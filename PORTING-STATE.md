@@ -50403,3 +50403,54 @@ Consume s649_fl_late_recover_freeroll SOAK-RESULTS (A/A2/B/C/E/F).
   without adlb TARGET co-timed with freelist to_zero.
 - Do not score Outcome B from silent-only soaks (this run was recovery-active).
 - Do not re-open H-memset / H-drainmesh without new counterexample.
+
+## Session 651 (2026-08-10) — s650 freeroll Outcome B; H-adlb-writer REFUTED; fault_ring
+
+### Consumed: s650_adlb_fl_stomp_freeroll (outer rc=137, 600s mid-att6)
+
+| att | class | key |
+|-----|-------|-----|
+| 1 | no_case5 crash | adlb_n=80 tgt=0 |
+| 2 | E_recovery_silent + scenegraph 1st | arm path engaged; flz_to_zero=1 menu; adlb_n=336 tgt=0 |
+| **3** | **D_other_crash recovery-active** | **recov768 LIVE thr11d_new=1** |
+| 4–5 | no_case5 | boot noise |
+| 6 | cut by outer 600s | — |
+
+**att3 freelist event (dual-source with s649/s650 Outcome B shape):**
+- arm_freelist@146070ms f=0x2 sz=0x60 LIVE
+- freelist to_zero #2 @165421ms prev_f=0x2 prev_sz=0x60 → zeros
+- adlb_n=358 **adlb_tgt=0 adlb_near=0** — ADLB stores never touch 0x801F3CC0
+  (dest class mesh 0x807* + misc; one dest 0x801F6D20 far from header)
+- flz_fault_hdr=0 fault_late=0; fault_n stuck 55 for ~15s armed=1 then +8 around stomp
+- to_zero_correlate last_sym=**submitSceneNodeRender** last_in_hdr=0 last_fa=+0x40
+- zero_node@0x801F3CC0 prev=0x801ED1B0 prev_f=0x2 prev_sz=0x6B00 (same as s642+)
+- CRASH coalesceFreeHeapBlocks (class-D other; not fail136c this hold)
+- thr11d_new=1 this run ( freelist stomp not thr11d-exclusive)
+
+### Verdicts
+- **H-adlb-writer REFUTED freelist-class** (Outcome B): recovery-active freelist
+  to_zero with live ADLB samples and TARGET=0. last_sym=allocateDisplayListBuffer
+  from s649 freeroll was weak leaf only.
+- **H-busy-rearm REFUTED** reconfirm (15s quiet fault_n while armed=1).
+- **Method hole:** s648 rate-limit drops want==2 lines after n=32 (every 256th);
+  after arm_fl only n=28..32 logged; n=33..63 invisible except last_* atomics.
+  Cannot name the 8 faults co-timed with to_zero.
+
+### Landed: fault_ring + near_hdr (src/main/main.cpp)
+- 16-slot ring records every handled page fault (fa/pc/sym/in_hdr/near_hdr/want)
+- freelist-shaped to_zero dumps `[fl-zero-fault] event=fault_ring` (no BT)
+- near_hdr = fa in [host, host+0x80) always logs line (no BT — thrash-safe)
+- heartbeat `ring_w=` for posctrl
+
+### Posctrl (70s, ROGUESQ_LOG_FL_ZERO_WATCH=1)
+- CRASH=0; fault_n LIVE (≥8); ring_w tracks fault_n (0→8); near_hdr field present
+- near_hdr=1 not expected at boot (traffic at page base)
+
+### Queued
+`scratch/agent/soak_queue/s651_fl_fault_ring_freeroll.sh`
+
+### Do not
+- Treat H-adlb-writer as open for freelist class
+- Expect poller/gbt/sticky alone to name freelist store
+- Re-enable full BT every want==2 fault
+- Soft-skip thr12 without writer ID

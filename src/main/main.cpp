@@ -1976,6 +1976,27 @@ static std::atomic<int> g_flz_last_want{0};
 // dyld string tables that may move).
 static char g_flz_last_sym[96] = "none";
 
+// s651: rate-limit drops want==2 lines after n=32 (every 256th only), so
+// freelist-window faults n=33..to_zero were invisible except last_* atomics.
+// Always record a compact ring; dump on freelist-shaped to_zero_correlate.
+// No BT in the ring path — avoids s648 thrash cost.
+struct FlzFaultRingRec {
+    uint64_t n;
+    uint64_t fa;
+    uint64_t pc;
+    uint64_t lr;
+    uint64_t pc_off;
+    uint32_t guest_pc;
+    int in_hdr;
+    int near_hdr;
+    int late;
+    int want;
+    char sym[64];
+};
+static constexpr int kFlzFaultRing = 16;
+static FlzFaultRingRec g_flz_fault_ring[kFlzFaultRing];
+static std::atomic<uint64_t> g_flz_fault_ring_w{0};
+
 static size_t fl_zero_page_size() {
     long p = sysconf(_SC_PAGESIZE);
     return (p > 0) ? (size_t)p : 16384u;
@@ -2067,6 +2088,9 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
 
     uint64_t n = g_flz_fault_n.fetch_add(1, std::memory_order_relaxed) + 1;
     int in_hdr = (fa >= host && fa < host + 8) ? 1 : 0;
+    // Free-block window (size 0x60): fa in [host, host+0x80). Catches payload
+    // stores that open the RW race without counting as strict header hits.
+    int near_hdr = (fa >= host && fa < host + 0x80) ? 1 : 0;
     if (in_hdr) {
         g_flz_fault_hdr_n.fetch_add(1, std::memory_order_relaxed);
     }
@@ -2121,24 +2145,53 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
         }
     }
 
+    // Always push ring (even when line rate-limited). Poller dumps on
+    // freelist-shaped to_zero so mid-window n=33..N are recoverable.
+    {
+        uint64_t wi = g_flz_fault_ring_w.fetch_add(1, std::memory_order_relaxed);
+        FlzFaultRingRec& rec = g_flz_fault_ring[wi % (uint64_t)kFlzFaultRing];
+        rec.n = n;
+        rec.fa = fa;
+        rec.pc = pc;
+        rec.lr = lr;
+        rec.pc_off = pc_off;
+        rec.guest_pc = (uint32_t)g_rs64_last_guest_pc;
+        rec.in_hdr = in_hdr;
+        rec.near_hdr = near_hdr;
+        rec.late = late;
+        rec.want = want;
+        size_t si = 0;
+        for (; si + 1 < sizeof(rec.sym) && pc_sym[si]; ++si)
+            rec.sym[si] = pc_sym[si];
+        rec.sym[si] = '\0';
+        if (si == 0) {
+            rec.sym[0] = 'n'; rec.sym[1] = 'o';
+            rec.sym[2] = 'n'; rec.sym[3] = 'e';
+            rec.sym[4] = '\0';
+        }
+    }
+
     // s648: s647 freeroll under want==2 dumped BT on EVERY fault (~7.5k
     // faults × ~16 frames ≈ 120k lines / 24 MB after arm_freelist alone).
     // Neighbor thrash (buildModelViewerTextPage on same 16KB page) made
     // full-BT-every-fault toxic — likely elevates recovery silence and
     // prevents freelist to_zero from ever firing. Rate-limit:
-    //   line: first 32 any; all in_hdr; every 256th non-hdr want==2
+    //   line: first 32 any; all in_hdr; all near_hdr (s651); every 256th want==2
     //   BT:   first 16 any; all in_hdr (cap 32); every 256th want==2
-    // to_zero_correlate still names last_sym even if individual lines drop.
+    //         (near_hdr does NOT get BT — still toxic if thrash near block)
+    // s651 fault_ring retains last 16 even when line is dropped.
     uint64_t hdr_n = g_flz_fault_hdr_n.load(std::memory_order_relaxed);
-    int log_line = (n <= 32) || in_hdr || (want == 2 && (n % 256ull) == 0);
+    int log_line = (n <= 32) || in_hdr || near_hdr ||
+                   (want == 2 && (n % 256ull) == 0);
     int log_bt = (n <= 16) || (in_hdr && hdr_n <= 32) ||
                  (want == 2 && (n % 256ull) == 0);
     // Always log late recovers (discriminate s648 att4 race) + rate-limit rest.
     if (log_line || late) {
         fprintf(stderr,
-            "[fl-zero-fault] n=%llu in_hdr=%d late=%d fa=0x%llx hdr_host=0x%llx "
-            "slot=0x%X pc=0x%llx sym=%s+0x%llx lr=0x%llx guest_pc=0x%08X want=%d\n",
-            (unsigned long long)n, in_hdr, late,
+            "[fl-zero-fault] n=%llu in_hdr=%d near_hdr=%d late=%d fa=0x%llx "
+            "hdr_host=0x%llx slot=0x%X pc=0x%llx sym=%s+0x%llx lr=0x%llx "
+            "guest_pc=0x%08X want=%d\n",
+            (unsigned long long)n, in_hdr, near_hdr, late,
             (unsigned long long)fa, (unsigned long long)host, slot,
             (unsigned long long)pc, pc_sym, (unsigned long long)pc_off,
             (unsigned long long)lr, (unsigned)g_rs64_last_guest_pc, want);
@@ -2332,12 +2385,14 @@ static void start_fl_zero_poller() {
                         // s647: on freelist to_zero, emit last-fault correlate
                         // so even a missed in_hdr still names a suspect leaf.
                         if (kind[0] == 't' && pf == 0x2u && psz == 0x60u) {
+                            uint64_t ring_w = g_flz_fault_ring_w.load(
+                                std::memory_order_relaxed);
                             fprintf(stderr,
                                 "[fl-zero-fault] event=to_zero_correlate "
                                 "t_ms=%lld last_n=%llu last_in_hdr=%d "
                                 "last_fa=0x%llx last_pc=0x%llx last_lr=0x%llx "
                                 "last_sym=%s last_want=%d busy_rearm_n=%llu "
-                                "fault_hdr=%llu\n",
+                                "fault_hdr=%llu ring_w=%llu\n",
                                 (long long)ms,
                                 (unsigned long long)g_flz_last_n.load(
                                     std::memory_order_relaxed),
@@ -2353,7 +2408,33 @@ static void start_fl_zero_poller() {
                                 (unsigned long long)g_flz_busy_rearm_n.load(
                                     std::memory_order_relaxed),
                                 (unsigned long long)g_flz_fault_hdr_n.load(
-                                    std::memory_order_relaxed));
+                                    std::memory_order_relaxed),
+                                (unsigned long long)ring_w);
+                            // Dump last min(16, ring_w) faults oldest→newest.
+                            uint64_t dump_n = ring_w < (uint64_t)kFlzFaultRing
+                                ? ring_w : (uint64_t)kFlzFaultRing;
+                            uint64_t start = ring_w - dump_n;
+                            for (uint64_t k = 0; k < dump_n; ++k) {
+                                const FlzFaultRingRec& r =
+                                    g_flz_fault_ring[(start + k) %
+                                        (uint64_t)kFlzFaultRing];
+                                if (r.n == 0 && r.fa == 0) continue;
+                                fprintf(stderr,
+                                    "[fl-zero-fault] event=fault_ring "
+                                    "i=%llu n=%llu in_hdr=%d near_hdr=%d late=%d "
+                                    "fa=0x%llx pc=0x%llx sym=%s+0x%llx lr=0x%llx "
+                                    "guest_pc=0x%08X want=%d\n",
+                                    (unsigned long long)k,
+                                    (unsigned long long)r.n,
+                                    r.in_hdr, r.near_hdr, r.late,
+                                    (unsigned long long)r.fa,
+                                    (unsigned long long)r.pc,
+                                    r.sym[0] ? r.sym : "none",
+                                    (unsigned long long)r.pc_off,
+                                    (unsigned long long)r.lr,
+                                    (unsigned)r.guest_pc,
+                                    r.want);
+                            }
                             fflush(stderr);
                         }
                         g_flz_fault_want.store(0, std::memory_order_release);
@@ -2391,7 +2472,7 @@ static void start_fl_zero_poller() {
                     "[fl-zero-poll] n=%llu event=heartbeat t_ms=%lld phys=0x%08X "
                     "flags=0x%X size=0x%X polls=%llu changes=%llu to_zero=%llu "
                     "fault_n=%llu fault_hdr=%llu fault_late=%llu fault_armed=%d "
-                    "busy_rearm=%llu want=%d\n",
+                    "busy_rearm=%llu want=%d ring_w=%llu\n",
                     (unsigned long long)n_change, (long long)ms, slot,
                     (unsigned)be_u16(prev), (unsigned)be_u32(prev + 4),
                     (unsigned long long)n_poll, (unsigned long long)n_change,
@@ -2402,9 +2483,10 @@ static void start_fl_zero_poller() {
                     (unsigned long long)g_flz_fault_late_n.load(std::memory_order_relaxed),
                     g_flz_fault_armed.load(std::memory_order_relaxed),
                     (unsigned long long)g_flz_busy_rearm_n.load(std::memory_order_relaxed),
-                    g_flz_fault_want.load(std::memory_order_relaxed)
+                    g_flz_fault_want.load(std::memory_order_relaxed),
+                    (unsigned long long)g_flz_fault_ring_w.load(std::memory_order_relaxed)
 #else
-                    0ull, 0ull, 0ull, 0, 0ull, 0
+                    0ull, 0ull, 0ull, 0, 0ull, 0, 0ull
 #endif
                 );
                 fflush(stderr);

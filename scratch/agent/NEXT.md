@@ -2,43 +2,45 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s650 recap (read this first)
+## s651 recap (read this first)
 
-**s649 freeroll consumed — Outcome B + H-busy-rearm REFUTED:**
-- outer rc=137 600s mid-att2 HOLD (att2 recovery-active, no SCORE line)
-- att1: recovery_silent; menu to_zero only; arm_fl=1 on SCORE
-- att2: recov768 LIVE; **arm_freelist@145991ms 0x2/0x60 LIVE**
-  - freelist **to_zero #2 @165335ms** prev_f=0x2 prev_sz=0x60
-  - flz_fault_hdr=0 fault_late=0 CRASH=0
-  - heartbeats 150–165s: armed=1 fault_n stuck **49** then silent zero
-    (~15s gap) → **H-busy-rearm REFUTED freelist-class**
-  - to_zero_correlate last_sym=**allocateDisplayListBuffer** last_in_hdr=0
-    last_fa=+0x50 (weak; not dual-source writer proof)
-  - thr11d_new=0 (id=11 live); zero_node@0x801F3CC0 prev=0x801ED1B0
-- H-late-recover soft-E (no post-arm CRASH); H-recov-co-gate-stomp reconfirmed
+**s650 freeroll consumed — Outcome B + H-adlb-writer REFUTED:**
+- outer rc=137 600s mid-att6
+- att3 recovery-active: recov768 LIVE thr11d_new=1
+  - arm_freelist@146070ms 0x2/0x60 LIVE
+  - freelist to_zero #2 @165421ms prev_f=0x2 prev_sz=0x60
+  - **adlb_n=358 adlb_tgt=0 adlb_near=0** → ADLB never touches header
+  - flz_fault_hdr=0 late=0; ~15s quiet fault_n=55 then +8 around stomp
+  - tz_corr last_sym=**submitSceneNodeRender** last_in_hdr=0 last_fa=+0x40
+  - CRASH coalesceFreeHeapBlocks (not fail136c this hold)
+- Rate-limit hole: after arm_fl only n≤32 logged; n=33..63 dropped
 
-**Landed s650 `[adlb-fl-stomp]`** on allocateDisplayListBuffer stores
-(tools/apply_s650_adlb_fl_stomp.py, 10 sites). Posctrl 55s: adlb_n=123
-TARGET=0 CRASH=0 fault_n=24.
+**Landed s651 fault_ring + near_hdr** in `src/main/main.cpp`:
+- 16-slot ring always records every page fault (no BT)
+- freelist to_zero dumps `event=fault_ring` (last 16)
+- near_hdr (fa in [host,host+0x80)) always logs line (no BT)
+- heartbeat `ring_w=`
+- Posctrl 70s: CRASH=0 fault_n≥8 ring_w tracks fault_n
 
-**Queued:** `scratch/agent/soak_queue/s650_adlb_fl_stomp_freeroll.sh`
+**Queued:** `scratch/agent/soak_queue/s651_fl_fault_ring_freeroll.sh`
 
 ## This iteration's work unit
 
-**Primary: consume s650 freeroll SOAK-RESULTS (or run if still queued).**
+**Primary: consume s651 freeroll SOAK-RESULTS (or run if still queued).**
 
-1. Posctrl: `adlb_n≥1` sample lines (boot ADLB traffic)
+1. Posctrl already LIVE (ring_w / fault lines / CRASH=0)
 2. Prefer **recovery-active** (`recov768≥1`) with `arm_fl≥1`
 3. Freelist-shaped: `to_zero` with `prev_f=0x2 prev_sz=0x60`
 4. Discriminators:
-   - **A)** `[adlb-fl-stomp] TARGET` co-timed with freelist to_zero
-     → H-adlb-writer CONFIRMED; site= names store for guard/fix
-   - **B)** freelist to_zero + adlb TARGET=0
-     → ADLB not header writer; next leaf (correlate or store census)
-   - **C)** recovery-active + arm_fl + no freelist to_zero
-     → requeue once; silent-only is not B
-   - Passive: late/CRASH recurrence (E/F from s649)
-5. If A fires with a specific site, next session guards or narrows that site only
+   - **A)** `event=fault_ring` with `in_hdr=1` → names store leaf (sym+off);
+     next session guards or instruments that site only
+   - **B)** ring last entries `near_hdr=1` / named leaf just before zero
+     → RW-race window writer; instrument that leaf
+   - **C)** freelist to_zero but ring empty / ring_w=0 → ring path failed
+   - **D)** ring all far-page thrash (in_hdr=0 near_hdr=0) → pure RW-race
+     with no near-header signal; pivot to store census / bulk-clear audit
+   - Passive: thr11d_new, fail136c, late/CRASH, adlb_tgt (expect 0)
+5. If A/B names a specific sym+off, next session is leaf probe only
 
 ## Hypotheses
 
@@ -56,15 +58,16 @@ TARGET=0 CRASH=0 fault_n=24.
 | H-gbt-writer | game-thread BT names store path | freelist gbt store leaf | **REFUTED s645** freelist-class |
 | H-bc19-live | freelist stamps update sticky PC | menu to_zero pc in rs_* | **CONFIRMED s645** |
 | H-memset-writer | rs_memset zeros freelist header | msfl hit@0x801F3CC0 ∧ freelist to_zero | **REFUTED s646** freelist-class |
-| H-fault-writer | mprotect names freelist stomp leaf | flz_fault_hdr≥1 ∧ flz_fault_sym | ACTIVE (B s646/s650; C s647/s648) |
+| H-fault-writer | mprotect names freelist stomp leaf | flz_fault_hdr≥1 ∧ flz_fault_sym | ACTIVE (B s646/s650/s651; C s647/s648) |
 | H-ss-rearm | ARM64 SS from SEGV closes race | ss_rearm≥1 ∧ CRASH=0 | **REFUTED s647** |
 | H-busy-rearm | 20µs busy re-arm catches header store | freelist to_zero ∧ flz_fault_hdr≥1 | **REFUTED s650** freelist-class |
-| H-recov-co-gate-stomp | freelist 0x2/0x60→0 needs recovery-active | silent arm_fl ∧ no fl-to_zero vs recov+fl-to_zero | **SUPPORTED s648/s650** |
+| H-recov-co-gate-stomp | freelist 0x2/0x60→0 needs recovery-active | silent arm_fl ∧ no fl-to_zero vs recov+fl-to_zero | **SUPPORTED s648/s650/s651** |
 | H-bt-thrash-toxic | BT-every-fault self-DOS under want=2 | ~7.5k BT dumps measured | **CONFIRMED s648** |
 | H-perturb-from-BT | BT thrash elevates recovery silence | rate-limit freeroll still silent | **REFUTED s649** |
 | H-mprotect-concurrent-CRASH | armed==0 + fa on page → old handler CRASH | s648 att4 SIGBUS | **CONFIRMED s649** |
-| H-late-recover | want!=0 recover closes concurrent CRASH | arm_fl + no post-arm CRASH | **SUPPORTED soft s650** (late=0 this run) |
-| H-adlb-writer | allocateDisplayListBuffer zeros freelist hdr | adlb TARGET ∧ freelist to_zero | ACTIVE (posctrl samples only) |
+| H-late-recover | want!=0 recover closes concurrent CRASH | arm_fl + no post-arm CRASH | **SUPPORTED soft s650** |
+| H-adlb-writer | allocateDisplayListBuffer zeros freelist hdr | adlb TARGET ∧ freelist to_zero | **REFUTED s651** freelist-class |
+| H-fault-ring-names | ring dump at freelist to_zero names stomp leaf | fault_ring in_hdr/near_hdr + sym | ACTIVE (posctrl ring_w LIVE) |
 | H-shipn3-gate / Outcome A | B8→store→thr11d | live chain | CONFIRMED s637/s638 |
 
 ## Do NOT
@@ -73,8 +76,9 @@ TARGET=0 CRASH=0 fault_n=24.
 - Treat guest_pc=rs_memset return-nop alone as dest proof without msfl hit=1
 - Treat H-memset-writer as open for freelist class (REFUTED s646)
 - Treat H-busy-rearm as still-evaluable for freelist (REFUTED s650)
-- Treat last_sym=allocateDisplayListBuffer alone as writer proof without
-  adlb TARGET co-timed with freelist to_zero
+- Treat H-adlb-writer as open for freelist class (REFUTED s651)
+- Treat last_sym=allocateDisplayListBuffer or submitSceneNodeRender alone as
+  writer proof without in_hdr/near_hdr ring entry or TARGET co-timed
 - Expect poller `backtrace()` / gbt to name a short freelist store
 - Soft-skip thr12 / coalesce past zero nodes without writer ID
 - Re-open H-drainmesh-stomp / H-zero-free / H-split / H-walk-into-zeros without
@@ -91,8 +95,6 @@ TARGET=0 CRASH=0 fault_n=24.
 - Re-open H-perturb-from-BT for silence elevation (REFUTED s649)
 
 ### Reference tags
-`[adlb-fl-stomp]`, `[fl-zero-fault]`, `late=`, `busy_rearm`, `to_zero_correlate`,
-`[fl-zero-poll]`, `[fl-zero-poll-bt]`, `[fl-zero-poll-gbt]`, `[memset-fl-dest]`,
-`[drain-mesh-stomp]`, `[fl-hdr-write]`, `[fl-zero-watch]`,
-`0x801F3CC0`, `0x1F3CC0`, BREADCRUMB19, fail136c, thr11d_new, -391, -395,
--397, -398, -399, -400, -401, -402, -403, -404
+`[fl-zero-fault] event=fault_ring`, `near_hdr=`, `ring_w=`, `[adlb-fl-stomp]`,
+`to_zero_correlate`, `[fl-zero-poll]`, `[memset-fl-dest]`, `[drain-mesh-stomp]`,
+`0x801F3CC0`, `0x1F3CC0`, fail136c, thr11d_new, -391, -395, -404, -405
