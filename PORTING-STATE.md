@@ -47734,3 +47734,49 @@ advances -338 toward 1/2 CLOSED.
 
 ### Next
 Fold s602 r3. Score A/B/C/D on engagement; E → force-write pivot.
+
+## Session 603 — 2026-08-09 — fold s602 r3: scored D + clean survival; thr-11/sec4 pipeline corrected; HOLD_S=180 dual-target soak queued
+
+### Ran
+- Folded `s602_item338_beginframe_s0_verify_r3` (554s, rc=0):
+  - Attempts 1–2: pre-engagement early deaths (8s/7s).
+  - Attempt 3: ace80=1 but case6=0 hangar_sel=0, crash (pre-engagement, not scored).
+  - Attempt 4 **scored**: `case6=1 hangar-sel=1 ace80=1 inject_lines=31
+    inject_max_n=550 recov76B768=0 sec4=1 sec2=0 thr495FC_creates=2 (bogus)
+    beginframe_s0_guard=0 last_guest_afa0=0 crash=ok`.
+- Class **D** for item -338 (3rd scored non-hit: s600/s601/s602). Path not
+  exercised; no `0x8000afa0` death.
+- No-sticks recipe **engaged** (ACE80 fired → state 6 → FORCE_CASE6). Force-write
+  state=6 pivot not needed.
+
+### Offline pipeline (s602 a4 vs s592_a sole sec4=2)
+- thr-11 = `saveServiceWorker` entry=`0x8006F2CC` (docs/game-architecture.md),
+  not thr495FC (`0x800495FC`). Gate `thr495FC_creates=2` was thr-create-id +
+  thr-create double-count of one **boot** create (destroyed pre-title); never a
+  post-exit thr-12 metric.
+- s592_a post-hsel: thr-11 create (id=11, 0x8006F2CC) → inject → recovery
+  `0x76B768` → thr-11 destroy @~100s post-hsel → **sec4 reload** → CRASH
+  `coalesceFreeHeapBlocks` / `last-guest-pc=0x8000247c` (item -361 R2 site,
+  pre-guard era).
+- s602 a4 post-hsel: thr-11 create → inject max_n=550 (767 post `syncs>0`) →
+  **no recovery cell** → thr-11 **still live** at HOLD_S=90 kill → no sec4_post
+  → crash=ok. Inject alone can restore sync flow without `0x76B768`.
+
+### Ruled out / not claimed
+- Not A/B/C for beginframe guard (0 fires). Not E (engagement succeeded).
+- Not "item -338 always races thr-11 destroy" as the only -361 blocker — clean
+  survival can also starve thr-11 destroy via short post-exit window.
+- Not that recovery cell is required for any `syncs>0` post-exit (inject
+  suffices for sync count); recovery may still correlate with cutscene advance
+  that triggers thr-11 stop (H12c still open for that coupling).
+
+### Landed
+- Recipe `scratch/agent/soak_queue/s603_item338_item361_hold180.sh`:
+  HOLD_S=180 (≤210 cap), STICK_SCHEDULE=999:sr, same arms; gate reports
+  `thr11_destroy`, `inject_max_n`, `sec4_post`, class_hint A–F.
+- Item -368 filed; -365/-361/-338/-364/-367 updated.
+
+### Next
+Fold s603 HOLD_S=180 soak. Prefer thr-11 destroy + sec4_post for -361 R2 live
+confirm; beginframe is passive. If thr11_destroy=0 again → pivot off longer
+HOLD to recovery-cell reliability (do not raise past 210).

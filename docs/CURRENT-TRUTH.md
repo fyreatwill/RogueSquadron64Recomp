@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s602)
+## Current truth (established by session 295; unchanged, reviewed through s603)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -127,10 +127,11 @@ OVERTURNED s150; **s577 REAL hangar exit CONFIRMED** (case 3→5→6→8, missio
 Post-exit chain root-caused s578-s591: cutscene plays, then a FULL_SYNC-starvation plateau (not
 classic s178 producer-stop) traced to a sticky shared DPC staging cell (phys `0x76DF60`) reused by
 Factor5 LLE RSP for PIPE_SYNC/SETTIMG (H7a) — product fix `ROGUESQ_FS_PIPE_INJECT` (default OFF)
-restores sync flow through the E7/F3/FD residual. thr-11 destroy co-times with sec4 reload when
-recovery `0x76B768` is healthy. Current frontier: item -361 R2 coalesce re-verify, blocked
-post-engagement by item -338 (guarded s600 as -365; s601 D, s601-r2 no engagement; s602 requeue
-with no-sticks). Full chain: items -349..-367; raw `PORTING-STATE.md` Sessions 577-602. DoD =
+restores sync flow through the E7/F3/FD residual. thr-11 (`saveServiceWorker` `0x8006F2CC`) destroy
+co-times with sec4 reload (s592_a positive control); s602 clean survival shows inject can keep
+`syncs>0` without recovery cell while thr-11 stays live under short HOLD. Current frontier: item
+-361 R2 live re-verify via longer HOLD (s603 HOLD_S=180); item -338 guard live-confirm rare
+(3× D). Full chain: items -349..-368; raw `PORTING-STATE.md` Sessions 577-603. DoD =
 **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -148,7 +149,21 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -367. The next NEW item takes -368.
+a range pointer. Highest allocated so far: -368. The next NEW item takes -369.
+
+-368. **(s603) `s602_item338_beginframe_s0_verify_r3` scored D + clean survival; thr-11/sec4
+    pipeline recharacterized; HOLD_S=180 dual-target soak queued.** Attempt 4 scored:
+    `case6=1 hangar-sel=1 ace80=1 inject_max_n=550 recov76B768=0 sec4=1 sec2=0
+    beginframe_s0_guard=0 last_guest_afa0=0 crash=ok`. No-sticks engagement OK (ACE80 fired;
+    force-write pivot not needed). Offline vs s592_a (sole `sec4=2`): thr-11 =
+    `saveServiceWorker` **entry=`0x8006F2CC`** (gate's `thr495FC_creates` was a thr-create-id
+    + thr-create double-count of one **boot** create — never post-exit thr-12). Pipeline:
+    post-hsel thr-11 create → cutscene → **thr-11 destroy ↔ sec4 reload** →
+    `initSceneForMission` coalesce R2 `@0x8000247c` (item -361). s592_a: thr-11 destroy
+    ~100s post-hsel → sec4=2 → CRASH `0x8000247c` (pre-R2-guard). s602: thr-11 still live at
+    HOLD_S=90 end; inject alone yields 767 post `syncs>0` without recovery cell. Recipe
+    `s603_item338_item361_hold180.sh`: HOLD_S=180, fixed gate (`thr11_destroy`,
+    `inject_max_n`, `sec4_post`). Full: Session 603.
 
 -367. **(s602) `s601_item338_beginframe_s0_verify_r2` = no engagement (rc=2); engagement gate
     diagnosed as ACE80 camera-settle; requeued no-sticks as
@@ -156,10 +171,8 @@ a range pointer. Highest allocated so far: -367. The next NEW item takes -368.
     `transformLightByType+256`/`0x80010134` (item -347; discard). Attempt 2: full HOLD
     survived at hangar **state=5**, 0 ACE80 / 0 ACE94 / 0 case6. Mechanism: FORCE_CASE6
     injects at ACE94 which only runs in state 6; 5→6 is automatic `[state-write]
-    site=0x800ACE80` (camera settle), not a button. All prior engagements have ACE80; stick
-    pulses (default hold+10/+25/+40) co-timed with A2's stuck-at-5 window while s600 engaged
-    in ~3s pre-stick. Recipe r3 sets `STICK_SCHEDULE=999:sr`. If r3 still no engagement →
-    pivot to force-write state=6 under FORCE_CASE6 after N case5 frames. Full: Session 602.
+    site=0x800ACE80` (camera settle), not a button. s603: no-sticks r3 **engaged** (ACE80+case6)
+    — stick hypothesis SUPPORTED as engagement fix; force-write pivot not needed. Full: Session 602.
 
 -366. **(s601) `s600_item338_beginframe_s0_verify` scored D (path not exercised).** Fast-retry:
     attempt 1 pre-engagement death; attempt 2 engagement `case6=1 hangar-sel=1` then scored.
@@ -168,7 +181,7 @@ a range pointer. Highest allocated so far: -367. The next NEW item takes -368.
     requeue scored no engagement → item -367. Full: Session 601.
 
 -365. **(s600) Item -338 ROOT-CAUSED and GUARDED (`BEGINFRAME_S0_GUARD` site=`0x8000AFA0`);
-    live 2/2 confirm still PENDING (s601=D, s601-r2=no engagement, s602 r3 queued).** Offline
+    live 2/2 confirm still PENDING (s600=D, s601=D, s602 r3=D — 3 scored non-hits).** Offline
     on all 5 crash logs (s554/s572/s574/s592_r2/s598): identical mechanism — guest `0x8000AFA0`
     `lw $v0, 0x8($s0)` after null-only `beql $s0,$zero`; SIGBUS `si_addr=0x335000008` on 4/5
     (s598: `0x384004087`), `x11` matches low 32 of `si_addr`. Function base `0x8000A8A0`
@@ -182,7 +195,8 @@ a range pointer. Highest allocated so far: -367. The next NEW item takes -368.
     entries. Fix: range-check `ctx->r16`; OOB → `s2--` + `goto L_8000B208` (mirrors outer null
     arm). Env `ROGUESQ_LOG_BEGINFRAME_S0_GUARD` / `[beginframe-s0-guard]`. In
     `fixup_game_funcs.py` + hand-applied `funcs_3.c` (sentinel blocks re-fixup without regen);
-    binary rebuilt. **Not CLOSED until 2/2 live confirms.** Full detail: Sessions 600-602.
+    binary rebuilt. **Keep LOG armed passively; do not dedicate another same-HOLD soak if
+    s603 is again F/D for beginframe — path is rare under force+inject.** Full: Sessions 600-603.
 
 -364. **(s599) `s598_fast_retry_case6` ran: engagement on attempt 1/8, then item -338 before
     `sec4=2` — REFRAMES item -361 bottleneck to "item -338 racing thr-11 destroy."**
@@ -190,7 +204,9 @@ a range pointer. Highest allocated so far: -367. The next NEW item takes -368.
     `sec4=2` run (`s592_sec4_thr12_a`): recovery `0x76B768` fired to EOF in BOTH; discriminator
     was thr-11 `[thr-destroy]` (present only in `s592_a`, immediately before 2nd sec4 reload).
     First post-engagement death in the item -361 tally (s593–s596 were all pre-engagement).
-    Superseded as "next probe" by item -365's guard. Full: Session 599.
+    s603: thr-11 identity corrected to `0x8006F2CC`; s602 clean survival shows -338 is not
+    always the race — HOLD window / cutscene advance can starve thr-11 destroy without any
+    beginframe crash. Full: Session 599.
 
 -363. **(s598) Item -361 redesign option (1) BUILT: `s598_fast_retry_case6.sh` queued to
     `scratch/agent/soak_queue/`.** Implements NEXT.md's fast-retry recommendation: loops the
@@ -231,13 +247,13 @@ a range pointer. Highest allocated so far: -367. The next NEW item takes -368.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s602) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
-    open.** Bottleneck reframed s599 (item -364): not recovery-cell reliability but item -338
-    racing thr-11 destroy post-engagement. s600 (item -365) root-caused and guarded -338;
-    s601 scored D; s601-r2 no engagement (item -367 ACE80 gate). s602 requeues no-sticks.
-    Mechanism (unchanged): `initSceneForMission`'s 2nd unguarded `$s2`-based coalesce loop at
-    `0x8000247C` (R2 guard s593). `sec4>=2` remains the discriminating threshold (`sec4=1` =
-    boot preload). Do not raise `HOLD_S` past 210. Full: Sessions 589-602.
+-361. **(s589-s603) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
+    open.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC` (not thr495FC). Pipeline: thr-11
+    destroy ↔ post-exit sec4 → initSceneForMission R2 `@0x8000247c`. s592_a is the positive
+    control for the crash site (pre-guard). s602 clean survival: inject works without recovery
+    cell, thr-11 still live under HOLD_S=90. s603 queues HOLD_S=180 to test whether longer
+    post-exit window reaches thr-11 destroy+sec4 for R2 live confirm. Do not raise HOLD_S
+    past 210. Full: Sessions 589-603.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
@@ -341,11 +357,11 @@ a range pointer. Highest allocated so far: -367. The next NEW item takes -368.
 
 -338. **(s554, s572, s574, s592, s598 — 5 occurrences) `beginFrameDLChunk`/
     `last-guest-pc=0x8000afa0` — ROOT-CAUSED s600, GUARDED as item -365 (`BEGINFRAME_S0_GUARD`
-    site=`0x8000AFA0`); live 2/2 confirm PENDING (s601=D, s601-r2=no eng, s602 r3 queued).**
+    site=`0x8000AFA0`); live 2/2 confirm PENDING (3 scored D: s600/s601/s602 r3).**
     Guest insn `lw $v0, 0x8($s0)` after null-only check on stack-slot-loaded node ptr; SIGBUS
     `si_addr=0x335000008` (4/5). s554 pre-crash also co-fired existing guards with
     `bad_ptr=0x7500D019` (corruption wave feeding the bad `$s0`, not a second independent
-    bug). See items -365/-366/-367.
+    bug). See items -365/-368.
 
 -337. **(s551) `submitSceneNodeRender+69192`/`0x80010df4` — ROOT-CAUSED, FIXED and FULLY CLOSED
     2/2 with item -341 (s561).**

@@ -316,3 +316,4 @@
 20260809-204251 | s598_fast_retry_case6 | rc=1 | 278s | scratch/agent/soak_results/s598_fast_retry_case6_20260809-204251.log
 20260809-211929 | s600_item338_beginframe_s0_verify | rc=1 | 334s | scratch/agent/soak_results/s600_item338_beginframe_s0_verify_20260809-211929.log
 20260809-212843 | s601_item338_beginframe_s0_verify_r2 | rc=2 | 533s | scratch/agent/soak_results/s601_item338_beginframe_s0_verify_r2_20260809-212843.log
+20260809-214516 | s602_item338_beginframe_s0_verify_r3 | rc=0 | 554s | scratch/agent/soak_results/s602_item338_beginframe_s0_verify_r3_20260809-214516.log

@@ -2,58 +2,63 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s602 recap (read this first)
+## s603 recap (read this first)
 
-Folded `s601_item338_beginframe_s0_verify_r2` (533s, rc=2): **no scored attempt**
-(not A/B/C/D). Attempt 1 pre-engagement `0x80010134`/item -347 discard. Attempt 2
-full HOLD survived at hangar **state=5** with 0 ACE80 / 0 ACE94 / 0 case6.
+Folded `s602_item338_beginframe_s0_verify_r3` (554s, rc=0): **scored D** for
+item -338 (3rd: s600/s601/s602) + **first clean post-engagement survival**.
+Gate A4: `case6=1 hangar-sel=1 ace80=1 inject_max_n=550 recov=0 sec4=1
+beginframe_s0_guard=0 last_guest_afa0=0 crash=ok`. No-sticks engagement OK.
 
-**Engagement gate diagnosed:** `ROGUESQ_FORCE_CASE6_START` injects Start at ACE94,
-which only runs in hangar state 6. 5→6 is automatic camera-settle
-`[state-write] site=0x800ACE80`, not a button. All prior engagements have ACE80.
-Default stick pulses (hold+10/+25/+40) co-timed with A2's stuck-at-5 window; s600
-engaged in ~3s pre-stick. Item -338/-365 still 0/2 live confirms; item -361 still
-blocked. Full: CURRENT-TRUTH -367/-366/-365/-361; PORTING-STATE Session 602.
+**Pipeline corrected:** thr-11 = `saveServiceWorker` `entry=0x8006F2CC` (not
+thr495FC double-count). s592_a: thr-11 destroy → sec4=2 → crash `0x8000247c`
+(R2 site). s602: thr-11 still live under HOLD_S=90. Queued
+`s603_item338_item361_hold180.sh` (HOLD_S=180, fixed gate).
 
-Requeued as `scratch/agent/soak_queue/s602_item338_beginframe_s0_verify_r3.sh`
-with `STICK_SCHEDULE=999:sr` (no stick pulses during hold).
+Full: CURRENT-TRUTH -368/-365/-361; PORTING-STATE Session 603.
 
 ## This iteration's work unit
 
-**Fold in the `s602_item338_beginframe_s0_verify_r3` soak result and act on it.**
+**Fold in the `s603_item338_item361_hold180` soak result and act on it.**
 
-1. Read the new SOAK-RESULTS.md line and any scored attempt's gate line. Extract:
-   `beginframe_s0_guard=N`, `ace80`, `sec4`, `sec2`, `coalesce_guard2_r2`,
-   `crash`, `crash_pc`, engagement (case6+hangar-sel).
-2. Classify:
-   - **A** guard fires + no `0x8000afa0` + `sec4>=2` → item -338 CLOSED 1/2;
-     check `coalesce_guard2_r2` for -361.
-   - **B** guard fires, no `0x8000afa0`, other crash or `sec4` still 1 → file
-     breadcrumb, keep -338 at 1/2 pending clean 2nd confirm.
-   - **C** dies at `0x8000afa0` with 0 guard fires → guard miss.
-   - **D** engagement but 0 fires, no `0x8000afa0` → not discriminating; requeue
-     same no-sticks recipe. Count consecutive Ds (s601 was D; if this is D #2,
-     one more then pivot).
-   - **E** budget exhausted / no engagement **again** despite no-sticks → ACE80
-     settle is nondet independent of sticks. **Pivot (code):** under
-     `ROGUESQ_FORCE_CASE6_START`, after N case5 frames still at state 5,
-     force-write hangar state byte to 6 (the ACE80 write) so ACE94 path becomes
-     reachable. Land in `fixup_game_funcs.py` + rebuild; do not redesign the
-     rest of the force path.
-3. If A or B and guard fired: queue a 2nd confirm soak for 2/2 CLOSE of -338/-365.
+1. Read SOAK-RESULTS.md line + scored attempt gate:
+   `beginframe_s0_guard`, `thr11_destroy`, `sec4_post`, `inject_max_n`,
+   `recov76B768`, `coalesce_guard2_r2`, `crash`, `crash_pc`, `class_hint`.
+2. Classify (scored attempt only):
+   - **A** `beginframe_s0_guard>=1` + no `0x8000afa0` → -338 confirm 1/2; queue 2nd.
+   - **B** `thr11_destroy=1` + `sec4_post>=1` + `coalesce_guard2_r2>=1` + no
+     crash at `0x8000247c` → -361 confirm 1/2; queue 2nd confirm.
+   - **C** thr11 destroy + sec4_post + crash `0x8000247c` + 0 r2 guard → guard miss;
+     debug R2 guard placement.
+   - **D** thr11 destroy + sec4_post + other crash → file breadcrumb; progress on
+     pipeline.
+   - **E** `thr11_destroy=0` at HOLD end → time alone insufficient; **pivot** to
+     recovery-cell reliability (why s592 had 76B768 and s602/s603 did not). Do
+     NOT raise HOLD_S past 210.
+   - **F** neither beginframe nor thr11 path (0 guard, thr11 live, no afa0) →
+     stop dedicated -338 soaks; park passive arm; pivot same as E or to offline
+     recovery-writer hunt.
+3. If B or A: queue one confirm soak only (not a third requeue of the same D).
+
+## Hypotheses for E/F pivot (do not run until soak scores E or F)
+
+| ID | Claim | Discriminator |
+|----|-------|---------------|
+| H-recov1 | Recovery cell `0x76B768` is required for cutscene advance that stops thr-11 | Compare thr11_destroy rate on runs with recov>0 vs recov=0 at equal HOLD |
+| H-recov2 | Inject mode-1 non-mutating path never promotes guest FULL_SYNC into the recovery cell | Instrument whether any guest E9 lands at 0x76B768 under inject |
+| H-time | 180s still short vs cutscene length variance | Only if thr11_destroy seen at least once under 180 |
 
 ## Do NOT
-- Re-characterize item -338 from the 5 historical logs (done s600).
-- Escalate `0x8000241c` / `coalesceFreeHeapBlocks+3192` (catalogued noise).
-- Escalate `0x80010134` / transformLightByType (item -347 coverage artifact).
-- Raise `HOLD_S` past 210.
-- Chase `waitForAnyAudioSlot+244` (item -362: symtab misattribution).
+- Raise HOLD_S past 210.
+- Re-characterize -338 from the 5 historical logs (done s600).
+- Chase `waitForAnyAudioSlot+244` (item -362).
+- Treat thr495FC_creates as post-exit thr-12 (boot-only; gate fixed in s603 recipe).
 - Re-open thr-11 as recvServiceMessage block (H12a closed).
-- Re-arm default stick schedule on this verify recipe.
+- Re-arm default stick schedule (no-sticks works).
 
 ### Reference tags
-`[beginframe-s0-guard] site=0x8000AFA0`, `[case6-force-start]`, `[hangar-sel]`,
-`[state-write] site=0x800ACE80`, `[hangar-state]`, `[buttons-hangar] site=0x800ACE94`,
-`[thr-create COP`/`[thr-destroy]`, `[rdp-fullsync] ... addr=0x0076B768`,
+`[beginframe-s0-guard]`, `[case6-force-start]`, `[hangar-sel]`,
+`[state-write] site=0x800ACE80`, `[buttons-hangar] site=0x800ACE94`,
+`[thr-create]`/`[thr-destroy]` entry=`0x8006F2CC`,
+`[rdp-fullsync] ... addr=0x0076B768`, `[fs-pipe-inject]`,
 `[overlay] start-match: section 4`, `[coalesce-heap-r2-guard]`,
 `[CRASH][last-guest-pc]` / `[CRASH][pc-symbol]`.
