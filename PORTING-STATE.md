@@ -47059,3 +47059,80 @@ crash stack at line 278849-278894)
 `scratch/s73_post_a_scene/s593_coalesce_r2_verify/run.log` (null re-verify)
 `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` (fix,
 ~line 12985 new block, search `item -361`)
+
+## Session 594 — 2026-08-09 — item -361: 4th+5th coalesce R2 verify attempts, both path-gated nulls; sec4-counter semantics documented
+
+### What happened
+The loop ran the two queued `s593_coalesce_r2_verify_{a,b}` soaks between
+iterations (logged in SOAK-RESULTS.md, rc=1 both). Consumed both this
+session:
+
+- `s593_coalesce_r2_verify_a`: `gate case6=0 hangar-sel=0 inject_lines=0
+  recov76B768~=0 sec4=1 sec2=0 thr495FC_creates=2 coalesce_guard1=0
+  coalesce_guard2_r2=0 crash=CRASH`. Full log shows the crash at
+  `[CRASH][pc-symbol] pc=... sym=heapFreeListDequeue+32892 (local-symtab)`,
+  `[CRASH][last-guest-pc] pc=0x8000d688` — **same guest PC as item -331's
+  s537 breadcrumb** (`heapFreeListDequeue+29152`/`0x8000d688`; host offset
+  drifted per the s541 pc-symbol-instability gotcha, guest PC is the
+  authoritative match). This is a 2nd occurrence; upgraded confidence
+  low→moderate in CURRENT-TRUTH, watch for a 3rd before source-tracing.
+- `s593_coalesce_r2_verify_b`: `gate case6=0 hangar-sel=0 inject_lines=0
+  recov76B768~=0 sec4=1 sec2=0 thr495FC_creates=2 coalesce_guard1=0
+  coalesce_guard2_r2=0 crash=CRASH`. Full log shows
+  `[CRASH][pc-symbol] sym=setByteAcrossEntryList+176`,
+  `[CRASH][last-guest-pc] pc=0x800aafa8` — item -306's already-catalogued
+  "weak early death" signature, seen repeatedly across the whole -338..-348
+  campaign as a background-noise crash unrelated to whatever's under test.
+
+Both runs died on unrelated background noise **before** the force-exit env
+(`ROGUESQ_FORCE_CASE6_START`) could engage at all: `case6=0 hangar-sel=0`
+in both, meaning the crash happened before the game ever reached hangar
+state 5. Neither run is discriminating for the R2 guard (iron rule 1 — the
+guarded code path never ran, `coalesce_guard1=0 coalesce_guard2_r2=0` in
+both is expected-when-untested, not expected-when-fixed).
+
+### sec4-counter semantics clarified (methodology note, not a new bug)
+Both runs showed `sec4=1`. Traced `overlays.cpp`'s
+`load_overlays_by_start` (the source of the `"[overlay] start-match:
+section %zu"` line the soak script's `sec4` counter matches): this logs
+*any* chunked-DMA overlay section whose ROM start lands in a transferred
+chunk, independent of hangar-exit state. Grepping both `run.log`s shows
+the single `"start-match: section 4"` hit lands at line ~6100-6400 out of
+~130-280k total lines — i.e. during normal early boot/menu overlay
+preload, not post-exit. Cross-checked against `s592_sec4_thr12_a`'s run.log
+(the one confirmed session-593 to have genuinely reached post-exit section
+4): it shows the SAME early hit at line 6081, **plus a second hit at line
+278849** (4 lines before its crash) — the real post-exit reload.
+**Conclusion: `sec4=1` is boot-only noise, `sec4>=2` is the correct
+discriminating threshold.** NEXT.md's decision tree already used `sec4>=2`
+correctly; this session just confirms the threshold choice was right and
+documents why, so future sessions don't need to re-derive it.
+
+### Ruled out this session
+- Not evidence the R2 guard fixes or fails to fix the crash — still 0
+  same-run positive control (guard fire) since s593's fix landed; both
+  nulls this session are pre-force-engagement deaths, a strictly weaker
+  null than s593's own (which at least reached hangar exit state=8).
+- `sec4=1` is NOT "post-exit reached" — corrected a possible
+  misreading of the soak script's own gate line (see above).
+
+### H13a (path-to-sec4 after case6-force is intermittent) reinforced
+Running tally since item -359 opened this question: s589 (reached, real
+crash), s592a (reached via retry, real crash — the s593 fix's evidence
+base), s592b/s593-manual/s593_coalesce_r2_verify_a/s593_coalesce_r2_verify_b
+(5 consecutive path-gated or pre-engagement nulls). Reaching post-exit sec4
+via this recipe remains unreliable; still no discriminating run for the R2
+guard fix itself.
+
+### Next
+Queued `s594_coalesce_r2_verify_c`/`_d` (identical recipe) to
+`scratch/agent/soak_queue/` for the loop. Per NEXT.md's own budget note,
+do not spend a further manual session babysitting this — keep consuming
+queued retries until one lands `sec4>=2` with both coalesce guards armed.
+
+### Artifacts
+`scratch/agent/soak_results/s593_coalesce_r2_verify_a_20260809-195057.log`,
+`scratch/agent/soak_results/s593_coalesce_r2_verify_b_20260809-195343.log`
+(drivers); `scratch/s73_post_a_scene/s593_coalesce_r2_verify_{a,b}_.../run.log`
+(full logs, crash stacks near EOF); `lib/N64ModernRuntime/librecomp/src/overlays.cpp`
+line ~258 (`load_overlays_by_start`, source of the sec4 log line).

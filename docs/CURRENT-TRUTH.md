@@ -212,14 +212,26 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
     0 guard hits either family, 0 crash, but the guarded code path never
     executed) — per iron rule 1 this proves nothing either way; it's a 3rd
     data point for path-to-sec4 being intermittent (**H13a**), not new
-    information about the fix. **Next**: queue more
-    `s593_coalesce_r2_verify`-shaped retries until one lands post-exit sec4
-    with both coalesce guards armed — that run is the real discriminating
-    test (guard fires + survives → CONFIRMED FIXED; guard fires + still
-    crashes → bail semantics wrong for this site; 0 fires + still crashes at
-    `0x8000247c` → patch didn't take, check regen order). Artifacts:
-    `PORTING-STATE.md` Session 593; `s592_sec4_thr12_a_20260809192526/run.log`;
-    `s593_coalesce_r2_verify/run.log`.
+    information about the fix. **s594 (this session): 4th+5th data points,
+    still NULL.** Consumed queued `s593_coalesce_r2_verify_a`/`_b` — both died
+    on unrelated, already-catalogued background noise *before* the
+    force-exit env could even engage (`case6=0 hangar-sel=0` both runs):
+    `_a` hit item -331's breadcrumb 2nd occurrence (`heapFreeListDequeue`
+    `last-guest-pc=0x8000d688`, confidence upgraded low→moderate, see item
+    -331 entry above); `_b` hit item -306's well-known weak-early-death
+    signature (`setByteAcrossEntryList+176`/`0x800aafa8`). Both showed
+    `sec4=1`: the soak script's counter matches literal `"start-match:
+    section 4"` from `overlays.cpp`'s chunked-DMA logger, which fires once at
+    normal boot-time overlay preload regardless of hangar exit (confirmed by
+    checking `s592_sec4_thr12_a`'s real post-exit-reaching run, which shows
+    `sec4=2` — the 2nd occurrence is the genuine post-exit reload).
+    **`sec4>=2` is the correct discriminating threshold, `sec4=1` is
+    boot-only noise** — NEXT.md's decision tree already had this right; both
+    `_a`/`_b` are consistent path-gate nulls (H13a), not new information
+    about the fix. Queued `s594_coalesce_r2_verify_c`/`_d`, identical recipe.
+    Artifacts: `PORTING-STATE.md` Sessions 593-594;
+    `s592_sec4_thr12_a_20260809192526/run.log`;
+    `s593_coalesce_r2_verify_{a,b}_.../run.log`.
 
 -360. **(s590/s591) Post-exit thr-11→section4→thr-12→section2 — RECHARACTERIZED.**
     thr-11 `saveServiceWorker` (0x8006F2CC) is infinite recv loop; destroy =
@@ -444,9 +456,12 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
     -329 (s529) `rebuildActiveDisplayObjectList+660`/`0x800ab060`, distinct from the item -317 R5
     `+540` breadcrumb. -330 (s536/s537, 2 occurrences back-to-back, weak corroboration per the
     boring-first prior — same binary/script/adjacent wall-clock) `heapFreeListInsert+72`/
-    `0x800220b8`, distinct from -324's same-symbol/different-PC breadcrumb. -331 (s537,
+    `0x800220b8`, distinct from -324's same-symbol/different-PC breadcrumb. **-331** (s537,
     `local-symtab`-tagged, in the free-list-pop region, before every already-guarded address in
-    `heapFreeListDequeue`) `heapFreeListDequeue+29152`/`0x8000d688`. **-332** (s539 weak `n=5`,
+    `heapFreeListDequeue`) `heapFreeListDequeue+29152`/`0x8000d688` — **2nd occurrence s593**
+    (`s593_coalesce_r2_verify_a`, host offset drifted to `+32892` per the s541 pc-symbol-instability
+    gotcha but same `last-guest-pc=0x8000d688`; confidence low→moderate, watch for a 3rd before
+    source-tracing, same pattern as -332). **-332** (s539 weak `n=5`,
     recurred s544 with a strong `n=2600` control — confidence upgraded low→moderate, watch for a 3rd
     before source-tracing) `submitSceneNodeRender+38976`/`0x8001086c`. **-333** (s546,
     `local-symtab`-tagged, 16 bytes from -331's address but a distinct guest PC — treat the

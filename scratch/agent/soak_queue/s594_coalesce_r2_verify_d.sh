@@ -1,12 +1,15 @@
 #!/bin/zsh
-# s593 soak_queue: force case6+inject HOLD90, BOTH coalesce guards armed,
+# s594 soak_queue: force case6+inject HOLD90, BOTH coalesce guards armed,
 # retry until post-exit sec4 lands (item -361 R2 guard live re-verify).
+# 3rd/4th attempt after s593_coalesce_r2_verify_a/b both died pre-force-exit
+# on unrelated background noise (item -306 weak early death, item -331 2nd occ)
+# with case6=0 hangar-sel=0 sec4=1 (boot-only, not the real post-exit sec4>=2 gate).
 # Self-contained from repo root. Exit nonzero on game CRASH marker.
 set -u
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT" || exit 2
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-TAG="s593_coalesce_r2_verify_a_$(date +%Y%m%d%H%M%S)"
+TAG="s594_coalesce_r2_verify_d_$(date +%Y%m%d%H%M%S)"
 OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
 mkdir -p "$OUT"
 /usr/bin/pkill -9 -x RogueSquadron64Recomp 2>/dev/null || true

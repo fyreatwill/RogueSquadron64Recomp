@@ -307,3 +307,5 @@
 20260809-s592-manual | s592_sec4_thr12_r2 (case6+inject HOLD90) | rc=0 crash hold-iter1 | scratch/s73_post_a_scene/s592_sec4_thr12_r2/run.log | 0 case6 0 hangar-sel 0 inject; CRASH beginFrameDLChunk+46800/0x8000afa0 (-338 4th) hangar state=5; thr-10 live; H13b/c/d untested
 20260809-192526 | s592_sec4_thr12_a | rc=1 | 267s | scratch/agent/soak_results/s592_sec4_thr12_a_20260809-192526.log
 20260809-192953 | s592_sec4_thr12_b | rc=1 | 7s | scratch/agent/soak_results/s592_sec4_thr12_b_20260809-192953.log
+20260809-195057 | s593_coalesce_r2_verify_a | rc=1 | 166s | scratch/agent/soak_results/s593_coalesce_r2_verify_a_20260809-195057.log
+20260809-195343 | s593_coalesce_r2_verify_b | rc=1 | 126s | scratch/agent/soak_results/s593_coalesce_r2_verify_b_20260809-195343.log
