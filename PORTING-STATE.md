@@ -47136,3 +47136,106 @@ queued retries until one lands `sec4>=2` with both coalesce guards armed.
 (drivers); `scratch/s73_post_a_scene/s593_coalesce_r2_verify_{a,b}_.../run.log`
 (full logs, crash stacks near EOF); `lib/N64ModernRuntime/librecomp/src/overlays.cpp`
 line ~258 (`load_overlays_by_start`, source of the sec4 log line).
+
+## Session 595 — 2026-08-09 — item -361: 6th+7th coalesce R2 verify attempts consumed; item -347 REFRAMED as instrumentation-coverage artifact, not a recurring bug; recipe redesigned
+
+### Consumed queued s594_coalesce_r2_verify_c/_d
+Both already ran between iterations. `_d`: `case6=0 hangar-sel=0 sec4=0
+crash=CRASH` — pre-engagement null, same shape as prior nulls. `_c`: **real
+progress** — `case6=1 hangar-sel=1 inject_lines=24 sec4=1 recov76B768~=0
+crash=CRASH`. Force-exit engaged, hangar-sel reached, `FS_PIPE_INJECT`
+climbed to n=200+ through the E7→F3→FD residual sequence (matches s588's H9d
+model exactly), but **the FULL_SYNC recovery cell `0x76B768` never fired**
+(0 occurrences in 183k lines) — so thr-11 never destroyed, sec4 never
+reached its post-exit 2nd hit, and the run drifted ~380s until an unrelated
+crash. Neither `_c` nor `_d` reaches `sec4>=2`; both are non-discriminating
+for the R2 guard fix itself (iron rule 1: `coalesce_guard2_r2=0` on both,
+consistent with "guarded code path never executed", not "fix inert").
+
+### Item -347 REFRAMED: 3rd occurrence is not evidence of a recurring bug
+`_c` crashed at `pc-symbol=transformLightByType+256 (local-symtab)`,
+`last-guest-pc=0x80010134` — item -347's exact signature, now 3 occurrences
+(s566, s582, s594/s595). Per that item's own escalation rule ("watch for a
+3rd before source-tracing"), traced the guest PC in
+`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c`: `0x80010134` is the
+JAL-delay-slot `sw $v0, 0x10($sp)` in `submitSceneNodeRender`, immediately
+after `jal transformSceneLights` (0x80010130). That part of the s566/s582
+analysis was already correct. New finding: **`transformSceneLights` and its
+callee `transformLightByType` (funcs_3.c:36935-37750 and :30793-31082) carry
+ZERO `g_rs64_last_guest_pc` tracking lines in their bodies** — confirmed by
+direct grep over both function ranges. Cross-checked against
+`submitSceneNodeRender` (which DOES track every instruction, 1164 tracking
+lines + 20 `GUARD` macro references in its first 700 lines) to establish the
+mechanism: tracking is **guard-campaign-associated instrumentation**, added
+only to the ~150 functions touched by the freelist/sibling-ptr/etc. audit
+lineages (item -317 and siblings), not blanket per-function coverage.
+Codebase-wide scan (`RecompiledFuncs/funcs_*.c`, all `RECOMP_FUNC` bodies
+>5 lines): **2447 of 2499 functions (98%) have zero tracking lines** — the
+instrumented set is the exception, not the rule.
+
+**Consequence:** when a crash occurs anywhere inside an unaudited callee
+subtree, `g_rs64_last_guest_pc` freezes at the last *instrumented* caller's
+address — here, permanently at `submitSceneNodeRender`'s own JAL delay slot,
+regardless of which instruction inside `transformSceneLights` /
+`transformLightByType` / their own callees actually faults. Three sessions
+reporting the identical `last-guest-pc=0x80010134` is therefore **not**
+proof of one recurring bug at one address — it is consistent with three
+completely different crashes anywhere in an unaudited, multi-function-deep
+subtree, all bucketed under the same caller stub. Item -347's "watch for a
+3rd before source-tracing" escalation heuristic does not apply here: there
+is no more precise site to source-trace than "somewhere past
+`transformSceneLights`," and treating this as a single fixable bug would be
+guessing. **Reclassified: filed as instrumentation-coverage artifact, not
+escalated.** No guard written.
+
+**Generalization (method trap):** the "watch for the Nth occurrence before
+escalating" pattern used throughout the Next-steps breadcrumb list
+(items -323/-324/-325/-326/-330/-332/-333 use the same heuristic) is only
+sound when the reporting function is inside the guard-audited/instrumented
+set. For a breadcrumb whose function has never been touched by a guard
+campaign, repeated identical `last-guest-pc` values carry much weaker
+evidentiary value than the heuristic assumes, since the address may be a
+shared caller stub rather than the true fault site. Did not audit which of
+the other watch-listed breadcrumbs are similarly affected (out of scope for
+this iteration) — flagging the caveat for future escalation decisions
+rather than re-litigating each one now.
+
+### Redesigned the item -361 verify recipe (iron rule 8)
+Tally since item -359 opened this question: s589 (reached, recovery fired),
+s592a (reached via retry, recovery fired), then **5** consecutive
+path-gated/pre-engagement nulls (s592b, s593-manual, s593_a, s593_b, s594_d)
+plus **1** reached-but-no-recovery null (s594_c) = **7 consecutive
+non-discriminating attempts** for the R2 guard fix specifically. Per
+NEXT.md's own iron-rule-8 clause, did not queue a 3rd blind identical pair.
+`_c`'s data point narrows the redesign: the recipe CAN reach case6=1 +
+hangar-sel=1 + full FS_PIPE_INJECT residual coverage reliably when it gets
+past the pre-engagement noise — the remaining unreliability is specifically
+the FULL_SYNC recovery cell (`0x76B768`) firing within the `HOLD_S=90`
+window (s589/s592a yes, s591/s594_c no). Redesigned: raised `HOLD_S` 90→210
+(s592a's own 267s @ HOLD90 implies ~177s non-hold overhead; 177+210=387s,
+safely under the loop's 600s hard cap) to give the recovery cell more
+wall-clock exposure per run before giving up. Queued
+`s595_coalesce_r2_verify_e`/`_f` (identical redesigned recipe) to
+`scratch/agent/soak_queue/`.
+
+### Ruled out this session
+- `_c`'s crash is NOT new evidence about the R2 guard fix (guard2_r2=0,
+  path never reached the guarded code).
+- `_c`'s crash is NOT confirmation that item -347 is a real recurring bug
+  at a specific address — see reframing above.
+
+### Next
+Consume `s595_coalesce_r2_verify_e`/`_f` next iteration. If a run reaches
+`sec4>=2`, follow the same decision tree as s594 (NEXT.md). If both are
+STILL non-discriminating, the redesign axis to try next is a pre-hangar
+stabilization pass (reduce the pre-engagement noise-death rate) or a
+natural (non-force) double_start path, per NEXT.md's own listed options.
+
+### Artifacts
+`scratch/agent/soak_results/s594_coalesce_r2_verify_c_20260809-200200.log`,
+`_d_20260809-200519.log` (drivers);
+`scratch/s73_post_a_scene/s594_coalesce_r2_verify_c_20260809200200/run.log`
+(full log, crash stack + fs-pipe-inject trail near EOF);
+`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_3.c` lines 30793-31082
+(`transformLightByType`), 36935-37750 (`transformSceneLights`), `funcs_4.c`
+lines 6-700 (`submitSceneNodeRender`, instrumented comparison case).

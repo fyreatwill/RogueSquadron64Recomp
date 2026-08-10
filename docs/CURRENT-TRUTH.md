@@ -229,9 +229,20 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
     boot-only noise** — NEXT.md's decision tree already had this right; both
     `_a`/`_b` are consistent path-gate nulls (H13a), not new information
     about the fix. Queued `s594_coalesce_r2_verify_c`/`_d`, identical recipe.
-    Artifacts: `PORTING-STATE.md` Sessions 593-594;
-    `s592_sec4_thr12_a_20260809192526/run.log`;
-    `s593_coalesce_r2_verify_{a,b}_.../run.log`.
+    **s595: consumed `_c`/`_d`.** `_d` pre-engagement null (case6=0). `_c`
+    reached case6=1 hangar-sel=1 + full FS_PIPE_INJECT residual coverage
+    (n=200+, E7→F3→FD) but **recovery cell `0x76B768` never fired** —
+    thr-11 never destroyed, sec4 stayed at boot-only 1, run eventually hit
+    the item -347 breadcrumb (now reframed, see above) at ~380s. **7
+    consecutive non-discriminating attempts** for the R2 fix itself
+    (`coalesce_guard2_r2=0` on every one — guarded path never executed).
+    Per iron rule 8, redesigned rather than re-queued blind: `HOLD_S`
+    raised 90→210 to give the intermittent recovery cell more exposure per
+    run (s589/s592a recovery fired; s591/s594_c did not). Queued
+    `s595_coalesce_r2_verify_e`/`_f`. Artifacts: `PORTING-STATE.md` Sessions
+    593-595; `s592_sec4_thr12_a_20260809192526/run.log`;
+    `s593_coalesce_r2_verify_{a,b}_.../run.log`;
+    `s594_coalesce_r2_verify_c_20260809200200/run.log`.
 
 -360. **(s590/s591) Post-exit thr-11→section4→thr-12→section2 — RECHARACTERIZED.**
     thr-11 `saveServiceWorker` (0x8006F2CC) is infinite recv loop; destroy =
@@ -339,12 +350,22 @@ a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
     confirm):** hangarbay n=3000, full ~300s rc=0, 0 fires, 0 CRASH — CLEAN. DIRECT residual
     same-base campaign for freelist/sibling write-guard lineage **exhausted**.
 
--347. **(s566, s582 — 2 occurrences) `transformSceneLights`/`transformLightByType` /
-    `last-guest-pc=0x80010134` breadcrumb.** s566: `transformSceneLights+2456` at
-    hangarbay n=2600. **s582 force-exit cutscene:** `transformLightByType+256` same
-    guest PC (after hangar-sel/state8/VI640; hangarbay n=800). Guest `0x80010134` is
-    caller `submitSceneNodeRender` JAL delay-slot before `jal transformSceneLights`.
-    Confidence low→moderate; watch for a 3rd before source-tracing.
+-347. **(s566, s582, s594/s595 — 3 occurrences) `transformSceneLights`/`transformLightByType` /
+    `last-guest-pc=0x80010134` breadcrumb — REFRAMED s595 as an instrumentation-coverage
+    artifact, NOT escalated.** Guest `0x80010134` is `submitSceneNodeRender`'s JAL
+    delay-slot right after `jal transformSceneLights`. s595 traced the source: neither
+    `transformSceneLights` nor its callee `transformLightByType` carries ANY
+    `g_rs64_last_guest_pc` tracking (0 lines in either body), while `submitSceneNodeRender`
+    itself is fully tracked (part of the `SIBLING_PTR_WRITE_GUARD` campaign). Codebase scan:
+    tracking exists in only 52/2499 recompiled functions — it's added per guard-campaign
+    function, not blanket. **Consequence: a crash anywhere in this unaudited subtree freezes
+    `last-guest-pc` at the same caller stub regardless of the true fault site** — 3 identical
+    reports are consistent with 3 *different* crashes, not one recurring bug. No guard
+    written; not source-traceable further without first instrumenting the subtree (a new
+    audit, not a reactive chase). **Method-trap generalization:** the "watch for the Nth
+    occurrence" escalation heuristic (used by items -323/-324/-325/-326/-330/-332/-333 too)
+    only has teeth when the reporting function is inside the guard-audited/instrumented set —
+    unaudited-subtree breadcrumbs need this caveat before escalating on repeat count alone.
 
 -346. **(s565/s566/s567) `heapFreeListDequeue` residual r3-base write at `0x8000D6D0` — FIXED
     and FULLY CLOSED 2/2 (s567).** DIRECT gap before existing `HEAP_FREE_LIST_DEQUEUE_R2_GUARD`
@@ -653,3 +674,9 @@ histogram-drain timing, camera motion confounding aggregates): `docs/PROJECT-OVE
   bug (grepping the game's `run.log` for driver-emitted `[keys]` lines, which only ever land in the
   launcher's own log) that made 2 real, fully key/stick-driven soaks misreport as having driven no
   input at all. Item -200.
+- **repeated-`last-guest-pc` is not repeated-bug proof outside the audited set (s595)**: `g_rs64_last_guest_pc`
+  tracking is added per guard-campaign function (52/2499 functions, ~2%), not blanket. A crash inside an
+  unaudited callee subtree freezes the value at the last *instrumented* caller, so N sessions reporting
+  the identical address can be N different crashes sharing one caller stub, not one recurring bug at one
+  site. Check whether the reporting function is in the guard-audited set before trusting the "watch for
+  the Nth occurrence" escalation heuristic used throughout the Next-steps breadcrumb list. Item -347.

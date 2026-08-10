@@ -309,3 +309,5 @@
 20260809-192953 | s592_sec4_thr12_b | rc=1 | 7s | scratch/agent/soak_results/s592_sec4_thr12_b_20260809-192953.log
 20260809-195057 | s593_coalesce_r2_verify_a | rc=1 | 166s | scratch/agent/soak_results/s593_coalesce_r2_verify_a_20260809-195057.log
 20260809-195343 | s593_coalesce_r2_verify_b | rc=1 | 126s | scratch/agent/soak_results/s593_coalesce_r2_verify_b_20260809-195343.log
+20260809-200200 | s594_coalesce_r2_verify_c | rc=1 | 199s | scratch/agent/soak_results/s594_coalesce_r2_verify_c_20260809-200200.log
+20260809-200519 | s594_coalesce_r2_verify_d | rc=1 | 7s | scratch/agent/soak_results/s594_coalesce_r2_verify_d_20260809-200519.log

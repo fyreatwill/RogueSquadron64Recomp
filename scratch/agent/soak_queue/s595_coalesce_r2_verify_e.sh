@@ -1,20 +1,27 @@
 #!/bin/zsh
-# s594 soak_queue: force case6+inject HOLD90, BOTH coalesce guards armed,
-# retry until post-exit sec4 lands (item -361 R2 guard live re-verify).
-# 3rd/4th attempt after s593_coalesce_r2_verify_a/b both died pre-force-exit
-# on unrelated background noise (item -306 weak early death, item -331 2nd occ)
-# with case6=0 hangar-sel=0 sec4=1 (boot-only, not the real post-exit sec4>=2 gate).
+# s595 soak_queue: REDESIGNED recipe for item -361 R2 guard live re-verify.
+# 7 consecutive non-discriminating attempts (s592b, s593-manual, s593_a/b,
+# s594_c/d) all died before reaching post-exit sec4>=2 -- either pre-force-exit
+# background noise (case6=0) or force-exit reached (case6=1 hangar-sel=1,
+# s594_c) but the FULL_SYNC recovery cell (0x76B768) never fired within the
+# HOLD_S=90 window, so thr-11 never destroyed and the run drifted into
+# unrelated background noise (item -347, transformLightByType region) instead
+# of ever reaching sec4>=2. Per NEXT.md's iron-rule-8 redesign clause: recovery
+# is intermittent (s589 fired, s591/s594 did not) -- give it more wall-clock
+# exposure per run instead of blindly re-queuing the same HOLD_S=90 shape.
+# HOLD_S raised 90->210 (s592a's own 267s @ HOLD90 implies ~177s non-hold
+# overhead; 177+210=387s, safely under the loop's 600s hard cap).
 # Self-contained from repo root. Exit nonzero on game CRASH marker.
 set -u
 ROOT="$(cd "$(dirname "$0")/../../.." && pwd)"
 cd "$ROOT" || exit 2
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-TAG="s594_coalesce_r2_verify_d_$(date +%Y%m%d%H%M%S)"
+TAG="s595_coalesce_r2_verify_e_$(date +%Y%m%d%H%M%S)"
 OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
 mkdir -p "$OUT"
 /usr/bin/pkill -9 -x RogueSquadron64Recomp 2>/dev/null || true
 sleep 0.3
-env PROBE_MODE=start_only HOLD_S=90 \
+env PROBE_MODE=start_only HOLD_S=210 \
   GAME_EXTRA_ENV="ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_COALESCE_HEAP_GUARD=1 ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD=1" \
   zsh "$ROOT/scratch/s73_post_a_scene/run_mission_keys.sh" "$TAG" 5 12
 RC=$?
