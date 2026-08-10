@@ -46873,3 +46873,51 @@ Do not reactive-chase leave-path or findLookupEntry crashes.
 
 ### Artifacts
 `scratch/s73_post_a_scene/s590_section2_{natural,case6}/` + case6 `ANALYSIS.md`
+
+## Session 591 — thr-11 pipeline offline+live (item -360 / m3-post-exit-fs-stall)
+
+### Work unit
+Item -360: discriminate why thr-11 `saveServiceWorker` never finishes on force
+path (blocks sec4→thr-12→sec2). Offline timelines s577/s589/s590 + live
+`s591_thr11_pipeline` (FORCE_CASE6=5 + FS_PIPE_INJECT HOLD_S=90 + audio-drain).
+
+### Offline thr-11 create→destroy (runner task #)
+
+| run | Δtasks thr-11 | destroy | post-exit sec4 | thr-12 | sec2 | notes |
+|-----|---------------|---------|----------------|--------|------|-------|
+| s577 natural | 266 | yes | yes | yes | yes | baseline |
+| s589 force+inject | 2851 | yes | yes | no | no | recovery @0x76B768×1988; crash initSceneForMission/coalesce after sec4 |
+| s590 case6+inject | never | no | no | no | no | recovery×3853; crash findLookupEntry while thr-11 live |
+| s591 case6+inject | never | no | no | no | no | **0 recovery**; inject n=26 E7-only; trailing syncs=0×2086; fs max 4980 |
+
+### Source
+`saveServiceWorker` (0x8006F2CC) is an infinite `recvServiceMessage` →
+`saveLoadDispatcher` loop. Destroy is external (`stopSaveServiceWorker` →
+`unregisterServiceWorker` → `osDestroyThread`), not self-exit. Architecture
+doc's "stubbed" note is stale for the worker body (full loop present).
+
+s591 `audio-drain`: last enter/exit (iters=1) is thr-10 teardown immediately
+before thr-11 create; **zero** drain calls during thr-11 lifetime → not
+waitForAnyAudioSlot-blocked.
+
+### Hypotheses
+- **H12a REFUTED as primary** (mesg/audio wait inside thr-11).
+- **H12b partial** (intermittent crashes can kill before destroy; not required).
+- **H12c SUPPORTED**: thr-11 destroy + sec4 co-occur only when post-exit
+  cutscene can advance (natural short life, or force + successful FULL_SYNC
+  recovery). Failed recovery (s591 = s588 empty path) → thr-11 lives until
+  unrelated crash.
+- **H12d untested** (need sec4 without immediate crash).
+
+### Recharacterization
+thr-11 "stall" is a **symptom** of cutscene freeze under FULL_SYNC starvation.
+thr-11 is a long-lived service; scene transition stops it and loads section 4.
+Product inject still default OFF; recovery still nondeterministic on force path
+(s589 yes / s591 no).
+
+### Next
+Reproduce recovery→sec4 (s589 shape), then thr-12 create vs
+initSceneForMission crash. Do not re-open thr-11 as recv-block.
+
+### Artifacts
+`scratch/s73_post_a_scene/s591_thr11_pipeline/` + `ANALYSIS.md`

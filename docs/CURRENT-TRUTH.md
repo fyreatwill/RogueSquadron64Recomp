@@ -31,7 +31,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s590)
+## Current truth (established by session 295; unchanged, reviewed through s591)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -165,13 +165,17 @@ real, not hidden content). Post-dual empty = failed-recovery path, not a
 structural gap. **s590 item -359:** natural double_start crashed leave-path
 before exit; `ROGUESQ_FORCE_CASE6_START` at ACE94 delivered natural **3→5→6→8**
 + hangar-sel + VI 640 still **0 section 2** — **H11a REFUTED** as sole gate.
-Section 2 pipeline (s577): thr-11 `saveServiceWorker` done → sec4 → thr-12
-`hudDisplayUpdateWorker` → sec2. Force/case6: thr-11 unfinished (s590) or
-sec4 then immediate crash (s589). Recovery @0x76B768 **2nd confirm** (s590
-×3853). `FS_PIPE_INJECT` still default OFF until thr pipeline healthy. DoD
-gate = **cutscene→in-mission** + craft input. *Done when:* 60s in-mission
-render, craft responds to synthetic input, stability 0, phase timeline covers
-the mission.
+Section 2 pipeline (s577): thr-11 destroy ↔ sec4 → thr-12
+`hudDisplayUpdateWorker` → sec2. **s591:** thr-11 is a long-lived
+`recvServiceMessage` service (external stop), not a progress worker —
+"unfinished thr-11" = cutscene freeze under FULL_SYNC starvation (H12a
+REFUTED; H12c SUPPORTED). Force: thr-11 destroy+sec4 only when recovery
+fires (s589); failed recovery (s591: 0×76B768, inject n=26) leaves thr-11
+alive until noise crash. s589 post-sec4 crash in `initSceneForMission`
+before thr-12. `FS_PIPE_INJECT` still default OFF. DoD =
+**cutscene→in-mission** + craft input. *Done when:* 60s in-mission render,
+craft responds to synthetic input, stability 0, phase timeline covers the
+mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -186,15 +190,23 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -360. The next NEW item takes -361.
+a range pointer. Highest allocated so far: -361. The next NEW item takes -362.
 
--360. **(s590) Post-exit thr-11→section4→thr-12→section2 pipeline stall.**
-    s577: thr-11 `saveServiceWorker` (0x8006F2CC) destroy → sec4; thr-12
-    `hudDisplayUpdateWorker` (0x800495FC) create→destroy → sec2 @0xA5D30.
-    s589 force: thr-11 late destroy → sec4 → crash before thr-12. s590 case6:
-    thr-11 never finishes; 0 sec4/thr12/sec2. Next: same-run thr-11 progress
-    counters + wall-time create→destroy natural vs case6+inject; gate next
-    probe on thr-12 create as section-2 precursor.
+-361. **(s591) Post-sec4 thr-12 create vs `initSceneForMission` crash.**
+    s589 alone reached thr-11 destroy + sec4 on force; stack
+    `cinematicLoopBody→initSceneForMission→coalesceFreeHeapBlocks+4424`/
+    `0x8000247c` before thr-12. Next: recovery-reliable force hold that
+    reproduces sec4, then thr-12 create within N seconds of sec4 vs known
+    coalesce noise — only escalate if thr-12 missing on crash-free sec4 hold.
+
+-360. **(s590/s591) Post-exit thr-11→section4→thr-12→section2 — RECHARACTERIZED.**
+    thr-11 `saveServiceWorker` (0x8006F2CC) is infinite recv loop; destroy =
+    external stop co-timed with sec4 DMA. **H12a REFUTED** (not mesg/audio
+    wait; s591 audio-drain iters=1 only at thr-10 restart). **H12c SUPPORTED**
+    (thr-11 destroy+sec4 only with healthy FULL_SYNC / recovery: s577 Δ266
+    tasks; s589 Δ2851 + recovery; s591 no recovery → thr-11 never destroy).
+    Primary remaining = item -361 (post-sec4 thr-12) + recovery reliability.
+    Artifact: `s591_thr11_pipeline/ANALYSIS.md`.
 
 -359. **(s589/s590) Force path missing section 2 — RECHARACTERIZED.** Not a
     hangar case5 vs case6 gate (**H11a REFUTED** s590: FORCE_CASE6 did 6→8 +
@@ -491,14 +503,13 @@ a range pointer. Highest allocated so far: -360. The next NEW item takes -361.
 -8. **M3 — characterize `frameStartReset` SIGBUS.** 3 occurrences (s85, s108, s156 — the 3rd, `+532`, at a call chain byte-identical to `composeNpcOrientationMatrix`'s own, raising a shared-dispatcher hypothesis); no located faulting instruction in any of the 3.
 -7. **M3 — hangar-exit → mission-entry (M3 DoD gate): OPEN — exit + cutscene
     CONFIRMED; dual FULL_SYNC sticky gap product-fixed when inject+recovery
-    (s587–s590); in-mission blocked by post-exit thr pipeline (item -360),
-    not classic s178 and not case5-vs-case6 (H11a REFUTED s590).**
-    **Natural exit (s577):** 3→5→6→8 → thr-11 → sec4 → thr-12 → sec2 → VI flip.
-    **s578–s586:** FULL_SYNC starvation sticky E9→E7→F3/FD + PIPE filter.
-    **s587–s589:** `FS_PIPE_INJECT` + recovery path. **s590:** FORCE_CASE6
-    reliable 6→8 exit; recovery 2nd confirm; thr-11 never finishes on case6.
-    Natural leave crashes file-not-chase. **Primary remaining:** thr-11
-    complete → thr-12 → section 2 (-360); inject still default OFF.
+    (s587–s590); in-mission blocked by post-exit scene transition under
+    FULL_SYNC health (items -360/-361), not thr-11 recv-block (H12a REFUTED
+    s591) and not case5-vs-case6 (H11a REFUTED s590).**
+    **Natural (s577):** thr-11 destroy ↔ sec4 → thr-12 → sec2.
+    **Force:** thr-11 destroy+sec4 only if recovery (s589 yes / s591 no);
+    thr-12 still never observed on force (s589 crash in initSceneForMission).
+    Natural leave crashes file-not-chase. Inject still default OFF.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.

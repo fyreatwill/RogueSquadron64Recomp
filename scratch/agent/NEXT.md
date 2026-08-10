@@ -2,71 +2,57 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s590 recap (read this first)
+## s591 recap (read this first)
 
 | H | Result | Evidence |
 |---|--------|----------|
-| H11a case6 edge is section-2 gate | **REFUTED** | FORCE_CASE6 3→5→6→8 + hangar-sel + VI640; 0 sec2 |
-| H11b FULL_SYNC/thr health | **SUPPORTED** | thr-11 never finishes (s590); late thr-11→sec4→crash (s589) |
-| H11c hangar-sel val=0 hard block | weak | s577 val=0 yet sec2 |
-| Section-2 pipeline | **MAPPED** | thr-11 destroy→sec4→thr-12→sec2 (s577) |
-| Inject recovery 2nd | **CONFIRMED** | 0x76B768 ×3853 on s590 |
+| H12a thr-11 mesg/audio wait | **REFUTED primary** | infinite recv loop; external stop; audio-drain only at thr-10 restart iters=1 |
+| H12b thr-11 guest crash | partial noise | s590/s591 die thr-11 live; s589 thr-11 completes |
+| H12c FULL_SYNC health gates thr-11 destroy/sec4 | **SUPPORTED** | s577 Δ266; s589 Δ2851+recovery→sec4; s591 0 recovery→no destroy |
+| H12d thr-12 flag beyond sec4 | untested | s589 sec4 then initSceneForMission crash pre thr-12 |
+| thr-11 is progress worker | **REFUTED** | save service; destroy ↔ sec4 scene transition |
 
-Code: `ROGUESQ_FORCE_CASE6_START` at ACE94 (fixup + funcs_28.c).
-Artifact: `scratch/s73_post_a_scene/s590_section2_case6/ANALYSIS.md`.
+Artifact: `scratch/s73_post_a_scene/s591_thr11_pipeline/ANALYSIS.md`.
 
 ## This iteration's work unit
 
-**Item -360: thr-11 (saveServiceWorker) stalls post-exit; thr-12 never starts.**
+**Item -361: post-sec4 thr-12 create vs `initSceneForMission` crash.**
 
-Section 2 only after thr-11 completes → sec4 → thr-12. Force/case6+inject
-reach hangar exit but thr-11 does not finish (or finishes then dies before
-thr-12). Discriminate wait-on-message vs RDP/FULL_SYNC vs crash-before-done.
+Need a force run that reproduces s589 (thr-11 destroy + sec4). Then
+discriminate: does thr-12 appear on a crash-free sec4 hold, or is thr-12
+gated beyond sec4?
 
 ### Hypotheses
-- H12a: thr-11 blocks on a mesg/event that never arrives under dual sticky
-  (even with inject), so destroy is delayed until recovery+long hold.
-- H12b: thr-11 runs guest code that crashes (`findLookupEntryByKey` /
-  freelist noise) before overlay DMA; section 4 never issued.
-- H12c: thr-11 completes only when `rdpFs`/present stays healthy for a
-  minimum window; inject recovery is too late / thr-11 already wedged.
-- H12d: thr-12 create is gated on a flag set inside thr-11 epilogue that
-  force path corrupts (sec4 alone insufficient — s589 had sec4, no thr-12).
+- H13a: recovery is intermittent; retry case6+inject HOLD≥90 until sec4 (s589 shape).
+- H13b: once sec4 lands, thr-12 creates within ~same gap as s577 (~few hundred thr-resume) unless crash intervenes.
+- H13c: `initSceneForMission`/`coalesceFreeHeapBlocks`/`0x8000247c` systematically blocks thr-12 on force path (not intermittent noise).
+- H13d: thr-12 create is independent of thr-11 destroy timing once sec4 is loaded.
 
 ### Discriminating measurement
-1. Arm always-on sparse thr-11 progress: create time, each run_next (or
-   every N guest PCs inside saveServiceWorker), destroy, and any
-   `[overlay] start-match` in same run. Prefer existing thr-create/destroy
-   logs + wall timestamps from `update_screen` / process epoch.
-2. Same binary: case6+inject HOLD_S≥90 (s589 shape) vs natural if it
-   survives; compare thr-11 create→destroy wall seconds and whether
-   thr-12 appears within 30s of sec4.
-3. Positive controls: hangar e9_b late40; case6-force-start; inject n>0;
-   recovery @0x76B768 if dual sticky hits.
+1. Arm always-on: thr-create/destroy, overlay start-match, inject, recovery cell.
+2. Same recipe as s589/s591 until **post-exit sec4** observed (positive control for H13a).
+3. From sec4 line: wall/task delta to thr-12 create (entry 0x800495FC id≥12) vs crash.
+4. Positive controls: case6-force-start; hangar-sel+state8; inject n>0; if recovery @0x76B768 then expect thr-11 destroy.
 
 ### Exact commands
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-# Offline first if thr-11 guest body not yet instrumented: compare s577/s589/s590
-# thr-11 create/destroy line timestamps via proc_start_epoch + nearest [vi] line.
-# Then optional thin instrument in saveServiceWorker entry/exit only if offline
-# cannot split H12a/b/c.
+# Prefer 1–2 force soaks until sec4 (do not babysit if queueing):
 env PROBE_MODE=start_only HOLD_S=90 \
-  GAME_EXTRA_ENV="ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_RDP_FULLSYNC=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s591_thr11_pipeline 5 12
-# Offline: thr-create-id id=11 → thr-destroy id=11 → section 4 → thr-create id=12 → section 2
+  GAME_EXTRA_ENV="ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1" \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s592_sec4_thr12 5 12
+# Offline gate: post hangar-sel [overlay] section 4; thr-destroy id=11; thr-create entry=0x800495FC after that
 ```
 
+Optional soak_queue recipe if first attempt fails recovery (s591 shape): same env, tag `s592_sec4_thr12_retry`.
+
 ### Outcomes
-- thr-11 destroy + thr-12 + sec2 on case6+inject long hold → pipeline was
-  time-bounded; product hold recipe + default-ON inject path reopens
-- thr-11 destroy + sec4 but no thr-12 → H12d; instrument thr-11 epilogue flags
-- thr-11 never destroy, crash inside thr-11 guest → H12b; file breadcrumb only
-  if new signature; else thr-11 wait instrument
-- thr-11 never destroy, no crash, inject recovery live → H12a/c; mqdiag or
-  thr-11 mesg wait probe next
+- sec4 + thr-12 + no crash → pipeline clear; next = sec2 / in-mission
+- sec4 + thr-12 + later crash → thr-12 not the gate; follow thr-12→sec2
+- sec4 + crash before thr-12 (s589 repeat) ≥2/2 → H13c; open coalesce/initScene audit only if same-run sec4 positive control
+- no sec4 after 2 recovery-fail runs → recovery reliability is the work unit (back to H10a rate)
 
 ### Do NOT
-- Re-open H11a case5 vs case6 as section-2 gate.
-- Reactive leave-path / findLookupEntry crash chases.
+- Re-open thr-11 as recvServiceMessage block (H12a closed).
+- Reactive single-crash chase on findLookupEntry / trackResourceList without sec4.
 - Default-ON FS_PIPE_INJECT without thr-12/sec2 on a surviving path.
