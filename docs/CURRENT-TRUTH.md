@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s648)
+## Current truth (established by session 295; unchanged, reviewed through s649)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -35,14 +35,16 @@ Metal shader rebuilds need full Xcode on PATH:
 - `ROGUESQ_LOG_FL_ZERO_WATCH=1` (s640+): soft poller on freelist header phys
   `0x1F3CC0` **plus** s646/s647 mprotect page-fault watch (`[fl-zero-fault]`).
   Arms PROT_READ while header is zeros (boot `want=1`) or freelist-shaped
-  `0x2/0x60` (`want=2`); write SIGSEGV logs host PC via local-symtab + guest
-  sticky, re-enables RW. 16KB Apple pages → filter `in_hdr=1`. s647: freelist
-  window uses busy re-arm spinner (20µs hold-off after fault; poller 10µs) +
-  `to_zero_correlate`. **ARM64 SS via `thread_set_state` from SEGV REFUTED**
-  (nested SIGTRAP → CRASH). **s648:** freelist-window fault lines/BT are
-  **rate-limited** (first 32/16, all in_hdr, every 256th) — s647 BT-every-fault
-  produced ~121k lines under neighbor thrash. Posctrl LIVE s648 (fault_n=25,
-  CRASH=0).
+  `0x2/0x60` (`want=2`); write SIGSEGV/SIGBUS logs host PC via local-symtab +
+  guest sticky, re-enables RW. 16KB Apple pages → filter `in_hdr=1`. s647:
+  freelist window uses busy re-arm spinner (20µs hold-off after fault; poller
+  10µs) + `to_zero_correlate`. **ARM64 SS via `thread_set_state` from SEGV
+  REFUTED** (nested SIGTRAP → CRASH). **s648:** freelist-window fault lines/BT
+  **rate-limited** (first 32/16, all in_hdr, every 256th). **s649:** recover
+  watch-page faults even when `armed==0` (concurrent/stale-TLB race; s648
+  att4 SIGBUS in `buildModelViewerTextPage` at fa on page after peer disarm
+  fell through to `[CRASH]`). Count `late=1` recovers. Posctrl LIVE s649
+  (fault_n LIVE, `late=` field, CRASH=0).
 - Default-ON, no longer worth naming: `ROGUESQ_VI_FOLLOW_DRAW=3` (s23), `ROGUESQ_SHADE_WRAP=1`
   per-pixel (s24→s26), `ROGUESQ_FIX_ZERO_SHADE` (s20), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15),
   `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough + forceAdvance +
@@ -131,7 +133,7 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s648**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s649**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 when recovery `0x76B768` fires. **s619 thr11d_new LIVE**;
   **s624 -385 M1 LIVE** (`[level-tex-malloc-guard]` null `rs_malloc(0x136C)`). **s626 H-walk1**;
@@ -144,18 +146,18 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   memset-fl-dest LIVE. **s646** freeroll freelist to_zero: sticky drainMesh +
   **msfl hit=0** → **H-memset-writer REFUTED**; **`[fl-zero-fault]` mprotect LIVE**.
   **s647** busy_rearm + SS REFUTED; s646 freeroll was Outcome B (hdr race).
-  **s648** s647 freeroll **Outcome C** (2× silent, arm_fl LIVE, header survived 50s,
-  no freelist to_zero); **H-recov-co-gate-stomp SUPPORTED**; want=2 BT-every-fault
-  **toxic** (~7.5k×BT); **BT rate-limit** landed; freeroll queued (-402). thr11d
-  rate **4/10**. Residual rank: (1) freelist writer **store** -391/-402, (2) B8 acc
-  -393, (3) -387 do_rom_read 4×.
+  **s648** Outcome C + BT thrash toxic + rate-limit. **s649** s648 freeroll Outcome C +
+  **mprotect concurrent-fault CRASH** (att4 SIGBUS on watch page with `armed==0`);
+  **H-perturb-from-BT REFUTED**; **late-recover** fix landed; freeroll queued (-403).
+  thr11d rate **4/10**. Residual rank: (1) freelist writer **store** -391/-403, (2) B8
+  acc -393, (3) -387 do_rom_read 4×.
 - Co-gates: recovery silence (-374; `RECOV_WAIT_S=50` + `BUDGET_S≥900`), mat3inv (-375),
   ship (-376/-377/-392/-393), class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll
   scene/readacct/matfree (-382..-384), null-malloc thr12 (-385 M1; -389..-391/-397),
   sinfApprox (-386 1×), do_rom_read (-387 **4×**). thr11d metric = post-hsel destroy of
   `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`,
   `FS_PIPE_INJECT`. Post-sec2: packTlut (-373).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-402; Sessions 577-648.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-403; Sessions 577-649.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -173,24 +175,36 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -402. The next NEW item takes -403.
+a range pointer. Highest allocated so far: -403. The next NEW item takes -404.
 
-### Active M3 pipeline (s577–s648) — open residuals only
+### Active M3 pipeline (s577–s649) — open residuals only
 
--402. **(s648) freelist writer — s647 freeroll Outcome C; BT thrash toxic;
-    rate-limit landed; freeroll queued under recovery-active gate.**
+-403. **(s649) freelist writer — s648 freeroll Outcome C + mprotect concurrent
+    CRASH; late-recover landed; freeroll queued.**
+    s648 freeroll (outer rc=137 600s mid-att5): engaged att1 mat3inv + att4
+    recovery_silent; **0 recovery-active**. att4 **arm_freelist@146s 0x2/0x60
+    LIVE** then **immediate SIGBUS** `si_addr=0x3001f23b4` (same 16KB page as
+    slot) in `buildModelViewerTextPage` — `fl_zero_try_handle_fault` returned
+    false with **armed==0** (peer/stale-TLB race after first neighbor fault
+    disarmed) → `[CRASH]` killed process before freelist stomp window. Rate-
+    limit worked (fault lines ~23–32, not ~7.5k). **No freelist-shaped
+    to_zero**. **H-perturb-from-BT REFUTED** (still silent under rate-limit;
+    dual-source with s647 silent under full BT). **H-busy-rearm / H-fault-
+    writer still unevaluable**. Landed: recover watch-page faults when
+    `want!=0` even if `armed==0`; log `late=1`. Posctrl 55s: fault_n LIVE
+    `late=` field CRASH=0. Queued: `s649_fl_late_recover_freeroll.sh`
+    (discriminators A/B/C + E late LIVE / F CRASH recurrence). Full:
+    Sessions 648-649.
+
+-402. **(s648→s649) freelist writer — s647 freeroll Outcome C; BT thrash toxic;
+    rate-limit landed; s648 freeroll closed into -403.**
     s647 freeroll 2× recovery_silent: **arm_freelist@~145s 0x2/0x60 LIVE** both;
     heartbeats 150–195s flags=0x2 size=0x60 — **header survived ~50s** past
     historical stomp window; **no freelist-shaped to_zero** (only menu
-    0x8E8E→0). **H-busy-rearm unevaluable** (needs freelist to_zero).
-    **H-recov-co-gate-stomp SUPPORTED dual-source** (s646 att3 recov + freelist
-    to_zero#2 vs silent att1/s647×2 arm_fl + no freelist stomp). want==2:
-    fault_n≈7500 all in_hdr=0; **BT-every-fault ≈121k lines / 24MB** after
-    arm_freelist (`buildModelViewerTextPage` neighbor thrash) — instrument
-    self-DOS; **H-perturb** open (may elevate recovery silence). Landed
-    rate-limit: line first-32/in_hdr/every-256; BT first-16/in_hdr/every-256.
-    **Posctrl 55s:** fault_n=25 CRASH=0 BT frames=320. Queued:
-    `s648_fl_bt_ratelimit_freeroll.sh`. Full: Sessions 647-648.
+    0x8E8E→0). **H-busy-rearm unevaluable**. **H-recov-co-gate-stomp SUPPORTED
+    dual-source**. want==2 BT-every-fault toxic → rate-limit landed. s648
+    freeroll under rate-limit: still silent + NEW concurrent mprotect CRASH
+    → -403. Full: Sessions 647-649.
 
 -401. **(s647→s648) freelist writer — busy_rearm landed; s647 freeroll
     Outcome C → -402 (no freelist to_zero; BT thrash).**
@@ -380,19 +394,20 @@ a range pointer. Highest allocated so far: -402. The next NEW item takes -403.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s648) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
+-361. **(s589-s649) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
     Outcome A live; class-D soft-skip LIVE; -385 M1 LIVE thr12 blocked by null
     `rs_malloc(0x136C)` — **E8 zero-node `0x801F3CC0`**: H-oob-store CONFIRMED s640,
     H-walk-into-zeros REFUTED, **H-drainmesh-stomp REFUTED s642**; sticky/BT/gbt
     Outcome B s643-s645; **H-memset-writer REFUTED s646**; mprotect LIVE s646;
     busy_rearm s647; **s648 freeroll Outcome C** + **H-recov-co-gate-stomp** +
-    **BT rate-limit** (-402); freelist store ID open; H-zero-free/H-split
-    REFUTED s639. thr11d gated by B8→store→throttle×7→destroy (-392/-393);
-    -387 **4×**. Co-gates: recovery (-374), mat3inv (-375), sinfApprox (-386),
-    ship (-376/-377/-392/-393), freeroll (-382..-384), FORCE_STATE6 (-381
-    CLOSED), packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`;
-    thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`. HOLD_S ≤ 210.
-    Full: PROJECT-OVERVIEW §27; Sessions 589-648.**
+    **BT rate-limit**; **s649** concurrent mprotect CRASH + **late-recover**
+    + **H-perturb-from-BT REFUTED** (-403); freelist store ID open; H-zero-free/
+    H-split REFUTED s639. thr11d gated by B8→store→throttle×7→destroy
+    (-392/-393); -387 **4×**. Co-gates: recovery (-374), mat3inv (-375),
+    sinfApprox (-386), ship (-376/-377/-392/-393), freeroll (-382..-384),
+    FORCE_STATE6 (-381 CLOSED), packTlut (-373). thr-11=`saveServiceWorker`
+    `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`.
+    HOLD_S ≤ 210. Full: PROJECT-OVERVIEW §27; Sessions 589-649.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -478,8 +493,8 @@ a range pointer. Highest allocated so far: -402. The next NEW item takes -403.
     CONFIRMED / H-walk-into-zeros REFUTED; s642 H-drainmesh-stomp REFUTED; s643–s645
     sticky/BT/gbt Outcome B; s646 H-memset-writer REFUTED + mprotect LIVE;
     s647 busy_rearm; s648 freeroll Outcome C + BT rate-limit +
-    H-recov-co-gate-stomp**. Active residuals: -402..-373 / -361 / -379.
-    Tools still default OFF.
+    H-recov-co-gate-stomp; s649 late-recover + H-perturb REFUTED**.
+    Active residuals: -403..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 

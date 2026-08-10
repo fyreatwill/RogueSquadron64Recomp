@@ -50305,3 +50305,55 @@ silent-rate vs s647 for H-perturb-from-BT.
 ### Item
 -402 opened; -401 updated; H-recov-co-gate-stomp SUPPORTED; H-busy-rearm
 still ACTIVE pending recovery-active freeroll under rate-limit.
+
+## Session 649 (2026-08-10) — s648 freeroll: mprotect concurrent CRASH; late-recover
+
+### Planned unit
+Consume s648_fl_bt_ratelimit_freeroll SOAK-RESULTS (A/A2/B/C/D on freelist
+to_zero under BT rate-limit).
+
+### s648 freeroll facts (outer rc=137 at 600s mid-att5)
+- Att1: hsel=1 recov768=0 mat3inv Abort; flz_to_zero=2 but **not** freelist-
+  shaped (menu 0x8E8E→0 @51s; then 0x129C/0x480→0 @165s at phys 0x1F3CC0);
+  arm_fl=0; flz_fault_n=23 hdr=0. zero_node observed at **0x801F56F0**
+  (different address) after the 0x129C stomp.
+- Att2/3: pre-eng unscored crashes.
+- Att4: hsel=1 recov768=0 crash=1; **arm_freelist@t=146002 f=0x2 sz=0x60 LIVE**;
+  neighbor thrash faults n=26–32 all in_hdr=0 (buildModelViewerTextPage);
+  then **[CRASH] SIGBUS** si_addr=**0x3001f23b4** (same 16KB page as
+  hdr_host=0x3001f3cc0) pc=buildModelViewerTextPage+10724. Handler returned
+  false → process death ~immediately after arm, before historical freelist
+  stomp window (~+19s → t≈165s).
+- Att5: started; outer 600s cap killed freeroll.
+- Rate-limit worked: fault line counts ~23–32 (not ~7500). No freelist
+  0x2/0x60→0 on any attempt. 0 recovery-active samples.
+
+### Discriminators
+- **Outcome C** (not B): no freelist-shaped to_zero; silent/mat3inv only.
+- **H-busy-rearm / H-fault-writer**: still **unevaluable** (need freelist
+  to_zero under arm).
+- **H-perturb-from-BT REFUTED (dual-source)**: recovery still silent under
+  rate-limit (s648) just as under full BT thrash (s647) — BT thrash is not
+  what elevates recovery silence.
+- **H-mprotect-concurrent-CRASH CONFIRMED (single-run, high confidence)**:
+  fa on watch page with armed already 0 falls through to CRASH. Mechanism:
+  peer/stale-TLB fault after first neighbor SEGV disarms; second fault sees
+  armed==0 and old handler bailed. Kills freeroll before freelist stomp
+  window — blocking H-fault-writer evaluation even when arm_fl fires.
+
+### Landed
+`fl_zero_try_handle_fault` (src/main/main.cpp): if fa is on the watch page
+and (want!=0 OR was_armed), always mprotect(RW)+recover even when armed==0.
+Log `late=1` and count `g_flz_fault_late_n`. Heartbeat includes fault_late=.
+Posctrl 55s: arm_boot_zero LIVE; fault lines with late= field; CRASH=0.
+
+### Queued
+`scratch/agent/soak_queue/s649_fl_late_recover_freeroll.sh` — SCORE adds
+flz_fault_late; discriminators A/B/C + E (late LIVE no CRASH post-arm) /
+F (CRASH recurrence → escalate off page-mprotect).
+
+### Rules out / do not
+- Do not score freelist writer Outcome B from recovery-silent-only soaks.
+- Do not treat H-perturb-from-BT as open for silence elevation (REFUTED).
+- Do not re-enable full BT on every want==2 fault.
+- Do not re-open H-memset / H-drainmesh without new counterexample.

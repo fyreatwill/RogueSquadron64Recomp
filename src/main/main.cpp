@@ -1959,6 +1959,7 @@ static std::atomic<int> g_flz_fault_want{0};   // 0=off 1=boot-zero 2=freelist
 static std::atomic<int> g_flz_fault_armed{0};  // currently PROT_READ
 static std::atomic<uint64_t> g_flz_fault_n{0};
 static std::atomic<uint64_t> g_flz_fault_hdr_n{0};
+static std::atomic<uint64_t> g_flz_fault_late_n{0}; // s649: recover with armed==0
 static std::atomic<int> g_flz_fault_enabled{0};
 static std::atomic<uint64_t> g_flz_busy_rearm_n{0};
 // Steady-clock ns of last handled page fault — busy re-arm waits ≥20µs
@@ -2028,12 +2029,23 @@ static void fl_zero_fault_arm() {
     }
 }
 
-// Called from SIGSEGV handler. Returns true if this was our watch fault
+// Called from SIGSEGV/SIGBUS handler. Returns true if this was our watch fault
 // (store should be retried after RW re-enable). Not async-signal-pure
 // (fprintf/backtrace) — same diagnostic trade-off as the crash handler.
+//
+// s649: do NOT require armed==1. s648 att4: after arm_freelist, neighbor thrash
+// (buildModelViewerTextPage on same 16KB page) delivered SIGBUS at fa in page
+// with armed already 0 — concurrent/stale-TLB fault after a peer handler
+// disarmed fell through to [CRASH] and killed the run before the freelist
+// stomp window (~+19s). Policy: if fa is on the watch page and want!=0,
+// always unprotect + recover (idempotent). armed is only a re-arm hint.
 static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
     if (!g_flz_fault_enabled.load(std::memory_order_relaxed)) return false;
-    if (!g_flz_fault_armed.load(std::memory_order_acquire)) return false;
+    int want_gate = g_flz_fault_want.load(std::memory_order_acquire);
+    int was_armed = g_flz_fault_armed.load(std::memory_order_acquire);
+    // Boot-zero (want=1) or freelist (want=2) window must recover page faults
+    // even when armed==0 (TLB race). Outside a watch window, leave to CRASH.
+    if (want_gate == 0 && !was_armed) return false;
     uint8_t* rdram = g_flz_fault_rdram.load(std::memory_order_acquire);
     if (!rdram || !info || !info->si_addr) return false;
 
@@ -2044,7 +2056,7 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
     uintptr_t page_base = host & ~(uintptr_t)(page - 1);
     if (fa < page_base || fa >= page_base + page) return false;
 
-    // Allow the faulting store to complete.
+    // Allow the faulting store to complete (idempotent if already RW).
     mprotect((void*)page_base, page, PROT_READ | PROT_WRITE);
     g_flz_fault_armed.store(0, std::memory_order_release);
     {
@@ -2057,6 +2069,10 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
     int in_hdr = (fa >= host && fa < host + 8) ? 1 : 0;
     if (in_hdr) {
         g_flz_fault_hdr_n.fetch_add(1, std::memory_order_relaxed);
+    }
+    int late = (!was_armed && want_gate != 0) ? 1 : 0;
+    if (late) {
+        g_flz_fault_late_n.fetch_add(1, std::memory_order_relaxed);
     }
 
     uint64_t pc = 0, lr = 0;
@@ -2117,11 +2133,12 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
     int log_line = (n <= 32) || in_hdr || (want == 2 && (n % 256ull) == 0);
     int log_bt = (n <= 16) || (in_hdr && hdr_n <= 32) ||
                  (want == 2 && (n % 256ull) == 0);
-    if (log_line) {
+    // Always log late recovers (discriminate s648 att4 race) + rate-limit rest.
+    if (log_line || late) {
         fprintf(stderr,
-            "[fl-zero-fault] n=%llu in_hdr=%d fa=0x%llx hdr_host=0x%llx slot=0x%X "
-            "pc=0x%llx sym=%s+0x%llx lr=0x%llx guest_pc=0x%08X want=%d\n",
-            (unsigned long long)n, in_hdr,
+            "[fl-zero-fault] n=%llu in_hdr=%d late=%d fa=0x%llx hdr_host=0x%llx "
+            "slot=0x%X pc=0x%llx sym=%s+0x%llx lr=0x%llx guest_pc=0x%08X want=%d\n",
+            (unsigned long long)n, in_hdr, late,
             (unsigned long long)fa, (unsigned long long)host, slot,
             (unsigned long long)pc, pc_sym, (unsigned long long)pc_off,
             (unsigned long long)lr, (unsigned)g_rs64_last_guest_pc, want);
@@ -2373,7 +2390,7 @@ static void start_fl_zero_poller() {
                 fprintf(stderr,
                     "[fl-zero-poll] n=%llu event=heartbeat t_ms=%lld phys=0x%08X "
                     "flags=0x%X size=0x%X polls=%llu changes=%llu to_zero=%llu "
-                    "fault_n=%llu fault_hdr=%llu fault_armed=%d "
+                    "fault_n=%llu fault_hdr=%llu fault_late=%llu fault_armed=%d "
                     "busy_rearm=%llu want=%d\n",
                     (unsigned long long)n_change, (long long)ms, slot,
                     (unsigned)be_u16(prev), (unsigned)be_u32(prev + 4),
@@ -2382,11 +2399,12 @@ static void start_fl_zero_poller() {
 #ifndef _WIN32
                     (unsigned long long)g_flz_fault_n.load(std::memory_order_relaxed),
                     (unsigned long long)g_flz_fault_hdr_n.load(std::memory_order_relaxed),
+                    (unsigned long long)g_flz_fault_late_n.load(std::memory_order_relaxed),
                     g_flz_fault_armed.load(std::memory_order_relaxed),
                     (unsigned long long)g_flz_busy_rearm_n.load(std::memory_order_relaxed),
                     g_flz_fault_want.load(std::memory_order_relaxed)
 #else
-                    0ull, 0ull, 0, 0ull, 0
+                    0ull, 0ull, 0ull, 0, 0ull, 0
 #endif
                 );
                 fflush(stderr);
