@@ -49015,3 +49015,65 @@ Crash ~4 log lines after ltexmg:
 Instrument `rs_malloc` / heap free-head around the 0x136C path with same-run positive control
 (mark a known-good malloc that must log). Discriminate heap-pressure (free-head empty /
 fragmentation) vs corrupted free-list head vs wrong size path. Do not remove state==5 gate.
+
+## Session 625 — 2026-08-10 — H-ltexOOM: rs_malloc heap-diag LIVE; H-ltexArg/null_pool REFUTED; free-byte walk untrusted
+
+### Work unit
+Why `rs_malloc(0x136C)` returns null (H-ltexOOM). Landed `[rs-malloc-diag]` at rs_malloc
+exit under `ROGUESQ_LOG_RS_MALLOC_DIAG=1` (fixup_game_funcs.py + funcs_0.c). Logs
+fail / fail136c / ok136c / posctrl (first 8 successful flags==0 size≥0x800) with pool
+heads at 0x8010FEFC / 0x8010FF00 / 0x8010FF18, free-node walk stats, reason.
+
+### Instrument bugs fixed same iteration
+1. First soak (s625 att1): heads read as non-KSEG0 (0x1 / 0xE8C / 0x9) while mallocs
+   succeeded — bare `uint32_t 0x80110000` breaks `MEM_W` phys calc (needs S32-sign-extended
+   KSEG0). Fixed to `gpr rsm_base = S32(0x8011 << 16)`.
+2. s625 att1 scored recovery-active without thr11d (class I) — freeroll policy extended
+   to re-roll recovery-active when thr11d_new=0 or post-hsel ltex=0 so H-ltexOOM gets
+   class-D.
+
+### Scored run (s625b att2)
+Recipe: `scratch/agent/soak_queue/done/s625_ltex_oom_heap_diag_*.sh`
+Log: `scratch/s73_post_a_scene/s625_ltex_2_20260810034900/run.log`
+Harness: `scratch/agent/soak_results/s625b_ltex_oom_heap_diag_20260810-034526.log`
+
+att1: recovery_silent freeroll @50s. att2: recovery @+166s, class-D scored.
+
+**SCORE:** force6=1 thr11d_new=1 sec4_post=1 cshadow_a=3 ltex=1 **ltexmg=1**
+thr12_post=0 **diag_pos=8 diag_fail136c=1 diag_ok136c=1** class_hint=M1_ltexmg_no_thr12
+crash=1 (-387 do_rom_read+608, same as s624)
+
+**Discriminating lines (same run):**
+```
+[rs-malloc-diag] event=ok136c ... ptr=0x80261E20 size=0x136C need=0x1370 flags=0x0 ...
+[rs-malloc-diag] event=fail136c ... ptr=0x00000000 size=0x136C need=0x1370 flags=0x0
+  head4=0x8062B800 head0=0x800B1EF0 headE8=0x80154690
+  nnodes=2 nfree=2 maxfree=0xC104240C totfree=0x22568380 reason=corrupt
+[level-tex-malloc-guard] n=0 bad_s0=0x00000000 size=0x136C
+```
+Immediately followed by -387 residual (do_rom_read / submitDmaSlot / processAssetLoadStep).
+
+### Hypotheses
+| ID | Verdict |
+|----|---------|
+| instrument live | **CONFIRMED** — posctrl=8 ∧ fail136c=1 same run (O4 REFUTED) |
+| H-ltexArg | **REFUTED** — fail size=0x136C flags=0x0 need=0x1370 (matches call site) |
+| H-ltexNullPool | **REFUTED** — all three heads non-zero KSEG0 at fail |
+| H-ltexOOM (simple free-bytes < need) | **NOT PROVEN** — walk reports reason=corrupt / maxfree garbage
+  even on early successful posctrl/ok136c with the same headE8, so free-byte totals are
+  **not trustworthy** until raw node-header dump is fixed |
+| H-ltexFree | **OPEN / plausible** — size words read as ~GB values (0x61525F74 early,
+  0xC104240C at fail); allocator still succeeds early → either walk model wrong or
+  progressive freelist damage. Next: dump raw flags+size for first N nodes (no free-bit
+  interpretation) + log which pool/index the allocator actually searched |
+| H-dmarom1 / -387 | still 1× freeroll residual after soft-skip (same host stack as s624) |
+
+### Caveat (method)
+`diag_fail` rate-limit (40) is consumed by unrelated flags=0x4 null returns long before
+class-D; fail136c is unthrottled via size==0x136C path and still fires. Do not treat
+diag_fail=40 as "40 OOMs on the level-tex path".
+
+### Next
+Refine diag: per-node raw header dump (flags halfword + size word) for first ≤16 nodes
+per pool at fail136c and one posctrl; optionally log t0/pools-tried at L_80001C60.
+Do not soft-skip thr12; do not merge -385 root with -387.

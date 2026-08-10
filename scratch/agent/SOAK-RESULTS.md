@@ -340,3 +340,4 @@
 20260810-024817 | s622_ltex_malloc_guard_classd_retry | rc=2 | 569s | scratch/agent/soak_results/s622_ltex_malloc_guard_classd_retry_20260810-024817.log
 20260810-030947 | s623_ltex_malloc_guard_recov_tight | rc=2 | 23lines | scratch/agent/soak_results/s623_ltex_malloc_guard_recov_tight_20260810-030020.log
 20260810-032508 | s624_ltex_malloc_guard_budget900 | rc=1 | 43lines | scratch/agent/soak_results/s624_ltex_malloc_guard_budget900_20260810-031033.log
+20260810-035604 | s625_ltex_oom_heap_diag | rc=1 | scored class-D fail136c=1 posctrl=8 ok136c=1 reason=corrupt (walk-model untrusted) ltexmg=1 thr11d_new=1 -387 do_rom_read | scratch/agent/soak_results/s625b_ltex_oom_heap_diag_20260810-034526.log
