@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s627)
+## Current truth (established by session 295; unchanged, reviewed through s638)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -120,36 +120,25 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s637**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s638**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
-  `loadLevelTextureCache`) → sec2 (mission overlay) is reachable when recovery cell `0x76B768`
-  fires (s608). **s619: thr11d_new LIVE** when recovery fires → sec4_post=1; class-D
-  craft-shadow soft-skip LIVE. **s624: -385 M1 LIVE** — `[level-tex-malloc-guard]` on null
-  `rs_malloc(0x136C)`; thr12 soft-skips until malloc succeeds. **s626 H-walk1 CONFIRMED**;
-  **s627 global O1 + size-O3 REFUTED** (selected-pool residual). **s633: first
-  thr11d_new∧ltexmg∧fail136c** with `reason=corrupt` (E8 `stop=bad_size` i=55; print-gate
-  fixed same session). **s634: thr11d rate 2/8 (25%)**; s635/s636 no new thr11d sample.
-  **H-shipcycle2 STRUCTURAL (s634):** thr11d_new requires ship-zero after post-hsel thr11
-  create (ship cycle n=3). **H-shipn3-gate CONFIRMED (s637 dual-source):** n=3 path is
-  entirely `runModelViewerLoop` — B8 timer (or A/START) → `updateTextOverlayLookupEntry`
-  store → `accumulateShipThrottleCharge` ret=1 (needs gPlayerShip; 7 thresholds) →
-  `destroyPlayerShipRecord` @ L_800CA578 → thr11 id=11 die → sec4. n=2 destroy is
-  `gracefulMenuShutdown` (different). Residual: why B8/store only ~25% of holds (-393);
-  instruments `[mv-b8-set]`/`[mv-ship-arm]` live. freelist walk model OK (-391).
-- Co-gates: recovery silence (-374; freeroll any eng+hsel `recov768=0`; prefer
-  `RECOV_WAIT_S=50` + `BUDGET_S≥900` when pre-eng 128s cutscene SIGBUS is frequent),
-  mid-window mat3inv Abort (-375), ship ret1/store (**-376/-377/-392/-393**), class-D
-  craft-shadow (**-378**), FORCE_STATE6 KSEG0 (**-381 CLOSED**),
-  scene-graph/readAccount/freelist (**-382..-384** freeroll; s634 att3 2nd recovery-active
-  scenegraph noise, not scored), null-malloc thr12 parent (**-385 M1 LIVE**; selected-pool
-  residual -389..-391), sinfApprox (**-386** 1×), post-soft-skip `do_rom_read` (**-387** 3×).
-- **thr11d scoring trap (s618):** real metric = destroy of post-hsel-created id with entry
-  `0x8006F2CC` (`thr11d_new`), not any post-hsel destroy.
-- **Soak freeroll trap (s620→s621):** freeroll any eng+hsel with `recov768=0`. H-freeroll1
-  CONFIRMED; H-recovwait1 CONFIRMED s624.
-- Tools (default OFF): `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`.
-- Post-sec2 residual: HMT/`packTlut` SIGBUS (-373, 1×). Material `0x8000e29c` (2×, free-reroll).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-393; Sessions 577-637.
+  `loadLevelTextureCache`) → sec2 when recovery `0x76B768` fires. **s619 thr11d_new LIVE**;
+  **s624 -385 M1 LIVE** (`[level-tex-malloc-guard]` null `rs_malloc(0x136C)`). **s626 H-walk1**;
+  **s627 global O1+size-O3 REFUTED**. **s633 first fail136c `reason=corrupt`**. **s634
+  H-shipcycle2 STRUCTURAL**. **s637 H-shipn3-gate CONFIRMED** (n=3 = `runModelViewerLoop`
+  B8→store→throttle×7→destroy; n=2 = `gracefulMenuShutdown`). **s638 Outcome A CONFIRMED**
+  live: `[mv-b8-set]`→`[mv-ship-arm]` b8=1 s0=0→store n=3→throttle ret=1→zero→thr11d;
+  thr11d rate **3/9**; first B8 ~93s post-hsel. **s638 fail136c raw FED**: E8
+  `0x801F3CC0 flags=0 size=0` (matches s634 prediction) — freelist walk stops; thr12
+  blocked until alloc succeeds. Residual rank: (1) freelist zero-node -391/-385, (2) B8
+  acc rate -393 (~25–33%), (3) -387 do_rom_read 4× after soft-skip.
+- Co-gates: recovery silence (-374; `RECOV_WAIT_S=50` + `BUDGET_S≥900`), mat3inv (-375),
+  ship (-376/-377/-392/-393), class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll
+  scene/readacct/matfree (-382..-384), null-malloc thr12 (-385 M1; -389..-391), sinfApprox
+  (-386 1×), do_rom_read (-387 **4×**). thr11d metric = post-hsel destroy of `0x8006F2CC`
+  only (s618). Freeroll any eng+hsel with `recov768=0` (s620). Tools default OFF:
+  `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`. Post-sec2: packTlut (-373).
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-393; Sessions 577-638.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -169,21 +158,18 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -393. The next NEW item takes -394.
 
-### Active M3 pipeline (s577–s637) — open residuals only
+### Active M3 pipeline (s577–s638) — open residuals only
 
--393. **(s637) H-shipn3-gate CONFIRMED — n=3 path is `runModelViewerLoop`; residual
-    is B8 timer intermittency (~25%).** Dual-source static+dynamic (s629 att4 +
-    s633 thr11d vs s634 att1 no-destroy): after thr11 id=11 create, thr11d path
-    does `ship-store n=3` → `throttle-ret n=3 ret=1` → `ship-zero n=3` →
-    thr-destroy id=11 → overlay sec4. Guest chain: L_800CA51C store via
-    `updateTextOverlayLookupEntry` when **sp+0xB8** (float acc at
-    `0x800D0120+0x90*s3+4` > `*0x800A79B8`, set at 0x800CA1E0) or A/START with
-    unlock (post-hsel newbtn is zeros → B8 path) and ship null; then
-    `accumulateShipThrottleCharge` returns 1 after 7 charge thresholds **only
-    if gPlayerShip non-null** → L_800CA578 `destroyPlayerShipRecord`. n=2 is
-    `gracefulMenuShutdown` (not model-viewer). Instruments live:
-    `[mv-b8-set]` / `[mv-ship-arm]`. Enqueued `s637_mv_b8_shipn3_gate`. Full:
-    Session 637.
+-393. **(s637→s638) H-shipn3-gate CONFIRMED; Outcome A live-verified; residual
+    is B8 acc crossing thr only ~25–33% of recovery-fired holds.** Guest chain
+    unchanged: sp+0xB8 when float `0x800D0120+0x90*s3+4` > `*0x800A79B8` →
+    L_800CA51C store → throttle×7 → L_800CA578 destroy. **s638 thr11d_new=1:**
+    `[mv-b8-set]` (acc=0.997619 thr=0.98 s0=0) → `[mv-ship-arm]` b8=1 → store
+    n=3 → throttle ret=1 → zero n=3 → thr-destroy id=11 → sec4. First B8
+    ~93s post-hsel. thr11d rate **3/9**. Offline Outcome B support: s634 att1
+    564s HOLD recovery-fired, ship-store n=3 = 0 (HOLD not the lever). Next:
+    instrumented no-destroy freeroll (queued s638) or `[mv-acc]` sample if still
+    open after freelist pivot. Full: Sessions 637-638.
 
 -392. **(s634→s637) H-shipcycle2 STRUCTURAL / CONFIRMED — thr11d_new = ship-zero
     after post-hsel thr11 create.** Dual-source event-order on s633
@@ -193,20 +179,15 @@ a range pointer. Highest allocated so far: -393. The next NEW item takes -394.
     SCORE `ship_store` post-hsel: =2 means n=2+n=3; =1 only n=2. **Gate of n=3
     closed into -393** (runModelViewerLoop B8→throttle). Full: Sessions 634-637.
 
--391. **(s632→s634) fail136c `reason=corrupt`: E8 freelist walk breaks mid-
-    scan (`stop=bad_size` i=55); walk model dual-source OK; raw node still
-    unprinted.** s633 first thr11d_new∧ltexmg∧fail136c: `maxfree_sel=0xD20
-    < need=0x1370` but `reason=corrupt` because selected pool E8 stops at
-    i=55/56 (`nnodes=56 nfree=1 maxfree=0x20`) after earlier same-run
-    posctrl showed E8 healthy (`maxfree=0x4E6290`). **s634 offline:** game
-    freelist advance (`next = node + size + 0x10`, term bit 0x8) matches
-    the diagnostic bit-exact; posctrl E8 nodes verify the formula — not a
-    walker-model bug. Predicted bad-node addr from i=54 free
-    `@0x801F3C90 size=0x20` = **`0x801F3CC0`**. Break is only ~650 KB into
-    ~6.5 MB E8 arena → remaining free unreachable if size field is insane.
-    Print-gate fix (`!rsm_sane` always prints) live in binary since s633;
-    s634 soak got 0 fail136c so raw flags/size at break still unseen. Full:
-    Sessions 632-634.
+-391. **(s632→s638) fail136c `reason=corrupt`: E8 freelist zero-node at
+    `0x801F3CC0` — raw FED s638; walk model dual-source OK.** s633 first
+    thr11d_new∧ltexmg∧fail136c: selected E8 stops i=55 after healthy posctrl.
+    s634: game freelist advance (`next = node + size + 0x10`, term 0x8)
+    matches diag; predicted bad addr **`0x801F3CC0`**. **s638 dump:**
+    `i=54 @0x801F3C90 flags=0x1 size=0x20 free`; `i=55 @0x801F3CC0 flags=0x0
+    size=0x0 sane=0` — not free/alloc/term; walk dies; maxfree_sel=0xD20
+    (pool0) < need 0x1370 while pool4 free ≥ need unselected. Mid-run only
+    (posctrl sane). **Primary thr12 unblock residual.** Full: Sessions 632-638.
 
 -390. **(s627→s634) pool-aware free census + thr11d rate: 2/8 (25%) of
     recovery-fired reach thr11d_new; discriminator fed once (→ -391); pure
@@ -230,13 +211,13 @@ a range pointer. Highest allocated so far: -393. The next NEW item takes -394.
     s627: pool-aware reason landed in s628 (-390). Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`.
     Full: Sessions 625-627.
 
--387. **(s624→s627) Post soft-skip `do_rom_read+608` SIGBUS — 3× freeroll residual
-    (s624/s625/s627 scored class-D, same host stack).** Host: `recomp::do_rom_read` ←
+-387. **(s624→s638) Post soft-skip `do_rom_read+608` SIGBUS — 4× freeroll residual
+    (s624/s625/s627/s637 scored class-D, same host stack).** Host: `recomp::do_rom_read` ←
     `do_dma` ← `osPiStartDma_recomp` ← `submitDmaSlot` ← `processAssetLoadStep` ←
     `mainEventQueueWorker`. si_addr=`0x380000003` (guest shape `0x80000003`).
     last-guest-pc=`0x800290d4` is **STALE** (CLOSED -259; do not merge). Fires ~immediately
-    after `[level-tex-malloc-guard]`. Free-reroll kept while -385 root open; note 3× if
-    escalating after thr12 path unblocks. Full: Sessions 624-627.
+    after `[level-tex-malloc-guard]`. Free-reroll while -385 root open; note 4×. Full:
+    Sessions 624-638.
 
 -386. **(s621) recovery-active thr11-live `sinfApprox` NAN_CHECK Abort — 1× freeroll.**
     Host: `sinfApprox` (funcs_5.c:6460 `assert(f10==f10)`) ←
@@ -314,15 +295,16 @@ a range pointer. Highest allocated so far: -393. The next NEW item takes -394.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s637) thr11→sec4→sec2 pipeline — thr11d_new LIVE when recovery fires
-    (s619; rate 2/8 s634–s636); class-D soft-skip LIVE; -385 M1 LIVE but thr12 blocked by
-    null `rs_malloc(0x136C)` (selected residual -389..-391; fail136c corrupt N=1);
-    **thr11d gated by model-viewer B8→store→throttle×7→destroy (-392/-393)**; post-soft-skip
-    -387 (3×). Pre-thr11d co-gates: recovery silence (-374), mat3inv (-375), sinfApprox
-    (-386 1×), ship (-376/-377/-392/-393), freelist/scene/readacct freeroll (-384/-382/-383),
-    FORCE_STATE6 (-381 CLOSED), post-sec2 packTlut (-373). thr-11=`saveServiceWorker`
-    `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`. Do not raise
-    HOLD_S past 210. Full arc: PROJECT-OVERVIEW §27; Sessions 589-637.**
+-361. **(s589-s638) thr11→sec4→sec2 pipeline — thr11d_new LIVE when recovery fires
+    (s619; rate **3/9** s638); Outcome A live (s638); class-D soft-skip LIVE; -385 M1
+    LIVE thr12 blocked by null `rs_malloc(0x136C)` — **E8 zero-node `0x801F3CC0`
+    flags=0 size=0 raw FED s638** (-391); thr11d gated by model-viewer
+    B8→store→throttle×7→destroy (-392/-393, residual acc rate); -387 **4×**.
+    Pre-thr11d co-gates: recovery (-374), mat3inv (-375), sinfApprox (-386), ship
+    (-376/-377/-392/-393), freeroll scene/readacct (-382/-383/-384), FORCE_STATE6
+    (-381 CLOSED), post-sec2 packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`;
+    thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`. HOLD_S ≤ 210. Full:
+    PROJECT-OVERVIEW §27; Sessions 589-638.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -402,13 +384,10 @@ a range pointer. Highest allocated so far: -393. The next NEW item takes -394.
 -8. **`frameStartReset` SIGBUS** — 3 occurrences (s85/s108/s156); no located faulting insn.
 
 -7. **M3 hangar-exit → mission-entry (DoD gate): OPEN.** Exit+cutscene CONFIRMED s577;
-    FULL_SYNC inject product-fixed; force6 engagement CONFIRMED s606 and **live-writes real
-    hangar state s617** (-381 CLOSED); s608 first force-path sec2 after thr11d when recovery
-    fires; **s619 thr11d_new + class-D LIVE**; **s624 -385 M1 LIVE**; **s626 H-walk1
-    CONFIRMED**; **s627 global O1+size-O3 REFUTED**; **s633 fail136c corrupt N=1**; **s634
-    H-shipcycle2 STRUCTURAL**; **s637 H-shipn3-gate CONFIRMED** (runModelViewerLoop
-    B8→throttle; residual ~25% B8 rate, -393). Active residuals: -393..-373 / -361 /
-    -379. Tools still default OFF.
+    FULL_SYNC inject product-fixed; force6 live-writes hangar state s617 (-381 CLOSED);
+    thr11d_new+class-D LIVE; -385 M1 LIVE; H-walk1; global O1+size-O3 REFUTED; H-shipcycle2
+    STRUCTURAL; H-shipn3-gate CONFIRMED; **s638 Outcome A live + fail136c raw zero-node**.
+    Active residuals: -393..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 

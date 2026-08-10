@@ -49670,3 +49670,82 @@ recipe; discriminates A/B/C on thr11d vs no-destroy with new tags.
 ### Open residual (-393)
 Why B8 / store n=3 only ~25% of recovery-fired holds. Next soak should show
 whether acc never reaches thr (stuck f28/s3) or B8 fires but arm is skipped.
+
+## Session 638 — 2026-08-10 — Outcome A CONFIRMED on thr11d path; fail136c raw node FED (flags=0 size=0 at 0x801F3CC0)
+
+### Consumed soak: s637_mv_b8_shipn3_gate
+
+Outer: rc=1 495s; 2 attempts.
+
+| att | class | thr11d_new | recov | notes |
+|-----|-------|------------|-------|-------|
+| 1 | E_recovery_silent / mat3inv freeroll | 0 | 0 | mat3inv Abort mid-window; ship_store=1 (n=2 only); 0 mv-b8-set |
+| 2 | **M1_ltexmg_no_thr12 scored** | **1** | 7956 | full B8 instrument chain; fail136c+ltexmg; -387 do_rom_read |
+
+### Discriminator Outcome A — CONFIRMED (positive control green)
+
+Post thr-create id=11 (`0x8006F2CC`), thr11d_new=1 event order in
+`s637_mv_b8_2_.../run.log`:
+
+```
+… throttle-ret ret=0 ship=null (long, rate-limited) …
+[mv-b8-set] n=0 s3=0 acc=0.997619 thr=0.98 ship=0x00000000   ← first cross
+[mv-ship-arm] n=0 s0=0 b8=1 ship=null s3=3
+[ship-store] n=3 val=0x8015FD90
+… more mv-b8-set / mv-ship-arm while ship set (s0 always 0) …
+[throttle-ret] n=3 ret=1 ship=0x8015FD90
+[ship-zero] n=3
+[thr-destroy] id=11 → overlay section 4
+→ craft-shadow soft-skip ×3 → fail136c → [level-tex-malloc-guard] → do_rom_read SIGBUS
+```
+
+**Controls:**
+- Path is pure B8 (`s0=0` every arm); post-hsel button path not involved.
+- First B8 at host `t_ms≈242139` (~93 s after hangar-sel / ~76 s after recovery).
+- thr = 0.98 fixed; first acc just barely above thr, then climbs ~0.01–0.02 per tick.
+
+### Outcome B offline support (no instrumented no-destroy yet)
+
+s634 att1: recovery-fired, thr11 live, **564 s HOLD**, ship_store=1 only,
+**ship-store n=3 count = 0** (ship-store tag was live then). HOLD_S is not the
+lever — acc never arms n=3 on that path. H-b8rate residual remains "why does
+acc cross thr only ~25% of recovery-fired holds"; live-instrumented no-destroy
+still useful for confirming 0 mv-b8-set (vs B8 without store).
+
+thr11d rate update: prior 2/8 recovery-fired; s637 adds thr11d_new=1 → **3/9**.
+
+### fail136c raw node FED (item -391) — dual-source with s634 prediction
+
+Print-gate (`!rsm_sane` always prints) fed on att2:
+
+```
+pool=E8 i=54 addr=0x801F3C90 flags=0x1 size=0x20 free=1   ← last good free
+pool=E8 i=55 addr=0x801F3CC0 flags=0x0 size=0x0 sane=0    ← break (predicted s634)
+stop=bad_size nnodes=56 nfree=1 maxfree=0x20
+summary reason=corrupt maxfree_sel=0xD20 need=0x1370
+```
+
+- `0x801F3CC0` matches s634 predicted bad-node from i=54 free + size + 0x10.
+- **flags=0 size=0** is not a free (0x1) or alloc (0x2) node and not term bit 0x8 —
+  freelist walk cannot advance past it; remaining E8 arena free is unreachable.
+- Pool4 still has free ≥ need (0x6A3C0 / 0x6A3E0) but **unselected** for flags=0
+  (selected pools = 0 + E8; maxfree_sel 0xD20 is pool0 free).
+- posctrl same-run still healthy (maxfree 0x4E6290) — corruption is mid-run.
+
+### Product residual ranking after s638
+
+1. **-385 / -391 freelist zero-node** — blocks thr12 every time thr11d fires
+   (class-D soft-skip + null malloc). Highest product value once thr11d path
+   known. Next: who zeros / overwrites freelist header at 0x801F3CC0.
+2. **-393 B8 acc intermittency** — gates thr11d rate (~25–33%). Path fully
+   modeled; residual is accumulator physics, not which destroy caller.
+3. **-387 do_rom_read** after soft-skip — now **4×** (s624/s625/s627/s637);
+   freeroll co-symptom of soft-skip path, still not root of null malloc.
+
+### Enqueued
+`scratch/agent/soak_queue/s638_b8_fail136c_freeroll.sh` — same force6/inject
+recipe; free B8 no-destroy samples + more fail136c raw dumps.
+
+### Not done this session
+No code change; offline consume of s637 soak only. Next unit: freelist
+zero-node writer audit (or `[mv-acc]` sample if freelist blocked).
