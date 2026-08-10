@@ -48717,3 +48717,98 @@ symbolizer trap as -311; always cross-check host PC with `nm -n` / `atos` on the
 Consume s618 soak: thr11d_new+sec4_post → class-D A–D; readacct 2nd → escalate -383 with
 site audit (menuControllerInput case 1 / account table); scenegraph 2nd → escalate -382;
 thr11c_post thr11d_new=0 → ship-zero / handoff.
+
+## Session 619 — 2026-08-10 — fold s618 soak: thr11d_new LIVE; new residual buildMaterialFreeList post-sec4
+
+### Planned unit
+Consume `s618_readacct_freeroll_classd`: require BASE_CTRL_PASS; classify thr11d_new vs
+readacct 2nd-occ vs class-D (NEXT.md HYPOTHESIS-ID: m3-post-exit-fs-stall).
+
+### Soak fold (`s618_readacct_freeroll_classd`, rc=1, 546s)
+Two attempts; discard_stats: scenegraph=1 readacct=0 mat3inv=0 matnoise=0 recov_silent=0.
+
+**a1 free-reroll (scenegraph 1st):**
+- BASE_CTRL_PASS case5_n0_state=5; force6=1 force_old5=1 recov768=7952
+- thr11c_post=1 thr11d_new=0 (id=11 live at crash) sec4_post=0
+- crash: `traverseSceneGraphRecursive+1984` ← `setupCameraMatrices` ← `runModelViewerLoop`
+  ← `menuOverlayInit`; si_addr=0x3503c1f80; last-guest-pc=0x80015544
+- Free-rerolled correctly (SCENEGRAPH_N=1)
+
+**a2 recovery-active SCORED:**
+- BASE_CTRL_PASS case5_n0_state=5; force6=1 force_old5=1 force_skip=0
+- recov768=7952; case6=1 hsel=1 ace80=0
+- **thr11c_post=1 thr11d_new=1 sec4_post=1** ← first LIVE thr11d_new
+- thr12_post=0 cshadow_a/w=0 ltex=0 sec2=0
+- ship_store=2 ship_zero_post=2
+- scenegraph=0 readacct=0 mat3inv=0
+- class_hint=D_other_crash crash=1
+
+### Classification
+| Class | Criteria | Result |
+|-------|----------|--------|
+| G | thr11d_new ∧ sec4_post ∧ (cshadow\|thr12\|sec2) | **NO** — thr12/cshadow/sec2 all 0 |
+| H | scenegraph 2nd on scored | **NO** — scenegraph=0 on scored; a1 freeroll only |
+| J | readacct 2nd on scored | **NO** — readacct=0; H-readacct1 still freeroll |
+| I | thr11c_post thr11d_new=0 | **NO** — thr11d_new=1 |
+| A–D | craft-shadow class-D | **NO** — guards never entered; thr12 not created |
+| E | recovery_silent | **NO** |
+| K (new) | thr11d_new+sec4 then other crash | **YES** → item **-384** |
+
+### thr11d_new LIVE (pipeline milestone)
+Post-hsel a2 timeline (key lines):
+1. case5-force-state6 n=40 old=5→6
+2. hangar-sel; ship-store n=2 val=0x8015FD90; ship-zero n=2
+3. thr-destroy id=10 (old thr11); thr-create id=11 entry=0x8006F2CC
+4. ship-store n=3; ship-zero n=3
+5. thr-destroy **id=11** ← thr11d_new=1
+6. overlay start-match section 4 rom=0x00137580 (cinematic)
+7. texdata-table-guard site=0x8001E2BC bad_base=0
+8. SIGBUS in buildMaterialFreeList
+
+H-ship1z ("post-hsel ship-zero blocks thr11d of new thr11") **REFUTED as hard gate**:
+ship_zero_post=2 co-occurred with thr11d_new=1 on the same scored run.
+
+### Crash — item -384 (1×; free-reroll)
+```
+[CRASH] signal 10 Bus error
+si_addr=0x380000000  x0=x9=0x300000000  (null guest + rdram base)
+local-symtab: buildMaterialFreeList+260  # CONFIRMED via nm slide + stack
+stack: buildMaterialFreeList ← advanceVideoFrame ← runVideoFrameTick
+       ← initSceneForMission ← cinematicLoopBody ← mainGameLoop
+last-guest-pc=0x800025ac  # STALE (-347 / do not merge with -373 packTlut)
+```
+Faulting insn = first freelist clear loop store (`MEM_W(0, r3)=0` at guest ~0x80021EB4)
+when clear-array base at `0x80128F00` (-0x7100 from 0x80130000) is null while count at
+`0x80128EF0` (-0x7110) is non-zero. Called from advanceVideoFrame after
+buildAndRegisterDefaultMaterial during mission-scene init — post thr11d/sec4, pre thr12.
+
+Do NOT soft-skip without 2nd same host stack (policy matches -382/-383/-375).
+
+### Hypotheses
+| ID | Claim | Result |
+|----|-------|--------|
+| H-thr11d1 | thr11d_new reachable under force6+recov | **CONFIRMED** (1× scored) |
+| H-sg1 | scenegraph free-reroll noise | still SUPPORTED (0 on scored) |
+| H-readacct1 | readAccount free-reroll noise | SUPPORTED further (0 on scored; freeroll not needed) |
+| H-ship1z | ship-zero blocks thr11d_new | **REFUTED** as hard gate |
+| H-Dshadow1 | craft-shadow primary class-D | still PENDING (thr12 never after thr11d this path) |
+| H-matfree1 | freelist null-base is free-reroll noise | 1×; freeroll queued |
+| H-matfree2 | 2nd same host stack → real residual / guard | pending |
+
+### Soak enqueued
+`scratch/agent/soak_queue/s619_matfree_freeroll_classd.sh`
+- Free-reroll mat3inv / matnoise / recovery_silent / scenegraph 1st / readacct 1st /
+  **buildMaterialFreeList 1st** (host stack: advanceVideoFrame / initSceneForMission)
+- Score thr11d_new + sec4_post + thr12 + cshadow + matfree=
+- Escalate -384 only on 2nd same host stack; class-D A–D if thr12/cshadow fire
+
+### Do not
+- Soft-skip buildMaterialFreeList / scenegraph / readacct / mat3inv without 2nd same host stack
+- Treat thr11d_post as thr11d_new
+- Merge -384 with -373 on last-guest-pc=0x800025ac (STALE)
+- Raise HOLD_S past 210 / remove state==5 gate / uint32 KSEG0 bases
+- Assume craft-shadow is next on this path — thr12 never created before freelist death
+
+### Next
+Consume s619: matfree 2nd → escalate -384 (null-base guard candidate); thr12/cshadow →
+class-D A–D; thr11d_new+sec4+hold without crash → pipeline advance past freelist.

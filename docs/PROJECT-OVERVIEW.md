@@ -2497,10 +2497,10 @@ CLEAN hangarbay n=2600, 0 fires on new sites. Surfaced item -345 DIRECT gap afte
 - **(s85→s91)** "`do_rom_read` corrupted `physical_addr` is nondeterministic garbage" — the exact same
   DMA call recurred byte-for-byte 3 times across 3 sessions; reclassified deterministic, reproducible.
 
-## 27. M3 thr11→sec2 hangar-exit pipeline (s577–s617), migrated from CURRENT-TRUTH.md s615 maintenance
+## 27. M3 thr11→sec2 hangar-exit pipeline (s577–s619), migrated from CURRENT-TRUTH.md s615 maintenance
 
 Durable summary of the active M3 DoD path after hangar exit. Session-level detail lives in
-PORTING-STATE Sessions 577–617; CURRENT-TRUTH keeps only open residuals (-382..-373, -361, -7).
+PORTING-STATE Sessions 577–619; CURRENT-TRUTH keeps only open residuals (-384..-373, -361, -7).
 
 ### What was confirmed
 
@@ -2543,17 +2543,23 @@ PORTING-STATE Sessions 577–617; CURRENT-TRUTH keeps only open residuals (-382.
   never destroyed). True crash host is `readAccountForSelectionScreen+604` (nm/atos), not
   local-symtab's `rebuildActiveDisplayObjectList+540`; caller `menuControllerInput` jump
   case 1. New residual **-383** (1× free-reroll). Metric fix: `thr11d_new`.
+- **s619**: s618 scored a2: **thr11d_new=1 sec4_post=1 LIVE** (first confirmed post-hsel thr11
+  destroy of a post-hsel-created 6F2CC thread). thr12 never created. Crash **-384**:
+  `buildMaterialFreeList+260` null freelist-base write (`si_addr=0x380000000`) during
+  `initSceneForMission`→`advanceVideoFrame` mission-scene init. H-ship1z (ship-zero blocks
+  thr11d_new) **REFUTED** as hard gate. -383/-382 stay 1× freeroll (0 on scored).
 
 ### Open residuals (do not re-derive)
 
 | Item | Residual | Status |
 |------|----------|--------|
-| -383 | post-force `readAccountForSelectionScreen` SIGBUS pre-thr11d_new | 1×; free-reroll; local-symtab often mislabels rebuild+540 |
-| -382 | post-force `traverseSceneGraphRecursive` SIGBUS pre-thr11d | 1×; H-sg1 SUPPORTED s618 (0 hits); escalate only on 2nd |
+| -384 | post thr11d_new+sec4 `buildMaterialFreeList` null-base SIGBUS | 1×; free-reroll; primary after thr11d LIVE |
+| -383 | post-force `readAccountForSelectionScreen` SIGBUS pre-thr11d | 1×; 0 on s618 scored; free-reroll |
+| -382 | post-force `traverseSceneGraphRecursive` SIGBUS pre-thr11d | 1× freeroll; H-sg1 SUPPORTED |
 | -374 | recovery cell `0x76B768` silence after eng+inject | free-reroll; co-primary |
 | -375 | `mat3x3InverseInto` Abort mid-window | 1×; free-reroll; escalate on 2nd |
-| -376/-377 | ship ret=1 / store co-gate for thr11d | H-ship1 SUPPORTED; H-ship1b open |
-| -378 | craft-shadow null walk before thr12 | guard landed; live-verify PENDING (needs thr11d) |
+| -376/-377 | ship ret=1 / store co-gate for thr11d | H-ship1 SUPPORTED; H-ship1z hard-block REFUTED |
+| -378 | craft-shadow null walk before thr12 | guard landed; live-verify PENDING (needs thr12) |
 | -379 | FORCE_STATE6 only at state==5 | gate kept; s613 recharacterized by -381 |
 | -381 | FORCE_STATE6 KSEG0 `uint32` base OOB | **CLOSED s617** (fix + live-verify) |
 | -373 | post-sec2 `packTlut`/HMT SIGBUS | 1×; primary bottleneck once pipeline completes |
@@ -2578,5 +2584,5 @@ PORTING-STATE Sessions 577–617; CURRENT-TRUTH keeps only open residuals (-382.
   KSEG0 bases into `MEM_*` patches on 64-bit hosts
 
 ### Next
-Consume s618 soak: thr11d_new+sec4_post → class-D A–D; readacct 2nd → escalate -383;
-scenegraph 2nd → escalate -382; thr11c_post thr11d_new=0 → ship-zero / handoff.
+Consume s619 soak: matfree 2nd → escalate -384 (null-base guard candidate); thr12/cshadow →
+class-D A–D; thr11d_new+sec4 hold without crash → past freelist.
