@@ -49605,3 +49605,68 @@ accumulators for the loop — free evidence when they hit, but do not spend the
 session babysitting them. bad_size raw-node print still pending first fail136c
 on the new binary.
 
+
+## Session 637 — 2026-08-10 — H-shipn3-gate RESOLVED to runModelViewerLoop; B8 timer residual; instruments live
+
+### Consumed soaks (s635/s636 passive)
+- s635: att1 early crash; att2 mat3inv freeroll (recov silent); att3 pre-eng; att4 recovery-fired then trackResourceList freeroll — **no thr11d_new scored**.
+- s636: att1/2 recovery_silent only (timeout mid att3). Rate stays **2/8** recovery-fired thr11d_new (no new recovery-fired thr11d sample).
+
+### Work unit: ship cycle n=3 / destroyPlayerShipRecord gate (item -392 → -393)
+
+**Static callers of `destroyPlayerShipRecord` (5 sites):**
+
+| caller | guest addr region | post-exit role |
+|--------|-------------------|----------------|
+| `gracefulMenuShutdown` | 0x800AE784 | **n=2 only** — both thr11d and no-destroy; tag `[graceful-menu]` once per run |
+| `drainAudioAndFinalizeSpeechBuffer` | 0x800B24FC | speech-buffer path; not observed on n=3 |
+| `menuControllerInput` | L_800B8024 when sp+0x8F==1 | menu exit flag; not the n=3 sequence |
+| `runMenuShipSelectScreen` | L_800C1728 when $s6==1 | craft-select exit; not n=3 post-hangar |
+| **`runModelViewerLoop`** | **L_800CA578** | **n=3 destroy** |
+
+**Model-viewer exit predicate (guest):** after frame submit,
+`accumulateShipThrottleCharge` @ 0x800B4168; if ret≠0 → L_800CA578 destroy +
+`shutdownModelViewer` / `setUnlockBitAndPersist`. That function **early-outs
+ret=0 when gPlayerShip is null**, else accumulates charge and returns 1 after
+the counter at `0x800CC860` reaches 7 threshold crossings.
+
+**Ship re-arm (store n=3) same function:** L_800CA51C when
+`(button A|START && unlock bit)` OR **sp+0xB8**, and `isPlayerShipActive` is
+false → `updateTextOverlayLookupEntry` (only non-null gPlayerShip writer).
+sp+0xB8 is set at 0x800CA1E0 when float at `0x800D0120+0x90*s3+4` exceeds
+`*0x800A79B8`. Cleared every frame at loop top. Post-hsel `newbtn` is all zeros
+on both paths → **B8 timer, not input**, is the expected n=3 arm.
+
+### Dynamic dual-source (s633 thr11d_new=1 + s629 att4 thr11d_new=1 vs s634 att1 no-destroy)
+
+**thr11d path (both thr11d_new=1 logs):**
+```
+hangar-sel → ship-store n=2 → graceful-menu → ship-zero n=2 → thr-destroy id=10
+→ thr-create id=11 (0x8006F2CC)
+… long throttle-ret ret=0 ship=null …
+→ ship-store n=3 → ship-active ret=1 → throttle-ret n=3 ret=1 → ship-zero n=3
+→ thr-destroy id=11 → overlay section 4 → level-tex-*
+```
+
+**no-destroy (s634 att1, 564s HOLD):** same through thr-create id=11; then only
+`throttle-ret ret=0 ship=0` forever; **never** ship-store n=3, never throttle
+ret=1 n≥3, never thr-destroy id=11.
+
+Tags present on thr11d only: `ship-store n=3`, `throttle-ret n=3 ret=1`,
+`ship-zero n=3`, thr-destroy id=11, overlay sec4. HOLD_S not the lever (already
+known). H-shipn3-gate **CONFIRMED**: gate is model-viewer B8→store→throttle×7→destroy.
+
+### Instruments landed (binary + fixup)
+- `[mv-b8-set]` at 0x800CA1E0 (always-on when timer fires): s3, acc, thr, ship
+- `[mv-ship-arm]` at L_800CA51C (rate-limited): s0, b8, ship, s3
+- fixup_game_funcs.py (s637 block) for regen durability; hand-applied to
+  sentinel-bearing funcs_36.c for this build
+- strings confirmed in `build/RogueSquadron64Recomp`
+
+### Enqueued
+`scratch/agent/soak_queue/s637_mv_b8_shipn3_gate.sh` — same force6/inject/HOLD
+recipe; discriminates A/B/C on thr11d vs no-destroy with new tags.
+
+### Open residual (-393)
+Why B8 / store n=3 only ~25% of recovery-fired holds. Next soak should show
+whether acc never reaches thr (stuck f28/s3) or B8 fires but arm is skipped.

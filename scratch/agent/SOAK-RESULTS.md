@@ -351,3 +351,5 @@
 20260810-101140 | s632_thr11d_rate_accum_a | rc=137 | 600s | scratch/agent/soak_results/s632_thr11d_rate_accum_a_20260810-101140.log
 20260810-102140 | s633_thr11d_rate_accum_b | rc=1 | 304s | scratch/agent/soak_results/s633_thr11d_rate_accum_b_20260810-102140.log
 20260810-110719 | s634_thr11d_rate_accum_c | rc=2 | 1221s | 4 att: recov×3 thr11d_new=0/3; att1 full-hold I_thr11_live_no_destroy ship_post=1; att3 scenegraph freeroll; H-shipcycle2 STRUCTURAL: thr11d needs post-create ship-zero n=3 (never fires on no-destroy)
+20260810-111210 | s635_thr11d_rate_accum_d | rc=137 | 600s | scratch/agent/soak_results/s635_thr11d_rate_accum_d_20260810-111210.log
+20260810-112210 | s636_thr11d_rate_accum_e | rc=137 | 600s | scratch/agent/soak_results/s636_thr11d_rate_accum_e_20260810-112210.log

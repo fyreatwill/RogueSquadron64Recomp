@@ -2,78 +2,65 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s634 recap (read this first)
+## s637 recap (read this first)
 
-**s634 ran `s634_thr11d_rate_accum_c` (new binary with !rsm_sane print-gate):**
-4 attempts, recovery-fired 3×, thr11d_new **0/3**. Rate update s628–s634:
-**2/8 (25%)** recovery-fired reach thr11d_new. 0 fail136c — bad_size raw-node
-print still unfed.
+**H-shipn3-gate CONFIRMED (dual-source s629+s633 vs s634):** thr11d_new path is
+entirely inside `runModelViewerLoop`:
 
-**H-shipcycle2 STRUCTURAL (dual-source offline):** correlated s633
-(`thr11d_new=1`) vs s634 att1 (`thr11d_new=0`, full 564s HOLD) event order
-post-`[hangar-sel]`:
+1. sp+0xB8 set when float `0x800D0120+0x90*s3+4` > `*0x800A79B8` (site 0x800CA1E0)
+   — post-hsel newbtn is zeros, so not A/START
+2. L_800CA51C: if ship null → `updateTextOverlayLookupEntry` → **ship-store n=3**
+3. `accumulateShipThrottleCharge` (needs gPlayerShip) → ret=1 after 7 thresholds
+4. L_800CA578 → `destroyPlayerShipRecord` → **ship-zero n=3** → thr11 id=11 dies → sec4
 
-| step | both paths | thr11d_new=1 only |
-|------|------------|-------------------|
-| ship n=2 store/zero | yes | yes |
-| destroy thr11 id=10, create id=11 | yes | yes |
-| ship n=3 store/zero | **never on no-destroy** | yes |
-| destroy id=11 → level-tex-* | no | yes |
+n=2 destroy = `gracefulMenuShutdown` (different caller). HOLD_S not the lever.
 
-SCORE `ship_store` is post-hsel only: =2 means n=2+n=3; =1 means only n=2.
-Every no-destroy recovery-fired sample has ship_store=1; both thr11d_new=1
-have ship_store=2. HOLD_S is not the lever (564s with id=11 live, no n=3).
+**Instruments live in binary:** `[mv-b8-set]` (always when B8 fires),
+`[mv-ship-arm]` (rate-limited at L_800CA51C with s0/b8/ship/s3).
 
-**Freelist walk model dual-source OK** (game `next=node+size+0x10` matches
-diag; predicted bad-node `0x801F3CC0`). Not a walker-model bug.
+**s635/s636 soaks:** no new thr11d_new; rate still **2/8** recovery-fired.
 
-s635 remains queued for passive accumulation. Do not spend this session
-babysitting another identical thr11d rate soak.
+**Enqueued:** `s637_mv_b8_shipn3_gate.sh` — consume its SCORE first.
 
 ## This iteration's work unit
 
-**Gate analysis for ship cycle n=3 / `destroyPlayerShipRecord` after post-exit
-thr11 create** (item -392). Discriminating question: what condition makes
-ship-store n=3 fire on thr11d_new=1 paths and never on no-destroy paths?
+**Consume s637 soak (or run it if not yet done) and classify B8 residual (-393).**
 
-1. **Static:** list every caller of `destroyPlayerShipRecord` (known sites in
-   `funcs_28/30/31/33/36.c` from s634 grep). For each, sketch the guard that
-   decides whether to call free after hangar exit (state 8). Name the guest
-   function + address for the path that fires at ship-zero n=3 host PC
-   (`host=0x100d00b98` on s633 / `0x102e64b98` on s629 — use `atos`/`nm` or
-   log host offset if available; guest ra may be zeroed).
-2. **Dynamic from existing logs (no new run first):** in s633 and s629 att4
-   thr11d_new=1 logs, dump ±50 lines around ship-store n=3 for guest
-   breadcrumbs (`hangar-state`, section match, thr-create, cutscene tags,
-   recovery). Diff against the same wall-clock window on s634 att1 after
-   id=11 create (where n=3 never appears). The first tag present on thr11d=1
-   and absent on no-destroy is the lead.
-3. **If a single guest predicate is identified:** either (a) instrument it
-   with a rate-limited fprintf in fixup (then one build + one soak), or
-   (b) if it is already logged, just document the gate and enqueue a soak
-   that waits for that tag. Do NOT force-write game state without a
-   positive control plan.
-4. **Consume s635** if the loop already ran it — fold SCORE into rates; if
-   thr11d_new=1 with fail136c, read the !sane node print at E8 i=55
-   (item -391). If still <3 thr11d_new samples and no n=3 lead, enqueue
-   s636 copy for the loop and continue the gate analysis.
+1. **Fold SOAK-RESULTS** for `s637_mv_b8_shipn3_gate`:
+   - Count recovery-fired thr11d_new vs no-destroy.
+   - On thr11d_new=1: require `[mv-b8-set]` then `[mv-ship-arm]` (b8=1 or s0=1)
+     then ship-store n=3 then throttle-ret ret=1 — **positive control**.
+   - On no-destroy: is `[mv-b8-set]` count post thr11-create **0** (acc never
+     hits thr) or >0 with arm skipped / ship non-null?
+
+2. **Discriminators (pick one):**
+   | outcome | proves |
+   |---------|--------|
+   | A thr11d: b8-set→arm b8=1→store n=3→thr ret1 | control green; path as modeled |
+   | B no-destroy: 0 mv-b8-set after id=11 create | float acc stuck (f28/s3/table) |
+   | C no-destroy: mv-b8-set>0 but 0 store n=3 | arm entered with ship already set, or isPlayerShipActive blocks |
+   | D thr11d without any mv-b8-set | store via s0=1 (button path) — unexpected post-hsel |
+
+3. **If B (acc stuck):** static-read who writes s3 / the 0x800D0120 table and
+   f28 (frame dt); instrument one rate-limited `[mv-acc]` sample of acc vs thr
+   every N frames post-hsel (one build). Do not force B8 without control plan.
+
+4. **If A only (no no-destroy sample):** enqueue another copy; do not spend
+   session babysitting. Optionally offline-read s634 no-destroy for any
+   pre-existing B8-adjacent tags (there were none before instruments).
 
 ## Hypotheses (active)
 
 | ID | Claim | Discriminator | Status |
 |----|-------|---------------|--------|
 | H-ltexmg1 | guard LIVE | ltexmg≥1 ∧ ltex_null=0 | CONFIRMED |
-| H-ltexArg | (size=0x136C flags=0) | — | REFUTED s625 |
-| H-ltexNullPool | (heads KSEG0 non-null) | — | REFUTED s625 |
 | H-walk1 | uint32 MEM_* garbage | sane maxfree on posctrl | CONFIRMED s626 |
-| H-ltexOOM | pool4 free ≥ need (global) | maxfree all pools | REFUTED s627 (global) |
-| H-ltexOOM-sel | null = no free ≥ 0x1370 on E8 | fail136c maxfree_sel < need | **AMBIGUOUS N=1** (reason=corrupt, not clean no_fit) |
-| H-ltexFree | null = freelist walk rejects free ≥ need | maxfree_sel ≥ need, mystery | UNFED clean |
-| H-E8-corrupt | selected E8 freelist size field goes insane mid-run | !sane print flags/size at 0x801F3CC0 | **SUPPORTED N=1**; walk model OK; raw node unfed |
-| H-walk-model-bug | diag next≠game next | static compare | **REFUTED s634** |
-| H-thr11destroy-rate | thr11d rate is the bottleneck vs HOLD_S | recov vs thr11d across attempts | SUPPORTED 2/8; deprioritized |
-| H-shipcycle2 | thr11d_new requires post-create ship-zero (n=3) | event order thr11d=1 vs =0 | **STRUCTURAL / CONFIRMED s634** |
-| H-shipn3-gate | (open) a guest predicate gates ship n=3 | present on thr11d=1, absent on no-destroy | **ACTIVE** |
+| H-ltexOOM-sel | null = no free ≥ 0x1370 on E8 | fail136c maxfree_sel < need | AMBIGUOUS N=1 |
+| H-E8-corrupt | E8 freelist size insane mid-run | !sane print at 0x801F3CC0 | SUPPORTED N=1; raw unfed |
+| H-walk-model-bug | diag next≠game next | static compare | REFUTED s634 |
+| H-shipcycle2 | thr11d needs post-create ship-zero n=3 | event order | **STRUCTURAL s634** |
+| H-shipn3-gate | n=3 = runModelViewerLoop B8→throttle | static+dynamic dual-source | **CONFIRMED s637** |
+| H-b8rate | residual thr11d rate = B8 never fires | mv-b8-set post id=11 on no-destroy | **ACTIVE** |
 | H-recovwait1 | RECOV_WAIT=50 correct | — | CONFIRMED |
 | H-dmarom1 | post soft-skip DMA (-387) | freeroll; not -385 root | 3× seen |
 
@@ -84,11 +71,12 @@ ship-store n=3 fire on thr11d_new=1 paths and never on no-destroy paths?
 - Trust pre-s628 maxfree/reason when unselected free counted
 - Leave FORCE tools default-ON
 - Raise HOLD_S past 210
-- Spend the session on another pure thr11d rate-accumulation soak (enqueue only)
-- Escalate scenegraph off recovery-active freeroll without scored class-D 2nd
-- Force ship-zero / destroyPlayerShipRecord without a control plan
+- Spend the session on pure thr11d rate soaks without the new B8 tags
+- Force ship-zero / destroyPlayerShipRecord / force B8 without control plan
+- Re-open "which destroyPlayerShipRecord caller" — closed s637
 
 ### Reference tags
-`[ship-store]`, `[ship-zero]`, `destroyPlayerShipRecord`, `0x800B42A8`,
-`[hangar-sel]`, thr11 id=11, ship n=3, H-shipn3-gate, H-shipcycle2,
-`[rs-malloc-diag]`, `fail136c`, `stop=bad_size`, `0x801F3CC0`, thr11d_new
+`[mv-b8-set]`, `[mv-ship-arm]`, `[ship-store]`, `[ship-zero]`, `[throttle-ret]`,
+`runModelViewerLoop`, `0x800CA1E0`, `0x800CA51C`, `0x800CA578`,
+`accumulateShipThrottleCharge`, `gracefulMenuShutdown`, thr11 id=11,
+H-shipn3-gate, H-b8rate, fail136c, `0x801F3CC0`
