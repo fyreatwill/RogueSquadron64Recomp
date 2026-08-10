@@ -1,27 +1,35 @@
 #!/bin/zsh
-# s609: recovery-cell gate on force6+inject path.
+# s610: recovery-active force6+inject path with mat3inv free-reroll.
 # HYPOTHESIS-ID: m3-post-exit-fs-stall
 #
-# s608 confirm fold (attempt 3 scored offline after hard-cap):
-#   force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=750 thr11_create=1
-#   recov76B768=0 recov76BA90=0 thr11_destroy=0 sec4_post=0 sec2_post=0
-#   crash=ok (hard-killed mid-hold). Post-hangar-sel FULL_SYNC mono-cell
-#   0x0076DF60×474 — never diversifies to 0x0076B768 (s607 had ×46 76B768
-#   + multi-cell family after comparable inject volume). Class =
-#   F_recovery_silent_no_thr11_destroy. H-recov1 necessity SUPPORTED.
-# Pre-eng A1/A2 free rerolls; A1 breadcrumb setByteAcrossEntryList/0x800aafa8.
+# s609_recovery_cell_reroll fold (scored a3 class E):
+#   pre_eng=2 matnoise=0 recov_silent=0
+#   force6=1 case6=1 hangar-sel=1 ace80=1 inject_max_n=450
+#   recov76B768~=48 thr11_create=1 thr11_destroy=0 sec4_post=0 sec2_post=0
+#   crash=CRASH host stack: mat3x3InverseInto ← traverseSceneGraphRecursive
+#     ← setupCameraMatrices ← runModelViewerLoop ← menuOverlayInit
+#   last-guest-pc=0x80022160 STALE (tickTextureMaterialExpiry epilogue nop;
+#     mat3x3InverseInto does not stamp g_rs64_last_guest_pc)
+#   Abort trap (signal 6) via NAN_CHECK assert on NaN/Inf after det path.
+# Offline vs s607 thr11-destroy control:
+#   first 76B768 ~+63–67k lines post hangar-sel (same order)
+#   s607 thr11_destroy ~+7k lines after first 76B768
+#   s609 crash ~+4k lines after first 76B768 — MID recovery window, not a
+#   clean thr11-stall at EOF. Class E recharacterized as mid-window mat3inv
+#   abort race, not "recovery insufficient for thr11 destroy."
 #
-# New discard class: engaged + inject alive but no 0x0076B768 within
-# RECOV_WAIT_S after hangar-sel → SIGKILL free reroll (do not spend full HOLD
-# scoring a dead recovery path). Score only recovery-active attempts.
+# New free-reroll class: engaged + recovery-active + crash stack contains
+# mat3x3InverseInto (Abort/NAN_CHECK) before thr11 destroy — discard and
+# retry (same role as matnoise). Score only recovery-active non-mat3inv paths.
+# Arms ROGUESQ_LOG_MAT3INV=1 for same-run det/abnormal positive control.
 #
-# Discriminating outcomes (scored = eng + recov76B768≥1 + not matnoise):
+# Discriminating outcomes (scored = eng + recov≥1 + not matnoise + not mat3inv):
 #   A) sec2_post + ok → in-mission hold
 #   B) sec2_post + packTlut/loadDebugAssets → -373 2nd
 #   C) sec2_post + other crash → new breadcrumb
 #   D) thr11_destroy+sec4, sec2=0 → regression
-#   E) recov≥1 but thr11 never destroyed by EOF
-#   F) budget exhaust: only pre-eng / matnoise / recovery-silent
+#   E) recov≥1 thr11 live at EOF (true stall — crash!=mat3inv)
+#   F) budget exhaust: only pre-eng / matnoise / recovery-silent / mat3inv
 #
 # Exit: 0 scored+ok, 1 scored+CRASH, 2 no recovery-active engagement, 3 force miss.
 set -u
@@ -33,13 +41,10 @@ BUDGET_S=560
 MAX_ATTEMPTS=8
 HOLD_S=180
 START_FLOOR_S=90
-# After hangar-sel, if no recovery cell within this window, kill+reroll.
-# s607 first 76B768 was ~inject+~56k log lines (~tens of seconds post-inject);
-# 100s is generous vs that and leaves room for multi-reroll under 560s.
 RECOV_WAIT_S=100
 POLL_S=3
 
-GAME_EXTRA_ENV_BASE="ROGUESQ_FORCE_STATE6_AFTER=40 ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_COALESCE_HEAP_GUARD=1 ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD=1 ROGUESQ_LOG_BEGINFRAME_S0_GUARD=1 ROGUESQ_LOG_TEXDATA_TABLE_GUARD=1 ROGUESQ_LOG_TEXDATA_PTR_ARRAY_GUARD=1 ROGUESQ_LOG_MATERIAL_ARRAY_PTR_GUARD=1"
+GAME_EXTRA_ENV_BASE="ROGUESQ_FORCE_STATE6_AFTER=40 ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_COALESCE_HEAP_GUARD=1 ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD=1 ROGUESQ_LOG_BEGINFRAME_S0_GUARD=1 ROGUESQ_LOG_TEXDATA_TABLE_GUARD=1 ROGUESQ_LOG_TEXDATA_PTR_ARRAY_GUARD=1 ROGUESQ_LOG_MATERIAL_ARRAY_PTR_GUARD=1 ROGUESQ_LOG_MAT3INV=1"
 
 START_EPOCH=$(date +%s)
 ATTEMPT=0
@@ -48,10 +53,26 @@ SCORED_RC=""
 MATERIAL_NOISE_N=0
 PRE_ENG_N=0
 RECOV_SILENT_N=0
+MAT3INV_N=0
 
 kill_game() {
   /usr/bin/pkill -9 -x RogueSquadron64Recomp 2>/dev/null || true
   /usr/bin/pkill -9 -f 'run_mission_keys.sh' 2>/dev/null || true
+}
+
+is_mat3inv_crash() {
+  local log="$1"
+  [ -f "$log" ] || return 1
+  grep -aq '\[CRASH\]' "$log" 2>/dev/null || return 1
+  # Host stack (symbolized) is authoritative — last-guest-pc is stale for this path
+  if grep -aq 'mat3x3InverseInto' "$log" 2>/dev/null; then
+    return 0
+  fi
+  # Diagnostic tag if MAT3INV log armed and process aborted mid abnormal
+  if grep -aq '\[mat3inv-abnormal\]' "$log" 2>/dev/null && grep -aq 'Abort trap\|signal 6' "$log" 2>/dev/null; then
+    return 0
+  fi
+  return 1
 }
 
 while :; do
@@ -67,7 +88,7 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping"
     break
   fi
-  TAG="s609_recov_reroll_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s610_recov_mat3inv_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   LOG="$OUT/run.log"
   kill_game
@@ -86,7 +107,6 @@ while :; do
   EARLY_REASON=""
   while kill -0 "$LAUNCH_PID" 2>/dev/null; do
     sleep "$POLL_S"
-    # Global budget hard stop
     NOW2=$(date +%s)
     if [ $(( NOW2 - START_EPOCH )) -ge "$BUDGET_S" ]; then
       EARLY_KILL=1
@@ -101,12 +121,10 @@ while :; do
       echo "[fast-retry] attempt $ATTEMPT hangar-sel seen at +$((NOW2-NOW))s — starting RECOV_WAIT_S=${RECOV_WAIT_S}"
     fi
     if [ "$HSEL_T" -gt 0 ] && [ "$RECOV_SEEN" -eq 0 ]; then
-      if grep -aq '0x0076B768' "$LOG" 2>/dev/null && grep -aq '\[rdp-fullsync\].*0x0076B768\|0x0076B768.*rdp-fullsync\|addr=0x0076B768' "$LOG" 2>/dev/null; then
+      if grep -aqE '\[rdp-fullsync\].*0x0076B768|addr=0x0076B768' "$LOG" 2>/dev/null; then
         RECOV_SEEN=1
         echo "[fast-retry] attempt $ATTEMPT recovery 76B768 seen at +$((NOW2-NOW))s — letting HOLD finish"
       elif [ $(( NOW2 - HSEL_T )) -ge "$RECOV_WAIT_S" ]; then
-        # Also accept any non-76DF60 post-exit fullsync diversification as recovery signal
-        # but primary gate is 76B768 (s607 control).
         EARLY_KILL=1
         EARLY_REASON=recovery_silent
         echo "[fast-retry] attempt $ATTEMPT RECOV_WAIT expired (${RECOV_WAIT_S}s post hangar-sel, 0×76B768) — SIGKILL free reroll"
@@ -115,7 +133,6 @@ while :; do
         break
       fi
     fi
-    # Material noise can fire before recovery window ends — free reroll immediately
     if grep -aqi 'last-guest-pc\] pc=0x8000e29c' "$LOG" 2>/dev/null || \
        grep -aq 'findOrCreateMaterial+' "$LOG" 2>/dev/null; then
       if grep -aq '\[CRASH\]' "$LOG" 2>/dev/null; then
@@ -127,41 +144,54 @@ while :; do
         break
       fi
     fi
+    # mat3inv Abort mid recovery window — free reroll (s609 class-E cause)
+    if is_mat3inv_crash "$LOG"; then
+      EARLY_KILL=1
+      EARLY_REASON=mat3inv
+      echo "[fast-retry] attempt $ATTEMPT mat3x3InverseInto crash mid-run — SIGKILL free reroll"
+      kill_game
+      wait "$LAUNCH_PID" 2>/dev/null || true
+      break
+    fi
   done
   if kill -0 "$LAUNCH_PID" 2>/dev/null; then
     wait "$LAUNCH_PID" 2>/dev/null || true
   fi
   RC=$?
-  # If we SIGKILL'd the game under run_mission_keys, launcher may still report non-zero
   if [ "$EARLY_KILL" -eq 1 ]; then
     RC=137
   fi
 
-  CASE6=0; HSEL=0; CRASH=0; ACE80=0; FORCE6=0; MATNOISE=0; RECOV=0
+  CASE6=0; HSEL=0; CRASH=0; ACE80=0; FORCE6=0; MATNOISE=0; RECOV=0; MAT3INV=0
   if [ -f "$LOG" ]; then
     grep -aq '\[case6-force-start\]' "$LOG" && CASE6=1
     grep -aq '\[hangar-sel\]' "$LOG" && HSEL=1
     grep -aq '\[CRASH\]' "$LOG" && CRASH=1
     grep -aq 'site=0x800ACE80' "$LOG" && ACE80=1
     grep -aq '\[case5-force-state6\]' "$LOG" && FORCE6=1
-    if grep -aq 'addr=0x0076B768' "$LOG" && grep -aq '\[rdp-fullsync\]' "$LOG"; then
-      # count properly below; presence gate here
-      if grep -aqE '\[rdp-fullsync\].*0x0076B768|addr=0x0076B768' "$LOG"; then
-        RECOV=1
-      fi
+    if grep -aqE '\[rdp-fullsync\].*0x0076B768|addr=0x0076B768' "$LOG"; then
+      RECOV=1
     fi
     if grep -aqi 'last-guest-pc\] pc=0x8000e29c' "$LOG" || \
        grep -aq 'findOrCreateMaterial+' "$LOG"; then
       MATNOISE=1
     fi
+    if is_mat3inv_crash "$LOG"; then
+      MAT3INV=1
+    fi
   fi
   DUR=$(( $(date +%s) - NOW ))
-  echo "[fast-retry] attempt $ATTEMPT done rc=$RC dur=${DUR}s force6=$FORCE6 case6=$CASE6 hangar_sel=$HSEL ace80=$ACE80 recov768=$RECOV crash=$CRASH matnoise=$MATNOISE early=$EARLY_REASON log=$LOG"
+  echo "[fast-retry] attempt $ATTEMPT done rc=$RC dur=${DUR}s force6=$FORCE6 case6=$CASE6 hangar_sel=$HSEL ace80=$ACE80 recov768=$RECOV crash=$CRASH matnoise=$MATNOISE mat3inv=$MAT3INV early=$EARLY_REASON log=$LOG"
 
   if [ "$CASE6" -eq 1 ] && [ "$HSEL" -eq 1 ]; then
     if [ "$MATNOISE" -eq 1 ] && [ "$CRASH" -eq 1 ]; then
       MATERIAL_NOISE_N=$(( MATERIAL_NOISE_N + 1 ))
       echo "[fast-retry] attempt $ATTEMPT engaged but material-noise -- discard (noise_n=$MATERIAL_NOISE_N)"
+      continue
+    fi
+    if [ "$MAT3INV" -eq 1 ]; then
+      MAT3INV_N=$(( MAT3INV_N + 1 ))
+      echo "[fast-retry] attempt $ATTEMPT engaged+recov-path mat3inv Abort -- free reroll (mat3inv_n=$MAT3INV_N)"
       continue
     fi
     if [ "$RECOV" -eq 0 ]; then
@@ -179,12 +209,12 @@ while :; do
 done
 
 if [ -z "$SCORED_LOG" ]; then
-  echo "[fast-retry] no recovery-active engagement within budget (attempts=$ATTEMPT pre_eng=$PRE_ENG_N matnoise=$MATERIAL_NOISE_N recov_silent=$RECOV_SILENT_N)"
+  echo "[fast-retry] no recovery-active engagement within budget (attempts=$ATTEMPT pre_eng=$PRE_ENG_N matnoise=$MATERIAL_NOISE_N recov_silent=$RECOV_SILENT_N mat3inv=$MAT3INV_N)"
   exit 2
 fi
 
 echo "[fast-retry] === scored attempt analysis: $SCORED_LOG ==="
-echo "[fast-retry] discard_stats pre_eng=$PRE_ENG_N matnoise=$MATERIAL_NOISE_N recov_silent=$RECOV_SILENT_N attempts=$ATTEMPT"
+echo "[fast-retry] discard_stats pre_eng=$PRE_ENG_N matnoise=$MATERIAL_NOISE_N recov_silent=$RECOV_SILENT_N mat3inv=$MAT3INV_N attempts=$ATTEMPT"
 python3 - "$SCORED_LOG" <<'PY'
 import re, sys
 from collections import Counter
@@ -211,6 +241,8 @@ sec2 = sum(1 for l in lines if "start-match: section 2" in l)
 tex_g = c("[texdata-table-guard]") + c("[texdata-ptr-array-guard]")
 mat_g = c("[material-array-ptr-guard]")
 vi24 = 1 if re.search(r"width=24", raw) else 0
+mat3_abn = c("[mat3inv-abnormal]")
+mat3_ent = c("[mat3inv-entry]")
 
 hsel_i = next((i for i, l in enumerate(lines) if "[hangar-sel]" in l), 0)
 post = lines[hsel_i:]
@@ -247,15 +279,19 @@ crash = "CRASH" if "[CRASH]" in raw else "ok"
 stack_blob = raw[raw.find("[CRASH] caught"): raw.find("[CRASH] caught") + 4000] if "[CRASH] caught" in raw else ""
 stack_pack = 1 if "packTlutEntriesRgba5551" in stack_blob else 0
 stack_debug = 1 if "loadDebugAssets" in stack_blob else 0
+stack_mat3 = 1 if "mat3x3InverseInto" in stack_blob else 0
 
+# first recovery relative line after hangar-sel; gap to crash/thr11d
+first768 = next((i for i, l in enumerate(post) if "0x0076B768" in l and "rdp-fullsync" in l), -1)
 print(
     f"gate force6={force6} case6={case6} hangar-sel={hsel} ace80={ace80} "
     f"inject_max_n={inj_max} recov76B768~={rec768} recov76BA90~={recA90} "
     f"thr11_create={thr11_create} thr11_destroy={thr11_destroy} "
     f"sec4={sec4} sec4_post={sec4_post} sec2={sec2} sec2_post={sec2_post} "
     f"thr495FC_post={t12_post} tex_guards={tex_g} mat_guards={mat_g} vi24={vi24} "
+    f"mat3inv_entry={mat3_ent} mat3inv_abnormal={mat3_abn} first768_post_rel={first768} "
     f"post_fs_top={top} stack_packtlut={stack_pack} stack_loaddebug={stack_debug} "
-    f"crash={crash} crash_pc={crash_pc}",
+    f"stack_mat3inv={stack_mat3} crash={crash} crash_pc={crash_pc}",
     file=sys.stderr,
 )
 if m_sym:
@@ -269,6 +305,8 @@ elif sec2_post >= 1 and crash == "CRASH":
     cls = "C_sec2_other_crash"
 elif thr11_destroy and sec4_post >= 1 and sec2_post == 0:
     cls = "D_sec4_no_sec2"
+elif thr11_destroy == 0 and stack_mat3:
+    cls = "E_mat3inv_midwindow"  # should not score; free-reroll bug if seen
 elif thr11_destroy == 0:
     cls = "E_recov_but_thr11_live"
 else:

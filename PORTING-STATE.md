@@ -48153,3 +48153,60 @@ Queued `scratch/agent/soak_queue/s609_recovery_cell_reroll.sh`:
 
 ### Next
 Consume s609 soak: recovery-active scored path should re-exercise thr11→sec2 and either reconfirm -373 or land in-mission hold.
+
+## Session 610 (2026-08-09): fold s609_recovery_cell_reroll — class E RECHARACTERIZED as mid-window mat3x3InverseInto Abort; free-reroll recipe queued
+
+### Work unit
+Consume `s609_recovery_cell_reroll` (NEXT.md s609) and act on class A–F.
+
+### Soak result
+Outer: `scratch/agent/soak_results/s609_recovery_cell_reroll_20260809-232158.log` (rc=1, 535s)
+
+| | value |
+|---|---|
+| discard_stats | pre_eng=2 matnoise=0 recov_silent=0 attempts=3 |
+| A1/A2 | pre-eng `setByteAcrossEntryList+176`/`0x800aafa8` (2× same run; 3rd total w/ s609 A1) |
+| scored a3 | eng force6+case6+hsel+ace80 inject_max_n=450 |
+| recov76B768 | ~48 (multi-cell post_fs_top also 76B9E8/76C528/…) |
+| thr11_create / destroy | 1 / **0** |
+| sec4_post / sec2_post | 0 / 0 |
+| crash | **CRASH** Abort trap (signal 6) |
+| host stack | `mat3x3InverseInto` ← `traverseSceneGraphRecursive` ← `setupCameraMatrices` ← `runModelViewerLoop` ← `menuOverlayInit` ← `mainGameLoop` |
+| last-guest-pc | `0x80022160` **STALE** (`tickTextureMaterialExpiry` epilogue `nop`; `mat3x3InverseInto` does not stamp `g_rs64_last_guest_pc`) |
+| class_hint | `E_recov_but_thr11_live` |
+
+Scored log: `scratch/s73_post_a_scene/s609_recov_reroll_3_20260809232616/run.log`
+
+### Offline vs s607 thr11→sec2 control
+| event | s607 (sec2) | s609 a3 |
+|---|---|---|
+| hangar-sel line | 167391 | 165185 |
+| thr11 create | 168689 | 166059 |
+| first `0x76B768` | 230653 (~+63k post-hsel) | 231863 (~+67k) |
+| thr11 destroy | 237578 (~+7k after first 768) | **never** |
+| death / sec2 | sec2@252574 then packTlut (-373) | Abort@235843 (~+4k after first 768) |
+| n768 | 92 before thr11d | 96 to crash |
+
+**Recharacterization:** class E here is **not** "recovery present but thr11 never dies given a full hold." Process died ~4k log lines after first recovery cell — halfway through the s607 recovery→destroy gap — on a cutscene camera-path Abort inside `mat3x3InverseInto` (`NAN_CHECK`/`assert(val==val)` on NaN after the det/`DIV_S` path). Recovery-cell appearance still matched the healthy control; thr11 destroy never got its window.
+
+H-recov1 necessity still SUPPORTED (s609). H-recov1 sufficiency remains REFUTED in general (s606 heavy 76B768 + thr11 live) but **this** class-E instance is a mid-window abort race, not a clean sufficiency counterexample. H-sec2a / -373 not re-tested (no thr11 destroy).
+
+`ROGUESQ_LOG_MAT3INV` was **not** armed on s609 — no same-run `[mat3inv-abnormal]` count. s223 refuted abnormal dets on the hangar-hold path (0/456k); this is a **different** post-exit cutscene phase under force6+inject. Do not re-open s223's hangar null; file post-exit mat3inv Abort as new breadcrumb.
+
+### Item dispositions
+- **-374** recovery silence: this soak had recov_silent=0; filter still valuable for other rolls.
+- **-373** packTlut: still 1× (no sec2).
+- **-375** NEW: post-exit `mat3x3InverseInto` Abort under force6+inject recovery-active cutscene (1×; free-reroll, not single-chased).
+- `0x800aafa8` pre-eng: 3× total near closed -320 (`0x800aafb8`); still pre-eng free-reroll noise, watch for 4th / hangar-only hits.
+
+### Act
+Queued `scratch/agent/soak_queue/s610_recov_mat3inv_reroll.sh`:
+- Same force6+case6+inject + recovery-silent free-reroll as s609.
+- **New free-reroll:** crash stack contains `mat3x3InverseInto` (or abnormal+Abort) → discard like matnoise.
+- Arms `ROGUESQ_LOG_MAT3INV=1` for same-run det/abnormal positive control when mat3inv fires.
+- Scorer reports `mat3inv_entry`/`mat3inv_abnormal`/`stack_mat3inv`/`first768_post_rel`.
+
+### Do not
+- Soft-skip det0 in product code without 2nd occ + same-run abnormal control (s223 hangar null still stands for that phase).
+- Treat `last-guest-pc=0x80022160` as a real fault site.
+- Raise HOLD_S past 210.
