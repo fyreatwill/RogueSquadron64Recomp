@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s600)
+## Current truth (established by session 295; unchanged, reviewed through s601)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -129,8 +129,9 @@ classic s178 producer-stop) traced to a sticky shared DPC staging cell (phys `0x
 Factor5 LLE RSP for PIPE_SYNC/SETTIMG (H7a) — product fix `ROGUESQ_FS_PIPE_INJECT` (default OFF)
 restores sync flow through the E7/F3/FD residual. thr-11 destroy co-times with sec4 reload when
 recovery `0x76B768` is healthy. Current frontier: item -361 R2 coalesce re-verify, blocked
-post-engagement by item -338 (now guarded s600 as -365; soak pending). Full chain: items
--349..-365; raw `PORTING-STATE.md` Sessions 577-600. DoD = **cutscene→in-mission** + craft input.
+post-engagement by item -338 (guarded s600 as -365; s601 first live verify scored D — requeued).
+Full chain: items -349..-366; raw `PORTING-STATE.md` Sessions 577-601. DoD = **cutscene→in-mission**
++ craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
 
@@ -147,10 +148,21 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -365. The next NEW item takes -366.
+a range pointer. Highest allocated so far: -366. The next NEW item takes -367.
+
+-366. **(s601) `s600_item338_beginframe_s0_verify` scored D (path not exercised) — requeued as
+    `s601_item338_beginframe_s0_verify_r2`.** Fast-retry: attempt 1 pre-engagement death
+    (`last-guest-pc=0x80065ac4`, not discriminating); attempt 2 engagement
+    `case6=1 hangar-sel=1` then scored. Gate:
+    `beginframe_s0_guard=0 last_guest_afa0=0 sec4=1 sec2=0 coalesce_guard2_r2=0
+    inject_lines=0 recov76B768=0 crash_pc=0x8000241c` /
+    `coalesceFreeHeapBlocks+3192` (already-catalogued s354-366 heap-walker background noise,
+    not a new item; dies ~1k log lines after hangar-sel, before the beginframe path can run).
+    Binary has the guard string; env was armed. **Item -338/-365 still PENDING live 1/2** —
+    same recipe requeued, do not redesign. Full: Session 601.
 
 -365. **(s600) Item -338 ROOT-CAUSED and GUARDED (`BEGINFRAME_S0_GUARD` site=`0x8000AFA0`);
-    live verify queued as `s600_item338_beginframe_s0_verify`.** Offline on all 5 crash logs
+    live verify in flight (s601 requeue after s600 soak scored D).** Offline on all 5 crash logs
     (s554/s572/s574/s592_r2/s598): identical mechanism — guest `0x8000AFA0`
     `lw $v0, 0x8($s0)` after null-only `beql $s0,$zero`; SIGBUS `si_addr=0x335000008` on 4/5
     (s598: `0x384004087`), `x11` matches low 32 of `si_addr`. Function base `0x8000A8A0`
@@ -164,8 +176,7 @@ a range pointer. Highest allocated so far: -365. The next NEW item takes -366.
     entries. Fix: range-check `ctx->r16`; OOB → `s2--` + `goto L_8000B208` (mirrors outer null
     arm). Env `ROGUESQ_LOG_BEGINFRAME_S0_GUARD` / `[beginframe-s0-guard]`. In
     `fixup_game_funcs.py` + hand-applied `funcs_3.c` (sentinel blocks re-fixup without regen);
-    binary rebuilt. **Not CLOSED until 2/2 live confirms** — next session folds the queued soak.
-    Full detail: `PORTING-STATE.md` Session 600.
+    binary rebuilt. **Not CLOSED until 2/2 live confirms.** Full detail: Sessions 600-601.
 
 -364. **(s599) `s598_fast_retry_case6` ran: engagement on attempt 1/8, then item -338 before
     `sec4=2` — REFRAMES item -361 bottleneck to "item -338 racing thr-11 destroy."**
@@ -214,14 +225,16 @@ a range pointer. Highest allocated so far: -365. The next NEW item takes -366.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s600) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
+-361. **(s589-s601) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
     open.** Bottleneck reframed s599 (item -364): not recovery-cell reliability but item -338
     racing thr-11 destroy post-engagement. s600 (item -365) root-caused and guarded -338;
-    verify soak `s600_item338_beginframe_s0_verify` queued — if it reaches `sec4>=2` with the
-    R2 path live, item -361's original re-verify unblocks. Mechanism (unchanged): 
-    `initSceneForMission`'s 2nd unguarded `$s2`-based coalesce loop at `0x8000247C` (R2 guard
-    s593). `sec4>=2` remains the discriminating threshold (`sec4=1` = boot preload). Do not
-    raise `HOLD_S` past 210. Full: Sessions 589-600.
+    s601 first live verify scored D (path not exercised; died on catalogued `0x8000241c`
+    coalesce noise post-engagement with `sec4=1`). Requeued as `s601_item338_*_r2` — if a
+    future scored attempt reaches `sec4>=2` with the R2 path live, item -361's original
+    re-verify unblocks. Mechanism (unchanged): `initSceneForMission`'s 2nd unguarded
+    `$s2`-based coalesce loop at `0x8000247C` (R2 guard s593). `sec4>=2` remains the
+    discriminating threshold (`sec4=1` = boot preload). Do not raise `HOLD_S` past 210.
+    Full: Sessions 589-601.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
@@ -325,10 +338,11 @@ a range pointer. Highest allocated so far: -365. The next NEW item takes -366.
 
 -338. **(s554, s572, s574, s592, s598 — 5 occurrences) `beginFrameDLChunk`/
     `last-guest-pc=0x8000afa0` — ROOT-CAUSED s600, GUARDED as item -365 (`BEGINFRAME_S0_GUARD`
-    site=`0x8000AFA0`); live 2/2 confirm PENDING.** Guest insn `lw $v0, 0x8($s0)` after
-    null-only check on stack-slot-loaded node ptr; SIGBUS `si_addr=0x335000008` (4/5). s554
-    pre-crash also co-fired existing guards with `bad_ptr=0x7500D019` (corruption wave feeding
-    the bad `$s0`, not a second independent bug). See item -365.
+    site=`0x8000AFA0`); live 2/2 confirm PENDING (s601 first soak = D, requeued).** Guest insn
+    `lw $v0, 0x8($s0)` after null-only check on stack-slot-loaded node ptr; SIGBUS
+    `si_addr=0x335000008` (4/5). s554 pre-crash also co-fired existing guards with
+    `bad_ptr=0x7500D019` (corruption wave feeding the bad `$s0`, not a second independent
+    bug). See items -365/-366.
 
 -337. **(s551) `submitSceneNodeRender+69192`/`0x80010df4` — ROOT-CAUSED, FIXED and FULLY CLOSED
     2/2 with item -341 (s561).**

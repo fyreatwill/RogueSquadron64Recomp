@@ -47649,3 +47649,52 @@ unblock signal; 2nd confirm still required for FULLY CLOSED 2/2.
 - `fixup_game_funcs.py` (BEGINFRAME_S0_GUARD)
 - `RecompiledFuncs/funcs_3.c` (hand-applied, same shape)
 - `scratch/agent/soak_queue/s600_item338_beginframe_s0_verify.sh`
+
+## Session 601 — 2026-08-09 — fold s600 item -338 verify soak: scored D (path not exercised); requeued
+
+### Work unit
+Consume `s600_item338_beginframe_s0_verify` (queued s600) and act on A/B/C/D.
+
+### Soak result (scored attempt 2/2)
+Recipe: fast-retry case6+inject + `ROGUESQ_LOG_BEGINFRAME_S0_GUARD=1`, budget 560s.
+- Attempt 1: pre-engagement death (case6=0 hangar-sel=0), `last-guest-pc=0x80065ac4`
+  (not scored; free reroll).
+- Attempt 2: engagement `case6=1 hangar-sel=1` ~hold-iter 3, then CRASH. Gate line:
+  ```
+  gate case6=1 hangar-sel=1 inject_lines=0 recov76B768~=0 sec4=1 sec2=0
+  thr495FC_creates=2 coalesce_guard1=0 coalesce_guard2_r2=0
+  beginframe_s0_guard=0 last_guest_afa0=0 crash=CRASH crash_pc=0x8000241c
+  crash_sym=coalesceFreeHeapBlocks+3192 (local-symtab)
+  ```
+- Stack: `coalesceFreeHeapBlocks ← runVideoFrameTick ← menuOverlayInit ← mainGameLoop`.
+- `si_addr=0x3efc2187c` (wild halfword load at guest `lhu $v1, 0x0($a0)`).
+- Binary contains `[beginframe-s0-guard]` string (built s600 21:06); env armed.
+
+### Classification
+**D** — 0 guard fires, no `0x8000afa0` crash: item -338 path not exercised this run.
+Not discriminating for the guard. Death is the already-catalogued s354-366
+`coalesceFreeHeapBlocks+3192`/`0x8000241c` heap-walker background-noise family
+(seen e.g. s446/s565 confirm soaks), not a new item and not a guard miss (C).
+`sec4=1` only (boot preload); no thr-11 destroy co-timing with post-exit sec4;
+inject/recovery never reached (died still in menu overlay post-hangar-sel).
+
+### Action
+Requeued identical recipe as
+`scratch/agent/soak_queue/s601_item338_beginframe_s0_verify_r2.sh` (TAG prefix
+`s601_item338_verify_r2_`). Do not redesign. Item -338/-365 still 0/2 live
+confirms. Item -361 still blocked on a discriminating -338 verify that reaches
+`sec4>=2` with R2 live.
+
+### Ruled out this session
+- Guard missing from binary / env not armed (string present; env in GAME_EXTRA_ENV).
+- "Still dies at 0x8000afa0" (C) — scored attempt's last-guest-pc is 0x8000241c.
+- Escalating 0x8000241c as a new M3 lead — already catalogued background noise.
+
+### Artifacts
+- `scratch/agent/soak_results/s600_item338_beginframe_s0_verify_20260809-211929.log`
+- scored run: `scratch/s73_post_a_scene/s600_item338_verify_2_20260809212211/run.log`
+- requeue: `scratch/agent/soak_queue/s601_item338_beginframe_s0_verify_r2.sh`
+
+### Next
+Fold s601 requeue result the same way (A/B/C/D). Only A/B with guard fire
+advances -338 toward 1/2 CLOSED.

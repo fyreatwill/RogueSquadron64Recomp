@@ -1,5 +1,5 @@
 #!/bin/zsh
-# s600 item -338 BEGINFRAME_S0_GUARD live verify (HYPOTHESIS-ID m3-post-exit-fs-stall).
+# s601 requeue of s600 BEGINFRAME_S0_GUARD live verify (s600 scored D: path not exercised) (HYPOTHESIS-ID m3-post-exit-fs-stall).
 # s599 offline characterization of 5/5 item -338 crashes (s554/s572/s574/s592_r2/s598)
 # found identical mechanism: guest 0x8000AFA0 `lw $v0, 0x8($s0)` after null-only check
 # on a stack-slot-loaded node pointer; SIGBUS si_addr=0x335000008 (4/5). Guard landed
@@ -49,7 +49,7 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping without engagement"
     break
   fi
-  TAG="s600_item338_verify_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s601_item338_verify_r2_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   /usr/bin/pkill -9 -x RogueSquadron64Recomp 2>/dev/null || true
   sleep 0.3
