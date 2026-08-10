@@ -46731,3 +46731,34 @@ equivalent) and verify force dual keeps `syncs>0` past E9→E7.
 - `scratch/s73_post_a_scene/s587_fs_pipe_inject/run.log` (WEAK)
 - `scratch/s73_post_a_scene/s587_fs_pipe_inject_r2/run.log` (mutating / UJ)
 - `scratch/s73_post_a_scene/s587_fs_pipe_inject_r3/run.log` (non-mutating GREEN)
+
+## Session 588 — H9d residual F3/FD inject (drop-return); dual sticky FULL_SYNC gap closed
+
+**Work unit:** item -357 residual FULL_SYNC starvation after E7-only
+`ROGUESQ_FS_PIPE_INJECT`.
+
+**Hypotheses:**
+- H9a: task-end synth FULL_SYNC when `g_task_rdp_fullsyncs==0`
+- H9d: extend pipe inject to any non-E9 size-8 at slot∩last_fs
+- H9c: force recovery cells make residual inject redundant
+- Forward vs drop residual size-8 (control-flow discrimination)
+
+**Code:** `src/rsp/dpc_bridge.cpp` — `ROGUESQ_FS_PIPE_INJECT` mode 1 now
+injects from scratch `0x7FFF80` on **any** non-FULL_SYNC size-8 at
+slot∩last_fs (E7 PIPE + F3/FD/F5 residual). Drop the size-8; do not forward.
+
+**Runs:**
+| tag | result |
+|-----|--------|
+| s588_fs_f3_residual | WEAK early death hangarbay n=4 item-306 `0x800aafa8` |
+| s588_fs_f3_residual_r2 | forward residual: inject n=300 (E7+FD), continuous 572 syncs, **UJ 2078** at task ~5880 exit=3 |
+| s588_fs_f3_residual_r3 | **drop residual: H9d CONFIRMED** — continuous 570 = 237 E9 + 150 E7 + 8 F3 + 175 FD; inject n≥300; 0 UJ; hangar e9_b 39/40; hangarbay n=800 hangar-sel VI 640@0x6A2900; post-dual tris=0 syncs=0 ×2085 with present FIRE pairs=2; crash `0x80065e94` noise |
+
+**Verdicts:**
+- H9d CONFIRMED (drop-return covers full sticky dual residual)
+- Forward residual REFUTED (UJ family matches s587 r2 in-place)
+- H9c REFUTED this window (0 `0x76A838` / `0x76B768` recovery)
+- Item -357 CLOSED for dual sticky window; item -358 filed (post-dual empty)
+- Default OFF until -358 characterized
+
+**Artifacts:** `scratch/s73_post_a_scene/s588_fs_f3_residual{,_r2,_r3}/`

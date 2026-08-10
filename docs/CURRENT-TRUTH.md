@@ -31,7 +31,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s587)
+## Current truth (established by session 295; unchanged, reviewed through s588)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -153,12 +153,14 @@ CONFIRMED, H6c SUPPORTED (natural s577 never recovers). **s586:** H7a
 CONFIRMED — E9→E7 writer is Factor5 LLE RSP into the shared scratch
 (H7b/H7c REFUTED; item -356). **s587:** product `ROGUESQ_FS_PIPE_INJECT=1`
 (non-mutating scratch `0x7FFF80`, mode-1 = slot∩last_fs) **eliminates the
-E7-phase zero-tail** (H8a; 388 continuous dual syncs; hangar e9_b control
-GREEN; 0 UJ). In-place cell rewrite **rejected** (r2 UJ 2080). **F3/FD
-zero-tail still open** after inject stops (item -357). Default OFF until
-F3 residual closed. DoD gate = **cutscene→in-mission** past FULL_SYNC gap
-+ craft input. *Done when:* 60s in-mission render, craft responds to
-synthetic input, stability 0, phase timeline covers the mission.
+E7-phase zero-tail** (H8a; 388 continuous dual syncs). **s588 H9d:** extend
+same drop+inject to residual non-E9 at slot (F3/FD) — dual residual
+**fully covered** (570 continuous: 237 E9 + 150 E7 + 8 F3 + 175 FD; 0 UJ
+drop-return; forward path UJ 2078 REFUTED as product). Hangar e9_b 39/40
+GREEN. Post-dual empty (tris=0 syncs=0, present FIRE pairs=2) → item -358.
+Default OFF until -358 characterized. DoD gate = **cutscene→in-mission**
+past post-dual gap + craft input. *Done when:* 60s in-mission render, craft
+responds to synthetic input, stability 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -173,30 +175,34 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -357. The next NEW item takes -358.
+a range pointer. Highest allocated so far: -358. The next NEW item takes -359.
 
--357. **(s587) Residual F3/FD FULL_SYNC starvation after FS_PIPE_INJECT covers
-    E7.** Mode-1 non-mutating inject kills the E7 zero-tail (item -356) but
-    stops when the sticky cell leaves PIPE (`E7→F3` then `FD`). r3: post-dual
-    zero run **250** tasks to hold-kill, fs max stuck **4717**, no recovery
-    singles at `0x76A838`/`0x76B768` this hold; last VI still nonzero=1.
-    Next: task-end synthetic FULL_SYNC when `g_task_rdp_fullsyncs==0` after
-    dual plateau (fix `rsp_force_fullsync` — today re-submits last_fs bytes
-    which are F3/FD), or extend inject to non-PIPE terminal opcodes at the
-    slot. Discriminate vs force-path natural recovery cells (s584 `0x76A838`).
+-358. **(s588) Post-dual empty after H9d residual inject covers full sticky
+    window.** r3 drop-return residual: continuous dual syncs **570** through
+    E9→E7→F3→FD then task #5863+ **tris=0 syncs=0** for 2085 tasks; present
+    still FIRE pairs=2 `stalled=0` rdpFs plateau 4890; VI 640@0x6A2900;
+    crash `0x80065e94` noise. Not classic s178. Next: longer hold / visual
+    whether cutscene→mission advances, or a new FULL_SYNC path is needed
+    once the sticky slot stops being size-8-submitted.
+
+-357. **(s587/s588) Residual F3/FD FULL_SYNC starvation — FIXED s588 (H9d
+    drop-return).** s587 E7-only inject left post-E7 zero-run (F3/FD at
+    sticky cell). s588: extend `ROGUESQ_FS_PIPE_INJECT` to any non-E9 size-8
+    at slot∩last_fs — inject scratch `0x7FFF80` FULL_SYNC and **drop** the
+    size-8 (same control flow as PIPE). **H9d CONFIRMED** (r3: 237 E9 + 150
+    E7 + 8 F3 + 175 FD continuous; inject n≈300+; hangar e9_b 39/40; 0 UJ).
+    **Forward residual REFUTED** (r2 UJ 2078 at task ~5880, same family as
+    s587 r2 in-place). **H9c REFUTED this window** (0 recovery cells).
+    Default OFF until item -358. Artifact: `s588_fs_f3_residual_r3`.
 
 -356. **(s586/s587) H7 writer RESOLVED; product FS_PIPE_INJECT E7-phase DONE
     (default OFF).** s586: E9→E7 is Factor5 LLE RSP (H7a; H7b/H7c REFUTED).
-    s587: `ROGUESQ_FS_PIPE_INJECT=1` mode-1 = slot∩last_fs → host scratch
-    `0x7FFF80` FULL_SYNC (non-mutating, defer-aware). **H8a CONFIRMED** (388
-    dual syncs vs 238+150zero baseline). **H8c REFUTED for mode 1** (hangar
-    e9_b 75/75). In-place rewrite **REFUTED** (r2 UJ 2080). r3: 0 UJ 0 CRASH,
-    hangarbay n=800, hangar-sel, VI 640@0x6A2900. Leave default OFF until
-    item -357 closes F3 residual. Artifacts: `s587_fs_pipe_inject_r3`.
+    s587: mode-1 non-mutating E7 inject **H8a CONFIRMED**; H8c mode-1
+    REFUTED; in-place REFUTED (UJ 2080). Extended s588 for residual (-357).
 
--355. **(s585–s587) H-sync4 mechanism + writer + E7 product inject.** Sticky
-    side-slot FULL_SYNC; H7a RSP writer; s587 E7 inject (item -356). Natural
-    dual sticky confirm still open (H7d). F3 residual → item -357.
+-355. **(s585–s588) H-sync4 mechanism + writer + product inject through FD.**
+    Sticky side-slot FULL_SYNC; H7a RSP writer; s587 E7 + s588 F3/FD inject.
+    Natural dual sticky confirm still open (H7d). Post-dual empty → -358.
 
 -354. **(s584/s585) H-sync4 stop edge RESOLVED as staging-cell opcode switch;
     s585 refined to sticky overwrite.** phys `0x76DF60` shared 8-byte DPC
@@ -466,8 +472,8 @@ a range pointer. Highest allocated so far: -357. The next NEW item takes -358.
     CONFIRMED** (E9→E7 = RSP LLE into shared 8-byte scratch; H7b/H7c
     REFUTED). Force recovers at `0x76A838`. Natural leave crashes
     file-not-chase. Force path diagnostic-only for product exit.
-    **Primary remaining:** product bridge response to sticky-cell PIPE
-    (item -356) + optional natural H7d.
+    **Primary remaining:** post-dual empty after full sticky inject (item
+    -358); optional natural H7d; default-ON decision for FS_PIPE_INJECT.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
