@@ -319,3 +319,4 @@
 20260809-214516 | s602_item338_beginframe_s0_verify_r3 | rc=0 | 554s | scratch/agent/soak_results/s602_item338_beginframe_s0_verify_r3_20260809-214516.log
 20260809-220133 | s603_item338_item361_hold180 | rc=2 | 336s | scratch/agent/soak_results/s603_item338_item361_hold180_20260809-220133.log
 20260809-221137 | s604_item338_item361_hold180_budgetfix | rc=137 | 600s | scratch/agent/soak_results/s604_item338_item361_hold180_budgetfix_20260809-221137.log
+20260809-223148 | s605_force_state6_dual_target | rc=1 | 399s | scratch/agent/soak_results/s605_force_state6_dual_target_20260809-223148.log

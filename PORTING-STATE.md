@@ -47865,3 +47865,67 @@ path is never entered — not that the store is conditional once reached.
 
 ### Next
 Fold `s605_force_state6_dual_target` SOAK-RESULTS; class A–G per recipe header.
+
+## Session 606 — s605 force6 soak fold: H-force6a confirmed; 76BA90 handoff gate
+
+**Date:** 2026-08-09
+
+### Work unit
+Fold `s605_force_state6_dual_target` SOAK-RESULTS (loop-run 399s, rc=1) and act
+on classification. No new binary change this session.
+
+### Soak summary
+- Attempt 1: pre-engagement discard (force6=0 case6=0 hangar-sel=0 crash at
+  ~128s wall; thr-orbit noise).
+- Attempt 2 (scored): `force6=1 case6=1 hangar-sel=1 ace80=1 inject_lines=26
+  inject_max_n=300 recov76B768~=7920 sec4_post=0 thr11_create=1
+  thr11_destroy=0 beginframe_s0_guard=0 crash=CRASH crash_pc=0x8000e29c
+  crash_sym=findOrCreateMaterial+776 (local-symtab)
+  class_hint=E_thr11_still_live`.
+- force6 fired at case5-entry n=40 (`[case5-force-state6] old=105 new=6`);
+  natural ACE80 later also wrote state 5→6; FORCE_CASE6_START n=5 → hangar-sel
+  → state 6→8.
+
+### Discriminating offline timeline (post-hangar-sel line index)
+
+| Event | s592_a (sec4 control) | s605 scored | s602_r3 (clean HOLD90) |
+|-------|----------------------|-------------|------------------------|
+| thr10 destroy | +818 | +898 | +816 |
+| VI640 phase | +868 | +949 | +867 |
+| thr11 create | +920 | +993 | +913 |
+| inject n=1 | +8931 | +9145 | +8164 |
+| first 76B768 | +20587 | +20404 | never |
+| last 76B768 | +86938 | +86457 | — |
+| first 76BA90 | **+95599** | **never** | never |
+| thr11 destroy | **+96337** | never | never |
+| sec4 post | **+96340** | never | never |
+| end | R2 crash +96344 | material crash +89961 | HOLD kill (ok) |
+
+Both s592_a and s605 lose 76B768 ~+86–87k with rising syncs=0. Only s592_a
+then acquires recovery cell **0x76BA90** and immediately thr11-destroys →
+sec4. s605 dies ~6k lines into the post-768 gap (material SIGBUS
+`si_addr=0x38000ff10`, stack `emitMaterialTexturedDL` ← `drawSubtitleText` ←
+`setupCameraMatrices` ← `runModelViewerLoop`).
+
+### Hypotheses
+| ID | Result | Notes |
+|----|--------|-------|
+| H-force6a | **SUPPORTED** | force6 unlocks ACE80 path + case6 + hangar-sel |
+| H-recov1 sufficiency | **REFUTED** | 76B768 heavy fire; thr11 still live at death |
+| H-recov1 necessity | open | s602 recov=0 also no thr11 destroy (short HOLD) |
+| thr10 destroy = sec4 gate | **REFUTED** | thr10 destroy is routine hangar-exit; sec4 co-times with thr11 destroy after 76BA90 |
+
+### Breadcrumb (filed, not chased)
+- `findOrCreateMaterial+776` / `last-guest-pc=0x8000e29c` — guest PC differs
+  from prior material noise (`0x80010b7c`). M3 rule: no reactive single-crash
+  guard; watch for recurrence only.
+
+### Act
+Queued `scratch/agent/soak_queue/s606_handoff_76ba90_dual_target.sh`: same
+engagement recipe (FORCE_STATE6_AFTER=40 + FORCE_CASE6_START=5 + inject +
+HOLD_S=180 + no-sticks + START_FLOOR=100) with scoring extended for
+`recov76BA90`, `last_768_rel`, `first_a90_rel`, `thr11_destroy_rel`,
+`crash_rel` and classes A–G on the handoff gate.
+
+### Next
+Fold `s606_handoff_76ba90_dual_target` SOAK-RESULTS; classify A–G per NEXT.md.
