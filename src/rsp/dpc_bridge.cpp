@@ -390,7 +390,27 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                 }
                 // Always log first 20 + every hit once cum_fs high (cutscene edge).
                 const uint32_t cum = g_cumulative_fullsyncs.load(std::memory_order_relaxed);
-                if (n <= 20 || cum >= 4000 || (n % 50) == 0) {
+                // H7: log every size-8 head_b0 change at the slot (E9↔E7 etc).
+                // Submit is always on the RSP LLE path; pairs with task_delta.
+                static uint8_t s_prev_slot_b0 = 0xFF;
+                static int s_have_prev_b0 = 0;
+                const bool b0_changed = s_have_prev_b0 && (b0_first != s_prev_slot_b0);
+                const bool e9e7 = (b0_first == 0xE9 || b0_first == 0xE7 ||
+                                   s_prev_slot_b0 == 0xE9 || s_prev_slot_b0 == 0xE7);
+                if (b0_changed && e9e7 && size == 8) {
+                    fprintf(stderr,
+                        "[fs-slot] n=%llu event=slot_op_change lo=0x%08X hi=0x%08X size=%u "
+                        "slot=0x%08X head_b0=%02X->%02X op=%02X w0=%08X w1=%08X "
+                        "cum_fs=%u src=rsp_submit\n",
+                        (unsigned long long)n, submit_lo, submit_hi, size,
+                        slot, s_prev_slot_b0, b0_first, op, w0, w1, cum);
+                    fflush(stderr);
+                }
+                if (size == 8 || submit_lo == slot) {
+                    s_prev_slot_b0 = b0_first;
+                    s_have_prev_b0 = 1;
+                }
+                if (n <= 20 || cum >= 4000 || (n % 50) == 0 || (b0_changed && e9e7)) {
                     fprintf(stderr,
                         "[fs-slot] n=%llu event=submit lo=0x%08X hi=0x%08X size=%u "
                         "slot=0x%08X head_b0=%02X op=%02X w0=%08X w1=%08X cum_fs=%u\n",

@@ -46649,3 +46649,47 @@ syncs=0, tris animates → `6258+`: E9 @**76A838**, syncs=1, tris=100 (1406).
 ### Item updates
 -354 mechanism refined to **sticky side-slot FULL_SYNC + one PIPE_SYNC overwrite
 + dpc_bridge PIPE filter**. Next: writer identity / natural sticky confirm.
+
+## Session 586 — H7 writer is RSP LLE (H7a CONFIRMED); H7b/H7c REFUTED
+
+**Work unit:** who writes E9→E7 into phys `0x76DF60` at the dual stop edge
+(H7a RSP scratch vs H7b guest vs H7c bridge artifact).
+
+**Instrument (one build):** extended `ROGUESQ_LOG_FS_SLOT`:
+- LLE depth + task serial atomics around `factor5_ucode`
+- `event=task_delta` pre/post LLE slot snapshot (`src=rsp_lle`)
+- `event=intertask_delta` if slot mutates between tasks (`src=outside_lle`)
+- poller `event=write` stamps `lle_depth`/`lle_task`/`guest_pc`/`dpc_*`/`src=`
+- dpc_bridge `event=slot_op_change` on size-8 E7/E9 head flips (`src=rsp_submit`)
+
+Files: `src/main/main.cpp`, `src/rsp/dpc_bridge.cpp`, `docs/debug-trace-env-vars.md`.
+
+**Runs:**
+1. `s586_hsync4_writer` — early death hangarbay n=4, item-306 `0x800aafa8`.
+   Instrument positive control only: task_delta fires, writes stamp lle_depth.
+2. `s586_hsync4_writer_r2` — force-exit dual **GREEN** for discrimination:
+   hangarbay n=800, force case5 AC8C0 n=40 a_start=1, hangar-sel, graceful-menu,
+   VI 640@0x6A2900 at 148.4s. Late crash `findLookupEntryByKey+2212` noise.
+
+**Discrimination (r2, same-run):**
+
+| Event | Evidence | Verdict |
+|-------|----------|---------|
+| Dual entry E7→E9 | `task_delta #5309 b0=E7→E9 w0=E7000000→E9000000 src=rsp_lle`; `slot_op_change E7→E9 op=29 src=rsp_submit` | RSP |
+| Sticky E9 | 238 `task_end` b0=E9; **0** intermediate slot writes between #5309 and #5547 | H6b reconfirm |
+| Stop E9→E7 | `task_delta #5547 b0=E9→E7 w0=E9000000→E7000000 src=rsp_lle`; `write lle_depth=1 src=rsp_lle`; `slot_op_change E9→E7 op=27 src=rsp_submit` | **H7a** |
+| Guest path | **0** `intertask_delta` entire run | **H7b REFUTED** |
+| Bridge-only | real RDRAM mutation under LLE before filtered PIPE submit | **H7c REFUTED** |
+
+Poller `write E7→E9 lle_depth=0` is a 250µs post-LLE race; task_delta is
+authoritative for that edge.
+
+**Hypotheses:** H7a **CONFIRMED**, H7b **REFUTED**, H7c **REFUTED**, H7d open
+(force path only).
+
+**Product next (item -356):** dpc_bridge size-8 PIPE filter at the sticky
+FULL_SYNC cell is what kills runner `syncs` after the RSP overwrite. Land a
+gated response (inject FULL_SYNC when filtering PIPE at last_fullsync_addr, or
+equivalent) and verify force dual keeps `syncs>0` past E9→E7.
+
+**Artifact:** `scratch/s73_post_a_scene/s586_hsync4_writer_r2/run.log`.

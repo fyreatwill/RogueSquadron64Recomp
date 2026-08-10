@@ -102,6 +102,14 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 // name; defined once here.
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
 
+// s586 H7 writer discrimination: LLE task depth + serial for the FS_SLOT
+// poller / task-boundary snapshots. depth>0 ⇒ mutation during RSP LLE;
+// depth==0 + intertask_delta ⇒ guest/DMA window between tasks.
+static std::atomic<int> g_rs64_lle_depth{0};
+static std::atomic<uint32_t> g_rs64_lle_task_n{0};
+extern uint32_t g_rsp_dpc_start;
+extern uint32_t g_rsp_dpc_end;
+
 #if defined(__APPLE__) && defined(__aarch64__)
 // s480 (item -310 tooling fix): local (non-exported) symbol table for
 // crash-pc resolution. dladdr() (used in the pc-symbol crash-handler block
@@ -495,9 +503,89 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         const char *e = std::getenv("ROGUESQ_LOG_TASKMS");
         return e && *e && *e != '0';
     }();
+    // H7: pre/post LLE snapshot of the fixed FULL_SYNC side-slot. A b0
+    // change with in_task=1 is RSP-side (H7a); a change only visible between
+    // tasks is guest/DMA (H7b). Gated by the same env as the poller.
+    static const bool s_fs_slot_task = []{
+        const char *e = std::getenv("ROGUESQ_LOG_FS_SLOT");
+        return e && *e && *e != '0';
+    }();
+    static const uint32_t s_fs_slot_phys = []{
+        uint32_t a = 0x76DF60u;
+        if (const char *e = std::getenv("ROGUESQ_FS_SLOT_ADDR")) {
+            unsigned long v = strtoul(e, nullptr, 0);
+            if (v > 0 && v < 0x800000u) a = (uint32_t)v;
+        }
+        return a & 0x7FFFFFu;
+    }();
+    auto fs_slot_b0 = [&]() -> uint8_t {
+        return (uint8_t)MEM_B(0, (int64_t)(int32_t)(s_fs_slot_phys + 0x80000000u));
+    };
+    auto fs_slot_w0 = [&]() -> uint32_t {
+        uint32_t w = 0;
+        for (int i = 0; i < 4; ++i) {
+            w = (w << 8) | (uint32_t)(uint8_t)MEM_B(0,
+                (int64_t)(int32_t)(s_fs_slot_phys + (uint32_t)i + 0x80000000u));
+        }
+        return w;
+    };
+    const uint32_t task_serial = g_rs64_lle_task_n.fetch_add(1, std::memory_order_relaxed) + 1;
+    // Shared across pre/post so intertask_delta sees the previous task's post.
+    static int s_fs_have_post = 0;
+    static uint8_t s_fs_last_post_b0 = 0;
+    static uint32_t s_fs_last_post_w0 = 0;
+    static uint32_t s_fs_last_post_task = 0;
+    uint8_t slot_b0_pre = 0;
+    uint32_t slot_w0_pre = 0;
+    if (s_fs_slot_task) {
+        slot_b0_pre = fs_slot_b0();
+        slot_w0_pre = fs_slot_w0();
+        // Inter-task window: slot changed since last task's post snapshot ⇒
+        // writer was outside LLE (guest CPU or DMA).
+        if (s_fs_have_post &&
+            (slot_b0_pre != s_fs_last_post_b0 || slot_w0_pre != s_fs_last_post_w0)) {
+            const bool e9e7 = (s_fs_last_post_b0 == 0xE9 || s_fs_last_post_b0 == 0xE7 ||
+                               slot_b0_pre == 0xE9 || slot_b0_pre == 0xE7);
+            if (e9e7 || (task_serial <= 40) || ((task_serial % 200) == 0)) {
+                fprintf(stderr,
+                    "[fs-slot] n=%u event=intertask_delta prev_task=#%u next_task=#%u "
+                    "b0=%02X->%02X w0=%08X->%08X guest_pc=0x%08X src=outside_lle\n",
+                    task_serial, s_fs_last_post_task, task_serial,
+                    s_fs_last_post_b0, slot_b0_pre, s_fs_last_post_w0, slot_w0_pre,
+                    (unsigned)g_rs64_last_guest_pc);
+                fflush(stderr);
+            }
+        }
+    }
+    g_rs64_lle_depth.fetch_add(1, std::memory_order_release);
     const auto t_start = s_taskms ? std::chrono::steady_clock::now()
                                   : std::chrono::steady_clock::time_point{};
     RspExitReason r = factor5_ucode(rdram, ucode_addr);
+    g_rs64_lle_depth.fetch_sub(1, std::memory_order_release);
+    if (s_fs_slot_task) {
+        const uint8_t slot_b0_post = fs_slot_b0();
+        const uint32_t slot_w0_post = fs_slot_w0();
+        if (slot_b0_pre != slot_b0_post || slot_w0_pre != slot_w0_post) {
+            const bool e9e7 = (slot_b0_pre == 0xE9 || slot_b0_pre == 0xE7 ||
+                               slot_b0_post == 0xE9 || slot_b0_post == 0xE7);
+            // Always log E7/E9 transitions; sparse otherwise for noise.
+            if (e9e7 || (task_serial <= 40) || ((task_serial % 200) == 0)) {
+                fprintf(stderr,
+                    "[fs-slot] n=%u event=task_delta task=#%u "
+                    "b0=%02X->%02X w0=%08X->%08X dpc_start=0x%08X dpc_end=0x%08X "
+                    "guest_pc=0x%08X src=rsp_lle\n",
+                    task_serial, task_serial,
+                    slot_b0_pre, slot_b0_post, slot_w0_pre, slot_w0_post,
+                    g_rsp_dpc_start, g_rsp_dpc_end,
+                    (unsigned)g_rs64_last_guest_pc);
+                fflush(stderr);
+            }
+        }
+        s_fs_last_post_b0 = slot_b0_post;
+        s_fs_last_post_w0 = slot_w0_post;
+        s_fs_last_post_task = task_serial;
+        s_fs_have_post = 1;
+    }
     if (s_taskms) {
         const double ms = std::chrono::duration<double, std::milli>(
             std::chrono::steady_clock::now() - t_start).count();
@@ -1546,17 +1634,27 @@ static void start_fs_slot_poller() {
                 ++n_change;
                 auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
                     std::chrono::steady_clock::now() - t0).count();
+                // H7: stamp LLE depth / task serial / guest PC / DPC regs so
+                // E7/E9 transitions classify as rsp_lle vs outside_lle.
+                // Positive control: dual-entry E7→E9 and stop E9→E7 both log.
+                const int lle_d = g_rs64_lle_depth.load(std::memory_order_acquire);
+                const uint32_t lle_tn = g_rs64_lle_task_n.load(std::memory_order_relaxed);
+                const char* src = (lle_d > 0) ? "rsp_lle" : "outside_lle_or_race";
                 fprintf(stderr,
                     "[fs-slot] n=%llu event=write t_ms=%lld slot=0x%08X "
                     "prev=%02X%02X%02X%02X%02X%02X%02X%02X "
                     "cur=%02X%02X%02X%02X%02X%02X%02X%02X "
-                    "b0=%02X->%02X\n",
+                    "b0=%02X->%02X lle_depth=%d lle_task=#%u "
+                    "guest_pc=0x%08X dpc_start=0x%08X dpc_end=0x%08X src=%s\n",
                     (unsigned long long)n_change, (long long)ms, slot,
                     prev[0], prev[1], prev[2], prev[3],
                     prev[4], prev[5], prev[6], prev[7],
                     cur[0], cur[1], cur[2], cur[3],
                     cur[4], cur[5], cur[6], cur[7],
-                    prev[0], cur[0]);
+                    prev[0], cur[0],
+                    lle_d, lle_tn,
+                    (unsigned)g_rs64_last_guest_pc,
+                    g_rsp_dpc_start, g_rsp_dpc_end, src);
                 fflush(stderr);
                 memcpy(prev, cur, 16);
             }

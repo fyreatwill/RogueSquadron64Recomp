@@ -31,7 +31,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s585)
+## Current truth (established by session 295; unchanged, reviewed through s586)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -149,10 +149,11 @@ cell E9→E7 while dual DLs continue; submits never die. Force recovers at
 `0x76A838` (~task 6258). **s585 offline:** E9 is **sticky** (0 RDRAM writes
 for 237 re-submits / 7.9s); stop = **one** E9→E7 overwrite; dpc_bridge
 **filters** size-8 PIPE_SYNC so runner `syncs` dies; H6a/H6d REFUTED, H6b
-CONFIRMED, H6c SUPPORTED (natural s577 never recovers). DoD gate =
-**cutscene→in-mission** past FULL_SYNC gap + craft input. *Done when:* 60s
-in-mission render, craft responds to synthetic input, stability 0, phase
-timeline covers the mission.
+CONFIRMED, H6c SUPPORTED (natural s577 never recovers). **s586:** H7a
+CONFIRMED — E9→E7 writer is Factor5 LLE RSP into the shared scratch
+(H7b/H7c REFUTED; item -356). DoD gate = **cutscene→in-mission** past
+FULL_SYNC gap + craft input. *Done when:* 60s in-mission render, craft
+responds to synthetic input, stability 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -167,19 +168,29 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -355. The next NEW item takes -356.
+a range pointer. Highest allocated so far: -356. The next NEW item takes -357.
 
--355. **(s585) H-sync4 mechanism refined: sticky side-slot FULL_SYNC + one
-    PIPE_SYNC overwrite + dpc_bridge PIPE filter. Next = who writes E9→E7.**
-    Offline on s584 log (`scratch/.../s585_hsync4_offline/ANALYSIS.md`):
-    **H6a REFUTED** (dual DL unchanged; e9_b=0 both sides). **H6b CONFIRMED**:
-    0 slot RDRAM writes for 7913 ms / 237 E9 re-submits (1 size-8 single/task
-    @ `0x76DF60`); single poller write E9→E7 at task~#5569. **H6d REFUTED**
-    (recovery `0x76A838` = 1406 real E9 singles, e9_b=0). **H6c SUPPORTED**
-    (s577 open 772-zero tail, never recovers). dpc_bridge drops size-8 op 0x27
-    (PIPE_SYNC) so sticky E7 kills runner `syncs` while GFX continues. Primary
-    next: writer of the E9→E7 store (RSP PC / guest last-store) and/or natural
-    dual-phase soak with `LOG_FS_SLOT` to confirm sticky overwrite off force path.
+-356. **(s586) H7 writer RESOLVED: E9→E7 is Factor5 LLE RSP (H7a), not guest.
+    Next = product bridge response to sticky-cell PIPE overwrite.** Force-exit
+    dual (`s586_hsync4_writer_r2`, hangarbay n=800, hangar-sel + graceful-menu,
+    VI 640@0x6A2900): instrument positive control GREEN (task_delta +
+    slot_op_change + write stamps). Clean dual entry `E7→E9` at task **#5309**
+    and stop `E9→E7` at task **#5547** both `event=task_delta src=rsp_lle` with
+    `w0=E7000000↔E9000000`; stop also `event=write lle_depth=1 src=rsp_lle` and
+    `slot_op_change E9→E7 op=27 src=rsp_submit`. Sticky window: **238** task_end
+    b0=E9, **0** intermediate slot writes (reconfirm H6b). **0**
+    `intertask_delta` all run → **H7b REFUTED** (guest/DMA). **H7c REFUTED**
+    (real RDRAM mutation under LLE, not pure bridge re-forward). **H7d** still
+    open (force path only). Poller `lle_depth=0` on entry E7→E9 is a 250µs race
+    after LLE exit; task_delta is authoritative. Product next: when size-8
+    PIPE filters the sticky FULL_SYNC cell, preserve present pacing (inject
+    FULL_SYNC or equivalent) — do not ship until same-run dual keeps
+    `syncs>0` past the E9→E7 edge.
+
+-355. **(s585/s586) H-sync4 mechanism + writer: sticky side-slot FULL_SYNC;
+    s586 H7a CONFIRMED (RSP LLE writes E9→E7).** s585 offline: H6a/H6d REFUTED,
+    H6b CONFIRMED, H6c SUPPORTED; dpc_bridge filters size-8 PIPE. s586: writer
+    is RSP (item -356). Natural dual sticky confirm still open (H7d).
 
 -354. **(s584/s585) H-sync4 stop edge RESOLVED as staging-cell opcode switch;
     s585 refined to sticky overwrite.** phys `0x76DF60` shared 8-byte DPC
@@ -231,7 +242,7 @@ a range pointer. Highest allocated so far: -355. The next NEW item takes -356.
     e9_b. **s582:** H-sync1 CONFIRMED / H-sync2 REFUTED on plateau. **s583:**
     H-sync4 source = fixed guest E9 at `0x76DF60` (item -352). **s584:** stop
     edge RESOLVED (staging-cell E9→E7). **s585:** sticky overwrite + PIPE
-    filter; follow-on item -355.
+    filter. **s586:** H7a CONFIRMED (item -356); product bridge next.
 
 -348. **(s568/s569) SIBLING_PTR DIRECT residual same-base gap class — FIXED and FULLY CLOSED 2/2
     (s569).** Systematic audit of the `-334/-340/-345/-346` model across all applied freelist/
@@ -445,11 +456,12 @@ a range pointer. Highest allocated so far: -355. The next NEW item takes -356.
     **Natural exit (s577):** 3→5→6→8 → section 4 → section 2 → VI flip. **s578–s579:**
     not s178; FULL_SYNC starvation with live GFX. **s580–s581:** walk GREEN. **s582:**
     H-sync1/2 settled; H-sync4 **source** = staging cell `0x76DF60` (s583);
-    **stop edge RESOLVED s584**; **s585 sticky overwrite** (0 writes / 237
-    E9 resubmits; one E9→E7; PIPE filter). Force recovers at `0x76A838`.
-    Natural leave crashes file-not-chase. Force path diagnostic-only for
-    product exit. **Primary remaining:** who writes E9→E7 + natural sticky
-    confirm (item -355).
+    **stop edge RESOLVED s584**; **s585 sticky overwrite**; **s586 H7a
+    CONFIRMED** (E9→E7 = RSP LLE into shared 8-byte scratch; H7b/H7c
+    REFUTED). Force recovers at `0x76A838`. Natural leave crashes
+    file-not-chase. Force path diagnostic-only for product exit.
+    **Primary remaining:** product bridge response to sticky-cell PIPE
+    (item -356) + optional natural H7d.
 -6. **(s53/s54→s399) M4 — the 3 `[missing-func]` addresses: DONE, CLOSED s399.** s54's fix was dead on arrival — silently shadowed by pre-existing duplicate entries at the same addresses in `main_overlay.txt` (first-discovered instance of item -249's family). Root-caused and fixed s399 by deleting the 3 duplicate lines; verified 3/3 post-fix runs, same-run positive control. Full detail: `PORTING-STATE` Session 399.
 -5. Past the first sustained mission hold: expect further new failure classes (mission overlay DMA → missing-func/UnhandledJumpTarget, new VI phase, overlays 12/44 splice, texture corruption — s399's item -248 is a concrete, proactively-found instance of exactly this). Each new failure is its own work unit.
 -3. **Sibling-repo housekeeping (flagged s54, not autonomous):** `~/Documents/Tools/rogue_squadron64` carries uncommitted symbol-file edits, including s54's now-superseded `mission_overlay.txt` addition, s399's `main_overlay.txt` 3-line deletion (the actual fix), and s426's `menu_overlay.txt` duplicate-symbol deletion (item -262's fix). Ask the user before committing there.
