@@ -2,47 +2,56 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s647 recap (read this first)
+## s648 recap (read this first)
 
-**s646 freeroll consumed — Outcome B (mprotect race):**
-- att3 freelist to_zero #2 t=164873 phys=0x1F3CC0 prev_f=0x2 prev_sz=0x60
-- arm_freelist@t=145570; heartbeats 150–160s fault_armed=1 fault_n=20
-- freelist-window faults n=18–21 **all in_hdr=0**
-  (buildModelViewerTextPage, submitSceneNodeRender fa=hdr+64, n=21 garbage PC)
-- n=21 co-timed with to_zero → **250µs poller re-arm race** after neighbor thrash
-- SCORE: flz_fault_n=21 flz_fault_hdr=0 flz_fault_arm_fl=1 flz_fault_sym=none
-- **H-fault-writer still open** (missed leaf; not refuted)
+**s647 freeroll consumed — Outcome C (not B):**
+- 2× recovery_silent; outer rc=137 600s mid-att3
+- arm_freelist@~145s f=0x2/sz=0x60 LIVE both; heartbeats 150–195s
+  flags=0x2 size=0x60 fault_armed=1 want=2 — **header survived ~50s**
+- **no freelist-shaped to_zero** (only menu 0x8E8E→0 @t≈51s)
+- SCORE: flz_fault_n≈7500 flz_fault_hdr=0 flz_fault_arm_fl=1
+  flz_busy_rearm=9–10 (log-capped; heartbeats 106–124) flz_tz_corr=0
+- **H-busy-rearm unevaluable** (needs freelist to_zero)
 
-**SS rearm REFUTED (do not retry):**
-- `thread_set_state(ARM_DEBUG_STATE64)` from SEGV → nested SIGTRAP in
-  `mach_msg`/`thread_set_state` → CRASH path (posctrl CRASH=36, ss_rearm=0)
+**H-recov-co-gate-stomp SUPPORTED (dual-source):**
+- freelist 0x2/0x60→0 co-occurs with recovery-active freerolls
+  (s646 att3 recov768=7956 freelist#2; s645 recov768=1 freelist#2)
+- absent on recovery-silent + arm_fl holds (s647×2; s646 att1 arm_fl=1
+  menu-only to_zero)
 
-**Landed busy_rearm (Outcome B fix):**
-- want=1 boot / want=2 freelist
-- freelist-only busy re-arm spinner, ≥20µs hold-off after last fault
-- freelist poller sleep 10µs; full BT while want==2; to_zero_correlate
-- **Posctrl 55s:** arm_boot, fault_n=15, CRASH=0 (busy_rearm=0 under want=1 OK)
+**BT thrash toxic (measured s647 want=2):**
+- ~7500 faults all in_hdr=0 (buildModelViewerTextPage page-neighbor)
+- BT on every fault → ~121k frame lines / ~24 MB after arm_freelist
+- H-perturb open: may elevate recovery silence / block freelist stomp
 
-**Queued:** `scratch/agent/soak_queue/s647_fl_busy_rearm_freeroll.sh`
-(SCORE: flz_fault_* + flz_busy_rearm + flz_tz_corr + flz_tz_corr_inhdr)
+**Landed s648 rate-limit** (`fl_zero_try_handle_fault`):
+- line: first 32 / all in_hdr / every 256th want==2 non-hdr
+- BT: first 16 / all in_hdr cap32 / every 256th want==2
+- Posctrl 55s: fault_n=25 CRASH=0 BT frames=320 (first-16 only)
+
+**Queued:** `scratch/agent/soak_queue/s648_fl_bt_ratelimit_freeroll.sh`
 
 ## This iteration's work unit
 
-**Primary: consume s647 freeroll SOAK-RESULTS (or run if still queued).**
+**Primary: consume s648 freeroll SOAK-RESULTS (or run if still queued).**
 
 1. Posctrl: `flz_fault_n≥1` (boot-zero) — instrument not cold
-2. Freelist-shaped: `to_zero` with `prev_f=0x2 prev_sz=0x60`
-3. Require `flz_fault_arm_fl≥1` and preferably `flz_busy_rearm≥1` after arm
+2. Prefer **recovery-active** attempts (`recov768≥1`) with `arm_fl≥1`
+3. Freelist-shaped: `to_zero` with `prev_f=0x2 prev_sz=0x60`
 4. Discriminators on freelist window / to_zero:
    - **A)** `flz_fault_hdr≥1` near freelist to_zero with `flz_fault_sym` naming
      a recomp leaf → instrument that leaf only for zero-store of flags/size
    - **A2)** `to_zero_correlate last_in_hdr=1` or last_sym names leaf even if
      SCORE hdr lag → treat as A for next session
    - **B)** arm_fl≥1 + freelist to_zero + flz_fault_hdr=0 still
-     → 20µs race not closed; escalate to per-thread ARM watchpoint on header
-     bytes only (not page mprotect), or log-only correlate + targeted leaf
-     probes from freelist-window BT neighbors (submitSceneNodeRender family)
-   - **C)** no freelist to_zero → requeue freeroll once
+     → 20µs race not closed; escalate to header-byte watch (not page
+     mprotect) or targeted leaf probes from freelist-window neighbors
+   - **C)** no freelist to_zero after ≥1 recovery-active + arm_fl attempt
+     → requeue once OR escalate; silent-only is **not** Outcome B
+   - **D)** recovery-active rate vs s647 (2/2 silent): if still all silent
+     under rate-limit → H-perturb-from-BT REFUTED (silence not BT-caused);
+     if recovery appears and freelist to_zero returns → H-perturb-from-BT
+     SUPPORTED and busy_rearm re-testable
 5. If A/A2 fires with a specific leaf, next session instruments that leaf only
 
 ## Hypotheses
@@ -61,9 +70,12 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 | H-gbt-writer | game-thread BT names store path | freelist gbt store leaf | **REFUTED s645** freelist-class |
 | H-bc19-live | freelist stamps update sticky PC | menu to_zero pc in rs_* | **CONFIRMED s645** |
 | H-memset-writer | rs_memset zeros freelist header | msfl hit@0x801F3CC0 ∧ freelist to_zero | **REFUTED s646** freelist-class |
-| H-fault-writer | mprotect names freelist stomp leaf | flz_fault_hdr≥1 ∧ flz_fault_sym | ACTIVE (B s647) |
+| H-fault-writer | mprotect names freelist stomp leaf | flz_fault_hdr≥1 ∧ flz_fault_sym | ACTIVE (B s646; C s647) |
 | H-ss-rearm | ARM64 SS from SEGV closes race | ss_rearm≥1 ∧ CRASH=0 | **REFUTED s647** |
-| H-busy-rearm | 20µs busy re-arm catches header store | freelist to_zero ∧ flz_fault_hdr≥1 | ACTIVE |
+| H-busy-rearm | 20µs busy re-arm catches header store | freelist to_zero ∧ flz_fault_hdr≥1 | ACTIVE (uneval s647) |
+| H-recov-co-gate-stomp | freelist 0x2/0x60→0 needs recovery-active | silent arm_fl ∧ no fl-to_zero vs recov+fl-to_zero | **SUPPORTED s648** |
+| H-bt-thrash-toxic | BT-every-fault self-DOS under want=2 | ~7.5k BT dumps measured | **CONFIRMED s648** |
+| H-perturb-from-BT | BT thrash elevates recovery silence / blocks stomp | rate-limit freeroll recov rate vs s647 | ACTIVE |
 | H-shipn3-gate / Outcome A | B8→store→thr11d | live chain | CONFIRMED s637/s638 |
 
 ## Do NOT
@@ -82,10 +94,12 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 - Use re.sub *string* replacement for C probes containing `\n` in format
   strings (use lambda repl — s641 lesson)
 - Try ROGUESQ_HWBP on macOS (prints "not supported")
+- Score Outcome B from recovery-silent-only freerolls (s648: no freelist to_zero)
+- Re-enable full BT on every want==2 fault (toxic measured s647)
 
 ### Reference tags
 `[fl-zero-fault]`, `busy_rearm`, `to_zero_correlate`, `[fl-zero-poll]`,
 `[fl-zero-poll-bt]`, `[fl-zero-poll-gbt]`, `[memset-fl-dest]`,
 `[drain-mesh-stomp]`, `[fl-hdr-write]`, `[fl-zero-watch]`,
 `0x801F3CC0`, `0x1F3CC0`, BREADCRUMB19, fail136c, thr11d_new, -391, -395,
--397, -398, -399, -400, -401
+-397, -398, -399, -400, -401, -402

@@ -50245,3 +50245,63 @@ under busy_rearm; SCORE flz_fault_* + flz_busy_rearm + flz_tz_corr*.
 
 ### Item
 -401 opened; -400 updated; H-ss-rearm REFUTED; H-busy-rearm ACTIVE.
+
+## Session 648 (2026-08-10) — s647 freeroll Outcome C; BT thrash toxic; rate-limit landed
+
+### Planned unit
+Consume s647_fl_busy_rearm_freeroll SOAK-RESULTS (A/A2/B/C on freelist
+to_zero under busy_rearm).
+
+### s647 freeroll facts (2 completed attempts, both recovery_silent; outer
+rc=137 at 600s mid-att3)
+- SCORE att1/2: force6=1 hsel=1 recov768=0 thr11d_new=0 fail136c=0
+  flz_fault_n=7464/7570 flz_fault_hdr=0 flz_fault_arm_fl=1
+  flz_busy_rearm=9/10 (rate-limited log count; heartbeats show 106–124)
+  flz_to_zero=1 flz_tz_corr=0 — to_zero is **menu-shaped** only
+  (prev_f=0x8E8E prev_sz=0x8E8E8E8E @t≈51s), not freelist 0x2/0x60.
+- arm_freelist@t≈145s f=0x2 sz=0x60 LIVE both attempts; heartbeats
+  150–195s show flags=0x2 size=0x60 fault_armed=1 want=2 continuously
+  — **header survived ~50s past historical stomp window** (s642–s646
+  freelist to_zero at t≈164–165s).
+- want==2 thrash: ~7500 faults ALL in_hdr=0 (buildModelViewerTextPage
+  dominant; fa at page base, not hdr+0..8). Full BT on every fault
+  produced ~121k BT frame lines / ~24 MB log after arm_freelist alone.
+
+### Discriminators
+- **H-busy-rearm** for catching freelist header store: **unevaluable**
+  (no freelist-shaped to_zero) — Outcome C per NEXT, not Outcome B.
+- **H-recov-co-gate-stomp SUPPORTED (dual-source)**: freelist 0x2/0x60→0
+  co-occurs with recovery-active freerolls (s646 att3 recov768=7956
+  freelist to_zero#2; s645 recov768=1 freelist#2) and is **absent** on
+  recovery-silent holds that still arm freelist (s647×2; s646 att1
+  arm_fl=1 flz_to_zero=1 menu-only). Stomp is not a continuous hangar
+  thrash of the slot.
+- **H-bt-every-fault-toxic CONFIRMED (single-run measurement)**: s647
+  want==2 path dumped BT on every fault; instrument self-DOS. Plausible
+  elevates recovery silence / blocks freelist stomp (H-perturb) — not
+  dual-source until rate-limit freeroll returns recovery-active samples.
+
+### Landed
+Rate-limit freelist-window fault logging in `src/main/main.cpp`
+`fl_zero_try_handle_fault`:
+- line: first 32 any; all in_hdr; every 256th non-hdr want==2
+- BT: first 16 any; all in_hdr (cap 32); every 256th want==2
+to_zero_correlate still names last_sym via atomics.
+
+### Posctrl (same-build, 55s)
+arm_boot_zero LIVE; fault_n=25; CRASH=0; BT frames=320 (= first 16 only).
+
+### Queued
+`scratch/agent/soak_queue/s648_fl_bt_ratelimit_freeroll.sh` — require
+recovery-active + freelist to_zero before scoring A/B; also score
+silent-rate vs s647 for H-perturb-from-BT.
+
+### Rules out / do not
+- Do not treat s647 as Outcome B (flz_fault_hdr=0 *with* freelist to_zero)
+  — freelist to_zero never fired.
+- Do not retry ARM64 SS from SEGV (still REFUTED s647).
+- Do not re-open H-memset-writer / H-drainmesh-stomp without new evidence.
+
+### Item
+-402 opened; -401 updated; H-recov-co-gate-stomp SUPPORTED; H-busy-rearm
+still ACTIVE pending recovery-active freeroll under rate-limit.

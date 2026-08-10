@@ -2105,18 +2105,28 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
         }
     }
 
-    fprintf(stderr,
-        "[fl-zero-fault] n=%llu in_hdr=%d fa=0x%llx hdr_host=0x%llx slot=0x%X "
-        "pc=0x%llx sym=%s+0x%llx lr=0x%llx guest_pc=0x%08X want=%d\n",
-        (unsigned long long)n, in_hdr,
-        (unsigned long long)fa, (unsigned long long)host, slot,
-        (unsigned long long)pc, pc_sym, (unsigned long long)pc_off,
-        (unsigned long long)lr, (unsigned)g_rs64_last_guest_pc, want);
-    // BT: first 8 any; all header hits (cap 32); ALL freelist-window faults
-    // (want==2) — s646 missed n=21 BT under the old rate-limit and lost the
-    // only freelist-window neighbor that co-timed with to_zero.
+    // s648: s647 freeroll under want==2 dumped BT on EVERY fault (~7.5k
+    // faults × ~16 frames ≈ 120k lines / 24 MB after arm_freelist alone).
+    // Neighbor thrash (buildModelViewerTextPage on same 16KB page) made
+    // full-BT-every-fault toxic — likely elevates recovery silence and
+    // prevents freelist to_zero from ever firing. Rate-limit:
+    //   line: first 32 any; all in_hdr; every 256th non-hdr want==2
+    //   BT:   first 16 any; all in_hdr (cap 32); every 256th want==2
+    // to_zero_correlate still names last_sym even if individual lines drop.
     uint64_t hdr_n = g_flz_fault_hdr_n.load(std::memory_order_relaxed);
-    if (n <= 8 || (in_hdr && hdr_n <= 32) || want == 2) {
+    int log_line = (n <= 32) || in_hdr || (want == 2 && (n % 256ull) == 0);
+    int log_bt = (n <= 16) || (in_hdr && hdr_n <= 32) ||
+                 (want == 2 && (n % 256ull) == 0);
+    if (log_line) {
+        fprintf(stderr,
+            "[fl-zero-fault] n=%llu in_hdr=%d fa=0x%llx hdr_host=0x%llx slot=0x%X "
+            "pc=0x%llx sym=%s+0x%llx lr=0x%llx guest_pc=0x%08X want=%d\n",
+            (unsigned long long)n, in_hdr,
+            (unsigned long long)fa, (unsigned long long)host, slot,
+            (unsigned long long)pc, pc_sym, (unsigned long long)pc_off,
+            (unsigned long long)lr, (unsigned)g_rs64_last_guest_pc, want);
+    }
+    if (log_bt) {
         void* frames[24];
         int bn = backtrace(frames, 24);
         char** syms = backtrace_symbols(frames, bn);
@@ -2130,7 +2140,7 @@ static bool fl_zero_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
         }
         free(syms);
     }
-    fflush(stderr);
+    if (log_line || log_bt) fflush(stderr);
     // Re-arm is NOT done here: re-arming PROT_READ before the faulting store
     // restarts would infinite-loop. The busy re-arm spinner (want==2) and the
     // poller's fallback restore PROT_READ after the store completes. s647:

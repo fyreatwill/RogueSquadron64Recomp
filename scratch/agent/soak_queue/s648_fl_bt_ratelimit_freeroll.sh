@@ -1,18 +1,28 @@
 #!/bin/zsh
-# s647 freeroll: freelist to_zero with busy-rearm mprotect (Outcome B fix).
-# s646 freeroll Outcome B: arm_fl=1 + freelist to_zero 0x2/0x60->0 but
-# flz_fault_hdr=0 — neighbor thrash unprotects 16KB page; header store races
-# through ~250us poller re-arm window (n=21 co-timed with to_zero).
-# s647 landed: want=1 boot/2 freelist; busy re-arm spinner 20us hold-off for
-# want==2; full BT while freelist; to_zero_correlate; SS path REFUTED (toxic).
-# Discriminators on freelist-shaped to_zero (prev_f=0x2 prev_sz=0x60):
+# s648 freeroll: busy_rearm + BT rate-limit (s647 thrash fix).
+#
+# s647 freeroll ANALYZED (Outcome C + toxic instrument finding):
+#   2× recovery_silent, arm_freelist@~145s f=0x2/sz=0x60 LIVE both,
+#   header SURVIVED to SIGKILL ~195s (no freelist-shaped to_zero).
+#   Dual-source with s646 att1 silent (arm_fl=1, flz_to_zero=1 menu-only)
+#   vs s646 att3 recov768=1 freelist to_zero#2 → freelist stomp is
+#   recovery-co-gated (H-recov-co-gate-stomp SUPPORTED).
+#   Under want==2: fault_n~7500 ALL in_hdr=0; BT dumped on EVERY fault
+#   → ~121k BT lines / 24 MB log after arm_freelist (buildModelViewerTextPage
+#   neighbor thrash). H-busy-rearm unevaluable without freelist to_zero.
+# s648 fix: rate-limit freelist-window fault lines + BT (first 32/16,
+#   all in_hdr, every 256th). Posctrl 55s: fault_n=25 CRASH=0 BT frames=320.
+#
+# Discriminators (require recovery-active + freelist-shaped to_zero):
 #   A) flz_fault_hdr>=1 near freelist to_zero + flz_fault_sym names store leaf
-#   A2) to_zero_correlate last_in_hdr=1 OR synth via busy path
-#   B) arm_fl>=1 + freelist to_zero + flz_fault_hdr=0 still (race not closed;
-#      need hardware watchpoint or other approach)
-#   C) no freelist to_zero -> requeue once
-# Posctrl (same-run): flz_fault_n>=1 boot-zero (s647 smoke: 15, CRASH=0).
-# SCORE: flz_fault_n/hdr/arm_fl/sym + busy_rearm via log section.
+#   A2) to_zero_correlate last_in_hdr=1 OR last_sym names leaf
+#   B) arm_fl>=1 + freelist to_zero + flz_fault_hdr=0 still (20us race not closed)
+#   C) no freelist to_zero after >=1 recovery-active attempt with arm_fl
+#      → H-perturb residual OR requeue; do not treat silent-only as B
+#   D) recovery-active rate vs s647 silent-only: if still all silent under
+#      rate-limit, H-perturb-from-BT REFUTED (silence not BT-caused)
+# Posctrl (same-run): flz_fault_n>=1 boot-zero.
+# SCORE: flz_fault_n/hdr/arm_fl/sym + busy_rearm + tz_corr.
 # HYPOTHESIS-ID: m3-post-exit-fs-stall
 #
 set -u
@@ -448,7 +458,7 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping"
     break
   fi
-  TAG="s647_fl_busy_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s648_fl_bt_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   LOG="$OUT/run.log"
   kill_game
