@@ -31,7 +31,7 @@ Priority order for upcoming iterations, set after the 300-session review:
     `APPEND_RDP_STATE_DL_ENTRY_GUARD` "grep-verified unique site" lineage — seven items, all fully
     CLOSED except -317 step 3** (see item -317 below). Full derivation: `docs/PROJECT-OVERVIEW.md` §20-§23.
 
-## Current truth (established by session 295; unchanged, reviewed through s586)
+## Current truth (established by session 295; unchanged, reviewed through s587)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -151,9 +151,14 @@ for 237 re-submits / 7.9s); stop = **one** E9→E7 overwrite; dpc_bridge
 **filters** size-8 PIPE_SYNC so runner `syncs` dies; H6a/H6d REFUTED, H6b
 CONFIRMED, H6c SUPPORTED (natural s577 never recovers). **s586:** H7a
 CONFIRMED — E9→E7 writer is Factor5 LLE RSP into the shared scratch
-(H7b/H7c REFUTED; item -356). DoD gate = **cutscene→in-mission** past
-FULL_SYNC gap + craft input. *Done when:* 60s in-mission render, craft
-responds to synthetic input, stability 0, phase timeline covers the mission.
+(H7b/H7c REFUTED; item -356). **s587:** product `ROGUESQ_FS_PIPE_INJECT=1`
+(non-mutating scratch `0x7FFF80`, mode-1 = slot∩last_fs) **eliminates the
+E7-phase zero-tail** (H8a; 388 continuous dual syncs; hangar e9_b control
+GREEN; 0 UJ). In-place cell rewrite **rejected** (r2 UJ 2080). **F3/FD
+zero-tail still open** after inject stops (item -357). Default OFF until
+F3 residual closed. DoD gate = **cutscene→in-mission** past FULL_SYNC gap
++ craft input. *Done when:* 60s in-mission render, craft responds to
+synthetic input, stability 0, phase timeline covers the mission.
 
 **M4 — parked correctness items**, one work unit each: outdoor `baseFixed = −32768` zero-shade root
 cause; S=0 triangles in the 640 attribution phase; the I4 `sample=64x128` anomaly if M1 didn't
@@ -168,29 +173,30 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -356. The next NEW item takes -357.
+a range pointer. Highest allocated so far: -357. The next NEW item takes -358.
 
--356. **(s586) H7 writer RESOLVED: E9→E7 is Factor5 LLE RSP (H7a), not guest.
-    Next = product bridge response to sticky-cell PIPE overwrite.** Force-exit
-    dual (`s586_hsync4_writer_r2`, hangarbay n=800, hangar-sel + graceful-menu,
-    VI 640@0x6A2900): instrument positive control GREEN (task_delta +
-    slot_op_change + write stamps). Clean dual entry `E7→E9` at task **#5309**
-    and stop `E9→E7` at task **#5547** both `event=task_delta src=rsp_lle` with
-    `w0=E7000000↔E9000000`; stop also `event=write lle_depth=1 src=rsp_lle` and
-    `slot_op_change E9→E7 op=27 src=rsp_submit`. Sticky window: **238** task_end
-    b0=E9, **0** intermediate slot writes (reconfirm H6b). **0**
-    `intertask_delta` all run → **H7b REFUTED** (guest/DMA). **H7c REFUTED**
-    (real RDRAM mutation under LLE, not pure bridge re-forward). **H7d** still
-    open (force path only). Poller `lle_depth=0` on entry E7→E9 is a 250µs race
-    after LLE exit; task_delta is authoritative. Product next: when size-8
-    PIPE filters the sticky FULL_SYNC cell, preserve present pacing (inject
-    FULL_SYNC or equivalent) — do not ship until same-run dual keeps
-    `syncs>0` past the E9→E7 edge.
+-357. **(s587) Residual F3/FD FULL_SYNC starvation after FS_PIPE_INJECT covers
+    E7.** Mode-1 non-mutating inject kills the E7 zero-tail (item -356) but
+    stops when the sticky cell leaves PIPE (`E7→F3` then `FD`). r3: post-dual
+    zero run **250** tasks to hold-kill, fs max stuck **4717**, no recovery
+    singles at `0x76A838`/`0x76B768` this hold; last VI still nonzero=1.
+    Next: task-end synthetic FULL_SYNC when `g_task_rdp_fullsyncs==0` after
+    dual plateau (fix `rsp_force_fullsync` — today re-submits last_fs bytes
+    which are F3/FD), or extend inject to non-PIPE terminal opcodes at the
+    slot. Discriminate vs force-path natural recovery cells (s584 `0x76A838`).
 
--355. **(s585/s586) H-sync4 mechanism + writer: sticky side-slot FULL_SYNC;
-    s586 H7a CONFIRMED (RSP LLE writes E9→E7).** s585 offline: H6a/H6d REFUTED,
-    H6b CONFIRMED, H6c SUPPORTED; dpc_bridge filters size-8 PIPE. s586: writer
-    is RSP (item -356). Natural dual sticky confirm still open (H7d).
+-356. **(s586/s587) H7 writer RESOLVED; product FS_PIPE_INJECT E7-phase DONE
+    (default OFF).** s586: E9→E7 is Factor5 LLE RSP (H7a; H7b/H7c REFUTED).
+    s587: `ROGUESQ_FS_PIPE_INJECT=1` mode-1 = slot∩last_fs → host scratch
+    `0x7FFF80` FULL_SYNC (non-mutating, defer-aware). **H8a CONFIRMED** (388
+    dual syncs vs 238+150zero baseline). **H8c REFUTED for mode 1** (hangar
+    e9_b 75/75). In-place rewrite **REFUTED** (r2 UJ 2080). r3: 0 UJ 0 CRASH,
+    hangarbay n=800, hangar-sel, VI 640@0x6A2900. Leave default OFF until
+    item -357 closes F3 residual. Artifacts: `s587_fs_pipe_inject_r3`.
+
+-355. **(s585–s587) H-sync4 mechanism + writer + E7 product inject.** Sticky
+    side-slot FULL_SYNC; H7a RSP writer; s587 E7 inject (item -356). Natural
+    dual sticky confirm still open (H7d). F3 residual → item -357.
 
 -354. **(s584/s585) H-sync4 stop edge RESOLVED as staging-cell opcode switch;
     s585 refined to sticky overwrite.** phys `0x76DF60` shared 8-byte DPC

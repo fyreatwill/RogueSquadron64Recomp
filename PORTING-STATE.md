@@ -46693,3 +46693,41 @@ gated response (inject FULL_SYNC when filtering PIPE at last_fullsync_addr, or
 equivalent) and verify force dual keeps `syncs>0` past E9→E7.
 
 **Artifact:** `scratch/s73_post_a_scene/s586_hsync4_writer_r2/run.log`.
+
+## Session 587 — FS_PIPE_INJECT: E7 zero-tail killed (H8a); non-mutating scratch; F3 residual open
+
+**Work unit:** product bridge response to sticky-cell PIPE overwrite (item -356).
+
+**Code (`src/rsp/dpc_bridge.cpp`):** `ROGUESQ_FS_PIPE_INJECT` (default OFF).
+- Mode `1`: when size-8 PIPE is filtered at `g_last_fullsync_addr` ∩
+  `ROGUESQ_FS_SLOT_ADDR` (default phys `0x76DF60`), queue synthetic FULL_SYNC
+  from host scratch phys `0x7FFF80` (defer-aware); do **not** rewrite the
+  guest staging cell. Correct hist `0x27→0x29`, set `g_rsp_full_sync_seen`.
+- Mode `2`: last_fs-only (deliberate flood A/B).
+- Doc: `docs/debug-trace-env-vars.md`.
+
+**Runs (force dual + hangar control):**
+
+| Run | Result | Notes |
+|-----|--------|-------|
+| `s587_fs_pipe_inject` | WEAK early death hangarbay n=4 item-306 `0x800aafa8` | first cut used **mutating** last_fs-only; inject flooded mid-boot (`0x4B8408` ×100+) — **H8c CONFIRMED for broad gate** |
+| `s587_fs_pipe_inject_r2` | force dual GREEN; hangarbay n=800 | **mutating** mode-1 (rewrite cell E9 in place): inject n=150 @76DF60 only; dual probes syncs>0 **388** (238 sticky+150 inject); hangar e9_b 76/76; **UJ 2080 after first inject** (s586 baseline UJ=0); no recovery cell; crash `0x80065e94` |
+| `s587_fs_pipe_inject_r3` | force dual GREEN; full HOLD_S kill; **0 CRASH 0 UJ** | **non-mutating** scratch: inject n=150 @76DF60 synth=0x7FFF80 defer=1; dual syncs>0 probes **388** range #5300–#5687; hangar e9_b 75/75; slot E9→E7 then E7→F3; post-dual zero run **250** (hold kill, not crash); fs max 4717 stuck; last VI nonzero=1 @640/0x6A2900 |
+
+**Hypotheses:**
+
+| H | Verdict | Evidence |
+|---|---------|----------|
+| H8a inject keeps syncs past E9→E7 | **CONFIRMED** (E7 phase) | r2/r3: 388 continuous dual syncs vs s586 238 then 150 zeros @E7 |
+| H8b sole size-8 only | not required | mode-1 slot gate enough for dual |
+| H8c never-filter / broad last_fs floods hangar | **CONFIRMED for mode 2/r1**; **REFUTED for mode 1** | r1 flood `0x4B8408`; r3 hangar e9_b 75/75 0 inject off-slot |
+| H8d force recovery makes inject redundant | **REFUTED for E7 window** | inject covers 150 E7 tasks before F3; force recovery cell absent this hold |
+| In-place E9 rewrite safe | **REFUTED** | r2 UJ 2080 only after inject; r3 non-mut UJ 0 |
+| Non-mutating scratch safe for E7 | **SUPPORTED** | r3 0 UJ 0 CRASH hangar green dual syncs continuous |
+
+**Still open:** after E7→F3 the slot is no longer PIPE — inject stops; F3/FD zero-tail remains (~250 tasks to hold kill; natural s577 ~772). No `0x76A838` recovery this run. Product leave default **OFF** until F3 residual has a plan (item -357).
+
+**Artifacts:**
+- `scratch/s73_post_a_scene/s587_fs_pipe_inject/run.log` (WEAK)
+- `scratch/s73_post_a_scene/s587_fs_pipe_inject_r2/run.log` (mutating / UJ)
+- `scratch/s73_post_a_scene/s587_fs_pipe_inject_r3/run.log` (non-mutating GREEN)

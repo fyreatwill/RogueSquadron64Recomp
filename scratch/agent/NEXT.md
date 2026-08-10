@@ -2,60 +2,60 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s586 recap (read this first)
+## s587 recap (read this first)
 
 | H | Result | Evidence |
 |---|--------|----------|
-| H7a | **CONFIRMED** | E7→E9 #5309 and E9→E7 #5547 both `task_delta src=rsp_lle`; stop also `write lle_depth=1` + `slot_op_change op=27 src=rsp_submit` |
-| H7b | **REFUTED** | 0 `intertask_delta` whole run |
-| H7c | **REFUTED** | real RDRAM mutation under LLE before filtered PIPE submit |
-| H7d | open | force path only |
+| H8a E7 inject keeps syncs | **CONFIRMED** | r3: 388 dual syncs #5300–#5687 (238 sticky + 150 inject) |
+| H8c mode-1 hangar flood | **REFUTED** | hangar e9_b 75/75; inject only @0x76DF60 |
+| H8c broad last_fs | **CONFIRMED** (r1) | flood @0x4B8408 |
+| In-place E9 rewrite | **REFUTED** | r2 UJ 2080 after inject; r3 non-mut UJ 0 |
+| H8d force recovery makes inject redundant | **REFUTED for E7** | inject covers full E7 window before F3 |
+| F3/FD residual | **OPEN** (-357) | inject stops at E7→F3; zero run 250 to hold-kill; fs stuck 4717 |
 
-Sticky: 238 E9 task_end, 0 mid-writes. Instrument GREEN. Artifact:
-`scratch/s73_post_a_scene/s586_hsync4_writer_r2/run.log`.
+Landed: `ROGUESQ_FS_PIPE_INJECT` mode 1 non-mutating scratch `0x7FFF80` in
+`src/rsp/dpc_bridge.cpp` (default OFF). Artifact: `s587_fs_pipe_inject_r3`.
 
 ## This iteration's work unit
 
-**Product bridge response to sticky-cell PIPE overwrite (item -356).**
+**Item -357: residual F3/FD FULL_SYNC starvation after E7 inject.**
 
-When Factor5 LLE writes E7 (PIPE_SYNC) into the shared 8-byte cell that was
-sticky FULL_SYNC, dpc_bridge filters size-8 op 0x27 and runner `syncs` dies
-while GFX continues. Writer is known (RSP); fix is bridge-side.
+When sticky cell leaves PIPE (`E7→F3→FD`), `FS_PIPE_INJECT` no longer fires and
+runner `syncs` dies again while GFX continues (r3 zero run #5688+).
 
 ### Hypotheses
-- H8a: Injecting one FULL_SYNC (or counting a synthetic sync) when filtering
-  size-8 PIPE at `last_fullsync_addr` keeps dual-phase `syncs>0` past E9→E7
-  without visual regression.
-- H8b: Only inject when the filtered PIPE is the *sole* size-8 submit that
-  task (avoids flooding mid-stream PIPEs).
-- H8c: Broader "never filter size-8 PIPE" regresses hangar (action_queue flood).
-- H8d: Force dual recovery at `0x76A838` already restores syncs later — inject
-  only needed for open natural plateau (H6c); measure whether inject shortens
-  zero-tail or is redundant on force path.
+- H9a: Task-end synthetic FULL_SYNC from scratch `0x7FFF80` whenever
+  `g_task_rdp_fullsyncs==0` after dual has ever been seen collapses the F3/FD
+  zero-tail (fix broken `rsp_force_fullsync` which re-submits last_fs=F3/FD).
+- H9b: Only synth when slot head is F3/FD (not global zero-sync) avoids
+  re-introducing hangar/action_queue issues.
+- H9c: Force-path natural recovery cells (`0x76A838` s584 / `0x76B768` s586)
+  still appear if hold is longer — inject did not block them; r3 kill was early.
+- H9d: Extending PIPE inject to "any non-E9 at slot while last_fs==slot" is
+  enough (treat F3/FD size-8 slot submits like PIPE).
 
-### Discriminating measurement (one build, one force dual)
-1. Land gated fix: e.g. `ROGUESQ_FS_PIPE_INJECT=1` default OFF for A/B, or ON
-   if already proven safe on hangar control in same run.
-2. Same-run: hangar late e9_b/syncs GREEN (no flood), dual sticky E9 window
-   still forms, then after E9→E7 edge runner `syncs` stays ≥1 (or zero-tail
-   length collapses vs s586 baseline ~150 E7 tasks then F3/FD).
-3. Log inject count + first/last inject task.
+### Discriminating measurement (one build, force dual, HOLD_S≥60)
+1. Prefer H9a or H9d gated env (e.g. `ROGUESQ_FS_PIPE_INJECT=1` extended, or
+   `ROGUESQ_FS_TASK_END_INJECT=1`).
+2. Same-run: hangar late e9_b GREEN; dual E7 inject still 150; **post-F3
+   `syncs≥1` for ≥200 tasks** (or zero-tail length ≪ s577's 772 / r3's 250).
+3. UJ=0 CRASH=0; log synth count after F3 edge.
 
 ### Exact commands
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 # after code + rebuild:
-env PROBE_MODE=start_only HOLD_S=45 \
+env PROBE_MODE=start_only HOLD_S=60 \
   GAME_EXTRA_ENV="ROGUESQ_FORCE_CASE5_START=40 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s587_fs_pipe_inject 5 12
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s588_fs_f3_residual 5 12
 ```
 
 ### Outcomes
-- dual keeps syncs after E9→E7 + hangar control green → H8a/H8b path works
-- hangar flood / present glitch → H8c, tighten gate
-- inject fires but force still recovers only via 0x76A838 → measure natural next
+- post-F3 syncs recover + hangar green + UJ0 → ship candidate (consider default ON)
+- recovery cells appear without extra inject (H9c) → inject E7-only is enough; longer hold
+- UJ/hangar flood → tighten gate
 
 ### Do NOT
-- Re-litigate H7a/b/c.
+- Re-litigate H7/H8a E7 inject.
+- Ship default-ON until F3 residual measured clean.
 - Chase leave-path crashes.
-- Ship inject without same-run hangar positive control.

@@ -743,12 +743,96 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     // PIPESYNC FILTER: Factor5 emits PIPESYNC (op_int 0x27) very heavily.
     // RT64 implicitly maintains pipeline coherence; per-cmd PIPESYNC floods
     // the action_queue. Keep LOADSYNC (0x26), TILESYNC (0x28), FULLSYNC (0x29).
+    //
+    // ROGUESQ_FS_PIPE_INJECT (default OFF): when the filtered size-8 PIPE is
+    // the dual sticky FULL_SYNC staging cell (phys default 0x76DF60 =
+    // ROGUESQ_FS_SLOT_ADDR) *and* that cell is still g_last_fullsync_addr,
+    // submit a synthetic FULL_SYNC from a host-owned scratch word instead of
+    // forwarding the PIPE. After the post-exit dual window the RSP overwrites
+    // that cell E9→E7 once; without this, runner hist[0x29]/syncs and RT64
+    // fullSync starve while GFX continues (H-sync4 / item -355/-356).
+    //
+    // s587 r1: last_fullsync_addr alone flooded mid-boot staging (H8c).
+    // Gate mode 1 = fs_slot ∩ last_fs; mode 2 = last_fs-only (A/B only).
+    // s587 r2: mutating the sticky cell to E9 in place eliminated the E7
+    // zero-tail (H8a) but correlated with 2080 UnhandledJump + no force
+    // recovery. Non-mutating path: permanent E9 at phys 0x7FFF80, defer/live
+    // submit that range, leave the staging cell as PIPE for the RSP.
     if ((submit_hi - submit_lo) == 8) {
         int64_t mips = (int64_t)(int32_t)(submit_lo + 0x80000000);
-        uint8_t b0 = MEM_B(0, mips);
+        uint8_t b0 = (uint8_t)MEM_B(0, mips);
         if ((b0 & 0x3F) == 0x27) {
-            (void)rdram;
-            return;
+            static const int s_pipe_inject = []{
+                const char *e = std::getenv("ROGUESQ_FS_PIPE_INJECT");
+                if (!e || !*e || *e == '0') return 0;
+                if (*e == '2') return 2;
+                return 1;
+            }();
+            const uint32_t last_fs =
+                g_last_fullsync_addr.load(std::memory_order_acquire);
+            const uint32_t slot = fs_slot_addr();
+            const bool at_last = (last_fs != 0xFFFFFFFFu && submit_lo == last_fs);
+            const bool at_slot = (submit_lo == slot);
+            const bool do_inject =
+                (s_pipe_inject == 2 && at_last) ||
+                (s_pipe_inject == 1 && at_last && at_slot);
+            if (do_inject) {
+                // Host-owned top-of-RDRAM scratch: never rewrite guest staging.
+                constexpr uint32_t kSynthFsPhys = 0x7FFF80u;
+                static bool s_synth_inited = false;
+                if (!s_synth_inited) {
+                    int64_t sm = (int64_t)(int32_t)(kSynthFsPhys + 0x80000000);
+                    MEM_B(0, sm) = (int8_t)0xE9;
+                    MEM_B(1, sm) = 0;
+                    MEM_B(2, sm) = 0;
+                    MEM_B(3, sm) = 0;
+                    MEM_B(4, sm) = 0;
+                    MEM_B(5, sm) = 0;
+                    MEM_B(6, sm) = 0;
+                    MEM_B(7, sm) = 0;
+                    s_synth_inited = true;
+                }
+                // Hist was counted as 0x27 above; correct to FULL_SYNC.
+                if (g_task_op_count[0x27] > 0) {
+                    g_task_op_count[0x27]--;
+                }
+                g_task_op_count[0x29]++;
+                {
+                    uint32_t prev =
+                        g_cumulative_op_count[0x27].load(std::memory_order_relaxed);
+                    if (prev > 0) {
+                        g_cumulative_op_count[0x27].store(
+                            prev - 1, std::memory_order_relaxed);
+                    }
+                    g_cumulative_op_count[0x29].fetch_add(
+                        1, std::memory_order_relaxed);
+                }
+                g_rsp_full_sync_seen.store(true, std::memory_order_release);
+                g_task_rdp_fullsyncs.fetch_add(1, std::memory_order_relaxed);
+                g_cumulative_fullsyncs.fetch_add(1, std::memory_order_relaxed);
+                // Keep last_fullsync_addr on the sticky slot so subsequent
+                // PIPE filters still match; do not point it at the scratch.
+                if (g_defer_active) {
+                    g_deferred_ranges.emplace_back(kSynthFsPhys, kSynthFsPhys + 8);
+                } else {
+                    ultramodern::submit_rdp_range(kSynthFsPhys, kSynthFsPhys + 8);
+                }
+                static std::atomic<uint64_t> s_inject_n{0};
+                uint64_t in = ++s_inject_n;
+                if (in <= 20 || (in % 50) == 0) {
+                    fprintf(stderr,
+                        "[fs-pipe-inject] n=%llu addr=0x%08X last_fs=0x%08X "
+                        "slot=0x%08X synth=0x%08X mode=%d defer=%d task_cmds=%u\n",
+                        (unsigned long long)in, submit_lo, last_fs, slot,
+                        kSynthFsPhys, s_pipe_inject, g_defer_active ? 1 : 0,
+                        g_task_rdp_cmds.load(std::memory_order_relaxed));
+                    fflush(stderr);
+                }
+                return; // drop the PIPE; synth FULL_SYNC already queued
+            } else {
+                (void)rdram;
+                return;
+            }
         }
         if ((b0 & 0x3F) == 0x29) {
             // FULL_SYNC marks the end of a frame's RDP work — on real hw
