@@ -149,7 +149,23 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -362. The next NEW item takes -363.
+a range pointer. Highest allocated so far: -363. The next NEW item takes -364.
+
+-363. **(s598) Item -361 redesign option (1) BUILT: `s598_fast_retry_case6.sh` queued to
+    `scratch/agent/soak_queue/`.** Implements NEXT.md's fast-retry recommendation: loops the
+    existing case6+inject recipe inside one 560s slot, discarding any pre-engagement death
+    (no `[case6-force-start]`+`[hangar-sel]`) as a free reroll instead of a scored soak, up to 8
+    attempts; only the first attempt that reaches engagement runs its full `HOLD_S` window and
+    gets the sec4-decision-tree analysis. Verified `run_mission_keys.sh` already self-terminates
+    promptly on early death (per-phase `kill -0` checks) so no separate mid-run polling/kill logic
+    was needed — confirmed `ROGUESQ_FORCE_CASE6_START`'s implementation
+    (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c` ~17830) fires on the 5th poll of the
+    hangar-bay check once SELECT YOUR CRAFT is reached, not gated on additional key input beyond
+    getting there. Syntax-checked (`zsh -n`); not execution-smoke-tested standalone this session
+    (direct invocation of a `soak_queue/` script required interactive approval) — the loop will run
+    it for real on the next queued-soak pass. **Next session: read the
+    `s598_fast_retry_case6` verdict line in `scratch/agent/SOAK-RESULTS.md` and fold into item
+    -361's decision tree.** Full detail: `PORTING-STATE.md` Session 598.
 
 -362. **(s597) Item -361 pre-engagement noise tally (redesign option a) — CLOSED NEGATIVE, no
     dominant fixable family; new "waitForAnyAudioSlot+244" signature (2/2, s594_d/s595_e)
@@ -192,8 +208,9 @@ a range pointer. Highest allocated so far: -362. The next NEW item takes -363.
     full soak slot, or a natural-path comparison re-scoped to target `s594_c`-style
     recovery-cell reliability specifically. `sec4>=2` is the correct discriminating threshold
     (`sec4=1` is boot-only overlay-preload noise, confirmed s594 against `s592_sec4_thr12_a`'s
-    real post-exit `sec4=2`). Full session-by-session detail: `PORTING-STATE.md` Sessions
-    589-597.
+    real post-exit `sec4=2`). **s598: redesign option (1) built and queued** — see item -363;
+    result pending next queued-soak pass. Full session-by-session detail: `PORTING-STATE.md`
+    Sessions 589-598.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4

@@ -2,92 +2,82 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s597 recap (read this first)
+## s598 recap (read this first)
 
-s597 executed NEXT.md's own scoped option (a): tally which breadcrumb killed
-each of the 9 non-discriminating s593-s596 `coalesce_r2_verify` attempts, to
-see whether one dominant noise family exists worth a targeted guard. Result:
-**CLOSED NEGATIVE.** Full tally + method: `PORTING-STATE.md` Session 597,
-`docs/CURRENT-TRUTH.md` item -362.
+s598 built and queued `scratch/agent/soak_queue/s598_fast_retry_case6.sh`,
+implementing NEXT.md's redesign option (1) from s597: instead of one
+case6+inject attempt per 600s soak_queue slot (8/9 of which died pre-
+engagement in s593-s596, per item -362's tally), it loops the same recipe
+inside a 560s budget, discarding pre-engagement deaths as free rerolls (up
+to 8 attempts) and only scoring the first attempt that reaches real
+engagement (`[case6-force-start]` + `[hangar-sel]` both present), which then
+runs its full `HOLD_S=90` window and gets the standard sec4-decision-tree
+analysis. Full detail: `PORTING-STATE.md` Session 598, `docs/CURRENT-TRUTH.md`
+item -363.
 
-- No single family is a majority: item -306 (2×), a new
-  `waitForAnyAudioSlot+244`/`0x8000834c` cluster (2×), item -331 2nd occ
-  (1×), a genuinely distinct recovery-cell-reliability failure (1×,
-  `s594_c`), non-crash early death/hang (2×).
-- The new `waitForAnyAudioSlot+244` cluster looked like a fresh M5 lead but
-  **failed its own implied positive control**: the function's unconditional
-  `[audio-drain-enter]` entry print never fired in either crashing log
-  despite the env var being armed correctly and the instrument working in
-  199 other historical run dirs. Conclusion: `nm -n` nearest-symbol
-  misattribution (item -310/-311 family), not a real crash inside that
-  function. **Do not chase it as an audio bug.**
-- Both `waitForAnyAudioSlot+244` deaths happened in 7-8 seconds, VI still at
-  640 — pre-title-screen, i.e. **before** `ROGUESQ_FORCE_CASE6_START` could
-  possibly engage. This applies to 6 of the 8 tallied nulls: they die with
-  `case6=0 hangar-sel=0`. That undercuts the original rationale for redesign
-  option (b) ("the force mechanism adds fragility") — the force mechanism
-  hasn't run yet when most of these deaths happen, so switching to a natural
-  double_start path would not obviously touch this early-boot noise.
+**It has not run yet.** It was queued, not executed, this session (a direct
+standalone invocation would have needed interactive approval; the loop's own
+queued-soak runner will execute it normally on the next pass, up to 2
+recipes between iterations, 600s hard cap per recipe — comfortably above the
+wrapper's internal 560s budget).
 
 ## This iteration's work unit
 
-Two real options remain (both cheaper than another blind identical retry):
+1. **First, check whether `s598_fast_retry_case6` already ran.** Read the
+   tail of `scratch/agent/SOAK-RESULTS.md` for a line naming it. Also check
+   `ls scratch/agent/soak_queue/` — if the `.sh` file is gone (moved to
+   `soak_queue/done/`), it ran regardless of whether a result line landed.
+   - If it ran and exited 0/1 (an attempt reached engagement): read the
+     scored attempt's `run.log` (path is in the wrapper's own captured
+     stdout, `scratch/agent/soak_results/s598_fast_retry_case6_*.log`, under
+     the `=== scored attempt analysis ===` line) and apply the item -361
+     decision tree — `sec4>=2` with the guarded path live is the only
+     outcome that counts as a real verify (positive or negative) for the
+     `coalesceFreeHeapBlocks` R2 guard fix landed s593. Fold the result into
+     item -361 (close it FIXED+CLOSED 2/2 if this is a clean 2nd confirm, or
+     record the new data point if still inconclusive).
+   - If it ran and exited 2 (no engagement across up to 8 rerolls in the
+     560s budget): that's a sharper data point than item -362's 8-sample
+     tally — pre-engagement noise is dense enough to eat an 8x-retry budget.
+     Worth a quick frequency read of which crash signature(s) killed each of
+     the (likely ~4-8) sub-attempts logged in the wrapper's own stdout
+     before deciding whether option (2) (natural-path, recovery-cell-
+     reliability-scoped) is now the better remaining move.
+   - If it has NOT run yet (still sitting in `scratch/agent/soak_queue/`):
+     that's fine, the loop runs up to 2 queued recipes between iterations —
+     do NOT re-invoke it manually. Pick a DIFFERENT work unit this iteration
+     (see fallback below) rather than stalling on it.
 
-**(1) Fast-retry wrapper (recommended first).** ~89% of attempts die
-pre-engagement, but the two fastest deaths cost only 7-8s of the 600s soak
-budget — the expensive nulls are the 100-200s pre-engagement deaths
-(s593_a/b, s595_f) and the reached-but-no-recovery ones (s594_c, ~199s).
-Build a wrapper script (`scratch/agent/soak_queue/`-compatible) that:
-  - Launches the game with the existing case6+inject recipe.
-  - Polls for a `case6=1`/`hangar-sel=1` signal (or just VI width) in the
-    growing `run.log`; if the process dies or crashes with `case6=0` before
-    that point, SIGKILL, discard, and immediately relaunch — do NOT count
-    it against the 600s budget the same way (log it as a fast reroll, not a
-    soak result).
-  - Once a launch survives to `case6=1`, let it run the FULL `HOLD_S=90-210`
-    window as normal, then evaluate `sec4>=2` per the existing decision
-    tree.
-  - Cap total wall time at the loop's existing 600s hard cap regardless of
-    how many fast rerolls happen inside it.
-  This turns the current 1-attempt-per-slot model into effectively several
-  attempts per slot, multiplying the number of shots at the *actual*
-  remaining question: does the FULL_SYNC recovery cell `0x76B768` fire
-  reliably once case6 is reached? (H12c/H13c, still open: s589/s592a fired,
-  s591/s594_c did not — 2/4 known reached-case6 runs recover.)
-
-**(2) Natural (non-force) double_start path, re-scoped.** If (1) is
-impractical this iteration, fall back to the original option (b), but
-**target it correctly**: the comparison that matters is not
-"does natural survive pre-engagement noise better" (unlikely, per the s597
-finding above) but "does natural reach the recovery-cell firing more
-reliably than forced once hangar exit happens." Design the discriminating
-measurement around `recov76B768~=0` vs `>0` counts across N runs of each
-path, not around raw survival-to-case6 rate.
-
-Pick ONE, name the discriminating measurement explicitly before running
-anything, then either run it directly or queue it to
-`scratch/agent/soak_queue/`.
+2. **Fallback if s598's soak hasn't landed a result yet:** do NOT start a
+   3rd redesign of the same item -361 verify loop without new evidence —
+   iron rule 8 (3 consecutive non-discriminating iterations on one
+   hypothesis forces a pivot preamble; s595/s596/s597 already spent 3+ on
+   this exact question). Instead, treat this as a scheduling gap and do
+   ONE of:
+   - A short M3 idiom-class audit unrelated to item -361 (per the strategic
+     priority in `docs/CURRENT-TRUTH.md`'s USER DIRECTIVE, item 3: systematic
+     idiom-class audits only, not reactive chases). No open idiom-class
+     bucket is currently flagged in Next-steps as ready to start — check
+     items -328..-336 (six filed-not-chased breadcrumbs) for a 3rd
+     occurrence before opening new ground.
+   - Re-run Step 0's maintenance check (`wc -c < docs/CURRENT-TRUTH.md`) —
+     if it's crept back over 60000 bytes, that's this iteration's unit.
 
 ### Do NOT
-- Raise `HOLD_S` past 210 — already tried twice (90, 210), no effect on
-  recovery-cell-firing rate specifically.
-- Chase `waitForAnyAudioSlot+244` as a real audio bug — s597 disproved its
-  own positive control (see above). If it recurs, the next step is closing
-  the underlying symtab-misattribution gap (item -310/-311 family), not
-  patching `waitForAnyAudioSlot` itself.
-- Treat a `sec4=1`-only, `case6=0`, or reached-but-no-recovery null as
-  evidence about the R2 guard fix (iron rule 1) — only a run reaching
-  `sec4>=2` with the guarded path live counts.
+- Manually invoke `scratch/agent/soak_queue/s598_fast_retry_case6.sh`
+  directly (bypasses the loop's one-game-at-a-time + budget accounting).
+- Raise `HOLD_S` past 210 inside the wrapper's recipe without new evidence
+  that duration (not engagement rate) is still the bottleneck.
+- Chase `waitForAnyAudioSlot+244` as a real audio bug (item -362: disproved
+  its own positive control, `nm -n` misattribution).
 - Re-open thr-11 as recvServiceMessage block (H12a closed).
 - Chase item -347/-331/-306 reactively — filed breadcrumbs, watch-only.
 
-### Reference: exact command used for prior attempts (case6+inject baseline)
-```bash
-export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-env PROBE_MODE=start_only HOLD_S=90 \
-  GAME_EXTRA_ENV="ROGUESQ_FORCE_CASE6_START=5 ROGUESQ_FS_PIPE_INJECT=1 ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_HANGARBAY_ENTRY=1 ROGUESQ_LOG_COALESCE_HEAP_GUARD=1 ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s598_<name> 5 12
-```
-For option (2), drop `ROGUESQ_FORCE_CASE6_START` and drive a natural
-double_start leave sequence instead (see `PROBE_KEYS`/leave-sequence recipes
-referenced in items -359/-590 for the natural path shape).
+### Reference: wrapper internals, if the scored log needs re-deriving
+`scratch/agent/soak_queue/s598_fast_retry_case6.sh` uses the same
+`GAME_EXTRA_ENV` as the s593-s596 attempts (`ROGUESQ_FORCE_CASE6_START=5
+ROGUESQ_FS_PIPE_INJECT=1` + the DL_SYNC/FS_SLOT/RDP_FULLSYNC/AUDIO_DRAIN/
+HANGARBAY_ENTRY/COALESCE_HEAP_GUARD/COALESCE_HEAP_R2_GUARD log flags),
+`PROBE_MODE=start_only HOLD_S=90` — same decision-tree python block as the
+s595 script (`sec4`, `sec2`, `case6`, `hangar-sel`, `inject_lines`,
+`recov76B768~=`, `thr495FC_creates`, `coalesce_guard1/2_r2`, `crash`).

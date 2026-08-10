@@ -47414,3 +47414,77 @@ early-boot noise first. Full detail: NEXT.md.
 `~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_15.c:7253`
 (`waitForAnyAudioSlot`, entry-diagnostic source); `docs/CURRENT-TRUTH.md`
 item -361/-362 (this session's tally folded in).
+
+## Session 598 — 2026-08-09 — item -361 redesign option (1) BUILT: fast-retry wrapper landed to soak_queue
+
+### Work unit
+s597's item -362 tally closed redesign option (a) negative and left two real
+options for the item -361 R2-guard live re-verify (`docs/CURRENT-TRUTH.md`
+item -361, `HYPOTHESIS-ID: m3-post-exit-fs-stall`): (1) a fast-retry wrapper
+that discards pre-engagement deaths without spending a full 600s soak slot,
+or (2) a natural-path comparison re-scoped to recovery-cell reliability.
+NEXT.md recommended (1) first as cheaper and more directly targeted at the
+actual open question. This session built it.
+
+### What was verified before building
+Read `run_mission_keys.sh` end to end and the `ROGUESQ_FORCE_CASE6_START`
+implementation (`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c`
+~line 17830, injected by `fixup_game_funcs.py`'s `PATCH: hangar-exit buttons
+(s574/s590)` block): the force fires on the 5th poll of the per-frame
+`0x800ACE94` hangar-bay check once the game is actually sitting at
+SELECT YOUR CRAFT — it is not itself gated on real key input reaching that
+screen, but the run still needs ~100-115s of unavoidable VI1024-wait +
+SCHEDULE + PROBES navigation time to get there. Confirmed `run_mission_keys.sh`
+already self-terminates promptly on an early death via `kill -0` checks
+gating every phase (VI1024 wait, SCHEDULE loop, PROBES loop, HOLD loop) —
+this is exactly why the historical 8/9 non-discriminating attempts show a
+wide spread of run durations (7s, 8s, 125s, 126s, 166s, 199s) rather than
+all consuming the full 600s cap. That means the wrapper doesn't need its own
+mid-run polling/kill logic; it only needs an OUTER loop that reruns the
+existing recipe and checks each completed attempt's log for
+`[case6-force-start]` + `[hangar-sel]` (real engagement) before deciding
+whether to reroll or score.
+
+### What was built
+`scratch/agent/soak_queue/s598_fast_retry_case6.sh` (bash-compatible body,
+matches convention — `loop.sh` execs recipes via `/bin/bash` regardless of
+shebang). Behavior: loops the existing case6+inject recipe
+(`PROBE_MODE=start_only HOLD_S=90`, same `GAME_EXTRA_ENV` as the s593-s596
+attempts) inside a 560s wall-clock budget (under the loop's 600s hard cap,
+leaving analysis/kill slack), re-tagging and re-launching after every
+pre-engagement death (`pkill -9` + 0.3s settle) until either an attempt's
+`run.log` shows both `[case6-force-start]` and `[hangar-sel]` — at which
+point that attempt is "scored" (it already ran its full `HOLD_S` window
+inline, since `run_mission_keys.sh` is blocking) and gets the same
+sec4-decision-tree python analysis as the s595 script — or the budget/attempt
+cap (8) is exhausted with 0 engagements, which exits 2 as its own distinct
+data point (pre-engagement noise rate too high even under retry, rather than
+being silently indistinguishable from a scored crash null). Syntax-checked
+with `zsh -n` (direct `bash -n`/`bash` invocation of a `soak_queue/` script
+required interactive approval and was not run standalone this session —
+correctness relies on the syntax check + close reading, not an execution
+smoke test; the loop will execute it for real on the next queued-soak pass).
+
+### Why this counts as ADVANCED, not SUBSTITUTED
+A new instrument (self-contained soak_queue recipe) was landed implementing
+NEXT.md's explicit redesign recommendation — this is a real change per the
+OUTCOME contract, not doc-only housekeeping. It was queued rather than run
+inline because the loop's own soak-queue mechanism (600s cap, one game at a
+time, next-session log consumption) is the correct place for a multi-attempt
+recipe whose total runtime is deliberately budget-variable.
+
+### Next steps
+Read `scratch/agent/SOAK-RESULTS.md` for the `s598_fast_retry_case6` verdict
+line next session (loop runs up to 2 queued recipes between iterations).
+Fold whatever `sec4`/`recov76B768` counts the scored attempt shows into item
+-361's decision tree per the existing `sec4>=2` threshold. If it exits 2
+(no engagement within budget across up to 8 rerolls), that itself sharpens
+the pre-engagement noise picture beyond item -362's 8-sample tally and may
+be worth its own frequency read before trying option (2).
+
+### Artifacts
+`scratch/agent/soak_queue/s598_fast_retry_case6.sh` (new); reference reading
+`scratch/s73_post_a_scene/run_mission_keys.sh`,
+`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c` (case6 force site),
+`~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:117194`
+(`[hangar-sel]` tag source, confirmed exact string for the wrapper's grep).
