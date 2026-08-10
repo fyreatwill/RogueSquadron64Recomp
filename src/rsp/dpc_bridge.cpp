@@ -257,6 +257,16 @@ namespace {
         }();
         return v;
     }
+    // ROGUESQ_LOG_RDP_FULLSYNC: every real op-0x29 (FULL_SYNC) submit site.
+    // Discriminates H-sync4: guest-E9 outside e9_b walk vs synthetic/misdecode.
+    // Not folded into LOG_ALL — can be ~1 line/task for thousands of tasks.
+    bool log_rdp_fullsync() {
+        static const bool v = []{
+            const char *e = std::getenv("ROGUESQ_LOG_RDP_FULLSYNC");
+            return e && *e && *e != '0';
+        }();
+        return v;
+    }
 }
 
 void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
@@ -335,9 +345,43 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     g_task_rdp_cmds.fetch_add(1, std::memory_order_relaxed);
     {
         int64_t mips_first = (int64_t)(int32_t)(submit_lo + 0x80000000);
-        uint8_t op = (uint8_t)MEM_B(0, mips_first) & 0x3F;
+        uint8_t b0_first = (uint8_t)MEM_B(0, mips_first);
+        uint8_t op = b0_first & 0x3F;
         g_task_op_count[op]++;
         g_cumulative_op_count[op].fetch_add(1, std::memory_order_relaxed);
+        // H-sync4: log every range whose FIRST byte is RDP FULL_SYNC family
+        // (b0&0x3F==0x29). This is exactly what runner hist[0x29]/syncs counts.
+        // size==8 path below also updates g_last_fullsync_addr; multi-cmd heads
+        // inflate hist without refreshing last_addr (sticky-fs risk).
+        if (log_rdp_fullsync() && op == 0x29) {
+            static std::atomic<uint64_t> s_fs_head{0};
+            uint64_t n = ++s_fs_head;
+            const uint32_t size = submit_hi - submit_lo;
+            // Always log: first 40 (boot/hangar control), every head during the
+            // late dual-DL window (n large), and the edge into starvation.
+            // Cap mid-run noise: after 40, log every 25th until cumulative
+            // fullsyncs >= 4000, then every submit (cutscene/plateau).
+            const uint32_t cum = g_cumulative_fullsyncs.load(std::memory_order_relaxed);
+            const bool log_this = (n <= 40) || (cum >= 4000) || ((n % 25) == 0);
+            if (log_this) {
+                uint32_t w0 = ((uint32_t)(uint8_t)MEM_B(0, mips_first) << 24) |
+                              ((uint32_t)(uint8_t)MEM_B(1, mips_first) << 16) |
+                              ((uint32_t)(uint8_t)MEM_B(2, mips_first) <<  8) |
+                              ((uint32_t)(uint8_t)MEM_B(3, mips_first));
+                uint32_t w1 = 0;
+                if (size >= 8) {
+                    w1 = ((uint32_t)(uint8_t)MEM_B(4, mips_first) << 24) |
+                         ((uint32_t)(uint8_t)MEM_B(5, mips_first) << 16) |
+                         ((uint32_t)(uint8_t)MEM_B(6, mips_first) <<  8) |
+                         ((uint32_t)(uint8_t)MEM_B(7, mips_first));
+                }
+                fprintf(stderr,
+                    "[rdp-fullsync] n=%llu kind=head addr=0x%08X b0=%02X size=%u "
+                    "w0=%08X w1=%08X cum_fs=%u\n",
+                    (unsigned long long)n, submit_lo, b0_first, size, w0, w1, cum);
+                fflush(stderr);
+            }
+        }
         // Full-range walk (ROGUESQ_LOG_DPC=1): the first-command histogram
         // above misses commands bundled after the head of a multi-command
         // submit. TEXRECT/TEXRECTFLIP are 16 bytes, everything else 8.
@@ -651,6 +695,27 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
                 fprintf(stderr, "[dpc] FULL_SYNC byte sent #%llu\n",
                     (unsigned long long)n);
                 fflush(stderr);
+            }
+            // size==8 path is the only site that refreshes g_last_fullsync_addr.
+            // kind=single distinguishes from kind=head (hist) above.
+            if (log_rdp_fullsync()) {
+                const uint32_t cum = g_cumulative_fullsyncs.load(std::memory_order_relaxed);
+                const bool log_this = (n <= 40) || (cum >= 4000) || ((n % 25) == 0);
+                if (log_this) {
+                    uint32_t w0 = ((uint32_t)(uint8_t)MEM_B(0, mips) << 24) |
+                                  ((uint32_t)(uint8_t)MEM_B(1, mips) << 16) |
+                                  ((uint32_t)(uint8_t)MEM_B(2, mips) <<  8) |
+                                  ((uint32_t)(uint8_t)MEM_B(3, mips));
+                    uint32_t w1 = ((uint32_t)(uint8_t)MEM_B(4, mips) << 24) |
+                                  ((uint32_t)(uint8_t)MEM_B(5, mips) << 16) |
+                                  ((uint32_t)(uint8_t)MEM_B(6, mips) <<  8) |
+                                  ((uint32_t)(uint8_t)MEM_B(7, mips));
+                    fprintf(stderr,
+                        "[rdp-fullsync] n=%llu kind=single addr=0x%08X b0=%02X size=8 "
+                        "w0=%08X w1=%08X cum_fs=%u\n",
+                        (unsigned long long)n, submit_lo, b0, w0, w1, cum);
+                    fflush(stderr);
+                }
             }
         }
         // SET_COLOR/DEPTH/TEXTURE_IMAGE tracer. Confirmed Factor5 LLE cycles a

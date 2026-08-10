@@ -46,6 +46,7 @@ To disable: unset, set to `0`, or leave undefined.
 | `ROGUESQ_LOG_RT64_ALLOC` | off | `[rt64-alloc] interpolatedColorTargets/nativeSwappedRAM/rdramData/BufferPair/RT::setupColor/setupDepth` | RT64 allocation hotspots — emit `[rt64-alloc]` log lines whenever an allocator commits ≥ 1 MB. Used to find allocation spikes. Lives in 5 sites across `lib/rt64/src/{hle,render}/`. |
 | `ROGUESQ_LOG_TEXBYTES` | off | `[trace] tex bytes ...` | First 32 bytes of texture data at SETTIMG addresses, for diagnosing wrong/missing assets. |
 | `ROGUESQ_LOG_DL_SYNC` | off | `[dl-sync-probe] task=#N syncs=… e9_a=… e9_b=… lin_e9=… fs_addr=…` | Guest F3D walk vs post-LLE runner `syncs` (RDP hist `0x29`). **e9_a** = B5=ENDDL (false-neg on complex); **e9_b** = B5=no-op (authoritative presence); **lin_e9** = linear scan; **fs_b0** = byte at last FULL_SYNC submit. **s581:** late hangar control GREEN via e9_b (30/30). Pass via `GAME_EXTRA_ENV`. Rate-limited. |
+| `ROGUESQ_LOG_RDP_FULLSYNC` | off | `[rdp-fullsync] n=… kind=head\|single addr=… b0=… size=…` | Per-submit RDP FULL_SYNC (op family `b0&0x3F==0x29`). **head** = first byte of a submit range (= runner `syncs` hist); **single** = 8-byte submit that also refreshes `g_last_fullsync_addr`. Not in `LOG_ALL`. Use with `LOG_DL_SYNC` for H-sync4 (item -352): cutscene dual-DL had sticky `fs_addr=0x76DF60` / `fs_b0=E9` with `e9_b=0`. Pass via `GAME_EXTRA_ENV`. Logs every submit once `cum_fs>=4000`. |
 
 ### Cinematic-loop checkpoints
 

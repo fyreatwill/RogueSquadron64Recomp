@@ -46491,3 +46491,42 @@ LLE had a non-guest-E9 RDP 0x29 source that later died. Filed item **-352**
 Locate LLE/bridge non-guest-E9 FULL_SYNC emission (H-sync4) and why it stops at
 the cutscene dual-buffer plateau edge. Prefer instrumenting RDP 0x29 submit path
 with guest-E9 co-presence flag; one build, force-exit recipe for same-run control.
+
+## Session 583 — H-sync4 source: fixed guest E9 at 0x76DF60 (not synthetic)
+
+**Work unit:** H-sync4 — find LLE/bridge RDP 0x29 emission when guest e9_b=0, and why
+it stops. Instrument `ROGUESQ_LOG_RDP_FULLSYNC` in `src/rsp/dpc_bridge.cpp`.
+
+**Hypotheses:** H4a LLE non-guest path; H4b mis-decode; H4c walker gap / side-slot E9;
+H4d hist/sticky artifact.
+
+**Build:** dpc_bridge only + relink. Env catalog updated.
+
+**Run:** `PROBE_MODE=start_only HOLD_S=45` + `ROGUESQ_FORCE_CASE5_START=40` +
+`ROGUESQ_LOG_DL_SYNC=1` + `ROGUESQ_LOG_RDP_FULLSYNC=1`
+→ `scratch/s73_post_a_scene/s583_hsync4_rdp29/`. force-exit: hangar-sel + graceful-menu
++ VI 640@0x6A2900. hangarbay n=800. Crash late
+`trackResourceListWithMappingTables+1228`/`0x80065e94` (file not chase). fs max=4518.
+
+**Positive control (same run):** first 40 `[rdp-fullsync]` at phys `0x7778C8`, b0=E9,
+size=8, w0=E9000000, kind=head+single paired.
+
+**Discrimination:**
+| Class | Evidence |
+|-------|----------|
+| A hangar | late probes e9_b≥1 syncs=1; fs_addr varies 0x78/0x79…; b0=E9 |
+| B dual cutscene | runner 238 tasks dual DL tris=164 **syncs=1**; 238 consecutive **singles at 0x76DF60** n=4281..4518 all b0=E9 size=8; probes e9_b=0 fs=0x76DF60 fs_b0=E9 |
+| C plateau | 2418 post tasks all syncs=0; **zero** new rdp-fullsync after n=4518; sticky fs_b0 E9→E7→FD |
+
+**Outcomes:**
+- H4b REFUTED (authentic E9000000, size always 8)
+- H4d REFUTED (238 live singles = 238 dual syncs=1; head size≠8 = 0)
+- "Synthetic non-guest RDP 0x29" REFUTED (bytes are guest F3D G_RDPFULLSYNC)
+- H4c CONFIRMED: real E9 **outside** task e9_b tree at **fixed side-slot 0x76DF60**
+- Stop edge: submits cease; slot byte mutates (item -353)
+
+**Not done:** owner of 0x76DF60 / LLE path that DPC-submits it / why it stops.
+
+### Next
+Item -353: identify who owns phys 0x76DF60 and what ends 8-byte FULL_SYNC submits
+from that address at the dual-buffer plateau edge.
