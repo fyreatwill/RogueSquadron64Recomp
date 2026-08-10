@@ -49749,3 +49749,55 @@ recipe; free B8 no-destroy samples + more fail136c raw dumps.
 ### Not done this session
 No code change; offline consume of s637 soak only. Next unit: freelist
 zero-node writer audit (or `[mv-acc]` sample if freelist blocked).
+
+## Session 639 — 2026-08-10 — freelist zero-node writer audit: H-zero-free + H-split REFUTED (static+live); instruments LIVE
+
+### s638 freeroll consume
+`s638_b8_fail136c_freeroll` rc=137/600s: recovery_silent × attempts, thr11d_new=0,
+diag_fail136c=0. No new B8/no-destroy or fail136c raw samples. Folded as null freeroll.
+
+### Static freelist writer audit (item -391 / -385)
+
+Node layout (rs_malloc walk L_80001BC4..): flags halfword @+0 (1=free, 2=alloc, 8=term),
+size word @+4, next = addr + size + 0x10.
+
+| Writer | flags/size stores | Can produce flags=0 size=0? |
+|--------|-------------------|-----------------------------|
+| rs_malloc alloc | flags=2; size=req (exact) or split | **No** — residual only if rem≥0x20; residual size = rem−0x10 ≥ 0x10 |
+| rs_free | flags=1 only; size preserved; coalesce grows size | **No** — never zeros size |
+| coalesceFreeHeapBlocks | flags=1; size merge | **No** |
+| buildHeapFreeList / initMainHeap | flags=1; size=pool−0x20; term size=0 with flags&8 | **No** for !term zero-node |
+
+**H-zero-free REFUTED (static).** **H-split-bug REFUTED (static).**
+**H-never-init REFUTED** for mid-run i=55 after healthy posctrl (s638 dual-source dump).
+
+Residual hypothesis: **H-oob-store** (external write zeros a freelist header) or
+**H-walk-into-zeros** (prev free size too small so walk lands on payload zeros).
+
+### Instruments landed (one build, env `ROGUESQ_LOG_FL_ZERO_WATCH=1`)
+
+1. **`[fl-zero-poll]`** host soft-watch (`src/main/main.cpp`) phys default `0x1F3CC0`
+   (= KSEG0 `0x801F3CC0`). 250µs poll; `event=to_zero` when size→0 !term; heartbeat 5s;
+   logs guest_pc. Override: `ROGUESQ_FL_ZERO_ADDR`.
+2. **`[fl-hdr-write]`** free flag stores (×2 sites) + split residual size store in
+   `funcs_0.c` via fixup + `tools/apply_s639_fl_zero_watch.py` (regen-durable).
+3. **`[fl-zero-watch]`** E8 freelist scan at free/malloc exit: `event=control` first 3
+   healthy walks; `event=zero_node` first 8 size==0 hits with `site=free|malloc`.
+
+### Same-run positive control (25s boot, SIGKILL)
+
+| Instrument | Result |
+|------------|--------|
+| fl-zero-poll | arm + enabled; phys starts zero (region unused at boot) |
+| fl-hdr-write free | n=0 flags=0x1 size=0x10; n=1 flags=0x1 size=0x720 — **never size=0** |
+| fl-hdr-write split_res | 15+ samples flags=0x1 size>>0 — **never size=0** |
+| fl-zero-watch control | malloc/free site maxfree=0x4E… nnodes sane — **LIVE** |
+
+Live confirms static: free/split never emit zero-size headers.
+
+### Enqueued
+`scratch/agent/soak_queue/s639_fl_zero_writer_freeroll.sh` — thr11d freeroll with
+FL_ZERO_WATCH + all passive breadcrumbs. Discriminators A–E in recipe header.
+
+### Not done
+No thr11d+fail136c hit this session (posctrl only). Writer identity still open pending soak.

@@ -133,3 +133,4 @@ These always print regardless of env vars — don't gate them:
 - **`[Audio] SDL_OpenAudioDevice failed`, `[ROM] Imported`, `[F12] manual minidump requested`** — one-shot user-facing events.
 - **`[exp mode=N]`, `[particle-fix]`, `[texrect-alpha-fix]`, `[vi-follow-draw mode=N]`** — workaround/experiment confirmation messages, throttled to first 3-5 hits. Telemetry that an opt-in workaround actually fired.
 - **`[RT64] setCurrentThreadName threw`** — exception that the gated success path was supposed to avoid; you want to see this.
+| `ROGUESQ_LOG_FL_ZERO_WATCH` | off | `[fl-zero-poll]` / `[fl-hdr-write]` / `[fl-zero-watch]` | s639 freelist zero-node writer audit. Host soft-watch phys 0x1F3CC0 (override `ROGUESQ_FL_ZERO_ADDR`); free/split header logs; E8 exit scan for size==0 nodes. |

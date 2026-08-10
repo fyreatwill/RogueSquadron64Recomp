@@ -354,3 +354,4 @@
 20260810-111210 | s635_thr11d_rate_accum_d | rc=137 | 600s | scratch/agent/soak_results/s635_thr11d_rate_accum_d_20260810-111210.log
 20260810-112210 | s636_thr11d_rate_accum_e | rc=137 | 600s | scratch/agent/soak_results/s636_thr11d_rate_accum_e_20260810-112210.log
 20260810-115137 | s637_mv_b8_shipn3_gate | rc=1 | 495s | scored thr11d_new=1 Outcome A CONFIRMED (b8→arm→store n=3→thr ret1→zero→destroy id=11); fail136c raw FED 0x801F3CC0 flags=0 size=0; ltexmg=1 -387 do_rom_read; att1 mat3inv freeroll | scratch/agent/soak_results/s637_mv_b8_shipn3_gate_20260810-115137.log
+20260810-121808 | s638_b8_fail136c_freeroll | rc=137 | 600s | scratch/agent/soak_results/s638_b8_fail136c_freeroll_20260810-121808.log

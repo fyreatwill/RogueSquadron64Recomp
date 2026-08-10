@@ -1679,6 +1679,108 @@ static void start_fs_slot_poller() {
     t.detach();
 }
 
+
+// ROGUESQ_LOG_FL_ZERO_WATCH: macOS soft-watch on the fail136c freelist
+// zero-node (default KSEG0 0x801F3CC0 → phys 0x1F3CC0). Polls 16-byte
+// header every 250us; logs mutations + 5s heartbeat (positive control).
+// Discriminates H-oob-store (write to zeros with guest_pc) vs allocator
+// paths (pair with [fl-hdr-write]/[fl-zero-watch] from fixup). Override
+// phys via ROGUESQ_FL_ZERO_ADDR=<hex offset into RDRAM>.
+static void start_fl_zero_poller() {
+    static std::thread t{[]{
+        uint8_t* rdram = nullptr;
+        while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        uint32_t slot = 0x1F3CC0u; /* 0x801F3CC0 & 0x7FFFFF */
+        if (const char* e = std::getenv("ROGUESQ_FL_ZERO_ADDR")) {
+            unsigned long v = strtoul(e, nullptr, 0);
+            if (v > 0 && v < 0x800000u) slot = (uint32_t)v;
+        }
+        slot &= 0x7FFFFFu;
+        auto rbyte = [&](uint32_t a) -> uint8_t {
+            return rdram[(a & 0x7FFFFF) ^ 3];
+        };
+        auto snap16 = [&](uint8_t out[16]) {
+            for (int i = 0; i < 16; ++i) out[i] = rbyte(slot + (uint32_t)i);
+        };
+        auto be_u16 = [](const uint8_t* b) -> uint16_t {
+            return (uint16_t)((b[0] << 8) | b[1]);
+        };
+        auto be_u32 = [](const uint8_t* b) -> uint32_t {
+            return ((uint32_t)b[0] << 24) | ((uint32_t)b[1] << 16)
+                 | ((uint32_t)b[2] << 8) | (uint32_t)b[3];
+        };
+        uint8_t prev[16];
+        snap16(prev);
+        fprintf(stderr,
+            "[fl-zero-poll] n=0 event=arm phys=0x%08X kseg=0x%08X bytes="
+            "%02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X %02X%02X%02X%02X "
+            "flags=0x%X size=0x%X\n",
+            slot, slot | 0x80000000u,
+            prev[0], prev[1], prev[2], prev[3],
+            prev[4], prev[5], prev[6], prev[7],
+            prev[8], prev[9], prev[10], prev[11],
+            prev[12], prev[13], prev[14], prev[15],
+            (unsigned)be_u16(prev), (unsigned)be_u32(prev + 4));
+        fflush(stderr);
+        uint64_t n_change = 0;
+        uint64_t n_poll = 0;
+        uint64_t n_to_zero = 0;
+        auto t0 = std::chrono::steady_clock::now();
+        auto last_hb = t0;
+        for (;;) {
+            uint8_t cur[16];
+            snap16(cur);
+            ++n_poll;
+            if (memcmp(cur, prev, 16) != 0) {
+                ++n_change;
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now() - t0).count();
+                uint16_t pf = be_u16(prev), cf = be_u16(cur);
+                uint32_t psz = be_u32(prev + 4), csz = be_u32(cur + 4);
+                const char* kind = "write";
+                if (csz == 0 && (cf & 0x8u) == 0 && (psz != 0 || (pf & 0x3u) != 0)) {
+                    kind = "to_zero";
+                    ++n_to_zero;
+                }
+                fprintf(stderr,
+                    "[fl-zero-poll] n=%llu event=%s t_ms=%lld phys=0x%08X "
+                    "prev_f=0x%X prev_sz=0x%X cur_f=0x%X cur_sz=0x%X "
+                    "prev=%02X%02X%02X%02X%02X%02X%02X%02X "
+                    "cur=%02X%02X%02X%02X%02X%02X%02X%02X "
+                    "guest_pc=0x%08X to_zero_n=%llu\n",
+                    (unsigned long long)n_change, kind, (long long)ms, slot,
+                    (unsigned)pf, psz, (unsigned)cf, csz,
+                    prev[0], prev[1], prev[2], prev[3],
+                    prev[4], prev[5], prev[6], prev[7],
+                    cur[0], cur[1], cur[2], cur[3],
+                    cur[4], cur[5], cur[6], cur[7],
+                    (unsigned)g_rs64_last_guest_pc,
+                    (unsigned long long)n_to_zero);
+                fflush(stderr);
+                memcpy(prev, cur, 16);
+            }
+            auto now = std::chrono::steady_clock::now();
+            if (now - last_hb >= std::chrono::seconds(5)) {
+                auto ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    now - t0).count();
+                fprintf(stderr,
+                    "[fl-zero-poll] n=%llu event=heartbeat t_ms=%lld phys=0x%08X "
+                    "flags=0x%X size=0x%X polls=%llu changes=%llu to_zero=%llu\n",
+                    (unsigned long long)n_change, (long long)ms, slot,
+                    (unsigned)be_u16(prev), (unsigned)be_u32(prev + 4),
+                    (unsigned long long)n_poll, (unsigned long long)n_change,
+                    (unsigned long long)n_to_zero);
+                fflush(stderr);
+                last_hb = now;
+            }
+            std::this_thread::sleep_for(std::chrono::microseconds(250));
+        }
+    }};
+    t.detach();
+}
+
 static void start_memwp_watchdog() {
 #ifndef _WIN32
     // Hardware-breakpoint watchdog is Win32-only (DR0 debug registers).
@@ -2184,6 +2286,17 @@ int main(int argc, char* argv[]) {
                                                       : "0x76DF60");
             fflush(stderr);
             start_fs_slot_poller();
+        }
+    }
+
+    {
+        const char* e = std::getenv("ROGUESQ_LOG_FL_ZERO_WATCH");
+        if (e && *e && *e != '0') {
+            fprintf(stderr, "[fl-zero-poll] poller enabled (ROGUESQ_LOG_FL_ZERO_WATCH=%s addr=%s)\n",
+                    e, getenv("ROGUESQ_FL_ZERO_ADDR") ? getenv("ROGUESQ_FL_ZERO_ADDR")
+                                                      : "0x1F3CC0");
+            fflush(stderr);
+            start_fl_zero_poller();
         }
     }
 
