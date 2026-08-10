@@ -48276,3 +48276,60 @@ s607/s592 → ship_ret1=1 thr11d=1; s610 → ship_ret1=0 thr11d=0.
 - Treat class E as budget artifact without checking hold_N vs s607 hold~65.
 - Raise HOLD_S past 210.
 - Single-chase packTlut (-373 still 1×).
+
+## Session 612 (2026-08-10): fold s611_ship_ret1_gate unscored; land gPlayerShip store/zero instrument (H-ship1b)
+
+### Soak consumed
+`s611_ship_ret1_gate` rc=2 562s (SOAK-RESULTS 20260809-235621):
+- discard_stats: attempts=5 pre_eng=4 matnoise=1 recov_silent=0 mat3inv=0
+- **No recovery-active scored path** (exit 2).
+- a1: force6=1 case6=0 hsel=0 — pre-eng death `heapFreeListDequeue+32892` /
+  last-guest-pc=`0x8000d688` (had early ship ret=1 n=2..9 and thr11 creates; no hsel).
+- a2: force6+case6+hsel+ace80 eng, thr11 create post-path, **0×76B768**, crash
+  `findOrCreateMaterial+776` / last-guest-pc=`0x80010b7c` (matnoise free-reroll;
+  note guest-pc is **not** the catalogued `0x8000e29c` of item -372 — same host
+  symbol, different guest freeze). Last post-hsel ship-active is hangar-sel n=18 ret=0.
+- a3: boot death `waitForAnyAudioSlot+244` / `0x8000834c` (known -362 misattr family).
+- a4: pre-eng `setByteAcrossEntryList+176` / `0x800aafa8` (near -320).
+- a5: budget kill pre-eng.
+
+### Offline (s607 thr11d control timeline, rechecked)
+Post hangar-sel: thr11 create → recovery `0x76B768` → **ship-active n=20 ret=1
+ship=0x8015FD90** (~655 lines before thr11 destroy) → thr11 destroy → sec4 → sec2.
+s610: recovery + thr11 create, **zero** post-hsel ship-active / ret=1, thr11 never
+destroyed through hold_160. H-ship1 still SUPPORTED.
+
+### Code: sole writers of gPlayerShip (`0x800CC85C`)
+Grepped all `MEM_W(-0X37A4, …)` stores in RecompiledFuncs:
+1. **Non-null** `updateTextOverlayLookupEntry` @ `0x800B40D0` — only when current
+   value is null (`bne` skip to `L_800B4138`); stores the texture-target pointer
+   from `0x800CC864` (`-0x379C`). Callers include `runHangarSelectionFrame` (AC914
+   hangar-sel path calls it immediately after the selection write),
+   `updateHangarBayScene`, `runModelViewerLoop`, `playExitSoundAndToggleScreenMeshes`,
+   `menuControllerInput`, `runMenuShipSelectScreen`.
+2. **Zero** `destroyPlayerShipRecord` @ `0x800B42A8`.
+
+### Instrument (s612 / item -377)
+Always-on tags (writes are rare; skip is rate-limited):
+- `[ship-store] n= val= prev= ra= host=` at `0x800B40D0`
+- `[ship-zero] n= prev= ra= host=` at `0x800B42A8`
+- `[ship-store-skip] n= ship= ra= host=` at the non-null branch `0x800B4068`
+Host return address via `__builtin_return_address(0)` because guest `ctx->r31` is
+often 0 on recomp direct C calls (existing `[ship-active]` logs already show ra=0).
+
+Landed in `~/Documents/Tools/N64Recomp/fixup_game_funcs.py` (s612 block before
+s600 BEGINFRAME) + hand-applied to `RecompiledFuncs/funcs_30.c` — fixup refuses
+re-run under `RS64_FIXUP_APPLIED` sentinel (same pattern as BEGINFRAME_S0_GUARD).
+Binary rebuilt: `strings` confirms all three format strings; `funcs_30.c.o` recompiled.
+
+### Queued
+`scratch/agent/soak_queue/s612_ship_store_gate.sh` — same free-rerolls as s611
+(START_FLOOR_S=80), scores `ship_store_all` (same-run positive control),
+`ship_store_post_nz`, `store_at_hsel`, class split E_noship / E_store_no_thr11d /
+G_thr11d_with_ship. NOCTRL suffix if instrument never fires.
+
+### Do not
+- Soft-skip mat3inv det0 (still 1×).
+- Raise HOLD_S past 210.
+- Single-chase packTlut (-373 still 1×) or material 0x8000e29c (2× filed).
+- Treat s611 rc=2 as H-ship1 evidence either way (unscored).

@@ -325,3 +325,4 @@
 20260809-230626 | s608_post_sec2_pipeline_confirm | rc=137 | 600s | scratch/agent/soak_results/s608_post_sec2_pipeline_confirm_20260809-230626.log
 20260809-232158 | s609_recovery_cell_reroll | rc=1 | 535s | scratch/agent/soak_results/s609_recovery_cell_reroll_20260809-232158.log
 20260809-233630 | s610_recov_mat3inv_reroll | rc=0 | 567s | scratch/agent/soak_results/s610_recov_mat3inv_reroll_20260809-233630.log
+20260809-235621 | s611_ship_ret1_gate | rc=2 | 562s | scratch/agent/soak_results/s611_ship_ret1_gate_20260809-235621.log

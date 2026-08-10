@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s611)
+## Current truth (established by session 295; unchanged, reviewed through s612)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -133,10 +133,13 @@ mid-window mat3inv Abort** free-rerolled. **s611: s610 scored TRUE class E stall
 (hold_160 past s607's destroy-at-hold~65; not budget-truncated). Offline multi-run:
 thr11 destroy co-requires post-hsel `[ship-active] ret=1` (`isPlayerShipActive` /
 global `0x800CC85C` re-activation) — **H-ship1 SUPPORTED** (s592_a+s607 yes;
-s610+all scanned stalls no). Post-sec2 HMT/`packTlut` (-373, 1×); material
+s610+all scanned stalls no). **s611 soak** no recovery-active score (pre_eng=4
+matnoise=1). **s612:** instrumented sole writers of `0x800CC85C`
+(`[ship-store]` @ `0x800B40D0`, `[ship-zero]` @ `0x800B42A8`, skip arm) — H-ship1b
+pending recovery-active soak. Post-sec2 HMT/`packTlut` (-373, 1×); material
 `0x8000e29c` (2×); mat3inv Abort (-375, 1×). Tools (default OFF):
 `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`. Full chain: items
--349..-376; raw Sessions 577-611.
+-349..-377; raw Sessions 577-612.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -154,22 +157,29 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -376. The next NEW item takes -377.
+a range pointer. Highest allocated so far: -377. The next NEW item takes -378.
 
--376. **(s611) thr11-destroy co-gate: post-hsel `isPlayerShipActive` ret=1 — H-ship1
-    SUPPORTED; s610 class E is a TRUE stall (not budget-truncated).** Folded
-    `s610_recov_mat3inv_reroll` (rc=0): pre_eng=1 mat3inv=0 scored a2
-    `force6+case6+hsel+ace80 inject_n=500 recov76B768~=70 thr11_create=1 thr11_destroy=0
-    sec2_post=0 mat3inv_entry=68 abnormal=0 crash=ok` class E. Hold reached hold_160
-    (~283s); recovery ~hold_93 — **past** s607 destroy wall (game gone hold~65).
-    Multi-run table: s592_a + s607 thr11d each have post-hsel
-    `[ship-active] n=20 ship=0x8015FD90 ret=1` ~655–787 lines before destroy; s610 and
-    all scanned thr11-live stalls (s605/s606/s608/s609) have **zero** post-hsel ret=1
-    (last is hangar-sel n=18 ret=0). Function `isPlayerShipActive` @ `0x800B4264` reads
-    `0x800CC85C`; non-null store at `updateTextOverlayLookupEntry` @ `0x800B40D0`;
-    zero at `destroyPlayerShipRecord`. Cause vs co-symptom of shared cutscene advance
-    open. **Act:** queued `s611_ship_ret1_gate` (scores `ship_ret1_post` /
-    `E_noship` vs `E_ship_stall` vs `G_thr11d_with_ship`). Full: Session 611.
+-377. **(s612) gPlayerShip writer instrument landed — H-ship1b probe armed; s611 soak
+    unscored (pre_eng=4 matnoise=1).** Folded `s611_ship_ret1_gate` rc=2 562s: 5
+    attempts, no recovery-active engagement. a2 engaged force6+case6+hsel+ace80 then
+    material-noise `findOrCreateMaterial+776` / guest-pc `0x80010b7c` (not `0x8000e29c`)
+    with 0×76B768 — free-reroll. Offline still holds H-ship1. Code: only two stores to
+    `0x800CC85C` in the recomp tree — non-null arm `updateTextOverlayLookupEntry`
+    @ `0x800B40D0` (only when current is null; copies `0x800CC864` texture-target slot);
+    zero arm `destroyPlayerShipRecord` @ `0x800B42A8`. Hangar-sel AC914 calls
+    `updateTextOverlayLookupEntry` immediately after the selection write. Always-on
+    tags `[ship-store]` / `[ship-zero]` / `[ship-store-skip]` (host return address via
+    `__builtin_return_address`) in `fixup_game_funcs.py` + hand-applied `funcs_30.c`
+    (fixup refuses re-run under `RS64_FIXUP_APPLIED` sentinel). Binary rebuilt.
+    Queued `s612_ship_store_gate` (scores post-hsel store_nz + same-run ctrl
+    `ship_store_all≥1`). Full: Session 612.
+
+-376. **(s611/s612) thr11-destroy co-gate: post-hsel `isPlayerShipActive` ret=1 — H-ship1
+    SUPPORTED; s610 class E TRUE stall; s611 soak unscored.** s610 scored E (hold_160,
+    recov×70, thr11 live, 0 post-hsel ret=1). Controls s592_a+s607 thr11d each have
+    post-hsel n=20 ret=1 ~655–787 lines before destroy. s611_ship_ret1_gate rc=2:
+    pre_eng=4 matnoise=1 — no scored E_noship/E_ship_stall. Writer sites + instrument
+    → item -377. Full: Sessions 611-612.
 
 -375. **(s610/s611) Post-exit `mat3x3InverseInto` Abort (NAN_CHECK) mid recovery→thr11-destroy
     window — 1×; free-reroll WORKED on s610 scored path.** s609 scored mid-window Abort
@@ -324,14 +334,15 @@ a range pointer. Highest allocated so far: -376. The next NEW item takes -377.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s611) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
+-361. **(s589-s612) thr11→sec4→sec2 pipeline — reachable when recovery fires (s608); blocked
     by recovery silence (-374), mid-window mat3inv (-375), or missing ship re-activation
-    (-376 / H-ship1) otherwise.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. s608:
+    (-376/-377 / H-ship1) otherwise.** thr-11 = `saveServiceWorker` entry=`0x8006F2CC`. s608:
     thr11 destroy + sec4 + thr12 + **sec2** with recov76B768~=92, recov76BA90=0
     (H-handoff2 REFUTED; H-handoff3 SUPPORTED). s609: no 76B768 → no thr11d (H-recov1
     necessity). s610: true stall with 76B768×70 + thr11 live through hold_160; lacks
-    post-hsel ship ret=1 (H-ship1). Residuals: material `0x8000e29c`; -374; -375; -373;
-    -376. Free-reroll noise classes. Do not raise HOLD_S past 210. Full: Sessions 589-611.
+    post-hsel ship ret=1 (H-ship1). s612: writer instrument armed. Residuals: material
+    `0x8000e29c`; -374; -375; -373; -377. Free-reroll noise. Do not raise HOLD_S past 210.
+    Full: Sessions 589-612.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
