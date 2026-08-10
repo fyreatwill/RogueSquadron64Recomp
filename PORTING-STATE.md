@@ -49420,3 +49420,188 @@ is exactly what the soak queue exists for. Once 3+ `thr11d_new=1` samples
 exist, re-check H-shipcycle2 and re-attempt the fail136c discriminator from
 whichever samples survive past the loadDatFile background noise.
 
+## Session 632/633 — 2026-08-10 — first-ever fed fail136c discriminator: `reason=corrupt`, selected-pool E8 freelist walk breaks mid-scan (item -390/-391)
+
+Consumed the two queued accumulation soaks from s631 (`s632_thr11d_rate_accum_a`,
+`s633_thr11d_rate_accum_b`, mechanically identical to s631's recipe,
+`HOLD_S=210`). `s632` had 1 attempt, `recov768=0` (silent) — no new data
+point for the recovery-fired tally other than the denominator. `s633` scored
+on its very first attempt: `recov768` fired, and — for the first time in this
+campaign — **`thr11d_new=1` AND `ltexmg≥1` AND a scored `fail136c` all landed
+in the same attempt.** Every prior `thr11d_new=1` sample (s629 att4) had been
+killed by the `loadDatFile+692` background-noise crash before ever reaching
+`ltexmg`; this is the first sample that survived long enough to actually
+exercise the -389/-390 discriminator.
+
+### The discriminator result: `reason=corrupt`, not a clean no-fit
+`s633` `SCORE`: `thr11d_new=1 ltexmg=1 sec4_post=1 diag_fail136c=1 diag_ok136c=1
+diag_reason=corrupt diag_maxfree=0x6A3E0 diag_maxfree_sel=0xD20 diag_nfree_sel=3
+diag_need=0x1370 ship_store=2 ship_zero_post=2`. `maxfree_sel=0xD20 <
+need=0x1370` on its face reads as H-ltexOOM-sel confirmed (selected pool
+lacks a block big enough) — but the diagnostic's own reason field overrides
+that with `corrupt`, because the raw pool walk hit `rsm_corrupt=1`
+somewhere. Reading the raw per-pool dump (`fixup_game_funcs.py`'s
+`rs-malloc-diag` block, `funcs_0.c`): pool 4 (unselected) and pool 0
+(selected) both walk cleanly to their terminator; **pool E8 — the other
+selected pool — stops with `stop=bad_size` at node index 55 of a walk that
+had found 54 valid-looking nodes first** (`nnodes=56 nfree=1 maxfree=0x20`,
+i.e. the only free block found before the break was tiny, 0x20 bytes).
+Notably, an EARLIER `posctrl` sample from the same run (an unrelated
+successful large allocation, printed first in the log since posctrl captures
+the first 8 successes) shows pool E8 healthy at that earlier point in time:
+`stop=term dumped=6 nnodes=6 nfree=2 maxfree=0x4E6290` (~5 MB free). So
+whatever breaks the E8 walk develops **during the run**, between that
+earlier successful allocation and the `ltexmg` attempt — not a permanently
+malformed pool.
+
+**This is genuinely new information, not previously seen:** neither the s627
+global-OOM check (O1, REFUTED) nor the s627 size-corruption check (O3,
+REFUTED) exercised the SELECTED pool's own walk integrity — those checked
+"is there free space somewhere" and "is the requested size sane," not
+"does the freelist chain in the pool `rs_malloc` actually searches stay
+sane end to end." `reason=corrupt` had appeared once before (s627, folded
+into the `no_fit_mystery` diag-artifact finding) but was never traced to a
+specific pool/node before now.
+
+### Instrument gap fixed same session
+The raw node at the break point (i=55, pool E8) was read by the diagnostic
+(`rsm_f`/`rsm_bsz` are computed unconditionally before the sanity check) but
+never printed — the per-node `fprintf` was gated to free nodes or the first
+8 allocated nodes per pool (log-budget rule), and node 55 was neither.
+Fixed in `fixup_game_funcs.py` (N64Recomp sibling repo, `funcs_0.c`
+rs-malloc-diag patch block): the print gate now also fires when the node
+fails its own sanity check (`!rsm_sane`), so the NEXT occurrence of
+`stop=bad_size` will show the actual raw `flags`/`size` at the break —
+letting us tell real heap corruption (garbage bytes) apart from a walker
+bug (a legitimate block shape the sanity check wrongly rejects, e.g. a
+sentinel/terminator pattern this walk doesn't special-case). Full regen
+pipeline run this session: `make_elf.py` → `N64Recomp` → `fixup_game_funcs.py`
+→ `cmake --build`, all clean. `fixup_game_funcs.py` itself remains untracked
+in the N64Recomp sibling repo (as it has been for the whole campaign — not
+part of this repo's `lib/`, no `export.sh` applicable).
+
+### Updated tallies
+Combined across s628-s633 (13 attempts total): recovery fired 5/13 (was
+4/11); of those, `thr11d_new` completed in 2/5 = 40% (was 1/4 = 25%) —
+`H-thr11destroy-rate` stays SUPPORTED, sample still small (N=5).
+`H-shipcycle2` (2nd ship-store/zero cycle correlates with `thr11d_new`
+completing) is now 2/2: both `thr11d_new=1` samples (s629 att4, s633 att1)
+had `ship_store=2 ship_zero_post=2`; every no-destroy attempt has had
+`ship_store=1`. Still N=2 — promoted from "weak lead" to "supported, small
+N," not yet a closeable claim.
+
+### Discrimination
+| Outcome | Verdict |
+|---|---|
+| H-ltexOOM-sel / H-ltexFree (fail136c maxfree_sel vs need) | **FED for the first time (N=1) — but the result is `reason=corrupt`, not a clean no-fit signal; genuinely ambiguous until the raw-node fix reproduces** |
+| New: selected-pool E8 freelist walk integrity | **N=1: walk breaks at node i=55 with `stop=bad_size`, after finding only a 0x20 free block; an earlier point in the same run had E8 healthy with ~5 MB free** — item -391 |
+| H-thr11destroy-rate (recovery-fired → thr11d_new completion) | SUPPORTED, refined to 2/5 (40%), N still small |
+| H-shipcycle2 | SUPPORTED N=2/2, needs a 3rd |
+
+### Ruled out
+Nothing newly ruled out this session — s627's O1 (global OOM) and O3 (size
+corruption) REFUTED verdicts stand; this session's finding is orthogonal
+(walk-integrity in the selected pool, not global availability or the
+requested size).
+
+### Code
+`fixup_game_funcs.py` (N64Recomp sibling repo): 1-line print-gate change
+in the `rs-malloc-diag` patch block (`funcs_0.c`) so the node that fails
+`!rsm_sane` is always printed, not just free/first-8 nodes. Full regen +
+rebuild done and verified linking clean; no game run yet against the new
+binary (queued to the soak recipes below instead of spending this
+session's one game-run budget on a manual verification launch).
+
+### Next
+Enqueued `s634_thr11d_rate_accum_c.sh` and `s635_thr11d_rate_accum_d.sh`
+(same HOLD_S=210 freeroll mechanics as s632/s633, new tags) for the loop to
+run against the new binary. When a `stop=bad_size` reproduces, read the new
+raw node print to settle real-corruption vs walker-bug; if it does NOT
+reproduce (E8 walks clean next time), that itself is informative — it would
+mean the s633 corruption was a one-off (transient heap state, e.g. a
+race/UAF) rather than deterministic. Continue accumulating toward 3+
+`thr11d_new=1` samples for H-shipcycle2 regardless of the corruption
+question — they are independent lines of evidence.
+
+
+## Session 634 — 2026-08-10 — thr11d_new rate updated 2/8; H-shipcycle2 STRUCTURAL (post-create ship-zero required); freelist walk model dual-source confirmed (item -391/-392)
+
+### Soak
+Ran `s634_thr11d_rate_accum_c` against the s632/s633 print-gate binary (BUDGET_S=1200,
+HOLD_S=210). 4 attempts:
+
+| att | recov | thr11d_new | ship_post | class | notes |
+|-----|-------|------------|-----------|-------|-------|
+| 1 | 1 | 0 | store=1 zero=1 | I_thr11_live_no_destroy | full HOLD 564s, no crash |
+| 2 | 0 | 0 | 0 | pre-eng crash | free reroll |
+| 3 | 1 | 0 | store=1 zero=1 | H_scenegraph_pre_thr11d | -382 freeroll (recovery-active thr11-live; not scored class-D) |
+| 4 | 1 | 0 | store=1 zero=1 | I_thr11_live_no_destroy | budget cut mid-HOLD |
+
+0 fail136c / 0 bad_size this session — the !rsm_sane node print remains unfed.
+
+### Rate update (s628–s634 recovery-fired with thr11c_post)
+Previous (s633): 5 recovery-fired, 2/5 thr11d_new (40%).
+s634 adds 3 recovery-fired with thr11 live, 0 thr11d_new.
+**Combined: 8 recovery-fired, 2/8 thr11d_new (25%).** H-thr11destroy-rate still
+SUPPORTED; pure accumulation remains low-yield.
+
+### H-shipcycle2 STRUCTURAL (dual-source offline, item -392)
+Correlated raw event order in s633 (`thr11d_new=1`) vs s634 att1 (`thr11d_new=0`,
+full 564s hold) against the scorer's post-`[hangar-sel]` window:
+
+**Common path (both):** after `[hangar-sel]` → `ship-store n=2` → `ship-zero n=2`
+→ destroy thr11 id=10 → create thr11 id=11 (this is the post-hsel thr11 that
+`thr11d_new` tracks).
+
+**thr11d_new=1 only (s633, also s629 att4):** later `ship-store n=3` → `ship-zero n=3`
+→ **destroy id=11** → then `level-tex-cache` / `level-tex-malloc-guard`.
+
+**thr11d_new=0 (s634 att1):** id=11 created after ship-zero n=2; **no ship-store n=3
+ever fires** for the rest of HOLD (564s). id=11 lives forever. Total ship-store
+count in log: 3 (n=0..2) vs 4 (n=0..3) on thr11d_new=1.
+
+So H-shipcycle2 is not a weak count correlation — it is the destroy mechanism:
+**`thr11d_new` requires a ship-zero AFTER the post-hsel thr11 create.** SCORE
+`ship_store=2` on thr11d_new=1 samples = post-hsel stores n=2 and n=3; SCORE
+`ship_store=1` on no-destroy = only n=2. Every no-destroy recovery-fired sample
+in s628–s634 has `ship_store=1`; both thr11d_new=1 samples have `ship_store=2`.
+Promoted from "supported small N" to **STRUCTURAL / CONFIRMED** (two independent
+thr11d_new=1 logs + one full-hold no-destroy counterexample with complete event
+order). Causal chain of *what triggers* ship cycle n=3 remains open — next unit.
+
+HOLD_S is not the lever (already known); waiting longer after id=11 create does
+not produce n=3 on the no-destroy path. Something else gates the second post-exit
+ship cycle.
+
+### Freelist walk model dual-source confirmed (item -391 support)
+Read `rs_malloc` freelist advance at `funcs_0.c:0x80001BEC–0x80001C00`:
+`next = node + size + 0x10`, terminator flag bit 0x8 at next header — **exact match**
+to the diagnostic's contiguous walk. Early posctrl E8 nodes also verify
+`addr[i+1] = addr[i] + size[i] + 0x10` bit-exact. Therefore s633's
+`stop=bad_size` at E8 i=55 is not a walker-model artifact. Predicted bad-node
+address from i=54 free `@0x801F3C90 size=0x20`: **`0x801F3CC0`**. The break is
+only ~650 KB into an ~6.5 MB E8 arena (posctrl end ~`0x807DCFF0`), so if the
+size field is truly insane the remaining free is unreachable to both game and
+diag — explaining selected-pool null `rs_malloc(0x136C)` despite pool4 having
+≥ need free (unselected). Still need the !sane print of raw flags/size at
+`0x801F3CC0` on the next fail136c to distinguish size=0 / huge / pointer-shaped.
+
+### Ruled out
+- "just need more HOLD after thr11 create" — s634 att1 held 564s post-engage with
+  id=11 live and zero ship n=3.
+- Diagnostic freelist next-computation mismatch with game — dual-source refuted.
+
+### Scenegraph (-382)
+s634 att3: recovery-active thr11-live scenegraph SIGBUS (`si_addr=0x381010101`).
+Still not on scored class-D path (thr11d_new=0); stays freeroll policy. 2nd
+recovery-active freeroll noise, not yet "2nd on scored".
+
+### Next
+Pivot off pure thr11d rate-accumulation. Highest EV: **what gates ship-store n=3
+/ `destroyPlayerShipRecord` after post-exit thr11 create** (static call-graph of
+`destroyPlayerShipRecord` callers + dynamic breadcrumb on the n=3 path from the
+two thr11d_new=1 logs). Keep s635 (and enqueue s636) as passive thr11d/fail136c
+accumulators for the loop — free evidence when they hit, but do not spend the
+session babysitting them. bad_size raw-node print still pending first fail136c
+on the new binary.
+

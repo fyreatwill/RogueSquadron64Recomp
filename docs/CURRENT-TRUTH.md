@@ -120,41 +120,33 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s631**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s634**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 (mission overlay) is reachable when recovery cell `0x76B768`
-  fires (s608; H-handoff2 / 76BA90 REFUTED). **s619: thr11d_new LIVE** when recovery fires →
-  sec4_post=1; class-D craft-shadow soft-skip LIVE (cshadow_a≥1). **s624: -385 M1 LIVE** —
-  `[level-tex-malloc-guard]` fires on null `rs_malloc(0x136C)` (`bad_s0=0`); thr12 still 0
-  until malloc succeeds (soft-skip before `registerServiceWorker`). **s625: H-ltexOOM
-  instrument LIVE**; **s626: H-walk1 CONFIRMED** (S32 `MEM_*`; posctrl free sane).
-  **s627: class-D fail136c scored** — global H-ltexOOM REFUTED (pool4 free ≥ need but
-  unselected for flags=0); size-corruption O3 REFUTED; residual is **selected-pool**
-  E8/0 free census (s626 dump cap 16 hid free past i=15; ok136c ptr `0x80261E20`
-  past cap). **s628-s631: instrument LIVE (pool-aware `maxfree_sel`, cap 256) but
-  4 consecutive null soaks** — 0 ltexmg hits in 11 combined attempts. **s631
-  offline analysis found the real bottleneck: `thr11d_new` (precondition for
-  reaching ltexmg) fires in only 1/4 recovery-fired attempts** — refines s619's
-  "thr11d_new LIVE when recovery fires"; HOLD_S=210 did not fix it; the one
-  `thr11d_new=1` sample hit a known-family background-noise crash
-  (`loadDatFile+692`) before reaching ltexmg. Pivoted to accumulating more
-  `thr11d_new=1` samples, not a finer malloc counter (item -390).
+  fires (s608). **s619: thr11d_new LIVE** when recovery fires → sec4_post=1; class-D
+  craft-shadow soft-skip LIVE. **s624: -385 M1 LIVE** — `[level-tex-malloc-guard]` on null
+  `rs_malloc(0x136C)`; thr12 soft-skips until malloc succeeds. **s626 H-walk1 CONFIRMED**;
+  **s627 global O1 + size-O3 REFUTED** (selected-pool residual). **s633: first
+  thr11d_new∧ltexmg∧fail136c** with `reason=corrupt` (E8 `stop=bad_size` i=55; print-gate
+  fixed same session). **s634: thr11d rate 2/8 (25%)** recovery-fired; pure accumulation
+  low-yield. **H-shipcycle2 STRUCTURAL (s634):** thr11d_new requires a ship-zero AFTER the
+  post-hsel thr11 create (overall ship cycle n=3); no-destroy runs never fire n=3 even at
+  564s HOLD. Active pivot: what gates ship cycle n=3 / `destroyPlayerShipRecord` post-exit
+  (item -392). freelist walk model dual-source matched to game (item -391 support).
 - Co-gates: recovery silence (-374; freeroll any eng+hsel `recov768=0`; prefer
   `RECOV_WAIT_S=50` + `BUDGET_S≥900` when pre-eng 128s cutscene SIGBUS is frequent),
-  mid-window mat3inv Abort (-375), ship ret1/store (-376/-377), class-D craft-shadow
-  (**-378**), FORCE_STATE6 KSEG0 (**-381 CLOSED**), scene-graph/readAccount/freelist
-  (**-382..-384** 1× freeroll), null-malloc thr12 parent (**-385 M1 LIVE**; H-ltexArg
-  + null_pool REFUTED s625; H-walk1 CONFIRMED s626; **global O1 + size-O3 REFUTED s627**;
-  selected-pool O1 vs mystery open -389/-390), sinfApprox (**-386** 1×), post-soft-skip
-  `do_rom_read` SIGBUS (**-387** 3× s624/s625/s627 freeroll), trackResourceList freeroll
-  noise (not escalated).
+  mid-window mat3inv Abort (-375), ship ret1/store (-376/-377; **H-shipcycle2 STRUCTURAL
+  -392**), class-D craft-shadow (**-378**), FORCE_STATE6 KSEG0 (**-381 CLOSED**),
+  scene-graph/readAccount/freelist (**-382..-384** freeroll; s634 att3 2nd recovery-active
+  scenegraph noise, not scored), null-malloc thr12 parent (**-385 M1 LIVE**; selected-pool
+  residual -389..-391), sinfApprox (**-386** 1×), post-soft-skip `do_rom_read` (**-387** 3×).
 - **thr11d scoring trap (s618):** real metric = destroy of post-hsel-created id with entry
   `0x8006F2CC` (`thr11d_new`), not any post-hsel destroy.
-- **Soak freeroll trap (s620→s621):** freeroll any eng+hsel with `recov768=0` (not only
-  `EARLY_REASON=recovery_silent`). H-freeroll1 CONFIRMED; H-recovwait1 CONFIRMED s624.
+- **Soak freeroll trap (s620→s621):** freeroll any eng+hsel with `recov768=0`. H-freeroll1
+  CONFIRMED; H-recovwait1 CONFIRMED s624.
 - Tools (default OFF): `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`.
 - Post-sec2 residual: HMT/`packTlut` SIGBUS (-373, 1×). Material `0x8000e29c` (2×, free-reroll).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-390; Sessions 577-627.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-392; Sessions 577-634.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -172,42 +164,49 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -390. The next NEW item takes -391.
+a range pointer. Highest allocated so far: -392. The next NEW item takes -393.
 
-### Active M3 pipeline (s577–s627) — open residuals only
+### Active M3 pipeline (s577–s634) — open residuals only
 
--390. **(s627→s631) pool-aware free census LIVE but UNFED — 4 consecutive null
-    soaks (s628-s631), 0 scored `fail136c` in 11 combined attempts. Root
-    cause identified: the bottleneck is upstream of the malloc call, not the
-    malloc/pool logic itself.** Offline cross-reference of all 11 printed
-    `SCORE` lines across s628-s631 on `recov768` (recovery fired) vs
-    `thr11d_new` (thr11 create+destroy pair — the established precondition
-    for ever reaching `loadLevelTextureCache`/`ltexmg`): recovery is silent
-    in 7/11 attempts; of the 4 where it fires, `thr11d_new` completes in only
-    **1/4 (~25%)** — refining (not refuting) the s619 claim "thr11d_new LIVE
-    when recovery fires," which was based on a much smaller sample. Raising
-    `HOLD_S` 180→210 (s631) did **not** convert a no-destroy attempt into a
-    destroy — the one s631 recovery-fired attempt was still
-    `I_thr11_live_no_destroy` at the wider window. The single `thr11d_new=1`
-    sample seen so far (s629 attempt 4) was killed by a real SIGBUS crash
-    (`loadDatFile+692`←`loadLevelAssets`←`setupCutsceneLevel`←
-    `cinematicLoopBody`←`mainGameLoop`) before reaching `ltexmg` — matches
-    the known stale-`last-guest-pc=0x800290d4` background-noise family
-    (item -259); 1× freeroll, not escalated. Weak N=1 lead flagged, not yet a
-    claim: that one `thr11d_new=1` attempt had `ship_store=2 ship_zero_post=2`
-    (a 2nd ship-store/zero cycle, items -376/-377) vs `=1` on all 3
-    no-destroy attempts (`H-shipcycle2`, needs more samples). **The
-    aggregate-E8-drain-counter pivot planned after a 4th null is premature —
-    `loadLevelTextureCache` is barely ever reached, so a finer malloc counter
-    has nothing to discriminate yet.** Correct pivot: accumulate more
-    `thr11d_new=1` samples (recipe's own reroll logic already retries toward
-    it; bottleneck is raw attempt volume at ~9% hit rate) — enqueued
-    `s632_thr11d_rate_accum_a.sh` + `s633_thr11d_rate_accum_b.sh` (same
-    HOLD_S=210 mechanics, new tags, for the loop to run). Once 3+
-    `thr11d_new=1` samples exist, re-check H-shipcycle2 and re-attempt the
-    `fail136c`/`maxfree_sel` discriminator on whichever survive the
-    `loadDatFile` background noise. Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`.
-    Full: Sessions 627-631.
+-392. **(s634) H-shipcycle2 STRUCTURAL / CONFIRMED — thr11d_new = ship-zero
+    after post-hsel thr11 create.** Dual-source event-order on s633
+    (`thr11d_new=1`) vs s634 att1 (`thr11d_new=0`, full 564s HOLD): after
+    `[hangar-sel]` both paths do `ship-store/zero n=2` → destroy thr11 id=10
+    → create thr11 id=11 (the tracked post-hsel worker). Only thr11d_new=1
+    paths then fire `ship-store/zero n=3` → destroy id=11 → `level-tex-*`.
+    No-destroy paths never fire n=3 (s634 att1: 3 total ship-stores n=0..2
+    even after 564s; thr11d_new=1 logs have 4). SCORE `ship_store` is
+    post-hsel only: =2 means n=2+n=3, =1 means only n=2. Every no-destroy
+    recovery-fired sample s628–s634 has ship_store=1; both thr11d_new=1
+    samples have ship_store=2. HOLD_S is not the lever. **Open residual:
+    what gates ship cycle n=3 / `destroyPlayerShipRecord` after post-exit
+    thr11 create** (static callers of `destroyPlayerShipRecord` + dynamic
+    breadcrumb on the n=3 path). Passive s635 (and further copies) as passive
+    accumulators only. Full: Session 634.
+
+-391. **(s632→s634) fail136c `reason=corrupt`: E8 freelist walk breaks mid-
+    scan (`stop=bad_size` i=55); walk model dual-source OK; raw node still
+    unprinted.** s633 first thr11d_new∧ltexmg∧fail136c: `maxfree_sel=0xD20
+    < need=0x1370` but `reason=corrupt` because selected pool E8 stops at
+    i=55/56 (`nnodes=56 nfree=1 maxfree=0x20`) after earlier same-run
+    posctrl showed E8 healthy (`maxfree=0x4E6290`). **s634 offline:** game
+    freelist advance (`next = node + size + 0x10`, term bit 0x8) matches
+    the diagnostic bit-exact; posctrl E8 nodes verify the formula — not a
+    walker-model bug. Predicted bad-node addr from i=54 free
+    `@0x801F3C90 size=0x20` = **`0x801F3CC0`**. Break is only ~650 KB into
+    ~6.5 MB E8 arena → remaining free unreachable if size field is insane.
+    Print-gate fix (`!rsm_sane` always prints) live in binary since s633;
+    s634 soak got 0 fail136c so raw flags/size at break still unseen. Full:
+    Sessions 632-634.
+
+-390. **(s627→s634) pool-aware free census + thr11d rate: 2/8 (25%) of
+    recovery-fired reach thr11d_new; discriminator fed once (→ -391); pure
+    accumulation deprioritized (→ -392).** s628–s634: recovery silent in
+    many attempts; of 8 recovery-fired with thr11 live, thr11d_new in 2/8.
+    HOLD_S 180→210 did not move the rate. Pivot (s634): stop spending
+    sessions on thr11d rate soaks; investigate ship cycle n=3 gate (-392).
+    Keep soak-queue copies for free thr11d/fail136c samples. Env:
+    `ROGUESQ_LOG_RS_MALLOC_DIAG=1`. Full: Sessions 627-634.
 
 -389. **(s626→s627) Class-D fail136c scored; global H-ltexOOM REFUTED; size-O3 REFUTED;
     residual is selected-pool.** s627 SCORE: thr11d_new=1 ltexmg=1 fail136c=1 posctrl=8
@@ -306,15 +305,15 @@ a range pointer. Highest allocated so far: -390. The next NEW item takes -391.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s627) thr11→sec4→sec2 pipeline — thr11d_new LIVE when recovery fires
-    (s619); class-D soft-skip LIVE; -385 M1 LIVE (s624) but thr12 still 0 until null
-    `rs_malloc(0x136C)` fixed (H-walk1 s626; global O1+size-O3 REFUTED s627; selected
-    residual -390); post-soft-skip -387 (3×). Pre-thr11d co-gates: recovery silence
-    (-374; RECOV_WAIT_S=50, BUDGET≥900), mat3inv (-375), sinfApprox (-386 1×), ship
-    (-376/-377), freelist/scene/readacct 1× (-384/-382/-383), FORCE_STATE6 (-379; OOB
-    -381 CLOSED), post-sec2 packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`;
+-361. **(s589-s634) thr11→sec4→sec2 pipeline — thr11d_new LIVE when recovery fires
+    (s619; rate 2/8 s634); class-D soft-skip LIVE; -385 M1 LIVE but thr12 blocked by
+    null `rs_malloc(0x136C)` (selected residual -389..-391; fail136c corrupt N=1);
+    **thr11d gated by ship cycle n=3 (-392 STRUCTURAL)**; post-soft-skip -387 (3×).
+    Pre-thr11d co-gates: recovery silence (-374), mat3inv (-375), sinfApprox (-386 1×),
+    ship (-376/-377/-392), freelist/scene/readacct freeroll (-384/-382/-383), FORCE_STATE6
+    (-381 CLOSED), post-sec2 packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`;
     thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`. Do not raise HOLD_S
-    past 210. Full arc: PROJECT-OVERVIEW §27; Sessions 589-627.**
+    past 210. Full arc: PROJECT-OVERVIEW §27; Sessions 589-634.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -397,8 +396,9 @@ a range pointer. Highest allocated so far: -390. The next NEW item takes -391.
     FULL_SYNC inject product-fixed; force6 engagement CONFIRMED s606 and **live-writes real
     hangar state s617** (-381 CLOSED); s608 first force-path sec2 after thr11d when recovery
     fires; **s619 thr11d_new + class-D LIVE**; **s624 -385 M1 LIVE**; **s626 H-walk1
-    CONFIRMED**; **s627 global O1+size-O3 REFUTED** (selected residual -390). Active
-    residuals: -390..-373 / -361 / -379. Tools still default OFF.
+    CONFIRMED**; **s627 global O1+size-O3 REFUTED**; **s633 fail136c corrupt N=1**; **s634
+    H-shipcycle2 STRUCTURAL** (ship n=3 gates thr11d_new; rate 2/8). Active residuals:
+    -392..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 

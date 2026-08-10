@@ -348,3 +348,6 @@
 20260810-092833 | s629_ltex_pool_aware_freeroll | rc=2 | 1234s | 0 ltexmg across 4 attempts (2 recov_silent + 2 recovery-active-no-class-D-ltex reroll); no fail136c/maxfree_sel data — 2nd consecutive null (s628+s629) on H-ltexOOM-sel discriminator | scratch/agent/soak_results/s629_ltex_pool_aware_freeroll_20260810-090759.log
 20260810-093237 | s630_ltex_pool_aware_freeroll_retry | rc=137 | 600s | scratch/agent/soak_results/s630_ltex_pool_aware_freeroll_retry_20260810-093237.log
 20260810-095049 | s631_ltex_pool_aware_freeroll_hold210 | rc=137 | 600s | scratch/agent/soak_results/s631_ltex_pool_aware_freeroll_hold210_20260810-095049.log
+20260810-101140 | s632_thr11d_rate_accum_a | rc=137 | 600s | scratch/agent/soak_results/s632_thr11d_rate_accum_a_20260810-101140.log
+20260810-102140 | s633_thr11d_rate_accum_b | rc=1 | 304s | scratch/agent/soak_results/s633_thr11d_rate_accum_b_20260810-102140.log
+20260810-110719 | s634_thr11d_rate_accum_c | rc=2 | 1221s | 4 att: recov×3 thr11d_new=0/3; att1 full-hold I_thr11_live_no_destroy ship_post=1; att3 scenegraph freeroll; H-shipcycle2 STRUCTURAL: thr11d needs post-create ship-zero n=3 (never fires on no-destroy)
