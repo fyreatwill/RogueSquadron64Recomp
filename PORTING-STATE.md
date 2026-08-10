@@ -48881,3 +48881,76 @@ scores `ltexmg` / `ltex_null`; class_hint M1 (guard live) vs M2 (unguarded miss)
 Consume s620 soak: require BASE_CTRL_PASS + recovery-active; M1 guard fire = LIVE-VERIFY
 -385; M2 = binary stale. If M1 and thr12 still 0, probe why rs_malloc returns null (heap
 free head / first malloc size) — do not soft-skip past thr12 creation without a real alloc.
+
+## Session 621 — 2026-08-10 — s620 freeroll bug; recovery-active sinfApprox Abort blocks thr11d; -385 still PENDING
+
+### Work unit
+Consume `s620_ltex_malloc_guard_classd`; live-verify `[level-tex-malloc-guard]` (-385) on
+recovery-active class-D; classify thr12 vs OOM.
+
+### Soak fold s620 (`s620_ltex_malloc_guard_classd` rc=1, 285s)
+- a1 only: BASE_CTRL_PASS case5_n0_state=5; force6=1 force_old5=1
+- **recov768=0** thr11d_new=0 sec4_post=0 cshadow=0 ltex=0 **ltexmg=0** ltex_null=0
+- crash: SIGBUS `trackResourceListWithMappingTables+1228` si_addr=`0x38000000c`
+  last-guest-pc=`0x80065e94` ← `updateAnimatedTextureStreaming` ← `runModelViewerLoop`
+- class_hint=`E_recovery_silent` but recipe **wrongly scored** as "engaged HOLD complete"
+  (no freeroll).
+
+### Freeroll bug (two independent lines)
+1. Code: freeroll required `[ "$RECOV768" -eq 0 ] && [ "$EARLY_REASON" = "recovery_silent" ]`.
+   Mid-HOLD crash with recov768=0 leaves EARLY_REASON empty → falls through to
+   `SCORED_LOG=... engaged HOLD complete -- scoring` / break.
+2. s621b positive control after fix: 2× `recov768=0 early= crash=1` printed
+   `engaged but recovery-silent ... free reroll (silent_n=1/2)` and did not score.
+
+### s621 recovery-active scored (freeroll fix; 284s, force6 old=5→6 recov768=7952)
+- BASE_CTRL_PASS case5_n0_state=5
+- thr11c_post=1 thr11d_new=0 sec4_post=0 thr12_post=0 cshadow=0 ltex=0 **ltexmg=0**
+- ship_store=1 ship_zero_post=1
+- class_hint=`I_thr11_live_other_crash`
+- Crash: **Abort trap** `Assertion failed: (ctx->f10.fl == ctx->f10.fl), function sinfApprox,
+  file funcs_5.c, line 6460` (NAN_CHECK)
+  stack: `sinfApprox` ← `buildPositionAndCallTransformHelper` ← `runModelViewerLoop` ←
+  `menuOverlayInit` ← `mainGameLoop`
+  last-guest-pc=`0x80065c94` (nop in audited set; STALE-ish)
+- thr11 id=11 created post-hsel, still live at Abort — never thr11d, never class-D.
+
+### s621b freeroll stress (529s, budget exhaust, exit 2)
+- a1+a2 freeroll recovery_silent correctly; both died
+  `trackResourceListWithMappingTables+1228` / `0x80065e94` / si_addr=`0x38000000c`
+  (same as s620 silent path; freeroll noise, not escalated)
+- No recovery-active scored in budget window.
+- sinfApprox freeroll detector added (1st) for next recovery-active hit.
+
+### Classification
+| Code | Result |
+|------|--------|
+| M1 ltexmg LIVE | **NOT REACHED** — class-D never entered (cshadow=ltex=0) |
+| M2 ltex_null | **NO** — no unguarded loadLevelTextureCache+2576 this session |
+| E recovery_silent | s620 (bug-scored); s621b×2 freeroll OK |
+| I thr11 live other | s621 scored: sinfApprox NAN_CHECK Abort |
+| H-freeroll1 | **CONFIRMED** — recov768=0 freerolls without EARLY_REASON |
+
+### Changes landed
+- Soak freeroll fix: any eng+hsel with `recov768=0` freerolls (drop EARLY_REASON gate).
+- 1st `sinfApprox` NAN_CHECK Abort freeroll (mid-run + completed), same policy as mat3inv.
+- Recipe archived: `scratch/agent/soak_queue/done/s621_ltex_malloc_guard_freeroll_fix.sh`
+- Guard binary still present (`[level-tex-malloc-guard]` in strings; not live-verified on path).
+
+### Hypotheses
+| ID | Verdict |
+|----|---------|
+| H-freeroll1 | **CONFIRMED** (s621b 2× silent freeroll) |
+| H-ltexmg1 | still PENDING — need thr11d_new + class-D entry |
+| H-ltexOOM | open; not instrumented until M1 |
+| H-sinf1 | 1× recovery-active freeroll noise (known s214 family); free-reroll |
+
+### Do not
+- Merge sinfApprox / trackResourceList with -385
+- Soft-skip thr12 creation without fixing null alloc
+- Trust thr11d_post without thr11d_new
+
+### Next
+Re-run recovery-active with freerolls (silent + sinfApprox 1st + mat3inv/scenegraph/etc.);
+require thr11d_new + class-D for M1 live-verify of -385. If budget-limited on silent,
+raise BUDGET_S slightly or lower START_FLOOR only if needed — do NOT raise HOLD_S past 210.

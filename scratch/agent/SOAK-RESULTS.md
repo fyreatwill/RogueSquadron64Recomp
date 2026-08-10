@@ -334,3 +334,6 @@
 20260810-013539 | s617_scenegraph_freeroll_classd | rc=1 | 268s | scratch/agent/soak_results/s617_scenegraph_freeroll_classd_20260810-013539.log
 20260810-014847 | s618_readacct_freeroll_classd | rc=1 | 546s | scratch/agent/soak_results/s618_readacct_freeroll_classd_20260810-014847.log
 20260810-020452 | s619_matfree_freeroll_classd | rc=1 | 476s | scratch/agent/soak_results/s619_matfree_freeroll_classd_20260810-020452.log
+20260810-022225 | s620_ltex_malloc_guard_classd | rc=1 | 285s | scratch/agent/soak_results/s620_ltex_malloc_guard_classd_20260810-022225.log
+20260810-023033 | s621_ltex_malloc_guard_freeroll_fix | rc=1 | 284s | scratch/agent/soak_results/s621_ltex_malloc_guard_freeroll_fix_20260810-023033.log
+20260810-023637 | s621b_ltex_malloc_sinf_freeroll | rc=2 | 529s | scratch/agent/soak_results/s621b_ltex_malloc_sinf_freeroll_20260810-023637.log
