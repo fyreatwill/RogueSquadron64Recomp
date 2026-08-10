@@ -46595,3 +46595,57 @@ for dual-phase (diagnostic only).
 ### Item updates
 -353 stop edge mechanism: **RESOLVED** (staging-cell opcode switch).
 -354 filed: LLE E9→E7 terminal switch + force-path recovery vs natural s577.
+
+## Session 585 — H-sync4 E9→E7 is sticky side-slot overwrite (offline)
+
+**Date:** 2026-08-09
+**Work unit:** item -354 / HYPOTHESIS-ID `m3-post-exit-fs-stall` — offline
+discrimination of H6a–H6d on the complete s584 log (no new live run).
+
+### Source
+Re-analysis of `scratch/s73_post_a_scene/s584_hsync4_slot/run.log` (240266 lines)
+with `LOG_FS_SLOT` + `LOG_RDP_FULLSYNC` + `LOG_DL_SYNC` already armed. Artifact:
+`scratch/s73_post_a_scene/s585_hsync4_offline/ANALYSIS.md`. Natural comparison:
+s577 `run.log` (no slot instruments; runner-only).
+
+### Positive control
+s584 same-run: `[fs-slot] event=arm`, 1687 writes, 970 slot submits, 237 E9 + 151
+E7 + 530 FD at phys `0x76DF60`; hangar-era singles at moving `0x7778C8`/`0x799*`
+addrs; recovery 1406 singles at `0x76A838`.
+
+### Discriminating results
+
+| Hyp | Verdict | Evidence |
+|-----|---------|----------|
+| H6a dual DL loses terminal FULL_SYNC | **REFUTED** | Edge #5569→#5570: identical dual pair, `first_ops`, `cmds_b=1419`, `e9_b=0` both sides; `lin_e9` stays 2/5. Dual never carried walkable E9. |
+| H6b separate FULL_SYNC emit path stops | **CONFIRMED (refined: sticky overwrite)** | **0 RDRAM writes** to the slot for 7913 ms / 237 tasks while E9 is re-submitted **once per task**; stop = **single** poller write `E900…→E700…` at task~#5569 `t_ms=157157`. Geometry continues. |
+| H6c natural never recovers like force | **SUPPORTED** | s577 open plateau #5960..#6731 (772× `syncs=0`), dl_ptr `0x805*`, tris~36–75, no recovery before log end. Force recovers after 688 zeros at #6258. |
+| H6d recovery cell not real guest E9 | **REFUTED** | `0x76A838` = 1406× size=8 `w0=E9000000` `kind=single`; still `e9_b=0`. |
+
+### Sticky + filter mechanism (two lines)
+
+1. **Poller:** E9 set once at dual entry (#5332); zero mutations until one E9→E7
+   overwrite; then E7→F3 at #5719; cell becomes FD/junk while tasks continue.
+2. **dpc_bridge `rsp_dpc_submit`:** size==8 && `(b0&0x3F)==0x27` (PIPE_SYNC)
+   returns early (~line 729) — **not** counted as FULL_SYNC. size==8 && 0x29
+   increments `g_task_rdp_fullsyncs` / runner `syncs`.
+
+Per-task pattern (dense): dual E9 phase = 1 single @ `0x76DF60` + syncs=1 each
+task; zero phase = 0 singles + 1 slot submit `head_b0=E7` (logged, then filtered).
+
+### Timeline compact
+
+`5333–5569`: sticky E9 @76DF60, syncs=1, tris=164, e9_b=0 (237 tasks) →
+`5570–5719`: E7 @same, syncs=0, tris=164 (150) → `5720–6257`: junk opcodes,
+syncs=0, tris animates → `6258+`: E9 @**76A838**, syncs=1, tris=100 (1406).
+
+### Rules out / leaves open
+- Rules out: dual-tree content change as the edge cause; permanent force-path
+  starvation; recovery-as-synthetic.
+- Open: **who** writes E9→E7 at #5569 (RSP single-cmd scratch vs guest store);
+  whether natural dual phase hits the same sticky overwrite (needs natural soak
+  with FS_SLOT armed); product inject FULL_SYNC still diagnostic-only.
+
+### Item updates
+-354 mechanism refined to **sticky side-slot FULL_SYNC + one PIPE_SYNC overwrite
++ dpc_bridge PIPE filter**. Next: writer identity / natural sticky confirm.

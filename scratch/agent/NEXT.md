@@ -2,62 +2,65 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s584 recap (read this first)
+## s585 recap (read this first)
 
 | Observation | Implication |
 |-------------|-------------|
-| phys 0x76DF60 always size=8 DPC submit | shared **staging cell**, not ring/side buffer |
-| task 5569 E9/syncs=1 → 5570 E7/syncs=0 | stop = **opcode rewrite**, not path death |
-| 237 E9 then 150 E7 + 530 FD at same lo | H5b REFUTED (submits continue) |
-| same dual dl_ptr pair through flip | H5c REFUTED |
-| force recovers FULL_SYNC @ 0x76A838 task 6258 | s582/s583 "permanent" plateau death-truncated |
-| e9_b=0 even on recovery | still side-slot pattern (H-sync4 family) |
+| 0 RDRAM writes for 7913 ms / 237 E9 re-submits | dual FULL_SYNC is **sticky**, not re-emitted/task |
+| 1 write E9→E7 at task~#5569 | stop = **one overwrite**, not path death |
+| dual DL trees identical across edge | H6a REFUTED |
+| dpc_bridge drops size-8 PIPE_SYNC (op 0x27) | sticky E7 → runner syncs=0 |
+| force recovers @ 0x76A838 after 688 zeros | not permanent on force path |
+| natural s577 open 772-zero tail | H6c SUPPORTED (no instruments for slot) |
 
-Instrument stays: `ROGUESQ_LOG_FS_SLOT` + `ROGUESQ_LOG_DL_SYNC` + `ROGUESQ_LOG_RDP_FULLSYNC`.
+Artifact: `scratch/s73_post_a_scene/s585_hsync4_offline/ANALYSIS.md`.
 
 ## This iteration's work unit
 
-**Why does LLE write PIPE_SYNC (E7) instead of FULL_SYNC (E9) into the staging
-cell at the dual edge — and does natural hangar exit recover like force?**
+**Who writes E9→E7 into phys 0x76DF60 at the dual edge — RSP LLE single-cmd
+scratch, or a guest store?**
+
+Prefer the highest-information cheap path first:
 
 ### Hypotheses
-- H6a: Guest dual DL stops containing a terminal FULL_SYNC emit path; LLE only
-  ever forwards what the ucode writes — E7 is the legitimate end-of-batch op
-  for that phase (lin_e9>0 at 5570 may be stale/unrelated).
-- H6b: Ucode has a separate "emit FULL_SYNC to staging cell" epilogue gated on
-  task flags / yield / DP complete that stops firing while geometry continues.
-- H6c: Natural exit (s577) never reaches the force-path recovery phase
-  (different cutscene branch / dies or freezes before 0x76A838).
-- H6d: Recovery at 0x76A838 is VI/other synthetic — REFUTE already leans no
-  (real kind=single E9 in s584); reconfirm e9_b=0 + real submit only.
+- H7a: Factor5 LLE writes every RDP command through a fixed 8-byte RDRAM
+  scratch at 0x76DF60; terminal FULL_SYNC is sticky only because the last
+  command of each task re-points DPC at leftover E9 until a later task's
+  PIPE_SYNC (normal mid-stream op) overwrites the scratch.
+- H7b: Guest CPU writes the E9→E7 (or the whole terminal command) outside
+  the RSP task.
+- H7c: Sticky re-submit is a **bridge artifact** — `rs64_dpc_reset` + leftover
+  DPC regs re-forward RDRAM the current task never issued; overwrite is
+  incidental.
+- H7d: Natural dual phase never uses sticky 0x76DF60 (force-path only).
 
-### Discriminating measurement (prefer offline-first, one run if live)
-1. **Offline on s584 log first:** correlate E9→E7 edge with runner fields
-   (tris, cimg, depth, exit, dl_ptr), any overlay/section markers, and first
-   0x76A838 single vs task #6258. Map whether lin_e9 at 5570 points inside
-   dual DL or elsewhere.
-2. If still open: one natural-exit soak (`PROBE_MODE=double_start` or real edge
-   recipe from s577) with `ROGUESQ_LOG_FS_SLOT=1` + DL_SYNC + RDP_FULLSYNC —
-   watch for E9→E7 and whether 0x76A838 ever appears.
-3. Outcomes:
-   - lin_e9 targets move out of live DPC path at edge → H6a
-   - staging cell write of E7 with no guest E9 change → H6b
-   - natural never recovers / never sees 0x76A838 → H6c
-   - 0x76A838 not real guest E9 → H6d
+### Discriminating measurement
+1. **Instrument (one build):** on `[fs-slot] event=write` when cur becomes
+   E7/E9 clean form, log **RSP IMEM PC** (if inside LLE task) and/or
+   **last-guest-pc** / host return if guest. Same-run positive control: the
+   known E7→E9 at dual entry and E9→E7 at stop must both log.
+2. Optional same build: count per-task size-8 submits at ALL addrs (not just
+   slot) to see if 0x76DF60 is unique terminal scratch.
+3. If instrument is heavy: enqueue natural force-free soak with existing
+   `LOG_FS_SLOT` only to settle H7d first (no new code).
 
-### Exact commands (if live needed after offline)
+### Exact commands (if instrument lands)
 ```bash
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
-# Prefer re-analysis of s584 before another force run.
-# Natural recovery A/B (if offline insufficient):
-env PROBE_MODE=double_start HOLD_S=45 \
+# rebuild after instrument, then force-exit dual (known E9→E7):
+env PROBE_MODE=start_only HOLD_S=45 ROGUESQ_FORCE_CASE5_START=40 \
   ROGUESQ_LOG_HANGARBAY_ENTRY=1 \
   GAME_EXTRA_ENV="ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_FS_SLOT=1" \
-  zsh scratch/s73_post_a_scene/run_mission_keys.sh s585_hsync4_natural_recover 5 12
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s586_hsync4_writer 5 12
 ```
 
+### Outcomes
+- write fires only under RSP task with IMEM PC in emit path → H7a
+- write fires with guest PC / outside task → H7b
+- slot submits without matching mtc0 DPC_END this task → H7c
+- natural dual never arms sticky E9 @76DF60 → H7d
+
 ### Do NOT
-- Re-litigate H5b/H5c or treat 0x76DF60 as a dedicated FULL_SYNC-only slot.
-- Chase leave-path crashes / 0x8000b650 (known stale).
-- Wire `rsp_force_fullsync` as product fix before knowing E9→E7 cause.
-- Assume force-path recovery applies to natural s577 without measuring.
+- Wire product FULL_SYNC inject before knowing the writer.
+- Re-litigate H6a/H6b/H6d.
+- Chase leave-path crashes.
