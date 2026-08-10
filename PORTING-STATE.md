@@ -47488,3 +47488,164 @@ be worth its own frequency read before trying option (2).
 `~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c` (case6 force site),
 `~/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_27.c:117194`
 (`[hangar-sel]` tag source, confirmed exact string for the wrapper's grep).
+
+## Session 599 — 2026-08-09 — item -361: s598 fast-retry soak folded in (engagement on attempt 1/8), REFRAMED bottleneck to item -338 racing thr-11 destroy
+
+### What ran
+The loop executed the queued `s598_fast_retry_case6.sh` between iterations
+(`scratch/agent/soak_results/s598_fast_retry_case6_20260809-204251.log`,
+rc=1, 278s, moved to `soak_queue/done/`). This session read the result,
+verified it against the underlying game run.log
+(`scratch/s73_post_a_scene/s598_fastretry_case6_1_20260809204251/run.log`,
+232860 lines), and did an offline comparison against the sole historical
+real `sec4=2` reference run
+(`scratch/s73_post_a_scene/s592_sec4_thr12_a_20260809192526/run.log`,
+278904 lines) — no new soak was run this session.
+
+### What it showed
+The fast-retry wrapper worked exactly as designed: attempt 1 reached
+engagement (`case6=1 hangar-sel=1`) immediately, no rerolls needed, refuting
+by demonstration (this run) the worry that item -362's pre-engagement noise
+would eat the whole 560s budget every time. Scored-attempt gate line:
+`case6=1 hangar-sel=1 inject_lines=24 recov76B768~=5300 sec4=1 sec2=0
+thr495FC_creates=2 coalesce_guard1=0 coalesce_guard2_r2=0 crash=CRASH`. Per
+item -361's `sec4>=2` discriminating threshold, `sec4=1` is still the
+boot-only overlay-preload occurrence (confirmed s594) — this is the 10th
+consecutive item -361 verify attempt (s593-s598) that failed to reach the
+real post-exit `sec4=2`/`coalesce_guard2_r2` re-verify.
+
+The crash was `[CRASH][pc-symbol] beginFrameDLChunk+46800 (local-symtab)`,
+`[CRASH][last-guest-pc] 0x8000afa0` — item -338's 5th occurrence (previously
+4: s554, s572, s574, s592). This is a NEW failure class for item -361's
+tally: item -362's 8-sample tally (s593-s596) was entirely pre-engagement
+deaths (`case6=0`, died before `ROGUESQ_FORCE_CASE6_START` ever engaged);
+this is the first item -361 attempt to reach engagement AND `sec4=1` and
+THEN die downstream, via a specific identified crash, before the pipeline
+could complete.
+
+Offline diff against `s592_sec4_thr12_a` (grep `[thr-create]`/`[thr-destroy]`
+and `[rdp-fullsync] ... addr=0x0076B768` in both logs):
+- Both runs created thr-11 (`id=11`): s592_a at line 183429, s598 at line
+  167219.
+- Both runs kept firing the `0x76B768` FULL_SYNC recovery cell continuously
+  all the way to end-of-log — last fire within ~30 lines of EOF in both
+  (s592_a: line 269441 of 278904; s598: line 228522 of 232860). Recovery
+  firing was NOT intermittent or starved in either run.
+- s592_a's thr-11 reached `[thr-destroy] id=11` at line 278846, IMMEDIATELY
+  followed (line 278849) by the 2nd `[overlay] start-match: section 4` —
+  the event that makes `sec4=2`.
+- s598 never printed `[thr-destroy] id=11` anywhere — the process crashed
+  (line 232822, item -338) while thr-11 was still alive, pre-empting
+  whatever would have eventually triggered its destroy.
+
+This REFUTES "recovery-cell firing is the bottleneck" as item -361's own
+text framed it ("recovery cell 0x76B768 firing (intermittent, H12c/H13c)")
+— recovery fired abundantly and continuously in the failing run too. The
+actual discriminator between the one known success and this failure is
+whether item -338's crash happens before thr-11 would otherwise destroy
+itself. This reframes item -361's next probe from "retry until recovery
+cell cooperates" to "characterize and possibly fix item -338, which is now
+directly implicated as the thing killing item -361 verify attempts
+post-engagement," rather than a `sec4`-gate exploration.
+
+### What it rules out
+- Recovery-cell-firing-rate as the sole/primary gate on thr-11 destroy (both
+  runs fired copiously and continuously; only one destroyed).
+- `HOLD_S` duration as this run's limiter — game died at hold-iter 52/90,
+  well inside the window.
+- This being another instance of item -362's pre-engagement noise family —
+  engagement was immediate and clean here.
+
+### Ledger changes
+`docs/CURRENT-TRUTH.md`: new item -364 (this finding); item -361 updated
+(9→10 non-discriminating attempts, bottleneck reframed, cross-referenced to
+-364); item -338 occurrence count 4→5, promoted from pure "watch" to
+"next probe for item -361," noted the `bad_ptr=0x7500D019` co-fire lead from
+a different breadcrumb's sweep (PROJECT-OVERVIEW.md:2339) as unconfirmed
+against -338's own crashes. `docs/CURRENT-TRUTH.md` size: 49943 bytes (was
+47245), still well under the 60000-byte maintenance trigger.
+
+### Why this counts as ADVANCED, not SUBSTITUTED
+This iteration ran the planned work unit (fold the queued soak's result into
+item -361 per NEXT.md's own instructions) and it produced a genuine new
+result: a reframed bottleneck hypothesis backed by a concrete two-run offline
+comparison, not just a null tally increment. Per NEXT.md's own fallback,
+starting a 4th/5th blind redesign of the retry wrapper without this
+characterization would have been the iron-rule-8 violation; doing the
+offline analysis instead, using logs already on disk, is the correct
+higher-information-value move and produces a specific, falsifiable next
+probe (item -338 characterization) rather than another repeat of the same
+experiment shape.
+
+### Next steps
+Written into `scratch/agent/NEXT.md`: characterize item -338's 5 crash logs
+(confirm/refute the `bad_ptr=0x7500D019` shared-corruption-wave signature
+against its own crashes, not just the unrelated breadcrumb that surfaced
+it), read the actual `beginFrameDLChunk` C at guest offset `+46800`/`+37740`
+in `~/Documents/Tools/N64Recomp/RecompiledFuncs/`, classify against known
+guarded idiom families, and only then decide fix-and-verify vs. pivot to the
+untried natural-path/`s594_c`-style recovery-cell-reliability comparison.
+
+### Artifacts
+None new (pure analysis session — no code/instrument changes, no new soak
+queued). Read: `scratch/s73_post_a_scene/s598_fastretry_case6_1_20260809204251/run.log`,
+`scratch/s73_post_a_scene/s592_sec4_thr12_a_20260809192526/run.log`,
+`docs/PROJECT-OVERVIEW.md:2339`.
+
+## Session 600 — 2026-08-09 — item -338 root-caused + BEGINFRAME_S0_GUARD; verify soak queued
+
+### What ran
+Offline characterization of all 5 item -338 crash logs (no new soak this
+session), then a single guard + rebuild + queue:
+
+| # | run | path | si_addr | host pc-symbol | stack top (guest-side) |
+|---|-----|------|---------|----------------|------------------------|
+| 1 | s554 | soak_results/.../manual/run.log | 0x335000008 | beginFrameDLChunk+37740 | (driver truncated; same guest pc) |
+| 2 | s572 | s571_item7_retry_*/run.log | 0x335000008 | +46800 | initRenderStateArrays←runHangarSelectionFrame |
+| 3 | s574 | s574_item7_exit_gates/run.log | 0x335000008 | +46800 | same hangar path |
+| 4 | s592_r2 | s592_sec4_thr12_r2/run.log | 0x335000008 | +46800 | same hangar path |
+| 5 | s598 | s598_fastretry_case6_1_*/run.log | 0x384004087 | +46800 | drawFrameProfilerBars←runModelViewerLoop (post-exit) |
+
+All 5: SIGBUS, `last-guest-pc=0x8000afa0`, `x11` matches low 32 of `si_addr`.
+`+37740` vs `+46800` is binary/pc-symbol drift across rebuilds, not two sites
+(guest PC is identical; function base `beginFrameDLChunk=0x8000A8A0`).
+
+### Guest site (funcs_3.c)
+```
+// 0x8000AF94: lw  $s0, 0x0($s1)     ctx->r16 = MEM_W(ctx->r17, 0)
+// 0x8000AF98: beql $s0, $zero, L_8000B208   # null-only
+// 0x8000AFA0: lw  $v0, 0x8($s0)     ctx->r2 = MEM_W(ctx->r16, 0x8)  # CRASH
+```
+Inner walk at `0x8000B1EC` (`lw $s0,0($s0); bne → L_8000AFA0`) re-enters the
+same label — one guard covers both. Idiom = item -317 null-then-deref family;
+missed by hi16-reload enumeration (pointer from stack slot, not lui+lw).
+
+s554 pre-crash co-fired freelist-next / append-rdp-state / etc. with shared
+`bad_ptr=0x7500D019` — existing families catching the corruption *wave* that
+feeds the bad `$s0`; the crash itself is the unguarded +8 deref.
+
+### Fix
+`BEGINFRAME_S0_GUARD` site=`0x8000AFA0` in `fixup_game_funcs.py` + hand-applied
+to `RecompiledFuncs/funcs_3.c` (sentinel blocks re-fixup without full regen).
+Range-check `U32(ctx->r16)`; OOB → log + `s2--` + `goto L_8000B208` (outer null
+arm). Env: `ROGUESQ_LOG_BEGINFRAME_S0_GUARD` / `[beginframe-s0-guard]`.
+cmake rebuild succeeded.
+
+### Queued
+`scratch/agent/soak_queue/s600_item338_beginframe_s0_verify.sh` — s598
+fast-retry case6+inject recipe + new log flag. Discriminators A–D in script
+header / NEXT.md.
+
+### Ruled out
+- "Two different code locations" (+37740 vs +46800) — one guest PC.
+- "Hangar-only crash" — s598 post-exit call stack, same PC.
+- "blind guard without site match" — 5/5 logs + source agree.
+
+### Next
+Consume s600 soak: guard fire + no 0x8000afa0 + sec4>=2 is the item -361
+unblock signal; 2nd confirm still required for FULLY CLOSED 2/2.
+
+### Artifacts
+- `fixup_game_funcs.py` (BEGINFRAME_S0_GUARD)
+- `RecompiledFuncs/funcs_3.c` (hand-applied, same shape)
+- `scratch/agent/soak_queue/s600_item338_beginframe_s0_verify.sh`

@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s596)
+## Current truth (established by session 295; unchanged, reviewed through s600)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -127,12 +127,10 @@ OVERTURNED s150; **s577 REAL hangar exit CONFIRMED** (case 3→5→6→8, missio
 Post-exit chain root-caused s578-s591: cutscene plays, then a FULL_SYNC-starvation plateau (not
 classic s178 producer-stop) traced to a sticky shared DPC staging cell (phys `0x76DF60`) reused by
 Factor5 LLE RSP for PIPE_SYNC/SETTIMG (H7a) — product fix `ROGUESQ_FS_PIPE_INJECT` (default OFF)
-restores sync flow through the E7/F3/FD residual. The FULL_SYNC recovery cell `0x76B768` firing is
-required for thr-11 (`saveServiceWorker`) to destroy and section-4 overlay reload to fire; that
-reload is required for thr-12/section 2. Current frontier: item -361 (post-sec4
-`coalesceFreeHeapBlocks` R2 crash, fix landed s593, live re-verify blocked on path-to-sec4
-intermittency — recovery-cell firing is itself unreliable). Full session chain: items -349..-361
-below; raw detail `PORTING-STATE.md` Sessions 577-596. DoD = **cutscene→in-mission** + craft input.
+restores sync flow through the E7/F3/FD residual. thr-11 destroy co-times with sec4 reload when
+recovery `0x76B768` is healthy. Current frontier: item -361 R2 coalesce re-verify, blocked
+post-engagement by item -338 (now guarded s600 as -365; soak pending). Full chain: items
+-349..-365; raw `PORTING-STATE.md` Sessions 577-600. DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
 
@@ -149,7 +147,33 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -363. The next NEW item takes -364.
+a range pointer. Highest allocated so far: -365. The next NEW item takes -366.
+
+-365. **(s600) Item -338 ROOT-CAUSED and GUARDED (`BEGINFRAME_S0_GUARD` site=`0x8000AFA0`);
+    live verify queued as `s600_item338_beginframe_s0_verify`.** Offline on all 5 crash logs
+    (s554/s572/s574/s592_r2/s598): identical mechanism — guest `0x8000AFA0`
+    `lw $v0, 0x8($s0)` after null-only `beql $s0,$zero`; SIGBUS `si_addr=0x335000008` on 4/5
+    (s598: `0x384004087`), `x11` matches low 32 of `si_addr`. Function base `0x8000A8A0`
+    (`beginFrameDLChunk`); host `+37740` vs `+46800` is pc-symbol/binary drift, not two sites.
+    Stacks: hangar path `initRenderStateArrays←runHangarSelectionFrame` (4/5) or post-exit
+    `drawFrameProfilerBars←runModelViewerLoop` (s598) — same guest PC, two callers. Idiom =
+    item -317 family (null-check gates zero arm; non-null fallthrough has no
+    `0x80000000`–`0x80800000` range check) missed by the hi16-reload sweep because the pointer
+    arrives via stack-slot load (`lw $s0,0($s1)`), not `lui`+`lw`. Inner list walk at
+    `0x8000B1EC` reloads `$s0` and branches back to `L_8000AFA0`, so one guard covers both
+    entries. Fix: range-check `ctx->r16`; OOB → `s2--` + `goto L_8000B208` (mirrors outer null
+    arm). Env `ROGUESQ_LOG_BEGINFRAME_S0_GUARD` / `[beginframe-s0-guard]`. In
+    `fixup_game_funcs.py` + hand-applied `funcs_3.c` (sentinel blocks re-fixup without regen);
+    binary rebuilt. **Not CLOSED until 2/2 live confirms** — next session folds the queued soak.
+    Full detail: `PORTING-STATE.md` Session 600.
+
+-364. **(s599) `s598_fast_retry_case6` ran: engagement on attempt 1/8, then item -338 before
+    `sec4=2` — REFRAMES item -361 bottleneck to "item -338 racing thr-11 destroy."**
+    `case6=1 hangar-sel=1 … sec4=1 crash=CRASH` at `0x8000afa0` (5th). Offline vs sole real
+    `sec4=2` run (`s592_sec4_thr12_a`): recovery `0x76B768` fired to EOF in BOTH; discriminator
+    was thr-11 `[thr-destroy]` (present only in `s592_a`, immediately before 2nd sec4 reload).
+    First post-engagement death in the item -361 tally (s593–s596 were all pre-engagement).
+    Superseded as "next probe" by item -365's guard. Full: Session 599.
 
 -363. **(s598) Item -361 redesign option (1) BUILT: `s598_fast_retry_case6.sh` queued to
     `scratch/agent/soak_queue/`.** Implements NEXT.md's fast-retry recommendation: loops the
@@ -190,27 +214,14 @@ a range pointer. Highest allocated so far: -363. The next NEW item takes -364.
     comparison's real value is `s594_c`-style recovery-cell reliability, not pre-engagement
     survival. Full detail: `PORTING-STATE.md` Session 597.
 
--361. **(s589-s597) Post-sec4 thr-12 gate — fix landed s593 (2nd `coalesceFreeHeapBlocks` R2
-    guard at `0x8000247C`, `ROGUESQ_LOG_COALESCE_HEAP_R2_GUARD`), live re-verify still open —
-    9 consecutive non-discriminating attempts (s593-s596, `coalesce_guard2_r2=0` every time,
-    none reached `sec4>=2` with the guarded path live).** Mechanism: `initSceneForMission`'s
-    2nd unguarded forward block-coalescing loop (`L_80002474`, `$s2`-based, distinct from the
-    `$t0`-based loop guarded s354-366) crashed identically in s589 and `s592_sec4_thr12_a`
-    before thr-12 (`0x800495FC`) could be created. Fix reuses the already-verified-safe bail
-    (`ctx->r3=0x8`). Path-to-sec4 is the bottleneck, not the fix: `sec4>=2` requires reaching
-    `case6=1`+hangar-sel AND the FULL_SYNC recovery cell `0x76B768` firing (intermittent,
-    H12c/H13c) — s595's `_c` reached case6 but recovery never fired; `_e`/`_f` (s595) and the
-    s593/s594 pairs mostly didn't even reach case6 (background-noise deaths: item -331 2nd occ,
-    item -306, item -347, and item -362's new symtab-misattribution finding). `HOLD_S` raised
-    90→210 in s595 without effect (2 more nulls). **Do not raise `HOLD_S` a 3rd time.** s597's
-    item -362 tally closed redesign option (a) negative (no dominant family to guard) — next
-    probe is either a fast-retry wrapper that discards <15s pre-VI1024 deaths without spending a
-    full soak slot, or a natural-path comparison re-scoped to target `s594_c`-style
-    recovery-cell reliability specifically. `sec4>=2` is the correct discriminating threshold
-    (`sec4=1` is boot-only overlay-preload noise, confirmed s594 against `s592_sec4_thr12_a`'s
-    real post-exit `sec4=2`). **s598: redesign option (1) built and queued** — see item -363;
-    result pending next queued-soak pass. Full session-by-session detail: `PORTING-STATE.md`
-    Sessions 589-598.
+-361. **(s589-s600) Post-sec4 thr-12 gate — R2 coalesce guard landed s593; live re-verify still
+    open.** Bottleneck reframed s599 (item -364): not recovery-cell reliability but item -338
+    racing thr-11 destroy post-engagement. s600 (item -365) root-caused and guarded -338;
+    verify soak `s600_item338_beginframe_s0_verify` queued — if it reaches `sec4>=2` with the
+    R2 path live, item -361's original re-verify unblocks. Mechanism (unchanged): 
+    `initSceneForMission`'s 2nd unguarded `$s2`-based coalesce loop at `0x8000247C` (R2 guard
+    s593). `sec4>=2` remains the discriminating threshold (`sec4=1` = boot preload). Do not
+    raise `HOLD_S` past 210. Full: Sessions 589-600.
 
 -360. **(s590/s591) thr-11→sec4→thr-12→sec2 pipeline RECHARACTERIZED.** thr-11
     `saveServiceWorker` is an infinite recv loop, destroyed only externally, co-timed with sec4
@@ -312,11 +323,12 @@ a range pointer. Highest allocated so far: -363. The next NEW item takes -364.
 -339. **(s556) `emitAllocatedDLCommand+13216`/`0x800088ec` — ROOT-CAUSED, FIXED and FULLY CLOSED
     2/2 with item -341 (s561).**
 
--338. **(s554, s572, s574, s592 — 4 occurrences) `beginFrameDLChunk`/`last-guest-pc=0x8000afa0`
-    breadcrumb, filed not chased.** All 4 at `+37740` or `+46800` (same guest PC) around hangar
-    leave-hold/state 5. Confidence **high**. Still do not open a reactive leave-path chase until
-    hangar exit works (item -7); prioritize after the state-machine gate / path-to-sec4
-    reliability.
+-338. **(s554, s572, s574, s592, s598 — 5 occurrences) `beginFrameDLChunk`/
+    `last-guest-pc=0x8000afa0` — ROOT-CAUSED s600, GUARDED as item -365 (`BEGINFRAME_S0_GUARD`
+    site=`0x8000AFA0`); live 2/2 confirm PENDING.** Guest insn `lw $v0, 0x8($s0)` after
+    null-only check on stack-slot-loaded node ptr; SIGBUS `si_addr=0x335000008` (4/5). s554
+    pre-crash also co-fired existing guards with `bad_ptr=0x7500D019` (corruption wave feeding
+    the bad `$s0`, not a second independent bug). See item -365.
 
 -337. **(s551) `submitSceneNodeRender+69192`/`0x80010df4` — ROOT-CAUSED, FIXED and FULLY CLOSED
     2/2 with item -341 (s561).**

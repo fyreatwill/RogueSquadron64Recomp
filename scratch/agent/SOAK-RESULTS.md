@@ -313,3 +313,4 @@
 20260809-200519 | s594_coalesce_r2_verify_d | rc=1 | 7s | scratch/agent/soak_results/s594_coalesce_r2_verify_d_20260809-200519.log
 20260809-201406 | s595_coalesce_r2_verify_e | rc=1 | 8s | scratch/agent/soak_results/s595_coalesce_r2_verify_e_20260809-201406.log
 20260809-201414 | s595_coalesce_r2_verify_f | rc=1 | 125s | scratch/agent/soak_results/s595_coalesce_r2_verify_f_20260809-201414.log
+20260809-204251 | s598_fast_retry_case6 | rc=1 | 278s | scratch/agent/soak_results/s598_fast_retry_case6_20260809-204251.log
