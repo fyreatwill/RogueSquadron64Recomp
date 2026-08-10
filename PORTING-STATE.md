@@ -49968,3 +49968,57 @@ thr11d∧fail136c hit (queued freeroll retry).
 ### Not done
 Did not land host-BT this session (consume-only work unit). Did not soft-skip
 freelist. Did not raise HOLD_S.
+
+## Session 643 — 2026-08-10 — fl-zero-poll host BT landed; posctrl LIVE Outcome B structural
+
+### Work unit
+Land host `backtrace()`/`dladdr` dump on `[fl-zero-poll] event=to_zero` in
+`src/main/main.cpp` `start_fl_zero_poller` (item -396). Same-run positive
+control on menu to_zero #1. Enqueue freelist freeroll with `flz_bt` SCORE.
+
+### Change
+- On `kind=="to_zero"` and `n_to_zero≤16`: `backtrace(frames,32)` +
+  `backtrace_symbols` + `dladdr` symbol names.
+- Tag: `[fl-zero-poll-bt]` header + one line per frame.
+- Gate: existing `ROGUESQ_LOG_FL_ZERO_WATCH`. No regen, no lib/ edit.
+
+### Positive control (driven HOLD_S=70,
+`scratch/s73_post_a_scene/s643_flz_bt_posctrl_drv_20260810133121/run.log`)
+- arm + heartbeats LIVE
+- menu to_zero #1 t_ms=51745 prev=`0x8E8E…` → zeros, guest_pc=`0x8000834C` sticky
+- **`[fl-zero-poll-bt] n=8 to_zero_n=1 frames=6`** — instrument LIVE
+- frames (all): `start_fl_zero_poller` lambda → `__thread_proxy` → `_pthread_start`
+  — **no recomp / bulk-clear leaf**
+
+### Classification
+| Outcome | Claim | Result |
+|---------|-------|--------|
+| Posctrl | menu to_zero prints ≥1 BT frame | **YES** |
+| A | frames name recomp helper / bulk clear | **NO** |
+| B | frames only poller/runtime | **YES** |
+| C | no to_zero | N/A (posctrl hit) |
+
+**H-hostbt-writer** ("poller BT names the store path") **REFUTED for naming**
+by architecture + same-run evidence: the poller is a detached side thread;
+`backtrace()` captures the poller, not the game recomp thread that performed
+the store. Instrument remains useful as a same-run posctrl tag (`flz_bt≥1`).
+
+Undriven 75s smoke never hit to_zero (slot stayed non-zero-header-shaped until
+texture traffic; no clean zeros event) — driven keys path required for menu #1.
+
+### Queued
+`scratch/agent/soak_queue/s643_flz_bt_freeroll.sh` — freelist-shaped to_zero #2
+under thr11d∧fail136c; SCORE `flz_bt`/`flz_bt_frames`; dumps BT block.
+
+### Ruled out
+- Poller-thread host BT as a writer-identification tool (Outcome A path dead)
+- "BT probe dead" (posctrl frames=6)
+
+### Next
+Consume freeroll for freelist-shaped event (expected also B). Then sample
+**game recomp thread** stack at to_zero (`[fl-zero-poll-gbt]`) or expand
+`g_rs64_last_guest_pc` audited set on freelist store idioms (-397).
+
+### Not done
+Did not sample game-thread stack this session. Did not freeroll thr11d∧fail136c
+in-process (queued for loop). Did not soft-skip freelist.

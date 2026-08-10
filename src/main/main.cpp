@@ -1758,6 +1758,37 @@ static void start_fl_zero_poller() {
                     cur[4], cur[5], cur[6], cur[7],
                     (unsigned)g_rs64_last_guest_pc,
                     (unsigned long long)n_to_zero);
+                // s643: host BT on to_zero. Poller is a side thread, so frames
+                // are poller-local (Outcome B expected unless a host bulk path
+                // is somehow on this thread). Posctrl = menu to_zero #1 prints
+                // ≥1 [fl-zero-poll-bt] line. Cap 32 frames; rate-limit 16.
+#ifndef _WIN32
+                if (kind[0] == 't' && n_to_zero <= 16) {
+                    void* bt_frames[32];
+                    int bt_n = backtrace(bt_frames, 32);
+                    fprintf(stderr,
+                        "[fl-zero-poll-bt] n=%llu to_zero_n=%llu frames=%d "
+                        "guest_pc=0x%08X t_ms=%lld prev_f=0x%X prev_sz=0x%X\n",
+                        (unsigned long long)n_change,
+                        (unsigned long long)n_to_zero, bt_n,
+                        (unsigned)g_rs64_last_guest_pc, (long long)ms,
+                        (unsigned)pf, psz);
+                    char** syms = backtrace_symbols(bt_frames, bt_n);
+                    for (int bi = 0; bi < bt_n; ++bi) {
+                        Dl_info dli;
+                        const char* sname = nullptr;
+                        if (dladdr(bt_frames[bi], &dli) && dli.dli_sname) {
+                            sname = dli.dli_sname;
+                        }
+                        fprintf(stderr,
+                            "[fl-zero-poll-bt]   [%2d] %s%s%s\n", bi,
+                            sname ? sname : "",
+                            sname ? " | " : "",
+                            (syms && syms[bi]) ? syms[bi] : "?");
+                    }
+                    free(syms);
+                }
+#endif
                 fflush(stderr);
                 memcpy(prev, cur, 16);
             }

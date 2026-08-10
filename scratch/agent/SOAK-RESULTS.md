@@ -359,3 +359,4 @@
 20260810-s640 | s639_fl_zero_writer_freeroll ANALYZED | H-oob-store CONFIRMED (0x2/0x60->0 at 0x1F3CC0); H-walk-into-zeros REFUTED; zero_node site=malloc first; guest_pc=0x8000834C drainMesh return-nop STICKY not dual-source; thr11d 4/10
 20260810-130003 | s641_drain_mesh_stomp_freeroll | rc=137 | 600s | scratch/agent/soak_results/s641_drain_mesh_stomp_freeroll_20260810-130003.log
 20260810-s642 | s641_drain_mesh_stomp_freeroll ANALYZED | posctrl LIVE (hb + dms n=34 all sample@0x807*); to_zero#1 texture→0 dms_tgt=0 → H-drainmesh-stomp REFUTED; no freelist-shaped to_zero#2 (force6=0 hsel=0 craft-select hold); outer rc=137 600s cap
+20260810-131743 | s642_drain_mesh_stomp_freeroll_retry | rc=137 | 600s | scratch/agent/soak_results/s642_drain_mesh_stomp_freeroll_retry_20260810-131743.log
