@@ -51005,3 +51005,72 @@ Exact-killer freeroll under fixed instruments; if KILLER fires with in_wrap=1
 + garbage prev triangle → freelist killer is hangar-class garbage → A/B
 mitigation-off after filter. If KILLER fires with in_wrap=0 + clean prev chain
 → H-legit / different path.
+
+## Session 663 — exact freelist-killer origin = in-wrap garbage (Outcome A)
+
+Consumed loop soak `s662_dpcwrap_killer_correlate` (rc=0, 425s; scored att2).
+No new code this session — pure freeroll analysis under s662 instruments.
+
+### Hypotheses (exact killer only)
+
+| ID | Claim | Result |
+|----|-------|--------|
+| H-exact-same-class | Historical freelist SETCIMG (`w=1161` `addr=0x1F0D74`) is same hangar garbage-ring class | **SUPPORTED** dual-source |
+| H-exact-legit | Game/ucode genuinely emits those operands on a clean boundary | **REFUTED** |
+| H-exact-submit-range | processRDPLists range is deferred merge of wrap-adjacent bytes; submit sticky would NOT contain killer | **REFUTED** (submit contains killer) |
+
+### Discriminating dump (att2, same-run posctrl OK×8)
+
+```
+[cimg-raw] KILLER #1 task=0x768D40 byteOff=0xF8 w0=0xFFFFF488 w1=0x771F0D74
+  w=1161 addr=0x1F0D74 wrap_n=5035810
+  wrap=[0x769D90,seen=0x775FF0,start=0x766000] in_wrap=1
+  submit=[0x768D40,0x7699D0)
+  prev-8..prev-3: zeros / 0x80008000
+  prev-2 op=0x3F w0=0xFFFFFFE9 w1=0x38F903F2
+  prev-1 op=0x00 w0=0x000D0000
+[set-cimg-full #10706] KILLER addr=0x1F0D74 w=1161 siz=3 fmt=7 dl=0x768D40
+[ost-wb] ALLOW_WILD_FL #1 ... HIT_WRITE_RESTORE
+[fb-fl-hdr-restore] match=1 pre=0x2/0x60 mid=0/0 post=0x2/0x60 nhdr=45
+[fl-zero-poll] to_zero phys=0x1F3CC0 prev_f=0x2 prev_sz=0x60 t_ms=168121
+```
+
+Att1: ok=8 wild=40 killer=0 (no exact). Att2: killer=1 fb_hit=1 in_wrap=41.
+
+### ORIGIN (required before further freelist mitigation)
+
+- **Immediate host writer of freelist stomp:** RT64 `copyNativeToRAM` color
+  writeback of SETCIMG `addr=0x1F0D74` `w=1161` (range covers freelist phys
+  `0x1F3CC0`). Product path ALLOW_WILD_FL + multi-header restore then repairs
+  the 16B headers (match=1 same dump).
+- **Why those operands exist:** length-respecting RDP walker over a
+  **just-wrapped DPC ring** (`in_wrap=1`, ring start=`0x766000`) interprets
+  garbage bytes as `G_SETCIMG` (op `0x3F`). Prev command ring is non-monotonic
+  (zeros, nonsense `0x3F`), not a clean allowlist-width chain.
+- **Legitimate?** **No.** This game never uses width 1161; same class as hangar
+  wilds (s662: 104/104 `in_wrap=1` after garbage TRI). Hangar cluster uses ring
+  start=`0x781800`; killer uses `0x766000` — shared class, different ring
+  instance.
+- **Not** a deferred-merge artifact outside submit: sticky
+  `submit=[0x768D40,0x7699D0)` contains the killer task.
+
+### Ruled out
+
+- Exact killer as legitimate ucode emission (H-exact-legit).
+- Exact killer as submit-range merge bug with empty sticky (H-exact-submit-range).
+- Need for more freelist writeback mitigation layers before origin settled.
+
+### Product implication
+
+Freelist restore layers (s653–s660) are still correct as **defense** while
+garbage CIMG still reaches writeback. Root fix is **stop feeding wrap-stale
+ring content into processRDPLists** (or drop those submits), then A/B freelist
+mitigation OFF expecting stomp rate → 0.
+
+### Next
+
+-416: wrap-tail / in-wrap RDP submit filter (env-gated first) + same-run A/B
+with freelist restore OFF. Expect: KILLER=0, freelist to_zero freelist-shaped=0,
+posctrl OK still fires, hangar still renders.
+
+Log: `scratch/s73_post_a_scene/s662_2_20260810231058/run.log`

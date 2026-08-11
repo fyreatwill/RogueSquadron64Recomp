@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s662)
+## Current truth (established by session 295; unchanged, reviewed through s663)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -88,13 +88,18 @@ Metal shader rebuilds need full Xcode on PATH:
   mode=headers:** restore only 16B freelist headers along chain; leave body
   writeback intact. A/B: `FL_RESTORE_MODE=body` / `FL_RESTORE_BYTES=N`.
   Opt-out: `FL_HDR_HARD_SKIP=1` / `FL_HDR_RESTORE=0`.
-  **s662 cimg-origin-desync:** hangar wild SETCIMG cluster is **garbage
-  ring content** — length-respecting RDP walker lands wild SETCIMG after
-  garbage TRI op 0x09 cmdLen=6; **104/104 in_wrap=1** on ring
-  start=0x781800. Instruments: `ROGUESQ_LOG_CIMG_RAW` (OK/WILD/KILLER +
-  wrap sticky), `ROGUESQ_LOG_DL_SYNC2`. Exact freelist killer
-  (`w=1161`/`0x1F0D74`) origin still PENDING (queued exact freeroll).
-  Do NOT expand freelist mitigation until exact origin settles.
+  **s662–s663 cimg-origin-desync CLOSED for class:** hangar wild SETCIMG
+  **and** the exact freelist killer (`w=1161`/`0x1F0D74`) are **garbage
+  ring content** after wrap. Length-respecting RDP walker lands SETCIMG
+  after garbage prev (hangar: TRI op 0x09; killer: zeros+op 0x3F).
+  Hangar **104/104 in_wrap=1** ring start=0x781800; killer **in_wrap=1**
+  ring start=0x766000 (same class, different ring). Submit sticky
+  contains killer task → not a deferred-merge sticky bug. **ORIGIN:**
+  freelist stomp host writer = RT64 color writeback of that garbage
+  SETCIMG (range covers phys 0x1F3CC0); operands not legitimate (w=1161
+  never used). Instruments: `ROGUESQ_LOG_CIMG_RAW`, `ROGUESQ_LOG_DL_SYNC2`.
+  Product freelist restore remains defense-only; root fix = stop
+  submitting wrap-stale ring content (-416).
 - Default-ON, no longer worth naming: `ROGUESQ_VI_FOLLOW_DRAW=3` (s23), `ROGUESQ_SHADE_WRAP=1`
   per-pixel (s24→s26), `ROGUESQ_FIX_ZERO_SHADE` (s20), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15),
   `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough + forceAdvance +
@@ -189,7 +194,7 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s662**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s663**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 when recovery `0x76B768` fires. **s619 thr11d_new LIVE**;
   **s624 -385 M1 LIVE**. **s640 H-oob-store CONFIRMED**. **s653–s654 H-fb-writeback-stomp
@@ -197,9 +202,10 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   **s659 product 16B restore:** recov 3/3 thr11d 3/3 fail136c 2/3 (-413). **s660
   H-body-stomp STRUCTURAL** (next=node+size+0x10 zero); full-body 64KB → next_ok
   but recov drought 0/3; **product mode=headers** multi-header restore (-414).
-  **s662 cimg-origin:** hangar wild SETCIMG = in-wrap garbage after TRI desync
-  (-415); exact freelist-killer origin PENDING.
-  Residual rank: (1) exact cimg origin -415, (2) headers freeroll -414,
+  **s662–s663 cimg-origin CLOSED class:** hangar wild + exact killer
+  (`w=1161`/`0x1F0D74`) = in-wrap garbage (-415); next is wrap-tail
+  submit filter (-416).
+  Residual rank: (1) wrap-tail filter -416, (2) headers freeroll -414,
   (3) B8 -393, (4) -387 **5×**.
 - Co-gates: recovery (-374/-413/-414), mat3inv (-375), ship (-376/-377/-392/-393),
   class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll (-382..-384), null-malloc
@@ -209,7 +215,7 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   `FL_HDR_RESTORE=0`, `FL_RESTORE_MODE=body`. Product ON: freelist multi-header
   restore. Diagnostics: `ROGUESQ_LOG_CIMG_RAW`, `ROGUESQ_LOG_DL_SYNC2`.
   Post-sec2: packTlut (-373).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-415; Sessions 577-662.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-416; Sessions 577-663.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -227,25 +233,38 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -415. The next NEW item takes -416.
+a range pointer. Highest allocated so far: -416. The next NEW item takes -417.
 
-### Active M3 pipeline (s577–s662) — open residuals only
+### Active M3 pipeline (s577–s663) — open residuals only
 
--415. **(s662) cimg-origin-desync — hangar wild SETCIMG is in-wrap garbage
-    after length-respecting triangle desync; exact freelist killer PENDING.**
-    Instruments LIVE (posctrl OK×8 same-run): `ROGUESQ_LOG_CIMG_RAW` dumps
-    OK/WILD/KILLER + sticky wrap/submit; `ROGUESQ_LOG_DL_SYNC2` six-command
-    SW-DL walk; `set-cimg-full KILLER` for exact `w=1161`/`0x1F0D74`.
-    **H-desync-tri SUPPORTED** hangar cluster: WILD#1 task=0x7818C8 after
-    garbage TRI op=0x09 cmdLen=6. **in_wrap=1 104/104** on ring
-    start=0x781800. covers_fl false-pos REFUTED as KILLER heuristic (exact
-    only). Exact historical freelist SETCIMG origin still open — queued
-    `s662_dpcwrap_killer_correlate`. Do not expand freelist mitigation until
-    exact origin settles. Full: Session 662.
+-416. **(s663) wrap-tail RDP submit filter — root fix for in-wrap garbage
+    SETCIMG class (freelist killer + hangar wilds).**
+    s663 ORIGIN: freelist stomp = RT64 writeback of garbage SETCIMG
+    `w=1161`/`0x1F0D74` from just-wrapped DPC ring (`in_wrap=1`); not
+    legitimate game emission. Product freelist restore is defense-only.
+    **Next work unit:** env-gated filter/drop of RDP submits whose task
+    range sits inside a just-wrapped ring (start..seen), then same-run
+    or paired A/B with freelist mitigation OFF
+    (`FL_HDR_RESTORE=0` / hard-skip as needed). Expect KILLER=0,
+    freelist-shaped to_zero=0, posctrl OK still LIVE, hangar still
+    renders. Discriminate false-drop of legit post-wrap work vs stomp
+    elimination. Full: Session 663 → implement s664.
 
--414. **(s660→s662) freelist multi-header restore LANDED; H-body-stomp
+-415. **(s662→s663) cimg-origin-desync — hangar wild + exact freelist
+    killer are in-wrap garbage; class CLOSED; root fix → -416.**
+    Instruments LIVE (posctrl OK×8): `ROGUESQ_LOG_CIMG_RAW` OK/WILD/KILLER
+    + wrap/submit sticky; `ROGUESQ_LOG_DL_SYNC2`. **H-desync-tri SUPPORTED**
+    hangar: WILD#1 task=0x7818C8 after garbage TRI op=0x09; **in_wrap=1
+    104/104** ring start=0x781800. **s663 Outcome A:** exact KILLER
+    task=0x768D40 w=1161 addr=0x1F0D74 **in_wrap=1** ring start=0x766000;
+    prev zeros+op 0x3F; submit contains killer; co-timed freelist to_zero
+    + HIT_WRITE_RESTORE. **H-exact-same-class SUPPORTED**; **H-exact-legit
+    REFUTED**; **H-exact-submit-range REFUTED**. Full: Sessions 662-663.
+
+-414. **(s660→s663) freelist multi-header restore LANDED; H-body-stomp
     STRUCTURAL; headers freeroll INCONCLUSIVE (s661 soak 600s cap, no
-    thr11d/fail136c score); deprioritized behind -415 origin.**
+    thr11d/fail136c score); deprioritized behind -416 wrap-tail filter
+    (origin settled s663).**
     Offline s659: zero_node bad=0x801F3D30 = prev+size+0x10 after 16B restore
     of 0x801F3CC0 size=0x60 → next freelist header stomped. s660a full-body
     64KB: snap=0x10000 next_ok=1 LIVE; recov_active=0/3 engaged (vs s659 3/3
@@ -633,9 +652,9 @@ a range pointer. Highest allocated so far: -415. The next NEW item takes -416.
     SUPPORTED under stomp; s658 FL_HDR_RESTORE Outcome A —
     H-wb-complete-not-stomp SUPPORTED (3/5 recov with header restored);
     residual -412 productize → -413 thr11d re-score → -414 multi-header;
-    s662 hangar wild SETCIMG origin = in-wrap garbage TRI desync (-415);
-    exact freelist killer origin still open**.
-    Active residuals: -415..-373 / -361 / -379. Tools still default OFF.
+    s662–s663 hangar wild + exact freelist killer = in-wrap garbage
+    SETCIMG class CLOSED (-415); root fix wrap-tail filter (-416)**.
+    Active residuals: -416..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 
