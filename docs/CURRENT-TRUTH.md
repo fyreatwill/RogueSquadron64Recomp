@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s667)
+## Current truth (established by session 295; unchanged, reviewed through s668)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -119,14 +119,18 @@ Metal shader rebuilds need full Xcode on PATH:
   remains multi-header restore. Drop stays opt-in experiment only (-418
   CLOSED).
   **s667 freeroll SCORE (headers product, drop OFF, BUDGET=1200):**
-  posctrl LIVE mode=headers nhdr=45 next_ok=1 on classic killer
-  1F0D74 w=1161 (att4+att6). engaged=5 recov_active official=1
-  (+att4 trackres noise also recov768=7936 → 2/5 recovery-fired).
-  **fail136c=0** both recovery-fired holds → **H-headers-fail136
-  SUPPORTED** (closes s659 16B residual 2/3). thr11d_new=0/2
-  (UNEVALUABLE; thr11 live, ship n≤2). zero_node mid-writeback race
-  only; heartbeats 0x2/0x60 post-restore. Residual: thr11d multi-hold
-  rate under headers (-419) then thr12 (-385).
+  posctrl LIVE mode=headers nhdr=45 next_ok=1; fail136c=0 both
+  recovery-fired → **H-headers-fail136 SUPPORTED**. thr11d_new=0/2
+  UNEVALUABLE (ship n≤2; holds truncated/silent shape).
+  **s668 thr11d multi-hold freeroll (BUDGET=1800, product headers):**
+  recov_full=2/3 eng thr11d_hit=**2/2** dual-source →
+  **H-headers-thr11d CONFIRMED**; ship n=3 + mv-b8=27 both →
+  **H-headers-shipn3 CONFIRMED**; fail136c=0; next_ok=1.
+  **Pipeline LIVE:** thr11d → ok136c (rs_malloc 0x136C succeeds) →
+  thr12 create (ltexmg=0) → **section 2** mission overlay → thr12
+  recreate; crash=0 packTlut=0 both holds. s667 thr11d=0 recharacterized
+  as ship-n3-miss (holds never reached B8 gate), not headers regression.
+  Residual: **post-sec2** mission progress (-420), not thr11d rate.
 - Default-ON, no longer worth naming: `ROGUESQ_VI_FOLLOW_DRAW=3` (s23), `ROGUESQ_SHADE_WRAP=1`
   per-pixel (s24→s26), `ROGUESQ_FIX_ZERO_SHADE` (s20), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15),
   `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough + forceAdvance +
@@ -225,30 +229,27 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s667**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s668**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
-  `loadLevelTextureCache`) → sec2 when recovery `0x76B768` fires. **s619 thr11d_new LIVE**;
-  **s624 -385 M1 LIVE**. **s640 H-oob-store CONFIRMED**. **s653–s654 H-fb-writeback-stomp
-  + H-fb-skip-stops-stomp CONFIRMED**. **s658 H-wb-complete-not-stomp SUPPORTED**.
-  **s659 product 16B restore:** recov 3/3 thr11d 3/3 fail136c 2/3 (-413). **s660
-  H-body-stomp STRUCTURAL**; **product mode=headers** multi-header restore (-414).
-  **s662–s663 cimg-origin CLOSED** (-415). **s664 Outcome B** wrap filter (-416).
-  **s665 garbage-prev drop LIVE** (-417). **s666 drop productize REJECTED** (-418).
-  **s667 headers freeroll SCORE:** next_ok=1 LIVE; **fail136c=0** on recovery-fired
-  → **H-headers-fail136 SUPPORTED** (closes 16B residual); recov partial 1–2/5;
-  thr11d_new=0/2 UNEVALUABLE (-419). Residual rank: (1) thr11d multi-hold under
-  headers (-419), (2) thr12 null-malloc (-385), (3) B8 -393, (4) -387 **5×**.
-  Do **not** productize DROP_GARBAGE_CIMG without a recovery co-gate that does
-  not need garbage freelist-range writeback.
-- Co-gates: recovery (-374/-413/-414/-418/-419), mat3inv (-375), ship (-376/-377/-392/-393),
-  class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll (-382..-384), null-malloc
-  thr12 (-385 M1), sinfApprox (-386 1×), do_rom_read (-387 **5×**). thr11d metric =
-  post-hsel destroy of `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`,
+  `loadLevelTextureCache`) → **sec2 LIVE** when recovery `0x76B768` fires under product
+  multi-header restore. **s668 dual-source:** thr11d_new 2/2 recovery-full + ship n=3
+  + B8 + **ok136c** (0x136C malloc succeeds) + thr12 create (ltexmg=0) + section 2
+  mission overlay; crash=0 both HOLDs. **s667** closed fail136c residual
+  (H-headers-fail136); thr11d 0/2 was ship-n3-miss not headers regression.
+  **s666 drop productize REJECTED**. Residual rank: (1) **post-sec2** mission
+  progress (-420), (2) thr12 post-sec2 churn / packTlut (-373), (3) B8 co-gate
+  -393 (still required for thr11d), (4) -387 **5×**. Do **not** productize
+  DROP_GARBAGE_CIMG.
+- Co-gates: recovery (-374/-413/-414/-418), mat3inv (-375), ship (-376/-377/-392/-393),
+  class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll (-382..-384), thr12 path
+  LIVE under headers (-385 reframed; null-malloc dissolved when freelist intact),
+  sinfApprox (-386 1×), do_rom_read (-387 **5×**). thr11d metric = post-hsel
+  destroy of `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`,
   `FORCE_CASE6_START`, `FS_PIPE_INJECT`, `ALLOW_WILD_W`, `FL_HDR_HARD_SKIP`,
   `FL_HDR_RESTORE=0`, `FL_RESTORE_MODE=body`, `DROP_WRAP_RDP`,
   `DROP_GARBAGE_CIMG`. Product ON: freelist multi-header restore. Diagnostics:
-  `ROGUESQ_LOG_CIMG_RAW`, `ROGUESQ_LOG_DL_SYNC2`. Post-sec2: packTlut (-373).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-419; Sessions 577-667.
+  `ROGUESQ_LOG_CIMG_RAW`, `ROGUESQ_LOG_DL_SYNC2`. Post-sec2: packTlut (-373), -420.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-420; Sessions 577-668.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -266,17 +267,24 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -419. The next NEW item takes -420.
+a range pointer. Highest allocated so far: -420. The next NEW item takes -421.
 
-### Active M3 pipeline (s577–s667) — open residuals only
+### Active M3 pipeline (s577–s668) — open residuals only
 
--419. **(s667→) thr11d multi-hold under product headers restore — OPEN.**
-    s667 freeroll: fail136c residual CLOSED (→ -414); thr11d_new=0/2 on
-    recovery-fired holds with thr11 id=11 live and ship_store max n=2
-    (no n=3 / B8). Historical thr11d rate 4/10; 0/2 UNEVALUABLE. Next:
-    BUDGET≥1800 freeroll targeting ≥5 recovery-fired full HOLDs under
-    product headers; score thr11d_new + ship n=3 + mv-b8. If thr11d
-    rate ≈ s659 3/3, close and push thr12 (-385). Full: Session 667.
+-420. **(s668→) post-sec2 mission progress under product headers — OPEN.**
+    s668 dual-source recovery-full HOLDs reach thr11d → ok136c → thr12 →
+    **section 2** (mission overlay rom=0x000A5D30) with crash=0 packTlut=0.
+    thr12 churns (id=12 destroy at sec2, id=13 recreate then destroy).
+    Next: one freeroll scoring post-sec2 VI/content/phase + thr12 lifetime
+    + whether packTlut (-373) or other mission loaders fire. Do not re-soak
+    thr11d rate. Full: Session 668.
+
+-419. **(s667→s668) thr11d multi-hold under product headers — CLOSED LIVE
+    (Outcome A).**
+    s668: thr11d_new=1 on 2/2 recovery-fired full HOLDs; ship n=3 + B8 both;
+    fail136c=0; sec2 LIVE. s667 thr11d 0/2 recharacterized (ship n≤2 /
+    truncated holds). thr11d still co-gates with B8→n=3 (-393). Full:
+    Sessions 667-668.
 
 -418. **(s665→s666) productize `ROGUESQ_DROP_GARBAGE_CIMG` — REJECTED
     CLOSED; drop stays default OFF.**
@@ -294,15 +302,11 @@ a range pointer. Highest allocated so far: -419. The next NEW item takes -420.
     killer are in-wrap garbage; class CLOSED; root fix attempted -416
     → -417.** Full: Sessions 662-663.
 
--414. **(s660→s667) freelist multi-header restore LIVE-VERIFIED; H-body-stomp
-    STRUCTURAL; fail136c residual CLOSED (H-headers-fail136); thr11d residual
-    → -419.**
-    s660 product mode=headers. s661 freeroll INCONCLUSIVE (600s cap). s667
-    freeroll SCORE (BUDGET=1200 product defaults drop OFF): posctrl
-    mode=headers nhdr=45 next_ok=1 on classic killer 1F0D74 w=1161;
-    engaged=5 recovery-fired 1–2/5; **fail136c=0** both recovery holds
-    (vs s659 16B fail136c 2/3); thr11d_new=0/2 UNEVALUABLE; zero_node
-    mid-writeback race only. Full: Sessions 660-667.
+-414. **(s660→s668) freelist multi-header restore LIVE-VERIFIED; H-body-stomp
+    STRUCTURAL; fail136c CLOSED (H-headers-fail136); thr11d CLOSED LIVE
+    (-419); pipeline thr11d→thr12→sec2 LIVE → residual -420.**
+    s660 product mode=headers. s667 fail136c=0. s668 thr11d 2/2 + ok136c +
+    sec2 dual-source. Full: Sessions 660-668.
 
 -413. **(s659→s660) product freelist-header restore LIVE; thr11d 3/3;
     fail136c residual closed into -414 (H-body-stomp + headers product).**
@@ -502,13 +506,13 @@ a range pointer. Highest allocated so far: -419. The next NEW item takes -420.
     Known freeroll family (s214/s215); thr11c_post=1 thr11d_new=0 (blocks thr11d/class-D).
     Free-reroll 1st; escalate only on 2nd same host stack with thr11 live. Full: Session 621.
 
--385. **(s620→s627) `loadLevelTextureCache` null `rs_malloc(0x136C)` — GUARD LIVE-VERIFIED
-    M1 (s624); thr12 still blocked until malloc succeeds; walk model fixed s626.**
-    Guard: `[level-tex-malloc-guard]` @ `0x80048248` → `L_8004840C`. **s624 M1:** ltexmg=1
-    ltex_null=0 thr11d_new=1. **s625:** H-ltexArg + H-ltexNullPool REFUTED. **s626:**
-    H-walk1 CONFIRMED. **s627:** global O1 + size-O3 REFUTED; selected-pool residual
-    (-389/-390). Soft-skip before `registerServiceWorker` expected until null alloc
-    fixed — do not soft-skip thr12 create. Full: Sessions 620-627.
+-385. **(s620→s668) `loadLevelTextureCache` null `rs_malloc(0x136C)` — GUARD M1 LIVE
+    (s624); **null-malloc residual DISSOLVED under product headers** (s668).**
+    Guard: `[level-tex-malloc-guard]` @ `0x80048248` → `L_8004840C`. **s624 M1:**
+    ltexmg=1. **s626 H-walk1.** **s668 dual-source:** ok136c LIVE (0x136C alloc
+    succeeds reason=ok) → thr12 create with ltexmg=0 → sec2. Guard remains as
+    safety net; thr12 path no longer blocked by freelist stomp under product
+    multi-header restore. Residual → post-sec2 (-420). Full: Sessions 620-668.
 
 -384. **(s619→s621) Post thr11d_new+sec4 `buildMaterialFreeList` null-base SIGBUS — 1×;
     H-matfree1 SUPPORTED (0 on s619 scored freeroll).** s618 only hit. Host
@@ -688,9 +692,10 @@ a range pointer. Highest allocated so far: -419. The next NEW item takes -420.
     false-drop (-416 CLOSED shape); s665 garbage-prev SETCIMG drop
     Outcome A LIVE (-417); s666 productize drop REJECTED (-418 CLOSED)
     — H-drop-suppresses-recov; product freelist path = restore;
-    s667 headers freeroll SCORE — H-headers-fail136 SUPPORTED
-    (fail136c=0); thr11d residual → -419**.
-    Active residuals: -419 / -414..-373 / -361 / -379. Tools still
+    s667 H-headers-fail136; **s668 thr11d 2/2 + thr12 + sec2 LIVE
+    under product headers** (ok136c; -419 CLOSED; -385 dissolved;
+    residual → -420 post-sec2).
+    Active residuals: -420 / -414..-373 / -361 / -379. Tools still
     default OFF for DROP_*; product ON for multi-header restore.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.

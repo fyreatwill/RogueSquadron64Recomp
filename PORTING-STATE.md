@@ -51345,3 +51345,71 @@ n=3 gate -393 freeroll). Do not productize DROP_GARBAGE_CIMG (s666).
 Logs: `scratch/agent/s667_logs/wrapper.stdout`,
 `scratch/s73_post_a_scene/s660_flhdr_{1..6}_20260811*/run.log`
 Recipe: `scratch/agent/s667_headers_restore_scored_freeroll.sh`
+
+
+## Session 668 — thr11d multi-hold under product headers: thr11d→thr12→sec2 LIVE (Outcome A)
+
+**Work unit:** item -419 thr11d multi-hold freeroll under product multi-header
+restore (drop OFF). Recipe
+`scratch/agent/s668_thr11d_headers_multihold_freeroll.sh` BUDGET_S=1800
+HOLD_S=210 TARGET_RECOV_FULL=5. Product defaults only.
+
+**Run:** 4 attempts, ~32 min wall.
+- att1: recovery_silent (ship_max_n=2, thr11d_new=0) — free reroll
+- att2: recovery-FULL thr11d_new=1 ship_max_n=3 mv_b8=27 fail136c=0
+  class_hint=A_sec2 thr12_post=4 sec2_post=1 ltexmg=0 crash=0
+- att3: recovery-FULL **identical shape** thr11d_new=1 ship_n3=1 mv_b8=27
+  fail136c=0 A_sec2 thr12_post=4 sec2_post=1 ltexmg=0 crash=0
+- att4: budget truncate pre-eng
+
+**discard_stats:** pre_eng=1 recov_silent=1 recov_active=2 engaged=3
+recov_full=2 thr11d_hit=2. Formal script threshold wanted ≥3 full HOLDs →
+printed INCONCLUSIVE, but dual-source att2+att3 is decisive.
+
+### Discriminating outcomes
+
+| Hypothesis | Result | Evidence |
+|---|---|---|
+| H-headers-thr11d | **CONFIRMED dual-source** | thr11d_new=1 on 2/2 recovery-fired full HOLDs (id=11 destroy post-hsel) |
+| H-headers-shipn3 | **CONFIRMED dual-source** | ship n=3 + `[mv-b8-set]`×27 + `[mv-ship-arm]` both holds |
+| H-headers-recov-rate | **SUPPORTED** | recov_active 2/3 engaged (≥1/3); not drought |
+| H-headers-fail136 | reconfirmed | fail136c=0 both (vs s659 16B fail136c 2/3) |
+| s667 thr11d=0 recharacterization | **supported** | s667 recovery holds never reached ship n=3 (truncated / silent shape); thr11d still co-gates with B8→n=3 (-393) |
+
+### Pipeline breakthrough (dual-source att2+att3)
+
+Post thr11d id=11 destroy:
+1. `[rs-malloc-diag] event=ok136c` size=0x136C **succeeds** (ptr live, reason=ok)
+2. thr12 create `entry=0x800495FC` (hudDisplayUpdateWorker) without
+   `[level-tex-malloc-guard]` (ltexmg=0)
+3. thr12 destroy → **`[overlay] start-match: section 2`** rom=0x000A5D30
+   (mission overlay)
+4. ok136c again + thr12 recreate; HOLD ends crash=0, packTlut=0
+
+Counts both holds: ok136c=6 fail136c=0 thr12_create=6 sec2=1 sec4=2
+ltex=3 cshadow=0 crash=0 packTlut=0 shipn3=1 thr11d_id11=1.
+Freelist 0x2/0x60 heartbeats survive; product banner mode=headers LIVE;
+next_ok=1 on killer path.
+
+### Closures / recharacterizations
+
+- **-419 thr11d multi-hold under headers — CLOSED LIVE (Outcome A).**
+  thr11d rate 2/2 recovery-full under product headers; ship/B8 co-gate still
+  required (silent holds stay n≤2). Residual of thr11d rate soaks closed.
+- **-385 null-malloc thr12 block — M1 guard residual DISSOLVED under headers
+  product path.** ok136c LIVE dual-source; thr12 creates without soft-skip.
+  Item -385 reframed: thr12 path LIVE; residual is **post-sec2** (what happens
+  after mission overlay loads; packTlut never fires this HOLD; thr12 churn
+  id=12→13).
+- fail136c residual remains closed (-414 H-headers-fail136).
+
+### Next
+
+Score post-sec2 mission state under product headers: after section-2 load,
+is in-mission content / VI phase advancing? Why thr12 destroys after sec2?
+Is packTlut (-373) expected in this window? Prefer one freeroll with
+post-sec2 phase markers + content/VI counters, not another thr11d rate soak.
+
+Logs: `scratch/agent/s668_logs/wrapper.stdout`,
+`scratch/s73_post_a_scene/s668_thr11d_{1..4}_*/run.log`
+Recipe: `scratch/agent/s668_thr11d_headers_multihold_freeroll.sh`
