@@ -50821,3 +50821,45 @@ Compare: product SKIP 0/7; incomplete ALLOW 0/2; complete ALLOW stomp 1/3.
 Productize freelist-header restore as the freelist-range writeback path
 (replace SKIP_FL_HDR hard-skip with snapshot/write/restore default ON) so
 recovery can fire without permanent freelist corruption; then thr11d re-score.
+
+## Session 659 — product freelist-header restore LIVE (Outcome A); thr11d 3/3
+
+Date: 2026-08-10. HYPOTHESIS-ID: m3-post-exit-fs-stall.
+
+### Work unit
+Productize freelist-header restore as freelist-range writeback path (item -412).
+
+### Landed (lib/rt64, export.sh refreshed)
+1. `rs64_writeback_sane` policy A:
+   - wild width covering freelist phys 0x1F3CC0 → allow (`ALLOW_WILD_FL` log)
+   - non-freelist wild still `SKIP_WILD_W`
+   - removed default `SKIP_FL_HDR` hard-skip
+   - opt-in `ROGUESQ_FL_HDR_HARD_SKIP=1` restores pre-s659 hard skip
+2. `copyNativeToRAM` product default ON:
+   - always snapshot 16B @ 0x1F3CC0 → writeback → restore
+   - logs `HIT_WRITE_RESTORE` + `[fb-fl-hdr-restore]`
+   - banner `product restore=1 hard_skip=0`
+   - `ROGUESQ_FL_HDR_RESTORE=0` disables restore only; HARD_SKIP re-enables HIT_SKIP
+
+### Freeroll (product defaults, no ALLOW_*)
+BUDGET=1200s multi-engagement: recov_active=3 engaged=3 pre_eng=1.
+All 3 recovery-active:
+- classic killer `addr=0x1F0D74 w=1161` ALLOW_WILD_FL + HIT_WRITE_RESTORE
+- restore match=1 pre=0x2/0x60 mid=0/0 post=0x2/0x60
+- heartbeats flags=0x2 size=0x60 to ~245s (transient mid-write to_zero expected)
+- thr11d_new=1 (create id=11 → destroy id=11 post-hsel) on 3/3
+- fail136c reason=corrupt on 2/3 (att1+att3); att2 thr11d without fail136c
+- thr12_post=0 sec2_post=0 on all 3 (class-D still blocks thr12)
+
+### Discriminators
+- **A CONFIRMED** productize LIVE: recov 3/3 ≥1/3 + freelist header intact + product defaults
+- thr11d re-score under recovery-without-permanent-stomp: thr11d_new **3/3** (vs s658 ALLOW restore 0/3 — sample/path difference; product reopens thr11d)
+- fail136c residual with header intact → freelist body beyond 16B still stomped by wild CIMG, or independent corrupt path
+
+### Ruled out / closed
+- Product SKIP drought closed by product restore (not freelist integrity alone)
+- H-wb-complete-not-stomp reconfirmed under product defaults
+- SKIP_FL_HDR hard-skip no longer product default
+
+### Next
+-413 residual: thr11d→class-D fail136c with header restored — expand restore to freelist node body (size 0x60) or skip writing freelist-range body while completing writeback co-factor; score thr12/sec2 after thr11d.
