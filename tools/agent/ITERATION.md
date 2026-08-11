@@ -80,6 +80,35 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
    `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake ...` is
    allowlisted verbatim and works either way.
 
+11. A MITIGATION IS NOT AN EXPLANATION. Before landing a skip / allow /
+   guard / restore for a corruption or wild-value defect, name the WRITER and
+   say whether the value is legitimate. s640-s659 landed four layers of
+   freelist mitigation without once asking why a colour image is set at
+   0x1F0D74 with width 1161 - a width this game never uses - and every one of
+   those iterations passed the ADVANCED contract. The Stop gate now requires
+   an `ORIGIN:` line in the session entry when the diff adds mitigation-shaped
+   machinery.
+12. ASK GROUND TRUTH BEFORE BUILDING AN INSTRUMENT. See the section below.
+   Our runtime is the thing under test; it cannot be its own witness.
+13. BUILD EVERY ARM OF AN A/B IN ONE ITERATION. A three-hypothesis work unit
+   that measures one arm per iteration costs three iterations to learn what a
+   single iteration could have shown. Build the arms, run them concurrently
+   (one game instance uses ~50% of one core), report the comparison in this
+   session's entry.
+
+## Ground truth that is not our runtime
+- `tools/oracle/README.md` - runs the RETAIL ROM under mupen64plus with memory
+  read/write watches, so "is this address ours or the game's?" gets an
+  independent answer with a PC attribution. Watches are PHYSICAL addresses;
+  always arm a positive control first (a whole-RDRAM watch must fire ~1.6M
+  times in 8 emulated seconds). Currently undriven: it reaches boot and
+  attract only, so a null says nothing about the hangar or a mission.
+- `docs/F5-UCODE-REFERENCE.md` - the Factor 5 microcode's real command table,
+  its six inline-data pointer advances, and what it can and cannot emit, taken
+  from GLideN64's shipped HLE implementation of this exact ucode. Read it
+  before reasoning about any DL or RDP stream anomaly. It also corrects our
+  own long-standing mislabelling of ops 0x01/0x02/0x03.
+
 ## Soak queue — never spend a session babysitting a repeat soak
 A soak that only re-runs an existing recipe belongs to the loop, not to you.
 - Enqueue: write a SELF-CONTAINED script to scratch/agent/soak_queue/<name>.sh.

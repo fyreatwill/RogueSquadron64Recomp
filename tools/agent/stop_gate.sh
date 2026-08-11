@@ -180,4 +180,31 @@ ARTIFACTS
   fi
 fi
 
+# ORIGIN GATE (2026-08-10) - a mitigation is not an explanation.
+# s640-s659 landed SKIP_WILD_W, SKIP_FL_HDR, ALLOW_FL_HDR and FL_HDR_RESTORE
+# against a framebuffer writeback stomping the heap freelist, without once
+# establishing why a colour image is set at 0x1F0D74 with width 1161 - a width
+# this game never uses. Each of those iterations satisfied ADVANCED, so the
+# contract could not see the omission. This makes it visible: when the diff
+# adds mitigation-shaped machinery, the session entry must carry an ORIGIN:
+# line. It does not demand that the origin be KNOWN - it demands that the
+# iteration say which, so "still unexplained" accumulates in the ledger
+# instead of disappearing into another passing gate.
+# Scan only RUNTIME sources: the harness, its docs and CLAUDE.md talk ABOUT
+# mitigation knobs constantly, and a comment mentioning one is not a landing.
+# Comment lines are dropped, and one stray line is not a mitigation - a real
+# one lands several. Both guards were added after this gate false-positived on
+# a harness commit whose only match was the words RS64_SKIP_STOP_HOOK in a
+# comment. Threshold calibrated over the last 30 commits: the six that landed
+# real mitigation machinery score 2/4/4/5/8/11 and every other commit scores
+# exactly 0, so >=2 separates them cleanly with no false positive.
+mitig="$(git diff ${range:-HEAD~1..HEAD} -- .     ':(exclude)docs' ':(exclude)PORTING-STATE.md' ':(exclude)CLAUDE.md'     ':(exclude)tools/agent' ':(exclude)scratch' ':(exclude).claude' 2>/dev/null   | grep '^+' | grep -vE '^\+[[:space:]]*(#|//|\*)'   | grep -cE '(SKIP_|ALLOW_|_RESTORE|_GUARD|HARD_SKIP)' || true)"
+case "$mitig" in ''|*[!0-9]*) mitig=0 ;; esac
+if [ "$mitig" -ge 2 ]; then
+  ps_added="$(git diff ${range:-HEAD~1..HEAD} -- PORTING-STATE.md 2>/dev/null | grep '^+' || true)"
+  printf '%s
+' "$ps_added" | grep -q 'ORIGIN:'     || block "Exit contract unmet: this iteration adds mitigation-shaped machinery (skip/allow/guard/restore, $mitig lines) but the PORTING-STATE.md session entry has no 'ORIGIN:' line. Write one of: 'ORIGIN: <who writes the value, and whether the value is legitimate>' when you attributed it, or 'ORIGIN: unattributed - <why mitigating anyway, and the experiment that would attribute it>' when you did not. Iron rule 11."
+fi
+
+
 allow

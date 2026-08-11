@@ -112,3 +112,7 @@ skills-lock.json
 # Python caches
 __pycache__/
 *.pyc
+
+# GPL reference implementations, fetched by tools/oracle/fetch_reference.sh
+reference/
+tools/oracle/build/
