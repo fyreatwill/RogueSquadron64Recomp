@@ -140,6 +140,27 @@ extern "C" uint32_t rs64_dpc_get_last_fullsync_addr() {
     return g_last_fullsync_addr.load(std::memory_order_acquire);
 }
 
+// Sticky last dpc-wrap + last successful submit range (s662 cimg-origin-desync).
+// processRDPLists reads these via weak symbols so a WILD SETCIMG dump can say
+// whether its task address sits inside a recently-wrapped ring.
+static std::atomic<uint32_t> g_last_wrap_end{0};
+static std::atomic<uint32_t> g_last_wrap_seen{0};
+static std::atomic<uint32_t> g_last_wrap_start{0};
+static std::atomic<uint32_t> g_last_wrap_n{0};
+static std::atomic<uint32_t> g_last_submit_lo{0};
+static std::atomic<uint32_t> g_last_submit_hi{0};
+extern "C" void rs64_dpc_get_last_wrap(uint32_t *end, uint32_t *seen,
+                                      uint32_t *start, uint32_t *n) {
+    if (end)   *end   = g_last_wrap_end.load(std::memory_order_acquire);
+    if (seen)  *seen  = g_last_wrap_seen.load(std::memory_order_acquire);
+    if (start) *start = g_last_wrap_start.load(std::memory_order_acquire);
+    if (n)     *n     = g_last_wrap_n.load(std::memory_order_acquire);
+}
+extern "C" void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi) {
+    if (lo) *lo = g_last_submit_lo.load(std::memory_order_acquire);
+    if (hi) *hi = g_last_submit_hi.load(std::memory_order_acquire);
+}
+
 // Per-task GFX opcode histogram (high byte of DL command word). Counted
 // directly from the factor5_ucode dispatch loop — a single increment per
 // command, no function call. Same single-thread-only constraint as above.
@@ -326,6 +347,10 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         // solved by VI_FULLSYNC (session 11). Count and drop.
         static std::atomic<int> s_wrapped{0};
         int n = ++s_wrapped;
+        g_last_wrap_end.store(end_phys, std::memory_order_release);
+        g_last_wrap_seen.store(s_last_end, std::memory_order_release);
+        g_last_wrap_start.store(start_phys, std::memory_order_release);
+        g_last_wrap_n.store((uint32_t)n, std::memory_order_release);
         if (n <= 4 || (n % 4096) == 0) {
             fprintf(stderr, "[dpc-wrap #%d] end=0x%06X < seen=0x%06X start=0x%06X (dropped)\n",
                     n, end_phys, s_last_end, start_phys);
@@ -337,6 +362,10 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     uint32_t submit_lo = s_last_end;
     uint32_t submit_hi = end_phys;
     s_last_end = end_phys;
+    // Note: sticky last-submit is updated at the actual ultramodern::
+    // submit_rdp_range call sites below (live + deferred commit), not here.
+    // Updating here records the last 8-byte DPC_END bump, which is NOT the
+    // range processRDPLists sees after merge/defer (s662 false correlation).
 
     {
         static std::atomic<uint64_t> s_fwd_bytes{0};
@@ -1451,6 +1480,8 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         return;
     }
 
+    g_last_submit_lo.store(submit_lo, std::memory_order_release);
+    g_last_submit_hi.store(submit_hi, std::memory_order_release);
     ultramodern::submit_rdp_range(submit_lo, submit_hi);
 }
 
@@ -1488,6 +1519,8 @@ extern "C" void rs64_dpc_defer_end(int commit) {
 
                 bytes += hi - lo;
                 calls++;
+                g_last_submit_lo.store(lo, std::memory_order_release);
+                g_last_submit_hi.store(hi, std::memory_order_release);
                 ultramodern::submit_rdp_range(lo, hi);
                 lo = r.first;
                 hi = r.second;
@@ -1495,12 +1528,16 @@ extern "C" void rs64_dpc_defer_end(int commit) {
 
             bytes += hi - lo;
             calls++;
+            g_last_submit_lo.store(lo, std::memory_order_release);
+            g_last_submit_hi.store(hi, std::memory_order_release);
             ultramodern::submit_rdp_range(lo, hi);
         }
         else {
             for (const auto& r : g_deferred_ranges) {
                 bytes += r.second - r.first;
                 calls++;
+                g_last_submit_lo.store(r.first, std::memory_order_release);
+                g_last_submit_hi.store(r.second, std::memory_order_release);
                 ultramodern::submit_rdp_range(r.first, r.second);
             }
         }

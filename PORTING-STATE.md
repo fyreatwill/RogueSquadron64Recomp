@@ -50922,3 +50922,86 @@ headers freeroll BUDGET=1200 for recovery-active fail136c re-score
 ### Next
 Consume headers freeroll: expect recov ≥1/3 + next_ok=1 + fail136c drop on
 thr11d; else independent corrupt or residual beyond walk_cap.
+
+## Session 662 — cimg-origin-desync: hangar wild SETCIMG is in-wrap garbage after length-respecting triangle desync
+
+HYPOTHESIS-ID: cimg-origin-desync
+
+### Why (iron rule 11 context)
+
+s640–s660 landed freelist writeback mitigation for killer `addr=0x1F0D74 w=1161`
+without establishing origin. NEXT.md pivoted to origin. Prior incomplete s661
+work (uncommitted) had already landed `ROGUESQ_LOG_CIMG_RAW` +
+`ROGUESQ_LOG_DL_SYNC2` and observed a hangar wild-CIMG cluster without the
+exact historical killer.
+
+### Instruments landed (this session, on top of s661 uncommitted)
+
+1. **`[cimg-raw]` dump budget split** (`lib/rt64/.../rt64_interpreter.cpp`):
+   - `OK` first 8 SETCIMGs of any width (posctrl — instrument LIVE even
+     without wilds)
+   - `WILD` first 40 non-allowlist widths (generic)
+   - `KILLER` first 64 exact historical operands only (`w==1161` OR
+     `addr==0x1F0D74`)
+   - Sticky last dpc-wrap + last submit range on every dump
+2. **`rs64_dpc_get_last_wrap` / `rs64_dpc_get_last_submit`**
+   (`src/rsp/dpc_bridge.cpp`) — sticky atomics; submit sticky updated at
+   actual `ultramodern::submit_rdp_range` sites (live + deferred merge),
+   not the per-DPC_END bump (s662 first cut false-correlated).
+3. **`[set-cimg-full] KILLER`** always-on for exact operands in
+   `RDP::setColorImage` (pairs with cimg-raw).
+4. **`ROGUESQ_LOG_DL_SYNC2`** (main.cpp, from s661 uncommitted): six-command-
+   aware SW-DL walk per `docs/F5-UCODE-REFERENCE.md`.
+
+False start: a `covers_fl` (64KB floor) KILLER heuristic false-positived 64×
+on hangar garbage (low addr + large w/siz always "covers" 0x1F3CC0) and
+aborted freerolls before the real killer window. **Removed** — exact only.
+
+### Discriminating run (s662_1, posctrl + hangar wild cluster)
+
+```
+ok=8 wild=40 killer=0(exact)  # covers_fl false 64 before tighten
+in_wrap=1 for 104/104 WILD+false-KILLER dumps
+```
+
+Posctrl LIVE same-run:
+```
+[cimg-raw] OK #1 task=0x777880 w=320 addr=0x7DD000 wrap_n=0
+```
+
+Hangar wild cluster (first dump):
+```
+[cimg-raw] WILD #1 task=0x7818C8 byteOff=0x48 w=855 addr=0x2003F9
+  wrap_n=4801802 wrap=[0x793898,seen=0x7A1788,start=0x781800] in_wrap=1
+  prev-2 op=0x00 NOOP @0x10
+  prev-1 op=0x09 w0=0x09C609C6 cmdLen=6 @0x18   ← garbage "triangle"
+  → SETCIMG at 0x18+48=0x48
+```
+
+Exact historical `w=1161`/`0x1F0D74`: **0 hits** this run (killed early by
+false KILLER before ~165s freelist-writeback window).
+
+### Hypothesis table after s662
+
+| ID | Verdict | Evidence |
+|----|---------|----------|
+| H-desync-tri (hangar wild cluster) | **SUPPORTED** (single-source parser ring) | length-respecting walker lands wild SETCIMG after consuming garbage RDP triangle op 0x09 cmdLen=6; prev ring shows repeated-pattern w0 |
+| H-desync-inline (LLE PC advance) | open for hangar cluster; SW-DL path not the freelist killer | DL_SYNC2 finds wild 0xFF-shaped SW-DL bytes (alias noise: wild_addr 0xFFFFFF43 etc.) — never exact historical operands; 0xFF overloads SETCIMG so SW-DL walk alone cannot prove intent |
+| H-legit (game emits exact killer) | unevaluable for exact operands this run | hangar wilds are garbage-shaped; exact freelist killer not reproduced |
+| H-dpcwrap-stale-tail (hangar cluster) | **SUPPORTED correlation** (in_wrap=1 104/104) | all wilds at tasks inside RDP ring start=0x781800 seen=0x7A1788; wrap_n live; mechanism (dropped-then-resubmitted vs first-pass garbage) needs submit sticky at processRDPLists entry (fixed this session for next freeroll) |
+
+### What this does NOT yet settle
+
+Whether the **exact** freelist-stomp SETCIMG (`0x1F0D74 w=1161`) is the same
+garbage-ring class. s659 shows it fires at writeback ~165s with recovery.
+Queued `s662_dpcwrap_killer_correlate` with exact-only KILLER + fixed sticky.
+
+### Product
+
+No mitigation change. Instruments + submodule-patches export. Free roll next.
+
+### Next
+Exact-killer freeroll under fixed instruments; if KILLER fires with in_wrap=1
++ garbage prev triangle → freelist killer is hangar-class garbage → A/B
+mitigation-off after filter. If KILLER fires with in_wrap=0 + clean prev chain
+→ H-legit / different path.

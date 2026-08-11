@@ -1284,18 +1284,26 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..71d6c74 100644
+index dccaa87..1b642f7 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,100 @@
+@@ -5,12 +5,108 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
 +#include <chrono>
++#include <cstdint>
 +#include <cstdlib>
  
  //#define DUMP_DISPLAY_LISTS
  
++// Sticky dpc-wrap / submit range from the main binary's dpc_bridge (s662).
++// Weak so librt64 still links standalone.
++extern "C" __attribute__((weak)) void rs64_dpc_get_last_wrap(
++    uint32_t *end, uint32_t *seen, uint32_t *start, uint32_t *n);
++extern "C" __attribute__((weak)) void rs64_dpc_get_last_submit(
++    uint32_t *lo, uint32_t *hi);
++
  namespace RT64 {
      static FILE *displayListFp = nullptr;
  
@@ -1388,7 +1396,7 @@ index dccaa87..71d6c74 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -114,6 +202,17 @@ namespace RT64 {
+@@ -114,6 +210,17 @@ namespace RT64 {
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
              opCode = (dl->w0 >> 24) & opCodeMask;
  
@@ -1406,6 +1414,101 @@ index dccaa87..71d6c74 100644
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
                  extendedFunction(state, &dl);
+@@ -143,6 +250,94 @@ namespace RT64 {
+                 else {
+                     RT64_LOG_PRINTF("DL Parser ran into an unknown RDP opCode: %u / 0x%X", opCode, opCode);
+                 }
++
++                // ROGUESQ_LOG_CIMG_RAW=1 (m3 cimg-origin-desync, s661/s662):
++                // this walker is the REAL parser and always resumes exactly
++                // cmdLength words later (commandWordLengths is a per-opcode
++                // table, not a fixed stride — see rt64_rdp.cpp getCommandLength).
++                // So a SETCIMG landing here is, by construction, at a boundary
++                // this walker reached through an unbroken length-respecting
++                // chain from dlStart. Ring-buffers every dispatched command
++                // and dumps whenever a SETCIMG (opcode 0x3F) carries a width
++                // outside {320,512,640,1024}.
++                //
++                // s661 hole: a flat 40-dump budget was exhausted by early hangar
++                // garbage (task 0x781xxx cluster), so the historical freelist
++                // killer (addr=0x1F0D74 w=1161) never logged when it fired later.
++                // s662: generic wilds keep a 40 budget (posctrl); KILLER-shaped
++                // hits (exact addr/w, or range covering freelist phys 0x1F3CC0)
++                // always dump, with sticky last dpc-wrap / last submit range.
++                {
++                    static int s_log_cimg_raw = -1;
++                    if (s_log_cimg_raw < 0) {
++                        const char *e = std::getenv("ROGUESQ_LOG_CIMG_RAW");
++                        s_log_cimg_raw = (e && e[0] && e[0] != '0') ? 1 : 0;
++                    }
++                    if (s_log_cimg_raw) {
++                        struct CimgRawRec { uint8_t op; uint32_t w0, w1; uint32_t cmdLen; uint32_t byteOff; };
++                        static CimgRawRec s_ring[8];
++                        static int s_ring_n = 0;
++                        const uint32_t byteOff = (uint32_t)((uintptr_t)dl - (uintptr_t)dlStart);
++                        if (opCode == 0x3F) {
++                            const uint16_t w = (uint16_t)((dl->w0 & 0xFFFu) + 1u);
++                            const uint32_t addr = dl->w1 & 0x00FFFFFFu;
++                            const bool wild = !(w == 320 || w == 512 || w == 640 || w == 1024);
++                            // Killer = exact historical freelist-stomp operands
++                            // only. s662 covers_fl (64KB floor from low addr)
++                            // false-positived 64× on hangar garbage and aborted
++                            // freerolls before the real w=1161/0x1F0D74 fired.
++                            const bool killer = wild &&
++                                (w == 1161u || addr == 0x1F0D74u);
++                            // Posctrl: first 8 SETCIMGs of ANY width (proves the
++                            // instrument is LIVE even if no wilds fire this run).
++                            static int s_dumps_any = 0;
++                            static int s_dumps_generic = 0;
++                            static int s_dumps_killer = 0;
++                            const bool do_any = (++s_dumps_any <= 8);
++                            const bool do_wild = wild && !killer && (++s_dumps_generic <= 40);
++                            const bool do_killer = killer && (++s_dumps_killer <= 64);
++                            if (do_any || do_wild || do_killer) {
++                                uint32_t w_end = 0, w_seen = 0, w_start = 0, w_n = 0;
++                                uint32_t s_lo = 0, s_hi = 0;
++                                if (rs64_dpc_get_last_wrap)
++                                    rs64_dpc_get_last_wrap(&w_end, &w_seen, &w_start, &w_n);
++                                if (rs64_dpc_get_last_submit)
++                                    rs64_dpc_get_last_submit(&s_lo, &s_hi);
++                                const bool in_wrap =
++                                    (w_start != 0) &&
++                                    (dlStartAdddress >= w_start) &&
++                                    (dlStartAdddress < (w_seen ? w_seen : w_end + 1));
++                                const char *tag = killer ? "KILLER"
++                                    : wild ? "WILD"
++                                    : "OK";
++                                const int idx = killer ? s_dumps_killer
++                                    : wild ? s_dumps_generic
++                                    : s_dumps_any;
++                                fprintf(stderr,
++                                    "[cimg-raw] %s #%d task=0x%X byteOff=0x%X "
++                                    "w0=0x%08X w1=0x%08X w=%u addr=0x%06X "
++                                    "wrap_n=%u wrap=[0x%06X,seen=0x%06X,start=0x%06X] "
++                                    "in_wrap=%d submit=[0x%06X,0x%06X)\n",
++                                    tag, idx,
++                                    dlStartAdddress, byteOff, dl->w0, dl->w1, w, addr,
++                                    w_n, w_end, w_seen, w_start, in_wrap ? 1 : 0,
++                                    s_lo, s_hi);
++                                const int n = (s_ring_n < 8) ? s_ring_n : 8;
++                                for (int i = n; i >= 1; --i) {
++                                    const CimgRawRec &r = s_ring[(s_ring_n - i) & 7];
++                                    fprintf(stderr,
++                                        "  [cimg-raw]   prev-%d op=0x%02X w0=0x%08X w1=0x%08X cmdLen=%u byteOff=0x%X\n",
++                                        i, r.op, r.w0, r.w1, r.cmdLen, r.byteOff);
++                                }
++                                fflush(stderr);
++                            }
++                        }
++                        // Record this command (whatever it was) into the ring
++                        // AFTER the wild-check, so "prev-1" never means itself.
++                        s_ring[s_ring_n & 7] = CimgRawRec{ opCode, dl->w0, dl->w1, cmdLength, byteOff };
++                        s_ring_n++;
++                    }
++                }
+             }
+ 
+             if (dl != nullptr) {
 diff --git a/src/hle/rt64_present_queue.cpp b/src/hle/rt64_present_queue.cpp
 index f17db9b..5087cef 100644
 --- a/src/hle/rt64_present_queue.cpp
@@ -1735,7 +1838,7 @@ index f17db9b..5087cef 100644
                      }
                  }
 diff --git a/src/hle/rt64_rdp.cpp b/src/hle/rt64_rdp.cpp
-index d1a9f4e..7025af8 100644
+index d1a9f4e..11a9595 100644
 --- a/src/hle/rt64_rdp.cpp
 +++ b/src/hle/rt64_rdp.cpp
 @@ -4,10 +4,20 @@
@@ -1914,27 +2017,34 @@ index d1a9f4e..7025af8 100644
      RDP::RDP(State *state) : state(state) {
          memset(TMEM, 0, sizeof(TMEM));
          crashed = false;
-@@ -268,6 +419,27 @@ namespace RT64 {
+@@ -268,6 +419,34 @@ namespace RT64 {
  #       ifdef LOG_COLOR_DEPTH_IMAGE_METHODS
              RT64_LOG_PRINTF("RDP::setColorImage(fmt %u, siz %u, width %u, address 0x%08X)", fmt, siz, width, address);
  #       endif
 +            // ROGUESQ_LOG_CIMG=1 — log every NEW (addr,width,siz,fmt) so the
 +            // 1024-wide tiled phase's colour-image geometry is visible. The
 +            // dpc_bridge [set-cimg] sampler only prints the address.
++            // s662: always log exact historical freelist-stomp operands
++            // (w=1161 / addr=0x1F0D74) so origin is not lost to the generic
++            // rate limit — pairs with [cimg-raw] KILLER dumps. covers_fl was
++            // tried and false-positived hangar garbage (do not restore).
 +            {
 +                static const bool s_log = []{
 +                    const char *e = std::getenv("ROGUESQ_LOG_CIMG");
 +                    return e && *e && *e != '0';
 +                }();
-+                if (s_log) {
++                const uint32_t a = newAddress & 0xFFFFFFu;
++                const bool killer = (width == 1161u) || (a == 0x1F0D74u);
++                if (s_log || killer) {
 +                    static std::atomic<int> n{0};
 +                    const int i = ++n;
-+                    if (i <= 40 || (i % 200) == 0 || width >= 1024 ||
++                    if (killer || i <= 40 || (i % 200) == 0 || width >= 1024 ||
 +                        (newAddress & 0xFFF000) == 0x790000) {
 +                        fprintf(stderr,
-+                            "[set-cimg-full #%d] addr=0x%06X w=%u siz=%u fmt=%u\n",
-+                            i, newAddress & 0xFFFFFF, (unsigned)width,
-+                            (unsigned)siz, (unsigned)fmt);
++                            "[set-cimg-full #%d]%s addr=0x%06X w=%u siz=%u fmt=%u dl=0x%X\n",
++                            i, killer ? " KILLER" : "",
++                            a, (unsigned)width, (unsigned)siz, (unsigned)fmt,
++                            state ? state->displayListAddress : 0u);
 +                        fflush(stderr);
 +                    }
 +                }
@@ -1942,7 +2052,7 @@ index d1a9f4e..7025af8 100644
          }
      }
  
-@@ -293,6 +465,67 @@ namespace RT64 {
+@@ -293,6 +472,67 @@ namespace RT64 {
  #   ifdef LOG_TEXTURE_IMAGE_METHODS
          RT64_LOG_PRINTF("RDP::setTextureImage(fmt %u, siz %u, width %u, address 0x%08X)", fmt, siz, width, address);
  #   endif
@@ -2010,7 +2120,7 @@ index d1a9f4e..7025af8 100644
      }
  
      void RDP::setCombine(uint64_t combine) {
-@@ -324,6 +557,46 @@ namespace RT64 {
+@@ -324,6 +564,46 @@ namespace RT64 {
  #ifdef LOG_TILE_METHODS
          RT64_LOG_PRINTF("RDP::setTile(tile %u, fmt %u, siz %u, line %u, tmem %u, palette %u, cmt %u, cms %u, maskt %u, masks %u, shiftt %u, shifts %u)", tile, fmt, siz, line, tmem, palette, cmt, cms, maskt, masks, shiftt, shifts);
  #endif
@@ -2057,7 +2167,7 @@ index d1a9f4e..7025af8 100644
  
          assert(tile < RDP_TILES);
  
-@@ -340,6 +613,11 @@ namespace RT64 {
+@@ -340,6 +620,11 @@ namespace RT64 {
          t.shifts = shifts;
          t.shiftt = shiftt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -2069,7 +2179,7 @@ index d1a9f4e..7025af8 100644
      }
  
      void RDP::setTileSize(uint8_t tile, uint16_t uls, uint16_t ult, uint16_t lrs, uint16_t lrt) {
-@@ -354,6 +632,10 @@ namespace RT64 {
+@@ -354,6 +639,10 @@ namespace RT64 {
          t.lrs = lrs;
          t.lrt = lrt;
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -2080,7 +2190,7 @@ index d1a9f4e..7025af8 100644
      }
  
      void RDP::clearTileReplacementHash(uint8_t tile) {
-@@ -379,22 +661,26 @@ namespace RT64 {
+@@ -379,22 +668,26 @@ namespace RT64 {
              offsetMask = 0x7;
          }
  
@@ -2116,7 +2226,7 @@ index d1a9f4e..7025af8 100644
              }
          }
      }
-@@ -404,7 +690,15 @@ namespace RT64 {
+@@ -404,7 +697,15 @@ namespace RT64 {
          uint32_t tmemStride, uint32_t wordsPerRow, uint32_t rowCount, uint32_t dxtIncrement = 0)
      {
          assert((!BLOCK || (rowCount == 1)) && "Load block must behave as if it only loads one row of data.");
@@ -2133,7 +2243,7 @@ index d1a9f4e..7025af8 100644
          const uint32_t DXTSwap = 0x800;
          uint32_t textureAddress, tmemAddress, wordCount, tmemMask, tmemAdvance;
          if constexpr (RGBA32) {
-@@ -540,12 +834,207 @@ namespace RT64 {
+@@ -540,12 +841,207 @@ namespace RT64 {
              // Load into TMEM.
              uint8_t *TMEM8 = reinterpret_cast<uint8_t *>(TMEM);
              const uint8_t *RDRAM = state->RDRAM;
@@ -2341,7 +2451,7 @@ index d1a9f4e..7025af8 100644
          }
      }
  
-@@ -722,6 +1211,117 @@ namespace RT64 {
+@@ -722,6 +1218,117 @@ namespace RT64 {
  #ifdef LOG_LOAD_METHODS
          RT64_LOG_PRINTF("RDP::loadBlock(tile %u, uls %u, ult %u, lrs %u, dxt %u)", tile, uls, ult, lrs, dxt);
  #endif
@@ -2459,7 +2569,7 @@ index d1a9f4e..7025af8 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -775,12 +1375,82 @@ namespace RT64 {
+@@ -775,12 +1382,82 @@ namespace RT64 {
          workload.drawData.loadOperations.emplace_back(operation);
  
          state->updateDrawStatusAttribute(DrawAttribute::Texture);
@@ -2542,7 +2652,7 @@ index d1a9f4e..7025af8 100644
          assert(tile < RDP_TILES);
          auto &t = tiles[tile];
          t.uls = uls;
-@@ -912,6 +1582,18 @@ namespace RT64 {
+@@ -912,6 +1589,18 @@ namespace RT64 {
      }
  
      void RDP::setFogColor(uint32_t color) {
@@ -2561,7 +2671,7 @@ index d1a9f4e..7025af8 100644
          hlslpp::float4 &fogColor = fogColorStack[fogColorStackSize - 1];
          fogColor.x = ((color >> 24) & 0xFF) / 255.0f;
          fogColor.y = ((color >> 16) & 0xFF) / 255.0f;
-@@ -935,6 +1617,23 @@ namespace RT64 {
+@@ -935,6 +1624,23 @@ namespace RT64 {
      }
  
      void RDP::setFillColor(uint32_t color) {
@@ -2585,7 +2695,7 @@ index d1a9f4e..7025af8 100644
          fillColorStack[fillColorStackSize - 1] = color;
          state->updateDrawStatusAttribute(DrawAttribute::FillColor);
      }
-@@ -1049,6 +1748,44 @@ namespace RT64 {
+@@ -1049,6 +1755,44 @@ namespace RT64 {
              lry |= 3;
          }
  
@@ -2630,7 +2740,7 @@ index d1a9f4e..7025af8 100644
          drawRect(ulx, uly, lrx, lry, 0, 0, 0, 0, false, extAlignment);
      }
  
-@@ -1132,6 +1869,828 @@ namespace RT64 {
+@@ -1132,6 +1876,828 @@ namespace RT64 {
          triColorFloats.insert(triColorFloats.end(), col, col + triCount * ColFloatsPerTri);
          drawCall.triangleCount += triCount;
  
@@ -3459,7 +3569,7 @@ index d1a9f4e..7025af8 100644
          const FixedRect &scissorRect = state->rdp->scissorRectStack[scissorStackSize - 1];
          if (!scissorRect.isNull()) {
              fbPair.scissorRect.merge(scissorRect);
-@@ -1319,6 +2878,40 @@ namespace RT64 {
+@@ -1319,6 +2885,40 @@ namespace RT64 {
          RT64_LOG_PRINTF("RDP::drawTexRect(ulx %d, uly %d, lrx %d, lry %d, tile %u, uls %d, ult %d, dsdx %d, dtdy %d, flip %u)", ulx, uly, lrx, lry, tile, uls, ult, dsdx, dtdy, flip);
  #   endif
  

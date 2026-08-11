@@ -651,6 +651,16 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             const char* e = std::getenv("ROGUESQ_LOG_DL_SYNC");
             s_dl_sync = (e && *e && *e != '0') ? 1 : 0;
         }
+        // ROGUESQ_LOG_DL_SYNC2 (m3 cimg-origin-desync, s661): independent of
+        // LOG_DL_SYNC — read here (not just at the walker call site) so it
+        // can gate do_probe/the outer sampling condition on its own; a probe
+        // wired only into LOG_DL_SYNC's do_probe silently never fires when
+        // only LOG_DL_SYNC2 is set.
+        static int s_dl_sync2 = -1;
+        if (s_dl_sync2 < 0) {
+            const char* e = std::getenv("ROGUESQ_LOG_DL_SYNC2");
+            s_dl_sync2 = (e && *e && *e != '0') ? 1 : 0;
+        }
         // ROGUESQ_LOG_FS_SLOT densifies late dual-task dumps (every task
         // after s_n>=5200) so the stop edge is not lost to rate limits.
         static int s_fs_slot = -1;
@@ -658,7 +668,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             const char* e = std::getenv("ROGUESQ_LOG_FS_SLOT");
             s_fs_slot = (e && *e && *e != '0') ? 1 : 0;
         }
-        if (s_log || s_dl_sync || s_fs_slot) {
+        if (s_log || s_dl_sync || s_dl_sync2 || s_fs_slot) {
             static int s_n = 0;
             ++s_n;
             const bool sample_runner = s_log && (s_log_all || s_n <= 8 || (s_n & 31) == 0);
@@ -673,7 +683,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             // hist may be stale; force drain whenever we might probe.
             // Actual syncs come from drained hist below.
             const bool dense_slot = s_fs_slot && s_n >= 5200;
-            bool force_for_probe = (s_dl_sync || dense_slot) && (
+            bool force_for_probe = (s_dl_sync || s_dl_sync2 || dense_slot) && (
                 s_n <= 20 || consec_zero < 120 ||
                 (consec_zero > 0 && (consec_zero % 50) == 0) ||
                 n_with_sync_probed < 40 ||
@@ -703,7 +713,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                             tris, hist[0x24] + hist[0x25], hist[0x36],
                             syncs, hist[0x3F], hist[0x3E]);
                 }
-                const bool do_probe = (s_dl_sync || dense_slot) && (
+                const bool do_probe = (s_dl_sync || s_dl_sync2 || dense_slot) && (
                     s_n <= 20 ||
                     (syncs > 0 && n_with_sync_probed < 40) ||
                     (syncs > 0 && s_n >= 4000 && late_sync_probed < 30) ||
@@ -821,6 +831,103 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                             if (op == 0xB8) lin_b8++;
                             addr = (addr + 8) & 0x7FFFFF;
                         }
+                    }
+                    // ROGUESQ_LOG_DL_SYNC2=1 (m3 cimg-origin-desync, s661):
+                    // six-command-aware walk of the SAME guest SW DL, honouring
+                    // the inline-data advances from docs/F5-UCODE-REFERENCE.md
+                    // (MoveMem 0x03 +16, TriGen 0x05 +32, Tri 0xB4/0xBF +16 iff
+                    // w0&2, TexrectGen 0xBD +16, SetOtherMode_*_EX 0xB3/0xBE +8)
+                    // instead of walk_tree's/the linear scan's fixed 8-byte
+                    // step. Discriminates H-legit from H-desync-inline: if this
+                    // walk reaches a SETCIMG-shaped (op 0xFF) command whose
+                    // operands match the observed wild CIMG (addr=0x1F0D74
+                    // w=1161), the SW DL genuinely contains it under a length
+                    // model that respects every documented inline-data command
+                    // — not merely as an artifact of a fixed-stride walk. If it
+                    // never does, the fixed-stride walkers' apparent
+                    // presence/absence of SETCIMG proves nothing either way.
+                    // (s_dl_sync2 itself is read once, earlier in this
+                    // function, so it can also gate do_probe/force_for_probe.)
+                    if (s_dl_sync2 && do_probe) {
+                        uint32_t addr2 = dl_ptr & 0x7FFFFF;
+                        uint32_t stack2[32];
+                        int sp2 = 0;
+                        int jumps_left2 = 64;
+                        uint32_t cmds2 = 0, jumps2 = 0, b8_2 = 0;
+                        uint32_t setcimg_n = 0, setcimg_wild = 0;
+                        uint32_t wild_addr = 0, wild_w = 0;
+                        char end2[8] = {0};
+                        for (int i = 0; i < 8192 && addr2 + 8u <= 0x800000u; ++i) {
+                            uint8_t op = rbyte(addr2);
+                            uint32_t w0 = ((uint32_t)rbyte(addr2) << 24) |
+                                          ((uint32_t)rbyte(addr2 + 1) << 16) |
+                                          ((uint32_t)rbyte(addr2 + 2) <<  8) |
+                                          ((uint32_t)rbyte(addr2 + 3));
+                            cmds2++;
+                            if (op == 0xFF) {
+                                setcimg_n++;
+                                const uint16_t w = (uint16_t)((w0 & 0xFFFu) + 1u);
+                                if (!(w == 320 || w == 512 || w == 640 || w == 1024)) {
+                                    setcimg_wild++;
+                                    if (wild_w == 0) {
+                                        wild_w = w;
+                                        wild_addr = ((uint32_t)rbyte(addr2 + 4) << 24) |
+                                                    ((uint32_t)rbyte(addr2 + 5) << 16) |
+                                                    ((uint32_t)rbyte(addr2 + 6) <<  8) |
+                                                    ((uint32_t)rbyte(addr2 + 7));
+                                    }
+                                }
+                            }
+                            if (op == 0xB8 || op == 0xDF) {
+                                b8_2++;
+                                if (sp2 > 0) { addr2 = stack2[--sp2]; continue; }
+                                snprintf(end2, sizeof(end2), "%s", "endB8");
+                                break;
+                            }
+                            bool is_dl2 = false;
+                            uint8_t branch2 = 0;
+                            if (op == 0x06) {
+                                if ((w0 & 0x00FEFFFFu) == 0) {
+                                    is_dl2 = true;
+                                    branch2 = (uint8_t)((w0 >> 16) & 1);
+                                }
+                            } else if (op == 0xDE) {
+                                is_dl2 = true;
+                                branch2 = rbyte(addr2 + 1);
+                            }
+                            if (is_dl2 && jumps_left2 > 0) {
+                                uint32_t w1 = ((uint32_t)rbyte(addr2 + 4) << 24) |
+                                              ((uint32_t)rbyte(addr2 + 5) << 16) |
+                                              ((uint32_t)rbyte(addr2 + 6) <<  8) |
+                                              ((uint32_t)rbyte(addr2 + 7));
+                                uint32_t target2 = w1 & 0x7FFFFF;
+                                if (branch2 == 0 && sp2 < 32)
+                                    stack2[sp2++] = (addr2 + 8) & 0x7FFFFF;
+                                addr2 = target2;
+                                jumps_left2--;
+                                jumps2++;
+                                continue;
+                            }
+                            uint32_t extra = 0;
+                            switch (op) {
+                                case 0x03: extra = 16; break; // MoveMem
+                                case 0x05: extra = 32; break; // TriGen
+                                case 0xB4: case 0xBF: extra = (w0 & 2) ? 16 : 0; break; // Tri
+                                case 0xBD: extra = 16; break; // TexrectGen
+                                case 0xB3: case 0xBE: extra = 8; break; // SetOtherMode_*_EX
+                                default: break;
+                            }
+                            addr2 = (addr2 + 8 + extra) & 0x7FFFFF;
+                        }
+                        if (!end2[0]) {
+                            snprintf(end2, sizeof(end2), "%s", addr2 + 8u > 0x800000u ? "oob" : "lim");
+                        }
+                        fprintf(stderr,
+                                "[dl-sync-probe2] task=#%d cmds=%u jumps=%u b8=%u end=%s "
+                                "setcimg_n=%u setcimg_wild=%u wild_addr=0x%X wild_w=%u dl_ptr=0x%08X\n",
+                                s_n, cmds2, jumps2, b8_2, end2,
+                                setcimg_n, setcimg_wild, wild_addr, wild_w, dl_ptr);
+                        fflush(stderr);
                     }
                     const uint32_t fs_addr = rs64_dpc_get_last_fullsync_addr();
                     uint8_t fs_b0 = 0xFF;
