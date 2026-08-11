@@ -51074,3 +51074,89 @@ with freelist restore OFF. Expect: KILLER=0, freelist to_zero freelist-shaped=0,
 posctrl OK still fires, hangar still renders.
 
 Log: `scratch/s73_post_a_scene/s662_2_20260810231058/run.log`
+
+## Session 664 — wrap-tail submit filter: Outcome B (false-drop; too coarse)
+
+### Work unit
+Landed env-gated `ROGUESQ_DROP_WRAP_RDP=1` (default OFF) in
+`src/rsp/dpc_bridge.cpp`: at live + deferred `submit_rdp_range` commit sites,
+if `submit_lo ∈ [last_wrap_start, last_wrap_seen)` log `[dpc-wrap-drop]` and
+skip. Wrap sticky still updates on every wrap. Banner
+`[dpc] DROP_WRAP_RDP=1 ...` on first enable.
+
+A/B/C freeroll (same binary, sequential arms, force6/inject hangar path):
+- **A:** filter ON + product restore ON
+- **B:** filter ON + `ROGUESQ_FL_HDR_RESTORE=0`
+- **C:** filter OFF + `ROGUESQ_FL_HDR_RESTORE=0` (control)
+
+### Hypotheses
+
+| ID | Claim | Result |
+|----|-------|--------|
+| H-wrap-filter-kills-killer | Filter zeroes KILLER + freelist stomp with restore OFF | **UNEVALUABLE** — filter never reached hangar/killer window |
+| H-wrap-filter-false-drop | Filter drops legitimate post-wrap ring reuse (cinematic dies, hangar black) | **CONFIRMED dual-source (A+B)** |
+| H-filter-needs-byte-granularity | Task-address in_wrap sticky is too coarse | **SUPPORTED** (same mechanism as false-drop) |
+
+### Discriminating evidence
+
+**A** (`s664_A_filter_restore_1_*`): banner=1; `[dpc-wrap-drop]` counter to
+#29696 (rate-limited log lines 45); **all drops against single wrap start
+`0x4B7800`** with seen growing to ~`0x4D3598`. OK×8 early boot LIVE
+(tasks at `0x777880` outside that ring). **wild=0, vi1024=0, force6=0,
+pngs=0**. SIGBUS mid-cinematic (`cinematicLoopBody` ←
+`traverseSceneGraphRecursive` / `submitSceneNodeRender`). ~40s death.
+
+**B** (`s664_B_filter_norestore_1_*`): identical shape to A (banner, ~30k
+drops, OK×8, wild=0, cinematic SIGBUS). Restore OFF irrelevant — never
+reached freelist stomp window.
+
+**C** (`s664_C_nofilter_norestore_1_*`, posctrl control): drop=0; OK×8
+wild=40 **killer=1** exact `task=0x768D40 w=1161 addr=0x1F0D74 in_wrap=1
+submit=[0x768D40,0x7699D0)`; `ALLOW_WILD_FL` + `HIT_WRITE` (restore=0);
+immediate freelist-shaped `to_zero prev_f=0x2 prev_sz=0x60` @ t=168799ms;
+zero_node follow-on. Reconfirms s663 ORIGIN under restore OFF.
+
+### Mechanism of false-drop
+
+Sticky wrap `[start,seen)` never expires. After ring `0x4B7800` wraps once,
+every subsequent **legitimate** rewrite of that ring has `submit_lo` still
+inside sticky and is dropped forever (~30k drops). Hangar/killer rings
+(`0x781800` / `0x766000`) never reached because cinematic already starved.
+
+This is the same address space the game *reuses* after wrap — not a brief
+"stale tail" window. Coarse task-lo ∈ sticky cannot distinguish garbage
+decode from legitimate re-emit.
+
+### ORIGIN (unchanged from s663)
+
+```
+ORIGIN: freelist stomp host writer = RT64 copyNativeToRAM color writeback of
+SETCIMG addr=0x1F0D74 w=1161 (covers freelist phys 0x1F3CC0). Operands are
+NOT legitimate — length-respecting RDP walk over just-wrapped DPC ring.
+Filter at submit_lo∈sticky is too coarse; keep product freelist restore.
+```
+
+### Ruled out
+
+- Productizing `ROGUESQ_DROP_WRAP_RDP` as default-ON task-address filter.
+- Expecting freelist-restore retirement from this filter shape.
+
+### Product
+
+Keep `ROGUESQ_DROP_WRAP_RDP` default **OFF** (debug/experiment only).
+Product freelist multi-header restore remains defense-in-depth.
+
+### Next (-417)
+
+Narrower root fix candidates (rank):
+1. **Garbage-prev SETCIMG drop** inside processRDPLists / setColorImage:
+   reject wild SETCIMG when prev ring is non-monotonic garbage (zeros /
+   op 0x3F / non-allowlist) — targets decode site, not whole submit.
+2. **Byte-offset desync**: only drop the *tail past last consumed high-water
+   that was never rewritten* — requires tracking which ring bytes were
+   re-written post-wrap (harder).
+3. Keep freelist restore; treat wrap-stale as permanent class residual until
+   (1) lands.
+
+Logs: `scratch/s73_post_a_scene/s664_{A,B,C}_*/run.log`
+Recipe: `scratch/agent/s664_drop_wrap_rdp_ab.sh`

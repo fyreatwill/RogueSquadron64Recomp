@@ -161,6 +161,50 @@ extern "C" void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi) {
     if (hi) *hi = g_last_submit_hi.load(std::memory_order_acquire);
 }
 
+// ROGUESQ_DROP_WRAP_RDP (s664, default OFF): drop RDP submits whose
+// submit_lo sits inside the last dpc-wrap sticky [start, seen). Candidate
+// root fix for in-wrap garbage SETCIMG (exact freelist killer + hangar
+// wilds; ORIGIN s663). Wrap sticky still updates on every wrap event even
+// when this filter is dropping submits.
+static bool drop_wrap_rdp_enabled() {
+    static const bool v = []{
+        const char *e = std::getenv("ROGUESQ_DROP_WRAP_RDP");
+        const bool on = e && *e && *e != '0';
+        if (on) {
+            fprintf(stderr,
+                "[dpc] DROP_WRAP_RDP=1 (skip submits with lo in last wrap "
+                "sticky [start,seen))\n");
+            fflush(stderr);
+        }
+        return on;
+    }();
+    return v;
+}
+
+static bool should_drop_wrap_rdp(uint32_t submit_lo, uint32_t submit_hi) {
+    if (!drop_wrap_rdp_enabled()) {
+        return false;
+    }
+    const uint32_t start = g_last_wrap_start.load(std::memory_order_acquire);
+    const uint32_t seen = g_last_wrap_seen.load(std::memory_order_acquire);
+    if (start == 0 || seen <= start) {
+        return false;
+    }
+    if (submit_lo < start || submit_lo >= seen) {
+        return false;
+    }
+    static std::atomic<uint64_t> s_n{0};
+    const uint64_t n = ++s_n;
+    if (n <= 16 || (n % 1024) == 0) {
+        fprintf(stderr,
+            "[dpc-wrap-drop] #%llu lo=0x%06X hi=0x%06X "
+            "wrap=[start=0x%06X,seen=0x%06X)\n",
+            (unsigned long long)n, submit_lo, submit_hi, start, seen);
+        fflush(stderr);
+    }
+    return true;
+}
+
 // Per-task GFX opcode histogram (high byte of DL command word). Counted
 // directly from the factor5_ucode dispatch loop — a single increment per
 // command, no function call. Same single-thread-only constraint as above.
@@ -1480,6 +1524,10 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         return;
     }
 
+    if (should_drop_wrap_rdp(submit_lo, submit_hi)) {
+        return;
+    }
+
     g_last_submit_lo.store(submit_lo, std::memory_order_release);
     g_last_submit_hi.store(submit_hi, std::memory_order_release);
     ultramodern::submit_rdp_range(submit_lo, submit_hi);
@@ -1517,23 +1565,30 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                     continue;
                 }
 
+                if (!should_drop_wrap_rdp(lo, hi)) {
+                    bytes += hi - lo;
+                    calls++;
+                    g_last_submit_lo.store(lo, std::memory_order_release);
+                    g_last_submit_hi.store(hi, std::memory_order_release);
+                    ultramodern::submit_rdp_range(lo, hi);
+                }
+                lo = r.first;
+                hi = r.second;
+            }
+
+            if (!should_drop_wrap_rdp(lo, hi)) {
                 bytes += hi - lo;
                 calls++;
                 g_last_submit_lo.store(lo, std::memory_order_release);
                 g_last_submit_hi.store(hi, std::memory_order_release);
                 ultramodern::submit_rdp_range(lo, hi);
-                lo = r.first;
-                hi = r.second;
             }
-
-            bytes += hi - lo;
-            calls++;
-            g_last_submit_lo.store(lo, std::memory_order_release);
-            g_last_submit_hi.store(hi, std::memory_order_release);
-            ultramodern::submit_rdp_range(lo, hi);
         }
         else {
             for (const auto& r : g_deferred_ranges) {
+                if (should_drop_wrap_rdp(r.first, r.second)) {
+                    continue;
+                }
                 bytes += r.second - r.first;
                 calls++;
                 g_last_submit_lo.store(r.first, std::memory_order_release);
