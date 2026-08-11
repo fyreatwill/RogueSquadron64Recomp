@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s668)
+## Current truth (established by session 295; unchanged, reviewed through s669)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -130,7 +130,15 @@ Metal shader rebuilds need full Xcode on PATH:
   thr12 create (ltexmg=0) → **section 2** mission overlay → thr12
   recreate; crash=0 packTlut=0 both holds. s667 thr11d=0 recharacterized
   as ship-n3-miss (holds never reached B8 gate), not headers regression.
-  Residual: **post-sec2** mission progress (-420), not thr11d rate.
+  **s669 offline post-sec2 SCORE (s668 att2+att3 dual-source):**
+  **H-sec2-mission-live CONFIRMED** — ~195–200s outdoor VI 512
+  origins 0x620000↔0x690000 continuous present FIRE swap pairs=4,
+  ~5900 GFX tasks tris=42; thr12 id=13 long-lived then menu sec3 return.
+  **H-thr12-churn-normal CONFIRMED** (not immediate death).
+  **H-postsec2-fs-plateau CONFIRMED** — thr13 life rdpFs delta 0/+2 while
+  synth +~5864–5892; runner syncs=0 ~5866–5894 vs syncs>0 only 3;
+  fs_b0=E9=6 vs F7~11.7k. packTlut=0 crash=0. Residual → -421
+  (post-sec2 FS plateau / menu return / packTlut never).
 - Default-ON, no longer worth naming: `ROGUESQ_VI_FOLLOW_DRAW=3` (s23), `ROGUESQ_SHADE_WRAP=1`
   per-pixel (s24→s26), `ROGUESQ_FIX_ZERO_SHADE` (s20), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15),
   `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough + forceAdvance +
@@ -229,27 +237,25 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s668**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s669**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
-  `loadLevelTextureCache`) → **sec2 LIVE** when recovery `0x76B768` fires under product
-  multi-header restore. **s668 dual-source:** thr11d_new 2/2 recovery-full + ship n=3
-  + B8 + **ok136c** (0x136C malloc succeeds) + thr12 create (ltexmg=0) + section 2
-  mission overlay; crash=0 both HOLDs. **s667** closed fail136c residual
-  (H-headers-fail136); thr11d 0/2 was ship-n3-miss not headers regression.
-  **s666 drop productize REJECTED**. Residual rank: (1) **post-sec2** mission
-  progress (-420), (2) thr12 post-sec2 churn / packTlut (-373), (3) B8 co-gate
-  -393 (still required for thr11d), (4) -387 **5×**. Do **not** productize
-  DROP_GARBAGE_CIMG.
+  `loadLevelTextureCache`) → **sec2 LIVE** under product multi-header restore.
+  **s668 dual-source:** thr11d→ok136c→thr12→sec2. **s669 dual-source offline:**
+  post-sec2 outdoor content LIVE ~195–200s (VI 512 0x620000/0x690000, present
+  swap FIRE) then **menu sec3 return**; thr12 long-lived; **rdpFs plateau**
+  (syncs=0 / E9 starved) entire thr13 window; packTlut=0. Residual rank:
+  (1) **post-sec2 FS plateau / menu return / packTlut** (-421/-373), (2) B8
+  co-gate -393, (3) -387 **5×**. Do **not** productize DROP_GARBAGE_CIMG;
+  do **not** re-soak thr11d rate (-419 CLOSED).
 - Co-gates: recovery (-374/-413/-414/-418), mat3inv (-375), ship (-376/-377/-392/-393),
   class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll (-382..-384), thr12 path
-  LIVE under headers (-385 reframed; null-malloc dissolved when freelist intact),
-  sinfApprox (-386 1×), do_rom_read (-387 **5×**). thr11d metric = post-hsel
-  destroy of `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`,
-  `FORCE_CASE6_START`, `FS_PIPE_INJECT`, `ALLOW_WILD_W`, `FL_HDR_HARD_SKIP`,
-  `FL_HDR_RESTORE=0`, `FL_RESTORE_MODE=body`, `DROP_WRAP_RDP`,
-  `DROP_GARBAGE_CIMG`. Product ON: freelist multi-header restore. Diagnostics:
-  `ROGUESQ_LOG_CIMG_RAW`, `ROGUESQ_LOG_DL_SYNC2`. Post-sec2: packTlut (-373), -420.
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-420; Sessions 577-668.
+  LIVE under headers (-385 dissolved), sinfApprox (-386 1×), do_rom_read
+  (-387 **5×**). thr11d metric = post-hsel destroy of `0x8006F2CC` only (s618).
+  Tools default OFF: `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`, `FS_PIPE_INJECT`,
+  `ALLOW_WILD_W`, `FL_HDR_HARD_SKIP`, `FL_HDR_RESTORE=0`, `FL_RESTORE_MODE=body`,
+  `DROP_WRAP_RDP`, `DROP_GARBAGE_CIMG`. Product ON: freelist multi-header restore.
+  Diagnostics: `ROGUESQ_LOG_CIMG_RAW`, `ROGUESQ_LOG_DL_SYNC2`.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-421; Sessions 577-669.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -267,17 +273,26 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -420. The next NEW item takes -421.
+a range pointer. Highest allocated so far: -421. The next NEW item takes -422.
 
-### Active M3 pipeline (s577–s668) — open residuals only
+### Active M3 pipeline (s577–s669) — open residuals only
 
--420. **(s668→) post-sec2 mission progress under product headers — OPEN.**
-    s668 dual-source recovery-full HOLDs reach thr11d → ok136c → thr12 →
-    **section 2** (mission overlay rom=0x000A5D30) with crash=0 packTlut=0.
-    thr12 churns (id=12 destroy at sec2, id=13 recreate then destroy).
-    Next: one freeroll scoring post-sec2 VI/content/phase + thr12 lifetime
-    + whether packTlut (-373) or other mission loaders fire. Do not re-soak
-    thr11d rate. Full: Session 668.
+-421. **(s669→) post-sec2 FULL_SYNC plateau + menu return without packTlut — OPEN.**
+    s669 offline dual-source (s668 att2+att3): post-sec2 outdoor content LIVE
+    ~195–200s (VI 512 0x620000↔0x690000, present FIRE swap, ~5900 tasks
+    tris=42) then thr12 destroy → **menu sec3** return; packTlut=0 crash=0.
+    **H-postsec2-fs-plateau CONFIRMED:** thr13 life rdpFs delta 0/+2 while
+    synth +~5.9k; runner syncs=0 ~5866–5894 vs syncs>0=3; E9=6 vs F7~11.7k.
+    Same family as -349 but mission-overlay phase (not post-exit hangar).
+    Next: why mission-phase DLs lack E9 / whether inject covers this shape /
+    what guest path tears thr12→sec3 without HMT. Scorer:
+    `scratch/agent/s669_postsec2_offline_score.py`. Full: Session 669.
+
+-420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
+    Outcome A (content advances; residual → -421).**
+    s668: thr11d→ok136c→thr12→sec2 LIVE. s669 offline: H-sec2-mission-live +
+    H-thr12-churn-normal CONFIRMED; packTlut still 0; FS plateau residual
+    -421. Full: Sessions 668-669.
 
 -419. **(s667→s668) thr11d multi-hold under product headers — CLOSED LIVE
     (Outcome A).**
@@ -302,11 +317,12 @@ a range pointer. Highest allocated so far: -420. The next NEW item takes -421.
     killer are in-wrap garbage; class CLOSED; root fix attempted -416
     → -417.** Full: Sessions 662-663.
 
--414. **(s660→s668) freelist multi-header restore LIVE-VERIFIED; H-body-stomp
+-414. **(s660→s669) freelist multi-header restore LIVE-VERIFIED; H-body-stomp
     STRUCTURAL; fail136c CLOSED (H-headers-fail136); thr11d CLOSED LIVE
-    (-419); pipeline thr11d→thr12→sec2 LIVE → residual -420.**
+    (-419); pipeline thr11d→thr12→sec2 LIVE; post-sec2 outdoor LIVE (-420
+    CLOSED) → residual -421 (FS plateau / menu return).**
     s660 product mode=headers. s667 fail136c=0. s668 thr11d 2/2 + ok136c +
-    sec2 dual-source. Full: Sessions 660-668.
+    sec2 dual-source. s669 post-sec2 scored. Full: Sessions 660-669.
 
 -413. **(s659→s660) product freelist-header restore LIVE; thr11d 3/3;
     fail136c residual closed into -414 (H-body-stomp + headers product).**
@@ -693,9 +709,10 @@ a range pointer. Highest allocated so far: -420. The next NEW item takes -421.
     Outcome A LIVE (-417); s666 productize drop REJECTED (-418 CLOSED)
     — H-drop-suppresses-recov; product freelist path = restore;
     s667 H-headers-fail136; **s668 thr11d 2/2 + thr12 + sec2 LIVE
-    under product headers** (ok136c; -419 CLOSED; -385 dissolved;
-    residual → -420 post-sec2).
-    Active residuals: -420 / -414..-373 / -361 / -379. Tools still
+    under product headers** (ok136c; -419 CLOSED; -385 dissolved);
+    **s669 post-sec2 outdoor LIVE + rdpFs plateau** (-420 CLOSED
+    Outcome A; residual → -421).
+    Active residuals: -421 / -414..-373 / -361 / -379. Tools still
     default OFF for DROP_*; product ON for multi-header restore.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.

@@ -4,55 +4,60 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 
 ## Single work unit
 
-**Post-sec2 mission progress under product multi-header restore** (item -420).
+**Post-sec2 FULL_SYNC plateau / menu return** (item -421).
 
-s668 CLOSED thr11d multi-hold LIVE and dissolved -385 null-malloc under
-headers: thr11d → ok136c → thr12 → **section 2** dual-source, crash=0,
-packTlut=0. thr12 churns (id=12 destroy at sec2 boundary, id=13 recreate
-then destroy by HOLD end). Do **not** re-soak thr11d rate.
+s669 CLOSED -420 Outcome A: post-sec2 outdoor content LIVE ~195–200s
+(VI 512 0x620000↔0x690000, present swap FIRE) then thr12→menu sec3;
+packTlut=0. **H-postsec2-fs-plateau CONFIRMED** dual-source (rdpFs
+frozen, syncs=0 ~5866–5894, E9 starved). Do not re-soak thr11d or
+re-score post-sec2 presence.
 
 ## Hypotheses
 
 | ID | Claim | Killed if |
 |----|-------|-----------|
-| H-sec2-mission-live | after sec2, mission cutscene/gameplay VI+content advance within HOLD | sec2 fires but VI/content stuck at pre-mission menu profile for full HOLD |
-| H-thr12-churn-normal | thr12 destroy at sec2 is expected service-worker teardown, not a stall | thr12 dies and no replacement stays live while sec2 content should run |
-| H-packtlut-next | packTlut / HMT load (-373) is the next post-sec2 loader and should fire | sec2 holds with 0 packTlut and no other mission-load markers |
+| H-mission-dl-no-e9 | mission-phase DLs legitimately lack E9 FULL_SYNC (game emits none) | oracle/retail or DL dump shows E9 in same outdoor window |
+| H-inject-misses-mission | `FS_PIPE_INJECT` only covers hangar post-exit shape; mission outdoor tasks never get inject | inject counters fire for thr13 tasks OR arming inject for this phase moves rdpFs |
+| H-menu-return-fs | rdpFs plateau causes state machine to abort mission → sec3 | rdpFs advances and sec3 return disappears / packTlut fires |
+| H-menu-return-input | start_only HOLD never presses Start after cutscene; menu return is input-starved abort | extra post-sec2 Start/A keeps sec2 + reaches packTlut |
 
-## Discriminating measurements (ONE freeroll, product defaults)
+## Discriminating measurement (ONE iteration, batch arms)
 
-1. Product defaults only (headers restore ON, drop OFF). Same force6+inject
-   engage path as s668.
-2. BUDGET≥1200, target ≥2 recovery-full HOLDs that reach sec2 (s668 rate ~2/3).
-3. Per sec2-reaching HOLD, score:
-   - time of sec2 vs thr12 create/destroy ids
-   - last thr12 still live? duration of thr12 after sec2
-   - packTlut / parseHmt / loadTexture / craft-shadow counts post-sec2
-   - VI width/origin transitions post-sec2 (if logged) or phase markers
-   - crash / fail136c / ok136c post-sec2
-   - any `[missing-func]` / new crash families
+Build/run **two arms in one session** on product defaults (headers ON, drop OFF):
+
+1. **Arm A — FS inject visibility:** same force6+inject path as s668; add
+   counters for inject hit rate **during thr13 post-sec2 only** (phase-gated
+   from sec2 line). Posctrl: inject must log ≥1 sample in pre-sec2 recovery
+   window (known-good). Score: inject_n post-sec2, rdpFs delta, syncs>0.
+2. **Arm B — post-sec2 Start pulse:** same engage, but after sec2 (or after
+   outdoor VI 0x620000 first present) inject Start×2 or A×2 via probe keys
+   phase-gated. Score: sec3 return time, packTlut, thr12 lifetime vs s669
+   baseline ~195s.
+
+Target ≥1 recovery-full sec2 hold per arm (BUDGET≥1200 each; can run
+sequentially if only one game instance, or sequential in one wrapper).
 
 ## Outcomes
 
-- **A)** Mission phase markers / content advance post-sec2 → score residual
-  (packTlut, input, stability) as next bottleneck
-- **B)** sec2 loads but thr12 dies immediately and no mission loaders fire →
-  thr12 lifetime / registerServiceWorker residual
-- **C)** sec2 never reached this freeroll (recov drought) → re-run budget only;
-  do not reopen thr11d
+- **A)** inject_n=0 post-sec2 while posctrl pre-sec2 inject>0 → H-inject-misses-mission;
+  extend inject to mission outdoor task shape
+- **B)** inject fires but rdpFs still flat → H-mission-dl-no-e9 / different fix site
+- **C)** Start pulse prevents sec3 return or fires packTlut → H-menu-return-input;
+  residual is input schedule not FS
+- **D)** both arms still menu-return + packTlut=0 → guest path for thr12→sec3 teardown
+  (instrument destroy call site)
 
 ## Command sketch
 
 ```bash
-# Reuse s668 recipe skeleton; extend score_attempt for post-sec2 markers.
-# Tag prefix s669_postsec2_
-BUDGET_S=1200 TARGET_RECOV_FULL=2 \
-  zsh scratch/agent/s669_postsec2_scored_freeroll.sh \
-  >scratch/agent/s669_logs/wrapper.stdout 2>&1
+# Arm A: reuse s668 skeleton; phase-gate inject counters; tag s670_fs_postsec2_
+# Arm B: PROBE post-sec2 keys; tag s670_input_postsec2_
+# Offline baseline: python3 scratch/agent/s669_postsec2_offline_score.py
 ```
 
 ## Do NOT
 
-- Productize `DROP_GARBAGE_CIMG` (s666 CLOSED REJECTED).
-- Spend another session on thr11d multi-hold rate (-419 CLOSED).
-- Chase single trackResourceList freeroll noise until 2nd same stack.
+- Productize `DROP_GARBAGE_CIMG` (s666 REJECTED).
+- Re-soak thr11d multi-hold rate (-419 CLOSED).
+- Re-prove outdoor present post-sec2 (s669 CLOSED).
+- Chase packTlut SIGBUS (-373) until the loader actually fires (still 0).

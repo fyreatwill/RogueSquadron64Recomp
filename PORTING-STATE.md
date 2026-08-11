@@ -51413,3 +51413,46 @@ post-sec2 phase markers + content/VI counters, not another thr11d rate soak.
 Logs: `scratch/agent/s668_logs/wrapper.stdout`,
 `scratch/s73_post_a_scene/s668_thr11d_{1..4}_*/run.log`
 Recipe: `scratch/agent/s668_thr11d_headers_multihold_freeroll.sh`
+
+## Session 669 — post-sec2 mission progress: outdoor LIVE + rdpFs plateau (Outcome A)
+
+**Work unit:** item -420 post-sec2 mission progress under product multi-header
+restore. HYPOTHESIS-ID: `m3-post-exit-fs-stall`.
+
+**Method:** offline dual-source reanalysis of s668 recovery-full HOLDs (att2
+`s668_thr11d_2_20260811011317`, att3 `s668_thr11d_3_20260811012532`) — same
+product defaults, force6+inject engage path. Scorer:
+`scratch/agent/s669_postsec2_offline_score.py`. No new freeroll (capture-once
+rule; s668 already produced ≥2 sec2-reaching full HOLDs).
+
+### Discriminating outcomes (dual-source att2+att3)
+
+| Hypothesis | Result | Evidence |
+|---|---|---|
+| H-sec2-mission-live | **CONFIRMED** | post-sec2: VI 512 outdoor origins 0x620000↔0x690000, continuous `threadPresent` FIRE reason=swap pairs=4, ~5900 GFX tasks tris_mode=42 for ~195–200s |
+| H-thr12-churn-normal | **CONFIRMED** | pre-sec2 thr12 id=12 dies at boundary (expected); post-sec2 thr12 id=13 lives **~195–200s** then dies co-timed with menu sec3 load — not immediate stall |
+| H-packtlut-next | **not yet** | packTlut/parseHmt/loadTextureToMemory = **0** entire post-sec2 window both holds |
+| H-postsec2-fs-plateau | **CONFIRMED** | thr13 life: runner `syncs=0` 5866/5894 vs `syncs>0` only 3; `fs_b0=E9` 6 vs `F7` ~11.7k; **rdpFs delta 0 / +2** while **synth delta ~5864–5892** |
+
+### Timeline (both holds, identical shape)
+
+1. thr11d → ok136c → thr12 id=12 → sec2 mission overlay rom=0x000A5D30 (~t_ms=265s)
+2. level-tex-cache n=2 + ok136c → thr12 id=13 create
+3. ~195–200s outdoor present window (rdpFs frozen ~7065, present via swap)
+4. thr13 destroy → **section 3 menu overlay** rom=0x0010C2D0 → thr11 recreate + thr entry=0x800B3650
+5. hangar FB pair 0x720000/0x790000; crash=0 packTlut=0
+
+### Rules out
+
+- Post-sec2 is **not** stuck at pre-mission menu profile (VI/content advance).
+- thr12 boundary destroy is **not** the residual stall (post-sec2 thr12 long-lived).
+- Does **not** reach packTlut/HMT in this window ( -373 still 0-occurrence on this path).
+
+### Residual → -421
+
+Post-sec2 outdoor phase has **FULL_SYNC starvation profile** (syncs=0, rdpFs
+plateau, present via swap only) then **returns to menu** without mission HMT
+load. Related to -349 family but distinct phase (mission overlay live, not
+post-exit hangar). Next: why no E9 during thr13 / why menu return / whether
+input after cutscene is required for packTlut path.
+
