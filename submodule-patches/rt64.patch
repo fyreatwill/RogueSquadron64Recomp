@@ -680,7 +680,7 @@ index 6255872..ed69a87 100644
                  }
                  // No texture coefficients
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..14273a1 100644
+index 873883d..50accb9 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
 @@ -16,6 +16,12 @@
@@ -755,7 +755,7 @@ index 873883d..14273a1 100644
          return differentPixels;
      }
  
-@@ -143,6 +200,38 @@ namespace RT64 {
+@@ -143,6 +200,48 @@ namespace RT64 {
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
          uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
          uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
@@ -763,6 +763,9 @@ index 873883d..14273a1 100644
 +        // Outcome B — wild CIMG writeback range covers header co-timed with
 +        // 0x2/0x60→0. Primary gate is rs64_writeback_sane SKIP_WILD_W /
 +        // SKIP_FL_HDR; this is last-line defense if any caller bypasses it.
++        // s657: ROGUESQ_ALLOW_FL_HDR=1 must also disable this return — s656
++        // A/B left it always-on so freelist never to_zero under "both allows"
++        // (Outcome C incomplete opt-out; fb_hit=1 + HIT_SKIP + freelist survives).
 +        {
 +            const uint32_t hdr = 0x1F3CC0u;
 +            const uint32_t rowBytes = imageRowBytes(dstRowWidth);
@@ -770,24 +773,31 @@ index 873883d..14273a1 100644
 +            const uint32_t rangeEnd = addressStart + dstRowEnd * rowBytes;
 +            const int hit = (rangeStart <= hdr && hdr < rangeEnd) ? 1 : 0;
 +            static int s_fb_fl_en = -1;
++            static int s_allow_fl_hdr = -1;
 +            if (s_fb_fl_en < 0) {
 +                const char *e = std::getenv("ROGUESQ_LOG_FL_ZERO_WATCH");
 +                s_fb_fl_en = (e && e[0] && e[0] != '0') ? 1 : 0;
++            }
++            if (s_allow_fl_hdr < 0) {
++                const char *e = std::getenv("ROGUESQ_ALLOW_FL_HDR");
++                s_allow_fl_hdr = (e && e[0] == '1') ? 1 : 0;
 +            }
 +            if (s_fb_fl_en || hit) {
 +                static int s_fb_fl_n = 0;
 +                s_fb_fl_n++;
 +                if (hit || s_fb_fl_n <= 16 || (s_fb_fl_n % 500) == 0) {
++                    const char *tag = !hit ? " sample"
++                        : (s_allow_fl_hdr ? " HIT_WRITE" : " HIT_SKIP");
 +                    fprintf(stderr,
 +                        "[fb-fl-writeback] n=%d hit=%d addrStart=0x%X range=[0x%X,0x%X) "
 +                        "rows=%u..%u w=%u h=%u siz=%u rowB=%u%s\n",
 +                        s_fb_fl_n, hit, addressStart, rangeStart, rangeEnd,
 +                        dstRowStart, dstRowEnd, dstRowWidth, height, (unsigned)siz,
-+                        rowBytes, hit ? " HIT_SKIP" : " sample");
++                        rowBytes, tag);
 +                    fflush(stderr);
 +                }
 +            }
-+            if (hit) {
++            if (hit && !s_allow_fl_hdr) {
 +                return;
 +            }
 +        }

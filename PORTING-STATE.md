@@ -50726,3 +50726,45 @@ B 0/≥5 with freelist to_zero LIVE → drought independent of freelist → reco
 - Leave either ALLOW_* =1 on product soaks
 - Score thr11d pipeline from recovery-silent-only freerolls
 - Soft-skip thr12 without recovery-active thr11d evidence
+
+## Session 657 (2026-08-10) — s656 Outcome C incomplete opt-out; complete ALLOW restores recovery
+
+### s656_allow_fl_hdr_recov_ab consume (loop 600s-cap)
+
+2 engaged (att2+att4), both recovery_silent, recov768=0. Posctrl both ALLOW
+banners LIVE; SCORE skip_wild=0 skip_fl=0. **fb_hit=1 with HIT_SKIP** on
+classic killer `1F0D74 w=1161` (att2) and `1BF3A8 w=944` (att4) — freelist
+0x2/0x60 survived heartbeats to ~195s, freelist-shaped to_zero=0 (menu 0x8E8E
+only). **Outcome C incomplete opt-out:** `Framebuffer::copyNativeToRAM`
+last-line hard-return on freelist-range hit was NOT gated by
+`ROGUESQ_ALLOW_FL_HDR` (only `rs64_writeback_sane` was). H-fl-survive-
+suppresses-recov **UNEVALUABLE** under that A/B.
+
+### Fix + complete freeroll (BUDGET=1200s)
+
+Gated last-line `if (hit) return` on `!ALLOW_FL_HDR`; hit with allow logs
+`HIT_WRITE` and proceeds. Rebuild + in-session freeroll with both allows:
+
+| att | engaged | recov | freelist 0x2→0 | notes |
+|-----|---------|-------|----------------|-------|
+| 1 | silent | 0 | partial write@166s | HIT_WRITE `1BF3A8 w=944`; thr11d_new=0 |
+| 2 | mat3inv noise | 0 | fb_hit=2 | free-reroll policy |
+| 3 | **recovery-active** | **7948** | **full to_zero#2@166352** | HIT_WRITE classic `1F0D74 w=1161`; thr11d_new=1 fail136c=1 corrupt ltexmg=1 |
+
+**Outcome A:** H-fl-survive-suppresses-recov **SUPPORTED**. Rate table:
+product SKIP 0/7 + ALLOW_WILD (FL protected) 0/6 + incomplete ALLOW both 0/2
+vs complete ALLOW **1/3 recovery-active** (~pre-SKIP historical ~1/3).
+Dual-source att3: exact killer HIT_WRITE + freelist to_zero 0x2/0x60 + recovery
+cell 0x76B768 live + thr11d_new + zero_node fail136c.
+
+**Product tension:** freelist-protection path co-gates recovery drought.
+Product keeps SKIP_WILD_W + SKIP_FL_HDR + last-line HIT_SKIP default ON
+(fail136c avoid). Residual: need recovery **without** freelist corruption —
+next: surgical freelist-header snapshot/restore around HIT writeback to split
+writeback-completion vs freelist-stomp as recovery co-factor.
+
+### Landed
+- `lib/rt64/.../rt64_framebuffer.cpp`: ALLOW_FL_HDR gates last-line freelist
+  HIT return; HIT_WRITE tag when allowed.
+- submodule-patches/export.sh refreshed rt64.patch.
+
