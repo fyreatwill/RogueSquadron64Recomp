@@ -2,44 +2,45 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s653 recap (read this first)
+## s654 recap (read this first)
 
-**s652 freeroll consumed — Outcome B CONFIRMED (H-fb-writeback-stomp):**
-- att2 recovery-active: recov768 LIVE arm_fl@146322ms freelist 0x2/0x60
-- freelist to_zero #2 @165665ms prev_f=0x2 prev_sz=0x60
-- **IMMEDIATELY preceded by** `[fb-fl-writeback] HIT`:
-  `addrStart=0x1F0D74 range=[0x1F0D74,0x32AE68) w=1161 h=277 siz=3`
-  phys 0x1F3CC0 ∈ range at +0x2F4C
-- Dual-source: fault_ring copyToRAM/copyNativeToRAM @0x1F0D74 + sticky
-  guest_pc=0x8000B650 on to_zero
-- ssnr_tgt=0 all dest 0x807* → **H-ssnr-zero-stores REFUTED freelist-class**
-- s78 ≤1280 width cap misses w=1161; s82 allowlist would have caught it
+**s653 freeroll consumed — Outcome A CONFIRMED (H-fb-skip-stops-stomp):**
+- att2 + att3 engaged recovery-silent (recov768=0 both): dual-source
+- arm_freelist @146–147s phys 0x1F3CC0 f=0x2 sz=0x60 LIVE both
+- **SKIP_WILD_W exact killer CIMG** `addr=0x1F0D74 w=1161 siz=3 rows=0..277`
+  (identical to s652 freeroll `[fb-fl-writeback] HIT` that stomped freelist
+  @165665ms) — fires in historical ~165–170s stomp window
+- freelist **0x2/0x60 SURVIVED** heartbeats through ~195–200s
+- freelist-shaped to_zero=0 (only menu 0x8E8E ~51s)
+- skip_wild=40 fb_hit=0 skip_fl=0 both; thr11d_new=0 fail136c=0 (silent path)
+- att1 early crash; att4 600s outer cap mid-run (no SCORE)
+- Wild CIMG fires on silent → H-recov-co-gate-stomp partly recharacterized
+  (recovery not required for killer CIMG emission)
 
-**Landed s653 product guard (always-on):**
-- `rs64_writeback_sane`: `SKIP_WILD_W` (w ∈ {320,512,640,1024}) + `SKIP_FL_HDR`
-  (range covers freelist phys 0x1F3CC0)
-- `copyNativeToRAM` last-line: hit → return early (`HIT_SKIP`)
-- Posctrl 75s: fb=25 sample CRASH=0 HIT=0 (boot FBs allowlisted)
-- `./submodule-patches/export.sh` (rt64.patch)
+**Product:** `SKIP_WILD_W` + `SKIP_FL_HDR` LIVE-VERIFIED. FB-writeback
+freelist-stomp class CLOSED (-407).
 
-**Queued:** `scratch/agent/soak_queue/s653_fb_wb_skip_freeroll.sh`
+**Queued:** `scratch/agent/soak_queue/s654_post_fbskip_pipeline_freeroll.sh`
 
 ## This iteration's work unit
 
-**Primary: consume s653 freeroll SOAK-RESULTS (or run if still queued).**
+**Primary: consume s654 pipeline freeroll SOAK-RESULTS (or run if still queued).**
 
 1. Prefer **recovery-active** (`recov768≥1`) with `arm_fl≥1`
-2. Freelist-shaped: look for `to_zero` with `prev_f=0x2 prev_sz=0x60`
-3. Discriminators:
-   - **A)** freelist to_zero ABSENT after arm_fl + `skip_wild≥1` or `skip_fl≥1`
-     → guard stopped the stomp (SUCCESS). Next: re-score thr11d/fail136c/
-     class-D path with freelist surviving (hope -385 null-malloc unblocks)
-   - **B)** freelist to_zero still fires with skip_wild=0 and skip_fl=0
-     → guard not reached (path leak past rs64_writeback_sane); find caller
-   - **C)** freelist to_zero with skip≥1 co-timed → residual other writer;
-     re-open ring/near after skip proof
-4. Passive: thr11d_new, fail136c, ssnr_tgt (expect 0), fb_hit (expect 0
-   post-gate; HIT_SKIP only if last-line defense fires)
+2. Freelist-shaped: confirm no `to_zero` with `prev_f=0x2 prev_sz=0x60`
+3. Confirm SKIP of killer still fires: `SKIP_WILD_W` `addr=0x1F0D74 w=1161`
+4. Discriminators:
+   - **A)** recov768≥1 ∧ arm_fl ∧ no freelist to_zero ∧ thr11d_new=1 ∧
+     fail136c=0 → freelist survival unblocks thr11d path (partial pipeline
+     SUCCESS). Next: thr12 / null-malloc / class-D path under freelist intact
+   - **B)** recov768≥1 ∧ arm_fl ∧ no freelist to_zero ∧ thr11d_new=1 ∧
+     fail136c=1 reason=corrupt → residual other zero-node / selected-pool
+   - **C)** recov768≥1 ∧ freelist to_zero 0x2/0x60 with skip≥1 → residual
+     other writer; re-open ring/near after skip proof
+   - **D)** recov768≥1 ∧ freelist to_zero with skip=0 → path leak past
+     rs64_writeback_sane
+5. Passive: ltexmg, ssnr_tgt (expect 0), fb_hit (expect 0), skip_wild of
+   0x1F0D74, ship_store / B8 chain if thr11d fires
 
 ## Hypotheses
 
@@ -60,7 +61,7 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 | H-fault-writer | mprotect names freelist stomp leaf | flz_fault_hdr≥1 ∧ flz_fault_sym | ACTIVE (B race; in_hdr=0 all freerolls) |
 | H-ss-rearm | ARM64 SS from SEGV closes race | ss_rearm≥1 ∧ CRASH=0 | **REFUTED s647** |
 | H-busy-rearm | 20µs busy re-arm catches header store | freelist to_zero ∧ flz_fault_hdr≥1 | **REFUTED s650** freelist-class |
-| H-recov-co-gate-stomp | freelist 0x2/0x60→0 needs recovery-active | silent arm_fl ∧ no fl-to_zero vs recov+fl-to_zero | **SUPPORTED s648/s650/s651** |
+| H-recov-co-gate-stomp | freelist 0x2/0x60→0 needs recovery-active | silent arm_fl ∧ no fl-to_zero vs recov+fl-to_zero | **PARTLY RECHARACTERIZED s654** (killer CIMG fires on silent too) |
 | H-bt-thrash-toxic | BT-every-fault self-DOS under want=2 | ~7.5k BT dumps measured | **CONFIRMED s648** |
 | H-perturb-from-BT | BT thrash elevates recovery silence | rate-limit freeroll still silent | **REFUTED s649** |
 | H-mprotect-concurrent-CRASH | armed==0 + fa on page → old handler CRASH | s648 att4 SIGBUS | **CONFIRMED s649** |
@@ -70,7 +71,8 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 | H-ssnr380-writer | SSNR+0x380 / 0x80010054 zeros freelist hdr | fa in_hdr ∨ dest in [hdr,hdr+8) | **REFUTED s652** (payload of LIVE alloc) |
 | H-ssnr-zero-stores | SSNR sw$zero 0/4($reg) zeros freelist hdr | ssnr TARGET ∧ freelist to_zero | **REFUTED s653** freelist-class |
 | H-fb-writeback-stomp | RT64 copyNativeToRAM covers phys 0x1F3CC0 | fb HIT ∧ freelist to_zero | **CONFIRMED s653** dual-source |
-| H-fb-skip-stops-stomp | SKIP_WILD_W/SKIP_FL_HDR prevents freelist to_zero | arm_fl ∧ no fl-to_zero ∧ skip≥1 | ACTIVE (guard landed; freeroll pending) |
+| H-fb-skip-stops-stomp | SKIP_WILD_W/SKIP_FL_HDR prevents freelist to_zero | arm_fl ∧ no fl-to_zero ∧ skip≥1 | **CONFIRMED s654** dual-source |
+| H-fl-survive-unblocks-thr11d | freelist intact under recovery → thr11d∧!fail136c | recov768∧arm_fl∧!fl_to_zero∧thr11d_new∧!fail136c | ACTIVE (queued freeroll) |
 | H-shipn3-gate / Outcome A | B8→store→thr11d | live chain | CONFIRMED s637/s638 |
 
 ## Do NOT
@@ -83,10 +85,13 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 - Treat submitSceneNodeRender+0x380 / 0x80010054 as header-writer proof
   (REFUTED s652 — payload of LIVE 0x2/0x60 alloc)
 - Treat H-ssnr-zero-stores as open for freelist class (REFUTED s653)
+- Treat H-fb-writeback-stomp / H-fb-skip-stops-stomp as open without new
+  counterexample (CONFIRMED s653/s654; class CLOSED)
 - Treat last_sym=allocateDisplayListBuffer or submitSceneNodeRender alone as
   writer proof without in_hdr/near_hdr ring entry or TARGET co-timed
 - Expect poller `backtrace()` / gbt to name a short freelist store
-- Soft-skip thr12 / coalesce past zero nodes without freelist survival proof
+- Soft-skip thr12 / coalesce past zero nodes without recovery-active freelist
+  survival + thr11d evidence
 - Re-open H-drainmesh-stomp / H-zero-free / H-split / H-walk-into-zeros without
   new counterexample
 - Raise HOLD_S past 210
@@ -101,10 +106,11 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 - Re-open H-perturb-from-BT for silence elevation (REFUTED s649)
 - Treat near_hdr alone as writer ID without dest in [hdr,hdr+8)
 - Revert SKIP_WILD_W without freeroll proof it breaks a legitimate FB width
+- Treat silent thr11d_new=0 as freelist-survival failure (silent never thr11d)
 
 ### Reference tags
 `[ost-wb] SKIP_WILD_W`, `[ost-wb] SKIP_FL_HDR`, `HIT_SKIP`,
-`[fb-fl-writeback]`, `[ssnr-hdr-zero]`, `[fl-zero-fault] event=fault_ring`,
-`near_hdr=`, `ring_w=`, `[adlb-fl-stomp]`, `to_zero_correlate`,
-`0x801F3CC0`, `0x1F3CC0`, `0x1F0D74`, w=1161, fail136c, thr11d_new,
--391, -406, -407
+`[fb-fl-writeback]`, `addr=0x1F0D74`, w=1161, `[ssnr-hdr-zero]`,
+`[fl-zero-fault] event=fault_ring`, `near_hdr=`, `ring_w=`,
+`[adlb-fl-stomp]`, `to_zero_correlate`, `0x801F3CC0`, `0x1F3CC0`,
+fail136c, thr11d_new, -391, -407, -408

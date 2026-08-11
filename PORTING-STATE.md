@@ -50574,3 +50574,43 @@ freelist 0x2/0x60 to_zero ABSENT after arm_fl + skip_wild/skip_fl ≥1 = SUCCESS
 - Soft-skip thr12 without freelist survival proof post-guard
 - Treat last-guest-pc rebuildActiveDisplayObjectList alone as new class without
   nm cross-check (known mislabel → readAccountForSelectionScreen; -383)
+
+## Session 654 (2026-08-10) — s653 freeroll Outcome A; SKIP_WILD_W stops freelist stomp
+
+### Work unit
+Consume `s653_fb_wb_skip_freeroll` SOAK-RESULTS (rc=137, 600s outer cap mid att4).
+
+### Freeroll SCORE (att2 + att3 engaged recovery-silent — discriminating)
+Both engaged attempts identical shape:
+- force6=1 hsel=1 **recov768=0** thr11d_new=0 fail136c=0 class_hint=E_recovery_silent
+- **arm_freelist** @146–147s phys 0x1F3CC0 f=0x2 sz=0x60
+- **SKIP_WILD_W** of exact killer CIMG:
+  `tag=color addr=0x1F0D74 w=1161 siz=3 rows=0..277`
+  (identical to s652 freeroll `[fb-fl-writeback] HIT` that stomped freelist @165665ms)
+- skip fires between 165–170s heartbeats — historical freelist-stomp window
+- freelist **0x2/0x60 SURVIVED** heartbeats through ~195–200s (no freelist-shaped to_zero)
+- only to_zero = menu-shaped `prev_f=0x8E8E` ~51s
+- skip_wild=40 both; **fb_hit=0**; skip_fl=0 (wild-W catches before FL_HDR needed)
+- att1: pre-eng crash 10s; att4: outer 600s cap mid-run (no SCORE)
+
+### Outcome A — dual-source
+| ID | Result |
+|----|--------|
+| H-fb-skip-stops-stomp | **CONFIRMED dual-source** (exact killer CIMG SKIPPED + freelist survives post-arm) |
+| H-fb-writeback-stomp | reconfirm CONFIRMED as the writer (CIMG still emitted; now skipped) |
+| H-recov-co-gate-stomp | **partly recharacterized** — wild CIMG fires on silent path too (att2/3 SKIP of 1F0D74); recovery was not required for the killer CIMG to appear. Silent survival without guard (s648) likely means those runs lacked this CIMG, not a recovery-exclusive stomp mechanism |
+| H-ssnr-zero-stores / H-adlb / H-ssnr380 | reconfirm REFUTED (ssnr_tgt=0 adlb_tgt=0) |
+
+Range math unchanged: w=1161 siz=3 rowB=4644 → range [0x1F0D74, 0x32AE68) covers phys 0x1F3CC0 at +0x2F4C.
+
+### Product status
+`SKIP_WILD_W` + `SKIP_FL_HDR` product (-407) is **effectiveness LIVE-VERIFIED**. Freelist writer residual CLOSED for the FB-writeback class. Residual other writers still open only if freelist to_zero reappears with skip≥1 under recovery-active.
+
+### Queued
+`scratch/agent/soak_queue/s654_post_fbskip_pipeline_freeroll.sh` — recovery-active re-score of thr11d∧fail136c with freelist intact (pipeline unblocks?).
+
+### Do not
+- Score freelist Outcome B from recovery-silent-only (not needed — Outcome A uses exact CIMG intercept)
+- Soft-skip thr12 without recovery-active freelist-survival + thr11d evidence
+- Re-open H-fb-writeback-stomp without new counterexample
+- Treat silent thr11d_new=0 as freelist-survival failure (silent never produces thr11d)

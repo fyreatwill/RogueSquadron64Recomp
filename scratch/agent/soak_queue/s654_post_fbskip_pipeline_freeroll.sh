@@ -1,28 +1,27 @@
 #!/bin/zsh
-# s653 freeroll: FB writeback SKIP_WILD_W / SKIP_FL_HDR guard effectiveness.
+# s654 freeroll: post-SKIP_WILD_W pipeline re-score (thr11d / fail136c / class-D).
 #
-# s652 freeroll ANALYZED — Outcome B CONFIRMED (H-fb-writeback-stomp):
-#   att2 recovery-active: arm_fl@146s freelist 0x2/0x60 → to_zero #2 @165665ms
-#   IMMEDIATELY preceded by:
-#     [fb-fl-writeback] n=13632 hit=1 addrStart=0x1F0D74
-#       range=[0x1F0D74,0x32AE68) rows=0..277 w=1161 h=277 siz=3 HIT
-#   phys 0x1F3CC0 ∈ range (offset +0x2F4C). Dual-source: fault_ring copyToRAM
-#   @0x1F0D74 + guest sticky 0x8000B650 on to_zero. ssnr_tgt=0 (all dest 0x807*).
-#   H-ssnr-zero-stores REFUTED freelist-class. H-ssnr380 reconfirm REFUTED.
+# s653 freeroll ANALYZED (s654) — Outcome A CONFIRMED dual-source for
+# H-fb-skip-stops-stomp (recovery-silent engaged, but killer CIMG still fires):
+#   att2+att3: arm_freelist@~146-147s 0x2/0x60 LIVE
+#   SKIP_WILD_W exact killer CIMG addr=0x1F0D74 w=1161 siz=3 rows=0..277
+#     (same shape as s652 freeroll HIT that stomped freelist @165s)
+#   freelist 0x2/0x60 SURVIVED heartbeats through ~195-200s (no freelist to_zero)
+#   skip_wild=40 both; fb_hit=0; skip_fl=0 (wild-W catches first)
+#   menu to_zero only (0x8E8E); thr11d_new=0 fail136c=0 (silent path)
+#   600s outer cap killed att4 mid-run.
 #
-# s653 product guard (rs64_writeback_sane in rt64_state.cpp):
-#   SKIP_WILD_W — refuse writeback unless w ∈ {320,512,640,1024} (s82 allowlist)
-#   SKIP_FL_HDR — refuse writeback if range covers freelist phys 0x1F3CC0
-#   copyNativeToRAM last-line: HIT → return early (HIT_SKIP log)
-# Posctrl 75s: fb=25 sample CRASH=0 HIT=0 (boot FBs allowlisted only).
+# Note: wild CIMG fires on silent too → H-recov-co-gate-stomp partly recharacterized
+# (stomp was not recovery-exclusive; recovery may have correlated with other factors).
 #
-# Discriminators (prefer recovery-active + arm_fl):
-#   A) freelist to_zero 0x2/0x60 ABSENT after arm_fl + skip_wild≥1 or skip_fl≥1
-#      → guard stopped the stomp (SUCCESS)
-#   B) freelist to_zero still fires with skip=0 → guard not reached (path leak)
-#   C) freelist to_zero with skip≥1 co-timed → race / other writer residual
-#   Passive: thr11d_new, fail136c (hope freelist survives → class-D unblocks),
-#            ssnr_tgt (expect 0), fb_hit/HIT_SKIP (expect 0 post-gate)
+# This freeroll seeks recovery-active to re-score thr11d∧fail136c with freelist intact:
+#   A) recov768≥1 ∧ arm_fl ∧ no freelist to_zero ∧ thr11d_new=1 ∧ fail136c=0
+#      → freelist survival unblocks thr11d path (SUCCESS partial pipeline)
+#   B) recov768≥1 ∧ arm_fl ∧ no freelist to_zero ∧ thr11d_new=1 ∧ fail136c=1 reason=corrupt
+#      → residual other zero-node / selected-pool issue
+#   C) recov768≥1 ∧ freelist to_zero 0x2/0x60 with skip≥1 → residual other writer
+#   D) recov768≥1 ∧ freelist to_zero with skip=0 → path leak past guard
+#   Passive: ltexmg, skip_wild of 0x1F0D74, fb_hit, ssnr_tgt
 # HYPOTHESIS-ID: m3-post-exit-fs-stall
 #
 set -u
@@ -486,7 +485,7 @@ while :; do
     echo "[fast-retry] hit MAX_ATTEMPTS=$MAX_ATTEMPTS, stopping"
     break
   fi
-  TAG="s653_fbskip_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
+  TAG="s654_pipe_${ATTEMPT}_$(date +%Y%m%d%H%M%S)"
   OUT="$ROOT/scratch/s73_post_a_scene/$TAG"
   LOG="$OUT/run.log"
   kill_game
