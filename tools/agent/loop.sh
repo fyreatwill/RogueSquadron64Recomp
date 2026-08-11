@@ -200,7 +200,9 @@ else:
   # stated reset time means the window reopens by itself: always transient.
   if printf '%s' "$errtxt" | grep -qiE 'resets? at|resets? in|resets? [0-9]|try again (later|at)|limit will reset'; then
     : # falls through to the transient handler below - sleep, do not stop
-  elif printf '%s' "$errtxt" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota'; then
+  elif printf '%s' "$errtxt" | grep -qiE 'monthly spend limit|spend limit|credit balance|insufficient quota|insufficient balance'; then
+    # 'insufficient balance' is DeepSeek's 402: a prepaid balance that ran out.
+    # Genuinely a hard cap — it is not a window and no probe can talk it open.
     # The API's wording is not trustworthy here: on 2026-07-27 a 5-hour
     # window cap returned 429 "You've hit your monthly spend limit" and the
     # loop hard-stopped over credit that was still there. Before declaring a
@@ -224,8 +226,13 @@ else:
     fi
     { echo "# Hard spend/quota cap reached, $(date)"; echo;
       echo "This is NOT a transient rate limit and sleeping will not clear it."
-      echo "Raise or reset the cap (claude.ai/settings/usage), then delete this"
-      echo "file and rerun the loop."; echo;
+      if [ "${RUNNER:-claude}" = "deepseek" ]; then
+        echo "RUNNER=deepseek: top up the DeepSeek account balance"
+        echo "(platform.deepseek.com billing), then delete this file and rerun."
+      else
+        echo "Raise or reset the cap (claude.ai/settings/usage), then delete this"
+        echo "file and rerun the loop."
+      fi; echo;
       echo "Last claude output:"; printf '%s\n' "$out" | tail -20; } > "$AG/BLOCKED.md"
     log "HARD CAP reached - not retryable, stopping"
     notify_blocked
@@ -301,10 +308,15 @@ else:
       echo "command), commit, and write DONE to scratch/agent/STATUS with"
       echo "OUTCOME=ADVANCED if any artifact/knowledge landed, else SUBSTITUTED."
     } > "$AG/RETRY_PROMPT.md"
-    # Retries always use the claude runner: grok runs the Stop hook and aborts
+    # Retries fall back to the claude runner: grok runs the Stop hook and aborts
     # the whole turn on a block (observed as stopReason=Cancelled after ~3
     # calls), so a grok retry can never satisfy the contract it was sent to fix.
-    out="$(RUNNER=claude LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
+    # deepseek is exempt — it IS the claude CLI on another endpoint, so it
+    # handles a hook block normally, and routing its retries to Anthropic would
+    # quietly spend the wrong provider's quota on every unmet contract.
+    retry_runner=claude
+    [ "${RUNNER:-claude}" = "deepseek" ] && retry_runner=deepseek
+    out="$(RUNNER=$retry_runner LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
     printf '%s\n' "$out" >> "$AG/loop.log"
     # A retry that itself hits a limit is not a contract failure - stop retrying.
     # (Raw-output match is acceptable here: a false positive merely stops

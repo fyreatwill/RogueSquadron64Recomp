@@ -57,4 +57,14 @@ for p in N64ModernRuntime:lib/N64ModernRuntime \
   echo "[preflight] WARN: $sub differs from submodule-patches/$name.patch (you edited lib/ without re-exporting). Run ./submodule-patches/export.sh and commit."
 done
 
+# RUNNER=deepseek is the claude CLI pointed at DeepSeek's Anthropic-compatible
+# endpoint. Without the key every iteration would fail identically four times
+# and then block; say it once, here, in words.
+if [ "${RUNNER:-claude}" = "deepseek" ]; then
+  [ -n "${DEEPSEEK_API_KEY:-${RUNNER_API_KEY:-}}" ] \
+    || fail "RUNNER=deepseek but DEEPSEEK_API_KEY is unset - export it (or RUNNER_API_KEY) in the shell that starts the loop"
+  command -v claude >/dev/null 2>&1 \
+    || fail "RUNNER=deepseek needs the claude CLI on PATH - it is the client, DeepSeek is only the endpoint"
+fi
+
 echo "[preflight] OK"

@@ -4,7 +4,7 @@
 #
 #   tools/agent/runner.sh <prompt-file>      # prints the agent's output
 #
-# Selected by RUNNER: claude (default) | grok | codex | custom
+# Selected by RUNNER: claude (default) | deepseek | grok | codex | custom
 #   RUNNER_MODEL   override the model for the chosen runner
 #   RUNNER_CMD     with RUNNER=custom: a command receiving the prompt on stdin
 #   RUNNER_SANDBOX codex only: read-only | workspace-write | danger-full-access
@@ -13,6 +13,18 @@
 # is a Claude Code feature. codex and grok never run it, so for them the exit
 # contract is enforced only by loop.sh's post-hoc `stop_gate.sh --verify` pass
 # and its retry. Same contract either way, checked at a different moment.
+# RUNNER=deepseek is the exception among the non-Anthropic runners: it IS the
+# claude CLI, pointed at DeepSeek's Anthropic-compatible endpoint, so hooks,
+# .claude/settings.json permissions and --output-format json all behave exactly
+# as they do for RUNNER=claude. Do NOT set RS64_SKIP_STOP_HOOK for it.
+#
+#   RUNNER=deepseek DEEPSEEK_API_KEY=sk-... tools/agent/loop.sh
+#
+# The key comes from DEEPSEEK_API_KEY (or RUNNER_API_KEY). Nothing is written to
+# the shell profile: the endpoint switch is scoped to the one subshell that runs
+# the iteration, so an interactive `claude` in this repo still talks to
+# Anthropic. Model default deepseek-v4-pro (1M context, so the 390 KB ledger
+# fits); RUNNER_MODEL=deepseek-v4-flash for the cheap tier.
 set -u
 cd "$(dirname "$0")/../.."
 PROMPT_FILE="${1:?usage: runner.sh <prompt-file> | runner.sh --describe}"
@@ -25,6 +37,7 @@ RUNNER="${RUNNER:-claude}"
 if [ "$PROMPT_FILE" = "--describe" ]; then
   case "$RUNNER" in
     claude) echo "runner=claude model=${RUNNER_MODEL:-${LOOP_MODEL:-sonnet}}" ;;
+    deepseek) echo "runner=deepseek model=${RUNNER_MODEL:-deepseek-v4-pro} endpoint=https://api.deepseek.com/anthropic key=$([ -n "${DEEPSEEK_API_KEY:-${RUNNER_API_KEY:-}}" ] && echo set || echo MISSING)" ;;
     grok)   echo "runner=grok model=${RUNNER_MODEL:-<grok default>} max_turns=${RUNNER_MAX_TURNS:-200}" ;;
     codex)  echo "runner=codex model=${RUNNER_MODEL:-<codex default>} sandbox=${RUNNER_SANDBOX:-workspace-write}" ;;
     custom) echo "runner=custom cmd=${RUNNER_CMD:-<unset>}" ;;
@@ -48,6 +61,52 @@ case "$RUNNER" in
     # loop.sh classifies limits by rc.
     out="$(claude -p "$(cat "$PROMPT_FILE")" \
       --model "${RUNNER_MODEL:-${LOOP_MODEL:-sonnet}}" \
+      --permission-mode acceptEdits \
+      --output-format json 2>&1)"
+    rc=$?
+    printf '%s\n' "$out" | python3 -m json.tool 2>/dev/null || printf '%s\n' "$out"
+    exit $rc
+    ;;
+
+  deepseek)
+    # The claude CLI against DeepSeek's Anthropic-compatible endpoint. Every
+    # harness feature keeps working because the CLI is unchanged; only the
+    # transport moves. Config per DeepSeek's own Claude Code integration page.
+    key="${DEEPSEEK_API_KEY:-${RUNNER_API_KEY:-}}"
+    [ -n "$key" ] || { echo "RUNNER=deepseek requires DEEPSEEK_API_KEY (or RUNNER_API_KEY)"; exit 2; }
+    ds_model="${RUNNER_MODEL:-deepseek-v4-pro}"
+
+    export ANTHROPIC_BASE_URL=https://api.deepseek.com/anthropic
+    export ANTHROPIC_AUTH_TOKEN="$key"
+    # ANTHROPIC_API_KEY would go out as x-api-key ALONGSIDE the bearer token —
+    # an Anthropic key leaked to a third-party host, and an auth conflict. The
+    # user's shell exports ANTHROPIC_BASE_URL=https://api.anthropic.com, so
+    # never assume the ambient env is empty; clear what must not travel.
+    unset ANTHROPIC_API_KEY ANTHROPIC_API_URL CLAUDE_CODE_USE_BEDROCK CLAUDE_CODE_USE_VERTEX
+    # Alias every tier. Claude Code asks for a small/fast model on its own
+    # (titles, summaries, subagents); unmapped names are silently rewritten to
+    # flash by DeepSeek's backend, which would make the runner lie about what
+    # it ran. Map them explicitly instead.
+    export ANTHROPIC_MODEL="$ds_model"
+    export ANTHROPIC_DEFAULT_OPUS_MODEL="$ds_model"
+    export ANTHROPIC_DEFAULT_SONNET_MODEL="$ds_model"
+    export ANTHROPIC_DEFAULT_HAIKU_MODEL="${RUNNER_SMALL_MODEL:-deepseek-v4-flash}"
+    export CLAUDE_CODE_SUBAGENT_MODEL="${RUNNER_SMALL_MODEL:-deepseek-v4-flash}"
+    export CLAUDE_CODE_EFFORT_LEVEL="${RUNNER_EFFORT:-max}"
+    export CLAUDE_CODE_AUTO_COMPACT_WINDOW="${RUNNER_COMPACT_WINDOW:-786432}"
+    # An iteration builds, runs a 120 s capture and reconciles the ledger; a
+    # default-length HTTP timeout kills long tool turns as "runner error".
+    export API_TIMEOUT_MS="${API_TIMEOUT_MS:-600000}"
+
+    # -pro carries 1M context and swallows the 390 KB ledger; the flash tier
+    # does not, so it gets the same budget preamble grok needs.
+    case "$ds_model" in
+      *-pro*) ds_prompt="$(cat "$PROMPT_FILE")" ;;
+      *)      ds_prompt="$(prompt_with_budget)" ;;
+    esac
+
+    out="$(claude -p "$ds_prompt" \
+      --model "$ds_model" \
       --permission-mode acceptEdits \
       --output-format json 2>&1)"
     rc=$?
@@ -113,7 +172,7 @@ case "$RUNNER" in
     ;;
 
   *)
-    echo "unknown RUNNER='$RUNNER' (expected claude, grok, codex, or custom)"
+    echo "unknown RUNNER='$RUNNER' (expected claude, deepseek, grok, codex, or custom)"
     exit 2
     ;;
 esac

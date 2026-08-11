@@ -11,8 +11,19 @@ PowerShell, `E:\Projects\...`). It is historical context, not instructions for
 this macOS port — CURRENT-TRUTH wins wherever they disagree.
 
 The loop is runner-agnostic (`tools/agent/runner.sh`): `RUNNER=claude` (default,
-`LOOP_MODEL` picks the model), `RUNNER=grok`, `RUNNER=codex`, or `RUNNER=custom`
-with `RUNNER_CMD`. The Stop-hook gate in `.claude/settings.json` is a Claude
+`LOOP_MODEL` picks the model), `RUNNER=deepseek`, `RUNNER=grok`, `RUNNER=codex`,
+or `RUNNER=custom` with `RUNNER_CMD`.
+
+`RUNNER=deepseek` is the claude CLI pointed at DeepSeek's Anthropic-compatible
+endpoint (`https://api.deepseek.com/anthropic`), so hooks, permissions and JSON
+output work exactly as for `RUNNER=claude` — it is the only non-Anthropic runner
+that keeps the Stop hook. Start it with
+`RUNNER=deepseek DEEPSEEK_API_KEY=sk-... caffeinate -dis tools/agent/loop.sh`;
+`RUNNER_MODEL` defaults to `deepseek-v4-pro` (1M context — the flash tier gets
+the CONTEXT-BUDGET preamble appended instead). The endpoint switch is scoped to
+the iteration's subshell, so an interactive `claude` here still uses Anthropic.
+
+The Stop-hook gate in `.claude/settings.json` is a Claude
 Code feature — but **grok DOES read `.claude/settings.json` and DOES run the
 Stop hook** (measured s64: stopReason=EndTurn without the file, Cancelled with
 it), and it aborts the whole turn on a hook block instead of continuing. So
