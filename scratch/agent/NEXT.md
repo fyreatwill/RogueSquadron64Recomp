@@ -4,48 +4,44 @@ HYPOTHESIS-ID: m3-post-exit-fs-stall
 
 ## Single work unit
 
-**Scored freeroll under product multi-header restore (drop OFF)** —
-resume -414 after s666 rejected DROP_GARBAGE_CIMG productize.
-
-Product path is restore (mode=headers, walk_cap=64KB). s661 freeroll was
-INCONCLUSIVE (queue 600s cap before thr11d/fail136c scoring). s659 16B
-restore: recov 3/3 thr11d 3/3 fail136c 2/3. Headers product should keep
-recov while fixing next=node+size+0x10 zero_node.
+**thr11d multi-hold freeroll under product multi-header restore**
+(item -419). s667 closed fail136c residual (H-headers-fail136); thr11d
+was 0/2 recovery-fired holds with thr11 live and ship_store max n=2 —
+UNEVALUABLE vs historical 4/10 thr11d rate / s659 3/3 under 16B restore.
 
 ## Hypotheses
 
 | ID | Claim | Killed if |
 |----|-------|-----------|
-| H-headers-recov | Product headers restore retains recov_active ≥1/3 engaged | 0/N recovery-active under product defaults (drop OFF) |
-| H-headers-fail136 | Headers restore zeros fail136c reason=corrupt / zero_node next | fail136c still fires with next_ok=1 after restore |
-| H-headers-thr11d | thr11d_new rate under headers ≈ s659 3/3 when recov fires | thr11d_new=0 on recovery-active holds |
+| H-headers-thr11d | thr11d_new rate under headers ≈ s659 (≥1/3 of recovery-fired full HOLDs) | thr11d_new=0 on ≥5 recovery-fired full HOLDs |
+| H-headers-shipn3 | ship n=3 / B8 still fires under headers when recovery fires | ship_store n=3 never appears on recovery-fired holds |
+| H-headers-recov-rate | recovery-fired rate under headers ≥1/3 engaged | 0 recovery-fired over ≥6 engaged |
 
-## Discriminating measurements (ONE build, product defaults)
+## Discriminating measurements (ONE freeroll, product defaults)
 
-1. No `ROGUESQ_DROP_GARBAGE_CIMG`, no `FL_HDR_RESTORE=0` (product restore ON).
-2. Arm instruments: `ROGUESQ_LOG_FL_ZERO_WATCH=1`, `ROGUESQ_LOG_RS_MALLOC_DIAG=1`,
-   force6+inject hangar path, HOLD_S≥210, BUDGET_S≥1200 (or queue soak).
-3. Score per engaged recovery-active: thr11d_new, fail136c reason/maxfree,
-   `[fb-fl-hdr-restore]` match=1 nhdr next_ok, freelist to_zero 0x2/0x60,
-   HIT_WRITE_RESTORE on killer.
+1. Product defaults only: NO `DROP_GARBAGE_CIMG`, NO `FL_HDR_RESTORE=0`.
+2. BUDGET_S≥1800 (or multi-pass until ≥5 recovery-fired full HOLD_S=210).
+3. Per recovery-fired full HOLD score: thr11d_new, ship_store max n,
+   `[mv-b8-set]`, fail136c (expect 0), next_ok, freelist 0x2/0x60 hb.
 
 ## Outcomes
 
-- **A)** recov≥1/3 + thr11d_new≥1 + fail136c=0 → headers product LIVE; push thr12 (-385)
-- **B)** recov OK but fail136c residual → deepen body/next header walk
-- **C)** recov drought under product restore → regression vs s659; bisect
+- **A)** thr11d_new ≥1 on ≥1/3 recovery-fired → headers product thr11d LIVE; push thr12 (-385)
+- **B)** recovery fires but thr11d=0 and ship n≤2 always → residual is ship/B8 gate (-393), not freelist
+- **C)** recovery drought returns → headers regression; bisect vs s667
+
+## Command
+
+```bash
+# Prefer reusing s667 recipe with higher budget:
+# edit BUDGET_S=1800 (or env override if supported), or:
+zsh scratch/agent/s667_headers_restore_scored_freeroll.sh
+# Better: copy to s668 with BUDGET_S=1800 MAX_ATTEMPTS=16
+```
+
+Enqueue long soak to soak_queue if only re-running; score offline.
 
 ## Do NOT
 
-- Productize `DROP_GARBAGE_CIMG` (s666 CLOSED REJECTED — recovery drought).
-- Retire FL_HDR_RESTORE while drop is OFF (product freelist path).
-
-## Recipe scaffold
-
-`scratch/agent/s659_product_fl_restore_freeroll.sh` (or s660 headers variant)
-with BUDGET_S≥1200. Enqueue to soak_queue if only re-running.
-
-## Standing rules
-
-- Editing `lib/rt64` → `./submodule-patches/export.sh` + commit same session.
-- Kill with SIGKILL; run from build/ with ROM.
+- Productize `DROP_GARBAGE_CIMG` (s666 CLOSED REJECTED).
+- Chase single trackResourceList freeroll noise (att4 s667) until 2nd same stack.

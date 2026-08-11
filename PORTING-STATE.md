@@ -51276,3 +51276,72 @@ a recovery co-gate that does not require garbage freelist-range writeback.
 Logs: `scratch/agent/s666_logs/arm_{A,B2}.stdout`,
 `scratch/s73_post_a_scene/s666_{A,B}_*/run.log`
 Recipe: `scratch/agent/s666_product_drop_freeroll.sh`
+
+## Session 667 — product multi-header restore freeroll SCORE (fail136c residual closed)
+
+Work unit: scored freeroll under product `mode=headers` restore (drop OFF),
+resume -414 after s661 INCONCLUSIVE (600s queue cap) and s666 drop productize
+REJECTED. Recipe `scratch/agent/s667_headers_restore_scored_freeroll.sh`
+(BUDGET_S=1200 HOLD_S=210 product defaults only).
+
+### Posctrl LIVE (every engaged attempt)
+
+Banner: `product restore=1 hard_skip=0 mode=headers walk_cap=0x10000`.
+Classic killer on att4+att6:
+```
+HIT_WRITE_RESTORE addrStart=0x1F0D74 w=1161 siz=3
+[fb-fl-hdr-restore] mode=headers nhdr=45 match=1
+  pre=0x2/0x60 mid=0/0 post=0x2/0x60 next_f=0x2 next_sz=0x180 next_ok=1
+```
+Silent att1 used non-classic freelist-range CIMG `addr=0x1BF3A8 w=944` with
+same restore shape next_ok=1.
+
+### Freeroll SCORE (6 attempts, engaged=5)
+
+| Att | Class | recov768 | thr11d_new | fail136c | hit_wr / next_ok | notes |
+|-----|-------|----------|------------|----------|------------------|-------|
+| 1 | recovery_silent | 0 | 0 | 0 | 1 / 1 | freelist 0x2/0x60 heartbeats survive |
+| 2 | pre-eng crash | 0 | 0 | 0 | 0 / 0 | discard |
+| 3 | recovery_silent | 0 | 0 | 0 | 1 / 1 | |
+| 4 | trackres freeroll noise | **7936** | 0 | 0 | 2 / 2 | thr11 id=11 LIVE; SIGBUS `trackResourceListWithMappingTables+1192` si_addr=0x3c5000032; ~88s post-recov no thr11d |
+| 5 | recovery_silent | 0 | 0 | 0 | 1 / 1 | |
+| 6 | recovery-active (budget cut) | **1290** | 0 | 0 | 1 / 1 | thr11 LIVE; HOLD truncated ~10s post-recov |
+
+discard_stats: pre_eng=1 matnoise=0 recov_silent=3 recov_active=1 engaged=5
+(official). Counting att4's recov768 as recovery-fired: **2/5 engaged**.
+
+### Discriminators
+
+- **H-headers-recov PARTIAL SUPPORTED.** Not drought (1–2/5 eng fire recovery
+  cell 0x76B768) vs s666 drop-ON 0/4 and s659 16B 3/3. Official rate 1/5 <1/3
+  threshold; with att4 noise-classified recovery-fired 2/5=40%.
+- **H-headers-fail136 SUPPORTED dual-source.** fail136c=0 on both
+  recovery-fired holds with next_ok=1 (att4+att6). Contrasts s659 16B restore
+  fail136c 2/3 (H-body-stomp residual). Headers walk closes the
+  next=node+size+0x10 zero_node permanent-corrupt path that drove fail136c.
+- **H-headers-thr11d UNEVALUABLE (0/2).** Both recovery holds had thr11 id=11
+  live + ship_store max n=2 (no n=3 / B8 gate). thr11d historical rate 4/10;
+  0/2 is not a refute. att6 HOLD truncated by budget.
+
+### zero_node race (not permanent stomp)
+
+att6 timeline at classic killer:
+1. HIT_WRITE_RESTORE begins writeback
+2. poller to_zero 0x2/0x60 @169501ms (mid-state)
+3. four `zero_node bad=0x801F3CC0` from malloc/free walks during mid window
+4. restore completes: post=0x2/0x60 match=1 next_ok=1
+5. arm_freelist re-arm @169711ms; heartbeats flags=0x2 size=0x60
+
+zero_node during mid-writeback is expected; permanent freelist-shaped
+corruption does **not** stick under headers restore.
+
+### Verdict
+
+**Outcome hybrid A-partial:** product multi-header restore LIVE-VERIFIED;
+**fail136c residual CLOSED** under headers (H-headers-fail136); recovery not
+drought; thr11d rate still needs multi-hold samples under headers (or ship
+n=3 gate -393 freeroll). Do not productize DROP_GARBAGE_CIMG (s666).
+
+Logs: `scratch/agent/s667_logs/wrapper.stdout`,
+`scratch/s73_post_a_scene/s660_flhdr_{1..6}_20260811*/run.log`
+Recipe: `scratch/agent/s667_headers_restore_scored_freeroll.sh`
