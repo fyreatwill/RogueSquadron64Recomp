@@ -51216,3 +51216,63 @@ ON and start retiring freelist restore layers under scored freeroll
 
 Logs: `scratch/s73_post_a_scene/s665_{A,B,C}_*/run.log`
 Recipe: `scratch/agent/s665_drop_garbage_cimg_ab.sh`
+
+## Session 666 — productize DROP_GARBAGE_CIMG REJECTED (recovery drought)
+
+### Work unit
+Productize `ROGUESQ_DROP_GARBAGE_CIMG` default ON + scored freeroll with
+`FL_HDR_RESTORE=0` (retire restore layers). HYPOTHESIS-ID: cimg-origin-desync.
+
+### Code (attempted then reverted)
+Temporarily flipped `rs64DropGarbageCimg()` to default ON with opt-out
+`DROP=0` / `ALLOW_GARBAGE_CIMG=1`. Smoke without env: banner LIVE, OK×8.
+After freeroll, **reverted to default OFF** — product path stays restore.
+
+ORIGIN (unchanged from s663): freelist stomp host writer = RT64 color
+writeback of garbage SETCIMG addr=0x1F0D74 w=1161. Drop stops apply at
+decode (legitimate filter of non-legitimate operands) but also removes the
+freelist-range writeback that co-gates recovery (H-wb-complete-not-stomp).
+
+### Freeroll (product drop ON during test binary)
+
+| Arm | Config | engaged | recov_active | flz 0x2/0x60→0 | kill_applied | kill_drop | restore_ok | ok |
+|-----|--------|---------|--------------|----------------|--------------|-----------|------------|-----|
+| **A** | drop ON + restore ON (no env) | 4 | **0** | 0 | 0 | 164 | 0 | 8 |
+| **B** | drop ON + restore OFF | 4 | **0** | 0 | 0 | 98 | 0 | 8 |
+
+B freelist heartbeats: arm_freelist LIVE 5/5 engaged-class runs; flags=0x2
+size=0x60 heartbeats to ~195–200s; freelist-shaped to_zero=0. Hangar PNGs
+~900KB (content LIVE). A matches B: restore never fires (`restore_ok=0`,
+`fb_hit=0`) because drop prevents freelist-range CIMG apply.
+
+Contrast **s659 product restore, drop OFF**: recov_active **3/3**, thr11d_new
+**3/3**, fail136c 2/3.
+
+### Hypotheses
+
+| ID | Result |
+|----|--------|
+| H-product-drop-safe (freelist/content/OK) | **SUPPORTED** dual-source: A+B kill_applied=0 flz_fl=0 OK×8 hangar PNGs |
+| H-product-drop-safe (recovery pipeline) | **REFUTED** dual-source: A+B recov 0/4 engaged vs s659 3/3 under drop OFF + restore |
+| H-restore-redundant (freelist under drop) | **SUPPORTED** — restore_ok=0 both arms; freelist survives via drop alone |
+| H-drop-suppresses-recov | **SUPPORTED** — same shape as writeback-skip drought (s654–s657); drop is writeback-prevent not writeback-complete |
+
+### Product decision
+**REJECT productize.** `ROGUESQ_DROP_GARBAGE_CIMG` remains default **OFF**
+(opt-in experiment). Product freelist path remains multi-header restore
+(default ON). Drop is a correct freelist-origin filter but is anti-recovery
+under the current co-gate model.
+
+### Ruled out
+- Retiring FL_HDR_RESTORE while drop is product ON (recovery dies).
+- Product default-ON drop without a replacement recovery co-gate.
+
+### Residual
+-418 CLOSED (productize REJECTED). Pipeline returns to product-restore
+path: thr11d/fail136c under multi-header restore (-414 reopen), thr12
+null-malloc (-385), B8 residual (-393). Any future drop productize needs
+a recovery co-gate that does not require garbage freelist-range writeback.
+
+Logs: `scratch/agent/s666_logs/arm_{A,B2}.stdout`,
+`scratch/s73_post_a_scene/s666_{A,B}_*/run.log`
+Recipe: `scratch/agent/s666_product_drop_freeroll.sh`

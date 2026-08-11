@@ -1284,10 +1284,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..8d30ac2 100644
+index dccaa87..1e85433 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,242 @@
+@@ -5,12 +5,250 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1410,6 +1410,13 @@ index dccaa87..8d30ac2 100644
 +        return false;
 +    }
 +
++    // s665 Outcome A: drop wild SETCIMG when prev ring is garbage-shaped
++    // (or operands addr=0 / w=1161). Stops freelist writeback stomp with
++    // FL_HDR_RESTORE OFF. s666 freeroll: product default ON REVERTED —
++    // drop prevents freelist-range writeback that co-gates recovery
++    // (H-wb-complete-not-stomp); 0/4 eng both arms vs s659 restore 3/3.
++    // Stays default OFF; opt-in ROGUESQ_DROP_GARBAGE_CIMG=1 for freelist-
++    // origin experiments only. Product freelist path remains restore.
 +    static bool rs64DropGarbageCimg() {
 +        static int s = -1;
 +        if (s < 0) {
@@ -1418,7 +1425,8 @@ index dccaa87..8d30ac2 100644
 +            if (s) {
 +                fprintf(stderr,
 +                    "[cimg] DROP_GARBAGE_CIMG=1 (skip wild SETCIMG when "
-+                    "prev ring is garbage-shaped; default OFF)\n");
++                    "prev ring garbage / addr=0 / w=1161; default OFF — "
++                    "s666 freeroll: ON recreates recovery drought)\n");
 +                fflush(stderr);
 +            }
 +        }
@@ -1530,7 +1538,7 @@ index dccaa87..8d30ac2 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -114,6 +344,17 @@ namespace RT64 {
+@@ -114,6 +352,17 @@ namespace RT64 {
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
              opCode = (dl->w0 >> 24) & opCodeMask;
  
@@ -1548,16 +1556,16 @@ index dccaa87..8d30ac2 100644
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
                  extendedFunction(state, &dl);
-@@ -136,13 +377,155 @@ namespace RT64 {
+@@ -136,13 +385,155 @@ namespace RT64 {
                      break;
                  }
  
 -                if (func != nullptr) {
-+                // ROGUESQ_DROP_GARBAGE_CIMG=1 (s665): skip applying wild SETCIMG
-+                // when the length-respecting prev ring is garbage-shaped. Must
-+                // run BEFORE the handler so colorImage never adopts the address.
-+                // Ring is shared with LOG_CIMG_RAW (always maintained when either
-+                // env is on).
++                // ROGUESQ_DROP_GARBAGE_CIMG=1 (s665, default OFF — s666
++                // freeroll rejected product ON for recovery drought): skip
++                // applying wild SETCIMG when the length-respecting prev ring
++                // is garbage-shaped. Must run BEFORE the handler so colorImage
++                // never adopts the address. Ring shared with LOG_CIMG_RAW.
 +                const uint32_t byteOff =
 +                    (uint32_t)((uintptr_t)dl - (uintptr_t)dlStart);
 +                const bool trackCimg = rs64LogCimgRaw() || rs64DropGarbageCimg();
