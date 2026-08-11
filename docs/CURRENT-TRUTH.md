@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s657)
+## Current truth (established by session 295; unchanged, reviewed through s658)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -71,8 +71,16 @@ Metal shader rebuilds need full Xcode on PATH:
   **s657:** gate last-line on ALLOW_FL_HDR → **HIT_WRITE LIVE**; freelist
   to_zero 0x2/0x60 returned; complete-ALLOW freeroll **1/3 recovery-active**
   (att3 recov768=7948 thr11d_new=1 fail136c=1) →
-  **H-fl-survive-suppresses-recov SUPPORTED**. Product tension: freelist
-  protect co-gates drought; keep product SKIP default ON.
+  **H-fl-survive-suppresses-recov SUPPORTED** (under permanent stomp).
+  **s658 Outcome A CONFIRMED triple-source:** `ROGUESQ_FL_HDR_RESTORE=1`
+  (ALLOW path) snapshots 16B @ phys 0x1F3CC0 around HIT writeback;
+  `HIT_WRITE_RESTORE` classic killer + `[fb-fl-hdr-restore] match=1`
+  pre=0x2/0x60 mid=0/0 post=0x2/0x60; freelist heartbeats survive past 170s;
+  recovery-active **3/5 engaged** (att2/4/6; thr11d_new=0 fail136c=0) →
+  **H-wb-complete-not-stomp SUPPORTED**. Product SKIP drought recharacterized
+  as **writeback-skip** of freelist-range wild CIMG, not freelist integrity.
+  Product still keeps SKIP_* default ON; next productize restore as freelist-
+  range path (-412).
 - Default-ON, no longer worth naming: `ROGUESQ_VI_FOLLOW_DRAW=3` (s23), `ROGUESQ_SHADE_WRAP=1`
   per-pixel (s24→s26), `ROGUESQ_FIX_ZERO_SHADE` (s20), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15),
   `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough + forceAdvance +
@@ -88,6 +96,8 @@ Metal shader rebuilds need full Xcode on PATH:
   (default OFF, product path unchanged):** `ROGUESQ_ALLOW_WILD_W=1` disables
   SKIP_WILD_W only; `ROGUESQ_ALLOW_FL_HDR=1` disables SKIP_FL_HDR only.
   Both needed to re-open freelist writeback stomp for residual drought A/B.
+  **s658 (default OFF):** `ROGUESQ_FL_HDR_RESTORE=1` with ALLOW_FL_HDR —
+  snapshot/restore freelist header around HIT writeback (A/B; not product).
 - Default-OFF, keep them off: `ROGUESQ_FIX_DXT` (s22/s23), `ROGUESQ_FIX_DXT_I` (s27, null on
   hangar band), `ROGUESQ_FLATTEN_I4` / `FLATTEN_RGBA16` / `FLATTEN_CI4` (attribution probes),
   `ROGUESQ_SHADE_ONLY_MONO` (s30, pad-only), `ROGUESQ_SHADE_WRAP=3` (s31), `ROGUESQ_SHADOW2`,
@@ -166,43 +176,32 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s656**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s658**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → sec2 when recovery `0x76B768` fires. **s619 thr11d_new LIVE**;
   **s624 -385 M1 LIVE** (`[level-tex-malloc-guard]` null `rs_malloc(0x136C)`). **s626 H-walk1**;
   **s627 global O1+size-O3 REFUTED**. **s633 first fail136c `reason=corrupt`**. **s634
   H-shipcycle2 STRUCTURAL**. **s637 H-shipn3-gate CONFIRMED**. **s638 Outcome A live** +
-  fail136c raw E8 zeros. **s639** H-zero-free/H-split **REFUTED**. **s640** thr11d∧fail136c:
-  **H-oob-store CONFIRMED** (`0x2/0x60`→zeros mid-run); **H-walk-into-zeros REFUTED**.
-  **s641–s642** `[drain-mesh-stomp]` LIVE; **H-drainmesh-stomp REFUTED**. **s643–s645**
-  sticky/BT/gbt Outcome B; BREADCRUMB19 + memset-fl-dest. **s646** **H-memset-writer
-  REFUTED**; mprotect LIVE. **s647** busy_rearm; SS REFUTED. **s648** Outcome C +
-  BT rate-limit. **s649** late-recover; **H-perturb REFUTED**. **s650** Outcome B +
-  **H-busy-rearm REFUTED** + `[adlb-fl-stomp]`. **s651** freeroll **H-adlb-writer
-  REFUTED**; **fault_ring + near_hdr**. **s652** **H-ssnr380-writer REFUTED**;
-  `[ssnr-hdr-zero]` + `[fb-fl-writeback]`. **s653 Outcome B CONFIRMED**: host FB
-  writeback wild CIMG `w=1161 addr=0x1F0D74` range covers freelist phys
-  `0x1F3CC0` co-timed with 0x2/0x60→0; **H-ssnr-zero-stores REFUTED**; product
-  guard **`SKIP_WILD_W` + `SKIP_FL_HDR`** landed (-407). **s654 Outcome A CONFIRMED
-  dual-source**: exact killer CIMG SKIP_WILD_W'd + freelist 0x2/0x60 survives;
-  **H-fb-skip-stops-stomp CONFIRMED**; FB-writeback freelist-stomp class CLOSED.
-  **s655 Outcome C**: post-SKIP freeroll **0/7 recovery-active**. **s656 Outcome B**:
-  ALLOW_WILD_W A/B **0/6** → **H-skip-suppresses-recov REFUTED** (SKIP_WILD_W
-  alone). **s656 soak Outcome C** incomplete ALLOW_FL_HDR (last-line HIT_SKIP).
-  **s657 Outcome A**: complete opt-out **HIT_WRITE** + freelist to_zero
-  0x2/0x60 returned; **1/3 recovery-active** (att3 thr11d_new=1 fail136c=1
-  corrupt) → **H-fl-survive-suppresses-recov SUPPORTED**. thr11d rate
-  historical **4/10**; s657 scored thr11d_new=1 with fail136c. Residual rank:
-  (1) recovery-without-fl-stomp surgical split -411, (2) thr11d∧fail136c under
-  recovery -408, (3) B8 -393, (4) -387 **5×**.
-- Co-gates: recovery silence (-374; product drought co-gated with freelist
-  protect -410/-411; `RECOV_WAIT_S=50` + `BUDGET_S≥900`), mat3inv (-375),
+  fail136c raw E8 zeros. **s640** thr11d∧fail136c: **H-oob-store CONFIRMED**;
+  **H-walk-into-zeros REFUTED**. **s641–s654** freelist writer campaign → FB writeback
+  wild CIMG; **H-fb-writeback-stomp** + **H-fb-skip-stops-stomp CONFIRMED**; product
+  **SKIP_WILD_W + SKIP_FL_HDR** (-407). **s655–s657** post-SKIP drought: SKIP_WILD_W
+  alone REFUTED; complete ALLOW stomp restores recov (1/3) → H-fl-survive-suppresses-
+  recov SUPPORTED under permanent stomp. **s658 Outcome A**: freelist-header
+  **snapshot/restore** under ALLOW writeback → recovery **3/5 engaged** with header
+  intact → **H-wb-complete-not-stomp SUPPORTED**; drought = writeback-skip not
+  freelist integrity. thr11d rate historical **4/10**; s658 restore path thr11d_new=0
+  fail136c=0 on 3 recov. Residual rank: (1) productize FL_HDR_RESTORE -412, (2)
+  thr11d under recovery-without-stomp -408, (3) B8 -393, (4) -387 **5×**.
+- Co-gates: recovery silence (-374; product drought = writeback-skip of freelist-
+  range wild CIMG -410/-411/-412; `RECOV_WAIT_S=50` + `BUDGET_S≥900`), mat3inv (-375),
   ship (-376/-377/-392/-393), class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll
   scene/readacct/matfree (-382..-384), null-malloc thr12 (-385 M1; -389..-391/-397),
   sinfApprox (-386 1×), do_rom_read (-387 **5×**). thr11d metric = post-hsel destroy of
   `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`, `FORCE_CASE6_START`,
-  `FS_PIPE_INJECT`, `ROGUESQ_ALLOW_WILD_W`, `ROGUESQ_ALLOW_FL_HDR`. Post-sec2: packTlut (-373).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-411; Sessions 577-657.
+  `FS_PIPE_INJECT`, `ROGUESQ_ALLOW_WILD_W`, `ROGUESQ_ALLOW_FL_HDR`,
+  `ROGUESQ_FL_HDR_RESTORE`. Post-sec2: packTlut (-373).
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-412; Sessions 577-658.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -220,26 +219,32 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -411. The next NEW item takes -412.
+a range pointer. Highest allocated so far: -412. The next NEW item takes -413.
 
-### Active M3 pipeline (s577–s657) — open residuals only
+### Active M3 pipeline (s577–s658) — open residuals only
 
--411. **(s657) complete freelist opt-out LIVE; H-fl-survive-suppresses-recov
-    SUPPORTED; residual = recovery without freelist corruption.**
-    s656 soak ALLOW both: **Outcome C** — `copyNativeToRAM` last-line
-    HIT_SKIP not gated by ALLOW_FL_HDR; freelist never stomped; 0/2 recov.
-    s657 gated last-line on ALLOW_FL_HDR (HIT_WRITE); freeroll BUDGET=1200s:
-    att1 silent + HIT_WRITE + partial 0x2 stomp; att2 mat3inv; **att3
-    recovery-active** recov768=7948 thr11d_new=1 fail136c=1 reason=corrupt
-    ltexmg=1 — classic killer `1F0D74 w=1161` HIT_WRITE + freelist to_zero
-    0x2/0x60@166352ms + 0x76B768 live. Rate: product SKIP 0/7 + ALLOW_WILD
-    0/6 + incomplete ALLOW 0/2 vs complete ALLOW **1/3** (~pre-SKIP ~1/3).
-    Product keeps all freelist guards default ON. **Next:** surgical freelist-
-    header snapshot/restore around HIT writeback under ALLOW path — split
-    writeback-completion vs freelist-stomp as recovery co-factor. If recov
-    still fires with header restored → writeback-completion is co-factor
-    (product can allow non-header bytes or alternate inject); if silent →
-    freelist corruption itself co-gates recovery (harder). Full: Session 657.
+-412. **(s658) freelist-header restore LIVE; H-wb-complete-not-stomp SUPPORTED;
+    residual = productize restore + thr11d under recovery-without-stomp.**
+    Landed `ROGUESQ_FL_HDR_RESTORE=1` (default OFF, needs ALLOW_FL_HDR): on
+    freelist-range HIT, snapshot 16 host bytes @ phys 0x1F3CC0, complete
+    writeback, restore header. Logs `HIT_WRITE_RESTORE` +
+    `[fb-fl-hdr-restore]`. Freeroll BUDGET=1200s: **Outcome A CONFIRMED
+    triple-source** (att2/4/6) — classic killer `1F0D74 w=1161` HIT_WRITE_
+    RESTORE; restore match=1 pre=0x2/0x60 mid=0/0 post=0x2/0x60; freelist
+    heartbeats 0x2/0x60 past 170s; recovery-active **3/5 engaged**
+    (recov768=7932/7932/3058) thr11d_new=0 fail136c=0. Product SKIP drought
+    recharacterized as **writeback-skip** of freelist-range wild CIMG (not
+    freelist integrity). **Next:** productize restore as freelist-range
+    writeback path (replace SKIP_FL_HDR hard-skip with snapshot/write/restore
+    default ON; decide SKIP_WILD_W policy), then thr11d re-score under
+    recovery-without-stomp (-408). Full: Session 658.
+
+-411. **(s657→s658) complete freelist opt-out LIVE; H-fl-survive-suppresses-
+    recov SUPPORTED under permanent stomp; closed into -412 (surgical restore
+    split → H-wb-complete-not-stomp).**
+    s657 complete ALLOW: HIT_WRITE + freelist to_zero; 1/3 recovery-active
+    with thr11d∧fail136c. s658 restore path: recov without permanent stomp.
+    Full: Sessions 657-658.
 
 -410. **(s656→s657) freelist-survival residual — incomplete A/B then complete
     opt-out → closed into -411 (H-fl-survive-suppresses-recov SUPPORTED).**
@@ -254,14 +259,13 @@ a range pointer. Highest allocated so far: -411. The next NEW item takes -412.
     SKIP_FL_HDR → drought not caused by SKIP_WILD_W gate. Full: Sessions
     655-656.
 
--408. **(s654→s657) thr11d∧fail136c re-score — recovery returned under
-    complete ALLOW with freelist stomped (s657 att3 thr11d_new=1
-    fail136c=1 corrupt); freelist-intact path still droughted.**
-    s654 closed FB-writeback freelist-stomp product guard. s654–s656
-    freelist-survive freerolls: 0 recovery → H-fl-survive-unblocks-thr11d
-    UNEVALUABLE. s657 complete ALLOW: thr11d∧fail136c LIVE again with
-    freelist to_zero — classic class-D. Residual under product (freelist
-    intact) still needs recovery-without-stomp (-411). Full: Sessions 654-657.
+-408. **(s654→s658) thr11d∧fail136c re-score — stomped path thr11d LIVE
+    (s657); restore path recovery LIVE but thr11d_new=0 fail136c=0 (s658
+    0/3).**
+    s657 complete ALLOW stomp: thr11d∧fail136c. s658 restore: 3 recovery-
+    active with freelist intact, thr11d_new=0 fail136c=0 (no permanent
+    zero-node). Re-score thr11d after productize restore (-412). Full:
+    Sessions 654-658.
 
 -407. **(s653→s654) freelist writer — H-fb-writeback-stomp CONFIRMED;
     product guard LIVE-VERIFIED Outcome A; FB-writeback freelist-stomp
@@ -382,16 +386,12 @@ a range pointer. Highest allocated so far: -411. The next NEW item takes -412.
     SCORE `ship_store` post-hsel: =2 means n=2+n=3; =1 only n=2. **Gate of n=3
     closed into -393** (runModelViewerLoop B8→throttle). Full: Sessions 634-637.
 
--391. **(s632→s657) fail136c `reason=corrupt`: E8 freelist zero-node at
-    `0x801F3CC0` — H-oob-store CONFIRMED; H-walk-into-zeros REFUTED;
-    H-drainmesh-stomp REFUTED s642; … H-fb-writeback-stomp CONFIRMED s653;
-    **H-fb-skip-stops-stomp CONFIRMED s654**; s657 complete ALLOW restores
-    thr11d∧fail136c with freelist to_zero; residual recovery-without-
-    fl-stomp (-411) then thr11d re-score (-408).**
-    s633–s640: freelist 0x2/0x60→0 mid-run H-oob-store. **s641–s654:** writer
-    ID closed at FB writeback wild CIMG; product guard LIVE. **s656–s657:**
-    freelist-protect co-gates recovery drought; complete ALLOW reopens
-    thr11d∧fail136c. Full: Sessions 632-657.
+-391. **(s632→s658) fail136c `reason=corrupt`: E8 freelist zero-node at
+    `0x801F3CC0` — H-oob-store CONFIRMED; H-fb-writeback-stomp CONFIRMED;
+    H-fb-skip-stops-stomp CONFIRMED; s657 stomp reopens thr11d∧fail136c;
+    s658 restore reopens recovery **without** fail136c; residual productize
+    restore (-412) + thr11d re-score (-408).**
+    Full: Sessions 632-658.
 
 -390. **(s627→s634) pool-aware free census + thr11d rate: 2/8 (25%) of
     recovery-fired reach thr11d_new; discriminator fed once (→ -391); pure
@@ -499,18 +499,18 @@ a range pointer. Highest allocated so far: -411. The next NEW item takes -412.
     is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
     Full: Session 608.
 
--361. **(s589-s654) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
+-361. **(s589-s658) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
     Outcome A live; class-D soft-skip LIVE; -385 M1 LIVE thr12 blocked by null
-    `rs_malloc(0x136C)` — **E8 zero-node `0x801F3CC0`**: H-oob-store CONFIRMED s640;
-    writer ID campaign closed s654 (**H-fb-writeback-stomp** + **H-fb-skip-
-    stops-stomp CONFIRMED**; FB freelist-stomp class CLOSED via SKIP_WILD_W);
-    residual recovery-without-fl-stomp (-411); thr11d∧fail136c under stomp
-    LIVE s657 att3. thr11d gated by B8→store→throttle×7 →destroy (-392/-393);
-    -387 **5×**. Co-gates: recovery (-374/-410/-411), mat3inv (-375),
-    sinfApprox (-386), ship (-376/-377/-392/-393), freeroll (-382..-384),
-    FORCE_STATE6 (-381 CLOSED), packTlut (-373). thr-11=`saveServiceWorker`
-    `0x8006F2CC`; thr-12=`hudDisplayUpdateWorker` via `loadLevelTextureCache`.
-    HOLD_S ≤ 210. Full: PROJECT-OVERVIEW §27; Sessions 589-657.**
+    `rs_malloc(0x136C)` — freelist writer closed s654 (SKIP_WILD_W product);
+    s657 stomp restores thr11d∧fail136c; **s658 restore restores recovery
+    without freelist stomp (H-wb-complete-not-stomp)**; residual productize
+    restore (-412) + thr11d re-score (-408). thr11d gated by B8→store→
+    throttle×7 →destroy (-392/-393); -387 **5×**. Co-gates: recovery
+    (-374/-410/-411/-412), mat3inv (-375), sinfApprox (-386), ship
+    (-376/-377/-392/-393), freeroll (-382..-384), FORCE_STATE6 (-381 CLOSED),
+    packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`; thr-12=
+    `hudDisplayUpdateWorker` via `loadLevelTextureCache`. HOLD_S ≤ 210.
+    Full: PROJECT-OVERVIEW §27; Sessions 589-658.**
 
 ### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
 
@@ -607,9 +607,10 @@ a range pointer. Highest allocated so far: -411. The next NEW item takes -412.
     post-SKIP; s656 Outcome B H-skip-suppresses-recov REFUTED
     (SKIP_WILD_W alone) + Outcome C incomplete ALLOW_FL_HDR; s657
     complete opt-out HIT_WRITE + H-fl-survive-suppresses-recov
-    SUPPORTED (1/3 recov with freelist to_zero); residual -411
-    recovery-without-fl-stomp then -408**.
-    Active residuals: -411..-373 / -361 / -379. Tools still default OFF.
+    SUPPORTED under stomp; s658 FL_HDR_RESTORE Outcome A —
+    H-wb-complete-not-stomp SUPPORTED (3/5 recov with header restored);
+    residual -412 productize restore then -408 thr11d re-score**.
+    Active residuals: -412..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 

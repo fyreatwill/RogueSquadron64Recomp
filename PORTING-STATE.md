@@ -50768,3 +50768,56 @@ writeback-completion vs freelist-stomp as recovery co-factor.
   HIT return; HIT_WRITE tag when allowed.
 - submodule-patches/export.sh refreshed rt64.patch.
 
+
+## Session 658 (2026-08-10) — freelist-header snapshot/restore Outcome A; H-wb-complete-not-stomp SUPPORTED
+
+### Work unit
+Surgical freelist-header snapshot/restore under complete ALLOW writeback
+(`ROGUESQ_FL_HDR_RESTORE=1` + ALLOW_WILD_W + ALLOW_FL_HDR) to split
+writeback-completion vs freelist-stomp as recovery co-factor.
+
+### Posctrl (same-run, LIVE)
+- `[fb-fl-writeback] FL_HDR_RESTORE=1` banner
+- Classic killer `addrStart=0x1F0D74 w=1161 h=277 siz=3` → `HIT_WRITE_RESTORE`
+- `[fb-fl-hdr-restore] pre_f=0x2 pre_sz=0x60 mid_f=0x0 mid_sz=0x0
+  post_f=0x2 post_sz=0x60 match=1` — writeback zeros header mid-write;
+  restore returns 0x2/0x60
+- Freelist heartbeats stay `flags=0x2 size=0x60` past ~170s (brief
+  freelist-shaped to_zero flash only; permanent survival)
+
+### Freeroll BUDGET=1200s (6 attempts)
+| att | engaged | recov768 | thr11d_new | fail136c | restore | notes |
+|-----|---------|----------|------------|----------|---------|-------|
+| 1 | yes | 0 | 0 | 0 | no real HIT | matnoise free-reroll |
+| 2 | yes | 7932 | 0 | 0 | match=1 | matnoise post-recov |
+| 3 | no | — | — | — | — | pre-eng crash 10s |
+| 4 | yes | 7932 | 0 | 0 | match=1 (×2) | scenegraph free-reroll |
+| 5 | yes | 0 | 0 | 0 | — | recovery_silent crash |
+| 6 | yes | 3058 | 0 | 0 | match=1 | budget kill, no crash |
+
+**Recovery-active 3/5 engaged** with freelist header restored (att2/4/6).
+Compare: product SKIP 0/7; incomplete ALLOW 0/2; complete ALLOW stomp 1/3.
+
+### Verdict
+- **Outcome A CONFIRMED triple-source**
+- **H-wb-complete-not-stomp SUPPORTED**: writeback completion (not permanent
+  freelist zero) co-gates recovery
+- **H-fl-survive-suppresses-recov refined**: freelist *integrity alone* does
+  not suppress recovery when writeback still completes; product SKIP drought
+  was from **skipping freelist-range wild writeback**, not from freelist
+  surviving as a side effect
+- thr11d_new=0 / fail136c=0 on all 3 recovery-active (no permanent zero-node
+  → class-D `reason=corrupt` not re-entered). thr11d re-score under
+  recovery-without-stomp still open (-408/-412)
+
+### Landed
+- `lib/rt64/.../rt64_framebuffer.cpp`: `ROGUESQ_FL_HDR_RESTORE=1` (default OFF)
+  snapshots 16 host bytes at phys 0x1F3CC0 around HIT writeback when
+  ALLOW_FL_HDR is on; logs `HIT_WRITE_RESTORE` + `[fb-fl-hdr-restore]`
+- Product keeps SKIP_WILD_W + SKIP_FL_HDR + last-line HIT_SKIP default ON
+- submodule-patches/export.sh refreshed rt64.patch
+
+### Next
+Productize freelist-header restore as the freelist-range writeback path
+(replace SKIP_FL_HDR hard-skip with snapshot/write/restore default ON) so
+recovery can fire without permanent freelist corruption; then thr11d re-score.

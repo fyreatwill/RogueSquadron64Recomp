@@ -680,7 +680,7 @@ index 6255872..ed69a87 100644
                  }
                  // No texture coefficients
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..50accb9 100644
+index 873883d..4f768e1 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
 @@ -16,6 +16,12 @@
@@ -755,7 +755,7 @@ index 873883d..50accb9 100644
          return differentPixels;
      }
  
-@@ -143,6 +200,48 @@ namespace RT64 {
+@@ -143,6 +200,74 @@ namespace RT64 {
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
          uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
          uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
@@ -766,6 +766,12 @@ index 873883d..50accb9 100644
 +        // s657: ROGUESQ_ALLOW_FL_HDR=1 must also disable this return — s656
 +        // A/B left it always-on so freelist never to_zero under "both allows"
 +        // (Outcome C incomplete opt-out; fb_hit=1 + HIT_SKIP + freelist survives).
++        // s658: ROGUESQ_FL_HDR_RESTORE=1 (with ALLOW_FL_HDR) snapshots 16 host
++        // bytes at phys 0x1F3CC0, lets writeback complete, restores header —
++        // splits writeback-completion vs freelist-stomp as recovery co-factor.
++        uint8_t fl_hdr_snap[16];
++        uint8_t *fl_hdr_host = nullptr;
++        bool do_fl_restore = false;
 +        {
 +            const uint32_t hdr = 0x1F3CC0u;
 +            const uint32_t rowBytes = imageRowBytes(dstRowWidth);
@@ -774,6 +780,7 @@ index 873883d..50accb9 100644
 +            const int hit = (rangeStart <= hdr && hdr < rangeEnd) ? 1 : 0;
 +            static int s_fb_fl_en = -1;
 +            static int s_allow_fl_hdr = -1;
++            static int s_fl_hdr_restore = -1;
 +            if (s_fb_fl_en < 0) {
 +                const char *e = std::getenv("ROGUESQ_LOG_FL_ZERO_WATCH");
 +                s_fb_fl_en = (e && e[0] && e[0] != '0') ? 1 : 0;
@@ -782,12 +789,23 @@ index 873883d..50accb9 100644
 +                const char *e = std::getenv("ROGUESQ_ALLOW_FL_HDR");
 +                s_allow_fl_hdr = (e && e[0] == '1') ? 1 : 0;
 +            }
++            if (s_fl_hdr_restore < 0) {
++                const char *e = std::getenv("ROGUESQ_FL_HDR_RESTORE");
++                s_fl_hdr_restore = (e && e[0] == '1') ? 1 : 0;
++                if (s_fl_hdr_restore) {
++                    fprintf(stderr,
++                        "[fb-fl-writeback] FL_HDR_RESTORE=1 "
++                        "(snapshot/restore freelist header when range covers it)\n");
++                    fflush(stderr);
++                }
++            }
 +            if (s_fb_fl_en || hit) {
 +                static int s_fb_fl_n = 0;
 +                s_fb_fl_n++;
 +                if (hit || s_fb_fl_n <= 16 || (s_fb_fl_n % 500) == 0) {
 +                    const char *tag = !hit ? " sample"
-+                        : (s_allow_fl_hdr ? " HIT_WRITE" : " HIT_SKIP");
++                        : (!s_allow_fl_hdr ? " HIT_SKIP"
++                           : (s_fl_hdr_restore ? " HIT_WRITE_RESTORE" : " HIT_WRITE"));
 +                    fprintf(stderr,
 +                        "[fb-fl-writeback] n=%d hit=%d addrStart=0x%X range=[0x%X,0x%X) "
 +                        "rows=%u..%u w=%u h=%u siz=%u rowB=%u%s\n",
@@ -800,10 +818,58 @@ index 873883d..50accb9 100644
 +            if (hit && !s_allow_fl_hdr) {
 +                return;
 +            }
++            // Surgical freelist-header protect: writeback still runs (so any
++            // recovery co-factor of "write completed" is preserved) but the
++            // 16-byte freelist node header is restored immediately after.
++            if (hit && s_allow_fl_hdr && s_fl_hdr_restore && addressStart <= hdr) {
++                fl_hdr_host = dst + (hdr - addressStart);
++                memcpy(fl_hdr_snap, fl_hdr_host, 16);
++                do_fl_restore = true;
++            }
 +        }
          uint32_t dstFirstWord = dstWords[0];
          nativeTarget.copyToRAM(dstRowStart, dstRowEnd, dstRowWidth, siz, dstBytes);
  
+@@ -165,6 +290,39 @@ namespace RT64 {
+             dstWords[0] = dstFirstWord;
+         }
+ 
++        if (do_fl_restore && fl_hdr_host) {
++            uint8_t mid[16];
++            memcpy(mid, fl_hdr_host, 16);
++            memcpy(fl_hdr_host, fl_hdr_snap, 16);
++            // Logical BE flags/size via N64 RDRAM byte-swap (host idx ^ 3).
++            auto rbe_u16 = [](const uint8_t *base, uint32_t off) -> uint16_t {
++                return (uint16_t)((base[off ^ 3] << 8) | base[(off + 1) ^ 3]);
++            };
++            auto rbe_u32 = [](const uint8_t *base, uint32_t off) -> uint32_t {
++                return ((uint32_t)base[off ^ 3] << 24)
++                     | ((uint32_t)base[(off + 1) ^ 3] << 16)
++                     | ((uint32_t)base[(off + 2) ^ 3] << 8)
++                     | (uint32_t)base[(off + 3) ^ 3];
++            };
++            static int s_restore_n = 0;
++            s_restore_n++;
++            if (s_restore_n <= 40 || (s_restore_n % 100) == 0) {
++                fprintf(stderr,
++                    "[fb-fl-hdr-restore] n=%d addrStart=0x%X "
++                    "pre_f=0x%X pre_sz=0x%X mid_f=0x%X mid_sz=0x%X "
++                    "post_f=0x%X post_sz=0x%X match=%d\n",
++                    s_restore_n, addressStart,
++                    (unsigned)rbe_u16(fl_hdr_snap, 0),
++                    (unsigned)rbe_u32(fl_hdr_snap, 4),
++                    (unsigned)rbe_u16(mid, 0),
++                    (unsigned)rbe_u32(mid, 4),
++                    (unsigned)rbe_u16(fl_hdr_host, 0),
++                    (unsigned)rbe_u32(fl_hdr_host, 4),
++                    memcmp(fl_hdr_host, fl_hdr_snap, 16) == 0 ? 1 : 0);
++                fflush(stderr);
++            }
++        }
++
+ #   ifdef DUMP_RAW_RDRAM
+         char path[1024];
+         snprintf(path, sizeof(path), "dumps/FB_0x%X_W_%d_H_%d_SIZ_%d.rdram", addressStart, dstRowWidth, height, siz);
 diff --git a/src/hle/rt64_framebuffer_manager.cpp b/src/hle/rt64_framebuffer_manager.cpp
 index 7d385fa..ac7cba2 100644
 --- a/src/hle/rt64_framebuffer_manager.cpp
