@@ -50863,3 +50863,62 @@ All 3 recovery-active:
 
 ### Next
 -413 residual: thr11d→class-D fail136c with header restored — expand restore to freelist node body (size 0x60) or skip writing freelist-range body while completing writeback co-factor; score thr12/sec2 after thr11d.
+
+## Session 660 — freelist multi-header restore; body over-restore drought
+
+Date: 2026-08-10. HYPOTHESIS-ID: m3-post-exit-fs-stall.
+
+### Work unit
+Class-D / fail136c residual under product 16B header restore (-413): expand
+restore past header vs independent corrupt.
+
+### Offline (s659 logs, same-run dual-source)
+- fail136c `reason=corrupt` with header restored match=1
+- zero_node `bad=0x801F3D30` prev=`0x801F3CC0` prev_sz=`0x60`
+- freelist walk: `next = node + size + 0x10` → 0x801F3CC0+0x60+0x10=0x801F3D30
+- **H-body-stomp STRUCTURAL** for the residual zero next-header after 16B restore
+
+### Landed (lib/rt64, export.sh refreshed)
+1. s660a experiment: full-body multi-node restore (snap_cap 64KB) of freelist
+   window after writeback
+2. s660 product (final): **surgical multi-header restore** (mode=headers):
+   - snapshot walk window (default 64KB) pre-write
+   - after writeback: walk pre-snap sizes, restore **only 16B headers** at each
+     freelist node; leave body writeback bytes intact (recovery co-factor)
+   - banner: `mode=headers walk_cap=0x10000`
+   - A/B: `ROGUESQ_FL_RESTORE_MODE=body` or `ROGUESQ_FL_RESTORE_BYTES=N`
+     for full-body restore; `ROGUESQ_FL_HDR_RESTORE=0` / `FL_HDR_HARD_SKIP=1`
+
+### Freeroll s660a (64KB full body, BUDGET=1200, ATTEMPT_WALL=300)
+- posctrl LIVE: snap=0x10000 node_span=0x70 next_ok=1 restore_ok=1
+- engaged=3 all recovery_silent (recov_active=0); zero_node=0 fail136c=0 on silent
+- classic killer 1F0D74 w=1161 on att3; also freelist-range 1BF3A8 w=944
+- **Outcome C candidate (single-source 0/3)**: full-body over-restore correlated
+  with recovery drought vs s659 16B recov 3/3
+- **H-wb-complete-not-stomp refined**: recovery may need freelist-range *body*
+  writeback bytes kept, not only function completion
+
+### Freeroll s660b (node_span then headers pivot)
+- pre-eng noise 5/5 (0 hangar-sel); ATTEMPT_WALL worked
+- headers product banner LIVE; recovery-active scoring deferred to soak queue
+
+### Discriminators
+| Claim | Result |
+|-------|--------|
+| H-body-stomp (next header zero after 16B) | **STRUCTURAL** offline s659 |
+| Full-body 64KB fixes chain (next_ok) | **LIVE** s660a |
+| Full-body preserves recovery | **REFUTED candidate** 0/3 vs s659 3/3 |
+| Headers-only product | **LANDED** posctrl banner; freeroll queued |
+
+### Ruled out / closed
+- Expanding to one node body alone (size+0x10) cannot fix next header at +0x70
+  without also restoring that next 16B — multi-header required
+- Full-body 64KB not product-safe (drought)
+
+### Queued
+`scratch/agent/soak_queue/s660_fl_headers_restore_freeroll.sh` — product
+headers freeroll BUDGET=1200 for recovery-active fail136c re-score
+
+### Next
+Consume headers freeroll: expect recov ≥1/3 + next_ok=1 + fail136c drop on
+thr11d; else independent corrupt or residual beyond walk_cap.

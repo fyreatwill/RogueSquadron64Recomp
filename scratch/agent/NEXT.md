@@ -2,55 +2,53 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-## s659 recap (read this first)
+## s660 recap (read this first)
 
-**Outcome A CONFIRMED dual-source (product freelist-header restore LIVE):**
+**H-body-stomp STRUCTURAL (offline s659 dual-source):**
+- fail136c reason=corrupt with 16B header restore match=1
+- zero_node bad=0x801F3D30 prev=0x801F3CC0 prev_sz=0x60
+- freelist walk: next = node + size + 0x10
 
-Product path (default ON, no ALLOW_*):
-- policy A: wild freelist-range → ALLOW_WILD_FL + HIT_WRITE_RESTORE
-- non-freelist wild still SKIP_WILD_W
-- freeroll: recov 3/3 engaged; thr11d_new 3/3; fail136c 2/3 reason=corrupt
-- classic killer restore match=1; heartbeats 0x2/0x60 to ~245s
-- thr12_post=0 sec2_post=0 (class-D still blocks)
+**s660a full-body 64KB restore:**
+- posctrl LIVE: snap=0x10000 node_span=0x70 next_ok=1
+- recov_active=0/3 engaged (vs s659 16B recov 3/3) → body over-restore
+  undoes recovery co-factor (Outcome C candidate, single-source)
 
-s658 ALLOW restore had thr11d_new=0/3; product reopens thr11d 3/3 with
-header intact. fail136c residual with restored header → freelist **body**
-beyond 16B still stomped by wild CIMG, or independent corrupt path.
+**s660 product (LANDED):** mode=headers multi-header restore
+- snapshot walk window 64KB, restore only 16B headers along chain
+- leave body writeback intact for recovery co-factor
+- banner: `mode=headers walk_cap=0x10000` LIVE
+- A/B: `ROGUESQ_FL_RESTORE_MODE=body` / `ROGUESQ_FL_RESTORE_BYTES=N`
 
 ## This iteration's work unit
 
-**Primary: class-D / fail136c residual under product header restore.**
+**Primary: consume headers freeroll (or run if not yet soaked).**
 
-Hypotheses:
+Queued: `scratch/agent/soak_queue/s660_fl_headers_restore_freeroll.sh`
+
+If SOAK-RESULTS already has a verdict, fold it and decide A/B/C:
 | ID | Claim |
 |----|-------|
-| H-body-stomp | wild CIMG stomps freelist node body past 16B header → reason=corrupt |
-| H-independent-corrupt | fail136c corrupt independent of freelist writeback |
-| H-mid-race | fail136c samples freelist during mid-write zero window |
+| H-headers-fix | headers restore → recov ≥1/3 + fail136c ~0 on thr11d + next_ok |
+| H-independent-corrupt | recov ok but fail136c still ≥2/3 with next_ok=1 |
+| H-headers-drought | recov drought even with headers-only → co-factor subtler |
 
-Discriminating measurement (one build, one freeroll):
-1. Expand product restore from 16B header to full freelist node (size field
-   0x60 = 96B, or fixed 0x60 from header size) — OR hole-punch freelist
-   range out of writeback memcpy (skip writing [hdr, hdr+node_size) entirely
-   while still "completing" writeback for recovery co-factor).
-2. Posctrl: product banner + restore_ok on killer.
-3. Freeroll product defaults BUDGET≥1200:
-   - **A)** fail136c drops to ~0 on thr11d recovery-active + thr12/sec2 may
-     advance → body-stomp was residual
-   - **B)** fail136c still 2/3+ with expanded restore → independent corrupt
-   - **C)** recov drought returns → writeback co-factor needs full freelist-
-     range bytes written (not just "completion")
+Discriminating measurement:
+1. Posctrl: banner mode=headers + restore next_ok=1 nhdr≥2 on killer
+2. Freeroll product defaults BUDGET≥1200:
+   - **A)** recov≥1/3 + thr11d + fail136c~0 (+ thr12/sec2?) → headers fix
+   - **B)** fail136c still high with next_ok → independent corrupt
+   - **C)** recov drought → need different co-factor model
 
-Prefer hole-punch or expand-restore over soft-skip thr12. Do NOT leave
-ALLOW_* on product soaks. Keep thr11d scoring (post-hsel destroy of
-0x8006F2CC).
+Do NOT soft-skip thr12. Do NOT leave ALLOW_* on product soaks.
+Keep thr11d scoring (post-hsel destroy of 0x8006F2CC).
 
 ## Do NOT
+- Full-body 64KB as product (s660a drought)
 - Soft-skip thr12 without recovery-active thr11d evidence
 - Raise HOLD_S past 210
-- Revert product restore without dual-source regression
 - Merge -385 with -387/-384/-373/-386
 
 ### Reference tags
-`ALLOW_WILD_FL`, `HIT_WRITE_RESTORE`, `fb-fl-hdr-restore`, 0x1F3CC0,
-0x1F0D74, fail136c, thr11d_new, thr12_post, sec2_post, -413, -408
+`mode=headers`, `HIT_WRITE_RESTORE`, `fb-fl-hdr-restore`, next_ok, nhdr,
+0x1F3CC0, 0x1F3D30, fail136c, thr11d_new, thr12_post, sec2_post, -414

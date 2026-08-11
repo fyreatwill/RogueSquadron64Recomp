@@ -680,7 +680,7 @@ index 6255872..ed69a87 100644
                  }
                  // No texture coefficients
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
-index 873883d..79f0181 100644
+index 873883d..dbe946a 100644
 --- a/src/hle/rt64_framebuffer.cpp
 +++ b/src/hle/rt64_framebuffer.cpp
 @@ -16,6 +16,12 @@
@@ -755,21 +755,32 @@ index 873883d..79f0181 100644
          return differentPixels;
      }
  
-@@ -143,6 +200,77 @@ namespace RT64 {
+@@ -143,6 +200,124 @@ namespace RT64 {
          uint8_t *dstBytes = dst + dstRowStart * imageRowBytes(dstRowWidth);
          uint32_t *dstWords = reinterpret_cast<uint32_t *>(dstBytes);
          uint32_t bytesToSwap = (dstRowEnd - dstRowStart) * imageRowBytes(dstRowWidth);
-+        // s652–s659 freelist header phys 0x1F3CC0. Product path (s659, -412):
-+        // always snapshot 16 host bytes, complete writeback, restore header —
-+        // writeback completion co-gates recovery (H-wb-complete-not-stomp s658)
-+        // while freelist integrity is preserved (H-fb-skip-stops-stomp s654).
-+        // Pre-s659 hard HIT_SKIP is opt-in via ROGUESQ_FL_HDR_HARD_SKIP=1.
-+        // ROGUESQ_FL_HDR_RESTORE=0 disables restore only (HIT_WRITE, A/B stomp).
-+        uint8_t fl_hdr_snap[16];
-+        uint8_t *fl_hdr_host = nullptr;
++        // s652–s660 freelist phys 0x1F3CC0. Product path:
++        // writeback completion co-gates recovery (H-wb-complete-not-stomp);
++        // freelist integrity via surgical multi-header restore (s660).
++        // s659: 16B at hdr only → fail136c zero_node at next=node+size+0x10.
++        // s660a: full 64KB body restore → next_ok=1 but recov drought 0/3
++        //   (over-restore undoes writeback body co-factor).
++        // s660 product: snapshot walk window, restore ONLY 16B headers along
++        //   freelist chain (next=node+size+0x10); leave body writeback intact.
++        // ROGUESQ_FL_HDR_HARD_SKIP=1 → pre-s659 HIT_SKIP.
++        // ROGUESQ_FL_HDR_RESTORE=0 → no restore.
++        // ROGUESQ_FL_RESTORE_BYTES=N → full-body restore of N bytes (A/B).
++        // ROGUESQ_FL_RESTORE_MODE=body → full-body of walk window (A/B).
++        static constexpr uint32_t kFlHdrPhys = 0x1F3CC0u;
++        static constexpr uint32_t kFlWalkCapDefault = 0x10000u; // 64KB walk window
++        uint8_t *fl_snap = nullptr;
++        uint8_t *fl_host = nullptr;
++        uint32_t fl_snap_n = 0;
++        uint32_t fl_node_span = 0;
++        int fl_restore_mode = 0; // 0=headers, 1=full body
 +        bool do_fl_restore = false;
 +        {
-+            const uint32_t hdr = 0x1F3CC0u;
++            const uint32_t hdr = kFlHdrPhys;
 +            const uint32_t rowBytes = imageRowBytes(dstRowWidth);
 +            const uint32_t rangeStart = addressStart + dstRowStart * rowBytes;
 +            const uint32_t rangeEnd = addressStart + dstRowEnd * rowBytes;
@@ -777,6 +788,8 @@ index 873883d..79f0181 100644
 +            static int s_fb_fl_en = -1;
 +            static int s_fl_hard_skip = -1;
 +            static int s_fl_hdr_restore = -1;
++            static uint32_t s_fl_walk_cap = kFlWalkCapDefault;
++            static int s_fl_mode = 0; // 0 headers, 1 body
 +            if (s_fb_fl_en < 0) {
 +                const char *e = std::getenv("ROGUESQ_LOG_FL_ZERO_WATCH");
 +                s_fb_fl_en = (e && e[0] && e[0] != '0') ? 1 : 0;
@@ -786,23 +799,37 @@ index 873883d..79f0181 100644
 +                s_fl_hard_skip = (e && e[0] == '1') ? 1 : 0;
 +            }
 +            if (s_fl_hdr_restore < 0) {
-+                // Product default ON. Opt out with ROGUESQ_FL_HDR_RESTORE=0.
 +                const char *e = std::getenv("ROGUESQ_FL_HDR_RESTORE");
 +                if (e && e[0] == '0') {
 +                    s_fl_hdr_restore = 0;
 +                } else {
 +                    s_fl_hdr_restore = 1;
 +                }
++                const char *eb = std::getenv("ROGUESQ_FL_RESTORE_BYTES");
++                if (eb && eb[0]) {
++                    char *end = nullptr;
++                    unsigned long v = strtoul(eb, &end, 0);
++                    if (end != eb && v >= 16u && v <= 0x200000u) {
++                        s_fl_walk_cap = (uint32_t)v;
++                        s_fl_mode = 1; // explicit bytes → full body
++                    }
++                }
++                const char *em = std::getenv("ROGUESQ_FL_RESTORE_MODE");
++                if (em && (em[0] == 'b' || em[0] == 'B' || em[0] == '1')) {
++                    s_fl_mode = 1;
++                }
 +                static int s_banner = 0;
 +                if (!s_banner) {
 +                    s_banner = 1;
 +                    fprintf(stderr,
 +                        "[fb-fl-writeback] product restore=%d hard_skip=%d "
-+                        "(freelist phys 0x1F3CC0)\n",
-+                        s_fl_hdr_restore, s_fl_hard_skip);
++                        "mode=%s walk_cap=0x%X (freelist phys 0x1F3CC0)\n",
++                        s_fl_hdr_restore, s_fl_hard_skip,
++                        s_fl_mode ? "body" : "headers", s_fl_walk_cap);
 +                    fflush(stderr);
 +                }
 +            }
++            fl_restore_mode = s_fl_mode;
 +            if (s_fb_fl_en || hit) {
 +                static int s_fb_fl_n = 0;
 +                s_fb_fl_n++;
@@ -819,29 +846,45 @@ index 873883d..79f0181 100644
 +                    fflush(stderr);
 +                }
 +            }
-+            // Pre-s659 hard skip (A/B only). Product default: do not return.
 +            if (hit && s_fl_hard_skip) {
 +                return;
 +            }
-+            // Product: writeback runs; 16-byte freelist node header restored after.
-+            if (hit && s_fl_hdr_restore && addressStart <= hdr) {
-+                fl_hdr_host = dst + (hdr - addressStart);
-+                memcpy(fl_hdr_snap, fl_hdr_host, 16);
-+                do_fl_restore = true;
++            // Snapshot walk window for post-write header (or body) restore.
++            if (hit && s_fl_hdr_restore && addressStart <= hdr && hdr < rangeEnd) {
++                fl_host = dst + (hdr - addressStart);
++                auto rbe_u32 = [](const uint8_t *base, uint32_t off) -> uint32_t {
++                    return ((uint32_t)base[off ^ 3] << 24)
++                         | ((uint32_t)base[(off + 1) ^ 3] << 16)
++                         | ((uint32_t)base[(off + 2) ^ 3] << 8)
++                         | (uint32_t)base[(off + 3) ^ 3];
++                };
++                uint32_t pre_sz = rbe_u32(fl_host, 4);
++                if (pre_sz >= 0x10u && pre_sz <= 0x100000u) {
++                    fl_node_span = pre_sz + 0x10u;
++                } else {
++                    fl_node_span = 0x70u;
++                }
++                uint32_t avail = rangeEnd - hdr;
++                uint32_t want = s_fl_walk_cap;
++                if (want < 16u) {
++                    want = 16u;
++                }
++                fl_snap_n = (want < avail) ? want : avail;
++                fl_snap = (uint8_t *)malloc(fl_snap_n);
++                if (fl_snap) {
++                    memcpy(fl_snap, fl_host, fl_snap_n);
++                    do_fl_restore = true;
++                }
 +            }
 +        }
          uint32_t dstFirstWord = dstWords[0];
          nativeTarget.copyToRAM(dstRowStart, dstRowEnd, dstRowWidth, siz, dstBytes);
  
-@@ -165,6 +293,39 @@ namespace RT64 {
+@@ -165,6 +340,79 @@ namespace RT64 {
              dstWords[0] = dstFirstWord;
          }
  
-+        if (do_fl_restore && fl_hdr_host) {
-+            uint8_t mid[16];
-+            memcpy(mid, fl_hdr_host, 16);
-+            memcpy(fl_hdr_host, fl_hdr_snap, 16);
-+            // Logical BE flags/size via N64 RDRAM byte-swap (host idx ^ 3).
++        if (do_fl_restore && fl_host && fl_snap && fl_snap_n >= 16u) {
 +            auto rbe_u16 = [](const uint8_t *base, uint32_t off) -> uint16_t {
 +                return (uint16_t)((base[off ^ 3] << 8) | base[(off + 1) ^ 3]);
 +            };
@@ -851,23 +894,67 @@ index 873883d..79f0181 100644
 +                     | ((uint32_t)base[(off + 2) ^ 3] << 8)
 +                     | (uint32_t)base[(off + 3) ^ 3];
 +            };
++            uint8_t mid[16];
++            memcpy(mid, fl_host, 16);
++            int nhdr = 0;
++            if (fl_restore_mode == 1) {
++                // A/B full-body restore of snap window.
++                memcpy(fl_host, fl_snap, fl_snap_n);
++                nhdr = -1;
++            } else {
++                // Product: restore only 16B headers along freelist chain.
++                // Walk pre-snap sizes so body writeback bytes stay written.
++                uint32_t off = 0;
++                for (int i = 0; i < 256 && off + 16u <= fl_snap_n; i++) {
++                    uint16_t f = rbe_u16(fl_snap, off);
++                    uint32_t sz = rbe_u32(fl_snap, off + 4);
++                    memcpy(fl_host + off, fl_snap + off, 16);
++                    nhdr++;
++                    if (f & 0x8u) {
++                        break; // terminator
++                    }
++                    if (sz == 0u || sz > 0x100000u) {
++                        break;
++                    }
++                    uint32_t step = sz + 0x10u;
++                    if (step < 0x10u || off + step < off) {
++                        break;
++                    }
++                    off += step;
++                }
++            }
 +            static int s_restore_n = 0;
 +            s_restore_n++;
 +            if (s_restore_n <= 40 || (s_restore_n % 100) == 0) {
++                uint32_t next_f = 0, next_sz = 0;
++                int next_ok = 0;
++                if (fl_node_span + 8u <= fl_snap_n) {
++                    next_f = rbe_u16(fl_host, fl_node_span);
++                    next_sz = rbe_u32(fl_host, fl_node_span + 4);
++                    next_ok = (next_sz != 0) ? 1 : 0;
++                }
 +                fprintf(stderr,
-+                    "[fb-fl-hdr-restore] n=%d addrStart=0x%X "
++                    "[fb-fl-hdr-restore] n=%d addrStart=0x%X snap=0x%X node_span=0x%X "
++                    "mode=%s nhdr=%d "
 +                    "pre_f=0x%X pre_sz=0x%X mid_f=0x%X mid_sz=0x%X "
-+                    "post_f=0x%X post_sz=0x%X match=%d\n",
-+                    s_restore_n, addressStart,
-+                    (unsigned)rbe_u16(fl_hdr_snap, 0),
-+                    (unsigned)rbe_u32(fl_hdr_snap, 4),
++                    "post_f=0x%X post_sz=0x%X match=%d next_f=0x%X next_sz=0x%X next_ok=%d\n",
++                    s_restore_n, addressStart, fl_snap_n, fl_node_span,
++                    fl_restore_mode ? "body" : "headers", nhdr,
++                    (unsigned)rbe_u16(fl_snap, 0),
++                    (unsigned)rbe_u32(fl_snap, 4),
 +                    (unsigned)rbe_u16(mid, 0),
 +                    (unsigned)rbe_u32(mid, 4),
-+                    (unsigned)rbe_u16(fl_hdr_host, 0),
-+                    (unsigned)rbe_u32(fl_hdr_host, 4),
-+                    memcmp(fl_hdr_host, fl_hdr_snap, 16) == 0 ? 1 : 0);
++                    (unsigned)rbe_u16(fl_host, 0),
++                    (unsigned)rbe_u32(fl_host, 4),
++                    memcmp(fl_host, fl_snap, 16) == 0 ? 1 : 0,
++                    next_f, next_sz, next_ok);
 +                fflush(stderr);
 +            }
++            free(fl_snap);
++            fl_snap = nullptr;
++        } else if (fl_snap) {
++            free(fl_snap);
++            fl_snap = nullptr;
 +        }
 +
  #   ifdef DUMP_RAW_RDRAM
