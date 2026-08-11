@@ -50664,3 +50664,65 @@ wild-W skip disabled. A ≥1 recov/≤6 engaged → SUPPORTED; B 0/≥5 → REFU
 - Soft-skip thr12 without recovery-active + freelist survival + thr11d
 - Re-open FB freelist-stomp class without freelist to_zero under product SKIP
 - Treat 0/7 drought as CONFIRMED causal without A/B (single-source correlation)
+
+## Session 656 (2026-08-10) — ALLOW_WILD_W A/B Outcome B; H-skip-suppresses-recov REFUTED; ALLOW_FL_HDR
+
+### Work unit
+Consume `s655_allow_wild_w_recov_ab` SOAK-RESULTS (loop 600s-cap truncated). Complete
+A/B with in-session BUDGET=1200s freeroll. Discriminate H-skip-suppresses-recov.
+
+### Loop soak s655_allow_wild_w_recov_ab (rc=137, 600s outer cap)
+- Posctrl LIVE: `[ost-wb] ALLOW_WILD_W=1 (SKIP_WILD_W disabled for A/B)`
+- att1 pre-eng crash 11s; att2 silent engaged; att3 matnoise engaged; att4 truncated
+- Engaged recovery-active: **0/2**
+- Under ALLOW_WILD_W: killer CIMG still **SKIP_FL_HDR**
+  (`addr=0x1F0D74 w=1161 range covers hdr 0x1F3CC0`); freelist 0x2/0x60 survived
+  heartbeats 150–200s; freelist-shaped to_zero=0; skip_wild=0 skip_fl=1
+
+### In-session freeroll (BUDGET=1200s, no loop cap)
+discard_stats: pre_eng=3 matnoise=1 recov_silent=3 attempts=7 — **0 recovery-active**
+| att | class | arm_fl | fl to_zero 0x2/0x60 | SKIP_FL_HDR killer | thr11d |
+|-----|-------|--------|--------------------|--------------------|--------|
+| 1 | pre-eng crash 134s | 0 | — | — | — |
+| 2 | matnoise engaged | 0 | 0 | 1F0D74 w=1161 | 0 |
+| 3 | pre-eng crash 10s | 0 | — | — | — |
+| 4 | silent | 1 | 0 | 1F0D74 w=1161 | 0 |
+| 5 | silent | 1 | 0 | 1F0D74 w=1161 | 0 |
+| 6 | silent | 1 | 0 | 1BF3A8 w=944 (also covers hdr) | 0 |
+| 7 | pre-eng crash 135s | 0 | — | — | — |
+
+Combined ALLOW_WILD_W engaged recovery-active: **0/6** (soak 2 + in-session 4).
+Product SKIP post-s654: 0/7. Pre-SKIP historical ≈1/3.
+
+### Silent vs active fullsync profile (same-recipe passive instruments)
+- Silent engaged (att4): top fullsync `0x76DF60` (side-slot, 476×); **0×** at recovery
+  cell `0x76B768`
+- Active control (s652 freeroll att2): **3974×** at `0x76B768` + 476× at `0x76DF60`
+- FS_PIPE_INJECT side-slot path is live on silent; guest recovery cell never becomes
+  an fs_addr source within RECOV_WAIT_S=50
+
+### Outcomes
+| ID | Result |
+|----|--------|
+| H-skip-suppresses-recov (SKIP_WILD_W alone) | **REFUTED** — 0/6 with ALLOW_WILD_W ≥5 engaged criterion |
+| H-fl-survive-suppresses-recov | **ACTIVE residual** — freelist still SKIP_FL_HDR-protected under ALLOW_WILD_W |
+| H-fl-survive-unblocks-thr11d | still **UNEVALUABLE** (0 recovery) |
+| H-fb-skip-stops-stomp | still holds (product path); ALLOW path freelist survival is SKIP_FL_HDR |
+
+### Product
+`ROGUESQ_ALLOW_FL_HDR=1` env opt-out of SKIP_FL_HDR (`rs64_writeback_sane` in
+`lib/rt64/src/hle/rt64_state.cpp`). Default OFF. Banner
+`[ost-wb] ALLOW_FL_HDR=1`. Both ALLOW_WILD_W + ALLOW_FL_HDR required to re-open
+killer freelist writeback stomp (SKIP_WILD_W gates before range calc).
+submodule-patches/export.sh refreshed (rt64.patch).
+
+### Queued
+`scratch/agent/soak_queue/s656_allow_fl_hdr_recov_ab.sh` — both allows ON.
+A ≥1 recov/≤6 engaged → freelist-survival co-factor SUPPORTED;
+B 0/≥5 with freelist to_zero LIVE → drought independent of freelist → recovery-inject pivot.
+
+### Do not
+- Claim SKIP_WILD_W causes recovery drought (REFUTED s656)
+- Leave either ALLOW_* =1 on product soaks
+- Score thr11d pipeline from recovery-silent-only freerolls
+- Soft-skip thr12 without recovery-active thr11d evidence
