@@ -51160,3 +51160,59 @@ Narrower root fix candidates (rank):
 
 Logs: `scratch/s73_post_a_scene/s664_{A,B,C}_*/run.log`
 Recipe: `scratch/agent/s664_drop_wrap_rdp_ab.sh`
+
+## Session 665 — garbage-prev SETCIMG drop: Outcome A (freelist killer stopped; restore OFF)
+
+### Work unit
+Land env-gated `ROGUESQ_DROP_GARBAGE_CIMG=1` (default OFF) at LLE
+`processRDPLists` decode site: skip applying wild SETCIMG (width ∉
+{320,512,640,1024}) when prev-command ring is garbage-shaped OR operands
+are known-bogus (addr=0 / w=1161). A/B freelist restore OFF.
+
+ORIGIN (settled s663; filter targets decode, not writeback mitigation):
+freelist stomp host writer = RT64 color writeback of garbage SETCIMG
+addr=0x1F0D74 w=1161; s664 task-lo∈sticky was too coarse.
+
+### Code
+`lib/rt64/src/hle/rt64_interpreter.cpp`:
+- shared 8-deep prev ring (also feeds `LOG_CIMG_RAW`)
+- `rs64PrevRingGarbage()` — wild SETCIMG in ring, ≥2 zeroish, ≥2 nonsense,
+  hangar-class repeated-halfword TRI
+- `rs64CimgOperandsGarbage(w,addr)` — addr==0 or w==1161
+- drop BEFORE handler; log `[cimg-garbage-drop]` + `KILLER_DROP`/`WILD_DROP`
+- rate-limit DROP dumps (s665 v1 unbounded → 244MB logs)
+
+### A/B (v1 heuristic then v2 tighten same iteration)
+
+| Arm | Config | ok | kill_applied | kill_drop | exact 1F0D74 | flz 0x2/0x60→0 | hangar |
+|-----|--------|----|--------------|-----------|--------------|----------------|--------|
+| A v1 | drop ON + restore ON | 8 | 13 (addr=0/w=1161 slip) | 174 | 0 | 0 | LIVE |
+| B v1 | drop ON + restore OFF | 8 | 6 | 162 | 0 | 0 | LIVE |
+| C v1 | drop OFF + restore OFF | 8 | 2 | 0 | present | 1 | LIVE |
+| **B v2** | drop ON + restore OFF | **8** | **0** | **210** | **0** | **0** | **LIVE** (craft_stable ~74k colours) |
+| **C v2** | drop OFF + restore OFF | **8** | **1** (exact 1F0D74) | **0** | **HIT_WRITE + to_zero** | **1** | LIVE |
+
+v1 hole: last-4 prev window missed w=1161/addr=0 cluster (wild SETCIMGs at
+prev-4..2, zeros at prev-6..8). v2: full 8-deep ring + any prior wild
+SETCIMG + operand gate (addr=0 / w=1161).
+
+### Hypotheses
+
+| ID | Result |
+|----|--------|
+| H-prev-garbage-kills-killer | **CONFIRMED** dual-source: B v2 exact 1F0D74=0, freelist-shaped to_zero=0 with restore OFF; C v2 control exact killer + HIT_WRITE + to_zero 0x2/0x60→0 |
+| H-prev-garbage-false-drop | **REFUTED for hangar** dual-source: B and C both craft_stable ~74k colours / mean_lum~35; hold_*.png dark on BOTH (not drop-specific). OK×8 LIVE both. |
+| H-prev-window-too-short | **CONFIRMED then FIXED** same iteration (v1→v2) |
+
+### Ruled out
+- Need for freelist restore to stop the exact freelist stomp once garbage
+  SETCIMG is dropped at decode (B v2 restore OFF, flz freelist-shaped=0).
+- Productizing s664 `DROP_WRAP_RDP` (still too coarse; remains OFF).
+
+### Product implication
+Filter default **OFF** this session (prove + land). Next: productize default
+ON and start retiring freelist restore layers under scored freeroll
+(recov/thr11d/fail136c). Keep restore as defense until product freeroll.
+
+Logs: `scratch/s73_post_a_scene/s665_{A,B,C}_*/run.log`
+Recipe: `scratch/agent/s665_drop_garbage_cimg_ab.sh`

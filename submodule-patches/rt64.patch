@@ -1284,10 +1284,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..1b642f7 100644
+index dccaa87..8d30ac2 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,108 @@
+@@ -5,12 +5,242 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1307,6 +1307,140 @@ index dccaa87..1b642f7 100644
  namespace RT64 {
      static FILE *displayListFp = nullptr;
  
++    // --- s665 garbage-prev wild SETCIMG drop (decode-site; default OFF) ---
++    // ORIGIN (s663): freelist stomp = RT64 color writeback of garbage SETCIMG
++    // addr=0x1F0D74 w=1161 (covers phys 0x1F3CC0). Operands not legitimate —
++    // length-respecting RDP walk over just-wrapped DPC ring (in_wrap=1, prev
++    // zeros/op 0x3F). s664 task-lo∈sticky was too coarse; this drops only
++    // wild SETCIMG when the prev-command ring is garbage-shaped.
++    struct Rs64CimgPrevRec {
++        uint8_t op;
++        uint32_t w0, w1;
++        uint32_t cmdLen;
++        uint32_t byteOff;
++    };
++    static Rs64CimgPrevRec s_cimg_prev[8];
++    static int s_cimg_prev_n = 0;
++
++    static bool rs64CimgWidthOk(uint16_t w) {
++        return w == 320 || w == 512 || w == 640 || w == 1024;
++    }
++
++    // Standard RDP primary opcodes (low 6 bits after mask). Anything outside
++    // this set arriving mid-stream is almost always ring garbage desync.
++    static bool rs64RdpOpPlausible(uint8_t op) {
++        switch (op) {
++        // triangles / rects
++        case 0x08: case 0x09: case 0x0A: case 0x0B:
++        case 0x0C: case 0x0D: case 0x0E: case 0x0F:
++        case 0x24: case 0x25: // FILLRECT / ?
++        // RDP pipeline / syncs / modes
++        case 0x26: case 0x27: case 0x28: case 0x29:
++        case 0x2A: case 0x2B: case 0x2C: case 0x2D:
++        case 0x2E: case 0x2F:
++        case 0x30: case 0x31: case 0x32: case 0x33:
++        case 0x34: case 0x35: case 0x36: case 0x37:
++        case 0x38: case 0x39: case 0x3A: case 0x3B:
++        case 0x3C: case 0x3D: case 0x3E: case 0x3F:
++            return true;
++        default:
++            return false;
++        }
++    }
++
++    static bool rs64PrevRingGarbage() {
++        if (s_cimg_prev_n < 1) {
++            return false;
++        }
++        // Full 8-deep ring (s663 killer had zeros at prev-8..prev-3; s665 att
++        // applied w=1161/addr=0 had wild SETCIMGs at prev-4..prev-2 with
++        // zeros only at prev-6..8 — a last-4 window missed both shapes).
++        const int n = (s_cimg_prev_n < 8) ? s_cimg_prev_n : 8;
++        int zeroish = 0;
++        int wildCimg = 0;
++        int nonsense = 0;
++        for (int i = 1; i <= n; ++i) {
++            const Rs64CimgPrevRec &r = s_cimg_prev[(s_cimg_prev_n - i) & 7];
++            if (r.op == 0x00 || (r.w0 == 0 && r.w1 == 0)) {
++                ++zeroish;
++            }
++            if (r.op == 0x3F) {
++                const uint16_t pw = (uint16_t)((r.w0 & 0xFFFu) + 1u);
++                if (!rs64CimgWidthOk(pw)) {
++                    ++wildCimg;
++                }
++            }
++            if (!rs64RdpOpPlausible(r.op)) {
++                ++nonsense;
++            }
++        }
++        // Any prior wild SETCIMG in the ring → already desynced stream.
++        // Legitimate paths never emit non-allowlist widths.
++        if (wildCimg >= 1) {
++            return true;
++        }
++        // s663 killer / s665 addr=0 cluster: ≥2 zeros in the 8-deep window
++        if (zeroish >= 2) {
++            return true;
++        }
++        // nonsense ops dominate
++        if (nonsense >= 2) {
++            return true;
++        }
++        // hangar-class: prev TRI with repeated halfword payload (0x09C609C6)
++        const Rs64CimgPrevRec &p1 = s_cimg_prev[(s_cimg_prev_n - 1) & 7];
++        if ((p1.op >= 0x08 && p1.op <= 0x0F) &&
++            ((p1.w0 & 0xFFFFu) == ((p1.w0 >> 16) & 0xFFFFu)) &&
++            (p1.w0 != 0)) {
++            return true;
++        }
++        return false;
++    }
++
++    // Operand-level garbage independent of prev ring. HLE path already
++    // rejects w1==0 in setColorImage_filtered; LLE processRDPLists did not.
++    static bool rs64CimgOperandsGarbage(uint16_t w, uint32_t addr) {
++        if (addr == 0) {
++            return true;
++        }
++        // widths this game never uses that historically stomped freelist
++        if (w == 1161u) {
++            return true;
++        }
++        return false;
++    }
++
++    static bool rs64DropGarbageCimg() {
++        static int s = -1;
++        if (s < 0) {
++            const char *e = std::getenv("ROGUESQ_DROP_GARBAGE_CIMG");
++            s = (e && e[0] && e[0] != '0') ? 1 : 0;
++            if (s) {
++                fprintf(stderr,
++                    "[cimg] DROP_GARBAGE_CIMG=1 (skip wild SETCIMG when "
++                    "prev ring is garbage-shaped; default OFF)\n");
++                fflush(stderr);
++            }
++        }
++        return s != 0;
++    }
++
++    static bool rs64LogCimgRaw() {
++        static int s = -1;
++        if (s < 0) {
++            const char *e = std::getenv("ROGUESQ_LOG_CIMG_RAW");
++            s = (e && e[0] && e[0] != '0') ? 1 : 0;
++        }
++        return s != 0;
++    }
++
++    static void rs64CimgPrevPush(uint8_t op, uint32_t w0, uint32_t w1,
++                                 uint32_t cmdLen, uint32_t byteOff) {
++        s_cimg_prev[s_cimg_prev_n & 7] =
++            Rs64CimgPrevRec{ op, w0, w1, cmdLen, byteOff };
++        s_cimg_prev_n++;
++    }
++
 +    // --- ROGUESQ_LOG_RDPHIST: parser-side RDP opcode census (see call site) ---
 +    static bool rs64RdpHist() {
 +        static const bool v = []{
@@ -1396,7 +1530,7 @@ index dccaa87..1b642f7 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -114,6 +210,17 @@ namespace RT64 {
+@@ -114,6 +344,17 @@ namespace RT64 {
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
              opCode = (dl->w0 >> 24) & opCodeMask;
  
@@ -1414,8 +1548,70 @@ index dccaa87..1b642f7 100644
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
                  extendedFunction(state, &dl);
-@@ -143,6 +250,94 @@ namespace RT64 {
-                 else {
+@@ -136,13 +377,155 @@ namespace RT64 {
+                     break;
+                 }
+ 
+-                if (func != nullptr) {
++                // ROGUESQ_DROP_GARBAGE_CIMG=1 (s665): skip applying wild SETCIMG
++                // when the length-respecting prev ring is garbage-shaped. Must
++                // run BEFORE the handler so colorImage never adopts the address.
++                // Ring is shared with LOG_CIMG_RAW (always maintained when either
++                // env is on).
++                const uint32_t byteOff =
++                    (uint32_t)((uintptr_t)dl - (uintptr_t)dlStart);
++                const bool trackCimg = rs64LogCimgRaw() || rs64DropGarbageCimg();
++                bool droppedGarbageCimg = false;
++                if (opCode == 0x3F && rs64DropGarbageCimg()) {
++                    const uint16_t w = (uint16_t)((dl->w0 & 0xFFFu) + 1u);
++                    const uint32_t addr = dl->w1 & 0x00FFFFFFu;
++                    const bool wild = !rs64CimgWidthOk(w);
++                    // Drop wild SETCIMG when prev ring is garbage OR operands
++                    // are known-bogus (addr=0 / historical freelist w=1161).
++                    // s665 v1: prev-only last-4 missed w=1161/addr=0 cluster
++                    // (wild prevs at prev-4..2, zeros at prev-6..8).
++                    if (wild &&
++                        (rs64CimgOperandsGarbage(w, addr) ||
++                         rs64PrevRingGarbage())) {
++                        droppedGarbageCimg = true;
++                        static int s_drop_n = 0;
++                        const int dn = ++s_drop_n;
++                        if (dn <= 64 || (dn % 256) == 0 ||
++                            w == 1161u || addr == 0x1F0D74u) {
++                            uint32_t w_end = 0, w_seen = 0, w_start = 0, w_n = 0;
++                            if (rs64_dpc_get_last_wrap)
++                                rs64_dpc_get_last_wrap(&w_end, &w_seen, &w_start, &w_n);
++                            const bool in_wrap =
++                                (w_start != 0) &&
++                                (dlStartAdddress >= w_start) &&
++                                (dlStartAdddress < (w_seen ? w_seen : w_end + 1));
++                            fprintf(stderr,
++                                "[cimg-garbage-drop] #%d task=0x%X byteOff=0x%X "
++                                "w0=0x%08X w1=0x%08X w=%u addr=0x%06X in_wrap=%d "
++                                "prev_n=%d\n",
++                                dn, dlStartAdddress, byteOff,
++                                dl->w0, dl->w1, w, addr, in_wrap ? 1 : 0,
++                                s_cimg_prev_n);
++                            const int pn = (s_cimg_prev_n < 4) ? s_cimg_prev_n : 4;
++                            for (int i = pn; i >= 1; --i) {
++                                const Rs64CimgPrevRec &r =
++                                    s_cimg_prev[(s_cimg_prev_n - i) & 7];
++                                fprintf(stderr,
++                                    "  [cimg-garbage-drop]   prev-%d op=0x%02X "
++                                    "w0=0x%08X w1=0x%08X\n",
++                                    i, r.op, r.w0, r.w1);
++                            }
++                            fflush(stderr);
++                        }
++                    }
++                }
++
++                if (func != nullptr && !droppedGarbageCimg) {
+                     dummy = dl;
+                     func(state, &dummy);
+                 }
+-                else {
++                else if (func == nullptr) {
                      RT64_LOG_PRINTF("DL Parser ran into an unknown RDP opCode: %u / 0x%X", opCode, opCode);
                  }
 +
@@ -1435,76 +1631,77 @@ index dccaa87..1b642f7 100644
 +                // s662: generic wilds keep a 40 budget (posctrl); KILLER-shaped
 +                // hits (exact addr/w, or range covering freelist phys 0x1F3CC0)
 +                // always dump, with sticky last dpc-wrap / last submit range.
-+                {
-+                    static int s_log_cimg_raw = -1;
-+                    if (s_log_cimg_raw < 0) {
-+                        const char *e = std::getenv("ROGUESQ_LOG_CIMG_RAW");
-+                        s_log_cimg_raw = (e && e[0] && e[0] != '0') ? 1 : 0;
-+                    }
-+                    if (s_log_cimg_raw) {
-+                        struct CimgRawRec { uint8_t op; uint32_t w0, w1; uint32_t cmdLen; uint32_t byteOff; };
-+                        static CimgRawRec s_ring[8];
-+                        static int s_ring_n = 0;
-+                        const uint32_t byteOff = (uint32_t)((uintptr_t)dl - (uintptr_t)dlStart);
-+                        if (opCode == 0x3F) {
-+                            const uint16_t w = (uint16_t)((dl->w0 & 0xFFFu) + 1u);
-+                            const uint32_t addr = dl->w1 & 0x00FFFFFFu;
-+                            const bool wild = !(w == 320 || w == 512 || w == 640 || w == 1024);
-+                            // Killer = exact historical freelist-stomp operands
-+                            // only. s662 covers_fl (64KB floor from low addr)
-+                            // false-positived 64× on hangar garbage and aborted
-+                            // freerolls before the real w=1161/0x1F0D74 fired.
-+                            const bool killer = wild &&
-+                                (w == 1161u || addr == 0x1F0D74u);
-+                            // Posctrl: first 8 SETCIMGs of ANY width (proves the
-+                            // instrument is LIVE even if no wilds fire this run).
-+                            static int s_dumps_any = 0;
-+                            static int s_dumps_generic = 0;
-+                            static int s_dumps_killer = 0;
-+                            const bool do_any = (++s_dumps_any <= 8);
-+                            const bool do_wild = wild && !killer && (++s_dumps_generic <= 40);
-+                            const bool do_killer = killer && (++s_dumps_killer <= 64);
-+                            if (do_any || do_wild || do_killer) {
-+                                uint32_t w_end = 0, w_seen = 0, w_start = 0, w_n = 0;
-+                                uint32_t s_lo = 0, s_hi = 0;
-+                                if (rs64_dpc_get_last_wrap)
-+                                    rs64_dpc_get_last_wrap(&w_end, &w_seen, &w_start, &w_n);
-+                                if (rs64_dpc_get_last_submit)
-+                                    rs64_dpc_get_last_submit(&s_lo, &s_hi);
-+                                const bool in_wrap =
-+                                    (w_start != 0) &&
-+                                    (dlStartAdddress >= w_start) &&
-+                                    (dlStartAdddress < (w_seen ? w_seen : w_end + 1));
-+                                const char *tag = killer ? "KILLER"
-+                                    : wild ? "WILD"
-+                                    : "OK";
-+                                const int idx = killer ? s_dumps_killer
-+                                    : wild ? s_dumps_generic
-+                                    : s_dumps_any;
++                // s665: DROPPED tag when garbage-prev filter skipped apply.
++                if (trackCimg) {
++                    if (rs64LogCimgRaw() && opCode == 0x3F) {
++                        const uint16_t w = (uint16_t)((dl->w0 & 0xFFFu) + 1u);
++                        const uint32_t addr = dl->w1 & 0x00FFFFFFu;
++                        const bool wild = !rs64CimgWidthOk(w);
++                        // Killer = exact historical freelist-stomp operands
++                        // only. s662 covers_fl (64KB floor from low addr)
++                        // false-positived 64× on hangar garbage and aborted
++                        // freerolls before the real w=1161/0x1F0D74 fired.
++                        const bool killer = wild &&
++                            (w == 1161u || addr == 0x1F0D74u);
++                        // Posctrl: first 8 SETCIMGs of ANY width (proves the
++                        // instrument is LIVE even if no wilds fire this run).
++                        static int s_dumps_any = 0;
++                        static int s_dumps_generic = 0;
++                        static int s_dumps_killer = 0;
++                        static int s_dumps_drop = 0;
++                        const bool do_any = (++s_dumps_any <= 8);
++                        const bool do_wild = wild && !killer && !droppedGarbageCimg &&
++                            (++s_dumps_generic <= 40);
++                        const bool do_killer = killer && !droppedGarbageCimg &&
++                            (++s_dumps_killer <= 64);
++                        // Rate-limit DROP dumps: first 64, then every 256th,
++                        // always dump exact freelist killer shape (s665 v1
++                        // unbounded WILD_DROP produced 244MB logs).
++                        const bool do_drop = droppedGarbageCimg &&
++                            ((++s_dumps_drop <= 64) || ((s_dumps_drop % 256) == 0) ||
++                             (w == 1161u) || (addr == 0x1F0D74u));
++                        if (do_any || do_wild || do_killer || do_drop) {
++                            uint32_t w_end = 0, w_seen = 0, w_start = 0, w_n = 0;
++                            uint32_t s_lo = 0, s_hi = 0;
++                            if (rs64_dpc_get_last_wrap)
++                                rs64_dpc_get_last_wrap(&w_end, &w_seen, &w_start, &w_n);
++                            if (rs64_dpc_get_last_submit)
++                                rs64_dpc_get_last_submit(&s_lo, &s_hi);
++                            const bool in_wrap =
++                                (w_start != 0) &&
++                                (dlStartAdddress >= w_start) &&
++                                (dlStartAdddress < (w_seen ? w_seen : w_end + 1));
++                            const char *tag = droppedGarbageCimg
++                                ? (killer ? "KILLER_DROP" : wild ? "WILD_DROP" : "OK_DROP")
++                                : killer ? "KILLER"
++                                : wild ? "WILD"
++                                : "OK";
++                            const int idx = droppedGarbageCimg ? s_dumps_drop
++                                : killer ? s_dumps_killer
++                                : wild ? s_dumps_generic
++                                : s_dumps_any;
++                            fprintf(stderr,
++                                "[cimg-raw] %s #%d task=0x%X byteOff=0x%X "
++                                "w0=0x%08X w1=0x%08X w=%u addr=0x%06X "
++                                "wrap_n=%u wrap=[0x%06X,seen=0x%06X,start=0x%06X] "
++                                "in_wrap=%d submit=[0x%06X,0x%06X)\n",
++                                tag, idx,
++                                dlStartAdddress, byteOff, dl->w0, dl->w1, w, addr,
++                                w_n, w_end, w_seen, w_start, in_wrap ? 1 : 0,
++                                s_lo, s_hi);
++                            const int n = (s_cimg_prev_n < 8) ? s_cimg_prev_n : 8;
++                            for (int i = n; i >= 1; --i) {
++                                const Rs64CimgPrevRec &r =
++                                    s_cimg_prev[(s_cimg_prev_n - i) & 7];
 +                                fprintf(stderr,
-+                                    "[cimg-raw] %s #%d task=0x%X byteOff=0x%X "
-+                                    "w0=0x%08X w1=0x%08X w=%u addr=0x%06X "
-+                                    "wrap_n=%u wrap=[0x%06X,seen=0x%06X,start=0x%06X] "
-+                                    "in_wrap=%d submit=[0x%06X,0x%06X)\n",
-+                                    tag, idx,
-+                                    dlStartAdddress, byteOff, dl->w0, dl->w1, w, addr,
-+                                    w_n, w_end, w_seen, w_start, in_wrap ? 1 : 0,
-+                                    s_lo, s_hi);
-+                                const int n = (s_ring_n < 8) ? s_ring_n : 8;
-+                                for (int i = n; i >= 1; --i) {
-+                                    const CimgRawRec &r = s_ring[(s_ring_n - i) & 7];
-+                                    fprintf(stderr,
-+                                        "  [cimg-raw]   prev-%d op=0x%02X w0=0x%08X w1=0x%08X cmdLen=%u byteOff=0x%X\n",
-+                                        i, r.op, r.w0, r.w1, r.cmdLen, r.byteOff);
-+                                }
-+                                fflush(stderr);
++                                    "  [cimg-raw]   prev-%d op=0x%02X w0=0x%08X w1=0x%08X cmdLen=%u byteOff=0x%X\n",
++                                    i, r.op, r.w0, r.w1, r.cmdLen, r.byteOff);
 +                            }
++                            fflush(stderr);
 +                        }
-+                        // Record this command (whatever it was) into the ring
-+                        // AFTER the wild-check, so "prev-1" never means itself.
-+                        s_ring[s_ring_n & 7] = CimgRawRec{ opCode, dl->w0, dl->w1, cmdLength, byteOff };
-+                        s_ring_n++;
 +                    }
++                    // Record this command AFTER the check so prev-1 ≠ self.
++                    rs64CimgPrevPush(opCode, dl->w0, dl->w1, cmdLength, byteOff);
 +                }
              }
  

@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s664)
+## Current truth (established by session 295; unchanged, reviewed through s665)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -103,8 +103,15 @@ Metal shader rebuilds need full Xcode on PATH:
   sticky never expires, so legitimate ring reuse after wrap is starved
   (~30k drops on early ring `0x4B7800`); cinematic SIGBUS; hangar never
   reached (A+B dual-source). Control C filter OFF + restore OFF still
-  hits exact KILLER + freelist `0x2/0x60`→0. Product freelist restore
-  stays; root fix → narrower garbage-prev SETCIMG drop (-417).
+  hits exact KILLER + freelist `0x2/0x60`→0. **s665 Outcome A:**
+  `ROGUESQ_DROP_GARBAGE_CIMG=1` (default OFF) at processRDPLists —
+  drop wild SETCIMG when prev ring garbage OR operands addr=0/w=1161.
+  **H-prev-garbage-kills-killer CONFIRMED** dual-source: B drop ON +
+  restore OFF → exact 1F0D74=0, freelist to_zero freelist-shaped=0;
+  C control exact KILLER + HIT_WRITE + to_zero. Hangar craft_stable
+  content LIVE both arms → false-drop REFUTED for hangar. v1 last-4
+  hole fixed same-iter (full 8-deep + operand gate). Next: productize
+  drop default ON + retire freelist restore under scored freeroll (-418).
 - Default-ON, no longer worth naming: `ROGUESQ_VI_FOLLOW_DRAW=3` (s23), `ROGUESQ_SHADE_WRAP=1`
   per-pixel (s24→s26), `ROGUESQ_FIX_ZERO_SHADE` (s20), `ROGUESQ_FIX_SAMPLE_BOUNDS` (s15),
   `ROGUESQ_VI_FULLSYNC` (s11), PresentEarly fallthrough + forceAdvance +
@@ -125,7 +132,8 @@ Metal shader rebuilds need full Xcode on PATH:
   hangar band), `ROGUESQ_FLATTEN_I4` / `FLATTEN_RGBA16` / `FLATTEN_CI4` (attribution probes),
   `ROGUESQ_SHADE_ONLY_MONO` (s30, pad-only), `ROGUESQ_SHADE_WRAP=3` (s31), `ROGUESQ_SHADOW2`,
   `ROGUESQ_RING_RESYNC`, **`ROGUESQ_DROP_WRAP_RDP`** (s664 Outcome B — too coarse; experiment
-  only). Diagnostics: `ROGUESQ_DUMP_IMEM_DMA=1` (s47, lib-side) dumps every skipped
+  only), **`ROGUESQ_DROP_GARBAGE_CIMG`** (s665 Outcome A — decode-site wild+garbage
+  SETCIMG drop; default OFF pending productize freeroll -418). Diagnostics: `ROGUESQ_DUMP_IMEM_DMA=1` (s47, lib-side) dumps every skipped
   IMEM DMA to `build/imem_dma_dump.bin` (`scratch/s47_parse_imemdump.py` decodes).
   `ROGUESQ_LOG_RUNNER=1` prints a per-task RDP-opcode histogram (1-in-32 sampled by default --
   `ROGUESQ_LOG_RUNNER_ALL=1`, s64, prints every task unsampled; the sampled mode misattributes
@@ -210,19 +218,20 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   but recov drought 0/3; **product mode=headers** multi-header restore (-414).
   **s662–s663 cimg-origin CLOSED class:** hangar wild + exact killer
   (`w=1161`/`0x1F0D74`) = in-wrap garbage (-415). **s664 Outcome B:**
-  task-lo wrap-sticky filter **false-drops** (-416 CLOSED shape);
-  next = garbage-prev SETCIMG drop (-417).
-  Residual rank: (1) garbage-prev SETCIMG -417, (2) headers freeroll -414,
-  (3) B8 -393, (4) -387 **5×**.
+  task-lo wrap-sticky filter **false-drops** (-416 CLOSED shape).
+  **s665 Outcome A:** garbage-prev decode drop **LIVE** env-gated (-417);
+  freelist stomp stopped with restore OFF. Next productize (-418).
+  Residual rank: (1) productize DROP_GARBAGE_CIMG -418, (2) headers freeroll
+  -414 / restore retirement, (3) B8 -393, (4) -387 **5×**.
 - Co-gates: recovery (-374/-413/-414), mat3inv (-375), ship (-376/-377/-392/-393),
   class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll (-382..-384), null-malloc
   thr12 (-385 M1), sinfApprox (-386 1×), do_rom_read (-387 **5×**). thr11d metric =
   post-hsel destroy of `0x8006F2CC` only (s618). Tools default OFF: `FORCE_STATE6_AFTER`,
   `FORCE_CASE6_START`, `FS_PIPE_INJECT`, `ALLOW_WILD_W`, `FL_HDR_HARD_SKIP`,
-  `FL_HDR_RESTORE=0`, `FL_RESTORE_MODE=body`, `DROP_WRAP_RDP`. Product ON:
-  freelist multi-header restore. Diagnostics: `ROGUESQ_LOG_CIMG_RAW`,
-  `ROGUESQ_LOG_DL_SYNC2`. Post-sec2: packTlut (-373).
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-417; Sessions 577-664.
+  `FL_HDR_RESTORE=0`, `FL_RESTORE_MODE=body`, `DROP_WRAP_RDP`,
+  `DROP_GARBAGE_CIMG`. Product ON: freelist multi-header restore. Diagnostics:
+  `ROGUESQ_LOG_CIMG_RAW`, `ROGUESQ_LOG_DL_SYNC2`. Post-sec2: packTlut (-373).
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-418; Sessions 577-665.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -240,23 +249,28 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 
 Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -417. The next NEW item takes -418.
+a range pointer. Highest allocated so far: -418. The next NEW item takes -419.
 
-### Active M3 pipeline (s577–s664) — open residuals only
+### Active M3 pipeline (s577–s665) — open residuals only
 
--417. **(s664) garbage-prev / decode-site SETCIMG drop — root fix residual
-    after coarse wrap-submit filter Outcome B.**
-    s664 landed `ROGUESQ_DROP_WRAP_RDP` (task-lo ∈ last wrap sticky) and
-    A/B'd: **H-wrap-filter-false-drop CONFIRMED** dual-source (A+B ~30k
-    drops on early ring `0x4B7800`, cinematic SIGBUS, hangar never
-    reached; OK×8 still LIVE as posctrl). Control C (filter OFF, restore
-    OFF): exact KILLER + HIT_WRITE + freelist `0x2/0x60`→0 reconfirmed.
-    Sticky never expires → legitimate ring reuse is starved. **Next work
-    unit:** env-gated drop of *wild* SETCIMG at processRDPLists /
-    setColorImage when prev-command ring is garbage (zeros / nonsense
-    op / non-allowlist width chain) — same prev pattern as s663 KILLER
-    dump. Expect: hangar OK, KILLER=0, freelist to_zero freelist-shaped=0
-    with restore OFF, posctrl OK LIVE. Full: Session 664 → implement s665.
+-418. **(s665) productize `ROGUESQ_DROP_GARBAGE_CIMG` default ON + retire
+    freelist restore under scored freeroll.**
+    s665 landed filter env-gated OFF and proved Outcome A: drop ON +
+    restore OFF zeros exact freelist killer and freelist-shaped to_zero
+    (B v2); control C still hits exact 1F0D74 HIT_WRITE + to_zero.
+    Hangar content LIVE (craft_stable ~74k colours both arms). **Next:**
+    flip default ON (or product always-on), scored freeroll
+    recov/thr11d/fail136c with restore OFF; if stable, start retiring
+    FL_HDR_RESTORE / SKIP_FL_HDR layers. Full: Session 665.
+
+-417. **(s664→s665) garbage-prev / decode-site SETCIMG drop — LIVE-VERIFIED
+    Outcome A; residual productize → -418.**
+    s664 wrap-submit filter too coarse (CLOSED shape → -416). s665:
+    `ROGUESQ_DROP_GARBAGE_CIMG` at processRDPLists before setColorImage
+    apply. **H-prev-garbage-kills-killer CONFIRMED** dual-source;
+    **H-prev-garbage-false-drop REFUTED** hangar; v1 last-4 hole → v2
+    full-8 + operand gate (addr=0 / w=1161). Default OFF until -418.
+    Full: Sessions 664-665.
 
 -416. **(s663→s664) wrap-tail RDP submit filter — SHAPE CLOSED Outcome B
     (too coarse); residual → -417.**
@@ -275,10 +289,10 @@ a range pointer. Highest allocated so far: -417. The next NEW item takes -418.
     + HIT_WRITE_RESTORE. **H-exact-same-class SUPPORTED**; **H-exact-legit
     REFUTED**; **H-exact-submit-range REFUTED**. Full: Sessions 662-663.
 
--414. **(s660→s664) freelist multi-header restore LANDED; H-body-stomp
-    STRUCTURAL; headers freeroll INCONCLUSIVE (s661 soak 600s cap, no
-    thr11d/fail136c score); deprioritized behind -417 garbage-prev drop
-    (origin settled s663; coarse filter failed s664).**
+-414. **(s660→s665) freelist multi-header restore LANDED; H-body-stomp
+    STRUCTURAL; headers freeroll INCONCLUSIVE (s661); deprioritized —
+    s665 drop stops freelist stomp with restore OFF; retirement path
+    is -418 productize drop then scored freeroll restore OFF.**
     Offline s659: zero_node bad=0x801F3D30 = prev+size+0x10 after 16B restore
     of 0x801F3CC0 size=0x60 → next freelist header stomped. s660a full-body
     64KB: snap=0x10000 next_ok=1 LIVE; recov_active=0/3 engaged (vs s659 3/3
@@ -668,9 +682,10 @@ a range pointer. Highest allocated so far: -417. The next NEW item takes -418.
     residual -412 productize → -413 thr11d re-score → -414 multi-header;
     s662–s663 hangar wild + exact freelist killer = in-wrap garbage
     SETCIMG class CLOSED (-415); s664 wrap-tail submit filter Outcome B
-    false-drop (-416 CLOSED shape); root fix → garbage-prev SETCIMG
-    drop (-417)**.
-    Active residuals: -417..-373 / -361 / -379. Tools still default OFF.
+    false-drop (-416 CLOSED shape); s665 garbage-prev SETCIMG drop
+    Outcome A LIVE (-417) — freelist stomp stopped with restore OFF;
+    next productize default ON + restore retirement (-418)**.
+    Active residuals: -418..-373 / -361 / -379. Tools still default OFF.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 
