@@ -163,8 +163,17 @@ static void dbg_update(unsigned int pc)
 #define VI_ORIGIN_ADDR 0xA4400004u   /* KSEG1: uncached, no TLB, masks to 0x04400004 */
 #define VI_WIDTH_ADDR  0xA4400008u
 
+/* PIF RAM holds the SI's controller readout: after a 0x01 (read controller)
+ * command the button word for pad 1 lands at physical 0x1FC007C4. Reading it
+ * answers the one question a headless run cannot otherwise settle - does the
+ * GAME see the buttons we inject, or are we only talking to the plugin? */
+#define PIF_PAD1_ADDR  0xBFC007C4u
+#define N64_BTN_START  0x00001000u
+
 static long g_vis;
 static int g_vi_trace;
+static int g_pif_trace;
+static unsigned g_last_pad = 0xFFFFFFFFu;
 static unsigned g_last_width = 0xFFFFFFFFu, g_last_origin = 0xFFFFFFFFu;
 static double g_last_origin_log = -1e9;
 
@@ -174,6 +183,23 @@ static void dbg_vi(void)
     double t;
 
     g_vis++;
+
+    if (g_pif_trace) {
+        /* Log the whole 8-byte block, not a halfword we assumed was the
+         * buttons: the first cut watched only (word>>16) and silently missed
+         * every press whose bits landed elsewhere, which looked exactly like
+         * "the game ignores that key". Print both words and let the bits
+         * identify themselves. */
+        unsigned w0 = pDebugMemRead32(PIF_PAD1_ADDR - 4);
+        unsigned w1 = pDebugMemRead32(PIF_PAD1_ADDR);
+        if (w1 != g_last_pad) {
+            printf("[pad] t=%6.1fs vi=%-6ld 7C0=0x%08x 7C4=0x%08x\n",
+                   now_s() - g_t0, g_vis, w0, w1);
+            g_last_pad = w1;
+            fflush(stdout);
+        }
+    }
+
     if (!g_vi_trace) return;
 
     width  = pDebugMemRead32(VI_WIDTH_ADDR);
@@ -236,18 +262,31 @@ static int attach_plugin(const char *path, m64p_plugin_type type)
  * this project keeps getting bitten by. Codes are SDL2 keycodes; the mapping
  * from key to N64 button is whatever [Input-SDL-Control1] holds in
  * ~/.config/mupen64plus/mupen64plus.cfg (written on first run). */
+/* N64 buttons, not keys. What --press sends is an SDL2 SCANCODE, because
+ * mupen64plus-input-sdl matches incoming values against scancodes while its
+ * config records SDL1-era keysyms - so sending the "obvious" keycode 13 for
+ * Return lands on C-Left, and the config's A Button = key(304) is unreachable
+ * by any keycode at all. Verified empirically against PIF RAM: each name below
+ * was pressed and the resulting N64 button word read back (--pif-trace).
+ *
+ * These match the DEFAULT [Input-SDL-Control1] mapping. Change that config and
+ * this table is wrong - re-derive it with --pif-trace, do not assume. */
 struct keyname { const char *name; int sym; };
 static const struct keyname g_keynames[] = {
-    { "return", 13 }, { "enter", 13 }, { "escape", 27 }, { "space", 32 },
-    { "a", 97 }, { "b", 98 }, { "x", 120 }, { "z", 122 },
-    { "lshift", 1073742049 }, { "lctrl", 1073742048 },
-    { "right", 1073741903 }, { "left", 1073741904 },
-    { "down", 1073741905 }, { "up", 1073741906 },
+    { "start",  40 },                                  /* Return   -> 0x1000 */
+    { "a",     225 },                                  /* LShift   -> 0x8000 */
+    { "b",     224 },                                  /* LCtrl    -> 0x4000 */
+    { "z",      29 },                                  /* Z        -> 0x2000 */
+    { "dup",    26 }, { "ddown", 22 },                 /* W / S              */
+    { "dleft",   4 }, { "dright", 7 },                 /* A / D              */
+    { "cup",    12 }, { "cdown", 14 },                 /* I / K              */
+    { "cleft",  13 }, { "cright", 15 },                /* J / L              */
+    { "l",      27 }, { "r",      6 },                 /* X / C              */
     { NULL, 0 }
 };
 
 struct press { double at; int sym; };
-static struct press g_press[32];
+static struct press g_press[256];
 static int g_npress;
 static int g_hold_ms = 150;
 static int g_have_input;
@@ -343,13 +382,15 @@ static void usage(void)
         "  --rsp PATH            RSP plugin (default homebrew mupen64plus-rsp-hle)\n"
         "  --datadir PATH        dir holding mupen64plus.ini (default homebrew share dir)\n"
         "  --press SEC:KEY[,...] press KEY at SEC seconds, e.g. --press 6:return,12:return\n"
-        "                        KEY is a name (return z x up down left right lshift) or an\n"
-        "                        SDL2 keycode. Attaches input-sdl automatically.\n"
+        "                        KEY is an N64 button name (start a b z dup ddown dleft\n"
+        "                        dright cup cdown cleft cright l r) or a raw SDL2 SCANCODE.\n"
+        "                        Attaches input-sdl automatically.\n"
         "  --hold-ms N           how long each press is held (default 150)\n"
         "  --input PATH          input plugin (default homebrew mupen64plus-input-sdl)\n"
         "  --video PATH          video plugin (default none -> core dummy, no RDP at all)\n"
         "  --audio PATH          audio plugin (default none -> core dummy)\n"
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
+        "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
         "  --verbose             pass through core info messages\n"
         "\n"
         "Watch addresses are PHYSICAL and are masked with 0x1FFFFFFF on input,\n"
@@ -395,7 +436,7 @@ int main(int argc, char **argv)
             char *spec = argv[++i], *tok, *save = NULL;
             for (tok = strtok_r(spec, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
                 char *colon = strchr(tok, ':');
-                if (!colon || g_npress >= 32) { fprintf(stderr, "[oracle] bad --press '%s'\n", tok); exit(2); }
+                if (!colon || g_npress >= 256) { fprintf(stderr, "[oracle] bad --press '%s'\n", tok); exit(2); }
                 *colon = 0;
                 g_press[g_npress].at  = atof(tok);
                 g_press[g_npress].sym = keycode(colon + 1);
@@ -403,6 +444,7 @@ int main(int argc, char **argv)
             }
         }
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
+        else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
         else if (!strcmp(argv[i], "--verbose"))                    g_verbose = 1;
         else usage();
     }

@@ -27,7 +27,7 @@ Do NOT continue expanding the restore until this is settled.
 |----|-------|-----------|
 | H-desync-tri | Our RDP-stream walk mis-steps a variable-length triangle command and reads coefficient data as a SETCIMG | the killer command is present at a command-aligned offset in the raw stream |
 | H-desync-inline | Our LLE ucode mis-advances the DL pointer on one of the six inline-data commands (MoveMem +16, TriGen +32, Tri +16 conditional on `w0 & 2`, TexrectGen +16, SetOtherMode_*_EX +8) and emits garbage downstream | the DL PC advance matches the reference table at every command in the failing task |
-| H-legit | The retail game really does set a colour image there | the oracle shows the retail ROM never writes/uses that region for a framebuffer |
+| H-legit | The retail game really does set a colour image there | (note: the oracle has now shown the game DOES own and write `0x1F3CC0`, so "that memory is spare" is dead. This hypothesis is about the SETCIMG operands, which is a separate question) |
 
 ## Discriminating measurements (one build, one run, plus one oracle run)
 
@@ -40,28 +40,32 @@ Do NOT continue expanding the restore until this is settled.
    and the DL PC delta our LLE ucode actually takes, and diff against the
    reference table in `docs/F5-UCODE-REFERENCE.md`. Any mismatch is the bug.
 3. **Oracle.** `tools/oracle/` runs the retail ROM under mupen64plus with
-   memory watches — see its README.
+   memory watches — see its README. It can now be driven into the hangar
+   (`--press 6:start,11:start,...,56:start`; hangar = VI 512 @ `0x6ab400`
+   from 38.4s, holds for the rest of the run).
 
-   Already measured (2026-08-10, logs in `~/Documents/Tools/rs64-oracle/`):
-   - `freelist_hdr_180s.log` — watch on physical `0x1F3CC0:0x1F3CD0`,
-     **0 hits in 180 s / 10799 VI**.
-   - `freelist_region_180s.log` — watch on the whole surrounding 64 KB,
-     `0x1F0000:0x200000`, **0 hits in 180 s / 10799 VI**.
-   - Positive control in the same build: whole-RDRAM watch, ~1.6 M hits in
-     8 emulated seconds, PCs attributed to IPL3.
+   **MEASURED, and it changes this item (2026-08-10, logs in
+   `~/Documents/Tools/rs64-oracle/`):**
 
-   **Read that correctly.** The second run is why the first is not yet an
-   answer: the retail game leaves that entire 64 KB untouched during the
-   phases an undriven run reaches, so "it never writes the header" is a
-   statement about dead space, not about the allocator. (Fermi check: uniform
-   write traffic would put ~25,000 writes in a 64 KB slice over 8 s, so the
-   zero is a real absence, not a sampling artifact.) The oracle cannot speak
-   to the freelist until it is driven into the hangar. Key injection now
-   EXISTS and is verified end-to-end (`--press 8:return,...`; see the README's
-   determinism A/B), and `driven_region_180s.log` shows the same zero with
-   eight Start presses — so what is missing is a real menu-navigation
-   schedule, not the capability. Working that schedule out is a cheap
-   iteration and it makes this whole class of question answerable.
+   - `hangar_fl_hdr.log` — the retail game **DOES write physical `0x1F3CC0`**:
+     624 writes over 150 s, first at 26.1 s, from a repeating unrolled
+     sequence at PCs `0x800C7F08 / 7F34 / 7F5C / 7F84 / 7FAC / 7FD4 / 7FFC /
+     801C`. So that address is live game-owned allocator memory, not spare
+     RAM — which means ANY host-side write there (RT64's framebuffer
+     writeback) is unambiguously corruption of a structure the game maintains.
+   - `hangar_freelist.log` — the surrounding 64 KB takes 3,514,738 writes with
+     the hangar schedule.
+   - Every earlier "0 hits" result was a PHASE ARTIFACT: undriven runs take
+     zero writes in that entire region because they never leave the attract
+     loop. Do not cite those nulls.
+
+   **Attribution caveat, learned the hard way here.** Looking `0x800C7FF8` up
+   in the decomp gives `playNpcStateChangeEffect`, and
+   `tools/overlay_symbol_probe.py` confirms it is a genuine function start —
+   *in the mission overlay*. In the menu overlay the same VRAM is not a
+   function start at all. Overlays alias these addresses, so a PC is only
+   nameable together with the overlay resident at that moment. Naming the
+   writer means first establishing residency at t=26.1 s (title phase).
 
 ## Outcomes
 

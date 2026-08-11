@@ -69,10 +69,44 @@ writes per frame (2891.3, 2891.3 over all of RDRAM), while a run pressing
 Start four times diverges to 2903.3 — 0.4% against 0.002% run-to-run noise.
 Reproduce that A/B if you ever suspect the presses stopped landing.
 
-What it still does not reach: blind Start presses get through boot, logos and
-title, but not into the hangar or a mission — that needs a real menu
-navigation schedule. Do not read a null as evidence about a phase the run
-never reached; check the phase first.
+### The button map is scancodes, and the default config lies
+
+`--press` sends SDL2 **scancodes**, because `mupen64plus-input-sdl` matches
+incoming values against scancodes while its config records SDL1-era keysyms.
+Consequences, all measured against PIF RAM with `--pif-trace`:
+
+- Sending keycode 13 (Return, which the config maps to Start) produces
+  **C-Left**, not Start. Start is scancode **40**.
+- The config's `A Button = key(304)` is unreachable by any keycode at all —
+  304 is an SDL1 keysym with no SDL2 equivalent. A is scancode **225**.
+
+Use the names, which are verified: `start a b z dup ddown dleft dright
+cup cdown cleft cright l r`. Each was pressed and the resulting N64 button
+word read back out of PIF RAM. If you change `[Input-SDL-Control1]`, re-derive
+the table with `--pif-trace` — do not assume.
+
+### Reaching the hangar
+
+    --press 6:start,11:start,16:start,21:start,26:start,31:start,\
+            36:start,41:start,46:start,51:start,56:start
+
+Measured phase timeline (`--vi-trace`), driven vs undriven:
+
+| Phase           | undriven   | driven          |
+|-----------------|------------|-----------------|
+| 320 boot        | 0.5s       | 0.8s            |
+| 640 intro       | 2.1s       | 2.4s            |
+| 1024 title      | 49.7s      | **17.3s**       |
+| 512             | 102.2s @ `0x690800` (attract demo) | **38.4s @ `0x6ab400/800` (HANGAR)** |
+
+The hangar holds for the rest of the run once the presses stop. Keep pressing
+past ~58s and it advances out of the hangar into a 640 phase at `0x6a2900`.
+Origin distinguishes the two 512 phases: `0x690xxx` is the attract demo,
+`0x6abxxx` is the hangar — the same buffer pair our port reports.
+
+Do not read a null as evidence about a phase the run never reached: the whole
+64 KB around the heap freelist takes **zero** writes undriven and **3,514,738**
+with this schedule.
 
 The RSP plugin is Homebrew's `mupen64plus-rsp-hle`, which handles MusyX audio
 tasks. Video and audio are left unattached and the core substitutes dummies
