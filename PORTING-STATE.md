@@ -50514,3 +50514,63 @@ not the header writer.
 - Treat submitSceneNodeRender+0x380 / guest 0x80010054 as header-writer proof
 - Treat near_hdr alone as writer ID without dest in [hdr,hdr+8)
 - Soft-skip thr12 without writer ID
+
+## Session 653 (2026-08-10) — s652 freeroll Outcome B; H-fb-writeback-stomp CONFIRMED; writeback guard
+
+### Work unit
+Consume `s652_ssnr_fb_fl_stomp_freeroll` SOAK-RESULTS (rc=137, 600s cap mid att3).
+
+### Freeroll SCORE (att2 recovery-active — discriminating)
+- force6=1 hsel=1 recov768=7948 thr11d_new=0 fail136c=0
+- arm_freelist@146322ms 0x2/0x60; freelist to_zero #2 @165665ms prev_f=0x2/0x60
+- ssnr_n=515 **ssnr_tgt=0** ssnr_near=0 (all dest high-bytes 0x807*)
+- fb_n=52 **fb_hit=1** (HIT line n=13632)
+- flz_ring_n=16 inhdr=0 near=9; adlb_tgt=0
+- crash: rebuildActiveDisplayObjectList+540 / readAccount mislabel; si_addr=0x38101804f
+
+### Outcome B — dual-source co-timing
+```
+[fb-fl-writeback] n=13632 hit=1 addrStart=0x1F0D74
+  range=[0x1F0D74,0x32AE68) rows=0..277 w=1161 h=277 siz=3 rowB=4644 HIT
+[fl-zero-poll] n=9 event=to_zero t_ms=165665 phys=0x001F3CC0
+  prev_f=0x2 prev_sz=0x60 → zeros  guest_pc=0x8000B650
+```
+- phys 0x1F3CC0 ∈ [0x1F0D74, 0x32AE68) at offset +0x2F4C
+- fault_ring i=9..11: NativeTarget::copyToRAM / Framebuffer::copyNativeToRAM
+  fa=phys 0x1F0D74 (same start); guest sticky 0x8000B650 matches to_zero
+- att1 (recovery_silent) also HIT same wild shape co-timed with a non-freelist
+  to_zero (prev 0x129C/0x480) — same stomper, freelist not 0x2/0x60 shaped
+
+### Verdicts
+| ID | Result |
+|----|--------|
+| H-ssnr-zero-stores | **REFUTED freelist-class** (ssnr_tgt=0; dests 0x807* only) |
+| H-fb-writeback-stomp | **CONFIRMED dual-source** (HIT line + ring copyToRAM + range math) |
+| H-ssnr380-writer | reconfirm REFUTED |
+| H-adlb-writer | reconfirm REFUTED (adlb_tgt=0) |
+
+s78/s72 width cap ≤1280 does **not** catch w=1161. s82 allowlist
+{320,512,640,1024} would have.
+
+### Landed product guard (s653)
+1. `rs64_writeback_sane` (`lib/rt64/src/hle/rt64_state.cpp`):
+   - `SKIP_WILD_W` — writeback only for w ∈ {320,512,640,1024}
+   - `SKIP_FL_HDR` — skip if range covers freelist phys 0x1F3CC0
+2. `Framebuffer::copyNativeToRAM` last-line: hit on 0x1F3CC0 → return early
+   (`HIT_SKIP` log under `ROGUESQ_LOG_FL_ZERO_WATCH` or always on hit)
+3. `./submodule-patches/export.sh` (rt64.patch refreshed)
+
+### Posctrl 75s
+- fb_n=25 HIT=0 (boot FBs w=320/512/640 only — allowlist still passes)
+- ssnr_n=291 CRASH=0 flz arm LIVE
+- Binary strings: SKIP_WILD_W / SKIP_FL_HDR / HIT_SKIP present
+
+### Queued
+`scratch/agent/soak_queue/s653_fb_wb_skip_freeroll.sh` — effectiveness freeroll:
+freelist 0x2/0x60 to_zero ABSENT after arm_fl + skip_wild/skip_fl ≥1 = SUCCESS.
+
+### Do not
+- Re-open H-ssnr-zero-stores freelist-class without TARGET co-timed counterexample
+- Soft-skip thr12 without freelist survival proof post-guard
+- Treat last-guest-pc rebuildActiveDisplayObjectList alone as new class without
+  nm cross-check (known mislabel → readAccountForSelectionScreen; -383)
