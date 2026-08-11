@@ -50614,3 +50614,53 @@ Range math unchanged: w=1161 siz=3 rowB=4644 → range [0x1F0D74, 0x32AE68) cove
 - Soft-skip thr12 without recovery-active freelist-survival + thr11d evidence
 - Re-open H-fb-writeback-stomp without new counterexample
 - Treat silent thr11d_new=0 as freelist-survival failure (silent never produces thr11d)
+
+## Session 655 (2026-08-10) — post-SKIP freeroll Outcome C; recovery drought; ALLOW_WILD_W A/B
+
+### Work unit
+Consume `s654_post_fbskip_pipeline_freeroll` SOAK-RESULTS, then run full-budget
+in-session freeroll (BUDGET_S=1200) for recovery-active thr11d∧fail136c re-score
+with freelist intact (item -408). Land A/B gate when recovery drought blocked scoring.
+
+### s654 soak freeroll (loop, 600s outer cap)
+- att1+att2: recovery_silent engaged; arm_fl@146s 0x2/0x60 LIVE both
+- freelist-shaped to_zero=0 (menu 0x8E8E only); freelist survived ~195–200s
+- att2: SKIP_WILD_W exact killer `addr=0x1F0D74 w=1161` (att1 killer=0)
+- thr11d_new=0 fail136c=0; att3 killed mid-run by outer 600s cap
+- **H-fl-survive-unblocks-thr11d UNEVALUABLE** (needs recov768≥1)
+
+### s655 in-session freeroll (BUDGET=1200s, no loop cap)
+discard_stats: pre_eng=1 recov_silent=5 attempts=6 — **0 recovery-active**
+| att | class | arm_fl | fl to_zero | killer 1F0D74 | thr11d |
+|-----|-------|--------|------------|---------------|--------|
+| 1 | silent | 1 | 0 | 0 | 0 |
+| 2 | silent+crash | 1 | 0 | 1 | 0 |
+| 3 | silent | 1 | 0 | 1 | 0 |
+| 4 | pre-eng crash 10s | 0 | — | — | — |
+| 5 | silent | 1 | 0 | 0 | 0 |
+| 6 | silent | 1 | 0 | 0 | 0 |
+
+Combined post-SKIP engaged recovery-active rate: **0/7** (s654 2 + s655 5).
+Pre-SKIP historical (s650–s653 freerolls) ≈1/3.
+
+### Outcomes
+| ID | Result |
+|----|--------|
+| H-fb-skip-stops-stomp | reconfirm (silent freelist survival dual-source s654+s655) |
+| H-fl-survive-unblocks-thr11d | **UNEVALUABLE** — recovery co-gate never opened |
+| H-skip-suppresses-recov | **ACTIVE single-source** — 0/7 post-SKIP vs ~1/3 pre-SKIP |
+
+### Product
+`ROGUESQ_ALLOW_WILD_W=1` env opt-out of SKIP_WILD_W only (`rs64_writeback_sane` in
+`lib/rt64/src/hle/rt64_state.cpp`). SKIP_FL_HDR stays. Default OFF. Banner
+`[ost-wb] ALLOW_WILD_W=1` is same-run posctrl. submodule-patches/export.sh refreshed.
+
+### Queued
+`scratch/agent/soak_queue/s655_allow_wild_w_recov_ab.sh` — A/B recovery rate with
+wild-W skip disabled. A ≥1 recov/≤6 engaged → SUPPORTED; B 0/≥5 → REFUTED.
+
+### Do not
+- Score thr11d/fail136c pipeline from recovery-silent-only freerolls
+- Soft-skip thr12 without recovery-active + freelist survival + thr11d
+- Re-open FB freelist-stomp class without freelist to_zero under product SKIP
+- Treat 0/7 drought as CONFIRMED causal without A/B (single-source correlation)
