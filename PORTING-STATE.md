@@ -52480,3 +52480,27 @@ Logs: `scratch/agent/s705_oracle_modes/`.
 The next bounded unit is to add a debugger-independent phase witness with its
 own same-run positive control, then rerun debugger-on/off and emulator=1 arms
 concurrently. Do not alter the recovery-cell watch or E9 tracer first.
+
+## Session 706 (2026-08-12) — debugger-off direct VI polling confirms the oracle's 320 stall
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 44,370 bytes, so maintenance did
+not trigger. Added `--vi-poll` to `tools/oracle/rs64_oracle.c`: a frontend
+thread calls the DEBUGGER-built core's exported `DebugMemRead32` outside the
+debugger callbacks and records its first nonzero VI width plus changes. The
+first concurrent three-arm launch crashed before any sample in all arms because
+the thread entered before the core had powered its device; the logs stop after
+the launch banner. Added a 100ms post-execute gate and rebuilt before the fixed
+batch.
+
+The repaired default, debugger=0, and emulator=1 arms ran concurrently against
+the same retail ROM/current HLE RSP with separate configs and all eleven Starts
+at 6..56 seconds. Every arm produced `[vi-poll] WIDTH 0 -> 320` at 0.2--0.3s,
+then only the normal boot-origin change; none produced 640, 1024, or a hangar
+origin. Default/emulator=1 independently retained callback `WIDTH 0 -> 320`,
+all eleven PIF-observed presses, 4,199 VI/~70s, and 11,785,945 whole-RDRAM
+writes. Thus the direct debugger-off witness is live and H-debugger-route is
+refuted; H-core-environment-route is supported. This remains insufficient for
+a recovery-cell watch because no arm reached the desired phase. Logs:
+`scratch/agent/s706_oracle_vi_poll_retry/` (discarded lifecycle-failure logs:
+`scratch/agent/s706_oracle_vi_poll/`). The next bounded comparison changes
+only the dummy video plugin, retaining the direct-poll and callback controls.

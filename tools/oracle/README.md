@@ -32,8 +32,12 @@ not just how long the wall clock ran.
 `--oracle-debugger 0|1` and `--oracle-emulator N` expose the core's
 `EnableDebugger` and `R4300Emulator` settings (defaults: `1` and `0`, the
 pure interpreter). A debugger-off run cannot produce this tool's watches,
-VI trace, or PIF trace: those are debugger callbacks. Treat its zero VI/hit
-summary as an absent instrument, not a boot-stall result.
+VI trace, or PIF trace: those are debugger callbacks. `--vi-poll` instead
+reads the VI registers through the core's exported `DebugMemRead32` from a
+frontend thread and works with the debugger disabled. It reports its first
+nonzero width plus subsequent width/origin changes; pair debugger-on runs
+with `--vi-trace` as its independent control. Treat a zero VI/hit summary
+without `--vi-poll` as an absent instrument, not a boot-stall result.
 
 ## Three traps, all already paid for
 

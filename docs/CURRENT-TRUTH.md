@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s705; compacted in maintenance s679)
+## Current truth (reviewed through s706; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -482,8 +482,19 @@ maintenance pass. Closed lineages are not backlog items.
    REFUTED** with two controlled arms. Debugger=0 ran all presses but reports
    `0 VI/0 hits` by design because the oracle's VI/PIF/watch mechanisms are
    debugger callbacks; that is an absent instrument, not evidence for or
-   against **H-debugger-route**. Next make a debugger-independent phase
-   witness before another target watch or debugger-off conclusion.
+   against **H-debugger-route**. **s706 direct VI poll A/B:** added
+   `--vi-poll`, which calls exported `DebugMemRead32` from a frontend thread
+   outside debugger callbacks. The first version read before the core powered
+   its device and SIGSEGVed in all three arms; after a 100ms post-execute gate,
+   default, debugger=0, and emulator=1 all produced the same live control:
+   `WIDTH 0 -> 320` at 0.2--0.3s followed only by the boot-origin change.
+   The debugger-on callback independently reported `WIDTH 0 -> 320`, all
+   eleven presses reached PIF, and both whole-RDRAM controls counted 11,785,945
+   writes over 4,199 VI/~70s. Thus **H-debugger-route is REFUTED** and
+   **H-core-environment-route is SUPPORTED**: the debugger-off core itself
+   remains 320, not merely its callbacks. This does not phase-qualify a target
+   watch. Next vary the currently dummy video plugin with the same direct-poll
+   witness before another target watch or E9 reroll.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

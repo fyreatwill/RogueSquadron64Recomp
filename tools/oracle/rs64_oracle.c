@@ -178,10 +178,12 @@ static void dbg_update(unsigned int pc)
 
 static long g_vis;
 static int g_vi_trace;
+static int g_vi_poll;
 static int g_pif_trace;
 static unsigned g_last_pad = 0xFFFFFFFFu;
 static unsigned g_last_width = 0xFFFFFFFFu, g_last_origin = 0xFFFFFFFFu;
 static double g_last_origin_log = -1e9;
+static volatile int g_poll_running;
 
 static void dbg_vi(void)
 {
@@ -314,6 +316,28 @@ static void sleep_s(double secs)
     nanosleep(&ts, NULL);
 }
 
+static void *vi_poller(void *arg)
+{
+    unsigned last_width = 0xFFFFFFFFu, last_origin = 0xFFFFFFFFu;
+    (void)arg;
+
+    sleep_s(0.1);
+    while (g_poll_running) {
+        unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
+        unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        if (width != 0 && (width != last_width || origin != last_origin)) {
+            printf("[vi-poll] t=%6.1fs WIDTH %u%s%u origin=0x%08x\n",
+                   now_s() - g_t0, last_width == 0xFFFFFFFFu ? 0 : last_width,
+                   last_width == 0xFFFFFFFFu ? " -> " : " => ", width, origin);
+            fflush(stdout);
+            last_width = width;
+            last_origin = origin;
+        }
+        sleep_s(0.01);
+    }
+    return NULL;
+}
+
 /* Drives the run: fires the press schedule, then stops the emulator. */
 static void *director(void *arg)
 {
@@ -398,6 +422,7 @@ static void usage(void)
         "  --oracle-debugger 0|1 set Core/EnableDebugger (default 1; 0 disables watches and traces)\n"
         "  --oracle-emulator N   set Core/R4300Emulator (default 0, pure interpreter)\n"
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
+        "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
         "  --verbose             pass through core info messages\n"
         "\n"
@@ -421,7 +446,7 @@ int main(int argc, char **argv)
     int oracle_debugger = 1;
     int oracle_emulator = 0;
     FILE *f; long romsize; void *rombuf;
-    pthread_t th;
+    pthread_t th, poll_th;
     int i;
 
     for (i = 1; i < argc; i++) {
@@ -462,6 +487,7 @@ int main(int argc, char **argv)
             }
         }
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
+        else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
         else if (!strcmp(argv[i], "--verbose"))                    g_verbose = 1;
         else usage();
@@ -545,12 +571,19 @@ int main(int argc, char **argv)
     }
 
     g_t0 = now_s();
+    g_poll_running = g_vi_poll;
+    if (g_vi_poll)
+        pthread_create(&poll_th, NULL, vi_poller, NULL);
     pthread_create(&th, NULL, director, &secs);
 
     printf("[oracle] running %s for %.0fs with %d watch(es), debugger=%d emulator=%d\n",
            rom, secs, g_nwatch, oracle_debugger, oracle_emulator);
     fflush(stdout);
     pCoreDoCommand(M64CMD_EXECUTE, 0, NULL);
+
+    g_poll_running = 0;
+    if (g_vi_poll)
+        pthread_join(poll_th, NULL);
 
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",
            g_hits, now_s() - g_t0, g_vis, g_vis / 60.0);
