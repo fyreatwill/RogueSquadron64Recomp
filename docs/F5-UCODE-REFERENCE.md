@@ -237,6 +237,30 @@ reached through documented lifecycle edges. It does not establish that the
 bytes consumed by a particular long stream are legitimate commands; the next
 question is which cap-reachable command family produces the unbounded chain.
 
+## 0x06 push-site static audit (s730)
+
+The resident dispatcher has exactly one materialized `L_12A0` handler and no
+direct generated branch to it: repository-wide source enumeration returns its
+label and the `do_indirect_jump` switch case only. The normal low-opcode table
+path at `L_1090` advances `r17` by eight bytes, then maps opcode `0x06`
+(DMEM table-1 offset `0xD6 + 0x0C`) to that handler. `L_12A0` is the sole
+writer of the frame pair `DMEM[0x650 + depth]` / `DMEM[0x654 + depth]`;
+`L_12C4` is the sole decrement/read site, and its non-root path reaches
+`L_12DC`, the sole restore of the saved parent `r17`, before `L_1088` resumes
+fetch. This independently matches the Factor 5 `F3DSWRS_DL` / EndDL lifecycle.
+
+However, this does **not** close the DMA-table alternative. `L_1298` also
+enters the same generated indirect-jump switch using a DMEM `0x76` entry.
+The retained s46 table capture contains `tbl76=1DB0,12A0,00D3,0D38,021F,0E10,002B,1030`:
+there is an opaque-table word for `0x12A0`, even though that run's active
+overlay records all selected `0x1DB0`. Generated code has no writer for that
+table, so static inspection cannot establish whether the `0x12A0` word is
+cap-reachable or whether such an entry has the ordinary `0x06` parent-frame
+lifecycle. Thus `H-dl06-unpaired-site` is refuted for resident direct paths;
+`H-dl06-opaque-overlay` remains open and needs a phase-latched source-tagged
+`L_1298` → `L_12A0` trace. The old table capture is supporting evidence, not a
+section-2 execution result.
+
 ## Dispatch-table / inline-advance audit (s713)
 
 The generated dispatcher performs its universal `r17 += 8` before either

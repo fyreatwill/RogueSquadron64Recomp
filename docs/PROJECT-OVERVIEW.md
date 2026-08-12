@@ -2634,8 +2634,11 @@ the complete TriGen route intact.
 
 The later TriGen continuation work established that `L_1DB0` uses the documented root/refill loop:
 section-2-latched branch/return pairs always choose branch 4 and return to `0x1088`, with changing
-sources and no crash. It therefore does not explain the plateau. The remaining bounded question is
-to enumerate every cap-reachable generated `0x06` push site and its paired parent/child lifecycle,
-including any opaque DMA-populated dispatch-table route. Runtime rerolls without a section-2 latch
-are unqualified and must not be repeated unchanged. Details: PORTING-STATE Sessions 685–728;
+sources and no crash. It therefore does not explain the plateau. The s730 static enumeration found
+the ordinary `0x06` route has exactly one generated push site and its sole `0x654+depth`
+save/restore pair is balanced. It also found a remaining opaque alternative: the DMA-fed `L_1298`
+entry table contains `0x12A0` in its retained table image, although the earlier live overlay records
+selected only `0x1DB0`. The next bounded question is whether a section-2 cap row reaches `L_12A0`
+via that table and, if so, whether its frame is paired. Runtime rerolls without a section-2 latch
+are unqualified and must not be repeated unchanged. Details: PORTING-STATE Sessions 685–730;
 active protocol: `scratch/agent/NEXT.md`.

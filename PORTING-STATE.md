@@ -53048,3 +53048,24 @@ This rules out treating the compaction as a new runtime result or reopening the 
 rerolls. NEXT keeps the same `m3-postsec2-lle-control-flow` thread: statically enumerate every
 generated `L_12A0` push and `0x654` frame save/restore site against the independent Factor 5 0x06 /
 EndDL lifecycle before any new build. No mitigation changed.
+
+## Session 730 (2026-08-12) — direct 0x06 lifecycle is balanced; opaque overlay entry remains
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 30,672 bytes, so maintenance was not triggered. The
+required next-unit hypotheses and discriminator were already retained in `NEXT.md`; this was a
+static source audit, so the Factor 5 command reference was the independent ground-truth source.
+
+Repository-wide enumeration found one generated `L_12A0` body and no direct branch to it beyond the
+indirect-jump switch. The normal `L_1090` table-1 route maps opcode `0x06` to `0x12A0` after the
+universal eight-byte advance. `L_12A0` is the only writer of `0x650/0x654 + depth`; `L_12C4` is the
+only decrement/read site, and its non-root route enters `L_12DC`, the sole saved-parent-`r17`
+restore before fetch resumes at `L_1088`. Together with the independent `F3DSWRS_DL`/EndDL command
+reference, this refutes H-dl06-unpaired-site for the resident direct path.
+
+The same enumeration also found that `L_1298` can enter the indirect switch from the DMA-fed
+DMEM-`0x76` overlay table. The retained s46 table capture has a `0x12A0` word
+(`tbl76=1DB0,12A0,00D3,0D38,021F,0E10,002B,1030`), although its live overlay records selected only
+`0x1DB0`. Generated code contains no table writer, so static source cannot prove the `0x12A0`
+overlay entry unreachable in a section-2 cap row. H-dl06-opaque-overlay therefore remains open;
+the next unit is one phase-latched source-tagged `L_1090`/`L_1298` → `L_12A0` trace joined to the
+existing frame unwind/resume records. No mitigation changed.
