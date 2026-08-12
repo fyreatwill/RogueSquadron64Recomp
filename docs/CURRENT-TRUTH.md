@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s698; compacted in maintenance s679)
+## Current truth (reviewed through s699; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -434,7 +434,19 @@ maintenance pass. Closed lineages are not backlog items.
    Starts; the control counted 11,785,883 writes. H-watch-perturbation is
    refuted. No alternate RSP plugin is installed, so the current oracle
    environment remains unqualified and must be diagnosed before another
-   recovery-cell target watch or provenance reroll.
+   recovery-cell target watch or provenance reroll. **s699 source-backed
+   launch audit:** both candidate ROM files have identical SHA-256
+   `9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`
+   and identical 64-byte N64 headers (U v1.0 CRC `66A24BEC 2EADD94F`);
+   Homebrew's `mupen64plus.ini` has the matching U v1.0 per-ROM entry
+   (`SaveType=Eeprom 4KB`). The oracle passes that data directory to
+   `CoreStartup`, explicitly enables the debugger and pure interpreter, and
+   attaches input then RSP in the documented order. Thus **H-rom-identity and
+   H-core-launch-config are REFUTED** for the checked launch path. Installed
+   plugins are audio-sdl, input-sdl, rsp-hle, video-glide64mk2, and video-rice:
+   there is only one RSP arm. **H-single-rsp-limitation is SUPPORTED.** The
+   oracle remains an unqualified phase witness; obtain an alternate compatible
+   RSP plugin before another oracle target-watch or provenance reroll.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

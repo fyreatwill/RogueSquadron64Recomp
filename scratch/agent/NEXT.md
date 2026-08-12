@@ -1,39 +1,31 @@
-# NEXT work unit (after s698: watches are not the oracle boot stall)
+# NEXT work unit (after s699: alternate RSP required for a phase-qualified oracle)
 
 HYPOTHESIS-ID: m3-oracle-boot-environment
 
-Perform one bounded, source-backed oracle launch-configuration audit. Do not
-add a recovery-cell watch or alter the E9 tracer; s698 proved that the current
-no-watch configuration is itself stuck at VI 320.
+Blocked pending a human-provided alternate compatible Mupen64Plus RSP plugin.
+The only installed implementation is Homebrew `mupen64plus-rsp-hle`; s699
+refuted ROM-identity and checked launch-config drift. Do not add a target
+watch or alter the E9 tracer beforehand.
 
 ## Competing hypotheses
 
-- **H-rom-identity:** the oracle ROM differs from the documented retail image;
-  its checksum/region metadata will differ from the port's ROM.
-- **H-core-launch-config:** the oracle's direct Core API initialization omits
-  a required config/plugin setting; a source/config comparison will identify a
-  concrete divergent setting from the README's previously working setup.
-- **H-single-rsp-limitation:** ROM identity and launch config agree, but the
-  sole installed `mupen64plus-rsp-hle` is the only executable RSP arm; no
-  phase-qualified retail route exists locally until an alternate compatible
-  RSP plugin is installed.
+- **H-rsp-hle-route:** the current RSP HLE path causes the VI-320 stall; an
+  alternate RSP reaches 640/1024/hangar under the documented driven schedule.
+- **H-core-environment-route:** an alternate RSP also remains at 320 despite
+  PIF and whole-RDRAM controls; the residual lies in the debugger/core launch
+  environment, not the RSP implementation.
 
 ## Discriminating measurement
 
-In one read-only batch, compare SHA-256 and N64 header bytes for the oracle
-ROM and `build/rogue_squadron.z64`; enumerate all installed RSP/video/input
-plugins; and trace the oracle's actual `CoreStartup`/plugin attach/config
-calls against `tools/oracle/README.md`. A hash/header mismatch proves
-H-rom-identity. An omitted or different concrete startup/config value proves
-H-core-launch-config. Matching identity plus no alternative RSP and no
-concrete config divergence supports H-single-rsp-limitation; record it and
-ask a human for an alternate compatible plugin rather than treating an oracle
-null as game evidence.
+Run both RSP arms in one batch with identical retail ROM, `--vi-trace`,
+`--pif-trace`, eleven Starts at 6..56 s, and the whole-RDRAM write control.
+If only the alternate reaches a 640/1024/0x6ABxxx phase, H-rsp-hle-route wins
+and a subsequent narrow recovery-cell watch is qualified. If both remain at
+320 while both controls fire, H-core-environment-route wins; keep oracle
+target-watch zeros unqualified and audit the debugger/core build next.
 
-## Commands
+## Commands (after the human supplies `ALT_RSP_PATH`)
 
-    shasum -a 256 build/rogue_squadron.z64 ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64
-    xxd -l 64 build/rogue_squadron.z64
-    xxd -l 64 ~/Documents/Tools/rogue_squadron64/rogue_squadron.z64
-    find /opt/homebrew/lib/mupen64plus -maxdepth 1 -name 'mupen64plus-*.dylib' -print | sort
-    rg -n 'CoreStartup|CoreAttachPlugin|CoreDoCommand|Config|rsp|video|audio|input' tools/oracle/rs64_oracle.c tools/oracle/README.md
+    tools/oracle/build.sh
+    tools/oracle/rs64_oracle --rom build/rogue_squadron.z64 --rsp /path/to/alternate-rsp.dylib --secs 70 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace --pif-trace --watch-write 0:0x800000
+    tools/oracle/rs64_oracle --rom build/rogue_squadron.z64 --rsp /opt/homebrew/lib/mupen64plus/mupen64plus-rsp-hle.dylib --secs 70 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace --pif-trace --watch-write 0:0x800000

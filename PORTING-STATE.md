@@ -52340,3 +52340,28 @@ environment is still not a phase-qualified retail witness for the recovery
 cell; do not read target-watch zeros or rerun the E9 provenance recipe until a
 distinct launch/ROM/RSP-environment discriminator is resolved. Logs:
 `scratch/agent/s698_oracle_reachability/`.
+
+## Session 699 (2026-08-12) — oracle launch audit isolates the remaining environment limitation
+
+Ran the prescribed read-only batch before adding a new runtime instrument or
+watch. The oracle/decomp ROM and `build/rogue_squadron.z64` have identical
+SHA-256 values (`9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`)
+and identical first 64 header bytes: U v1.0 CRC `66A24BEC 2EADD94F`, title
+`Rogue Squadron`, country `E`. Homebrew's `mupen64plus.ini` contains that
+exact U v1.0 entry with `SaveType=Eeprom 4KB`.
+
+Source inspection confirms the oracle passes Homebrew's data directory to
+`CoreStartup`, explicitly sets `Core.EnableDebugger=1` and
+`Core.R4300Emulator=0`, opens the ROM before attaching plugins, then attaches
+input (when presses are requested) followed by RSP. This matches the README's
+known-working configuration; no concrete omitted or divergent launch setting
+was found. The installed plugin set is audio-sdl, input-sdl, rsp-hle,
+video-glide64mk2, and video-rice: `mupen64plus-rsp-hle` is the sole local RSP
+implementation.
+
+This refutes H-rom-identity and H-core-launch-config for the checked path and
+supports H-single-rsp-limitation. It does not make the VI-320 stall a retail
+game result: the current oracle still cannot reach a phase-qualified witness.
+Do not run another target watch or E9 provenance reroll until a human supplies
+an alternate compatible RSP plugin; then run the same driven 70-second
+positive-control recipe with the alternate arm.
