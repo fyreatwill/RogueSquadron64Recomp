@@ -142,6 +142,12 @@ while :; do
       kill_game; wait "$LAUNCH_PID" 2>/dev/null || true; break
     fi
     [ -f "$LOG" ] || continue
+    if grep -aq 'SDL_Init failed: The video driver did not add any displays' "$LOG" 2>/dev/null; then
+      echo "[s670] SDL has no display; aborting instead of rerolling"
+      kill_game
+      wait "$LAUNCH_PID" 2>/dev/null || true
+      exit 3
+    fi
     if [ "$C5_T" -eq 0 ] && grep -aq '\[case5-entry\]' "$LOG" 2>/dev/null; then
       C5_T=$NOW2
     fi

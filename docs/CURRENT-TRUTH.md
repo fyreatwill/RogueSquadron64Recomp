@@ -333,12 +333,16 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     `scratch/agent/s669_postsec2_offline_score.py`. **s672: instrument
     built** (`e9_aligned` counter added to `ROGUESQ_LOG_DL_SYNC2`'s
     `[dl-sync-probe2]` output, `ROGUESQ_LOG_DL_SYNC2=1` wired into the
-    freeroll's env) but the discriminating run itself could not complete —
-    BLOCKED (turn-cadence limit, not an environment/build problem; see
-    `scratch/agent/BLOCKED.md` and PORTING-STATE.md Session 672). Next
-    session: just run `env BUDGET_S=2400 zsh
+    freeroll's env) but the discriminating run itself could not complete.
+    s672 was blocked by turn cadence. **s673:** a direct retry produced ten
+    3–4s pre-engagement exits; every run independently logged `SDL_Init
+    failed: The video driver did not add any displays`, so this headless
+    execution context cannot supply the required GUI display. This is not
+    evidence about either E9 hypothesis. The harness now aborts on the first
+    such failure instead of consuming all retries. Next GUI-capable session:
+    run `env BUDGET_S=2400 zsh
     scratch/agent/s670_postsec2_pulse_freeroll.sh` to completion, no further
-    code changes needed. Full: Sessions 669-672.
+    code changes needed. Full: Sessions 669-673.
 
 -420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
     Outcome A (content advances; residual → -421).**

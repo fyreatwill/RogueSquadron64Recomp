@@ -51697,3 +51697,25 @@ not yet have data. No experimental conclusion to record.
 
 ### Residual → item -421 unchanged (still needs the discriminating run). The instrument is in place and correct; a future session (or a human running it directly, outside this turn-cadence constraint) just needs to run `env BUDGET_S=2400 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh` to completion and score `e9_aligned` against `e9_a`/`e9_b` per task per the s671 NEXT.md outcomes A/B/C.
 
+## Session 673 — item -421 run cannot boot without a GUI display; harness now fails fast (2026-08-12)
+
+Ran the exact queued command, `env BUDGET_S=2400 zsh
+scratch/agent/s670_postsec2_pulse_freeroll.sh`. All ten attempts exited before
+engagement in 3–4 seconds. Each independent `run.log` ended with `SDL_Init
+failed: The video driver did not add any displays`; attempt 1 also recorded
+macOS LaunchServices/XPC connection failures. Thus the positive controls never
+armed and the run supplies no E9-alignment evidence.
+
+This iteration added a fail-fast check to the harness: when that exact SDL
+failure appears, it kills the launcher and exits 3 instead of spending all ten
+retries on an environment failure.
+
+### Rules out / confirms
+
+- Confirms this execution context has no SDL-visible display (ten independent
+  boot attempts, same terminal error).
+- Does not distinguish H-e9-not-translated from H-e9-walker-misaligned.
+- Refutation test: run the same command in a logged-in GUI session and observe
+  normal VI/game progress past SDL initialization.
+
+### Residual → item -421 unchanged; run the already-built discriminator in a GUI-capable session.
