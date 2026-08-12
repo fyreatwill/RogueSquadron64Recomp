@@ -1211,6 +1211,25 @@ if is_main_ucode and TRIGEN_CONTINUATION_MARKER not in text:
         print(f"fixup_factor5_ucode: FIXUP 14 ANCHOR FAILED (entry={n_entry} reload={n_reload}).", file=sys.stderr)
         sys.exit(1)
 
+TRIGEN_EXIT_MARKER = "/* fixup: TriGen continuation exits v2 */"
+if is_main_ucode and TRIGEN_EXIT_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_trigen_reload[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) + 'extern "C" void rs64_inline_probe_trigen_exit(uint32_t r17, uint32_t site);  ' + TRIGEN_EXIT_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 14B ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    for label in ("L_1E48", "L_1E5C", "L_1E70", "L_1E80", "L_11B0"):
+        label_anchor = re.compile(rf"({label}:\n)([ \t]*(?:if|//))")
+        text, n_label = label_anchor.subn(
+            lambda m, site=label: m.group(1) +
+            f"    rs64_inline_probe_trigen_exit(r17, 0x{site[2:]});  " + TRIGEN_EXIT_MARKER + "\n" + m.group(2),
+            text, count=1)
+        if n_label != 1:
+            print(f"fixup_factor5_ucode: FIXUP 14B ANCHOR FAILED ({label} exit).", file=sys.stderr)
+            sys.exit(1)
+
 # ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.

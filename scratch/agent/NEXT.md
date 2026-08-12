@@ -1,36 +1,35 @@
-# NEXT work unit (after s717: TriGen enters L_1DB0 but never reaches L_1E80)
+# NEXT work unit (after s718: TriGen flushes DPC and refills a new DMEM buffer)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-Implement one regeneration-safe, phase-gated route trace from actual TriGen
-continuation L_1DB0 through only its first reachable branch labels. Preserve
-the s716 0x05 table/route control and give every candidate exit its own
-phase-scoped budget; do not add markers to unrelated inline handlers.
+Implement one regeneration-safe, phase-gated physical-source correlation for
+the live `0x05→L_1DB0→L_11B0` path. Record the DRAM base that supplied the
+active entry buffer and the `L_11B0` refill source, retaining the existing
+0x05 route control. Do not compare raw DMEM offsets to the reference PC.
 
 ## Competing hypotheses
 
-- **H-trigen-dpc-loop:** live L_1DB0 repeats through its DPC scheduler path
-  without reaching L_1E80; the TriGen command's next pointer is not
-  finalized on that visit.
-- **H-trigen-hidden-exit:** L_1DB0 reaches a non-L_1E80 child/return label
-  that reloads or changes the command pointer; that label is the next place
-  to measure r17.
-- **H-trigen-probe-state-loss:** the active 0x05 probe is overwritten before
-  the reload, so entry is real but the missing reload is an instrument defect.
+- **H-trigen-chunked-conformant:** the refill DRAM source is the entry command
+  source plus 40 bytes, so the reference's command + inline-data advance is
+  correct despite the DMEM buffer restart.
+- **H-trigen-wrong-advance:** the refill source has a stable non-40-byte delta
+  from the entry source, identifying a concrete generated-stream mapping bug.
+- **H-trigen-source-opaque:** the available state fields do not identify both
+  sources; first derive their ownership statically before interpreting a row.
 
 ## Discriminating measurement
 
-In one phase-6 task, live 0x05→0x15AC→L_15AC→0x0C→L_1298→L_1DB0 plus a
-first-hit row for each static successor/loop label selects DPC loop or the
-concrete hidden exit. A phase-6 L_1DB0 entry followed by a reload with the
-probe inactive selects state loss. Each possible result names the next exact
-measurement; no null is a verdict without the route control.
+In one qualified 512-wide task, route control plus a source row containing
+`entry_dram`, `entry_offset`, and `refill_dram` measures the actual physical
+delta. `refill_dram == entry_dram + entry_offset + 40` supports chunked
+conformance; any other stable delta supports a mapping defect; absent source
+ownership is an instrument-design failure, not a null result.
 
 ## Commands
 
-    rg -n -C 12 '^L_1DB0:|^L_1E48:|^L_1E5C:|^L_1E6C:|^L_1E70:|^L_1E80:' build/factor5_ucode/factor5_ucode_recompiled.c
+    rg -n -C 12 'L_1DB0:|L_11B0:|RSP_MEM_W_LOAD\(0X30, r1\)|RSP_MEM_W_STORE\(0X30, r18\)|RSP_MEM_W_STORE\(0X5C, r18\)' build/factor5_ucode/factor5_ucode_recompiled.c
     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
     env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_INLINE_ADVANCE=1 \
       PROBE_KEYS="3:start 7:start" PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300 \
-      zsh tools/probe.sh scratch/agent/s718_trigen_l1db0_exit 120 1
+      zsh tools/probe.sh scratch/agent/s719_trigen_phys_advance 120 1

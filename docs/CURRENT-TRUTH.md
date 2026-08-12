@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s716; compacted in maintenance s679)
+## Current truth (reviewed through s718; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -584,7 +584,17 @@ maintenance pass. Closed lineages are not backlog items.
    L_1DB0 does not reach its apparent reload-to-L_1090 exit in the active
    command; no measured increment supports or refutes the expected 32-byte
    TriGen advance. Next: map the first live exit/loop path from L_1DB0 with
-   the same route control and one independent budget per label.
+   the same route control and one independent budget per label. **s718
+   successor probe:** qualified phase-7 capture (512-wide for 30.3 s) has the
+   full control 64× (`0x05→0x15AC→selector 0x0C→L_1298→L_1DB0`) and exactly
+   64× each `L_1E48→L_1E5C→L_11B0`, with **0** `L_1E70`, `L_1E80`, or reload
+   rows. Thus H-trigen-hidden-exit and H-trigen-probe-state-loss are refuted:
+   this continuation submits DPC work then DMAs a new command buffer rather
+   than root-reloading. Its `r17` changes from `0x1E8` to the new buffer
+   `0x178`, so the prior DMEM-address delta is not a valid comparison with the
+   reference's `PC += 32`. Next: correlate the entry buffer's DRAM source with
+   the `L_11B0` refill source; `next=entry+40` proves a chunked conformant
+   TriGen advance, while another delta identifies the concrete mapping defect.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

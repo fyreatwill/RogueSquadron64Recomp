@@ -52754,3 +52754,26 @@ does not reach the apparent reload-to-dispatcher exit while the active TriGen
 command is being processed, so there is no basis for a 32-byte advance verdict
 or a correction. Next: trace only L_1DB0's first live successor labels with
 separate budgets, retaining the route control. No mitigation changed.
+
+## Session 718 (2026-08-12) — TriGen continuation flushes DPC and refills its command buffer
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 52,388 bytes, so maintenance did
+not trigger. Added regeneration-safe v2 successor hooks at only `L_1E48`,
+`L_1E5C`, `L_1E70`, `L_1E80`, and `L_11B0`, each with a separate VI-phase
+budget. The first fixup anchor was incompatible with the existing v1 hook;
+the corrected v2 upgrade anchor applied before the single final build/run.
+The boot-relative two-Start probe reached 512-wide after 87.8 seconds,
+captured 30.3 seconds, and completed without a crash.
+
+The positive control was live 64 times: every `0x05 table1:0x15AC` reached
+`L_15AC`, selector `0x0C`, `L_1298`, and `L_1DB0`. In those same qualified
+rows, the successor counts were `L_1E48=64`, `L_1E5C=64`, `L_11B0=64`, and
+`L_1E70=L_1E80=reload=0`. The generated code independently shows that
+`L_11B0` issues a DMA read into DMEM and returns through the dispatcher.
+This refutes H-trigen-hidden-exit and H-trigen-probe-state-loss: live TriGen
+does not take the root-loader path; it flushes DPC then refills a command
+buffer. The raw DMEM transition `0x1E8 -> 0x178` cannot test the reference
+`PC += 32`, so no advance defect or correction is established. Next: correlate
+the entry buffer's physical DRAM source with the `L_11B0` refill source; a
+40-byte physical delta is the discriminating conformance measurement. No
+mitigation changed.
