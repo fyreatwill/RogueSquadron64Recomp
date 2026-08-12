@@ -145,7 +145,7 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
     static uint32_t controls = 0;
     static uint32_t targets = 0;
     const bool control = task <= 4;
-    const bool target = task >= 6500;
+    const bool target = task >= 8200 && task < 8264;
     if ((control && ++controls <= 4) || (target && ++targets <= 64)) {
         fprintf(stderr, "[e9-prov] task=%u guest=%u emit=%u submit=%u guest0=0x%06X emit0=0x%06X\\n",
                 task, g_e9prov.guest, g_e9prov.emitted, g_e9prov.submitted,

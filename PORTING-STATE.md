@@ -51916,3 +51916,27 @@ the historical evidence remains in this chronological ledger.
 This rules out treating legacy negative item numbers as active priority order:
 only backlog item 1 is active M3 work. The next unit remains the already-built,
 same-run E9 provenance audit; no mitigation or runtime behavior changed.
+
+## Session 680 (2026-08-12) — item -421: provenance target phase corrected; rerun phase-inconclusive
+
+The first completed provenance run reached section 2 cleanly after 737s. Its
+same-run controls (tasks 1–4) and records 6500–6563 each reported
+`guest=1 emit=1 submit=1`, but that is recovery traffic: the matching
+`dl-sync-probe2` records have `e9_aligned=0`. The 64-record target budget had
+therefore been exhausted before the s677 divergent population around task 8227.
+This is a measurement-scope defect, not evidence for or against any E9-loss
+hypothesis.
+
+Changed the persistent probe target gate from `task >= 6500` to
+`8200 <= task < 8264`; controls remain tasks 1–4. The full build succeeded.
+The fixed recipe was run immediately as required, but it produced four
+recovery-silent rerolls, one non-engaged reroll, and one recovery-active
+attempt that reached the 1200s global cutoff before section 2. It printed zero
+corrected target records, so it rules out neither dispatch skip, handler
+non-emission, deferred-submit loss, nor the walker-nonexecuted-path hypothesis.
+
+The next retry keeps the same behavior-free probe but uses a 2400s global
+budget and a 15s post-section-2 hold (the records precede the old 180s hold).
+It must compare each task-8200–8263 `[e9-prov]` record with its matching
+`[dl-sync-probe2] e9_aligned` count; boot tasks 1–4 remain its positive
+control.
