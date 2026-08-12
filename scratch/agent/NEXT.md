@@ -1,45 +1,45 @@
-# NEXT work unit (after s710: cap marker and 0x06/EndDL return edges audited)
+# NEXT work unit (after s711: root-loader state field excludes cap reload)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-Perform one bounded static audit of the Factor 5 root-stream lifecycle behind
-backlog item 1. Enumerate every write and every consumption of DMEM state
-offset `0x54($18)`, which `L_1E80` loads into `r17` before returning to
-`L_1090`. Trace its callers and task-root transition paths, then decide
-whether cap rows can be a deliberately reloaded root stream or require a
-missing termination transition. Do not rerun the recovery recipe: s694--s696
-exhausted unchanged unqualified rerolls, and s710 closed the 0x06/EndDL return
-edge hypotheses.
+Perform one bounded static audit of the Factor 5 fetch-pointer lifecycle behind
+backlog item 1. Enumerate every generated-main assignment to `r17` and every
+direct/indirect predecessor of `L_1090`, then classify whether it starts a
+root stream, advances an ordinary command, loads a 0x06 child, or restores an
+EndDL parent. The s711 audit proves the root loader enters `L_1090` only once
+per loader return; this unit tests whether a cap row can nevertheless loop by
+an erroneous `r17` continuation. Do not rerun the recovery recipe: s694--s696
+exhausted unchanged unqualified rerolls.
 
 ## Competing hypotheses
 
-- **H-root-is-deliberately-reloaded:** a documented control path repeatedly
-  writes `0x54($18)` and returns through `L_1E80`, making cap continuation an
-  expected task-root wait under the unmodelled SP status bit.
-- **H-root-stale-or-unwritten:** the cap path reaches `L_1E80` without a
-  matching live root-pointer write, so it reuses stale state rather than a
-  valid root stream.
-- **H-cap-never-enters-root-reload:** `L_1E80` is unrelated to cap rows; the
-  repeated stream originates solely in normal `0x06` list dispatch and needs
-  a different lifecycle audit.
+- **H-r17-command-advance:** all cap-reachable writes advance a valid command
+  or take a documented 0x06/EndDL frame edge; the long stream is a legitimate
+  open chain, not a reloaded root.
+- **H-r17-stale-reload:** a cap-reachable predecessor assigns `r17` from root
+  state or an unmatched saved frame, restarting/reusing a stream incorrectly.
+- **H-r17-unmodelled-dispatch:** an indirect handler/return reaches `L_1090`
+  without a statically classifiable `r17` update; the missing semantic is in
+  that dispatch family rather than the root loader.
 
 ## Discriminating measurement
 
-Produce one complete table: `0x54($18)` read/write site, value source, caller
-or successor, and root-lifecycle verdict. The positive control is exhaustive
-enumeration: every generated `0x54($18)` access must have a row. A recurrent
-write→`L_1E80`→`L_1090` path supports H-root-is-deliberately-reloaded; a read
-without a dominating write supports H-root-stale-or-unwritten; no cap-reachable
-`L_1E80` path selects H-cap-never-enters-root-reload.
+Produce one complete table: `r17` write site, value source, successor, and
+whether the edge can reach `L_1090`. The positive control is exhaustive
+enumeration: the count of table rows must equal the generated-main `r17 =`
+assignment count, with each direct `goto L_1090` and indirect jump-table case
+accounted for. Only advance/frame edges support H-r17-command-advance; a
+root/saved-frame reload without its matching lifecycle edge supports
+H-r17-stale-reload; an unclassifiable dispatch edge selects
+H-r17-unmodelled-dispatch.
 
 ## Commands
 
-    rg -n -C 12 '0X54, r18|0x54\(\$18\)|L_1E80|L_1090|L_10E8' \
-      build/factor5_ucode tools/fixup_factor5_ucode.py factor5_rsp.toml
-    rg -n -C 8 'root|display-list|EndDL|F3DSWRS_(DL|ENDDL)' \
-      docs/F5-UCODE-REFERENCE.md docs/factor5-ucode-dispatch.md
+    rg -n -C 6 'r17 =|L_1090:|goto L_1090|case 0x1090|L_1088:|L_10D8:|L_12A0:|L_12DC:' \
+      build/factor5_ucode/factor5_ucode_recompiled.c
+    rg -n -C 8 'F3DSWRS_(DL|ENDDL)|pointer advance|inline data|root' \
+      docs/F5-UCODE-REFERENCE.md
 
-Record the enumerated table in `docs/F5-UCODE-REFERENCE.md` or
-`docs/CURRENT-TRUTH.md`; if a code correction is indicated, put it in
-`tools/fixup_factor5_ucode.py`, regenerate, and run the existing phase-gated
-controls in the same iteration.
+Record the enumerated table in `docs/F5-UCODE-REFERENCE.md`; if a code
+correction is indicated, put it in `tools/fixup_factor5_ucode.py`, regenerate,
+and run the existing phase-gated controls in the same iteration.

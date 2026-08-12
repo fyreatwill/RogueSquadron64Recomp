@@ -174,3 +174,27 @@ earlier live paired-frame controls: `H-cap-misses-06-return`,
 `H-cap-misses-enddl-exit`, and `H-probe-misattribution` are refuted for the
 generated main ucode. This does not prove why the cap rows lack a root EndDL;
 the next audit is root-stream lifecycle, not another unchanged recovery reroll.
+
+## Root-loader state-field audit (s711)
+
+The generated main ucode has exactly three instruction accesses to the
+root-state field at `DMEM[0x154]` (`0x54($18)`, with `$18 = 0x100`). The
+table is exhaustive for instruction accesses; the root loader also overwrites
+the field by DMA, which is a separate data-flow edge.
+
+| Site | Access / source | Successor | Lifecycle verdict |
+|---|---|---|---|
+| `L_1494` | `sh r11, 0x54($18)` after its `L_1484` setup path | renderer-state save; later `L_14B8` reloads the saved trio | Not a root-stream reload path. |
+| `L_14B8` | `lhu r11, 0x54($18)` (with companion fields `0x56/0x58`) | resumes the renderer-state helper through `L_17F0` | Paired with `L_1494`; does not enter `L_1090`. |
+| `L_1E80` | `lhu r17, 0x54($18)` | direct `goto L_1090` | The sole instruction path which seeds a fetch pointer from this field. |
+
+`L_1E80` itself has one direct producer: `L_1E70` calls DMA helper `L_122C`
+with DMEM destination `r3=0`, DRAM source `DMEM[0x38]`, and length `0xFFF`;
+on return (`r31=0x1E80`) it loads `DMEM[0x154]` and starts fetching. Therefore
+the loader DMA, rather than `L_1494`, supplies the root pointer for this path.
+There is no edge from the synthetic cap return to `L_1E80`: cap rows return
+directly from `L_1090`. This refutes `H-root-stale-or-unwritten` for the root
+loader and selects `H-cap-never-enters-root-reload` for a cap row. It leaves
+open whether the ongoing `r17` in a cap row is a legitimate command-chain
+continuation or an incorrect continuation; audit every `L_1090` predecessor
+and every `r17` writer next.

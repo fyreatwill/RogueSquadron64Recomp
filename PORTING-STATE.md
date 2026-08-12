@@ -52593,3 +52593,23 @@ H-cap-misses-enddl-exit, and H-probe-misattribution. It does not explain why
 the cap rows have no root EndDL, so the next bounded static audit enumerates
 the root-stream state pointer `0x54($18)` and its `L_1E80` lifecycle; no
 runtime recipe was rerun.
+
+## Session 711 (2026-08-12) — root-loader state field is not a cap reload
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 48,269 bytes, so maintenance did
+not trigger. Per the assigned static audit, exhaustively enumerated generated
+main-ucode instruction accesses to `0x54($18)` (DMEM `0x154`, `$18=0x100`):
+the only writer is `L_1494` (`sh r11`), whose paired `L_14B8` consumer reloads
+renderer-state fields `0x54/0x56/0x58`; the sole fetch-pointer consumer is
+`L_1E80` (`lhu r17`).
+
+`L_1E80` has one direct producer. `L_1E70` calls DMA helper `L_122C` with
+DMEM destination zero, source from `DMEM[0x38]`, and length `0xFFF`; its
+return address is `0x1E80`, which then reads DMEM `0x154` into `r17` and goes
+to `L_1090`. The root field is consequently supplied by the loader DMA rather
+than the renderer-state store. The synthetic cap at `L_1090` returns directly
+and has no edge to `L_1E80`. This refutes H-root-stale-or-unwritten for the
+loader and selects H-cap-never-enters-root-reload: cap rows do not reload the
+root stream through this field. It does not explain their continuing stream;
+the next bounded static unit enumerates every `r17` writer and `L_1090`
+predecessor. No runtime behavior or mitigation changed.
