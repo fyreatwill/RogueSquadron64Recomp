@@ -52195,3 +52195,28 @@ legitimate-open-chain, inline-data-dispatch, nor state-corrupt hypotheses.
 Repeating unchanged would be a third non-discriminating pass; next audit
 effective force/gate configuration and both recovery observations against the
 known qualified s689 log before retrying.
+
+## Session 692 (2026-08-12) — recovery observer is live; config drift refuted
+
+Added and ran the regeneration-free `scratch/agent/s692_recovery_latch_audit.sh`.
+It extracts the historical s689 environment from commit `0f2cd78e`, records
+all inherited `ROGUESQ_*` settings, and scores a common saved-log control plus
+both new phase-gated arms using the literal `0x0076B768`, authoritative
+`[rdp-fullsync]`, and independent `[fs-slot]` observations.
+
+The historical/current freeroll and runner scripts have identical SHA-1s;
+their effective `GAME_EXTRA_ENV` strings match exactly and there were no
+inherited `ROGUESQ_*` variables. This rules out H-config-drift. The saved s689
+positive control scored `literal=7936`, `fullsync=3968`, `fs-slot=1984`, and
+four boot E9 controls. The current arm also passed all four boot controls and
+then produced `literal=96`, `fullsync=48`, and `fs-slot=24`, ruling out an
+observer/log-selection loss. The concurrent historical arm passed its boot
+control but never reached `[hangar-sel]`: both GUI instances competed for
+focus, so it is not a valid negative A/B arm. Its zero recovery count is
+discarded. The 9/9 s691 silence is therefore consistent with a stochastic
+route, but that remains provisional rather than a causal conclusion.
+
+The recovery positive control is restored and independently cross-checked, so
+the next single-instance run may again interpret phase-latched command-word
+rows. The 36 current-arm `[CRASH]` markers occurred only after the recovery
+observation and were not used as evidence for this gate audit.

@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s691; compacted in maintenance s679)
+## Current truth (reviewed through s692; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -376,8 +376,20 @@ maintenance pass. Closed lineages are not backlog items.
    control, so it is not evidence for any command-path hypothesis. Do not
    repeat unchanged: first audit why the formerly recovery-active recipe now
    produces only silent rows, then retry only after the control is restored.
+   **s692 recovery-latch readiness audit:** the s689 historical and current
+   launcher/runner scripts have identical SHA-1s and identical effective
+   `GAME_EXTRA_ENV` (no inherited `ROGUESQ_*` setting), refuting
+   **H-config-drift**. The saved s689 log passed the new common scorer
+   (`literal=7936`, authoritative `rdp-fullsync=3968`, independent
+   `fs-slot=1984`, boot E9 controls=4). In the new current arm, boot controls
+   passed and recovery became live (`literal=96`, `rdp-fullsync=48`,
+   `fs-slot=24`), refuting **H-wrapper-observer-loss**. The simultaneous
+   historical arm never reached `hangar-sel` because the two GUI instances
+   competed for focus, so it is invalid as an A/B outcome. This supports
+   **H-stochastic-route** only provisionally; the recovery control is now
+   restored for one ordinary, single-instance provenance-capture reroll.
    Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions
-   669–691.
+   669–692.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

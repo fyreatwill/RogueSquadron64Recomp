@@ -1,38 +1,32 @@
-# NEXT work unit (after s691 recovery-negative command capture)
+# NEXT work unit (after s692 recovery-latch readiness audit)
 
-HYPOTHESIS-ID: m3-recovery-latch-readiness
+HYPOTHESIS-ID: m3-e9-provenance-cap
 
-Before another `L_12A0` capture, audit the recovery-latch gate that made s691
-unscorable. The exact s670 recipe previously produced a qualified s689 row,
-but s691 completed 9/9 hangar-selection-engaged attempts without one
-`0x0076B768` event. Do not change decoding, submission, or FULL_SYNC.
+Run one ordinary single-instance command-word capture now that s692 restored
+and independently validated its required recovery control. Do not alter the
+decoder, the LLE marker, or the recovery route.
 
 ## Competing hypotheses
 
-- **H-config-drift:** the recovery-active s689 invocation differs from the
-  current script or inherited environment in a force/gate setting.
-- **H-wrapper-observer-loss:** recovery occurs but the watcher/log selection
-  fails to observe `0x0076B768`.
-- **H-stochastic-route:** invocation and observer are intact; recovery is a
-  probabilistic branch that happened not to fire in s691.
+- **H-legitimate-open-chain:** the eight retained frames describe a valid
+  display-list/branch chain; their captured command words are valid commands.
+- **H-inline-data-dispatch:** the repeated dispatcher return fetches inline
+  data as commands; captured words expose a pointer/data family.
+- **H-state-corrupt:** a corrupted saved frame or command source feeds the
+  dispatcher; captured words/PCs are unstable or implausible.
 
 ## Discriminating measurement
 
-Make one bounded, regeneration-free audit script that records complete
-effective `GAME_EXTRA_ENV`, relevant inherited `ROGUESQ_FORCE_*` settings,
-and two independent recovery observations from the same `run.log`: the literal
-`0x0076B768` and the surrounding `[fs-slot]`/`[rdp-fullsync]` transition. Run
-the s689-compatible and current-script arms concurrently, phase-gated, one
-attempt each. Positive controls: a boot `[e9-prov]` chain in each new arm and
-the recovered transition in the saved s689 log parsed by the same scorer.
+Run the existing phase-gated, recovery-reroll recipe once to a qualified
+section-2 latch and score `[e9-prov-frame]` rows only after the first
+`addr=0x0076B768`. Positive controls in that same log: four boot
+`[e9-prov]` controls plus both `rdp-fullsync` and `fs-slot` observations of
+the recovery cell. Valid, stable opcode/operand families support
+H-legitimate-open-chain; repeatable data-shaped words support
+H-inline-data-dispatch; incoherent or changing target/PC/word joins support
+H-state-corrupt. If the recovery control is absent, record it as unscorable;
+do not interpret cap rows.
 
-- Different effective settings or force banners: H-config-drift supported.
-- Independent transition but no literal watch hit: H-wrapper-observer-loss.
-- Matching arms/configs and controls, both without transition: H-stochastic-route.
-- Missing saved-log or boot controls: reject and repair the scorer first.
+## Command
 
-## Commands
-
-    rg -n '0076B768|\[fs-slot\]|\[rdp-fullsync\]|\[e9-prov\]' scratch/s73_post_a_scene/s670_postsec2_pulse_1_20260812051415/run.log | head -200
-    sed -n '1,240p' scratch/agent/s670_postsec2_pulse_freeroll.sh
-    sed -n '1,240p' scratch/agent/s670_run_mission_keys_postsec2.sh
+    env BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=8 POST_PULSE_HOLD_S=15 MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
