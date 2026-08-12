@@ -284,3 +284,21 @@ rules out a zero-count interpretation, but it leaves
 H-advance-conformant/H-advance-mismatch unevaluable for Tri/TriGen. The next
 probe must reconstruct `r17` at the internal advances in `0x146C`, `0x1484`,
 and the live TriGen overlay path before comparing reference totals.
+
+## Internal Tri steps (s715)
+
+The v2 probe retained the phase-6 live-table control and added calls directly
+after both `r17` advances in the shared `L_13A8` Tri helper. In task 3391, the
+live `0xB4 → 0x1484` and `0xBF → 0x146C` entries reached the textured branch
+at `0x13B0` (`delta=16`) and the non-textured branch at `0x13A8`
+(`delta=8`). These are the two conditional steps described by the independent
+reference: no wrong individual generated increment was observed. The old
+dispatch-to-next-fetch `+8/+24` differences consequently remain attributable
+to continuation between triangle commands, not evidence of a wrong Tri
+increment. This is support for H-tri-run-conformant, not a complete generated
+total proof.
+
+The same run had `tg=9--15/9--15` live TriGen samples per phase-6 task, but
+no `L_15AC` overlay marker. Thus the resident `L_15AC` relay is not the live
+continuation entered by those table words; it cannot instrument TriGen's
+internal advance. TriGen remains opaque and is the next discriminating target.

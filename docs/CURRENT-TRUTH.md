@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s714; compacted in maintenance s679)
+## Current truth (reviewed through s715; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -564,7 +564,15 @@ maintenance pass. Closed lineages are not backlog items.
    but the observed `+8/+24` totals conflate Tri's documented run continuation
    with one command. This is a qualified instrument result, not a
    generated-advance verdict. Next: reconstruct `r17` at internal Tri/TriGen
-   advances, with the same live table control.
+   advances, with the same live table control. **s715 internal Tri probe:**
+   phase-6 table control again LIVE; `0xB4→0x1484` and `0xBF→0x146C` reached
+   `L_13A8`'s exact `+8` non-textured and `+16` textured branches. This agrees
+   with the independent reference's conditional Tri steps, so the next-fetch
+   mismatch is **not evidence of an individual Tri increment defect** and
+   H-tri-run-conformant is supported. TriGen had 9--15 live samples/task but
+   never reached the static `L_15AC` marker: its live overlay continuation is
+   still opaque. Next: locate that continuation from its live table word and
+   instrument its actual `r17` steps; preserve the table control.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -52688,3 +52688,28 @@ advance hypotheses unevaluable. The next unit instruments only the internal
 `r17` advances in live `0x146C`, `0x1484`, and the `0x05` overlay continuation,
 while retaining this run's live-table positive control. No mitigation or
 runtime behavior changed.
+
+## Session 715 (2026-08-12) — individual Tri advances conform; live TriGen continuation remains opaque
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 50,417 bytes, so maintenance did
+not trigger. Added regeneration-safe v2 hooks after both `r17` advances in
+the shared `L_13A8` Tri helper and at static `L_15AC`, rebuilt successfully,
+and ran the VI-512 phase-gated probe. The first invocation incorrectly paired
+the 512 gate with phase-relative keys and never reached the gate; it is
+discarded. The corrected no-key rerun reached phase 6 at 89.3 seconds, with no
+crash, then was SIGKILLed after capture.
+
+The phase-6 table control was live again. In dense task 3391, live
+`0xB4→table2:0x1484` and `0xBF→table2:0x146C` reached the exact helper steps:
+textured `L_13A8` executions logged `site=13B0 delta=16`, while non-textured
+ones logged `site=13A8 delta=8`. This agrees with the independent Factor 5
+reference's conditional Tri advances. The previous next-fetch `+8/+24`
+differences therefore do not support an individual generated Tri-increment
+defect; H-tri-run-conformant is supported, though the complete run total is
+not independently reconstructed.
+
+TriGen remains unresolved: phase-6 summaries had 9--15 live `tg` samples per
+task, but zero `L_15AC` markers. The static resident relay is not the actual
+continuation selected by the live DMA-populated table word. Next work is to
+trace that `0x05` table word through `do_indirect_jump` and instrument the
+actual continuation, retaining a per-op table control. No mitigation changed.

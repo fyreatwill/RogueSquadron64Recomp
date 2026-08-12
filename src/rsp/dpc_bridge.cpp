@@ -273,6 +273,29 @@ extern "C" void rs64_inline_probe_dispatch(uint32_t r17, uint32_t w0, uint32_t t
         opcode == 0xBD ? 16 : 8;
 }
 
+extern "C" void rs64_inline_probe_step(uint32_t r17, uint32_t delta, uint32_t site) {
+    if (!log_inline_advance() || !g_inline_probe.active) return;
+    if (g_inline_probe.opcode != 0xB4 && g_inline_probe.opcode != 0xBF) return;
+    const uint32_t line = g_inline_probe_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 96) {
+        fprintf(stderr, "[inline-step] task=%u phase=%u op=%02X table=%u:0x%04X site=%04X r17=0x%06X delta=%u\n",
+                g_e9prov.task, rs64_phase_ord(), g_inline_probe.opcode, g_inline_probe.table_kind,
+                g_inline_probe.table_word, site, r17 & 0x7FFFFFu, delta);
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_inline_probe_overlay(uint32_t r17) {
+    if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
+    const uint32_t line = g_inline_probe_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 96) {
+        fprintf(stderr, "[inline-overlay] task=%u phase=%u op=05 table=%u:0x%04X entry=0x%06X path=L_15AC\n",
+                g_e9prov.task, rs64_phase_ord(), g_inline_probe.table_kind, g_inline_probe.table_word,
+                r17 & 0x7FFFFFu);
+        fflush(stderr);
+    }
+}
+
 extern "C" void rs64_e9prov_section2_latch() {
     if (!log_e9_provenance()) return;
     g_e9prov_latch_remaining.store(64, std::memory_order_release);
