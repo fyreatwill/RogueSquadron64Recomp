@@ -52932,3 +52932,37 @@ is a bounded cleanup result, not a claim about post-sec2 control flow because
 these captures did not reach that latch. No mitigation changed. Next: perform
 the analogous narrow default-off/restore A/B for the already-proven redundant
 host FF0 mirror.
+
+## Session 725 (2026-08-12) — redundant host FF0 mirror is default-off
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 57,484 bytes, below the maintenance
+threshold. `tools/oracle/README.md` and `docs/F5-UCODE-REFERENCE.md` were
+checked before the work: retail watches cannot observe RSP-local DMEM, while
+the reference identifies `0x05` as the TriGen route used for the same-run
+control. Inverted only the host post-boot FF0 mirror in `src/main/main.cpp`:
+default now leaves DMEM[0xFF0] alone and `ROGUESQ_STAGE_HOST_FF0=1` restores
+the previous write. The existing phase-scoped boot, route, chunk, and source
+probes were retained unchanged.
+
+The first concurrent A/B reached the 1024 gate in both arms, but focus let
+only the restore instance consume its phase-relative inputs and its capture
+helper did not reap either process. That paired capture is invalid for a
+phase-progress comparison and both validated game processes were SIGKILLed.
+Its restore log is nevertheless a valid arm-local control: 65 boot rows say
+`host_ff0=written` with `ff0_boot=ff0_post=task_data`, 16 complete phase-3
+`0x05→L_15AC→L_1298→L_1DB0` routes, 16 L_11B0 chunk rows, and 32 source rows.
+The corrected default-off single-instance capture reached 1024 then 512 and
+has the complementary 65 `host_ff0=skipped` rows, all still
+`ff0_boot=ff0_post=task_data`, plus the same 16/16/32 controls. Every direct
+row in both arms retains `chunk130=staged_dram=refill_dram=0x73FB60`; neither
+log contains `[CRASH]`. The single-instance capture helper later stalled in
+`screencapture`, so it too was SIGKILLed after the controls were collected.
+
+The arm-specific boot fields are the positive control, and the generated
+route plus direct L_11B0 source capture independently show that the real
+bootstrap still owns the consumed value. H-ff0-default-off-safe is supported;
+H-ff0-hidden-early-consumer and H-ff0-host-ordering are refuted for the
+qualified route. This removes another redundant host write but does not test
+the post-sec2 plateau. No mitigation changed. Next: return to the -421 LLE
+control-flow audit and trace the live `L_1DB0` continuation's command-source
+selection rather than re-running this cleanup.

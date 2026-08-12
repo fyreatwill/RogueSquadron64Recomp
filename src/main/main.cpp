@@ -460,16 +460,16 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             poke_be32(0x130, dl_ptr);
         }
         const uint32_t boot_ff0 = peek_be32(0xFF0);
-        static int s_skip_host_ff0_stage = -1;
-        if (s_skip_host_ff0_stage < 0) {
-            const char* e = std::getenv("ROGUESQ_SKIP_HOST_FF0_STAGE");
-            s_skip_host_ff0_stage = (e && *e && *e != '0') ? 1 : 0;
+        static int s_stage_host_ff0 = -1;
+        if (s_stage_host_ff0 < 0) {
+            const char* e = std::getenv("ROGUESQ_STAGE_HOST_FF0");
+            s_stage_host_ff0 = (e && *e && *e != '0') ? 1 : 0;
         }
-        if (!s_skip_host_ff0_stage) {
+        if (s_stage_host_ff0) {
             poke_be32(0xFF0, dl_ptr);
         }
         rs64_inline_probe_trigen_stage(dl_ptr, boot_130, peek_be32(0x130), !s_stage_host_130,
-                                        boot_ff0, peek_be32(0xFF0), s_skip_host_ff0_stage);
+                                        boot_ff0, peek_be32(0xFF0), !s_stage_host_ff0);
         poke_be32(0x101C, dl_ptr);
         poke_be32(0x654,  0x178);
         // RDP flush ring state (L_112C): DMEM[0x100]=ring base, [0x104]=limit,

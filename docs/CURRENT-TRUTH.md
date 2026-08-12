@@ -654,7 +654,19 @@ maintenance pass. Closed lineages are not backlog items.
    H-130-default-off-safe is supported; hidden early consumption and host
    ordering are refuted for this route. The initial concurrent A/B was invalid
    (both GUIs stuck at 640); the completed phase-gated captures are the
-   evidence. No claim is made about the post-sec2 plateau.
+   evidence. **s725 FF0 cleanup A/B:** host FF0 staging is now default OFF;
+   `ROGUESQ_STAGE_HOST_FF0=1` restores the former post-boot write. The default
+   arm has 65 visibly `host_ff0=skipped` boot rows, and the restore arm has 65
+   `host_ff0=written`; all 130 rows preserve
+   `ff0_boot=ff0_post=task_data`. Each arm independently reached 1024 then 512
+   and retained 16 complete phase-3 `0x05→L_15AC→L_1298→L_1DB0` routes, 16
+   direct L_11B0 chunk rows, and 32 source rows with
+   `chunk130=staged_dram=refill_dram=0x73FB60`; neither log has `[CRASH]`.
+   H-ff0-default-off-safe is supported, while a hidden early consumer and host
+   ordering effect are refuted for the qualified route. The initial concurrent
+   captures had focus/capture-helper failures, so these controls—not a
+   post-sec2 comparison—are the result. No claim is made about the post-sec2
+   plateau.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
