@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s709; compacted in maintenance s679)
+## Current truth (reviewed through s710; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -524,7 +524,18 @@ maintenance pass. Closed lineages are not backlog items.
    recovery cell during the driven hangar path. It is not permission to remove
    the recomp recovery instrumentation or to claim final ownership; the next
    -421 unit is a static audit of the LLE cap-return path, not another
-   unchanged recovery reroll.
+   unchanged recovery reroll. **s710 static cap-return audit:** complete
+   repository enumeration found exactly one `src_kind=2` producer: fixup 10's
+   synthetic cap return at `L_1090`. Static table/edge tracing independently
+   maps `0x06` to `L_12A0` (save already-advanced parent PC, load child),
+   child EndDL to `L_12C4`/`L_12DC` (restore that parent PC), and root EndDL
+   directly to `L_10E8`. The command meanings are independently documented in
+   `F5-UCODE-REFERENCE.md`. Thus **H-cap-misses-06-return**,
+   **H-cap-misses-enddl-exit**, and **H-probe-misattribution are REFUTED**;
+   `src_kind=2` is exactly the cap marker. The open question is why cap rows
+   legitimately keep receiving a non-root-ending stream, so the next bounded
+   unit is a static root-stream-lifecycle audit (writes/uses of DMEM state
+   offset `0x54`), not another recovery reroll.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

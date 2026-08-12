@@ -1,46 +1,45 @@
-# NEXT work unit (after s709: recovery cell is retail-target-specific absent)
+# NEXT work unit (after s710: cap marker and 0x06/EndDL return edges audited)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-Perform one bounded static audit of the Factor 5 LLE synthetic-cap return path
-behind backlog item 1. Enumerate every `src_kind=2` assignment and every
-call/return edge that can produce it in the generated ucode plus its fixup
-script. Map each edge to the real Factor 5 command semantics in
-`docs/F5-UCODE-REFERENCE.md`, especially `0x06` and EndDL. Do not rerun the
-recovery recipe: s694--s696 exhausted unchanged unqualified rerolls, and s709
-shows the recovery cell itself is not written by retail in the driven hangar.
+Perform one bounded static audit of the Factor 5 root-stream lifecycle behind
+backlog item 1. Enumerate every write and every consumption of DMEM state
+offset `0x54($18)`, which `L_1E80` loads into `r17` before returning to
+`L_1090`. Trace its callers and task-root transition paths, then decide
+whether cap rows can be a deliberately reloaded root stream or require a
+missing termination transition. Do not rerun the recovery recipe: s694--s696
+exhausted unchanged unqualified rerolls, and s710 closed the 0x06/EndDL return
+edge hypotheses.
 
 ## Competing hypotheses
 
-- **H-cap-is-expected-root-wait:** every `src_kind=2` edge is an intentional
-  bounded wait/continuation after a valid root list; no missing guest return
-  exists.
-- **H-cap-misses-06-return:** a valid `0x06` child-list edge can return to the
-  repeated dispatcher rather than its parent/root continuation.
-- **H-cap-misses-enddl-exit:** EndDL at depth zero fails to take the root-exit
-  edge on a reachable generated-code path.
-- **H-probe-misattribution:** `src_kind=2` can be assigned without a cap-path
-  return, so the prior dynamic classifier is not measuring the claimed edge.
+- **H-root-is-deliberately-reloaded:** a documented control path repeatedly
+  writes `0x54($18)` and returns through `L_1E80`, making cap continuation an
+  expected task-root wait under the unmodelled SP status bit.
+- **H-root-stale-or-unwritten:** the cap path reaches `L_1E80` without a
+  matching live root-pointer write, so it reuses stale state rather than a
+  valid root stream.
+- **H-cap-never-enters-root-reload:** `L_1E80` is unrelated to cap rows; the
+  repeated stream originates solely in normal `0x06` list dispatch and needs
+  a different lifecycle audit.
 
 ## Discriminating measurement
 
-Produce one complete table: assignment site, guarding condition, immediate
-caller/callee or jump target, command kind, and reference-semantic verdict.
-H-cap-is-expected-root-wait requires all reachable sites to agree with the
-reference. Any reachable `0x06` or root-EndDL mismatch selects its respective
-hypothesis. An assignment reachable outside the cap return selects
-H-probe-misattribution. The table itself is the positive control: every
-`src_kind=2` assignment found by grep must have a row.
+Produce one complete table: `0x54($18)` read/write site, value source, caller
+or successor, and root-lifecycle verdict. The positive control is exhaustive
+enumeration: every generated `0x54($18)` access must have a row. A recurrent
+write→`L_1E80`→`L_1090` path supports H-root-is-deliberately-reloaded; a read
+without a dominating write supports H-root-stale-or-unwritten; no cap-reachable
+`L_1E80` path selects H-cap-never-enters-root-reload.
 
 ## Commands
 
-    rg -n -C 12 'src_kind[[:space:]]*=[[:space:]]*2|src_kind.*2' \
-      build/factor5_ucode tools/fixup_factor5_ucode.py
-    rg -n -C 12 '0x06|L_10E8|EndDL|endDl|L_1090|L_1088' \
-      build/factor5_ucode tools/fixup_factor5_ucode.py
-    rg -n -C 8 '0x06|EndDL|F3DSWRS_DL' docs/F5-UCODE-REFERENCE.md
+    rg -n -C 12 '0X54, r18|0x54\(\$18\)|L_1E80|L_1090|L_10E8' \
+      build/factor5_ucode tools/fixup_factor5_ucode.py factor5_rsp.toml
+    rg -n -C 8 'root|display-list|EndDL|F3DSWRS_(DL|ENDDL)' \
+      docs/F5-UCODE-REFERENCE.md docs/factor5-ucode-dispatch.md
 
-Record the enumerated table in a new bounded section of
-`docs/F5-UCODE-REFERENCE.md` or `docs/CURRENT-TRUTH.md`; if a code correction
-is indicated, put it in `tools/fixup_factor5_ucode.py`, regenerate, and run
-the existing phase-gated controls in the same iteration.
+Record the enumerated table in `docs/F5-UCODE-REFERENCE.md` or
+`docs/CURRENT-TRUTH.md`; if a code correction is indicated, put it in
+`tools/fixup_factor5_ucode.py`, regenerate, and run the existing phase-gated
+controls in the same iteration.

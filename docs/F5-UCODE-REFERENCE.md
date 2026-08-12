@@ -152,3 +152,25 @@ Three questions this reference answers directly, without a build:
 For questions about the *machine* rather than the microcode — "does the retail
 game ever write this address?" — use `tools/oracle/` instead, which runs the
 retail ROM under a real emulator. See `tools/oracle/README.md`.
+
+## LLE synthetic-cap return-path audit (s710)
+
+`src_kind` is a host log field, not a generated-code variable. The complete
+repository enumeration found exactly one producer of `src_kind=2`: fixup 10
+in `tools/fixup_factor5_ucode.py` injects
+`rs64_e9prov_source_end(r17, 2)` immediately before the synthetic
+`return RspExitReason::Broke` at generated `L_1090`. It is therefore an
+unambiguous cap marker, not a second generated return mechanism.
+
+| Producer / edge | Guard and control flow | Command semantics | Verdict |
+|---|---|---|---|
+| `L_1090` cap → `source_end(..., 2)` | `++rs64_iter > 16384`; direct synthetic `Broke` return before the next fetch | Not a Factor 5 command or guest return | The only `src_kind=2` producer; it cannot be assigned off the cap path. |
+| `0x06` → `L_12A0` | Dispatch table maps `0x06` to `L_12A0`; it saves the already advanced parent `r17` at `0x654+depth`, increments depth, DMA-loads child `r20`, then re-enters fetch via `L_1088` | `F3DSWRS_DL`: child display-list call | Matches call semantics. |
+| child `0xB8` / EndDL → `L_12C4` → `L_12DC` | Non-negative decremented depth loads the saved child target, restores saved parent `r17`, then jumps to `L_1088` | `F3DSWRS_ENDDL`: return to caller | Matches return semantics; no child can return directly to the repeated dispatcher without restoring its parent PC. |
+| root `0xB8` / EndDL → `L_12C4` → `L_10E8` | Decremented depth is negative; direct branch to natural `Broke` exit | Root display-list completion | Matches root-exit semantics. |
+
+The static code path independently agrees with the command reference and the
+earlier live paired-frame controls: `H-cap-misses-06-return`,
+`H-cap-misses-enddl-exit`, and `H-probe-misattribution` are refuted for the
+generated main ucode. This does not prove why the cap rows lack a root EndDL;
+the next audit is root-stream lifecycle, not another unchanged recovery reroll.

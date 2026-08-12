@@ -52572,3 +52572,24 @@ or authorize removal of recomp instrumentation. The closed oracle work replaces
 the next recovery reroll with the bounded static `src_kind=2` LLE cap-return
 audit for backlog item 1. Log:
 `scratch/agent/s709_oracle_recovery_page_watch/rice/run.log`.
+
+## Session 710 (2026-08-12) — cap marker excludes 0x06/EndDL return defect
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 47,428 bytes, so maintenance did
+not trigger. Per the assigned static audit, enumerated every `src_kind=2`
+producer across the generated main ucode, its fixup, and host provenance
+bridge. There is exactly one: fixup 10 injects
+`rs64_e9prov_source_end(r17, 2)` directly before the synthetic iteration-cap
+`Broke` return at `L_1090`; it is not a guest return or a second classifier
+path.
+
+The generated table maps `0x06` to `L_12A0`, which saves the already advanced
+parent PC, loads the child, and re-enters fetch. `EndDL` enters `L_12C4`:
+non-root depth reloads the saved child target, restores that parent PC at
+`L_12DC`, and re-enters `L_1088`; negative depth branches directly to natural
+`L_10E8`. `docs/F5-UCODE-REFERENCE.md` independently identifies these as
+`F3DSWRS_DL` and `F3DSWRS_ENDDL`. This refutes H-cap-misses-06-return,
+H-cap-misses-enddl-exit, and H-probe-misattribution. It does not explain why
+the cap rows have no root EndDL, so the next bounded static audit enumerates
+the root-stream state pointer `0x54($18)` and its `L_1E80` lifecycle; no
+runtime recipe was rerun.
