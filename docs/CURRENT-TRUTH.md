@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s708; compacted in maintenance s679)
+## Current truth (reviewed through s709; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -514,6 +514,17 @@ maintenance pass. Closed lineages are not backlog items.
    **single-source support for H-cell-is-runtime-only**, not a final ownership
    conclusion: the next unit adds a same-run surrounding-page write control to
    distinguish a target-specific zero from an otherwise quiescent region.
+   **s709 surrounding-page control:** the same 70-second Rice-qualified arm
+   again reached 320→640→1024→512 / `0x006AB400`, observed all eleven PIF
+   Starts, and recorded 111,080,684 whole-RDRAM writes. The surrounding physical
+   page `0x0076B000:0x0076C000` recorded **126** writes while the exact
+   `0x0076B768:0x0076B76C` cell remained **0**. This rejects
+   H-region-quiescent and gives a second qualified, but still single-source,
+   result for **H-cell-is-runtime-only**: retail does not write the exact
+   recovery cell during the driven hangar path. It is not permission to remove
+   the recomp recovery instrumentation or to claim final ownership; the next
+   -421 unit is a static audit of the LLE cap-return path, not another
+   unchanged recovery reroll.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

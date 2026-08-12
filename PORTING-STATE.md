@@ -52551,3 +52551,24 @@ quiescent surrounding region, so do not change the recomp E9 tracer or treat
 ownership as settled. The next unit watches the surrounding physical page in
 the same Rice-qualified arm alongside the target and whole-RDRAM controls.
 Logs: `scratch/agent/s708_oracle_recovery_watch/rice/run.log`.
+
+## Session 709 (2026-08-12) — Rice page control classifies recovery-cell null
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 46,650 bytes, so maintenance did
+not trigger. Built the oracle and ran the planned single 70-second retail Rice
+arm with debugger on/pure interpreter, direct plus callback VI traces, PIF
+trace, eleven Starts at 6..56 seconds, and three simultaneous physical write
+watches: whole RDRAM, page `0x0076B000:0x0076C000`, and exact cell
+`0x0076B768:0x0076B76C`.
+
+All required controls were live: PIF recorded 11 Start assertions, VI crossed
+320→640 at 2.3s, 1024 at 17.3s, and 512 / `0x006AB400` at 38.4s; the run
+completed 4,169 VI/~69.5 emulated seconds with 111,080,684 whole-RDRAM writes.
+The surrounding page recorded 126 writes while the exact four-byte recovery
+cell recorded zero. This rejects H-region-quiescent and is a second qualified,
+but still single-source, result supporting H-cell-is-runtime-only: retail does
+not write the exact cell on the driven hangar path. It does not settle ownership
+or authorize removal of recomp instrumentation. The closed oracle work replaces
+the next recovery reroll with the bounded static `src_kind=2` LLE cap-return
+audit for backlog item 1. Log:
+`scratch/agent/s709_oracle_recovery_page_watch/rice/run.log`.
