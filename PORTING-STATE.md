@@ -52031,3 +52031,23 @@ mismatch interpretation is overturned: the three genuine raw E9s dispatch
 normally, and the apparent 40-command deficit was an invalid scanner metric.
 Next: use parser-derived raw-E9 versus `fullSync` counts to determine whether
 the real post-section-2 FULL_SYNC starvation is already present in RSP output.
+
+## Session 685 (2026-08-12) — item -421: genuine post-section-2 E9s all dispatch
+
+Added a phase-scoped `dispatch` counter at `State::fullSync`, paired with the
+existing authoritative raw-opcode-fetch counter. This is observational only;
+the fixed-8-byte bridge scan remains provenance evidence, not a decision
+metric. Built successfully and ran the prescribed phase-gated recovery-active
+recipe. One pre-engagement launch was discarded; attempt 2 reached section 2,
+printed one latch and exactly 64 target records, with no `[CRASH]`.
+
+The same-run positive control visibly marked every boundary: boot tasks 1–4
+each reported `guest=emit=submit=raw=dispatch=match=1`. In the section-2
+window, the independent totals were `guest=3`, authoritative parser `raw=3`,
+and `State::fullSync dispatch=3`; all three nonzero target rows were exact
+address matches. The legacy fixed-stride bridge scan still reported
+`emit=submit=37`, as predicted by s684's triangle-inline-data finding.
+**H-dispatch-loss REFUTED; H-rsp-starvation SUPPORTED at the RT64 boundary.**
+This does not yet say whether the source-side three-E9 total is a legitimate
+game stream or Factor 5 LLE control-flow loss; next, add an independent
+source-stream endpoint marker with an all-path positive control.

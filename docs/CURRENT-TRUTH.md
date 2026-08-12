@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s684; compacted in maintenance s679)
+## Current truth (reviewed through s685; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -322,10 +322,16 @@ maintenance pass. Closed lineages are not backlog items.
    (`pending=0`). The bridge's fixed-8-byte emission scan was counting inline triangle payload as
    E9 commands. Thus there is no submitted-command loss in this population and the apparent 40-E9
    deficit is a scanner false positive, not the plateau mechanism. The three genuine raw E9s still
-   dispatch normally. Next: replace the false fixed-stride “emitted E9” quantity with a
-   parser-derived phase-scoped count, then establish whether the genuine post-sec2 FULL_SYNC
-   starvation originates in the RSP output rather than bridge/parser handling. Durable evidence
-   and probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–684.
+   dispatch normally. **s685 parser→State discriminator:** one recovery-active, phase-latched
+   64-task section-2 window passed four visible boot controls
+   (`guest=emit=submit=raw=dispatch=match=1`, each). The target total was
+   `guest=3 raw=3 dispatch=3`, while legacy fixed-stride `emit=submit=37`.
+   Therefore **H-dispatch-loss is REFUTED**: every real parser E9 invoked
+   `State::fullSync`, and the apparent other 34 E9s are triangle inline data.
+   **H-rsp-starvation is SUPPORTED** at the RT64 boundary; the next question is
+   whether the source-side three-E9 total is legitimate game/RSP input or an LLE
+   control-flow defect. Durable evidence and probe mechanics: PROJECT-OVERVIEW §27
+   and Sessions 669–685.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

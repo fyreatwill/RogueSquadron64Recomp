@@ -115,6 +115,7 @@ struct Rs64E9Provenance {
     uint32_t emitted = 0;
     uint32_t submitted = 0;
     uint32_t authoritative = 0;
+    uint32_t dispatched = 0;
     uint32_t matched = 0;
     bool target = false;
     bool control = false;
@@ -190,10 +191,11 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
     }
     static uint32_t controls = 0;
     if ((g_e9prov.control && ++controls <= 4) || g_e9prov.target) {
-        fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u raw=%u match=%u "
+        fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u raw=%u dispatch=%u match=%u "
                 "span=%u gap=%u guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.guest,
-                g_e9prov.emitted, g_e9prov.submitted, g_e9prov.authoritative, g_e9prov.matched,
+                g_e9prov.emitted, g_e9prov.submitted, g_e9prov.authoritative,
+                g_e9prov.dispatched, g_e9prov.matched,
                 g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);
@@ -254,6 +256,10 @@ extern "C" void rs64_e9prov_authoritative_fetch(uint32_t address) {
                 match ? 1u : 0u);
         fflush(stderr);
     }
+}
+
+extern "C" void rs64_e9prov_fullsync_dispatch() {
+    if (log_e9_provenance()) ++g_e9prov.dispatched;
 }
 
 // Drain accessor for diagnostic — see rt64_render_context.cpp / main.cpp.

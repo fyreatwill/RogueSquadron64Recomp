@@ -1,36 +1,39 @@
-# NEXT work unit (after s684 span attribution)
+# NEXT work unit (after s685 parser→State discriminator)
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-Replace the false fixed-8-byte output E9 scan with a parser-derived
-phase-scoped FULL_SYNC count, then rerun one 64-task section-2 window. s684
-proved the apparent missing E9s were inline data inside executed raw `0xCE`
-20-word commands; do not alter decoding, submission, or FULL_SYNC behavior.
+Trace the section-2 source-side FULL_SYNC scarcity through the Factor 5 LLE
+dispatch. s685 proved that there are exactly three genuine parser E9s and all
+three call `State::fullSync`; do not alter decoding, submission, or FULL_SYNC
+behavior.
 
 ## Competing hypotheses
 
-- **H-rsp-starvation:** the authoritative parser sees only the known ~3 real
-  FULL_SYNCs in the section-2 window, so starvation originates before RT64
-  parses the submitted output.
-- **H-dispatch-loss:** raw parser E9 fetches exceed `State::fullSync` calls,
-  so a remaining loss is between parser fetch and FULL_SYNC handling.
-- **H-probe-scope-bug:** boot controls or the section-2 latch disagree with
-  the new parser-derived count, invalidating the phase join.
+- **H-legitimate-source:** the active section-2 guest DLs themselves present
+  exactly three E9s; the producer legitimately stopped emitting frame
+  boundaries, so the next audit belongs in the guest scheduler/overlay path.
+- **H-lle-control-flow:** the factor5 RSP loop leaves or resets a section-2
+  guest stream before later E9s, so the deficit is an LLE control-flow defect.
+- **H-source-probe-scope:** the L_1090 guest-E9 counter misses another valid
+  Factor 5 input path; a second source-side marker disagrees with it.
 
 ## Discriminating measurement
 
-At RT64, record one phase-scoped per-task pair: raw `0xE9` fetches and actual
-`GBI_RDP::fullSync` calls, with four boot controls, one section-2 latch, 64
-target rows, and matching `dl-sync-probe2` rows. Remove the bridge's
-fixed-8-byte E9 scan from the decision path; it cannot distinguish RDP command
-boundaries from triangle inline data.
+At the Factor 5 LLE boundary, record per task: every L_1090 E9 fetch, the
+normal task exit/iter-cap path, and an independent source-stream endpoint
+marker. Keep four boot controls, the existing section-2 latch, and 64 target
+rows. The marker must show a visible all-path positive control in the same
+run; branch execution alone is not a control.
 
-- Raw E9 and `fullSync` agree at ~3 across the target: H-rsp-starvation
+- Both source markers report three E9s and normal completion: H-legitimate-source
   supported.
-- Raw E9 exceeds `fullSync`: H-dispatch-loss supported.
-- Any boot control or phase latch mismatch: H-probe-scope-bug supported.
+- The independent marker reaches stream content past L_1090's last E9 or shows
+  an early/reset exit: H-lle-control-flow supported.
+- The controls disagree: H-source-probe-scope supported; reject the run.
 
 ## Commands
 
+    # Add the bounded source-side markers through tools/fixup_factor5_ucode.py,
+    # regenerate if needed, then build and reuse the phase-gated s670 recipe.
     env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer zsh -c 'cd build && cmake --build . -j8'
     env BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=8 POST_PULSE_HOLD_S=15 MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
