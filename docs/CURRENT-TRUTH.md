@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s694; compacted in maintenance s679)
+## Current truth (reviewed through s695; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -401,12 +401,17 @@ maintenance pass. Closed lineages are not backlog items.
    IDs (push→pop→resume) and `dl06=push/complete/open` phase summaries. Its
    same-run boot positive controls passed in tasks 1--4 (each valid `0x06`
    pair completed, `open=0`), but attempt 1 returned to section 3 before the
-   section-2 latch. Thus it yields **no cap-path conclusion**; the bounded
-   target reroll is queued as `s694_e9prov_frame_pairs.sh`. The remaining
-   question is whether the valid `0x06` chain is pushed with incorrect
-   control-flow semantics or lacks its eventual root return. The pulse
-   produced `section3=2`, `packTlut=0`; it is incidental to this provenance
-   result, not a new input conclusion.
+   section-2 latch. **s695 consumed that 600-second reroll:** attempts 1--3
+   again passed the tasks-1--4 paired-frame controls; attempts 1 and 3 were
+   recovery-silent, while attempt 2 aborted before any section-2 latch. There
+   are no `scope=sec2` or target cap rows in any attempt, so this is an
+   **unqualified null**, not evidence for H-extra-push, H-missing-return, or
+   H-game-open-chain. Two further self-contained 600-second rerolls are
+   queued to obtain recovery-active target rows without changing the tracer.
+   The remaining question is whether the valid `0x06` chain is pushed with
+   incorrect control-flow semantics or lacks its eventual root return. The
+   pulse/section-3 outcomes remain incidental to this provenance result, not
+   a new input conclusion.
    Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions
    669–693.
 

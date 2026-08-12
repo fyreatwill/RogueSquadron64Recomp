@@ -1,10 +1,11 @@
-# NEXT work unit (after s694 paired-frame tracer validation)
+# NEXT work unit (after s695 unqualified paired-frame reroll)
 
 HYPOTHESIS-ID: m3-e9-provenance-cap
 
-Consume the queued, bounded phase-gated reroll
-`scratch/agent/soak_queue/s694_e9prov_frame_pairs.sh`. Do not rebuild or alter
-the tracer unless the boot positive control fails.
+Consume the two queued, bounded phase-gated rerolls
+`scratch/agent/soak_queue/s695_e9prov_frame_pairs_a.sh` and
+`scratch/agent/soak_queue/s695_e9prov_frame_pairs_b.sh`. Do not rebuild or
+alter the tracer unless the boot positive control fails.
 
 ## Competing hypotheses
 
@@ -27,5 +28,5 @@ latch is unqualified and must remain a null result.
 ## Commands
 
     tail -20 scratch/agent/SOAK-RESULTS.md
-    rg -n '\[e9-prov\]|\[e9-prov-frame\]|\[e9-prov-latch\]' scratch/agent/soak_results/*s694* | tail -160
-    rg -n 'dl06=|scope=sec2|w0=0x06000000' scratch/s73_post_a_scene/s670_postsec2_pulse_*20260812*/run.log | tail -160
+    rg -n '\[e9-prov\]|\[e9-prov-frame\]|\[e9-prov-latch\]' scratch/agent/soak_results/*s695* | tail -240
+    rg -n 'dl06=|scope=sec2|w0=0x06000000|\[CRASH\]' scratch/s73_post_a_scene/s670_postsec2_pulse_*20260812*/run.log | tail -240

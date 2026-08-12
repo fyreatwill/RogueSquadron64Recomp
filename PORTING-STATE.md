@@ -52264,3 +52264,19 @@ section-2 latch, so it emitted no target cap rows and cannot discriminate
 extra-push from missing-return.  The bounded 600-second reroll is queued as
 `scratch/agent/soak_queue/s694_e9prov_frame_pairs.sh`; do not infer anything
 about the cap path from this boot-only result.
+
+## Session 695 (2026-08-12) — paired-frame reroll controls pass; no qualified section-2 sample
+
+Consumed `s694_e9prov_frame_pairs_20260812-065110.sh` (600-second bounded
+queue recipe). Attempts 1--3 each passed the same-run boot positive control:
+tasks 1--4 reported matched valid `0x06000000` P→O→R IDs and
+`dl06=push:2,complete:2,open:0`. Thus the tracer can visibly report a
+completed `F3DSWRS_DL` frame in this run.
+
+No attempt reached a section-2 latch. Attempts 1 and 3 were
+recovery-silent; attempt 2 ended in an Abort trap before the target phase.
+There are no `scope=sec2` provenance summaries or cap frame rows in the three
+logs. This is therefore an unqualified null: it does not distinguish
+H-extra-push, H-missing-return, or H-game-open-chain. Two independent
+self-contained 600-second rerolls are queued for the loop; the tracer and
+its phase gate remain unchanged.
