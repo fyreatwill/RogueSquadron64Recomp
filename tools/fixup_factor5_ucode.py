@@ -1026,6 +1026,63 @@ if is_main_ucode and OVL24_MARKER not in text:
         1, "case 0x1DB0 overlay-28 routing")
 
 # ---------------------------------------------------------------------------
+# Fixup 6d: 0x1364 clip-stray predecessor (s744)
+# ---------------------------------------------------------------------------
+# s743: case 0x1364 routes only when DMEM 0x153==0x24; 4434 clip-strays
+# arrive with 153==0x04. Static: clip image has no 0x1364; the only
+# r31=0x1364 writer is OVL24_135C (jal L_17F0). L_17F0's hand path
+# (r5=4; goto L_1268) stores 0x153=4 and enters CLIP_1DB0 with that $ra
+# saved at 0x50($18); CLIP_1E48 jr's it back. This fixup names that
+# writer live: count the jal, count CLIP_1E48 $ra, and log every
+# do_indirect_jump to 0x1364 (line/r31/r30/resident/last ovl-route).
+# Do not widen the 0x1364 case here.
+OVL24_1364PRED_MARKER = "/* fixup: ovl24-1364pred */"
+if is_main_ucode and OVL24_1364PRED_MARKER not in text:
+    def sub_exactly6d(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6d ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}.",
+                  file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    sub_exactly6d(
+        re.compile(r'(extern "C" void rs64_e9prov_l1298_12a0_res\([^\n]*\n)'),
+        lambda m: m.group(1) +
+        'extern "C" void rs64_e9prov_ovl24_jal17f0(void);\n'
+        'extern "C" void rs64_e9prov_clip_1e48_ra(uint32_t ra);\n'
+        'extern "C" void rs64_e9prov_1364_jump(uint32_t line, uint32_t r31, '
+        'uint32_t r30, uint32_t resident);  ' +
+        OVL24_1364PRED_MARKER + "\n",
+        1, "1364-pred declarations")
+
+    sub_exactly6d(
+        re.compile(r"(OVL24_135C:\n    // jal         0x17F0\n    r31 = 0x1364;\n)"),
+        lambda m: m.group(1) +
+        "    rs64_e9prov_ovl24_jal17f0();  " + OVL24_1364PRED_MARKER + "\n",
+        1, "OVL24_135C jal L_17F0")
+
+    sub_exactly6d(
+        re.compile(
+            r"(CLIP_1E48:\n    // lhu         \$ra, 0x50\(\$18\)\n"
+            r"    r31 = RSP_MEM_HU_LOAD\(0X50, r18\);\n)"),
+        lambda m: m.group(1) +
+        "    rs64_e9prov_clip_1e48_ra(r31);  " + OVL24_1364PRED_MARKER + "\n",
+        1, "CLIP_1E48 saved $ra")
+
+    sub_exactly6d(
+        re.compile(
+            r"(    if \(\(\(jump_target \| 0x1000\) & 0X1FFF\) == 0x1DB0\) "
+            r"rs64_e9prov_l1db0_predecessor\([^\n]*\n)"),
+        lambda m: m.group(1) +
+        "    if (((jump_target | 0x1000) & 0X1FFF) == 0x1364) "
+        "rs64_e9prov_1364_jump((uint32_t)debug_line, r31, r30, "
+        "RSP_MEM_BU(0X153, 0));  " + OVL24_1364PRED_MARKER + "\n",
+        1, "do_indirect_jump 0x1364")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level

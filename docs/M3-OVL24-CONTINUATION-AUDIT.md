@@ -151,3 +151,14 @@ LIVE, UJ 2931→0, 0x06 push/pop/resume still 2/2/2, dest-`0x12A0`
 `L_1298` resident other=0. Sec2 E9 match stayed 3/64. Residual
 `[clip-stray] tgt=0x1364 153=0x04` (n=4434) is the ovl24 `jal L_17F0`
 return hitting the new case while clip is resident.
+
+**s744 live:** static + soak
+`s744_clip_stray_1364_pred_20260812-162040` (349 s, CRASH=0).
+Clip C has no `0x1364`. Lifetime `jal17f0=j1364=64192`,
+`clip1e48_1364=res04=4452`, res24=59740, oth=0. Two classes only:
+`L_1DA8` res=0x24 (reject, routes) and `CLIP_1E48` res=0x04
+last_ovl=`0x04/0x1DB0` (stray). **H-l17f0-dispatches-clip SELECTED.**
+**H-clip-uses-1364 / H-stale-ra REFUTED.** Writer is `CLIP_1E48` `jr`
+of the `OVL24_135C` jal return after `L_1268` sets `0x153=4`.
+Legitimate; IMEM `0x1364` remains ovl24 (clip dest `0x1DB0`). Next
+is the 0x04 arm on case `0x1364`.

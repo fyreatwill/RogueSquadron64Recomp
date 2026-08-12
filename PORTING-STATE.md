@@ -53451,3 +53451,50 @@ line used as a s739 heartbeat, not a crash.
 image at ROM `0x27260`) and overlay 28 (`addiu $17,32`). Both are
 legitimate table-selected ucode. The restore DMA is a no-op in C
 because main `L_12A0` was never overwritten.
+
+## Session 744 (2026-08-12) — clip-stray 0x1364 is CLIP_1E48 returning ovl24's jal
+
+Step 0 measured `CURRENT-TRUTH.md` at 34,750 bytes, so maintenance was not
+triggered. Work unit was NEXT.md after s743: name the writer of
+`[clip-stray] tgt=0x1364 153=0x04` before widening the ovl24-only case.
+SOAK-RESULTS had no new queue lines since s743.
+
+Static (two files, no rebuild): clip overlay C
+(`factor5_ucode_ovl4_recompiled.c` and the spliced `CLIP_*` block) has
+**zero** `0x1364` / `r31=0x1364` / `L_1364`. The only `r31=0x1364` writer
+is `OVL24_135C` (`jal L_17F0`). Shared `L_17F0` has three exits: reject
+`L_1DA8` (`jr $ra`, resident unchanged), setup `L_1828`, and hand
+`r5=4; goto L_1268`. `L_1268` stores `r5` to DMEM `0x153` and jumps the
+table dest (`0x1DB0` for overlay 4). `CLIP_1DB0` saves incoming `$ra` at
+`0x50($18)`; `CLIP_1E48` `jr`s it. Overlay 4 dest is `0x1DB0`, so
+hardware still has ovl24 at `0x1364` after the clip swap.
+
+Fixup 6d (regeneration-safe) + host in `dpc_bridge.cpp`: count
+`OVL24_135C` jal, count `CLIP_1E48` `$ra`, log every `do_indirect_jump`
+to `0x1364` (line / r31 / r30 / resident / last ovl-route). No case
+change.
+
+Soak `scratch/agent/soak_results/s744_clip_stray_1364_pred_20260812-162040/run.log`
+(349 s, same recipe as s743, CRASH=0, wrapper rc=0). Same-run positive
+controls LIVE: `[ovl-route] res=0x04` n=1113, `jal17f0` and `[1364-pred]`
+both fire, four boot controls still `dl06=push:2,complete:2,open:0`.
+Lifetime at last `[1364-pred-sum]`: **n=64192 = jal17f0=64192**,
+res04=4452, res24=59740, oth=0, clip1e48_1364=4452
+(= res04). Final `[clip-stray] tgt=0x1364 153=0x04` n=4454 (two past
+the last *64 sum). Sampled `[1364-pred]` rows are only two classes:
+line=2295 (`L_1DA8`) res=0x24 last_ovl=0x24/{0x12F4,0x1320,0x1344};
+line=2852 (`CLIP_1E48`) res=0x04 last_ovl=0x04/0x1DB0 r30=0x1E34.
+Sec2 48/64 last-pred is the CLIP_1E48 class. UJ=0. E9 match still 3/64;
+rdpFs 0→4141 (s743 4060→4063).
+
+**H-l17f0-dispatches-clip SELECTED. H-clip-uses-1364 REFUTED
+(static + live). H-stale-ra REFUTED** (jal17f0==j1364 1:1;
+clip1e48_1364==res04).
+
+**ORIGIN:** writer of the clip-resident `0x1364` jump is `CLIP_1E48`
+`jr $ra` of the `$ra` `CLIP_1DB0` saved at this invocation's entry,
+and that `$ra` was set by `OVL24_135C` `jal L_17F0`. The value is
+legitimate: `L_17F0`'s hand path is the ROM clip dispatch, and IMEM
+`0x1364` remains ovl24 (clip dest is `0x1DB0`). The case that requires
+`0x153==0x24` is what turns that return into a stray. Residual, new:
+340 `[clip-stray] tgt=0x1DF4 153=0x00` (ovl12-only label, resident 0).

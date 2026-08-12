@@ -209,6 +209,21 @@ struct Rs64E9Provenance {
     uint32_t ovl28_route = 0;
     uint32_t l1298_12a0_res24 = 0;
     uint32_t l1298_12a0_other = 0;
+    uint32_t last_ovl_res = 0;
+    uint32_t last_ovl_tgt = 0;
+    uint32_t j1364 = 0;
+    uint32_t j1364_res04 = 0;
+    uint32_t j1364_res24 = 0;
+    uint32_t j1364_other = 0;
+    uint32_t ovl24_jal17f0 = 0;
+    uint32_t clip_1e48 = 0;
+    uint32_t clip_1e48_1364 = 0;
+    uint32_t j1364_line = 0;
+    uint32_t j1364_r31 = 0;
+    uint32_t j1364_r30 = 0;
+    uint32_t j1364_res = 0;
+    uint32_t j1364_ovl_res = 0;
+    uint32_t j1364_ovl_tgt = 0;
     std::vector<ResetReusePair> reset_reuse_first;
     std::vector<ResetReusePair> reset_reuse_last;
     std::vector<ResetRoute> reset_route_first;
@@ -616,6 +631,8 @@ extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra,
 }
 
 extern "C" void rs64_e9prov_ovl_route(uint32_t resident, uint32_t target) {
+    g_e9prov.last_ovl_res = resident;
+    g_e9prov.last_ovl_tgt = target;
     if (resident == 4) ++g_e9prov.clip_route;
     else if (resident == 0xC) {
         ++g_e9prov.ovl12_route;
@@ -650,6 +667,78 @@ extern "C" void rs64_e9prov_l1298_12a0_res(uint32_t resident) {
         fprintf(stderr, "[ovl-route] n=%u res=0x%02X tgt=0x12A0 task=%u scope=%s via=l1298-other\n",
                 n, resident, g_e9prov.task,
                 g_e9prov.control ? "control" : (g_e9prov.target ? "sec2" : "other"));
+        fflush(stderr);
+    }
+}
+
+static std::atomic<uint32_t> g_1364_life_n{0};
+static std::atomic<uint32_t> g_1364_life_res04{0};
+static std::atomic<uint32_t> g_1364_life_res24{0};
+static std::atomic<uint32_t> g_1364_life_other{0};
+static std::atomic<uint32_t> g_1364_life_jal17f0{0};
+static std::atomic<uint32_t> g_1364_life_clip1e48{0};
+static std::atomic<uint32_t> g_1364_life_clip1e48_1364{0};
+
+extern "C" void rs64_e9prov_ovl24_jal17f0(void) {
+    ++g_e9prov.ovl24_jal17f0;
+    ++g_1364_life_jal17f0;
+}
+
+extern "C" void rs64_e9prov_clip_1e48_ra(uint32_t ra) {
+    ++g_e9prov.clip_1e48;
+    ++g_1364_life_clip1e48;
+    if (((ra | 0x1000) & 0x1FFF) == 0x1364) {
+        ++g_e9prov.clip_1e48_1364;
+        ++g_1364_life_clip1e48_1364;
+    }
+}
+
+extern "C" void rs64_e9prov_1364_jump(uint32_t line, uint32_t r31, uint32_t r30,
+                                      uint32_t resident) {
+    ++g_e9prov.j1364;
+    const uint32_t n = ++g_1364_life_n;
+    if (resident == 4) {
+        ++g_e9prov.j1364_res04;
+        ++g_1364_life_res04;
+    } else if (resident == 0x24) {
+        ++g_e9prov.j1364_res24;
+        ++g_1364_life_res24;
+    } else {
+        ++g_e9prov.j1364_other;
+        ++g_1364_life_other;
+    }
+    g_e9prov.j1364_line = line;
+    g_e9prov.j1364_r31 = r31;
+    g_e9prov.j1364_r30 = r30;
+    g_e9prov.j1364_res = resident;
+    g_e9prov.j1364_ovl_res = g_e9prov.last_ovl_res;
+    g_e9prov.j1364_ovl_tgt = g_e9prov.last_ovl_tgt;
+    if (!log_e9_provenance()) return;
+    if (n <= 32 || (n % 64) == 0) {
+        fprintf(stderr,
+                "[1364-pred] n=%u line=%u r31=0x%04X r30=0x%04X res=0x%02X "
+                "last_ovl=0x%02X/0x%04X task=%u scope=%s jal17f0=%u "
+                "clip1e48=%u/%u\n",
+                n, line, r31 & 0xFFFFu, r30 & 0xFFFFu, resident & 0xFFu,
+                g_e9prov.last_ovl_res & 0xFFu, g_e9prov.last_ovl_tgt & 0xFFFFu,
+                g_e9prov.task,
+                g_e9prov.control ? "control" : (g_e9prov.target ? "sec2" : "other"),
+                g_1364_life_jal17f0.load(std::memory_order_relaxed),
+                g_1364_life_clip1e48_1364.load(std::memory_order_relaxed),
+                g_1364_life_clip1e48.load(std::memory_order_relaxed));
+        fflush(stderr);
+    }
+    if ((n % 64) == 0) {
+        fprintf(stderr,
+                "[1364-pred-sum] n=%u res04=%u res24=%u oth=%u jal17f0=%u "
+                "clip1e48_1364=%u clip1e48=%u\n",
+                n,
+                g_1364_life_res04.load(std::memory_order_relaxed),
+                g_1364_life_res24.load(std::memory_order_relaxed),
+                g_1364_life_other.load(std::memory_order_relaxed),
+                g_1364_life_jal17f0.load(std::memory_order_relaxed),
+                g_1364_life_clip1e48_1364.load(std::memory_order_relaxed),
+                g_1364_life_clip1e48.load(std::memory_order_relaxed));
         fflush(stderr);
     }
 }
@@ -838,13 +927,20 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);
-        fprintf(stderr, "[e9-prov-reset] task=%u scope=%s reset=%u active=%u predecessor=%u paired=%zu unpaired_reuse=%u pending_seq=%u clip=%u ovl12=%u ovl12_ret=%u ovl24=%u ovl24_ret=%u ovl28=%u l1298_12a0=24:%u,other:%u\n",
+        fprintf(stderr, "[e9-prov-reset] task=%u scope=%s reset=%u active=%u predecessor=%u paired=%zu unpaired_reuse=%u pending_seq=%u clip=%u ovl12=%u ovl12_ret=%u ovl24=%u ovl24_ret=%u ovl28=%u l1298_12a0=24:%u,other:%u j1364=%u,04:%u,24:%u,oth:%u jal17f0=%u clip1e48=%u/%u last_ovl=0x%02X/0x%04X pred=line:%u,r31:0x%04X,r30:0x%04X,res:0x%02X,ovl:0x%02X/0x%04X\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.l1db0_reset,
                 g_e9prov.l1db0_reset_active, g_e9prov.l1db0_predecessor, g_e9prov.reset_reuse_last.size(),
                 g_e9prov.depth0_reuse_unpaired, g_e9prov.l1db0_reset_last_active_seq,
                 g_e9prov.clip_route, g_e9prov.ovl12_route, g_e9prov.ovl12_ret,
                 g_e9prov.ovl24_route, g_e9prov.ovl24_ret, g_e9prov.ovl28_route,
-                g_e9prov.l1298_12a0_res24, g_e9prov.l1298_12a0_other);
+                g_e9prov.l1298_12a0_res24, g_e9prov.l1298_12a0_other,
+                g_e9prov.j1364, g_e9prov.j1364_res04, g_e9prov.j1364_res24,
+                g_e9prov.j1364_other, g_e9prov.ovl24_jal17f0,
+                g_e9prov.clip_1e48_1364, g_e9prov.clip_1e48,
+                g_e9prov.last_ovl_res & 0xFFu, g_e9prov.last_ovl_tgt & 0xFFFFu,
+                g_e9prov.j1364_line, g_e9prov.j1364_r31 & 0xFFFFu,
+                g_e9prov.j1364_r30 & 0xFFFFu, g_e9prov.j1364_res & 0xFFu,
+                g_e9prov.j1364_ovl_res & 0xFFu, g_e9prov.j1364_ovl_tgt & 0xFFFFu);
         const auto dump_reset_pair = [task](const char* edge,
                                              const std::vector<Rs64E9Provenance::ResetReusePair>& pairs) {
             for (const auto& pair : pairs) {
