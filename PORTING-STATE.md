@@ -53202,3 +53202,20 @@ predecessor selects the wrong-route candidate; an `L_1298` predecessor selects
 the TriGen-relay candidate; a missing paired predecessor despite an
 unconditional target marker rejects the new correlation instrument. No
 mitigation has been added.
+
+## Session 736 (2026-08-12) — predecessor latch built; section-2 capture queued
+
+Step 0 measured `CURRENT-TRUTH.md` at 33,616 bytes, so maintenance was not
+triggered. Added a regeneration-safe v5 predecessor latch to the Factor 5
+fixup: every normalized `do_indirect_jump` target `0x1DB0` records its raw
+target, generated debug line, `r31`, resident id, `r17`, and a one-shot
+`L_1298` origin bit; `rs64_e9prov_l1db0_reset` attaches it to bounded active
+reset records. The origin bit is cleared after every indirect dispatch, so a
+prior relay cannot contaminate a later direct route.
+
+The rebuilt binary passed the positive control in one LLE boot: each of the
+four balanced direct control tasks had `predecessor=1`. The interactive runner
+detaches its phase-relative key worker in this environment, so it cannot reach
+the section-2 cap; that is an invalid capture, not a route null. Queued the
+self-contained title-gated `s736_reset_predecessor.sh` soak for the loop.
+No mitigation or depth behavior changed.

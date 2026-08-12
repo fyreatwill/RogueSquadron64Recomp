@@ -1,15 +1,11 @@
-# NEXT work unit (attribute the predecessor of each active L_1DB0 reset)
+# NEXT work unit (consume the predecessor-latch soak)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-The consumed s734 soak ruled out mixed retained reset state but left its source
-unresolved: all 61 section-2 cap rows retained `ra=0x1088`, resident 0,
-pending L_12A0 source 0, and inactive inline state. Build one regeneration-safe,
-phase-scoped predecessor latch: on every `do_indirect_jump` whose normalized
-target is `0x1DB0`, retain `jump_target`, `debug_line`, `r31`, resident, `r17`,
-and whether it followed `L_1298`; have `rs64_e9prov_l1db0_reset` consume and
-print that latch with the existing bounded first/last active-reset records.
-Do not change depth handling or add a mitigation.
+The v5 regeneration-safe latch is built and boot-positive-controlled: each of
+tasks 1--4 reports `predecessor=1`. Consume the queued `s736_reset_predecessor`
+verdict before changing code. It drives title-gated input to section 2 and must
+produce `[e9-prov-reset-predecessor]` plus a depth cap row.
 
 ## Competing hypotheses
 
@@ -27,7 +23,7 @@ Do not change depth handling or add a mitigation.
 
 ## Discriminating measurement
 
-Score the new `[e9-prov-reset-predecessor]` rows. A cap-row predecessor that
+Score the queued `[e9-prov-reset-predecessor]` rows. A cap-row predecessor that
 is direct/bootstrap selects H-direct-bootstrap-entry; an `L_1298` relay selects
 H-trigen-relay-entry; a reset without a preceding marker while the unconditional
 target marker fires selects H-predecessor-latch-broken. Positive controls: the
@@ -37,7 +33,5 @@ show at least one target-`0x1DB0` predecessor marker.
 
 ## Commands
 
-    python3 tools/fixup_factor5_ucode.py build/factor5_ucode/factor5_ucode_recompiled.c
-    cd build && cmake --build . -j8
-    env ROGUESQ_LOG_E9_PROVENANCE=1 PROBE_PHASE_WIDTH=512 PROBE_KEYS_FROM_PHASE=1 zsh ../tools/probe.sh ../scratch/agent/s735_reset_predecessor 300 '3:start 7:start 11:start'
-    rg -n '\[e9-prov-reset-predecessor\]|\[e9-prov-reset\]|\[e9-prov-depth-summary\]|\[e9-prov\]' scratch/agent/s735_reset_predecessor/run.log | tail -180
+    tail -20 scratch/agent/SOAK-RESULTS.md
+    rg -n '\[e9-prov-reset-predecessor\]|\[e9-prov-reset\]|\[e9-prov-depth-summary\]|\[e9-prov\]' scratch/agent/soak_results/s736_reset_predecessor_*/run.log | tail -180

@@ -153,6 +153,12 @@ struct Rs64E9Provenance {
         uint32_t inline_entry;
         uint32_t inline_table_kind;
         uint32_t inline_table_word;
+        uint32_t predecessor_target;
+        uint32_t predecessor_line;
+        uint32_t predecessor_ra;
+        uint32_t predecessor_resident;
+        uint32_t predecessor_r17;
+        uint32_t predecessor_from_l1298;
     };
     uint32_t task = 0;
     uint32_t guest = 0;
@@ -188,6 +194,13 @@ struct Rs64E9Provenance {
     uint32_t l1db0_reset_last_active_old = 0;
     uint32_t l1db0_reset_last_active_r17 = 0;
     uint32_t depth0_reuse_unpaired = 0;
+    uint32_t l1db0_predecessor = 0;
+    uint32_t l1db0_predecessor_target = 0;
+    uint32_t l1db0_predecessor_line = 0;
+    uint32_t l1db0_predecessor_ra = 0;
+    uint32_t l1db0_predecessor_resident = 0;
+    uint32_t l1db0_predecessor_r17 = 0;
+    uint32_t l1db0_predecessor_from_l1298 = 0;
     std::vector<ResetReusePair> reset_reuse_first;
     std::vector<ResetReusePair> reset_reuse_last;
     std::vector<ResetRoute> reset_route_first;
@@ -585,10 +598,25 @@ extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra,
         g_e9prov.pending_l12a0_source, g_e9prov.pending_l12a0_r17,
         g_e9prov.pending_l12a0_w0, g_e9prov.pending_l12a0_w1,
         g_inline_probe.active ? 1u : 0u, g_inline_probe.opcode,
-        g_inline_probe.entry, g_inline_probe.table_kind, g_inline_probe.table_word};
+        g_inline_probe.entry, g_inline_probe.table_kind, g_inline_probe.table_word,
+        g_e9prov.l1db0_predecessor_target, g_e9prov.l1db0_predecessor_line,
+        g_e9prov.l1db0_predecessor_ra, g_e9prov.l1db0_predecessor_resident,
+        g_e9prov.l1db0_predecessor_r17, g_e9prov.l1db0_predecessor_from_l1298};
     if (g_e9prov.reset_route_first.size() < 8) g_e9prov.reset_route_first.push_back(route);
     if (g_e9prov.reset_route_last.size() == 8) g_e9prov.reset_route_last.erase(g_e9prov.reset_route_last.begin());
     g_e9prov.reset_route_last.push_back(route);
+}
+
+extern "C" void rs64_e9prov_l1db0_predecessor(uint32_t target, uint32_t line, uint32_t ra,
+                                                   uint32_t resident, uint32_t r17, uint32_t from_l1298) {
+    if (!log_e9_provenance()) return;
+    ++g_e9prov.l1db0_predecessor;
+    g_e9prov.l1db0_predecessor_target = target;
+    g_e9prov.l1db0_predecessor_line = line;
+    g_e9prov.l1db0_predecessor_ra = ra;
+    g_e9prov.l1db0_predecessor_resident = resident;
+    g_e9prov.l1db0_predecessor_r17 = r17;
+    g_e9prov.l1db0_predecessor_from_l1298 = from_l1298;
 }
 
 static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t target, uint32_t pc,
@@ -763,9 +791,9 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);
-        fprintf(stderr, "[e9-prov-reset] task=%u scope=%s reset=%u active=%u paired=%zu unpaired_reuse=%u pending_seq=%u\n",
+        fprintf(stderr, "[e9-prov-reset] task=%u scope=%s reset=%u active=%u predecessor=%u paired=%zu unpaired_reuse=%u pending_seq=%u\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.l1db0_reset,
-                g_e9prov.l1db0_reset_active, g_e9prov.reset_reuse_last.size(),
+                g_e9prov.l1db0_reset_active, g_e9prov.l1db0_predecessor, g_e9prov.reset_reuse_last.size(),
                 g_e9prov.depth0_reuse_unpaired, g_e9prov.l1db0_reset_last_active_seq);
         const auto dump_reset_pair = [task](const char* edge,
                                              const std::vector<Rs64E9Provenance::ResetReusePair>& pairs) {
@@ -780,11 +808,14 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
         const auto dump_reset_route = [task](const char* edge,
                                               const std::vector<Rs64E9Provenance::ResetRoute>& routes) {
             for (const auto& route : routes) {
-                fprintf(stderr, "[e9-prov-reset-route] task=%u edge=%s seq=%u old=0x%02X r17=0x%06X ra=0x%04X resident=0x%02X pending=src:%u,r17:0x%06X,w0:0x%08X,w1:0x%08X inline=active:%u,op:0x%02X,entry:0x%06X,table:%u,word:0x%04X\\n",
+                fprintf(stderr, "[e9-prov-reset-predecessor] task=%u edge=%s seq=%u old=0x%02X r17=0x%06X ra=0x%04X resident=0x%02X pending=src:%u,r17:0x%06X,w0:0x%08X,w1:0x%08X inline=active:%u,op:0x%02X,entry:0x%06X,table:%u,word:0x%04X pred=target:0x%04X,line:%u,ra:0x%04X,resident:0x%02X,r17:0x%06X,l1298:%u\\n",
                         task, edge, route.seq, route.old, route.r17 & 0x7FFFFFu, route.ra & 0xFFFFu,
                         route.resident, route.pending_source, route.pending_r17 & 0x7FFFFFu,
                         route.pending_w0, route.pending_w1, route.inline_active, route.inline_opcode,
-                        route.inline_entry & 0x7FFFFFu, route.inline_table_kind, route.inline_table_word);
+                        route.inline_entry & 0x7FFFFFu, route.inline_table_kind, route.inline_table_word,
+                        route.predecessor_target & 0xFFFFu, route.predecessor_line,
+                        route.predecessor_ra & 0xFFFFu, route.predecessor_resident,
+                        route.predecessor_r17 & 0x7FFFFFu, route.predecessor_from_l1298);
             }
         };
         dump_reset_route("first", g_e9prov.reset_route_first);

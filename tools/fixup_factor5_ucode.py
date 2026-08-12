@@ -1133,22 +1133,49 @@ if is_main_ucode and L12A0_SOURCE_MARKER not in text:
 # display-list-frame reuse (s733, item -421). The callback is deliberately
 # before the sole generated store so it observes the pre-reset byte.
 # ---------------------------------------------------------------------------
-RESET_REUSE_MARKER = "/* fixup: L_1DB0 depth-reset route audit v2 */"
+RESET_REUSE_MARKER = "/* fixup: L_1DB0 depth-reset route audit v5 */"
+if is_main_ucode:
+    text = re.sub(r'^.*(?:rs64_e9prov_l1db0_predecessor|uint32_t rs64_e9prov_from_l1298|rs64_e9prov_from_l1298 = [01];).*\n', '', text, flags=re.MULTILINE)
+    text = re.sub(r'  /\* fixup: L_1DB0 depth-reset route audit v[0-9]+ \*/', '', text)
 if is_main_ucode and RESET_REUSE_MARKER not in text:
     reset_decl = re.compile(r'extern "C" void rs64_e9prov_l1db0_reset[^\n]*\n')
     if reset_decl.search(text):
         text, n_decl = reset_decl.subn(
-            'extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra, uint32_t resident);  ' +
+            'extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra, uint32_t resident);\n' +
+            'extern "C" void rs64_e9prov_l1db0_predecessor(uint32_t target, uint32_t line, uint32_t ra, uint32_t resident, uint32_t r17, uint32_t from_l1298);  ' +
             RESET_REUSE_MARKER + "\n", text, count=1)
     else:
         decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_l12a0_source[^\n]*\n)")
         text, n_decl = decl_anchor.subn(
             lambda m: m.group(1) +
-            'extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra, uint32_t resident);  ' +
+            'extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra, uint32_t resident);\n' +
+            'extern "C" void rs64_e9prov_l1db0_predecessor(uint32_t target, uint32_t line, uint32_t ra, uint32_t resident, uint32_t r17, uint32_t from_l1298);  ' +
             RESET_REUSE_MARKER + "\n",
             text, count=1)
     if n_decl != 1:
         print("fixup_factor5_ucode: FIXUP 12c ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    entry_decl = re.compile(r"(    Rs64OvlTrace rs64_ot;[^\n]*\n)")
+    text, n_entry = entry_decl.subn(
+        lambda m: m.group(1) + "    uint32_t rs64_e9prov_from_l1298 = 0;  " + RESET_REUSE_MARKER + "\n",
+        text, count=1)
+    if n_entry != 1:
+        print("fixup_factor5_ucode: FIXUP 12c ANCHOR FAILED (predecessor local).", file=sys.stderr)
+        sys.exit(1)
+    l1298_anchor = re.compile(r"(L_1298:\n[\s\S]{0,900}?)([ \t]*// jr          \$3)")
+    text, n_l1298 = l1298_anchor.subn(
+        lambda m: m.group(1) + "    rs64_e9prov_from_l1298 = 1;  " + RESET_REUSE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_l1298 != 1:
+        print("fixup_factor5_ucode: FIXUP 12c ANCHOR FAILED (L_1298 predecessor).", file=sys.stderr)
+        sys.exit(1)
+    switch_anchor = re.compile(r"(    switch \(\(jump_target \| 0x1000\) & 0X1FFF\) \{[ \t]*\n)")
+    text, n_switch = switch_anchor.subn(
+        lambda m: "    if (((jump_target | 0x1000) & 0X1FFF) == 0x1DB0) rs64_e9prov_l1db0_predecessor(jump_target, (uint32_t)debug_line, r31, RSP_MEM_BU(0X153, 0), r17, rs64_e9prov_from_l1298);  " + RESET_REUSE_MARKER + "\n" +
+        "    rs64_e9prov_from_l1298 = 0;  " + RESET_REUSE_MARKER + "\n" + m.group(1),
+        text, count=1)
+    if n_switch != 1:
+        print("fixup_factor5_ucode: FIXUP 12c ANCHOR FAILED (predecessor switch).", file=sys.stderr)
         sys.exit(1)
     old_reset = re.compile(r'^[ \t]*rs64_e9prov_l1db0_reset\([^\n]*\);[^\n]*\n', re.MULTILINE)
     if old_reset.search(text):

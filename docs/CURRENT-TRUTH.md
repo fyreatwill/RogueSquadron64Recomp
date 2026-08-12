@@ -24,6 +24,13 @@ Priority order for upcoming iterations, set after the 300-session review:
 
 ## Current truth (reviewed through s735; compacted in maintenance s729)
 
+**s736:** built the v5 regeneration-safe `0x1DB0` predecessor latch. LLE boot
+controls prove it fires (`predecessor=1` in all four balanced direct tasks),
+but the interactive launcher loses its phase-relative key worker when detached
+and therefore cannot supply a section-2 row. `s736_reset_predecessor.sh` is
+queued as the self-contained phase-safe discriminator; consume it before
+interpreting route shape. No mitigation changed.
+
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
 
