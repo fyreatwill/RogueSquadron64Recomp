@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s723; compacted in maintenance s679)
+## Current truth (reviewed through s724; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -645,8 +645,16 @@ maintenance pass. Closed lineages are not backlog items.
    from DMEM[0xFF0] and writes it to 0x130 before L_11B0 reads it. The host
    0x130 mirror is redundant; its default remains unchanged pending a narrow
    cleanup A/B. H-130-later-writer is recharacterized as this expected
-   `L_1DB0` bootstrap store, not an unknown writer. No claim is made about
-   the post-sec2 plateau because neither arm qualified there.
+   `L_1DB0` bootstrap store, not an unknown writer. **s724 cleanup A/B:** host
+   0x130 staging is now default OFF, with `ROGUESQ_STAGE_HOST_130=1` restoring
+   the old write. Both phase-gated arms independently completed 16
+   `0x05→L_15AC→L_1298→L_1DB0` routes and 16 direct L_11B0 chunk controls,
+   with no `[CRASH]`: default rows were `host130=skipped`, restore rows
+   `host130=written`, but each had `chunk130=staged_dram=refill_dram=0x73FB60`.
+   H-130-default-off-safe is supported; hidden early consumption and host
+   ordering are refuted for this route. The initial concurrent A/B was invalid
+   (both GUIs stuck at 640); the completed phase-gated captures are the
+   evidence. No claim is made about the post-sec2 plateau.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

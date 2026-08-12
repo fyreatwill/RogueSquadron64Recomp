@@ -52904,3 +52904,31 @@ writer. H-130-host-required is refuted for the qualified route; the host
 0x130 mirror is redundant. The run does not qualify post-sec2, so it makes no
 claim about the plateau. No mitigation changed. Next: make this redundant
 mirror default-off with a restore arm and repeat the same controls.
+
+## Session 724 (2026-08-12) — redundant host 0x130 mirror is default-off
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 56,879 bytes, below the maintenance
+threshold. The planned cleanup inverted the host `DMEM[0x130]` mirror: it is
+now absent by default and `ROGUESQ_STAGE_HOST_130=1` restores the former write.
+The already regeneration-safe inline route/source probe was retained; no new
+runtime diagnostic was needed. An initial concurrent A/B was invalid because
+both GUI instances stayed at 640 while waiting for the phase gate, so it
+provided no control. The fixed, phase-gated single-instance captures ran each
+arm to completion.
+
+The default-off arm produced 16 complete phase-3
+`0x05→L_15AC→L_1298→L_1DB0` routes and 16 direct `L_11B0` chunk rows. Its
+rows all report `host130=skipped`, `boot130=post130=0x00000C`, and
+`chunk130=staged_dram=refill_dram=0x73FB60`. The restore arm produced the same
+16 complete routes and 16 chunk rows, all with `host130=written`,
+`boot130=0x00000C`, `post130=0x73FB60`, and that identical three-way live
+source equality. Neither capture contains `[CRASH]`. The route and direct
+consumer are independent controls: the former proves the generated bootstrap
+ran and the latter proves its value, not the host mirror, reached L_11B0.
+
+H-130-default-off-safe is therefore supported for the qualified route;
+H-130-hidden-early-consumer and H-130-host-ordering are refuted there. This
+is a bounded cleanup result, not a claim about post-sec2 control flow because
+these captures did not reach that latch. No mitigation changed. Next: perform
+the analogous narrow default-off/restore A/B for the already-proven redundant
+host FF0 mirror.

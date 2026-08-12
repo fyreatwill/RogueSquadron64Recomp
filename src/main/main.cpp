@@ -448,16 +448,15 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         // (the value our fixup injects, matching L_1DB0's bootstrap), this
         // is DMEM[0x130]. L_11B0's chunk-fetch reads this slot for the next
         // re-DMA. L_1DB0 normally bootstraps it from DMEM[$1+0x30] = 0xFF0;
-        // we mirror that bootstrap here in case L_1DB0 itself doesn't fire
-        // every task. (Without this, tasks 2+ exit before emitting any RDP
-        // because the static-data segment leaves 0x130 as bogus.)
+        // The generated L_1DB0 bootstrap normally seeds this slot from FF0.
+        // Keep an opt-in host mirror only for the cleanup A/B.
         const uint32_t boot_130 = peek_be32(0x130);
-        static int s_skip_host_130_stage = -1;
-        if (s_skip_host_130_stage < 0) {
-            const char* e = std::getenv("ROGUESQ_SKIP_HOST_130_STAGE");
-            s_skip_host_130_stage = (e && *e && *e != '0') ? 1 : 0;
+        static int s_stage_host_130 = -1;
+        if (s_stage_host_130 < 0) {
+            const char* e = std::getenv("ROGUESQ_STAGE_HOST_130");
+            s_stage_host_130 = (e && *e && *e != '0') ? 1 : 0;
         }
-        if (!s_skip_host_130_stage) {
+        if (s_stage_host_130) {
             poke_be32(0x130, dl_ptr);
         }
         const uint32_t boot_ff0 = peek_be32(0xFF0);
@@ -469,7 +468,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         if (!s_skip_host_ff0_stage) {
             poke_be32(0xFF0, dl_ptr);
         }
-        rs64_inline_probe_trigen_stage(dl_ptr, boot_130, peek_be32(0x130), s_skip_host_130_stage,
+        rs64_inline_probe_trigen_stage(dl_ptr, boot_130, peek_be32(0x130), !s_stage_host_130,
                                         boot_ff0, peek_be32(0xFF0), s_skip_host_ff0_stage);
         poke_be32(0x101C, dl_ptr);
         poke_be32(0x654,  0x178);
