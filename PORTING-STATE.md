@@ -52322,3 +52322,21 @@ which it could answer the question. The next bounded unit is an oracle
 boot-reachability A/B/C (unwatched current-RSP, watched current-RSP, and each
 installed alternative RSP) before another recovery-cell watch or provenance
 reroll.
+
+## Session 698 (2026-08-12) — oracle watches do not cause the retail boot stall
+
+Ran the prescribed boot-reachability comparison concurrently with the retail
+ROM, current `mupen64plus-rsp-hle`, the documented eleven-Start schedule,
+`--vi-trace`, and `--pif-trace`. Arm A had no memory watch. Arm B added the
+whole-RDRAM write positive control. Both arms observed every injected Start in
+PIF RAM and remained at VI width 320 for 4,199 frames/70.0 emulated seconds;
+neither reached 640, 1024, or hangar. Arm B counted 11,785,883 RDRAM writes,
+so the watch mechanism was live.
+
+This refutes H-watch-perturbation: removing all watches does not restore boot
+progress. `ls /opt/homebrew/lib/mupen64plus/*rsp*.dylib` found only the
+current HLE plugin, so no alternative-RSP arm exists locally. The oracle
+environment is still not a phase-qualified retail witness for the recovery
+cell; do not read target-watch zeros or rerun the E9 provenance recipe until a
+distinct launch/ROM/RSP-environment discriminator is resolved. Logs:
+`scratch/agent/s698_oracle_reachability/`.
