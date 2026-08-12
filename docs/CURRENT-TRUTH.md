@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s680; compacted in maintenance s679)
+## Current truth (reviewed through s681; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -300,11 +300,14 @@ maintenance pass. Closed lineages are not backlog items.
    generated-code provenance probe joins guest L_1090 E9 fetches, raw DPC E9 emissions, and
    deferred-submit coverage. **s680 corrected its target gate from 6500 to 8200–8263:** the
    former 64-record window was recovery traffic, exhausted before the s677 divergent population.
-   Its rerun was phase-inconclusive (four recovery-silent attempts; its only recovery-active
-   attempt hit the 1200s cap before section 2), so it establishes no provenance conclusion.
-   Controls are tasks 1–4; execute the shortened-hold retry in `scratch/agent/NEXT.md`.
-   Hypotheses: dispatch skip, handler-noemit, or DPC-submit loss. Durable evidence and probe
-   mechanics: PROJECT-OVERVIEW §27 and Sessions 669–680.
+   **s681's shortened recovery-active rerun passed all task-1..4 controls but falsified that
+   static gate:** section 2 began at task 8800, after the complete 8200–8263 capture. Those 64
+   earlier records were `guest=1 emit=0 submit=0` while their matching walker counts were
+   `e9_aligned=0`; they are recovery traffic, not the divergent population. No E9-loss mechanism
+   is established. Next, replace the absolute task window with a section-2 phase latch and count
+   E9 at every output-ring command (the current `emit` field only sees a submit-range head).
+   Controls remain tasks 1–4. Hypotheses: dispatch skip, handler-noemit, or DPC-submit loss.
+   Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–681.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

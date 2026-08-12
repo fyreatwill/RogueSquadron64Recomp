@@ -51940,3 +51940,23 @@ budget and a 15s post-section-2 hold (the records precede the old 180s hold).
 It must compare each task-8200–8263 `[e9-prov]` record with its matching
 `[dl-sync-probe2] e9_aligned` count; boot tasks 1–4 remain its positive
 control.
+
+## Session 681 (2026-08-12) — item -421: static provenance gate falsified by a recovery-active run
+
+Ran the prescribed shortened-hold audit:
+`BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=0 POST_PULSE_HOLD_S=15
+MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh`. One
+recovery-active attempt reached section 2 at task 8800 and completed the
+observation window without a crash. The positive control was live in the same
+run: task 1–4 each logged `guest=1 emit=1 submit=1` and matching
+`e9_aligned=1`.
+
+The fixed 8200–8263 target window was therefore not post-section-2 in this
+run. All 64 records preceded the section-2 marker and had `guest=1 emit=0
+submit=0`, while their matching `[dl-sync-probe2]` records had
+`e9_aligned=0`; they are recovery traffic and cannot support dispatch-skip,
+handler-noemit, submit-loss, or walker-path conclusions about the plateau.
+This rules out absolute task serial as a phase gate. It also exposed that the
+existing `emit` field counts only an emitted submit range whose first byte is
+E9, not every E9 command in a range. Next: latch from the actual section-2
+transition and add per-command output-ring E9 accounting before rerunning.
