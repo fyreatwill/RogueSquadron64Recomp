@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s678)
+## Current truth (reviewed through s678; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -285,482 +285,45 @@ family, and its `0x800290d4` clustering are all **DONE/CLOSED** (items -6/-249/-
 needs a genuinely new lead (rechecked s570: zero new leads, intentionally-left stubs still C88
 force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-OVERVIEW.md` §9-§12.
 
-## Next steps, in order of expected value (s295)
-
-Numbering convention (fixed s295): items are numbered highest-magnitude-negative (top,
-newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
-a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
-
-### Active M3 pipeline (s577–s675) — open residuals only
-
--422. **(s670→s671) post-sec2 menu-return is input-gated — H-menu-return-input
-    CONFIRMED dual-source; CLOSED. Splits -421.** Arm A (offline, s668/669
-    data re-confirmed): `synth` +5864/+5892 during thr13 while `rdpFs` delta
-    0/+2 → **H-inject-misses-mission REFUTED** (inject reaches mission phase,
-    doesn't move the real counter). Arm B: two independent recovery-active,
-    pulsed attempts (s670 original + s671 2nd confirm) both show: Start pulse
-    @ sec2+8s → thr12(id=13) created → **never destroyed**, 0 section-3
-    return, 0 packTlut, held alive **>1000s** (1187–1372s) vs baseline's
-    unforced ~195–200s teardown+menu-return. rdpFs stayed frozen (9003)
-    throughout both — plateau itself untouched by input; belongs to -421.
-    **Not soak-queue-able** (single attempt needs ~1400–2000s wall; soak cap
-    600s) — must run in-session, `BUDGET_S>=2400`.
-    `scratch/agent/s670_postsec2_pulse_freeroll.sh` score_log() bugfix
-    (pulse marker lives in launcher.stdout not run.log; thr13c/d search must
-    scope to `>= sec2_ln`) verified correct on s671's run. CLOSED — no
-    further residual (outcome-A follow-ups like "does ANY input work" /
-    "does packTlut ever fire given more hold time" deprioritized below
-    -421's mechanism). Full: Sessions 670-671.
-
--421. **(s669→s676) post-sec2 FULL_SYNC plateau — OPEN, narrowed to an E9
-    loss before authoritative RDP dispatch
-    (menu-return/thr12-teardown CLOSED as -422).**
-    s669 offline dual-source (s668 att2+att3): post-sec2 outdoor content LIVE
-    ~195–200s (VI 512 0x620000↔0x690000, present FIRE swap, ~5900 tasks
-    tris=42) then thr12 destroy → **menu sec3** return; packTlut=0 crash=0.
-    **H-postsec2-fs-plateau CONFIRMED:** thr13 life rdpFs delta 0/+2 while
-    synth +~5.9k; runner syncs=0 ~5866–5894 vs syncs>0=3; E9=6 vs F7~11.7k.
-    Same family as -349 but mission-overlay phase (not post-exit hangar).
-    **s670:** rdpFs stayed frozen (9003) even under a >1000s post-sec2 input
-    pulse hold (-422, now CLOSED) — plateau is independent of both
-    FS_PIPE_INJECT reach and player input.
-    **s671 new lead (already-captured data, no new run):** scoped
-    `[dl-sync-probe]` to post-sec2 lines in the -422 confirming run —
-    11328/29780 (~38%) post-sec2 tasks show `e9_a>0`/`e9_b>0` (naive
-    fixed-8-byte-stride walk finds an 0xE9 byte), yet 29777/29780 report
-    runner `syncs=0`. Two competing, undistinguished explanations:
-    **H-e9-not-translated** (guest DL genuinely requests SYNC_FULL, runner
-    drops/fails to dispatch it — would directly explain the plateau) vs
-    **H-e9-walker-misaligned** (the naive walker doesn't respect the F5
-    ucode's variable-length inline-data commands per
-    `docs/F5-UCODE-REFERENCE.md`, unlike the existing six-command-aware
-    `ROGUESQ_LOG_DL_SYNC2` walker built for -415..-417; an unaligned read
-    can land mid-command and hit a coincidental 0xE9 byte). Scorers:
-    `scratch/agent/s669_postsec2_offline_score.py`. **s672: instrument
-    built** (`e9_aligned` counter added to `ROGUESQ_LOG_DL_SYNC2`'s
-    `[dl-sync-probe2]` output, `ROGUESQ_LOG_DL_SYNC2=1` wired into the
-    freeroll's env) but the discriminating run itself could not complete.
-    s672 was blocked by turn cadence. **s673:** a direct retry produced ten
-    3–4s pre-engagement exits; every run independently logged `SDL_Init
-    failed: The video driver did not add any displays`, so this headless
-    execution context cannot supply the required GUI display. This is not
-    evidence about either E9 hypothesis. The harness now aborts on the first
-    such failure instead of consuming all retries. **s675 Outcome A,
-    dual-source:** two independent recovery-active runs reached section 2
-    with `DL_SYNC2` live. The inline-data-aware walker reported
-    `e9_aligned>0` in **4,444/12,924** and **9,549/13,135** post-sec2 tasks
-    (aligned sums 12,739 and 28,047), while runner `syncs>0` appeared in only
-    **3 tasks per run**. H-e9-walker-misaligned is REFUTED as the sole
-    explanation; H-e9-not-translated is CONFIRMED. Next split the loss among
-    interpreter pre-dispatch, Factor5 handler, and `State::fullSync`/runner
-    accounting with same-task counters. **s676 Outcome A:** after correcting
-    an invalid first build that instrumented the inactive HLE parser, the live
-    `processRDPLists` positive controls passed (millions of decoded commands,
-    E7 nonzero, joined pre→handler→state E9 lines). Post-sec2, the aligned
-    walker found E9 sum **32,150** across **6,719** positive probes, while the
-    authoritative parser's cumulative E9 count advanced by only **2**; every
-    authoritative E9 reached both `GBI_RDP::fullSync` and `State::fullSync`.
-    **H-e9-pre-dispatch-loss CONFIRMED; H-e9-map-or-handler-loss and
-    H-e9-post-handler-loss REFUTED as dominant mechanisms.** Next compare the
-    authoritative parser's command lengths/advances against
-    `docs/F5-UCODE-REFERENCE.md` on the same post-sec2 task population.
-    **s677 Outcome C, dual-source:** a phase-scoped authoritative advance ring
-    captured 24 late tasks with `e9_aligned>0`. Three same-run controls decoded
-    authoritative E9 normally at output `0x4DA8C8`; then 21 target tasks had
-    guest E9 counts 1–9 but authoritative E9=0 and pending carry=0. The address
-    domains are disjoint: guest SW DLs `0x739650–0x751B18`, authoritative RDP
-    ranges `0x4Dxxxx`. **H-rdp-length-skip and H-rdp-boundary-carry REFUTED for
-    this loss; H-rdp-source-divergence CONFIRMED.** The comparison must move
-    upstream to the LLE translation/emission path and join guest command
-    provenance to emitted DPC ranges; direct guest-address joins at
-    `processRDPLists` are structurally invalid. **s678:** persistent
-    `ROGUESQ_LOG_E9_PROVENANCE` records guest L_1090 E9 fetches, raw DPC E9
-    emissions, and deferred-submit coverage per LLE task; generated code is
-    injected through `fixup_factor5_ucode.py`. Build and idempotency passed.
-    The first run exposed a run-lifetime 64-record cap (invalid); fixed to
-    preserve tasks 1–4 controls plus task>=6500 targets. Corrected attempt
-    was killed before 1024/section2, so no provenance conclusion exists yet.
-    Full: Sessions 669-678.
-
--420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
-    Outcome A (content advances; residual → -421).**
-    s668: thr11d→ok136c→thr12→sec2 LIVE. s669 offline: H-sec2-mission-live +
-    H-thr12-churn-normal CONFIRMED; packTlut still 0; FS plateau residual
-    -421. Full: Sessions 668-669.
-
--419. **(s667→s668) thr11d multi-hold under product headers — CLOSED LIVE
-    (Outcome A).**
-    s668: thr11d_new=1 on 2/2 recovery-fired full HOLDs; ship n=3 + B8 both;
-    fail136c=0; sec2 LIVE. s667 thr11d 0/2 recharacterized (ship n≤2 /
-    truncated holds). thr11d still co-gates with B8→n=3 (-393). Full:
-    Sessions 667-668.
-
--418. **(s665→s666) productize `ROGUESQ_DROP_GARBAGE_CIMG` — REJECTED
-    CLOSED; drop stays default OFF.**
-    s666 freeroll A+B recov 0/4 eng under drop ON. **H-drop-suppresses-recov
-    SUPPORTED**. Product freelist = multi-header restore. Full: Sessions 665-666.
-
--417. **(s664→s666) garbage-prev / decode-site SETCIMG drop — LIVE-VERIFIED
-    Outcome A; productize REJECTED → -418 CLOSED.** Default OFF (s666).
-    Full: Sessions 664-666.
-
--416. **(s663→s664) wrap-tail RDP submit filter — SHAPE CLOSED Outcome B
-    (too coarse); residual → -417.** Do not productize. Full: Sessions 663-664.
-
--415. **(s662→s663) cimg-origin-desync — hangar wild + exact freelist
-    killer are in-wrap garbage; class CLOSED; root fix attempted -416
-    → -417.** Full: Sessions 662-663.
-
--414. **(s660→s669) freelist multi-header restore LIVE-VERIFIED; H-body-stomp
-    STRUCTURAL; fail136c CLOSED (H-headers-fail136); thr11d CLOSED LIVE
-    (-419); pipeline thr11d→thr12→sec2 LIVE; post-sec2 outdoor LIVE (-420
-    CLOSED) → residual -421 (FS plateau / menu return).**
-    s660 product mode=headers. s667 fail136c=0. s668 thr11d 2/2 + ok136c +
-    sec2 dual-source. s669 post-sec2 scored. Full: Sessions 660-669.
-
--413. **(s659→s660) product freelist-header restore LIVE; thr11d 3/3;
-    fail136c residual closed into -414 (H-body-stomp + headers product).**
-    s659 freeroll: recov 3/3 thr11d_new 3/3 fail136c 2/3 with 16B restore.
-    s660 offline + expand campaign → multi-header product. Full: Sessions
-    659-660.
-
--412. **(s658→s659) freelist-header restore LIVE; H-wb-complete-not-stomp
-    SUPPORTED; productize CLOSED into -413.**
-    s658 ALLOW path: 3/5 recov thr11d_new=0 fail136c=0. s659 product defaults
-    (no ALLOW_*): 3/3 recov thr11d_new=3/3. Full: Sessions 658-659.
-
--411. **(s657→s658) complete freelist opt-out LIVE; H-fl-survive-suppresses-
-    recov SUPPORTED under permanent stomp; closed into -412 (surgical restore
-    split → H-wb-complete-not-stomp).**
-    s657 complete ALLOW: HIT_WRITE + freelist to_zero; 1/3 recovery-active
-    with thr11d∧fail136c. s658 restore path: recov without permanent stomp.
-    Full: Sessions 657-658.
-
--410. **(s656→s657) freelist-survival residual — incomplete A/B then complete
-    opt-out → closed into -411 (H-fl-survive-suppresses-recov SUPPORTED).**
-    s656: H-skip-suppresses-recov REFUTED (SKIP_WILD_W alone); ALLOW_FL_HDR
-    landed but last-line HIT_SKIP left freelist protected (Outcome C). s657
-    complete opt-out restored recovery. Full: Sessions 656-657.
-
--409. **(s655→s656) post-SKIP recovery drought — H-skip-suppresses-recov
-    REFUTED (SKIP_WILD_W alone); closed into -410 freelist residual.**
-    s654 soak + s655 in-session: 0/7 recovery-active under product SKIP.
-    s656 ALLOW_WILD_W A/B: 0/6 engaged, freelist still protected by
-    SKIP_FL_HDR → drought not caused by SKIP_WILD_W gate. Full: Sessions
-    655-656.
-
--408. **(s654→s659) thr11d∧fail136c re-score — product restore thr11d_new
-    3/3 LIVE; fail136c 2/3 residual with header intact → closed into -413.**
-    s657 stomp: thr11d∧fail136c. s658 ALLOW restore: thr11d_new=0/3. s659
-    product restore: thr11d_new=3/3 fail136c=2/3 (header restored; body may
-    still be stomped). Full: Sessions 654-659.
-
--407. **(s653→s654) freelist writer — H-fb-writeback-stomp CONFIRMED;
-    product guard LIVE-VERIFIED Outcome A; FB-writeback freelist-stomp
-    class CLOSED.**
-    s652 freeroll att2 recovery-active: arm_fl@146s freelist to_zero
-    0x2/0x60@165665ms **immediately after** `[fb-fl-writeback] HIT`
-    `addrStart=0x1F0D74 range=[0x1F0D74,0x32AE68) w=1161 h=277 siz=3`
-    (phys 0x1F3CC0 ∈ range +0x2F4C). Dual-source: fault_ring copyToRAM@
-    0x1F0D74 + sticky guest_pc=0x8000B650. **ssnr_tgt=0** all dest 0x807*
-    → **H-ssnr-zero-stores REFUTED freelist-class**. s78 ≤1280 width cap
-    misses w=1161. Landed always-on: `rs64_writeback_sane` `SKIP_WILD_W`
-    (allowlist 320/512/640/1024, s82 match) + `SKIP_FL_HDR` (range covers
-    0x1F3CC0) + `copyNativeToRAM` HIT early-return. **s654 freeroll
-    Outcome A CONFIRMED dual-source** (att2+att3 recovery-silent engaged):
-    arm_fl@146–147s; **SKIP_WILD_W exact killer** `addr=0x1F0D74 w=1161
-    siz=3` in historical ~165–170s stomp window; freelist 0x2/0x60 survived
-    to ~195–200s; freelist-shaped to_zero=0; skip_wild=40 fb_hit=0. Wild
-    CIMG fires on silent too → H-recov-co-gate-stomp partly recharacterized.
-    Full: Sessions 652-654.
-
--406. **(s652→s653) freelist writer — H-ssnr380 REFUTED; probes landed;
-    freeroll closed into -407 (Outcome B).**
-    s651 freeroll: ring near=9 leaf SSNR+0x380 = payload of LIVE alloc →
-    H-ssnr380 REFUTED. s652 freeroll: ssnr_tgt=0; fb_hit=1 co-timed →
-    H-fb-writeback-stomp CONFIRMED → -407. Full: Sessions 651-653.
-
--405. **(s651→s652) freelist writer — H-adlb-writer REFUTED; fault_ring +
-    near_hdr LIVE; freeroll closed into -406 then -407.**
-    s650 freeroll: adlb_tgt=0 → H-adlb REFUTED. s651 ring LIVE near=9; named
-    leaf is payload traffic not writer. Full: Sessions 650-653.
-
--404. **(s650→s651) freelist writer — H-busy-rearm REFUTED; `[adlb-fl-stomp]`
-    landed; freeroll closed into -405 (H-adlb-writer REFUTED).**
-    s649 freeroll Outcome B: arm_fl + freelist to_zero fault_hdr=0; ~15s quiet
-    → H-busy-rearm REFUTED. ADLB probe posctrl LIVE; freeroll TARGET=0. Full:
-    Sessions 649-651.
-
--403. **(s649→s650) freelist writer — s648 freeroll Outcome C + mprotect
-    concurrent CRASH; late-recover landed; s649 freeroll closed into -404.**
-    s648 freeroll: 0 recovery-active; att4 arm_fl then SIGBUS armed==0 CRASH.
-    Late-recover fix; s649 freeroll under it: Outcome B + busy_rearm REFUTED
-    → -404. Full: Sessions 648-650.
-
--402. **(s648→s649) freelist writer — s647 freeroll Outcome C; BT thrash toxic;
-    rate-limit landed; s648 freeroll closed into -403.**
-    s647 freeroll 2× recovery_silent: **arm_freelist@~145s 0x2/0x60 LIVE** both;
-    heartbeats 150–195s flags=0x2 size=0x60 — **header survived ~50s** past
-    historical stomp window; **no freelist-shaped to_zero** (only menu
-    0x8E8E→0). **H-busy-rearm unevaluable**. **H-recov-co-gate-stomp SUPPORTED
-    dual-source**. want==2 BT-every-fault toxic → rate-limit landed. s648
-    freeroll under rate-limit: still silent + NEW concurrent mprotect CRASH
-    → -403. Full: Sessions 647-649.
-
--401. **(s647→s648) freelist writer — busy_rearm landed; s647 freeroll
-    Outcome C → -402 (no freelist to_zero; BT thrash).**
-    s646 freeroll att3 (recovery-active): freelist to_zero #2 t=164873ms
-    prev_f=0x2/prev_sz=0x60; arm_fl=1; freelist-window faults n=18–21 all
-    in_hdr=0 → Outcome B (250µs re-arm race). SS rearm **REFUTED** (nested
-    SIGTRAP CRASH). Landed busy_rearm 20µs + want=1/2 + to_zero_correlate.
-    s647 freeroll: arm_fl LIVE but recovery_silent ×2 → no freelist to_zero;
-    busy_rearm heartbeats 100+ under want=2; BT-every-fault toxic → s648
-    rate-limit. Full: Sessions 646-648.
-
--400. **(s646→s647) freelist writer — H-memset-writer REFUTED; `[fl-zero-fault]`
-    mprotect LIVE; freeroll Outcome B → -401.**
-    s645 freeroll att2: freelist to_zero #2 sticky drainMesh; msfl hit=0 →
-    H-memset-writer REFUTED. s646 mprotect posctrl LIVE. s647 freeroll closed
-    as Outcome B (missed header store to race). Full: Sessions 645-647.
-
--399. **(s645→s646) freelist writer — BREADCRUMB19 + memset-fl-dest LIVE;
-    freeroll Outcome B / H-memset-writer REFUTED.**
-    s645 instruments LIVE (menu sticky→rs_memset 0x80007904; msfl first-8).
-    s646 freeroll: freelist to_zero with flz_pc_dms only + msfl hit=0 → residual
-    → mprotect fault watch (-400). Full: Sessions 645-646.
-
--398. **(s644→s645) freelist writer — game-thread BT LIVE; freeroll Outcome B.**
-    s644 `[fl-zero-poll-gbt]` posctrl thr_with_guest=17 (parked OSThread hosts).
-    s645 freeroll freelist-shaped to_zero **Outcome B** (writer off-stack) →
-    residual moved to BREADCRUMB19 / memset-dest (-399). Full: Sessions 644-645.
-
--397. **(s643→s644) freelist writer — poller BT LIVE Outcome B structural;
-    game-thread sample LANDED s644.** s643 `[fl-zero-poll-bt]` posctrl: menu
-    to_zero #1 flz_bt=1 frames=6 all poller/pthread — H-hostbt-writer REFUTED
-    for naming. s643 freeroll (`s643_flz_bt_freeroll`, rc=137 600s cap):
-    flz_bt=1 menu-shaped only; recov768=0; no freelist `0x2/0x60`→0. Residual
-    writer ID → -399. Full: Sessions 643-645.
-
--396. **(s642→s644) freelist zero-node writer — poller BT + game-thread BT LIVE.**
-    H-drainmesh-stomp REFUTED (-395). s643 poller BT Outcome B; s644 gbt posctrl
-    LIVE thr_with_guest=17 (parked OSThread hosts). Residual freelist store ID
-    → -398 freeroll. Full: Sessions 642-644.
-
--395. **(s640→s643) freelist zero-node writer STORE — H-drainmesh-stomp REFUTED
-    (menu + freelist class).**
-    s640 confirmed H-oob-store *event* (allocated header destroyed mid-run) but
-    `guest_pc=0x8000834C` is sticky drainMesh return-nop (PROJECT-OVERVIEW §10)
-    — not writer proof. **s641–s642:** dms LIVE dest exclusive 0x807*; menu
-    to_zero #1 dms_tgt=0 → REFUTE menu class. **s642 freeroll retry (s643 fold):**
-    freelist to_zero #2 **2/2** recovery-active attempts (`0x2/0x60`→0 at
-    t≈164–165s) with dms_tgt=0 dms_n=100 → **H-drainmesh-stomp REFUTED freelist
-    class dual-source**. Header placed ~t=146s then stomped +19s. thr11d_new=0
-    both (stomp not thr11d-gated). Residual writer ID → -396/-397. Full:
-    Sessions 640-643.
-
--393. **(s637→s640) H-shipn3-gate CONFIRMED; Outcome A live-verified; residual
-    is B8 acc crossing thr only ~25–40% of recovery-fired holds.** Guest chain
-    unchanged: sp+0xB8 when float `0x800D0120+0x90*s3+4` > `*0x800A79B8` →
-    L_800CA51C store → throttle×7 → L_800CA578 destroy. **s638 thr11d_new=1:**
-    `[mv-b8-set]` → `[mv-ship-arm]` → store n=3 → thr-destroy id=11 → sec4.
-    thr11d rate **4/10** (s640). Offline Outcome B: s634 att1 564s HOLD no n=3.
-    Deprioritized vs freelist writer (-391/-395). Full: Sessions 637-640.
-
--392. **(s634→s637) H-shipcycle2 STRUCTURAL / CONFIRMED — thr11d_new = ship-zero
-    after post-hsel thr11 create.** Dual-source event-order on s633
-    (`thr11d_new=1`) vs s634 att1 (`thr11d_new=0`, full 564s HOLD): after
-    `[hangar-sel]` both paths do `ship-store/zero n=2` → destroy thr11 id=10
-    → create thr11 id=11. Only thr11d_new=1 then fires n=3 → destroy id=11.
-    SCORE `ship_store` post-hsel: =2 means n=2+n=3; =1 only n=2. **Gate of n=3
-    closed into -393** (runModelViewerLoop B8→throttle). Full: Sessions 634-637.
-
--391. **(s632→s659) fail136c `reason=corrupt`: E8 freelist zero-node at
-    `0x801F3CC0` — H-oob-store CONFIRMED; H-fb-writeback-stomp CONFIRMED;
-    H-fb-skip-stops-stomp CONFIRMED; s659 product 16B header restore reopens
-    thr11d 3/3 but fail136c 2/3 residual (body beyond header?) → -413.**
-    Full: Sessions 632-659.
-
--390. **(s627→s634) pool-aware free census + thr11d rate: 2/8 (25%) of
-    recovery-fired reach thr11d_new; discriminator fed once (→ -391); pure
-    accumulation deprioritized (→ -392).** s628–s634: recovery silent in
-    many attempts; of 8 recovery-fired with thr11 live, thr11d_new in 2/8.
-    HOLD_S 180→210 did not move the rate. Pivot (s634): stop spending
-    sessions on thr11d rate soaks; investigate ship cycle n=3 gate (-392).
-    Keep soak-queue copies for free thr11d/fail136c samples. Env:
-    `ROGUESQ_LOG_RS_MALLOC_DIAG=1`. Full: Sessions 627-634.
-
--389. **(s626→s627) Class-D fail136c scored; global H-ltexOOM REFUTED; size-O3 REFUTED;
-    residual is selected-pool.** s627 SCORE: thr11d_new=1 ltexmg=1 fail136c=1 posctrl=8
-    ok136c=1 reason=`no_fit_mystery` maxfree=0x6A3E0 need=0x1370. Pool4 free 0x6A3C0/
-    0x6A3E0 ≥ need but **unselected** for flags=0; selected E8/0 show 0 free in first 16
-    (stop=cap). `no_fit_mystery` was counting unselected free — diag artifact. H-walk1
-    still good on posctrl. Residual discrimination → -390. Full: Session 627.
-
--388. **(s625→s626) `[rs-malloc-diag]` H-walk1 CONFIRMED — s625 free-byte garbage was
-    uint32 guest addrs in `MEM_*` without `S32()`.** s626: every node via `S32()` + raw
-    dump. **Same-run control:** posctrl sizes sane (free `0x4E6290`). **O2 REFUTED.**
-    s627: pool-aware reason landed in s628 (-390). Env: `ROGUESQ_LOG_RS_MALLOC_DIAG=1`.
-    Full: Sessions 625-627.
-
--387. **(s624→s652) Post soft-skip `do_rom_read+608` SIGBUS — 5× freeroll residual
-    (s624/s625/s627/s637/s652 scored class-D, same host stack).** Host: `recomp::do_rom_read` ←
-    `do_dma` ← `osPiStartDma_recomp` ← `submitDmaSlot` ← `processAssetLoadStep` ←
-    `mainEventQueueWorker`. si_addr=`0x380000003` (guest shape `0x80000003`).
-    last-guest-pc=`0x800290d4` is **STALE** (CLOSED -259; do not merge). Fires ~immediately
-    after `[level-tex-malloc-guard]`. Free-reroll while -385 root open; note 5×. Full:
-    Sessions 624-652.
-
--386. **(s621) recovery-active thr11-live `sinfApprox` NAN_CHECK Abort — 1× freeroll.**
-    Host: `sinfApprox` (funcs_5.c:6460 `assert(f10==f10)`) ←
-    `buildPositionAndCallTransformHelper` ← `runModelViewerLoop` ← `menuOverlayInit`.
-    Known freeroll family (s214/s215); thr11c_post=1 thr11d_new=0 (blocks thr11d/class-D).
-    Free-reroll 1st; escalate only on 2nd same host stack with thr11 live. Full: Session 621.
-
--385. **(s620→s668) `loadLevelTextureCache` null `rs_malloc(0x136C)` — GUARD M1 LIVE
-    (s624); **null-malloc residual DISSOLVED under product headers** (s668).**
-    Guard: `[level-tex-malloc-guard]` @ `0x80048248` → `L_8004840C`. **s624 M1:**
-    ltexmg=1. **s626 H-walk1.** **s668 dual-source:** ok136c LIVE (0x136C alloc
-    succeeds reason=ok) → thr12 create with ltexmg=0 → sec2. Guard remains as
-    safety net; thr12 path no longer blocked by freelist stomp under product
-    multi-header restore. Residual → post-sec2 (-420). Full: Sessions 620-668.
-
--384. **(s619→s621) Post thr11d_new+sec4 `buildMaterialFreeList` null-base SIGBUS — 1×;
-    H-matfree1 SUPPORTED (0 on s619 scored freeroll).** s618 only hit. Host
-    `buildMaterialFreeList+260` ← `advanceVideoFrame` ← `initSceneForMission`. Do not
-    merge with -385 (different stack) or -373 (stale pc). Escalate only on 2nd same host
-    stack. Full: Sessions 618-621.
-
--383. **(s618→s620) Post-force `readAccountForSelectionScreen` SIGBUS — stays 1× free-reroll;
-    0 on s618/s619 scored (H-readacct1 SUPPORTED).** local-symtab often mislabels as
-    `rebuildActiveDisplayObjectList+540` — nm: `readAccountForSelectionScreen+604`
-    (guest `0x800B85B4`). Escalate only on 2nd same host stack. Full: Sessions 618-620.
-
--382. **(s617→s620) Post-force `traverseSceneGraphRecursive` SIGBUS — H-sg1 SUPPORTED (0 on
-    scored; freeroll noise including s619 a1). Stays 1× freeroll policy on scored path;
-    do not escalate without 2nd on recovery-active scored.** Full: Sessions 617-620.
-
--381. **(s616→s617) FORCE_STATE6 KSEG0 `uint32` base OOB — FIXED and LIVE-VERIFIED.**
-    S32-extended `gpr base = S32(0x800D << 16)` in case5 force-state6 + case3-start.
-    s616 soak: `case5_n0_state=5` (matches hangar-state), `ctrl_good=5 ctrl_bad=0`,
-    `force6=1 force_old5=1 force_skip=0`, hangar 5→6→8 after force. H-kseg3 + H-force6c
-    CONFIRMED. **CLOSED.** Full: Sessions 616-617.
-
--380. **(s615) Fold `s614_class_d_force_gate` + `s615_class_d_recov_active` — both
-    unscored recovery_silent; force_skip was OOB base (closed by -381).** Natural ACE80
-    still engages without force-write. Full: Sessions 615-617.
-
--379. **(s614) FORCE_STATE6 state==5 gate — still correct policy; s613 hang recharacterized
-    by -381 as OOB write (hangar never left 5), not a successful 3→6 clobber.** Gate
-    logs `[case5-force-state6-skip]`. Keep gate after S32 base fix. Recipe
-    `ENGAGE_WAIT_S=90`. Full: Sessions 614-616.
-
--378. **(s613→s627) class-D craft-shadow soft-skip LIVE on scored (cshadow_a=3
-    s619/s624/s625/s627); thr12 still blocked by null-malloc in parent (-385 M1 LIVE).**
-    thr12 parent = `loadLevelTextureCache`. Guards: `[craft-shadow-asset-guard]`/
-    `[craft-shadow-walk-guard]` + `[level-tex-cache]` + `[level-tex-malloc-guard]` (-385)
-    + `[rs-malloc-diag]` (-388/-390). walk-guard not entered (asset-guard soft-skips all
-    three crafts). Full: Sessions 613-627.
-
--377. **(s612) gPlayerShip writer instrument live.** Only two stores to `0x800CC85C`:
-    non-null `updateTextOverlayLookupEntry` @ `0x800B40D0` (when current null; copies
-    `0x800CC864`); zero `destroyPlayerShipRecord` @ `0x800B42A8`. Tags `[ship-store]` /
-    `[ship-zero]` / `[ship-store-skip]`. H-ship1b not fully causal-proven (no E_store_no_thr11d).
-    Full: Session 612.
-
--376. **(s611) thr11-destroy co-gate: post-hsel `isPlayerShipActive` ret=1 — H-ship1
-    SUPPORTED.** Controls s592_a+s607 have post-hsel ret=1 before destroy; s610 class E stall
-    had 0 post-hsel ret=1 with thr11 live. Full: Sessions 611-612.
-
--375. **(s610) Post-exit `mat3x3InverseInto` Abort (NAN_CHECK) mid recovery→thr11 window —
-    1×; free-reroll WORKED.** Host: `setupCameraMatrices`←`runModelViewerLoop`. Escalate only
-    on 2nd same host stack with abnormal. Full: Sessions 610-611.
-
--374. **(s609→s624) Force6+inject recovery silence — co-primary thr11→sec2 gate; H-recov1
-    necessity SUPPORTED; H-recovwait1 CONFIRMED (fires ~+22s post hsel when it fires).**
-    Free-reroll if silent within `RECOV_WAIT_S=50` (was 100; s624). Prefer `BUDGET_S≥900`
-    when pre-eng 128s cutscene SIGBUS is frequent. Full: Sessions 609-624.
-
--373. **(s608) Post-sec2 mission HMT texture load SIGBUS — primary M3 bottleneck once recovery
-    fires (1×; not chased).** Host: `packTlutEntriesRgba5551`←`loadTextureToMemory`←
-    `parseHmtMaterials`←…←`mainGameLoop`. `si_addr=0x38ea20812`. **last-guest-pc=`0x800025ac`
-    is STALE** — do not merge with -326. Co-symptom: `osViSetMode` width=24. 2nd occ pending.
-    Full: Session 608.
-
--361. **(s589-s658) thr11→sec4→sec2 pipeline — thr11d_new LIVE (rate **4/10** s640);
-    Outcome A live; class-D soft-skip LIVE; -385 M1 LIVE thr12 blocked by null
-    `rs_malloc(0x136C)` — freelist writer closed s654 (SKIP_WILD_W product);
-    s657 stomp restores thr11d∧fail136c; **s658 restore restores recovery
-    without freelist stomp (H-wb-complete-not-stomp)**; residual productize
-    restore (-412) + thr11d re-score (-408). thr11d gated by B8→store→
-    throttle×7 →destroy (-392/-393); -387 **5×**. Co-gates: recovery
-    (-374/-410/-411/-412), mat3inv (-375), sinfApprox (-386), ship
-    (-376/-377/-392/-393), freeroll (-382..-384), FORCE_STATE6 (-381 CLOSED),
-    packTlut (-373). thr-11=`saveServiceWorker` `0x8006F2CC`; thr-12=
-    `hudDisplayUpdateWorker` via `loadLevelTextureCache`. HOLD_S ≤ 210.
-    Full: PROJECT-OVERVIEW §27; Sessions 589-658.**
-
-### Closed product lineage (FULL_SYNC inject + thr pipeline setup) — do not re-open
-
--372..-349. **(s579-s607) Post-exit FULL_SYNC starvation → `FS_PIPE_INJECT` product line + thr11
-    handoff recharacterization — ALL CLOSED as setup for -361.** Summary: post-exit plateau
-    reclassified as FULL_SYNC starvation not s178 producer-stop (-349); guest E9 at phys
-    `0x76DF60` side-slot (-352..-354); E7/F3/FD inject product (-355..-357); recovery cell
-    `0x76B768` yields post-dual syncs (H10a, -358); FORCE_CASE6 / FORCE_STATE6 tools (-359/-370);
-    thr-11 destroy co-timed with sec4 under healthy recovery (H12c, -360); beginframe `0x8000AFA0`
-    guarded as `BEGINFRAME_S0_GUARD` (-365/-338; live 2/2 still PENDING, rare under force+inject);
-    engagement = ACE80 camera-settle state 5→6 (-367). Durable write-up: PROJECT-OVERVIEW §27.
-    Individual session detail: PORTING-STATE 579-607.
-
-### Closed idiom-class / guard campaigns (s424–s569) — range pointers only
-
--348..-334. **(s549-s569) Freelist / SIBLING_PTR residual WRITE campaign — ALL FULLY CLOSED 2/2.**
-    Includes -348 DIRECT residual (218 sites), -346/-345 freelist R6/ATTR, -344 packing DEFER,
-    -343..-341 GUARD2-4, -340/-334 SIBLING gaps, -339/-337 emitAllocated/submitSceneNode (via
-    -341). PROJECT-OVERVIEW §25-§26.
-
--338 / -365. **`beginFrameDLChunk` `0x8000afa0` — ROOT-CAUSED s600, GUARDED (`BEGINFRAME_S0_GUARD`);
-    live 2/2 PENDING (3 scored D).** Keep LOG armed passively; do not dedicate another same-HOLD
-    soak solely for beginframe. See -361 note on thr-11 race.
-
--335/-336 / -328..-333 / -323..-326. **Breadcrumbs filed not chased** (watch for 3rd occ before
-    escalating). Notable: **-331** `heapFreeListDequeue+29152`/`0x8000d688` (2×); **-332**
-    `submitSceneNodeRender+38976`/`0x8001086c` (2× weak); **-326** `do_rom_read+608`/`0x800025ac`
-    (**urgent if 2nd** — do not confuse with -373's stale pc). Full: PROJECT-OVERVIEW §25-§26.
-
--347. **(s566/s582/s594/s595) `transformLightByType`/`0x80010134` — REFRAMED as instrumentation-
-    coverage artifact, NOT escalated.** 52/2499 funcs carry `g_rs64_last_guest_pc`; unaudited
-    subtree freezes caller stub. Method trap: N identical addresses ≠ N same bugs outside
-    audited set.
-
--320. **(s508/s565/s566) `loadCutsceneAssetsByIndex+1860`/`0x800aafb8` — FULLY CLOSED 2/2.**
-    `projectModelBoundsToScreen` early-exit clobbered `$s1`.
-
--327 / -319 / -318. **CLOSED 2/2:** DL_LIST_APPEND_DEREF (84 sites, with -334), SIBLING gap
-    `0x8000B0D0`, APPEND_RDP_STATE_DL_ENTRY. PROJECT-OVERVIEW §23-§24.
-
--317..-311. **(s480-s569) Step-3 blanket sweep + symbolizer fix — ALL CLOSED.** ~131 range-check
-    guards on derived-pointer reload idiom; `nm -n` local-symtab crash symbolizer (-311) fixed
-    -310 `dladdr` artifact. Standing gotchas: hangarbay positive control; cross-check
-    `last-guest-pc` not host symbol; early-guard `goto` needs full epilogue if callee-saves
-    unspilled. PROJECT-OVERVIEW §19-§25; PORTING-STATE 480-569.
-
--310..-291. **(s454-s480) s465 frequency-scan buckets + DL_LIST/SIBLING first wave — CLOSED
-    (or DEFERRED non-guard).** -305/-307/-308/-309 classify-only; -306 real SIBLING fix;
-    -302 DEFERRED (integer index, multi-shape); -298..-304 / -291..-297 closed. PROJECT-OVERVIEW
-    §17-§19.
-
--261..-290 (and -263). **(s424-453) Duplicate-symbol-name-collision arc — ALL CLOSED.**
-    PROJECT-OVERVIEW §16; PORTING-STATE 424-453.
-
--259. **(s422) `0x800290d4` "six independent triggers" — CLOSED, not a bug** (`inflate_fast`
-    clean return). PORTING-STATE 422.
-
--231..-249. **(s377-421) Fixup function-scope backport + M3 `-0x25A4` resumption + 784-function
-    `main_overlay.txt` phantom relocation — ALL CLOSED.** PROJECT-OVERVIEW §13-§15.
-
--230..-14 (excluding -20). **Eleven closed investigation lineages, s99-s376 — all CLOSED.**
-    M5 audio de-stubbing (-160..-230, §9-§12) plus ten earlier guard-gap chases. PROJECT-OVERVIEW
-    §9-§12; PORTING-STATE 99-376.
+## Backlog — one monotonic sequence (reviewed s679)
+
+Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
+`docs/PROJECT-OVERVIEW.md`; this active backlog is intentionally renumbered from 1 on each
+maintenance pass. Closed lineages are not backlog items.
+
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Post-sec2 outdoor rendering is
+   live, but `rdpFs` stays flat while GFX continues. Two independent s675 samples show aligned
+   guest E9s in 4,444/12,924 and 9,549/13,135 target tasks, with runner FULL_SYNC in only three
+   each. s676 confirms the dominant loss is before authoritative dispatch: all authoritative E9s
+   reach both `GBI_RDP::fullSync` and `State::fullSync`. s677 rules out parser-length and
+   boundary-carry loss: guest and authoritative address domains are distinct. The current,
+   generated-code provenance probe joins guest L_1090 E9 fetches, raw DPC E9 emissions, and
+   deferred-submit coverage. Run it as specified in `scratch/agent/NEXT.md`; controls are tasks
+   1–4 and targets are task >=6500. Hypotheses: dispatch skip, handler-noemit, or DPC-submit loss.
+   Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–678.
+
+2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
+   recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
+   craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a
+   recipe adds information; pursue only a systematic idiom-class audit after recurrence.
+
+3. **M4 correctness.** Outdoor `baseFixed=-32768` zero-shade, attribution S=0 triangles, then
+   I4 `sample=64x128`; each needs an independently controlled experiment.
+
+4. **Tooling / legacy -20.** Intermittent regeneration omission: delete generated `funcs_*.c`
+   before regen and audit `fixup_game_funcs.py` counts. Escalate only with a reproducible case.
+
+## Closed lineages — do not reopen
+
+- **M5 audio (legacy -160..-230): CLOSED.** A new audio lead is required; see
+  PROJECT-OVERVIEW §9–§12 and `docs/M5-AUDIO-PLAN.md`.
+- **Hangar-exit → sec2 pipeline (legacy -349..-422): CLOSED except backlog item 1.** Product
+  multi-header freelist restore is ON. `DROP_WRAP_RDP` and `DROP_GARBAGE_CIMG` remain OFF:
+  suppressing the garbage SETCIMG writeback also suppresses recovery. The exact w=1161 CIMG was
+  proven garbage after ring wrap, not a legitimate game command. Detail: PROJECT-OVERVIEW §27.
+- **Idiom-class audits (legacy -231..-348): CLOSED.** The duplicate-symbol, frequency-scan,
+  `DL_LIST_APPEND_GUARD`, and sibling/freelist campaigns are archived in PROJECT-OVERVIEW §13–§26.
+  Do not revive an individual crash without a new class-level enumeration.
 
 ### Standing / open non-pipeline items
 
@@ -776,41 +339,8 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
 
 -8. **`frameStartReset` SIGBUS** — 3 occurrences (s85/s108/s156); no located faulting insn.
 
--7. **M3 hangar-exit → mission-entry (DoD gate): OPEN.** Exit+cutscene CONFIRMED s577;
-    FULL_SYNC inject product-fixed; force6 live-writes hangar state s617 (-381 CLOSED);
-    thr11d_new+class-D LIVE (rate 4/10); -385 M1 LIVE; H-walk1; global O1+size-O3 REFUTED;
-    H-shipcycle2 STRUCTURAL; H-shipn3-gate CONFIRMED; s638 Outcome A; **s640 H-oob-store
-    CONFIRMED / H-walk-into-zeros REFUTED; s642 H-drainmesh-stomp REFUTED; s643–s645
-    sticky/BT/gbt Outcome B; s646 H-memset-writer REFUTED + mprotect LIVE;
-    s647 busy_rearm; s648 freeroll Outcome C + BT rate-limit +
-    H-recov-co-gate-stomp; s649 late-recover + H-perturb REFUTED;
-    s650 Outcome B + H-busy-rearm REFUTED + adlb-fl-stomp;
-    s651 H-adlb-writer REFUTED + fault_ring/near_hdr;
-    s652 H-ssnr380 REFUTED + ssnr-hdr-zero/fb-fl-writeback;
-    s653 H-fb-writeback-stomp CONFIRMED + H-ssnr-zero-stores REFUTED +
-    SKIP_WILD_W/SKIP_FL_HDR product (-407);
-    s654 H-fb-skip-stops-stomp CONFIRMED Outcome A dual-source — FB
-    freelist-stomp class CLOSED; s655 Outcome C 0/7 recovery-active
-    post-SKIP; s656 Outcome B H-skip-suppresses-recov REFUTED
-    (SKIP_WILD_W alone) + Outcome C incomplete ALLOW_FL_HDR; s657
-    complete opt-out HIT_WRITE + H-fl-survive-suppresses-recov
-    SUPPORTED under stomp; s658 FL_HDR_RESTORE Outcome A —
-    H-wb-complete-not-stomp SUPPORTED (3/5 recov with header restored);
-    residual -412 productize → -413 thr11d re-score → -414 multi-header;
-    s662–s663 hangar wild + exact freelist killer = in-wrap garbage
-    SETCIMG class CLOSED (-415); s664 wrap-tail submit filter Outcome B
-    false-drop (-416 CLOSED shape); s665 garbage-prev SETCIMG drop
-    Outcome A LIVE (-417); s666 productize drop REJECTED (-418 CLOSED)
-    — H-drop-suppresses-recov; product freelist path = restore;
-    s667 H-headers-fail136; **s668 thr11d 2/2 + thr12 + sec2 LIVE
-    under product headers** (ok136c; -419 CLOSED; -385 dissolved);
-    **s669 post-sec2 outdoor LIVE + rdpFs plateau** (-420 CLOSED
-    Outcome A; residual → -421). **s670 Arm A+B: menu-return split off as
-    input-gated (-422, single-source); rdpFs plateau stays open (-421),
-    untouched by inject or input.**
-    Active residuals: -422 / -421 / -414..-373 / -361 / -379. Tools still
-    default OFF for DROP_* and the -422 input pulse; product ON for
-    multi-header restore.
+-7. **M3 DoD gate.** Mission-entry pipeline is live through sec2; the only active blocker is
+    backlog item 1. Product settings and the durable causal chain are in PROJECT-OVERVIEW §27.
 
 -6. **(s53→s399) M4 `[missing-func]` addresses: DONE, CLOSED s399.** PORTING-STATE 399.
 

@@ -51903,3 +51903,16 @@ Those four same-run controls fired. The corrected process had not reached the
 records as evidence. Thus this session rules out neither dispatch-skip,
 handler-noemit, nor deferred-submit-loss; it lands the durable, phase-scoped
 discriminator for the next run.
+
+## Session 679 (2026-08-12) — maintenance: compacted current truth and normalized the backlog
+
+Step 0 triggered at 60,219 bytes, so no experiment was run. `CURRENT-TRUTH.md`
+was compacted to 30,317 bytes and 421 lines (from 891): closed detail moved out
+of the active ledger, the stale session-295 headline was refreshed through s678,
+and the active backlog is now one monotonic sequence (1–4). Durable s620–s678
+M3 pipeline and E9-provenance context was added to PROJECT-OVERVIEW §28, while
+the historical evidence remains in this chronological ledger.
+
+This rules out treating legacy negative item numbers as active priority order:
+only backlog item 1 is active M3 work. The next unit remains the already-built,
+same-run E9 provenance audit; no mitigation or runtime behavior changed.

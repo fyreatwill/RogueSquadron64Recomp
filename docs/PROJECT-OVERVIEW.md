@@ -2586,3 +2586,32 @@ PORTING-STATE Sessions 577–619; CURRENT-TRUTH keeps only open residuals (-384.
 ### Next
 Consume s619 soak: matfree 2nd → escalate -384 (null-base guard candidate); thr12/cshadow →
 class-D A–D; thr11d_new+sec4 hold without crash → past freelist.
+
+## 28. M3 pipeline completion through the post-sec2 E9 loss (s620–s678)
+
+The `loadLevelTextureCache` null allocation and the craft-shadow path dissolved under the
+multi-header freelist-writeback restore. The restore preserves all freelist headers in the
+wild-CIMG writeback range while allowing the body writeback needed by recovery; restoring the
+whole body suppressed recovery. The triggering `SETCIMG addr=0x1F0D74, width=1161` was proved
+garbage read after a wrapped DPC ring, not a legitimate game command. Decode-site drops and
+wrap-wide submission drops remain default OFF because they also suppress recovery.
+
+With the product restore enabled, two full recovery-fired holds reached thr11 destruction,
+thr12 creation, and section 2; post-sec2 outdoor rendering and presentation are live. The
+remaining defect is a mission-phase FULL_SYNC plateau: GFX continues but `rdpFs` barely advances.
+Input can keep thr12 alive but does not change this plateau, so menu-return is a closed,
+input-gated side branch rather than its cause.
+
+Two independent phase-scoped samples found thousands of inline-data-aware guest E9s but only
+three runner FULL_SYNC events each. The authoritative parser saw only two E9s in one matching
+population, and every such E9 reached `GBI_RDP::fullSync` and `State::fullSync`. A later advance
+ring ruled out authoritative command-length and boundary-carry loss: guest software DL addresses
+and authoritative RDP addresses are different domains. Therefore the active question is upstream
+translation provenance: does Factor 5 dispatch E9, emit it to the raw DPC ring, and include that
+range in the deferred submit?
+
+`ROGUESQ_LOG_E9_PROVENANCE` is injected idempotently by `tools/fixup_factor5_ucode.py`. It retains
+tasks 1–4 as controls and task >=6500 as targets, recording L_1090 guest E9 fetches, raw output
+E9 writes, and DPC submit coverage. The next run must score the complete same-run chain; see
+`scratch/agent/NEXT.md` and CURRENT-TRUTH backlog item 1. Sessions 620–678 contain the full
+chronology in `PORTING-STATE.md`.

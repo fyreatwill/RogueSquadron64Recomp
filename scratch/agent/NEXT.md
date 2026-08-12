@@ -1,8 +1,9 @@
-# NEXT work unit
+# NEXT work unit (after s679 maintenance)
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-Run the completed, phase-scoped LLE E9 provenance audit for item -421. Do not
+Run the completed, phase-scoped LLE E9 provenance audit for backlog item 1
+(legacy -421). Do not
 alter translation behavior. The s678 build already contains the persistent
 probe and the harness already exports `ROGUESQ_LOG_E9_PROVENANCE=1`.
 
