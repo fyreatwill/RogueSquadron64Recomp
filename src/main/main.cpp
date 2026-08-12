@@ -100,6 +100,7 @@ extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
                                           uint32_t guestE9);
 extern "C" void rs64_e9prov_task_begin(uint32_t task);
 extern "C" void rs64_e9prov_task_end(uint32_t task);
+extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr);
 // Defined in lib/rt64/src/hle/rt64_state.cpp — s171 crash-instant snapshot
 // of [vi-fs-decision] state, read from the SIGSEGV/SIGBUS handler below.
 extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
@@ -443,6 +444,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         // because the static-data segment leaves 0x130 as bogus.)
         poke_be32(0x130, dl_ptr);
         poke_be32(0xFF0, dl_ptr);
+        rs64_inline_probe_trigen_stage(dl_ptr);
         poke_be32(0x101C, dl_ptr);
         poke_be32(0x654,  0x178);
         // RDP flush ring state (L_112C): DMEM[0x100]=ring base, [0x104]=limit,

@@ -52801,3 +52801,27 @@ the live continuation does not select the command after TriGen's 40-byte
 physical span. This does not authorize a correction yet: the semantic writer
 and contract for r1+0x30 remain unknown. Next: correlate that writer with the
 consumer in one phase-gated run. No mitigation changed.
+
+## Session 720 (2026-08-12) — host task-root staging is the TriGen refill source
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 54,262 bytes, so maintenance did
+not trigger. Static audit found exactly one generated `r1` assignment
+(`r1=0xFC0`) and no generated store to `r1+0x30` (DMEM 0xFF0). The independent
+host staging path in `factor5_gfx_runner` writes both DMEM 0xFF0 and 0x130
+from `OSTask.data_ptr`. Added a narrow correlation field to the existing
+regeneration-safe L_1DB0 source row; it records the staged host value without
+altering execution.
+
+The initial two-Start schedule was invalid: both key presses happened before
+the title, so the requested 512-wide target never arrived. SIGKILL stopped
+that run. The fixed phase-relative title capture reached 512 at 55.4 seconds
+without a crash, but no new TriGen row fired in that phase. Its qualified 640
+rows retained the full positive control
+`0x05→L_15AC→selector 0x0C→L_1298→L_1DB0→L_1E48→L_1E5C→L_11B0` and joined
+`entry_dram=0x73FD70`, `refill_dram=0x73FB60`, and
+`staged_dram=0x73FB60`; the reference expectation remains `0x73FE10`.
+The static and live lines are independent: H-trigen-host-root-seed is
+supported and a later generated-ucode writer is ruled out for this path. This
+does not yet establish whether host staging mirrors or overwrites the real
+boot contract. Next: log DMEM 0xFF0 immediately after boot and before staging.
+No mitigation changed.

@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s719; compacted in maintenance s679)
+## Current truth (reviewed through s720; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -608,9 +608,19 @@ maintenance pass. Closed lineages are not backlog items.
    **H-trigen-wrong-advance is SUPPORTED**: this continuation selects a
    physical stream 0x210 bytes before its entry buffer, not the expected
    inline continuation. No correction is justified until the writer/semantic
-   owner of `r1+0x30` is established. Next: trace the `L_1298`/overlay writer
-   of that field and compare its selected source with the reference TriGen
-   command's expected post-inline address.
+   owner of `r1+0x30` is established. **s720 source-owner audit:** `r1` has
+   one generated assignment (`0xFC0`) and the generated main has zero stores
+   to `r1+0x30` (DMEM 0xFF0). The host runner explicitly writes
+   `DMEM[0xFF0]=OSTask.data_ptr`; a live complete 0x05 route independently
+   joins that staged value to the L_1DB0 consumer
+   (`entry=0x73FD70`, `refill=staged=0x73FB60`, expected `0x73FE10`). Thus
+   **H-trigen-host-root-seed is SUPPORTED** and a later generated-ucode writer
+   is refuted for this path. The first boot-relative input schedule was
+   invalid (both starts pre-title); its phase-relative repair reached 512 but
+   emitted no new 0x05 row there, while the qualified 640 rows establish the
+   source owner. Next: capture DMEM 0xFF0 immediately after real boot and
+   before host staging, to determine whether the host write mirrors or
+   overwrites the boot-provided contract.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

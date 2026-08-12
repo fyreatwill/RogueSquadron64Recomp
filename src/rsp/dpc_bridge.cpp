@@ -327,6 +327,12 @@ extern "C" void rs64_inline_probe_trigen_entry(uint32_t r17) {
     }
 }
 
+static std::atomic<uint32_t> g_inline_probe_trigen_staged_dram{0};
+
+extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr) {
+    g_inline_probe_trigen_staged_dram.store(dl_ptr & 0x7FFFFFu, std::memory_order_relaxed);
+}
+
 extern "C" void rs64_inline_probe_trigen_sources(uint32_t r17, uint32_t entry_dram, uint32_t refill_dram) {
     if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
     const uint32_t line = g_inline_probe_trigen_source_lines.fetch_add(1, std::memory_order_relaxed);
@@ -334,9 +340,11 @@ extern "C" void rs64_inline_probe_trigen_sources(uint32_t r17, uint32_t entry_dr
         const uint32_t entry_offset = (r17 - 0x170) & 0xFFF;
         const uint32_t expected = (entry_dram + entry_offset + 40) & 0x7FFFFFu;
         const uint32_t actual = refill_dram & 0x7FFFFFu;
-        fprintf(stderr, "[inline-trigen-source] task=%u phase=%u entry_dram=0x%06X entry_offset=0x%03X refill_dram=0x%06X expected=0x%06X verdict=%s\n",
+        const uint32_t staged = g_inline_probe_trigen_staged_dram.load(std::memory_order_relaxed);
+        fprintf(stderr, "[inline-trigen-source] task=%u phase=%u entry_dram=0x%06X entry_offset=0x%03X refill_dram=0x%06X staged_dram=0x%06X expected=0x%06X stage=%s verdict=%s\n",
                 g_e9prov.task, rs64_phase_ord(), entry_dram & 0x7FFFFFu, entry_offset,
-                actual, expected, actual == expected ? "equal" : "MISMATCH");
+                actual, staged, expected, actual == staged ? "equal" : "MISMATCH",
+                actual == expected ? "equal" : "MISMATCH");
         fflush(stderr);
     }
 }
