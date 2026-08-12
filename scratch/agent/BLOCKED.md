@@ -1,15 +1,15 @@
-# Blocked: alternate Mupen64Plus RSP plugin required
+# Blocked: alternate Mupen64Plus RSP plugin
 
-Need: a path to an alternate Mupen64Plus-compatible macOS RSP `.dylib` that
-the local Mupen64Plus 2.6.0 core can load.
+Need: a compatible macOS Mupen64Plus RSP dylib and its filesystem path.
 
-Why: the active oracle unit needs current and alternate RSP arms in one
-otherwise identical 70-second driven positive-control batch. Only a differing
-outcome separates H-rsp-hle-route from H-core-environment-route.
+From: a human who can supply or install that plugin.
 
-Tried this iteration: a fresh inventory of RSP and Mupen64Plus dylibs under
-`/opt/homebrew` and `/usr/local` found only the already-tested
-`mupen64plus-rsp-hle.dylib`; the remaining plugins are audio, input, and video.
+Tried: on 2026-08-12, an inventory of `/opt/homebrew` and `/usr/local` found
+only `/opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib`.
+The current HLE arm alone stays at VI width 320 even while PIF injection and
+whole-RDRAM write controls fire. A paired alternate/current 70-second run is
+the single discriminator: alternate reaches 640/1024/hangar means the HLE RSP
+route is responsible; both remain at 320 means the core/debugger environment
+is responsible.
 
-After supply: run both commands in `scratch/agent/NEXT.md` with the eleven-
-Start schedule, VI/PIF traces, and whole-RDRAM write positive control.
+When supplied, use the two exact commands in `scratch/agent/NEXT.md`.

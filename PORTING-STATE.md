@@ -52414,3 +52414,19 @@ from H-core-environment-route and would repeat the unqualified VI-320 null;
 therefore no build, target watch, E9-tracer change, or runtime experiment was
 performed. Supply an alternate compatible macOS RSP dylib, then run both arms
 from `NEXT.md` with the identical 70-second driven positive-control recipe.
+
+## Session 703 (2026-08-12) — paired oracle discriminator still lacks its alternate arm
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 42,516 bytes, so maintenance did
+not trigger. The active `m3-oracle-boot-environment` work unit requires the
+alternate/current RSP batch specified in `scratch/agent/NEXT.md`. A fresh
+local inventory of `/opt/homebrew` and `/usr/local` for RSP dylibs found only
+the already-tested
+`/opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib`.
+
+The requested alternate compatible macOS RSP plugin is therefore absent now.
+Neither arm can be replaced by a one-arm rerun: with live PIF and whole-RDRAM
+controls, a VI-320 result still cannot discriminate `H-rsp-hle-route` from
+`H-core-environment-route`. No build, target watch, runtime tracer, or soak
+was run. This is a concrete external dependency block; provide an alternate
+compatible RSP dylib path, then run the two commands in `NEXT.md` unchanged.

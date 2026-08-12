@@ -459,7 +459,11 @@ maintenance pass. Closed lineages are not backlog items.
    `mupen64plus-rsp-hle.dylib`; the remaining dylibs are audio, input, and
    video plugins. The alternate/current two-arm measurement remains impossible
    to assemble locally, so no one-arm rerun, target watch, or tracer change is
-   informative.
+   informative. **s703 recheck:** `docs/CURRENT-TRUTH.md` remains below the
+   maintenance threshold (42,516 bytes), and a fresh `/opt/homebrew` plus
+   `/usr/local` RSP-dylib inventory still yields only that same HLE plugin.
+   The two-arm discriminator remains externally blocked; a compatible alternate
+   macOS RSP dylib is required before another oracle run can be evidence.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
