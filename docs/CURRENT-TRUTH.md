@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s675)
+## Current truth (established by session 295; unchanged, reviewed through s676)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -248,11 +248,17 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   CONFIRMED dual-source and CLOSED** (2/2 pulsed attempts: thr12 alive
   >1000s, 0 sec3 return, 0 packTlut) while the **rdpFs plateau itself is
   untouched by both inject (Arm A) and input (Arm B)** — stays open as -421,
-  **s675 confirms command-boundary E9 is abundant** in two independent
+    **s675 confirms command-boundary E9 is abundant** in two independent
   post-sec2 samples (4,444/12,924 and 9,549/13,135 tasks) while runner
-  FULL_SYNC appears in only 3 tasks per sample. Walker misalignment is
-  refuted as the sole explanation; the loss is downstream of the guest DL.
-  Residual rank: (1) **-421 E9 dispatch-stage discriminator** then rdpFs
+    FULL_SYNC appears in only 3 tasks per sample. Walker misalignment is
+    refuted as the sole explanation. **s676 dispatch discriminator:** one
+    recovery-active post-sec2 run had aligned walker E9 sum **32,150** in
+    **6,719** positive task probes, while the authoritative RDP parser's
+    cumulative E9 count advanced by only **2**. Every authoritative E9 seen
+    reached `GBI_RDP::fullSync` and `State::fullSync`. Thus the dominant loss
+    is before authoritative dispatch; map/handler and State accounting are
+    ruled out for those commands. Residual rank: (1) **-421 authoritative
+    parser advance/control-flow mismatch** then rdpFs
   starvation mechanism / packTlut (-373), (2) B8
   co-gate -393, (3) -387 **5×**. Do **not** productize DROP_GARBAGE_CIMG; do
   **not** re-soak thr11d rate (-419 CLOSED) or re-run the -422 input pulse
@@ -306,8 +312,8 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     "does packTlut ever fire given more hold time" deprioritized below
     -421's mechanism). Full: Sessions 670-671.
 
--421. **(s669→s675) post-sec2 FULL_SYNC plateau — OPEN, narrowed to an E9
-    dispatch/translation loss after the guest command stream
+-421. **(s669→s676) post-sec2 FULL_SYNC plateau — OPEN, narrowed to an E9
+    loss before authoritative RDP dispatch
     (menu-return/thr12-teardown CLOSED as -422).**
     s669 offline dual-source (s668 att2+att3): post-sec2 outdoor content LIVE
     ~195–200s (VI 512 0x620000↔0x690000, present FIRE swap, ~5900 tasks
@@ -346,9 +352,19 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     (aligned sums 12,739 and 28,047), while runner `syncs>0` appeared in only
     **3 tasks per run**. H-e9-walker-misaligned is REFUTED as the sole
     explanation; H-e9-not-translated is CONFIRMED. Next split the loss among
-    interpreter pre-dispatch, Factor5 `fullSync_logged`, and
-    `State::fullSync`/runner accounting with same-task counters. Full:
-    Sessions 669-675.
+    interpreter pre-dispatch, Factor5 handler, and `State::fullSync`/runner
+    accounting with same-task counters. **s676 Outcome A:** after correcting
+    an invalid first build that instrumented the inactive HLE parser, the live
+    `processRDPLists` positive controls passed (millions of decoded commands,
+    E7 nonzero, joined pre→handler→state E9 lines). Post-sec2, the aligned
+    walker found E9 sum **32,150** across **6,719** positive probes, while the
+    authoritative parser's cumulative E9 count advanced by only **2**; every
+    authoritative E9 reached both `GBI_RDP::fullSync` and `State::fullSync`.
+    **H-e9-pre-dispatch-loss CONFIRMED; H-e9-map-or-handler-loss and
+    H-e9-post-handler-loss REFUTED as dominant mechanisms.** Next compare the
+    authoritative parser's command lengths/advances against
+    `docs/F5-UCODE-REFERENCE.md` on the same post-sec2 task population. Full:
+    Sessions 669-676.
 
 -420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
     Outcome A (content advances; residual → -421).**

@@ -2,54 +2,41 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-Build and run one same-task E9 dispatch-stage discriminator for item -421.
-Do not change E9 behaviour or inject a sync. Add phase-budgeted counters/logs
-at three existing stages, all gated by one new `ROGUESQ_LOG_E9_DISPATCH=1`:
+Build one same-run authoritative command-advance audit for item -421. Read
+`docs/F5-UCODE-REFERENCE.md` first. At `processRDPLists`, log a phase-budgeted
+ring of the raw command address/opcode, selected command length, next address,
+and pending-command boundary state for post-sec2 tasks whose independent
+`DL_SYNC2` walk reports `e9_aligned>0`. Include a positive-control sample from
+tasks where authoritative E9 does dispatch. Do not change command lengths or
+inject/drop commands.
 
-1. RT64 interpreter immediately before dispatch when the decoded opcode is
-   `0xE9` (positive control: also count all decoded commands and `0xE7`).
-2. `GBI_F3DFACTOR5::fullSync_logged` entry.
-3. `State::fullSync` entry plus the runner task number/counter snapshot already
-   available around `[dl-sync-probe]`.
-
-Scope/reset every budget at section 2 or the existing post-sec2 task phase;
-include the task number in every stage so counts can be joined within one run.
-Because this edits `lib/rt64`, export the submodule patch before committing:
+Commands:
 
     ./submodule-patches/export.sh
     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
     env BUDGET_S=2400 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
 
-Wire `ROGUESQ_LOG_E9_DISPATCH=1` into the recipe before the run. Preserve the
-existing `ROGUESQ_LOG_DL_SYNC=1` and `ROGUESQ_LOG_DL_SYNC2=1` controls. Batch
-all counters into this one build/run cycle.
-
 ## Competing hypotheses
 
-- **H-e9-pre-dispatch-loss:** the authoritative interpreter never decodes the
-  command-boundary E9 population seen by the diagnostic walker (control-flow
-  or command-length model differs before map dispatch).
-- **H-e9-map-or-handler-loss:** interpreter pre-dispatch sees E9, but the
-  Factor5 `fullSync_logged` handler is not entered (map replacement/mismatch).
-- **H-e9-post-handler-loss:** handler entry tracks pre-dispatch E9, but
-  `State::fullSync` or runner `hist[0x29]` does not track it.
+- **H-rdp-length-skip:** `commandWordLengths[op]` advances across aligned E9
+  slots because an earlier command length is wrong for Factor 5 output.
+- **H-rdp-boundary-carry:** pending-command carry across DPC submissions
+  consumes or reassembles bytes so the E9 slot is never a command boundary.
+- **H-rdp-source-divergence:** the independent guest walker and authoritative
+  RDP parser are examining different buffers/stages; no local advance crosses
+  the walker's E9 address.
 
 ## Discriminating measurement
 
-For each post-sec2 task, compare `e9_aligned`, interpreter E9, handler entry,
-`State::fullSync`, and runner `syncs`. Positive control in the same run:
-section 2 reached, thousands of interpreter commands decoded, nonzero E7, and
-nonzero `e9_aligned`.
+Join each aligned E9 address to the authoritative address/advance ring.
+Positive controls: section 2 reached, `e9_aligned>0`, millions of authoritative
+commands, E7 nonzero before the scoped window, and at least one authoritative
+E9 with matching handler/state lines.
 
-- Aligned E9 high, interpreter E9 near zero: H-e9-pre-dispatch-loss confirmed;
-  next compare the authoritative interpreter's PC advances/control flow with
-  `docs/F5-UCODE-REFERENCE.md`.
-- Interpreter E9 high, handler near zero: H-e9-map-or-handler-loss confirmed;
-  inspect Factor5 map lifetime/ucode switches.
-- Handler high, `State::fullSync` or runner syncs near zero: H-e9-post-handler-loss
-  confirmed; inspect the first diverging stage only.
-- All stages track but `rdpFs` stays flat: the runner metric is not the missing
-  sync witness; reframe -421 without landing a mitigation.
-
-Do not rerun item -422, productize `DROP_GARBAGE_CIMG`, or add a synthetic
-FULL_SYNC in this work unit.
+- An earlier command's `[addr,next)` spans the E9 slot: H-rdp-length-skip;
+  compare that opcode's length with the reference table.
+- The E9 bytes enter/leave pending-command state: H-rdp-boundary-carry.
+- No authoritative range covers the aligned address: H-rdp-source-divergence;
+  add buffer provenance/range IDs next.
+- Addresses and boundaries match yet E9 is not decoded: instrument the exact
+  raw bytes at the first mismatch before proposing any fix.

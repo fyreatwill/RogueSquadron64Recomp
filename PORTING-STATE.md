@@ -51827,3 +51827,33 @@ Logs:
 `scratch/s73_post_a_scene/s670_postsec2_pulse_4_20260812005024/run.log`.
 
 ### Residual → item -421 stays open; next build one same-task E9 dispatch-stage discriminator.
+
+## Session 676 (2026-08-12) — item -421: E9 loss is before authoritative RDP dispatch
+
+Built the three-stage discriminator under `ROGUESQ_LOG_E9_DISPATCH=1` and ran
+`env BUDGET_S=2400 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh`.
+The first build instrumented `processDisplayLists`; the live LLE-solo path is
+`processRDPLists`, so pre/handler positive controls were zero and that run was
+discarded. The corrected build instrumented raw opcode decode in
+`processRDPLists`, `GBI_RDP::fullSync`, and `State::fullSync`.
+
+Positive control passed in the same run: millions of authoritative commands,
+nonzero E7 and E9, and matching display-list counters across
+`stage=pre` → `stage=handler` → `stage=state`. Attempt 5 was recovery-active,
+reached section 2, fired the established input pulse, and held thr13 alive.
+After the section-2 marker, `[dl-sync-probe2]` reported 13,132 task probes,
+6,719 with `e9_aligned>0`, aligned E9 sum 32,150. Across the same window the
+authoritative parser's cumulative E9 counter advanced by only 2 (E7 delta 0);
+all authoritative E9s that appeared reached the handler and State stages.
+
+This confirms H-e9-pre-dispatch-loss. It rules out map/handler replacement and
+State/runner accounting as the dominant loss: those stages preserve every E9
+the authoritative parser actually decodes. The remaining mechanism is a
+control-flow or command-advance mismatch before dispatch. No mitigation was
+added. The persistent instrument and its exported RT64 patch are the landed
+change.
+
+Log:
+`scratch/s73_post_a_scene/s670_postsec2_pulse_5_20260812013350/run.log`.
+
+### Residual → compare authoritative parser advances with the Factor 5 reference on matched post-sec2 streams.

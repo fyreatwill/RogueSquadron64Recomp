@@ -29,7 +29,7 @@ diff --git a/src/contrib/plume b/src/contrib/plume
 -Subproject commit 51b1ad443b9f202c5cfc930ae25345d3f2ba7716
 +Subproject commit 51b1ad443b9f202c5cfc930ae25345d3f2ba7716-dirty
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..ed69a87 100644
+index 6255872..80121b1 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
 @@ -4,10 +4,18 @@
@@ -51,7 +51,25 @@ index 6255872..ed69a87 100644
  namespace RT64 {
      namespace GBI_RDP {
          void noOp(State *state, DisplayList **dl) {
-@@ -420,6 +428,14 @@ namespace RT64 {
+@@ -253,6 +261,17 @@ namespace RT64 {
+         }
+ 
+         void fullSync(State *state, DisplayList **dl) {
++            static const bool e9Log = [] {
++                const char *e = std::getenv("ROGUESQ_LOG_E9_DISPATCH");
++                return e && *e && *e != '0';
++            }();
++            if (e9Log) {
++                std::fprintf(stderr,
++                    "[e9-dispatch] dlc=%llu stage=handler w0=0x%08X w1=0x%08X\n",
++                    (unsigned long long)state->displayListCounter,
++                    (*dl)->w0, (*dl)->w1);
++                std::fflush(stderr);
++            }
+             RT64_LOG_PRINTF("GBI_RDP::fullSync()");
+             state->fullSync();
+             state->dpInterrupt();
+@@ -420,6 +439,14 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -66,7 +84,7 @@ index 6255872..ed69a87 100644
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +471,14 @@ namespace RT64 {
+@@ -455,6 +482,14 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
@@ -81,7 +99,7 @@ index 6255872..ed69a87 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +488,163 @@ namespace RT64 {
+@@ -464,6 +499,163 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -245,7 +263,7 @@ index 6255872..ed69a87 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +658,366 @@ namespace RT64 {
+@@ -477,6 +669,366 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -612,7 +630,7 @@ index 6255872..ed69a87 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,6 +1078,66 @@ namespace RT64 {
+@@ -537,6 +1089,66 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -1284,10 +1302,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..1e85433 100644
+index dccaa87..0058975 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,250 @@
+@@ -5,12 +5,258 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1307,6 +1325,14 @@ index dccaa87..1e85433 100644
  namespace RT64 {
      static FILE *displayListFp = nullptr;
  
++    static bool rs64LogE9Dispatch() {
++        static const bool enabled = [] {
++            const char *e = std::getenv("ROGUESQ_LOG_E9_DISPATCH");
++            return e && *e && *e != '0';
++        }();
++        return enabled;
++    }
++
 +    // --- s665 garbage-prev wild SETCIMG drop (decode-site; default OFF) ---
 +    // ORIGIN (s663): freelist stomp = RT64 color writeback of garbage SETCIMG
 +    // addr=0x1F0D74 w=1161 (covers phys 0x1F3CC0). Operands not legitimate —
@@ -1538,10 +1564,35 @@ index dccaa87..1e85433 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -114,6 +352,17 @@ namespace RT64 {
+@@ -112,7 +358,40 @@ namespace RT64 {
+         // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
+         DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
-             opCode = (dl->w0 >> 24) & opCodeMask;
- 
+-            opCode = (dl->w0 >> 24) & opCodeMask;
++            const uint8_t rawOpCode = dl->w0 >> 24;
++            opCode = rawOpCode & opCodeMask;
++
++            if (rs64LogE9Dispatch()) {
++                static uint64_t allDecoded = 0;
++                static uint64_t e7Decoded = 0;
++                static uint64_t e9Decoded = 0;
++                static uint64_t lastReport = 0;
++                allDecoded++;
++                e7Decoded += (rawOpCode == 0xE7);
++                e9Decoded += (rawOpCode == 0xE9);
++                if (rawOpCode == 0xE9 || allDecoded - lastReport >= 100000) {
++                    lastReport = allDecoded;
++                    std::fprintf(stderr,
++                        "[e9-dispatch] dlc=%llu stage=pre all=%llu e7=%llu e9=%llu raw=0x%02X w0=0x%08X w1=0x%08X\n",
++                        (unsigned long long)state->displayListCounter,
++                        (unsigned long long)allDecoded,
++                        (unsigned long long)e7Decoded,
++                        (unsigned long long)e9Decoded,
++                        rawOpCode, dl->w0, dl->w1);
++                    std::fflush(stderr);
++                }
++            }
++
 +            // ROGUESQ_LOG_RDPHIST=1 — opcode census taken by the real parser.
 +            // The [full-hist] walker in dpc_bridge steps a fixed 8 bytes per
 +            // command, so triangles (32-48 bytes) desynchronise it and its
@@ -1552,11 +1603,10 @@ index dccaa87..1e85433 100644
 +            if (rs64RdpHist()) {
 +                rs64RdpHistCount(opCode);
 +            }
-+
+ 
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
-                 extendedFunction(state, &dl);
-@@ -136,13 +385,155 @@ namespace RT64 {
+@@ -136,13 +415,155 @@ namespace RT64 {
                      break;
                  }
  
@@ -3861,7 +3911,7 @@ index 6051f4e..e4a8fc3 100644
          uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
          if (hashSet.find(hash) == hashSet.end()) {
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
-index 10f98af..a7cf4b3 100644
+index 10f98af..9eac4f2 100644
 --- a/src/hle/rt64_state.cpp
 +++ b/src/hle/rt64_state.cpp
 @@ -4,8 +4,17 @@
@@ -4881,7 +4931,32 @@ index 10f98af..a7cf4b3 100644
              }
              else if (callTile.reinterpretTile) {
                  struct ReinterpretHashData {
-@@ -765,6 +1674,35 @@ namespace RT64 {
+@@ -762,9 +1671,60 @@ namespace RT64 {
+     }
+ 
+     void State::fullSync() {
++        {
++            static const bool e9Log = [] {
++                const char *e = std::getenv("ROGUESQ_LOG_E9_DISPATCH");
++                return e && *e && *e != '0';
++            }();
++            if (e9Log) {
++                const uint32_t phase = rs64_phase_ord ? rs64_phase_ord() : 0u;
++                static uint32_t budgetPhase = UINT32_MAX;
++                static uint32_t budget = 0;
++                if (budgetPhase != phase) {
++                    budgetPhase = phase;
++                    budget = 0;
++                }
++                if (budget++ < 256) {
++                    std::fprintf(stderr,
++                        "[e9-dispatch] phase=%u dlc=%llu stage=state workload=%llu\n",
++                        phase, (unsigned long long)displayListCounter,
++                        (unsigned long long)workloadCounter);
++                    std::fflush(stderr);
++                }
++            }
++        }
          flush();
          submitFramebufferPair(FramebufferPair::FlushReason::ProcessDisplayListsEnd);
  
@@ -4917,7 +4992,7 @@ index 10f98af..a7cf4b3 100644
          // Append any framebuffer operations to the end of the last framebuffer pair.
          int workloadCursor = ext.workloadQueue->writeCursor;
          Workload &workload = ext.workloadQueue->workloads[workloadCursor];
-@@ -1149,6 +2087,13 @@ namespace RT64 {
+@@ -1149,6 +2109,13 @@ namespace RT64 {
                  if (!fbPair.drawColorRect.isEmpty()) {
                      const auto &colorImg = fbPair.colorImage;
                      const auto &depthImg = fbPair.depthImage;
@@ -4931,7 +5006,7 @@ index 10f98af..a7cf4b3 100644
                      colorHeight = fbPair.drawColorRect.bottom(true);
                      colorWriteWidth = (colorHeight > 1) ? colorImg.width : std::min(fbPair.drawColorRect.right(true), int32_t(colorImg.width));
                      depthWriteWidth = 0;
-@@ -1357,12 +2302,30 @@ namespace RT64 {
+@@ -1357,12 +2324,30 @@ namespace RT64 {
                              uint32_t readRowCount = colorFb->height - colorFb->readHeight;
                              uint32_t readFbBytes = readRowBytes * readRowCount;
                              uint32_t storageAddress = colorImg.address + readRowBytes * colorFb->readHeight;
@@ -4967,7 +5042,7 @@ index 10f98af..a7cf4b3 100644
                              }
  
                              colorFb->readHeight = colorFb->height;
-@@ -1401,6 +2364,18 @@ namespace RT64 {
+@@ -1401,6 +2386,18 @@ namespace RT64 {
                                  uint32_t readRowCount = depthFb->height - depthFb->readHeight;
                                  uint32_t readFbBytes = readRowBytes * readRowCount;
                                  uint32_t storageAddress = depthImg.address + readRowBytes * depthFb->readHeight;
@@ -4986,7 +5061,7 @@ index 10f98af..a7cf4b3 100644
                                  workload.fbStorage.store(pairCursor, storageAddress, &RDRAM[storageAddress], readFbBytes);
                                  FramebufferChange *depthFbChange = depthFb->readChangeFromStorage(ext.framebufferGraphicsWorker, workload.fbStorage, scratchFbChangePool, Framebuffer::Type::Depth,
                                      G_IM_FMT_DEPTH, pairCursor, depthFb->readHeight, readRowCount, ext.shaderLibrary);
-@@ -1409,6 +2384,7 @@ namespace RT64 {
+@@ -1409,6 +2406,7 @@ namespace RT64 {
                                      depthTarget->copyFromChanges(ext.framebufferGraphicsWorker, *depthFbChange, depthFb->width, readRowCount, depthFb->readHeight, ext.shaderLibrary);
                                      depthFbChanged = true;
                                  }
@@ -4994,7 +5069,7 @@ index 10f98af..a7cf4b3 100644
  
                                  depthFb->readHeight = depthFb->height;
                              }
-@@ -1426,11 +2402,21 @@ namespace RT64 {
+@@ -1426,11 +2424,21 @@ namespace RT64 {
                              depthFb->lastWriteType = Framebuffer::Type::Depth;
                          }
  
@@ -5020,7 +5095,7 @@ index 10f98af..a7cf4b3 100644
                          }
                      }
  
-@@ -1462,11 +2448,41 @@ namespace RT64 {
+@@ -1462,11 +2470,41 @@ namespace RT64 {
                          // 1MB gate is safe (real N64 framebuffers are always
                          // at >=0x80100000) and unblocks Factor 5 boot.
                          if (colorFb->addressStart >= 0x100000) {
@@ -5064,7 +5139,7 @@ index 10f98af..a7cf4b3 100644
                          }
                      }
  
-@@ -1873,6 +2889,25 @@ namespace RT64 {
+@@ -1873,6 +2911,25 @@ namespace RT64 {
          clearExtended();
      }
      
@@ -5090,7 +5165,7 @@ index 10f98af..a7cf4b3 100644
      void State::updateScreen(const VI &newVI, bool fromEarlyPresent) {
          // If the debugger has paused the plugin, keep submitting the last workload and screen VI for rendering and a present event.
          if (debuggerInspector.paused && !fromEarlyPresent) {
-@@ -1899,6 +2934,132 @@ namespace RT64 {
+@@ -1899,6 +2956,132 @@ namespace RT64 {
              }
          }
          
@@ -5223,7 +5298,7 @@ index 10f98af..a7cf4b3 100644
          const int presentCursor = ext.presentQueue->writeCursor;
          Present &present = ext.presentQueue->presents[presentCursor];
          present.fbOperations.clear();
-@@ -1959,8 +3120,20 @@ namespace RT64 {
+@@ -1959,8 +3142,20 @@ namespace RT64 {
                  lastScreenFactorCounter++;
              }
  
@@ -5246,7 +5321,7 @@ index 10f98af..a7cf4b3 100644
                  return;
              }
          }
-@@ -1972,7 +3145,11 @@ namespace RT64 {
+@@ -1972,7 +3167,11 @@ namespace RT64 {
          // Permit upload when force flag is set and the VI carries a real fb address.
          static const bool s_us_force_render = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -5259,7 +5334,7 @@ index 10f98af..a7cf4b3 100644
          }();
          const bool renderGate = newVI.visible() ||
                                  (s_us_force_render && screenFbAddress != 0 && screenFbSiz != 0);
-@@ -2033,26 +3210,51 @@ namespace RT64 {
+@@ -2033,26 +3232,51 @@ namespace RT64 {
          // it to the swapchain.
          static const bool s_us_force_advance = [](){
              const char *v = std::getenv("ROGUESQ_PRESENT_EARLY_FORCE");
@@ -5329,6 +5404,13 @@ index 10f98af..a7cf4b3 100644
              }
          }
  
+@@ -2910,4 +4134,4 @@ namespace RT64 {
+             break;
+         }
+     }
+-};
+\ No newline at end of file
++};
 diff --git a/src/hle/rt64_workload.cpp b/src/hle/rt64_workload.cpp
 index b4c85f5..880611b 100644
 --- a/src/hle/rt64_workload.cpp
