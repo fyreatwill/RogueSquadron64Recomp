@@ -237,20 +237,25 @@ work unit from the top open milestone, so this ladder is what keeps it from idli
 **M3 — first gameplay: OPENED (s50), still open.** AVAILABLE CRAFT and SELECT YOUR CRAFT reachable
 and stable; ~20 crash classes closed s50-s294. Leave-key "hangar-flight" OVERTURNED s150; **s577
 REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvation product-fixed via
-`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s670**:
+`ROGUESQ_FS_PIPE_INJECT` (default OFF; items -354..-358). Pipeline status as of **s671**:
 - thr11 (`saveServiceWorker` `0x8006F2CC`) → sec4 → thr12 (`hudDisplayUpdateWorker` via
   `loadLevelTextureCache`) → **sec2 LIVE** under product multi-header restore.
   **s668 dual-source:** thr11d→ok136c→thr12→sec2. **s669 dual-source offline:**
   post-sec2 outdoor content LIVE ~195–200s (VI 512 0x620000/0x690000, present
   swap FIRE) then **menu sec3 return**; thr12 long-lived; **rdpFs plateau**
   (syncs=0 / E9 starved) entire thr13 window; packTlut=0. **s670 split:**
-  menu-return/thr12-teardown is **input-gated** (-422, single-source Start
-  pulse keeps thr12 alive >1000s, no sec3 return) while the **rdpFs plateau
-  itself is untouched by both inject (Arm A) and input (Arm B)** — stays open
-  as -421. Residual rank: (1) **-422 2nd-confirm** then **-421 rdpFs
-  starvation mechanism / packTlut** (-373), (2) B8 co-gate -393, (3) -387
-  **5×**. Do **not** productize DROP_GARBAGE_CIMG or the -422 input pulse
-  (single-source); do **not** re-soak thr11d rate (-419 CLOSED).
+  menu-return/thr12-teardown is **input-gated** (-422). **s671: -422
+  CONFIRMED dual-source and CLOSED** (2/2 pulsed attempts: thr12 alive
+  >1000s, 0 sec3 return, 0 packTlut) while the **rdpFs plateau itself is
+  untouched by both inject (Arm A) and input (Arm B)** — stays open as -421,
+  now with a concrete candidate mechanism (~38% post-sec2 tasks show a raw
+  E9 byte in the naive walker while 99.99% show runner syncs=0 —
+  H-e9-not-translated vs H-e9-walker-misaligned, undistinguished). Residual
+  rank: (1) **-421 E9-alignment check** (walker-misaligned vs
+  not-translated) then rdpFs starvation mechanism / packTlut (-373), (2) B8
+  co-gate -393, (3) -387 **5×**. Do **not** productize DROP_GARBAGE_CIMG; do
+  **not** re-soak thr11d rate (-419 CLOSED) or re-run the -422 input pulse
+  (CLOSED, no residual).
 - Co-gates: recovery (-374/-413/-414/-418), mat3inv (-375), ship (-376/-377/-392/-393),
   class-D (-378), FORCE_STATE6 (-381 CLOSED), freeroll (-382..-384), thr12 path
   LIVE under headers (-385 dissolved), sinfApprox (-386 1×), do_rom_read
@@ -281,27 +286,27 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
 
 ### Active M3 pipeline (s577–s670) — open residuals only
 
--422. **(s670→) post-sec2 menu-return is input-gated — H-menu-return-input
-    SUPPORTED single-source; splits -421.** Arm A (offline, s668/669 data
-    re-confirmed): `synth` +5864/+5892 during thr13 while `rdpFs` delta 0/+2
-    → **H-inject-misses-mission REFUTED** (inject reaches mission phase,
-    doesn't move the real counter; residual is H-mission-dl-no-e9, not
-    inject reach). Arm B (new freeroll, 1 scored attempt): log-phase-gated
-    Start pulse @ sec2+8s → thr12(id=13) survived **>1000s** post-sec2 (0
-    thr-destroy id=13, 0 section-3 return, 0 packTlut) vs baseline's unforced
-    ~195–200s teardown+menu-return. rdpFs stayed frozen (9003) throughout —
-    plateau itself NOT resolved by input. **Not soak-queue-able** (single
-    attempt needs ~1400–2000s wall; soak cap 600s) — must run in-session,
-    `BUDGET_S>=2400`. Bugfix landed in
-    `scratch/agent/s670_postsec2_pulse_freeroll.sh` (score_log read the
-    wrong file for the pulse marker + unscoped thr13c/d search — see
-    Session 670 for detail). Next: 2nd confirming in-session run
-    (`TARGET_PULSED=2`); if confirmed, test whether ANY input (not just
-    Start) delays teardown and whether sustained input holds it
-    indefinitely or just delays. Full: Session 670.
+-422. **(s670→s671) post-sec2 menu-return is input-gated — H-menu-return-input
+    CONFIRMED dual-source; CLOSED. Splits -421.** Arm A (offline, s668/669
+    data re-confirmed): `synth` +5864/+5892 during thr13 while `rdpFs` delta
+    0/+2 → **H-inject-misses-mission REFUTED** (inject reaches mission phase,
+    doesn't move the real counter). Arm B: two independent recovery-active,
+    pulsed attempts (s670 original + s671 2nd confirm) both show: Start pulse
+    @ sec2+8s → thr12(id=13) created → **never destroyed**, 0 section-3
+    return, 0 packTlut, held alive **>1000s** (1187–1372s) vs baseline's
+    unforced ~195–200s teardown+menu-return. rdpFs stayed frozen (9003)
+    throughout both — plateau itself untouched by input; belongs to -421.
+    **Not soak-queue-able** (single attempt needs ~1400–2000s wall; soak cap
+    600s) — must run in-session, `BUDGET_S>=2400`.
+    `scratch/agent/s670_postsec2_pulse_freeroll.sh` score_log() bugfix
+    (pulse marker lives in launcher.stdout not run.log; thr13c/d search must
+    scope to `>= sec2_ln`) verified correct on s671's run. CLOSED — no
+    further residual (outcome-A follow-ups like "does ANY input work" /
+    "does packTlut ever fire given more hold time" deprioritized below
+    -421's mechanism). Full: Sessions 670-671.
 
--421. **(s669→s670) post-sec2 FULL_SYNC plateau — OPEN, narrowed to the FS
-    mechanism only (menu-return/thr12-teardown split out to -422).**
+-421. **(s669→s671) post-sec2 FULL_SYNC plateau — OPEN, narrowed to the FS
+    mechanism only (menu-return/thr12-teardown CLOSED as -422).**
     s669 offline dual-source (s668 att2+att3): post-sec2 outdoor content LIVE
     ~195–200s (VI 512 0x620000↔0x690000, present FIRE swap, ~5900 tasks
     tris=42) then thr12 destroy → **menu sec3** return; packTlut=0 crash=0.
@@ -309,10 +314,23 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     synth +~5.9k; runner syncs=0 ~5866–5894 vs syncs>0=3; E9=6 vs F7~11.7k.
     Same family as -349 but mission-overlay phase (not post-exit hangar).
     **s670:** rdpFs stayed frozen (9003) even under a >1000s post-sec2 input
-    pulse hold (-422) — plateau is independent of both FS_PIPE_INJECT reach
-    and player input. Next: why mission-phase DLs lack E9 (H-mission-dl-no-e9).
-    Scorer: `scratch/agent/s669_postsec2_offline_score.py`. Full: Sessions
-    669-670.
+    pulse hold (-422, now CLOSED) — plateau is independent of both
+    FS_PIPE_INJECT reach and player input.
+    **s671 new lead (already-captured data, no new run):** scoped
+    `[dl-sync-probe]` to post-sec2 lines in the -422 confirming run —
+    11328/29780 (~38%) post-sec2 tasks show `e9_a>0`/`e9_b>0` (naive
+    fixed-8-byte-stride walk finds an 0xE9 byte), yet 29777/29780 report
+    runner `syncs=0`. Two competing, undistinguished explanations:
+    **H-e9-not-translated** (guest DL genuinely requests SYNC_FULL, runner
+    drops/fails to dispatch it — would directly explain the plateau) vs
+    **H-e9-walker-misaligned** (the naive walker doesn't respect the F5
+    ucode's variable-length inline-data commands per
+    `docs/F5-UCODE-REFERENCE.md`, unlike the existing six-command-aware
+    `ROGUESQ_LOG_DL_SYNC2` walker built for -415..-417; an unaligned read
+    can land mid-command and hit a coincidental 0xE9 byte). Check the
+    boring explanation (walker misalignment) first, per iron rule 5, before
+    H-e9-not-translated enters this file as a real finding. Scorers:
+    `scratch/agent/s669_postsec2_offline_score.py`. Full: Sessions 669-671.
 
 -420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
     Outcome A (content advances; residual → -421).**

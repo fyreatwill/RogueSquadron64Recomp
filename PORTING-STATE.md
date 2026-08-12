@@ -51558,3 +51558,111 @@ queue's 600s hard cap by a wide margin; must be run in-session with
 
 ### Residual → -422 (new), -421 narrowed (FS plateau only)
 
+## Session 671 — item -422 2nd confirming run: CONFIRMED dual-source; new -421 lead found in already-captured data (E9 present in raw DL but runner syncs stay 0)
+
+**Work unit:** NEXT.md's assigned 2nd confirming run of item -422
+(post-sec2 menu-return input-gating), `BUDGET_S=2400 TARGET_PULSED=2`,
+`scratch/agent/s670_postsec2_pulse_freeroll.sh` → `scratch/agent/s670_logs/
+wrapper2.stdout`. HYPOTHESIS-ID: `m3-post-exit-fs-stall`.
+
+**Housekeeping note:** at session start, `scratch/agent/s670_logs/
+wrapper.stdout` (no "2") looked like unscored leftover data suggesting an
+interrupted prior iteration. Traced it: it is NOT new — it's the exact same
+attempt tag (`s670_postsec2_pulse_5_20260811192406`) already hand-scored and
+closed in Session 670 (committed `ed46d83f`). The file's `score_log()` output
+shows the OLD pre-bugfix field format (`thr13c=` not
+`thr13c_post_sec2=`), confirming the bugfix described in Session 670 was
+applied to the script *after* that run executed and was never re-run against
+it — Session 670's numbers came from hand-analysis of the raw log, not from
+re-running the (by-then-fixed) `score_log()`. No new data was in this file;
+it was correctly left unfolded.
+
+### Run
+
+5 attempts, `BUDGET_S=2400`: attempt 1 pre-engage (0 hangar-sel, wall
+timeout); attempt 2 **engaged + recovery-active** — sec2 fired (`sec2_ln=
+347715`), pulse fired at `hold_16` (+8s post-sec2, confirmed twice in
+`launcher.stdout` line 13/14 — same duplicate-print behavior as s670),
+ran to budget-adjacent completion at **dur=1370s**; attempts 3-4
+recovery-silent (2/2, matches historical ~2/3 silent rate); attempt 5
+pre-engage (budget ran out mid-hangar-sel wait).
+
+This time `score_log()` (the bugfixed version) scored correctly:
+`pulsed_n=2 sec3_after_pulse= pulse_ln=13 thr13c_post_sec2=348431
+thr13d_post_sec2=none(still-alive)`. Hand-verified directly against
+`scratch/s73_post_a_scene/s670_postsec2_pulse_2_20260811200701/run.log`
+(1.3M+ lines):
+- `[thr-create-id] id=13 ... entry=0x800495FC` at L348430 — the LAST
+  thread lifecycle event in the entire file. No `[thr-destroy]` for id=13
+  anywhere afterward (grep across whole file: 0 hits).
+- `packTlut`: 0. `CRASH`: 0. `section-3: 2` per the run's own summary
+  counter, but (matching s670's finding) both are the pre-sec2 menu-nav
+  cycles — 0 section-3 returns after `sec2_ln`.
+- Process still alive at kill time (dur=1370s, vs the original s670
+  attempt's ~1187-1372s) — same shape, independent attempt, different
+  wall-clock session (today, 2 hours after s670's original attempt).
+
+### Verdict: H-menu-return-input CONFIRMED (2/2 dual-source)
+
+s670's original attempt (`_5_20260811192406`) + this session's attempt 2
+(`_2_20260811200701`) are two independent recovery-active, pulsed attempts,
+both showing: pulse fires post-sec2 → thr12 (id=13) created → never
+destroyed → 0 section-3 return → 0 packTlut → held alive to budget
+exhaustion (>1000s both times, vs baseline's unforced ~195-200s teardown).
+Iron rule 4 satisfied — promotes from SUPPORTED single-source to CONFIRMED.
+**Item -422 CLOSED.** The remaining open question from s670's outcome-A plan
+(whether ANY input works, delay-vs-indefinite, whether packTlut ever fires
+given more hold time) is now lower priority than -421's actual mechanism,
+per the existing residual rank.
+
+### New lead for -421 (rdpFs plateau), found in already-captured data — no new run needed
+
+While hand-verifying the confirming run, noticed the existing
+`[dl-sync-probe]` instrument (already firing every task under the freeroll's
+standard `ROGUESQ_LOG_DL_SYNC=1`, no new instrumentation needed) had never
+been tallied in aggregate before — only spot-read per-task. Scoped to
+lines `>= sec2_ln=347715` (post-sec2 mission phase only) in the same
+`pulse_2_20260811200701/run.log`:
+
+- 29780 `[dl-sync-probe]` lines post-sec2. `e9_a`/`e9_b` (proper
+  control-flow-respecting tree walks, one treating opcode 0xB5 as
+  end-of-DL, one not) are BOTH zero in 18452/29780 (~62%), but **11328/29780
+  (~38%) show e9_a>0 or e9_b>0** — i.e. a large fraction of post-sec2
+  mission tasks DO contain the SYNC_FULL byte value in their raw command
+  walk.
+- Cross-referenced against the same window's `[runner] task ... syncs=`
+  field (the runner's own translated/dispatched RDP command count, the
+  actual signal `rdpFs`/item -421's plateau is measured from): **29777/29780
+  post-sec2 tasks report `syncs=0`; only 3 show `syncs=1`.**
+
+Read together: a large fraction of post-sec2 mission DLs contain what the
+naive fixed-8-byte-stride walker sees as an E9 opcode, yet the runner's own
+translated-command counter almost never registers a real sync. Two
+competing explanations, NOT yet distinguished:
+- **H-e9-not-translated:** the guest DL genuinely contains SYNC_FULL
+  requests that our RDP command translator/dispatcher drops or fails to
+  execute for this task class — would directly explain the -421 plateau as
+  a translation-path bug, not a content-absence issue.
+- **H-e9-walker-misaligned:** `walk_tree`'s fixed 8-byte stride (used for
+  `e9_a`/`e9_b`) does not account for the F5 ucode's variable-length
+  inline-data commands (MoveMem/TriGen/Tri/TexrectGen/SetOtherMode_*_EX —
+  see `docs/F5-UCODE-REFERENCE.md`), unlike the existing
+  `ROGUESQ_LOG_DL_SYNC2` six-command-aware walker (built for the
+  cimg-origin-desync investigation, `-415..-417`). An unaligned walk can
+  land mid-command and read a coincidental 0xE9 byte that isn't a real
+  opcode boundary — the 38% hit rate could be entirely this artifact.
+
+Not adjudicated this session (out of scope for the assigned -422 work
+unit; flagging per iron rule 5 "check the boring thing first" — an
+instrumentation alignment bug is the boring explanation and must be ruled
+out before H-e9-not-translated enters CURRENT-TRUTH). Full next-step design
+in `scratch/agent/NEXT.md`.
+
+### Rules out / confirms
+
+- H-menu-return-input CONFIRMED (was SUPPORTED single-source in s670).
+- Old `wrapper.stdout` leftover data reconfirmed as already-closed s670
+  material — not a missed/interrupted iteration.
+
+### Residual → -421 gets a concrete next-step candidate (E9-alignment check on the existing dl-sync-probe2 walker); -422 fully CLOSED, no further residual.
+
