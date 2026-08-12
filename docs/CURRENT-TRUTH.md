@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s706; compacted in maintenance s679)
+## Current truth (reviewed through s707; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -493,8 +493,20 @@ maintenance pass. Closed lineages are not backlog items.
    writes over 4,199 VI/~70s. Thus **H-debugger-route is REFUTED** and
    **H-core-environment-route is SUPPORTED**: the debugger-off core itself
    remains 320, not merely its callbacks. This does not phase-qualify a target
-   watch. Next vary the currently dummy video plugin with the same direct-poll
-   witness before another target watch or E9 reroll.
+   watch. **SUPERSEDED s707:** H-core-environment-route was believable because
+   dummy video plus debugger/RSP/emulator variants all stayed at 320; Rice
+   differs only at the GFX plugin and reaches the documented driven phases.
+   **s707 video-plugin A/B:** three concurrent 70-second retail arms,
+   each with separate config, eleven PIF-observed Starts, callback + direct
+   VI controls, and a whole-RDRAM write watch, cleanly initialized. Dummy
+   (4,195 VI; 11,774,568 writes) and Glide64MK2 (4,177 VI; 11,725,357 writes)
+   each stayed at 320, but Rice (4,182 VI; 111,727,025 writes) transitioned
+   320→640 at VI 99, 640→1024 at VI 1,014, then 1024→512 / `0x006AB400` at
+   VI 2,279. Thus **H-dummy-video-route is CONFIRMED**: a real GFX plugin can
+   phase-qualify the retail oracle; Glide's live 320-only outcome is plugin-
+   specific, not an initialization failure. The oracle recovery-cell watch is
+   now qualified under Rice; do that bounded ground-truth measurement before
+   changing the recomp E9 tracer.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -52504,3 +52504,30 @@ a recovery-cell watch because no arm reached the desired phase. Logs:
 `scratch/agent/s706_oracle_vi_poll_retry/` (discarded lifecycle-failure logs:
 `scratch/agent/s706_oracle_vi_poll/`). The next bounded comparison changes
 only the dummy video plugin, retaining the direct-poll and callback controls.
+
+## Session 707 (2026-08-12) — Rice video phase-qualifies the retail oracle
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 45,193 bytes, so maintenance did
+not trigger. Built the existing oracle frontend, then smoke-tested dummy,
+Glide64MK2, and Rice GFX arms. Every smoke arm attached cleanly and produced
+both width-320 witnesses plus a high whole-RDRAM write count. The full arms
+ran concurrently for 70 seconds with separate configs, the same retail ROM,
+DEBUGGER=1/pure interpreter, current RSP HLE, eleven Starts at 6..56 seconds,
+callback/direct VI traces, PIF trace, and whole-RDRAM watch.
+
+All three arms observed all eleven PIF Start reads and their direct/callback
+320 controls. Dummy stayed at 320 for 4,195 VI with 11,774,568 writes;
+Glide64MK2 also stayed at 320 for 4,177 VI with 11,725,357 writes. Rice
+reached 640 at VI 99, 1024 at VI 1,014, and 512 origin `0x006AB400` at VI
+2,279, completing 4,182 VI with 111,727,025 writes. This controlled result
+confirms H-dummy-video-route: the core can run the retail CPU/memory path to
+the hangar when driven by a compatible real GFX plugin. Glide's 320-only
+result is a live, plugin-specific route difference, not an absent instrument.
+Logs: `scratch/agent/s707_oracle_video_ab/`.
+
+This overturns the working H-core-environment-route framing from s706: it was
+believable because dummy and two RSP/emulator/debugger variations all remained
+at 320, but Rice changes only the GFX route and reaches the documented phases.
+The next unit is now the already-designed Rice-qualified retail recovery-cell
+watch at physical `0x0076B768:0x0076B76C`, retaining the same-run phase,
+PIF, and whole-RDRAM controls; leave the recomp E9 tracer unchanged.

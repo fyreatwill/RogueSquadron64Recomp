@@ -1,38 +1,40 @@
-# NEXT work unit (after s706: test whether dummy video is the oracle's remaining boot-route difference)
+# NEXT work unit (after s707: phase-qualified retail recovery-cell watch under Rice)
 
-HYPOTHESIS-ID: m3-oracle-boot-environment
+HYPOTHESIS-ID: m3-oracle-recovery-cell-origin
 
-Do not add a target watch or alter the E9 tracer. Use the existing
-`--vi-poll` witness to run a concurrent three-arm retail oracle comparison:
-current dummy-video control, `mupen64plus-video-glide64mk2.dylib`, and
-`mupen64plus-video-rice.dylib`. Use debugger=1/emulator=0, the existing RSP
-HLE, separate config directories, and the 6..56-second eleven-Start schedule.
-First smoke-test each video plugin for a clean 5-second run; if a plugin needs
-a display/context and cannot initialize, record that measured failure and do
-not treat its missing phase trace as a null.
+Use the phase-qualified Rice video arm to run the retail ROM through the
+hangar and watch physical `0x0076B768:0x0076B76C`, with a simultaneous
+whole-RDRAM `0:0x800000` positive control. Keep debugger=1/emulator=0,
+`--vi-poll`, `--vi-trace`, `--pif-trace`, separate config, and the established
+6..56-second eleven-Start schedule. Do not alter the recomp E9 tracer.
 
 ## Competing hypotheses
 
-- **H-dummy-video-route:** either real-video arm reaches 640/1024/0x6ABxxx
-  while the dummy control remains 320.
-- **H-core-environment-route:** every initialized arm reports the initial 320
-  control but never a phase transition.
-- **H-video-plugin-unavailable:** a real-video arm fails before its direct
-  initial-320 control because the headless host cannot provide its required
-  context; it is explicitly uninstrumented, so no phase null is claimed for it.
+- **H-retail-writes-recovery-cell:** Rice reaches `0x006ABxxx` and the narrow
+  physical watch records one or more game writes with a guest PC.
+- **H-cell-is-runtime-only:** Rice reaches `0x006ABxxx`, the whole-RDRAM and
+  PIF/VI controls are live, but the narrow watch remains zero.
+- **H-rice-phase-control-fails:** Rice fails to reach 640/1024/`0x006ABxxx`;
+  the narrow zero is unqualified and no origin claim follows.
 
 ## Discriminating measurement
 
-The positive control is a visible initial `--vi-poll` width=320 sample in each
-initialized arm; each arm must also retain `--vi-trace`, `--pif-trace`, and
-`--watch-write 0:0x800000`. A real-video 640/1024/0x6ABxxx result confirms
-H-dummy-video-route; live 320-only polling in all initialized arms refutes it
-and supports H-core-environment-route; an initialization failure confirms only
-H-video-plugin-unavailable.
+The positive controls are Rice's visible 320→640→1024→512/`0x006ABxxx` phase
+trace, eleven PIF-observed Starts, and a high whole-RDRAM watch count in the
+same run. A narrow hit supports H-retail-writes-recovery-cell; a narrow zero
+with every control live supports H-cell-is-runtime-only (single source until
+corroborated); missing phase control proves only H-rice-phase-control-fails.
 
 ## Commands
 
     tools/oracle/build.sh
-    # Smoke-test dummy, Glide64MK2, and Rice for 5s, then launch all initialized
-    # arms concurrently for 70s with the explicit DEBUGGER=1 core path.
-    # Capture logs under scratch/agent/s707_oracle_video_ab/.
+    mkdir -p scratch/agent/s708_oracle_recovery_watch/rice
+    tools/oracle/build/rs64_oracle \
+      --core "$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" \
+      --rom "$HOME/Documents/Tools/rogue_squadron64/rogue_squadron.z64" \
+      --secs 70 --configdir scratch/agent/s708_oracle_recovery_watch/rice \
+      --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+      --oracle-debugger 1 --oracle-emulator 0 --vi-poll --vi-trace --pif-trace \
+      --watch-write 0:0x800000 --watch-write 0x76B768:0x76B76C \
+      --press '6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' \
+      > scratch/agent/s708_oracle_recovery_watch/rice/run.log 2>&1
