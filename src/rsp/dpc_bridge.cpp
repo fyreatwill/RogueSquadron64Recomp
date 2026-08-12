@@ -193,6 +193,7 @@ static std::atomic<uint32_t> g_inline_probe_trigen_entry_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_reload_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_exit_lines[5];
 static std::atomic<uint32_t> g_inline_probe_trigen_source_lines{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_boot_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
 extern "C" uint32_t rs64_phase_ord(void);
@@ -246,6 +247,7 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
         g_inline_probe_trigen_reload_lines.store(0, std::memory_order_release);
         for (auto &lines : g_inline_probe_trigen_exit_lines) lines.store(0, std::memory_order_release);
         g_inline_probe_trigen_source_lines.store(0, std::memory_order_release);
+        g_inline_probe_trigen_boot_lines.store(0, std::memory_order_release);
         g_inline_probe_summaries.store(0, std::memory_order_release);
     }
 }
@@ -329,8 +331,23 @@ extern "C" void rs64_inline_probe_trigen_entry(uint32_t r17) {
 
 static std::atomic<uint32_t> g_inline_probe_trigen_staged_dram{0};
 
-extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr) {
+extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_ff0,
+                                                  uint32_t staged_ff0) {
     g_inline_probe_trigen_staged_dram.store(dl_ptr & 0x7FFFFFu, std::memory_order_relaxed);
+    if (!log_inline_advance()) return;
+    const uint32_t line = g_inline_probe_trigen_boot_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 16) {
+        const uint32_t task = g_e9prov.task;
+        const uint32_t boot = boot_ff0 & 0x7FFFFFu;
+        const uint32_t staged = staged_ff0 & 0x7FFFFFu;
+        const uint32_t expected = dl_ptr & 0x7FFFFFu;
+        fprintf(stderr, "[inline-trigen-boot-ff0] task=%u phase=%u boot=0x%06X task_data=0x%06X post=0x%06X boot_task=%s post_task=%s boot_kind=%s\n",
+                task, rs64_phase_ord(), boot, expected, staged,
+                boot == expected ? "equal" : "MISMATCH",
+                staged == expected ? "equal" : "MISMATCH",
+                boot == 0 ? "zero" : boot == expected ? "mirror" : "other");
+        fflush(stderr);
+    }
 }
 
 extern "C" void rs64_inline_probe_trigen_sources(uint32_t r17, uint32_t entry_dram, uint32_t refill_dram) {

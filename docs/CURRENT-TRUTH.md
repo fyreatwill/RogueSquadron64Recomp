@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s720; compacted in maintenance s679)
+## Current truth (reviewed through s721; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -618,9 +618,16 @@ maintenance pass. Closed lineages are not backlog items.
    is refuted for this path. The first boot-relative input schedule was
    invalid (both starts pre-title); its phase-relative repair reached 512 but
    emitted no new 0x05 row there, while the qualified 640 rows establish the
-   source owner. Next: capture DMEM 0xFF0 immediately after real boot and
-   before host staging, to determine whether the host write mirrors or
-   overwrites the boot-provided contract.
+   source owner. **s721 boot-contract discriminator:** 33 phase-scoped rows
+   in phases 2 and 3 each show `boot_ff0=OSTask.data_ptr=post_stage_ff0`
+   (all `boot_kind=mirror`); the existing complete 0x05 source control also
+   fired 16 times with `staged_dram=refill_dram`. Thus
+   **H-boot-mirrors-host is SUPPORTED** and
+   **H-host-overwrites-boot/H-boot-does-not-initialize are REFUTED** for the
+   observed tasks. The host FF0 store is redundant, not the source of the
+   wrong TriGen continuation. Next: A/B suppress only that redundant host
+   FF0 store while retaining the source control; equivalent source rows prove
+   it has no hidden ordering role, while a divergence identifies such a role.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

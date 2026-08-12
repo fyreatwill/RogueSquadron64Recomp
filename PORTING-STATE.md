@@ -52825,3 +52825,27 @@ supported and a later generated-ucode writer is ruled out for this path. This
 does not yet establish whether host staging mirrors or overwrites the real
 boot contract. Next: log DMEM 0xFF0 immediately after boot and before staging.
 No mitigation changed.
+
+## Session 721 (2026-08-12) — boot already mirrors the host FF0 task-root stage
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 54,976 bytes, so maintenance did
+not trigger. The retail oracle has no built core/front-end in this workspace
+and its physical-RDRAM watches cannot observe RSP DMEM; its documented
+positive-control and phase limits were checked before using the bounded
+runtime probe. Added a phase-scoped pre/post field around the existing host
+`DMEM[0xFF0]=OSTask.data_ptr` write. The field is gated by
+`ROGUESQ_LOG_INLINE_ADVANCE` and resets with the existing inline-probe phase
+budget. The existing full 0x05 route/source row remained the same-run positive
+control.
+
+The prescribed phase-relative two-Start probe completed without `[CRASH]`.
+All 33 `inline-trigen-boot-ff0` rows across phases 2 and 3 say
+`boot=task_data=post` and `boot_kind=mirror` (for example task 0:
+`0x720108`, and phase-3 task 41: `0x728928`). Independently, 16 qualified
+`inline-trigen-source` controls fired with `staged_dram=refill_dram`
+(`0x73FB60`) on the established 0x05 route. H-boot-mirrors-host is supported;
+H-host-overwrites-boot and H-boot-does-not-initialize are refuted for these
+tasks. The host FF0 stage is therefore redundant and is not the writer that
+explains the wrong TriGen continuation. No mitigation changed. Next: build
+the default and FF0-stage-suppressed arms together and compare their
+phase-scoped source rows.
