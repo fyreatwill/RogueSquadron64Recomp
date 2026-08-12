@@ -157,7 +157,11 @@ run_soak_queue() {
   done
 }
 
-log "run starting $(date) — $(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh --describe) cap=$ITER_CAP"
+# Computed once per run and reused on every iteration's finished-line stamp,
+# so per-model/runner analysis of loop.log doesn't have to reverse-engineer
+# attribution from narrative text (see 2026-08-12 loop.log audit).
+runner_desc="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh --describe)"
+log "run starting $(date) — $runner_desc cap=$ITER_CAP"
 
 n=0
 waits=0
@@ -206,7 +210,8 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   rm -f "$AG/OUTCOME" "$AG/SUBSTITUTION.md"
   touch "$AG/ITER_START_MARK"   # the gate dates run artifacts against this
   echo 0 > "$AG/.stop_blocks"
-  git rev-parse HEAD > "$AG/ITER_START_HEAD" 2>/dev/null
+  iter_start_head="$(git rev-parse HEAD 2>/dev/null)"
+  printf '%s\n' "$iter_start_head" > "$AG/ITER_START_HEAD"
 
   # A rule-8 forced pivot (written after 3 consecutive non-ADVANCED iterations
   # on one HYPOTHESIS-ID) rides in as a preamble on the standard prompt.
@@ -442,7 +447,13 @@ else:
   fi
 
   status="$(tr -d '[:space:]' < "$AG/STATUS" 2>/dev/null)"
-  log "iteration $n finished $(date) STATUS=${status:-unset} HEAD=$(git rev-parse --short HEAD 2>/dev/null)"
+  # Ground truth, not narrative: whatever "## Session NNN" headings this
+  # iteration actually appended to PORTING-STATE.md, diffed against the HEAD
+  # captured before the iteration ran. A model's result text can claim any
+  # session number; the ledger diff cannot.
+  session_nums="$(git diff --unified=0 "$iter_start_head" -- PORTING-STATE.md 2>/dev/null \
+    | grep -oE '^\+## Session [0-9]+' | grep -oE '[0-9]+' | sort -nu | paste -sd, -)"
+  log "iteration $n finished $(date) STATUS=${status:-unset} HEAD=$(git rev-parse --short HEAD 2>/dev/null) $runner_desc session=${session_nums:-none}"
   if [ "$status" = "BLOCKED" ]; then
     [ -s "$AG/BLOCKED.md" ] || echo "# Agent set STATUS=BLOCKED without writing this file, $(date)" > "$AG/BLOCKED.md"
     # One automated attempt before the run ends. On success the next iteration
