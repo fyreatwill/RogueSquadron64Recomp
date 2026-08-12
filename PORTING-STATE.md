@@ -53295,3 +53295,42 @@ Queued `scratch/agent/soak_queue/s739_ovl12_splice.sh` (phase-latched
 section-2, CLIP `[ovl-route] res=0x04` required as same-run positive
 control). Do not babysit. Consume that soak before any further splice or
 reset-path change.
+
+## Session 740 (2026-08-12) — overlay-12 splice stops the reset; UJ storm is the residual
+
+Step 0 measured `CURRENT-TRUTH.md` at 32,630 bytes, so maintenance was not
+triggered. Consumed the queued s739 soak only; no rebuild or resplice.
+
+Artifact: `scratch/agent/soak_results/s739_ovl12_splice_20260812-152309/run.log`
+(353 s, rc=0, CRASH=0). Same-run positive control: CLIP `[ovl-route] res=0x04`
+n=1033 (counter to 65088, all `tgt=0x1DB0`). Treatment: OVL12 `res=0x0C`
+n=155960 (counter to 9980416) with live `tgt=0x1DB0/1F9C/1FAC/1FBC/1FCC`
+(~31189 each) plus rare `0x1DD8` (2) and `0x1DF4` (1). All 64 section-2
+`[e9-prov-reset]` rows have `reset=1 active=0 unpaired_reuse=0`; once the
+route is warm, per-task `ovl12=5 ovl12_ret=4`. s736 on the same latch had
+61/64 `active!=0` (later rows `reset=15 active=14`).
+
+This selects **H-splice-correct**. **H-ovl12-return-incomplete** is refuted
+for the wired jal-return set (`ovl12_ret=0` only while `ovl12=0`; no
+route-specific UJ after `tgt=0x1DB0` with resident `0xC`).
+**H-reset-independent** is refuted (`active=0`, `unpaired_reuse=0`).
+
+The splice does not move -421. Section-2 `[e9-prov]` is match=3/64 emit=24
+dispatch=3 (s736: 3/64, 22, 3). rdpFs 3933 at first sec2 → 3948 at process
+end (+15); s736 was 4020→4023. Present still FIREs pairs=4 on the outdoor
+512 pair.
+
+New vs s736 (same `Unhandled jump` runtime string, then 0): 2935 UJs and 79
+`[defer-drop]`. Class: 1937 OOB IMEM, 878 in-IMEM, **0** in the overlay-12
+window `0x1DB0..0x1FE0`. Pre-sec2 tops are `0x4F42`/`0x4A40` (line 238);
+post-sec2 top is `0xFA92` x1009 (line 238, `lhu $2, 0x64($2)` table 2).
+121 `[clip-stray] tgt=0x1DF4 153=0x00` are cinematic/main-resident, not an
+OVL12-return miss; one later `tgt=0x1FCC 153=0x24` is overlay 0x24.
+
+Overlay-12's extracted body has exactly two `jal 0x122C` payload DMAs
+(`r3=0x4E0` then `r3=0x380`, `r4` from the command stream masked `0xFF0`).
+Those dests are not the command tables (`0x64` / `0xD6`, F5-UCODE-REFERENCE
+dispatch-table audit). NEXT is a static wrap/legit-payload audit of those
+DMAs before any further splice. **ORIGIN:** not a new mitigation; the s739
+writer attribution (main `L_1DB0` `DMEM[0x152]=0`) stands, and this consume
+shows that writer is no longer on the section-2 path.

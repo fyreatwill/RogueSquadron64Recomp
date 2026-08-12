@@ -33,5 +33,12 @@ overlay-0C TriGen code.
 
 s739 landed that splice (fixup 6b, `OVL12_*`, resident `0xC` at `0x1DB0`,
 jal-return cases `0x1DD8/1DF4/1F9C/1FAC/1FBC/1FCC`). Build-time extraction
-and helper-set checks passed. Live section-2 validation is
-`scratch/agent/soak_queue/s739_ovl12_splice.sh`.
+and helper-set checks passed.
+
+**s740 live consume** (`scratch/agent/soak_results/s739_ovl12_splice_20260812-152309/run.log`):
+H-splice-correct selected — CLIP and OVL12 `[ovl-route]` live, 64/64 section-2
+rows `active=0`, per-task `ovl12=5 ovl12_ret=4`. The wired jal-return set is
+complete. Residual is not a missing window case (0 UJs in `0x1DB0..0x1FE0`):
+2935 main-table `jr` UJs (1937 OOB) and 79 defer-drops, new vs s736, while
+sec2 E9/FS is unchanged. Overlay-12's two `L_122C` DMAs target DMEM `0x4E0`
+and `0x380`; next audit is whether those lengths wrap onto tables `0x64`/`0xD6`.

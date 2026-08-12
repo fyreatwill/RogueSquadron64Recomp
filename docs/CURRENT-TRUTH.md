@@ -22,18 +22,27 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s739; compacted in maintenance s729)
+## Current truth (reviewed through s740; compacted in maintenance s729)
 
-**s739:** landed the regeneration-safe resident-`0C` splice. Fixup 6b extracts
-the overlay-12 window (`OVL12_*`), routes `DMEM[0x153]==0xC` at `0x1DB0`, and
-wires jal-return cases `0x1DD8/1DF4/1F9C/1FAC/1FBC/1FCC` through resident
-helpers `L_122C`/`L_1268`. Extraction/sanity and the full Debug build
-succeeded, so H-ovl12-return-incomplete is not selected at build time. The
-same build keeps the resident-04 `CLIP_*` route and emits `[ovl-route]` for
-both ids. Phase-latched reset/reuse validation is queued as
-`s739_ovl12_splice.sh` — do not babysit. **ORIGIN:** writer is main `L_1DB0`'s
-`DMEM[0x152]=0` (s738); this change runs the ROM-backed overlay-12 image
-instead of skipping that store.
+**s740:** consumed `scratch/agent/soak_results/s739_ovl12_splice_20260812-152309/run.log`
+(353 s, rc=0, CRASH=0). Same-run CLIP `[ovl-route] res=0x04` n=1033 (n up to
+65088) and OVL12 `res=0x0C` n=155960 (n up to 9980416, `tgt=0x1DB0` plus the
+four jal-returns) are LIVE. All 64 section-2 `[e9-prov-reset]` rows have
+`active=0 unpaired_reuse=0` with per-task `ovl12=5 ovl12_ret=4` once the
+route is warm (vs s736 61/64 `active!=0`). **H-splice-correct SELECTED.**
+**H-ovl12-return-incomplete REFUTED** for the wired jal-return set.
+**H-reset-independent REFUTED.** Residual, new vs s736 (UJ=0, defer-drop=0):
+2935 `Unhandled jump` (1937 OOB IMEM, 878 in-IMEM, **0** overlay-12 window)
+and 79 `[defer-drop]`; dominant post-sec2 target `0xFA92` from the main
+command-table `jr` at line 238 (`DMEM[0x64]`). Section-2 E9/FS is unchanged
+(match=3/64 both soaks; rdpFs 3933→3948 vs s736 4020→4023). Next is a
+static DMEM-map / `L_122C` wrap audit of dests `0x380`/`0x4E0` vs tables
+`0x64`/`0xD6` — no rebuild. **ORIGIN:** the reset writer remains main
+`L_1DB0` `DMEM[0x152]=0`; the splice now runs the ROM-backed image instead.
+
+**s739:** landed the regeneration-safe resident-`0C` splice (fixup 6b,
+`OVL12_*`, id-`0xC` at `0x1DB0`, jal-returns through `L_122C`/`L_1268`).
+Build-time extraction/sanity passed. Live consume is s740.
 
 **s738:** static audit selected **H-stale-main-image**. Resident 0C's `L_1DB0`
 is distinct TriGen (ROM `0x26670`, 0x230 B); the runtime was falling through
@@ -317,7 +326,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. Qualified phase-latched controls establish: (a) parser-derived raw E9s all reach `GBI_RDP::fullSync` and `State::fullSync`; (b) fixed-stride extra E9 bytes are inline triangle payload, not commands; and (c) the observed TriGen refill continuation has normal branch-4 → `0x1088` returns. **s731–s738:** every active depth-0 reuse is paired to the main-image `L_1DB0` reset, and every predecessor is the resident-`0C` `L_1298` relay; the correct overlay-12 image at that entry is distinct TriGen and does not reset. H-counter-alias, H-cap-truncates-valid-stack, H-intended-resident0c-reset, and H-bad-table-entry are refuted; **H-stale-main-image is selected**. **s739:** the regeneration-safe overlay-12 splice and `[ovl-route]` counters are in the binary; consume `s739_ovl12_splice.sh` before any further change. Details: `docs/M3-OVERLAY12-AUDIT.md`; consume protocol: `scratch/agent/NEXT.md`.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s740:** the s739 resident-`0C` splice is live and **stops the section-2 `L_1DB0` reset** (H-splice-correct; 64/64 `active=0`). It does **not** restore FULL_SYNC (sec2 E9 match still 3/64; rdpFs still flat). New residual: command-table `jr` UJ storm (s736 had zero). Next is a static audit of overlay-12 `L_122C` DMA dests `0x380`/`0x4E0` against tables `0x64`/`0xD6` (`docs/F5-UCODE-REFERENCE.md` §dispatch-table; `docs/M3-OVERLAY12-AUDIT.md`). Do not resplice until that audit names a writer.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

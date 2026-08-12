@@ -1,42 +1,53 @@
-# NEXT work unit (consume overlay-12 splice soak)
+# NEXT work unit (static DMEM-map / L_122C wrap audit)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-s739 landed the resident-0C splice and queued `s739_ovl12_splice.sh`.
-This iteration only consumes that soak. Do not rebuild or resplice.
+s740 selected H-splice-correct. Do not rebuild or resplice. Classify the
+new command-table UJ storm against overlay-12's two `L_122C` payload DMAs
+using ROM / GLideN64 / F5-UCODE-REFERENCE ground truth, not a new runtime
+counter.
 
 ## Competing hypotheses
 
-- **H-splice-correct:** live `[ovl-route] res=0x0C` plus the CLIP positive
-  control (`res=0x04`) and zero active reset/reuse rows in the section-2
-  latch.
-- **H-ovl12-return-incomplete:** OVL12 `0x1DB0` is entered, then
-  `[clip-stray]`, a route-specific `UnhandledJumpTarget`, or `ovl12_ret=0`
-  after a live `tgt=0x1DB0`.
-- **H-reset-independent:** live OVL12 markers with retained active
-  reset/reuse rows (main-image `L_1DB0` still fires, or a new predecessor
-  such as resident `0x24` from `OVL12_1FCC → L_1268`).
+- **H-ovl12-dma-wrap-stomp:** overlay-12 `L_122C` dests `r3=0x4E0` then
+  `r3=0x380` with `r4` near `0xFF0` wrap 4 KB DMEM and overwrite command
+  tables at `0x64` / `0xD6`. Later `L_1090`/`L_10C8` `jr` to OOB targets
+  (`0xFA92`, `0x0000`, `0x4F42`).
+- **H-ovl12-dma-legit-payload:** dests `0x380`/`0x4E0` are documented
+  vertex/triangle scratch; legal sizes cannot cover `0x64`/`0xD6`. UJs
+  then come from return-state / `L_1268` resident switch, not DMA wrap.
+- **H-ovl12-imem-gap:** UJs are missing overlay-12 IMEM handlers. Already
+  weak: s740 had **0** UJs in the `0x1DB0..0x1FE0` window.
 
 ## Discriminating measurement
 
-Same-run CLIP `[ovl-route] res=0x04` must fire or the zero-reset result is
-an unqualified null. Then:
+Static only, same iteration, no game run:
 
-- CLIP live + OVL12 live + sec2 `active=0` and `unpaired_reuse=0` →
-  H-splice-correct.
-- CLIP live + OVL12 `tgt=0x1DB0` then stray/UJ/`ovl12_ret=0` →
-  H-ovl12-return-incomplete.
-- CLIP live + OVL12 live + retained sec2 reset/reuse → H-reset-independent.
+1. `docs/F5-UCODE-REFERENCE.md` plus GLideN64 Factor 5 HLE: what lives at
+   DMEM `0x64`, `0xD6`, `0x380`, `0x4E0`.
+2. Overlay-12 translation (`factor5_ucode_ovl12_recompiled.c` `L_1DB0` body):
+   the `r4` size formula at both `jal 0x122C` sites; max `dest+len` vs
+   0x1000 wrap onto `0x64`/`0xD6`.
+3. `L_122C` / `DO_DMA_READ` wrap semantics in our RSP.
+4. Top s740 UJ targets vs those tables (file:
+   `scratch/agent/soak_results/s739_ovl12_splice_20260812-152309/run.log`).
+
+Outcomes:
+
+- Wrap-capable size + dests cover the tables + OOB UJs match stomped
+  halfwords → H-ovl12-dma-wrap-stomp. Then name the writer (command-stream
+  length vs our DMA helper) before any change.
+- Documented scratch + sizes cannot reach the tables → H-ovl12-dma-wrap
+  REFUTED; next is `L_1268` resident-switch / `L_1FD4` delay-slot state.
+- Dominant UJs land inside the overlay-12 window → reopen H-ovl12-imem-gap
+  (s740 counts already contradict this).
 
 ## Commands
 
-    # After the loop moves the recipe to soak_queue/done/:
-    LOG=$(ls -1t scratch/agent/soak_results/s739_ovl12_splice_*/run.log | head -1)
-    grep -c '\[ovl-route\].*res=0x04' "$LOG"
-    grep -c '\[ovl-route\].*res=0x0C' "$LOG"
-    grep -c '\[e9-prov-reset\].*scope=sec2' "$LOG"
-    grep '\[e9-prov-reset\].*scope=sec2' "$LOG" | awk '
-      {reset+=($0 ~ /reset=[1-9]/); act+=($0 ~ /active=[1-9]/); ur+=($0 ~ /unpaired_reuse=[1-9]/); n++}
-      END {print "sec2_rows",n,"reset_nonzero",reset,"active_nonzero",act,"unpaired_nonzero",ur}'
-    grep -c '\[clip-stray\]' "$LOG"
-    grep -c '\[CRASH\]' "$LOG"
+    python3 - <<'PY'
+    # print both ovl12 jal 0x122C sites: r2/r3/r4 setup
+    # classify dest+max_len wrap onto 0x64 and 0xD6
+    PY
+    grep -n '0x380\|0x4E0\|0x64\|0xD6' docs/F5-UCODE-REFERENCE.md docs/F5-UCODE-REFERENCE.md
+    # GLideN64: search Factor5/F5 DMEM map for those addresses
+    # DO_DMA_READ wrap: grep in lib/N64ModernRuntime or RSP recomp runtime
