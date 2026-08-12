@@ -1,4 +1,4 @@
-# NEXT work unit (after s700: alternate RSP required for a phase-qualified oracle)
+# NEXT work unit (after s701: alternate RSP required for a phase-qualified oracle)
 
 HYPOTHESIS-ID: m3-oracle-boot-environment
 

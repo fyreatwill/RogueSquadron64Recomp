@@ -52381,3 +52381,18 @@ unqualified VI-320 null. s699 already checked the ROM and launch configuration,
 while s697/s698 established live PIF and whole-RDRAM positive controls. The
 next unit remains exactly the paired alternate/current-RSP run in
 `scratch/agent/NEXT.md`; this iteration is BLOCKED pending the alternate plugin.
+
+## Session 701 (2026-08-12) — alternate-RSP discriminator remains externally blocked
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 41,888 bytes, below the 60,000-byte
+maintenance threshold. Before altering any watch or tracer, a fresh local
+inventory of `/opt/homebrew` and `/usr/local` found exactly one Mupen64Plus RSP
+dynamic library: the already-tested
+`/opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib`.
+
+The planned paired 70-second run cannot be assembled. A one-arm rerun cannot
+distinguish H-rsp-hle-route from H-core-environment-route, and would merely
+repeat the unqualified VI-320 outcome from s697/s698. No build, experiment,
+runtime instrument, target watch, or E9 tracer change was made. The required
+next action remains a same-batch alternate/current RSP comparison after a
+human supplies an alternate compatible plugin.

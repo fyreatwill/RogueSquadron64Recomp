@@ -1,18 +1,18 @@
-## Blocked — s700 (2026-08-12)
+# Blocked: alternate Mupen64Plus RSP plugin required
 
-Need: a path to an alternate, compatible Mupen64Plus RSP plugin (`.dylib`) for
-the installed Homebrew core, from a human who can provide or install it.
+Need: a path to an alternate Mupen64Plus-compatible RSP plugin for macOS
+(`.dylib`) that can be loaded by the local Mupen64Plus 2.6.0 core.
 
-Already tried: s697 established that the oracle's recovery-cell watch was
-unqualified because VI remained 320 despite PIF-observed Starts and a live
-whole-RDRAM write control. s698 refuted watch perturbation with no-watch and
-whole-RDRAM arms. s699 verified identical retail ROM identity and the documented
-oracle launch configuration, then enumerated installed plugins; only
-`mupen64plus-rsp-hle` exists. This iteration rechecked the prescribed state:
-the selected work unit still requires that missing second RSP arm.
+Why: the active oracle work unit requires current and alternate RSP arms in
+the same 70-second driven positive-control batch. Only a differing result can
+separate H-rsp-hle-route from H-core-environment-route.
 
-Once supplied, run the two exact 70-second commands in `scratch/agent/NEXT.md`
-in one batch. The alternate reaches a 640/1024/0x6ABxxx phase while the current
-arm remains at 320 => H-rsp-hle-route; both at 320 with live PIF and whole-RDRAM
-controls => H-core-environment-route. This paired run refutes the present
-blocking explanation.
+Tried this iteration: `find /opt/homebrew /usr/local -type f` for RSP dylibs
+and shared objects. It found only the already-tested
+`mupen64plus-rsp-hle.dylib`. The current truth records that ROM identity,
+launch configuration, PIF input, and whole-RDRAM watch controls have already
+been checked; another one-arm run is unqualified.
+
+After supply: set its path in the two commands in `scratch/agent/NEXT.md` and
+run the alternate and current RSP arms with the identical retail ROM, eleven
+Start schedule, VI/PIF traces, and whole-RDRAM write control.
