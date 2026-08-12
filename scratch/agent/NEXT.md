@@ -1,37 +1,34 @@
-# NEXT work unit (after s682 section-2 provenance capture)
+# NEXT work unit (after s683 authoritative E9 join)
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-Add authoritative-parser attribution to the existing phase-scoped E9 probe,
-then rerun the same one-window section-2 audit. The s682 probe proved that all
-62 output E9 commands were submitted, but it did not join individual output
-addresses to the RT64 parser. Do not alter command decoding, range submission,
+Add parser-span attribution to the phase-scoped E9 probe, then rerun the same
+one-window section-2 audit. s683 proved 40 submitted emitted E9s did not reach
+either direct or pending-command raw fetch; do not alter decoding, submission,
 or FULL_SYNC behavior.
 
 ## Competing hypotheses
 
-- **H-parser-advance-mismatch:** submitted output E9 commands are skipped by
-  RT64's authoritative parser before its raw-opcode fetch.
-- **H-output-not-parser-visible:** the bridge sees E9 bytes in an output range,
-  but the RT64 range/pending-command boundary prevents that exact address from
-  reaching parser dispatch.
-- **H-walker-nonexecuted-path:** the six-command walker sees E9s in guest DL
-  paths that L_1090 never executes; this explains walker/guest divergence but
-  not necessarily the plateau.
+- **H-preceding-span:** an executed authoritative RDP command's declared
+  length covers each missing emitted E9, treating its bytes as inline data.
+- **H-range-gap:** no authoritative parser span covers a missing emitted E9;
+  the parser never enters the relevant submitted subrange.
+- **H-address-join-bug:** bridge/parser address domains diverge only after
+  boot, despite the four same-run exact-address controls.
 
 ## Discriminating measurement
 
-At RT64's raw-opcode fetch, record each authoritative E9's physical address
-against the active per-task emitted-address vector. The first 64 tasks after
-the real section-2 `start-match` must retain all current controls: four boot
-chains, one `[e9-prov-latch]`, 64 `scope=sec2` records, and matching
+At RT64's authoritative parser, compare every executed `address..nextAddress`
+span with the active task's emitted-address vector. Print one scoped
+`[e9-prov-span]` row for every emitted E9 skipped by a non-E9 span, including
+span start/end/raw opcode/length and whether it came from pending completion.
+Retain four boot controls, one latch, 64 `scope=sec2` rows, and matching
 `dl-sync-probe2` rows.
 
-- Submitted E9 address with no authoritative raw fetch: H-parser-advance-mismatch.
-- Authoritative raw fetch at an emitted address but no handler/state line:
-  H-output-not-parser-visible is refuted; isolate handler dispatch next.
-- Walker E9 > guest while emitted E9s are authoritatively fetched:
-  H-walker-nonexecuted-path.
+- Every missing E9 is covered by a non-E9 span: H-preceding-span supported.
+- Missing E9s have no covering span: H-range-gap supported.
+- A section-2 raw E9 has a nonmatching address while boot controls match:
+  H-address-join-bug supported.
 
 ## Commands
 

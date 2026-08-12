@@ -114,10 +114,15 @@ struct Rs64E9Provenance {
     uint32_t guest = 0;
     uint32_t emitted = 0;
     uint32_t submitted = 0;
+    uint32_t authoritative = 0;
+    uint32_t matched = 0;
     bool target = false;
+    bool control = false;
     std::vector<uint32_t> emitted_addrs;
     uint32_t first_guest = 0xFFFFFFFFu;
     uint32_t first_emit = 0xFFFFFFFFu;
+    uint32_t first_authoritative = 0xFFFFFFFFu;
+    uint32_t first_match = 0xFFFFFFFFu;
 };
 static Rs64E9Provenance g_e9prov;
 static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
@@ -137,6 +142,7 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
     while (remaining != 0 && !g_e9prov_latch_remaining.compare_exchange_weak(
         remaining, remaining - 1, std::memory_order_acq_rel, std::memory_order_acquire)) {}
     g_e9prov.target = remaining != 0;
+    g_e9prov.control = task <= 4;
     g_e9prov.first_guest = 0xFFFFFFFFu;
     g_e9prov.first_emit = 0xFFFFFFFFu;
 }
@@ -157,11 +163,13 @@ extern "C" void rs64_e9prov_guest(uint32_t guest_addr, uint32_t) {
 extern "C" void rs64_e9prov_task_end(uint32_t task) {
     if (!log_e9_provenance() || g_e9prov.task != task) return;
     static uint32_t controls = 0;
-    const bool control = task <= 4;
-    if ((control && ++controls <= 4) || g_e9prov.target) {
-        fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u guest0=0x%06X emit0=0x%06X\n",
-                task, control ? "control" : "sec2", g_e9prov.guest, g_e9prov.emitted, g_e9prov.submitted,
-                g_e9prov.first_guest, g_e9prov.first_emit);
+    if ((g_e9prov.control && ++controls <= 4) || g_e9prov.target) {
+        fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u raw=%u match=%u "
+                "guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
+                task, g_e9prov.control ? "control" : "sec2", g_e9prov.guest,
+                g_e9prov.emitted, g_e9prov.submitted, g_e9prov.authoritative, g_e9prov.matched,
+                g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
+                g_e9prov.first_match);
         fflush(stderr);
     }
 }
@@ -170,6 +178,33 @@ static void rs64_e9prov_mark_submitted(uint32_t lo, uint32_t hi) {
     if (!log_e9_provenance()) return;
     for (uint32_t addr : g_e9prov.emitted_addrs) {
         if (lo <= addr && addr < hi) ++g_e9prov.submitted;
+    }
+}
+
+// Called at RT64's raw-opcode fetch. This is deliberately a bridge-owned
+// address set: a match proves this exact emitted output byte reached RT64's
+// authoritative parser, not merely that some E9 was counted elsewhere.
+extern "C" void rs64_e9prov_authoritative_fetch(uint32_t address) {
+    if (!log_e9_provenance()) return;
+    address &= 0x7FFFFFu;
+    ++g_e9prov.authoritative;
+    if (g_e9prov.first_authoritative == 0xFFFFFFFFu)
+        g_e9prov.first_authoritative = address;
+    bool match = false;
+    for (uint32_t emitted : g_e9prov.emitted_addrs) {
+        if (emitted == address) {
+            match = true;
+            ++g_e9prov.matched;
+            if (g_e9prov.first_match == 0xFFFFFFFFu)
+                g_e9prov.first_match = address;
+            break;
+        }
+    }
+    if (g_e9prov.control || g_e9prov.target) {
+        fprintf(stderr, "[e9-prov-fetch] task=%u scope=%s addr=0x%06X match=%u\n",
+                g_e9prov.task, g_e9prov.control ? "control" : "sec2", address,
+                match ? 1u : 0u);
+        fflush(stderr);
     }
 }
 

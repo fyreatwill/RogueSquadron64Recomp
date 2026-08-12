@@ -51985,3 +51985,26 @@ does not attach raw RT64 parser fetches to individual output addresses.
 Next: add only that authoritative-parser address join at the interpreter's
 raw-opcode fetch, preserving the same section-2 latch, controls, and 64-task
 capture; distinguish parser-advance loss from the walker-only explanation.
+
+## Session 683 (2026-08-12) — item -421: submitted post-section-2 E9s miss authoritative raw fetch
+
+Added an address-level bridge→RT64 provenance join: every emitted physical E9
+address is retained for the active task, and RT64 marks exact matches at its
+raw-opcode fetch. The first build/run exposed an instrumentation hole: this
+direct-loop hook did not observe a command completed through the pending
+buffer. Fixed that path immediately, rebuilt, and reran the same phase-gated
+recipe. The corrected recovery-active run reached section 2, printed exactly
+one latch and 64 `scope=sec2` records, and did not crash.
+
+The same-run positive control is valid by a visible mark-all test, not merely
+a branch count: tasks 1–4 each printed an individual `[e9-prov-fetch]` with
+`match=1` and aggregate `emit=submit=raw=match=1`. In the corrected section-2
+window, 43 E9s were emitted and submitted but only the first three reached an
+authoritative raw fetch and exact address match (`raw=match=3`); the other 40
+had neither direct nor pending-command completion fetches. There were no
+nonmatching raw fetches. This is single-source support for a parser
+advance/control-flow mismatch, and rules out the pending-command-path
+explanation for this captured population. It does not yet prove the plateau
+mechanism under the two-line evidence rule. Next: log the authoritative parser
+command span that covers every emitted E9 absent from raw fetch, distinguishing
+an oversized preceding command from a parser range gap.
