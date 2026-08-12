@@ -1117,6 +1117,44 @@ if is_main_ucode and OVL24_1364CLIP_MARKER not in text:
         1, "case 0x1364 clip-resident return")
 
 # ---------------------------------------------------------------------------
+# Fixup 6f: remaining ovl24-only clip-resident returns (s746)
+# ---------------------------------------------------------------------------
+# s745: routing 0x1364 for 0x24||0x04 killed that stray (4454->0) and
+# kept boot dl06=2/2/0, but the same class leaked at 0x1320/0x1330/
+# 0x1344 with 153=0x04 (n=3681/1165/485, all line=400). Writer: after
+# CLIP_1E48 returns to the now-routed OVL24_1364, that label loads $ra
+# from 0xB30 (saved by OVL24_1358 before jal L_17F0) and goto L_112C;
+# L_112C jr $30 of that $ra while clip is still resident. Clip dest is
+# 0x1DB0, so IMEM 0x12A0..0x1384 is still ovl24. Widen every remaining
+# ovl24-only clip-stray case to 0x24||0x04. Shared cases that fall
+# through to main L_* stay 0x24-only. Not a bare always-OVL24.
+# ORIGIN: L_112C jr of the OVL24_1358-saved $ra after the 6e 0x1364
+# clip-resident return. Legitimate ROM emit continuation; route.
+OVL24_04RET_MARKER = "/* fixup: ovl24-04ret */"
+if is_main_ucode and OVL24_04RET_MARKER not in text:
+    def sub_exactly6f(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6f ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}.",
+                  file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    sub_exactly6f(
+        re.compile(
+            r"        case 0x([0-9A-F]{4}): if \(RSP_MEM_BU\(0X153, 0\) == 0x24\) \{ "
+            r"rs64_e9prov_ovl_route\(0x24, 0x\1\); goto OVL24_\1; \} "
+            r"goto rs64_clip_stray;  /\* fixup: ovl24route \*/\n"),
+        lambda m: (
+            f"        case 0x{m.group(1)}: if (RSP_MEM_BU(0X153, 0) == 0x24 || "
+            f"RSP_MEM_BU(0X153, 0) == 0x04) {{ "
+            f"rs64_e9prov_ovl_route(0x24, 0x{m.group(1)}); goto OVL24_{m.group(1)}; }} "
+            f"goto rs64_clip_stray;  " + OVL24_04RET_MARKER + "\n"),
+        10, "remaining ovl24-only clip-resident returns")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level

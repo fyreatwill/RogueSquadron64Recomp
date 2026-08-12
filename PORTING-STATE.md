@@ -53533,3 +53533,47 @@ returns via the now-routed `0x1364`, `OVL24_1364` loads `$ra` from
 `0xB30` and `goto L_112C`, which later `jr`s `0x1320`/`0x1330`/`0x1344`
 while clip is still resident. `0x1DF4/00` still 343 (other class;
 defer). Next is widen the remaining ovl24-only clip-stray cases.
+
+## Session 746 (2026-08-12) — remaining ovl24-only 0x04 returns route; E9 stays 3/64
+
+Step 0 measured `CURRENT-TRUTH.md` at 35,773 bytes, so maintenance was
+not triggered. Work unit was NEXT.md after s745: widen every remaining
+ovl24-only `goto rs64_clip_stray` case to `0x153==0x24 || ==0x04`.
+SOAK-RESULTS had no new queue lines since s745 (s745 itself was
+in-session).
+
+Fixup 6f (regeneration-safe) rewrites the ten leftover 6c ovl24-only
+cases (`0x12AC`/`0x12C0`/`0x12D0`/`0x12F4`/`0x1320`/`0x1330`/`0x1338`/
+`0x1344`/`0x1358`/`0x136C`). Shared cases that fall through to main
+`L_*` stay `0x24`-only; `0x1364` stays the 6e rewrite. Predecessor
+counters from 6d stay. **ORIGIN:** `L_112C` `jr $30` of the `$ra`
+`OVL24_1358` saved at `0xB30` before `jal L_17F0`. After 6e routes the
+clip-resident `0x1364` return, `OVL24_1364` restores that `$ra` and
+`goto L_112C`; clip dest is still `0x1DB0`, so IMEM `0x12A0..0x1384`
+is still ovl24. Legitimate ROM emit continuation; route, not a guard.
+
+Soak `scratch/agent/soak_results/s746_ovl24_04ret_20260812-164346/run.log`
+(348 s, same recipe as s743–s745, CRASH=0, wrapper rc=0). Same-run
+positive controls LIVE: `[ovl-route] res=0x04` n=3789 (clip `0x1DB0`),
+`[1364-pred]` / `jal17f0=` fire, four boot controls
+`dl06=push:2,complete:2,open:0`, and the stray instrument itself
+(`0x1DF4/00` still prints). Stray `0x1320/04`+`0x1330/04`+`0x1344/04`
+**3681+1165+485 → 0**; no ovl24-only stray remains. Lifetime at last
+`[1364-pred-sum]`: **n=879232 = jal17f0** (s745 68672, 12.8× — each
+routed `0x1320` jals `0x1358` again), res04=177429,
+clip1e48_1364=175093 (s745 5279). Sec2 last reset `last_ovl=0x0C/0x1DF4`
+61/64 (s745 `0x24/0x1364`); ovl24=1910 ret=1719 ovl28=191 LIVE.
+UJ=0 defer-drop=0. E9 match still **3/64**; rdpFs 0→4117 (s745 0→4030,
+still flat).
+
+**H-ovl24-class-needed-but-not-e9 SELECTED. H-ovl24-class-restores-e9
+REFUTED** (E9 unchanged). **H-ovl24-class-breaks-06 REFUTED** (dl06
+2/2/0, UJ=0).
+
+Residual, same class as s745's deferred leak, now louder because emit
+continues: `[clip-stray] tgt=0x1DF4 153=0x00` n=3157 (s745 343), all
+line=451 (`L_11B0` TriGen DMA-helper `jr`). OVL12-only case; 153=0
+means IMEM `0x1DF4` is the main image — do not widen to `==0`. Next is
+a static provenance audit of who writes `$ra=0x1DF4` and why resident
+is 0 at the `L_11B0` return (ovl14 sibling is the other deferred
+lead).
