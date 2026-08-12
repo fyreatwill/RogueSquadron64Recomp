@@ -52244,3 +52244,23 @@ provide no evidence for H-state-corrupt. The next unit is a bounded semantic
 instrument: compare each F5 `0x06` command's expected push/return contract to
 the LLE saved-frame operations to locate the missing root return or wrong
 push semantics.
+
+## Session 694 (2026-08-12) — frame IDs validate the `0x06` return tracer; target rerolled to soak queue
+
+Added regeneration-safe v3 saved-frame provenance: each L_12A0 push is given a
+monotonic per-task ID, and its pop and resumed-PC events retain that ID.  The
+phase-scoped summary separately reports `dl06=push`, `complete`, and `open`.
+No decoder or control-flow behaviour changed.  The update lives in
+`tools/fixup_factor5_ucode.py`; the host pairing/accounting is in
+`src/rsp/dpc_bridge.cpp`.  Regenerated main/ovl4/boot Factor 5 ucode and built
+successfully.
+
+The prescribed phase-gated driver started attempt 1.  Its same-run boot
+positive controls passed independently in tasks 1--4: each had two valid
+`0x06000000` P→O→R triplets with matching IDs and `dl06=push:2,complete:2,open:0`.
+This proves that a valid `F3DSWRS_DL` push/return is recorded as a complete
+pair.  The attempt reached `hangar-sel` but returned to section 3 before the
+section-2 latch, so it emitted no target cap rows and cannot discriminate
+extra-push from missing-return.  The bounded 600-second reroll is queued as
+`scratch/agent/soak_queue/s694_e9prov_frame_pairs.sh`; do not infer anything
+about the cap path from this boot-only result.

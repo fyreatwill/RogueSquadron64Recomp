@@ -1054,7 +1054,7 @@ if is_main_ucode and UNWIND_AUDIT_MARKER not in text:
 # L_12DC. The host retains only bounded first/last events for phase-latched
 # tasks; this remains observational and leaves the branch sequence unchanged.
 # ---------------------------------------------------------------------------
-FRAME_AUDIT_MARKER = "/* fixup: saved DL frame audit v2 */"
+FRAME_AUDIT_MARKER = "/* fixup: saved DL frame audit v3 */"
 if is_main_ucode and FRAME_AUDIT_MARKER not in text:
     decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_unwind[^\n]*\n)")
     text, n_decl = decl_anchor.subn(

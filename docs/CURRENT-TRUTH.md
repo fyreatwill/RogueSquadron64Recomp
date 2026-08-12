@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s693; compacted in maintenance s679)
+## Current truth (reviewed through s694; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -397,11 +397,16 @@ maintenance pass. Closed lineages are not backlog items.
    Therefore **H-inline-data-dispatch is REFUTED for the captured cap frames**
    and **H-legitimate-open-chain is SUPPORTED** (runtime capture + independent
    reference). Target/PC families are coherent, so this run provides no
-   support for H-state-corrupt. The remaining question is whether the valid
-   `0x06` chain is pushed with incorrect control-flow semantics or lacks its
-   eventual root return; instrument that command's expected push/pop contract
-   next. The pulse produced `section3=2`, `packTlut=0`; it is incidental to
-   this provenance result, not a new input conclusion.
+   support for H-state-corrupt. **s694** landed regeneration-safe paired-frame
+   IDs (push→pop→resume) and `dl06=push/complete/open` phase summaries. Its
+   same-run boot positive controls passed in tasks 1--4 (each valid `0x06`
+   pair completed, `open=0`), but attempt 1 returned to section 3 before the
+   section-2 latch. Thus it yields **no cap-path conclusion**; the bounded
+   target reroll is queued as `s694_e9prov_frame_pairs.sh`. The remaining
+   question is whether the valid `0x06` chain is pushed with incorrect
+   control-flow semantics or lacks its eventual root return. The pulse
+   produced `section3=2`, `packTlut=0`; it is incidental to this provenance
+   result, not a new input conclusion.
    Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions
    669–693.
 
