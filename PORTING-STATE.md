@@ -52531,3 +52531,23 @@ at 320, but Rice changes only the GFX route and reaches the documented phases.
 The next unit is now the already-designed Rice-qualified retail recovery-cell
 watch at physical `0x0076B768:0x0076B76C`, retaining the same-run phase,
 PIF, and whole-RDRAM controls; leave the recomp E9 tracer unchanged.
+
+## Session 708 (2026-08-12) — Rice retail watch finds no recovery-cell writer
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 46,090 bytes, so maintenance did
+not trigger. Built the oracle and ran one 70-second Rice arm with the retail
+ROM, debugger on/pure interpreter, direct plus callback VI traces, PIF trace,
+the established eleven-Start schedule, a whole-RDRAM write control, and the
+physical four-byte recovery-cell watch `0x0076B768:0x0076B76C`.
+
+All controls were live in the same run: eleven `[press]` records landed; VI
+transitioned 320→640 at VI 99, 640→1024 at VI 998, then 1024→512 at VI 2265
+with hangar origin `0x006AB400`; the run completed 4,165 VI/~69.4 emulated
+seconds. The whole-RDRAM watch recorded 111,111,067 writes, while the exact
+target watch recorded zero. This rules out an unqualified instrument null and
+is single-source support that this cell is runtime-only rather than retail
+game-owned. It does not yet distinguish a target-specific absence from a
+quiescent surrounding region, so do not change the recomp E9 tracer or treat
+ownership as settled. The next unit watches the surrounding physical page in
+the same Rice-qualified arm alongside the target and whole-RDRAM controls.
+Logs: `scratch/agent/s708_oracle_recovery_watch/rice/run.log`.
