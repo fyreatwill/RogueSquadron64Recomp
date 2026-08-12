@@ -198,3 +198,41 @@ loader and selects `H-cap-never-enters-root-reload` for a cap row. It leaves
 open whether the ongoing `r17` in a cap row is a legitimate command-chain
 continuation or an incorrect continuation; audit every `L_1090` predecessor
 and every `r17` writer next.
+
+## Fetch-pointer lifecycle audit (s712)
+
+The generated main has **16 executable `r17 =` statements**.  The apparent
+duplicates are the recompilation of a MIPS delay-slot instruction on both
+generated C branch arms, not independent guest instructions.  Every one has a
+known source and successor; none loads a root pointer or an unmatched frame
+outside the root loader and `EndDL` return described above.
+
+| Generated sites (count) | Value source | Successor / role | Verdict |
+|---|---|---|---|
+| `185, 189` (2) | `r17 + 8` | main fetch dispatch | Ordinary 8-byte command advance. |
+| `271` (1) | `r17 + 8` | `L_1128` → `L_10D8` | Copies the extra word of the long RDP command form before the normal fetch boundary check. |
+| `408, 412, 425, 428` (4) | `0x170`, then `r17 + 8` | DMA helper return | Scratch-DMEM DMA address setup; never enters `L_1090` as a fetch pointer. |
+| `644, 648` (2) | saved `DMEM[0x654 + depth]` | `L_1088` | Non-root `EndDL` restores precisely the parent PC saved by `0x06`. |
+| `664, 667` (2) | `r17 + 8` | handler-local `L_1324` | Ordinary handler input advance before its boundary return. |
+| `854, 858, 876` (3) | `r17 + 8`, then conditional `r17 + 16` | inline-data helper return | The conditional payload path; its shape agrees with the reference's non-uniform inline-data advances. |
+| `984` (1) | `r17 + 16` | `L_10D8` | Fixed inline-data advance before the normal boundary check. |
+| `2413` (1) | `DMEM[0x154]` | direct `L_1090` | Root-loader seed, supplied by `L_1E70`'s DMA as established in s711. |
+
+There are exactly three ways to enter `L_1090`:
+
+| Predecessor | Mechanism | Classification |
+|---|---|---|
+| `L_1E80` | direct `goto`; sets `r17` from root-loader DMEM | Initial root stream. |
+| `L_10D8` | direct `goto` when the normal boundary check finds `r17 != 0x278` | Ordinary continuation after a handler or command copy. |
+| `L_1088` → `L_11E4` → indirect `case 0x1090` | `L_1088` is the sole `r31 = 0x1090` producer; the DMA wait helper returns through `jr r31` | Normal command-buffer load completion. |
+
+The dispatch switch contains a `case 0x1090`, but it introduces no fourth
+producer: the sole generated `r31 = 0x1090` assignment is at `L_1088`.
+Likewise, the only direct `goto L_1090` sites are `L_1E80` and `L_10D8`.
+The exhaustive count is the positive control for this static result.
+
+This refutes `H-r17-stale-reload` and `H-r17-unmodelled-dispatch`. It supports
+`H-r17-command-advance` only in the narrow static sense: the cap can be
+reached through documented lifecycle edges. It does not establish that the
+bytes consumed by a particular long stream are legitimate commands; the next
+question is which cap-reachable command family produces the unbounded chain.

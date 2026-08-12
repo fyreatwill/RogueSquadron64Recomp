@@ -52613,3 +52613,26 @@ loader and selects H-cap-never-enters-root-reload: cap rows do not reload the
 root stream through this field. It does not explain their continuing stream;
 the next bounded static unit enumerates every `r17` writer and `L_1090`
 predecessor. No runtime behavior or mitigation changed.
+
+## Session 712 (2026-08-12) — fetch-pointer lifecycle has no stale/reload edge
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 48,868 bytes, so maintenance did
+not trigger. Per the assigned bounded static audit, enumerated all 16
+executable generated-main `r17 =` statements, every direct `goto L_1090`, and
+the indirect `case 0x1090` route. The table is recorded in
+`docs/F5-UCODE-REFERENCE.md` and is its own exhaustive positive control:
+ordinary command/inline-data advances account for 9 generated sites,
+scratch-DMEM DMA address setup for 4, the paired `0x06`/EndDL saved-parent
+restore for 2, and the loader-DMA root seed for 1.
+
+There are exactly three `L_1090` entries: `L_1E80`'s root seed, `L_10D8`'s
+ordinary boundary continuation, and the normal `L_1088` DMA-helper return.
+The latter is not a hidden dispatch path: `L_1088` is the sole
+`r31 = 0x1090` producer and `L_11E4` returns via `jr r31`; the switch's
+`case 0x1090` merely materializes that return. Thus H-r17-stale-reload and
+H-r17-unmodelled-dispatch are refuted. H-r17-command-advance has only narrow
+static support: the lifecycle can legitimately continue, but this audit cannot
+prove the cap stream's bytes are valid commands. The next bounded static unit
+maps each cap-reachable Factor 5 dispatch entry and exact inline-data advance
+against the independent command reference, rather than rerunning an
+unqualified recovery soak. No runtime behavior or mitigation changed.
