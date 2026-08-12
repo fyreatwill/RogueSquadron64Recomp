@@ -53219,3 +53219,23 @@ detaches its phase-relative key worker in this environment, so it cannot reach
 the section-2 cap; that is an invalid capture, not a route null. Queued the
 self-contained title-gated `s736_reset_predecessor.sh` soak for the loop.
 No mitigation or depth behavior changed.
+
+## Session 737 (2026-08-12) — predecessor soak selects the TriGen relay
+
+Step 0 measured `CURRENT-TRUTH.md` at 34,049 bytes, so maintenance was not
+triggered. Consumed the queued, self-contained `s736_reset_predecessor.sh`
+capture; it exited cleanly after 347 seconds.
+
+The same run supplied both controls required to interpret the null-free result:
+the four direct boot tasks remained balanced, and 61 section-2 cap rows had
+active resets with zero unpaired reuse. Every retained reset had a live
+predecessor marker, and every marker was identical: normalized target `0x1DB0`,
+generated line 615, `ra=0x1088`, resident `0x0C`, and `l1298=1`. The generated
+source independently identifies line 615 as the indirect `jr $3` at `L_1298`.
+
+This selects H-trigen-relay-entry and rules out H-direct-bootstrap-entry and
+H-predecessor-latch-broken for the retained cap rows. The resident at the reset
+callback is zero because `L_1DB0` has begun resetting state; the predecessor's
+resident `0C` is the attribution value. No mitigation was changed. NEXT now
+requests a bounded static provenance audit of resident `0C`'s table/image,
+with resident `04` clip routing as the positive control, before another build.

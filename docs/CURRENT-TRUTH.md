@@ -22,14 +22,19 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s735; compacted in maintenance s729)
+## Current truth (reviewed through s737; compacted in maintenance s729)
 
-**s736:** built the v5 regeneration-safe `0x1DB0` predecessor latch. LLE boot
-controls prove it fires (`predecessor=1` in all four balanced direct tasks),
-but the interactive launcher loses its phase-relative key worker when detached
-and therefore cannot supply a section-2 row. `s736_reset_predecessor.sh` is
-queued as the self-contained phase-safe discriminator; consume it before
-interpreting route shape. No mitigation changed.
+**s737:** consumed the clean 347-second `s736_reset_predecessor` soak. Its
+four balanced direct boot controls remain intact; all 61 retained section-2
+cap rows reproduce active resets with zero unpaired reuse and a live target
+marker. Every reset's predecessor is the `L_1298` indirect relay
+(`target=0x1DB0`, line 615, `ra=0x1088`, resident `0x0C`, `l1298=1`). Thus
+**H-trigen-relay-entry is selected**, while H-direct-bootstrap-entry and
+H-predecessor-latch-broken are refuted. The reset callback itself sees
+resident 0 because `L_1DB0` has already begun; that is not evidence against
+the predecessor's resident-`0C` route. Next is a bounded static provenance
+audit of resident `0C`'s `L_1298→0x1DB0` image/semantics before any change.
+No mitigation changed.
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -304,6 +309,15 @@ Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 **s734:** landed the regeneration-safe source-route extension: every active `L_1DB0` reset now retains bounded first/last tuples of `r31`, `DMEM[0x153]` resident id, pending `L_12A0` direct/overlay context, and inline opcode/table context. The first direct launcher only produced the four balanced boot controls; its parent detached before phase-relative key injection, so it emitted no section-2 rows and is an **unqualified null**. The persistent self-checking recipe is queued as `s734_reset_route.sh`; do not conclude route uniformity/mixing until its cap rows and same-run controls arrive.
 
 **s735:** consumed `s734_reset_route.sh` (clean 347 s exit). Its four same-run direct boot controls remain balanced; 61 section-2 cap rows reproduce active resets and no unpaired reuse. Every retained active-reset tuple is identical in the fields that can be trusted: `old=0x08`, `r17=0x1D8`, `ra=0x1088`, `resident=0`, pending `L_12A0 source=0`, and inactive inline context. Thus **H-route-mixed is refuted for the retained reset state**, but neither H-wrong-trigen-route nor H-intentional-trigen-reset is selected: `L_1DB0` is reached after the source-specific `0x05`/`L_12A0` state has cleared, so the present callback has no predecessor attribution. Next: phase-latched, bounded correlation of the immediately preceding `do_indirect_jump target=0x1DB0` event (target, `debug_line`, `r31`, resident) to each active reset; only that can distinguish a direct bootstrap/stray entry from the known `0x05` relay.
+
+**s737:** consumed `s736_reset_predecessor.sh` (clean 347 s exit). Four
+direct boot controls stayed balanced. The run retained 61 section-2 reset rows,
+each with a paired target-`0x1DB0` predecessor; no reuse was unpaired. All
+retained predecessor tuples are `line=615`, `ra=0x1088`, resident `0x0C`,
+`l1298=1`, selecting **H-trigen-relay-entry**. H-direct-bootstrap-entry and
+H-predecessor-latch-broken are refuted. The next question is not another
+reroll: statically identify resident `0C`'s relay image and establish whether
+its `L_1DB0` reset is the intended TriGen continuation semantics.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
