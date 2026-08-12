@@ -23,6 +23,12 @@ that keeps the Stop hook. Start it with
 the CONTEXT-BUDGET preamble appended instead). The endpoint switch is scoped to
 the iteration's subshell, so an interactive `claude` here still uses Anthropic.
 
+`RUNNER=codex` defaults to `-s danger-full-access`, and that is deliberate:
+under codex's `workspace-write` seatbelt, `.git` is read-only (so no iteration
+can ever commit) and the game gets no SDL display (so no experiment can run).
+Both measured 2026-08-12 — see the session-674 entry in PORTING-STATE.md before
+lowering it.
+
 The Stop-hook gate in `.claude/settings.json` is a Claude
 Code feature — but **grok DOES read `.claude/settings.json` and DOES run the
 Stop hook** (measured s64: stopReason=EndTurn without the file, Cancelled with

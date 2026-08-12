@@ -51719,3 +51719,67 @@ retries on an environment failure.
   normal VI/game progress past SDL initialization.
 
 ### Residual → item -421 unchanged; run the already-built discriminator in a GUI-capable session.
+
+## Session 674 (2026-08-12) — HARNESS: codex runner made viable; two loop bugs fixed
+
+Not an experiment iteration. Toolchain work on `tools/agent/`, prompted by the
+first `RUNNER=codex` runs (s673 and the 00:21 restart).
+
+**s673's "no SDL display" was the codex SANDBOX, not the terminal context.**
+`codex exec` defaulted to `-s workspace-write`, which is a seatbelt sandbox.
+Measured directly in a throwaway `/tmp` git repo (codex-cli 0.144.3), inside
+that sandbox vs an ordinary shell:
+
+| probe | `-s workspace-write` | unsandboxed / `danger-full-access` |
+|---|---|---|
+| `test -w .git` | `GIT_READONLY` | `GIT_WRITABLE` |
+| `nice -n 5 true` | `setpriority: Operation not permitted` | `nice_rc=0` |
+| `launchctl managername` | `Aqua` | `Aqua` |
+
+So the session type was never the problem — the seatbelt was. Three
+consequences, the middle one previously misdiagnosed:
+
+1. The game gets no display ("The video driver did not add any displays",
+   `hsel=0`, clean exit in 3-4s) because the work is GUI-driven and that is
+   exactly what the sandbox blocks. Still to be confirmed at full access.
+2. **CORRECTION to s673's checkpoint.** It concluded the read-only `.git` was
+   "specific to that one sandbox invocation, not a durable property". It is
+   deterministic: EVERY codex iteration under workspace-write gets a read-only
+   `.git`, so no codex iteration can ever meet an exit contract that ends in a
+   commit. s673's commit landed because `loop.sh` routes contract RETRIES to
+   the claude runner, which is unsandboxed — the retry, not a changed sandbox,
+   is what "found `.git` writable". Attribution error of the familiar kind: two
+   observations from two different processes read as one process changing.
+3. `nice(5) denied`, which s673 reported without attribution, is the same cause.
+
+Fix: `runner.sh` codex sandbox default raised to `danger-full-access`, with the
+measurements inline so it is not quietly lowered again. `RUNNER_SANDBOX` still
+overrides per run.
+
+**Loop bug: a run could die on a BLOCKED.md that says it is not blocked.**
+`loop.sh` halted on the mere EXISTENCE of `scratch/agent/BLOCKED.md`. s673 ended
+`STATUS=DONE` / `OUTCOME=ADVANCED` but left behind a BLOCKED.md whose first line
+read `# Not currently blocked`, so the 00:21 codex run exited before preflight,
+before spending anything, on a healthy repo. Fixed on both sides: an iteration
+ending DONE has its leftover BLOCKED.md archived, and the loop top only treats
+the file as stale when STATUS=DONE *and* its first line says "not blocked" — a
+real block (STATUS=BLOCKED) and a preflight block ("# Blocked by preflight")
+are both still honoured.
+
+**Known blind spot, not yet fixed:** `preflight.sh` runs in loop.sh's own shell
+and then hands the work to a runner that may be sandboxed, so for codex it
+certifies an environment the agent never gets. It printed `[preflight] OK` at
+00:05:16 immediately before an agent that could not open a window. Its very
+first check (`launchctl managername` = Aqua) passes inside the sandbox too, so
+it cannot catch this class by itself — the fix is to run it inside the runner.
+
+### Rules out / confirms
+- Confirms the codex workspace-write sandbox blocks `.git` writes and
+  `setpriority`, deterministically, in a repo unrelated to this one.
+- Refutes s673's "one-off sandbox invocation" reading of the read-only `.git`.
+- Does NOT yet confirm the game gets a display under `danger-full-access`; the
+  00:21 run that would have shown it never started. Refutation test:
+  `RUNNER=codex ITER_CAP=1 caffeinate -dis tools/agent/loop.sh` from a GUI
+  session, then check whether the SDL display error recurs.
+
+### Residual → item -421 unchanged; the E9-alignment discriminator still needs one GUI-session run.

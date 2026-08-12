@@ -92,9 +92,22 @@ prev_hyp=""; hyp_count=0
 case "${hyp_count:-0}" in ''|*[!0-9]*) hyp_count=0 ;; esac
 while [ "$n" -lt "$ITER_CAP" ]; do
 
+  # BLOCKED.md is the EXPLANATION of a block; scratch/agent/STATUS is the
+  # DECLARATION. Halting on the file's mere existence killed a healthy run
+  # before it reached preflight (2026-08-12 00:21: a codex run exited
+  # instantly on a BLOCKED.md whose first line read "# Not currently
+  # blocked", written by an iteration that ended DONE/ADVANCED). Only treat
+  # it as stale when BOTH say so — a real block leaves STATUS=BLOCKED, and a
+  # preflight block leaves "# Blocked by preflight", so neither is archived.
   if [ -f "$AG/BLOCKED.md" ]; then
-    notify_blocked
-    exit 2
+    if [ "$(tr -d '[:space:]' < "$AG/STATUS" 2>/dev/null)" = "DONE" ] \
+       && head -1 "$AG/BLOCKED.md" | grep -qiE 'not[[:space:]]+(currently[[:space:]]+)?blocked'; then
+      mv "$AG/BLOCKED.md" "$AG/BLOCKED.stale.$(date +%Y%m%d-%H%M%S).md"
+      log "stale BLOCKED.md (says 'not blocked', last iteration DONE) - archived, continuing"
+    else
+      notify_blocked
+      exit 2
+    fi
   fi
 
   if ! tools/agent/preflight.sh 2>&1 | tee -a "$AG/loop.log" | grep -q '^\[preflight\] OK'; then
@@ -371,6 +384,13 @@ else:
     fi
   else
     nocontract=0
+    # An iteration that ended DONE has declared itself not blocked. If it left
+    # a BLOCKED.md behind anyway, clear it here rather than letting the next
+    # loop top halt on it — that cost a whole run at 00:21 on 2026-08-12.
+    if [ -f "$AG/BLOCKED.md" ]; then
+      mv "$AG/BLOCKED.md" "$AG/BLOCKED.stale.$(date +%Y%m%d-%H%M%S).md"
+      log "iteration $n ended DONE but left a BLOCKED.md - archived as stale"
+    fi
   fi
 
   # Consecutive substitutions mean the environment is not letting the project
