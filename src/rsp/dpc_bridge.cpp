@@ -114,10 +114,13 @@ struct Rs64E9Provenance {
     uint32_t guest = 0;
     uint32_t emitted = 0;
     uint32_t submitted = 0;
+    bool target = false;
+    std::vector<uint32_t> emitted_addrs;
     uint32_t first_guest = 0xFFFFFFFFu;
     uint32_t first_emit = 0xFFFFFFFFu;
 };
 static Rs64E9Provenance g_e9prov;
+static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
 
 static bool log_e9_provenance() {
     static const bool enabled = [] {
@@ -130,8 +133,19 @@ static bool log_e9_provenance() {
 extern "C" void rs64_e9prov_task_begin(uint32_t task) {
     g_e9prov = {};
     g_e9prov.task = task;
+    uint32_t remaining = g_e9prov_latch_remaining.load(std::memory_order_acquire);
+    while (remaining != 0 && !g_e9prov_latch_remaining.compare_exchange_weak(
+        remaining, remaining - 1, std::memory_order_acq_rel, std::memory_order_acquire)) {}
+    g_e9prov.target = remaining != 0;
     g_e9prov.first_guest = 0xFFFFFFFFu;
     g_e9prov.first_emit = 0xFFFFFFFFu;
+}
+
+extern "C" void rs64_e9prov_section2_latch() {
+    if (!log_e9_provenance()) return;
+    g_e9prov_latch_remaining.store(64, std::memory_order_release);
+    fprintf(stderr, "[e9-prov-latch] section=2 next_tasks=64\n");
+    fflush(stderr);
 }
 
 extern "C" void rs64_e9prov_guest(uint32_t guest_addr, uint32_t) {
@@ -141,16 +155,21 @@ extern "C" void rs64_e9prov_guest(uint32_t guest_addr, uint32_t) {
 }
 
 extern "C" void rs64_e9prov_task_end(uint32_t task) {
-    if (!log_e9_provenance() || g_e9prov.task != task || g_e9prov.guest == 0) return;
+    if (!log_e9_provenance() || g_e9prov.task != task) return;
     static uint32_t controls = 0;
-    static uint32_t targets = 0;
     const bool control = task <= 4;
-    const bool target = task >= 8200 && task < 8264;
-    if ((control && ++controls <= 4) || (target && ++targets <= 64)) {
-        fprintf(stderr, "[e9-prov] task=%u guest=%u emit=%u submit=%u guest0=0x%06X emit0=0x%06X\\n",
-                task, g_e9prov.guest, g_e9prov.emitted, g_e9prov.submitted,
+    if ((control && ++controls <= 4) || g_e9prov.target) {
+        fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u guest0=0x%06X emit0=0x%06X\n",
+                task, control ? "control" : "sec2", g_e9prov.guest, g_e9prov.emitted, g_e9prov.submitted,
                 g_e9prov.first_guest, g_e9prov.first_emit);
         fflush(stderr);
+    }
+}
+
+static void rs64_e9prov_mark_submitted(uint32_t lo, uint32_t hi) {
+    if (!log_e9_provenance()) return;
+    for (uint32_t addr : g_e9prov.emitted_addrs) {
+        if (lo <= addr && addr < hi) ++g_e9prov.submitted;
     }
 }
 
@@ -486,9 +505,15 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         int64_t mips_first = (int64_t)(int32_t)(submit_lo + 0x80000000);
         uint8_t b0_first = (uint8_t)MEM_B(0, mips_first);
         uint8_t op = b0_first & 0x3F;
-        if (b0_first == 0xE9 && log_e9_provenance()) {
-            ++g_e9prov.emitted;
-            if (g_e9prov.first_emit == 0xFFFFFFFFu) g_e9prov.first_emit = submit_lo;
+        if (log_e9_provenance()) {
+            for (uint32_t p = submit_lo; p + 8 <= submit_hi; p += 8) {
+                int64_t e9_mips = (int64_t)(int32_t)(p + 0x80000000);
+                if ((uint8_t)MEM_B(0, e9_mips) == 0xE9) {
+                    ++g_e9prov.emitted;
+                    g_e9prov.emitted_addrs.push_back(p);
+                    if (g_e9prov.first_emit == 0xFFFFFFFFu) g_e9prov.first_emit = p;
+                }
+            }
         }
         g_task_op_count[op]++;
         g_cumulative_op_count[op].fetch_add(1, std::memory_order_relaxed);
@@ -1577,6 +1602,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         return;
     }
 
+    rs64_e9prov_mark_submitted(submit_lo, submit_hi);
     g_last_submit_lo.store(submit_lo, std::memory_order_release);
     g_last_submit_hi.store(submit_hi, std::memory_order_release);
     ultramodern::submit_rdp_range(submit_lo, submit_hi);
@@ -1615,8 +1641,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                 }
 
                 if (!should_drop_wrap_rdp(lo, hi)) {
-                    if (log_e9_provenance() && lo <= g_e9prov.first_emit && g_e9prov.first_emit < hi)
-                        ++g_e9prov.submitted;
+                    rs64_e9prov_mark_submitted(lo, hi);
                     bytes += hi - lo;
                     calls++;
                     g_last_submit_lo.store(lo, std::memory_order_release);
@@ -1628,8 +1653,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
             }
 
             if (!should_drop_wrap_rdp(lo, hi)) {
-                if (log_e9_provenance() && lo <= g_e9prov.first_emit && g_e9prov.first_emit < hi)
-                    ++g_e9prov.submitted;
+                rs64_e9prov_mark_submitted(lo, hi);
                 bytes += hi - lo;
                 calls++;
                 g_last_submit_lo.store(lo, std::memory_order_release);
@@ -1644,8 +1668,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                 }
                 bytes += r.second - r.first;
                 calls++;
-                if (log_e9_provenance() && r.first <= g_e9prov.first_emit && g_e9prov.first_emit < r.second)
-                    ++g_e9prov.submitted;
+                rs64_e9prov_mark_submitted(r.first, r.second);
                 g_last_submit_lo.store(r.first, std::memory_order_release);
                 g_last_submit_hi.store(r.second, std::memory_order_release);
                 ultramodern::submit_rdp_range(r.first, r.second);

@@ -51960,3 +51960,28 @@ This rules out absolute task serial as a phase gate. It also exposed that the
 existing `emit` field counts only an emitted submit range whose first byte is
 E9, not every E9 command in a range. Next: latch from the actual section-2
 transition and add per-command output-ring E9 accounting before rerunning.
+
+## Session 682 (2026-08-12) — item -421: section-2-latched E9 provenance refutes DPC submit loss
+
+Replaced the invalid absolute task window with a latch in the actual
+`load_overlays_by_start` section-2 transition and changed E9 accounting to
+scan every 8-byte output-ring command, retaining each emitted address until
+its containing deferred submit is committed. The full build succeeded. The
+shortened phase-gated run reached section 2 at task 8754, printed one
+`[e9-prov-latch]`, and produced exactly 64 `scope=sec2` records (8754–8817)
+without a crash. Its same-run positive control was live: tasks 1–4 each had
+`guest=1 emit=1 submit=1` and `e9_aligned=1`.
+
+The target totals are `guest=3 emit=62 submit=62`; 57 emitted E9s had no
+L_1090 guest fetch, and every emitted E9 was covered by a submitted range.
+Nine target tasks independently had walker `e9_aligned > guest` while their
+emitted E9s were submitted (for example task 8760: walker=1, guest=0,
+emit=submit=1; task 8771: walker=6, guest=0, emit=submit=1). This refutes
+**H-dpc-submit-loss** for the complete captured population and supports
+**H-walker-nonexecuted-path** for the walker/guest discrepancy. It does not
+yet identify why most submitted E9s do not produce a runner sync: the probe
+does not attach raw RT64 parser fetches to individual output addresses.
+
+Next: add only that authoritative-parser address join at the interpreter's
+raw-opcode fetch, preserving the same section-2 latch, controls, and 64-task
+capture; distinguish parser-advance loss from the walker-only explanation.

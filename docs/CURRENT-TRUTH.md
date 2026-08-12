@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s681; compacted in maintenance s679)
+## Current truth (reviewed through s682; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -306,8 +306,14 @@ maintenance pass. Closed lineages are not backlog items.
    `e9_aligned=0`; they are recovery traffic, not the divergent population. No E9-loss mechanism
    is established. Next, replace the absolute task window with a section-2 phase latch and count
    E9 at every output-ring command (the current `emit` field only sees a submit-range head).
-   Controls remain tasks 1–4. Hypotheses: dispatch skip, handler-noemit, or DPC-submit loss.
-   Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–681.
+   **s682 completed the real phase-latched capture:** section 2 at task 8754 triggered the latch;
+   all 64 post-latch records and all four boot controls printed. Controls were complete
+   `guest=emit=submit=1`; the target had guest=3, emit=submit=62, including 57 emitted E9s
+   with no L_1090 fetch and nine walker>guest rows. Thus DPC-submit loss is refuted for all
+   62 captured output E9s, and walker/guest divergence supports a non-executed walker path.
+   The capture lacks per-address authoritative-parser attribution, so it does not establish the
+   plateau mechanism. Next: join every emitted E9 address to RT64's raw parser fetch. Durable
+   evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–682.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
