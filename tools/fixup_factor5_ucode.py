@@ -1231,6 +1231,31 @@ if is_main_ucode and TRIGEN_EXIT_MARKER not in text:
             sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 15: TriGen physical command-buffer source correlation (s719, item -421).
+#
+# L_11B0 copies DMEM[0x130] into a new buffer at DMEM 0x170 and preserves that
+# DRAM base at DMEM[0x15c]. On the next L_1DB0, r17 is an offset inside that
+# buffer; capture both sources after the new refill word has been loaded.
+# ---------------------------------------------------------------------------
+TRIGEN_SOURCE_MARKER = "/* fixup: TriGen physical source audit v1 */"
+if is_main_ucode and TRIGEN_SOURCE_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_trigen_exit[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) + 'extern "C" void rs64_inline_probe_trigen_sources(uint32_t r17, uint32_t entry_dram, uint32_t refill_dram);  ' + TRIGEN_SOURCE_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 15 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    source_anchor = re.compile(
+        r"(L_1DB0:\n[\s\S]{0,1200}?[ \t]*r2 = RSP_MEM_W_LOAD\(0X30, r1\);\n)([ \t]*// sw          \$2, 0x30\(\$18\))")
+    text, n_source = source_anchor.subn(
+        lambda m: m.group(1) + "    rs64_inline_probe_trigen_sources(r17, RSP_MEM_W_LOAD(0X15C, 0), r2);  " + TRIGEN_SOURCE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_source != 1:
+        print("fixup_factor5_ucode: FIXUP 15 ANCHOR FAILED (L_1DB0 sources).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -1272,5 +1297,7 @@ if INLINE_ADVANCE_MARKER in text and INLINE_ADVANCE_MARKER not in original:
     notes.append("live inline-data advance audit (s714)")
 if TRIGEN_CONTINUATION_MARKER in text and TRIGEN_CONTINUATION_MARKER not in original:
     notes.append("TriGen resident continuation audit (s717)")
+if TRIGEN_SOURCE_MARKER in text and TRIGEN_SOURCE_MARKER not in original:
+    notes.append("TriGen physical source audit (s719)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)

@@ -52777,3 +52777,27 @@ buffer. The raw DMEM transition `0x1E8 -> 0x178` cannot test the reference
 the entry buffer's physical DRAM source with the `L_11B0` refill source; a
 40-byte physical delta is the discriminating conformance measurement. No
 mitigation changed.
+
+## Session 719 (2026-08-12) — TriGen refill source is consistently 0x210 bytes before its entry buffer
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 53,179 bytes, so maintenance did
+not trigger. Added one regeneration-safe physical-source hook at L_1DB0 after
+it loads the new `r1+0x30` refill word. It logs that word, the previous
+L_11B0-saved DRAM base in DMEM[0x15C], and `r17-0x170`; the existing separate
+0x05 route/entry/exit controls were retained. The one driven two-Start probe
+reached width 512 at 87.9 seconds, captured 30.5 seconds until the phase
+transitioned to 640, and completed without a crash.
+
+The source-row positive control fired 64 times with the complete
+`0x05→L_15AC→L_1298→L_1DB0→L_1E48→L_1E5C→L_11B0` route. Across six distinct
+task/phase shapes, all rows are MISMATCH and give the same physical relation:
+the refill is `entry_dram - 0x210`, rather than the reference prediction
+`entry_dram + entry_offset + 40` (entry offsets are 0x68 or 0x78). Examples
+are 0x73FD70→0x73FB60, 0x7408C8→0x7406B8, and 0x593F70→0x593D60. Independently,
+the generated code shows L_11B0 DMA-loads DMEM 0x170 from DMEM[0x130] and saves
+that source at 0x15C; the next L_1DB0 loads its refill from r1+0x30. Thus
+H-trigen-chunked-conformant is refuted and H-trigen-wrong-advance is supported:
+the live continuation does not select the command after TriGen's 40-byte
+physical span. This does not authorize a correction yet: the semantic writer
+and contract for r1+0x30 remain unknown. Next: correlate that writer with the
+consumer in one phase-gated run. No mitigation changed.

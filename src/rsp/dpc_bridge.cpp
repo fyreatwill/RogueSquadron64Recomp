@@ -192,6 +192,7 @@ static std::atomic<uint32_t> g_inline_probe_route_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_entry_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_reload_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_exit_lines[5];
+static std::atomic<uint32_t> g_inline_probe_trigen_source_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
 extern "C" uint32_t rs64_phase_ord(void);
@@ -244,6 +245,7 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
         g_inline_probe_trigen_entry_lines.store(0, std::memory_order_release);
         g_inline_probe_trigen_reload_lines.store(0, std::memory_order_release);
         for (auto &lines : g_inline_probe_trigen_exit_lines) lines.store(0, std::memory_order_release);
+        g_inline_probe_trigen_source_lines.store(0, std::memory_order_release);
         g_inline_probe_summaries.store(0, std::memory_order_release);
     }
 }
@@ -321,6 +323,20 @@ extern "C" void rs64_inline_probe_trigen_entry(uint32_t r17) {
     if (line < 16) {
         fprintf(stderr, "[inline-trigen-entry] task=%u phase=%u entry=0x%06X l1db0=0x%06X\n",
                 g_e9prov.task, rs64_phase_ord(), g_inline_probe.entry & 0x7FFFFFu, r17 & 0x7FFFFFu);
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_inline_probe_trigen_sources(uint32_t r17, uint32_t entry_dram, uint32_t refill_dram) {
+    if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
+    const uint32_t line = g_inline_probe_trigen_source_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 16) {
+        const uint32_t entry_offset = (r17 - 0x170) & 0xFFF;
+        const uint32_t expected = (entry_dram + entry_offset + 40) & 0x7FFFFFu;
+        const uint32_t actual = refill_dram & 0x7FFFFFu;
+        fprintf(stderr, "[inline-trigen-source] task=%u phase=%u entry_dram=0x%06X entry_offset=0x%03X refill_dram=0x%06X expected=0x%06X verdict=%s\n",
+                g_e9prov.task, rs64_phase_ord(), entry_dram & 0x7FFFFFu, entry_offset,
+                actual, expected, actual == expected ? "equal" : "MISMATCH");
         fflush(stderr);
     }
 }

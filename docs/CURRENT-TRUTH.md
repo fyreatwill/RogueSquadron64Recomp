@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s718; compacted in maintenance s679)
+## Current truth (reviewed through s719; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -595,6 +595,22 @@ maintenance pass. Closed lineages are not backlog items.
    reference's `PC += 32`. Next: correlate the entry buffer's DRAM source with
    the `L_11B0` refill source; `next=entry+40` proves a chunked conformant
    TriGen advance, while another delta identifies the concrete mapping defect.
+   **s719 physical-source probe:** all 64 qualified source rows had the
+   complete route control and the new row itself fired (positive control).
+   Six task/phase shapes independently repeat `refill=entry−0x210`
+   (`0x73FD70→0x73FB60`, `0x7408C8→0x7406B8`,
+   `0x73A3B8→0x739B78`, `0x593F70→0x593D60`,
+   `0x59E158→0x59DF48`); their entry offsets were `0x68`/`0x78`, so none
+   equals `entry+offset+40`. Static ownership is independent: `L_11B0`
+   copies `DMEM[0x130]` to the next buffer at `0x170` and saves that DRAM base
+   at `DMEM[0x15C]`, which the probe reads at the next `L_1DB0`. Therefore
+   **H-trigen-chunked-conformant is REFUTED** and
+   **H-trigen-wrong-advance is SUPPORTED**: this continuation selects a
+   physical stream 0x210 bytes before its entry buffer, not the expected
+   inline continuation. No correction is justified until the writer/semantic
+   owner of `r1+0x30` is established. Next: trace the `L_1298`/overlay writer
+   of that field and compare its selected source with the reference TriGen
+   command's expected post-inline address.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

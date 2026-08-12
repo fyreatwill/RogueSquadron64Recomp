@@ -1,35 +1,41 @@
-# NEXT work unit (after s718: TriGen flushes DPC and refills a new DMEM buffer)
+# NEXT work unit (after s719: TriGen refill source is entry−0x210, not +40)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-Implement one regeneration-safe, phase-gated physical-source correlation for
-the live `0x05→L_1DB0→L_11B0` path. Record the DRAM base that supplied the
-active entry buffer and the `L_11B0` refill source, retaining the existing
-0x05 route control. Do not compare raw DMEM offsets to the reference PC.
+Trace the semantic writer of the live `r1+0x30` field that L_1DB0 copies into
+DMEM[0x130] and L_11B0 uses as its refill DRAM address. First exhaustively
+classify the generated stores and the `r1` ownership statically, then add one
+regeneration-safe, phase-gated writer-to-consumer correlation row retaining
+the existing 0x05 route control. This is source ownership, not a mitigation.
 
 ## Competing hypotheses
 
-- **H-trigen-chunked-conformant:** the refill DRAM source is the entry command
-  source plus 40 bytes, so the reference's command + inline-data advance is
-  correct despite the DMEM buffer restart.
-- **H-trigen-wrong-advance:** the refill source has a stable non-40-byte delta
-  from the entry source, identifying a concrete generated-stream mapping bug.
-- **H-trigen-source-opaque:** the available state fields do not identify both
-  sources; first derive their ownership statically before interpreting a row.
+- **H-trigen-source-contract:** `r1+0x30` deliberately selects a separate
+  continuation stream, so the stable −0x210 delta is legitimate scheduler
+  behaviour rather than the reference TriGen inline advance.
+- **H-trigen-source-writer-wrong:** the live writer computes/selects a stale or
+  wrong source; its intended value is the entry command's post-inline physical
+  address, making the −0x210 delta a concrete generated-stream defect.
+- **H-trigen-source-alias:** DMEM[0x15C] is not owned by the active buffer at
+  L_1DB0, so the s719 source pairing is an alias and must be replaced before a
+  semantic conclusion.
 
 ## Discriminating measurement
 
-In one qualified 512-wide task, route control plus a source row containing
-`entry_dram`, `entry_offset`, and `refill_dram` measures the actual physical
-delta. `refill_dram == entry_dram + entry_offset + 40` supports chunked
-conformance; any other stable delta supports a mapping defect; absent source
-ownership is an instrument-design failure, not a null result.
+One qualified 512-wide row must join the writer PC/value of `r1+0x30`, the
+consumer value at L_1DB0, and the preceding L_11B0 saved base. A matching
+writer→consumer value plus a separate-stream contract supports
+H-trigen-source-contract; a matching but post-inline-wrong writer supports
+H-trigen-source-writer-wrong; no ownership-preserving join supports
+H-trigen-source-alias and invalidates s719's pairing rather than interpreting
+its delta. The existing complete 0x05 route is the positive control.
 
 ## Commands
 
-    rg -n -C 12 'L_1DB0:|L_11B0:|RSP_MEM_W_LOAD\(0X30, r1\)|RSP_MEM_W_STORE\(0X30, r18\)|RSP_MEM_W_STORE\(0X5C, r18\)' build/factor5_ucode/factor5_ucode_recompiled.c
+    rg -n -C 10 'RSP_MEM_W_STORE\\(0X30, r1|RSP_MEM_W_LOAD\\(0X30, r1|r1 =|L_1298:|L_1DB0:|L_11B0:' build/factor5_ucode/factor5_ucode_recompiled.c
+    rg -n -C 8 'L_1298|0x30\\(\\$1\\)|0X30, r1' tools/fixup_factor5_ucode.py build/factor5_ucode
     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-      ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_INLINE_ADVANCE=1 \
-      PROBE_KEYS="3:start 7:start" PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300 \
-      zsh tools/probe.sh scratch/agent/s719_trigen_phys_advance 120 1
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \\
+      ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_INLINE_ADVANCE=1 \\
+      PROBE_KEYS="3:start 7:start" PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300 \\
+      zsh tools/probe.sh scratch/agent/s720_trigen_source_writer 120 1
