@@ -52101,3 +52101,32 @@ despite repeated EndDL visits. It does not identify whether `L_12A0` saved an
 invalid frame, `L_12DC` resumes a stale PC, or the source legitimately lacks a
 root terminator. Next: trace the bounded push/save/pop/resume pairs at those
 three labels without changing LLE control flow.
+
+## Session 688 (2026-08-12) — item -421: cap paths retain eight frames, not stale resumes
+
+Added regeneration-safe, phase-scoped frame markers at `L_12A0`, `L_12C4`,
+and `L_12DC`; the host reports bounded first/last events, push/pop/resume
+counts, slot range, zero-slot returns, and pop→resume payload mismatches in
+`[e9-prov]`. The first splice anchor was two generated lines too short and
+failed before build; widening it produced exactly one generated marker at each
+label. The rebuilt binary ran the phase-gated recovery-active recipe. Attempt
+1 was recovery-silent and rerolled. Attempt 2 reached section 2, fired its
+pulse, latched exactly 64 rows, and ended with no `[CRASH]`.
+
+The same-run positive control passed: boot tasks 1–4 and all three natural
+section-2 rows each had a visible `P→O→R` chain with
+`push=pop=resume=2`, `zresume=2`, `slot=0..0`, `mis=0`, and the prior exact
+E9→dispatch chain. All 61 capped rows reached `src_fetch=8192 src_kind=2`.
+Every one had coherent observed pop→resume payloads (`mis=0`) but retained
+exactly eight frames: `push-pop=8`, slot range `0..8`, and 102–115 resumes
+from slot zero. Representative task 8849 was `push=128 pop=120 resume=120
+zresume=113 slot=0..8 mis=0`; its bounded trace shows normal slot-zero
+P/O/R cycles rather than a restored-PC mismatch.
+
+This is single-run evidence with two independent live control populations. It
+**refutes H-stale-resume for observed pop/resume pairs** and **supports an
+unbalanced-frame state** as the cause of the missing root underflow. It does
+not establish whether the eight retained pushes are legitimate open DL frames,
+one repeated LLE call site, or a corrupt stack write. Next: retain the call-site
+return address and payload for the first push into every slot and the slot-eight
+transitions, still without modifying control flow.
