@@ -2603,15 +2603,16 @@ Input can keep thr12 alive but does not change this plateau, so menu-return is a
 input-gated side branch rather than its cause.
 
 Two independent phase-scoped samples found thousands of inline-data-aware guest E9s but only
-three runner FULL_SYNC events each. The authoritative parser saw only two E9s in one matching
-population, and every such E9 reached `GBI_RDP::fullSync` and `State::fullSync`. A later advance
-ring ruled out authoritative command-length and boundary-carry loss: guest software DL addresses
-and authoritative RDP addresses are different domains. Therefore the active question is upstream
-translation provenance: does Factor 5 dispatch E9, emit it to the raw DPC ring, and include that
-range in the deferred submit?
+three runner FULL_SYNC events each. The authoritative parser saw only the genuine raw E9s in the
+matching population, and every one reached `GBI_RDP::fullSync` and `State::fullSync`. s684 closed
+an apparent bridge/parser discrepancy: its fixed-8-byte raw-ring scanner mistook `0xE9` bytes
+inside raw `0xCE` 20-word triangle payloads for commands. Two section-2 windows, with exact boot
+controls, showed every sampled non-fetch byte inside such an executed span; none was a parser
+range gap. The remaining question is therefore whether genuine FULL_SYNC starvation already
+originates in RSP output, not bridge/parser command loss.
 
 `ROGUESQ_LOG_E9_PROVENANCE` is injected idempotently by `tools/fixup_factor5_ucode.py`. It retains
-tasks 1–4 as controls and task >=6500 as targets, recording L_1090 guest E9 fetches, raw output
-E9 writes, and DPC submit coverage. The next run must score the complete same-run chain; see
-`scratch/agent/NEXT.md` and CURRENT-TRUTH backlog item 1. Sessions 620–678 contain the full
+tasks 1–4 as controls and uses a section-2 latch for targets. Do not use its fixed-8-byte raw-ring
+scan as a command count; the next probe must use parser-derived raw-E9 and `fullSync` counts. See
+`scratch/agent/NEXT.md` and CURRENT-TRUTH backlog item 1. Sessions 620–684 contain the full
 chronology in `PORTING-STATE.md`.

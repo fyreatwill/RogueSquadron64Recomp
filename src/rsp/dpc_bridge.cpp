@@ -123,6 +123,10 @@ struct Rs64E9Provenance {
     uint32_t first_emit = 0xFFFFFFFFu;
     uint32_t first_authoritative = 0xFFFFFFFFu;
     uint32_t first_match = 0xFFFFFFFFu;
+    std::vector<uint32_t> fetched_addrs;
+    std::vector<uint32_t> spanned_addrs;
+    uint32_t non_e9_spans = 0;
+    uint32_t uncovered = 0;
 };
 static Rs64E9Provenance g_e9prov;
 static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
@@ -162,15 +166,58 @@ extern "C" void rs64_e9prov_guest(uint32_t guest_addr, uint32_t) {
 
 extern "C" void rs64_e9prov_task_end(uint32_t task) {
     if (!log_e9_provenance() || g_e9prov.task != task) return;
+    if (g_e9prov.control || g_e9prov.target) {
+        for (uint32_t emitted : g_e9prov.emitted_addrs) {
+            bool covered = false;
+            for (uint32_t fetched : g_e9prov.fetched_addrs) {
+                if (fetched == emitted) {
+                    covered = true;
+                    break;
+                }
+            }
+            for (uint32_t spanned : g_e9prov.spanned_addrs) {
+                if (spanned == emitted) {
+                    covered = true;
+                    break;
+                }
+            }
+            if (!covered) {
+                ++g_e9prov.uncovered;
+                fprintf(stderr, "[e9-prov-gap] task=%u scope=%s addr=0x%06X\\n",
+                        task, g_e9prov.control ? "control" : "sec2", emitted);
+            }
+        }
+    }
     static uint32_t controls = 0;
     if ((g_e9prov.control && ++controls <= 4) || g_e9prov.target) {
         fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u raw=%u match=%u "
-                "guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
+                "span=%u gap=%u guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.guest,
                 g_e9prov.emitted, g_e9prov.submitted, g_e9prov.authoritative, g_e9prov.matched,
+                g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);
         fflush(stderr);
+    }
+}
+
+extern "C" void rs64_e9prov_authoritative_span(uint32_t start, uint32_t end,
+                                                   uint32_t raw_opcode, uint32_t pending) {
+    if (!log_e9_provenance() || raw_opcode == 0xE9 || end <= start) return;
+    start &= 0x7FFFFFu;
+    end &= 0x7FFFFFu;
+    if (end <= start) return;
+    for (uint32_t emitted : g_e9prov.emitted_addrs) {
+        if (start < emitted && emitted < end) {
+            g_e9prov.spanned_addrs.push_back(emitted);
+            ++g_e9prov.non_e9_spans;
+            if (g_e9prov.control || g_e9prov.target) {
+                fprintf(stderr,
+                        "[e9-prov-span] task=%u scope=%s addr=0x%06X span=0x%06X..0x%06X raw=0x%02X len=%u pending=%u\n",
+                        g_e9prov.task, g_e9prov.control ? "control" : "sec2", emitted,
+                        start, end, raw_opcode, (end - start) / 8u, pending);
+            }
+        }
     }
 }
 
@@ -194,6 +241,7 @@ extern "C" void rs64_e9prov_authoritative_fetch(uint32_t address) {
     for (uint32_t emitted : g_e9prov.emitted_addrs) {
         if (emitted == address) {
             match = true;
+            g_e9prov.fetched_addrs.push_back(address);
             ++g_e9prov.matched;
             if (g_e9prov.first_match == 0xFFFFFFFFu)
                 g_e9prov.first_match = address;

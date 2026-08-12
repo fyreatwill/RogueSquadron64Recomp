@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s683; compacted in maintenance s679)
+## Current truth (reviewed through s684; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -316,10 +316,16 @@ maintenance pass. Closed lineages are not backlog items.
    iteration:** boot controls were visibly complete (`emit=submit=raw=match=1`, four individual
    `match=1` fetch marks); corrected section-2 capture had all 64 rows and `emit=submit=43` but
    `raw=match=3`, with the other 40 emitted E9s absent from both direct and pending-command raw
-   fetch paths. This is **single-source support** for authoritative parser advance/control-flow
-   mismatch, not yet a confirmed plateau mechanism. Next: attribute each missing emitted E9 to
-   the preceding parser command span (`address..nextAddress`) before any behavior change. Durable
-   evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–683.
+   fetch paths. **s684 span join REFUTED parser advance/control-flow mismatch:** two independent
+   section-2 windows, each with four exact boot controls (`emit=submit=raw=match=1`, `gap=0`),
+   showed every sampled non-fetch E9 byte strictly inside an executed raw `0xCE` 20-word span
+   (`pending=0`). The bridge's fixed-8-byte emission scan was counting inline triangle payload as
+   E9 commands. Thus there is no submitted-command loss in this population and the apparent 40-E9
+   deficit is a scanner false positive, not the plateau mechanism. The three genuine raw E9s still
+   dispatch normally. Next: replace the false fixed-stride “emitted E9” quantity with a
+   parser-derived phase-scoped count, then establish whether the genuine post-sec2 FULL_SYNC
+   starvation originates in the RSP output rather than bridge/parser handling. Durable evidence
+   and probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–684.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

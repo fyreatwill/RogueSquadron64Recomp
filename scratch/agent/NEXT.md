@@ -1,36 +1,36 @@
-# NEXT work unit (after s683 authoritative E9 join)
+# NEXT work unit (after s684 span attribution)
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-Add parser-span attribution to the phase-scoped E9 probe, then rerun the same
-one-window section-2 audit. s683 proved 40 submitted emitted E9s did not reach
-either direct or pending-command raw fetch; do not alter decoding, submission,
-or FULL_SYNC behavior.
+Replace the false fixed-8-byte output E9 scan with a parser-derived
+phase-scoped FULL_SYNC count, then rerun one 64-task section-2 window. s684
+proved the apparent missing E9s were inline data inside executed raw `0xCE`
+20-word commands; do not alter decoding, submission, or FULL_SYNC behavior.
 
 ## Competing hypotheses
 
-- **H-preceding-span:** an executed authoritative RDP command's declared
-  length covers each missing emitted E9, treating its bytes as inline data.
-- **H-range-gap:** no authoritative parser span covers a missing emitted E9;
-  the parser never enters the relevant submitted subrange.
-- **H-address-join-bug:** bridge/parser address domains diverge only after
-  boot, despite the four same-run exact-address controls.
+- **H-rsp-starvation:** the authoritative parser sees only the known ~3 real
+  FULL_SYNCs in the section-2 window, so starvation originates before RT64
+  parses the submitted output.
+- **H-dispatch-loss:** raw parser E9 fetches exceed `State::fullSync` calls,
+  so a remaining loss is between parser fetch and FULL_SYNC handling.
+- **H-probe-scope-bug:** boot controls or the section-2 latch disagree with
+  the new parser-derived count, invalidating the phase join.
 
 ## Discriminating measurement
 
-At RT64's authoritative parser, compare every executed `address..nextAddress`
-span with the active task's emitted-address vector. Print one scoped
-`[e9-prov-span]` row for every emitted E9 skipped by a non-E9 span, including
-span start/end/raw opcode/length and whether it came from pending completion.
-Retain four boot controls, one latch, 64 `scope=sec2` rows, and matching
-`dl-sync-probe2` rows.
+At RT64, record one phase-scoped per-task pair: raw `0xE9` fetches and actual
+`GBI_RDP::fullSync` calls, with four boot controls, one section-2 latch, 64
+target rows, and matching `dl-sync-probe2` rows. Remove the bridge's
+fixed-8-byte E9 scan from the decision path; it cannot distinguish RDP command
+boundaries from triangle inline data.
 
-- Every missing E9 is covered by a non-E9 span: H-preceding-span supported.
-- Missing E9s have no covering span: H-range-gap supported.
-- A section-2 raw E9 has a nonmatching address while boot controls match:
-  H-address-join-bug supported.
+- Raw E9 and `fullSync` agree at ~3 across the target: H-rsp-starvation
+  supported.
+- Raw E9 exceeds `fullSync`: H-dispatch-loss supported.
+- Any boot control or phase latch mismatch: H-probe-scope-bug supported.
 
 ## Commands
 
     env DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer zsh -c 'cd build && cmake --build . -j8'
-    env BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=0 POST_PULSE_HOLD_S=15 MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
+    env BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=8 POST_PULSE_HOLD_S=15 MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh

@@ -52008,3 +52008,26 @@ explanation for this captured population. It does not yet prove the plateau
 mechanism under the two-line evidence rule. Next: log the authoritative parser
 command span that covers every emitted E9 absent from raw fetch, distinguishing
 an oversized preceding command from a parser range gap.
+
+## Session 684 (2026-08-12) — item -421: apparent post-section-2 E9 loss is triangle inline data
+
+Added phase-scoped parser-span attribution to the existing provenance probe.
+The first run rejected itself correctly: its `gap` reporter counted exact raw
+matches as gaps. The four boot controls exposed that defect in the same run;
+the reporter was fixed, rebuilt, and rerun immediately. The corrected probe
+passed four exact boot controls in each successful capture
+(`emit=submit=raw=match=1`, `gap=0`) and produced two independent 64-task
+section-2 windows (attempts 1 and 3; attempt 2 did not reach section 2).
+
+Every submitted E9 byte that lacked a raw E9 fetch was covered by an executed,
+non-pending `0xCE` parser span of 20 DisplayList words; examples include
+`0x720890 ∈ [0x7207F8,0x720898)` and
+`0x723280 ∈ [0x723208,0x7232A8)`. No target byte was a true range gap and no
+nonmatching raw fetch occurred. Therefore the bridge's fixed-8-byte scan was
+counting `0xE9` values inside RDP triangle inline payload, not FULL_SYNC
+commands. **H-preceding-span CONFIRMED dual-source; H-range-gap and
+H-address-join-bug REFUTED.** The prior s683 parser-advance/control-flow
+mismatch interpretation is overturned: the three genuine raw E9s dispatch
+normally, and the apparent 40-command deficit was an invalid scanner metric.
+Next: use parser-derived raw-E9 versus `fullSync` counts to determine whether
+the real post-section-2 FULL_SYNC starvation is already present in RSP output.
