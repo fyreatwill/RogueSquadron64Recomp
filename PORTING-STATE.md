@@ -52733,3 +52733,24 @@ by the shared detail budget being exhausted before TriGen, not by a bypass.
 No handler-local TriGen `r17` increment was measured, so no advance verdict
 or correction is justified. Next: instrument only `L_1DB0`'s `r17` advances,
 with the same route/table control. No mitigation changed.
+
+## Session 717 (2026-08-12) — TriGen enters L_1DB0 but does not reach its reload exit
+
+Step 0 measured docs/CURRENT-TRUTH.md at 51,805 bytes, so maintenance did not
+trigger. Added regeneration-safe continuation hooks at L_1DB0 entry and the
+only apparent r17 reload at L_1E80. The initial capture was stopped before the
+target phase and a phase-relative variant entered the wrong menu path; both are
+discarded. The fixed boot-relative two-Start, VI-512-gated capture reached
+phase 6, completed without a crash, and used separate phase-scoped entry and
+reload budgets after the first shared-budget implementation exposed its own
+positive-control failure.
+
+The phase-6 route control was live in task 3394: 0x05 table1:0x15AC reached
+L_15AC, selector 0x0C, L_1298, and L_1DB0. Fifteen TriGen samples were
+complete, and the dedicated entry budget logged 16 L_1DB0 entries. The
+independent reload budget logged zero L_1E80 rows. Therefore the missing reload
+is not a log-budget null: H-trigen-continuation-opaque is supported. L_1DB0
+does not reach the apparent reload-to-dispatcher exit while the active TriGen
+command is being processed, so there is no basis for a 32-byte advance verdict
+or a correction. Next: trace only L_1DB0's first live successor labels with
+separate budgets, retaining the route control. No mitigation changed.

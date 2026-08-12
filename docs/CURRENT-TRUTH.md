@@ -577,6 +577,14 @@ maintenance pass. Closed lineages are not backlog items.
    shared-budget failure, not a bypass. H-trigen-resident-relay is supported;
    H-trigen-direct-overlay is refuted. The only open measurement is the
    handler-local `r17` advance inside actual continuation `L_1DB0`.
+   **s717 continuation probe:** independent phase-6 entry/reload budgets
+   recorded the full live route control and 16 L_1DB0 entries in task 3394,
+   but **zero** L_1E80 r17 reloads, despite 15/15 TriGen samples and no
+   incomplete probe. Thus **H-trigen-continuation-opaque is supported**:
+   L_1DB0 does not reach its apparent reload-to-L_1090 exit in the active
+   command; no measured increment supports or refutes the expected 32-byte
+   TriGen advance. Next: map the first live exit/loop path from L_1DB0 with
+   the same route control and one independent budget per label.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

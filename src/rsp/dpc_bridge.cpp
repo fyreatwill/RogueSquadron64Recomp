@@ -189,6 +189,8 @@ struct Rs64InlineProbe {
 static Rs64InlineProbe g_inline_probe;
 static std::atomic<uint32_t> g_inline_probe_lines{0};
 static std::atomic<uint32_t> g_inline_probe_route_lines{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_entry_lines{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_reload_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
 extern "C" uint32_t rs64_phase_ord(void);
@@ -238,6 +240,8 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
             previous, phase, std::memory_order_acq_rel, std::memory_order_acquire)) {
         g_inline_probe_lines.store(0, std::memory_order_release);
         g_inline_probe_route_lines.store(0, std::memory_order_release);
+        g_inline_probe_trigen_entry_lines.store(0, std::memory_order_release);
+        g_inline_probe_trigen_reload_lines.store(0, std::memory_order_release);
         g_inline_probe_summaries.store(0, std::memory_order_release);
     }
 }
@@ -305,6 +309,28 @@ extern "C" void rs64_inline_probe_overlay(uint32_t r17, uint32_t selector) {
         fprintf(stderr, "[inline-overlay] task=%u phase=%u op=05 table=%u:0x%04X entry=0x%06X selector=0x%X path=L_15AC\n",
                 g_e9prov.task, rs64_phase_ord(), g_inline_probe.table_kind, g_inline_probe.table_word,
                 r17 & 0x7FFFFFu, selector);
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_inline_probe_trigen_entry(uint32_t r17) {
+    if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
+    const uint32_t line = g_inline_probe_trigen_entry_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 16) {
+        fprintf(stderr, "[inline-trigen-entry] task=%u phase=%u entry=0x%06X l1db0=0x%06X\n",
+                g_e9prov.task, rs64_phase_ord(), g_inline_probe.entry & 0x7FFFFFu, r17 & 0x7FFFFFu);
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_inline_probe_trigen_reload(uint32_t r17) {
+    if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
+    const uint32_t line = g_inline_probe_trigen_reload_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 96) {
+        const uint32_t extra = (r17 - g_inline_probe.entry) & 0x7FFFFFu;
+        fprintf(stderr, "[inline-trigen-reload] task=%u phase=%u entry=0x%06X l1e80=0x%06X extra=%u expected=32 verdict=%s\n",
+                g_e9prov.task, rs64_phase_ord(), g_inline_probe.entry & 0x7FFFFFu, r17 & 0x7FFFFFu,
+                extra, extra == 32 ? "equal" : "MISMATCH");
         fflush(stderr);
     }
 }

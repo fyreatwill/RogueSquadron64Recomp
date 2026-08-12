@@ -1179,6 +1179,39 @@ if is_main_ucode and INLINE_ADVANCE_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 14: TriGen resident continuation r17 audit (s717, item -421).
+#
+# L_1DB0 is reached through the live 0x05 -> L_15AC overlay-0x0C relay. It
+# does not directly increment r17; L_1E80 reloads the next command pointer
+# immediately before returning to L_1090. Keep this separate from the shared
+# route budget so the continuation row cannot be consumed by other commands.
+# ---------------------------------------------------------------------------
+TRIGEN_CONTINUATION_MARKER = "/* fixup: TriGen continuation audit v1 */"
+if is_main_ucode and TRIGEN_CONTINUATION_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_overlay[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: (m.group(1)
+        + 'extern "C" void rs64_inline_probe_trigen_entry(uint32_t r17);\n'
+        + 'extern "C" void rs64_inline_probe_trigen_reload(uint32_t r17);  '
+        + TRIGEN_CONTINUATION_MARKER + "\n"),
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 14 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    entry_anchor = re.compile(r"(L_1DB0:\n)([ \t]*if \(Rs64OvlTrace::on\(\)\))")
+    text, n_entry = entry_anchor.subn(
+        lambda m: m.group(1) + "    rs64_inline_probe_trigen_entry(r17);  " + TRIGEN_CONTINUATION_MARKER + "\n" + m.group(2),
+        text, count=1)
+    reload_anchor = re.compile(
+        r"(L_1E80:\n[\s\S]{0,300}?[ \t]*r17 = RSP_MEM_HU_LOAD\(0X54, r18\);\n)([ \t]*// j           L_1090)")
+    text, n_reload = reload_anchor.subn(
+        lambda m: m.group(1) + "    rs64_inline_probe_trigen_reload(r17);  " + TRIGEN_CONTINUATION_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_entry != 1 or n_reload != 1:
+        print(f"fixup_factor5_ucode: FIXUP 14 ANCHOR FAILED (entry={n_entry} reload={n_reload}).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -1218,5 +1251,7 @@ if UNWIND_AUDIT_MARKER in text and UNWIND_AUDIT_MARKER not in original:
     notes.append("EndDL/unwind audit (s687)")
 if INLINE_ADVANCE_MARKER in text and INLINE_ADVANCE_MARKER not in original:
     notes.append("live inline-data advance audit (s714)")
+if TRIGEN_CONTINUATION_MARKER in text and TRIGEN_CONTINUATION_MARKER not in original:
+    notes.append("TriGen resident continuation audit (s717)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)
