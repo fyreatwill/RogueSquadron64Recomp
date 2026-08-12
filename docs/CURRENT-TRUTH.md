@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s695; compacted in maintenance s679)
+## Current truth (reviewed through s696; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -406,8 +406,13 @@ maintenance pass. Closed lineages are not backlog items.
    recovery-silent, while attempt 2 aborted before any section-2 latch. There
    are no `scope=sec2` or target cap rows in any attempt, so this is an
    **unqualified null**, not evidence for H-extra-push, H-missing-return, or
-   H-game-open-chain. Two further self-contained 600-second rerolls are
-   queued to obtain recovery-active target rows without changing the tracer.
+   H-game-open-chain. **s696 consumed both follow-up 600-second rerolls:** all
+   five engaged attempts passed all four boot paired-frame controls
+   (`dl06=push:2,complete:2,open:0`; P/O/R counts 20/16/16), but every one was
+   recovery-silent and none latched section 2. This is a third consecutive
+   unqualified provenance reroll (s694--s696); do not enqueue another
+   unchanged reroll. The next unit is a recovery-latch writer/readiness audit
+   with a retail-oracle positive control before any new runtime instrument.
    The remaining question is whether the valid `0x06` chain is pushed with
    incorrect control-flow semantics or lacks its eventual root return. The
    pulse/section-3 outcomes remain incidental to this provenance result, not

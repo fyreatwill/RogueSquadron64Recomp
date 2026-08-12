@@ -1,32 +1,36 @@
-# NEXT work unit (after s695 unqualified paired-frame reroll)
+# NEXT work unit (after s696: three unqualified provenance rerolls)
 
-HYPOTHESIS-ID: m3-e9-provenance-cap
+HYPOTHESIS-ID: m3-recovery-latch-readiness
 
-Consume the two queued, bounded phase-gated rerolls
-`scratch/agent/soak_queue/s695_e9prov_frame_pairs_a.sh` and
-`scratch/agent/soak_queue/s695_e9prov_frame_pairs_b.sh`. Do not rebuild or
-alter the tracer unless the boot positive control fails.
+Do a bounded recovery-latch writer/readiness audit before any further
+`m3-e9-provenance-cap` reroll. Do not alter the E9 tracer or enqueue another
+identical 600-second provenance recipe.
 
 ## Competing hypotheses
 
-- **H-extra-push:** a valid `0x06` takes a push path where Factor 5 semantics
-  require a tail branch, accumulating the observed open frames.
-- **H-missing-return:** valid `0x06` pushes occur, but EndDL/root return never
-  completes their paired pop/resume.
-- **H-game-open-chain:** the captured valid chain is still legitimately open
-  when the synthetic cap ends the task.
+- **H-game-route:** the current route legitimately never emits the recovery
+  FULL_SYNC/address `0x0076B768`; the section-2 prerequisite is stochastic
+  game state, not an observer defect.
+- **H-observer:** the recovery write/emission occurs but the current runtime
+  marker misses it; this contradicts s692's three live marker classes and
+  needs independent retail evidence before being revived.
+- **H-runtime-divergence:** retail reaches the recovery write on the same
+  phase-gated path while recomp does not, identifying an emulation/control-flow
+  divergence upstream of the E9 provenance target.
 
 ## Discriminating measurement
 
-For a section-2-latched cap task, first require the same-run boot controls:
-task 1--4 must include at least one `w0=0x06000000` P→O→R triplet with one ID
-and `dl06 ... open:0`. Then score target rows: excess P IDs or `open>0`
-supports H-extra-push; P→O without R supports H-missing-return; complete
-paired IDs with `open=0` supports H-game-open-chain. A run with no section-2
-latch is unqualified and must remain a null result.
+First use `tools/oracle/README.md`'s whole-RDRAM write watch as a positive
+control; it must fire at the documented rate. Then arm physical `0x0076B768`
+and run the documented phase-gated retail path. A retail hit while recomp's
+three markers remain absent supports H-runtime-divergence; no retail hit after
+the path demonstrably reaches the equivalent phase supports H-game-route;
+whole-RDRAM-only activity or failure to reach the phase is unqualified and
+must not be used to revive H-observer. If retail cannot reach that phase, stop
+before adding a runtime instrument and record the exact reachability limit.
 
 ## Commands
 
+    sed -n '1,240p' tools/oracle/README.md
+    rg -n '0x0076B768|recovery-silent|rdp-fullsync|fs-slot' scratch/agent/s692_recovery_latch_audit.sh scratch/agent/s670_postsec2_pulse_freeroll.sh
     tail -20 scratch/agent/SOAK-RESULTS.md
-    rg -n '\[e9-prov\]|\[e9-prov-frame\]|\[e9-prov-latch\]' scratch/agent/soak_results/*s695* | tail -240
-    rg -n 'dl06=|scope=sec2|w0=0x06000000|\[CRASH\]' scratch/s73_post_a_scene/s670_postsec2_pulse_*20260812*/run.log | tail -240

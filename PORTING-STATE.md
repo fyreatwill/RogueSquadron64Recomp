@@ -52280,3 +52280,22 @@ logs. This is therefore an unqualified null: it does not distinguish
 H-extra-push, H-missing-return, or H-game-open-chain. Two independent
 self-contained 600-second rerolls are queued for the loop; the tracer and
 its phase gate remain unchanged.
+
+## Session 696 (2026-08-12) — both paired-frame rerolls recovery-silent; provenance remains unqualified
+
+Consumed the queued `s695_e9prov_frame_pairs_a` and `_b` recipes. Their five
+hangar-selection-engaged attempts all passed the same-run paired-frame positive
+control in tasks 1--4: each control row reported
+`dl06=push:2,complete:2,open:0`, and the independently logged frame events
+totalled P/O/R = 20/16/16 per attempt. The tracer is therefore live and able
+to show a completed valid `0x06000000` display-list call.
+
+The target prerequisite failed in every engaged attempt: A had two
+recovery-silent attempts (plus one pre-engagement exit), and B had three
+recovery-silent attempts. Neither recipe emitted `scope=sec2`, a section-2
+latch, or any target cap frame row. This is an unqualified null and rules out
+no member of H-extra-push, H-missing-return, or H-game-open-chain. It is the
+third consecutive unqualified reroll in this thread (s694--s696), so the next
+unit must not repeat it unchanged; audit the recovery-latch writer/readiness
+path, beginning with a retail-oracle positive control, before retrying the
+provenance capture.
