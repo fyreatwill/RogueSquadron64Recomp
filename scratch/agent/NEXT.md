@@ -1,41 +1,39 @@
-# NEXT work unit (after s730 static 0x06 audit)
+# NEXT work unit (after s731 source-tagged L_12A0 capture)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-Build one regeneration-safe, phase-latched source-attribution trace for every
-entry to `L_12A0`. It must distinguish the normal `L_1090` table-1 opcode-06
-dispatch from the DMA-fed `L_1298` overlay-table dispatch, and join each entry
-to the existing push/unwind/resume frame records. Do not rerun an unchanged
-TriGen continuation capture.
+Build one regeneration-safe, phase-latched direct-frame depth audit for cap
+rows. It must retain the stack-depth at every direct `0x06` → `L_12A0` push,
+its matching pop/resume, and synthetic-cap end, then report per-depth push,
+pop, resume, and active-frame counts in a bounded task summary. Do not rerun
+the unchanged source-tag capture.
 
 ## Competing hypotheses
 
-- **H-overlay12a0-unreached:** the retained `DMEM[0x78]=0x12A0` word is never
-  selected by a cap-reachable overlay record; all phase-2 `L_12A0` entries are
-  ordinary table-1 opcode `0x06` calls.
-- **H-overlay12a0-paired:** the overlay table can select `L_12A0`, but its
-  frame has the same depth save, child load, EndDL unwind, and parent resume
-  as a normal display-list call.
-- **H-overlay12a0-unpaired:** an overlay-table entry reaches `L_12A0` without
-  a matching frame lifecycle and supplies the open cap chain.
+- **H-cap-truncates-valid-stack:** the push/pop surplus is only the bounded
+  set of live direct-`0x06` frames when the synthetic cap stops the task; their
+  depths remain properly nested and no completed frame is missing a resume.
+- **H-direct-lifecycle-leak:** one or more direct `0x06` pushes at a depth do
+  not obtain their expected pop/resume before later work reuses or escapes that
+  depth, supplying the cap chain.
+- **H-counter-alias:** the existing total surplus is an artifact of slot-keyed
+  bookkeeping under depth reuse; a depth-local event ledger is balanced.
 
 ## Discriminating measurement
 
-In one build, retain the phase-2 latch and tag the pending source immediately
-before each indirect dispatch: `L_1090` when table-1 target is `0x12A0`, and
-`L_1298` when its table target is `0x12A0`. At `L_12A0`, emit the source tag,
-opcode/command words, `r17`, `r20`, depth, and `r31`; join it to the existing
-phase-scoped frame push/unwind/resume records by task and depth. "Direct only"
-selects H-overlay12a0-unreached; an overlay tag followed by the complete frame
-pair selects H-overlay12a0-paired; an overlay tag at a cap row with an absent
-or mismatched unwind/resume selects H-overlay12a0-unpaired. The positive
-control is phase-2 direct-0x06 tagging plus matching push/unwind/resume in the
-same run; a branch counter alone is not sufficient.
+In one build, add depth-local counters keyed by the `L_12A0` save depth (not
+the reused slot map) and a bounded first/last event ring. At cap, report the
+per-depth ledger alongside current depth and the existing source totals. A
+balanced nested ledger with only current-depth active frames selects
+H-cap-truncates-valid-stack; a completed-depth deficit or resume mismatch
+selects H-direct-lifecycle-leak; balanced depth rows despite the old total
+surplus select H-counter-alias. The positive control is the existing
+section-2 direct-only tag plus matching push/pop/resume in the same run.
 
 ## Commands
 
-    rg -n -C 8 'L_1090:|L_1298:|L_12A0:|rs64_e9prov_frame_(push|unwind|resume)' build/factor5_ucode/factor5_ucode_recompiled.c
-    rg -n -C 8 'FRAME_AUDIT_MARKER|L_1090|L_1298|L_12A0' tools/fixup_factor5_ucode.py
+    rg -n -C 8 'L_12A0:|L_12C4:|L_12DC:|rs64_e9prov_frame_(push|pop|resume)' build/factor5_ucode/factor5_ucode_recompiled.c
+    rg -n -C 8 'FRAME_AUDIT_MARKER|L12A0_SOURCE_MARKER|L_12A0|L_12C4|L_12DC' tools/fixup_factor5_ucode.py src/rsp/dpc_bridge.cpp
     python3 tools/fixup_factor5_ucode.py
     cd build && cmake --build . -j8
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_E9_PROVENANCE=1 ../tools/probe.sh
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_E9_PROVENANCE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' zsh ../tools/probe.sh ../scratch/agent/s732_direct_frame_depth 300 2

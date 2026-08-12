@@ -1096,6 +1096,39 @@ if is_main_ucode and FRAME_AUDIT_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 12b: attribute each L_12A0 frame to its dispatch table (s731, -421).
+#
+# The normal opcode table reaches L_12A0 from L_1090; a DMA-fed overlay table
+# can also reach it from L_1298. Preserve the source immediately before each
+# indirect jump and attach it to the existing push/pop/resume frame record.
+# ---------------------------------------------------------------------------
+L12A0_SOURCE_MARKER = "/* fixup: L_12A0 source audit v1 */"
+if is_main_ucode and L12A0_SOURCE_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_frame_resume[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_e9prov_l12a0_source(uint32_t source, uint32_t r17, uint32_t w0, uint32_t w1, uint32_t target);  ' +
+        L12A0_SOURCE_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 12b ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    direct_anchor = re.compile(
+        r"(    r2 = RSP_MEM_HU_LOAD\(0XD6, r2\);\n)(    rs64_inline_probe_dispatch|    // jr)")
+    text, n_direct = direct_anchor.subn(
+        lambda m: m.group(1) +
+        "    if (r2 == 0x12A0) rs64_e9prov_l12a0_source(1, r17, r19, r20, r2);  " + L12A0_SOURCE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    overlay_anchor = re.compile(r"(L_1298:\n)([\s\S]{0,900}?    // jr          \$3)")
+    text, n_overlay = overlay_anchor.subn(
+        lambda m: m.group(1) +
+        "    if (r3 == 0x12A0) rs64_e9prov_l12a0_source(2, r17, r19, r20, r3);  " + L12A0_SOURCE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_direct != 1 or n_overlay != 1:
+        print(f"fixup_factor5_ucode: FIXUP 12b ANCHOR FAILED (direct={n_direct} overlay={n_overlay}).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 # Fixup 13: live inline-data command advance audit (s714, item -421).
 #
 # The universal dispatcher has already advanced r17 by eight at both table

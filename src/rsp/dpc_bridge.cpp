@@ -119,6 +119,7 @@ struct Rs64E9Provenance {
         uint32_t caller;
         uint32_t w0;
         uint32_t w1;
+        uint32_t source;
     };
     uint32_t task = 0;
     uint32_t guest = 0;
@@ -145,6 +146,8 @@ struct Rs64E9Provenance {
     uint32_t frame_next_id = 0;
     uint32_t frame_06_push = 0;
     uint32_t frame_06_complete = 0;
+    uint32_t l12a0_direct = 0;
+    uint32_t l12a0_overlay = 0;
     std::unordered_map<uint32_t, uint32_t> frame_id_by_slot;
     std::unordered_map<uint32_t, uint32_t> frame_opcode_by_slot;
     uint32_t source_first = 0xFFFFFFFFu;
@@ -173,6 +176,10 @@ struct Rs64E9Provenance {
     bool frame_reentry_slot0_seen = false;
     uint32_t pending_pop_slot = 0xFFFFFFFFu;
     uint32_t pending_pop_pc = 0xFFFFFFFFu;
+    uint32_t pending_l12a0_source = 0;
+    uint32_t pending_l12a0_r17 = 0;
+    uint32_t pending_l12a0_w0 = 0;
+    uint32_t pending_l12a0_w1 = 0;
 };
 static Rs64E9Provenance g_e9prov;
 static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
@@ -508,6 +515,17 @@ extern "C" void rs64_e9prov_unwind(uint32_t stack_byte, uint32_t natural) {
     if (natural) ++g_e9prov.unwind_natural;
 }
 
+extern "C" void rs64_e9prov_l12a0_source(uint32_t source, uint32_t r17, uint32_t w0,
+                                             uint32_t w1, uint32_t target) {
+    if (!log_e9_provenance() || target != 0x12A0) return;
+    if (source == 1) ++g_e9prov.l12a0_direct;
+    else if (source == 2) ++g_e9prov.l12a0_overlay;
+    g_e9prov.pending_l12a0_source = source;
+    g_e9prov.pending_l12a0_r17 = r17;
+    g_e9prov.pending_l12a0_w0 = w0;
+    g_e9prov.pending_l12a0_w1 = w1;
+}
+
 static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t target, uint32_t pc,
                                      uint32_t caller = 0, uint32_t w0 = 0, uint32_t w1 = 0) {
     if (!log_e9_provenance()) return;
@@ -524,7 +542,11 @@ static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t targe
     }
     if (slot < g_e9prov.frame_min_slot) g_e9prov.frame_min_slot = slot;
     if (slot > g_e9prov.frame_max_slot) g_e9prov.frame_max_slot = slot;
-    Rs64E9Provenance::FrameEvent event{kind, id, slot, target, pc, caller, w0, w1};
+    const uint32_t source = kind == 1 ? g_e9prov.pending_l12a0_source : 0;
+    Rs64E9Provenance::FrameEvent event{kind, id, slot, target, pc, caller, w0, w1, source};
+    if (kind == 1 && source != 0) {
+        g_e9prov.pending_l12a0_source = 0;
+    }
     if (g_e9prov.frame_first.size() < 8) g_e9prov.frame_first.push_back(event);
     if (g_e9prov.frame_last.size() == 8) g_e9prov.frame_last.erase(g_e9prov.frame_last.begin());
     g_e9prov.frame_last.push_back(event);
@@ -621,7 +643,7 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
         }
         fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u raw=%u dispatch=%u match=%u "
                 "src_fetch=%u src_e9=%u src_end=%u src_kind=%u src0=0x%06X src_last=0x%06X src_end0=0x%06X "
-                "unwind=%u unwind_natural=%u unwind_last=0x%08X frame=push:%u,pop:%u,resume:%u,zresume:%u,slot:%u..%u,mis:%u dl06=push:%u,complete:%u,open:%u span=%u gap=%u guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
+                "unwind=%u unwind_natural=%u unwind_last=0x%08X frame=push:%u,pop:%u,resume:%u,zresume:%u,slot:%u..%u,mis:%u dl06=push:%u,complete:%u,open:%u l12a0=direct:%u,overlay:%u span=%u gap=%u guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.guest,
                 g_e9prov.emitted, g_e9prov.submitted, g_e9prov.authoritative,
                 g_e9prov.dispatched, g_e9prov.matched,
@@ -633,14 +655,15 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 g_e9prov.frame_min_slot == 0xFFFFFFFFu ? 0u : g_e9prov.frame_min_slot,
                 g_e9prov.frame_max_slot, g_e9prov.frame_resume_mismatch,
                 g_e9prov.frame_06_push, g_e9prov.frame_06_complete, frame_06_open,
+                g_e9prov.l12a0_direct, g_e9prov.l12a0_overlay,
                 g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);
         const auto dump_frame = [task](const char* edge, const std::vector<Rs64E9Provenance::FrameEvent>& events) {
             for (const auto& event : events) {
-                fprintf(stderr, "[e9-prov-frame] task=%u edge=%s kind=%c id=%u slot=0x%X target=0x%06X pc=0x%06X caller=0x%04X w0=0x%08X w1=0x%08X\n",
+                fprintf(stderr, "[e9-prov-frame] task=%u edge=%s kind=%c id=%u src=%u slot=0x%X target=0x%06X pc=0x%06X caller=0x%04X w0=0x%08X w1=0x%08X\n",
                         task, edge, event.kind == 1 ? 'P' : event.kind == 2 ? 'O' : 'R',
-                        event.id, event.slot, event.target & 0x7FFFFFu, event.pc & 0x7FFFFFu, event.caller & 0xFFFFu,
+                        event.id, event.source, event.slot, event.target & 0x7FFFFFu, event.pc & 0x7FFFFFu, event.caller & 0xFFFFu,
                         event.w0, event.w1);
             }
         };

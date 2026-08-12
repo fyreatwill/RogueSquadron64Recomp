@@ -2638,7 +2638,10 @@ sources and no crash. It therefore does not explain the plateau. The s730 static
 the ordinary `0x06` route has exactly one generated push site and its sole `0x654+depth`
 save/restore pair is balanced. It also found a remaining opaque alternative: the DMA-fed `L_1298`
 entry table contains `0x12A0` in its retained table image, although the earlier live overlay records
-selected only `0x1DB0`. The next bounded question is whether a section-2 cap row reaches `L_12A0`
-via that table and, if so, whether its frame is paired. Runtime rerolls without a section-2 latch
-are unqualified and must not be repeated unchanged. Details: PORTING-STATE Sessions 685–730;
-active protocol: `scratch/agent/NEXT.md`.
+selected only `0x1DB0`. **s731 closed that alternative for observed cap rows:** two section-2-latched
+captures tagged every `L_12A0` entry as table-1 direct `0x06` (overlay=0); the same-run control
+showed direct tags with matching push/pop/resume. The bounded residual is the direct-frame surplus
+at a synthetic cap (for example push=245 versus pop/resume=230): determine whether it is simply
+the cap truncating an otherwise valid active stack or an unmatched direct-`0x06` lifecycle. Runtime
+rerolls without a section-2 latch are unqualified and must not be repeated unchanged. Details:
+PORTING-STATE Sessions 685–731; active protocol: `scratch/agent/NEXT.md`.

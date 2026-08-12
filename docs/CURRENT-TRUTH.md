@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s730; compacted in maintenance s729)
+## Current truth (reviewed through s731; compacted in maintenance s729)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -290,7 +290,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. Qualified phase-latched controls establish: (a) parser-derived raw E9s all reach `GBI_RDP::fullSync` and `State::fullSync`; (b) fixed-stride extra E9 bytes are inline triangle payload, not commands; and (c) the observed TriGen refill continuation has normal branch-4 → `0x1088` returns. **s730:** the direct `0x06` push route is statically balanced, but DMA-fed overlay table `0x76` retains a `0x12A0` entry that static source cannot prove unreachable. The active discriminator is a phase-latched source-tagged `L_1298` → `L_12A0` trace, joined to the frame unwind. Details and the evidence chain are durable in PROJECT-OVERVIEW §28; the exact next protocol is `scratch/agent/NEXT.md`.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. Qualified phase-latched controls establish: (a) parser-derived raw E9s all reach `GBI_RDP::fullSync` and `State::fullSync`; (b) fixed-stride extra E9 bytes are inline triangle payload, not commands; and (c) the observed TriGen refill continuation has normal branch-4 → `0x1088` returns. **s731:** two phase-latched section-2 captures source-tagged every `L_12A0` entry: direct table-1 `0x06` only; the DMA-fed `L_1298` overlay route was 0. The same-run control showed direct tags plus matching push/pop/resume. This closes the opaque-overlay route for observed cap rows. Residual: cap rows retain a direct-frame push/pop surplus (e.g. 245/230); next discriminate whether it is an expected cap-truncated active stack or a direct `0x06` lifecycle leak. Details and the evidence chain are durable in PROJECT-OVERVIEW §28; the exact next protocol is `scratch/agent/NEXT.md`.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -53069,3 +53069,30 @@ DMEM-`0x76` overlay table. The retained s46 table capture has a `0x12A0` word
 overlay entry unreachable in a section-2 cap row. H-dl06-opaque-overlay therefore remains open;
 the next unit is one phase-latched source-tagged `L_1090`/`L_1298` → `L_12A0` trace joined to the
 existing frame unwind/resume records. No mitigation changed.
+
+## Session 731 (2026-08-12) — observed cap rows never use the opaque overlay `L_12A0` route
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 30,694 bytes, so maintenance was not triggered. The
+required competing hypotheses and discriminating measurement were recorded in `NEXT.md` before the
+build. I added a regeneration-safe source tag immediately before both indirect routes to `L_12A0`:
+table-1 `L_1090` direct `0x06`, and DMA-fed overlay `L_1298`. The tag is retained in the existing
+phase-scoped frame records. The initial wrapper invocation was malformed (it omitted probe.sh's
+required output-directory argument); inspecting its documented usage produced the corrected,
+phase-gated command in this same iteration.
+
+Two driven captures reached the section-2 latch. The first verified the tag but exposed an
+unbounded per-entry log (15,110 lines), so the same iteration replaced it with per-task
+`l12a0=direct:N,overlay:N` totals plus the existing bounded first/last lifecycle records and reran
+the exact phase-gated recipe. In both captures every observed `L_12A0` source was direct; overlay
+was zero. The corrected run's first four control tasks each had two direct `0x06` tags and balanced
+`push:2,pop:2,resume:2`; section-2 cap rows likewise reported overlay=0 (for example task 5627:
+`l12a0=direct:245,overlay:0`). This is two phase-latched capture sources plus the source-tagged
+generated routes, and closes H-overlay12a0-unreached for observed cap rows. It rules out the
+retained DMA table's `0x12A0` word as the source of the open cap chain. No mitigation changed.
+
+The direct cap rows still have a raw lifecycle surplus (e.g. push=245, pop/resume=230 while the
+slot-keyed map reports only one open frame). This does not by itself prove a leak because repeated
+depth/slot reuse aliases the current accounting. NEXT now keeps the same
+`m3-postsec2-lle-control-flow` thread and asks one depth-local, bounded direct-frame ledger to split
+cap-truncated valid nesting from an actual unmatched direct `0x06` lifecycle. The positive control
+remains direct tagging plus matched push/pop/resume in the same section-2 run.
