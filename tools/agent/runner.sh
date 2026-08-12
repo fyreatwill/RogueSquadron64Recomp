@@ -30,6 +30,35 @@ cd "$(dirname "$0")/../.."
 PROMPT_FILE="${1:?usage: runner.sh <prompt-file> | runner.sh --describe}"
 RUNNER="${RUNNER:-claude}"
 
+# Portable timeout: macOS ships no timeout(1). Same watchdog idiom as
+# loop.sh's soak runner (setpgrp so the whole process tree dies together).
+with_timeout() {
+  local secs="$1"; shift
+  local pid wd rc
+  perl -e 'setpgrp(0,0); exec @ARGV' "$@" &
+  pid=$!
+  ( sleep "$secs" && kill -9 -- -"$pid" 2>/dev/null ) &
+  wd=$!
+  rc=0; wait "$pid" 2>/dev/null || rc=$?
+  kill "$wd" 2>/dev/null; wait "$wd" 2>/dev/null
+  return $rc
+}
+
+# When RUNNER_MODEL is unset, grok/codex silently use whatever their OWN
+# default currently is - and that default moves out from under the loop
+# (grok 4.5 -> 4.6, codex gpt-5.6-terra -> newer, observed 2026-08-12 without
+# either CLI's invocation changing at all). Ask each CLI directly instead of
+# printing a placeholder, so loop.log's per-iteration stamp names the model
+# that actually ran, not "<grok default>".
+grok_default_model() {
+  with_timeout 10 grok models 2>&1 | grep -oE 'Default model: \S+' | awk '{print $NF}'
+}
+codex_default_model() {
+  local cfg="${CODEX_HOME:-$HOME/.codex}/config.toml"
+  [ -f "$cfg" ] || return 0
+  grep -E '^\s*model\s*=' "$cfg" | head -1 | sed -E 's/^[^=]*=[[:space:]]*"([^"]*)".*/\1/'
+}
+
 # Only the claude branch falls back to LOOP_MODEL; the others pass no model
 # flag unless RUNNER_MODEL is set, so they use their own default. --describe
 # reports what will ACTUALLY be used, so the loop banner cannot drift from the
@@ -38,8 +67,8 @@ if [ "$PROMPT_FILE" = "--describe" ]; then
   case "$RUNNER" in
     claude) echo "runner=claude model=${RUNNER_MODEL:-${LOOP_MODEL:-sonnet}}" ;;
     deepseek) echo "runner=deepseek model=${RUNNER_MODEL:-deepseek-v4-pro} endpoint=https://api.deepseek.com/anthropic key=$([ -n "${DEEPSEEK_API_KEY:-${RUNNER_API_KEY:-}}" ] && echo set || echo MISSING)" ;;
-    grok)   echo "runner=grok model=${RUNNER_MODEL:-<grok default>} max_turns=${RUNNER_MAX_TURNS:-200}" ;;
-    codex)  echo "runner=codex model=${RUNNER_MODEL:-<codex default>} sandbox=${RUNNER_SANDBOX:-danger-full-access}" ;;
+    grok)   gm="${RUNNER_MODEL:-$(grok_default_model)}";   echo "runner=grok model=${gm:-<unresolved>} max_turns=${RUNNER_MAX_TURNS:-200}" ;;
+    codex)  cm="${RUNNER_MODEL:-$(codex_default_model)}";  echo "runner=codex model=${cm:-<unresolved>} sandbox=${RUNNER_SANDBOX:-danger-full-access}" ;;
     custom) echo "runner=custom cmd=${RUNNER_CMD:-<unset>}" ;;
     *)      echo "runner=$RUNNER (unknown)" ;;
   esac

@@ -11,10 +11,28 @@
 #      SOAKS_BETWEEN_ITERS (2) / SOAK_TIMEOUT (600s) for the queued-soak runner,
 #      UNBLOCK_ENABLE (1) / MAX_UNBLOCK_ATTEMPTS (1) / UNBLOCK_RUNNER /
 #      UNBLOCK_MODEL for the automated unblock tier (see try_unblock below)
+#
+# Any of the above (or RUNNER, RUNNER_MODEL, ...) can also be passed as a
+# key=value argument instead of an env var prefix, e.g.:
+#   tools/agent/loop.sh model=opus
+#   tools/agent/loop.sh runner=grok model=grok-4.6
+# `model=` is shorthand for LOOP_MODEL (the claude runner's model, e.g. opus /
+# sonnet / claude-opus-5); other RUNNER_MODEL values still need the full name
+# since they're runner-specific. Args are applied in order and override any
+# same-named env var already in the shell.
 set -u
 cd "$(dirname "$0")/../.."
 AG=scratch/agent
 mkdir -p "$AG"
+
+for arg in "$@"; do
+  case "$arg" in
+    model=*)  export LOOP_MODEL="${arg#model=}" ;;
+    runner=*) export RUNNER="${arg#runner=}" ;;
+    *=*)      export "${arg%%=*}=${arg#*=}" ;;
+    *) echo "usage: $0 [key=value ...]  e.g. model=opus  runner=grok RUNNER_MODEL=grok-4.6" >&2; exit 2 ;;
+  esac
+done
 ITER_CAP="${ITER_CAP:-40}"
 SLEEP_ON_LIMIT="${SLEEP_ON_LIMIT:-1800}"
 MAX_LIMIT_WAITS="${MAX_LIMIT_WAITS:-12}"
@@ -161,6 +179,17 @@ run_soak_queue() {
 # so per-model/runner analysis of loop.log doesn't have to reverse-engineer
 # attribution from narrative text (see 2026-08-12 loop.log audit).
 runner_desc="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh --describe)"
+# Pin whatever model --describe detected (including grok/codex's own live
+# default, see runner.sh) for the rest of THIS run, so every iteration - and
+# the finished-line stamp below - uses exactly the model just logged instead
+# of re-resolving (and possibly drifting, e.g. mid-run default change) later.
+if [ -z "${RUNNER_MODEL:-}" ]; then
+  detected_model="$(printf '%s' "$runner_desc" | grep -oE 'model=[^ ]+' | cut -d= -f2)"
+  case "$detected_model" in
+    ''|'<unresolved>') : ;;  # leave RUNNER_MODEL unset, runner.sh falls back to its own default per-call
+    *) export RUNNER_MODEL="$detected_model" ;;
+  esac
+fi
 log "run starting $(date) — $runner_desc cap=$ITER_CAP"
 
 n=0
