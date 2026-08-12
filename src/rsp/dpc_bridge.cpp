@@ -188,6 +188,7 @@ struct Rs64InlineProbe {
 };
 static Rs64InlineProbe g_inline_probe;
 static std::atomic<uint32_t> g_inline_probe_lines{0};
+static std::atomic<uint32_t> g_inline_probe_route_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
 extern "C" uint32_t rs64_phase_ord(void);
@@ -236,6 +237,7 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
     if (previous != phase && g_inline_probe_phase.compare_exchange_strong(
             previous, phase, std::memory_order_acq_rel, std::memory_order_acquire)) {
         g_inline_probe_lines.store(0, std::memory_order_release);
+        g_inline_probe_route_lines.store(0, std::memory_order_release);
         g_inline_probe_summaries.store(0, std::memory_order_release);
     }
 }
@@ -273,6 +275,17 @@ extern "C" void rs64_inline_probe_dispatch(uint32_t r17, uint32_t w0, uint32_t t
         opcode == 0xBD ? 16 : 8;
 }
 
+extern "C" void rs64_inline_probe_route(uint32_t r17, uint32_t target, uint32_t line) {
+    if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
+    const uint32_t line_no = g_inline_probe_route_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line_no < 96) {
+        fprintf(stderr, "[inline-route] task=%u phase=%u op=05 table=%u:0x%04X entry=0x%06X target=0x%04X line=%u\n",
+                g_e9prov.task, rs64_phase_ord(), g_inline_probe.table_kind, g_inline_probe.table_word,
+                r17 & 0x7FFFFFu, target, line);
+        fflush(stderr);
+    }
+}
+
 extern "C" void rs64_inline_probe_step(uint32_t r17, uint32_t delta, uint32_t site) {
     if (!log_inline_advance() || !g_inline_probe.active) return;
     if (g_inline_probe.opcode != 0xB4 && g_inline_probe.opcode != 0xBF) return;
@@ -285,13 +298,13 @@ extern "C" void rs64_inline_probe_step(uint32_t r17, uint32_t delta, uint32_t si
     }
 }
 
-extern "C" void rs64_inline_probe_overlay(uint32_t r17) {
+extern "C" void rs64_inline_probe_overlay(uint32_t r17, uint32_t selector) {
     if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
-    const uint32_t line = g_inline_probe_lines.fetch_add(1, std::memory_order_relaxed);
+    const uint32_t line = g_inline_probe_route_lines.fetch_add(1, std::memory_order_relaxed);
     if (line < 96) {
-        fprintf(stderr, "[inline-overlay] task=%u phase=%u op=05 table=%u:0x%04X entry=0x%06X path=L_15AC\n",
+        fprintf(stderr, "[inline-overlay] task=%u phase=%u op=05 table=%u:0x%04X entry=0x%06X selector=0x%X path=L_15AC\n",
                 g_e9prov.task, rs64_phase_ord(), g_inline_probe.table_kind, g_inline_probe.table_word,
-                r17 & 0x7FFFFFu);
+                r17 & 0x7FFFFFu, selector);
         fflush(stderr);
     }
 }

@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s715; compacted in maintenance s679)
+## Current truth (reviewed through s716; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -571,8 +571,12 @@ maintenance pass. Closed lineages are not backlog items.
    mismatch is **not evidence of an individual Tri increment defect** and
    H-tri-run-conformant is supported. TriGen had 9--15 live samples/task but
    never reached the static `L_15AC` marker: its live overlay continuation is
-   still opaque. Next: locate that continuation from its live table word and
-   instrument its actual `r17` steps; preserve the table control.
+   still opaque. **s716 route control closes that uncertainty:** dedicated
+   phase-6 rows are `0x05 table1:0x15AC→L_15AC→selector 0x0C→L_1298→L_1DB0`
+   (task 3391, tg=15/15; established table control live). The s715 zero was a
+   shared-budget failure, not a bypass. H-trigen-resident-relay is supported;
+   H-trigen-direct-overlay is refuted. The only open measurement is the
+   handler-local `r17` advance inside actual continuation `L_1DB0`.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
@@ -673,6 +677,11 @@ plus the early-era dead-ends list: `docs/PROJECT-OVERVIEW.md` §26. Load-bearing
 - **(s578→s579)** post-exit `rdpFs` plateau is **not** the s178 graphics-task-submission stall —
   s178 is `stalled=1 pairs=0` + producer stop; s577 post-exit keeps submitting GFX with present
   FIRE pairs=4 while only FULL_SYNC dies (item -349).
+- **(s715→s716)** zero `L_15AC` markers meant live TriGen bypassed the resident relay. This was
+  believable because phase-6 summaries showed 9--15 live TriGen samples with no marker. It was
+  refuted by s716's separate TriGen route budget: the live DMA word is `0x15AC` and every first
+  route enters `L_15AC`, selector `0x0C`, then `L_1298→L_1DB0`; the old shared detail budget had
+  already been consumed by other inline commands.
 
 ### Dead ends — labelled as such in the log, do not retry
 

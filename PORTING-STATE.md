@@ -52713,3 +52713,23 @@ task, but zero `L_15AC` markers. The static resident relay is not the actual
 continuation selected by the live DMA-populated table word. Next work is to
 trace that `0x05` table word through `do_indirect_jump` and instrument the
 actual continuation, retaining a per-op table control. No mitigation changed.
+
+## Session 716 (2026-08-12) — TriGen resident relay identified; actual continuation is L_1DB0
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 51,055 bytes, so maintenance did
+not trigger. Added a regeneration-safe v3 route hook at `do_indirect_jump` and
+gave its `0x05` rows a separate VI-phase budget; the first 30-second ungated
+capture and a 120-second undriven capture never reached phase 6 and are
+discarded. The corrected driven run (`3:start 7:start`) reached width 512 at
+89.2 seconds, had no crash, and was SIGKILLed after capture.
+
+The phase-6 control was qualified: task 3391 had 15 TriGen samples, while the
+existing table controls remained live. All first TriGen routes were
+`table1:0x15AC → L_15AC` (line 211), then selector `0x0C` at `L_1268`, then
+`L_1298 → L_1DB0`. The source route and live DMA table word are independent
+lines of evidence: H-trigen-resident-relay is supported and
+H-trigen-direct-overlay is refuted. The s715 zero `L_15AC` marker was caused
+by the shared detail budget being exhausted before TriGen, not by a bypass.
+No handler-local TriGen `r17` increment was measured, so no advance verdict
+or correction is justified. Next: instrument only `L_1DB0`'s `r17` advances,
+with the same route/table control. No mitigation changed.

@@ -1103,15 +1103,16 @@ if is_main_ucode and FRAME_AUDIT_MARKER not in text:
 # only when execution returns to L_1090. This measures the handler-local extra
 # advance without guessing which generated label a DMA/overlay table word names.
 # ---------------------------------------------------------------------------
-INLINE_ADVANCE_MARKER = "/* fixup: inline advance audit v2 */"
+INLINE_ADVANCE_MARKER = "/* fixup: inline advance audit v3 */"
 if is_main_ucode and INLINE_ADVANCE_MARKER not in text:
     decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_frame_resume[^\n]*\n)")
     text, n_decl = decl_anchor.subn(
         lambda m: (m.group(1)
         + 'extern "C" void rs64_inline_probe_resume(uint32_t r17);\n'
         + 'extern "C" void rs64_inline_probe_dispatch(uint32_t r17, uint32_t w0, uint32_t table_kind, uint32_t table_word);\n'
+        + 'extern "C" void rs64_inline_probe_route(uint32_t r17, uint32_t target, uint32_t line);\n'
         + 'extern "C" void rs64_inline_probe_step(uint32_t r17, uint32_t delta, uint32_t site);\n'
-        + 'extern "C" void rs64_inline_probe_overlay(uint32_t r17);  '
+        + 'extern "C" void rs64_inline_probe_overlay(uint32_t r17, uint32_t selector);  '
         + INLINE_ADVANCE_MARKER + "\n"),
         text, count=1)
     if n_decl != 1:
@@ -1141,6 +1142,14 @@ if is_main_ucode and INLINE_ADVANCE_MARKER not in text:
     if n_table1 != 1 or n_table2 != 1:
         print(f"fixup_factor5_ucode: FIXUP 13 ANCHOR FAILED (table loads): table1={n_table1} table2={n_table2}.", file=sys.stderr)
         sys.exit(1)
+    route_anchor = re.compile(r"(do_indirect_jump:\n)(    if \(Rs64OvlTrace::on\(\))")
+    text, n_route = route_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_inline_probe_route(r17, jump_target, (uint32_t)debug_line);  " + INLINE_ADVANCE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_route != 1:
+        print("fixup_factor5_ucode: FIXUP 13 ANCHOR FAILED (TriGen indirect route).", file=sys.stderr)
+        sys.exit(1)
     tri_step_anchor = re.compile(
         r"(L_13A8:\n[\s\S]{0,8000}?[ \t]*r17 = RSP_ADD32\(r17, 0X8\);\n)([ \t]*goto L_1464;)")
     text, n_tri_step = tri_step_anchor.subn(
@@ -1163,7 +1172,7 @@ if is_main_ucode and INLINE_ADVANCE_MARKER not in text:
         r"(L_15AC:\n[\s\S]{0,800}?[ \t]*r5 = 0 \| 0XC;\n)([ \t]*goto L_1268;)")
     text, n_trigen_overlay = trigen_overlay_anchor.subn(
         lambda m: m.group(1) +
-        "    rs64_inline_probe_overlay(r17);  " + INLINE_ADVANCE_MARKER + "\n" + m.group(2),
+        "    rs64_inline_probe_overlay(r17, r5);  " + INLINE_ADVANCE_MARKER + "\n" + m.group(2),
         text, count=1)
     if n_trigen_overlay != 1:
         print("fixup_factor5_ucode: FIXUP 13 ANCHOR FAILED (L_15AC TriGen overlay).", file=sys.stderr)

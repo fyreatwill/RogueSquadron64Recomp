@@ -302,3 +302,15 @@ The same run had `tg=9--15/9--15` live TriGen samples per phase-6 task, but
 no `L_15AC` overlay marker. Thus the resident `L_15AC` relay is not the live
 continuation entered by those table words; it cannot instrument TriGen's
 internal advance. TriGen remains opaque and is the next discriminating target.
+
+## Live TriGen route (s716)
+
+The v3 route trace gave `0x05` a separate per-phase budget. In qualified
+phase 6, task 3391 had 15 live TriGen samples and retained the established
+table controls. Every first route was `table1:0x15AC → L_15AC` (generated line
+211), followed by selector `0x0C` at `L_1268`, then `L_1298` and `L_1DB0`.
+This is two-line support (the resident generated route and the live
+DMA-provided table word) for the resident relay; the old s715 zero marker was
+a shared-budget failure, not an opaque direct-overlay continuation. It does
+not measure TriGen's handler-local `r17` increments: the next probe must
+instrument `L_1DB0`'s actual advances while retaining this route control.
