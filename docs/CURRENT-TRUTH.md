@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s722; compacted in maintenance s679)
+## Current truth (reviewed through s723; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -635,9 +635,18 @@ maintenance pass. Closed lineages are not backlog items.
    H-ff0-stage-couples-another-writer are REFUTED** there. The concurrent
    arms did not qualify a post-sec2 capture (their GUI/input timing diverged),
    so this does not answer the plateau mechanism. Default behavior remains
-   unchanged; the env gate is diagnostic. Next: audit the independent host
-   DMEM[0x130] chunk-source mirror against the boot-established value before
-   considering any task-root staging change.
+   unchanged; the env gate is diagnostic. **s723 DMEM[0x130] A/B:** both
+   default and `ROGUESQ_SKIP_HOST_130_STAGE=1` arms have 16 complete
+   phase-3 route/source controls; boot is static `0x00000C` (not task data),
+   while the default post-host value is task data and the skip post value
+   remains `0x00000C`. Despite that difference, direct `L_11B0` captures
+   show `chunk130=staged_dram=refill_dram=0x73FB60` in both arms. **Thus
+   H-130-host-required is REFUTED** for this route: `L_1DB0` loads the root
+   from DMEM[0xFF0] and writes it to 0x130 before L_11B0 reads it. The host
+   0x130 mirror is redundant; its default remains unchanged pending a narrow
+   cleanup A/B. H-130-later-writer is recharacterized as this expected
+   `L_1DB0` bootstrap store, not an unknown writer. No claim is made about
+   the post-sec2 plateau because neither arm qualified there.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -52879,3 +52879,28 @@ unchanged. The env gate remains diagnostic and default behavior is unchanged.
 No mitigation changed. Next: distinguish the independent host DMEM 0x130
 chunk-source mirror from a real boot-established field before altering any
 task-root staging.
+
+## Session 723 (2026-08-12) — L_1DB0, not the host, seeds the live 0x130 chunk source
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 56,200 bytes, so maintenance did
+not trigger. `tools/oracle/README.md` was checked before adding the probe: the
+retail tool observes physical RDRAM CPU accesses and runs dummy video, so it
+cannot inspect this RSP-DMEM-local slot. Added phase-scoped boot/post-130
+fields, `ROGUESQ_SKIP_HOST_130_STAGE=1`, and a direct capture immediately
+after `L_11B0` loads `DMEM[$18+0x30]`; the generated-code insertion is in
+`fixup_factor5_ucode.py`. The existing complete 0x05 route and later source
+row remained mandatory controls.
+
+One build ran default and skip-130 arms concurrently, then a corrected build
+ran them again with the direct L_11B0 capture. Both final arms emitted 16
+complete phase-3 `0x05→L_15AC→L_1298→L_1DB0` controls and 16 direct chunk
+rows, with no crash. Boot left 0x130 at static `0x00000C` in both arms;
+default then wrote task data while skip retained `0x00000C`. Nevertheless,
+each direct row says `chunk130=staged_dram=refill_dram=0x73FB60` (for example
+task 191 default and task 190 skip), while the established entry-buffer
+expectation remains `0x73FE10`. This directly identifies `L_1DB0`'s load from
+FF0 and store to 0x130 as the writer before `L_11B0`, not an unknown later
+writer. H-130-host-required is refuted for the qualified route; the host
+0x130 mirror is redundant. The run does not qualify post-sec2, so it makes no
+claim about the plateau. No mitigation changed. Next: make this redundant
+mirror default-off with a restore arm and repeat the same controls.

@@ -1256,6 +1256,27 @@ if is_main_ucode and TRIGEN_SOURCE_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 16: direct TriGen L_11B0 chunk-source capture (s723, item -421).
+# ---------------------------------------------------------------------------
+TRIGEN_CHUNK_MARKER = "/* fixup: TriGen L_11B0 chunk source audit v1 */"
+if is_main_ucode and TRIGEN_CHUNK_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_trigen_sources[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) + 'extern "C" void rs64_inline_probe_trigen_chunk(uint32_t r17, uint32_t chunk_dram);  ' + TRIGEN_CHUNK_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 16 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    chunk_anchor = re.compile(
+        r"(L_11B0:\n[\s\S]{0,400}?[ \t]*r2 = RSP_MEM_W_LOAD\(0X30, r18\);\n)(L_11B4:)")
+    text, n_chunk = chunk_anchor.subn(
+        lambda m: m.group(1) + "    rs64_inline_probe_trigen_chunk(r17, r2);  " + TRIGEN_CHUNK_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_chunk != 1:
+        print("fixup_factor5_ucode: FIXUP 16 ANCHOR FAILED (L_11B0 chunk source).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:

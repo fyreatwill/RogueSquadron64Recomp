@@ -193,6 +193,7 @@ static std::atomic<uint32_t> g_inline_probe_trigen_entry_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_reload_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_exit_lines[5];
 static std::atomic<uint32_t> g_inline_probe_trigen_source_lines{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_chunk_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_boot_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
@@ -247,6 +248,7 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
         g_inline_probe_trigen_reload_lines.store(0, std::memory_order_release);
         for (auto &lines : g_inline_probe_trigen_exit_lines) lines.store(0, std::memory_order_release);
         g_inline_probe_trigen_source_lines.store(0, std::memory_order_release);
+        g_inline_probe_trigen_chunk_lines.store(0, std::memory_order_release);
         g_inline_probe_trigen_boot_lines.store(0, std::memory_order_release);
         g_inline_probe_summaries.store(0, std::memory_order_release);
     }
@@ -330,10 +332,18 @@ extern "C" void rs64_inline_probe_trigen_entry(uint32_t r17) {
 }
 
 static std::atomic<uint32_t> g_inline_probe_trigen_staged_dram{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_boot_130{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_post_130{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_skip_130{0};
 
-extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_ff0,
-                                                  uint32_t staged_ff0, uint32_t skipped_host_stage) {
+extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_130,
+                                                  uint32_t staged_130, uint32_t skipped_host_130,
+                                                  uint32_t boot_ff0, uint32_t staged_ff0,
+                                                  uint32_t skipped_host_ff0) {
     g_inline_probe_trigen_staged_dram.store(dl_ptr & 0x7FFFFFu, std::memory_order_relaxed);
+    g_inline_probe_trigen_boot_130.store(boot_130 & 0x7FFFFFu, std::memory_order_relaxed);
+    g_inline_probe_trigen_post_130.store(staged_130 & 0x7FFFFFu, std::memory_order_relaxed);
+    g_inline_probe_trigen_skip_130.store(skipped_host_130, std::memory_order_relaxed);
     if (!log_inline_advance()) return;
     const uint32_t line = g_inline_probe_trigen_boot_lines.fetch_add(1, std::memory_order_relaxed);
     if (line < 16) {
@@ -341,12 +351,33 @@ extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_ff
         const uint32_t boot = boot_ff0 & 0x7FFFFFu;
         const uint32_t staged = staged_ff0 & 0x7FFFFFu;
         const uint32_t expected = dl_ptr & 0x7FFFFFu;
-        fprintf(stderr, "[inline-trigen-boot-ff0] task=%u phase=%u boot=0x%06X task_data=0x%06X post=0x%06X host_stage=%s boot_task=%s post_task=%s boot_kind=%s\n",
-                task, rs64_phase_ord(), boot, expected, staged,
-                skipped_host_stage ? "skipped" : "written",
+        const uint32_t boot130 = boot_130 & 0x7FFFFFu;
+        const uint32_t post130 = staged_130 & 0x7FFFFFu;
+        fprintf(stderr, "[inline-trigen-boot] task=%u phase=%u 130_boot=0x%06X 130_post=0x%06X task_data=0x%06X host130=%s 130_boot_task=%s 130_post_task=%s ff0_boot=0x%06X ff0_post=0x%06X host_ff0=%s ff0_boot_task=%s ff0_post_task=%s\n",
+                task, rs64_phase_ord(), boot130, post130, expected,
+                skipped_host_130 ? "skipped" : "written",
+                boot130 == expected ? "equal" : "MISMATCH",
+                post130 == expected ? "equal" : "MISMATCH", boot, staged,
+                skipped_host_ff0 ? "skipped" : "written",
                 boot == expected ? "equal" : "MISMATCH",
-                staged == expected ? "equal" : "MISMATCH",
-                boot == 0 ? "zero" : boot == expected ? "mirror" : "other");
+                staged == expected ? "equal" : "MISMATCH");
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_inline_probe_trigen_chunk(uint32_t r17, uint32_t chunk_dram) {
+    if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
+    const uint32_t line = g_inline_probe_trigen_chunk_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 16) {
+        const uint32_t staged = g_inline_probe_trigen_staged_dram.load(std::memory_order_relaxed);
+        const uint32_t boot130 = g_inline_probe_trigen_boot_130.load(std::memory_order_relaxed);
+        const uint32_t post130 = g_inline_probe_trigen_post_130.load(std::memory_order_relaxed);
+        const uint32_t skip130 = g_inline_probe_trigen_skip_130.load(std::memory_order_relaxed);
+        const uint32_t chunk = chunk_dram & 0x7FFFFFu;
+        fprintf(stderr, "[inline-trigen-chunk] task=%u phase=%u r17=0x%06X chunk130=0x%06X staged_dram=0x%06X host130=%s boot130=0x%06X post130=0x%06X stage=%s\n",
+                g_e9prov.task, rs64_phase_ord(), r17 & 0x7FFFFFu, chunk, staged,
+                skip130 ? "skipped" : "written", boot130, post130,
+                chunk == staged ? "equal" : "MISMATCH");
         fflush(stderr);
     }
 }
@@ -359,9 +390,13 @@ extern "C" void rs64_inline_probe_trigen_sources(uint32_t r17, uint32_t entry_dr
         const uint32_t expected = (entry_dram + entry_offset + 40) & 0x7FFFFFu;
         const uint32_t actual = refill_dram & 0x7FFFFFu;
         const uint32_t staged = g_inline_probe_trigen_staged_dram.load(std::memory_order_relaxed);
-        fprintf(stderr, "[inline-trigen-source] task=%u phase=%u entry_dram=0x%06X entry_offset=0x%03X refill_dram=0x%06X staged_dram=0x%06X expected=0x%06X stage=%s verdict=%s\n",
+        const uint32_t boot130 = g_inline_probe_trigen_boot_130.load(std::memory_order_relaxed);
+        const uint32_t post130 = g_inline_probe_trigen_post_130.load(std::memory_order_relaxed);
+        const uint32_t skip130 = g_inline_probe_trigen_skip_130.load(std::memory_order_relaxed);
+        fprintf(stderr, "[inline-trigen-source] task=%u phase=%u entry_dram=0x%06X entry_offset=0x%03X refill_dram=0x%06X staged_dram=0x%06X expected=0x%06X host130=%s boot130=0x%06X post130=0x%06X stage=%s verdict=%s\n",
                 g_e9prov.task, rs64_phase_ord(), entry_dram & 0x7FFFFFu, entry_offset,
-                actual, staged, expected, actual == staged ? "equal" : "MISMATCH",
+                actual, staged, expected, skip130 ? "skipped" : "written", boot130, post130,
+                actual == staged ? "equal" : "MISMATCH",
                 actual == expected ? "equal" : "MISMATCH");
         fflush(stderr);
     }
