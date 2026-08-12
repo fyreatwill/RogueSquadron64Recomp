@@ -29,6 +29,12 @@ Exit status: 0 = hits, 3 = clean run with zero hits, 1/2 = setup error. The
 VI count is emulated frames, so a run always reports how far the *game* got,
 not just how long the wall clock ran.
 
+`--oracle-debugger 0|1` and `--oracle-emulator N` expose the core's
+`EnableDebugger` and `R4300Emulator` settings (defaults: `1` and `0`, the
+pure interpreter). A debugger-off run cannot produce this tool's watches,
+VI trace, or PIF trace: those are debugger callbacks. Treat its zero VI/hit
+summary as an absent instrument, not a boot-stall result.
+
 ## Three traps, all already paid for
 
 **Addresses are PHYSICAL.** `r4300_write_aligned_word()` masks with

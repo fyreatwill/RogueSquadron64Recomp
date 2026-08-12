@@ -52454,3 +52454,29 @@ support H-core-environment-route, but do not qualify a recovery-cell target
 watch. The next bounded unit exposes the oracle's forced debugger and
 pure-interpreter settings as selectable launch arms, then compares those arms
 concurrently before any target-watch or E9-provenance change.
+
+## Session 705 (2026-08-12) — interpreter mode does not explain the oracle's VI-320 stall
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 43,690 bytes, so maintenance did
+not trigger. Added `--oracle-debugger 0|1` and `--oracle-emulator N` to
+`tools/oracle/rs64_oracle.c`, preserving debugger=1/emulator=0 defaults, and
+documented that debugger callbacks are the source of this tool's VI, PIF, and
+watch evidence. The first three-arm launch failed immediately because the
+oracle default core path is only a basename; the logs named that missing path.
+The fixed concurrent batch passed the explicit DEBUGGER=1 core dylib path and
+used separate config directories.
+
+Default and emulator=1 arms each ran the same retail ROM and eleven Start
+presses at 6..56 seconds, with VI/PIF traces and a whole-RDRAM write control.
+Both observed every Start in PIF, stayed at VI width 320 for 4,199/4,200 VI
+(~70 seconds), and recorded 11,786,166/11,788,933 writes. This is a qualified
+two-arm result: pure interpreter mode is not the VI-320 cause, so
+H-interpreter-route is refuted. The debugger=0 arm ran all eleven presses but
+reported 0 VI/0 hits, exactly because disabling `EnableDebugger` prevents the
+callback initialization that implements every existing oracle witness. It
+does not test H-debugger-route and must not be treated as a phase-stall null.
+Logs: `scratch/agent/s705_oracle_modes/`.
+
+The next bounded unit is to add a debugger-independent phase witness with its
+own same-run positive control, then rerun debugger-on/off and emulator=1 arms
+concurrently. Do not alter the recovery-cell watch or E9 tracer first.

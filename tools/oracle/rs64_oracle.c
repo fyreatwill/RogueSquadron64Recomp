@@ -395,6 +395,8 @@ static void usage(void)
         "  --input PATH          input plugin (default homebrew mupen64plus-input-sdl)\n"
         "  --video PATH          video plugin (default none -> core dummy, no RDP at all)\n"
         "  --audio PATH          audio plugin (default none -> core dummy)\n"
+        "  --oracle-debugger 0|1 set Core/EnableDebugger (default 1; 0 disables watches and traces)\n"
+        "  --oracle-emulator N   set Core/R4300Emulator (default 0, pure interpreter)\n"
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
         "  --verbose             pass through core info messages\n"
@@ -416,6 +418,8 @@ int main(int argc, char **argv)
     const char *videopath = NULL;
     const char *audiopath = NULL;
     double secs = 120.0;
+    int oracle_debugger = 1;
+    int oracle_emulator = 0;
     FILE *f; long romsize; void *rombuf;
     pthread_t th;
     int i;
@@ -428,6 +432,14 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--configdir") && i + 1 < argc)  configdir = argv[++i];
         else if (!strcmp(argv[i], "--video") && i + 1 < argc)      videopath = argv[++i];
         else if (!strcmp(argv[i], "--audio") && i + 1 < argc)      audiopath = argv[++i];
+        else if (!strcmp(argv[i], "--oracle-debugger") && i + 1 < argc) {
+            oracle_debugger = atoi(argv[++i]);
+            if (oracle_debugger != 0 && oracle_debugger != 1) usage();
+        }
+        else if (!strcmp(argv[i], "--oracle-emulator") && i + 1 < argc) {
+            oracle_emulator = atoi(argv[++i]);
+            if (oracle_emulator < 0) usage();
+        }
         else if (!strcmp(argv[i], "--secs") && i + 1 < argc)       secs = atof(argv[++i]);
         else if (!strcmp(argv[i], "--hit-cap") && i + 1 < argc)    g_hit_cap = atol(argv[++i]);
         else if (!strcmp(argv[i], "--watch-write") && i + 1 < argc)
@@ -493,7 +505,7 @@ int main(int argc, char **argv)
      * per access there, and the reported PC is exact. */
     {
         m64p_handle core_section;
-        int enable = 1, interp = 0;
+        int enable = oracle_debugger, interp = oracle_emulator;
         if (pConfigOpenSection("Core", &core_section) == M64ERR_SUCCESS) {
             pConfigSetParameter(core_section, "EnableDebugger", M64TYPE_BOOL, &enable);
             pConfigSetParameter(core_section, "R4300Emulator", M64TYPE_INT, &interp);
@@ -535,7 +547,8 @@ int main(int argc, char **argv)
     g_t0 = now_s();
     pthread_create(&th, NULL, director, &secs);
 
-    printf("[oracle] running %s for %.0fs with %d watch(es)\n", rom, secs, g_nwatch);
+    printf("[oracle] running %s for %.0fs with %d watch(es), debugger=%d emulator=%d\n",
+           rom, secs, g_nwatch, oracle_debugger, oracle_emulator);
     fflush(stdout);
     pCoreDoCommand(M64CMD_EXECUTE, 0, NULL);
 

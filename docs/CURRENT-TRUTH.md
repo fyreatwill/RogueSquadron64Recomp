@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s704; compacted in maintenance s679)
+## Current truth (reviewed through s705; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -474,7 +474,16 @@ maintenance pass. Closed lineages are not backlog items.
    **SUPERSEDED s704:** that conclusion was believable because the inventories
    searched only `/opt/homebrew` and `/usr/local`; they omitted the local
    `rs64-oracle` source tree. CXD4 is compatible enough to load and complete
-   the control run, but did not change the 320 stall.
+   the control run, but did not change the 320 stall. **s705 launch-mode A/B:**
+   exposed `--oracle-debugger` and `--oracle-emulator`. Default
+   (debugger=1/emulator=0) and emulator=1 each observed all eleven Starts in
+   PIF, ran 4,199/4,200 VI (~70s), recorded 11,786,166/11,788,933 whole-RDRAM
+   writes, and never transitioned from 320. **H-interpreter-route is
+   REFUTED** with two controlled arms. Debugger=0 ran all presses but reports
+   `0 VI/0 hits` by design because the oracle's VI/PIF/watch mechanisms are
+   debugger callbacks; that is an absent instrument, not evidence for or
+   against **H-debugger-route**. Next make a debugger-independent phase
+   witness before another target watch or debugger-off conclusion.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
