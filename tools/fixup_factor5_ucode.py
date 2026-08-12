@@ -1277,6 +1277,60 @@ if is_main_ucode and TRIGEN_CHUNK_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 17: TriGen L_1DB0 DPC-branch trace (s726, item -421).
+#
+# The source is DMEM[r1+0x30] (0xFF0) copied to state[0x30]/0x130. Record
+# exactly one selected DPC exit for the first 16 active phase-3 TriGen routes.
+# ---------------------------------------------------------------------------
+TRIGEN_BRANCH_MARKER = "/* fixup: TriGen L_1DB0 branch audit v1 */"
+if is_main_ucode and TRIGEN_BRANCH_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_trigen_chunk[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) + 'extern "C" void rs64_inline_probe_trigen_branch(uint32_t r17, uint32_t source_dram, uint32_t dpc_end, uint32_t dpc_current, uint32_t branch);  ' + TRIGEN_BRANCH_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 17 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    branches = [
+        (r"(r2 = RSP_MEM_W_LOAD\(0X4, r1\);\n[\s\S]{0,300}?RSP_MEM_W_STORE\(0X4, r1, 0\);\n)([ \t]*goto L_1E70;)", 0),
+        (r"(r2 = r2 & 0X1;\n[\s\S]{0,300}?r2 = RSP_DPC_END_READ\(\);\n)([ \t]*goto L_1E48;)", 1),
+        (r"(r16 = RSP_SUB32\(r16, r2\);\n[\s\S]{0,300}?r3 = RSP_DPC_CURRENT_READ\(\);\n)([ \t]*goto L_1E48;)", 2),
+        (r"(if \(r3 == 0\) \{[\s\S]{0,300}?)(        goto L_1E48;)", 3),
+        (r"(if \(r3 == r2\) \{[\s\S]{0,300}?)(        goto L_1E48;)", 4),
+        (r"(r4 = 0 \| r2;\n)([ \t]*goto L_1E5C;)", 5),
+    ]
+    for pattern, branch in branches:
+        anchor = re.compile(pattern)
+        text, n_branch = anchor.subn(
+            lambda m, b=branch: m.group(1) +
+            f"    rs64_inline_probe_trigen_branch(r17, RSP_MEM_W_LOAD(0X30, r18), r2, r3, {b});  " + TRIGEN_BRANCH_MARKER + "\n" + m.group(2),
+            text, count=1)
+        if n_branch != 1:
+            print(f"fixup_factor5_ucode: FIXUP 17 ANCHOR FAILED (branch {branch}).", file=sys.stderr)
+            sys.exit(1)
+
+# ---------------------------------------------------------------------------
+# Fixup 18: record L_11B0's actual indirect continuation (s726).
+# ---------------------------------------------------------------------------
+TRIGEN_RETURN_MARKER = "/* fixup: TriGen L_11B0 return audit v1 */"
+if is_main_ucode and TRIGEN_RETURN_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_trigen_branch[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) + 'extern "C" void rs64_inline_probe_trigen_return(uint32_t r17, uint32_t source_dram, uint32_t target);  ' + TRIGEN_RETURN_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 18 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    return_anchor = re.compile(
+        r"(L_11B0:\n[\s\S]{0,1800}?jump_target = r31;\n)([ \t]*debug_file = __FILE__;)")
+    text, n_return = return_anchor.subn(
+        lambda m: m.group(1) + "    rs64_inline_probe_trigen_return(r17, RSP_MEM_W_LOAD(0X30, r18), jump_target);  " + TRIGEN_RETURN_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_return != 1:
+        print("fixup_factor5_ucode: FIXUP 18 ANCHOR FAILED (L_11B0 return).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:

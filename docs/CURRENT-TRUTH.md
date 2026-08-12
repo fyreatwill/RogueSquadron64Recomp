@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s724; compacted in maintenance s679)
+## Current truth (reviewed through s726; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -666,7 +666,17 @@ maintenance pass. Closed lineages are not backlog items.
    ordering effect are refuted for the qualified route. The initial concurrent
    captures had focus/capture-helper failures, so these controls—not a
    post-sec2 comparison—are the result. No claim is made about the post-sec2
-   plateau.
+   plateau. **s726 `L_1DB0` branch/return audit:** static audit records the
+   source path as DMEM `0xFF0` (`r1=0xFC0` + `lw 0x30(r1)`) → state
+   `0x130` → `L_11B0` DMA to DMEM `0x170`; `L_11B0` then returns through
+   `L_1088→L_11E4→L_1090`. The phase-3 runtime control fired 16
+   `0x05→L_15AC→L_1298→L_1DB0` routes. All 16 had source `0x73FB60`, DPC
+   `current=end=0x4B8400`, selected branch 4 through
+   `L_1E48→L_1E5C→L_11B0`, and indirect target `0x1088`; no `[CRASH]`.
+   This is single-source support for the documented refill loop and refutes
+   an unexpected generated branch/return on this early qualified route. It
+   does not test the post-sec2 plateau; next latch the same trace to section
+   2 before interpreting source repetition as stale.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

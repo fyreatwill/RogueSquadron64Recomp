@@ -52966,3 +52966,29 @@ qualified route. This removes another redundant host write but does not test
 the post-sec2 plateau. No mitigation changed. Next: return to the -421 LLE
 control-flow audit and trace the live `L_1DB0` continuation's command-source
 selection rather than re-running this cleanup.
+## Session 726 (2026-08-12) — TriGen refill continuation returns through the normal DMA helper
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 58,314 bytes, below the maintenance threshold.
+The required static audit found `L_1DB0` uses `r1=0xFC0`, so its `lw 0x30(r1)`
+reads DMEM `0xFF0`; it copies that root to state `0x130` and `L_11B0` DMA-loads
+it into DMEM `0x170`. The DPC branch table is: state bit `r1+4` → `L_1E70`;
+DPC busy, positive remaining span, zero current, or `current==end` →
+`L_1E48→L_1E5C→L_11B0`; otherwise it enters `L_1E5C→L_11B0` directly.
+`L_11B0` returns indirectly through its saved `r31`; `0x1088` then invokes
+`L_11E4`, which reloads the DMA buffer word and continues at `L_1090`. This
+matches the reference's `0x05` TriGen route to the DMA-populated continuation;
+the reference cannot observe DMEM or branch state.
+
+Added regeneration-safe fixups 17/18 plus a phase-3 trace for the selected
+DPC branch and `L_11B0` indirect target. The first build/run had all 16
+existing `L_15AC` route controls and 16 branch rows, but did not record the
+indirect target; it was SIGKILLed after those controls, and the trace was
+completed in the same iteration. The corrected run again had 16 route
+controls, 16 branch rows, and 16 return rows, with no `[CRASH]`. Every row
+was task 211, `entry=0x1E8`, source `0x73FB60`,
+`current=end=0x4B8400`, branch 4 through `L_1E48→L_1E5C→L_11B0`, and return
+target `0x1088`. Thus H-l1db0-branch-loss is refuted for this early qualified
+route, and H-l1db0-valid-chunk-loop has single-source support. The rows are
+pre-section-2, so repeated source does not yet distinguish a legitimate
+post-sec2 refill loop from H-l1db0-stale-source. No mitigation changed.
+Next: phase-latch this same complete trace to section 2.

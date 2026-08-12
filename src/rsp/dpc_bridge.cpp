@@ -194,6 +194,8 @@ static std::atomic<uint32_t> g_inline_probe_trigen_reload_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_exit_lines[5];
 static std::atomic<uint32_t> g_inline_probe_trigen_source_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_chunk_lines{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_branch_lines{0};
+static std::atomic<uint32_t> g_inline_probe_trigen_return_lines{0};
 static std::atomic<uint32_t> g_inline_probe_trigen_boot_lines{0};
 static std::atomic<uint32_t> g_inline_probe_summaries{0};
 static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
@@ -249,6 +251,8 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
         for (auto &lines : g_inline_probe_trigen_exit_lines) lines.store(0, std::memory_order_release);
         g_inline_probe_trigen_source_lines.store(0, std::memory_order_release);
         g_inline_probe_trigen_chunk_lines.store(0, std::memory_order_release);
+        g_inline_probe_trigen_branch_lines.store(0, std::memory_order_release);
+        g_inline_probe_trigen_return_lines.store(0, std::memory_order_release);
         g_inline_probe_trigen_boot_lines.store(0, std::memory_order_release);
         g_inline_probe_summaries.store(0, std::memory_order_release);
     }
@@ -398,6 +402,35 @@ extern "C" void rs64_inline_probe_trigen_sources(uint32_t r17, uint32_t entry_dr
                 actual, staged, expected, skip130 ? "skipped" : "written", boot130, post130,
                 actual == staged ? "equal" : "MISMATCH",
                 actual == expected ? "equal" : "MISMATCH");
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_inline_probe_trigen_branch(uint32_t r17, uint32_t source_dram,
+                                                   uint32_t dpc_end, uint32_t dpc_current,
+                                                   uint32_t branch) {
+    if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
+    if (rs64_phase_ord() != 3) return;
+    const uint32_t line = g_inline_probe_trigen_branch_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 16) {
+        fprintf(stderr, "[inline-trigen-branch] task=%u phase=%u entry=0x%06X r17=0x%06X source=0x%06X end=0x%06X current=0x%06X branch=%u next=%s\n",
+                g_e9prov.task, rs64_phase_ord(), g_inline_probe.entry & 0x7FFFFFu,
+                r17 & 0x7FFFFFu, source_dram & 0x7FFFFFu, dpc_end & 0x7FFFFFu,
+                dpc_current & 0x7FFFFFu, branch,
+                branch == 5 ? "L_1E5C/L_11B0" : branch == 0 ? "L_1E70" : "L_1E48/L_1E5C/L_11B0");
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_inline_probe_trigen_return(uint32_t r17, uint32_t source_dram,
+                                                   uint32_t target) {
+    if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
+    if (rs64_phase_ord() != 3) return;
+    const uint32_t line = g_inline_probe_trigen_return_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 16) {
+        fprintf(stderr, "[inline-trigen-return] task=%u phase=%u entry=0x%06X r17=0x%06X source=0x%06X target=0x%04X\n",
+                g_e9prov.task, rs64_phase_ord(), g_inline_probe.entry & 0x7FFFFFu,
+                r17 & 0x7FFFFFu, source_dram & 0x7FFFFFu, target);
         fflush(stderr);
     }
 }
