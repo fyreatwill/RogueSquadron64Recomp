@@ -53239,3 +53239,33 @@ callback is zero because `L_1DB0` has begun resetting state; the predecessor's
 resident `0C` is the attribution value. No mitigation was changed. NEXT now
 requests a bounded static provenance audit of resident `0C`'s table/image,
 with resident `04` clip routing as the positive control, before another build.
+
+## Session 738 (2026-08-12) — overlay 12 has distinct TriGen semantics; main image is stale
+
+Step 0 measured `CURRENT-TRUTH.md` at 34,975 bytes, so maintenance was not
+triggered. This bounded static audit built resident-04 and resident-0C
+composite ROM arms with the same helper, then translated both through
+RSPRecomp. The resident-04 control exactly reproduced its known clip image and
+distinct `L_1DB0` entry. The treatment exactly reproduced ROM `0x26670` for
+0x230 bytes (SHA-256 `06a8ce4d476ce18998f597fe093d947a13251d853fa07df8561b393183410029`)
+and translated a different `L_1DB0`: it reads TriGen-adjacent command fields,
+conditionally branches to `L_1F64`, and issues two payload DMAs through
+`L_122C`. It does not clear `DMEM[0x152]`.
+
+The existing generated dispatcher independently shows that `L_1268` derives
+the table index from `DMEM[0x7A + r5]`, obtains the shared entry from
+`DMEM[0x76]`, and reaches `L_1298`; s737's live rows identify this exact path
+with resident `0C`. The historical IMEM-DMA capture independently maps that
+resident to `dram=0x25A70,len=0x230`, whose ROM source is `dram + 0xC00 =
+0x26670`. The resident-04 clip route is explicitly spliced, but the current
+`case 0x1DB0` only recognizes resident 04 and otherwise enters main `L_1DB0`,
+where the sole observed `DMEM[0x152]=0` reset occurs.
+
+This selects H-stale-main-image and refutes H-intended-resident0c-reset and
+H-bad-table-entry. **ORIGIN:** the reset writer is the main/static `L_1DB0`
+executed because IMEM-targeted overlay-12 DMA is intentionally skipped and no
+resident-0C splice/router exists; it is not a legitimate overlay-12 TriGen
+operation. Added the generic composite helper and an overlay-12 RSPRecomp TOML
+for a repeatable source-backed audit. No runtime behavior changed. NEXT is one
+regeneration-safe resident-0C splice/router change with phase-latched reset /
+reuse validation and the resident-04 route as a same-build positive control.

@@ -22,7 +22,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s737; compacted in maintenance s729)
+## Current truth (reviewed through s738; compacted in maintenance s729)
+
+**s738:** static provenance audit selected **H-stale-main-image**. The
+resident-`0C` window image is raw ROM `0x26670`, 0x230 bytes (independent s47
+capture source `dram=0x25A70 + 0xC00`); a fresh RSPRecomp composite translates
+its `L_1DB0` into TriGen parameter/payload-DMA code, not the main image's
+`DMEM[0x152]=0` reset. Resident-04 rebuilt as the same-method positive control
+and retains its distinct clip code. The shared `0x76` table entry `0x1DB0` is
+therefore correct; only the runtime's omission of an overlay-12 splice is
+wrong. `docs/M3-OVERLAY12-AUDIT.md` contains the table and commands. Next is
+one regeneration-safe overlay-12 splice/router change plus phase-latched
+reset/reuse validation; no runtime routing changed in the audit.
 
 **s737:** consumed the clean 347-second `s736_reset_predecessor` soak. Its
 four balanced direct boot controls remain intact; all 61 retained section-2
@@ -302,7 +313,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. Qualified phase-latched controls establish: (a) parser-derived raw E9s all reach `GBI_RDP::fullSync` and `State::fullSync`; (b) fixed-stride extra E9 bytes are inline triangle payload, not commands; and (c) the observed TriGen refill continuation has normal branch-4 → `0x1088` returns. **s731:** two phase-latched section-2 captures source-tagged every `L_12A0` entry: direct table-1 `0x06` only; the DMA-fed `L_1298` overlay route was 0. **s732:** depth-local ledgers resolve the residual: cap rows have balanced depth 1 but depth 0 has 9–15 reused pushes, with no pop/resume mismatch and one active frame (e.g. 245/229/229, reuse=15). The same-run boot controls are direct-only and balanced. Therefore H-counter-alias and H-cap-truncates-valid-stack are refuted; the direct `0x06` lifecycle leaks through depth-0 reuse. Static ground truth locates the only generated depth reset at TriGen continuation `L_1DB0`; next phase-latched trace must correlate that reset with each live depth-0 overwrite before considering any mitigation. Details and the evidence chain are durable in PROJECT-OVERVIEW §28; the exact next protocol is `scratch/agent/NEXT.md`.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. Qualified phase-latched controls establish: (a) parser-derived raw E9s all reach `GBI_RDP::fullSync` and `State::fullSync`; (b) fixed-stride extra E9 bytes are inline triangle payload, not commands; and (c) the observed TriGen refill continuation has normal branch-4 → `0x1088` returns. **s731:** two phase-latched section-2 captures source-tagged every `L_12A0` entry: direct table-1 `0x06` only; the DMA-fed `L_1298` overlay route was 0. **s732–s737:** the depth-0 reuse is paired to the `L_1DB0` reset and every active predecessor is the resident-`0C` `L_1298` relay. **s738 static audit:** resident 0C's correct `0x1DB0` image is a distinct TriGen overlay but the runtime dispatches the main bootstrap image, whose reset is the writer. Thus H-counter-alias, H-cap-truncates-valid-stack, H-intended-resident0c-reset, and H-bad-table-entry are refuted; **H-stale-main-image is selected**. Next is the bounded regeneration-safe resident-0C splice/router change and a phase-latched reset/reuse validation. Details: `docs/M3-OVERLAY12-AUDIT.md`; exact protocol: `scratch/agent/NEXT.md`.
 
 **s733:** a callback immediately before the sole `L_1DB0` `DMEM[0x152]=0` store pairs every active reset with the next depth-0 reuse, in order (e.g. reset `r17=0x1D8` → reuse `r17=0x180`, consecutive lifecycle sequence numbers; 64 latched rows, no unpaired reuse). The generated-store enumeration and the live pairing are two independent lines: **H-l1db0-reset-writer CONFIRMED** and H-reset-is-boundary/H-host-ledger-ordering refuted for the observed cap rows. The reference identifies `0x05` as TriGen, whose semantic handler advances its input stream; it does not establish why this continuation resets the call-depth byte. Next: source-tag each active `L_1DB0` entry (return address, resident id, and preceding `0x05` route) to split an erroneous overlay-route entry from an intentional but undocumented TriGen reset. Details and the evidence chain are durable in PROJECT-OVERVIEW §28; the exact next protocol is `scratch/agent/NEXT.md`.
 
