@@ -121,6 +121,16 @@ struct Rs64E9Provenance {
         uint32_t w1;
         uint32_t source;
     };
+    struct FrameDepth {
+        uint32_t push = 0;
+        uint32_t pop = 0;
+        uint32_t resume = 0;
+        uint32_t reuse_push = 0;
+        uint32_t pop_without_push = 0;
+        uint32_t resume_without_pop = 0;
+        bool active = false;
+        bool pending_resume = false;
+    };
     uint32_t task = 0;
     uint32_t guest = 0;
     uint32_t emitted = 0;
@@ -150,6 +160,7 @@ struct Rs64E9Provenance {
     uint32_t l12a0_overlay = 0;
     std::unordered_map<uint32_t, uint32_t> frame_id_by_slot;
     std::unordered_map<uint32_t, uint32_t> frame_opcode_by_slot;
+    std::vector<FrameDepth> frame_depths;
     uint32_t source_first = 0xFFFFFFFFu;
     uint32_t source_last = 0xFFFFFFFFu;
     uint32_t trigen_sample = 0xFFFFFFFFu;
@@ -530,6 +541,25 @@ static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t targe
                                      uint32_t caller = 0, uint32_t w0 = 0, uint32_t w1 = 0) {
     if (!log_e9_provenance()) return;
     ++(kind == 1 ? g_e9prov.frame_push : kind == 2 ? g_e9prov.frame_pop : g_e9prov.frame_resume);
+    const uint32_t depth = slot / 8u;
+    if (g_e9prov.frame_depths.size() <= depth) g_e9prov.frame_depths.resize(depth + 1);
+    auto& ledger = g_e9prov.frame_depths[depth];
+    if (kind == 1) {
+        ++ledger.push;
+        if (ledger.active) ++ledger.reuse_push;
+        ledger.active = true;
+        ledger.pending_resume = false;
+    } else if (kind == 2) {
+        if (!ledger.active) ++ledger.pop_without_push;
+        else ++ledger.pop;
+        ledger.pending_resume = ledger.active;
+    } else if (!ledger.active || !ledger.pending_resume) {
+        ++ledger.resume_without_pop;
+    } else {
+        ++ledger.resume;
+        ledger.active = false;
+        ledger.pending_resume = false;
+    }
     uint32_t id = 0;
     if (kind == 1) {
         id = ++g_e9prov.frame_next_id;
@@ -681,6 +711,29 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
             const std::vector<Rs64E9Provenance::FrameEvent> last{g_e9prov.frame_reentry_slot0_last};
             dump_frame("reentry-slot0-first", first);
             dump_frame("reentry-slot0-last", last);
+        }
+        if (g_e9prov.target && g_e9prov.source_end_kind == 2) {
+            uint32_t active = 0;
+            uint32_t rows = 0;
+            for (const auto& depth : g_e9prov.frame_depths) {
+                if (depth.active) ++active;
+            }
+            fprintf(stderr, "[e9-prov-depth-summary] task=%u phase=%u cap=1 current_active=%u depths=%zu\n",
+                    task, rs64_phase_ord(), active, g_e9prov.frame_depths.size());
+            for (uint32_t depth = 0; depth < g_e9prov.frame_depths.size() && rows < 32; ++depth) {
+                const auto& entry = g_e9prov.frame_depths[depth];
+                if (entry.push == 0 && entry.pop == 0 && entry.resume == 0 &&
+                    entry.reuse_push == 0 && entry.pop_without_push == 0 &&
+                    entry.resume_without_pop == 0) continue;
+                ++rows;
+                fprintf(stderr, "[e9-prov-depth] task=%u depth=%u push=%u pop=%u resume=%u active=%u pending=%u reuse=%u pop_without_push=%u resume_without_pop=%u\n",
+                        task, depth, entry.push, entry.pop, entry.resume,
+                        entry.active ? 1u : 0u, entry.pending_resume ? 1u : 0u,
+                        entry.reuse_push, entry.pop_without_push, entry.resume_without_pop);
+            }
+            if (rows < g_e9prov.frame_depths.size()) {
+                fprintf(stderr, "[e9-prov-depth-truncated] task=%u rows=%u cap=32\n", task, rows);
+            }
         }
         fflush(stderr);
     }

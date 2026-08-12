@@ -53096,3 +53096,30 @@ depth/slot reuse aliases the current accounting. NEXT now keeps the same
 `m3-postsec2-lle-control-flow` thread and asks one depth-local, bounded direct-frame ledger to split
 cap-truncated valid nesting from an actual unmatched direct `0x06` lifecycle. The positive control
 remains direct tagging plus matched push/pop/resume in the same section-2 run.
+
+## Session 732 (2026-08-12) — depth-0 direct frames are overwritten before return
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 30,877 bytes, so maintenance was not triggered. The
+competing hypotheses and discriminating measurement were in `NEXT.md` before building. I added a
+phase-scoped, depth-local frame ledger in `dpc_bridge.cpp`; it records push, pop, resume, reuse,
+and active state independently of the older slot-keyed maps, and emits only bounded cap-task
+summaries. The first direct invocation of the fixup script omitted its required generated-C path;
+its documented usage was checked, the invocation corrected, and the binary rebuilt in this same
+iteration.
+
+The 300-second phase-latched capture reached the section-2 latch and completed normally (91
+screenshots, no `[CRASH]`). Its four boot controls were direct-only and balanced:
+`push:2,pop:2,resume:2`, `l12a0=direct:2,overlay:0`. The cap rows pass the same direct-source
+control but decisively do not form a valid nested stack. For example task 5916 records
+`push/pop/resume=260/244/244`, with the depth ledger splitting that into depth 0
+`245/229/229, active=1, reuse=15` and depth 1 `15/15/15, active=0, reuse=0`; every row had zero
+pop-without-push and resume-without-pop. The same pattern recurred throughout the 64 latched rows
+(depth-0 reuse 9--15). Thus H-counter-alias and H-cap-truncates-valid-stack are refuted, while
+H-direct-lifecycle-leak is confirmed: direct `0x06` reuses depth 0 before the prior frame returns.
+
+Static ground truth enumerates exactly one generated writer that sets the depth byte to zero:
+`L_1DB0` (TriGen continuation) executes `RSP_MEM_B(0X52, r18) = 0`; ordinary `L_12A0` increments
+it and `L_12C4` decrements it. This identifies a concrete candidate writer but does not yet prove
+whether its reset is a legitimate root boundary or the causal overwrite. NEXT retains
+`m3-postsec2-lle-control-flow` and requests one phase-latched, bounded reset-to-reuse ordering
+trace. No mitigation changed.

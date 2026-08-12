@@ -2640,8 +2640,13 @@ save/restore pair is balanced. It also found a remaining opaque alternative: the
 entry table contains `0x12A0` in its retained table image, although the earlier live overlay records
 selected only `0x1DB0`. **s731 closed that alternative for observed cap rows:** two section-2-latched
 captures tagged every `L_12A0` entry as table-1 direct `0x06` (overlay=0); the same-run control
-showed direct tags with matching push/pop/resume. The bounded residual is the direct-frame surplus
-at a synthetic cap (for example push=245 versus pop/resume=230): determine whether it is simply
-the cap truncating an otherwise valid active stack or an unmatched direct-`0x06` lifecycle. Runtime
+showed direct tags with matching push/pop/resume. **s732 resolved the bounded residual:** a
+phase-latched depth-local ledger reports depth 1 balanced, but depth 0 has 9–15 reused direct
+pushes with no pop/resume mismatch and one active frame at cap (for example
+push/pop/resume=245/229/229, reuse=15). The boot controls are balanced, so the old slot-keyed
+summary was not the source of the surplus and the cap is not merely truncating a properly nested
+stack. Static enumeration finds one generated reset of `DMEM[0x152]`, at the `L_1DB0` TriGen
+continuation root setup. The next probe must establish whether that writer precedes each active
+depth-0 overwrite; no mitigation is justified until its legitimacy is known. Runtime
 rerolls without a section-2 latch are unqualified and must not be repeated unchanged. Details:
-PORTING-STATE Sessions 685–731; active protocol: `scratch/agent/NEXT.md`.
+PORTING-STATE Sessions 685–732; active protocol: `scratch/agent/NEXT.md`.
