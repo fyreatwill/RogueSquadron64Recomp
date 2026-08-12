@@ -116,6 +116,8 @@ struct Rs64E9Provenance {
         uint32_t target;
         uint32_t pc;
         uint32_t caller;
+        uint32_t w0;
+        uint32_t w1;
     };
     uint32_t task = 0;
     uint32_t guest = 0;
@@ -158,6 +160,9 @@ struct Rs64E9Provenance {
     FrameEvent frame_slot8_first{};
     FrameEvent frame_slot8_last{};
     bool frame_slot8_seen = false;
+    FrameEvent frame_reentry_slot0_first{};
+    FrameEvent frame_reentry_slot0_last{};
+    bool frame_reentry_slot0_seen = false;
     uint32_t pending_pop_slot = 0xFFFFFFFFu;
     uint32_t pending_pop_pc = 0xFFFFFFFFu;
 };
@@ -220,12 +225,13 @@ extern "C" void rs64_e9prov_unwind(uint32_t stack_byte, uint32_t natural) {
     if (natural) ++g_e9prov.unwind_natural;
 }
 
-static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t target, uint32_t pc, uint32_t caller = 0) {
+static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t target, uint32_t pc,
+                                     uint32_t caller = 0, uint32_t w0 = 0, uint32_t w1 = 0) {
     if (!log_e9_provenance()) return;
     ++(kind == 1 ? g_e9prov.frame_push : kind == 2 ? g_e9prov.frame_pop : g_e9prov.frame_resume);
     if (slot < g_e9prov.frame_min_slot) g_e9prov.frame_min_slot = slot;
     if (slot > g_e9prov.frame_max_slot) g_e9prov.frame_max_slot = slot;
-    Rs64E9Provenance::FrameEvent event{kind, slot, target, pc, caller};
+    Rs64E9Provenance::FrameEvent event{kind, slot, target, pc, caller, w0, w1};
     if (g_e9prov.frame_first.size() < 8) g_e9prov.frame_first.push_back(event);
     if (g_e9prov.frame_last.size() == 8) g_e9prov.frame_last.erase(g_e9prov.frame_last.begin());
     g_e9prov.frame_last.push_back(event);
@@ -240,11 +246,17 @@ static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t targe
             g_e9prov.frame_slot8_last = event;
             g_e9prov.frame_slot8_seen = true;
         }
+        if (slot == 0 && caller == 0x1088) {
+            if (!g_e9prov.frame_reentry_slot0_seen) g_e9prov.frame_reentry_slot0_first = event;
+            g_e9prov.frame_reentry_slot0_last = event;
+            g_e9prov.frame_reentry_slot0_seen = true;
+        }
     }
 }
 
-extern "C" void rs64_e9prov_frame_push(uint32_t slot, uint32_t saved_target, uint32_t saved_pc, uint32_t caller) {
-    rs64_e9prov_frame_event(1, slot, saved_target, saved_pc, caller);
+extern "C" void rs64_e9prov_frame_push(uint32_t slot, uint32_t saved_target, uint32_t saved_pc,
+                                          uint32_t caller, uint32_t w0, uint32_t w1) {
+    rs64_e9prov_frame_event(1, slot, saved_target, saved_pc, caller, w0, w1);
 }
 
 extern "C" void rs64_e9prov_frame_pop(uint32_t slot, uint32_t saved_target, uint32_t saved_pc) {
@@ -305,9 +317,10 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 g_e9prov.first_match);
         const auto dump_frame = [task](const char* edge, const std::vector<Rs64E9Provenance::FrameEvent>& events) {
             for (const auto& event : events) {
-                fprintf(stderr, "[e9-prov-frame] task=%u edge=%s kind=%c slot=0x%X target=0x%06X pc=0x%06X caller=0x%04X\n",
+                fprintf(stderr, "[e9-prov-frame] task=%u edge=%s kind=%c slot=0x%X target=0x%06X pc=0x%06X caller=0x%04X w0=0x%08X w1=0x%08X\n",
                         task, edge, event.kind == 1 ? 'P' : event.kind == 2 ? 'O' : 'R',
-                        event.slot, event.target & 0x7FFFFFu, event.pc & 0x7FFFFFu, event.caller & 0xFFFFu);
+                        event.slot, event.target & 0x7FFFFFu, event.pc & 0x7FFFFFu, event.caller & 0xFFFFu,
+                        event.w0, event.w1);
             }
         };
         dump_frame("first", g_e9prov.frame_first);
@@ -318,6 +331,12 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
             const std::vector<Rs64E9Provenance::FrameEvent> last{g_e9prov.frame_slot8_last};
             dump_frame("slot8-first", first);
             dump_frame("slot8-last", last);
+        }
+        if (g_e9prov.frame_reentry_slot0_seen) {
+            const std::vector<Rs64E9Provenance::FrameEvent> first{g_e9prov.frame_reentry_slot0_first};
+            const std::vector<Rs64E9Provenance::FrameEvent> last{g_e9prov.frame_reentry_slot0_last};
+            dump_frame("reentry-slot0-first", first);
+            dump_frame("reentry-slot0-last", last);
         }
         fflush(stderr);
     }

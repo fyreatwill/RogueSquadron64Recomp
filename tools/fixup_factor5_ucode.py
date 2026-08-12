@@ -648,7 +648,7 @@ struct Rs64StrayTrace {
     # Recorder immediately before the do_indirect_jump switch: every arrival
     # whose masked target is 0x1DB0, from whatever source (debug_line).
     sub_exactly5(
-        re.compile(r"(    switch \(\(jump_target \| 0x1000\) & 0X1FFF\) \{\n)"),
+        re.compile(r"(    switch \(\(jump_target \| 0x1000\) & 0X1FFF\) \{[ \t]*\n)"),
         lambda m: ("    if (Rs64OvlTrace::on() && ((jump_target | 0x1000) & 0X1FFF) == 0x1DB0)  " + STRAY_MARKER + "\n"
                    "        rs64_st.rec((unsigned)debug_line, (unsigned)RSP_MEM_BU(0X153, 0));\n") + m.group(1),
         1, "case-0x1DB0 recorder")
@@ -855,6 +855,11 @@ if is_main_ucode and IMEM_NOTE_MARKER not in text:
             + ind + "return RspExitReason::ImemOverrun;"
         )
     text, n_l1650 = l1650.subn(l1650_repl, text, count=1)
+    if n_l1650 == 0 and "// goto L_1650" not in text:
+        # Recent RSPRecomp output omits this out-of-range jump entirely; the
+        # tail is already a direct ImemOverrun return, so there is no L_1650
+        # path to attribute or reconnect.
+        n_l1650 = 1
     if n_l1650 != 1:
         print(
             f"fixup_factor5_ucode: FIXUP 7 ANCHOR FAILED (L_1650): "
@@ -921,6 +926,9 @@ if is_main_ucode and L1650_RECONNECT_MARKER not in text:
             f"{ind}goto L_1650;"
         )
     text, n_reconnect = l1650_hard.subn(l1650_reconnect_repl, text, count=1)
+    if n_reconnect == 0 and "// goto L_1650" not in text:
+        # See fixup 7: newer output has no severed L_1650 jump.
+        n_reconnect = 1
     if n_reconnect != 1:
         print(
             f"fixup_factor5_ucode: FIXUP 8 ANCHOR FAILED: expected 1 CLIP_1FBC "
@@ -950,7 +958,7 @@ if is_main_ucode and E9_PROVENANCE_MARKER not in text:
         print("fixup_factor5_ucode: FIXUP 9 ANCHOR FAILED (declaration).", file=sys.stderr)
         sys.exit(1)
     fetch_anchor = re.compile(
-        r"(    r20 = RSP_MEM_W_LOAD\(0X4, r17\);\n)(    \{ /\* PATCH: diag — trace every op fetch)")
+        r"(    r20 = RSP_MEM_W_LOAD\(0X4, r17\);\n)(    (?:\{ /\* PATCH: diag — trace every op fetch|// andi        \$2, \$2, 0x80))")
     text, n_fetch = fetch_anchor.subn(
         lambda m: m.group(1) +
         "    if ((r19 >> 24) == 0xE9) rs64_e9prov_guest(r17, r19);  " +
@@ -1039,19 +1047,19 @@ if is_main_ucode and UNWIND_AUDIT_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
-# Fixup 12: saved display-list frame audit (s688, item -421).
+# Fixup 12: saved display-list frame audit (s688-s690, item -421).
 #
 # EndDL visits alone cannot tell a stale saved PC from a bad push. Capture the
 # stack slot and both saved words at push/pop, then the PC actually restored at
 # L_12DC. The host retains only bounded first/last events for phase-latched
 # tasks; this remains observational and leaves the branch sequence unchanged.
 # ---------------------------------------------------------------------------
-FRAME_AUDIT_MARKER = "/* fixup: saved DL frame audit */"
+FRAME_AUDIT_MARKER = "/* fixup: saved DL frame audit v2 */"
 if is_main_ucode and FRAME_AUDIT_MARKER not in text:
     decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_unwind[^\n]*\n)")
     text, n_decl = decl_anchor.subn(
         lambda m: m.group(1) +
-        'extern "C" void rs64_e9prov_frame_push(uint32_t slot, uint32_t saved_target, uint32_t saved_pc, uint32_t caller);\n'
+        'extern "C" void rs64_e9prov_frame_push(uint32_t slot, uint32_t saved_target, uint32_t saved_pc, uint32_t caller, uint32_t w0, uint32_t w1);\n'
         'extern "C" void rs64_e9prov_frame_pop(uint32_t slot, uint32_t saved_target, uint32_t saved_pc);\n'
         'extern "C" void rs64_e9prov_frame_resume(uint32_t slot, uint32_t resumed_pc);  ' +
         FRAME_AUDIT_MARKER + "\n",
@@ -1063,7 +1071,7 @@ if is_main_ucode and FRAME_AUDIT_MARKER not in text:
         r"(L_12A0:\n(?:.*\n){0,10}?    RSP_MEM_W_STORE\(0X654, r2, r17\);\n)(    // addiu\s+\$2, \$2, 0x8)")
     text, n_push = push_anchor.subn(
         lambda m: m.group(1) +
-        "    rs64_e9prov_frame_push(r2, r3, r17, r31);  " + FRAME_AUDIT_MARKER + "\n" + m.group(2),
+        "    rs64_e9prov_frame_push(r2, r3, r17, r31, r19, r20);  " + FRAME_AUDIT_MARKER + "\n" + m.group(2),
         text, count=1)
     if n_push != 1:
         print("fixup_factor5_ucode: FIXUP 12 ANCHOR FAILED (L_12A0 saved frame).", file=sys.stderr)

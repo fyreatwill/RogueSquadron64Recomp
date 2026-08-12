@@ -52158,3 +52158,22 @@ dispatcher continuation rather than a decoded-command identity; it cannot yet
 separate a legitimate DL/branch chain from inline-data dispatch or state
 corruption. Next: join each retained `L_12A0` push to its current fetched
 guest address and opcode/operands, retaining the controls and phase latch.
+
+## Session 690 — L_12A0 command-word capture built; target latch not reached
+
+Extended the regeneration-safe `L_12A0` frame-push marker with its current
+guest PC (`r17`) and fetched command words (`r19`/`r20`). `[e9-prov-frame]`
+now prints `w0`/`w1` for every retained event and separately retains the
+first/last slot-0 re-entry from caller `0x1088`. This is observational only.
+Regenerating main plus ovl4 exposed two stale fixup assumptions: RSPRecomp now
+emits whitespace after the indirect-jump switch and no longer emits the
+out-of-range `L_1650` jump. The fixup accepts those shapes; the full build
+passed.
+
+Ran the phase-gated post-sec2 recipe. Both attempts reached the craft pulse
+window and each had all four boot `[e9-prov]` controls, but neither produced
+`[e9-prov-latch]` or any section-2 target row before the run was stopped;
+both also had `CRASH=0`. Therefore the command-word discriminator has no
+result yet: boot-only records cannot distinguish the three cap-path
+hypotheses. Next run must allow the recipe to finish its recovery-active
+rerolls and reject any non-latched attempt.

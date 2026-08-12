@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s689; compacted in maintenance s679)
+## Current truth (reviewed through s690; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -360,9 +360,19 @@ maintenance pass. Closed lineages are not backlog items.
    cap task 8820 kept the saved target stable while saved PC advanced
    `0x180..0x1F8`. This is single-run support for a repeated dispatcher return
    path, but `r31` alone does not identify the decoded command. Next join the
-   push with the current fetched opcode/operands and guest address.
+   push with the current fetched opcode/operands and guest address. **s690
+   command-word capture is built and regeneration-safe:** `L_12A0` now passes
+   `r17/r19/r20` as `pc/w0/w1`; `[e9-prov-frame]` prints them and retains
+   first/last re-entry slot-0 (`caller=0x1088`) in addition to slot 8. The
+   main/ovl4 regeneration exposed stale fixup anchors; updated fixups accept
+   the current whitespace and absent out-of-range `L_1650` jump. Build passed.
+   Two phase-gated starts reached the post-craft pulse window with all four
+   boot controls live, but neither reached the section-2 latch before the
+   bounded run was stopped (`sec2=0`, `latch=0`, `CRASH=0`): **no conclusion**
+   from their command words. Repeat the existing phase-gated capture through
+   a complete recovery-active section-2 attempt; reject every non-latched row.
    Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions
-   669–689.
+   669–690.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
