@@ -1,32 +1,37 @@
-# NEXT work unit (after s692 recovery-latch readiness audit)
+# NEXT work unit (after s693 valid-DL cap capture)
 
 HYPOTHESIS-ID: m3-e9-provenance-cap
 
-Run one ordinary single-instance command-word capture now that s692 restored
-and independently validated its required recovery control. Do not alter the
-decoder, the LLE marker, or the recovery route.
+Add one regeneration-safe, phase-scoped trace that joins each Factor 5 opcode
+`0x06` (`F3DSWRS_DL`) command to its LLE saved-frame push and eventual return.
+Do not add a mitigation or change decoder behavior.
 
 ## Competing hypotheses
 
-- **H-legitimate-open-chain:** the eight retained frames describe a valid
-  display-list/branch chain; their captured command words are valid commands.
-- **H-inline-data-dispatch:** the repeated dispatcher return fetches inline
-  data as commands; captured words expose a pointer/data family.
-- **H-state-corrupt:** a corrupted saved frame or command source feeds the
-  dispatcher; captured words/PCs are unstable or implausible.
+- **H-extra-push:** opcode `0x06` takes a push path where Factor 5 semantics
+  require a branch/tail path, accumulating the observed eight frames.
+- **H-missing-return:** each `0x06` push is legitimate, but its matching
+  EndDL/root return is skipped or resumes the wrong continuation.
+- **H-game-open-chain:** the captured chain is legitimate game input and its
+  depth eventually unwinds outside the bounded cap observation.
 
 ## Discriminating measurement
 
-Run the existing phase-gated, recovery-reroll recipe once to a qualified
-section-2 latch and score `[e9-prov-frame]` rows only after the first
-`addr=0x0076B768`. Positive controls in that same log: four boot
-`[e9-prov]` controls plus both `rdp-fullsync` and `fs-slot` observations of
-the recovery cell. Valid, stable opcode/operand families support
-H-legitimate-open-chain; repeatable data-shaped words support
-H-inline-data-dispatch; incoherent or changing target/PC/word joins support
-H-state-corrupt. If the recovery control is absent, record it as unscorable;
-do not interpret cap rows.
+Instrument `0x06` decode with its command PC, w0/w1, selected push/branch
+mode, depth before/after, and a monotonically paired push id; emit the paired
+id and depth at EndDL/root-return. Phase-latch records at section 2 and bound
+them to the first 64 cap tasks after recovery. The existing four boot
+`[e9-prov]` controls plus one boot `0x06` pair must visibly complete.
+Extra unmatched pushes support H-extra-push; matched pushes without root
+return support H-missing-return; balanced pairs refute both and support
+H-game-open-chain. Put generated-code changes in the appropriate fixup
+script, then regenerate/build before running the existing phase-gated recipe.
 
-## Command
+## Commands
 
+    rg -n '0x06|F3DSWRS_DL|L_12A0|L_10E8' build/factor5_ucode tools/fixup_factor5_ucode.py
+    ~/Documents/Tools/N64Recomp/build/RSPRecomp factor5_rsp.toml
+    python3 tools/make_clip_composite.py && ~/Documents/Tools/N64Recomp/build/RSPRecomp factor5_rsp_ovl4.toml
+    ~/Documents/Tools/N64Recomp/build/RSPRecomp factor5_boot_rsp.toml && python3 tools/fixup_factor5_ucode.py
+    export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer; cd build && cmake --build . -j8
     env BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=8 POST_PULSE_HOLD_S=15 MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh

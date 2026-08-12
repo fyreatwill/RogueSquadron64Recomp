@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s692; compacted in maintenance s679)
+## Current truth (reviewed through s693; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -388,8 +388,22 @@ maintenance pass. Closed lineages are not backlog items.
    competed for focus, so it is invalid as an A/B outcome. This supports
    **H-stochastic-route** only provisionally; the recovery control is now
    restored for one ordinary, single-instance provenance-capture reroll.
+   **s693 qualified single-instance command capture:** attempt 5 reached
+   recovery (`rdp-fullsync=2662`, `fs-slot=7984`), section 2, and fired both
+   scheduled Start pulses. Of 1,381 post-recovery frame rows, all 547
+   `caller=0x1088` rows were `kind=P` with `w0=0x06000000` and KSEG0 display
+   list operands (`w1=0x8058...`--`0x805A...`); none had a zero/data-shaped
+   `w0`. The independent F5 command table identifies `0x06` as `F3DSWRS_DL`.
+   Therefore **H-inline-data-dispatch is REFUTED for the captured cap frames**
+   and **H-legitimate-open-chain is SUPPORTED** (runtime capture + independent
+   reference). Target/PC families are coherent, so this run provides no
+   support for H-state-corrupt. The remaining question is whether the valid
+   `0x06` chain is pushed with incorrect control-flow semantics or lacks its
+   eventual root return; instrument that command's expected push/pop contract
+   next. The pulse produced `section3=2`, `packTlut=0`; it is incidental to
+   this provenance result, not a new input conclusion.
    Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions
-   669–692.
+   669–693.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

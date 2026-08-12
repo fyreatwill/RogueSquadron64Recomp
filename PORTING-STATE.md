@@ -52220,3 +52220,27 @@ The recovery positive control is restored and independently cross-checked, so
 the next single-instance run may again interpret phase-latched command-word
 rows. The 36 current-arm `[CRASH]` markers occurred only after the recovery
 observation and were not used as evidence for this gate audit.
+
+## Session 693 (2026-08-12) — qualified command capture identifies valid DL pushes
+
+Ran the prescribed single-instance command capture unchanged:
+`env BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=8 POST_PULSE_HOLD_S=15
+MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh`.
+Attempts 1--4 were discarded before qualification (including one
+`waitForAnyAudioSlot` boot crash). Attempt 5 passed the required controls:
+`[hangar-sel]`, recovery `0x0076B768`, 2,662 authoritative
+`[rdp-fullsync]` observations, 7,984 independent `[fs-slot]` observations,
+and a section-2 latch. It fired both phase-gated Start pulses; section 3 was
+seen twice and `packTlut=0`, which is not interpreted by this work unit.
+
+After the first recovery observation, the log contains 1,381
+`[e9-prov-frame]` rows. The 547 rows from the repeated cap caller
+`0x1088` are all `kind=P`, with `w0=0x06000000` and KSEG0 display-list
+operands in `w1` (`0x8058...` through `0x805A...`); zero/data-shaped w0 is
+0/547. `docs/F5-UCODE-REFERENCE.md` independently identifies opcode `0x06`
+as `F3DSWRS_DL`. This refutes H-inline-data-dispatch for these captured cap
+frames and supports H-legitimate-open-chain. The stable PC/operand families
+provide no evidence for H-state-corrupt. The next unit is a bounded semantic
+instrument: compare each F5 `0x06` command's expected push/return contract to
+the LLE saved-frame operations to locate the missing root return or wrong
+push semantics.
