@@ -1,59 +1,46 @@
-# NEXT work unit (fixup 6c route: ovl24 emit + ovl28 PC+=32)
+# NEXT work unit (clip-stray 0x1364 after ovl24 route)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-s742 selected H-ovl24-skipped-imem. Do not permanently splice overlay 24
-over `L_12A0` (that is DL-push / EndDL; overlay 28 exists to restore it).
-Land a route swap: `L_1298` dest `0x12A0` + resident `0x24` → generated
-ovl24 C; resident `0x28` → the seven-instruction `r17 += 32; goto L_10D8`.
-See `docs/M3-OVL24-CONTINUATION-AUDIT.md`.
+s743 selected H-ovl24-route-restores-fetch (UJ 2931→0) and left E9
+flat (3/64). The largest NEW residual is `[clip-stray] tgt=0x1364
+153=0x04` n=4434. 0x1364 is ovl24's `jal L_17F0` return, not a main
+label (main has L_135C then L_1368). Do not widen the 0x1364 case to
+"always OVL24" until the writer of the clip-resident jump is named.
 
 ## Competing hypotheses
 
-- **H-ovl24-route-restores-fetch:** routing those two residents stops the
-  post-sec2 table-`jr` UJ storm (s740: 2935, top `0xFA92`) and is the
-  missing extra `PC += 32`. Sec2 E9 match / rdpFs may move.
-- **H-ovl24-not-sufficient:** ovl24+ovl28 fire on the dominant `L_1F64`
-  path only. The rare `r5=0x14` → ovl14 → `r5=0x18` chain stays skipped
-  into spliced ovl12; UJs remain or E9 stays flat.
-- **H-l1298-12a0-not-only-ovl:** `L_1298` dest `0x12A0` is also a live
-  non-0x24 path (ovl20 / something else). Blind 0x24 routing would
-  mis-enter emit. Discriminate by resident byte at the `jr`.
-
-s731 tagged every *direct* `L_12A0` as table-1 `0x06` (not `L_1298`).
-That is the positive control that a dest-`0x12A0` `L_1298` route does
-not steal DL-push — confirm it still holds after 6c (paired 0x06
-push/pop/resume in the same soak).
+- **H-l17f0-dispatches-clip:** shared `L_17F0` (or a callee) hits
+  `L_1268` and sets DMEM 0x153=4 before `jr $ra` to 0x1364.
+- **H-clip-uses-1364:** the clip image itself loads/jumps 0x1364
+  (computed or `ori`). Our new case then steals a clip-side target.
+- **H-stale-ra:** leftover `r31=0x1364` from a finished ovl24 emit is
+  later `jr`'d on a clip task. Writer is stale $ra, not a live emit.
 
 ## Discriminating measurement
 
-One build, one driven soak (same recipe as s739/s740). Batch:
-
-1. `[ovl-route]` / new 6c markers: ovl24 entries and ovl28 `r17+=32`
-   must be LIVE in section 2 (positive control).
-2. Unhandled jump count and overlay-12-window UJs vs s740 (2935 / 0).
-3. Sec2 `[e9-prov-reset]` match and rdpFs delta vs s740 (3/64, flat).
-4. Direct `0x06` push/pop/resume still balanced (must not regress s731).
+Static first (no rebuild): search clip overlay C + `L_17F0` body for
+0x1364 / `L_1268` / stores to 0x153. Then one soak, same recipe as
+s743, with a batched clip-stray predecessor (debug_line, r31, r30,
+resident, last ovl-route tgt) on tgt==0x1364 only.
 
 Outcomes:
 
-- ovl24+ovl28 LIVE, UJ collapse, 0x06 still balanced →
-  H-ovl24-route-restores-fetch SELECTED. Score E9/rdpFs same run.
-- ovl24+ovl28 LIVE, UJs stay / E9 flat → H-ovl24-not-sufficient;
-  next is ovl14/ovl18, not another 0x24 tweak.
-- dest-`0x12A0` entries with resident ≠ `0x24` → H-l1298-12a0-not-only-ovl;
-  gate the route on resident before shipping.
+- `L_17F0` reaches `L_1268` before returning → H-l17f0-dispatches-clip;
+  next is whether that return should ignore resident.
+- clip image contains 0x1364 and stray line is inside CLIP_* →
+  H-clip-uses-1364; drop or relocate the 0x1364 ovl24-only case.
+- stray predecessor is a clip `jr $ra` with no live ovl24 in that task
+  → H-stale-ra; clear r31 on overlay swap or ignore stale 0x1364.
 
 ## Commands
 
-    # extract ovl24 (ROM 0x27260, 0xE3) and ovl28 (ROM 0x27348, 0x1B)
-    # into composites / RSPRecomp inputs; do NOT overwrite main L_12A0
-    # in factor5_ucode_recompiled.c.
-    # fixup: L_1298 dest==0x12A0 && resident==0x24 → ovl24_L_12A0
-    #        dest==0x1DB0 && resident==0x28 → r17+=32; goto L_10D8
-    # then the s739-shaped soak. Kill with SIGKILL.
-    # do not enable IMEM DMA globally.
+    # static: grep L_17F0 / 0x1364 / L_1268 in
+    #   build/factor5_ucode/factor5_ucode_recompiled.c (main L_17F0)
+    #   and the CLIP_* block / factor5_ucode_ovl4_recompiled.c
+    # then one s743-shaped soak with clip-stray predecessor. SIGKILL.
+    # do not enable IMEM DMA globally. do not widen the 0x1364 case yet.
 
-ORIGIN: the writer is overlay 24's skipped IMEM image (emit) and
-overlay 28's skipped `r17 += 32`. The values are legitimate ucode.
-6c is a route, not a guard.
+ORIGIN: name the writer of the 0x1364 jump while resident==4 before
+any case change. s743 already showed the ovl24 emit return is
+legitimate when resident==0x24.

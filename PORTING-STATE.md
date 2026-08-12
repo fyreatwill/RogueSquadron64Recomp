@@ -53411,3 +53411,43 @@ swap.
 **ORIGIN:** not a mitigation; the skipped images are legitimate
 ucode (ROM-backed, table-selected). The wild `jr` target is main
 `L_12A0` running in overlay 24's place.
+
+## Session 743 (2026-08-12) — ovl24+ovl28 route kills the UJ storm; E9 stays flat
+
+Step 0 measured `CURRENT-TRUTH.md` at 34,419 bytes, so maintenance was not
+triggered. Work unit was fixup 6c (NEXT.md after s742). SOAK-RESULTS had
+the queued s739 consume already folded in s740–s742; no new queue lines
+since then until this in-session soak.
+
+Landed a route, not an overwrite of main `L_12A0`. `make_clip_composite.py
+24` places ROM `0x27260` (0xE4 B) at dest ROM `0x25830` / IMEM `0x12A0`.
+`factor5_rsp_ovl24.toml` + RSPRecomp emit `factor5_ucode_ovl24_recompiled.c`.
+Fixup 6c extracts `L_12A0..0x1383`, renames `OVL24_*`, inserts `L_15D0`
+in front of the shared `jal 0x1780`, routes resident `0x24` at dest
+`0x12A0` and the handshake/jal-return cases, and routes resident `0x28`
+at dest `0x1DB0` to `r17 += 32; goto L_10D8`. Main `L_12A0` remains
+DL-push. Host counters: `[ovl-route] res=0x24/0x28` and
+`l1298_12a0=24:N,other:N` on `[e9-prov-reset]`.
+
+Soak `scratch/agent/soak_results/s743_ovl24_route_20260812-160417/run.log`
+(349 s, same recipe as s739, CRASH=0). Positive controls LIVE: CLIP
+`res=0x04`, OVL12 `res=0x0C`, first ovl24 at task 189 (`0x12A0` then
+`0x12AC`), sec2 last row `ovl24=16 ovl24_ret=14 ovl28=1
+l1298_12a0=24:2,other:0`. Four direct boot controls still
+`dl06=push:2,complete:2,open:0` / `l12a0=direct:2,overlay:0`.
+
+Unhandled jump **2931 → 0** (s739/s740 baseline 2931; top `0xFA92` gone).
+**H-ovl24-route-restores-fetch SELECTED. H-l1298-12a0-not-only-ovl
+REFUTED** (other=0). Sec2 E9 match still 3/64; rdpFs 4060→4063 vs s740
+3933→3948 — fetch alignment is not sufficient for FULL_SYNC.
+
+Residual, new vs s740: 4434 `[clip-stray] tgt=0x1364 153=0x04` (main has
+no `L_1364`; that address is ovl24's `jal L_17F0` return) and 13/64
+early-sec2 rows `reset=2 active=1` on heavy TriGen tasks (later 51/64
+stay `active=0`). Wrapper rc=1 was a missing `e9-prov-depth-summary`
+line used as a s739 heartbeat, not a crash.
+
+**ORIGIN:** route, not a mitigation. The writers are overlay 24 (emit
+image at ROM `0x27260`) and overlay 28 (`addiu $17,32`). Both are
+legitimate table-selected ucode. The restore DMA is a no-op in C
+because main `L_12A0` was never overwritten.

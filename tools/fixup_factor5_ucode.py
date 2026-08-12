@@ -872,6 +872,160 @@ if is_main_ucode and OVL12_MARKER not in text:
         1, "overlay-12 window cases")
 
 # ---------------------------------------------------------------------------
+# Fixup 6c: route overlay 24 (emit @ 0x12A0) and overlay 28 (r17+=32)
+# ---------------------------------------------------------------------------
+# s742: skipped IMEM writer of the post-s739 UJ storm is overlay 0x24
+# (ROM 0x27260, dest 0x12A0, emit) plus overlay 0x28 (ROM 0x27348, dest
+# 0x1DB0, addiu $17,32 then restore-DMA of main L_12A0). Do not overwrite
+# main L_12A0 — overlay 28 exists to put DL-push back. factor5_rsp_ovl24.toml
+# translates a composite whose 0x12A0 range holds the emit image; this
+# fixup extracts L_12A0..end-of-overlay, renames OVL24_*, splices the
+# block, and routes DMEM 0x153 == 0x24 at dest 0x12A0 (and the handshake
+# / jal-return cases). Resident 0x28 at dest 0x1DB0 is the seven-instruction
+# overlay: r17 += 32; goto L_10D8. The restore DMA is a no-op in C.
+OVL24_MARKER = "/* fixup: ovl24route */"
+OVL24_END = 0x1384  # dest 0x12A0 + inclusive 0xE3 + 1
+if is_main_ucode and OVL24_MARKER not in text:
+    ovl24_path = path.parent / "factor5_ucode_ovl24_recompiled.c"
+    if not ovl24_path.exists():
+        print("fixup_factor5_ucode: FIXUP 6c INPUT MISSING: "
+              f"{ovl24_path} not found. Run make_clip_composite.py 24 and "
+              "RSPRecomp on factor5_rsp_ovl24.toml before fixing up the "
+              "main ucode, or the overlay-24 route is lost.", file=sys.stderr)
+        sys.exit(1)
+    ovl24_text = ovl24_path.read_text(encoding="utf-8")
+
+    def sub_exactly6c(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6c ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the overlay-24 route.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    m_start = re.search(r"^L_12A0:\n", ovl24_text, flags=re.MULTILINE)
+    after = [(int(m.group(1), 16), m.start())
+             for m in re.finditer(r"^L_([0-9A-F]{4}):", ovl24_text, flags=re.MULTILINE)
+             if int(m.group(1), 16) >= OVL24_END]
+    if not m_start or not after:
+        print("fixup_factor5_ucode: FIXUP 6c EXTRACTION FAILED: could not "
+              "bound L_12A0..first-label-past-overlay in the ovl24 file.",
+              file=sys.stderr)
+        sys.exit(1)
+    region = ovl24_text[m_start.start():after[0][1]]
+    # Drop the unreachable main-image tail RSPRecomp emits after jr $ra.
+    last_jr = None
+    for last_jr in re.finditer(
+            r"    goto do_indirect_jump;\n(?:    // [^\n]*\n    [^\n]*\n)?",
+            region):
+        pass
+    if last_jr:
+        region = region[:last_jr.end()]
+
+    region_labels = set(re.findall(r"^(L_[0-9A-F]{4}):", region, flags=re.MULTILINE))
+    expected_external = {"L_112C", "L_1268", "L_15D0", "L_17F0"}
+    referenced = set(re.findall(r"goto (L_[0-9A-F]{4});", region))
+    external = referenced - region_labels
+    if external != expected_external:
+        print(f"fixup_factor5_ucode: FIXUP 6c SANITY FAILED: region's external "
+              f"references {sorted(external)} != expected resident helpers "
+              f"{sorted(expected_external)}. The overlay-24 image or its "
+              f"translation changed — re-derive before routing.", file=sys.stderr)
+        sys.exit(1)
+    if "L_12A0" not in region_labels or "L_12AC" not in region_labels:
+        print("fixup_factor5_ucode: FIXUP 6c SANITY FAILED: missing emit "
+              "entry/handshake labels "
+              f"{sorted(region_labels)}.", file=sys.stderr)
+        sys.exit(1)
+    for lbl in region_labels:
+        region = re.sub(r"\b" + lbl + r"\b", "OVL24_" + lbl[2:], region)
+
+    sub_exactly6c(
+        re.compile(r'(extern "C" void rs64_e9prov_ovl_route\([^\n]*\n)'),
+        lambda m: m.group(1) +
+        'extern "C" void rs64_e9prov_l1298_12a0_res(uint32_t resident);  ' +
+        OVL24_MARKER + "\n",
+        1, "l1298_12a0_res declaration")
+
+    sub_exactly6c(
+        re.compile(r"(^do_indirect_jump:\n)", flags=re.MULTILINE),
+        lambda m: OVL24_MARKER + "\n" + region + m.group(1),
+        1, "splice point")
+
+    # Shared vertex-helper entry that overlay 24 jumps to (mid L_15C4).
+    sub_exactly6c(
+        re.compile(r"(    // jal         0x1780\n    r31 = 0x15D8;\n)"),
+        lambda m: "L_15D0:  " + OVL24_MARKER + "\n" + m.group(1),
+        1, "L_15D0 label")
+
+    sub_exactly6c(
+        re.compile(r"(L_1298:\n)"),
+        lambda m: m.group(1) +
+        "    if (r3 == 0x12A0) rs64_e9prov_l1298_12a0_res(RSP_MEM_BU(0X153, 0));  " +
+        OVL24_MARKER + "\n",
+        1, "L_1298 dest-0x12A0 resident")
+
+    ovl24_addrs = sorted(int(lbl[2:], 16) for lbl in region_labels)
+    existing_12a0 = re.compile(r"        case 0x12A0: goto L_12A0;\n")
+    sub_exactly6c(
+        existing_12a0,
+        lambda m: ("        case 0x12A0:  " + OVL24_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x24) {"
+                   " rs64_e9prov_ovl_route(0x24, 0x12A0); goto OVL24_12A0; }\n"
+                   "            goto L_12A0;\n"),
+        1, "case 0x12A0 overlay-24 routing")
+
+    for addr in ovl24_addrs:
+        if addr == 0x12A0:
+            continue
+        pat = re.compile(rf"        case 0x{addr:04X}: goto L_{addr:04X};\n")
+        if pat.search(text):
+            sub_exactly6c(
+                pat,
+                lambda m, a=addr: (
+                    f"        case 0x{a:04X}:  " + OVL24_MARKER + "\n"
+                    f"            if (RSP_MEM_BU(0X153, 0) == 0x24) {{"
+                    f" rs64_e9prov_ovl_route(0x24, 0x{a:04X}); goto OVL24_{a:04X}; }}\n"
+                    f"            goto L_{a:04X};\n"),
+                1, f"case 0x{addr:04X} shared overlay-24 routing")
+
+    ovl24_only = "".join(
+        f"        case 0x{a:04X}: if (RSP_MEM_BU(0X153, 0) == 0x24) {{ "
+        f"rs64_e9prov_ovl_route(0x24, 0x{a:04X}); goto OVL24_{a:04X}; }} "
+        f"goto rs64_clip_stray;  {OVL24_MARKER}\n"
+        for a in ovl24_addrs
+        if a != 0x12A0 and not re.search(
+            rf"        case 0x{a:04X}:", text))
+    if ovl24_only:
+        sub_exactly6c(
+            re.compile(r"(        case 0x12A0:  /\* fixup: ovl24route \*/\n)"),
+            lambda m: ovl24_only + m.group(1),
+            1, "overlay-24 handshake/return cases")
+
+    sub_exactly6c(
+        re.compile(
+            r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x4\) \{"
+            r" rs64_e9prov_ovl_route\(0x4, 0x1DB0\); goto CLIP_1DB0; \}\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0xC\) \{"
+            r" rs64_e9prov_ovl_route\(0xC, 0x1DB0\); goto OVL12_1DB0; \}\n"
+            r"            goto L_1DB0;\n)"),
+        lambda m: ("        case 0x1DB0:  " + CLIP_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x4) {"
+                   " rs64_e9prov_ovl_route(0x4, 0x1DB0); goto CLIP_1DB0; }\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0xC) {"
+                   " rs64_e9prov_ovl_route(0xC, 0x1DB0); goto OVL12_1DB0; }\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x28) {"
+                   " rs64_e9prov_ovl_route(0x28, 0x1DB0); "
+                   "r17 = RSP_ADD32(r17, 0X20); goto L_10D8; }  " +
+                   OVL24_MARKER + "\n"
+                   "            goto L_1DB0;\n"),
+        1, "case 0x1DB0 overlay-28 routing")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level

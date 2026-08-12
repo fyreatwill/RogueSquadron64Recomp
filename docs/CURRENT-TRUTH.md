@@ -22,24 +22,31 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s742; compacted in maintenance s729)
+## Current truth (reviewed through s743; compacted in maintenance s729)
+
+**s743:** fixup 6c route swap (ovl24 emit @ `0x12A0` + ovl28 `r17+=32`).
+Soak `s743_ovl24_route_20260812-160417` (349 s, CRASH=0). Same-run CLIP
+`res=0x04` and OVL12 `res=0x0C` remain LIVE. New 6c markers LIVE: first
+ovl24 at task 189 (`tgt=0x12A0` then handshake `0x12AC`); sec2 last row
+`ovl24=16 ovl24_ret=14 ovl28=1 l1298_12a0=24:2,other:0`. Unhandled jump
+**2931→0**. Four direct boot controls still `dl06=push:2,complete:2,open:0`
+and `l12a0=direct:2,overlay:0`. **H-ovl24-route-restores-fetch SELECTED.**
+**H-l1298-12a0-not-only-ovl REFUTED.** Sec2 E9 match still 3/64; rdpFs
+4060→4063 (s740 3933→3948) — fetch alignment did not restore FULL_SYNC.
+Residual, new: 4434 `[clip-stray] tgt=0x1364 153=0x04` (ovl24 `jal L_17F0`
+return case while clip is resident) and 13/64 early-sec2 `active!=0`
+(reset=2 on heavy TriGen tasks; later 51/64 stay `active=0`). Wrapper
+rc=1 was a missing `e9-prov-depth-summary` line, not a crash.
+**ORIGIN:** route, not a guard. Writers are overlay 24 (emit) and overlay
+28 (`r17+=32`); both are legitimate ROM-backed ucode. Main `L_12A0` is
+untouched.
 
 **s742:** static `L_1268` continuation audit (`docs/M3-OVL24-CONTINUATION-AUDIT.md`).
-**H-ovl24-skipped-imem SELECTED.** Overlay 24 (ROM `0x27260`, dest `0x12A0`,
-0xE3 B) is emit, not DL-push: `ori $10,4; j L_15D0; ori $30,0x12AC` vs main
-`L_12A0` at ROM `0x25830` (`lw $3, 0x5C($18)`); 212/227 bytes differ.
-NEXT.md's `0x257D0` was the `L_122C` helper, not `L_12A0`. After emit it
-`j L_1268` with `r5=0x28`. Overlay 28 (ROM `0x27348`, dest `0x1DB0`, 0x1B B)
-is the GLideN64 extra `PC += 32`: `addiu $17, $17, 32` then restore-DMA of
-main `L_12A0` (`OSTask.ucode+0x220` = ROM `0x25830`) and `L_10D8`. Overlay 14
-(ROM `0x26AB8`) is a third `0x1DB0` image (not clip, not TriGen; 503/543 vs
-ovl12) and exits to `r5=0x18`; rare-path only. Both dests and ovl28's
-restore have bit 12 set, so `dma_rdram_to_dmem` skips. Skip consequence:
-`jr 0x12A0` runs main DL-push on TriGen `w1`. **H-ovl14-window-collision**
-cannot explain ~31k `L_1F64` exits. **H-r17-not-advanced** is what the
-`0x24→0x28` skip drops (ovl24 never adds 32; ovl28 does). Do not
-permanently splice ovl24 over `L_12A0` — ovl28 exists to restore DL-push.
-Fixup 6c is a route swap.
+**H-ovl24-skipped-imem SELECTED.** Overlay 24 (ROM `0x27260`, dest `0x12A0`)
+is emit (`ori $10,4; j L_15D0; ori $30,0x12AC`), not DL-push. Overlay 28
+(ROM `0x27348`, dest `0x1DB0`) is `addiu $17,32` then restore-DMA of main
+`L_12A0`. Overlay 14 is the rare `0x1DB0` sibling. Do not overwrite
+`L_12A0`. 6c is the route; live consume is s743.
 
 **s741:** static `L_122C` wrap audit (`docs/M3-OVL12-L122C-WRAP-AUDIT.md`).
 **H-ovl12-dma-legit-payload SELECTED. H-ovl12-dma-wrap-stomp REFUTED.**
@@ -349,7 +356,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s740:** the s739 resident-`0C` splice is live and **stops the section-2 `L_1DB0` reset** (H-splice-correct; 64/64 `active=0`). It does **not** restore FULL_SYNC (sec2 E9 match still 3/64; rdpFs still flat). **s741:** the UJ storm is **not** `L_122C` wrapping onto tables `0x64`/`0xD6` (H-ovl12-dma-wrap-stomp REFUTED). **s742:** the skipped IMEM writer is overlay 24 at dest `0x12A0` (emit) plus overlay 28 (`r17 += 32` / restore `L_12A0`); `docs/M3-OVL24-CONTINUATION-AUDIT.md`. Next is fixup 6c as a **route swap** (do not overwrite `L_12A0`).
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s743:** ovl24+ovl28 route is live and **stops the post-s739 UJ storm** (2931→0) without touching 0x06. It does **not** restore FULL_SYNC (sec2 E9 match still 3/64; rdpFs 4060→4063). **s740:** the s739 resident-`0C` splice stops the section-2 `L_1DB0` reset. **s741:** the UJ storm was not `L_122C` wrapping onto tables. Next is the s743 residual: `[clip-stray] tgt=0x1364` while clip is resident, then whether that (or still-skipped ovl14) is the remaining E9 leak.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
@@ -423,8 +430,9 @@ Game functions (s1) — all four steps, in order:
 RSP ucode (only when a ucode toml changes): `~/Documents/Tools/N64Recomp/build/RSPRecomp` on
 `factor5_rsp.toml` / `factor5_boot_rsp.toml` → `build/factor5_ucode/*.c`, then
 `tools/fixup_factor5_ucode.py`. **s47/s739: before the fixup, also run
-`python3 tools/make_clip_composite.py [4|12]` + RSPRecomp on
-`factor5_rsp_ovl4.toml` and `factor5_rsp_ovl12.toml`**. `factor5b_rsp.toml`
+`python3 tools/make_clip_composite.py [4|12|24]` + RSPRecomp on
+`factor5_rsp_ovl4.toml`, `factor5_rsp_ovl12.toml`, and
+`factor5_rsp_ovl24.toml`**. `factor5b_rsp.toml`
 is the **MusyX audio** ucode; stays in the build as a never-called artifact (s5).
 
 Standing warnings:

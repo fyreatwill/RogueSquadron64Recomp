@@ -1,0 +1,22 @@
+# Resident overlay 24 (id 0x24) input. Dest is IMEM 0x12A0 (ROM 0x25830),
+# NOT the 0x1DB0 window. The composite overwrites only that range so
+# RSPRecomp labels the emit image at the hardware dest. Fixup 6c extracts
+# L_12A0..0x1383, renames OVL24_*, and routes resident 0x24 there.
+# Main L_12A0 (DL-push / EndDL) stays untouched.
+# Source image: ROM 0x27260, inclusive DMA length 0xE3 -> 0xE4 bytes.
+rom_file_path = "scratch/s47_ovl24_composite.z64"
+text_offset = 0x025610
+text_size = 0xF80
+text_address = 0x04001080
+output_file_path = "build/factor5_ucode/factor5_ucode_ovl24_recompiled.c"
+output_function_name = "factor5_ucode_ovl24"
+
+# Main dispatch-table targets plus overlay-24 handshake / jal-return
+# addresses that only appear as register-loaded jr targets.
+extra_indirect_branch_targets = [
+    0x10D8, 0x10E0, 0x12A0, 0x12AC, 0x12B8, 0x12C0, 0x12C4, 0x12D0,
+    0x12E4, 0x12EC, 0x12F4, 0x12FC, 0x1304, 0x1320, 0x1330, 0x1338,
+    0x1344, 0x1350, 0x1358, 0x135C, 0x136C, 0x1370, 0x1390, 0x146C,
+    0x1484, 0x14D4, 0x14F0, 0x1504, 0x15A4, 0x15AC, 0x15B4, 0x15D0,
+    0x15D8, 0x17F0, 0x1DB0
+]

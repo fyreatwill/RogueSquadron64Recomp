@@ -145,9 +145,9 @@ and skip.
   is what the skip drops, not a separate missing add in overlay 12
   or 24.
 
-Fixup 6c candidate (not this iteration): route `L_1298` when
-`dest==0x12A0` and resident `0x24` into a generated overlay-24
-translation, then resident `0x28` into the seven-instruction
-`r17 += 32; goto L_10D8` (the restore DMA is a no-op in C — the
-main `L_12A0` label is untouched). A permanent overwrite of
-`L_12A0` would destroy `0x06` / EndDL.
+**s743 live:** fixup 6c landed that route. Soak
+`s743_ovl24_route_20260812-160417` (349 s, CRASH=0): ovl24+ovl28
+LIVE, UJ 2931→0, 0x06 push/pop/resume still 2/2/2, dest-`0x12A0`
+`L_1298` resident other=0. Sec2 E9 match stayed 3/64. Residual
+`[clip-stray] tgt=0x1364 153=0x04` (n=4434) is the ovl24 `jal L_17F0`
+return hitting the new case while clip is resident.
