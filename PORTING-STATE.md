@@ -51456,3 +51456,105 @@ load. Related to -349 family but distinct phase (mission overlay live, not
 post-exit hangar). Next: why no E9 during thr13 / why menu return / whether
 input after cutscene is required for packTlut path.
 
+## Session 670 — post-sec2 input pulse keeps thr12 alive >1000s; splits -421 into menu-teardown (input-gated) vs FS plateau (still open)
+
+**Work unit:** item -421, two-arm design from NEXT.md (H-inject-misses-mission
+/ H-mission-dl-no-e9 vs H-menu-return-input / H-menu-return-guest-teardown).
+HYPOTHESIS-ID: `m3-post-exit-fs-stall`.
+
+### Arm A — FS inject visibility post-sec2 (offline reanalysis, no new run)
+
+s669's own att2/att3 scoring already contains the answer: `synth` (the
+`ROGUESQ_FS_PIPE_INJECT` synthetic-FULL_SYNC counter) climbs **+5864 / +5892**
+during the thr13/post-sec2 window while `rdpFs` (the real completion counter)
+stays flat (**delta 0 / +2**). Re-ran `scratch/agent/s669_postsec2_offline_score.py`
+to confirm the numbers still stand. **H-inject-misses-mission REFUTED** —
+injection unambiguously reaches mission-phase RDP submits; it just never moves
+the counter that matters. Residual is **not** "extend inject's reach" but "why
+does the mission DL never accept/need a real E9" (H-mission-dl-no-e9), a
+different fix site than the hangar post-exit inject product. No rebuild or
+game run needed for this arm — capture-once rule, data already existed.
+
+### Arm B — post-sec2 synthetic input pulse (new freeroll, 1 scored attempt)
+
+Built two new scripts (no C++/regen needed — bash only):
+- `scratch/agent/s670_run_mission_keys_postsec2.sh` — copy of
+  `scratch/s73_post_a_scene/run_mission_keys.sh` whose hold window
+  log-phase-gates a synthetic Start pulse on the REAL
+  `[overlay] start-match: section 2` line (not a wall-clock guess, per method
+  trap §4.3) — waits `SEC2_SETTLE_S=8`, fires `SEC2_PULSE_KEYS="start start"`,
+  then holds `POST_PULSE_HOLD_S=180` more loop-iterations to let the outcome
+  land in the log.
+- `scratch/agent/s670_postsec2_pulse_freeroll.sh` — s668's proven
+  engage/recovery retry loop (force6+inject → hangar-sel → recovery 76B768),
+  pointed at the new wrapper, `TARGET_PULSED=2`, `BUDGET_S=2400`. Product
+  defaults only (headers restore ON, drop OFF) — directly comparable to
+  s668/s669.
+
+Run (in-session, BUDGET_S=2400): attempt 1 died in 10s to an unrelated
+`waitForAnyAudioSlot` boot-race crash (known noise family, free-rerolled).
+Attempts 2–4 reached hangar-sel at +215s each but were recovery-silent
+(3/3 — matches the historical ~2/3 silent rate, not a new finding). Attempt 5
+was recovery-active: sec2 fired at hold_8, pulse fired at hold_16 (Start×2,
++8s post-sec2). Budget ran out after attempt 6 died pre-engage, so only 1
+attempt reached scoring (**single-source**).
+
+**Scoring bug found and fixed in-session:** `score_log()` in the driver
+grepped `run.log` for `[sec2-pulse] fired`, but that `print` goes to the
+wrapper's own `launcher.stdout` (captured separately) — this produced a false
+`pulsed_n=0` → `INCONCLUSIVE` verdict even though the pulse demonstrably
+fired. It also searched for `[thr-create].*0x800495FC` from the START of the
+file rather than scoped to `>= sec2_ln`, picking up an earlier same-entry
+thread incarnation (ids 5/12 from prior section-3/section-4 cycles) instead of
+the one created after the target sec2. Fixed both in
+`scratch/agent/s670_postsec2_pulse_freeroll.sh` (read the pulse marker from
+`launcher.stdout`; scope thr-create/destroy search to `>= sec2_ln`, matching
+`scratch/agent/s669_postsec2_offline_score.py`'s convention).
+
+**Hand-scored attempt 5** (`s670_postsec2_pulse_5_20260811192406`, 1.49M-line
+run.log) directly from the raw logs after the bugfix:
+- sec2 fires once (L348248); thr12 (id=13, `entry=0x800495FC`) created
+  immediately after.
+- `grep -c '[thr-destroy].*id=13 '` over the **entire** file: **0** — thr12
+  never torn down.
+- `grep -c 'start-match: section 3'` after sec2: **0** — no menu return.
+- `grep -c packTlut`: **0** (same as baseline).
+- Tail of the log at kill time: still actively rendering the outdoor scene
+  (VI 512, origin swap 0x620000↔0x690000, `present-1024` FIRE, tris=42,
+  `rdpFs=9003` frozen, `synth` still climbing) — the plateau itself
+  (rdpFs frozen) is **unchanged**, but the baseline's menu-return teardown
+  never happened.
+- Observation window: nominally 180 loop-iterations but wall-clock inflated
+  to **1020s** (`hold done wall=1020s` per launcher.stdout) — screencapture-
+  per-iteration cost under the heavy `[thr-resume]`-per-swap logging load
+  (file reached 1.49M lines). Real elapsed post-sec2 time was **>1000s**,
+  roughly **5×** the s669 baseline's unforced ~195–200s thr12 lifetime.
+
+### Verdict — Outcome C, SINGLE-SOURCE
+
+**H-menu-return-input SUPPORTED, single-source (1/1 scored):** a synthetic
+Start press ~8s after section-2 keeps thr12/outdoor-mission state alive far
+past the baseline's unforced ~195–200s teardown, with no section-3 return.
+This **splits item -421 into two separate residuals**: the menu-return /
+thr12-teardown appears **input-gated** (this item, -422), while the **rdpFs
+FULL_SYNC starvation is untouched by input** (`rdpFs` stayed frozen at 9003
+throughout the >1000s window) — that mechanism is still open and belongs to
+the surviving -421.
+
+Needs a 2nd confirming attempt before promotion to CONFIRMED (iron rule 4 —
+one source so far). **Not suitable for the passive soak queue**: a single
+successful attempt (hangar-sel ~215s + recovery-silent rerolls ~266s each +
+the pulse-hold observation itself ~1000–1400s wall time) exceeds the soak
+queue's 600s hard cap by a wide margin; must be run in-session with
+`BUDGET_S>=2400` like this one.
+
+### Rules out
+
+- Arm A + Arm B together: the rdpFs/FULL_SYNC plateau is **not** resolved by
+  either FS_PIPE_INJECT reaching the phase (Arm A) or synthetic input (Arm B)
+  — it is a separate, still-open mechanism from the menu-return teardown.
+- Not a productization candidate yet (single-source); do not wire a SEC2
+  auto-input pulse into any product default before a 2nd confirming run.
+
+### Residual → -422 (new), -421 narrowed (FS plateau only)
+
