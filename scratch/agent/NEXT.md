@@ -1,32 +1,36 @@
-# NEXT work unit (after s703: alternate RSP required for a phase-qualified oracle)
+# NEXT work unit (after s704: isolate the oracle debugger/interpreter launch mode)
 
 HYPOTHESIS-ID: m3-oracle-boot-environment
 
-Blocked pending a human-provided alternate compatible Mupen64Plus RSP plugin.
-The only installed implementation is Homebrew `mupen64plus-rsp-hle`; s699
-refuted ROM-identity and checked launch-config drift, and the fresh s703
-inventory again found no alternate plugin. Do not add a target watch or alter
-the E9 tracer beforehand.
+Do not add a target watch or alter the E9 tracer beforehand. Make one bounded,
+regeneration-independent oracle change: expose the existing forced
+`EnableDebugger=1` and `R4300Emulator=0` settings as CLI-selectable launch
+arms, preserving the present debugger/pure-interpreter defaults.
 
 ## Competing hypotheses
 
-- **H-rsp-hle-route:** the current RSP HLE path causes the VI-320 stall; an
-  alternate RSP reaches 640/1024/hangar under the documented driven schedule.
-- **H-core-environment-route:** an alternate RSP also remains at 320 despite
-  PIF and whole-RDRAM controls; the residual lies in the debugger/core launch
-  environment, not the RSP implementation.
+- **H-debugger-route:** `EnableDebugger=1` causes the VI-320 stall; a
+  debugger-off arm reaches 640/1024/0x6ABxxx under the documented schedule.
+- **H-interpreter-route:** pure interpreter (`R4300Emulator=0`) causes the
+  stall; a nonzero emulator-mode arm reaches those phases while debugger state
+  is held constant.
+- **H-core-environment-route:** every arm remains at 320 despite PIF and
+  whole-RDRAM controls; the residual is elsewhere in the oracle core/data path.
 
 ## Discriminating measurement
 
-Run both RSP arms in one batch with identical retail ROM, `--vi-trace`,
-`--pif-trace`, eleven Starts at 6..56 s, and the whole-RDRAM write control.
-If only the alternate reaches a 640/1024/0x6ABxxx phase, H-rsp-hle-route wins
-and a subsequent narrow recovery-cell watch is qualified. If both remain at
-320 while both controls fire, H-core-environment-route wins; keep oracle
-target-watch zeros unqualified and audit the debugger/core build next.
+Run the debugger-off, alternate-emulator-mode, and default arms concurrently
+with identical retail ROM, current RSP HLE, `--vi-trace`, `--pif-trace`, the
+eleven Starts at 6..56 s, and a whole-RDRAM control wherever debugger support
+permits it. If debugger-off alone progresses, H-debugger-route wins. If only
+the nonzero emulator-mode arm progresses, H-interpreter-route wins. If all
+phase-stall with live PIF controls (and live write controls in debugger arms),
+H-core-environment-route remains; keep target-watch zeros unqualified.
 
-## Commands (after the human supplies `ALT_RSP_PATH`)
+## Commands (after adding the CLI launch-mode switches)
 
     tools/oracle/build.sh
-    tools/oracle/rs64_oracle --rom build/rogue_squadron.z64 --rsp /path/to/alternate-rsp.dylib --secs 70 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace --pif-trace --watch-write 0:0x800000
-    tools/oracle/rs64_oracle --rom build/rogue_squadron.z64 --rsp /opt/homebrew/lib/mupen64plus/mupen64plus-rsp-hle.dylib --secs 70 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace --pif-trace --watch-write 0:0x800000
+    # launch all three arms concurrently; use separate --configdir paths
+    tools/oracle/build/rs64_oracle --rom build/rogue_squadron.z64 --secs 70 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace --pif-trace --watch-write 0:0x800000
+    tools/oracle/build/rs64_oracle --rom build/rogue_squadron.z64 --oracle-debugger 0 --secs 70 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace --pif-trace
+    tools/oracle/build/rs64_oracle --rom build/rogue_squadron.z64 --oracle-emulator 1 --secs 70 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace --pif-trace --watch-write 0:0x800000

@@ -52430,3 +52430,27 @@ controls, a VI-320 result still cannot discriminate `H-rsp-hle-route` from
 `H-core-environment-route`. No build, target watch, runtime tracer, or soak
 was run. This is a concrete external dependency block; provide an alternate
 compatible RSP dylib path, then run the two commands in `NEXT.md` unchanged.
+
+## Session 704 (2026-08-12) — alternate RSP does not explain the oracle's VI-320 stall
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 42,880 bytes, below the maintenance
+threshold. The required alternate arm was already available locally:
+`~/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/`
+contains the arm64 CXD4 RSP plugin; prior inventories were limited to
+`/opt/homebrew` and `/usr/local`. `file` and `otool -L` confirmed it is an
+arm64 Mach-O bundle with only the system runtime dependency.
+
+Built the oracle, then ran CXD4 and current Homebrew RSP HLE concurrently for
+70 seconds with the identical retail ROM, DEBUGGER=1 pure-interpreter core,
+eleven Start presses at 6..56 seconds, VI/PIF traces, separate config dirs,
+and whole-RDRAM physical write controls. Both arms completed 4,193 VI
+(~69.9 emulated seconds), logged every press and its PIF transition, remained
+at width 320 after the boot-origin change, and each counted exactly 11,769,059
+writes. Logs: `scratch/agent/oracle_results/s704_rsp_ab_20260812-093940/`.
+
+The same-run whole-RDRAM controls are live, so this is a qualified
+boot-reachability result: H-rsp-hle-route is refuted. The matched VI-320 arms
+support H-core-environment-route, but do not qualify a recovery-cell target
+watch. The next bounded unit exposes the oracle's forced debugger and
+pure-interpreter settings as selectable launch arms, then compares those arms
+concurrently before any target-watch or E9-provenance change.

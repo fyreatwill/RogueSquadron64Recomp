@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s702; compacted in maintenance s679)
+## Current truth (reviewed through s704; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -432,9 +432,16 @@ maintenance pass. Closed lineages are not backlog items.
    669–698. **s698 retail A/B:** both current-RSP no-watch and whole-RDRAM
    control arms stayed at 320 through 70s despite all eleven PIF-observed
    Starts; the control counted 11,785,883 writes. H-watch-perturbation is
-   refuted. No alternate RSP plugin is installed, so the current oracle
-   environment remains unqualified and must be diagnosed before another
-   recovery-cell target watch or provenance reroll. **s699 source-backed
+   refuted. **s704 found the local arm missed by the earlier narrow inventory:**
+   `~/Documents/Tools/rs64-oracle/src/mupen64plus-rsp-cxd4/projects/unix/`
+   contains an arm64 `mupen64plus-rsp-cxd4.dylib`. The concurrent current-HLE
+   and CXD4 arms used identical ROM/core/input schedule, VI/PIF traces, and
+   whole-RDRAM controls; both received all eleven Starts, remained 320 through
+   4,193 VI/~69.9 emulated seconds, and counted exactly 11,769,059 writes.
+   **H-rsp-hle-route is REFUTED; H-core-environment-route is SUPPORTED.** This
+   is still not a phase-qualified target-watch witness; next audit the oracle
+   debugger/pure-interpreter launch mode before another recovery-cell watch or
+   provenance reroll. **s699 source-backed
    launch audit:** both candidate ROM files have identical SHA-256
    `9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`
    and identical 64-byte N64 headers (U v1.0 CRC `66A24BEC 2EADD94F`);
@@ -464,6 +471,10 @@ maintenance pass. Closed lineages are not backlog items.
    `/usr/local` RSP-dylib inventory still yields only that same HLE plugin.
    The two-arm discriminator remains externally blocked; a compatible alternate
    macOS RSP dylib is required before another oracle run can be evidence.
+   **SUPERSEDED s704:** that conclusion was believable because the inventories
+   searched only `/opt/homebrew` and `/usr/local`; they omitted the local
+   `rs64-oracle` source tree. CXD4 is compatible enough to load and complete
+   the control run, but did not change the 320 stall.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
