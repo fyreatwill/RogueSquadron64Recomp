@@ -42,3 +42,10 @@ complete. Residual is not a missing window case (0 UJs in `0x1DB0..0x1FE0`):
 2935 main-table `jr` UJs (1937 OOB) and 79 defer-drops, new vs s736, while
 sec2 E9/FS is unchanged. Overlay-12's two `L_122C` DMAs target DMEM `0x4E0`
 and `0x380`; next audit is whether those lengths wrap onto tables `0x64`/`0xD6`.
+
+**s741 wrap audit** (`docs/M3-OVL12-L122C-WRAP-AUDIT.md`): **H-ovl12-dma-wrap-stomp
+REFUTED.** dests are GLideN64 TriGen vertex/color scratch and sit above the
+table span (`0x64..0x2D4`); `dma_rdram_to_dmem` clamps at `0x1000` instead
+of wrapping. Live `0x1DD8`/`0x1DF4` ran 2/1 times vs ~31k `L_1F64` exits.
+Next writer is `L_1268` continuation overlays `0x14`/`0x24` (IMEM DMA
+skipped; `jr` 0x1DB0 / 0x12A0).

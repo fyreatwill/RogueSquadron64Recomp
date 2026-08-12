@@ -22,7 +22,18 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s740; compacted in maintenance s729)
+## Current truth (reviewed through s741; compacted in maintenance s729)
+
+**s741:** static `L_122C` wrap audit (`docs/M3-OVL12-L122C-WRAP-AUDIT.md`).
+**H-ovl12-dma-legit-payload SELECTED. H-ovl12-dma-wrap-stomp REFUTED.**
+dests `0x4E0`/`0x380` are GLideN64 TriGen vertex/color scratch and start
+above table span `0x64..0x2D4`. Our `dma_rdram_to_dmem` clamps at `0x1000`
+instead of wrapping, so those DMAs cannot store into the tables. Same-log
+re-count of s739: 2927 UJs, 0 in `0x1DB0..0x1FE0`, 2050 from table 2
+`L_10C8` / 760 from table 1; payload DMA returns `0x1DD8` n=2 / `0x1DF4`
+n=1 vs ~31k `L_1F64` exits. Do not add hardware wrap as a UJ fix. Next is
+`L_1268` continuation overlays `0x14` (ROM `0x26AB8` → `jr 0x1DB0`) and
+`0x24` (ROM `0x27260` → `jr 0x12A0`); both IMEM DMAs are skipped.
 
 **s740:** consumed `scratch/agent/soak_results/s739_ovl12_splice_20260812-152309/run.log`
 (353 s, rc=0, CRASH=0). Same-run CLIP `[ovl-route] res=0x04` n=1033 (n up to
@@ -326,7 +337,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s740:** the s739 resident-`0C` splice is live and **stops the section-2 `L_1DB0` reset** (H-splice-correct; 64/64 `active=0`). It does **not** restore FULL_SYNC (sec2 E9 match still 3/64; rdpFs still flat). New residual: command-table `jr` UJ storm (s736 had zero). Next is a static audit of overlay-12 `L_122C` DMA dests `0x380`/`0x4E0` against tables `0x64`/`0xD6` (`docs/F5-UCODE-REFERENCE.md` §dispatch-table; `docs/M3-OVERLAY12-AUDIT.md`). Do not resplice until that audit names a writer.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s740:** the s739 resident-`0C` splice is live and **stops the section-2 `L_1DB0` reset** (H-splice-correct; 64/64 `active=0`). It does **not** restore FULL_SYNC (sec2 E9 match still 3/64; rdpFs still flat). **s741:** the new UJ storm is **not** `L_122C` wrapping onto tables `0x64`/`0xD6` (H-ovl12-dma-wrap-stomp REFUTED; `docs/M3-OVL12-L122C-WRAP-AUDIT.md`). Next is a static audit of `L_1268` continuation overlays `0x14`/`0x24` (skipped IMEM DMA, `jr` 0x1DB0 / 0x12A0). Do not resplice until that audit names the writer.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

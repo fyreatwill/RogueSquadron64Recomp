@@ -1,53 +1,55 @@
-# NEXT work unit (static DMEM-map / L_122C wrap audit)
+# NEXT work unit (static L_1268 continuation overlays 0x14 / 0x24)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-s740 selected H-splice-correct. Do not rebuild or resplice. Classify the
-new command-table UJ storm against overlay-12's two `L_122C` payload DMAs
-using ROM / GLideN64 / F5-UCODE-REFERENCE ground truth, not a new runtime
-counter.
+s741 refuted H-ovl12-dma-wrap-stomp. Do not rebuild, resplice, or add
+DMEM wrap. Classify the post-ovl12 `L_1268` exits against the ROM images
+and the skipped IMEM DMA, using ROM / F5-UCODE-REFERENCE / the generated
+dispatcher, not a new runtime counter.
 
 ## Competing hypotheses
 
-- **H-ovl12-dma-wrap-stomp:** overlay-12 `L_122C` dests `r3=0x4E0` then
-  `r3=0x380` with `r4` near `0xFF0` wrap 4 KB DMEM and overwrite command
-  tables at `0x64` / `0xD6`. Later `L_1090`/`L_10C8` `jr` to OOB targets
-  (`0xFA92`, `0x0000`, `0x4F42`).
-- **H-ovl12-dma-legit-payload:** dests `0x380`/`0x4E0` are documented
-  vertex/triangle scratch; legal sizes cannot cover `0x64`/`0xD6`. UJs
-  then come from return-state / `L_1268` resident switch, not DMA wrap.
-- **H-ovl12-imem-gap:** UJs are missing overlay-12 IMEM handlers. Already
-  weak: s740 had **0** UJs in the `0x1DB0..0x1FE0` window.
+- **H-ovl24-skipped-imem:** dominant `L_1F64` → `L_1268(r5=0x24)` DMA dest
+  `0x12A0` is skipped (`dmem_addr & 0x1000`). `jr 0x12A0` runs main
+  `L_12A0` (DL push) instead of overlay-24 (ROM `0x27260`, 0xE3 B, 215/227
+  bytes differ from main). Fetch desyncs; table-`jr` UJs follow.
+- **H-ovl14-window-collision:** rare DMA-path exit `L_1268(r5=0x14)` `jr`s
+  `0x1DB0` into the spliced ovl12 image instead of ovl14 (ROM `0x26AB8`,
+  0x21F B, 509/543 bytes differ from the window). Cannot explain ~31k
+  `L_1F64` exits by itself.
+- **H-r17-not-advanced:** overlay-12 never adds the GLideN64 `PC += 32`.
+  Even a correct continuation overlay would then consume inline words as
+  opcodes. Discriminate by whether ovl24's first instructions advance
+  `r17` / consume `0x18..0x1E` vs treating `r20` as a DL pointer.
 
 ## Discriminating measurement
 
 Static only, same iteration, no game run:
 
-1. `docs/F5-UCODE-REFERENCE.md` plus GLideN64 Factor 5 HLE: what lives at
-   DMEM `0x64`, `0xD6`, `0x380`, `0x4E0`.
-2. Overlay-12 translation (`factor5_ucode_ovl12_recompiled.c` `L_1DB0` body):
-   the `r4` size formula at both `jal 0x122C` sites; max `dest+len` vs
-   0x1000 wrap onto `0x64`/`0xD6`.
-3. `L_122C` / `DO_DMA_READ` wrap semantics in our RSP.
-4. Top s740 UJ targets vs those tables (file:
-   `scratch/agent/soak_results/s739_ovl12_splice_20260812-152309/run.log`).
+1. Disassemble ROM `0x27260..0x27343` (ovl24) vs main IMEM `0x12A0`
+   (ROM `0x257D0`). Name ovl24's first `jr`/`j` and whether it is `L_12A0`
+   semantics.
+2. Disassemble ROM `0x26AB8..0x26CD7` (ovl14) vs spliced ovl12 at
+   `0x1DB0`. Confirm it is not clip (ovl4) and not TriGen (ovl12).
+3. `L_122C` dest for each `L_1268` path = delay-slot `lhu 0x76($3)`
+   (already 0x1DB0 / 0x12A0). Confirm both skip in `dma_rdram_to_dmem`.
+4. GLideN64 TriGen `PC += 32` vs ovl24's actual `r17` / PC effect.
 
 Outcomes:
 
-- Wrap-capable size + dests cover the tables + OOB UJs match stomped
-  halfwords → H-ovl12-dma-wrap-stomp. Then name the writer (command-stream
-  length vs our DMA helper) before any change.
-- Documented scratch + sizes cannot reach the tables → H-ovl12-dma-wrap
-  REFUTED; next is `L_1268` resident-switch / `L_1FD4` delay-slot state.
-- Dominant UJs land inside the overlay-12 window → reopen H-ovl12-imem-gap
-  (s740 counts already contradict this).
+- ovl24 ≠ main `L_12A0` and ovl24 is the PC-advance / emit step →
+  H-ovl24-skipped-imem SELECTED. Name that skipped IMEM writer before
+  any new splice (fixup 6c candidate, not this iteration).
+- ovl24 *is* a DL-push / `L_12A0` variant and ovl14 is the real
+  continuation → H-ovl14-window-collision rises; still needs a reason
+  the dominant path UJs.
+- ovl24 clearly does `r17 += 32` (or equivalent) → H-r17-not-advanced
+  becomes the skip consequence, not a third writer.
 
 ## Commands
 
     python3 - <<'PY'
-    # print both ovl12 jal 0x122C sites: r2/r3/r4 setup
-    # classify dest+max_len wrap onto 0x64 and 0xD6
+    # dump first 16 words of ROM 0x27260 and 0x257D0; 0x26AB8 vs 0x26670
     PY
-    grep -n '0x380\|0x4E0\|0x64\|0xD6' docs/F5-UCODE-REFERENCE.md docs/F5-UCODE-REFERENCE.md
-    # GLideN64: search Factor5/F5 DMEM map for those addresses
-    # DO_DMA_READ wrap: grep in lib/N64ModernRuntime or RSP recomp runtime
+    # rabbitizer or existing scratch disasm helper if present
+    # do not run the game

@@ -53334,3 +53334,33 @@ dispatch-table audit). NEXT is a static wrap/legit-payload audit of those
 DMAs before any further splice. **ORIGIN:** not a new mitigation; the s739
 writer attribution (main `L_1DB0` `DMEM[0x152]=0`) stands, and this consume
 shows that writer is no longer on the section-2 path.
+
+## Session 741 (2026-08-12) — L_122C dests cannot wrap onto the command tables
+
+Step 0 measured `CURRENT-TRUTH.md` at 32,861 bytes, so maintenance was not
+triggered. Static wrap audit only; no rebuild, no game run, no resplice.
+
+New document: `docs/M3-OVL12-L122C-WRAP-AUDIT.md`. Same-run re-count of
+`scratch/agent/soak_results/s739_ovl12_splice_20260812-152309/run.log`.
+
+Overlay-12 `L_1DB0` (bit1 clear) issues two `L_122C` DMAs: dest `r3=0x4E0`
+then `0x380`, length `(halfword + 0x16 or 0x13) & 0xFF0` minus one. Those
+constants match GLideN64 `TriGen0001_PrepareVtxData` /
+`PrepareColorData` on `_params[4]`. dests sit above the table span
+(`0x64..0x262` / `0xD6..0x2D4`). Max size `0xFF0` *would* wrap 4 KB DMEM
+on hardware; `dma_rdram_to_dmem` (`rsp.hpp`) clamps
+`rd_len = 0x1000 - dmem_addr` instead. Independent second line: the DMA
+return sites almost never run (`[ovl-route] 0x1DD8` n=2, `0x1DF4` n=1)
+against ~31k `L_1F64` exits. UJ re-count 2927 (8 lines split by `[vi]` vs
+s740's 2935): 2017 OOB, 910 IMEM, **0** in `0x1DB0..0x1FE0`; 2050 from
+`L_10C8` table 2, 760 from table 1.
+
+**H-ovl12-dma-legit-payload SELECTED. H-ovl12-dma-wrap-stomp REFUTED.**
+**H-ovl12-imem-gap REFUTED.** Do not add hardware wrap as a UJ fix — at
+max size that *would* become a table stomp. Both overlay-12 exits go to
+`L_1268` without touching `r17`: `r5=0x14` (ROM `0x26AB8` len `0x21F` →
+`jr 0x1DB0`) and dominant `r5=0x24` (ROM `0x27260` len `0x0E3` →
+`jr 0x12A0`). Both dests have bit 12 set, so the overlay IMEM DMA is
+skipped. Next names that continuation, not another payload-DMA probe.
+**ORIGIN:** not a mitigation; the UJ writer is still unnamed, and this
+audit only rules out `L_122C` wrap as that writer.
