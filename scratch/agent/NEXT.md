@@ -1,12 +1,12 @@
-# NEXT work unit (after s701: alternate RSP required for a phase-qualified oracle)
+# NEXT work unit (after s702: alternate RSP required for a phase-qualified oracle)
 
 HYPOTHESIS-ID: m3-oracle-boot-environment
 
 Blocked pending a human-provided alternate compatible Mupen64Plus RSP plugin.
 The only installed implementation is Homebrew `mupen64plus-rsp-hle`; s699
-refuted ROM-identity and checked launch-config drift, and s700 found no new
-alternate plugin supplied. Do not add a target watch or alter the E9 tracer
-beforehand.
+refuted ROM-identity and checked launch-config drift, and the fresh s702
+inventory again found no alternate plugin. Do not add a target watch or alter
+the E9 tracer beforehand.
 
 ## Competing hypotheses
 

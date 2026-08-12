@@ -52396,3 +52396,21 @@ repeat the unqualified VI-320 outcome from s697/s698. No build, experiment,
 runtime instrument, target watch, or E9 tracer change was made. The required
 next action remains a same-batch alternate/current RSP comparison after a
 human supplies an alternate compatible plugin.
+
+## Session 702 (2026-08-12) — fresh alternate-RSP dependency audit remains blocked
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 42,124 bytes, below the 60,000-byte
+maintenance threshold. The selected work unit is still the two-arm oracle
+comparison in `scratch/agent/NEXT.md`; it cannot run with one RSP arm. A fresh
+inventory of every `*rsp*.dylib` and Mupen64Plus dylib under `/opt/homebrew`
+and `/usr/local` found exactly one RSP plugin:
+`/opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib`.
+The other discovered Mupen64Plus plugins are audio-sdl, input-sdl, video-
+glide64mk2, and video-rice.
+
+This independently re-establishes the concrete missing dependency for this
+iteration. A current-RSP-only rerun would not distinguish H-rsp-hle-route
+from H-core-environment-route and would repeat the unqualified VI-320 null;
+therefore no build, target watch, E9-tracer change, or runtime experiment was
+performed. Supply an alternate compatible macOS RSP dylib, then run both arms
+from `NEXT.md` with the identical 70-second driven positive-control recipe.
