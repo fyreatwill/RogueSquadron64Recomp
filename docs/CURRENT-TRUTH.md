@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s688; compacted in maintenance s679)
+## Current truth (reviewed through s689; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -353,11 +353,16 @@ maintenance pass. Closed lineages are not backlog items.
    `slot=0`; each of the 61 cap rows has coherent pop→resume (`mis=0`) but
    `push-pop=8`, `slot=0..8`, and 102–115 zero-slot resumes. Thus
    **H-stale-resume is REFUTED for the observed pop/resume pairs** and
-   **H-unbalanced-frame is SUPPORTED** (single-run, controls live). Next
-   attribute the eight residual pushes by their call-site return address and
-   saved target/PC, including a bounded first transition to depth eight.
+   **H-unbalanced-frame is SUPPORTED** (single-run, controls live). **s689
+   caller/payload capture:** controls stayed balanced and complete. All 61 cap
+   rows had only slot-0/slot-8 first pushes; the initial slot-0 push was
+   caller `0x1090`, while every slot-8 push was caller `0x1088`; representative
+   cap task 8820 kept the saved target stable while saved PC advanced
+   `0x180..0x1F8`. This is single-run support for a repeated dispatcher return
+   path, but `r31` alone does not identify the decoded command. Next join the
+   push with the current fetched opcode/operands and guest address.
    Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions
-   669–688.
+   669–689.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

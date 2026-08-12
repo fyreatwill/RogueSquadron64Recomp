@@ -52130,3 +52130,31 @@ not establish whether the eight retained pushes are legitimate open DL frames,
 one repeated LLE call site, or a corrupt stack write. Next: retain the call-site
 return address and payload for the first push into every slot and the slot-eight
 transitions, still without modifying control flow.
+
+## Session 689 (2026-08-12) — item -421: cap pushes reuse two slots through the dispatcher
+
+Extended the regeneration-safe `L_12A0` marker to retain `r31` with each
+saved-frame payload, plus first push per slot and first/last slot-8 push. The
+host output is phase-scoped in `[e9-prov-frame]`; the binary built cleanly and
+one recovery-active, phase-gated run
+`scratch/s73_post_a_scene/s670_postsec2_pulse_1_20260812051415/run.log`
+reached section 2, latched 64 target rows, fired the prescribed pulse, and
+finished without `[CRASH]`.
+
+Positive controls passed in the same run: tasks 1–4 all had the exact prior
+E9→dispatch chain, natural completion, balanced `push=pop=resume=2`, and a
+visible slot-0 push from caller `0x1090`. The phase window again contained 3
+natural rows and 61 synthetic-cap rows. Every cap row recorded only slot 0
+and slot 8 as first-push locations: slot 0 entered from `0x1090`, slot 8 from
+`0x1088`. In representative cap task 8820, the first push was
+`slot=0 target=0x593D60 pc=0x180 caller=0x1090`; late slot-0 pushes retained
+that target while their saved PCs advanced through `0x1D8..0x1F8` with caller
+`0x1088`, and its sole slot-8 push was `target=0x593F70 pc=0x1C0 caller=0x1088`.
+
+This rules out the premise that the net eight unmatched push events represent
+eight simultaneously distinct stack slots. It is single-run support that the
+cap path repeatedly returns through the LLE dispatcher, but `r31=0x1088` is a
+dispatcher continuation rather than a decoded-command identity; it cannot yet
+separate a legitimate DL/branch chain from inline-data dispatch or state
+corruption. Next: join each retained `L_12A0` push to its current fetched
+guest address and opcode/operands, retaining the controls and phase latch.

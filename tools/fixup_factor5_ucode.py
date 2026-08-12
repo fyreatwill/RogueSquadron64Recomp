@@ -1051,7 +1051,7 @@ if is_main_ucode and FRAME_AUDIT_MARKER not in text:
     decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_unwind[^\n]*\n)")
     text, n_decl = decl_anchor.subn(
         lambda m: m.group(1) +
-        'extern "C" void rs64_e9prov_frame_push(uint32_t slot, uint32_t saved_target, uint32_t saved_pc);\n'
+        'extern "C" void rs64_e9prov_frame_push(uint32_t slot, uint32_t saved_target, uint32_t saved_pc, uint32_t caller);\n'
         'extern "C" void rs64_e9prov_frame_pop(uint32_t slot, uint32_t saved_target, uint32_t saved_pc);\n'
         'extern "C" void rs64_e9prov_frame_resume(uint32_t slot, uint32_t resumed_pc);  ' +
         FRAME_AUDIT_MARKER + "\n",
@@ -1063,7 +1063,7 @@ if is_main_ucode and FRAME_AUDIT_MARKER not in text:
         r"(L_12A0:\n(?:.*\n){0,10}?    RSP_MEM_W_STORE\(0X654, r2, r17\);\n)(    // addiu\s+\$2, \$2, 0x8)")
     text, n_push = push_anchor.subn(
         lambda m: m.group(1) +
-        "    rs64_e9prov_frame_push(r2, r3, r17);  " + FRAME_AUDIT_MARKER + "\n" + m.group(2),
+        "    rs64_e9prov_frame_push(r2, r3, r17, r31);  " + FRAME_AUDIT_MARKER + "\n" + m.group(2),
         text, count=1)
     if n_push != 1:
         print("fixup_factor5_ucode: FIXUP 12 ANCHOR FAILED (L_12A0 saved frame).", file=sys.stderr)

@@ -1,38 +1,38 @@
-# NEXT work unit (after s688 saved-frame audit)
+# NEXT work unit (after s689 frame-caller audit)
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-Attribute the eight unpopped display-list frames in each of the 61 section-2
-LLE cap tasks. s688 proved the observed pop→resume pairs are coherent
-(`mis=0`) but every cap row has `push-pop=8` and reaches slot 8; natural rows
-are balanced at slot 0. Do not alter decoding, submission, or FULL_SYNC.
+Attribute the command that enters `L_12A0` on the repeated cap path. s689
+showed the net `push-pop=8` is not eight distinct slots: cap rows reuse slots
+0 and 8, and the late pushes return through `r31=0x1088`. That is a dispatcher
+return address, not a command identity. Do not alter decoding, submission, or
+FULL_SYNC.
 
 ## Competing hypotheses
 
-- **H-legitimate-open-chain:** the eight residual pushes come from valid Factor
-  5 DL/branch commands and the stream genuinely lacks a root terminator.
-- **H-repeat-callsite:** one LLE call path repeatedly pushes the same saved
-  target/PC, accumulating the eight residual frames.
-- **H-stack-write-corrupt:** the saved-frame slot/target/PC changes before a
-  matching pop, so an invalid stack write—not a legitimate command—creates
-  the residual depth.
+- **H-legitimate-open-chain:** the repeated `L_12A0` entries are valid Factor
+  5 DL/branch opcodes with command-consistent target and return PC.
+- **H-inline-data-dispatch:** the repeated entries follow an inline-data word
+  misread as a DL/branch command, so its opcode/operands contradict the Factor
+  5 command table.
+- **H-state-corrupt:** the fetched command is valid, but its guest PC or the
+  saved target changes without a corresponding decoder transition.
 
 ## Discriminating measurement
 
-Add phase-scoped bounded call-site (`r31`) and frame payload (`slot`, saved
-target, saved PC) markers at `L_12A0`, retaining the first push into each slot
-and the first/last push at slot 8. Join those with the existing pop/resume
-records in `[e9-prov]`. Keep four boot controls, the section-2 latch, and 64
-target rows. The visible positive control is the existing natural
-push→pop→resume chain plus a balanced slot histogram; a counter alone is
-insufficient.
+Extend the regeneration-safe `L_12A0` push marker with current `r17`, `r19`,
+and `r20`; retain the first/last slot-0 push after caller `0x1088` and the
+slot-8 push. Join those with the existing source-fetch records in
+`[e9-prov]`. Keep four boot controls, the section-2 latch, and 64 target rows.
+The visible positive control is the existing natural push→pop→resume chain
+plus a command-consistent boot DL entry; a counter alone is insufficient.
 
-- The eight retained pushes have distinct, command-consistent call sites and
-  payloads: H-legitimate-open-chain supported.
-- The same call-site/payload supplies repeated residual pushes: H-repeat-callsite
-  supported.
-- A slot's saved payload changes without its matching pop: H-stack-write-corrupt
-  supported.
+- Valid 0x06/0x07 DL/branch commands with Factor-5-consistent operands:
+  H-legitimate-open-chain supported.
+- A non-command/inline-data-shaped opcode at the repeated push:
+  H-inline-data-dispatch supported.
+- Valid opcode but guest PC/target changes without its matching decoder path:
+  H-state-corrupt supported.
 - Missing boot/natural controls: reject the run.
 
 ## Commands
