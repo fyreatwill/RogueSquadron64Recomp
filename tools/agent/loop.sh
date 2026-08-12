@@ -33,6 +33,21 @@ LOOP_MODEL="${LOOP_MODEL:-sonnet}"
 
 log() { echo "[loop] $*" | tee -a "$AG/loop.log"; }
 
+# Runner output goes through the formatter on the way to the log ONLY. codex
+# emits JSONL whose command output arrives as one enormous escaped line per
+# event; fmt_runner_log.py unescapes it into readable blocks, and pretty-prints
+# claude/deepseek's single JSON document the way runner.sh already did.
+# The RAW $out is what the limit classifier reads (see errtxt below) — keep it
+# that way. Rendering the agent's narrative into plain text and then pattern
+# matching it is how a successful iteration gets mistaken for a rate limit.
+# If the formatter fails for any reason, log the raw output rather than nothing.
+log_runner_output() {
+  local formatted
+  formatted="$(printf '%s\n' "$1" | tools/agent/fmt_runner_log.py 2>/dev/null)"
+  [ -n "$formatted" ] || formatted="$1"
+  printf '%s\n' "$formatted" >> "$AG/loop.log"
+}
+
 notify_blocked() {
   osascript -e 'display notification "RS64 agent blocked - see scratch/agent/BLOCKED.md" with title "RS64 loop"' 2>/dev/null
   log "BLOCKED - fix it, delete $AG/BLOCKED.md, rerun."
@@ -134,7 +149,7 @@ while [ "$n" -lt "$ITER_CAP" ]; do
   fi
   out="$(LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$prompt_file")"
   rc=$?
-  printf '%s\n' "$out" >> "$AG/loop.log"
+  log_runner_output "$out"
 
   # Limit classification must look at the runner's ERROR fields, never its
   # narrative: s68's grok iteration described RSP timing as "the rate-limit
@@ -339,7 +354,7 @@ else:
     retry_runner=claude
     [ "${RUNNER:-claude}" = "deepseek" ] && retry_runner=deepseek
     out="$(RUNNER=$retry_runner LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
-    printf '%s\n' "$out" >> "$AG/loop.log"
+    log_runner_output "$out"
     # A retry that itself hits a limit is not a contract failure - stop retrying.
     # (Raw-output match is acceptable here: a false positive merely stops
     # retrying early, it does not put the loop to sleep.)
