@@ -53364,3 +53364,50 @@ max size that *would* become a table stomp. Both overlay-12 exits go to
 skipped. Next names that continuation, not another payload-DMA probe.
 **ORIGIN:** not a mitigation; the UJ writer is still unnamed, and this
 audit only rules out `L_122C` wrap as that writer.
+
+## Session 742 (2026-08-12) — overlay 24 is emit; overlay 28 does PC += 32
+
+Step 0 measured `CURRENT-TRUTH.md` at 33,619 bytes, so maintenance was not
+triggered. Static `L_1268` continuation audit only; no rebuild, no game
+run, no splice. New document: `docs/M3-OVL24-CONTINUATION-AUDIT.md`.
+SOAK-RESULTS had no new lines since s740 (queue empty).
+
+ROM ucode data at `0x39900` independently confirms the s46 table
+(`0x76=0x1DB0`, `0x78=0x12A0`) and the `L_1268` dest formula
+(`r3 = desc>>12; dest = lhu 0x76(r3)`):
+
+- r5=0x14 desc=0x021F → dest 0x1DB0 len 0x21F ROM 0x26AB8
+- r5=0x24 desc=0x20E3 → dest 0x12A0 len 0x0E3 ROM 0x27260
+- r5=0x28 desc=0x001B → dest 0x1DB0 len 0x01B ROM 0x27348
+
+`L_122C` `SET_DMA_MEM(r3)`; both dests have bit 12 set, so
+`dma_rdram_to_dmem` skips. Same skip on overlay 28's restore DMA
+(hard-coded dest `0x12A0`).
+
+Main `L_12A0` is ROM `0x25830` (toml `0x25610+(0x12A0-0x1080)`), first
+word `0x8E43005C`. NEXT.md's `0x257D0` is the DMA/overlay helper, not
+DL-push. Overlay 24 vs that address: 212/227 bytes differ. First
+three insns: `ori $10,4; j L_15D0; ori $30,0x12AC` — handshake into
+the shared vertex helper, not a frame push. Body copies `r17+4..+16`
+into DMEM 0x670/698/6C0/6E8, emits via `L_1358`/`L_17F0`/`L_112C`,
+exits `j L_1268; ori $5,0x28`. No `addiu $17,$17,N`.
+
+Overlay 28 is seven instructions: `addiu $17,$17,32` then DMA
+`OSTask.ucode+0x220` (ROM `0x25830`, first word independently
+`0x8E43005C`) over IMEM `0x12A0..0x15CF` and `jr L_10D8`. That `+32`
+is GLideN64 `F3DSWRS_TriGen`'s extra advance (reference line 1044).
+
+Overlay 14 starts COP2, not clip (`sh $ra`) and not TriGen
+(`lbu -6($17)`); 503/543 vs ovl12, 507/543 vs ovl4. Exits
+`j L_1268; ori $5,0x18`. Rare bit-1-clear path only.
+
+**H-ovl24-skipped-imem SELECTED. H-ovl14-window-collision** cannot
+explain ~31k `L_1F64` exits. **H-r17-not-advanced** is the skip
+consequence of losing `0x24→0x28`, not a missing add in ovl12/ovl24.
+Named writers: overlay 24 (emit; `jr 0x12A0` currently runs DL-push
+on TriGen w1) and overlay 28 (`r17+=32` + restore). Do not
+permanently splice ovl24 over `L_12A0`. Next is fixup 6c as a route
+swap.
+**ORIGIN:** not a mitigation; the skipped images are legitimate
+ucode (ROM-backed, table-selected). The wild `jr` target is main
+`L_12A0` running in overlay 24's place.

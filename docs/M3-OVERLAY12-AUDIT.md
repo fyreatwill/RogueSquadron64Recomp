@@ -47,5 +47,7 @@ and `0x380`; next audit is whether those lengths wrap onto tables `0x64`/`0xD6`.
 REFUTED.** dests are GLideN64 TriGen vertex/color scratch and sit above the
 table span (`0x64..0x2D4`); `dma_rdram_to_dmem` clamps at `0x1000` instead
 of wrapping. Live `0x1DD8`/`0x1DF4` ran 2/1 times vs ~31k `L_1F64` exits.
-Next writer is `L_1268` continuation overlays `0x14`/`0x24` (IMEM DMA
-skipped; `jr` 0x1DB0 / 0x12A0).
+**s742** (`docs/M3-OVL24-CONTINUATION-AUDIT.md`): **H-ovl24-skipped-imem
+SELECTED.** Overlay 24 (ROM `0x27260` → `jr 0x12A0`) is emit, not DL-push;
+overlay 28 does `r17 += 32` and restores main `L_12A0`. Overlay 14 is the
+rare-path `0x1DB0` sibling. Fixup 6c is a route swap, not a resident overwrite.

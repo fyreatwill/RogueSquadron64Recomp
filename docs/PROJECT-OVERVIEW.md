@@ -2646,5 +2646,7 @@ the main-image `L_1DB0` `DMEM[0x152]=0` reset, and every active predecessor is t
 `L_1298` relay. The correct overlay-12 window image is distinct TriGen and does not reset, so
 H-stale-main-image is selected. **s739 landed the overlay-12 splice** (fixup 6b, `OVL12_*`,
 jal-return cases through `L_122C`/`L_1268`); consume the queued phase-latched soak before any
-further change. Runtime rerolls without a section-2 latch are unqualified. Details:
-PORTING-STATE Sessions 685–739; consume protocol: `scratch/agent/NEXT.md`.
+further change. Runtime rerolls without a section-2 latch are unqualified. **s740–s742:** the
+splice stops the section-2 reset; residual UJs are the skipped overlay-24 emit at dest `0x12A0`
+plus overlay 28's `r17 += 32` / restore of `L_12A0` (`docs/M3-OVL24-CONTINUATION-AUDIT.md`).
+Details: PORTING-STATE Sessions 685–742; consume protocol: `scratch/agent/NEXT.md`.
