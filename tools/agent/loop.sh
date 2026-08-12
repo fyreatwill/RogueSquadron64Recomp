@@ -8,7 +8,9 @@
 # Env: ITER_CAP (default 40), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12),
 #      LOOP_MODEL (default sonnet), MAX_NO_CONTRACT (default 2),
 #      SLEEP_ON_ERROR (120s) / MAX_ERR_RETRIES (4) for nonzero-rc-without-limit-wording,
-#      SOAKS_BETWEEN_ITERS (2) / SOAK_TIMEOUT (600s) for the queued-soak runner
+#      SOAKS_BETWEEN_ITERS (2) / SOAK_TIMEOUT (600s) for the queued-soak runner,
+#      UNBLOCK_ENABLE (1) / MAX_UNBLOCK_ATTEMPTS (1) / UNBLOCK_RUNNER /
+#      UNBLOCK_MODEL for the automated unblock tier (see try_unblock below)
 set -u
 cd "$(dirname "$0")/../.."
 AG=scratch/agent
@@ -46,6 +48,73 @@ log_runner_output() {
   formatted="$(printf '%s\n' "$1" | tools/agent/fmt_runner_log.py 2>/dev/null)"
   [ -n "$formatted" ] || formatted="$1"
   printf '%s\n' "$formatted" >> "$AG/loop.log"
+}
+
+# --- automated unblock tier -------------------------------------------------
+# A BLOCKED iteration used to end the run and wait for a human, which is right
+# when the block is real and expensive when it is not: the alternate-RSP block
+# of 2026-08-12 stopped four consecutive overnight runs, each restart spending
+# a paid iteration to re-derive the same claim, while the answer sat in the
+# blocked tool's own --help.
+#
+# So before surrendering the run, spend ONE iteration on a different prompt
+# (tools/agent/UNBLOCK.md) whose whole job is to refute the block, satisfy it
+# locally, or re-scope around it. Three properties keep this from becoming a
+# churn engine:
+#   * the agent cannot mark itself unblocked - the loop re-runs stop_gate
+#     --verify and restores a block if the contract is unmet;
+#   * one attempt per DISTINCT block (keyed by content hash), so a block that
+#     survives its attempt goes to the human instead of looping;
+#   * state lives outside the repo, like every other meter here.
+# UNBLOCK_ENABLE=0 restores the old stop-and-notify behaviour.
+UNBLOCK_STATE="${TMPDIR:-/tmp}/.rs64-unblock-state"
+
+try_unblock() {
+  [ "${UNBLOCK_ENABLE:-1}" = "1" ] || return 1
+  [ -s "$AG/BLOCKED.md" ] || return 1
+
+  local hash prev_hash prev_n out rc verdict
+  hash="$(shasum "$AG/BLOCKED.md" 2>/dev/null | cut -d' ' -f1)"
+  prev_hash=""; prev_n=0
+  [ -f "$UNBLOCK_STATE" ] && read -r prev_hash prev_n < "$UNBLOCK_STATE" 2>/dev/null
+  case "${prev_n:-0}" in ''|*[!0-9]*) prev_n=0 ;; esac
+
+  if [ "$hash" = "$prev_hash" ] && [ "$prev_n" -ge "${MAX_UNBLOCK_ATTEMPTS:-1}" ]; then
+    log "unblock: this exact block already survived $prev_n attempt(s) - escalating to human"
+    return 1
+  fi
+  if [ "$hash" = "$prev_hash" ]; then prev_n=$((prev_n + 1)); else prev_n=1; fi
+  printf '%s %s\n' "$hash" "$prev_n" > "$UNBLOCK_STATE"
+
+  log "unblock: attempt $prev_n - $(head -1 "$AG/BLOCKED.md")"
+  echo WORKING > "$AG/STATUS"
+  rm -f "$AG/OUTCOME" "$AG/UNBLOCK.md"
+  touch "$AG/ITER_START_MARK"
+  echo 0 > "$AG/.stop_blocks"
+  git rev-parse HEAD > "$AG/ITER_START_HEAD" 2>/dev/null
+
+  out="$(RUNNER="${UNBLOCK_RUNNER:-${RUNNER:-claude}}" \
+         RUNNER_MODEL="${UNBLOCK_MODEL:-${RUNNER_MODEL:-}}" \
+         LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh tools/agent/UNBLOCK.md)"
+  rc=$?
+  log_runner_output "$out"
+
+  if [ -f "$AG/BLOCKED.md" ]; then
+    log "unblock: agent left BLOCKED.md in place (rc=$rc) - treating as a real human dependency"
+    return 1
+  fi
+  if ! verdict="$(tools/agent/stop_gate.sh --verify)"; then
+    log "unblock: BLOCKED.md cleared but the exit contract is unmet - not trusting it"
+    { echo "# An unblock attempt cleared BLOCKED.md without meeting the exit contract, $(date)"
+      echo
+      echo "The block below was NOT resolved; the attempt merely deleted the file."
+      echo "Unmet condition:"; echo
+      printf '%s\n' "$verdict"; } > "$AG/BLOCKED.md"
+    return 1
+  fi
+
+  log "unblock: resolved - resuming iterations"
+  return 0
 }
 
 notify_blocked() {
@@ -119,7 +188,7 @@ while [ "$n" -lt "$ITER_CAP" ]; do
        && head -1 "$AG/BLOCKED.md" | grep -qiE 'not[[:space:]]+(currently[[:space:]]+)?blocked'; then
       mv "$AG/BLOCKED.md" "$AG/BLOCKED.stale.$(date +%Y%m%d-%H%M%S).md"
       log "stale BLOCKED.md (says 'not blocked', last iteration DONE) - archived, continuing"
-    else
+    elif ! try_unblock; then
       notify_blocked
       exit 2
     fi
@@ -376,6 +445,12 @@ else:
   log "iteration $n finished $(date) STATUS=${status:-unset} HEAD=$(git rev-parse --short HEAD 2>/dev/null)"
   if [ "$status" = "BLOCKED" ]; then
     [ -s "$AG/BLOCKED.md" ] || echo "# Agent set STATUS=BLOCKED without writing this file, $(date)" > "$AG/BLOCKED.md"
+    # One automated attempt before the run ends. On success the next iteration
+    # starts fresh; rule-8 accounting is skipped for a blocked iteration since
+    # it produced no OUTCOME to weigh.
+    if try_unblock; then
+      continue
+    fi
     notify_blocked
     exit 2
   fi
