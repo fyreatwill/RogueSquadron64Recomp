@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s712; compacted in maintenance s679)
+## Current truth (reviewed through s713; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -548,9 +548,18 @@ maintenance pass. Closed lineages are not backlog items.
    root seed, `L_10D8` normal boundary continuation, and `L_1088`'s DMA-helper
    return (`r31=0x1090` has one producer). Thus **H-r17-stale-reload** and
    **H-r17-unmodelled-dispatch are REFUTED**; H-r17-command-advance is
-   supported only statically. Next map every cap-reachable dispatch family to
-   its reference command and exact expected advance, to distinguish a valid
-   open chain from an inline-data decode desynchronization.
+   supported only statically. **s713 dispatch/advance audit:** the universal
+   dispatcher `r17 += 8` and `0x03 → L_14D4 → +16` exactly match MoveMem's
+   24-byte total. But the two dispatch tables have zero generated stores and
+   are DMA/overlay-populated; `0x05` selects overlay `0x0C` through `L_15AC`
+   / `L_1268`, while most reference inline-op table words are not materialized
+   in generated C. Thus **H-advance-conformant** and
+   **H-advance-mismatch are UNEVALUABLE**; **H-dispatch-table-opaque has
+   single-source static support** from table-load and overlay-selection code.
+   The
+   next unit instruments one phase-gated run to snapshot live table words and
+   per-family entry/exit `r17` for all six reference inline-data commands;
+   that table snapshot is its positive control.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

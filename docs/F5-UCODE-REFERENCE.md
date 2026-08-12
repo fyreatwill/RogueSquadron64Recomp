@@ -236,3 +236,32 @@ This refutes `H-r17-stale-reload` and `H-r17-unmodelled-dispatch`. It supports
 reached through documented lifecycle edges. It does not establish that the
 bytes consumed by a particular long stream are legitimate commands; the next
 question is which cap-reachable command family produces the unbounded chain.
+
+## Dispatch-table / inline-advance audit (s713)
+
+The generated dispatcher performs its universal `r17 += 8` before either
+table lookup. `L_10C8` reads table 2 from `DMEM[0x64 + index]`; the direct
+path reads table 1 from `DMEM[0xD6 + index]`. There are **no generated
+instruction stores** to either table. Their contents arrive through the RSP
+DMA/overlay path, rather than being materialized as C assignments. This is
+the static positive control: exhaustive `RSP_MEM_H*_STORE` enumeration has
+zero table writers, while both table readers are present at `L_1090`/`L_10C8`.
+
+| Reference inline command | Opcode | Statically attributable target / path | Generated advance proven by this audit | Reference total | Verdict |
+|---|---:|---|---|---:|---|
+| MoveMem | `0x03` | table 1 → `L_14D4` | universal `+8`, then `L_14D4` `+16` | 24 | Equal. |
+| TriGen | `0x05` | table 1 → `L_15AC` → overlay selector `L_1268` (`r5=0x0C`) | only universal `+8` is resident; selected overlay continuation is DMA-populated | 40 | Opaque. |
+| Tri (TRI2) | `0xB4` | table 2 entry not materialized in generated C | no handler-local total can be statically assigned | 8 or 24 (`w0 & 2`) | Opaque. |
+| TexrectGen | `0xBD` | table 2 entry not materialized in generated C | no handler-local total can be statically assigned | 24 | Opaque. |
+| SetOtherMode_H_EX | `0xBE` | table 2 entry resolves through resident `L_12E4`/`L_12F0` family, but the exact table word is DMA data | resident helper has `+8` after its inline-word read; target attribution still needs the live table word | 16 | Single-source candidate, not certified. |
+| SetOtherMode_L_EX | `0xB3` | table 2 entry not materialized in generated C | no handler-local total can be statically assigned | 16 | Opaque. |
+| Tri (TRI1) | `0xBF` | table 2 entry not materialized in generated C | no handler-local total can be statically assigned | 8 or 24 (`w0 & 2`) | Opaque. |
+
+This selects **H-dispatch-table-opaque**, not H-advance-conformant or
+H-advance-mismatch. The absence is structural, not a null runtime counter:
+the generated source contains only table loads and the checked-in toml lists
+the indirect targets as values extracted from the ucode data section. The
+next discriminating measurement must log the live table word, opcode, entry
+`r17`, and post-handler `r17` for all six inline-data families in one
+phase-gated run. That runtime table snapshot is also the positive control for
+the probe; without it, a zero mismatch count is not evidence.

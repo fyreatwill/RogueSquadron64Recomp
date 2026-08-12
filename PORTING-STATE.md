@@ -52636,3 +52636,27 @@ prove the cap stream's bytes are valid commands. The next bounded static unit
 maps each cap-reachable Factor 5 dispatch entry and exact inline-data advance
 against the independent command reference, rather than rerunning an
 unqualified recovery soak. No runtime behavior or mitigation changed.
+
+## Session 713 (2026-08-12) — static inline-advance audit stops at DMA-populated table
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 49,393 bytes, so maintenance did
+not trigger. The requested bounded audit compared all six Factor 5
+inline-data command families in `docs/F5-UCODE-REFERENCE.md` with the
+generated dispatcher. The universal dispatcher contributes `r17 += 8`; the
+one fully resident family, MoveMem (`0x03`), dispatches to `L_14D4`, whose
+additional `r17 += 16` gives the reference 24-byte total.
+
+The audit's static positive control was exhaustive: generated code reads both
+dispatch tables (`DMEM[0xD6]` and `DMEM[0x64]`) but has zero instruction
+stores to either. The table values therefore arrive through the existing RSP
+DMA/overlay path. In particular `0x05` reaches `L_15AC`, which selects overlay
+`0x0C` via `L_1268`; most remaining inline-family table words and their final
+handlers are not materialized in generated C. This is a structural result, not
+a null counter. It gives single-source static support for
+H-dispatch-table-opaque; H-advance-conformant and H-advance-mismatch remain
+unevaluable. The full table is in `docs/F5-UCODE-REFERENCE.md`.
+
+No runtime behavior or mitigation changed. The next unit is one
+regeneration-safe, phase-gated probe that logs live table word plus handler
+entry/exit `r17` for every selected family; the live table snapshot is its
+required positive control.
