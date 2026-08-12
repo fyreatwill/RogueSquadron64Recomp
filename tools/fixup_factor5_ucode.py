@@ -931,6 +931,36 @@ if is_main_ucode and L1650_RECONNECT_MARKER not in text:
     l1650_reconnect_applied = True
 
 # ---------------------------------------------------------------------------
+# Fixup 9: phase-scoped guest-E9 → DPC provenance (s678, item -421).
+#
+# The guest display-list fetch at L_1090 is the only common point before the
+# microcode dispatch table.  Record an E9 there; the host bridge joins it to
+# emitted/output E9 bytes and the eventual deferred submit for this LLE task.
+# This does not change the dispatch, ring, or command lengths.
+# ---------------------------------------------------------------------------
+E9_PROVENANCE_MARKER = "/* fixup: e9 provenance */"
+if is_main_ucode and E9_PROVENANCE_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rsp_task_log_and_reset[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_e9prov_guest(uint32_t guest_addr, uint32_t w0);  ' +
+        E9_PROVENANCE_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 9 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    fetch_anchor = re.compile(
+        r"(    r20 = RSP_MEM_W_LOAD\(0X4, r17\);\n)(    \{ /\* PATCH: diag — trace every op fetch)")
+    text, n_fetch = fetch_anchor.subn(
+        lambda m: m.group(1) +
+        "    if ((r19 >> 24) == 0xE9) rs64_e9prov_guest(r17, r19);  " +
+        E9_PROVENANCE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_fetch != 1:
+        print("fixup_factor5_ucode: FIXUP 9 ANCHOR FAILED (L_1090 E9 fetch).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -962,5 +992,7 @@ if imem_note_applied:
     notes.append("ImemOverrun site notes (L_1650/epilogue/control)")
 if l1650_reconnect_applied:
     notes.append("CLIP_1FBC → goto L_1650 reconnect (s69)")
+if E9_PROVENANCE_MARKER in text and E9_PROVENANCE_MARKER not in original:
+    notes.append("guest-E9 to DPC provenance audit (s678)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)

@@ -51886,3 +51886,20 @@ Logs:
 (phase-budget failure and early controls).
 
 ### Residual → tag guest E9 dispatch in Factor 5 ucode and correlate it to emitted DPC submit ranges.
+
+## Session 678 (2026-08-12) — item -421: persistent LLE E9 provenance probe built; target run unscored
+
+Implemented `ROGUESQ_LOG_E9_PROVENANCE`: the Factor 5 L_1090 guest-command
+fetch tags E9 through `tools/fixup_factor5_ucode.py`; the DPC bridge joins the
+per-task tag to raw emitted E9 bytes and to the deferred range that is actually
+submitted. No command, command length, DPC range, or dispatch behavior changes.
+The fixup is idempotent and the full build succeeded.
+
+The first attempt revealed a measurement defect before any conclusion: its
+64-record output budget was exhausted at boot. The corrected build explicitly
+keeps four task-1..4 controls and allocates 64 records only at task>=6500.
+Those four same-run controls fired. The corrected process had not reached the
+1024 phase after 2m24s and was SIGKILLed rather than treating its zero target
+records as evidence. Thus this session rules out neither dispatch-skip,
+handler-noemit, nor deferred-submit-loss; it lands the durable, phase-scoped
+discriminator for the next run.

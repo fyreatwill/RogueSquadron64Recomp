@@ -109,6 +109,51 @@ static std::atomic<uint32_t> g_task_rdp_fullsyncs{0};
 // task_log_and_reset both run on the RSP task thread, so plain array is fine.
 static uint32_t g_task_op_count[64] = {0};
 
+struct Rs64E9Provenance {
+    uint32_t task = 0;
+    uint32_t guest = 0;
+    uint32_t emitted = 0;
+    uint32_t submitted = 0;
+    uint32_t first_guest = 0xFFFFFFFFu;
+    uint32_t first_emit = 0xFFFFFFFFu;
+};
+static Rs64E9Provenance g_e9prov;
+
+static bool log_e9_provenance() {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_E9_PROVENANCE");
+        return e && *e && *e != '0';
+    }();
+    return enabled;
+}
+
+extern "C" void rs64_e9prov_task_begin(uint32_t task) {
+    g_e9prov = {};
+    g_e9prov.task = task;
+    g_e9prov.first_guest = 0xFFFFFFFFu;
+    g_e9prov.first_emit = 0xFFFFFFFFu;
+}
+
+extern "C" void rs64_e9prov_guest(uint32_t guest_addr, uint32_t) {
+    if (!log_e9_provenance()) return;
+    ++g_e9prov.guest;
+    if (g_e9prov.first_guest == 0xFFFFFFFFu) g_e9prov.first_guest = guest_addr & 0x7FFFFFu;
+}
+
+extern "C" void rs64_e9prov_task_end(uint32_t task) {
+    if (!log_e9_provenance() || g_e9prov.task != task || g_e9prov.guest == 0) return;
+    static uint32_t controls = 0;
+    static uint32_t targets = 0;
+    const bool control = task <= 4;
+    const bool target = task >= 6500;
+    if ((control && ++controls <= 4) || (target && ++targets <= 64)) {
+        fprintf(stderr, "[e9-prov] task=%u guest=%u emit=%u submit=%u guest0=0x%06X emit0=0x%06X\\n",
+                task, g_e9prov.guest, g_e9prov.emitted, g_e9prov.submitted,
+                g_e9prov.first_guest, g_e9prov.first_emit);
+        fflush(stderr);
+    }
+}
+
 // Drain accessor for diagnostic — see rt64_render_context.cpp / main.cpp.
 extern "C" void rs64_dpc_drain_histogram(uint32_t out[64]) {
     for (int i = 0; i < 64; ++i) {
@@ -441,6 +486,10 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
         int64_t mips_first = (int64_t)(int32_t)(submit_lo + 0x80000000);
         uint8_t b0_first = (uint8_t)MEM_B(0, mips_first);
         uint8_t op = b0_first & 0x3F;
+        if (b0_first == 0xE9 && log_e9_provenance()) {
+            ++g_e9prov.emitted;
+            if (g_e9prov.first_emit == 0xFFFFFFFFu) g_e9prov.first_emit = submit_lo;
+        }
         g_task_op_count[op]++;
         g_cumulative_op_count[op].fetch_add(1, std::memory_order_relaxed);
         // H-sync4 stop edge (item -353): any submit that covers the fixed slot.
@@ -1566,6 +1615,8 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                 }
 
                 if (!should_drop_wrap_rdp(lo, hi)) {
+                    if (log_e9_provenance() && lo <= g_e9prov.first_emit && g_e9prov.first_emit < hi)
+                        ++g_e9prov.submitted;
                     bytes += hi - lo;
                     calls++;
                     g_last_submit_lo.store(lo, std::memory_order_release);
@@ -1577,6 +1628,8 @@ extern "C" void rs64_dpc_defer_end(int commit) {
             }
 
             if (!should_drop_wrap_rdp(lo, hi)) {
+                if (log_e9_provenance() && lo <= g_e9prov.first_emit && g_e9prov.first_emit < hi)
+                    ++g_e9prov.submitted;
                 bytes += hi - lo;
                 calls++;
                 g_last_submit_lo.store(lo, std::memory_order_release);
@@ -1591,6 +1644,8 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                 }
                 bytes += r.second - r.first;
                 calls++;
+                if (log_e9_provenance() && r.first <= g_e9prov.first_emit && g_e9prov.first_emit < r.second)
+                    ++g_e9prov.submitted;
                 g_last_submit_lo.store(r.first, std::memory_order_release);
                 g_last_submit_hi.store(r.second, std::memory_order_release);
                 ultramodern::submit_rdp_range(r.first, r.second);

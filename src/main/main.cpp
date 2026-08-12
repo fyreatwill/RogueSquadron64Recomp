@@ -98,6 +98,8 @@ extern "C" uint32_t rs64_dpc_get_last_fullsync_addr();
 extern "C" void rs64_rdp_advance_reset();
 extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
                                           uint32_t guestE9);
+extern "C" void rs64_e9prov_task_begin(uint32_t task);
+extern "C" void rs64_e9prov_task_end(uint32_t task);
 // Defined in lib/rt64/src/hle/rt64_state.cpp — s171 crash-instant snapshot
 // of [vi-fs-decision] state, read from the SIGSEGV/SIGBUS handler below.
 extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
@@ -502,6 +504,8 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         fflush(stderr);
     }
     { static int tn2 = 0; if (++tn2 <= 16) rs64_canary("pre-ucode", tn2); }
+    const uint32_t task_serial = g_rs64_lle_task_n.fetch_add(1, std::memory_order_relaxed) + 1;
+    rs64_e9prov_task_begin(task_serial);
     rs64_dpc_defer_begin();
     // ROGUESQ_LOG_TASKMS=1 (session 37) — wall time of the ucode call per task,
     // phase-scoped. s36 put 82% of Gfx Thread samples inside factor5_ucode but
@@ -538,7 +542,6 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         }
         return w;
     };
-    const uint32_t task_serial = g_rs64_lle_task_n.fetch_add(1, std::memory_order_relaxed) + 1;
     // Shared across pre/post so intertask_delta sees the previous task's post.
     static int s_fs_have_post = 0;
     static uint8_t s_fs_last_post_b0 = 0;
@@ -623,6 +626,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     // Drop the task's RDP output if the ucode wandered into garbage (trig
     // data executed as DL) — RT64 must never see those streams.
     rs64_dpc_defer_end(r != RspExitReason::UnhandledJumpTarget);
+    rs64_e9prov_task_end(task_serial);
     if (log_step) {
         fprintf(stderr, "[runner-step #%d] factor5_ucode returned %d\n",
                 s_runner_step_log, (int)r);

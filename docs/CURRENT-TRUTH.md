@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s677)
+## Current truth (established by session 295; unchanged, reviewed through s678)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -373,7 +373,14 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     this loss; H-rdp-source-divergence CONFIRMED.** The comparison must move
     upstream to the LLE translation/emission path and join guest command
     provenance to emitted DPC ranges; direct guest-address joins at
-    `processRDPLists` are structurally invalid. Full: Sessions 669-677.
+    `processRDPLists` are structurally invalid. **s678:** persistent
+    `ROGUESQ_LOG_E9_PROVENANCE` records guest L_1090 E9 fetches, raw DPC E9
+    emissions, and deferred-submit coverage per LLE task; generated code is
+    injected through `fixup_factor5_ucode.py`. Build and idempotency passed.
+    The first run exposed a run-lifetime 64-record cap (invalid); fixed to
+    preserve tasks 1–4 controls plus task>=6500 targets. Corrected attempt
+    was killed before 1024/section2, so no provenance conclusion exists yet.
+    Full: Sessions 669-678.
 
 -420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
     Outcome A (content advances; residual → -421).**
