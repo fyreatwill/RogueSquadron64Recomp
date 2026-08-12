@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s732; compacted in maintenance s729)
+## Current truth (reviewed through s735; compacted in maintenance s729)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -295,6 +295,8 @@ Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 **s733:** a callback immediately before the sole `L_1DB0` `DMEM[0x152]=0` store pairs every active reset with the next depth-0 reuse, in order (e.g. reset `r17=0x1D8` → reuse `r17=0x180`, consecutive lifecycle sequence numbers; 64 latched rows, no unpaired reuse). The generated-store enumeration and the live pairing are two independent lines: **H-l1db0-reset-writer CONFIRMED** and H-reset-is-boundary/H-host-ledger-ordering refuted for the observed cap rows. The reference identifies `0x05` as TriGen, whose semantic handler advances its input stream; it does not establish why this continuation resets the call-depth byte. Next: source-tag each active `L_1DB0` entry (return address, resident id, and preceding `0x05` route) to split an erroneous overlay-route entry from an intentional but undocumented TriGen reset. Details and the evidence chain are durable in PROJECT-OVERVIEW §28; the exact next protocol is `scratch/agent/NEXT.md`.
 
 **s734:** landed the regeneration-safe source-route extension: every active `L_1DB0` reset now retains bounded first/last tuples of `r31`, `DMEM[0x153]` resident id, pending `L_12A0` direct/overlay context, and inline opcode/table context. The first direct launcher only produced the four balanced boot controls; its parent detached before phase-relative key injection, so it emitted no section-2 rows and is an **unqualified null**. The persistent self-checking recipe is queued as `s734_reset_route.sh`; do not conclude route uniformity/mixing until its cap rows and same-run controls arrive.
+
+**s735:** consumed `s734_reset_route.sh` (clean 347 s exit). Its four same-run direct boot controls remain balanced; 61 section-2 cap rows reproduce active resets and no unpaired reuse. Every retained active-reset tuple is identical in the fields that can be trusted: `old=0x08`, `r17=0x1D8`, `ra=0x1088`, `resident=0`, pending `L_12A0 source=0`, and inactive inline context. Thus **H-route-mixed is refuted for the retained reset state**, but neither H-wrong-trigen-route nor H-intentional-trigen-reset is selected: `L_1DB0` is reached after the source-specific `0x05`/`L_12A0` state has cleared, so the present callback has no predecessor attribution. Next: phase-latched, bounded correlation of the immediately preceding `do_indirect_jump target=0x1DB0` event (target, `debug_line`, `r31`, resident) to each active reset; only that can distinguish a direct bootstrap/stray entry from the known `0x05` relay.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -53168,3 +53168,37 @@ persistent-wrapper attempt likewise produced no launcher or run log in this runn
 repair the null. I queued `scratch/agent/soak_queue/s734_reset_route.sh`, a self-contained
 300-second phase-gated recipe that requires both reset-route and cap controls and fails on a crash.
 The next iteration must consume that verdict before interpreting route shape.
+
+## Session 735 (2026-08-12) — reset state is uniform, but its predecessor is not retained
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 32,704 bytes, so maintenance was not
+triggered. The competing hypotheses and discriminator were already recorded in
+`NEXT.md`; this work unit consumed the queued, already-built
+`s734_reset_route.sh` capture and made no code or mitigation change.
+
+The 347-second recipe exited cleanly. Its four same-run direct boot controls
+remain fully balanced (`push/pop/resume=2/2/2`, direct `L_12A0`, and matched
+E9 emission/dispatch), which is the positive control for the phase-scoped
+ledger. It produced 61 section-2 cap rows with active resets and zero unpaired
+depth-0 reuse. In all 976 retained first/last route records, the categorical
+tuple was the same: pre-reset depth `0x08`, `r17=0x1D8`, `ra=0x1088`, resident
+id 0, pending `L_12A0 source=0`, and inactive inline state. This is sufficient
+to refute H-route-mixed for the state retained by this probe.
+
+It does not select H-wrong-trigen-route or H-intentional-trigen-reset. The
+source tags deliberately report current `L_12A0` and inline state, but
+`L_1DB0` is reached after both have cleared; zero/inactive therefore means
+"not retained at reset," not "not a TriGen predecessor." The static generated
+switch and the independent reference still identify the known `0x05→L_15AC`
+relay, while this live reset tuple instead exposes a uniform `ra=0x1088`
+bootstrap-shaped state. Those facts require a direct predecessor attribution
+before any correction is justified.
+
+NEXT keeps `m3-postsec2-lle-control-flow` and specifies one bounded,
+regeneration-safe latch at `do_indirect_jump` for normalized target `0x1DB0`.
+The reset callback will consume the immediately preceding target, debug line,
+return address, resident id, and `L_1298` provenance. A direct/bootstrap
+predecessor selects the wrong-route candidate; an `L_1298` predecessor selects
+the TriGen-relay candidate; a missing paired predecessor despite an
+unconditional target marker rejects the new correlation instrument. No
+mitigation has been added.
