@@ -53012,3 +53012,24 @@ the normal DMA-helper continuation. It does not distinguish H-l1db0-valid-chunk-
 H-l1db0-stale-source: the global 16-row budget is exhausted by repeats within one task, so it cannot
 compare the target tasks. No mitigation changed. Next: keep the 16-row cap but sample one paired
 branch/return per target task.
+
+## Session 728 (2026-08-12) — section-2 TriGen continuation varies normally across target tasks
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 59,837 bytes, below the maintenance threshold. The
+Factor 5 reference was consulted before the change: `0x05` is TriGen and its continuation carries
+inline data, while the retail oracle cannot observe the RSP-local DMEM state being tested. `NEXT.md`
+recorded the valid-chunk-loop, stale-source, and branch-loss alternatives and their discriminating
+per-task paired measurement.
+
+The sole code change made `Rs64E9Provenance` allocate one phase-scoped sample to each newly latched
+target task, then emit only that task's first branch and first paired return. The existing
+regeneration-safe ucode calls were retained; `fixup_factor5_ucode.py` and the full CMake build passed.
+The phase-gated 600-second run (`scratch/agent/s728_l1db0_pairs`) completed with no `[CRASH]`.
+Four section-2 latch banners were present. Three qualified phase windows (6, 10, and 14) each
+produced 16 complete branch/return pairs: all 48 branches selected 4, all 48 returns targeted
+`0x1088`, and each pair had the expected `r17` `0x1D8`/`0x170` shape. In every window sources varied
+across the 16 sequential task ids, with only occasional repeats; no single stale source/r17 pair
+dominates the section-2 continuation. This is single-source runtime evidence, but it refutes both
+H-l1db0-branch-loss and H-l1db0-stale-source for the observed route. The remaining cap population
+is therefore the documented `0x06` open-chain family; next classify that entire dispatch/push idiom
+systematically instead of rerunning the continuation probe. No mitigation changed.

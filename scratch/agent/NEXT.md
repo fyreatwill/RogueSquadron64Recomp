@@ -1,39 +1,35 @@
-# NEXT work unit (after s727: section-2 continuation is normal but task-skewed)
+# NEXT work unit (after s728: TriGen continuation is normal across section-2 target tasks)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-Sample one paired `L_1DB0` branch/return per section-2 target task, preserving
-the existing 16-task cap. This is one bounded instrumentation change and one
-phase-gated run, not an unconstrained reroll.
+Statically audit the complete `0x06` display-list dispatch/push idiom that
+feeds the cap rows. This is one bounded enumeration/classification work unit;
+do not rerun the L_1DB0 continuation capture.
 
 ## Competing hypotheses
 
-- **H-l1db0-valid-chunk-loop:** section-2 TriGen routes advance through
-  legitimate chunk sources and return `L_11B0→0x1088→L_1090`.
-- **H-l1db0-stale-source:** post-sec2 cap traffic repeats one source/r17
-  pair through the otherwise normal return path.
-- **H-l1db0-branch-loss:** section 2 selects an unexpected DPC branch or an
-  indirect target other than the normal DMA-helper continuation.
+- **H-dl06-legitimate-chain:** every cap-reachable push is the documented
+  `0x06 → L_12A0` child-DL path, with a paired EndDL parent restore; cap rows
+  represent a legitimate-but-unbounded command chain.
+- **H-dl06-unpaired-site:** one generated dispatch or indirect return site can
+  push a child without the documented parent-PC/frame lifecycle.
+- **H-dl06-opaque-overlay:** a DMA-populated dispatch-table entry reaches a
+  push-like path not visible in the resident generated code.
 
 ## Discriminating measurement
 
-The s727 latch and route rows are mandatory positive controls. Add per-task
-state to `Rs64E9Provenance`: the first eligible branch records one global
-sample index and marks that task; its paired return reuses that index. Later
-routes in the same task must not consume the cap. Sixteen distinct target task
-ids with source/r17 and `target=0x1088` samples establish whether sources
-progress (H-valid) or repeat as one stale pair (H-stale); any branch or target
-outside the normal values supports H-branch. The retail oracle cannot inspect
-RSP-local DMEM, so mark a qualified runtime result single-source until joined
-to a game-visible consequence.
+Enumerate every generated call/jump into `L_12A0`, every producer of its
+caller/return target, and every `0x654+depth` save/restore access. Join each
+site to the Factor 5 reference's `0x06`/EndDL lifecycle. A complete finite
+table with only the documented dispatcher push and `L_12C4/L_12DC` restore
+supports H-dl06-legitimate-chain and refutes the other two; any extra entry,
+unpaired frame access, or DMA-table-only push selects its matching alternative.
+This static result needs the independent command reference as its second line
+of evidence; do not call it a runtime explanation without a later qualified
+cap-row trace.
 
 ## Commands
 
-    rg -n -C 5 'trigen_branch|trigen_return|g_e9prov.target|Rs64E9Provenance' src/rsp/dpc_bridge.cpp
-    python3 tools/fixup_factor5_ucode.py build/factor5_ucode/factor5_ucode_recompiled.c
-    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-      ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_INLINE_ADVANCE=1 \
-      ROGUESQ_LOG_E9_PROVENANCE=1 PROBE_KEYS="3:start 7:start" \
-      PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
-      zsh tools/probe.sh scratch/agent/s727_l1db0_sec2 600 1
+    rg -n -C 8 'L_12A0:|goto L_12A0|r31 = 0x12A0|0X654|0x654|L_12C4:|L_12DC:' build/factor5_ucode/factor5_ucode_recompiled.c
+    rg -n -C 5 '0x06|F3DSWRS_DList|EndDL|L_12A0|L_12C4|L_12DC' docs/F5-UCODE-REFERENCE.md docs/CURRENT-TRUTH.md
+    rg -n 'L_12A0|L_12C4|L_12DC|0X654' tools/fixup_factor5_ucode.py

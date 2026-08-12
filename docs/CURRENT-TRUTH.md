@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s727; compacted in maintenance s679)
+## Current truth (reviewed through s728; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -685,8 +685,19 @@ maintenance pass. Closed lineages are not backlog items.
    single-source support that H-l1db0-branch-loss does not explain the
    observed section-2 plateau. The 16-row global budget is consumed by the
    first task's repeated routes, so it cannot discriminate H-l1db0-valid-
-   chunk-loop from H-l1db0-stale-source across the latch window. Next make
-   the existing 16 samples one paired branch/return per target task.
+   chunk-loop from H-l1db0-stale-source across the latch window. **s728
+   per-target pairs:** the revised probe made one branch/return pair per
+   task, with the section-2 latch as its positive control. Three qualified
+   phase windows (6, 10, 14) each produced 16 complete pairs, 48 total, and
+   no `[CRASH]`. Every branch was 4 and every paired return target was
+   `0x1088`; branch `r17` was `0x1D8` and paired return `r17` was `0x170`.
+   Sources varied across each 16-task sequence (with only occasional repeats),
+   so **H-l1db0-branch-loss and H-l1db0-stale-source are REFUTED** for this
+   observed section-2 route. This remains single-source runtime evidence: the
+   retail oracle cannot observe RSP DMEM. The residual is the documented
+   legitimate `0x06` open-chain/cap path, not this TriGen continuation.
+   Next systematically classify the cap-reachable `0x06` dispatch-family
+   push sites and their parent/child lifecycle rather than rerunning this probe.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
