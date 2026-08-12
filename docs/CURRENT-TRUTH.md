@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s699; compacted in maintenance s679)
+## Current truth (reviewed through s700; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -446,7 +446,11 @@ maintenance pass. Closed lineages are not backlog items.
    plugins are audio-sdl, input-sdl, rsp-hle, video-glide64mk2, and video-rice:
    there is only one RSP arm. **H-single-rsp-limitation is SUPPORTED.** The
    oracle remains an unqualified phase witness; obtain an alternate compatible
-   RSP plugin before another oracle target-watch or provenance reroll.
+   RSP plugin before another oracle target-watch or provenance reroll. **s700
+   blocker check:** maintenance did not trigger (41,577 bytes) and no alternate
+   compatible RSP plugin has been supplied since s699. The required two-arm
+   discriminator therefore cannot be run; this is a dependency blocker, not a
+   new runtime result. Keep the target watch and E9 tracer unchanged.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -52365,3 +52365,19 @@ game result: the current oracle still cannot reach a phase-qualified witness.
 Do not run another target watch or E9 provenance reroll until a human supplies
 an alternate compatible RSP plugin; then run the same driven 70-second
 positive-control recipe with the alternate arm.
+
+## Session 700 (2026-08-12) — oracle alternate-RSP discriminator blocked externally
+
+Read the prescribed current-truth, next-unit, and soak-result state before
+choosing work. Step 0 measured `docs/CURRENT-TRUTH.md` at 41,577 bytes, so the
+maintenance threshold did not apply. The selected oracle work unit requires two
+RSP implementations in one identical 70-second driven batch. The established
+local inventory still contains only `mupen64plus-rsp-hle`; no human-provided
+alternate compatible plugin path is available.
+
+No build, watch, tracer, or rerun was performed: a one-arm repeat cannot split
+H-rsp-hle-route from H-core-environment-route and would produce another
+unqualified VI-320 null. s699 already checked the ROM and launch configuration,
+while s697/s698 established live PIF and whole-RDRAM positive controls. The
+next unit remains exactly the paired alternate/current-RSP run in
+`scratch/agent/NEXT.md`; this iteration is BLOCKED pending the alternate plugin.
