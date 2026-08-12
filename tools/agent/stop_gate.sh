@@ -85,6 +85,22 @@ $dirty
 Commit them (git add -A && git commit -m 'iter: <one-line finding>'). If you edited anything under lib/, first run ./submodule-patches/export.sh so the submodule patches do not go stale."
 fi
 
+head_now="$(git rev-parse HEAD 2>/dev/null)"
+head_start="$(cat "$AG/ITER_START_HEAD" 2>/dev/null || echo '')"
+
+# --- session history is append-only ------------------------------------------
+# The ledger is the only memory, so an iteration may add to history but never
+# rewrite it. The "a commit landed" test below cannot catch this on its own:
+# `git commit --amend` on a PREVIOUS iteration's commit also moves HEAD, so it
+# passes that check while destroying the session entry it rewrote. Ancestry is
+# the discriminating test — amend/rebase/reset at or below the iteration's
+# starting commit all detach it from HEAD's history, while amending a commit
+# this iteration authored leaves it an ancestor and is fine.
+if [ -n "$head_start" ] && [ "$head_now" != "$head_start" ] \
+   && ! git merge-base --is-ancestor "$head_start" HEAD 2>/dev/null; then
+  block "Exit contract unmet: you rewrote history. This iteration started at ${head_start:0:8}, which is no longer an ancestor of HEAD (${head_now:0:8}) — an amend, rebase, or reset landed on a commit from a previous iteration and destroyed its session entry. Recover it now: 'git reflog' lists the pre-rewrite HEAD, and 'git reset --soft <that hash>' restores those commits with your work still staged (NEVER --hard: lib/ carries uncommitted patches). Then commit your own work as a NEW commit on top. Never amend a commit you did not create this iteration."
+fi
+
 # --- BLOCKED: needs a usable write-up, but not a commit it has nothing for ----
 if [ "$status" = "BLOCKED" ]; then
   [ -s "$AG/BLOCKED.md" ] || block "Exit contract unmet: STATUS is BLOCKED but scratch/agent/BLOCKED.md is missing or empty. Write it: what you need, from whom, and what you already tried — specific enough that a human can act in 2 minutes."
@@ -92,8 +108,6 @@ if [ "$status" = "BLOCKED" ]; then
 fi
 
 # --- DONE: a commit landed this iteration, and it moved the ledger ------------
-head_now="$(git rev-parse HEAD 2>/dev/null)"
-head_start="$(cat "$AG/ITER_START_HEAD" 2>/dev/null || echo '')"
 if [ -n "$head_start" ] && [ "$head_now" = "$head_start" ]; then
   block "Exit contract unmet: no commit landed this iteration (HEAD is unchanged at ${head_now:0:8}). Run: git add -A && git commit -m 'iter: <one-line finding>'."
 fi

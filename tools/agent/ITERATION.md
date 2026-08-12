@@ -168,7 +168,12 @@ Before you may stop, ALL of:
    enforces iron rule 8 with it: an ADVANCED iteration resets the counter, so
    only stalled runs count — 3 consecutive non-ADVANCED iterations on one slug
    force a pivot preamble, a 4th blocks the loop.
-4. git add -A && git commit (message: "iter: <one-line finding>").
+4. git add -A && git commit (message: "iter: <one-line finding>"). ALWAYS a new
+   commit. Never `git commit --amend`, rebase, or reset onto a commit from a
+   previous iteration — that deletes another session's entry from the ledger,
+   and the ledger is the only memory. The gate checks this by ancestry, so an
+   amend of a commit you made THIS iteration is fine and a rewrite below your
+   own starting point is blocked. When in doubt, add a commit.
 5. Write scratch/agent/STATUS: DONE (work unit finished), or BLOCKED (also
    write scratch/agent/BLOCKED.md: what you need, from whom, and what you
    already tried — specific enough that a human can act in 2 minutes).

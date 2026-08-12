@@ -43,6 +43,10 @@ Hard rules:
 - Regen order: `make_elf.py` -> `N64Recomp` -> `fixup_game_funcs.py` -> `cmake`.
   The fixup step is NOT optional. Hand-edits to generated code go in the fixup
   scripts (`tools/fixup_*.py`) or they die at the next regen.
+- History is append-only: never `git commit --amend`, rebase, or reset onto a
+  commit from an earlier session. Each commit carries that session's
+  PORTING-STATE entry and rewriting one deletes it. `stop_gate.sh` blocks this
+  by checking that the iteration's starting commit is still an ancestor of HEAD.
 - NEVER run `git submodule update`, `git checkout -- lib/...`, `git clean`, or
   `git reset --hard`. `lib/` carries months of uncommitted patches. They are
   mirrored in `submodule-patches/*.patch`; `./submodule-patches/apply.sh`

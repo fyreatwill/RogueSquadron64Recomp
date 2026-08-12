@@ -87,7 +87,9 @@ Same as a normal iteration, and the same gate enforces it:
 2. Update `docs/CURRENT-TRUTH.md` if a conclusion changed.
 3. Rewrite `scratch/agent/NEXT.md` with the next work unit and a
    `HYPOTHESIS-ID:` line.
-4. `git add -A && git commit` (message: `unblock: <one-line outcome>`).
+4. `git add -A && git commit` (message: `unblock: <one-line outcome>`). A new
+   commit — never amend, rebase, or reset onto the blocked iteration's commit.
+   Its session entry is evidence about the block you are resolving.
 5. Write `scratch/agent/STATUS`: `DONE` if the loop may continue, `BLOCKED` if
    you took route 4.
 6. Write `scratch/agent/OUTCOME`: `ADVANCED` if you resolved or refuted the
