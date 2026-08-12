@@ -117,6 +117,13 @@ struct Rs64E9Provenance {
     uint32_t authoritative = 0;
     uint32_t dispatched = 0;
     uint32_t matched = 0;
+    uint32_t source_fetch = 0;
+    uint32_t source_e9 = 0;
+    uint32_t source_end = 0;
+    uint32_t source_end_addr = 0xFFFFFFFFu;
+    uint32_t source_end_kind = 0;
+    uint32_t source_first = 0xFFFFFFFFu;
+    uint32_t source_last = 0xFFFFFFFFu;
     bool target = false;
     bool control = false;
     std::vector<uint32_t> emitted_addrs;
@@ -165,6 +172,22 @@ extern "C" void rs64_e9prov_guest(uint32_t guest_addr, uint32_t) {
     if (g_e9prov.first_guest == 0xFFFFFFFFu) g_e9prov.first_guest = guest_addr & 0x7FFFFFu;
 }
 
+extern "C" void rs64_e9prov_source_fetch(uint32_t guest_addr, uint32_t w0) {
+    if (!log_e9_provenance()) return;
+    const uint32_t address = guest_addr & 0x7FFFFFu;
+    ++g_e9prov.source_fetch;
+    if ((w0 >> 24) == 0xE9) ++g_e9prov.source_e9;
+    if (g_e9prov.source_first == 0xFFFFFFFFu) g_e9prov.source_first = address;
+    g_e9prov.source_last = address;
+}
+
+extern "C" void rs64_e9prov_source_end(uint32_t guest_addr, uint32_t kind) {
+    if (!log_e9_provenance()) return;
+    ++g_e9prov.source_end;
+    g_e9prov.source_end_addr = guest_addr & 0x7FFFFFu;
+    g_e9prov.source_end_kind = kind;
+}
+
 extern "C" void rs64_e9prov_task_end(uint32_t task) {
     if (!log_e9_provenance() || g_e9prov.task != task) return;
     if (g_e9prov.control || g_e9prov.target) {
@@ -192,10 +215,14 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
     static uint32_t controls = 0;
     if ((g_e9prov.control && ++controls <= 4) || g_e9prov.target) {
         fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u raw=%u dispatch=%u match=%u "
+                "src_fetch=%u src_e9=%u src_end=%u src_kind=%u src0=0x%06X src_last=0x%06X src_end0=0x%06X "
                 "span=%u gap=%u guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.guest,
                 g_e9prov.emitted, g_e9prov.submitted, g_e9prov.authoritative,
                 g_e9prov.dispatched, g_e9prov.matched,
+                g_e9prov.source_fetch, g_e9prov.source_e9, g_e9prov.source_end,
+                g_e9prov.source_end_kind, g_e9prov.source_first, g_e9prov.source_last,
+                g_e9prov.source_end_addr,
                 g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);

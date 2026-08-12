@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s685; compacted in maintenance s679)
+## Current truth (reviewed through s686; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -330,8 +330,20 @@ maintenance pass. Closed lineages are not backlog items.
    `State::fullSync`, and the apparent other 34 E9s are triangle inline data.
    **H-rsp-starvation is SUPPORTED** at the RT64 boundary; the next question is
    whether the source-side three-E9 total is legitimate game/RSP input or an LLE
-   control-flow defect. Durable evidence and probe mechanics: PROJECT-OVERVIEW §27
-   and Sessions 669–685.
+   control-flow defect. **s686 source-stream completion audit:** the same-run
+   four boot controls visibly completed naturally (`src_fetch=42 src_e9=1
+   src_end=1 src_kind=1`) and preserved their exact E9→dispatch chain. The
+   phase-latched 64-row section-2 window had exactly three matching natural
+   rows (`src_fetch=42 src_e9=1`), followed by **61** rows that each made
+   `src_fetch=8192`, `src_e9=0`, and returned only through synthetic
+   `src_kind=2` (iter cap); target totals are `guest=src_e9=raw=dispatch=3`.
+   The all-fetch marker and independently anchored exit marker agree, with
+   the boot controls proving both live. This is **single-run, dual-marker
+   support for H-lle-control-flow**: after the three real boundaries the LLE
+   does not reach a natural display-list completion. It does not yet establish
+   whether that cap loop is an expected SP_STATUS-stub artifact or a stale
+   stream reset; next trace the real EndDL/unwind path. Durable evidence and
+   probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–686.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

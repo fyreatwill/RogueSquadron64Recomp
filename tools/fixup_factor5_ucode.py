@@ -961,6 +961,54 @@ if is_main_ucode and E9_PROVENANCE_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 10: source-stream completion audit (s686, item -421).
+#
+# E9 provenance alone records only E9 fetches. Count every L_1090 fetch and
+# stamp the actual return path so a three-E9 target can be distinguished from
+# an early/reset LLE exit. The all-fetch count is the same-run positive
+# control: a target row with source_fetch=0 is invalid, regardless of E9s.
+# ---------------------------------------------------------------------------
+SOURCE_AUDIT_MARKER = "/* fixup: source stream audit */"
+if is_main_ucode and SOURCE_AUDIT_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_guest[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_e9prov_source_fetch(uint32_t guest_addr, uint32_t w0);\n'
+        'extern "C" void rs64_e9prov_source_end(uint32_t guest_addr, uint32_t kind);  ' +
+        SOURCE_AUDIT_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 10 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    fetch_anchor = re.compile(
+        r"(    if \(\(r19 >> 24\) == 0xE9\) rs64_e9prov_guest\(r17, r19\);[^\n]*\n)")
+    text, n_fetch = fetch_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_e9prov_source_fetch(r17, r19);  " + SOURCE_AUDIT_MARKER + "\n",
+        text, count=1)
+    if n_fetch != 1:
+        print("fixup_factor5_ucode: FIXUP 10 ANCHOR FAILED (L_1090 all-fetch).", file=sys.stderr)
+        sys.exit(1)
+    natural_anchor = re.compile(
+        r"(L_10E8:\n(?:.*\n){0,8}?    // break       0\n)(    return RspExitReason::Broke;)")
+    text, n_natural = natural_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_e9prov_source_end(r17, 1);  " + SOURCE_AUDIT_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_natural != 1:
+        print("fixup_factor5_ucode: FIXUP 10 ANCHOR FAILED (L_10E8 natural exit).", file=sys.stderr)
+        sys.exit(1)
+    cap_anchor = re.compile(
+        r"(if \(\+\+rs64_iter > 16384\) \{  /\* fixup: iter cap \*/.*?)(        return RspExitReason::Broke;)",
+        flags=re.DOTALL)
+    def cap_repl(m: re.Match) -> str:
+        return m.group(1) + "        rs64_e9prov_source_end(r17, 2);  " + SOURCE_AUDIT_MARKER + "\n" + m.group(2)
+    text, n_cap = cap_anchor.subn(cap_repl, text)
+    if n_cap < 1:
+        print("fixup_factor5_ucode: FIXUP 10 ANCHOR FAILED (iter-cap exit).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -994,5 +1042,7 @@ if l1650_reconnect_applied:
     notes.append("CLIP_1FBC → goto L_1650 reconnect (s69)")
 if E9_PROVENANCE_MARKER in text and E9_PROVENANCE_MARKER not in original:
     notes.append("guest-E9 to DPC provenance audit (s678)")
+if SOURCE_AUDIT_MARKER in text and SOURCE_AUDIT_MARKER not in original:
+    notes.append("source-stream completion audit (s686)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)

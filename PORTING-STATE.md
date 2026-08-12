@@ -52051,3 +52051,27 @@ address matches. The legacy fixed-stride bridge scan still reported
 This does not yet say whether the source-side three-E9 total is a legitimate
 game stream or Factor 5 LLE control-flow loss; next, add an independent
 source-stream endpoint marker with an all-path positive control.
+
+## Session 686 (2026-08-12) — item -421: section-2 work falls into synthetic-cap completion
+
+Added generated-code source markers for every `L_1090` fetch and the separately
+anchored natural (`L_10E8`) versus synthetic-cap return. Built successfully and
+ran the phase-gated recovery-active recipe. Attempt 1 missed section 2 and
+rerolled; attempt 2 reached section 2, fired the prescribed pulse, emitted one
+latch and exactly 64 target rows, and had no `[CRASH]`.
+
+The same-run positive control is visible: boot tasks 1–4 each had
+`src_fetch=42 src_e9=1 src_end=1 src_kind=1`, alongside the existing exact
+`guest=emit=submit=raw=dispatch=match=1` chain. In the 64 section-2 rows,
+three natural rows had the same 42-fetch/one-E9 shape and preserved all three
+authoritative dispatches. The other 61 rows each had `src_fetch=8192`,
+`src_e9=0`, and `src_kind=2`; their last source addresses stayed in the small
+DMEM range `0x178..0x268`. Aggregate target totals are
+`guest=src_e9=raw=dispatch=3`, `src_fetch=499838`, `natural=3`, `cap=61`.
+
+The independent all-fetch and exit markers agree and their controls are live:
+this is single-run, dual-marker support that the post-three-E9 population does
+not naturally complete a display list before the synthetic cap. It rules out a
+missed L_1090 E9 path in this capture. It does not distinguish an expected
+SP_STATUS-stub completion artifact from a stale/unwound display-list loop;
+next, mark the real `L_12C4` EndDL/unwind path and its stack-depth transition.
