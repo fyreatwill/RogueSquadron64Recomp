@@ -11,8 +11,8 @@ a resident overlay. This script writes a composite ROM whose window region
 byte-identical to the runtime RDRAM capture (s47 imem_dma_dump control).
 
 The overlay-4 composite is the input of factor5_rsp_ovl4.toml; its RSPRecomp
-output is consumed by fixup 6 in tools/fixup_factor5_ucode.py. Overlay 12 is
-also supported for static provenance audits, without changing runtime routing.
+output is consumed by fixup 6 in tools/fixup_factor5_ucode.py. The overlay-12
+composite is the input of factor5_rsp_ovl12.toml and is consumed by fixup 6b.
 
 Usage: python3 tools/make_clip_composite.py [4|12]   (from the repo root)
 """

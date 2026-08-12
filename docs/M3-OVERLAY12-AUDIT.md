@@ -31,7 +31,7 @@ The runtime deliberately skips IMEM-targeted DMA and only restores resident
 image. This is the writer of the observed depth reset: main `L_1DB0`, not the
 overlay-0C TriGen code.
 
-The next bounded change is to extend the regeneration-safe splice/router for
-resident 0C, using the generated overlay-12 image, and validate it with the
-existing phase-latched reset/reuse recipe plus the resident-04 control. No
-runtime routing changed in this audit.
+s739 landed that splice (fixup 6b, `OVL12_*`, resident `0xC` at `0x1DB0`,
+jal-return cases `0x1DD8/1DF4/1F9C/1FAC/1FBC/1FCC`). Build-time extraction
+and helper-set checks passed. Live section-2 validation is
+`scratch/agent/soak_queue/s739_ovl12_splice.sh`.

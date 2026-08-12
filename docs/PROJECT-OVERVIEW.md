@@ -84,8 +84,9 @@ clip-flagged triangle vanished. The fix splices the real clip overlay back in: i
 `factor5_rsp_ovl4.toml`) and spliced in by fixup 6, routed by `DMEM 0x153 == 4`. Verified in the
 scene itself (band rows rasterise geometry under a mode-2 marker, census identities exact) and
 confirmed on a post-fix regression sweep (undriven full timeline + driven war-room run, 0
-cull-census-identity violations). Overlays 12/44 still take the old broken path by design — the same
-splice recipe applies if they ever matter. Full detail: PORTING-STATE s44–s49; day-to-day state in
+cull-census-identity violations). Overlay 12 now has the same-style splice
+(s739, live validation queued); overlay 44 still takes the old broken path.
+Full detail: PORTING-STATE s44–s49 / s739; day-to-day state in
 `CURRENT-TRUTH.md` M1/M2.
 
 **Chasing M3 crashes (s76–s147).** Getting past AVAILABLE CRAFT into a stable SELECT YOUR CRAFT menu,
@@ -2640,13 +2641,10 @@ save/restore pair is balanced. It also found a remaining opaque alternative: the
 entry table contains `0x12A0` in its retained table image, although the earlier live overlay records
 selected only `0x1DB0`. **s731 closed that alternative for observed cap rows:** two section-2-latched
 captures tagged every `L_12A0` entry as table-1 direct `0x06` (overlay=0); the same-run control
-showed direct tags with matching push/pop/resume. **s732 resolved the bounded residual:** a
-phase-latched depth-local ledger reports depth 1 balanced, but depth 0 has 9–15 reused direct
-pushes with no pop/resume mismatch and one active frame at cap (for example
-push/pop/resume=245/229/229, reuse=15). The boot controls are balanced, so the old slot-keyed
-summary was not the source of the surplus and the cap is not merely truncating a properly nested
-stack. Static enumeration finds one generated reset of `DMEM[0x152]`, at the `L_1DB0` TriGen
-continuation root setup. The next probe must establish whether that writer precedes each active
-depth-0 overwrite; no mitigation is justified until its legitimacy is known. Runtime
-rerolls without a section-2 latch are unqualified and must not be repeated unchanged. Details:
-PORTING-STATE Sessions 685–732; active protocol: `scratch/agent/NEXT.md`.
+showed direct tags with matching push/pop/resume. **s732–s738:** the depth-0 reuse is paired to
+the main-image `L_1DB0` `DMEM[0x152]=0` reset, and every active predecessor is the resident-`0C`
+`L_1298` relay. The correct overlay-12 window image is distinct TriGen and does not reset, so
+H-stale-main-image is selected. **s739 landed the overlay-12 splice** (fixup 6b, `OVL12_*`,
+jal-return cases through `L_122C`/`L_1268`); consume the queued phase-latched soak before any
+further change. Runtime rerolls without a section-2 latch are unqualified. Details:
+PORTING-STATE Sessions 685–739; consume protocol: `scratch/agent/NEXT.md`.

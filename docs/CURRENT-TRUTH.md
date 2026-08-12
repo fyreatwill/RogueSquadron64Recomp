@@ -22,18 +22,22 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s738; compacted in maintenance s729)
+## Current truth (reviewed through s739; compacted in maintenance s729)
 
-**s738:** static provenance audit selected **H-stale-main-image**. The
-resident-`0C` window image is raw ROM `0x26670`, 0x230 bytes (independent s47
-capture source `dram=0x25A70 + 0xC00`); a fresh RSPRecomp composite translates
-its `L_1DB0` into TriGen parameter/payload-DMA code, not the main image's
-`DMEM[0x152]=0` reset. Resident-04 rebuilt as the same-method positive control
-and retains its distinct clip code. The shared `0x76` table entry `0x1DB0` is
-therefore correct; only the runtime's omission of an overlay-12 splice is
-wrong. `docs/M3-OVERLAY12-AUDIT.md` contains the table and commands. Next is
-one regeneration-safe overlay-12 splice/router change plus phase-latched
-reset/reuse validation; no runtime routing changed in the audit.
+**s739:** landed the regeneration-safe resident-`0C` splice. Fixup 6b extracts
+the overlay-12 window (`OVL12_*`), routes `DMEM[0x153]==0xC` at `0x1DB0`, and
+wires jal-return cases `0x1DD8/1DF4/1F9C/1FAC/1FBC/1FCC` through resident
+helpers `L_122C`/`L_1268`. Extraction/sanity and the full Debug build
+succeeded, so H-ovl12-return-incomplete is not selected at build time. The
+same build keeps the resident-04 `CLIP_*` route and emits `[ovl-route]` for
+both ids. Phase-latched reset/reuse validation is queued as
+`s739_ovl12_splice.sh` — do not babysit. **ORIGIN:** writer is main `L_1DB0`'s
+`DMEM[0x152]=0` (s738); this change runs the ROM-backed overlay-12 image
+instead of skipping that store.
+
+**s738:** static audit selected **H-stale-main-image**. Resident 0C's `L_1DB0`
+is distinct TriGen (ROM `0x26670`, 0x230 B); the runtime was falling through
+to the main bootstrap reset. Table: `docs/M3-OVERLAY12-AUDIT.md`.
 
 **s737:** consumed the clean 347-second `s736_reset_predecessor` soak. Its
 four balanced direct boot controls remain intact; all 61 retained section-2
@@ -313,22 +317,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. Qualified phase-latched controls establish: (a) parser-derived raw E9s all reach `GBI_RDP::fullSync` and `State::fullSync`; (b) fixed-stride extra E9 bytes are inline triangle payload, not commands; and (c) the observed TriGen refill continuation has normal branch-4 → `0x1088` returns. **s731:** two phase-latched section-2 captures source-tagged every `L_12A0` entry: direct table-1 `0x06` only; the DMA-fed `L_1298` overlay route was 0. **s732–s737:** the depth-0 reuse is paired to the `L_1DB0` reset and every active predecessor is the resident-`0C` `L_1298` relay. **s738 static audit:** resident 0C's correct `0x1DB0` image is a distinct TriGen overlay but the runtime dispatches the main bootstrap image, whose reset is the writer. Thus H-counter-alias, H-cap-truncates-valid-stack, H-intended-resident0c-reset, and H-bad-table-entry are refuted; **H-stale-main-image is selected**. Next is the bounded regeneration-safe resident-0C splice/router change and a phase-latched reset/reuse validation. Details: `docs/M3-OVERLAY12-AUDIT.md`; exact protocol: `scratch/agent/NEXT.md`.
-
-**s733:** a callback immediately before the sole `L_1DB0` `DMEM[0x152]=0` store pairs every active reset with the next depth-0 reuse, in order (e.g. reset `r17=0x1D8` → reuse `r17=0x180`, consecutive lifecycle sequence numbers; 64 latched rows, no unpaired reuse). The generated-store enumeration and the live pairing are two independent lines: **H-l1db0-reset-writer CONFIRMED** and H-reset-is-boundary/H-host-ledger-ordering refuted for the observed cap rows. The reference identifies `0x05` as TriGen, whose semantic handler advances its input stream; it does not establish why this continuation resets the call-depth byte. Next: source-tag each active `L_1DB0` entry (return address, resident id, and preceding `0x05` route) to split an erroneous overlay-route entry from an intentional but undocumented TriGen reset. Details and the evidence chain are durable in PROJECT-OVERVIEW §28; the exact next protocol is `scratch/agent/NEXT.md`.
-
-**s734:** landed the regeneration-safe source-route extension: every active `L_1DB0` reset now retains bounded first/last tuples of `r31`, `DMEM[0x153]` resident id, pending `L_12A0` direct/overlay context, and inline opcode/table context. The first direct launcher only produced the four balanced boot controls; its parent detached before phase-relative key injection, so it emitted no section-2 rows and is an **unqualified null**. The persistent self-checking recipe is queued as `s734_reset_route.sh`; do not conclude route uniformity/mixing until its cap rows and same-run controls arrive.
-
-**s735:** consumed `s734_reset_route.sh` (clean 347 s exit). Its four same-run direct boot controls remain balanced; 61 section-2 cap rows reproduce active resets and no unpaired reuse. Every retained active-reset tuple is identical in the fields that can be trusted: `old=0x08`, `r17=0x1D8`, `ra=0x1088`, `resident=0`, pending `L_12A0 source=0`, and inactive inline context. Thus **H-route-mixed is refuted for the retained reset state**, but neither H-wrong-trigen-route nor H-intentional-trigen-reset is selected: `L_1DB0` is reached after the source-specific `0x05`/`L_12A0` state has cleared, so the present callback has no predecessor attribution. Next: phase-latched, bounded correlation of the immediately preceding `do_indirect_jump target=0x1DB0` event (target, `debug_line`, `r31`, resident) to each active reset; only that can distinguish a direct bootstrap/stray entry from the known `0x05` relay.
-
-**s737:** consumed `s736_reset_predecessor.sh` (clean 347 s exit). Four
-direct boot controls stayed balanced. The run retained 61 section-2 reset rows,
-each with a paired target-`0x1DB0` predecessor; no reuse was unpaired. All
-retained predecessor tuples are `line=615`, `ra=0x1088`, resident `0x0C`,
-`l1298=1`, selecting **H-trigen-relay-entry**. H-direct-bootstrap-entry and
-H-predecessor-latch-broken are refuted. The next question is not another
-reroll: statically identify resident `0C`'s relay image and establish whether
-its `L_1DB0` reset is the intended TriGen continuation semantics.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. Qualified phase-latched controls establish: (a) parser-derived raw E9s all reach `GBI_RDP::fullSync` and `State::fullSync`; (b) fixed-stride extra E9 bytes are inline triangle payload, not commands; and (c) the observed TriGen refill continuation has normal branch-4 → `0x1088` returns. **s731–s738:** every active depth-0 reuse is paired to the main-image `L_1DB0` reset, and every predecessor is the resident-`0C` `L_1298` relay; the correct overlay-12 image at that entry is distinct TriGen and does not reset. H-counter-alias, H-cap-truncates-valid-stack, H-intended-resident0c-reset, and H-bad-table-entry are refuted; **H-stale-main-image is selected**. **s739:** the regeneration-safe overlay-12 splice and `[ovl-route]` counters are in the binary; consume `s739_ovl12_splice.sh` before any further change. Details: `docs/M3-OVERLAY12-AUDIT.md`; consume protocol: `scratch/agent/NEXT.md`.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
@@ -401,8 +390,9 @@ Game functions (s1) — all four steps, in order:
 
 RSP ucode (only when a ucode toml changes): `~/Documents/Tools/N64Recomp/build/RSPRecomp` on
 `factor5_rsp.toml` / `factor5_boot_rsp.toml` → `build/factor5_ucode/*.c`, then
-`tools/fixup_factor5_ucode.py`. **s47: before the fixup, also run
-`python3 tools/make_clip_composite.py` + RSPRecomp on `factor5_rsp_ovl4.toml`**. `factor5b_rsp.toml`
+`tools/fixup_factor5_ucode.py`. **s47/s739: before the fixup, also run
+`python3 tools/make_clip_composite.py [4|12]` + RSPRecomp on
+`factor5_rsp_ovl4.toml` and `factor5_rsp_ovl12.toml`**. `factor5b_rsp.toml`
 is the **MusyX audio** ucode; stays in the build as a never-called artifact (s5).
 
 Standing warnings:

@@ -53269,3 +53269,29 @@ operation. Added the generic composite helper and an overlay-12 RSPRecomp TOML
 for a repeatable source-backed audit. No runtime behavior changed. NEXT is one
 regeneration-safe resident-0C splice/router change with phase-latched reset /
 reuse validation and the resident-04 route as a same-build positive control.
+
+## Session 739 (2026-08-12) — overlay-12 splice landed; section-2 validation queued
+
+Step 0 measured `CURRENT-TRUTH.md` at 35,655 bytes, so maintenance was not
+triggered. Landed the regeneration-safe resident-`0C` splice selected by the
+s738 stale-main-image audit. `tools/make_clip_composite.py 12` + RSPRecomp on
+`factor5_rsp_ovl12.toml` rebuilt the TriGen window; fixup 6b extracts
+`L_1DB0..do_indirect_jump`, renames labels `OVL12_*`, and routes
+`DMEM[0x153]==0xC` at the shared `0x1DB0` entry. External helpers are exactly
+`L_122C` and `L_1268`. Jal-return cases `0x1DD8`, `0x1DF4`, `0x1F9C`,
+`0x1FAC`, `0x1FBC`, and `0x1FCC` are wired; `0x1FBC` is shared with the
+resident-04 clip route. The same build keeps `CLIP_*` and adds
+`rs64_e9prov_ovl_route` (`[ovl-route]` plus per-task `clip=`/`ovl12=`/
+`ovl12_ret=` on `[e9-prov-reset]`). Extraction/sanity passed and the Debug
+link succeeded, so H-ovl12-return-incomplete is not selected at build time.
+
+**ORIGIN:** writer is the main/static `L_1DB0` `DMEM[0x152]=0` store, executed
+because IMEM-targeted overlay-12 DMA is skipped and no resident-0C splice
+existed (s738). The store is not a legitimate overlay-12 TriGen operation.
+This change installs the missing ROM-backed image rather than skipping or
+restoring the reset.
+
+Queued `scratch/agent/soak_queue/s739_ovl12_splice.sh` (phase-latched
+section-2, CLIP `[ovl-route] res=0x04` required as same-run positive
+control). Do not babysit. Consume that soak before any further splice or
+reset-path change.

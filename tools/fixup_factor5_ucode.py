@@ -774,6 +774,104 @@ if is_main_ucode and CLIP_MARKER not in text:
         1, "L_1650 label")
 
 # ---------------------------------------------------------------------------
+# Fixup 6b: splice resident overlay 12 (id 0x0C) into the main ucode
+# ---------------------------------------------------------------------------
+# s738: the live section-2 L_1DB0 reset is the main bootstrap image, not the
+# overlay-12 TriGen image at ROM 0x26670. factor5_rsp_ovl12.toml translates a
+# composite whose window holds that image; this fixup extracts L_1DB0..,
+# renames labels OVL12_*, splices the block, and routes DMEM 0x153 == 0xC.
+# Must run after fixup 6 so case 0x1DB0 is already in the clip-routed form.
+# Jal returns through resident L_122C / internal L_1FD4 need window cases.
+OVL12_MARKER = "/* fixup: ovl12splice */"
+if is_main_ucode and OVL12_MARKER not in text:
+    ovl12_path = path.parent / "factor5_ucode_ovl12_recompiled.c"
+    if not ovl12_path.exists():
+        print("fixup_factor5_ucode: FIXUP 6b INPUT MISSING: "
+              f"{ovl12_path} not found. Run RSPRecomp on factor5_rsp_ovl12.toml "
+              "(needs scratch/s47_trigen_composite.z64) before fixing up the "
+              "main ucode, or the overlay-12 splice is lost.", file=sys.stderr)
+        sys.exit(1)
+    ovl12_text = ovl12_path.read_text(encoding="utf-8")
+
+    def sub_exactly6b(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6b ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the overlay-12 splice.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    m_start = re.search(r"^L_1DB0:\n", ovl12_text, flags=re.MULTILINE)
+    m_end = re.search(r"^do_indirect_jump:\n", ovl12_text, flags=re.MULTILINE)
+    if not m_start or not m_end or m_end.start() <= m_start.start():
+        print("fixup_factor5_ucode: FIXUP 6b EXTRACTION FAILED: could not "
+              "bound L_1DB0..do_indirect_jump in the ovl12 file.", file=sys.stderr)
+        sys.exit(1)
+    region = ovl12_text[m_start.start():m_end.start()]
+
+    region_labels = set(re.findall(r"^(L_[0-9A-F]{4}):", region, flags=re.MULTILINE))
+    expected_resident = {"L_122C", "L_1268"}
+    referenced = set(re.findall(r"goto (L_[0-9A-F]{4});", region))
+    external = referenced - region_labels
+    if external != expected_resident:
+        print(f"fixup_factor5_ucode: FIXUP 6b SANITY FAILED: region's external "
+              f"references {sorted(external)} != expected resident helpers "
+              f"{sorted(expected_resident)}. The overlay-12 image or its "
+              f"translation changed — re-derive before splicing.", file=sys.stderr)
+        sys.exit(1)
+    for lbl in region_labels:
+        region = re.sub(r"\b" + lbl + r"\b", "OVL12_" + lbl[2:], region)
+
+    sub_exactly6b(
+        re.compile(r'(extern "C" void rsp_task_log_and_reset\([^\n]*\n)'),
+        lambda m: m.group(1) +
+        'extern "C" void rs64_e9prov_ovl_route(uint32_t resident, uint32_t target);  ' +
+        OVL12_MARKER + "\n",
+        1, "ovl_route declaration")
+
+    sub_exactly6b(
+        re.compile(r"(^do_indirect_jump:\n)", flags=re.MULTILINE),
+        lambda m: OVL12_MARKER + "\n" + region + m.group(1),
+        1, "splice point")
+
+    sub_exactly6b(
+        re.compile(
+            r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x4\) goto CLIP_1DB0;\n"
+            r"            goto L_1DB0;\n)"),
+        lambda m: ("        case 0x1DB0:  " + CLIP_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x4) {"
+                   " rs64_e9prov_ovl_route(0x4, 0x1DB0); goto CLIP_1DB0; }\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0xC) {"
+                   " rs64_e9prov_ovl_route(0xC, 0x1DB0); goto OVL12_1DB0; }\n"
+                   "            goto L_1DB0;\n"),
+        1, "case 0x1DB0 overlay-12 routing")
+
+    sub_exactly6b(
+        re.compile(
+            r"(        case 0x1FBC: if \(RSP_MEM_BU\(0X153, 0\) == 0x4\) "
+            r"goto CLIP_1FBC; goto rs64_clip_stray;  /\* fixup: clipsplice \*/\n)"),
+        lambda m: ("        case 0x1FBC:  " + OVL12_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x4) goto CLIP_1FBC;\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0xC) {"
+                   " rs64_e9prov_ovl_route(0xC, 0x1FBC); goto OVL12_1FBC; }\n"
+                   "            goto rs64_clip_stray;\n"),
+        1, "shared case 0x1FBC")
+
+    ovl12_only = "".join(
+        f"        case 0x{a:04X}: if (RSP_MEM_BU(0X153, 0) == 0xC) {{ "
+        f"rs64_e9prov_ovl_route(0xC, 0x{a:04X}); goto OVL12_{a:04X}; }} "
+        f"goto rs64_clip_stray;  {OVL12_MARKER}\n"
+        for a in (0x1DD8, 0x1DF4, 0x1F9C, 0x1FAC, 0x1FCC))
+    sub_exactly6b(
+        re.compile(r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n)"),
+        lambda m: ovl12_only + m.group(1),
+        1, "overlay-12 window cases")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level
@@ -1457,6 +1555,8 @@ if STRAY_MARKER in text and STRAY_MARKER not in original:
     notes.append("injected stray-0x1DB0 source trace (ROGUESQ_UCODE_CULLSTATS=2)")
 if CLIP_MARKER in text and CLIP_MARKER not in original:
     notes.append("spliced real clip overlay (CLIP_* labels, id-4 routing)")
+if OVL12_MARKER in text and OVL12_MARKER not in original:
+    notes.append("spliced overlay-12 TriGen (OVL12_* labels, id-0xC routing)")
 if imem_note_applied:
     notes.append("ImemOverrun site notes (L_1650/epilogue/control)")
 if l1650_reconnect_applied:
