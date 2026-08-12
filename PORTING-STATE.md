@@ -52849,3 +52849,33 @@ tasks. The host FF0 stage is therefore redundant and is not the writer that
 explains the wrong TriGen continuation. No mitigation changed. Next: build
 the default and FF0-stage-suppressed arms together and compare their
 phase-scoped source rows.
+
+## Session 722 (2026-08-12) — duplicate host FF0 stage has no observed ordering role
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 55,494 bytes, so maintenance did
+not trigger. Independent Factor 5 reference ground truth classifies `0x05` as
+TriGen; the existing complete `0x05→L_15AC→selector 0x0C→L_1298→L_1DB0`
+route/source line was retained as the positive control. Added only the
+diagnostic `ROGUESQ_SKIP_HOST_FF0_STAGE=1` arm, which suppresses the host's
+duplicate post-boot `DMEM[0xFF0]=OSTask.data_ptr` store. The same boot row now
+states whether that host store was actually written or skipped.
+
+One build ran the default and skip arms concurrently. The positive control
+was live in both: default emitted 16 complete phase-3 source rows and skip
+emitted 16, with the same route and `staged_dram=refill_dram` in every row.
+All 65 default boot rows reported `host_stage=written` and
+`boot=task_data=post`; all 49 initially captured skip rows reported
+`host_stage=skipped` with that same three-way equality (the processes were
+SIGKILLed after the wrapper returned without reaping them). Neither log
+contained `[CRASH]`. The two GUI instances advanced
+at different rates, so no post-sec2 comparison is qualified; it is not needed
+for the bootstrap discriminator.
+
+Thus H-ff0-stage-redundant is confirmed for the observed boot and phase-3
+TriGen continuation. H-ff0-stage-orders-state and
+H-ff0-stage-couples-another-writer are refuted for that route: suppressing the
+host write leaves the boot-established task root and the later physical source
+unchanged. The env gate remains diagnostic and default behavior is unchanged.
+No mitigation changed. Next: distinguish the independent host DMEM 0x130
+chunk-source mirror from a real boot-established field before altering any
+task-root staging.

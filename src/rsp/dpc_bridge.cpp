@@ -332,7 +332,7 @@ extern "C" void rs64_inline_probe_trigen_entry(uint32_t r17) {
 static std::atomic<uint32_t> g_inline_probe_trigen_staged_dram{0};
 
 extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_ff0,
-                                                  uint32_t staged_ff0) {
+                                                  uint32_t staged_ff0, uint32_t skipped_host_stage) {
     g_inline_probe_trigen_staged_dram.store(dl_ptr & 0x7FFFFFu, std::memory_order_relaxed);
     if (!log_inline_advance()) return;
     const uint32_t line = g_inline_probe_trigen_boot_lines.fetch_add(1, std::memory_order_relaxed);
@@ -341,8 +341,9 @@ extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_ff
         const uint32_t boot = boot_ff0 & 0x7FFFFFu;
         const uint32_t staged = staged_ff0 & 0x7FFFFFu;
         const uint32_t expected = dl_ptr & 0x7FFFFFu;
-        fprintf(stderr, "[inline-trigen-boot-ff0] task=%u phase=%u boot=0x%06X task_data=0x%06X post=0x%06X boot_task=%s post_task=%s boot_kind=%s\n",
+        fprintf(stderr, "[inline-trigen-boot-ff0] task=%u phase=%u boot=0x%06X task_data=0x%06X post=0x%06X host_stage=%s boot_task=%s post_task=%s boot_kind=%s\n",
                 task, rs64_phase_ord(), boot, expected, staged,
+                skipped_host_stage ? "skipped" : "written",
                 boot == expected ? "equal" : "MISMATCH",
                 staged == expected ? "equal" : "MISMATCH",
                 boot == 0 ? "zero" : boot == expected ? "mirror" : "other");

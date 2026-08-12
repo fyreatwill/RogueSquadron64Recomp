@@ -1,43 +1,35 @@
-# NEXT work unit (after s721: boot mirrors the host FF0 stage)
+# NEXT work unit (after s722: FF0 host stage closed)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-Build both arms of a narrow FF0-stage A/B: default behavior and a new
-`ROGUESQ_SKIP_HOST_FF0_STAGE=1` arm that suppresses only the redundant host
-`poke_be32(0xFF0, dl_ptr)` after boot. s721 established that boot already
-leaves this exact value; this unit tests whether the host rewrite nevertheless
-has a hidden ordering role. Retain the pre/post row and TriGen route/source
-row as same-run positive controls. This is source ownership, not a mitigation.
+Audit the independent host `DMEM[0x130]` chunk-source mirror with one
+phase-scoped, same-run boot/pre/post/source probe. Do not change the FF0
+default: s722 closed that duplicate write as an observed source of the wrong
+TriGen continuation.
 
 ## Competing hypotheses
 
-- **H-ff0-stage-redundant:** without the host rewrite, boot's exact value
-  reaches L_1DB0 and the default and suppressed arms have the same source rows.
-- **H-ff0-stage-orders-state:** despite equal values at the immediate probe,
-  suppressing the rewrite changes a later source row or task outcome.
-- **H-ff0-stage-couples-another-writer:** suppression exposes a later DMEM
-  rewrite, visible as a source-row value that differs from both boot and task data.
+- **H-130-boot-mirror:** boot already establishes `DMEM[0x130]` to the task
+  root, so the host mirror is redundant just like FF0.
+- **H-130-host-required:** boot leaves 0x130 stale or absent and the host
+  mirror is the necessary chunk-source seed.
+- **H-130-later-writer:** boot and host agree initially, but a later writer
+  changes the chunk source before L_11B0 consumes it.
 
 ## Discriminating measurement
 
-Run both arms concurrently using the same phase gate. In each arm, the
-pre/post row must show boot/task/post values and the existing complete 0x05
-route plus `staged_dram==refill_dram` source row must fire. Equal source rows
-and task outcomes support H-ff0-stage-redundant; any arm-only divergence
-supports H-ff0-stage-orders-state or H-ff0-stage-couples-another-writer.
+Add boot/pre/post 0x130 values to the existing phase-scoped TriGen row and
+record the L_11B0 consumer source in the same run. A three-way boot/task/post
+equality plus matching consumer supports H-130-boot-mirror; boot mismatch
+with post/task equality supports H-130-host-required; a consumer mismatch
+after equality supports H-130-later-writer. The existing complete 0x05 route
+and `staged_dram==refill_dram` row are mandatory positive controls.
 
 ## Commands
 
-    # Add the env-gated FF0-store arm; build once, then run both arms together.
     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \\
-      ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_INLINE_ADVANCE=1 \\
-      PROBE_KEYS="3:start 7:start" PROBE_PHASE_WIDTH=1024 \\
-      PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \\
-      zsh tools/probe.sh scratch/agent/s722_ff0_default 60 1 &
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \\
-      ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_INLINE_ADVANCE=1 \\
-      ROGUESQ_SKIP_HOST_FF0_STAGE=1 PROBE_KEYS="3:start 7:start" \\
-      PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \\
-      zsh tools/probe.sh scratch/agent/s722_ff0_skip 60 1 &
-    wait
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+      ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_INLINE_ADVANCE=1 \
+      PROBE_KEYS="3:start 7:start" PROBE_PHASE_WIDTH=1024 \
+      PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+      zsh tools/probe.sh scratch/agent/s723_130_source 60 1

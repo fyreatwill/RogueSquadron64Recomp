@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s721; compacted in maintenance s679)
+## Current truth (reviewed through s722; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -625,9 +625,19 @@ maintenance pass. Closed lineages are not backlog items.
    **H-boot-mirrors-host is SUPPORTED** and
    **H-host-overwrites-boot/H-boot-does-not-initialize are REFUTED** for the
    observed tasks. The host FF0 store is redundant, not the source of the
-   wrong TriGen continuation. Next: A/B suppress only that redundant host
-   FF0 store while retaining the source control; equivalent source rows prove
-   it has no hidden ordering role, while a divergence identifies such a role.
+   wrong TriGen continuation. **s722 FF0-stage A/B:** default and
+   `ROGUESQ_SKIP_HOST_FF0_STAGE=1` arms each retained 16 identical complete
+   phase-3 `0x05→L_15AC→selector 0x0C→L_1298→L_1DB0` source controls with
+   `staged_dram=refill_dram`; every arm-specific boot row was visibly marked
+   `host_stage=written` or `host_stage=skipped`, respectively, while all
+   retained `boot=task_data=post`. Thus **H-ff0-stage-redundant is
+   CONFIRMED** for the observed route and **H-ff0-stage-orders-state/
+   H-ff0-stage-couples-another-writer are REFUTED** there. The concurrent
+   arms did not qualify a post-sec2 capture (their GUI/input timing diverged),
+   so this does not answer the plateau mechanism. Default behavior remains
+   unchanged; the env gate is diagnostic. Next: audit the independent host
+   DMEM[0x130] chunk-source mirror against the boot-established value before
+   considering any task-root staging change.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

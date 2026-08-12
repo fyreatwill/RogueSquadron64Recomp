@@ -101,7 +101,7 @@ extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
 extern "C" void rs64_e9prov_task_begin(uint32_t task);
 extern "C" void rs64_e9prov_task_end(uint32_t task);
 extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_ff0,
-                                                  uint32_t staged_ff0);
+                                                  uint32_t staged_ff0, uint32_t skipped_host_stage);
 // Defined in lib/rt64/src/hle/rt64_state.cpp — s171 crash-instant snapshot
 // of [vi-fs-decision] state, read from the SIGSEGV/SIGBUS handler below.
 extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
@@ -451,8 +451,15 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
         // because the static-data segment leaves 0x130 as bogus.)
         poke_be32(0x130, dl_ptr);
         const uint32_t boot_ff0 = peek_be32(0xFF0);
-        poke_be32(0xFF0, dl_ptr);
-        rs64_inline_probe_trigen_stage(dl_ptr, boot_ff0, peek_be32(0xFF0));
+        static int s_skip_host_ff0_stage = -1;
+        if (s_skip_host_ff0_stage < 0) {
+            const char* e = std::getenv("ROGUESQ_SKIP_HOST_FF0_STAGE");
+            s_skip_host_ff0_stage = (e && *e && *e != '0') ? 1 : 0;
+        }
+        if (!s_skip_host_ff0_stage) {
+            poke_be32(0xFF0, dl_ptr);
+        }
+        rs64_inline_probe_trigen_stage(dl_ptr, boot_ff0, peek_be32(0xFF0), s_skip_host_ff0_stage);
         poke_be32(0x101C, dl_ptr);
         poke_be32(0x654,  0x178);
         // RDP flush ring state (L_112C): DMEM[0x100]=ring base, [0x104]=limit,
