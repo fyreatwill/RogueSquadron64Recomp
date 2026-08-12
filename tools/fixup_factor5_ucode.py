@@ -1009,6 +1009,36 @@ if is_main_ucode and SOURCE_AUDIT_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 11: EndDL/unwind audit (s687, item -421).
+#
+# The source audit established that the phase-latched cap tasks fetch 16K
+# commands without a natural return.  Record each L_12C4 entry after its depth
+# decrement, including whether that decrement takes the direct L_10E8 exit.
+# This is observational only: it must not alter the RSP control flow.
+# ---------------------------------------------------------------------------
+UNWIND_AUDIT_MARKER = "/* fixup: EndDL unwind audit */"
+if is_main_ucode and UNWIND_AUDIT_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_source_end[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_e9prov_unwind(uint32_t stack_byte, uint32_t natural);  ' +
+        UNWIND_AUDIT_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 11 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    unwind_anchor = re.compile(
+        r"(L_12C4:\n(?:.*\n){0,8}?    r8 = RSP_ADD32\(r8, -0X8\);\n)(    // bltz        \$8, L_10E8\n    if \(RSP_SIGNED\(r8\) < 0\) \{)")
+    text, n_unwind = unwind_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_e9prov_unwind(r8, RSP_SIGNED(r8) < 0 ? 1u : 0u);  " +
+        UNWIND_AUDIT_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_unwind != 1:
+        print("fixup_factor5_ucode: FIXUP 11 ANCHOR FAILED (L_12C4 decrement).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -1044,5 +1074,7 @@ if E9_PROVENANCE_MARKER in text and E9_PROVENANCE_MARKER not in original:
     notes.append("guest-E9 to DPC provenance audit (s678)")
 if SOURCE_AUDIT_MARKER in text and SOURCE_AUDIT_MARKER not in original:
     notes.append("source-stream completion audit (s686)")
+if UNWIND_AUDIT_MARKER in text and UNWIND_AUDIT_MARKER not in original:
+    notes.append("EndDL/unwind audit (s687)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)

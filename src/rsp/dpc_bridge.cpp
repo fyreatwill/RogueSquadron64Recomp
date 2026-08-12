@@ -122,6 +122,9 @@ struct Rs64E9Provenance {
     uint32_t source_end = 0;
     uint32_t source_end_addr = 0xFFFFFFFFu;
     uint32_t source_end_kind = 0;
+    uint32_t unwind = 0;
+    uint32_t unwind_natural = 0;
+    uint32_t unwind_last = 0;
     uint32_t source_first = 0xFFFFFFFFu;
     uint32_t source_last = 0xFFFFFFFFu;
     bool target = false;
@@ -188,6 +191,13 @@ extern "C" void rs64_e9prov_source_end(uint32_t guest_addr, uint32_t kind) {
     g_e9prov.source_end_kind = kind;
 }
 
+extern "C" void rs64_e9prov_unwind(uint32_t stack_byte, uint32_t natural) {
+    if (!log_e9_provenance()) return;
+    ++g_e9prov.unwind;
+    g_e9prov.unwind_last = stack_byte;
+    if (natural) ++g_e9prov.unwind_natural;
+}
+
 extern "C" void rs64_e9prov_task_end(uint32_t task) {
     if (!log_e9_provenance() || g_e9prov.task != task) return;
     if (g_e9prov.control || g_e9prov.target) {
@@ -216,13 +226,14 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
     if ((g_e9prov.control && ++controls <= 4) || g_e9prov.target) {
         fprintf(stderr, "[e9-prov] task=%u scope=%s guest=%u emit=%u submit=%u raw=%u dispatch=%u match=%u "
                 "src_fetch=%u src_e9=%u src_end=%u src_kind=%u src0=0x%06X src_last=0x%06X src_end0=0x%06X "
-                "span=%u gap=%u guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
+                "unwind=%u unwind_natural=%u unwind_last=0x%08X span=%u gap=%u guest0=0x%06X emit0=0x%06X raw0=0x%06X match0=0x%06X\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.guest,
                 g_e9prov.emitted, g_e9prov.submitted, g_e9prov.authoritative,
                 g_e9prov.dispatched, g_e9prov.matched,
                 g_e9prov.source_fetch, g_e9prov.source_e9, g_e9prov.source_end,
                 g_e9prov.source_end_kind, g_e9prov.source_first, g_e9prov.source_last,
-                g_e9prov.source_end_addr,
+                g_e9prov.source_end_addr, g_e9prov.unwind, g_e9prov.unwind_natural,
+                g_e9prov.unwind_last,
                 g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);

@@ -52075,3 +52075,29 @@ not naturally complete a display list before the synthetic cap. It rules out a
 missed L_1090 E9 path in this capture. It does not distinguish an expected
 SP_STATUS-stub completion artifact from a stale/unwound display-list loop;
 next, mark the real `L_12C4` EndDL/unwind path and its stack-depth transition.
+
+## Session 687 (2026-08-12) — item -421: cap tasks repeatedly reach EndDL but not root exit
+
+Added regeneration-safe `L_12C4` post-decrement markers through
+`tools/fixup_factor5_ucode.py`, plus phase-scoped host counters in the existing
+`[e9-prov]` report. The marker reports every EndDL visit, the direct-negative
+branch count, and last post-decrement depth. Built successfully and ran one
+phase-gated recovery-active attempt
+`scratch/s73_post_a_scene/s670_postsec2_pulse_1_20260812045051/run.log`.
+It reached section 2, latched exactly 64 rows, fired the prescribed pulse, and
+completed without `[CRASH]`.
+
+The positive control passed in the same run: boot tasks 1–4 and the three
+natural target rows each reported `unwind=3 unwind_natural=1`, last depth
+`0xFFFFFFF8`, and the prior exact E9→dispatch chain. The other 61 target rows
+all reached the synthetic cap (`src_fetch=8192 src_kind=2`) but made 106–122
+EndDL visits each, with `unwind_natural=0` and final depth `0`. Aggregate:
+64 rows = 3 natural + 61 cap; cap-with-natural = 0.
+
+This is one run with two independent path markers and live boot/natural
+controls. It **refutes H-unwind-missed**: cap tasks do not bypass EndDL. It
+**supports H-unwind-corrupt**: the root natural-exit decrement never occurs,
+despite repeated EndDL visits. It does not identify whether `L_12A0` saved an
+invalid frame, `L_12DC` resumes a stale PC, or the source legitimately lacks a
+root terminator. Next: trace the bounded push/save/pop/resume pairs at those
+three labels without changing LLE control flow.

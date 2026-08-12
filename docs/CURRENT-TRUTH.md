@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s686; compacted in maintenance s679)
+## Current truth (reviewed through s687; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -342,8 +342,16 @@ maintenance pass. Closed lineages are not backlog items.
    support for H-lle-control-flow**: after the three real boundaries the LLE
    does not reach a natural display-list completion. It does not yet establish
    whether that cap loop is an expected SP_STATUS-stub artifact or a stale
-   stream reset; next trace the real EndDL/unwind path. Durable evidence and
-   probe mechanics: PROJECT-OVERVIEW §27 and Sessions 669–686.
+   stream reset; next trace the real EndDL/unwind path. **s687 EndDL audit:**
+   all four boot controls and the three natural section-2 rows show
+   `unwind=3 unwind_natural=1`, while all 61 cap rows show 106–122 EndDL
+   visits but `unwind_natural=0` (and their last depth is exactly zero).
+   **H-unwind-missed is REFUTED; H-unwind-corrupt is SUPPORTED**
+   single-run with live controls: EndDL executes repeatedly but never takes
+   the root `L_10E8` exit. Next trace push/save/resume pairs around
+   `L_12A0`/`L_12C4`/`L_12DC` to distinguish a stale saved PC from missing
+   root termination. Durable evidence and probe mechanics: PROJECT-OVERVIEW
+   §27 and Sessions 669–687.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
