@@ -1035,7 +1035,7 @@ if is_main_ucode and OVL24_MARKER not in text:
 # saved at 0x50($18); CLIP_1E48 jr's it back. This fixup names that
 # writer live: count the jal, count CLIP_1E48 $ra, and log every
 # do_indirect_jump to 0x1364 (line/r31/r30/resident/last ovl-route).
-# Do not widen the 0x1364 case here.
+# Widening is fixup 6e, after this predecessor instrument lands.
 OVL24_1364PRED_MARKER = "/* fixup: ovl24-1364pred */"
 if is_main_ucode and OVL24_1364PRED_MARKER not in text:
     def sub_exactly6d(pattern, repl_fn, n, what):
@@ -1081,6 +1081,40 @@ if is_main_ucode and OVL24_1364PRED_MARKER not in text:
         "rs64_e9prov_1364_jump((uint32_t)debug_line, r31, r30, "
         "RSP_MEM_BU(0X153, 0));  " + OVL24_1364PRED_MARKER + "\n",
         1, "do_indirect_jump 0x1364")
+
+# ---------------------------------------------------------------------------
+# Fixup 6e: route 0x1364 for clip-resident return (s745)
+# ---------------------------------------------------------------------------
+# s744: CLIP_1E48 jr of OVL24_135C jal L_17F0 returns to 0x1364 with
+# DMEM 0x153==0x04 (L_17F0 handed to clip; dest 0x1DB0). IMEM 0x1364 is
+# still the overlay-24 emit image. Fixup 6c's ovl24-only case required
+# 0x153==0x24 and turned that legitimate return into [clip-stray].
+# Widen only 0x1364 — not a bare always-OVL24. After overlay 28 restores
+# main L_12A0, IMEM 0x1364 is main bytes; keep the 0x24|0x04 gate.
+# ORIGIN: CLIP_1E48 jr of a ROM clip dispatch; route, not a guard.
+OVL24_1364CLIP_MARKER = "/* fixup: ovl24-1364clip */"
+if is_main_ucode and OVL24_1364CLIP_MARKER not in text:
+    def sub_exactly6e(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6e ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}.",
+                  file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    sub_exactly6e(
+        re.compile(
+            r"        case 0x1364: if \(RSP_MEM_BU\(0X153, 0\) == 0x24\) \{ "
+            r"rs64_e9prov_ovl_route\(0x24, 0x1364\); goto OVL24_1364; \} "
+            r"goto rs64_clip_stray;  /\* fixup: ovl24route \*/\n"),
+        lambda m: (
+            "        case 0x1364: if (RSP_MEM_BU(0X153, 0) == 0x24 || "
+            "RSP_MEM_BU(0X153, 0) == 0x04) { "
+            "rs64_e9prov_ovl_route(0x24, 0x1364); goto OVL24_1364; } "
+            "goto rs64_clip_stray;  " + OVL24_1364CLIP_MARKER + "\n"),
+        1, "case 0x1364 clip-resident return")
 
 # ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only

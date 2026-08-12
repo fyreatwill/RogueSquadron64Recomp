@@ -22,7 +22,21 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s744; compacted in maintenance s729)
+## Current truth (reviewed through s745; compacted in maintenance s729)
+
+**s745:** fixup 6e widens case `0x1364` to `OVL24_1364` when
+`0x153==0x24 || ==0x04`. Soak `s745_1364clip_route_20260812-163229`
+(348 s, CRASH=0 UJ=0): stray `0x1364/04` **4454→0**; `jal17f0=j1364=
+68672`; res04=`clip1e48_1364`=5279; last reset `last_ovl=0x24/0x1364`
+LIVE. 4/4 boot `dl06=2/2/0`. E9 match still **3/64**; rdpFs 0→4030
+(flat; s744 4141). **H-1364-needed-but-not-e9 SELECTED.
+H-1364-restore-e9 REFUTED. H-1364-breaks-06 REFUTED.** Residual, new
+vs s744: `[clip-stray] 0x1320/04` n=3681, `0x1330/04` n=1165,
+`0x1344/04` n=485 (all line=400, same ovl24-only class: `jal 0x1358`
+returns after `OVL24_1364` → `L_112C` restores `$ra` from `0xB30`).
+`0x1DF4/00` still 343 (other class). Next is widen remaining
+ovl24-only clip-stray cases to `0x24||0x04`. **ORIGIN:** `CLIP_1E48`
+`jr` of `OVL24_135C` jal; 0x04 arm is a route of that return.
 
 **s744:** named the s743 `[clip-stray] tgt=0x1364 153=0x04` writer.
 Static: clip C has no `0x1364`; only `OVL24_135C` sets `r31=0x1364`
@@ -35,10 +49,9 @@ stray `0x1364/04` n=4454. Two classes only: `L_1DA8` res=0x24 (routes)
 and `CLIP_1E48` res=0x04 last_ovl=`0x04/0x1DB0` (stray). Boot
 `dl06=2/2/0` LIVE. E9 match still 3/64; rdpFs 0→4141. **H-l17f0-
 dispatches-clip SELECTED. H-clip-uses-1364 REFUTED. H-stale-ra
-REFUTED.** Residual: 340 `[clip-stray] tgt=0x1DF4 153=0x00`. Next is
-route `0x1364` to `OVL24_1364` when resident is `0x24` **or** `0x04`.
+REFUTED.** Residual was the 0x1364 0x04 leak (consumed s745).
 **ORIGIN:** `CLIP_1E48` `jr` of the `OVL24_135C` jal return. Legitimate
-ROM clip dispatch; the `153==0x24`-only case is the leak.
+ROM clip dispatch; the `153==0x24`-only case was the leak.
 
 **s743:** fixup 6c route swap (ovl24 emit @ `0x12A0` + ovl28 `r17+=32`).
 Soak `s743_ovl24_route_20260812-160417` (349 s, CRASH=0). UJ **2931→0**.
@@ -361,7 +374,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s744:** the s743 `[clip-stray] tgt=0x1364 153=0x04` writer is `CLIP_1E48` returning `OVL24_135C`'s `jal L_17F0` after the legitimate clip dispatch; do not treat it as clip-side or stale `$ra`. Next is routing `0x1364` to `OVL24_1364` for resident `0x24` **or** `0x04`, then whether E9 moves (still 3/64; rdpFs 0→4141). **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0) without restoring FULL_SYNC. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s745:** routing clip-resident `0x1364` → `OVL24_1364` **stops that stray** (4454→0) without restoring FULL_SYNC (E9 still 3/64; rdpFs 0→4030). Residual is the same ovl24-only class at `0x1320`/`0x1330`/`0x1344` with `153=0x04`. **s744:** writer of the 0x1364/04 stray is `CLIP_1E48` returning `OVL24_135C`'s `jal L_17F0`. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

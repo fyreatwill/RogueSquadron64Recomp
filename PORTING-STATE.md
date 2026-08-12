@@ -53498,3 +53498,38 @@ legitimate: `L_17F0`'s hand path is the ROM clip dispatch, and IMEM
 `0x1364` remains ovl24 (clip dest is `0x1DB0`). The case that requires
 `0x153==0x24` is what turns that return into a stray. Residual, new:
 340 `[clip-stray] tgt=0x1DF4 153=0x00` (ovl12-only label, resident 0).
+
+## Session 745 (2026-08-12) — clip-resident 0x1364 routes; E9 stays flat
+
+Step 0 measured `CURRENT-TRUTH.md` at 35,012 bytes, so maintenance was
+not triggered. Work unit was NEXT.md after s744: widen case `0x1364`
+to `OVL24_1364` when `0x153==0x24 || ==0x04`. SOAK-RESULTS had no new
+queue lines since s744.
+
+Fixup 6e (regeneration-safe) rewrites the 6c ovl24-only `0x1364` case.
+Shared cases and a bare always-OVL24 are untouched: after overlay 28
+restores main `L_12A0`, IMEM `0x1364` is main bytes. Predecessor
+counters from 6d stay. **ORIGIN:** `CLIP_1E48` `jr` of `OVL24_135C`
+`jal L_17F0` (s744). Legitimate ROM clip dispatch; clip dest is
+`0x1DB0` so IMEM `0x1364` is still ovl24. Route, not a guard.
+
+Soak `scratch/agent/soak_results/s745_1364clip_route_20260812-163229/run.log`
+(348 s, same recipe as s743/s744, CRASH=0, wrapper rc=0). Same-run
+positive controls LIVE: `[ovl-route] res=0x04` n=1132, `[1364-pred]`
+and `jal17f0=` fire, four boot controls `dl06=push:2,complete:2,open:0`.
+Lifetime at last `[1364-pred-sum]`: **n=68672 = jal17f0=68672**,
+res04=5279 = clip1e48_1364, res24=63393, oth=0. Stray `0x1364/04`
+**4454→0**. Last sec2 reset `last_ovl=0x24/0x1364` with pred still
+CLIP_1E48 (line 2852, res=0x04, last_ovl=0x04/0x1DB0). UJ=0.
+E9 match still 3/64; rdpFs 0→4030 (s744 0→4141, still flat).
+
+**H-1364-needed-but-not-e9 SELECTED. H-1364-restore-e9 REFUTED
+(E9 unchanged). H-1364-breaks-06 REFUTED** (dl06 2/2/0, UJ=0).
+
+Residual, new vs s744: `[clip-stray] tgt=0x1320 153=0x04` n=3681,
+`0x1330/04` n=1165, `0x1344/04` n=485 (all line=400). Same class:
+`OVL24_1358` saves `$ra` at `0xB30`, `135C` jals `L_17F0`, clip
+returns via the now-routed `0x1364`, `OVL24_1364` loads `$ra` from
+`0xB30` and `goto L_112C`, which later `jr`s `0x1320`/`0x1330`/`0x1344`
+while clip is still resident. `0x1DF4/00` still 343 (other class;
+defer). Next is widen the remaining ovl24-only clip-stray cases.
