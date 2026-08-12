@@ -52992,3 +52992,23 @@ route, and H-l1db0-valid-chunk-loop has single-source support. The rows are
 pre-section-2, so repeated source does not yet distinguish a legitimate
 post-sec2 refill loop from H-l1db0-stale-source. No mitigation changed.
 Next: phase-latch this same complete trace to section 2.
+
+## Session 727 (2026-08-12) — section-2 TriGen branch and return are normal, but the budget is task-skewed
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 59,079 bytes, below the maintenance threshold.
+The required ground-truth references were consulted before the instrument: the retail oracle cannot
+observe RSP-local DMEM and the Factor 5 reference identifies `0x05` as the TriGen route. `NEXT.md`
+recorded the valid-chunk-loop, stale-source, and branch-loss alternatives and their discriminating
+outcomes. The sole code change replaced the phase-3 branch/return gate with the existing
+`g_e9prov.target` section-2 latch; fixup generation and a full build succeeded.
+
+The phase-gated 600-second run (`scratch/agent/s727_l1db0_sec2`) captured 235 frames with no
+`[CRASH]`. Four `[e9-prov-latch] section=2` banners are positive controls, and the trace emitted
+48 branch plus 48 return rows, proving the newly gated path executed. In the first qualified task
+(3180, phase 6), the first 16 rows all had source `0x593D60`, `current=end=0x723E20`, branch 4,
+and target `0x1088`; task 3181 then showed the same branch/return with source `0x59DF48`. This
+single runtime source refutes H-l1db0-branch-loss for those observed section-2 routes and supports
+the normal DMA-helper continuation. It does not distinguish H-l1db0-valid-chunk-loop from
+H-l1db0-stale-source: the global 16-row budget is exhausted by repeats within one task, so it cannot
+compare the target tasks. No mitigation changed. Next: keep the 16-row cap but sample one paired
+branch/return per target task.

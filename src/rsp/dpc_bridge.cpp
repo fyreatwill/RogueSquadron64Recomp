@@ -410,7 +410,7 @@ extern "C" void rs64_inline_probe_trigen_branch(uint32_t r17, uint32_t source_dr
                                                    uint32_t dpc_end, uint32_t dpc_current,
                                                    uint32_t branch) {
     if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
-    if (rs64_phase_ord() != 3) return;
+    if (!g_e9prov.target) return;
     const uint32_t line = g_inline_probe_trigen_branch_lines.fetch_add(1, std::memory_order_relaxed);
     if (line < 16) {
         fprintf(stderr, "[inline-trigen-branch] task=%u phase=%u entry=0x%06X r17=0x%06X source=0x%06X end=0x%06X current=0x%06X branch=%u next=%s\n",
@@ -425,7 +425,7 @@ extern "C" void rs64_inline_probe_trigen_branch(uint32_t r17, uint32_t source_dr
 extern "C" void rs64_inline_probe_trigen_return(uint32_t r17, uint32_t source_dram,
                                                    uint32_t target) {
     if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
-    if (rs64_phase_ord() != 3) return;
+    if (!g_e9prov.target) return;
     const uint32_t line = g_inline_probe_trigen_return_lines.fetch_add(1, std::memory_order_relaxed);
     if (line < 16) {
         fprintf(stderr, "[inline-trigen-return] task=%u phase=%u entry=0x%06X r17=0x%06X source=0x%06X target=0x%04X\n",

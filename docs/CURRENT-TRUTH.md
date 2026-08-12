@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s726; compacted in maintenance s679)
+## Current truth (reviewed through s727; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -676,7 +676,17 @@ maintenance pass. Closed lineages are not backlog items.
    This is single-source support for the documented refill loop and refutes
    an unexpected generated branch/return on this early qualified route. It
    does not test the post-sec2 plateau; next latch the same trace to section
-   2 before interpreting source repetition as stale.
+   2 before interpreting source repetition as stale. **s727 section-2 latch:**
+   four `[e9-prov-latch] section=2` controls fired; the latch delivered 48
+   branch and 48 return rows with no `[CRASH]`. The first qualified task
+   (3180, phase 6) repeatedly selected branch 4 with `current=end=0x723E20`,
+   source `0x593D60`, and returned to `0x1088`; task 3181 showed the same
+   normal branch/return with its distinct source `0x59DF48`. This is
+   single-source support that H-l1db0-branch-loss does not explain the
+   observed section-2 plateau. The 16-row global budget is consumed by the
+   first task's repeated routes, so it cannot discriminate H-l1db0-valid-
+   chunk-loop from H-l1db0-stale-source across the latch window. Next make
+   the existing 16 samples one paired branch/return per target task.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

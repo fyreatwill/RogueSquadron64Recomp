@@ -1,10 +1,10 @@
-# NEXT work unit (after s726: early TriGen continuation is normal)
+# NEXT work unit (after s727: section-2 continuation is normal but task-skewed)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-Phase-latch the complete `L_1DB0` branch/return trace to section 2. This is
-one bounded instrumentation change and one phase-gated run, not an
-unconstrained reroll.
+Sample one paired `L_1DB0` branch/return per section-2 target task, preserving
+the existing 16-task cap. This is one bounded instrumentation change and one
+phase-gated run, not an unconstrained reroll.
 
 ## Competing hypotheses
 
@@ -17,18 +17,19 @@ unconstrained reroll.
 
 ## Discriminating measurement
 
-Replace the fixed `phase==3` condition in the s726 branch/return probe with
-the existing `g_e9prov.target` section-2 latch, retaining the first 16-row
-budget. The existing section-2 latch banner and at least one
-`0x05→L_15AC→L_1298→L_1DB0` route are mandatory positive controls. Monotonic
-source/r17 progression plus `target=0x1088` supports H-valid; a repeated
-source/r17 identifies H-stale; any other branch/target identifies H-branch.
-The retail oracle cannot inspect RSP-local DMEM, so mark a qualified runtime
-result single-source until joined to a game-visible consequence.
+The s727 latch and route rows are mandatory positive controls. Add per-task
+state to `Rs64E9Provenance`: the first eligible branch records one global
+sample index and marks that task; its paired return reuses that index. Later
+routes in the same task must not consume the cap. Sixteen distinct target task
+ids with source/r17 and `target=0x1088` samples establish whether sources
+progress (H-valid) or repeat as one stale pair (H-stale); any branch or target
+outside the normal values supports H-branch. The retail oracle cannot inspect
+RSP-local DMEM, so mark a qualified runtime result single-source until joined
+to a game-visible consequence.
 
 ## Commands
 
-    rg -n -C 5 'trigen_branch|trigen_return|g_e9prov.target' src/rsp/dpc_bridge.cpp tools/fixup_factor5_ucode.py
+    rg -n -C 5 'trigen_branch|trigen_return|g_e9prov.target|Rs64E9Provenance' src/rsp/dpc_bridge.cpp
     python3 tools/fixup_factor5_ucode.py build/factor5_ucode/factor5_ucode_recompiled.c
     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
     env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
