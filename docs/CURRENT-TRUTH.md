@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s690; compacted in maintenance s679)
+## Current truth (reviewed through s691; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -369,10 +369,15 @@ maintenance pass. Closed lineages are not backlog items.
    Two phase-gated starts reached the post-craft pulse window with all four
    boot controls live, but neither reached the section-2 latch before the
    bounded run was stopped (`sec2=0`, `latch=0`, `CRASH=0`): **no conclusion**
-   from their command words. Repeat the existing phase-gated capture through
-   a complete recovery-active section-2 attempt; reject every non-latched row.
+   from their command words. **s691 completed the bounded reroll:** 9/9
+   hangar-selection-engaged attempts were recovery-silent (`0x0076B768`
+   absent), one pre-engagement exit was discarded, and no pulse, section-2
+   latch, or target row occurred. This fails the required recovery positive
+   control, so it is not evidence for any command-path hypothesis. Do not
+   repeat unchanged: first audit why the formerly recovery-active recipe now
+   produces only silent rows, then retry only after the control is restored.
    Durable evidence and probe mechanics: PROJECT-OVERVIEW §27 and Sessions
-   669–690.
+   669–691.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -52177,3 +52177,21 @@ both also had `CRASH=0`. Therefore the command-word discriminator has no
 result yet: boot-only records cannot distinguish the three cap-path
 hypotheses. Next run must allow the recipe to finish its recovery-active
 rerolls and reject any non-latched attempt.
+
+## Session 691 (2026-08-12) — command capture recipe completed without its recovery control
+
+Ran the prescribed already-built command-word capture unchanged:
+`env BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=8 POST_PULSE_HOLD_S=15
+MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh`. It completed
+its ten-attempt bound. Nine attempts reached `[hangar-sel]` at about +157–162s
+but each timed out with zero `addr=0x0076B768`; one exited pre-engagement.
+Final summary: `pre_eng=1`, `recov_silent=9`, `engaged=9`, `pulsed_n=0`,
+`sec3_after_pulse_n=0`, `packtlut_n=0`, exit 2.
+
+The recovery-cell hit is a required positive control for the section-2
+provenance latch. Since it never occurred, no `[e9-prov-frame]` cap row or
+command word is eligible for interpretation. This rules out neither the
+legitimate-open-chain, inline-data-dispatch, nor state-corrupt hypotheses.
+Repeating unchanged would be a third non-discriminating pass; next audit
+effective force/gate configuration and both recovery observations against the
+known qualified s689 log before retrying.

@@ -1,43 +1,38 @@
-# NEXT work unit (after s690 command-word capture build)
+# NEXT work unit (after s691 recovery-negative command capture)
 
-HYPOTHESIS-ID: m3-post-exit-fs-stall
+HYPOTHESIS-ID: m3-recovery-latch-readiness
 
-Attribute the command that enters `L_12A0` on the repeated cap path. s689
-showed the net `push-pop=8` is not eight distinct slots: cap rows reuse slots
-0 and 8, and the late pushes return through `r31=0x1088`. That is a dispatcher
-return address, not a command identity. Do not alter decoding, submission, or
-FULL_SYNC.
+Before another `L_12A0` capture, audit the recovery-latch gate that made s691
+unscorable. The exact s670 recipe previously produced a qualified s689 row,
+but s691 completed 9/9 hangar-selection-engaged attempts without one
+`0x0076B768` event. Do not change decoding, submission, or FULL_SYNC.
 
 ## Competing hypotheses
 
-- **H-legitimate-open-chain:** the repeated `L_12A0` entries are valid Factor
-  5 DL/branch opcodes with command-consistent target and return PC.
-- **H-inline-data-dispatch:** the repeated entries follow an inline-data word
-  misread as a DL/branch command, so its opcode/operands contradict the Factor
-  5 command table.
-- **H-state-corrupt:** the fetched command is valid, but its guest PC or the
-  saved target changes without a corresponding decoder transition.
+- **H-config-drift:** the recovery-active s689 invocation differs from the
+  current script or inherited environment in a force/gate setting.
+- **H-wrapper-observer-loss:** recovery occurs but the watcher/log selection
+  fails to observe `0x0076B768`.
+- **H-stochastic-route:** invocation and observer are intact; recovery is a
+  probabilistic branch that happened not to fire in s691.
 
 ## Discriminating measurement
 
-Run the already-built regeneration-safe `L_12A0` marker that reports `r17`,
-`r19`, and `r20` as guest PC plus `w0`/`w1`; retain the first/last slot-0 push
-after caller `0x1088` and the slot-8 push. Join those with the existing
-source-fetch records in `[e9-prov]`. Keep four boot controls, the section-2
-latch, and 64 target rows. Do not manually terminate the recipe: non-latched
-attempts are discard rows, not a result.
-The visible positive control is the existing natural push→pop→resume chain
-plus a command-consistent boot DL entry; a counter alone is insufficient.
+Make one bounded, regeneration-free audit script that records complete
+effective `GAME_EXTRA_ENV`, relevant inherited `ROGUESQ_FORCE_*` settings,
+and two independent recovery observations from the same `run.log`: the literal
+`0x0076B768` and the surrounding `[fs-slot]`/`[rdp-fullsync]` transition. Run
+the s689-compatible and current-script arms concurrently, phase-gated, one
+attempt each. Positive controls: a boot `[e9-prov]` chain in each new arm and
+the recovered transition in the saved s689 log parsed by the same scorer.
 
-- Valid 0x06/0x07 DL/branch commands with Factor-5-consistent operands:
-  H-legitimate-open-chain supported.
-- A non-command/inline-data-shaped opcode at the repeated push:
-  H-inline-data-dispatch supported.
-- Valid opcode but guest PC/target changes without its matching decoder path:
-  H-state-corrupt supported.
-- Missing boot/natural controls: reject the run.
+- Different effective settings or force banners: H-config-drift supported.
+- Independent transition but no literal watch hit: H-wrapper-observer-loss.
+- Matching arms/configs and controls, both without transition: H-stochastic-route.
+- Missing saved-log or boot controls: reject and repair the scorer first.
 
 ## Commands
 
-    # The s690 instrumentation is already built; only rebuild if the tree changed.
-    env BUDGET_S=2400 TARGET_PULSED=1 SEC2_SETTLE_S=8 POST_PULSE_HOLD_S=15 MAX_HOLD_S=45 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
+    rg -n '0076B768|\[fs-slot\]|\[rdp-fullsync\]|\[e9-prov\]' scratch/s73_post_a_scene/s670_postsec2_pulse_1_20260812051415/run.log | head -200
+    sed -n '1,240p' scratch/agent/s670_postsec2_pulse_freeroll.sh
+    sed -n '1,240p' scratch/agent/s670_run_mission_keys_postsec2.sh
