@@ -51783,3 +51783,47 @@ it cannot catch this class by itself — the fix is to run it inside the runner.
   session, then check whether the SDL display error recurs.
 
 ### Residual → item -421 unchanged; the E9-alignment discriminator still needs one GUI-session run.
+
+## Session 675 (2026-08-12) — item -421: command-boundary E9 survives alignment check; loss is downstream of guest DL
+
+Ran the already-built discriminator unchanged from a GUI-capable full-access
+session:
+
+    env BUDGET_S=2400 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
+
+The wrapper completed four attempts: two 10-second pre-engagement clean exits
+and two independent recovery-active attempts. Attempts 2 and 4 reached hangar
+selection at +161s/+156s, recovery cell `0x76B768` at +181s/+176s, section 2,
+and the post-section-2 phase-gated hold. Both created post-sec2 thread 13 and
+kept it alive; neither returned to section 3 after the pulse and neither hit
+`packTlut`. This also re-confirms -422's input-gated menu-return result but does
+not reopen it.
+
+The item -421 discriminator was decisive:
+
+| attempt | post-sec2 probe tasks | `e9_aligned>0` | aligned E9 sum | runner `syncs>0` |
+|---|---:|---:|---:|---:|
+| 2 | 12,924 | 4,444 | 12,739 | 3 |
+| 4 | 13,135 | 9,549 | 28,047 | 3 |
+
+Positive control: both logs contain thousands of `[dl-sync-probe2]` records,
+normal scene progression, recovery, and section 2 in the same run. The aligned
+walker honours all six inline-data advances from `docs/F5-UCODE-REFERENCE.md`.
+
+### What this shows / rules out
+
+- **H-e9-walker-misaligned REFUTED as the sole explanation**, independently
+  in two recovery-active samples. E9 is abundant on command boundaries, not
+  merely in payload bytes reached by the naive fixed-eight-byte walker.
+- **H-e9-not-translated CONFIRMED at the pipeline level:** command-boundary
+  guest E9 exists in thousands of post-sec2 tasks while runner FULL_SYNC is
+  nonzero in only three tasks per run.
+- This does not yet locate the exact loss stage. The Factor5 map assigns
+  `0xE9` to `fullSync_logged`, so the remaining split is interpreter
+  pre-dispatch versus handler entry versus `State::fullSync`/runner accounting.
+
+Logs:
+`scratch/s73_post_a_scene/s670_postsec2_pulse_2_20260812003755/run.log` and
+`scratch/s73_post_a_scene/s670_postsec2_pulse_4_20260812005024/run.log`.
+
+### Residual → item -421 stays open; next build one same-task E9 dispatch-stage discriminator.

@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s669)
+## Current truth (established by session 295; unchanged, reviewed through s675)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -248,11 +248,12 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   CONFIRMED dual-source and CLOSED** (2/2 pulsed attempts: thr12 alive
   >1000s, 0 sec3 return, 0 packTlut) while the **rdpFs plateau itself is
   untouched by both inject (Arm A) and input (Arm B)** — stays open as -421,
-  now with a concrete candidate mechanism (~38% post-sec2 tasks show a raw
-  E9 byte in the naive walker while 99.99% show runner syncs=0 —
-  H-e9-not-translated vs H-e9-walker-misaligned, undistinguished). Residual
-  rank: (1) **-421 E9-alignment check** (walker-misaligned vs
-  not-translated) then rdpFs starvation mechanism / packTlut (-373), (2) B8
+  **s675 confirms command-boundary E9 is abundant** in two independent
+  post-sec2 samples (4,444/12,924 and 9,549/13,135 tasks) while runner
+  FULL_SYNC appears in only 3 tasks per sample. Walker misalignment is
+  refuted as the sole explanation; the loss is downstream of the guest DL.
+  Residual rank: (1) **-421 E9 dispatch-stage discriminator** then rdpFs
+  starvation mechanism / packTlut (-373), (2) B8
   co-gate -393, (3) -387 **5×**. Do **not** productize DROP_GARBAGE_CIMG; do
   **not** re-soak thr11d rate (-419 CLOSED) or re-run the -422 input pulse
   (CLOSED, no residual).
@@ -264,7 +265,7 @@ REAL hangar exit CONFIRMED** (case 3→5→6→8). Post-exit FULL_SYNC starvatio
   `ALLOW_WILD_W`, `FL_HDR_HARD_SKIP`, `FL_HDR_RESTORE=0`, `FL_RESTORE_MODE=body`,
   `DROP_WRAP_RDP`, `DROP_GARBAGE_CIMG`. Product ON: freelist multi-header restore.
   Diagnostics: `ROGUESQ_LOG_CIMG_RAW`, `ROGUESQ_LOG_DL_SYNC2`.
-- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-421; Sessions 577-669.
+- Full durable arc: **`docs/PROJECT-OVERVIEW.md` §27**; items -349..-422; Sessions 577-675.
 DoD = **cutscene→in-mission** + craft input.
 *Done when:* 60s in-mission render, craft responds to synthetic input, stability 0, phase timeline
 covers the mission.
@@ -284,7 +285,7 @@ Numbering convention (fixed s295): items are numbered highest-magnitude-negative
 newest/highest priority) counting up to -1 (bottom, oldest); never renumbered when compacted into
 a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
 
-### Active M3 pipeline (s577–s670) — open residuals only
+### Active M3 pipeline (s577–s675) — open residuals only
 
 -422. **(s670→s671) post-sec2 menu-return is input-gated — H-menu-return-input
     CONFIRMED dual-source; CLOSED. Splits -421.** Arm A (offline, s668/669
@@ -305,8 +306,9 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     "does packTlut ever fire given more hold time" deprioritized below
     -421's mechanism). Full: Sessions 670-671.
 
--421. **(s669→s671) post-sec2 FULL_SYNC plateau — OPEN, narrowed to the FS
-    mechanism only (menu-return/thr12-teardown CLOSED as -422).**
+-421. **(s669→s675) post-sec2 FULL_SYNC plateau — OPEN, narrowed to an E9
+    dispatch/translation loss after the guest command stream
+    (menu-return/thr12-teardown CLOSED as -422).**
     s669 offline dual-source (s668 att2+att3): post-sec2 outdoor content LIVE
     ~195–200s (VI 512 0x620000↔0x690000, present FIRE swap, ~5900 tasks
     tris=42) then thr12 destroy → **menu sec3** return; packTlut=0 crash=0.
@@ -327,9 +329,7 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     ucode's variable-length inline-data commands per
     `docs/F5-UCODE-REFERENCE.md`, unlike the existing six-command-aware
     `ROGUESQ_LOG_DL_SYNC2` walker built for -415..-417; an unaligned read
-    can land mid-command and hit a coincidental 0xE9 byte). Check the
-    boring explanation (walker misalignment) first, per iron rule 5, before
-    H-e9-not-translated enters this file as a real finding. Scorers:
+    can land mid-command and hit a coincidental 0xE9 byte). Scorers:
     `scratch/agent/s669_postsec2_offline_score.py`. **s672: instrument
     built** (`e9_aligned` counter added to `ROGUESQ_LOG_DL_SYNC2`'s
     `[dl-sync-probe2]` output, `ROGUESQ_LOG_DL_SYNC2=1` wired into the
@@ -339,10 +339,16 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     failed: The video driver did not add any displays`, so this headless
     execution context cannot supply the required GUI display. This is not
     evidence about either E9 hypothesis. The harness now aborts on the first
-    such failure instead of consuming all retries. Next GUI-capable session:
-    run `env BUDGET_S=2400 zsh
-    scratch/agent/s670_postsec2_pulse_freeroll.sh` to completion, no further
-    code changes needed. Full: Sessions 669-673.
+    such failure instead of consuming all retries. **s675 Outcome A,
+    dual-source:** two independent recovery-active runs reached section 2
+    with `DL_SYNC2` live. The inline-data-aware walker reported
+    `e9_aligned>0` in **4,444/12,924** and **9,549/13,135** post-sec2 tasks
+    (aligned sums 12,739 and 28,047), while runner `syncs>0` appeared in only
+    **3 tasks per run**. H-e9-walker-misaligned is REFUTED as the sole
+    explanation; H-e9-not-translated is CONFIRMED. Next split the loss among
+    interpreter pre-dispatch, Factor5 `fullSync_logged`, and
+    `State::fullSync`/runner accounting with same-task counters. Full:
+    Sessions 669-675.
 
 -420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
     Outcome A (content advances; residual → -421).**
