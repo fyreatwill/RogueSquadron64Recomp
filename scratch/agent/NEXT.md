@@ -1,4 +1,4 @@
-# NEXT work unit (after s728: TriGen continuation is normal across section-2 target tasks)
+# NEXT work unit (after s729 maintenance: compact `0x06` provenance retained in PROJECT-OVERVIEW §28)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
@@ -27,6 +27,12 @@ unpaired frame access, or DMA-table-only push selects its matching alternative.
 This static result needs the independent command reference as its second line
 of evidence; do not call it a runtime explanation without a later qualified
 cap-row trace.
+
+Expected outcomes: the sole documented push plus paired `L_12C4/L_12DC`
+restore closes H-dl06-unpaired-site and H-dl06-opaque-overlay for generated
+code; any additional site keeps the matching hypothesis open and names the
+next bounded trace. Before any build, retain these hypotheses and this
+discriminator in this file as required by the iteration contract.
 
 ## Commands
 

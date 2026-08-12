@@ -53033,3 +53033,18 @@ dominates the section-2 continuation. This is single-source runtime evidence, bu
 H-l1db0-branch-loss and H-l1db0-stale-source for the observed route. The remaining cap population
 is therefore the documented `0x06` open-chain family; next classify that entire dispatch/push idiom
 systematically instead of rerunning the continuation probe. No mitigation changed.
+
+## Session 729 (2026-08-12) — maintenance compaction preserves the active 0x06 discriminator
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 60,667 bytes, triggering a maintenance-only iteration;
+no experiment or build ran. The file was reduced from 823 to 416 lines (60,667 to 30,672 bytes),
+well beyond the required 200-net-line threshold. Durable s685–s728 provenance findings were migrated
+to PROJECT-OVERVIEW §28: parser/State dispatch is intact for genuine E9s, fixed-stride false E9s are
+triangle payload, cap rows are `0x06` child-DL chains, and the observed TriGen refill branch/return
+is normal. CURRENT-TRUTH now retains the active residual and one monotonic 1–4 backlog; the stale
+review headline was refreshed to s729.
+
+This rules out treating the compaction as a new runtime result or reopening the unqualified section-2
+rerolls. NEXT keeps the same `m3-postsec2-lle-control-flow` thread: statically enumerate every
+generated `L_12A0` push and `0x654` frame save/restore site against the independent Factor 5 0x06 /
+EndDL lifecycle before any new build. No mitigation changed.

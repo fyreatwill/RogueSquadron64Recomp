@@ -2616,3 +2616,26 @@ tasks 1–4 as controls and uses a section-2 latch for targets. Do not use its f
 scan as a command count; the next probe must use parser-derived raw-E9 and `fullSync` counts. See
 `scratch/agent/NEXT.md` and CURRENT-TRUTH backlog item 1. Sessions 620–684 contain the full
 chronology in `PORTING-STATE.md`.
+
+### Provenance and 0x06 control-flow narrowing (s685–s728)
+
+The section-2-latched provenance work closed bridge and RT64-dispatch loss. In qualified windows,
+every real raw `E9` reaches `GBI_RDP::fullSync` and `State::fullSync`; fixed-stride E9 excesses are
+inline triangle payload bytes, not commands. Boot controls complete naturally, whereas cap rows
+make 8,192 fetches and return only via the synthetic cap marker. EndDL executes on those rows, but
+does not take the root exit because the chain remains open.
+
+The cap frames are not corrupted inline dispatch: qualified runtime capture found all `caller=0x1088`
+pushes are `0x06` (`F3DSWRS_DL`) with KSEG0 child-DL operands, matching the independent Factor 5
+command reference. Static audits then closed the normal `0x06` parent-PC save/child load/EndDL
+restore path, root-loader and fetch-pointer lifecycle, and the host DMEM `0xFF0`/`0x130` staging
+theory. Host staging of both fields is redundant and is default OFF; phase-gated A/B controls kept
+the complete TriGen route intact.
+
+The later TriGen continuation work established that `L_1DB0` uses the documented root/refill loop:
+section-2-latched branch/return pairs always choose branch 4 and return to `0x1088`, with changing
+sources and no crash. It therefore does not explain the plateau. The remaining bounded question is
+to enumerate every cap-reachable generated `0x06` push site and its paired parent/child lifecycle,
+including any opaque DMA-populated dispatch-table route. Runtime rerolls without a section-2 latch
+are unqualified and must not be repeated unchanged. Details: PORTING-STATE Sessions 685–728;
+active protocol: `scratch/agent/NEXT.md`.
