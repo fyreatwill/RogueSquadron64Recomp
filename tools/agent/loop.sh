@@ -173,9 +173,18 @@ for line in raw.splitlines():
         continue
     sawjson = True
     if isinstance(ev, dict):
+        # MEASURED 2026-08-11, do not narrow this test again: a claude/deepseek
+        # result object is type="result" with NO "error" key — the failure rides
+        # in is_error + api_error_status + result. This branch runs for it
+        # because the CLI prints a stderr warning line ("claude.ai connectors
+        # are disabled...") ahead of the JSON, which breaks the whole-document
+        # parse above. The old type/"error"-key test dropped exactly the event
+        # carrying "API Error: 402 Insufficient Balance", so a hard cap was
+        # classified as a crash and slept through 4 retries.
         t = str(ev.get("type", ""))
-        if "error" in t or "fail" in t or "error" in ev:
-            parts.append(json.dumps(ev))
+        if ("error" in t or "fail" in t or "error" in ev
+                or ev.get("is_error") or ev.get("api_error_status")):
+            parts.extend(fields(ev))
 if not sawjson and not parts:
     print(raw)
 else:
