@@ -1133,24 +1133,36 @@ if is_main_ucode and L12A0_SOURCE_MARKER not in text:
 # display-list-frame reuse (s733, item -421). The callback is deliberately
 # before the sole generated store so it observes the pre-reset byte.
 # ---------------------------------------------------------------------------
-RESET_REUSE_MARKER = "/* fixup: L_1DB0 depth-reset ordering audit v1 */"
+RESET_REUSE_MARKER = "/* fixup: L_1DB0 depth-reset route audit v2 */"
 if is_main_ucode and RESET_REUSE_MARKER not in text:
-    decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_l12a0_source[^\n]*\n)")
-    text, n_decl = decl_anchor.subn(
-        lambda m: m.group(1) +
-        'extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17);  ' +
-        RESET_REUSE_MARKER + "\n",
-        text, count=1)
+    reset_decl = re.compile(r'extern "C" void rs64_e9prov_l1db0_reset[^\n]*\n')
+    if reset_decl.search(text):
+        text, n_decl = reset_decl.subn(
+            'extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra, uint32_t resident);  ' +
+            RESET_REUSE_MARKER + "\n", text, count=1)
+    else:
+        decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_l12a0_source[^\n]*\n)")
+        text, n_decl = decl_anchor.subn(
+            lambda m: m.group(1) +
+            'extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra, uint32_t resident);  ' +
+            RESET_REUSE_MARKER + "\n",
+            text, count=1)
     if n_decl != 1:
         print("fixup_factor5_ucode: FIXUP 12c ANCHOR FAILED (declaration).", file=sys.stderr)
         sys.exit(1)
-    reset_anchor = re.compile(
-        r"(L_1DB0:\n[\s\S]{0,1200}?)([ \t]*RSP_MEM_B\(0X52, r18\) = 0;)")
-    text, n_reset = reset_anchor.subn(
-        lambda m: m.group(1) +
-        "    rs64_e9prov_l1db0_reset(RSP_MEM_BU(0X52, r18), r17);  " +
-        RESET_REUSE_MARKER + "\n" + m.group(2),
-        text, count=1)
+    old_reset = re.compile(r'^[ \t]*rs64_e9prov_l1db0_reset\([^\n]*\);[^\n]*\n', re.MULTILINE)
+    if old_reset.search(text):
+        text, n_reset = old_reset.subn(
+            "    rs64_e9prov_l1db0_reset(RSP_MEM_BU(0X52, r18), r17, r31, RSP_MEM_BU(0X153, 0));  " +
+            RESET_REUSE_MARKER + "\n", text, count=1)
+    else:
+        reset_anchor = re.compile(
+            r"(L_1DB0:\n[\s\S]{0,1200}?)([ \t]*RSP_MEM_B\(0X52, r18\) = 0;)")
+        text, n_reset = reset_anchor.subn(
+            lambda m: m.group(1) +
+            "    rs64_e9prov_l1db0_reset(RSP_MEM_BU(0X52, r18), r17, r31, RSP_MEM_BU(0X153, 0));  " +
+            RESET_REUSE_MARKER + "\n" + m.group(2),
+            text, count=1)
     if n_reset != 1:
         print("fixup_factor5_ucode: FIXUP 12c ANCHOR FAILED (L_1DB0 reset).", file=sys.stderr)
         sys.exit(1)

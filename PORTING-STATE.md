@@ -53149,3 +53149,22 @@ TriGen and describes its input advance, but it does not explain why this generat
 clears the display-list depth during an active direct `0x06` frame. NEXT keeps
 `m3-postsec2-lle-control-flow` and asks one bounded source-route trace at the reset before any
 mitigation is considered.
+
+## Session 734 (2026-08-12) — source-route trace landed; direct launcher result is unqualified
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 32,108 bytes, so maintenance was not triggered. The
+competing hypotheses and phase-latched discriminator were recorded in `NEXT.md` before the build.
+I extended the existing regeneration-safe `L_1DB0` callback to retain bounded first/last active
+reset tuples: old depth and `r17`, `r31`, `DMEM[0x153]` resident id, pending `L_12A0`
+direct/overlay source tuple, and current inline-dispatch opcode/table tuple. The fixup now upgrades
+the old callback declaration/call in place, so a subsequent RSP regeneration recreates the probe.
+No mitigation changed.
+
+The first direct phase-gated launch rebuilt successfully but its launcher detached before the
+phase-relative key worker ran. It recorded only the four expected balanced direct-only boot
+controls (`reset=1, active=0` each) and emitted zero active reset-route/cap rows. That is not a
+test of any of H-wrong-trigen-route, H-intentional-trigen-reset, or H-route-mixed. A second
+persistent-wrapper attempt likewise produced no launcher or run log in this runner, so it cannot
+repair the null. I queued `scratch/agent/soak_queue/s734_reset_route.sh`, a self-contained
+300-second phase-gated recipe that requires both reset-route and cap controls and fails on a crash.
+The next iteration must consume that verdict before interpreting route shape.

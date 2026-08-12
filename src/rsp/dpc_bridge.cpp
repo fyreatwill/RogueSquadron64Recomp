@@ -138,6 +138,22 @@ struct Rs64E9Provenance {
         uint32_t reuse_seq;
         uint32_t reuse_r17;
     };
+    struct ResetRoute {
+        uint32_t seq;
+        uint32_t old;
+        uint32_t r17;
+        uint32_t ra;
+        uint32_t resident;
+        uint32_t pending_source;
+        uint32_t pending_r17;
+        uint32_t pending_w0;
+        uint32_t pending_w1;
+        uint32_t inline_active;
+        uint32_t inline_opcode;
+        uint32_t inline_entry;
+        uint32_t inline_table_kind;
+        uint32_t inline_table_word;
+    };
     uint32_t task = 0;
     uint32_t guest = 0;
     uint32_t emitted = 0;
@@ -174,6 +190,8 @@ struct Rs64E9Provenance {
     uint32_t depth0_reuse_unpaired = 0;
     std::vector<ResetReusePair> reset_reuse_first;
     std::vector<ResetReusePair> reset_reuse_last;
+    std::vector<ResetRoute> reset_route_first;
+    std::vector<ResetRoute> reset_route_last;
     std::unordered_map<uint32_t, uint32_t> frame_id_by_slot;
     std::unordered_map<uint32_t, uint32_t> frame_opcode_by_slot;
     std::vector<FrameDepth> frame_depths;
@@ -553,7 +571,7 @@ extern "C" void rs64_e9prov_l12a0_source(uint32_t source, uint32_t r17, uint32_t
     g_e9prov.pending_l12a0_w1 = w1;
 }
 
-extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17) {
+extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17, uint32_t ra, uint32_t resident) {
     if (!log_e9_provenance()) return;
     ++g_e9prov.lifecycle_seq;
     ++g_e9prov.l1db0_reset;
@@ -562,6 +580,15 @@ extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17) {
     g_e9prov.l1db0_reset_last_active_seq = g_e9prov.lifecycle_seq;
     g_e9prov.l1db0_reset_last_active_old = old;
     g_e9prov.l1db0_reset_last_active_r17 = r17;
+    const Rs64E9Provenance::ResetRoute route{
+        g_e9prov.lifecycle_seq, old, r17, ra, resident,
+        g_e9prov.pending_l12a0_source, g_e9prov.pending_l12a0_r17,
+        g_e9prov.pending_l12a0_w0, g_e9prov.pending_l12a0_w1,
+        g_inline_probe.active ? 1u : 0u, g_inline_probe.opcode,
+        g_inline_probe.entry, g_inline_probe.table_kind, g_inline_probe.table_word};
+    if (g_e9prov.reset_route_first.size() < 8) g_e9prov.reset_route_first.push_back(route);
+    if (g_e9prov.reset_route_last.size() == 8) g_e9prov.reset_route_last.erase(g_e9prov.reset_route_last.begin());
+    g_e9prov.reset_route_last.push_back(route);
 }
 
 static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t target, uint32_t pc,
@@ -750,6 +777,18 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
         };
         dump_reset_pair("first", g_e9prov.reset_reuse_first);
         dump_reset_pair("last", g_e9prov.reset_reuse_last);
+        const auto dump_reset_route = [task](const char* edge,
+                                              const std::vector<Rs64E9Provenance::ResetRoute>& routes) {
+            for (const auto& route : routes) {
+                fprintf(stderr, "[e9-prov-reset-route] task=%u edge=%s seq=%u old=0x%02X r17=0x%06X ra=0x%04X resident=0x%02X pending=src:%u,r17:0x%06X,w0:0x%08X,w1:0x%08X inline=active:%u,op:0x%02X,entry:0x%06X,table:%u,word:0x%04X\\n",
+                        task, edge, route.seq, route.old, route.r17 & 0x7FFFFFu, route.ra & 0xFFFFu,
+                        route.resident, route.pending_source, route.pending_r17 & 0x7FFFFFu,
+                        route.pending_w0, route.pending_w1, route.inline_active, route.inline_opcode,
+                        route.inline_entry & 0x7FFFFFu, route.inline_table_kind, route.inline_table_word);
+            }
+        };
+        dump_reset_route("first", g_e9prov.reset_route_first);
+        dump_reset_route("last", g_e9prov.reset_route_last);
         const auto dump_frame = [task](const char* edge, const std::vector<Rs64E9Provenance::FrameEvent>& events) {
             for (const auto& event : events) {
                 fprintf(stderr, "[e9-prov-frame] task=%u edge=%s kind=%c id=%u src=%u slot=0x%X target=0x%06X pc=0x%06X caller=0x%04X w0=0x%08X w1=0x%08X\n",
