@@ -53123,3 +53123,29 @@ it and `L_12C4` decrements it. This identifies a concrete candidate writer but d
 whether its reset is a legitimate root boundary or the causal overwrite. NEXT retains
 `m3-postsec2-lle-control-flow` and requests one phase-latched, bounded reset-to-reuse ordering
 trace. No mitigation changed.
+
+## Session 733 (2026-08-12) — `L_1DB0` reset immediately causes every depth-0 reuse
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 31,162 bytes, so maintenance was not triggered. The
+competing hypotheses and phase-latched discriminator were already recorded in `NEXT.md` before the
+build. After checking the retail-oracle protocol and the Factor 5 command reference, I added one
+regeneration-safe callback immediately before the sole generated `L_1DB0` store to
+`DMEM[0x152]`. It captures the old depth byte and `r17`; the existing host ledger pairs each
+active reset to the next depth-0 reuse with bounded first/last records. No mitigation changed.
+
+The 300-second capture reached the section-2 latch, produced 64 section-2 target rows, and exited
+normally with no `[CRASH]`. Its first four boot controls were again direct-only and balanced
+(`push:2,pop:2,resume:2`, `dl06=push:2,complete:2,open:0`), so the same run proves the existing
+call/return instrumentation is live. Every cap row with reuse shows an active reset immediately
+followed by that reuse: for the common `reuse=14` shape, `reset=15, active=14,
+unpaired_reuse=0`, and the bounded records are consecutive lifecycle events, for example
+`reset_seq=19 old=0x08 reset_r17=0x1D8` then `reuse_seq=20 reuse_r17=0x180`. The alternate
+`reuse=15` rows similarly report `reset=16, active=15, unpaired_reuse=0`.
+
+The live ordered pairing plus the static exhaustive writer enumeration are independent evidence:
+H-l1db0-reset-writer is confirmed for observed synthetic-cap rows, while H-reset-is-boundary and
+H-host-ledger-ordering are refuted. The command reference independently names opcode `0x05` as
+TriGen and describes its input advance, but it does not explain why this generated continuation
+clears the display-list depth during an active direct `0x06` frame. NEXT keeps
+`m3-postsec2-lle-control-flow` and asks one bounded source-route trace at the reset before any
+mitigation is considered.

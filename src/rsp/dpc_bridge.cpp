@@ -131,6 +131,13 @@ struct Rs64E9Provenance {
         bool active = false;
         bool pending_resume = false;
     };
+    struct ResetReusePair {
+        uint32_t reset_seq;
+        uint32_t reset_old;
+        uint32_t reset_r17;
+        uint32_t reuse_seq;
+        uint32_t reuse_r17;
+    };
     uint32_t task = 0;
     uint32_t guest = 0;
     uint32_t emitted = 0;
@@ -158,6 +165,15 @@ struct Rs64E9Provenance {
     uint32_t frame_06_complete = 0;
     uint32_t l12a0_direct = 0;
     uint32_t l12a0_overlay = 0;
+    uint32_t lifecycle_seq = 0;
+    uint32_t l1db0_reset = 0;
+    uint32_t l1db0_reset_active = 0;
+    uint32_t l1db0_reset_last_active_seq = 0;
+    uint32_t l1db0_reset_last_active_old = 0;
+    uint32_t l1db0_reset_last_active_r17 = 0;
+    uint32_t depth0_reuse_unpaired = 0;
+    std::vector<ResetReusePair> reset_reuse_first;
+    std::vector<ResetReusePair> reset_reuse_last;
     std::unordered_map<uint32_t, uint32_t> frame_id_by_slot;
     std::unordered_map<uint32_t, uint32_t> frame_opcode_by_slot;
     std::vector<FrameDepth> frame_depths;
@@ -537,6 +553,17 @@ extern "C" void rs64_e9prov_l12a0_source(uint32_t source, uint32_t r17, uint32_t
     g_e9prov.pending_l12a0_w1 = w1;
 }
 
+extern "C" void rs64_e9prov_l1db0_reset(uint32_t old, uint32_t r17) {
+    if (!log_e9_provenance()) return;
+    ++g_e9prov.lifecycle_seq;
+    ++g_e9prov.l1db0_reset;
+    if (g_e9prov.frame_depths.empty() || !g_e9prov.frame_depths[0].active) return;
+    ++g_e9prov.l1db0_reset_active;
+    g_e9prov.l1db0_reset_last_active_seq = g_e9prov.lifecycle_seq;
+    g_e9prov.l1db0_reset_last_active_old = old;
+    g_e9prov.l1db0_reset_last_active_r17 = r17;
+}
+
 static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t target, uint32_t pc,
                                      uint32_t caller = 0, uint32_t w0 = 0, uint32_t w1 = 0) {
     if (!log_e9_provenance()) return;
@@ -545,8 +572,28 @@ static void rs64_e9prov_frame_event(uint32_t kind, uint32_t slot, uint32_t targe
     if (g_e9prov.frame_depths.size() <= depth) g_e9prov.frame_depths.resize(depth + 1);
     auto& ledger = g_e9prov.frame_depths[depth];
     if (kind == 1) {
+        ++g_e9prov.lifecycle_seq;
         ++ledger.push;
-        if (ledger.active) ++ledger.reuse_push;
+        if (ledger.active) {
+            ++ledger.reuse_push;
+            if (depth == 0) {
+                if (g_e9prov.l1db0_reset_last_active_seq != 0) {
+                    const Rs64E9Provenance::ResetReusePair pair{
+                        g_e9prov.l1db0_reset_last_active_seq,
+                        g_e9prov.l1db0_reset_last_active_old,
+                        g_e9prov.l1db0_reset_last_active_r17,
+                        g_e9prov.lifecycle_seq, pc};
+                    if (g_e9prov.reset_reuse_first.size() < 8)
+                        g_e9prov.reset_reuse_first.push_back(pair);
+                    if (g_e9prov.reset_reuse_last.size() == 8)
+                        g_e9prov.reset_reuse_last.erase(g_e9prov.reset_reuse_last.begin());
+                    g_e9prov.reset_reuse_last.push_back(pair);
+                    g_e9prov.l1db0_reset_last_active_seq = 0;
+                } else {
+                    ++g_e9prov.depth0_reuse_unpaired;
+                }
+            }
+        }
         ledger.active = true;
         ledger.pending_resume = false;
     } else if (kind == 2) {
@@ -689,6 +736,20 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);
+        fprintf(stderr, "[e9-prov-reset] task=%u scope=%s reset=%u active=%u paired=%zu unpaired_reuse=%u pending_seq=%u\n",
+                task, g_e9prov.control ? "control" : "sec2", g_e9prov.l1db0_reset,
+                g_e9prov.l1db0_reset_active, g_e9prov.reset_reuse_last.size(),
+                g_e9prov.depth0_reuse_unpaired, g_e9prov.l1db0_reset_last_active_seq);
+        const auto dump_reset_pair = [task](const char* edge,
+                                             const std::vector<Rs64E9Provenance::ResetReusePair>& pairs) {
+            for (const auto& pair : pairs) {
+                fprintf(stderr, "[e9-prov-reset-pair] task=%u edge=%s reset_seq=%u old=0x%02X reset_r17=0x%06X reuse_seq=%u reuse_r17=0x%06X\n",
+                        task, edge, pair.reset_seq, pair.reset_old, pair.reset_r17 & 0x7FFFFFu,
+                        pair.reuse_seq, pair.reuse_r17 & 0x7FFFFFu);
+            }
+        };
+        dump_reset_pair("first", g_e9prov.reset_reuse_first);
+        dump_reset_pair("last", g_e9prov.reset_reuse_last);
         const auto dump_frame = [task](const char* edge, const std::vector<Rs64E9Provenance::FrameEvent>& events) {
             for (const auto& event : events) {
                 fprintf(stderr, "[e9-prov-frame] task=%u edge=%s kind=%c id=%u src=%u slot=0x%X target=0x%06X pc=0x%06X caller=0x%04X w0=0x%08X w1=0x%08X\n",
