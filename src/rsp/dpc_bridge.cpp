@@ -175,6 +175,43 @@ struct Rs64E9Provenance {
 static Rs64E9Provenance g_e9prov;
 static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
 
+struct Rs64InlineProbe {
+    bool active = false;
+    uint32_t opcode = 0;
+    uint32_t entry = 0;
+    uint32_t table_kind = 0;
+    uint32_t table_word = 0;
+    uint32_t expected_extra = 0;
+    uint32_t samples[7] = {};
+    uint32_t mismatch[7] = {};
+    uint32_t incomplete = 0;
+};
+static Rs64InlineProbe g_inline_probe;
+static std::atomic<uint32_t> g_inline_probe_lines{0};
+static std::atomic<uint32_t> g_inline_probe_summaries{0};
+static std::atomic<uint32_t> g_inline_probe_phase{0xFFFFFFFFu};
+extern "C" uint32_t rs64_phase_ord(void);
+
+static bool log_inline_advance() {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_INLINE_ADVANCE");
+        return e && *e && *e != '0';
+    }();
+    return enabled;
+}
+
+static uint32_t inline_probe_slot(uint32_t opcode) {
+    switch (opcode) {
+    case 0x03: return 1;
+    case 0x05: return 2;
+    case 0xB4: case 0xBF: return 3;
+    case 0xBD: return 4;
+    case 0xBE: return 5;
+    case 0xB3: return 6;
+    default: return 0;
+    }
+}
+
 static bool log_e9_provenance() {
     static const bool enabled = [] {
         const char *e = std::getenv("ROGUESQ_LOG_E9_PROVENANCE");
@@ -193,6 +230,47 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
     g_e9prov.control = task <= 4;
     g_e9prov.first_guest = 0xFFFFFFFFu;
     g_e9prov.first_emit = 0xFFFFFFFFu;
+    g_inline_probe = {};
+    const uint32_t phase = rs64_phase_ord();
+    uint32_t previous = g_inline_probe_phase.load(std::memory_order_acquire);
+    if (previous != phase && g_inline_probe_phase.compare_exchange_strong(
+            previous, phase, std::memory_order_acq_rel, std::memory_order_acquire)) {
+        g_inline_probe_lines.store(0, std::memory_order_release);
+        g_inline_probe_summaries.store(0, std::memory_order_release);
+    }
+}
+
+extern "C" void rs64_inline_probe_resume(uint32_t r17) {
+    if (!log_inline_advance() || !g_inline_probe.active) return;
+    const uint32_t slot = inline_probe_slot(g_inline_probe.opcode);
+    const uint32_t actual = (r17 - g_inline_probe.entry) & 0x7FFFFFu;
+    ++g_inline_probe.samples[slot];
+    if (actual != g_inline_probe.expected_extra) ++g_inline_probe.mismatch[slot];
+    const uint32_t line = g_inline_probe_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 96) {
+        fprintf(stderr, "[inline-advance] task=%u phase=%u op=%02X table=%u:0x%04X entry=0x%06X exit=0x%06X extra=%u expected=%u verdict=%s\n",
+                g_e9prov.task, rs64_phase_ord(), g_inline_probe.opcode, g_inline_probe.table_kind,
+                g_inline_probe.table_word, g_inline_probe.entry & 0x7FFFFFu,
+                r17 & 0x7FFFFFu, actual, g_inline_probe.expected_extra,
+                actual == g_inline_probe.expected_extra ? "equal" : "MISMATCH");
+        fflush(stderr);
+    }
+    g_inline_probe.active = false;
+}
+
+extern "C" void rs64_inline_probe_dispatch(uint32_t r17, uint32_t w0, uint32_t table_kind, uint32_t table_word) {
+    if (!log_inline_advance()) return;
+    const uint32_t opcode = w0 >> 24;
+    const uint32_t slot = inline_probe_slot(opcode);
+    if (slot == 0) return;
+    g_inline_probe.active = true;
+    g_inline_probe.opcode = opcode;
+    g_inline_probe.entry = r17;
+    g_inline_probe.table_kind = table_kind;
+    g_inline_probe.table_word = table_word;
+    g_inline_probe.expected_extra = opcode == 0x03 ? 16 : opcode == 0x05 ? 32 :
+        (opcode == 0xB4 || opcode == 0xBF) ? ((w0 & 2) ? 16 : 0) :
+        opcode == 0xBD ? 16 : 8;
 }
 
 extern "C" void rs64_e9prov_section2_latch() {
@@ -294,6 +372,25 @@ extern "C" void rs64_e9prov_frame_resume(uint32_t slot, uint32_t resumed_pc) {
 }
 
 extern "C" void rs64_e9prov_task_end(uint32_t task) {
+    if (log_inline_advance() && g_e9prov.task == task && g_inline_probe.active) {
+        ++g_inline_probe.incomplete;
+        g_inline_probe.active = false;
+    }
+    if (log_inline_advance() && g_e9prov.task == task &&
+        (g_inline_probe.samples[1] || g_inline_probe.samples[2] || g_inline_probe.samples[3] ||
+         g_inline_probe.samples[4] || g_inline_probe.samples[5] || g_inline_probe.samples[6])) {
+        if (g_inline_probe_summaries.fetch_add(1, std::memory_order_relaxed) < 32) {
+            fprintf(stderr, "[inline-advance-summary] task=%u phase=%u samples=mm:%u/%u tg:%u/%u tri:%u/%u tx:%u/%u oh:%u/%u ol:%u/%u incomplete=%u\n",
+                    task, rs64_phase_ord(), g_inline_probe.mismatch[1], g_inline_probe.samples[1],
+                    g_inline_probe.mismatch[2], g_inline_probe.samples[2],
+                    g_inline_probe.mismatch[3], g_inline_probe.samples[3],
+                    g_inline_probe.mismatch[4], g_inline_probe.samples[4],
+                    g_inline_probe.mismatch[5], g_inline_probe.samples[5],
+                    g_inline_probe.mismatch[6], g_inline_probe.samples[6],
+                    g_inline_probe.incomplete);
+            fflush(stderr);
+        }
+    }
     if (!log_e9_provenance() || g_e9prov.task != task) return;
     if (g_e9prov.control || g_e9prov.target) {
         for (uint32_t emitted : g_e9prov.emitted_addrs) {

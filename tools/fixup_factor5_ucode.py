@@ -1096,6 +1096,51 @@ if is_main_ucode and FRAME_AUDIT_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 13: live inline-data command advance audit (s714, item -421).
+#
+# The universal dispatcher has already advanced r17 by eight at both table
+# loads. Record the live DMA-provided table word there, then close the sample
+# only when execution returns to L_1090. This measures the handler-local extra
+# advance without guessing which generated label a DMA/overlay table word names.
+# ---------------------------------------------------------------------------
+INLINE_ADVANCE_MARKER = "/* fixup: inline advance audit */"
+if is_main_ucode and INLINE_ADVANCE_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_e9prov_frame_resume[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_inline_probe_resume(uint32_t r17);\n'
+        'extern "C" void rs64_inline_probe_dispatch(uint32_t r17, uint32_t w0, uint32_t table_kind, uint32_t table_word);  ' +
+        INLINE_ADVANCE_MARKER + "\n",
+        text, count=1)
+    if n_decl != 1:
+        print("fixup_factor5_ucode: FIXUP 13 ANCHOR FAILED (declaration).", file=sys.stderr)
+        sys.exit(1)
+    fetch_anchor = re.compile(
+        r"(L_1090:\n)(    if \(\+\+rs64_iter > 16384\) \{)")
+    text, n_fetch = fetch_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_inline_probe_resume(r17);  " + INLINE_ADVANCE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_fetch != 1:
+        print("fixup_factor5_ucode: FIXUP 13 ANCHOR FAILED (L_1090 resume).", file=sys.stderr)
+        sys.exit(1)
+    table1_anchor = re.compile(
+        r"(    r2 = RSP_MEM_HU_LOAD\(0XD6, r2\);\n)(    // jr          \$2)")
+    text, n_table1 = table1_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_inline_probe_dispatch(r17, r19, 1, r2);  " + INLINE_ADVANCE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    table2_anchor = re.compile(
+        r"(    r2 = RSP_MEM_HU_LOAD\(0X64, r2\);\n)(    // jr          \$2)")
+    text, n_table2 = table2_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_inline_probe_dispatch(r17, r19, 2, r2);  " + INLINE_ADVANCE_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if n_table1 != 1 or n_table2 != 1:
+        print(f"fixup_factor5_ucode: FIXUP 13 ANCHOR FAILED (table loads): table1={n_table1} table2={n_table2}.", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -1133,5 +1178,7 @@ if SOURCE_AUDIT_MARKER in text and SOURCE_AUDIT_MARKER not in original:
     notes.append("source-stream completion audit (s686)")
 if UNWIND_AUDIT_MARKER in text and UNWIND_AUDIT_MARKER not in original:
     notes.append("EndDL/unwind audit (s687)")
+if INLINE_ADVANCE_MARKER in text and INLINE_ADVANCE_MARKER not in original:
+    notes.append("live inline-data advance audit (s714)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)

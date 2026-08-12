@@ -260,8 +260,27 @@ zero table writers, while both table readers are present at `L_1090`/`L_10C8`.
 This selects **H-dispatch-table-opaque**, not H-advance-conformant or
 H-advance-mismatch. The absence is structural, not a null runtime counter:
 the generated source contains only table loads and the checked-in toml lists
-the indirect targets as values extracted from the ucode data section. The
-next discriminating measurement must log the live table word, opcode, entry
-`r17`, and post-handler `r17` for all six inline-data families in one
-phase-gated run. That runtime table snapshot is also the positive control for
-the probe; without it, a zero mismatch count is not evidence.
+the indirect targets as values extracted from the ucode data section.
+
+## Live table / fetch-loop probe (s714)
+
+The regeneration-safe probe sampled both live table loads and reset its fixed
+96-detail/32-summary budgets at each in-process VI phase. In the driven 512
+phase (ordinal 6), the positive control was live: `0x03` resolved table 1 to
+`0x14D4`, `0xB4` to table 2 `0x1484`, `0xBF` to `0x146C`, and `0xBE` to
+`0x12E4`. MoveMem was 0/720--743 mismatch per sampled task (extra `+16`);
+extended OtherMode-H was 0/186--202 mismatch (`+8`). These are independent
+live confirmations of the static MoveMem result and the resident OtherMode
+candidate.
+
+TriGen was 15/15 mismatch in the first dense phase-6 task and Tri was
+1,245--1,372 mismatch per sampled task under a dispatcher-to-*next fetch*
+comparison. That is **not evidence of an advance defect**: the exact live
+triangle entries show both `+24` and `+8` fetch-loop deltas, while the
+reference says Tri may consume inline data and continue a triangle run. A
+single next-fetch point therefore collapses multiple internal command steps
+into one delta. The probe correctly establishes its table-word control and
+rules out a zero-count interpretation, but it leaves
+H-advance-conformant/H-advance-mismatch unevaluable for Tri/TriGen. The next
+probe must reconstruct `r17` at the internal advances in `0x146C`, `0x1484`,
+and the live TriGen overlay path before comparing reference totals.

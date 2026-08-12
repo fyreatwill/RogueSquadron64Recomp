@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s713; compacted in maintenance s679)
+## Current truth (reviewed through s714; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -556,10 +556,15 @@ maintenance pass. Closed lineages are not backlog items.
    in generated C. Thus **H-advance-conformant** and
    **H-advance-mismatch are UNEVALUABLE**; **H-dispatch-table-opaque has
    single-source static support** from table-load and overlay-selection code.
-   The
-   next unit instruments one phase-gated run to snapshot live table words and
-   per-family entry/exit `r17` for all six reference inline-data commands;
-   that table snapshot is its positive control.
+   **s714 live phase-6 table probe:** the positive control is LIVE
+   (`0x03→table1:0x14D4`, `0xB4→table2:0x1484`, `0xBF→table2:0x146C`,
+   `0xBE→table2:0x12E4`). MoveMem is 0/720--743 and OtherMode-H 0/186--202
+   mismatch per phase-6 task. TriGen (15/15 in the first dense task) and Tri
+   (1,245--1,372/task) differ when measured from dispatch to the *next fetch*,
+   but the observed `+8/+24` totals conflate Tri's documented run continuation
+   with one command. This is a qualified instrument result, not a
+   generated-advance verdict. Next: reconstruct `r17` at internal Tri/TriGen
+   advances, with the same live table control.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

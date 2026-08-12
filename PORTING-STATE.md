@@ -52660,3 +52660,31 @@ No runtime behavior or mitigation changed. The next unit is one
 regeneration-safe, phase-gated probe that logs live table word plus handler
 entry/exit `r17` for every selected family; the live table snapshot is its
 required positive control.
+
+## Session 714 (2026-08-12) — live table probe qualifies itself; Tri totals are run-shaped
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 49,980 bytes, so maintenance did
+not trigger. The first bounded probe implementation consumed its global
+detail budget before the VI-512 gate; it was corrected and rerun in the same
+session with an in-process phase ordinal, a per-phase 96-detail/32-summary
+budget, and the ordinal printed on every row. The corrected run reached VI
+512 (phase 6), accepted the first phase-relative Start, then transitioned to
+1024; there was no `[CRASH]`.
+
+The live-table positive control fired in phase 6: `0x03 → table1:0x14D4`,
+`0xB4 → table2:0x1484`, `0xBF → table2:0x146C`, and
+`0xBE → table2:0x12E4`. MoveMem was 0/720--743 mismatch per sampled phase-6
+task (`+16` handler-local) and OtherMode-H 0/186--202 (`+8`). The direct
+table/entry/return instrument therefore works and independently confirms those
+two reference advances.
+
+TriGen was 15/15 mismatch in the first dense phase-6 task and Tri was
+1,245--1,372 mismatch per sampled phase-6 task under a dispatch-to-next-fetch
+comparison, with live Tri rows showing both `+24` and `+8`. This does not
+prove H-advance-mismatch: the reference documents conditional inline data and
+triangle-run continuation, so the next fetch can follow more than one internal
+Tri command step. It rules out a zero-counter reading and leaves the Tri/TriGen
+advance hypotheses unevaluable. The next unit instruments only the internal
+`r17` advances in live `0x146C`, `0x1484`, and the `0x05` overlay continuation,
+while retaining this run's live-table positive control. No mitigation or
+runtime behavior changed.
