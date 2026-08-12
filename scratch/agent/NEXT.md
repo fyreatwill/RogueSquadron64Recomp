@@ -2,6 +2,25 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
+## s672 status: instrument DONE, run BLOCKED (turn-cadence, not a bug)
+
+The `e9_aligned` counter (below) is already built and committed
+(`src/main/main.cpp` `[dl-sync-probe2]`, `ROGUESQ_LOG_DL_SYNC2=1` wired into
+`scratch/agent/s670_postsec2_pulse_freeroll.sh`). Do NOT redo the
+instrumentation. The s672 session's interactive turn-based Stop-hook
+check-in cadence could not outrun the ~1400-2400s the run itself needs (see
+`scratch/agent/BLOCKED.md` for detail) — this is an artifact of that one
+session's interaction pattern, not a discriminating result and not a code
+problem. Just run it:
+
+    env BUDGET_S=2400 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
+
+and let it run to completion (up to ~2400s) before checking in — do not
+end the session on intermediate checks. Once it finishes, score
+`e9_aligned` (from `[dl-sync-probe2]`) against the naive `e9_a`/`e9_b`
+(from `[dl-sync-probe]`) per task, matched by task number, per Outcomes
+A/B/C below.
+
 ## Single work unit
 
 **Item -421 (rdpFs post-sec2 plateau): distinguish H-e9-not-translated from

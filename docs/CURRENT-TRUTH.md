@@ -330,7 +330,15 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     can land mid-command and hit a coincidental 0xE9 byte). Check the
     boring explanation (walker misalignment) first, per iron rule 5, before
     H-e9-not-translated enters this file as a real finding. Scorers:
-    `scratch/agent/s669_postsec2_offline_score.py`. Full: Sessions 669-671.
+    `scratch/agent/s669_postsec2_offline_score.py`. **s672: instrument
+    built** (`e9_aligned` counter added to `ROGUESQ_LOG_DL_SYNC2`'s
+    `[dl-sync-probe2]` output, `ROGUESQ_LOG_DL_SYNC2=1` wired into the
+    freeroll's env) but the discriminating run itself could not complete —
+    BLOCKED (turn-cadence limit, not an environment/build problem; see
+    `scratch/agent/BLOCKED.md` and PORTING-STATE.md Session 672). Next
+    session: just run `env BUDGET_S=2400 zsh
+    scratch/agent/s670_postsec2_pulse_freeroll.sh` to completion, no further
+    code changes needed. Full: Sessions 669-672.
 
 -420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
     Outcome A (content advances; residual → -421).**

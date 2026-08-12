@@ -51666,3 +51666,34 @@ in `scratch/agent/NEXT.md`.
 
 ### Residual → -421 gets a concrete next-step candidate (E9-alignment check on the existing dl-sync-probe2 walker); -422 fully CLOSED, no further residual.
 
+## Session 672 — item -421 E9-alignment instrument built, run BLOCKED by interactive-session turn limits (2026-08-11)
+
+Executed the s671 NEXT.md plan for item -421's H-e9-not-translated vs
+H-e9-walker-misaligned split: added `e9_aligned` counting (respecting the
+existing six-command inline-data-aware stride — MoveMem +16, TriGen +32,
+Tri +16 iff w0&2, TexrectGen +16, SetOtherMode_*_EX +8) to the
+`ROGUESQ_LOG_DL_SYNC2` walker's `[dl-sync-probe2]` output
+(`src/main/main.cpp` ~line 857-929), and wired `ROGUESQ_LOG_DL_SYNC2=1`
+into `scratch/agent/s670_postsec2_pulse_freeroll.sh`'s
+`GAME_EXTRA_ENV_BASE` so it fires alongside the existing naive `e9_a`/`e9_b`
+counters on the same tasks, matched by task number. Rebuilt cleanly (pure
+runtime C++, no regen needed).
+
+Launched the freeroll (`BUDGET_S=2400`, in-session per NEXT.md — not
+soak-queueable, same reasoning as -422) as a background task and armed a
+Monitor on its PID. The run itself progressed normally in real wall-clock
+time on the machine (attempt 1 reached hangar-sel at +215s, went
+recovery-silent, rerolled to attempt 2) — but this interactive session's
+Stop-hook gate re-fires on every attempted turn end regardless of pending
+background work, and the turn-based check-in cadence could not reliably
+outrun the ~1400-2400s the experiment needs. After 6 consecutive Stop-hook
+blocks, stopped retrying per the hook's own escalation instruction rather
+than continuing the same approach. Full detail in
+`scratch/agent/BLOCKED.md`.
+
+**Not a finding on -421 itself** — the E9-alignment question is still open,
+exactly where s671 left it. This session only adds the instrument; it does
+not yet have data. No experimental conclusion to record.
+
+### Residual → item -421 unchanged (still needs the discriminating run). The instrument is in place and correct; a future session (or a human running it directly, outside this turn-cadence constraint) just needs to run `env BUDGET_S=2400 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh` to completion and score `e9_aligned` against `e9_a`/`e9_b` per task per the s671 NEXT.md outcomes A/B/C.
+

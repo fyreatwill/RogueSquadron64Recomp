@@ -856,6 +856,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                         uint32_t cmds2 = 0, jumps2 = 0, b8_2 = 0;
                         uint32_t setcimg_n = 0, setcimg_wild = 0;
                         uint32_t wild_addr = 0, wild_w = 0;
+                        uint32_t e9_aligned = 0; // item -421: E9 hits at inline-data-respecting cmd boundaries
                         char end2[8] = {0};
                         for (int i = 0; i < 8192 && addr2 + 8u <= 0x800000u; ++i) {
                             uint8_t op = rbyte(addr2);
@@ -864,6 +865,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                                           ((uint32_t)rbyte(addr2 + 2) <<  8) |
                                           ((uint32_t)rbyte(addr2 + 3));
                             cmds2++;
+                            if (op == 0xE9) e9_aligned++;
                             if (op == 0xFF) {
                                 setcimg_n++;
                                 const uint16_t w = (uint16_t)((w0 & 0xFFFu) + 1u);
@@ -924,9 +926,9 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                         }
                         fprintf(stderr,
                                 "[dl-sync-probe2] task=#%d cmds=%u jumps=%u b8=%u end=%s "
-                                "setcimg_n=%u setcimg_wild=%u wild_addr=0x%X wild_w=%u dl_ptr=0x%08X\n",
+                                "setcimg_n=%u setcimg_wild=%u wild_addr=0x%X wild_w=%u e9_aligned=%u dl_ptr=0x%08X\n",
                                 s_n, cmds2, jumps2, b8_2, end2,
-                                setcimg_n, setcimg_wild, wild_addr, wild_w, dl_ptr);
+                                setcimg_n, setcimg_wild, wild_addr, wild_w, e9_aligned, dl_ptr);
                         fflush(stderr);
                     }
                     const uint32_t fs_addr = rs64_dpc_get_last_fullsync_addr();
