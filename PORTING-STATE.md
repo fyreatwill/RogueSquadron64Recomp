@@ -51857,3 +51857,32 @@ Log:
 `scratch/s73_post_a_scene/s670_postsec2_pulse_5_20260812013350/run.log`.
 
 ### Residual → compare authoritative parser advances with the Factor 5 reference on matched post-sec2 streams.
+
+## Session 677 (2026-08-12) — item -421: guest E9 and authoritative RDP occupy different stages
+
+Built one phase-scoped authoritative `processRDPLists` advance ring carrying
+raw opcode, selected word length, `[addr,next)`, and pending-byte state. The
+first attempt exposed a phase-budget bug (all reports spent before section 2),
+so the final build gated reports to task 6500+, matching the prior 6719 sample.
+The completed recovery-active run reached section 2 with no crash.
+
+Positive control passed in the same run: tasks 8227–8229 each had guest
+`e9_aligned=1` and authoritative `auth_e9=1`; the parser decoded raw E9 at
+`0x4DA8C8`, length 1, pending `0->0`. In the next 21 target reports, the guest
+walker found 1–9 aligned E9 commands per task while authoritative E9 was zero.
+Pending carry remained zero in every captured authoritative record.
+
+The discriminating address evidence is structural: guest SW DL roots were in
+physical `0x739650–0x751B18`, while authoritative RDP ranges were in
+`0x4Dxxxx`. Therefore no local authoritative command advance can span a guest
+E9 address. H-rdp-length-skip and H-rdp-boundary-carry are refuted for this
+loss; H-rdp-source-divergence is confirmed. The loss must be joined across the
+LLE translation/emission boundary, before `processRDPLists`.
+
+Logs:
+`scratch/s73_post_a_scene/s670_postsec2_pulse_2_20260812021836/run.log`
+(target),
+`scratch/s73_post_a_scene/s670_postsec2_pulse_1_20260812020006/run.log`
+(phase-budget failure and early controls).
+
+### Residual → tag guest E9 dispatch in Factor 5 ucode and correlate it to emitted DPC submit ranges.

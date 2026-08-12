@@ -1302,10 +1302,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..0058975 100644
+index dccaa87..ab87e5e 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,258 @@
+@@ -5,12 +5,308 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1325,6 +1325,56 @@ index dccaa87..0058975 100644
  namespace RT64 {
      static FILE *displayListFp = nullptr;
  
++    struct Rs64RdpAdvanceRec {
++        uint32_t listStart, address, nextAddress, w0, w1;
++        uint16_t pendingBefore, pendingAfter;
++        uint8_t rawOp, cmdLength;
++    };
++    static Rs64RdpAdvanceRec s_rdp_advance_ring[512];
++    static uint32_t s_rdp_advance_n = 0;
++    static uint32_t s_rdp_advance_total = 0;
++
++    static bool rs64LogRdpAdvance() {
++        static const bool enabled = [] {
++            const char *e = std::getenv("ROGUESQ_LOG_RDP_ADVANCE");
++            return e && *e && *e != '0';
++        }();
++        return enabled;
++    }
++
++    extern "C" void rs64_rdp_advance_reset() {
++        s_rdp_advance_n = 0;
++        s_rdp_advance_total = 0;
++    }
++
++    extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
++                                              uint32_t guestE9) {
++        if (!rs64LogRdpAdvance() || guestE9 == 0 || task < 6500) return;
++        static uint32_t reports = 0;
++        if (++reports > 24) return;
++        uint32_t authE9 = 0;
++        const uint32_t base = s_rdp_advance_total > s_rdp_advance_n ?
++            s_rdp_advance_total - s_rdp_advance_n : 0;
++        for (uint32_t i = 0; i < s_rdp_advance_n; ++i)
++            authE9 += s_rdp_advance_ring[(base + i) & 511].rawOp == 0xE9;
++        fprintf(stderr,
++            "[rdp-advance-summary] report=%u task=%u guest_dl=0x%08X guest_e9=%u "
++            "auth_total=%u ring_n=%u auth_e9=%u\n",
++            reports, task, guestDl, guestE9, s_rdp_advance_total,
++            s_rdp_advance_n, authE9);
++        const uint32_t first = s_rdp_advance_n > 64 ? s_rdp_advance_n - 64 : 0;
++        for (uint32_t i = 0; i < s_rdp_advance_n; ++i) {
++            const Rs64RdpAdvanceRec &r = s_rdp_advance_ring[(base + i) & 511];
++            if (i < first && r.rawOp != 0xE9) continue;
++            fprintf(stderr,
++                "[rdp-advance] i=%u list=0x%06X addr=0x%06X next=0x%06X "
++                "raw=0x%02X len=%u pending=%u->%u w0=0x%08X w1=0x%08X\n",
++                i, r.listStart, r.address, r.nextAddress, r.rawOp,
++                r.cmdLength, r.pendingBefore, r.pendingAfter, r.w0, r.w1);
++        }
++        fflush(stderr);
++    }
++
 +    static bool rs64LogE9Dispatch() {
 +        static const bool enabled = [] {
 +            const char *e = std::getenv("ROGUESQ_LOG_E9_DISPATCH");
@@ -1564,7 +1614,7 @@ index dccaa87..0058975 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -112,7 +358,40 @@ namespace RT64 {
+@@ -112,7 +408,40 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -1606,7 +1656,30 @@ index dccaa87..0058975 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
-@@ -136,13 +415,155 @@ namespace RT64 {
+@@ -123,6 +452,22 @@ namespace RT64 {
+                 func = rdpGBI->map[opCode];
+                 cmdLength = state->rdp->commandWordLengths[opCode];
+ 
++                if (rs64LogRdpAdvance()) {
++                    Rs64RdpAdvanceRec &r = s_rdp_advance_ring[s_rdp_advance_total & 511];
++                    if (s_rdp_advance_n < 512) s_rdp_advance_n++;
++                    r.listStart = dlStartAdddress;
++                    r.address = dlStartAdddress + (uint32_t)((uintptr_t)dl - (uintptr_t)dlStart);
++                    r.nextAddress = r.address + cmdLength * sizeof(DisplayList);
++                    r.w0 = dl->w0;
++                    r.w1 = dl->w1;
++                    r.pendingBefore = (uint16_t)state->rdp->pendingCommandRemainingBytes;
++                    r.pendingAfter = (dl + cmdLength > dlEnd) ?
++                        (uint16_t)((dl + cmdLength - dlEnd) * sizeof(DisplayList)) : 0;
++                    r.rawOp = rawOpCode;
++                    r.cmdLength = (uint8_t)cmdLength;
++                    s_rdp_advance_total++;
++                }
++
+ #       ifdef DUMP_DISPLAY_LISTS
+                 RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
+ #       endif
+@@ -136,13 +481,155 @@ namespace RT64 {
                      break;
                  }
  

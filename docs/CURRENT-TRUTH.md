@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (established by session 295; unchanged, reviewed through s676)
+## Current truth (established by session 295; unchanged, reviewed through s677)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -363,8 +363,17 @@ a range pointer. Highest allocated so far: -422. The next NEW item takes -423.
     **H-e9-pre-dispatch-loss CONFIRMED; H-e9-map-or-handler-loss and
     H-e9-post-handler-loss REFUTED as dominant mechanisms.** Next compare the
     authoritative parser's command lengths/advances against
-    `docs/F5-UCODE-REFERENCE.md` on the same post-sec2 task population. Full:
-    Sessions 669-676.
+    `docs/F5-UCODE-REFERENCE.md` on the same post-sec2 task population.
+    **s677 Outcome C, dual-source:** a phase-scoped authoritative advance ring
+    captured 24 late tasks with `e9_aligned>0`. Three same-run controls decoded
+    authoritative E9 normally at output `0x4DA8C8`; then 21 target tasks had
+    guest E9 counts 1–9 but authoritative E9=0 and pending carry=0. The address
+    domains are disjoint: guest SW DLs `0x739650–0x751B18`, authoritative RDP
+    ranges `0x4Dxxxx`. **H-rdp-length-skip and H-rdp-boundary-carry REFUTED for
+    this loss; H-rdp-source-divergence CONFIRMED.** The comparison must move
+    upstream to the LLE translation/emission path and join guest command
+    provenance to emitted DPC ranges; direct guest-address joins at
+    `processRDPLists` are structurally invalid. Full: Sessions 669-677.
 
 -420. **(s668→s669) post-sec2 mission progress under product headers — CLOSED
     Outcome A (content advances; residual → -421).**

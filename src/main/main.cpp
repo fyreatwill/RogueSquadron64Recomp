@@ -95,6 +95,9 @@ extern RspExitReason factor5_boot (uint8_t* rdram, uint32_t ucode_addr);
 extern uint8_t dmem[];
 extern "C" void rs64_dpc_drain_histogram(uint32_t out[64]);
 extern "C" uint32_t rs64_dpc_get_last_fullsync_addr();
+extern "C" void rs64_rdp_advance_reset();
+extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
+                                          uint32_t guestE9);
 // Defined in lib/rt64/src/hle/rt64_state.cpp — s171 crash-instant snapshot
 // of [vi-fs-decision] state, read from the SIGSEGV/SIGBUS handler below.
 extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *lastFireDecisionN,
@@ -929,6 +932,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                                 "setcimg_n=%u setcimg_wild=%u wild_addr=0x%X wild_w=%u e9_aligned=%u dl_ptr=0x%08X\n",
                                 s_n, cmds2, jumps2, b8_2, end2,
                                 setcimg_n, setcimg_wild, wild_addr, wild_w, e9_aligned, dl_ptr);
+                        rs64_rdp_advance_report((uint32_t)s_n, dl_ptr, e9_aligned);
                         fflush(stderr);
                     }
                     const uint32_t fs_addr = rs64_dpc_get_last_fullsync_addr();
@@ -1004,6 +1008,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
 // this step), then invokes the LLE runner.
 extern "C" int rs64_run_lle_gfx(uint8_t* rdram, const OSTask* task) {
     std::lock_guard<std::recursive_mutex> lle_lock(g_lle_task_mutex);
+    rs64_rdp_advance_reset();
     s_pending_task_data_ptr        = (uint32_t)task->t.data_ptr;
     s_pending_task_ucode_data      = (uint32_t)task->t.ucode_data;
     s_pending_task_ucode_data_size = (uint32_t)task->t.ucode_data_size;

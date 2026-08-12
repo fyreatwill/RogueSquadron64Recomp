@@ -2,41 +2,38 @@
 
 HYPOTHESIS-ID: m3-post-exit-fs-stall
 
-Build one same-run authoritative command-advance audit for item -421. Read
-`docs/F5-UCODE-REFERENCE.md` first. At `processRDPLists`, log a phase-budgeted
-ring of the raw command address/opcode, selected command length, next address,
-and pending-command boundary state for post-sec2 tasks whose independent
-`DL_SYNC2` walk reports `e9_aligned>0`. Include a positive-control sample from
-tasks where authoritative E9 does dispatch. Do not change command lengths or
-inject/drop commands.
+Build one same-run LLE translation provenance audit for item -421. Instrument
+the Factor 5 ucode dispatch boundary (through `tools/fixup_factor5_ucode.py`,
+not a transient generated-file edit) to count and tag guest E9 command
+addresses, and correlate those tags with DPC writes/submits for the same task.
+Preserve the s677 authoritative advance positive control. Do not inject, drop,
+or change command lengths.
 
 Commands:
 
+    python3 tools/fixup_factor5_ucode.py
     ./submodule-patches/export.sh
     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
-    env BUDGET_S=2400 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
+    env BUDGET_S=1200 TARGET_PULSED=1 zsh scratch/agent/s670_postsec2_pulse_freeroll.sh
 
 ## Competing hypotheses
 
-- **H-rdp-length-skip:** `commandWordLengths[op]` advances across aligned E9
-  slots because an earlier command length is wrong for Factor 5 output.
-- **H-rdp-boundary-carry:** pending-command carry across DPC submissions
-  consumes or reassembles bytes so the E9 slot is never a command boundary.
-- **H-rdp-source-divergence:** the independent guest walker and authoritative
-  RDP parser are examining different buffers/stages; no local advance crosses
-  the walker's E9 address.
+- **H-f5-dispatch-skip:** the Factor 5 command loop never dispatches aligned
+  guest E9 commands in the target tasks.
+- **H-f5-handler-noemit:** guest E9 dispatches, but its handler emits no E9
+  into the output ring.
+- **H-dpc-submit-loss:** the handler writes E9 into the output ring, but the
+  corresponding byte range is not forwarded to `processRDPLists`.
 
 ## Discriminating measurement
 
-Join each aligned E9 address to the authoritative address/advance ring.
-Positive controls: section 2 reached, `e9_aligned>0`, millions of authoritative
-commands, E7 nonzero before the scoped window, and at least one authoritative
-E9 with matching handler/state lines.
+For each phase-scoped target task, join guest walker E9 addresses to ucode
+dispatch hits, output-ring E9 writes, DPC submit ranges, and authoritative E9.
+Same-run controls must show the complete chain for at least one authoritative
+E9 task.
 
-- An earlier command's `[addr,next)` spans the E9 slot: H-rdp-length-skip;
-  compare that opcode's length with the reference table.
-- The E9 bytes enter/leave pending-command state: H-rdp-boundary-carry.
-- No authoritative range covers the aligned address: H-rdp-source-divergence;
-  add buffer provenance/range IDs next.
-- Addresses and boundaries match yet E9 is not decoded: instrument the exact
-  raw bytes at the first mismatch before proposing any fix.
+- Guest E9 absent at ucode dispatch: H-f5-dispatch-skip.
+- Dispatch present but no output write: H-f5-handler-noemit.
+- Output write present but outside/absent from submit: H-dpc-submit-loss.
+- Submit contains E9 but authoritative decode is absent: refine the existing
+  output-ring advance capture around that exact emitted address.
