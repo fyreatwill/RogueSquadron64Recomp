@@ -72,6 +72,7 @@ struct watch {
     uint32_t start, end;
     unsigned int flags;
     const char *label;
+    long hits;
 };
 static struct watch g_watch[MAX_WATCHES];
 static int g_nwatch;
@@ -131,9 +132,14 @@ static void dbg_init(void)
 static void dbg_update(unsigned int pc)
 {
     uint32_t flags = 0, accessed = 0;
+    int i;
     pDebugBreakpointTriggeredBy(&flags, &accessed);
 
     g_hits++;
+    for (i = 0; i < g_nwatch; i++) {
+        if (accessed >= g_watch[i].start && accessed < g_watch[i].end)
+            g_watch[i].hits++;
+    }
     if (g_hits <= g_hit_cap) {
         unsigned int prev = (unsigned int)pDebugGetState(M64P_DBG_PREVIOUS_PC);
         printf("[hit] %s%s addr=0x%08x pc=0x%08x prev_pc=0x%08x t=%.1fs n=%ld\n",
@@ -535,6 +541,10 @@ int main(int argc, char **argv)
 
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",
            g_hits, now_s() - g_t0, g_vis, g_vis / 60.0);
+    for (int i = 0; i < g_nwatch; i++)
+        printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s)\n",
+               g_watch[i].label, g_watch[i].start, g_watch[i].end,
+               g_watch[i].hits);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses
      * rely on is invisible in-memory defaults - i.e. an unverifiable

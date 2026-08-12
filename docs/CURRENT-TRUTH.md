@@ -22,7 +22,7 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s696; compacted in maintenance s679)
+## Current truth (reviewed through s697; compacted in maintenance s679)
 
     cd build && ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
       ROGUESQ_STUB_MISSING_FUNCS=1 ./RogueSquadron64Recomp
@@ -411,8 +411,19 @@ maintenance pass. Closed lineages are not backlog items.
    (`dl06=push:2,complete:2,open:0`; P/O/R counts 20/16/16), but every one was
    recovery-silent and none latched section 2. This is a third consecutive
    unqualified provenance reroll (s694--s696); do not enqueue another
-   unchanged reroll. The next unit is a recovery-latch writer/readiness audit
-   with a retail-oracle positive control before any new runtime instrument.
+   unchanged reroll. **s697 retail-oracle readiness audit:** the first
+   concurrent two-arm attempt was invalid because the oracle's combined hit
+   total hid the narrow watch; it also never left VI width 320. The oracle now
+   prints per-watch totals. Its fixed single-instance arm carried a whole-RDRAM
+   positive control (11,785,811 writes), a narrow physical
+   `0x0076B768:0x0076B76C` watch (0 writes), `--pif-trace`, and the documented
+   6..56-second Start schedule. Every injected Start was observed in PIF RAM,
+   but VI remained 320 through 4,199 frames/70.0 emulated seconds, never
+   reaching the documented 640/1024/hangar phases. The target zero is therefore
+   **unqualified**: it cannot distinguish H-game-route, H-observer, or
+   H-runtime-divergence. The next unit is an oracle boot-reachability audit
+   (RSP/plugin versus debugger/watch arms) before another target watch or any
+   new runtime instrument.
    The remaining question is whether the valid `0x06` chain is pushed with
    incorrect control-flow semantics or lacks its eventual root return. The
    pulse/section-3 outcomes remain incidental to this provenance result, not

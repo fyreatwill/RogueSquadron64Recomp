@@ -52299,3 +52299,26 @@ third consecutive unqualified reroll in this thread (s694--s696), so the next
 unit must not repeat it unchanged; audit the recovery-latch writer/readiness
 path, beginning with a retail-oracle positive control, before retrying the
 provenance capture.
+
+## Session 697 (2026-08-12) — retail recovery-cell audit blocked by oracle boot reachability
+
+Ran the prescribed independent retail-oracle audit before adding any runtime
+instrument. The initial simultaneous hangar-hold and advance arms were not
+scorable: their broad and narrow watches shared one combined hit total, and
+both remained at VI width 320. Fixed the oracle to print a count for every
+watch, then rebuilt it.
+
+The corrected single-instance arm used the retail ROM, RSP HLE, the documented
+Start schedule (6 through 56 seconds), `--vi-trace`, `--pif-trace`, a whole
+RDRAM write control, and a physical `0x0076B768:0x0076B76C` target watch.
+The control was live with 11,785,811 writes in 70.2 wall seconds/4,199 VI;
+each injected Start produced the expected PIF transition, independently
+confirming input delivery. Yet the only VI width was 320 throughout; no
+documented 640, 1024, or hangar phase occurred. The target watch had 0 hits.
+
+This target zero is unqualified and rules out nothing about H-game-route,
+H-observer, or H-runtime-divergence: the oracle did not reach the phase in
+which it could answer the question. The next bounded unit is an oracle
+boot-reachability A/B/C (unwatched current-RSP, watched current-RSP, and each
+installed alternative RSP) before another recovery-cell watch or provenance
+reroll.

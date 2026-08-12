@@ -1,36 +1,39 @@
-# NEXT work unit (after s696: three unqualified provenance rerolls)
+# NEXT work unit (after s697: retail target watch is phase-unqualified)
 
 HYPOTHESIS-ID: m3-recovery-latch-readiness
 
-Do a bounded recovery-latch writer/readiness audit before any further
-`m3-e9-provenance-cap` reroll. Do not alter the E9 tracer or enqueue another
-identical 600-second provenance recipe.
+Do a bounded retail-oracle boot-reachability audit before any further
+`m3-e9-provenance-cap` reroll or recovery-cell target watch. Do not alter the
+E9 tracer or enqueue another identical 600-second provenance recipe.
 
 ## Competing hypotheses
 
-- **H-game-route:** the current route legitimately never emits the recovery
-  FULL_SYNC/address `0x0076B768`; the section-2 prerequisite is stochastic
-  game state, not an observer defect.
-- **H-observer:** the recovery write/emission occurs but the current runtime
-  marker misses it; this contradicts s692's three live marker classes and
-  needs independent retail evidence before being revived.
-- **H-runtime-divergence:** retail reaches the recovery write on the same
-  phase-gated path while recomp does not, identifying an emulation/control-flow
-  divergence upstream of the E9 provenance target.
+- **H-watch-perturbation:** debugger memory watches prevent retail boot from
+  advancing; an unwatched `--vi-trace --pif-trace` arm reaches 640/1024 while
+  the whole-RDRAM-control arm remains 320.
+- **H-rsp-stall:** the currently selected retail RSP plugin fails a boot task;
+  all otherwise-equivalent arms using it remain 320, while an installed
+  alternative RSP plugin reaches 640/1024.
+- **H-oracle-environment:** the phase failure persists across no-watch and
+  alternative-RSP arms, so the oracle setup/ROM environment is not presently
+  a valid retail witness. Do not interpret the recovery-cell zero in that
+  state.
 
 ## Discriminating measurement
 
-First use `tools/oracle/README.md`'s whole-RDRAM write watch as a positive
-control; it must fire at the documented rate. Then arm physical `0x0076B768`
-and run the documented phase-gated retail path. A retail hit while recomp's
-three markers remain absent supports H-runtime-divergence; no retail hit after
-the path demonstrably reaches the equivalent phase supports H-game-route;
-whole-RDRAM-only activity or failure to reach the phase is unqualified and
-must not be used to revive H-observer. If retail cannot reach that phase, stop
-before adding a runtime instrument and record the exact reachability limit.
+Build every available arm in one batch: (A) current RSP with no memory watch,
+(B) current RSP plus the whole-RDRAM control watch, and (C) each installed
+alternative RSP plugin with no watch. All use `--vi-trace --pif-trace` and the
+same documented Start schedule. A/B splits H-watch-perturbation; C splits
+H-rsp-stall. Each arm must show PIF Start transitions, and a successful arm
+must reach a VI-width transition past 320 before it can qualify a later
+`0x0076B768` target watch. If no arm crosses 320, record H-oracle-environment
+and stop before adding a runtime instrument.
 
 ## Commands
 
-    sed -n '1,240p' tools/oracle/README.md
-    rg -n '0x0076B768|recovery-silent|rdp-fullsync|fs-slot' scratch/agent/s692_recovery_latch_audit.sh scratch/agent/s670_postsec2_pulse_freeroll.sh
-    tail -20 scratch/agent/SOAK-RESULTS.md
+    ls /opt/homebrew/lib/mupen64plus/*rsp*.dylib
+    tools/oracle/build/rs64_oracle --help
+    # Run A/B/C with --secs 70 --vi-trace --pif-trace and:
+    # --press '6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start'
+    # B alone adds --watch-write 0x0:0x800000.
