@@ -53922,3 +53922,50 @@ REFUTED** (`0x1E2C` UJ gone; route LIVE). **H-1e2c-breaks-06
 REFUTED. H-1e2c-restores-e9 REFUTED.** Residual is the 1ED4
 trampoline return at `0x1F04`. Do not splice overlay `0x20`
 next. Do not add `0x1E6C` until `0x1F04` is LIVE.
+
+## Session 755 (2026-08-12) — ovl1c 1ED4 trampoline return 0x1F04 is LIVE; residual is $30 restores 0x1E6C/0x1EA8
+
+Step 0 measured `CURRENT-TRUTH.md` at 41,742 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s754: route dest
+`0x1F04` / `153==0x1C` to `OVL1C_1F04`. SOAK-RESULTS s754 line
+was already folded; no unread queue recipes.
+
+Fixup 6n (own marker `ovl1c_1f04`) inserts
+`case 0x1F04` gated on `153==0x1C` → `OVL1C_1F04`. Label already
+existed from the 6k splice; no composite or RSPRecomp. Independent
+of 6m's marker so an already-routed `0x1E2C` file still gets the
+case. Did not add the later `$30`-return cases. Did not splice
+overlay `0x20`.
+**ORIGIN:** ovl1c `OVL1C_1ED4` saves `$ra` into `$30` then jals
+`0x1F0C` with `r31=0x1F04`; `OVL1C_1F9C` `jr $ra` is the
+legitimate return into `OVL1C_1F04`, which then `jr $30` to
+the original caller. Route, not a default-allow of `0x1F04`
+for every resident.
+
+Soak `scratch/agent/soak_results/s755_ovl1c_1f04_20260812-185242/run.log`
+(350 s, same recipe as s743–s754, CRASH=0, wrapper rc=0). Same-run
+positive control: `[ovl-route] res=0x1C tgt=0x1F04` last n=55232
+LIVE; dest `tgt=0x1DB0` (n=56448), jal-returns `tgt=0x1E18`
+(n=56064) and `tgt=0x1E2C` (n=56704), clip `res=0x04`, and
+ovl10 `tgt=0x1F40` stay LIVE. Four boot controls
+`dl06=push:2,complete:2,open:0` match=1.
+
+UJ `0x1F04` **3185→0**. `[clip-stray]` still 0. sec2
+`last_ovl` `0x1C/0x1E2C` 98 + `0x1C/0x1F04` 85 / 192
+(9 early `0x00/0x0000`). E9 match still boot-shaped: sec2
+match=9/192, the 3× boot-shaped `2/2/0` triplet. rdpFs
+0→5167 (s754 5150; not a restore). New residual:
+`Unhandled jump target 0x1EA8` n=1609 and `0x1E6C` n=1570,
+both from `OVL1C_1F04` `jr $30` (ucode line 4987). The other
+predicted `$30` landings (`0x1E7C`/`0x1E8C`/`0x1EBC`/`0x1ECC`)
+are 0 — those jals sit on `$6==0` arms not taken this soak.
+Callers: IMEM `0x1E60` sets `r31=0x1E6C`; IMEM `0x1E9C` sets
+`r31=0x1EA8`; both `goto OVL1C_1ED4`. Do not revert
+dest-`0x1F04` / `153==0x1C`.
+
+**H-1f04-ovl1c-jalret SELECTED.** **H-1f04-not-the-uj-path
+REFUTED** (`0x1F04` UJ gone; route LIVE). **H-1f04-breaks-06
+REFUTED. H-1f04-restores-e9 REFUTED.** Residual is the
+`$30` restore pair. Next is case `0x1E6C` / `153==0x1C`;
+`0x1EA8` is the sibling leftover. Do not splice overlay
+`0x20` next.
