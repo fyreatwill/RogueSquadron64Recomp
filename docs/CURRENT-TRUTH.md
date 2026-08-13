@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s779; compacted in maintenance s776)
+## Current truth (reviewed through s780; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -46,6 +46,13 @@ the chronological ledger. The active facts are:
   strengthens the exact-recipe 320-only explanation and selects it over
   timing sensitivity for this recipe; it does not explain the documented
   later retail timeline.
+- The matched s780 oracle horizon A/B ran two concurrent emulator-1 arms for
+  130 seconds with the whole-RDRAM positive control, VI/PIF traces, and all
+  eleven Start presses. Both recorded 21,635,499 whole-RDRAM writes, 7,799
+  VI callbacks, all eleven presses, and only width 320/origin `0x6dd280`.
+  This selects H-oracle-exact-recipe-320 over H-late-phase for the tested
+  driven recipe and rules out a transition merely delayed beyond 70 seconds;
+  it does not explain the documented later retail timeline.
 - The matched s777 oracle runtime check again found no later retail VI phase:
   debugger-on had the whole-RDRAM positive control (11,768,621 writes), 4,193
   VI callbacks, and all 11 PIF presses; debugger-off raw polling stayed at
@@ -124,23 +131,17 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **Oracle phase divergence — OPEN, H-oracle-exact-recipe-320 next.** s779's
-three-arm emulator-1 repeatability run kept every arm at width 320/origin
-`0x6dd280`, with positive whole-RDRAM controls and all eleven PIF presses. This
-strengthens exact-recipe reachability over schedule/timing sensitivity for the
-tested recipe. Next: compare the documented later-phase-driving oracle recipe
-against this exact recipe in one phase-gated, positive-control A/B, changing
-only the documented runtime/input condition that could select the later phase.
-s778's
-alternate-backend A/B had debugger-on positive controls of 11,782,489 whole-RDRAM
-writes over 4,198 VI callbacks and all 11 PIF presses; debugger-off had 70 raw polls,
-all width 320/origin `0x6dd280`. This refutes H-oracle-emulator-backend for the tested
-recipe. Next: run three fresh concurrent debugger-on emulator-1 arms with the same
-controls and phase gating; any later transition selects timing sensitivity, while
-three 320-only traces strengthen the exact-recipe explanation.
-The prior identity audit found byte-identical executable, core, RSP, input-plugin, and
-ROM artifacts; fresh configs differed only by `EnableDebugger`.
-
+1. **Oracle phase divergence — OPEN, H-oracle-exact-recipe-320 selected for the
+   driven recipe.** s780's two-arm 130-second horizon run kept every arm at
+   width 320/origin `0x6dd280`, with 21,635,499 whole-RDRAM positive-control
+   writes, 7,799 VI callbacks, and all eleven PIF Start presses per arm. This
+   rules out a merely late transition in the driven recipe. Next: phase-gated
+   A/B the documented later-phase-driving undriven recipe against the exact
+   eleven-Start recipe, changing only the input schedule; positive whole-RDRAM
+   writes and VI/PIF controls must be live in both arms. A later 512/1024/640
+   transition only in the undriven arm selects input-conditioned phase
+   divergence; identical 320-only traces select a remaining runtime/ROM
+   discrepancy.
 - **Overturned: H-oracle-runtime-environment-divergence (s777).** s777's
 bounded identity audit found byte-identical oracle/core/RSP/input/ROM artifacts;
 the matched configs differ only by `EnableDebugger`. This rules out artifact,

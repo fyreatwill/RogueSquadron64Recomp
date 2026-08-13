@@ -54725,3 +54725,21 @@ occurred. This strengthens **H-oracle-exact-recipe-320** and selects it over
 schedule/timing sensitivity for this recipe. It rules out neither a different
 documented phase-driving recipe nor the cause of the retail phase divergence.
 No port runtime code changed.
+## Session 780 (2026-08-13) — 130-second driven oracle remains 320-only
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 20,064 bytes, so maintenance did
+not trigger. The planned work unit was two concurrent debugger-on, emulator-1
+oracle arms for 130 seconds using the retail ROM, the whole-RDRAM positive
+control, VI and PIF traces, and the documented eleven-entry Start schedule.
+
+Both arms completed cleanly. Each recorded 21,635,499 whole-RDRAM writes,
+7,799 VI callbacks, and all eleven scheduled Start presses. Both reached the
+same initial width 320/origin `0x6dd280` and never logged a later 512, 1024,
+or 640 transition. The arms therefore select **H-oracle-exact-recipe-320**
+over H-late-phase for the tested driven recipe and rule out a transition merely
+delayed beyond the prior 70-second horizon. The positive controls and PIF
+traces make the null phase result evaluable. This does not explain the
+documented later retail timeline, so the next discriminator is an input-only
+A/B against the documented later-phase-driving undriven recipe.
+
+No port runtime code changed.
