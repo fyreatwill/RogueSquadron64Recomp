@@ -55945,8 +55945,9 @@ provenance positive controls. Late aligned joins for tasks 570 and 580 showed
 
 The submit-range logger's 128-row budget ended at task 282, leaving no
 producer serial records for those late joins. Independently, all 128 retained
-producer serials had matching consumer records with the same serial and
-range. This extends the producer/consumer identity evidence only for the
+producer records had matching consumer records with the same task and range;
+the consumer logger's serial is a call-boundary latest-submit label, not the
+producer record's serial. This extends the producer/consumer identity evidence only for the
 earlier population; it does not distinguish parser filtering from a join
 population issue in the late rows. The run later crashed in the known
 `slotDispatcherIter+872` family at 184.4s. No mitigation or legitimacy claim
@@ -55967,7 +55968,9 @@ control rows (`emit=1`, `raw=1`, `dispatch=1`, `match=1`), and ran through task
 649 before the known `slotDispatcherIter+872` SIGBUS.
 
 The run retained 863 E9-bearing producer serials across tasks 570–649. Every
-one had an exact RT64 consumer record with the same serial and [lo,hi) range.
+one had an exact RT64 consumer record with the same task and [lo,hi) range;
+the consumer logger's serial is a call-boundary latest-submit label, not the
+producer record's serial.
 The task-join stream independently retained 27 late aligned rows; 20 still
 had unequal bridge/parser deltas, including task 632 at 27/0 and task 649 at
 31/3. This rules out late producer/consumer range loss for the captured
@@ -55978,3 +55981,34 @@ not used as the E9 explanation.
 
 ORIGIN: the only changed values are the host-side provenance latch and its
 telemetry budget; no game value, RDP command, or mitigation behavior changed.
+
+## Session 834 (2026-08-13) — late E9 accounting selects parser-side branch
+
+Performed the prescribed bounded source-and-log audit; no build, run, or
+runtime behavior changed. The audit inventory found one writer/reset pair for
+the bridge counter (`rs64_count_submitted_e9` and task-begin store), one
+writer/reset pair for the RT64 parser counter (the two raw-0xE9 fetch sites and
+`rs64_rdp_advance_reset`), and one writer/reset pair for the aligned join value
+(the matching callback and `g_e9prov = {}`). The task join is called after the
+LLE task's deferred submissions are flushed and after the guest alignment
+callback, while the parser reset occurs once at `rs64_run_lle_gfx` entry.
+
+Computed from the s833 log, tasks 570–649 contain 863 E9-bearing submit-range
+records. Every one has exactly one consumer-range record with the same task
+and [lo,hi); there are no missing or duplicate exact range keys. All 80 late
+tasks have consumer rows and join rows. Of 80 join rows, 77 have unequal
+bridge/parser deltas. Sixty-nine retain reset < first-consumer-E9 < join, and
+all 80 have distinct matching epochs. Examples: task 570 is 9/1, task 580 is
+9/1, task 632 is 27/0, and task 649 is 31/3.
+
+This selects H-parser-filter over join-population for the captured late
+population: producer/consumer range identity and task epochs are aligned, but
+the authoritative parser count is lower or absent before the join snapshot.
+The source audit does not yet distinguish byte-order/raw-op decoding from
+pending-command handling or another parser guard, so no mitigation or game
+value legitimacy claim follows. The known late slot-dispatch SIGBUS is not
+used as evidence for this classification.
+
+ORIGIN: this session changed only ledger prose and scratch control files; all
+values discussed are existing host-side telemetry. No game value, RDP command,
+or mitigation behavior changed.

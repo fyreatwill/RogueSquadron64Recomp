@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s833 (2026-08-13). The active blocker is the authoritative
+Reviewed through s834 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -79,45 +79,62 @@ Priority until changed by the user:
 - s833 extended the section-2 provenance latch from 64 to 512 tasks. The same
   VI-1024 recipe reached task 649, passed all four control rows
   (`emit/raw/dispatch/match=1`), and retained 863 E9-bearing producer serials
-  across tasks 570–649. Every one had an exact consumer serial and [lo,hi)
-  range match. In the independent task-join accounting, 20 of 27 late
+  across tasks 570–649. Every one had an exact consumer task and [lo,hi)
+  range match; the consumer logger's serial is a call-boundary latest-submit
+  label, not the producer record's serial. In the independent task-join
+  accounting, 20 of 27 late
   aligned rows still had unequal deltas; examples include task 632
   `bridge_delta=27/parser_delta=0` and task 649 `31/3`. This rules out late
   submit-range loss for the captured population and selects the
   parser/filter-or-join-population branch, but does not yet distinguish those
   two or establish a writer/legitimacy claim. The run later hit the known
   `slotDispatcherIter+872` SIGBUS.
+- s834 completed the requested source-and-log accounting audit without a new
+  build or run. In the s833 log, late tasks 570–649 contain 863 E9-bearing
+  accepted submit ranges; all 863 have exactly one RT64 consumer-range record
+  with the same task and [lo,hi), and all 80 late tasks have consumer rows.
+  The join stream has 80 task/epoch rows: 77 have unequal bridge/parser deltas,
+  while 69 retain reset < first-consumer-E9 < join. The source inventory found
+  one bridge writer/reset pair (`rs64_count_submitted_e9` / task-begin reset),
+  one parser writer/reset pair (the two raw-E9 fetch sites /
+  `rs64_rdp_advance_reset`), and one aligned writer/reset pair (the callback /
+  `g_e9prov = {}`). This selects H-parser-filter for the captured late
+  population: submit/consumer identity and task epochs are aligned, but the
+  authoritative parser's raw-E9 count is lower or absent before the join.
+  It does not yet identify whether the cause is byte-order/raw-op decoding,
+  pending-command handling, or another parser filter, and it is not a writer
+  legitimacy claim or a mitigation basis.
 
-## Next work unit: classify late E9 parser/filter versus join population
+## Next work unit: identify the parser-side E9 count filter
 
 HYPOTHESIS-ID: m3-e9-parser-filter-join
 
-Perform a bounded source-and-log accounting audit of the now-keyed late
-population. Keep runtime behavior and mitigation code unchanged. Enumerate
-every producer and consumer of the bridge/parser counters and task-join
-snapshots, then reconcile late task IDs 570–649 by serial, [lo,hi), and epoch.
+Perform a bounded source audit of the selected parser-filter branch. Keep
+runtime behavior and mitigation code unchanged. Compare the bridge's
+`p ^ 3` E9 byte test with RT64's `dl->w0 >> 24` raw-op test at both direct and
+pending-command parser paths, and trace the exact conditions that suppress a
+parser increment. Reconcile those conditions with the existing late examples
+from s833; do not add instrumentation unless the source audit cannot decide.
 
 Competing hypotheses:
 
-- H-parser-filter: producer/consumer ranges and task identity are aligned, but
-  the authoritative RT64 parser counter filters E9-bearing ranges before the
-  join snapshot.
-- H-join-population: the mismatch is created by different task populations or
-  snapshot lifetimes despite matching submit/consumer serials.
-- H-counter-ownership: one counter has a second writer or reset boundary, so
-  equal task IDs do not make the values comparable.
+- H-byte-order: the bridge and parser inspect different physical bytes for the
+  same submitted range, so bridge E9 counts need not be parser raw-op E9s.
+- H-pending-path: RT64's pending-command completion path excludes or delays
+  some E9s relative to the direct walk before the join snapshot.
+- H-other-filter: a parser guard or callback gate suppresses increments even
+  when the raw opcode is E9.
 
-Discriminator: produce an exhaustive writer/reset table and a per-task
-reconciliation for every late aligned row. Same task/epoch plus exact
-producer/consumer ranges and lower parser increments selects H-parser-filter;
-different populations select H-join-population; a second writer/reset selects
-H-counter-ownership. A partial inventory is unevaluable.
+Discriminator: derive the byte address and increment predicate for each parser
+path from source. A proven byte mismatch selects H-byte-order; a pending-only
+increment gap selects H-pending-path; an explicit post-raw-op guard selects
+H-other-filter. If source remains ambiguous, the next unit must build one
+phase-gated probe with a positive-control raw-op/byte-pair record.
 
 ## Ranked backlog
 
-1. Classify the late parser/filter versus join-population alternatives using
-   the now-keyed producer, consumer, parser, and task-join rows; add one
-   independent source or static accounting audit before changing behavior.
+1. Identify which RT64 parser byte/pending/guard condition accounts for the
+   lower late E9 count; no behavior change until the condition is proven.
 2. Only after that classification, identify the responsible parser/counting
    path and consider an implementation fix.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
