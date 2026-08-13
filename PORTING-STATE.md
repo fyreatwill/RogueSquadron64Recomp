@@ -54497,3 +54497,26 @@ with the documented oracle phase timeline, so it does not yet explain the
 divergence. The next work unit is a fresh-config plus ROM-hash identity check
 in the oracle, with the same positive control and phase schedule. No port
 runtime code changed.
+
+## Session 769 (2026-08-12) — fresh oracle identity still remains at VI 320
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 52,914 bytes, so maintenance did
+not trigger. The planned work unit was the fresh-config oracle identity check
+with the documented 70-second Start schedule, PIF and VI traces, and a
+whole-RDRAM positive control.
+
+The oracle ROM SHA-256 was
+`9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`,
+matching both the sibling oracle ROM and `build/rogue_squadron.z64`. The fresh
+config was materialized at `/tmp/rs64-oracle-config-next/mupen64plus.cfg`.
+The positive control recorded **11,785,333 writes** over 4,199 VI. All eleven
+scheduled Start presses were observed at the PIF read boundary as
+`0x7C4=0x10000000`; nevertheless VI stayed at width 320 for the full run and
+never transitioned to 640, 1024, or 512.
+
+This selects H-oracle-observed-320 for the current environment and rules out
+ROM mismatch, missing PIF delivery, and a simple stale-config/input-timing
+explanation. It does not explain the conflict with the documented phase
+timeline. The next unit is a same-iteration undriven-versus-driven oracle A/B
+with identical ROM/core and positive controls, to determine whether the Start
+schedule itself changes the 320-only result. No port runtime code changed.
