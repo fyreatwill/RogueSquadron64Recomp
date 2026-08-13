@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s881 (2026-08-13). The active blocker is the authoritative
+Reviewed through s882 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -62,6 +62,13 @@ closed. M3 work is limited to systematic idiom-class audits.
   non-null checks. The generated source and companion decomp agree on the
   relative-offset conversion and optional inner pointers, but neither proves
   the caller's raw model blob values legitimate. No guard or behavior change.
+- s882 audited `tickAudioChannel`'s program-stream cursor. The complete
+  function has one direct cursor dereference at `0x8008BF24`, surrounded by
+  cursor load/advance/store operations at `0x8008BF20` and `0x8008BF44–BF4C`.
+  Nine semantic `channel+0x4` writer sites in the same function were
+  classified, but the function mixes this stream idiom with unrelated channel
+  and global-table accesses, and no source/symbol artifact proves the
+  legitimacy of the stream pointer. No guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -78,6 +85,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s872–s877 | Retail watches and PIF/VI controls were live, but retail stayed at width 320; port reached late writers. Value comparison remained unavailable. |
 | s879–s880 | Oracle ABI and artifact audits found no safe post-write writer/value route; coalescer legitimacy remains unproven and is parked. |
 | s881 | `model_animation_offset_convert` array-pointer inventory: 6 sites structurally bounded; raw model-blob writer legitimacy remains unproven, so no mitigation. |
+| s882 | `tickAudioChannel` cursor inventory: 1 direct stream dereference, 5 cursor operations, 9 semantic in-function `channel+0x4` writers; shape/writer legitimacy remains unproven, so no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -98,10 +106,10 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-The `model_animation_offset_convert` inventory is complete but leaves the raw
-model-blob writer/legitimacy unproven. Do not add a guard or change game
-behavior. Continue M3 with one complete, bounded idiom inventory, selecting the
-next top-ranked coherent candidate after this one.
+The `tickAudioChannel` cursor inventory is shape-rejected as a whole-function
+idiom and leaves the stream-pointer writer/legitimacy unproven. Do not add a
+guard or change game behavior. Continue M3 with the next bounded pointer-chain
+candidate, `stopSongByHandle`.
 
 Competing hypotheses:
 

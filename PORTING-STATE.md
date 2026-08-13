@@ -57110,3 +57110,45 @@ behavior changed.
 
 ORIGIN: bounded generated-source and independent companion-decomp inventory;
 no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s882 (2026-08-13) — audio program cursor class is narrow but writer legitimacy remains open
+
+Performed the prescribed source-only M3 inventory against `tickAudioChannel`
+(`0x8008BC10`) in the external generated tree and its companion named-symbol
+file. The complete function contains five cursor operations: loading
+`channel+0x4` at `0x8008BF20`, dereferencing the resulting stream pointer at
+`0x8008BF24`, reloading it at `0x8008BF44`, advancing it by 8 at `0x8008BF48`,
+and storing it at `0x8008BF4C`. Thus there is one direct program-stream
+dereference, with no explicit null check on the cursor immediately before it.
+
+| Guest site | Operation | Predecessor / writer basis |
+|---|---|---|
+| `0x8008BF20` | load `channel+0x4` into cursor | enters the command loop after `+0x40 == 0`; no cursor null check |
+| `0x8008BF24` | read word at `cursor+0x0` | directly follows the cursor load; this is the sole stream dereference |
+| `0x8008BF44` | reload `channel+0x4` | same command-loop iteration, after global bookkeeping |
+| `0x8008BF48` | cursor `+ 8` | follows command/global reads; no range proof in this function |
+| `0x8008BF4C` | write advanced cursor to `channel+0x4` | normal command-stream advance |
+
+The semantic writers establishing `channel+0x4` are `0x8008BF00` (state-gated
+`channel+0x20` handoff), `0x8008BF4C` (advance), `0x8008BFB4` (copy from
+`+0xC`), `0x8008C004`, `0x8008C054`, `0x8008C160`, `0x8008C1A8`, `0x8008C32C`,
+and `0x8008C508` (lookup/stride paths). The two textual branch-delay copies
+of each store are not additional semantic writers.
+
+The function has nine semantic `channel+0x4` writer sites, counting each
+branch-delay duplicate once: `0x8008BF00` (state-gated handoff from `+0x20`),
+`0x8008BF4C` (the normal +8 advance), `0x8008BFB4` (copy from `+0xC`),
+`0x8008C004`, `0x8008C054`, and `0x8008C32C`/`0x8008C508` (lookup-derived
+stride results), plus `0x8008C160` and `0x8008C1A8` (continuation/new-voice
+paths). The generated source identifies each control origin, but the
+companion symbol file supplies only the routine's per-channel MusyX-sequencer
+description and no writer/data-flow proof.
+
+Because the function mixes the stream access with unrelated channel fields and
+global lookup tables, H-cursor-shape-mismatch is selected. H-cursor-fully-
+classified is rejected because cursor null safety and external writer
+legitimacy remain unproven. No guard, build, soak, or runtime behavior
+changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
