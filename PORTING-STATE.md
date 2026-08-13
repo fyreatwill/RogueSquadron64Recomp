@@ -54369,3 +54369,59 @@ Do not route `0x1E8C` this step. Do not revert 0x1ECC.
 
 **ORIGIN:** `OVL1C_1F04` `jr` of a ROM ovl1c `$30`-return.
 Route the return; do not skip `OVL1C_1ED4`.
+
+## Session 764 (2026-08-12) — ovl1c 0x1E7C $30-return LIVE; residual is 0x1E8C
+
+Step 0 measured `CURRENT-TRUTH.md` at 49,521 bytes, so
+maintenance was not triggered. Work unit was NEXT.md after
+s763: 6o-style insert of `case 0x1E7C` / `153==0x1C` →
+`OVL1C_1E7C`. Queued SOAK-RESULTS already contained the
+s763 ANALYZED line (UJ `0x1E7C` n=91).
+
+Landed fixup 6v. Only the new `0x1E7C` case; `0x1E8C`
+stays unrouted. **ORIGIN:** route, not a mitigation.
+Writer is `OVL1C_1F04` `jr $30` after `OVL1C_1E70`
+`jal 0x1ED4` sets `r31=0x1E7C` and `OVL1C_1ED4` copies
+`$ra→$30` then jals `0x1F0C` (return `0x1F04`). Label
+`OVL1C_1E7C:` already existed from 6k (`jal 0x1ED4`
+`r31=0x1E8C`).
+
+Soak `scratch/agent/soak_results/s764_ovl1c_1e7c_20260812-205304/run.log`
+(356 s, probe_rc=0, CRASH=0, 89 frames). First attempt
+reached title, hangar leave (640 origin 0x6A2900 at
+207.1 s), and outdoor sec2 (512 origin 0x690400 at
+236.2 s). Same-run positive controls LIVE: CLIP
+`res=0x04` last n=220736, ovl24 `res=0x24 tgt=0x12A0`
+(task 200), ovl1c `res=0x1C tgt=0x1ECC` last n=543296
+(3 samples, including sec2 task 4551), dest
+`[ovl-route] res=0x20 tgt=0x12A0` last n=412544 (sec2
+and later), new `[ovl-route] res=0x1C tgt=0x1E7C` last
+n=435392 (1 sample, sec2 task 4586). Four boot controls
+still `dl06=push:2,complete:2,open:0`. Clip-stray 0.
+UJ `0x1E7C` **91→0**.
+
+**H-1e7c-ovl1c-30ret SELECTED. H-1e7c-breaks-06 REFUTED.**
+**H-1e7c-not-only REFUTED:** leftover is only the predicted
+UJ `0x1E8C` n=102 from `OVL1C_1F04` `jr $30` line 4987.
+No other UJ. First UJ is after leave (line 66687 vs
+leave-phase 62163) and before the first sec2 row (79108).
+`OVL1C_1E7C` sets `r31=0x1E8C` and `goto OVL1C_1ED4`.
+**H-1e7c-restores-e9 REFUTED:** sec2 match **12/64** —
+3 boot-shaped `dl06=2/2/0` (tasks 4540–4542) plus 9
+fatter `src0=0x000178` copies. Still that boot DL as
+the E9 source; rdpFs 0→4101 (flat vs s763 3676 / s761
+3661). last_ovl at reset is `0x1C/0x1F04` 44 times
+(trampoline return overwrites 0x1E7C before the dump).
+
+Residual is the `$30`-return into `OVL1C_1E8C`. That
+label already exists (6k; `lbu` then `beq` to
+`OVL1C_1ECC` / `OVL1C_1EAC`, else `jal 0x1ED4`
+`r31=0x1EA8` which is already a case). After routing
+`0x1E8C`, every ovl1c `jal 0x1ED4` return
+(`0x1E18`/`0x1E2C`/`0x1E6C`/`0x1E7C`/`0x1E8C`/`0x1EA8`/
+`0x1EBC`/`0x1ECC`/`0x1F04`) will have a case. Predicted
+leftover is UJ=0. Next is a 6o-style insert of
+`case 0x1E8C` / `153==0x1C` only. Do not revert 0x1E7C.
+
+**ORIGIN:** `OVL1C_1F04` `jr` of a ROM ovl1c `$30`-return.
+Route the return; do not skip `OVL1C_1ED4`.
