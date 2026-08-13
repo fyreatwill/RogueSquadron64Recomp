@@ -297,6 +297,13 @@ leaving runtime behavior as the remaining broad class.
    a phase/co-gate because no aligned-walker E9 total was captured. No mitigation is
    justified. Next is a source/telemetry audit of the phase-5 E9 accounting boundary.
 
+   **s794 accounting-boundary update:** the source audit found that the aligned
+   count is sampled per selected task, whereas the authoritative advance ring is
+   reset per LLE task and capped at 512 records. The s793 phase-5 log shows the
+   authoritative dispatch and State/fullSync hooks advancing in the same parser
+   chain. This selects H-measurement-scope, refutes no parser boundary, and
+   justifies no mitigation. Next is one unified phase-5 counter capture.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a

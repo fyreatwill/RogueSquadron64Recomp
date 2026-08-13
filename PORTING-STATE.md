@@ -55059,3 +55059,28 @@ Logs:
 `scratch/agent/soak_results/s790_postsec2_reachability_20260812-233115/run.log`
 and
 `scratch/agent/soak_results/s790_postsec2_reachability_20260812-233436/run.log`.
+
+## Session 794 (2026-08-12) — E9 accounting audit finds scope mismatch
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 30,543 bytes, so maintenance did
+not trigger. The planned work unit was a source-and-log audit of the phase-5
+aligned E9, authoritative parser, and State/fullSync counters; no build or run
+was authorized or needed.
+
+The aligned-walker `e9_aligned` value is computed per selected task in
+`main.cpp` and is emitted only when `do_probe` selects that task. The
+authoritative advance ring in RT64 is reset at each LLE task and retains only
+512 parser records. Authoritative fetch, RDP handler, and State/fullSync hooks
+are ordered in the same parser chain. The s793 phase-5 log independently shows
+authoritative dispatch and State/fullSync records advancing together, while
+the aligned samples are task-selective and do not provide a comparable total.
+
+This selects H-measurement-scope for the prior comparison and leaves the real
+authoritative-advance boundary unevaluable. It refutes neither a parser loss
+nor a phase/co-gate. No mitigation or source change was made. The next unit is
+one unified phase-5 counter capture with a shared task/list identity and a
+same-run positive control.
+
+Source evidence: `src/main/main.cpp`, `lib/rt64/src/hle/rt64_interpreter.cpp`,
+`lib/rt64/src/gbi/rt64_gbi_rdp.cpp`, and `lib/rt64/src/hle/rt64_state.cpp`.
+Log evidence: `scratch/agent/soak_results/s790_postsec2_reachability_20260812-233436/run.log`.
