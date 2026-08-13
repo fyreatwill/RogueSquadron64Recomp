@@ -316,6 +316,16 @@ leaving runtime behavior as the remaining broad class.
    mitigation is justified. Next: trace the callback/task serial at both sides
    of the join and make the aligned value attach to the same task-end record.
 
+   **s796 join-trace update:** callback-entry and task-end rows were added with
+   both the passed and current task serials, plus a phase-scoped log budget.
+   The build succeeded, but the prescribed run timed out after 180 seconds at
+   VI 640; it emitted no aligned-walker or unified parser row, so the four
+   parser controls were not exercised. This is an unevaluable pre-chain death,
+   not evidence for callback-key mismatch, unreachable callback, or shared-state
+   overwrite. No parser conclusion or mitigation is justified. Next: obtain a
+   stable post-sec2 / VI-1024 sample with this instrumentation before interpreting
+   the join rows.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a

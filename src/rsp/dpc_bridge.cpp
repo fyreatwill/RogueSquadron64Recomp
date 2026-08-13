@@ -272,6 +272,7 @@ struct Rs64E9Provenance {
 };
 static Rs64E9Provenance g_e9prov;
 static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
+static std::atomic<uint32_t> g_e9prov_join_lines{0};
 
 struct Rs64InlineProbe {
     bool active = false;
@@ -339,7 +340,16 @@ static bool log_e9_unified() {
 
 extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
                                       uint32_t guestE9) {
-    if (g_e9prov.task != task) return;
+    const uint32_t current = g_e9prov.task;
+    if (log_e9_unified() && (task <= 4 || g_e9prov.target)) {
+        const uint32_t line = g_e9prov_join_lines.fetch_add(1, std::memory_order_relaxed);
+        if (line < 96) {
+            fprintf(stderr, "[e9-join-callback] passed=%u current=%u guest_dl=0x%08X aligned=%u\n",
+                    task, current, guestDl, guestE9);
+            fflush(stderr);
+        }
+    }
+    if (current != task) return;
     g_e9prov.aligned = guestE9;
     g_e9prov.aligned_dl = guestDl;
 }
@@ -369,6 +379,7 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
         g_inline_probe_trigen_pairs.store(0, std::memory_order_release);
         g_inline_probe_trigen_boot_lines.store(0, std::memory_order_release);
         g_inline_probe_summaries.store(0, std::memory_order_release);
+        g_e9prov_join_lines.store(0, std::memory_order_release);
     }
 }
 
@@ -918,6 +929,14 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
         }
     }
     if (g_e9prov.task != task) return;
+    if (log_e9_unified() && (g_e9prov.control || g_e9prov.target)) {
+        const uint32_t line = g_e9prov_join_lines.fetch_add(1, std::memory_order_relaxed);
+        if (line < 96) {
+            fprintf(stderr, "[e9-join-end] passed=%u current=%u guest_dl=0x%08X aligned=%u\n",
+                    task, g_e9prov.task, g_e9prov.aligned_dl, g_e9prov.aligned);
+            fflush(stderr);
+        }
+    }
     if (log_e9_unified() && (g_e9prov.control || g_e9prov.target)) {
         fprintf(stderr,
                 "[e9-unified] task=%u scope=%s guest_dl=0x%08X aligned=%u "

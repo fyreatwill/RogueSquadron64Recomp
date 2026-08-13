@@ -55111,3 +55111,23 @@ mitigation or parser conclusion was made.
 
 Logs: `scratch/agent/soak_results/s795_unified_e9_rows_20260812-235433/run.log`,
 with earlier instrument-fix evidence in the `s795_unified_e9_*` sibling logs.
+
+## Session 796 (2026-08-13) — callback/task join trace was pre-chain unevaluable
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 31,875 bytes, so maintenance did
+not trigger. The planned work unit added bounded, phase-scoped callback-entry
+and task-end diagnostics to `rs64_e9prov_aligned` / `rs64_e9prov_task_end`.
+Each row records the passed task serial, the current global serial, and the
+aligned guest-DL/count; the existing provenance and authoritative counters were
+left unchanged. The build completed successfully.
+
+The phase-gated run used the prescribed join recipe and timed out after 180
+seconds at VI width 640. It produced zero `[e9-join-callback]`, zero
+`[e9-join-end]`, zero `[dl-sync-probe2]`, and zero `[e9-unified]` rows. Because
+the run never reached VI 1024, the parser positive controls were not exercised
+and none of the three join hypotheses is discriminated. This rules out no
+parser mechanism and adds no mitigation; the result is an unevaluable
+pre-chain transient. The next unit is a stability-oriented post-sec2 capture
+using this instrumentation.
+
+Logs: `scratch/agent/soak_results/s796_join/run.log`.
