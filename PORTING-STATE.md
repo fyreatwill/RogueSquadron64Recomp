@@ -54664,3 +54664,24 @@ bytes / 248 lines** (down from 60,263 bytes / 932 lines), a net reduction of
 This advances the maintenance contract, preserves the oracle runtime-divergence
 work unit as NEXT, and rules out no new runtime hypothesis. The existing
 submodule working-tree patches were left untouched.
+## Session 777 (2026-08-12) — matched oracle A/B refutes late debugger interference
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 17,188 bytes, so maintenance did
+not trigger. The planned work unit was a fresh 70-second debugger-on/off
+oracle runtime check using the verified core, RSP, input plugin, ROM, and
+eleven-entry Start schedule. Both arms ran concurrently.
+
+The debugger-on arm exited cleanly with **11,768,621** whole-RDRAM positive-
+control writes over **4,193 VI**, logged all eleven PIF Start presses, and
+reported width 320/origin `0x6dd280` with no later phase transition. The
+debugger-off arm exited with rc=3, the oracle's documented clean zero-hit
+result, and its independent raw VI poll remained width 320/origin
+`0x6dd280` for the full 70 seconds. The off arm's lack of debugger callbacks
+was therefore not interpreted as a missing-instrument result.
+
+This selects the same 320-only runtime outcome in both arms and refutes
+late debugger interference for this recipe. It rules out neither a
+scheduling/timing condition nor the possibility that the documented later
+phase is not reachable with this exact retail/core/plugin recipe. No port
+runtime code changed. The next unit tests the alternate `R4300Emulator`
+execution backend with the same phase-gated A/B and controls.
