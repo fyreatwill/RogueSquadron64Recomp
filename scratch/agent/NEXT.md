@@ -1,30 +1,30 @@
-# NEXT work unit (s919)
+# NEXT work unit (s920)
 
-HYPOTHESIS-ID: m3-voice-slot-helper-inventory
+HYPOTHESIS-ID: m3-streaming-voice-inventory
 
-Audit the adjacent generated audio helper `func_8009BE40`
-(`0x8009BE40`, size `0xD4`) in
-`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerate its complete control and
-voice-slot field flow, every indirect call and pointer/size argument, loop or
-termination behavior, all generated callers, and companion symbol or decomp
-evidence. Do not add a guard, change game behavior, build, or run a soak.
+Audit the next adjacent generated audio helper `serviceStreamingVoice`
+(`0x8009BF14`, size `0x13C`) in the generated recompiled files. Enumerate its
+complete control and voice-record/queue/buffer field flow, every indirect call
+and pointer/size argument, loop or termination behavior, all generated callers,
+and companion symbol or decomp evidence. Do not add a guard, change game
+behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-voice-slot-helper-unclassified: the helper's slot fields, indirect calls,
-  or pointer/size arguments contain an unchecked or incompatible contract.
-- H-voice-slot-helper-classified: it has one coherent bounded slot-operation
-  shape and all callers supply the same argument form.
-- H-voice-slot-helper-shape-mismatch: a caller or sibling path supplies a
-  different slot/callback contract; record the exact split and stop.
+- H-streaming-voice-unclassified: the helper's queue/state/buffer fields or
+  callback path contains an unchecked or incompatible contract.
+- H-streaming-voice-classified: it has one coherent bounded voice-record
+  service shape and all generated callers supply the same record form.
+- H-streaming-voice-shape-mismatch: a caller or sibling path supplies a
+  different queue/buffer/callback contract; record the exact split and stop.
 
-Discriminating measurement: a complete site table for `func_8009BE40`, every
-slot/global load and store, indirect call and argument, all generated callers,
+Discriminating measurement: a complete site table for
+`serviceStreamingVoice`, every slot/global/queue/buffer load and store,
+indirect call and argument, loop/termination behavior, all generated callers,
 and the companion symbol/decomp basis. Any omitted access, unbounded
-arithmetic/termination, or incompatible caller shape rejects full
-classification.
+termination, or incompatible caller shape rejects full classification.
 
-Exact commands: use `rg` to enumerate `func_8009BE40` and its callsites in
-`../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
-companion `rogue_squadron64` symbol/decomp files. No game build or soak is
-planned.
+Exact commands: use `rg` to enumerate `serviceStreamingVoice` and
+`0x8009BF14` in `../N64Recomp/RecompiledFuncs`, then bounded `sed` windows
+and the companion `rogue_squadron64` symbol/decomp files. No game build or
+soak is planned.

@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s919 (2026-08-13). The active blocker is the authoritative
+Reviewed through s920 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -211,6 +211,18 @@ closed. M3 work is limited to systematic idiom-class audits.
   hazard. No generated direct callers or companion body/callsite evidence
   were found, so indirect reachability and dynamic DMA/queue legitimacy remain
   unproven; no mitigation or behavior change.
+- s920 audited `initMusyXVoiceSlot`'s complete 0xD4-byte helper. It has no
+  loop, indirect call, derived walk, or local termination hazard: it bzeroes
+  0x190 bytes at the supplied slot base, initializes the per-slot queue at
+  `+0x11AC/+0x11C4`, stores the four pointer/control arguments at `+0x190`,
+  `+0x194`, `+0x198`, and `+0x19C`, and clears the documented control fields
+  through `+0x11DE`. The two generated callers agree on the slot base and
+  helper entry but intentionally use different argument shapes: table init
+  passes zero pointers, while voice allocation passes a computed sample
+  pointer, slot-derived control values, and callback `0x8009BE08` as the
+  stack argument. The companion symbol description agrees on the layout and
+  role. The caller split is classified, but dynamic slot/pointer legitimacy
+  remains unproven; no guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -246,6 +258,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s917 | Re-audit correction: the first shutdown loop is exactly one slot-0 call, but the second active-byte scan has no finite bound and repeats while the slot remains active; `stopVoiceSlotSynced` can leave state 3, so termination depends on an external/later clear. Caller and slot shape still agree; no mitigation. |
 | s918 | `accumulateVoiceSampleOffset` inventory: fixed `index*0x1228` slot arithmetic, one `consumeVoiceSamples` call, one `+0x463C` accumulation, no loop, and no generated callers found. The unchecked index and the `0x800A5121` symbol/lifecycle discrepancy leave dynamic legitimacy unresolved; no mitigation. |
 | s919 | `dmaVoiceSampleAndSignal` inventory: four incoming DMA arguments pass unchanged to synchronous submit/wait, then `$a3` is used as the message queue for one blocking zero-message signal; no globals, slot fields, loop, or local termination hazard. No generated direct callers or companion body/callsite evidence were found, so indirect reachability and dynamic argument legitimacy remain unresolved; no mitigation. |
+| s920 | `initMusyXVoiceSlot` inventory: fixed 0x190-byte clear, per-slot queue creation, four pointer/control stores, and documented control-field resets with no loop or local termination hazard. The two callers share the slot-base contract but use distinct initialization versus active-voice pointer shapes; the split is intentional/classified, while dynamic pointer/value legitimacy remains unproven; no mitigation. |
 | s895 | `setVoiceVolumePanLocked` inventory: one gate read, one nonzero handle check, no target dereference/loop, and one mutex-protected modulation call; shape is coherent, but caller-derived handle/parameter writers are not independently proven legitimate; no mitigation. |
 | s896 | `stopStreamedVoice` inventory: one audio-enable gate, one computed 24-byte streamed-voice state access, state-1 check/clear, and `silenceVoiceSlot` call; the caller-derived voice index has no independent bound or writer-legitimacy proof, so full classification remains unresolved; no mitigation. |
 | s897 | `compute3DSourceSpatialMix` inventory: null-terminated `0x80153418` source-list walk, complete spatial-distance/mix/pan/output access table, and independent node/list writer cross-checks; structure passes but dynamic node/input writer legitimacy remains unproven and shapes are mixed; no mitigation. |
@@ -291,30 +304,30 @@ shape, not a local termination bound. No runtime conclusion follows.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-voice-slot-helper-inventory
+HYPOTHESIS-ID: m3-streaming-voice-inventory
 
-Audit the adjacent generated audio helper `func_8009BE40` (`0x8009BE40`,
-size `0xD4`) as a complete function. Do not add a guard or change game
-behavior.
+Audit the next adjacent generated audio helper `serviceStreamingVoice`
+(`0x8009BF14`, size `0x13C`) as a complete function. Do not add a guard or
+change game behavior.
 
 Competing hypotheses:
 
-- H-voice-slot-helper-unclassified: the helper's slot fields, indirect calls,
-  or pointer/size arguments contain an unchecked or incompatible contract.
-- H-voice-slot-helper-classified: it has one coherent bounded slot-operation
-  shape and all callers supply the same argument form.
-- H-voice-slot-helper-shape-mismatch: a caller or sibling path supplies a
-  different slot/callback contract; record the exact split and stop.
+- H-streaming-voice-unclassified: the helper's queue/state/buffer fields or
+  callback path contains an unchecked or incompatible contract.
+- H-streaming-voice-classified: it has one coherent bounded voice-record
+  service shape and all generated callers supply the same record form.
+- H-streaming-voice-shape-mismatch: a caller or sibling path supplies a
+  different queue/buffer/callback contract; record the exact split and stop.
 Discriminating measurement: a complete site table for
-`func_8009BE40`, every slot/global load and store, indirect call and argument,
-all generated callers, and the companion symbol/decomp basis. Any omitted
-access, unbounded arithmetic/termination, or incompatible caller shape rejects
-full classification.
+`serviceStreamingVoice`, every slot/global/queue/buffer load and store,
+indirect call and argument, loop/termination behavior, all generated callers,
+and the companion symbol/decomp basis. Any omitted access, unbounded
+termination, or incompatible caller shape rejects full classification.
 
-Exact commands: use `rg` to enumerate `func_8009BE40` and its callsites in
-`../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
-companion `rogue_squadron64` symbol/decomp files. No game build or soak is
-planned.
+Exact commands: use `rg` to enumerate `serviceStreamingVoice` and
+`0x8009BF14` in `../N64Recomp/RecompiledFuncs`, then bounded `sed` windows
+and the companion `rogue_squadron64` symbol/decomp files. No game build or
+soak is planned.
 
 ## Closed and parked
 

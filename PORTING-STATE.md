@@ -58524,3 +58524,44 @@ game behavior changed. This is source inventory evidence only.
 
 ORIGIN: complete generated-function, DMA-callee, reference, and companion-symbol
 inventory; no guest value mutation, mitigation, or runtime behavior changed.
+## 2026-08-13 — s920: initMusyXVoiceSlot caller-shape split is classified
+
+### What ran
+
+Performed the prescribed source-only M3 idiom inventory of
+`initMusyXVoiceSlot` (`0x8009BE40`, size `0xD4`). The helper definition is in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`; both generated callers are in
+`funcs_26.c`. No build, game run, or soak was needed.
+
+The helper saves its four register arguments plus the stack argument at
+`[sp+0x38]`, then calls `bzero(slotBase, 0x190)` and
+`osCreateMesgQueue(slotBase+0x11AC, slotBase+0x11C4, 1)`. It stores the stack
+pointer at `+0x190`, `$a1/$a2/$a3` at `+0x194/+0x198/+0x19C`, sets halfword
+`+0x166` to `0x28`, clears `+0x11A8`, sets the derived flag byte `+0x11DD`,
+and clears `+0x11DC`, `+0x11A0`, `+0x11A2`, `+0x11A4`, `+0x11C8`, `+0x11CC`,
+`+0x11D0`, `+0x11D4`, and `+0x11D8`, before setting `+0x11DE` to 2. It has
+no loop, indirect call, derived pointer walk, or local termination hazard.
+
+The first caller is `initMusyXVoiceTable` at `0x8009BBDC`; it passes the
+table slot base (`0x80153420 + n*0x1228`) and zero for all four pointer
+arguments, then separately clears the active byte at `0x80154620+n*0x1228`.
+The second is the voice-allocation path at `0x8009B1F4`; it passes its chosen
+slot base, a computed sample/table pointer, slot-derived control values, and
+the callback address `0x8009BE08` in the stack argument. The companion
+`main_overlay.txt` independently describes the same slot layout and says the
+helper is used both for table initialization and active voice allocation.
+
+### Rules out / narrows
+
+This inventory rules out a local loop/return hazard and proves there is no
+incompatible caller shape at the slot-base level. It identifies a deliberate
+initialization-versus-active-voice argument split, so the hypothesis that all
+callers use one identical pointer form is rejected. It does not prove the
+computed pointer, slot-derived values, callback address, or queue destination
+are legitimate at runtime. H-voice-slot-helper-classified is supported for
+local structure and caller roles; dynamic legitimacy remains unresolved. No
+guard, mitigation, or game behavior changed. This is source inventory evidence
+only.
+
+ORIGIN: complete generated helper/caller and companion-symbol inventory; the
+diff changes only the investigation ledger and next-work-unit documents.
