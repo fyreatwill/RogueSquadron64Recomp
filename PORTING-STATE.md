@@ -55852,3 +55852,17 @@ control capture.
 ORIGIN: the classification is from the counter declaration, both increment
 sites, the sole reset call path, and the direct join read; no game value was
 modified or filtered.
+
+## Session 828 (2026-08-13) — maintenance compacts current truth
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 60,046 bytes, so this was a
+maintenance iteration and no experiment or build was run. The file was
+compacted from 862 lines / 60,046 bytes to 121 lines / 6,353 bytes. Durable
+history remains in `docs/PROJECT-OVERVIEW.md`; the compact file retains the
+active s827 parser-epoch finding, ranked next steps, closed-lineage warnings,
+ground-truth rules, and build cautions. The next work unit remains the
+consumer-scoped E9 epoch join from s827, with hypotheses and its discriminating
+measurement preserved in `scratch/agent/NEXT.md`. No runtime code, generated
+code, submodule contents, or mitigation changed.
+
+ORIGIN: documentation-only compaction; no runtime value or writer was changed.

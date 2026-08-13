@@ -26,5 +26,6 @@ an explicit parser epoch on reset and join rows, and a reset-to-consumer-to-join
 ordering trace. Do not conclude from the old `parser_delta` field alone.
 
 Expected commands: edit the telemetry source; build the Debug target with the
-project's documented cmake command; run the existing queued post-sec2 recipe
-with passive breadcrumbs; inspect only bounded log slices; update the ledger.
+documented CMake command; run the existing post-sec2 recipe once with passive
+breadcrumbs and positive controls; inspect only bounded log slices; update the
+ledger. Do not run this unit during a future maintenance iteration.
