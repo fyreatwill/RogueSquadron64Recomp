@@ -56669,3 +56669,28 @@ justify a mitigation. No build or run was needed.
 
 ORIGIN: generated breadcrumb writes and host crash-handler handoff semantics;
 no game value, helper control flow, or mitigation behavior changed.
+
+## Session s862 (2026-08-13) — coalescer entry-state audit leaves writer open
+
+Completed the prescribed source-only whole-idiom audit of the recurring
+`coalesceFreeHeapBlocks` local-symbol family. The generated tree has one
+caller, `funcs_0.c` at guest `0x80001430`. The function contains two independent
+forward walks: the first starts from the global free-list head and reads the
+computed next block at `0x80002434`; the second starts from the caller-supplied
+block base and reads its computed next block at `0x8000247c`. Both use
+`next = block + MEM_W(block, 4)` and then read `next+0x10`. Both reads are
+already covered by regeneration-safe range checks whose invalid-pointer path
+sets the in-use bit and exits the walk without reusing the wild pointer.
+
+The sole caller supplies `a0/a1` from heap globals at `0x801163e4/0x801163e8`
+and derives `a2/a3` from its heap state. The audit also traced the global
+free-list head and the internal link/size reads, but source alone cannot prove
+that the caller bases or live links are legitimate at the recurring crash
+boundary. This selects H-heap-entry-state over H-missing-read-guard, while
+leaving the writer and legitimacy unclassified. It is single-source evidence:
+no build or run was performed, and no mitigation was added.
+
+ORIGIN: source inventory only; the existing guards change only handling of
+out-of-range computed next pointers, and no game value or control flow changed
+in s862. The next unit is a phase-gated entry-state probe with retail heap-watch
+and port positive controls.

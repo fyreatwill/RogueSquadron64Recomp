@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s861 (2026-08-13). The active blocker is the authoritative
+Reviewed through s862 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -586,6 +586,58 @@ an invalid slot/link/context, and it adds no guard or other mitigation.
 
 ORIGIN: generated breadcrumb writes and host crash-handler handoff semantics;
 no game value, helper control flow, or mitigation behavior changed.
+
+## Session s862 result
+
+Completed a source-only whole-idiom audit of the recurring
+`coalesceFreeHeapBlocks` local-symbol family. The function has one generated
+caller (`funcs_0.c` at guest `0x80001430`) and two independent forward walks:
+`0x80002390`/`0x80002434` from the global free-list head and
+`0x80002474`/`0x8000247c` from the caller-supplied block base. Each computes
+`next = block + MEM_W(block, 4)` and then reads `next+0x10`; both reads have
+regeneration-safe range checks and safe loop-exit behavior. The caller's
+`a0/a1` come from the heap globals at `0x801163e4/0x801163e8`, while `a2/a3`
+and the internal free-list links remain unproven at the call boundary.
+
+This source inventory selects H-heap-entry-state over H-missing-read-guard,
+but cannot identify the writer or establish value legitimacy. It is
+single-source evidence; no build, run, or mitigation was performed.
+
+ORIGIN: source inventory only; existing guards change only the handling of
+out-of-range computed next pointers, and no game value or control flow was
+changed in s862.
+
+## Next work unit: phase-gated coalescer entry-state probe
+
+HYPOTHESIS-ID: m3-coalesce-entry-state
+
+Add one behavior-neutral, regeneration-safe entry probe to
+`coalesceFreeHeapBlocks`, carrying the four incoming block bases and the global
+free-list head, then run the existing phase-gated recipe with the retail heap
+watch positive control before the port build. Do not add a guard or alter the
+coalescer's values/control flow. The probe must be bounded to the 1024 phase
+and must log the computed `next` values at both guarded sites when the entry
+record is active.
+
+Competing hypotheses:
+
+- H-heap-entry-state: one incoming base or the free-list head is outside the
+  expected RDRAM heap range, or a computed next pointer is wild; this selects a
+  writer/state probe target.
+- H-heap-valid: all observed bases and computed next pointers are valid, so the
+  recurring host symbol is not explained by this coalescer idiom.
+- H-heap-unreached: the coalescer entry control does not fire in the 1024 phase;
+  the recurring symbol belongs to another phase or attribution path.
+- H-probe-invalid: the retail control or coalescer positive control fails, so
+  the run cannot classify heap state.
+
+Discriminator: the retail whole-RDRAM and heap-watch controls must fire, and the
+port's existing phase controls must fire in the same run. Invalid entry or
+computed-next values select H-heap-entry-state; all values valid through the
+active population select H-heap-valid; no entry rows select H-heap-unreached;
+failed controls select H-probe-invalid. This remains diagnostic evidence only
+and cannot authorize a mitigation without naming the writer and establishing
+legitimacy.
 
 ## Ranked backlog
 
