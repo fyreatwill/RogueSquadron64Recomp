@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s904 (2026-08-13). The active blocker is the authoritative
+Reviewed through s907 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -206,6 +206,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s904 | `update3DAudioFrame` inventory: active-list walk rooted at `0x80153414` with guarded unlinking; spatial-mix, priority-queue, voice-handle, and flag-state paths are coherent but mixed, while dynamic list/voice fields and writer legitimacy remain unproven; no mitigation. |
 | s905 | `reset3DAudioLists` inventory: two standalone zero stores with a concrete ownership split between the `0x80153414` Factor 5 voice/source list and `0x80153418` MusyX listener/source list; sibling readers, insertion writers, and unlink writers agree, but reset ordering and dynamic writer legitimacy remain unproven; no mitigation. |
 | s906 | `normalizeVec3` inventory: one fixed-shape in-place 3-float read/normalize/write path, one caller, and a caller-side zero-vector gate; no local zero-norm check, while input/output value legitimacy remains unproven; no mitigation. |
+| s907 | `crossProductVec3` inventory: fixed-shape 3-float cross product with six input reads and three output writes; both generated callers pass matching slices of the same listener-node record, with no loop or derived pointer walk; dynamic input/output writer legitimacy remains unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -226,23 +227,23 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `crossProductVec3` (`0x80099D68`),
+Audit the next adjacent audio function, `invertOrientationMatrix` (`0x80099DCC`),
 as a complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-cross-unclassified: the helper has an unchecked or aliasing-sensitive
+- H-invert-unclassified: the helper has an unchecked or aliasing-sensitive
   writer/initialization obligation that cannot be classified from the function
   and sibling writers.
-- H-cross-fully-classified: all vector reads/writes are fixed-shape,
+- H-invert-fully-classified: all matrix/vector reads/writes are fixed-shape,
   bounded by the function's arithmetic, and its callers agree on the same
   layout.
-- H-cross-shape-mismatch: callers use incompatible vector layouts or the
+- H-invert-shape-mismatch: callers use incompatible layouts or the
   function's output aliases a state structure; record the exact split and
   stop.
 
-Discriminating measurement: a complete site table for `crossProductVec3`, every
-vector load/store and arithmetic operation, all generated callers, and the
+Discriminating measurement: a complete site table for `invertOrientationMatrix`, every
+matrix/vector load/store and arithmetic operation, all generated callers, and the
 companion symbol/decomp basis. Any omitted access or incompatible caller shape
 rejects full classification.
 

@@ -58002,3 +58002,41 @@ single-source inventory evidence and authorizes no guard or mitigation.
 ORIGIN: complete generated-helper, sole-caller, stack-vector, gate, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
+
+## Session s907 (2026-08-13) — crossProductVec3 is a fixed-shape three-float helper
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`crossProductVec3` (`0x80099D68`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerated every helper memory
+access, both generated callers, the caller-side record slices, and the
+companion symbol/decomp basis. No build, game run, or soak was needed.
+
+The complete classification is:
+
+- `0x80099D68–0x80099D80` computes output `a0[0]` from `a1[1]*a2[2] -
+  a1[2]*a2[1]`, reading only offsets `0x0`, `0x4`, and `0x8` from each input.
+- `0x80099D84–0x80099DA0` computes output `a0[1]` from `a1[2]*a2[0] -
+  a1[0]*a2[2]`, and `0x80099DA4–0x80099DC0` computes output `a0[2]` from
+  `a1[0]*a2[1] - a1[1]*a2[0]`. The only stores are `a0+0x0`, `a0+0x4`,
+  and `a0+0x8`; there is no loop, table access, derived pointer, or local
+  alias-sensitive state.
+- `tickAndReap3DAudioVoices` calls it at `0x80099070` with `a0=s0+0x30`,
+  `a1=s0+0x3C`, and `a2=s0+0x24`. `register3DAudioListenerNode` calls it at
+  `0x80099238` with the same three offsets. Both callers construct or copy
+  the three-float slices in one listener-node record and consume the result at
+  `s0+0x30`; no incompatible caller shape was found.
+- `rogue_squadron64/symbol_files/main_overlay.txt` independently names the
+  helper at `0x80099D68` between `normalizeVec3` and `invertOrientationMatrix`.
+  No companion C body or additional caller was present.
+
+### Rules out / narrows
+
+This audit rules out an omitted local access, hidden loop, derived pointer
+walk, or generated caller-shape mismatch in `crossProductVec3`. It does not
+prove that the dynamic listener-node inputs or their writers are legitimate at
+runtime; this is single-source inventory evidence and does not authorize a
+guard or mitigation.
+
+ORIGIN: complete generated-helper, both-caller, record-slice, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
