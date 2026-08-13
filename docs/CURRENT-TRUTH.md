@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s782; compacted in maintenance s776)
+## Current truth (reviewed through s785; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -73,6 +73,13 @@ the chronological ledger. The active facts are:
   attached-input arm had 21,605,494 writes / 7,788 VI. Both stayed at width
   320/origin `0x6dd280` for 130 seconds. This refutes input-plugin attachment
   as the missing phase trigger and selects a remaining runtime/ROM discrepancy.
+- The s785 low-noise post-sec2 reachability preflight reached VI width 1024
+  after 47 seconds, with provenance controls live (emit=1, raw=1,
+  dispatch=1, match=1) and the phase-gated key schedule firing. It then
+  crashed 30.2 seconds into capture after 9 frames in the Metal renderer
+  barrier path (si_addr=0x60, last guest PC 0x8000834c). No post-sec2
+  parser-chain result was obtained. This selects H-640-transient for the
+  s784 pre-target failures, but leaves the chain hypotheses unevaluable.
 - The s783 stock-front-end audit found the stock CLI starts with no
   `Input-SDL-Control1` section and falls back to `InputAutoCfg.ini`, while the
   oracle materializes an explicit keyboard section. A fresh 130-second oracle

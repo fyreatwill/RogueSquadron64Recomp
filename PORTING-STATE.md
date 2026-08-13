@@ -54846,3 +54846,24 @@ The blocker is falsifiable: one low-noise rerun that reaches VI 1024 with
 controls live refutes the deterministic-pre-target explanation and permits the
 parser audit. No mitigation or runtime code changed. Logs are under
 `scratch/agent/soak_results/s784_m3_parser_audit*`.
+ 
+## Session 785 (2026-08-12) — post-sec2 reachability reached, renderer crash before parser chain
+
+Step 0 measured docs/CURRENT-TRUTH.md at 22,668 bytes, so maintenance did
+not trigger. The planned work unit was the low-noise post-sec2 reachability
+preflight for the batched FULL_SYNC parser-chain audit. The build completed
+cleanly.
+
+The prescribed phase-gated run reached VI width 1024 after 47 seconds, and
+the same run had positive provenance controls: control tasks repeatedly
+reported emit=1, raw=1, dispatch=1, and match=1; the phase-gated key schedule
+also fired. The game then crashed 30.2 seconds into capture after 9 frames in
+the Metal renderer barrier path, with si_addr=0x60, local PC symbol
+MetalCommandList::barriers+436, and last guest PC 0x8000834c.
+
+The run therefore selects H-640-transient for s784's two pre-target deaths:
+the target phase is reachable with controls live. It does not evaluate the
+post-sec2 parser chain because the crash precedes a usable chain sample.
+The renderer crash is a new recurrence candidate, not an explanation for
+FULL_SYNC loss, and no mitigation was added. Log:
+scratch/agent/soak_results/s785_m3_reachability/run.log.

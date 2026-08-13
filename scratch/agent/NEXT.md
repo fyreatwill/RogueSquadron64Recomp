@@ -1,64 +1,44 @@
-# NEXT work unit (M3 post-sec2 reachability stability preflight)
+# NEXT work unit (stable post-sec2 reachability before parser-chain audit)
 
 HYPOTHESIS-ID: m3-full-sync-parser-control-flow
 
-Session 784 could not reach the parser audit phase. Two attempts reached VI
-640 and fired the positive control, then died before VI 1024/post-sec2: the
-verbose attempt hit a `viRetraceHandlerThread` SIGBUS and the low-noise fixed
-attempt aborted. Session 783 compared the stock Mupen64Plus CLI with the oracle. The stock CLI
-fresh config lacked `Input-SDL-Control1` and fell back to `InputAutoCfg.ini`,
-but a fresh 130-second oracle run using the attached SDL input path and the
-verified eleven Start schedule still stayed 320-only: 21,618,871 whole-RDRAM
-writes, 7,793 VI, all presses verified. The oracle runtime/configuration
-thread is closed for this concrete difference.
+The s785 recipe reached VI 1024 with positive controls, then crashed 30.2s
+into the 9-frame capture in MetalCommandList::barriers+436. The parser chain
+was not sampled. Run one stability-oriented repeat with the same phase gate
+and provenance controls; do not interpret E9 counters unless the post-sec2
+capture survives.
+
+## Competing hypotheses
+
+- H-renderer-transient: the Metal barrier crash is timing-sensitive.
+  Prediction: the repeat reaches 1024 and survives long enough to capture
+  post-sec2 provenance.
+- H-renderer-deterministic: the current post-sec2 workload deterministically
+  crashes in the renderer barrier path. Prediction: the repeat reaches 1024
+  with controls live and dies in the same barrier family before chain data.
+- H-phase-latch: the phase gate fired but the capture window is not aligned
+  with the parser work. Prediction: a surviving run has post-sec2 task/E9
+  provenance without the expected chain counters.
 
 ## Discriminating measurement
 
-First establish whether the low-noise recipe can reach VI 1024/post-sec2 at
-all, while retaining only the existing positive-control/provenance marker.
-The split is: reaching 1024 with controls live permits the parser-chain audit
-next; two more VI-640 early deaths select a deterministic pre-target crash
-blocker and require a new systematic audit target; a clean run that reaches
-1024 but has no post-sec2 provenance is an instrumentation/phase-latch fault.
-
-## Competing hypotheses for the next iteration
-
-- H-640-transient: the two early deaths are unrelated timing-sensitive crash
-  families. Prediction: the low-noise recipe reaches 1024 in the next run.
-- H-640-deterministic: the current product/runtime state deterministically
-  dies during the 640 phase. Prediction: another low-noise run reaches 640,
-  fires controls, and dies before 1024 with the same class of marker.
-- H-phase-latch: the game reaches the target work but the phase marker fails
-  to publish 1024. Prediction: logs show post-sec2 provenance or equivalent
-  task activity despite no `[phase] vi_width=1024` line.
-
-Once reachability is established, retain the prior chain hypotheses:
-`emitted/raw E9 -> authoritative fetch/match -> RDP dispatch -> State::fullSync`.
-
-The single discriminating measurement is the phase-scoped chain
-`emitted/raw E9 -> authoritative fetch/match -> RDP dispatch -> State::fullSync`,
-with the existing control-task markers proving every arm is live. A positive
-chain through a stage rules out all hypotheses upstream of that stage; a
-break between two adjacent counters selects the corresponding class.
-
-## Controls
-
-- Read `docs/F5-UCODE-REFERENCE.md` before interpreting command boundaries.
-- Write the competing hypotheses and this discriminating measurement into this
-  file before building; do not run a counter-only null.
-- Use one build/run for all parser, aligned-E9, authoritative-dispatch, and
-  State::fullSync counters; scope budgets to the post-sec2 phase.
-- Do not productize a mitigation without naming the writer and legitimacy.
+One phase-gated run measuring: VI 1024 reached, control task
+emit/raw/dispatch/match positive, capture survival past the 9-frame window,
+and post-sec2 E9 provenance. Reaching 1024 and surviving selects
+H-renderer-transient and permits the batched parser-chain audit next.
+Two barrier-family deaths select H-renderer-deterministic and require a
+systematic renderer-barrier idiom audit. A surviving run with no post-sec2
+provenance selects H-phase-latch.
 
 ## Exact run
 
-Build once, then run the existing 1024-gated leave recipe without the noisy
-dispatch/full-sync print streams:
+Build once:
 
-`cmake --build build --config Debug --target RogueSquadron64Recomp -j8`
+    cmake --build build --config Debug --target RogueSquadron64Recomp -j8
 
-`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_E9_PROVENANCE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' zsh ../tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/soak_results/s785_m3_reachability 300 2`
+Run from build/ with the same low-noise controls:
 
-Expected split: controls must fire before interpreting a null. Do not interpret
-the parser chain until the 1024 gate is reached; if it is reached, run the
-chain audit with one batched build/run in that same iteration.
+    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_E9_PROVENANCE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' zsh ../tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/soak_results/s786_m3_stable_reachability 300 2
+
+Keep the existing positive-control requirement. Do not add a mitigation or
+change runtime code on a crash-only result.
