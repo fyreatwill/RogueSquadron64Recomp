@@ -54481,3 +54481,19 @@ overturns s766's provisional H-retail-undriven-only interpretation. The run
 does not yet distinguish ROM/config divergence from a later phase/timing issue,
 because it ends before any 640/1024/512 transition. No port runtime code was
 changed; the oracle trace fix is retained.
+## Session 768 (2026-08-12) — long retail oracle remains at VI 320
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 51,974 bytes, so maintenance did
+not trigger. The planned work unit was the corrected 70-second retail-oracle
+phase reachability run with the documented 11-entry Start schedule, PIF and VI
+traces, and a whole-RDRAM positive control.
+
+The run completed with **11,785,153** positive-control writes over 4,199 VI.
+Every scheduled press was observed at the game PIF read boundary as
+`0x7C4=0x10000000`, but VI remained width 320 for the full run; no 640, 1024,
+or 512 phase occurred. This selects the 320-only result for this recipe and
+rules out missing PIF delivery or a simple press-timing miss. It conflicts
+with the documented oracle phase timeline, so it does not yet explain the
+divergence. The next work unit is a fresh-config plus ROM-hash identity check
+in the oracle, with the same positive control and phase schedule. No port
+runtime code changed.

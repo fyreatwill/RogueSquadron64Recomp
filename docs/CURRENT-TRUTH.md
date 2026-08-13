@@ -22,7 +22,22 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s767; compacted in maintenance s729)
+## Current truth (reviewed through s768; compacted in maintenance s729)
+
+**s768:** the corrected long retail-oracle schedule ran for 70 seconds with
+the whole-RDRAM positive control. All 11 scheduled Start presses were read as
+`0x7C4=0x10000000`, and the control recorded **11,785,153 writes** over 4,199
+VI. VI stayed at width 320 for the entire run; no 640/1024/512 transition
+occurred. This selects **H-retail-320-only** for this recipe and rules out
+H-retail-input-timing / missing PIF delivery as the explanation for the null.
+The result conflicts with the documented oracle phase timeline, so treat the
+remaining cause as an oracle configuration/ROM/runtime divergence until a
+same-run configuration or ROM identity check separates them. The raw run is
+`scratch/agent/oracle-s767-long.log`.
+
+**ORIGIN:** the oracle's PIF trace observed every injected Start at the game
+read boundary; the whole-RDRAM watch independently proved the emulator was
+executing and writing normally. No port runtime code changed.
 
 **s767:** oracle PIF verification selected **H-input-reaches-pif**. After fixing
 the trace's same-run visibility bug (it only emitted when PIF word `0x7C4`
