@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s889 (2026-08-13). The active blocker is the authoritative
+Reviewed through s890 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -124,6 +124,13 @@ closed. M3 work is limited to systematic idiom-class audits.
   symbols confirm the table and dispatch roles, but do not prove the raw input
   record or every downstream writer/value legitimate. No guard or behavior
   change.
+- s890 audited `playSongByIdLockCtl`'s complete function. It has a bounded
+  positive-count walk over the `0x801529D0` song-bank pointer array, then
+  resolves three entry-relative bases and scans `0x84`-byte sub-entries to a
+  `0xFFFF` sentinel. The table/count writers and companion symbols establish
+  the intended song-bank pipeline, but do not independently prove the dynamic
+  count, raw entry pointer, or offset-derived bases legitimate. The function
+  mixes bank-entry and sub-entry pointer shapes; no guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -148,6 +155,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s887 | `tickActiveSongs` inventory: 1 fixed-table slot-pointer load, bounded 8-slot loop, no direct chain dereference; `tickSongSequence` remains the inherited chain consumer and writer/value legitimacy remains unproven. |
 | s888 | `advanceSongRegion` inventory: bounded 64-entry/16-byte walk with explicit cursor reset/advance, but mixed region/event/table pointer shapes and unproven raw writer legitimacy; no mitigation. |
 | s889 | `processSongByHandle` inventory: two bounded 8-slot scans resolve input `+0x0` and `+0x8` through the `0xEF8` table; mixed record/slot shapes and writer legitimacy remain unproven; no mitigation. |
+| s890 | `playSongByIdLockCtl` inventory: song-bank pointer load plus three entry-relative bases and a sentinel-terminated `0x84` sub-entry scan; dynamic count/raw pointer legitimacy remains unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -168,29 +176,29 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-The next audio-sequence pointer idiom is `playSongByIdLockCtl` (`0x80097AD0`).
-Do not add a guard or change game behavior. Audit the complete function and
+The next audio-sequence pointer idiom is `unloadLastSndFileGroup`
+(`0x800978EC`). Do not add a guard or change game behavior. Audit the complete function and
 classify every song-bank lookup, slot/record pointer dereference,
 loop bound, sentinel/state check, and writer basis.
 
 Competing hypotheses:
 
-- H-play-lockctl-unclassified: at least one song-bank or slot/table site
+- H-unload-snd-unclassified: at least one song-bank or record/cursor site
   lacks a proof of safety or a concrete writer/legitimacy basis.
-- H-play-lockctl-fully-classified: every site is bounded and its writers are
-  proven legitimate by independent source artifacts.
-- H-play-lockctl-shape-mismatch: the function mixes unrelated pointer shapes;
+- H-unload-snd-fully-classified: every site in the candidate is bounded and
+  its writers are proven legitimate.
+- H-unload-snd-shape-mismatch: the function mixes unrelated pointer shapes;
   record the exact sites and stop rather than mixing shapes.
 
-Discriminating measurement: a complete site table for `playSongByIdLockCtl`,
-including every song-bank/table pointer load, dereference, loop bound, state or
-sentinel check, and writer/legitimacy basis. Any omitted access or unproven
-writer rejects full classification.
+Discriminating measurement: a complete site table for
+`unloadLastSndFileGroup`, including every song-bank/table pointer load,
+dereference, loop bound, state or sentinel check, and writer/legitimacy basis.
+Any omitted access or unproven writer rejects full classification.
 
-Exact commands: use `rg` to enumerate `playSongByIdLockCtl` and its `MEM_*`/
-`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_25.c`, then bounded `sed`
-windows and the companion `rogue_squadron64` symbol/decomp files. No game
-build or soak is planned.
+Exact commands: use `rg` to enumerate `unloadLastSndFileGroup` and its
+`MEM_*`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded
+`sed` windows and the companion `rogue_squadron64` symbol/decomp files. No
+game build or soak is planned.
 
 ## Closed and parked
 

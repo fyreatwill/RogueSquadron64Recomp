@@ -57153,6 +57153,34 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s890 (2026-08-13) — play-song bank lookup mixes bounded scan and unproven record bases
+
+Performed the prescribed source-only M3 inventory for `playSongByIdLockCtl`
+(`0x80097AD0`) in the external generated tree, cross-checked against the
+companion MusyX symbol artifacts. The complete pointer/access table is:
+
+| Guest site | Operation | Bounds / predecessor | Writer or legitimacy basis |
+|---|---|---|---|
+| `0x80097B08` | read song-bank count at `0x80152A10` | exits when signed count is non-positive; outer index starts at zero and advances by 4 | reset at `0x80097124`, increment at `0x80097898`; parser pipeline is named by companion symbols, but no independent maximum/count legitimacy proof |
+| `0x80097B2C` | load entry pointer from `0x801529D0 + index` | one pointer-table element per outer iteration; loop continues while `v1 < count` | pointer writer `0x80097598` in `parseSndFiles`; raw entry value is not independently proven |
+| `0x80097B30`, `0x80097B3C` | read entry `+0x4` group id and `+0x6` loaded/state field | reached from the table pointer; state nonzero returns `-1` | entry is parser-produced, but no null/value legitimacy proof |
+| `0x80097B48`, `0x80097B4C` | read entry `+0x24` and `+0x20` relative offsets; derive `s0` and `s2` bases with `+0x8` | derived bases are used only after state is zero; no range/null checks | fields belong to the parsed song entry shape, but their writers and legitimacy are not independently established |
+| `0x80097B58`, `0x80097B5C`, `0x80097B64`, `0x80097B6C` | read entry `+0x1C` offset and derive `s1` sub-entry base; read first sub-entry id at `s0+0` | initial `0xFFFF` sentinel rejects an empty sub-entry stream | parsed-entry offsets; no independent range/value proof |
+| `0x80097B80–0x80097B84`, `0x80097BDC–0x80097BE0` | compare current sub-entry id, advance `s0` by `0x84`, and read next id | repeated until requested id matches, `0xFFFF` sentinel, or outer entry count ends | `0x84` stride agrees with companion song-bank description; stream length/value legitimacy remains unproven |
+| `0x80097BA0–0x80097BC8` | pass `s0`, `s1`, and `s2` to `startSongSequence`, optionally under mutex | selected by control byte `s4`; mutex wraps only the control-zero path | companion symbol identifies `startSongSequence`; downstream slot/record legitimacy is outside this function |
+
+The gate byte at `0x800A0F50`, stack argument loads, and saved-register
+accesses were classified as control/frame state rather than song-bank pointer
+sites. The function therefore mixes the dynamic song-bank entry shape with an
+entry-relative sub-entry stream and setup bases. The count and loop/sentinel
+controls are structurally present, but the generated source plus companion
+symbols do not independently prove the count, raw table entry, or derived
+offset values legitimate. H-play-lockctl-unclassified and
+H-play-lockctl-shape-mismatch remain unresolved; no guard, build, soak, or
+runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
 ## Session s888 (2026-08-13) — advance-song-region mixes pointer shapes; raw writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `advanceSongRegion`
