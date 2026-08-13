@@ -57960,3 +57960,45 @@ writers or reset call ordering are legitimate at runtime; this is source-only,
 single-source ownership evidence and does not authorize a guard or mitigation.
 
 ORIGIN: complete generated-function, shared-root reader/writer, lifecycle, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s906 (2026-08-13) — normalizeVec3 is a single fixed-shape vector helper
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`normalizeVec3` (`0x80099CFC`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerated the complete helper,
+its generated callers, the caller-side stack-vector writes and zero-vector
+gate, and the companion symbol/decomp basis. No build, game run, or soak was
+needed.
+
+The complete classification is:
+
+- `0x80099D0C–0x80099D20` reads three consecutive single-precision values at
+  offsets `0x0`, `0x4`, and `0x8`, squares them, and sums the squares.
+- `0x80099D28` calls `sqrtf`; `0x80099D30–0x80099D44` rereads the same three
+  fields and divides each by the norm; `0x80099D48–0x80099D50` writes the
+  three normalized values back to the same offsets. There is no loop, derived
+  pointer, table access, or local zero-norm guard.
+- The only generated caller is `compute3DSourceSpatialMix` at
+  `0x80098624`. It passes `sp+0x30`, a local three-float vector assembled by
+  the surrounding spatial-mix arithmetic. Before the call, the caller tests
+  the three components at `sp+0x30`, `sp+0x34`, and `sp+0x38`; the all-zero
+  path skips normalization. The source inventory does not independently prove
+  the comparison constant or runtime values, so zero-norm legitimacy remains
+  unproven even though the local shape is coherent.
+- `rogue_squadron64/symbol_files/main_overlay.txt` independently names the
+  helper and places `crossProductVec3` immediately after it; no companion C
+  body or additional caller was present.
+
+### Rules out / narrows
+
+This audit rules out an omitted vector access, hidden loop, table walk, or
+incompatible generated caller shape. It narrows the remaining concern to the
+caller-provided vector values and the absence of a local zero-norm check; it
+does not identify a corrupt writer or establish runtime legitimacy. This is
+single-source inventory evidence and authorizes no guard or mitigation.
+
+ORIGIN: complete generated-helper, sole-caller, stack-vector, gate, and
+companion-symbol inventory; no guest value, writer mutation, mitigation, or
+runtime behavior changed.

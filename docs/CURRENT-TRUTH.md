@@ -205,6 +205,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s903 | `dispatchPrioritizedSoundQueue` inventory: bounded-by-count group walk plus guarded priority/pending linked-list operations and an unchecked `+0x18` voice-record pointer; local shapes are coherent, but dynamic count/node/voice writers and legitimacy remain unproven; no mitigation. |
 | s904 | `update3DAudioFrame` inventory: active-list walk rooted at `0x80153414` with guarded unlinking; spatial-mix, priority-queue, voice-handle, and flag-state paths are coherent but mixed, while dynamic list/voice fields and writer legitimacy remain unproven; no mitigation. |
 | s905 | `reset3DAudioLists` inventory: two standalone zero stores with a concrete ownership split between the `0x80153414` Factor 5 voice/source list and `0x80153418` MusyX listener/source list; sibling readers, insertion writers, and unlink writers agree, but reset ordering and dynamic writer legitimacy remain unproven; no mitigation. |
+| s906 | `normalizeVec3` inventory: one fixed-shape in-place 3-float read/normalize/write path, one caller, and a caller-side zero-vector gate; no local zero-norm check, while input/output value legitimacy remains unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -225,27 +226,27 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `normalizeVec3` (`0x80099CFC`),
+Audit the next adjacent audio function, `crossProductVec3` (`0x80099D68`),
 as a complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-normalize-unclassified: the helper has an unchecked or aliasing-sensitive
+- H-cross-unclassified: the helper has an unchecked or aliasing-sensitive
   writer/initialization obligation that cannot be classified from the function
   and sibling writers.
-- H-normalize-fully-classified: all vector reads/writes are fixed-shape,
+- H-cross-fully-classified: all vector reads/writes are fixed-shape,
   bounded by the function's arithmetic, and its callers agree on the same
   layout.
-- H-normalize-shape-mismatch: callers use incompatible vector layouts or the
+- H-cross-shape-mismatch: callers use incompatible vector layouts or the
   function's output aliases a state structure; record the exact split and
   stop.
 
-Discriminating measurement: a complete site table for `normalizeVec3`, every
+Discriminating measurement: a complete site table for `crossProductVec3`, every
 vector load/store and arithmetic operation, all generated callers, and the
 companion symbol/decomp basis. Any omitted access or incompatible caller shape
 rejects full classification.
 
-Exact commands: use `rg` to enumerate `normalizeVec3` and its callsites in
+Exact commands: use `rg` to enumerate `crossProductVec3` and its callsites in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
 companion `rogue_squadron64` symbol/decomp files. No game build or soak is
 planned.
