@@ -53969,3 +53969,46 @@ REFUTED. H-1f04-restores-e9 REFUTED.** Residual is the
 `$30` restore pair. Next is case `0x1E6C` / `153==0x1C`;
 `0x1EA8` is the sibling leftover. Do not splice overlay
 `0x20` next.
+
+## Session 756 (2026-08-12) — ovl1c $30-return 0x1E6C is LIVE; residual is sibling 0x1EA8
+
+Step 0 measured `CURRENT-TRUTH.md` at 42,087 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s755: route dest
+`0x1E6C` / `153==0x1C` to `OVL1C_1E6C`. SOAK-RESULTS s755 line
+was already folded; no unread queue recipes.
+
+Fixup 6o (own marker `ovl1c_1e6c`) inserts
+`case 0x1E6C` gated on `153==0x1C` → `OVL1C_1E6C`. Label already
+existed from the 6k splice; no composite or RSPRecomp. Independent
+of 6n's marker so an already-routed `0x1F04` file still gets the
+case. Did not add the sibling `$30`-return `0x1EA8`. Did not splice
+overlay `0x20`. Did not widen `0x1E6C` to `153==0x20`.
+**ORIGIN:** ovl1c jal at IMEM `0x1E60` sets `r31=0x1E6C` and
+`goto OVL1C_1ED4`. The trampoline saves that into `$30`, returns
+through `OVL1C_1F04`, then `jr $30`. `OVL1C_1F04` `jr $30` is the
+legitimate return into `OVL1C_1E6C`. Route, not a default-allow
+of `0x1E6C` for every resident.
+
+Soak `scratch/agent/soak_results/s756_ovl1c_1e6c_20260812-190418/run.log`
+(348 s, same recipe as s743–s755, CRASH=0, wrapper rc=0). Same-run
+positive control: `[ovl-route] res=0x1C tgt=0x1E6C` last n=7744
+LIVE; dest `tgt=0x1DB0` (n=21376), jal-returns `tgt=0x1E18`
+(n=14976) and `tgt=0x1E2C` (n=21632), trampoline `tgt=0x1F04`
+(n=14656), clip `res=0x04`, and ovl10 `tgt=0x1F40` stay LIVE.
+Four boot controls `dl06=push:2,complete:2,open:0` match=1.
+
+UJ `0x1E6C` **1570→0**. Sibling UJ `0x1EA8` stays n=1403
+(s755 1609), still from `OVL1C_1F04` `jr $30` (ucode line 4987).
+The other predicted `$30` landings (`0x1E7C`/`0x1E8C`/`0x1EBC`/
+`0x1ECC`) remain 0. sec2 `last_ovl` `0x1C/0x1F04` 46 +
+`0x1C/0x1E2C` 10 + `0x1C/0x1E6C` 5 / 64 (3 early `0x00/0x0000`).
+E9 match still boot-shaped: sec2 match=3/64, one copy of the
+`2/2/0` triplet. rdpFs 0→4017 (s755 5167; not a restore).
+Two `[clip-stray]` `tgt=0x1E6C 153=0x20` hits — do not widen.
+Do not revert dest-`0x1E6C` / `153==0x1C`.
+
+**H-1e6c-ovl1c-30ret SELECTED.** **H-1e6c-not-the-uj-path
+REFUTED** (`0x1E6C` UJ gone; route LIVE). **H-1e6c-breaks-06
+REFUTED. H-1e6c-restores-e9 REFUTED.** Residual is the sibling
+`$30` restore `0x1EA8`. Next is case `0x1EA8` / `153==0x1C`.
+Do not splice overlay `0x20` next.
