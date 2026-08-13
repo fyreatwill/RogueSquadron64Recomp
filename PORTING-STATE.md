@@ -56779,3 +56779,23 @@ with the documented eleven-Start schedule through the hangar transition.
 
 ORIGIN: retail debugger watch-PC output plus independent whole-RDRAM and VI
 controls; no game value or control flow changed.
+
+## Session s867 (2026-08-13) — eleven-Start retail run remains width-320 only
+
+Ran the prescribed 70-second retail oracle with the eleven-Start schedule,
+whole-RDRAM positive control, VI trace, and target-PC detail enabled. The
+whole-RDRAM watch recorded 11,785,465 writes over 4,199 VI, and the target
+watches recorded 9 caller-global writes plus 3 free-list-head writes. Every
+target hit was attributed to the early PCs already seen in s865/s866:
+`0x80000420`, `0x80000424`, `0x80000ED8`, `0x80000FFC`, `0x8000104C`, or
+`0x800021D8`.
+
+The run stayed at VI width 320 for its full duration despite all eleven
+scheduled Start presses. This rules out H-control-invalid and strengthens
+H-init-writer only for the observed width-320 population; H-runtime-writer
+remains unevaluable because the phase transition did not occur. The next unit
+validates the injected input at the PIF boundary with `--pif-trace` before
+another writer-watch inference. No port behavior or mitigation changed.
+
+ORIGIN: retail debugger watch-PC output plus independent whole-RDRAM and VI
+controls; no game value or control flow changed.

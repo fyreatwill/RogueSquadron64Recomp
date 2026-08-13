@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s866 (2026-08-13). The active blocker is the authoritative
+Reviewed through s867 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -679,30 +679,52 @@ changed.
 ORIGIN: retail debugger write-watch PC attribution with whole-RDRAM and VI
 positive controls; no port value or mitigation behavior changed.
 
-## Next work unit: make the retail phase transition observable
+## Session s867 result
 
-HYPOTHESIS-ID: m3-coalesce-entry-state
+The 70-second retail oracle run used the documented eleven-Start schedule,
+whole-RDRAM positive control, VI trace, and target-write detail watches. The
+whole-RDRAM control recorded 11,785,465 writes over 4,199 VI, and both target
+watches fired (9 writes to `0x1163E4..0x1163F0`, 3 writes to
+`0x10FF18..0x10FF1C`). Every target hit occurred at the early PCs already seen
+in s865/s866: `0x80000420`, `0x80000424`, `0x80000ED8`, `0x80000FFC`,
+`0x8000104C`, and `0x800021D8`. The VI trace remained width 320 for the full
+run; no later phase was observed despite all eleven scheduled Start presses.
 
-Run one 70-second retail-oracle experiment with the same ROM, VI trace,
-whole-RDRAM control, and target watches, but use the documented phase-driving
-schedule through the hangar boundary:
-`6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`.
-Keep `--detail-watch 1 --detail-watch 2` enabled. This changes only input
-delivery, not game code; the goal is to verify that the Start schedule actually
-reaches the later width/phase needed to test a runtime heap-maintenance writer.
+This rules out H-control-invalid for this run and strengthens H-init-writer
+only for the observed width-320 population. It does not test H-runtime-writer,
+because the required phase transition did not occur. The next experiment must
+validate the input schedule at the PIF boundary before using another retail
+watch to infer writer absence.
+
+ORIGIN: independent retail debugger write-watch, VI trace, and whole-RDRAM
+control; no port value, game behavior, or mitigation behavior changed.
+
+## Next work unit: validate the retail phase driver at PIF
+
+HYPOTHESIS-ID: m3-coalesce-phase-driver
+
+Run one 20-second retail-oracle experiment with the same ROM, VI trace, and
+whole-RDRAM positive control, using the documented early phase-driving
+schedule and adding `--pif-trace`:
+`2:start,4:start,6:start,8:start,10:start,12:start,14:start,16:start,18:start`.
+Do not infer writer absence from this run; its purpose is to validate that the
+oracle's injected Start presses become Start bits at the PIF boundary and to
+identify the first resulting VI transition.
 
 Competing hypotheses:
 
-- H-init-writer: target writes remain limited to boot/heap initialization PCs.
-- H-runtime-writer: a later gameplay/heap-maintenance PC writes the state.
-- H-control-invalid: whole-RDRAM or VI control fails, so the target-PC result
-  is unevaluable.
+- H-pif-start: PIF trace shows Start-bit transitions at the scheduled times and
+  VI advances beyond width 320.
+- H-input-map: presses are delivered but the PIF button word never contains
+  Start, so the documented schedule is not driving this oracle configuration.
+- H-game-state: PIF Start bits are present but VI remains width 320, so the
+  retail state machine or timing—not the input injector—is the blocker.
 
-Discriminator: whole-RDRAM and VI controls must fire, and the VI trace must
-show a post-320 transition (ideally width 1024 or 512). A target PC after that
-transition selects H-runtime-writer; target PCs confined to boot with no
-transition select H-init-writer only for the observed phase; failed controls
-or no phase transition make the writer question unevaluable.
+Discriminator: the whole-RDRAM control must fire; the PIF trace must show the
+Start bit for each scheduled press, and VI must show a post-320 width/origin
+transition. Missing PIF Start selects H-input-map; present PIF Start with no
+transition selects H-game-state; both controls plus a transition validate the
+driver and permit a later writer-watch experiment.
 
 ## Ranked backlog
 

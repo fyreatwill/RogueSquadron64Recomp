@@ -1,29 +1,22 @@
-# NEXT work unit (s867)
+# NEXT work unit (s868)
 
-HYPOTHESIS-ID: m3-coalesce-entry-state
+HYPOTHESIS-ID: m3-coalesce-phase-driver
 
-Run one 70-second retail-oracle phase-transition experiment. Preserve the
-whole-RDRAM positive control, VI trace, retail ROM, and target watches; use the
-documented eleven-Start schedule through the hangar boundary:
-`6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`.
-Keep `--detail-watch 1 --detail-watch 2` enabled. Do not change emulated game
-behavior or add a mitigation.
+Run one 20-second retail-oracle input-validation experiment. Preserve the
+whole-RDRAM positive control, VI trace, and retail ROM; add `--pif-trace` and
+use: `2:start,4:start,6:start,8:start,10:start,12:start,14:start,16:start,18:start`.
+Do not add target watches or change emulated game behavior.
 
 Competing hypotheses:
 
-- H-init-writer: target writes remain limited to boot/heap initialization PCs
-  because the run stays in width 320.
-- H-runtime-writer: a later phase is reached and a later gameplay/heap-
-  maintenance PC writes the state.
-- H-control-invalid: whole-RDRAM or VI control fails, making attribution
-  unevaluable.
+- H-pif-start: PIF shows Start-bit transitions and VI advances beyond width 320.
+- H-input-map: presses are delivered but PIF never shows Start.
+- H-game-state: PIF shows Start but VI remains width 320.
 
-Discriminating measurement: whole-RDRAM and VI controls must fire and the VI
-trace must show a post-320 transition (ideally width 1024 or 512). A target PC
-after that transition selects H-runtime-writer; target PCs confined to boot
-with no transition select H-init-writer only for the observed phase; failed
-controls or no transition leave the writer question unevaluable. Counts without
-PCs are unevaluable.
+Discriminating measurement: whole-RDRAM must fire, PIF must show each scheduled
+Start bit, and VI must show a post-320 width/origin transition. Missing PIF
+Start selects H-input-map; present PIF Start with no transition selects
+H-game-state; both controls plus a transition validate the driver.
 
 Exact command:
 
@@ -31,9 +24,7 @@ Exact command:
 tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --secs 70 --watch-write 0x0:0x800000 \
-  --watch-write 0x1163E4:0x1163F0 --watch-write 0x10FF18:0x10FF1C \
-  --vi-trace \
-  --press '6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' \
-  --detail-watch 1 --detail-watch 2 2>&1 | tee scratch/agent/oracle_s867_phase.log
+  --secs 20 --watch-write 0x0:0x800000 --vi-trace --pif-trace \
+  --press '2:start,4:start,6:start,8:start,10:start,12:start,14:start,16:start,18:start' \
+  2>&1 | tee scratch/agent/oracle_s868_pif.log
 ```
