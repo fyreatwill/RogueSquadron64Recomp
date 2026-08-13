@@ -192,3 +192,11 @@ ovl18 dest-`0x1DB0` when `153==0x18`.
 `resident:0x10`. New leftover `$ra=0x1F40` stray (ovl18 jal
 return). E9 still the boot-shaped triplet. Next is ovl10 dest-
 `0x1DB0` when `153==0x10`.
+
+**s750 live:** fixup 6i landed the ovl10 dest route. Soak
+`s750_ovl10_route_20260812-174446` (331 s, wrapper rc=3 from a
+late SIGSEGV): `last_ovl=0x10/0x1DB0` 122/128, leftover `/00`
+`L_11B0` strays → 0. New stray is `0x1F40/10` n=5501 line=1421
+(`L_1778` `jr $30`), not leftover `$ra`. Writer is ovl10
+`ori $30, 0x1F40; j L_15D0` at IMEM `0x1F38`. Next is an
+`OVL10_1F40` handshake route, not ovl 0x1C and not an OVL18 widen.

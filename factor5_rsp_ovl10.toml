@@ -1,0 +1,23 @@
+# Resident overlay 10 (id 0x10) input. The composite puts its ROM image in
+# the shared IMEM window so RSPRecomp can translate L_1DB0 as the ovl18
+# successor. Only the window-region labels are used — they are renamed
+# OVL10_* and spliced into factor5_ucode_recompiled.c by fixup 6i.
+# Source image: ROM 0x268A0, table length 0x213 -> 0x214 bytes, dest IMEM
+# 0x1DB0. First word 0x9626000C (lhu $6, 12($17)). No jals. Exit:
+# j L_1268; ori $5, 0x1C at IMEM 0x1FBC. Also j L_15D0 at 0x1F38.
+# Overlay 0x1C is the successor residual — do not splice it here.
+rom_file_path = "scratch/s47_ovl10_composite.z64"
+text_offset = 0x025610
+text_size = 0xF80
+text_address = 0x04001080
+output_file_path = "build/factor5_ucode/factor5_ucode_ovl10_recompiled.c"
+output_function_name = "factor5_ucode_ovl10"
+
+# Same resident dispatch-table targets as the main/ovl18 configs. No
+# jal-return extras — this overlay has none.
+extra_indirect_branch_targets = [
+    0x10D8, 0x10E0, 0x12A0, 0x12B8, 0x12C4, 0x12E4, 0x12EC, 0x12FC,
+    0x1304, 0x1350, 0x135C, 0x1370, 0x1390, 0x146C, 0x1484, 0x14D4,
+    0x14F0, 0x1504, 0x15A4, 0x15AC, 0x15B4, 0x15D0, 0x1DB0,
+    0x1F38, 0x1FBC
+]

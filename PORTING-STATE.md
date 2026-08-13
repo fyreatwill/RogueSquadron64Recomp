@@ -53700,3 +53700,53 @@ pred dest `0x1DB0` line 621 resident `0x10`). **H-ovl18-breaks-06
 REFUTED. H-ovl18-restores-e9 REFUTED.** Residual is skipped
 overlay `0x10` (ROM `0x268A0`, dest `0x1DB0`, table len `0x213`,
 no jals, exit `j L_1268; ori $5, 0x1C`).
+
+## Session 750 (2026-08-12) — ovl10 dest-0x1DB0 route is LIVE; residual is jr $30 0x1F40
+
+Step 0 measured `CURRENT-TRUTH.md` at 38,576 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s749: route overlay
+10 at dest `0x1DB0` when `153==0x10`. SOAK-RESULTS s749 line was
+already folded; no unread queue recipes.
+
+`make_clip_composite.py 16` (alias of id 10) places ROM `0x268A0`
+(0x214 B, first word `9626000C`) in the window.
+`factor5_rsp_ovl10.toml` + RSPRecomp emit
+`factor5_ucode_ovl10_recompiled.c`. Fixup 6i extracts
+`L_1DB0..do_indirect_jump`, renames `OVL10_*` (external helpers
+`L_1268` and `L_15D0`), and routes `153==0x10` at dest `0x1DB0`
+only. No jal-return cases — the image has none. Host
+`[ovl-route]` filter now prints `res=0x10`. Overlay `0x1C` was
+not spliced. **ORIGIN:** dest `0x1DB0` / `153==0x10` is the
+skipped ovl10 vector loop (ROM `0x268A0`). Leftover-`$ra`
+`L_11B0` `/00` strays are after that skip falls into main
+`L_1DB0`. Route, not a `0x1DF4`/`0x1E28`/`0x1F40` widen.
+
+Soak `scratch/agent/soak_results/s750_ovl10_route_20260812-174446/run.log`
+(331 s, same recipe as s743–s749, UJ=0, wrapper rc=3). Same-run
+positive control: `[ovl-route] res=0x04` 4233 lines, `res=0x18`
+last n=6464, `res=0x10` last n=5440 tgt=`0x1DB0`.
+`last_ovl=0x10/0x1DB0` on 122/128 sec2 reset rows (`ovl10=1` on
+those 122; 6 early `0x00`). Four boot controls
+`dl06=push:2,complete:2,open:0` match=1.
+
+Leftover-`$ra` `/00` `L_11B0` strays **2619+2345+901+56→0**.
+New class: `[clip-stray] tgt=0x1F40 153=0x10 line=1421` n=5501.
+Line 1421 is `L_1778` `jr $30` (`jump_target = r30`), not
+`L_11B0` `jr $ra`. ovl10 IMEM `0x1F38` is `j L_15D0` /
+`ori $30, $zero, 0x1F40`; `0x1F40` is `lhu $10, 0x56($18)` —
+the continuation after the shared vertex helper. Distinct from
+ovl18's jal-return at the same IMEM address. E9 match **6/128**
+is two copies of the boot-shaped `dl06=2/2/0` triplet; rdpFs
+0→5169. Not an E9 restore.
+
+Late SIGSEGV at 283 s (`si_addr=0x10`, x0=0, x10=0xeeee…,
+`last-guest-pc=0x8000b650` stale). Menu-return window (sec3 at
+245 s). Do not revert the dest route: boot `dl06` stayed
+`2/2/0` and the 5501 dropped `jr $30` returns are the plausible
+fallout. Not a single-crash chase.
+
+**H-ovl10-stops-1db0-reset SELECTED.** **H-ovl10-not-the-l11b0-path
+REFUTED** (`/00` line-451 strays gone). **H-ovl10-breaks-06
+REFUTED. H-ovl10-restores-e9 REFUTED.** Residual is the ovl10
+`L_15D0` handshake return at `0x1F40`. Do not widen `0x1F40` to
+`OVL18_*`. Overlay `0x1C` stays later.

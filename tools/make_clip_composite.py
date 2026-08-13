@@ -22,8 +22,12 @@ window and routes DMEM 0x153 == 0x14.
 Overlay 18 is dest 0x1DB0 (ROM 0x26CD8, table len 0x21F -> 0x220 B):
 ovl14's successor, exits j L_1268; ori $5, 0x10. Fixup 6h extracts
 that window and routes DMEM 0x153 == 0x18.
+Overlay 10 is dest 0x1DB0 (ROM 0x268A0, table len 0x213 -> 0x214 B):
+ovl18's successor, first word 0x9626000C, no jals, exits
+j L_1268; ori $5, 0x1C at IMEM 0x1FBC plus j L_15D0 at 0x1F38.
+Fixup 6i extracts that window and routes DMEM 0x153 == 0x10.
 
-Usage: python3 tools/make_clip_composite.py [4|12|14|18|24]   (from the repo root)
+Usage: python3 tools/make_clip_composite.py [4|10|12|14|16|18|24]   (from the repo root; 16==10)
 """
 import sys
 from pathlib import Path
@@ -37,6 +41,7 @@ WINDOW_END = 0x26590      # IMEM 0x2000 (text end)
 # dest 0x12A0 = text_offset 0x25610 + (0x12A0-0x1080) = 0x25830
 OVERLAYS = {
     4: (0x26420, 0x220, "clip", WINDOW_ROM, WINDOW_END),
+    10: (0x268A0, 0x214, "ovl10", WINDOW_ROM, WINDOW_END),
     12: (0x26670, 0x230, "trigen", WINDOW_ROM, WINDOW_END),
     14: (0x26AB8, 0x220, "ovl14", WINDOW_ROM, WINDOW_END),
     18: (0x26CD8, 0x220, "ovl18", WINDOW_ROM, WINDOW_END),
@@ -44,10 +49,13 @@ OVERLAYS = {
 }
 
 overlay_id = int(sys.argv[1], 0) if len(sys.argv) == 2 else 4
+# 0x10 is 16 decimal; accept both the hex-digit key (10) and the decimal id (16).
+if overlay_id == 16:
+    overlay_id = 10
 try:
     overlay_rom, overlay_len, overlay_name, dest_rom, pad_end = OVERLAYS[overlay_id]
 except KeyError:
-    raise SystemExit(f"unsupported overlay {overlay_id}; choose one of {sorted(OVERLAYS)}")
+    raise SystemExit(f"unsupported overlay {overlay_id}; choose one of {sorted(OVERLAYS)} (or 16 for ovl10)")
 
 overlay = rom[overlay_rom:overlay_rom + overlay_len]
 out = bytearray(rom)

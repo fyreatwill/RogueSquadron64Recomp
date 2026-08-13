@@ -22,25 +22,36 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s749; compacted in maintenance s729)
+## Current truth (reviewed through s750; compacted in maintenance s729)
+
+**s750:** fixup 6i splices overlay 10 (`OVL10_*`, dest `0x1DB0`,
+`153==0x10`, no jals; external helpers `L_1268` and `L_15D0`).
+Soak `s750_ovl10_route_20260812-174446` (331 s, UJ=0, wrapper rc=3
+from a late SIGSEGV `si_addr=0x10` at 283 s; `last-guest-pc`
+`0x8000b650` is the stale `beginFrameDLChunk` checkpoint): ovl10
+LIVE via `[ovl-route] res=0x10` last n=5440 and
+`last_ovl=0x10/0x1DB0` 122/128 (`ovl10=1` on those 122). ovl18
+stays LIVE (n=6464). Leftover-`$ra` `/00` `L_11B0` strays
+**2619+2345+901+56→0**. New stray is `0x1F40/10` n=5501 line=1421
+(`L_1778` `jr $30`). 4/4 boot `dl06=2/2/0`. E9 match **6/128** is
+two copies of the boot-shaped `2/2/0` triplet; rdpFs 0→5169.
+**H-ovl10-stops-1db0-reset SELECTED. H-ovl10-not-the-l11b0-path
+REFUTED. H-ovl10-breaks-06 REFUTED. H-ovl10-restores-e9 REFUTED.**
+Do not revert the dest route. Next is an `OVL10_1F40` handshake
+route. **ORIGIN:** dest `0x1DB0` / `153==0x10` is the skipped
+ovl10 image (ROM `0x268A0`). The `0x1F40/10` stray writer is ovl10
+`ori $30, 0x1F40; j L_15D0` at IMEM `0x1F38`; `L_1778` `jr $30`
+is the legitimate return into ovl10 at `lhu $10, 0x56($18)`.
+Route `153==0x10` to `OVL10_1F40`, not `OVL18_1F40`.
 
 **s749:** fixup 6h splices overlay 18 (`OVL18_*`, dest `0x1DB0`,
-`153==0x18`, jal-returns `0x1EEC` widened `0x14||0x18` and
-`0x1F40`). Soak `s749_ovl18_route_20260812-172852` (348 s, CRASH=0
-UJ=0, wrapper rc=0): ovl18 LIVE via `[ovl-route] res=0x18` last
-n=6848 and `last_ovl=0x18/*` 183/192 (`0x1DB0` 177, `0x1F40` 6).
-ovl14 stays LIVE (n=10176). Sec2 first-edge pred `resident:0x18`
-**61→0**; all 183 are now `dest=0x1DB0,line:621,resident:0x10`
-(`ra=0x1DF4` 96 / `0x1E28` 81 / `0x1F40` 6). Leftover-`$ra` strays
-`0x1DF4/00` 1395→2619, `0x1E28/00` 1200→2345, `0x1EEC/00` 77→56,
-new `0x1F40/00=901` (all line=451). 4/4 boot `dl06=2/2/0`. E9
-match **9/192** is three copies of the boot-shaped `2/2/0`
-triplet (s748 3/64); rdpFs 0→5120. **H-ovl18-stops-1db0-reset
-SELECTED. H-ovl18-not-the-l11b0-path REFUTED. H-ovl18-breaks-06
-REFUTED. H-ovl18-restores-e9 REFUTED.** Next is an ovl10 dest-
-`0x1DB0` route when `153==0x10`. **ORIGIN:** dest `0x1DB0` /
-`153==0x18` is the skipped ovl18 image (ROM `0x26CD8`). Route,
-not a leftover-`$ra` widen.
+`153==0x18`). Soak `s749_ovl18_route_20260812-172852` (348 s,
+CRASH=0): ovl18 LIVE n=6848, `last_ovl=0x18/*` 183/192; pred
+`resident:0x18` **61→0**; leftover `/00` `L_11B0` strays grew
+(1DF4/1E28/1F40/1EEC). 4/4 boot `dl06=2/2/0`. E9 9/192 boot-
+shaped. **H-ovl18-stops-1db0-reset SELECTED.** Consumed by s750.
+**ORIGIN:** dest `0x1DB0` / `153==0x18` is the skipped ovl18 image
+(ROM `0x26CD8`).
 
 **s748:** fixup 6g splices overlay 14 (`OVL14_*`, dest `0x1DB0`,
 `153==0x14`, jal-returns `0x1E28`/`0x1E94`/`0x1EEC`). Soak
@@ -421,7 +432,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s749:** ovl18 dest-`0x1DB0` route is LIVE; pred `resident:0x18` → 0; residual is skipped ovl10 (`153==0x10` at dest `0x1DB0`) plus leftover-`$ra` `L_11B0` strays. E9 still the boot-shaped triplet (9/192). **s748:** ovl14 dest-`0x1DB0` LIVE; pred `0x14` → 0. **s747:** `$ra=0x1DF4` is ovl12-only. **s746:** remaining ovl24-only `0x04` returns → 0. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s750:** ovl10 dest-`0x1DB0` route is LIVE; leftover `/00` `L_11B0` strays → 0; residual is ovl10's `L_15D0` handshake return (`0x1F40/10` via `jr $30`). E9 still the boot-shaped triplet (6/128). **s749:** ovl18 dest-`0x1DB0` LIVE; pred `0x18` → 0. **s748:** ovl14 dest-`0x1DB0` LIVE; pred `0x14` → 0. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
@@ -495,9 +506,10 @@ Game functions (s1) — all four steps, in order:
 RSP ucode (only when a ucode toml changes): `~/Documents/Tools/N64Recomp/build/RSPRecomp` on
 `factor5_rsp.toml` / `factor5_boot_rsp.toml` → `build/factor5_ucode/*.c`, then
 `tools/fixup_factor5_ucode.py`. **s47/s739: before the fixup, also run
-`python3 tools/make_clip_composite.py [4|12|14|18|24]` + RSPRecomp on
-`factor5_rsp_ovl4.toml`, `factor5_rsp_ovl12.toml`,
-`factor5_rsp_ovl14.toml`, `factor5_rsp_ovl18.toml`, and
+`python3 tools/make_clip_composite.py [4|10|12|14|16|18|24]` + RSPRecomp on
+`factor5_rsp_ovl4.toml`, `factor5_rsp_ovl10.toml`,
+`factor5_rsp_ovl12.toml`, `factor5_rsp_ovl14.toml`,
+`factor5_rsp_ovl18.toml`, and
 `factor5_rsp_ovl24.toml`**. `factor5b_rsp.toml`
 is the **MusyX audio** ucode; stays in the build as a never-called artifact (s5).
 
