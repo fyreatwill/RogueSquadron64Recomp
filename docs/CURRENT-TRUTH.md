@@ -339,9 +339,15 @@ leaving runtime behavior as the remaining broad class.
    unified, callback/task-end, or authoritative-advance rows. The lower log
    volume did not recover the post-sec2 gate; this selects only
    H-prechain-transient for the tested recipe and leaves all join hypotheses
-   unevaluable. No parser conclusion or mitigation is justified. Next: audit
-   the phase-gated recipe/transition boundary for a single stability-oriented
-   capture before adding more parser instrumentation.
+   unevaluable. No parser conclusion or mitigation is justified. The s799
+   read-only audit found the launcher passed the intended
+   `PROBE_PHASE_WIDTH=1024`, `PROBE_PHASE_TIMEOUT=240`, and phase-relative key
+   mode, while both logs independently recorded the 0→320→640 VI sequence and
+   no 1024 transition. This refutes H-recipe-gate and
+   H-instrumentation-interference for the tested recipe and selects
+   H-runtime-transition. Next: one stability-oriented capture gated at VI 640,
+   with `PROBE_LEAVE_OK=1`, to observe the transition boundary and retain the
+   parser positive controls without waiting on an unreachable 1024 gate.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

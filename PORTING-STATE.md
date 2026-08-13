@@ -55169,3 +55169,27 @@ phase-gated recipe/transition boundary.
 
 Logs: `scratch/agent/soak_results/s798_join_a/run.log` and
 `scratch/agent/soak_results/s798_join_b/run.log`.
+## Session 799 (2026-08-13) — phase-gate audit selected runtime transition
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 33,658 bytes, so maintenance did
+not trigger. The planned work unit was a read-only audit of the s798 phase-gated
+recipe and transition boundary; no build or run was performed.
+
+Both launcher logs explicitly show `PROBE_PHASE_WIDTH=1024`, a 240-second
+timeout, and waiting for that width. The probe script confirms that
+`PROBE_KEYS_FROM_PHASE=1` starts the requested key schedule only after the gate,
+and the captured run logs independently record the phase sequence 0→320→640
+with no 1024 transition in either arm. The requested low-volume diagnostics
+therefore were not shown to interfere, and the gate/key propagation was correct.
+
+This refutes H-recipe-gate and H-instrumentation-interference for the tested
+recipe and selects H-runtime-transition: the port reaches VI 640 but does not
+cross the transition that enables the 1024 phase. It rules out no parser
+mechanism because no parser controls fired. No mitigation was added. The next
+unit is one capture gated at VI 640 with `PROBE_LEAVE_OK=1`, retaining parser
+positive controls so the transition can be observed without an unreachable
+1024 wait.
+
+Logs: `scratch/agent/soak_results/s798_join_a_launcher.log`,
+`scratch/agent/soak_results/s798_join_b_launcher.log`, and the corresponding
+`run.log` files.
