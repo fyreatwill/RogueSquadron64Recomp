@@ -57689,3 +57689,63 @@ line. This is a source/symbol result only, not an explanation for a runtime
 crash; no guard or behavior change was made.
 
 ORIGIN: complete generated-function and caller inventory cross-checked against companion symbol notes; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s901 (2026-08-13) — priority sound enqueue is structurally coherent but remains unclassified
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, source-only inspection of
+`enqueueSoundInPriorityGroup` (`0x80099394`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`, cross-checked against its caller in
+`tickAndReap3DAudioVoices`, the adjacent spatial enqueue and dispatcher
+functions, all generated accesses to the shared globals, and the companion
+`main_overlay.txt` symbol file. No build, game run, or soak was needed.
+
+The complete site classification is:
+
+- `0x8009939C–0x800993D8`: load the active group count at `D_80152EF0`,
+  load the caller record's `+0x38` group key, then scan the group-key table
+  `D_80152D70` in `0xC`-byte strides. The scan is bounded by the current
+  byte count and exits on a matching key; the record pointer, key, count, and
+  table contents are dynamic, with no independent writer/value legitimacy
+  proof.
+- `0x800993E0–0x8009942C`: if the scan reaches the count, derive the slot
+  offset as `group * 0xC`, clear `D_80152D74[slot]` and
+  `D_80152D78[slot]`, increment `D_80152EF0`, and store the record's group
+  key into `D_80152D70[slot]`. The new-slot path is structurally explicit, but
+  the count has no local capacity check and its writer/value basis is not
+  independently established.
+- `0x80099430–0x8009946C`: load the per-group head/tail pointer
+  `D_80152D78[slot]`; walk each queue node by `+0x4` priority and `+0x0`
+  next pointer until the incoming float belongs before the current node or
+  the null terminator is reached. The loop is null-terminated and the
+  current node is only dereferenced after the head/next value is tested, but
+  node pointers, node priorities, and the incoming float remain
+  caller/list-writer-derived without independent legitimacy proof.
+- `0x80099470–0x800994AC`: for a head insertion, compute the next free node
+  from `D_80153410` and the `D_80153290` node pool, then publish that node as
+  `D_80152D78[slot]`. The index arithmetic is a consistent `12`-byte stride,
+  but `D_80153410` has no local upper-bound check or independent value proof.
+- `0x800994B8–0x80099520`: for a middle/tail insertion, link the new node
+  through the predecessor's `+0`; otherwise use the same node-pool path.
+  Store next pointer `+0`, priority float `+4`, original record pointer `+8`,
+  and increment `D_80153410`. These fields form one coherent 12-byte sorted
+  queue-node shape; the node-pool cursor and all dynamic values remain
+  unproven by independent writer evidence.
+
+The shape-mismatch hypothesis is rejected for the local queue node: all
+linked-list accesses use the same `next/+4-priority` record shape, and the
+caller supplies the expected record-plus-float form. Full classification is
+nevertheless rejected because the function mixes the group table, linked
+queue nodes, and free-node pool, while the dynamic record/key/priority,
+global count/cursor, and list writers are not independently proven legitimate.
+No guard or behavior change was made.
+
+### Rules out / narrows
+
+This source audit rules out an omitted loop bound or an unclassified local
+access in the function. It does not identify a corrupt writer or establish
+that any runtime value is legitimate; the result is single-source inventory
+evidence, not an explanation for a crash.
+
+ORIGIN: complete generated-function, caller, shared-writer, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
