@@ -57033,3 +57033,16 @@ retail-value sampler.
 ORIGIN: port diagnostic reads, independent retail physical write/VI/PIF
 controls, and the invalid callback-read attempt; no game behavior or
 mitigation behavior changed.
+## s878 result — maintenance compaction
+
+The required maintenance check found `docs/CURRENT-TRUTH.md` at 61,556 bytes,
+above the 60,000-byte gate. No build, run, soak, or experiment was performed.
+The file was compacted from 1,046 lines to a concise current-state ledger and
+the durable s743–s877 conclusions were migrated to `docs/PROJECT-OVERVIEW.md`
+under “Recent investigation archive (s743–s877)”. The active coalescer
+value-legitimacy hypothesis, backlog, controls, and safe retail value-sampler
+next unit were retained. The maintenance result is a net reduction of more
+than 200 lines; no technical conclusion or mitigation changed.
+
+ORIGIN: documentation maintenance only; no runtime, guest value, parser,
+writer, or mitigation behavior changed.

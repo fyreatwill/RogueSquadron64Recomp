@@ -2650,3 +2650,41 @@ further change. Runtime rerolls without a section-2 latch are unqualified. **s74
 splice stops the section-2 reset; residual UJs are the skipped overlay-24 emit at dest `0x12A0`
 plus overlay 28's `r17 += 32` / restore of `L_12A0` (`docs/M3-OVL24-CONTINUATION-AUDIT.md`).
 Details: PORTING-STATE Sessions 685–742; consume protocol: `scratch/agent/NEXT.md`.
+
+### Recent investigation archive (s743–s877)
+
+This compact archive was migrated from `CURRENT-TRUTH.md` during the s878
+maintenance pass. It preserves the durable conclusions; chronological detail
+remains in `PORTING-STATE.md`.
+
+**Post-sec2 E9 accounting (s743–s854).** Phase-gated port captures reached VI
+1024 with live `emit/raw/dispatch/match` controls. Bridge submit serials and
+RT64 consumer ranges matched for the retained ordinary population, and the
+synthetic FULL_SYNC path was absent in the decisive s840 capture. Source and
+runtime audits showed that the bridge scans fixed 8-byte slots while RT64
+advances by command length; most apparent E9 excesses are inline words inside
+preceding commands (`span`), not parser E9 commands. Pending completion was
+zero in the captured population. Triangle/copy probes then showed B4/BF rows
+were owned by the RDP map, not Factor 5, and mapped to non-triangle entries;
+the accepted submit ranges matched those rows. The remaining extended-opcode
+residual was not reached by the later captures. No writer or value legitimacy
+was established, so no mitigation is justified.
+
+**Dispatcher and breadcrumb family (s855–s861).** Bounded slot/update
+populations were valid in the observed post-sec2 window, but the recurring
+death population was not captured. A source inventory found 9,550 writes to
+the process-wide guest-PC breadcrumb across 47 functions; guest PC
+`0x8000834c` is written by `drainMeshReleaseQueue`'s return delay-slot
+representation, not by `getNextSlotNpcTypeId`. The crash handler has no writer
+thread, epoch, or handoff association, so that breadcrumb is stale attribution
+for this family. It does not prove that a later slot chain is valid.
+
+**Coalescer value-origin family (s862–s877).** The whole-idiom audit found
+the coalescer's two walks and the sole partition writers. Port entry telemetry
+observed `a0=0/1` and head `0x830A10A0`; retail physical watches independently
+showed live early writers and verified whole-RDRAM, PIF, and VI controls. The
+retail driver stayed at VI width 320 despite phase-appropriate Start pulses,
+while the port reached VI 1024 and late partition writers. Thus the late
+retail value comparison is phase-unreachable. No value-legitimacy conclusion
+or mitigation follows. The next bounded unit is an oracle callback/API audit
+for a safe deferred value sampler.
