@@ -55597,3 +55597,26 @@ mitigation was made.
 
 ORIGIN: the values originate at `runVideoFrameTick`'s `lhu 0x4($s3)` frame
 state load; no mitigation-shaped machinery was added.
+
+## Session 817 (2026-08-13) — frame-state field writer audit
+
+The bounded generated-source audit enumerated all four callers of
+`runVideoFrameTick`: two calls in `mainGameLoop`, one in `menuOverlayInit`,
+and one in `initSceneForMission`. In `runVideoFrameTick`, the `a0` frame
+object is retained in `$s3`, and `lhu 0x4($s3)` is sign-extended into the
+`advanceVideoFrame` argument. Therefore the observed small values are a
+frame-state scalar, not a guest pointer.
+
+The menu caller passes its frame object as `s0+0x10` and stores the matching
+`s0+0x14` halfword from the computed menu timing-table entry at `0x800C5978`.
+The mission caller passes `s1+0x10` and stores the matching `s1+0x14`
+halfword from the computed scene timing value at `0x800A9BBC`. The two
+`mainGameLoop` calls pass the static `D_80037560+0x10` record. No generated
+code writer for that record's matching `D_80037574` halfword was found, so
+its ROM/data initializer remains unresolved. This classifies the dynamic
+callers as intentional structured state, leaves the static caller
+single-source/evaluable only after data tracing, and rules out the
+small-value-as-pointer explanation. No build, run, or mitigation was made.
+
+ORIGIN: the dynamic values originate in the menu/mission frame-state stores;
+the static value originates in an as-yet-untraced data initializer.

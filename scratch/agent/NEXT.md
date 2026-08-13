@@ -1,36 +1,33 @@
-# NEXT work unit (trace the frame-state value supplied as VI argument a1)
+# NEXT work unit (trace the static frame record initializer)
 
 HYPOTHESIS-ID: m3-vi-argument-state-origin
 
-Perform one bounded source audit. Trace `runVideoFrameTick`'s callers and the
-frame-structure value loaded at offset `0x4` that becomes `advanceVideoFrame`
-argument `a1`, and identify the stores or ROM/data initialization that produce
-that field. Do not add a probe, guard, or game-logic change.
+Perform one bounded source/data audit. Trace `D_80037560` and the static frame
+record passed as `D_80037560+0x10` by both `mainGameLoop` callsites. Identify
+the ROM/data bytes at the corresponding `D_80037574` field, the loader or
+initializer that materializes them, and any generated writer missed by the
+previous register-scoped search. Do not add a probe, guard, or game-logic
+change; no build or run is needed unless the data path cannot be resolved
+statically.
 
 ## Competing hypotheses
 
-- H-frame-field-legitimate: offset `0x4` is a documented/intentional scalar
-  mode or video-state field, and the observed values are valid inputs.
-- H-frame-field-corrupt: the field is populated by an invalid/stale writer or
-  malformed initialization, so the small values are not legitimate state.
-- H-frame-field-unresolved: the generated tree cannot identify the producer or
-  the frame object, leaving the value's meaning unevaluable.
+- H-static-field-rom-intended: `D_80037574` is a ROM-backed initialized mode/timing scalar and is intentionally consumed.
+- H-static-field-runtime-writer: a loader or runtime store populates the field outside the previously searched caller functions.
+- H-static-field-unresolved: the available symbols/source/data do not expose the initializer or exact field bytes.
 
 ## Discriminating measurement
 
-The audit must identify every `runVideoFrameTick` caller, the frame object
-passed as `a0`, and every writer/initializer for its `+0x4` halfword. A
-documented mode/state writer splits legitimate from corrupt; an unresolved
-object or writer remains unevaluable. Do not infer legitimacy from the clean
-run.
+Resolve the virtual address and exact `+0x14` field offset to a named data
+object, ROM initializer, or runtime store. A named ROM/data initializer with
+decoded bytes supports the first hypothesis; an executable store or loader
+path supports the second; failure to resolve either is the third. Do not
+infer legitimacy from the clean run.
 
 ## Exact commands
 
 ```sh
-rg -n -C 18 "runVideoFrameTick\(rdram, ctx\)|0x80001354|lhu +\$s6, 0x4\(\$s3\)" ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -C 12 "0x4\(\$s3\)|runVideoFrameTick|thread3_video_handle" ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n "0x8001[0-9A-Fa-f]{4}|video.*frame|runVideoFrameTick" syms docs PORTING-STATE.md | tail -80
+rg -n -C 12 "D_80037560|0x80037560|0x80037574|0X7570|runVideoFrameTick" syms ../N64Recomp rogue_squadron64 docs
+rg -n -C 8 "MEM_H\(0X14|sh .*0x14|0x14\(\$s[0-9]\)" ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n "D_80037560|37574|37560" ../N64Recomp --glob '*.bin' --glob '*.s' --glob '*.inc' --glob '*.toml'
 ```
-
-Use the regenerated source currently under test. No build or run is needed
-for this source-only unit.

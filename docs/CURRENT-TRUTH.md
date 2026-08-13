@@ -11,10 +11,24 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s815; compacted in maintenance s776)
+## Current truth (reviewed through s817; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
+
+- The s817 source audit found four generated callers of `runVideoFrameTick`.
+  Its `lhu 0x4($s3)` reads the frame record's scalar field, not a pointer.
+  The menu and mission callers populate their corresponding `+0x14` fields
+  from table/state values immediately before the call. The two main-loop
+  calls pass the static `D_80037560+0x10` record, but the generated tree has
+  no writer for its corresponding `D_80037574` halfword. This selects
+  intentional structured state for the dynamic callers but leaves the static
+  record's ROM/data initializer unresolved; no legitimacy claim or mitigation
+  follows.
+
+Next work unit: trace the ROM/data initializer for the static
+`D_80037560+0x10` frame record, especially its `D_80037574` halfword, before
+resuming runtime VI or FULL_SYNC experiments.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
   input-plugin, and ROM artifacts. Fresh configs differed only in
