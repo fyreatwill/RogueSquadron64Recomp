@@ -54651,3 +54651,16 @@ This selects **H-oracle-runtime-environment-divergence** over core-build drift,
 plugin binary/path drift, config-generation drift, ROM mismatch, and input
 plugin identity drift. It does not identify the remaining emulator/runtime
 cause, so the phase divergence remains open. No port runtime code changed.
+
+## Session 776 (2026-08-12) — maintenance compaction
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at **60,263 bytes**, triggering a
+documentation-only maintenance iteration. I compacted its repeated s767–s775
+and older phase narrative into the active facts and pointers already preserved
+by `docs/PROJECT-OVERVIEW.md` §§3–28 and this ledger. The file is now **17,188
+bytes / 248 lines** (down from 60,263 bytes / 932 lines), a net reduction of
+684 lines. No experiment or build ran, and no runtime conclusion changed.
+
+This advances the maintenance contract, preserves the oracle runtime-divergence
+work unit as NEXT, and rules out no new runtime hypothesis. The existing
+submodule working-tree patches were left untouched.

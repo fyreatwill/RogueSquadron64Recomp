@@ -3,8 +3,9 @@
 HYPOTHESIS-ID: oracle-runtime-identity-divergence
 
 s775 found byte-identical oracle/core/RSP/input/ROM artifacts and configs that
-differ only by `EnableDebugger`; the remaining question is runtime behavior,
-not artifact identity.
+differ only by `EnableDebugger`; s774 independently showed both matched arms
+staying at width 320 through 70 seconds. The remaining question is runtime
+behavior, not artifact identity.
 
 ## Competing hypotheses
 
@@ -17,13 +18,13 @@ not artifact identity.
 
 ## Discriminating measurement
 
-Run one fresh matched debugger-on/off oracle A/B using the already verified
-artifacts and the existing 70-second Start schedule. Keep the debugger-on
-whole-RDRAM positive control and PIF trace; keep debugger-off raw VI polling.
-Phase-gate the comparison on width/origin transitions. A later transition in
-only one arm selects debugger interference; identical 320-only traces select
-schedule/timing or expected-320 runtime behavior and rule out the debugger as
-the late-phase cause.
+Run one fresh bounded oracle runtime-behavior check using the verified
+artifacts. Prefer a same-iteration debugger-on/off A/B with the existing
+70-second Start schedule; retain the debugger-on whole-RDRAM positive control,
+PIF trace, and debugger-off raw VI polling. Phase-gate on width/origin
+transitions. A later transition in only one arm selects debugger interference;
+identical 320-only traces rule out debugger as the late-phase cause and leave
+schedule/timing versus expected-320 runtime behavior.
 
 ## Commands
 
