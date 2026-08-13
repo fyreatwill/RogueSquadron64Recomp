@@ -56759,3 +56759,23 @@ the writer of the port corruption. No game behavior or mitigation changed.
 
 ORIGIN: retail debugger write-watch PC attribution and VI/whole-RDRAM controls;
 no game value or control flow was changed.
+
+## Session s866 (2026-08-13) — extended retail run remains width-320 only
+
+Ran the prescribed 180-second retail oracle with the whole-RDRAM positive
+control, VI trace, repeated five-Start schedule, and target-PC detail enabled.
+The whole-RDRAM watch recorded 29,825,154 writes and the VI trace reached
+10,792 frames, proving both controls were live. The caller-global watch had 9
+writes and the free-list-head watch had 3; every target hit was at the early
+PCs already seen in s865: `0x80000420`, `0x80000424`, `0x80000ED8`,
+`0x80000FFC`, `0x8000104C`, or `0x800021D8`.
+
+The run stayed at VI width 320 for all 180 seconds, so it did not provide the
+post-320 discriminator. This strengthens H-init-writer for the observed phase
+and rules out H-control-invalid, but leaves H-runtime-writer unevaluable. It
+also rules out treating the target-watch counts as evidence of a later writer.
+No port behavior or mitigation changed. The next unit is a single oracle run
+with the documented eleven-Start schedule through the hangar transition.
+
+ORIGIN: retail debugger watch-PC output plus independent whole-RDRAM and VI
+controls; no game value or control flow changed.
