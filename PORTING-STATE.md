@@ -57153,6 +57153,27 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s888 (2026-08-13) — advance-song-region mixes pointer shapes; raw writer legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `advanceSongRegion`
+(`0x80095244`) in the external generated tree, using the companion main-overlay
+symbols. The complete function walks 64 entries with a 16-byte stride. Each
+entry's `+0x12C` region cursor is null-tested before dereference; the cursor's
+event header uses `+0x8` and `+0xA`, with `0xFFFE` and `0xFFFF` sentinel paths.
+The wrap path derives a new cursor from the entry's `+0x128` base and the
+header index, then stores it back to `+0x12C`; the normal path advances it by
+`0xC`. The function also consumes the shared table `+0x120`, sequence-data
+pointer `+0x10C/+0x14`, event-record tables through `+0x4`, `+0x8`, `+0x88`,
+and `+0x12C/+0x134`, plus per-slot tempo/control fields. The repeated table
+base loads have the existing KSEG0 guards, but the source artifacts do not
+independently prove legitimacy for every raw base, offset-derived event record,
+or writer. H-advance-region-unclassified is selected; H-shape-mismatch is not
+used as a reason to omit sites because all sites were classified in the table.
+No guard, build, soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
+
 ## Session s887 (2026-08-13) — tick-active-songs dispatcher is bounded; inherited list legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `tickActiveSongs`

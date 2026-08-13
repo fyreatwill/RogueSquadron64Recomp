@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s887 (2026-08-13). The active blocker is the authoritative
+Reviewed through s888 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -108,6 +108,14 @@ closed. M3 work is limited to systematic idiom-class audits.
   symbols independently identify the eight-slot table at `0x80149A00`.
   Dispatcher structure is classified, but inherited writer/value legitimacy
   remains unproven. No guard or behavior change.
+- s888 audited `advanceSongRegion`'s complete function. Its outer walk is
+  structurally bounded to 64 entries with a 16-byte stride, and its cursor
+  reset/advance paths are explicit. The function nevertheless mixes region
+  cursors, sequence-table pointers, event records, and per-slot tempo/control
+  state. Existing guards cover the shared song-tick table base, but the local
+  generated code and companion symbols do not independently prove every raw
+  base/offset writer legitimate. H-advance-region-unclassified is selected;
+  no guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -130,6 +138,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s885 | `tickAllActiveSongs` inventory: 1 guarded `+0xE7C` chain consumer; shared writers classified, writer/value legitimacy remains unproven, so no mitigation. |
 | s886 | `tickScheduledSongEvents` inventory: 2 guarded non-empty head uses plus 1 empty-list store; all shared `+0xE7C` writers classified, legitimacy remains unproven, so no mitigation. |
 | s887 | `tickActiveSongs` inventory: 1 fixed-table slot-pointer load, bounded 8-slot loop, no direct chain dereference; `tickSongSequence` remains the inherited chain consumer and writer/value legitimacy remains unproven. |
+| s888 | `advanceSongRegion` inventory: bounded 64-entry/16-byte walk with explicit cursor reset/advance, but mixed region/event/table pointer shapes and unproven raw writer legitimacy; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -150,27 +159,26 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-The next audio-sequence pointer idiom is `advanceSongRegion`; its cursor and
-event-stream accesses may be bounded by sentinels and slot state, but the
-source artifacts may not prove every raw cursor writer legitimate. Do not add
-a guard or change game behavior. Audit the complete function and classify
-every cursor/table pointer access and its writer basis.
+The next audio-sequence pointer idiom is `processSongByHandle` (`0x800966A4`).
+Do not add a guard or change game behavior. Audit the complete function and
+classify every handle-derived slot lookup, table/record pointer dereference,
+loop bound, sentinel/state check, and writer basis.
 
 Competing hypotheses:
 
-- H-advance-region-unclassified: the candidate has at least one cursor/table
-  site without a proof of safety or a concrete writer/legitimacy explanation.
-- H-advance-region-fully-classified: every site is bounded and its writers are
+- H-process-song-unclassified: at least one handle-derived slot/table site
+  lacks a proof of safety or a concrete writer/legitimacy basis.
+- H-process-song-fully-classified: every site is bounded and its writers are
   proven legitimate by independent source artifacts.
-- H-advance-region-shape-mismatch: the function mixes unrelated pointer
-  shapes; stop rather than mixing shapes.
+- H-process-song-shape-mismatch: the function mixes unrelated pointer shapes;
+  record the exact sites and stop rather than mixing shapes.
 
-Discriminating measurement: a complete site table for `advanceSongRegion`,
-including every cursor/table pointer load, event-stream dereference, sentinel
-check, and writer/legitimacy basis. Any omitted access or unproven writer
-rejects full classification.
+Discriminating measurement: a complete site table for `processSongByHandle`,
+including every handle-derived pointer load, dereference, loop bound, state or
+sentinel check, and writer/legitimacy basis. Any omitted access or unproven
+writer rejects full classification.
 
-Exact commands: use `rg` to enumerate `advanceSongRegion` and its `MEM_*`/
+Exact commands: use `rg` to enumerate `processSongByHandle` and its `MEM_*`/
 `goto` sites in `../N64Recomp/RecompiledFuncs/funcs_25.c`, then bounded `sed`
 windows and the companion `rogue_squadron64` symbol/decomp files. No game
 build or soak is planned.
