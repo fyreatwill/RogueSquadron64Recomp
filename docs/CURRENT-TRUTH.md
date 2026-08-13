@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s806; compacted in maintenance s776)
+## Current truth (reviewed through s807; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -448,6 +448,22 @@ leaving runtime behavior as the remaining broad class.
    not identify the state writer or explain the retail phase divergence. No
    mitigation was added. Next: enumerate writers and state gates for the
    pending masks and selector/config bytes before another run.
+
+   **s807 writer inventory:** a complete generated-tree audit found only three
+   pending-mask store functions: `requestViFeatureChange` writes
+   `0x80128E90` from `$a0`, `beginSceneRenderFrame` writes `0x80128E94`
+   from `$a0`, and `clearPendingViChanges` plus the tail of
+   `applyPendingViChanges` clear both words. Selector/config stores are in
+   `setViewStateBytesAndFadeScale`, `setViewStateTripletBytes`, the video-state
+   update routine at `0x80017C80–0x80017CEC`, and the feature-application
+   branches in `applyPendingViChanges`; no other generated absolute stores
+   exist. Callers of the two pending writers are enumerated across the
+   generated tree (scene/render paths in funcs 9, 28–30, 33, 49), while the
+   selector setters have callers in funcs 9 and 36. This rules out an
+   unenumerated state writer and a post-table 640 overwrite, but source alone
+   cannot classify which caller supplies the 640 values at the transition.
+   H-state-writer remains selected; the next unit is writer attribution, not
+   parser work or mitigation. No build or run was needed.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

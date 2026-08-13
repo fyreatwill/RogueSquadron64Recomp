@@ -55372,3 +55372,31 @@ string fix only, not a guard, skip, restore, or other corruption mitigation.
 
 Logs: `scratch/agent/oracle_vi_gate_s806.log` and
 `scratch/agent/vi_gate_s806/run.log`.
+
+## Session 807 (2026-08-13) — complete VI state-writer inventory
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 41,055 bytes, so maintenance did
+not trigger. The competing hypotheses and discriminating measurement were
+written in `scratch/agent/NEXT.md`. Ground truth was not instrumented or
+changed because this unit was a bounded read-only source audit; no build or
+run was justified.
+
+The generated tree contains only three pending-mask store functions:
+`requestViFeatureChange` writes `0x80128E90` from `$a0`,
+`beginSceneRenderFrame` writes `0x80128E94` from `$a0`, and
+`clearPendingViChanges` plus the tail of `applyPendingViChanges` clear both
+words. Selector/config stores are confined to
+`setViewStateBytesAndFadeScale`, `setViewStateTripletBytes`, the video-state
+update routine at `0x80017C80–0x80017CEC`, and feature-application branches in
+`applyPendingViChanges`. The caller inventory spans funcs 9, 28–30, 33, 36,
+and 49; no other generated absolute stores for the audited addresses exist.
+
+This rules out an unenumerated state writer and a post-table 640 overwrite,
+but source alone cannot identify which reachable caller supplies the 640
+values at the transition. H-state-writer remains selected. The next unit is a
+single batched writer-attribution capture with value and ordering markers; no
+mitigation was added.
+
+ORIGIN: the 640-only state is written through the enumerated game-side pending
+and selector/config routines; this iteration added no guard, skip, restore, or
+other mitigation.

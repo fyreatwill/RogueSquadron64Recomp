@@ -1,45 +1,45 @@
-# NEXT work unit (enumerate the reachable VI state writers)
+# NEXT work unit (attribute the reachable VI state writers)
 
 HYPOTHESIS-ID: m3-vi640-transition-writer
 
-The s806 batched trace selected the reachable state gate: direct callers
-repeatedly publish width-640 rows while the selector publisher is silent. The
-next single unit is a bounded source audit of every writer and predicate for
-the pending masks (`0x80128E90/0x80128E94`) and selector/config bytes
-(`0x8011A862/0x8011A865–868` and init stack/config fields). Do not build or
-run unless the audit identifies one concrete writer whose reachability cannot
-be classified statically; if so, rewrite NEXT before that later experiment.
+Run one batched, phase-gated capture that marks every call to the complete
+pending-mask and selector/config writer inventory identified in s807. Do not
+instrument a new address class: the source audit found no other absolute
+stores. Retain the existing host VI/mode positive control, `[vi-gate]` direct
+caller controls, and the oracle whole-RDRAM positive control. Build all writer
+markers in one regeneration-safe fixup change and run the arms concurrently
+if the recipe requires an oracle comparison.
 
 ## Competing hypotheses
 
-- H-state-writer: a reachable game function writes the 640-only pending or
-  selector/config state. Prediction: the audit finds a concrete store and its
-  caller path reaches one of the s806 direct publishers.
-- H-missing-state-dispatch: the 1024-producing state writer exists but its
-  overlay/function dispatch is absent. Prediction: the audit finds a 1024
-  capable writer whose call or overlay route is not reachable in the port.
-- H-recipe-state: the port's 640 values are legitimate for this driven recipe,
-  and no missing writer is implied. Prediction: all reachable stores are
-  initialization or 640-path logic, with no concrete 1024 producer.
+- H-state-writer: a reachable scene/render caller writes the 640-only pending
+  mask or selector state. Prediction: a writer marker precedes the first
+  post-transition 640 row and identifies its caller/value.
+- H-missing-1024-writer: the 1024-capable writer exists but its caller or
+  overlay route is absent. Prediction: no 1024-producing writer marker fires,
+  while only initialization/640 callers fire.
+- H-recipe-state: the observed 640 values are legitimate for this port
+  recipe. Prediction: writer markers match the expected initialization/640
+  sequence and no unexplained state mutation occurs.
 
 ## Discriminating measurement
 
-The audit's complete writer inventory is the discriminator: a reachable store
-that selects or publishes the 640 state advances H-state-writer; a concrete
-1024-capable store with an absent route advances H-missing-state-dispatch; an
-exhaustive inventory with only initialization/640-path stores advances
-H-recipe-state. Record every store, address, function, and reachability proof;
-do not infer from a single grep hit.
+The first writer event after the phase-gated 640 transition, correlated with
+its function, argument, pending-mask/selector values, and the next `[vi-gate]`
+row, splits the hypotheses. A marker proving only that a writer function is
+reachable is insufficient; it must capture the state value and ordering.
 
 ## Exact commands
 
 ```sh
-rg -n -C 4 '0x80128E90|0x80128E94|0x8011A862|0x8011A865|0x8011A866|0x8011A867|0x8011A868|-0x716C|-0x7170|-0x579B|-0x579C|-0x579E' ../N64Recomp/RecompiledFuncs ../N64Recomp/fixup_game_funcs.py
-rg -n -C 3 '80128D50|80128C90|width.*1024|width.*640|osViSetMode_recomp' ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -C 3 'pending.*Vi|Vi.*pending|selector|mode table|set.*ViMode' src ../N64Recomp/RecompiledFuncs
+# Before editing/building, confirm the s807 inventory remains unchanged:
+rg -n 'MEM_W\(-0X716C|MEM_W\(-0X7170|MEM_B\(-0X579B|MEM_B\(-0X579C|MEM_B\(-0X579E' ../N64Recomp/RecompiledFuncs/funcs_*.c
+
+# Then use the repository regeneration/fixup flow, build Debug, and run the
+# existing phase-gated recipe with positive controls and SIGKILL watchdog.
 ```
 
-Use the generated source as the implementation witness and update the audit
-with a complete classified list. If a future run is needed, retain the s806
-oracle positive controls, `[vi-gate]` direct-call controls, and silent selector
-control; phase-gate on VI 640 and do not compare stopwatch windows.
+Expected outcomes: a concrete writer/value/order advances H-state-writer; a
+missing 1024-capable route advances H-missing-1024-writer; a complete
+initialization/640 sequence with no unexplained mutation advances H-recipe-state.
+No skip, guard, restore, or other mitigation is authorized by this unit.
