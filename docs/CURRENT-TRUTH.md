@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s840 (2026-08-13). The active blocker is the authoritative
+Reviewed through s842 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -188,30 +188,42 @@ Priority until changed by the user:
   capture remains authoritative; the next unit is a systematic source audit
   of the `drawIndexedTri`/`G_CYC_COPY` idiom.
 
-## Next work unit: audit the repeat drawIndexedTri G_CYC_COPY crash idiom
+- s842 completed that source-only idiom audit without a build or run. All
+  regular triangle callers assert on `G_CYC_COPY`; copy mode has rectangle
+  handling but no legitimate regular-triangle path. RSP other-mode setters
+  immediately synchronize RDP state, and reset initializes equivalent
+  1-cycle values, so no static stale-copy transition was found. Factor 5
+  inherits F3DEX dispatch, overrides its documented real triangle opcodes
+  0xB4/0xBF with consume-only handlers, and leaves 0xB1 mapped to standard
+  F3DEX TRI2. This selects H-wrong-handler as the leading source hypothesis,
+  but runtime caller/opcode attribution is still required; no mitigation is
+  justified. Full audit: `docs/M3-DRAWINDEXED-COPY-AUDIT.md`.
+
+## Next work unit: attribute the drawIndexedTri G_CYC_COPY caller
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one bounded source-only idiom audit of every `drawIndexedTri` assertion
-or `G_CYC_COPY` guard and every caller/state setter that can reach it. Do not
-change behavior or add a mitigation. Establish whether the abort is caused by
-a legitimate copy-cycle triangle, stale cycle state, or a wrong opcode/handler
-path, and identify the exact writer/transition before any runtime retry.
+Perform one phase-gated diagnostic build/run that records the active GBI,
+dispatch opcode, triangle-handler family, and RDP/RSP cycle values immediately
+before every `drawIndexedTri` call and at the assertion. Keep the existing
+positive triangle/provenance control in the same run. Do not change behavior or
+add a mitigation.
 
 Competing hypotheses:
 
-- H-copy-cycle-legitimate: a real copy-cycle TRI reaches `drawIndexedTri` and
-  the assertion reflects an unsupported but legitimate state.
-- H-cycle-state-stale: an earlier state writer leaves `G_CYC_COPY` active when
-  a normal triangle reaches the renderer.
-- H-wrong-handler: a malformed or misdecoded command routes to the triangle
-  helper with an invalid cycle mode.
+- H-copy-cycle-legitimate: a documented Factor 5 triangle opcode reaches the
+  helper while copy mode is intentionally active.
+- H-cycle-state-stale: RSP and RDP cycle values diverge or a prior copy writer
+  remains active across the caller transition.
+- H-wrong-handler: inherited 0xB1 TRI2 or another malformed dispatch reaches the
+  helper instead of Factor 5's 0xB4/0xBF path.
 
-Discriminator: exhaustive source paths and state writes classify the reachable
-cycle-mode transition and caller; an explicit legitimate copy-cycle TRI selects
-H-copy-cycle-legitimate, a stale prior writer selects H-cycle-state-stale, and
-a wrong/malformed dispatch path selects H-wrong-handler. A runtime retry is
-not justified until this audit identifies the relevant transition.
+Discriminator: a positive control must show the marker fires for a normal
+triangle. A 0xB4/0xBF caller with synchronized copy mode selects
+H-copy-cycle-legitimate; divergent RSP/RDP values or an unmatched prior setter
+selects H-cycle-state-stale; 0xB1/unknown dispatch or a malformed handler
+selects H-wrong-handler. Only after this attribution is a parser retry or
+behavior change justified.
 
 ## Ranked backlog
 

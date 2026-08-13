@@ -56182,3 +56182,24 @@ other mitigation until the writer/state transition is identified.
 
 ORIGIN: diagnostics and recipe inputs only; no game value, RDP command, or
 mitigation behavior changed.
+
+## Session 842 (2026-08-13) — source audit selects wrong-handler lead for copy-cycle assert
+
+Performed the prescribed source-only idiom audit; no build or run was
+performed. Every regular triangle caller reaches `RSP::drawIndexedTri`, whose
+assert rejects `G_CYC_COPY`; copy mode has rectangle handling but no legitimate
+regular-triangle path. The RSP other-mode setters immediately synchronize the
+RDP state, and reset initializes equivalent 1-cycle values, so the setter,
+push/pop, and reset audit found no static stale-copy transition.
+
+The Factor 5 setup inherits F3DEX dispatch, overrides its documented real
+triangle opcodes 0xB4/0xBF with consume-only handlers, and leaves inherited
+0xB1 mapped to standard F3DEX TRI2. The reference identifies 0xB4/0xBF, not
+0xB1, as Factor 5 triangle commands. This selects H-wrong-handler as the
+leading source hypothesis for a Factor 5 stream reaching the assertion, but
+does not identify the actual crash caller. The next unit must record active
+GBI, opcode, handler family, and RSP/RDP cycle values in one phase-gated run.
+No behavior or mitigation changed.
+
+ORIGIN: source audit only; no game value, RDP command, or mitigation behavior
+changed.

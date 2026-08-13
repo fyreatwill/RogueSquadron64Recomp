@@ -1,30 +1,29 @@
-# NEXT work unit (audit the repeat drawIndexedTri G_CYC_COPY crash idiom)
+# NEXT work unit (attribute the drawIndexedTri G_CYC_COPY caller)
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one bounded source-only idiom audit of every `drawIndexedTri` assertion
-or `G_CYC_COPY` guard and every caller/state setter that can reach it. Do not
-change behavior or add a mitigation. Establish whether the abort is caused by
-a legitimate copy-cycle triangle, stale cycle state, or a wrong opcode/handler
-path, and identify the exact writer/transition before any runtime retry.
+Perform one phase-gated diagnostic build/run that records the active GBI,
+dispatch opcode, triangle-handler family, and RDP/RSP cycle values immediately
+before every `drawIndexedTri` call and at the assertion. Keep the existing
+positive triangle/provenance control in the same run. Do not change behavior or
+add a mitigation.
 
 Competing hypotheses and discriminator:
 
-- H-copy-cycle-legitimate: a real copy-cycle TRI reaches `drawIndexedTri` and
-  the assertion reflects an unsupported but legitimate state.
-- H-cycle-state-stale: an earlier state writer leaves `G_CYC_COPY` active when
-  a normal triangle reaches the renderer.
-- H-wrong-handler: a malformed or misdecoded command routes to the triangle
-  helper with an invalid cycle mode.
+- H-copy-cycle-legitimate: a documented Factor 5 triangle opcode reaches the
+  helper while copy mode is intentionally active.
+- H-cycle-state-stale: RSP and RDP cycle values diverge or a prior copy writer
+  remains active across the caller transition.
+- H-wrong-handler: inherited 0xB1 TRI2 or another malformed dispatch reaches the
+  helper instead of Factor 5's 0xB4/0xBF path.
 
-Discriminator: exhaustive source paths and state writes classify the reachable
-cycle-mode transition and caller; an explicit legitimate copy-cycle TRI selects
-H-copy-cycle-legitimate, a stale prior writer selects H-cycle-state-stale, and
-a wrong/malformed dispatch path selects H-wrong-handler. A runtime retry is
-not justified until this audit identifies the relevant transition.
+Discriminator: a positive control must show the marker fires for a normal
+triangle. A 0xB4/0xBF caller with synchronized copy mode selects
+H-copy-cycle-legitimate; divergent RSP/RDP values or an unmatched prior setter
+select H-cycle-state-stale; 0xB1/unknown dispatch or a malformed handler
+selects H-wrong-handler. Only after this attribution is a parser retry or
+behavior change justified.
 
-Exact execution: run bounded `rg` inventories over `lib/rt64/src` for
-`drawIndexedTri`, `G_CYC_COPY`, `cycleType`, and all triangle callers; read each
-hit in bounded windows and trace every setter-to-caller path. Record the
-writer, value, and legitimacy classification for each path. No build or run is
-needed unless the source audit leaves mutually exclusive live paths.
+Exact execution: add one regeneration-safe, phase-scoped diagnostic batch;
+build Debug; run the existing phase-gated recipe from `build/` with the
+positive control and crash capture enabled; compare caller/opcode/cycle rows.
