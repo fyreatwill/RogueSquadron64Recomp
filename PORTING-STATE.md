@@ -58109,3 +58109,43 @@ behavior changed. This is source inventory evidence only.
 ORIGIN: complete generated-helper, sole-caller, shared-field, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
+
+## Session s910 (2026-08-13) — stopVoiceSlotSynced has one coherent slot shape
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`stopVoiceSlotSynced` (`0x8009B268`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerated every local slot/table
+access, control operation, both generated callers, sibling field uses, and the
+companion symbol/decomp basis. No build, game run, or soak was needed.
+
+The helper computes `s0 = a0 * 0x1228` through the generated multiply/add
+sequence and uses the single slot shape rooted at `0x80150000`: it reads
+`slot+0x4620` at `0x8009B298`; state 1 clears that active byte at `0x8009B2C4`
+and returns; state 2 receives from the shared queue at `0x80154650`, calls
+`stopVoice` with `slot+0x3420` at `0x8009B2E8`, then sends a zero message to the
+same queue, stores state 3 at `slot+0x4620`, and stores 4 at `slot+0x4638`.
+There is no loop, pointer walk, or aliasing-sensitive output access.
+
+The two generated callers agree with this contract. `stopVoiceByHandle`
+(`0x8009B3A8`) scans the same table with `0x1228` stride and passes the matching
+slot index. `shutdownMusyXVoices` (`0x8009BCD4`) passes slot 0, matching the
+companion annotation. Initialization calls `initMusyXVoiceSlot` on the same
+`0x80154620` table and clears `+0x4620`; `serviceVoicePoolFrame` reads the same
+active/state fields and uses the same slot stride. The companion symbol file
+independently identifies the helper, table, stride, queue, and teardown role.
+
+### Rules out / narrows
+
+This audit rules out an omitted local access, hidden loop/table walk, and
+generated caller-shape mismatch in `stopVoiceSlotSynced`. It establishes a
+structural pass for the slot/index contract, but does not prove the legitimacy
+of caller-derived indices or concurrent state transitions. H-stop-voice-shape-
+mismatch is refuted; H-stop-voice-unclassified remains active for the
+unproven writer/value obligation. No guard, mitigation, or game behavior
+changed. This is single-source inventory evidence only.
+
+ORIGIN: complete generated-helper, both-caller, sibling-field, and
+companion-symbol inventory; no guest value, writer mutation, mitigation, or
+runtime behavior changed.
