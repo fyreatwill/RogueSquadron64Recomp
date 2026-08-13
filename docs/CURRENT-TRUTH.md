@@ -22,27 +22,37 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s751; compacted in maintenance s729)
+## Current truth (reviewed through s752; compacted in maintenance s729)
+
+**s752:** fixup 6k splices overlay `0x1C` (`OVL1C_*`, dest
+`0x1DB0`, `153==0x1C`, no jal-return cases). Soak
+`s752_ovl1c_route_20260812-181705` (350 s, CRASH=0, wrapper
+rc=0): `[ovl-route] res=0x1C tgt=0x1DB0` last n=5888 LIVE;
+`last_ovl=0x1C/0x1DB0` 183/192 (`ovl1c=1`). Stray `0x1F40/00`
+**3767→0** (all `[clip-stray]` 0). Pred-tag **122→0**; s751
+first-edge `resident:0x1C` 61→0. 4/4 boot `dl06=2/2/0`. E9
+match still boot-shaped (`9/54` all `dl06=2/2/0`; last_ovl
+`0x1C` match **0/45**); rdpFs 0→5203 (not a restore vs s751
+11238). New residual: `Unhandled jump target 0x1E18` n=5879
+from `OVL1C_1F9C` `jr $ra` (jal at IMEM `0x1E10` → callee
+`0x1F0C`, return `0x1E18`). Label `OVL1C_1E18` exists; case
+does not. **H-ovl1c-stops-1f40-00 SELECTED. H-ovl1c-not-the-
+1f40-path REFUTED. H-ovl1c-breaks-06 REFUTED.
+H-ovl1c-restores-e9 REFUTED.** Next is case `0x1E18` /
+`153==0x1C`. Do not splice overlay `0x20` yet (dest is
+`0x12A0`, table `0x2157`, not dest `0x1DB0`). **ORIGIN:** dest
+`0x1DB0` / `153==0x1C` is the skipped ovl1c image (ROM
+`0x26EF8`). Route, not a `0x1F40` widen to `153==0`.
 
 **s751:** fixup 6j routes ovl10 `L_15D0` handshake return
 (`0x1F40` extra target + `OVL10_1F40` + case `153==0x18||0x10`).
-Soak `s751_ovl10_1f40_20260812-180004` (351 s, CRASH=0 UJ=0
-wrapper rc=0): `[ovl-route] res=0x10 tgt=0x1F40` last n=7488
-LIVE; `last_ovl=0x10/0x1F40` 61/64 (`ovl10=2`). Stray
-`0x1F40/10` **5501→0**. New leftover is `0x1F40/00` line=1421
-hits=3767 (`L_1778` `jr $30`). Pred first-edge
-`dest=0x1DB0,line:621,resident:0x1C` **61/61** (ra=`0x16B8`).
-4/4 boot `dl06=2/2/0`. E9 match still **3/64** boot-shaped
-triplet; rdpFs 0→11238 (flat vs s750 5169; longer clean run).
-**H-1f40-ovl10-handshake SELECTED. H-1f40-not-the-handshake
-REFUTED. H-1f40-breaks-06 REFUTED. H-1f40-restores-e9 REFUTED.**
-Do not widen `0x1F40` to `153==0`. Next is dest-`0x1DB0` /
-`153==0x1C`. **ORIGIN:** ovl10 `ori $30, 0x1F40; j L_15D0` at
-IMEM `0x1F38`; `L_1778` `jr $30` is the legitimate return into
-`lhu $10, 0x56($18)`. Residual writer of `0x1F40/00` is leftover
-`$30` after skipped ovl `0x1C` (ROM `0x26EF8`, dest `0x1DB0`,
-len `0x20B`, exit `j L_1268; ori $5, 0x20`) falls into main
-`L_1DB0`.
+Soak `s751_ovl10_1f40_20260812-180004` (351 s, CRASH=0 UJ=0):
+`[ovl-route] res=0x10 tgt=0x1F40` last n=7488 LIVE;
+`last_ovl=0x10/0x1F40` 61/64. Stray `0x1F40/10` **5501→0**.
+Pred first-edge `resident:0x1C` **61/61**. 4/4 boot
+`dl06=2/2/0`. E9 still 3/64 boot-shaped. **H-1f40-ovl10-
+handshake SELECTED.** Consumed by s752. **ORIGIN:** ovl10
+`ori $30, 0x1F40; j L_15D0` at IMEM `0x1F38`.
 
 **s750:** fixup 6i splices overlay 10 (`OVL10_*`, dest `0x1DB0`,
 `153==0x10`, no jals; external helpers `L_1268` and `L_15D0`).
@@ -448,7 +458,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s751:** ovl10 `0x1F40` handshake LIVE; stray `0x1F40/10` → 0; residual is dest-`0x1DB0` / `153==0x1C` (ovl10's `ori $5, 0x1C` successor, ROM `0x26EF8`). E9 still the boot-shaped triplet (3/64). **s750:** ovl10 dest-`0x1DB0` LIVE; leftover `/00` `L_11B0` strays → 0. **s749:** ovl18 dest-`0x1DB0` LIVE. **s748:** ovl14 dest-`0x1DB0` LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s752:** ovl1c dest-`0x1DB0` LIVE; stray `0x1F40/00` → 0; residual is jal-return `0x1E18` / `153==0x1C` (`OVL1C_1F9C` `jr $ra`). E9 still boot-shaped. **s751:** ovl10 `0x1F40` handshake LIVE. **s750:** ovl10 dest-`0x1DB0` LIVE. **s749:** ovl18 dest-`0x1DB0` LIVE. **s748:** ovl14 dest-`0x1DB0` LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset. Overlay `0x20` dest is `0x12A0` (table `0x2157`); do not treat it as another `0x1DB0` sibling.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
@@ -522,10 +532,10 @@ Game functions (s1) — all four steps, in order:
 RSP ucode (only when a ucode toml changes): `~/Documents/Tools/N64Recomp/build/RSPRecomp` on
 `factor5_rsp.toml` / `factor5_boot_rsp.toml` → `build/factor5_ucode/*.c`, then
 `tools/fixup_factor5_ucode.py`. **s47/s739: before the fixup, also run
-`python3 tools/make_clip_composite.py [4|10|12|14|16|18|24]` + RSPRecomp on
+`python3 tools/make_clip_composite.py [4|10|12|14|16|18|24|0x1C|28]` + RSPRecomp on
 `factor5_rsp_ovl4.toml`, `factor5_rsp_ovl10.toml`,
 `factor5_rsp_ovl12.toml`, `factor5_rsp_ovl14.toml`,
-`factor5_rsp_ovl18.toml`, and
+`factor5_rsp_ovl18.toml`, `factor5_rsp_ovl1c.toml`, and
 `factor5_rsp_ovl24.toml`**. `factor5b_rsp.toml`
 is the **MusyX audio** ucode; stays in the build as a never-called artifact (s5).
 

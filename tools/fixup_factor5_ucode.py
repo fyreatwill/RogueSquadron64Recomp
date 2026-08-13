@@ -1545,6 +1545,120 @@ if is_main_ucode and OVL10_1F40_MARKER not in text:
         1, "widen 0x1F40 ovl18||ovl10")
 
 # ---------------------------------------------------------------------------
+# Fixup 6k: splice resident overlay 0x1C at dest 0x1DB0 (s752)
+# ---------------------------------------------------------------------------
+# s751: dest 0x1DB0 / 153==0x1C is the skipped ovl10 successor. Overlay
+# 0x1C is a vector loop (ROM 0x26EF8, 0x20C B) that exits j L_1268;
+# ori $5, 0x20 at IMEM 0x1ECC and has jals returning to 0x1ED4 / 0x1F0C.
+# factor5_rsp_ovl1c.toml translates a composite whose window holds that
+# image; this fixup extracts L_1DB0.., renames labels OVL1C_*, splices
+# the block, and routes DMEM 0x153 == 0x1C at dest 0x1DB0 only.
+# Do not add jal-return cases until dest-0x1DB0 is LIVE. Do not name
+# this overlay ovl28 — that id is the r17+=32 restore route. Overlay
+# 0x20 dest is 0x12A0 (table 0x2157); do not splice it here.
+# ORIGIN: dest 0x1DB0 / 153==0x1C is the skipped ovl1c image.
+# The 0x1F40/00 stray is leftover $30 after that skip falls into
+# main L_1DB0. Route, not a 0x1F40 widen to 153==0.
+OVL1C_MARKER = "/* fixup: ovl1csplice */"
+if is_main_ucode and OVL1C_MARKER not in text:
+    ovl1c_path = path.parent / "factor5_ucode_ovl1c_recompiled.c"
+    if not ovl1c_path.exists():
+        print("fixup_factor5_ucode: FIXUP 6k INPUT MISSING: "
+              f"{ovl1c_path} not found. Run make_clip_composite.py 0x1C and "
+              "RSPRecomp on factor5_rsp_ovl1c.toml before fixing up the "
+              "main ucode, or the overlay-0x1C splice is lost.", file=sys.stderr)
+        sys.exit(1)
+    ovl1c_text = ovl1c_path.read_text(encoding="utf-8")
+
+    def sub_exactly6k(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6k ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the overlay-0x1C splice.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    m_start = re.search(r"^L_1DB0:\n", ovl1c_text, flags=re.MULTILINE)
+    m_end = re.search(r"^do_indirect_jump:\n", ovl1c_text, flags=re.MULTILINE)
+    if not m_start or not m_end or m_end.start() <= m_start.start():
+        print("fixup_factor5_ucode: FIXUP 6k EXTRACTION FAILED: could not "
+              "bound L_1DB0..do_indirect_jump in the ovl1c file.", file=sys.stderr)
+        sys.exit(1)
+    region = ovl1c_text[m_start.start():m_end.start()]
+
+    region_labels = set(re.findall(r"^(L_[0-9A-F]{4}):", region, flags=re.MULTILINE))
+    expected_resident = {"L_1268"}
+    referenced = set(re.findall(r"goto (L_[0-9A-F]{4});", region))
+    external = referenced - region_labels
+    if external != expected_resident:
+        print(f"fixup_factor5_ucode: FIXUP 6k SANITY FAILED: region's external "
+              f"references {sorted(external)} != expected resident helpers "
+              f"{sorted(expected_resident)}. The overlay-0x1C image or its "
+              f"translation changed — re-derive before splicing.", file=sys.stderr)
+        sys.exit(1)
+    for need in ("L_1DB0", "L_1ECC", "L_1ED4", "L_1F0C"):
+        if need not in region_labels:
+            print("fixup_factor5_ucode: FIXUP 6k SANITY FAILED: missing "
+                  f"{need} in ovl1c region {sorted(region_labels)}.",
+                  file=sys.stderr)
+            sys.exit(1)
+    for lbl in region_labels:
+        region = re.sub(r"\b" + lbl + r"\b", "OVL1C_" + lbl[2:], region)
+
+    sub_exactly6k(
+        re.compile(r"(^do_indirect_jump:\n)", flags=re.MULTILINE),
+        lambda m: OVL1C_MARKER + "\n" + region + m.group(1),
+        1, "splice point")
+
+    sub_exactly6k(
+        re.compile(
+            r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x4\) \{"
+            r" rs64_e9prov_ovl_route\(0x4, 0x1DB0\); goto CLIP_1DB0; \}\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0xC\) \{"
+            r" rs64_e9prov_ovl_route\(0xC, 0x1DB0\); goto OVL12_1DB0; \}\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x14\) \{"
+            r" rs64_e9prov_ovl_route\(0x14, 0x1DB0\); goto OVL14_1DB0; \}  "
+            r"/\* fixup: ovl14splice \*/\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x18\) \{"
+            r" rs64_e9prov_ovl_route\(0x18, 0x1DB0\); goto OVL18_1DB0; \}  "
+            r"/\* fixup: ovl18splice \*/\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x10\) \{"
+            r" rs64_e9prov_ovl_route\(0x10, 0x1DB0\); goto OVL10_1DB0; \}  "
+            r"/\* fixup: ovl10splice \*/\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x28\) \{"
+            r" rs64_e9prov_ovl_route\(0x28, 0x1DB0\); "
+            r"r17 = RSP_ADD32\(r17, 0X20\); goto L_10D8; \}  "
+            r"/\* fixup: ovl24route \*/\n"
+            r"            goto L_1DB0;\n)"),
+        lambda m: ("        case 0x1DB0:  " + CLIP_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x4) {"
+                   " rs64_e9prov_ovl_route(0x4, 0x1DB0); goto CLIP_1DB0; }\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0xC) {"
+                   " rs64_e9prov_ovl_route(0xC, 0x1DB0); goto OVL12_1DB0; }\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x14) {"
+                   " rs64_e9prov_ovl_route(0x14, 0x1DB0); goto OVL14_1DB0; }  " +
+                   OVL14_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x18) {"
+                   " rs64_e9prov_ovl_route(0x18, 0x1DB0); goto OVL18_1DB0; }  " +
+                   OVL18_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x10) {"
+                   " rs64_e9prov_ovl_route(0x10, 0x1DB0); goto OVL10_1DB0; }  " +
+                   OVL10_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x1C) {"
+                   " rs64_e9prov_ovl_route(0x1C, 0x1DB0); goto OVL1C_1DB0; }  " +
+                   OVL1C_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x28) {"
+                   " rs64_e9prov_ovl_route(0x28, 0x1DB0); "
+                   "r17 = RSP_ADD32(r17, 0X20); goto L_10D8; }  "
+                   "/* fixup: ovl24route */\n"
+                   "            goto L_1DB0;\n"),
+        1, "case 0x1DB0 overlay-0x1C routing")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level
@@ -2238,6 +2352,8 @@ if OVL10_MARKER in text and OVL10_MARKER not in original:
     notes.append("spliced overlay-10 vector loop (OVL10_* labels, id-0x10 routing)")
 if OVL10_1F40_MARKER in text and OVL10_1F40_MARKER not in original:
     notes.append("routed ovl10 L_15D0 handshake return (0x1F40 / 153==0x10)")
+if OVL1C_MARKER in text and OVL1C_MARKER not in original:
+    notes.append("spliced overlay-0x1C vector loop (OVL1C_* labels, id-0x1C routing)")
 if imem_note_applied:
     notes.append("ImemOverrun site notes (L_1650/epilogue/control)")
 if l1650_reconnect_applied:

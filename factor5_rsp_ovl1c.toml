@@ -1,0 +1,26 @@
+# Resident overlay 0x1C input. The composite puts its ROM image in
+# the shared IMEM window so RSPRecomp can translate L_1DB0 as the ovl10
+# successor. Only the window-region labels are used — they are renamed
+# OVL1C_* and spliced into factor5_ucode_recompiled.c by fixup 6k.
+# Source image: ROM 0x26EF8, table length 0x20B -> 0x20C bytes, dest
+# IMEM 0x1DB0. First word 0x9228FFFA. Jals return to 0x1ED4 / 0x1F0C.
+# Exit: j L_1268; ori $5, 0x20 at IMEM 0x1ECC. Extra targets emit
+# those jal-return labels; 6k does not route the cases until dest
+# 0x1DB0 is LIVE. Do not name this toml ovl28 — that id is the
+# r17+=32 restore route. Overlay 0x20 is dest 0x12A0 (table 0x2157);
+# do not splice it here.
+rom_file_path = "scratch/s47_ovl1c_composite.z64"
+text_offset = 0x025610
+text_size = 0xF80
+text_address = 0x04001080
+output_file_path = "build/factor5_ucode/factor5_ucode_ovl1c_recompiled.c"
+output_function_name = "factor5_ucode_ovl1c"
+
+# Same resident dispatch-table targets as the main/ovl10 configs, plus
+# overlay-0x1C jal-return / helper / internal-jump addresses.
+extra_indirect_branch_targets = [
+    0x10D8, 0x10E0, 0x12A0, 0x12B8, 0x12C4, 0x12E4, 0x12EC, 0x12FC,
+    0x1304, 0x1350, 0x135C, 0x1370, 0x1390, 0x146C, 0x1484, 0x14D4,
+    0x14F0, 0x1504, 0x15A4, 0x15AC, 0x15B4, 0x1DB0,
+    0x1E8C, 0x1ECC, 0x1ED4, 0x1F04, 0x1F0C, 0x1F9C
+]

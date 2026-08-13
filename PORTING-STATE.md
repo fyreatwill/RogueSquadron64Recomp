@@ -53793,3 +53793,47 @@ recur; do not treat that as the handshake "fixing" a crash.
 REFUTED** (`0x1F40/10` gone; pred now `0x1C`). **H-1f40-breaks-06
 REFUTED. H-1f40-restores-e9 REFUTED.** Residual is skipped
 overlay `0x1C`. Do not widen `0x1F40` to `153==0`.
+
+## Session 752 (2026-08-12) — ovl1c dest-0x1DB0 route is LIVE; residual is jal-return 0x1E18
+
+Step 0 measured `CURRENT-TRUTH.md` at 40,029 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s751: splice overlay
+`0x1C` at dest `0x1DB0` / `153==0x1C`. SOAK-RESULTS s751 line was
+already folded; no unread queue recipes.
+
+Added overlay `0x1C` to `make_clip_composite.py` (ROM `0x26EF8`,
+0x20C B, accept `0x1C`/28, output `s47_ovl1c_composite.z64`).
+New `factor5_rsp_ovl1c.toml` (not named ovl28) + RSPRecomp emits
+`L_1DB0` with external helper `L_1268` only; extra targets include
+jal-return labels. Fixup 6k extracts `L_1DB0..`, renames `OVL1C_*`,
+and routes `153==0x1C` at dest `0x1DB0` only — no jal-return cases.
+Host `[ovl-route]` print filter now counts `res=0x1C` (s748-class
+drop otherwise). Overlay `0x20` was not spliced; table dest is
+`0x12A0` (`0x2157`), not another `0x1DB0` sibling.
+**ORIGIN:** dest `0x1DB0` / `153==0x1C` is the skipped ovl1c image
+(ROM `0x26EF8`). The `0x1F40/00` stray is leftover `$30` after that
+skip falls into main `L_1DB0`. Route, not a `0x1F40` widen to
+`153==0`.
+
+Soak `scratch/agent/soak_results/s752_ovl1c_route_20260812-181705/run.log`
+(350 s, same recipe as s743–s751, CRASH=0, wrapper rc=0). Same-run
+positive control: `[ovl-route] res=0x1C tgt=0x1DB0` last n=5888
+LIVE; clip `res=0x04` and ovl10 `tgt=0x1F40` stay LIVE;
+`last_ovl=0x1C/0x1DB0` 183/192 sec2 reset rows (`ovl1c=1`; 9 early
+`0x00`). Four boot controls `dl06=push:2,complete:2,open:0`
+match=1.
+
+Stray `0x1F40/00` **3767→0** (entire `[clip-stray]` class 0).
+Pred-tag **122→0**; s751 first-edge `resident:0x1C` dest
+`0x1DB0` line=621 ra=`0x16B8` **61→0**. E9 match still
+boot-shaped: sec2 match=1 is 9/54, all `dl06=2/2/0`; last_ovl
+`0x1C` match **0/45**. rdpFs 0→5203 (s751 11238; not a restore).
+New residual: `Unhandled jump target 0x1E18` n=5879 from
+`OVL1C_1F9C` `jr $ra` (ucode line 5114). ovl1c jal at IMEM
+`0x1E10` → callee `0x1F0C`, return `0x1E18`. Label `OVL1C_1E18`
+exists; case does not. Do not revert dest-`0x1DB0` / `153==0x1C`.
+
+**H-ovl1c-stops-1f40-00 SELECTED.** **H-ovl1c-not-the-1f40-path
+REFUTED** (`0x1F40/00` gone; pred-tag gone). **H-ovl1c-breaks-06
+REFUTED. H-ovl1c-restores-e9 REFUTED.** Residual is the ovl1c
+jal-return at `0x1E18`. Do not splice overlay `0x20` next.
