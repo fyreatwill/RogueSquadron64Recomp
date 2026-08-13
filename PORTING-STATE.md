@@ -56141,6 +56141,32 @@ ordinary pairs from synthetic submissions.
 ORIGIN: source audit only; no game value, RDP command, or mitigation behavior
 changed.
 
+## Session 844 (2026-08-13) — Factor 5 candidate dispatches are consume-only in capture
+
+Added a behavior-neutral, per-VI-width RT64 interpreter breadcrumb immediately
+before handler invocation for raw opcodes 0xB1, 0xB4, and 0xBF. Refreshed the
+submodule patch export and built the Debug target successfully.
+
+The phase-gated s790 recipe was run with the E9 provenance control and the new
+diagnostic enabled. It reached VI width 1024 and produced 392 positive E9
+provenance rows. It recorded 112 candidate dispatch rows, all 0xB4/0xBF; no
+0xB1 row, no drawIndexedTri row, and no copy-assert row occurred. The process
+later hit the known slotDispatcherIter+872 SIGBUS at 202.8 seconds. The
+independent DL-sync census continued to run, so this is a valid dispatch
+reachability result rather than a null-control failure.
+
+Together with s842's independent source mapping of 0xB4/0xBF to Factor 5
+consume-only handlers, this selects H-factor5-consume-only for the captured
+candidate population and rules out H-no-triangle-dispatch there. It provides
+no runtime evidence for H-wrong-handler because 0xB1 did not dispatch. The
+garbage-shaped operands are not yet attributed to a writer or judged
+legitimate, so no mitigation is justified.
+
+Artifact: `scratch/agent/soak_results/s790_postsec2_reachability_20260813-061248/run.log`.
+
+ORIGIN: host-side diagnostic breadcrumb only; no game value, RDP command, or
+mitigation behavior changed.
+
 ## Session 843 (2026-08-13) — drawIndexedTri caller probe did not reach a triangle call
 
 Added a behavior-neutral RT64 breadcrumb at the interpreter-to-

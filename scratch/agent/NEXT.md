@@ -1,25 +1,31 @@
-# NEXT work unit (establish the triangle-handler dispatch positive control)
+# NEXT work unit (classify the observed Factor 5 candidate dispatch population)
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one phase-gated diagnostic build/run that records dispatch of candidate
-triangle opcodes 0xB1, 0xB4, and 0xBF before the existing `drawIndexedTri`
-breadcrumb. Keep the E9 provenance positive control in the same run. Do not
-change behavior or add a mitigation.
+Perform one bounded source-and-reference audit of the s844 0xB4/0xBF dispatch
+rows against docs/F5-UCODE-REFERENCE.md and the installed Factor 5 handler map.
+Do not build, run, or change behavior.
 
 Competing hypotheses and discriminator:
 
-- H-no-triangle-dispatch: the recipe never dispatches a candidate triangle
-  opcode, so the previous null was only a reachability gap.
-- H-factor5-consume-only: 0xB4/0xBF dispatches but the installed handlers do
-  not call `drawIndexedTri`.
-- H-wrong-handler: 0xB1 dispatches under Factor 5 and reaches inherited TRI2.
+- H-legitimate-tri: the rows are valid Factor 5 triangle commands whose
+  handler should consume payload and emit geometry elsewhere.
+- H-garbage-candidate: the rows are non-triangle bytes reached by the parser;
+  classify them against command boundaries and source provenance.
+- H-misclassified-opcode: the installed map or reference labels 0xB4/0xBF
+  differently from the current consume-only interpretation.
 
-Discriminator: the E9 controls must fire, and a candidate dispatch row followed
-by a draw row is the required triangle positive control. 0xB4/0xBF without a
-draw row selects H-factor5-consume-only, 0xB1 with a draw row selects
-H-wrong-handler, and no candidate rows selects H-no-triangle-dispatch. Only
-then attempt cycle-state attribution or behavior changes.
+Discriminator: every observed opcode/operand pattern must map to the exact
+Factor 5 command length and handler, and the reference must agree on whether
+it is a geometry command. Agreement selects H-legitimate-tri; boundary or
+provenance evidence selecting non-command bytes selects H-garbage-candidate;
+map/reference disagreement selects H-misclassified-opcode. No mitigation
+without an ORIGIN writer/legitimacy claim.
+
+Evidence from s844: the Debug build passed; the phase-gated run reached VI
+1024 and produced 392 positive E9 provenance rows. It recorded 112 candidate
+dispatch rows (0xB4/0xBF only), zero draw rows, and zero copy-assert rows,
+then hit slotDispatcherIter+872 at 202.8s.
 
 Exact execution: add one regeneration-safe, phase-scoped dispatch diagnostic;
 build Debug; run the existing phase-gated recipe from `build/` with the E9

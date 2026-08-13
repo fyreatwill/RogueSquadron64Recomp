@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s843 (2026-08-13). The active blocker is the authoritative
+Reviewed through s844 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -208,28 +208,45 @@ Priority until changed by the user:
   unevaluable reachability result, not evidence for any copy-cycle hypothesis.
   No behavior or mitigation changed.
 
-## Next work unit: establish the triangle-handler dispatch positive control
+- s844 added a behavior-neutral, per-VI-width dispatch breadcrumb immediately
+  before the RT64 handler call for raw opcodes `0xB1`, `0xB4`, and `0xBF`.
+  The Debug build passed. The phase-gated run reached VI 1024, produced 392
+  positive E9 provenance rows, and later hit the known
+  `slotDispatcherIter+872` SIGBUS at 202.8s. It recorded 112 candidate
+  dispatches (0xB4/0xBF only), but zero `drawIndexedTri` or copy-assert rows;
+  the independent DL-sync census continued to run. Together with s842's
+  source mapping of 0xB4/0xBF to consume-only Factor 5 handlers, this selects
+  H-factor5-consume-only for the captured candidate population and rules out
+  H-no-triangle-dispatch there; it provides no runtime evidence for H-wrong-
+  handler because 0xB1 did not dispatch. The rows' garbage-shaped operands
+  are not a legitimacy or writer attribution. No behavior or mitigation
+  changed.
+
+## Next work unit: classify the observed Factor 5 candidate dispatch population
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one phase-gated diagnostic build/run that records dispatch of the
-Factor 5 candidate triangle opcodes (0xB1, 0xB4, 0xBF) before the existing
-`drawIndexedTri` breadcrumb. Keep the E9 provenance positive control in the
-same run. Do not change behavior or add a mitigation.
+Perform one bounded source-and-reference audit of the s844 `0xB4/0xBF`
+dispatch rows against `docs/F5-UCODE-REFERENCE.md` and the installed Factor 5
+handler map. Do not build, run, or change behavior.
 
 Competing hypotheses:
 
-- H-no-triangle-dispatch: the recipe never dispatches a candidate triangle
-  opcode, so the previous null was only a reachability gap.
-- H-factor5-consume-only: 0xB4/0xBF dispatches but the installed handlers do
-  not call `drawIndexedTri`.
-- H-wrong-handler: 0xB1 dispatches under Factor 5 and reaches inherited TRI2.
+- H-legitimate-tri: the rows are valid Factor 5 triangle commands whose
+  handler should consume payload and emit geometry elsewhere.
+- H-garbage-candidate: the rows are non-triangle bytes reached by the parser;
+  their operands should be classified against command boundaries and source
+  provenance before any mitigation is considered.
+- H-misclassified-opcode: the installed map or reference labels 0xB4/0xBF
+  differently from the current consume-only interpretation.
 
-Discriminator: the E9 controls must fire, and a candidate dispatch row followed
-by a draw row is the required triangle positive control. 0xB4/0xBF without a
-draw row selects H-factor5-consume-only, 0xB1 with a draw row selects
-H-wrong-handler, and no candidate rows selects H-no-triangle-dispatch. Only
-then attempt cycle-state attribution or behavior changes.
+Discriminator: every observed opcode/operand pattern must map to the exact
+Factor 5 command length and handler, and the reference must agree on whether
+it is a geometry command. Complete agreement selects H-legitimate-tri;
+boundary/provenance evidence selecting non-command bytes selects
+H-garbage-candidate; a map/reference disagreement selects
+H-misclassified-opcode. Do not add a skip, allow, or restore without an
+`ORIGIN:` writer/legitimacy claim.
 
 ## Ranked backlog
 

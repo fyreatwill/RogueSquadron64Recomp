@@ -1302,7 +1302,7 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..76386a7 100644
+index dccaa87..e150c17 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
 @@ -5,12 +5,424 @@
@@ -1903,7 +1903,7 @@ index dccaa87..76386a7 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +675,157 @@ namespace RT64 {
+@@ -136,13 +675,178 @@ namespace RT64 {
                      break;
                  }
  
@@ -1965,6 +1965,27 @@ index dccaa87..76386a7 100644
                      dummy = dl;
 +                    state->rsp->setCurrentCommand(static_cast<uint32_t>(rdpGBI->ucode),
 +                        rawOpCode, dl->w0, dl->w1);
++                    // Phase-scoped positive-control breadcrumb for the Factor 5
++                    // triangle-handler audit. This is before the handler call,
++                    // so a dispatch row can be paired with drawIndexedTri.
++                    if (std::getenv("ROGUESQ_LOG_TRI_DISPATCH") &&
++                        (rawOpCode == 0xB1 || rawOpCode == 0xB4 || rawOpCode == 0xBF)) {
++                        static uint32_t lastWidth = 0xFFFFFFFFu;
++                        static uint32_t phaseRows = 0;
++                        const uint32_t width = state->lastScreenVI.width;
++                        if (width != lastWidth) {
++                            lastWidth = width;
++                            phaseRows = 0;
++                        }
++                        if (phaseRows++ < 96) {
++                            std::fprintf(stderr,
++                                "[tri-dispatch] vi=%u row=%u ucode=%u raw=0x%02X "
++                                "w0=0x%08X w1=0x%08X len=%u\n",
++                                width, phaseRows, static_cast<uint32_t>(rdpGBI->ucode),
++                                rawOpCode, dl->w0, dl->w1, cmdLength);
++                            std::fflush(stderr);
++                        }
++                    }
                      func(state, &dummy);
                  }
 -                else {
