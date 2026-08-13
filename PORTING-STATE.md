@@ -56269,6 +56269,34 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 855 (2026-08-13) — recurring slotDispatcherIter+872 is a real game-thread SIGBUS, not a stall gate
+
+Completed the prescribed source-only inventory. There is one dispatcher
+definition at guest `0x8003E8DC` in `../N64Recomp/RecompiledFuncs/funcs_8.c`.
+It walks the NPC slot chain, calls the update-function pointer, and returns
+through ordinary epilogue code; it has no progress counter, stall threshold,
+explicit abort, or signal path. The documented callers are
+`cinematicSlotBatchDispatch` plus the generated `jal 0x8003E8DC` call sites.
+No second definition or host dispatcher was found.
+
+The crash census found 31 matching `[CRASH][pc-symbol]` markers. A
+representative late-task log reports SIGBUS 10, `si_addr=0x33cb82199`, and a
+raw faulting PC symbolized as `slotDispatcherIter+872`; its stack continues
+through `runInMissionFrame`, `mainGameLoop`, and `mainBootstrapWorker`, so it
+is the game thread. The sticky `last-guest-pc=0x80022160` is a separate
+breadcrumb and is not an instruction attribution. The VI snapshot reports
+`stalledNow=1`, but no dispatcher stall gate exists in source.
+
+Source inventory and crash/runtime census independently refute intentional
+stall termination, crash-report-only attribution, and unrelated-thread
+attribution for the observed markers. They select runtime corruption as the
+leading explanation, but do not identify the invalid slot/queue input or its
+writer. No mitigation was added or justified. The next unit is a source-only
+input/state audit of `slotDispatcherIter`/`slotDispatcherInner` and callers.
+
+ORIGIN: source audit and existing crash telemetry only; no game value,
+dispatcher advancement, parser behavior, or mitigation changed.
+
 ## Session 854 (2026-08-13) — residual condition probe remained below task 650
 
 Ran the prescribed phase-gated residual-condition recipe twice. The first

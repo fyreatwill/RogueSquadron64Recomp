@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s854 (2026-08-13). The active blocker is the authoritative
+Reviewed through s855 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -357,38 +357,69 @@ H-extended-residual. No parser behavior, game value, or mitigation changed.
 ORIGIN: recipe-only condition logging and existing host-side telemetry; no
 game value, parser advancement, RDP handler, or mitigation behavior changed.
 
-## Next work unit: audit the recurring slotDispatcherIter+872 crash path
+## Session s855 result
+
+Completed the prescribed source-only inventory of `slotDispatcherIter+872`,
+its callers, crash handler, guest-PC handoff, and recent crash markers. There
+is one dispatcher definition at guest `0x8003E8DC` in
+`../N64Recomp/RecompiledFuncs/funcs_8.c`; its loop walks the NPC slot chain,
+calls the update-function pointer, and returns through normal epilogue code.
+It contains no progress counter, stall threshold, explicit abort, or signal
+path. The documented callers are `cinematicSlotBatchDispatch` and the broader
+set of generated `jal 0x8003E8DC` sites; no second definition or host-side
+dispatcher was found.
+
+The crash census found 31 matching markers. In the representative late-task
+capture, the signal is SIGBUS 10 with `si_addr=0x33cb82199`, and the raw
+faulting PC is the same local-symbol `slotDispatcherIter+872`; the backtrace
+continues through `runInMissionFrame`, `mainGameLoop`, and
+`mainBootstrapWorker` on the game thread. `last-guest-pc=0x80022160` is a
+separate sticky breadcrumb and does not identify the faulting dispatcher
+instruction. The concurrent VI snapshot says `stalledNow=1`, but the source
+has no dispatcher stall gate, so that state is correlation rather than proof
+of intentional dispatcher termination.
+
+Two independent lines (source inventory and crash/runtime census) select
+H-runtime-corruption as the leading explanation for the reachability loss and
+refute H-real-stall, H-crash-report-only, and H-unrelated-thread for the
+observed markers. The exact invalid slot/queue input and its writer remain
+unidentified; no guard, skip, or other mitigation is justified.
+
+ORIGIN: source audit and existing crash telemetry only; no game value,
+dispatcher advancement, parser behavior, or mitigation changed.
+
+## Next work unit: classify the dispatcher invalid-state input
 
 HYPOTHESIS-ID: m3-slot-dispatcher-crash
 
-Perform one bounded source-only idiom audit of every `slotDispatcherIter+872`
-definition, call path, crash marker, and guest-PC handoff. Do not build, run,
+Perform one bounded source-only audit of every input read and state transition
+in `slotDispatcherIter` and `slotDispatcherInner`, then trace the caller-side
+slot/index arguments and the NPC update-function pointer. Do not build, run,
 or change parser advancement, RDP handlers, or mitigation.
 
 Competing hypotheses:
 
-- H-real-stall: the dispatcher intentionally aborts after a guest-side
-  scheduler stall and task 650 is unreachable without fixing that idiom.
-- H-crash-report-only: the process is still making progress and the host crash
-  marker is a false attribution or stale signal.
-- H-runtime-corruption: an invalid slot or queue state reaches the dispatcher
-  and causes the SIGBUS before the residual task.
-- H-unrelated-thread: the marker belongs to a different thread and cannot
-  explain the late-task reachability loss.
+- H-invalid-slot: the slot-chain/index or NPC context is invalid before the
+  dispatcher dereference.
+- H-invalid-update: the NPC update-function pointer is invalid or returns a
+  corrupted context that faults in the dispatcher frame.
+- H-caller-state: the dispatcher inputs are valid and corruption enters from a
+  caller-side state transition or a callee return.
+- H-stale-breadcrumb: the source path does not match the observed host PC and
+  the apparent dispatcher attribution remains symbol/stack artefact.
 
-Discriminator: enumerate every source site and call edge, then classify each
-observed marker by thread, guest PC, signal/abort origin, and whether the
-dispatcher has a progress counter or explicit stall threshold. A complete
-one-to-one match between the task-650 failures and an intentional stall gate
-selects H-real-stall; a mismatch selects H-crash-report-only or
-H-unrelated-thread; a reproducible invalid-state input selects
-H-runtime-corruption. No source-only result authorizes a mitigation.
+Discriminator: enumerate each dereference and call edge, identify the source
+of the slot/index/update pointer, and determine whether the faulting host
+instruction can be one of those operations. A proven invalid input selects
+H-invalid-slot or H-invalid-update; valid inputs with a corrupting caller or
+callee select H-caller-state; a source/PC mismatch selects H-stale-breadcrumb.
+No source-only result authorizes a mitigation.
 
 ## Ranked backlog
 
-1. Complete the slot-dispatcher crash idiom inventory and classify the
-   recurring signal/guest-PC path.
-2. Re-run the residual condition capture only after the blocker is classified.
+1. Classify the invalid slot/index/update-pointer input at the dispatcher
+   dereference and identify its writer or prove it is legitimate.
+2. Re-run the residual condition capture only after that input is classified.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.
