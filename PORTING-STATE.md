@@ -55809,3 +55809,21 @@ ORIGIN: the repaired row is emitted by the post-task guest-DL walker after its
 `rs64_e9prov_aligned` callback; the matching serial and positive controls are
 evidence about telemetry ordering, not a legitimacy claim about any game
 pointer or RDP stream.
+
+## Session 826 (2026-08-13) — task-scoped E9 join aggregation selects parser undercount
+
+The prescribed read-only aggregation joined every repaired `[e9-task-join]`
+row in the s825 capture to a `[dl-sync-probe2]` task row: 52/52 matched, with
+no missing task IDs. The 4 control and 36 sec2 rows each had aligned=1,
+bridge_delta=1, and parser_delta=1. The 12 `scope=aligned` rows had matching
+guest/probe aligned counts on every row, 29 total; their bridge_delta total was
+332 while parser_delta total was 12. This selects H-task-scoped-loss for this
+capture: the repaired task join preserves aligned guest E9s but authoritative
+parser advances are lower in the same task population. It is single-source
+evidence, not a causal explanation or cross-run stability claim. No build,
+runtime change, mitigation, or rerun was made.
+
+ORIGIN: the table derives only from the post-callback `[e9-task-join]` and
+same-task `[dl-sync-probe2]` records. The writer and lifetime of the parser
+counter remain unresolved; the next unit is a source audit of every parser
+counter increment/reset and its task boundary.

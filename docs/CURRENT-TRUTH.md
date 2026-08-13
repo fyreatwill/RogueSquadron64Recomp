@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s825; compacted in maintenance s776)
+## Current truth (reviewed through s826; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -117,15 +117,32 @@ ORIGIN: the repaired join row is emitted by the same inline-walker block after
 the callback; matching task serials and positive controls are runtime evidence
 for telemetry ordering only.
 
-Next work unit: perform one bounded, read-only aggregation of the repaired
-`[e9-task-join]` rows from the s825 capture, joining each row to its
-`[dl-sync-probe2]` task and classifying aligned guest E9 versus bridge/parser
-deltas. Competing hypotheses are H-task-scoped-parity (aligned, bridge, and
-parser counts agree per task), H-task-scoped-loss (aligned exceeds parser), and
-H-join-sample-bias (the repaired rows cover only the control/selected subset).
-Discriminator: one script-derived table of matched task IDs and counts, with
-the positive-control rows separately identified; do not change runtime code or
-rerun an animating scene until that table exists.
+**s826 task-scoped join aggregation selects H-task-scoped-loss (single-source):**
+the read-only keyed join of the s825 capture matched all 52 repaired rows to a
+`[dl-sync-probe2]` row, with no missing task IDs. The 4 control rows and 36 sec2
+rows each had aligned=1, bridge_delta=1, and parser_delta=1. The 12 later
+`scope=aligned` rows had guest/probe aligned counts equal on every row (29 total),
+but parser_delta totaled 12 while bridge_delta totaled 332. Thus the repaired
+ownership join reproduces aligned guest E9s while authoritative parser advances
+remain lower in the same task population. This is one capture and therefore
+does not yet establish a cross-run or causal explanation; no mitigation follows.
+
+ORIGIN: `[e9-task-join]` is emitted after the guest-DL callback and
+`[dl-sync-probe2]` is emitted by the same run's task walker; the writer of the
+underlying stream remains unresolved.
+
+Next work unit: perform one bounded, read-only source audit of every writer,
+reset, and scope boundary for the authoritative parser E9 counter used in
+`[e9-task-join]` (`g_e9prov`/`g_cumulative_fullsyncs`/advance-ring paths).
+Competing hypotheses are H-parser-counter-task-local (the parser delta is a
+task-local counter and the 12-vs-29 result is a real per-task loss),
+H-parser-counter-cumulative (the delta is cumulative or reset at a different
+boundary, so the join subtraction is invalid), and H-parser-counter-filtered
+(the parser counter intentionally excludes some legitimate E9 forms).
+Discriminator: a source-derived table listing every increment and reset site,
+the owning counter, and the task/phase lifetime it spans; cite the exact call
+path that feeds `parser_delta` and do not build or rerun until the table is
+complete.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
   input-plugin, and ROM artifacts. Fresh configs differed only in
@@ -357,6 +374,14 @@ VI 1024 and showed authoritative `rdpFs`/FULL_SYNC advancement after the gate
 totally lost after section 2. The aligned-E9 versus authoritative-count
 discrepancy remains open for source/telemetry accounting; the later
 `slotDispatcherIter+872` SIGBUS is a separate crash family.
+
+**s826 update:** the repaired task join matched all 52 rows to their
+`[dl-sync-probe2]` tasks. In the 12 later aligned rows, guest/probe aligned E9
+counts matched at 29 total, while parser deltas totaled 12 and bridge deltas
+332. This selects H-task-scoped-loss as single-source evidence and supersedes
+the prior “accounting still unresolved” wording for the joined capture. Next is
+a read-only source audit of parser counter increments, resets, and lifetimes;
+no mitigation or runtime change is justified.
 
 2. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s784:** the batched parser-chain audit was unevaluable: both the verbose-chain run and its low-noise fixed rerun had positive control tasks (`emit=1`, `raw=1`, `dispatch=1`, `match=1`) but died at VI 640 before the 1024/post-sec2 gate; the first was a `viRetraceHandlerThread` SIGBUS and the fixed rerun an abort. No parser conclusion is supported. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: obtain one post-sec2 reachability result with a stability-oriented recipe before interpreting the parser chain. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
