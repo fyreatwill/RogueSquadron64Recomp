@@ -57809,3 +57809,62 @@ the result is single-source inventory evidence, not an explanation for a
 runtime crash.
 
 ORIGIN: complete generated-function, caller, sibling, shared-writer, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s903 (2026-08-13) — prioritized sound dispatcher is structurally coherent but remains unclassified
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`dispatchPrioritizedSoundQueue` (`0x80099720`, size `0x1C8`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Cross-checked the complete
+generated function, both priority-enqueue writers, the reset path, the
+shared-field writer/read inventory, and the companion `main_overlay.txt`
+symbol file. No build, game run, or soak was needed.
+
+The complete site classification is:
+
+- `0x80099720–0x8009974C` loads the active group count `D_80152EF0` and
+  exits when it is non-positive. The outer loop advances a group-table byte
+  offset by `0xC` while `s4 < count`; enqueue writers cap creation at 32,
+  but the dispatcher has no local `count <= 32` proof.
+- `0x8009975C–0x80099784` loads the group head `D_80152D74[group]` and the
+  pending/tail field `D_80152D78[group]`. The head is tested before its
+  `+0x4` priority/time read; the pending pointer is tested before its
+  `+0x4` read. Group-table shape and null gates are coherent, but the table
+  values and count writers are not independently proven legitimate.
+- `0x80099788–0x800997F0` compares the two node priorities against two
+  constant float thresholds. On the middle band it follows the head's
+  `+0x18` voice-record pointer, increments or clears record `+0x3E`, and
+  loops after the twentieth increment. The `+0x18` pointer is not checked
+  before dereference; its writer/value legitimacy is not established by the
+  generated source or companion artifacts.
+- `0x800997F4–0x80099874` loads voice `+0x3C`, calls
+  `musyxNoteEventLockedDispatch(note, 0x7F, 0x40)`, stores the returned
+  handle at `+0x34`, and either sets/clears flag `0x2` or initializes the
+  voice flags/field `+0x40` before calling `applyVoice3DMixParams`. The
+  helper arguments match the neighboring audio voice shape, but the voice
+  pointer and dynamic fields remain unproven; no guard was added.
+- `0x80099878–0x80099898` reloads `D_80152D78[group]`, null-checks it,
+  reads its `+0x0` next pointer, and publishes that pointer as the new
+  group pending head. The local list operation is guarded and coherent, but
+  node/link writers and values have no independent legitimacy proof.
+- `0x8009989C–0x800998BC` follows the processed group's `+0x0` next link
+  under a non-null loop condition, then advances to the next 12-byte group
+  table entry. This is a bounded group walk plus a null-terminated node walk;
+  the dynamic head/list provenance remains unresolved.
+
+The shape-mismatch hypothesis is rejected for each local substructure, but
+the dispatcher combines a group table, linked priority nodes, pending-list
+links, and a voice-record shape. Full classification is rejected because the
+dynamic count, node/voice writers, and the unchecked `+0x18` voice pointer do
+not have independent legitimacy evidence. No guard or behavior change was
+made.
+
+### Rules out / narrows
+
+This source audit rules out an omitted local access or missing loop/sentinel
+classification in the generated function. It does not identify a corrupt
+writer or establish that the unchecked voice pointer is legitimate; the
+result is single-source inventory evidence, not an explanation for a crash.
+
+ORIGIN: complete generated-function, caller/sibling writer, shared-field, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
