@@ -22,7 +22,22 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s771; compacted in maintenance s729)
+## Current truth (reviewed through s772; compacted in maintenance s729)
+
+**s772:** the matched debugger-mode oracle check used the same ROM/core and
+fresh configs. The debugger-on arm passed the whole-RDRAM positive control
+with **2,743,475 writes** and 899 VI, and its VI trace reached 320 then
+origin `0x6dd280`. The debugger-off arm's independent `--vi-poll` observed
+the same 0→320 transition and origin, but reported no debugger-callback VI
+count, as expected when `EnableDebugger=False`. This does not select a
+debugger-induced phase difference; it selects **H-oracle-poll-observation**
+as a limitation for later-phase comparison. The short run is only an initial
+phase result, so the next test is a long scheduled debugger-on/off A/B with
+the debugger-on positive control and debugger-off `--vi-poll`.
+
+**ORIGIN:** same-iteration debugger-on/off oracle arms; debugger-on whole-
+RDRAM control and debugger-off exported VI-register polling were independent
+signals. No port runtime code changed.
 
 **s771:** two fresh oracle config arms materialized byte-identical
 `mupen64plus.cfg` files and ran the same 15-second retail recipe. Both
@@ -729,7 +744,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **Oracle phase divergence — OPEN, H-oracle-runtime-or-ROM-divergence selected.** s771's two fresh configs were byte-identical and both 15-second arms had identical 2,743,553-write positive controls, 899 VI, and width 320 only. This rules out generated-config drift and makes plugin-default divergence less likely, but remains single-source evidence. Next: pair a debugger-on traced run with a debugger-off `--vi-poll` run using the same ROM/core/config; debugger-on and debugger-off phase differences select instrumentation/config interaction, while identical width-320 behavior selects a deeper retail-oracle runtime/ROM-environment divergence.
+1. **Oracle phase divergence — OPEN, H-oracle-poll-observation selected.** s772's debugger-on arm passed the positive control with 2,743,475 writes and 899 VI; debugger-off `--vi-poll` independently observed the same initial width 320 and origin `0x6dd280`, but cannot provide debugger-callback VI totals. This does not support an initial debugger-induced phase difference, while leaving later-phase comparison unevaluable in the short run. Next: run a long scheduled debugger-on/off A/B with debugger-on `--vi-trace --pif-trace --watch-write 0x0:0x800000` and debugger-off `--vi-poll`; compare width/origin transitions and confirm the debugger-on control.
 
 2. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: phase-gated reachability result for 6w or pivot to a higher-information M3 audit. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 

@@ -54562,3 +54562,24 @@ out differing fresh-config materialization and input as explanations for the
 current 320-only result; it does not identify whether debugger instrumentation
 or the retail oracle runtime/environment causes the divergence. No port runtime
 code changed.
+
+## Session 772 (2026-08-12) — debugger-off oracle polling matches initial phase
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 56,291 bytes, so maintenance did
+not trigger. The planned work unit was a matched 15-second debugger-on/off
+oracle check with fresh configs. The debugger-on arm exited cleanly and its
+whole-RDRAM positive control recorded **2,743,475 writes** over 899 VI; its
+trace showed width 0→320 followed by origin `0x6dd280`. The debugger-off arm
+also exited cleanly and `--vi-poll` independently observed width 0→320 at
+origin `0x6dd280`, but reported zero debugger-callback VI because
+`EnableDebugger=False` disables those callbacks. The configs were not used as
+the discriminator here; this was a debugger-mode check.
+
+The result does not support an initial debugger-induced phase difference, but
+the short run cannot test later transitions and the debugger-off arm has no
+callback VI total. This selects **H-oracle-poll-observation** as the current
+measurement limitation, not a runtime explanation. The next unit is a long
+70-second same-schedule debugger-on/off A/B: debugger-on gets the positive
+control, VI/PIF traces, and debugger-off uses exported VI polling. No port
+runtime code changed. This rules out neither deeper debugger interference nor
+the retail-oracle runtime/ROM-environment divergence.
