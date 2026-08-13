@@ -57579,3 +57579,37 @@ soak, or runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
+## Session s898 (2026-08-13) — 3D voice mix application is coherent but input legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `applyVoice3DMixParams`
+(`0x8009868C`, size `0x25C`) in the external generated tree, with the
+companion symbol artifacts and all four generated caller shapes. The complete
+function has no loop, sentinel walk, or derived pointer arithmetic:
+
+| Guest site(s) | Operation | Classification / writer basis |
+|---|---|---|
+| `0x800986AC`, `0x800986B0` | Load voice-entry `+0x8` flags and `+0x34` handle; branch on flag `0x10000` | Entry shape is coherent with the spatial-voice API; caller supplies the entry, but no independent legitimacy proof for the pointer, flags, or handle writer |
+| `0x800986CC` | Load voice-entry `+0x40`, multiply by `a1`, then by constant at `0x8003DE90` | Scalar path is structurally direct; raw `+0x40` writer/value is not independently proven |
+| `0x800986E4`, `0x80098740` | Load constants at `0x8003DE94`/`0x8003DE9C`; absolute-value-style fold, truncate, mask to byte | Explicit conversion; `0x8009871C`/`0x80098778` clamp result to `<0x80`, with fallback `0x7F` |
+| `0x80098788` | Call `spreadVoiceByteParamAcrossChain` with handle and clamped byte | Companion symbol identifies the chain-propagation role; handle legitimacy remains caller/state-derived |
+| `0x80098794`, `0x800987A0`, `0x800987AC` | Add `a2` to constant `0x8003DEA0`, scale by `0x8003DEA4`, fold against `0x8003DEA8` | Explicit conversion; `0x800987E4`/`0x800987E8` clamp result to `<0x80`, fallback `0x7F` |
+| `0x800987F4` | Call `setVoiceParamByHandle` with handle and clamped byte | Named handle-based API; handle/value provenance is not independently established |
+| `0x80098800`, `0x8009880C`, `0x80098818` | Subtract `f22` from constant `0x8003DEAC`, scale by `0x8003DEB0`, fold against `0x8003DEB4` | Explicit conversion; `0x80098850`/`0x80098854` clamp result to `<0x80`, fallback `0x7F` |
+| `0x80098860` | Call `applyVoiceCmdByHandle` with handle and clamped byte | Named handle-based API; no independent handle/value legitimacy proof |
+| `0x8009886C`, `0x80098878` | Multiply `f24` by `0x8003DEB8`, fold against `0x8003DEBC` | Explicit conversion; `0x80098898`/`0x800988AC` clamp to `<0x4000`, fallback `0x3FFF` |
+| `0x800988C0` | Call `spreadVoiceKeyTransposeAcrossChain` with handle and low-16-bit clamped result | Companion symbol identifies chain propagation; handle remains unproven caller/state input |
+| `0x800988C8–0x800988D8` | Restore stack-saved return address, entry register, and floating registers | Stack-local save/restore is structurally complete |
+
+The four caller shapes at `0x80098B3C`, `0x80098D40`, `0x80099864`, and
+`0x80099B68` all pass the same voice-entry base, three computed word arguments,
+and two stack floating arguments; the first two resolve/store entry `+0x34`
+through `bsearchFactor5TableByU16Key`, while the latter paths use the same
+spatial-source update pipeline. The generated source and companion symbols
+agree that this is one spatial-voice record/API shape, so the shape-mismatch
+hypothesis is rejected. Structural classification passes, but full
+classification is rejected because the voice-entry pointer and its `+0x8`,
+`+0x34`, `+0x40`, `+0x2C` values, plus caller-derived float inputs, have no
+independent writer/value legitimacy proof. No guard, build, soak, or runtime
+behavior changed.
+
+ORIGIN: bounded generated-source, caller, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
