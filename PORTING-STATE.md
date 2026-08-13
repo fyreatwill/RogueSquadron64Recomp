@@ -54306,6 +54306,24 @@ Do not route `0x1E7C` this step. Do not revert 0x1EBC.
 **ORIGIN:** `OVL1C_1F04` `jr` of a ROM ovl1c `$30`-return.
 Route the return; do not skip `OVL1C_1ED4`.
 
+## Session 765 (2026-08-12) — ovl1c 0x1E8C route landed; soak unevaluable
+
+Step 0 measured `CURRENT-TRUTH.md` at 50,037 bytes, so maintenance was not
+triggered. Work unit was the queued 6w insertion of `case 0x1E8C` /
+`153==0x1C` → `OVL1C_1E8C`, with the existing overlay-route and `dl06`
+controls. The fixup script and generated ucode built successfully.
+
+Two same-recipe soaks both reached the VI-1024 positive control and fired the
+ovl20, ovl24, clip, and `dl06=2/2/0` controls. Both crashed at about 190 s
+after 56 frames before the `0x1E7C` route and therefore before the `0x1E8C`
+discriminator: attempt 1 was `coalesceFreeHeapBlocks+3192` with
+`last-guest-pc=0x8000241c`; attempt 2 was `getNextSlotNpcTypeId+448` with
+`last-guest-pc=0x8000834c`. Attempt 2 also observed the existing `0x1ECC`
+route. The targeted null result is unevaluable and does not select or refute
+H-1e8c. The change is retained because its ORIGIN is a legitimate ovl1c
+`$30` return from `OVL1C_1E7C` through `OVL1C_1ED4`/`OVL1C_1F04`, not a
+mitigation.
+
 ## Session 763 (2026-08-12) — ovl1c 0x1ECC $30-return LIVE; residual is 0x1E7C
 
 Step 0 measured `CURRENT-TRUTH.md` at 48,076 bytes, so

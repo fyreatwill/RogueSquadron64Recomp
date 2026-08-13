@@ -22,7 +22,22 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s764; compacted in maintenance s729)
+## Current truth (reviewed through s765; compacted in maintenance s729)
+
+**s765:** fixup 6w inserts `case 0x1E8C` / `153==0x1C` →
+`OVL1C_1E8C`, but the two same-recipe soaks were unevaluable.
+Both reached VI 1024 and fired positive controls for ovl20,
+ovl24, clip, and `dl06=2/2/0`, then crashed at ~190 s after
+56 frames before the targeted `0x1E7C` route (and therefore
+before any `0x1E8C` discriminator). Crash PCs differed:
+`coalesceFreeHeapBlocks+3192` / `last-guest-pc=0x8000241c`
+and `getNextSlotNpcTypeId+448` / `last-guest-pc=0x8000834c`.
+Do not classify H-1e8c from these nulls. The code change is
+retained; next work must obtain a phase-gated reachability result
+or pivot to a higher-information M3 audit.
+**ORIGIN:** `OVL1C_1E7C` `jal 0x1ED4` sets r31=`0x1E8C`;
+`OVL1C_1ED4` saves `$ra→$30`, and `OVL1C_1F04` returns via
+`jr $30`. Legitimate ovl1c `$30`-return; route it.
 
 **s764:** fixup 6v inserts `case 0x1E7C` / `153==0x1C` →
 `OVL1C_1E7C`. Soak `s764_ovl1c_1e7c_20260812-205304` (356 s,
@@ -636,7 +651,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Residual is UJ `0x1E8C` 102 (`OVL1C_1F04` `jr $30`, first after leave / before sec2). Next is a 6o-style case `0x1E8C` / `153==0x1C` only — last unrouted ovl1c `jal 0x1ED4` return; predicted leftover UJ=0. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: phase-gated reachability result for 6w or pivot to a higher-information M3 audit. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -2308,6 +2308,43 @@ if is_main_ucode and OVL1C_1E7C_MARKER not in text:
         1, "case 0x1E7C overlay-0x1C $30-return")
 
 # ---------------------------------------------------------------------------
+# Fixup 6w: route ovl1c $30-return at 0x1E8C (s765)
+# ---------------------------------------------------------------------------
+# Residual UJ 0x1E8C is the return from OVL1C_1E7C's jal 0x1ED4.
+# OVL1C_1ED4 saves that return into $30 and OVL1C_1F04 restores it.
+# This is the legitimate overlay-0x1C continuation, so route it by
+# resident id rather than allowing the target for every overlay.
+OVL1C_1E8C_MARKER = "/* fixup: ovl1c_1e8c */"
+if is_main_ucode and OVL1C_1E8C_MARKER not in text:
+    def sub_exactly6w(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6w ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the ovl1c 0x1E8C $30-return.",
+                  file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    if "OVL1C_1E8C:" not in text:
+        print("fixup_factor5_ucode: FIXUP 6w PRECONDITION FAILED: "
+              "OVL1C_1E8C: missing. Run fixup 6k (make_clip_composite.py "
+              "0x1C + RSPRecomp on factor5_rsp_ovl1c.toml) first.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    sub_exactly6w(
+        re.compile(
+            r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n)"),
+        lambda m: (
+            "        case 0x1E8C: if (RSP_MEM_BU(0X153, 0) == 0x1C) { "
+            "rs64_e9prov_ovl_route(0x1C, 0x1E8C); goto OVL1C_1E8C; } "
+            "goto rs64_clip_stray;  " + OVL1C_1E8C_MARKER + "\n" + m.group(1)),
+        1, "case 0x1E8C overlay-0x1C $30-return")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level
