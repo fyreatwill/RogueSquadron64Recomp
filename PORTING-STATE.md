@@ -58688,3 +58688,43 @@ not classify the upstream writer/value origin.
 
 ORIGIN: complete generated queue-access, caller, overlay-metadata, and
 companion-symbol inventory; no guest value mutation or runtime behavior.
+## 2026-08-13 — s924: decodeAndFillVoiceBlock has bounded fixed-shape decode
+
+### What ran
+
+Performed the planned source-only M3 idiom inventory of
+`decodeAndFillVoiceBlock` (`0x8009C904`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated its complete generated
+body, all direct references, the caller argument setup in
+`serviceStreamingVoice`, and the companion `main_overlay.txt` mapping. No
+build, game run, or soak was run.
+
+The sole generated caller at `0x8009C0E4` passes the voice-slot base in `$a0`
+and an output-table pointer from slot `+0x198` plus an index derived from
+`slot+0x11D8 / slot+0x19C`, remainder shifted right two and then left three.
+The helper reads `slot+0x11C8`, forms a source address at `slot+0x1A0` plus
+`((slot+0x11C8 >> 3) & 0xFFC)`, and reads the source word there. The bitfield
+decode path writes fixed halfword fields in a 0x140-byte stack block and
+updates slot fields `+0x18A`, `+0x18C`, and `+0x11C8`.
+
+The first decode stage advances through a fixed 0x68-bit span in 0x1A-byte
+record steps; its loop condition is `cursor < start+0x68`, so it executes
+four times. The later post-filter loop increments a counter from zero and
+stops at four, calling `filterVoiceSampleBlock` and `applyVoiceDelayFilter`
+once per decoded block, then calls `computeVoicePanCoefficients`. The helper
+has no indirect call, unbounded loop, or second caller shape. The source index
+mask bounds the slot-relative source offset to 0..0xFFC, but does not prove
+the slot base, table pointer, divisor, table contents, or decoded values
+legitimate.
+
+### Rules out / narrows
+
+This source inventory supports H-decode-voice-classified for local control,
+pointer-shape, and caller-shape structure. It rules out an unbounded decode
+or filter loop and an incompatible generated caller. It does not establish
+dynamic pointer/value legitimacy, so it authorizes no guard or mitigation.
+This is source inventory evidence only; no independent runtime line was
+needed or claimed.
+
+ORIGIN: complete generated helper/caller and companion-symbol inventory; no
+guest value mutation, mitigation, or runtime behavior changed.

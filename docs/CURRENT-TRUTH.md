@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s923 (2026-08-13). The active blocker is the authoritative
+Reviewed through s924 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -244,6 +244,12 @@ closed. M3 work is limited to systematic idiom-class audits.
   Its sole generated caller supplies one coherent slot-base plus consumption
   amount shape. Dynamic slot fields and caller-derived amount legitimacy
   remain unproven; no guard or behavior change.
+- s924 audited `decodeAndFillVoiceBlock` (`0x8009C904`). It has one direct
+  caller, a coherent slot-base plus output-table-pointer shape, masked input
+  indexing within the slot's `+0x1A0` block, and exactly four local
+  filter/pan iterations. The generated helper has no unbounded loop or
+  caller-shape split; dynamic slot pointers, table contents, and decoded
+  values remain unproven, so no guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -302,6 +308,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s912 | `serviceVoicePoolFrame` inventory: one coherent `0x80154620` voice-slot shape with `0x1228` stride, state/streaming accesses, queue operations, and no pointer/list walk; no generated direct caller was found, and queue/state plus shared-field writer legitimacy remain unproven; no mitigation. |
 | s913 | `getVoicePlaybackProgressByKey` inventory: two callers agree on a handle-plus-output-float contract and the helper's `0x80154620`/`0x1228` slot shape; the helper has an explicit `speechFileLoaded` gate but no finite scan bound or sentinel, and its miss path reaches the 32-bit counter wrap. Slot progress reads and queue handoff are classified, but scan termination and dynamic writer/value legitimacy remain unproven; no guard or behavior change. |
 | s923 | MusyX per-slot queue inventory: `initMusyXVoiceSlot` creates `slot+0x11AC` with buffer `slot+0x11C4` and capacity 1; `serviceStreamingVoice` has the only generated receive site, gated by `slot+0x11DC`, using nonblocking `osRecvMesg(queue, NULL, 0)` and checking only the return. The two init callers share the slot-base contract and the receive path has no message dereference or queue retry loop; dynamic queue/state writer legitimacy remains unproven, so no guard or behavior change. |
+| s924 | `decodeAndFillVoiceBlock` inventory: one direct caller passes the voice slot and `+0x198` block-table entry; the helper masks the bitstream word index to a `0..0xFFC` offset from `slot+0x1A0`, decodes into a fixed stack block, and runs four filter/pan iterations before updating `+0x11C8`. Local control and caller shape are coherent; dynamic pointer/table/value legitimacy remains unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -328,32 +335,29 @@ shape, not a local termination bound. No runtime conclusion follows.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-voice-queue-receive-class
+HYPOTHESIS-ID: m3-filter-voice-block-class
 
-Audit the complete MusyX per-slot queue-receive idiom at `slot+0x11AC`.
-Do not add a guard or change game behavior.
+Audit the complete `filterVoiceSampleBlock` idiom at `0x8009D7D0`, including
+all generated callers, input/output bounds, helper calls, and termination.
+Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-queue-receive-unclassified: a queue receive site has an unchecked queue
-  base, incompatible record shape, unsafe returned-message use, or an
-  unbounded retry/termination path.
-- H-queue-receive-classified: every receive is state-gated/nonblocking with a
-  coherent slot queue and bounded local control, and initialization/writers
-  establish the same queue contract.
-- H-queue-receive-shape-mismatch: one caller or sibling writer uses a distinct
-  queue/slot contract; record the exact split and stop.
-Discriminating measurement: a complete site table for every `slot+0x11AC`
-queue access, including exact receive/create arguments, gate and state fields,
-message consumers, loop/termination bounds, all callers, and companion basis.
-Any omitted access, unsafe message use, unbounded termination, or incompatible
-queue shape rejects full classification.
+- H-filter-voice-unclassified: a filter caller or helper uses an unchecked
+  sample-block pointer/length or an incompatible record shape.
+- H-filter-voice-classified: all callers pass the same fixed block shape and
+  the helper has bounded control with only dynamic value legitimacy open.
+- H-filter-voice-shape-mismatch: one caller uses a distinct sample/filter
+  contract; record the exact split and stop.
 
-Exact commands: use `rg -n '11AC|osRecvMesg|osCreateMesgQueue'` in
-`../N64Recomp/RecompiledFuncs/funcs_26.c` and `funcs_27.c`, inspect bounded
-windows around each site and caller, then inspect matching
-`rogue_squadron64/symbol_files/main_overlay.txt` entries. No game build or
-soak is planned.
+Discriminating measurement: complete memory-access, helper-call, caller-
+argument, and loop/termination tables, cross-checked against companion
+symbols. Any omitted access, unsafe bound, unbounded control, or shape split
+rejects full classification.
+
+Exact commands: inspect `funcs_27.c` around `0x8009D7D0`, `rg` every
+`filterVoiceSampleBlock` reference and helper call, then inspect the matching
+`main_overlay.txt` entry. No game build or soak is planned.
 
 ## Closed and parked
 

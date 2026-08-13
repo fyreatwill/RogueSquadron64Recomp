@@ -1,33 +1,29 @@
-# NEXT work unit (s923)
+# NEXT work unit (s924)
 
-HYPOTHESIS-ID: m3-voice-queue-receive-class
+HYPOTHESIS-ID: m3-decode-voice-block-class
 
-Audit the complete MusyX voice queue-receive idiom: every generated use of
-the per-slot queue at `slot+0x11AC`, its gate/state fields, receive arguments,
-returned-message consumers, and queue initialization/writers. Cover the
-`serviceStreamingVoice` sites and the queue creation in `initMusyXVoiceSlot`,
-then enumerate all generated callers and companion symbol/decomp evidence.
-Do not add a guard, change game behavior, build, or run a soak.
+Audit the complete MusyX `decodeAndFillVoiceBlock` idiom at `0x8009C904`:
+all input/output pointer arithmetic, block-index derivation, loops and
+termination, every generated caller, and companion symbol/decomp evidence.
+Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-queue-receive-unclassified: a queue receive site has an unchecked queue
-  base, incompatible record shape, unsafe returned-message use, or an
-  unbounded retry/termination path.
-- H-queue-receive-classified: every receive is state-gated/nonblocking with a
-  coherent slot queue and bounded local control, and initialization/writers
-  establish the same queue contract.
-- H-queue-receive-shape-mismatch: one caller or sibling writer uses a distinct
-  queue/slot contract; record the exact split and stop.
+- H-decode-voice-unclassified: a decode site has an unchecked or incompatible
+  pointer/record shape, unsafe index arithmetic, or an unbounded termination
+  path.
+- H-decode-voice-classified: the helper has a coherent slot/table contract,
+  bounded control, and all callers pass the same shape; only dynamic value
+  legitimacy remains open.
+- H-decode-voice-shape-mismatch: a caller or sibling path uses a distinct
+  buffer/index/slot contract; record the exact split and stop.
 
-Discriminating measurement: a complete site table for every `slot+0x11AC`
-queue access, including the exact `osRecvMesg`/queue-create arguments, gate and
-state fields, message consumers, loop/termination bounds, all callers, and
-companion basis. Any omitted access, unsafe message use, unbounded termination,
-or incompatible queue shape rejects full classification.
+Discriminating measurement: a complete helper table of every memory access,
+derived index and pointer, loop/termination condition, all direct callers and
+argument setup, plus companion basis. Any omitted access, unsafe derivation,
+unbounded loop, or incompatible caller shape rejects full classification.
 
-Exact commands: use `rg -n '11AC|osRecvMesg|osCreateMesgQueue'` in
-`../N64Recomp/RecompiledFuncs/funcs_26.c` and `funcs_27.c`, inspect bounded
-windows around each site and callers, then inspect the matching
-`rogue_squadron64/symbol_files/main_overlay.txt` entries. No game build or
-soak is planned.
+Exact commands: use `sed` around the definition/caller in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`, `rg` for every generated reference,
+then inspect the matching `main_overlay.txt` entry and any companion body.
+No game build or soak is planned.
