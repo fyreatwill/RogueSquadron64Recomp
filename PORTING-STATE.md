@@ -55193,3 +55193,22 @@ positive controls so the transition can be observed without an unreachable
 Logs: `scratch/agent/soak_results/s798_join_a_launcher.log`,
 `scratch/agent/soak_results/s798_join_b_launcher.log`, and the corresponding
 `run.log` files.
+
+## Session 800 (2026-08-13) — VI-640 transition capture stayed pre-chain
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 34,094 bytes, so maintenance did
+not trigger. The planned work unit was one stability-oriented capture gated at
+VI width 640, with phase-relative keys and the existing E9 provenance/parser
+controls. No build was needed.
+
+The run reached VI width 640 at 2.6 seconds, fired the phase-relative key
+schedule, captured 90 frames, and completed without a crash. It never reached
+VI width 1024 and emitted zero provenance, unified, callback, authoritative,
+or parser-control rows. This selects H-runtime-transition for the tested
+recipe and rules out neither parser mechanism nor any writer by itself; the
+result is a clean pre-chain boundary observation, not parser evidence. No
+mitigation was added. The next unit is a source audit of the VI-width
+transition writer and gate, with an independent retail watch/oracle control
+identified before any new instrumentation.
+
+Logs: `scratch/agent/soak_results/s799_transition_640/run.log`.

@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s793; compacted in maintenance s776)
+## Current truth (reviewed through s800; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -345,9 +345,14 @@ leaving runtime behavior as the remaining broad class.
    mode, while both logs independently recorded the 0→320→640 VI sequence and
    no 1024 transition. This refutes H-recipe-gate and
    H-instrumentation-interference for the tested recipe and selects
-   H-runtime-transition. Next: one stability-oriented capture gated at VI 640,
-   with `PROBE_LEAVE_OK=1`, to observe the transition boundary and retain the
-   parser positive controls without waiting on an unreachable 1024 gate.
+   H-runtime-transition. The s800 stability-oriented capture was gated at VI
+   640, reached that gate at 2.6 seconds, and then ran to completion with 90
+   frames while remaining at width 640; it emitted no provenance, unified,
+   callback, authoritative, or 1024-phase rows. This is a clean repeat of the
+   runtime-transition result, not parser evidence. The next unit is a source
+   audit of the VI-width transition writer and its gate, followed by one
+   bounded writer-attribution capture only if the audit identifies a concrete
+   candidate.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
