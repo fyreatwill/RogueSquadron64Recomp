@@ -56117,3 +56117,26 @@ latest-submit-label ordering.
 
 ORIGIN: no game value, RDP command, or mitigation behavior changed; only the
 host-side diagnostic budget scope changed.
+
+## Session 839 (2026-08-13) — source audit finds synthetic stale-label path
+
+Performed the prescribed source-only audit of the submit-to-parser chain; no
+build or run was performed. Normal accepted bridge ranges call
+`rs64_dpc_record_submit`, store their range, increment the submit serial, and
+immediately call `submit_rdp_range`. That call synchronously invokes RT64 with
+the same `[lo,hi)` arguments, and `processRDPLists` derives its parser range
+from the same pointers. This rules out a normal producer/consumer range race
+and normal latest-submit ordering as explanations for s838's ordinary rows.
+
+The audit found one bounded exception: non-deferred synthetic FULL_SYNC
+injection in `rsp_force_fullsync` calls `submit_rdp_range(addr, addr + 8)`
+without `rs64_dpc_record_submit`, so the consumer and parser telemetry attach
+the previous submit serial/range while parsing the synthetic range. Synthetic
+ranges deferred during a task are recorded at commit and do not have this
+staleness. This identifies a telemetry label-staleness path, but does not
+explain the late ordinary bridge/parser disjointness and is not a mitigation or
+game-value legitimacy claim. Next work is one phase-gated probe separating
+ordinary pairs from synthetic submissions.
+
+ORIGIN: source audit only; no game value, RDP command, or mitigation behavior
+changed.

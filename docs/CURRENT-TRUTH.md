@@ -151,33 +151,45 @@ Priority until changed by the user:
   It does not yet identify why the parser call ranges are disjoint or justify
   a mitigation.
 
-## Next work unit: source-audit the disjoint parser call ranges
+- s839 completed the requested source audit without a build or run. Normal
+  bridge submissions are synchronous and preserve identity: each accepted
+  range calls `rs64_dpc_record_submit`, which stores `[lo,hi)`, increments the
+  serial, and immediately invokes `submit_rdp_range`; RT64 passes those same
+  arguments to `processRDPLists`, whose parser derives its call range from the
+  same pointers. This refutes a normal producer/consumer range race and a
+  normal latest-submit ordering explanation. One exception is the non-deferred
+  synthetic FULL_SYNC path (`rsp_force_fullsync`), which calls
+  `submit_rdp_range` without recording a new serial/range; its consumer and
+  parser telemetry therefore carries the previous submit label while parsing
+  the synthetic `[addr,addr+8)` range. Deferred synthetic ranges do receive a
+  normal record at commit. This identifies a bounded telemetry label-staleness
+  path, but does not explain the late ordinary bridge/parser disjointness or
+  establish a writer/legitimacy claim.
+
+## Next work unit: classify ordinary versus synthetic late range records
 
 HYPOTHESIS-ID: m3-e9-command-boundary
 
-Perform one bounded source audit of the submit-to-parser call chain, using the
-s838 range records as the target. Do not change behavior or run a new soak.
-Enumerate every writer and consumer of the submit serial, `[lo,hi)` range,
-and parser task label from `rs64_dpc_record_submit` through
-`run_rdp_submission` and the RT64 command telemetry. Check whether any
-producer/consumer ordering or latest-submit label can make a parser call range
-look disjoint from the bridge range despite exact consumer identity.
+Perform one bounded telemetry-only probe, using s838's late records as the
+target. Keep the existing positive controls and phase gates. Add a distinct
+marker or counter for every synthetic FULL_SYNC submission and for every
+ordinary `rs64_dpc_record_submit`/consumer pair, then run the phase-gated
+recipe once. Do not change behavior or add a mitigation.
 
 Competing hypotheses:
 
-- H-range-association: the parser receives a different range or task-era than
-  the bridge record, so the disjointness is real.
-- H-label-ordering: the parser receives the same range, but a latest-submit
-  label or call-boundary ordering makes telemetry associate it with another
-  serial/task.
-- H-parser-record-loss: the parser call range is present, but command telemetry
-  omits its contents through a bounded or filtered path.
+- H-ordinary-disjoint: ordinary accepted submissions remain disjoint from the
+  parser call ranges, so the source audit missed a live range transition.
+- H-synthetic-stale-label: disjoint rows are synthetic submissions carrying the
+  previous serial/range label; ordinary pairs remain exact.
+- H-parser-record-loss: ordinary parser call ranges are present, but command
+  telemetry omits their contents through a bounded or filtered path.
 
-Discriminator: a source-proven range/label divergence selects
-H-range-association; a source-proven same-range/latest-label race selects
-H-label-ordering; a parser telemetry omission path selects H-parser-record-loss.
-The s838 late bridge records and the already observed 582 span-covered slots
-remain settled evidence and are not re-litigated.
+Discriminator: synthetic markers covering the disjoint rows select
+H-synthetic-stale-label; exact ordinary pairs with missing command records
+select H-parser-record-loss; disjoint ordinary pairs select
+H-ordinary-disjoint. The s838 span-covered slots remain settled evidence and
+are not re-litigated.
 
 ## Ranked backlog
 
