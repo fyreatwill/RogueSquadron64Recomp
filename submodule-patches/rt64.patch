@@ -1389,10 +1389,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..d228e04 100644
+index dccaa87..401414e 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,432 @@
+@@ -5,12 +5,438 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1446,6 +1446,12 @@ index dccaa87..d228e04 100644
 +    static uint32_t s_rs64_pending_submit_lo = 0;
 +    static uint32_t s_rs64_pending_submit_hi = 0;
 +    static uint32_t s_rs64_pending_task = 0;
++    static uint32_t s_rs64_tri_boundary_width = 0xFFFFFFFFu;
++    static uint32_t s_rs64_tri_boundary_rows = 0;
++    static uint32_t s_rs64_tri_prev_address = 0;
++    static uint32_t s_rs64_tri_prev_raw = 0;
++    static uint32_t s_rs64_tri_prev_length = 0;
++    static bool s_rs64_tri_prev_valid = false;
 +
 +    static bool rs64LogRdpAdvance() {
 +        static const bool enabled = [] {
@@ -1825,7 +1831,7 @@ index dccaa87..d228e04 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -69,6 +489,12 @@ namespace RT64 {
+@@ -69,6 +495,12 @@ namespace RT64 {
          GBIFunction func;
          uint32_t cmdLength;
          size_t pendingCommandRemainingBytes = state->rdp->pendingCommandRemainingBytes;
@@ -1838,7 +1844,7 @@ index dccaa87..d228e04 100644
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +515,40 @@ namespace RT64 {
+@@ -89,8 +521,40 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -1879,7 +1885,7 @@ index dccaa87..d228e04 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +557,11 @@ namespace RT64 {
+@@ -99,6 +563,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -1891,7 +1897,7 @@ index dccaa87..d228e04 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,7 +575,54 @@ namespace RT64 {
+@@ -112,7 +581,54 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -1947,7 +1953,7 @@ index dccaa87..d228e04 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
-@@ -122,6 +632,35 @@ namespace RT64 {
+@@ -122,6 +638,35 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -1983,7 +1989,7 @@ index dccaa87..d228e04 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +668,14 @@ namespace RT64 {
+@@ -129,6 +674,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -1998,7 +2004,7 @@ index dccaa87..d228e04 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +683,183 @@ namespace RT64 {
+@@ -136,13 +689,211 @@ namespace RT64 {
                      break;
                  }
  
@@ -2083,6 +2089,29 @@ index dccaa87..d228e04 100644
 +                                width, phaseRows, static_cast<uint32_t>(rdpGBI->ucode),
 +                                rs64_tri_gbi_owner(rdpGBI->ucode),
 +                                reinterpret_cast<void *>(func), rawOpCode);
++                            if (std::getenv("ROGUESQ_LOG_TRI_BOUNDARY")) {
++                                if (width != s_rs64_tri_boundary_width) {
++                                    s_rs64_tri_boundary_width = width;
++                                    s_rs64_tri_boundary_rows = 0;
++                                    s_rs64_tri_prev_valid = false;
++                                }
++                                if (s_rs64_tri_boundary_rows++ < 96) {
++                                    std::fprintf(stderr,
++                                        "[tri-boundary] vi=%u row=%u ucode=%u owner=%s "
++                                        "raw=0x%02X map=%p len=%u addr=0x%08X next=0x%08X "
++                                        "prev_valid=%u prev_addr=0x%08X prev_raw=0x%02X prev_len=%u "
++                                        "submit=[0x%08X,0x%08X) pending=%u\n",
++                                        width, s_rs64_tri_boundary_rows,
++                                        static_cast<uint32_t>(rdpGBI->ucode),
++                                        rs64_tri_gbi_owner(rdpGBI->ucode), rawOpCode,
++                                        reinterpret_cast<void *>(func), cmdLength,
++                                        commandAddress, commandAddress + static_cast<uint32_t>(cmdLength * sizeof(DisplayList)),
++                                        s_rs64_tri_prev_valid ? 1u : 0u,
++                                        s_rs64_tri_prev_address, s_rs64_tri_prev_raw,
++                                        s_rs64_tri_prev_length, submit_lo, submit_hi,
++                                        state->rdp->pendingCommandRemainingBytes);
++                                }
++                            }
 +                            std::fflush(stderr);
 +                        }
 +                    }
@@ -2092,6 +2121,11 @@ index dccaa87..d228e04 100644
 +                else if (func == nullptr) {
                      RT64_LOG_PRINTF("DL Parser ran into an unknown RDP opCode: %u / 0x%X", opCode, opCode);
                  }
++
++                s_rs64_tri_prev_address = commandAddress;
++                s_rs64_tri_prev_raw = rawOpCode;
++                s_rs64_tri_prev_length = cmdLength;
++                s_rs64_tri_prev_valid = true;
 +
 +                // ROGUESQ_LOG_CIMG_RAW=1 (m3 cimg-origin-desync, s661/s662):
 +                // this walker is the REAL parser and always resumes exactly

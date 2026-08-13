@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s846 (2026-08-13). The active blocker is the authoritative
+Reviewed through s849 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -257,38 +257,60 @@ Priority until changed by the user:
   whether the RDP candidate is legitimate, misframed, or garbage, and no
   mitigation or behavior change is justified.
 
+- s849 added a behavior-neutral `[tri-boundary]` record containing the RDP
+  command-table map entry, masked opcode, length, current/next parser address,
+  preceding parser span, and submit range. The Debug build passed. The
+  phase-gated run reached VI 1024, passed the E9 provenance control 402 times,
+  and produced 108 matching candidate/owner/boundary rows (28 at VI 512 and
+  80 at VI 640) before the known `slotDispatcherIter+872` SIGBUS. Every row
+  was `ucode=1 owner=RDP`, had command length 1, and had a valid preceding
+  parser boundary except the first row of each width interval. The masked
+  opcodes are 0x34 for raw B4 and 0x3F for raw BF; the RDP source table's real
+  triangle range is 0x08–0x0F, so these are boundary-shaped non-triangle RDP
+  entries rather than genuine RDP triangle commands. This is a second
+  runtime/source line selecting H-rdp-garbage as the leading explanation and
+  leaving H-rdp-misframed open only for the unmeasured writer/stream origin.
+  It does not identify the writer, prove operand legitimacy, or justify a
+  mitigation. No behavior changed.
+
+  ORIGIN: host-side parser-boundary telemetry; the candidate values were not
+  changed, skipped, or reinterpreted.
+
   ORIGIN: host-side owner telemetry at the RT64 handler boundary; no game
   value, command advancement, geometry, or mitigation behavior changed.
 
-## Next work unit: classify the RDP-owned B4/BF candidate stream
+## Next work unit: identify the writer of the RDP-owned B4/BF candidate stream
 
-HYPOTHESIS-ID: m3-rdp-triangle-candidate-origin
+HYPOTHESIS-ID: m3-rdp-triangle-candidate-writer
 
-Perform one phase-gated source/runtime provenance probe for the RDP-owned
-`0xB4/0xBF` candidate stream. Keep the owner and triangle breadcrumbs, and add
-one bounded record of the RDP command-table entry/length and surrounding parser
-boundary for each candidate. Batch E9, VI-width, triangle-owner, copy-cycle,
-and DL-sync controls in one build and capture. Do not change command
-advancement, emit geometry, or classify operand legitimacy.
+Perform one source/runtime writer-attribution probe for the RDP-owned
+`0xB4/0xBF` candidate stream. Keep the owner and boundary breadcrumbs, and add
+one bounded record at the accepted RDP submit/LLE emission boundary carrying
+the candidate address, task, submit serial, and source range. Batch E9,
+VI-width, triangle-owner, triangle-boundary, copy-cycle, and DL-sync controls
+in one build and capture. Do not change command advancement, emit geometry, or
+classify operand legitimacy.
 
 Competing hypotheses:
 
-- H-rdp-legitimate: RDP reaches genuine B4/BF commands at valid boundaries.
-- H-rdp-misframed: RDP is selected, but command length/boundary state makes a
-  candidate misframed.
-- H-rdp-garbage: RDP reaches a boundary-shaped slot that is not a legitimate
-  game command; writer attribution remains required.
+- H-game-writer: the game/LLE emission path writes the candidate bytes into a
+  submitted range, making them legitimate game output despite the non-triangle
+  RDP table entry.
+- H-lle-writer: the LLE/RDP bridge or range bookkeeping associates an unrelated
+  byte slot with the candidate; the candidate is not game-authored.
+- H-unattributed: no accepted source range contains the candidate, leaving the
+  existing H-rdp-garbage classification open without a writer claim.
 
-Discriminator: compare every owner row with the command-table length and
-preceding parser span. Valid RDP boundaries select H-rdp-legitimate;
-boundary/length disagreement selects H-rdp-misframed; a valid boundary without
-writer evidence leaves H-rdp-garbage open. A null is invalid unless triangle
-dispatch and owner controls fire in the same run.
+Discriminator: compare every boundary row with the source-tagged accepted
+submit range and LLE emission address. A same-task source-range hit selects
+H-game-writer; only bridge/range-origin evidence selects H-lle-writer; no hit
+with positive owner/boundary controls selects H-unattributed. A null is
+invalid unless triangle owner and boundary controls fire in the same run.
 
 ## Ranked backlog
 
-1. Run the within-run Factor 5 triangle-map A/B and classify geometry/sync
-   effects; no mitigation until stream provenance and legitimacy are known.
+1. Attribute the RDP-owned B4/BF candidates to a game/LLE writer; no
+   mitigation until stream provenance and legitimacy are known.
 2. Identify which RT64 parser byte/pending/guard condition accounts for the
    lower late E9 count; no behavior change until the condition is proven.
 3. Only after that classification, identify the responsible parser/counting

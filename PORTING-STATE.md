@@ -56269,6 +56269,38 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 849 (2026-08-13) — RDP candidate rows are boundary-shaped non-triangles
+
+Before building the probe, rebuilt the documented retail oracle core and ran
+its required positive control: the whole physical RDRAM watch fired 1,596,610
+times in 8 emulated seconds and the retail ROM reached 479 VI. This validates
+the independent watch mechanism; it does not answer the candidate-writer
+question.
+
+Added a behavior-neutral, per-VI-width `[tri-boundary]` breadcrumb at the RT64
+parser boundary. It records the selected map entry, command length, current
+and next parser address, preceding parser span, pending count, and submit
+range. The Debug target built successfully after exporting the RT64 submodule
+patch.
+
+The phase-gated run reached VI 1024, passed the E9 provenance positive control
+402 times, and produced 108 matching B4/BF dispatch/owner/boundary rows: 28 at
+VI 512 and 80 at VI 640. Every row was `ucode=1 owner=RDP`; each command-table
+length was 1, and every row after the first in its width interval had a valid
+preceding parser boundary. Raw B4 masks to RDP table opcode 0x34 and raw BF to
+0x3F; the checked-in RDP table's real triangle range is 0x08–0x0F. Thus the
+stream is being accepted at ordinary one-word RDP boundaries, but not as
+genuine RDP triangle commands. The run ended at 201.2s with the known
+`slotDispatcherIter+872` SIGBUS; it had zero copy-cycle assertion rows.
+
+This is a second source/runtime line selecting H-rdp-garbage as the leading
+explanation and leaving H-rdp-misframed open only for stream/writer origin. It
+does not identify the writer, prove operand legitimacy, or justify a
+mitigation. The next unit is a source-tagged writer-attribution probe.
+
+ORIGIN: host-side parser-boundary telemetry; no candidate value, command
+advancement, geometry, or mitigation behavior changed.
+
 ## Session 848 (2026-08-13) — B4/BF candidate owner is RDP in the paired capture
 
 Added a behavior-neutral, per-VI-width `[tri-owner]` breadcrumb at the RT64
