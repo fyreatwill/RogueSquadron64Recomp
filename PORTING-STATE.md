@@ -54725,6 +54725,7 @@ occurred. This strengthens **H-oracle-exact-recipe-320** and selects it over
 schedule/timing sensitivity for this recipe. It rules out neither a different
 documented phase-driving recipe nor the cause of the retail phase divergence.
 No port runtime code changed.
+
 ## Session 780 (2026-08-13) — 130-second driven oracle remains 320-only
 
 Step 0 measured `docs/CURRENT-TRUTH.md` at 20,064 bytes, so maintenance did
@@ -54743,3 +54744,27 @@ documented later retail timeline, so the next discriminator is an input-only
 A/B against the documented later-phase-driving undriven recipe.
 
 No port runtime code changed.
+
+## Session 781 (2026-08-12) — input-only oracle A/B remains 320-only
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 20,171 bytes, so maintenance did
+not trigger. The planned work unit was a fresh 130-second debugger-on,
+emulator-1 oracle A/B using the retail ROM, whole-RDRAM positive control, VI
+and PIF traces: one arm without presses and one with the documented eleven
+Start schedule.
+
+The first undriven launcher was malformed because it split the comma-delimited
+`--press` value while constructing the concurrent command; it exited with
+usage status 2 and was not treated as data. The driven arm then completed
+cleanly, recording **21,618,393** whole-RDRAM writes, **7,793** VI callbacks,
+and all eleven Start presses. The corrected undriven arm completed cleanly
+with **21,588,309** writes and **7,799** VI callbacks. Both arms logged only
+width 320 with origin `0x6dd280` for the full horizon.
+
+The positive controls make both null phase results evaluable. This refutes
+**H-input-conditioned-phase** for the input schedule alone and rules out a
+transition merely delayed beyond 130 seconds. It does not distinguish the
+absence of an attached input plugin from the exact runtime/ROM discrepancy,
+so the next discriminator holds no presses constant and toggles only plugin
+attachment. No port runtime code changed. Logs are under
+`scratch/agent/oracle_runs/20260812_input_phase/`.
