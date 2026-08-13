@@ -468,3 +468,5 @@
 20260812-s765-att2 | s765_ovl1c_1e8c UNEVALUABLE | VI 1024 reached; ovl20/ovl24/clip/dl06 and 0x1ECC controls fired; no 0x1E7C or 0x1E8C discriminator before 56-frame crash in getNextSlotNpcTypeId+448, last-guest-pc=0x8000834c.
 20260813-s813-att1 | s813_vi1024_argument_state UNEVALUABLE | rc=4; VI 320 only; no vi-arg/1024/E9 discriminator; SIGBUS initVideoBootWrapper+2196 si_addr=0x3800002CC guest-pc=0x80001C94.
 20260813-s813-att2 | s813_vi1024_argument_state UNEVALUABLE | rc=4; VI 320 only; no vi-arg/1024/E9 discriminator; same SIGBUS initVideoBootWrapper+2196 si_addr=0x3800002CC guest-pc=0x80001C94.
+20260813-s815-att1 | s790_postsec2_reachability INVALID | rc=1; VI 1024 and E9 controls passed but ROGUESQ_LOG_VI_ARGS was omitted, so vi-arg positive control was zero; crash slotDispatcherIter+872 after 178.6s.
+20260813-s815-att2 | s790_postsec2_reachability ADVANCED | rc=0; VI 1024 at 79.5s, 4 positive E9 controls, 5 pointer-only vi-arg records, 300s/89 frames, 0 crash markers.

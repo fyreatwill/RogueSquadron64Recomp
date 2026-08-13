@@ -55577,3 +55577,23 @@ legitimate, and `ra=0` in the records leaves caller attribution open.
 
 ORIGIN: the diff removes diagnostic reads that caused host-address translation
 faults; no game-logic guard, skip, restore, or mitigation was added.
+
+## Session 816 (2026-08-13) — VI argument origin is a frame-state scalar
+
+The bounded generated-source audit traced both `initVideoSubsystem` callsites
+in `advanceVideoFrame` (`0x80018378` and `0x80018564`). The main path carries
+the original `a1` in `$s5` and the secondary wrapper carries the same value in
+`$s3`; neither path loads `ctx->r5` from a caller structure at the callsite.
+The only generated caller of `advanceVideoFrame` is `runVideoFrameTick`.
+There, `$s3` is the incoming frame object and `$s6` is loaded with
+`lhu 0x4($s3)`; that halfword is sign-extended into `a1` before the call.
+
+Thus the observed `0xE0`, `0x1E0`, `0x154`, and `0x1C0` values are scalar
+frame-state values, not guest pointers. This selects H-pointer-is-small-offset
+over the guest-structure and stale-caller-state alternatives for the observed
+origin. The source audit did not identify the frame object's upstream writer or
+assign semantic legitimacy to the field. No build, run, code change, or
+mitigation was made.
+
+ORIGIN: the values originate at `runVideoFrameTick`'s `lhu 0x4($s3)` frame
+state load; no mitigation-shaped machinery was added.

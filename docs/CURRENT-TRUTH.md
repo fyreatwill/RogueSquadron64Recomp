@@ -549,8 +549,18 @@ leaving runtime behavior as the remaining broad class.
    `0x1C0`, `0x154`) with no probe fault. It completed 300 seconds / 89
    frames with zero crash markers. This supports **H-probe-only** for the
    s813 pre-gate crash, but does not establish caller-structure legitimacy;
-   all recorded `ra` values were zero. Next: audit the two caller paths and
-   pointer origins for these records, without adding a game-logic guard.
+   all recorded `ra` values were zero. **s816 source audit:** both direct calls
+   pass `a1` from `advanceVideoFrame`; its main and secondary call paths retain
+   the caller's second argument as the value passed to `initVideoSubsystem`.
+   The only reachable `advanceVideoFrame` caller, `runVideoFrameTick`, builds
+   that argument from `lhu 0x4($s3)` where `$s3` is its frame-structure `a0`,
+   then sign-extends it to 16 bits. The observed `0xE0`, `0x1E0`, `0x154`, and
+   `0x1C0` values are therefore scalar frame-state values, not guest
+   structure pointers. This selects **H-pointer-is-small-offset** over
+   H-pointer-is-guest-structure and H-caller-state-stale for the observed
+   origin, while the field's semantic producer remains open. No code or
+   mitigation was added. Next: audit the `runVideoFrameTick` frame-state
+   argument producer and its callers, source-only.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
