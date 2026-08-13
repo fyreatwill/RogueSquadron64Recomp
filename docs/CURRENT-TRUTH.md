@@ -926,24 +926,53 @@ ORIGIN: diagnostic-only writer/value reads in generated port functions and
 physical retail write watches; no game value, control flow, or writeback
 behavior changed.
 
-## Next work unit: coalescer value-legitimacy source audit
+## s876 result — coalescer value-legitimacy source audit
+
+Performed the prescribed source-only whole-idiom audit in the generated tree;
+no build or run was performed. `partitionFramebufferMemory` is the sole
+writer of the four partition outputs: `0x80000ED8` writes `0x801163E4`,
+`0x80000FFC`/`0x80001010` write `0x801163E8`, and
+`0x80001024`/`0x80001038` write `0x801163F8`. The two value paths are the
+fit and residual branches of one partition pass, not independent producers.
+
+The startup call in `thread3_video_handle` supplies the display buffer at
+`0x8010D200`, a stack result area, signed 16-bit config dimensions at
+`0x12`/`0x14` (with height changed from `0x18` to `0x20`), a signed
+16-bit config value at `0x16`, and a config-derived bit at `0x44 >> 9 & 1`.
+`runVideoFrameTick` repeats the same call with the current display state and
+frame dimensions. The partitioner aligns its computed sizes to 0x40 and
+0x10, selects either the RDRAM-derived end or `0x80400000`, then subtracts
+the aligned regions; the source contains no range check proving the config
+dimensions, buffer end, or size fields are valid. `coalesceFreeHeapBlocks`
+has one direct caller, the same frame tick, and receives the four globals plus
+the frame-local heap/display arguments. The sole `0x8010FF18` writer is
+`initMainHeap` at `0x800021D8`, reached only from the startup path; it stores
+its caller-supplied `s0` as the initial free-list head and then constructs
+headers from the caller-supplied heap bounds/count.
+
+Complete writer/input classification: no malformed upstream operand is
+proven, but no source proof establishes valid ranges for the raw config or
+caller-supplied heap bounds either. This selects H-unknown-downstream over
+H-input-range-legitimate and H-input-range-malformed. It supplies no writer
+legitimacy basis for a mitigation; a runtime value comparison remains needed.
+
+ORIGIN: generated-tree source inventory only; no guest value, control flow, or
+mitigation behavior changed.
+
+## Next work unit: coalescer late-value comparison
 
 HYPOTHESIS-ID: m3-coalesce-value-legitimacy
 
-Perform one source-only whole-idiom audit of every computation feeding
-`0x801163E4`, `0x801163E8`, `0x801163F8`, and `0x8010FF18`, including all
-partition inputs, alignment arithmetic, and every caller boundary. Use
-`rg -n -- "0x63E4|0x63E8|0x63F8|-0xE8|partitionFramebufferMemory|coalesceFreeHeapBlocks" ../N64Recomp/RecompiledFuncs`
-then inspect bounded function windows and classify each value range as
-proven legitimate, malformed, or unknown. Do not build, run, or add a guard.
+Run one paired, phase-gated value comparison for the four coalescer globals,
+using the existing regeneration-replayable origin probe on the port and the
+retail oracle's physical write watches. Do not add a guard or change behavior.
+Verify positive controls and phase reach before interpreting null.
 
-Competing hypotheses are H-input-range-legitimate (all writers are fed by
-valid display/heap inputs), H-input-range-malformed (a bounded writer input is
-already invalid), and H-unknown-downstream (all source ranges remain
-unclassifiable). The discriminating result is a complete writer/input table:
-one malformed upstream operand selects H-input-range-malformed; all operands
-proven valid with no bad source selects H-unknown-downstream; complete valid
-ranges plus a documented state transition selects H-input-range-legitimate.
+Competing hypotheses are H-port-value-matches-retail, H-port-value-diverges,
+and H-late-phase-unreachable. The discriminating measurement is the same
+writer/phase/value tuple: matching late tuples select the first; a divergent
+matched tuple selects the second; absent late tuples select the third only
+with positive controls and phase proof.
 
 ## Closed and parked
 

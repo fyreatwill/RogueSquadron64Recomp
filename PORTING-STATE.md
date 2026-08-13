@@ -56978,3 +56978,32 @@ all inputs feeding the four coalescer globals and their callers.
 
 ORIGIN: diagnostic-only writer/value reads and independent physical write
 watches; no game value, control flow, or writeback behavior changed.
+
+## Session s876 (2026-08-13) — coalescer value-legitimacy source audit
+
+Performed the prescribed source-only whole-idiom audit in the generated tree;
+no build or run was performed. `partitionFramebufferMemory` is the sole
+writer of the four partition outputs: `0x80000ED8` writes `0x801163E4`,
+`0x80000FFC`/`0x80001010` write `0x801163E8`, and
+`0x80001024`/`0x80001038` write `0x801163F8`. The two value paths are the
+fit and residual branches of one partition pass.
+
+The startup call in `thread3_video_handle` supplies the display buffer at
+`0x8010D200`, a stack result area, signed 16-bit config dimensions at
+`0x12`/`0x14` (height changed from `0x18` to `0x20`), a signed 16-bit config
+value at `0x16`, and a config-derived bit at `0x44 >> 9 & 1`.
+`runVideoFrameTick` repeats the same call with current display/frame inputs.
+The partitioner aligns computed sizes to 0x40 and 0x10 and subtracts them
+from either the RDRAM-derived end or `0x80400000`; no source check proves the
+raw config dimensions, buffer end, or size fields valid. The coalescer has one
+direct caller, that frame tick. The sole `0x8010FF18` writer is
+`initMainHeap` at `0x800021D8`, reached from startup, and stores caller `s0`
+as the free-list head before constructing headers from caller heap bounds/count.
+
+No malformed upstream operand is proven, but no source proof establishes
+valid ranges for the raw config or heap bounds. This selects
+H-unknown-downstream and provides no writer legitimacy basis for mitigation;
+a runtime value comparison remains needed.
+
+ORIGIN: generated-tree source inventory only; no guest value, control flow, or
+mitigation behavior changed.

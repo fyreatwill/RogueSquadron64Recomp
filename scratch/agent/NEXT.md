@@ -1,30 +1,23 @@
-# NEXT work unit (s876)
+# NEXT work unit (s877)
 
 HYPOTHESIS-ID: m3-coalesce-value-legitimacy
 
-Perform one source-only whole-idiom audit of every computation feeding
-`0x801163E4`, `0x801163E8`, `0x801163F8`, and `0x8010FF18`, including all
-partition inputs, alignment arithmetic, and every caller boundary. Do not
-build, run, or add a guard.
+Run one paired, phase-gated value comparison for the four coalescer globals,
+using the existing s875 regeneration-replayable origin probe on the port and
+the retail oracle's physical write watches. Do not add a guard or change game
+behavior. Verify positive controls and phase reach before interpreting null.
 
 Competing hypotheses:
 
-- H-input-range-legitimate: every writer is fed by valid display/heap inputs.
-- H-input-range-malformed: a bounded writer input is already invalid.
-- H-unknown-downstream: source ranges remain unclassifiable.
+- H-port-value-matches-retail: writer values and transitions agree.
+- H-port-value-diverges: a matched late writer differs.
+- H-late-phase-unreachable: controls pass but the late tuple is not reached.
 
-Discriminating measurement: a complete writer/input table. One malformed
-upstream operand selects H-input-range-malformed; all operands proven valid
-with no bad source selects H-unknown-downstream; complete valid ranges plus a
-documented state transition selects H-input-range-legitimate.
+Discriminating measurement: the same writer/phase/value tuple on both sides.
+Matching late tuples select H-port-value-matches-retail; a divergent matched
+tuple selects H-port-value-diverges; absent tuples are valid only with phase
+proof and positive controls, selecting H-late-phase-unreachable.
 
-Exact commands:
-
-```sh
-rg -n -- "0x63E4|0x63E8|0x63F8|-0xE8|partitionFramebufferMemory|coalesceFreeHeapBlocks" ../N64Recomp/RecompiledFuncs
-```
-
-Inspect at most 60-line windows around every hit, enumerate callers and
-stores, and write the classification into `docs/CURRENT-TRUTH.md` and
-`PORTING-STATE.md`. This is a systematic idiom audit; no runtime evidence is
-required for this unit.
+Exact commands: use the existing s875 probe/recipe and oracle instructions;
+run the port from `build/`, capture to a non-hidden final path, and use
+SIGKILL. Do not start a second build or an A/B stopwatch comparison.
