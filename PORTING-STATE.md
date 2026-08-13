@@ -54248,3 +54248,60 @@ Do not revert the 0x13C0 widen.
 
 **ORIGIN:** `L_11A0` `jr` of a ROM clip continuation.
 Route the return; do not skip `L_112C`.
+
+## Session 762 (2026-08-12) — ovl1c 0x1EBC $30-return LIVE; residual is 0x1ECC
+
+Step 0 measured `CURRENT-TRUTH.md` at 46,798 bytes, so
+maintenance was not triggered. Work unit was NEXT.md after
+s761: 6o-style insert of `case 0x1EBC` / `153==0x1C` →
+`OVL1C_1EBC`. Queued SOAK-RESULTS already contained the
+s761 ANALYZED line.
+
+Landed fixup 6t. Only the new `0x1EBC` case; `0x1E7C` /
+`0x1E8C` / `0x1ECC` stay unrouted. **ORIGIN:** route, not
+a mitigation. Writer is `OVL1C_1F04` `jr $30` after
+`OVL1C_1EAC` `jal 0x1ED4` sets `r31=0x1EBC` and
+`OVL1C_1ED4` copies `$ra→$30` then jals `0x1F0C` (return
+`0x1F04`). Label `OVL1C_1EBC:` already existed from 6k.
+
+First soak `s762_ovl1c_1ebc_20260812-201444` died at 24 s
+(probe_rc=4) during VI 640 cinematic: SIGBUS
+`si_addr=0x38c80e030` `pc-symbol=matchKeywordWithPriority+88`
+`spawnCutsceneEffectsAndCues+18400`
+`last-guest-pc=0x8000834c`. Same stale/misattr family as
+s760; UJ window is after the 189 s leave-craft phase
+(s761 first `0x1EBC` at task 4293), so att1 is
+unevaluable. Did not chase. Re-ran the same recipe.
+
+Soak `scratch/agent/soak_results/s762_ovl1c_1ebc_20260812-201609/run.log`
+(352 s, probe_rc=0, CRASH=0, 89 frames). Same-run positive
+controls LIVE: CLIP `res=0x04` last n=406592, ovl24
+`res=0x24 tgt=0x12A0` (task 202), ovl1c `res=0x1C tgt=0x1EA8`
+last n=720512, dest `[ovl-route] res=0x20 tgt=0x12A0` last
+n=1193728, new `[ovl-route] res=0x1C tgt=0x1EBC` last
+n=722880 (34 samples, including sec2). Four boot controls
+still `dl06=push:2,complete:2,open:0`. Clip-stray 0.
+UJ `0x1EBC` **557→0**.
+
+**H-1ebc-ovl1c-30ret SELECTED. H-1ebc-breaks-06 REFUTED.**
+**H-1ebc-not-only SELECTED:** leftover UJ `0x1E7C` n=68
+(s761=69) plus new UJ `0x1ECC` n=2016, both from
+`OVL1C_1F04` `jr $30` line 4987. First UJ (0x1ECC) is
+before the first sec2 row (line 57512 vs 81105).
+`OVL1C_1EBC` body is `jal 0x1ED4` with `r31=0x1ECC`, then
+`OVL1C_1ECC` is `j L_1268; ori $5, 0x20` (the ovl20-
+dispatch exit). Two garbled `Unhandled jump target 0x1E` /
+`0x1` lines are stderr interleaves, not real targets.
+**H-1ebc-restores-e9 REFUTED:** sec2 match **6/64** — 3
+boot-shaped `dl06=2/2/0` (tasks 3610–3612) plus 3 fatter
+`src0=0x000178` copies (tasks 3619–3621). Still that boot
+DL as the E9 source; rdpFs 0→2969 (flat vs s761 3661 /
+s760 4500). last_ovl at reset is `0x1C/0x1F04` 58/64
+(trampoline return overwrites 0x1EBC before the dump).
+
+Residual is the `$30`-return into `OVL1C_1ECC`. Next is
+a 6o-style insert of `case 0x1ECC` / `153==0x1C` only.
+Do not route `0x1E7C` this step. Do not revert 0x1EBC.
+
+**ORIGIN:** `OVL1C_1F04` `jr` of a ROM ovl1c `$30`-return.
+Route the return; do not skip `OVL1C_1ED4`.
