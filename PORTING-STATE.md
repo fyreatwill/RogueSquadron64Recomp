@@ -54443,3 +54443,22 @@ leftover is UJ=0. Next is a 6o-style insert of
 
 **ORIGIN:** `OVL1C_1F04` `jr` of a ROM ovl1c `$30`-return.
 Route the return; do not skip `OVL1C_1ED4`.
+## Session 766 (2026-08-12) — retail oracle positive control passes; Start schedule does not leave 320
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 50,890 bytes, so maintenance did
+not trigger. The mandated work unit was the independent retail-oracle phase
+measurement after s765's unevaluable post-sec2 soak.
+
+Rebuilt the debugger-enabled Mupen core and oracle frontend, then ran the
+documented 70-second schedule with `--vi-trace` and a whole-RDRAM write watch.
+The positive control fired **11,774,702 writes** over 4,195 VI (~69.9
+emulated seconds), proving the oracle watch is live. The trace reported the
+initial 320 phase and one 320-origin transition to `0x6dd280`, but no 640,
+1024, or 512 transition; all eleven Start injections were logged as scancode
+40. Therefore the target post-sec2 watch remains unevaluable. This selects
+H-retail-undriven-only provisionally, pending PIF-level verification of whether
+the injected Start bits reach the emulated controller.
+
+This rules out an oracle setup failure or a whole-RDRAM watch null. It does not
+rule out input-plugin mapping, ROM/config divergence, or a phase-timing
+divergence. No port code or runtime instrument was changed.

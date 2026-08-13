@@ -22,7 +22,19 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s765; compacted in maintenance s729)
+## Current truth (reviewed through s766; compacted in maintenance s729)
+
+**s766:** retail-oracle ground-truth run completed with the required positive
+control: whole-RDRAM watch recorded **11,774,702 writes** in 4,195 VI
+(~69.9 emulated seconds). The VI trace reported the initial 320 phase and one
+320-origin change to `0x6dd280`, but no 640, 1024, or 512 transition despite
+the documented 11-entry Start schedule (all injections logged as scancode 40).
+This makes a target-watch null unusable for the current oracle setup and
+selects **H-retail-undriven-only** over H-retail-reaches-hangar; whether the
+presses reach the game's PIF/input state is still unverified. Do not interpret
+this as evidence about post-sec2 reachability. Next: run the oracle's PIF trace
+with a short verified Start schedule to distinguish input delivery from a
+phase/timing mismatch.
 
 **s765:** fixup 6w inserts `case 0x1E8C` / `153==0x1C` →
 `OVL1C_1E8C`, but the two same-recipe soaks were unevaluable.
