@@ -85,6 +85,14 @@ inline bool log_rdp_state() {
     return v;
 }
 
+// RT64 drawIndexedTri caller/copy-cycle breadcrumbs. Per-VI-width budget;
+// useful for attributing a regular triangle reached while G_CYC_COPY is set.
+// ROGUESQ_LOG_TRI_COPY=1.
+inline bool log_tri_copy() {
+    static const bool v = env_flag("ROGUESQ_LOG_TRI_COPY");
+    return v;
+}
+
 // VI present-queue traces (`[trace] PresentQueue::frame ...`,
 // `[trace] RT64::Present #N ...`, `[trace] Present::lookup ...`,
 // `[trace] PresentQ::regfb ...`, `[trace] fbReg #N ...`). Per-frame

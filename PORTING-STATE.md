@@ -56141,6 +56141,27 @@ ordinary pairs from synthetic submissions.
 ORIGIN: source audit only; no game value, RDP command, or mitigation behavior
 changed.
 
+## Session 843 (2026-08-13) — drawIndexedTri caller probe did not reach a triangle call
+
+Added a behavior-neutral RT64 breadcrumb at the interpreter-to-
+`drawIndexedTri` boundary. It records the active GBI, raw opcode, command
+words, RSP/RDP other-mode words, cycle type, and assertion row, with a
+per-VI-width budget. The Debug target built successfully and the submodule
+patch export was refreshed.
+
+Two phase-gated captures reached VI 1024 and passed the E9 provenance positive
+control (211 and 435 rows). Neither produced a `[tri-copy]` or
+`[tri-copy-assert]` row. The second ran to process exit at 274.7 seconds; its
+independent DL-sync census still reported `tris=599`, showing that the run had
+triangle-shaped display-list traffic but did not call the shared helper in the
+captured path. This is an unevaluable reachability result: it rules out no
+copy-cycle hypothesis and does not establish a null triangle path. The next
+probe must mark candidate opcode dispatches to establish where the positive
+control disappears.
+
+ORIGIN: host-side diagnostic breadcrumb and recipe only; no game value, RDP
+command, or mitigation behavior changed.
+
 ## Session 840 (2026-08-13) — ordinary late ranges retain identity; synthetic path absent
 
 Added task-scoped synthetic FULL_SYNC markers and explicit ordinary E9-bearing

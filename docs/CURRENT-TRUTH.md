@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s842 (2026-08-13). The active blocker is the authoritative
+Reviewed through s843 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -199,31 +199,37 @@ Priority until changed by the user:
   but runtime caller/opcode attribution is still required; no mitigation is
   justified. Full audit: `docs/M3-DRAWINDEXED-COPY-AUDIT.md`.
 
-## Next work unit: attribute the drawIndexedTri G_CYC_COPY caller
+- s843 added a behavior-neutral dispatch-to-`drawIndexedTri` breadcrumb carrying
+  the active GBI, raw opcode, command words, and RSP/RDP other-mode values.
+  The Debug build passed. Two full phase-gated captures reached VI 1024 and
+  passed the E9 provenance control (211 and 435 rows), but neither produced a
+  triangle-call or copy-assert row; the second ran to process exit at 274.7s
+  and its independent DL-sync census still showed `tris=599`. This is an
+  unevaluable reachability result, not evidence for any copy-cycle hypothesis.
+  No behavior or mitigation changed.
+
+## Next work unit: establish the triangle-handler dispatch positive control
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one phase-gated diagnostic build/run that records the active GBI,
-dispatch opcode, triangle-handler family, and RDP/RSP cycle values immediately
-before every `drawIndexedTri` call and at the assertion. Keep the existing
-positive triangle/provenance control in the same run. Do not change behavior or
-add a mitigation.
+Perform one phase-gated diagnostic build/run that records dispatch of the
+Factor 5 candidate triangle opcodes (0xB1, 0xB4, 0xBF) before the existing
+`drawIndexedTri` breadcrumb. Keep the E9 provenance positive control in the
+same run. Do not change behavior or add a mitigation.
 
 Competing hypotheses:
 
-- H-copy-cycle-legitimate: a documented Factor 5 triangle opcode reaches the
-  helper while copy mode is intentionally active.
-- H-cycle-state-stale: RSP and RDP cycle values diverge or a prior copy writer
-  remains active across the caller transition.
-- H-wrong-handler: inherited 0xB1 TRI2 or another malformed dispatch reaches the
-  helper instead of Factor 5's 0xB4/0xBF path.
+- H-no-triangle-dispatch: the recipe never dispatches a candidate triangle
+  opcode, so the previous null was only a reachability gap.
+- H-factor5-consume-only: 0xB4/0xBF dispatches but the installed handlers do
+  not call `drawIndexedTri`.
+- H-wrong-handler: 0xB1 dispatches under Factor 5 and reaches inherited TRI2.
 
-Discriminator: a positive control must show the marker fires for a normal
-triangle. A 0xB4/0xBF caller with synchronized copy mode selects
-H-copy-cycle-legitimate; divergent RSP/RDP values or an unmatched prior setter
-selects H-cycle-state-stale; 0xB1/unknown dispatch or a malformed handler
-selects H-wrong-handler. Only after this attribution is a parser retry or
-behavior change justified.
+Discriminator: the E9 controls must fire, and a candidate dispatch row followed
+by a draw row is the required triangle positive control. 0xB4/0xBF without a
+draw row selects H-factor5-consume-only, 0xB1 with a draw row selects
+H-wrong-handler, and no candidate rows selects H-no-triangle-dispatch. Only
+then attempt cycle-state attribution or behavior changes.
 
 ## Ranked backlog
 

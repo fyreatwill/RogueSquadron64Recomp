@@ -1,29 +1,27 @@
-# NEXT work unit (attribute the drawIndexedTri G_CYC_COPY caller)
+# NEXT work unit (establish the triangle-handler dispatch positive control)
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one phase-gated diagnostic build/run that records the active GBI,
-dispatch opcode, triangle-handler family, and RDP/RSP cycle values immediately
-before every `drawIndexedTri` call and at the assertion. Keep the existing
-positive triangle/provenance control in the same run. Do not change behavior or
-add a mitigation.
+Perform one phase-gated diagnostic build/run that records dispatch of candidate
+triangle opcodes 0xB1, 0xB4, and 0xBF before the existing `drawIndexedTri`
+breadcrumb. Keep the E9 provenance positive control in the same run. Do not
+change behavior or add a mitigation.
 
 Competing hypotheses and discriminator:
 
-- H-copy-cycle-legitimate: a documented Factor 5 triangle opcode reaches the
-  helper while copy mode is intentionally active.
-- H-cycle-state-stale: RSP and RDP cycle values diverge or a prior copy writer
-  remains active across the caller transition.
-- H-wrong-handler: inherited 0xB1 TRI2 or another malformed dispatch reaches the
-  helper instead of Factor 5's 0xB4/0xBF path.
+- H-no-triangle-dispatch: the recipe never dispatches a candidate triangle
+  opcode, so the previous null was only a reachability gap.
+- H-factor5-consume-only: 0xB4/0xBF dispatches but the installed handlers do
+  not call `drawIndexedTri`.
+- H-wrong-handler: 0xB1 dispatches under Factor 5 and reaches inherited TRI2.
 
-Discriminator: a positive control must show the marker fires for a normal
-triangle. A 0xB4/0xBF caller with synchronized copy mode selects
-H-copy-cycle-legitimate; divergent RSP/RDP values or an unmatched prior setter
-select H-cycle-state-stale; 0xB1/unknown dispatch or a malformed handler
-selects H-wrong-handler. Only after this attribution is a parser retry or
-behavior change justified.
+Discriminator: the E9 controls must fire, and a candidate dispatch row followed
+by a draw row is the required triangle positive control. 0xB4/0xBF without a
+draw row selects H-factor5-consume-only, 0xB1 with a draw row selects
+H-wrong-handler, and no candidate rows selects H-no-triangle-dispatch. Only
+then attempt cycle-state attribution or behavior changes.
 
-Exact execution: add one regeneration-safe, phase-scoped diagnostic batch;
-build Debug; run the existing phase-gated recipe from `build/` with the
-positive control and crash capture enabled; compare caller/opcode/cycle rows.
+Exact execution: add one regeneration-safe, phase-scoped dispatch diagnostic;
+build Debug; run the existing phase-gated recipe from `build/` with the E9
+positive control and crash capture enabled; compare candidate dispatch rows to
+the draw/assert rows.

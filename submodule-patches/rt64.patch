@@ -1302,7 +1302,7 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..0d816cb 100644
+index dccaa87..76386a7 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
 @@ -5,12 +5,424 @@
@@ -1743,7 +1743,7 @@ index dccaa87..0d816cb 100644
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +507,38 @@ namespace RT64 {
+@@ -89,8 +507,40 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -1777,12 +1777,14 @@ index dccaa87..0d816cb 100644
 +                }
  
                  if (func != nullptr) {
++                    state->rsp->setCurrentCommand(static_cast<uint32_t>(rdpGBI->ucode),
++                        pendingRawOpCode, pendingCommand->w0, pendingCommand->w1);
 +                    if (pendingRawOpCode == 0xE9 && rs64_e9prov_handler)
 +                        rs64_e9prov_handler();
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +547,11 @@ namespace RT64 {
+@@ -99,6 +549,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -1794,7 +1796,7 @@ index dccaa87..0d816cb 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,7 +565,54 @@ namespace RT64 {
+@@ -112,7 +567,54 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -1850,7 +1852,7 @@ index dccaa87..0d816cb 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
-@@ -122,6 +622,35 @@ namespace RT64 {
+@@ -122,6 +624,35 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -1886,7 +1888,7 @@ index dccaa87..0d816cb 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +658,14 @@ namespace RT64 {
+@@ -129,6 +660,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -1901,7 +1903,7 @@ index dccaa87..0d816cb 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +673,155 @@ namespace RT64 {
+@@ -136,13 +675,157 @@ namespace RT64 {
                      break;
                  }
  
@@ -1961,6 +1963,8 @@ index dccaa87..0d816cb 100644
 +
 +                if (func != nullptr && !droppedGarbageCimg) {
                      dummy = dl;
++                    state->rsp->setCurrentCommand(static_cast<uint32_t>(rdpGBI->ucode),
++                        rawOpCode, dl->w0, dl->w1);
                      func(state, &dummy);
                  }
 -                else {
@@ -4205,6 +4209,118 @@ index 6051f4e..e4a8fc3 100644
          const uint8_t *TMEM = reinterpret_cast<const uint8_t *>(state->rdp->TMEM);
          uint64_t hash = TMEMHasher::hash(TMEM, loadTile, width, height, tlut, TMEMHasher::CurrentHashVersion);
          if (hashSet.find(hash) == hashSet.end()) {
+diff --git a/src/hle/rt64_rsp.cpp b/src/hle/rt64_rsp.cpp
+index d4d9883..02080f6 100644
+--- a/src/hle/rt64_rsp.cpp
++++ b/src/hle/rt64_rsp.cpp
+@@ -5,6 +5,8 @@
+ #include "rt64_rsp.h"
+ 
+ #include <cassert>
++#include <cstdio>
++#include <cstdlib>
+ 
+ #include "../include/rt64_extended_gbi.h"
+ #include "common/rt64_common.h"
+@@ -34,6 +36,10 @@ namespace RT64 {
+         shadingSmoothMask = 0;
+ 
+         segments.fill(0);
++        currentCommandUCode = 0;
++        currentCommandRawOpCode = 0;
++        currentCommandW0 = 0;
++        currentCommandW1 = 0;
+         reset();
+     }
+ 
+@@ -1043,8 +1049,46 @@ namespace RT64 {
+     }
+ 
+     void RSP::drawIndexedTri(uint32_t a, uint32_t b, uint32_t c, bool rawGlobalIndices) {
++        static const bool probeEnabled = []() {
++            const char *v = std::getenv("ROGUESQ_LOG_TRI_COPY");
++            return v && *v && *v != '0';
++        }();
++        if (probeEnabled) {
++            static uint32_t lastWidth = 0xFFFFFFFFu;
++            static uint32_t phaseRows = 0;
++            const uint32_t width = state->lastScreenVI.width;
++            if (width != lastWidth) {
++                lastWidth = width;
++                phaseRows = 0;
++            }
++            if (phaseRows++ < 96) {
++                const uint32_t cycleType = state->rdp->otherMode.cycleType();
++                std::fprintf(stderr,
++                    "[tri-copy] vi=%u row=%u ucode=%u raw=0x%02X "
++                    "w0=0x%08X w1=0x%08X rspH=0x%06X rspL=0x%08X "
++                    "rdpH=0x%06X rdpL=0x%08X cycle=%u indices=%u,%u,%u rawidx=%u\n",
++                    width, phaseRows, currentCommandUCode,
++                    currentCommandRawOpCode, currentCommandW0, currentCommandW1,
++                    otherModeStack[otherModeStackSize - 1].H,
++                    otherModeStack[otherModeStackSize - 1].L,
++                    state->rdp->otherMode.H, state->rdp->otherMode.L,
++                    cycleType, a, b, c, rawGlobalIndices ? 1u : 0u);
++                std::fflush(stderr);
++            }
++        }
+         // Copy mode is not supported when drawing regular tris and crashes the hardware.
+         const uint32_t cycleType = state->rdp->otherMode.cycleType();
++        if (probeEnabled && cycleType == G_CYC_COPY) {
++            std::fprintf(stderr,
++                "[tri-copy-assert] vi=%u ucode=%u raw=0x%02X w0=0x%08X w1=0x%08X "
++                "rspH=0x%06X rspL=0x%08X rdpH=0x%06X rdpL=0x%08X cycle=%u\n",
++                state->lastScreenVI.width, currentCommandUCode,
++                currentCommandRawOpCode, currentCommandW0, currentCommandW1,
++                otherModeStack[otherModeStackSize - 1].H,
++                otherModeStack[otherModeStackSize - 1].L,
++                state->rdp->otherMode.H, state->rdp->otherMode.L, cycleType);
++            std::fflush(stderr);
++        }
+         assert(cycleType != G_CYC_COPY);
+ 
+         // Don't draw anything if both tris are being culled.
+@@ -1295,6 +1339,14 @@ namespace RT64 {
+         shadingSmoothMask = gbi->constants[F3DENUM::G_SHADING_SMOOTH];
+     }
+ 
++    void RSP::setCurrentCommand(uint32_t ucode, uint8_t rawOpCode,
++                                uint32_t w0, uint32_t w1) {
++        currentCommandUCode = ucode;
++        currentCommandRawOpCode = rawOpCode;
++        currentCommandW0 = w0;
++        currentCommandW1 = w1;
++    }
++
+     void RSP::setNoN(bool NoN) {
+         if (this->NoN != NoN) {
+             state->flush();
+diff --git a/src/hle/rt64_rsp.h b/src/hle/rt64_rsp.h
+index e3d289c..5da989d 100644
+--- a/src/hle/rt64_rsp.h
++++ b/src/hle/rt64_rsp.h
+@@ -187,6 +187,11 @@ namespace RT64 {
+         uint32_t shadingSmoothMask;
+         std::array<uint32_t, RSP_MAX_SEGMENTS> segments;
+ 
++        uint32_t currentCommandUCode;
++        uint8_t currentCommandRawOpCode;
++        uint32_t currentCommandW0;
++        uint32_t currentCommandW1;
++
+         struct {
+             // Storage for struct data loaded by S2D commands.
+             std::array<uint8_t, 256> struct_buffer;
+@@ -301,6 +306,7 @@ namespace RT64 {
+         void extendRDRAM(bool isExtended);
+         void clearExtended();
+         void setGBI(GBI *gbi);
++        void setCurrentCommand(uint32_t ucode, uint8_t rawOpCode, uint32_t w0, uint32_t w1);
+         void setNoN(bool NoN);
+     };
+-};
+\ No newline at end of file
++};
 diff --git a/src/hle/rt64_state.cpp b/src/hle/rt64_state.cpp
 index 10f98af..6b11ca2 100644
 --- a/src/hle/rt64_state.cpp
