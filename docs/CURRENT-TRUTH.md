@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s859 (2026-08-13). The active blocker is the authoritative
+Reviewed through s860 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -514,21 +514,49 @@ H-caller-transition for the actionable runtime probe, while H-stale-breadcrumb
 remains open because the s858 host marker does not prove the faulting
 instruction. H-legitimate is not established. No mitigation was added.
 
-The next probe must capture the helper's selector, table link, linked context,
-and returned type in one phase-gated run, with the existing dispatcher/E9
-controls retained as positive controls. It must identify the writer before any
-guard is considered.
-
 ORIGIN: source audit only; the normal slot-table/link and context writers are
 game allocation/spawn paths, but legitimacy of the live crash-time values is
 unknown.
 
+## Session s860 result
+
+The retail oracle was run before the port build with both required controls:
+the whole-RDRAM watch recorded 1,596,697 writes in 8 emulated seconds, and the
+physical slot-table watch `0x130BB0..0x130FB0` recorded 256 writes from boot
+PCs `0x80000420/0x80000424`. Fresh regeneration (`make_elf.py` -> N64Recomp
+-> fixup) and the Debug build succeeded. The fixup anchor audit initially
+found that the helper's normal return included delayed-instruction comments;
+that omission was corrected and a second fresh regen verified two helper trace
+sites.
+
+The phase-gated port run reached VI width 1024 and fired the positive controls:
+627 dispatcher-entry, 791 pre-call, and 791 post-call rows. It captured 32
+`getNextSlotNpcTypeId` rows. Twenty-eight terminal rows had `link=0xFFFF`; the
+four non-terminal rows all had the in-range table `0x80202120`, in-range linked
+slots, contexts, and type values, with returns matching the captured type. The
+process later died at 168.3s with the known local host-symbol artifact and
+sticky guest PC `0x8000834c`; no helper row occurred at the crash boundary.
+
+The independent retail watch plus the port's positive-controlled trace show
+that the observed helper population is valid and that retail writes the table;
+s859's complete caller/consumer inventory independently found no caller-side
+result fabrication. This selects H-valid-helper-population for the captured
+window and leaves H-later-invalid-chain and H-stale-breadcrumb open for the
+actual death. It does not identify a writer, establish crash-time legitimacy,
+or authorize a mitigation.
+
+ORIGIN: host-side helper telemetry and retail table-watch evidence; no game
+value, helper control flow, or mitigation behavior changed.
+
 ## Ranked backlog
 
-1. Add the phase-gated helper boundary probe: selector, `0x80130BB0` link,
-   linked context pointer, and `+0x16` type, retaining dispatcher/E9 controls.
-2. Re-run the expanded dispatcher capture only if the helper probe identifies
-   a concrete caller/state boundary that can be phase-gated.
+1. Audit the `0x8000834c` crash attribution chain: enumerate every writer of
+   `g_rs64_last_guest_pc`, every crash-handler read, and every host/guest-PC
+   handoff, then compare it with the s860 helper trace's last event. Do not
+   build or run until the source inventory distinguishes a stale breadcrumb
+   from an actual helper fault.
+2. Re-run the expanded dispatcher capture only if that audit identifies a
+   concrete caller/state boundary that can be phase-gated.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.

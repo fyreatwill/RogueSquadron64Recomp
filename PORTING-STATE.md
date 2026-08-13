@@ -56614,3 +56614,32 @@ added.
 
 ORIGIN: source audit only; normal slot-table/link and context writers are
 game allocation/spawn paths, and legitimacy of their live values is unknown.
+
+## Session s860 (2026-08-13)
+
+Ran the queued `getNextSlotNpcTypeId` runtime boundary probe after the
+required retail ground-truth controls. The oracle whole-RDRAM watch recorded
+1,596,697 writes in 8 emulated seconds; the physical slot-table watch
+`0x130BB0..0x130FB0` recorded 256 writes from boot PCs `0x80000420/0x80000424`.
+Fresh `make_elf.py` -> N64Recomp -> fixup regeneration and the Debug target
+build succeeded. A first fresh regen exposed a delayed-comment anchor omission
+in the helper's normal return; the fixup was corrected and a second fresh regen
+verified both sentinel and normal trace sites.
+
+The phase-gated run reached VI 1024 and passed the positive dispatcher controls:
+627 entry, 791 pre-call, and 791 post-call rows. It captured 32 helper rows:
+28 terminal `link=0xFFFF` rows and four non-terminal rows. All four had the
+in-range table `0x80202120`, in-range linked slots and contexts, type values,
+and returns matching the type. The process died at 168.3s with the known local
+host-symbol artifact and sticky guest PC `0x8000834c`; no helper row occurred at
+the death boundary.
+
+This is two-source evidence with s859's source caller/consumer inventory and
+the retail watch: the observed helper population is valid and retail does
+populate the table. It rules out an invalid helper chain for the captured
+window, but not a later crash-time chain or stale guest-PC breadcrumb. No
+writer/legitimacy basis for a mitigation was found. The next unit is a
+source-only audit of the `g_rs64_last_guest_pc` writer/read/handoff chain.
+
+ORIGIN: host-side helper telemetry and retail table-watch evidence; no game
+value, helper control flow, or mitigation behavior changed.

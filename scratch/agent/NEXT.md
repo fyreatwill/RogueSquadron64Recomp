@@ -1,42 +1,39 @@
-# NEXT work unit (s859)
+# NEXT work unit (s860)
 
 HYPOTHESIS-ID: m3-guest-pc-8000834c-audit
 
-Add one behavior-neutral, phase-gated runtime probe at
-`getNextSlotNpcTypeId` in the generated-code fixup path. Record, in one
-bounded row, the masked selector, slot-table pointer, selected slot address,
-`+4` link, linked context pointer, context `+0x16` type, and return value.
-Keep the existing dispatcher and E9 provenance controls armed in the same run.
-Do not add a guard or alter control flow.
+Perform a source-only audit of the complete `0x8000834c` attribution chain:
+enumerate every write of `g_rs64_last_guest_pc`, every crash-handler read, and
+every host/guest-PC handoff, then compare the handoff semantics with the last
+s860 helper event. Do not build or run until the inventory can distinguish a
+stale breadcrumb from a fault in `getNextSlotNpcTypeId`.
 
 Competing hypotheses:
 
-- H-link-state: the helper reaches a non-sentinel link or context pointer
-  outside the KSEG0/RDRAM range or outside the populated slot/context regions;
-  a row with that defect before the crash selects this branch.
-- H-legitimate-chain: all captured helper chains are valid through the crash
-  window; this weakens the helper theory and returns priority to the stale
-  breadcrumb/other crash path.
-- H-caller-transition: a caller supplies a selector inconsistent with its
-  record or consumes a valid helper result in a mismatched state transition;
-  caller identity plus the row's selector provenance is required to select it.
-- H-stale-breadcrumb: the helper probe remains healthy while the process dies
-  with the same host/guest-PC handoff; this keeps attribution unresolved.
+- H-stale-breadcrumb: the guest PC is a sticky or asynchronously written
+  breadcrumb unrelated to the faulting host instruction.
+- H-helper-handoff: the crash handler's guest-PC handoff identifies a real
+  helper instruction or return path.
+- H-other-thread: the host crash occurs on a thread/path that cannot share the
+  helper's guest-PC state under the documented ownership rules.
+- H-unresolved: source ownership is complete but the handoff remains
+  ambiguous; leave the crash family open rather than adding a guard.
 
-Discriminator: the helper row immediately before the death. An invalid link or
-context selects H-link-state; valid helper rows plus caller-state mismatch
-select H-caller-transition; valid rows and no mismatch select H-legitimate;
-zero helper rows despite positive dispatcher/E9 controls keeps H-stale-
-breadcrumb open. No outcome authorizes a mitigation without naming the writer
-and establishing value legitimacy.
+Discriminator: the exhaustive source inventory must show whether the value
+reported as `0x8000834c` can be the faulting guest instruction, which thread
+writes it, and whether the crash handler samples it synchronously. A valid
+helper trace ending before the host crash plus an asynchronous/sticky writer
+selects H-stale-breadcrumb; a synchronous helper-owned handoff selects
+H-helper-handoff; disjoint thread ownership selects H-other-thread. No outcome
+authorizes a mitigation without naming the writer and establishing value
+legitimacy.
 
 Exact commands:
 
-1. Add the breadcrumb to the regeneration/fixup path, not only to a generated
-   output: `rg -n -C 8 "getNextSlotNpcTypeId|80040218" ../N64Recomp/fixup_game_funcs.py`.
-2. Regenerate in the required order (`make_elf.py`, N64Recomp, fixup script),
-   then build: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
-3. Run from `build/` with `PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`,
-   retaining the existing dispatcher/E9 controls and using SIGKILL on timeout.
-4. Require positive dispatcher/E9 controls before interpreting helper-row
-   absence; compare the final helper row to the crash marker and phase ordinal.
+1. Inventory writers/readers first:
+   `rg -n -C 8 "g_rs64_last_guest_pc|last-guest-pc|mcontext|CRASH" src lib ../N64Recomp/fixup_game_funcs.py`.
+2. Read bounded source windows around every hit and map thread/ordering; no
+   build or run unless the inventory leaves a discriminating ambiguity.
+3. If a runtime probe is still required, add it only through the appropriate
+   fixup/source path, then regenerate and build once with the existing
+   phase-gated controls.
