@@ -1,27 +1,35 @@
-# NEXT work unit (long oracle debugger-mode phase A/B)
+# NEXT work unit (audit debugger-off oracle phase observation)
 
 HYPOTHESIS-ID: oracle-320-only-divergence
 
-s772 showed the debugger-on arm's positive control and initial VI trace, while
-debugger-off `--vi-poll` observed the same initial width/origin but cannot
-report debugger-callback VI totals. The next unit is one bounded long phase
-check using the documented 11-entry Start schedule and fresh configs.
+s773 completed the long A/B: debugger-on had a positive control and 4,192 VI;
+debugger-off logged all inputs and the same initial poll transition but cannot
+provide a callback VI total or a later transition record. The next unit is one
+bounded oracle-side observation audit, followed by one matched phase check if
+the audit is a buildable change.
 
 ## Competing hypotheses
 
-- H-oracle-debugger-interference: debugger callbacks or interpreter overhead
-  change the retail phase path; the long arms will show different width/origin
-  transitions.
-- H-oracle-rom-runtime-divergence: debugger mode does not affect the result;
-  both long arms will show the same phase transitions.
-- H-oracle-poll-observation: debugger-off polling is insufficient for the
-  later phase; debugger-on has a positive control but debugger-off cannot
-  produce a trustworthy comparable transition record.
+- H-oracle-poll-bug: `--vi-poll` is not sampling the effective VI registers
+  after initialization; raw register logging will remain frozen or absent.
+- H-oracle-real-320-only: raw debugger-off polling will show continuous
+  width/origin samples with no later transition, matching debugger-on.
+- H-oracle-debugger-interference: a trustworthy raw poll will show a later
+  transition that differs from debugger-on, selecting debugger overhead or
+  callbacks as causal.
 
 ## Discriminating measurement
 
-Run matched 70-second arms with the same ROM/core and fresh config directories:
-debugger-on with `--press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --oracle-debugger 1 --vi-trace --pif-trace --watch-write 0x0:0x800000`, and debugger-off with the same schedule plus `--oracle-debugger 0 --vi-poll`. The debugger-on arm must pass the positive control and log the scheduled inputs. A difference in width/origin transitions selects H-oracle-debugger-interference; identical transitions select H-oracle-rom-runtime-divergence; a debugger-off poll that cannot record later transitions is unevaluable and selects H-oracle-poll-observation only if the debugger-on control is positive.
+First inspect the existing `--vi-poll` implementation and add one bounded,
+phase-scoped raw-read diagnostic that emits the sampled VI width and origin at
+fixed poll intervals without using debugger callbacks. Build the oracle, then
+run matched fresh-config 70-second arms with the same schedule: debugger-on
+with `--oracle-debugger 1 --vi-trace --pif-trace --watch-write 0x0:0x800000`,
+debugger-off with `--oracle-debugger 0 --vi-poll`, and the same positive-control
+requirements. A continuously changing raw poll proves the off-arm observation
+path; frozen/absent raw samples select H-oracle-poll-bug; a trustworthy later
+transition differing between arms selects H-oracle-debugger-interference; no
+later transition in either arm selects H-oracle-real-320-only.
 
 ## Commands
 

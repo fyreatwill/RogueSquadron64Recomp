@@ -54583,3 +54583,29 @@ measurement limitation, not a runtime explanation. The next unit is a long
 control, VI/PIF traces, and debugger-off uses exported VI polling. No port
 runtime code changed. This rules out neither deeper debugger interference nor
 the retail-oracle runtime/ROM-environment divergence.
+
+## Session 773 (2026-08-12) — long debugger-mode A/B remains limited by off-arm phase observation
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 57,230 bytes, so maintenance did
+not trigger. The planned work unit was a matched 70-second debugger-on/off
+oracle run with fresh configs, the same ROM/core, the documented eleven-entry
+Start schedule, PIF traces, and a whole-RDRAM positive control on the
+debugger-on arm.
+
+The debugger-on arm exited cleanly, recorded **11,766,128** whole-RDRAM writes
+over **4,192 VI**, and logged all eleven scheduled Start presses at the PIF
+boundary as `0x7C4=0x10000000`. It transitioned from width 0 to 320 and then
+reported origin `0x6dd280`, with no later width transition. The debugger-off arm
+also logged all eleven presses and its independent `--vi-poll` observed the same
+initial width/origin, but reported zero callback VI because debugger callbacks
+were disabled and produced no later poll transition. The arms returned 0 and 3
+respectively; the latter is the oracle wrapper's expected non-debugger result,
+not a game crash.
+
+The positive control makes the debugger-on arm valid, but the off-arm lacks a
+comparable later-phase observation. This does not select debugger-induced phase
+divergence; it selects **H-oracle-poll-observation** as the current limitation
+and rules out missing PIF delivery for this recipe. The next work unit is a
+bounded audit/control change to make debugger-off raw VI width/origin reads
+independently visible before rerunning one matched phase check. No port runtime
+code changed.
