@@ -57153,6 +57153,35 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s897 (2026-08-13) — 3D source spatial mix is structurally bounded; node and input legitimacy remain open
+
+Performed the prescribed source-only M3 inventory for `compute3DSourceSpatialMix`
+(`0x80098310`) in the external generated tree, cross-checked against the
+companion `main_overlay.txt` symbols and the adjacent generated writers.
+
+The complete function has these access classes:
+
+| Guest sites | Operation | Predecessor / writer basis |
+|---|---|---|
+| `0x80098368–9836C` | initialize output accumulators (`a1+0`, `a2+0`) | caller-provided output pointers; no independent bounds proof |
+| `0x80098374` | load 3D-source list head from `0x80153418` | companion symbols identify the MusyX doubly-linked source list |
+| `0x80098380`, `0x8009863C–98640` | null-test and advance node through `+0x0` | null-terminated walk; `+0x0/+0x4` geometry independently matches `register3DAudioListenerNode` and `factor5RemoveListNode` |
+| `0x80098398–98444` | read node/source `+0x0C,+0x10,+0x14,+0x24,+0x30,+0x28,+0x2C,+0x84,+0x8`; compute squared distance, attenuation, and accumulate output | `play3DSoundEvent` and its variant populate the source record fields; dynamic node/value legitimacy remains unproven |
+| `0x8009846C–98580` | read node/source and input position/velocity fields at `+0x0C..+0x20`; compute relative distance, scaled interpolation, and write pan output | same source-record writer basis; caller input record is dynamic and not independently proven |
+| `0x80098588–985DC` | call affine transform on source orientation `+0x48` and input `+0x0C`; clamp/normalize transformed result and write `a3+0` | companion symbols identify the transform primitive; source orientation and input pointers/values remain unproven |
+| `0x800985E0–98638` | inspect transformed stack vector, conditionally call `normalizeVec3`, write `a4+0` and `a5+0` | stack outputs are locally produced; caller output pointers are dynamic |
+
+The only loop is the list walk and is structurally null-terminated. The
+function mixes list-node fields, caller-supplied source/output vectors, and
+derived stack temporaries; no table bound or sentinel beyond the list null
+terminator is present. Generated writers and companion symbols provide two
+independent lines for the list shape and source-record population, but neither
+proves every dynamic node/input writer or value legitimate. H-compute-3d-shape-mismatch
+is selected, with H-compute-3d-unclassified unresolved. No guard, build, soak,
+or runtime behavior changed.
+
+ORIGIN: bounded generated-source, adjacent-writer, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
 ## Session s895 (2026-08-13) — voice volume/pan wrapper is structurally safe; caller legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for
