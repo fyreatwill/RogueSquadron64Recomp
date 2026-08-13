@@ -56643,3 +56643,29 @@ source-only audit of the `g_rs64_last_guest_pc` writer/read/handoff chain.
 
 ORIGIN: host-side helper telemetry and retail table-watch evidence; no game
 value, helper control flow, or mitigation behavior changed.
+
+## Session s861 (2026-08-13) — 0x8000834c attribution is a stale breadcrumb
+
+Completed the prescribed source-only audit of the complete
+`g_rs64_last_guest_pc` writer/read/handoff chain. The generated recompiled
+tree contains 9,550 writes across 47 guest functions. The exact
+`0x8000834c` writer occurs twice in `drainMeshReleaseQueue`'s generated
+`jr $ra` delay-slot representation; there are no such writes elsewhere, and
+`getNextSlotNpcTypeId` at `0x80040218` has zero breadcrumb writes, including
+both s860 trace exits.
+
+The only definition is the process-wide `volatile uint32_t` in `main.cpp`,
+declared through `recomp.h`. Multiple guest bodies write it; pollers,
+watch-fault diagnostics, and the POSIX crash handler read it. The crash
+handler samples it synchronously on the signal-delivery thread, but it has no
+TLS, writer thread, epoch, or call-chain association; the Windows crash path
+does not print it. A host crash symbolized as `getNextSlotNpcTypeId+448` with
+`last-guest-pc=0x8000834c` is therefore not a helper-instruction handoff.
+
+This source result selects H-stale-breadcrumb for the s860 crash family and
+rules out using that value as a faulting-instruction attribution. It does not
+prove a later invalid helper slot/link/context, identify a game writer, or
+justify a mitigation. No build or run was needed.
+
+ORIGIN: generated breadcrumb writes and host crash-handler handoff semantics;
+no game value, helper control flow, or mitigation behavior changed.

@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s860 (2026-08-13). The active blocker is the authoritative
+Reviewed through s861 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -60,6 +60,15 @@ Priority until changed by the user:
   run later hit the known Metal barriers crash at guest PC 0x8000B650.
 - No current conclusion establishes parser loss, a bad RDP writer, or a
   legitimate/illegitimate game value. No mitigation is justified.
+- s861 completed the requested source-only attribution audit. The generated
+  tree contains 9,550 process-wide breadcrumb writes across 47 guest
+  functions; `0x8000834c` is emitted only by `drainMeshReleaseQueue` at the
+  `jr $ra` delay-slot `nop`, not by `getNextSlotNpcTypeId` (which has no
+  breadcrumb writes). The crash handler synchronously reads the same
+  unsynchronized global from the crashing signal thread, with no thread
+  identity, epoch, or helper handoff. This selects H-stale-breadcrumb for the
+  s860 host-symbol crash family. It does not classify a later invalid slot
+  chain and gives no mitigation or legitimacy basis.
 - s831 added an independent bridge-submit serial and recorded it again at the
   RT64 consumer call boundary, including task scope and [lo,hi). In the
   corrected capture, all 67 E9-bearing producer serials had a consumer record
@@ -548,22 +557,49 @@ or authorize a mitigation.
 ORIGIN: host-side helper telemetry and retail table-watch evidence; no game
 value, helper control flow, or mitigation behavior changed.
 
+## Session s861 result
+
+Completed the prescribed source-only audit of the complete
+`g_rs64_last_guest_pc` attribution chain. The generated recompiled tree has
+9,550 writes across 47 guest functions. The exact `0x8000834c` writer occurs
+twice in `drainMeshReleaseQueue`'s generated `jr $ra` delay-slot
+representation (one executable pre-return stamp and one unreachable delayed
+instruction copy); there are no `0x8000834c` writes elsewhere.
+`getNextSlotNpcTypeId` at guest `0x80040218` has zero breadcrumb writes,
+including both s860 trace exits.
+
+The only definition is the process-wide `volatile uint32_t` in `main.cpp`,
+declared through `recomp.h`. Guest bodies in multiple functions write it,
+while pollers, watch-fault diagnostics, and the crash handler read it. The
+POSIX crash handler samples it synchronously on the signal-delivery thread,
+but the value has no TLS, writer thread, epoch, or call-chain association;
+the Windows crash path does not print it. Therefore a crash symbolized as
+`getNextSlotNpcTypeId+448` with `last-guest-pc=0x8000834c` is not a helper
+instruction handoff: it is a stale process-wide breadcrumb from
+`drainMeshReleaseQueue` or another guest execution path. This is source-only
+evidence, but it directly discriminates the attribution hypotheses and
+explains why s860 had no helper row at the death boundary.
+
+The audit rules out using `0x8000834c` as a faulting-instruction attribution
+for this family. It does not prove that a later helper invocation cannot carry
+an invalid slot/link/context, and it adds no guard or other mitigation.
+
+ORIGIN: generated breadcrumb writes and host crash-handler handoff semantics;
+no game value, helper control flow, or mitigation behavior changed.
+
 ## Ranked backlog
 
-1. Audit the `0x8000834c` crash attribution chain: enumerate every writer of
-   `g_rs64_last_guest_pc`, every crash-handler read, and every host/guest-PC
-   handoff, then compare it with the s860 helper trace's last event. Do not
-   build or run until the source inventory distinguishes a stale breadcrumb
-   from an actual helper fault.
-2. Re-run the expanded dispatcher capture only if that audit identifies a
-   concrete caller/state boundary that can be phase-gated.
-3. M3 co-gates and crash families: pursue only a complete idiom inventory,
+1. Do not use the process-wide `0x8000834c` breadcrumb to select a helper
+   crash site. Re-run the expanded dispatcher capture only after a new,
+   phase-gateable caller/state boundary is identified independently.
+2. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.
-4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
+3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`; each needs independent controls.
-5. Regeneration-pipeline reliability: retain the delete-before-regen rule and
+4. Regeneration-pipeline reliability: retain the delete-before-regen rule and
    audit fixup counts when a reproducible omission appears.
+
 
 ## Closed and parked
 
