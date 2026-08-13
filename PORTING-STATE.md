@@ -54150,3 +54150,52 @@ revert dest; do not chase the crash.
 **ORIGIN:** route, not a mitigation. Dest `0x12A0` / `153==0x20`
 is the skipped ovl20 image (ROM `0x27108`, table desc `0x2157`).
 The `0x13B8` stray is a legitimate `L_17F0` clip-hand return.
+
+## Session 760 (2026-08-12) — ovl20 0x13B8 clip-hand return LIVE; residual is 0x13C0/04
+
+Step 0 measured `CURRENT-TRUTH.md` at 44,236 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s759: 6e-style
+widen of case `0x13B8` to `153==0x20||0x04` → `OVL20_13B8`.
+Queued SOAK-RESULTS already contained the s759 ANALYZED line.
+
+Landed fixup 6r. Same-iter also made 6n idempotent: 6q had
+replaced the `ovl1c_1f04` marker, so a re-run of the fixup
+script re-inserted a duplicate `case 0x1F04` and broke the
+build. 6n now treats any existing `case 0x1F04` as applied and
+strips a leftover 6n-only duplicate; 6q keeps the 6n marker on
+the widened form. **ORIGIN:** route, not a mitigation. Writer
+is `CLIP_1E48` `jr` of `OVL20` `jal L_17F0` (IMEM `0x13B0`,
+`r31=0x13B8`) after `L_17F0` hands to clip (`r5=4; goto
+L_1268`). Clip dest `0x1DB0` does not overwrite IMEM
+`0x12A0..0x13F7`, so `0x13B8` is still the ovl20 image.
+
+Soak `scratch/agent/soak_results/s760_ovl20_13b8_20260812-195008/run.log`
+(~250 s to leave-Start SIGBUS, wrapper rc=3). Same-run positive
+controls LIVE: CLIP `res=0x04` last n=296640, ovl24
+`res=0x24 tgt=0x12A0` (task 195), ovl1c `res=0x1C tgt=0x1EA8`
+last n=396416, dest `[ovl-route] res=0x20 tgt=0x12A0` last
+n=764672 (first task 195 `via=l1298-other`). Four boot controls
+still `dl06=push:2,complete:2,open:0`. `last_ovl=0x20/0x13B8`
+once (sec2 task 6043). Stray `0x13B8/04` **419→0**.
+
+**H-13b8-clip-hand SELECTED. H-13b8-breaks-06 REFUTED.**
+**H-13b8-not-only SELECTED:** only remaining stray is
+`0x13C0/04` n=643 line=400 (`L_11A0` `jr $30`). Writer:
+`OVL20_13B8` `jal L_112C` sets `r31=0x13C0`; `L_112C` copies
+`r31→r30`; `L_11A0` `jr`s it while clip is still resident.
+**H-13b8-restores-e9 REFUTED:** sec2 now sampled (64 rows)
+match **6/64** — 3 boot-shaped `dl06=2/2/0` plus 3 fatter
+`src0=0x000178` copies (emit 4–6, overlay 4/9/29). Still that
+boot DL as the E9 source; rdpFs 0→4500 (flat vs s757 4155 /
+s759 3836); 58/64 match=0.
+
+New vs s759, not chased this unit: UJ **631** (`0x1EBC` 555
+from `OVL1C_1F04` `jr $30` at line 4987, `0x1E7C` 76). First
+UJ is before the first sec2 row. s757 left these as n=0/n=1
+leftovers; do not route them until the 0x13C0 class is
+closed. Crash `calculateDatItemDistanceToPlayer+432`
+`si_addr=0x380000000` `last-guest-pc=0x8000834c` (known stale
+checkpoint / misattr family). Do not revert the 0x13B8 widen.
+
+**ORIGIN:** `CLIP_1E48` `jr` of a ROM clip dispatch. Route the
+return; do not skip `L_17F0`.

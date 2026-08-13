@@ -22,7 +22,30 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s759; compacted in maintenance s729)
+## Current truth (reviewed through s760; compacted in maintenance s729)
+
+**s760:** fixup 6r widens case `0x13B8` to `153==0x20||0x04` →
+`OVL20_13B8` (same class as s745 `0x1364`). Soak
+`s760_ovl20_13b8_20260812-195008` (250 s, leave-Start SIGBUS,
+wrapper rc=3): stray `0x13B8/04` **419→0**; dest
+`res=0x20 tgt=0x12A0` last n=764672 LIVE; ovl24 dest LIVE;
+ovl1c `0x1EA8` LIVE; clip `res=0x04` LIVE; 4/4 boot
+`dl06=2/2/0`. `last_ovl=0x20/0x13B8` once (task 6043). Residual
+`[clip-stray] 0x13C0/04` n=643 line=400 (`L_11A0` `jr $30`
+after `L_112C` copies `r31→r30`). UJ **0→631** (`0x1EBC` 555
+from `OVL1C_1F04` `jr $30`, `0x1E7C` 76) starts before sec2;
+do not route them this step. Sec2 E9 **6/64** (3 boot-shaped
+`2/2/0` + 3 fatter `src0=0x000178`); rdpFs 0→4500 still
+plateau; **H-13b8-restores-e9 REFUTED**. Crash
+`calculateDatItemDistanceToPlayer+432` `si_addr=0x380000000`
+`last-guest-pc=0x8000834c` (stale/misattr family); do not
+chase. Same-iter: 6n now treats an existing `case 0x1F04` as
+applied so a re-run cannot duplicate it after 6q ate its
+marker. **H-13b8-clip-hand SELECTED. H-13b8-breaks-06
+REFUTED. H-13b8-not-only SELECTED.** Next is a 6e-style
+`0x13C0` widen only. **ORIGIN:** `CLIP_1E48` `jr` of `OVL20`
+`jal L_17F0` r31=`0x13B8`; 0x04 arm is that return. Route,
+not a guard.
 
 **s759:** fixup 6q routes dest `0x12A0` / `153==0x20` →
 `OVL20_12A0` (keep `OVL24_12A0` and default `L_12A0`), rewrites
@@ -527,7 +550,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s759:** ovl20 dest-`0x12A0` route LIVE; UJ 0; residual is clip-stray `0x13B8/04` (ovl20 `jal L_17F0` return after clip hand). Sec2 E9 unevaluable (hangar leave SIGSEGV). Do not revert dest. Next is a 6e-style `0x13B8` widen for `153==0x20||0x04`. **s758:** overlay 0x20 is dest-`0x12A0` emit, not restore, not a `0x1DB0` sibling, not an E9 producer. **s757:** ovl1c `$30` pair complete. E9 still boot-shaped 3/64 through s757. Do not route n=1 `0x1E7C`. **s756–s752:** ovl1c dest + jal-returns + trampoline LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s760:** `0x13B8` clip-hand return LIVE (`153==0x20||0x04`); stray 419→0; residual is `0x13C0/04` (ovl20 `jal L_112C` return via `L_11A0` `jr $30`). Dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (6/64, still `src0=0x000178`, rdpFs plateau). Next is a 6e-style `0x13C0` widen only — do not blanket ovl20-04ret, do not route `0x1EBC`/`0x1E7C` yet. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

@@ -1769,34 +1769,48 @@ if is_main_ucode and OVL1C_1E2C_MARKER not in text:
 # caller. Route, not a default-allow of 0x1F04 for every
 # resident.
 OVL1C_1F04_MARKER = "/* fixup: ovl1c_1f04 */"
-if is_main_ucode and OVL1C_1F04_MARKER not in text:
-    def sub_exactly6n(pattern, repl_fn, n, what):
-        global text
-        new_text, count = pattern.subn(repl_fn, text)
-        if count != n:
-            print(f"fixup_factor5_ucode: FIXUP 6n ANCHOR FAILED ({what}): "
-                  f"expected {n} substitution(s), made {count}. "
-                  f"Regen changed the code shape — re-derive the anchors "
-                  f"before trusting the ovl1c 0x1F04 trampoline return.",
+OVL1C_1F04_CASE_ONLY = (
+    "        case 0x1F04: if (RSP_MEM_BU(0X153, 0) == 0x1C) { "
+    "rs64_e9prov_ovl_route(0x1C, 0x1F04); goto OVL1C_1F04; } "
+    "goto rs64_clip_stray;  " + OVL1C_1F04_MARKER + "\n")
+if is_main_ucode:
+    # 6q widens this case and used to drop OVL1C_1F04_MARKER, so a
+    # later re-run of this file re-inserted a duplicate 0x1F04 case.
+    # Treat any existing 0x1F04 route as already-applied, and strip
+    # a leftover 6n-only duplicate if the widened form is also present.
+    if "case 0x1F04:" in text:
+        if text.count("case 0x1F04:") > 1:
+            text, n_dup = re.subn(re.escape(OVL1C_1F04_CASE_ONLY), "", text)
+            if n_dup != 1 or text.count("case 0x1F04:") != 1:
+                print("fixup_factor5_ucode: FIXUP 6n SANITY FAILED: "
+                      "duplicate case 0x1F04 could not be reduced to the "
+                      "widened ovl1c||ovl20 form.", file=sys.stderr)
+                sys.exit(1)
+    elif OVL1C_1F04_MARKER not in text:
+        def sub_exactly6n(pattern, repl_fn, n, what):
+            global text
+            new_text, count = pattern.subn(repl_fn, text)
+            if count != n:
+                print(f"fixup_factor5_ucode: FIXUP 6n ANCHOR FAILED ({what}): "
+                      f"expected {n} substitution(s), made {count}. "
+                      f"Regen changed the code shape — re-derive the anchors "
+                      f"before trusting the ovl1c 0x1F04 trampoline return.",
+                      file=sys.stderr)
+                sys.exit(1)
+            text = new_text
+
+        if "OVL1C_1F04:" not in text:
+            print("fixup_factor5_ucode: FIXUP 6n PRECONDITION FAILED: "
+                  "OVL1C_1F04: missing. Run fixup 6k (make_clip_composite.py "
+                  "0x1C + RSPRecomp on factor5_rsp_ovl1c.toml) first.",
                   file=sys.stderr)
             sys.exit(1)
-        text = new_text
 
-    if "OVL1C_1F04:" not in text:
-        print("fixup_factor5_ucode: FIXUP 6n PRECONDITION FAILED: "
-              "OVL1C_1F04: missing. Run fixup 6k (make_clip_composite.py "
-              "0x1C + RSPRecomp on factor5_rsp_ovl1c.toml) first.",
-              file=sys.stderr)
-        sys.exit(1)
-
-    sub_exactly6n(
-        re.compile(
-            r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n)"),
-        lambda m: (
-            "        case 0x1F04: if (RSP_MEM_BU(0X153, 0) == 0x1C) { "
-            "rs64_e9prov_ovl_route(0x1C, 0x1F04); goto OVL1C_1F04; } "
-            "goto rs64_clip_stray;  " + OVL1C_1F04_MARKER + "\n" + m.group(1)),
-        1, "case 0x1F04 overlay-0x1C trampoline return")
+        sub_exactly6n(
+            re.compile(
+                r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n)"),
+            lambda m: OVL1C_1F04_CASE_ONLY + m.group(1),
+            1, "case 0x1F04 overlay-0x1C trampoline return")
 
 # ---------------------------------------------------------------------------
 # Fixup 6o: route ovl1c $30-return at 0x1E6C (s756)
@@ -2063,7 +2077,8 @@ if is_main_ucode and OVL20_MARKER not in text:
             "rs64_e9prov_ovl_route(0x1C, 0x1F04); goto OVL1C_1F04; } "
             "if (RSP_MEM_BU(0X153, 0) == 0x20) { "
             "rs64_e9prov_ovl_route(0x20, 0x1F04); goto OVL1C_1F04; } "
-            "goto rs64_clip_stray;  " + OVL20_MARKER + "\n"),
+            "goto rs64_clip_stray;  " + OVL1C_1F04_MARKER + " "
+            + OVL20_MARKER + "\n"),
         1, "widen 0x1F04 ovl1c||ovl20")
 
     sub_exactly6q(
@@ -2073,6 +2088,44 @@ if is_main_ucode and OVL20_MARKER not in text:
             "rs64_e9prov_ovl_route(0x20, 0x1ED4); goto OVL1C_1ED4; } "
             "goto rs64_clip_stray;  " + OVL20_MARKER + "\n" + m.group(1)),
         1, "case 0x1ED4 ovl20 trampoline keep")
+
+# ---------------------------------------------------------------------------
+# Fixup 6r: route 0x13B8 for overlay-0x20 clip-resident return (s760)
+# ---------------------------------------------------------------------------
+# s759: dest 0x12A0 / 153==0x20 is LIVE, but 419 [clip-stray] tgt=0x13B8
+# 153==0x04 arrive after OVL20 jal L_17F0 (IMEM 0x13B0, r31=0x13B8).
+# L_17F0 hand is r5=4; goto L_1268, so dest becomes clip 0x1DB0 and
+# CLIP_1E48 jr's the saved $ra. Clip dest does not overwrite IMEM
+# 0x12A0..0x13F7, so 0x13B8 is still the ovl20 emit image. 6q's
+# ovl20-only case required 153==0x20 and turned that legitimate
+# return into [clip-stray]. Same class as s744/s745 0x1364.
+# Widen only 0x13B8 — do not steal ovl24 0x1364's 0x24||0x04 arm,
+# and do not blanket-widen 0x13C0/0x13D8/0x13F0 (jal L_112C
+# siblings). ORIGIN: CLIP_1E48 jr of a ROM clip dispatch; route,
+# not a guard.
+OVL20_13B8CLIP_MARKER = "/* fixup: ovl20-13b8clip */"
+if is_main_ucode and OVL20_13B8CLIP_MARKER not in text:
+    def sub_exactly6r(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6r ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}.",
+                  file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    sub_exactly6r(
+        re.compile(
+            r"        case 0x13B8: if \(RSP_MEM_BU\(0X153, 0\) == 0x20\) \{ "
+            r"rs64_e9prov_ovl_route\(0x20, 0x13B8\); goto OVL20_13B8; \} "
+            r"goto rs64_clip_stray;  /\* fixup: ovl20route \*/\n"),
+        lambda m: (
+            "        case 0x13B8: if (RSP_MEM_BU(0X153, 0) == 0x20 || "
+            "RSP_MEM_BU(0X153, 0) == 0x04) { "
+            "rs64_e9prov_ovl_route(0x20, 0x13B8); goto OVL20_13B8; } "
+            "goto rs64_clip_stray;  " + OVL20_13B8CLIP_MARKER + "\n"),
+        1, "case 0x13B8 clip-resident return")
 
 # ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
