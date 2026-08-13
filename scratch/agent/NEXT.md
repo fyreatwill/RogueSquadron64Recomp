@@ -1,11 +1,13 @@
-# NEXT work unit (s855)
+# NEXT work unit (s856)
 
 HYPOTHESIS-ID: m3-slot-dispatcher-crash
 
-Perform one bounded source-only audit of every input read and state transition
-in `slotDispatcherIter` and `slotDispatcherInner`, then trace the caller-side
-slot/index arguments and the NPC update-function pointer. Do not build, run,
-or change parser advancement, RDP handlers, or mitigation.
+Add one behavior-neutral, phase-scoped dispatcher trace in the generated-code
+fixup path, build once, and run the existing phase-gated recipe once. Record a
+positive-control entry for every dispatcher invocation, then record selector,
+masked index, table-entry pointer, slot fields, update-function address, and
+pre/post update-call state for the first bounded late-task window. Do not
+change parser advancement, RDP handlers, or mitigation.
 
 Competing hypotheses and discriminator:
 
@@ -18,16 +20,18 @@ Competing hypotheses and discriminator:
 - H-stale-breadcrumb: the source path does not match the observed host PC and
   the apparent dispatcher attribution remains symbol/stack artefact.
 
-Discriminator: enumerate each dereference and call edge, identify the source
-of the slot/index/update pointer, and determine whether the faulting host
-instruction can be one of those operations. A proven invalid input selects
-H-invalid-slot or H-invalid-update; valid inputs with a corrupting caller or
-callee select H-caller-state; a source/PC mismatch selects H-stale-breadcrumb.
-No source-only result authorizes a mitigation.
+Discriminator: the same-run positive-control count must be nonzero. A bad
+selector/link or null/implausible slot before the fault selects H-invalid-slot;
+a bad update address or post-call context selects H-invalid-update; valid
+inputs through the crash select H-caller-state; no dispatcher entry before a
+matching host fault selects H-stale-breadcrumb. No trace result authorizes a
+mitigation without identifying the writer and legitimacy.
 
 Exact commands:
 
 1. `rg -n "slotDispatcherIter|viRetraceHandlerThread|\[CRASH\]|last-guest-pc|vifs-snapshot" src lib docs tools`
 2. Read bounded windows around every dereference/callsite and representative
-   crash markers in `scratch/agent/soak_results/`; produce a complete input
-   table in the session ledger.
+   crash markers in `scratch/agent/soak_results/`; implement the trace through
+   the regeneration/fixup path.
+3. Build once, run the phase-gated recipe once, and require the dispatcher-entry
+   positive control before classifying any null result.

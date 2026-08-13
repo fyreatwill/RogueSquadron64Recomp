@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s855 (2026-08-13). The active blocker is the authoritative
+Reviewed through s856 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -388,14 +388,40 @@ unidentified; no guard, skip, or other mitigation is justified.
 ORIGIN: source audit and existing crash telemetry only; no game value,
 dispatcher advancement, parser behavior, or mitigation changed.
 
-## Next work unit: classify the dispatcher invalid-state input
+## Session s856 result
+
+Completed the requested bounded input/state audit across the sole
+`slotDispatcherIter` and `slotDispatcherInner` definitions and all 144
+generated `jal 0x8003E8DC` callsites (plus five `slotDispatcherInner`
+callsites). `slotDispatcherIter` masks the caller's selector to 16 bits,
+recognizes only `0xFFFF` as a sentinel, and uses `0x80130BB0 + index*8` for
+both initial and chained indices; there is no table-capacity or chain-cycle
+check. A non-null table entry is trusted for reads at `+0`, `+0x14`, and
+`+0x1A`; `+0` is the indirect NPC update call, and the post-call `+4/+6`
+links feed the next iteration. `slotDispatcherInner` has no null check on
+its context argument and trusts the selected `0x80130BC0/BC4` list head,
+allocator result, and `+0x44/+0x48` links while inserting the context.
+The normal update-pointer writer is `spawnNpcOfType`'s `sw $s2,0($s0)`,
+with `setupNpcUpdateFunctions` selecting the function passed into that path;
+no source proof identifies the live corrupting write. This selects
+H-invalid-slot/H-invalid-update as the actionable runtime branch, keeps
+H-caller-state open as the likely writer origin, and refutes H-real-stall and
+H-stale-breadcrumb for the observed markers. No mitigation is justified.
+
+ORIGIN: source audit only; the identified writers are normal game
+allocation/spawn paths, and their values' legitimacy at the observed crash
+is unknown.
+
+## Next work unit: instrument the dispatcher invalid-state input
 
 HYPOTHESIS-ID: m3-slot-dispatcher-crash
 
-Perform one bounded source-only audit of every input read and state transition
-in `slotDispatcherIter` and `slotDispatcherInner`, then trace the caller-side
-slot/index arguments and the NPC update-function pointer. Do not build, run,
-or change parser advancement, RDP handlers, or mitigation.
+Add one behavior-neutral, phase-scoped dispatcher trace in the generated-code
+fixup path, build once, and run the existing phase-gated recipe once. Record a
+positive-control entry for every dispatcher invocation, then record the
+selector, masked index, table-entry pointer, slot fields, update-function
+address, and pre/post update-call state for the first bounded late-task
+window. Do not change parser advancement, RDP handlers, or mitigation.
 
 Competing hypotheses:
 
@@ -408,12 +434,12 @@ Competing hypotheses:
 - H-stale-breadcrumb: the source path does not match the observed host PC and
   the apparent dispatcher attribution remains symbol/stack artefact.
 
-Discriminator: enumerate each dereference and call edge, identify the source
-of the slot/index/update pointer, and determine whether the faulting host
-instruction can be one of those operations. A proven invalid input selects
-H-invalid-slot or H-invalid-update; valid inputs with a corrupting caller or
-callee select H-caller-state; a source/PC mismatch selects H-stale-breadcrumb.
-No source-only result authorizes a mitigation.
+Discriminator: the same-run positive-control count must be nonzero. A bad
+selector/link or null/implausible slot before the fault selects H-invalid-slot;
+a bad update address or post-call context selects H-invalid-update; valid
+inputs through the crash select H-caller-state; no dispatcher entry before a
+matching host fault selects H-stale-breadcrumb. No trace result authorizes a
+mitigation without identifying the writer and legitimacy.
 
 ## Ranked backlog
 

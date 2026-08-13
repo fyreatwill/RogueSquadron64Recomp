@@ -56521,3 +56521,25 @@ mitigation basis was established.
 
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
+## Session 856 (2026-08-13) — dispatcher input/state audit
+
+Completed the prescribed source-only audit of `slotDispatcherIter` and
+`slotDispatcherInner` in `../N64Recomp/RecompiledFuncs/funcs_8.c`, including
+all 144 generated `jal 0x8003E8DC` callsites and five
+`slotDispatcherInner` callsites. The dispatcher masks its selector to 16
+bits, treats only `0xFFFF` as terminal, and indexes `0x80130BB0` with
+`index*8` for both the initial and chained indices. There is no table-capacity
+or chain-cycle check. A non-null table entry is trusted for `+0`, `+0x14`, and
+`+0x1A`; `+0` is called indirectly as the NPC update function, and `+4/+6`
+become the next selector. The inner dispatcher has no null check on its
+context and trusts the `0x80130BC0/BC4` list head, allocator result, and
+`+0x44/+0x48` links.
+
+The normal update-pointer writer is `spawnNpcOfType`'s `sw $s2,0($s0)`, with
+`setupNpcUpdateFunctions` selecting the function passed to that path. No
+source proof identifies the live corrupting write. This selects
+H-invalid-slot/H-invalid-update as the actionable runtime branch, keeps
+H-caller-state open as the likely writer origin, and refutes an intentional
+dispatcher stall or stale dispatcher attribution for the observed markers.
+No mitigation was added. ORIGIN: source audit only; normal allocation/spawn
+writers were identified, but their live values' legitimacy is unknown.
