@@ -54632,6 +54632,25 @@ H-oracle-debugger-interference for this recipe, and rules out a missing input
 delivery path. It does not explain the divergence from the documented later VI
 timeline. The next work unit is a bounded oracle runtime/config identity audit.
 The port runtime was not changed.
+
+## Session 778 (2026-08-12) — alternate oracle backend leaves phase divergence unresolved
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 17,824 bytes, so maintenance did
+not trigger. The planned work unit was a fresh concurrent debugger-on/off
+70-second oracle A/B using `--oracle-emulator 1`, the verified core/RSP/input
+plugin/ROM, and the eleven-entry Start schedule.
+
+The debugger-on arm exited cleanly with **11,782,489** whole-RDRAM positive-
+control writes over **4,198 VI** callbacks and all eleven PIF Start presses.
+It stayed at width 320/origin `0x6dd280`. The debugger-off arm independently
+produced **70** raw VI polls, all width 320/origin `0x6dd280`, and exited with
+the documented zero-hit result. No later VI phase appeared in either arm.
+
+This refutes **H-oracle-emulator-backend** for this recipe. It does not
+distinguish a schedule/timing-sensitive phase from a consistently 320-only
+exact recipe, so the oracle phase-divergence issue remains open. No port
+runtime code changed. Raw logs are under
+`scratch/agent/oracle_runs/20260812_backend/`.
 ## Session 775 (2026-08-12) — oracle artifact identity audit selects runtime/environment divergence
 
 Step 0 measured `docs/CURRENT-TRUTH.md` at 59,146 bytes, so maintenance did

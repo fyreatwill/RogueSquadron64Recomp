@@ -31,6 +31,13 @@ the chronological ledger. The active facts are:
   crashes. Do not classify that hypothesis from those nulls.
 - M5 audio de-stubbing and prior idiom-class campaigns are closed. Product
   freelist restore is ON; garbage-CIMG and wrap-drop mitigations remain OFF.
+- The matched s778 oracle runtime check with the alternate `R4300Emulator`
+  again found no later retail VI phase: debugger-on had 11,782,489
+  whole-RDRAM positive-control writes, 4,198 VI callbacks, and all 11 PIF
+  presses; debugger-off independently produced 70 raw VI polls, all at width
+  320/origin `0x6dd280`. This refutes the alternate execution backend as the
+  missing phase for this recipe. Exact-recipe reachability versus
+  schedule/timing sensitivity remains unresolved.
 - The matched s777 oracle runtime check again found no later retail VI phase:
   debugger-on had the whole-RDRAM positive control (11,768,621 writes), 4,193
   VI callbacks, and all 11 PIF presses; debugger-off raw polling stayed at
@@ -109,7 +116,17 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **Oracle phase divergence — OPEN, H-oracle-runtime-environment-divergence selected.** s777's
+1. **Oracle phase divergence — OPEN, H-oracle-schedule-vs-expected-320 next.** s778's
+alternate-backend A/B had debugger-on positive controls of 11,782,489 whole-RDRAM
+writes over 4,198 VI callbacks and all 11 PIF presses; debugger-off had 70 raw polls,
+all width 320/origin `0x6dd280`. This refutes H-oracle-emulator-backend for the tested
+recipe. Next: run three fresh concurrent debugger-on emulator-1 arms with the same
+controls and phase gating; any later transition selects timing sensitivity, while
+three 320-only traces strengthen the exact-recipe explanation.
+The prior identity audit found byte-identical executable, core, RSP, input-plugin, and
+ROM artifacts; fresh configs differed only by `EnableDebugger`.
+
+- **Overturned: H-oracle-runtime-environment-divergence (s777).** s777's
 bounded identity audit found byte-identical oracle/core/RSP/input/ROM artifacts;
 the matched configs differ only by `EnableDebugger`. This rules out artifact,
 plugin-path, config-generation, ROM, and input-plugin identity drift, but not
@@ -119,11 +136,11 @@ run: 70 samples after initialization stayed at width 320/origin `0x6dd280`,
 while debugger-on independently recorded 4,199 VI, all 11 PIF presses, and
 11,785,277 positive-control writes. This refutes the poll-observation and
 debugger-interference explanations for the 320-only result. s777 independently
-reproduced the same result with 11,768,621 writes and 4,193 VI callbacks. Next:
-run the same bounded debugger-on/off phase check with the alternate
-`R4300Emulator` setting (`--oracle-emulator 1`) to test whether the execution
-backend itself selects the later VI timeline; do not treat the port as ground
-truth.
+reproduced the same result with 11,768,621 writes and 4,193 VI callbacks.
+s778's alternate-backend A/B reproduced the 320-only result with positive
+controls, refuting the execution-backend explanation for this recipe. It was
+believable because the identity audit ruled out artifact and plugin drift while
+leaving runtime behavior as the remaining broad class.
 
 2. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: phase-gated reachability result for 6w or pivot to a higher-information M3 audit. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
