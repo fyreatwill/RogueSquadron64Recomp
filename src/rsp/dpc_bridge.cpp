@@ -1236,6 +1236,7 @@ static std::atomic<uint32_t> g_last_wrap_start{0};
 static std::atomic<uint32_t> g_last_wrap_n{0};
 static std::atomic<uint32_t> g_last_submit_lo{0};
 static std::atomic<uint32_t> g_last_submit_hi{0};
+static std::atomic<uint64_t> g_submit_serial{0};
 extern "C" void rs64_dpc_get_last_wrap(uint32_t *end, uint32_t *seen,
                                       uint32_t *start, uint32_t *n) {
     if (end)   *end   = g_last_wrap_end.load(std::memory_order_acquire);
@@ -1246,6 +1247,29 @@ extern "C" void rs64_dpc_get_last_wrap(uint32_t *end, uint32_t *seen,
 extern "C" void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi) {
     if (lo) *lo = g_last_submit_lo.load(std::memory_order_acquire);
     if (hi) *hi = g_last_submit_hi.load(std::memory_order_acquire);
+}
+extern "C" uint64_t rs64_dpc_get_last_submit_serial() {
+    return g_submit_serial.load(std::memory_order_acquire);
+}
+extern "C" uint32_t rs64_e9prov_current_task() {
+    return g_e9prov.task;
+}
+extern "C" uint32_t rs64_e9prov_current_scope() {
+    return g_e9prov.control ? 1u : g_e9prov.target ? 2u : 0u;
+}
+
+static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
+    g_last_submit_lo.store(lo, std::memory_order_release);
+    g_last_submit_hi.store(hi, std::memory_order_release);
+    const uint32_t before = g_task_bridge_e9.load(std::memory_order_acquire);
+    rs64_count_submitted_e9(lo, hi);
+    const uint32_t after = g_task_bridge_e9.load(std::memory_order_acquire);
+    const uint64_t serial = g_submit_serial.fetch_add(1, std::memory_order_acq_rel) + 1;
+    if (log_e9_unified() && after > before && (g_e9prov.control || g_e9prov.target)) {
+        fprintf(stderr, "[e9-submit-range] serial=%llu task=%u lo=0x%06X hi=0x%06X e9=%u\n",
+                (unsigned long long)serial, g_e9prov.task, lo, hi, after - before);
+        fflush(stderr);
+    }
 }
 
 // ROGUESQ_DROP_WRAP_RDP (s664, default OFF): drop RDP submits whose
@@ -2627,9 +2651,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     }
 
     rs64_e9prov_mark_submitted(submit_lo, submit_hi);
-    g_last_submit_lo.store(submit_lo, std::memory_order_release);
-    g_last_submit_hi.store(submit_hi, std::memory_order_release);
-    rs64_count_submitted_e9(submit_lo, submit_hi);
+    rs64_dpc_record_submit(submit_lo, submit_hi);
     ultramodern::submit_rdp_range(submit_lo, submit_hi);
 }
 
@@ -2669,9 +2691,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                     rs64_e9prov_mark_submitted(lo, hi);
                     bytes += hi - lo;
                     calls++;
-                    g_last_submit_lo.store(lo, std::memory_order_release);
-                    g_last_submit_hi.store(hi, std::memory_order_release);
-                    rs64_count_submitted_e9(lo, hi);
+                    rs64_dpc_record_submit(lo, hi);
                     ultramodern::submit_rdp_range(lo, hi);
                 }
                 lo = r.first;
@@ -2682,9 +2702,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                 rs64_e9prov_mark_submitted(lo, hi);
                 bytes += hi - lo;
                 calls++;
-                g_last_submit_lo.store(lo, std::memory_order_release);
-                g_last_submit_hi.store(hi, std::memory_order_release);
-                rs64_count_submitted_e9(lo, hi);
+                rs64_dpc_record_submit(lo, hi);
                 ultramodern::submit_rdp_range(lo, hi);
             }
         }
@@ -2696,9 +2714,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                 bytes += r.second - r.first;
                 calls++;
                 rs64_e9prov_mark_submitted(r.first, r.second);
-                g_last_submit_lo.store(r.first, std::memory_order_release);
-                g_last_submit_hi.store(r.second, std::memory_order_release);
-                rs64_count_submitted_e9(r.first, r.second);
+                rs64_dpc_record_submit(r.first, r.second);
                 ultramodern::submit_rdp_range(r.first, r.second);
             }
         }

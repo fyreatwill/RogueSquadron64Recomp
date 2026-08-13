@@ -17,6 +17,10 @@
 // processDisplayLists(isHLE=false). Set on construction, cleared on shutdown.
 static std::atomic<RT64::Application*> g_rt64_app{nullptr};
 
+extern "C" uint64_t rs64_dpc_get_last_submit_serial();
+extern "C" uint32_t rs64_e9prov_current_task();
+extern "C" uint32_t rs64_e9prov_current_scope();
+
 // Interval-scoped diagnostics (session 25).
 //
 // The RT64-side censuses (ROGUESQ_LOG_FLOOR and friends) keep their `seen` set
@@ -942,6 +946,23 @@ namespace ultramodern {
     static void run_rdp_submission(RT64::Application* app, uint32_t lo_phys, uint32_t hi_phys) {
         if (s_rdp_disabled.load(std::memory_order_relaxed)) {
             return;
+        }
+        static const bool log_e9_consumer = [] {
+            const char *e = std::getenv("ROGUESQ_LOG_E9_UNIFIED");
+            const char *advance = std::getenv("ROGUESQ_LOG_RDP_ADVANCE");
+            const char *all = std::getenv("ROGUESQ_LOG_ALL");
+            return (e && *e && *e != '0') || (advance && *advance && *advance != '0') ||
+                   (all && *all && *all != '0');
+        }();
+        if (log_e9_consumer) {
+            const uint32_t task = rs64_e9prov_current_task();
+            const uint32_t scope = rs64_e9prov_current_scope();
+            if (scope != 0) {
+                fprintf(stderr, "[e9-consumer-range] serial=%llu task=%u scope=%s lo=0x%06X hi=0x%06X\n",
+                        (unsigned long long)rs64_dpc_get_last_submit_serial(), task,
+                        scope == 1 ? "control" : "sec2", lo_phys, hi_phys);
+                fflush(stderr);
+            }
         }
 #ifdef _WIN32
         __try {

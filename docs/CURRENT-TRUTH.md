@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s830 (2026-08-13). The active blocker is the authoritative
+Reviewed through s831 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -60,6 +60,15 @@ Priority until changed by the user:
   run later hit the known Metal barriers crash at guest PC 0x8000B650.
 - No current conclusion establishes parser loss, a bad RDP writer, or a
   legitimate/illegitimate game value. No mitigation is justified.
+- s831 added an independent bridge-submit serial and recorded it again at the
+  RT64 consumer call boundary, including task scope and [lo,hi). In the
+  corrected capture, all 67 E9-bearing producer serials had a consumer record
+  with the same serial and range; 4 control and 58 sec2 provenance rows passed
+  `emit/raw/dispatch/match`, and all 36 sec2 join rows had
+  `bridge_delta=parser_delta=1`. This is a second independent line against
+  producer/consumer range loss for the captured early sec2 population. The run
+  reached only VI 320/640, not VI 1024, so it does not settle the late
+  post-sec2 mismatch.
 
 ## Next work unit: independent parser-consumer evidence
 
@@ -85,10 +94,10 @@ inconclusive if it only repeats the s830 runtime counter.
 
 ## Ranked backlog
 
-1. Add the second independent producer/consumer identity or queue-order
-   source for an aligned-task capture.
-2. After two independent lines classify parser/consumer advancement; only then
-   consider an implementation fix.
+1. Re-run the independent producer/consumer serial capture with a recipe that
+   demonstrably reaches VI 1024, then compare the late aligned-task rows.
+2. After the late population has two independent lines, classify
+   parser/consumer advancement; only then consider an implementation fix.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.

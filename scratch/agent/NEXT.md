@@ -1,32 +1,31 @@
-# NEXT work unit (independent parser-consumer evidence)
+# NEXT work unit (late aligned-task serial capture)
 
 HYPOTHESIS-ID: m3-e9-consumer-ordering
 
-Add one independent producer/consumer identity or queue-order trace for the
-aligned-task population. Keep game logic, RDP behavior, and mitigation code
-unchanged. Batch the trace into one Debug build and run the existing
-phase-gated `s790_postsec2_reachability.sh` recipe once with its positive
-controls. Do not treat a repeat of the s830 runtime event sequence as a second
-line of evidence.
+Run one phase-gated capture using the new bridge-submit/RT64-consumer serial
+telemetry, with a recipe that demonstrably reaches VI width 1024. Keep game
+logic, RDP behavior, and mitigation code unchanged. Before building, verify
+the recipe contains `ROGUESQ_LOG_RDP_ADVANCE=1` and all four provenance
+positive-control markers; do not accept a run that stops at VI 640 as evidence
+about the late population.
 
 Competing hypotheses and the discriminating measurement:
 
-- H-parser-filter-remains: an independent queue/identity join still shows
-  lower authoritative parser advancement for the same aligned tasks.
-- H-parser-join-population: the previous mismatch joined different task
-  populations; independent task identity aligns the counts or exposes the
-  mismatch.
-- H-parser-writer-path: bridge E9 bytes are submitted in ranges that do not
-  reach the RT64 consumer because of deferred or dropped queue work.
+- H-parser-filter-remains: late aligned tasks have producer E9 serial/range
+  records that reach the consumer, but parser advancement remains lower.
+- H-parser-join-population: the earlier mismatch joined different task
+  populations; late producer/consumer/task joins will align or expose that.
+- H-parser-writer-path: late producer serials/ranges diverge before the RT64
+  consumer, implicating deferred/drop behavior.
 
-Discriminator: keyed producer task, submitted range, consumer epoch, and join
-row with positive controls (`emit/raw/dispatch/match`). A result is
-inconclusive if it lacks the positive controls or only repeats the s830
-reset/fetch/join counter.
+Discriminator: at VI 1024, key `[e9-submit-range]` and
+`[e9-consumer-range]` by serial and [lo,hi), then join them to the same late
+`[e9-task-join]` task. Matching serial/ranges plus equal parser/bridge deltas
+weakens the writer-path and parser-filter hypotheses; divergence implicates
+the submit path. A run without VI 1024 or without positive controls is
+unevaluable.
 
-Expected commands: edit the telemetry source; run
-`./submodule-patches/export.sh`; build with
-`cmake --build build --config Debug --target RogueSquadron64Recomp`; run
-`zsh scratch/agent/s790_postsec2_reachability.sh` once; inspect bounded marker
-slices; update the ledger. Use SIGKILL behavior from the recipe and do not run
-repeat soaks manually.
+Expected commands: confirm the recipe/env, then
+`cmake --build build --config Debug --target RogueSquadron64Recomp` and run the
+single selected recipe from `build/` with SIGKILL watchdog behavior. Inspect
+bounded marker slices and record the result; do not run repeat soaks manually.

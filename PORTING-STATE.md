@@ -55912,3 +55912,26 @@ source on the aligned-task population.
 ORIGIN: the new values are telemetry emitted by RT64 reset/consumer paths and
 the existing join callback; no game value, RDP command, or mitigation behavior
 was changed.
+
+## Session 831 (2026-08-13) — independent submit-to-consumer ranges match
+
+Added a monotonic serial to every accepted bridge RDP range and recorded the
+serial, task scope, and range again at the RT64 consumer call boundary. The
+Debug target built successfully. The first capture was invalid because the
+consumer probe gate omitted the recipe's enabled `ROGUESQ_LOG_RDP_ADVANCE`; it
+was corrected and rerun. The corrected capture passed the positive controls:
+4 control and 58 sec2 provenance rows had `emit=1`, `raw=1`, `dispatch=1`, and
+`match=1`.
+
+All 67 E9-bearing producer serials had a consumer record with the same serial
+and [lo,hi) range. There were 36 sec2 join rows, all with
+`bridge_delta=1` and `parser_delta=1`. This is an independent second line of
+evidence against producer/consumer range loss for the captured early sec2
+population and weakens H-parser-writer-path there. The run reached only VI
+320/640 and never VI 1024, so it does not classify the late post-sec2 gap and
+does not establish parser loss or justify a mitigation. The next unit is a
+late VI-1024 capture using the same serial telemetry.
+
+ORIGIN: the serial and scope values are host-side telemetry at accepted bridge
+submits and the RT64 consumer call; no game value, RDP command, or mitigation
+behavior was changed.
