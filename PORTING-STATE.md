@@ -53877,3 +53877,48 @@ REFUTED** (`0x1E18` UJ gone; route LIVE). **H-1e18-breaks-06
 REFUTED. H-1e18-restores-e9 REFUTED.** Residual is the next
 ovl1c jal-return at `0x1E2C`. Do not splice overlay `0x20`
 next.
+
+## Session 754 (2026-08-12) — ovl1c jal-return 0x1E2C is LIVE; residual is 0x1F04
+
+Step 0 measured `CURRENT-TRUTH.md` at 41,071 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s753: route dest
+`0x1E2C` / `153==0x1C` to `OVL1C_1E2C`. SOAK-RESULTS s753 line
+was already folded; no unread queue recipes.
+
+Fixup 6m (own marker `ovl1c_1e2c`) inserts
+`case 0x1E2C` gated on `153==0x1C` → `OVL1C_1E2C`. Label already
+existed from the 6k splice; no composite or RSPRecomp. Independent
+of 6l's marker so an already-routed `0x1E18` file still gets the
+case. Did not add the later jal-return cases. Did not splice
+overlay `0x20`.
+**ORIGIN:** ovl1c jal at `OVL1C_1E18` sets `r31=0x1E2C` and
+`goto OVL1C_1F0C`; `OVL1C_1F9C` `jr $ra` is the legitimate
+return into `OVL1C_1E2C`. Route, not a default-allow of
+`0x1E2C` for every resident.
+
+Soak `scratch/agent/soak_results/s754_ovl1c_1e2c_20260812-184124/run.log`
+(348 s, same recipe as s743–s753, CRASH=0, wrapper rc=0). Same-run
+positive control: `[ovl-route] res=0x1C tgt=0x1E2C` last n=53440
+LIVE; dest `tgt=0x1DB0` (n=53056), jal-return `tgt=0x1E18`
+(n=53504), clip `res=0x04`, and ovl10 `tgt=0x1F40` stay LIVE.
+Four boot controls `dl06=push:2,complete:2,open:0` match=1.
+
+UJ `0x1E2C` **3213→0**. `[clip-stray]` still 0. sec2
+`last_ovl=0x1C/0x1E2C` 183/196 (13 early `0x00/0x0000`). E9
+match still boot-shaped: sec2 match=9/192, the 3× boot-shaped
+`2/2/0` triplet. rdpFs 0→5150 (s753 4483; not a restore). New
+residual: `Unhandled jump target 0x1F04` n=3185 from
+`OVL1C_1F9C` `jr $ra` (ucode line 5114). Predicted leftover
+`0x1E6C` UJ is 0: `OVL1C_1ED4` is a trampoline that saves
+`$ra` into `$30` then jals `0x1F0C` with `r31=0x1F04`; the
+`0x1E6C`/`0x1E7C`/`0x1E8C`/`0x1EA8`/`0x1EBC`/`0x1ECC`
+returns are `$30` restores after `OVL1C_1F04` `jr $30`, so
+they cannot UJ until `0x1F04` is routed (those six UJ counts
+are all 0). Label `OVL1C_1F04` exists; case does not. Do not
+revert dest-`0x1E2C` / `153==0x1C`.
+
+**H-1e2c-ovl1c-jalret SELECTED.** **H-1e2c-not-the-uj-path
+REFUTED** (`0x1E2C` UJ gone; route LIVE). **H-1e2c-breaks-06
+REFUTED. H-1e2c-restores-e9 REFUTED.** Residual is the 1ED4
+trampoline return at `0x1F04`. Do not splice overlay `0x20`
+next. Do not add `0x1E6C` until `0x1F04` is LIVE.

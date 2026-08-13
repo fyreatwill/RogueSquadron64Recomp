@@ -1704,6 +1704,53 @@ if is_main_ucode and OVL1C_1E18_MARKER not in text:
         1, "case 0x1E18 overlay-0x1C jal-return")
 
 # ---------------------------------------------------------------------------
+# Fixup 6m: route ovl1c jal-return at 0x1E2C (s754)
+# ---------------------------------------------------------------------------
+# s753: dest-0x1E18 / 153==0x1C is LIVE; UJ 0x1E18 went 5879→0.
+# New residual is Unhandled jump target 0x1E2C n=3213 from
+# OVL1C_1F9C jr $ra. After the 0x1E18 return, OVL1C_1E18 jals
+# callee 0x1F0C with r31=0x1E2C. Label OVL1C_1E2C already
+# exists (6k sequential label after the delay slot). There is
+# no case 0x1E2C. Independent of 6l's marker so an already-
+# routed 0x1E18 file still gets this case. Do not add the
+# later jal-return cases (0x1E6C/0x1E7C/0x1E8C/0x1EA8/
+# 0x1EBC/0x1ECC/0x1F04) until 0x1E2C is LIVE. Do not splice
+# overlay 0x20 (dest 0x12A0).
+# ORIGIN: ovl1c jal at OVL1C_1E18 → callee 0x1F0C, return
+# 0x1E2C. OVL1C_1F9C jr $ra is the legitimate return into
+# OVL1C_1E2C. Route, not a default-allow of 0x1E2C for every
+# resident.
+OVL1C_1E2C_MARKER = "/* fixup: ovl1c_1e2c */"
+if is_main_ucode and OVL1C_1E2C_MARKER not in text:
+    def sub_exactly6m(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6m ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the ovl1c 0x1E2C jal-return.",
+                  file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    if "OVL1C_1E2C:" not in text:
+        print("fixup_factor5_ucode: FIXUP 6m PRECONDITION FAILED: "
+              "OVL1C_1E2C: missing. Run fixup 6k (make_clip_composite.py "
+              "0x1C + RSPRecomp on factor5_rsp_ovl1c.toml) first.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    sub_exactly6m(
+        re.compile(
+            r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n)"),
+        lambda m: (
+            "        case 0x1E2C: if (RSP_MEM_BU(0X153, 0) == 0x1C) { "
+            "rs64_e9prov_ovl_route(0x1C, 0x1E2C); goto OVL1C_1E2C; } "
+            "goto rs64_clip_stray;  " + OVL1C_1E2C_MARKER + "\n" + m.group(1)),
+        1, "case 0x1E2C overlay-0x1C jal-return")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level
@@ -2399,6 +2446,10 @@ if OVL10_1F40_MARKER in text and OVL10_1F40_MARKER not in original:
     notes.append("routed ovl10 L_15D0 handshake return (0x1F40 / 153==0x10)")
 if OVL1C_MARKER in text and OVL1C_MARKER not in original:
     notes.append("spliced overlay-0x1C vector loop (OVL1C_* labels, id-0x1C routing)")
+if OVL1C_1E18_MARKER in text and OVL1C_1E18_MARKER not in original:
+    notes.append("routed ovl1c jal-return 0x1E18 / 153==0x1C")
+if OVL1C_1E2C_MARKER in text and OVL1C_1E2C_MARKER not in original:
+    notes.append("routed ovl1c jal-return 0x1E2C / 153==0x1C")
 if imem_note_applied:
     notes.append("ImemOverrun site notes (L_1650/epilogue/control)")
 if l1650_reconnect_applied:
