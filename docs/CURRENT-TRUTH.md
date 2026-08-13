@@ -207,6 +207,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s905 | `reset3DAudioLists` inventory: two standalone zero stores with a concrete ownership split between the `0x80153414` Factor 5 voice/source list and `0x80153418` MusyX listener/source list; sibling readers, insertion writers, and unlink writers agree, but reset ordering and dynamic writer legitimacy remain unproven; no mitigation. |
 | s906 | `normalizeVec3` inventory: one fixed-shape in-place 3-float read/normalize/write path, one caller, and a caller-side zero-vector gate; no local zero-norm check, while input/output value legitimacy remains unproven; no mitigation. |
 | s907 | `crossProductVec3` inventory: fixed-shape 3-float cross product with six input reads and three output writes; both generated callers pass matching slices of the same listener-node record, with no loop or derived pointer walk; dynamic input/output writer legitimacy remains unproven; no mitigation. |
+| s908 | `invertOrientationMatrix` inventory: fixed-shape 12-float affine inverse with input/output offsets `0x00..0x2C`; two generated callers pass the same stack-temporary-to-record shape and no incompatible aliasing; dynamic matrix values/writers remain unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -227,27 +228,26 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `invertOrientationMatrix` (`0x80099DCC`),
+Audit the next adjacent audio function, `findVoiceSlotByAge` (`0x8009AF60`),
 as a complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-invert-unclassified: the helper has an unchecked or aliasing-sensitive
+- H-find-voice-unclassified: the helper has an unchecked or aliasing-sensitive
   writer/initialization obligation that cannot be classified from the function
   and sibling writers.
-- H-invert-fully-classified: all matrix/vector reads/writes are fixed-shape,
-  bounded by the function's arithmetic, and its callers agree on the same
-  layout.
-- H-invert-shape-mismatch: callers use incompatible layouts or the
+- H-find-voice-fully-classified: all slot/list reads and writes are bounded by
+  the function's controls, and its callers agree on the same layout.
+- H-find-voice-shape-mismatch: callers use incompatible layouts or the
   function's output aliases a state structure; record the exact split and
   stop.
 
-Discriminating measurement: a complete site table for `invertOrientationMatrix`, every
-matrix/vector load/store and arithmetic operation, all generated callers, and the
+Discriminating measurement: a complete site table for `findVoiceSlotByAge`, every
+slot/list load/store and control operation, all generated callers, and the
 companion symbol/decomp basis. Any omitted access or incompatible caller shape
 rejects full classification.
 
-Exact commands: use `rg` to enumerate `invertOrientationMatrix` and its callsites in
+Exact commands: use `rg` to enumerate `findVoiceSlotByAge` and its callsites in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
 companion `rogue_squadron64` symbol/decomp files. No game build or soak is
 planned.

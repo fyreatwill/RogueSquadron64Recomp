@@ -58040,3 +58040,33 @@ runtime; this is single-source inventory evidence and does not authorize a
 guard or mitigation.
 
 ORIGIN: complete generated-helper, both-caller, record-slice, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s908 (2026-08-13) — invertOrientationMatrix is a fixed-shape affine inverse
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`invertOrientationMatrix` (`0x80099DCC`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerated every matrix load/store,
+the two generated callers, their temporary/record layouts, and the companion
+symbol/decomp basis. No build, game run, or soak was needed.
+
+The helper reads the input matrix at `a1+0x00, 0x04, 0x08, 0x0C, 0x10,
+0x14, 0x18, 0x1C, 0x20, 0x24, 0x28, 0x2C` and writes the output matrix at the
+same twelve offsets from `a0`. It computes the 3x3 inverse and affine
+translation; the only output reads occur after the corresponding first-row
+stores and use the output as the established inverse basis. There is no loop,
+table walk, or derived pointer. `setMusyX3DProperties` calls it at
+`0x800990DC` and `0x800992A4`, each with `a0=s0+0x48` and `a1=sp+0x10` after
+assembling the same twelve-float temporary. No incompatible caller shape or
+aliasing was found; the companion symbol file independently names the helper.
+
+### Rules out / narrows
+
+This audit rules out an omitted matrix access, hidden loop/table walk, and
+generated caller-shape mismatch in `invertOrientationMatrix`. It narrows the
+remaining concern to caller-provided matrix values and their writers; the
+source inventory does not establish runtime legitimacy. This is single-source
+inventory evidence and authorizes no guard or mitigation.
+
+ORIGIN: complete generated-helper, both-caller, matrix-layout, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
