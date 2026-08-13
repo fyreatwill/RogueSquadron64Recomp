@@ -55957,3 +55957,24 @@ producer serials, followed by the same VI-1024 capture.
 
 ORIGIN: only host-side telemetry budget coverage is changing next; this run
 changed no game value, RDP behavior, or mitigation.
+
+## Session 833 (2026-08-13) — late producer serial coverage still shows E9 accounting gap
+
+Extended the section-2 E9 provenance latch from 64 to 512 tasks, with no game
+logic, RDP behavior, or mitigation change. The Debug target built successfully.
+The same phase-gated capture reached VI width 1024 at 79.8s, passed the four
+control rows (`emit=1`, `raw=1`, `dispatch=1`, `match=1`), and ran through task
+649 before the known `slotDispatcherIter+872` SIGBUS.
+
+The run retained 863 E9-bearing producer serials across tasks 570–649. Every
+one had an exact RT64 consumer record with the same serial and [lo,hi) range.
+The task-join stream independently retained 27 late aligned rows; 20 still
+had unequal bridge/parser deltas, including task 632 at 27/0 and task 649 at
+31/3. This rules out late producer/consumer range loss for the captured
+population. It selects parser/filter versus join-population as the next
+classification, but does not distinguish those alternatives or establish a
+writer/legitimacy claim. The crash is the known slot-dispatch family and is
+not used as the E9 explanation.
+
+ORIGIN: the only changed values are the host-side provenance latch and its
+telemetry budget; no game value, RDP command, or mitigation behavior changed.

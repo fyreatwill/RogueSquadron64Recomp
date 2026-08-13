@@ -1,34 +1,37 @@
-# NEXT work unit (late aligned-task producer serial coverage)
+# NEXT work unit (classify late E9 parser/filter versus join population)
 
-HYPOTHESIS-ID: m3-e9-consumer-ordering
+HYPOTHESIS-ID: m3-e9-parser-filter-join
 
-Make one bounded telemetry-only change to retain submit serial/range records
-for the late aligned population (the current 128-row budget ends at task 282),
-then build and run one phase-gated capture with the existing recipe. Keep game
-logic, RDP behavior, and mitigation code unchanged. Before building, verify
-the recipe contains `ROGUESQ_LOG_RDP_ADVANCE=1` and all four provenance
-positive-control markers; do not accept a run that stops at VI 640 as evidence
-about the late population.
+Perform one bounded source-and-log accounting audit of the now-keyed late
+population. Do not change runtime behavior or add a mitigation. Enumerate
+every producer and consumer of `g_task_bridge_e9`, `s_rdp_advance_task_e9`,
+`g_e9prov.aligned`, and the task-join begin/end snapshots; then reconcile the
+same late task IDs (570–649) against the s833 log by serial, [lo,hi), and
+epoch. Use the existing source locations and one computed log summary; no
+new build or soak is needed unless the audit finds an uninstrumented writer.
 
 Competing hypotheses and the discriminating measurement:
 
-- H-parser-filter-remains: late aligned tasks have producer E9 serial/range
-  records that reach the consumer, but parser advancement remains lower.
-- H-parser-join-population: the earlier mismatch joined different task
-  populations; late producer/consumer/task joins will align or expose that.
-- H-parser-writer-path: late producer serials/ranges diverge before the RT64
-  consumer, implicating deferred/drop behavior.
-- H-telemetry-budget: the late mismatch is real, but the current producer log
-  budget hides the serial/range evidence needed to test it.
+- H-parser-filter: producer/consumer ranges and task identity are aligned, but
+  the authoritative RT64 parser counter intentionally or accidentally filters
+  E9-bearing ranges before the join snapshot.
+- H-join-population: the apparent delta mismatch is created by different task
+  populations or snapshot lifetimes despite matching submit/consumer serials.
+- H-counter-ownership: one of the counters is cumulative, reset at a different
+  lifecycle boundary, or updated on a second path, so equal values are not
+  comparable even with matching task IDs.
 
-Discriminator: at VI 1024, with late `[e9-submit-range]` rows retained, key
-`[e9-submit-range]` and `[e9-consumer-range]` by serial and [lo,hi), then join
-them to the same late `[e9-task-join]` task. Equal serial/ranges with unequal
-late deltas selects parser/filter or join-population; divergence implicates the
-submit path. A run without VI 1024 or without positive controls is unevaluable.
+Discriminator: the audit must produce an exhaustive writer/reset table and a
+per-task reconciliation for all late aligned rows. If every aligned row has
+the same task/epoch and exact producer/consumer range evidence while parser
+increments are absent or lower on a traced path, select H-parser-filter. If
+the join rows combine different task epochs/populations, select
+H-join-population. If a second writer/reset boundary exists, select
+H-counter-ownership. A partial inventory is unevaluable.
 
-Expected commands: inspect the submit log budget, patch only that budget,
-confirm the recipe/env, then
-`cmake --build build --config Debug --target RogueSquadron64Recomp` and run the
-single selected recipe from `build/` with SIGKILL watchdog behavior. Inspect
-bounded marker slices and record the result; do not run repeat soaks manually.
+Expected commands: `rg -n` the four symbols in `src/` and `lib/rt64/`, inspect
+bounded windows around every hit, then run a short parser over
+`scratch/agent/soak_results/s833_e9_submit_budget_20260813-041100/run.log` to
+emit counts for late submit/consumer exact matches, aligned joins, and epoch
+consistency. Record the selected branch and any remaining uncertainty; do not
+rerun the game.

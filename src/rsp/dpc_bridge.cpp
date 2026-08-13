@@ -628,8 +628,8 @@ extern "C" void rs64_inline_probe_trigen_exit(uint32_t r17, uint32_t site) {
 
 extern "C" void rs64_e9prov_section2_latch() {
     if (!log_e9_provenance()) return;
-    g_e9prov_latch_remaining.store(64, std::memory_order_release);
-    fprintf(stderr, "[e9-prov-latch] section=2 next_tasks=64\n");
+    g_e9prov_latch_remaining.store(512, std::memory_order_release);
+    fprintf(stderr, "[e9-prov-latch] section=2 next_tasks=512\n");
     fflush(stderr);
 }
 

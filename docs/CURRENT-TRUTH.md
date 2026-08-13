@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s831 (2026-08-13). The active blocker is the authoritative
+Reviewed through s833 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -76,40 +76,50 @@ Priority until changed by the user:
   all 128 retained producer serials matched consumer serial/range records.
   The run later hit the known `slotDispatcherIter+872` crash. No parser-loss,
   writer, or legitimacy conclusion is established.
+- s833 extended the section-2 provenance latch from 64 to 512 tasks. The same
+  VI-1024 recipe reached task 649, passed all four control rows
+  (`emit/raw/dispatch/match=1`), and retained 863 E9-bearing producer serials
+  across tasks 570–649. Every one had an exact consumer serial and [lo,hi)
+  range match. In the independent task-join accounting, 20 of 27 late
+  aligned rows still had unequal deltas; examples include task 632
+  `bridge_delta=27/parser_delta=0` and task 649 `31/3`. This rules out late
+  submit-range loss for the captured population and selects the
+  parser/filter-or-join-population branch, but does not yet distinguish those
+  two or establish a writer/legitimacy claim. The run later hit the known
+  `slotDispatcherIter+872` SIGBUS.
 
-## Next work unit: late aligned-task producer serial coverage
+## Next work unit: classify late E9 parser/filter versus join population
 
-HYPOTHESIS-ID: m3-e9-consumer-ordering
+HYPOTHESIS-ID: m3-e9-parser-filter-join
 
-Extend the submit-range telemetry budget or make it phase-scoped so late
-aligned tasks retain producer serial/range records; then rerun the same
-VI-1024 recipe. Keep game logic, RDP behavior, and mitigation code unchanged.
+Perform a bounded source-and-log accounting audit of the now-keyed late
+population. Keep runtime behavior and mitigation code unchanged. Enumerate
+every producer and consumer of the bridge/parser counters and task-join
+snapshots, then reconcile late task IDs 570–649 by serial, [lo,hi), and epoch.
 
 Competing hypotheses:
 
-- H-parser-filter-remains: a second source keyed by the same aligned task
-  population still shows lower authoritative parser advancement.
-- H-parser-join-population: the earlier mismatch came from joining different
-  task populations; independent task identity/queue evidence will align the
-  counts or expose the join error.
-- H-parser-writer-path: the bridge count includes bytes that never reach the
-  RT64 consumer because submission ranges or deferred work differ.
-- H-telemetry-budget: the late mismatch is real, but the current producer log
-  budget hides the serial/range evidence needed to test it.
+- H-parser-filter: producer/consumer ranges and task identity are aligned, but
+  the authoritative RT64 parser counter filters E9-bearing ranges before the
+  join snapshot.
+- H-join-population: the mismatch is created by different task populations or
+  snapshot lifetimes despite matching submit/consumer serials.
+- H-counter-ownership: one counter has a second writer or reset boundary, so
+  equal task IDs do not make the values comparable.
 
-Discriminator: at VI 1024, retain late submit rows and key
-`[e9-submit-range]` and `[e9-consumer-range]` by serial and [lo,hi), then join
-them to the same late `[e9-task-join]` task. Equal serial/ranges with unequal
-late deltas selects parser/filter or join-population; divergence implicates the
-submit path. A run without VI 1024 or positive controls is unevaluable.
+Discriminator: produce an exhaustive writer/reset table and a per-task
+reconciliation for every late aligned row. Same task/epoch plus exact
+producer/consumer ranges and lower parser increments selects H-parser-filter;
+different populations select H-join-population; a second writer/reset selects
+H-counter-ownership. A partial inventory is unevaluable.
 
 ## Ranked backlog
 
-1. Extend the submit-range telemetry budget or make it phase-scoped so late
-   aligned tasks retain producer serial/range records; then rerun the same
-   VI-1024 recipe.
-2. After the late population has two independent lines, classify
-   parser/consumer advancement; only then consider an implementation fix.
+1. Classify the late parser/filter versus join-population alternatives using
+   the now-keyed producer, consumer, parser, and task-join rows; add one
+   independent source or static accounting audit before changing behavior.
+2. Only after that classification, identify the responsible parser/counting
+   path and consider an implementation fix.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.
