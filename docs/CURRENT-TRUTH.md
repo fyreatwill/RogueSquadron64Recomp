@@ -420,6 +420,19 @@ leaving runtime behavior as the remaining broad class.
    H-overlay-dispatch prediction that a direct marker would carry 1024; the
    state writer remains unidentified. No mitigation was added.
 
+   **s805 source audit:** the four candidate direct buffers are rows in the
+   ROM-backed `0x80128D50` mode table; the generated tree contains no later
+   writer that can turn a 640 row into a 1024 row. `swapBufferWithViMode` and
+   the unreachable `selectAndApplyViMode` are the only publishers into the
+   copied `0x80128C90` buffer. The reachable direct callers select rows using
+   stack/config bytes in `initVideoSubsystem`, pending masks at
+   `0x80128E90`/`0x80128E94`, and selector bytes at `0x8011A862`/`0x8011A865–868`;
+   `applyPendingViChanges` additionally gates publication on pending bits.
+   This selects **H-state-gate** over H-mode-buffer-writer and
+   H-missing-dispatch. The next unit is one batched marker at the reachable
+   row-selection predicates, retaining all existing callsite, host VI, and
+   oracle positive controls. No mitigation is justified.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a

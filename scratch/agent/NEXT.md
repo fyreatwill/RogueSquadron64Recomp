@@ -1,47 +1,46 @@
-# NEXT work unit (audit the 640-only direct mode state)
+# NEXT work unit (mark the reachable 640-row state gate)
 
 HYPOTHESIS-ID: m3-vi640-transition-writer
 
-The s804 same-run trace fired all three reachable direct callers, but every
-post-640 request was width 640 and the selector route stayed silent. Do one
-bounded read-only source audit before adding another instrument: enumerate
-every writer and gate for `0x80128E40`, `0x80128E90`, `0x80128DF0`, and
-`0x80128C90`, then identify the smallest state predicate that could prevent a
-1024 row from reaching a direct caller.
+The s805 source audit found no post-initialization writer that can convert the
+mode table's 640 rows into 1024. The smallest reachable discriminator is the
+row-selection state: `initVideoSubsystem` uses its configuration bytes,
+`applyPendingViChanges` uses pending masks plus selector bytes, and
+`swapBufferWithViMode` uses selector bytes before copying to `0x80128C90`.
+Add one regeneration-safe, phase-scoped marker at those predicates in the
+existing generated-function fixup, then run one bounded VI-640 capture.
 
 ## Competing hypotheses
 
-- H-mode-buffer-writer: a direct buffer is initialized or overwritten with a
-  640-only OS_VI_MODE row on this recipe. Prediction: a concrete store/copy
-  site writes the 640 row after the 1024-capable table is available.
-- H-state-gate: the direct callers are given the right buffer, but a pending
-  flag or state byte prevents the 1024-producing branch. Prediction: one
-  conditional around the direct call has a state byte/word with a reachable
-  640-only value and no later writer in the tested path.
-- H-missing-dispatch: a call or return path that would publish the 1024 mode is
-  absent or mis-dispatched before the direct callers. Prediction: source shows
-  a distinct 1024-producing caller/return path that cannot reach any of the
-  three traced sites.
+- H-mode-buffer-writer (now disfavored): a direct buffer is initialized or
+  overwritten with a 640-only row after the table is available. Prediction:
+  the next marker sees a concrete post-table store/copy.
+- H-state-gate (selected): a reachable predicate keeps choosing the 640 row.
+  Prediction: the marker records stable selector/config bytes and a 640 row
+  while the 1024 row remains available in the same table.
+- H-missing-dispatch (disfavored): a distinct 1024 publisher cannot reach the
+  three direct callers. Prediction: the marker remains silent while the
+  existing direct-call controls continue to fire.
 
 ## Discriminating measurement
 
-The audit's writer/gate map is the discriminator: a post-table 640 store
-selects H-mode-buffer-writer; a live conditional with no 1024-producing write
-selects H-state-gate; a distinct unreachable 1024 publisher selects
-H-missing-dispatch. Do not build until the audit names one concrete site and
-its positive control.
+The same-run marker is the discriminator: a post-table 640 store selects
+H-mode-buffer-writer; a live predicate selecting the 640 row with no 1024
+writer selects H-state-gate; a silent reachable predicate with direct-call
+controls still firing selects H-missing-dispatch. The s805 source audit is
+already the required concrete-site identification; do not add a mitigation.
 
 ## Exact commands
 
 ```sh
-rg -n -S "80128C90|80128DA0|80128DF0|80128E40|80128E90|osViSetMode_recomp|viMode|pendingVi|716C|7170" \
-  ../N64Recomp/RecompiledFuncs/funcs_4.c ../N64Recomp/RecompiledFuncs/funcs_5.c \
-  ../N64Recomp/RecompiledFuncs/funcs_*.c src
-rg -n -S "0x80128C90|0x80128DA0|0x80128DF0|0x80128E40|0x80128E90" \
-  ../rogue_squadron64 ../N64Recomp docs
+python3 tools/fixup_game_funcs.py
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
+env ROGUESQ_LOG_VI_CALLERS=1 ROGUESQ_LOG_VI_SELECTOR=1 \
+  PROBE_PHASE_WIDTH=640 PROBE_LEAVE_OK=1 zsh tools/probe.sh
 ```
 
-If a concrete writer is found, the following unit must add one batched,
-regeneration-safe marker at that writer and retain `osViSetMode`, selector,
-and oracle whole-RDRAM/VI positive controls. Use `PROBE_PHASE_WIDTH=640`
-and `PROBE_LEAVE_OK=1`; never compare animating scenes by stopwatch.
+Retain the host `osViSetMode` positive control, all three direct-call markers,
+the selector marker, and the oracle whole-RDRAM/VI controls. A positive
+predicate record with a 640 row and no 1024-row selection advances H-state-gate;
+an observed post-table 640 write advances H-mode-buffer-writer; silent
+predicate markers with direct-call controls firing advances H-missing-dispatch.

@@ -55312,3 +55312,26 @@ skip, restore, or other corruption mitigation.
 
 Logs: `scratch/agent/vi640_direct_callers/run.log` and the terminal oracle
 capture from the grounded candidate-buffer watch.
+## Session 805 (2026-08-13) — VI mode-table writer and gate audit
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 39,077 bytes, so maintenance did
+not trigger. Before any build, the competing hypotheses and discriminator were
+written in `scratch/agent/NEXT.md`. This unit was a bounded read-only source
+audit, so no instrument or build was required.
+
+The generated `funcs_5.c` audit maps the direct mode buffers to rows of the
+ROM-backed `0x80128D50` table. The reachable direct callers do not write a
+1024 row into those buffers: `initVideoSubsystem` selects rows using its
+configuration bytes, `applyPendingViChanges` selects rows after pending-mask
+tests, and `swapBufferWithViMode` selects rows using the selector bytes before
+copying into `0x80128C90`. The selector publisher is separate and was already
+shown silent by s804. The relevant state is the pending masks at
+`0x80128E90`/`0x80128E94` and selector bytes at `0x8011A862`/`0x8011A865–868`.
+
+This selects H-state-gate over H-mode-buffer-writer and H-missing-dispatch for
+the tested 0→320→640 recipe. It rules out a post-table 640 overwrite in the
+audited generated tree, but does not identify which state writer produces the
+640-only values. No mitigation was added.
+
+ORIGIN: the 640-only values are selected by the generated row-selection
+branches; no guard, skip, restore, or other mitigation was introduced.
