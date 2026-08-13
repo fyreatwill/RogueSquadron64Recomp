@@ -259,6 +259,15 @@ leaving runtime behavior as the remaining broad class.
   H-prechain-transient for s790 and leaves H-parser-chain and H-writer-co-gate
   unevaluable; it adds a fourth distinct pre-chain family without naming a
   common writer or justifying mitigation.
+- The s791 source audit classified the s790 `0x380000004` failure as an
+  independent consumer, not a shared pre-chain idiom. `viRetraceHandlerThread`
+  only dereferences fixed queue/global addresses; its `last-guest-pc=0x8000b650`
+  is the existing stale `beginFrameDLChunk` stamp. The other recent failures
+  are disjoint: s785 Metal barrier, s786 `rs_malloc` free-list use, and s787
+  host-only RT64 tile-copy sizing. No active source or trace identifies a
+  writer common to these consumers. This selects H-independent-consumers and
+  leaves parser and writer-co-gate hypotheses unevaluable; no mitigation is
+  justified.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

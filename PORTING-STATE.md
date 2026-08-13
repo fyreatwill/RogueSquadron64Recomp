@@ -54980,3 +54980,27 @@ distinct pre-chain failure family after the earlier Metal barrier, grid
 allocator, and tile-copy failures, but does not identify a common writer or
 justify a mitigation. Log:
 `scratch/agent/soak_results/s790_postsec2_reachability_20260812-231408/run.log`.
+
+## Session 791 (2026-08-12) — source audit finds disjoint pre-chain consumers
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 27,719 bytes, so maintenance did
+not trigger. The planned work unit was a source-only systematic audit of the
+s790 near-zero fault against the s785-s790 pre-chain failures; no build or run
+was authorized or needed.
+
+The active generated tree is `../N64Recomp/RecompiledFuncs`. The s790
+`viRetraceHandlerThread` body uses fixed queue/global addresses and does not
+consume a guest-derived wild pointer at the reported site. Its
+`last-guest-pc=0x8000b650` is the existing stale stamp for `beginFrameDLChunk`,
+not a localization of the VI-thread fault. The other failures remain disjoint:
+s785 is a Metal barrier failure, s786 is `rs_malloc` consuming malformed
+free-list state, and s787 is host-only RT64 tile-copy sizing. Existing
+free-list guards cover the enumerated generated consumers, but no source or
+trace evidence names a writer common to all four families.
+
+This selects H-independent-consumers and rules out a shared consumer idiom for
+the current pre-chain set. The parser and writer-co-gate hypotheses remain
+unevaluable, and no mitigation was added. The next unit is a bounded
+writer-attribution run correlating phase-scoped RT64 writeback/free-list
+telemetry with the first pre-chain crash. This is a source-and-trace result,
+not a runtime reproduction.
