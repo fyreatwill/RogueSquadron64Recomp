@@ -1,34 +1,42 @@
-# NEXT work unit (s870)
+# NEXT work unit (s871)
 
-HYPOTHESIS-ID: m3-coalesce-phase-driver
+HYPOTHESIS-ID: m3-coalescer-heap-writers
 
-Run one 70-second retail-oracle pulse-duration experiment. Preserve the
-whole-RDRAM positive control, VI trace, PIF trace, and retail ROM; use the
-same schedule with `--hold-ms 1000`:
-`6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`.
-Do not add target watches or change emulated game behavior.
+Perform one source-only whole-idiom audit of the coalescer heap-entry state.
+Enumerate every generated writer of guest globals `0x801163e4` and
+`0x801163e8`, every caller of `coalesceFreeHeapBlocks` at `0x80001430`, and
+the complete path from each caller's `a0/a1` source into the two forward
+walks. Include all generated aliases and delay-slot duplicates, but do not
+build, run, or add a guard.
 
 Competing hypotheses:
 
-- H-short-pulse: longer Start holds produce a post-320 VI transition.
-- H-game-state: sustained Start reaches PIF but VI remains width 320.
-- H-input-queue: sustained holds alter the PIF pattern or produce repeated
-  transitions, showing injector pulse semantics are the driver.
+- H-init-writer-only: the globals are initialized or mutated only by the
+  known boot allocator path; the invalid port entry arrives through caller
+  arguments or a separate untracked heap-link writer.
+- H-runtime-writer: a later normal game path writes the invalid global state;
+  the source inventory identifies that path and its transition conditions.
+- H-caller-state: the globals remain valid, but one or more callers source an
+  invalid `a0/a1` from a game record or stack state before the coalescer call.
+- H-legitimate-transition: every writer/caller path has a valid state-machine
+  explanation, so the observed invalid values remain unexplained runtime
+  corruption rather than an identifiable legitimate state.
 
-Discriminating measurement: whole-RDRAM must fire; PIF must show sustained
-Start for each scheduled press; and VI must show a post-320 width/origin
-transition. A transition only with long holds selects H-short-pulse; sustained
-PIF Start with no transition selects H-game-state; an altered/repeated PIF
-pattern selects H-input-queue.
+Discriminating measurement: the exhaustive inventory must produce a table of
+all writer PCs, written expressions, all callsites, and `a0/a1` provenance.
+Only a writer that can reach the observed invalid global values selects
+H-runtime-writer; valid globals with an invalid call argument selects
+H-caller-state; a complete valid transition table leaves the state
+corruption unexplained and keeps H-legitimate unproven. Any missing writer
+or caller means the audit is incomplete and no hypothesis may be selected.
 
-Exact command:
+Exact commands:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --secs 70 --watch-write 0x0:0x800000 --vi-trace --pif-trace \
-  --hold-ms 1000 \
-  --press '6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' \
-  2>&1 | tee scratch/agent/oracle_s870_longhold.log
+rg -n -S '801163e4|801163e8|80001430|coalesceFreeHeapBlocks' ../N64Recomp/RecompiledFuncs src tools
+rg -n -S '0x801163e4|0x801163e8|0x80001430|80001430' docs PORTING-STATE.md | tail -80
 ```
+
+Do not add mitigation machinery. If the inventory identifies a new
+phase-gateable caller/state boundary, make that the following unit's probe
+design; otherwise record the missing boundary explicitly.

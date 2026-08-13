@@ -56834,3 +56834,23 @@ another writer-watch inference. No port behavior or mitigation changed.
 
 ORIGIN: retail debugger watch-PC output plus independent whole-RDRAM and VI
 controls; no game value or control flow changed.
+
+## Session s870 (2026-08-13) — long Start holds still do not leave retail width 320
+
+The first invocation of the prescribed 70-second oracle recipe was invalid:
+the ROM path in `NEXT.md` did not exist and the binary exited before opening
+the ROM. After locating the checked-in retail ROM, the same experiment was
+rerun with the whole-RDRAM positive control, VI trace, PIF trace, eleven-entry
+Start schedule, and `--hold-ms 1000`.
+
+The corrected run recorded 11,785,215 whole-RDRAM writes over 4,199 VI. All
+eleven scheduled presses produced `0x7C4=0x10000000` at the PIF boundary and
+each release returned it to zero. VI changed from width 0 to 320 and changed
+origin once, then remained width 320 for all 70 seconds. This is a second
+independent line selecting H-game-state over H-short-pulse and H-input-queue
+for this schedule: sustained Start reached PIF, but did not alter the PIF
+pattern or produce a post-320 transition. It does not explain the retail
+state-machine stall, classify a later writer, or justify a mitigation.
+
+ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
+positive controls; no port value, game behavior, or mitigation changed.

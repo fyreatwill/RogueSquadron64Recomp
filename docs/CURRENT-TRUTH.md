@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s869 (2026-08-13). The active blocker is the authoritative
+Reviewed through s870 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -757,17 +757,42 @@ transition only with long holds selects H-short-pulse; sustained PIF Start
 with no transition selects H-game-state; an altered/repeated PIF pattern
 selects H-input-queue.
 
+## Session s870 result
+
+The corrected 70-second retail oracle run used the retail ROM, whole-RDRAM
+positive control, VI trace, PIF trace, the eleven-entry Start schedule, and
+`--hold-ms 1000`. The initial command was invalid because its ROM path did not
+exist; the corrected run completed normally. The whole-RDRAM watch recorded
+11,785,215 writes over 4,199 VI. All eleven presses produced the expected
+`0x7C4=0x10000000` PIF word and each release returned it to zero. VI changed
+from width 0 to 320 and changed origin once, then stayed at width 320 for the
+full run.
+
+This is a second independent line selecting H-game-state over H-short-pulse
+and H-input-queue for the documented schedule: sustained Start reached PIF,
+but longer holds did not produce a post-320 transition or altered PIF pattern.
+It does not explain the retail state-machine stall, classify a later writer,
+or authorize a mitigation. The next unit returns to a source-only whole-idiom
+audit of the coalescer heap-global writers and their call-boundary state.
+
+ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
+positive controls; no port value, game behavior, or mitigation changed.
+
 ## Ranked backlog
 
-1. Do not use the process-wide `0x8000834c` breadcrumb to select a helper
+1. Complete the coalescer heap-global writer/call-boundary audit: enumerate
+   every writer and every caller-side source of `0x801163e4/0x801163e8` and
+   classify whether the invalid entry state can be produced by a legitimate
+   transition or an unproven corruption path.
+2. Do not use the process-wide `0x8000834c` breadcrumb to select a helper
    crash site. Re-run the expanded dispatcher capture only after a new,
    phase-gateable caller/state boundary is identified independently.
-2. M3 co-gates and crash families: pursue only a complete idiom inventory,
+3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.
-3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
+4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`; each needs independent controls.
-4. Regeneration-pipeline reliability: retain the delete-before-regen rule and
+5. Regeneration-pipeline reliability: retain the delete-before-regen rule and
    audit fixup counts when a reproducible omission appears.
 
 
