@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s871 (2026-08-13). The active blocker is the authoritative
+Reviewed through s872 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -828,6 +828,26 @@ build, run, or mitigation was performed.
 
 ORIGIN: source inventory only. No guest value, control flow, guard, or
 writeback behavior changed.
+
+## Session s872 result
+
+The planned 70-second retail-oracle writer-attribution run used the checked-in
+retail ROM, whole-RDRAM watch, PIF trace, VI trace, both target watches, the
+documented eleven-Start schedule, and `--hold-ms 150`. All controls were live:
+11,785,395 whole-RDRAM writes, PIF Start/release transitions for every press,
+and 4,199 VI frames. VI changed from width 0 to 320 and then remained width
+320; no post-320 width/origin transition occurred.
+
+The target watches recorded six writes to the caller globals and three to the
+free-list head, all at early initialization PCs (`0x80000420`, `0x80000424`,
+`0x80000ED8`, `0x80000FFC`, and `0x800021D8`). Per the pre-registered
+discriminator this selects H-driver-still-stalled: later writer attribution is
+unevaluable, not negative. After s869, s870, and s872 all failed to reach the
+required phase under this thread, further phase-driver experiments are
+stopped; the next unit pivots to a source-only state-gate idiom audit.
+
+ORIGIN: independent retail whole-RDRAM, PIF, and VI controls plus debugger
+watch PCs; no port value, game behavior, or mitigation behavior changed.
 
 
 ## Closed and parked

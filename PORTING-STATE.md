@@ -56798,6 +56798,28 @@ repeating the same schedule with `--hold-ms 1000`.
 ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
 positive controls; no port value, game behavior, or mitigation changed.
 
+## Session s872 (2026-08-13) — retail writer watch remained pre-transition
+
+Ran the planned 70-second retail-oracle writer-attribution experiment with the
+checked-in ROM, whole-RDRAM watch, PIF trace, VI trace, both target watches, the
+eleven-Start schedule, and `--hold-ms 150`. All controls were positive:
+11,785,395 whole-RDRAM writes, PIF Start/release transitions for all eleven
+presses, and 4,199 VI frames. VI changed from width 0 to 320 and then stayed at
+width 320 for the entire run.
+
+The target watches recorded six caller-global writes and three free-list-head
+writes, all from early initialization PCs (`0x80000420`, `0x80000424`,
+`0x80000ED8`, `0x80000FFC`, and `0x800021D8`). The pre-registered discriminator
+therefore selects H-driver-still-stalled; later retail writer attribution is
+unevaluable, not negative. This is the third stalled phase-driver iteration
+after s869/s870, so the next work unit pivots to a source-only state-gate
+idiom audit rather than another driver variant. No port behavior or mitigation
+changed.
+
+ORIGIN: independent retail whole-RDRAM, PIF, and VI controls plus debugger
+watch PCs; no guest value, port value, control flow, or mitigation behavior
+changed.
+
 ## Session s871 (2026-08-13) — coalescer writer/caller inventory is complete
 
 Completed the prescribed source-only whole-idiom audit. An exhaustive search
