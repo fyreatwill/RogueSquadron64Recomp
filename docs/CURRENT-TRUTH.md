@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s813; compacted in maintenance s776)
+## Current truth (reviewed through s815; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -539,6 +539,18 @@ leaving runtime behavior as the remaining broad class.
    dereferences with pointer-only logging in the regeneration fixup, rebuild,
    and run one bounded phase-gated capture with the existing positive controls.
    No mitigation to game logic was added.
+
+   **s815 pointer-only probe capture:** the fixup removed the three speculative
+   `MEM_BU` reads from `[vi-arg]`, and the regenerated build applied both
+   callsites once. The first capture omitted `ROGUESQ_LOG_VI_ARGS` and was
+   invalid despite positive phase/E9 controls; the corrected rerun reached
+   width 1024 at 79.5 seconds, produced four positive E9 provenance controls,
+   and emitted five pointer-only records (`ptr=0xE0`, `0x1E0`, `0x154`,
+   `0x1C0`, `0x154`) with no probe fault. It completed 300 seconds / 89
+   frames with zero crash markers. This supports **H-probe-only** for the
+   s813 pre-gate crash, but does not establish caller-structure legitimacy;
+   all recorded `ra` values were zero. Next: audit the two caller paths and
+   pointer origins for these records, without adding a game-logic guard.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

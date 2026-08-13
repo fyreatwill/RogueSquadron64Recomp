@@ -55555,3 +55555,25 @@ mitigation was added.
 
 ORIGIN: the fault originates in the s811 diagnostic dereference of the caller
 pointer; the value is not yet classified as legitimate or corrupt game state.
+
+## Session 815 (2026-08-13) — pointer-only VI probe passed the pre-gate crash
+
+The regeneration-safe fixup was updated to remove all three speculative
+`MEM_BU` reads from `[vi-arg]`, preserving only `ctx->r5` and `ra`. The full
+regen/fixup/build completed; both callsites applied once. The first capture
+was invalid because the recipe omitted `ROGUESQ_LOG_VI_ARGS` and produced no
+probe positive control, so the recipe was corrected and rerun in this
+iteration.
+
+The corrected phase-gated run reached VI width 1024 at 79.5 seconds, emitted
+four positive E9 provenance controls (`emit=1`, `raw=1`, `dispatch=1`,
+`match=1`), and recorded five `[vi-arg]` lines without any `MEM_BU` fault:
+one secondary call with `ptr=0xE0`, then four main calls with pointers
+`0x1E0`, `0x154`, `0x1C0`, and `0x154`. It ran for 300 seconds / 89 frames
+with zero crash markers. This supports **H-probe-only** for the s813
+pre-gate crash: the old probe-side dereference was sufficient to stop those
+runs. It does not establish that any caller pointer or argument structure is
+legitimate, and `ra=0` in the records leaves caller attribution open.
+
+ORIGIN: the diff removes diagnostic reads that caused host-address translation
+faults; no game-logic guard, skip, restore, or mitigation was added.
