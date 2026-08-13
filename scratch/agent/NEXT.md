@@ -1,35 +1,42 @@
-# NEXT work unit (s858)
+# NEXT work unit (s859)
 
 HYPOTHESIS-ID: m3-guest-pc-8000834c-audit
 
-Perform a source-only, whole-idiom audit of the function at guest PC
-0x8000834c (`getNextSlotNpcTypeId`) and every generated caller, including all
-reads of slot-table links and all return-value consumers. Do not build or run.
-The s858 dispatcher trace covered 626 entries / 790 pre/post rows with valid
-inputs; the observed death was guest PC 0x8000834c, not the dispatcher.
+Add one behavior-neutral, phase-gated runtime probe at
+`getNextSlotNpcTypeId` in the generated-code fixup path. Record, in one
+bounded row, the masked selector, slot-table pointer, selected slot address,
+`+4` link, linked context pointer, context `+0x16` type, and return value.
+Keep the existing dispatcher and E9 provenance controls armed in the same run.
+Do not add a guard or alter control flow.
 
 Competing hypotheses:
 
-- H-link-state: 0x8000834c reads a live but invalid slot-table link or index.
-- H-caller-transition: callers pass a corrupted selector/context into the
-  helper or consume its result incorrectly.
-- H-legitimate: all observed reads and callers are valid; the crash is outside
-  this helper's source path.
-- H-stale-breadcrumb: the guest-PC handoff does not identify the faulting
-  instruction or function.
+- H-link-state: the helper reaches a non-sentinel link or context pointer
+  outside the KSEG0/RDRAM range or outside the populated slot/context regions;
+  a row with that defect before the crash selects this branch.
+- H-legitimate-chain: all captured helper chains are valid through the crash
+  window; this weakens the helper theory and returns priority to the stale
+  breadcrumb/other crash path.
+- H-caller-transition: a caller supplies a selector inconsistent with its
+  record or consumes a valid helper result in a mismatched state transition;
+  caller identity plus the row's selector provenance is required to select it.
+- H-stale-breadcrumb: the helper probe remains healthy while the process dies
+  with the same host/guest-PC handoff; this keeps attribution unresolved.
 
-Discriminator: map every helper read, caller, and consumer. An invalid link
-path selects H-link-state; a caller-only bad argument/result use selects
-H-caller-transition; complete valid paths with the crash elsewhere select
-H-legitimate; an unmappable guest-PC handoff selects H-stale-breadcrumb. No
-source-only result authorizes a mitigation without identifying the writer and
-legitimacy.
+Discriminator: the helper row immediately before the death. An invalid link or
+context selects H-link-state; valid helper rows plus caller-state mismatch
+select H-caller-transition; valid rows and no mismatch select H-legitimate;
+zero helper rows despite positive dispatcher/E9 controls keeps H-stale-
+breadcrumb open. No outcome authorizes a mitigation without naming the writer
+and establishing value legitimacy.
 
 Exact commands:
 
-1. `rg -n -C 8 "getNextSlotNpcTypeId|0x8000834c|jal 0x8000834c|slot-table|80130BB0|80130BC0|80130BC4" ../N64Recomp/RecompiledFuncs src docs`
-2. Read bounded windows around the sole helper definition and every caller;
-   enumerate each slot/link read and each consumer of the return value.
-3. `rg -n "getNextSlotNpcTypeId|8000834c" ../N64Recomp/fixup_game_funcs.py`
-4. Record a source verdict and the smallest phase-gated runtime boundary, if
-   one exists; do not add instrumentation or mitigation in this unit.
+1. Add the breadcrumb to the regeneration/fixup path, not only to a generated
+   output: `rg -n -C 8 "getNextSlotNpcTypeId|80040218" ../N64Recomp/fixup_game_funcs.py`.
+2. Regenerate in the required order (`make_elf.py`, N64Recomp, fixup script),
+   then build: `cmake --build build --config Debug --target RogueSquadron64Recomp`.
+3. Run from `build/` with `PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1`,
+   retaining the existing dispatcher/E9 controls and using SIGKILL on timeout.
+4. Require positive dispatcher/E9 controls before interpreting helper-row
+   absence; compare the final helper row to the crash marker and phase ordinal.

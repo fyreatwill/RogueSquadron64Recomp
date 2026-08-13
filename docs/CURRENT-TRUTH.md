@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s858 (2026-08-13). The active blocker is the authoritative
+Reviewed through s859 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -492,11 +492,42 @@ mitigation was added.
 ORIGIN: host-side dispatcher telemetry; no game value, dispatcher control
 flow, parser advancement, or mitigation behavior changed.
 
+## Session s859 result
+
+Completed the prescribed source-only whole-idiom audit of
+`getNextSlotNpcTypeId` (guest `0x80040218`, the function containing the
+`0x8000834c` return-site breadcrumb) and all 25 generated callsites across
+`funcs_9.c`, `funcs_11.c`, `funcs_17.c`, `funcs_18.c`, `funcs_19.c`,
+`funcs_29.c`, `funcs_30.c`, `funcs_33.c`, and `funcs_42.c`. The helper masks
+the selector to 16 bits, treats only `0xFFFF` as terminal, reads the slot
+table pointer at `0x80130BB0`, loads the selected slot's `+4` link, and then
+trusts the linked slot's `+0` context pointer before reading context `+0x16`.
+There is no capacity, KSEG0, null-context, or cycle check in this helper.
+
+The 25 callers pass either halfword fields from NPC/effect/HUD records or a
+previous helper result. Every return consumer masks to 16 bits and compares
+against `0xFFFF`; non-sentinel results are then passed to the expected NPC
+context/destroy helpers or stored as a 16-bit selector. No source caller
+widens, fabricates, or otherwise mishandles the helper result. This selects
+H-link-state (the helper's trusted link/context chain) over
+H-caller-transition for the actionable runtime probe, while H-stale-breadcrumb
+remains open because the s858 host marker does not prove the faulting
+instruction. H-legitimate is not established. No mitigation was added.
+
+The next probe must capture the helper's selector, table link, linked context,
+and returned type in one phase-gated run, with the existing dispatcher/E9
+controls retained as positive controls. It must identify the writer before any
+guard is considered.
+
+ORIGIN: source audit only; the normal slot-table/link and context writers are
+game allocation/spawn paths, but legitimacy of the live crash-time values is
+unknown.
+
 ## Ranked backlog
 
-1. Audit the actual 0x8000834c helper and all callers/consumers as one idiom
-   class; keep the dispatcher crash population unevaluable until mapped.
-2. Re-run the expanded dispatcher capture only if the source audit identifies
+1. Add the phase-gated helper boundary probe: selector, `0x80130BB0` link,
+   linked context pointer, and `+0x16` type, retaining dispatcher/E9 controls.
+2. Re-run the expanded dispatcher capture only if the helper probe identifies
    a concrete caller/state boundary that can be phase-gated.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs

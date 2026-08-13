@@ -56594,3 +56594,23 @@ breadcrumb explanation. No mitigation was added.
 
 ORIGIN: host-side dispatcher telemetry only; no game value, dispatcher
 control flow, parser advancement, or mitigation behavior changed.
+
+## Session 859 (2026-08-13) — helper/link idiom audit
+
+Completed the prescribed source-only audit of `getNextSlotNpcTypeId` (guest
+0x80040218, the function associated with the 0x8000834c breadcrumb) and all
+25 generated callsites. The helper masks its selector to 16 bits, treats only
+0xFFFF as terminal, reads the table pointer at 0x80130BB0, loads the selected
+slot's +4 link, then trusts the linked slot's +0 context pointer before reading
+context +0x16. It has no capacity, KSEG0, null-context, or cycle check.
+
+Callers pass halfword fields from NPC/effect/HUD records or prior helper
+results. Every return consumer masks to 16 bits and sentinel-checks it before
+using the selector with the expected NPC context/destroy path; no caller-only
+widening or malformed return transformation was found. This selects
+H-link-state over H-caller-transition for the next runtime boundary probe, but
+does not establish H-stale-breadcrumb or H-legitimate. No mitigation was
+added.
+
+ORIGIN: source audit only; normal slot-table/link and context writers are
+game allocation/spawn paths, and legitimacy of their live values is unknown.
