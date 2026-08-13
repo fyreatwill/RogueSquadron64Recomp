@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s834 (2026-08-13). The active blocker is the authoritative
+Reviewed through s835 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -105,31 +105,39 @@ Priority until changed by the user:
   pending-command handling, or another parser filter, and it is not a writer
   legitimacy claim or a mitigation basis.
 
-## Next work unit: identify the parser-side E9 count filter
+- s835 completed the parser-side source audit without a build or run. `MEM_B`
+  and the bridge's `g_rdram_for_submit[p ^ 3]` select the same logical first
+  byte as RT64's `dl->w0 >> 24`; byte order is refuted. The bridge scans every
+  8-byte slot, while RT64 advances by `cmdLength * 8`, so an E9 in an interior
+  word of a multiword command is bridge-counted but never a parser opcode.
+  Pending completion has a separate valid-sentinel gate. This identifies
+  command-boundary filtering as the leading explanation for s833's 9/1, 9/1,
+  27/0, and 31/3 rows, but it is source-only and needs a paired runtime probe.
+  No mitigation or legitimacy claim is justified.
 
-HYPOTHESIS-ID: m3-e9-parser-filter-join
+## Next work unit: independently test command-boundary E9 overcount
 
-Perform a bounded source audit of the selected parser-filter branch. Keep
-runtime behavior and mitigation code unchanged. Compare the bridge's
-`p ^ 3` E9 byte test with RT64's `dl->w0 >> 24` raw-op test at both direct and
-pending-command parser paths, and trace the exact conditions that suppress a
-parser increment. Reconcile those conditions with the existing late examples
-from s833; do not add instrumentation unless the source audit cannot decide.
+HYPOTHESIS-ID: m3-e9-command-boundary
+
+Build one phase-gated, telemetry-only probe recording, for the same late submit
+ranges, every bridge-tested E9 slot, every RT64 command-start fetch (address,
+raw opcode, command length), and direct versus pending completion. Keep runtime
+behavior and mitigation code unchanged. Require existing positive controls in
+the same run.
 
 Competing hypotheses:
 
-- H-byte-order: the bridge and parser inspect different physical bytes for the
-  same submitted range, so bridge E9 counts need not be parser raw-op E9s.
-- H-pending-path: RT64's pending-command completion path excludes or delays
-  some E9s relative to the direct walk before the join snapshot.
-- H-other-filter: a parser guard or callback gate suppresses increments even
-  when the raw opcode is E9.
+- H-command-boundary: late bridge-only E9s are interior words skipped by the
+  command-length walk.
+- H-pending-path: late bridge-only E9s are split commands not counted at
+  pending completion.
+- H-other-filter: late E9 command starts reach a remaining parser/callback
+  gate that prevents the count.
 
-Discriminator: derive the byte address and increment predicate for each parser
-path from source. A proven byte mismatch selects H-byte-order; a pending-only
-increment gap selects H-pending-path; an explicit post-raw-op guard selects
-H-other-filter. If source remains ambiguous, the next unit must build one
-phase-gated probe with a positive-control raw-op/byte-pair record.
+Discriminator: an E9 slot covered by the preceding parser command span selects
+H-command-boundary; an E9 command start with pending metadata and no completion
+selects H-pending-path; a command-start record that reaches the handler but
+lacks the increment selects H-other-filter. Missing pairings remain unproven.
 
 ## Ranked backlog
 

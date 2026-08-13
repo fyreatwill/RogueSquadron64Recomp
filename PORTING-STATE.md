@@ -56012,3 +56012,29 @@ used as evidence for this classification.
 ORIGIN: this session changed only ledger prose and scratch control files; all
 values discussed are existing host-side telemetry. No game value, RDP command,
 or mitigation behavior changed.
+
+## Session 835 (2026-08-13) — source audit identifies command-boundary E9 overcount
+
+Performed the prescribed bounded parser-side source audit; no build, run, or
+runtime behavior changed. `MEM_B` uses the host index `logical_address ^ 3`,
+so the bridge's `g_rdram_for_submit[p ^ 3]` test and RT64's
+`DisplayList::w0 >> 24` load select the same logical first byte. H-byte-order
+is refuted.
+
+The bridge counter scans every 8-byte slot from `lo` through `hi`, whereas the
+RT64 direct parser advances by `cmdLength * sizeof(DisplayList)`. Therefore an
+E9 at an interior word of a multiword command is counted by the bridge but is
+not a parser command fetch. Pending completion has a separate gate requiring
+completed bytes, raw pending opcode E9, the authoritative callback, and a
+non-sentinel `s_rs64_pending_start_address`; that sentinel is set only when a
+raw E9 command crosses a range boundary. This explains a lower parser count
+without byte-order loss, while leaving pending-only effects to a paired probe.
+
+This source result is single-source evidence. It identifies command-boundary
+filtering as the leading explanation for s833's late rows (570=9/1, 580=9/1,
+632=27/0, 649=31/3), but does not promote it to settled truth until a
+phase-gated probe records bridge slots and parser command starts by address.
+No mitigation or legitimacy claim was made.
+
+ORIGIN: no game value, RDP command, mitigation, or runtime behavior changed;
+this iteration changed only audit prose and scratch control files.

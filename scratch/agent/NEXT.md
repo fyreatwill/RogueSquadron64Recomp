@@ -1,29 +1,27 @@
-# NEXT work unit (identify the parser-side E9 count filter)
+# NEXT work unit (independently test command-boundary E9 overcount)
 
-HYPOTHESIS-ID: m3-e9-parser-filter-join
+HYPOTHESIS-ID: m3-e9-command-boundary
 
-Perform one bounded source audit; do not change runtime behavior and do not
-rerun the game unless the source audit is ambiguous. Compare the bridge's
-`g_rdram_for_submit[p ^ 3] == 0xE9` test with RT64's `dl->w0 >> 24` raw-op test
-at both the direct display-list walk and pending-command completion path.
-Enumerate every guard between raw-op recognition and `++s_rdp_advance_task_e9`,
-then reconcile the result with s833 tasks 570, 580, 632, and 649.
+Build one phase-gated, telemetry-only probe recording, for the same late submit
+ranges, every bridge-tested E9 slot, every RT64 command-start fetch (address,
+raw opcode, command length), and direct versus pending completion. Keep runtime
+behavior and mitigation code unchanged. Require existing positive controls in
+the same run.
 
 Competing hypotheses and discriminator:
 
-- H-byte-order: the two paths inspect different physical bytes. Prove or
-  refute by deriving the byte address and endian conversion on both paths.
-- H-pending-path: only pending-command completion changes the count. Prove or
-  refute by classifying each increment site and its command-buffer conditions.
-- H-other-filter: a guard/callback gate suppresses increments after raw E9 is
-  recognized. Prove or refute by enumerating the complete predicate.
+- H-command-boundary: late bridge-only E9s are interior words skipped by the
+  command-length walk.
+- H-pending-path: late bridge-only E9s are split commands not counted at
+  pending completion.
+- H-other-filter: late E9 command starts reach a remaining parser/callback
+  gate that prevents the count.
 
-The result must identify one branch or explicitly show why a single
-phase-gated probe is required. If a probe is required, design one build with a
-positive control that records both bridge-tested byte and parser raw opcode;
-do not build a partial instrument.
+Discriminator: an E9 slot covered by the preceding parser command span selects
+H-command-boundary; an E9 command start with pending metadata and no completion
+selects H-pending-path; a command-start record that reaches the handler but
+lacks the increment selects H-other-filter. Missing pairings remain unproven.
 
-Expected commands: `rg -n` the bridge byte test, both parser increment sites,
-`MEM_B`, `DisplayList`, pending-command setup, and all `return`/guard
-conditions in bounded source windows. Use the existing s833 log only for the
-four reconciliation rows; no mitigation is authorized.
+Expected commands: add all records in one build, run the existing phase-gated
+VI-1024 recipe from `build/`, capture one log, and inspect bounded windows. No
+mitigation is authorized.
