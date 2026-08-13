@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s884 (2026-08-13). The active blocker is the authoritative
+Reviewed through s885 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -87,6 +87,12 @@ closed. M3 work is limited to systematic idiom-class audits.
   insertion, reaping, and clears. Structural safety is established, but no
   independent evidence proves every writer/value legitimate. No guard or
   behavior change.
+- s885 audited `tickAllActiveSongs`'s complete `+0xE7C` linked-list use. The
+  single head load is null-checked, and the node loop reads `+0x8` then
+  `+0x0`, with the next node revalidated by `validateVoiceHandle`; the shared
+  initialization, insertion, reaping, and clear writers were all enumerated.
+  Structural safety passed, but writer/value legitimacy remains unproven. No
+  guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -106,6 +112,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s882 | `tickAudioChannel` cursor inventory: 1 direct stream dereference, 5 cursor operations, 9 semantic in-function `channel+0x4` writers; shape/writer legitimacy remains unproven, so no mitigation. |
 | s883 | `stopSongByHandle` linked-list inventory: 2 parallel chains, 12 generated `+0xE78/+0xE7C` writes classified; writer/value legitimacy remains unproven, so no mitigation. |
 | s884 | `tickSongSequence` linked-list inventory: 4 guarded chain consumers and all same-class sibling accesses/writers classified; structural safety passed, writer/value legitimacy remains unproven, so no mitigation. |
+| s885 | `tickAllActiveSongs` inventory: 1 guarded `+0xE7C` chain consumer; shared writers classified, writer/value legitimacy remains unproven, so no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;

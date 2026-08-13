@@ -57153,6 +57153,40 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s885 (2026-08-13) — all-active-song `+0xE7C` chain is structurally guarded; writer legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `tickAllActiveSongs`
+(`0x80096D08`) in the external generated tree, with the companion MusyX
+symbol artifacts. The complete function has one `+0xE7C` chain consumer:
+
+| Guest site | Operation | Predecessor / writer basis |
+|---|---|---|
+| `0x80096F68` | load slot `+0xE7C` into `s0` | bounded eight-slot outer loop; immediate `beq s0, zero` gates the chain |
+| `0x80096F7C` | read `head+0x8` | follows the non-null head branch; supplies `validateVoiceHandle` |
+| `0x80096F80` | read `head+0x0` | same non-null head branch; saves the next node before possible reap |
+| `0x80096FA0` | read `node+0x0` | after `validateVoiceHandle` returns `-1`; no separate null check on returned node |
+| `0x80096FAC` | read `node+0x4` | same validated-node branch; updates predecessor link when present |
+| `0x80096FB4` | read `node+0x4` | same branch; null-checks successor before writing it |
+| `0x80096FC0` | read `node+0x0` | successor is non-null at `0x80096FB8` |
+| `0x80096FD4` | read `node+0x0` | fallback head update after successor-null branch |
+| `0x80096FD8` | write slot `+0xE7C` | only when the removed node has no predecessor |
+| `0x80096FE8` | write `node+0x0` | assigns free-list head, gated by non-null global free head |
+| `0x80096FEC` | write `free_head+0x4` | same non-null free-head branch |
+| `0x80096FF0` | clear `node+0x4` | completes node reaping |
+
+The shared `+0xE7C` writer inventory is complete: slot initialization clears
+the field at `0x800946A0`; `tickScheduledSongEvents` inserts at
+`0x80094E90`; `stopSongByHandle` clears it at `0x800959F4`; and
+`tickSongSequence` clears it at `0x80095CA4`. The companion symbols identify
+the table as eight MusyX song slots at base `0x80149A00`, stride `0xEF8`, and
+identify `tickAllActiveSongs` as the eight-slot caller. Structural safety is
+established for the observed chain shape, but the reaping path and every
+writer/value are not independently proven legitimate. H-tick-all-unclassified
+is selected; no guard, build, soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
+
 ## Session s884 (2026-08-13) — tick-song linked-list consumers are structurally guarded; writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `tickSongSequence`
