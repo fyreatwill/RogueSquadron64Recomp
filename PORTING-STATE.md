@@ -56798,6 +56798,34 @@ repeating the same schedule with `--hold-ms 1000`.
 ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
 positive controls; no port value, game behavior, or mitigation changed.
 
+## Session s871 (2026-08-13) — coalescer writer/caller inventory is complete
+
+Completed the prescribed source-only whole-idiom audit. An exhaustive search
+of the generated tree found exactly three stores to the target globals:
+`partitionFramebufferMemory` at `0x80000ED8` writes `0x801163e4`, while
+`0x80000FFC` and the complementary branch at `0x80001010` write
+`0x801163e8`. No other aliases or delay-slot store duplicates exist. The
+partition routine has two callsites, boot worker `0x80001180` and normal
+`runVideoFrameTick` `0x800013F0`; the latter is immediately followed by the
+sole coalescer call at `0x80001430`. No other direct or indirect target of
+`0x800022F8` was found.
+
+At `0x8000143c/0x80001444`, coalescer `a0/a1` are direct reloads of the two
+globals. `a2` is the fixed heap-base expression `0x80113200+0x47490` and
+`a3` is the frame-tick state pointer from `0x801163f8`. The first walk starts
+at free-list head `0x8010ff18`; the second starts at saved `a2`. Both use
+`next = block + MEM_W(block,4)` and read `next+0x10`.
+
+The audit identifies a normal runtime writer path and rules out describing
+the port as init-writer-only, but source alone cannot prove that the writer's
+inputs can legitimately produce the observed `a0=0x1` or head
+`0x830a10a0`. H-runtime-writer and H-legitimate-transition remain unproven;
+the next discriminator is phase-gated retail/port value comparison. This is
+single-source evidence. No build, run, guard, or mitigation was performed.
+
+ORIGIN: generated source inventory only; no guest value, control flow, or
+mitigation behavior changed.
+
 ## Session s868 (2026-08-13) — early retail Start reaches PIF but not phase state
 
 Ran the prescribed 20-second retail oracle with the whole-RDRAM positive

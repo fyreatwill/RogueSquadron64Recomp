@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s870 (2026-08-13). The active blocker is the authoritative
+Reviewed through s871 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -780,10 +780,10 @@ positive controls; no port value, game behavior, or mitigation changed.
 
 ## Ranked backlog
 
-1. Complete the coalescer heap-global writer/call-boundary audit: enumerate
-   every writer and every caller-side source of `0x801163e4/0x801163e8` and
-   classify whether the invalid entry state can be produced by a legitimate
-   transition or an unproven corruption path.
+1. Use the now-classified `runVideoFrameTick` boundary to obtain a
+   phase-gated retail writer attribution for the coalescer globals. Preserve
+   whole-RDRAM, PIF, and VI positive controls; the run is useful only after a
+   post-320 VI transition is observed.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a helper
    crash site. Re-run the expanded dispatcher capture only after a new,
    phase-gateable caller/state boundary is identified independently.
@@ -794,6 +794,40 @@ positive controls; no port value, game behavior, or mitigation changed.
    triangles, then I4 `sample=64x128`; each needs independent controls.
 5. Regeneration-pipeline reliability: retain the delete-before-regen rule and
    audit fixup counts when a reproducible omission appears.
+
+## s871 coalescer writer and caller audit
+
+The exhaustive generated-tree inventory found three stores to the two target
+globals, all in `partitionFramebufferMemory` (`0x80000ED8` writes
+`0x801163e4`; `0x80000FFC` and its complementary branch at `0x80001010`
+write `0x801163e8`). There are no additional aliases or delay-slot store
+duplicates. The function has two callsites: boot worker `0x80001180` and the
+normal `runVideoFrameTick` path `0x800013F0`. The latter executes immediately
+before the sole coalescer call at `0x80001430`; no other caller or indirect
+target of `0x800022F8` exists in the generated tree.
+
+At the coalescer boundary, `a0/a1` are direct reloads of those globals at
+`0x8000143c/0x80001444`. `a2` is the fixed heap-base expression
+`0x80113200 + 0x00047490`, and `a3` is the frame-tick state pointer loaded
+from `0x801163f8`. The coalescer copies all four arguments to its saved
+state, then its first forward walk starts at the free-list head
+`0x8010ff18`; its second starts from saved `a2`. Both compute
+`next = block + MEM_W(block,4)` and read `next+0x10`. The target globals do
+not directly seed either walk after the entry copy; they affect the saved
+`a0/a1` values used by the link-update arithmetic.
+
+This closes the source inventory but not the value-origin question. It rules
+out H-init-writer-only as a complete port description because the same
+writer is reached from every normal frame tick, and identifies a concrete
+runtime writer path. It does not prove that the writer can legitimately
+produce the observed `a0=0x1` or head `0x830a10a0`; the valid-input ranges
+needed to make that claim are not available from source alone. H-runtime-
+writer and H-legitimate-transition therefore remain unproven pending a
+phase-gated retail/port value comparison. This is single-source evidence; no
+build, run, or mitigation was performed.
+
+ORIGIN: source inventory only. No guest value, control flow, guard, or
+writeback behavior changed.
 
 
 ## Closed and parked

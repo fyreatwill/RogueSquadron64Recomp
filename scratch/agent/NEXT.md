@@ -1,42 +1,42 @@
-# NEXT work unit (s871)
+# NEXT work unit (s872)
 
-HYPOTHESIS-ID: m3-coalescer-heap-writers
+HYPOTHESIS-ID: m3-coalescer-phase-driver
 
-Perform one source-only whole-idiom audit of the coalescer heap-entry state.
-Enumerate every generated writer of guest globals `0x801163e4` and
-`0x801163e8`, every caller of `coalesceFreeHeapBlocks` at `0x80001430`, and
-the complete path from each caller's `a0/a1` source into the two forward
-walks. Include all generated aliases and delay-slot duplicates, but do not
-build, run, or add a guard.
+Run one retail-oracle writer-attribution experiment at the newly identified
+`runVideoFrameTick` boundary. Use the documented hangar-driving Start schedule
+and physical watches on the caller globals (`0x1163e4:0x1163ec`) and free-list
+head (`0x10ff18:0x10ff1c`). Preserve the whole-RDRAM, PIF, and VI positive
+controls. Do not change the port or add instrumentation.
 
 Competing hypotheses:
 
-- H-init-writer-only: the globals are initialized or mutated only by the
-  known boot allocator path; the invalid port entry arrives through caller
-  arguments or a separate untracked heap-link writer.
-- H-runtime-writer: a later normal game path writes the invalid global state;
-  the source inventory identifies that path and its transition conditions.
-- H-caller-state: the globals remain valid, but one or more callers source an
-  invalid `a0/a1` from a game record or stack state before the coalescer call.
-- H-legitimate-transition: every writer/caller path has a valid state-machine
-  explanation, so the observed invalid values remain unexplained runtime
-  corruption rather than an identifiable legitimate state.
+- H-retail-later-writer: after a post-320 VI transition, retail writes the
+  caller globals or head at a later PC not present in the early-only census.
+- H-retail-init-only: even after the transition, target writes remain confined
+  to the early initialization PCs.
+- H-driver-still-stalled: the schedule reaches PIF but never leaves width 320,
+  so writer absence remains unevaluable rather than negative.
 
-Discriminating measurement: the exhaustive inventory must produce a table of
-all writer PCs, written expressions, all callsites, and `a0/a1` provenance.
-Only a writer that can reach the observed invalid global values selects
-H-runtime-writer; valid globals with an invalid call argument selects
-H-caller-state; a complete valid transition table leaves the state
-corruption unexplained and keeps H-legitimate unproven. Any missing writer
-or caller means the audit is incomplete and no hypothesis may be selected.
+Discriminating measurement: whole-RDRAM, PIF, and VI controls must all fire;
+VI must show a width/origin transition after 320. Only then classify target
+watch PCs. A later target PC selects H-retail-later-writer; only early PCs
+select H-retail-init-only for the reached phases; no post-320 transition is
+H-driver-still-stalled and is not evidence about later writers.
 
-Exact commands:
+Exact commands from the repo root:
 
 ```sh
-rg -n -S '801163e4|801163e8|80001430|coalesceFreeHeapBlocks' ../N64Recomp/RecompiledFuncs src tools
-rg -n -S '0x801163e4|0x801163e8|0x80001430|80001430' docs PORTING-STATE.md | tail -80
+tools/oracle/build/rs64_oracle \
+  --core "$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" \
+  --rom "$PWD/rogue_squadron.z64" \
+  --secs 70 --vi-trace --pif-trace \
+  --watch-write 0x0:0x800000 \
+  --watch-write 0x1163e4:0x1163ec --detail-watch 1 \
+  --watch-write 0x10ff18:0x10ff1c --detail-watch 2 \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,\
+36:start,41:start,46:start,51:start,56:start --hold-ms 150
 ```
 
-Do not add mitigation machinery. If the inventory identifies a new
-phase-gateable caller/state boundary, make that the following unit's probe
-design; otherwise record the missing boundary explicitly.
+The ROM path must be verified before launch; if the repo-root copy is absent,
+use `/Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64`
+without changing the experiment.
