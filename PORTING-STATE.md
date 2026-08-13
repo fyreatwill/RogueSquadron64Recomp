@@ -55827,3 +55827,28 @@ ORIGIN: the table derives only from the post-callback `[e9-task-join]` and
 same-task `[dl-sync-probe2]` records. The writer and lifetime of the parser
 counter remain unresolved; the next unit is a source audit of every parser
 counter increment/reset and its task boundary.
+
+## Session 827 (2026-08-13) — parser delta is cumulative across LLE reset epochs
+
+The bounded read-only source audit followed every writer, reset, and read of
+the authoritative parser E9 value. `parser_delta` is the direct return of
+`rs64_rdp_advance_task_e9()` in `rs64_e9prov_task_join_report`; its printed
+start is hard-coded zero. The counter is incremented only in the two
+`RT64::Interpreter::processRDPLists` fetch paths: completed pending commands
+and ordinary commands whose raw opcode is `0xE9`. Its only reset is
+`rs64_rdp_advance_reset()`, called at the beginning of `rs64_run_lle_gfx()`.
+The producer's `rs64_e9prov_task_begin()` and task end do not reset it, so it
+spans LLE tasks until the next LLE reset. The ring has the same reset boundary,
+is populated only with `ROGUESQ_LOG_RDP_ADVANCE`, and is capped at 512 rows.
+
+The separate `g_cumulative_fullsyncs` counter is process-lifetime and has two
+bridge increment sites (real and synthetic FULL_SYNC); it is not read by
+`parser_delta`. This selects H-parser-counter-cumulative and refutes the
+task-local and filtered interpretations for the current join by source. No
+build, run, code change, mitigation, or runtime claim was made. The next unit
+is a consumer-scoped parser epoch telemetry change followed by one positive-
+control capture.
+
+ORIGIN: the classification is from the counter declaration, both increment
+sites, the sole reset call path, and the direct join read; no game value was
+modified or filtered.

@@ -131,18 +131,40 @@ ORIGIN: `[e9-task-join]` is emitted after the guest-DL callback and
 `[dl-sync-probe2]` is emitted by the same run's task walker; the writer of the
 underlying stream remains unresolved.
 
-Next work unit: perform one bounded, read-only source audit of every writer,
-reset, and scope boundary for the authoritative parser E9 counter used in
-`[e9-task-join]` (`g_e9prov`/`g_cumulative_fullsyncs`/advance-ring paths).
-Competing hypotheses are H-parser-counter-task-local (the parser delta is a
-task-local counter and the 12-vs-29 result is a real per-task loss),
-H-parser-counter-cumulative (the delta is cumulative or reset at a different
-boundary, so the join subtraction is invalid), and H-parser-counter-filtered
-(the parser counter intentionally excludes some legitimate E9 forms).
-Discriminator: a source-derived table listing every increment and reset site,
-the owning counter, and the task/phase lifetime it spans; cite the exact call
-path that feeds `parser_delta` and do not build or rerun until the table is
-complete.
+**s827 source audit resolves the parser-delta boundary:** `parser_delta` is not
+a per-`rs64_e9prov_task_begin` counter. It reads RT64's
+`s_rdp_advance_task_e9` directly in `rs64_e9prov_task_join_report` (the printed
+`parser_start` is hard-coded zero). That counter has exactly two increment sites,
+both in `RT64::Interpreter::processRDPLists`: one for a completed pending
+command and one for the ordinary command loop, each gated only by raw opcode
+`0xE9`. Its only reset is `rs64_rdp_advance_reset`, called at the start of
+`rs64_run_lle_gfx`; `rs64_e9prov_task_begin` and task end do not reset it.
+Therefore the join can aggregate parser E9s across LLE tasks since the most
+recent LLE reset, and a 12-vs-29 same-task subtraction is not valid evidence of
+per-task parser loss. The advance ring is separate: it is populated only when
+`ROGUESQ_LOG_RDP_ADVANCE` is enabled, shares that LLE reset, and retains only
+the newest 512 records. `g_cumulative_fullsyncs` is a third, process-lifetime
+bridge counter with two increment sites (real and synthetic submissions) and is
+not the source of `parser_delta`. This selects H-parser-counter-cumulative;
+H-parser-counter-task-local and H-parser-counter-filtered are refuted for the
+current join by source, without a mitigation or runtime claim.
+
+ORIGIN: the boundary classification comes from the counter declarations,
+increment/reset callsites, and the direct `rs64_rdp_advance_task_e9()` read;
+there is no filtered parser increment beyond the raw-opcode test.
+
+Next work unit: redesign the E9 measurement with a consumer-scoped counter or
+explicit parser reset/epoch join. One bounded source change may add an epoch
+identifier at the `rs64_rdp_advance_reset` boundary and carry it into the
+post-parser report; do not infer per-task loss from the existing
+`parser_delta`. Competing hypotheses are H-parser-epoch-join (a reset/epoch
+join will make parser and guest populations comparable), H-parser-async-order
+(the render-thread consumer processes submitted ranges after the producer's
+task callback), and H-parser-filter-remains (raw-opcode accounting still omits
+some parser forms even after epoch alignment). Discriminator: a single capture
+with positive controls and a keyed row whose parser count is delimited by the
+same consumer epoch as the aligned guest task; report the exact reset-to-report
+ordering before any conclusion.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
   input-plugin, and ROM artifacts. Fresh configs differed only in
