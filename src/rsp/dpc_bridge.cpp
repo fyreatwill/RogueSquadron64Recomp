@@ -275,6 +275,7 @@ static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
 static std::atomic<uint32_t> g_e9prov_join_lines{0};
 static std::atomic<uint32_t> g_e9prov_nonzero_callback_lines{0};
 static std::atomic<uint32_t> g_task_bridge_e9{0};
+static uint32_t g_e9_boundary_lines = 0;
 static uint8_t *g_rdram_for_submit = nullptr;
 
 static bool log_e9_unified();
@@ -395,6 +396,7 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
     g_e9prov = {};
     g_e9prov.task = task;
     g_task_bridge_e9.store(0, std::memory_order_release);
+    g_e9_boundary_lines = 0;
     uint32_t remaining = g_e9prov_latch_remaining.load(std::memory_order_acquire);
     while (remaining != 0 && !g_e9prov_latch_remaining.compare_exchange_weak(
         remaining, remaining - 1, std::memory_order_acq_rel, std::memory_order_acquire)) {}
@@ -1287,10 +1289,9 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     const uint64_t serial = g_submit_serial.fetch_add(1, std::memory_order_acq_rel) + 1;
     if (log_e9_boundary() && (g_e9prov.control || g_e9prov.target) &&
         g_rdram_for_submit != nullptr) {
-        static uint32_t lines = 0;
         for (uint32_t p = lo; p + 8 <= hi; p += 8) {
             if (g_rdram_for_submit[p ^ 3] != 0xE9) continue;
-            if (lines++ >= 1024) break;
+            if (g_e9_boundary_lines++ >= 1024) break;
             fprintf(stderr,
                     "[e9-boundary-bridge] serial=%llu task=%u scope=%s addr=0x%06X range=0x%06X..0x%06X\n",
                     (unsigned long long)serial, g_e9prov.task,

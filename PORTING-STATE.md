@@ -56090,3 +56090,30 @@ No mitigation or game-value legitimacy conclusion was made.
 
 ORIGIN: host-side diagnostic records and budgets only; no game value, RDP
 command, or mitigation behavior changed.
+
+## Session 838 (2026-08-13) — late bridge E9 records are outside parser ranges
+
+Changed the bridge boundary telemetry budget from one lifetime 1,024-line cap
+to a 1,024-line cap reset at each task. This was telemetry-only: no submit,
+parser, RDP, or mitigation behavior changed. The Debug target built
+successfully.
+
+The phase-gated run reached VI 1024 and passed all four E9 provenance controls,
+with 204 positive rows. It retained 889 late bridge E9 slots across tasks
+570–630, including 31 slots at task 630; the old lifetime budget would have
+stopped recording before this population. Comparing the bridge records with
+the task/serial/range-carrying parser command records found zero late slots
+contained in any parser command range with the same task, and zero with a
+same-task/same-serial parser range. The parser stream itself remained live
+through task 630. The process later hit the known `slotDispatcherIter+872`
+SIGBUS at 205.6 seconds.
+
+This is a second runtime line, independent of s837's parser-side late-slot
+capture, selecting H-range-association for the late bridge population and
+ruling out bridge telemetry-budget loss. It does not explain why the parser
+call ranges are disjoint, and it provides no writer/legitimacy basis for a
+mitigation. The next work is a bounded source audit of submit-range and
+latest-submit-label ordering.
+
+ORIGIN: no game value, RDP command, or mitigation behavior changed; only the
+host-side diagnostic budget scope changed.

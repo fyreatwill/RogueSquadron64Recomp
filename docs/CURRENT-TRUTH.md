@@ -139,31 +139,45 @@ Priority until changed by the user:
   late-slot population still needs an independent range/serial capture because
   its older lifetime budget ended at task 385. No mitigation or legitimacy
   claim follows.
+- s838 changed only the bridge boundary-record budget from a lifetime 1,024
+  lines to a per-task 1,024 lines, then ran the phase-gated recipe. VI 1024
+  was reached, all four provenance controls passed (204 rows), and 889 late
+  bridge E9 slots were retained across tasks 570–630. None was contained in a
+  parser command range with the same task, and none had a same-serial parser
+  range; the parser command stream remained live through task 630. The run
+  later hit the known `slotDispatcherIter+872` crash. This is a second,
+  independent runtime line selecting H-range-association for the late bridge
+  population and ruling out the old bridge-record-budget loss explanation.
+  It does not yet identify why the parser call ranges are disjoint or justify
+  a mitigation.
 
-## Next work unit: independently capture late bridge range association
+## Next work unit: source-audit the disjoint parser call ranges
 
 HYPOTHESIS-ID: m3-e9-command-boundary
 
-Build one phase-gated, telemetry-only probe that keeps the current records and
-changes the bridge-side boundary budget from lifetime-scoped to task-scoped,
-so late bridge E9 slots retain their submit serial/task/range records. Keep
-runtime behavior and mitigation code unchanged. Require the existing positive
-controls in the same run.
+Perform one bounded source audit of the submit-to-parser call chain, using the
+s838 range records as the target. Do not change behavior or run a new soak.
+Enumerate every writer and consumer of the submit serial, `[lo,hi)` range,
+and parser task label from `rs64_dpc_record_submit` through
+`run_rdp_submission` and the RT64 command telemetry. Check whether any
+producer/consumer ordering or latest-submit label can make a parser call range
+look disjoint from the bridge range despite exact consumer identity.
 
 Competing hypotheses:
 
-- H-range-association: the bridge's late E9 slots are in submit ranges that
-  have no matching parser call range for the same task/serial.
-- H-parser-call-mismatch: late bridge slots have matching parser call ranges,
-  but the current command records were incorrectly associated by task/serial.
-- H-bridge-record-loss: late bridge slots are absent because the bridge-side
-  record budget or emission path drops them.
+- H-range-association: the parser receives a different range or task-era than
+  the bridge record, so the disjointness is real.
+- H-label-ordering: the parser receives the same range, but a latest-submit
+  label or call-boundary ordering makes telemetry associate it with another
+  serial/task.
+- H-parser-record-loss: the parser call range is present, but command telemetry
+  omits its contents through a bounded or filtered path.
 
-Discriminator: late bridge records with no same-serial parser range select
-H-range-association; same-serial parser ranges select H-parser-call-mismatch;
-missing late bridge records with the controls alive select H-bridge-record-loss.
-The already observed 582 span-covered slots remain settled as boundary
-overcount evidence and are not re-litigated.
+Discriminator: a source-proven range/label divergence selects
+H-range-association; a source-proven same-range/latest-label race selects
+H-label-ordering; a parser telemetry omission path selects H-parser-record-loss.
+The s838 late bridge records and the already observed 582 span-covered slots
+remain settled evidence and are not re-litigated.
 
 ## Ranked backlog
 
