@@ -57083,3 +57083,30 @@ illegitimate. No runtime behavior, mitigation, or oracle source changed.
 
 ORIGIN: bounded source/API and artifact audit of the independent oracle/core
 and decomp; no guest value, control flow, or mitigation behavior changed.
+
+## Session s881 (2026-08-13) — model-animation array walk is bounded but raw blob legitimacy remains open
+
+Performed the prescribed source-only M3 inventory against the top-ranked
+`unguarded_walk_candidates.json` entry, `model_animation_offset_convert`, in
+the external generated tree and its companion m2c decomp. The complete
+array-entry pointer-read class has six sites: outer-table read
+`0x80082BFC`, then the five repeated inner-loop reads
+`0x80082C28`, `0x80082C48`, `0x80082C68`, `0x80082C88`, and `0x80082CA8`.
+The outer loop is bounded by `arg0->unk0`; the inner loop is bounded by the
+entry halfword at `+0xE`; the entry pointer is checked non-null before the
+inner reads. The five optional payload pointers at `+0x8/+0xC/+0x10/+0x14/+0x18`
+are each independently null-checked before relocation.
+
+The generated C and decomp independently agree on the source semantics:
+`arg0->unk4` is a relative model-animation table pointer, the function adds
+`arg0` to convert it in place, and each table entry's optional offsets are
+similarly relocated. This proves the control/shape classification but not the
+legitimacy of the raw model blob or the writer that supplied `arg0->unk4`.
+Therefore H-class-has-unclassified-sites remains selected for writer origin;
+H-class-fully-classified is rejected. The earlier proposed `tickAudioChannel`
+candidate was also shape-rejected before use: its key reads are a program
+cursor, not a self-referential list walk. No build, soak, guard, or runtime
+behavior changed.
+
+ORIGIN: bounded generated-source and independent companion-decomp inventory;
+no guest value, writer mutation, mitigation, or runtime behavior changed.

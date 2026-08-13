@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s880 (2026-08-13). The active blocker is the authoritative
+Reviewed through s881 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -55,6 +55,13 @@ closed. M3 work is limited to systematic idiom-class audits.
   current state. The decomp supplies the coalescer symbol and heap globals but
   no coalescer body or writer/value data-flow proof. H-no-independent-route is
   selected; no legitimacy or mitigation conclusion follows.
+- s881 audited the top-ranked unguarded-walk candidate,
+  `model_animation_offset_convert`. Six table-entry pointer reads
+  (`0x80082BFC`, `0x80082C28`, `0x80082C48`, `0x80082C68`, `0x80082C88`,
+  `0x80082CA8`) have bounded outer/inner loop control and the expected
+  non-null checks. The generated source and companion decomp agree on the
+  relative-offset conversion and optional inner pointers, but neither proves
+  the caller's raw model blob values legitimate. No guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -70,6 +77,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s862–s871 | Coalescer entry/global idiom inventory and port probes found invalid entry state; writer legitimacy remained unknown. |
 | s872–s877 | Retail watches and PIF/VI controls were live, but retail stayed at width 320; port reached late writers. Value comparison remained unavailable. |
 | s879–s880 | Oracle ABI and artifact audits found no safe post-write writer/value route; coalescer legitimacy remains unproven and is parked. |
+| s881 | `model_animation_offset_convert` array-pointer inventory: 6 sites structurally bounded; raw model-blob writer legitimacy remains unproven, so no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -90,28 +98,27 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-The oracle source/API audit is complete: no safe deferred post-write value
-sampler exists in the stock debugger ABI, and the available decomp artifacts do
-not contain a coalescer body or value-flow proof. Do not add a guard or change
-game behavior. Continue M3 with one complete, bounded idiom inventory.
+The `model_animation_offset_convert` inventory is complete but leaves the raw
+model-blob writer/legitimacy unproven. Do not add a guard or change game
+behavior. Continue M3 with one complete, bounded idiom inventory, selecting the
+next top-ranked coherent candidate after this one.
 
 Competing hypotheses:
 
-- H-core-write-trace: an existing core trace hook supplies post-write value and
-  guest PC. REFUTED: no such hook exists in the local core.
-- H-static-retail-proof: available decomp/ROM artifacts prove the late value
-  legitimate. REFUTED for the inspected artifacts: only symbols/globals exist.
-- H-no-independent-route: neither available artifact supplies the required
-  writer/value association. SELECTED.
+- H-next-class-unclassified: the next candidate has at least one pointer site
+  without a proof of safety or a concrete writer/legitimacy explanation.
+- H-next-class-fully-classified: every site in the next candidate is already
+  proven safe, dead, or covered by an existing justified patch.
+- H-next-inventory-shape-mismatch: the next ranked candidate does not define
+  one coherent pointer idiom; stop rather than mixing shapes.
 
-Discriminating measurement: existing core trace/API and decomp artifact
-coverage. The write wrapper calls `check_breakpoints_on_mem_access` before
-`mem_write32`; the decomp has `coalesceFreeHeapBlocks=0x800022F8` and heap
-globals but no function body or value-flow proof.
+Discriminating measurement: a complete site table for the next coherent idiom,
+including source address, checks, and writer/legitimacy basis for every hit.
+Any omitted site or unproven writer rejects full classification.
 
-Exact commands used: inspect the oracle wrapper/core with `rg` and bounded
-`sed` windows, including debugger APIs, memory write paths, trace/profiling
-wiring, and the decomp symbol/artifact tree. No game build or soak was needed.
+Exact commands used: use `rg` to enumerate the next candidate in the external
+generated tree and bounded `sed` windows around every site plus its decomp or
+named-symbol counterpart. No game build or soak is planned.
 
 ## Closed and parked
 
