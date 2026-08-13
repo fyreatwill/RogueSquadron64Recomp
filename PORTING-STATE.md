@@ -56066,3 +56066,27 @@ serial identity to every parser command record to classify those four.
 
 ORIGIN: only host-side diagnostic records and their env gate changed; no game
 value, RDP command, or mitigation behavior changed.
+
+## Session 837 (2026-08-13) — late unmatched E9 slots are outside parser ranges
+
+Added telemetry-only RT64 parser records carrying task, submit serial, and
+exact `[lo,hi)` range for in-range command starts and pending completions. The
+first run reached VI 1024 and passed all four E9 controls, but its lifetime
+4,096-record budget ended at task 42; the second reached VI 1024 and passed
+controls but its lifetime 131,072-record budget ended before late tasks. Both
+were invalid for the discriminator, so the budget was repaired to reset per
+task and the run was repeated.
+
+The corrected run reached VI 1024, passed all four positive controls, captured
+59 frames, and later hit the known `slotDispatcherIter+872` SIGBUS at task
+657. It produced 1,196,701 task-scoped parser command records, 681 parser E9
+records, zero pending-completion records, and 657 task joins. None of the late
+unmatched emitted addresses was contained in any logged parser call range.
+This selects H-range-association for the captured four-slot class and rules
+out pending completion and an in-range parser filter for that population. The
+bridge-side late population remains single-source because its older boundary
+budget ended at task 385; the next probe must retain those bridge records late.
+No mitigation or game-value legitimacy conclusion was made.
+
+ORIGIN: host-side diagnostic records and budgets only; no game value, RDP
+command, or mitigation behavior changed.

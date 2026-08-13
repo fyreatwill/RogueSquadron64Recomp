@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s836 (2026-08-13). The active blocker is the authoritative
+Reviewed through s837 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -126,30 +126,42 @@ Priority until changed by the user:
   hit the known Metal `0x8000B650` crash. No mitigation or legitimacy claim is
   justified.
 
-## Next work unit: classify the four unmatched bridge E9 slots
+- s837 added parser command-start/pending telemetry carrying task, submit
+  serial, and exact `[lo,hi)` range. Two initial runs reached VI 1024 and
+  passed all four controls but exhausted lifetime record budgets before late
+  tasks, so they were invalid for classification. The corrected task-scoped
+  run reached VI 1024, passed all four controls, and later hit the known
+  `slotDispatcherIter+872` crash at task 657. It logged 1,196,701 in-range
+  parser command starts, 681 parser E9 records, zero pending completions, and
+  657 joins. None of the late unmatched emitted addresses was contained in a
+  logged parser call range. This selects H-range-association for the captured
+  four-slot class, not H-pending-path or an in-range parser filter. The bridge
+  late-slot population still needs an independent range/serial capture because
+  its older lifetime budget ended at task 385. No mitigation or legitimacy
+  claim follows.
+
+## Next work unit: independently capture late bridge range association
 
 HYPOTHESIS-ID: m3-e9-command-boundary
 
-Build one phase-gated, telemetry-only probe that keeps the current records but
-also logs every RT64 command start and pending completion whose address lies in
-the exact bridge submit range, with submit serial/task/range attached. This
-must decide whether the four s836 unmatched slots are outside the parser's
-consumed range, part of an unlogged pending command, or genuinely absent from
-the parser walk. Keep runtime behavior and mitigation code unchanged. Require
-the existing positive controls in the same run.
+Build one phase-gated, telemetry-only probe that keeps the current records and
+changes the bridge-side boundary budget from lifetime-scoped to task-scoped,
+so late bridge E9 slots retain their submit serial/task/range records. Keep
+runtime behavior and mitigation code unchanged. Require the existing positive
+controls in the same run.
 
 Competing hypotheses:
 
-- H-range-association: the four records are not in the parser call/range that
-  the current task label suggests.
-- H-pending-path: an unmatched slot belongs to a split command and appears in
-  pending metadata before completion.
-- H-other-filter: an unmatched slot is a parser command start or span in the
-  exact range but reaches no E9 completion record.
+- H-range-association: the bridge's late E9 slots are in submit ranges that
+  have no matching parser call range for the same task/serial.
+- H-parser-call-mismatch: late bridge slots have matching parser call ranges,
+  but the current command records were incorrectly associated by task/serial.
+- H-bridge-record-loss: late bridge slots are absent because the bridge-side
+  record budget or emission path drops them.
 
-Discriminator: exact range association outside the parser call selects
-H-range-association; pending metadata tied to the slot selects H-pending-path;
-an in-range command-start/span record without completion selects H-other-filter.
+Discriminator: late bridge records with no same-serial parser range select
+H-range-association; same-serial parser ranges select H-parser-call-mismatch;
+missing late bridge records with the controls alive select H-bridge-record-loss.
 The already observed 582 span-covered slots remain settled as boundary
 overcount evidence and are not re-litigated.
 
