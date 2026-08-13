@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s820; compacted in maintenance s776)
+## Current truth (reviewed through s821; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -43,20 +43,20 @@ use bases `0x800A` or `0x800B` and are unrelated addresses, not
 and compatibility-accessor alternatives. No build, run, code change, or
 mitigation was made.
 
-**s820 selects H-authoritative-advance, single-source:** the valid s815-style
-capture reached VI width 1024 at 79.8s, fired the provenance positive control,
-and emitted five pointer-only `[vi-arg]` records. After the gate, aligned
-walker provenance had `e9_b=29`, while authoritative `rdpFs` advanced from
-219 at the gate to 611 before a later `slotDispatcherIter+872` SIGBUS; sampled
-`[rdp-fullsync]` records were present in the same interval. This is a positive
-authoritative parser/full-sync result, but the run is not a stability result
-and the crash family remains separate. A second independent post-sec2 capture
-is required before closing the parser-loss hypothesis.
+**s820–s821 select H-authoritative-advance, repeated:** two independent valid
+post-sec2 captures reached VI width 1024, passed their provenance controls, and
+showed authoritative parser/full-sync advancement after the gate. s820 had
+aligned `e9_b=29` and `rdpFs` 219→611; s821 had `e9_aligned=1` on task 545
+and `rdpFs` 219→521, with sampled `[rdp-fullsync]` records. Both later ended
+in the separate `slotDispatcherIter+872` SIGBUS family. This refutes a total
+post-sec2 authoritative-dispatch loss, but not the remaining discrepancy
+between abundant aligned-stream E9s and the authoritative count; no mitigation
+or stability claim follows.
 
-Next work unit: one bounded phase-gated post-sec2 parser-chain persistence
-capture using the same s790 recipe, retaining provenance, `[vi-arg]`, and
-FULL_SYNC logging; classify whether authoritative advancement repeats after
-the VI-1024 gate without relying on the s820 crash outcome.
+Next work unit: a bounded source/telemetry audit of the aligned-E9 and
+authoritative `rdpFs` accounting boundaries, identifying where each counter is
+sampled/reset/capped and whether they are expected to count the same command
+population. Do not change game logic or add a mitigation.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
   input-plugin, and ROM artifacts. Fresh configs differed only in
@@ -282,10 +282,12 @@ controls, refuting the execution-backend explanation for this recipe. It was
 believable because the identity audit ruled out artifact and plugin drift while
 leaving runtime behavior as the remaining broad class.
 
-**s820 single-source parser result:** a valid post-sec2 capture reached VI
-1024, had aligned `e9_b=29`, and authoritative `rdpFs` advanced 219→611
-before a separate `slotDispatcherIter+872` SIGBUS. This selects
-H-authoritative-advance for that run; an independent repeat is still required.
+**s820–s821 parser result:** two independent valid post-sec2 captures reached
+VI 1024 and showed authoritative `rdpFs`/FULL_SYNC advancement after the gate
+(219→611 and 219→521). This closes the claim that authoritative advancement is
+totally lost after section 2. The aligned-E9 versus authoritative-count
+discrepancy remains open for source/telemetry accounting; the later
+`slotDispatcherIter+872` SIGBUS is a separate crash family.
 
 2. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s784:** the batched parser-chain audit was unevaluable: both the verbose-chain run and its low-noise fixed rerun had positive control tasks (`emit=1`, `raw=1`, `dispatch=1`, `match=1`) but died at VI 640 before the 1024/post-sec2 gate; the first was a `viRetraceHandlerThread` SIGBUS and the fixed rerun an abort. No parser conclusion is supported. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: obtain one post-sec2 reachability result with a stability-oriented recipe before interpreting the parser chain. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 

@@ -1,33 +1,35 @@
-# NEXT work unit (bounded post-sec2 FULL_SYNC persistence capture)
+# NEXT work unit (bounded E9/FULL_SYNC accounting-boundary audit)
 
 HYPOTHESIS-ID: m3-postsec2-authoritative-e9
 
-Run one bounded, phase-gated capture using `scratch/agent/s790_postsec2_reachability.sh`.
-Keep `ROGUESQ_LOG_VI_ARGS=1`, the provenance positive controls, `[rdp-fullsync]`
-logging, and the phase-relative key schedule. Do not change game logic or add
-a mitigation. The capture is valid only if VI reaches 1024 and the control
-record has `emit=1 raw=1 dispatch=1 match=1`.
+Perform one read-only source/telemetry audit. Trace every write, reset, cap, and
+log site for aligned-E9 counts (`e9_a/e9_b/e9_aligned`) and authoritative
+`rdpFs`/`[rdp-fullsync]` counts, including task/phase scoping. Do not build, run,
+change game logic, or add a mitigation.
 
 Competing hypotheses:
 
-- H-authoritative-persistent: after VI-1024, aligned E9 provenance and
-  authoritative `rdpFs`/FULL_SYNC advances recur; this confirms s820's parser
-  result is not a one-run artifact.
-- H-pre-authoritative-loss: aligned E9 provenance recurs, but authoritative
-  advancement remains absent or flat after the gate; this restores the parser
-  loss hypothesis.
-- H-prechain-transient: the run fails before a valid post-gate parser sample;
-  the persistence question remains unevaluable.
+- H-same-population: both counters are intended to measure the same command
+  population, so their divergent rates imply a real parser-chain loss or
+  sampling defect.
+- H-different-populations: the counters are scoped to different task/stream
+  populations or parser stages, so the divergence is expected and cannot by
+  itself establish command loss.
+- H-counter-defect: one counter is reset, capped, or joined at the wrong task
+  boundary, so the observed divergence is instrumentation accounting error.
 
-Discriminating measurement: in the same run after the VI-1024 transition,
-compare aligned `e9_b` and authoritative `rdpFs`/`[rdp-fullsync]` records.
-Positive advancement selects H-authoritative-persistent; positive provenance
-with flat authoritative state selects H-pre-authoritative-loss; no valid
-post-gate sample selects H-prechain-transient.
+Discriminating measurement: a complete source map of producer/reset/cap/task
+scope for both counters. If scopes match, H-same-population remains live; if
+they differ, H-different-populations is selected; if a reset/cap/join defect is
+found, H-counter-defect is selected. The s820 and s821 captures are the
+independent runtime line of evidence; the audit must not treat runtime output
+as its own ground truth.
 
-Exact command:
+Exact commands:
 
-    zsh scratch/agent/s790_postsec2_reachability.sh
+    rg -n "e9_a|e9_b|e9_aligned|rdpFs|rdp-fullsync|RDP.*advance|fullSync" src lib ../N64Recomp/RecompiledFuncs
+    rg -n "e9_a|e9_b|e9_aligned|rdpFs|rdp-fullsync" docs scratch/agent/PORTING-STATE.md 2>/dev/null
 
-Run one arm only. Record the capture path and classify the result from the
-captured log, including any later crash family.
+Record the exact producer/reset/cap sites and update the ledger with the
+selected accounting hypothesis. If the audit cannot distinguish them, leave
+the parser discrepancy open and choose the smallest next source probe.

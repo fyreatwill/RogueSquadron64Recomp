@@ -471,3 +471,4 @@
 20260813-s815-att1 | s790_postsec2_reachability INVALID | rc=1; VI 1024 and E9 controls passed but ROGUESQ_LOG_VI_ARGS was omitted, so vi-arg positive control was zero; crash slotDispatcherIter+872 after 178.6s.
 20260813-s815-att2 | s790_postsec2_reachability ADVANCED | rc=0; VI 1024 at 79.5s, 4 positive E9 controls, 5 pointer-only vi-arg records, 300s/89 frames, 0 crash markers.
 20260813-s820 | s790_postsec2_reachability ADVANCED | VI 1024 at 79.8s; control emit/raw/dispatch/match=1; 5 pointer-only vi-arg records; post-gate aligned e9_b=29 and authoritative rdpFs 219->611 with rdp-fullsync records; later SIGBUS slotDispatcherIter+872 at 202.9s.
+20260813-s821 | s790_postsec2_reachability ADVANCED | VI 1024 at 79.6s; four positive control records; post-gate e9_aligned=1 on task 545 and authoritative rdpFs 219->521 with sampled rdp-fullsync records; later SIGBUS slotDispatcherIter+872 at 179.2s.

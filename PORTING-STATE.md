@@ -55682,3 +55682,25 @@ does not justify a mitigation. The crash is a separate slot-dispatch family.
 ORIGIN: aligned E9s originate in the post-sec2 display-list walker; the
 authoritative advances originate in the RDP parser/full-sync path. Both were
 observed in this run; the SIGBUS occurred later in `slotDispatcherIter`.
+
+## Session 821 (2026-08-13) — post-sec2 authoritative advance repeats
+
+The bounded s790 post-sec2 recipe ran again with the VI-1024 phase gate,
+phase-relative keys, E9 provenance controls, `[vi-arg]`, and FULL_SYNC logging.
+VI width 1024 was reached at 79.6s. The same-run control passed with four
+`emit=1 raw=1 dispatch=1 match=1` records. After the gate, the aligned walker
+reported `e9_aligned=1` on task 545, while authoritative `rdpFs` advanced from
+219 at the gate to 521; sampled `[rdp-fullsync]` records continued through
+the interval. The process later received SIGBUS in `slotDispatcherIter+872`
+(`si_addr=0x37fff0019`, guest PC `0x80007904`).
+
+This is the second independent valid post-sec2 capture with authoritative
+advancement, so it refutes a total post-sec2 parser/full-sync loss. It does not
+resolve why aligned-stream E9 counts are much larger than the authoritative
+count, does not establish stability, and does not justify a mitigation. The
+next unit is a read-only source/telemetry audit of the two counters' producer,
+reset, cap, and task/phase scope.
+
+ORIGIN: aligned E9s originate in the post-sec2 display-list walker;
+authoritative advancement originates in the RDP parser/full-sync path. The
+later SIGBUS is in the separate slot-dispatch consumer family.
