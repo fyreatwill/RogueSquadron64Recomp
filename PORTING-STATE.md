@@ -54822,3 +54822,27 @@ trigger; no port runtime code changed. This rules out the stock/oracle input
 configuration lead, but not a deeper emulator/runtime or ROM discrepancy.
 Next is the M3 FULL_SYNC parser/control-flow audit with one batched,
 phase-scoped instrument run.
+
+## Session 784 (2026-08-12) — parser-chain audit blocked before post-sec2
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 22,287 bytes, so maintenance did
+not trigger. The planned work unit was the batched M3 FULL_SYNC parser-control
+flow audit, with emitted/source E9, authoritative fetch/match, RDP dispatch,
+and `State::fullSync` markers in one phase-gated run. The build completed
+cleanly.
+
+The first run enabled the full dispatch/full-sync print stream. It reached VI
+640, fired the positive controls (`emit=1`, `raw=1`, `dispatch=1`, `match=1`),
+then hit a `viRetraceHandlerThread` SIGBUS before the 1024/post-sec2 gate. The
+fixed low-noise rerun kept the provenance marker and removed the verbose print
+stream; it again reached VI 640, fired the same controls, and aborted before
+1024. The two early deaths make the requested post-sec2 chain null
+unevaluable; they do not select parser-boundary, map/handler, state/pacing, or
+source-emission hypotheses. The positive controls prove this was not a silent
+instrument failure.
+
+This iteration is SUBSTITUTED because the target phase could not be reached.
+The blocker is falsifiable: one low-noise rerun that reaches VI 1024 with
+controls live refutes the deterministic-pre-target explanation and permits the
+parser audit. No mitigation or runtime code changed. Logs are under
+`scratch/agent/soak_results/s784_m3_parser_audit*`.
