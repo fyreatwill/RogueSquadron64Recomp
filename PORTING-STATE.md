@@ -55734,3 +55734,30 @@ ORIGIN: guest counts originate in the diagnostic display-list walkers;
 `rdpFs` originates in DPC bridge submissions; authoritative counts originate
 in the RT64 RDP interpreter. These are diagnostic scope differences, not a
 legitimacy or corruption claim.
+
+## Session 823 (2026-08-13) — task-scoped E9 join is not valid
+
+The bounded task-scoped join added bridge-submitted E9 and authoritative parser
+E9 deltas alongside the existing inline-aware guest count. The first build and
+capture reached VI 1024 and passed the existing provenance positive controls,
+but emitted no post-sec2 target rows: source/log inspection showed the latch
+tested overlay table index 2 while the actual start-match was section 3.
+
+After changing that diagnostic gate to section 3, a fixed capture reached VI
+1024, passed four control rows, and emitted 124 positive sec2 provenance rows;
+it later hit `slotDispatcherIter+872` SIGBUS. The 64-task latch window did not
+cover the later aligned-E9 tasks. The join logger was then widened to include
+any task with nonzero `e9_aligned`. A second fixed capture again reached VI
+1024 and passed four controls, while `[dl-sync-probe2]` recorded nonzero
+`e9_aligned` on tasks 624–632; it still emitted zero `scope=aligned` join rows
+and later hit the same separate SIGBUS family.
+
+Control rows showed bridge delta 1 and parser delta 1 on tasks 1–4, so the
+instrument was live. The missing aligned rows make the task/callback join
+invalid, not evidence of bridge/parser loss. This selects H-join-defect and
+requires a callback-ownership/task-serial audit before interpreting the
+parser counts. No game logic or mitigation was changed.
+
+ORIGIN: the positive controls originate in the synthetic E9 control task;
+nonzero aligned values originate in the inline-aware guest-DL walker. The
+unjoined values are a telemetry ownership defect, not a corruption claim.

@@ -273,6 +273,20 @@ struct Rs64E9Provenance {
 static Rs64E9Provenance g_e9prov;
 static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
 static std::atomic<uint32_t> g_e9prov_join_lines{0};
+static std::atomic<uint32_t> g_task_bridge_e9{0};
+static uint8_t *g_rdram_for_submit = nullptr;
+
+static bool log_e9_unified();
+extern "C" uint32_t rs64_rdp_advance_task_e9();
+
+static void rs64_count_submitted_e9(uint32_t lo, uint32_t hi) {
+    if (!log_e9_unified() || g_rdram_for_submit == nullptr) return;
+    uint32_t count = 0;
+    for (uint32_t p = lo; p + 8 <= hi; p += 8) {
+        if (g_rdram_for_submit[p ^ 3] == 0xE9) ++count;
+    }
+    if (count != 0) g_task_bridge_e9.fetch_add(count, std::memory_order_relaxed);
+}
 
 struct Rs64InlineProbe {
     bool active = false;
@@ -357,6 +371,7 @@ extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
 extern "C" void rs64_e9prov_task_begin(uint32_t task) {
     g_e9prov = {};
     g_e9prov.task = task;
+    g_task_bridge_e9.store(0, std::memory_order_release);
     uint32_t remaining = g_e9prov_latch_remaining.load(std::memory_order_acquire);
     while (remaining != 0 && !g_e9prov_latch_remaining.compare_exchange_weak(
         remaining, remaining - 1, std::memory_order_acq_rel, std::memory_order_acquire)) {}
@@ -929,7 +944,17 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
         }
     }
     if (g_e9prov.task != task) return;
-    if (log_e9_unified() && (g_e9prov.control || g_e9prov.target)) {
+    if (log_e9_unified() && (g_e9prov.control || g_e9prov.target || g_e9prov.aligned != 0)) {
+        const uint32_t bridge_e9 = g_task_bridge_e9.load(std::memory_order_acquire);
+        const uint32_t parser_e9 = rs64_rdp_advance_task_e9();
+        fprintf(stderr,
+                "[e9-task-join] task=%u begin=%u end=%u bridge_start=0 bridge_end=%u "
+                "bridge_delta=%u parser_start=0 parser_end=%u parser_delta=%u "
+                "aligned=%u dl=0x%08X scope=%s\n",
+                task, task, task, bridge_e9, bridge_e9, parser_e9, parser_e9,
+                g_e9prov.aligned, g_e9prov.aligned_dl,
+                g_e9prov.control ? "control" : g_e9prov.target ? "sec2" : "aligned");
+        fflush(stderr);
         const uint32_t line = g_e9prov_join_lines.fetch_add(1, std::memory_order_relaxed);
         if (line < 96) {
             fprintf(stderr, "[e9-join-end] passed=%u current=%u guest_dl=0x%08X aligned=%u\n",
@@ -1398,6 +1423,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     if (end <= start) {
         return;
     }
+    g_rdram_for_submit = rdram;
 
     // RT64 expects RDRAM-relative addresses. Factor5 writes KSEG0 (0x80xxxxxx)
     // to DPC_START/END — mask to 24 bits.
@@ -2580,6 +2606,7 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
     rs64_e9prov_mark_submitted(submit_lo, submit_hi);
     g_last_submit_lo.store(submit_lo, std::memory_order_release);
     g_last_submit_hi.store(submit_hi, std::memory_order_release);
+    rs64_count_submitted_e9(submit_lo, submit_hi);
     ultramodern::submit_rdp_range(submit_lo, submit_hi);
 }
 
@@ -2621,6 +2648,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                     calls++;
                     g_last_submit_lo.store(lo, std::memory_order_release);
                     g_last_submit_hi.store(hi, std::memory_order_release);
+                    rs64_count_submitted_e9(lo, hi);
                     ultramodern::submit_rdp_range(lo, hi);
                 }
                 lo = r.first;
@@ -2633,6 +2661,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                 calls++;
                 g_last_submit_lo.store(lo, std::memory_order_release);
                 g_last_submit_hi.store(hi, std::memory_order_release);
+                rs64_count_submitted_e9(lo, hi);
                 ultramodern::submit_rdp_range(lo, hi);
             }
         }
@@ -2646,6 +2675,7 @@ extern "C" void rs64_dpc_defer_end(int commit) {
                 rs64_e9prov_mark_submitted(r.first, r.second);
                 g_last_submit_lo.store(r.first, std::memory_order_release);
                 g_last_submit_hi.store(r.second, std::memory_order_release);
+                rs64_count_submitted_e9(r.first, r.second);
                 ultramodern::submit_rdp_range(r.first, r.second);
             }
         }

@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s822; compacted in maintenance s776)
+## Current truth (reviewed through s823; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -69,10 +69,27 @@ the latest 512 records. Therefore the s820/s821 `e9_aligned` versus `rdpFs`
 rates cannot establish parser loss without a task-scoped join. No reset/cap
 defect was found and no mitigation is justified.
 
-Next work unit: a bounded source/telemetry audit of the aligned-E9 and
-authoritative `rdpFs` accounting boundaries, identifying where each counter is
-sampled/reset/capped and whether they are expected to count the same command
-population. Do not change game logic or add a mitigation.
+**s823 task-scoped join selects H-join-defect:** the new bridge-submitted and
+parser-side counters both passed the positive control in one run (`bridge=1`,
+`parser=1` on tasks 1–4), but the first capture had no post-sec2 target rows
+because the existing section latch tested table index 2 while the observed
+start matches were sections 3 and 4. Changing the diagnostic latch to the
+observed menu section 3 produced 124 positive sec2 provenance rows, but the
+64-task latch window ended before later aligned-E9 tasks. Widening the join
+logger to include any task with nonzero `e9_aligned` still produced no
+`scope=aligned` join rows, despite `[dl-sync-probe2]` recording nonzero
+`e9_aligned` on tasks 624–632. Both fixed captures reached VI 1024 and passed
+the existing controls; both later hit the separate `slotDispatcherIter+872`
+SIGBUS family. This proves the current callback/task ownership join is not
+valid, and does not classify bridge/parser loss. No game logic or mitigation
+was changed.
+
+Next work unit: a bounded source/telemetry audit of `rs64_e9prov_aligned`
+callback ownership and task serial lifetime. Explain why the inline walker can
+print nonzero `e9_aligned` while the task-end join sees no nonzero field;
+instrument one callback row with passed/current task IDs if source inspection
+cannot prove it. Keep the bridge/parser counters unchanged and do not run a
+parser-loss experiment until this join is repaired.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
   input-plugin, and ROM artifacts. Fresh configs differed only in

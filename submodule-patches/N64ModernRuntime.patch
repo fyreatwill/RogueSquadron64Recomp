@@ -145,7 +145,7 @@ index b0d6bef..bb3352d 100644
          RSP_MEM_B(i, dmem_addr) = MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
      }
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..7359e0b 100644
+index 8c8e5d1..e058a76 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
 @@ -4,6 +4,7 @@
@@ -199,7 +199,7 @@ index 8c8e5d1..7359e0b 100644
 +            fprintf(stderr, "[overlay] start-match: section %zu rom=0x%08X at ram=0x%08X\n",
 +                i, section.rom_addr, (uint32_t)(section.rom_addr - rom + ram_addr));
 +            fflush(stderr);
-+            if (i == 2) rs64_e9prov_section2_latch();
++            if (i == 3) rs64_e9prov_section2_latch();
 +            load_overlay(i, section.rom_addr - rom + ram_addr);
 +        }
 +    }
