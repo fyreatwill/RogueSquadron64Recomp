@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s818; compacted in maintenance s776)
+## Current truth (reviewed through s819; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -32,9 +32,21 @@ the chronological ledger. The active facts are:
   the field. This selects **H-static-field-rom-intended** over a hidden
   runtime writer; it is not a mitigation or a claim about the later VI phase.
 
-Next work unit: enumerate `getBootConfigField14` callers and remaining
-`D_80037574` uses to classify the scalar's semantic role, source-only, before
-resuming runtime VI or FULL_SYNC experiments.
+**s819 resolves the semantic role:** all 18 generated callsites of
+`getBootConfigField14` are in seven routines covering vehicle/frame setup,
+subtitle and sprite geometry, HUD scaling, and mission-transition overlays.
+Each uses the returned `0x00E0` as a screen-height/display scalar: it is stored
+in frame/overlay `+0x14` fields, converted for geometry ratios, or used in
+screen-coordinate calculations. The only other generated `0x7574` literals
+use bases `0x800A` or `0x800B` and are unrelated addresses, not
+`D_80037574`. This selects **H-static-field-display-mode** over timing-state
+and compatibility-accessor alternatives. No build, run, code change, or
+mitigation was made.
+
+Next work unit: one bounded phase-gated post-sec2 parser-chain capture using
+the successful s815 recipe, retaining the existing provenance positive
+controls and `[vi-arg]` logging; classify only whether authoritative FULL_SYNC
+dispatch advances after the VI-1024 gate.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
   input-plugin, and ROM artifacts. Fresh configs differed only in
@@ -222,9 +234,10 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-The s801 VI audit now precedes the parser work: the port's game-side selector
-requests only 640 after the transition, while retail independently reaches
-1024. Instrument that selector gate before resuming parser reachability.
+The s801 VI audit and s819 static-field audit now precede parser work: the
+port's game-side selector requests only 640 after the transition, while retail
+independently reaches 1024; the static `0x00E0` field is a legitimate display
+height. Resume parser reachability only with a post-sec2 phase-gated capture.
 
 1. **Oracle phase divergence — OPEN, H-oracle-runtime-or-ROM-discrepancy selected.**
    s780's two-arm 130-second horizon run kept every driven arm at

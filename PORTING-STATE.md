@@ -55642,3 +55642,23 @@ mitigation was made.
 
 ORIGIN: the value originates in the retail ROM initializer at VROM `0x38174`;
 it is a legitimate static data value, not a corruption mitigation target.
+## Session 819 (2026-08-13) — static VI scalar is display height
+
+The bounded generated-source audit enumerated all 18 calls to
+`getBootConfigField14` (`0x8006B3E0`) across seven routines:
+`initPlayerVehicleStateTables`, `initVoiceSubtitleSystem`,
+`setSubtitleOverlayScreenPos`, `setupWalkerSpriteTileQuad`, `initHudStruct`,
+`setupMissionTransitionScreenOverlay`, and
+`tickMissionTransitionAndTeardown`. The returned halfword is stored in
+frame/overlay `+0x14` fields, converted into HUD/subtitle/sprite geometry
+ratios, or used in mission-transition screen calculations. It is therefore a
+screen-height/display scalar, selecting H-static-field-display-mode.
+
+The remaining generated `0x7574` matches are unrelated loads/arguments based
+at `0x800A7574` or `0x800B7574`; no generated use targets `D_80037574` beyond
+the accessor itself. This is source-only evidence, independent of the ROM
+initializer audit in s818. No build, run, code change, or mitigation was made.
+
+ORIGIN: the classified value is the legitimate ROM initializer at
+`D_80037574`/VROM `0x38174`; this iteration added no mitigation-shaped
+machinery.
