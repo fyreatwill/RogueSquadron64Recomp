@@ -1,27 +1,32 @@
-# NEXT work unit (oracle runtime/configuration identity audit)
+# NEXT work unit (M3 FULL_SYNC parser/control-flow audit)
 
-HYPOTHESIS-ID: oracle-runtime-or-rom-discrepancy
+HYPOTHESIS-ID: m3-full-sync-parser-control-flow
 
-Session 782 completed the controlled no-press input-plugin A/B. The verified
-input-SDL plugin was attached only in arm B, yet the no-input arm recorded
-21,588,123 whole-RDRAM writes / 7,799 VI and the input arm 21,605,494 / 7,788;
-both stayed at width 320/origin `0x6dd280` for 130 seconds. Input schedule and
-input-plugin attachment are now refuted as phase discriminators.
+Session 783 compared the stock Mupen64Plus CLI with the oracle. The stock CLI
+fresh config lacked `Input-SDL-Control1` and fell back to `InputAutoCfg.ini`,
+but a fresh 130-second oracle run using the attached SDL input path and the
+verified eleven Start schedule still stayed 320-only: 21,618,871 whole-RDRAM
+writes, 7,793 VI, all presses verified. The oracle runtime/configuration
+thread is closed for this concrete difference.
 
 ## Discriminating measurement
 
-Before changing the port runtime, perform a bounded effective-state audit of
-the oracle launch against a stock Mupen64Plus CLI launch using the same retail
-ROM, core/RSP/input plugin paths, ROM-database data path, `R4300Emulator=1`,
-and fresh config directories. Record the generated configs plus startup logs,
-then compare the effective Core and Input-SDL sections and loaded plugin list.
-If a concrete difference is found, test only that difference in a fresh
-130-second oracle run. If no effective-state difference exists, record that
-the exact 320-only recipe reproduces across both frontends and return focus to
-the M3 FULL_SYNC blocker.
+Enumerate the authoritative post-sec2 FULL_SYNC/E9 dispatch path and its
+control-flow gates in one phase-gated port run, reusing the existing positive
+task/E9 alignment and `State::fullSync` counters. The discriminating outcome
+is: if aligned E9s advance the authoritative parser but do not reach
+`GBI_RDP::fullSync`, the map/handler path is implicated; if they reach
+`GBI_RDP::fullSync` but `State::fullSync` does not advance, the state/pacing
+path is implicated; if aligned E9s do not advance the authoritative parser,
+the parser's command-boundary/control-flow walk remains the active fault.
+Require a same-run positive control that marks every instrumentation arm and
+phase-gate the counters to the post-sec2 VI transition.
 
 ## Controls
 
-- Do not treat a config-save warning after shutdown as startup failure.
-- Preserve the whole-RDRAM positive control and VI trace for any follow-up run.
-- Do not change port runtime code during this oracle audit.
+- Read `docs/F5-UCODE-REFERENCE.md` before interpreting command boundaries.
+- Write the competing hypotheses and this discriminating measurement into this
+  file before building; do not run a counter-only null.
+- Use one build/run for all parser, aligned-E9, authoritative-dispatch, and
+  State::fullSync counters; scope budgets to the post-sec2 phase.
+- Do not productize a mitigation without naming the writer and legitimacy.

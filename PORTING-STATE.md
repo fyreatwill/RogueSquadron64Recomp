@@ -54797,3 +54797,28 @@ code changed. Raw logs and statuses are under
 bounded oracle-versus-stock-Mupen runtime/configuration audit before changing
 the port runtime; it must identify a concrete effective-state difference or
 record that the exact 320-only recipe is reproducible in both frontends.
+
+## Session 783 (2026-08-12) — stock frontend config difference does not explain oracle phase
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 21,334 bytes, so maintenance did
+not trigger. The planned work unit was the bounded oracle-versus-stock-
+Mupen64Plus configuration audit. A corrected stock CLI launch used the same
+retail ROM, debugger-capable core, Homebrew RSP and SDL input libraries,
+Homebrew data/plugin paths, dummy video/audio, and cached interpreter. Its
+startup log showed that a fresh config has no `Input-SDL-Control1` section and
+the input plugin falls back to `InputAutoCfg.ini`; the oracle materializes an
+explicit keyboard section. The initial audit command incorrectly passed the
+unsupported `--rom` option to the stock CLI and was discarded; the corrected
+launch reached the ROM and all requested plugins.
+
+Following the planned discriminator, a fresh 130-second oracle run used the
+attached SDL input path, `R4300Emulator=1`, debugger-on whole-RDRAM positive
+control, VI/PIF traces, and the eleven verified Start presses. It recorded
+**21,618,871** whole-RDRAM writes, **7,793 VI** callbacks, and all eleven
+presses; it remained width 320/origin `0x6dd280` for the complete horizon.
+The positive control and phase horizon make the result evaluable. Therefore
+the concrete input-config fallback difference is refuted as the phase
+trigger; no port runtime code changed. This rules out the stock/oracle input
+configuration lead, but not a deeper emulator/runtime or ROM discrepancy.
+Next is the M3 FULL_SYNC parser/control-flow audit with one batched,
+phase-scoped instrument run.

@@ -73,6 +73,15 @@ the chronological ledger. The active facts are:
   attached-input arm had 21,605,494 writes / 7,788 VI. Both stayed at width
   320/origin `0x6dd280` for 130 seconds. This refutes input-plugin attachment
   as the missing phase trigger and selects a remaining runtime/ROM discrepancy.
+- The s783 stock-front-end audit found the stock CLI starts with no
+  `Input-SDL-Control1` section and falls back to `InputAutoCfg.ini`, while the
+  oracle materializes an explicit keyboard section. A fresh 130-second oracle
+  run with the same attached SDL input path, `R4300Emulator=1`, retail ROM,
+  debugger/whole-RDRAM positive control, VI/PIF traces, and eleven verified
+  Start presses recorded 21,618,871 writes and 7,793 VI callbacks, but stayed
+  at width 320/origin `0x6dd280` throughout. This refutes the concrete
+  input-config fallback difference as the phase trigger; no port runtime code
+  changed.
 
 **ORIGIN:** this compaction retains the latest measured facts and pointers;
 deleted session narrative is recoverable from `PORTING-STATE.md` and git.
@@ -155,8 +164,12 @@ Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
    attached. **s782 completed that test:** the unattached arm had 21,588,123
    whole-RDRAM writes / 7,799 VI and the attached arm had 21,605,494 / 7,788;
    both were 320-only at `0x6dd280` for the full 130 seconds. This refutes
-   input-plugin state. Next: bounded oracle-versus-stock-Mupen
-   runtime/configuration audit before any port-runtime change.
+   input-plugin state. s783's stock-CLI audit found only an input-config
+   fallback difference (missing `Input-SDL-Control1` versus explicit keyboard
+   defaults); the fresh 130-second oracle arm with the attached input path and
+   verified eleven Start presses still stayed 320-only with positive controls.
+   This refutes that difference. Next: return to the M3 FULL_SYNC parser/control-flow
+   audit; do not change the port runtime for the oracle discrepancy.
 - **Overturned: H-oracle-runtime-environment-divergence (s777).** s777's
 bounded identity audit found byte-identical oracle/core/RSP/input/ROM artifacts;
 the matched configs differ only by `EnableDebugger`. This rules out artifact,
