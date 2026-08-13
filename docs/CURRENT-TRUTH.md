@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s924 (2026-08-13). The active blocker is the authoritative
+Reviewed through s925 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -314,6 +314,36 @@ All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
 none authorizes a mitigation.
 
+## s925 — `filterVoiceSampleBlock` remains locally unclassified
+
+This source-only inventory found exactly three direct generated callers, at
+`0x8009C540`, `0x8009C88C`, and `0x8009D740`. All three pass the same four-
+iteration voice-channel shape: `a0` is a decoded selector, `a1` is a
+caller-derived halfword offset, `a2` points at a 13-halfword input/output
+block, and `a3` points at a caller-owned stack/output workspace. No caller
+shape split was found.
+
+Inside `filterVoiceSampleBlock`, the 13-sample transform reads and rewrites
+`a2[0..12]`; a second fixed loop clears 40 halfwords at `a3[0..39]`; and the
+final fixed loop copies 13 halfwords to addresses beginning at `a3 + 2*a1`
+with a six-byte stride. The latter range is not locally bounded by `a1`, and
+neither `a2` nor `a3` is checked. For selectors `a0 <= 7`, the generated
+MIPS path also reads a byte through a return-address-derived address before
+computing the filter parameters; the source and companion symbols do not
+independently establish that table's bounds. All three loops have fixed
+termination (13, 40, and 13) and the only helper edge is the
+unreachable-on-ordinary-MIPS `bltzal $zero` path to `0x8009D8BC`, which falls
+into an emitted `scd` trap rather than a normal callable helper.
+
+This rejects H-filter-voice-classified and H-filter-voice-shape-mismatch as
+complete explanations: the callers agree, but local pointer/output bounds
+and the selector table path remain unclassified. H-filter-voice-unclassified
+is retained. No guard, mitigation, generated-code edit, or game behavior
+changed.
+
+ORIGIN: complete generated helper/caller, access-range, loop, and
+companion-symbol inventory; no guest value mutation or mitigation.
+
 ## Superseded interpretation
 
 The s916 claim that the shutdown active-byte scan was a bounded one-slot wait
@@ -335,28 +365,29 @@ shape, not a local termination bound. No runtime conclusion follows.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-filter-voice-block-class
+HYPOTHESIS-ID: m3-apply-voice-delay-class
 
-Audit the complete `filterVoiceSampleBlock` idiom at `0x8009D7D0`, including
-all generated callers, input/output bounds, helper calls, and termination.
+Audit the complete `applyVoiceDelayFilter` idiom at `0x8009D8C4`, including
+all generated callers, record/table bounds, helper calls, and termination.
 Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-filter-voice-unclassified: a filter caller or helper uses an unchecked
-  sample-block pointer/length or an incompatible record shape.
-- H-filter-voice-classified: all callers pass the same fixed block shape and
-  the helper has bounded control with only dynamic value legitimacy open.
-- H-filter-voice-shape-mismatch: one caller uses a distinct sample/filter
+- H-apply-delay-unclassified: a caller or helper uses unchecked channel,
+  delay-buffer, or output pointers/lengths.
+- H-apply-delay-classified: all callers share one fixed channel/filter shape
+  and every local walk is bounded, with only dynamic value legitimacy open.
+- H-apply-delay-shape-mismatch: one caller uses a distinct delay/filter
   contract; record the exact split and stop.
 
-Discriminating measurement: complete memory-access, helper-call, caller-
-argument, and loop/termination tables, cross-checked against companion
-symbols. Any omitted access, unsafe bound, unbounded control, or shape split
-rejects full classification.
+Discriminating measurement: enumerate every memory access, indirect/direct
+helper edge, caller argument setup, and loop/termination condition in the
+generated body; cross-check `main_overlay.txt` and companion symbols. Any
+omitted access, unsafe bound, unbounded control, or shape split rejects full
+classification.
 
-Exact commands: inspect `funcs_27.c` around `0x8009D7D0`, `rg` every
-`filterVoiceSampleBlock` reference and helper call, then inspect the matching
+Exact commands: inspect `funcs_27.c` around `0x8009D8C4`, `rg` every
+`applyVoiceDelayFilter` reference and helper call, then inspect the matching
 `main_overlay.txt` entry. No game build or soak is planned.
 
 ## Closed and parked

@@ -58728,3 +58728,40 @@ needed or claimed.
 
 ORIGIN: complete generated helper/caller and companion-symbol inventory; no
 guest value mutation, mitigation, or runtime behavior changed.
+
+## s925 — `filterVoiceSampleBlock` remains locally unclassified
+
+Performed the planned source-only M3 idiom inventory of
+`filterVoiceSampleBlock` (`0x8009D7D0`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated every generated direct
+caller, the complete helper body, access ranges, fixed-loop termination, and
+the companion `main_overlay.txt` mapping. No build, game run, or soak was
+run.
+
+Exactly three direct callers exist, at `0x8009C540`, `0x8009C88C`, and
+`0x8009D740`. Each is inside a four-iteration voice-channel loop and passes
+the same shape: a decoded selector in `$a0`, a caller-derived halfword offset
+in `$a1`, a 13-halfword input/output block in `$a2`, and a caller-owned
+workspace in `$a3`. No caller-shape split was found.
+
+The helper's first loop reads and rewrites 13 halfwords at `$a2`; the second
+clears 40 halfwords at `$a3`; the third copies 13 halfwords to `$a3 + 2*$a1`
+with a six-byte stride. The latter output range is not locally bounded by
+`$a1`, and neither pointer is checked. For `$a0 <= 7`, the parameter path
+also reads through a return-address-derived address; this source and the
+companion symbols do not independently establish that table's bounds. All
+three loops are fixed and terminate after 13, 40, and 13 iterations. The
+only helper edge is an unreachable-on-ordinary-MIPS `bltzal $zero` path to
+`0x8009D8BC`, which falls into the generated `scd` trap rather than a normal
+callable helper.
+
+### Result
+
+H-filter-voice-shape-mismatch is ruled out, but H-filter-voice-classified is
+not supported because pointer/output bounds and the selector-table path
+remain unclassified. H-filter-voice-unclassified remains active. No guard,
+mitigation, generated-code edit, or game behavior changed. This is a
+single-source static result; no independent runtime evidence was claimed.
+
+ORIGIN: complete generated helper/caller, access-range, loop, and
+companion-symbol inventory; no guest value mutation or mitigation.
