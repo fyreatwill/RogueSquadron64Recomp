@@ -56543,3 +56543,31 @@ H-caller-state open as the likely writer origin, and refutes an intentional
 dispatcher stall or stale dispatcher attribution for the observed markers.
 No mitigation was added. ORIGIN: source audit only; normal allocation/spawn
 writers were identified, but their live values' legitimacy is unknown.
+
+## Session 857 (2026-08-13) — first post-sec2 dispatcher population is valid
+
+Added a behavior-neutral `slotDispatcherIter` trace through the generated-code
+fixup path and built the Debug target successfully. Before the port run, the
+retail oracle armed a whole-RDRAM positive control and a physical watch on
+`0x130BB0..0x130FB0`; in 8 emulated seconds the controls reported 1,593,920
+whole-RDRAM writes and 256 table-region writes. This independently confirms
+the watch and that retail populates the table.
+
+The single phase-gated port capture reached VI 1024 at 79.5 seconds and
+entered trace phase ordinal 6. It produced 512 positive dispatcher-entry rows,
+256 pre-call rows, and 256 post-call rows. All pre-call slot pointers were in
+the KSEG0/RDRAM range, update pointers were in the observed
+`0x800403EC..0x8006FC90` range, and all post-call returns were `1`. No
+`[CRASH]` marker occurred; the probe ended after its 220-second post-gate
+budget when the 1024 phase changed, so the known dispatcher crash was not
+observed.
+
+The oracle control and port trace together rule out invalid slot/update input
+for this first bounded post-sec2 population, but do not classify the later
+crash-triggering population or identify a writer. H-caller-state remains open;
+no mitigation was added. The next work unit expands the trace bounds to reach
+later phase activity.
+
+ORIGIN: retail memory-watch control and host-side dispatcher telemetry only;
+no game value, dispatcher control flow, parser advancement, or mitigation
+behavior changed.

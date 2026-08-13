@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s856 (2026-08-13). The active blocker is the authoritative
+Reviewed through s857 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -441,10 +441,39 @@ inputs through the crash select H-caller-state; no dispatcher entry before a
 matching host fault selects H-stale-breadcrumb. No trace result authorizes a
 mitigation without identifying the writer and legitimacy.
 
+## Session s857 result
+
+Added the behavior-neutral `slotDispatcherIter` trace through the generated-code
+fixup path and built the Debug target successfully. The retail oracle was run
+before the build-side probe with a whole-RDRAM positive control plus the
+physical `0x130BB0..0x130FB0` table watch: 1,593,920 whole-RDRAM writes and
+256 table-region writes occurred in 8 emulated seconds, confirming that the
+independent watch was live and that retail populates this structure.
+
+The phase-gated port capture reached VI width 1024 at 79.5 seconds, entered
+trace phase ordinal 6, and filled all bounded controls: 512 dispatcher-entry
+rows, 256 pre-call rows, and 256 post-call rows. Every pre-call row had a
+KSEG0/RDRAM-range slot pointer (`valid=1`); update pointers were in the
+observed `0x800403EC..0x8006FC90` function range, and every post-call row
+returned `1`. The capture ran without a `[CRASH]` marker and ended when the
+probe budget left the 1024 phase, so it did not observe the known dispatcher
+fault itself.
+
+This is two-source evidence (retail table-watch control plus port trace) that
+the first bounded post-sec2 dispatcher population is not an invalid-slot or
+invalid-update population. It does not classify the later crash-triggering
+population, identify a writer, or establish legitimacy; H-caller-state remains
+open and no mitigation is justified. The next unit expands the same trace
+window to test whether the invalid state appears later in the phase.
+
+ORIGIN: retail memory-watch control and host-side dispatcher telemetry only;
+no game value, dispatcher control flow, parser advancement, or mitigation
+behavior changed.
+
 ## Ranked backlog
 
-1. Classify the invalid slot/index/update-pointer input at the dispatcher
-   dereference and identify its writer or prove it is legitimate.
+1. Expand the phase-scoped dispatcher trace window to reach the later crash
+   population and classify the first invalid slot/index/update-pointer input.
 2. Re-run the residual condition capture only after that input is classified.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
