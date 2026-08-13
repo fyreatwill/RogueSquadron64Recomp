@@ -234,7 +234,22 @@ leaving runtime behavior as the remaining broad class.
    reachability soak. **s788:** the source audit refuted stale generated view
    and separated s787's host-only zero-height tile-copy assertion from s786's
    malformed free-list consumption. It did not identify a writer common to
-   all three families; do not add a grid or RT64 mitigation.
+   all three families; do not add a grid or RT64 mitigation. **s789:** the
+   bounded writer audit named RT64 `copyNativeToRAM` writeback of garbage
+   `SETCIMG addr=0x1F0D74, width=1161` as the immediate writer for the s786
+   malformed range; the six game-side allocator/header writers are normal
+   bookkeeping paths. This selects H-freelist-writer for s786 and keeps s787
+   disjoint; no mitigation was added.
+- The s789 bounded writer audit enumerated all six active game-side free-list
+  writers: `rs_malloc`, `rs_free`, `buildHeapFreeList`,
+  `coalesceFreeHeapBlocks`, `rs_memset`, and `heapWalker`. The CMake manifest
+  consumes that exact generated tree. Existing `[fl-zero-fault]` evidence
+  names the immediate wild-range writer as RT64 `copyNativeToRAM` processing
+  garbage `SETCIMG addr=0x1F0D74, width=1161`; the game-side writers perform
+  allocator bookkeeping and no source writer explains that operand. This
+  selects H-freelist-writer for s786's allocator corruption, with RT64 as the
+  named writer, and keeps s787's zero-height tile-copy assertion independent.
+  No mitigation is justified.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

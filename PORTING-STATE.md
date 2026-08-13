@@ -54935,3 +54935,26 @@ is a mixed pre-chain crash class. No mitigation or lib change was made.
 Next is a systematic `rs_malloc`/free-list writer audit, starting with the
 writers that can create the `0x80000000`/zero-header state. This closes the
 grid-specific audit without reopening the parser chain.
+
+## Session 789 (2026-08-12) — allocator writer audit names RT64 wild writeback
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 26,045 bytes, so maintenance did
+not trigger. The planned work unit was a bounded source-and-trace audit; no
+build or run was authorized or needed.
+
+The active generated tree is `../N64Recomp/RecompiledFuncs`, and CMake globs
+that exact directory. Its six free-list/header writers are `rs_malloc`,
+`rs_free`, `buildHeapFreeList`, `coalesceFreeHeapBlocks`, `rs_memset`, and
+`heapWalker`; the fixup source documents the corresponding header and walk
+guards. Existing `[fl-zero-fault]` evidence identifies the immediate writer
+of the malformed free-list range as RT64 `copyNativeToRAM` processing the
+garbage SETCIMG at `0x1F0D74` with width `1161`, whose writeback range covers
+the watched header. The game-side writers are normal bookkeeping paths and no
+source writer produces that wild RDP operand.
+
+This selects H-freelist-writer for the s786 allocator corruption with a named
+RT64 writer and rules out H-rsmalloc-consumer for that corruption. It does not
+unify s785/s786/s787: s787's zero-height `findTileCopyId` assertion remains in
+two host-only tile-copy call sites. No mitigation or lib change was made.
+ORIGIN: RT64 `copyNativeToRAM` writeback of garbage SETCIMG `addr=0x1F0D74`,
+width `1161`; the operands are not legitimate game framebuffer parameters.
