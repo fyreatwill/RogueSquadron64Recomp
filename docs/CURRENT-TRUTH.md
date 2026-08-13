@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s914 (2026-08-13). The active blocker is the authoritative
+Reviewed through s915 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -175,6 +175,16 @@ closed. M3 work is limited to systematic idiom-class audits.
   on the speech-file layout, but do not independently prove dynamic asset
   pointers, count-derived size, or cleanup ownership legitimate; no guard or
   behavior change.
+- s915 audited `initMusyXVoiceTable`'s complete initializer. It has one
+  generated caller, initializes exactly one `0x80153420` voice slot with
+  `0x1228` stride and zero pointer arguments, clears the active byte at
+  `0x80154620`, creates/seeds the capacity-1 queue at `0x80154650`/`0x80154668`,
+  allocates `0x21C8` bytes at `0x80154674`, registers callback `0x8009B5A8`,
+  sets max voice count `0x800A5121` to 1, and clears `0x80154648`. The control
+  flow proves one iteration, not an unbounded slot walk; no speech-file DMA or
+  cleanup occurs in this function. Companion symbols and the caller agree on
+  ownership and layout, but dynamic allocation/callback legitimacy remains
+  unproven; no guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -205,6 +215,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s893 | `flushStreamedVoiceBuffers` inventory: count-bounded 0x18-byte scan with state-1 gate; `+0x8` buffer and `+0xC` element/cursor feed the four-halfword writeback helper; `startStreamedSampleVoice` supplies both dynamically, so structure passes but writer/value legitimacy remains unproven; no mitigation. |
 | s894 | `streamSampleCountToByteSize` inventory: 12-byte pure `($a0+4)<<1` wrapper with no memory or control-flow hazards; sole caller passes constant `0x10E0` and allocates `0x21C8`; full classification passed for this function, with broader audio legitimacy out of scope. |
 | s914 | `loadSpeechFile` inventory: two loaded-state gates, prior-offset-buffer free, speech asset lookup, fixed 4-byte header DMA, count-derived offset-table allocation/DMA, and coherent speech globals/flags; generated caller and companion speech layout agree, but dynamic pointer/count/cleanup legitimacy remains unproven; no mitigation. |
+| s915 | `initMusyXVoiceTable` inventory: one caller and one proven slot initialization at `0x80153420`, capacity-1 control queue creation/seeding, fixed `0x21C8` allocation, callback registration, max-voice-count reset, and active-byte reset; no local speech-file DMA/cleanup and no shape mismatch, while dynamic allocation/callback legitimacy remains unproven; no mitigation. |
 | s895 | `setVoiceVolumePanLocked` inventory: one gate read, one nonzero handle check, no target dereference/loop, and one mutex-protected modulation call; shape is coherent, but caller-derived handle/parameter writers are not independently proven legitimate; no mitigation. |
 | s896 | `stopStreamedVoice` inventory: one audio-enable gate, one computed 24-byte streamed-voice state access, state-1 check/clear, and `silenceVoiceSlot` call; the caller-derived voice index has no independent bound or writer-legitimacy proof, so full classification remains unresolved; no mitigation. |
 | s897 | `compute3DSourceSpatialMix` inventory: null-terminated `0x80153418` source-list walk, complete spatial-distance/mix/pan/output access table, and independent node/list writer cross-checks; structure passes but dynamic node/input writer legitimacy remains unproven and shapes are mixed; no mitigation. |
@@ -244,25 +255,24 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `initMusyXVoiceTable` (`0x8009BBA0`), as a
+Audit the next adjacent audio function, `findFreeSpeechVoiceSlot` (`0x8009BC88`), as a
 complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-init-voice-table-unclassified: the initializer mixes bounded slot setup,
-  queue creation/seeding, and global reset paths whose bounds or ownership are
-  not independently established.
-- H-init-voice-table-fully-classified: the slot count/stride, queue storage,
-  reset fields, and caller contract are explicit and mutually consistent.
-- H-init-voice-table-shape-mismatch: a caller or sibling helper uses an
-  incompatible slot or queue layout; record the exact split and stop.
+- H-free-speech-slot-unclassified: the helper's nested scan has an unproven
+  termination/count contract or mixes incompatible voice-slot shapes.
+- H-free-speech-slot-fully-classified: the one-slot scan, active-byte test,
+  return contract, and sibling callers are explicit and mutually consistent.
+- H-free-speech-slot-shape-mismatch: a caller or sibling helper supplies a
+  different index/table contract; record the exact split and stop.
 Discriminating measurement: a complete site table for
-`initMusyXVoiceTable`, every slot/queue/global load/store and control operation,
-all generated callers, and the
-companion symbol/decomp basis. Any omitted access or incompatible caller shape
-rejects full classification.
+`findFreeSpeechVoiceSlot`, every slot/global load and control operation, all
+generated callers, and the companion symbol/decomp basis. Any omitted access,
+unbounded termination, or incompatible caller shape rejects full
+classification.
 
-Exact commands: use `rg` to enumerate `initMusyXVoiceTable` and its callsites in
+Exact commands: use `rg` to enumerate `findFreeSpeechVoiceSlot` and its callsites in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
 companion `rogue_squadron64` symbol/decomp files. No game build or soak is
 planned.

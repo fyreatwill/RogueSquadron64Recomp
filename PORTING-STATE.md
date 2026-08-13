@@ -58329,3 +58329,49 @@ only; the companion artifacts corroborate layout, not runtime values.
 ORIGIN: complete generated-function, caller, symbol, and speech-layout
 inventory; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
+
+## 2026-08-13 — s915: initMusyXVoiceTable inventory
+
+### What ran
+
+Performed the prescribed source-only M3 idiom inventory of
+`initMusyXVoiceTable` (`0x8009BBA0`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. No build, game run, or soak was
+needed. The site table covered every stack save/restore, voice-slot argument,
+loop/control operation, active-byte and global store, queue creation/seeding,
+sample-buffer allocation, callback registration, max-voice reset, generated
+caller, and companion symbol/decomp basis.
+
+The function clears `0x80154E7C`, calls `initMusyXVoiceSlot` once with slot base
+`0x80153420` and four zero pointer arguments, then clears the active byte at
+`0x80154620`. The loop counter starts at zero, increments to one, and branches
+back only while signed non-positive; therefore this generated control flow
+executes exactly one slot iteration. It then creates a capacity-1 message
+queue at `0x80154650` using buffer `0x80154668`, sends one empty message,
+computes `streamSampleCountToByteSize(0x10E0) = 0x21C8`, allocates that size
+with alignment zero, stores the result at `0x80154674`, registers callback
+`0x8009B5A8`, sets `0x800A5121` to one, and clears `0x80154648`. There is no
+speech-file state load, asset lookup/DMA, or cleanup/free in this function.
+
+The only generated caller is `initSpeechSubsystem` at `0x80066A90`, which calls
+this initializer before resetting the speech state block. The companion symbol
+file identifies `D_80153420` as a `0x1228` object and independently describes
+the queue, buffer, one-slot initialization, and caller relationship. Sibling
+voice code uses the same `0x80153420` base, `0x1228` stride, and active field
+`+0x4620`; no caller or local shape mismatch was found.
+
+### Rules out / narrows
+
+This inventory rules out an unbounded multi-slot loop in this function, an
+omitted local voice-table write, a local speech-file DMA/cleanup path, and an
+incompatible generated caller shape. It does not prove the dynamic allocator
+result, callback target, queue storage ownership, or the legitimacy of values
+written by `initMusyXVoiceSlot`. H-init-voice-table-shape-mismatch is refuted;
+H-init-voice-table-fully-classified is supported for structure but not runtime
+value legitimacy. Two independent source lines (generated function/caller and
+companion symbols/sibling scans) support the shape result. No guard,
+mitigation, or game behavior changed.
+
+ORIGIN: complete generated-function, caller, sibling-scan, and companion-symbol
+inventory; no guest value, writer mutation, mitigation, or runtime behavior
+changed.
