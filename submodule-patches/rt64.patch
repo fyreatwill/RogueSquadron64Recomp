@@ -1389,7 +1389,7 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..7a3244e 100644
+index dccaa87..61314c0 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
 @@ -5,12 +5,450 @@
@@ -1916,7 +1916,7 @@ index dccaa87..7a3244e 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,7 +600,54 @@ namespace RT64 {
+@@ -112,9 +600,61 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -1971,8 +1971,15 @@ index dccaa87..7a3244e 100644
 +            }
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
++                if (rawOpCode == 0xE9 && rs64LogE9Condition() && rs64_e9prov_condition) {
++                    rs64_e9prov_condition("extended", commandAddress,
++                        sizeof(DisplayList), rawOpCode, 0, submit_serial,
++                        submit_lo, submit_hi);
++                }
                  dummy = dl;
-@@ -122,6 +657,40 @@ namespace RT64 {
+                 extendedFunction(state, &dl);
+                 cmdLength = 1;
+@@ -122,6 +662,40 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -2013,7 +2020,7 @@ index dccaa87..7a3244e 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +698,14 @@ namespace RT64 {
+@@ -129,6 +703,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -2028,7 +2035,7 @@ index dccaa87..7a3244e 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +713,211 @@ namespace RT64 {
+@@ -136,13 +718,211 @@ namespace RT64 {
                      break;
                  }
  

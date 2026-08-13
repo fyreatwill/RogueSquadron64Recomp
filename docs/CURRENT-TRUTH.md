@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s850 (2026-08-13). The active blocker is the authoritative
+Reviewed through s853 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -332,13 +332,23 @@ Priority until changed by the user:
   ORIGIN: source audit only; no game value, parser advance, RDP handler, or
   mitigation behavior changed.
 
-## Next work unit: classify the residual E9 condition
+- s853 added the requested behavior-neutral `kind=extended` condition marker
+  at the RT64 extended-opcode branch and exported the submodule patch. The
+  Debug build passed. The single phase-gated capture reached VI 1024 and
+  passed the E9 provenance positive control 345 times, but the known
+  `slotDispatcherIter+872` SIGBUS occurred at task 514 before the late
+  residual population previously observed around task 653. Captured summaries
+  had `pending=0`, `extended=0`, and no unassociated row. This is an
+  instrumented-but-unevaluable reachability result, not evidence against
+  H-extended-residual; no parser behavior or mitigation changed.
+
+## Next work unit: reach the residual E9 condition
 
 HYPOTHESIS-ID: m3-rdp-parser-condition
 
-Instrument the RT64 extended-opcode branch for raw E9 candidates with a
-behavior-neutral breadcrumb, build one Debug binary, and run one phase-gated
-capture. Do not change parser advancement, RDP handlers, or mitigation.
+Run one phase-gated capture with the existing behavior-neutral `kind=extended`
+marker and full provenance controls, requiring task 650 or later. Do not
+change parser advancement, RDP handlers, or mitigation.
 
 Competing hypotheses:
 
@@ -359,8 +369,8 @@ H-instrumentation-gap. All arms are measured in this one run.
 
 ## Ranked backlog
 
-1. Instrument the RT64 extended-opcode branch for raw E9 candidates with exact
-   task/serial/range; no behavior change until the residual condition is proven.
+1. Reach task 650 or later with the existing extended-E9 marker and compare
+   the residual against extended, synthetic, and pending condition rows.
 2. Only after that classification, identify the responsible parser/counting
    path and consider an implementation fix.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,

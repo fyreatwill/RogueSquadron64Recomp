@@ -264,6 +264,7 @@ struct Rs64E9Provenance {
     uint32_t condition_direct = 0;
     uint32_t condition_span = 0;
     uint32_t condition_pending = 0;
+    uint32_t condition_extended = 0;
     uint32_t condition_unassociated = 0;
     uint32_t non_e9_spans = 0;
     uint32_t uncovered = 0;
@@ -1044,9 +1045,10 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
             }
         }
         fprintf(stderr,
-                "[rdp-condition-summary] task=%u scope=%s direct=%u span=%u pending=%u unassociated=%u records=%zu\\n",
+                "[rdp-condition-summary] task=%u scope=%s direct=%u span=%u pending=%u extended=%u unassociated=%u records=%zu\\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.condition_direct,
                 g_e9prov.condition_span, g_e9prov.condition_pending,
+                g_e9prov.condition_extended,
                 g_e9prov.condition_unassociated, g_e9prov.conditions.size());
         fflush(stderr);
     }
@@ -1236,15 +1238,17 @@ extern "C" void rs64_e9prov_condition(const char *kind, uint32_t address,
     if (std::strcmp(kind, "direct") == 0) kind_id = 1;
     else if (std::strcmp(kind, "span") == 0) kind_id = 2;
     else if (std::strcmp(kind, "pending") == 0) kind_id = 3;
+    else if (std::strcmp(kind, "extended") == 0) kind_id = 4;
     else return;
     for (uint32_t emitted : g_e9prov.emitted_addrs) {
-        const bool match = kind_id == 1 ? emitted == address :
+        const bool match = (kind_id == 1 || kind_id == 4) ? emitted == address :
             (address <= emitted && emitted < end);
         if (!match || emitted < submit_lo || emitted >= submit_hi) continue;
         g_e9prov.conditions.push_back({emitted, submit_serial, submit_lo, submit_hi, kind_id});
         if (kind_id == 1) ++g_e9prov.condition_direct;
         else if (kind_id == 2) ++g_e9prov.condition_span;
-        else ++g_e9prov.condition_pending;
+        else if (kind_id == 3) ++g_e9prov.condition_pending;
+        else ++g_e9prov.condition_extended;
         static uint32_t lines = 0;
         if (lines++ < 2048) {
             fprintf(stderr,

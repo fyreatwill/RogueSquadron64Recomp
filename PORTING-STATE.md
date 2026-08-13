@@ -56269,6 +56269,30 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 853 (2026-08-13) — extended E9 probe did not reach the residual
+
+Added a behavior-neutral `kind=extended` condition breadcrumb at the RT64
+extended-opcode branch for raw E9 candidates. It carries the existing task,
+submit serial, and submit range, and the bridge now counts extended condition
+records separately. Exported the RT64 submodule patch and built the Debug
+target successfully.
+
+The single phase-gated capture reached VI width 1024 and passed the E9
+provenance positive control 345 times. It ended at 177.6s with the known
+`slotDispatcherIter+872` SIGBUS at task 514, before the late residual
+population previously seen around task 653. Captured condition summaries had
+`pending=0`, `extended=0`, and no unassociated row; this is not evidence that
+the residual cannot enter the extended branch because the residual was not
+reached. The run is therefore an instrumented-but-unevaluable reachability
+result. No parser advancement, handler, game value, or mitigation changed.
+
+The next unit must obtain a late-task capture with the same positive controls
+and compare the residual address against `kind=extended`, synthetic, and
+pending records.
+
+ORIGIN: host-side RT64 condition telemetry only; no game value, parser
+advancement, RDP handler, or mitigation behavior changed.
+
 ## Session 852 (2026-08-13) — source audit accounts for span matches; residual remains outside normal condition paths
 
 Performed the prescribed bounded source-only audit; no build or run was
