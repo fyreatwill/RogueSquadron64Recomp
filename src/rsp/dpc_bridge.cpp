@@ -273,6 +273,7 @@ struct Rs64E9Provenance {
 static Rs64E9Provenance g_e9prov;
 static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
 static std::atomic<uint32_t> g_e9prov_join_lines{0};
+static std::atomic<uint32_t> g_e9prov_nonzero_callback_lines{0};
 static std::atomic<uint32_t> g_task_bridge_e9{0};
 static uint8_t *g_rdram_for_submit = nullptr;
 
@@ -355,6 +356,14 @@ static bool log_e9_unified() {
 extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
                                       uint32_t guestE9) {
     const uint32_t current = g_e9prov.task;
+    if (log_e9_unified() && guestE9 != 0) {
+        const uint32_t line = g_e9prov_nonzero_callback_lines.fetch_add(1, std::memory_order_relaxed);
+        if (line < 128) {
+            fprintf(stderr, "[e9-callback-nonzero] passed=%u current=%u guest_dl=0x%08X aligned=%u\n",
+                    task, current, guestDl, guestE9);
+            fflush(stderr);
+        }
+    }
     if (log_e9_unified() && (task <= 4 || g_e9prov.target)) {
         const uint32_t line = g_e9prov_join_lines.fetch_add(1, std::memory_order_relaxed);
         if (line < 96) {

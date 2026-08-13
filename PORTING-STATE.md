@@ -55761,3 +55761,25 @@ parser counts. No game logic or mitigation was changed.
 ORIGIN: the positive controls originate in the synthetic E9 control task;
 nonzero aligned values originate in the inline-aware guest-DL walker. The
 unjoined values are a telemetry ownership defect, not a corruption claim.
+
+## Session 824 (2026-08-13) — E9 join is ordered before its callback
+
+The source/telemetry audit traced `rs64_e9prov_task_end` to line 658 of
+`src/main/main.cpp`, immediately after `factor5_ucode` returns, while the
+inline-data-aware walker calls `rs64_e9prov_aligned` at line 975 afterward.
+The LLE mutex covers the runner, so another LLE task cannot overwrite the
+global provenance record between those points; task serial allocation and the
+callback argument are the same value.
+
+The bounded instrumented s790 capture reached VI 1024 at 78.3s and passed its
+positive controls. It recorded 40 nonzero callback rows, all with
+`passed==current`; for tasks 1–20 the corresponding task-end join rows came
+before the callback and reported `aligned=0`. The later 53-frame SIGBUS was
+`cutsceneDispatchSlotsByFlag+7288` / guest PC `0x8000834c`, a separate known
+family. This selects H-callback-order and rules out global overwrite and
+serial mismatch for this join. It does not classify parser loss. The next
+unit is a telemetry-only reorder/deferred join followed by one phase-gated
+capture; no game logic, parser accounting, or mitigation changed.
+
+ORIGIN: task-end telemetry runs before the post-task guest-DL walker callback;
+the stale zero is a diagnostic ordering defect, not a game value.

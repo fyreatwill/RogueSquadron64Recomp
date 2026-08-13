@@ -84,12 +84,30 @@ SIGBUS family. This proves the current callback/task ownership join is not
 valid, and does not classify bridge/parser loss. No game logic or mitigation
 was changed.
 
-Next work unit: a bounded source/telemetry audit of `rs64_e9prov_aligned`
-callback ownership and task serial lifetime. Explain why the inline walker can
-print nonzero `e9_aligned` while the task-end join sees no nonzero field;
-instrument one callback row with passed/current task IDs if source inspection
-cannot prove it. Keep the bridge/parser counters unchanged and do not run a
-parser-loss experiment until this join is repaired.
+**s824 resolves the join defect:** source inspection found
+`rs64_e9prov_task_end(task_serial)` at `src/main/main.cpp:658`, immediately
+after `factor5_ucode` returns, while the inline-data-aware walker calls
+`rs64_e9prov_aligned(task_serial, ...)` later at line 975. The LLE mutex covers
+the runner and prevents another LLE task from overwriting `g_e9prov`; the
+capture's 40 nonzero callback records all had `passed==current`, including the
+positive controls. The corresponding task-join rows immediately before those
+callbacks had `aligned=0`, proving the join was evaluated before the callback.
+This selects **H-callback-order**, not global overwrite or serial mismatch.
+VI 1024 was reached at 78.3s; the later 53-frame SIGBUS was the separate
+`cutsceneDispatchSlotsByFlag+7288` / guest `0x8000834c` family. The telemetry
+join must be reordered or split into post-callback reporting before parser-loss
+interpretation. No game logic, parser accounting, or mitigation changed.
+
+ORIGIN: the callback is emitted by the post-task guest-DL diagnostic walker;
+the stale `aligned=0` row is produced by task-end telemetry before that walker.
+
+Next work unit: make the smallest telemetry-only repair that records the
+inline-walker result after `rs64_e9prov_aligned` returns (or defers the join
+until that callback), keeping bridge/parser counters unchanged. Build once and
+run `zsh scratch/agent/s790_postsec2_reachability.sh` with the existing
+VI-1024 gate and positive controls. Expected discriminator: a post-callback
+row with `passed==current` and `aligned>0` on the same task proves the join is
+repaired; a mismatch or absent callback row reopens the ownership audit.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
   input-plugin, and ROM artifacts. Fresh configs differed only in
