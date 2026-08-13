@@ -57658,3 +57658,34 @@ is rejected; no mitigation or behavior change was made.
   for a runtime crash.
 
 ORIGIN: generated-function site table cross-checked against local audio siblings and companion symbol notes; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s900 (2026-08-13) — listener-node registration is one coherent shape, but dynamic inputs remain unproven
+
+Performed the prescribed source-only M3 inventory of
+`register3DAudioListenerNode` (`0x8009912C`, size `0x1E4`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`, cross-checked against the companion
+`main_overlay.txt` symbols and all four current generated callers. No build,
+game run, or soak was needed.
+
+The complete site table is:
+
+| Guest site(s) | Operation | Classification / writer basis |
+|---|---|---|
+| `0x80099150–0x80099188` | Load `gMusyXActiveFlag` at `0x800A0F50`; save arguments; branch to return 0 when inactive | Explicit initialization gate; `a0` is the destination node, `a1–a3` are three-word input vectors, and stack inputs are loaded at `0x88–0x9F($sp)`; caller/value legitimacy is not independently proven |
+| `0x80099198–0x800991B4` | Load list head `D_80153418`; if non-null write old head to node `+0` and node to old head `+4`; clear node `+4`; publish node as head | Coherent doubly-linked insertion under `factor5MutexAcquire`; head/node writers and values are dynamic and not independently proven |
+| `0x800991B8–0x800991FC` | Copy three words from each of `a1`, `a2`, and `a3` into node `+0xC..+0x2C` | Three consistent vec3 record fields; each pointer is dereferenced without an inner bound, and its writer/value basis is not independently established |
+| `0x80099200–0x80099234` | Load three floats from stack-derived `s1`, negate them, store node `+0x3C..+0x44`; copy stack floats `f20/f22/f24` to `+0x78..+0x80` | Explicit velocity/Doppler and auxiliary-vector transformations; stack pointer and float writers remain caller-derived/unproven |
+| `0x80099238–0x800992A8` | `crossProductVec3(node+0x30, node+0x3C, node+0x24)`; copy node fields to a stack matrix/vector block; call `invertOrientationMatrix(node+0x48, stack+0x10)` | Derived orientation path is structurally coherent; helper output/input legitimacy inherits the unproven node and caller values |
+| `0x800992AC–0x800992C8` | Convert byte `s5` to float, divide by constant at `0x8003DED0`, store node `+0x84`; store `s6` at node `+0x8` | Explicit scalar conversion and record-field store; no independent writer/value proof for `s5` or `s6` |
+| `0x800992CC–0x80099308` | Return 1, release mutex, restore frame/register state | Control-flow and stack cleanup complete; inactive path returns 0 |
+
+The four callers at `0x80066568`, `0x800AA160`, `0x800AD7E8`, and
+`0x800CB2D0` use the same destination-plus-three-vec3-plus-stack-scalar
+listener-node shape. The shape-mismatch hypothesis is therefore rejected.
+Structural classification passes, but full classification is rejected because
+the destination node, list head, vector pointers, stack-derived velocity and
+scalar inputs, and their dynamic writers/values have no independent legitimacy
+line. This is a source/symbol result only, not an explanation for a runtime
+crash; no guard or behavior change was made.
+
+ORIGIN: complete generated-function and caller inventory cross-checked against companion symbol notes; no guest value, writer mutation, mitigation, or runtime behavior changed.
