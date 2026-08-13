@@ -1,49 +1,46 @@
-# NEXT work unit (repeat capture of initVideoSubsystem argument-state values)
+# NEXT work unit (bounded source audit of the recurring pre-gate crash)
 
-HYPOTHESIS-ID: m3-vi1024-argument-state
+HYPOTHESIS-ID: m3-vi1024-boot-crash-pivot
 
-Run one more bounded phase-gated capture using the fixed `[vi-arg]` probe at both
-reachable `initVideoSubsystem` callers. The source audit is complete: callers
-are `advanceVideoFrame` sites `0x80018378` and `0x80018564`, and no generated
-store targets argument offsets `0x1EF`, `0x1F3`, or `0x1FF`. Four fixed-recipe
-attempts plus s812 died before the 1024 gate in the same boot crash family, so
-this unit must obtain a 1024-gated record before interpreting argument state.
-Do not change mode data or add a mitigation.
+Do one read-only source audit; do not build or run. The `[vi-arg]` capture
+thread stalled for three consecutive iterations: s811, s812, and s813 all
+failed to reach 1024, and s812/s813 independently reproduced
+`initVideoBootWrapper+2196`, `si_addr=0x3800002CC`, guest PC `0x80001C94`.
 
 ## Competing hypotheses
 
-- H-argument-state-intended: a reachable caller supplies a legitimate
-  1024-capable argument state; `[vi-arg]` values precede the 1024
-  `initVideoSubsystem` call and agree with its derived predicate.
-- H-argument-state-miswritten: a reachable writer corrupts or overwrites one
-  of those bytes before the call; source and `[vi-arg]` ordering identify it.
-- H-argument-state-unresolved: the recipe reaches 1024 only intermittently or
-  the caller record is absent while host-VI and E9 controls are positive.
+- H-boot-crash-malformed-state: the fault is a legitimate guest-side bad
+  pointer/state consumed by the `0x80001C94` return path or its caller.
+- H-boot-crash-host-translation: the guest PC is only a stale stamp and the
+  host fault comes from a runtime pointer translation or probe-side access.
+- H-boot-crash-independent: the two matching signatures are a shared
+  last-guest-PC label over a different host instruction, so no single guest
+  state explanation is justified.
 
 ## Discriminating measurement
 
-Require all of: `[phase] vi_width=1024`, host VI/mode control, and an E9 record
-with `emit=1 raw=1 dispatch=1 match=1`. Then compare `[vi-arg]` values and
-callsite ordering against the 1024 `[vi-gate]` record. Matching values advance
-H-intended; a concrete pre-call overwrite advances H-miswritten; no argument
-record with all controls live advances H-unresolved. A boot crash or width-320
-null is unevaluable and must not be classified.
+Map guest `0x80001C94` to the exact generated instruction and surrounding
+host code, then map the faulting host instruction/operand from the two run
+logs to its source access. Enumerate every access in the immediate return
+path and every caller edge into `initVideoBootWrapper`; compare the mapped
+fault operand with `si_addr=0x3800002CC` and the saved register values. A
+single concrete malformed guest operand advances H-boot-crash-malformed-state;
+an unrelated host/runtime access with a stale guest stamp advances
+H-boot-crash-host-translation; non-unique mappings advance
+H-boot-crash-independent. Do not add a guard or mitigation from this audit.
 
-## Exact command
+## Exact commands
 
 ```sh
-OUT="scratch/agent/soak_results/s813_vi1024_argument_state_$(date +%Y%m%d-%H%M%S)"
-mkdir -p "$OUT"
-env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_E9_PROVENANCE=1 \
-  ROGUESQ_LOG_E9_DISPATCH=1 ROGUESQ_LOG_RDP_ADVANCE=1 \
-  ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_DL_SYNC=1 \
-  ROGUESQ_LOG_DL_SYNC2=1 ROGUESQ_LOG_FL_ZERO_WATCH=1 \
-  ROGUESQ_LOG_CIMG_RAW=1 ROGUESQ_LOG_RS_MALLOC_DIAG=1 \
-  ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_VI_CALLERS=1 \
-  ROGUESQ_LOG_VI_WRITERS=1 ROGUESQ_LOG_VI_ARGS=1 \
-  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
-  PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
-  PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' \
-  zsh tools/probe.sh "$OUT" 300 2
+rg -n "80001C94|initVideoBootWrapper|0x3800002CC|last-guest-pc" \
+  ../N64Recomp/RecompiledFuncs/funcs_0.c \
+  ../N64Recomp/RecompiledFuncs/funcs_4.c \
+  src lib
+sed -n '34080,34380p' ../N64Recomp/RecompiledFuncs/funcs_4.c
+sed -n '3260,3340p' ../N64Recomp/RecompiledFuncs/funcs_0.c
+rg -n "initVideoBootWrapper\(" ../N64Recomp/RecompiledFuncs
 ```
+
+Use the two s813 logs under `scratch/agent/soak_results/` only as bounded
+crash evidence; do not rerun the phase-gated capture until this audit has a
+classified result.

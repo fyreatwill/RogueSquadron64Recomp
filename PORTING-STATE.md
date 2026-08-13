@@ -55519,3 +55519,20 @@ mitigation rationale. The next unit repeats the same bounded capture.
 
 ORIGIN: no code or mitigation changed; this iteration only exercised the
 existing regeneration-safe diagnostics.
+
+## Session 813 (2026-08-13) — `[vi-arg]` capture repeated pre-gate
+
+The planned phase-gated repeat was run twice with the fixed `[vi-arg]` probe,
+host VI controls, and E9 provenance controls. Both arms reached only width
+320 and exited before any `[vi-arg]`, 1024-phase, or E9 discriminator. Both
+reported the same `initVideoBootWrapper+2196`, `si_addr=0x3800002CC`, and
+guest PC `0x80001C94` signature.
+
+This is an unevaluable third stalled iteration for the argument-state
+hypothesis: it neither supports intended nor corrupted argument bytes and
+does not justify a mitigation. Per the iteration budget, the next unit pivots
+to a bounded source audit of the `0x80001C94` crash site and its immediate
+state/allocator accesses.
+
+ORIGIN: no code or mitigation changed; this iteration only exercised the
+existing regeneration-safe diagnostics.

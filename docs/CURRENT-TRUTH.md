@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s810; compacted in maintenance s776)
+## Current truth (reviewed through s813; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -517,6 +517,14 @@ leaving runtime behavior as the remaining broad class.
    intended-versus-corrupt argument state; no mitigation or hypothesis
    classification is justified. Next: repeat the same bounded capture until
    a 1024-gated record is obtained.
+
+   **s813 repeat:** both fixed `[vi-arg]` arms died at width 320 before the
+   1024 gate, with no argument, phase, or E9 discriminator. Both had the same
+   `initVideoBootWrapper+2196`, `si_addr=0x3800002CC`, and guest PC
+   `0x80001C94` signature. This is a third stalled iteration on the
+   argument-state slug, so the capture hypothesis is not classified and no
+   mitigation is justified. Pivot next to a bounded source audit of the
+   `0x80001C94` crash site and its immediate state/allocator accesses.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
