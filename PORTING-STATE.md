@@ -56955,3 +56955,26 @@ retail width-320 stall or establish runtime value legitimacy.
 
 ORIGIN: generated-tree source inventory only; no guest value, control flow, or
 mitigation behavior changed.
+
+## Session s875 (2026-08-13) — coalescer value-origin experiment
+
+Added `tools/apply_s875_coalesce_origin.py` and applied one behavior-neutral
+probe at the partition writers, boot zeroing stores, and free-list-head
+initialization writer. The Debug target built successfully. The phase-gated
+port run passed 124 positive E9 provenance controls but reached only VI width
+640, not width 1024. Port writer/value records fired in earlier phases,
+including `0x80000ED8=0x807DD000`, `0x80000FFC=0x80720000`,
+`0x80001038=0x8063D000`, and `0x800021D8=0x80154690`, with later phase-4
+partition records as well.
+
+The independent retail run had whole-RDRAM, PIF, and VI controls live and
+showed early writer PCs `0x80000420`, `0x80000424`, `0x80000ED8`,
+`0x80000FFC`, `0x80001038`, and `0x800021D8`, but stayed at VI width 320;
+the capture ended before a later phase and the oracle reports no write
+values. The late matched writer/value discriminator was phase-unreachable,
+not a null result. This rules out no writer or legitimacy hypothesis and
+justifies no mitigation. The next unit is a source-only whole-idiom audit of
+all inputs feeding the four coalescer globals and their callers.
+
+ORIGIN: diagnostic-only writer/value reads and independent physical write
+watches; no game value, control flow, or writeback behavior changed.

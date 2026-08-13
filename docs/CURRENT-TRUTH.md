@@ -901,25 +901,49 @@ build or run was performed, and no behavior or mitigation changed.
 ORIGIN: generated-tree source inventory only; no guest value, control flow, or
 mitigation behavior changed.
 
-## Next work unit: obtain coalescer value-origin evidence
+## s875 result — coalescer value-origin experiment
 
-HYPOTHESIS-ID: m3-coalesce-phase-driver
+Added `tools/apply_s875_coalesce_origin.py`, a regeneration-replayable,
+behavior-neutral probe for the partition writers, boot zeroing stores, and
+free-list-head initialization writer. The Debug build succeeded. The
+phase-gated port run passed 124 positive E9 provenance controls but reached
+only VI width 640; it never reached width 1024. The probe fired in earlier
+phases and recorded port values including `0x807DD000`, `0x80720000`,
+`0x8063D000`, and free-list head `0x80154690` at writer PCs `0x80000ED8`,
+`0x80000FFC`, `0x80001038`, and `0x800021D8`, plus later phase-4 partition
+values. These are genuine port-origin observations, but do not classify the
+late post-sec2 state.
 
-Use one phase-gated port/retail value-origin experiment for the coalescer
-globals and free-list head, preserving whole-RDRAM, PIF, and VI positive
-controls. The port side must record exact writer PC/value at `0x801163E4`,
-`0x801163E8`, `0x801163F8`, and `0x8010FF18`; arm corresponding retail
-physical watches only after the controls are live. Do not change game behavior
-or add a mitigation.
+The independent retail run had live whole-RDRAM, PIF, and VI controls and
+showed the same early writer PCs (`0x80000420`, `0x80000424`, `0x80000ED8`,
+`0x80000FFC`, `0x80001038`, `0x800021D8`) while remaining at VI width 320;
+the capture ended before a later phase and the oracle does not print write
+values. The matched late writer/value discriminator was therefore
+phase-unreachable. This does not select H-port-writer, H-retail-writer, or
+H-legitimate-transition, and no mitigation is justified.
 
-Competing hypotheses are H-port-writer (the port partition writer produces a
-stale or malformed value), H-retail-writer (retail reaches the same writer but
-the current schedule has not crossed the phase), and H-legitimate-transition
-(matched values are valid state-machine output and the defect is downstream).
-Positive controls plus matched writer/value transitions select H-retail-writer;
-a port-only or malformed port value selects H-port-writer; matched legitimate
-values with divergent downstream behavior select H-legitimate-transition. If
-retail remains at width 320, classify it as phase-unreachable, not a null.
+ORIGIN: diagnostic-only writer/value reads in generated port functions and
+physical retail write watches; no game value, control flow, or writeback
+behavior changed.
+
+## Next work unit: coalescer value-legitimacy source audit
+
+HYPOTHESIS-ID: m3-coalesce-value-legitimacy
+
+Perform one source-only whole-idiom audit of every computation feeding
+`0x801163E4`, `0x801163E8`, `0x801163F8`, and `0x8010FF18`, including all
+partition inputs, alignment arithmetic, and every caller boundary. Use
+`rg -n -- "0x63E4|0x63E8|0x63F8|-0xE8|partitionFramebufferMemory|coalesceFreeHeapBlocks" ../N64Recomp/RecompiledFuncs`
+then inspect bounded function windows and classify each value range as
+proven legitimate, malformed, or unknown. Do not build, run, or add a guard.
+
+Competing hypotheses are H-input-range-legitimate (all writers are fed by
+valid display/heap inputs), H-input-range-malformed (a bounded writer input is
+already invalid), and H-unknown-downstream (all source ranges remain
+unclassifiable). The discriminating result is a complete writer/input table:
+one malformed upstream operand selects H-input-range-malformed; all operands
+proven valid with no bad source selects H-unknown-downstream; complete valid
+ranges plus a documented state transition selects H-input-range-legitimate.
 
 ## Closed and parked
 

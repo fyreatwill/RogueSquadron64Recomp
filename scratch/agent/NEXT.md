@@ -1,27 +1,30 @@
-# NEXT work unit (s875)
+# NEXT work unit (s876)
 
-HYPOTHESIS-ID: m3-coalesce-phase-driver
+HYPOTHESIS-ID: m3-coalesce-value-legitimacy
 
-Run one phase-gated value-origin experiment for the coalescer globals and
-free-list head. Preserve whole-RDRAM, PIF, and VI positive controls. Record
-exact writer PC/value in the port for `0x801163E4`, `0x801163E8`,
-`0x801163F8`, and `0x8010FF18`; arm matching retail physical watches only
-after controls are live. Do not change game behavior or add a mitigation.
+Perform one source-only whole-idiom audit of every computation feeding
+`0x801163E4`, `0x801163E8`, `0x801163F8`, and `0x8010FF18`, including all
+partition inputs, alignment arithmetic, and every caller boundary. Do not
+build, run, or add a guard.
 
 Competing hypotheses:
 
-- H-port-writer: the port partition writer produces a stale or malformed value.
-- H-retail-writer: retail reaches the same writer/value transition, but the
-  current oracle schedule has not crossed the required phase.
-- H-legitimate-transition: matched values are legitimate state-machine output
-  and the defect is downstream.
+- H-input-range-legitimate: every writer is fed by valid display/heap inputs.
+- H-input-range-malformed: a bounded writer input is already invalid.
+- H-unknown-downstream: source ranges remain unclassifiable.
 
-Discriminating measurement: positive controls plus matched writer/value
-transitions select H-retail-writer; a port-only or malformed port value selects
-H-port-writer; matched legitimate values with divergent downstream behavior
-select H-legitimate-transition. If retail remains at width 320, classify the
-run as phase-unreachable, not as a null.
+Discriminating measurement: a complete writer/input table. One malformed
+upstream operand selects H-input-range-malformed; all operands proven valid
+with no bad source selects H-unknown-downstream; complete valid ranges plus a
+documented state transition selects H-input-range-legitimate.
 
-Exact source anchors: `partitionFramebufferMemory` stores at 0x80000ED8,
-0x80000FFC/0x80001010, and 0x80001024/0x80001038; the normal tick calls it
-at 0x800013F0 and coalescer at 0x80001430.
+Exact commands:
+
+```sh
+rg -n -- "0x63E4|0x63E8|0x63F8|-0xE8|partitionFramebufferMemory|coalesceFreeHeapBlocks" ../N64Recomp/RecompiledFuncs
+```
+
+Inspect at most 60-line windows around every hit, enumerate callers and
+stores, and write the classification into `docs/CURRENT-TRUTH.md` and
+`PORTING-STATE.md`. This is a systematic idiom audit; no runtime evidence is
+required for this unit.
