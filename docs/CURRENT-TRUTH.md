@@ -22,7 +22,23 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s769; compacted in maintenance s729)
+## Current truth (reviewed through s770; compacted in maintenance s729)
+
+**s770:** the same-iteration oracle A/B used separate fresh config directories,
+the same ROM/core, PIF and VI traces, and whole-RDRAM positive controls. The
+undriven arm recorded **11,759,337 writes** over 4,200 VI; the driven arm
+recorded **11,788,598 writes** over 4,200 VI. Both controls visibly fired.
+The driven arm logged all eleven scheduled Start presses at the PIF boundary
+as `0x7C4=0x10000000`, while both arms remained at VI width 320 after the
+initial transition and never reached 640/1024/512. This selects
+**H-oracle-environment-320** and refutes **H-oracle-input-induced-320** for
+this recipe. The result is still unexplained; next compare the effective
+fresh-config/plugin state or run a configuration-focused oracle check rather
+than using the documented phase timeline as ground truth. ROM SHA-256 remains
+`9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`.
+
+**ORIGIN:** same-run independent whole-RDRAM watches and PIF/VI traces; no
+port runtime code changed.
 
 **s769:** the fresh-config oracle identity run used ROM SHA-256
 `9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`,

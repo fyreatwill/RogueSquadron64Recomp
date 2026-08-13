@@ -54520,3 +54520,24 @@ explanation. It does not explain the conflict with the documented phase
 timeline. The next unit is a same-iteration undriven-versus-driven oracle A/B
 with identical ROM/core and positive controls, to determine whether the Start
 schedule itself changes the 320-only result. No port runtime code changed.
+
+## Session 770 (2026-08-12) — oracle undriven/driven A/B both remain at VI 320
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 54,396 bytes, so maintenance did not
+trigger. The planned work unit was the same-iteration undriven-versus-driven
+oracle A/B using separate fresh config directories, identical ROM/core settings,
+PIF and VI traces, and whole-RDRAM positive controls.
+
+The sibling ROM SHA-256 was
+`9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`.
+The undriven arm recorded **11,759,337** whole-RDRAM writes over 4,200 VI; the
+driven arm recorded **11,788,598** over 4,200 VI. Both positive controls visibly
+fired. The driven arm logged all eleven Start presses at the PIF boundary as
+`0x7C4=0x10000000`. Both arms transitioned only to width 320 and never reached
+640, 1024, or 512.
+
+This selects H-oracle-environment-320 and refutes H-oracle-input-induced-320
+for this recipe. It rules out a missing positive control, missing PIF delivery,
+and the Start schedule as the cause of the 320-only result. It does not yet
+distinguish plugin defaults, generated configuration, or a retail-oracle
+runtime divergence. No port runtime code changed.
