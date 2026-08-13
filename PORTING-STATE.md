@@ -56780,6 +56780,24 @@ with the documented eleven-Start schedule through the hangar transition.
 ORIGIN: retail debugger watch-PC output plus independent whole-RDRAM and VI
 controls; no game value or control flow changed.
 
+## Session s869 (2026-08-13) — phase-appropriate retail Start remains width-320 only
+
+Ran the prescribed 70-second retail oracle with the phase-appropriate eleven-
+Start schedule, whole-RDRAM positive control, VI trace, PIF trace, and retail
+ROM. The whole-RDRAM watch recorded 11,785,805 writes over 4,199 VI. All
+eleven presses produced `0x7C4=0x10000000` at the PIF boundary and each
+release returned it to zero. VI changed from width 0 to 320 and changed origin
+once, then stayed at width 320 for the full run.
+
+This selects H-game-state for the phase-appropriate schedule and rules out
+H-input-map plus a dead whole-RDRAM/PIF/VI instrument. It does not explain the
+retail state-machine stall, classify a later writer, or justify a mitigation.
+The next unit tests whether the default pulse duration is too short by
+repeating the same schedule with `--hold-ms 1000`.
+
+ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
+positive controls; no port value, game behavior, or mitigation changed.
+
 ## Session s868 (2026-08-13) — early retail Start reaches PIF but not phase state
 
 Ran the prescribed 20-second retail oracle with the whole-RDRAM positive

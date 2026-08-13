@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s867 (2026-08-13). The active blocker is the authoritative
+Reviewed through s869 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -719,33 +719,43 @@ behavior or mitigation changed.
 ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
 positive controls; no game value or control flow was changed.
 
-## Next work unit: validate the phase-appropriate retail driver at PIF
+## Session s869 result
+
+The 70-second retail oracle used the phase-appropriate eleven-Start schedule,
+whole-RDRAM positive control, VI trace, PIF trace, and retail ROM. The positive
+control recorded 11,785,805 writes over 4,199 VI. Every scheduled press
+produced `0x7C4=0x10000000` at PIF and every release returned it to zero. VI
+changed from width 0 to 320 and changed origin once, then stayed at width 320
+for the full run.
+
+This is a second independent line for H-game-state under the phase-appropriate
+schedule and rules out H-input-map plus a dead whole-RDRAM/PIF/VI instrument.
+It does not establish why the retail state machine remains at width 320 and
+does not authorize a later writer-watch or mitigation.
+
+ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
+positive controls; no port value, game behavior, or mitigation changed.
+
+## Next work unit: test retail Start pulse duration
 
 HYPOTHESIS-ID: m3-coalesce-phase-driver
 
-Run one 70-second retail-oracle experiment with the same ROM, VI trace, and
-whole-RDRAM positive control, using the documented phase-driving schedule and
-adding `--pif-trace`:
-`6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`.
-Do not infer writer absence from this run; its purpose is to validate the
-phase-appropriate input schedule and identify the first resulting VI
-transition.
+Run one 70-second retail-oracle experiment with the same ROM, whole-RDRAM
+positive control, VI trace, PIF trace, and eleven-entry schedule, but add
+`--hold-ms 1000`. Do not add target watches or change emulated game behavior.
 
 Competing hypotheses:
 
-- H-pif-start: PIF trace shows Start-bit transitions at the scheduled times and
-  VI advances beyond width 320.
-- H-input-map: presses are delivered but the PIF button word never contains
-  Start, so the documented schedule is not driving this oracle configuration.
-- H-game-state: PIF Start bits are present but VI remains width 320 under the
-  phase-appropriate schedule, so the retail state machine—not the input
-  injector—is the blocker.
+- H-short-pulse: longer Start holds produce a post-320 VI transition.
+- H-game-state: sustained Start reaches PIF but VI remains width 320.
+- H-input-queue: sustained holds alter the PIF pattern or produce repeated
+  transitions, showing injector pulse semantics are the driver.
 
-Discriminator: the whole-RDRAM control must fire; the PIF trace must show the
-Start bit for each scheduled press, and VI must show a post-320 width/origin
-transition. Missing PIF Start selects H-input-map; present PIF Start with no
-transition selects H-game-state; both controls plus a transition validate the
-driver and permit a later writer-watch experiment.
+Discriminator: whole-RDRAM must fire; PIF must show sustained Start for each
+scheduled press; and VI must show a post-320 width/origin transition. A
+transition only with long holds selects H-short-pulse; sustained PIF Start
+with no transition selects H-game-state; an altered/repeated PIF pattern
+selects H-input-queue.
 
 ## Ranked backlog
 
