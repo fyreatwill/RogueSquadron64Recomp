@@ -58201,3 +58201,46 @@ behavior changed. This is single-source inventory evidence only.
 ORIGIN: complete generated-helper, both-caller, shared-field, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
+
+## Session s912 (2026-08-13) — serviceVoicePoolFrame has one coherent slot shape but unproven state ownership
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`serviceVoicePoolFrame` (`0x8009B5A8`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerated its complete local
+voice-slot/table access set, control flow, queue operations, sibling field
+uses, and the companion symbol/decomp basis. No build, game run, or soak was
+needed.
+
+The helper gates on `0x800A5121`, receives from and later sends to the voice
+control queue at `0x80154650`, and derives one coherent MusyX slot shape from
+`0x80154620` with a `0x1228` stride. It reads the active/state byte at
+`slot+0x4620`, streaming state at the slot base, timing/configuration fields
+at `slot+0x45C0`, `+0x4621..+0x4624`, `+0x4630`, `+0x4634`, and `+0x4639`,
+and the slot's stream handle at `slot+0x3420`. It writes `+0x463C`, `+0x4620`,
+`+0x4640`, `+0x120C`, and `+0x1218`, calling the matching streaming,
+advance, start, and stop helpers. There is no pointer/list walk or alternate
+record layout. The emitted bottom test increments its local counter from zero
+then tests `blez`, so the generated control executes the first slot path and
+does not establish a positive multi-slot bound in this helper.
+
+No generated direct callsite for `serviceVoicePoolFrame` was found; its
+registration is present in `recomp_overlays.inl`, so an indirect/runtime
+dispatch path remains possible. The companion symbols independently identify
+the MusyX table, stride, queue, initialization, and adjacent helper roles,
+but do not prove every queue/state input or shared-field writer value.
+
+### Rules out / narrows
+
+This audit rules out an omitted local table access, pointer/list walk, and an
+incompatible slot record shape in `serviceVoicePoolFrame`. It does not prove
+the legitimacy or initialization ordering of the queue/state inputs, the
+shared slot-field writers, or the indirect caller path. H-service-voice-pool-
+shape-mismatch is refuted; H-service-voice-pool-unclassified remains active.
+No guard, mitigation, or game behavior changed. This is single-source
+inventory evidence only.
+
+ORIGIN: complete generated-helper, sibling-field, overlay-registration, and
+companion-symbol inventory; no guest value, writer mutation, mitigation, or
+runtime behavior changed.

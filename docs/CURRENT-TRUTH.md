@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s911 (2026-08-13). The active blocker is the authoritative
+Reviewed through s912 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -211,6 +211,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s909 | `findVoiceSlotByAge` inventory: one generated caller and one coherent MusyX table shape (`0x80154620`, stride `0x1228`, active `+0x4620`, age/handle `+0x4644`, counter `0x80154648`); no pointer walk or caller-shape mismatch, but caller-derived index/counter legitimacy remains unproven; no mitigation. |
 | s910 | `stopVoiceSlotSynced` inventory: one computed MusyX slot shape (`0x80154620`, stride `0x1228`), active/state reads and writes, shared queue, and `slot+0x3420` stop call; both callers agree on the slot-index contract and no local walk or shape mismatch exists, but caller-derived index/state legitimacy remains unproven; no mitigation. |
 | s911 | `setVoiceMixByKey` inventory: one coherent MusyX slot shape with active/key/handle reads, three mix-byte stores, shared queue, and two matching callers; emitted control exits after the first failed candidate, so writer/value legitimacy and the unusual one-candidate behavior remain unproven; no mitigation. |
+| s912 | `serviceVoicePoolFrame` inventory: one coherent `0x80154620` voice-slot shape with `0x1228` stride, state/streaming accesses, queue operations, and no pointer/list walk; no generated direct caller was found, and queue/state plus shared-field writer legitimacy remain unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -231,20 +232,23 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `serviceVoicePoolFrame` (`0x8009B5A8`),
-as a complete generated function. Do not add a guard or change game behavior.
+Audit the next adjacent audio function, `getVoicePlaybackProgressByKey`
+(`0x8009B8A8`), as a complete generated function. Do not add a guard or
+change game behavior.
 
 Competing hypotheses:
 
-- H-service-voice-pool-unclassified: the helper has an unchecked or aliasing-sensitive
-  slot/list access whose writer/initialization obligation cannot be classified
-  from the function and sibling writers.
-- H-service-voice-pool-fully-classified: all slot/list reads and writes are bounded by
-  the function's controls, and its callers agree on the same layout.
-- H-service-voice-pool-shape-mismatch: callers use incompatible layouts or the helper's
-  output aliases a state structure; record the exact split and stop.
+- H-voice-progress-unclassified: the helper has an unchecked or
+  aliasing-sensitive slot/table access whose writer/initialization obligation
+  cannot be classified from the function and sibling writers.
+- H-voice-progress-fully-classified: all slot/table reads and writes are
+  bounded by the function's controls, and its callers agree on the same
+  layout.
+- H-voice-progress-shape-mismatch: callers use incompatible layouts or the
+  helper's output aliases a state structure; record the exact split and stop.
 
-Discriminating measurement: a complete site table for `serviceVoicePoolFrame`,
+Discriminating measurement: a complete site table for
+`getVoicePlaybackProgressByKey`,
 every slot/list load/store and control operation, all generated callers, and the
 companion symbol/decomp basis. Any omitted access or incompatible caller shape
 rejects full classification.
