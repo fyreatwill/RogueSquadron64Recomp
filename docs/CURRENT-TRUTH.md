@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s895 (2026-08-13). The active blocker is the authoritative
+Reviewed through s896 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -195,6 +195,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s893 | `flushStreamedVoiceBuffers` inventory: count-bounded 0x18-byte scan with state-1 gate; `+0x8` buffer and `+0xC` element/cursor feed the four-halfword writeback helper; `startStreamedSampleVoice` supplies both dynamically, so structure passes but writer/value legitimacy remains unproven; no mitigation. |
 | s894 | `streamSampleCountToByteSize` inventory: 12-byte pure `($a0+4)<<1` wrapper with no memory or control-flow hazards; sole caller passes constant `0x10E0` and allocates `0x21C8`; full classification passed for this function, with broader audio legitimacy out of scope. |
 | s895 | `setVoiceVolumePanLocked` inventory: one gate read, one nonzero handle check, no target dereference/loop, and one mutex-protected modulation call; shape is coherent, but caller-derived handle/parameter writers are not independently proven legitimate; no mitigation. |
+| s896 | `stopStreamedVoice` inventory: one audio-enable gate, one computed 24-byte streamed-voice state access, state-1 check/clear, and `silenceVoiceSlot` call; the caller-derived voice index has no independent bound or writer-legitimacy proof, so full classification remains unresolved; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -215,25 +216,25 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio idiom, `stopStreamedVoice` (`0x80098298`), as a
+Audit the next adjacent audio idiom, `compute3DSourceSpatialMix` (`0x80098310`), as a
 complete generated function. Do not add a guard or
 change game behavior.
 
 Competing hypotheses:
 
-- H-stop-streamed-unclassified: at least one memory access, derived pointer, or
+- H-compute-3d-unclassified: at least one memory access, derived pointer, or
   input value lacks a structural or writer/legitimacy basis.
-- H-stop-streamed-fully-classified: all accesses and transformations are bounded,
+- H-compute-3d-fully-classified: all accesses and transformations are bounded,
   and every dynamic input has a concrete writer/legitimacy basis.
-- H-stop-streamed-shape-mismatch: the function mixes unrelated voice/table shapes;
+- H-compute-3d-shape-mismatch: the function mixes unrelated voice/table shapes;
   record the exact sites and stop rather than mixing shapes.
 
 Discriminating measurement: a complete site table for
-`stopStreamedVoice`, including every load/store, arithmetic
+`compute3DSourceSpatialMix`, including every load/store, arithmetic
 transformation, bound/sentinel/state check, and writer/legitimacy basis. Any
 omitted access or unproven writer rejects full classification.
 
-Exact commands: use `rg` to enumerate `stopStreamedVoice` and its
+Exact commands: use `rg` to enumerate `compute3DSourceSpatialMix` and its
 `MEM_*`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded
 `sed` windows and the companion `rogue_squadron64` symbol/decomp files. No
 game build or soak is planned.

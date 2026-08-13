@@ -57518,3 +57518,35 @@ also unresolved. No guard, build, soak, or runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s896 (2026-08-13) — streamed-voice stop path is structurally bounded but its index provenance is open
+
+Performed the prescribed source-only M3 inventory for `stopStreamedVoice`
+(`0x80098298`) in the external generated tree, with the companion symbol
+artifacts and its sole generated caller. The complete function has one
+audio-enable gate at `0x8009829C`, one computed record access at
+`0x800982D0`, one state-1 predicate at `0x800982D8`, one state clear at
+`0x800982E8`, and one `silenceVoiceSlot` call at `0x800982EC`, all under the
+mutex acquire/release pair.
+
+| Guest site | Operation | Predecessor / writer basis |
+|---|---|---|
+| `0x8009829C` | read global audio-enable byte `0x800A0F50` | named audio gate |
+| `0x800982BC–0x800982C4` | transform input voice index as `index * 24` | exact 0x18-byte streamed-voice record stride; input is caller-derived |
+| `0x800982D0` | read `0x80152A20 + index*0x18` state byte | geometry agrees with the adjacent streamed-voice functions; no local bound check |
+| `0x800982D8` | require state `== 1` | prevents clearing inactive records, but does not validate the computed address |
+| `0x800982E8` | clear the record state byte | same computed address, after the state-1 check |
+| `0x800982EC` | call `silenceVoiceSlot(index)` | same caller-derived index under the mutex |
+
+The sole generated caller at `0x8009B804` loads its argument from the current
+streamed record's `+0x0` field, calls this function only for the record's
+state-3 path, then stores `-1` back to that field. `startStreamedSampleVoice`
+writes the state-table fields and `serviceStreamedVoices`/`flushStreamedVoiceBuffers`
+confirm the 0x18-byte record layout, but the companion artifacts provide no
+independent proof that every dynamic `+0x0` voice index is within the audio
+slot range or that its writers are legitimate. H-stop-streamed-unclassified
+is selected; H-stop-streamed-fully-classified is rejected. No guard, build,
+soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
