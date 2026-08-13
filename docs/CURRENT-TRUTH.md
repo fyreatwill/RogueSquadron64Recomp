@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s901 (2026-08-13). The active blocker is the authoritative
+Reviewed through s902 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -201,6 +201,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s899 | `tickAndReap3DAudioVoices` inventory: bounded null-terminated doubly-linked-list reap rooted at `0x80153414`; link fields, `+0xA -> +0x8` state copy, and conditional `+0x34` handle dispatch fully enumerated, but dynamic node/head/handle legitimacy remains unproven and shapes are mixed; no mitigation. |
 | s900 | `register3DAudioListenerNode` inventory: active-gated doubly-linked insertion at `0x80153418`, four input vector/record shapes, derived orientation helpers, scalar conversion, and all node stores classified; callers agree on one listener-node API shape, but dynamic pointer/input writer legitimacy remains unproven; no mitigation. |
 | s901 | `enqueueSoundInPriorityGroup` inventory: count-bounded group scan plus sorted null-terminated queue insertion over `D_80152D70/74/78` and `D_80153290`; structure is coherent, but dynamic record/group/priority inputs, queue-node pointers, and cursor/count writers lack independent legitimacy proof; mixed table/list shape retained, no mitigation. |
+| s902 | `enqueueSpatialSoundInPriorityGroup` inventory: bounded group lookup plus sorted linked-list insertion and a 0x20-entry spatial-record pool at `D_80152F00`; the linked-list and pool shapes are coherent within their respective paths, but mixed table/list/pool inputs and writers lack independent legitimacy proof; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -221,27 +222,29 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio idiom, `enqueueSpatialSoundInPriorityGroup` (`0x8009952C`),
+Audit the next adjacent audio idiom, `dispatchPrioritizedSoundQueue` (`0x80099720`),
 as a complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-enqueue-spatial-priority-unclassified: at least one memory access, derived pointer, or
+- H-dispatch-priority-unclassified: at least one queue/table access, derived pointer, or
   input value lacks a structural or writer/legitimacy basis.
-- H-enqueue-spatial-priority-fully-classified: all accesses and transformations are bounded,
+- H-dispatch-priority-fully-classified: all accesses and transformations are bounded,
   and every dynamic input has a concrete writer/legitimacy basis.
-- H-enqueue-spatial-priority-shape-mismatch: the function mixes unrelated voice/table shapes;
+- H-dispatch-priority-shape-mismatch: the function mixes unrelated queue, voice-record, and
+  helper/state shapes;
   record the exact sites and stop rather than mixing shapes.
 
 Discriminating measurement: a complete site table for
-`enqueueSpatialSoundInPriorityGroup`, including every load/store, arithmetic
-transformation, bound/sentinel/state check, and writer/legitimacy basis. Any
-omitted access or unproven writer rejects full classification.
+`dispatchPrioritizedSoundQueue`, including every queue/table access,
+dereference, bound/sentinel/state check, helper argument shape, and
+writer/legitimacy basis. Any omitted access or unproven writer rejects full
+classification.
 
-Exact commands: use `rg` to enumerate `enqueueSpatialSoundInPriorityGroup` and its
-`MEM_*`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded
-`sed` windows and the companion `rogue_squadron64` symbol/decomp files. No
-game build or soak is planned.
+Exact commands: use `rg` to enumerate `dispatchPrioritizedSoundQueue` and its
+`MEM_*`/`jal`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then
+bounded `sed` windows and the companion `rogue_squadron64` symbol/decomp
+files. No game build or soak is planned.
 
 ## Closed and parked
 

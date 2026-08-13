@@ -57749,3 +57749,63 @@ that any runtime value is legitimate; the result is single-source inventory
 evidence, not an explanation for a crash.
 
 ORIGIN: complete generated-function, caller, shared-writer, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s902 (2026-08-13) — spatial priority enqueue mixes coherent audio shapes but remains unclassified
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`enqueueSpatialSoundInPriorityGroup` (`0x8009952C`, size `0x1F4`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Cross-checked its caller in
+`update3DAudioFrame`, the sibling `enqueueSoundInPriorityGroup`, all generated
+writers/readers of the shared audio globals, the dispatcher/reset paths, and
+the companion `main_overlay.txt` symbol file. No build, game run, or soak was
+needed.
+
+The complete site classification is:
+
+- `0x80099534–0x80099584`: load active group count `D_80152EF0`, load the
+  caller record's group key at `a0+0x38`, and scan `D_80152D70` in 12-byte
+  strides. The scan is bounded by the current group count and exits on a
+  matching key; the record pointer, key, count, and table contents are
+  dynamic, with no independent writer/value legitimacy proof.
+- `0x80099588–0x800995D8`: if no group matched, derive `group * 0xC`, clear
+  that group's head/tail fields `D_80152D74/78`, increment
+  `D_80152EF0`, and store the caller record's group key in `D_80152D70`.
+  The new-group path is explicit, but the count has no local capacity check;
+  its writer/value basis remains unproven.
+- `0x800995DC–0x80099640`: load spatial-record count `D_80153280`; reject
+  when it is `0x20`, then select `D_80152D74[group]` and walk its
+  null-terminated sorted queue. Each node reads priority at `+0x4`, compares
+  it with the incoming float, and follows `+0x0` until insertion position or
+  null. The list shape is coherent and dereferences are guarded by head/next
+  tests, but node pointers, priorities, incoming float, and group/count state
+  lack independent legitimacy proof.
+- `0x80099644–0x800996A4`: allocate the next spatial node from
+  `D_801532F00 + D_80153280 * 0x1C` when the walk found no predecessor, clear
+  the pool slot's prior link, and publish it as the group's head; otherwise
+  link the new node through the predecessor. The pool cursor is used with a
+  consistent 28-byte stride, but has no local bound beyond the earlier count
+  equality check and no independent writer/value proof.
+- `0x800996A8–0x80099710`: store the node's next pointer, three position
+  floats, priority float, and source record pointer in the 0x1C-byte spatial
+  record; increment `D_80153280`. These fields form one coherent spatial
+  record shape, and the caller supplies the source pointer plus three stack/
+  register float arguments, but their dynamic values and the count writer
+  remain unproven.
+
+The shape-mismatch hypothesis is rejected for each local substructure, but
+the function does mix group table, linked queue, and spatial-record-pool
+shapes. Full classification is rejected because the dynamic inputs, count and
+cursor writers, and pool/list values have no independent legitimacy evidence.
+No guard or behavior change was made.
+
+### Rules out / narrows
+
+This source audit rules out an omitted local access, missing loop bound, or
+unclassified list/pool operation in the generated function. It does not
+identify a corrupt writer or establish that any runtime value is legitimate;
+the result is single-source inventory evidence, not an explanation for a
+runtime crash.
+
+ORIGIN: complete generated-function, caller, sibling, shared-writer, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
