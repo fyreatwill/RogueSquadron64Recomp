@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s863 (2026-08-13). The active blocker is the authoritative
+Reviewed through s865 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -643,30 +643,45 @@ a mitigation.
 ORIGIN: retail debugger write-watch observation only; no port value, game
 control flow, or mitigation behavior changed.
 
-## Next work unit: isolate retail coalescer writer PCs
+## s865 retail coalescer writer PCs are early-only
+
+Added the bounded `--detail-watch N` oracle option so selected watch indices
+continue printing hit PCs after the global whole-RDRAM detail cap. The oracle
+rebuilt successfully. In the same 30-second retail run, whole-RDRAM recorded
+5,199,605 writes, VI reached 1,792 frames at width 320, and the target watches
+recorded 9 caller-global plus 3 head-global writes. Caller PCs were
+`0x80000420`, `0x80000424`, `0x80000ED8`, `0x80000FFC`, and `0x8000104C`;
+head PCs were `0x80000424` and `0x800021D8`. No later writer appeared because
+retail remained in the width-320 phase. This selects H-init-writer for the
+observed population and rules out H-control-invalid, while leaving
+H-runtime-writer open for a later phase. No legitimacy or mitigation conclusion
+follows.
+
+ORIGIN: retail debugger write-watch PC attribution and VI/whole-RDRAM controls;
+no game value or control flow was changed.
+
+## Next work unit: extend retail coalescer writer-PC attribution
 
 HYPOTHESIS-ID: m3-coalesce-entry-state
 
-Run the oracle once with the same ROM, schedule, VI trace, and three watches,
-but first inspect the oracle's hit-detail cap and make the smallest bounded
-tool change needed to retain detail for all three watch indices (or otherwise
-ensure target-hit PCs are printed while the whole-RDRAM control remains
-armed). Do not change the emulated game or add a mitigation. The goal is PC
-attribution for the retail writes that s864 proved exist.
+Run the oracle for 180 seconds with the same ROM, repeated-Start schedule, VI
+trace, whole-RDRAM control, and the two coalescer-state watches. Keep
+`--detail-watch 1 --detail-watch 2` enabled. Do not change emulated game
+behavior or add a mitigation. The goal is to determine whether a later
+width/phase produces a runtime heap-maintenance writer.
 
 Competing hypotheses:
 
-- H-init-writer: target writes come from boot/heap initialization PCs and are
-  not the later coalescer-state corruption source.
-- H-runtime-writer: target writes include a later gameplay/heap-maintenance PC
-  that can be compared with the port's invalid entry values.
+- H-init-writer: target writes remain limited to boot/heap initialization PCs.
+- H-runtime-writer: a later gameplay/heap-maintenance PC writes the state.
 - H-control-invalid: whole-RDRAM or VI control fails after the tool change, so
   the target-PC result is unevaluable.
 
-Discriminator: whole-RDRAM and VI controls must fire in the same run. A target
-hit with a guest PC selects H-init-writer or H-runtime-writer by PC/time; a
-failed control selects H-control-invalid. A target-hit count without a PC is
-still unevaluable. This remains diagnostic evidence only.
+Discriminator: whole-RDRAM and VI controls must fire, and each target hit must
+print its guest PC. A target PC after a documented phase/VI transition selects
+H-runtime-writer; target PCs confined to boot remain H-init-writer for the
+observed run; failed controls select H-control-invalid. Counts without PCs are
+unevaluable.
 
 ## Ranked backlog
 

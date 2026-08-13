@@ -56738,3 +56738,24 @@ target-hit PCs.
 
 ORIGIN: retail debugger write-watch observation only; no game value or control
 flow was changed.
+
+## Session s865 (2026-08-13) — retail writer PCs are early-only in 30 seconds
+
+Added the bounded `--detail-watch N` oracle option so selected watch indices
+continue printing hit PCs after the global whole-RDRAM detail cap. The oracle
+rebuilt successfully. In the same 30-second retail run, the whole-RDRAM
+positive control recorded 5,199,605 writes and VI reached 1,792 frames at
+width 320. The caller-global watch recorded 9 writes and the free-list-head
+watch recorded 3 writes. All target hits were attributed to early PCs:
+caller writes at `0x80000420`, `0x80000424`, `0x80000ED8`, `0x80000FFC`, and
+`0x8000104C`, and head writes at `0x80000424` and `0x800021D8`. No later
+gameplay/heap-maintenance writer was observed because the retail run never
+left the width-320 phase.
+
+This selects H-init-writer for the observed retail population and rules out
+H-control-invalid; H-runtime-writer remains open for a later phase. It does
+not establish that the port's invalid entry values are legitimate or identify
+the writer of the port corruption. No game behavior or mitigation changed.
+
+ORIGIN: retail debugger write-watch PC attribution and VI/whole-RDRAM controls;
+no game value or control flow was changed.

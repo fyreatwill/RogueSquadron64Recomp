@@ -78,6 +78,7 @@ static struct watch g_watch[MAX_WATCHES];
 static int g_nwatch;
 static long g_hits;
 static long g_hit_cap = 200;          /* stop logging after this many, keep running */
+static unsigned int g_detail_watch_mask;
 static int g_verbose;
 
 static double now_s(void)
@@ -133,14 +134,18 @@ static void dbg_update(unsigned int pc)
 {
     uint32_t flags = 0, accessed = 0;
     int i;
+    int detail_hit = 0;
     pDebugBreakpointTriggeredBy(&flags, &accessed);
 
     g_hits++;
     for (i = 0; i < g_nwatch; i++) {
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end)
             g_watch[i].hits++;
+        if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
+            (g_detail_watch_mask & (1u << i)))
+            detail_hit = 1;
     }
-    if (g_hits <= g_hit_cap) {
+    if (g_hits <= g_hit_cap || detail_hit) {
         unsigned int prev = (unsigned int)pDebugGetState(M64P_DBG_PREVIOUS_PC);
         printf("[hit] %s%s addr=0x%08x pc=0x%08x prev_pc=0x%08x t=%.1fs n=%ld\n",
                (flags & M64P_BKP_FLAG_WRITE) ? "w" : "",
@@ -417,6 +422,7 @@ static void usage(void)
         "  --watch-rw    A[:B]   log both\n"
         "  --secs N              run for N seconds (default 120)\n"
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
+        "  --detail-watch N      always log hits for watch index N\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
         "  --rsp PATH            RSP plugin (default homebrew mupen64plus-rsp-hle)\n"
         "  --datadir PATH        dir holding mupen64plus.ini (default homebrew share dir)\n"
@@ -476,6 +482,11 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--secs") && i + 1 < argc)       secs = atof(argv[++i]);
         else if (!strcmp(argv[i], "--hit-cap") && i + 1 < argc)    g_hit_cap = atol(argv[++i]);
+        else if (!strcmp(argv[i], "--detail-watch") && i + 1 < argc) {
+            int watch = atoi(argv[++i]);
+            if (watch >= 0 && watch < MAX_WATCHES)
+                g_detail_watch_mask |= 1u << watch;
+        }
         else if (!strcmp(argv[i], "--watch-write") && i + 1 < argc)
             add_watch(argv[++i], M64P_BKP_FLAG_WRITE, "write");
         else if (!strcmp(argv[i], "--watch-read") && i + 1 < argc)
