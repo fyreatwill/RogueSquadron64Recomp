@@ -58285,3 +58285,47 @@ support the shape result; no runtime legitimacy conclusion follows.
 ORIGIN: complete generated-helper, caller, sibling-scan, and companion-symbol
 inventory; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
+## 2026-08-13 — s914: loadSpeechFile inventory
+
+### What ran
+
+Performed the prescribed source-only M3 idiom inventory of `loadSpeechFile`
+(`0x8009BA38`) in `../N64Recomp/RecompiledFuncs/funcs_26.c`. No build, game
+run, or soak was needed. The site table covered both loaded-state gates, the
+old-offset-buffer free, asset lookup, both allocation/DMA sequences, every
+speech-global load/store, return path, generated caller, and the companion
+symbol/decomp basis.
+
+The function reads `speechFileLoaded` at `0x800A5121` and, when a prior offset
+table exists, checks `speechSampleOffsetsLoaded` at `0x800A5120` before freeing
+`0x8015467C`. It resolves the input asset through `getAssetRamAddress`, stores
+that address in `speechFile` at `0x80154684`, allocates four bytes, and DMAs
+the first word through `setupAssetDma`; that word becomes `numSpeechSamples`
+at `0x80154670`. It then allocates `numSpeechSamples * 4`, stores the pointer
+at `speechSampleOffsets` (`0x8015467C`), and performs the second DMA. The
+success paths set `speechSampleOffsetsLoaded` or clear it for the preloaded
+asset path, and set `speechFileLoaded` only after the offset-table DMA. Any
+allocation failure returns zero; the normal paths return one.
+
+The only generated callsite is in the audio initialization path at
+`0x80066B90`; its surrounding code loads the speech asset first and then
+initializes the MusyX voice table. The generated source and two independent
+companion artifacts (named globals/symbol roles and `docs/subtitles/subtitles.md`)
+agree that the file begins with a sample count followed by 4-byte relative
+offset entries. They do not independently prove the dynamic asset pointer,
+count-derived allocation size, or free/DMA ownership legitimate.
+
+### Rules out / narrows
+
+This inventory rules out an omitted local speech-file access and an obvious
+caller/layout mismatch. It does not establish bounds on the count-derived
+allocation, validity of `getAssetRamAddress`'s result, or ownership ordering
+between the old offset buffer and the new load. H-load-speech-fully-classified
+is rejected; H-load-speech-unclassified remains active. H-load-speech-shape-
+mismatch is not supported by the available source artifacts. No guard,
+mitigation, or game behavior changed. This is single-source inventory evidence
+only; the companion artifacts corroborate layout, not runtime values.
+
+ORIGIN: complete generated-function, caller, symbol, and speech-layout
+inventory; no guest value, writer mutation, mitigation, or runtime behavior
+changed.
