@@ -56269,6 +56269,34 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 851 (2026-08-13) — late E9 candidates are mostly parser spans
+
+Added behavior-neutral RT64 parser-condition telemetry for direct command
+starts, preceding non-E9 command spans, and pending completions. Each record
+carries task, submit serial, exact range, candidate address, and condition
+kind; the bridge reports an explicit unassociated class. Exported the RT64
+submodule patch and built the Debug target successfully.
+
+The phase-gated capture reached VI 1024 after 78.6s and fired 653 E9
+provenance rows, including all four same-run positive controls
+(`emit/raw/dispatch/match=1`). It later hit the known
+`slotDispatcherIter+872` SIGBUS at task 653. Across late tasks 570–653,
+1,068 emitted E9 slots had same-task, same-serial condition records:
+direct=66, span=1,001, pending=0, unassociated=1. The control rows were
+direct=1, span=0, pending=0, unassociated=0.
+
+Together with s835's independent source audit, this selects
+H-span-accounting: the bridge's fixed 8-byte scan counts E9 bytes inside
+preceding multiword parser commands, while RT64 counts only command starts.
+It rules out H-pending for the captured late population, but leaves the one
+residual slot for a source audit of deferred/synthetic labels and range
+semantics. The known crash is a reachability limit, not evidence against the
+classification. No writer, operand-legitimacy, parser behavior, or mitigation
+conclusion follows.
+
+ORIGIN: host-side parser-condition telemetry; no game value, parser advance,
+RDP handler, or mitigation behavior changed.
+
 ## Session 850 (2026-08-13) — accepted submit ranges attribute RDP B4/BF candidates
 
 Added a behavior-neutral, phase-gated `[tri-writer]` record at the accepted

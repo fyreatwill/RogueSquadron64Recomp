@@ -1389,16 +1389,17 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..401414e 100644
+index dccaa87..7a3244e 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,438 @@
+@@ -5,12 +5,450 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
 +#include <chrono>
 +#include <cstdint>
 +#include <cstdlib>
++#include <cstring>
  
  //#define DUMP_DISPLAY_LISTS
  
@@ -1413,6 +1414,9 @@ index dccaa87..401414e 100644
 +extern "C" __attribute__((weak)) void rs64_e9prov_handler();
 +extern "C" __attribute__((weak)) void rs64_e9prov_authoritative_span(
 +    uint32_t start, uint32_t end, uint32_t rawOpcode, uint32_t pending);
++extern "C" __attribute__((weak)) void rs64_e9prov_condition(
++    const char *kind, uint32_t address, uint32_t length, uint32_t rawOpcode,
++    uint32_t pending, uint64_t submitSerial, uint32_t submitLo, uint32_t submitHi);
 +extern "C" __attribute__((weak)) uint32_t rs64_e9prov_current_task();
 +extern "C" __attribute__((weak)) uint32_t rs64_e9prov_current_scope();
 +
@@ -1552,6 +1556,14 @@ index dccaa87..401414e 100644
 +    static bool rs64LogE9Boundary() {
 +        static const bool enabled = [] {
 +            const char *e = std::getenv("ROGUESQ_LOG_E9_BOUNDARY");
++            return e && *e && *e != '0';
++        }();
++        return enabled;
++    }
++
++    static bool rs64LogE9Condition() {
++        static const bool enabled = [] {
++            const char *e = std::getenv("ROGUESQ_LOG_RDP_CONDITION");
 +            return e && *e && *e != '0';
 +        }();
 +        return enabled;
@@ -1831,7 +1843,7 @@ index dccaa87..401414e 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -69,6 +495,12 @@ namespace RT64 {
+@@ -69,6 +507,12 @@ namespace RT64 {
          GBIFunction func;
          uint32_t cmdLength;
          size_t pendingCommandRemainingBytes = state->rdp->pendingCommandRemainingBytes;
@@ -1844,7 +1856,7 @@ index dccaa87..401414e 100644
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +521,40 @@ namespace RT64 {
+@@ -89,8 +533,47 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -1876,6 +1888,13 @@ index dccaa87..401414e 100644
 +                    rs64_rdp_advance_consumer_fetch(s_rs64_pending_start_address);
 +                    rs64_e9prov_authoritative_fetch(s_rs64_pending_start_address);
 +                }
++                if (rs64LogE9Condition() && rs64_e9prov_condition &&
++                    s_rs64_pending_start_address != 0xFFFFFFFFu) {
++                    rs64_e9prov_condition("pending", s_rs64_pending_start_address,
++                        pendingLength * sizeof(DisplayList), pendingRawOpCode, 1,
++                        s_rs64_pending_submit_serial, s_rs64_pending_submit_lo,
++                        s_rs64_pending_submit_hi);
++                }
  
                  if (func != nullptr) {
 +                    state->rsp->setCurrentCommand(static_cast<uint32_t>(rdpGBI->ucode),
@@ -1885,7 +1904,7 @@ index dccaa87..401414e 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +563,11 @@ namespace RT64 {
+@@ -99,6 +582,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -1897,7 +1916,7 @@ index dccaa87..401414e 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,7 +581,54 @@ namespace RT64 {
+@@ -112,7 +600,54 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -1953,13 +1972,18 @@ index dccaa87..401414e 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
-@@ -122,6 +638,35 @@ namespace RT64 {
+@@ -122,6 +657,40 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
 +                if (rs64_e9prov_authoritative_span) {
 +                    rs64_e9prov_authoritative_span(commandAddress,
 +                        commandAddress + cmdLength * sizeof(DisplayList), rawOpCode, 0);
++                }
++                if (rs64LogE9Condition() && rs64_e9prov_condition) {
++                    rs64_e9prov_condition(rawOpCode == 0xE9 ? "direct" : "span",
++                        commandAddress, cmdLength * sizeof(DisplayList), rawOpCode, 0,
++                        submit_serial, submit_lo, submit_hi);
 +                }
 +
 +                if (rawOpCode == 0xE9) {
@@ -1989,7 +2013,7 @@ index dccaa87..401414e 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +674,14 @@ namespace RT64 {
+@@ -129,6 +698,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -2004,7 +2028,7 @@ index dccaa87..401414e 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +689,211 @@ namespace RT64 {
+@@ -136,13 +713,211 @@ namespace RT64 {
                      break;
                  }
  

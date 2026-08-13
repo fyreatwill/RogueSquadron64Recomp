@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <atomic>
 #include <mutex>
 #include <unordered_map>
@@ -110,6 +111,13 @@ static std::atomic<uint32_t> g_task_rdp_fullsyncs{0};
 static uint32_t g_task_op_count[64] = {0};
 
 struct Rs64E9Provenance {
+    struct Condition {
+        uint32_t address;
+        uint64_t serial;
+        uint32_t lo;
+        uint32_t hi;
+        uint32_t kind;
+    };
     struct FrameEvent {
         uint32_t kind;
         uint32_t id;
@@ -252,6 +260,11 @@ struct Rs64E9Provenance {
     uint32_t first_match = 0xFFFFFFFFu;
     std::vector<uint32_t> fetched_addrs;
     std::vector<uint32_t> spanned_addrs;
+    std::vector<Condition> conditions;
+    uint32_t condition_direct = 0;
+    uint32_t condition_span = 0;
+    uint32_t condition_pending = 0;
+    uint32_t condition_unassociated = 0;
     uint32_t non_e9_spans = 0;
     uint32_t uncovered = 0;
     std::vector<FrameEvent> frame_first;
@@ -1013,7 +1026,29 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 fprintf(stderr, "[e9-prov-gap] task=%u scope=%s addr=0x%06X\\n",
                         task, g_e9prov.control ? "control" : "sec2", emitted);
             }
+            bool conditioned = false;
+            for (const auto& condition : g_e9prov.conditions) {
+                if (condition.address == emitted && condition.serial != 0) {
+                    conditioned = true;
+                    break;
+                }
+            }
+            if (!conditioned) {
+                ++g_e9prov.condition_unassociated;
+                static uint32_t condition_gap_lines = 0;
+                if (condition_gap_lines++ < 256) {
+                    fprintf(stderr, "[rdp-condition] task=%u scope=%s kind=unassociated addr=0x%06X\\n",
+                            task, g_e9prov.control ? "control" : "sec2", emitted);
+                    fflush(stderr);
+                }
+            }
         }
+        fprintf(stderr,
+                "[rdp-condition-summary] task=%u scope=%s direct=%u span=%u pending=%u unassociated=%u records=%zu\\n",
+                task, g_e9prov.control ? "control" : "sec2", g_e9prov.condition_direct,
+                g_e9prov.condition_span, g_e9prov.condition_pending,
+                g_e9prov.condition_unassociated, g_e9prov.conditions.size());
+        fflush(stderr);
     }
     static uint32_t controls = 0;
     if ((g_e9prov.control && ++controls <= 4) || g_e9prov.target) {
@@ -1186,6 +1221,38 @@ extern "C" void rs64_e9prov_authoritative_span(uint32_t start, uint32_t end,
                         g_e9prov.task, g_e9prov.control ? "control" : "sec2", emitted,
                         start, end, raw_opcode, (end - start) / 8u, pending);
             }
+        }
+    }
+}
+
+extern "C" void rs64_e9prov_condition(const char *kind, uint32_t address,
+                                       uint32_t length, uint32_t raw_opcode,
+                                       uint32_t pending, uint64_t submit_serial,
+                                       uint32_t submit_lo, uint32_t submit_hi) {
+    if (!log_e9_provenance() || !kind || length == 0 || submit_hi <= submit_lo) return;
+    address &= 0x7FFFFFu;
+    const uint32_t end = address + length;
+    uint32_t kind_id = 0;
+    if (std::strcmp(kind, "direct") == 0) kind_id = 1;
+    else if (std::strcmp(kind, "span") == 0) kind_id = 2;
+    else if (std::strcmp(kind, "pending") == 0) kind_id = 3;
+    else return;
+    for (uint32_t emitted : g_e9prov.emitted_addrs) {
+        const bool match = kind_id == 1 ? emitted == address :
+            (address <= emitted && emitted < end);
+        if (!match || emitted < submit_lo || emitted >= submit_hi) continue;
+        g_e9prov.conditions.push_back({emitted, submit_serial, submit_lo, submit_hi, kind_id});
+        if (kind_id == 1) ++g_e9prov.condition_direct;
+        else if (kind_id == 2) ++g_e9prov.condition_span;
+        else ++g_e9prov.condition_pending;
+        static uint32_t lines = 0;
+        if (lines++ < 2048) {
+            fprintf(stderr,
+                    "[rdp-condition] task=%u scope=%s kind=%s addr=0x%06X len=%u raw=0x%02X pending=%u serial=%llu range=0x%06X..0x%06X\n",
+                    g_e9prov.task, g_e9prov.control ? "control" : "sec2", kind,
+                    emitted, length, raw_opcode, pending,
+                    (unsigned long long)submit_serial, submit_lo, submit_hi);
+            fflush(stderr);
         }
     }
 }

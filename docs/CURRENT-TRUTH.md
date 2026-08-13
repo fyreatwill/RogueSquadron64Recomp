@@ -298,33 +298,51 @@ Priority until changed by the user:
   ORIGIN: host-side owner telemetry at the RT64 handler boundary; no game
   value, command advancement, geometry, or mitigation behavior changed.
 
-## Next work unit: classify the late E9 parser condition
+- s851 added behavior-neutral RT64 parser-condition telemetry carrying direct,
+  span, and pending condition tags with the exact task submit serial/range;
+  the bridge joined those records against emitted E9 slots and reported an
+  explicit unassociated class. The phase-gated run reached VI 1024, fired
+  653 provenance rows including all four positive controls, and later hit the
+  known `slotDispatcherIter+872` SIGBUS at task 653. For late tasks 570–653,
+  1,068 emitted slots were classified: direct=66, span=1,001, pending=0,
+  unassociated=1. This is a second runtime line with the s835 source audit
+  selecting H-span-accounting: most bridge-counted E9 bytes lie inside
+  preceding non-E9 parser command spans, so the lower authoritative E9 count
+  is command-boundary accounting. It rules out H-pending for the captured
+  population and leaves one residual slot for the next source audit. The
+  result does not establish a writer defect, operand legitimacy, or justify a
+  mitigation.
+
+  ORIGIN: host-side parser-condition telemetry; no game value, parser advance,
+  RDP handler, or mitigation behavior changed.
+
+## Next work unit: identify the late E9 span-counting path
 
 HYPOTHESIS-ID: m3-rdp-parser-condition
 
-Perform one phase-gated source/runtime parser-condition probe for the lower
-late authoritative E9 count. Keep the existing E9 provenance, parser-range,
-triangle owner, triangle boundary, and DL-sync controls. Add only bounded
-condition-tagged records at authoritative parser command-start decisions and
-carry task, submit serial, exact range, and candidate address where applicable.
-Do not change parser advance, RDP handlers, or mitigation.
+Perform one bounded source audit of the authoritative parser's command-length
+and bridge E9-counting paths, including the one residual unassociated class.
+Reconcile the exact address/range semantics of the bridge's 8-byte scan,
+RT64's command-word lengths, and the condition join. Do not change parser
+advance, RDP handlers, or mitigation.
 
 Competing hypotheses:
 
-- H-direct-filter: late bridge E9 slots are at parser command starts but are
-  excluded by an authoritative parser filter or opcode/byte-order condition.
-- H-span-accounting: late bridge E9 slots are covered by a preceding non-E9
-  command span, so the lower E9 count is correct command-boundary accounting.
-- H-pending: the late slots are completed through the pending-command path and
-  are omitted from the direct-start count.
-- H-unassociated: the slots are outside all authoritative parser ranges,
-  reopening a range-association defect.
+- H-span-intended: the parser command-length table intentionally consumes the
+  bridge-counted interior E9 bytes as inline payload.
+- H-span-mismatch: the parser spans are real, but the bridge's candidate scan
+  is using a different physical/range interpretation.
+- H-residual-range: the one unassociated slot is a deferred/synthetic range
+  or stale submit-label case rather than a parser omission.
+- H-pending-residual: the pending path is absent from the captured aggregate
+  but accounts for the residual when its split-range lifecycle is traced.
 
-Discriminator: classify every retained late bridge E9 slot with a same-task,
-same-serial parser record. Direct-start hits select H-direct-filter; span hits
-select H-span-accounting; pending hits select H-pending; no association with
-positive controls selects H-unassociated. A null is invalid unless E9
-provenance and parser command-start controls fire in the same run.
+Discriminator: an exhaustive source table must account for the 1,001 span
+matches and the one residual slot using identical address/range semantics.
+An exact interior-byte proof selects H-span-intended; a mismatch in the
+bridge/parser physical mapping selects H-span-mismatch; a synthetic/deferred
+label edge selects H-residual-range; a split-command lifecycle edge selects
+H-pending-residual. No mitigation is permitted from this audit alone.
 
 ## Ranked backlog
 
