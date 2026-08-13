@@ -57153,6 +57153,32 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s887 (2026-08-13) — tick-active-songs dispatcher is bounded; inherited list legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `tickActiveSongs`
+(`0x80095DA0`) in the external generated tree, with the companion symbol
+artifacts. The complete function has one pointer-bearing site: at
+`0x80095DC0` it loads the selected slot base from the fixed table
+`0x80149A00 + index*0xEF8`, advances the slot offset by `0xEF8`, increments
+the counter, and calls `tickSongSequence` at `0x80095DC8`. The loop condition
+at `0x80095DD0/0x80095DD4` bounds it to exactly eight slots. There are no
+linked-list dereferences, predecessor checks, or pointer writes in this
+function.
+
+The slot pointer writer inventory found `startSongSequence` storing the
+selected slot handle at `0x80094918`; slot initialization clears the linked
+list heads at `0x8009469C/0x800946A0`. The called `tickSongSequence` owns the
+two inherited chains rooted at `+0xE78` and `+0xE7C`, already enumerated in
+s884, with shared writers and cleanup paths classified but writer/value
+legitimacy still unproven. The companion symbols independently identify the
+eight-slot MusyX table and the `tickActiveSongs` role. H-tick-active-fully-
+classified is rejected for the inherited legitimacy gap; H-tick-active-shape-
+mismatch is rejected because this function is a single bounded dispatch
+shape. No guard, build, soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
+
 ## Session s885 (2026-08-13) — all-active-song `+0xE7C` chain is structurally guarded; writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `tickAllActiveSongs`
