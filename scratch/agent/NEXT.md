@@ -1,35 +1,33 @@
-# NEXT work unit (bounded post-sec2 FULL_SYNC reachability capture)
+# NEXT work unit (bounded post-sec2 FULL_SYNC persistence capture)
 
 HYPOTHESIS-ID: m3-postsec2-authoritative-e9
 
-Run one bounded, phase-gated capture using the successful s815
-`s790_postsec2_reachability` recipe. Keep the existing provenance controls
-(`emit`, `raw`, `dispatch`, `match`), `[vi-arg]` pointer-only logging, and
-the phase-relative key schedule. Do not change game logic or add a
-mitigation. The capture is valid only if the phase and provenance positive
-controls fire and VI reaches 1024.
+Run one bounded, phase-gated capture using `scratch/agent/s790_postsec2_reachability.sh`.
+Keep `ROGUESQ_LOG_VI_ARGS=1`, the provenance positive controls, `[rdp-fullsync]`
+logging, and the phase-relative key schedule. Do not change game logic or add
+a mitigation. The capture is valid only if VI reaches 1024 and the control
+record has `emit=1 raw=1 dispatch=1 match=1`.
 
-## Competing hypotheses
+Competing hypotheses:
 
-- H-authoritative-advance: post-sec2 aligned E9 commands reach the
-  authoritative parser and advance FULL_SYNC accounting.
-- H-pre-authoritative-loss: aligned E9 commands remain abundant, but the
-  authoritative parser/dispatch sees no corresponding advances.
-- H-prechain-transient: the run fails or remains at VI 640 before a parser
-  sample, leaving both parser hypotheses unevaluable.
+- H-authoritative-persistent: after VI-1024, aligned E9 provenance and
+  authoritative `rdpFs`/FULL_SYNC advances recur; this confirms s820's parser
+  result is not a one-run artifact.
+- H-pre-authoritative-loss: aligned E9 provenance recurs, but authoritative
+  advancement remains absent or flat after the gate; this restores the parser
+  loss hypothesis.
+- H-prechain-transient: the run fails before a valid post-gate parser sample;
+  the persistence question remains unevaluable.
 
-## Discriminating measurement
-
-Compare aligned-walker E9 provenance with authoritative parser advance and
-`State::fullSync` records after the VI-1024 gate in the same run. A positive
-authoritative advance selects H-authoritative-advance; positive provenance
-with zero authoritative advance selects H-pre-authoritative-loss; no
+Discriminating measurement: in the same run after the VI-1024 transition,
+compare aligned `e9_b` and authoritative `rdpFs`/`[rdp-fullsync]` records.
+Positive advancement selects H-authoritative-persistent; positive provenance
+with flat authoritative state selects H-pre-authoritative-loss; no valid
 post-gate sample selects H-prechain-transient.
 
-## Exact command
+Exact command:
 
-Use the existing self-contained recipe/script for
-`s790_postsec2_reachability`, with its normal 300-second watchdog and SIGKILL
-cleanup. Confirm `ROGUESQ_LOG_VI_ARGS=1` is present before launch. Do not run a
-second arm or rebuild in this work unit unless the first launch is invalid due
-to a missing positive control.
+    zsh scratch/agent/s790_postsec2_reachability.sh
+
+Run one arm only. Record the capture path and classify the result from the
+captured log, including any later crash family.

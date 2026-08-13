@@ -55662,3 +55662,23 @@ initializer audit in s818. No build, run, code change, or mitigation was made.
 ORIGIN: the classified value is the legitimate ROM initializer at
 `D_80037574`/VROM `0x38174`; this iteration added no mitigation-shaped
 machinery.
+
+## Session 820 (2026-08-13) — post-sec2 parser advance repeats in one capture
+
+The bounded s790 post-sec2 recipe ran with `ROGUESQ_LOG_VI_ARGS=1`, the E9
+provenance controls, phase-relative keys, and a VI-1024 gate. VI width 1024
+was reached at 79.8s; the control task recorded `emit=1`, `raw=1`,
+`dispatch=1`, `match=1`, and five pointer-only `[vi-arg]` records fired.
+After the gate, aligned walker provenance recorded `e9_b=29`. The
+authoritative parser/full-sync path was active in the same run: `rdpFs` was
+219 at the gate and 611 immediately before the run's later
+`slotDispatcherIter+872` SIGBUS, with sampled `[rdp-fullsync]` records.
+
+This selects H-authoritative-advance for this capture and rules out a total
+post-sec2 authoritative-dispatch loss. It does not explain the remaining
+FULL_SYNC discrepancy across older recipes, does not establish stability, and
+does not justify a mitigation. The crash is a separate slot-dispatch family.
+
+ORIGIN: aligned E9s originate in the post-sec2 display-list walker; the
+authoritative advances originate in the RDP parser/full-sync path. Both were
+observed in this run; the SIGBUS occurred later in `slotDispatcherIter`.
