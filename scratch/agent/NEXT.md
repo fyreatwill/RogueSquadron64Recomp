@@ -1,29 +1,28 @@
-# NEXT work unit (s879)
+# NEXT work unit (s880)
 
-HYPOTHESIS-ID: m3-coalesce-value-legitimacy
+HYPOTHESIS-ID: m3-coalesce-independent-ground-truth-pivot
 
-Perform one source/API audit of the oracle debugger callback and memory-read
-interfaces. Determine whether a value written by the four coalescer watch
-ranges can be sampled later without stopping VI progress while retaining the
-triggering writer address and PC. Do not change game behavior, add a guard, or
-run an animating A/B unless the audit finds a safe value channel.
+Perform one bounded audit of a different independent ground-truth route for
+the four coalescer watch ranges. Start with the available retail ROM/core
+artifacts and identify one route that can associate a post-write value with a
+guest PC without relying on the stock debugger callback ABI. Do not add a
+runtime guard, change game behavior, or run an animating A/B unless the audit
+identifies a concrete route and its controls.
 
 Competing hypotheses:
 
-- H-deferred-read-safe: the core exposes a deferred value read or a
-  value-bearing breakpoint callback.
-- H-no-safe-value-api: the callback ABI exposes only flags/address/PC, and a
-  deferred read cannot preserve writer association.
-- H-oracle-phase-stall: a safe sampler exists, but retail still cannot leave
-  VI width 320 under the validated input schedule.
+- H-core-write-trace: an existing retail core trace/disassembly hook can emit
+  post-write value plus guest PC without changing emulation behavior.
+- H-static-retail-proof: retail ROM disassembly/data-flow can prove the value
+  legitimacy of the coalescer writers without a dynamic sampler.
+- H-no-independent-route: neither available artifact provides the required
+  writer/value association, so the legitimacy question must be parked.
 
-Discriminating measurement: inspect the actual callback and memory-read ABI in
-`tools/oracle/rs64_oracle.c`, its debugger symbols, and
-`tools/oracle/README.md`. A documented safe deferred value route selects
-H-deferred-read-safe; an ABI limitation selects H-no-safe-value-api; a safe
-route whose positive whole-RDRAM/PIF/VI controls still remain at width 320
-selects H-oracle-phase-stall.
+Discriminating measurement: source/API or artifact evidence showing whether a
+post-write value and its guest writer PC can be obtained independently of the
+recompiled runtime. A concrete safe route selects H-core-write-trace or
+H-static-retail-proof; absence selects H-no-independent-route.
 
-Exact commands: use `rg` and bounded `sed` windows over the oracle sources and
-README, then make at most one bounded source/API change if supported. No game
-build is required for a source-only audit.
+Exact commands: inspect the local oracle core for existing trace hooks and the
+retail ROM/decomp artifacts for a bounded writer/data-flow proof, using `rg`
+and bounded `sed` windows. No game build or soak is planned for this audit.

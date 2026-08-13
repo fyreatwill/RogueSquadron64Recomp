@@ -57046,3 +57046,21 @@ than 200 lines; no technical conclusion or mitigation changed.
 
 ORIGIN: documentation maintenance only; no runtime, guest value, parser,
 writer, or mitigation behavior changed.
+
+## Session s879 (2026-08-13) — oracle debugger ABI cannot sample deferred values
+
+Performed the prescribed source/API audit against `tools/oracle/rs64_oracle.c`,
+the oracle README, and the local mupen64plus core's debugger headers and
+implementation. The public breakpoint path provides a callback with guest PC,
+then `DebugBreakpointTriggeredBy` returns only flags and accessed address.
+`DebugMemRead32` exists, but `check_breakpoints_on_mem_access()` invokes the
+callback before `mem_write32()`, so reading the watched address in the callback
+observes the pre-write value. A later read from the frontend polling thread
+can observe current memory but cannot retain the triggering writer address/PC
+and is vulnerable to intervening writes. This selects
+H-no-safe-value-api and rules out the deferred-sampler and phase-stall arms;
+the coalescer legitimacy question must pivot to another independent
+ground-truth source. No source, game, or mitigation behavior was changed.
+
+ORIGIN: source/API audit of the independent oracle and its local core; no
+runtime, guest value, control flow, or mitigation behavior changed.

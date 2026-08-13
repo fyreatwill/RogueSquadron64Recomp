@@ -2688,3 +2688,14 @@ while the port reached VI 1024 and late partition writers. Thus the late
 retail value comparison is phase-unreachable. No value-legitimacy conclusion
 or mitigation follows. The next bounded unit is an oracle callback/API audit
 for a safe deferred value sampler.
+
+**Oracle ABI audit (s879).** The local mupen64plus debugger headers and core
+source settle the remaining sampler question. `DebugSetCallbacks` exposes a
+breakpoint callback with guest PC only; `DebugBreakpointTriggeredBy` exposes
+only flags and accessed address; and `DebugMemRead32` is a current-memory read.
+The core calls `check_breakpoints_on_mem_access` before `mem_write32`, so a
+callback read sees the pre-write value. A later frontend-thread read can avoid
+the callback stall but cannot preserve the triggering writer association and
+races later writes. H-no-safe-value-api is selected. No runtime behavior,
+mitigation, or oracle source was changed; the coalescer question must pivot to
+another independent ground-truth source.
