@@ -1,33 +1,36 @@
-# NEXT work unit (classify the observed Factor 5 candidate dispatch population)
+# NEXT work unit (classify the Factor 5 triangle map discrepancy)
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one bounded source-and-reference audit of the s844 0xB4/0xBF dispatch
-rows against docs/F5-UCODE-REFERENCE.md and the installed Factor 5 handler map.
-Do not build, run, or change behavior.
+Perform one bounded source audit of the installed Factor 5 triangle path and
+the regeneration/fixup source that produces it. Do not build, run, or change
+behavior.
 
 Competing hypotheses and discriminator:
 
-- H-legitimate-tri: the rows are valid Factor 5 triangle commands whose
-  handler should consume payload and emit geometry elsewhere.
-- H-garbage-candidate: the rows are non-triangle bytes reached by the parser;
-  classify them against command boundaries and source provenance.
-- H-misclassified-opcode: the installed map or reference labels 0xB4/0xBF
-  differently from the current consume-only interpretation.
+- H-map-intentional: the consume-only map is an intentional temporary contract
+  and another path emits the geometry.
+- H-map-regression: the installed map contradicts the reference and the
+  consume-only override is the load-bearing defect.
+- H-generated-source: a fixup or generated-source step rewrites the intended
+  triangle handler/map, so editing the checked-in RT64 map would be the wrong
+  fix location.
 
-Discriminator: every observed opcode/operand pattern must map to the exact
-Factor 5 command length and handler, and the reference must agree on whether
-it is a geometry command. Agreement selects H-legitimate-tri; boundary or
-provenance evidence selecting non-command bytes selects H-garbage-candidate;
-map/reference disagreement selects H-misclassified-opcode. No mitigation
-without an ORIGIN writer/legitimacy claim.
+Discriminator: trace the complete map-to-handler path and every source/fixup
+definition for 0xB4/0xBF, then compare its intended command length and geometry
+side effects with the independent reference. A deliberate alternate geometry
+producer selects H-map-intentional; an unreferenced consume-only override that
+contradicts the reference selects H-map-regression; a regeneration rewrite
+selects H-generated-source. No behavior change or mitigation is allowed in
+this audit.
 
-Evidence from s844: the Debug build passed; the phase-gated run reached VI
-1024 and produced 392 positive E9 provenance rows. It recorded 112 candidate
-dispatch rows (0xB4/0xBF only), zero draw rows, and zero copy-assert rows,
-then hit slotDispatcherIter+872 at 202.8s.
+Evidence from s844/s845: the phase-gated run reached VI 1024 and produced 392
+positive E9 provenance rows. It recorded 112 candidate rows (37 B4, 75 BF;
+54 textured), zero draw rows, and zero copy-assert rows. The reference maps
+both opcodes to geometry with conditional 8/24-byte totals, while RT64 maps
+both to unconditional consume16. The run later hit slotDispatcherIter+872 at
+202.8s. No writer/legitimacy claim exists.
 
-Exact execution: add one regeneration-safe, phase-scoped dispatch diagnostic;
-build Debug; run the existing phase-gated recipe from `build/` with the E9
-positive control and crash capture enabled; compare candidate dispatch rows to
-the draw/assert rows.
+Exact execution: use `rg` and bounded `sed` windows to enumerate every
+0xB4/0xBF map, handler, fixup, and generated-source definition; compare the
+call graph and command-length behavior with `docs/F5-UCODE-REFERENCE.md`.

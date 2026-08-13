@@ -56250,3 +56250,21 @@ No behavior or mitigation changed.
 
 ORIGIN: source audit only; no game value, RDP command, or mitigation behavior
 changed.
+## Session 845 (2026-08-13) — Factor 5 triangle map contradicts reference
+
+Performed the prescribed bounded source/reference audit; no build or run was
+performed. The independent `docs/F5-UCODE-REFERENCE.md` table identifies 0xB4
+as TRI2 and 0xBF as TRI1, both geometry commands with conditional total
+advances of 24 bytes when textured (`w0 & 2`) and 8 bytes otherwise. The
+installed RT64 Factor 5 setup maps both opcodes to `op_consume16`, which only
+advances by one extra 8-byte word and emits no geometry.
+
+The s844 capture contains 112 candidates: 37 B4 and 75 BF, including 54
+textured rows. The operands include repeated opcode-like patterns and
+incoherent values, so the stream-provenance/garbage alternative remains open;
+the audit does not identify their writer or establish legitimacy. It selects
+H-misclassified-opcode for the installed map, while leaving H-garbage-candidate
+as a separate question. No behavior, game value, or mitigation changed.
+
+ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
+behavior changed.

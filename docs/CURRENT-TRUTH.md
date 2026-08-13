@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s844 (2026-08-13). The active blocker is the authoritative
+Reviewed through s845 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -222,31 +222,42 @@ Priority until changed by the user:
   are not a legitimacy or writer attribution. No behavior or mitigation
   changed.
 
-## Next work unit: classify the observed Factor 5 candidate dispatch population
+- s845 completed the prescribed source/reference audit of s844's 112 candidate
+  dispatches: 37 were 0xB4 and 75 were 0xBF, with 54 textured (`w0 & 2`) and
+  58 untextured rows. The independent Factor 5 reference calls these TRI2 and
+  TRI1 geometry commands and specifies a conditional total advance of 24 or 8
+  bytes. The installed RT64 Factor 5 map instead routes both opcodes to an
+  unconditional 16-byte consume-only handler. This selects
+  H-misclassified-opcode for the installed map. The repeated opcode-like and
+  incoherent operands in the rows keep H-garbage-candidate open as a separate
+  stream-provenance question; no writer or legitimacy claim exists, so no
+  mitigation or behavior change is justified.
+
+## Next work unit: classify the Factor 5 triangle map discrepancy
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one bounded source-and-reference audit of the s844 `0xB4/0xBF`
-dispatch rows against `docs/F5-UCODE-REFERENCE.md` and the installed Factor 5
-handler map. Do not build, run, or change behavior.
+Perform one bounded source audit of the installed Factor 5 triangle path and
+the regeneration/fixup source that produces it. Do not build, run, or change
+behavior.
 
 Competing hypotheses:
 
-- H-legitimate-tri: the rows are valid Factor 5 triangle commands whose
-  handler should consume payload and emit geometry elsewhere.
-- H-garbage-candidate: the rows are non-triangle bytes reached by the parser;
-  their operands should be classified against command boundaries and source
-  provenance before any mitigation is considered.
-- H-misclassified-opcode: the installed map or reference labels 0xB4/0xBF
-  differently from the current consume-only interpretation.
+- H-map-intentional: the consume-only map is an intentional temporary contract
+  and another path emits the geometry.
+- H-map-regression: the installed map contradicts the reference and the
+  consume-only override is the load-bearing defect.
+- H-generated-source: a fixup or generated-source step rewrites the intended
+  triangle handler/map, so editing the checked-in RT64 map would be the wrong
+  fix location.
 
-Discriminator: every observed opcode/operand pattern must map to the exact
-Factor 5 command length and handler, and the reference must agree on whether
-it is a geometry command. Complete agreement selects H-legitimate-tri;
-boundary/provenance evidence selecting non-command bytes selects
-H-garbage-candidate; a map/reference disagreement selects
-H-misclassified-opcode. Do not add a skip, allow, or restore without an
-`ORIGIN:` writer/legitimacy claim.
+Discriminator: trace the complete map-to-handler path and every source/fixup
+definition for 0xB4/0xBF, then compare its intended command length and geometry
+side effects with the independent reference. A deliberate alternate geometry
+producer selects H-map-intentional; an unreferenced consume-only override that
+contradicts the reference selects H-map-regression; a regeneration rewrite
+selects H-generated-source. No behavior change or mitigation is allowed in
+this audit.
 
 ## Ranked backlog
 
