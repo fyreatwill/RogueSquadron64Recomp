@@ -247,7 +247,7 @@ matrix/vector load/store and arithmetic operation, all generated callers, and th
 companion symbol/decomp basis. Any omitted access or incompatible caller shape
 rejects full classification.
 
-Exact commands: use `rg` to enumerate `crossProductVec3` and its callsites in
+Exact commands: use `rg` to enumerate `invertOrientationMatrix` and its callsites in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
 companion `rogue_squadron64` symbol/decomp files. No game build or soak is
 planned.

@@ -4,8 +4,8 @@ HYPOTHESIS-ID: m3-idiom-inventory-next
 
 Perform one bounded M3 idiom-class inventory in the generated game tree:
 `invertOrientationMatrix` (`0x80099DCC`) in
-`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerate every listener/voice-list
-or table access, vector load/store, dependent caller, and ownership basis.
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerate every matrix/vector
+load/store, dependent caller, and ownership basis.
 Do not add a guard or change game behavior. Do not run a game
 build or animating A/B for this source inventory.
 
