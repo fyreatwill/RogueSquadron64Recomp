@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s879 (2026-08-13). The active blocker is the authoritative
+Reviewed through s880 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -49,6 +49,12 @@ closed. M3 work is limited to systematic idiom-class audits.
   `mem_write32`, so `DebugMemRead32` there returns the old value. A later
   frontend-thread read can observe current memory but cannot retain writer
   association and is racy. No safe deferred post-write value channel exists.
+- s880 audited the remaining local oracle/core and decomp artifacts. The core
+  has no existing post-write trace hook: its write breakpoint wrapper calls the
+  callback before `mem_write32`, while CPU/memory pointer exports expose only
+  current state. The decomp supplies the coalescer symbol and heap globals but
+  no coalescer body or writer/value data-flow proof. H-no-independent-route is
+  selected; no legitimacy or mitigation conclusion follows.
 
 ## Recent evidence ledger
 
@@ -63,6 +69,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s854–s861 | Late residual and dispatcher crash families were reachability-limited; stale guest-PC breadcrumb was proven by source audit. |
 | s862–s871 | Coalescer entry/global idiom inventory and port probes found invalid entry state; writer legitimacy remained unknown. |
 | s872–s877 | Retail watches and PIF/VI controls were live, but retail stayed at width 320; port reached late writers. Value comparison remained unavailable. |
+| s879–s880 | Oracle ABI and artifact audits found no safe post-write writer/value route; coalescer legitimacy remains unproven and is parked. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -70,47 +77,41 @@ none authorizes a mitigation.
 
 ## Ranked backlog
 
-1. Pivot the coalescer legitimacy question to a different independent
-   ground-truth source; the stock debugger ABI cannot provide deferred
-   post-write values with writer association.
-2. Do not use the process-wide `0x8000834c` breadcrumb to select a helper crash
+1. Do not use the process-wide `0x8000834c` breadcrumb to select a helper crash
    site; require a new independently phase-gated caller/state boundary.
-3. Continue M3 only as complete idiom inventories with every site classified
+2. Continue M3 only as complete idiom inventories with every site classified
    and proof/guard per site. Queue passive breadcrumbs as soaks.
-4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
+3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
-5. Retain the regeneration delete-before-regen rule and audit fixup counts if
+4. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-coalesce-value-legitimacy
+HYPOTHESIS-ID: m3-idiom-inventory-next
 
 The oracle source/API audit is complete: no safe deferred post-write value
-sampler exists in the stock debugger ABI. The callback has only `(pc)` plus
-`DebugBreakpointTriggeredBy(flags, address)` and fires before the write;
-`DebugMemRead32` in the callback therefore reads the pre-write value, while a
-later read loses the triggering writer association. Do not add a guard or
-change game behavior. Pivot to a different independent ground-truth source.
+sampler exists in the stock debugger ABI, and the available decomp artifacts do
+not contain a coalescer body or value-flow proof. Do not add a guard or change
+game behavior. Continue M3 with one complete, bounded idiom inventory.
 
 Competing hypotheses:
 
-- H-deferred-read-safe: the core exposes a safe deferred value read or
-  value-bearing breakpoint callback. REFUTED by the callback/header/source
-  audit.
-- H-no-safe-value-api: the callback ABI exposes only flags/address/PC and a
-  deferred read cannot preserve writer association. SELECTED.
-- H-oracle-phase-stall: a safe sampler exists, but the retail phase driver
-  still cannot reach the late writer. Not applicable after the ABI result.
+- H-core-write-trace: an existing core trace hook supplies post-write value and
+  guest PC. REFUTED: no such hook exists in the local core.
+- H-static-retail-proof: available decomp/ROM artifacts prove the late value
+  legitimate. REFUTED for the inspected artifacts: only symbols/globals exist.
+- H-no-independent-route: neither available artifact supplies the required
+  writer/value association. SELECTED.
 
-Discriminating measurement: the actual callback signature and write ordering in
-the oracle core. The signature has no value argument, and
-`check_breakpoints_on_mem_access` calls the callback before `mem_write32`.
+Discriminating measurement: existing core trace/API and decomp artifact
+coverage. The write wrapper calls `check_breakpoints_on_mem_access` before
+`mem_write32`; the decomp has `coalesceFreeHeapBlocks=0x800022F8` and heap
+globals but no function body or value-flow proof.
 
-Exact commands used: inspect `tools/oracle/rs64_oracle.c`, its debugger symbols,
-`tools/oracle/README.md`, `m64p_debugger.h`, `debugger.c`, `memory.c`, and
-`dbg_breakpoints.c` under the local oracle core checkout. No game build or
-animating A/B run was needed.
+Exact commands used: inspect the oracle wrapper/core with `rg` and bounded
+`sed` windows, including debugger APIs, memory write paths, trace/profiling
+wiring, and the decomp symbol/artifact tree. No game build or soak was needed.
 
 ## Closed and parked
 

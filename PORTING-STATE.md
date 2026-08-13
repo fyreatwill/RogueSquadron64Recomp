@@ -57064,3 +57064,22 @@ ground-truth source. No source, game, or mitigation behavior was changed.
 
 ORIGIN: source/API audit of the independent oracle and its local core; no
 runtime, guest value, control flow, or mitigation behavior changed.
+
+## Session s880 (2026-08-13) — no second independent coalescer value route in local artifacts
+
+Audited the remaining independent ground-truth options without building or
+running the game. The local mupen64plus core has the debugger write wrapper in
+`write_with_bp_checks`, but it invokes `check_breakpoints_on_mem_access` before
+`mem_write32`; its existing CPU and RDRAM pointer exports expose only current
+state. Instruction counters, profiling, disassembly, and debugger APIs do not
+provide an existing post-write value plus guest-PC trace. The companion decomp
+contains the named `coalesceFreeHeapBlocks` symbol at `0x800022F8` and the
+`gRsHeap*` globals, but no coalescer body or writer/value data-flow artifact.
+
+This selects H-no-independent-route and parks the coalescer legitimacy
+question. It rules out H-core-write-trace and H-static-retail-proof for the
+available artifacts, but does not establish that any observed value is
+illegitimate. No runtime behavior, mitigation, or oracle source changed.
+
+ORIGIN: bounded source/API and artifact audit of the independent oracle/core
+and decomp; no guest value, control flow, or mitigation behavior changed.

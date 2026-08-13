@@ -1,28 +1,30 @@
-# NEXT work unit (s880)
+# NEXT work unit (s881)
 
-HYPOTHESIS-ID: m3-coalesce-independent-ground-truth-pivot
+HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Perform one bounded audit of a different independent ground-truth route for
-the four coalescer watch ranges. Start with the available retail ROM/core
-artifacts and identify one route that can associate a post-write value with a
-guest PC without relying on the stock debugger callback ABI. Do not add a
-runtime guard, change game behavior, or run an animating A/B unless the audit
-identifies a concrete route and its controls.
+Perform one bounded M3 idiom-class inventory in the generated game tree. Pick
+the highest-ranked unclassified pointer idiom at the start of the iteration,
+enumerate every site with `rg`, and classify every occurrence as proven safe,
+dead/phase-unreachable, or requiring a patch. Do not add a guard until the
+whole class is enumerated and the writer/legitimacy question is explicit.
+Do not run a game build or animating A/B for this source inventory.
 
 Competing hypotheses:
 
-- H-core-write-trace: an existing retail core trace/disassembly hook can emit
-  post-write value plus guest PC without changing emulation behavior.
-- H-static-retail-proof: retail ROM disassembly/data-flow can prove the value
-  legitimacy of the coalescer writers without a dynamic sampler.
-- H-no-independent-route: neither available artifact provides the required
-  writer/value association, so the legitimacy question must be parked.
+- H-class-has-unclassified-sites: the selected idiom has at least one site
+  without a proof of safety or a concrete writer/legitimacy explanation.
+- H-class-fully-classified: every selected site is already proven safe, dead,
+  or covered by an existing justified patch.
+- H-inventory-shape-mismatch: the candidate ranking does not define one
+  coherent idiom class; stop and record the shape mismatch rather than mixing
+  unrelated sites.
 
-Discriminating measurement: source/API or artifact evidence showing whether a
-post-write value and its guest writer PC can be obtained independently of the
-recompiled runtime. A concrete safe route selects H-core-write-trace or
-H-static-retail-proof; absence selects H-no-independent-route.
+Discriminating measurement: the complete site table for one syntactic idiom,
+with a classification and writer/legitimacy basis for every hit. Any omitted
+site or unproven writer rejects H-class-fully-classified; a coherent but empty
+class selects H-inventory-shape-mismatch.
 
-Exact commands: inspect the local oracle core for existing trace hooks and the
-retail ROM/decomp artifacts for a bounded writer/data-flow proof, using `rg`
-and bounded `sed` windows. No game build or soak is planned for this audit.
+Exact commands: use `rg` to enumerate the selected idiom in `RecompiledFuncs/`
+and the fixup/source inventories, then use bounded `sed` windows around every
+site and its named-symbol/decomp counterpart. Record the site count and all
+classifications in the session ledger. No game build or soak is planned.
