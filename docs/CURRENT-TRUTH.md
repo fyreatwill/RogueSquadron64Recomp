@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s837 (2026-08-13). The active blocker is the authoritative
+Reviewed through s840 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -166,30 +166,45 @@ Priority until changed by the user:
   path, but does not explain the late ordinary bridge/parser disjointness or
   establish a writer/legitimacy claim.
 
-## Next work unit: classify ordinary versus synthetic late range records
+- s840 added task-scoped synthetic FULL_SYNC markers and explicit ordinary
+  E9-bearing submit/consumer markers. The first capture was invalid because
+  the recipe omitted `ROGUESQ_LOG_DL_SYNC=1`; the corrected capture reached VI
+  1024, passed all four controls, and ran through task 598 before the known
+  `slotDispatcherIter+872` SIGBUS. It recorded 3,986 ordinary E9-bearing
+  submissions, including 555 late submits from tasks 570–598; every late
+  ordinary submit had an exact consumer serial and `[lo,hi)` range match.
+  Synthetic submit and consumer markers were both zero. Together with s838's
+  independent parser-range capture, this rules out ordinary producer/consumer
+  range disjointness and synthetic stale labels for the captured late
+  population, and selects H-parser-record-loss/range-association as the
+  remaining accounting branch. It does not identify the parser condition and
+  gives no writer/legitimacy basis for a mitigation.
+
+## Next work unit: identify the parser condition behind late range disjointness
 
 HYPOTHESIS-ID: m3-e9-command-boundary
 
-Perform one bounded telemetry-only probe, using s838's late records as the
-target. Keep the existing positive controls and phase gates. Add a distinct
-marker or counter for every synthetic FULL_SYNC submission and for every
-ordinary `rs64_dpc_record_submit`/consumer pair, then run the phase-gated
-recipe once. Do not change behavior or add a mitigation.
+Perform one bounded telemetry-only source/runtime probe on the late ordinary
+population. Keep the existing positive controls and phase gates. Carry the
+ordinary serial/range identity into the parser's command-start and pending
+records, with per-task budgets, and report whether each late E9-bearing range
+is absent, contained, or only overlaps a parser call range. Do not change
+behavior or add a mitigation.
 
 Competing hypotheses:
 
-- H-ordinary-disjoint: ordinary accepted submissions remain disjoint from the
-  parser call ranges, so the source audit missed a live range transition.
-- H-synthetic-stale-label: disjoint rows are synthetic submissions carrying the
-  previous serial/range label; ordinary pairs remain exact.
-- H-parser-record-loss: ordinary parser call ranges are present, but command
-  telemetry omits their contents through a bounded or filtered path.
+- H-parser-range-transition: parser call ranges are genuinely different from
+  the ordinary submit ranges at the late boundary.
+- H-parser-record-loss: ordinary parser calls have the expected range, but
+  command telemetry omits or filters their contents.
+- H-pending-or-filter: the missing rows are recovered by pending completion or
+  a parser-side opcode/filter path rather than range association.
 
-Discriminator: synthetic markers covering the disjoint rows select
-H-synthetic-stale-label; exact ordinary pairs with missing command records
-select H-parser-record-loss; disjoint ordinary pairs select
-H-ordinary-disjoint. The s838 span-covered slots remain settled evidence and
-are not re-litigated.
+Discriminator: same-task parser ranges matching ordinary serial/range select
+H-parser-record-loss when their command records are absent; pending records or
+parser-side filters covering the rows select H-pending-or-filter; genuinely
+disjoint parser ranges select H-parser-range-transition. The s838 span-covered
+slots remain settled evidence and are not re-litigated.
 
 ## Ranked backlog
 

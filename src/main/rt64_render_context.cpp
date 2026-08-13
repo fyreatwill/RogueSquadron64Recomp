@@ -18,6 +18,7 @@
 static std::atomic<RT64::Application*> g_rt64_app{nullptr};
 
 extern "C" uint64_t rs64_dpc_get_last_submit_serial();
+extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial);
 extern "C" uint32_t rs64_e9prov_current_task();
 extern "C" uint32_t rs64_e9prov_current_scope();
 
@@ -957,10 +958,23 @@ namespace ultramodern {
         if (log_e9_consumer) {
             const uint32_t task = rs64_e9prov_current_task();
             const uint32_t scope = rs64_e9prov_current_scope();
+            uint64_t synthetic = 0;
+            const bool is_synthetic = rs64_dpc_take_synthetic_consumer(&synthetic);
             if (scope != 0) {
-                fprintf(stderr, "[e9-consumer-range] serial=%llu task=%u scope=%s lo=0x%06X hi=0x%06X\n",
-                        (unsigned long long)rs64_dpc_get_last_submit_serial(), task,
-                        scope == 1 ? "control" : "sec2", lo_phys, hi_phys);
+                if (is_synthetic) {
+                    fprintf(stderr,
+                            "[e9-synthetic-consumer] synthetic=%llu task=%u scope=%s "
+                            "serial=%llu lo=0x%06X hi=0x%06X\n",
+                            (unsigned long long)synthetic, task,
+                            scope == 1 ? "control" : "sec2",
+                            (unsigned long long)rs64_dpc_get_last_submit_serial(),
+                            lo_phys, hi_phys);
+                } else {
+                    fprintf(stderr,
+                            "[e9-ordinary-consumer] serial=%llu task=%u scope=%s lo=0x%06X hi=0x%06X\n",
+                            (unsigned long long)rs64_dpc_get_last_submit_serial(), task,
+                            scope == 1 ? "control" : "sec2", lo_phys, hi_phys);
+                }
                 fflush(stderr);
             }
         }

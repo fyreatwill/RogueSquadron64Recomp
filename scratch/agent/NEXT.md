@@ -1,22 +1,22 @@
-# NEXT work unit (classify ordinary versus synthetic late range records)
+# NEXT work unit (identify the parser condition behind late range disjointness)
 
 HYPOTHESIS-ID: m3-e9-command-boundary
 
-Perform one bounded telemetry-only probe using s838's late records. Add a
-distinct marker/counter for synthetic FULL_SYNC submissions and for ordinary
-`rs64_dpc_record_submit`/consumer pairs, retain the existing positive controls
-and phase gates, build all arms together, and run once. Do not change behavior
-or add a mitigation.
+Perform one bounded telemetry-only source/runtime probe on s840's late
+ordinary population. Carry ordinary submit serial/range identity into the
+parser command-start and pending records, with per-task budgets; retain the
+existing positive controls and phase gates, build all arms together, and run
+once. Do not change behavior or add a mitigation.
 
 Competing hypotheses and discriminator:
 
-- H-ordinary-disjoint: ordinary accepted submissions remain disjoint from the
-  parser call ranges.
-- H-synthetic-stale-label: disjoint rows are synthetic submissions carrying
-  the previous serial/range label; ordinary pairs remain exact.
-- H-parser-record-loss: ordinary parser call ranges are present, but command
-  telemetry omits their contents.
+- H-parser-range-transition: parser call ranges genuinely differ from the
+  ordinary submit ranges at the late boundary.
+- H-parser-record-loss: ordinary parser calls have the expected range, but
+  command telemetry omits or filters their contents.
+- H-pending-or-filter: pending completion or a parser-side filter accounts for
+  the missing rows.
 
-Discriminator: synthetic markers covering the disjoint rows select
-H-synthetic-stale-label; exact ordinary pairs with missing command records
-select H-parser-record-loss; disjoint ordinary pairs select H-ordinary-disjoint.
+Discriminator: matching parser ranges with absent command records select
+H-parser-record-loss; pending/filter coverage selects H-pending-or-filter; and
+genuinely disjoint parser ranges select H-parser-range-transition.

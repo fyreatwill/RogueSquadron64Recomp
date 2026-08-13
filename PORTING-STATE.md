@@ -56140,3 +56140,26 @@ ordinary pairs from synthetic submissions.
 
 ORIGIN: source audit only; no game value, RDP command, or mitigation behavior
 changed.
+
+## Session 840 (2026-08-13) — ordinary late ranges retain identity; synthetic path absent
+
+Added task-scoped synthetic FULL_SYNC markers and explicit ordinary E9-bearing
+submit/consumer markers in the host diagnostics. The Debug target built
+successfully. The first phase-gated capture reached VI 1024 and passed the
+provenance controls, but was invalid for the join discriminator because the
+recipe omitted `ROGUESQ_LOG_DL_SYNC=1`; it was not used for classification.
+
+The corrected capture reached VI 1024 at 79.1 seconds, passed all four E9
+provenance controls, ran through task 598, and later hit the known
+`slotDispatcherIter+872` SIGBUS. It logged 3,986 ordinary E9-bearing submits;
+555 were late submits from tasks 570–598. Every late ordinary submit had an
+exact consumer serial and `[lo,hi)` range match. Synthetic submit and
+synthetic consumer markers were both zero. The late ordinary producer/consumer
+disjoint hypothesis and synthetic stale-label hypothesis are therefore ruled
+out for this captured population. Combined with s838's independent parser
+range capture, the remaining branch is parser range association/record loss;
+the parser condition is still unclassified. No behavior, game value, RDP
+command, or mitigation changed.
+
+ORIGIN: host-side diagnostic markers and recipe correction only; no game value,
+RDP command, or mitigation behavior changed.

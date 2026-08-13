@@ -275,6 +275,9 @@ static std::atomic<uint32_t> g_e9prov_latch_remaining{0};
 static std::atomic<uint32_t> g_e9prov_join_lines{0};
 static std::atomic<uint32_t> g_e9prov_nonzero_callback_lines{0};
 static std::atomic<uint32_t> g_task_bridge_e9{0};
+static std::atomic<uint32_t> g_task_synthetic_fullsyncs{0};
+static std::atomic<bool> g_synthetic_consumer_pending{false};
+static std::atomic<uint64_t> g_synthetic_submit_serial{0};
 static uint32_t g_e9_boundary_lines = 0;
 static uint8_t *g_rdram_for_submit = nullptr;
 
@@ -396,6 +399,7 @@ extern "C" void rs64_e9prov_task_begin(uint32_t task) {
     g_e9prov = {};
     g_e9prov.task = task;
     g_task_bridge_e9.store(0, std::memory_order_release);
+    g_task_synthetic_fullsyncs.store(0, std::memory_order_release);
     g_e9_boundary_lines = 0;
     uint32_t remaining = g_e9prov_latch_remaining.load(std::memory_order_acquire);
     while (remaining != 0 && !g_e9prov_latch_remaining.compare_exchange_weak(
@@ -1135,6 +1139,8 @@ extern "C" void rs64_e9prov_task_join_report(uint32_t task) {
             rs64_rdp_advance_first_consumer_address(),
             (unsigned long long)join_order, g_e9prov.aligned, g_e9prov.aligned_dl,
             g_e9prov.control ? "control" : g_e9prov.target ? "sec2" : "aligned");
+    fprintf(stderr, "[e9-task-provenance] task=%u ordinary_bridge_e9=%u synthetic_fullsyncs=%u\n",
+            task, bridge_e9, g_task_synthetic_fullsyncs.load(std::memory_order_acquire));
     fflush(stderr);
     const uint32_t line = g_e9prov_join_lines.fetch_add(1, std::memory_order_relaxed);
     if (line < 96) {
@@ -1280,6 +1286,13 @@ extern "C" uint32_t rs64_e9prov_current_scope() {
     return g_e9prov.control ? 1u : g_e9prov.target ? 2u : 0u;
 }
 
+extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial) {
+    if (!g_synthetic_consumer_pending.exchange(false, std::memory_order_acq_rel))
+        return false;
+    if (serial) *serial = g_synthetic_submit_serial.load(std::memory_order_acquire);
+    return true;
+}
+
 static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     g_last_submit_lo.store(lo, std::memory_order_release);
     g_last_submit_hi.store(hi, std::memory_order_release);
@@ -1300,6 +1313,9 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
         fflush(stderr);
     }
     if (log_e9_unified() && after > before && (g_e9prov.control || g_e9prov.target)) {
+        fprintf(stderr,
+                "[e9-ordinary-submit] serial=%llu task=%u e9=%u lo=0x%06X hi=0x%06X\n",
+                (unsigned long long)serial, g_e9prov.task, after - before, lo, hi);
         fprintf(stderr, "[e9-submit-range] serial=%llu task=%u lo=0x%06X hi=0x%06X e9=%u\n",
                 (unsigned long long)serial, g_e9prov.task, lo, hi, after - before);
         fflush(stderr);
@@ -2988,6 +3004,19 @@ extern "C" void rsp_force_fullsync() {
     uint32_t addr = g_last_fullsync_addr.load(std::memory_order_acquire);
     if (addr == 0xFFFFFFFFu) {
         return;
+    }
+    const uint64_t synthetic = g_synthetic_submit_serial.fetch_add(1, std::memory_order_acq_rel) + 1;
+    g_task_synthetic_fullsyncs.fetch_add(1, std::memory_order_relaxed);
+    g_synthetic_consumer_pending.store(true, std::memory_order_release);
+    if (log_e9_unified() && (g_e9prov.control || g_e9prov.target)) {
+        fprintf(stderr,
+                "[e9-synthetic-submit] synthetic=%llu task=%u previous_serial=%llu "
+                "previous_lo=0x%06X previous_hi=0x%06X range=0x%06X..0x%06X\n",
+                (unsigned long long)synthetic, g_e9prov.task,
+                (unsigned long long)g_submit_serial.load(std::memory_order_acquire),
+                g_last_submit_lo.load(std::memory_order_acquire),
+                g_last_submit_hi.load(std::memory_order_acquire), addr, addr + 8);
+        fflush(stderr);
     }
     ultramodern::submit_rdp_range(addr, addr + 8);
 }
