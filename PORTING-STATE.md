@@ -54012,3 +54012,52 @@ REFUTED** (`0x1E6C` UJ gone; route LIVE). **H-1e6c-breaks-06
 REFUTED. H-1e6c-restores-e9 REFUTED.** Residual is the sibling
 `$30` restore `0x1EA8`. Next is case `0x1EA8` / `153==0x1C`.
 Do not splice overlay `0x20` next.
+
+## Session 757 (2026-08-12) — ovl1c $30-return 0x1EA8 is LIVE; ovl1c $30 pair complete
+
+Step 0 measured `CURRENT-TRUTH.md` at 42,524 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s756: route dest
+`0x1EA8` / `153==0x1C` to `OVL1C_1EA8`. SOAK-RESULTS s756 line
+was already folded; no unread queue recipes.
+
+Fixup 6p (own marker `ovl1c_1ea8`) inserts
+`case 0x1EA8` gated on `153==0x1C` → `OVL1C_1EA8`. Label already
+existed from the 6k splice; no composite or RSPRecomp. Independent
+of 6o's marker so an already-routed `0x1E6C` file still gets the
+case. Did not add the `$6==0` landings (`0x1E7C`/`0x1E8C`/
+`0x1EBC`/`0x1ECC`). Did not splice overlay `0x20`. Did not
+widen `0x1E6C` to `153==0x20`.
+**ORIGIN:** ovl1c jal at IMEM `0x1E9C` sets `r31=0x1EA8` and
+`goto OVL1C_1ED4`. The trampoline saves that into `$30`, returns
+through `OVL1C_1F04`, then `jr $30`. `OVL1C_1F04` `jr $30` is the
+legitimate return into `OVL1C_1EA8`. Route, not a default-allow
+of `0x1EA8` for every resident.
+
+Soak `scratch/agent/soak_results/s757_ovl1c_1ea8_20260812-191445/run.log`
+(350 s, same recipe as s743–s756, CRASH=0, wrapper rc=0). Same-run
+positive control: `[ovl-route] res=0x1C tgt=0x1EA8` last n=32896
+LIVE; dest `tgt=0x1DB0` (n=33216), jal-returns `tgt=0x1E18`
+(n=33536) and `tgt=0x1E2C` (n=33152), trampoline `tgt=0x1F04`
+(n=33280), sibling `$30` `tgt=0x1E6C` (n=25856), clip `res=0x04`,
+and ovl10 `tgt=0x1F40` stay LIVE. Four boot controls
+`dl06=push:2,complete:2,open:0` match=1.
+
+UJ `0x1EA8` **1403→0**. ovl1c `$30` pair (`0x1E6C`+`0x1EA8`) is
+complete. Leftover UJ `0x1E7C` n=1 from `OVL1C_1F04` `jr $30`
+(ucode line 4987) is a `$6==0` landing — not a class. The other
+predicted landings (`0x1E8C`/`0x1EBC`/`0x1ECC`) remain 0. sec2
+`last_ovl` `0x1C/0x1EA8` 46 + `0x1C/0x1E2C` 10 + `0x1C/0x1E6C` 4
++ `0x1C/0x1F04` 1 / 64 (3 early `0x00/0x0000`). E9 match still
+boot-shaped: sec2 match=3/64, one copy of the `2/2/0` triplet.
+rdpFs 0→4155 (s756 4017; not a restore). Three `[clip-stray]`
+`tgt=0x1E6C 153=0x20` hits — do not widen. Do not revert
+dest-`0x1EA8` / `153==0x1C`.
+
+**H-1ea8-ovl1c-30ret SELECTED.** **H-1ea8-not-the-uj-path
+REFUTED** (`0x1EA8` UJ gone; route LIVE). **H-1ea8-breaks-06
+REFUTED. H-1ea8-restores-e9 REFUTED.** Residual is skipped
+overlay `0x20` (ovl1c successor `j L_1268; ori $5, 0x20` at
+IMEM `0x1ECC`; dest `0x12A0`, desc `0x2157`, ROM `0x27108`).
+Next is a static dest/`L_12A0`/ovl24 comparison of that image.
+Do not splice overlay `0x20` as a `0x1DB0` sibling. Do not
+route `0x1E7C` on n=1.
