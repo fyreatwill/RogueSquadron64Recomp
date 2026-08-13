@@ -309,6 +309,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s913 | `getVoicePlaybackProgressByKey` inventory: two callers agree on a handle-plus-output-float contract and the helper's `0x80154620`/`0x1228` slot shape; the helper has an explicit `speechFileLoaded` gate but no finite scan bound or sentinel, and its miss path reaches the 32-bit counter wrap. Slot progress reads and queue handoff are classified, but scan termination and dynamic writer/value legitimacy remain unproven; no guard or behavior change. |
 | s923 | MusyX per-slot queue inventory: `initMusyXVoiceSlot` creates `slot+0x11AC` with buffer `slot+0x11C4` and capacity 1; `serviceStreamingVoice` has the only generated receive site, gated by `slot+0x11DC`, using nonblocking `osRecvMesg(queue, NULL, 0)` and checking only the return. The two init callers share the slot-base contract and the receive path has no message dereference or queue retry loop; dynamic queue/state writer legitimacy remains unproven, so no guard or behavior change. |
 | s924 | `decodeAndFillVoiceBlock` inventory: one direct caller passes the voice slot and `+0x198` block-table entry; the helper masks the bitstream word index to a `0..0xFFC` offset from `slot+0x1A0`, decodes into a fixed stack block, and runs four filter/pan iterations before updating `+0x11C8`. Local control and caller shape are coherent; dynamic pointer/table/value legitimacy remains unproven; no mitigation. |
+| s926 | `applyVoiceDelayFilter` inventory: three direct callers share one voice-base/delay/channel-table/stack-output shape; its 120-halfword shift and 40-halfword mix loops terminate, but the voice base, return-address-derived table read, and output/input ranges lack local bounds or legitimacy proof. Caller-shape mismatch is ruled out; full classification is not. No mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -344,6 +345,44 @@ changed.
 ORIGIN: complete generated helper/caller, access-range, loop, and
 companion-symbol inventory; no guest value mutation or mitigation.
 
+## s926 — `applyVoiceDelayFilter` remains locally unclassified
+
+Performed the planned source-only M3 idiom inventory of
+`applyVoiceDelayFilter` (`0x8009D8C4`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated the complete generated
+body, all direct callers, caller argument setup, access ranges, loop
+termination, the unresolved conditional helper edge, and the companion
+`main_overlay.txt` mapping. No build, game run, or soak was run.
+
+Exactly three direct callers exist: `updateVoiceChannelParams` at
+`0x8009C55C`, and `updateVoiceChannelParamsLarge` at `0x8009C8A8` and
+`0x8009D75C`. All pass the same shape: `$a0` is the voice-record base, `$a1`
+is a delay/sample value, `$a2` is a halfword channel/table value, and `$a3`
+is a caller-owned stack output buffer. No caller-shape split was found.
+
+The helper reads and writes voice state at `$a0+0x166`, then shifts 120
+halfwords from `$a0+0x50` down to `$a0`, with a fixed terminating counter. It
+derives a table read from `$ra+0x84+2*$a2`, then mixes 40 halfwords from a
+`$a0 - 2*$t3 + 0xF0`-based range into `$a0+0xF0` and `$a3`. `$t3` is clamped
+to the inclusive range `0x28..0x78`, which bounds the arithmetic offset but
+does not prove the voice base, table address, output pointer, or source/output
+ranges valid. The `bltzal $zero` path is never taken on ordinary MIPS; its
+emitted unresolved branch/trap does not provide a normal helper call or a
+termination hazard.
+
+### Result
+
+H-apply-delay-shape-mismatch is ruled out. H-apply-delay-classified is not
+supported because the pointer/table accesses and derived ranges remain
+unclassified; H-apply-delay-unclassified remains active. The generated source
+and companion symbol mapping are two artifact lines agreeing on function
+identity and call structure, but this remains a single-source static result:
+no independent runtime writer/value evidence was claimed. No guard,
+mitigation, generated-code edit, or game behavior changed.
+
+ORIGIN: complete generated helper/caller, access-range, loop, unresolved-edge,
+and companion-symbol inventory; no guest value mutation or mitigation.
+
 ## Superseded interpretation
 
 The s916 claim that the shutdown active-byte scan was a bounded one-slot wait
@@ -365,19 +404,19 @@ shape, not a local termination bound. No runtime conclusion follows.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-apply-voice-delay-class
+HYPOTHESIS-ID: m3-run-voice-lattice-class
 
-Audit the complete `applyVoiceDelayFilter` idiom at `0x8009D8C4`, including
+Audit the complete `runVoiceLatticeFilter` idiom at `0x8009D980`, including
 all generated callers, record/table bounds, helper calls, and termination.
 Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-apply-delay-unclassified: a caller or helper uses unchecked channel,
-  delay-buffer, or output pointers/lengths.
-- H-apply-delay-classified: all callers share one fixed channel/filter shape
-  and every local walk is bounded, with only dynamic value legitimacy open.
-- H-apply-delay-shape-mismatch: one caller uses a distinct delay/filter
+- H-lattice-unclassified: a caller or helper uses unchecked lattice,
+  coefficient, state, or output pointers/lengths.
+- H-lattice-classified: all callers share one fixed lattice/filter shape and
+  every local walk is bounded, with only dynamic value legitimacy open.
+- H-lattice-shape-mismatch: one caller uses a distinct lattice/filter
   contract; record the exact split and stop.
 
 Discriminating measurement: enumerate every memory access, indirect/direct
@@ -386,8 +425,8 @@ generated body; cross-check `main_overlay.txt` and companion symbols. Any
 omitted access, unsafe bound, unbounded control, or shape split rejects full
 classification.
 
-Exact commands: inspect `funcs_27.c` around `0x8009D8C4`, `rg` every
-`applyVoiceDelayFilter` reference and helper call, then inspect the matching
+Exact commands: inspect `funcs_27.c` around `0x8009D980`, `rg` every
+`runVoiceLatticeFilter` reference and helper call, then inspect the matching
 `main_overlay.txt` entry. No game build or soak is planned.
 
 ## Closed and parked

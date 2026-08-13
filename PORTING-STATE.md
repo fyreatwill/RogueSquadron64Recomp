@@ -58765,3 +58765,31 @@ single-source static result; no independent runtime evidence was claimed.
 
 ORIGIN: complete generated helper/caller, access-range, loop, and
 companion-symbol inventory; no guest value mutation or mitigation.
+
+## 2026-08-13 — s926: applyVoiceDelayFilter remains locally unclassified
+
+Performed the planned source-only M3 idiom inventory of
+`applyVoiceDelayFilter` (`0x8009D8C4`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated the complete generated
+body, all direct callers, caller argument setup, access ranges, loop
+termination, unresolved conditional edge, and companion `main_overlay.txt`
+mapping. No build, game run, or soak was run.
+
+Three direct callers were found: `updateVoiceChannelParams` at `0x8009C55C`
+and `updateVoiceChannelParamsLarge` at `0x8009C8A8` and `0x8009D75C`. They
+share one shape: voice-record base, delay/sample value, halfword channel/table
+value, and caller-owned stack output buffer. The helper's 120-halfword shift
+and 40-halfword mix loops terminate with fixed counters. It clamps the delay
+offset to `0x28..0x78`, but the voice base, `$ra+0x84+2*$a2` table read,
+`$a3` output, and derived source/output ranges lack local bounds or
+legitimacy proof. The `bltzal $zero` conditional path is unreachable on
+ordinary MIPS and its unresolved branch/trap is not a normal helper edge.
+
+H-apply-delay-shape-mismatch is ruled out. H-apply-delay-classified is not
+supported; H-apply-delay-unclassified remains active. Generated source and
+companion mapping agree on identity/call structure, but this is explicitly a
+single-source static result with no independent runtime writer/value evidence.
+No guard, mitigation, generated-code edit, or game behavior changed.
+
+ORIGIN: complete generated helper/caller, access-range, loop, unresolved-edge,
+and companion-symbol inventory; no guest value mutation or mitigation.

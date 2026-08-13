@@ -456,7 +456,15 @@ else:
     # quietly spend the wrong provider's quota on every unmet contract.
     retry_runner=claude
     [ "${RUNNER:-claude}" = "deepseek" ] && retry_runner=deepseek
-    out="$(RUNNER=$retry_runner LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
+    # RUNNER_MODEL is pinned to the ORIGINAL runner's model (see the
+    # --describe block above) and is meaningless - or actively wrong, a
+    # foreign provider's slug - for whichever runner this retry switches to.
+    # Clearing it here lets runner.sh fall back to LOOP_MODEL/its own default
+    # instead of e.g. handing Claude Code a codex model id (found 2026-08-13:
+    # a codex run pinned to a since-retired "gpt-5.6-luna" 404'd, and the
+    # claude retry inherited that same string as --model and 404'd too,
+    # silently reducing the automated retry tier to zero attempts).
+    out="$(RUNNER=$retry_runner RUNNER_MODEL= LOOP_MODEL="$LOOP_MODEL" tools/agent/runner.sh "$AG/RETRY_PROMPT.md")"
     log_runner_output "$out"
     # A retry that itself hits a limit is not a contract failure - stop retrying.
     # (Raw-output match is acceptable here: a false positive merely stops
