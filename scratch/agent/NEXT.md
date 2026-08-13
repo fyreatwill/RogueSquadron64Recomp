@@ -1,33 +1,33 @@
-# NEXT work unit (attribute the reachable VI state writers)
+# NEXT work unit (classify the 0x11 VI feature request)
 
 HYPOTHESIS-ID: m3-vi640-transition-writer
 
-Run one batched, phase-gated capture that marks every call to the complete
-pending-mask and selector/config writer inventory identified in s807. Do not
-instrument a new address class: the source audit found no other absolute
-stores. Retain the existing host VI/mode positive control, `[vi-gate]` direct
-caller controls, and the oracle whole-RDRAM positive control. Build all writer
-markers in one regeneration-safe fixup change and run the arms concurrently
-if the recipe requires an oracle comparison.
+Run one bounded source-to-caller audit and then one batched phase-gated capture
+focused on the reachable `requestViFeatureChange(a0=0x11)` →
+`applyPendingViChanges` path. Keep the s808 writer markers, host VI/mode
+positive control, `[vi-gate]` controls, E9 provenance controls, and phase-gated
+key schedule. Do not add a mitigation or change the requested mask.
 
 ## Competing hypotheses
 
-- H-state-writer: a reachable scene/render caller writes the 640-only pending
-  mask or selector state. Prediction: a writer marker precedes the first
-  post-transition 640 row and identifies its caller/value.
-- H-missing-1024-writer: the 1024-capable writer exists but its caller or
-  overlay route is absent. Prediction: no 1024-producing writer marker fires,
-  while only initialization/640 callers fire.
-- H-recipe-state: the observed 640 values are legitimate for this port
-  recipe. Prediction: writer markers match the expected initialization/640
-  sequence and no unexplained state mutation occurs.
+- H-0x11-intended-640: all callers that issue `a0=0x11` are legitimate 640-mode
+  requests. Prediction: source caller classification plus the capture show
+  the same request/value/order and no alternate 1024 request.
+- H-0x11-misrouted: a caller supplies `0x11` on a route that should request a
+  1024-capable mode. Prediction: the caller audit identifies a scene/render
+  route whose surrounding state differs from the observed capture, or the
+  capture shows an unexpected caller/return ordering.
+- H-later-1024-route: the 1024 request is a later, currently unexercised
+  caller. Prediction: the capture remains 640-only, while source inventory
+  identifies a concrete caller and predicate that can publish a 1024 row.
 
 ## Discriminating measurement
 
-The first writer event after the phase-gated 640 transition, correlated with
-its function, argument, pending-mask/selector values, and the next `[vi-gate]`
-row, splits the hypotheses. A marker proving only that a writer function is
-reachable is insufficient; it must capture the state value and ordering.
+The complete caller list for `requestViFeatureChange(a0=0x11)`, joined to the
+first post-transition writer and next `[vi-gate]` row, splits the hypotheses.
+The source audit must identify the caller's scene/render role and predicate;
+the runtime capture must confirm ordering. A marker proving only that the
+writer is reachable is insufficient.
 
 ## Exact commands
 
@@ -35,11 +35,12 @@ reachable is insufficient; it must capture the state value and ordering.
 # Before editing/building, confirm the s807 inventory remains unchanged:
 rg -n 'MEM_W\(-0X716C|MEM_W\(-0X7170|MEM_B\(-0X579B|MEM_B\(-0X579C|MEM_B\(-0X579E' ../N64Recomp/RecompiledFuncs/funcs_*.c
 
-# Then use the repository regeneration/fixup flow, build Debug, and run the
-# existing phase-gated recipe with positive controls and SIGKILL watchdog.
+# Enumerate requestViFeatureChange callers and the a0=0x11 callsites, then run
+# the existing phase-gated recipe with ROGUESQ_LOG_VI_WRITERS=1 and positive
+# controls/SIGKILL watchdog.
 ```
 
-Expected outcomes: a concrete writer/value/order advances H-state-writer; a
-missing 1024-capable route advances H-missing-1024-writer; a complete
-initialization/640 sequence with no unexplained mutation advances H-recipe-state.
-No skip, guard, restore, or other mitigation is authorized by this unit.
+Expected outcomes: a classified intended-640 caller advances
+H-0x11-intended-640; a mismatched caller/predicate advances H-0x11-misrouted;
+a clean 640-only run plus a concrete later 1024 caller advances
+H-later-1024-route. No skip, guard, restore, or other mitigation is authorized.

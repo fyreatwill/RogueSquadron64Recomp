@@ -55400,3 +55400,33 @@ mitigation was added.
 ORIGIN: the 640-only state is written through the enumerated game-side pending
 and selector/config routines; this iteration added no guard, skip, restore, or
 other mitigation.
+
+## Session 808 (2026-08-13) — VI-640 transition writer attribution
+
+The competing hypotheses and discriminating measurement were written in
+`scratch/agent/NEXT.md`. The regeneration-safe fixup instrumentation covered
+the complete s807 pending-mask and selector/config inventory, with the existing
+host VI and E9 provenance controls retained. The first build exposed and the
+fixed regeneration/build resolved a diagnostic-emission bug; the final Debug
+build succeeded.
+
+The phase-gated capture reached VI 640, passed the E9 positive controls
+(`emit=1`, `raw=1`, `dispatch=1`, `match=1` on four records), and then crashed
+before any VI 1024 phase. Immediately before the 640 publication,
+`requestViFeatureChange` was entered with `a0=0x11` and wrote pending mask
+`0x00000011`. `applyPendingViChanges` then consumed the mask, set selector
+byte `selA` to 1, and published mode `0x80128DF0` at width 640; subsequent
+publishes remained 640. No writer marker produced a 1024-capable mode.
+
+This advances H-state-writer: a reachable game-side pending-mask request and
+feature-application path deterministically selects the 640 mode. It refutes
+the tested prediction that the 1024-capable writer is merely missing from the
+instrumented inventory, but does not establish why retail reaches 1024 or
+whether another caller can request it later. The crash was in
+`cutsceneDispatchSlotsByFlag+7288` with `si_addr=0x380000044`, so it is not
+evidence about the VI state writer and no mitigation was added.
+
+ORIGIN: the measured 640 state originates from the game-side
+`requestViFeatureChange(a0=0x11)` → `applyPendingViChanges` path; the diff adds
+only bounded diagnostics and fixup support, not a guard, skip, restore, or
+other mitigation.
