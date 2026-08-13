@@ -56269,6 +56269,33 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 847 (2026-08-13) — Factor 5 triangle A/B missed the candidate owner
+
+Built the Debug target with an optional within-run A/B: arm A preserved the
+installed consume-only 0xB4/0xBF handlers, while arm B decoded the reference
+TRI1/TRI2 indices and conditionally consumed textured inline data. The first
+phase-gated capture was invalid for the discriminator because the recipe
+omitted `ROGUESQ_LOG_TRI_DISPATCH`; it reached VI 1024 and the E9 controls but
+produced no triangle rows before the known `slotDispatcherIter+872` SIGBUS.
+
+The corrected run added the missing dispatch control and reached VI 1024,
+passed all four E9 provenance controls, and recorded 40 B4/BF candidate rows
+before the same SIGBUS. Every candidate reported `ucode=1`. The RT64 enum
+defines `GBIUCode::RDP` as 1 and `GBIUCode::F3DFACTOR5` as 12, so the candidate
+stream was not using the Factor 5 map. A third run gated at the observed VI
+640 candidate width and still produced 40 dispatch rows but zero A/B or
+triangle-call rows, confirming the map was not reached rather than merely
+missing the VI-1024 gate.
+
+This rules out using the s844 candidate census as evidence for the Factor 5
+map regression. It does not select a geometry behavior hypothesis, establish
+operand legitimacy, or justify a mitigation. The next unit must identify the
+GBI owner at selection/handler entry with a positive candidate-dispatch
+control.
+
+ORIGIN: optional host-side diagnostic A/B and owner telemetry only; no game
+value, RDP command advancement, or mitigation behavior changed.
+
 ## Session 846 (2026-08-13) — installed Factor 5 triangle map is a direct RT64 override
 
 Performed the prescribed bounded source/reference audit; no build or run was

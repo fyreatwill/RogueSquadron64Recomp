@@ -28,6 +28,93 @@ diff --git a/src/contrib/plume b/src/contrib/plume
 @@ -1 +1 @@
 -Subproject commit 51b1ad443b9f202c5cfc930ae25345d3f2ba7716
 +Subproject commit 51b1ad443b9f202c5cfc930ae25345d3f2ba7716-dirty
+diff --git a/src/gbi/rt64_gbi_f3dfactor5.cpp b/src/gbi/rt64_gbi_f3dfactor5.cpp
+index a0d4a6a..39c294f 100644
+--- a/src/gbi/rt64_gbi_f3dfactor5.cpp
++++ b/src/gbi/rt64_gbi_f3dfactor5.cpp
+@@ -32,6 +32,8 @@
+ #include <unordered_map>
+ #include <unordered_set>
+ 
++extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
++
+ namespace RT64 {
+     namespace GBI_F3DFACTOR5 {
+         // ROGUESQ_LOG_GBI=1 enables per-handler diagnostic logs (off by default
+@@ -371,6 +373,57 @@ namespace RT64 {
+             (*dl)++;  // skip the 8-byte payload
+         }
+ 
++        // Optional within-run comparison against the reference TRI decoder.
++        // The A arm preserves the installed consume-only map; the B arm emits
++        // the decoded TRI1/TRI2 indices and skips inline data only for textured
++        // commands. The phase/width gate keeps the comparison in one captured
++        // animation phase; the recipe selects the observed candidate width.
++        void op_tri_ab(State *state, DisplayList **dl) {
++            static const bool enabled = [] {
++                const char *v = std::getenv("ROGUESQ_HLE_TRI_AB");
++                return v && *v && *v != '0';
++            }();
++            static const uint32_t targetWidth = [] {
++                const char *v = std::getenv("ROGUESQ_HLE_TRI_AB_WIDTH");
++                return v && *v ? static_cast<uint32_t>(std::strtoul(v, nullptr, 10)) : 1024u;
++            }();
++            if (!enabled || state->lastScreenVI.width != targetWidth) {
++                op_consume16(state, dl);
++                return;
++            }
++
++            static uint32_t calls = 0;
++            static uint32_t rows = 0;
++            const uint32_t n = calls++;
++            const bool referenceArm = ((n / 32u) & 1u) != 0;
++            const uint32_t w0 = (*dl)->w0;
++            const uint32_t w1 = (*dl)->w1;
++            const uint32_t v1 = ((w1 >> 13) & 0x7F8u) / 40u;
++            const uint32_t v2 = ((w1 >> 5) & 0x7F8u) / 40u;
++            const uint32_t v3 = ((w1 << 3) & 0x7F8u) / 40u;
++            const uint32_t v4 = ((w1 >> 21) & 0x7F8u) / 40u;
++            const bool textured = (w0 & 2u) != 0;
++            if (rows++ < 128u) {
++                std::fprintf(stderr,
++                    "[tri-ab] phase=%u vi=%u arm=%c op=0x%02X textured=%u "
++                    "indices=%u,%u,%u,%u advance=%u\n",
++                    rs64_phase_ord ? rs64_phase_ord() : 0u,
++                    targetWidth, referenceArm ? 'B' : 'A', state->rsp->currentCommandRawOpCode,
++                    textured ? 1u : 0u, v1, v2, v3, v4, textured ? 16u : 0u);
++                std::fflush(stderr);
++            }
++            if (!referenceArm) {
++                op_consume16(state, dl);
++                return;
++            }
++
++            state->rsp->drawIndexedTri(v1, v2, v3);
++            if (state->rsp->currentCommandRawOpCode == 0xB4)
++                state->rsp->drawIndexedTri(v1, v3, v4);
++            if (textured)
++                (*dl)++;
++        }
++
+         // op 0x06 strict G_DL filter. Standard F3D G_DL has w0=0x06000000
+         // (opcode + branch flag at bit 16, rest zero). Factor 5 emits
+         // commands sharing first byte 0x06 but packing data into w0's low
+@@ -1121,8 +1174,13 @@ namespace RT64 {
+             // produces garbled graphics during N64 logo. So 0xBF in Factor 5's
+             // variant is NOT standard G_TRI1 — the original drift-detector
+             // diagnosis was correct. Keep as 16-byte consumer.
+-            gbi->map[0xB4] = &op_consume16;
+-            gbi->map[0xBF] = &op_consume16;
++            if (std::getenv("ROGUESQ_HLE_TRI_AB")) {
++                gbi->map[0xB4] = &op_tri_ab;
++                gbi->map[0xBF] = &op_tri_ab;
++            } else {
++                gbi->map[0xB4] = &op_consume16;
++                gbi->map[0xBF] = &op_consume16;
++            }
+ 
+             // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
+             //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
 index 6255872..80121b1 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp

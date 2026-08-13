@@ -233,32 +233,41 @@ Priority until changed by the user:
   stream-provenance question; no writer or legitimacy claim exists, so no
   mitigation or behavior change is justified.
 
-## Next work unit: within-run A/B of the Factor 5 triangle map
+- s847 built the requested within-run Factor 5 TRI A/B and corrected one
+  invalid capture that omitted `ROGUESQ_LOG_TRI_DISPATCH`. The corrected run
+  reached VI 1024 and all four E9 controls, then recorded 40 candidate
+  dispatches before the known `slotDispatcherIter+872` SIGBUS. Every candidate
+  row reported `ucode=1`; the RT64 enum defines 1 as the RDP GBI, while
+  `F3DFACTOR5` is 12. The A/B handler therefore produced zero arm rows and
+  zero triangle-call rows: these candidates were not dispatched through the
+  installed Factor 5 map. This is independent source/runtime evidence that
+  the s844 candidate census was misattributed to the Factor 5 handler family;
+  it does not select H-map-load-bearing, H-map-intentional, or H-map-garbage.
+  No game behavior or mitigation changed.
+
+## Next work unit: identify the GBI owner of the B4/BF candidate stream
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one phase-gated runtime A/B that builds both arms in the same iteration:
-the current consume-only `0xB4/0xBF` map and a reference-shaped handler arm
-that decodes triangle indices and applies the conditional 8/24-byte advance.
-Batch the existing positive E9, VI-width, triangle-dispatch, copy-cycle, and
-DL-sync controls in one build and capture. Do not add a mitigation or classify
-operand legitimacy.
+Perform one phase-gated source/runtime ownership probe. Keep the existing
+triangle-dispatch breadcrumb, and add one bounded record at GBI selection or
+handler entry that identifies the selected `GBIUCode` and the map owner for
+raw `0xB4/0xBF`. Batch the E9, VI-width, triangle-dispatch, copy-cycle, and
+DL-sync controls in one build and capture. Do not change command advancement,
+emit geometry, or classify operand legitimacy.
 
 Competing hypotheses:
 
-- H-map-load-bearing: the reference-shaped arm increases legitimate triangle
-  dispatch/emission and changes copy-cycle or DL-sync outcomes.
-- H-map-intentional: the reference-shaped arm does not improve controls or
-  introduces stream drift, so another producer/path is required.
-- H-map-garbage: candidates are not valid triangles, so decoding them produces
-  no legitimate geometry and the map discrepancy is incidental.
+- H-factor5-candidates: the B4/BF candidates are dispatched through the Factor
+  5 map, but the A/B gate or handler ownership telemetry missed them.
+- H-rdp-candidates: the candidates belong to the RDP GBI and cannot test the
+  Factor 5 map; the next lead is a separate RDP-stream provenance issue.
+- H-mixed-owner: both owners occur, requiring separate phase/owner counts.
 
-Discriminator: compare per-arm triangle handler/emission counts, copy-cycle
-assertions, and DL-sync progression within the same phase/VI population. A
-positive-control-preserving geometry increase with improved sync selects
-H-map-load-bearing; unchanged or worsened behavior with opcode/operand drift
-selects H-map-intentional or H-map-garbage. Any mitigation still requires an
-ORIGIN naming the writer and a legitimacy assessment.
+Discriminator: every candidate must have a matching owner record. A complete
+Factor 5 match selects H-factor5-candidates; all-RDP ownership selects
+H-rdp-candidates; both selects H-mixed-owner. A null is invalid unless the
+positive triangle-dispatch control fires in the same run.
 
 ## Ranked backlog
 
