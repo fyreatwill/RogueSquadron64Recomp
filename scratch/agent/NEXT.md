@@ -1,14 +1,14 @@
-# NEXT work unit (capture initVideoSubsystem argument-state values)
+# NEXT work unit (repeat capture of initVideoSubsystem argument-state values)
 
 HYPOTHESIS-ID: m3-vi1024-argument-state
 
-Run one bounded phase-gated capture using the fixed `[vi-arg]` probe at both
+Run one more bounded phase-gated capture using the fixed `[vi-arg]` probe at both
 reachable `initVideoSubsystem` callers. The source audit is complete: callers
 are `advanceVideoFrame` sites `0x80018378` and `0x80018564`, and no generated
 store targets argument offsets `0x1EF`, `0x1F3`, or `0x1FF`. Four fixed-recipe
-attempts died before the 1024 gate in the same boot crash family, so this unit
-must obtain a 1024-gated record before interpreting argument state. Do not
-change mode data or add a mitigation.
+attempts plus s812 died before the 1024 gate in the same boot crash family, so
+this unit must obtain a 1024-gated record before interpreting argument state.
+Do not change mode data or add a mitigation.
 
 ## Competing hypotheses
 
@@ -32,7 +32,7 @@ null is unevaluable and must not be classified.
 ## Exact command
 
 ```sh
-OUT="scratch/agent/soak_results/s812_vi1024_argument_state_$(date +%Y%m%d-%H%M%S)"
+OUT="scratch/agent/soak_results/s813_vi1024_argument_state_$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
   ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_E9_PROVENANCE=1 \

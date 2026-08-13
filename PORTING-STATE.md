@@ -55505,3 +55505,17 @@ added.
 
 ORIGIN: this iteration added only bounded argument diagnostics and fixup
 support; it added no guard, skip, restore, or other mitigation.
+
+## Session 812 (2026-08-13) — argument-state capture stayed pre-gate
+
+The planned phase-gated capture used the fixed `[vi-arg]` probe and the full
+host-VI/E9 control set. The process reached only width 320 and exited before
+the 1024 gate; the log contained no `[vi-arg]` record and no 1024/E9
+discriminator. The independent crash markers identify
+`initVideoBootWrapper+2196`, `si_addr=0x3800002CC`, and guest PC
+`0x80001C94`. This is a pre-gate recurrence of the existing boot-crash family,
+so it neither supports intended nor corrupted argument state and provides no
+mitigation rationale. The next unit repeats the same bounded capture.
+
+ORIGIN: no code or mitigation changed; this iteration only exercised the
+existing regeneration-safe diagnostics.

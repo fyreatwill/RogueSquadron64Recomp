@@ -509,6 +509,15 @@ leaving runtime behavior as the remaining broad class.
    is one successful phase-gated run with `[vi-arg]` enabled; no mitigation is
    justified.
 
+   **s812 argument-state capture:** the fixed `[vi-arg]` recipe again died
+   before the 1024 gate. It reported width 320, emitted no `[vi-arg]` or
+   1024/E9 discriminator, and crashed in `initVideoBootWrapper+2196`
+   (`si_addr=0x3800002CC`, guest PC `0x80001C94`). This is a second
+   pre-gate recurrence in the same boot-crash family and is unevaluable for
+   intended-versus-corrupt argument state; no mitigation or hypothesis
+   classification is justified. Next: repeat the same bounded capture until
+   a 1024-gated record is obtained.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a
