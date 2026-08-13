@@ -19,8 +19,11 @@ Fixup 6c extracts that range; it does not overwrite main L_12A0.
 Overlay 14 is dest 0x1DB0 (ROM 0x26AB8, table len 0x21F -> 0x220 B): a
 vector loop that exits j L_1268; ori $5, 0x18. Fixup 6g extracts that
 window and routes DMEM 0x153 == 0x14.
+Overlay 18 is dest 0x1DB0 (ROM 0x26CD8, table len 0x21F -> 0x220 B):
+ovl14's successor, exits j L_1268; ori $5, 0x10. Fixup 6h extracts
+that window and routes DMEM 0x153 == 0x18.
 
-Usage: python3 tools/make_clip_composite.py [4|12|14|24]   (from the repo root)
+Usage: python3 tools/make_clip_composite.py [4|12|14|18|24]   (from the repo root)
 """
 import sys
 from pathlib import Path
@@ -36,6 +39,7 @@ OVERLAYS = {
     4: (0x26420, 0x220, "clip", WINDOW_ROM, WINDOW_END),
     12: (0x26670, 0x230, "trigen", WINDOW_ROM, WINDOW_END),
     14: (0x26AB8, 0x220, "ovl14", WINDOW_ROM, WINDOW_END),
+    18: (0x26CD8, 0x220, "ovl18", WINDOW_ROM, WINDOW_END),
     24: (0x27260, 0xE4, "ovl24", 0x25830, None),
 }
 

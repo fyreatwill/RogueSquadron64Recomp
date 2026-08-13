@@ -185,3 +185,10 @@ part of this unit.
 `resident:0x18`. Stray `0x1DF4/00` 3157→1395 (no-jal ovl14 path);
 new `0x1E28/00=1200` `0x1EEC/00=77`. E9 match still 3/64. Next is
 ovl18 dest-`0x1DB0` when `153==0x18`.
+
+**s749 live:** fixup 6h landed the ovl18 route. Soak
+`s749_ovl18_route_20260812-172852` (348 s, CRASH=0): `last_ovl=0x18/*`
+183/192, pred `resident:0x18` → 0, all 183 first-edge preds
+`resident:0x10`. New leftover `$ra=0x1F40` stray (ovl18 jal
+return). E9 still the boot-shaped triplet. Next is ovl10 dest-
+`0x1DB0` when `153==0x10`.

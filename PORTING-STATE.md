@@ -53656,3 +53656,47 @@ entry (remaining 1DF4 still has pred dest `0x1DB0` line 621
 resident `0x18`). **H-ovl14-breaks-06 REFUTED. H-ovl14-restores-e9
 REFUTED.** Residual is skipped ovl18 (ROM `0x26CD8`, dest `0x1DB0`,
 exit `ori $5, 0x10`).
+
+## Session 749 (2026-08-12) — ovl18 dest-0x1DB0 route is LIVE; residual is skipped ovl 0x10
+
+Step 0 measured `CURRENT-TRUTH.md` at 37,933 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s748: route overlay
+18 at dest `0x1DB0` when `153==0x18`. SOAK-RESULTS had no new queue
+lines; s748 was already folded.
+
+`make_clip_composite.py 18` places ROM `0x26CD8` (0x220 B) in the
+window. `factor5_rsp_ovl18.toml` + RSPRecomp emit
+`factor5_ucode_ovl18_recompiled.c`. Fixup 6h extracts
+`L_1DB0..do_indirect_jump`, renames `OVL18_*` (external helper is
+exactly `L_1268`), routes `153==0x18` at dest `0x1DB0`, widens
+jal-return `0x1EEC` to `0x14||0x18`, and adds ovl18-only `0x1F40`.
+JALs themselves are direct gotos to `OVL18_1F64`. Overlay `0x10`
+was not spliced. **ORIGIN:** dest `0x1DB0` / `153==0x18` is the
+skipped ovl18 vector loop (ROM `0x26CD8`). Leftover-`$ra` `L_11B0`
+strays are after that skip falls into main `L_1DB0`. Route, not a
+`0x1DF4`/`0x1E28` widen.
+
+Soak `scratch/agent/soak_results/s749_ovl18_route_20260812-172852/run.log`
+(348 s, same recipe as s743–s748, CRASH=0 UJ=0, wrapper rc=0).
+Same-run positive control: `[ovl-route] res=0x04` last n=296448,
+`res=0x14` last n=10176, `res=0x18` last n=6848 (tgts `0x1DB0` +
+`0x1F40`). `last_ovl=0x18/*` on 183/192 sec2 reset rows
+(`0x1DB0` 177, `0x1F40` 6, `0x00` 9 early). Four boot controls
+`dl06=push:2,complete:2,open:0` match=1.
+
+Pred `resident:0x18` **61→0**. All 183 first-edge rows are
+`pred=target:0x1DB0,line:621,resident:0x10` with `ra=0x1DF4` 96 /
+`0x1E28` 81 / `0x1F40` 6. Stray `0x1DF4/00` 1395→2619,
+`0x1E28/00` 1200→2345, `0x1EEC/00` 77→56, new `0x1F40/00=901`
+(all line=451). Volume tracks the larger sec2 set (192 vs 64
+rows; last task 11383 vs 3244). Class is leftover `$ra` after
+skipped ovl `0x10` falls into `L_1DB0` → `L_11B0`. E9 match
+**9/192** is three copies of the same boot-shaped `dl06=2/2/0`
+triplet (s748 3/64); rdpFs 0→5120. Not an E9 restore.
+
+**H-ovl18-stops-1db0-reset SELECTED.** **H-ovl18-not-the-l11b0-path
+REFUTED** (pred 0x18 gone; new 1F40 class; remaining strays have
+pred dest `0x1DB0` line 621 resident `0x10`). **H-ovl18-breaks-06
+REFUTED. H-ovl18-restores-e9 REFUTED.** Residual is skipped
+overlay `0x10` (ROM `0x268A0`, dest `0x1DB0`, table len `0x213`,
+no jals, exit `j L_1268; ori $5, 0x1C`).
