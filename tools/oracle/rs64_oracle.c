@@ -321,15 +321,22 @@ static void sleep_s(double secs)
 static void *vi_poller(void *arg)
 {
     unsigned last_width = 0xFFFFFFFFu, last_origin = 0xFFFFFFFFu;
+    double last_raw_log = -1e9;
     (void)arg;
 
     sleep_s(0.1);
     while (g_poll_running) {
+        double t = now_s() - g_t0;
         unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
         unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        if ((t - last_raw_log) >= 1.0) {
+            printf("[vi-poll-raw] t=%6.1fs width=%u origin=0x%08x\n", t, width, origin);
+            fflush(stdout);
+            last_raw_log = t;
+        }
         if (width != 0 && (width != last_width || origin != last_origin)) {
             printf("[vi-poll] t=%6.1fs WIDTH %u%s%u origin=0x%08x\n",
-                   now_s() - g_t0, last_width == 0xFFFFFFFFu ? 0 : last_width,
+                   t, last_width == 0xFFFFFFFFu ? 0 : last_width,
                    last_width == 0xFFFFFFFFu ? " -> " : " => ", width, origin);
             fflush(stdout);
             last_width = width;

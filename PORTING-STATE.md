@@ -54609,3 +54609,26 @@ and rules out missing PIF delivery for this recipe. The next work unit is a
 bounded audit/control change to make debugger-off raw VI width/origin reads
 independently visible before rerunning one matched phase check. No port runtime
 code changed.
+
+## Session 774 (2026-08-12) — debugger-off raw VI polling proves the 320-only phase
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 58,192 bytes, so maintenance did not
+trigger. The planned work unit was the bounded oracle observation audit. I added
+one-second `[vi-poll-raw]` samples to the existing debugger-off poller, rebuilt
+the oracle, and ran matched fresh-config 70-second arms with the same ROM/core,
+eleven-entry Start schedule, and positive-control requirements.
+
+The debugger-on arm exited cleanly with **11,785,277** whole-RDRAM writes over
+**4,199 VI**, all eleven PIF Start presses, and width 0→320 followed by origin
+`0x6dd280`; no later width transition occurred. The debugger-off arm exited with
+the expected zero-hit wrapper result and produced **70** raw samples: width 0 at
+0.1s, then width 320/origin `0x6dd280` from 1.1s through 69.6s. Its callback VI
+count was zero because debugger callbacks were disabled.
+
+The positive control and PIF trace validate the debugger-on arm; the continuous
+raw reads validate debugger-off phase observation. This selects
+**H-oracle-real-320-only**, refutes H-oracle-poll-bug and
+H-oracle-debugger-interference for this recipe, and rules out a missing input
+delivery path. It does not explain the divergence from the documented later VI
+timeline. The next work unit is a bounded oracle runtime/config identity audit.
+The port runtime was not changed.

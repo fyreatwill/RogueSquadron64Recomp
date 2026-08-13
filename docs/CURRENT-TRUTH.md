@@ -22,7 +22,23 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s773; compacted in maintenance s729)
+## Current truth (reviewed through s774; compacted in maintenance s729)
+
+**s774:** the matched 70-second debugger-mode oracle arms used the same ROM/core,
+fresh configs, and 11-entry Start schedule. The debugger-on arm passed the
+whole-RDRAM positive control with **11,785,277 writes** and **4,199 VI**, logged
+all 11 PIF presses, and stayed at width 320 after origin `0x6dd280`. The new
+debugger-off raw sampler produced 70 one-second samples: width was 0 at 0.1s,
+then 320/origin `0x6dd280` from 1.1s through 69.6s; its expected callback VI
+total remained zero. This proves the off-arm observation path is live and
+selects **H-oracle-real-320-only** for this recipe; it refutes
+H-oracle-poll-bug and H-oracle-debugger-interference. The phase remains an
+oracle-environment/runtime divergence from the documented timeline, not a
+polling artifact.
+
+**ORIGIN:** debugger-off `DebugMemRead32` raw samples independently remained
+stable for the full run; debugger-on's whole-RDRAM watch and PIF trace were
+positive. The only code change was the bounded oracle raw-sample diagnostic.
 
 **s773:** the matched 70-second debugger-mode oracle arms used the same ROM/core,
 fresh configs, and 11-entry Start schedule. Debugger-on passed the whole-RDRAM
@@ -759,7 +775,15 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **Oracle phase divergence — OPEN, H-oracle-poll-observation selected.** s773's 70-second A/B had a positive debugger-on control (**11,766,128 writes**, 4,192 VI) and all 11 PIF presses in both arms. Both arms showed the initial width 320 and origin `0x6dd280`; debugger-off polling showed no later transition, but its callback VI total is necessarily zero. The result does not select debugger interference and remains unevaluable for a later-phase difference. Next: audit the oracle's debugger-off phase-observation path with a bounded logging/control change that records the raw VI width/origin reads independently of debugger callbacks, then rerun one matched phase check.
+1. **Oracle phase divergence — OPEN, H-oracle-real-320-only selected.** s774's
+70-second A/B made debugger-off raw polling independently visible for the full
+run: 70 samples after initialization stayed at width 320/origin `0x6dd280`,
+while debugger-on independently recorded 4,199 VI, all 11 PIF presses, and
+11,785,277 positive-control writes. This refutes the poll-observation and
+debugger-interference explanations for the 320-only result. Next: perform a
+bounded oracle runtime/config identity audit that can explain why this retail
+run never reaches the documented later VI phases; do not treat the port as
+ground truth.
 
 2. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: phase-gated reachability result for 6w or pivot to a higher-information M3 audit. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
