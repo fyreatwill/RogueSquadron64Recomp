@@ -55275,3 +55275,40 @@ corruption mitigation.
 
 Next: add regeneration-safe markers at those three callsites and run one
 phase-gated VI-640 capture with the existing mode logger and oracle controls.
+
+## Session 804 (2026-08-13) — reachable direct VI callers are 640-only
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 38,063 bytes, so maintenance did
+not trigger. Before building, the competing hypotheses and discriminator were
+written in `scratch/agent/NEXT.md`. Ground truth was checked first: the retail
+oracle passed the whole-RDRAM positive control with 2,251,959 writes and
+independently recorded writes to the candidate mode regions
+`0x128C90` (40), `0x128E40` (60), `0x128E90` (2,934), and `0x128D50–0x128E40`
+(180). This establishes that the candidate buffers are live game state, not
+that this undriven oracle recipe reaches the later 1024 phase.
+
+The regeneration-safe fixup added markers at `initVideoSubsystem` (`0x8001B720`),
+`applyPendingViChanges` (`0x8001B8DC`), and `swapBufferWithViMode`
+(`0x8001BB54`); the existing selector marker and host `osViSetMode` logger
+were retained. The generated tree rebuilt successfully. A phase-gated capture
+reached VI 640 at 2.6 seconds, passed the mode positive control with six
+calls, and fired all three direct markers. Post-transition rows were:
+`initVideoSubsystem` width 640 from `0x80128E40`/`0x80128DA0`,
+`applyPendingViChanges` width 640 from `0x80128DF0`, and
+`swapBufferWithViMode` width 640 from `0x80128C90`; the selector marker stayed
+silent. The run remained at VI 640 for roughly 80 seconds with no crash marker
+before I SIGKILLed the capture process.
+
+This selects H-recipe-state for the tested port recipe, refuting
+H-direct-caller and the narrow H-overlay-dispatch prediction that a direct
+marker would carry 1024. The generated source's complete caller enumeration
+is the second independent line of evidence. It does not identify the state
+writer or prove that the retail and port recipes take the same transition.
+No mitigation was added.
+
+ORIGIN: the measured 640-only requests originated at the three generated
+direct callsites above; this iteration added diagnostics only, not a guard,
+skip, restore, or other corruption mitigation.
+
+Logs: `scratch/agent/vi640_direct_callers/run.log` and the terminal oracle
+capture from the grounded candidate-buffer watch.

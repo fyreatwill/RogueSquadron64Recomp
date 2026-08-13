@@ -404,6 +404,21 @@ leaving runtime behavior as the remaining broad class.
    mitigation was added. Next: one batched, phase-gated callsite trace for
    `initVideoSubsystem`, `applyPendingViChanges`, and `swapBufferWithViMode`,
    retaining the existing `osViSetMode` logger and oracle positive control.
+   The s804 result supersedes this as the active next step: audit the writers
+   and state gates that populate the 640-only direct mode buffers.
+
+   **s804 direct-caller trace:** the grounded oracle passed the whole-RDRAM
+   positive control (2,251,959 writes) and independently wrote every candidate
+   mode region. The port's same-run `osViSetMode` control fired six times and
+   all three direct markers fired. After the 640 transition,
+   `initVideoSubsystem` requested 640 from `0x80128E40`/`0x80128DA0`,
+   `applyPendingViChanges` requested 640 from `0x80128DF0`, and
+   `swapBufferWithViMode` requested 640 from `0x80128C90`; the selector marker
+   stayed silent. The phase stayed at 640 for roughly 80 seconds without a
+   crash before the capture process was SIGKILLed. This selects H-recipe-state
+   for the tested recipe and refutes H-direct-caller and the narrow
+   H-overlay-dispatch prediction that a direct marker would carry 1024; the
+   state writer remains unidentified. No mitigation was added.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

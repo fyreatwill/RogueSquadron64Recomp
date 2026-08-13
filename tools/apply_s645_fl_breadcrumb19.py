@@ -53,7 +53,7 @@ MEMSET_PROBE = """\
             int ms_log = ms_hit || (s_msfl_all < 8) || ((s_msfl_all % 500) == 0);
             if (ms_log) {
                 fprintf(stderr,
-                    "[memset-fl-dest] n=%d all=%d hit=%d dst=0x%08X val=0x%02X len=0x%X ra=0x%08X\n",
+                    "[memset-fl-dest] n=%d all=%d hit=%d dst=0x%08X val=0x%02X len=0x%X ra=0x%08X\\n",
                     s_msfl_n, s_msfl_all, ms_hit, ms_dst, ms_val, ms_len, U32(ctx->r31));
                 fflush(stderr);
             }
