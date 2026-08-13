@@ -57868,3 +57868,59 @@ writer or establish that the unchecked voice pointer is legitimate; the
 result is single-source inventory evidence, not an explanation for a crash.
 
 ORIGIN: complete generated-function, caller/sibling writer, shared-field, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s904 (2026-08-13) — 3D audio frame update mixes coherent shapes but remains unclassified
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`update3DAudioFrame` (`0x800998E8`, size `0x344`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Cross-checked the complete
+generated function, its caller and adjacent 3D-audio helpers, generated
+readers/writers of the active-list root, and `rogue_squadron64` companion
+symbol artifacts. No build, game run, or soak was needed.
+
+The complete site classification is:
+
+- `0x800998F4` loads the active voice/list head from `D_80153414`; the null
+  gate at `0x80099938` makes the outer walk null-terminated. Each iteration
+  reads node `+0x8` state and `+0x0` next pointer, increments `D_8015341C`,
+  and advances through `+0x0` at `0x80099BE8`. The list shape is coherent,
+  but the root and node writers are not independently proven legitimate.
+- `0x80099984–0x800999B8` unlinks the current node: predecessor and successor
+  pointers are null-checked before link stores, and the no-predecessor case
+  publishes the next node to `D_80153414`. This is a guarded doubly-linked
+  removal with no local bound beyond the null-terminated chain.
+- `0x800999BC–0x80099A08` reads `+0xA`, `+0x34`, and `+0x8` flags, then either
+  stores the event value or calls `flagVoiceChainForStop`; the spatial path
+  calls `compute3DSourceSpatialMix` with five stack output slots. These fields
+  and helper arguments are coherent, but dynamic values lack independent
+  writer/legitimacy proof.
+- `0x80099A0C–0x80099A8C` branches on flags `0x8`, `0x2`, `0x4`, and `0x1`.
+  It calls `enqueueSpatialSoundInPriorityGroup` with the current record and
+  four spatial values, or `musyxNoteEventLockedDispatch` with note `+0x3C`
+  and constant `0x40`; returned handles are stored at `+0x34`.
+- `0x80099AC0–0x80099B40` validates the `+0x34` handle and updates flags.
+  `0x80099AEC–0x80099B6C` conditionally enqueues through
+  `enqueueSoundInPriorityGroup`, calls `flagVoiceChainForStop` on the
+  zero-spatial case, and otherwise calls `applyVoice3DMixParams` with three
+  stack outputs. The handle gate is explicit, but record/handle writers remain
+  unproven.
+- `0x80099B70–0x80099BE4` reads/writes voice `+0x40` and `+0x8`, applying
+  constant threshold/flag transformations. `dispatchPrioritizedSoundQueue`
+  runs once after the list is exhausted at `0x80099BF4`.
+
+The shape-mismatch hypothesis is rejected for each local substructure, but the
+function combines active-list unlinking, spatial-record, priority-queue,
+voice-handle, and flag-state shapes. Full classification is rejected because
+the active head, node fields, voice pointer, and handle writers/values have no
+independent legitimacy evidence. No guard or behavior change was made.
+
+### Rules out / narrows
+
+This source audit rules out an omitted local access, missing null gate, or
+unclassified list-unlink operation in the generated function. It does not
+identify a corrupt writer or establish runtime value legitimacy; this is
+single-source inventory evidence, not an explanation for a crash.
+
+ORIGIN: complete generated-function, caller/sibling-writer, shared-field, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.

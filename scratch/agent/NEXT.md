@@ -1,29 +1,30 @@
-# NEXT work unit (s904)
+# NEXT work unit (s905)
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
 Perform one bounded M3 idiom-class inventory in the generated game tree:
-`update3DAudioFrame` (`0x800998E8`) in
+`reset3DAudioLists` (`0x80099C2C`) in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerate every listener/voice-list
-or table access, derived pointer, bound/sentinel/state check, helper call, and
-writer basis. Do not add a guard or change game behavior. Do not run a game
+or table access, reset store, dependent reader/writer, and ownership basis.
+Do not add a guard or change game behavior. Do not run a game
 build or animating A/B for this source inventory.
 
 Competing hypotheses:
 
-- H-update-3d-unclassified: at least one listener/voice-list access, derived
-  pointer, or state value lacks structural or writer/legitimacy support.
-- H-update-3d-fully-classified: all accesses are bounded or guarded and every
-  dynamic input has a concrete writer/legitimacy basis.
-- H-update-3d-shape-mismatch: the function combines unrelated listener,
-  voice-chain, spatial-record, and queue shapes; record exact sites and stop.
+- H-reset-3d-unclassified: a reset store has a hidden dependent state or
+  writer/initialization obligation that cannot be classified from the function
+  and sibling writers.
+- H-reset-3d-fully-classified: both stores are standalone list-root resets and
+  their lifecycle writers and readers have a concrete basis.
+- H-reset-3d-shape-mismatch: the two reset globals belong to unrelated audio
+  structures; record the exact ownership split and stop.
 
-Discriminating measurement: a complete site table for `update3DAudioFrame`,
-including guest address, operation, derived value, bound/state check, helper
-argument shape, and the writer that established each input. Any omitted access
-or unproven writer rejects full classification.
+Discriminating measurement: a complete site table for `reset3DAudioLists`,
+including both stores, every reader/writer of `0x80153414` and `0x80153418`,
+and the companion symbol/lifecycle basis. Any omitted dependency or unproven
+ownership rejects full classification.
 
-Exact commands: use `rg` to enumerate `update3DAudioFrame` and its
-`MEM_*`/`jal`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then
-bounded `sed` windows and the companion `rogue_squadron64` symbol/decomp
-files. No game build or soak is planned.
+Exact commands: use `rg` to enumerate `reset3DAudioLists`, `0x80153414`, and
+`0x80153418` in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed`
+windows and the companion `rogue_squadron64` symbol/decomp files. No game
+build or soak is planned.

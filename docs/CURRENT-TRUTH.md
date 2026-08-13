@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s903 (2026-08-13). The active blocker is the authoritative
+Reviewed through s904 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -203,6 +203,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s901 | `enqueueSoundInPriorityGroup` inventory: count-bounded group scan plus sorted null-terminated queue insertion over `D_80152D70/74/78` and `D_80153290`; structure is coherent, but dynamic record/group/priority inputs, queue-node pointers, and cursor/count writers lack independent legitimacy proof; mixed table/list shape retained, no mitigation. |
 | s902 | `enqueueSpatialSoundInPriorityGroup` inventory: bounded group lookup plus sorted linked-list insertion and a 0x20-entry spatial-record pool at `D_80152F00`; the linked-list and pool shapes are coherent within their respective paths, but mixed table/list/pool inputs and writers lack independent legitimacy proof; no mitigation. |
 | s903 | `dispatchPrioritizedSoundQueue` inventory: bounded-by-count group walk plus guarded priority/pending linked-list operations and an unchecked `+0x18` voice-record pointer; local shapes are coherent, but dynamic count/node/voice writers and legitimacy remain unproven; no mitigation. |
+| s904 | `update3DAudioFrame` inventory: active-list walk rooted at `0x80153414` with guarded unlinking; spatial-mix, priority-queue, voice-handle, and flag-state paths are coherent but mixed, while dynamic list/voice fields and writer legitimacy remain unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -223,27 +224,28 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `update3DAudioFrame` (`0x800998E8`),
+Audit the next adjacent audio function, `reset3DAudioLists` (`0x80099C2C`),
 as a complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-update-3d-unclassified: at least one listener/voice-list access, derived
-  pointer, or state value lacks structural or writer/legitimacy support.
-- H-update-3d-fully-classified: all accesses are bounded or guarded and every
-  dynamic input has a concrete writer/legitimacy basis.
-- H-update-3d-shape-mismatch: the function combines unrelated listener,
-  voice-chain, spatial-record, and queue shapes; record exact sites and stop.
+- H-reset-3d-unclassified: a reset store has a hidden dependent state or
+  writer/initialization obligation that cannot be classified from the function
+  and sibling writers.
+- H-reset-3d-fully-classified: both stores are standalone list-root resets and
+  their lifecycle writers and readers have a concrete basis.
+- H-reset-3d-shape-mismatch: the two reset globals belong to unrelated audio
+  structures; record the exact ownership split and stop.
 
-Discriminating measurement: a complete site table for `update3DAudioFrame`,
-including every list/table access, dereference, bound/state check, helper
-argument shape, and writer/legitimacy basis. Any omitted access or unproven
-writer rejects full classification.
+Discriminating measurement: a complete site table for `reset3DAudioLists`,
+including both stores, every reader/writer of `0x80153414` and `0x80153418`,
+and the companion symbol/lifecycle basis. Any omitted dependency or unproven
+ownership rejects full classification.
 
-Exact commands: use `rg` to enumerate `update3DAudioFrame` and its
-`MEM_*`/`jal`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then
-bounded `sed` windows and the companion `rogue_squadron64` symbol/decomp
-files. No game build or soak is planned.
+Exact commands: use `rg` to enumerate `reset3DAudioLists`, `0x80153414`, and
+`0x80153418` in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed`
+windows and the companion `rogue_squadron64` symbol/decomp files. No game
+build or soak is planned.
 
 ## Closed and parked
 
