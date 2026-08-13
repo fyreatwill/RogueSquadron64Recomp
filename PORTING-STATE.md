@@ -55536,3 +55536,22 @@ state/allocator accesses.
 
 ORIGIN: no code or mitigation changed; this iteration only exercised the
 existing regeneration-safe diagnostics.
+
+## Session 814 (2026-08-13) — `[vi-arg]` crash attributed to probe-side dereference
+
+The bounded read-only audit mapped the s813 host PC `initVideoBootWrapper+2196`
+to the generated `[vi-arg]` diagnostic's first `MEM_BU(0x1EF, ctx->r5)` access.
+Both s813 logs stopped before a `[vi-arg]` record and reported `x9=0x800002CC`
+with `si_addr=0x3800002CC`; applying the probe's guest-address transform gives
+`ctx->r5=0x800000E0`, exactly the pointer being inspected. The matching
+`0x80001C94` value is the stale last-guest-PC stamp left by nested `rs_malloc`,
+not the faulting instruction.
+
+This selects the probe-side host-translation explanation for the observed
+crash and leaves the underlying game argument state unevaluable. The next
+unit is to make the probe pointer-only in the regeneration fixup, rebuild, and
+run one positive-control phase-gated capture. No game-logic guard or other
+mitigation was added.
+
+ORIGIN: the fault originates in the s811 diagnostic dereference of the caller
+pointer; the value is not yet classified as legitimate or corrupt game state.

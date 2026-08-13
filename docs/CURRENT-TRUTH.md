@@ -526,6 +526,20 @@ leaving runtime behavior as the remaining broad class.
    mitigation is justified. Pivot next to a bounded source audit of the
    `0x80001C94` crash site and its immediate state/allocator accesses.
 
+   **s814 source audit:** the two s813 logs have the same host fault operands
+   (`x9=0x800002CC`, `si_addr=0x3800002CC`) and both stop before any `[vi-arg]`
+   line. In the current generated source, `initVideoBootWrapper+2196` maps to
+   the diagnostic probe's `MEM_BU(0x1EF, ctx->r5)` evaluation, not to the
+   `0x80001C94` return path. The probe's address transform maps the observed
+   fault to `ctx->r5=0x800000E0`; its dereference becomes the host address
+   `0x3800002CC`. The `0x80001C94` stamp is stale state left by the nested
+   `rs_malloc` return. This selects **H-boot-crash-host-translation** in the
+   narrower probe-side-access sense, and does not establish that the game's
+   caller structure is malformed. Next: replace the probe's speculative byte
+   dereferences with pointer-only logging in the regeneration fixup, rebuild,
+   and run one bounded phase-gated capture with the existing positive controls.
+   No mitigation to game logic was added.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a
