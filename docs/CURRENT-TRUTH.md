@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s890 (2026-08-13). The active blocker is the authoritative
+Reviewed through s892 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -139,6 +139,15 @@ closed. M3 work is limited to systematic idiom-class audits.
   but do not independently prove the selected entry pointer, relative bases,
   or parsed record values legitimate. The function mixes sentinel-table and
   count-bounded record shapes; no guard or behavior change.
+- s892 audited `serviceStreamedVoices`' complete streamed-voice service path.
+  Its outer scan is bounded by `D_80141AD0`, with 0x18-byte records rooted at
+  `0x80152A20`; active records use `+0x0` cursor, `+0x4` callback, `+0x8`
+  sample base, `+0xC` count, `+0x10` cursor storage, and `+0x14` user field.
+  Forward and wrapped callback branches are structurally classified, and all
+  slot-field writers are accounted for in `startStreamedSampleVoice`, service
+  cursor stores, initialization, and stop. The function mixes callback,
+  sample-buffer, and cursor shapes; raw input/user values and indirect
+  callback legitimacy remain unproven. No guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -165,6 +174,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s889 | `processSongByHandle` inventory: two bounded 8-slot scans resolve input `+0x0` and `+0x8` through the `0xEF8` table; mixed record/slot shapes and writer legitimacy remain unproven; no mitigation. |
 | s890 | `playSongByIdLockCtl` inventory: song-bank pointer load plus three entry-relative bases and a sentinel-terminated `0x84` sub-entry scan; dynamic count/raw pointer legitimacy remains unproven; no mitigation. |
 | s891 | `unloadLastSndFileGroup` inventory: five sentinel-terminated entry-relative halfword walks plus one state-gated count-bounded voice-record walk; pointer/value legitimacy remains unproven and mixed shapes are retained; no mitigation. |
+| s892 | `serviceStreamedVoices` inventory: count-bounded 0x18-byte streamed-voice scan with state gate, cursor comparisons, two callback branches, and writeback; slot-field writers are accounted for, but raw input/user values and callback legitimacy remain unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -185,26 +195,26 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-The next audio-sequence pointer idiom is `serviceStreamedVoices`
-(`0x80097DA8`). Do not add a guard or change game behavior. Audit the complete function and
-classify every song-bank lookup, slot/record pointer dereference,
-loop bound, sentinel/state check, and writer basis.
+The next adjacent streamed-voice idiom is `flushStreamedVoiceBuffers`
+(`0x80097F54`). Do not add a guard or change game behavior. Audit the complete
+function and classify every slot/record pointer use, buffer/count argument,
+loop bound, state check, and writer basis.
 
 Competing hypotheses:
 
-- H-service-stream-unclassified: at least one stream/voice-table or record/cursor site
-  lacks a proof of safety or a concrete writer/legitimacy basis.
-- H-service-stream-fully-classified: every site in the candidate is bounded and
+- H-flush-stream-unclassified: at least one slot/buffer/count site lacks a proof
+  of safety or a concrete writer/legitimacy basis.
+- H-flush-stream-fully-classified: every site in the candidate is bounded and
   its writers are proven legitimate.
-- H-service-stream-shape-mismatch: the function mixes unrelated pointer shapes;
+- H-flush-stream-shape-mismatch: the function mixes unrelated pointer shapes;
   record the exact sites and stop rather than mixing shapes.
 
 Discriminating measurement: a complete site table for
-`serviceStreamedVoices`, including every stream/voice-table pointer load,
-dereference, loop bound, state or sentinel check, and writer/legitimacy basis.
+`flushStreamedVoiceBuffers`, including every stream/voice-table pointer load,
+buffer/count dereference, loop bound, state check, and writer/legitimacy basis.
 Any omitted access or unproven writer rejects full classification.
 
-Exact commands: use `rg` to enumerate `serviceStreamedVoices` and its
+Exact commands: use `rg` to enumerate `flushStreamedVoiceBuffers` and its
 `MEM_*`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded
 `sed` windows and the companion `rogue_squadron64` symbol/decomp files. No
 game build or soak is planned.

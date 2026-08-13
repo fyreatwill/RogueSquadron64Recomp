@@ -57153,6 +57153,39 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s892 (2026-08-13) — streamed-voice service mixes callback and buffer shapes; legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `serviceStreamedVoices`
+(`0x80097DA8`) in the external generated tree, cross-checked against the
+companion MusyX symbol artifacts. The complete function has one outer scan and
+two cursor-processing branches:
+
+| Guest sites | Operation | Bounds / predecessor | Writer or legitimacy basis |
+|---|---|---|---|
+| `0x80097DAC`, `0x80097F20` | load `D_80141AD0` voice-record count | outer index starts at zero and advances by one; record byte offset advances by `0x18`; exits when index reaches the count | count is a shared audio global; generated source shows writers elsewhere but this audit does not prove its runtime value |
+| `0x80097DE4` | load record state `+0x0` | record base is `0x80152A20 + index*0x18`; only state `== 1` enters service work | initialized/started/stopped by sibling audio functions; state legitimacy is not independently proven |
+| `0x80097DF4`, `0x80097DFC` | call `getVoiceUserField(s3)` and load record cursor `+0x10` | cursor values are compared before either callback branch | `getVoiceUserField` is named by the companion symbols; returned value and cursor writer legitimacy remain open |
+| `0x80097E20`, `0x80097E2C`, `0x80097E40`, `0x80097E48` | forward branch loads sample base `+0x8`, user/aux field `+0x14`, callback `+0x4`, then calls callback at `base + cursor*2` | entered only when stored cursor `<` user-field result; delta is `result-cursor` | `startStreamedSampleVoice` writes the three slot fields at `0x8009808C/0x800980A4/0x800980C8`; raw bases/values and indirect callback target are not independently proven |
+| `0x80097E58`, `0x80097E5C`, `0x80097E68`, `0x80097E70` | on callback result, update cursor or form the next sample pointer | callback return is masked to a byte; cursor store is the only state transition in this branch | service owns cursor stores; sample base still comes from the start routine, with no local null/range proof |
+| `0x80097E84`, `0x80097E90`, `0x80097E9C`, `0x80097EB4`, `0x80097EBC` | wrapped branch loads sample base `+0x8`, count `+0xC`, aux `+0x14`, callback `+0x4`, then calls callback at `base + cursor*2` | entered when stored cursor `>=` returned user field; count-minus-cursor and returned cursor are passed to callback | `startStreamedSampleVoice` writes base/count/callback/aux at `0x8009808C–0x800980C8`; count/value legitimacy and callback target remain unproven |
+| `0x80097ECC`, `0x80097ED0`, `0x80097EDC`, `0x80097EE8`, `0x80097EF4`, `0x80097F04`, `0x80097F0C` | wrapped callback result either stores cursor or writes back halfwords from current cursor and from base to returned cursor | callback result controls the writeback path; no explicit range check beyond arithmetic | `writebackDCacheHalfwords` is independently named in the companion symbols; its addresses/counts are record-derived and not independently proven |
+| `0x80097F14` | store returned user-field result into record cursor `+0x10` | reached after equal-cursor, successful callback, or writeback path | service itself owns this cursor writer; initialization sets it to zero at `0x800980BC` |
+
+The record geometry is consistent with six fields at offsets `0x0/0x4/0x8/
+0xC/0x10/0x14` and an outer `0x18` stride. The function nevertheless mixes
+state/cursor control, callback dispatch, sample-buffer addressing, and cache
+writeback shapes. The generated tree accounts for slot-field initialization in
+`startStreamedSampleVoice`, state clear in the initialization/stop paths, and
+service cursor stores, but no independent artifact proves the count, returned
+user field, sample base/range, or callback legitimacy. H-service-stream-
+unclassified and H-service-stream-shape-mismatch are selected; H-service-
+stream-fully-classified is rejected. No guard, build, soak, or runtime
+behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
+
+
 ## Session s891 (2026-08-13) — unload-song-group teardown mixes bounded table walks with unproven parsed bases
 
 Performed the prescribed source-only M3 inventory for `unloadLastSndFileGroup`
