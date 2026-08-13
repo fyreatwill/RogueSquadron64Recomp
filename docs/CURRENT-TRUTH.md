@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s853 (2026-08-13). The active blocker is the authoritative
+Reviewed through s854 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -342,37 +342,53 @@ Priority until changed by the user:
   instrumented-but-unevaluable reachability result, not evidence against
   H-extended-residual; no parser behavior or mitigation changed.
 
-## Next work unit: reach the residual E9 condition
+## Session s854 result
 
-HYPOTHESIS-ID: m3-rdp-parser-condition
+The residual-condition recipe ran twice, including a corrected retry with
+`ROGUESQ_LOG_RDP_CONDITION=1`. The first capture reached VI 1024, passed 388
+positive E9 provenance controls, and reached task 645 before the known
+`slotDispatcherIter+872` SIGBUS; its last join was `bridge_delta=31` versus
+`parser_delta=3`. The corrected retry reached VI 1024, passed 357 controls,
+but crashed at task 524. Neither capture reached the required task 650 gate,
+and neither produced an extended, synthetic, or pending marker for the
+residual. These are unevaluable reachability results, not evidence against
+H-extended-residual. No parser behavior, game value, or mitigation changed.
 
-Run one phase-gated capture with the existing behavior-neutral `kind=extended`
-marker and full provenance controls, requiring task 650 or later. Do not
-change parser advancement, RDP handlers, or mitigation.
+ORIGIN: recipe-only condition logging and existing host-side telemetry; no
+game value, parser advancement, RDP handler, or mitigation behavior changed.
+
+## Next work unit: audit the recurring slotDispatcherIter+872 crash path
+
+HYPOTHESIS-ID: m3-slot-dispatcher-crash
+
+Perform one bounded source-only idiom audit of every `slotDispatcherIter+872`
+definition, call path, crash marker, and guest-PC handoff. Do not build, run,
+or change parser advancement, RDP handlers, or mitigation.
 
 Competing hypotheses:
 
-- H-extended-residual: raw E9 entered the extended-opcode branch, which has no
-  condition callback and can advance outside the normal command table.
-- H-residual-range: the one slot is a non-deferred synthetic range or stale
-  submit-label case.
-- H-pending-residual: the slot is completed through a split-command pending
-  lifecycle that the aggregate condition join missed.
-- H-instrumentation-gap: the row is a normal direct/span path but was missed by
-  the join's task/serial/range association.
+- H-real-stall: the dispatcher intentionally aborts after a guest-side
+  scheduler stall and task 650 is unreachable without fixing that idiom.
+- H-crash-report-only: the process is still making progress and the host crash
+  marker is a false attribution or stale signal.
+- H-runtime-corruption: an invalid slot or queue state reaches the dispatcher
+  and causes the SIGBUS before the residual task.
+- H-unrelated-thread: the marker belongs to a different thread and cannot
+  explain the late-task reachability loss.
 
-Discriminator: an extended-branch marker on the residual address selects
-H-extended-residual; a synthetic marker with the same address selects
-H-residual-range; a pending completion selects H-pending-residual; none of
-these with the positive direct/span controls firing selects
-H-instrumentation-gap. All arms are measured in this one run.
+Discriminator: enumerate every source site and call edge, then classify each
+observed marker by thread, guest PC, signal/abort origin, and whether the
+dispatcher has a progress counter or explicit stall threshold. A complete
+one-to-one match between the task-650 failures and an intentional stall gate
+selects H-real-stall; a mismatch selects H-crash-report-only or
+H-unrelated-thread; a reproducible invalid-state input selects
+H-runtime-corruption. No source-only result authorizes a mitigation.
 
 ## Ranked backlog
 
-1. Reach task 650 or later with the existing extended-E9 marker and compare
-   the residual against extended, synthetic, and pending condition rows.
-2. Only after that classification, identify the responsible parser/counting
-   path and consider an implementation fix.
+1. Complete the slot-dispatcher crash idiom inventory and classify the
+   recurring signal/guest-PC path.
+2. Re-run the residual condition capture only after the blocker is classified.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.

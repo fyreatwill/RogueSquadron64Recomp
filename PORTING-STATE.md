@@ -56269,6 +56269,22 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 854 (2026-08-13) — residual condition probe remained below task 650
+
+Ran the prescribed phase-gated residual-condition recipe twice. The first
+capture reached VI 1024, passed 388 positive E9 provenance controls, and
+reached task 645 before the known `slotDispatcherIter+872` SIGBUS. Its final
+join was `bridge_delta=31` versus `parser_delta=3`. The corrected retry added
+the explicit `ROGUESQ_LOG_RDP_CONDITION=1` flag, reached VI 1024, passed 357
+controls, and crashed at task 524. Neither run reached the required task 650
+gate, and neither emitted an extended, synthetic, or pending marker for the
+residual. The runs are unevaluable reachability results, not evidence against
+H-extended-residual. The recurring crash is now the next bounded source-audit
+target. No parser behavior, game value, or mitigation changed.
+
+ORIGIN: recipe-only condition logging and existing host-side telemetry; no
+game value, parser advancement, RDP handler, or mitigation behavior changed.
+
 ## Session 853 (2026-08-13) — extended E9 probe did not reach the residual
 
 Added a behavior-neutral `kind=extended` condition breadcrumb at the RT64
