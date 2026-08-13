@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s807; compacted in maintenance s776)
+## Current truth (reviewed through s810; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -480,6 +480,20 @@ leaving runtime behavior as the remaining broad class.
    H-later-1024-route is not closed. No mitigation was added. Next: audit the
    reachable `initVideoSubsystem` row-selection predicate that produces the
    1024 mode, then capture that predicate with the existing controls.
+
+   **s810 initVideoSubsystem predicate classification:** the source branch at
+   `0x8001B6D8–0x8001B720` selects `0x80128DA0` when its gate
+   `(stack[0x17F] < 1 || $fp != 0)` is true and `stack[0x15F] == 0`.
+   The regeneration-safe probe printed those predicate values in the fixed
+   phase-gated run: the later 1024 call observed `stack15f=0`, `stack17f=0`,
+   `fp_nonzero=1` and selected `0x80128DA0`; the independent host decoder
+   reported width 1024 for the same call. The run passed the host VI, phase,
+   and E9 positive controls but later crashed in `slotDispatcherIter+872`
+   (guest PC `0x80007904`). Source and same-run runtime evidence select
+   **H-init-1024-intended** and refute H-init-state-misrouted. This does not
+   identify where the argument state is populated or explain the retail phase
+   divergence; no mitigation was added. Next: audit the reachable callers and
+   argument-structure writers feeding `initVideoSubsystem`.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

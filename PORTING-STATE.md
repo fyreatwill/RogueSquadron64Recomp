@@ -55455,3 +55455,28 @@ predicate is not yet classified. No mitigation was added.
 ORIGIN: the measured 640 state originates from the game-side
 `requestViFeatureChange(a0=0x11)` → `applyPendingViChanges` path; this iteration
 added no guard, skip, restore, or other mitigation.
+
+## Session 810 (2026-08-13) — classify the later 1024 initVideoSubsystem predicate
+
+The source audit found that the reachable `0x8001B720` branch selects the
+1024-capable `0x80128DA0` row when `(stack[0x17F] < 1 || $fp != 0)` is true
+and `stack[0x15F] == 0`. The regeneration-safe `[vi-gate]` diagnostic was
+extended to print those predicate inputs; the Debug rebuild succeeded.
+
+The first phase-gated capture reached VI 1024 after 47.3 seconds but lacked
+the predicate fields and then crashed in `slotDispatcherIter+872`. The fixed
+same-recipe capture reached VI 1024 after 48.0 seconds, fired the phase,
+host-VI, and E9 positive controls, and recorded the later call as
+`stack15f=0`, `stack17f=0`, `fp_nonzero=1`, `mode_ptr=0x80128DA0`, width 1024.
+The independent host `osViSetMode` decoder reported width 1024 for that same
+request. The process later crashed at guest PC `0x80007904` in the same slot
+dispatcher family; that crash is unrelated to the selector measurement.
+
+Source and same-run runtime evidence select H-init-1024-intended and refute
+H-init-state-misrouted. H-missing-1024-state is not supported by this unit:
+the 1024 row is directly selected by the observed predicate. The argument
+state's upstream population remains open. No mitigation was added.
+
+ORIGIN: the measured 1024 request originates from the legitimate
+`initVideoSubsystem` predicate (`stack15f=0`, `stack17f=0`, `$fp!=0`); the
+diff adds only bounded regeneration-safe diagnostics.
