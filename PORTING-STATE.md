@@ -58375,3 +58375,45 @@ mitigation, or game behavior changed.
 ORIGIN: complete generated-function, caller, sibling-scan, and companion-symbol
 inventory; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
+
+## 2026-08-13 — s916: shutdownMusyXVoices inventory
+
+### What ran
+
+Performed the pivoted source-only M3 idiom inventory of
+`shutdownMusyXVoices` (`0x8009BCC4`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. No build, game run, or soak was
+needed. The site table covered both loops, the `stopVoiceSlotSynced` call,
+active-byte reads, count/global stores, free gates, direct caller, callee
+shape, and companion symbol evidence.
+
+The first loop starts at slot index zero, calls `stopVoiceSlotSynced(0)`,
+increments once, and exits because the signed counter is positive. The second
+loop starts with target count one and scans `0x80154620 + index*0x1228`, reading
+active byte `+0x4620`; an inactive slot increments the match count to one and
+exits, while an active slot restarts the same scan. Thus, with the configured
+count of one, it is a bounded one-slot wait rather than an unbounded table
+walk. The function then clears `0x800A5121`, calls `findAndZeroTableSlotMatching`
+with the fixed speech-control key, and conditionally frees
+`0x80154E7C`/`0x80154E74` under the existing loaded-state gate.
+
+The only generated caller is `finalizeCurrentSpeechBuffer` at `0x800678EC`.
+The companion `main_overlay.txt` independently identifies the same teardown,
+slot-0 stop, one-slot table shape, count clear, table zeroing, and two buffer
+frees. The generated callee `stopVoiceSlotSynced` uses the same slot stride and
+active field. No caller or local shape mismatch was found.
+
+### Rules out / narrows
+
+This inventory rules out a local non-terminating counter path and a
+caller/callee slot-shape mismatch for the teardown. It does not prove the
+legitimacy of the dynamic control-buffer pointers, active-byte values, or
+free ownership/order. H-voice-pool-reset-unclassified is rejected for local
+control structure; H-voice-pool-reset-classified is supported for structure,
+with runtime value legitimacy still open. Two independent source lines
+(generated code/caller and companion symbol/decomp description) support the
+shape result. No guard, mitigation, or game behavior changed.
+
+ORIGIN: complete generated-function, caller, callee, and companion-symbol
+inventory; no guest value, writer mutation, mitigation, or runtime behavior
+changed.

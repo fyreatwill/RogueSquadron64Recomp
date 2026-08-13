@@ -1,30 +1,32 @@
 # NEXT work unit (s916)
 
-HYPOTHESIS-ID: m3-idiom-inventory-next
+HYPOTHESIS-ID: m3-voice-pool-reset-inventory
 
-Perform one bounded M3 idiom-class inventory in the generated game tree:
-`findFreeSpeechVoiceSlot` (`0x8009BC88`) in
-`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerate every slot/global load,
-active-byte test, nested-loop counter/control operation, return path, dependent
-caller, sibling scan, and ownership basis. Do not add a guard or change game
-behavior. Do not run a game build or animating A/B for this source inventory.
+Audit the adjacent generated helper `func_8009BCC4` (`0x8009BCC4`, size
+`0xB8`) in `../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerate its complete
+outer/inner scan, calls to `func_8009B268`, slot/global accesses, termination
+conditions, return behavior, all generated callers, and companion symbol or
+decomp evidence. Do not add a guard, change game behavior, build, or run a
+soak.
 
 Competing hypotheses:
 
-- H-free-speech-slot-unclassified: the helper's nested scan has an unproven
-  termination/count contract or mixes incompatible voice-slot shapes.
-- H-free-speech-slot-fully-classified: the one-slot scan, active-byte test,
-  return contract, and sibling callers are explicit and mutually consistent.
-- H-free-speech-slot-shape-mismatch: a caller or sibling helper supplies a
+- H-voice-pool-reset-unclassified: the helper's repeated scan has an
+  unproven termination contract, hidden state dependence, or incompatible
+  slot shape between its two phases.
+- H-voice-pool-reset-classified: both phases are explicit one-pass scans over
+  the same voice-slot active-byte shape, with bounded termination and a
+  consistent caller contract.
+- H-voice-pool-reset-shape-mismatch: a caller or `func_8009B268` path uses a
   different index/table contract; record the exact split and stop.
 
-Discriminating measurement: a complete site table for
-`findFreeSpeechVoiceSlot`, every slot/global load and control operation, all
-generated callers, and the companion symbol/decomp basis. Any omitted access,
-unbounded termination, or incompatible caller shape rejects full
+Discriminating measurement: a complete instruction/site table for
+`func_8009BCC4`, its direct callers, the callee `func_8009B268` contract, and
+the companion symbol/decomp basis. Any omitted memory access, non-terminating
+counter path, or incompatible caller/callee shape rejects full
 classification.
 
-Exact commands: use `rg` to enumerate `findFreeSpeechVoiceSlot` and its
-callsites in `../N64Recomp/RecompiledFuncs/funcs_*.c`, then bounded `sed`
-windows and the companion `rogue_squadron64` symbol/decomp files. No game build
-or soak is planned.
+Exact commands: use `rg` to enumerate `func_8009BCC4`, `func_8009B268`, and
+their callsites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded
+`sed` windows and companion `rogue_squadron64`/symbol files. No game build or
+soak is planned.
