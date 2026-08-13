@@ -58655,3 +58655,36 @@ as semantic edge cases; no guard, mitigation, or game behavior changed.
 ORIGIN: complete generated-function, caller, overlay-metadata, and companion-
 symbol inventory; no guest value mutation, mitigation, or runtime behavior
 changed.
+## s923 — 2026-08-13 — per-slot MusyX queue receive inventory
+
+HYPOTHESIS-ID: m3-voice-queue-receive-class
+
+The mandated pivot rejected another `m3-streaming-voice-inventory` adjacent
+helper audit. I ran the planned static work unit: enumerated every generated
+`slot+0x11AC` access, the surrounding `serviceStreamingVoice` control flow,
+both `initMusyXVoiceSlot` callers, and the companion symbol/decomp metadata.
+No build or soak was run because this was a source-class inventory.
+
+The generated tree has one per-slot receive site, at `0x8009BF3C` in
+`serviceStreamingVoice`. It first reads `slot+0x11DC`; when nonzero it calls
+`osRecvMesg(slot+0x11AC, NULL, 0)`, i.e. nonblocking mode, then branches on the
+negative return. It never dereferences a returned message and does not retry
+the receive. The service function's later callback receives the same queue
+address as an argument, but that is an indirect callback handoff rather than a
+second queue operation. Queue initialization at `0x8009BE78` creates the
+queue with buffer `slot+0x11C4` and capacity one. `initMusyXVoiceTable` and
+`allocAndConfigureNewVoice` are the only generated callers of the initializer;
+both pass the same `0x80153420 + index*0x1228` slot shape. The service path has
+one generated caller, `serviceVoicePoolFrame`, with that same base/stride.
+
+Generated control flow and companion metadata independently agree on the
+queue offsets, capacity, and voice-table role. This class therefore supports
+H-queue-receive-classified for local structure: no unchecked message use,
+queue retry loop, or caller-shape split was found. It does not prove that
+dynamic slot/state writers or callback values are legitimate. No mitigation,
+guard, generated-code edit, or game behavior changed. The result rules out a
+local per-slot queue receive/termination hazard as an explanation, but does
+not classify the upstream writer/value origin.
+
+ORIGIN: complete generated queue-access, caller, overlay-metadata, and
+companion-symbol inventory; no guest value mutation or runtime behavior.

@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s922 (2026-08-13). The active blocker is the authoritative
+Reviewed through s923 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -301,6 +301,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s911 | `setVoiceMixByKey` inventory: one coherent MusyX slot shape with active/key/handle reads, three mix-byte stores, shared queue, and two matching callers; emitted control exits after the first failed candidate, so writer/value legitimacy and the unusual one-candidate behavior remain unproven; no mitigation. |
 | s912 | `serviceVoicePoolFrame` inventory: one coherent `0x80154620` voice-slot shape with `0x1228` stride, state/streaming accesses, queue operations, and no pointer/list walk; no generated direct caller was found, and queue/state plus shared-field writer legitimacy remain unproven; no mitigation. |
 | s913 | `getVoicePlaybackProgressByKey` inventory: two callers agree on a handle-plus-output-float contract and the helper's `0x80154620`/`0x1228` slot shape; the helper has an explicit `speechFileLoaded` gate but no finite scan bound or sentinel, and its miss path reaches the 32-bit counter wrap. Slot progress reads and queue handoff are classified, but scan termination and dynamic writer/value legitimacy remain unproven; no guard or behavior change. |
+| s923 | MusyX per-slot queue inventory: `initMusyXVoiceSlot` creates `slot+0x11AC` with buffer `slot+0x11C4` and capacity 1; `serviceStreamingVoice` has the only generated receive site, gated by `slot+0x11DC`, using nonblocking `osRecvMesg(queue, NULL, 0)` and checking only the return. The two init callers share the slot-base contract and the receive path has no message dereference or queue retry loop; dynamic queue/state writer legitimacy remains unproven, so no guard or behavior change. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -327,29 +328,31 @@ shape, not a local termination bound. No runtime conclusion follows.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-streaming-voice-inventory
+HYPOTHESIS-ID: m3-voice-queue-receive-class
 
-Audit the next adjacent generated audio helper `advanceVoiceStateToPlaying`
-(`0x8009C2A0`, size `0x1C`) as a complete function. Do not add a guard or
-change game behavior.
+Audit the complete MusyX per-slot queue-receive idiom at `slot+0x11AC`.
+Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-advance-voice-unclassified: the helper's state transition has an unchecked
-  field or incompatible caller/value path.
-- H-advance-voice-classified: it is a fixed-shape state transition with all
-  generated callers supplying the same voice-record form.
-- H-advance-voice-shape-mismatch: a caller or sibling path supplies a
-  different state contract; record the exact split and stop.
-Discriminating measurement: a complete site table for
-`advanceVoiceStateToPlaying`, every slot/global/queue/buffer load and store,
-indirect call and argument, loop/termination behavior, all generated callers,
-and the companion symbol/decomp basis. Any omitted access, unbounded
-termination, or incompatible caller shape rejects full classification.
+- H-queue-receive-unclassified: a queue receive site has an unchecked queue
+  base, incompatible record shape, unsafe returned-message use, or an
+  unbounded retry/termination path.
+- H-queue-receive-classified: every receive is state-gated/nonblocking with a
+  coherent slot queue and bounded local control, and initialization/writers
+  establish the same queue contract.
+- H-queue-receive-shape-mismatch: one caller or sibling writer uses a distinct
+  queue/slot contract; record the exact split and stop.
+Discriminating measurement: a complete site table for every `slot+0x11AC`
+queue access, including exact receive/create arguments, gate and state fields,
+message consumers, loop/termination bounds, all callers, and companion basis.
+Any omitted access, unsafe message use, unbounded termination, or incompatible
+queue shape rejects full classification.
 
-Exact commands: use `rg` to enumerate `advanceVoiceStateToPlaying` and
-`0x8009C2A0` in `../N64Recomp/RecompiledFuncs`, then bounded `sed` windows
-and the companion `rogue_squadron64` symbol/decomp files. No game build or
+Exact commands: use `rg -n '11AC|osRecvMesg|osCreateMesgQueue'` in
+`../N64Recomp/RecompiledFuncs/funcs_26.c` and `funcs_27.c`, inspect bounded
+windows around each site and caller, then inspect matching
+`rogue_squadron64/symbol_files/main_overlay.txt` entries. No game build or
 soak is planned.
 
 ## Closed and parked
