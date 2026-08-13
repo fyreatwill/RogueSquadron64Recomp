@@ -180,6 +180,7 @@ static long g_vis;
 static int g_vi_trace;
 static int g_vi_poll;
 static int g_pif_trace;
+static unsigned g_last_pad0 = 0xFFFFFFFFu;
 static unsigned g_last_pad = 0xFFFFFFFFu;
 static unsigned g_last_width = 0xFFFFFFFFu, g_last_origin = 0xFFFFFFFFu;
 static double g_last_origin_log = -1e9;
@@ -200,9 +201,10 @@ static void dbg_vi(void)
          * identify themselves. */
         unsigned w0 = pDebugMemRead32(PIF_PAD1_ADDR - 4);
         unsigned w1 = pDebugMemRead32(PIF_PAD1_ADDR);
-        if (w1 != g_last_pad) {
+        if (w0 != g_last_pad0 || w1 != g_last_pad) {
             printf("[pad] t=%6.1fs vi=%-6ld 7C0=0x%08x 7C4=0x%08x\n",
                    now_s() - g_t0, g_vis, w0, w1);
+            g_last_pad0 = w0;
             g_last_pad = w1;
             fflush(stdout);
         }

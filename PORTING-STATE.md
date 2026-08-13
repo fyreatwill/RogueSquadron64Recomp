@@ -54462,3 +54462,22 @@ the injected Start bits reach the emulated controller.
 This rules out an oracle setup failure or a whole-RDRAM watch null. It does not
 rule out input-plugin mapping, ROM/config divergence, or a phase-timing
 divergence. No port code or runtime instrument was changed.
+
+## Session 767 (2026-08-12) — oracle PIF trace proves Start reaches the game
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 51,679 bytes, so maintenance did not
+trigger. The planned work unit was the short retail-oracle PIF trace with a
+whole-RDRAM positive control. The first run exposed an oracle instrumentation
+defect: PIF output was gated only on changes to word `0x7C4`, so it could miss
+changes in the adjacent word. The minimal fix made the trace emit when either
+word changes, then rebuilt the oracle and reran the same recipe.
+
+The corrected run logged all four scheduled Start presses as
+`0x7C4=0x10000000` at the expected press windows. The whole-RDRAM positive
+control recorded **4,378,916 writes** over 1,492 VI (~24.9 emulated seconds),
+and the VI trace remained at width 320 with one origin change to `0x6dd280`.
+This selects H-input-reaches-pif and refutes H-input-not-mapped. It also
+overturns s766's provisional H-retail-undriven-only interpretation. The run
+does not yet distinguish ROM/config divergence from a later phase/timing issue,
+because it ends before any 640/1024/512 transition. No port runtime code was
+changed; the oracle trace fix is retained.

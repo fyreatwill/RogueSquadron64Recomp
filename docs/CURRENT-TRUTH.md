@@ -22,19 +22,24 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s766; compacted in maintenance s729)
+## Current truth (reviewed through s767; compacted in maintenance s729)
 
-**s766:** retail-oracle ground-truth run completed with the required positive
-control: whole-RDRAM watch recorded **11,774,702 writes** in 4,195 VI
-(~69.9 emulated seconds). The VI trace reported the initial 320 phase and one
-320-origin change to `0x6dd280`, but no 640, 1024, or 512 transition despite
-the documented 11-entry Start schedule (all injections logged as scancode 40).
-This makes a target-watch null unusable for the current oracle setup and
-selects **H-retail-undriven-only** over H-retail-reaches-hangar; whether the
-presses reach the game's PIF/input state is still unverified. Do not interpret
-this as evidence about post-sec2 reachability. Next: run the oracle's PIF trace
-with a short verified Start schedule to distinguish input delivery from a
-phase/timing mismatch.
+**s767:** oracle PIF verification selected **H-input-reaches-pif**. After fixing
+the trace's same-run visibility bug (it only emitted when PIF word `0x7C4`
+changed, missing changes in `0x7C0`), the 25-second run logged each of four
+scheduled Start presses as `0x7C4=0x10000000`; the whole-RDRAM positive control
+recorded **4,378,916 writes** over 1,492 VI. VI remained at 320 (one origin
+change to `0x6dd280`), so the short run does not distinguish ROM/config
+divergence from later phase timing. **H-input-not-mapped is REFUTED.** The
+s766 provisional H-retail-undriven-only conclusion is overturned by this
+independent PIF evidence. Next: run the documented long Start schedule again
+with the corrected PIF trace and VI trace to determine whether PIF-delivered
+Start reaches 640/1024/512; do not interpret the current 25-second result as
+evidence about post-sec2 reachability.
+
+**ORIGIN:** `tools/oracle/rs64_oracle.c` gated PIF output on `w1` only; the
+button word was visible at `0x7C4` after the trace fix, with Start represented
+as `0x10000000` in the emulated big-endian word.
 
 **s765:** fixup 6w inserts `case 0x1E8C` / `153==0x1C` →
 `OVL1C_1E8C`, but the two same-recipe soaks were unevaluable.

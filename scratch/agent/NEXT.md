@@ -1,40 +1,39 @@
-# NEXT work unit (oracle PIF input verification)
+# NEXT work unit (long oracle phase reachability)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control
 
-s766 established that the retail oracle itself runs and its whole-RDRAM watch
-fires (11,774,702 writes / 4,195 VI), but the documented Start schedule did
-not produce any 640, 1024, or 512 VI transition. The next unit is a short
-oracle PIF trace, not a port build or target watch.
+s767 proved with corrected PIF tracing that scheduled Start reaches the retail
+game (`0x7C4=0x10000000`), while a 25-second run still remained at VI width 320.
+The next unit is the longer phase-gated oracle run, not a port build or target
+watch.
 
 ## Competing hypotheses
 
-- H-input-reaches-pif: scheduled scancode-40 Start presses appear in PIF reads
-  as Start bits, so the 320-only result is a game/phase timing divergence.
-- H-input-not-mapped: the frontend logs injections but the input plugin does
-  not deliver Start to the emulated controller; the phase result is
-  H-retail-undriven-only.
-- H-rom-or-config-mismatch: PIF sees Start, but the ROM/config differs from
-  the documented setup and follows a different state machine.
+- H-retail-reaches-phases: PIF-delivered Start produces the documented 640,
+  1024, and/or 512 VI transitions during the long schedule.
+- H-retail-320-only: PIF-delivered Start is visible, but this ROM/config still
+  remains at 320, indicating a phase/timing or configuration divergence.
+- H-retail-input-timing: PIF Start is visible but the schedule's timing misses
+  the game's input windows; a shifted/repeated schedule is required.
 
 ## Discriminating measurement
 
-Run the oracle with `--pif-trace`, a whole-RDRAM positive control, and a short
-Start schedule. PIF reads containing the Start bit at the scheduled presses
-select H-input-reaches-pif; no Start bit despite logged injections selects
-H-input-not-mapped; correct Start bits with a continued 320-only trace selects
-H-rom-or-config-mismatch. Do not add runtime instrumentation until this split
-is made.
+Run the oracle with the corrected `--pif-trace`, `--vi-trace`, a whole-RDRAM
+positive control, and the documented 11-entry Start schedule. PIF Start words
+plus 640/1024/512 transitions select H-retail-reaches-phases; PIF Start words
+with 320-only select H-retail-320-only; missing PIF Start at a press window
+selects H-retail-input-timing. The positive control must fire in the same run.
 
 ## Command
 
     tools/oracle/build/rs64_oracle \
       --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
       --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-      --secs 25 --pif-trace --vi-trace --watch-write 0x0:0x800000 \
-      --press 6:start,11:start,16:start,21:start
+      --secs 70 --pif-trace --vi-trace --watch-write 0x0:0x800000 \
+      --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
 
-Record PIF button words, positive-control hit count, and VI transitions.
+Record PIF button words, positive-control hit count, and VI transitions. Keep
+the corrected oracle trace source/build; do not revert the `w0 || w1` trigger.
 
-ORIGIN for the closed 6w change: OVL1C_1E7C `jal 0x1ED4` sets r31=`0x1E8C`;
-OVL1C_1ED4 saves `$ra→$30`; OVL1C_1F04 `jr $30` is the legitimate return.
+ORIGIN for the s767 oracle fix: PIF trace output previously checked only `w1`;
+the button word is observed as `0x10000000` in `0x7C4`.
