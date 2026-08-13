@@ -57924,3 +57924,39 @@ identify a corrupt writer or establish runtime value legitimacy; this is
 single-source inventory evidence, not an explanation for a crash.
 
 ORIGIN: complete generated-function, caller/sibling-writer, shared-field, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s905 (2026-08-13) — reset3DAudioLists has two coherent list-root owners
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`reset3DAudioLists` (`0x80099C2C`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerated both reset stores, all
+generated readers/writers of `D_80153414` and `D_80153418` in the adjacent
+3D-audio function cluster, and the companion symbol/lifecycle artifacts in
+`rogue_squadron64`. No build, game run, or soak was needed.
+
+The complete classification is:
+
+- `0x80099C30` clears `D_80153414`. This root is read by
+  `tickAndReap3DAudioVoices` and `update3DAudioFrame`, inserted by the two
+  active voice/source construction paths, and rewritten by their guarded
+  unlink/reap paths. Its nodes use the expected `next`/`prev` links plus state
+  and handle fields.
+- `0x80099C38` clears `D_80153418`. This root is read by
+  `compute3DSourceSpatialMix` and `register3DAudioListenerNode`, inserted by
+  the listener-node registration path, and rewritten by `unlinkMusyXListNode`.
+  The companion symbol file independently describes this as the MusyX list
+  root and confirms the mutex-gated lifecycle.
+- The two stores are therefore standalone resets for distinct roots, not two
+  aliases of one list. The generated source has no direct textual reset
+  callsite; reset ordering relative to teardown/init is not proven here.
+
+### Rules out / narrows
+
+This audit rejects the hidden-local-access hypothesis and the shape-mismatch
+hypothesis for the two reset stores. It does not prove that dynamic node
+writers or reset call ordering are legitimate at runtime; this is source-only,
+single-source ownership evidence and does not authorize a guard or mitigation.
+
+ORIGIN: complete generated-function, shared-root reader/writer, lifecycle, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
