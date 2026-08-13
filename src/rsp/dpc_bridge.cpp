@@ -278,6 +278,7 @@ static std::atomic<uint32_t> g_task_bridge_e9{0};
 static uint8_t *g_rdram_for_submit = nullptr;
 
 static bool log_e9_unified();
+static bool log_e9_boundary();
 extern "C" uint32_t rs64_rdp_advance_task_e9();
 extern "C" uint32_t rs64_rdp_advance_epoch();
 extern "C" uint64_t rs64_rdp_advance_join_order();
@@ -354,6 +355,14 @@ static bool log_e9_unified() {
         const char *u = std::getenv("ROGUESQ_LOG_E9_UNIFIED");
         return (all && *all && *all != '0') ||
                (e && *e && *e != '0') || (u && *u && *u != '0');
+    }();
+    return enabled;
+}
+
+static bool log_e9_boundary() {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_E9_BOUNDARY");
+        return e && *e && *e != '0';
     }();
     return enabled;
 }
@@ -1143,6 +1152,17 @@ extern "C" void rs64_e9prov_authoritative_span(uint32_t start, uint32_t end,
         if (start < emitted && emitted < end) {
             g_e9prov.spanned_addrs.push_back(emitted);
             ++g_e9prov.non_e9_spans;
+            if (log_e9_boundary() && (g_e9prov.control || g_e9prov.target)) {
+                static uint32_t lines = 0;
+                if (lines++ < 1024) {
+                    fprintf(stderr,
+                            "[e9-boundary-span] task=%u scope=%s addr=0x%06X span=0x%06X..0x%06X raw=0x%02X len=%u pending=%u\n",
+                            g_e9prov.task, g_e9prov.control ? "control" : "sec2",
+                            emitted, start, end, raw_opcode, (end - start) / 8u,
+                            pending);
+                    fflush(stderr);
+                }
+            }
             if (g_e9prov.control || g_e9prov.target) {
                 fprintf(stderr,
                         "[e9-prov-span] task=%u scope=%s addr=0x%06X span=0x%06X..0x%06X raw=0x%02X len=%u pending=%u\n",
@@ -1265,6 +1285,19 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_count_submitted_e9(lo, hi);
     const uint32_t after = g_task_bridge_e9.load(std::memory_order_acquire);
     const uint64_t serial = g_submit_serial.fetch_add(1, std::memory_order_acq_rel) + 1;
+    if (log_e9_boundary() && (g_e9prov.control || g_e9prov.target) &&
+        g_rdram_for_submit != nullptr) {
+        static uint32_t lines = 0;
+        for (uint32_t p = lo; p + 8 <= hi; p += 8) {
+            if (g_rdram_for_submit[p ^ 3] != 0xE9) continue;
+            if (lines++ >= 1024) break;
+            fprintf(stderr,
+                    "[e9-boundary-bridge] serial=%llu task=%u scope=%s addr=0x%06X range=0x%06X..0x%06X\n",
+                    (unsigned long long)serial, g_e9prov.task,
+                    g_e9prov.control ? "control" : "sec2", p, lo, hi);
+        }
+        fflush(stderr);
+    }
     if (log_e9_unified() && after > before && (g_e9prov.control || g_e9prov.target)) {
         fprintf(stderr, "[e9-submit-range] serial=%llu task=%u lo=0x%06X hi=0x%06X e9=%u\n",
                 (unsigned long long)serial, g_e9prov.task, lo, hi, after - before);

@@ -56038,3 +56038,31 @@ No mitigation or legitimacy claim was made.
 
 ORIGIN: no game value, RDP command, mitigation, or runtime behavior changed;
 this iteration changed only audit prose and scratch control files.
+
+## Session 836 (2026-08-13) — paired runtime probe confirms command-boundary overcount
+
+Added one env-gated telemetry-only probe to the bridge and RT64 parser. It
+records every bridge-tested E9 slot, every parser E9 command start (direct or
+pending), and every parser command span covering a bridge E9, with the existing
+positive-control path left enabled. The Debug target built successfully after
+exporting the submodule patch.
+
+The phase-gated VI-1024 run reached the target phase and produced 310 existing
+positive E9 provenance rows, so the new records were live in the same run. It
+captured 651 sec2 bridge E9 slots: 65 matched exact parser command starts, 582
+were covered by a preceding non-E9 parser span, and 4 matched neither within
+the bounded record stream. The parser stream contained 416 direct E9 starts,
+977 span records, and no pending-completion E9 record. The game later hit the
+known Metal crash at guest PC 0x8000B650; that crash is not used as the E9
+explanation.
+
+Together with s835's independent source audit, the address-level runtime
+result selects command-boundary filtering as the explanation for the captured
+late bridge/parser delta: the fixed-stride bridge sees E9 bytes inside
+multiword commands that the length-respecting parser skips. The four unmatched
+slots and general pending behavior remain unclassified; no mitigation or
+legitimacy claim follows. The next probe will attach exact submit range and
+serial identity to every parser command record to classify those four.
+
+ORIGIN: only host-side diagnostic records and their env gate changed; no game
+value, RDP command, or mitigation behavior changed.

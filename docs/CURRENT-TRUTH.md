@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s835 (2026-08-13). The active blocker is the authoritative
+Reviewed through s836 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -114,30 +114,44 @@ Priority until changed by the user:
   command-boundary filtering as the leading explanation for s833's 9/1, 9/1,
   27/0, and 31/3 rows, but it is source-only and needs a paired runtime probe.
   No mitigation or legitimacy claim is justified.
+- s836 paired that audit with one phase-gated runtime probe. The run reached VI
+  1024 and passed the four existing E9 provenance controls (310 positive rows).
+  Among 651 captured sec2 bridge E9 slots, 65 were exact authoritative parser
+  command starts and 582 were covered by a preceding non-E9 parser command
+  span; only 4 had neither record in the bounded stream. The parser stream had
+  416 direct E9 starts, 977 span records, and no pending-completion E9 record.
+  This is a second line with s835's source audit and selects
+  H-command-boundary for the captured late population, while leaving the four
+  unmatched slots and general pending behavior unclassified. The run later
+  hit the known Metal `0x8000B650` crash. No mitigation or legitimacy claim is
+  justified.
 
-## Next work unit: independently test command-boundary E9 overcount
+## Next work unit: classify the four unmatched bridge E9 slots
 
 HYPOTHESIS-ID: m3-e9-command-boundary
 
-Build one phase-gated, telemetry-only probe recording, for the same late submit
-ranges, every bridge-tested E9 slot, every RT64 command-start fetch (address,
-raw opcode, command length), and direct versus pending completion. Keep runtime
-behavior and mitigation code unchanged. Require existing positive controls in
-the same run.
+Build one phase-gated, telemetry-only probe that keeps the current records but
+also logs every RT64 command start and pending completion whose address lies in
+the exact bridge submit range, with submit serial/task/range attached. This
+must decide whether the four s836 unmatched slots are outside the parser's
+consumed range, part of an unlogged pending command, or genuinely absent from
+the parser walk. Keep runtime behavior and mitigation code unchanged. Require
+the existing positive controls in the same run.
 
 Competing hypotheses:
 
-- H-command-boundary: late bridge-only E9s are interior words skipped by the
-  command-length walk.
-- H-pending-path: late bridge-only E9s are split commands not counted at
-  pending completion.
-- H-other-filter: late E9 command starts reach a remaining parser/callback
-  gate that prevents the count.
+- H-range-association: the four records are not in the parser call/range that
+  the current task label suggests.
+- H-pending-path: an unmatched slot belongs to a split command and appears in
+  pending metadata before completion.
+- H-other-filter: an unmatched slot is a parser command start or span in the
+  exact range but reaches no E9 completion record.
 
-Discriminator: an E9 slot covered by the preceding parser command span selects
-H-command-boundary; an E9 command start with pending metadata and no completion
-selects H-pending-path; a command-start record that reaches the handler but
-lacks the increment selects H-other-filter. Missing pairings remain unproven.
+Discriminator: exact range association outside the parser call selects
+H-range-association; pending metadata tied to the slot selects H-pending-path;
+an in-range command-start/span record without completion selects H-other-filter.
+The already observed 582 span-covered slots remain settled as boundary
+overcount evidence and are not re-litigated.
 
 ## Ranked backlog
 
