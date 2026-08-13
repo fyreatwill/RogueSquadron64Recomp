@@ -56163,3 +56163,22 @@ command, or mitigation changed.
 
 ORIGIN: host-side diagnostic markers and recipe correction only; no game value,
 RDP command, or mitigation behavior changed.
+
+## Session 841 (2026-08-13) — late parser probe blocked by repeat renderer abort
+
+Built the Debug target successfully and ran the planned phase-gated parser
+probe. The first recipe omitted the post-title input schedule and was invalid;
+the corrected recipe and a reduced-trace retry both reached VI 1024, fired the
+boot-stage E9 control path, and then reproduced the same Metal
+`drawIndexedTri` `G_CYC_COPY` assertion at about 165–168 seconds, with last
+guest PC `0x8000834c`, before task 570 or any late ordinary parser records.
+The parser discriminator therefore produced no late result. This is a
+reachability failure, not evidence for a null parser/pending path. Existing
+s840 late telemetry remains the authoritative result for this work unit.
+
+The next work should audit the complete `drawIndexedTri`/`G_CYC_COPY` idiom
+and its callers as a systematic crash-class probe, without adding a skip or
+other mitigation until the writer/state transition is identified.
+
+ORIGIN: diagnostics and recipe inputs only; no game value, RDP command, or
+mitigation behavior changed.

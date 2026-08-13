@@ -179,32 +179,39 @@ Priority until changed by the user:
   population, and selects H-parser-record-loss/range-association as the
   remaining accounting branch. It does not identify the parser condition and
   gives no writer/legitimacy basis for a mitigation.
+- s841 attempted the parser-condition probe three times in one iteration. The
+  initial recipe omitted the post-title input schedule; the corrected recipe
+  and reduced-trace retry reached VI 1024 and fired the boot controls, but all
+  three runs reproduced the Metal `drawIndexedTri` `G_CYC_COPY` assertion at
+  about 165–168 seconds, before task 570 or late parser records. This is an
+  unevaluable reachability result, not a parser null. The existing s840 late
+  capture remains authoritative; the next unit is a systematic source audit
+  of the `drawIndexedTri`/`G_CYC_COPY` idiom.
 
-## Next work unit: identify the parser condition behind late range disjointness
+## Next work unit: audit the repeat drawIndexedTri G_CYC_COPY crash idiom
 
-HYPOTHESIS-ID: m3-e9-command-boundary
+HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one bounded telemetry-only source/runtime probe on the late ordinary
-population. Keep the existing positive controls and phase gates. Carry the
-ordinary serial/range identity into the parser's command-start and pending
-records, with per-task budgets, and report whether each late E9-bearing range
-is absent, contained, or only overlaps a parser call range. Do not change
-behavior or add a mitigation.
+Perform one bounded source-only idiom audit of every `drawIndexedTri` assertion
+or `G_CYC_COPY` guard and every caller/state setter that can reach it. Do not
+change behavior or add a mitigation. Establish whether the abort is caused by
+a legitimate copy-cycle triangle, stale cycle state, or a wrong opcode/handler
+path, and identify the exact writer/transition before any runtime retry.
 
 Competing hypotheses:
 
-- H-parser-range-transition: parser call ranges are genuinely different from
-  the ordinary submit ranges at the late boundary.
-- H-parser-record-loss: ordinary parser calls have the expected range, but
-  command telemetry omits or filters their contents.
-- H-pending-or-filter: the missing rows are recovered by pending completion or
-  a parser-side opcode/filter path rather than range association.
+- H-copy-cycle-legitimate: a real copy-cycle TRI reaches `drawIndexedTri` and
+  the assertion reflects an unsupported but legitimate state.
+- H-cycle-state-stale: an earlier state writer leaves `G_CYC_COPY` active when
+  a normal triangle reaches the renderer.
+- H-wrong-handler: a malformed or misdecoded command routes to the triangle
+  helper with an invalid cycle mode.
 
-Discriminator: same-task parser ranges matching ordinary serial/range select
-H-parser-record-loss when their command records are absent; pending records or
-parser-side filters covering the rows select H-pending-or-filter; genuinely
-disjoint parser ranges select H-parser-range-transition. The s838 span-covered
-slots remain settled evidence and are not re-litigated.
+Discriminator: exhaustive source paths and state writes classify the reachable
+cycle-mode transition and caller; an explicit legitimate copy-cycle TRI selects
+H-copy-cycle-legitimate, a stale prior writer selects H-cycle-state-stale, and
+a wrong/malformed dispatch path selects H-wrong-handler. A runtime retry is
+not justified until this audit identifies the relevant transition.
 
 ## Ranked backlog
 
