@@ -54199,3 +54199,52 @@ checkpoint / misattr family). Do not revert the 0x13B8 widen.
 
 **ORIGIN:** `CLIP_1E48` `jr` of a ROM clip dispatch. Route the
 return; do not skip `L_17F0`.
+
+## Session 761 (2026-08-12) — ovl20 0x13C0 jal-L_112C return LIVE; ovl20 04-return class CLOSED
+
+Step 0 measured `CURRENT-TRUTH.md` at 45,485 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s760: 6e-style
+widen of case `0x13C0` to `153==0x20||0x04` → `OVL20_13C0`.
+Queued SOAK-RESULTS already contained the s760 ANALYZED line.
+
+Landed fixup 6s. Only case `0x13C0` changed; `0x13D8` /
+`0x13F0` / `0x133C` stay `153==0x20`; ovl24 `0x1364` keeps
+its `0x24||0x04` arm. **ORIGIN:** route, not a mitigation.
+Writer is `L_11A0` `jr $30` after `OVL20_13B8` `jal L_112C`
+sets `r31=0x13C0` and `L_112C` copies `r31→r30` (delay slot
+of `beq $10,$zero,L_11A0` and the fallthrough). `OVL20_13C0`
+itself restores regs then `j OVL20_133C` (direct goto, not a
+switch re-dispatch).
+
+Soak `scratch/agent/soak_results/s761_ovl20_13c0_20260812-200123/run.log`
+(352 s, probe_rc=0, CRASH=0, 89 frames). Same-run positive
+controls LIVE: CLIP `res=0x04` last n=246592, ovl24
+`res=0x24 tgt=0x12A0` (task 191), ovl1c `res=0x1C tgt=0x1EA8`
+last n=587328, dest `[ovl-route] res=0x20 tgt=0x12A0` last
+n=523584 (task 5360 `via=l1298-other`). Four boot controls
+still `dl06=push:2,complete:2,open:0`. Stray `0x13C0/04`
+**643→0**; **all** `[clip-stray]` **0**. `rs64_e9prov_ovl_route`
+has no `n20` counter (`if (!n) return`), so `tgt=0x13C0` /
+`0x13B8` never log and `last_ovl=0x20` is overwritten before
+the reset dump — clip-stray 0 is the discriminator, not a
+missing ovl-route line.
+
+**H-13c0-jal-112c SELECTED. H-13c0-breaks-06 REFUTED.**
+**H-13c0-not-only REFUTED:** no sibling `0x13D8`/`0x13F0`/
+`0x133C` stray. ovl20 04-return class **CLOSED**.
+**H-13c0-restores-e9 REFUTED:** sec2 match **6/64** — 3
+boot-shaped `dl06=2/2/0` (tasks 4581–4583) plus 3 fatter
+`src0=0x000178` copies (tasks 4591–4593). Still that boot
+DL as the E9 source; rdpFs 0→3661 (flat vs s760 4500 /
+s757 4155); 58/64 match=0.
+
+Residual, same as s760's deferred leftover: UJ **631**
+(`0x1EBC` 557 + `0x1E7C` 69 from `OVL1C_1F04` `jr $30` at
+line 4987). First UJ is before the first sec2 row (line
+64200 vs first sec2 at 87397). s757 left these as n=0/n=1;
+they are now the live ovl1c `$30`-return leftovers. Next is
+a 6o-style insert of `case 0x1EBC` / `153==0x1C` only.
+Do not revert the 0x13C0 widen.
+
+**ORIGIN:** `L_11A0` `jr` of a ROM clip continuation.
+Route the return; do not skip `L_112C`.

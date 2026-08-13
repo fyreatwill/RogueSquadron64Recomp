@@ -2128,6 +2128,41 @@ if is_main_ucode and OVL20_13B8CLIP_MARKER not in text:
         1, "case 0x13B8 clip-resident return")
 
 # ---------------------------------------------------------------------------
+# Fixup 6s: route 0x13C0 for overlay-0x20 jal-L_112C return (s761)
+# ---------------------------------------------------------------------------
+# s760: 0x13B8/04 419->0, residual [clip-stray] tgt=0x13C0 153=0x04
+# n=643 line=400. OVL20_13B8 jal L_112C sets r31=0x13C0; L_112C
+# copies r31->r30 (delay slot of beq $10,$zero,L_11A0 and fallthrough);
+# L_11A0 jr $30. Same class as s745 0x1364 / s760 0x13B8.
+# 0x13C0 itself is restore-regs then j OVL20_133C — do not widen
+# 0x13D8 / 0x13F0 / 0x133C this step, and do not steal ovl24
+# 0x1364's 0x24||0x04 arm. ORIGIN: L_11A0 jr of OVL20 jal L_112C;
+# 0x04 arm is that return. Route, not a guard.
+OVL20_13C0CLIP_MARKER = "/* fixup: ovl20-13c0clip */"
+if is_main_ucode and OVL20_13C0CLIP_MARKER not in text:
+    def sub_exactly6s(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6s ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}.",
+                  file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    sub_exactly6s(
+        re.compile(
+            r"        case 0x13C0: if \(RSP_MEM_BU\(0X153, 0\) == 0x20\) \{ "
+            r"rs64_e9prov_ovl_route\(0x20, 0x13C0\); goto OVL20_13C0; \} "
+            r"goto rs64_clip_stray;  /\* fixup: ovl20route \*/\n"),
+        lambda m: (
+            "        case 0x13C0: if (RSP_MEM_BU(0X153, 0) == 0x20 || "
+            "RSP_MEM_BU(0X153, 0) == 0x04) { "
+            "rs64_e9prov_ovl_route(0x20, 0x13C0); goto OVL20_13C0; } "
+            "goto rs64_clip_stray;  " + OVL20_13C0CLIP_MARKER + "\n"),
+        1, "case 0x13C0 jal-L_112C return")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level

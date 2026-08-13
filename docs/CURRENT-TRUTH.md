@@ -22,7 +22,30 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s760; compacted in maintenance s729)
+## Current truth (reviewed through s761; compacted in maintenance s729)
+
+**s761:** fixup 6s widens case `0x13C0` to `153==0x20||0x04` →
+`OVL20_13C0` (same class as s745 `0x1364` / s760 `0x13B8`).
+Soak `s761_ovl20_13c0_20260812-200123` (352 s, CRASH=0,
+probe_rc=0, 89 frames): stray `0x13C0/04` **643→0**;
+**all** `[clip-stray]` **0**. Dest `res=0x20 tgt=0x12A0` last
+n=523584 LIVE; ovl24 dest LIVE (task 191); ovl1c `0x1EA8`
+LIVE n=587328; clip `res=0x04` last n=246592 LIVE; 4/4 boot
+`dl06=2/2/0`. `rs64_e9prov_ovl_route` has no `n20` counter,
+so `tgt=0x13C0`/`0x13B8` never log and `last_ovl=0x20` is
+overwritten before reset dump — clip-stray 0 is the
+discriminator. Sec2 E9 **6/64** (3 boot-shaped `2/2/0` + 3
+fatter `src0=0x000178`); rdpFs 0→3661 still plateau;
+**H-13c0-restores-e9 REFUTED**. ovl20 04-return class
+**CLOSED** (no sibling `0x13D8`/`0x13F0`/`0x133C` stray).
+Residual is UJ **631** (`0x1EBC` 557 + `0x1E7C` 69 from
+`OVL1C_1F04` `jr $30` line 4987; first UJ before sec2).
+**H-13c0-jal-112c SELECTED. H-13c0-breaks-06 REFUTED.
+H-13c0-not-only REFUTED.** Next is a 6o-style case
+`0x1EBC` / `153==0x1C` → `OVL1C_1EBC` only. **ORIGIN:**
+`OVL20_13B8` `jal L_112C` r31=`0x13C0`; `L_112C` copies
+`r31→r30`; `L_11A0` `jr $30`. Legitimate ROM clip
+continuation; route the return.
 
 **s760:** fixup 6r widens case `0x13B8` to `153==0x20||0x04` →
 `OVL20_13B8` (same class as s745 `0x1364`). Soak
@@ -550,7 +573,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s760:** `0x13B8` clip-hand return LIVE (`153==0x20||0x04`); stray 419→0; residual is `0x13C0/04` (ovl20 `jal L_112C` return via `L_11A0` `jr $30`). Dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (6/64, still `src0=0x000178`, rdpFs plateau). Next is a 6e-style `0x13C0` widen only — do not blanket ovl20-04ret, do not route `0x1EBC`/`0x1E7C` yet. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s761:** `0x13C0` jal-`L_112C` return LIVE (`153==0x20||0x04`); stray 643→0; **all clip-stray 0**; ovl20 04-return class CLOSED. Dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (6/64, still `src0=0x000178`, rdpFs plateau). Residual is UJ `0x1EBC` 557 + `0x1E7C` 69 (`OVL1C_1F04` `jr $30`, first before sec2). Next is a 6o-style case `0x1EBC` / `153==0x1C` only — do not route `0x1E7C` this step. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
