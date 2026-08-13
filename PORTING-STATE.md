@@ -55480,3 +55480,28 @@ state's upstream population remains open. No mitigation was added.
 ORIGIN: the measured 1024 request originates from the legitimate
 `initVideoSubsystem` predicate (`stack15f=0`, `stack17f=0`, `$fp!=0`); the
 diff adds only bounded regeneration-safe diagnostics.
+
+## Session 811 (2026-08-13) — initVideoSubsystem argument-state audit
+
+The source audit found exactly two reachable direct callers, both in
+`advanceVideoFrame` at `0x80018378` and `0x80018564`. No generated store targets
+the caller-structure bytes at offsets `0x1EF`, `0x1F3`, or `0x1FF`. The retail
+oracle ground-truth run passed its whole-RDRAM positive control with 4,378,602
+writes and independently observed four writes in the selector region, but its
+recipe stayed at width 320; it did not answer the dynamic caller-structure
+question.
+
+The regenerated Debug build succeeded. The baseline phase-gated capture reached
+VI 1024, passed the host-VI and E9 positive controls, and then crashed in
+`slotDispatcherIter+872`; it was unevaluable because the existing probe did not
+record the three argument bytes. I added a regeneration-safe `[vi-arg]` probe to
+both callsites and fixed the adjacent fixup string-concatenation syntax so the
+fixup remains compilable. Four fixed-recipe attempts then died before the 1024
+gate at width 320 in the same `initVideoBootWrapper+2196` / guest
+`0x80001C94` family and emitted zero `[vi-arg]` records. This is a pre-gate
+recurrence, not evidence for intended or corrupted argument state. The next
+unit is a successful 1024-gated capture with the new probe. No mitigation was
+added.
+
+ORIGIN: this iteration added only bounded argument diagnostics and fixup
+support; it added no guard, skip, restore, or other mitigation.

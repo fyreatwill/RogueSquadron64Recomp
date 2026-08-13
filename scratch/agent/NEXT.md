@@ -1,46 +1,49 @@
-# NEXT work unit (trace initVideoSubsystem argument-state population)
+# NEXT work unit (capture initVideoSubsystem argument-state values)
 
 HYPOTHESIS-ID: m3-vi1024-argument-state
 
-Run one bounded source-to-callsite audit of every reachable call to
-`initVideoSubsystem`, identifying the argument structure and each writer of
-the bytes at offsets `0x1EF`, `0x1F3`, and `0x1FF` that become the selector
-stack bytes. Then run one phase-gated capture with a batched entry marker at
-the reachable caller and the existing `[vi-gate]`, host VI/mode, E9, writer,
-and phase-relative key controls. Do not change mode data or add a mitigation.
+Run one bounded phase-gated capture using the fixed `[vi-arg]` probe at both
+reachable `initVideoSubsystem` callers. The source audit is complete: callers
+are `advanceVideoFrame` sites `0x80018378` and `0x80018564`, and no generated
+store targets argument offsets `0x1EF`, `0x1F3`, or `0x1FF`. Four fixed-recipe
+attempts died before the 1024 gate in the same boot crash family, so this unit
+must obtain a 1024-gated record before interpreting argument state. Do not
+change mode data or add a mitigation.
 
 ## Competing hypotheses
 
-- H-argument-state-intended: the caller supplies a legitimate 1024-capable
-  argument state; source and capture agree on the three input bytes and the
-  later `stack15f=0`, `stack17f=0`, `fp_nonzero=1` predicate.
+- H-argument-state-intended: a reachable caller supplies a legitimate
+  1024-capable argument state; `[vi-arg]` values precede the 1024
+  `initVideoSubsystem` call and agree with its derived predicate.
 - H-argument-state-miswritten: a reachable writer corrupts or overwrites one
-  of those bytes before the later call; source identifies the writer and the
-  capture orders its value against the 1024 call.
-- H-argument-state-unresolved: the callsite or writer is not reachable in the
-  tested recipe; the positive controls fire but no attributable argument
-  record precedes the 1024 call.
+  of those bytes before the call; source and `[vi-arg]` ordering identify it.
+- H-argument-state-unresolved: the recipe reaches 1024 only intermittently or
+  the caller record is absent while host-VI and E9 controls are positive.
 
 ## Discriminating measurement
 
-The complete caller/writer inventory joined to the same-run argument values,
-writer ordering, and the 1024 `[vi-gate]` record splits the hypotheses. A
-marker proving only that `initVideoSubsystem` ran is insufficient.
+Require all of: `[phase] vi_width=1024`, host VI/mode control, and an E9 record
+with `emit=1 raw=1 dispatch=1 match=1`. Then compare `[vi-arg]` values and
+callsite ordering against the 1024 `[vi-gate]` record. Matching values advance
+H-intended; a concrete pre-call overwrite advances H-miswritten; no argument
+record with all controls live advances H-unresolved. A boot crash or width-320
+null is unevaluable and must not be classified.
 
-## Exact commands
+## Exact command
 
 ```sh
-rg -n -C 35 'initVideoSubsystem\(rdram|0x8001A098|0x8001B720' ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n 'MEM_[BWH].*0X1EF|MEM_[BWH].*0X1F3|MEM_[BWH].*0X1FF|0X1EF|0X1F3|0X1FF' ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n 'initVideoSubsystem|vi-gate|video-state-update' ../N64Recomp/fixup_game_funcs.py
-cmake --build build --config Debug --target RogueSquadron64Recomp
+OUT="scratch/agent/soak_results/s812_vi1024_argument_state_$(date +%Y%m%d-%H%M%S)"
+mkdir -p "$OUT"
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_E9_PROVENANCE=1 \
+  ROGUESQ_LOG_E9_DISPATCH=1 ROGUESQ_LOG_RDP_ADVANCE=1 \
+  ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_DL_SYNC=1 \
+  ROGUESQ_LOG_DL_SYNC2=1 ROGUESQ_LOG_FL_ZERO_WATCH=1 \
+  ROGUESQ_LOG_CIMG_RAW=1 ROGUESQ_LOG_RS_MALLOC_DIAG=1 \
+  ROGUESQ_LOG_FS_SLOT=1 ROGUESQ_LOG_VI_CALLERS=1 \
+  ROGUESQ_LOG_VI_WRITERS=1 ROGUESQ_LOG_VI_ARGS=1 \
+  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
+  PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+  PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' \
+  zsh tools/probe.sh "$OUT" 300 2
 ```
-
-Use the s808 fixed phase-gated recipe from `scratch/agent/last_s808_fixed_out`
-as the capture baseline, with `ROGUESQ_LOG_VI_CALLERS=1`,
-`ROGUESQ_LOG_VI_WRITERS=1`, E9 provenance controls, and SIGKILL watchdog.
-Expected outcomes: matching writer/value ordering advances
-H-argument-state-intended; a concrete pre-call overwrite advances
-H-argument-state-miswritten; no attributable record with all controls live
-advances H-argument-state-unresolved. No skip, guard, restore, or other
-mitigation is authorized.

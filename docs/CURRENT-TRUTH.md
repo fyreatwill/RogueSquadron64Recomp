@@ -495,6 +495,20 @@ leaving runtime behavior as the remaining broad class.
    divergence; no mitigation was added. Next: audit the reachable callers and
    argument-structure writers feeding `initVideoSubsystem`.
 
+   **s811 argument-state audit:** the complete generated-tree inventory found
+   exactly two reachable direct callers, both in `advanceVideoFrame` at
+   `0x80018378` and `0x80018564`; no generated store targets the argument
+   bytes at offsets `0x1EF`, `0x1F3`, or `0x1FF`. The first same-recipe capture
+   reached 1024 and passed host-VI and E9 controls, but the existing probe did
+   not record those bytes, so it was unevaluable for intended-versus-corrupt
+   argument state. A regeneration-safe `[vi-arg]` probe was added to the
+   fixup and both callsites. Four subsequent fixed-recipe attempts all died
+   before the 1024 gate at width 320 in the same `initVideoBootWrapper+2196`
+   / guest `0x80001C94` family and emitted no argument record. This is a
+   pre-gate recurrence, not evidence about the argument bytes. The next unit
+   is one successful phase-gated run with `[vi-arg]` enabled; no mitigation is
+   justified.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a
