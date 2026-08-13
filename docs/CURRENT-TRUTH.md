@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s916 (2026-08-13). The active blocker is the authoritative
+Reviewed through s917 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -185,14 +185,16 @@ closed. M3 work is limited to systematic idiom-class audits.
   cleanup occurs in this function. Companion symbols and the caller agree on
   ownership and layout, but dynamic allocation/callback legitimacy remains
   unproven; no guard or behavior change.
-- s916 audited `shutdownMusyXVoices`' complete teardown. It has one direct
-  caller; its first loop calls `stopVoiceSlotSynced(0)` exactly once, and its
-  second loop scans the same `0x80154620` table at `0x1228` stride until the
-  one configured voice slot's active byte is clear. It then clears the
+- s916–s917 audited `shutdownMusyXVoices`' complete teardown. It has one
+  direct caller; its first loop calls `stopVoiceSlotSynced(0)` exactly once.
+  The second loop scans the same `0x80154620` table at `0x1228` stride until
+  an inactive byte is observed, but has no finite slot-count termination: an
+  active byte restarts the scan. The companion source confirms the teardown
+  role and one-slot shape, while the callee can leave state 3 active, so the
+  loop's termination depends on a later state transition. It then clears the
   max-voice-count byte, zeros the matching table slot, and frees the active
-  speech/control buffers under their existing gates. Generated code and the
-  companion symbol file agree on ownership and shape; dynamic pointer/value
-  legitimacy remains unproven. No guard or behavior change.
+  speech/control buffers under their existing gates. Dynamic pointer/value
+  legitimacy remains unproven; no guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -224,7 +226,8 @@ short ledger below preserves the decision points needed for the next unit:
 | s894 | `streamSampleCountToByteSize` inventory: 12-byte pure `($a0+4)<<1` wrapper with no memory or control-flow hazards; sole caller passes constant `0x10E0` and allocates `0x21C8`; full classification passed for this function, with broader audio legitimacy out of scope. |
 | s914 | `loadSpeechFile` inventory: two loaded-state gates, prior-offset-buffer free, speech asset lookup, fixed 4-byte header DMA, count-derived offset-table allocation/DMA, and coherent speech globals/flags; generated caller and companion speech layout agree, but dynamic pointer/count/cleanup legitimacy remains unproven; no mitigation. |
 | s915 | `initMusyXVoiceTable` inventory: one caller and one proven slot initialization at `0x80153420`, capacity-1 control queue creation/seeding, fixed `0x21C8` allocation, callback registration, max-voice-count reset, and active-byte reset; no local speech-file DMA/cleanup and no shape mismatch, while dynamic allocation/callback legitimacy remains unproven; no mitigation. |
-| s916 | `shutdownMusyXVoices` inventory: one caller, one exact `stopVoiceSlotSynced(0)` call, a bounded one-slot active-byte wait over the `0x1228` voice shape, max-count clear, table-slot zeroing, and gated frees of both speech/control buffers; generated source and companion symbols agree, while dynamic pointer/value legitimacy remains unproven; no mitigation. |
+| s916 | Initial shutdown inventory said the active-byte wait was bounded to one slot; superseded by s917 after the branch/termination audit found no finite bound. |
+| s917 | Re-audit correction: the first shutdown loop is exactly one slot-0 call, but the second active-byte scan has no finite bound and repeats while the slot remains active; `stopVoiceSlotSynced` can leave state 3, so termination depends on an external/later clear. Caller and slot shape still agree; no mitigation. |
 | s895 | `setVoiceVolumePanLocked` inventory: one gate read, one nonzero handle check, no target dereference/loop, and one mutex-protected modulation call; shape is coherent, but caller-derived handle/parameter writers are not independently proven legitimate; no mitigation. |
 | s896 | `stopStreamedVoice` inventory: one audio-enable gate, one computed 24-byte streamed-voice state access, state-1 check/clear, and `silenceVoiceSlot` call; the caller-derived voice index has no independent bound or writer-legitimacy proof, so full classification remains unresolved; no mitigation. |
 | s897 | `compute3DSourceSpatialMix` inventory: null-terminated `0x80153418` source-list walk, complete spatial-distance/mix/pan/output access table, and independent node/list writer cross-checks; structure passes but dynamic node/input writer legitimacy remains unproven and shapes are mixed; no mitigation. |
@@ -248,6 +251,14 @@ short ledger below preserves the decision points needed for the next unit:
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
 none authorizes a mitigation.
+
+## Superseded interpretation
+
+The s916 claim that the shutdown active-byte scan was a bounded one-slot wait
+is superseded by s917. The generated branch is `bne count,1` around a scan
+whose active case does not increment the count; only an inactive byte advances
+the count to one. The companion one-slot description establishes intended
+shape, not a local termination bound. No runtime conclusion follows.
 
 ## Ranked backlog
 

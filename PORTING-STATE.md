@@ -58417,3 +58417,39 @@ shape result. No guard, mitigation, or game behavior changed.
 ORIGIN: complete generated-function, caller, callee, and companion-symbol
 inventory; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
+## 2026-08-13 — s917: shutdownMusyXVoices scan is not locally bounded
+
+### What ran
+
+Performed the prescribed source-only M3 inventory of `shutdownMusyXVoices`
+(`0x8009BCC4`, size `0xB8`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`, including both loops, all local
+slot/global accesses, the `stopVoiceSlotSynced` callee contract, the sole
+generated caller, and the companion `main_overlay.txt` description. No build,
+game run, or soak was needed.
+
+The first loop initializes `s0=0`, calls `stopVoiceSlotSynced(0)`, increments
+once, and exits because `blez s0` is false. The second loop initializes target
+count `a1=1` and scan count `a0=0`, then reads active byte
+`0x80154620 + index*0x1228 + 0x4620`. An inactive slot increments `a0` and
+advances the index; an active slot branches directly to the outer test without
+incrementing `a0`. The outer `bne a0,a1` therefore repeats until an inactive
+byte is seen, with no finite slot-count or sentinel bound. The companion
+description corroborates the one-slot table and teardown role, and the
+generated callee uses the same stride/active field, but its state-2 path stores
+state 3 rather than clearing the active byte. The only caller is
+`finalizeCurrentSpeechBuffer` at `0x800678EC`.
+
+### Rules out / narrows
+
+This corrects the s916 interpretation that the second loop was a bounded
+one-slot wait. It rules out a caller/callee shape mismatch, but not a local
+termination hazard: termination depends on a later transition of the active
+byte to zero. It also does not prove the control-buffer pointers, active-byte
+values, or free ownership/order legitimate. H-voice-pool-reset-classified is
+not selected; H-voice-pool-reset-unclassified remains active. No guard,
+mitigation, or game behavior changed. This is source inventory evidence only.
+
+ORIGIN: complete generated loop/callee/caller and companion-symbol inventory;
+the only change is correcting the structural classification, with no guest
+value mutation or runtime mitigation.
