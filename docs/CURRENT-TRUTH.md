@@ -386,7 +386,7 @@ leaving runtime behavior as the remaining broad class.
    gate. The source audit and runtime log are independent lines; no
    mitigation is justified. Correct the stale prose above: the generated
    MIPS computes selector addresses `0x8011A865–867` from `lbu -0x579B/-C/-E`.
-   **s803 caller audit:** the generated tree has six `osViSetMode_recomp`
+   **s803 caller audit:** the generated tree has five `osViSetMode_recomp`
    callsites: `preNmiResetThread` at `0x80001764` (fixed OS VI data
    `0x80039790/0x80039330/0x80039BF0`), `initVideoSubsystem` at
    `0x8001B720` (conditional `0x80128E40/0x80128E90`),

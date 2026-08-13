@@ -55252,7 +55252,7 @@ Step 0 measured `docs/CURRENT-TRUTH.md` at 36,930 bytes, so maintenance did
 not trigger. The planned work unit was a read-only exhaustive source audit; no
 build or run was performed.
 
-The generated tree contains six `osViSetMode_recomp` callsites:
+The generated tree contains five `osViSetMode_recomp` callsites:
 `preNmiResetThread` at `0x80001764` with fixed pointers
 `0x80039790/0x80039330/0x80039BF0`; `initVideoSubsystem` at `0x8001B720`
 with conditional `0x80128E40/0x80128E90`; `applyPendingViChanges` at

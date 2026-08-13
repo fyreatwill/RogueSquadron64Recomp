@@ -2,7 +2,7 @@
 
 HYPOTHESIS-ID: m3-vi640-transition-writer
 
-The s803 source audit found six generated `osViSetMode_recomp` callsites. The
+The s803 source audit found five generated `osViSetMode_recomp` callsites. The
 selector route at `0x800186C0` → `selectAndApplyViMode` is not reached in the
 tested recipe; the reachable candidates are the three direct callers below.
 Instrument all three in one build and run, phase-gated at VI 640.
