@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s921 (2026-08-13). The active blocker is the authoritative
+Reviewed through s922 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -237,6 +237,13 @@ closed. M3 work is limited to systematic idiom-class audits.
   loop executes once for the initialized one-voice configuration. Local
   structure is classified, but callback, buffer, divisor, and state-writer
   legitimacy remain unproven; no guard or behavior change.
+- s922 audited `consumeVoiceSamples` (`0x8009C240`). The 0x60-byte helper has
+  one state-3 gate, conditional `+0x11A8` countdown/state transition, and
+  unsigned bounded consumption from `+0x11D8 - +0x11D4` into `+0x11D4`; it
+  has no loop, indirect call, queue/global access, or derived pointer walk.
+  Its sole generated caller supplies one coherent slot-base plus consumption
+  amount shape. Dynamic slot fields and caller-derived amount legitimacy
+  remain unproven; no guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -274,6 +281,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s919 | `dmaVoiceSampleAndSignal` inventory: four incoming DMA arguments pass unchanged to synchronous submit/wait, then `$a3` is used as the message queue for one blocking zero-message signal; no globals, slot fields, loop, or local termination hazard. No generated direct callers or companion body/callsite evidence were found, so indirect reachability and dynamic argument legitimacy remain unresolved; no mitigation. |
 | s920 | `initMusyXVoiceSlot` inventory: fixed 0x190-byte clear, per-slot queue creation, four pointer/control stores, and documented control-field resets with no loop or local termination hazard. The two callers share the slot-base contract but use distinct initialization versus active-voice pointer shapes; the split is intentional/classified, while dynamic pointer/value legitimacy remains unproven; no mitigation. |
 | s921 | `serviceStreamingVoice` inventory: one caller and finite local retry/refill loops; stream callback and decode/block paths are distinct but coherent roles. Dynamic callback/buffer/state legitimacy remains unproven; no behavior change. |
+| s922 | `consumeVoiceSamples` inventory: one state-3 gate, conditional `+0x11A8` countdown/state transition, and unsigned `+0x11D8 - +0x11D4` consumption with `+0x11D4` writeback; no loop, indirect call, queue/global access, or derived pointer walk. Its sole caller supplies one coherent slot-base/amount shape, but dynamic field/value legitimacy remains unproven; no mitigation. |
 | s895 | `setVoiceVolumePanLocked` inventory: one gate read, one nonzero handle check, no target dereference/loop, and one mutex-protected modulation call; shape is coherent, but caller-derived handle/parameter writers are not independently proven legitimate; no mitigation. |
 | s896 | `stopStreamedVoice` inventory: one audio-enable gate, one computed 24-byte streamed-voice state access, state-1 check/clear, and `silenceVoiceSlot` call; the caller-derived voice index has no independent bound or writer-legitimacy proof, so full classification remains unresolved; no mitigation. |
 | s897 | `compute3DSourceSpatialMix` inventory: null-terminated `0x80153418` source-list walk, complete spatial-distance/mix/pan/output access table, and independent node/list writer cross-checks; structure passes but dynamic node/input writer legitimacy remains unproven and shapes are mixed; no mitigation. |
@@ -321,26 +329,26 @@ shape, not a local termination bound. No runtime conclusion follows.
 
 HYPOTHESIS-ID: m3-streaming-voice-inventory
 
-Audit the next adjacent generated audio helper `consumeVoiceSamples`
-(`0x8009C240`, size `0x60`) as a complete function. Do not add a guard or
+Audit the next adjacent generated audio helper `advanceVoiceStateToPlaying`
+(`0x8009C2A0`, size `0x1C`) as a complete function. Do not add a guard or
 change game behavior.
 
 Competing hypotheses:
 
-- H-consume-voice-unclassified: the helper's state/cursor contract contains
-  an unchecked or incompatible field/value path.
-- H-consume-voice-classified: it has one coherent bounded voice-record state
-  transition and all generated callers supply the same argument form.
-- H-consume-voice-shape-mismatch: a caller or sibling path supplies a
-  different state/cursor contract; record the exact split and stop.
+- H-advance-voice-unclassified: the helper's state transition has an unchecked
+  field or incompatible caller/value path.
+- H-advance-voice-classified: it is a fixed-shape state transition with all
+  generated callers supplying the same voice-record form.
+- H-advance-voice-shape-mismatch: a caller or sibling path supplies a
+  different state contract; record the exact split and stop.
 Discriminating measurement: a complete site table for
-`consumeVoiceSamples`, every slot/global/queue/buffer load and store,
+`advanceVoiceStateToPlaying`, every slot/global/queue/buffer load and store,
 indirect call and argument, loop/termination behavior, all generated callers,
 and the companion symbol/decomp basis. Any omitted access, unbounded
 termination, or incompatible caller shape rejects full classification.
 
-Exact commands: use `rg` to enumerate `consumeVoiceSamples` and
-`0x8009C240` in `../N64Recomp/RecompiledFuncs`, then bounded `sed` windows
+Exact commands: use `rg` to enumerate `advanceVoiceStateToPlaying` and
+`0x8009C2A0` in `../N64Recomp/RecompiledFuncs`, then bounded `sed` windows
 and the companion `rogue_squadron64` symbol/decomp files. No game build or
 soak is planned.
 

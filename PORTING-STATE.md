@@ -58612,3 +58612,46 @@ values. No guard, mitigation, or game behavior changed.
 ORIGIN: complete generated-function, caller, overlay-metadata, and companion-
 symbol inventory; no guest value mutation, mitigation, or runtime behavior
 changed.
+
+## 2026-08-13 — s922: consumeVoiceSamples has a fixed local cursor/state shape
+
+### What ran
+
+Performed the prescribed source-only M3 idiom inventory of
+`consumeVoiceSamples` (`0x8009C240`, size `0x60`). The generated definition,
+overlay metadata, its complete generated caller search, and the companion
+`main_overlay.txt` symbol/decomp artifacts were checked. No build, game run,
+or soak was needed.
+
+The helper receives a voice-slot base in `$a0` and a consumption amount in
+`$a1`. It reads state byte `+0x11DD`; values other than 3 return zero. In the
+state-3 path it reads remaining count `+0x11A8`: if the initial count is
+positive, it subtracts `$a1`; a still-positive result is stored, while a
+nonpositive result stores the result, changes `+0x11DD` to 4, and clears
+`+0x11A8`. If the initial count is already nonpositive, the branch-delay
+subtraction is not stored and processing continues. It then reads cursor
+limit/current fields `+0x11D8` and `+0x11D4`, computes their unsigned
+difference, clamps the amount to that difference, and stores the advanced
+cursor back at `+0x11D4`. There is no loop, indirect call, queue/global
+access, or derived pointer walk; the only memory accesses are the slot fields
+`+0x11DD`, `+0x11A8`, `+0x11D8`, and `+0x11D4`.
+
+The only generated direct caller is `accumulateVoiceSampleOffset` at
+`0x8009BDC8`. It computes the slot as `0x80153420 + index*0x1228`, passes
+`a1+a3` as the consumption amount, then adds that same amount to slot
+`+0x463C`. No other `jal 0x8009C240` or helper reference exists in the
+generated tree. The companion project provides the named symbol and the
+voice-table base/stride, but no function body or additional callsite.
+
+### Rules out / narrows
+
+This inventory rules out a local loop/return hazard and a generated
+caller-shape split. It supports H-consume-voice-classified for the local
+state/cursor shape, while dynamic state fields, the unchecked caller index,
+and the caller-derived amount remain unproven for legitimacy. The
+nonpositive-initial-count branch and unsigned cursor comparison are retained
+as semantic edge cases; no guard, mitigation, or game behavior changed.
+
+ORIGIN: complete generated-function, caller, overlay-metadata, and companion-
+symbol inventory; no guest value mutation, mitigation, or runtime behavior
+changed.
