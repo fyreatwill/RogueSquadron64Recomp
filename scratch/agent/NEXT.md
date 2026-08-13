@@ -1,31 +1,30 @@
-# NEXT work unit (oracle repeatability check)
+# NEXT work unit (oracle longer-horizon phase check)
 
-HYPOTHESIS-ID: oracle-schedule-vs-expected-320
+HYPOTHESIS-ID: oracle-exact-recipe-320
 
-The s778 emulator-1 A/B stayed at width 320/origin `0x6dd280` in both arms,
-with positive controls. The alternate execution backend is not the missing
-phase for this recipe. The next unit tests whether the remaining outcome is
-timing-sensitive or consistently 320-only.
+The s779 three-arm emulator-1 repeatability run stayed at width 320/origin
+`0x6dd280` in every arm, with positive controls and all eleven Start presses.
+The exact recipe is now repeatably 320-only through 70 seconds, but the oracle
+README's documented undriven 512 phase begins around 102 seconds. The current
+window may simply end before the claimed later phase.
 
 ## Competing hypotheses
 
-- H-oracle-schedule-or-timing: the later retail phase is selected only by a
-  scheduling/timing condition and appears in at least one fresh identical run.
-- H-oracle-expected-320: this exact headless retail/core/plugin recipe is
-  consistently 320-only; the documented later phase is not reachable here.
+- H-late-phase: the exact recipe reaches a later width/origin after the
+  documented 102-second point.
+- H-exact-recipe-only: the exact recipe remains at width 320/origin
+  `0x6dd280` beyond that point.
 
 ## Discriminating measurement
 
-Run three fresh debugger-on emulator-1 arms concurrently for 70 seconds with
-the same positive whole-RDRAM watch, VI trace, PIF trace, and eleven-entry
-Start schedule. Phase-gate on VI width/origin transitions. Any later width or
-origin transition in any arm selects timing sensitivity; three 320-only arms
-with positive controls strengthen the exact-recipe explanation.
+Run two concurrent arms for 130 seconds with the same core, ROM, emulator-1,
+all-RDRAM positive control, VI trace, PIF trace, and eleven Start schedule.
+Any width/origin transition after 70 seconds selects H-late-phase; two
+320-only traces with positive controls select H-exact-recipe-only.
 
 ## Commands
 
-Use the s778 command with `--oracle-debugger 1 --oracle-emulator 1` three times
-concurrently, writing separate logs under
-`scratch/agent/oracle_runs/20260812_repeatability/`; kill only after the
-70-second oracle completion or with SIGKILL on timeout. Record each arm's
-whole-RDRAM hit count, VI count, PIF count, and width/origin transitions.
+Use the verified s779 command twice, changing only `--secs 130`. Store
+separate logs under `scratch/agent/oracle_runs/20260813_longer_phase/`; run
+concurrently and kill with SIGKILL only after completion or a 160-second
+timeout.

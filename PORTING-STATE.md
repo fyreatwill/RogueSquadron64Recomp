@@ -54704,3 +54704,24 @@ scheduling/timing condition nor the possibility that the documented later
 phase is not reachable with this exact retail/core/plugin recipe. No port
 runtime code changed. The next unit tests the alternate `R4300Emulator`
 execution backend with the same phase-gated A/B and controls.
+
+## Session 779 (2026-08-12) — three emulator-1 repeats stay 320-only
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 19,057 bytes, so maintenance did
+not trigger. The planned work unit was three fresh concurrent debugger-on
+oracle arms using emulator 1, the whole-RDRAM positive control, VI/PIF traces,
+and the eleven-entry Start schedule.
+
+An initial launcher mistake started three copies of the three-arm launcher,
+creating nine overlapping processes and shared log names; those outputs were
+discarded. The contaminated processes were SIGKILLed and the prescribed run
+was repeated once with three unique log paths.
+
+All three arms exited cleanly after 70 seconds. Whole-RDRAM writes were
+11,768,897 / 11,771,521 / 11,768,897; VI callbacks were 4,193 / 4,194 /
+4,193; and each arm recorded all eleven PIF Start presses. Every arm reported
+only width 320 with origin `0x6dd280`; no later 640, 1024, or 512 transition
+occurred. This strengthens **H-oracle-exact-recipe-320** and selects it over
+schedule/timing sensitivity for this recipe. It rules out neither a different
+documented phase-driving recipe nor the cause of the retail phase divergence.
+No port runtime code changed.

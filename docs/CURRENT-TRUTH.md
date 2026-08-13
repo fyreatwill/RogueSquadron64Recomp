@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s777; compacted in maintenance s776)
+## Current truth (reviewed through s779; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -38,6 +38,14 @@ the chronological ledger. The active facts are:
   320/origin `0x6dd280`. This refutes the alternate execution backend as the
   missing phase for this recipe. Exact-recipe reachability versus
   schedule/timing sensitivity remains unresolved.
+- The matched s779 oracle repeatability run used three concurrent emulator-1
+  debugger-on arms with the all-RDRAM positive control, VI/PIF traces, and the
+  eleven-entry Start schedule. All three stayed at width 320/origin
+  `0x6dd280`, with 11,768,897 / 11,771,521 / 11,768,897 whole-RDRAM writes,
+  4,193 / 4,194 / 4,193 VI callbacks, and all eleven PIF presses. This
+  strengthens the exact-recipe 320-only explanation and selects it over
+  timing sensitivity for this recipe; it does not explain the documented
+  later retail timeline.
 - The matched s777 oracle runtime check again found no later retail VI phase:
   debugger-on had the whole-RDRAM positive control (11,768,621 writes), 4,193
   VI callbacks, and all 11 PIF presses; debugger-off raw polling stayed at
@@ -116,7 +124,14 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **Oracle phase divergence — OPEN, H-oracle-schedule-vs-expected-320 next.** s778's
+1. **Oracle phase divergence — OPEN, H-oracle-exact-recipe-320 next.** s779's
+three-arm emulator-1 repeatability run kept every arm at width 320/origin
+`0x6dd280`, with positive whole-RDRAM controls and all eleven PIF presses. This
+strengthens exact-recipe reachability over schedule/timing sensitivity for the
+tested recipe. Next: compare the documented later-phase-driving oracle recipe
+against this exact recipe in one phase-gated, positive-control A/B, changing
+only the documented runtime/input condition that could select the later phase.
+s778's
 alternate-backend A/B had debugger-on positive controls of 11,782,489 whole-RDRAM
 writes over 4,198 VI callbacks and all 11 PIF presses; debugger-off had 70 raw polls,
 all width 320/origin `0x6dd280`. This refutes H-oracle-emulator-backend for the tested
