@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s874 (2026-08-13). The active blocker is the authoritative
+Reviewed through s877 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -959,20 +959,50 @@ legitimacy basis for a mitigation; a runtime value comparison remains needed.
 ORIGIN: generated-tree source inventory only; no guest value, control flow, or
 mitigation behavior changed.
 
-## Next work unit: coalescer late-value comparison
+## s877 result — coalescer late-value comparison remains phase-unreachable
+
+Ran the paired capture using the regeneration-replayable port origin probe and
+the retail physical write watches. The port reached VI width 1024, passed 387
+positive E9 provenance rows, and recorded 8,211 origin rows, including phase-10
+partition tuples such as `0x80790000`, `0x8055F800`, and `0x8045F800`; it later
+hit the known `slotDispatcherIter+2180` SIGBUS. The port side therefore reached
+the late writer population with its controls live.
+
+The fixed retail run independently recorded 11,782,306 whole-RDRAM writes,
+4,198 VI frames, all eleven PIF Start transitions, and target writes to the
+coalescer globals only at the early PCs `0x80000420`, `0x80000424`,
+`0x80000ED8`, `0x80000FFC`, `0x80001038`, and `0x800021D8`. It never left VI
+width 320. A first oracle attempt that called `DebugMemRead32` inside the
+breakpoint callback stopped at VI 0 and is invalid; the callback has no safe
+post-write value channel. The fixed run is the authoritative oracle result.
+
+This selects H-late-phase-unreachable for the late tuple discriminator, not
+H-port-value-matches-retail or H-port-value-diverges. The early retail PC
+population is independently live, but its values were not exposed, so no value
+legitimacy conclusion or mitigation is justified. The next unit is a bounded
+source/API audit for a safe deferred retail-value sampler.
+
+ORIGIN: port diagnostic reads, independent retail physical write/VI/PIF
+controls, and a documented invalid callback-read attempt; no game behavior or
+mitigation behavior changed.
+
+## Next work unit: safe retail value-sampler audit
 
 HYPOTHESIS-ID: m3-coalesce-value-legitimacy
 
-Run one paired, phase-gated value comparison for the four coalescer globals,
-using the existing regeneration-replayable origin probe on the port and the
-retail oracle's physical write watches. Do not add a guard or change behavior.
-Verify positive controls and phase reach before interpreting null.
+Perform one source/API audit of the oracle debugger callback and memory-read
+interfaces to identify a safe deferred way to capture the value written by the
+four coalescer watch ranges. Do not add a guard or change game behavior. If a
+safe channel is found, specify its phase/control validation recipe; if not,
+record the exact ABI limitation and pivot to a different independent ground
+truth source.
 
-Competing hypotheses are H-port-value-matches-retail, H-port-value-diverges,
-and H-late-phase-unreachable. The discriminating measurement is the same
-writer/phase/value tuple: matching late tuples select the first; a divergent
-matched tuple selects the second; absent late tuples select the third only
-with positive controls and phase proof.
+Competing hypotheses are H-deferred-read-safe, H-no-safe-value-api, and
+H-oracle-phase-stall. The discriminating measurement is whether the documented
+core ABI exposes a value-bearing breakpoint callback or a read operation that
+can be deferred without stopping VI progress; the first selects a sampler
+design, the second closes this value route, and the third requires a separate
+phase-driver investigation.
 
 ## Closed and parked
 

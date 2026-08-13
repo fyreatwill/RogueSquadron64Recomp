@@ -57007,3 +57007,29 @@ a runtime value comparison remains needed.
 
 ORIGIN: generated-tree source inventory only; no guest value, control flow, or
 mitigation behavior changed.
+
+## Session s877 (2026-08-13) — coalescer late-value comparison remains phase-unreachable
+
+Ran the paired capture using the regeneration-replayable port origin probe and
+retail physical write watches. The port reached VI width 1024, passed 387
+positive E9 provenance rows, and recorded 8,211 origin rows, including phase-10
+partition tuples `0x80790000`, `0x8055F800`, and `0x8045F800`; it later hit the
+known `slotDispatcherIter+2180` SIGBUS.
+
+The fixed retail run recorded 11,782,306 whole-RDRAM writes, 4,198 VI frames,
+all eleven PIF Start transitions, and target writes only at early PCs
+`0x80000420`, `0x80000424`, `0x80000ED8`, `0x80000FFC`, `0x80001038`, and
+`0x800021D8`; it stayed at VI width 320. A first oracle attempt called
+`DebugMemRead32` inside the breakpoint callback, stopped at VI 0, and was
+invalid. Removing that read and rerunning restored the controls, but the
+callback API still provides no safe post-write value channel.
+
+This selects H-late-phase-unreachable for the late tuple discriminator, not a
+port/retail value match or divergence. The early retail PC population is live,
+but values remain unobserved, so no legitimacy conclusion or mitigation is
+justified. The next unit is a bounded source/API audit for a safe deferred
+retail-value sampler.
+
+ORIGIN: port diagnostic reads, independent retail physical write/VI/PIF
+controls, and the invalid callback-read attempt; no game behavior or
+mitigation behavior changed.
