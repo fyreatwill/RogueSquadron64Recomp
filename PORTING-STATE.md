@@ -55236,3 +55236,12 @@ a host-side VI suppression. It does not identify which selector byte or
 dispatch path is wrong. No mitigation was added. Next is one batched,
 phase-gated selector trace with the oracle whole-RDRAM positive control and VI
 trace retained.
+## Session 802 (2026-08-13) — VI selector was not the reachable 640-path writer
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 35,830 bytes, so maintenance did not trigger. The planned unit was a grounded, phase-gated VI selector trace. The retail oracle passed the whole-RDRAM positive control with 2,251,867 writes in 12 seconds and recorded 24 writes in the actual selector region `0x11A860–0x11A870`. The port probe build passed its independent `osViSetMode` control with six calls and reached VI 640, but the only generated caller at `0x800186C0` and `selectAndApplyViMode` both emitted zero control markers. A fixed rerun added the caller marker and reproduced the zero while the same run logged the six mode calls.
+
+This rules out the narrow claim that `selectAndApplyViMode` is the active writer in the tested 0→320→640 recipe; it does not classify selector state or parser behavior. Post-640 live mode calls remained 640-wide. No mitigation was added. The generated MIPS computes selector addresses `0x8011A865–867`, correcting stale prose that said `0x8012A865–867`. Next: enumerate every reachable `osViSetMode` caller and mode pointer before choosing the next bounded trace.
+
+ORIGIN: the runtime logs identify the live `osViSetMode` path, while the generated source identifies the sole selector callsite; no corruption or wild-value mitigation was introduced.
+
+Logs: `scratch/agent/oracle_selector_groundtruth.log`, `scratch/agent/soak_results/s802_vi_selector/run.log`, and `scratch/agent/soak_results/s802_vi_selector_fixed/run.log`.

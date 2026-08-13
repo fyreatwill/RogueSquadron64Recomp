@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s801; compacted in maintenance s776)
+## Current truth (reviewed through s802; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -365,13 +365,29 @@ leaving runtime behavior as the remaining broad class.
    shows calls #3–#6 after the 640 transition selecting only 640-wide modes;
    no 1024 `osViSetMode` request occurred. The immediate candidate is the
    game-side `selectAndApplyViMode` branch at `0x8001BB70–0x8001BBC0`, which
-   selects from the `0x80128D50` mode table using globals at `0x8012A865–867`,
+   selects from the `0x80128D50` mode table using globals at `0x8011A865–867`,
    rather than a host-side VI suppression. Retail ground truth reaches 1024
    at 17.3s driven and 49.7s undriven, so H-renderer-consumer is refuted and
    H-game-state is selected for the port recipe only. Next: one batched,
    phase-gated capture logging those selector bytes, selected mode
    pointer/width, and `osViSetMode` calls, with the oracle whole-RDRAM
    positive control plus VI trace retained as the independent control.
+
+   **s802 selector trace:** retail ground truth passed the whole-RDRAM control
+   (2,251,867 writes in 12s) and independently wrote the actual selector
+   region `0x11A860–0x11A870` 24 times. The port probe build passed its
+   `osViSetMode` positive control (six calls, including 640-wide modes), but
+   neither the only generated caller at `0x800186C0` nor
+   `selectAndApplyViMode` emitted its control marker. The selector function is
+   therefore not reached in this tested 0→320→640 recipe; its null is not a
+   selector-state result. The post-640 calls still select only 640-wide modes.
+   This refutes the narrow claim that `selectAndApplyViMode` is the active
+   writer on this path and pivots to the reachable direct mode callers/state
+   gate. The source audit and runtime log are independent lines; no
+   mitigation is justified. Correct the stale prose above: the generated
+   MIPS computes selector addresses `0x8011A865–867` from `lbu -0x579B/-C/-E`.
+   Next: enumerate every reachable `osViSetMode` caller and its mode pointer,
+   then choose one bounded callsite/state trace.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
