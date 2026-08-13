@@ -699,17 +699,37 @@ watch to infer writer absence.
 ORIGIN: independent retail debugger write-watch, VI trace, and whole-RDRAM
 control; no port value, game behavior, or mitigation behavior changed.
 
-## Next work unit: validate the retail phase driver at PIF
+## Session s868 result
+
+The 20-second retail oracle run used the whole-RDRAM positive control, VI
+trace, retail ROM, `--pif-trace`, and nine Start presses at 2–18 seconds.
+Whole-RDRAM recorded 3,574,338 writes over 1,198 VI, proving the watch and
+emulator controls were live. The oracle's PIF trace is printed as `[pad]`:
+each scheduled press produced `0x7C4=0x10000000` and the release returned it
+to zero, so Start reached the retail PIF boundary. VI remained width 320 for
+the full run.
+
+This selects H-game-state for the early schedule and rules out H-input-map:
+the injector delivered Start, but those presses occurred before the
+phase-appropriate title-driving window and did not advance the retail state
+machine. It does not yet establish that the documented 6–56 second schedule
+will reach a later phase, and it says nothing about any later writer. No port
+behavior or mitigation changed.
+
+ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
+positive controls; no game value or control flow was changed.
+
+## Next work unit: validate the phase-appropriate retail driver at PIF
 
 HYPOTHESIS-ID: m3-coalesce-phase-driver
 
-Run one 20-second retail-oracle experiment with the same ROM, VI trace, and
-whole-RDRAM positive control, using the documented early phase-driving
-schedule and adding `--pif-trace`:
-`2:start,4:start,6:start,8:start,10:start,12:start,14:start,16:start,18:start`.
-Do not infer writer absence from this run; its purpose is to validate that the
-oracle's injected Start presses become Start bits at the PIF boundary and to
-identify the first resulting VI transition.
+Run one 70-second retail-oracle experiment with the same ROM, VI trace, and
+whole-RDRAM positive control, using the documented phase-driving schedule and
+adding `--pif-trace`:
+`6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`.
+Do not infer writer absence from this run; its purpose is to validate the
+phase-appropriate input schedule and identify the first resulting VI
+transition.
 
 Competing hypotheses:
 
@@ -717,8 +737,9 @@ Competing hypotheses:
   VI advances beyond width 320.
 - H-input-map: presses are delivered but the PIF button word never contains
   Start, so the documented schedule is not driving this oracle configuration.
-- H-game-state: PIF Start bits are present but VI remains width 320, so the
-  retail state machine or timing—not the input injector—is the blocker.
+- H-game-state: PIF Start bits are present but VI remains width 320 under the
+  phase-appropriate schedule, so the retail state machine—not the input
+  injector—is the blocker.
 
 Discriminator: the whole-RDRAM control must fire; the PIF trace must show the
 Start bit for each scheduled press, and VI must show a post-320 width/origin

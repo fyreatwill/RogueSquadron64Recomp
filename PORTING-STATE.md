@@ -56780,6 +56780,23 @@ with the documented eleven-Start schedule through the hangar transition.
 ORIGIN: retail debugger watch-PC output plus independent whole-RDRAM and VI
 controls; no game value or control flow changed.
 
+## Session s868 (2026-08-13) — early retail Start reaches PIF but not phase state
+
+Ran the prescribed 20-second retail oracle with the whole-RDRAM positive
+control, VI trace, retail ROM, `--pif-trace`, and nine Start presses at 2–18
+seconds. The whole-RDRAM watch recorded 3,574,338 writes over 1,198 VI, and
+the PIF trace was active. The trace is emitted as `[pad]`: each press changed
+PIF word `0x7C4` to `0x10000000` and release returned it to zero. VI stayed at
+width 320 throughout.
+
+This rules out H-input-map for the observed run: the injected Start reaches
+the retail PIF boundary. It selects H-game-state for the early schedule, but
+does not test the documented phase-appropriate 6–56 second schedule and does
+not attribute any later writer. No port behavior or mitigation changed.
+
+ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
+positive controls; no game value or control flow changed.
+
 ## Session s867 (2026-08-13) — eleven-Start retail run remains width-320 only
 
 Ran the prescribed 70-second retail oracle with the eleven-Start schedule,
