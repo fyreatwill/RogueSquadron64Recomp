@@ -316,38 +316,51 @@ Priority until changed by the user:
   ORIGIN: host-side parser-condition telemetry; no game value, parser advance,
   RDP handler, or mitigation behavior changed.
 
-## Next work unit: identify the late E9 span-counting path
+- s852 completed the prescribed source audit without a build or run. The bridge
+  scans accepted ranges at fixed 8-byte boundaries using the same logical
+  byte-swapped RDRAM selection used to form words, while RT64 loads each parser
+  boundary and advances by `commandWordLengths[opCode] * 8`. Normal non-E9
+  commands report `span` over that full command interval; E9 command starts
+  report `direct`; a split command reports `pending` only on completion. This
+  accounts for the 1,001 span rows and rules out a normal byte-order or
+  producer/consumer range mismatch. Deferred commits retain normal identity;
+  non-deferred synthetic FULL_SYNC is the bounded stale-label exception.
+  The one residual remains unclassified because the extended-opcode branch
+  bypasses the condition callbacks and has function-controlled advancement.
+  No writer, legitimacy, or mitigation conclusion follows.
+
+  ORIGIN: source audit only; no game value, parser advance, RDP handler, or
+  mitigation behavior changed.
+
+## Next work unit: classify the residual E9 condition
 
 HYPOTHESIS-ID: m3-rdp-parser-condition
 
-Perform one bounded source audit of the authoritative parser's command-length
-and bridge E9-counting paths, including the one residual unassociated class.
-Reconcile the exact address/range semantics of the bridge's 8-byte scan,
-RT64's command-word lengths, and the condition join. Do not change parser
-advance, RDP handlers, or mitigation.
+Instrument the RT64 extended-opcode branch for raw E9 candidates with a
+behavior-neutral breadcrumb, build one Debug binary, and run one phase-gated
+capture. Do not change parser advancement, RDP handlers, or mitigation.
 
 Competing hypotheses:
 
-- H-span-intended: the parser command-length table intentionally consumes the
-  bridge-counted interior E9 bytes as inline payload.
-- H-span-mismatch: the parser spans are real, but the bridge's candidate scan
-  is using a different physical/range interpretation.
-- H-residual-range: the one unassociated slot is a deferred/synthetic range
-  or stale submit-label case rather than a parser omission.
-- H-pending-residual: the pending path is absent from the captured aggregate
-  but accounts for the residual when its split-range lifecycle is traced.
+- H-extended-residual: raw E9 entered the extended-opcode branch, which has no
+  condition callback and can advance outside the normal command table.
+- H-residual-range: the one slot is a non-deferred synthetic range or stale
+  submit-label case.
+- H-pending-residual: the slot is completed through a split-command pending
+  lifecycle that the aggregate condition join missed.
+- H-instrumentation-gap: the row is a normal direct/span path but was missed by
+  the join's task/serial/range association.
 
-Discriminator: an exhaustive source table must account for the 1,001 span
-matches and the one residual slot using identical address/range semantics.
-An exact interior-byte proof selects H-span-intended; a mismatch in the
-bridge/parser physical mapping selects H-span-mismatch; a synthetic/deferred
-label edge selects H-residual-range; a split-command lifecycle edge selects
-H-pending-residual. No mitigation is permitted from this audit alone.
+Discriminator: an extended-branch marker on the residual address selects
+H-extended-residual; a synthetic marker with the same address selects
+H-residual-range; a pending completion selects H-pending-residual; none of
+these with the positive direct/span controls firing selects
+H-instrumentation-gap. All arms are measured in this one run.
 
 ## Ranked backlog
 
-1. Identify which RT64 parser byte/pending/guard condition accounts for the
-   lower late E9 count; no behavior change until the condition is proven.
+1. Instrument the RT64 extended-opcode branch for raw E9 candidates with exact
+   task/serial/range; no behavior change until the residual condition is proven.
 2. Only after that classification, identify the responsible parser/counting
    path and consider an implementation fix.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,

@@ -56269,6 +56269,39 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 852 (2026-08-13) — source audit accounts for span matches; residual remains outside normal condition paths
+
+Performed the prescribed bounded source-only audit; no build or run was
+performed. The bridge's accepted ordinary ranges are scanned in 8-byte steps
+and read the logical first byte through the same byte-swapped RDRAM mapping
+used to reconstruct words. Each accepted range is recorded, serialised, and
+passed synchronously to `submit_rdp_range`; RT64 derives its parser call range
+from the same `[lo, hi)` pointers.
+
+The authoritative parser loads the command opcode at each current boundary,
+uses `commandWordLengths[opCode]`, reports a `direct` condition only when the
+raw opcode is E9, reports a `span` condition for every normal non-E9 command,
+and advances by `cmdLength * 8`. Thus an E9 byte at an interior 8-byte slot is
+intentionally bridge-counted but is inline data in the preceding parser
+command. The pending path records a split command only when a command crosses
+the current `[lo, hi)` end and reports it on completion; the captured zero
+pending rows are consistent with that gate. Deferred ranges receive normal
+submit identity at commit. The non-deferred synthetic FULL_SYNC path is the
+only submit path that bypasses `rs64_dpc_record_submit` and can carry a stale
+serial/range label, but it submits only `[addr, addr+8)`.
+
+This source table selects H-span-intended for the 1,001 span rows and rules out
+a normal byte-order or producer/consumer range mismatch. It does not classify
+the one residual condition-join slot: the normal direct/span paths are
+complete, while the extended-opcode branch bypasses both condition callbacks
+and uses its own function-controlled advancement. The residual therefore
+needs one behavior-neutral runtime marker at that branch before choosing
+between H-extended-residual and the bounded synthetic-label edge. No writer,
+operand-legitimacy, parser-behavior, or mitigation conclusion follows.
+
+ORIGIN: source audit only; no game value, RDP command, parser advancement, or
+mitigation behavior changed.
+
 ## Session 851 (2026-08-13) — late E9 candidates are mostly parser spans
 
 Added behavior-neutral RT64 parser-condition telemetry for direct command
