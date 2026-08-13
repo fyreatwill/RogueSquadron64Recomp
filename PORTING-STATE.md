@@ -56717,3 +56717,24 @@ mitigation was added.
 ORIGIN: the new probe reads and logs incoming registers, the global head, and
 already-computed next pointers only; it changes no game value, guard, or
 control flow.
+
+## Session s864 (2026-08-13) — retail coalescer state writes exist
+
+Ran the prescribed retail oracle writer-attribution experiment with the
+whole-RDRAM control, VI trace, physical watches on `0x1163E4..0x1163F0` and
+`0x10FF18..0x10FF1C`, and the repeated-Start schedule. The run reached 1,792
+VI. Whole-RDRAM recorded 5,199,604 writes; the caller-global watch recorded 9
+writes and the head-global watch recorded 3 writes. Thus the retail target
+state is written in this run, ruling out both a no-write result and invalid
+positive controls.
+
+The oracle's process-wide 200-hit detail cap was consumed by whole-RDRAM
+control output, so the target-hit PC lines were suppressed. This selects the
+existence of a retail writer boundary but does not attribute the exact writer
+or establish legitimacy of the port's invalid values. No build, port run,
+runtime behavior, or mitigation changed. The next unit is a bounded oracle
+tool adjustment/run that preserves the whole-RDRAM control while retaining
+target-hit PCs.
+
+ORIGIN: retail debugger write-watch observation only; no game value or control
+flow was changed.

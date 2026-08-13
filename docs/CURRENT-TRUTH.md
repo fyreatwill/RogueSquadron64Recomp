@@ -626,29 +626,47 @@ ORIGIN: the probe only reads and logs incoming registers, the global head, and
 already-computed next pointers; it changes no game value, guard, or control
 flow. No mitigation is justified.
 
-## Next work unit: retail coalescer-state writer attribution
+## s864 retail coalescer-state writer presence
+
+The retail oracle ran for 30 seconds with whole-RDRAM, VI-trace, and physical
+watches on caller globals `0x1163E4..0x1163F0` and head global
+`0x10FF18..0x10FF1C`, using the documented repeated-Start schedule. It reached
+1,792 VI and the whole-RDRAM control recorded 5,199,604 writes. The caller
+watch recorded 9 writes and the head watch recorded 3 writes. This selects
+H-retail-writer over H-retail-no-write and rules out H-retail-control-invalid
+for the run. Because the oracle's process-wide 200-hit detail cap was consumed
+by the whole-RDRAM control, the target-hit PC lines were suppressed; the exact
+writer PCs remain unclassified. This is one retail runtime evidence line and
+does not establish that the port's invalid values are legitimate or authorize
+a mitigation.
+
+ORIGIN: retail debugger write-watch observation only; no port value, game
+control flow, or mitigation behavior changed.
+
+## Next work unit: isolate retail coalescer writer PCs
 
 HYPOTHESIS-ID: m3-coalesce-entry-state
 
-Run the retail oracle with whole-RDRAM plus physical watches on the coalescer
-caller globals `0x1163E4:0x1163F0` and the coalescer head global
-`0x10FF18:0x10FF1C`, with `--vi-trace` and the documented input schedule. Do
-not build or add a mitigation. The goal is PC attribution for writes to the
-state that the port probe found invalid.
+Run the oracle once with the same ROM, schedule, VI trace, and three watches,
+but first inspect the oracle's hit-detail cap and make the smallest bounded
+tool change needed to retain detail for all three watch indices (or otherwise
+ensure target-hit PCs are printed while the whole-RDRAM control remains
+armed). Do not change the emulated game or add a mitigation. The goal is PC
+attribution for the retail writes that s864 proved exist.
 
 Competing hypotheses:
 
-- H-retail-writer: a retail write to either watched state range has a guest PC,
-  identifying the writer boundary.
-- H-retail-no-write: whole-RDRAM and VI controls fire but neither state watch
-  fires; the retail state is initialized elsewhere or not reached.
-- H-retail-control-invalid: the whole-RDRAM or VI positive control fails, so a
-  null state watch is unevaluable.
+- H-init-writer: target writes come from boot/heap initialization PCs and are
+  not the later coalescer-state corruption source.
+- H-runtime-writer: target writes include a later gameplay/heap-maintenance PC
+  that can be compared with the port's invalid entry values.
+- H-control-invalid: whole-RDRAM or VI control fails after the tool change, so
+  the target-PC result is unevaluable.
 
-Discriminator: whole-RDRAM and VI controls must fire in the same run. Any
-state-watch hit with a PC selects H-retail-writer; zero state hits with valid
-controls selects H-retail-no-write; failed controls select
-H-retail-control-invalid. This remains diagnostic evidence only.
+Discriminator: whole-RDRAM and VI controls must fire in the same run. A target
+hit with a guest PC selects H-init-writer or H-runtime-writer by PC/time; a
+failed control selects H-control-invalid. A target-hit count without a PC is
+still unevaluable. This remains diagnostic evidence only.
 
 ## Ranked backlog
 

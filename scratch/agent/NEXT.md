@@ -1,28 +1,24 @@
-# NEXT work unit (s864)
+# NEXT work unit (s865)
 
 HYPOTHESIS-ID: m3-coalesce-entry-state
 
-Run one retail-oracle writer-attribution experiment. Watch the coalescer caller
-globals at physical `0x1163E4:0x1163F0` and the coalescer head global at
-`0x10FF18:0x10FF1C`, alongside the whole-RDRAM positive control. Include
-`--vi-trace` and the documented repeated-Start schedule. Do not build, edit
-runtime behavior, or add a mitigation.
+Run one retail-oracle writer-PC experiment. Preserve the whole-RDRAM watch,
+VI trace, ROM, and repeated-Start schedule, but inspect the oracle's global
+200-hit detail cap and make the smallest bounded tool change needed to retain
+detail for the target watch indices. Then run the same three watches on one
+30-second retail capture. Do not change emulated game behavior or add a
+mitigation.
 
 Competing hypotheses:
 
-- H-retail-writer: a watched state write fires with a guest PC, identifying the
-  writer boundary that can be compared with the port's invalid entry values.
-- H-retail-no-write: whole-RDRAM and VI controls fire but neither state watch
-  fires; retail initializes this state elsewhere or the target phase is not
-  reached.
-- H-retail-control-invalid: whole-RDRAM or VI positive control fails, so a null
-  state watch is unevaluable.
+- H-init-writer: target writes are only boot/heap initialization PCs.
+- H-runtime-writer: a later gameplay/heap-maintenance PC writes the state.
+- H-control-invalid: whole-RDRAM or VI control fails after the tool change.
 
-Discriminating measurement: in the same run, whole-RDRAM must report writes and
-`--vi-trace` must report VI activity. With both controls live, any hit in either
-state range selects H-retail-writer; zero hits selects H-retail-no-write. Failed
-controls select H-retail-control-invalid. A null is not evidence without both
-controls.
+Discriminating measurement: whole-RDRAM and VI must fire, and each target hit
+must print its guest PC. Target PCs at boot versus later runtime split
+H-init-writer from H-runtime-writer; failed controls select
+H-control-invalid. Counts without PCs are unevaluable.
 
 Exact command:
 
@@ -36,5 +32,5 @@ tools/oracle/build/rs64_oracle \
   --press '6:start,11:start,16:start,21:start,26:start'
 ```
 
-Keep the current probe build; no port run is needed unless the oracle controls
-are valid and the result requires a paired port measurement.
+Keep the current probe build; no port run is needed unless the attributed PC
+requires a paired port measurement.
