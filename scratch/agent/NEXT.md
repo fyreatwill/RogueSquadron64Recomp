@@ -1,47 +1,50 @@
-# NEXT work unit (one more stable post-sec2 reachability before parser-chain audit)
+# NEXT work unit (systematic allocation/grid crash-idiom audit)
 
-HYPOTHESIS-ID: m3-full-sync-parser-control-flow
+HYPOTHESIS-ID: m3-prechain-allocation-grid-idiom
 
-The s786 repeat reached VI 1024 with positive controls and section-2 latch,
-then crashed 50.4s into the run after 15 frames in
-allocAndInitGridCellArray+624 (guest PC 0x80001c94). The parser chain was not
-sampled. Run one more stability-oriented repeat with the same phase gate and
-provenance controls; do not interpret E9 counters unless the post-sec2 capture
-survives. If the next run dies again before a usable sample, pivot to a
-systematic allocation/grid crash-idiom audit rather than another reactive
-single-crash chase.
+The s787 repeat passed provenance controls but reached only VI 640 and aborted
+in RT64 `findTileCopyId` before the 1024 gate. This is the third consecutive
+pre-chain failure across distinct families (s785 Metal barrier, s786 grid
+allocation, s787 framebuffer tile-copy). Do not run another reachability soak
+yet and do not add a guard from any one crash.
 
 ## Competing hypotheses
 
-- H-prechain-transient: pre-chain failures are timing-sensitive across
-  unrelated crash families. Prediction: the repeat reaches 1024 and survives
-  long enough to capture post-sec2 provenance.
-- H-prechain-deterministic: the current post-sec2 workload deterministically
-  fails before chain capture, though the fault site may vary. Prediction: the
-  repeat reaches 1024 with controls live and dies before chain data again.
-- H-phase-latch: the phase gate fired but the capture window is not aligned
-  with the parser work. Prediction: a surviving run has post-sec2 task/E9
-  provenance without the expected chain counters.
+- H-grid-writer-corruption: one game-side allocation/grid writer corrupts state
+  later consumed by several crash families. Prediction: a complete enumeration
+  finds a shared unchecked pointer/size/index idiom and a common upstream value.
+- H-renderer-only: the distinct failures are independent host/runtime consumers.
+  Prediction: the allocation/grid enumeration has no shared game-side idiom;
+  only RT64 host sites differ.
+- H-stale-generated-view: the apparent allocation/grid class is incomplete
+  because the active generated funcs are outside this checkout or stale.
+  Prediction: source inventory cannot map the named functions/PCs to a current
+  generated artifact, so no complete classification is possible.
 
 ## Discriminating measurement
 
-One phase-gated run measuring: VI 1024 reached, control task
-emit/raw/dispatch/match positive, capture survival past the 9-frame window,
-and post-sec2 E9 provenance. Reaching 1024 and surviving selects
-H-prechain-transient and permits the batched parser-chain audit next. A third
-pre-chain death, regardless of exact fault site, selects
-H-prechain-deterministic and requires a systematic allocation/grid crash-idiom
-audit. A surviving run with no post-sec2 provenance selects H-phase-latch.
+One bounded source audit, before any build: inventory every allocation/grid
+pointer, size, index, and host-consumer site reachable from the three observed
+families; classify each as guarded, proven-valid, or unclassified; and record
+the writer and legitimacy of every wild value. H-grid-writer-corruption wins
+only if two independent lines (source idiom enumeration plus an existing trace
+or address/value record) identify a shared writer. H-renderer-only wins if the
+complete current source inventory shows disjoint, valid game inputs and only
+host consumers. H-stale-generated-view wins if the required generated source
+is absent or cannot be tied to the active build; then stop and request the
+artifact path rather than inventing a guard.
 
-## Exact run
+## Exact audit
 
-Build once:
+1. Locate active generated `funcs_*.c` and its fixup/build provenance with
+   `find`, `rg`, and the build manifest; do not read the whole generated tree.
+2. Enumerate `allocAndInitGridCellArray`, its callers, and all sibling grid/
+   allocation idioms; separately inspect RT64 `findTileCopyId` call sites.
+3. For every candidate, capture the guest address/value writer and classify
+   legitimate versus wild. No code change or mitigation is allowed unless a
+   writer is identified.
+4. If the active generated source is unavailable, record that concrete result
+   and stop the audit as blocked; do not substitute a reactive runtime patch.
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp -j8
-
-Run from build/ with the same low-noise controls:
-
-    env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_E9_PROVENANCE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' zsh ../tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/soak_results/s787_m3_stable_reachability 300 2
-
-Keep the existing positive-control requirement. Do not add a mitigation or
-change runtime code on a crash-only result.
+No build or run is part of this unit unless the audit discovers a bounded,
+source-backed diagnostic change and its positive control can be specified.

@@ -54886,3 +54886,22 @@ hypotheses unevaluable. It rules out an instrumentation null and shows that
 the prior Metal barrier failure is not the only pre-chain crash family; it does
 not establish a deterministic cause or justify a mitigation. Log:
 scratch/agent/soak_results/s786_m3_stable_reachability/run.log.
+## Session 787 (2026-08-12) — third pre-chain failure, pivot to idiom audit
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 23,819 bytes, so maintenance did
+not trigger. The planned work unit was the low-noise, phase-gated repeat before
+the FULL_SYNC parser-chain audit. The Debug build completed cleanly.
+
+The run passed the positive-control requirement: repeated control tasks logged
+`emit=1`, `raw=1`, `dispatch=1`, and `match=1`. It reached VI 640 but the
+process aborted before the 1024 gate, in RT64
+`FramebufferManager::findTileCopyId`, called from `State::fullSync`, with last
+guest PC `0x8000834c`. No post-sec2 parser-chain sample was captured.
+
+Together with s785's Metal barrier failure and s786's
+`allocAndInitGridCellArray+624` SIGBUS, this is the third consecutive
+pre-chain failure in a distinct family. It selects the bounded
+H-prechain-deterministic failure class and rules out treating the parser
+chain as measured; it does not identify a writer or justify a mitigation.
+The next work unit is a systematic allocation/grid crash-idiom audit. Log:
+`scratch/agent/soak_results/s787_m3_stable_reachability/run.log`.

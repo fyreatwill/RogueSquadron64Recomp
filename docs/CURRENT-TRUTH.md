@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s786; compacted in maintenance s776)
+## Current truth (reviewed through s787; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -40,6 +40,15 @@ the chronological ledger. The active facts are:
   post-sec2 parser-chain sample preceded the crash. This is a different crash
   family from s785's Metal barrier failure; it leaves the FULL_SYNC parser
   hypotheses unevaluable and adds no explanation or mitigation.
+- The s787 stability repeat passed the same provenance positive controls
+  (`emit=1`, `raw=1`, `dispatch=1`, `match=1`) but died before the 1024 gate:
+  VI reached 640, then RT64 aborted in `FramebufferManager::findTileCopyId`
+  during `State::fullSync` (last guest PC `0x8000834c`). Across s785-s787,
+  three consecutive pre-chain runs failed in distinct families (Metal barrier,
+  grid allocation, framebuffer tile-copy). This selects the bounded
+  H-prechain-deterministic failure class, not a parser hypothesis; no parser
+  sample or mitigation is justified. The next unit is a systematic
+  allocation/grid crash-idiom audit.
 - The matched s778 oracle runtime check with the alternate `R4300Emulator`
   again found no later retail VI phase: debugger-on had 11,782,489
   whole-RDRAM positive-control writes, 4,198 VI callbacks, and all 11 PIF
@@ -203,6 +212,12 @@ believable because the identity audit ruled out artifact and plugin drift while
 leaving runtime behavior as the remaining broad class.
 
 2. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s784:** the batched parser-chain audit was unevaluable: both the verbose-chain run and its low-noise fixed rerun had positive control tasks (`emit=1`, `raw=1`, `dispatch=1`, `match=1`) but died at VI 640 before the 1024/post-sec2 gate; the first was a `viRetraceHandlerThread` SIGBUS and the fixed rerun an abort. No parser conclusion is supported. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: obtain one post-sec2 reachability result with a stability-oriented recipe before interpreting the parser chain. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+
+   **s787 update:** the repeat had positive controls but died at VI 640 in RT64
+   `findTileCopyId` before the 1024 gate. With s785's Metal barrier and s786's
+   grid-allocation failures, this is the third distinct pre-chain family;
+   next is a systematic allocation/grid crash-idiom audit before another
+   reachability soak.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
