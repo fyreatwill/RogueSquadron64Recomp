@@ -58453,3 +58453,39 @@ mitigation, or game behavior changed. This is source inventory evidence only.
 ORIGIN: complete generated loop/callee/caller and companion-symbol inventory;
 the only change is correcting the structural classification, with no guest
 value mutation or runtime mitigation.
+## 2026-08-13 — s918: accumulateVoiceSampleOffset inventory
+
+### What ran
+
+Performed the prescribed source-only M3 idiom inventory of
+`accumulateVoiceSampleOffset` (`0x8009BD7C`, size `0x8C`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. No build, game run, or soak was
+needed. The site table covered the loaded-state gate, stack-sourced slot
+index, all slot arithmetic, the `consumeVoiceSamples` call, the accumulated
+offset field, return behavior, generated references, and companion artifacts.
+
+The helper reads byte `0x800A5121`; when nonzero, it computes the slot offset
+as `index * 0x1228`, forms `0x80153420 + offset`, passes that slot base and
+`a1+a3` to `consumeVoiceSamples`, then reads and writes slot `+0x463C` as
+`old + (a1+a3)`. There is no loop, sentinel, or local termination hazard. It
+returns zero on both the gated and active paths. No generated direct caller or
+address reference was found in the recompiled function files.
+
+The companion `main_overlay.txt` names the helper and its neighboring voice
+functions; `docs/subtitles/subtitles.md` independently documents the speech
+globals and MORT offset layout. Those artifacts label `0x800A5121` as
+`speechFileLoaded`, while generated voice-table initialization/shutdown uses
+the same byte as a voice-subsystem lifecycle gate. The slot stride and field
+shape are coherent, but the dynamic index and value meaning are not proved.
+
+### Rules out / narrows
+
+This inventory rules out a local loop or termination hazard and finds no
+caller-shape split in generated code, but it does not establish that the
+stack-sourced index is bounded or that the `0x800A5121` gate has one stable
+semantic role. H-speech-offset-classified is therefore not selected;
+H-speech-offset-unclassified remains active. No guard, mitigation, or game
+behavior changed. This is source inventory evidence only.
+
+ORIGIN: complete generated-function, callee, reference, and companion-artifact
+inventory; no guest value mutation, mitigation, or runtime behavior changed.

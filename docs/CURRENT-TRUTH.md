@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s917 (2026-08-13). The active blocker is the authoritative
+Reviewed through s918 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -195,6 +195,15 @@ closed. M3 work is limited to systematic idiom-class audits.
   max-voice-count byte, zeros the matching table slot, and frees the active
   speech/control buffers under their existing gates. Dynamic pointer/value
   legitimacy remains unproven; no guard or behavior change.
+- s918 audited `accumulateVoiceSampleOffset`'s complete helper. Its slot
+  offset arithmetic is exactly `index * 0x1228`, and it calls
+  `consumeVoiceSamples(slotBase, a1+a3)` before adding that amount to slot
+  `+0x463C`; there is no loop or local termination hazard. However, the
+  stack-sourced index is unchecked, no generated caller was found, and the
+  companion artifacts label `0x800A5121` as `speechFileLoaded` while the
+  generated init/shutdown lifecycle uses it as a voice-subsystem gate. The
+  shape is coherent but dynamic index/value legitimacy remains unproven; no
+  guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -228,6 +237,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s915 | `initMusyXVoiceTable` inventory: one caller and one proven slot initialization at `0x80153420`, capacity-1 control queue creation/seeding, fixed `0x21C8` allocation, callback registration, max-voice-count reset, and active-byte reset; no local speech-file DMA/cleanup and no shape mismatch, while dynamic allocation/callback legitimacy remains unproven; no mitigation. |
 | s916 | Initial shutdown inventory said the active-byte wait was bounded to one slot; superseded by s917 after the branch/termination audit found no finite bound. |
 | s917 | Re-audit correction: the first shutdown loop is exactly one slot-0 call, but the second active-byte scan has no finite bound and repeats while the slot remains active; `stopVoiceSlotSynced` can leave state 3, so termination depends on an external/later clear. Caller and slot shape still agree; no mitigation. |
+| s918 | `accumulateVoiceSampleOffset` inventory: fixed `index*0x1228` slot arithmetic, one `consumeVoiceSamples` call, one `+0x463C` accumulation, no loop, and no generated callers found. The unchecked index and the `0x800A5121` symbol/lifecycle discrepancy leave dynamic legitimacy unresolved; no mitigation. |
 | s895 | `setVoiceVolumePanLocked` inventory: one gate read, one nonzero handle check, no target dereference/loop, and one mutex-protected modulation call; shape is coherent, but caller-derived handle/parameter writers are not independently proven legitimate; no mitigation. |
 | s896 | `stopStreamedVoice` inventory: one audio-enable gate, one computed 24-byte streamed-voice state access, state-1 check/clear, and `silenceVoiceSlot` call; the caller-derived voice index has no independent bound or writer-legitimacy proof, so full classification remains unresolved; no mitigation. |
 | s897 | `compute3DSourceSpatialMix` inventory: null-terminated `0x80153418` source-list walk, complete spatial-distance/mix/pan/output access table, and independent node/list writer cross-checks; structure passes but dynamic node/input writer legitimacy remains unproven and shapes are mixed; no mitigation. |
@@ -273,22 +283,22 @@ shape, not a local termination bound. No runtime conclusion follows.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-speech-offset-inventory
+HYPOTHESIS-ID: m3-voice-stream-dma-inventory
 
-Audit the adjacent generated audio helper `accumulateVoiceSampleOffset`
-(`0x8009BD7C`) as a complete function. Do not add a guard or change game
+Audit the adjacent generated audio helper `dmaVoiceSampleAndSignal`
+(`0x8009BE08`) as a complete function. Do not add a guard or change game
 behavior.
 
 Competing hypotheses:
 
-- H-speech-offset-unclassified: the helper's cursor/offset arithmetic mixes
-  incompatible speech-buffer shapes or has an unproven bound.
-- H-speech-offset-classified: its input/output fields, arithmetic, and callers
-  form one explicit bounded contract.
-- H-speech-offset-shape-mismatch: a caller or sibling helper supplies a
-  different buffer/offset contract; record the exact split and stop.
+- H-voice-stream-dma-unclassified: the helper's DMA arguments, queue signal,
+  or slot fields contain an unchecked or incompatible pointer/size contract.
+- H-voice-stream-dma-classified: it is a fixed-shape synchronous DMA followed
+  by one queue signal, with all callers supplying the same slot/message form.
+- H-voice-stream-dma-shape-mismatch: a caller or sibling helper supplies a
+  different DMA or queue contract; record the exact split and stop.
 Discriminating measurement: a complete site table for
-`accumulateVoiceSampleOffset`, every buffer/global load and store, all
+`dmaVoiceSampleAndSignal`, every DMA/queue/global load and store, all
 generated callers, and the companion symbol/decomp basis. Any omitted access,
 unbounded arithmetic/termination, or incompatible caller shape rejects full
 classification.
