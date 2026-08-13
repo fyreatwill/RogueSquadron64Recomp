@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s907 (2026-08-13). The active blocker is the authoritative
+Reviewed through s909 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -208,6 +208,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s906 | `normalizeVec3` inventory: one fixed-shape in-place 3-float read/normalize/write path, one caller, and a caller-side zero-vector gate; no local zero-norm check, while input/output value legitimacy remains unproven; no mitigation. |
 | s907 | `crossProductVec3` inventory: fixed-shape 3-float cross product with six input reads and three output writes; both generated callers pass matching slices of the same listener-node record, with no loop or derived pointer walk; dynamic input/output writer legitimacy remains unproven; no mitigation. |
 | s908 | `invertOrientationMatrix` inventory: fixed-shape 12-float affine inverse with input/output offsets `0x00..0x2C`; two generated callers pass the same stack-temporary-to-record shape and no incompatible aliasing; dynamic matrix values/writers remain unproven; no mitigation. |
+| s909 | `findVoiceSlotByAge` inventory: one generated caller and one coherent MusyX table shape (`0x80154620`, stride `0x1228`, active `+0x4620`, age/handle `+0x4644`, counter `0x80154648`); no pointer walk or caller-shape mismatch, but caller-derived index/counter legitimacy remains unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -228,26 +229,25 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `findVoiceSlotByAge` (`0x8009AF60`),
+Audit the next adjacent audio function, `stopVoiceSlotSynced` (`0x8009B268`),
 as a complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-find-voice-unclassified: the helper has an unchecked or aliasing-sensitive
-  writer/initialization obligation that cannot be classified from the function
-  and sibling writers.
-- H-find-voice-fully-classified: all slot/list reads and writes are bounded by
+- H-stop-voice-unclassified: the helper has an unchecked or aliasing-sensitive
+  slot/list access whose writer/initialization obligation cannot be classified
+  from the function and sibling writers.
+- H-stop-voice-fully-classified: all slot/list reads and writes are bounded by
   the function's controls, and its callers agree on the same layout.
-- H-find-voice-shape-mismatch: callers use incompatible layouts or the
-  function's output aliases a state structure; record the exact split and
-  stop.
+- H-stop-voice-shape-mismatch: callers use incompatible layouts or the helper's
+  output aliases a state structure; record the exact split and stop.
 
-Discriminating measurement: a complete site table for `findVoiceSlotByAge`, every
-slot/list load/store and control operation, all generated callers, and the
+Discriminating measurement: a complete site table for `stopVoiceSlotSynced`,
+every slot/list load/store and control operation, all generated callers, and the
 companion symbol/decomp basis. Any omitted access or incompatible caller shape
 rejects full classification.
 
-Exact commands: use `rg` to enumerate `findVoiceSlotByAge` and its callsites in
+Exact commands: use `rg` to enumerate `stopVoiceSlotSynced` and its callsites in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
 companion `rogue_squadron64` symbol/decomp files. No game build or soak is
 planned.

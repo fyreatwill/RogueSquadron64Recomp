@@ -58070,3 +58070,42 @@ source inventory does not establish runtime legitimacy. This is single-source
 inventory evidence and authorizes no guard or mitigation.
 
 ORIGIN: complete generated-helper, both-caller, matrix-layout, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s909 (2026-08-13) — findVoiceSlotByAge has one coherent table shape but unproven index legitimacy
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`findVoiceSlotByAge` (`0x8009AF60`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerated every local load/store,
+the generated caller, the shared voice-table field uses, and the companion
+symbol/decomp basis. No build, game run, or soak was needed.
+
+The helper uses the MusyX voice table rooted at `0x80154620`, with a
+`0x1228` slot stride. Its complete local access set is: global counter
+`0x80154648` loads at `0x8009AF70`, `0x8009AFC0`, and `0x8009AFFC`, counter
+stores at `0x8009AFCC`, `0x8009AFDC`, `0x8009B020`, and `0x8009B030`; one
+active-byte read at slot `+0x4620` (`0x8009AF80`); one age/handle-word read at
+slot `+0x4644` (`0x8009AF9C`); and one selected-slot handle store at `+0x4644`
+(`0x8009B014`). The remaining operations are candidate-index arithmetic,
+counter comparisons, and the `0x1228` slot advance.
+
+`allocAndConfigureNewVoice` is the only generated caller (`0x8009B220`),
+passing `s1`, the result of its own stride-based scan of the same table. The
+companion symbol file independently names `findVoiceSlotByAge`; its adjacent
+MusyX annotations identify the table root, stride, active field, and handle
+field. No pointer-valued load, linked-list walk, hidden loop body, or
+incompatible caller layout was found.
+
+### Rules out / narrows
+
+This audit rules out an omitted local table access, pointer/list walk, and
+generated caller-shape mismatch. It does not prove the caller-derived `s1`
+index or the global age-counter transitions legitimate or bounded in the
+runtime state. H-find-voice-fully-classified is therefore not selected;
+H-find-voice-unclassified remains active. No guard, mitigation, or game
+behavior changed. This is source inventory evidence only.
+
+ORIGIN: complete generated-helper, sole-caller, shared-field, and
+companion-symbol inventory; no guest value, writer mutation, mitigation, or
+runtime behavior changed.
