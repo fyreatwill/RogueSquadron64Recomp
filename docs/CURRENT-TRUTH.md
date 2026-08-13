@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s872 (2026-08-13). The active blocker is the authoritative
+Reviewed through s873 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -849,6 +849,59 @@ stopped; the next unit pivots to a source-only state-gate idiom audit.
 ORIGIN: independent retail whole-RDRAM, PIF, and VI controls plus debugger
 watch PCs; no port value, game behavior, or mitigation behavior changed.
 
+
+## s873 result — frame-tick/coalescer state-gate audit
+
+The complete generated-tree audit is recorded in
+[`docs/M3-COALESCE-PHASE-GATE-AUDIT.md`](M3-COALESCE-PHASE-GATE-AUDIT.md).
+`0x801163f8` has exactly two writers, both in `partitionFramebufferMemory`:
+the fourth-boundary fit branch at `0x80001024` and its complementary residual
+branch at `0x80001038`. The routine runs once from the boot worker and again
+from the normal `runVideoFrameTick` path. The tick has four direct callers:
+two `mainGameLoop` paths, `initSceneForMission`, and `menuOverlayInit`.
+
+The tick unconditionally calls `coalesceFreeHeapBlocks` after partitioning;
+the partition return only changes its arguments. There is no audio/input
+predicate around the tick or coalescer. `menuOverlayInit` does have a separate
+audio wait loop before its tick call, and that loop reaches the audio-disabled
+`audioStubReturnZero`, but this does not gate the other callers or the tick's
+internal path. This source-only inventory selects H-retail-driver-only over a
+missing/stale port writer or audio/input gate. It does not establish runtime
+value legitimacy or explain the retail width-320 stall, so no mitigation is
+justified.
+
+ORIGIN: generated-tree source inventory only; no guest value, control flow, or
+mitigation behavior changed.
+
+## Next work unit: audit the video-ready/display-mode gate
+
+Perform one source-only whole-idiom audit of `setDisplayMode`,
+`reapplyDisplayMode`, `setVideoReadyFlag`, `setViModeType`, and
+`thread3_video_handle`, including every writer/read/callsite in the chain
+before `runVideoFrameTick`. Do not build, run, or change behavior. Classify
+each site as initialization, per-frame update, gate, or dead/unreachable, and
+identify the exact predicate/value that could keep startup at VI width 320.
+
+Competing hypotheses:
+
+- H-video-ready-port-gate: a port readiness/display-mode writer or predicate is
+  systematically stale or missing.
+- H-retail-state-machine: the port pre-tick gates are complete; the width-320
+  stall is outside this call chain.
+- H-audio-display-coupling: a display-mode transition depends on an audio
+  completion path that remains stubbed.
+
+Discriminator: a complete source inventory with no audio dependency selects
+H-retail-state-machine; a missing/stale readiness writer selects
+H-video-ready-port-gate; an audio-only producer for a transition predicate
+selects H-audio-display-coupling. An incomplete callsite inventory is
+unevaluable.
+
+Exact command from the repo root:
+
+```sh
+rg -n "setDisplayMode|reapplyDisplayMode|setVideoReadyFlag|setViModeType|thread3_video_handle|8000274C|80003380|8008EA14|8011.*2DEF" ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime
+```
 
 ## Closed and parked
 

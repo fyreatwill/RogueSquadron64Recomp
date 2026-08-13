@@ -1,40 +1,36 @@
-# NEXT work unit (s873)
+# NEXT work unit (s874)
 
-HYPOTHESIS-ID: m3-coalescer-state-gate-audit
+HYPOTHESIS-ID: m3-video-ready-display-gate-audit
 
-Perform one source-only, whole-idiom audit of the state gate that should drive
-`runVideoFrameTick` past the width-320 boot phase. Do not build or run. Enumerate
-every generated-tree read/write and callsite for the frame-tick state at
-`0x801163f8`, the phase/VI state used by `runVideoFrameTick`, and the input/audio
-gates immediately surrounding its calls to `partitionFramebufferMemory` and
-the coalescer. Classify each site as initialization, per-frame update, gate,
-or dead/unreachable, and identify the exact value that can keep the gate in
-the observed boot state. Do not add a guard or alter behavior.
+Perform one source-only whole-idiom audit of `setDisplayMode`,
+`reapplyDisplayMode`, `setVideoReadyFlag`, `setViModeType`, and
+`thread3_video_handle`, including every writer/read/callsite in the chain
+before `runVideoFrameTick`. Do not build or run. Classify each site as
+initialization, per-frame update, gate, or dead/unreachable, and identify the
+exact predicate/value that could keep startup at VI width 320. Do not add a
+guard or alter behavior.
 
 Competing hypotheses:
 
-- H-port-state-gate: the port has a systematic missing/stale writer or gate
-  input that holds the frame-tick state at the boot phase.
-- H-retail-driver-only: the generated port gate is complete; the retail oracle
-  stall is an emulator/frontend driving issue unrelated to the port state.
-- H-audio/input-gate: the gate depends on an audio or input completion path that
-  is stubbed or never delivered in the port.
+- H-video-ready-port-gate: a port readiness/display-mode writer or predicate is
+  systematically stale or missing.
+- H-retail-state-machine: the port pre-tick gates are complete; the width-320
+  stall is outside this call chain.
+- H-audio-display-coupling: a display-mode transition depends on an audio
+  completion path that remains stubbed.
 
-Discriminating measurement: the complete source inventory must identify (or
-fail to identify) a writer and gate predicate for every transition-relevant
-state value, with independent callsite coverage. A missing/stale port writer
-selects H-port-state-gate; complete port coverage with no audio/input dependency
-selects H-retail-driver-only; a transition gate whose only producer is an
-audio/input completion path selects H-audio/input-gate. An incomplete inventory
-is unevaluable and must be fixed before any runtime experiment.
+Discriminating measurement: a complete source inventory with no audio
+dependency selects H-retail-state-machine; a missing/stale readiness writer
+selects H-video-ready-port-gate; an audio-only producer for a transition
+predicate selects H-audio-display-coupling. An incomplete callsite inventory
+is unevaluable.
 
-Exact commands from the repo root:
+Exact command from the repo root:
 
 ```sh
-rg -n "801163f8|runVideoFrameTick|partitionFramebufferMemory|800022F8|waitForAnyAudioSlot|osCont|PAD|audio" RecompiledFuncs src lib/N64ModernRuntime
-rg -n "801163f8|runVideoFrameTick|partitionFramebufferMemory|800022F8" docs PORTING-STATE.md | tail -80
+rg -n "setDisplayMode|reapplyDisplayMode|setVideoReadyFlag|setViModeType|thread3_video_handle|8000274C|80003380|8008EA14|8011.*2DEF" ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime
 ```
 
-Read bounded windows around every generated-function hit; do not read the
-ledger whole. Record the site inventory and any source-only conclusion in the
-session ledger and CURRENT-TRUTH.
+Read bounded windows around every generated-function hit. Do not build or run.
+Record the inventory and source-only conclusion in the session ledger and
+CURRENT-TRUTH.

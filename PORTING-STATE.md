@@ -56904,3 +56904,29 @@ state-machine stall, classify a later writer, or justify a mitigation.
 
 ORIGIN: independent retail PIF button-word trace plus whole-RDRAM and VI
 positive controls; no port value, game behavior, or mitigation changed.
+
+## Session s873 (2026-08-13) — frame-tick/coalescer state-gate audit
+
+Performed the prescribed source-only whole-idiom audit against the generated
+tree in `../N64Recomp/RecompiledFuncs`; no build or run was performed. The
+`0x801163f8` state word has exactly two writers, both in
+`partitionFramebufferMemory`: `0x80001024` writes the fourth-boundary fit
+value and `0x80001038` writes the complementary residual value. It is read by
+the boot worker and by `runVideoFrameTick` before coalescing. The same
+partition routine refreshes the companion globals on both its boot and normal
+frame callsites.
+
+The complete direct-call inventory found four `runVideoFrameTick` callsites:
+two in `mainGameLoop`, one in `initSceneForMission`, and one in
+`menuOverlayInit`. The tick always calls `partitionFramebufferMemory` and then
+`coalesceFreeHeapBlocks`; the partition return only changes coalescer
+arguments. No input predicate or audio predicate surrounds the tick or
+coalescer. `menuOverlayInit` has a separate pre-tick audio wait loop reaching
+the audio-disabled `audioStubReturnZero`, but it is not a common frame-tick
+gate. This selects the source-level H-retail-driver-only branch over a missing
+port writer or audio/input gate, while remaining single-source evidence. It
+does not establish runtime pointer legitimacy, explain the retail width-320
+stall, or justify a mitigation.
+
+ORIGIN: generated-tree source inventory only; no guest value, control flow, or
+mitigation behavior changed.
