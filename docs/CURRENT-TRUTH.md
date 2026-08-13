@@ -212,6 +212,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s910 | `stopVoiceSlotSynced` inventory: one computed MusyX slot shape (`0x80154620`, stride `0x1228`), active/state reads and writes, shared queue, and `slot+0x3420` stop call; both callers agree on the slot-index contract and no local walk or shape mismatch exists, but caller-derived index/state legitimacy remains unproven; no mitigation. |
 | s911 | `setVoiceMixByKey` inventory: one coherent MusyX slot shape with active/key/handle reads, three mix-byte stores, shared queue, and two matching callers; emitted control exits after the first failed candidate, so writer/value legitimacy and the unusual one-candidate behavior remain unproven; no mitigation. |
 | s912 | `serviceVoicePoolFrame` inventory: one coherent `0x80154620` voice-slot shape with `0x1228` stride, state/streaming accesses, queue operations, and no pointer/list walk; no generated direct caller was found, and queue/state plus shared-field writer legitimacy remain unproven; no mitigation. |
+| s913 | `getVoicePlaybackProgressByKey` inventory: two callers agree on a handle-plus-output-float contract and the helper's `0x80154620`/`0x1228` slot shape; the helper has an explicit `speechFileLoaded` gate but no finite scan bound or sentinel, and its miss path reaches the 32-bit counter wrap. Slot progress reads and queue handoff are classified, but scan termination and dynamic writer/value legitimacy remain unproven; no guard or behavior change. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -232,28 +233,25 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `getVoicePlaybackProgressByKey`
-(`0x8009B8A8`), as a complete generated function. Do not add a guard or
-change game behavior.
+Audit the next adjacent audio function, `loadSpeechFile` (`0x8009BA38`), as a
+complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-voice-progress-unclassified: the helper has an unchecked or
-  aliasing-sensitive slot/table access whose writer/initialization obligation
-  cannot be classified from the function and sibling writers.
-- H-voice-progress-fully-classified: all slot/table reads and writes are
-  bounded by the function's controls, and its callers agree on the same
-  layout.
-- H-voice-progress-shape-mismatch: callers use incompatible layouts or the
-  helper's output aliases a state structure; record the exact split and stop.
-
+- H-load-speech-unclassified: the loader mixes speech-file state, allocation,
+  DMA/asset ownership, and voice-table teardown or setup paths whose bounds or
+  writers cannot be classified from the function and sibling helpers.
+- H-load-speech-fully-classified: all dynamic pointers, sizes, state gates, and
+  cleanup paths have explicit controls, and companion callers agree on them.
+- H-load-speech-shape-mismatch: callers or sibling helpers use incompatible
+  asset/buffer layouts; record the exact split and stop.
 Discriminating measurement: a complete site table for
-`getVoicePlaybackProgressByKey`,
-every slot/list load/store and control operation, all generated callers, and the
+`loadSpeechFile`, every pointer/size/state load/store and control operation, all
+generated callers, and the
 companion symbol/decomp basis. Any omitted access or incompatible caller shape
 rejects full classification.
 
-Exact commands: use `rg` to enumerate `serviceVoicePoolFrame` and its callsites in
+Exact commands: use `rg` to enumerate `loadSpeechFile` and its callsites in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
 companion `rogue_squadron64` symbol/decomp files. No game build or soak is
 planned.

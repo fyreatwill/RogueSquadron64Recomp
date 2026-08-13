@@ -58244,3 +58244,44 @@ inventory evidence only.
 ORIGIN: complete generated-helper, sibling-field, overlay-registration, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
+
+## 2026-08-13 — s913: getVoicePlaybackProgressByKey inventory
+
+Ran the prescribed source-only M3 idiom inventory for
+`getVoicePlaybackProgressByKey` (`0x8009B8A8`) in generated `funcs_26.c`.
+No build, game run, or soak was needed. The discriminating site table covered
+the gate, scan, slot reads, queue operations, output store, arithmetic path,
+and both generated callers.
+
+The helper gates on `speechFileLoaded` at `0x800A5121`, scans the MusyX voice
+table rooted at `0x80154620` with `0x1228` stride, reads `slot+0x4620` and
+`slot+0x4644` while matching the input handle, then receives and sends on the
+voice queue at `0x80154650`. For a matching slot it re-derives the same slot
+address, reads state `+0x4620`, progress fields `+0x463C` and `+0x4628`, and
+the output float at `+0x4640`, storing that float through caller-provided
+`a1`. It performs no voice-table writes. The scan counter starts at zero,
+increments on misses, and tests for zero; absent a match, termination is only
+the 32-bit counter wrap, with no finite bound or sentinel in this function.
+
+The two callers are `tickVoiceSubtitleDisplay` (`funcs_12.c`) and
+`getSpeechPlaybackElapsedTime` (`funcs_15.c`). Both pass a voice handle from a
+caller-owned record and a stack float output, then consume `f0`; no caller
+shape mismatch or output alias was found. The generated sibling scans use the
+same table base/stride and handle field. The companion symbols independently
+identify the MusyX table, stride, queue, and initialization roles, but do not
+establish the helper's scan bound or prove dynamic writer/value legitimacy.
+
+### Rules out / narrows
+
+This audit rules out an incompatible caller contract, an alternate local slot
+shape, an omitted table write, and a local pointer/list walk. It does not prove
+that the unbounded scan idiom is safe, that a matching handle is guaranteed, or
+that the progress/state writers are legitimate and correctly ordered.
+H-voice-progress-shape-mismatch is refuted; H-voice-progress-unclassified
+remains active. No guard, mitigation, or game behavior changed. Two independent
+source lines (generated callers/function and companion symbols/sibling scans)
+support the shape result; no runtime legitimacy conclusion follows.
+
+ORIGIN: complete generated-helper, caller, sibling-scan, and companion-symbol
+inventory; no guest value, writer mutation, mitigation, or runtime behavior
+changed.
