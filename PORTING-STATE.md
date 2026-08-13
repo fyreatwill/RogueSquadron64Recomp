@@ -56268,3 +56268,21 @@ as a separate question. No behavior, game value, or mitigation changed.
 
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
+
+## Session 846 (2026-08-13) — installed Factor 5 triangle map is a direct RT64 override
+
+Performed the prescribed bounded source/reference audit; no build or run was
+performed. `GBI_F3DFACTOR5::setup` inherits F3DEX and then directly assigns both
+`0xB4` and `0xBF` to `op_consume16`. That handler only advances one extra
+8-byte word and has no geometry side effect. CMake compiles this checked-in
+RT64 source independently of the generated RSP C, and the complete
+`tools/fixup_factor5_ucode.py` search contains no `0xB4/0xBF` rewrite. The
+independent reference identifies `0xB4` as TRI2 and `0xBF` as TRI1, both real
+geometry commands with conditional 8/24-byte totals. This selects
+H-map-regression for the installed map and rules out H-generated-source for
+this discrepancy. The s844 operand-shape evidence keeps H-garbage-candidate
+open as a separate stream-provenance question. No writer, legitimacy, or
+mitigation basis was established.
+
+ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
+behavior changed.

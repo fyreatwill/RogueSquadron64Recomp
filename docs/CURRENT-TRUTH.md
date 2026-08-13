@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s845 (2026-08-13). The active blocker is the authoritative
+Reviewed through s846 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -233,44 +233,47 @@ Priority until changed by the user:
   stream-provenance question; no writer or legitimacy claim exists, so no
   mitigation or behavior change is justified.
 
-## Next work unit: classify the Factor 5 triangle map discrepancy
+## Next work unit: within-run A/B of the Factor 5 triangle map
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one bounded source audit of the installed Factor 5 triangle path and
-the regeneration/fixup source that produces it. Do not build, run, or change
-behavior.
+Perform one phase-gated runtime A/B that builds both arms in the same iteration:
+the current consume-only `0xB4/0xBF` map and a reference-shaped handler arm
+that decodes triangle indices and applies the conditional 8/24-byte advance.
+Batch the existing positive E9, VI-width, triangle-dispatch, copy-cycle, and
+DL-sync controls in one build and capture. Do not add a mitigation or classify
+operand legitimacy.
 
 Competing hypotheses:
 
-- H-map-intentional: the consume-only map is an intentional temporary contract
-  and another path emits the geometry.
-- H-map-regression: the installed map contradicts the reference and the
-  consume-only override is the load-bearing defect.
-- H-generated-source: a fixup or generated-source step rewrites the intended
-  triangle handler/map, so editing the checked-in RT64 map would be the wrong
-  fix location.
+- H-map-load-bearing: the reference-shaped arm increases legitimate triangle
+  dispatch/emission and changes copy-cycle or DL-sync outcomes.
+- H-map-intentional: the reference-shaped arm does not improve controls or
+  introduces stream drift, so another producer/path is required.
+- H-map-garbage: candidates are not valid triangles, so decoding them produces
+  no legitimate geometry and the map discrepancy is incidental.
 
-Discriminator: trace the complete map-to-handler path and every source/fixup
-definition for 0xB4/0xBF, then compare its intended command length and geometry
-side effects with the independent reference. A deliberate alternate geometry
-producer selects H-map-intentional; an unreferenced consume-only override that
-contradicts the reference selects H-map-regression; a regeneration rewrite
-selects H-generated-source. No behavior change or mitigation is allowed in
-this audit.
+Discriminator: compare per-arm triangle handler/emission counts, copy-cycle
+assertions, and DL-sync progression within the same phase/VI population. A
+positive-control-preserving geometry increase with improved sync selects
+H-map-load-bearing; unchanged or worsened behavior with opcode/operand drift
+selects H-map-intentional or H-map-garbage. Any mitigation still requires an
+ORIGIN naming the writer and a legitimacy assessment.
 
 ## Ranked backlog
 
-1. Identify which RT64 parser byte/pending/guard condition accounts for the
+1. Run the within-run Factor 5 triangle-map A/B and classify geometry/sync
+   effects; no mitigation until stream provenance and legitimacy are known.
+2. Identify which RT64 parser byte/pending/guard condition accounts for the
    lower late E9 count; no behavior change until the condition is proven.
-2. Only after that classification, identify the responsible parser/counting
+3. Only after that classification, identify the responsible parser/counting
    path and consider an implementation fix.
-3. M3 co-gates and crash families: pursue only a complete idiom inventory,
+4. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.
-4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
+5. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`; each needs independent controls.
-5. Regeneration-pipeline reliability: retain the delete-before-regen rule and
+6. Regeneration-pipeline reliability: retain the delete-before-regen rule and
    audit fixup counts when a reproducible omission appears.
 
 ## Closed and parked

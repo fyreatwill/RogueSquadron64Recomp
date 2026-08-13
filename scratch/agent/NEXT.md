@@ -1,28 +1,37 @@
-# NEXT work unit (classify the Factor 5 triangle map discrepancy)
+# NEXT work unit (within-run A/B of the Factor 5 triangle map)
 
 HYPOTHESIS-ID: m3-drawindexed-copy-cycle
 
-Perform one bounded source audit of the installed Factor 5 triangle path and
-the regeneration/fixup source that produces it. Do not build, run, or change
-behavior.
+Build both the current consume-only Factor 5 `0xB4/0xBF` map and a
+reference-shaped handler arm in one iteration, then run a phase-gated within-
+run A/B. Batch positive E9 provenance, VI width, triangle dispatch, copy-cycle,
+and DL-sync controls in the same build and capture. Do not add a mitigation or
+classify operand legitimacy.
 
 Competing hypotheses and discriminator:
 
-- H-map-intentional: the consume-only map is an intentional temporary contract
-  and another path emits the geometry.
-- H-map-regression: the installed map contradicts the reference and the
-  consume-only override is the load-bearing defect.
-- H-generated-source: a fixup or generated-source step rewrites the intended
-  triangle handler/map, so editing the checked-in RT64 map would be the wrong
-  fix location.
+- H-map-load-bearing: the reference-shaped arm increases legitimate triangle
+  dispatch/emission and changes copy-cycle or DL-sync outcomes.
+- H-map-intentional: the reference-shaped arm does not improve controls or
+  introduces stream drift, so another producer/path is required.
+- H-map-garbage: candidates are not valid triangles, so decoding them produces
+  no legitimate geometry and the map discrepancy is incidental.
 
-Discriminator: trace the complete map-to-handler path and every source/fixup
-definition for 0xB4/0xBF, then compare its intended command length and geometry
-side effects with the independent reference. A deliberate alternate geometry
-producer selects H-map-intentional; an unreferenced consume-only override that
-contradicts the reference selects H-map-regression; a regeneration rewrite
-selects H-generated-source. No behavior change or mitigation is allowed in
-this audit.
+Discriminator: compare per-arm triangle handler/emission counts, copy-cycle
+assertions, and DL-sync progression within the same phase/VI population. A
+positive-control-preserving geometry increase with improved sync selects
+H-map-load-bearing; unchanged or worsened behavior with opcode/operand drift
+selects H-map-intentional or H-map-garbage. Any mitigation still requires an
+ORIGIN naming the writer and a legitimacy assessment.
+
+Exact execution: add both map arms and one in-process toggle, then run
+`cmake --build build --config Debug --target RogueSquadron64Recomp`; execute
+`env ROGUESQ_LOG_E9_PROVENANCE=1 ROGUESQ_LOG_E9_DISPATCH=1
+ROGUESQ_LOG_RDP_ADVANCE=1 ROGUESQ_LOG_RDP_FULLSYNC=1 ROGUESQ_LOG_DL_SYNC=1
+ROGUESQ_LOG_TRI_COPY=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1
+zsh scratch/agent/s790_postsec2_reachability.sh` from the repo root, with the
+script's `build/` launch and watchdog retained. Use SIGKILL for timeout. Do
+not run a cross-run animating-scene comparison.
 
 Evidence from s844/s845: the phase-gated run reached VI 1024 and produced 392
 positive E9 provenance rows. It recorded 112 candidate rows (37 B4, 75 BF;
