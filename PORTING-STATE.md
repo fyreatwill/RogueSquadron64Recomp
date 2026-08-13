@@ -57152,3 +57152,33 @@ changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s883 (2026-08-13) — stop-song linked-list chains are parallel but writer legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `stopSongByHandle`
+(`0x8009582C`) in the external generated tree, with the companion MusyX
+symbol artifacts. The complete function has two parallel chain sites:
+
+| Guest site | Operation | Predecessor / writer basis |
+|---|---|---|
+| `0x80095960` | load slot `+0xE78` into head | slot index is bounded to 8 entries; no direct head null proof until the following branch |
+| `0x8009596C` | read `head+0x0` | follows the `+0xE78` load and its non-null branch |
+| `0x80095978` | reload `next+0x0` | loop body follows the prior non-null `next` test; terminates when next is zero |
+| `0x800959B0` | load slot `+0xE7C` into head | same bounded slot-index calculation; no direct head null proof until the following branch |
+| `0x800959BC` | read `head+0x0` | follows the `+0xE7C` load and its non-null branch |
+| `0x800959C8` | reload `next+0x0` | loop body follows the prior non-null `next` test; terminates when next is zero |
+
+The semantic writer inventory across the generated tree is complete: slot
+initialization clears both fields at `0x8009469C/0x800946A0`; active-track
+linking writes `+0xE78` at `0x80094C3C` and `0x80094D24`; scheduled-event
+processing writes `+0xE78` at `0x80094E60` and `+0xE7C` at `0x80094E90`;
+`stopSongByHandle` clears them at `0x800959A4/0x800959F4`; and the sequence
+and all-active-song consumers clear them at `0x80095C54/0x80095CA4` and
+`0x80096FD8`. Delay-slot duplicates were counted once. The companion symbols
+independently identify the table as eight MusyX song slots at base `0x80149A00`
+with stride `0xEF8`, but do not prove the legitimacy of every linked-list
+writer or value. H-stop-song-unclassified is selected; no guard, build, soak,
+or runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.

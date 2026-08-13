@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s882 (2026-08-13). The active blocker is the authoritative
+Reviewed through s883 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -69,6 +69,15 @@ closed. M3 work is limited to systematic idiom-class audits.
   classified, but the function mixes this stream idiom with unrelated channel
   and global-table accesses, and no source/symbol artifact proves the
   legitimacy of the stream pointer. No guard or behavior change.
+- s883 audited `stopSongByHandle`'s two parallel linked-list chains. The
+  `+0xE78` site at `0x80095960–0x8009597C` and the `+0xE7C` site at
+  `0x800959B0–0x800959CC` each load a slot head, null-check it, then follow
+  `next` pointers with a null-terminated loop. All 12 generated writes to
+  these fields were inventoried: slot initialization, active-track and
+  scheduled-event linking, sequence/sweep clearing, and the stop clears.
+  The companion symbol artifacts establish the MusyX slot-table role but do
+  not prove legitimacy of every linked-list writer/value. No guard or
+  behavior change.
 
 ## Recent evidence ledger
 
@@ -86,6 +95,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s879–s880 | Oracle ABI and artifact audits found no safe post-write writer/value route; coalescer legitimacy remains unproven and is parked. |
 | s881 | `model_animation_offset_convert` array-pointer inventory: 6 sites structurally bounded; raw model-blob writer legitimacy remains unproven, so no mitigation. |
 | s882 | `tickAudioChannel` cursor inventory: 1 direct stream dereference, 5 cursor operations, 9 semantic in-function `channel+0x4` writers; shape/writer legitimacy remains unproven, so no mitigation. |
+| s883 | `stopSongByHandle` linked-list inventory: 2 parallel chains, 12 generated `+0xE78/+0xE7C` writes classified; writer/value legitimacy remains unproven, so no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -106,25 +116,26 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-The `tickAudioChannel` cursor inventory is shape-rejected as a whole-function
-idiom and leaves the stream-pointer writer/legitimacy unproven. Do not add a
-guard or change game behavior. Continue M3 with the next bounded pointer-chain
-candidate, `stopSongByHandle`.
+The `stopSongByHandle` inventory found one coherent two-chain idiom, but its
+writers and values are not independently proven legitimate. Do not add a
+guard or change game behavior. Continue the same M3 linked-list audit with
+the sibling consumer `tickSongSequence`, including every `+0xE78/+0xE7C`
+chain site and every writer it relies on.
 
 Competing hypotheses:
 
-- H-next-class-unclassified: the next candidate has at least one pointer site
+- H-tick-song-unclassified: the next candidate has at least one pointer site
   without a proof of safety or a concrete writer/legitimacy explanation.
-- H-next-class-fully-classified: every site in the next candidate is already
+- H-tick-song-fully-classified: every site in the next candidate is already
   proven safe, dead, or covered by an existing justified patch.
-- H-next-inventory-shape-mismatch: the next ranked candidate does not define
+- H-tick-song-shape-mismatch: the next ranked candidate does not define
   one coherent pointer idiom; stop rather than mixing shapes.
 
 Discriminating measurement: a complete site table for the next coherent idiom,
 including source address, checks, and writer/legitimacy basis for every hit.
 Any omitted site or unproven writer rejects full classification.
 
-Exact commands used: use `rg` to enumerate the next candidate in the external
+Exact commands used: use `rg` to enumerate `tickSongSequence` in the external
 generated tree and bounded `sed` windows around every site plus its decomp or
 named-symbol counterpart. No game build or soak is planned.
 
