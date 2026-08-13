@@ -57008,7 +57008,7 @@ a runtime value comparison remains needed.
 ORIGIN: generated-tree source inventory only; no guest value, control flow, or
 mitigation behavior changed.
 
-## Session s877 (2026-08-13) — coalescer late-value comparison remains phase-unreachable
+## Session 877 (2026-08-13) — coalescer late-value comparison remains phase-unreachable
 
 Ran the paired capture using the regeneration-replayable port origin probe and
 retail physical write watches. The port reached VI width 1024, passed 387
@@ -57033,7 +57033,7 @@ retail-value sampler.
 ORIGIN: port diagnostic reads, independent retail physical write/VI/PIF
 controls, and the invalid callback-read attempt; no game behavior or
 mitigation behavior changed.
-## s878 result — maintenance compaction
+## Session 878 (2026-08-13) — maintenance compaction
 
 The required maintenance check found `docs/CURRENT-TRUTH.md` at 61,556 bytes,
 above the 60,000-byte gate. No build, run, soak, or experiment was performed.
@@ -57047,7 +57047,7 @@ than 200 lines; no technical conclusion or mitigation changed.
 ORIGIN: documentation maintenance only; no runtime, guest value, parser,
 writer, or mitigation behavior changed.
 
-## Session s879 (2026-08-13) — oracle debugger ABI cannot sample deferred values
+## Session 879 (2026-08-13) — oracle debugger ABI cannot sample deferred values
 
 Performed the prescribed source/API audit against `tools/oracle/rs64_oracle.c`,
 the oracle README, and the local mupen64plus core's debugger headers and
@@ -57065,7 +57065,7 @@ ground-truth source. No source, game, or mitigation behavior was changed.
 ORIGIN: source/API audit of the independent oracle and its local core; no
 runtime, guest value, control flow, or mitigation behavior changed.
 
-## Session s880 (2026-08-13) — no second independent coalescer value route in local artifacts
+## Session 880 (2026-08-13) — no second independent coalescer value route in local artifacts
 
 Audited the remaining independent ground-truth options without building or
 running the game. The local mupen64plus core has the debugger write wrapper in
@@ -57084,7 +57084,7 @@ illegitimate. No runtime behavior, mitigation, or oracle source changed.
 ORIGIN: bounded source/API and artifact audit of the independent oracle/core
 and decomp; no guest value, control flow, or mitigation behavior changed.
 
-## Session s881 (2026-08-13) — model-animation array walk is bounded but raw blob legitimacy remains open
+## Session 881 (2026-08-13) — model-animation array walk is bounded but raw blob legitimacy remains open
 
 Performed the prescribed source-only M3 inventory against the top-ranked
 `unguarded_walk_candidates.json` entry, `model_animation_offset_convert`, in
@@ -57111,7 +57111,7 @@ behavior changed.
 ORIGIN: bounded generated-source and independent companion-decomp inventory;
 no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s882 (2026-08-13) — audio program cursor class is narrow but writer legitimacy remains open
+## Session 882 (2026-08-13) — audio program cursor class is narrow but writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory against `tickAudioChannel`
 (`0x8008BC10`) in the external generated tree and its companion named-symbol
@@ -57153,7 +57153,7 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s897 (2026-08-13) — 3D source spatial mix is structurally bounded; node and input legitimacy remain open
+## Session 897 (2026-08-13) — 3D source spatial mix is structurally bounded; node and input legitimacy remain open
 
 Performed the prescribed source-only M3 inventory for `compute3DSourceSpatialMix`
 (`0x80098310`) in the external generated tree, cross-checked against the
@@ -57182,7 +57182,7 @@ or runtime behavior changed.
 
 ORIGIN: bounded generated-source, adjacent-writer, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s895 (2026-08-13) — voice volume/pan wrapper is structurally safe; caller legitimacy remains open
+## Session 895 (2026-08-13) — voice volume/pan wrapper is structurally safe; caller legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for
 `setVoiceVolumePanLocked` (`0x800981F0`) in the external generated tree and
@@ -57210,7 +57210,7 @@ runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
-## Session s894 (2026-08-13) — stream sample-size wrapper is fully classified
+## Session 894 (2026-08-13) — stream sample-size wrapper is fully classified
 
 Performed the prescribed source-only M3 inventory for
 `streamSampleCountToByteSize` (`0x800981E4`) in the external generated tree,
@@ -57229,7 +57229,7 @@ guard, build, soak, or runtime behavior changed.
 ORIGIN: bounded generated-source, callsite, and companion-symbol inventory;
 no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s893 (2026-08-13) — streamed-voice flush is bounded but buffer/index legitimacy remains open
+## Session 893 (2026-08-13) — streamed-voice flush is bounded but buffer/index legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for
 `flushStreamedVoiceBuffers` (`0x80097F54`) in
@@ -57258,7 +57258,7 @@ ORIGIN: bounded generated-source inventory plus helper and companion-symbol
 cross-check; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
 
-## Session s892 (2026-08-13) — streamed-voice service mixes callback and buffer shapes; legitimacy remains open
+## Session 892 (2026-08-13) — streamed-voice service mixes callback and buffer shapes; legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `serviceStreamedVoices`
 (`0x80097DA8`) in the external generated tree, cross-checked against the
@@ -57291,7 +57291,7 @@ ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
 
-## Session s891 (2026-08-13) — unload-song-group teardown mixes bounded table walks with unproven parsed bases
+## Session 891 (2026-08-13) — unload-song-group teardown mixes bounded table walks with unproven parsed bases
 
 Performed the prescribed source-only M3 inventory for `unloadLastSndFileGroup`
 (`0x800978EC`) in the external generated tree, cross-checked against the
@@ -57323,7 +57323,7 @@ unresolved. No guard, build, soak, or runtime behavior changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s890 (2026-08-13) — play-song bank lookup mixes bounded scan and unproven record bases
+## Session 890 (2026-08-13) — play-song bank lookup mixes bounded scan and unproven record bases
 
 Performed the prescribed source-only M3 inventory for `playSongByIdLockCtl`
 (`0x80097AD0`) in the external generated tree, cross-checked against the
@@ -57351,7 +57351,7 @@ runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
-## Session s888 (2026-08-13) — advance-song-region mixes pointer shapes; raw writer legitimacy remains open
+## Session 888 (2026-08-13) — advance-song-region mixes pointer shapes; raw writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `advanceSongRegion`
 (`0x80095244`) in the external generated tree, using the companion main-overlay
@@ -57372,7 +57372,7 @@ No guard, build, soak, or runtime behavior changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s887 (2026-08-13) — tick-active-songs dispatcher is bounded; inherited list legitimacy remains open
+## Session 887 (2026-08-13) — tick-active-songs dispatcher is bounded; inherited list legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `tickActiveSongs`
 (`0x80095DA0`) in the external generated tree, with the companion symbol
@@ -57398,7 +57398,7 @@ shape. No guard, build, soak, or runtime behavior changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s885 (2026-08-13) — all-active-song `+0xE7C` chain is structurally guarded; writer legitimacy remains open
+## Session 885 (2026-08-13) — all-active-song `+0xE7C` chain is structurally guarded; writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `tickAllActiveSongs`
 (`0x80096D08`) in the external generated tree, with the companion MusyX
@@ -57432,7 +57432,7 @@ is selected; no guard, build, soak, or runtime behavior changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s884 (2026-08-13) — tick-song linked-list consumers are structurally guarded; writer legitimacy remains open
+## Session 884 (2026-08-13) — tick-song linked-list consumers are structurally guarded; writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `tickSongSequence`
 (`0x80095ADC`) in the external generated tree. The complete function has four
@@ -57464,7 +57464,7 @@ writer origin. No guard, build, soak, or runtime behavior changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s883 (2026-08-13) — stop-song linked-list chains are parallel but writer legitimacy remains open
+## Session 883 (2026-08-13) — stop-song linked-list chains are parallel but writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `stopSongByHandle`
 (`0x8009582C`) in the external generated tree, with the companion MusyX
@@ -57493,7 +57493,7 @@ or runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
-## Session s886 (2026-08-13) — scheduled-song insertion is structurally guarded; writer legitimacy remains open
+## Session 886 (2026-08-13) — scheduled-song insertion is structurally guarded; writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `tickScheduledSongEvents`
 (`0x80094DB4`) in the external generated tree, with the companion symbol
@@ -57519,7 +57519,7 @@ runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
-## Session s889 (2026-08-13) — process-song handle path mixes two bounded slot scans; writer legitimacy remains open
+## Session 889 (2026-08-13) — process-song handle path mixes two bounded slot scans; writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `processSongByHandle`
 (`0x800966A4`) in the external generated tree, cross-checked against the
@@ -57548,7 +57548,7 @@ also unresolved. No guard, build, soak, or runtime behavior changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s896 (2026-08-13) — streamed-voice stop path is structurally bounded but its index provenance is open
+## Session 896 (2026-08-13) — streamed-voice stop path is structurally bounded but its index provenance is open
 
 Performed the prescribed source-only M3 inventory for `stopStreamedVoice`
 (`0x80098298`) in the external generated tree, with the companion symbol
@@ -57579,7 +57579,7 @@ soak, or runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
-## Session s898 (2026-08-13) — 3D voice mix application is coherent but input legitimacy remains open
+## Session 898 (2026-08-13) — 3D voice mix application is coherent but input legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `applyVoice3DMixParams`
 (`0x8009868C`, size `0x25C`) in the external generated tree, with the
@@ -57659,7 +57659,7 @@ is rejected; no mitigation or behavior change was made.
 
 ORIGIN: generated-function site table cross-checked against local audio siblings and companion symbol notes; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s900 (2026-08-13) — listener-node registration is one coherent shape, but dynamic inputs remain unproven
+## Session 900 (2026-08-13) — listener-node registration is one coherent shape, but dynamic inputs remain unproven
 
 Performed the prescribed source-only M3 inventory of
 `register3DAudioListenerNode` (`0x8009912C`, size `0x1E4`) in
@@ -57690,7 +57690,7 @@ crash; no guard or behavior change was made.
 
 ORIGIN: complete generated-function and caller inventory cross-checked against companion symbol notes; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s901 (2026-08-13) — priority sound enqueue is structurally coherent but remains unclassified
+## Session 901 (2026-08-13) — priority sound enqueue is structurally coherent but remains unclassified
 
 ### What ran
 
@@ -57750,7 +57750,7 @@ evidence, not an explanation for a crash.
 
 ORIGIN: complete generated-function, caller, shared-writer, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s902 (2026-08-13) — spatial priority enqueue mixes coherent audio shapes but remains unclassified
+## Session 902 (2026-08-13) — spatial priority enqueue mixes coherent audio shapes but remains unclassified
 
 ### What ran
 
@@ -57810,7 +57810,7 @@ runtime crash.
 
 ORIGIN: complete generated-function, caller, sibling, shared-writer, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s903 (2026-08-13) — prioritized sound dispatcher is structurally coherent but remains unclassified
+## Session 903 (2026-08-13) — prioritized sound dispatcher is structurally coherent but remains unclassified
 
 ### What ran
 
@@ -57869,7 +57869,7 @@ result is single-source inventory evidence, not an explanation for a crash.
 
 ORIGIN: complete generated-function, caller/sibling writer, shared-field, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s904 (2026-08-13) — 3D audio frame update mixes coherent shapes but remains unclassified
+## Session 904 (2026-08-13) — 3D audio frame update mixes coherent shapes but remains unclassified
 
 ### What ran
 
@@ -57925,7 +57925,7 @@ single-source inventory evidence, not an explanation for a crash.
 
 ORIGIN: complete generated-function, caller/sibling-writer, shared-field, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s905 (2026-08-13) — reset3DAudioLists has two coherent list-root owners
+## Session 905 (2026-08-13) — reset3DAudioLists has two coherent list-root owners
 
 ### What ran
 
@@ -57961,7 +57961,7 @@ single-source ownership evidence and does not authorize a guard or mitigation.
 
 ORIGIN: complete generated-function, shared-root reader/writer, lifecycle, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s906 (2026-08-13) — normalizeVec3 is a single fixed-shape vector helper
+## Session 906 (2026-08-13) — normalizeVec3 is a single fixed-shape vector helper
 
 ### What ran
 
@@ -58003,7 +58003,7 @@ ORIGIN: complete generated-helper, sole-caller, stack-vector, gate, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
 
-## Session s907 (2026-08-13) — crossProductVec3 is a fixed-shape three-float helper
+## Session 907 (2026-08-13) — crossProductVec3 is a fixed-shape three-float helper
 
 ### What ran
 
@@ -58041,7 +58041,7 @@ guard or mitigation.
 
 ORIGIN: complete generated-helper, both-caller, record-slice, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s908 (2026-08-13) — invertOrientationMatrix is a fixed-shape affine inverse
+## Session 908 (2026-08-13) — invertOrientationMatrix is a fixed-shape affine inverse
 
 ### What ran
 
@@ -58071,7 +58071,7 @@ inventory evidence and authorizes no guard or mitigation.
 
 ORIGIN: complete generated-helper, both-caller, matrix-layout, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
 
-## Session s909 (2026-08-13) — findVoiceSlotByAge has one coherent table shape but unproven index legitimacy
+## Session 909 (2026-08-13) — findVoiceSlotByAge has one coherent table shape but unproven index legitimacy
 
 ### What ran
 
@@ -58110,7 +58110,7 @@ ORIGIN: complete generated-helper, sole-caller, shared-field, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
 
-## Session s910 (2026-08-13) — stopVoiceSlotSynced has one coherent slot shape
+## Session 910 (2026-08-13) — stopVoiceSlotSynced has one coherent slot shape
 
 ### What ran
 
@@ -58150,7 +58150,7 @@ ORIGIN: complete generated-helper, both-caller, sibling-field, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
 
-## Session s911 (2026-08-13) — setVoiceMixByKey has one coherent slot shape but an unusual one-candidate exit
+## Session 911 (2026-08-13) — setVoiceMixByKey has one coherent slot shape but an unusual one-candidate exit
 
 ### What ran
 
@@ -58202,7 +58202,7 @@ ORIGIN: complete generated-helper, both-caller, shared-field, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
 
-## Session s912 (2026-08-13) — serviceVoicePoolFrame has one coherent slot shape but unproven state ownership
+## Session 912 (2026-08-13) — serviceVoicePoolFrame has one coherent slot shape but unproven state ownership
 
 ### What ran
 
@@ -58245,7 +58245,7 @@ ORIGIN: complete generated-helper, sibling-field, overlay-registration, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
 
-## 2026-08-13 — s913: getVoicePlaybackProgressByKey inventory
+## Session 913 (2026-08-13) — getVoicePlaybackProgressByKey inventory
 
 Ran the prescribed source-only M3 idiom inventory for
 `getVoicePlaybackProgressByKey` (`0x8009B8A8`) in generated `funcs_26.c`.
@@ -58285,7 +58285,7 @@ support the shape result; no runtime legitimacy conclusion follows.
 ORIGIN: complete generated-helper, caller, sibling-scan, and companion-symbol
 inventory; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
-## 2026-08-13 — s914: loadSpeechFile inventory
+## Session 914 (2026-08-13) — loadSpeechFile inventory
 
 ### What ran
 
@@ -58330,7 +58330,7 @@ ORIGIN: complete generated-function, caller, symbol, and speech-layout
 inventory; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
 
-## 2026-08-13 — s915: initMusyXVoiceTable inventory
+## Session 915 (2026-08-13) — initMusyXVoiceTable inventory
 
 ### What ran
 
@@ -58376,7 +58376,7 @@ ORIGIN: complete generated-function, caller, sibling-scan, and companion-symbol
 inventory; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
 
-## 2026-08-13 — s916: shutdownMusyXVoices inventory
+## Session 916 (2026-08-13) — shutdownMusyXVoices inventory
 
 ### What ran
 
@@ -58417,7 +58417,7 @@ shape result. No guard, mitigation, or game behavior changed.
 ORIGIN: complete generated-function, caller, callee, and companion-symbol
 inventory; no guest value, writer mutation, mitigation, or runtime behavior
 changed.
-## 2026-08-13 — s917: shutdownMusyXVoices scan is not locally bounded
+## Session 917 (2026-08-13) — shutdownMusyXVoices scan is not locally bounded
 
 ### What ran
 
@@ -58453,7 +58453,7 @@ mitigation, or game behavior changed. This is source inventory evidence only.
 ORIGIN: complete generated loop/callee/caller and companion-symbol inventory;
 the only change is correcting the structural classification, with no guest
 value mutation or runtime mitigation.
-## 2026-08-13 — s918: accumulateVoiceSampleOffset inventory
+## Session 918 (2026-08-13) — accumulateVoiceSampleOffset inventory
 
 ### What ran
 
@@ -58490,7 +58490,7 @@ behavior changed. This is source inventory evidence only.
 ORIGIN: complete generated-function, callee, reference, and companion-artifact
 inventory; no guest value mutation, mitigation, or runtime behavior changed.
 
-## 2026-08-13 — s919: dmaVoiceSampleAndSignal is fixed-shape but indirectly unreferenced
+## Session 919 (2026-08-13) — dmaVoiceSampleAndSignal is fixed-shape but indirectly unreferenced
 
 ### What ran
 
@@ -58524,7 +58524,7 @@ game behavior changed. This is source inventory evidence only.
 
 ORIGIN: complete generated-function, DMA-callee, reference, and companion-symbol
 inventory; no guest value mutation, mitigation, or runtime behavior changed.
-## 2026-08-13 — s920: initMusyXVoiceSlot caller-shape split is classified
+## Session 920 (2026-08-13) — initMusyXVoiceSlot caller-shape split is classified
 
 ### What ran
 
@@ -58566,7 +58566,7 @@ only.
 ORIGIN: complete generated helper/caller and companion-symbol inventory; the
 diff changes only the investigation ledger and next-work-unit documents.
 
-## 2026-08-13 — s921: serviceStreamingVoice has finite local service loops
+## Session 921 (2026-08-13) — serviceStreamingVoice has finite local service loops
 
 ### What ran
 
@@ -58613,7 +58613,7 @@ ORIGIN: complete generated-function, caller, overlay-metadata, and companion-
 symbol inventory; no guest value mutation, mitigation, or runtime behavior
 changed.
 
-## 2026-08-13 — s922: consumeVoiceSamples has a fixed local cursor/state shape
+## Session 922 (2026-08-13) — consumeVoiceSamples has a fixed local cursor/state shape
 
 ### What ran
 
@@ -58655,7 +58655,7 @@ as semantic edge cases; no guard, mitigation, or game behavior changed.
 ORIGIN: complete generated-function, caller, overlay-metadata, and companion-
 symbol inventory; no guest value mutation, mitigation, or runtime behavior
 changed.
-## s923 — 2026-08-13 — per-slot MusyX queue receive inventory
+## Session 923 (2026-08-13) — per-slot MusyX queue receive inventory
 
 HYPOTHESIS-ID: m3-voice-queue-receive-class
 
@@ -58688,7 +58688,7 @@ not classify the upstream writer/value origin.
 
 ORIGIN: complete generated queue-access, caller, overlay-metadata, and
 companion-symbol inventory; no guest value mutation or runtime behavior.
-## 2026-08-13 — s924: decodeAndFillVoiceBlock has bounded fixed-shape decode
+## Session 924 (2026-08-13) — decodeAndFillVoiceBlock has bounded fixed-shape decode
 
 ### What ran
 
@@ -58729,7 +58729,7 @@ needed or claimed.
 ORIGIN: complete generated helper/caller and companion-symbol inventory; no
 guest value mutation, mitigation, or runtime behavior changed.
 
-## s925 — `filterVoiceSampleBlock` remains locally unclassified
+## Session 925 (2026-08-13) — filterVoiceSampleBlock remains locally unclassified
 
 Performed the planned source-only M3 idiom inventory of
 `filterVoiceSampleBlock` (`0x8009D7D0`) in
@@ -58766,7 +58766,7 @@ single-source static result; no independent runtime evidence was claimed.
 ORIGIN: complete generated helper/caller, access-range, loop, and
 companion-symbol inventory; no guest value mutation or mitigation.
 
-## 2026-08-13 — s926: applyVoiceDelayFilter remains locally unclassified
+## Session 926 (2026-08-13) — applyVoiceDelayFilter remains locally unclassified
 
 Performed the planned source-only M3 idiom inventory of
 `applyVoiceDelayFilter` (`0x8009D8C4`) in
