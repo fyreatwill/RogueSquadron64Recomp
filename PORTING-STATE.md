@@ -55212,3 +55212,27 @@ transition writer and gate, with an independent retail watch/oracle control
 identified before any new instrumentation.
 
 Logs: `scratch/agent/soak_results/s799_transition_640/run.log`.
+
+## Session 801 (2026-08-13) — VI-width writer audit selected the game-side mode gate
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 34,413 bytes, so maintenance did
+not trigger. The planned work unit was a read-only audit; no build or run was
+performed.
+
+The port's complete VI chain is `osViSetMode` → pending `ViState::mode` → the
+VI thread's `update_vi()` copy of `mode->comRegs.width` into
+`regs.VI_WIDTH_REG` → the graphics thread's queued `ScreenUpdateAction` and
+`update_screen()` consumer. The phase observer reads that live register, so
+the consumer cannot silently hide a published 1024 width. The s799 log's
+post-640 calls #3–#6 selected only 640-wide modes and contained no 1024 mode
+request. The concrete candidate is `selectAndApplyViMode` at
+`0x8001BB70–0x8001BBC0`, whose selector bytes are at `0x8012A865–867` and
+whose mode table begins at `0x80128D50`.
+
+The retail oracle's independent phase trace reaches 1024 at 17.3 seconds with
+the driven schedule and 49.7 seconds undriven. This refutes the renderer-
+consumer hypothesis and selects a port-recipe/game-state selection gate, not
+a host-side VI suppression. It does not identify which selector byte or
+dispatch path is wrong. No mitigation was added. Next is one batched,
+phase-gated selector trace with the oracle whole-RDRAM positive control and VI
+trace retained.

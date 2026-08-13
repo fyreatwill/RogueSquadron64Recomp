@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s800; compacted in maintenance s776)
+## Current truth (reviewed through s801; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -202,6 +202,10 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
+The s801 VI audit now precedes the parser work: the port's game-side selector
+requests only 640 after the transition, while retail independently reaches
+1024. Instrument that selector gate before resuming parser reachability.
+
 1. **Oracle phase divergence — OPEN, H-oracle-runtime-or-ROM-discrepancy selected.**
    s780's two-arm 130-second horizon run kept every driven arm at
    width 320/origin `0x6dd280`, with 21,635,499 whole-RDRAM positive-control
@@ -352,7 +356,22 @@ leaving runtime behavior as the remaining broad class.
    runtime-transition result, not parser evidence. The next unit is a source
    audit of the VI-width transition writer and its gate, followed by one
    bounded writer-attribution capture only if the audit identifies a concrete
-   candidate.
+   candidate. **s801 source audit:** the port has one VI publication chain:
+   game `osViSetMode` writes a pending `ViState::mode`, the VI thread's
+   `update_vi()` copies `mode->comRegs.width` into `regs.VI_WIDTH_REG`, and
+   the graphics thread consumes the prior-frame `ScreenUpdateAction` through
+   `update_screen()`. The `[phase]` observer reads that same live register, so
+   a published 1024 cannot be hidden by the renderer consumer. The s799 log
+   shows calls #3–#6 after the 640 transition selecting only 640-wide modes;
+   no 1024 `osViSetMode` request occurred. The immediate candidate is the
+   game-side `selectAndApplyViMode` branch at `0x8001BB70–0x8001BBC0`, which
+   selects from the `0x80128D50` mode table using globals at `0x8012A865–867`,
+   rather than a host-side VI suppression. Retail ground truth reaches 1024
+   at 17.3s driven and 49.7s undriven, so H-renderer-consumer is refuted and
+   H-game-state is selected for the port recipe only. Next: one batched,
+   phase-gated capture logging those selector bytes, selected mode
+   pointer/width, and `osViSetMode` calls, with the oracle whole-RDRAM
+   positive control plus VI trace retained as the independent control.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
