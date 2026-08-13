@@ -55150,3 +55150,22 @@ join and positive controls.
 
 Logs: `scratch/agent/soak_results/s797_join_a/run.log` and
 `scratch/agent/soak_results/s797_join_b/run.log`.
+
+## Session 798 (2026-08-13) — lower-volume join repeat was pre-chain unevaluable
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 33,000 bytes, so maintenance did
+not trigger. The planned work unit ran two concurrent, phase-gated captures
+with only the E9 provenance, unified-join, and authoritative-advance diagnostics
+enabled; no rebuild was needed.
+
+Both arms reached VI width 640 and remained there until the 240-second
+VI-1024 timeout. Neither emitted provenance, unified, callback/task-end, or
+authoritative-advance rows, and neither exercised the four parser positive
+controls. Lowering the diagnostic volume therefore did not recover the
+post-sec2 gate. This selects only H-prechain-transient for the tested recipe;
+callback-key mismatch and shared-state overwrite remain unevaluable. No parser
+conclusion or mitigation was made. The next unit is a read-only audit of the
+phase-gated recipe/transition boundary.
+
+Logs: `scratch/agent/soak_results/s798_join_a/run.log` and
+`scratch/agent/soak_results/s798_join_b/run.log`.

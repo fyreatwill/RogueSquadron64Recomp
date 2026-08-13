@@ -333,6 +333,15 @@ leaving runtime behavior as the remaining broad class.
    the join unevaluable; no parser conclusion or mitigation is justified.
    Next: one lower-volume stability capture retaining the join and positive
    controls.
+   **s798 lower-volume repeat:** two concurrent arms used only the unified
+   provenance/join/advance diagnostics and the same phase-gated key schedule.
+   Both ran to the 240-second VI-1024 timeout at VI 640, with zero provenance,
+   unified, callback/task-end, or authoritative-advance rows. The lower log
+   volume did not recover the post-sec2 gate; this selects only
+   H-prechain-transient for the tested recipe and leaves all join hypotheses
+   unevaluable. No parser conclusion or mitigation is justified. Next: audit
+   the phase-gated recipe/transition boundary for a single stability-oriented
+   capture before adding more parser instrumentation.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
