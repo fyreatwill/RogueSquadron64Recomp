@@ -57321,3 +57321,31 @@ runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
+## Session s889 (2026-08-13) — process-song handle path mixes two bounded slot scans; writer legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `processSongByHandle`
+(`0x800966A4`) in the external generated tree, cross-checked against the
+companion MusyX symbol artifacts. The complete function has two separate
+handle-derived table scans and several downstream record/slot paths:
+
+| Guest sites | Operation | Bounds / predecessor | Writer or legitimacy basis |
+|---|---|---|---|
+| `0x800966D4`, `0x800966E4–0x80096718` | read input handle `s0+0x0`, mask low 31 bits; scan active table marker and slot handle | `a0`/`v1` scan is bounded to 8 entries; `v1 += 0xEF8`; `-1` sentinel at `0x80096724` | caller-provided record; companion symbols identify the eight-slot table, but do not prove the record writer/value |
+| `0x8009672C`, `0x80096760–0x80096798` | read input flags `s0+0x26`; copy input `+0x0..+0x14` into resolved slot | resolved index comes from the first bounded scan; copy loop stops at `s0+0x20`, then copies the final 8 bytes | slot base is table-derived; input record and destination legitimacy are not independently proven |
+| `0x800967B8–0x800967E4` | update resolved slot control bytes/owner pointer at `slot+0xEEE/+0xEF4/+0xEF0` | same first scan index; no new pointer arithmetic | writer is this function; prior slot state/value legitimacy remains unproven |
+| `0x800967E8`, `0x8009681C–0x80096930`, `0x8009693C–0x80096948` | re-read input record fields and dispatch voice/slot handlers | guarded by input flag bits and the MusyX active gate; handler calls receive record-derived ids/pointers | downstream handlers are named in companion symbols; raw input fields remain unproven |
+| `0x8009694C`, `0x80096960–0x80096998` | second scan reads input handle `s0+0x8`, resolves another slot, then dispatches command paths | independently bounded to 8 entries with `v1 += 0xEF8`; `-1` sentinel at `0x800969A0` | second input-record pointer shape; no independent writer/value proof |
+| `0x800969B0–0x80096B14`, `0x80096A1C–0x80096B14` | use resolved `s0+0x8` as command target; consume input `+0x18/+0x1C/+0x20/+0x24` | controlled by `s3` and flag bits; mutex gate protects active MusyX calls | no independent proof of target slot or command-record fields |
+| `0x80096BB8–0x80096C60` | consume input `+0x14/+0x16/+0x10`; call `playSongByIdLockCtl` or `playSongById`; optionally update returned slot | handler returns `-1` sentinel; active gate protects the optional follow-up | companion symbols identify both dispatchers; returned slot writer/value remains external to this audit |
+
+The first scan resolves the low-31-bit handle at input `+0x0`; the second
+resolves input `+0x8`. Both are structurally bounded eight-entry walks over
+`0x80149A00` with stride `0xEF8`, but the function mixes input-record fields,
+resolved slot fields, and handler-owned pointers. The generated source and
+companion symbols independently agree on the table geometry and dispatch
+roles; neither proves every raw input writer or downstream value legitimate.
+H-process-song-shape-mismatch is selected, with H-process-song-unclassified
+also unresolved. No guard, build, soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
