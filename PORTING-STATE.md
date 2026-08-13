@@ -54103,3 +54103,50 @@ desc `0x2157` selects dest `0x12A0`. The skipped image is
 legitimate table-selected ucode at ROM `0x27108`. The skip
 writer is `dma_rdram_to_dmem` bit-12 IMEM reject, same class
 as ovl24.
+
+## Session 759 (2026-08-12) — ovl20 dest-0x12A0 route is LIVE; residual is 0x13B8/04 clip-hand
+
+Step 0 measured `CURRENT-TRUTH.md` at 42,974 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s758: 6c-style dest
+`0x12A0` route for overlay `0x20`. Queued SOAK-RESULTS s756/s757
+were already folded in s758.
+
+Landed a route, not an overwrite of `L_12A0` or `OVL24_12A0`.
+`make_clip_composite.py 0x20` places ROM `0x27108` (0x158 B) at
+dest ROM `0x25830` / IMEM `0x12A0`. `factor5_rsp_ovl20.toml` +
+RSPRecomp emit `factor5_ucode_ovl20_recompiled.c` (first word
+`lbu $2, -4($17)`; six `goto L_1ED4`; exit `goto L_1268` with
+`r5=0x28`). Fixup 6q extracts `L_12A0..0x13F7`, trims after the
+`L_1268` exit, renames `OVL20_*`, rewrites the six `jal 0x1ED4`
+to `OVL1C_1ED4`, adds `153==0x20` arms on shared `0x12A0`-window
+cases, widens `0x1F04` to `153==0x1C || ==0x20`, and adds case
+`0x1ED4` for `153==0x20`. Main `L_12A0` remains DL-push.
+
+Soak `scratch/agent/soak_results/s759_ovl20_route_20260812-193904/run.log`
+(~105 s to leave-Start SIGSEGV, wrapper rc=3). Same-run positive
+controls LIVE: CLIP `res=0x04`, ovl24 `res=0x24 tgt=0x12A0` (task
+188), ovl1c `res=0x1C tgt=0x1EA8`, new `[ovl-route] res=0x20
+tgt=0x12A0` last n=54848 (173 logged, first task 188
+`via=l1298-other`). Four boot controls still
+`dl06=push:2,complete:2,open:0`. UJ **0**. Predicted leftover
+`0x1E6C/20` **0**.
+
+**H-ovl20-route-runs SELECTED. H-ovl20-route-breaks-06 REFUTED.**
+**H-ovl20-needs-1ed4-keep REFUTED** as the failure mode: no UJ
+`0x1ED4`; dest body takes `jal L_17F0` (return `0x13B8`), not
+the six `jal 0x1ED4` flag arm. **H-ovl20-route-restores-e9
+UNEVALUABLE** for the sec2 3/64 sample (died before outdoor);
+boot E9 still 4/4 match=1; rdpFs 0→3836.
+
+Residual, new vs s757: 419 `[clip-stray] tgt=0x13B8 153=0x04`
+line=2852 (s757 had 0). Writer is ovl20 `jal L_17F0` at IMEM
+`0x13B0` (`r31=0x13B8`); `L_17F0` hand `r5=4; goto L_1268`
+stores `153=4`; `CLIP_1E48` `jr`s it. Same class as s744/s745
+`0x1364`. Hangar SIGSEGV `si_addr=0x4000cd6d3` host
+`updateHangarBayScene+65520` with sticky `last-guest-pc
+0x800ac8c0` (known case-5 checkpoint, not a new idiom). Do not
+revert dest; do not chase the crash.
+
+**ORIGIN:** route, not a mitigation. Dest `0x12A0` / `153==0x20`
+is the skipped ovl20 image (ROM `0x27108`, table desc `0x2157`).
+The `0x13B8` stray is a legitimate `L_17F0` clip-hand return.

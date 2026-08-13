@@ -22,7 +22,30 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s758; compacted in maintenance s729)
+## Current truth (reviewed through s759; compacted in maintenance s729)
+
+**s759:** fixup 6q routes dest `0x12A0` / `153==0x20` →
+`OVL20_12A0` (keep `OVL24_12A0` and default `L_12A0`), rewrites
+the six `jal 0x1ED4` to `OVL1C_1ED4`, and widens `0x1F04` /
+adds `0x1ED4` for `153==0x20`. Soak
+`s759_ovl20_route_20260812-193904` (crash at 105 s leave-Start,
+wrapper rc=3): `[ovl-route] res=0x20 tgt=0x12A0` last n=54848
+LIVE (173 logged, first task 188 `via=l1298-other`); ovl24 dest
+`0x12A0` still LIVE; ovl1c `0x1EA8` LIVE. UJ **0**. Predicted
+`0x1E6C/20` leftover **0**. 4/4 boot `dl06=2/2/0`. Boot E9
+still 4/4 match=1; sec2 3/64 unevaluable (died before outdoor).
+rdpFs 0→3836. Residual `[clip-stray] 0x13B8/04` n=419
+line=2852 — ovl20 `jal L_17F0` return after the clip hand
+(same class as s744 `0x1364`). Hangar SIGSEGV
+`si_addr=0x4000cd6d3` `last-guest-pc=0x800ac8c0` (sticky
+case-5 checkpoint); do not revert dest route. **H-ovl20-route-
+runs SELECTED. H-ovl20-route-breaks-06 REFUTED.
+H-ovl20-needs-1ed4-keep REFUTED** as the failure mode (no UJ
+`0x1ED4`; common path is `jal L_17F0`). **H-ovl20-route-
+restores-e9 UNEVALUABLE** for sec2; boot-shaped holds.
+**ORIGIN:** dest `0x12A0` / `153==0x20` is skipped ovl20 ROM
+`0x27108`. Residual writer: `OVL20` `jal L_17F0` r31=`0x13B8`;
+`L_17F0` hand `r5=4; goto L_1268` → `CLIP_1E48` `jr`.
 
 **s758:** static overlay-0x20 successor audit
 (`docs/M3-OVL20-SUCCESSOR-AUDIT.md`). Table desc `0x2157` at
@@ -35,10 +58,7 @@ resident), then `jal L_17F0` / `jal L_112C`, exit
 `j L_1268; ori $5, 0x28`. Zero `0xE9` bytes. **H-ovl20-skipped-
 12a0-emit SELECTED. H-ovl20-is-restore REFUTED.
 H-ovl20-is-1db0-sibling REFUTED. H-ovl20-not-the-e9-hole
-SELECTED.** Live consume is a 6c-style dest-`0x12A0` route
-(`153==0x20` → `OVL20_12A0`); do not overwrite `L_12A0`; do not
-splice as a `0x1DB0` sibling. After `L_1268` stores `153=0x20`,
-`OVL1C_1ED4`/`1F0C`/`1F04` must stay reachable. **ORIGIN:**
+SELECTED.** Live consume is s759. **ORIGIN:**
 `OVL1C_1ECC` is `j L_1268; ori $5, 0x20`; skipped IMEM writer
 is `dma_rdram_to_dmem` bit-12 reject of dest `0x12A0`.
 
@@ -507,7 +527,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s758:** overlay 0x20 is dest-`0x12A0` emit (ovl24-class, not restore, not a `0x1DB0` sibling) and is not an E9 producer. Live consume is a dest-`0x12A0` route swap; keep `OVL1C_1ED4` reachable at `153==0x20`. **s757:** ovl1c `$30` pair complete. E9 still boot-shaped 3/64. Do not route n=1 `0x1E7C`. **s756–s752:** ovl1c dest + jal-returns + trampoline LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s759:** ovl20 dest-`0x12A0` route LIVE; UJ 0; residual is clip-stray `0x13B8/04` (ovl20 `jal L_17F0` return after clip hand). Sec2 E9 unevaluable (hangar leave SIGSEGV). Do not revert dest. Next is a 6e-style `0x13B8` widen for `153==0x20||0x04`. **s758:** overlay 0x20 is dest-`0x12A0` emit, not restore, not a `0x1DB0` sibling, not an E9 producer. **s757:** ovl1c `$30` pair complete. E9 still boot-shaped 3/64 through s757. Do not route n=1 `0x1E7C`. **s756–s752:** ovl1c dest + jal-returns + trampoline LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
@@ -581,10 +601,11 @@ Game functions (s1) — all four steps, in order:
 RSP ucode (only when a ucode toml changes): `~/Documents/Tools/N64Recomp/build/RSPRecomp` on
 `factor5_rsp.toml` / `factor5_boot_rsp.toml` → `build/factor5_ucode/*.c`, then
 `tools/fixup_factor5_ucode.py`. **s47/s739: before the fixup, also run
-`python3 tools/make_clip_composite.py [4|10|12|14|16|18|24|0x1C|28]` + RSPRecomp on
+`python3 tools/make_clip_composite.py [4|10|12|14|16|18|24|0x1C|28|0x20|32]` + RSPRecomp on
 `factor5_rsp_ovl4.toml`, `factor5_rsp_ovl10.toml`,
 `factor5_rsp_ovl12.toml`, `factor5_rsp_ovl14.toml`,
-`factor5_rsp_ovl18.toml`, `factor5_rsp_ovl1c.toml`, and
+`factor5_rsp_ovl18.toml`, `factor5_rsp_ovl1c.toml`,
+`factor5_rsp_ovl20.toml`, and
 `factor5_rsp_ovl24.toml`**. `factor5b_rsp.toml`
 is the **MusyX audio** ucode; stays in the build as a never-called artifact (s5).
 

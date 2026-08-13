@@ -1893,6 +1893,188 @@ if is_main_ucode and OVL1C_1EA8_MARKER not in text:
         1, "case 0x1EA8 overlay-0x1C $30-return")
 
 # ---------------------------------------------------------------------------
+# Fixup 6q: route overlay 0x20 emit at dest 0x12A0 (s759)
+# ---------------------------------------------------------------------------
+# s758: overlay 0x20 is dest 0x12A0 emit (ROM 0x27108, 0x158 B), not
+# restore and not a 0x1DB0 sibling. Table desc 0x2157. First word
+# lbu $2, -4($17). Body jals still-resident OVL1C_1ED4 six times,
+# then L_17F0 / L_112C, exits j L_1268; ori $5, 0x28. Do not
+# overwrite L_12A0 or OVL24_12A0. factor5_rsp_ovl20.toml translates
+# a composite whose 0x12A0 range holds the emit image; this fixup
+# extracts L_12A0..0x13F7, renames OVL20_*, rewrites jal 0x1ED4 to
+# OVL1C_1ED4, routes DMEM 0x153 == 0x20 at dest 0x12A0 and the
+# shared 0x12A0-window cases, and keeps OVL1C_1ED4 / 0x1F04
+# reachable at 153==0x20. ORIGIN: OVL1C_1ECC is j L_1268; ori $5,
+# 0x20. Table dest 0x12A0. Route, not an overwrite.
+OVL20_MARKER = "/* fixup: ovl20route */"
+OVL20_END = 0x13F8  # dest 0x12A0 + inclusive 0x157 + 1
+if is_main_ucode and OVL20_MARKER not in text:
+    ovl20_path = path.parent / "factor5_ucode_ovl20_recompiled.c"
+    if not ovl20_path.exists():
+        print("fixup_factor5_ucode: FIXUP 6q INPUT MISSING: "
+              f"{ovl20_path} not found. Run make_clip_composite.py 0x20 and "
+              "RSPRecomp on factor5_rsp_ovl20.toml before fixing up the "
+              "main ucode, or the overlay-0x20 route is lost.", file=sys.stderr)
+        sys.exit(1)
+    ovl20_text = ovl20_path.read_text(encoding="utf-8")
+
+    def sub_exactly6q(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6q ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the overlay-0x20 route.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    if "OVL1C_1ED4:" not in text or "OVL1C_1F04:" not in text:
+        print("fixup_factor5_ucode: FIXUP 6q PRECONDITION FAILED: "
+              "OVL1C_1ED4/OVL1C_1F04 missing. Run fixup 6k/6n first.",
+              file=sys.stderr)
+        sys.exit(1)
+
+    m_start = re.search(r"^L_12A0:\n", ovl20_text, flags=re.MULTILINE)
+    after = [(int(m.group(1), 16), m.start())
+             for m in re.finditer(r"^L_([0-9A-F]{4}):", ovl20_text, flags=re.MULTILINE)
+             if int(m.group(1), 16) >= OVL20_END]
+    if not m_start or not after:
+        print("fixup_factor5_ucode: FIXUP 6q EXTRACTION FAILED: could not "
+              "bound L_12A0..first-label-past-overlay in the ovl20 file.",
+              file=sys.stderr)
+        sys.exit(1)
+    region = ovl20_text[m_start.start():after[0][1]]
+    exit_m = None
+    for exit_m in re.finditer(r"    goto L_1268;\n", region):
+        pass
+    if not exit_m:
+        print("fixup_factor5_ucode: FIXUP 6q EXTRACTION FAILED: no "
+              "goto L_1268 exit in the ovl20 region.", file=sys.stderr)
+        sys.exit(1)
+    region = region[:exit_m.end()]
+
+    region_labels = set(re.findall(r"^(L_[0-9A-F]{4}):", region, flags=re.MULTILINE))
+    expected_external = {"L_112C", "L_1268", "L_17F0", "L_1ED4"}
+    referenced = set(re.findall(r"goto (L_[0-9A-F]{4});", region))
+    external = referenced - region_labels
+    if external != expected_external:
+        print(f"fixup_factor5_ucode: FIXUP 6q SANITY FAILED: region's external "
+              f"references {sorted(external)} != expected resident helpers "
+              f"{sorted(expected_external)}. The overlay-0x20 image or its "
+              f"translation changed — re-derive before routing.", file=sys.stderr)
+        sys.exit(1)
+    for need in ("L_12A0", "L_12BC", "L_13F0"):
+        if need not in region_labels:
+            print("fixup_factor5_ucode: FIXUP 6q SANITY FAILED: missing "
+                  f"{need} in ovl20 region {sorted(region_labels)}.",
+                  file=sys.stderr)
+            sys.exit(1)
+    for lbl in region_labels:
+        region = re.sub(r"\b" + lbl + r"\b", "OVL20_" + lbl[2:], region)
+    region, n_1ed4 = re.subn(r"goto L_1ED4;", "goto OVL1C_1ED4;", region)
+    if n_1ed4 != 6:
+        print("fixup_factor5_ucode: FIXUP 6q SANITY FAILED: expected 6 "
+              f"jal-0x1ED4 rewrites, made {n_1ed4}.", file=sys.stderr)
+        sys.exit(1)
+
+    sub_exactly6q(
+        re.compile(r"(^do_indirect_jump:\n)", flags=re.MULTILINE),
+        lambda m: OVL20_MARKER + "\n" + region + m.group(1),
+        1, "splice point")
+
+    ovl20_addrs = sorted(int(lbl[2:], 16) for lbl in region_labels)
+    routed = set()
+    for addr in ovl20_addrs:
+        pat24 = re.compile(
+            rf"(        case 0x{addr:04X}:  /\* fixup: ovl24route \*/\n"
+            rf"            if \(RSP_MEM_BU\(0X153, 0\) == 0x24\) \{{"
+            rf" rs64_e9prov_ovl_route\(0x24, 0x{addr:04X}\); "
+            rf"goto OVL24_{addr:04X}; \}}\n"
+            rf"            goto L_{addr:04X};\n)")
+        if pat24.search(text):
+            sub_exactly6q(
+                pat24,
+                lambda m, a=addr: (
+                    f"        case 0x{a:04X}:  " + OVL24_MARKER + "\n"
+                    f"            if (RSP_MEM_BU(0X153, 0) == 0x24) {{"
+                    f" rs64_e9prov_ovl_route(0x24, 0x{a:04X}); "
+                    f"goto OVL24_{a:04X}; }}\n"
+                    f"            if (RSP_MEM_BU(0X153, 0) == 0x20) {{"
+                    f" rs64_e9prov_ovl_route(0x20, 0x{a:04X}); "
+                    f"goto OVL20_{a:04X}; }}  " + OVL20_MARKER + "\n"
+                    f"            goto L_{a:04X};\n"),
+                1, f"case 0x{addr:04X} shared ovl24+ovl20")
+            routed.add(addr)
+            continue
+        pat04 = re.compile(
+            rf"(        case 0x{addr:04X}: if \(RSP_MEM_BU\(0X153, 0\) == 0x24 \|\| "
+            rf"RSP_MEM_BU\(0X153, 0\) == 0x04\) \{{ "
+            rf"rs64_e9prov_ovl_route\(0x24, 0x{addr:04X}\); "
+            rf"goto OVL24_{addr:04X}; \}} "
+            rf"goto rs64_clip_stray;  /\* fixup: ovl24-(?:04ret|1364clip) \*/\n)")
+        if pat04.search(text):
+            sub_exactly6q(
+                pat04,
+                lambda m, a=addr: (
+                    f"        case 0x{a:04X}: if (RSP_MEM_BU(0X153, 0) == 0x20) {{ "
+                    f"rs64_e9prov_ovl_route(0x20, 0x{a:04X}); "
+                    f"goto OVL20_{a:04X}; }} "
+                    f"if (RSP_MEM_BU(0X153, 0) == 0x24 || "
+                    f"RSP_MEM_BU(0X153, 0) == 0x04) {{ "
+                    f"rs64_e9prov_ovl_route(0x24, 0x{a:04X}); "
+                    f"goto OVL24_{a:04X}; }} "
+                    f"goto rs64_clip_stray;  " + OVL20_MARKER + "\n"),
+                1, f"case 0x{addr:04X} ovl24-04ret + ovl20")
+            routed.add(addr)
+            continue
+        pat_bare = re.compile(
+            rf"        case 0x{addr:04X}: goto L_{addr:04X};\n")
+        if pat_bare.search(text):
+            sub_exactly6q(
+                pat_bare,
+                lambda m, a=addr: (
+                    f"        case 0x{a:04X}:  " + OVL20_MARKER + "\n"
+                    f"            if (RSP_MEM_BU(0X153, 0) == 0x20) {{"
+                    f" rs64_e9prov_ovl_route(0x20, 0x{a:04X}); "
+                    f"goto OVL20_{a:04X}; }}\n"
+                    f"            goto L_{a:04X};\n"),
+                1, f"case 0x{addr:04X} bare + ovl20")
+            routed.add(addr)
+
+    ovl20_only = "".join(
+        f"        case 0x{a:04X}: if (RSP_MEM_BU(0X153, 0) == 0x20) {{ "
+        f"rs64_e9prov_ovl_route(0x20, 0x{a:04X}); goto OVL20_{a:04X}; }} "
+        f"goto rs64_clip_stray;  {OVL20_MARKER}\n"
+        for a in ovl20_addrs if a not in routed)
+    if ovl20_only:
+        sub_exactly6q(
+            re.compile(r"(        case 0x12A0:  /\* fixup: ovl24route \*/\n)"),
+            lambda m: ovl20_only + m.group(1),
+            1, "overlay-0x20 handshake/return cases")
+
+    sub_exactly6q(
+        re.compile(
+            r"        case 0x1F04: if \(RSP_MEM_BU\(0X153, 0\) == 0x1C\) \{ "
+            r"rs64_e9prov_ovl_route\(0x1C, 0x1F04\); goto OVL1C_1F04; \} "
+            r"goto rs64_clip_stray;  /\* fixup: ovl1c_1f04 \*/\n"),
+        lambda m: (
+            "        case 0x1F04: if (RSP_MEM_BU(0X153, 0) == 0x1C) { "
+            "rs64_e9prov_ovl_route(0x1C, 0x1F04); goto OVL1C_1F04; } "
+            "if (RSP_MEM_BU(0X153, 0) == 0x20) { "
+            "rs64_e9prov_ovl_route(0x20, 0x1F04); goto OVL1C_1F04; } "
+            "goto rs64_clip_stray;  " + OVL20_MARKER + "\n"),
+        1, "widen 0x1F04 ovl1c||ovl20")
+
+    sub_exactly6q(
+        re.compile(r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n)"),
+        lambda m: (
+            "        case 0x1ED4: if (RSP_MEM_BU(0X153, 0) == 0x20) { "
+            "rs64_e9prov_ovl_route(0x20, 0x1ED4); goto OVL1C_1ED4; } "
+            "goto rs64_clip_stray;  " + OVL20_MARKER + "\n" + m.group(1)),
+        1, "case 0x1ED4 ovl20 trampoline keep")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level

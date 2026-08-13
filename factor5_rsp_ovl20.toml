@@ -1,0 +1,27 @@
+# Resident overlay 0x20 input. Dest is IMEM 0x12A0 (ROM 0x25830),
+# NOT the 0x1DB0 window. The composite overwrites only that range so
+# RSPRecomp labels the emit image at the hardware dest. Fixup 6q
+# extracts L_12A0..0x13F7, renames OVL20_*, and routes resident 0x20
+# there. Main L_12A0 (DL-push / EndDL) and OVL24_12A0 stay untouched.
+# Source image: ROM 0x27108, inclusive DMA length 0x157 -> 0x158 bytes.
+# First word 0x9222FFFC. Six jal 0x1ED4 (ovl1c trampoline stays
+# resident in the 0x1DB0 window), then jal L_17F0 / L_112C, exit
+# j L_1268; ori $5, 0x28. Do not name this toml ovl28.
+rom_file_path = "scratch/s47_ovl20_composite.z64"
+text_offset = 0x025610
+text_size = 0xF80
+text_address = 0x04001080
+output_file_path = "build/factor5_ucode/factor5_ucode_ovl20_recompiled.c"
+output_function_name = "factor5_ucode_ovl20"
+
+# Main dispatch-table targets plus overlay-0x20 jal-return / merge /
+# trampoline addresses. 0x1ED4/0x1F04/0x1F0C stay as the ovl1c
+# trampoline (window not overwritten). Do not list ovl24-only
+# handshake extras inside 0x12A0..0x13F7.
+extra_indirect_branch_targets = [
+    0x10D8, 0x10E0, 0x112C, 0x1268, 0x12A0, 0x12BC, 0x12C0, 0x12CC,
+    0x12DC, 0x12FC, 0x1300, 0x1310, 0x1320, 0x133C, 0x1390, 0x139C,
+    0x13B8, 0x13C0, 0x13D8, 0x13F0, 0x146C, 0x1484, 0x14D4, 0x14F0,
+    0x1504, 0x15A4, 0x15AC, 0x15B4, 0x15D0, 0x15D8, 0x17F0, 0x1DB0,
+    0x1ED4, 0x1F04, 0x1F0C
+]
