@@ -55131,3 +55131,22 @@ pre-chain transient. The next unit is a stability-oriented post-sec2 capture
 using this instrumentation.
 
 Logs: `scratch/agent/soak_results/s796_join/run.log`.
+
+## Session 797 (2026-08-13) — concurrent join repeat was pre-chain unevaluable
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 32,525 bytes, so maintenance did
+not trigger. The planned work unit was two concurrent, phase-gated post-sec2
+captures using the callback/task-end join instrumentation and same-run parser
+controls. No rebuild was needed.
+
+Both arms ran to the full 240-second probe timeout and stayed at VI width 640.
+They did produce ordinary E9 dispatch traffic (497 and 502 records), proving
+the game was submitting work, but each emitted zero provenance, unified,
+callback/task-end, or authoritative-advance rows and never reached VI 1024.
+Thus the run selects only H-prechain-transient and does not test callback-key
+mismatch or shared-state overwrite. It rules out no parser mechanism and adds
+no mitigation. The next unit is a lower-volume stability capture retaining the
+join and positive controls.
+
+Logs: `scratch/agent/soak_results/s797_join_a/run.log` and
+`scratch/agent/soak_results/s797_join_b/run.log`.

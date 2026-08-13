@@ -326,6 +326,14 @@ leaving runtime behavior as the remaining broad class.
    stable post-sec2 / VI-1024 sample with this instrumentation before interpreting
    the join rows.
 
+   **s797 repeat:** two concurrent arms ran the join instrumentation for the
+   full 240-second timeout and both remained at VI 640. They emitted 497/502
+   ordinary E9-dispatch rows but zero provenance, unified, callback/task-end,
+   or authoritative-advance rows. This repeats H-prechain-transient and leaves
+   the join unevaluable; no parser conclusion or mitigation is justified.
+   Next: one lower-volume stability capture retaining the join and positive
+   controls.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a
