@@ -55935,3 +55935,25 @@ late VI-1024 capture using the same serial telemetry.
 ORIGIN: the serial and scope values are host-side telemetry at accepted bridge
 submits and the RT64 consumer call; no game value, RDP command, or mitigation
 behavior was changed.
+
+## Session 832 (2026-08-13) — late aligned joins still lack producer serial coverage
+
+The existing phase-gated `s790_postsec2_reachability.sh` recipe was run after a
+clean Debug build. It reached VI width 1024 at 79.6s and passed all four E9
+provenance positive controls. Late aligned joins for tasks 570 and 580 showed
+`bridge_delta=16/15` versus `parser_delta=2/2`, so the late mismatch remains.
+
+The submit-range logger's 128-row budget ended at task 282, leaving no
+producer serial records for those late joins. Independently, all 128 retained
+producer serials had matching consumer records with the same serial and
+range. This extends the producer/consumer identity evidence only for the
+earlier population; it does not distinguish parser filtering from a join
+population issue in the late rows. The run later crashed in the known
+`slotDispatcherIter+872` family at 184.4s. No mitigation or legitimacy claim
+was made.
+
+The next unit is a telemetry-only budget/phase-scope change that retains late
+producer serials, followed by the same VI-1024 capture.
+
+ORIGIN: only host-side telemetry budget coverage is changing next; this run
+changed no game value, RDP behavior, or mitigation.

@@ -69,14 +69,21 @@ Priority until changed by the user:
   producer/consumer range loss for the captured early sec2 population. The run
   reached only VI 320/640, not VI 1024, so it does not settle the late
   post-sec2 mismatch.
+- s832 reached VI 1024 at 79.6s, passed all four provenance controls, and
+  produced late aligned joins for tasks 570 and 580. Those joins still showed
+  `bridge_delta=16/15` versus `parser_delta=2/2`. The submit-range logger's
+  128-row budget ended at task 282, so late producer identity remains untested;
+  all 128 retained producer serials matched consumer serial/range records.
+  The run later hit the known `slotDispatcherIter+872` crash. No parser-loss,
+  writer, or legitimacy conclusion is established.
 
-## Next work unit: independent parser-consumer evidence
+## Next work unit: late aligned-task producer serial coverage
 
 HYPOTHESIS-ID: m3-e9-consumer-ordering
 
-Produce a second independent line of evidence for parser/consumer advancement
-on an aligned-task population. Keep game logic, RDP behavior, and mitigation
-code unchanged. Do not conclude from s830's event sequence alone.
+Extend the submit-range telemetry budget or make it phase-scoped so late
+aligned tasks retain producer serial/range records; then rerun the same
+VI-1024 recipe. Keep game logic, RDP behavior, and mitigation code unchanged.
 
 Competing hypotheses:
 
@@ -87,15 +94,20 @@ Competing hypotheses:
   counts or expose the join error.
 - H-parser-writer-path: the bridge count includes bytes that never reach the
   RT64 consumer because submission ranges or deferred work differ.
+- H-telemetry-budget: the late mismatch is real, but the current producer log
+  budget hides the serial/range evidence needed to test it.
 
-Discriminator: one aligned-task capture with positive controls and a second
-independent producer/consumer identity or queue-order source. A result is
-inconclusive if it only repeats the s830 runtime counter.
+Discriminator: at VI 1024, retain late submit rows and key
+`[e9-submit-range]` and `[e9-consumer-range]` by serial and [lo,hi), then join
+them to the same late `[e9-task-join]` task. Equal serial/ranges with unequal
+late deltas selects parser/filter or join-population; divergence implicates the
+submit path. A run without VI 1024 or positive controls is unevaluable.
 
 ## Ranked backlog
 
-1. Re-run the independent producer/consumer serial capture with a recipe that
-   demonstrably reaches VI 1024, then compare the late aligned-task rows.
+1. Extend the submit-range telemetry budget or make it phase-scoped so late
+   aligned tasks retain producer serial/range records; then rerun the same
+   VI-1024 recipe.
 2. After the late population has two independent lines, classify
    parser/consumer advancement; only then consider an implementation fix.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
