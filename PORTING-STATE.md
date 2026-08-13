@@ -57153,6 +57153,38 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s891 (2026-08-13) — unload-song-group teardown mixes bounded table walks with unproven parsed bases
+
+Performed the prescribed source-only M3 inventory for `unloadLastSndFileGroup`
+(`0x800978EC`) in the external generated tree, cross-checked against the
+companion SND/MusyX symbols and SND-file notes. The complete function has
+these pointer and control sites:
+
+| Guest sites | Operation | Bounds / predecessor | Writer or legitimacy basis |
+|---|---|---|---|
+| `0x80097910`, `0x80097930`, `0x80097934` | read active-group count, select `0x801529D0[(count-1)]`, then read entry `+0x8` | count must be non-zero; index is derived as `(count-1)` with 4-byte stride | `resetSongSubsystemCounter` clears the count; `parseSndFiles` stores parsed entry pointers; neither independently proves count/entry legitimacy |
+| `0x80097948–0x80097968` | walk entry `+0x8` halfword table, calling bucketed removal after each `+2` advance | initial `0xFFFF` check and `0xFFFF` sentinel loop | parsed entry-relative base; table contents are parser/data-owned and not independently proven |
+| `0x80097974–0x800979A0` | walk entry `+0xC` halfword table with wide-pair removal | same initial/sentinel structure | same unproven parsed relative-base/value basis |
+| `0x800979AC–0x800979D8` | walk entry `+0x10` halfword table with second sorted-value removal | same initial/sentinel structure | same unproven parsed relative-base/value basis |
+| `0x800979E4–0x80097A10` | walk entry `+0x14` halfword table with sorted-value removal | same initial/sentinel structure | same unproven parsed relative-base/value basis |
+| `0x80097A1C–0x80097A48` | walk entry `+0x18` halfword table with tagged-value removal | same initial/sentinel structure | same unproven parsed relative-base/value basis |
+| `0x80097A54–0x80097A70` | test entry state `+0x6 == 1`, load entry `+0x1C`, then read record count at derived `+0x8` | state gate; `blez` exits before record loop | parsed entry pointer and offset-derived record base; no independent writer/value proof |
+| `0x80097A80–0x80097A94` | read each record `+0x4`, call voice-record removal, advance record cursor by `0xC` | count-bounded `i < count` loop; count is signed halfword | record array is parsed/data-owned; count and record contents are not independently proven |
+
+The five table walks are structurally sentinel-terminated, and the voice
+record walk is structurally count-bounded after the state check. The function
+therefore mixes entry-relative sentinel-table pointers with a separate
+count-bounded record pointer shape. `parseSndFiles` is the identified writer
+of the song-bank entry pointer array at `0x801529D0 + index*4`; the counter is
+cleared by `resetSongSubsystemCounter` and incremented by the parser. The
+companion symbols identify the SND parser and song-bank roles, but no artifact
+proves every parsed offset, sentinel, count, or removal input legitimate.
+H-unload-snd-shape-mismatch is selected, with H-unload-snd-unclassified also
+unresolved. No guard, build, soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
+
 ## Session s890 (2026-08-13) — play-song bank lookup mixes bounded scan and unproven record bases
 
 Performed the prescribed source-only M3 inventory for `playSongByIdLockCtl`
