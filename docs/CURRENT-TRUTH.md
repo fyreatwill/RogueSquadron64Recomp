@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s821; compacted in maintenance s776)
+## Current truth (reviewed through s822; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -52,6 +52,22 @@ in the separate `slotDispatcherIter+872` SIGBUS family. This refutes a total
 post-sec2 authoritative-dispatch loss, but not the remaining discrepancy
 between abundant aligned-stream E9s and the authoritative count; no mitigation
 or stability claim follows.
+
+**s822 accounting-boundary audit selects H-different-populations:**
+`e9_aligned` is produced by the inline-data-aware guest-DL walker in
+`main.cpp`, only for selected tasks controlled by `ROGUESQ_LOG_DL_SYNC2` and
+the phase/task sampling gates; it is stored on the current `g_e9prov` task and
+then printed at task end. The `e9_a/e9_b` values are separate fixed-stride
+guest-DL walk counts, not authoritative parser counts. The `rdpFs` value in
+`[vi-fs-decision]` is `g_cumulative_fullsyncs`, a process-lifetime bridge
+submission count: it increments for real size-8 E9 submissions and for
+synthetic E9 submissions when `ROGUESQ_FS_PIPE_INJECT` is enabled, and is not
+reset at task or phase boundaries. The authoritative advance ring is a
+different diagnostic: it records parser commands only while
+`ROGUESQ_LOG_RDP_ADVANCE` is enabled, resets at each LLE task start, and keeps
+the latest 512 records. Therefore the s820/s821 `e9_aligned` versus `rdpFs`
+rates cannot establish parser loss without a task-scoped join. No reset/cap
+defect was found and no mitigation is justified.
 
 Next work unit: a bounded source/telemetry audit of the aligned-E9 and
 authoritative `rdpFs` accounting boundaries, identifying where each counter is

@@ -55704,3 +55704,33 @@ reset, cap, and task/phase scope.
 ORIGIN: aligned E9s originate in the post-sec2 display-list walker;
 authoritative advancement originates in the RDP parser/full-sync path. The
 later SIGBUS is in the separate slot-dispatch consumer family.
+
+## Session 822 (2026-08-13) — E9/FULL_SYNC accounting scopes differ
+
+The bounded read-only source/telemetry audit traced every relevant producer,
+reset, cap, and log boundary. `e9_aligned` is emitted by the inline-data-aware
+guest display-list walker in `src/main/main.cpp`, only on selected tasks under
+the `ROGUESQ_LOG_DL_SYNC2` and phase/task sampling gates; it is attached to the
+current `g_e9prov` task and printed at task end. `e9_a` and `e9_b` are separate
+fixed-stride guest-DL walk counts. None is an authoritative parser count.
+
+The `rdpFs` field in `[vi-fs-decision]` reads
+`g_cumulative_fullsyncs` from `src/rsp/dpc_bridge.cpp`. That counter is
+process-lifetime, is not reset at task or phase boundaries, and increments for
+real size-8 FULL_SYNC submissions plus synthetic FULL_SYNC submissions when
+`ROGUESQ_FS_PIPE_INJECT` is enabled. The authoritative RDP advance ring in
+`lib/rt64/src/hle/rt64_interpreter.cpp` is separate: it is reset at each LLE
+task start when the task runner calls `rs64_rdp_advance_reset()` and retains
+only 512 records. No reset, cap, or join defect was found.
+
+This selects **H-different-populations**: the s820/s821 `e9_aligned` versus
+`rdpFs` discrepancy cannot establish parser loss because the values do not
+measure the same command population. It does not explain the parser plateau;
+the next useful measurement is a task-scoped join of bridge E9 deltas,
+authoritative parser E9 deltas, and the guest walker. No build, run, code
+change, or mitigation was made.
+
+ORIGIN: guest counts originate in the diagnostic display-list walkers;
+`rdpFs` originates in DPC bridge submissions; authoritative counts originate
+in the RT64 RDP interpreter. These are diagnostic scope differences, not a
+legitimacy or corruption claim.
