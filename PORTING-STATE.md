@@ -58489,3 +58489,38 @@ behavior changed. This is source inventory evidence only.
 
 ORIGIN: complete generated-function, callee, reference, and companion-artifact
 inventory; no guest value mutation, mitigation, or runtime behavior changed.
+
+## 2026-08-13 — s919: dmaVoiceSampleAndSignal is fixed-shape but indirectly unreferenced
+
+### What ran
+
+Performed the prescribed source-only M3 idiom inventory of
+`dmaVoiceSampleAndSignal` (`0x8009BE08`, size `0x38`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. The complete function, its
+`synchronousDmaTransfer` callee, all generated direct references, the generated
+symbol/overlay metadata, and the companion `rogue_squadron64` symbol file were
+checked. No build, game run, or soak was needed.
+
+The helper saves `$s0` and `$ra`, copies incoming `$a3` to `$s0`, and invokes
+`synchronousDmaTransfer` without changing `$a0..$a3`. That callee submits the
+four-argument DMA slot and waits for completion. The helper then calls
+`osSendMesg` with `$a0=$a3`, `$a1=0`, and `$a2=1`, restores its saved registers,
+and returns. It has no global or voice-slot load/store, no derived arithmetic,
+loop, sentinel, or local termination hazard. No generated direct caller or
+address-form reference outside its definition was found. The companion
+`main_overlay.txt` independently supplies the human name/address mapping, but
+no body or callsite evidence.
+
+### Rules out / narrows
+
+This inventory rules out a local loop/return hazard and any generated
+caller-shape split. It supports a fixed synchronous-DMA-then-blocking-queue
+signal shape from the generated helper plus the independent companion symbol
+mapping. It does not establish indirect reachability, the legitimacy of the
+four dynamic DMA arguments, or whether `$a3` is always a valid queue. H-voice-
+stream-dma-classified is supported only for local structure; H-voice-stream-
+dma-unclassified remains active for dynamic values. No guard, mitigation, or
+game behavior changed. This is source inventory evidence only.
+
+ORIGIN: complete generated-function, DMA-callee, reference, and companion-symbol
+inventory; no guest value mutation, mitigation, or runtime behavior changed.

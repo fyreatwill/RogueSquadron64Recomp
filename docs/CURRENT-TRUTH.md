@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s918 (2026-08-13). The active blocker is the authoritative
+Reviewed through s919 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -204,6 +204,13 @@ closed. M3 work is limited to systematic idiom-class audits.
   generated init/shutdown lifecycle uses it as a voice-subsystem gate. The
   shape is coherent but dynamic index/value legitimacy remains unproven; no
   guard or behavior change.
+- s919 audited `dmaVoiceSampleAndSignal`'s complete helper. It preserves the
+  four incoming DMA arguments through `synchronousDmaTransfer`, waits for that
+  DMA to complete, then calls `osSendMesg` on incoming `$a3` with message zero
+  and blocking mode. It has no global/slot accesses, loop, or local return
+  hazard. No generated direct callers or companion body/callsite evidence
+  were found, so indirect reachability and dynamic DMA/queue legitimacy remain
+  unproven; no mitigation or behavior change.
 
 ## Recent evidence ledger
 
@@ -238,6 +245,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s916 | Initial shutdown inventory said the active-byte wait was bounded to one slot; superseded by s917 after the branch/termination audit found no finite bound. |
 | s917 | Re-audit correction: the first shutdown loop is exactly one slot-0 call, but the second active-byte scan has no finite bound and repeats while the slot remains active; `stopVoiceSlotSynced` can leave state 3, so termination depends on an external/later clear. Caller and slot shape still agree; no mitigation. |
 | s918 | `accumulateVoiceSampleOffset` inventory: fixed `index*0x1228` slot arithmetic, one `consumeVoiceSamples` call, one `+0x463C` accumulation, no loop, and no generated callers found. The unchecked index and the `0x800A5121` symbol/lifecycle discrepancy leave dynamic legitimacy unresolved; no mitigation. |
+| s919 | `dmaVoiceSampleAndSignal` inventory: four incoming DMA arguments pass unchanged to synchronous submit/wait, then `$a3` is used as the message queue for one blocking zero-message signal; no globals, slot fields, loop, or local termination hazard. No generated direct callers or companion body/callsite evidence were found, so indirect reachability and dynamic argument legitimacy remain unresolved; no mitigation. |
 | s895 | `setVoiceVolumePanLocked` inventory: one gate read, one nonzero handle check, no target dereference/loop, and one mutex-protected modulation call; shape is coherent, but caller-derived handle/parameter writers are not independently proven legitimate; no mitigation. |
 | s896 | `stopStreamedVoice` inventory: one audio-enable gate, one computed 24-byte streamed-voice state access, state-1 check/clear, and `silenceVoiceSlot` call; the caller-derived voice index has no independent bound or writer-legitimacy proof, so full classification remains unresolved; no mitigation. |
 | s897 | `compute3DSourceSpatialMix` inventory: null-terminated `0x80153418` source-list walk, complete spatial-distance/mix/pan/output access table, and independent node/list writer cross-checks; structure passes but dynamic node/input writer legitimacy remains unproven and shapes are mixed; no mitigation. |
@@ -283,27 +291,27 @@ shape, not a local termination bound. No runtime conclusion follows.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-voice-stream-dma-inventory
+HYPOTHESIS-ID: m3-voice-slot-helper-inventory
 
-Audit the adjacent generated audio helper `dmaVoiceSampleAndSignal`
-(`0x8009BE08`) as a complete function. Do not add a guard or change game
+Audit the adjacent generated audio helper `func_8009BE40` (`0x8009BE40`,
+size `0xD4`) as a complete function. Do not add a guard or change game
 behavior.
 
 Competing hypotheses:
 
-- H-voice-stream-dma-unclassified: the helper's DMA arguments, queue signal,
-  or slot fields contain an unchecked or incompatible pointer/size contract.
-- H-voice-stream-dma-classified: it is a fixed-shape synchronous DMA followed
-  by one queue signal, with all callers supplying the same slot/message form.
-- H-voice-stream-dma-shape-mismatch: a caller or sibling helper supplies a
-  different DMA or queue contract; record the exact split and stop.
+- H-voice-slot-helper-unclassified: the helper's slot fields, indirect calls,
+  or pointer/size arguments contain an unchecked or incompatible contract.
+- H-voice-slot-helper-classified: it has one coherent bounded slot-operation
+  shape and all callers supply the same argument form.
+- H-voice-slot-helper-shape-mismatch: a caller or sibling path supplies a
+  different slot/callback contract; record the exact split and stop.
 Discriminating measurement: a complete site table for
-`dmaVoiceSampleAndSignal`, every DMA/queue/global load and store, all
-generated callers, and the companion symbol/decomp basis. Any omitted access,
-unbounded arithmetic/termination, or incompatible caller shape rejects full
-classification.
+`func_8009BE40`, every slot/global load and store, indirect call and argument,
+all generated callers, and the companion symbol/decomp basis. Any omitted
+access, unbounded arithmetic/termination, or incompatible caller shape rejects
+full classification.
 
-Exact commands: use `rg` to enumerate `accumulateVoiceSampleOffset` and its callsites in
+Exact commands: use `rg` to enumerate `func_8009BE40` and its callsites in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
 companion `rogue_squadron64` symbol/decomp files. No game build or soak is
 planned.
