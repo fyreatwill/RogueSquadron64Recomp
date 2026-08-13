@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s792; compacted in maintenance s776)
+## Current truth (reviewed through s793; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -286,6 +286,16 @@ leaving runtime behavior as the remaining broad class.
    and s787 tile-copy failures. This selects independent known writers; parser reachability
    remains unevaluable and no mitigation is justified. Next is one stability-oriented
    post-sec2 parser-chain capture.
+
+   **s793 parser-chain update:** the first s790 attempt again timed out at VI 640,
+   but its fixed repeat passed the same positive controls (4/4), reached VI 1024 at
+   48.3s, and then produced 1,531 authoritative E9 dispatch records and 1,475
+   `rdp-fullsync` records before a SIGBUS in `parseDatItemSubtypes1To5+3800`
+   (`si_addr=0x380000000`, guest PC `0x800547bc`). The independent dispatch and
+   State/fullSync counters advanced together, so this arm refutes
+   H-parser-handler-loss; it does not distinguish authoritative-advance loss from
+   a phase/co-gate because no aligned-walker E9 total was captured. No mitigation is
+   justified. Next is a source/telemetry audit of the phase-5 E9 accounting boundary.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

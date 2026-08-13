@@ -55030,3 +55030,32 @@ Logs:
 `scratch/agent/soak_results/s790_postsec2_reachability_20260812-232207/run.log`
 and
 `scratch/agent/soak_results/s790_postsec2_reachability_20260812-232540/run.log`.
+
+## Session 793 (2026-08-12) — post-sec2 parser chain reaches 1024
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 29,821 bytes, so maintenance did
+not trigger. The planned work unit was one phase-gated low-noise post-sec2
+parser-chain capture. The first attempt passed the four-record provenance
+positive control but timed out at VI 640 after 180 seconds, without reaching
+the 1024 gate. The fixed repeat was run immediately.
+
+The repeat again passed the positive control (`emit=1`, `raw=1`, `dispatch=1`,
+`match=1` on all four control records), reached VI 1024 at 48.3 seconds, and
+then changed back to VI 640 at 74.1 seconds. Within the captured chain,
+authoritative E9 dispatch advanced to 1,531 and the independent
+`rdp-fullsync` counter advanced to 1,475. The run later received SIGBUS at
+`si_addr=0x380000000` in `parseDatItemSubtypes1To5+3800`, last guest PC
+`0x800547bc`.
+
+The dispatch and State/fullSync counters are two independent runtime lines of
+evidence that the handler/accounting path was active, so this arm refutes
+H-parser-handler-loss. It does not distinguish authoritative-advance loss
+from a phase/co-gate because the recipe did not capture a comparable
+aligned-walker E9 total. The pre-gate first attempt remains a separate
+transient and is not evidence against the parser. No mitigation or source
+change was made.
+
+Logs:
+`scratch/agent/soak_results/s790_postsec2_reachability_20260812-233115/run.log`
+and
+`scratch/agent/soak_results/s790_postsec2_reachability_20260812-233436/run.log`.
