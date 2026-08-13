@@ -57153,6 +57153,35 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s893 (2026-08-13) — streamed-voice flush is bounded but buffer/index legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for
+`flushStreamedVoiceBuffers` (`0x80097F54`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`, cross-checked against the companion
+`main_overlay.txt` symbols and the generated `copyFourHalfwordsWriteback`
+helper.
+
+| Guest sites | Operation | Bounds / predecessor | Writer or legitimacy basis |
+|---|---|---|---|
+| `0x80097F58`, `0x80097FBC–0x80097FC8` | load `D_80141AD0` as an unsigned-byte record count; increment scan index and record base by `0x18` | initial `blez`; repeated `s1 < count`; base is `D_80152A20 + s0` | companion symbols identify the display/audio count and streamed-record table; count writer is outside this function and not independently value-proven |
+| `0x80097F88` | load record state byte `+0x0` | only state `1` enters the payload path | `startStreamedSampleVoice` writes state `1`; clear/reset and stop write `0` |
+| `0x80097F9C` | load record `+0x8` as the source halfword-buffer base | state-1 gate; passed directly as helper `a0` | `startStreamedSampleVoice` writes `+0x8` from dynamic input `a1`; no independent buffer-range proof |
+| `0x80097FA8` | load record `+0xC` as helper `a1`; helper scales it by two for the destination offset | same state-1 gate; helper performs four halfword reads/writes at `base + index*2` | `startStreamedSampleVoice` writes `+0xC` from dynamic input `a2`; semantic index/range legitimacy is unproven |
+| `0x80097FAC–0x80097FB0` and helper `0x800925B4–0x800925E0` | call `copyFourHalfwordsWriteback`; copy exactly four halfwords and write back 8 bytes | helper has no local bound on the supplied index; only caller state/count scan bounds apply | helper confirms the `+0x8/+0xC` shape, but does not prove the dynamic buffer or index |
+
+The outer scan is structurally bounded and the state gate is explicit. The
+payload mixes a fixed streamed-record table shape with a dynamic halfword
+buffer/index shape. `startStreamedSampleVoice` is the only generated writer for
+the two payload fields in this function file, and it accepts both as runtime
+arguments. Therefore H-flush-stream-shape-mismatch is selected; the loop is
+safe in structure, but H-flush-stream-unclassified remains unresolved because
+the writer values and helper index range lack independent legitimacy proof. No
+guard, build, soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source inventory plus helper and companion-symbol
+cross-check; no guest value, writer mutation, mitigation, or runtime behavior
+changed.
+
 ## Session s892 (2026-08-13) — streamed-voice service mixes callback and buffer shapes; legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `serviceStreamedVoices`
