@@ -1389,10 +1389,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..e150c17 100644
+index dccaa87..d228e04 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,424 @@
+@@ -5,12 +5,432 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1419,6 +1419,14 @@ index dccaa87..e150c17 100644
  namespace RT64 {
      static FILE *displayListFp = nullptr;
  
++    static const char *rs64_tri_gbi_owner(GBIUCode ucode) {
++        switch (ucode) {
++        case GBIUCode::RDP: return "RDP";
++        case GBIUCode::F3DFACTOR5: return "F3DFACTOR5";
++        default: return "other";
++        }
++    }
++
 +    struct Rs64RdpAdvanceRec {
 +        uint32_t listStart, address, nextAddress, w0, w1;
 +        uint16_t pendingBefore, pendingAfter;
@@ -1817,7 +1825,7 @@ index dccaa87..e150c17 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -69,6 +481,12 @@ namespace RT64 {
+@@ -69,6 +489,12 @@ namespace RT64 {
          GBIFunction func;
          uint32_t cmdLength;
          size_t pendingCommandRemainingBytes = state->rdp->pendingCommandRemainingBytes;
@@ -1830,7 +1838,7 @@ index dccaa87..e150c17 100644
  
          if (dlStart >= dlEnd) {
              state->dlCpuProfiler.end();
-@@ -89,8 +507,40 @@ namespace RT64 {
+@@ -89,8 +515,40 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -1871,7 +1879,7 @@ index dccaa87..e150c17 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +549,11 @@ namespace RT64 {
+@@ -99,6 +557,11 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -1883,7 +1891,7 @@ index dccaa87..e150c17 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,7 +567,54 @@ namespace RT64 {
+@@ -112,7 +575,54 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -1939,7 +1947,7 @@ index dccaa87..e150c17 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
-@@ -122,6 +624,35 @@ namespace RT64 {
+@@ -122,6 +632,35 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -1975,7 +1983,7 @@ index dccaa87..e150c17 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +660,14 @@ namespace RT64 {
+@@ -129,6 +668,14 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -1990,7 +1998,7 @@ index dccaa87..e150c17 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +675,178 @@ namespace RT64 {
+@@ -136,13 +683,183 @@ namespace RT64 {
                      break;
                  }
  
@@ -2070,6 +2078,11 @@ index dccaa87..e150c17 100644
 +                                "w0=0x%08X w1=0x%08X len=%u\n",
 +                                width, phaseRows, static_cast<uint32_t>(rdpGBI->ucode),
 +                                rawOpCode, dl->w0, dl->w1, cmdLength);
++                            std::fprintf(stderr,
++                                "[tri-owner] vi=%u row=%u ucode=%u owner=%s map=%p raw=0x%02X\n",
++                                width, phaseRows, static_cast<uint32_t>(rdpGBI->ucode),
++                                rs64_tri_gbi_owner(rdpGBI->ucode),
++                                reinterpret_cast<void *>(func), rawOpCode);
 +                            std::fflush(stderr);
 +                        }
 +                    }

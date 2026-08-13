@@ -56269,6 +56269,29 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 848 (2026-08-13) — B4/BF candidate owner is RDP in the paired capture
+
+Added a behavior-neutral, per-VI-width `[tri-owner]` breadcrumb at the RT64
+handler boundary. It records the selected `GBIUCode`, owner label, map
+function pointer, and raw opcode alongside the existing triangle-dispatch
+positive control. The Debug target built successfully after exporting the RT64
+submodule patch.
+
+The phase-gated capture reached VI 1024, passed the E9 provenance control 165
+times, and produced one B4/BF dispatch row with exactly one owner row:
+`ucode=1 owner=RDP raw=0xBF`. There were zero Factor 5 owner rows, zero
+`tri-copy` rows, and no crash marker in the capture. The checked-in enum
+independently maps `GBIUCode::RDP` to 1 and `GBIUCode::F3DFACTOR5` to 12.
+
+This selects H-rdp-candidates for the observed candidate and rules out
+H-factor5-candidates for it; H-mixed-owner was not observed. It does not say
+whether the RDP candidate is legitimate, misframed, or garbage, and no
+behavior or mitigation changed. The next unit is a bounded RDP command-table
+length/boundary provenance probe.
+
+ORIGIN: host-side RT64 owner telemetry only; no game value, command
+advancement, geometry, or mitigation behavior changed.
+
 ## Session 847 (2026-08-13) — Factor 5 triangle A/B missed the candidate owner
 
 Built the Debug target with an optional within-run A/B: arm A preserved the

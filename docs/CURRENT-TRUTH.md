@@ -245,29 +245,45 @@ Priority until changed by the user:
   it does not select H-map-load-bearing, H-map-intentional, or H-map-garbage.
   No game behavior or mitigation changed.
 
-## Next work unit: identify the GBI owner of the B4/BF candidate stream
+- s848 added a behavior-neutral `[tri-owner]` record at the RT64 handler
+  boundary, pairing each B4/BF dispatch row with the selected GBI enum, owner
+  name, and map function pointer. The phase-gated capture reached VI 1024,
+  passed the E9 provenance controls (165 rows), and produced one positive
+  B4/BF dispatch with one matching owner row: `ucode=1`, owner `RDP`; there
+  were zero Factor 5 owner rows, zero triangle-copy rows, and no crash marker.
+  The source enum independently defines 1 as RDP and 12 as F3DFACTOR5. This
+  selects H-rdp-candidates for this capture and rules out H-factor5-candidates
+  for the observed row; H-mixed-owner is not observed. It does not establish
+  whether the RDP candidate is legitimate, misframed, or garbage, and no
+  mitigation or behavior change is justified.
 
-HYPOTHESIS-ID: m3-drawindexed-copy-cycle
+  ORIGIN: host-side owner telemetry at the RT64 handler boundary; no game
+  value, command advancement, geometry, or mitigation behavior changed.
 
-Perform one phase-gated source/runtime ownership probe. Keep the existing
-triangle-dispatch breadcrumb, and add one bounded record at GBI selection or
-handler entry that identifies the selected `GBIUCode` and the map owner for
-raw `0xB4/0xBF`. Batch the E9, VI-width, triangle-dispatch, copy-cycle, and
-DL-sync controls in one build and capture. Do not change command advancement,
-emit geometry, or classify operand legitimacy.
+## Next work unit: classify the RDP-owned B4/BF candidate stream
+
+HYPOTHESIS-ID: m3-rdp-triangle-candidate-origin
+
+Perform one phase-gated source/runtime provenance probe for the RDP-owned
+`0xB4/0xBF` candidate stream. Keep the owner and triangle breadcrumbs, and add
+one bounded record of the RDP command-table entry/length and surrounding parser
+boundary for each candidate. Batch E9, VI-width, triangle-owner, copy-cycle,
+and DL-sync controls in one build and capture. Do not change command
+advancement, emit geometry, or classify operand legitimacy.
 
 Competing hypotheses:
 
-- H-factor5-candidates: the B4/BF candidates are dispatched through the Factor
-  5 map, but the A/B gate or handler ownership telemetry missed them.
-- H-rdp-candidates: the candidates belong to the RDP GBI and cannot test the
-  Factor 5 map; the next lead is a separate RDP-stream provenance issue.
-- H-mixed-owner: both owners occur, requiring separate phase/owner counts.
+- H-rdp-legitimate: RDP reaches genuine B4/BF commands at valid boundaries.
+- H-rdp-misframed: RDP is selected, but command length/boundary state makes a
+  candidate misframed.
+- H-rdp-garbage: RDP reaches a boundary-shaped slot that is not a legitimate
+  game command; writer attribution remains required.
 
-Discriminator: every candidate must have a matching owner record. A complete
-Factor 5 match selects H-factor5-candidates; all-RDP ownership selects
-H-rdp-candidates; both selects H-mixed-owner. A null is invalid unless the
-positive triangle-dispatch control fires in the same run.
+Discriminator: compare every owner row with the command-table length and
+preceding parser span. Valid RDP boundaries select H-rdp-legitimate;
+boundary/length disagreement selects H-rdp-misframed; a valid boundary without
+writer evidence leaves H-rdp-garbage open. A null is invalid unless triangle
+dispatch and owner controls fire in the same run.
 
 ## Ranked backlog
 
