@@ -55620,3 +55620,25 @@ small-value-as-pointer explanation. No build, run, or mitigation was made.
 
 ORIGIN: the dynamic values originate in the menu/mission frame-state stores;
 the static value originates in an as-yet-untraced data initializer.
+
+## Session 818 (2026-08-13) — static VI frame field is ROM-initialized
+
+The bounded source/data audit traced the static frame object used by both
+`mainGameLoop` calls. `syms/rogue_squadron.datasyms.toml` maps
+`D_80037560` to VROM `0x38160` through the `.text` section mapping
+(`rom=0x1040`, `vram=0x80000440`). The retail ROM bytes at that offset are:
+`00 00 00 00 80 03 DF A0 00 00 00 00 00 00 00 00 00 00 01 40 00 E0 00 10`.
+Thus `D_80037574` (`D_80037560+0x14`) is the initialized big-endian halfword
+`0x00E0`; the record's `+0x04` word is the `mainGameLoop` pointer
+`0x8003DFA0`.
+
+Independent generated-source evidence shows `getBootConfigField14` at
+`0x8006B3E0` directly loads `lhu 0x7574($v0)`, while the absolute-address
+search found no generated store targeting `0x80037574`. The static field is
+therefore **H-static-field-rom-intended**, not a hidden runtime-writer case.
+This resolves the initializer question but does not assign the field's full
+semantic role or explain the later VI phase. No build, run, code change, or
+mitigation was made.
+
+ORIGIN: the value originates in the retail ROM initializer at VROM `0x38174`;
+it is a legitimate static data value, not a corruption mitigation target.

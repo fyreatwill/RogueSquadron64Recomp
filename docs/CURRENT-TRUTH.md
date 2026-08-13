@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s817; compacted in maintenance s776)
+## Current truth (reviewed through s818; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -24,10 +24,16 @@ the chronological ledger. The active facts are:
   no writer for its corresponding `D_80037574` halfword. This selects
   intentional structured state for the dynamic callers but leaves the static
   record's ROM/data initializer unresolved; no legitimacy claim or mitigation
-  follows.
+  follows. **s818 resolves it:** the section mapping places `D_80037560` at
+  ROM `0x38160`; the ROM bytes at `D_80037574` contain the big-endian
+  halfword `0x00E0`. The surrounding record contains the `mainGameLoop`
+  pointer `0x8003DFA0`, and `getBootConfigField14` independently loads
+  `lhu 0x7574($v0)` from this object. No generated absolute store targets
+  the field. This selects **H-static-field-rom-intended** over a hidden
+  runtime writer; it is not a mitigation or a claim about the later VI phase.
 
-Next work unit: trace the ROM/data initializer for the static
-`D_80037560+0x10` frame record, especially its `D_80037574` halfword, before
+Next work unit: enumerate `getBootConfigField14` callers and remaining
+`D_80037574` uses to classify the scalar's semantic role, source-only, before
 resuming runtime VI or FULL_SYNC experiments.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
@@ -573,8 +579,13 @@ leaving runtime behavior as the remaining broad class.
    structure pointers. This selects **H-pointer-is-small-offset** over
    H-pointer-is-guest-structure and H-caller-state-stale for the observed
    origin, while the field's semantic producer remains open. No code or
-   mitigation was added. Next: audit the `runVideoFrameTick` frame-state
-   argument producer and its callers, source-only.
+   mitigation was added. **s818 resolves the static producer:** the ROM
+   mapping places `D_80037560` at ROM `0x38160`, whose `+0x14` halfword is
+   `0x00E0`; `getBootConfigField14` independently reads `0x80037574`, and
+   no generated absolute store targets that field. This selects
+   H-static-field-rom-intended and refutes a hidden runtime writer for this
+   field. Next: enumerate `getBootConfigField14` callers and remaining
+   `D_80037574` uses to classify the scalar's semantic role, source-only.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
