@@ -22,7 +22,27 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s750; compacted in maintenance s729)
+## Current truth (reviewed through s751; compacted in maintenance s729)
+
+**s751:** fixup 6j routes ovl10 `L_15D0` handshake return
+(`0x1F40` extra target + `OVL10_1F40` + case `153==0x18||0x10`).
+Soak `s751_ovl10_1f40_20260812-180004` (351 s, CRASH=0 UJ=0
+wrapper rc=0): `[ovl-route] res=0x10 tgt=0x1F40` last n=7488
+LIVE; `last_ovl=0x10/0x1F40` 61/64 (`ovl10=2`). Stray
+`0x1F40/10` **5501→0**. New leftover is `0x1F40/00` line=1421
+hits=3767 (`L_1778` `jr $30`). Pred first-edge
+`dest=0x1DB0,line:621,resident:0x1C` **61/61** (ra=`0x16B8`).
+4/4 boot `dl06=2/2/0`. E9 match still **3/64** boot-shaped
+triplet; rdpFs 0→11238 (flat vs s750 5169; longer clean run).
+**H-1f40-ovl10-handshake SELECTED. H-1f40-not-the-handshake
+REFUTED. H-1f40-breaks-06 REFUTED. H-1f40-restores-e9 REFUTED.**
+Do not widen `0x1F40` to `153==0`. Next is dest-`0x1DB0` /
+`153==0x1C`. **ORIGIN:** ovl10 `ori $30, 0x1F40; j L_15D0` at
+IMEM `0x1F38`; `L_1778` `jr $30` is the legitimate return into
+`lhu $10, 0x56($18)`. Residual writer of `0x1F40/00` is leftover
+`$30` after skipped ovl `0x1C` (ROM `0x26EF8`, dest `0x1DB0`,
+len `0x20B`, exit `j L_1268; ori $5, 0x20`) falls into main
+`L_1DB0`.
 
 **s750:** fixup 6i splices overlay 10 (`OVL10_*`, dest `0x1DB0`,
 `153==0x10`, no jals; external helpers `L_1268` and `L_15D0`).
@@ -37,12 +57,8 @@ stays LIVE (n=6464). Leftover-`$ra` `/00` `L_11B0` strays
 two copies of the boot-shaped `2/2/0` triplet; rdpFs 0→5169.
 **H-ovl10-stops-1db0-reset SELECTED. H-ovl10-not-the-l11b0-path
 REFUTED. H-ovl10-breaks-06 REFUTED. H-ovl10-restores-e9 REFUTED.**
-Do not revert the dest route. Next is an `OVL10_1F40` handshake
-route. **ORIGIN:** dest `0x1DB0` / `153==0x10` is the skipped
-ovl10 image (ROM `0x268A0`). The `0x1F40/10` stray writer is ovl10
-`ori $30, 0x1F40; j L_15D0` at IMEM `0x1F38`; `L_1778` `jr $30`
-is the legitimate return into ovl10 at `lhu $10, 0x56($18)`.
-Route `153==0x10` to `OVL10_1F40`, not `OVL18_1F40`.
+Consumed by s751. **ORIGIN:** dest `0x1DB0` / `153==0x10` is the
+skipped ovl10 image (ROM `0x268A0`).
 
 **s749:** fixup 6h splices overlay 18 (`OVL18_*`, dest `0x1DB0`,
 `153==0x18`). Soak `s749_ovl18_route_20260812-172852` (348 s,
@@ -432,7 +448,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s750:** ovl10 dest-`0x1DB0` route is LIVE; leftover `/00` `L_11B0` strays → 0; residual is ovl10's `L_15D0` handshake return (`0x1F40/10` via `jr $30`). E9 still the boot-shaped triplet (6/128). **s749:** ovl18 dest-`0x1DB0` LIVE; pred `0x18` → 0. **s748:** ovl14 dest-`0x1DB0` LIVE; pred `0x14` → 0. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s751:** ovl10 `0x1F40` handshake LIVE; stray `0x1F40/10` → 0; residual is dest-`0x1DB0` / `153==0x1C` (ovl10's `ori $5, 0x1C` successor, ROM `0x26EF8`). E9 still the boot-shaped triplet (3/64). **s750:** ovl10 dest-`0x1DB0` LIVE; leftover `/00` `L_11B0` strays → 0. **s749:** ovl18 dest-`0x1DB0` LIVE. **s748:** ovl14 dest-`0x1DB0` LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

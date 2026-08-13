@@ -199,4 +199,6 @@ late SIGSEGV): `last_ovl=0x10/0x1DB0` 122/128, leftover `/00`
 `L_11B0` strays → 0. New stray is `0x1F40/10` n=5501 line=1421
 (`L_1778` `jr $30`), not leftover `$ra`. Writer is ovl10
 `ori $30, 0x1F40; j L_15D0` at IMEM `0x1F38`. Next is an
-`OVL10_1F40` handshake route, not ovl 0x1C and not an OVL18 widen.
+`OVL10_1F40` handshake route (consumed s751: LIVE, stray
+`0x1F40/10` → 0). Residual is skipped ovl `0x1C` (ROM `0x26EF8`),
+not an OVL18/`153==0` widen.

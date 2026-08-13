@@ -24,8 +24,10 @@ ovl14's successor, exits j L_1268; ori $5, 0x10. Fixup 6h extracts
 that window and routes DMEM 0x153 == 0x18.
 Overlay 10 is dest 0x1DB0 (ROM 0x268A0, table len 0x213 -> 0x214 B):
 ovl18's successor, first word 0x9626000C, no jals, exits
-j L_1268; ori $5, 0x1C at IMEM 0x1FBC plus j L_15D0 at 0x1F38.
-Fixup 6i extracts that window and routes DMEM 0x153 == 0x10.
+j L_1268; ori $5, 0x1C at IMEM 0x1FBC plus j L_15D0 at 0x1F38
+(delay-slot ori $30, 0x1F40). Fixup 6i extracts that window and
+routes DMEM 0x153 == 0x10; fixup 6j routes the L_15D0 handshake
+return at 0x1F40.
 
 Usage: python3 tools/make_clip_composite.py [4|10|12|14|16|18|24]   (from the repo root; 16==10)
 """

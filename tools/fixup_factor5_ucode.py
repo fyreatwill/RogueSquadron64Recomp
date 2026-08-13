@@ -1388,14 +1388,16 @@ if is_main_ucode and OVL18_MARKER not in text:
 # ---------------------------------------------------------------------------
 # s749: dest 0x1DB0 / 153==0x10 is the skipped ovl18 successor. Overlay 10
 # is a vector loop (ROM 0x268A0, 0x214 B) that exits j L_1268; ori $5, 0x1C
-# and also j L_15D0. No jals. factor5_rsp_ovl10.toml translates a
-# composite whose window holds that image; this fixup extracts L_1DB0..,
+# and also j L_15D0; ori $30, 0x1F40. No jals. factor5_rsp_ovl10.toml
+# translates a composite whose window holds that image (extra target
+# 0x1F40 required so L_1F40 exists); this fixup extracts L_1DB0..,
 # renames labels OVL10_*, splices the block, and routes DMEM 0x153 ==
-# 0x10 at dest 0x1DB0 only. Overlay 0x1C is the successor residual —
-# do not splice it here.
+# 0x10 at dest 0x1DB0. Fixup 6j routes the L_15D0 handshake return at
+# 0x1F40. Overlay 0x1C is the successor residual — do not splice it
+# here.
 # ORIGIN: dest 0x1DB0 / 153==0x10 is the skipped ovl10 image.
 # Leftover-$ra L_11B0 strays are after that skip falls into L_1DB0.
-# Route, not a 0x1DF4/0x1E28/0x1F40 widen.
+# Route dest 0x1DB0 here; 6j owns the 0x1F40 handshake.
 OVL10_MARKER = "/* fixup: ovl10splice */"
 if is_main_ucode and OVL10_MARKER not in text:
     ovl10_path = path.parent / "factor5_ucode_ovl10_recompiled.c"
@@ -1436,7 +1438,7 @@ if is_main_ucode and OVL10_MARKER not in text:
               f"{sorted(expected_resident)}. The overlay-10 image or its "
               f"translation changed — re-derive before splicing.", file=sys.stderr)
         sys.exit(1)
-    for need in ("L_1DB0", "L_1FBC"):
+    for need in ("L_1DB0", "L_1F40", "L_1FBC"):
         if need not in region_labels:
             print("fixup_factor5_ucode: FIXUP 6i SANITY FAILED: missing "
                   f"{need} in ovl10 region {sorted(region_labels)}.",
@@ -1488,6 +1490,59 @@ if is_main_ucode and OVL10_MARKER not in text:
                    "/* fixup: ovl24route */\n"
                    "            goto L_1DB0;\n"),
         1, "case 0x1DB0 overlay-10 routing")
+
+# ---------------------------------------------------------------------------
+# Fixup 6j: route ovl10 L_15D0 handshake return at 0x1F40 (s751)
+# ---------------------------------------------------------------------------
+# s750: dest-0x1DB0 / 153==0x10 is LIVE; leftover /00 L_11B0 strays
+# went to 0. New stray is [clip-stray] tgt=0x1F40 153=0x10 line=1421
+# (L_1778 jr $30). ovl10 at IMEM 0x1F38 is j L_15D0; ori $30, 0x1F40;
+# 0x1F40 is lhu $10, 0x56($18). 6h already owns 153==0x18 → OVL18_1F40
+# (jal L_1F64 return). Widen, do not overwrite. Do not splice overlay
+# 0x1C here. Independent of 6i's marker so an already-spliced file
+# still gets the label + route.
+# ORIGIN: ovl10 ori $30, 0x1F40; j L_15D0 at IMEM 0x1F38. L_1778
+# jr $30 is the legitimate return into ovl10. Route to OVL10_1F40.
+OVL10_1F40_MARKER = "/* fixup: ovl10_1f40 */"
+if is_main_ucode and OVL10_1F40_MARKER not in text:
+    def sub_exactly6j(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6j ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the ovl10 0x1F40 handshake.",
+                  file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    if "OVL10_1F40:" not in text:
+        sub_exactly6j(
+            re.compile(
+                r"(OVL10_1F38:\n"
+                r"    // j           L_15D0\n"
+                r"    // ori         \$30, \$zero, 0x1F40\n"
+                r"    r30 = 0 \| 0X1F40;\n"
+                r"    goto L_15D0;\n"
+                r"    // ori         \$30, \$zero, 0x1F40\n"
+                r"    r30 = 0 \| 0X1F40;\n)"
+                r"(    // lhu         \$10, 0x56\(\$18\)\n)"),
+            lambda m: m.group(1) + "OVL10_1F40:\n" + m.group(2),
+            1, "insert OVL10_1F40 label")
+
+    sub_exactly6j(
+        re.compile(
+            r"        case 0x1F40: if \(RSP_MEM_BU\(0X153, 0\) == 0x18\) \{ "
+            r"rs64_e9prov_ovl_route\(0x18, 0x1F40\); goto OVL18_1F40; \} "
+            r"goto rs64_clip_stray;  /\* fixup: ovl18splice \*/\n"),
+        lambda m: (
+            "        case 0x1F40: if (RSP_MEM_BU(0X153, 0) == 0x18) { "
+            "rs64_e9prov_ovl_route(0x18, 0x1F40); goto OVL18_1F40; } "
+            "if (RSP_MEM_BU(0X153, 0) == 0x10) { "
+            "rs64_e9prov_ovl_route(0x10, 0x1F40); goto OVL10_1F40; } "
+            "goto rs64_clip_stray;  " + OVL10_1F40_MARKER + "\n"),
+        1, "widen 0x1F40 ovl18||ovl10")
 
 # ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
@@ -2181,6 +2236,8 @@ if OVL18_MARKER in text and OVL18_MARKER not in original:
     notes.append("spliced overlay-18 vector loop (OVL18_* labels, id-0x18 routing)")
 if OVL10_MARKER in text and OVL10_MARKER not in original:
     notes.append("spliced overlay-10 vector loop (OVL10_* labels, id-0x10 routing)")
+if OVL10_1F40_MARKER in text and OVL10_1F40_MARKER not in original:
+    notes.append("routed ovl10 L_15D0 handshake return (0x1F40 / 153==0x10)")
 if imem_note_applied:
     notes.append("ImemOverrun site notes (L_1650/epilogue/control)")
 if l1650_reconnect_applied:

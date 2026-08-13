@@ -53750,3 +53750,46 @@ REFUTED** (`/00` line-451 strays gone). **H-ovl10-breaks-06
 REFUTED. H-ovl10-restores-e9 REFUTED.** Residual is the ovl10
 `L_15D0` handshake return at `0x1F40`. Do not widen `0x1F40` to
 `OVL18_*`. Overlay `0x1C` stays later.
+
+## Session 751 (2026-08-12) — ovl10 0x1F40 handshake is LIVE; residual is skipped ovl 0x1C
+
+Step 0 measured `CURRENT-TRUTH.md` at 39,162 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s750: route ovl10's
+`L_15D0` handshake return at dest `0x1F40` when `153==0x10`.
+SOAK-RESULTS s750 line was already folded; no unread queue
+recipes.
+
+Added `0x1F40` to `factor5_rsp_ovl10.toml`
+`extra_indirect_branch_targets`. `make_clip_composite.py 16` +
+RSPRecomp emit `L_1F40` (`lhu $10, 0x56($18)`) immediately after
+the `j L_15D0` / `ori $30, 0x1F40` delay slot. Fixup 6i now
+requires `L_1F40` on a fresh splice. New fixup 6j (own marker,
+runs on already-spliced files) inserts `OVL10_1F40:` if missing
+and widens case `0x1F40` to `153==0x18 → OVL18_1F40` **or**
+`153==0x10 → OVL10_1F40`. Overlay `0x1C` was not spliced.
+**ORIGIN:** ovl10 IMEM `0x1F38` `j L_15D0` / `ori $30, 0x1F40`.
+`L_1778` `jr $30` is the legitimate return into ovl10. Route to
+`OVL10_1F40`, not `OVL18_1F40`. Not a `153==0` widen.
+
+Soak `scratch/agent/soak_results/s751_ovl10_1f40_20260812-180004/run.log`
+(351 s, same recipe as s743–s750, UJ=0, CRASH=0, wrapper rc=0).
+Same-run positive control: `[ovl-route] res=0x10 tgt=0x1F40`
+last n=7488 LIVE; clip `res=0x04` and ovl18 stay LIVE;
+`last_ovl=0x10/0x1F40` 61/64 sec2 reset rows (`ovl10=2`; 3 early
+`0x00`). Four boot controls `dl06=push:2,complete:2,open:0`
+match=1.
+
+Stray `0x1F40/10` **5501→0**. New class: `[clip-stray]
+tgt=0x1F40 153=0x00 line=1421` hits=3767 (`L_1778` `jr $30` of
+leftover `$30`). Pred first-edge all 61
+`dest=0x1DB0,line:621,resident:0x1C` ra=`0x16B8`. Table lookup
+at ROM `0x39900`: r5=`0x1C` dest `0x1DB0` len `0x20B` dram off
+`0x18E8` → ROM `0x26EF8`, exit `j L_1268; ori $5, 0x20`. E9
+match still **3/64** boot-shaped triplet (plus 4/4 control);
+rdpFs 0→11238. Not an E9 restore. s750's late SIGSEGV did not
+recur; do not treat that as the handshake "fixing" a crash.
+
+**H-1f40-ovl10-handshake SELECTED.** **H-1f40-not-the-handshake
+REFUTED** (`0x1F40/10` gone; pred now `0x1C`). **H-1f40-breaks-06
+REFUTED. H-1f40-restores-e9 REFUTED.** Residual is skipped
+overlay `0x1C`. Do not widen `0x1F40` to `153==0`.
