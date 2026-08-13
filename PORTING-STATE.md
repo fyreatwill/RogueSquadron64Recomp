@@ -57152,6 +57152,35 @@ changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session s895 (2026-08-13) — voice volume/pan wrapper is structurally safe; caller legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for
+`setVoiceVolumePanLocked` (`0x800981F0`) in the external generated tree and
+cross-checked the companion symbol/decomp artifacts. The complete function
+has no loop and no target-pointer dereference:
+
+| Guest site | Operation | Basis |
+|---|---|---|
+| `0x800981F4` | read `gMusyXActiveFlag` at `0x800A0F50` | global engine gate; companion symbols name the same byte |
+| `0x80098220` | read fifth byte argument at `sp+0x43` | caller stack argument; no independent value-legitimacy proof |
+| `0x80098224–0x80098230` | test `a0 != 0` and gate byte != 0 | explicit nonzero/state checks |
+| `0x8009823C`, `0x8009826C` | acquire/release Factor 5 mutex | bounded straight-line critical section |
+| `0x8009824C–0x80098268` | mask `a1/a2/a3` to bytes, shift each 16 bits, forward to `setVoiceModulationParams` | caller-derived parameters; no independent writer/value proof |
+
+The remaining `MEM_W` operations are fixed stack saves/restores and the
+fifth-argument staging store at `0x80098248`; they do not dereference guest
+data. The sole generated caller is `allocAndConfigureNewVoice` at
+`0x8009B534`, which supplies a bounded voice-id candidate and byte-masked
+parameters while configuring a MusyX voice slot. The companion symbols
+independently identify `setVoiceVolumePanLocked` as the volume/pan setter and
+`allocAndConfigureNewVoice` as the voice allocator, but they do not prove the
+legitimacy of every dynamic caller value. H-voice-pan-unclassified remains
+selected; H-voice-pan-shape-mismatch is refuted. No guard, build, soak, or
+runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
 ## Session s894 (2026-08-13) — stream sample-size wrapper is fully classified
 
 Performed the prescribed source-only M3 inventory for
