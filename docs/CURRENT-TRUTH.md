@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s873 (2026-08-13). The active blocker is the authoritative
+Reviewed through s874 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -873,35 +873,53 @@ justified.
 ORIGIN: generated-tree source inventory only; no guest value, control flow, or
 mitigation behavior changed.
 
-## Next work unit: audit the video-ready/display-mode gate
+## Session s874 result — video-ready/display-mode gate audit
 
-Perform one source-only whole-idiom audit of `setDisplayMode`,
-`reapplyDisplayMode`, `setVideoReadyFlag`, `setViModeType`, and
-`thread3_video_handle`, including every writer/read/callsite in the chain
-before `runVideoFrameTick`. Do not build, run, or change behavior. Classify
-each site as initialization, per-frame update, gate, or dead/unreachable, and
-identify the exact predicate/value that could keep startup at VI width 320.
+The complete generated-tree inventory found one startup caller for each of
+`setVideoReadyFlag` and `setViModeType`, both in `thread3_video_handle`, plus
+one boot-worker caller of `setDisplayMode` and one per-frame
+`reapplyDisplayMode` caller in `runVideoFrameTick`. The four direct
+`runVideoFrameTick` callers are the two main-loop paths, `initSceneForMission`,
+and `menuOverlayInit`.
 
-Competing hypotheses:
+`thread3_video_handle` has explicit waits only on the nonzero returns from
+`initServiceRegistry` and `initDmaSlots`; then `setVideoReadyFlag` stores
+constant 1 at `0x80037630` and returns 1, and `setViModeType` maps the OS
+TV-type word at `0x80000300` to 0/1/2 at `0x80110F20`. Neither named function
+has a readiness or audio predicate, and no alternate ready-flag writer or
+reader exists in the generated tree. `setDisplayMode`/`reapplyDisplayMode`
+call audio configuration routines, but their status is not a gate around the
+startup video-ready or VI-mode calls; the per-frame reapply is after the
+`advanceVideoFrame` and `0x80112DEF` checks. The separate menu audio wait
+cannot gate the other tick callers.
 
-- H-video-ready-port-gate: a port readiness/display-mode writer or predicate is
-  systematically stale or missing.
-- H-retail-state-machine: the port pre-tick gates are complete; the width-320
-  stall is outside this call chain.
-- H-audio-display-coupling: a display-mode transition depends on an audio
-  completion path that remains stubbed.
+This source-only inventory selects H-retail-state-machine over a missing/stale
+video-ready writer and an audio-only display transition predicate. It does not
+explain the retail width-320 stall or establish runtime value legitimacy. No
+build or run was performed, and no behavior or mitigation changed.
 
-Discriminator: a complete source inventory with no audio dependency selects
-H-retail-state-machine; a missing/stale readiness writer selects
-H-video-ready-port-gate; an audio-only producer for a transition predicate
-selects H-audio-display-coupling. An incomplete callsite inventory is
-unevaluable.
+ORIGIN: generated-tree source inventory only; no guest value, control flow, or
+mitigation behavior changed.
 
-Exact command from the repo root:
+## Next work unit: obtain coalescer value-origin evidence
 
-```sh
-rg -n "setDisplayMode|reapplyDisplayMode|setVideoReadyFlag|setViModeType|thread3_video_handle|8000274C|80003380|8008EA14|8011.*2DEF" ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime
-```
+HYPOTHESIS-ID: m3-coalesce-phase-driver
+
+Use one phase-gated port/retail value-origin experiment for the coalescer
+globals and free-list head, preserving whole-RDRAM, PIF, and VI positive
+controls. The port side must record exact writer PC/value at `0x801163E4`,
+`0x801163E8`, `0x801163F8`, and `0x8010FF18`; arm corresponding retail
+physical watches only after the controls are live. Do not change game behavior
+or add a mitigation.
+
+Competing hypotheses are H-port-writer (the port partition writer produces a
+stale or malformed value), H-retail-writer (retail reaches the same writer but
+the current schedule has not crossed the phase), and H-legitimate-transition
+(matched values are valid state-machine output and the defect is downstream).
+Positive controls plus matched writer/value transitions select H-retail-writer;
+a port-only or malformed port value selects H-port-writer; matched legitimate
+values with divergent downstream behavior select H-legitimate-transition. If
+retail remains at width 320, classify it as phase-unreachable, not a null.
 
 ## Closed and parked
 

@@ -1,36 +1,27 @@
-# NEXT work unit (s874)
+# NEXT work unit (s875)
 
-HYPOTHESIS-ID: m3-video-ready-display-gate-audit
+HYPOTHESIS-ID: m3-coalesce-phase-driver
 
-Perform one source-only whole-idiom audit of `setDisplayMode`,
-`reapplyDisplayMode`, `setVideoReadyFlag`, `setViModeType`, and
-`thread3_video_handle`, including every writer/read/callsite in the chain
-before `runVideoFrameTick`. Do not build or run. Classify each site as
-initialization, per-frame update, gate, or dead/unreachable, and identify the
-exact predicate/value that could keep startup at VI width 320. Do not add a
-guard or alter behavior.
+Run one phase-gated value-origin experiment for the coalescer globals and
+free-list head. Preserve whole-RDRAM, PIF, and VI positive controls. Record
+exact writer PC/value in the port for `0x801163E4`, `0x801163E8`,
+`0x801163F8`, and `0x8010FF18`; arm matching retail physical watches only
+after controls are live. Do not change game behavior or add a mitigation.
 
 Competing hypotheses:
 
-- H-video-ready-port-gate: a port readiness/display-mode writer or predicate is
-  systematically stale or missing.
-- H-retail-state-machine: the port pre-tick gates are complete; the width-320
-  stall is outside this call chain.
-- H-audio-display-coupling: a display-mode transition depends on an audio
-  completion path that remains stubbed.
+- H-port-writer: the port partition writer produces a stale or malformed value.
+- H-retail-writer: retail reaches the same writer/value transition, but the
+  current oracle schedule has not crossed the required phase.
+- H-legitimate-transition: matched values are legitimate state-machine output
+  and the defect is downstream.
 
-Discriminating measurement: a complete source inventory with no audio
-dependency selects H-retail-state-machine; a missing/stale readiness writer
-selects H-video-ready-port-gate; an audio-only producer for a transition
-predicate selects H-audio-display-coupling. An incomplete callsite inventory
-is unevaluable.
+Discriminating measurement: positive controls plus matched writer/value
+transitions select H-retail-writer; a port-only or malformed port value selects
+H-port-writer; matched legitimate values with divergent downstream behavior
+select H-legitimate-transition. If retail remains at width 320, classify the
+run as phase-unreachable, not as a null.
 
-Exact command from the repo root:
-
-```sh
-rg -n "setDisplayMode|reapplyDisplayMode|setVideoReadyFlag|setViModeType|thread3_video_handle|8000274C|80003380|8008EA14|8011.*2DEF" ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime
-```
-
-Read bounded windows around every generated-function hit. Do not build or run.
-Record the inventory and source-only conclusion in the session ledger and
-CURRENT-TRUTH.
+Exact source anchors: `partitionFramebufferMemory` stores at 0x80000ED8,
+0x80000FFC/0x80001010, and 0x80001024/0x80001038; the normal tick calls it
+at 0x800013F0 and coalescer at 0x80001430.

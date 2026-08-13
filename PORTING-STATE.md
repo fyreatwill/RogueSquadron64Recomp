@@ -56930,3 +56930,28 @@ stall, or justify a mitigation.
 
 ORIGIN: generated-tree source inventory only; no guest value, control flow, or
 mitigation behavior changed.
+
+## Session s874 (2026-08-13) — video-ready/display-mode gate audit
+
+Performed the prescribed source-only whole-idiom audit against the generated
+tree; no build or run was performed. The complete inventory found one startup
+caller for each of `setVideoReadyFlag` and `setViModeType`, both in
+`thread3_video_handle`, one boot-worker caller of `setDisplayMode`, one
+per-frame `reapplyDisplayMode` caller, and four direct `runVideoFrameTick`
+callers: two main-loop paths, `initSceneForMission`, and `menuOverlayInit`.
+
+`thread3_video_handle` waits only on nonzero `initServiceRegistry` and
+`initDmaSlots` returns. `setVideoReadyFlag` stores constant 1 at
+`0x80037630` and returns 1. `setViModeType` maps `0x80000300` to 0/1/2 at
+`0x80110F20`, with no readiness or audio predicate. No alternate ready-flag
+writer or reader exists in the generated tree. The display-mode functions do
+call audio configuration routines, but their status is not a gate around the
+startup video-ready/VI-mode calls; the menu audio wait is not common to the
+other tick callers.
+
+This selects H-retail-state-machine over a missing/stale video-ready writer
+and an audio-only display transition predicate. It does not explain the
+retail width-320 stall or establish runtime value legitimacy.
+
+ORIGIN: generated-tree source inventory only; no guest value, control flow, or
+mitigation behavior changed.
