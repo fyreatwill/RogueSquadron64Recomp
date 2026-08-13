@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s785; compacted in maintenance s776)
+## Current truth (reviewed through s786; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -31,6 +31,15 @@ the chronological ledger. The active facts are:
   crashes. Do not classify that hypothesis from those nulls.
 - M5 audio de-stubbing and prior idiom-class campaigns are closed. Product
   freelist restore is ON; garbage-CIMG and wrap-drop mitigations remain OFF.
+- The s786 low-noise post-sec2 reachability repeat reached VI width 1024 after
+  48.1 seconds with the phase-relative key schedule firing and repeated
+  positive provenance controls (`emit=1`, `raw=1`, `dispatch=1`, `match=1`).
+  It crashed at 50.4 seconds after 15 frames in
+  `allocAndInitGridCellArray+624` (SIGBUS, fault address `0x380000014`, last
+  guest PC `0x80001c94`). The section-2 provenance latch fired, but no usable
+  post-sec2 parser-chain sample preceded the crash. This is a different crash
+  family from s785's Metal barrier failure; it leaves the FULL_SYNC parser
+  hypotheses unevaluable and adds no explanation or mitigation.
 - The matched s778 oracle runtime check with the alternate `R4300Emulator`
   again found no later retail VI phase: debugger-on had 11,782,489
   whole-RDRAM positive-control writes, 4,198 VI callbacks, and all 11 PIF

@@ -54867,3 +54867,22 @@ post-sec2 parser chain because the crash precedes a usable chain sample.
 The renderer crash is a new recurrence candidate, not an explanation for
 FULL_SYNC loss, and no mitigation was added. Log:
 scratch/agent/soak_results/s785_m3_reachability/run.log.
+
+## Session 786 (2026-08-12) — post-sec2 reachability repeat, second pre-chain crash family
+
+Step 0 measured docs/CURRENT-TRUTH.md at 23,171 bytes, so maintenance did not
+trigger. The planned work unit was the stability-oriented, phase-gated repeat
+before the FULL_SYNC parser-chain audit. The Debug build completed cleanly.
+
+The run reached VI width 1024 after 48.1 seconds with the phase-relative key
+schedule firing. Positive controls repeatedly reported `emit=1`, `raw=1`,
+`dispatch=1`, and `match=1`; the section-2 provenance latch also fired. The
+process then crashed at 50.4 seconds after 15 frames with SIGBUS in
+`allocAndInitGridCellArray+624`, fault address `0x380000014`, and last guest PC
+`0x80001c94`. No usable post-sec2 parser-chain sample preceded the crash.
+
+This advances the reachability question but leaves the FULL_SYNC parser
+hypotheses unevaluable. It rules out an instrumentation null and shows that
+the prior Metal barrier failure is not the only pre-chain crash family; it does
+not establish a deterministic cause or justify a mitigation. Log:
+scratch/agent/soak_results/s786_m3_stable_reachability/run.log.
