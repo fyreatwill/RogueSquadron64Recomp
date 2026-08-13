@@ -55430,3 +55430,28 @@ ORIGIN: the measured 640 state originates from the game-side
 `requestViFeatureChange(a0=0x11)` → `applyPendingViChanges` path; the diff adds
 only bounded diagnostics and fixup support, not a guard, skip, restore, or
 other mitigation.
+
+## Session 809 (2026-08-13) — the 0x11 VI request is an intended 640-mode path
+
+The competing hypotheses and discriminating measurement were written in
+`scratch/agent/NEXT.md`. A complete generated-tree caller audit found seven
+`requestViFeatureChange` callers, with only `runMenuModelViewerScreen` at
+`0x800C2984` passing `a0=0x11`; the others pass `0x17`, `0x1`, or `0x8`.
+
+The regenerated Debug build succeeded. The phase-gated capture reached the
+1024 target at 47.4 seconds and passed the host VI/mode controls, the `[vi-gate]`
+controls, and E9 provenance positive controls. The `0x11` request wrote pending
+mask `0x00000011`; `applyPendingViChanges` consumed it and published
+`0x80128DF0` at width 640. The later 1024 transition was an
+`initVideoSubsystem` selection of `0x80128DA0`, with no second `0x11` request.
+The run later crashed at 59.4 seconds in `slotDispatcherIter+872`, so that
+crash is not evidence about the VI path.
+
+The source caller inventory and same-run ordering are independent evidence that
+selects H-0x11-intended-640 and refutes H-0x11-misrouted. H-later-1024-route
+remains open in its narrower form: the later 1024 `initVideoSubsystem`
+predicate is not yet classified. No mitigation was added.
+
+ORIGIN: the measured 640 state originates from the game-side
+`requestViFeatureChange(a0=0x11)` → `applyPendingViChanges` path; this iteration
+added no guard, skip, restore, or other mitigation.

@@ -465,6 +465,22 @@ leaving runtime behavior as the remaining broad class.
    H-state-writer remains selected; the next unit is writer attribution, not
    parser work or mitigation. No build or run was needed.
 
+   **s809 request-mask classification:** the complete caller audit found seven
+   direct `requestViFeatureChange` callers, but only `runMenuModelViewerScreen`
+   at `0x800C2984` requests `a0=0x11`; the other callers request `0x17`, `0x1`,
+   or `0x8`. In the same phase-gated port capture, the `0x11` request wrote
+   pending mask `0x00000011`, and `applyPendingViChanges` consumed it and
+   published `0x80128DF0` at width 640. Later, the 1024 transition came from
+   `initVideoSubsystem` selecting `0x80128DA0`, with no second `0x11` request.
+   Host `osViSetMode` and phase controls fired; 11 sec2 E9 provenance records
+   carried `emit=1`, `raw=1`, `dispatch=1`, and `match=1`. The run then crashed
+   in `slotDispatcherIter+872`, unrelated to the VI path. Source inventory
+   plus same-run ordering selects **H-0x11-intended-640** and refutes
+   H-0x11-misrouted; the later 1024 selection predicate remains open, so
+   H-later-1024-route is not closed. No mitigation was added. Next: audit the
+   reachable `initVideoSubsystem` row-selection predicate that produces the
+   1024 mode, then capture that predicate with the existing controls.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a
