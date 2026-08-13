@@ -1,50 +1,49 @@
-# NEXT work unit (systematic allocation/grid crash-idiom audit)
+# NEXT work unit (systematic rs_malloc/free-list writer audit)
 
-HYPOTHESIS-ID: m3-prechain-allocation-grid-idiom
+HYPOTHESIS-ID: m3-rsmalloc-freelist-writer
 
-The s787 repeat passed provenance controls but reached only VI 640 and aborted
-in RT64 `findTileCopyId` before the 1024 gate. This is the third consecutive
-pre-chain failure across distinct families (s785 Metal barrier, s786 grid
-allocation, s787 framebuffer tile-copy). Do not run another reachability soak
-yet and do not add a guard from any one crash.
+The s788 source audit separated the s786 allocator failure from s787's
+host-only zero-height tile-copy assertion. Do not run another reachability
+soak yet and do not add a guard from either crash.
 
 ## Competing hypotheses
 
-- H-grid-writer-corruption: one game-side allocation/grid writer corrupts state
-  later consumed by several crash families. Prediction: a complete enumeration
-  finds a shared unchecked pointer/size/index idiom and a common upstream value.
-- H-renderer-only: the distinct failures are independent host/runtime consumers.
-  Prediction: the allocation/grid enumeration has no shared game-side idiom;
-  only RT64 host sites differ.
-- H-stale-generated-view: the apparent allocation/grid class is incomplete
-  because the active generated funcs are outside this checkout or stale.
-  Prediction: source inventory cannot map the named functions/PCs to a current
-  generated artifact, so no complete classification is possible.
+- H-freelist-writer: a game/runtime writer creates the malformed free-list
+  header or pointer consumed by `rs_malloc`. Prediction: source enumeration
+  finds a writer capable of producing zero-header/`0x80000000` state, and an
+  existing trace attributes the same value to that writer.
+- H-rsmalloc-consumer: the allocator's own free-list traversal is the defect,
+  with no upstream writer identified. Prediction: all suspicious values enter
+  `rs_malloc` from already-corrupt RDRAM and no writer site explains them.
+- H-independent-prechain: s785/s786/s787 are unrelated consumers. Prediction:
+  the writer audit finds no common value or writer, while RT64's zero-height
+  input remains confined to its two host call sites.
 
 ## Discriminating measurement
 
-One bounded source audit, before any build: inventory every allocation/grid
-pointer, size, index, and host-consumer site reachable from the three observed
-families; classify each as guarded, proven-valid, or unclassified; and record
-the writer and legitimacy of every wild value. H-grid-writer-corruption wins
-only if two independent lines (source idiom enumeration plus an existing trace
-or address/value record) identify a shared writer. H-renderer-only wins if the
-complete current source inventory shows disjoint, valid game inputs and only
-host consumers. H-stale-generated-view wins if the required generated source
-is absent or cannot be tied to the active build; then stop and request the
-artifact path rather than inventing a guard.
+One bounded source audit, before any build: enumerate every `rs_malloc`/`rs_free`
+free-list header/pointer write and every zero-header or loop-back guard in the
+active generated source and fixup script; map each candidate to the existing
+`[fl-zero-fault]`/header trace values. H-freelist-writer wins only if the
+writer and legitimacy are identified by both source and trace. H-rsmalloc-
+consumer wins if the source shows only reads/consumption at the bad value and
+no writer explains it. H-independent-prechain wins if the audit confirms no
+shared writer/value and keeps the RT64 input disjoint. Any result that cannot
+name a writer remains unclassified and forbids mitigation.
 
 ## Exact audit
 
-1. Locate active generated `funcs_*.c` and its fixup/build provenance with
-   `find`, `rg`, and the build manifest; do not read the whole generated tree.
-2. Enumerate `allocAndInitGridCellArray`, its callers, and all sibling grid/
-   allocation idioms; separately inspect RT64 `findTileCopyId` call sites.
-3. For every candidate, capture the guest address/value writer and classify
+1. Locate active generated `funcs_*.c`, fixup rules, and build provenance.
+2. Enumerate `rs_malloc`/`rs_free` writes to free-list headers and all
+   fixup-installed guards; separately retain the two RT64 tile-copy call sites
+   as the independent consumer control.
+3. For each suspicious value, map the guest address/value writer and classify
    legitimate versus wild. No code change or mitigation is allowed unless a
    writer is identified.
-4. If the active generated source is unavailable, record that concrete result
-   and stop the audit as blocked; do not substitute a reactive runtime patch.
+4. If no writer can be tied to the trace, record the class as unclassified and
+   choose the highest-information writer probe; do not run a reachability soak.
 
-No build or run is part of this unit unless the audit discovers a bounded,
-source-backed diagnostic change and its positive control can be specified.
+Expected outcomes: a source-and-trace writer match selects H-freelist-writer;
+allocator-only consumption selects H-rsmalloc-consumer; disjoint consumers
+with no shared value selects H-independent-prechain. A missing active source
+or unmapable trace blocks classification rather than justifying a guard.

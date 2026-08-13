@@ -54905,3 +54905,33 @@ H-prechain-deterministic failure class and rules out treating the parser
 chain as measured; it does not identify a writer or justify a mitigation.
 The next work unit is a systematic allocation/grid crash-idiom audit. Log:
 `scratch/agent/soak_results/s787_m3_stable_reachability/run.log`.
+
+## Session 788 (2026-08-12) — allocation/grid audit separates mixed pre-chain failures
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 24,778 bytes, so maintenance did
+not trigger. The planned work unit was a source-only allocation/grid crash-
+idiom audit; no build or run was authorized or needed.
+
+The active build manifest points at `../N64Recomp/RecompiledFuncs`, and that
+tree contains the named functions with current object timestamps, so the
+stale-generated-view hypothesis is refuted. `allocAndInitGridCellArray` has
+one caller in the active generated tree and performs three `rs_malloc` calls;
+the s786 `+624` site is the third call's return path. `rs_malloc` is a shared
+free-list allocator with existing loop guards and diagnostics, and the s786
+fault address `0x380000014` with registers `0x80000000` and `0x80000014`
+matches malformed free-list state being consumed by that allocator. Existing
+`[fl-zero-fault]` records from the same investigation independently show
+out-of-range free-list slots at `rs_malloc` sites.
+
+The s787 RT64 assertion is separate: `findTileCopyId` has exactly two call
+sites, both host-side RDP/framebuffer paths, and asserts on a zero tile height;
+the source audit found no grid/allocation writer reaching those arguments.
+Thus the renderer-only hypothesis is incomplete because s786 is a genuine
+allocator failure, while the shared-grid-writer hypothesis is not selected:
+there is no second independent line identifying a writer common to s785's
+Metal barrier, s786's allocator, and s787's tile-copy assertion. The result
+is a mixed pre-chain crash class. No mitigation or lib change was made.
+
+Next is a systematic `rs_malloc`/free-list writer audit, starting with the
+writers that can create the `0x80000000`/zero-header state. This closes the
+grid-specific audit without reopening the parser chain.

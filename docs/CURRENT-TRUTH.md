@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s787; compacted in maintenance s776)
+## Current truth (reviewed through s788; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -49,6 +49,20 @@ the chronological ledger. The active facts are:
   H-prechain-deterministic failure class, not a parser hypothesis; no parser
   sample or mitigation is justified. The next unit is a systematic
   allocation/grid crash-idiom audit.
+- The s788 source audit found the active generated tree at
+  `../N64Recomp/RecompiledFuncs`, and the build manifest compiles that exact
+  tree; stale-generated-view is therefore refuted for this unit. The s786
+  `allocAndInitGridCellArray+624` site is the grid initializer's third
+  `rs_malloc` call, while s787's `findTileCopyId` assertion has only two RT64
+  call sites and receives `callTile.tileCopyWidth/Height` or an RDP-derived
+  tile rectangle, not a grid allocation. The s786 fault (`0x380000014`) and
+  mcontext values `0x80000000`/`0x80000014` identify malformed free-list state
+  consumed by `rs_malloc`; existing `[fl-zero-fault]` records independently
+  show the same allocator consuming out-of-range free-list slots. No source
+  or trace evidence identifies one writer shared by the s785 Metal barrier,
+  s786 allocator, and s787 tile-copy families. This is a mixed pre-chain
+  failure class, not a justification for a guard. Next: systematic
+  `rs_malloc`/free-list writer audit.
 - The matched s778 oracle runtime check with the alternate `R4300Emulator`
   again found no later retail VI phase: debugger-on had 11,782,489
   whole-RDRAM positive-control writes, 4,198 VI callbacks, and all 11 PIF
@@ -216,8 +230,11 @@ leaving runtime behavior as the remaining broad class.
    **s787 update:** the repeat had positive controls but died at VI 640 in RT64
    `findTileCopyId` before the 1024 gate. With s785's Metal barrier and s786's
    grid-allocation failures, this is the third distinct pre-chain family;
-   next is a systematic allocation/grid crash-idiom audit before another
-   reachability soak.
+   next is a systematic `rs_malloc`/free-list writer audit before another
+   reachability soak. **s788:** the source audit refuted stale generated view
+   and separated s787's host-only zero-height tile-copy assertion from s786's
+   malformed free-list consumption. It did not identify a writer common to
+   all three families; do not add a grid or RT64 mitigation.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
