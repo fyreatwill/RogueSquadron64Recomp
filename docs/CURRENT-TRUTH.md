@@ -386,8 +386,24 @@ leaving runtime behavior as the remaining broad class.
    gate. The source audit and runtime log are independent lines; no
    mitigation is justified. Correct the stale prose above: the generated
    MIPS computes selector addresses `0x8011A865–867` from `lbu -0x579B/-C/-E`.
-   Next: enumerate every reachable `osViSetMode` caller and its mode pointer,
-   then choose one bounded callsite/state trace.
+   **s803 caller audit:** the generated tree has six `osViSetMode_recomp`
+   callsites: `preNmiResetThread` at `0x80001764` (fixed OS VI data
+   `0x80039790/0x80039330/0x80039BF0`), `initVideoSubsystem` at
+   `0x8001B720` (conditional `0x80128E40/0x80128E90`),
+   `applyPendingViChanges` at `0x8001B8DC` (conditional
+   `0x80128E40/0x80128E90`), `swapBufferWithViMode` at `0x8001BB54`
+   (`0x80128C90`), and `selectAndApplyViMode` at `0x8001BC28`
+   (`0x80128C90` after copying one of its four 0x50-byte table rows).
+   The sole selector caller is `freeRenderSubsystemResources` at
+   `0x800186C0`; s802 proved that caller and selector are absent from the
+   tested 0→320→640 path. Existing mode traces show the direct buffers are
+   640-wide on the post-640 path, while the copied `0x80128C90` buffer is
+   capable of carrying 320, 640, or 1024 depending on its source contents.
+   This refutes the claim that the selector is the only 1024-capable route
+   and selects the reachable direct-caller gate as the next target. No
+   mitigation was added. Next: one batched, phase-gated callsite trace for
+   `initVideoSubsystem`, `applyPendingViChanges`, and `swapBufferWithViMode`,
+   retaining the existing `osViSetMode` logger and oracle positive control.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

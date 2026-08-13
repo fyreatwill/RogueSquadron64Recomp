@@ -55245,3 +55245,33 @@ This rules out the narrow claim that `selectAndApplyViMode` is the active writer
 ORIGIN: the runtime logs identify the live `osViSetMode` path, while the generated source identifies the sole selector callsite; no corruption or wild-value mitigation was introduced.
 
 Logs: `scratch/agent/oracle_selector_groundtruth.log`, `scratch/agent/soak_results/s802_vi_selector/run.log`, and `scratch/agent/soak_results/s802_vi_selector_fixed/run.log`.
+
+## Session 803 (2026-08-13) — VI caller audit selected the direct-callsite trace
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 36,930 bytes, so maintenance did
+not trigger. The planned work unit was a read-only exhaustive source audit; no
+build or run was performed.
+
+The generated tree contains six `osViSetMode_recomp` callsites:
+`preNmiResetThread` at `0x80001764` with fixed pointers
+`0x80039790/0x80039330/0x80039BF0`; `initVideoSubsystem` at `0x8001B720`
+with conditional `0x80128E40/0x80128E90`; `applyPendingViChanges` at
+`0x8001B8DC` with the same conditional buffers; `swapBufferWithViMode` at
+`0x8001BB54` with `0x80128C90`; and `selectAndApplyViMode` at `0x8001BC28`,
+which copies one of its table rows into `0x80128C90`. The sole selector
+caller is `freeRenderSubsystemResources` at `0x800186C0`.
+
+The source table and prior mode traces show the direct buffers are 640-wide on
+the post-640 path, while the copied `0x80128C90` buffer has carried 320, 640,
+and 1024 depending on source contents. Together with s802's zero selector
+caller/function controls, this refutes the claim that the selector is the only
+1024-capable route and selects the three reachable direct callers for the next
+batched trace. It does not identify which direct caller requests 1024. No
+mitigation was added.
+
+ORIGIN: the candidate transition writers are the generated direct callsites at
+`0x8001B720`, `0x8001B8DC`, and `0x8001BB54`; this iteration made no
+corruption mitigation.
+
+Next: add regeneration-safe markers at those three callsites and run one
+phase-gated VI-640 capture with the existing mode logger and oracle controls.

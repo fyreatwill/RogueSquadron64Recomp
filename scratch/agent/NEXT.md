@@ -1,45 +1,41 @@
-# NEXT work unit (enumerate reachable VI mode callers)
+# NEXT work unit (trace reachable direct VI mode callers)
 
 HYPOTHESIS-ID: m3-vi640-transition-writer
 
-The s802 selector trace proved that the generated `selectAndApplyViMode`
-caller and function are not reached in the tested 0→320→640 recipe, while
-other `osViSetMode` calls are live. The next unit is a read-only source audit,
-not another selector run: enumerate every generated `osViSetMode_recomp` call,
-its guest address/function, mode pointer expression, and whether its mode is
-320/640/1024. Then select one reachable 640→1024 gate for the next batched
-trace.
+The s803 source audit found six generated `osViSetMode_recomp` callsites. The
+selector route at `0x800186C0` → `selectAndApplyViMode` is not reached in the
+tested recipe; the reachable candidates are the three direct callers below.
+Instrument all three in one build and run, phase-gated at VI 640.
 
 ## Competing hypotheses
 
-- H-direct-caller: a reachable direct caller selects the 640 mode and owns the
-  missing transition. Prediction: the post-640 call sites are outside
-  `selectAndApplyViMode` and one has a concrete 1024-capable mode pointer.
-- H-overlay-dispatch: the intended selector call is emitted but dispatch or
-  overlay registration routes around it. Prediction: static call is reachable
-  from the active state path, but runtime callsite control remains absent while
-  another overlay implementation owns the live calls.
-- H-recipe-state: no reachable caller has a 1024 mode in this recipe.
-  Prediction: all live mode pointers decode to 320/640, and the missing 1024
-  request is game-state/input dependent.
+- H-direct-caller: one reachable direct caller owns the missing transition.
+  Prediction: a callsite marker fires after VI 640 and its mode data decodes to
+  1024.
+- H-overlay-dispatch: the direct callsites fire only for 640 and the intended
+  1024 path remains absent. Prediction: no direct marker carries 1024, despite
+  the selector's static 1024-capable table.
+- H-recipe-state: all three direct callers fire only 320/640 in this recipe.
+  Prediction: no post-640 1024 mode request exists anywhere in the batched
+  trace.
 
 ## Discriminating measurement
 
-The exhaustive caller-to-mode table is the discriminator: one reachable
-1024-capable caller that is never invoked selects H-direct-caller or
-H-overlay-dispatch depending on dispatch ownership; an exhaustive 320/640-only
-set selects H-recipe-state. Do not build until every callsite is classified.
+The same-run callsite-to-width rows are the discriminator: a direct marker with
+width 1024 selects H-direct-caller; only 640 rows while the selector remains
+silent selects H-overlay-dispatch; 320/640-only rows across all three selects
+H-recipe-state. The existing `osViSetMode` logger and phase transition are the
+positive controls; retain the oracle whole-RDRAM watch and VI trace as the
+independent ground-truth control.
 
 ## Exact commands
 
 ```sh
-rg -n -S "osViSetMode_recomp|selectAndApplyViMode|0x8001BB6C|jal.*800352D0" \
-  ../N64Recomp/RecompiledFuncs src lib
-rg -n -S "RECOMP_FUNC void .*\(" ../N64Recomp/RecompiledFuncs/funcs_*.c | \
-  rg "osViSetMode|selectAndApplyViMode"
+rg -n -S "osViSetMode_recomp|initVideoSubsystem|applyPendingViChanges|swapBufferWithViMode|selectAndApplyViMode" \
+  ../N64Recomp/RecompiledFuncs src
 ```
 
-If the audit identifies a concrete reachable gate, the following unit must
-batch its callsite marker with the existing `[osViSetMode]` logger and retain
-the oracle `--watch-write 0x0:0x800000 --vi-trace` positive control. Use
+The next iteration must add the three direct-callsite markers through the
+regeneration-safe fixup path, batch them with `[osViSetMode]`, and retain the
+oracle `--watch-write 0x0:0x800000 --vi-trace` positive control. Use
 `PROBE_PHASE_WIDTH=640 PROBE_LEAVE_OK=1`, never a stopwatch.
