@@ -1,42 +1,44 @@
-# NEXT work unit (oracle effective-config divergence check)
+# NEXT work unit (oracle debugger instrumentation phase check)
 
 HYPOTHESIS-ID: oracle-320-only-divergence
 
-s770 completed the undriven-versus-driven A/B: both arms passed the positive
-control and remained at VI 320, so input-induced 320 is refuted. The next unit
-is one bounded configuration-focused oracle check that materializes fresh
-config/plugin state in two identical arms and compares it with the documented
-defaults before another phase run.
+s771 completed the fresh-config A/B: both arms materialized byte-identical
+configs, passed the positive control, and remained at VI 320. The next unit is
+one bounded debugger-mode check using the same ROM/core and a fresh config.
 
 ## Competing hypotheses
 
-- H-oracle-plugin-default: the fresh configs select a plugin/core default that
-  keeps the retail run at the 320 framebuffer path.
-- H-oracle-rom-runtime-divergence: the retail ROM/core pair itself differs from
-  the source of the documented phase timeline despite matching SHA-256.
-- H-oracle-config-generation: generated config contents differ between the
-  fresh arm and the sibling known-good setup and explain the phase null.
+- H-oracle-debugger-interference: debugger callbacks or interpreter overhead
+  change the retail phase path; debugger-on and debugger-off will diverge.
+- H-oracle-rom-runtime-divergence: debugger mode does not affect the result;
+  both arms remain at width 320 with the same origin behavior.
+- H-oracle-poll-observation: `--vi-poll` is insufficient or observes a
+  different register path; debugger-off produces no trustworthy VI result.
 
 ## Discriminating measurement
 
-Materialize two fresh configs with the same oracle binary, diff their
-`mupen64plus.cfg` files, and record plugin/core/default entries against the
-defaults documented in `tools/oracle/README.md`. Then run one 15-second
-undriven positive-control check from the audited config. A config/plugin
-difference plus a later VI phase selects
-H-oracle-config-generation or H-oracle-plugin-default; identical effective
-settings plus VI 320 selects H-oracle-rom-runtime-divergence. Missing control
-hits make the run unevaluable.
+Run matched short arms with `--oracle-debugger 1 --vi-trace` and
+`--oracle-debugger 0 --vi-poll`, using the same ROM/core and fresh config
+directories. The debugger-on arm must have whole-RDRAM positive-control hits;
+the debugger-off arm must report a nonzero VI poll. A phase difference selects
+H-oracle-debugger-interference; identical width-320/origin behavior selects
+H-oracle-rom-runtime-divergence; a missing poll is unevaluable and selects
+H-oracle-poll-observation only if the debugger-on control is positive.
 
 ## Commands
 
-    rm -rf /tmp/rs64-oracle-config-s771-a /tmp/rs64-oracle-config-s771-b
-    mkdir -p /tmp/rs64-oracle-config-s771-a /tmp/rs64-oracle-config-s771-b scratch/agent/oracle-config-s771
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --configdir /tmp/rs64-oracle-config-s771-a --secs 15 --vi-trace --watch-write 0x0:0x800000 > scratch/agent/oracle-config-s771/a.log 2>&1 & p1=$!
-    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --configdir /tmp/rs64-oracle-config-s771-b --secs 15 --vi-trace --watch-write 0x0:0x800000 > scratch/agent/oracle-config-s771/b.log 2>&1 & p2=$!
+   rm -rf /tmp/rs64-oracle-config-s772-a /tmp/rs64-oracle-config-s772-b
+   mkdir -p /tmp/rs64-oracle-config-s772-a /tmp/rs64-oracle-config-s772-b scratch/agent/oracle-config-s772
+   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --configdir /tmp/rs64-oracle-config-s772-a --secs 15 --oracle-debugger 1 --vi-trace --watch-write 0x0:0x800000 > scratch/agent/oracle-config-s772/a.log 2>&1 & p1=$!
+   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --configdir /tmp/rs64-oracle-config-s772-b --secs 15 --oracle-debugger 0 --vi-poll > scratch/agent/oracle-config-s772/b.log 2>&1 & p2=$!
+   wait "$p1"; r1=$?; wait "$p2"; r2=$?; printf 'a_rc=%s b_rc=%s\n' "$r1" "$r2"
+   diff -u /tmp/rs64-oracle-config-s771-a/mupen64plus.cfg /tmp/rs64-oracle-config-s771-b/mupen64plus.cfg || true
+   grep -n 'Video-\|Core\|Input-SDL\|Start\|Plugin' /tmp/rs64-oracle-config-s771-a/mupen64plus.cfg
+    rm -rf /tmp/rs64-oracle-config-s772-a /tmp/rs64-oracle-config-s772-b
+    mkdir -p /tmp/rs64-oracle-config-s772-a /tmp/rs64-oracle-config-s772-b scratch/agent/oracle-config-s772
+    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --configdir /tmp/rs64-oracle-config-s772-a --secs 15 --oracle-debugger 1 --vi-trace --watch-write 0x0:0x800000 > scratch/agent/oracle-config-s772/a.log 2>&1 & p1=$!
+    tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --configdir /tmp/rs64-oracle-config-s772-b --secs 15 --oracle-debugger 0 --vi-poll > scratch/agent/oracle-config-s772/b.log 2>&1 & p2=$!
     wait "$p1"; r1=$?; wait "$p2"; r2=$?; printf 'a_rc=%s b_rc=%s\n' "$r1" "$r2"
-    diff -u /tmp/rs64-oracle-config-s771-a/mupen64plus.cfg /tmp/rs64-oracle-config-s771-b/mupen64plus.cfg || true
-    grep -n 'Video-\|Core\|Input-SDL\|Start\|Plugin' /tmp/rs64-oracle-config-s771-a/mupen64plus.cfg
 
-Use `grep -n`/`tail` on the bounded result log; do not cat it. Record config
-differences, positive-control hits, and VI transitions in the next ledger entry.
+Use `grep -n`/`tail` on the bounded result logs; do not cat them. Record each
+arm's positive-control status and VI transitions in the next ledger entry.

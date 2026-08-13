@@ -22,7 +22,22 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s770; compacted in maintenance s729)
+## Current truth (reviewed through s771; compacted in maintenance s729)
+
+**s771:** two fresh oracle config arms materialized byte-identical
+`mupen64plus.cfg` files and ran the same 15-second retail recipe. Both
+whole-RDRAM positive controls fired (**2,743,553 writes**, 899 VI), and both
+arms remained at width 320 after the initial origin transition to
+`0x6dd280`; neither reached 640/1024/512. This selects
+**H-oracle-runtime-or-ROM-divergence** over config generation/plugin-default
+drift for the current environment. The result is still single-source
+oracle evidence; next test debugger-on versus debugger-off with `--vi-poll`
+to determine whether debugger instrumentation changes execution or phase
+progress.
+
+**ORIGIN:** same-binary, same-core, same-ROM fresh-config A/B; identical
+materialized configs and identical positive-control/VI totals. No port runtime
+code changed.
 
 **s770:** the same-iteration oracle A/B used separate fresh config directories,
 the same ROM/core, PIF and VI traces, and whole-RDRAM positive controls. The
@@ -714,7 +729,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **Oracle phase divergence — OPEN, H-oracle-observed-320 selected.** s769 matched ROM identity, fresh config, PIF Start delivery, and the whole-RDRAM positive control, yet remained at VI 320. Next: run undriven and driven oracle arms with the same ROM/core and VI/PIF/whole-RDRAM controls in one iteration. If undriven reaches 640/1024/512 while driven stays 320, input-induced behavior is selected; if both stay 320, the documented phase timeline is not reproducible in this oracle environment. Do not add port instrumentation until this split is measured.
+1. **Oracle phase divergence — OPEN, H-oracle-runtime-or-ROM-divergence selected.** s771's two fresh configs were byte-identical and both 15-second arms had identical 2,743,553-write positive controls, 899 VI, and width 320 only. This rules out generated-config drift and makes plugin-default divergence less likely, but remains single-source evidence. Next: pair a debugger-on traced run with a debugger-off `--vi-poll` run using the same ROM/core/config; debugger-on and debugger-off phase differences select instrumentation/config interaction, while identical width-320 behavior selects a deeper retail-oracle runtime/ROM-environment divergence.
 
 2. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: phase-gated reachability result for 6w or pivot to a higher-information M3 audit. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
