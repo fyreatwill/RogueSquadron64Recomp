@@ -53837,3 +53837,43 @@ exists; case does not. Do not revert dest-`0x1DB0` / `153==0x1C`.
 REFUTED** (`0x1F40/00` gone; pred-tag gone). **H-ovl1c-breaks-06
 REFUTED. H-ovl1c-restores-e9 REFUTED.** Residual is the ovl1c
 jal-return at `0x1E18`. Do not splice overlay `0x20` next.
+
+## Session 753 (2026-08-12) — ovl1c jal-return 0x1E18 is LIVE; residual is 0x1E2C
+
+Step 0 measured `CURRENT-TRUTH.md` at 40,634 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s752: route dest
+`0x1E18` / `153==0x1C` to `OVL1C_1E18`. SOAK-RESULTS s752 line
+was already folded; no unread queue recipes.
+
+Fixup 6l (own marker `ovl1c_1e18`) inserts
+`case 0x1E18` gated on `153==0x1C` → `OVL1C_1E18`. Label already
+existed from the 6k splice; no composite or RSPRecomp. Independent
+of 6k's marker so an already-spliced file still gets the route.
+Did not add the later jal-return cases. Did not splice overlay
+`0x20`.
+**ORIGIN:** ovl1c jal at IMEM `0x1E10` sets `r31=0x1E18` and
+`goto OVL1C_1F0C`; `OVL1C_1F9C` `jr $ra` is the legitimate
+return into `OVL1C_1E18`. Route, not a default-allow of
+`0x1E18` for every resident.
+
+Soak `scratch/agent/soak_results/s753_ovl1c_1e18_20260812-183025/run.log`
+(351 s, same recipe as s743–s752, CRASH=0, wrapper rc=0). Same-run
+positive control: `[ovl-route] res=0x1C tgt=0x1E18` last n=6464
+LIVE; dest `tgt=0x1DB0`, clip `res=0x04`, and ovl10 `tgt=0x1F40`
+stay LIVE. Four boot controls `dl06=push:2,complete:2,open:0`
+match=1.
+
+UJ `0x1E18` **5879→0**. `[clip-stray]` still 0. sec2
+`last_ovl=0x1C/0x1E18` 61/64 (3 early `0x00`). E9 match still
+boot-shaped: sec2 match=3/64, all `dl06=2/2/0`. rdpFs 0→4483
+(s752 5203; not a restore). New residual: `Unhandled jump target
+0x1E2C` n=3213 from `OVL1C_1F9C` `jr $ra` (ucode line 5113).
+After the 0x1E18 return, `OVL1C_1E18` jals `0x1F0C` with
+`r31=0x1E2C`. Label `OVL1C_1E2C` exists; case does not. Do not
+revert dest-`0x1E18` / `153==0x1C`.
+
+**H-1e18-ovl1c-jalret SELECTED.** **H-1e18-not-the-uj-path
+REFUTED** (`0x1E18` UJ gone; route LIVE). **H-1e18-breaks-06
+REFUTED. H-1e18-restores-e9 REFUTED.** Residual is the next
+ovl1c jal-return at `0x1E2C`. Do not splice overlay `0x20`
+next.
