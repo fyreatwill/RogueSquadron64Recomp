@@ -165,8 +165,11 @@ struct Rs64E9Provenance {
     uint32_t emitted = 0;
     uint32_t submitted = 0;
     uint32_t authoritative = 0;
+    uint32_t handler = 0;
     uint32_t dispatched = 0;
     uint32_t matched = 0;
+    uint32_t aligned = 0;
+    uint32_t aligned_dl = 0xFFFFFFFFu;
     uint32_t source_fetch = 0;
     uint32_t source_e9 = 0;
     uint32_t source_end = 0;
@@ -321,6 +324,24 @@ static bool log_e9_provenance() {
         return e && *e && *e != '0';
     }();
     return enabled;
+}
+
+static bool log_e9_unified() {
+    static const bool enabled = [] {
+        const char *all = std::getenv("ROGUESQ_LOG_ALL");
+        const char *e = std::getenv("ROGUESQ_LOG_RDP_ADVANCE");
+        const char *u = std::getenv("ROGUESQ_LOG_E9_UNIFIED");
+        return (all && *all && *all != '0') ||
+               (e && *e && *e != '0') || (u && *u && *u != '0');
+    }();
+    return enabled;
+}
+
+extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
+                                      uint32_t guestE9) {
+    if (g_e9prov.task != task) return;
+    g_e9prov.aligned = guestE9;
+    g_e9prov.aligned_dl = guestDl;
 }
 
 extern "C" void rs64_e9prov_task_begin(uint32_t task) {
@@ -896,7 +917,18 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
             fflush(stderr);
         }
     }
-    if (!log_e9_provenance() || g_e9prov.task != task) return;
+    if (g_e9prov.task != task) return;
+    if (log_e9_unified() && (g_e9prov.control || g_e9prov.target)) {
+        fprintf(stderr,
+                "[e9-unified] task=%u scope=%s guest_dl=0x%08X aligned=%u "
+                "fetched=%u handler=%u state_fullsync=%u emitted=%u matched=%u\n",
+                task, g_e9prov.control ? "control" : "sec2",
+                g_e9prov.aligned_dl, g_e9prov.aligned, g_e9prov.authoritative,
+                g_e9prov.handler, g_e9prov.dispatched, g_e9prov.emitted,
+                g_e9prov.matched);
+        fflush(stderr);
+    }
+    if (!log_e9_provenance()) return;
     if (g_e9prov.control || g_e9prov.target) {
         for (uint32_t emitted : g_e9prov.emitted_addrs) {
             bool covered = false;
@@ -1087,6 +1119,10 @@ extern "C" void rs64_e9prov_authoritative_fetch(uint32_t address) {
                 match ? 1u : 0u);
         fflush(stderr);
     }
+}
+
+extern "C" void rs64_e9prov_handler() {
+    if (log_e9_provenance() || log_e9_unified()) ++g_e9prov.handler;
 }
 
 extern "C" void rs64_e9prov_fullsync_dispatch() {

@@ -55084,3 +55084,30 @@ same-run positive control.
 Source evidence: `src/main/main.cpp`, `lib/rt64/src/hle/rt64_interpreter.cpp`,
 `lib/rt64/src/gbi/rt64_gbi_rdp.cpp`, and `lib/rt64/src/hle/rt64_state.cpp`.
 Log evidence: `scratch/agent/soak_results/s790_postsec2_reachability_20260812-233436/run.log`.
+
+## Session 795 (2026-08-12) — unified E9 capture proves parser controls, join remains broken
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 31,014 bytes, so maintenance did
+not trigger. The planned work unit was one phase-gated unified E9 accounting
+capture. The instrument was built, including a task/list row joining the
+inline-aware aligned walker to authoritative fetch, RDP handler, and
+State/fullSync hooks. The RT64 handler callback was exported through
+`submodule-patches/rt64.patch`.
+
+Two instrument-fix attempts were required: the first passed the probe counter
+instead of the LLE task serial and emitted no join rows; the second forced the
+aligned walker for every task but stopped before VI 1024. The final corrected
+run reached VI 1024, captured 18 frames with no crash, and passed four
+provenance positive controls. It emitted four unified control rows, all with
+`fetched=1`, `handler=1`, and `state_fullsync=1`; the same run's aligned
+positive controls reported `e9_aligned=1`, but the unified rows retained
+`aligned=0` and `guest_dl=0xFFFFFFFF`.
+
+This is a valid measurement result selecting H-parser-measurement/task-key-join
+failure. It proves the authoritative fetch→handler→State/fullSync control path
+is live in the same run, but does not distinguish authoritative advance loss
+from phase co-gating because no aligned value joined a task-end row. No
+mitigation or parser conclusion was made.
+
+Logs: `scratch/agent/soak_results/s795_unified_e9_rows_20260812-235433/run.log`,
+with earlier instrument-fix evidence in the `s795_unified_e9_*` sibling logs.

@@ -304,6 +304,18 @@ leaving runtime behavior as the remaining broad class.
    chain. This selects H-measurement-scope, refutes no parser boundary, and
    justifies no mitigation. Next is one unified phase-5 counter capture.
 
+   **s795 unified-capture update:** the new diagnostic built successfully and
+   its final phase-gated run reached VI 1024, captured 18 frames, and had no
+   crash. The same run passed four provenance positive controls and emitted four
+   unified control rows with `fetched=1`, `handler=1`, and `state_fullsync=1`.
+   The aligned walker independently emitted `e9_aligned=1` on those controls,
+   but every unified row had `aligned=0` and `guest_dl=0xFFFFFFFF`. Two earlier
+   attempts exposed and fixed task-sampling and handler-counter defects; the
+   final result selects **H-parser-measurement / task-key join still broken**,
+   not a parser-loss or phase-co-gate hypothesis. No parser conclusion or
+   mitigation is justified. Next: trace the callback/task serial at both sides
+   of the join and make the aligned value attach to the same task-end record.
+
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
    craft-shadow, `do_rom_read+608`, and the B8 ship gate. Enqueue self-contained soaks when a

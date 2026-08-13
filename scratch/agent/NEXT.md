@@ -1,40 +1,46 @@
-# NEXT work unit (unified phase-5 E9 accounting capture)
+# NEXT work unit (repair the unified E9 task-key join)
 
 HYPOTHESIS-ID: m3-postsec2-parser-chain
 
-The s794 audit found that the prior aligned and authoritative numbers have
-different scopes and reset rules. The next unit is one bounded instrumentation
-change plus one phase-gated run that records all three counters against the
-same task identity; do not add a mitigation.
+The s795 control run proved authoritative fetch, handler, and State/fullSync
+counts in one live row, but the aligned callback did not attach: the same run
+reported `e9_aligned=1` in `[dl-sync-probe2]` while every unified control row
+had `aligned=0` and `guest_dl=0xFFFFFFFF`.
 
 ## Competing hypotheses
 
-- H-authoritative-advance-loss: a same-task aligned E9 is emitted but no
-  authoritative fetch follows it. Prediction: `aligned=1, fetched=0` for the
-  same guest-list/task identity.
-- H-phase-co-gate: aligned and authoritative counts agree within each task,
-  while only a subset of phase-5 tasks reaches State/fullSync. Prediction:
-  unified records have `aligned=fetched`, with gaps only between task records.
-- H-parser-measurement: the old comparison was invalid, but the unified
-  capture will still show an address/list identity mismatch. Prediction:
-  same-task records cannot be joined without a new explicit task/list key.
+- H-callback-key-mismatch: the aligned callback sees a different task serial or
+  task lifecycle than task-end. Prediction: paired callback/task-end debug rows
+  show unequal keys or a reset between them.
+- H-aligned-call-not-reached: the displayed `[dl-sync-probe2]` row is from a
+  different binary path or call site. Prediction: callback-entry control rows
+  are absent even when probe rows fire.
+- H-shared-state-overwrite: the callback writes the aligned fields, then a
+  concurrent task/reset overwrites them before task-end. Prediction: callback
+  entry has `aligned=1` for the same key, but task-end sees zero and a changed
+  current task.
 
 ## Discriminating measurement
 
-In one build/run, tag the phase-5 aligned-walker record with the same LLE task
-and guest-list identity used by authoritative fetch, then log aligned count,
-fetch count, handler count, and State/fullSync count in one bounded row. A
-same-task aligned-without-fetch row selects H-authoritative-advance-loss;
-task-level equality with missing later stages selects H-phase-co-gate; inability
-to join the rows selects H-parser-measurement. The positive control must fire
-in the same run before any null is interpreted.
+Add bounded callback-entry and task-end rows for control tasks containing both
+the passed task serial and `g_e9prov.task`, plus the aligned count/list. One
+run must show which of the three outcomes occurs. Keep the existing four
+positive controls and authoritative counters. Do not change parser behavior.
 
 ## Exact commands
 
 ```sh
-rg -n "e9_aligned|rs64_rdp_advance|authoritative_fetch|fullsync_dispatch|e9-dispatch|rdp-fullsync" \
-  src lib tools
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build -j8
-env ROGUESQ_LOG_DL_SYNC2=1 ROGUESQ_LOG_RDP_ADVANCE=1 ROGUESQ_LOG_E9_DISPATCH=1 \
-  PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 zsh tools/probe.sh
+env ROGUESQ_LOG_E9_PROVENANCE=1 ROGUESQ_LOG_E9_UNIFIED=1 \
+  ROGUESQ_LOG_E9_DISPATCH=1 ROGUESQ_LOG_RDP_ADVANCE=1 \
+  ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_DL_SYNC2=1 \
+  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
+  PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+  PROBE_KEYS='3:start 7:start 11:start 15:a' \
+  zsh tools/probe.sh "$PWD/scratch/agent/soak_results/s796_join" 60 2
 ```
+
+Expected outcomes: unequal keys select H-callback-key-mismatch; absent
+callback-entry rows select H-aligned-call-not-reached; callback `aligned=1`
+followed by task-end zero selects H-shared-state-overwrite. Any pre-1024 death
+is unevaluable and must not update the parser ledger.

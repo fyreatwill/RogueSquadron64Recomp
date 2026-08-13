@@ -98,6 +98,8 @@ extern "C" uint32_t rs64_dpc_get_last_fullsync_addr();
 extern "C" void rs64_rdp_advance_reset();
 extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
                                           uint32_t guestE9);
+extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
+                                      uint32_t guestE9);
 extern "C" void rs64_e9prov_task_begin(uint32_t task);
 extern "C" void rs64_e9prov_task_end(uint32_t task);
 extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_130,
@@ -695,6 +697,11 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             const char* e = std::getenv("ROGUESQ_LOG_DL_SYNC2");
             s_dl_sync2 = (e && *e && *e != '0') ? 1 : 0;
         }
+        static int s_e9_unified = -1;
+        if (s_e9_unified < 0) {
+            const char* e = std::getenv("ROGUESQ_LOG_E9_UNIFIED");
+            s_e9_unified = (e && *e && *e != '0') ? 1 : 0;
+        }
         // ROGUESQ_LOG_FS_SLOT densifies late dual-task dumps (every task
         // after s_n>=5200) so the stop edge is not lost to rate limits.
         static int s_fs_slot = -1;
@@ -702,7 +709,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
             const char* e = std::getenv("ROGUESQ_LOG_FS_SLOT");
             s_fs_slot = (e && *e && *e != '0') ? 1 : 0;
         }
-        if (s_log || s_dl_sync || s_dl_sync2 || s_fs_slot) {
+        if (s_log || s_dl_sync || s_dl_sync2 || s_e9_unified || s_fs_slot) {
             static int s_n = 0;
             ++s_n;
             const bool sample_runner = s_log && (s_log_all || s_n <= 8 || (s_n & 31) == 0);
@@ -747,7 +754,8 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                             tris, hist[0x24] + hist[0x25], hist[0x36],
                             syncs, hist[0x3F], hist[0x3E]);
                 }
-                const bool do_probe = (s_dl_sync || s_dl_sync2 || dense_slot) && (
+                const bool do_probe = s_e9_unified ||
+                    (s_dl_sync || s_dl_sync2 || dense_slot) && (
                     s_n <= 20 ||
                     (syncs > 0 && n_with_sync_probed < 40) ||
                     (syncs > 0 && s_n >= 4000 && late_sync_probed < 30) ||
@@ -964,6 +972,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                                 s_n, cmds2, jumps2, b8_2, end2,
                                 setcimg_n, setcimg_wild, wild_addr, wild_w, e9_aligned, dl_ptr);
                         rs64_rdp_advance_report((uint32_t)s_n, dl_ptr, e9_aligned);
+                        rs64_e9prov_aligned(task_serial, dl_ptr, e9_aligned);
                         fflush(stderr);
                     }
                     const uint32_t fs_addr = rs64_dpc_get_last_fullsync_addr();
