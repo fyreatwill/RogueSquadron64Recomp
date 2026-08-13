@@ -57153,6 +57153,38 @@ changed.
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
 
+## Session s884 (2026-08-13) — tick-song linked-list consumers are structurally guarded; writer legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `tickSongSequence`
+(`0x80095ADC`) in the external generated tree. The complete function has four
+linked-list consumers:
+
+| Guest site | Operation | Predecessor / writer basis |
+|---|---|---|
+| `0x80095BAC` | load slot `+0xE78` into head | active slot selected by the bounded 8-slot scan; null-tested at `0x80095BB0` |
+| `0x80095BB8`/`0x80095BC4` | read node `+0x8`, then follow `+0x0` | entered only with non-null head; loop continues only after non-null next |
+| `0x80095BD0` | load slot `+0xE7C` into head | same bounded scan; null-tested at `0x80095BD4` |
+| `0x80095BDC`/`0x80095BE8` | read node `+0x8`, then follow `+0x0` | entered only with non-null head; loop continues only after non-null next |
+| `0x80095C10` | reload cleanup head `+0xE78` | null-tested at `0x80095C14` |
+| `0x80095C1C`, `0x80095C28`, `0x80095C2C` | initial next read, loop next read, loop termination read | first next is null-tested at `0x80095C20`; each loop iteration preserves non-null predecessor |
+| `0x80095C60` | reload cleanup head `+0xE7C` | null-tested at `0x80095C64` |
+| `0x80095C6C`, `0x80095C78`, `0x80095C7C` | initial next read, loop next read, loop termination read | first next is null-tested at `0x80095C70`; each loop iteration preserves non-null predecessor |
+
+The same-class writer/access inventory is complete across the generated song
+functions: initialization clears both fields at `0x8009469C/0x800946A0`;
+active-track linking writes `+0xE78` at `0x80094C3C` and `0x80094D24`;
+scheduled-event processing writes `+0xE78` at `0x80094E60` and `+0xE7C` at
+`0x80094E90`; `stopSongByHandle` clears them at `0x800959A4/0x800959F4`;
+`tickSongSequence` clears them at `0x80095C54/0x80095CA4`; and
+`tickAllActiveSongs` removes/relinks `+0xE7C` at `0x80096FD8`. Delay-slot
+duplicates were counted once. The companion symbols identify the eight-slot
+MusyX table, but no independent artifact proves every writer/value legitimate.
+Structural null-safety passed; H-tick-song-unclassified remains selected for
+writer origin. No guard, build, soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
+
 ## Session s883 (2026-08-13) — stop-song linked-list chains are parallel but writer legitimacy remains open
 
 Performed the prescribed source-only M3 inventory for `stopSongByHandle`
