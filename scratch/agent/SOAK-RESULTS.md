@@ -463,4 +463,6 @@
 20260812-210531 | s765_ovl1c_1e8c | rc=3 | 190s | scratch/agent/soak_results/s765_ovl1c_1e8c_20260812-210531/run.log
 20260812-s765-att1 | s765_ovl1c_1e8c UNEVALUABLE | VI 1024 reached; ovl20/ovl24/clip/dl06 controls fired; no 0x1E7C or 0x1E8C discriminator before 56-frame crash in coalesceFreeHeapBlocks+3192, last-guest-pc=0x8000241c.
 20260812-210941 | s765_ovl1c_1e8c | rc=3 | 190s | scratch/agent/soak_results/s765_ovl1c_1e8c_20260812-210941/run.log
+20260812-231408 | s790_postsec2_reachability | rc=4 | 7s | scratch/agent/soak_results/s790_postsec2_reachability_20260812-231408/run.log
+20260812-s790 | s790_postsec2_reachability ANALYZED | Outcome B H-prechain-transient SELECTED: controls scope=control emit/raw/dispatch/match=1 (4); VI 640 only, no VI 1024 or parser sample; SIGBUS viRetraceHandlerThread si_addr=0x380000004 last-guest-pc=0x8000b650; fl-zero-fault=1124, writeback=21, restore=1. Parser and writer-co-gate unevaluable; no mitigation.
 20260812-s765-att2 | s765_ovl1c_1e8c UNEVALUABLE | VI 1024 reached; ovl20/ovl24/clip/dl06 and 0x1ECC controls fired; no 0x1E7C or 0x1E8C discriminator before 56-frame crash in getNextSlotNpcTypeId+448, last-guest-pc=0x8000834c.

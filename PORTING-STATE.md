@@ -54958,3 +54958,25 @@ unify s785/s786/s787: s787's zero-height `findTileCopyId` assertion remains in
 two host-only tile-copy call sites. No mitigation or lib change was made.
 ORIGIN: RT64 `copyNativeToRAM` writeback of garbage SETCIMG `addr=0x1F0D74`,
 width `1161`; the operands are not legitimate game framebuffer parameters.
+
+## Session 790 (2026-08-12) — low-noise reachability repeat dies in VI retrace
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 27,097 bytes, so maintenance did
+not trigger. The planned work unit was one phase-gated low-noise post-sec2
+reachability soak with product freelist restore and passive provenance, parser,
+and writeback telemetry enabled. No build or source mitigation was needed.
+
+The positive-control requirement passed: four `scope=control` provenance
+records had `emit=1`, `raw=1`, `dispatch=1`, and `match=1`. The run reached VI
+640 but never reached the 1024 gate, so it produced no post-sec2 parser
+sample. It then received SIGBUS at `si_addr=0x380000004` in
+`viRetraceHandlerThread`, with last guest PC `0x8000b650`. The log contains
+1,124 `[fl-zero-fault]` records, 21 framebuffer writeback records, and one
+header-restore record; none is a post-sec2 correlation.
+
+This selects H-prechain-transient for this run and rules out claiming either
+the parser-chain or writer-co-gate hypotheses from a null. It adds a fourth
+distinct pre-chain failure family after the earlier Metal barrier, grid
+allocator, and tile-copy failures, but does not identify a common writer or
+justify a mitigation. Log:
+`scratch/agent/soak_results/s790_postsec2_reachability_20260812-231408/run.log`.

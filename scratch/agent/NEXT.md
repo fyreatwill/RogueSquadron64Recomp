@@ -1,42 +1,42 @@
-# NEXT work unit (post-sec2 reachability stability soak)
+# NEXT work unit (systematic pre-chain wild-pointer consumer audit)
 
-HYPOTHESIS-ID: m3-postsec2-reachability
+HYPOTHESIS-ID: m3-prechain-wild-pointer-audit
 
-The s789 writer audit identified RT64 garbage-SETCIMG writeback as the named
-writer for the allocator corruption and left the s787 tile-copy assertion
-independent. Do not add a mitigation from either crash.
+The s790 reachability repeat passed its controls but crashed in
+`viRetraceHandlerThread` at `0x380000004` before VI 1024. Do not add a guard
+from this crash or infer a parser result.
 
 ## Competing hypotheses
 
-- H-parser-chain: the post-sec2 parser/control-flow path is the remaining
-  cause of the FULL_SYNC plateau. Prediction: a stable run reaches the
-  post-sec2 provenance gate and records authoritative parser E9/FULL_SYNC
-  advances.
-- H-prechain-transient: pre-chain failures still prevent measurement.
-  Prediction: positive controls fire but the run dies before a usable
-  post-sec2 parser sample.
-- H-writer-co-gate: the named garbage-SETCIMG writeback remains coupled to
-  the recovery path and changes reachability. Prediction: same-run phase
-  telemetry correlates the writeback/restore events with the post-sec2 gate.
+- H-shared-consumer: the `0x380...` fault family has a common generated/runtime
+  consumer idiom before VI 1024. Prediction: source enumeration finds multiple
+  sites that dereference or index guest-derived wild pointers, including the
+  s790 path, with matching existing diagnostics.
+- H-independent-consumers: s790 is another unrelated pre-chain failure.
+  Prediction: the audit finds no shared consumer or value path across s785,
+  s786, s787, and s790.
+- H-writer-unresolved: the value is written upstream but current source cannot
+  name the writer. Prediction: all consumers see already-corrupt state and
+  existing traces lack a writer attribution.
 
 ## Discriminating measurement
 
-One phase-gated stability soak using the established low-noise post-sec2
-recipe, with all passive provenance controls and the existing freelist
-writeback/restore telemetry enabled. The discriminating measurement is a
-usable post-sec2 parser-chain sample after VI width 1024: parser E9/FULL_SYNC
-advances select H-parser-chain; positive controls plus a pre-gate crash select
-H-prechain-transient; a stable gate with writeback/restore correlation selects
-H-writer-co-gate. A null without the positive controls is invalid.
+One bounded source audit before any build or run. Enumerate every active
+generated/runtime consumer of guest-derived pointers or indices capable of
+producing the `0x380...` fault shape, then map each to the s785-s790 crash
+records and existing positive controls. Do not change code.
 
 ## Exact audit
 
-1. Run the existing low-noise recipe from `scratch/agent` with its phase gate;
-   do not use a stopwatch and kill with SIGKILL if the watchdog expires.
-2. Require repeated `emit=1`, `raw=1`, `dispatch=1`, and `match=1` controls.
-3. Compare parser-chain counts and writeback/restore correlation in that same
-   run; do not infer from an animating-scene cross-run A/B.
+1. Search the active generated tree and runtime for `0x380`, wild-pointer
+   guards, guest-address conversion, and array/index consumers; record bounded
+   source windows and call sites.
+2. Compare those sites with the four crash signatures and the s789 RT64
+   writeback origin; distinguish shared consumers from independent callers.
+3. If no shared consumer is identified, record H-independent-consumers and
+   choose the highest-information writer probe. No mitigation is allowed.
 
-Expected outcomes: a controlled post-sec2 parser sample selects H-parser-chain;
-an early death with controls selects H-prechain-transient; a stable gate with
-same-run writeback correlation selects H-writer-co-gate.
+Expected outcomes: a source-and-trace match selects H-shared-consumer; disjoint
+consumers select H-independent-consumers; only already-corrupt inputs with no
+writer attribution select H-writer-unresolved. A missing active source blocks
+classification rather than justifying a guard.

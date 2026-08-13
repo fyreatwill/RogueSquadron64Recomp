@@ -250,6 +250,15 @@ leaving runtime behavior as the remaining broad class.
   selects H-freelist-writer for s786's allocator corruption, with RT64 as the
   named writer, and keeps s787's zero-height tile-copy assertion independent.
   No mitigation is justified.
+- The s790 low-noise reachability repeat passed same-run positive controls
+  (`scope=control`, `emit=1`, `raw=1`, `dispatch=1`, `match=1`, four records)
+  but died at VI 640 before the 1024 gate. It was a SIGBUS in
+  `viRetraceHandlerThread` at `si_addr=0x380000004`, last guest PC
+  `0x8000b650`, with 1,124 `[fl-zero-fault]` records. There was no post-sec2
+  parser sample and no writeback/restore correlation. This selects
+  H-prechain-transient for s790 and leaves H-parser-chain and H-writer-co-gate
+  unevaluable; it adds a fourth distinct pre-chain family without naming a
+  common writer or justifying mitigation.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
