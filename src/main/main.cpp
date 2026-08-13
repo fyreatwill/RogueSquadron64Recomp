@@ -100,6 +100,7 @@ extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
                                           uint32_t guestE9);
 extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
                                       uint32_t guestE9);
+extern "C" void rs64_e9prov_task_join_report(uint32_t task);
 extern "C" void rs64_e9prov_task_begin(uint32_t task);
 extern "C" void rs64_e9prov_task_end(uint32_t task);
 extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_130,
@@ -973,6 +974,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
                                 setcimg_n, setcimg_wild, wild_addr, wild_w, e9_aligned, dl_ptr);
                         rs64_rdp_advance_report((uint32_t)s_n, dl_ptr, e9_aligned);
                         rs64_e9prov_aligned(task_serial, dl_ptr, e9_aligned);
+                        rs64_e9prov_task_join_report(task_serial);
                         fflush(stderr);
                     }
                     const uint32_t fs_addr = rs64_dpc_get_last_fullsync_addr();

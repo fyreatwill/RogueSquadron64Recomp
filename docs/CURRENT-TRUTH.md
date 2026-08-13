@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s823; compacted in maintenance s776)
+## Current truth (reviewed through s825; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -101,13 +101,31 @@ interpretation. No game logic, parser accounting, or mitigation changed.
 ORIGIN: the callback is emitted by the post-task guest-DL diagnostic walker;
 the stale `aligned=0` row is produced by task-end telemetry before that walker.
 
-Next work unit: make the smallest telemetry-only repair that records the
-inline-walker result after `rs64_e9prov_aligned` returns (or defers the join
-until that callback), keeping bridge/parser counters unchanged. Build once and
-run `zsh scratch/agent/s790_postsec2_reachability.sh` with the existing
-VI-1024 gate and positive controls. Expected discriminator: a post-callback
-row with `passed==current` and `aligned>0` on the same task proves the join is
-repaired; a mismatch or absent callback row reopens the ownership audit.
+**s825 repairs the join and validates it:** the telemetry-only change removed
+the pre-walker `[e9-task-join]` emission, added
+`rs64_e9prov_task_join_report`, and called it immediately after
+`rs64_e9prov_aligned`. The Debug build succeeded. The prescribed capture
+reached VI 1024 at 78.6s, passed its positive controls (128 provenance rows),
+and produced 52 post-callback join rows; all 52 had `passed==current`,
+`aligned=1`, and bridge/parser deltas of 1. This selects
+**H-post-callback-join** and refutes serial mismatch and callback absence for
+this path. The run later hit the separate `slotDispatcherIter+872` SIGBUS
+family at 200.1s; that does not invalidate the telemetry result. Bridge/parser
+counters and game logic were unchanged.
+
+ORIGIN: the repaired join row is emitted by the same inline-walker block after
+the callback; matching task serials and positive controls are runtime evidence
+for telemetry ordering only.
+
+Next work unit: perform one bounded, read-only aggregation of the repaired
+`[e9-task-join]` rows from the s825 capture, joining each row to its
+`[dl-sync-probe2]` task and classifying aligned guest E9 versus bridge/parser
+deltas. Competing hypotheses are H-task-scoped-parity (aligned, bridge, and
+parser counts agree per task), H-task-scoped-loss (aligned exceeds parser), and
+H-join-sample-bias (the repaired rows cover only the control/selected subset).
+Discriminator: one script-derived table of matched task IDs and counts, with
+the positive-control rows separately identified; do not change runtime code or
+rerun an animating scene until that table exists.
 
 - The oracle identity audit (s775) found byte-identical executable, core, RSP,
   input-plugin, and ROM artifacts. Fresh configs differed only in

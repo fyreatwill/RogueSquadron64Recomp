@@ -55783,3 +55783,29 @@ capture; no game logic, parser accounting, or mitigation changed.
 
 ORIGIN: task-end telemetry runs before the post-task guest-DL walker callback;
 the stale zero is a diagnostic ordering defect, not a game value.
+
+## Session 825 (2026-08-13) — repaired E9 callback/task join validates
+
+The telemetry-only repair removed the `[e9-task-join]` report from
+`rs64_e9prov_task_end`, added `rs64_e9prov_task_join_report`, and called it
+immediately after `rs64_e9prov_aligned` in the inline-data-aware walker. The
+Debug target built successfully; only the existing JSON literal and macOS
+deployment-target warnings appeared.
+
+The prescribed `s790_postsec2_reachability.sh` capture reached VI width 1024
+at 78.6s and passed its positive controls: 128 `[e9-prov]` rows had
+`emit=1`, `raw=1`, `dispatch=1`, and `match=1`. It emitted 52 repaired
+`[e9-task-join]` rows and 52 nonzero callback rows. Every repaired row had
+matching task identity (`passed==current`), `aligned=1`, and bridge/parser
+deltas of 1. This selects H-post-callback-join and rules out serial mismatch
+and callback absence for this path; the old pre-callback zero-valued join is
+no longer the observed row.
+
+The process later crashed at 200.1s after 59 frames in the known
+`slotDispatcherIter+872` family. That failure is separate from the telemetry
+discriminator. No bridge/parser implementation or game logic changed.
+
+ORIGIN: the repaired row is emitted by the post-task guest-DL walker after its
+`rs64_e9prov_aligned` callback; the matching serial and positive controls are
+evidence about telemetry ordering, not a legitimacy claim about any game
+pointer or RDP stream.

@@ -953,24 +953,6 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
         }
     }
     if (g_e9prov.task != task) return;
-    if (log_e9_unified() && (g_e9prov.control || g_e9prov.target || g_e9prov.aligned != 0)) {
-        const uint32_t bridge_e9 = g_task_bridge_e9.load(std::memory_order_acquire);
-        const uint32_t parser_e9 = rs64_rdp_advance_task_e9();
-        fprintf(stderr,
-                "[e9-task-join] task=%u begin=%u end=%u bridge_start=0 bridge_end=%u "
-                "bridge_delta=%u parser_start=0 parser_end=%u parser_delta=%u "
-                "aligned=%u dl=0x%08X scope=%s\n",
-                task, task, task, bridge_e9, bridge_e9, parser_e9, parser_e9,
-                g_e9prov.aligned, g_e9prov.aligned_dl,
-                g_e9prov.control ? "control" : g_e9prov.target ? "sec2" : "aligned");
-        fflush(stderr);
-        const uint32_t line = g_e9prov_join_lines.fetch_add(1, std::memory_order_relaxed);
-        if (line < 96) {
-            fprintf(stderr, "[e9-join-end] passed=%u current=%u guest_dl=0x%08X aligned=%u\n",
-                    task, g_e9prov.task, g_e9prov.aligned_dl, g_e9prov.aligned);
-            fflush(stderr);
-        }
-    }
     if (log_e9_unified() && (g_e9prov.control || g_e9prov.target)) {
         fprintf(stderr,
                 "[e9-unified] task=%u scope=%s guest_dl=0x%08X aligned=%u "
@@ -1115,6 +1097,27 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 fprintf(stderr, "[e9-prov-depth-truncated] task=%u rows=%u cap=32\n", task, rows);
             }
         }
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_e9prov_task_join_report(uint32_t task) {
+    if (!log_e9_unified() || g_e9prov.task != task) return;
+    if (!(g_e9prov.control || g_e9prov.target || g_e9prov.aligned != 0)) return;
+    const uint32_t bridge_e9 = g_task_bridge_e9.load(std::memory_order_acquire);
+    const uint32_t parser_e9 = rs64_rdp_advance_task_e9();
+    fprintf(stderr,
+            "[e9-task-join] task=%u begin=%u end=%u bridge_start=0 bridge_end=%u "
+            "bridge_delta=%u parser_start=0 parser_end=%u parser_delta=%u "
+            "aligned=%u dl=0x%08X scope=%s\n",
+            task, task, task, bridge_e9, bridge_e9, parser_e9, parser_e9,
+            g_e9prov.aligned, g_e9prov.aligned_dl,
+            g_e9prov.control ? "control" : g_e9prov.target ? "sec2" : "aligned");
+    fflush(stderr);
+    const uint32_t line = g_e9prov_join_lines.fetch_add(1, std::memory_order_relaxed);
+    if (line < 96) {
+        fprintf(stderr, "[e9-join-end] passed=%u current=%u guest_dl=0x%08X aligned=%u\n",
+                task, g_e9prov.task, g_e9prov.aligned_dl, g_e9prov.aligned);
         fflush(stderr);
     }
 }

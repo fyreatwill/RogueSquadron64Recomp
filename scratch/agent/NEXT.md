@@ -1,26 +1,28 @@
-# NEXT work unit (repair E9 callback/task join ordering)
+# NEXT work unit (task-scoped E9 join aggregation)
 
 HYPOTHESIS-ID: m3-e9-callback-task-ownership
 
-Make one telemetry-only change: ensure the inline-data-aware walker’s
-`rs64_e9prov_aligned(task_serial, dl_ptr, e9_aligned)` result is recorded after
-the callback, or defer the `[e9-task-join]` report until after that callback.
-Keep bridge/parser counters and game logic unchanged.
+Run one bounded, read-only aggregation over the completed s825 capture. Join
+each repaired `[e9-task-join]` row to its `[dl-sync-probe2]` task and classify
+aligned guest E9 against bridge/parser deltas. Do not change runtime code or
+rerun the game.
 
 Competing hypotheses:
 
-- H-post-callback-join: after reordering, the same task has
-  `passed==current` and `aligned>0`; this confirms the join repair.
-- H-serial-mismatch: the repaired row has differing callback/current serials;
-  this reopens task ownership rather than parser accounting.
-- H-callback-absent: no repaired row appears despite positive controls; this
-  means the walker callback path is still not the observed producer.
+- H-task-scoped-parity: matched task rows show aligned, bridge, and parser
+  counts agreeing; the earlier discrepancy was population/sampling scope.
+- H-task-scoped-loss: matched rows show aligned E9 greater than parser E9;
+  the discrepancy survives the repaired ownership join.
+- H-join-sample-bias: repaired rows cover only controls or a narrow selected
+  subset; there are too few matched post-sec2 rows to classify either count
+  relationship.
 
-Discriminating measurement: build once with the normal pipeline, then run:
+Discriminating measurement: derive one table from
+`scratch/agent/soak_results/s790_postsec2_reachability_20260813-031909/run.log`
+using bounded `grep`/`awk` or a one-off read-only script, with control rows
+separate from post-sec2 rows. Report matched task IDs and aligned/bridge/parser
+counts. Expected outcomes are parity, a reproducible aligned>parser delta, or
+insufficient matched post-sec2 coverage; do not infer parser loss from an
+unjoined row.
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    zsh scratch/agent/s790_postsec2_reachability.sh
-
-Use the existing VI-1024 phase gate and positive controls. A post-callback row
-with matching serial and nonzero aligned count is the required result; do not
-run a parser-loss experiment until it exists.
+No build command is expected for this work unit.
