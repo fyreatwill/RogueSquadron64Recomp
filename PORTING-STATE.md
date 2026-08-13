@@ -55335,3 +55335,40 @@ audited generated tree, but does not identify which state writer produces the
 
 ORIGIN: the 640-only values are selected by the generated row-selection
 branches; no guard, skip, restore, or other mitigation was introduced.
+
+## Session 806 (2026-08-13) — reachable VI state gate selected
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 39,956 bytes, so maintenance did
+not trigger. Before building, the competing hypotheses and discriminator were
+written in `scratch/agent/NEXT.md`. Ground truth was checked first: the retail
+oracle passed the whole-RDRAM positive control with 2,236,680 writes in 12
+seconds, independently recorded 24 writes in `0x11A860–0x11A870`, and its VI
+trace remained at the expected 320 phase for this horizon.
+
+The regeneration-safe fixup was extended at the three s803 direct VI callsites
+to log selector bytes, pending masks, selected mode pointer, and width. The
+generated tree was regenerated and rebuilt successfully. Regeneration exposed
+an existing s645 probe string-escaping defect in `funcs_2.c`; the fixup source
+was corrected and the generated occurrence repaired before the successful
+build. This was a build-path repair, not game behavior or mitigation.
+
+The phase-gated port capture reached VI 640 after 1.3 seconds and emitted six
+`[vi-gate]` records while the host VI/mode controls fired. After the transition,
+`initVideoSubsystem` selected `0x80128E40` at width 640,
+`applyPendingViChanges` selected `0x80128DF0` at width 640 with pending
+`0x00000000/0x00000011`, and a later `initVideoSubsystem` again selected a
+width-640 row. The selector publisher controls remained silent. The run
+captured 28 frames and ended normally at the probe budget with no crash or
+abort marker.
+
+This selects H-state-gate over H-mode-buffer-writer and H-missing-dispatch for
+the tested recipe. The generated-source inventory from s805 and this same-run
+runtime trace are independent evidence; neither identifies the state writer or
+explains the retail phase divergence. No mitigation was added.
+
+ORIGIN: the measured 640-only requests originated at the three reachable
+generated direct callers; the diff added diagnostics and a regeneration-path
+string fix only, not a guard, skip, restore, or other corruption mitigation.
+
+Logs: `scratch/agent/oracle_vi_gate_s806.log` and
+`scratch/agent/vi_gate_s806/run.log`.

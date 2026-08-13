@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s802; compacted in maintenance s776)
+## Current truth (reviewed through s806; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -432,6 +432,22 @@ leaving runtime behavior as the remaining broad class.
    H-missing-dispatch. The next unit is one batched marker at the reachable
    row-selection predicates, retaining all existing callsite, host VI, and
    oracle positive controls. No mitigation is justified.
+
+   **s806 reachable-gate trace:** the oracle ground-truth arm passed the
+   whole-RDRAM positive control (2,236,680 writes in 12 seconds) and
+   independently recorded 24 writes to `0x11A860–0x11A870`; its VI trace
+   remained at the expected 320 phase for this horizon. The regenerated port
+   build passed its host VI/mode positive control and emitted six batched
+   `[vi-gate]` rows. After the 640 transition, `initVideoSubsystem` selected
+   `0x80128E40` at width 640, `applyPendingViChanges` selected `0x80128DF0`
+   at width 640 with pending `0x00000000/0x00000011`, and a later
+   `initVideoSubsystem` again selected a width-640 row; selector publisher
+   controls remained silent. The source audit and same-run runtime trace are
+   independent lines of evidence. This selects **H-state-gate** over
+   H-mode-buffer-writer and H-missing-dispatch for the tested recipe; it does
+   not identify the state writer or explain the retail phase divergence. No
+   mitigation was added. Next: enumerate writers and state gates for the
+   pending masks and selector/config bytes before another run.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
