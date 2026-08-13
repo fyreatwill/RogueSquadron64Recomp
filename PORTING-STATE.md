@@ -56694,3 +56694,26 @@ ORIGIN: source inventory only; the existing guards change only handling of
 out-of-range computed next pointers, and no game value or control flow changed
 in s862. The next unit is a phase-gated entry-state probe with retail heap-watch
 and port positive controls.
+
+## Session s863 (2026-08-13) — port entry probe selects invalid coalescer state
+
+Added the regeneration-safe `M3-COALESCE-ENTRY-STATE` probe to the fixup script,
+regenerated in the required order, and built Debug successfully. A phase-gated
+capture reached VI width 1024 and passed 147 E9 provenance positive-control
+rows with no crash marker. The coalescer entry probe fired 3 times: every row
+had an invalid incoming `a0` (`0x1`, `0x1`, `0`) and the same invalid global
+head `0x830A10A0`; the other bases were in KSEG0. The paired computed-next
+probe produced 209 rows, all in-range, across both guarded reads. This selects
+H-heap-entry-state for the captured port population and rules out wild computed
+next values there, but does not identify the writer or establish legitimacy.
+
+The retail oracle's same-run whole-RDRAM control fired 11,785,315 writes and a
+known active control at physical `0x11A860` fired 24 times. The requested
+`0x1F3CC0` heap-slot watch stayed at zero, but the retail run stayed at VI 320,
+so that null is unevaluable and is not treated as a retail negative. The next
+unit is retail PC attribution on the coalescer caller/head globals. No
+mitigation was added.
+
+ORIGIN: the new probe reads and logs incoming registers, the global head, and
+already-computed next pointers only; it changes no game value, guard, or
+control flow.

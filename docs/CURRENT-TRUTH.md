@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s862 (2026-08-13). The active blocker is the authoritative
+Reviewed through s863 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -607,37 +607,48 @@ ORIGIN: source inventory only; existing guards change only the handling of
 out-of-range computed next pointers, and no game value or control flow was
 changed in s862.
 
-## Next work unit: phase-gated coalescer entry-state probe
+## s863 coalescer entry-state probe
+
+The regeneration-safe entry probe fired 3 times in a phase-gated port capture
+that reached VI width 1024 and passed 147 E9 provenance positive-control rows.
+All three rows carried an invalid incoming base (`a0=0x00000001` twice and
+`a0=0` once); all three carried the same out-of-range global head
+`0x830A10A0`. The other incoming bases were in KSEG0, and all 209 computed
+next values at the two guarded reads were in-range. The run had no crash marker.
+This selects H-heap-entry-state for the captured port population, but does not
+identify the writer or establish legitimacy. It is single-source runtime
+evidence. The retail oracle's whole-RDRAM control fired 11,785,315 times and a
+known active control at `0x11A860` fired 24 times; the `0x1F3CC0` heap-slot
+watch stayed at zero while retail remained at VI 320, so that heap-slot null is
+unevaluable rather than a retail negative.
+
+ORIGIN: the probe only reads and logs incoming registers, the global head, and
+already-computed next pointers; it changes no game value, guard, or control
+flow. No mitigation is justified.
+
+## Next work unit: retail coalescer-state writer attribution
 
 HYPOTHESIS-ID: m3-coalesce-entry-state
 
-Add one behavior-neutral, regeneration-safe entry probe to
-`coalesceFreeHeapBlocks`, carrying the four incoming block bases and the global
-free-list head, then run the existing phase-gated recipe with the retail heap
-watch positive control before the port build. Do not add a guard or alter the
-coalescer's values/control flow. The probe must be bounded to the 1024 phase
-and must log the computed `next` values at both guarded sites when the entry
-record is active.
+Run the retail oracle with whole-RDRAM plus physical watches on the coalescer
+caller globals `0x1163E4:0x1163F0` and the coalescer head global
+`0x10FF18:0x10FF1C`, with `--vi-trace` and the documented input schedule. Do
+not build or add a mitigation. The goal is PC attribution for writes to the
+state that the port probe found invalid.
 
 Competing hypotheses:
 
-- H-heap-entry-state: one incoming base or the free-list head is outside the
-  expected RDRAM heap range, or a computed next pointer is wild; this selects a
-  writer/state probe target.
-- H-heap-valid: all observed bases and computed next pointers are valid, so the
-  recurring host symbol is not explained by this coalescer idiom.
-- H-heap-unreached: the coalescer entry control does not fire in the 1024 phase;
-  the recurring symbol belongs to another phase or attribution path.
-- H-probe-invalid: the retail control or coalescer positive control fails, so
-  the run cannot classify heap state.
+- H-retail-writer: a retail write to either watched state range has a guest PC,
+  identifying the writer boundary.
+- H-retail-no-write: whole-RDRAM and VI controls fire but neither state watch
+  fires; the retail state is initialized elsewhere or not reached.
+- H-retail-control-invalid: the whole-RDRAM or VI positive control fails, so a
+  null state watch is unevaluable.
 
-Discriminator: the retail whole-RDRAM and heap-watch controls must fire, and the
-port's existing phase controls must fire in the same run. Invalid entry or
-computed-next values select H-heap-entry-state; all values valid through the
-active population select H-heap-valid; no entry rows select H-heap-unreached;
-failed controls select H-probe-invalid. This remains diagnostic evidence only
-and cannot authorize a mitigation without naming the writer and establishing
-legitimacy.
+Discriminator: whole-RDRAM and VI controls must fire in the same run. Any
+state-watch hit with a PC selects H-retail-writer; zero state hits with valid
+controls selects H-retail-no-write; failed controls select
+H-retail-control-invalid. This remains diagnostic evidence only.
 
 ## Ranked backlog
 
