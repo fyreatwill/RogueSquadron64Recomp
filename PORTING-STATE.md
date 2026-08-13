@@ -57152,6 +57152,24 @@ changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
+## Session s894 (2026-08-13) — stream sample-size wrapper is fully classified
+
+Performed the prescribed source-only M3 inventory for
+`streamSampleCountToByteSize` (`0x800981E4`) in the external generated tree,
+cross-checked against its sole callsite and the companion overlay metadata.
+The complete function is three instructions: `addiu v0,a0,4`, `jr ra`, and
+the delay-slot `sll v0,v0,1`. It has no loads, stores, pointer dereferences,
+branches, loops, sentinels, or state checks. The only callsite is
+`loadSpeechFile` at `0x8009BC2C`; its delay slot supplies the immediate
+`0x10E0`, yielding `0x21C8`, which is immediately passed to `rs_malloc` and
+stored as the speech allocation at `0x80154674`. The generated instruction
+sequence, callsite arithmetic, and companion overlay entry independently
+agree. H-stream-size-fully-classified is selected for this function; broader
+audio-buffer legitimacy is outside the function and remains unproven. No
+guard, build, soak, or runtime behavior changed.
+
+ORIGIN: bounded generated-source, callsite, and companion-symbol inventory;
+no guest value, writer mutation, mitigation, or runtime behavior changed.
 
 ## Session s893 (2026-08-13) — streamed-voice flush is bounded but buffer/index legitimacy remains open
 
