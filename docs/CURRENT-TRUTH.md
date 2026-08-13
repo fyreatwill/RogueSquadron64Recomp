@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s885 (2026-08-13). The active blocker is the authoritative
+Reviewed through s886 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -93,6 +93,12 @@ closed. M3 work is limited to systematic idiom-class audits.
   initialization, insertion, reaping, and clear writers were all enumerated.
   Structural safety passed, but writer/value legitimacy remains unproven. No
   guard or behavior change.
+- s886 audited `tickScheduledSongEvents`'s complete `+0xE7C` insertion path.
+  The head load is null-tested before either non-empty insertion write, and
+  the empty-list store is the only other path. Shared initialization, clear,
+  and replacement writers were enumerated across the song functions. The
+  companion symbols confirm the eight-slot MusyX table, but no independent
+  evidence proves every writer/value legitimate. No guard or behavior change.
 
 ## Recent evidence ledger
 
@@ -113,6 +119,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s883 | `stopSongByHandle` linked-list inventory: 2 parallel chains, 12 generated `+0xE78/+0xE7C` writes classified; writer/value legitimacy remains unproven, so no mitigation. |
 | s884 | `tickSongSequence` linked-list inventory: 4 guarded chain consumers and all same-class sibling accesses/writers classified; structural safety passed, writer/value legitimacy remains unproven, so no mitigation. |
 | s885 | `tickAllActiveSongs` inventory: 1 guarded `+0xE7C` chain consumer; shared writers classified, writer/value legitimacy remains unproven, so no mitigation. |
+| s886 | `tickScheduledSongEvents` inventory: 2 guarded non-empty head uses plus 1 empty-list store; all shared `+0xE7C` writers classified, legitimacy remains unproven, so no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -133,27 +140,27 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-The `tickSongSequence` inventory found four structurally guarded consumers,
-but its writers and values are not independently proven legitimate. Do not
-add a guard or change game behavior. Continue the same M3 linked-list audit
-with `tickAllActiveSongs`, including its `+0xE7C` consumer and every writer
-it relies on.
+The scheduled-event insertion path is structurally guarded, but its writers
+and values are not independently proven legitimate. Do not add a guard or
+change game behavior. Continue the same M3 linked-list audit with
+`tickActiveSongs`, including its complete bounded slot loop and all linked
+list state it relies on.
 
 Competing hypotheses:
 
-- H-tick-all-unclassified: the next candidate has at least one pointer site
+- H-tick-active-unclassified: the next candidate has at least one pointer site
   without a proof of safety or a concrete writer/legitimacy explanation.
-- H-tick-all-fully-classified: every site in the next candidate is already
+- H-tick-active-fully-classified: every site in the next candidate is already
   proven safe, dead, or covered by an existing justified patch.
-- H-tick-all-shape-mismatch: the next ranked candidate does not define
+- H-tick-active-shape-mismatch: the next ranked candidate does not define
   one coherent pointer idiom; stop rather than mixing shapes.
 
-Discriminating measurement: a complete site table for `tickAllActiveSongs`,
-including source address, checks, and writer/legitimacy basis for every
-`+0xE7C` hit. Any omitted access or unproven writer rejects full
+Discriminating measurement: a complete site table for `tickActiveSongs`,
+including every slot-table pointer load, linked-list dereference, check, and
+writer/legitimacy basis. Any omitted access or unproven writer rejects full
 classification.
 
-Exact commands used: use `rg` to enumerate `tickAllActiveSongs` and its
+Exact commands used: use `rg` to enumerate `tickActiveSongs` and its
 `MEM_*`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_25.c`, then bounded
 `sed` windows and the companion `rogue_squadron64` symbol/decomp files. No
 game build or soak is planned.

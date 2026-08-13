@@ -57248,3 +57248,29 @@ or runtime behavior changed.
 
 ORIGIN: bounded generated-source and companion-symbol inventory; no guest
 value, writer mutation, mitigation, or runtime behavior changed.
+## Session s886 (2026-08-13) — scheduled-song insertion is structurally guarded; writer legitimacy remains open
+
+Performed the prescribed source-only M3 inventory for `tickScheduledSongEvents`
+(`0x80094DB4`) in the external generated tree, with the companion symbol
+artifacts. The complete `+0xE7C` path has three sites:
+
+| Guest site | Operation | Predecessor / writer basis |
+|---|---|---|
+| `0x80094E6C` | load slot `+0xE7C` as the current scheduled-list head | slot base came from the validated song-tick table; null-tested at `0x80094E70` |
+| `0x80094E78` | reload the same head and write its `+0x4` back-link | reached only on the non-null branch from `0x80094E70`; same head value is reloaded, not independently revalidated |
+| `0x80094E90` | store the new node into slot `+0xE7C` | empty-list branch after the head check; new node `s0` has its `+0x4` cleared at `0x80094E88` |
+
+The insertion also writes the new node's `+0x0` at `0x80094E74`, and the
+head-load path is protected by the existing table-pointer guards at
+`0x80094DB8`, `0x80094DEC`, `0x80094E58`, `0x80094E68`, and `0x80094E84`.
+The shared `+0xE7C` writer inventory is complete: initialization clears it at
+`0x800946A0`; scheduled insertion writes it at `0x80094E90`; stop-song and
+sequence cleanup clear it at `0x800959F4` and `0x80095CA4`; and all-active
+song reaping replaces it at `0x80096FD8`. The companion symbols independently
+identify the table as eight MusyX song slots at `0x80149A00`, stride `0xEF8`,
+and name `tickScheduledSongEvents`, but do not prove every writer/value
+legitimate. H-scheduled-unclassified is selected. No guard, build, soak, or
+runtime behavior changed.
+
+ORIGIN: bounded generated-source and companion-symbol inventory; no guest
+value, writer mutation, mitigation, or runtime behavior changed.
