@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s827 (2026-08-13). The active blocker is the authoritative
+Reviewed through s829 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -35,11 +35,20 @@ Priority until changed by the user:
 - s823–s825 repaired the telemetry ownership join. The post-callback rows have
   matching task serials, aligned guest E9s, and positive controls.
 - s826's apparent same-task parser undercount was single-source evidence.
-  s827 source audit invalidated it: `parser_delta` reads a cumulative counter
-  spanning LLE tasks, reset only at `rs64_run_lle_gfx` entry. It is incremented
-  in two RT64 parser fetch paths for raw opcode `0xE9`; producer task begin/end
-  do not reset it. The advance ring shares the LLE reset and is capped at 512.
-  `g_cumulative_fullsyncs` is a separate process-lifetime bridge counter.
+  s827 source audit established that the old `parser_delta` read a cumulative
+  counter spanning LLE tasks, reset only at `rs64_run_lle_gfx` entry. It is
+  incremented in two RT64 parser fetch paths for raw opcode `0xE9`; producer
+  task begin/end do not reset it. The advance ring shares the LLE reset and is
+  capped at 512. `g_cumulative_fullsyncs` is a separate process-lifetime
+  bridge counter.
+- s829 added an explicit epoch at each parser reset and printed it in the
+  post-parser report and task join. In the one s790 capture, 58 join rows had
+  task/epoch identity (including positive controls), but aligned rows still
+  showed bridge E9 counts of 19–36 against parser counts of 0–3. This is
+  single-source runtime evidence: it rules out an unlabelled reset epoch as
+  the explanation, but does not distinguish consumer ordering from parser
+  filtering or establish a writer/legitimacy claim. The known
+  `slotDispatcherIter+872` crash recurred at 204s.
 - No current conclusion establishes parser loss, a bad RDP writer, or a
   legitimate/illegitimate game value. No mitigation is justified.
 
@@ -68,9 +77,10 @@ the same consumer epoch as the aligned guest task. Do not use the old
 
 ## Ranked backlog
 
-1. Redesign and validate the consumer-scoped E9 epoch join above.
-2. After a valid join, classify parser/consumer advancement with two
-   independent lines of evidence; only then consider an implementation fix.
+1. Add and validate the parser-consumer reset/fetch/join ordering trace above.
+2. After a valid ordering result, classify parser/consumer advancement with
+   two independent lines of evidence; only then consider an implementation
+   fix.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.

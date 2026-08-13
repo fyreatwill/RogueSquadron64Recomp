@@ -279,6 +279,7 @@ static uint8_t *g_rdram_for_submit = nullptr;
 
 static bool log_e9_unified();
 extern "C" uint32_t rs64_rdp_advance_task_e9();
+extern "C" uint32_t rs64_rdp_advance_epoch();
 
 static void rs64_count_submitted_e9(uint32_t lo, uint32_t hi) {
     if (!log_e9_unified() || g_rdram_for_submit == nullptr) return;
@@ -1106,12 +1107,13 @@ extern "C" void rs64_e9prov_task_join_report(uint32_t task) {
     if (!(g_e9prov.control || g_e9prov.target || g_e9prov.aligned != 0)) return;
     const uint32_t bridge_e9 = g_task_bridge_e9.load(std::memory_order_acquire);
     const uint32_t parser_e9 = rs64_rdp_advance_task_e9();
+    const uint32_t parser_epoch = rs64_rdp_advance_epoch();
     fprintf(stderr,
             "[e9-task-join] task=%u begin=%u end=%u bridge_start=0 bridge_end=%u "
             "bridge_delta=%u parser_start=0 parser_end=%u parser_delta=%u "
-            "aligned=%u dl=0x%08X scope=%s\n",
+            "parser_epoch=%u aligned=%u dl=0x%08X scope=%s\n",
             task, task, task, bridge_e9, bridge_e9, parser_e9, parser_e9,
-            g_e9prov.aligned, g_e9prov.aligned_dl,
+            parser_epoch, g_e9prov.aligned, g_e9prov.aligned_dl,
             g_e9prov.control ? "control" : g_e9prov.target ? "sec2" : "aligned");
     fflush(stderr);
     const uint32_t line = g_e9prov_join_lines.fetch_add(1, std::memory_order_relaxed);

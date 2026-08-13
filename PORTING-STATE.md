@@ -55866,3 +55866,26 @@ measurement preserved in `scratch/agent/NEXT.md`. No runtime code, generated
 code, submodule contents, or mitigation changed.
 
 ORIGIN: documentation-only compaction; no runtime value or writer was changed.
+
+## Session 829 (2026-08-13) — explicit parser epoch does not explain E9 gap
+
+The telemetry-only epoch change incremented an epoch at every
+`rs64_rdp_advance_reset` and printed it in reset, post-parser report, and
+`[e9-task-join]` records. The Debug target built successfully. The existing
+phase-gated `s790_postsec2_reachability.sh` run reached VI width 1024 and
+passed the positive controls: 128 provenance rows had
+`emit=1`, `raw=1`, `dispatch=1`, and `match=1`; 126 FULL_SYNC rows were
+recorded. It later reproduced the known `slotDispatcherIter+872` SIGBUS at
+204s after 60 frames.
+
+The bounded capture had 680 reset epochs and 58 join rows. Each observed join
+row had the same task number and parser epoch (controls, sec2, and aligned
+rows); aligned rows still showed bridge E9 counts of 19–36 against parser
+counts of 0–3. This rules out an unlabelled reset epoch as the explanation,
+but is single-source runtime evidence and does not distinguish consumer
+ordering from parser filtering or establish parser loss, a writer, or
+legitimacy. The next work unit is an explicit reset-to-first-consumer-to-join
+ordering trace with the same positive controls.
+
+ORIGIN: the new values are telemetry emitted by the RT64 parser reset and fetch
+paths; no game value, RDP command, or mitigation behavior was changed.
