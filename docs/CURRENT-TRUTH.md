@@ -47,8 +47,8 @@ the chronological ledger. The active facts are:
   three consecutive pre-chain runs failed in distinct families (Metal barrier,
   grid allocation, framebuffer tile-copy). This selects the bounded
   H-prechain-deterministic failure class, not a parser hypothesis; no parser
-  sample or mitigation is justified. The next unit is a systematic
-  allocation/grid crash-idiom audit.
+  sample or mitigation is justified. The next unit is a bounded pre-chain
+  writer-attribution run.
 - The s788 source audit found the active generated tree at
   `../N64Recomp/RecompiledFuncs`, and the build manifest compiles that exact
   tree; stale-generated-view is therefore refuted for this unit. The s786
@@ -61,8 +61,8 @@ the chronological ledger. The active facts are:
   show the same allocator consuming out-of-range free-list slots. No source
   or trace evidence identifies one writer shared by the s785 Metal barrier,
   s786 allocator, and s787 tile-copy families. This is a mixed pre-chain
-  failure class, not a justification for a guard. Next: systematic
-  `rs_malloc`/free-list writer audit.
+  failure class, not a justification for a guard. The s791 source audit then
+  found disjoint consumers; next is a bounded writer-attribution run.
 - The matched s778 oracle runtime check with the alternate `R4300Emulator`
   again found no later retail VI phase: debugger-on had 11,782,489
   whole-RDRAM positive-control writes, 4,198 VI callbacks, and all 11 PIF
