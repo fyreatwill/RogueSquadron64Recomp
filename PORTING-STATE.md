@@ -57613,3 +57613,48 @@ independent writer/value legitimacy proof. No guard, build, soak, or runtime
 behavior changed.
 
 ORIGIN: bounded generated-source, caller, and companion-symbol inventory; no guest value, writer mutation, mitigation, or runtime behavior changed.
+
+## Session 899 (2026-08-13) — complete source inventory of `tickAndReap3DAudioVoices`; mixed list-link/state/handle shapes, legitimacy remains unproven
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, source-only inspection of
+`../N64Recomp/RecompiledFuncs/funcs_26.c:4194-4353` plus the companion
+`main_overlay.txt` symbol notes. No build, game run, or soak was needed.
+
+The complete function table is:
+
+- `0x80098EF8`: load the mutable list head at `0x80153414`; the existing
+  fixup-injected KSEG0 range guard runs before the first node dereference.
+- `0x80098F14-0x80098F20`: read the current node's `+0x0` next pointer;
+  the MusyX gate either advances directly to it or enters the mutex-protected
+  unlink path.
+- `0x80098F2C-0x80098F3C`: read current `+0x0` and `+0x4`; if next exists,
+  write current `+0x4` into next `+0x4`.
+- `0x80098F40-0x80098F60`: read current `+0x4`; if previous exists, read
+  current `+0x0` and write it into previous `+0x0`; otherwise write current
+  `+0x0` back to the global head.
+- `0x80098F64-0x80098F70`: read node halfword `+0xA` and handle `+0x34`,
+  then store the halfword value at node `+0x8`. The handle is compared with
+  `-1`; non-sentinel values call `flagVoiceChainForStop`.
+- `0x80098F80-0x80098F84`: advance to the saved next pointer and repeat until
+  null. Stack save/restore accesses are frame-local and not part of the audio
+  pointer idiom.
+
+`factor5RemoveListNode`, the local insertion/removal siblings, and the
+companion symbols identify the intended doubly-linked 3D-audio list and its
+head lifecycle. The node walk is structurally bounded by null links plus the
+existing pointer guard, but node/head values and the `+0x34` handle are
+dynamic and have no independent value-legitimacy proof. The function also
+mixes link, voice-state, and handle shapes, so the fully-classified hypothesis
+is rejected; no mitigation or behavior change was made.
+
+### Rules out / narrows
+
+- This source audit rules out a missing loop bound or an unclassified access
+  site inside the generated function.
+- It does not prove that the list writers or handle values are legitimate;
+  the result is single-source and remains an M3 inventory, not an explanation
+  for a runtime crash.
+
+ORIGIN: generated-function site table cross-checked against local audio siblings and companion symbol notes; no guest value, writer mutation, mitigation, or runtime behavior changed.

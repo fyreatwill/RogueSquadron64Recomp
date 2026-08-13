@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s898 (2026-08-13). The active blocker is the authoritative
+Reviewed through s899 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -198,6 +198,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s896 | `stopStreamedVoice` inventory: one audio-enable gate, one computed 24-byte streamed-voice state access, state-1 check/clear, and `silenceVoiceSlot` call; the caller-derived voice index has no independent bound or writer-legitimacy proof, so full classification remains unresolved; no mitigation. |
 | s897 | `compute3DSourceSpatialMix` inventory: null-terminated `0x80153418` source-list walk, complete spatial-distance/mix/pan/output access table, and independent node/list writer cross-checks; structure passes but dynamic node/input writer legitimacy remains unproven and shapes are mixed; no mitigation. |
 | s898 | `applyVoice3DMixParams` inventory: one coherent voice-entry path with no loop or derived address walk; three explicit output clamps (`0..0x7F`, `0..0x3FFF`) and handle/chain calls are classified, but voice-entry fields and caller-derived inputs lack independent writer/value legitimacy proof; no mitigation. |
+| s899 | `tickAndReap3DAudioVoices` inventory: bounded null-terminated doubly-linked-list reap rooted at `0x80153414`; link fields, `+0xA -> +0x8` state copy, and conditional `+0x34` handle dispatch fully enumerated, but dynamic node/head/handle legitimacy remains unproven and shapes are mixed; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -218,24 +219,24 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio idiom, `tickAndReap3DAudioVoices` (`0x80098EEC`),
+Audit the next adjacent audio idiom, `register3DAudioListenerNode` (`0x8009912C`),
 as a complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-tick-reap-voice-unclassified: at least one memory access, derived pointer, or
+- H-register-listener-unclassified: at least one memory access, derived pointer, or
   input value lacks a structural or writer/legitimacy basis.
-- H-tick-reap-voice-fully-classified: all accesses and transformations are bounded,
+- H-register-listener-fully-classified: all accesses and transformations are bounded,
   and every dynamic input has a concrete writer/legitimacy basis.
-- H-tick-reap-voice-shape-mismatch: the function mixes unrelated voice/table shapes;
+- H-register-listener-shape-mismatch: the function mixes unrelated voice/table shapes;
   record the exact sites and stop rather than mixing shapes.
 
 Discriminating measurement: a complete site table for
-`tickAndReap3DAudioVoices`, including every load/store, arithmetic
+`register3DAudioListenerNode`, including every load/store, arithmetic
 transformation, bound/sentinel/state check, and writer/legitimacy basis. Any
 omitted access or unproven writer rejects full classification.
 
-Exact commands: use `rg` to enumerate `tickAndReap3DAudioVoices` and its
+Exact commands: use `rg` to enumerate `register3DAudioListenerNode` and its
 `MEM_*`/`goto` sites in `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded
 `sed` windows and the companion `rogue_squadron64` symbol/decomp files. No
 game build or soak is planned.
