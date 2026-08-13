@@ -1,79 +1,73 @@
-# NEXT work unit (static overlay-0x20 successor audit)
+# NEXT work unit (ovl20 dest-0x12A0 route)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-s757 routed dest `0x1EA8` / `153==0x1C` → `OVL1C_1EA8`: LIVE
-(`[ovl-route] res=0x1C tgt=0x1EA8` last n=32896; UJ `0x1EA8`
-1403→0). ovl1c `$30` pair (`0x1E6C`+`0x1EA8`) is complete.
-E9 match still boot-shaped 3/64. Do **not** route the n=1
-`$6==0` landing `0x1E7C`. Do **not** widen `0x1E6C` to
-`153==0x20`. Do **not** splice overlay `0x20` as a
-`0x1DB0` sibling.
-
-ovl1c exits `j L_1268; ori $5, 0x20` at IMEM `0x1ECC`.
-Table (ROM `0x39900`): desc at `0x3999A` = `0x2157`
-(`r3=2` → dest `0x12A0`, len `0x157`), dram off
-`0x1AF8` → image ROM `0x27108`. Same dest class as ovl24.
-
-Static only. No rebuild, no splice, no game run. Write
-`docs/M3-OVL20-SUCCESSOR-AUDIT.md`. Sources: ROM
-`build/rogue_squadron.z64`, table at `0x39900`, generated
-`OVL1C_1ECC` / main `L_12A0` / ovl24 `@0x12A0`,
-`docs/M3-OVL24-CONTINUATION-AUDIT.md`.
+s758 static audit (`docs/M3-OVL20-SUCCESSOR-AUDIT.md`):
+overlay 0x20 is dest-`0x12A0` emit, not restore, not a
+`0x1DB0` sibling, and not an E9 producer. Live consume is a
+6c-style route swap. Do **not** overwrite `L_12A0`. Do **not**
+splice as a `0x1DB0` sibling. Do **not** widen `0x1E6C` to
+`153==0x20`. Do **not** expect E9 to leave the boot-shaped
+3/64 triplet.
 
 ## Competing hypotheses
 
-- **H-ovl20-skipped-12a0-emit:** overlay 0x20 is an emit /
-  vertex helper at dest `0x12A0` (ovl24-class), not a
-  DL-push. Skipping it leaves main `L_12A0` to treat the
-  payload as a child DL. Image differs from main `L_12A0`
-  and from ovl24.
-- **H-ovl20-is-restore:** overlay 0x20 is a restore-DMA of
-  main `L_12A0` (ovl28-class), not emit. Then the 0x20 DMA
-  skip is a no-op once ovl24 is not resident.
-- **H-ovl20-is-1db0-sibling:** dest decode is wrong and
-  0x20 actually lands at `0x1DB0`. Then the "do not splice
-  as 1DB0 sibling" warning is false.
-- **H-ovl20-not-the-e9-hole:** even if skipped-emit is
-  true, the image has no FULL_SYNC producer (same as
-  ovl24). E9 stay boot-shaped is then expected; the next
-  live consume is a dest-`0x12A0` route swap, not an E9
-  restore.
+- **H-ovl20-route-runs:** dest `0x12A0` / `153==0x20` →
+  `OVL20_12A0` fires LIVE; first-edge sec2 `last_ovl` becomes
+  `0x20/0x12A0`; leftover `0x1E6C/20` stray drops. 4/4 boot
+  `dl06=2/2/0` holds.
+- **H-ovl20-route-breaks-06:** dest-`0x12A0` arm steals main
+  `L_12A0` / ovl24; boot `dl06` unpaired or UJ in the 0x12A0
+  window.
+- **H-ovl20-route-restores-e9:** section-2 E9 match leaves
+  the boot-shaped 3/64 triplet (refute of s758 static).
+- **H-ovl20-needs-1ed4-keep:** dest route LIVE but body dies
+  on `jal 0x1ED4` (UJ or clip-stray `0x1ED4/20`) because
+  `OVL1C_1ED4` is still `153==0x1C` only. Then the same
+  iteration must widen `0x1ED4`/`0x1F04` to `153==0x20` —
+  without that keep-alive the overlay cannot run past the
+  first jal.
 
 ## Discriminating measurement
 
-Offline, one pass:
+One build, one soak (s757 recipe). Same-run controls: clip
+`res=0x04`, ovl24 `res=0x24 tgt=0x12A0`, ovl1c dest + `$30`
+pair, and the new `[ovl-route] res=0x20 tgt=0x12A0`.
 
-- Disassemble ROM `0x27108` for `len=0x157` bytes at
-  IMEM `0x12A0`. First words vs main `L_12A0`
-  (`0x8E43005C`) and ovl24 (`ori $10,4; j L_15D0;
-  ori $30,0x12AC`).
-- Confirm dest: `0x2157 >> 12 == 2` → `lhu 0x78` =
-  `0x12A0`.
-- Name the exit (`j L_1268` + next `r5`, or restore-DMA).
-- Say whether any instruction in the image can emit E9.
-
-Outcomes:
-
-- first words emit-shaped + dest 0x12A0 →
-  H-ovl20-skipped-12a0-emit; live consume is a 6c-style
-  route swap (do not overwrite `L_12A0`).
-- first words == main L_12A0 or a restore-DMA →
-  H-ovl20-is-restore; do not splice.
-- dest decode lands 0x1DB0 → H-ovl20-is-1db0-sibling;
-  re-open the 1DB0 splice warning.
-- image has no E9 / no RDP-submit → H-ovl20-not-the-e9-hole
-  (report alongside the dest/class outcome).
+- route LIVE + dl06 2/2/0 + E9 still 3/64 → H-ovl20-route-runs
+  and H-ovl20-not-the-e9-hole hold; predicted residual is
+  UJ/stray on the `jal 0x1ED4` returns (`0x12BC`/`0x12CC`/…)
+  or on `0x1ED4` itself if the keep-alive was omitted.
+- dl06 breaks or ovl24 `res=0x24` dies → H-ovl20-route-breaks-06.
+- E9 match rises off the boot-shaped triplet →
+  H-ovl20-route-restores-e9 (overturns s758).
+- dest LIVE but first body jal is UJ `0x1ED4` →
+  H-ovl20-needs-1ed4-keep; widen `OVL1C_1ED4`/`1F04` to
+  `153==0x1C || ==0x20` in the same iteration.
 
 ## Commands
 
-    # no cmake, no probe, no RSPRecomp
-    # python3 one-shot: dump table row r5=0x20 and
-    #   first 16 words of ROM 0x27108 vs L_12A0 / ovl24
-    # write docs/M3-OVL20-SUCCESSOR-AUDIT.md
+    # add OVERLAYS[0x20] = (0x27108, 0x158, "ovl20", 0x25830, None)
+    python3 tools/make_clip_composite.py 0x20
+    # new factor5_rsp_ovl20.toml (dest 0x12A0, extra targets:
+    #   0x12A0..0x13F0 internals + 0x1ED4/0x1F04/0x1F0C +
+    #   L_112C/L_1268/L_17F0). Do not name it ovl28.
+    # RSPRecomp factor5_rsp_ovl20.toml
+    # fixup 6q: extract L_12A0..0x13F7, rename OVL20_*, route
+    #   dest 0x12A0 when 153==0x20 (keep the 0x24 → OVL24_12A0
+    #   and default → L_12A0 arms). Rewrite jal 0x1ED4 to
+    #   OVL1C_1ED4 (or case 0x1ED4 for 153==0x20). Widen
+    #   0x1F04 to 153==0x1C || 0x20 so the trampoline can
+    #   return. Shared 0x12A0-window cases get an extra
+    #   153==0x20 arm; do not steal 0x24 / L_12A0.
+    DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+      cmake --build build -j8 --target RogueSquadron64Recomp
+    # soak: copy s757 recipe; require
+    #   [ovl-route] res=0x20 tgt=0x12A0
+    #   [ovl-route] res=0x24 tgt=0x12A0
+    #   [ovl-route] res=0x1C tgt=0x1EA8
+    #   dl06=  and  no [CRASH]
 
-ORIGIN: ovl1c `OVL1C_1ECC` is `j L_1268; ori $5, 0x20`.
-Table desc `0x2157` at ROM `0x3999A` selects dest
-`0x12A0`. The three s757 `[clip-stray] 0x1E6C/20` hits
-are leftover `$30` after that request, not a reason to
-widen the 0x1E6C case.
+ORIGIN: OVL1C_1ECC is `j L_1268; ori $5, 0x20`. Table desc
+`0x2157` selects dest `0x12A0`. Route, not an overwrite of
+`L_12A0`. ovl28 already restores that image.

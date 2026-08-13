@@ -54061,3 +54061,45 @@ IMEM `0x1ECC`; dest `0x12A0`, desc `0x2157`, ROM `0x27108`).
 Next is a static dest/`L_12A0`/ovl24 comparison of that image.
 Do not splice overlay `0x20` as a `0x1DB0` sibling. Do not
 route `0x1E7C` on n=1.
+
+## Session 758 (2026-08-12) — overlay 0x20 is dest-0x12A0 emit, not restore / not 1DB0 / not E9
+
+Step 0 measured `CURRENT-TRUTH.md` at 43,200 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s757: static
+successor audit of overlay `0x20`. SOAK-RESULTS s756/s757 lines
+were already folded; no unread queue recipes.
+
+No rebuild, no splice, no game run. Sources: ROM
+`build/rogue_squadron.z64` table at `0x39900`, generated
+`OVL1C_1ECC` / `L_12A0` / `OVL24_12A0` / ovl28, and
+`docs/M3-OVL24-CONTINUATION-AUDIT.md`. Product:
+`docs/M3-OVL20-SUCCESSOR-AUDIT.md`.
+
+Independent dest decode: desc `0x2157` at ROM `0x3999A`
+(`0x7A+0x20`); `>>12 == 2`; `lhu 0x78 == 0x12A0`; len `0x157`;
+dram `0x1AF8` at `0x3999C`; ROM `0x25610+0x1AF8 = 0x27108`.
+First word `0x9222FFFC` (`lbu $2, -4($17)`). Main `L_12A0` is
+`0x8E43005C`; ovl24 is `0x340A0004`; ovl28 is `0x26310020`.
+Byte diffs 308/344 vs main, 219/228 vs ovl24. Body has six
+`jal 0x1ED4` (ovl1c trampoline; dest `0x12A0` leaves the
+`0x1DB0` window in place), then `jal L_17F0` / `jal L_112C`,
+and exits `j L_1268; ori $5, 0x28`. Zero `0xE9` bytes; the
+`0xE8411002` at `0x13AC` is COP2 `swc2`, not FULL_SYNC. No
+`addiu $17`.
+
+**H-ovl20-skipped-12a0-emit SELECTED.** **H-ovl20-is-restore
+REFUTED.** **H-ovl20-is-1db0-sibling REFUTED.**
+**H-ovl20-not-the-e9-hole SELECTED** (static; same helpers as
+the already-LIVE ovl24 emit path that left E9 at 3/64).
+s757's "do not splice as a 1DB0 sibling" warning stands. Live
+consume is a 6c-style dest-`0x12A0` route (`153==0x20` →
+`OVL20_12A0`). After `L_1268` stores `153=0x20`, `OVL1C_1ED4`
+/ `1F0C` / `1F04` must stay reachable — they are currently
+`153==0x1C` only. Do not overwrite `L_12A0`. Do not widen
+`0x1E6C` to `153==0x20`. Do not expect an E9 restore.
+
+**ORIGIN:** `OVL1C_1ECC` is `j L_1268; ori $5, 0x20`. Table
+desc `0x2157` selects dest `0x12A0`. The skipped image is
+legitimate table-selected ucode at ROM `0x27108`. The skip
+writer is `dma_rdram_to_dmem` bit-12 IMEM reject, same class
+as ovl24.

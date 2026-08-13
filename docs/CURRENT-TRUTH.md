@@ -22,34 +22,34 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s757; compacted in maintenance s729)
+## Current truth (reviewed through s758; compacted in maintenance s729)
 
-**s757:** fixup 6p routes dest `0x1EA8` when `153==0x1C` to
-`OVL1C_1EA8` (label already existed; no composite/RSPRecomp).
-Soak `s757_ovl1c_1ea8_20260812-191445` (350 s, CRASH=0,
-wrapper rc=0): `[ovl-route] res=0x1C tgt=0x1EA8` last n=32896
-LIVE; dest `0x1DB0` (n=33216), `0x1E18` (n=33536),
-`0x1E2C` (n=33152), `0x1F04` (n=33280), and `0x1E6C`
-(n=25856) stay LIVE. UJ `0x1EA8` **1403→0**. ovl1c `$30`
-pair (`0x1E6C`+`0x1EA8`) is complete. 4/4 boot
-`dl06=2/2/0`. sec2 `last_ovl` `0x1C/0x1EA8` 46 +
-`0x1C/0x1E2C` 10 + `0x1C/0x1E6C` 4 + `0x1C/0x1F04` 1
-/ 64. E9 match still boot-shaped (`3/64` = 1× the `2/2/0`
-triplet); rdpFs 0→4155 (s756 4017; not a restore). Leftover
-UJ `0x1E7C` n=1 from `OVL1C_1F04` `jr $30` (line 4987) is
-a `$6==0` landing — not a class; do not route it. Three
-`[clip-stray]` `0x1E6C/20` hits — do **not** widen
-`153==0x20`. **H-1ea8-ovl1c-30ret SELECTED.
-H-1ea8-not-the-uj-path REFUTED. H-1ea8-breaks-06 REFUTED.
-H-1ea8-restores-e9 REFUTED.** Next is a static audit of
-overlay `0x20` (ovl1c successor: `j L_1268; ori $5, 0x20`
-at IMEM `0x1ECC`; dest `0x12A0`, desc `0x2157`, ROM
-`0x27108`). Do not splice it as a `0x1DB0` sibling.
-**ORIGIN:** ovl1c jal at IMEM `0x1E9C` sets `r31=0x1EA8`
-and `goto OVL1C_1ED4`. The trampoline saves that into
-`$30`, returns through `OVL1C_1F04`, then `jr $30`.
-`OVL1C_1F04` `jr $30` is the legitimate return into
-`OVL1C_1EA8`. Route, not a default-allow of `0x1EA8`.
+**s758:** static overlay-0x20 successor audit
+(`docs/M3-OVL20-SUCCESSOR-AUDIT.md`). Table desc `0x2157` at
+ROM `0x3999A` independently decodes dest `0x12A0`, len `0x157`,
+DRAM `0x1AF8`, image ROM `0x27108`. First word `lbu $2, -4($17)`
+≠ main `L_12A0` (`0x8E43005C`) ≠ ovl24 (`ori $10,4; j L_15D0`)
+≠ ovl28 (`addiu $17,32`). Diffs 308/344 vs main, 219/228 vs
+ovl24. Body: 6× `jal 0x1ED4` (ovl1c trampoline, window stays
+resident), then `jal L_17F0` / `jal L_112C`, exit
+`j L_1268; ori $5, 0x28`. Zero `0xE9` bytes. **H-ovl20-skipped-
+12a0-emit SELECTED. H-ovl20-is-restore REFUTED.
+H-ovl20-is-1db0-sibling REFUTED. H-ovl20-not-the-e9-hole
+SELECTED.** Live consume is a 6c-style dest-`0x12A0` route
+(`153==0x20` → `OVL20_12A0`); do not overwrite `L_12A0`; do not
+splice as a `0x1DB0` sibling. After `L_1268` stores `153=0x20`,
+`OVL1C_1ED4`/`1F0C`/`1F04` must stay reachable. **ORIGIN:**
+`OVL1C_1ECC` is `j L_1268; ori $5, 0x20`; skipped IMEM writer
+is `dma_rdram_to_dmem` bit-12 reject of dest `0x12A0`.
+
+**s757:** fixup 6p routes dest `0x1EA8` / `153==0x1C` →
+`OVL1C_1EA8`. Soak `s757_ovl1c_1ea8_20260812-191445` (350 s,
+CRASH=0): `[ovl-route] res=0x1C tgt=0x1EA8` last n=32896 LIVE;
+UJ `0x1EA8` **1403→0**. ovl1c `$30` pair complete. 4/4 boot
+`dl06=2/2/0`. E9 still 3/64. Do not route n=1 `0x1E7C`; do not
+widen `0x1E6C` to `153==0x20`. **H-1ea8-ovl1c-30ret SELECTED.**
+Consumed by s758. **ORIGIN:** ovl1c jal IMEM `0x1E9C` r31=`0x1EA8`
+→ `OVL1C_1ED4` → `jr $30`.
 
 **s756:** fixup 6o routes dest `0x1E6C` when `153==0x1C` to
 `OVL1C_1E6C`. Soak `s756_ovl1c_1e6c_20260812-190418` (348 s,
@@ -507,7 +507,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s757:** ovl1c `$30` pair complete (`0x1E6C`+`0x1EA8` LIVE; UJ both 0). E9 still boot-shaped 3/64. Residual is skipped overlay `0x20` (ovl1c successor, dest `0x12A0`, desc `0x2157`, ROM `0x27108`) — static audit next; do not splice it as a `0x1DB0` sibling; do not route the n=1 `$6==0` landing `0x1E7C`. **s756:** ovl1c `$30` return `0x1E6C` LIVE. **s755:** ovl1c 1ED4 trampoline return `0x1F04` LIVE. **s754:** ovl1c jal-return `0x1E2C` LIVE. **s753:** ovl1c jal-return `0x1E18` LIVE. **s752:** ovl1c dest-`0x1DB0` LIVE. **s751:** ovl10 `0x1F40` handshake LIVE. **s750:** ovl10 dest-`0x1DB0` LIVE. **s749:** ovl18 dest-`0x1DB0` LIVE. **s748:** ovl14 dest-`0x1DB0` LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s758:** overlay 0x20 is dest-`0x12A0` emit (ovl24-class, not restore, not a `0x1DB0` sibling) and is not an E9 producer. Live consume is a dest-`0x12A0` route swap; keep `OVL1C_1ED4` reachable at `153==0x20`. **s757:** ovl1c `$30` pair complete. E9 still boot-shaped 3/64. Do not route n=1 `0x1E7C`. **s756–s752:** ovl1c dest + jal-returns + trampoline LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,
