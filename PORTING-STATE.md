@@ -56269,6 +56269,30 @@ as a separate question. No behavior, game value, or mitigation changed.
 ORIGIN: source/reference audit only; no game value, RDP command, or mitigation
 behavior changed.
 
+## Session 850 (2026-08-13) — accepted submit ranges attribute RDP B4/BF candidates
+
+Added a behavior-neutral, phase-gated `[tri-writer]` record at the accepted
+RDP submit boundary. The first capture reached VI 1024 and passed the E9
+controls, but its lifetime 1,024-row writer cap saturated at task 387 before
+the candidate boundary population; it was unevaluable and the probe was fixed
+immediately by making the cap per-task (64 rows).
+
+The fixed Debug build passed. Its phase-gated run reached VI 1024, retained
+10,476 writer rows across tasks 63–616, and produced 109 RDP owner/boundary
+rows (81 at VI 640 and 28 at VI 512), with all four E9 provenance controls
+positive. Every boundary row had an exact accepted-submit range match to a
+writer row; 18 also matched the exact candidate address. The run ended at
+205.1s in the known `slotDispatcherIter+872` SIGBUS.
+
+This is a second source/runtime line selecting H-game-writer for the observed
+RDP-owned B4/BF candidate stream and ruling out H-unattributed for that
+population. It does not establish operand legitimacy, explain the non-triangle
+RDP table entry, or justify a mitigation. The next unit is the parser-side E9
+condition audit.
+
+ORIGIN: host-side accepted-submit writer telemetry; no candidate value,
+command advancement, geometry, or mitigation behavior changed.
+
 ## Session 849 (2026-08-13) — RDP candidate rows are boundary-shaped non-triangles
 
 Before building the probe, rebuilt the documented retail oracle core and ran

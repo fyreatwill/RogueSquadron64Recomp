@@ -276,51 +276,68 @@ Priority until changed by the user:
   ORIGIN: host-side parser-boundary telemetry; the candidate values were not
   changed, skipped, or reinterpreted.
 
+- s850 added a phase-gated `[tri-writer]` record at the accepted RDP submit
+  boundary, carrying candidate address, task, serial, words, and source range.
+  The first capture reached VI 1024 and passed the E9 controls, but its
+  lifetime 1,024-row cap saturated at task 387 before the boundary population;
+  that result was unevaluable. The fixed per-task 64-row capture reached VI
+  1024 and the known `slotDispatcherIter+872` SIGBUS at 205.1s. It retained
+  10,476 writer rows across tasks 63–616 and 109 candidate owner/boundary rows
+  (81 at VI 640, 28 at VI 512). Every one of 109 boundary submit ranges had an
+  exact `[tri-writer]` accepted-range match; 18 also matched the exact
+  candidate address. The bridge source independently uses the same RDRAM
+  mapping and range passed to `submit_rdp_range`. With the four E9 positive
+  controls firing, this selects H-game-writer for the observed RDP-owned
+  candidate stream and rules out H-unattributed for that population. It does
+  not establish operand legitimacy, explain the RDP table mismatch, or justify
+  a mitigation.
+
+  ORIGIN: host-side accepted-submit writer telemetry; no candidate value,
+  command advancement, geometry, or mitigation behavior changed.
+
   ORIGIN: host-side owner telemetry at the RT64 handler boundary; no game
   value, command advancement, geometry, or mitigation behavior changed.
 
-## Next work unit: identify the writer of the RDP-owned B4/BF candidate stream
+## Next work unit: classify the late E9 parser condition
 
-HYPOTHESIS-ID: m3-rdp-triangle-candidate-writer
+HYPOTHESIS-ID: m3-rdp-parser-condition
 
-Perform one source/runtime writer-attribution probe for the RDP-owned
-`0xB4/0xBF` candidate stream. Keep the owner and boundary breadcrumbs, and add
-one bounded record at the accepted RDP submit/LLE emission boundary carrying
-the candidate address, task, submit serial, and source range. Batch E9,
-VI-width, triangle-owner, triangle-boundary, copy-cycle, and DL-sync controls
-in one build and capture. Do not change command advancement, emit geometry, or
-classify operand legitimacy.
+Perform one phase-gated source/runtime parser-condition probe for the lower
+late authoritative E9 count. Keep the existing E9 provenance, parser-range,
+triangle owner, triangle boundary, and DL-sync controls. Add only bounded
+condition-tagged records at authoritative parser command-start decisions and
+carry task, submit serial, exact range, and candidate address where applicable.
+Do not change parser advance, RDP handlers, or mitigation.
 
 Competing hypotheses:
 
-- H-game-writer: the game/LLE emission path writes the candidate bytes into a
-  submitted range, making them legitimate game output despite the non-triangle
-  RDP table entry.
-- H-lle-writer: the LLE/RDP bridge or range bookkeeping associates an unrelated
-  byte slot with the candidate; the candidate is not game-authored.
-- H-unattributed: no accepted source range contains the candidate, leaving the
-  existing H-rdp-garbage classification open without a writer claim.
+- H-direct-filter: late bridge E9 slots are at parser command starts but are
+  excluded by an authoritative parser filter or opcode/byte-order condition.
+- H-span-accounting: late bridge E9 slots are covered by a preceding non-E9
+  command span, so the lower E9 count is correct command-boundary accounting.
+- H-pending: the late slots are completed through the pending-command path and
+  are omitted from the direct-start count.
+- H-unassociated: the slots are outside all authoritative parser ranges,
+  reopening a range-association defect.
 
-Discriminator: compare every boundary row with the source-tagged accepted
-submit range and LLE emission address. A same-task source-range hit selects
-H-game-writer; only bridge/range-origin evidence selects H-lle-writer; no hit
-with positive owner/boundary controls selects H-unattributed. A null is
-invalid unless triangle owner and boundary controls fire in the same run.
+Discriminator: classify every retained late bridge E9 slot with a same-task,
+same-serial parser record. Direct-start hits select H-direct-filter; span hits
+select H-span-accounting; pending hits select H-pending; no association with
+positive controls selects H-unassociated. A null is invalid unless E9
+provenance and parser command-start controls fire in the same run.
 
 ## Ranked backlog
 
-1. Attribute the RDP-owned B4/BF candidates to a game/LLE writer; no
-   mitigation until stream provenance and legitimacy are known.
-2. Identify which RT64 parser byte/pending/guard condition accounts for the
+1. Identify which RT64 parser byte/pending/guard condition accounts for the
    lower late E9 count; no behavior change until the condition is proven.
-3. Only after that classification, identify the responsible parser/counting
+2. Only after that classification, identify the responsible parser/counting
    path and consider an implementation fix.
-4. M3 co-gates and crash families: pursue only a complete idiom inventory,
+3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.
-5. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
+4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`; each needs independent controls.
-6. Regeneration-pipeline reliability: retain the delete-before-regen rule and
+5. Regeneration-pipeline reliability: retain the delete-before-regen rule and
    audit fixup counts when a reproducible omission appears.
 
 ## Closed and parked

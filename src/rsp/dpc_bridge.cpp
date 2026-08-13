@@ -283,6 +283,7 @@ static uint8_t *g_rdram_for_submit = nullptr;
 
 static bool log_e9_unified();
 static bool log_e9_boundary();
+static bool log_tri_writer();
 extern "C" uint32_t rs64_rdp_advance_task_e9();
 extern "C" uint32_t rs64_rdp_advance_epoch();
 extern "C" uint64_t rs64_rdp_advance_join_order();
@@ -366,6 +367,14 @@ static bool log_e9_unified() {
 static bool log_e9_boundary() {
     static const bool enabled = [] {
         const char *e = std::getenv("ROGUESQ_LOG_E9_BOUNDARY");
+        return e && *e && *e != '0';
+    }();
+    return enabled;
+}
+
+static bool log_tri_writer() {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_TRI_WRITER");
         return e && *e && *e != '0';
     }();
     return enabled;
@@ -1300,6 +1309,37 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_count_submitted_e9(lo, hi);
     const uint32_t after = g_task_bridge_e9.load(std::memory_order_acquire);
     const uint64_t serial = g_submit_serial.fetch_add(1, std::memory_order_acq_rel) + 1;
+    if (log_tri_writer() && (g_e9prov.control || g_e9prov.target) &&
+        g_rdram_for_submit != nullptr) {
+        static std::atomic<uint32_t> writer_lines{0};
+        static uint32_t writer_task = 0xFFFFFFFFu;
+        static uint32_t writer_task_lines = 0;
+        if (writer_task != g_e9prov.task) {
+            writer_task = g_e9prov.task;
+            writer_task_lines = 0;
+        }
+        for (uint32_t p = lo; p + 8 <= hi; p += 8) {
+            const uint8_t raw = g_rdram_for_submit[p ^ 3];
+            if (raw != 0xB4 && raw != 0xBF) continue;
+            if (writer_task_lines++ >= 64) break;
+            const uint32_t line = writer_lines.fetch_add(1, std::memory_order_relaxed);
+            const uint32_t w0 = ((uint32_t)g_rdram_for_submit[(p + 0) ^ 3] << 24) |
+                                ((uint32_t)g_rdram_for_submit[(p + 1) ^ 3] << 16) |
+                                ((uint32_t)g_rdram_for_submit[(p + 2) ^ 3] << 8) |
+                                (uint32_t)g_rdram_for_submit[(p + 3) ^ 3];
+            const uint32_t w1 = ((uint32_t)g_rdram_for_submit[(p + 4) ^ 3] << 24) |
+                                ((uint32_t)g_rdram_for_submit[(p + 5) ^ 3] << 16) |
+                                ((uint32_t)g_rdram_for_submit[(p + 6) ^ 3] << 8) |
+                                (uint32_t)g_rdram_for_submit[(p + 7) ^ 3];
+            fprintf(stderr,
+                    "[tri-writer] line=%u task=%u scope=%s serial=%llu addr=0x%06X "
+                    "raw=0x%02X w0=0x%08X w1=0x%08X range=0x%06X..0x%06X\n",
+                    line + 1, g_e9prov.task,
+                    g_e9prov.control ? "control" : "sec2",
+                    (unsigned long long)serial, p, raw, w0, w1, lo, hi);
+        }
+        fflush(stderr);
+    }
     if (log_e9_boundary() && (g_e9prov.control || g_e9prov.target) &&
         g_rdram_for_submit != nullptr) {
         for (uint32_t p = lo; p + 8 <= hi; p += 8) {
