@@ -22,7 +22,23 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s746; compacted in maintenance s729)
+## Current truth (reviewed through s747; compacted in maintenance s729)
+
+**s747:** static `$ra=0x1DF4` audit (`docs/M3-1DF4-PROVENANCE-AUDIT.md`)
+plus s746 re-read. Only writer is ovl12 `jal L_122C` at IMEM `0x1DEC`
+(ROM `0x266AC`). Main/clip/ovl14/ovl18/ovl24/ovl28 have no
+jal-return-`0x1DF4`. `L_122C` already returns to `OVL12_1DF4` while
+`153==0xC` (s746 `last_ovl=0x0C/0x1DF4`). Stray line 451 is a *later*
+`L_11B0` `jr` of leftover `$ra`: `OVL12_1DF4` → `L_1268(r5=0x14)` →
+`L_1298` dest `0x1DB0` `153=0x14` (no splice) → main `L_1DB0`
+`sb $zero, 0x53($18)` writes `153=0` → `L_1E5C` `j L_11B0`. s746
+61/61 first-edge reset-predecessors are
+`pred=target:0x1DB0,line:621,ra:0x1DF4,resident:0x14`. **H-1df4-stale-ra
+SELECTED. H-1df4-main-jal / H-1df4-window-still-ovl12 / H-1df4-ovl14
+(as 0x1DF4 owner) REFUTED.** Do not widen `0x1DF4` to `==0` (main
+bytes are `lw $2, 4($1)` mid-reset). Next is an ovl14 dest-`0x1DB0`
+route when `153==0x14`. **ORIGIN:** `$ra` writer `OVL12_1DD8`; `153=0`
+writer main `L_1DB0` after skipped ovl14 DMA.
 
 **s746:** fixup 6f widens the ten leftover ovl24-only clip-stray
 cases to `OVL24_*` when `0x153==0x24 || ==0x04`. Soak
@@ -32,11 +48,9 @@ stray remains. `jal17f0` 68672→**879232** (12.8×); clip1e48_1364
 5279→175093; last reset `last_ovl=0x0C/0x1DF4` 61/64. 4/4 boot
 `dl06=2/2/0`. E9 match still **3/64**; rdpFs 0→4117 (flat; s745 4030).
 **H-ovl24-class-needed-but-not-e9 SELECTED. H-ovl24-class-restores-e9
-REFUTED. H-ovl24-class-breaks-06 REFUTED.** Residual: `[clip-stray]
-0x1DF4/00` n=3157 (s745 343), all line=451 (`L_11B0` jr). Ovl12-only
-label + resident 0 ⇒ IMEM is main — do not widen to `==0`. Next is a
-static `$ra=0x1DF4` provenance audit. **ORIGIN:** `L_112C` `jr` of
-`OVL24_1358`-saved `$ra` after the 6e `0x1364` clip return.
+REFUTED. H-ovl24-class-breaks-06 REFUTED.** Residual was
+`[clip-stray] 0x1DF4/00` n=3157 (consumed s747). **ORIGIN:** `L_112C`
+`jr` of `OVL24_1358`-saved `$ra` after the 6e `0x1364` clip return.
 
 **s745:** fixup 6e widens case `0x1364` to `OVL24_1364` when
 `0x153==0x24 || ==0x04`. Soak `s745_1364clip_route_20260812-163229`
@@ -385,7 +399,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s746:** routing the remaining ovl24-only `0x04` returns **stops that class** (stray 0x1320/1330/1344 → 0) without restoring FULL_SYNC (E9 still 3/64; rdpFs 0→4117). Residual is ovl12-only `0x1DF4` with `153=0` (n=3157, `L_11B0` jr). **s745:** `0x1364` 0x04 route 4454→0. **s744:** writer of the 0x1364/04 stray is `CLIP_1E48` returning `OVL24_135C`'s `jal L_17F0`. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
+1. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s747:** `$ra=0x1DF4` is ovl12-only; the 3157 `L_11B0` strays are leftover `$ra` after skipped ovl14 (`153=0x14` at `L_1298`) falls into main `L_1DB0`, which writes `153=0`. Next is an ovl14 dest-`0x1DB0` route, not a `0x1DF4` widen. **s746:** routing the remaining ovl24-only `0x04` returns **stops that class** (stray 0x1320/1330/1344 → 0) without restoring FULL_SYNC (E9 still 3/64). **s745:** `0x1364` 0x04 route 4454→0. **s744:** writer of the 0x1364/04 stray is `CLIP_1E48` returning `OVL24_135C`'s `jal L_17F0`. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm** (2931→0). **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 
 2. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

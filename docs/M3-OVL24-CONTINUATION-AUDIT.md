@@ -129,9 +129,11 @@ and skip.
     intended: ovl24 @ 0x12A0 → emit → L_1268(r5=0x28)
               ovl28 @ 0x1DB0 → r17+=32 → restore L_12A0 → L_10D8
     actual:   skip, jr 0x12A0 → main DL-push(r20=TriGen w1)
-  bit1 clear (s740: 0x1DD8 n=2 / 0x1DF4 n=1): L_1268(r5=0x14)
+  bit1 clear (s740: 0x1DD8 n=2 / 0x1DF4 n=1; s746 last_ovl 0x0C/0x1DF4 61/64):
+    L_1268(r5=0x14)
     intended: ovl14 @ 0x1DB0 → L_1268(r5=0x18)
-    actual:   skip, jr 0x1DB0 → spliced ovl12 again
+    actual:   skip, jr 0x1DB0 with 153=0x14 → main L_1DB0
+              (case 0x1DB0 does not route 0x14; s747)
 ```
 
 ## 6. Outcomes vs NEXT.md

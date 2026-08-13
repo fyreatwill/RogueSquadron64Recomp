@@ -1,72 +1,67 @@
-# NEXT work unit (static provenance of clip-stray 0x1DF4/00)
+# NEXT work unit (route overlay 14 at dest 0x1DB0)
 
 HYPOTHESIS-ID: m3-postsec2-lle-control-flow
 
-s746 selected H-ovl24-class-needed-but-not-e9: widening every
-remaining ovl24-only clip-stray case to `0x24||0x04` killed that
-class (0x1320/1330/1344 → 0), kept boot `dl06=2/2/0`, and moved
-sec2 `last_ovl` from `0x24/0x1364` to `0x0C/0x1DF4`, but E9 stayed
-3/64. Residual is `[clip-stray] tgt=0x1DF4 153=0x00` n=3157, all
-line=451 (`L_11B0` TriGen DMA-helper `jr`). Case `0x1DF4` is
-ovl12-only (`153==0xC` → `OVL12_1DF4`); `OVL12_1DD8` jals `L_122C`
-with `$ra=0x1DF4`. Resident 0 means IMEM `0x1DF4` is the main
-image — do **not** widen to `==0`. Overlay 14 is the rare-path
-`0x1DB0` sibling (s742); keep it as a competing lead, not a
-default route.
+s747 selected H-1df4-stale-ra: the `[clip-stray] 0x1DF4/00` n=3157
+is leftover `$ra` from `OVL12_1DD8` `jal L_122C` after skipped
+ovl14 DMA falls through to main `L_1DB0`, which stores `153=0` and
+`j L_11B0`. Table: `docs/M3-1DF4-PROVENANCE-AUDIT.md`. Do **not**
+widen case `0x1DF4` to `==0`. Do **not** enable IMEM DMA.
 
-No rebuild. No IMEM DMA. Static audit only, written to
-`docs/M3-1DF4-PROVENANCE-AUDIT.md`.
+Route overlay 14 the same way 6b/6c routed ovl12/ovl24: extract the
+ROM image into the `0x1DB0` window, RSPRecomp, fixup-rename
+`OVL14_*`, case `0x1DB0` when `153==0x14` (plus the three in-overlay
+jal-returns `0x1E28`/`0x1E94`/`0x1EEC` if the translator emits
+them as `do_indirect_jump`). ovl14 ROM `0x26AB8` len `0x21F`, dest
+`0x1DB0`, exit `j L_1268; ori $5, 0x18`. ovl18 is the successor
+residual — do not splice it in this unit.
 
 ## Competing hypotheses
 
-- **H-1df4-stale-ra:** overlay 12 set `$ra=0x1DF4`, then `0x153`
-  was cleared / the window restored to main before `L_11B0` `jr`s
-  it. IMEM `0x1DF4` is main bytes; the stray is correct; the bug is
-  a leftover `$ra` after overlay teardown.
-- **H-1df4-main-jal:** the main image itself jals a helper that
-  returns to `0x1DF4`. Stray is correct; there is no ovl12 image to
-  restore. Do not route.
-- **H-1df4-window-still-ovl12:** `0x153` is 0 but IMEM `0x1DF4` is
-  still the ovl12 image (resident byte desynced from the window).
-  Then a later splice/route may be justified — only after this
-  audit names the writer of both `$ra` and `0x153`.
-- **H-1df4-ovl14:** the jump belongs to overlay 14's `0x1DB0`
-  sibling, not ovl12. Route (if any) is `OVL14_*`, not `OVL12_1DF4`.
+- **H-ovl14-stops-1df4-stray:** routing `153==0x14` at dest `0x1DB0`
+  runs ovl14 instead of main `L_1DB0`, so `153` stays `0x14` and
+  `L_11B0` never jrs leftover `0x1DF4`. Stray `0x1DF4/00` → 0.
+  New residual is the ovl18 miss (`153==0x18` at dest `0x1DB0`)
+  or an ovl14 jal-return stray.
+- **H-ovl14-not-the-1df4-path:** ovl14 route is LIVE but
+  `0x1DF4/00` line=451 stays. Then the leftover-`$ra` story is
+  incomplete (another `L_11B0` entry).
+- **H-ovl14-breaks-06:** dest-`0x1DB0` `153==0x14` is also used
+  by a boot/control path; routing it breaks `dl06=2/2/0`.
+- **H-ovl14-restores-e9:** ovl14 was the missing FULL_SYNC
+  producer. E9 match rises above 3/64. Unlikely (ovl14 is a
+  vector loop, not emit) but cheap to read off the same soak.
 
 ## Discriminating measurement
 
-Offline, no soak. Enumerate every `r31 = 0x1DF4` / `jal` return-to-
-`0x1DF4` writer in main, ovl12, clip, ovl24, and the ovl14 ROM
-image. For each, say whether `L_11B0` is on the return path and
-what `0x153` must be at the `jr`. Cite ROM offsets.
+One rebuild, one soak (same recipe as s743–s746). Batch:
+
+- `[ovl-route] res=0x14` must be LIVE (positive control).
+- `[clip-stray] tgt=0x1DF4 153=0x00` n vs s746 3157.
+- boot 4/4 `dl06=2/2/0`.
+- sec2 first-edge reset-predecessor `resident:0x14` should drop
+  (those jr `0x1DB0` now route, so they never enter `L_1DB0`).
+- E9 match / rdpFs vs s746 3/64 and 0→4117.
+- new stray / UJ class (expect ovl18 or ovl14 jal-return).
 
 Outcomes:
 
-- only ovl12 writes `$ra=0x1DF4` and main `L_11B0` is the return
-  of `L_122C` after `0x153` is already 0 → H-1df4-stale-ra; next
-  is a live predecessor of the stray (who cleared 0x153 / who
-  restored the window), not a widen.
-- main also writes `$ra=0x1DF4` → H-1df4-main-jal; close the
-  stray as expected; pick the next leak or ovl14.
-- ovl12 writes it and the window cannot have been restored yet
-  (dest still `0x1DB0` or no restore-DMA since entry) →
-  H-1df4-window-still-ovl12; then a predecessor soak before any
-  route.
-- ovl14 image owns `0x1DF4` → H-1df4-ovl14; treat as a new
-  splice, not an ovl12 widen.
+- route LIVE + stray 1DF4→0 + dl06 intact → H-ovl14-stops-1df4-stray
+  SELECTED; next is the new residual (likely ovl18).
+- route LIVE + stray 1DF4 stays → H-ovl14-not-the-1df4-path; do
+  not keep iterating ovl14, re-open `L_11B0` callers.
+- dl06 breaks → H-ovl14-breaks-06; revert the 0x1DB0 arm.
+- E9 match rises → H-ovl14-restores-e9 (report, still record
+  the stray outcome).
 
 ## Commands
 
-    # no cmake, no game. Read:
-    #   build/factor5_ucode/factor5_ucode_recompiled.c  (OVL12_1DD8,
-    #     OVL12_1DF4, L_11B0, L_122C, main labels near 0x1DF4)
-    #   build/factor5_ucode/factor5_ucode_ovl12_recompiled.c
-    #   docs/M3-OVERLAY12-AUDIT.md
-    #   docs/M3-OVL24-CONTINUATION-AUDIT.md (ovl14 sibling)
-    #   tools/make_clip_composite.py overlay 14 if the ROM image
-    #     is not already extracted
-    # Write docs/M3-1DF4-PROVENANCE-AUDIT.md with the writer table.
-    # Do not enable IMEM DMA. Do not widen case 0x1DF4.
+    python3 tools/make_clip_composite.py 14   # add id 14 first
+    # RSPRecomp factor5_rsp_ovl14.toml → build/factor5_ucode/factor5_ucode_ovl14_recompiled.c
+    # fixup 6g in tools/fixup_factor5_ucode.py (route 153==0x14 at 0x1DB0)
+    cmake --build build -j8
+    # soak: copy s746 recipe, same env, SIGKILL, 348s class
 
-ORIGIN: L_11B0 jr (line 451) of $ra=0x1DF4 with 153=0. Writer of
-that $ra is unnamed until this audit. Do not mitigate first.
+ORIGIN: dest 0x1DB0 / 153==0x14 is the skipped ovl14 image
+(ROM 0x26AB8). The 0x1DF4 stray is leftover $ra after that skip
+falls into L_1DB0. Route, not a 0x1DF4 widen.

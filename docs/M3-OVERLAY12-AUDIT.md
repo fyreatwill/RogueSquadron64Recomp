@@ -51,3 +51,8 @@ of wrapping. Live `0x1DD8`/`0x1DF4` ran 2/1 times vs ~31k `L_1F64` exits.
 SELECTED.** Overlay 24 (ROM `0x27260` → `jr 0x12A0`) is emit, not DL-push;
 overlay 28 does `r17 += 32` and restores main `L_12A0`. Overlay 14 is the
 rare-path `0x1DB0` sibling. Fixup 6c is a route swap, not a resident overwrite.
+
+**s747** (`docs/M3-1DF4-PROVENANCE-AUDIT.md`): the post-s746
+`[clip-stray] 0x1DF4/00` is leftover `$ra` from `OVL12_1DD8` `jal L_122C`
+after that skipped ovl14 dest falls into main `L_1DB0` (which writes
+`153=0`). Not an ovl12 widen.

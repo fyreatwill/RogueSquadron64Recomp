@@ -53577,3 +53577,40 @@ means IMEM `0x1DF4` is the main image — do not widen to `==0`. Next is
 a static provenance audit of who writes `$ra=0x1DF4` and why resident
 is 0 at the `L_11B0` return (ovl14 sibling is the other deferred
 lead).
+
+## Session 747 (2026-08-12) — $ra=0x1DF4 writer is ovl12; 153=0 is L_1DB0 after skipped ovl14
+
+Step 0 measured `CURRENT-TRUTH.md` at 36,454 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s746: static
+provenance of `[clip-stray] tgt=0x1DF4 153=0x00` (no rebuild, no
+IMEM DMA, no case widen). SOAK-RESULTS had no new queue lines;
+s746 was already folded.
+
+Enumerated every `jal` whose return is `0x1DF4` and every
+`ori`/`addiu $ra, 0x1DF4` in main text, clip, ovl12, ovl14
+(ROM `0x26AB8`), ovl18, ovl24, and ovl28. Sole writer: ovl12
+IMEM `0x1DEC` `jal L_122C` (ROM `0x266AC`), generated
+`OVL12_1DD8` `r31=0x1DF4`. Main IMEM `0x1DF4` is `lw $2, 4($1)`
+mid-`L_1DB0`. ovl14 at `0x1DF4` is `lbu $7, -2($2)` mid-loop;
+its JALs return to `0x1E28`/`0x1E94`/`0x1EEC`.
+
+`L_122C` returns at generated line 555, not 451. `L_11B0` (line
+451) is entered from `L_1E5C` *without* rewriting `$ra`. The
+`153=0` store is main `L_1DB0` `sb $zero, 0x53($18)` with
+`$18=0x100` (ROM `0x2634C`). Chain: `OVL12_1DF4` →
+`L_1268(r5=0x14)` → `L_1298` dest `0x1DB0` `153=0x14` (no
+splice) → `L_1DB0` writes `153=0` → `L_1E5C` `j L_11B0` → stray.
+
+s746 re-read (second line): 61/61 sec2 first-edge
+`[e9-prov-reset-predecessor]` rows are
+`pred=target:0x1DB0,line:621,ra:0x1DF4,resident:0x14`; the reset
+callback sees `ra=0x1DF4 resident=0x00`; `[ovl-route] res=0x14`
+= 0; all 3157 strays are `0x1DF4/00 line=451`.
+
+**H-1df4-stale-ra SELECTED. H-1df4-main-jal REFUTED.
+H-1df4-window-still-ovl12 REFUTED. H-1df4-ovl14 REFUTED** as
+owner of the `0x1DF4` return (it is the skipped dest, not the
+`$ra` writer). Table: `docs/M3-1DF4-PROVENANCE-AUDIT.md`.
+**ORIGIN:** `$ra` writer `OVL12_1DD8` `jal L_122C`; `153=0`
+writer main `L_1DB0` after skipped ovl14 DMA. No mitigation.
+Next is an ovl14 dest-`0x1DB0` route when `153==0x14`.
