@@ -22,7 +22,19 @@ Priority order for upcoming iterations, set after the 300-session review:
    `DL_LIST_APPEND_GUARD`→`HEAPLISTDEQ_ATTR_WRITE_GUARD` lineage (items -312..-348, s481-569) is all
    fully CLOSED — PROJECT-OVERVIEW §20-§25; see individual items below for closure notes.
 
-## Current truth (reviewed through s774; compacted in maintenance s729)
+## Current truth (reviewed through s775; compacted in maintenance s729)
+
+**s775:** the bounded oracle identity audit found byte-identical SHA-256 values
+for the oracle executable, loaded core, RSP plugin, input plugin, and retail
+ROM in the matched arms; the sibling and build ROM hashes also match.
+The materialized configs differ only in `Core/EnableDebugger` (`True` versus
+`False`), and the oracle launcher source resolves the same fixed core/RSP/input
+paths for both arms. This selects **H-oracle-runtime-environment-divergence**
+over core-build drift, plugin drift, config-generation drift, ROM mismatch,
+and input-plugin path drift. It does not identify whether the remaining cause
+is emulator behavior or a runtime/environment detail outside these identities.
+**ORIGIN:** SHA-256/file metadata, normalized config diff, and launcher source
+path inspection; no port runtime code changed.
 
 **s774:** the matched 70-second debugger-mode oracle arms used the same ROM/core,
 fresh configs, and 11-entry Start schedule. The debugger-on arm passed the
@@ -775,15 +787,19 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **Oracle phase divergence — OPEN, H-oracle-real-320-only selected.** s774's
+1. **Oracle phase divergence — OPEN, H-oracle-runtime-environment-divergence selected.** s775's
+bounded identity audit found byte-identical oracle/core/RSP/input/ROM artifacts;
+the matched configs differ only by `EnableDebugger`. This rules out artifact,
+plugin-path, config-generation, ROM, and input-plugin identity drift, but not
+an emulator/runtime behavior difference. s774's
 70-second A/B made debugger-off raw polling independently visible for the full
 run: 70 samples after initialization stayed at width 320/origin `0x6dd280`,
 while debugger-on independently recorded 4,199 VI, all 11 PIF presses, and
 11,785,277 positive-control writes. This refutes the poll-observation and
 debugger-interference explanations for the 320-only result. Next: perform a
-bounded oracle runtime/config identity audit that can explain why this retail
-run never reaches the documented later VI phases; do not treat the port as
-ground truth.
+bounded oracle runtime behavior check that can explain why this retail run
+never reaches the documented later VI phases; do not treat the port as ground
+truth.
 
 2. **M3 / legacy -421 — post-sec2 FULL_SYNC plateau: OPEN.** Outdoor rendering and presentation remain live through section 2, but genuine FULL_SYNC commands are scarce while GFX continues. **s765:** 6w landed, but two same-recipe soaks crashed before the `0x1E7C`/`0x1E8C` reachability window; controls were positive, so the null is unevaluable. **s764:** `0x1E7C` `$30`-return LIVE (`153==0x1C`); UJ 91→0; dest `0x12A0/20` stays LIVE; 4/4 `dl06=2/2/0`. E9 still not restored (12/64, still `src0=0x000178`, rdpFs plateau). Next: phase-gated reachability result for 6w or pivot to a higher-information M3 audit. **s763:** `0x1ECC` `$30`-return LIVE. **s762:** `0x1EBC` `$30`-return LIVE. **s761:** `0x13C0` jal-`L_112C` return LIVE; ovl20 04-return class CLOSED. **s760:** `0x13B8` clip-hand LIVE. **s759:** ovl20 dest-`0x12A0` route LIVE. **s758:** overlay 0x20 is dest-`0x12A0` emit, not an E9 producer. **s757–s752:** ovl1c dest + jal-returns + `$30` pair LIVE. **s751–s748:** ovl10/18/14 LIVE. **s743:** ovl24+ovl28 route **stops the post-s739 UJ storm**. **s740:** resident-`0C` splice stops the section-2 `L_1DB0` reset.
 

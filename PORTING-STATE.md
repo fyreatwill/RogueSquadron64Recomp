@@ -54632,3 +54632,22 @@ H-oracle-debugger-interference for this recipe, and rules out a missing input
 delivery path. It does not explain the divergence from the documented later VI
 timeline. The next work unit is a bounded oracle runtime/config identity audit.
 The port runtime was not changed.
+## Session 775 (2026-08-12) — oracle artifact identity audit selects runtime/environment divergence
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 59,146 bytes, so maintenance did
+not trigger. The planned work unit was a bounded, read-only identity audit of
+the matched s774 debugger-on/off oracle arms before any new instrumentation.
+
+SHA-256 matched for the oracle executable, loaded Mupen64Plus core, RSP HLE
+plugin, input SDL plugin, and retail ROM. The sibling-repo ROM and
+`build/rogue_squadron.z64` also matched at
+`9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`.
+The materialized configs were identical after removing the one
+`EnableDebugger` line; the only raw diff was `True` versus `False`. Launcher
+source inspection confirmed both arms resolve the same fixed core/RSP/input
+paths, with no video or audio plugin attached.
+
+This selects **H-oracle-runtime-environment-divergence** over core-build drift,
+plugin binary/path drift, config-generation drift, ROM mismatch, and input
+plugin identity drift. It does not identify the remaining emulator/runtime
+cause, so the phase divergence remains open. No port runtime code changed.
