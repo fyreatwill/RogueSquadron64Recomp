@@ -56571,3 +56571,26 @@ later phase activity.
 ORIGIN: retail memory-watch control and host-side dispatcher telemetry only;
 no game value, dispatcher control flow, parser advancement, or mitigation
 behavior changed.
+
+## Session 858 (2026-08-13) — expanded dispatcher window still misses crash population
+
+Expanded the behavior-neutral `slotDispatcherIter` trace in the generated-code
+fixup path from 512 entry / 256 detail rows to 4096 / 2048 and built the Debug
+target successfully. The single phase-gated capture reached VI width 1024 at
+79.8 seconds and ran 54 post-gate frames before the process died at 167.9
+seconds. The positive control fired: 626 entry rows, 790 pre-call rows, and
+790 post-call rows. Every pre-call slot was KSEG0/RDRAM-range valid, every
+update pointer was in the observed `0x800403EC..0x8006CBB0` range, and every
+post-call return was 1.
+
+The death did not match the hypothesized dispatcher fault. The host marker was
+the local-symbol artifact `__isPlatformOrVariantPlatformVersionAtLeast...`,
+with sticky guest PC `0x8000834c`, not `slotDispatcherIter`. The expanded
+observed dispatcher population is therefore valid, while the later
+crash-triggering population remains unevaluable. Together with s857's retail
+table-watch control this rules out invalid dispatcher slot/update input for
+the captured window, but does not identify a writer or prove a general stale
+breadcrumb explanation. No mitigation was added.
+
+ORIGIN: host-side dispatcher telemetry only; no game value, dispatcher
+control flow, parser advancement, or mitigation behavior changed.

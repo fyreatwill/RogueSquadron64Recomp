@@ -1,41 +1,35 @@
-# NEXT work unit (s857)
+# NEXT work unit (s858)
 
-HYPOTHESIS-ID: m3-slot-dispatcher-crash
+HYPOTHESIS-ID: m3-guest-pc-8000834c-audit
 
-Increase the existing behavior-neutral, phase-scoped dispatcher trace bounds
-from 512 entry / 256 detail rows to 4096 entry / 2048 detail rows in the
-generated-code fixup path, build once, and run one 1024-width phase-gated
-capture. Keep selector, masked index, table-entry pointer, slot fields,
-update-function address, and pre/post update-call state unchanged. Do not
-change parser advancement, RDP handlers, or mitigation.
+Perform a source-only, whole-idiom audit of the function at guest PC
+0x8000834c (`getNextSlotNpcTypeId`) and every generated caller, including all
+reads of slot-table links and all return-value consumers. Do not build or run.
+The s858 dispatcher trace covered 626 entries / 790 pre/post rows with valid
+inputs; the observed death was guest PC 0x8000834c, not the dispatcher.
 
-Competing hypotheses and discriminator:
+Competing hypotheses:
 
-- H-invalid-slot: the slot-chain/index or NPC context is invalid before the
-  dispatcher dereference.
-- H-invalid-update: the NPC update-function pointer is invalid or returns a
-  corrupted context that faults in the dispatcher frame.
-- H-caller-state: the dispatcher inputs are valid and corruption enters from a
-  caller-side state transition or a callee return.
-- H-stale-breadcrumb: the source path does not match the observed host PC and
-  the apparent dispatcher attribution remains symbol/stack artefact.
+- H-link-state: 0x8000834c reads a live but invalid slot-table link or index.
+- H-caller-transition: callers pass a corrupted selector/context into the
+  helper or consume its result incorrectly.
+- H-legitimate: all observed reads and callers are valid; the crash is outside
+  this helper's source path.
+- H-stale-breadcrumb: the guest-PC handoff does not identify the faulting
+  instruction or function.
 
-Discriminator: the same-run positive-control count must be nonzero. If the
-expanded window captures a bad selector/link or null/implausible slot before a
-matching fault, select H-invalid-slot; a bad update address or post-call
-context selects H-invalid-update; valid inputs through a matching fault select
-H-caller-state; no dispatcher entry before the host fault selects
-H-stale-breadcrumb. If the run ends cleanly again, classify only the observed
-window as valid and leave the crash population unevaluable. No trace result
-authorizes a mitigation without identifying the writer and legitimacy.
+Discriminator: map every helper read, caller, and consumer. An invalid link
+path selects H-link-state; a caller-only bad argument/result use selects
+H-caller-transition; complete valid paths with the crash elsewhere select
+H-legitimate; an unmappable guest-PC handoff selects H-stale-breadcrumb. No
+source-only result authorizes a mitigation without identifying the writer and
+legitimacy.
 
 Exact commands:
 
-1. `rg -n "slotDispatcherIter|viRetraceHandlerThread|\[CRASH\]|last-guest-pc|vifs-snapshot" src lib docs tools`
-2. Update the existing s857 trace bounds in `../N64Recomp/fixup_game_funcs.py`
-   and the current generated `funcs_8.c` output; keep the fixup as the source
-   of truth.
-3. `cmake --build build --config Debug --target RogueSquadron64Recomp`
-4. `env ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_SLOT_DISPATCH_PHASE_MIN=3 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/soak_results/s858_slot_dispatch 300 0.5`
-5. Require nonzero `[slot-dispatch] kind=entry` rows, then compare the final
-   trace rows with `[CRASH]`/`pc-symbol` markers before classifying anything.
+1. `rg -n -C 8 "getNextSlotNpcTypeId|0x8000834c|jal 0x8000834c|slot-table|80130BB0|80130BC0|80130BC4" ../N64Recomp/RecompiledFuncs src docs`
+2. Read bounded windows around the sole helper definition and every caller;
+   enumerate each slot/link read and each consumer of the return value.
+3. `rg -n "getNextSlotNpcTypeId|8000834c" ../N64Recomp/fixup_game_funcs.py`
+4. Record a source verdict and the smallest phase-gated runtime boundary, if
+   one exists; do not add instrumentation or mitigation in this unit.

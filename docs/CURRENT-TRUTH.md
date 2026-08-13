@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s857 (2026-08-13). The active blocker is the authoritative
+Reviewed through s858 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -412,34 +412,33 @@ ORIGIN: source audit only; the identified writers are normal game
 allocation/spawn paths, and their values' legitimacy at the observed crash
 is unknown.
 
-## Next work unit: instrument the dispatcher invalid-state input
+## Next work unit: audit the actual 0x8000834c crash family
 
-HYPOTHESIS-ID: m3-slot-dispatcher-crash
+HYPOTHESIS-ID: m3-guest-pc-8000834c-audit
 
-Add one behavior-neutral, phase-scoped dispatcher trace in the generated-code
-fixup path, build once, and run the existing phase-gated recipe once. Record a
-positive-control entry for every dispatcher invocation, then record the
-selector, masked index, table-entry pointer, slot fields, update-function
-address, and pre/post update-call state for the first bounded late-task
-window. Do not change parser advancement, RDP handlers, or mitigation.
+Perform a source-only, whole-idiom audit of the function at guest PC
+0x8000834c (`getNextSlotNpcTypeId`) and every generated caller, including all
+reads of the slot-table links and all return-value consumers. Do not build or
+run until the inventory identifies whether the crash PC can arise from a
+legitimate caller-side state transition, an invalid slot/link, or a symbol/
+stack attribution artifact.
 
 Competing hypotheses:
 
-- H-invalid-slot: the slot-chain/index or NPC context is invalid before the
-  dispatcher dereference.
-- H-invalid-update: the NPC update-function pointer is invalid or returns a
-  corrupted context that faults in the dispatcher frame.
-- H-caller-state: the dispatcher inputs are valid and corruption enters from a
-  caller-side state transition or a callee return.
-- H-stale-breadcrumb: the source path does not match the observed host PC and
-  the apparent dispatcher attribution remains symbol/stack artefact.
+- H-link-state: 0x8000834c reads a live but invalid slot-table link or index.
+- H-caller-transition: callers pass a corrupted selector/context into the
+  helper or consume its result incorrectly.
+- H-legitimate: all observed reads and callers are valid; the crash is outside
+  this helper's source path.
+- H-stale-breadcrumb: the guest-PC handoff does not identify the faulting
+  instruction or function.
 
-Discriminator: the same-run positive-control count must be nonzero. A bad
-selector/link or null/implausible slot before the fault selects H-invalid-slot;
-a bad update address or post-call context selects H-invalid-update; valid
-inputs through the crash select H-caller-state; no dispatcher entry before a
-matching host fault selects H-stale-breadcrumb. No trace result authorizes a
-mitigation without identifying the writer and legitimacy.
+Discriminator: the exhaustive source inventory must map every helper read,
+caller, and consumer. A missing/invalid link path selects H-link-state; a
+caller-only bad argument or result use selects H-caller-transition; complete
+valid paths with the crash elsewhere select H-legitimate; an unmappable guest
+PC handoff selects H-stale-breadcrumb. This is source-only evidence and
+cannot authorize a mitigation without a writer and legitimacy assessment.
 
 ## Session s857 result
 
@@ -470,11 +469,35 @@ ORIGIN: retail memory-watch control and host-side dispatcher telemetry only;
 no game value, dispatcher control flow, parser advancement, or mitigation
 behavior changed.
 
+## Session s858 result
+
+Expanded the behavior-neutral dispatcher trace through the generated-code
+fixup path from 512 entry / 256 detail rows to 4096 entry / 2048 detail rows;
+the Debug target built successfully. The single phase-gated capture reached
+VI width 1024 at 79.8 seconds, then ran 54 post-gate frames before the process
+died at 167.9 seconds. The positive control fired: 626 entry rows, 790
+pre-call rows, and 790 post-call rows were captured. Every pre-call slot was
+KSEG0/RDRAM-range valid, every update pointer was in the observed
+0x800403EC..0x8006CBB0 range, and every post-call return was 1.
+
+The death did not match the hypothesized dispatcher fault: the host marker was
+the local-symbol artifact `__isPlatformOrVariantPlatformVersionAtLeast...`,
+with sticky guest PC 0x8000834c, rather than slotDispatcherIter. Thus the
+expanded observed dispatcher population remains valid and the later
+crash-triggering population remains unevaluable. This is two-source runtime
+evidence with the existing s857 retail-watch line, but it does not establish
+H-stale-breadcrumb as a general explanation or identify a writer. No
+mitigation was added.
+
+ORIGIN: host-side dispatcher telemetry; no game value, dispatcher control
+flow, parser advancement, or mitigation behavior changed.
+
 ## Ranked backlog
 
-1. Expand the phase-scoped dispatcher trace window to reach the later crash
-   population and classify the first invalid slot/index/update-pointer input.
-2. Re-run the residual condition capture only after that input is classified.
+1. Audit the actual 0x8000834c helper and all callers/consumers as one idiom
+   class; keep the dispatcher crash population unevaluable until mapped.
+2. Re-run the expanded dispatcher capture only if the source audit identifies
+   a concrete caller/state boundary that can be phase-gated.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.
