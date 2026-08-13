@@ -55889,3 +55889,26 @@ ordering trace with the same positive controls.
 
 ORIGIN: the new values are telemetry emitted by the RT64 parser reset and fetch
 paths; no game value, RDP command, or mitigation behavior was changed.
+
+## Session 830 (2026-08-13) — reset-to-consumer-to-join ordering is in order
+
+The bounded telemetry change added one monotonic event sequence around each
+LLE task: reset, first RT64 consumer E9 fetch, and the later task join. The
+Debug target built successfully. The existing phase-gated post-sec2 recipe
+reached VI width 1024 and passed its positive controls: 128 provenance rows
+were observed, including the four control rows with `emit=1`, `raw=1`,
+`dispatch=1`, and `match=1`. The run produced 40 keyed join rows before the
+known Metal barriers crash at guest PC `0x8000B650`.
+
+Every keyed row had reset order < first consumer-fetch order < join order, with
+the same parser epoch and `parser_delta=bridge_delta=1`; sampled order triples
+were `1<2<3`, `13<14<15`, and through `118<119<120`. This is single-source
+runtime evidence against producer/consumer ordering for the captured
+control/sec2 population. It does not explain the earlier aligned-task gap,
+does not establish parser loss, and does not justify a mitigation. The next
+work unit is a second independent producer/consumer identity or queue-order
+source on the aligned-task population.
+
+ORIGIN: the new values are telemetry emitted by RT64 reset/consumer paths and
+the existing join callback; no game value, RDP command, or mitigation behavior
+was changed.

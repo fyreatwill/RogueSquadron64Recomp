@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history and superseded detail are
 in [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen those
 closed lineages without a new class-level lead.
 
-Reviewed through s829 (2026-08-13). The active blocker is the authoritative
+Reviewed through s830 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -49,38 +49,46 @@ Priority until changed by the user:
   the explanation, but does not distinguish consumer ordering from parser
   filtering or establish a writer/legitimacy claim. The known
   `slotDispatcherIter+872` crash recurred at 204s.
+- s830 added a monotonic event sequence for reset, first RT64 consumer E9 fetch,
+  and join. The Debug build passed. The phase-gated run reached VI width 1024,
+  passed all four E9 positive controls (128 provenance rows), and produced 40
+  keyed join rows. Every keyed row had reset < first-consumer-fetch < join,
+  matching epoch, and parser_delta=bridge_delta=1 (orders 1<2<3 through
+  118<119<120). This is single-source runtime evidence against
+  producer/consumer ordering for the captured control/sec2 population; it
+  does not explain the earlier aligned-task gap or establish parser loss. The
+  run later hit the known Metal barriers crash at guest PC 0x8000B650.
 - No current conclusion establishes parser loss, a bad RDP writer, or a
   legitimate/illegitimate game value. No mitigation is justified.
 
-## Next work unit: consumer-scoped E9 epoch join
+## Next work unit: independent parser-consumer evidence
 
-HYPOTHESIS-ID: m3-e9-parser-epoch-join
+HYPOTHESIS-ID: m3-e9-consumer-ordering
 
-Make one bounded telemetry-only source change: assign an explicit epoch at
-`rs64_rdp_advance_reset`, carry it into the post-parser report, and include
-reset-to-consumer-to-join ordering. Keep game logic, RDP behavior, and
-mitigation code unchanged. Build once and run one existing phase-gated
-post-sec2 recipe with all passive breadcrumbs and positive controls.
+Produce a second independent line of evidence for parser/consumer advancement
+on an aligned-task population. Keep game logic, RDP behavior, and mitigation
+code unchanged. Do not conclude from s830's event sequence alone.
 
 Competing hypotheses:
 
-- H-parser-epoch-join: aligning the parser epoch with the guest population
-  removes the apparent mismatch.
-- H-parser-async-order: the render-thread consumer processes submitted ranges
-  after the producer callback; ordering records cross the callback boundary.
-- H-parser-filter-remains: even within one consumer epoch, raw-opcode counting
-  omits legitimate parser forms and remains lower.
+- H-parser-filter-remains: a second source keyed by the same aligned task
+  population still shows lower authoritative parser advancement.
+- H-parser-join-population: the earlier mismatch came from joining different
+  task populations; independent task identity/queue evidence will align the
+  counts or expose the join error.
+- H-parser-writer-path: the bridge count includes bytes that never reach the
+  RT64 consumer because submission ranges or deferred work differ.
 
-Discriminator: a keyed row with positive controls and parser count delimited by
-the same consumer epoch as the aligned guest task. Do not use the old
-`parser_delta` alone.
+Discriminator: one aligned-task capture with positive controls and a second
+independent producer/consumer identity or queue-order source. A result is
+inconclusive if it only repeats the s830 runtime counter.
 
 ## Ranked backlog
 
-1. Add and validate the parser-consumer reset/fetch/join ordering trace above.
-2. After a valid ordering result, classify parser/consumer advancement with
-   two independent lines of evidence; only then consider an implementation
-   fix.
+1. Add the second independent producer/consumer identity or queue-order
+   source for an aligned-task capture.
+2. After two independent lines classify parser/consumer advancement; only then
+   consider an implementation fix.
 3. M3 co-gates and crash families: pursue only a complete idiom inventory,
    classification of every site, and proof/guard per site. Passive breadcrumbs
    belong in queued soaks.

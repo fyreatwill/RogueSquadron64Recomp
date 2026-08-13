@@ -1,32 +1,32 @@
-# NEXT work unit (parser-consumer ordering trace)
+# NEXT work unit (independent parser-consumer evidence)
 
 HYPOTHESIS-ID: m3-e9-consumer-ordering
 
-Make one bounded telemetry-only source change that records the parser-consumer
-ordering around each LLE task: reset epoch, first
-RT64 E9 consumer fetch in that epoch, and the later `[e9-task-join]` row. Keep
-game logic, RDP behavior, and mitigation code unchanged. Build once and run
-the existing post-sec2 recipe once with all passive breadcrumbs and the
-positive controls.
+Add one independent producer/consumer identity or queue-order trace for the
+aligned-task population. Keep game logic, RDP behavior, and mitigation code
+unchanged. Batch the trace into one Debug build and run the existing
+phase-gated `s790_postsec2_reachability.sh` recipe once with its positive
+controls. Do not treat a repeat of the s830 runtime event sequence as a second
+line of evidence.
 
 Competing hypotheses and the discriminating measurement:
 
-- H-parser-async-order: the render-thread consumer processes submitted ranges
-  after the producer's task callback. The epoch/order trace will show the
-  parser reset and consumer records crossing the guest task callback boundary.
-- H-parser-filter-remains: even within one consumer epoch, raw-opcode E9
-  accounting omits legitimate parser forms. Positive controls will align in
-  epoch, but the keyed parser count will still be lower than the aligned guest
-  count without a reset/order explanation.
-- H-parser-reset-missed: reset timing is not the task boundary; the trace will
-  show a reset after task work or a consumer fetch attributed to another epoch.
+- H-parser-filter-remains: an independent queue/identity join still shows
+  lower authoritative parser advancement for the same aligned tasks.
+- H-parser-join-population: the previous mismatch joined different task
+  populations; independent task identity aligns the counts or exposes the
+  mismatch.
+- H-parser-writer-path: bridge E9 bytes are submitted in ranges that do not
+  reach the RT64 consumer because of deferred or dropped queue work.
 
-Discriminator: one capture with positive controls (`emit/raw/dispatch/match`),
-keyed reset-to-consumer-to-join ordering trace. Do not conclude from the old
-`parser_delta` field alone.
+Discriminator: keyed producer task, submitted range, consumer epoch, and join
+row with positive controls (`emit/raw/dispatch/match`). A result is
+inconclusive if it lacks the positive controls or only repeats the s830
+reset/fetch/join counter.
 
 Expected commands: edit the telemetry source; run
-`./submodule-patches/export.sh`; build the Debug target with the documented
-CMake command; run `zsh scratch/agent/s790_postsec2_reachability.sh` once;
-inspect only bounded log slices; update the ledger. Do not run this unit during
-a future maintenance iteration.
+`./submodule-patches/export.sh`; build with
+`cmake --build build --config Debug --target RogueSquadron64Recomp`; run
+`zsh scratch/agent/s790_postsec2_reachability.sh` once; inspect bounded marker
+slices; update the ledger. Use SIGKILL behavior from the recipe and do not run
+repeat soaks manually.

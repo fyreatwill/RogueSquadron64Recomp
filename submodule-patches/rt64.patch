@@ -1302,10 +1302,10 @@ index c944393..d8803d4 100644
          auto &proj = projections[projectionCount - 1];
          proj.addGameCall(gameCall);
 diff --git a/src/hle/rt64_interpreter.cpp b/src/hle/rt64_interpreter.cpp
-index dccaa87..6dbf358 100644
+index dccaa87..fa02d38 100644
 --- a/src/hle/rt64_interpreter.cpp
 +++ b/src/hle/rt64_interpreter.cpp
-@@ -5,12 +5,329 @@
+@@ -5,12 +5,366 @@
  #include "rt64_interpreter.h"
  
  #include <cassert>
@@ -1339,6 +1339,10 @@ index dccaa87..6dbf358 100644
 +    static uint32_t s_rdp_advance_total = 0;
 +    static uint32_t s_rdp_advance_task_e9 = 0;
 +    static uint32_t s_rdp_advance_epoch = 0;
++    static std::atomic<uint64_t> s_rdp_advance_order{0};
++    static uint64_t s_rdp_advance_reset_order = 0;
++    static uint64_t s_rdp_advance_first_consumer_order = 0;
++    static uint32_t s_rdp_advance_first_consumer_address = 0xFFFFFFFFu;
 +    static uint32_t s_rs64_pending_start_address = 0xFFFFFFFFu;
 +
 +    static bool rs64LogRdpAdvance() {
@@ -1351,6 +1355,9 @@ index dccaa87..6dbf358 100644
 +
 +    extern "C" void rs64_rdp_advance_reset() {
 +        ++s_rdp_advance_epoch;
++        s_rdp_advance_reset_order = s_rdp_advance_order.fetch_add(1) + 1;
++        s_rdp_advance_first_consumer_order = 0;
++        s_rdp_advance_first_consumer_address = 0xFFFFFFFFu;
 +        s_rdp_advance_n = 0;
 +        s_rdp_advance_total = 0;
 +        s_rdp_advance_task_e9 = 0;
@@ -1366,6 +1373,36 @@ index dccaa87..6dbf358 100644
 +
 +    extern "C" uint32_t rs64_rdp_advance_task_e9() {
 +        return s_rdp_advance_task_e9;
++    }
++
++    extern "C" uint64_t rs64_rdp_advance_join_order() {
++        return s_rdp_advance_order.fetch_add(1) + 1;
++    }
++
++    extern "C" uint64_t rs64_rdp_advance_reset_order() {
++        return s_rdp_advance_reset_order;
++    }
++
++    extern "C" uint64_t rs64_rdp_advance_first_consumer_order() {
++        return s_rdp_advance_first_consumer_order;
++    }
++
++    extern "C" uint32_t rs64_rdp_advance_first_consumer_address() {
++        return s_rdp_advance_first_consumer_address;
++    }
++
++    static void rs64_rdp_advance_consumer_fetch(uint32_t address) {
++        if (s_rdp_advance_first_consumer_order != 0) return;
++        s_rdp_advance_first_consumer_order = s_rdp_advance_order.fetch_add(1) + 1;
++        s_rdp_advance_first_consumer_address = address;
++        if (rs64LogRdpAdvance()) {
++            fprintf(stderr,
++                "[rdp-consumer-first-e9] epoch=%u order=%llu addr=0x%06X reset_order=%llu\n",
++                s_rdp_advance_epoch,
++                (unsigned long long)s_rdp_advance_first_consumer_order,
++                address, (unsigned long long)s_rdp_advance_reset_order);
++            fflush(stderr);
++        }
 +    }
 +
 +    extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
@@ -1635,7 +1672,7 @@ index dccaa87..6dbf358 100644
      // Interpreter
  
      Interpreter::Interpreter() {
-@@ -89,8 +406,26 @@ namespace RT64 {
+@@ -89,8 +443,27 @@ namespace RT64 {
                  DisplayList *pendingCommand = (DisplayList *)state->rdp->pendingCommandBuffer.data();
                  opCode = (pendingCommand->w0 >> 24) & opCodeMask;
                  func = rdpGBI->map[opCode];
@@ -1653,6 +1690,7 @@ index dccaa87..6dbf358 100644
 +                    rs64_e9prov_authoritative_fetch &&
 +                    s_rs64_pending_start_address != 0xFFFFFFFFu) {
 +                    ++s_rdp_advance_task_e9;
++                    rs64_rdp_advance_consumer_fetch(s_rs64_pending_start_address);
 +                    rs64_e9prov_authoritative_fetch(s_rs64_pending_start_address);
 +                }
  
@@ -1662,7 +1700,7 @@ index dccaa87..6dbf358 100644
                      func(state, &pendingCommand);
                  }
                  else {
-@@ -99,6 +434,7 @@ namespace RT64 {
+@@ -99,6 +472,7 @@ namespace RT64 {
  
                  state->rdp->pendingCommandCurrentBytes = 0;
                  state->rdp->pendingCommandRemainingBytes = 0;
@@ -1670,7 +1708,7 @@ index dccaa87..6dbf358 100644
              }
              // Not all of the bytes were copied, so adjust RDP state accordingly and exit.
              else {
-@@ -112,7 +448,50 @@ namespace RT64 {
+@@ -112,7 +486,51 @@ namespace RT64 {
          // Create a dummy pointer and pass that, since displaylist pointer incrementing is handled differently in LLE.
          DisplayList *dummy;
          while ((dl != nullptr) && ((dlEnd == nullptr) || (dl < dlEnd))) {
@@ -1682,6 +1720,7 @@ index dccaa87..6dbf358 100644
 +                ++s_rdp_advance_task_e9;
 +                const uint32_t address = dlStartAdddress +
 +                    (uint32_t)((uintptr_t)dl - (uintptr_t)dlStart);
++                rs64_rdp_advance_consumer_fetch(address);
 +                rs64_e9prov_authoritative_fetch(address);
 +            }
 +
@@ -1722,7 +1761,7 @@ index dccaa87..6dbf358 100644
  
              if ((extendedOpCode != 0) && (opCode == extendedOpCode)) {
                  dummy = dl;
-@@ -122,6 +501,29 @@ namespace RT64 {
+@@ -122,6 +540,29 @@ namespace RT64 {
              else {
                  func = rdpGBI->map[opCode];
                  cmdLength = state->rdp->commandWordLengths[opCode];
@@ -1752,7 +1791,7 @@ index dccaa87..6dbf358 100644
  
  #       ifdef DUMP_DISPLAY_LISTS
                  RT64_LOG_PRINTF("0x%08X 0x%08X", dl->w0, dl->w1);
-@@ -129,6 +531,10 @@ namespace RT64 {
+@@ -129,6 +570,10 @@ namespace RT64 {
  
                  // Check if this command is unfinished and store the partial contents if so.
                  if (dl + cmdLength > dlEnd) {
@@ -1763,7 +1802,7 @@ index dccaa87..6dbf358 100644
                      uint32_t toCopy = (uint32_t)((uintptr_t)dlEnd - (uintptr_t)dl);
                      memcpy(state->rdp->pendingCommandBuffer.data(), dl, toCopy);
                      state->rdp->pendingCommandCurrentBytes = toCopy;
-@@ -136,13 +542,155 @@ namespace RT64 {
+@@ -136,13 +581,155 @@ namespace RT64 {
                      break;
                  }
  
