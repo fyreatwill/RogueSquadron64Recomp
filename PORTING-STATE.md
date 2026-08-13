@@ -54768,3 +54768,32 @@ absence of an attached input plugin from the exact runtime/ROM discrepancy,
 so the next discriminator holds no presses constant and toggles only plugin
 attachment. No port runtime code changed. Logs are under
 `scratch/agent/oracle_runs/20260812_input_phase/`.
+
+## Session 782 (2026-08-12) — input-SDL attachment does not change the oracle phase
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 20,171 bytes, so maintenance did
+not trigger. The planned work unit was the phase-gated input-plugin A/B from
+`scratch/agent/NEXT.md`: two concurrent 130-second, debugger-on,
+`R4300Emulator=1` oracle arms with the retail ROM, identical whole-RDRAM
+positive-control watches, VI and PIF traces, and no injected presses. Arm B
+alone attached the verified Homebrew `mupen64plus-input-sdl` plugin.
+
+Both arms exited cleanly. The no-input arm recorded **21,588,123** whole-RDRAM
+writes and **7,799 VI** callbacks; the attached-input arm recorded
+**21,605,494** writes and **7,788 VI** callbacks. Each reached width 320 and
+origin `0x6dd280` during initialization and never transitioned to 512, 640, or
+1024 during the full 130-second horizon. The input arm log confirms attachment
+of `/opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-input-sdl.dylib`.
+The only config-save warning was expected sandbox isolation of the user
+Application Support directory after the already-complete run; it did not affect
+the loaded plugin or positive controls.
+
+This refutes **H-input-plugin-state** and selects
+**H-oracle-runtime-or-ROM-discrepancy** for the remaining phase divergence.
+The result is evaluable because both whole-RDRAM positive controls fired and
+both arms reached the same 130-second wall-time director stop. No port runtime
+code changed. Raw logs and statuses are under
+`scratch/agent/oracle_runs/20260813_input_plugin/s782/`. Next: perform a
+bounded oracle-versus-stock-Mupen runtime/configuration audit before changing
+the port runtime; it must identify a concrete effective-state difference or
+record that the exact 320-only recipe is reproducible in both frontends.

@@ -1,44 +1,27 @@
-# NEXT work unit (oracle input-plugin attachment A/B)
+# NEXT work unit (oracle runtime/configuration identity audit)
 
-HYPOTHESIS-ID: oracle-input-plugin-state
+HYPOTHESIS-ID: oracle-runtime-or-rom-discrepancy
 
-The s781 130-second A/B held both no-press and eleven-Start arms at width
-320/origin `0x6dd280`, despite positive whole-RDRAM watches; the driven arm
-also logged all eleven PIF presses. Input schedule alone is therefore not the
-documented phase discriminator. The remaining recipe difference is that the
-no-press command did not attach input-SDL, while the driven command did.
-
-## Competing hypotheses
-
-- H-input-plugin-state: attaching the verified input-SDL plugin, even with no
-  presses, allows the documented later 512 attract-demo phase.
-- H-runtime-or-rom-discrepancy: both no-press arms remain 320-only, so plugin
-  attachment does not explain the retail timeline.
+Session 782 completed the controlled no-press input-plugin A/B. The verified
+input-SDL plugin was attached only in arm B, yet the no-input arm recorded
+21,588,123 whole-RDRAM writes / 7,799 VI and the input arm 21,605,494 / 7,788;
+both stayed at width 320/origin `0x6dd280` for 130 seconds. Input schedule and
+input-plugin attachment are now refuted as phase discriminators.
 
 ## Discriminating measurement
 
-Run two concurrent debugger-on, emulator-1 arms for 130 seconds. Both use no
-`--press`, `--watch-write 0x0:0x800000`, `--vi-trace`, and `--pif-trace`; only
-arm B adds the verified input plugin. A 512/1024/640 transition only in arm B
-selects H-input-plugin-state. Identical 320-only VI traces with positive
-whole-RDRAM writes in both arms select H-runtime-or-rom-discrepancy. Do not
-interpret missing callbacks as a null: the whole-RDRAM watch must fire in both
-arms.
+Before changing the port runtime, perform a bounded effective-state audit of
+the oracle launch against a stock Mupen64Plus CLI launch using the same retail
+ROM, core/RSP/input plugin paths, ROM-database data path, `R4300Emulator=1`,
+and fresh config directories. Record the generated configs plus startup logs,
+then compare the effective Core and Input-SDL sections and loaded plugin list.
+If a concrete difference is found, test only that difference in a fresh
+130-second oracle run. If no effective-state difference exists, record that
+the exact 320-only recipe reproduces across both frontends and return focus to
+the M3 FULL_SYNC blocker.
 
-## Commands
+## Controls
 
-Use the verified core and retail ROM. Store logs under
-`scratch/agent/oracle_runs/20260813_input_plugin/` and kill with SIGKILL only
-if an external timeout is required.
-
-Arm A (no input plugin):
-
-```sh
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 130 --oracle-debugger 1 --oracle-emulator 1 --watch-write 0x0:0x800000 --vi-trace --pif-trace
-```
-
-Arm B adds:
-
-```text
---input /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-input-sdl.dylib
-```
+- Do not treat a config-save warning after shutdown as startup failure.
+- Preserve the whole-RDRAM positive control and VI trace for any follow-up run.
+- Do not change port runtime code during this oracle audit.

@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s781; compacted in maintenance s776)
+## Current truth (reviewed through s782; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -68,6 +68,11 @@ the chronological ledger. The active facts are:
   `0x6dd280` for the full horizon. This refutes input schedule alone as the
   explanation for the documented later phase; input-plugin attachment versus
   the exact runtime recipe remains unresolved.
+- The s782 no-press input-plugin A/B resolved that last input distinction:
+  the unattached arm had 21,588,123 whole-RDRAM writes / 7,799 VI and the
+  attached-input arm had 21,605,494 writes / 7,788 VI. Both stayed at width
+  320/origin `0x6dd280` for 130 seconds. This refutes input-plugin attachment
+  as the missing phase trigger and selects a remaining runtime/ROM discrepancy.
 
 **ORIGIN:** this compaction retains the latest measured facts and pointers;
 deleted session narrative is recoverable from `PORTING-STATE.md` and git.
@@ -139,7 +144,7 @@ force-zero + default `real_ucode=0`; due again s573+). Full arc: `docs/PROJECT-O
 Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
 `docs/PROJECT-OVERVIEW.md`; this active backlog uses the single monotonic sequence below. Closed lineages are not backlog items.
 
-1. **Oracle phase divergence — OPEN, H-oracle-input-plugin-or-runtime selected.**
+1. **Oracle phase divergence — OPEN, H-oracle-runtime-or-ROM-discrepancy selected.**
    s780's two-arm 130-second horizon run kept every driven arm at
    width 320/origin `0x6dd280`, with 21,635,499 whole-RDRAM positive-control
    writes, 7,799 VI callbacks, and all eleven PIF Start presses per arm. This
@@ -147,9 +152,11 @@ Legacy negative identifiers remain searchable in `PORTING-STATE.md` and
    no-press and eleven-Start arms at 320-only, with positive whole-RDRAM writes
    in both and all eleven PIF presses in the driven arm. Next: phase-gated A/B
    no-press runs that differ only in whether the verified input-SDL plugin is
-   attached. A later 512/1024/640 phase only with the attached plugin selects
-   an input-plugin-state explanation; identical 320-only traces select a
-   remaining runtime/ROM discrepancy.
+   attached. **s782 completed that test:** the unattached arm had 21,588,123
+   whole-RDRAM writes / 7,799 VI and the attached arm had 21,605,494 / 7,788;
+   both were 320-only at `0x6dd280` for the full 130 seconds. This refutes
+   input-plugin state. Next: bounded oracle-versus-stock-Mupen
+   runtime/configuration audit before any port-runtime change.
 - **Overturned: H-oracle-runtime-environment-divergence (s777).** s777's
 bounded identity audit found byte-identical oracle/core/RSP/input/ROM artifacts;
 the matched configs differ only by `EnableDebugger`. This rules out artifact,
