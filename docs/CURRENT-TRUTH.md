@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s910 (2026-08-13). The active blocker is the authoritative
+Reviewed through s911 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -210,6 +210,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s908 | `invertOrientationMatrix` inventory: fixed-shape 12-float affine inverse with input/output offsets `0x00..0x2C`; two generated callers pass the same stack-temporary-to-record shape and no incompatible aliasing; dynamic matrix values/writers remain unproven; no mitigation. |
 | s909 | `findVoiceSlotByAge` inventory: one generated caller and one coherent MusyX table shape (`0x80154620`, stride `0x1228`, active `+0x4620`, age/handle `+0x4644`, counter `0x80154648`); no pointer walk or caller-shape mismatch, but caller-derived index/counter legitimacy remains unproven; no mitigation. |
 | s910 | `stopVoiceSlotSynced` inventory: one computed MusyX slot shape (`0x80154620`, stride `0x1228`), active/state reads and writes, shared queue, and `slot+0x3420` stop call; both callers agree on the slot-index contract and no local walk or shape mismatch exists, but caller-derived index/state legitimacy remains unproven; no mitigation. |
+| s911 | `setVoiceMixByKey` inventory: one coherent MusyX slot shape with active/key/handle reads, three mix-byte stores, shared queue, and two matching callers; emitted control exits after the first failed candidate, so writer/value legitimacy and the unusual one-candidate behavior remain unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -230,25 +231,25 @@ none authorizes a mitigation.
 
 HYPOTHESIS-ID: m3-idiom-inventory-next
 
-Audit the next adjacent audio function, `setVoiceMixByKey` (`0x8009B464`),
+Audit the next adjacent audio function, `serviceVoicePoolFrame` (`0x8009B5A8`),
 as a complete generated function. Do not add a guard or change game behavior.
 
 Competing hypotheses:
 
-- H-set-voice-mix-unclassified: the helper has an unchecked or aliasing-sensitive
+- H-service-voice-pool-unclassified: the helper has an unchecked or aliasing-sensitive
   slot/list access whose writer/initialization obligation cannot be classified
   from the function and sibling writers.
-- H-set-voice-mix-fully-classified: all slot/list reads and writes are bounded by
+- H-service-voice-pool-fully-classified: all slot/list reads and writes are bounded by
   the function's controls, and its callers agree on the same layout.
-- H-set-voice-mix-shape-mismatch: callers use incompatible layouts or the helper's
+- H-service-voice-pool-shape-mismatch: callers use incompatible layouts or the helper's
   output aliases a state structure; record the exact split and stop.
 
-Discriminating measurement: a complete site table for `setVoiceMixByKey`,
+Discriminating measurement: a complete site table for `serviceVoicePoolFrame`,
 every slot/list load/store and control operation, all generated callers, and the
 companion symbol/decomp basis. Any omitted access or incompatible caller shape
 rejects full classification.
 
-Exact commands: use `rg` to enumerate `setVoiceMixByKey` and its callsites in
+Exact commands: use `rg` to enumerate `serviceVoicePoolFrame` and its callsites in
 `../N64Recomp/RecompiledFuncs/funcs_26.c`, then bounded `sed` windows and the
 companion `rogue_squadron64` symbol/decomp files. No game build or soak is
 planned.

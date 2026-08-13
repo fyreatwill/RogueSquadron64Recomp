@@ -58149,3 +58149,55 @@ changed. This is single-source inventory evidence only.
 ORIGIN: complete generated-helper, both-caller, sibling-field, and
 companion-symbol inventory; no guest value, writer mutation, mitigation, or
 runtime behavior changed.
+
+## Session s911 (2026-08-13) — setVoiceMixByKey has one coherent slot shape but an unusual one-candidate exit
+
+### What ran
+
+Per `scratch/agent/NEXT.md`, performed a source-only M3 inventory of
+`setVoiceMixByKey` (`0x8009B464`) in
+`../N64Recomp/RecompiledFuncs/funcs_26.c`. Enumerated every local table
+load/store, control operation, both generated callers, shared voice-slot
+writers/readers, and the companion symbol basis. No build, game run, or soak
+was needed.
+
+The helper first gates on `0x800A5121`, then uses the MusyX voice table rooted
+at `0x80154620` with a `0x1228` stride. Its complete local access set is:
+active-byte reads at slot `+0x4620` (`0x8009B4B0`), key/age-word reads at
+`+0x4644` (`0x8009B4C4`), a selected-slot handle read at `+0x462C`
+(`0x8009B520`), and byte stores to selected-slot `+0x4622`, `+0x4623`, and
+`+0x4621` (`0x8009B550`, `0x8009B55C`, `0x8009B568`). It receives and sends
+on the shared queue at `0x80154650`, and calls `setVoiceVolumePanLocked` only
+when the selected slot's `+0x462C` value is not `-1`.
+
+The control flow is not a conventional eight-slot scan: the candidate count
+starts at zero, and either an inactive slot or a key mismatch increments it;
+the loop branches back only while that count remains zero. Therefore the
+emitted function examines the first slot and exits on the first failed
+candidate, while a matching first slot selects index zero. The no-match path
+returns zero; the match path computes the selected slot offset from the
+candidate index, updates the three mix bytes, sends the queue message, and
+returns one.
+
+The two generated callers are `applySpeechVolumeScalar` (`0x80066EA4`) and
+`resetSpeechSubsystem` (`0x80067800`). Both derive the input voice handle from
+the same speech/voice table path and pass the same effective mix shape:
+computed volume, `0x40`, zero, and a zero fifth argument. The companion symbol
+file independently names the helper; adjacent symbols and sibling generated
+functions identify the same voice table, stride, active/key fields, mix-byte
+fields, and queue. No incompatible caller layout or pointer/list walk was
+found.
+
+### Rules out / narrows
+
+This audit rules out an omitted local table access, pointer/list walk, and
+generated caller-shape mismatch. It does not establish that the caller-derived
+key/mix values or the one-candidate control behavior are legitimate, nor does
+it prove all shared-field writers produce valid runtime values. H-set-voice-
+mix-shape-mismatch is refuted; H-set-voice-mix-fully-classified is not selected.
+H-set-voice-mix-unclassified remains active. No guard, mitigation, or game
+behavior changed. This is single-source inventory evidence only.
+
+ORIGIN: complete generated-helper, both-caller, shared-field, and
+companion-symbol inventory; no guest value, writer mutation, mitigation, or
+runtime behavior changed.
