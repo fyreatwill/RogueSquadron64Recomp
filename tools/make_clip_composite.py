@@ -16,8 +16,11 @@ composite is the input of factor5_rsp_ovl12.toml and is consumed by fixup 6b.
 Overlay 24 is dest 0x12A0 (not the 0x1DB0 window): the composite overwrites
 only that IMEM range so RSPRecomp labels the emit image at the hardware dest.
 Fixup 6c extracts that range; it does not overwrite main L_12A0.
+Overlay 14 is dest 0x1DB0 (ROM 0x26AB8, table len 0x21F -> 0x220 B): a
+vector loop that exits j L_1268; ori $5, 0x18. Fixup 6g extracts that
+window and routes DMEM 0x153 == 0x14.
 
-Usage: python3 tools/make_clip_composite.py [4|12|24]   (from the repo root)
+Usage: python3 tools/make_clip_composite.py [4|12|14|24]   (from the repo root)
 """
 import sys
 from pathlib import Path
@@ -32,6 +35,7 @@ WINDOW_END = 0x26590      # IMEM 0x2000 (text end)
 OVERLAYS = {
     4: (0x26420, 0x220, "clip", WINDOW_ROM, WINDOW_END),
     12: (0x26670, 0x230, "trigen", WINDOW_ROM, WINDOW_END),
+    14: (0x26AB8, 0x220, "ovl14", WINDOW_ROM, WINDOW_END),
     24: (0x27260, 0xE4, "ovl24", 0x25830, None),
 }
 

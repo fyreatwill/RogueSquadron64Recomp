@@ -1155,6 +1155,111 @@ if is_main_ucode and OVL24_04RET_MARKER not in text:
         10, "remaining ovl24-only clip-resident returns")
 
 # ---------------------------------------------------------------------------
+# Fixup 6g: splice resident overlay 14 (id 0x14) at dest 0x1DB0 (s748)
+# ---------------------------------------------------------------------------
+# s747: [clip-stray] 0x1DF4/00 is leftover $ra after skipped ovl14 DMA
+# (L_1268 r5=0x14, dest 0x1DB0) falls into main L_1DB0, which writes
+# 153=0 and j L_11B0. Overlay 14 is a vector loop (ROM 0x26AB8, 0x220 B),
+# not a 0x1DF4 owner. factor5_rsp_ovl14.toml translates a composite
+# whose window holds that image; this fixup extracts L_1DB0..,
+# renames labels OVL14_*, splices the block, and routes DMEM 0x153 ==
+# 0x14 at dest 0x1DB0 plus the three jr-$ra jal-returns. Overlay 18
+# is the successor residual — do not splice it here.
+# ORIGIN: dest 0x1DB0 / 153==0x14 is the skipped ovl14 image.
+# The 0x1DF4 stray is leftover $ra after that skip. Route, not a
+# 0x1DF4 widen.
+OVL14_MARKER = "/* fixup: ovl14splice */"
+if is_main_ucode and OVL14_MARKER not in text:
+    ovl14_path = path.parent / "factor5_ucode_ovl14_recompiled.c"
+    if not ovl14_path.exists():
+        print("fixup_factor5_ucode: FIXUP 6g INPUT MISSING: "
+              f"{ovl14_path} not found. Run make_clip_composite.py 14 and "
+              "RSPRecomp on factor5_rsp_ovl14.toml before fixing up the "
+              "main ucode, or the overlay-14 splice is lost.", file=sys.stderr)
+        sys.exit(1)
+    ovl14_text = ovl14_path.read_text(encoding="utf-8")
+
+    def sub_exactly6g(pattern, repl_fn, n, what):
+        global text
+        new_text, count = pattern.subn(repl_fn, text)
+        if count != n:
+            print(f"fixup_factor5_ucode: FIXUP 6g ANCHOR FAILED ({what}): "
+                  f"expected {n} substitution(s), made {count}. "
+                  f"Regen changed the code shape — re-derive the anchors "
+                  f"before trusting the overlay-14 splice.", file=sys.stderr)
+            sys.exit(1)
+        text = new_text
+
+    m_start = re.search(r"^L_1DB0:\n", ovl14_text, flags=re.MULTILINE)
+    m_end = re.search(r"^do_indirect_jump:\n", ovl14_text, flags=re.MULTILINE)
+    if not m_start or not m_end or m_end.start() <= m_start.start():
+        print("fixup_factor5_ucode: FIXUP 6g EXTRACTION FAILED: could not "
+              "bound L_1DB0..do_indirect_jump in the ovl14 file.", file=sys.stderr)
+        sys.exit(1)
+    region = ovl14_text[m_start.start():m_end.start()]
+
+    region_labels = set(re.findall(r"^(L_[0-9A-F]{4}):", region, flags=re.MULTILINE))
+    expected_resident = {"L_1268"}
+    referenced = set(re.findall(r"goto (L_[0-9A-F]{4});", region))
+    external = referenced - region_labels
+    if external != expected_resident:
+        print(f"fixup_factor5_ucode: FIXUP 6g SANITY FAILED: region's external "
+              f"references {sorted(external)} != expected resident helpers "
+              f"{sorted(expected_resident)}. The overlay-14 image or its "
+              f"translation changed — re-derive before splicing.", file=sys.stderr)
+        sys.exit(1)
+    for need in ("L_1DB0", "L_1E28", "L_1E94", "L_1EEC"):
+        if need not in region_labels:
+            print("fixup_factor5_ucode: FIXUP 6g SANITY FAILED: missing "
+                  f"{need} in ovl14 region {sorted(region_labels)}.",
+                  file=sys.stderr)
+            sys.exit(1)
+    for lbl in region_labels:
+        region = re.sub(r"\b" + lbl + r"\b", "OVL14_" + lbl[2:], region)
+
+    sub_exactly6g(
+        re.compile(r"(^do_indirect_jump:\n)", flags=re.MULTILINE),
+        lambda m: OVL14_MARKER + "\n" + region + m.group(1),
+        1, "splice point")
+
+    sub_exactly6g(
+        re.compile(
+            r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x4\) \{"
+            r" rs64_e9prov_ovl_route\(0x4, 0x1DB0\); goto CLIP_1DB0; \}\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0xC\) \{"
+            r" rs64_e9prov_ovl_route\(0xC, 0x1DB0\); goto OVL12_1DB0; \}\n"
+            r"            if \(RSP_MEM_BU\(0X153, 0\) == 0x28\) \{"
+            r" rs64_e9prov_ovl_route\(0x28, 0x1DB0\); "
+            r"r17 = RSP_ADD32\(r17, 0X20\); goto L_10D8; \}  "
+            r"/\* fixup: ovl24route \*/\n"
+            r"            goto L_1DB0;\n)"),
+        lambda m: ("        case 0x1DB0:  " + CLIP_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x4) {"
+                   " rs64_e9prov_ovl_route(0x4, 0x1DB0); goto CLIP_1DB0; }\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0xC) {"
+                   " rs64_e9prov_ovl_route(0xC, 0x1DB0); goto OVL12_1DB0; }\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x14) {"
+                   " rs64_e9prov_ovl_route(0x14, 0x1DB0); goto OVL14_1DB0; }  " +
+                   OVL14_MARKER + "\n"
+                   "            if (RSP_MEM_BU(0X153, 0) == 0x28) {"
+                   " rs64_e9prov_ovl_route(0x28, 0x1DB0); "
+                   "r17 = RSP_ADD32(r17, 0X20); goto L_10D8; }  "
+                   "/* fixup: ovl24route */\n"
+                   "            goto L_1DB0;\n"),
+        1, "case 0x1DB0 overlay-14 routing")
+
+    ovl14_only = "".join(
+        f"        case 0x{a:04X}: if (RSP_MEM_BU(0X153, 0) == 0x14) {{ "
+        f"rs64_e9prov_ovl_route(0x14, 0x{a:04X}); goto OVL14_{a:04X}; }} "
+        f"goto rs64_clip_stray;  {OVL14_MARKER}\n"
+        for a in (0x1E28, 0x1E94, 0x1EEC))
+    sub_exactly6g(
+        re.compile(r"(        case 0x1DB0:  /\* fixup: clipsplice \*/\n)"),
+        lambda m: ovl14_only + m.group(1),
+        1, "overlay-14 jal-return cases")
+
+# ---------------------------------------------------------------------------
 # Fixup 7: ImemOverrun site attribution (s68) — main ucode only
 # ---------------------------------------------------------------------------
 # s67 refuted L_0000 as the freeze path. Two source-level
@@ -1840,6 +1945,8 @@ if CLIP_MARKER in text and CLIP_MARKER not in original:
     notes.append("spliced real clip overlay (CLIP_* labels, id-4 routing)")
 if OVL12_MARKER in text and OVL12_MARKER not in original:
     notes.append("spliced overlay-12 TriGen (OVL12_* labels, id-0xC routing)")
+if OVL14_MARKER in text and OVL14_MARKER not in original:
+    notes.append("spliced overlay-14 vector loop (OVL14_* labels, id-0x14 routing)")
 if imem_note_applied:
     notes.append("ImemOverrun site notes (L_1650/epilogue/control)")
 if l1650_reconnect_applied:

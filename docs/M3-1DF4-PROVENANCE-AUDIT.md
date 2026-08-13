@@ -178,3 +178,10 @@ because `L_1DB0` has already executed `sb $zero, 0x53($18)`.
 Routing ovl14 will stop this fall-through. ovl14 then exits to ovl18
 (`r5=0x18`); that sibling is the residual after the ovl14 route, not
 part of this unit.
+
+**s748 live:** fixup 6g landed that route. Soak
+`s748_ovl14_route_20260812-171325` (350 s, CRASH=0): `last_ovl=0x14/*`
+61/64, pred `resident:0x14` → 0, all 61 first-edge preds
+`resident:0x18`. Stray `0x1DF4/00` 3157→1395 (no-jal ovl14 path);
+new `0x1E28/00=1200` `0x1EEC/00=77`. E9 match still 3/64. Next is
+ovl18 dest-`0x1DB0` when `153==0x18`.

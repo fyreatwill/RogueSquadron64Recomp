@@ -207,6 +207,9 @@ struct Rs64E9Provenance {
     uint32_t ovl24_route = 0;
     uint32_t ovl24_ret = 0;
     uint32_t ovl28_route = 0;
+    uint32_t ovl14_route = 0;
+    uint32_t ovl14_ret = 0;
+    uint32_t ovl18_route = 0;
     uint32_t l1298_12a0_res24 = 0;
     uint32_t l1298_12a0_other = 0;
     uint32_t last_ovl_res = 0;
@@ -642,11 +645,17 @@ extern "C" void rs64_e9prov_ovl_route(uint32_t resident, uint32_t target) {
         if (target != 0x12A0) ++g_e9prov.ovl24_ret;
     } else if (resident == 0x28) {
         ++g_e9prov.ovl28_route;
+    } else if (resident == 0x14) {
+        ++g_e9prov.ovl14_route;
+        if (target != 0x1DB0) ++g_e9prov.ovl14_ret;
+    } else if (resident == 0x18) {
+        ++g_e9prov.ovl18_route;
     }
     if (!log_e9_provenance()) return;
-    static uint32_t n4 = 0, nC = 0, n24 = 0, n28 = 0;
+    static uint32_t n4 = 0, nC = 0, n24 = 0, n28 = 0, n14 = 0, n18 = 0;
     uint32_t *n = resident == 4 ? &n4 : resident == 0xC ? &nC
-                 : resident == 0x24 ? &n24 : resident == 0x28 ? &n28 : nullptr;
+                 : resident == 0x24 ? &n24 : resident == 0x28 ? &n28
+                 : resident == 0x14 ? &n14 : resident == 0x18 ? &n18 : nullptr;
     if (!n) return;
     ++*n;
     if (*n <= 16 || (*n % 64) == 0) {
@@ -927,12 +936,13 @@ extern "C" void rs64_e9prov_task_end(uint32_t task) {
                 g_e9prov.non_e9_spans, g_e9prov.uncovered,
                 g_e9prov.first_guest, g_e9prov.first_emit, g_e9prov.first_authoritative,
                 g_e9prov.first_match);
-        fprintf(stderr, "[e9-prov-reset] task=%u scope=%s reset=%u active=%u predecessor=%u paired=%zu unpaired_reuse=%u pending_seq=%u clip=%u ovl12=%u ovl12_ret=%u ovl24=%u ovl24_ret=%u ovl28=%u l1298_12a0=24:%u,other:%u j1364=%u,04:%u,24:%u,oth:%u jal17f0=%u clip1e48=%u/%u last_ovl=0x%02X/0x%04X pred=line:%u,r31:0x%04X,r30:0x%04X,res:0x%02X,ovl:0x%02X/0x%04X\n",
+        fprintf(stderr, "[e9-prov-reset] task=%u scope=%s reset=%u active=%u predecessor=%u paired=%zu unpaired_reuse=%u pending_seq=%u clip=%u ovl12=%u ovl12_ret=%u ovl24=%u ovl24_ret=%u ovl28=%u ovl14=%u ovl14_ret=%u ovl18=%u l1298_12a0=24:%u,other:%u j1364=%u,04:%u,24:%u,oth:%u jal17f0=%u clip1e48=%u/%u last_ovl=0x%02X/0x%04X pred=line:%u,r31:0x%04X,r30:0x%04X,res:0x%02X,ovl:0x%02X/0x%04X\n",
                 task, g_e9prov.control ? "control" : "sec2", g_e9prov.l1db0_reset,
                 g_e9prov.l1db0_reset_active, g_e9prov.l1db0_predecessor, g_e9prov.reset_reuse_last.size(),
                 g_e9prov.depth0_reuse_unpaired, g_e9prov.l1db0_reset_last_active_seq,
                 g_e9prov.clip_route, g_e9prov.ovl12_route, g_e9prov.ovl12_ret,
                 g_e9prov.ovl24_route, g_e9prov.ovl24_ret, g_e9prov.ovl28_route,
+                g_e9prov.ovl14_route, g_e9prov.ovl14_ret, g_e9prov.ovl18_route,
                 g_e9prov.l1298_12a0_res24, g_e9prov.l1298_12a0_other,
                 g_e9prov.j1364, g_e9prov.j1364_res04, g_e9prov.j1364_res24,
                 g_e9prov.j1364_other, g_e9prov.ovl24_jal17f0,

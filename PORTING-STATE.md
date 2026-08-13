@@ -53614,3 +53614,45 @@ owner of the `0x1DF4` return (it is the skipped dest, not the
 **ORIGIN:** `$ra` writer `OVL12_1DD8` `jal L_122C`; `153=0`
 writer main `L_1DB0` after skipped ovl14 DMA. No mitigation.
 Next is an ovl14 dest-`0x1DB0` route when `153==0x14`.
+
+## Session 748 (2026-08-12) — ovl14 dest-0x1DB0 route is LIVE; residual is skipped ovl18
+
+Step 0 measured `CURRENT-TRUTH.md` at 37,440 bytes, so maintenance
+was not triggered. Work unit was NEXT.md after s747: route overlay
+14 at dest `0x1DB0` when `153==0x14`. SOAK-RESULTS had no new queue
+lines; s746/s747 were already folded.
+
+`make_clip_composite.py 14` places ROM `0x26AB8` (0x220 B) in the
+window. `factor5_rsp_ovl14.toml` + RSPRecomp emit
+`factor5_ucode_ovl14_recompiled.c`. Fixup 6g extracts
+`L_1DB0..do_indirect_jump`, renames `OVL14_*` (external helper is
+exactly `L_1268`), routes `153==0x14` at dest `0x1DB0`, and adds
+jal-return cases `0x1E28`/`0x1E94`/`0x1EEC`. JALs themselves are
+direct gotos. **ORIGIN:** dest `0x1DB0` / `153==0x14` is the skipped
+ovl14 vector loop (ROM `0x26AB8`). Route, not a `0x1DF4` widen.
+
+Soak `scratch/agent/soak_results/s748_ovl14_route_20260812-171325/run.log`
+(350 s, same recipe as s743–s746, CRASH=0 UJ=0, wrapper rc=1).
+Same-run positive control: `last_ovl=0x14/*` on 61/64 sec2 reset
+rows (`0x1E28` 50, `0x1DB0` 10, `0x1EEC` 1). `[ovl-route] res=0x14`
+printed 0 because the host filter only logged 04/0C/24/28 — not a
+miss; `last_ovl` is written before that filter. Host now logs
+0x14/0x18 and counts `ovl14=`/`ovl14_ret=`/`ovl18=` on
+`[e9-prov-reset]`. Four boot controls `dl06=push:2,complete:2,open:0`.
+
+Pred `resident:0x14` **61→0**. All 61 first-edge rows are
+`pred=target:0x1DB0,line:621,resident:0x18` with
+`ra=0x1E28` 50 / `0x1DF4` 10 / `0x1EEC` 1. Stray `0x1DF4/00`
+**3157→1395**; new `0x1E28/00=1200` `0x1EEC/00=77` (all line=451).
+The 10 `last_ovl=0x14/0x1DB0` rows are the ovl14 no-jal path
+(leaves leftover `$ra=0x1DF4`). E9 match still **3/64**. rdpFs
+4117→8092 tracks last_task 8047→11163 (synth 454→465), not an
+E9 restore.
+
+**H-ovl14-stops-1df4-stray SELECTED** for the dest-`0x1DB0`
+`153==0x14` fall-through. The written "1DF4→0" clause is too
+strong. **H-ovl14-not-the-1df4-path REFUTED** as a second `L_11B0`
+entry (remaining 1DF4 still has pred dest `0x1DB0` line 621
+resident `0x18`). **H-ovl14-breaks-06 REFUTED. H-ovl14-restores-e9
+REFUTED.** Residual is skipped ovl18 (ROM `0x26CD8`, dest `0x1DB0`,
+exit `ori $5, 0x10`).
