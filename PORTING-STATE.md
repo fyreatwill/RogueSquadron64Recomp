@@ -58565,3 +58565,50 @@ only.
 
 ORIGIN: complete generated helper/caller and companion-symbol inventory; the
 diff changes only the investigation ledger and next-work-unit documents.
+
+## 2026-08-13 — s921: serviceStreamingVoice has finite local service loops
+
+### What ran
+
+Performed the prescribed source-only M3 idiom inventory of
+`serviceStreamingVoice` (`0x8009BF14`). The generated definition in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`, its sole generated caller in
+`funcs_26.c`, overlay metadata, and the companion `main_overlay.txt` mapping
+were checked. No build, game run, or soak was needed. The overlay metadata and
+companion symbol file both give the helper size as `0x32C`; the previous Next
+entry's `0x13C` was stale.
+
+The helper receives a voice-slot base. It reads state bytes `+0x11DC`,
+`+0x11DD`, and `+0x11DE`, and maintains the per-slot queue at `+0x11AC`.
+When the stream-ready gate is set, it performs a nonblocking `osRecvMesg`,
+initializes `+0x11A0`, `+0x11A2`, `+0x11A4`, `+0x11C8`, and `+0x11D0` from the
+record's `+0x1A4/+0x1A8` values, then advances the stream cursor. If data is
+available, it computes a bounded chunk size, marks `+0x11DC`, and calls the
+indirect callback stored at `+0x190` with a source derived from `+0x194` and
+`+0x11D0`, a destination inside the slot's `+0x1A0` region, the computed size,
+and the slot queue at `+0x11AC`.
+
+The refill path checks `+0x11D8 - +0x11CC`, uses `+0x198` as the block table,
+and calls `decodeAndFillVoiceBlock` with an index derived from `+0x11D8/+0x19C`.
+It decrements the loaded `+0x11DE` count on each iteration, updates
+`+0x11A0/+0x11CC/+0x11D8`, and can reset `+0x11A8` at a block boundary. The
+second loop likewise decrements the same count and stops on the range/state
+conditions. Both local loops therefore have finite control from the slot's
+count byte. The sole caller at `0x8009B644` passes
+`0x80153420 + index*0x1228`; its outer initialized one-voice loop invokes the
+helper once.
+
+### Rules out / narrows
+
+This inventory rules out an unbounded local loop or generated caller-shape
+split. It classifies two intentional internal roles: stream-buffer callback
+service and decoded voice-block refill. The generated source and companion
+symbols support the slot layout and role, but do not independently prove the
+indirect callback, `+0x194/+0x198/+0x19C` values, divisor, or derived buffer
+addresses legitimate. H-streaming-voice-classified is supported for local
+structure only; H-streaming-voice-unclassified remains active for dynamic
+values. No guard, mitigation, or game behavior changed.
+
+ORIGIN: complete generated-function, caller, overlay-metadata, and companion-
+symbol inventory; no guest value mutation, mitigation, or runtime behavior
+changed.
