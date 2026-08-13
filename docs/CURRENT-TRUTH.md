@@ -11,7 +11,7 @@ Priority order for upcoming iterations, set after the 300-session review:
 2. **M5 audio de-stubbing**: DONE and fully CLOSED; next M5 work needs a genuinely new lead.
 3. **M3 crash work only as systematic idiom-class audits**, never reactive single-crash chases.
 
-## Current truth (reviewed through s788; compacted in maintenance s776)
+## Current truth (reviewed through s792; compacted in maintenance s776)
 
 The durable history for s2–s775 is in `docs/PROJECT-OVERVIEW.md` §§3–28 and
 the chronological ledger. The active facts are:
@@ -49,6 +49,16 @@ the chronological ledger. The active facts are:
   H-prechain-deterministic failure class, not a parser hypothesis; no parser
   sample or mitigation is justified. The next unit is a bounded pre-chain
   writer-attribution run.
+- The s792 bounded writer-attribution unit ran the low-noise reachability recipe twice.
+  Both attempts passed the provenance positive control (`emit=1`, `raw=1`,
+  `dispatch=1`, `match=1`, four records) but stopped at VI 640 before the 1024 gate.
+  The first timed out with 1,124 free-list faults, 21 writeback records, and one wild
+  writeback/restore; the fixed repeat crashed in `viRetraceHandlerThread` with
+  `si_addr=0x380000004`, after 388 free-list faults, 21 writeback records, and one
+  wild writeback/restore. The aligned s785/s786/s787 records contain the immediate
+  `hit=1` wild-writeback event for s786 but not for the Metal-barrier s785 or tile-copy
+  s787 failures. This selects H-independent-writers for the known wild-writeback path,
+  leaves parser reachability unevaluable, and justifies no mitigation.
 - The s788 source audit found the active generated tree at
   `../N64Recomp/RecompiledFuncs`, and the build manifest compiles that exact
   tree; stale-generated-view is therefore refuted for this unit. The s786
@@ -267,7 +277,15 @@ leaving runtime behavior as the remaining broad class.
   host-only RT64 tile-copy sizing. No active source or trace identifies a
   writer common to these consumers. This selects H-independent-consumers and
   leaves parser and writer-co-gate hypotheses unevaluable; no mitigation is
-  justified.
+  justified. The s792 writer-attribution repeat found the same pre-gate family
+  and independently recorded the wild-writeback split described above.
+
+   **s792 writer-attribution update:** both low-noise attempts passed provenance controls
+   but stopped at VI 640 before the 1024 gate. The immediate wild-writeback event was
+   present in s786 and both s790 attempts, but absent from aligned s785 Metal-barrier
+   and s787 tile-copy failures. This selects independent known writers; parser reachability
+   remains unevaluable and no mitigation is justified. Next is one stability-oriented
+   post-sec2 parser-chain capture.
 
 3. **M3 co-gates / legacy -374, -375, -378, -382..-384, -387, -393.** These are passive
    recurrence breadcrumbs, not reactive work: recovery-cell silence, one-off math/scene crashes,

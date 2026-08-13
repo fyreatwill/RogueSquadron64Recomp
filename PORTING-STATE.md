@@ -55004,3 +55004,29 @@ unevaluable, and no mitigation was added. The next unit is a bounded
 writer-attribution run correlating phase-scoped RT64 writeback/free-list
 telemetry with the first pre-chain crash. This is a source-and-trace result,
 not a runtime reproduction.
+
+## Session 792 (2026-08-12) — writer attribution separates known wild-writeback path
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 28,383 bytes, so maintenance did
+not trigger. The planned work unit was one low-noise, phase-gated
+pre-chain writer-attribution run with existing provenance, free-list, and
+RT64 writeback telemetry. The first attempt timed out at VI 640 before the
+1024 gate; the fixed repeat was run immediately and also stopped at VI 640,
+then crashed with SIGBUS at `si_addr=0x380000004` in
+`viRetraceHandlerThread`.
+
+Both attempts passed the positive control: four provenance records each had
+`emit=1`, `raw=1`, `dispatch=1`, and `match=1`. The first recorded 1,124
+free-list faults, 21 writeback records, and one wild writeback/restore. The
+fixed repeat recorded 388 free-list faults, 21 writeback records, and one
+wild writeback/restore. The aligned s785/s786/s787 logs provide the second
+line: the immediate `hit=1` wild-writeback event is present in s786 but
+absent from the s785 Metal-barrier and s787 tile-copy failures. This selects
+H-independent-writers for the known wild-writeback path and rules out making
+that RT64 event a common explanation for the pre-chain set. The parser-chain
+hypotheses remain unevaluable; no mitigation was added.
+
+Logs:
+`scratch/agent/soak_results/s790_postsec2_reachability_20260812-232207/run.log`
+and
+`scratch/agent/soak_results/s790_postsec2_reachability_20260812-232540/run.log`.
