@@ -59997,6 +59997,33 @@ for source, object, and dylib.
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 975 (2026-08-13) — LTO callback object is correct before final lowering
+
+Ran the planned static comparison using the existing fresh s974 oracle
+artifacts. The all-LTO `dbg_breakpoints.o` is LLVM bitcode and its disassembled
+IR defines `check_breakpoints_on_mem_access` with four integer arguments; its
+IR also carries the diagnostic's `size` and `flags` values through the call.
+The non-LTO `dbg_breakpoints.o` is ARM64 Mach-O; its callback entry saves
+`x3` and its call/reference shape matches the four-argument IR contract.
+
+The all-LTO linked dylib's callback entry does not save or move `x3`; its
+first diagnostic setup emits a constant `4` where the non-LTO object passes
+the fourth argument, while the non-LTO linked dylib emits `w2=4,w3=3` at both
+wrapper call sites. The all-LTO object is therefore correct in isolation but
+the final all-LTO artifact lowers `dbg_breakpoints.c` incorrectly. This
+selects the LTO lowering/backend boundary over source ABI, non-LTO codegen,
+and stale-product hypotheses. It does not identify the exact LTO stage or
+prove that correcting the oracle will make retail progress; no runtime arm,
+recomp change, or mitigation was made.
+
+Evidence: `llvm-dis`/`llvm-nm` on
+`/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix/_obj/debugger/dbg_breakpoints.o`,
+`nm -m`/`otool -tvV` on the s974 non-LTO object, and `nm -m`/`otool -tvV` on
+both linked dylibs. This is static single-source/build evidence only.
+
+ORIGIN: external oracle LTO object-to-dylib comparison; no guest value was
+changed and no mitigation was landed.
+
 ## Session 974 (2026-08-13) — dbg_breakpoints LTO treatment is the boundary
 
 Built the prescribed two single-object mixed oracle arms from a fresh all-LTO

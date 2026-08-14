@@ -1,35 +1,33 @@
-# NEXT work unit (s975)
+# NEXT work unit (s976)
 
-Run one bounded static comparison of fresh LTO and non-LTO
-`dbg_breakpoints.o` from the same oracle source tree. Use `llvm-dis`/`llvm-nm`
-on the LTO object and `otool -tvV`/`nm -m` on the non-LTO object; compare the
-callback symbol signature, prologue, and references to
-`check_breakpoints_on_mem_access`. Do not edit the recomp runtime or retry
-retail PIF/callback hypotheses.
+Run one bounded oracle rebuild with the all-LTO recipe, preserving the
+linker-generated LTO object with `-Wl,-object_path_lto,/tmp/s976-lto.o`.
+Inspect that object and the resulting dylib with `file`, `nm`, and
+`otool -tvV`; compare the callback entry and both wrapper call sites against
+the s975 non-LTO control. Do not edit the recomp runtime or retry retail
+PIF/callback hypotheses.
 
 HYPOTHESIS-ID: oracle-pif-breakpoints-lto
 
 Competing hypotheses:
 
-- H-pif-breakpoints-codegen: the LTO and non-LTO callback object differ in
-  the callback's emitted ABI or symbol/reference shape, identifying the
-  object-level transformation rather than the linker.
-- H-pif-breakpoints-link: the callback object is ABI-equivalent in isolation,
-  selecting the LTO linker's cross-object transformation as the remaining
-  boundary.
-- H-pif-breakpoints-recipe: the object difference cannot be reproduced from
-  identical source and flags, selecting build state/toolchain state instead.
+- H-pif-breakpoints-lto-lowering: the generated LTO object already drops
+  `x3`/changes the callback argument shape, selecting LTO lowering/backend
+  code generation.
+- H-pif-breakpoints-final-link: the generated LTO object is correct but the
+  final dylib changes the shape, selecting final-link handling.
+- H-pif-breakpoints-recipe: preserving the generated object is unsupported or
+  unreproducible, selecting recipe/toolchain state.
 
-Discriminating measurement: whether the LTO and non-LTO `dbg_breakpoints.o`
-artifacts have the same callback signature/prologue and reference shape. A
-reproducible object-level difference selects codegen; identical objects with
-different final calls selects the linker; an unreproducible difference selects
-build state rather than runtime.
+Discriminating measurement: whether `/tmp/s976-lto.o` has the same callback
+entry/call shape as the bad all-LTO dylib. Bad generated object selects LTO
+lowering; correct generated object plus bad dylib selects final-link handling;
+failure to preserve/reproduce it selects recipe/toolchain state.
 
 Exact commands:
 
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix && llvm-nm -m _obj/debugger/dbg_breakpoints.o && llvm-dis _obj/debugger/dbg_breakpoints.o -o /tmp/s975-breakpoints.ll`
+`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix && make clean && make LDFLAGS="-Wl,-object_path_lto,/tmp/s976-lto.o"`
 
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB3/projects/unix && nm -m _obj/debugger/dbg_breakpoints.o && otool -tvV _obj/debugger/dbg_breakpoints.o | rg -n -A 45 "check_breakpoints_on_mem_access|read_with_bp_checks"`
+`file /tmp/s976-lto.o && nm -m /tmp/s976-lto.o && otool -tvV /tmp/s976-lto.o | rg -n -A 45 "check_breakpoints_on_mem_access|read_with_bp_checks"`
 
-`rg -n -C 8 "check_breakpoints_on_mem_access|define .*check_breakpoints" /tmp/s975-breakpoints.ll`
+`otool -tvV /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix/libmupen64plus.dylib | rg -n -A 45 "_check_breakpoints_on_mem_access:|_read_with_bp_checks:"`

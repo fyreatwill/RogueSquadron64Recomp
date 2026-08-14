@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s974 (2026-08-13). The active blocker is authoritative
+Reviewed through s975 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -341,6 +341,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s972 | Fresh non-LTO linked dylib emits `w2=4,w3=3` at both callback sites after using the environment-preserved binutils path. This independently selects LTO over source, non-LTO codegen, and non-LTO link; no runtime or retail conclusion follows. |
 | s973 | Isolated all-non-LTO and mixed dylibs both emit `w2=4,w3=3` at both callback sites; the reproducible mixed arm rules out a generic link interaction between the two callback objects and selects single-object LTO treatment or their all-LTO interaction. |
 | s974 | From a fresh all-LTO baseline, non-LTO `memory.o` plus LTO `dbg_breakpoints.o` remains bad, while LTO `memory.o` plus non-LTO `dbg_breakpoints.o` is correct at both callback sites. This selects the `dbg_breakpoints.c` LTO transformation boundary; no runtime or retail conclusion follows. |
+| s975 | LTO `dbg_breakpoints.o` IR still defines a four-argument callback, while non-LTO object code saves `x3` and the all-LTO linked dylib omits `x3` and substitutes constant `4` in the first callback diagnostic. The non-LTO dylib preserves `w2=4,w3=3`. This selects LTO lowering of `dbg_breakpoints.c` at link time; no runtime or retail conclusion follows. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -359,10 +360,10 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s974 localizes the bad call shape to LTO treatment
-   of `dbg_breakpoints.c`. Compare the LTO and non-LTO callback object/IR and
-   link boundaries to identify the exact transformation; do not infer retail
-   behavior or change the runtime yet.
+   callback-table watch: s975 shows correct LTO IR but an incorrect all-LTO
+   callback entry. Capture the linker's generated LTO object and inspect its
+   callback prologue/call shape to identify the lowering stage; do not infer
+   retail behavior or change the runtime yet.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -372,36 +373,35 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: oracle-pif-breakpoints-lto
 
-Run one bounded static comparison of fresh LTO and non-LTO `dbg_breakpoints.o`
-from the same source tree. Use `llvm-dis`/`llvm-nm` on the LTO object and
-`otool -tvV`/`nm -m` on the non-LTO object, then compare the callback symbol
-signature, prologue, and references to `check_breakpoints_on_mem_access`.
-Do not edit the recomp runtime or retry retail PIF/callback hypotheses.
+Run one bounded oracle rebuild with the all-LTO recipe, preserving the
+linker-generated LTO object with `-Wl,-object_path_lto,/tmp/s976-lto.o`.
+Inspect that object and the resulting dylib with `file`, `nm`, and
+`otool -tvV`; compare the callback entry and both wrapper call sites against
+the s975 non-LTO control. Do not edit the recomp runtime or retry retail
+PIF/callback hypotheses.
 
 Competing hypotheses:
 
-- H-pif-breakpoints-codegen: the LTO and non-LTO callback object differ in
-  the callback's emitted ABI or symbol/reference shape, identifying the
-  object-level transformation rather than the linker as the next boundary.
-- H-pif-breakpoints-link: the callback object is ABI-equivalent in isolation,
-  selecting the LTO linker's cross-object transformation as the remaining
-  boundary.
-- H-pif-breakpoints-recipe: the object difference cannot be reproduced from
-  identical source and flags, selecting build state/toolchain state instead.
+- H-pif-breakpoints-lto-lowering: the generated LTO object already drops
+  `x3`/changes the callback argument shape, selecting LTO lowering/backend
+  code generation.
+- H-pif-breakpoints-final-link: the generated LTO object is correct but the
+  final dylib changes the shape, selecting final-link handling.
+- H-pif-breakpoints-recipe: preserving the generated object is unsupported or
+  unreproducible, selecting recipe/toolchain state.
 
-Discriminating measurement: whether the LTO and non-LTO `dbg_breakpoints.o`
-artifacts have the same callback signature/prologue and reference shape. A
-reproducible object-level difference selects codegen; identical objects with
-different final calls selects the linker; an unreproducible difference selects
-build state rather than runtime.
+Discriminating measurement: whether `/tmp/s976-lto.o` has the same callback
+entry/call shape as the bad all-LTO dylib. Bad generated object selects LTO
+lowering; correct generated object plus bad dylib selects final-link handling;
+failure to preserve/reproduce it selects recipe/toolchain state.
 
-Exact starting checks/commands:
+Exact commands:
 
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix && llvm-nm -m _obj/debugger/dbg_breakpoints.o && llvm-dis _obj/debugger/dbg_breakpoints.o -o /tmp/s975-breakpoints.ll`
+`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix && make clean && make LDFLAGS="-Wl,-object_path_lto,/tmp/s976-lto.o"`
 
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB3/projects/unix && nm -m _obj/debugger/dbg_breakpoints.o && otool -tvV _obj/debugger/dbg_breakpoints.o | rg -n -A 45 "check_breakpoints_on_mem_access|read_with_bp_checks"`
+`file /tmp/s976-lto.o && nm -m /tmp/s976-lto.o && otool -tvV /tmp/s976-lto.o | rg -n -A 45 "check_breakpoints_on_mem_access|read_with_bp_checks"`
 
-`rg -n -C 8 "check_breakpoints_on_mem_access|define .*check_breakpoints" /tmp/s975-breakpoints.ll`
+`otool -tvV /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix/libmupen64plus.dylib | rg -n -A 45 "_check_breakpoints_on_mem_access:|_read_with_bp_checks:"`
 
 ## Closed and parked
 
