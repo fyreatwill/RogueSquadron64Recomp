@@ -61839,6 +61839,27 @@ was not armed, so its writer remains unevaluable.
 ORIGIN: independent retail-oracle whole-RDRAM callback, PIF pad, and VI
 callback/poll controls; no guest value or recomp runtime behavior was changed.
 
+## Session 1045 (2026-08-14) — retail Start+Z did not leave width 320
+
+Ran the planned retail-oracle phase-path discriminator with both arms
+concurrently for 120 seconds: the verified eleven-Start schedule versus the
+same schedule with a Z pulse at each event. Both runs completed cleanly; the
+whole-RDRAM positive control reached 10,000 callbacks in each arm, and PIF
+reads showed all 11 Start words in both arms. The enriched arm additionally
+showed 11 Z words (`0x20000000`). Independent VI polling and VI callbacks
+agreed throughout: after the initial boot record, both stayed at width 320
+and origin `0x006dd280` for the full run (7,200 and 7,303 VI respectively).
+
+This selects `H-retail-path-independent` for the tested Start+Z input variant.
+It rules out the tested Z-enriched control sequence as sufficient to reach the
+512 hangar phase, but does not classify the still-missing state sequence or
+the hangar freelist writer. The freelist watch was not armed. The next unit
+must use a genuinely different state/control sequence or audit the documented
+hangar recipe against the oracle input contract.
+
+ORIGIN: independent retail-oracle whole-RDRAM callback, PIF button words, and
+VI callback/poll agreement; no guest value or recomp runtime behavior changed.
+
 ## Session 1044 (2026-08-14) — reconstructed M4 accumulator remained a controlled null
 
 Ran the bounded offline reconstruction against
