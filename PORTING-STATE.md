@@ -63543,3 +63543,15 @@ recurring writer precedes the first boot record consumer/copy at
 `H-selector-independent`, and keeps the `0x1800 -> A/B/C=1/0/0 -> 0xF0`
 width-320 chain fixed. No mitigation or runtime behavior changed. ORIGIN:
 generated caller/order census; no mitigation.
+## Session 1130 (2026-08-14) — ordered boot descriptor consumer
+
+Performed the prescribed bounded static audit of the boot-selected VI record.
+The `initVideoSubsystem` loop beginning at `0x8001B66C` writes all four copied
+records through the table base and then reaches `osViSetMode_recomp` at
+`0x8001B720`. No selector-byte store or copied-record store intervenes in
+that interval; selector stores are confined to the material-builder and
+pending-change paths outside it. This selects `H-no-intervening-store` and
+rules out selector/record clobber before the first consumer. The `a0` pointer
+passed to the consumer and the host-side width commit remain open. No build,
+run, or mitigation changed. ORIGIN: generated store census and bounded
+control-flow ordering; no mitigation.

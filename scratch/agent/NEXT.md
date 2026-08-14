@@ -1,31 +1,30 @@
-# NEXT work unit (s1130)
+# NEXT work unit (s1131)
 
 HYPOTHESIS-ID: retail-oracle-active-descriptor-index
 
-Perform one bounded static audit of the next live boundary: identify the
-first non-teardown consumer of the boot-selected `0xF0` descriptor after the
-resolved `initVideoSubsystem` copy, and determine whether any intervening
-generated store can change the active selector or mode record before that
-consumer.
+Perform one bounded static audit of the remaining active-descriptor boundary:
+trace the source of the `0xF0` record pointer passed at `0x8001B720` into
+`osViSetMode_recomp`, and classify whether the host VI commit copies width 320
+from that record or changes it before commit.
 
 Competing hypotheses and discriminator:
 
-- H-no-intervening-store: the copied `0xF0` record reaches the first active
-  consumer without an intervening selector/mode-record store.
-- H-selector-clobber: a generated store changes selector bytes before that
-  consumer.
-- H-record-clobber: a generated store changes the copied mode record before
-  that consumer.
+- H-record-pointer-0xF0: the `a0` pointer at `0x8001B720` is the copied table
+  base plus `0xF0`, so the committed width comes from the boot-selected record.
+- H-pointer-adjusted: control flow or an addend changes `a0` to another copied
+  record before the consumer.
+- H-consumer-rewrites: `osViSetMode_recomp` or its immediate host path changes
+  the width after loading the selected record.
 
-Discriminator: enumerate all generated stores to selector bytes
-`0x8011A862..0x8011A865` and the four copied-record ranges after
-`0x8001B66C`, then order them against the first non-teardown consumer call.
-An intervening selector or record store selects its corresponding clobber
-hypothesis; no intervening store selects H-no-intervening-store.
+Discriminator: follow `a0` from the selector branch through `0x8001B720`, then
+inspect the host `osViSetMode_recomp` implementation for the width load/store.
+An unchanged `base+0xF0` pointer and width-320 load selects
+H-record-pointer-0xF0; an adjusted pointer selects H-pointer-adjusted; a host
+rewrite selects H-consumer-rewrites.
 
 Do not build or run. Use bounded windows only:
 
 ```sh
-rg -n 'MEM_[BHW].*(0X8011A862|0X8011A863|0X8011A864|0X8011A865)|0x8011A862|0x8011A863|0x8011A864|0x8011A865' ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -C 12 '0x8001B66C|swapBufferWithViMode|osViSetMode_recomp|buildAndRegisterDefaultMaterial' ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -C 16 '0x8001B6F0|0x8001B720|osViSetMode_recomp' ../N64Recomp/RecompiledFuncs/funcs_5.c
+rg -n -C 12 'osViSetMode_recomp|vi_mode|width' src lib/N64ModernRuntime/ultramodern/src
 ```

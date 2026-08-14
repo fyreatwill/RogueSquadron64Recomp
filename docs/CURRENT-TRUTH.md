@@ -489,11 +489,13 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 
 | s1129 | Bounded caller/order audit found exactly two generated callers of `buildAndRegisterDefaultMaterial`: `advanceVideoFrame` at `0x800183F8` and `initVideoBootWrapper` at `0x800185DC`. Both call `initVideoSubsystem` first; the recurring path also calls `swapBufferWithViMode` at `0x800182C8` before the material writer. `selectAndApplyViMode` has only the teardown caller at `0x800186C0`. Thus no recurring writer precedes the first boot record consumer/copy at `0x8001B66C`; selects `H-boot-first`, rules out `H-recurring-first` and `H-selector-independent`. No build or run. ORIGIN: generated caller/order census; no mitigation. |
 
+| s1130 | Bounded generated audit ordered the first post-copy consumer. The loop beginning at `0x8001B66C` writes all four copied records through the table base and then reaches `osViSetMode_recomp` at `0x8001B720`; no selector-byte or copied-record store intervenes. Selector stores are confined to the material-builder and pending-change paths outside this interval. Selects `H-no-intervening-store`, rules out selector and record clobber before the first consumer, and leaves the exact `a0` pointer/host width provenance open. No build or run. ORIGIN: generated store census and bounded control-flow ordering; no mitigation. |
+
 ## Ranked next steps
 
-1. Reconcile the selected boot record with the now-ordered recurring
-   material-writer path; keep the resolved `0x1800 -> A/B/C=1/0/0 -> 0xF0`
-   chain fixed.
+1. Trace the `0xF0` record pointer and host width commit at `osViSetMode`;
+   keep the resolved `0x1800 -> A/B/C=1/0/0 -> 0xF0` chain fixed and the
+   no-intervening-store result from s1130.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
