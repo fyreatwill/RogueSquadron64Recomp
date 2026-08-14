@@ -4,8 +4,11 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s995 (2026-08-13). The active M4 lead is the zero-shade
-writer/value ownership boundary after the post-sec2 gate. M5 audio
+Reviewed through s996 (2026-08-13). The active M4 lead is the zero-shade
+writer/value ownership boundary after the post-sec2 gate. s996 found mixed
+ownership: two phase-6 VTXCOLOR sources had exact generated writes, while the
+other sampled sources—including the nonzero payload at `0x737EA0`—had no
+generated-store overlap. M5 audio
 de-stubbing is closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
 a human directory-permission grant (s983) — see Next work unit.
@@ -446,6 +449,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s993 | Clean regeneration/build/capture passed controls and found 39 phase-4 plus 59 phase-6 exact-target generated-store sites, with 154/86 non-target shared-page records. H-generated-target is selected; assigned values and legitimacy remain open. |
 | s994 | Static classification mapped all 98 s993 target records (97 distinct PCs) to eight named generated functions in funcs_3/4/6. The 97 PC assignments are 68 register copies and 29 zero initializations; no RHS directly constructs a wild pointer/index. This selects H-copy-shaped structurally, but register-value legitimacy and the shade writer remain unproven. |
 | s995 | Regenerated, built, and phase-gated one value-bearing capture. Controls fired (9,104 generated-store records, 129 write-fault records, 210 F5-state controls, 9 shade-DMA controls, 10 zero-shade replacements); phase 4/6 yielded 39/59 target rows covering all 97 classified PCs. Values were zeros, display-list words, colors, and in-RDRAM pointers; no phase-4/6 out-of-domain value appeared. This selects H-bounded-value over H-wild-value, while destination ownership and shade-source linkage remain open. The target-only subtag was corrected afterward to compare physical addresses; analysis used the value-bearing control rows, whose coverage was complete. |
+| s996 | Clean regeneration/build and a phase-gated VI-1024 capture passed the generated-store, F5 fetch/state/payload, shade-DMA, write-fault, and fix-zero-shade controls. The exact physical-address join found 2 phase-6 VTXCOLOR sources with generated writes at the source address and matching color words; the other 22 phase-4/6 sampled sources had no generated-store overlap, including the nonzero `0x737EA0` payload. The run reached 37 gated frames before a host crash at `last-guest-pc=0x80001F88`; controls and source rows were already present. This selects mixed source ownership, not a universal downstream-only explanation; it does not yet identify which source feeds each zero-shade replacement. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -477,50 +481,47 @@ entries and do not authorize mitigations.
    the invalid callback state pointer is identified.
 4. M4 correctness remains active: phase-6 VTXCOLOR payloads are demonstrably
    nonzero while decoded shade is exact ZERO, and s988 finds no overlap from the
-   instrumented RSP DMEM-to-RDRAM DMA path. s995 covered all 98 target records
-   with values and effective destinations; phase-4/6 values stayed within
-   coherent display-list, color, pointer, or zero-shaped domains, selecting
-   H-bounded-value over H-wild-value. Destination ownership and the exact
-   shade-source linkage remain open. The next probe must join generated-store
-   destinations/values to the F5 VTXCOLOR source/payload rows in one gated run.
-   The `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an
-   ORIGIN conclusion.
+   instrumented RSP DMEM-to-RDRAM DMA path. s995 selected bounded generated
+   values. s996 found two exact source-address generated writes but no overlap
+   for the remaining sampled sources, so ownership is mixed and the exact
+   zero-shade source/consumer pairing remains open. The next probe must join
+   source records to the zero-shade replacement/raw-shade records, not treat a
+   source-wide null as proven. The `ROGUESQ_FIX_ZERO_SHADE` mitigation (default
+   ON) remains without an ORIGIN conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s996)
+## Next work unit (s997)
 
-HYPOTHESIS-ID: m4-zero-shade-destination-source-join
+HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
-Join the existing generated-store value/destination records to the F5
-VTXCOLOR source/payload records by phase and physical address, using one
-phase-gated capture. Determine whether a generated store writes the exact
-source bytes later consumed by the zero-shade VTXCOLOR path, or whether the
-source remains untouched and the conversion is downstream. Do not add a
+Join each F5 VTXCOLOR source/payload record to the zero-shade replacement and
+raw-shade records in the same phase-gated capture. Determine whether the two
+exact generated source writes are the sources consumed by zero-shade draws, or
+whether zero-shade draws consume untouched nonzero sources. Do not add a
 mitigation or hand-edit generated files.
 
-Competing hypotheses are H-same-source (a generated store writes the bytes
-consumed by VTXCOLOR), H-nearby-owner (generated stores touch the surrounding
-allocation but not the consumed source), and H-downstream (the source is
-untouched and shade becomes zero after VTXCOLOR decoding). The discriminating
-measurement is an exact-address join with phase-4 and phase-6 controls and
-complete coverage of the 98 target records; a run with no controls or missing
-source rows is invalid.
+Competing hypotheses are H-exact-zero-source (zero-shade draws consume one of
+the exact generated source writes), H-untouched-zero-source (their nonzero
+source has no generated-store overlap), and H-mixed (the exact writes and
+zero-shade sources are different records). The discriminating measurement is
+the phase-matched source-to-zero-shade join; a run with no controls, no raw
+shade records, or no source rows is invalid.
 
 Exact commands:
 
 Run the fixup static check, regenerate/build in the documented order, and
 launch the existing phase-gated probe with generated-write, F5-state, shade-DMA,
-and write-fault controls. Extract phase-4/phase-6 generated rows and
-phase-matched `[f5-state-payload]` source rows, then join on exact physical
-address and report any later overwrite/value change. Same-run controls must
-visibly fire before a null join is considered.
+write-fault, and raw-shade controls (`ROGUESQ_LOG_SHADE_RAW=1`). Extract
+phase-4/phase-6 `[f5-state-payload]` and `[shade-raw]`/`[fix-zero-shade]` rows,
+then join by phase and the nearest F5 task/frame sequence. Same-run controls
+must visibly fire before a null join is considered.
 
-Expected outcomes: exact source-address writes select H-same-source; only
-nearby/non-source writes select H-nearby-owner; complete absence of generated
-writes at the consumed addresses, with source payloads still nonzero before
-decode, selects H-downstream. If controls or target/source coverage fail, make
-no causal selection.
+Expected outcomes: a zero-shade record tied to one of the two exact source
+writes selects H-exact-zero-source; zero-shade records tied only to untouched
+nonzero sources select H-untouched-zero-source; both populations select
+H-mixed. If controls or source/raw-shade coverage fail, make no causal
+selection.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

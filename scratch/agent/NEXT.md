@@ -1,40 +1,42 @@
-# NEXT work unit (s996)
+# NEXT work unit (s997)
 
-HYPOTHESIS-ID: m4-zero-shade-destination-source-join
+HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
 ## One work unit
 
-Join generated ordinary-store value/destination records to the F5
-VTXCOLOR source/payload records by phase and physical address. Determine
-whether a generated store writes the exact source bytes later consumed by the
-zero-shade path, or whether the source remains untouched and shade becomes
-zero downstream. Do not add a mitigation or hand-edit generated files.
+Join each F5 VTXCOLOR source/payload record to the zero-shade replacement and
+raw-shade records in one phase-gated capture. The s996 exact join was mixed:
+two phase-6 sources had exact generated writes, while the other sampled
+sources—including nonzero `0x737EA0`—had no generated-store overlap. Do not add
+a mitigation or hand-edit generated files.
 
 Competing hypotheses and discriminating measurement:
 
-- H-same-source: a generated store writes the exact VTXCOLOR source bytes.
-- H-nearby-owner: generated stores touch the surrounding allocation but not
-  the consumed source.
-- H-downstream: the source is untouched and shade becomes zero after decode.
+- H-exact-zero-source: a zero-shade draw consumes one of the two exact source
+  writes.
+- H-untouched-zero-source: zero-shade draws consume untouched nonzero sources.
+- H-mixed: both source populations occur, and the exact writes are unrelated
+  to the zero-shade records.
 
-The discriminating measurement is an exact-address, phase-matched join of
-generated-store rows and `[f5-state-payload]` rows, with the all-store, F5,
-shade-DMA, write-fault, and zero-shade positive controls in the same run.
-Complete coverage of the 98 target records and visible controls is required.
+The discriminating measurement is a phase-matched source-to-zero-shade join
+using `[f5-state-payload]`, `[shade-raw]`, and `[fix-zero-shade]` records. The
+generated-store, F5, shade-DMA, write-fault, and zero-shade controls must all
+fire in the same run; missing controls or source/raw-shade rows invalidate the
+result.
 
 ## Exact commands
 
-Run the fixup static candidate-count check. Then use the documented
-`make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake` order, with
-`RS64_FIXUP_S992_GENERATED_WRITES=1`; the corrected target branch compares
-physical addresses (`s992_phys`). Launch from `build/` with the existing
-phase-gated LLE recipe:
+Run the fixup static candidate-count check, then use the documented
+`make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake` order with
+`RS64_FIXUP_S992_GENERATED_WRITES=1`. Launch from `build/` with the existing
+phase-gated LLE recipe, adding `ROGUESQ_LOG_SHADE_RAW=1`:
 
-`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LOG_VTX_WRITE_FAULT=1 ROGUESQ_LOG_F5_STATE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a' zsh tools/probe.sh scratch/agent/s996_vtx_source_join_20260813 180 3`
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LOG_VTX_WRITE_FAULT=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a' zsh tools/probe.sh scratch/agent/s997_vtx_zero_source_join_20260813 180 3`
 
-Extract phase-4/phase-6 generated rows and F5 payload rows, join exact
-physical addresses, and report whether the value changes before consumption.
-Exact-source writes select H-same-source; only nearby writes select
-H-nearby-owner; no generated writes at nonzero source addresses with controls
-passing selects H-downstream. Any missing control or incomplete target/source
-coverage is invalid.
+Extract phase-4/phase-6 payload, raw-shade, zero-shade, and generated-store
+rows. Join by phase and nearest F5 task/frame sequence, then check whether the
+zero-shade records consume either exact source address `0x732A10` or
+`0x732F38`, or only untouched nonzero sources. A zero-shade record tied to an
+exact source selects H-exact-zero-source; untouched nonzero sources select
+H-untouched-zero-source; both select H-mixed. If controls or source/raw-shade
+coverage fail, make no causal selection.

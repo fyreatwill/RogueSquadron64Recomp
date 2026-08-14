@@ -60846,3 +60846,44 @@ ORIGIN: the value-bearing rows originate at the generated `MEM_B/MEM_H/MEM_W`
 assignments in the eight s994-classified functions; the target-only condition
 was diagnostic-only and was corrected to use physical addresses. No guest
 value was changed and no mitigation was landed.
+
+## Session 996 (2026-08-13) — joined generated stores to F5 VTXCOLOR sources
+
+### What ran
+
+Ran the prescribed s996 work unit after the required ground-truth reads. The
+static fixup census found 42,818 candidate ordinary stores across 50 generated
+files. Cleared the generated output, ran `make_elf.py`, N64Recomp, and the
+regeneration-owned fixup with `RS64_FIXUP_S992_GENERATED_WRITES=1`, then built
+the Debug executable successfully. One phase-gated ungated-LLE capture used
+the generated-store, F5 state/payload, shade-DMA, write-fault, and zero-shade
+controls.
+
+### What it showed
+
+The VI-1024 gate passed at 79.7 seconds. Controls fired: 9,040 generated-store
+control rows, 20 F5 fetch controls, 210 F5 state/payload rows, 9 shade-DMA
+controls, 129 recovered write-fault records, and 10 `fix-zero-shade`
+replacements. The run captured 37 gated frames before a host crash at 168.6
+seconds (`last-guest-pc=0x80001F88`); the required controls and source rows
+were already present.
+
+The exact physical-address join found 2 phase-6 VTXCOLOR sources with
+generated writes at the source address and matching color words:
+`0x732A10` and `0x732F38`. The remaining 22 sampled phase-4/6 sources had no
+generated-store overlap, including the nonzero source `0x737EA0`. Phase 4 had
+24 payload rows from 3 repeated sources; phase 6 had 24 rows from 24 sources.
+
+### What it rules out
+
+It rules out a universal claim that every VTXCOLOR source is untouched by
+generated CPU stores, and also rules out treating all destination writes as
+the source of the observed zero-shade path. The result is mixed source
+ownership. It does not identify which source record feeds each zero-shade
+replacement, so it does not authorize changing `ROGUESQ_FIX_ZERO_SHADE`.
+
+ORIGIN: the exact matches originate at generated `MEM_W` stores observed by
+the s992 fixup and the F5 `0x02` source pointer/payload reader. The no-overlap
+rows are bounded by the phase-gated generated-store log and do not claim that
+unobserved renderer or indirect writes are impossible. The host crash is a
+capture limitation, not a mitigation or causal conclusion.
