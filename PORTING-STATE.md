@@ -61112,3 +61112,33 @@ identifies the F5 source update. No mitigation or value rewrite was added.
 
 ORIGIN: diagnostic snapshots of accepted `submit_rdp_range` intervals; no game
 or renderer state is changed.
+
+## Session 1006 (2026-08-14) — joined F5 state to RT64 triangle parses
+
+Added a diagnostic F5 VTXCOLOR state snapshot and attempted to attach it to
+submitted triangle bytes. The first capture reached VI 1024 and passed the
+generated-write, fault, shade, and accepted-range controls, but produced zero
+triangle rows because the scanner looked for F5 DL opcodes `0xB4/0xBF` instead
+of emitted RDP triangle opcodes `0x08–0x0F`. That run was invalid for the
+discriminating measurement.
+
+Corrected the classification and moved the join to RT64's actual triangle
+parse site, exporting the RT64 submodule patch. The fixed build completed a
+40-frame VI-1024-gated capture. Positive controls fired: 168 F5 state-control
+and payload rows, 345 accepted task-range rows, 25 triangle-source join rows,
+25 shade rows, 8,700 generated-write control rows, one write-fault control,
+and both positive and zero shade classes. Zero-shade task 193 rows on child
+DLs `0x4B7930` and `0x4B7BE8` carried the same last F5 state (`ord=30`, source
+`0x7403A8`) despite different child consumers. This selects
+`H-child-range-only`; it does not identify an individual F5 source update.
+
+What it showed: the RT64 parse-site join is live, stable, and keyed by task,
+child DL, shade ordinal, submit serial, and accepted range, but the available
+F5 state is still only the task's latest update at parse time.
+
+What it rules out: missing RT64 triangle parsing, missing accepted-range
+coverage, and a claim that the last task-level F5 state identifies the
+zero-shade replacement source. It does not rule out an ordered event join.
+
+ORIGIN: diagnostic-only F5 state snapshots and RT64 parse rows; no game or
+renderer value is changed.

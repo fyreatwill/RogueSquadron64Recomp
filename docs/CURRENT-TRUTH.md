@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1005 (2026-08-14). The active investigation is M4
+Reviewed through s1006 (2026-08-14). The active investigation is M4
 zero-shade source-to-consumer association. M5 audio de-stubbing is closed.
 M3 work is limited to complete idiom-class audits. The retail-oracle callback
 thread is blocked on directory access and is not the current work unit.
@@ -71,6 +71,15 @@ The provenance campaign now establishes:
   contained by the task bounds; it does not identify an individual F5 VTXCOLOR
   source update. This selects `H-child-range-only`. No mitigation follows.
 
+- s1006 added a diagnostic join at RT64's actual triangle parse site. The
+  valid VI-1024 capture produced 25 join rows, including positive and
+  zero-shade rows, with task, child DL, shade ordinal, submit serial/range,
+  and F5 state. Zero-shade task 193 rows on child DLs `0x4B7930` and
+  `0x4B7BE8` repeatedly carried the same last F5 state (`ord=30`, source
+  `0x7403A8`). The rows are live and stable but still task/child-DL-shaped;
+  they do not identify the individual update feeding a replacement. This
+  selects `H-child-range-only`. No mitigation follows.
+
 All runtime claims above had positive controls in their relevant captures.
 Static single-source claims are explicitly described as such in the ledger.
 
@@ -92,6 +101,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1002 | Root-DL validation retries were invalid before VI-1024; no conclusion changed. |
 | s1003 | Accepted DPC bounds contained all observed repeated RT64 consumer DLs in a valid capture; individual source mapping remains open. |
 | s1005 | RT64 shade rows carried accepted serial/range fields; consumer ranges were child-DL-shaped and did not identify an individual F5 source update. |
+| s1006 | RT64 triangle-parse join rows carried the live last F5 state, but repeated zero-shade child DLs shared one task-level state; individual source mapping remains open. |
 
 ## Ranked backlog
 
@@ -107,22 +117,22 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 4. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
-## Next work unit (s1006)
+## Next work unit (s1007)
 
 HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
-Add one bounded cross-layer trace that records the task-global F5 VTXCOLOR
-ordinal/source immediately before each emitted RDP triangle command, alongside
-the existing RT64 triangle consumer serial/range. Preserve existing shade
-rows. Do not add a mitigation or hand-edit generated files.
+Add one bounded event-order trace that records every F5 VTXCOLOR update as a
+task-local sequence and records that sequence at each RT64 triangle parse,
+alongside the existing shade serial/range rows. Preserve existing join rows.
+Do not add a mitigation or hand-edit generated files.
 
 Competing hypotheses and the discriminating measurement:
 
-- `H-triangle-source-join`: ordered F5 VTXCOLOR state and emitted triangle rows
-  identify the source update feeding a zero-shade replacement.
+- `H-triangle-source-join`: ordered F5 VTXCOLOR events and emitted triangle
+  rows identify the source update feeding a zero-shade replacement.
 - `H-child-range-only`: the consumer remains associated only with its child DL.
-- `H-triangle-source-missing`: F5 state is not live at triangle emission or the
-  stream has no usable ordered join.
+- `H-triangle-source-missing`: the event stream is not live at triangle
+  emission or has no usable ordered join.
 
 The discriminating table must key task, F5 root DL, F5 update ordinal/source,
 triangle emission order, submit serial/range, RT64 DL, and shade ordinal. It is
@@ -131,7 +141,7 @@ shade rows, and zero-shade rows all fire in the VI-1024-gated phase.
 
 Exact launch recipe:
 
-`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LOG_VTX_WRITE_FAULT=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a' zsh tools/probe.sh scratch/agent/s1004_submit_range_20260814 180 3`
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LOG_VTX_WRITE_FAULT=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 ROGUESQ_LOG_TRI_WRITER=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a' zsh tools/probe.sh scratch/agent/s1007_f5_event_order_20260814 180 3`
 
 An individual F5 source appearing immediately before the consumer triangle
 selects `H-triangle-source-join`; only child-DL association selects

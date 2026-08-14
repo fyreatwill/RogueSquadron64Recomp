@@ -404,6 +404,26 @@ static bool log_tri_writer() {
     return enabled;
 }
 
+struct Rs64F5VtxColorState {
+    uint32_t task = 0xFFFFFFFFu;
+    uint32_t ordinal = 0;
+    uint32_t pc = 0;
+    uint32_t source = 0;
+    bool valid = false;
+};
+
+static Rs64F5VtxColorState g_f5_vtxcolor_state;
+static std::mutex g_f5_vtxcolor_mutex;
+
+static void rs64_f5_vtxcolor_state(uint32_t pc, uint32_t source, uint32_t ordinal) {
+    std::lock_guard<std::mutex> lock(g_f5_vtxcolor_mutex);
+    g_f5_vtxcolor_state.task = g_e9prov.task;
+    g_f5_vtxcolor_state.ordinal = ordinal;
+    g_f5_vtxcolor_state.pc = pc & 0x7FFFFFu;
+    g_f5_vtxcolor_state.source = source & 0x7FFFFFu;
+    g_f5_vtxcolor_state.valid = true;
+}
+
 extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
                                       uint32_t guestE9) {
     const uint32_t current = g_e9prov.task;
@@ -430,6 +450,11 @@ extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
 
 extern "C" void rs64_e9prov_task_begin(uint32_t task, uint32_t root_dl) {
     g_e9prov = {};
+    {
+        std::lock_guard<std::mutex> lock(g_f5_vtxcolor_mutex);
+        g_f5_vtxcolor_state = {};
+        g_f5_vtxcolor_state.task = 0xFFFFFFFFu;
+    }
     g_e9prov.task = task;
     g_e9prov.root_dl = root_dl & 0x007FFFFFu;
     g_task_bridge_e9.store(0, std::memory_order_release);
@@ -534,6 +559,8 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
     uint32_t &count = opcode == 0x02 ? n02 : n03;
     ++count;
     const uint32_t ordinal = opcode == 0x02 ? ++payload_ordinal : 0;
+    if (opcode == 0x02)
+        rs64_f5_vtxcolor_state(r17, w1 & 0x7FFFFFu, ordinal);
     if (count <= 24) {
         fprintf(stderr,
                 "[f5-state-control] phase=%u op=0x%02X n=%u r17=0x%06X "
@@ -1444,6 +1471,17 @@ extern "C" void rs64_dpc_get_task_range(uint32_t *first_lo, uint32_t *first_hi,
 extern "C" uint32_t rs64_e9prov_current_task() {
     return g_e9prov.task;
 }
+
+extern "C" void rs64_f5_vtxcolor_get(uint32_t *task, uint32_t *valid,
+                                       uint32_t *ordinal, uint32_t *pc,
+                                       uint32_t *source) {
+    std::lock_guard<std::mutex> lock(g_f5_vtxcolor_mutex);
+    if (task) *task = g_f5_vtxcolor_state.task;
+    if (valid) *valid = g_f5_vtxcolor_state.valid ? 1u : 0u;
+    if (ordinal) *ordinal = g_f5_vtxcolor_state.ordinal;
+    if (pc) *pc = g_f5_vtxcolor_state.pc;
+    if (source) *source = g_f5_vtxcolor_state.source;
+}
 extern "C" uint32_t rs64_e9prov_current_scope() {
     return g_e9prov.control ? 1u : g_e9prov.target ? 2u : 0u;
 }
@@ -1481,7 +1519,7 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
         }
         for (uint32_t p = lo; p + 8 <= hi; p += 8) {
             const uint8_t raw = g_rdram_for_submit[p ^ 3];
-            if (raw != 0xB4 && raw != 0xBF) continue;
+            if (raw < 0x08 || raw > 0x0F) continue;
             if (writer_task_lines++ >= 64) break;
             const uint32_t line = writer_lines.fetch_add(1, std::memory_order_relaxed);
             const uint32_t w0 = ((uint32_t)g_rdram_for_submit[(p + 0) ^ 3] << 24) |
@@ -1494,10 +1532,14 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
                                 (uint32_t)g_rdram_for_submit[(p + 7) ^ 3];
             fprintf(stderr,
                     "[tri-writer] line=%u task=%u scope=%s serial=%llu addr=0x%06X "
-                    "raw=0x%02X w0=0x%08X w1=0x%08X range=0x%06X..0x%06X\n",
+                    "raw=0x%02X w0=0x%08X w1=0x%08X range=0x%06X..0x%06X "
+                    "f5_task=%u f5_valid=%u f5_ord=%u f5_pc=0x%06X f5_source=0x%06X\n",
                     line + 1, g_e9prov.task,
                     g_e9prov.control ? "control" : "sec2",
-                    (unsigned long long)serial, p, raw, w0, w1, lo, hi);
+                    (unsigned long long)serial, p, raw, w0, w1, lo, hi,
+                    g_f5_vtxcolor_state.task, g_f5_vtxcolor_state.valid ? 1u : 0u,
+                    g_f5_vtxcolor_state.ordinal, g_f5_vtxcolor_state.pc,
+                    g_f5_vtxcolor_state.source);
         }
         fflush(stderr);
     }

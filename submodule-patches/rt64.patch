@@ -116,10 +116,10 @@ index a0d4a6a..39c294f 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..620636d 100644
+index 6255872..1ab2251 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
-@@ -4,12 +4,33 @@
+@@ -4,12 +4,36 @@
  
  #include "rt64_gbi_rdp.h"
  
@@ -139,6 +139,9 @@ index 6255872..620636d 100644
 +extern "C" __attribute__((weak)) uint32_t rs64_e9prov_current_task(void);
 +extern "C" __attribute__((weak)) uint64_t rs64_dpc_get_last_submit_serial(void);
 +extern "C" __attribute__((weak)) void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi);
++extern "C" __attribute__((weak)) void rs64_f5_vtxcolor_get(uint32_t *task, uint32_t *valid,
++                                                             uint32_t *ordinal, uint32_t *pc,
++                                                             uint32_t *source);
 +
  namespace RT64 {
      namespace GBI_RDP {
@@ -153,7 +156,7 @@ index 6255872..620636d 100644
          void noOp(State *state, DisplayList **dl) {
              // Do nothing.
          }
-@@ -253,6 +274,17 @@ namespace RT64 {
+@@ -253,6 +277,17 @@ namespace RT64 {
          }
  
          void fullSync(State *state, DisplayList **dl) {
@@ -171,7 +174,7 @@ index 6255872..620636d 100644
              RT64_LOG_PRINTF("GBI_RDP::fullSync()");
              state->fullSync();
              state->dpInterrupt();
-@@ -420,6 +452,22 @@ namespace RT64 {
+@@ -420,6 +455,22 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -194,7 +197,7 @@ index 6255872..620636d 100644
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +503,14 @@ namespace RT64 {
+@@ -455,6 +506,14 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
@@ -209,7 +212,7 @@ index 6255872..620636d 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +520,166 @@ namespace RT64 {
+@@ -464,6 +523,179 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -310,6 +313,19 @@ index 6255872..620636d 100644
 +                                    v1x, v1y, v1z, v1w,
 +                                    v1x / 255.0f, v1y / 255.0f,
 +                                    v1z / 255.0f, v1w / 255.0f);
++                                uint32_t f5Task = 0xFFFFFFFFu, f5Valid = 0, f5Ordinal = 0;
++                                uint32_t f5Pc = 0, f5Source = 0;
++                                if (rs64_f5_vtxcolor_get)
++                                    rs64_f5_vtxcolor_get(&f5Task, &f5Valid, &f5Ordinal,
++                                                         &f5Pc, &f5Source);
++                                fprintf(stderr,
++                                    "[tri-source-join] task=%u dl=0x%06X shade_ord=%u "
++                                    "serial=%llu range=0x%06X..0x%06X f5_task=%u "
++                                    "f5_valid=%u f5_ord=%u f5_pc=0x%06X f5_source=0x%06X\n",
++                                    shadeTask, shadeDl, shadeOrdinal,
++                                    (unsigned long long)shadeSubmitSerial,
++                                    shadeSubmitLo, shadeSubmitHi, f5Task, f5Valid,
++                                    f5Ordinal, f5Pc, f5Source);
 +                                fprintf(stderr, "  words:");
 +                                for (int k = 0; k < 8; k++) {
 +                                    fprintf(stderr, " %08X/%08X",
@@ -376,7 +392,7 @@ index 6255872..620636d 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +693,369 @@ namespace RT64 {
+@@ -477,6 +709,369 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -746,7 +762,7 @@ index 6255872..620636d 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,6 +1116,66 @@ namespace RT64 {
+@@ -537,6 +1132,66 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
