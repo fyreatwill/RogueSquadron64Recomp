@@ -1,27 +1,33 @@
-# NEXT work unit (s978)
+# NEXT work unit (s979)
 
-Run one bounded external-oracle PIF read-watch arm using the freshly linked
-oracle dylib whose only non-LTO object is `dbg_breakpoints.o`. Preserve a
-whole-RDRAM write positive control, enable VI polling, and compare wrapper /
-callback markers with exit status and VI count. Do not edit the recomp runtime.
+Classify the corrected oracle callback crash boundary with one static/runtime
+audit. Use the already validated `iter974-armB2` dylib and inspect the exact
+`read_with_bp_checks` call, callback symbol binding, callback prologue, and
+first diagnostic body; then run one 3-second PIF-watch arm under the same
+positive-control setup. Do not edit the recomp runtime.
 
 HYPOTHESIS-ID: oracle-pif-callback-runtime
 
 Competing hypotheses:
 
-- H-pif-callback-artifact: the prior pre-start `rc=139` was caused by the
-  all-LTO callback lowering; the corrected arm reaches callback return.
-- H-pif-callback-path: the corrected ABI still crashes at callback entry or
-  return, selecting a remaining debugger callback/path defect.
-- H-pif-phase: the corrected arm survives, but retail remains at VI 320 and
-  callback-table reachability is still phase-unevaluable.
+- H-pif-direct-target: the corrected caller's direct branch resolves to an
+  invalid or incompatible callback address at runtime.
+- H-pif-prologue: the callback target is correct, but entry/prologue state
+  (stack, ABI, or symbol body) faults before the first marker.
+- H-pif-marker-body: callback entry succeeds and the first diagnostic body
+  faults before its marker, so the marker placement is misleading.
 
-Discriminating measurement: whole-RDRAM writes must fire; then compare the
-PIF wrapper pre-callback, callback first-statement, and post-callback markers
-with exit status and VI count. Return/completion selects H-pif-callback-artifact;
-pre-return crash selects H-pif-callback-path; survival with VI 320 selects
-H-pif-phase.
+Discriminating measurement: `nm`/`otool` must identify the direct branch target
+and callback entry/prologue, while the positive-control PIF run must compare
+wrapper pre-callback, callback first-statement, and post-callback markers. A
+bad/unresolved target selects H-pif-direct-target; a valid target with no first
+marker selects H-pif-prologue; a first marker followed by no return selects
+H-pif-marker-body.
 
-Exact command:
+Exact commands:
 
-`env DYLD_LIBRARY_PATH=/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build/Debug/rogue_squadron.z64 --secs 8 --watch-write 0x0:0x800000 --watch-read 0x1fc00000:0x1fc01000 --vi-poll --vi-trace`
+`nm -n /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib | rg 'read_with_bp_checks|check_breakpoints_on_mem_access'`
+
+`otool -tvV /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib | sed -n '1,1155p' | rg 'read_with_bp_checks|check_breakpoints|mov w[0-3]|bl\s'`
+
+`env DYLD_LIBRARY_PATH=/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/rogue_squadron.z64 --secs 3 --watch-write 0x0:0x800000 --watch-read 0x1fc00000:0x1fc01000 --vi-poll --vi-trace`

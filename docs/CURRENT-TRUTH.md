@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s977 (2026-08-13). The active blocker is authoritative
+Reviewed through s978 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -305,6 +305,14 @@ closed; M3 work is limited to systematic idiom-class audits.
   reproduced command and independently selects `dbg_breakpoints.c` LTO
   treatment as the smallest corrective boundary; no retail or runtime claim
   follows.
+- s978 ran the corrected single-object oracle arm with a same-configuration
+  whole-RDRAM positive control. The control passed (616,120 writes in 2 s),
+  but the 8 s PIF arm reached breakpoint activation and wrapper pre-callback,
+  then exited `rc=139` before callback entry or return. The corrected artifact
+  statically passes `w2=4,w3=3` to a direct aligned callback, so the all-LTO
+  missing-argument explanation is refuted as the runtime cause; the remaining
+  callback call/entry path is selected. This is single-source oracle evidence;
+  retail phase remains unevaluable.
 
 ## Recent evidence ledger
 
@@ -359,6 +367,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s975 | LTO `dbg_breakpoints.o` IR still defines a four-argument callback, while non-LTO object code saves `x3` and the all-LTO linked dylib omits `x3` and substitutes constant `4` in the first callback diagnostic. The non-LTO dylib preserves `w2=4,w3=3`. This selects LTO lowering of `dbg_breakpoints.c` at link time; no runtime or retail conclusion follows. |
 | s976 | Preserved all-LTO object and final dylib both retain `x0=pc,x1=address,x2=size,x3=flags`; both wrapper call sites emit `w2=4,w3=3`, and `br x3` preserves the indirect target. The s975 mismatch is recipe/toolchain-state dependent; no runtime or retail conclusion follows. |
 | s977 | Forced clean all-LTO reproduces the bad `w2=3`/unset-`w3` shape; compiling only `dbg_breakpoints.o` with `-fno-lto` restores `w2=4,w3=3` at both sites. The smallest corrective boundary is independently selected; retail remains unevaluable. |
+| s978 | Corrected `dbg_breakpoints.o` arm passed the same-run whole-RDRAM control (616,120 writes/2 s) but still died `rc=139` after PIF wrapper pre-callback and before callback entry/return. Static caller shape is correct; callback path remains selected and retail phase is unevaluable. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session

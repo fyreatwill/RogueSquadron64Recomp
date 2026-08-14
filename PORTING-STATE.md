@@ -59997,6 +59997,33 @@ for source, object, and dylib.
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 978 (2026-08-13) — Corrected oracle arm still dies at callback boundary
+
+Ran the planned bounded retail-oracle PIF read-watch arm. The exact command
+first failed because this checkout has no `build/Debug/rogue_squadron.z64`;
+the repository root ROM and `rs64.n64.us.1.0.z64` are byte-identical, so the
+same arm was rerun from `build/` with the verified root ROM. The referenced
+`iter974-alllto` dylib reached PIF wrapper pre-callback and then exited `rc=139`
+before callback entry, as expected for the known all-LTO baseline.
+
+The corrected single-object arm was then run with the preserved `iter974-armB2`
+dylib. Its whole-RDRAM watch positive control passed in the same configuration
+(616,120 writes in a 2-second startup control); the 8-second PIF arm installed
+both watches, activated the PIF breakpoint, and emitted
+`[oracle-pif-wrapper] pre-callback`, but emitted neither the callback
+first-statement marker nor the post-callback marker before `rc=139`. This
+selects H-pif-callback-path over H-pif-callback-artifact. VI phase remains
+unevaluable because it dies before the first poll.
+
+The result is single-source external-oracle runtime evidence; no retail phase
+or recomp-runtime conclusion follows. Static inspection of the corrected
+artifact independently shows the caller loads `w2=4,w3=3` and directly calls
+the aligned callback symbol, so the former missing-argument shape is not the
+observed runtime boundary. No mitigation or runtime change was made.
+
+ORIGIN: external oracle callback-boundary experiment; no guest value was
+changed and no mitigation was landed.
+
 ## Session 977 (2026-08-13) — dbg_breakpoints non-LTO arm restores callback ABI
 
 Ran the prescribed static recipe comparison and forced a clean all-LTO
