@@ -63597,3 +63597,25 @@ No build, run, or instrumentation was performed in this preparation unit.
 The ground-truth reading rules out using a targeted oracle null as evidence
 unless the shaded phase is positively reached, and rules out treating an
 `L_16B8` counter as a positive control.
+## Session 1135 (2026-08-14) — completed paired M4 accumulator port capture
+
+Upgraded the fixup-owned M4 probe to pass generated `r9` and RDRAM, retain
+pre-VMADH and post-VGE state, capture the completed `r9+0x18..0x4F` record,
+and cover both VGE branch arms. The independent VMADH control remained a
+separate stage-1 site. Built the Debug target and ran one phase-gated capture
+with bounded budgets and `ROGUESQ_M4_PHASE_FROM=6`; the phase/input setup did
+not reach VI-1024 and remained at VI-640, but the target probe did reach phase
+6 on task 201.
+
+The control fired 8 rows. The target produced 16 stage-10, 16 stage-11, 16
+stage-12, and 16 stage-13 rows, giving 16 complete tuples / 128 lanes. The
+local VMADH model matched every observed post-VMADH lane (0 mismatches), and
+VGE changed 0/128 lanes. Completed records used `r9=0x670..0x6C0`; the next
+work unit is the retail oracle watch over physical `0x688..0x710`, with its
+whole-RDRAM control and VI trace.
+
+What it rules out: this port capture rules out the active accumulator/product
+arithmetic hypothesis and a VGE mutation on the captured path. It does not
+establish retail ownership or reachability because the run lacked VI-1024;
+the targeted retail null remains unevaluable until its matching phase is
+proven. No mitigation was added.

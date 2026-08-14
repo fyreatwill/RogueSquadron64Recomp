@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1133 (2026-08-14).
+in the ledger. Reviewed through s1135 (2026-08-14).
 
 ## Current state
 
@@ -71,8 +71,16 @@ shade lane/order as the cause. The VTXCOLOR payload is nonzero, while decoded
 shade is the fixed `0xFFFF8000` RGB / `0x00008000` alpha sentinel. Retail ROM
 and generated code show the shaded emitter reads geometry/vector data rather
 than the nearby color field. The missing-lighting/vector numeric origin before
-`vmadh v6,v4,v0` remains unresolved. The accumulator/VGE capture recipe is
-closed after controlled nulls; no mitigation is authorized.
+`vmadh v6,v4,v0` remains unresolved. The prior controlled-null recipe is
+superseded by the paired capture below; no mitigation is authorized.
+
+The paired accumulator capture now has a valid port-side result. The independent
+VMADH control fired 8 rows, and phase-6 target task 201 produced 16 complete
+pre/post/VGE tuples and completed records. A local model matched the VMADH
+result on all 128 lanes; VGE changed 0/128 lanes. The target records used
+`r9` values in `0x00000670..0x000006C0`, with the captured output range at
+`r9+0x18..0x4F`. The run did not reach VI-1024 (it remained at 640), so this
+does not yet establish retail reachability or ownership of that range.
 
 ## Superseded conclusions
 
@@ -106,15 +114,14 @@ closed after controlled nulls; no mitigation is authorized.
 | s1130–s1131 | First consumer ordering was resolved; this maintenance pass compacted the live file and migrated durable detail. |
 | s1132 | Traced the active VI pointer to copied-table `base+0xF0` and closed host width-rewrite as a cause. |
 | s1133 | Static census found `frameStartReset` fully regenerated with 14 call sites and overlay registration; no active fixup restoration exists, closing regeneration omission. |
+| s1134–s1135 | Defined and executed the paired M4 port capture; VMADH model and VGE/store path matched on 128 lanes with an independent control. |
 
 ## Ranked next steps
 
-1. Implement the paired M4 accumulator measurement specified in
-   [`M4-ACCUMULATOR-GROUND-TRUTH.md`](M4-ACCUMULATOR-GROUND-TRUTH.md): first
-   obtain the stable port-side record range, then run the port pre/post tuple
-   capture and retail oracle with a whole-RDRAM control plus targeted watch.
-   Do not interpret a targeted oracle null unless its VI trace proves the
-   shaded phase was reached.
+1. Run the retail oracle arm using whole-RDRAM control plus a targeted watch
+   over physical `0x688..0x710` (the observed `r9+0x18..0x4F` record range,
+   widened to cover the observed r9 span). Require `--vi-trace`; a targeted
+   null is unevaluable unless the matching shaded phase is reached.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

@@ -1,33 +1,30 @@
-# NEXT work unit (s1135)
+# NEXT work unit (s1136)
 
 HYPOTHESIS-ID: m4-ground-truth-accumulator-origin
 
-Implement the first arm of the paired M4 measurement in one build: add a
-phase-gated, bounded probe at the exact final `VMADH v6,v4,v0` in the Factor 5
-recompiled ucode, capturing `r9`, all four lanes of `v4`, `v0`, `ACCH:ACCM:ACCL`,
-and `v6` immediately before/after VMADH and after the following VGE. Include
-the existing independent RSP accumulator positive control in the same run.
-Do not run the retail oracle until this port capture supplies the stable
-physical record range for its targeted watch.
+Run the retail oracle arm with whole-RDRAM positive control and a targeted
+physical watch over `0x688:0x710`, derived from the port capture's
+`r9=0x670..0x6C0` and output record `r9+0x18..0x4F`. Include `--vi-trace` and
+the documented Start schedule; do not interpret a targeted null unless the
+matching shaded phase is reached. Do not change the port probe.
 
 Competing hypotheses and discriminating outcomes:
 
-- H-arithmetic: post-VMADH differs from the local model computed from the
-  captured operands and accumulator; the accumulator/product implementation
-  is implicated.
-- H-vge-store: post-VMADH matches the model, but post-VGE or the stored record
-  differs; VGE/store semantics remain implicated.
-- H-source-state: the complete port tuple and store agree, so the next arm
-  must compare the same record range against retail PC-attributed writers.
+- H-retail-writer: retail PC-attributed writes hit the candidate range in the
+  reached phase, so the game owns this record edge.
+- H-retail-null: whole-RDRAM control and matching phase pass, but the target
+  range stays quiet; the candidate port-side source is rejected.
+- H-phase-unreached: whole-RDRAM control passes but the matching shaded phase
+  is not reached; the targeted null is unevaluable.
 
-Discriminator: the exact pre/post tuple plus a visibly firing independent RSP
-positive-control row in one phase-gated run. A counter at `L_16B8` is not a
-control. The oracle follow-up must use `--watch-write 0x0:0x800000` and a
-targeted watch derived from this run, with `--vi-trace`; a targeted null is
-valid only if the shaded phase is reached.
+Discriminator: whole-RDRAM hit count, targeted PC-attributed hits, and VI phase
+reachability from the same oracle invocation.
 
-Expected command after the probe is implemented:
+Expected command shape (resolve the configured oracle core/ROM paths from
+`tools/oracle/README.md`):
 
 ```sh
-DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
+tools/oracle/build/rs64_oracle --core <debugger-core> --rom <retail-rom> \
+  --secs 180 --watch-write 0x0:0x800000 --watch-write 0x688:0x710 \
+  --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
 ```

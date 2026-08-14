@@ -3013,19 +3013,56 @@ if is_main_ucode and F5_STATE_MARKER not in text:
 # ---------------------------------------------------------------------------
 # Fixup 19: capture the final shade accumulator and VGE selection (s1014).
 # ---------------------------------------------------------------------------
-M4_ACCUM_MARKER = "/* fixup: M4 accumulator probe v1 */"
+M4_ACCUM_MARKER = "/* fixup: M4 accumulator probe v2 */"
+m4_migrated = False
+if is_shade_ucode and M4_ACCUM_MARKER in text and text.count('rs64_m4_accum_probe(&rsp, 12, r9, rdram);') == 1:
+    needle = '    rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);\n    // lqv'
+    text = text.replace(needle, '    rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);\n    rs64_m4_accum_probe(&rsp, 12, r9, rdram);  /* fixup: M4 accumulator probe v2 */\n    // lqv', 1)
 if is_shade_ucode and M4_ACCUM_MARKER not in text:
+    text = text.replace(
+        'rs64_m4_accum_probe(&rsp, 1);  /* fixup: M4 accumulator probe v1 */',
+        'rs64_m4_accum_probe(&rsp, 1, r9, rdram);  /* fixup: M4 accumulator probe v2 */')
+    text = text.replace(
+        'rs64_m4_accum_probe(&rsp, 10);  /* fixup: M4 accumulator probe v1 */',
+        'rs64_m4_accum_probe(&rsp, 10, r9, rdram);  /* fixup: M4 accumulator probe v2 */')
+    text = text.replace(
+        'rs64_m4_accum_probe(&rsp, 11);  /* fixup: M4 accumulator probe v1 */',
+        'rs64_m4_accum_probe(&rsp, 11, r9, rdram);  /* fixup: M4 accumulator probe v2 */')
+    text = text.replace(
+        'rs64_m4_accum_probe(&rsp, 12);  /* fixup: M4 accumulator probe v1 */',
+        'rs64_m4_accum_probe(&rsp, 12, r9, rdram);  /* fixup: M4 accumulator probe v2 */')
+    text = text.replace(
+        'extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage);  /* fixup: M4 accumulator probe v1 */',
+        'extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage, uint32_t r9, const uint8_t *rdram);  /* fixup: M4 accumulator probe v2 */')
+    old_vge = '    rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);\n    rs64_m4_accum_probe(&rsp, 12, r9, rdram);  /* fixup: M4 accumulator probe v2 */'
+    text = text.replace(old_vge, old_vge, 1)
+    # The second branch has the same VGE but no probe after the first fixup pass.
+    needle = '    rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);\n    lqv'
+    text = text.replace(needle, '    rsp.VGE<3>(rsp.vpu.r[6], rsp.vpu.r[6], rsp.vpu.r[29]);\n    rs64_m4_accum_probe(&rsp, 12, r9, rdram);  /* fixup: M4 accumulator probe v2 */\n    lqv', 1)
+    record = '    rsp.SSV<14>(rsp.vpu.r[26], r9, 0X25);\n'
+    text = text.replace(record, record + '    rs64_m4_accum_probe(&rsp, 13, r9, rdram);  /* fixup: M4 accumulator probe v2 */\n', 1)
+    if 'rs64_m4_accum_probe(&rsp, 13, r9, rdram);' not in text:
+        print("fixup_factor5_ucode: FIXUP 19 migration failed (record).", file=sys.stderr)
+        sys.exit(1)
+    if 'rs64_m4_accum_probe(&rsp, 12, r9, rdram);' not in text:
+        print("fixup_factor5_ucode: FIXUP 19 migration failed (VGE).", file=sys.stderr)
+        sys.exit(1)
+    if 'probe v1' in text:
+        print("fixup_factor5_ucode: FIXUP 19 migration left v1 marker.", file=sys.stderr)
+        sys.exit(1)
+    m4_migrated = True
+if is_shade_ucode and M4_ACCUM_MARKER not in text and not m4_migrated:
     decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_resume[^\n]*\n|#include \"librecomp/rsp_vu_impl\.hpp\"\n)")
     text, n_decl = decl_anchor.subn(
         lambda m: m.group(1) +
-        'extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage);  ' + M4_ACCUM_MARKER + "\n",
+        'extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage, uint32_t r9, const uint8_t *rdram);  ' + M4_ACCUM_MARKER + "\n",
         text, count=1)
     control = re.compile(
         r"(    rsp\.VMADH<0>\(rsp\.vpu\.r\[2\], rsp\.vpu\.r\[1\], rsp\.vpu\.r\[2\]\);\n)"
     )
     text, n_control = control.subn(
         lambda m: m.group(1) +
-        "    rs64_m4_accum_probe(&rsp, 1);  " + M4_ACCUM_MARKER + "\n",
+        "    rs64_m4_accum_probe(&rsp, 1, r9, rdram);  " + M4_ACCUM_MARKER + "\n",
         text, count=1)
     target = re.compile(
         r"(    // ldv         \$v29\[0\], 0x60\(\$zero\)\n)"
@@ -3035,18 +3072,23 @@ if is_shade_ucode and M4_ACCUM_MARKER not in text:
     )
     text, n_target = target.subn(
         lambda m: m.group(1) + m.group(2) +
-        "    rs64_m4_accum_probe(&rsp, 10);  " + M4_ACCUM_MARKER + "\n" +
+        "    rs64_m4_accum_probe(&rsp, 10, r9, rdram);  " + M4_ACCUM_MARKER + "\n" +
         m.group(3) + m.group(4) +
-        "    rs64_m4_accum_probe(&rsp, 11);  " + M4_ACCUM_MARKER + "\n",
+        "    rs64_m4_accum_probe(&rsp, 11, r9, rdram);  " + M4_ACCUM_MARKER + "\n",
         text, count=1)
     vge = re.compile(
         r"(    rsp\.VGE<3>\(rsp\.vpu\.r\[6\], rsp\.vpu\.r\[6\], rsp\.vpu\.r\[29\]\);\n)"
     )
     text, n_vge = vge.subn(
         lambda m: m.group(1) +
-        "    rs64_m4_accum_probe(&rsp, 12);  " + M4_ACCUM_MARKER + "\n",
+        "    rs64_m4_accum_probe(&rsp, 12, r9, rdram);  " + M4_ACCUM_MARKER + "\n",
+        text, count=2)
+    record = re.compile(r"(    rsp\.SSV<14>\(rsp\.vpu\.r\[26\], r9, 0X25\);\n)")
+    text, n_record = record.subn(
+        lambda m: m.group(1) +
+        "    rs64_m4_accum_probe(&rsp, 13, r9, rdram);  " + M4_ACCUM_MARKER + "\n",
         text, count=1)
-    if (n_decl, n_control, n_target, n_vge) != (1, 1, 1, 1):
+    if (n_decl, n_control, n_target, n_vge, n_record) != (1, 1, 1, 2, 1):
         print(f"fixup_factor5_ucode: FIXUP 19 ANCHOR FAILED (decl={n_decl} control={n_control} target={n_target} vge={n_vge}).", file=sys.stderr)
         sys.exit(1)
 

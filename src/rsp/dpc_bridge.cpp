@@ -404,7 +404,8 @@ static bool log_tri_writer() {
     return enabled;
 }
 
-extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage) {
+extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage,
+                                     uint32_t r9, const uint8_t *rdram) {
     static const bool enabled = [] {
         const char *e = std::getenv("ROGUESQ_LOG_M4_ACCUM");
         return e && *e && *e != '0';
@@ -418,20 +419,37 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage) {
         const char *e = std::getenv("ROGUESQ_M4_TARGET_CAP");
         return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 2048u;
     }();
+    static const uint32_t phase_from = [] {
+        const char *e = std::getenv("ROGUESQ_M4_PHASE_FROM");
+        return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 0u;
+    }();
+    if (stage != 1 && rs64_phase_ord() < phase_from) return;
     static uint32_t control_lines = 0;
     static uint32_t target_lines = 0;
     uint32_t *lines = stage == 1 ? &control_lines : &target_lines;
     const uint32_t cap = stage == 1 ? control_cap : target_cap;
     if ((*lines)++ >= cap) return;
     auto *rsp = static_cast<RSP *>(opaque);
-    fprintf(stderr, "[m4-accum] task=%u phase=%u stage=%u", g_e9prov.task,
-            rs64_phase_ord(), stage);
+    static uint16_t pre_v6[8];
+    static uint16_t post_vge[8];
+    if (stage == 10) {
+        for (unsigned lane = 0; lane < 8; ++lane) pre_v6[lane] = rsp->vpu.r[6].u16(lane);
+    } else if (stage == 12) {
+        for (unsigned lane = 0; lane < 8; ++lane) post_vge[lane] = rsp->vpu.r[6].u16(lane);
+    }
+    fprintf(stderr, "[m4-accum] task=%u phase=%u stage=%u r9=0x%08X", g_e9prov.task,
+            rs64_phase_ord(), stage, r9);
     for (unsigned lane = 0; lane < 8; ++lane) {
-        fprintf(stderr, " l%u:v4=%04X v0=%04X v6=%04X v29=%04X acch=%04X accm=%04X accl=%04X",
+        fprintf(stderr, " l%u:v4=%04X v0=%04X v6=%04X pre=%04X vge=%04X v29=%04X acch=%04X accm=%04X accl=%04X",
                 lane, rsp->vpu.r[4].u16(lane), rsp->vpu.r[0].u16(lane),
-                rsp->vpu.r[6].u16(lane), rsp->vpu.r[29].u16(lane),
+                rsp->vpu.r[6].u16(lane), pre_v6[lane], post_vge[lane], rsp->vpu.r[29].u16(lane),
                 rsp->vpu.acch.u16(lane), rsp->vpu.accm.u16(lane),
                 rsp->vpu.accl.u16(lane));
+    }
+    if (stage == 13 && rdram != nullptr) {
+        const uint32_t base = r9 & 0x7FFFFFu;
+        fprintf(stderr, " record=");
+        for (uint32_t i = 0; i < 0x38; ++i) fprintf(stderr, "%02X", rdram[(base + 0x18 + i) & 0x7FFFFF]);
     }
     fputc('\n', stderr);
     fflush(stderr);
