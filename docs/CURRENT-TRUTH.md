@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1127 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1128 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -178,6 +178,14 @@ compact and records only live conclusions, boundaries, and next work.
   descriptor with record `+8` width 320. This selects
   `H-selector-zero-to-320` and rules out argument transformation and a
   non-320 zero-selector arm. Static result; no build or run.
+- The s1128 descriptor-source audit found four `sp+0x108` write families in
+  `initVideoSubsystem`. The initial `0x8001A418..A424` loop loads the NTSC
+  `0x782C` index-0 descriptor. The later `0x8001A92C..A938` overwrite is
+  reached only by `s7==0` at `0x8001A364`; the `0x8001ADC0..ADCC` and
+  `0x8001B2C4..B2D0` families are on that same alternate route. The boot
+  wrapper's incoming stack words make both `t9` at `0x8001A358` and `s7` at
+  `0x8001A364` nonzero, so boot falls through the initial-load route and
+  preserves index 0 through the `0xF0` copy. Static result; no build or run.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -477,6 +485,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1125 | Bounded generated audit traced the boot selector input through `thread3_video_handle`: `gameConfig+0x44` is loaded into the outgoing stack slot consumed by `initVideoBootWrapper`, then forwarded to the `buildAndRegisterDefaultMaterial` flags/render-state slot. The callee extracts selector bits 2, 3, 4, 5, 7, and 8 from that runtime-loaded value. Selects `H-boot-arg-runtime` over a fixed literal; the producer and initial value of `gameConfig+0x44` remain open. Retail width 320 still constrains the initial record to offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`). No build or run. ORIGIN: generated caller/callee data-flow and independent retail VI-width evidence; no mitigation. |
 | s1126 | Bounded generated/host/patch/companion and ROM-data audit found `getGameConfig` returns `gBootConfig` at `0x80037560`, with no writer to `+0x44`; the main overlay mapping places that word at ROM `0x381A4`, where the retail image contains `0x00001800`. Bits 2, 3, 4, 5, 7, and 8 are all zero, selecting `H-config-field-literal` and ruling out a concrete non-320 config value. The selector-to-record mapping remains open. No build or run. ORIGIN: generated store census, companion/host/patch census, section mapping, and direct retail-ROM bytes; no mitigation. |
 | s1127 | Bounded generated/data audit traced `gameConfig+0x44 = 0x1800` through the boot stack argument. Bits 8/7/2 write selector `A/B/C=1/0/0`; the selector branch reaches copied-record offset `0xF0`, whose boot source block is the NTSC index-0 descriptor with width 320. Selects `H-selector-zero-to-320`; rules out argument transformation and a non-320 zero-selector arm. No build or run. ORIGIN: generated argument/branch/copy flow plus direct retail-ROM descriptor bytes; no mitigation. |
+| s1128 | Bounded static audit enumerated the `sp+0x108` descriptor stores. The initial `0x8001A418..A424` loop loads the `0x782C` NTSC index-0 record; `0x8001A92C..A938` is gated by `s7==0` at `0x8001A364`, while `0x8001ADC0..ADCC` and `0x8001B2C4..B2D0` are on that alternate `s7==0` route. The boot wrapper's stack-derived `t9` and `s7` are nonzero, so no later store replaces index 0 before the four-record copy at `0x8001B66C`; the `0xF0` source remains index 0 / width 320. Selects `H-preserve-index0`; rules out `H-replace-index` and `H-copy-source-misread`. No build or run. ORIGIN: generated control-flow/stack-argument audit plus direct retail-ROM descriptor mapping; no mitigation. |
 
 ## Ranked next steps
 

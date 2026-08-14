@@ -63513,3 +63513,18 @@ transformation and a non-320 zero-selector arm, and leaves no runtime probe
 or mitigation justified. No build or game run occurred. ORIGIN: generated
 argument/branch/copy flow plus direct retail-ROM descriptor bytes; no
 mitigation.
+
+## Session 1128 (2026-08-14) — classified boot descriptor preservation
+
+Ran the prescribed bounded static audit with no build or game run. `initVideoSubsystem`
+has four `sp+0x108` write families: the initial `0x8001A418..A424` loop
+loads the `0x782C` NTSC index-0 descriptor; `0x8001A92C..A938` is reached
+only when `s7==0` at `0x8001A364`; and `0x8001ADC0..ADCC` plus
+`0x8001B2C4..B2D0` are on that alternate route. The boot wrapper's
+stack-derived `t9` at `0x8001A358` and `s7` at `0x8001A364` are nonzero, so
+the boot path does not take the alternate overwrite route. The four-record
+copy at `0x8001B66C` therefore receives index 0 at `sp+0x108`, and the
+`0xF0` destination remains width 320. This selects `H-preserve-index0`, rules
+out `H-replace-index` and `H-copy-source-misread`, and closes the active
+descriptor-source boundary. ORIGIN: generated control-flow/stack-argument
+audit plus direct retail-ROM descriptor mapping; no mitigation.
