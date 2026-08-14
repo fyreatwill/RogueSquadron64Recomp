@@ -64051,3 +64051,21 @@ path and the generated selector consumer is not reached after the transition.
 It rules out H1/H2 for this observed lifecycle, but does not yet identify the
 independent generated owner. The next unit is a complete static census of all
 generated `osViSetMode_recomp` callsites and the sole selector-consumer caller.
+
+## Session 1160 (2026-08-14) — identified the direct VI owner
+
+The prescribed static census ran against the available generated tree at
+`../N64Recomp/RecompiledFuncs` (the absolute path in NEXT.md was stale). It
+found five generated `osViSetMode_recomp` edges: `preNmiResetThread` at
+`0x80001764`, `initVideoSubsystem` at `0x8001B720`,
+`applyPendingViChanges` at `0x8001B8DC`, `swapBufferWithViMode` at
+`0x8001BB54`, and `selectAndApplyViMode` at `0x8001BC28`.
+
+`applyPendingViChanges` selects the live descriptor family and is reached on
+the `0x80019914` writer path; its direct VI call can therefore submit
+`0x80128DF0` without entering `selectAndApplyViMode`. The other edges are
+boot/reset, frame-swap, or selector-owned paths. This identifies H3's direct
+generated owner and closes the duplicate-edge ambiguity. No build or runtime
+experiment was warranted because the census left one live owner rather than
+an unresolved duplicate path. The next unit is a positive-control-gated
+runtime reconciliation of the existing direct-caller marker.

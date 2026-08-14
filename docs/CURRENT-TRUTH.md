@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1159 (2026-08-14).
+in the ledger. Reviewed through s1160 (2026-08-14).
 
 ## Current state
 
@@ -180,6 +180,14 @@ in the ledger. Reviewed through s1159 (2026-08-14).
   request is on an independent path and the generated selector consumer is
   not reached after the transition. No crash occurred; the next audit is the
   complete generated VI call-path census.
+- The s1160 static census found five generated `osViSetMode_recomp` edges:
+  `preNmiResetThread` at `0x80001764`, `initVideoSubsystem` at `0x8001B720`,
+  `applyPendingViChanges` at `0x8001B8DC`, `swapBufferWithViMode` at
+  `0x8001BB54`, and `selectAndApplyViMode` at `0x8001BC28`. The direct
+  `0x8001B8DC` edge is the only one on the `0x80019914` writer path and can
+  submit `0x80128DF0` without entering `selectAndApplyViMode`; the other
+  edges are boot/reset, frame-swap, or selector-owned paths. This identifies
+  H3's independent generated owner and closes the duplicate-edge ambiguity.
 
 ## Retail VI descriptor boundary
 
@@ -310,17 +318,16 @@ corruption.
 | s1157 | Rebuilt and ran the phase-gated consumer capture. Selector positive and slot-dispatch controls passed, but the live `0x80019914` writer rows stayed `00/00/00→00/00/00`; no generated selector-consumer rows appeared. Host VI requests still recorded `320→2→640→640→2→640`. The planned H1/H2/H3 discriminator was unevaluable and the next unit moves to the missing-transition cause. |
 | s1158 | Re-ran the phase-gated writer capture with pending-mask and store-path attribution included. Selector-positive and slot-dispatch controls passed. The post-640 sequence showed pending `0/0`, then request-mask `pending B=0x11`, then `applyPendingViChanges` storing selector A and changing `01/00/00→01/00/01`; host VI logging independently recorded the matching 640 request. This selects H2 for s1157's non-reproduction and rules out an address/store defect in this capture. |
 | s1159 | Ran the consumer-order capture and a fixed retry. Both passed selector-positive and slot-dispatch controls; both observed the selector transition and host request, but zero generated selector-consumer entry/selection/callsite rows. This selects H3, an independent host VI path, and moves the next unit to a complete static call-path census. |
+| s1160 | Static-censused all five generated `osViSetMode_recomp` edges and the sole selector consumer. The direct `applyPendingViChanges` edge at `0x8001B8DC` is the only edge on the `0x80019914` writer path and can submit `0x80128DF0` without entering `selectAndApplyViMode`; the other edges are boot/reset, frame-swap, or selector-owned paths. This identifies H3's generated owner and closes the duplicate-edge ambiguity without a build or run. |
 
 ## Ranked next steps
 
-1. Perform a bounded static census of every generated `osViSetMode_recomp`
-   callsite and the sole generated `selectAndApplyViMode` caller. Record guest
-   address, containing function, mode-pointer setup, and whether the call can
-   follow `applyPendingViChanges` at `0x80019914`. The discriminator is whether
-   the observed `0x80128DF0` request has a direct generated owner distinct from
-   the selector consumer (H3) or is only reachable through that consumer
-   (H1/H2). Do not build or add runtime counters unless the census leaves two
-   live paths.
+1. Reconcile the s1160 H3 owner with one phase-gated runtime capture using the
+   existing direct-caller markers. Require selector-positive and slot-dispatch
+   controls, then compare `0x8001B8DC` rows against the host `0x80128DF0`
+   request after the `0x80019914` writer transition. Build only if the marker
+   source is present in the current generated tree; otherwise repair the
+   regeneration source before adding runtime fields.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
