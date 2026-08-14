@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1003 (2026-08-14). The active investigation is M4
+Reviewed through s1005 (2026-08-14). The active investigation is M4
 zero-shade source-to-consumer association. M5 audio de-stubbing is closed.
 M3 work is limited to complete idiom-class audits. The retail-oracle callback
 thread is blocked on directory access and is not the current work unit.
@@ -63,6 +63,14 @@ The provenance campaign now establishes:
   `H-dpc-range-contains-consumer`; it does not identify the F5 update feeding
   an individual replacement.
 
+- s1005 added accepted submit serial/range fields directly to RT64 shade rows.
+  The valid VI-1024 capture produced positive and zero rows with nonzero
+  serials and ranges. Zero-shade task 194 used serial 49346 and consumer range
+  `[0x4B7990,0x4B7C88)`, while its accepted F5 task bounds were
+  `[0x4B7800,0x4B7EA0)`. The consumer range begins at the child DL and is
+  contained by the task bounds; it does not identify an individual F5 VTXCOLOR
+  source update. This selects `H-child-range-only`. No mitigation follows.
+
 All runtime claims above had positive controls in their relevant captures.
 Static single-source claims are explicitly described as such in the ledger.
 
@@ -83,11 +91,13 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1000–s1001 | F5 ordinals reset at RT64 DL boundaries; root-DL identity does not join to child consumer DLs. |
 | s1002 | Root-DL validation retries were invalid before VI-1024; no conclusion changed. |
 | s1003 | Accepted DPC bounds contained all observed repeated RT64 consumer DLs in a valid capture; individual source mapping remains open. |
+| s1005 | RT64 shade rows carried accepted serial/range fields; consumer ranges were child-DL-shaped and did not identify an individual F5 source update. |
 
 ## Ranked backlog
 
-1. Complete the M4 source-to-consumer join by carrying accepted submit serial
-   and range into each RT64 shade row. This is the next work unit below.
+1. Continue the M4 source-to-consumer join by correlating ordered F5 VTXCOLOR
+   state with emitted RDP triangle consumers; the accepted range alone is
+   child-DL-shaped.
 2. Keep the `slotDispatcherIter+872` runtime `$sp` corruption family parked
    until an independent runtime boundary is available; do not perform another
    static sweep without a new idiom class.
@@ -97,34 +107,36 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 4. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
-## Next work unit (s1004)
+## Next work unit (s1006)
 
 HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
-Add the accepted DPC submission range and submit serial to each RT64
-task/DL-local shade row. Preserve F5 root DL, F5 update ordinal/source, and
-zero-shade replacement ordinal. Do not add a mitigation or hand-edit
-generated files.
+Add one bounded cross-layer trace that records the task-global F5 VTXCOLOR
+ordinal/source immediately before each emitted RDP triangle command, alongside
+the existing RT64 triangle consumer serial/range. Preserve existing shade
+rows. Do not add a mitigation or hand-edit generated files.
 
 Competing hypotheses and the discriminating measurement:
 
-- `H-submission-range-source-join`: a shade row's submission interval/serial
-  identifies the F5 source update feeding it.
-- `H-child-range-only`: the interval joins only the child DL, not an F5 source.
-- `H-range-coverage-incomplete`: no accepted interval covers the RT64 row.
+- `H-triangle-source-join`: ordered F5 VTXCOLOR state and emitted triangle rows
+  identify the source update feeding a zero-shade replacement.
+- `H-child-range-only`: the consumer remains associated only with its child DL.
+- `H-triangle-source-missing`: F5 state is not live at triangle emission or the
+  stream has no usable ordered join.
 
-The same-run table must key task, F5 root DL, F5 update ordinal/source,
-submit serial/range, RT64 DL, and RT64 ordinal. It is invalid unless positive
-controls, root identity, range-bearing shade rows, and zero-shade rows all
-fire in the VI-1024-gated phase.
+The discriminating table must key task, F5 root DL, F5 update ordinal/source,
+triangle emission order, submit serial/range, RT64 DL, and shade ordinal. It is
+invalid unless positive controls, root identity, triangle rows, range-bearing
+shade rows, and zero-shade rows all fire in the VI-1024-gated phase.
 
 Exact launch recipe:
 
 `env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LOG_VTX_WRITE_FAULT=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a' zsh tools/probe.sh scratch/agent/s1004_submit_range_20260814 180 3`
 
-The exact source/range join selects `H-submission-range-source-join`; only
-child-DL coverage selects `H-child-range-only`; missing rows select
-`H-range-coverage-incomplete`. If controls fail, make no causal selection.
+An individual F5 source appearing immediately before the consumer triangle
+selects `H-triangle-source-join`; only child-DL association selects
+`H-child-range-only`; absent/unstable state selects `H-triangle-source-missing`.
+If controls fail, record the run as invalid and make no causal selection.
 
 ## Method and safety rules
 

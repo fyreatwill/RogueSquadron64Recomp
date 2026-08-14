@@ -2791,6 +2791,13 @@ maintenance pass. Full records remain in `PORTING-STATE.md`.
   `H-dpc-range-contains-consumer`; source-to-individual-replacement mapping
   remains open. ORIGIN: these are diagnostics derived from accepted DPC
   intervals and do not modify game or renderer state.
+- s1005 carried accepted submit serial/range fields into RT64 shade rows. The
+  valid VI-1024 capture produced both positive and zero rows with nonzero
+  serials. Zero-shade task 194 had serial 49346 and consumer range
+  `[0x4B7990,0x4B7C88)`, contained by its accepted F5 task bounds
+  `[0x4B7800,0x4B7EA0)`. The consumer range begins at the child DL and does not
+  identify an individual F5 VTXCOLOR source update, selecting
+  `H-child-range-only`. No mitigation followed.
 
 The s955–s983 oracle line is also retained here as history: s982 localized the
 corrected external core's fault to dereferencing `r4300_pc(r4300)` before the

@@ -61087,3 +61087,28 @@ thread, backlog, and exact next command.
 
 What it rules out: nothing about runtime behavior; no causal experiment was
 attempted. No mitigation or game/runtime change was made.
+
+## Session 1005 (2026-08-14) — joined shade rows to accepted submit ranges
+
+Added diagnostic-only accepted submit serial and `[lo,hi)` range fields to the
+existing RT64 `shade-raw` and `fix-zero-shade` rows. Refreshed the RT64
+submodule patch export and built `RogueSquadron64Recomp` successfully. The
+prescribed VI-1024-gated run reached width 1024 after 78.1 seconds, completed
+40 frames, and passed the existing generated-write positive controls, F5 state
+and task-range controls, and both positive/zero shade classes.
+
+The decisive rows included zero-shade task 194, serial 49346, consumer range
+`[0x4B7990,0x4B7C88)`, and F5 accepted task bounds
+`[0x4B7800,0x4B7EA0)`. The range began at the RT64 child DL and was contained
+by the independent accepted task bounds. This selects H-child-range-only: the
+accepted interval identifies the child consumer, not an individual F5 VTXCOLOR
+source update.
+
+What it showed: the missing RT64 range/serial fields are now present and valid
+in the target phase; the range does not complete the source-to-replacement
+join. What it rules out: missing or invalid accepted-range coverage as the
+reason the join was unavailable, and any claim that the aggregate range alone
+identifies the F5 source update. No mitigation or value rewrite was added.
+
+ORIGIN: diagnostic snapshots of accepted `submit_rdp_range` intervals; no game
+or renderer state is changed.

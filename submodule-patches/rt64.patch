@@ -116,10 +116,10 @@ index a0d4a6a..39c294f 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..118ae7d 100644
+index 6255872..620636d 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
-@@ -4,12 +4,31 @@
+@@ -4,12 +4,33 @@
  
  #include "rt64_gbi_rdp.h"
  
@@ -137,6 +137,8 @@ index 6255872..118ae7d 100644
  
 +extern "C" __attribute__((weak)) uint32_t rs64_phase_ord(void);
 +extern "C" __attribute__((weak)) uint32_t rs64_e9prov_current_task(void);
++extern "C" __attribute__((weak)) uint64_t rs64_dpc_get_last_submit_serial(void);
++extern "C" __attribute__((weak)) void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi);
 +
  namespace RT64 {
      namespace GBI_RDP {
@@ -151,7 +153,7 @@ index 6255872..118ae7d 100644
          void noOp(State *state, DisplayList **dl) {
              // Do nothing.
          }
-@@ -253,6 +272,17 @@ namespace RT64 {
+@@ -253,6 +274,17 @@ namespace RT64 {
          }
  
          void fullSync(State *state, DisplayList **dl) {
@@ -169,7 +171,7 @@ index 6255872..118ae7d 100644
              RT64_LOG_PRINTF("GBI_RDP::fullSync()");
              state->fullSync();
              state->dpInterrupt();
-@@ -420,6 +450,17 @@ namespace RT64 {
+@@ -420,6 +452,22 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -184,10 +186,15 @@ index 6255872..118ae7d 100644
 +                uint32_t shadeTask = rs64_e9prov_current_task ? rs64_e9prov_current_task() : 0;
 +                const uint32_t shadeDl = state->displayListAddress & 0x7FFFFFu;
 +                const uint32_t shadeOrdinal = rs64_shade_ordinal(shadeTask, shadeDl);
++                const uint64_t shadeSubmitSerial = rs64_dpc_get_last_submit_serial ?
++                    rs64_dpc_get_last_submit_serial() : 0;
++                uint32_t shadeSubmitLo = 0, shadeSubmitHi = 0;
++                if (rs64_dpc_get_last_submit)
++                    rs64_dpc_get_last_submit(&shadeSubmitLo, &shadeSubmitHi);
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +496,14 @@ namespace RT64 {
+@@ -455,6 +503,14 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
@@ -202,7 +209,7 @@ index 6255872..118ae7d 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +513,164 @@ namespace RT64 {
+@@ -464,6 +520,166 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -292,10 +299,12 @@ index 6255872..118ae7d 100644
 +                                const bool cyc2 = state->rdp->otherMode.cycleType() == G_CYC_2CYCLE;
 +                                const bool slot = !cyc2; // true for 1-cycle
 +                                fprintf(stderr,
-+                                    "[shade-raw #%d %s] task=%u dl=0x%06X ord=%u cmd=0x%02X baseFixed=(%d,%d,%d,%d) "
++                                    "[shade-raw #%d %s] task=%u dl=0x%06X ord=%u cmd=0x%02X serial=%llu range=0x%06X..0x%06X baseFixed=(%d,%d,%d,%d) "
 +                                    "v1=(%.1f,%.1f,%.1f,%.1f) v1norm=(%.3f,%.3f,%.3f,%.3f)\n",
 +                                    i, cls,
 +                                    shadeTask, shadeDl, shadeOrdinal, commandId,
++                                    (unsigned long long)shadeSubmitSerial,
++                                    shadeSubmitLo, shadeSubmitHi,
 +                                    int(baseColorFixed.x), int(baseColorFixed.y),
 +                                    int(baseColorFixed.z), int(baseColorFixed.w),
 +                                    v1x, v1y, v1z, v1w,
@@ -367,7 +376,7 @@ index 6255872..118ae7d 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +684,367 @@ namespace RT64 {
+@@ -477,6 +693,369 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -717,9 +726,11 @@ index 6255872..118ae7d 100644
 +                                if (i <= 8 || (i % 10000) == 0) {
 +                                    fprintf(stderr,
 +                                        "[fix-zero-shade] replaced black TEXEL*SHADE "
-+                                        "vertex colours with white (#%llu task=%u dl=0x%06X ord=%u)\n",
++                                        "vertex colours with white (#%llu task=%u dl=0x%06X ord=%u serial=%llu range=0x%06X..0x%06X)\n",
 +                                        (unsigned long long)i,
-+                                        shadeTask, shadeDl, shadeOrdinal);
++                                        shadeTask, shadeDl, shadeOrdinal,
++                                        (unsigned long long)shadeSubmitSerial,
++                                        shadeSubmitLo, shadeSubmitHi);
 +                                    fflush(stderr);
 +                                }
 +                                // Keep decoded alpha (often ~0); force opaque so
@@ -735,7 +746,7 @@ index 6255872..118ae7d 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,6 +1105,66 @@ namespace RT64 {
+@@ -537,6 +1116,66 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
