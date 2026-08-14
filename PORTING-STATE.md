@@ -63381,3 +63381,20 @@ was made.
 ## Session 1119 (2026-08-14) — classified retail VI selector producers
 
 Performed the bounded generated/companion audit specified in `scratch/agent/NEXT.md`; no build or runtime capture. `getViModeType` returns `rsViModeType` at `0x8010FF20`, and its only setter is the boot call at `0x80001224`. `setViModeType` derives the value from `osResetType` at `0x80000300`, mapping reset types to 0/1/2, so the descriptor-index producer has a lifecycle/reset source rather than a controller/demo source. The selector bytes `0x8011A864/65/62` have only the material bitfield-unpack writer `buildAndRegisterDefaultMaterial` and the mask-driven clear/set path in `applyPendingViChanges`, which runs from the VI retrace loop; no direct controller/demo writer was found. This selects `H-selector-lifecycle/config` over fixed-zero and input/demo-tainted, while leaving the concrete runtime state that selects a non-320 descriptor open. It rules out an unconditionally fixed-zero mode-type producer and a direct input/demo producer, but does not prove the retail run reaches a non-320 index. No mitigation or runtime behavior changed. ORIGIN: generated control/data-flow plus companion symbol census, no mitigation.
+## Session 1120 (2026-08-14) — phase-gated retail selector capture
+
+Ran the prescribed retail-oracle selector capture with physical writes watched
+for `rsViModeType` (`0x10FF20`), selector bytes (`0x11A862..0x11A865`), and
+descriptor-index bytes (`0x3780C..0x782F`). Independent controls passed:
+10,009 whole-RDRAM callbacks, all nine scheduled Start events, and 7,196 VI
+frames. The target summaries were zero `rsViModeType` writes, four selector-
+range writes, and zero descriptor-index writes; VI stayed width 320 at origin
+`0x006dd280`. The four selector writes occurred in the boot window before the
+first scheduled press, so this selects phase-qualified
+`H-retail-selector-prephase` over input-tainted and observed non-320 selection.
+The oracle's global 200-hit print cap suppressed individual selector addresses
+and values, so no concrete selector value is claimed. This rules out a
+runtime-observed descriptor-index transition on the established schedule, but
+does not prove the four selector writes were 320-class. No port build or
+mitigation changed. ORIGIN: physical retail-oracle watches with independent
+whole-RDRAM/PIF/VI controls, no mitigation.

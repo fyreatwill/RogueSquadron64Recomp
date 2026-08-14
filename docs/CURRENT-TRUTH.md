@@ -124,6 +124,15 @@ compact and records only live conclusions, boundaries, and next work.
   26, 36, 38, 40). This rules out an uninitialized table and a fixed-320
   descriptor source, but does not yet identify which selector state reaches
   the active record on the retail width-320 path. Single-source static result.
+- The s1120 retail-oracle capture passed independent controls: 10,009 whole-RDRAM
+  callbacks, all nine scheduled Start events, and 7,196 VI frames. It recorded
+  zero writes to `rsViModeType` (`0x8010FF20`), four writes to the selector range
+  `0x8011A862..0x8011A865`, and zero writes to the descriptor-index range
+  `0x8003780C..0x8003782F`; VI remained width 320 at origin `0x006dd280`.
+  Selector activity was confined to boot before the first press, selecting
+  runtime `H-retail-selector-prephase` over input-tainted and observed non-320
+  selection. The oracle's global hit-print cap suppressed individual selector
+  addresses/values, so no concrete selector value is claimed.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -410,17 +419,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1117 | Bounded generated audit found boot `initVideoBootWrapper` and recurring `advanceVideoFrame` feed the same fixed mode-selection machinery. `swapBufferWithViMode`/`selectAndApplyViMode` select offsets `0x00/0x50/0xA0/0xF0` from RAM table base `0x80128D50` using lifecycle selector bytes `0x8011A864/65/62`; width is loaded from record `+8` before `osViSetMode`. No pointer escapes the table and the companion tree has no additional implementation/caller. Selects `H-mode-record-state-gate`, rules out `H-mode-record-pointer-corrupt`, and leaves table population/width values open; no build or run. ORIGIN: generated control-flow/data-flow plus companion symbol census, no mitigation. |
 | s1118 | Bounded generated/ROM audit found `initVideoSubsystem` copies four 0x50-byte records into `0x80128D50` from `osViModeTable` at `0x80039330`. Source indices come from `0x8003780C..0x782F`; the independent ROM table has widths 320, 640, and 1280 at distinct index classes. Selects `H-mode-record-populated/state-dependent`, rules out `H-mode-record-uninitialized` and `H-mode-record-constant`; the active selector-state producer remains open. Single-source static result; no build or run. ORIGIN: generated copy/data-flow plus direct retail-ROM table bytes, no mitigation. |
 | s1119 | Bounded generated/companion census found `getViModeType` returns `rsViModeType` at `0x8010FF20`; its sole setter is the boot call at `0x80001224`, which maps `osResetType` at `0x80000300` to 0/1/2. The mode-type value therefore has a lifecycle/reset source, not a controller/demo source. Selector bytes `0x8011A864/65/62` have only the material bitfield-unpack writer `buildAndRegisterDefaultMaterial` (bits of its render-state argument) plus the pending-mask applier `applyPendingViChanges` (mask-driven clear/set), called from the VI retrace loop; no direct controller/demo writer was found. Selects `H-selector-lifecycle/config` over fixed-zero and input/demo-tainted; the concrete state that selects a non-320 descriptor remains runtime-open. No build or run. ORIGIN: generated control/data-flow and companion symbol census, no mitigation. |
+| s1120 | Ran the prescribed retail-oracle selector capture. Independent controls passed: 10,009 whole-RDRAM callbacks, nine scheduled Start events, and 7,196 VI frames. The watched ranges recorded zero `rsViModeType` writes, four selector-range writes, and zero descriptor-index writes; VI stayed width 320 at `0x006dd280`. Selector activity occurred before the first press, selecting `H-retail-selector-prephase` over input-tainted and observed non-320 selection. The global 200-hit print cap hid individual selector addresses/values, so the result does not claim a concrete selector value. This is phase-qualified single-source retail evidence; no mitigation or port behavior changed. ORIGIN: physical oracle watch with independent whole-RDRAM/PIF/VI controls, no mitigation. |
 
 ## Ranked next steps
 
-1. Run one phase-gated retail-oracle capture watching `rsViModeType`
-   (`0x10FF20` physical), selector bytes `0x11A862..0x11A865`, and the
-   descriptor-index bytes `0x3780C..0x782F`, with whole-RDRAM/PIF/VI controls.
-   Identify the exact state transition, if any, that selects a non-320 record.
-2. If all watched state remains reset/320-class through the established
-   schedule, audit the retail `osResetType`/mode-table input boundary next;
-   if a non-320 index appears, map its selector and caller predicate before
-   touching the port.
+1. Audit the retail `osResetType`/mode-table input boundary and the concrete
+   descriptor-index producer. Reconcile reset-derived `rsViModeType`, selector
+   inputs, and the ROM index table with s1120; do not infer a selector value
+   from the capped watch summary.
+2. If the static boundary exposes a non-320 producer, map its caller predicate
+   and lifecycle input before touching the port; otherwise park the retail
+   width-320 route as an established boundary.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
