@@ -1,32 +1,37 @@
-# NEXT work unit (s1153)
+# NEXT work unit (s1154)
 
-HYPOTHESIS-ID: vi-submitgfx-owner
+HYPOTHESIS-ID: post640-vi-producer-gate
 
-Repeat the live `submitGfxFrame` callsite table with the known phase-relative
-input schedule so the port reaches VI-1024. Keep the durable callsite probe
-unchanged. The phase-6 `0x800A64AC` row is consistent with the known
-`cinematicLoopBody` family, but it is not an owner conclusion until the target
-phase is reached.
+Build one phase-scoped census of every generated `osViSetMode` caller and its
+state/input predecessor, keeping the existing host selector positive control,
+slot-dispatch control, and host-input control. The target window begins at the
+last committed width-640 record and ends at timeout; do not use a stopwatch.
+This is the next highest-information probe after three unevaluable owner runs.
 
 Competing hypotheses and discriminator:
 
-- H1/mission-owner: mission-family callsite tags fire in the VI-1024 target
-  phase.
-- H2/cinematic-owner: cinematic/menu callsite tags fire in the target phase
-  while mission-family tags remain absent.
-- H3/host-only: selector, E9, and slot controls are positive but no generated
-  callsite tag fires in the target phase.
+- H1/state-gate-active: a generated producer or exact predecessor fires after
+  the final 640 commit while slot dispatch and host input continue.
+- H2/producer-absent: no generated producer or predecessor fires after the
+  final 640 commit, while the independent controls continue.
+- H3/early-loop-stop: slot dispatch or host input stops before the producer
+  window, so the post-640 state gate is not reached.
 
-The discriminating measurement is one run with all callsite tags, the
-`ROGUESQ_LOG_VI_SELECTOR` positive control, `ROGUESQ_LOG_E9_PROVENANCE=1`,
-`ROGUESQ_LOG_E9_UNIFIED=1`, slot-dispatch logging, and the 1024 VI phase gate.
-A caller-family result is valid only when VI-1024 and at least one E9 row are
-observed. A pre-1024 stall or crash is unevaluable.
+The discriminating measurement is one run with a positive host selector,
+positive slot/input controls, and phase-scoped generated producer/predecessor
+markers. Producer-positive proves an unobserved state gate; producer-zero with
+continuing controls proves the active-loop path and sends the next audit to the
+state writer. If the controls stop first, the result is an early-loop stop and
+the next probe must target that boundary.
 
-Build is already complete. Run from the repo root:
+Before building, record the competing hypotheses and discriminator above in the
+durable probe path, then regenerate in the required order:
 
-    env ROGUESQ_LOG_SUBMIT_GFX_CALLSITES=1 ROGUESQ_LOG_VI_SELECTOR=1 ROGUESQ_LOG_E9_PROVENANCE=1 ROGUESQ_LOG_E9_UNIFIED=1 ROGUESQ_LOG_SLOT_DISPATCH=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_PHASE_KEYS_FROM_PHASE=1 PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:start 250:start" PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/soak_results/s1153_vi_submitgfx_callsites 300 2
+    python tools/make_elf.py
+    build/Debug/N64Recomp.exe rogue_squadron.toml
+    python tools/fixup_game_funcs.py
+    cmake --build build --config Debug --target RogueSquadron64Recomp
 
-The s1152 invalid capture is preserved at
-`scratch/agent/soak_results/s1152_vi_submitgfx_callsites/`; the corrected
-retry is at `scratch/agent/soak_results/s1152_vi_submitgfx_callsites_retry/`.
+Run from the repo root with the existing 1024 gate and known input schedule:
+
+    env ROGUESQ_LOG_VI_SELECTOR=1 ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_LOG_HOST_INPUT=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_PHASE_KEYS_FROM_PHASE=1 PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:start 250:start" PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/soak_results/s1154_post640_vi_producer_gate 300 2

@@ -63923,3 +63923,18 @@ rows include phase-6 `0x800A64AC`, but without the target phase and E9 control
 the H1/H2/H3 owner split is unevaluable. This rules out only the prior shared
 entry `$ra` method as the owner discriminator; it does not select an owner or
 explain the pre-1024 loop.
+
+## Session 1153 (2026-08-14) — closed the unevaluable submitGfxFrame owner thread
+
+Repeated the durable all-callsite probe with the documented phase-relative input
+schedule and selector, E9 provenance, unified-E9, and slot-dispatch controls.
+The independent selector positive control fired once; slot dispatch logged 6,424
+rows and the callsite table logged 168 rows, including phase-6
+`0x800A64AC`. The run stayed crash-free through the 640→2→640 sequence but
+never reached VI-1024 and produced zero E9 provenance or unified-E9 rows.
+
+This is a valid positive-control run but is unevaluable for H1/H2/H3 because the
+required target phase and E9 row were absent. It closes the owner thread after
+three consecutive non-discriminating attempts and rules out neither owner nor
+cause; the next work unit pivots to a whole post-640 VI-producer/state-gate
+census.

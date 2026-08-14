@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1152 (2026-08-14).
+in the ledger. Reviewed through s1153 (2026-08-14).
 
 ## Current state
 
@@ -121,6 +121,13 @@ in the ledger. Reviewed through s1152 (2026-08-14).
   H1/H2/H3 therefore remains unevaluable. The corrected retry used
   `ROGUESQ_LOG_E9_UNIFIED=1` but still had zero unified-E9 rows, so no E9
   positive-control claim is made.
+- The s1153 repeat used the documented phase-relative input schedule and all
+  controls. The selector positive control fired (1), slot dispatch remained
+  live (6,424), and the callsite table recorded 168 rows, including phase-6
+  `0x800A64AC`; the run stayed crash-free at 640→2→640 for 180 seconds. It
+  still produced no VI-1024, E9 provenance, or unified-E9 row. The
+  `vi-submitgfx-owner` thread is therefore closed as unevaluable after three
+  consecutive attempts; the callsite data does not select H1/H2/H3.
 
 ## Retail VI descriptor boundary
 
@@ -244,15 +251,19 @@ corruption.
 | s1150 | Static owner census found 144 direct `slotDispatcherIter` sites in 72 generated callers, including the mission and cinematic frame-loop families. `freeRenderSubsystemResources` is the sole generated caller of `selectAndApplyViMode`, while E9 production is host-side through `submit_rsp_task` and RSP task handling. Companion symbols agree on the named phase-loop owners and contain no omitted owner edge; this selects H2 path separation and rules out H3 for the censused graph. |
 | s1151 | The shared `submitGfxFrame` entry marker fired in phases 2/4/6 with selector, E9, and slot controls live, but the run stalled before VI-1024 in `fillSampleStreamRange+336`. All guest return addresses were zero because generated direct C calls do not populate `ctx->r31`; the shared-entry owner discriminator is invalid, so callsites must be tagged directly. |
 | s1152 | Added durable phase-scoped markers at all 13 generated `submitGfxFrame` callsites and rebuilt. The corrected retry passed selector and slot controls, logged 168 callsite rows including phase-6 `0x800A64AC`, and ran crash-free through 640→2→640, but never reached VI-1024 and logged zero unified-E9 rows. Owner hypotheses remain unevaluable. |
+| s1153 | Repeated the callsite capture with the documented phase-relative input schedule and all controls. Selector positive control fired, slot dispatch logged 6,424 rows, and callsites logged 168 rows including phase-6 `0x800A64AC`; the run stayed crash-free through 640→2→640 but produced no VI-1024, E9 provenance, or unified-E9 rows. After three consecutive unevaluable owner attempts, this thread is closed without selecting H1/H2/H3. |
 
 ## Ranked next steps
 
-1. Re-run the now-live callsite table with the known phase-relative input
-   schedule so the port reaches VI-1024. Arm `ROGUESQ_LOG_E9_PROVENANCE=1` and
-   `ROGUESQ_LOG_E9_UNIFIED=1`; require VI-1024 and at least one E9 row before
-   interpreting ownership. Use `PROBE_PHASE_KEYS_FROM_PHASE=1` with
-   `PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a
-   190:start 220:start 250:start"`.
+1. Pivot to the stable post-640 loop: make one phase-scoped producer census
+   covering every `osViSetMode` caller and the state/input predecessor that
+   can activate it, with an independent host selector positive control. The
+   discriminator is whether any generated producer/predecessor fires after
+   the final 640 commit while slot dispatch and host input continue. A
+   producer-positive result selects an unobserved state gate; a producer-zero
+   result selects the active-loop path and moves the investigation to the
+   state writer. Do not repeat the callsite-owner capture until VI-1024 and an
+   E9 control are both present.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
