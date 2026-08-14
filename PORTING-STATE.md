@@ -58793,3 +58793,46 @@ No guard, mitigation, generated-code edit, or game behavior changed.
 
 ORIGIN: complete generated helper/caller, access-range, loop, unresolved-edge,
 and companion-symbol inventory; no guest value mutation or mitigation.
+## Session 927 (2026-08-13) — runVoiceLatticeFilter is structurally classified
+
+Performed the planned source-only M3 idiom inventory of
+`runVoiceLatticeFilter` (`0x8009D980`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated the complete generated
+body, every direct caller, caller register setup, memory access ranges,
+termination, and the companion `main_overlay.txt` mapping. No build, game run,
+or soak was run.
+
+The helper has no direct or indirect helper call. Each iteration reads one
+halfword from `$t1`, advances `$t1` by two, computes the lattice update from
+the eight coefficient registers `$s0..$s7` and four packed state/input
+registers `$t6..$t9`, then writes one halfword through `$t0` and advances `$t0`
+by two. `renderVoiceAudioBlock` loads the eight coefficients from
+`$a0+0x140..$0x15C`, a fixed eight-word record range.
+
+Exactly four generated callsites occur in `renderVoiceAudioBlock`. They pass
+matching source/output offsets `(0, 0)`, `(0x1A, 0x1A)`, `(0x36, 0x36)`, and
+`(0x50, 0x50)`, with loop counts `0xC`, `0xD`, `0xC`, and `0x77`. Since the
+MIPS loop tests `t3 > 0` before decrementing, these produce 13, 14, 13, and
+120 iterations. Both halfword walks are therefore fixed and bounded in every
+caller. No caller-shape split or local termination hazard was found.
+
+### What it showed
+
+H-lattice-shape-mismatch and the local-control portion of
+H-lattice-unclassified are ruled out. H-lattice-classified is supported for
+caller shape, fixed coefficient access, local access ranges, and termination.
+This is a single-source static classification: the dynamic `$t0`/`$t1`
+pointer origins, coefficient values, and packed state values are not
+independently proven legitimate.
+
+### What it rules out
+
+It rules out an unbounded lattice loop, an omitted helper edge in this helper,
+and an incompatible generated caller as the explanation for a defect in this
+idiom. It does not rule out an invalid writer or value feeding the voice
+record, source/output pointers, coefficients, or packed state. No guard,
+mitigation, generated-code edit, or game behavior changed.
+
+ORIGIN: complete generated helper/caller, register setup, access-range,
+termination, and companion-symbol inventory; no guest value mutation or
+mitigation.

@@ -310,6 +310,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s923 | MusyX per-slot queue inventory: `initMusyXVoiceSlot` creates `slot+0x11AC` with buffer `slot+0x11C4` and capacity 1; `serviceStreamingVoice` has the only generated receive site, gated by `slot+0x11DC`, using nonblocking `osRecvMesg(queue, NULL, 0)` and checking only the return. The two init callers share the slot-base contract and the receive path has no message dereference or queue retry loop; dynamic queue/state writer legitimacy remains unproven, so no guard or behavior change. |
 | s924 | `decodeAndFillVoiceBlock` inventory: one direct caller passes the voice slot and `+0x198` block-table entry; the helper masks the bitstream word index to a `0..0xFFC` offset from `slot+0x1A0`, decodes into a fixed stack block, and runs four filter/pan iterations before updating `+0x11C8`. Local control and caller shape are coherent; dynamic pointer/table/value legitimacy remains unproven; no mitigation. |
 | s926 | `applyVoiceDelayFilter` inventory: three direct callers share one voice-base/delay/channel-table/stack-output shape; its 120-halfword shift and 40-halfword mix loops terminate, but the voice base, return-address-derived table read, and output/input ranges lack local bounds or legitimacy proof. Caller-shape mismatch is ruled out; full classification is not. No mitigation. |
+| s927 | `runVoiceLatticeFilter` inventory: four callers share matching source/output offsets and counts (13, 14, 13, 120 iterations); the helper has two sequential halfword walks, no helper edge, and fixed termination. Its eight coefficient loads from the caller's voice record are fixed, and all local walks are bounded by the supplied counts. Dynamic pointer/value legitimacy remains unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
 single-source result is explicitly labelled in the archived session entry;
@@ -402,32 +403,74 @@ shape, not a local termination bound. No runtime conclusion follows.
 4. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
+## s927 — `runVoiceLatticeFilter` is structurally classified
+
+Performed the planned source-only M3 idiom inventory of
+`runVoiceLatticeFilter` (`0x8009D980`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated the complete generated
+body, every direct caller, caller register setup, memory access ranges,
+termination, and the companion `main_overlay.txt` mapping. No build, game run,
+or soak was run.
+
+The helper has no direct or indirect helper call. Each iteration reads one
+halfword from `$t1`, advances `$t1` by two, computes the lattice update from
+the eight coefficient registers `$s0..$s7` and four packed state/input
+registers `$t6..$t9`, then writes one halfword through `$t0` and advances `$t0`
+by two. The eight coefficients are loaded by `renderVoiceAudioBlock` from
+`$a0+0x140..$0x15C`, a fixed eight-word record range.
+
+Exactly four generated callsites occur in `renderVoiceAudioBlock`. They pass
+matching source/output offsets `(0, 0)`, `(0x1A, 0x1A)`, `(0x36, 0x36)`, and
+`(0x50, 0x50)`, with loop counts `0xC`, `0xD`, `0xC`, and `0x77`. Because the
+MIPS loop tests `t3 > 0` before decrementing, these produce 13, 14, 13, and
+120 iterations respectively. Thus both halfword walks have fixed, bounded
+ranges in every caller; no caller-shape split or local termination hazard was
+found. The caller and companion symbol artifacts agree on identity and
+structure.
+
+### Result
+
+H-lattice-shape-mismatch and the local-control portion of
+H-lattice-unclassified are ruled out. H-lattice-classified is supported for
+caller shape, fixed coefficient access, local access ranges, and termination.
+This remains a single-source static classification: the dynamic `$t0`/`$t1`
+pointer origins, the eight coefficient values, and the packed state values
+are not independently proven legitimate. No guard, mitigation, generated
+code edit, or game behavior changed.
+
+ORIGIN: complete generated helper/caller, register setup, access-range,
+termination, and companion-symbol inventory; no guest value mutation or
+mitigation.
+
 ## Next work unit
 
-HYPOTHESIS-ID: m3-run-voice-lattice-class
+HYPOTHESIS-ID: m3-render-voice-audio-class
 
-Audit the complete `runVoiceLatticeFilter` idiom at `0x8009D980`, including
-all generated callers, record/table bounds, helper calls, and termination.
+Audit the complete `renderVoiceAudioBlock` idiom at `0x8009DB44`, including all
+generated callers, its voice-record coefficient/state ranges, indirect-call
+edges, nested audio helper contracts, and termination.
 Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-lattice-unclassified: a caller or helper uses unchecked lattice,
-  coefficient, state, or output pointers/lengths.
-- H-lattice-classified: all callers share one fixed lattice/filter shape and
-  every local walk is bounded, with only dynamic value legitimacy open.
-- H-lattice-shape-mismatch: one caller uses a distinct lattice/filter
-  contract; record the exact split and stop.
+- H-render-unclassified: a caller or nested helper uses an unchecked voice
+  record, stack/output pointer, indirect target, or unbounded control path.
+- H-render-classified: all callers share one fixed render contract, every
+  nested helper edge is structurally bounded, and only dynamic value
+  legitimacy remains open.
+- H-render-shape-mismatch: one caller uses a distinct render contract; record
+  the exact split and stop.
 
 Discriminating measurement: enumerate every memory access, indirect/direct
 helper edge, caller argument setup, and loop/termination condition in the
-generated body; cross-check `main_overlay.txt` and companion symbols. Any
-omitted access, unsafe bound, unbounded control, or shape split rejects full
-classification.
+generated body and each nested edge; cross-check `main_overlay.txt` and
+companion symbols. Any omitted access, unsafe bound, unbounded control, or
+shape split rejects full classification.
 
-Exact commands: inspect `funcs_27.c` around `0x8009D980`, `rg` every
-`runVoiceLatticeFilter` reference and helper call, then inspect the matching
-`main_overlay.txt` entry. No game build or soak is planned.
+Exact commands: inspect `funcs_27.c` around `0x8009DB44`, `rg` every
+`renderVoiceAudioBlock` reference and nested helper call, then inspect the
+matching `main_overlay.txt` entry and each direct nested helper body. No game
+build or soak is planned.
 
 ## Closed and parked
 
