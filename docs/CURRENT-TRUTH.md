@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s985 (2026-08-13). The active blocker is authoritative
+Reviewed through s986 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -435,6 +435,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s983 | Oracle work blocked: `rs64-oracle` fell outside this session's directory sandbox (verified). Substituted a static writer audit closing `runInMissionFrame`'s callback-table edge: `0x8010B350` is `data` per `roguesquadron.yaml`, and no generated-source store targets it anywhere. |
 | s984 | Oracle directory was absent, so the iteration pivoted once to M4. Static RT64/F5 decode audit refuted a shade lane/order defect; prior same-combiner A/B evidence independently keeps the cause upstream in F5 shade-state or game lighting. No mitigation or build/run. |
 | s985 | The isolated ungated-LLE F5 census passed fetch/state controls. Phase 6 had 355 `0x02 VTXCOLOR` and 1,520 `0x03 MOVEMEM` updates, including nonzero color-source addresses such as `0x80737EA0`, while the same phase produced exact `ZERO` shade words; phase 4 had the same update family but good/negative shades. Together with s984's independent decoder audit, this selects H-game-light-state over H-f5-stream and H-decode-layout. The exact game writer/value lifecycle remains unclassified; no mitigation followed. Default HLE and gated-LLE captures had zero hook controls and were invalid configuration arms, not null evidence. |
+| s986 | Added a phase-scoped RDRAM payload census and reran the isolated ungated-LLE probe. Positive controls fired: phase 4 had 579/36,495 and phase 6 had 355/1,525 `VTXCOLOR`/`MOVEMEM` updates. Phase-6 VTXCOLOR sources contained nonzero words (`0x737EA0`: `313131FF...`; later sources included `A6A6A6FF...` and `5F5F74FF...`) while the independent shade decoder emitted exact ZERO samples. This selects H-downstream-writer/state-conversion over H-game-state-zero and H-payload-address; the actual writer remains unclassified. The retail oracle whole-RDRAM control passed 7,651,765 and 12,581,730 writes in two arms, but all target watches stayed phase-unevaluable at VI-320. No mitigation followed. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -464,35 +465,39 @@ entries and do not authorize mitigations.
    s982 fault at `ldr w8,[x0]`. Do not edit the recomp runtime or infer a
    retail phase result. No mitigation is authorized until the writer/owner of
    the invalid callback state pointer is identified.
-4. M4 correctness is the active fallback: outdoor `baseFixed=-32768` zero
-   shade is selected as a game-light/state origin after s985. The next probe
-   must sample the RDRAM payload named by phase-6 `0x02 VTXCOLOR` (and the
-   relevant `0x03 MOVEMEM` source) beside good phase-4 data, so the actual
-   writer/value legitimacy can be named. Attribution S=0 triangles and I4
+4. M4 correctness is the active fallback: phase-6 VTXCOLOR payloads are
+   demonstrably nonzero while decoded shade is exact ZERO, selecting a
+   downstream writer/state-conversion boundary after s986. The next probe
+   must identify the writer for the sampled payload range using a bounded
+   source/runtime write-origin census; attribution S=0 triangles and I4
    `sample=64x128` follow only after that origin is classified. The
    `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an ORIGIN
    conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s986)
+## Next work unit (s987)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
-Run one phase-gated, same-run recomp probe in isolated ungated LLE mode. Extend
-the existing positive-controlled F5 census to sample the RDRAM bytes at each
-phase-6 `0x02 VTXCOLOR` source address and the relevant `0x03 MOVEMEM` source,
-then pair those values with scoped `ROGUESQ_LOG_SHADE_RAW` records. Keep
-`ROGUESQ_FIX_ZERO_SHADE` unchanged. Nonzero payload with zero shade moves the
-writer boundary downstream of VTXCOLOR; zero payload identifies the game state
-writer as the origin. Positive fetch and state controls must fire in the same
-capture.
+Run one bounded writer inventory for the phase-6 VTXCOLOR payload range now
+known from s986 (`0x732A10..0x73E3B0`, with the phase-4 range
+`0x726200..0x726C50` as control). Enumerate generated stores and their base/
+index forms, classify each candidate by owning object and phase reachability,
+and add no mitigation. Competing hypotheses are H-game-writer (a game-side
+store owns the nonzero payload), H-dma-copy (a DMA/copy path owns it), and
+H-renderer-state (the payload is not subsequently written by game state and
+the zero is introduced after the F5 fetch). The discriminating measurement is
+an exhaustive writer set for the sampled addresses plus one positive source
+control: a reachable game-side writer selects H-game-writer, a reachable DMA/
+copy writer selects H-dma-copy, and no writer in either region leaves only the
+downstream renderer boundary.
 
-Exact command shape:
+Exact commands:
 
-`cmake --build build --config Debug --target RogueSquadron64Recomp`
+`rg -n -C 3 '0x(732A10|732F38|733460|733988|7340C0|7344E0|734A08|737EA0|7384D0|7388F0|739238|739B80|739FA0|73A4C8|73A9F0|73B020|73B758|73BD88|73C4C0|73C9E8|73CF10|73D540|73DC78|73E3B0)|0x726200|0x726728|0x726C50' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`
 
-`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 ROGUESQ_FIX_ZERO_SHADE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='8:start' zsh tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/runs/s986_f5_state_payload 60 0.5`
+`rg -n -C 2 'MEM_[BHDW]|MEM_B|MEM_H|MEM_W|MEM_D' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | rg '732A|732F|7334|7339|7340|7344|734A|737E|7384|7388|7392|739B|739F|73A4|73A9|73B0|73B7|73BD|73C4|73C9|73CF|73D5|73DC|73E3|7262|7267|726C'`
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

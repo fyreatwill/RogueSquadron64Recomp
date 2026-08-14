@@ -60535,3 +60535,40 @@ ownership at the VTXCOLOR/MOVEMEM source, not another decoder A/B.
 
 ORIGIN: phase-6 F5 state hook records the command fetch and source address; it
 does not yet name the RDRAM writer. No mitigation was added.
+
+## Session 986 (2026-08-13) — F5 payload census moves zero-shade boundary downstream
+
+### Work unit
+
+NEXT.md recorded H-downstream-writer, H-game-state-zero, and H-payload-address.
+The discriminating measurement was a phase-scoped RDRAM byte sample at each
+`0x02 VTXCOLOR` source and the relevant `0x03 MOVEMEM` inline source, paired
+with the existing raw shade decoder in one isolated ungated-LLE run.
+
+### Result
+
+The build completed and the positive-controlled rerun reached VI 1024. Phase
+4 recorded 579 VTXCOLOR and 36,495 MOVEMEM updates; phase 6 recorded 355 and
+1,525. Phase-6 VTXCOLOR payloads were nonzero at the sampled source addresses,
+including `0x737EA0 = 313131FF313131FF7E7E7EFF656565FF`, with later samples such
+as `A6A6A6FF...` and `5F5F74FF...`. The same run's independent shade decoder
+emitted exact ZERO samples with
+`baseFixed=(-32768,-32768,-32768,32768)`. Phase-4 payload samples were also
+nonzero while its shade stream included good and negative samples.
+
+This selects H-downstream-writer/state-conversion over H-game-state-zero and
+H-payload-address. It does not identify the writer or establish legitimacy,
+so no mitigation was landed. The external oracle's whole-RDRAM positive
+controls passed (7,651,765 and 12,581,730 writes), but its target watches
+remained phase-unevaluable at VI-320 in both attempted schedules.
+
+### What it rules out
+
+It rules out the sampled VTXCOLOR payload already being zero or outside the
+expected RDRAM region as the explanation for the zero shade. It does not rule
+out a later game-side or renderer-state writer, and it does not make the
+phase-unevaluable oracle a negative result.
+
+ORIGIN: the new `[f5-state-payload]` records read the VTXCOLOR source bytes;
+the independent `[shade-raw ... ZERO]` records read the decoded shade state.
+Neither identifies the writer, and no mitigation was added.

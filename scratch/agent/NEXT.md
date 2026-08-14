@@ -1,33 +1,31 @@
-# NEXT work unit (s986)
+# NEXT work unit (s987)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
 ## One work unit
 
-Extend the existing positive-controlled F5 census to sample the RDRAM bytes at
-each phase-6 `0x02 VTXCOLOR` source address and the relevant `0x03 MOVEMEM`
-source, then pair those values with scoped `ROGUESQ_LOG_SHADE_RAW` records in
-isolated ungated LLE mode. Keep `ROGUESQ_FIX_ZERO_SHADE` unchanged.
+Run one bounded writer inventory for the phase-6 VTXCOLOR payload range
+`0x732A10..0x73E3B0`, with phase-4 control range `0x726200..0x726C50`.
+Enumerate generated stores and base/index forms, classify each candidate by
+owning object and reachability, and land no mitigation.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-downstream-writer: nonzero VTXCOLOR payload reaches the F5 path, but a later writer/state conversion produces zero shade.
-- H-game-state-zero: VTXCOLOR/MOVEMEM payload bytes are already zero or sentinel-valued in the zero-shade phase, identifying the game state writer as origin.
-- H-payload-address: the command source addresses point outside the expected RDRAM/color data region, so the apparent nonzero update stream is an address/ownership mismatch.
+- H-game-writer: a game-side store owns the nonzero VTXCOLOR payload.
+- H-dma-copy: a DMA or copy path owns the payload.
+- H-renderer-state: neither sampled range has a relevant writer, so zero is
+  introduced after the F5 fetch in renderer state conversion.
 
-Discriminating measurement: sample the payload bytes named by each positive
-controlled update and compare phase-6 zero-shade values against phase-4
-good-shade values. Nonzero payload with zero shade selects H-downstream-writer;
-zero/sentinel payload selects H-game-state-zero; out-of-region or unstable
-addresses select H-payload-address. Missing fetch/state controls invalidate the
-run.
+Discriminating measurement: an exhaustive writer set for the sampled addresses,
+plus one positive source control. A reachable game-side writer selects
+H-game-writer; a reachable DMA/copy writer selects H-dma-copy; no writer in
+either region leaves H-renderer-state as the remaining boundary.
 
-Exact commands:
+## Exact commands
 
-`cmake --build build --config Debug --target RogueSquadron64Recomp`
+`rg -n -C 3 '0x(732A10|732F38|733460|733988|7340C0|7344E0|734A08|737EA0|7384D0|7388F0|739238|739B80|739FA0|73A4C8|73A9F0|73B020|73B758|73BD88|73C4C0|73C9E8|73CF10|73D540|73DC78|73E3B0)|0x726200|0x726728|0x726C50' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`
 
-`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 ROGUESQ_FIX_ZERO_SHADE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='8:start' zsh tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/runs/s986_f5_state_payload 60 0.5`
+`rg -n -C 2 'MEM_[BHDW]|MEM_B|MEM_H|MEM_W|MEM_D' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | rg '732A|732F|7334|7339|7340|7344|734A|737E|7384|7388|7392|739B|739F|73A4|73A9|73B0|73B7|73BD|73C4|73C9|73CF|73D5|73DC|73E3|7262|7267|726C'`
 
-Expected result: the run reaches the 512-width positive control and emits
-`[f5-state-control]` records for both opcodes. Fold the phase-tagged state and
-shade classes into the ledger; do not land a mitigation from this probe.
+Do not infer a writer from an address-only string hit. Classify the base,
+stride, index, and owner, and state whether it can reach the phase-6 sources.

@@ -521,6 +521,17 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
                 "w0=0x%08X w1=0x%08X idx=0x%02X\n",
                 phase, opcode, count, r17 & 0x7FFFFFu, w0, w1,
                 (w0 >> 16) & 0xFFu);
+        const uint32_t source = opcode == 0x02 ? (w1 & 0x7FFFFFu) :
+            ((r17 + 8u) & 0x7FFFFFu);
+        fprintf(stderr, "[f5-state-payload] phase=%u op=0x%02X source=0x%06X bytes=",
+                phase, opcode, source);
+        if (g_rdram_for_submit != nullptr && source + 16u <= 0x800000u) {
+            for (uint32_t i = 0; i < 16; ++i)
+                fprintf(stderr, "%02X", (unsigned)g_rdram_for_submit[(source + i) ^ 3]);
+        } else {
+            fprintf(stderr, "OUT_OF_RANGE");
+        }
+        fputc('\n', stderr);
         fflush(stderr);
     }
 }
