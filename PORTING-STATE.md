@@ -59238,3 +59238,36 @@ not independent runtime writer/value evidence.
 ORIGIN: complete generated lifecycle writer/reader, count-range, stride,
 sentinel, caller, node-field, helper-edge, and companion-symbol inventory; no
 guest value mutation or mitigation.
+
+## Session 941 (2026-08-13) — sorted handle node index writers remain unclassified
+
+Performed the planned source-only M3 audit of the sorted handle-list node
+`+0xC` consumed by `stopVoicesByHandle` (`0x8008DA98`). The generated source
+inventory found four insertion/reuse writers at `0x80086524`, `0x80086E40`,
+`0x8008738C`, and `0x800877E0`; each writes node `+0xC` from the owning voice
+record's `+0x64`. The same paths set node links at `+0x0/+0x4`, store the
+sorted handle at `+0x8`, attach the node to voice `+0x18`, and use the free-list
+head/root at `0x8013AE00`. The unlink path at `0x80086380` restores the next
+voice index into the predecessor node's `+0xC`; empty-list paths use null and
+the lookup/stop scans use `-1` as their no-result sentinel.
+
+The companion symbol file agrees that `D_8013D880` is a 32-entry `0x17C`
+voice-record array, that `allocVoiceHandleNode` and
+`resolveVoiceSlotByHandle` are the corresponding sorted-handle helpers, and
+that `stopVoicesByHandle` is the consumer. The complete generated `+0x64`
+reference set also contains reset/release writes of `-1`, note-on writes of a
+constructed handle, and unrelated audio-state writers in neighboring
+functions. Their register provenance does not establish one uniformly bounded
+`0..31` slot-index domain for every value that can reach a node copy, and
+register-indirect callers/writers are not excluded by the source inventory.
+
+Therefore H-stop-voices-by-handle-index-valid is not established;
+H-stop-voices-by-handle-index-mismatch is not demonstrated; the selected
+result remains H-stop-voices-by-handle-index-unclassified. This is a
+single-source static result from generated code plus companion symbol
+metadata. No build, game run, soak, generated-source edit, guard, mitigation,
+or behavior change was made.
+
+ORIGIN: exhaustive generated node `+0xC` writer/reader, list-link, sentinel,
+voice `+0x64` reference, allocator-helper, and companion-symbol inventory; no
+guest value mutation or mitigation.

@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s940 (2026-08-13). The active blocker is authoritative
+Reviewed through s941 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -49,6 +49,12 @@ closed; M3 work is limited to systematic idiom-class audits.
   sentinel and note-on constructs the handle. The four
   `stopVoicesByHandle` callers agree on linked-list node `+0x8` handles, but
   node `+0xC` index provenance and runtime value legitimacy remain unproven.
+- s941 found four generated sorted-list insertion/reuse writers for node
+  `+0xC`; each copies the owning voice record's `+0x64`. Unlink/reuse preserves
+  the list contract, but the complete `+0x64` writer set and possible indirect
+  paths do not prove every copied value is an in-range `0..31` slot index.
+  H-stop-voices-by-handle-index-unclassified remains selected; no mismatch or
+  mitigation conclusion followed.
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. M4 correctness remains parked behind the active blocker.
 
@@ -68,6 +74,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s938 | `stopVoiceByKey` has one direct streamed-voice caller and coherent local index arithmetic; base/count and active-list legitimacy remain open. |
 | s939 | `stopVoicesByHandle` has four direct callers in two song-list walks; handle lookup and termination are coherent, but the node `+0xC` to 8-bit voice-index contract and voice-table lifecycle remain unproven. |
 | s940 | `D_8013D880`/`0x80141AD0` inventory found compatible 32-slot bounds and `-1` handle clearing across reset/release/stop paths, but did not prove node `+0xC` index provenance or runtime value legitimacy. |
+| s941 | Four node `+0xC` insertion/reuse writers all copy voice `+0x64`; list links and sentinels are coherent, but complete `+0x64` provenance and indirect paths remain unclassified. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -75,10 +82,10 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign with a bounded audit of the sorted handle
-   node `+0xC` index writer/initializer contract consumed by
-   `stopVoicesByHandle` (`0x8008DA98`), including every allocator, unlink,
-   reuse, and sentinel path that can populate or invalidate that field.
+1. Continue the active M3 campaign with a bounded audit of every writer of
+   voice-record `+0x64` and the allocator/index return paths feeding those
+   writers, separating handle values, slot indices, and unrelated structures.
+   Require direct register provenance or classify the path as unproven.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
@@ -90,31 +97,30 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
 
-Audit the voice-record base/count lifecycle consumed by `stopVoicesByHandle`
-at `0x8008DA98`: enumerate every generated writer/initializer of the record
-base at `0x8013D880`, the voice count at `0x80141AD0`, record handle fields at
-`base + index*0x17C + 0x64`, and the `-1` sentinel used by the scan. Include
-all callers/helpers that establish or invalidate those values and the
-companion symbol/decomp evidence. Source-only; do not add a guard, change
-game behavior, build, or run a soak.
+Audit every generated writer of voice-record `+0x64` and the allocator/index
+return paths feeding the sorted handle-list node `+0xC` consumed by
+`stopVoicesByHandle` at `0x8008DA98`. Separate handle values, slot indices,
+and unrelated structures; require direct register provenance or classify the
+path as unproven. Cross-check companion symbol/decomp evidence. Source-only;
+do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-stop-voices-by-handle-lifecycle-valid: initialization and all writers prove
-  a bounded count, valid base, in-range node index, and a reachable `-1`
-  sentinel for every scan.
-- H-stop-voices-by-handle-lifecycle-unclassified: the local arithmetic is
-  coherent, but base/count/index or sentinel legitimacy is not proven.
-- H-stop-voices-by-handle-lifecycle-mismatch: different writers or helpers use
-  incompatible bases, strides, counts, handle offsets, or sentinel meanings.
+- H-stop-voices-by-handle-index-valid: every `+0x64` value copied into node
+  `+0xC` is a bounded 32-slot index, with compatible allocator and reuse paths.
+- H-stop-voices-by-handle-index-unclassified: one or more `+0x64` writers,
+  indirect paths, or value domains remain unproven.
+- H-stop-voices-by-handle-index-mismatch: a writer or caller uses an
+  incompatible handle/state value, index domain, or node layout.
 
-Discriminating measurement: an exhaustive generated-source reference inventory
-for the four lifecycle addresses/fields, with each writer's phase and range,
-plus decomp-symbol cross-check. Any writer that can produce an out-of-range
-index/base, any incompatible field contract, or any unproven sentinel path
-selects unclassified/mismatch; otherwise the lifecycle is classified.
+Discriminating measurement: an exhaustive generated-source inventory of all
+`+0x64` writers/readers in the voice-record functions, their register
+provenance and caller contexts, every node `+0xC` copy, allocator return, and
+list termination, plus a decomp-symbol cross-check. A proven bounded index at
+every copy selects valid; a non-index value selects mismatch; an unresolved
+writer or indirect edge selects unclassified.
 
-Exact command: `rg -n -C 8 "8013D880|80141AD0|0x64|0x17C|0x2780|0x271C|0x2770|0x276C|0x2768|0x2758" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each writer and lifecycle edge. No game build or soak is planned.
+Exact command: `rg -n -C 8 "0x64\\(|0X64|80086450|80086534|80086FC4|8008DA98|8008DA4C|8013D880|80141AD0|0x17C|0x2780|0x5100|0x50FC" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each writer and lifecycle edge. No game build or soak is planned.
 
 ## Closed and parked
 
