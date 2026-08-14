@@ -61855,3 +61855,24 @@ Start timing as the explanation for the observed width-320 attract path, but
 does not say anything about the 512 hangar phase because neither run reached
 it. The freelist watch was not armed. Next work extends both arms to 120
 seconds, where the oracle documentation predicts a late attract transition.
+
+## Session 1042 (2026-08-14) — retail duration did not leave width 320
+
+Ran the planned retail-oracle duration discriminator with both arms
+concurrently for 120 seconds: eleven 150 ms Start pulses beginning at
+1,6,...,51 seconds versus the documented 6,11,...,56-second schedule. Both
+runs completed with rc=0 and 7,199 VI. The whole-RDRAM positive control
+reached 10,000 callbacks in each arm, and all 11 Start pad edges produced the
+verified `0x10000000` Start word in each log. Independent VI polling and the
+VI callback trace stayed at width 320/origin `0x006dd280` after the initial
+boot records for the full horizon; neither arm reached a 512 phase.
+
+This selects the negation of `H-retail-duration-limited`: the 120-second
+horizon does not explain the tested attract path, so the remaining tested
+behavior is consistent with `H-retail-path-independent`. It rules out duration
+and the two first-input schedules as sufficient causes of hangar entry, but
+says nothing about the hangar phase or its freelist writer. The freelist watch
+was not armed.
+
+ORIGIN: independent retail-oracle whole-RDRAM callback, PIF pad, and VI
+callback/poll controls; no guest value or recomp runtime behavior was changed.
