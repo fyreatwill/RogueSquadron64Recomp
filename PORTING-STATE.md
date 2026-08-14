@@ -62729,6 +62729,28 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1090 (2026-08-14) — narrowed the retail loop-exit boundary
+
+The first planned command failed before emulation because the retail-oracle
+frontend allowed only 16 watches, while the predeclared discriminator needed
+17. Increased the bounded frontend capacity to 24, rebuilt with
+`tools/oracle/build.sh`, and reran the unchanged eleven-Start schedule with
+whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, four milestones,
+and eight post-loop bracket PCs. The whole-RDRAM control reached 10,002
+callbacks and was removed, all eleven Start presses were observed in PIF
+reads, and VI reached 7,199 at width 320/origin `0x006dd280`; the target block
+was silent. Hits were `0x8006D900=1`, `0x8006D9B0=1`, every post-loop bracket
+PC from `0x8006D9C0` through `0x8006DA70=0`, `0x8006DA7C=0`,
+`0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and `0x8003E07C=0`.
+This selects single-source `H-loop-exit-path`: the retail callee reaches the
+loop-boundary compare but does not execute `0x8006D9C0`. It rules out a
+post-loop save/load call as the first silent boundary, but does not yet locate
+the branch or delay-slot instruction. No mitigation or game-data change was
+made.
+
+ORIGIN: retail ROM debugger execution callbacks and independent whole-RDRAM/PIF/VI
+positive controls; the only code change was oracle watch-capacity support.
+
 ## Session 1089 (2026-08-14) — located the retail save-tail boundary
 
 Ran the established eleven-Start retail-oracle capture with the whole-RDRAM

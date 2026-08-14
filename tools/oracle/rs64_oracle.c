@@ -43,7 +43,7 @@
 #define FRONTEND_API_VERSION 0x020106
 #endif
 
-#define MAX_WATCHES 16
+#define MAX_WATCHES 24
 
 static void *g_core;
 static double g_t0;
