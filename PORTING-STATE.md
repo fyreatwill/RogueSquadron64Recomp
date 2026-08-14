@@ -61442,3 +61442,23 @@ dispatch. It rules out `H-ovl20-dispatch-generated` and the s1020
 interpretation that the absence of an ovl20 symbol means the active path is
 missing. The shared probe and composite controls passed, so no game capture
 was needed in this artifact work unit. No mitigation or code change was made.
+
+## Session 1022 (2026-08-14) — captured M4 accumulator rows with live controls
+
+Ran the documented 1024-gated accumulator capture once with the probe gate
+omitted, then immediately reran it with `ROGUESQ_LOG_M4_ACCUM=1`. The first
+run reached VI-1024 at 78.5s and delivered its phase-relative keys, but had
+zero M4/control rows; this was a recipe configuration failure because the
+bridge helper is gated by that variable and `ROGUESQ_LOG_ALL` does not enable
+it. The corrected run reached VI-1024 at 78.7s, logged 19 independent stage-1
+VMADH-control rows and 77 M4 stage-10/11/12 rows, then crashed at 183.4s in
+the recurring `slotDispatcherIter+8592` SIGBUS after 51 frames.
+
+The corrected capture is phase- and probe-control valid. Its sampled M4
+tuples contain ordinary endpoint values and no `0x8000` shade sentinel before
+the crash, so this run does not classify saturation, ordinary `v4`/`v0`
+arithmetic, or VGE-table selection as the origin of the previously observed
+zero-shade sentinel. It does rule out the prior “probe not linked/unreached”
+interpretation and closes the missing-environment-variable failure. The
+recurring crash remains a capture-duration limit, not an M4 explanation. No
+mitigation or code change was made.

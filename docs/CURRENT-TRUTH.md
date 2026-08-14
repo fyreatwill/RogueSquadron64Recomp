@@ -6,13 +6,14 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1021 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1022 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
-numeric source of the shade record. The landed M4 accumulator probe has not
-yet fired on the executing code path in four attempts — its positive control
-never armed. s1017 identified that the 512-gated recipe starts its
+numeric source of the shade record. The corrected s1022 capture proved the
+probe path live with 19 independent VMADH controls and 77 M4 stage rows, but
+the sampled rows contained no 0x8000 endpoint before the recurring crash. s1017
+identified that the 512-gated recipe starts its
 phase-relative key worker only after 512, so it cannot drive the transition that
 may be needed to reach 512. s1018 corrected the gate to 1024 and delivered the
 scheduled keys, but the run stayed at 1024 and emitted neither the M4 target nor
@@ -26,8 +27,10 @@ remains a link-path result, not an M4 numeric result. s1021 completed the
 source-to-dispatch audit: standalone ovl20 is a fixup-6q splice input, and its
 region is already present in the linked composite. The executable contains 68
 ovl20 route markers and the M4 helper, but correctly has no standalone ovl20
-object or symbol. The missing-standalone-link interpretation is refuted; no
-runtime capture was launched.
+object or symbol. The missing-standalone-link interpretation is refuted. s1022
+then reached VI-1024 with the independent VMADH control and M4 stages live;
+the sampled M4 tuples had no 0x8000 endpoint before the recurring
+slotDispatcherIter+8592 crash, so the three numeric hypotheses remain open.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -242,13 +245,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1019 | Artifact audit found ovl20 probe source newer than the build; CMake compiles only base/boot/B ucode, and the linked executable has neither `rs64_m4_accum_probe` nor `factor5_ucode_ovl20`. Selected `H-stale-build-link`; no M4 hypothesis classified. |
 | s1020 | Reconfigure/build linked `rs64_m4_accum_probe` in the executable and regenerated the composite source, but CMake still omitted `factor5_ucode_ovl20_recompiled.c`; no executable ovl20 marker exists. Capture withheld; M4 remains unevaluated. |
 | s1021 | Source/build-graph audit showed standalone ovl20 is a fixup-6q splice input, not a runtime TU: the linked composite contains 68 ovl20 route markers and `_rs64_m4_accum_probe`, while no standalone ovl20 object/symbol is expected. The missing-link interpretation is refuted; M4 remains unevaluated. |
+| s1022 | The first capture omitted `ROGUESQ_LOG_M4_ACCUM` and was invalid despite VI-1024. The corrected capture reached VI-1024, fired 19 VMADH controls and 77 M4 stage rows, then hit `slotDispatcherIter+8592`; sampled endpoints lacked the 0x8000 sentinel, so no numeric hypothesis was selected. |
 
 ## Ranked backlog
 
-1. Run the corrected 1024-gated M4 capture with full passive instrumentation
-   now that the composite source, linked probe helper, and ovl20 route markers
-   all pass. Compare VI-1024, VMADH-control, and M4-row counts in one capture;
-   do not classify M4 from a phase/control failure.
+1. Perform one bounded offline analysis of the valid s1022 stage-10/11/12
+   tuples: pair each M4 invocation and test whether stage-12 `v6` is copied
+   from stage-11 `v6` or selected from `v29`; report exact row counts and
+   whether any endpoint can explain 0x8000. Do not infer the old zero-shade
+   sentinel from rows that never contain it.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak

@@ -1,10 +1,13 @@
-# NEXT work unit (s1021)
+# NEXT work unit (s1022)
 
 HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-Run one corrected 1024-gated M4 accumulator capture now that the active
-composite controls pass. Launch from `build/`, capture to a non-dot final path,
-and SIGKILL the process after the fixed window.
+Perform one bounded offline analysis of the valid corrected s1022 capture
+`scratch/agent/soak_results/s790_postsec2_reachability_20260814-024858/run.log`.
+Pair stage 10, 11, and 12 rows by invocation order and count, for each lane,
+whether stage-12 `v6` equals stage-11 `v6` or stage-11 `v29`. Report any
+0x8000 endpoint and whether it is present before VMADH, created by VMADH, or
+selected by VGE. Do not launch another game run in this work unit.
 
 Competing hypotheses and discriminator:
 
@@ -19,10 +22,10 @@ saturation select saturation; a matching v29 lane selects threshold selection.
 A zero M4/control result is invalid unless the same run visibly reaches
 VI-1024 and logs the positive controls.
 
-Exact command:
+Exact command shape (read-only; use an awk/Python one-shot, no file writes):
 
-    env ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_VI=1 ROGUESQ_LOG_VI_ARGS=1 ROGUESQ_LOG_DPC=1 ROGUESQ_LOG_RUNNER=1 ROGUESQ_LOG_SLOT_SP_GUARD=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start' zsh scratch/agent/s790_postsec2_reachability.sh > scratch/agent/m4_accum_s1022.log 2>&1
+    rg '\[m4-accum\]' scratch/agent/soak_results/s790_postsec2_reachability_20260814-024858/run.log | ...
 
-Required controls: VI 1024, positive VMADH-control rows, and M4 rows. If any
-control is absent, classify the capture as phase/control-invalid and do not
-classify the three M4 hypotheses.
+Required output: separate stage-1 controls from stage-10/11/12 M4 rows and
+give a discriminator result or explicitly state why tuple pairing is
+insufficient.
