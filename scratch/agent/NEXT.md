@@ -1,42 +1,33 @@
-# NEXT work unit (s1078)
+# NEXT work unit (s1079)
 
-HYPOTHESIS-ID: oracle-512-consumer-observation
+HYPOTHESIS-ID: oracle-512-consumer-gate-audit
 
-Add or expose exactly one independent retail-oracle observation on the
-controller consumer/alias path, then use it in the same eleven-Start schedule.
-Prefer a physical read watch on the consumer's controller-state range; if the
-consumer address cannot be established, implement a guest execution-breakpoint
-trace at the relevant menu/controller dispatch entry. Do not arm a freelist
-watch and do not change the input schedule.
+Run exactly one bounded static audit of the input-consumer boundary. Enumerate
+all generated callers and raw dispatch references for
+`getControllerNewButtonsPressed` (`0x80079F50`), then enumerate generated
+callers/raw entries for the menu/controller handlers around `0x800B47D0` and
+classify the first state/asset predicate that can prevent those reads before
+the width-320 attract loop. Do not run a new oracle arm, change the input
+schedule, or arm a freelist watch.
 
 Competing hypotheses and discriminator:
 
-* `H-consumer-read`: the retail game reads the injected controller state, but
-  the expected `0x13A960..0x13A970` writer is not the active alias; a read/PC
-  hit identifies the real consumer path.
-* `H-consumer-not-reached`: PIF delivery is positive but the state/controller
-  consumer is never executed before the width-320 attract loop; no read or
-  execution hit selects a state/dispatch gate.
-* `H-observation-insufficient`: the oracle cannot expose either read or guest
-  execution evidence; the missing capability, not a game conclusion, is the
-  result.
+* `H-gate-state`: a concrete generated caller predicate or state value gates
+  the consumer before width 320; static references identify it.
+* `H-raw-dispatch`: no generated caller reaches the consumer, but a raw-address
+  dispatch path does; the dispatch site and target identify the boundary.
+* `H-audit-open`: generated and raw enumeration cannot establish either a gate
+  or dispatch owner; the remaining boundary needs a new independent observation.
 
-Discriminating measurement: in one run require the whole-RDRAM positive
-control, PIF Start reads, and VI callback/poll agreement, then classify a
-consumer read/PC hit before or after the first VI observation. A hit with no
-expected writer selects `H-consumer-read`; positive controls with no consumer
-hit select `H-consumer-not-reached`; inability to arm or attribute the
-observation selects `H-observation-insufficient`.
-
-Before any build, run:
+Discriminating measurement: the audit must produce a complete address/caller
+table for both symbol families. A concrete predicate on a generated caller
+selects `H-gate-state`; a raw dispatch with no generated caller selects
+`H-raw-dispatch`; an incomplete table selects `H-audit-open`. Before any build,
+run:
 
 ```sh
-rg -n -S 'watch-read|watch-rw|DebugBreakpoint|execution|breakpoint|read' \
-  tools/oracle src /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core \
-  --glob '*.{c,cc,cpp,h,hpp,md,sh}'
-sed -n '1,240p' tools/oracle/README.md
+rg -n -S '80079F50|getControllerNewButtonsPressed|800B47C4|800B47D0|menuControllerInput' \
+  RecompiledFuncs patches src docs scratch tools --glob '*.{c,h,cpp,md,txt,sh}'
+rg -n -S '80079F50|800B47D0|800B47C4' \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64 --glob '*.{c,h,txt,s}'
 ```
-
-If the observation already exists, run the resulting one-arm command for 120
-seconds from the repo root, capture to `scratch/agent/oracle_s1078.log`, and
-use SIGKILL only if a watchdog is required.

@@ -62591,3 +62591,25 @@ only the expected writer path, not the state gate itself.
 
 ORIGIN: independent retail-oracle watch callbacks, PIF reads, and VI
 callback/poll traces; no recompiled runtime, game data, or mitigation changed.
+
+## Session 1078 (2026-08-14) — watched retail controller consumers
+
+Ran the one-arm s1078 retail-oracle experiment with the documented
+eleven-Start schedule. The run included the whole-RDRAM write positive control,
+physical read watches on controller edge storage `0x13A960..0x13A970` and
+selector/state storage `0x130B40..0x130B58`, `--vi-trace`, `--vi-poll`, and
+`--pif-trace`. It completed with `rc=0`, 7,198 VI, and 120.0 seconds of
+emulated time. The whole-RDRAM watch reached its 10,000-hit cap; PIF showed
+the eleven scheduled `0x10000000` Start words; VI callback and poll agreed,
+remaining width 320 at origin `0x006dd280`. Both target read watches had zero
+hits.
+
+The predeclared discriminator therefore selects `H-consumer-not-reached`:
+positive input delivery is reaching PIF, but neither expected controller/state
+consumer range is read before the attract loop. This rules out the two watched
+consumer/storage paths for this phase and rules out another input-schedule
+experiment. It does not identify the state gate that prevents the consumer
+path, and it does not justify any freelist mitigation or hangar conclusion.
+
+ORIGIN: independent retail-oracle memory-watch callbacks, PIF reads, and VI
+callback/poll traces; no recompiled runtime, game data, or mitigation changed.

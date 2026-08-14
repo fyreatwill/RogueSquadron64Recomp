@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1077 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1078 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -114,6 +114,17 @@ expected edge-storage writer. Another input schedule is not discriminating;
 the missing observation is a read watch or guest execution breakpoint on the
 consumer/alias path.
 
+The s1078 retail read-watch run added physical reads on
+`0x13A960..0x13A970` and `0x130B40..0x130B58` to the same eleven-Start
+schedule. Whole-RDRAM callbacks reached the 10,000-hit cap, PIF traces showed
+all eleven injected Start edges, and VI callback/poll traces agreed for 7,198
+frames. Neither target range was read, and VI remained width 320 at
+`0x006dd280`. Under the predeclared discriminator this selects
+`H-consumer-not-reached`: positive PIF delivery does not reach the expected
+consumer reads before the attract loop. This is a single-source retail-oracle
+result with independent positive-control lines; it does not identify which
+state gate prevents the consumer path.
+
 ## M4 zero-shade boundary
 
 The independent Factor 5 command reference and same-combiner/white-shade
@@ -157,13 +168,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1075 | The only generated call to the actual `menuControllerInput` entry passes `a0=0`, selecting masked index 0; no raw dispatch entry targets `0x800B47C4/0x800B47D0`. The generated caller class is non-2, while an untyped guest-entry possibility remains single-source open. |
 | s1076 | Designed a same-run retail discriminator joining controller-edge writes, selector/state writes, PIF reads, whole-RDRAM callbacks, and VI phase transitions. No run was performed; the route remains open pending this measurement. |
 | s1077 | Ran the eleven-Start discriminator: whole-RDRAM, PIF, and VI controls were positive; both target write ranges were silent and VI stayed width 320 at `0x006dd280`. Selected the execution/alias observation boundary; another schedule is not justified. |
+| s1078 | Added physical read watches for the controller-edge and selector/state ranges. Whole-RDRAM, eleven PIF Start edges, and VI callback/poll controls were positive; both reads were silent and VI stayed width 320 at `0x006dd280`. Selected `H-consumer-not-reached`; the blocking state gate remains open. |
 
 ## Ranked next steps
 
-1. Add or expose one independent oracle observation on the controller
-   consumer/alias path (guest execution breakpoint or physical read watch),
-   then rerun the same eleven-Start schedule; do not arm a freelist watch
-   without an independently observed `0x6abxxx` hangar-origin 512 transition.
+1. Perform one bounded static audit of the retail-input consumer boundary:
+   enumerate generated callers/raw dispatches of `getControllerNewButtonsPressed`
+   and the menu/controller state handlers, then classify the first gate that
+   can prevent those reads before the width-320 attract loop. Do not arm a
+   freelist watch without an independently observed `0x6abxxx` hangar-origin
+   512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
