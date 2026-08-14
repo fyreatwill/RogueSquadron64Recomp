@@ -80,6 +80,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   contract, and `stopVoicesByHandle` extracts the low byte as the slot before
   validating the full handle. Runtime legitimacy of all record pointers and
   the complete indirect handle lifecycle remains unproven.
+- s945 traced all four node `+0xC` copy sources. The three inline bodies at
+  `0x80086E40`, `0x8008738C`, and `0x800877E0` derive the source from the
+  `0x8013D880 + slot*0x17C` voice table. The standalone allocator body at
+  `0x80086524` receives its source through `$a0`, but has no direct generated
+  caller; the only nearby `jalr` is an unrelated comparator callback. The
+  three inline sites are structurally valid; standalone reachability and any
+  indirect allocator edge remain unclassified.
 
 ## Recent evidence ledger
 
@@ -101,6 +108,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s942 | Classified generated `+0x64` stores by domain; voice paths are sentinel/constructed-handle or `$s1` initialized to `-1`, but indirect provenance and runtime slot legitimacy remain unproven. |
 | s943 | Exhaustive source audit found the allocator plus three duplicated sorted-node insertion/reuse writers; no direct allocator call and no proven indirect edge were found, while pointer/value lifecycle remains unclassified. |
 | s944 | Four direct `startNoteOnVoice` callers were found; the return is a list handle, while voice `+0x64` is a composite handle with the allocated slot in its low byte. Node `+0xC` and `stopVoicesByHandle` agree structurally; indirect pointer/lifecycle legitimacy remains open. |
+| s945 | Three inline node-copy sites derive `0x8013D880 + slot*0x17C` voice records. The standalone allocator copy has no direct generated caller and receives `$a0` without a proven dispatch edge; the structural contract remains single-source and incomplete. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -108,10 +116,11 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign by tracing the voice-record pointer
-   provenance at each of the four sorted-node `+0xC` copy sites, including
-   callers that inline the insertion body; separate record pointers from
-   channel/fade structures and classify unresolved indirect edges.
+1. Continue the active M3 campaign by exhaustively classifying reachability of
+   the standalone `allocVoiceHandleNode` body at `0x80086450` versus its three
+   inline insertion/reuse bodies; inventory every direct call and candidate
+   indirect dispatch edge in the audio overlay before treating the standalone
+   `$a0` source as live evidence.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
@@ -123,30 +132,30 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
 
-Audit the voice-record pointer provenance at the four sorted handle-list node
-`+0xC` copy sites (`0x80086524`, `0x80086E40`, `0x8008738C`, `0x800877E0`),
-including their inline callers and any register-indirect dispatch edges. Confirm
-each source pointer is the `0x8013D880 + slot*0x17C` voice record rather than a
-channel/fade record, and connect it to the composite `+0x64` handle lifecycle.
-Cross-check companion decomp symbols. Source-only; do not add a guard, change
-game behavior, build, or run a soak.
+Audit reachability of the standalone `allocVoiceHandleNode` body at
+`0x80086450` and distinguish it from the three already classified inline
+insertion/reuse bodies. Inventory every direct call, every audio-overlay
+`jalr` candidate, and the register/value setup at each candidate; cross-check
+companion symbols. Source-only; do not add a guard, change game behavior,
+build, or run a soak.
 
 Competing hypotheses:
 
-- H-stop-voices-by-handle-index-valid: every node `+0xC` source is a live voice
-  record and its copied `+0x64` composite handle has a compatible low-byte slot.
-- H-stop-voices-by-handle-index-unclassified: one or more `+0x64` writers,
-  indirect paths, or value domains remain unproven.
-- H-stop-voices-by-handle-index-mismatch: a reachable copy uses a non-voice
-  record or incompatible handle/state value.
+- H-stop-voices-by-handle-index-valid: the standalone body is dead or every
+  reachable dispatch supplies the same live voice-record contract as the
+  three inline sites.
+- H-stop-voices-by-handle-index-unclassified: a candidate indirect edge or
+  standalone caller remains unresolved.
+- H-stop-voices-by-handle-index-mismatch: a reachable standalone edge supplies
+  a non-voice record or incompatible handle/state value.
 
-Discriminating measurement: an exhaustive generated-source inventory of each
-copy site's base register derivation, slot arithmetic, caller boundary, and
-register-indirect edge, plus a decomp-symbol cross-check. Four proven voice
-record pointers select valid; a channel/fade pointer selects mismatch; an
-unresolved edge selects unclassified.
+Discriminating measurement: exhaustive generated-source inventory of all
+`0x80086450` direct references and audio-overlay `jalr` target setup, plus the
+companion-symbol cross-check. No reachable standalone edge, or a proven
+voice-record argument at every edge, selects valid; a non-voice argument
+selects mismatch; an unresolved target or argument selects unclassified.
 
-Exact command: `rg -n -C 8 "80086524|80086E40|8008738C|800877E0|0x17C|-0x2780|jalr" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each copy-site pointer flow. No game build or soak is planned.
+Exact command: `rg -n -C 10 "80086450|allocVoiceHandleNode|jalr|0x80085C70|0x80086524|0x80086E40|0x8008738C|0x800877E0" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify every candidate edge. No game build or soak is planned.
 
 ## Closed and parked
 

@@ -59361,3 +59361,34 @@ not independent runtime writer/value evidence.
 ORIGIN: exhaustive `startNoteOnVoice` caller/return, voice-slot arithmetic,
 composite-handle construction, node-copy, stop-consumer, register-indirect,
 and companion-symbol inventory; no guest value mutation or mitigation.
+
+## Session 945 (2026-08-13) — three inline node sources are voice records; standalone allocator reachability remains open
+
+Performed the planned source-only M3 pointer-provenance audit for the four
+sorted handle-list node `+0xC` copy sites. No build, game run, soak,
+generated-source edit, guard, mitigation, or behavior change was made.
+
+The copies at `0x80086E40`, `0x8008738C`, and `0x800877E0` are inlined into
+`findActiveVoiceByKeyPair`, `startNoteOnVoice`, and its note-event path. Their
+source registers derive from the voice table base `0x8013D880` (`0x80140000 -
+0x2780`) plus the allocated or returned slot scaled by `0x17C`; each then
+loads the owning voice record's `+0x64` and stores it to node `+0xC`. These
+three sites therefore select the voice-record structure, not channel or fade
+state, at the static pointer-flow level.
+
+The standalone allocator body at `0x80086450` has the same node/list shape,
+but its source is only the incoming `$a0` at `0x8008651C`; no direct generated
+call to `0x80086450` or `allocVoiceHandleNode` exists. The only nearby
+register-indirect call is the generic comparator callback at `0x80085C70`,
+whose target is not proven to be the allocator. Companion symbols identify
+the standalone function but add no caller edge. Thus the three inline sources
+are structurally valid, while standalone reachability and any indirect
+allocator argument remain unclassified. H-stop-voices-by-handle-index-valid
+is not established; H-stop-voices-by-handle-index-mismatch is not
+demonstrated; H-stop-voices-by-handle-index-unclassified remains selected.
+This is a single-source static result from generated code and companion
+metadata, not independent runtime writer/value evidence.
+
+ORIGIN: exhaustive four-site pointer-flow, slot scaling, direct-call,
+register-indirect, and companion-symbol inventory; no guest value mutation or
+mitigation.
