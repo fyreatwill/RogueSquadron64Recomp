@@ -60027,6 +60027,33 @@ same-configuration oracle run with the whole-RDRAM watch control.
 ORIGIN: external oracle callback-boundary experiment; no guest value was
 changed and no mitigation was landed.
 
+## Session 980 (2026-08-13) — Oracle PIF handler ownership is coherent
+
+Ran the planned bounded static audit of the corrected oracle source. The
+memory handler typedefs are matching `(void*, uint32_t, uint32_t*)` and
+`(void*, uint32_t, uint32_t, uint32_t)` signatures. `init_device` constructs
+the debugger handler with `opaque = &dev->r4300` and the `with_bp_checks`
+functions. The PIF mapping supplies `read_pif_mem` with `opaque = &dev->pif`.
+
+`activate_memory_break_read` copies that PIF handler into
+`saved_handlers[0x1fc0]`, installs the debugger handler, and sets the read
+bit. `read_with_bp_checks` receives the live `r4300` opaque, calls the
+four-argument breakpoint callback, then dispatches the saved PIF handler.
+Deactivation restores the saved handler after both read/write bits clear.
+The breakpoint callback has no opaque argument and its referenced globals are
+initialized in the debugger module. The static target in the corrected dylib
+is directly aligned and was already independently shown to receive all four
+arguments.
+
+This refutes a handler/trampoline type mismatch and an invalid callback opaque.
+It does not explain the runtime `rc=139` between wrapper pre-call and the
+callback's first marker; the remaining fault is at the binary callback-entry or
+first-body boundary. This is single-source static evidence only. No runtime
+arm, runtime change, mitigation, or retail phase conclusion was made.
+
+ORIGIN: external oracle handler-ownership audit; no guest value was changed
+and no mitigation was landed.
+
 ## Session 978 (2026-08-13) — Corrected oracle arm still dies at callback boundary
 
 Ran the planned bounded retail-oracle PIF read-watch arm. The exact command

@@ -321,6 +321,15 @@ closed; M3 work is limited to systematic idiom-class audits.
   `0x1fc007e4`, then exited `rc=139` before callback entry or return. This
   selects the runtime callback call/entry boundary over the old LTO argument
   artifact; retail phase remains unevaluable. No mitigation or runtime change.
+- s980 statically traced the corrected oracle's complete PIF handler ownership
+  path. `read32fn` and `write32fn` match at the debugger handler, which is
+  initialized with `opaque=&dev->r4300`; activation copies the PIF mapping's
+  `read_pif_mem` handler/`opaque=&dev->pif` into `saved_handlers[0x1fc0]`, and
+  deactivation restores it after both breakpoint bits clear. The breakpoint
+  callback itself has no opaque argument and uses initialized globals. This
+  refutes a handler/trampoline type mismatch and an invalid callback opaque,
+  but leaves the runtime callback-entry/first-body fault unresolved. This is
+  static single-source evidence; retail remains unevaluable.
 
 ## Recent evidence ledger
 
@@ -377,6 +386,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s977 | Forced clean all-LTO reproduces the bad `w2=3`/unset-`w3` shape; compiling only `dbg_breakpoints.o` with `-fno-lto` restores `w2=4,w3=3` at both sites. The smallest corrective boundary is independently selected; retail remains unevaluable. |
 | s978 | Corrected `dbg_breakpoints.o` arm passed the same-run whole-RDRAM control (616,120 writes/2 s) but still died `rc=139` after PIF wrapper pre-callback and before callback entry/return. Static caller shape is correct; callback path remains selected and retail phase is unevaluable. |
 | s979 | Corrected `iter974-armB2` static audit found a direct aligned callback target with `w2=4,w3=3`; fixed 3-second PIF arm passed setup/control, reached wrapper pre-callback, then died `rc=139` before callback first marker or return. Runtime callback call/entry boundary remains selected; retail phase is unevaluable. |
+| s980 | Static ownership audit found matching handler types, `opaque=&dev->r4300` for the debugger wrapper, and a saved PIF handler with `opaque=&dev->pif`; restore logic is coherent. This refutes trampoline/type and invalid-opaque hypotheses but does not explain the callback-entry/first-body crash. Single-source static evidence; no runtime arm. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -394,12 +404,12 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Audit the corrected oracle's callback boundary: trace the runtime handler
-   replacement/saved-pointer path from `activate_memory_break_read` through
-   `read_with_bp_checks` and the callback's first instruction. The static
-   target is valid but the fixed arm still dies between the direct branch and
-   callback first marker; do not infer a retail phase result or add a runtime
-   mitigation.
+3. Resolve the corrected oracle's remaining callback-entry/first-body fault
+   with one external binary-level probe that does not add a callback marker:
+   compare the direct call target and first instructions in the corrected
+   dylib under a debugger or isolated harness. The handler ownership/type and
+   opaque paths are structurally coherent; do not infer a retail phase result
+   or add a runtime mitigation.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -409,26 +419,25 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: oracle-pif-callback-runtime
 
-Run one bounded external-oracle PIF read-watch arm using the freshly linked
-oracle dylib whose only non-LTO object is `dbg_breakpoints.o`. Preserve a
-whole-RDRAM write positive control, enable VI polling, and compare the
-wrapper/callback markers with the exit code and VI count. Do not edit the
-recomp runtime.
+Run one bounded external-oracle binary-level callback-entry probe against the
+corrected dylib. Do not add another callback marker or edit the recomp
+runtime. Use the existing source conclusion as the baseline: handler types,
+saved PIF ownership, and callback state ownership are coherent.
 
 Competing hypotheses:
 
-- H-pif-callback-artifact: the prior pre-start `rc=139` was caused by the
-  all-LTO callback lowering; the corrected arm reaches callback return.
-- H-pif-callback-path: the corrected ABI still crashes at callback entry or
-  return, selecting a remaining debugger callback/path defect.
-- H-pif-phase: the corrected arm survives, but retail remains at VI 320 and
-  callback-table reachability is still phase-unevaluable.
+- H-pif-core-entry: the corrected direct call reaches a valid callback body;
+  the fault is in the first compiled instructions or diagnostic operation.
+- H-pif-binary-target: the linked image's call target/prologue differs from
+  the static source model or lands in an invalid image state.
+- H-pif-harness: an isolated direct invocation survives, so the fault depends
+  on emulator/core state around the callback rather than handler ownership.
 
-Discriminating measurement: whole-RDRAM writes must fire; then the PIF
-wrapper pre-callback, callback first-statement, and post-callback markers are
-compared with exit status and VI count. Return/completion selects
-H-pif-callback-artifact; pre-return crash selects H-pif-callback-path;
-survival with VI 320 selects H-pif-phase.
+Discriminating measurement: inspect the exact corrected dylib call target and
+first instructions, then invoke that callback in an isolated harness with
+the same four arguments. A valid target/prologue plus isolated survival
+selects H-pif-harness; a fault in the first body instructions selects
+H-pif-core-entry; a target/prologue discrepancy selects H-pif-binary-target.
 
 Exact command:
 
