@@ -61264,3 +61264,22 @@ not RGBA or a fixed lighting constant. This selects the narrow
 This rules out a mode-arm divergence and a lighting/color source at this
 stage. It does not yet explain the compare-result encoding or the fixed
 sentinel value; that is the next discriminator.
+
+## Session 1012 (2026-08-14) — classified Factor 5 VGE sentinel semantics
+
+Ran the prescribed static M4 work unit without building or running. The
+independent SGI RSP Programmer's Guide describes VGE as a signed
+greater-or-equal operand select, and the local `VGE` implementation independently
+matches that behavior: each lane selects `vs` or the selected `vt` lane, with
+the VCO tie rule. The final `VGE<3>(v6,v6,v29)` therefore cannot synthesize the
+observed fixed `0x8000` RGB/alpha sentinel. Its `v29` operand is the DMEM-0x60
+table vector, while `v6` was already produced by `vmadh v6,v4,v0`; `v4` and
+`v0` are arithmetic inputs, not a fixed compare-result source. This refutes
+`H-vge-sentinel-encoding`, the fixed-operand form of `H-v4-v0-source`, and
+`H-shade-store-interpretation`, and moves the next discriminator to the RSP
+accumulator high-half/saturation path before VGE. No mitigation or generated
+file edit was made.
+
+The queued `slot_sp_guard` recipe was folded into this iteration's soak
+results separately: it crashed at `slotDispatcherIter+8592` before producing
+the guard record, so the original `+872` caller remains unclassified.

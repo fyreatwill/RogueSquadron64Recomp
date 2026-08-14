@@ -6,10 +6,11 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1011 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1012 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
-stream omits a color-word read in the shaded-triangle emitter. The remaining
-question is the intended semantic source of that emitter's shade record. M5 audio de-stubbing
+stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
+the sentinel; the remaining question is the preceding accumulator/high-half
+numeric source of the shade record. M5 audio de-stubbing
 is closed. M3 work is limited to complete idiom-class audits. The retail-oracle
 callback thread is no longer directory-blocked (`.claude/settings.json`
 currently lists `rs64-oracle`); see backlog.
@@ -155,6 +156,22 @@ misread and the lighting-result interpretation; it selects the narrow
 `H-v6-clip-predicate` description for the final compare, while leaving the
 sentinel's numeric origin open. Full audit: [M4-V6-PRODUCER-AUDIT.md](M4-V6-PRODUCER-AUDIT.md).
 
+The s1012 compare-semantics audit closes the encoding question. The independent
+[SGI RSP Programmer's Guide](https://ultra64.ca/files/documentation/silicon-graphics/SGI_Nintendo_64_RSP_Programmers_Guide.pdf)
+describes VGE as a signed greater-or-equal compare that selects an operand; it
+does not synthesize predicate values. The runtime implementation independently
+agrees: each lane writes `vs` when the compare passes (with the VCO tie rule),
+otherwise the selected `vt` lane. For the final `VGE<3>(v6,v6,v29)`, element-3
+lane routing supplies alternating lanes from `v29`, while the other choice is
+the already-computed `v6`; the DMEM-0x60 table does not contain the observed
+`0x8000` RGB / `0x8000` alpha pattern. VGE therefore preserves a value already
+present in `v6` or selects a table lane; it cannot create the fixed
+`-0.5/+0.5` sentinel. The final compare is not a fixed `v4/v0` source either:
+those registers feed the preceding `vmadh v6,v4,v0`. This refutes
+`H-vge-sentinel-encoding`, the fixed-operand form of `H-v4-v0-source`, and
+`H-shade-store-interpretation`; the numeric-origin lead is the accumulator/high-
+half arithmetic before VGE. No mitigation is authorized.
+
 ## Recent evidence ledger
 
 Details are in `PORTING-STATE.md`; durable summaries are in
@@ -179,12 +196,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1009 | Retail ROM instruction audit: color stores are present at `0x1424/0x1428/0x1468`, but the shaded emitter at `0x1740` has no `+0x10` read; generated output preserves it and fixup does not remove it. Selected `H-original-omits-color`; no mitigation. |
 | s1010 | GLideN64 TriGen semantics vs retail/generated emitter: reference copies colorData into RGBA, while retail `L_1740` writes `+0x18` from vector `v6`; RT64 shade decoding uses the subsequent RDP coefficient block. Selected `H-missing-lighting-source`; no mitigation. |
 | s1011 | `v6` producer audit: `r3=DMEM[0x134]&1`; both mode arms share the final compare/store, and DMEM `0x60` is a signed table vector. Selected narrow `H-v6-clip-predicate`; sentinel origin remains open. |
+| s1012 | Independent RSP semantics and the local VGE implementation agree that `vge` selects `v6` or a `v29` lane; it cannot synthesize the observed sentinel. The numeric-origin lead moves to the preceding `vmadh v6,v4,v0` accumulator/high-half path; no mitigation. |
 
 ## Ranked backlog
 
-1. Explain the numeric `-0.5/+0.5` sentinel from the `vge` compare: trace the
-   lane semantics of `v4`, `v0`, `v29[1q]`, and the compare-result encoding,
-   using an independent RSP semantic reference before proposing any mitigation.
+1. Trace the preceding `vmadh v6,v4,v0` accumulator/high-half and saturation
+   semantics to explain why its input to the final VGE is exactly
+   `-0.5/+0.5`; use an independent RSP arithmetic reference and do not propose
+   a mitigation until the numeric path is proven.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
@@ -195,30 +214,29 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 4. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
-## Next work unit (s1012)
+## Next work unit (s1013)
 
-HYPOTHESIS-ID: m4-zero-shade-emission-constant
+HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-Explain the numeric `-0.5/+0.5` sentinel from the final `vge` compare. Trace
-the lane semantics of `v4`, `v0`, and `v29[1q]` against an independent RSP
-semantic reference. Static audit only; no build/run required. Do not edit
-generated output.
+Explain the numeric `-0.5/+0.5` sentinel at the input to the final `vge` by
+tracing `vmadh v6,v4,v0`, the RSP accumulator high-half/saturation rules, and
+the lane values entering that instruction. Static audit only; no build/run
+required. Do not edit generated output.
 
 Competing hypotheses and the discriminating measurement:
 
-- `H-vge-sentinel-encoding`: the RSP `vge` result naturally encodes the
-  observed fixed `-0.5/+0.5` coefficients after RT64's shade decode.
-- `H-v4-v0-source`: one operand lane is a fixed compare/clip source, producing
-  the sentinel before `vge`.
-- `H-shade-store-interpretation`: the compare result is ordinary, but the
-  downstream shade coefficient interpretation maps its predicate bits to the
-  sentinel.
+- `H-accumulator-saturation`: `vmadh v6,v4,v0` produces the signed endpoint
+  pattern through the RSP accumulator high-half and saturation behavior.
+- `H-v4-v0-arithmetic`: the endpoint pattern is an ordinary bounded result of
+  the `v4`/`v0` arithmetic, without saturation being decisive.
+- `H-v29-selection`: VGE selects a DMEM-0x60 threshold lane that coincidentally
+  matches the sentinel.
 
-Discriminator: decode the exact `vge` lane result and RT64 coefficient mapping
-for the observed sentinel. A reference that produces the same sentinel from
-the compare selects `H-vge-sentinel-encoding`; a fixed operand selects
-`H-v4-v0-source`; a mismatch only after the RDP/RT64 store selects
-`H-shade-store-interpretation`.
+Discriminator: reconstruct the four shade lanes immediately before and after
+`vmadh v6,v4,v0`, applying the independent accumulator rules. Endpoint lanes
+appearing before saturation select `H-v4-v0-arithmetic`; endpoint lanes created
+only by saturation select `H-accumulator-saturation`; a matching `v29` lane
+selects `H-v29-selection`.
 
 The `slotDispatcherIter` sp-guard soak is a separate queued recipe
 (`scratch/agent/soak_queue/slot_sp_guard.sh`), not this work unit.

@@ -1,36 +1,32 @@
-# NEXT work unit (s1011)
+# NEXT work unit (s1013)
 
-s1010 (static semantic audit): GLideN64's TriGen paths copy colorData into
-vertex RGBA, but retail/generated `L_1740` writes record `+0x18` from `v6`,
-whose producer is the transformed-vector path. RT64 decodes the later RDP
-shade coefficient block at the expected post-position offset. This selects
-`H-missing-lighting-source`; no mitigation was made.
+s1012 (static compare-semantics audit): the SGI RSP guide and local VGE
+implementation agree that VGE selects `vs` or the selected `vt` lane; it does
+not synthesize the observed `-0.5/+0.5` sentinel. The final compare therefore
+preserves a value from `v6` or selects a DMEM-0x60 table lane. The numeric-origin
+lead moves to the preceding `vmadh v6,v4,v0` accumulator/high-half path. No
+mitigation was made. The queued SP-guard soak crashed before its guard record
+and remains separate.
 
-HYPOTHESIS-ID: m4-zero-shade-emission-constant
+HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
 ## One work unit
 
-Explain the numeric `-0.5/+0.5` sentinel from the final `vge` compare,
-tracing the lane semantics of `v4`, `v0`, and `v29[1q]` against an independent
-RSP semantic reference. Static audit only; no build/run required. Do not edit
-generated output.
+Static audit only; no build or run. Trace `vmadh v6,v4,v0` and the RSP
+accumulator high-half/saturation rules to explain the four shade lanes entering
+the final `vge`. Do not edit generated output.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-vge-sentinel-encoding`: the RSP `vge` result naturally encodes the
-  observed fixed `-0.5/+0.5` coefficients after RT64's shade decode.
-- `H-v4-v0-source`: one operand lane is a fixed compare/clip source, producing
-  the sentinel before `vge`.
-- `H-shade-store-interpretation`: the compare result is ordinary, but the
-  downstream shade coefficient interpretation maps its predicate bits to the
-  sentinel.
+- `H-accumulator-saturation`: the endpoint pattern is created by accumulator
+  high-half saturation.
+- `H-v4-v0-arithmetic`: the endpoint pattern is already an ordinary bounded
+  result of the `v4`/`v0` arithmetic.
+- `H-v29-selection`: the final VGE selects a DMEM-0x60 threshold lane matching
+  the sentinel.
 
-Discriminator: decode the exact `vge` lane result and RT64 coefficient mapping
-for the observed sentinel. A reference that produces the same sentinel from
-the compare selects `H-vge-sentinel-encoding`; a fixed operand selects
-`H-v4-v0-source`; a mismatch only after the RDP/RT64 store selects
-`H-shade-store-interpretation`.
-
-The `slotDispatcherIter` sp-guard soak crashed at a different site before
-producing a guard record; it remains a separate queued investigation and is
-not this work unit.
+Discriminator: reconstruct the four lanes immediately before and after
+`vmadh v6,v4,v0`, applying an independent RSP accumulator reference. Endpoint
+lanes appearing before saturation select `H-v4-v0-arithmetic`; endpoint lanes
+created only by saturation select `H-accumulator-saturation`; a matching
+`v29` lane selects `H-v29-selection`.
