@@ -64128,3 +64128,16 @@ The result rules out neither H1 (runtime-side writer), H2 (ABI transition),
 nor H3 (prologue-origin value), and justifies no mitigation. The missing
 `scratch/agent/run-slot-origin.sh` launcher was substituted by the equivalent
 existing phase-gated driver; the build and capture completed successfully.
+
+## Session 1164 (2026-08-14) — runtime-origin retry hit pre-1024 RT64 crash
+
+Rebuilt the Debug target and ran the prescribed phase-gated runtime-origin
+capture with slot-dispatch, stack-guard, link, and crash markers. The positive
+slot-dispatch control was live with 8,192 bounded entries through phase 6, and
+crash logging was live with 36 rows. The process never reached VI 1024 and
+terminated in RT64 `copyToRAM` at guest PC `0x8000B650`, with
+`si_addr=0x11ffbc000`; the tail also showed wild-width writeback skips. No
+slot-SP guard row was emitted, so the intended `slotDispatcherIter+872`
+writer-origin discriminator was unevaluable. This does not select H1, H2, or
+H3 and justifies no mitigation. The next unit audits the phase-scoped
+writeback/crash reachability path with an `[ost-wb]` positive control.
