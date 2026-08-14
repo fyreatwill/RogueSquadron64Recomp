@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s973 (2026-08-13). The active blocker is authoritative
+Reviewed through s974 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -284,6 +284,12 @@ closed; M3 work is limited to systematic idiom-class audits.
   remaining static boundary is the individual LTO treatment of `memory.c`,
   `dbg_breakpoints.c`, or their interaction when both are LTO; no runtime or
   retail conclusion follows.
+- s974 rebuilt the two single-object mixed arms from a fresh all-LTO baseline.
+  Arm A (non-LTO `memory.o`, LTO `dbg_breakpoints.o`) retained the bad
+  callback shape `w2=3` with `w3` unset at both sites. Arm B (LTO
+  `memory.o`, non-LTO `dbg_breakpoints.o`) emitted the correct `w2=4,w3=3`
+  at both sites. This selects the LTO treatment of `dbg_breakpoints.c` as the
+  sufficient build boundary; no runtime or retail conclusion followed.
 
 ## Recent evidence ledger
 
@@ -334,6 +340,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s971 | Fresh non-LTO ARM64 assembly emits `w2=4,w3=3` at both callback sites, while the current LTO dylib emits `w2=3` with `w3` unset. This selects the LTO transformation boundary; the source/ABI hypothesis is refuted for non-LTO codegen and no runtime or retail conclusion follows. |
 | s972 | Fresh non-LTO linked dylib emits `w2=4,w3=3` at both callback sites after using the environment-preserved binutils path. This independently selects LTO over source, non-LTO codegen, and non-LTO link; no runtime or retail conclusion follows. |
 | s973 | Isolated all-non-LTO and mixed dylibs both emit `w2=4,w3=3` at both callback sites; the reproducible mixed arm rules out a generic link interaction between the two callback objects and selects single-object LTO treatment or their all-LTO interaction. |
+| s974 | From a fresh all-LTO baseline, non-LTO `memory.o` plus LTO `dbg_breakpoints.o` remains bad, while LTO `memory.o` plus non-LTO `dbg_breakpoints.o` is correct at both callback sites. This selects the `dbg_breakpoints.c` LTO transformation boundary; no runtime or retail conclusion follows. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -352,11 +359,10 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s973 shows that fresh non-LTO `memory.o` plus
-   `dbg_breakpoints.o` is sufficient to restore both callback call sites even
-   when the rest of the dylib remains LTO. Build two single-object mixed arms
-   to identify whether `memory.c`, `dbg_breakpoints.c`, or their joint LTO
-   treatment creates the bad call; do not infer retail behavior yet.
+   callback-table watch: s974 localizes the bad call shape to LTO treatment
+   of `dbg_breakpoints.c`. Compare the LTO and non-LTO callback object/IR and
+   link boundaries to identify the exact transformation; do not infer retail
+   behavior or change the runtime yet.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -364,30 +370,30 @@ entries and do not authorize mitigations.
 
 ## Next work unit
 
-HYPOTHESIS-ID: oracle-pif-lto-boundary
+HYPOTHESIS-ID: oracle-pif-breakpoints-lto
 
-Build two isolated single-object mixed oracle dylibs from the successful s973
-copies: arm A has fresh non-LTO `memory.o` with LTO `dbg_breakpoints.o`; arm B
-has LTO `memory.o` with fresh non-LTO `dbg_breakpoints.o`. Compare both
-callback call sites against s973's all-LTO and two-object-mixed disassemblies.
+Run one bounded static comparison of fresh LTO and non-LTO `dbg_breakpoints.o`
+from the same source tree. Use `llvm-dis`/`llvm-nm` on the LTO object and
+`otool -tvV`/`nm -m` on the non-LTO object, then compare the callback symbol
+signature, prologue, and references to `check_breakpoints_on_mem_access`.
 Do not edit the recomp runtime or retry retail PIF/callback hypotheses.
 
 Competing hypotheses:
 
-- H-pif-memory-lto: arm A is correct and arm B is wrong, identifying
-  `memory.c`'s LTO treatment as sufficient for the bad call.
-- H-pif-breakpoints-lto: arm B is correct and arm A is wrong, identifying
-  `dbg_breakpoints.c`'s LTO treatment as sufficient for the bad call.
-- H-pif-joint-lto: both single-object arms remain wrong while the two-object
-  mixed arm is correct, selecting an interaction that requires both objects
-  to be LTO.
-- H-pif-lto-input-recipe: the mixed arm cannot be reproduced with identical
-  inputs/flags, selecting a build-recipe or toolchain-state defect instead.
+- H-pif-breakpoints-codegen: the LTO and non-LTO callback object differ in
+  the callback's emitted ABI or symbol/reference shape, identifying the
+  object-level transformation rather than the linker as the next boundary.
+- H-pif-breakpoints-link: the callback object is ABI-equivalent in isolation,
+  selecting the LTO linker's cross-object transformation as the remaining
+  boundary.
+- H-pif-breakpoints-recipe: the object difference cannot be reproduced from
+  identical source and flags, selecting build state/toolchain state instead.
 
-Discriminating measurement: compare `w2,w3` at both callback calls in both
-fresh dylibs. Only arm A correct selects `memory.c`; only arm B correct selects
-`dbg_breakpoints.c`; both wrong with the two-object mixed arm correct selects
-joint LTO; an unreproducible arm selects build-state rather than runtime.
+Discriminating measurement: whether the LTO and non-LTO `dbg_breakpoints.o`
+artifacts have the same callback signature/prologue and reference shape. A
+reproducible object-level difference selects codegen; identical objects with
+different final calls selects the linker; an unreproducible difference selects
+build state rather than runtime.
 
 Exact starting checks/commands:
 

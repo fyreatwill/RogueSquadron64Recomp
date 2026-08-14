@@ -59997,6 +59997,31 @@ for source, object, and dylib.
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 974 (2026-08-13) — dbg_breakpoints LTO treatment is the boundary
+
+Built the prescribed two single-object mixed oracle arms from a fresh all-LTO
+baseline, after correcting an initial invalid attempt whose copied baseline
+was already all-non-LTO. Arm A rebuilt only `memory.o` with `-fno-lto` and
+left `dbg_breakpoints.o` LTO; arm B rebuilt only `dbg_breakpoints.o` with
+`-fno-lto` and left `memory.o` LTO. The all-LTO control and arm A both emit
+`w2=3` with `w3` unset at both `read_with_bp_checks` callback calls. Arm B
+emits `w2=4,w3=3` at both calls.
+
+This selects the LTO treatment of `dbg_breakpoints.c` as sufficient for the
+bad linked call shape; `memory.c` LTO treatment is not sufficient to cause the
+bad shape by itself. The initial copied-baseline attempt was invalid because
+`make` preserved stale objects, and the forced rerun from an all-LTO baseline
+was the discriminating measurement. No runtime or retail oracle arm ran, and
+no mitigation or runtime change was made.
+
+Evidence: fresh all-LTO and arm artifacts under
+`/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/`,
+`iter974-armA3/`, and `iter974-armB3/`; forced `make`, `file`, and
+`otool -tvV` output. This is static single-source/build evidence only.
+
+ORIGIN: external oracle LTO object-composition audit; no guest value was
+changed and no mitigation was landed.
+
 ## Session 969 (2026-08-13) — Fresh oracle rebuild still drops callback argument
 
 Forced the external oracle's exact current target to rebuild. The first link
