@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s941 (2026-08-13). The active blocker is authoritative
+Reviewed through s942 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -53,6 +53,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   `+0xC`; each copies the owning voice record's `+0x64`. Unlink/reuse preserves
   the list contract, but the complete `+0x64` writer set and possible indirect
   paths do not prove every copied value is an in-range `0..31` slot index.
+- s942 separated the remaining generated `+0x64` stores: reset/release/stop
+  paths write the `-1` sentinel, the `tickAudioChannel` path writes `$s1` after
+  reachable initialization to `-1`, and neighboring channel/fade functions
+  write unrelated state fields. The sorted-node copies remain structurally
+  coherent, but indirect callers/writers and the complete handle-to-slot value
+  lifecycle remain unproven. H-stop-voices-by-handle-index-unclassified
+  remains selected.
   H-stop-voices-by-handle-index-unclassified remains selected; no mismatch or
   mitigation conclusion followed.
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
@@ -75,6 +82,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s939 | `stopVoicesByHandle` has four direct callers in two song-list walks; handle lookup and termination are coherent, but the node `+0xC` to 8-bit voice-index contract and voice-table lifecycle remain unproven. |
 | s940 | `D_8013D880`/`0x80141AD0` inventory found compatible 32-slot bounds and `-1` handle clearing across reset/release/stop paths, but did not prove node `+0xC` index provenance or runtime value legitimacy. |
 | s941 | Four node `+0xC` insertion/reuse writers all copy voice `+0x64`; list links and sentinels are coherent, but complete `+0x64` provenance and indirect paths remain unclassified. |
+| s942 | Classified generated `+0x64` stores by domain; voice paths are sentinel/constructed-handle or `$s1` initialized to `-1`, but indirect provenance and runtime slot legitimacy remain unproven. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -82,10 +90,10 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign with a bounded audit of every writer of
-   voice-record `+0x64` and the allocator/index return paths feeding those
-   writers, separating handle values, slot indices, and unrelated structures.
-   Require direct register provenance or classify the path as unproven.
+1. Continue the active M3 campaign with a bounded audit of every callsite and
+   register-indirect edge feeding `allocVoiceHandleNode` and the four node
+   `+0xC` copies. Separate voice-record pointers from channel/fade structures,
+   and prove whether the copied `+0x64` value is a slot index at each edge.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
@@ -97,12 +105,12 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
 
-Audit every generated writer of voice-record `+0x64` and the allocator/index
-return paths feeding the sorted handle-list node `+0xC` consumed by
-`stopVoicesByHandle` at `0x8008DA98`. Separate handle values, slot indices,
-and unrelated structures; require direct register provenance or classify the
-path as unproven. Cross-check companion symbol/decomp evidence. Source-only;
-do not add a guard, change game behavior, build, or run a soak.
+Audit every direct and register-indirect callsite feeding
+`allocVoiceHandleNode` and the four sorted handle-list node `+0xC` copies
+consumed by `stopVoicesByHandle` at `0x8008DA98`. Prove the voice-record
+pointer, slot-index, and handle-value domains at each edge; classify unresolved
+edges as unproven. Cross-check companion decomp evidence. Source-only; do not
+add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
@@ -113,14 +121,13 @@ Competing hypotheses:
 - H-stop-voices-by-handle-index-mismatch: a writer or caller uses an
   incompatible handle/state value, index domain, or node layout.
 
-Discriminating measurement: an exhaustive generated-source inventory of all
-`+0x64` writers/readers in the voice-record functions, their register
-provenance and caller contexts, every node `+0xC` copy, allocator return, and
-list termination, plus a decomp-symbol cross-check. A proven bounded index at
-every copy selects valid; a non-index value selects mismatch; an unresolved
-writer or indirect edge selects unclassified.
+Discriminating measurement: an exhaustive generated-source inventory of every
+`allocVoiceHandleNode` call, register-indirect dispatch edge, voice-record
+pointer derivation, node `+0xC` copy, and list termination, plus a decomp-symbol
+cross-check. A proven bounded index at every reachable copy selects valid; a
+non-index value selects mismatch; an unresolved edge selects unclassified.
 
-Exact command: `rg -n -C 8 "0x64\\(|0X64|80086450|80086534|80086FC4|8008DA98|8008DA4C|8013D880|80141AD0|0x17C|0x2780|0x5100|0x50FC" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each writer and lifecycle edge. No game build or soak is planned.
+Exact command: `rg -n -C 8 "allocVoiceHandleNode|80086450|80086534|80086FC4|8008DA98|0x18\\)|0x64\\(|0xC\\(" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each callsite and edge. No game build or soak is planned.
 
 ## Closed and parked
 

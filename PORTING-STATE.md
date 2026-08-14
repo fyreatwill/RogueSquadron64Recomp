@@ -59271,3 +59271,32 @@ or behavior change was made.
 ORIGIN: exhaustive generated node `+0xC` writer/reader, list-link, sentinel,
 voice `+0x64` reference, allocator-helper, and companion-symbol inventory; no
 guest value mutation or mitigation.
+
+## Session 942 (2026-08-13) — voice-record `+0x64` domains separated; indirect contract remains unclassified
+
+Performed the planned source-only M3 audit of generated `+0x64` stores and
+their relation to the sorted handle-list node `+0xC` consumed by
+`stopVoicesByHandle` (`0x8008DA98`). No build, game run, soak, generated-source
+edit, guard, mitigation, or behavior change was made.
+
+The inventory separated the relevant stores from unrelated stack, channel, and
+fade state. Reset/release/stop paths write `-1` to the voice-record `+0x64`
+field. The `tickAudioChannel` writer at `0x8008C1C4` stores `$s1`; on the
+reachable path its initialization is `-1`, but the source-only audit does not
+prove all indirect dispatch or caller states. The four sorted-list insertion or
+reuse copies at `0x80086524`, `0x80086E40`, `0x8008738C`, and `0x800877E0`
+still copy the owning record's `+0x64` into node `+0xC`. Neighboring stores in
+the sound-macro and volume-envelope functions use different structures or
+state domains and are not evidence of a node-index mismatch.
+
+This separates the apparent field-domain confusion but does not prove that
+every value reaching a node copy is an in-range `0..31` slot index, nor that
+all register-indirect edges preserve the voice-record pointer and list
+contract. H-stop-voices-by-handle-index-unclassified remains selected;
+H-stop-voices-by-handle-index-mismatch is not demonstrated. This is a
+single-source static result from generated code plus companion symbol metadata,
+not independent runtime writer/value evidence.
+
+ORIGIN: exhaustive generated `+0x64` store/reference, voice-record versus
+channel/fade domain, node-copy, register-provenance, and companion-symbol
+inventory; no guest value mutation or mitigation.
