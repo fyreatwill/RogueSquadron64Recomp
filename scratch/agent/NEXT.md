@@ -1,36 +1,36 @@
-# NEXT work unit (s1073)
+# NEXT work unit (s1074)
 
 HYPOTHESIS-ID: selector-nongenerated-ownership
 
-Perform one bounded companion-decomp source audit of the two computed-base
-writers in `controller_stuff/func_800B47C4.c` (the `temp_s1` index), focused on
-whether either writer can alias `D_80130B40+0x14`. The prior unit found only a
-zero initializer for `func_800C1D3C`'s `rest01[3]` and left raw guest ownership
-open.
+Perform one bounded generated-source audit of raw stores that can reach
+`0x80130B54` / `D_80130B40+0x14`, excluding already classified named-field
+accesses. Start with generated files and address expressions, then trace only
+the base/index assignments needed to classify each candidate.
 
 Competing hypotheses and discriminator:
 
-* `H-temp-s1-2`: a caller/initializer chain proves `temp_s1 == 2` at one
-  computed-base XOR write, establishing another concrete demoId writer.
-* `H-temp-s1-other`: every reachable chain proves a value other than 2, making
-  the `+0x14` alias inactive for these writers.
-* `H-temp-s1-open`: the source does not determine the index; retain the
-  pointer-mediated possibility without claiming runtime demoId corruption.
+* `H-raw-generated-writer`: a raw generated store reaches `0x80130B54`, adding
+  a concrete generated writer beyond the named-field sweep.
+* `H-raw-other-field`: every candidate resolves to another field/base or a
+  non-aliasing index, closing this raw-store class.
+* `H-raw-open`: one or more candidates retain unresolved base/index provenance;
+  keep the pointer-mediated possibility without claiming runtime corruption.
 
-Discriminating measurement: produce one table for both `func_800B47C4` writes
-with the index source, all writes/copies into that source, and the call path.
-A proven 2 selects `H-temp-s1-2`; proven non-2 for both selects
-`H-temp-s1-other`; unresolved provenance selects `H-temp-s1-open`.
+Discriminating measurement: one table containing every raw candidate, its
+effective address expression, width, writer function, and base/index proof.
+A candidate proven to target `0x80130B54` selects `H-raw-generated-writer`;
+all candidates proven elsewhere selects `H-raw-other-field`; unresolved
+provenance selects `H-raw-open`.
 
 Exact commands:
 
 ```sh
-rg -n -B 8 -A 14 'func_800B47C4|temp_s1|D_80130B40' \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64/docs \
-  --glob '*.c' --glob '*.h' 2>/dev/null
-rg -n -S 'temp_s1|0x80130B40|0x14' \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64/docs \
-  --glob '*.c' --glob '*.h' 2>/dev/null
+rg -n -S '0x80130B54|0x130B54|D_80130B40|\+ 0x14|\+0x14' \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+  --glob 'funcs_*.c' --glob '*.h' 2>/dev/null
+rg -n -B 8 -A 12 '0x80130B54|0x130B54|D_80130B40' \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+  --glob 'funcs_*.c' 2>/dev/null
 ```
 
 No build or runtime run is needed for a source-classification result.

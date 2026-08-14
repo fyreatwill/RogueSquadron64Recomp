@@ -62494,3 +62494,24 @@ runtime conclusion was added.
 
 ORIGIN: companion-decomp typed source at `hud_stuff/func_800C0084.c` and the
 documented indirect dispatch path from s433; static evidence only.
+
+## Session 1073 (2026-08-14) — audited computed selector index provenance
+
+Ran the prescribed bounded companion-decomp source audit; no build or runtime
+run was needed. The complete relevant table was:
+
+| Source/function | Index/base/write | Classification |
+|---|---|---|
+| `controller_stuff/func_800B47C4.c:597` | `temp_s1 = arg0 & 0xFF` | low-byte mask of external function input; no typed caller found |
+| `controller_stuff/func_800B47C4.c:640` | `sp138 = (&D_80130B40 + 4*temp_s1)` | computed base; aliases `D_80130B40+0x0C + 4*temp_s1` |
+| `controller_stuff/func_800B47C4.c:1007` | `sp138->unkC ^= 1 << temp_v1_9->unk6` | writer; reaches `D_80130B40+0x14` iff `temp_s1 == 2` and the branch executes |
+| companion callers/initializers | `func_800B47C4` references | none found; no proof of 2 or non-2 |
+
+This selects `H-temp-s1-open`: the writer is concrete and can alias the
+selector byte, but its index provenance is unresolved at the companion source
+boundary. It rules out neither the pointer-mediated write nor runtime aliasing;
+it only rules out a static proof that this function always targets or never
+targets `+0x14`. No mitigation or runtime conclusion was added.
+
+ORIGIN: companion-decomp source audit at the cited lines; no guest value,
+runtime behavior, or mitigation was changed.
