@@ -63082,3 +63082,21 @@ classify who writes or clears the gate bytes.
 ## Session 1104 (2026-08-14) — audited submit gate ownership
 
 Ran the prescribed bounded generated-source census; no build or runtime run was needed. The direct SP producer send at `0x80019F1C` is guarded by pointer-derived bytes `0x8011A89F/0x8011A8A0`, not the fixed `0x8011A89D/0x8011A89E` flags. The producer clears both state bytes after its send paths, while no generated nonzero writer was found. The fixed `0x8011A89D/0x8011A89E` flags are set by `setPostSwapPendingFlags` and consumed/cleared by submit/advance paths. The DP handler’s branch reads through `s0 = 0x8011A408`, so assigning `0x8011A89D` as its direct DP gate is a role conflation in the generated snapshot. This rules out the fixed-flag role assignment and unconditional lifecycle-writer hypothesis; it does not yet distinguish a non-generated writer from a genuinely stale SP gate. `git diff --check` passed.
+## Session 1105 (2026-08-14) — audited non-generated submit gate ownership
+
+Ran the prescribed bounded runtime-free ownership census; no build or run was
+needed. The companion tree contains only undefined-symbol declarations for
+`0x8011A89F`, `0x8011A8A0`, and `0x8011A408`; host/runtime and patch sources
+contain no matching fixed-address or equivalent-offset access. The generated
+SP producer initializes `s4=0x8011A89C`, derives `s2=0x8011A89F` and
+`s3=0x8011A8A0`, reads both gate bytes, and clears them after its send paths.
+The generated DP handler uses `s0=0x8011A408` as its queue object. The same
+census positively matched the named `spTaskSchedulerThread` and
+`dpInterruptHandlerThread` symbols and their generated boundaries. This
+selects static `H-gate-stale-or-unseen-writer`, rules out an in-tree external
+writer and source-level object alias, and leaves runtime values and execution
+reachability open. No build, runtime code, queue behavior, or mitigation
+changed.
+
+ORIGIN: companion/host/patch ownership census with generated symbol-path
+positive controls; this is a source classification, not a mitigation.
