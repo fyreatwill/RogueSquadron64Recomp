@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s992 (2026-08-13). The active blocker is authoritative
+Reviewed through s993 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -443,6 +443,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 
 | s991 | The planned ordinary-generated-write probe was blocked before build: generated `*.c` files compile as C and `MEM_W/MEM_H/MEM_B` are raw lvalue macros, so a common header hook cannot distinguish writes from reads or capture a per-store guest PC. The next probe must be implemented in the regeneration-owned fixup script. No runtime or mitigation conclusion. |
 | s992 | Added an env-gated, regeneration-owned fixup pass for simple generated `MEM_B/MEM_H/MEM_W` assignments. It matched 42,818 stores across all 50 current generated files in a static dry run and emits a same-run control marker plus phase, guest PC, width, and effective address for target-range stores. No build or game capture ran because 34 generated files already carry the fixup sentinel and the external tree has unrelated dirty source/generated changes; a second fixup pass would be unsafe. This advances instrumentation only and makes no writer or legitimacy conclusion. |
+| s993 | Clean regeneration/build/capture passed controls and found 39 phase-4 plus 59 phase-6 exact-target generated-store sites, with 154/86 non-target shared-page records. H-generated-target is selected; assigned values and legitimacy remain open. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -474,51 +475,43 @@ entries and do not authorize mitigations.
    the invalid callback state pointer is identified.
 4. M4 correctness remains active: phase-6 VTXCOLOR payloads are demonstrably
    nonzero while decoded shade is exact ZERO, and s988 finds no overlap from the
-   instrumented RSP DMEM-to-RDRAM DMA path. s989's recoverable page census saw
-   128 logged writes to the two shared host pages, but none at either exact target
-   range; phase-4 and phase-6 F5/shade controls and all-DMA controls fired. This
-   selects no directly faulting CPU store in the observed writable target bytes,
-   bounded by the page-sharing gap; dynamic copy paths and renderer/state
-   conversion remain open. The `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON)
-   remains without an ORIGIN conclusion.
+   instrumented RSP DMEM-to-RDRAM DMA path. s993's regeneration-safe generated
+   census identifies 39 phase-4 and 59 phase-6 exact-target static store sites,
+   with independent same-run controls and 154/86 non-target shared-page
+   records. This selects a generated game-side writer class for the sampled
+   ranges; it does not capture the assigned value or establish legitimacy.
+   Classify those PCs and value sources before considering any mitigation. The
+   `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an ORIGIN
+   conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s993)
+## Next work unit (s994)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
-Regenerate a clean `../N64Recomp/RecompiledFuncs/` tree, run the new
-`fixup_game_funcs.py` pass with `RS64_FIXUP_S992_GENERATED_WRITES=1`, verify
-the reported 42k-scale match count, then build and run the phase-gated probe.
-Do not edit generated files by hand or add a mitigation. Preserve the existing
-F5/shade and all-DMA controls and require the new
-`[vtx-generated-write-control] control=1` marker.
+Perform one bounded static classification of every exact-target generated
+store PC recorded by s993. Use the fresh generated C and companion symbols to
+map each PC to its function, assignment expression, base/offset provenance,
+and value expression. Do not rebuild, rerun the game, hand-edit generated
+files, or add a mitigation.
 
-Competing hypotheses are H-generated-target (exact target overlap with a
-matching guest PC), H-generated-unrelated (only non-target writes on the
-shared pages), and H-runtime-copy (no generated-store overlap, leaving only
-runtime copy/state conversion). The discriminating measurement is the
-phase-scoped count and records for exact target generated stores versus
-non-target shared-page stores; the positive control must visibly fire.
+Competing hypotheses are H-direct-expected (target stores have bounded,
+semantically expected value sources), H-direct-wild (a target store's value
+expression is an unbounded or corrupted pointer/state field), and
+H-copy-shaped (target stores are coherent source copies whose bad value must
+originate upstream). The discriminating measurement is a complete
+PC-to-assignment/value-source table covering all 39 phase-4 and 59 phase-6
+sites; an incomplete PC set is invalid.
 
 Exact commands:
 
-After the documented delete-before-regen pipeline (`make_elf.py`, N64Recomp,
-then fixup), build and run:
-
-`env RS64_FIXUP_S992_GENERATED_WRITES=1 python3 ../N64Recomp/fixup_game_funcs.py`
-
-`cmake --build build --config Debug --target RogueSquadron64Recomp`
-
-`env ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LLE_FORCE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_PHASE_TIMEOUT=180 PROBE_START=0 PROBE_KEYS='20:start' zsh tools/probe.sh scratch/agent/probe_s993 180 1`
-
-The pass must be regeneration-safe: if it cannot identify store statements
-without wrapping reads, stop and record the match-count measurement rather
-than inserting a temporary generated-file probe.
-
-The s992 dry-run match count and control design are not evidence about
-target-byte ownership.
+Extract the s993 target PCs and addresses from
+`scratch/agent/probe_s993/run.log`, then inspect bounded windows in the fresh
+`../N64Recomp/RecompiledFuncs/funcs_*.c` files and cross-check each guest PC
+against the companion symbol/decomp maps with `rg`. Record counts by phase and
+class in the session ledger; no code change is authorized. The s993 runtime
+counts establish generated-store ownership, not the assigned values.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

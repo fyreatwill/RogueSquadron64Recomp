@@ -60711,3 +60711,36 @@ regenerate cleanly, apply the pass, build, and run the phase-gated capture.
 
 ORIGIN: this session added diagnostic instrumentation only; no memory guard,
 shade change, or ownership mitigation was introduced.
+
+## Session 993 (2026-08-13) — generated stores hit both VTXCOLOR target ranges
+
+Regenerated the external `RecompiledFuncs/` tree from a fresh ELF and applied
+the regeneration-owned ordinary-store census. The first build exposed a
+fixup defect: files with no earlier `stdio` patch received census calls but
+not the headers declaring `fprintf`, `fflush`, `stderr`, and `getenv`. The
+minimal header insertion was added to `../N64Recomp/fixup_game_funcs.py`, the
+tree was regenerated again, and the full target build succeeded.
+
+The phase-gated capture reached VI width 1024 at 79.9 seconds, delivered the
+from-phase key, and completed 180 seconds with 36 frames. Positive controls
+fired: the generated-store control emitted 8,754 records overall; phase 4
+had 1,674 generated-store records and phase 6 had 4,213; the shade-DMA/all-
+DMA control emitted eight records with its all-DMA counter advancing from
+1041 through 1048; and the existing zero-shade replacement fired eight times.
+Within the target ranges, fresh generated ordinary stores were observed at
+39 distinct phase-4 static sites and 59 distinct phase-6 static sites. The
+same shared 0x700000–0x740000 window also contained 154 phase-4 and 86
+phase-6 non-target records. The records carry the generated guest PC and
+effective address immediately before the assignment; the probe does not
+capture the assigned value.
+
+This selects H-generated-target over H-generated-unrelated and H-runtime-copy
+for the sampled ranges. Phase 4 and phase 6 provide independent phase-gated
+lines of evidence, with the positive controls in the same run. It identifies
+the generated game-side writer class, not whether the writer's value is
+legitimate and not the ultimate shade-state explanation. No mitigation was
+added. The next unit must classify every exact-target guest PC/value source
+from the generated assignments before any guard or restore is considered.
+
+ORIGIN: the target-range stores are generated game assignments at the PCs
+listed by the phase-gated census; no writer was skipped, restored, or guarded.

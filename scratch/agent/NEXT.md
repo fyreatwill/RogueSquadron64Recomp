@@ -1,39 +1,42 @@
-# NEXT work unit (s993)
+# NEXT work unit (s994)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
 ## One work unit
 
-Regenerate a clean `../N64Recomp/RecompiledFuncs/` tree, apply the new
-regeneration-safe generated ordinary-store census, build, and run one
-phase-gated capture. Do not hand-edit generated files or add a mitigation.
+Perform one bounded static classification of every exact-target generated
+store PC recorded by s993. Map each PC to its fresh generated C function,
+assignment expression, base/offset provenance, and value expression. Do not
+build, rerun, hand-edit generated files, or add a mitigation.
 
 Competing hypotheses and discriminating measurement:
 
-- H-generated-target: exact phase-4/phase-6 target overlap records with a
-  matching generated guest PC.
-- H-generated-unrelated: the generated probe fires its positive control and
-  records only non-target shared-page stores.
-- H-runtime-copy: the generated probe fires its positive control but records no
-  target-range store, leaving runtime copy/state conversion as the remaining
-  class.
+- H-direct-expected: target stores have bounded, semantically expected value
+  sources.
+- H-direct-wild: a target store's value expression is an unbounded or
+  corrupted pointer/state field.
+- H-copy-shaped: target stores are coherent source copies whose bad value must
+  originate upstream.
 
-The discriminating measurement is the phase-scoped exact-target generated-store
-count and records, compared with non-target shared-page records. The run is
-invalid unless `[vtx-generated-write-control] control=1`, F5/shade, and all-DMA
-controls visibly fire.
+The discriminating measurement is a complete PC-to-assignment/value-source
+table covering all 39 phase-4 and 59 phase-6 exact-target sites from s993.
+An incomplete PC set is invalid. The s993 run does not capture assigned
+values, so do not infer legitimacy from its address records.
 
 ## Exact commands
 
-Use the documented delete-before-regen pipeline (`make_elf.py`, N64Recomp,
-then fixup) without touching unrelated dirty files. Apply the fixup with:
+Extract all target records and deduplicate by phase, guest PC, and physical
+address from the bounded capture:
 
-`env RS64_FIXUP_S992_GENERATED_WRITES=1 python3 ../N64Recomp/fixup_game_funcs.py`
+`perl -ne 'if (/\\[vtx-generated-write-control\\].*phase=(4|6).*pc=(0x[0-9A-Fa-f]+).*phys=(0x[0-9A-Fa-f]+)/) { $a=hex($3); print if (($a>=0x726200 && $a<0x726C50) || ($a>=0x732A10 && $a<0x73E3B0)); }' scratch/agent/probe_s993/run.log`
 
-Then:
+For every emitted PC, locate the preceding guest-PC comment and assignment in
+`../N64Recomp/RecompiledFuncs/funcs_*.c` with `rg`, then cross-check the
+function/semantic name in the companion symbol/decomp trees with `rg`. Count
+all 98 sites and classify the RHS as constant/bounded state, wild pointer or
+index-derived state, or coherent source copy. Record the table or its compact
+classification in the s994 ledger entry.
 
-`cmake --build build --config Debug --target RogueSquadron64Recomp`
-
-`env ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LLE_FORCE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_PHASE_TIMEOUT=180 PROBE_START=0 PROBE_KEYS='20:start' zsh tools/probe.sh scratch/agent/probe_s993 180 1`
-
-The s992 static match count is not evidence about target-byte ownership.
+No runtime controls are needed for this static unit. If fewer than 98 unique
+phase/site records can be mapped, report the missing PCs and do not select a
+value-legitimacy hypothesis.
