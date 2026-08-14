@@ -58961,7 +58961,7 @@ ORIGIN: complete generated helper/caller, arithmetic, access-range,
 termination, callback-target, and companion-symbol inventory; no guest value
 mutation or mitigation.
 
-## s933 (2026-08-13) — `musyxInitVoiceFromSample` remains unclassified
+## Session 932 (2026-08-13) — `musyxInitVoiceFromSample` remains unclassified
 
 Ran the planned source-only M3 idiom audit. Both generated callers use the
 same `(voiceIdx, sampleDesc, adsrFlag)` contract, so the caller-shape

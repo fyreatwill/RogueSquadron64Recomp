@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s933 (2026-08-13). The active blocker is the authoritative
+Reviewed through s932 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -424,7 +424,7 @@ ORIGIN: complete generated helper/reference, target, arithmetic-bound,
 termination, and companion-symbol inventory; no guest value mutation or
 mitigation.
 
-## s933 — `musyxInitVoiceFromSample` remains structurally unclassified
+## s932 — `musyxInitVoiceFromSample` remains structurally unclassified
 
 Performed the planned source-only M3 idiom inventory of
 `musyxInitVoiceFromSample` (`0x80092128`) in
