@@ -63255,3 +63255,22 @@ the selector state; no build, capture, queue behavior, or mitigation changed.
 
 ORIGIN: static source/data-flow classification only; no value was skipped,
 rewritten, or otherwise mitigated.
+
+## Session 1113 (2026-08-14) — brought up the debugger-enabled retail oracle
+
+Ran the prescribed oracle build/setup unit. `tools/oracle/build_core.sh`
+completed on Apple arm64 despite the existing Makefile `strings` compatibility
+warnings and verified that the resulting core exports
+`_DebugBreakpointCommand`. `tools/oracle/build.sh` then built
+`tools/oracle/build/rs64_oracle` successfully. The first setup invocation was
+invalid because this checkout has no `build/Debug` directory or ROM; the ROM
+was present at `build/rogue_squadron.z64`. Rerunning the identical 8-second
+whole-RDRAM positive-control check with that existing path loaded the core,
+advanced 479 VI frames, reached the oracle's 10,000-callback positive-control
+threshold, and returned zero. This selects `H-oracle-core`, rules out the
+build-environment and front-end mismatch hypotheses, and leaves all target
+watch and hangar-phase conclusions open. No port build, game logic, queue
+behavior, or mitigation changed.
+
+ORIGIN: toolchain/setup work only; no value was skipped, rewritten, or
+otherwise mitigated.

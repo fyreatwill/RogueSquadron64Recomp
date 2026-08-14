@@ -1,35 +1,38 @@
-# NEXT work unit (s1113)
+# NEXT work unit (s1114)
 
-HYPOTHESIS-ID: submit-phase-route-audit
+HYPOTHESIS-ID: retail-oracle-mode-state-route
 
-Build the debugger-enabled retail-oracle core, the next ranked step after the
-s1112 lifecycle audit. Do not run a game capture until the core and front-end
-positive controls are both available.
+Run one phase-gated retail-oracle capture using the rebuilt debugger-enabled
+core. Keep the whole-RDRAM, PIF, and VI controls armed; watch the mode selector
+and pending-mask family identified by s1112 plus target `0x8011A8A0` (physical
+`0x11A8A0`). Do not interpret target zeros unless the controls pass and the
+512/1024 phase is reached.
 
 Competing hypotheses:
 
-* H-oracle-core: `build_core.sh` produces a debugger-enabled core dylib and the
-  existing front end can load it.
-* H-build-env: the source/toolchain or Homebrew dependency is the blocker.
-* H-front-end-mismatch: the core builds, but the front end rejects it or its
-  debugger symbols/configuration are unusable.
+* H-mode-writer: selector/pending-state writes occur before the 512/1024 phase,
+  and their PC/value trace identifies the retail lifecycle gate.
+* H-A0-writer: the A0 byte is written by the retail route, with a PC/value
+  attribution independent of the port's generated-store probe.
+* H-pre-phase-boundary: all controls pass but neither watched state family nor
+  A0 is reached before the established attract route ends; the boundary is
+  earlier than the suspected consumers.
 
-Discriminator: `build_core.sh` exit/status plus a front-end setup check using
-`tools/oracle/build/rs64_oracle --core <built-dylib> --rom ... --secs 8
---watch-write 0:0x800000`. A successful build and approximately 1.6M whole-
-RDRAM callbacks select H-oracle-core; a build failure selects H-build-env; a
-built dylib rejected by the front end selects H-front-end-mismatch. Do not
-interpret target-watch zeros until the whole-RDRAM control fires.
+Discriminator: the phase-gated run's independent PC-attributed writes and
+controls. Mode-family writes before 512/1024 select H-mode-writer; an A0 write
+with controls and phase selects H-A0-writer; positive controls without either
+watch class or the phase select H-pre-phase-boundary. A zero target watch with
+failed controls is invalid.
 
 Exact commands:
 
 ```sh
-tools/oracle/build_core.sh
-tools/oracle/build.sh
-find /Users/williambuckley/Documents/Tools -name 'libmupen64plus.dylib' -type f -print
-tools/oracle/build/rs64_oracle --help
+mkdir -p scratch/agent/oracle_mode_capture
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom build/rogue_squadron.z64 --secs 120 --watch-write 0:0x800000 --watch-write 0x11A862:0x11A866 --watch-write 0x128E90:0x128E98 --watch-write 0x11A8A0:0x11A8A1 --vi-trace --vi-poll --pif-trace --press 6:return,12:return,18:return,24:return,30:return,36:return,42:return,48:return,54:return,60:return,66:return > scratch/agent/oracle_mode_capture/run.log 2>&1
 ```
 
-If the core builds, run only the 8-second whole-RDRAM positive-control setup
-check, capturing output under `scratch/agent/oracle_core_check/`. No port build,
-mode-state watch, mitigation, or soak is authorized for this unit.
+The whole-RDRAM watch must reach its positive-control threshold, PIF must show
+the scheduled Start edges, and VI callback/poll traces must agree. If the
+front end's watch capacity rejects this four-watch command, increase capacity
+in one bounded source edit and rerun the same complete table; do not drop a
+watch.

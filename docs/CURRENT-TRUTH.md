@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1111 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1113 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -69,6 +69,14 @@ compact and records only live conclusions, boundaries, and next work.
   commits the next state, so no unobserved 1024 write or logger mismatch was
   found. This selects static `H-state-lifecycle`; the retail writer/consumer
   boundary remains open.
+- The s1113 oracle setup check rebuilt the debugger-enabled Mupen64Plus core,
+  confirmed `DebugBreakpointCommand` is exported, rebuilt `rs64_oracle`, and
+  loaded the core successfully against the repository ROM. The 8-second
+  whole-RDRAM positive control reached the oracle's 10,000-callback threshold
+  and advanced 479 VI frames. The first invocation failed only because the
+  documented `build/Debug` ROM path is absent on this checkout; rerunning with
+  the existing `build/rogue_squadron.z64` path passed. This selects
+  `H-oracle-core`; no target-watch or hangar-phase conclusion is admissible yet.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -352,17 +360,13 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 
 ## Ranked next steps
 
-1. Build the missing debugger-enabled retail oracle core before relying on an
-   independent physical write watch. The s1112 route audit selects lifecycle
-   state as the static explanation for the missing 1024 phase; the oracle can
-   now provide an independent PC/value trace for the relevant mode-state
-   writers and the hangar transition. A0 remains open.
-2. After the oracle core exists, run one phase-gated positive-control capture
-   with watches on the mode-selector/pending-state family and the A0 target;
-   do not spend another port A/B until that independent route is available.
-3. Keep M4 parked unless an independent ground-truth path or a new complete
+1. Run one phase-gated retail-oracle capture with the rebuilt debugger core,
+   whole-RDRAM/PIF/VI controls, and watches on the mode-selector/pending-state
+   family plus the A0 target. Do not interpret target zeros unless all controls
+   pass and the 512/1024 phase is reached.
+2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
-4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
+3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
    omission only when a reproducible lead appears; preserve delete-before-
 regen ordering and audit fixup counts.
 
