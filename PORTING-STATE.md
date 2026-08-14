@@ -63499,3 +63499,17 @@ remains open. This rules out runtime population of the field in the audited
 sources, but does not yet identify the copied record or width. ORIGIN:
 generated store/read census, host/patch/companion census, section mapping,
 and direct retail-ROM bytes; no mitigation.
+## Session 1127 (2026-08-14) — resolved boot selector branch and descriptor
+
+The bounded static audit traced `gameConfig+0x44 = 0x00001800` from the
+`thread3_video_handle` stack argument through `initVideoBootWrapper` into
+`buildAndRegisterDefaultMaterial`. Bits 8, 7, and 2 write selector bytes
+`A/B/C = 1/0/0`; `selectAndApplyViMode` therefore takes the `0xF0` branch.
+`initVideoSubsystem` copies the four records from stack blocks
+`sp+0x18/0x68/0xB8/0x108` to destination offsets `0x00/0x50/0xA0/0xF0`.
+The boot `0xF0` source is the NTSC index-0 descriptor, whose record `+8`
+width is 320. This selects `H-selector-zero-to-320`, rules out an argument
+transformation and a non-320 zero-selector arm, and leaves no runtime probe
+or mitigation justified. No build or game run occurred. ORIGIN: generated
+argument/branch/copy flow plus direct retail-ROM descriptor bytes; no
+mitigation.
