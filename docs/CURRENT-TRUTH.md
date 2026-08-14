@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1156 (2026-08-14).
+in the ledger. Reviewed through s1157 (2026-08-14).
 
 ## Current state
 
@@ -156,6 +156,15 @@ in the ledger. Reviewed through s1156 (2026-08-14).
   a post-640 selector writer as the causal candidate. The writer log's 512-row
   budget saturated later `0x80019914` rows, so downstream consumer ordering is
   the next bounded check.
+- The s1157 consumer capture passed the independent selector positive control,
+  slot-dispatch control (6,424 rows), and the 640 phase gate, but did not
+  reproduce s1156's selector transition: live `0x80019914` rows were
+  `00/00/00→00/00/00` at committed width 640. There were zero selector-control,
+  selected-record, predecessor, or selector-callsite rows, while six host
+  `osViSetMode` requests independently recorded `320→2→640→640→2→640`.
+  This is an unevaluable non-reproduction, not evidence for H1/H2/H3; the
+  next unit must establish why the writer transition is absent before tracing
+  consumer ordering.
 
 ## Retail VI descriptor boundary
 
@@ -283,18 +292,18 @@ corruption.
 | s1154 | Ran the phase-scoped producer census with the independent selector positive control and slot-dispatch control. The run timed out at width 640 after 640→2→640; selector positive fired once, slot dispatch logged 6,438 rows, generated selector/predecessor/producer markers were zero, and no crash/SIGBUS occurred. This selects H2, the stable loop without a generated VI producer, and sends the investigation to the state writer. |
 | s1155 | Static-censused the live generated tree and companion symbols. `buildAndRegisterDefaultMaterial` writes selector bytes at `0x8011A862/0x8011A864/0x8011A865` from boot and per-frame callers; `applyPendingViChanges` writes `0x8011A862/0x8011A865`. `selectAndApplyViMode` reads the four source records at `0x80128D50/0x80128DA0/0x80128DF0/0x80128E40` and copies them to `0x80128C90`; no generated source-record writer was found. This selects H1, a post-640-capable generated selector writer, and moves the next probe to writer phase/value attribution. |
 | s1156 | Added durable callsite probes and a host committed-width accessor, rebuilt successfully, and ran one phase-gated capture. The selector positive control fired once, slot dispatch logged 6,424 rows, all three tagged writer callsites ran, and `0x80019914` changed selector `01/00/00→01/00/01` at committed width 640 after the `640→2→640` lifecycle. This selects H1, while the saturated apply-site budget leaves downstream consumer ordering open. |
+| s1157 | Rebuilt and ran the phase-gated consumer capture. Selector positive and slot-dispatch controls passed, but the live `0x80019914` writer rows stayed `00/00/00→00/00/00`; no generated selector-consumer rows appeared. Host VI requests still recorded `320→2→640→640→2→640`. The planned H1/H2/H3 discriminator was unevaluable and the next unit moves to the missing-transition cause. |
 
 ## Ranked next steps
 
-1. Trace the selected post-640 writer through the consumer in one phase-gated
-   capture: retain the selector positive and slot-dispatch controls, and tag
-   `applyPendingViChanges` at `0x80019914` together with
-   `selectAndApplyViMode`'s selected source record, copied-record width, and
-   the following `osViSetMode` request. The discriminator is an ordered
-   post-640 tuple where the selector change is followed by a changed selected
-   record/request (writer-to-consumer chain), versus selector change with an
-   unchanged consumer (the write is unrelated/transient), versus no consumer
-   invocation (ordering/path gap). Do not repeat the closed owner census.
+1. Explain the s1157 non-reproduction before retrying consumer ordering: in one
+   phase-gated capture, retain selector-positive and slot-dispatch controls and
+   tag `applyPendingViChanges` at `0x80019914` with pending selector inputs,
+   all selector bytes, and exact store-path evidence. Distinguish unchanged
+   pending input from s1156, a store/address measurement defect, and a live
+   nonzero input whose store leaves the selector unchanged. Do not repeat the
+   closed owner census or infer a consumer result without a reproduced writer
+   transition.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

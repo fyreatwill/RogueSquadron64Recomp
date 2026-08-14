@@ -63997,3 +63997,20 @@ this capture. The apply-site writer budget saturated at 512 rows, so later
 consumer ordering is not yet established; the next unit traces that writer
 through `selectAndApplyViMode` and the following VI request. No mitigation was
 added.
+## Session 1157 (2026-08-14) — consumer trace did not reproduce selector transition
+
+Applied the existing selector probe, rebuilt the Debug target successfully,
+and ran one phase-gated capture at committed VI width 640 for 180 seconds.
+The independent `[vi-selector-positive]` control fired once and slot dispatch
+logged 6,424 rows. The tagged `0x80019914` writer was live, including
+post-640 rows, but every sampled row remained `00/00/00→00/00/00`; the
+s1156 `01/00/00→01/00/01` transition did not recur. Generated selector,
+selected-record, predecessor, and selector-callsite markers were zero. Host
+`osViSetMode` independently logged six requests with widths
+`320→2→640→640→2→640`, and no crash marker occurred.
+
+The planned H1/H2/H3 consumer discriminator is unevaluable: its required
+writer transition was absent, so this run rules out neither consumer behavior
+nor the selector writer. The next unit instruments pending selector inputs and
+store-path evidence at `0x80019914` to explain the non-reproduction before
+retrying consumer ordering.

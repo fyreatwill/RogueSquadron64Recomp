@@ -1,31 +1,32 @@
-# NEXT work unit (s1157)
+# NEXT work unit (s1158)
 
 HYPOTHESIS-ID: post640-selector-writer-phase
 
-Perform one phase-gated runtime capture tracing the selected post-640 writer
-at callsite `0x80019914` through `selectAndApplyViMode` and the following
-`osViSetMode` request. Keep the independent selector positive and slot-
-dispatch controls. Record ordered committed-width phase, selector bytes,
-selected source record, copied-record width, and requested width. Do not add a
-mitigation or repeat the closed submitGfxFrame owner capture.
+Perform one phase-gated runtime capture that explains the s1157
+non-reproduction before attempting consumer ordering. Instrument the
+`applyPendingViChanges` callsite `0x80019914` with its pending selector inputs,
+all three selector bytes, and the exact store path; retain the independent
+selector-positive and slot-dispatch controls. The capture must distinguish:
 
-Competing hypotheses and discriminator:
+- H1: the pending input is unchanged from s1156 and the selector store path is
+  wrong or not reached, so the probe's observed bytes are not the causal state;
+- H2: the pending input itself is zero/unchanged in this run, so the s1156
+  selector transition is phase/input-dependent;
+- H3: the input is nonzero and the store executes, but the expected selector
+  bytes remain unchanged, identifying an address/endian/measurement defect.
 
-- H1/writer-to-consumer: the post-640 selector change is followed by a changed
-  selected record or requested width.
-- H2/transient-selector: the selector changes but the consumer remains on the
-  old record/width, so the write is unrelated to descriptor selection.
-- H3/ordering-gap: the writer change is observed but no selector consumer runs
-  afterward in the same phase.
+The discriminating measurement is an ordered table at `0x80019914` containing
+pending inputs, pre/post selector bytes, and store-path evidence after
+committed width 640. The selector-positive and slot-dispatch controls must
+fire; missing controls or missing post-640 callsite rows is inconclusive.
 
-The discriminating measurement is one ordered phase-scoped writer/consumer
-table with an independent positive control: changed selector followed by a
-changed consumer selects H1; unchanged consumer selects H2; no consumer row
-after the writer selects H3. Missing controls or missing post-640 rows is
-inconclusive.
-
-Commands (from the repository root):
+Commands:
 
     python3 tools/apply_s802_vi_selector_probe.py
     DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer cmake --build build --config Debug --target RogueSquadron64Recomp
-    env PROBE_PHASE_WIDTH=640 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 ROGUESQ_LOG_VI_WRITERS=1 ROGUESQ_LOG_VI_SELECTOR=1 ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_LOG_VI_TRANSITION=1 zsh tools/probe.sh scratch/agent/s1157_vi_consumer 180 0.5
+    env PROBE_PHASE_WIDTH=640 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 ROGUESQ_LOG_VI_WRITERS=1 ROGUESQ_LOG_VI_SELECTOR=1 ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_LOG_VI_TRANSITION=1 zsh tools/probe.sh scratch/agent/s1158_selector_writer_inputs 180 0.5
+
+Expected outcomes: H1 selects a measurement/address defect; H2 selects an
+input/state-path difference and sends the next probe to its writer; H3 selects
+the store/address implementation defect. Otherwise leave the thread open as
+unevaluable and do not infer a consumer result.
