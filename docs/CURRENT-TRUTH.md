@@ -52,9 +52,14 @@ callbacks, all eleven Start presses were observed in PIF reads, and VI reached
 `0x8006D9BC`, all odd nearby PCs, and all post-loop PCs remained silent. This
 selects single-source `H-taken-target`: retail execution reaches the taken
 loop target, and the remaining delay-slot distinction is an oracle callback
-coverage question rather than an unresolved branch target. The result does
-not identify whether the retail branch itself or debugger PC semantics explain
-the missing delay-slot callbacks.
+coverage question rather than an unresolved branch target. The s1093 source
+audit resolves that question: the oracle forces `R4300Emulator=0`, so
+`run_pure_interpreter` calls `update_debugger(current PC)` before each
+top-level instruction, while `DECLARE_JUMP` recursively executes the delay
+slot without another debugger update. `--watch-pc` maps each requested PC to
+the exact half-open range `[pc, pc+4)`. Thus zero PCs that are delay slots are
+callback omissions by construction; non-delay PCs remain valid retail
+evidence.
 
 ## Retail oracle boundary
 
@@ -248,16 +253,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1090 | Rebuilt the retail oracle after increasing watch capacity from 16 to 24 (the planned 17-watch discriminator otherwise failed before emulation), then ran the established eleven-Start capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, four milestones, and eight post-loop bracket PCs. Controls were positive: whole-RDRAM reached 10,002 callbacks, PIF delivered all eleven presses, and VI reached 7,199 at width 320/origin `0x006dd280`; the mission-state block was silent. Hits were `0x8006D900=1`, `0x8006D9B0=1`, all eight post-loop PCs `=0`, `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and `0x8003E07C=0`. Selects single-source `H-loop-exit-path`: the callee reaches the loop-boundary compare but not `0x8006D9C0`; the exact branch/delay-slot boundary remains open. |
 | s1091 | Ran the established eleven-Start retail-oracle capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, four milestones, eight post-loop PCs, and three branch-region PCs. Controls were positive: whole-RDRAM reached 10,003 callbacks, PIF delivered all eleven presses, and VI reached 7,204 at width 320/origin `0x006dd280`; the mission-state block was silent. Hits were `0x8006D900=1`, `0x8006D9B0=1`, `0x8006D9B4=1`, while `0x8006D9B8=0`, `0x8006D9BC=0`, all eight post-loop PCs `=0`, `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and `0x8003E07C=0`. Selects single-source `H-branch-delay-boundary`; the remaining distinction is oracle delay-slot callback behavior versus a taken branch target. |
 
-| s1092 | The initial planned run was rejected by the oracle's 24-watch capacity; increasing the front-end capacity to 64 and rerunning the same capture passed controls: whole-RDRAM 10,015 callbacks, eleven PIF Start presses, and 7,204 VI frames at width 320/origin `0x006dd280`. `0x8006D9B4` hit once, `0x8006D980` twice, and nearby even loop PCs `0x8006D988`–`0x8006D9A8` twice each; `0x8006D9B8`, `0x8006D9BC`, odd nearby PCs, and post-loop PCs were zero. Selects single-source `H-taken-target`; delay-slot callback coverage remains open. |
+| s1092 | The initial planned run was rejected by the oracle's 24-watch capacity; increasing the front-end capacity to 64 and rerunning the same capture passed controls: whole-RDRAM 10,015 callbacks, eleven PIF Start presses, and 7,204 VI frames at width 320/origin `0x006dd280`. `0x8006D9B4` hit once, `0x8006D980` twice, and nearby even loop PCs `0x8006D988`–`0x8006D9A8` twice each; `0x8006D9B8`, `0x8006D9BC`, odd nearby PCs, and post-loop PCs were zero. Selects single-source `H-taken-target`; delay-slot callback coverage remained open pending source audit. |
+| s1093 | Audited the retail oracle source. `R4300Emulator=0` selects `run_pure_interpreter`, whose loop calls `update_debugger` before each top-level instruction; `DECLARE_JUMP` recursively executes the delay slot without another debugger update. `--watch-pc` uses `[pc,pc+4)`, so zero PCs that are delay slots are callback omissions by construction. Selects single-source `H-delay-callback-omits`; non-delay PCs remain independently unresolved. |
 
 ## Ranked next steps
 
-1. Separate the selected taken-target result from debugger delay-slot
-   semantics with one bounded oracle/frontend audit or control capture. Keep
-   the branch target evidence; do not reopen the state-gate or watch-gap arms
-   unless a control demonstrates that execution callbacks omit ordinary
-   instructions. Do not arm a freelist watch without an independently observed
-   `0x6abxxx` hangar-origin 512 transition.
+1. Classify the remaining non-delay PCs around the retail loop boundary by a
+   bounded ROM/generated-instruction audit. Keep the selected delay-slot
+   callback explanation and do not reopen the state-gate arm. Do not arm a
+   freelist watch without an independently observed `0x6abxxx` hangar-origin
+   512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

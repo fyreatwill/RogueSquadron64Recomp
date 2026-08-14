@@ -62729,6 +62729,24 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1093 (2026-08-14) — resolved retail oracle delay-slot callback semantics
+
+Performed the planned bounded source audit without a new ROM capture. The
+oracle sets `Core/R4300Emulator=0`, selecting the pure interpreter. Its main
+loop calls `update_debugger(*r4300_pc(r4300))` before each top-level
+`InterpretOpcode`; the MIPS `DECLARE_JUMP` macro advances to the delay slot and
+recursively calls `InterpretOpcode` without calling `update_debugger`. The
+oracle's `--watch-pc` creates an execution breakpoint with `start=pc` and
+`end=pc+4`, and its callback tests `start <= pc < end`. This proves that
+delay-slot PCs are omitted from execution-watch callbacks and that single-PC
+watch attribution is exact. It selects single-source `H-delay-callback-omits`
+for zero PCs that are delay slots, rules out the watch-range attribution arm,
+and leaves only verified non-delay PCs as an open retail control-flow question.
+
+ORIGIN: Mupen64Plus pure-interpreter callback/control-flow source plus the
+oracle's exact half-open PC range implementation; no mitigation or game-data
+change was made.
+
 ## Session 1092 (2026-08-14) — resolved the retail branch target
 
 The planned oracle capture initially failed before emulation because the

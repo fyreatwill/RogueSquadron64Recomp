@@ -1,37 +1,34 @@
-# NEXT work unit (s1093)
+# NEXT work unit (s1094)
 
-HYPOTHESIS-ID: oracle-delay-slot-callback-semantics
+HYPOTHESIS-ID: retail-loop-pc-delay-classification
 
-Perform one bounded ground-truth source audit of the debugger execution
-callback path for the retail oracle. Read the callback registration and
-dispatch implementation in `/Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core`, then inspect the oracle's `--watch-pc` callback and
-hit attribution. Do not run a new ROM capture unless the source audit exposes
-a concrete callback ambiguity that requires one controlled confirmation.
+Perform one bounded static audit of the retail ROM/generated instructions at
+`0x8006D980..0x8006D9BC`. Classify every watched PC from s1092 as a branch,
+delay slot, taken target, or ordinary sequential instruction, using the ROM
+disassembly/symbol context and the generated function. No ROM run is planned.
 
 Competing hypotheses and discriminator:
 
-* H-delay-callback-omits: the core invokes execution callbacks only for
-  non-delay-slot or instruction-boundary PCs, so zero hits at 9B8/9BC and odd
-  loop PCs are callback coverage, not absent retail execution.
-* H-retail-skips: the retail branch reaches 0x8006D980 but the observed zero
-  PCs are genuinely not executed because of the branch/delay control flow.
-* H-watch-attribution: the callback fires but the oracle's inclusive range or
-  PC normalization misattributes the missing addresses.
+* H-zeroes-are-delay: every zero PC in the s1092 bracket is a delay slot, so
+  the callback-semantic result fully explains the missing PCs.
+* H-nondelay-missing: at least one zero PC is an ordinary or taken-target
+  instruction, leaving a genuine retail control-flow boundary open.
+* H-address-map-error: the static address mapping does not correspond to the
+  watched generated function, so the classification cannot be transferred.
 
-Discriminating measurement: source-level control-flow evidence must identify
-whether the debugger callback is invoked for MIPS delay slots and whether the
-oracle maps a single-PC watch to exactly that PC. A concrete callback contract
-selects H-delay-callback-omits or H-watch-attribution; absence of such a rule
-leaves H-retail-skips open and requires a new positive-control capture next.
+Discriminating measurement: one complete instruction table for the inclusive
+bracket, with opcode/address/role and an independent ROM-vs-generated address
+check. All-delay classification selects H-zeroes-are-delay; any verified
+non-delay zero selects H-nondelay-missing; a failed address check selects
+H-address-map-error.
 
 Exact commands:
 
 ```sh
-rg -n "DebugSetCallbacks|DebugCallback|EXEC|breakpoint|delay|pc" \
-  /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src \
-  /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/rs64_oracle.c
-sed -n '1,220p' /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger.c
+rg -n -C 8 "8006D980|8006D9(8[048]|9[048]|A[048]|B[048C])" \
+  docs syms RecompiledFuncs tools
+rg -n -C 6 "func_8006D9|8006D980|8006D9B4" RecompiledFuncs tools
 ```
 
-Record the callback contract and update the ledger. Keep the current oracle
-capacity increase; it is required by the established discriminator.
+Keep the oracle capacity increase; it is required by the established
+discriminator.
