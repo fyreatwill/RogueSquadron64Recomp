@@ -554,6 +554,88 @@ index 1f3a4cf..b9cc34f 100644
      osViSetMode(rdram, (int32_t)ctx->r4);
  }
  
+diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
+index 149e770..e3dc9df 100644
+--- a/ultramodern/src/events.cpp
++++ b/ultramodern/src/events.cpp
+@@ -8,6 +8,9 @@
+ #include <mutex>
+ #include <queue>
+ #include <cstring>
++#include <cstdio>
++#include <cstdlib>
++#include <atomic>
+ 
+ #include "blockingconcurrentqueue.h"
+ 
+@@ -20,6 +23,43 @@
+ 
+ static ultramodern::events::callbacks_t events_callbacks{};
+ 
++namespace {
++
++bool event_wiring_log_enabled() {
++    static const bool enabled = [] {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* specific = std::getenv("ROGUESQ_LOG_EVENT_WIRING");
++        return (all && *all && *all != '0') || (specific && *specific && *specific != '0');
++    }();
++    return enabled;
++}
++
++std::atomic<uint32_t> event_wiring_reg_rows{0};
++std::atomic<uint32_t> event_wiring_sp_rows{0};
++std::atomic<uint32_t> event_wiring_dp_rows{0};
++
++void log_event_wiring_registration(OSEvent event_id, PTR(OSMesgQueue) mq, OSMesg msg) {
++    if (!event_wiring_log_enabled() || (event_id != OS_EVENT_SP && event_id != OS_EVENT_DP)) return;
++    const uint32_t row = event_wiring_reg_rows.fetch_add(1, std::memory_order_relaxed);
++    if (row >= 64) return;
++    std::fprintf(stderr, "[event-wiring] register kind=%s event=%u mq=0x%08X msg=0x%08X row=%u\n",
++        event_id == OS_EVENT_SP ? "SP" : "DP", event_id,
++        static_cast<uint32_t>(mq), static_cast<uint32_t>(msg), row);
++    std::fflush(stderr);
++}
++
++void log_event_wiring_completion(const char* kind, std::atomic<uint32_t>& rows,
++                                 PTR(OSMesgQueue) mq, OSMesg msg) {
++    if (!event_wiring_log_enabled()) return;
++    const uint32_t row = rows.fetch_add(1, std::memory_order_relaxed);
++    if (row >= 64) return;
++    std::fprintf(stderr, "[event-wiring] complete kind=%s mq=0x%08X msg=0x%08X row=%u\n",
++        kind, static_cast<uint32_t>(mq), static_cast<uint32_t>(msg), row);
++    std::fflush(stderr);
++}
++
++}
++
+ void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
+     events_callbacks = callbacks;
+ }
+@@ -140,6 +180,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+ extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
+     std::lock_guard lock{ events_context.message_mutex };
+ 
++    log_event_wiring_registration(event_id, mq_, msg);
++
+     switch (event_id) {
+         case OS_EVENT_SP:
+             events_context.sp.msg = msg;
+@@ -252,12 +294,14 @@ void vi_thread_func() {
+ void sp_complete() {
+     uint8_t* rdram = events_context.rdram;
+     std::lock_guard lock{ events_context.message_mutex };
++    log_event_wiring_completion("SP", event_wiring_sp_rows, events_context.sp.mq, events_context.sp.msg);
+     ultramodern::enqueue_external_message_src(events_context.sp.mq, events_context.sp.msg, false, ultramodern::EventMessageSource::Sp);
+ }
+ 
+ void dp_complete() {
+     uint8_t* rdram = events_context.rdram;
+     std::lock_guard lock{ events_context.message_mutex };
++    log_event_wiring_completion("DP", event_wiring_dp_rows, events_context.dp.mq, events_context.dp.msg);
+     ultramodern::enqueue_external_message_src(events_context.dp.mq, events_context.dp.msg, false, ultramodern::EventMessageSource::Dp);
+ }
+ 
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
 index 9944a02..b99b340 100644
 --- a/ultramodern/src/mesgqueue.cpp

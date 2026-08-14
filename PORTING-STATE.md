@@ -62998,3 +62998,23 @@ event mapping. No build, run, or runtime code changed.
 ORIGIN: `lib/N64ModernRuntime/ultramodern/src/events.cpp` event registration,
 HLE/LLE completion call sites, `mesgqueue.cpp` external delivery, and the
 architecture queue contract; no mitigation or game-data change was made.
+
+## Session 1100 (2026-08-14) — traced SP and DP event wiring
+
+Added a bounded `ROGUESQ_LOG_EVENT_WIRING` trace at `osSetEventMesg`,
+`sp_complete`, and `dp_complete`, exported the submodule patch, and rebuilt
+the Debug executable. One phase-gated capture from `build/` reached VI width
+1024 and produced 413 positive E9 provenance rows with emit/raw/dispatch/match
+all set; it ended without a crash marker after 83 captured frames. The trace
+recorded exactly two registrations: SP event 4 to guest queue `0x8011A420`
+with message `0x80128C70`, and DP event 9 to `0x8011A408` with message `0`.
+Both completion routes fired repeatedly and every bounded completion row
+matched its registration target. The static s1098 audit independently names
+`0x8011A818` and `0x8011A7E8` as the two blocking consumers. This selects the
+wrong-target/unwired SP and DP arms, rules out missing host completion
+producers, and supersedes s1099's unresolved mapping. No queue behavior or
+game data was changed.
+
+ORIGIN: same-run host registration/completion rows plus VI-1024 and E9
+positive controls, cross-checked against the independent generated/companion
+consumer census from s1098; diagnostic-only runtime instrumentation.

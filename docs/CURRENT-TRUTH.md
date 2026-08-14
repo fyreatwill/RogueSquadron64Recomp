@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1099 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1100 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -288,15 +288,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1097 | Bounded generated/companion audit found one normal `submitGfxFrame` epilogue and explicit continuations at all nine caller sites, but also reachable blocking `osRecvMesg(..., MQ_BLOCK)` calls at `0x8000C0B4` and `0x8000C2B8`. Selects `H-submit-nonreturn` as a legitimate wait boundary while retaining the independent fact that the audited idle-loop invocation returned once; no build, runtime code, or mitigation changed. |
 | s1098 | Bounded queue-contract audit maps `0x8000C0B4` to `D_8011A818` and `0x8000C2B8` to `D_8011A7E8`; both are `osRecvMesg(..., BLOCK)`. Generated/companion evidence identifies consumers but no matching in-tree producer for either wait: the first is an external SP-completion boundary, and the second depends on host DP forwarding documented in the architecture notes. Selects `H-queue-unmatched`; no build, runtime code, or mitigation changed. |
 | s1099 | Bounded host/runtime audit found that HLE and LLE SP completion plus HLE DP completion all enqueue through `events_context.sp/.dp`, populated dynamically by `osSetEventMesg`; no host producer hard-codes either guest queue. The exact `0x8011A818`/`0x8011A7E8` registration mapping is unresolved and becomes the next runtime-trace discriminator. No build, run, or mitigation changed. |
+| s1100 | Batched phase-gated host trace passed VI-1024 and 413 positive E9 provenance rows. SP registered and completed on `0x8011A420` with message `0x80128C70`; DP registered and completed on `0x8011A408` with message `0`. Both pairs fired repeatedly and matched internally, but neither target is the blocking consumer pair `0x8011A818`/`0x8011A7E8`. Selects wrong-target/unwired SP and DP routes, rules out missing host completion calls, and supersedes s1099's unresolved registration mapping. |
 
 ## Ranked next steps
 
-1. Add one batched, phase-scoped host registration/completion trace, then run
-   one phase-gated capture. Log every `osSetEventMesg` SP/DP registration and
-   the first bounded `sp_complete`/`dp_complete` target, joined by queue
-   address. Positive controls must include the existing VI-1024 transition.
-   This distinguishes exact SP/DP queue matches from missing registration or
-   swapped/wrong queue targets.
+1. Audit every generated registration call and the initialization of the
+   `0x8011A420` SP and `0x8011A408` DP queues. Reconcile those actual event
+   targets with the blocking consumers at `0x8011A818` and `0x8011A7E8`, then
+   identify whether the consumer addresses are stale labels, aliases, or a
+   real producer/consumer mismatch. Do not change queue behavior.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
