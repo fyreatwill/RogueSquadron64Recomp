@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1160 (2026-08-14).
+in the ledger. Reviewed through s1161 (2026-08-14).
 
 ## Current state
 
@@ -188,6 +188,13 @@ in the ledger. Reviewed through s1160 (2026-08-14).
   submit `0x80128DF0` without entering `selectAndApplyViMode`; the other
   edges are boot/reset, frame-swap, or selector-owned paths. This identifies
   H3's independent generated owner and closes the duplicate-edge ambiguity.
+- The s1161 runtime reconciliation passed independent controls: selector-positive
+  fired once and slot dispatch logged 6,864 rows. At stable VI width 640,
+  `applyPendingViChanges` logged a live direct edge at `0x8001B8DC` with mode
+  pointer `0x80128DF0`, and the host independently logged the same request;
+  generated selector-consumer markers remained zero. This selects H3 at runtime
+  and rules out a stale or misplaced direct-call marker for this lifecycle. The
+  run reached no 1024 phase and had no crash.
 
 ## Retail VI descriptor boundary
 
@@ -319,15 +326,16 @@ corruption.
 | s1158 | Re-ran the phase-gated writer capture with pending-mask and store-path attribution included. Selector-positive and slot-dispatch controls passed. The post-640 sequence showed pending `0/0`, then request-mask `pending B=0x11`, then `applyPendingViChanges` storing selector A and changing `01/00/00→01/00/01`; host VI logging independently recorded the matching 640 request. This selects H2 for s1157's non-reproduction and rules out an address/store defect in this capture. |
 | s1159 | Ran the consumer-order capture and a fixed retry. Both passed selector-positive and slot-dispatch controls; both observed the selector transition and host request, but zero generated selector-consumer entry/selection/callsite rows. This selects H3, an independent host VI path, and moves the next unit to a complete static call-path census. |
 | s1160 | Static-censused all five generated `osViSetMode_recomp` edges and the sole selector consumer. The direct `applyPendingViChanges` edge at `0x8001B8DC` is the only edge on the `0x80019914` writer path and can submit `0x80128DF0` without entering `selectAndApplyViMode`; the other edges are boot/reset, frame-swap, or selector-owned paths. This identifies H3's generated owner and closes the duplicate-edge ambiguity without a build or run. |
+| s1161 | Rebuilt and ran the phase-gated runtime reconciliation with selector-positive and slot-dispatch controls. The controls fired (1 and 6,864); at stable VI width 640, the direct `0x8001B8DC` marker carried `0x80128DF0` and the host independently logged the same request, while selector-consumer markers stayed zero. This selects H3 and rules out a stale/misplaced direct-call marker for this lifecycle. The run timed out before VI-1024, with no crash. |
 
 ## Ranked next steps
 
-1. Reconcile the s1160 H3 owner with one phase-gated runtime capture using the
-   existing direct-caller markers. Require selector-positive and slot-dispatch
-   controls, then compare `0x8001B8DC` rows against the host `0x80128DF0`
-   request after the `0x80019914` writer transition. Build only if the marker
-   source is present in the current generated tree; otherwise repair the
-   regeneration source before adding runtime fields.
+1. Perform a systematic M3 audit of the generated `slotDispatcherIter` caller
+   frame idiom around the recurring `+872` SIGBUS. Enumerate every direct and
+   indirect callsite in the generated tree and companion symbols, classify each
+   stack/register contract, and identify one bounded runtime marker table that
+   distinguishes balanced callers from the `0x80078894` boundary family. Do not
+   add a mitigation; any wild value needs an ORIGIN writer attribution first.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

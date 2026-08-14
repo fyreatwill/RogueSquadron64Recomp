@@ -64069,3 +64069,20 @@ generated owner and closes the duplicate-edge ambiguity. No build or runtime
 experiment was warranted because the census left one live owner rather than
 an unresolved duplicate path. The next unit is a positive-control-gated
 runtime reconciliation of the existing direct-caller marker.
+
+## Session 1161 (2026-08-14) — reconciled the direct VI owner at runtime
+
+The Debug target rebuilt successfully. The named `tools/run-phase-gate.sh`
+launcher was absent, so the repository's phase-gated `tools/probe.sh` was used
+with the same 1024 gate and the existing VI caller/selector/writer markers.
+The run reached the stable 640 lifecycle but not VI-1024 and produced no crash.
+
+Both independent controls were live: `[vi-selector-positive]` fired once and
+`[slot-dispatch]` logged 6,864 rows. The decisive runtime pair was present:
+`[vi-gate] site=0x8001B8DC name=applyPendingViChanges ...
+mode_ptr=0x80128DF0 ...` and the host logged `[osViSetMode #4]
+mode_ptr=0x80128DF0`. Selector-consumer entry/selection/callsite markers were
+zero. This selects H3, the direct generated owner submitting the descriptor
+without entering `selectAndApplyViMode`, and rules out a stale or misplaced
+direct-call marker for this lifecycle. The pre-1024 timeout means this does not
+classify later 1024 behavior or parser/rendering causality.
