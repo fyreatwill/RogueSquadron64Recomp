@@ -63799,3 +63799,17 @@ target phase nor a positive control was present, and the recurring
 boundary's runtime relevance remains open. The next attempt must explicitly
 enable the E9 provenance/unified and slot-dispatch categories and require a
 task-0..4 control plus VI width 1024 before interpreting the crash outcome.
+
+## Session 1145 (2026-08-14) — explicit-control boundary test remained pre-phase
+
+Ran one bounded phase-gated probe using the regenerated binary, explicitly
+enabling E9 provenance, unified-E9, and slot-dispatch logging. The process
+reached VI width 640 and remained there until the 180-second gate. Slot
+dispatch logging was live with 6,438 records, but the run had zero VI-1024
+records, zero task-control E9 rows, zero unified-E9 rows, and zero crash
+markers.
+
+This is UNEVALUABLE, not a recurrence or a changed boundary outcome: the
+positive task-control and target-phase gates were both absent. It rules out
+only an instrumentation-dead explanation for slot dispatch; it does not
+classify the corrected NPC boundary or the recurring SIGBUS.
