@@ -75,6 +75,13 @@ in the ledger. Reviewed through s1146 (2026-08-14).
   crash, SIGBUS, or E9 marker occurred. This is single-run evidence about
   the regenerated-target trace and does not explain why the 1024 transition
   is absent.
+- The s1147 phase-scoped VI producer capture is evaluable: after the final
+  640 record, `osViSetMode` made the transient call sequence through committed
+  width 2 and requested width 640, then made no further producer calls. Slot
+  dispatch (6,424 rows), host input (10,000), and audio dispatch (10,752)
+  continued without a crash. This selects a producer-absent stable loop after
+  the last 640 transition; no E9 or 1024 phase was reached, so the corrected
+  NPC boundary remains unevaluable at runtime.
 
 ## Retail VI descriptor boundary
 
@@ -192,16 +199,16 @@ corruption.
 | s1144 | Ran the regenerated macOS target under the 1024 VI phase gate. It reached width 640, then timed out at 180 seconds with no crash, no 1024 phase, and no explicitly enabled E9/slot-dispatch controls. The result is unevaluable; the corrected boundary's runtime effect remains open. |
 | s1145 | Repeated the regenerated-target phase gate with E9 provenance, unified-E9, and slot-dispatch logging explicitly enabled. Slot dispatch was live, but VI stayed at 640 for 180 seconds; there were zero VI-1024, E9-control, unified-E9, and crash markers. The result remained unevaluable. |
 | s1146 | Analyzed the s1145 trace: VI stopped changing at width 640 around 7.3s, while slot dispatch and host/audio activity continued to the end of the captured log. This selects a stable active pre-phase loop over an early halt, but leaves the missing 1024 transition unexplained. |
+| s1147 | Added a latched phase-scoped `osViSetMode` producer marker and corrected its transient-width gating after the first capture exposed a 640→2→640 sequence. The fixed capture saw producer calls through the requested 640 call, then none; slot/host/audio controls continued, with no E9 or VI-1024. This selects the producer-absent stable loop and leaves NPC-boundary runtime causality unevaluable. |
 
 ## Ranked next steps
 
-1. Explain the stable pre-1024 loop by tracing the existing VI-640 state path
-   and its transition trigger in the generated/runtime logs or source. Do not
-   add a runtime guard or repeat the NPC boundary test yet. The next capture
-   must retain the existing slot-dispatch and host/audio activity controls and
-   add one phase-scoped progress discriminator: either a positive record at
-   the VI-640 transition producer or a bounded proof that no producer call is
-   reached after the last width-640 record. Only after positive task-control
+1. Identify the caller/state path that should invoke the next VI mode change
+   after the final 640 producer call. Use the existing generated VI-selector
+   and game-state traces plus a static call-site audit; do not add a runtime
+   guard or repeat the corrected NPC boundary test. The next capture, if
+   needed, must retain the producer, slot, host/audio, and phase controls and
+   add one bounded state-path discriminator. Only after positive task-control
    E9 and VI width 1024 are both observed should the corrected NPC boundary
    be judged by its crash outcome.
 

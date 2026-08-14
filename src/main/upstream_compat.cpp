@@ -202,6 +202,24 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
         "width=%u xScale=0x%08X yScale=0x%08X\n",
         n, mode_ptr, type, ctrl, width, xScale, yScale);
     fflush(stderr);
+    static const bool log_transition = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* own = std::getenv("ROGUESQ_LOG_VI_TRANSITION");
+        return (all && *all && *all != '0') || (own && *own && *own != '0');
+    }();
+    if (log_transition) {
+        static bool phase_640_seen = false;
+        const uint32_t committed_width = ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
+        if (committed_width >= 640) {
+            phase_640_seen = true;
+        }
+        if (phase_640_seen) {
+            fprintf(stderr,
+                "[vi-transition-producer] call=%d committed_width=%u requested_width=%u mode_ptr=0x%08X\n",
+                n, committed_width, width, mode_ptr);
+            fflush(stderr);
+        }
+    }
     extern void osViSetMode(uint8_t* rdram, int32_t modePtr);
     osViSetMode(rdram, (int32_t)ctx->r4);
 }

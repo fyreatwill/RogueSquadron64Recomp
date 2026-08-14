@@ -63825,3 +63825,18 @@ pre-phase-loop hypothesis over an early execution halt for this trace, while
 leaving the missing 1024 transition and corrected NPC-boundary runtime effect
 open. It rules out interpreting the absent crash marker as evidence about the
 boundary.
+
+## Session 1147 (2026-08-14) — classified the post-640 producer path
+
+Added the phase-scoped `ROGUESQ_LOG_VI_TRANSITION` marker at the
+`osViSetMode_recomp` producer and built the Debug target successfully. The
+first capture exposed a transient committed-width 2 between 640 records, so
+the marker was corrected to latch once width 640 had been observed; that first
+capture was not used as evidence. The fixed 180-second phase-gated capture
+recorded producer calls for the 640→2→640 sequence, including the final call
+requesting width 640, then no further producer calls. Slot dispatch remained
+active (6,424 rows), host input reached 10,000, and audio dispatch reached
+10,752. There were no crash, E9, or VI-1024 markers. This selects the
+producer-absent stable loop after the last 640 transition and rules out an
+early process halt for this run; the corrected NPC-boundary runtime effect
+remains unevaluable because the target phase and task-control E9 were absent.
