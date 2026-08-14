@@ -63157,3 +63157,24 @@ build, runtime code, queue behavior, or mitigation changed.
 
 ORIGIN: symbol-table/segment classification only; not a mitigation, and it
 does not itself attribute a writer.
+
+## Session 1108 (2026-08-14) — instrumented generated submit-gate stores
+
+The independent oracle baseline passed its whole-RDRAM positive control (10,000
+callbacks) but stopped before width 1024 with no admissible target-watch hit.
+Added a regeneration-safe store probe to the external
+`N64Recomp/fixup_game_funcs.py`, regenerated all 50 function files, and built
+the target successfully. The probe covers literal-offset `MEM_B`/`MEM_H`/`MEM_W`
+stores, accounts for N64 lane XOR, emits a positive control, and logs stores
+overlapping physical `0x11A89F..0x11A8A0`.
+
+The first local capture logged 256 target rows, all for `0x11A89F`, from
+generated PCs `0x80017F98`, `0x80019D34`, `0x80019DD4`, and `0x80019FE4`, but
+stayed at width 320. A Start-assisted retry reached width 640 but not 1024 and
+also produced no `0x11A8A0` row. Both captures were SIGKILLed and are invalid
+for the planned VI-1024 discriminator. The probe is active and identifies the
+neighboring A89F generated writers, but A0 remains open; no queue behavior or
+mitigation changed.
+
+ORIGIN: diagnostic-only store attribution; no value was skipped, rewritten, or
+otherwise mitigated.

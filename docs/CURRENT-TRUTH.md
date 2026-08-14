@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1107 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1108 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -313,14 +313,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1105 | Non-generated/companion ownership census found no host/runtime, patch, or companion read/write of `0x8011A89F`, `0x8011A8A0`, or `0x8011A408`; the companion has only undefined-symbol declarations. Generated boundaries positively matched `spTaskSchedulerThread` and `dpInterruptHandlerThread`: SP resolves `s2=0x8011A89F`, `s3=0x8011A8A0`, and clears both; DP uses `s0=0x8011A408` as its queue object. Selects static `H-gate-stale-or-unseen-writer`, rules out an in-tree external writer and source-level alias, and leaves runtime values/execution open. No build, runtime code, queue behavior, or mitigation changed. |
 | s1106 | Built the submit-boundary probe and ran a corrected VI-1024-gated capture after rejecting an invalid first run whose physical addresses omitted the KSEG0 `0x100000` offset. The fixed run passed the VI-1024 control, produced 818 scoped target rows with no crash markers, and showed repeated `0x8011A8A0=1` at SP sends while `0x8011A89F` was normally zero. It also observed both blocking consumers and the separate `0x8011A408` DP object, while event wiring continued to complete on `0x8011A420`/`0x8011A408`. Selects runtime `H-nonzero-gate`, rules out a stale-zero gate and fixed-address alias for these calls, but does not identify the writer PC. The first capture was invalid; no queue behavior changed. |
 | s1107 | Checkpoint iteration (no build/run): restated s1106's discrimination inline and ran one bounded static check. `syms/rogue_squadron.datasyms.toml` has no symbol between `D_8011A7E8` and `D_8011A8D0`, so the gate bytes sit in the SP/DP scheduler's own unlabeled static block; none of s1083's overlay DMA destinations overlap it. Selects static `H-core-bss-not-overlay`, ruling out a DMA/preexisting-ROM-content explanation and narrowing `H-nongenerated-writer` to an actual non-generated code path. Ranked next step is unchanged. |
+| s1108 | Added a regeneration-safe `MEM_B`/`MEM_H`/`MEM_W` store probe to the external `fixup_game_funcs.py`, regenerated all 50 function files, and built successfully. The probe's positive control fired and the local captures logged 256 target rows, all for physical `0x11A89F` from generated PCs `0x80017F98`, `0x80019D34`, `0x80019DD4`, and `0x80019FE4`; no `0x11A8A0` row appeared. Both captures failed the required VI-1024 phase control (one stopped at width 320; the Start-assisted retry reached width 640), so this is not a valid final discriminator for the A0 writer. It does establish a generated writer for the neighboring A89F byte and leaves A0 open; no queue behavior or mitigation changed. |
 
 ## Ranked next steps
 
 1. Attribute the writer of `0x8011A8A0`: add regeneration-safe generated-store
    probes for every byte/halfword/word store whose physical target is
    `0x11A89F..0x11A8A0`, then repeat the same VI-1024 capture. Preserve queue
-   behavior and require the VI/E9 controls plus a writer row before selecting
-   the writer.
+   behavior and require the VI/E9 controls plus an A0 writer row before
+   selecting the writer. The s1108 probe is landed and buildable; its A89F
+   rows are useful control evidence, but the A0 question remains open because
+   both captures stopped before VI 1024.
 2. If generated stores remain absent, build the missing debugger-enabled
    retail oracle core before relying on an independent physical write watch;
    the current machine has the front end but no core dylib.
