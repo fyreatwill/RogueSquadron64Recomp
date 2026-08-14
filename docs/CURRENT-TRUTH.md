@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1009 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1010 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. The remaining
 question is the intended semantic source of that emitter's shade record. M5 audio de-stubbing
@@ -130,6 +130,21 @@ GLideN64 semantic implementation copies colorData into RGBA, but it is now
 refined: the mismatch is present in the retail ucode path, not introduced by
 RSPRecomp. No mitigation is authorized.
 
+The s1010 semantic audit separates the missing color read from the downstream
+consumer. GLideN64's independent `TriGen0000`/`TriGen0001` paths load the
+colour array and `F3DSWRS_PrepareVertices` copies its four bytes into each
+vertex's RGBA fields before submitting triangles. In the retail/generated
+emitter, record `+0x18` is instead written by `sdv v6` at `L_1740`; `v6` is
+produced by the transformed-vector and clip/lighting-like path beginning at
+`L_162C`/`L_16B8`, not by a color-table load. Both `L_16B8` arms reach the
+same `v6` store. RT64 decodes the following shade coefficient words after
+the eight position words (`curData[0..7]` in `rt64_gbi_rdp.cpp`), so no
+record-offset discrepancy was found. This selects
+`H-missing-lighting-source` over `H-intentional-sentinel` and
+`H-record-consumer-mismatch`: the fixed sentinel is an output of the
+vector-source path, not an explicit no-lighting fallback, while the intended
+RGBA source is the separate VTXCOLOR array. No mitigation is authorized.
+
 ## Recent evidence ledger
 
 Details are in `PORTING-STATE.md`; durable summaries are in
@@ -152,14 +167,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1007 | Offline re-analysis: zero-shade rows are a fixed -0.5/+0.5 shade sentinel while the VTXCOLOR array is nonzero; source-join closed, question moves to ucode shade emission. |
 | s1008 | Static generated-vs-GLideN64 audit: color is copied to vertex `+0x10` but the shaded-triangle path consumes `+0x18`/geometry vectors and never reads it; the `lb` is flag-only. Selected `H-shade-source-mismatch`; no mitigation. |
 | s1009 | Retail ROM instruction audit: color stores are present at `0x1424/0x1428/0x1468`, but the shaded emitter at `0x1740` has no `+0x10` read; generated output preserves it and fixup does not remove it. Selected `H-original-omits-color`; no mitigation. |
+| s1010 | GLideN64 TriGen semantics vs retail/generated emitter: reference copies colorData into RGBA, while retail `L_1740` writes `+0x18` from vector `v6`; RT64 shade decoding uses the subsequent RDP coefficient block. Selected `H-missing-lighting-source`; no mitigation. |
 
 ## Ranked backlog
 
-1. Trace the retail Factor 5 shaded-triangle record semantics against the
-   GLideN64 reference and the generated `TriGen`/triangle consumers. Identify
-   whether the fixed `-0.5/+0.5` shade sentinel is an intentional no-lighting
-   value or an incorrect vector/register source. Name the original producer,
-   record offset, and consumer before proposing any mitigation.
+1. Trace the retail Factor 5 `v6` producer through the `L_16B8` mode bit and
+   DMEM constants at `0x60`, identifying whether that vector is a legitimate
+   lighting/fog result or a clip predicate accidentally written as shade.
+   Name the mode condition and constant source before proposing any
+   mitigation.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak

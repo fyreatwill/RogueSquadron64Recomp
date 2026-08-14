@@ -61221,3 +61221,23 @@ The queued `slot_sp_guard` soak also completed between iterations, but it was
 not this work unit: it crashed at `slotDispatcherIter+8592` after 57 captured
 frames and produced no slot-SP guard record, so it does not classify the
 original `+872` family.
+
+## Session 1010 (2026-08-14) — mapped Factor 5 shade semantics
+
+Ran the planned static M4 audit only; no build or game run. Compared the
+independent GLideN64 `F5Rogue.cpp` TriGen implementation with the retail ROM
+instruction path and generated `factor5_ucode_ovl1c_recompiled.c`, then checked
+RT64's triangle shade decoder. GLideN64 loads the TriGen colour array and
+copies its four bytes into vertex RGBA before triangle submission. The retail
+and generated emitter instead stores `v6` at record `+0x18` at `L_1740`; `v6`
+comes from the transformed-vector path at `L_162C`/`L_16B8`, with no color
+table read. Both `L_16B8` branch arms reach the same shade store. RT64 decodes
+the later RDP shade coefficient block after the eight position words, so the
+consumer offset is consistent. This selects `H-missing-lighting-source` over
+an intentional no-lighting sentinel and over a record-consumer mismatch.
+
+This rules out generation loss for the color read, a downstream RT64 offset
+error, and the claim that the sentinel is explicitly selected by a no-lighting
+fallback. It does not identify whether `v6` itself is a legitimate lighting
+vector or a clip/test vector; that is the next static discriminator. No
+mitigation was added.
