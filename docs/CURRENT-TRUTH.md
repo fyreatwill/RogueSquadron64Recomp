@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s958 (2026-08-13). The active blocker is authoritative
+Reviewed through s959 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -185,6 +185,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   presses, but both arms stayed at VI width 320/origin `0x006dd280`, with no
   PIF-trace records. This selects the core/setup phase hypothesis for this
   oracle configuration; callback-table zeros remain phase-unevaluable.
+- s959 audited the oracle attachment path and ran a corrected 30-second named-
+  `start` arm. The input plugin attached and the press scheduler delivered
+  scancode 40; the whole-RDRAM control fired 5,189,202 times. The PIF “trace”
+  is only a per-VI `DebugMemRead32` poll, not a game-read attribution, so the
+  run cannot distinguish absent game PIF reads from an unobserved trace path.
+  VI stayed at 320/origin `0x006dd280`; callback-table reachability remains
+  unevaluable. The next probe is a direct physical PIF-range read watch.
 
 ## Recent evidence ledger
 
@@ -220,6 +227,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s956 | Named-`start` schedule delivered all 11 presses; positive control passed (15,068,831 whole-RDRAM writes), but 5,399 frames stayed at VI 320 and callback-table writes remained zero. No PIF transition was logged; phase remains unevaluable. |
 | s957 | Concurrent undriven/driven controls both passed (10,120,336/10,146,403 whole-RDRAM writes); driven delivered 11 presses, but both stayed at VI 320/origin `0x006dd280` with no PIF trace. Core/setup phase remains selected; callback-table watch is unevaluable. |
 | s958 | Config/help audit plus corrected 30-second pair passed whole-RDRAM controls (5,201,480/5,203,031); driven delivered five `sym=40` presses, but both stayed at VI 320/origin `0x006dd280` with no PIF trace. Timeline is ruled out; input-read/core setup remains phase blocker. |
+| s959 | Source audit and one driven arm confirmed input-plugin attachment and scancode-40 delivery; whole-RDRAM control passed with 5,189,202 hits. The PIF trace is a VI poll rather than game-read attribution; VI stayed 320, so callback-table reachability remains unevaluable. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session

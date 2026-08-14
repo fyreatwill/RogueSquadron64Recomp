@@ -59771,3 +59771,34 @@ behavior change was made. Captures: `scratch/agent/oracle_results/s958_oracle_ph
 ORIGIN: retail-oracle config/help audit plus paired whole-RDRAM controls,
 VI-poll, press-delivery, and PIF traces; no guest value mutation or mitigation
 was landed.
+
+## Session 959 (2026-08-13) — oracle input attached; PIF trace is not a read attribution
+
+Audited the oracle source/config and ran the prescribed 30-second retail arm
+with `--press 6:start`, `--verbose`, `--vi-poll`, `--pif-trace`, and a whole-
+RDRAM write control. The source shows that any press schedule automatically
+attaches `/opt/homebrew/lib/mupen64plus/mupen64plus-input-sdl.dylib`; the run
+logged that attachment and the `sym=40` press. The config has a plugged
+keyboard controller in `[Input-SDL-Control1]`, with the legacy `Start =
+"key(13)"` mapping; the oracle's named `start` table sends SDL2 scancode 40.
+
+The positive control fired 5,189,202 times over 1,788 VI frames, proving the
+watch/debugger path. VI remained width 320 at origin `0x006dd280`. The PIF
+records changed during boot and immediately before the press, but the source
+audit shows `[pif-trace]` is emitted from `dbg_vi()` once per VI by calling
+`pDebugMemRead32(PIF_PAD1_ADDR - 4)` and `pDebugMemRead32(PIF_PAD1_ADDR)`;
+it is not a breakpoint or attribution of a game-side PIF read. Therefore the
+run proves attachment and injection, but cannot distinguish absent game PIF
+reads from an unobserved trace path.
+
+This rules out input-plugin attachment failure and a dead whole-RDRAM watch.
+It does not establish controller acceptance, callback-table reachability, or
+the cause of the VI-320 phase. The next discriminating measurement is a direct
+physical PIF-range read watch, paired with the same whole-RDRAM positive
+control. This is a single-source oracle result; no build, generated-source
+edit, guard, mitigation, or behavior change was made. Capture:
+`scratch/agent/oracle_results/s959_oracle_phase/`.
+
+ORIGIN: retail-oracle source/config audit, plugin-attachment log, press log,
+whole-RDRAM positive control, and VI/PIF polling; no guest value mutation or
+mitigation was landed.
