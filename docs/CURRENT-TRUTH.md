@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s930 (2026-08-13). The active blocker is the authoritative
+Reviewed through s933 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -424,6 +424,45 @@ ORIGIN: complete generated helper/reference, target, arithmetic-bound,
 termination, and companion-symbol inventory; no guest value mutation or
 mitigation.
 
+## s933 — `musyxInitVoiceFromSample` remains structurally unclassified
+
+Performed the planned source-only M3 idiom inventory of
+`musyxInitVoiceFromSample` (`0x80092128`) in
+`../N64Recomp/RecompiledFuncs/funcs_24.c`. Enumerated both generated callers,
+their argument setup, the complete callee, the existing base-pointer guard,
+all descriptor reads, all slot writes, derived ranges, and the companion
+`main_overlay.txt` mapping. No build, game run, soak, guard, or behavior
+change was made.
+
+The two callers agree on the helper contract `(voiceIdx, sampleDesc,
+adsrFlag)`. `func_8008A4A0` passes an 8-bit voice index from `$s5+0xBD`, a
+descriptor pointer from `0x8014ACA0`, and an ADSR flag selected from `$s5+0x67`
+and `$s5+0x24`. `startStreamedSampleVoice` at `0x80097FE8` passes the result
+of `stopVoiceByKey` (rejecting only `-1`), a stack-built descriptor at
+`$sp+0x18`, and flag `1`. No caller-shape mismatch was found.
+
+The callee computes `((voiceIdx & 0xFFFF) * 0x88)` and adds it to the global
+voice-array base at `0x801496F8`. The existing guard checks only that base is
+in KSEG0; it does not bound the masked index, and the second base reload has
+the same missing index proof. The slot initialization writes offsets
+`0x00..0x4A`, with an 8-byte store at `+0x08`; later descriptor-derived
+fields write through `+0x6D`. The optional ADSR path also touches the slot's
+`+0x28..+0x30` fields and sets a flag at `+0x02`. All descriptor reads are
+fixed offsets `+0x04`, `+0x08`, `+0x0C`, `+0x10`, `+0x14`, and byte `+0x18`,
+but neither descriptor pointer validity nor descriptor contents are checked.
+There are no helper calls, loops, or local termination hazards.
+
+H-voice-init-shape-mismatch is ruled out. H-voice-init-classified is not
+supported because the index is only truncated, not bounded to the intended
+voice count, and the descriptor pointer/value contract is not independently
+proven. H-voice-init-unclassified remains selected. This is a single-source
+static result: generated code and the companion symbol comment agree on the
+function identity and 0x88 voice-slot role, but no independent runtime
+writer/value evidence was claimed.
+
+ORIGIN: complete generated caller/callee, access-range, guard-coverage, and
+companion-symbol inventory; no guest value mutation or mitigation.
+
 ## Ranked backlog
 
 1. Do not use the process-wide `0x8000834c` breadcrumb to select a helper crash
@@ -550,32 +589,31 @@ mitigation.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-audio-voice-init-class
+HYPOTHESIS-ID: m3-audio-adsr-table-class
 
-Audit the complete `musyxInitVoiceFromSample` idiom at `0x80092128` in
-`../N64Recomp/RecompiledFuncs/funcs_24.c`, including both generated callers,
-the existing base-pointer guard, slot-index arithmetic, sample-descriptor
-reads, all writes, and helper edges. Source-only; do not add a guard, change
-game behavior, build, or run a soak.
+Audit the complete `musyxSetVoiceAdsrFromTable` idiom at `0x8008A8C4` in
+`../N64Recomp/RecompiledFuncs/funcs_22.c`, including every generated caller,
+voice-index arithmetic, ADSR-table search bounds, table-entry reads, slot
+writes, and helper edges. Source-only; do not add a guard, change game
+behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-voice-init-unclassified: a caller or descriptor supplies an invalid voice
-  index/base or data-derived pointer, or the existing guard does not cover the
-  full slot access shape.
-- H-voice-init-classified: callers agree, the slot calculation is bounded by
-  the intended voice table, and all descriptor/slot accesses and helper calls
-  have fixed safe contracts.
-- H-voice-init-shape-mismatch: the two callers use distinct contracts; record
-  the exact split and stop.
+- H-adsr-table-unclassified: a caller or ADSR id supplies an invalid slot,
+  table base, or search index, or a derived slot write escapes its intended
+  voice record.
+- H-adsr-table-classified: callers agree, the table search is bounded by its
+  sentinel/count contract, and all slot/table accesses have fixed safe ranges.
+- H-adsr-table-shape-mismatch: callers use distinct contracts; record the
+  exact split and stop.
 
 Discriminating measurement: enumerate every reference and caller register
-setup, inspect the complete callee and existing guard coverage, derive every
-slot range from the index/stride, classify every descriptor read and slot
-write, and cross-check `main_overlay.txt`. Any caller split, uncovered access,
-or data-derived unsafe edge rejects classification.
+setup, inspect the complete callee and all loop/sentinel exits, derive every
+table and slot access range, classify every helper edge, and cross-check
+`main_overlay.txt`. Any caller split, uncovered derived access, or unproven
+termination path rejects classification.
 
-Exact commands: `rg -n -C 10 "musyxInitVoiceFromSample|80092128|92128" ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_24.c ../N64Recomp/RecompiledFuncs/funcs_26.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and both callers. No game build or soak is planned.
+Exact command: `rg -n -C 12 "musyxSetVoiceAdsrFromTable|8008A8C4|8A8C4" ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_24.c ../N64Recomp/RecompiledFuncs/funcs_26.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
 
 ## Closed and parked
 

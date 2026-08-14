@@ -58960,3 +58960,21 @@ code edit, or game behavior changed.
 ORIGIN: complete generated helper/caller, arithmetic, access-range,
 termination, callback-target, and companion-symbol inventory; no guest value
 mutation or mitigation.
+
+## s933 (2026-08-13) — `musyxInitVoiceFromSample` remains unclassified
+
+Ran the planned source-only M3 idiom audit. Both generated callers use the
+same `(voiceIdx, sampleDesc, adsrFlag)` contract, so the caller-shape
+mismatch hypothesis is ruled out. The callee computes a 0x88-stride slot from
+`voiceIdx & 0xFFFF`; its existing KSEG0 base guard does not bound that index.
+It performs fixed descriptor reads through `+0x18` and slot writes through
+`+0x6D`, with no helper calls, loops, or local termination hazard. The
+descriptor pointer and data validity are not locally checked. This is a
+single-source static result from generated code plus companion symbol
+metadata; no independent runtime writer/value evidence was claimed. No build,
+run, soak, guard, mitigation, or behavior change.
+
+Rules out: H-voice-init-shape-mismatch and the local-control portion of
+H-voice-init-classified. Leaves H-voice-init-unclassified active. ORIGIN:
+complete generated caller/callee, guard-coverage, access-range, and
+companion-symbol inventory; no guest value mutation or mitigation.
