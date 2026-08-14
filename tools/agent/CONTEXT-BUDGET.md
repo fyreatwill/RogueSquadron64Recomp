@@ -1,10 +1,12 @@
 
 ---
 
-# CONTEXT BUDGET — this repo's ledger is 390 KB
+# CONTEXT BUDGET — PORTING-STATE.md is multi-MB and append-only
 
-`PORTING-STATE.md` alone is 340 KB; `docs/CURRENT-TRUTH.md` is 42 KB. Reading
-them whole is wasteful on any runner and fatal on a small-window one.
+`PORTING-STATE.md` is currently ~4 MB and grows every iteration; never read it
+whole. `docs/CURRENT-TRUTH.md` is kept compact (currently ~11 KB, capped near
+60 KB). Reading them whole is wasteful on any runner and fatal on a small-window
+one.
 
 1. **NEVER `Read` PORTING-STATE.md.** Use
    `grep -n "<pattern>" PORTING-STATE.md | tail -20` for line numbers, then
@@ -20,4 +22,4 @@ them whole is wasteful on any runner and fatal on a small-window one.
 NOTE ON PROVENANCE: this file was written while chasing grok's early-cancel
 bug and the context-exhaustion explanation for that bug was REFUTED (a
 2-turn cancel at 60k tokens). The guidance above stands on its own merits for
-a 390 KB ledger; it is NOT a fix for the cancel, and must not be cited as one.
+a multi-MB ledger; it is NOT a fix for the cancel, and must not be cited as one.
