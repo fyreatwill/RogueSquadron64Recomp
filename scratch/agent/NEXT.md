@@ -1,31 +1,25 @@
-# NEXT work unit (s1142)
+# NEXT work unit (s1143)
 
 HYPOTHESIS-ID: m3-generated-boundary-anomaly
 
-Perform one bounded static audit of the regeneration/input path for the
-coalesced `0x80077AC0`/`0x80077AF0` range. Do not build or run the game.
-Locate where the distinct `npcPowerGeneratorUpdate` boundary is lost and name
-the smallest durable correction that will regenerate two host functions.
+Apply the smallest input correction identified in s1142: make the companion
+symbol input emit `npcPowerGeneratorUpdate` at `0x80077AF0` in the main `.text`
+section, then run the required regeneration chain and verify the split. Do not
+hand-edit generated C and do not run the game in this work unit.
 
 ```sh
-rg -n 'forwardToNpcGeneratorSpawn|npcPowerGeneratorUpdate|80077AC0|80077AF0|77680|789FC' . /Users/williambuckley/Documents/Tools/N64Recomp --glob '!funcs_*.c' --glob '!PORTING-STATE.md' --glob '!*.log'
-rg -n 'fixup_game_funcs|recomp_overlays|single_file_output|function.*table|symbols|syms' tools patches *.toml CMakeLists.txt
+rg -n 'npcPowerGeneratorUpdate|80077AF0' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+python3 /Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py
+cd /Users/williambuckley/Documents/Tools/N64Recomp && ./build/N64Recomp rogue_squadron.toml
+objdump -t /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf | rg -i '80077ac0|80077af0|80078e3c'
+rg -n 'void npcPowerGeneratorUpdate|void forwardToNpcGeneratorSpawn|80077AF0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_18.c
 ```
 
-Competing hypotheses and the discriminating measurement:
+Expected discriminating outcomes:
 
-- H-input-merged: the source/config function table itself presents one
-  merged range, so the durable fix is in the generator input or symbol-map
-  generation.
-- H-fixup-merged: the source table is split but `fixup_game_funcs.py` or a
-  post-generation transform merges/relabels the functions; the correction is
-  in that transform.
-- H-generator-bug: the source and generated symbol tables are split, but
-  N64Recomp emits one host body; the correction belongs in N64Recomp or its
-  invocation, not a game guard.
-
-The discriminating measurement is the first representation in the
-regeneration chain whose range omits the split at `0x80077AF0`, followed by
-the concrete generated invocation/output that coalesces the body. Record the
-representation, range, and correction. Do not hand-edit generated C or add a
-runtime mitigation.
+- PASS: ELF shows `forwardToNpcGeneratorSpawn` size `0x30` and a distinct
+  `npcPowerGeneratorUpdate` symbol at `0x80077AF0`; generated C has two host
+  functions. This validates the input correction.
+- FAIL: ELF still omits `0x80077AF0`; the source ownership/input fix was not
+  applied or `make_elf.py` still rejects it. Stop before running the game and
+  inspect only that mapping.

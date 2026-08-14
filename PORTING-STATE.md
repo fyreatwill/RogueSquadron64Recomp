@@ -63745,3 +63745,19 @@ causes the recurring runtime SIGBUS, and no mitigation was added.
 ORIGIN: the distinct boundary is established by independent decomp symbols
 and the generated symbol table; no guest value was skipped, rewritten, or
 guarded.
+## Session 1142 (2026-08-14) — located the NPC function-boundary loss
+
+Ran the bounded static regeneration audit from `scratch/agent/NEXT.md`; no
+build or game run was performed. The companion symbol input places
+`npcPowerGeneratorUpdate = 0x80077AF0` only in `mission_overlay.txt`, while
+`make_elf.py` maps that source strictly to the mission overlay window starting
+at `0x800A5130`. Its `vram_to_shndx` therefore rejects the symbol as unmapped.
+The produced ELF independently contains `forwardToNpcGeneratorSpawn` at
+`0x80077AC0` with size `0x137C`, but no `0x80077AF0` symbol. N64Recomp's ELF
+reader and boundary-walk then consume that single range, and the generated
+`funcs_18.c` body visibly continues through the `0x80077AF0` prologue.
+
+This selects H-input-merged and rules out `fixup_game_funcs.py` and a
+N64Recomp emission bug for this defect. The durable correction is to fix source
+symbol ownership/input so the `0x80077AF0` boundary is present in the main
+`.text` ELF representation; generated C must not be hand-edited.
