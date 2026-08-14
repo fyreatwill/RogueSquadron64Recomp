@@ -63398,3 +63398,27 @@ runtime-observed descriptor-index transition on the established schedule, but
 does not prove the four selector writes were 320-class. No port build or
 mitigation changed. ORIGIN: physical retail-oracle watches with independent
 whole-RDRAM/PIF/VI controls, no mitigation.
+
+## Session 1121 (2026-08-14) — corrected the retail VI mode input boundary
+
+The planned no-build static audit enumerated the mode-type and descriptor-index
+path. `getViModeType` reads `rsViModeType` at `0x8010FF20`; its sole generated
+setter, `setViModeType` at `0x8000274C`, loads `0x80000300`, which the generated
+datasyms and companion libultra symbols identify as `osTvType`, not
+`osResetType` at `0x8000030C`. Its generated control flow maps TV-type values
+0/1/2 to the mode-type byte. Retail ROM words at the setter's mapped offset
+match the generated instructions independently.
+
+`initVideoSubsystem` contains ten descriptor-index reads at
+`0x8003780C`, `0x7810`, `0x7814`, `0x7818`, `0x781C`, `0x7820`, `0x7824`,
+`0x7828`, `0x782C`, and `0x7830`; each first calls `getViModeType` and indexes
+the corresponding byte by that result before copying an `OSViMode` record from
+`osViModeTable`. No generated literal/computed store, companion reference, or
+symbolized host/patch owner for the descriptor-index bytes was found in this
+audit. This selects `H-non-generated-index-source` for the concrete index
+producer and leaves raw/data/host ownership open. It rules out the s1119
+`H-reset-derived-index` label; that label was believable from the lifecycle
+helper's role and nearby reset symbols, but the actual load offset is the
+independently named TV-type global. No build, runtime run, or mitigation
+changed. ORIGIN: generated instruction/data-flow, independent retail ROM
+bytes, and companion symbol census, no mitigation.

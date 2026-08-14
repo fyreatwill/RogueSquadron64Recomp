@@ -1,40 +1,36 @@
-# NEXT work unit (s1121)
+# NEXT work unit (s1122)
 
-HYPOTHESIS-ID: retail-oracle-mode-record-selector-state
+HYPOTHESIS-ID: retail-oracle-mode-index-non-generated-boundary
 
-Perform one bounded static audit of the retail `osResetType`/mode-table input
-boundary and the concrete producer of descriptor-index bytes
-`0x8003780C..0x8003782F`. s1120 passed the independent oracle controls and
-found zero writes to `rsViModeType` and the descriptor-index range, with only
-four pre-input writes somewhere in selector range `0x8011A862..0x8011A865`.
-The oracle hit-print cap hid their individual addresses and values; do not
-turn that capture into a concrete selector-value claim.
+Perform one bounded static audit of the non-generated/data boundary for
+`osTvType` (`0x80000300`) and descriptor-index bytes
+`0x8003780C..0x8003782F`. s1121 proved that `setViModeType` reads `osTvType`,
+not `osResetType`, and found no generated or companion writer for the index
+bytes.
 
 Competing hypotheses and discriminator:
 
-- H-reset-derived-index: `osResetType`/`rsViModeType` selects the active
-  descriptor-index record through a generated lifecycle path.
-- H-fixed-index-caller: the active record index is supplied by a fixed or
-  constant caller path, independent of reset mode.
-- H-non-generated-index-source: the generated census misses the active index
-  producer at a raw, host, overlay, or data-driven boundary.
+- H-host-init: the host/runtime initializes `osTvType` or the index bytes.
+- H-rom-data: the index bytes are immutable ROM/data and the apparent missing
+  writer is intentional; the retail width-320 result is data-selected.
+- H-raw-guest-writer: a generated census missed a computed/raw guest store.
 
-Discriminator: enumerate every generated read/write and caller of
-`rsViModeType`, `getViModeType`, `0x8003780C..0x782F`, and the mode-table copy
-routine; reconcile each with companion references, overlay/data symbols, and
-the retail ROM bytes. A reset-dominated index path selects H-reset-derived-index;
-a constant/fixed caller selects H-fixed-index-caller; no complete generated or
-companion owner selects H-non-generated-index-source. The audit must record the
-exact address/field and caller predicate for whichever arm wins.
+Discriminator: enumerate host/runtime/patch initialization and every generated
+computed address reaching `0x80000300` or `0x8003780C..0x782F`; reconcile those
+with section/data symbols and the retail ROM image. A host store selects
+H-host-init; immutable source bytes with no store select H-rom-data; a complete
+computed guest store selects H-raw-guest-writer. If none can be proved, retain
+the boundary as open and do not infer a width or add a probe.
 
 Exact commands (no build or game run):
 
 ```sh
-rg -n 'rsViModeType|getViModeType|setViModeType|8003780C|8003780c|3780C|3780c|osResetType|osViModeTable|initVideoSubsystem|selectAndApplyViMode|swapBufferWithViMode' RecompiledFuncs rogue_squadron64 syms docs
-rg -n '0x8010FF20|0x8003780C|0x8003780c|0x8011A862|0x8011A864|0x80128D50|0x80039330' src lib patches syms RecompiledFuncs rogue_squadron64
-rg -n 'rsViModeType|getViModeType|setViModeType|osResetType|osViModeTable|3780' rogue_squadron64 -g '*.[ch]' -g '*.toml'
+rg -n '80000300|8000030C|8003780C|8003780c|800378[0-2][0-9]|3780C|3780c|osTvType|osResetType|rsViModeType' src lib patches ../N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
+rg -n 'MEM_[BWH].*(0X378|0x378|0X300|0x300)|ADD32\([^)]*0X780|addiu.*0x78' ../N64Recomp/RecompiledFuncs
+rg -n 'D_800378|osTvType|osResetType|rsViModeType|osViModeTable' syms /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
-Use bounded `sed` windows around every hit; do not read `PORTING-STATE.md`.
-Append the classified boundary and ruled-out alternatives to the ledger and
-current truth. No mitigation is authorized.
+Use bounded `sed` windows around every generated/host hit and inspect the ROM
+bytes only at the corresponding mapped offsets. Append the classified owner or
+the explicitly open boundary to the ledger and current truth. No mitigation is
+authorized.
