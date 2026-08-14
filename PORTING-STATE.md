@@ -59628,3 +59628,27 @@ stale-pointer, and stub-artifact were not selected. No mitigation was landed.
 ORIGIN: `atos`/DWARF source mapping, `otool` instruction mapping, generated
 prologue, companion symbol map, and 144-site call inventory; no guest value
 mutation or mitigation.
+
+## Session 953 (2026-08-13) — direct dispatcher callers are frame-balanced
+
+Performed the planned source-only caller audit. No build, game run, soak,
+generated-source edit, guard, mitigation, or behavior change was made.
+
+The generated-source inventory found 144 direct
+`slotDispatcherIter(rdram, ctx)` sites in 72 enclosing functions across 19
+files. Each caller has the normal generated frame idiom: one entry decrement
+of `ctx->r29` and a reachable matching restore. The apparent second restore
+at each function tail is the duplicated MIPS `jr $ra` delay-slot emission;
+it is not a second executed frame unwind. No caller in this set assigns
+`ctx->r29` from a non-frame value. The companion map independently identifies
+the callee as `slotDispatcherIter = 0x8003E8DC`, consistent with the generated
+call boundaries.
+
+Eight enclosing callers also contain `LOOKUP_FUNC`/`jalr` sites. Those target
+functions were not classified in this work unit, so an indirect target remains
+the only unresolved caller-side context-corruption branch. The balanced
+direct-call result selects neither caller-frame corruption nor a mitigation;
+the active hypothesis remains H-slotdispatcheriter-stacksp-unclassified.
+
+ORIGIN: exhaustive generated direct-call/frame-assignment inventory plus
+companion-symbol cross-check; no guest value mutation or mitigation.

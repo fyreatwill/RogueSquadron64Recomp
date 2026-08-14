@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s952 (2026-08-13). The active blocker is authoritative
+Reviewed through s953 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -153,6 +153,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   files, so the writer/origin class is caller stack-state, not a single slot
   writer; no caller audit or mitigation was attempted. The active hypothesis
   is H-slotdispatcheriter-stacksp-unclassified.
+- s953 audited all 144 direct `slotDispatcherIter` call sites in 72 generated
+  caller functions. Every caller has the normal generated frame shape: one
+  entry `$sp` decrement and a reachable matching restore; the second textual
+  restore is duplicated MIPS delay-slot emission. No caller assigns `ctx->r29`
+  from a non-frame value. Eight callers contain unrelated `LOOKUP_FUNC`/`jalr`
+  calls, so indirect target behavior remains the only unresolved caller-side
+  context-corruption branch; no legitimacy or mitigation conclusion followed.
 
 ## Recent evidence ledger
 
@@ -182,6 +189,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s950 | Complete generated audio inventory found eight `-0x276C` table stores, no reads, and only the `soundMacroOpKeyOnNote` store sourced from channel `+0x64`; all generated channel-field writers are `-1` stores. Structure is coherent but lifecycle/legitimacy remains unclassified. |
 | s951 | Closed the channel `+0x64` hypothesis thread: no reachable indirect-dispatch edge and fixed-array channel-object origin select H-channel-context-field-sentinel-contract. |
 | s952 | Mapped `slotDispatcherIter+872` to `funcs_8.c:22810`, the prologue spill of guest `$sp`/`ctx->r29`; 144 direct callers in 19 files are the next writer/origin class. No guard or mitigation. |
+| s953 | Audited all 144 direct callers in 72 generated functions: frame entry/restore is structurally balanced and no non-frame `$sp` writer exists; eight callers retain indirect-call targets as the unresolved shared-context branch. No guard or mitigation. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -194,7 +202,9 @@ entries and do not authorize mitigations.
    is now localized to the generated prologue spill at `funcs_8.c:22810`.
    Audit all 144 direct callers for guest `$sp`/`ctx->r29` provenance and
    caller-frame balance before considering any runtime change; do not guard
-   the dispatcher prologue.
+   the dispatcher prologue. s953 found no non-frame `$sp` writer in the 72
+   direct callers; audit the eight callers containing `LOOKUP_FUNC`/`jalr`
+   targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
@@ -204,49 +214,38 @@ entries and do not authorize mitigations.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-slotdispatcheriter-872-class
+HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-`slotDispatcherIter+872` is the single most recurring terminal SIGBUS across
-the `s790_postsec2_reachability` soak queue (7+ hits, always after VI 1024 and
-all positive controls pass — see ranked backlog item 1). No prior session has
-idiom-class audited it. Source-only first pass: grep-enumerate every access
-this function makes at/near the `+872` offset, identify what object it
-dereferences, find its writers, and classify each write as legitimate,
-sentinel, or wild — following the `-0x25A4` idiom-class model (grep-enumerate
-the whole class, classify every site, guard or prove dead, close the class).
-Do not build, run the game, or land a guard/mitigation until the writer set
-is classified — a mitigation without a named writer and a legitimacy verdict
-violates iron rule 11 (see `tools/agent/ITERATION.md`).
+The 144 direct `slotDispatcherIter` callers are frame-balanced in generated
+source, with no non-frame assignment to `ctx->r29`. Source-only next pass:
+enumerate the eight enclosing callers that contain `LOOKUP_FUNC`/`jalr`, trace
+their target arguments and whether each target can mutate `ctx->r29`, and
+cross-check target symbols. Do not build, run, or land a guard.
 
 Competing hypotheses:
 
-- H-slotdispatcheriter-872-legitimate-oob: the dereferenced object/offset is
-  legitimate but the crash is a real out-of-bounds index reaching it (a real
-  bug to fix, not a stub artifact).
-- H-slotdispatcheriter-872-stale-pointer: the object was freed/reused and the
-  `+872` dereference reads a stale or wild pointer (freelist-adjacent, per
-  the s640–s659 precedent — do not mitigate without naming the writer).
-- H-slotdispatcheriter-872-stub-artifact: the crash is downstream of an
-  audio- or another degenerate-path stub rather than a genuine game-state bug.
-- H-slotdispatcheriter-872-unclassified: the writer/object-origin set is not
-  yet fully enumerated.
+- H-slotdispatcheriter-stacksp-indirect-corruption: an indirect target writes
+  or fails to restore the shared guest `$sp`.
+- H-slotdispatcheriter-stacksp-indirect-balanced: all indirect targets
+  preserve the context, leaving no caller-side writer.
+- H-slotdispatcheriter-stacksp-stub-artifact: an indirect target is a known
+  degenerate stub and is the corruption origin.
+- H-slotdispatcheriter-stacksp-unclassified: target provenance or mutation
+  remains unresolved.
 
-Discriminating measurement: complete generated-source inventory of
-`slotDispatcherIter`'s `+872`-offset access(es) and every writer of the
-object/field it reads, cross-checked against companion symbols. A reachable
-writer with a provably invalid/stale value selects stale-pointer; a
-consistently legitimate writer set with the crash still reachable via normal
-control flow selects legitimate-oob; provenance rooted in a known stub path
-selects stub-artifact; anything unresolved selects unclassified.
+Discriminating measurement: complete generated-source inventory of the eight
+indirect target addresses and their target bodies' `ctx->r29` writes, with
+companion-symbol cross-checks. An incorrect target-side `$sp` write selects
+indirect-corruption; balanced targets select indirect-balanced; a known stub
+target selects stub-artifact; anything unresolved selects unclassified.
 
-Exact starting commands (adjust paths once the function's guest address is
-confirmed via `main_overlay.txt` or `nm`/symbol lookup — it was not looked up
-this session):
+Exact starting commands:
 
-`rg -n "slotDispatcherIter" ../rogue_squadron64/symbol_files/main_overlay.txt`
-then locate its generated body in `../N64Recomp/RecompiledFuncs/funcs_*.c` by
-guest address and grep for the offset(s) near `+872` (`0x368`) from whatever
-base register it uses.
+`rg -n "LOOKUP_FUNC|jalr" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+
+`rg -n "ctx->r29\\s*=" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+
+Cross-check every indirect target against `funcs.h` and the companion map.
 
 ## Closed and parked
 
