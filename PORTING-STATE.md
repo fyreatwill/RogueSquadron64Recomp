@@ -60744,3 +60744,46 @@ from the generated assignments before any guard or restore is considered.
 
 ORIGIN: the target-range stores are generated game assignments at the PCs
 listed by the phase-gated census; no writer was skipped, restored, or guarded.
+
+## Session 994 (2026-08-13) — classified all s993 target-store assignments
+
+Performed the prescribed static classification against the fresh generated
+tree and companion symbol/decomp names. The corrected log extractor found all
+98 s993 target records: 39 phase-4 and 59 phase-6 records. They are 97
+distinct guest PCs because `0x8000D7A0` recorded two phase-4 target addresses
+(`0x726324` and `0x726A44`). Every record mapped to a generated assignment;
+there were no missing PCs.
+
+The complete compact PC-to-assignment classification is:
+
+| generated function | phase-4 sites | phase-6 sites | total distinct PCs | RHS classes |
+|---|---:|---:|---:|---|
+| `heapFreeListDequeue` | 25 | 7 | 32 | 25 register copies, 7 zeroes |
+| `loadTextureTile` | 3 | 30 | 33 | 25 register copies, 8 zeroes |
+| `submitSceneNodeRender` | 5 | 6 | 11 | 7 register copies, 4 zeroes |
+| `reserveAndEmitDLEntry` | 1 | 6 | 7 | 3 register copies, 4 zeroes |
+| `emitAllocatedDLCommand` | 0 | 6 | 6 | 3 register copies, 3 zeroes |
+| `emitMaterialRenderModeDL` | 1 | 2 | 3 | 3 register copies, 1 zero |
+| `emitMaterialRenderStateDL` | 0 | 2 | 2 | 1 register copy, 1 zero |
+| `parseImageFile` | 2 | 0 | 2 | 1 register copy, 1 zero |
+| **total records** | **39** | **59** | **97 PCs / 98 records** | **68 register copies, 29 zeroes** |
+
+The source-level assignment forms are all direct `MEM_W(base, offset)`
+stores except the two `parseImageFile` sites, which are `MEM_B` stores. The
+zero RHS sites initialize record fields; the nonzero sites copy one generated
+register (`ctx->r2`, `r3`, `r4`, `r5`, `r8`, `r9`, `r10`, `r19`, or `r22`) into
+the destination. Companion symbol/decomp entries independently confirm the
+eight function identities and their render-list, texture, image-parser, and
+heap-free-list roles.
+
+This selects H-copy-shaped as the best static structure: the target writes are
+ordinary field/record stores in named game subsystems, with no direct RHS that
+constructs an unbounded pointer or index. It does not select H-direct-expected
+over H-direct-wild for the register-copy values: in particular,
+`heapFreeListDequeue` copies pointer-bearing state, and the runtime values,
+destination-object provenance, and shade ownership remain unproven. No
+mitigation or generated-file edit was made.
+
+ORIGIN: the only classified writers are the generated assignments listed
+above; this session inspected their RHS and did not change their values or
+add a guard.

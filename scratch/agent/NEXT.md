@@ -1,42 +1,38 @@
-# NEXT work unit (s994)
+# NEXT work unit (s995)
 
-HYPOTHESIS-ID: m4-zero-shade-writer
+HYPOTHESIS-ID: m4-zero-shade-writer-values
 
 ## One work unit
 
-Perform one bounded static classification of every exact-target generated
-store PC recorded by s993. Map each PC to its fresh generated C function,
-assignment expression, base/offset provenance, and value expression. Do not
-build, rerun, hand-edit generated files, or add a mitigation.
+Extend the regeneration-owned ordinary generated-store census to capture the
+assigned RHS value along with phase, guest PC, width, and effective physical
+address. Regenerate, build, and run one phase-gated capture with the existing
+all-store, shade, and all-DMA positive controls. Do not hand-edit generated
+files or add a mitigation.
 
 Competing hypotheses and discriminating measurement:
 
-- H-direct-expected: target stores have bounded, semantically expected value
-  sources.
-- H-direct-wild: a target store's value expression is an unbounded or
-  corrupted pointer/state field.
-- H-copy-shaped: target stores are coherent source copies whose bad value must
-  originate upstream.
+- H-bounded-value: target RHS values are coherent for their named record
+  fields.
+- H-wild-value: a target RHS is an out-of-domain pointer/index/state value.
+- H-wrong-owner: values are locally coherent but the destination object is not
+  the expected VTXCOLOR owner.
 
-The discriminating measurement is a complete PC-to-assignment/value-source
-table covering all 39 phase-4 and 59 phase-6 exact-target sites from s993.
-An incomplete PC set is invalid. The s993 run does not capture assigned
-values, so do not infer legitimacy from its address records.
+The discriminating measurement is a phase-gated value/destination table with
+positive controls, covering target records from all 97 classified PCs. A run
+without visible controls or complete target coverage is invalid.
 
 ## Exact commands
 
-Extract all target records and deduplicate by phase, guest PC, and physical
-address from the bounded capture:
+Run the fixup script's static match-count/dry-run check first. Then follow the
+documented regeneration order: `make_elf.py -> N64Recomp ->
+fixup_game_funcs.py -> cmake`. Launch the existing phase-gated probe recipe
+from `build/` with `ROGUESQ_LOG_VTX_GENERATED_WRITES=1`, retaining its four
+provenance controls and all-DMA control. Extract phase-4/phase-6 target rows
+and classify RHS values by the eight s994 function groups.
 
-`perl -ne 'if (/\\[vtx-generated-write-control\\].*phase=(4|6).*pc=(0x[0-9A-Fa-f]+).*phys=(0x[0-9A-Fa-f]+)/) { $a=hex($3); print if (($a>=0x726200 && $a<0x726C50) || ($a>=0x732A10 && $a<0x73E3B0)); }' scratch/agent/probe_s993/run.log`
-
-For every emitted PC, locate the preceding guest-PC comment and assignment in
-`../N64Recomp/RecompiledFuncs/funcs_*.c` with `rg`, then cross-check the
-function/semantic name in the companion symbol/decomp trees with `rg`. Count
-all 98 sites and classify the RHS as constant/bounded state, wild pointer or
-index-derived state, or coherent source copy. Record the table or its compact
-classification in the s994 ledger entry.
-
-No runtime controls are needed for this static unit. If fewer than 98 unique
-phase/site records can be mapped, report the missing PCs and do not select a
-value-legitimacy hypothesis.
+Expected outcomes: bounded coherent values select H-bounded-value; an
+out-of-domain value selects H-wild-value and requires identifying its writer
+before any mitigation; coherent values paired with an unexpected destination
+select H-wrong-owner. If the classified PC set is not covered, select no value
+hypothesis and document the omission.
