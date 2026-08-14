@@ -495,6 +495,8 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
     static uint32_t fetch_n = 0;
     static uint32_t n02 = 0;
     static uint32_t n03 = 0;
+    static uint32_t payload_ordinal = 0;
+    static uint32_t task_seen = 0xFFFFFFFFu;
     const uint32_t phase = rs64_phase_ord();
     if (phase != phase_seen) {
         if (phase_seen != 0xFFFFFFFFu) {
@@ -505,6 +507,11 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
         fetch_n = 0;
         n02 = 0;
         n03 = 0;
+        payload_ordinal = 0;
+    }
+    if (g_e9prov.task != task_seen) {
+        task_seen = g_e9prov.task;
+        payload_ordinal = 0;
     }
     ++fetch_n;
     if (fetch_n <= 4) {
@@ -515,6 +522,7 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
     if (opcode != 0x02 && opcode != 0x03) return;
     uint32_t &count = opcode == 0x02 ? n02 : n03;
     ++count;
+    const uint32_t ordinal = opcode == 0x02 ? ++payload_ordinal : 0;
     if (count <= 24) {
         fprintf(stderr,
                 "[f5-state-control] phase=%u op=0x%02X n=%u r17=0x%06X "
@@ -523,8 +531,8 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
                 (w0 >> 16) & 0xFFu);
         const uint32_t source = opcode == 0x02 ? (w1 & 0x7FFFFFu) :
             ((r17 + 8u) & 0x7FFFFFu);
-        fprintf(stderr, "[f5-state-payload] phase=%u task=%u op=0x%02X source=0x%06X bytes=",
-                phase, g_e9prov.task, opcode, source);
+        fprintf(stderr, "[f5-state-payload] phase=%u task=%u ord=%u pc=0x%06X op=0x%02X source=0x%06X bytes=",
+                phase, g_e9prov.task, ordinal, r17 & 0x7FFFFFu, opcode, source);
         if (g_rdram_for_submit != nullptr && source + 16u <= 0x800000u) {
             for (uint32_t i = 0; i < 16; ++i)
                 fprintf(stderr, "%02X", (unsigned)g_rdram_for_submit[(source + i) ^ 3]);

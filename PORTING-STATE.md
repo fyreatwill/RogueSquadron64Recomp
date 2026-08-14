@@ -60980,3 +60980,27 @@ ORIGIN: exact overlaps are generated `MEM_W` writes observed by the s992
 fixup and source bytes read by the F5 payload diagnostic; no mitigation or
 value rewrite was added. The no-overlap classification is bounded by the
 phase-scoped generated-store census.
+
+## Session 1000 (2026-08-13) — joined F5 and RT64 shade ordinals
+
+Added a task-local ordinal to each F5 `0x02` VTXCOLOR payload row and a
+task/display-list-local ordinal to RT64 shade records, including the F5 command
+address. The first build caught and fixed a diagnostic scope error; the final
+Debug build passed. The final phase-gated capture reached VI width 1024 and
+passed all controls: 120 payload rows, 19 raw-shade rows, 8 zero-shade
+replacements, 9 shade-DMA controls, 128 recovered write-fault records, and
+6,974 generated-write controls.
+
+What it showed: task 184's F5 payload ordinals were task-global 1..24. RT64
+zero-shade ordinals reset at display-list boundaries: `0x4B7930` ord 1..5,
+`0x4B7BE8` ord 1..2, and `0x4B8B28` ord 5..10. This rejects a task-global
+source-ordinal join and selects the observed DL-boundary-shaped result. The
+F5 `r17` field is a DMEM command address, not the RT64 display-list start, so
+the run cannot identify which F5 source update feeds each RT64 display list.
+
+What it rules out: a null or phase-misaligned ordinal instrument; every
+required control fired in the gated phase. It does not prove a causal source
+mapping or authorize changing `ROGUESQ_FIX_ZERO_SHADE`.
+
+ORIGIN: the ordinal observations are emitted at the existing F5 payload and
+RT64 shade/replacement sites; no mitigation or value rewrite was added.

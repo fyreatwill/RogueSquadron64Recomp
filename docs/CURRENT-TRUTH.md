@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s999 (2026-08-13). The active M4 lead is the zero-shade
+Reviewed through s1000 (2026-08-13). The active M4 lead is the zero-shade
 writer/value ownership boundary after the post-sec2 gate. s996 found mixed
 ownership: two phase-6 VTXCOLOR sources had exact generated writes, while the
 other sampled sources—including the nonzero payload at `0x737EA0`—had no
@@ -453,6 +453,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s997 | The clean Debug build and one phase-gated ungated-LLE capture passed all controls: 48 phase-4 and 48 phase-6 payload rows, 21 raw-shade rows, 8 zero-shade replacements, 9 shade-DMA controls, 130 write-fault records, and no crash marker. In the task containing the zero-shade rows, `0x732A10` had an exact phase-6 generated write while `0x732F38` had no phase-6 generated-store row; however, `[shade-raw]` carries no source/task identifier, so neither source can be assigned to a replacement. The causal split remains unevaluable; no hypothesis or mitigation conclusion followed. |
 | s998 | Added task serial and display-list-start identity to `[shade-raw]` and `[fix-zero-shade]`, regenerated and built cleanly, then reached VI 1024 and completed 40 gated frames with all controls positive: 48/48 phase-4/6 payload rows, 21 raw-shade rows, 8 replacements, 9 shade-DMA controls, 129 write-fault records, and no crash. Zero rows were identified as task 197 at DL starts `0x4B7930`/`0x4B7BE8`; phase-6 still contained nonzero sources including `0x732A10` (same-phase generated write) and `0x732F38` (no same-phase generated write). Because `[f5-state-payload]` still lacks the task serial, this enables only a task-level, not source-level, join; the causal split remains unevaluable. |
 | s999 | Added the current LLE task serial to `[f5-state-payload]`, regenerated/fixed up and built cleanly, then completed 40 phase-gated VI-1024 frames with positive controls: 48 phase-4 and 48 phase-6 payload rows, 54 raw-shade rows, 9 replacements, 9 shade-DMA controls, 129 write-fault records, 9,046 generated-store controls, and no crash marker. The zero-shade records were in task 204; its 24 phase-6 VTXCOLOR sources included exact generated writes at `0x732A10`, `0x732F38`, and `0x733460`, while the remaining same-task sources—including nonzero `0x737EA0`—had no phase-6 generated-store overlap. This selects H-mixed: source ownership is not uniformly generated-written or untouched. The source-to-individual-replacement mapping remains open. ORIGIN: exact overlaps are generated `MEM_W` writes observed by the s992 fixup and payload source reads; no mitigation or value rewrite was added. |
+| s1000 | Added task-local F5 VTXCOLOR ordinals and RT64 task/DL-local shade ordinals, with the F5 command address, then completed a valid phase-gated capture: payload=120, raw-shade=19, replacements=8, shade-DMA=9, write-fault=128, generated-write controls=6974, and VI-1024 reached. In task 184, F5 ordinals ran task-global 1..24, while zero-shade rows reset at DL boundaries (`0x4B7930` ord 1..5, `0x4B7BE8` ord 1..2, `0x4B8B28` ord 5..10). This rejects H-source-ordinal and selects the observed H-dl-boundary shape, but does not identify the F5 source consumed by each RT64 DL because F5 `r17` is a DMEM command address, not the RT64 DL start. No mitigation or value rewrite was added. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -494,37 +495,36 @@ entries and do not authorize mitigations.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s1000)
+## Next work unit (s1001)
 
 HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
-Add a phase-scoped ordinal to each F5 `0x02` VTXCOLOR payload update and to
-each RT64 raw-shade/zero-shade record for the same task/DL stream. Join the
-ordinal and display-list identity to test whether each zero-shade replacement
-maps to a specific source update. Do not add a mitigation or hand-edit
+Add the F5 task's root display-list start address to shared task provenance and
+print it on every `[f5-state-payload]` row. Preserve the existing task-global
+F5 ordinal and RT64 task/DL-local ordinal. Do not add a mitigation or hand-edit
 generated files.
 
-Competing hypotheses are H-source-ordinal (each zero shade maps to a stable
-source ordinal), H-dl-boundary (the mapping is DL-local and resets at the DL
-boundary), and H-no-consumer-join (no stable mapping exists). The
-discriminating measurement is a same-run table keyed by task, F5 update
-ordinal, RT64 command/DL identity, and source address. A run with no controls,
-no ordinal-bearing payload rows, no raw-shade records, or no source rows is
+Competing hypotheses are H-root-dl-join (the F5 root DL identity matches one
+RT64 DL and its local ordinal), H-child-dl-join (the source is associated with
+a child DL that must be captured separately), and H-no-consumer-join (root
+identity still cannot connect the streams). The discriminating measurement is
+a same-run table keyed by task, F5 root DL, F5 update ordinal, F5 command
+address/source, RT64 DL, and RT64 ordinal. A run with no positive controls, no
+root identity, no ordinal-bearing payload rows, or no zero-shade rows is
 invalid.
 
 Exact commands:
 
-Add the ordinal fields to the existing F5 payload and RT64 shade diagnostics,
-preserving task, source, payload, and DL fields. Run the fixup static check,
-regenerate/build in the documented order, and launch the existing phase-gated
-probe with generated-write, F5 state/payload, shade-DMA, write-fault, and
-raw-shade controls. Extract phase-4/phase-6 rows and report the mapped source,
-generated-store overlap/value, task, and DL for every replacement.
+Thread `dl_ptr` from the graphics-task submitter into `rs64_e9prov_task_begin`
+or an equivalent task-scoped provenance setter, print it on F5 payload rows,
+run the fixup static check, export submodule patches if needed, build Debug,
+and launch the existing phase-gated probe with all current controls.
 
-Expected outcomes: a stable task-global mapping selects H-source-ordinal; a
-mapping that changes only at DL boundaries selects H-dl-boundary; no stable
-mapping selects H-no-consumer-join. If controls or identity coverage fail,
-make no causal selection.
+Expected outcomes: a root DL matching one RT64 DL with aligned local ordinals
+selects H-root-dl-join; a root mismatch with a child-DL explanation supported
+by repeated task/DL rows selects H-child-dl-join; otherwise select
+H-no-consumer-join. If controls or root identity coverage fail, make no causal
+selection.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.
