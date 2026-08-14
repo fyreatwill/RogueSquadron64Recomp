@@ -61838,3 +61838,20 @@ was not armed, so its writer remains unevaluable.
 
 ORIGIN: independent retail-oracle whole-RDRAM callback, PIF pad, and VI
 callback/poll controls; no guest value or recomp runtime behavior was changed.
+
+## Session 1041 (2026-08-14) — retail first-input timing did not leave width 320
+
+Ran the planned retail-oracle discriminator with both arms concurrently for
+60 seconds: eleven 150 ms Start pulses beginning at 1,6,11,...,51 seconds
+versus the documented 6,11,...,56-second schedule. Both runs completed with
+rc=0 and 3,599 VI. The whole-RDRAM positive control reached 10,000 callbacks
+and removed watch index 0 with `rc=0` in both arms; all 11 Start pad edges were
+visible in each log. Independent VI polling stayed at width 320 and origin
+`0x006dd280` after the initial record through 59.5 seconds in both arms.
+
+This selects `H-retail-path-independent` for the tested first-input timing
+windows and 60-second horizon. It rules out the early-versus-documented first
+Start timing as the explanation for the observed width-320 attract path, but
+does not say anything about the 512 hangar phase because neither run reached
+it. The freelist watch was not armed. Next work extends both arms to 120
+seconds, where the oracle documentation predicts a late attract transition.
