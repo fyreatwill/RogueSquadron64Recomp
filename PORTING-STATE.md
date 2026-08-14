@@ -59913,3 +59913,32 @@ runtime writer. No runtime mitigation or submodule change was made.
 ORIGIN: external oracle callback-boundary diagnostics plus paired ordinary/PIF
 arms with visible whole-RDRAM controls; no guest value was changed and no
 mitigation was landed.
+
+## Session 965 (2026-08-13) — PIF wrapper crosses pre-call but callback does not return
+
+Added rate-limited PIF-only markers immediately before and after the external
+oracle memory wrapper's call to `check_breakpoints_on_mem_access()`. Rebuilt
+the core and oracle front-end, then ran ordinary-RDRAM and PIF-RAM read-watch
+arms concurrently with the same whole-RDRAM write positive control.
+
+The ordinary arm completed with 1,102,500 whole-RDRAM write hits, one
+ordinary read hit, and 298 VI frames (`rc=0`). The PIF arm reached the new
+wrapper pre-callback marker on its first PIF read at `0x1fc007e4`, emitted no
+post-callback marker, and exited `rc=139` without an oracle completion line.
+The wrapper therefore passed its read-entry and pre-call boundary; the
+failure is during callback invocation/early entry or before callback return.
+This does not identify the callback instruction, classify retail PIF activity,
+or say anything about the recomp runtime.
+
+This rules out a pre-wrapper/device failure as the immediate cause. The next
+unit places a marker at the first statement of
+`check_breakpoints_on_mem_access()` to split call ABI/prologue failure from
+early callback-body failure. No runtime mitigation or submodule change was
+made.
+
+Captures: `scratch/agent/oracle_wrapper_ordinary.log` and
+`scratch/agent/oracle_wrapper_pif.log`.
+
+ORIGIN: external oracle wrapper-boundary diagnostics plus paired ordinary/PIF
+arms with visible whole-RDRAM controls; no guest value was changed and no
+mitigation was landed.

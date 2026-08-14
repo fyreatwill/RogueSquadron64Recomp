@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s964 (2026-08-13). The active blocker is authoritative
+Reviewed through s965 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -232,6 +232,14 @@ closed; M3 work is limited to systematic idiom-class audits.
   `check_breakpoints_on_mem_access()` enters lookup; the three instrumented
   callback stages remain unevaluable. No runtime mitigation or retail
   conclusion followed.
+- s965 added before/after markers around the PIF wrapper's call to
+  `check_breakpoints_on_mem_access()`. The ordinary-RDRAM arm passed its
+  controls (1,102,500 whole-RDRAM writes, one ordinary read, 298 VI); the PIF
+  arm reached the wrapper pre-call marker on `0x1fc007e4`, emitted no
+  post-call marker, and exited `rc=139`. This rules out a pre-wrapper/device
+  failure and selects the callback call/early-entry boundary, but does not
+  identify the callback's failing instruction. No runtime mitigation or
+  retail conclusion followed.
 
 ## Recent evidence ledger
 
@@ -273,6 +281,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s962 | Core rebuild with `pif_address()` base stripping left ordinary RDRAM healthy (1,105,106 writes/one read/299 VI) but PIF read watch still crashed `rc=139` after RDRAM init and before emulator start. Latent normalization bug recorded; pre-start PIF debugger/init failure remains. |
 | s963 | Batched oracle diagnostics showed ordinary RDRAM completing (1,105,162 writes/299 VI), while PIF mapping and activation succeeded and the first wrapped PIF read entered before `rc=139`; immediate failure is in the debugger callback path after read entry. |
 | s964 | Callback-boundary markers showed the ordinary arm completing (1,105,307 writes/one read/299 VI), while the PIF arm reached wrapped read entry but produced no pre-lookup marker before `rc=139`; lookup/state/update remain unevaluable and the failure is earlier in the PIF read-with-breakpoint path. |
+| s965 | Wrapper before/after markers showed the ordinary arm completing (1,102,500 writes/one read/298 VI), while the PIF arm reached the wrapper pre-callback marker at `0x1fc007e4`, emitted no post-callback marker, and exited `rc=139`; the failure is at callback call/early-entry, not before the wrapper. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -291,11 +300,11 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s964 showed the first wrapped PIF read but no entry
-   marker from `check_breakpoints_on_mem_access()`. Instrument the PIF
-   `read_with_bp_checks()` call boundary and its callback argument/return path,
-   paired with the ordinary-RDRAM positive control; do not infer anything
-   about callback internals until this boundary is crossed.
+   callback-table watch: s965 crossed the wrapper pre-call marker but not the
+   post-call marker. Add a first-statement callback marker to distinguish call
+   ABI/prologue failure from early callback-body failure, paired with the
+   ordinary-RDRAM positive control; do not infer retail callback-table
+   behavior until this boundary is crossed.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -305,9 +314,10 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-Make one minimal source-level diagnostic in the external oracle core around
-the PIF `read_with_bp_checks()` call boundary so the PIF-region read watch can
-cross the wrapper or name the first failing call boundary.
+Make one minimal source-level diagnostic in the external oracle core at the
+first statement of `check_breakpoints_on_mem_access()` so the PIF-region read
+watch can distinguish callback call/prologue failure from early callback-body
+failure.
 Do not edit the recomp runtime or retry retail PIF/callback hypotheses until
 this passes.
 
