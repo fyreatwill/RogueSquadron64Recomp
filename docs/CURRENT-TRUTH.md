@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s1001 (2026-08-13). The active M4 lead is the zero-shade
+Reviewed through s1002 (2026-08-14). The active M4 lead is the zero-shade
 writer/value ownership boundary after the post-sec2 gate. s996 found mixed
 ownership: two phase-6 VTXCOLOR sources had exact generated writes, while the
 other sampled sources—including the nonzero payload at `0x737EA0`—had no
@@ -496,7 +496,16 @@ entries and do not authorize mitigations.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s1002)
+## s1002 validation note
+
+s1002 verified that the root-DL provenance implementation is present and the
+Debug target links, but two fresh phase-gated attempts were invalid: both
+crashed in the NPC update path at VI 640 before reaching the required VI-1024
+gate. The F5 payload and control markers fired, but no root/consumer join is
+admissible from either run. This does not overturn s1001's valid root-DL
+result; it only leaves the DPC-range join unmeasured.
+
+## Next work unit (s1003)
 
 HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 

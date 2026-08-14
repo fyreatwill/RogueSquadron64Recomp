@@ -61026,3 +61026,21 @@ added.
 ORIGIN: this change only records `task->t.data_ptr` at the existing F5 task
 boundary and emits diagnostic provenance; it does not alter game or renderer
 state.
+
+## Session 1002 (2026-08-14) — retried root-DL provenance validation
+
+Verified the existing root-DL provenance implementation and rebuilt the Debug
+target successfully. Two fresh runs of the prescribed phase-gated capture were
+invalid: both reached only VI width 640 and then crashed in the NPC update path
+before the VI-1024 gate. F5 payload/control markers fired, but no root/consumer
+join is admissible from either run. This leaves the DPC-range join work
+unmeasured and does not overturn s1001's valid root-versus-consumer result.
+
+What it rules out: neither run supplies evidence about root-DL, child-DL, or
+source ownership because the required phase gate was never reached. It also
+confirms the failure is a pre-gate transient in this recipe, not a valid null
+result for the provenance join.
+
+ORIGIN: no mitigation, game-logic change, or renderer-state change was added;
+the crash originated in the existing NPC update path before the measurement
+phase.
