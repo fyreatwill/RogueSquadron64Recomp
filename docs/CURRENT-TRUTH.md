@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1064 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1065 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -497,6 +497,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1062 | Incoming-value audit for the two non-constant writers found five cinematic call sites, all constant or menu-state/table-derived, with no direct controller/timer/demo/attract read. The menu asset path reads `s2+0x14`, where `s2` is initialized to fixed global `0x80130B40`, so the source is global state byte `0x80130B54` plus a fixed table lookup. Selects `H-selector0-state` as static single-source evidence; the field writers and retail transition remain open. |
 | s1063 | Generated-store audit of `0x80130B54` found `cycleIdleDemoId` at `0x8006F07C` as the only exact global-base writer, incrementing the field modulo six, plus the generated `0x8006F0AC` clear form. No controller read appears. Selects `H-field-demo` as static single-source evidence; pointer-mediated/non-generated aliases remain open. |
 | s1064 | The selected table is the named `dLevelByDemoId` data object at `0x800CD404` (`0x800D-0x2BFC`). The complete generated-tree audit found its indexed byte read only at `menuOverlayInit+0x45c`; no generated store targets the table range. This selects `H-table-immutable` for generated code, while data initialization and pointer-mediated/non-generated writers remain an explicit boundary. |
+| s1065 | The data-symbol section places `dLevelByDemoId` inside `.ovl.menu`, ROM `0x10C2D0`–`0x1346BF`, VRAM `0x800A5130`–`0x800CD51F`; its computed ROM offset is `0x1345A4`, whose bytes are `00 05 07 0A 0B 11 00 00`. This independently selects `H-table-ROM`: the source is immutable ROM/overlay data, with normal overlay DMA as the loader rather than a generated population routine. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -529,11 +530,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    fixed table. Selects `H-selector0-state` as static single-source evidence;
    the field writers remain open. Do not arm the
    freelist watch until a 512 hangar-origin phase is reached.
-2. The table selected by `0x80130B54` is immutable in the generated tree:
-   `dLevelByDemoId` begins at `0x800CD404`, and the only generated access found
-   is the indexed read in `menuOverlayInit`. Treat its initialization or any
-   pointer-mediated/non-generated write as a boundary; do not infer a runtime
-   value or arm a freelist watch from this static result.
+2. The table selected by `0x80130B54` is immutable ROM-backed data:
+   `dLevelByDemoId` begins at `0x800CD404` inside the `.ovl.menu` section, whose
+   ROM range is `0x10C2D0`–`0x1346BF`; its ROM offset is `0x1345A4` and the
+   captured bytes are `00 05 07 0A 0B 11 00 00`. The only generated access is
+   the indexed read in `menuOverlayInit`. Normal overlay DMA initializes the
+   RAM copy; no generated population path was found. Do not infer which
+   runtime phase consumes a value or arm a freelist watch from this static
+   result.
 3. The normal frame-return producer is now classified as state-shaped:
    `accumulateShipThrottleCharge` has no local controller, timer, demo, or
    attract source and returns 1 only when its ship charge counter reaches 7.

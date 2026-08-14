@@ -1,31 +1,38 @@
-# NEXT work unit (s1065)
+# NEXT work unit (s1066)
 
 HYPOTHESIS-ID: retail-selector-upstream-state
 
-Perform one bounded static audit of the unresolved initialization boundary for
-`dLevelByDemoId` at `0x800CD404`: inspect the linked data definition and its
-ROM/section ownership, then classify whether the table is initialized from
-immutable ROM data or copied/populated by a generated/runtime path. Do not
-build, run the game, or arm a freelist watch.
+Perform one bounded static audit of every generated call site of
+`cycleIdleDemoId` (`0x8006F07C`), the only exact writer of the selector source
+byte `0x80130B54`. Classify each caller's immediate guard and argument/state
+inputs, and determine whether the selector update is driven directly by
+controller input, a timer/demo/attract path, or persistent menu/setup state.
+Do not build, run the game, or arm a freelist watch.
 
 Competing hypotheses and discriminator:
 
-* `H-table-ROM`: the data symbol is loaded as immutable section/ROM content.
-* `H-table-copy`: a generated or runtime copy populates the table.
-* `H-table-boundary`: ownership remains unresolved outside generated code.
+* `H-cycle-input`: at least one caller has a direct controller edge/mask input.
+* `H-cycle-demo`: callers are reached through timer/demo/attract scheduling.
+* `H-cycle-state`: all callers are setup/menu/state driven with no direct input
+  or timer/demo predicate.
+* `H-cycle-boundary`: a call target or caller input remains outside generated
+  code and cannot be classified.
 
-Discriminating measurement: produce one data/section ownership table containing
-symbol address, section/ROM range, all references, and any population call.
-ROM-backed immutable ownership selects `H-table-ROM`; a copy/population site
-selects `H-table-copy`; missing ownership keeps `H-table-boundary` open.
+Discriminating measurement: produce one complete call-site table listing each
+`jal cycleIdleDemoId` address, its immediate branch predicates, argument/state
+sources, and caller chain. A direct controller predicate selects
+`H-cycle-input`; a timer/demo/attract predicate with no input selects
+`H-cycle-demo`; state-only callers select `H-cycle-state`; unresolved calls
+keep `H-cycle-boundary` open.
 
 Exact commands:
 
 ```sh
-rg -n -B 16 -A 20 '0x800D2BFC|0X800D2BFC|0x2BFC|0X2BFC|0x2C00|0X2C00' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -1800
-rg -n -B 16 -A 20 'MEM_[BHW]\([^)]*0x2BFC|MEM_[BHW]\([^)]*0X2BFC|MEM_[BHW]\([^)]*0x2C00|MEM_[BHW]\([^)]*0X2C00' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -1800
-rg -n -B 12 -A 18 'getController(New|Raw)|timer|demo|attract|menu|asset|save|ship|cutscene' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -1200
+rg -n -B 24 -A 30 'cycleIdleDemoId\(rdram, ctx\)|jal.*0x8006F07C|0x8006F07C' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -B 18 -A 24 'getController(New|Raw)|0x8013A9|0x80130B54|timer|demo|attract|idle|cycleIdleDemoId' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -1800
+rg -n -B 8 -A 12 'cycleIdleDemoId' /Users/williambuckley/Documents/Tools/rogue_squadron64 2>/dev/null | head -500
 ```
 
-Expected output is one complete data-ownership table with a selected hypothesis
-or an explicitly unresolved boundary. No build or runtime run is needed.
+Expected output is one complete caller/input table with a selected
+hypothesis or an explicitly unresolved boundary. No build or runtime run is
+needed.

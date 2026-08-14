@@ -62345,3 +62345,20 @@ mitigation or guest behavior changed.
 ORIGIN: `syms/rogue_squadron.datasyms.toml` data ownership plus complete
 generated `MEM_[BHW]`/address-form census; no guest value, runtime behavior, or
 mitigation was changed.
+
+## Session 1065 (2026-08-14) — resolved demo-level table ROM ownership
+
+Ran the bounded data/section ownership follow-up; no build or runtime run was
+performed. `dLevelByDemoId` at `0x800CD404` lies in the `.ovl.menu` data section
+(`rom=0x10C2D0`, `vram=0x800A5130`, `size=0x283F0`), so its computed ROM offset
+is `0x1345A4`, inside the section's `0x1346C0` exclusive end. The retail ROM
+and the duplicate local ROM compare equal, and the bytes at that offset are
+`00 05 07 0A 0B 11 00 00`. The generated-tree census from s1064 found only
+the indexed read and no table-range store. This selects `H-table-ROM` over a
+generated/runtime population path; normal overlay DMA is the expected loader
+of the immutable ROM content. It does not identify the retail phase that
+consumes the selected byte or justify a freelist watch.
+
+ORIGIN: `.ovl.menu` section geometry in `syms/rogue_squadron.datasyms.toml`,
+ROM-byte inspection at `0x1345A4`, and the prior complete generated-tree store
+census; no guest value, runtime behavior, or mitigation was changed.
