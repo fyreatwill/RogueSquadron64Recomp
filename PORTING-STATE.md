@@ -1,3 +1,23 @@
+### s950 (2026-08-13)
+
+Completed the planned source-only M3 audit of the `tickAudioChannel` context
+`+0x64` field and the table at `0x8013D894 + index*0x17C`. Generated
+funcs_21–23 contain eight stores to the table through `-0x276C` and no reads
+through that address form. The stores are voice-list/voice-start bookkeeping
+except for `soundMacroOpKeyOnNote` at `0x80089D28`, which copies its channel
+argument's `+0x64`. Every generated audio writer of channel `+0x64` writes the
+`-1` sentinel: `soundMacroOpStopVoice`, `soundMacroOpReturnFromGosub`,
+`soundMacroOpGosub`, and `tickAudioChannel` (whose `$s1` is initialized to
+`-1` at `0x8008BF1C`). Companion symbols independently identify
+`tickAudioChannel` and the `0x17C`-stride channel array at `0x8013D880`.
+
+This rules out a directly generated incompatible table consumer and a directly
+generated non-sentinel channel-field writer, but does not prove runtime
+legitimacy: indirect dispatch, channel-object origins, and non-generated
+writers remain open. The result is single-source static evidence with an
+independent companion-symbol cross-check; no mitigation or behavior change
+was made. H-channel-context-field-unclassified remains selected.
+
 # Rogue Squadron 64 Recomp — build/fix state (2026-07-09)
 
 Goal: build MikeSemicolonD/RogueSquadron64Recomp on macOS and fix the documented
