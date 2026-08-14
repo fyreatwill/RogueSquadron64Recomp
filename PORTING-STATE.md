@@ -63583,3 +63583,17 @@ rule; its matches are historical comments only. This selects
 isolated SIGBUS, and leaves runtime fault origin open. No mitigation was
 added. ORIGIN: generated definition/call/header/overlay census plus active
 fixup-script census; no mitigation.
+## Session 1134 (2026-08-14) — defined independent M4 accumulator ground truth
+
+Read the required oracle instructions and Factor 5 command reference, then
+audited the existing M4 accumulator and v6 producer notes plus the generated
+`L_16B8` path. The oracle is independent for retail VI-phase reachability and
+RDRAM PC attribution, but cannot watch the internal RSP `ACCH:ACCM:ACCL`; an
+"accumulator address" watch would be invalid. Defined the smallest complete
+paired measurement in `docs/M4-ACCUMULATOR-GROUND-TRUTH.md`: a port-side exact
+VMADH pre/post tuple and stored-record row with an independent RSP positive
+control, followed by a retail whole-RDRAM control and targeted record watch.
+No build, run, or instrumentation was performed in this preparation unit.
+The ground-truth reading rules out using a targeted oracle null as evidence
+unless the shaded phase is positively reached, and rules out treating an
+`L_16B8` counter as a positive control.

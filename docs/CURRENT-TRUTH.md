@@ -109,8 +109,12 @@ closed after controlled nulls; no mitigation is authorized.
 
 ## Ranked next steps
 
-1. Keep M4 parked unless an independent ground-truth path or a new complete
-   pre/post accumulator discriminator becomes available.
+1. Implement the paired M4 accumulator measurement specified in
+   [`M4-ACCUMULATOR-GROUND-TRUTH.md`](M4-ACCUMULATOR-GROUND-TRUTH.md): first
+   obtain the stable port-side record range, then run the port pre/post tuple
+   capture and retail oracle with a whole-RDRAM control plus targeted watch.
+   Do not interpret a targeted oracle null unless its VI trace proves the
+   shaded phase was reached.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
