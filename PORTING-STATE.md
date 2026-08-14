@@ -60460,3 +60460,39 @@ corruption mechanism remains open, this only rules out one candidate writer.
 ORIGIN: `roguesquadron.yaml` segment split (independent build-config source,
 not generated code) plus exhaustive generated-source grep; no guest value was
 read or changed and no mitigation was landed.
+## Session 984 (2026-08-13) — M4 zero-shade decode/origin audit after oracle pivot
+
+The required `/Users/williambuckley/Documents/Tools/rs64-oracle` directory was
+absent in this environment, and `.claude/settings.json` grants only the
+`N64Recomp` and `rogue_squadron64` directories. Per the prescribed fallback,
+this iteration pivoted once to M4 item 4 after reading the s19/s20 windows and
+the rendering archive/reference.
+
+### Work unit
+
+Before the audit, NEXT.md recorded three competing hypotheses: an RT64 shade
+lane/order/sign decode defect, an upstream Factor 5 stream-emission defect, or
+game light-state production of the near-zero values. The discriminating static
+measurement was the RT64 coefficient reconstruction against the independent
+Factor 5 command semantics, checked against the prior good-vs-zero same-
+combiner A/B evidence.
+
+### Result
+
+`lib/rt64/src/gbi/rt64_gbi_rdp.cpp` consumes the standard four position words,
+advances by `triangleBaseWords`, then reconstructs the shaded triangle's base,
+de, and dx coefficients from the expected word lanes and signed 16.16 scale.
+The s19/s20 evidence independently shows good and zero outdoor triangles use
+the same `(T0-0)*SHADE+0` combiner and that forcing white shade restores the
+textured scene in the same phase. H-decode-layout is refuted. The remaining
+split is upstream Factor 5 shade-state emission versus game light-state
+production; no source mitigation, build, or run was performed.
+
+### What it rules out
+
+It rules out promoting `ROGUESQ_FIX_ZERO_SHADE` into a decoder correction or
+claiming a lane/order origin. It does not identify the writer or establish that
+the near-zero values are illegitimate, so no mitigation ORIGIN conclusion is
+authorized. Next work is a phase-gated, same-run positive-control probe that
+marks Factor 5 color/light-state updates and pairs them with scoped raw shade
+samples.

@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s983 (2026-08-13). The active blocker is authoritative
+Reviewed through s984 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -363,6 +363,17 @@ a human directory-permission grant (s983) — see Next work unit.
   table; H-slotdispatcheriter-stacksp-unclassified's general `$sp` corruption
   question remains open.
 
+## s984 result
+
+s984 pivoted once to M4 after the oracle directory was absent. A bounded static
+audit compared RT64's shaded-triangle decode with the independent F5 command
+reference: position words are consumed first, the triangle base is advanced,
+and the shade base/de/dx fields are reconstructed in the expected signed-16.16
+lane order. The s19/s20 same-combiner good-vs-zero evidence and white-shade A/B
+independently agree that the decoded shade path is causal. H-decode-layout is
+refuted; the remaining split is upstream F5 shade-state emission versus game
+light-state production. No mitigation or build/run was performed.
+
 ## Recent evidence ledger
 
 The detailed session records are in `PORTING-STATE.md`; durable campaign
@@ -422,6 +433,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s981 | Corrected dylib audit found direct calls to local callback `0x1b80` with `w2=4,w3=3` and a normal aligned callback prologue, refuting a target/prologue discrepancy. No isolated harness exists, so callback runtime and retail phase remain unevaluable. |
 | s982 | LLDB run passed setup and reached the first PIF wrapper read, then faulted at `read_with_bp_checks+268` while dereferencing the result of `r4300_pc(r4300)`; callback `0x1b80` was not entered. Source and disassembly agree; retail remains unevaluable. |
 | s983 | Oracle work blocked: `rs64-oracle` fell outside this session's directory sandbox (verified). Substituted a static writer audit closing `runInMissionFrame`'s callback-table edge: `0x8010B350` is `data` per `roguesquadron.yaml`, and no generated-source store targets it anywhere. |
+| s984 | Oracle directory was absent, so the iteration pivoted once to M4. Static RT64/F5 decode audit refuted a shade lane/order defect; prior same-combiner A/B evidence independently keeps the cause upstream in F5 shade-state or game lighting. No mitigation or build/run. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -451,16 +463,33 @@ entries and do not authorize mitigations.
    s982 fault at `ldr w8,[x0]`. Do not edit the recomp runtime or infer a
    retail phase result. No mitigation is authorized until the writer/owner of
    the invalid callback state pointer is identified.
-4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
-   triangles, then I4 `sample=64x128`, each with independent controls. Prior
-   root-cause work is in PORTING-STATE.md Sessions 19–20 (2026-07-25/26); the
-   `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) papers over it without an
-   ORIGIN conclusion — do not restart this cold without reading those two
-   sessions plus PROJECT-OVERVIEW's rendering archive first.
+4. M4 correctness is the active fallback: outdoor `baseFixed=-32768` zero
+   shade is now at the writer/state split after s984 refuted a decoder-layout
+   defect. Next is a phase-gated marker of Factor 5 color/light updates paired
+   with scoped raw shade samples; attribution S=0 triangles and I4
+   `sample=64x128` follow only after this origin is classified. The
+   `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an ORIGIN
+   conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit
+## Next work unit (s985)
+
+HYPOTHESIS-ID: m4-zero-shade-origin
+
+Run one phase-gated, same-run recomp probe to split the two remaining zero-shade
+origins. Batch a positive-control marker for every Factor 5 vertex-color/light
+state update with scoped `ROGUESQ_LOG_SHADE_RAW` samples in the 512 outdoor
+phase; do not change `ROGUESQ_FIX_ZERO_SHADE`. A control must visibly fire in
+the same capture. If color/light updates precede zero shade words, select
+H-game-light-state; if the update stream is absent or carries zero values while
+boot carries good values, select H-f5-stream. Do not land a mitigation until
+the writer and legitimacy are named.
+
+The old oracle unit below is blocked and retained only as history; it is not the
+next work unit.
+
+## Superseded next work unit (s983 oracle; blocked)
 
 HYPOTHESIS-ID: oracle-pif-callback-runtime
 
