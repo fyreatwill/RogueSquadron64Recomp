@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1164 (2026-08-14).
+in the ledger. Reviewed through s1165 (2026-08-14).
 
 ## Current state
 
@@ -214,6 +214,13 @@ in the ledger. Reviewed through s1164 (2026-08-14).
   after wild-width writeback skips. It produced no slot-SP guard row. This is
   a second unevaluable pre-1024 capture, not evidence for H1/H2/H3; the next
   probe must classify the pre-1024 writeback/crash reachability path.
+- The s1165 pre-1024 writeback capture passed independent controls: 8,192
+  bounded slot-dispatch entries and 25 writeback control rows. It recorded 32
+  wild-width skips, zero overlap rows, and zero crash rows while remaining in
+  the 640→2→640 lifecycle beyond the 600-second hard cap. Compared with the
+  s1164 crash capture, this supports H3, nondeterministic pre-1024 reachability,
+  and shows wild-width skips alone do not discriminate the crash cause. H1/H2
+  remains unevaluable; no mitigation was added.
 
 ## Retail VI descriptor boundary
 
@@ -349,18 +356,17 @@ corruption.
 | s1162 | Completed the whole generated `slotDispatcherIter` caller census: 144 direct sites across 72 callers, zero static indirect targets to `0x8003E8DC`, 72/72 companion-entry matches, and no unbalanced stack/return idiom. The `0x80078894` site is inside the corrected standalone `npcPowerGeneratorUpdate` boundary. This selects H1 and rules out a generated caller-frame idiom or the old coalesced-boundary explanation; runtime-side frame/value origin remains open. |
 | s1163 | Rebuilt and ran the phase-gated runtime-origin capture with slot-dispatch and stack-guard controls. Slot dispatch produced 8,192 bounded entries through phase 6, but the run stayed in `640→2→640` for 209 seconds and was SIGKILLed after no VI-1024 transition; stack-guard and crash rows were zero. The planned writer-origin discriminator was unevaluable, so no H1/H2/H3 conclusion or mitigation is justified. |
 | s1164 | Rebuilt and reran the runtime-origin capture. Slot-dispatch and crash controls were live (8,192 dispatch entries and 36 crash rows), but VI 1024 was not reached; the process terminated in RT64 `copyToRAM` at guest PC `0x8000B650` with `si_addr=0x11ffbc000`, after wild-width writeback skips, and no slot-SP guard row. The writer-origin discriminator remains unevaluable; no H1/H2/H3 conclusion or mitigation is justified. |
+| s1165 | Rebuilt and ran the pre-1024 writeback reachability capture. Slot dispatch logged 8,192 entries; writeback control logged 25 rows including 32 wild-width skips, with zero overlaps and zero crashes. The process stayed in 640→2→640 beyond the 600-second cap and was SIGKILLed. Compared with s1164, this supports nondeterministic reachability (H3) and shows wild skips alone do not classify the crash; no mitigation was added. |
 
 ## Ranked next steps
 
-1. Perform one bounded, phase-gated pre-1024 reachability audit of the RT64
-   writeback/crash path using the existing `[ost-wb]` control and crash logs,
-   with slot dispatch as a positive control. Competing hypotheses are: H1,
-   wild writeback state is present before the crash; H2, the writeback skips
-   are unrelated and the crash is an independent RT64 resource failure; H3,
-   the same pre-1024 path is merely a nondeterministic reachability gate. The
-   discriminator is a phase-scoped `[ost-wb]` control/skip/overlap sequence
-   immediately preceding the crash, with the independent slot-dispatch control
-   live. Do not add a mitigation or infer ownership from a skip alone.
+1. Perform one bounded, phase-gated source audit of the pre-1024 `copyToRAM`
+   crash family, using the existing `[ost-wb]` controls plus RT64 resource
+   failure markers. The s1164/s1165 pair supports nondeterministic reachability
+   (H3), while wild skips occur in both arms and are not sufficient evidence.
+   The discriminator is a positive-control-gated comparison of the failing
+   resource/operation marker against the same pre-1024 writeback sequence; do
+   not add a mitigation or infer ownership from a skip alone.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

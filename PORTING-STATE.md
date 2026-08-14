@@ -64141,3 +64141,15 @@ slot-SP guard row was emitted, so the intended `slotDispatcherIter+872`
 writer-origin discriminator was unevaluable. This does not select H1, H2, or
 H3 and justifies no mitigation. The next unit audits the phase-scoped
 writeback/crash reachability path with an `[ost-wb]` positive control.
+
+## Session 1165 (2026-08-14) — pre-1024 writeback reachability stayed stable
+
+Rebuilt the Debug target and ran the prescribed pre-1024 reachability capture
+with slot-dispatch, writeback, and crash controls. Slot dispatch was live with
+8,192 bounded entries; the writeback control produced 25 rows, including 32
+wild-width skips, but there were zero overlap rows and zero crash rows. The
+process stayed in the 640→2→640 lifecycle beyond the 600-second hard cap and
+was SIGKILLed. Compared with s1164's controlled pre-1024 `copyToRAM` crash,
+this supports H3, nondeterministic reachability gating, and rules out
+wild-width skips alone as a sufficient crash discriminator. The causal H1/H2
+distinction remains unevaluable; no mitigation was added.

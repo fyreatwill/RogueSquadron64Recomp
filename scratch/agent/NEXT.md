@@ -1,35 +1,31 @@
-# NEXT work unit (s1165)
+# NEXT work unit (s1166)
 
-HYPOTHESIS-ID: pre1024-writeback-reachability
+HYPOTHESIS-ID: pre1024-copytoram-source
 
-The s1164 retry passed slot dispatch but did not reach the recurring fault: it
-stayed pre-1024 and terminated in RT64 `copyToRAM` at guest PC `0x8000B650`
-after wild-width writeback skips. Perform one bounded pre-1024 reachability
-audit using the existing phase-gated driver and `[ost-wb]` instrumentation. Do
-not add a skip or guard; any wild value requires an `ORIGIN:` writer attribution
-and a legitimacy assessment.
+The s1164/s1165 pair establishes a valid reachability split: both runs had
+writeback activity and wild-width skips, but only s1164 reached the pre-1024
+RT64 `copyToRAM` fault. Audit the existing RT64 resource/failure markers in one
+phase-gated run. Do not add a skip, guard, or restore; any mitigation-shaped
+change requires an `ORIGIN:` writer attribution and legitimacy assessment.
 
 Competing hypotheses and discriminator:
 
-- H1: wild writeback state is present before the pre-1024 RT64 crash.
-- H2: writeback skips are unrelated and the crash is an independent RT64 resource failure.
-- H3: the same pre-1024 path is nondeterministic reachability gating.
+- H1: the `copyToRAM` fault is preceded by a distinct RT64 resource/operation
+  failure marker that is absent from the stable arm.
+- H2: the fault is caused by writeback state, but the current `[ost-wb]` rows
+  do not identify the relevant resource transition.
+- H3: the fault remains nondeterministic with no reproducible preceding marker.
 
-The discriminating measurement is a phase-scoped `[ost-wb]` control/skip/
-overlap sequence immediately before the crash, with slot-dispatch and crash
-controls live. H1 predicts wild skips/overlaps temporally preceding the crash;
-H2 predicts no relevant writeback relation; H3 predicts materially different
-pre-1024 reachability across the same controlled recipe. A null is invalid
-unless slot-dispatch, `[ost-wb]` positive control, and crash/phase controls all
-fire.
+The discriminating measurement is the first resource/failure marker and its
+ordering relative to phase-scoped `[ost-wb]` skips/controls, with slot-dispatch
+and crash controls live. A null is invalid unless slot dispatch, writeback
+positive control, and crash/phase controls all fire.
 
 Exact commands:
 
     cmake --build build --config Debug --target RogueSquadron64Recomp
-    env GAME_EXTRA_ENV='ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_LOG_CRASH=1 ROGUESQ_LOG_OST_WB=1' PROBE_MODE=start_only HOLD_S=0 CAPTURE_TICK_S=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh wb_origin_s1165 240 12
+    env GAME_EXTRA_ENV='ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_LOG_CRASH=1 ROGUESQ_LOG_OST_WB=1 ROGUESQ_LOG_RT64_ALLOC=1' PROBE_MODE=start_only HOLD_S=0 CAPTURE_TICK_S=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh copytoram_s1166 240 12
 
-Expected outcomes: if the `[ost-wb]` positive control and crash occur before
-VI 1024, classify the temporal relation against H1/H2/H3; if the run reaches
-VI 1024, retain the pre-1024 trace and do not infer parser causality. If the
-positive control is absent, the run is invalid and the instrument must be
-fixed before interpretation.
+Expected outcomes: a reproducible resource marker before `copyToRAM` selects
+H1; writeback-only correlation selects H2 provisionally; and another valid
+stable/crash split with no marker selects H3 and closes this marker audit.
