@@ -1,9 +1,11 @@
-# NEXT work unit (s1144)
+# NEXT work unit (s1145)
 
 HYPOTHESIS-ID: m3-generated-boundary-anomaly
 
 Run one bounded phase-gated stability test using the regenerated binary from
-s1143. Do not change code or add a runtime guard.
+s1143. Do not change code or add a runtime guard. The s1144 attempt reached
+only VI width 640 and omitted the explicit E9/slot-dispatch control categories,
+so it was unevaluable.
 
 Competing hypotheses and discriminator before the run:
 
@@ -18,8 +20,11 @@ with positive controls visibly firing. A changed crash outcome selects H1; an
 in-phase recurrence selects H2. A pre-phase crash is unevaluable.
 
 ```sh
-env ROGUESQ_LOG_ALL=1 zsh tools/run-one-stability.sh 300 scratch/agent/next_s1144.log
-grep -n 'VI 1024\|slotDispatcherIter+872\|CRASH\|control' scratch/agent/next_s1144.log | tail -40
+env ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_E9_PROVENANCE=1 ROGUESQ_LOG_E9_UNIFIED=1 ROGUESQ_LOG_SLOT_DISPATCH=1 \
+  PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+  zsh tools/probe.sh scratch/agent/next_s1145 300 1
+grep -n 'vi_width=1024\|\[e9-prov\].*scope=control\|\[e9-unified\]\|\[slot-dispatch\]\|slotDispatcherIter+872\|\[CRASH\]' \
+  scratch/agent/next_s1145/run.log | tail -60
 ```
 
 Expected outcomes:

@@ -63782,3 +63782,20 @@ and C compiler format warnings remained non-fatal.
 
 ORIGIN: the correction changes only companion symbol-file ownership; no guest
 value was skipped, rewritten, guarded, or otherwise mitigated.
+
+## Session 1144 (2026-08-14) — first runtime boundary test was unevaluable
+
+Built the regenerated macOS target successfully, then ran one phase-gated
+stability probe with `ROGUESQ_LOG_ALL=1`, waiting for VI width 1024 with a
+180-second gate. The process reached VI width 640 and remained alive until the
+gate timed out; it produced six VI phase records, zero `[CRASH]` records, and
+no width-1024 record. The run also contained zero `[e9-prov]`, `[e9-unified]`,
+or `[slot-dispatch]` records because those categories were not explicitly
+enabled in this first attempt.
+
+This is UNEVALUABLE, not evidence for either boundary hypothesis: neither the
+target phase nor a positive control was present, and the recurring
+`slotDispatcherIter+872` outcome did not occur. The corrected function
+boundary's runtime relevance remains open. The next attempt must explicitly
+enable the E9 provenance/unified and slot-dispatch categories and require a
+task-0..4 control plus VI width 1024 before interpreting the crash outcome.

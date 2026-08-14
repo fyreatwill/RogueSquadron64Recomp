@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1143 (2026-08-14).
+in the ledger. Reviewed through s1144 (2026-08-14).
 
 ## Current state
 
@@ -56,6 +56,12 @@ in the ledger. Reviewed through s1143 (2026-08-14).
   delivered and VI polling remained active, so debugger/watch overhead is
   ruled out as the launch cause. The core scheduling/state-path boundary is
   still open; the shaded M4 range remains unevaluable.
+- The first runtime test of the corrected NPC function boundary was
+  unevaluable: the regenerated macOS build reached VI width 640 but not the
+  1024 target in the 180-second phase-gate wait. The run had no `[CRASH]`,
+  `[e9-prov]`, `[e9-unified]`, or `[slot-dispatch]` records because those
+  categories were not explicitly enabled, so it supplies neither a
+  boundary-sensitive result nor a positive-control result.
 
 ## Retail VI descriptor boundary
 
@@ -170,14 +176,17 @@ corruption.
 | s1141 | Independent decomp and generated symbol boundaries identify `0x80077AF0` as a distinct `npcPowerGeneratorUpdate` entry ending at `0x80078E3C`; the generated host coalesces it after `forwardToNpcGeneratorSpawn`'s return. This selects a regeneration/input boundary defect and closes the static ambiguity. |
 | s1142 | Bounded regeneration audit found the split is lost in `make_elf.py`: `npcPowerGeneratorUpdate` is only in `mission_overlay.txt`, but `vram_to_shndx` rejects that source at `0x80077AF0` because it lies in the `.text` VRAM range. The ELF contains `forwardToNpcGeneratorSpawn` at `0x80077AC0` with size `0x137C` and no `0x80077AF0` symbol; N64Recomp then faithfully emits one body. The smallest durable correction is to put the function boundary in the main-overlay symbol input before ELF generation, not to change fixup or N64Recomp. |
 | s1143 | Moved `npcPowerGeneratorUpdate` to `main_overlay.txt`, regenerated the ELF and host output, and ran fixup plus CMake. The ELF now has `forwardToNpcGeneratorSpawn` size `0x30` and `npcPowerGeneratorUpdate` at `0x80077AF0` size `0x134C`; generated C has separate functions and the Debug target links. This validates H1/input-boundary and rules out H2 for this defect; runtime causality remains untested. |
+| s1144 | Ran the regenerated macOS target under the 1024 VI phase gate. It reached width 640, then timed out at 180 seconds with no crash, no 1024 phase, and no explicitly enabled E9/slot-dispatch controls. The result is unevaluable; the corrected boundary's runtime effect remains open. |
 
 ## Ranked next steps
 
-1. Run one phase-gated stability test with the regenerated binary and compare
-   only whether the recurring `slotDispatcherIter+872` SIGBUS still occurs.
-   Keep passive breadcrumbs and positive controls enabled; do not add a runtime
-   guard. A clean run tests boundary relevance but does not prove sole
-   causality; recurrence leaves runtime frame corruption open.
+1. Repeat one phase-gated stability test with the regenerated binary, explicitly
+   enabling `ROGUESQ_LOG_E9_PROVENANCE=1`, `ROGUESQ_LOG_E9_UNIFIED=1`, and
+   `ROGUESQ_LOG_SLOT_DISPATCH=1` alongside passive breadcrumbs. Require at least
+   one task-0..4 E9 control and VI width 1024 before interpreting the
+   `slotDispatcherIter+872` outcome; do not add a runtime guard. A changed
+   crash outcome tests boundary relevance, while an in-phase recurrence leaves
+   runtime frame corruption open.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
