@@ -61301,3 +61301,21 @@ pre/post `ACCH:ACCM:ACCL`, `v4`, and `v0` tuple exists in the current captures.
 The next work unit is one scoped runtime capture with a positive control. No
 mitigation or generated-file edit was made. Full audit:
 `docs/M4-ACCUMULATOR-AUDIT.md`.
+
+## Session 1014 (2026-08-14) — landed and phase-tested M4 accumulator probe
+
+Added a regeneration-owned fixup and DPC-bridge probe for the final Factor 5
+`vmadh v6,v4,v0`. It records all eight `v4`, `v0`, `v6`, `v29`, and
+`ACCH:ACCM:ACCL` lanes before and after VMADH, plus the post-VGE state. A
+separate VMADH site is the positive control in the same generated ucode.
+The build succeeded.
+
+The initial VI-1024 run reached the phase but produced zero control and target
+records because the executing shade path is in overlay 20, not the main
+generated file. The corrected overlay-20 build also reached VI-1024 and still
+produced zero records; its trace showed title/menu work. A Start-driven,
+phase-gated 512 attempt timed out with last width 1024, despite all scheduled
+key-post attempts being reported. Therefore the discriminator did not run:
+the zero count is invalid because the positive control did not fire. This
+rules out interpreting either VI-1024 null as an M4 result, and leaves the
+numeric saturation/arithmetic/VGE alternatives open. No mitigation was added.

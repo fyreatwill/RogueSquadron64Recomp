@@ -54,6 +54,7 @@ text = path.read_text(encoding="utf-8")
 original = text
 
 is_main_ucode = "factor5_ucode(" in text and "factor5_boot(" not in text
+is_shade_ucode = is_main_ucode or "factor5_ucode_ovl20(" in text
 
 # ---------------------------------------------------------------------------
 # Fixup 1a: L_0000 → self-restart (main ucode only). Must run before the
@@ -3007,6 +3008,48 @@ if is_main_ucode and F5_STATE_MARKER not in text:
 
 # ---------------------------------------------------------------------------
 # Fixup 18: record L_11B0's actual indirect continuation (s726).
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Fixup 19: capture the final shade accumulator and VGE selection (s1014).
+# ---------------------------------------------------------------------------
+M4_ACCUM_MARKER = "/* fixup: M4 accumulator probe v1 */"
+if is_shade_ucode and M4_ACCUM_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_resume[^\n]*\n|#include \"librecomp/rsp_vu_impl\.hpp\"\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_m4_accum_probe(void *rsp, uint32_t stage);  ' + M4_ACCUM_MARKER + "\n",
+        text, count=1)
+    control = re.compile(
+        r"(    rsp\.VMADH<0>\(rsp\.vpu\.r\[2\], rsp\.vpu\.r\[1\], rsp\.vpu\.r\[2\]\);\n)"
+    )
+    text, n_control = control.subn(
+        lambda m: m.group(1) +
+        "    rs64_m4_accum_probe(&rsp, 1);  " + M4_ACCUM_MARKER + "\n",
+        text, count=1)
+    target = re.compile(
+        r"(    // ldv         \$v29\[0\], 0x60\(\$zero\)\n)"
+        r"(    rsp\.LDV<0>\(rsp\.vpu\.r\[29\], 0, 0XC\);\n)"
+        r"(    // vmadh       \$v6, \$v4, \$v0\n)"
+        r"(    rsp\.VMADH<0>\(rsp\.vpu\.r\[6\], rsp\.vpu\.r\[4\], rsp\.vpu\.r\[0\]\);\n)"
+    )
+    text, n_target = target.subn(
+        lambda m: m.group(1) + m.group(2) +
+        "    rs64_m4_accum_probe(&rsp, 10);  " + M4_ACCUM_MARKER + "\n" +
+        m.group(3) + m.group(4) +
+        "    rs64_m4_accum_probe(&rsp, 11);  " + M4_ACCUM_MARKER + "\n",
+        text, count=1)
+    vge = re.compile(
+        r"(    rsp\.VGE<3>\(rsp\.vpu\.r\[6\], rsp\.vpu\.r\[6\], rsp\.vpu\.r\[29\]\);\n)"
+    )
+    text, n_vge = vge.subn(
+        lambda m: m.group(1) +
+        "    rs64_m4_accum_probe(&rsp, 12);  " + M4_ACCUM_MARKER + "\n",
+        text, count=1)
+    if (n_decl, n_control, n_target, n_vge) != (1, 1, 1, 1):
+        print(f"fixup_factor5_ucode: FIXUP 19 ANCHOR FAILED (decl={n_decl} control={n_control} target={n_target} vge={n_vge}).", file=sys.stderr)
+        sys.exit(1)
+
 # ---------------------------------------------------------------------------
 TRIGEN_RETURN_MARKER = "/* fixup: TriGen L_11B0 return audit v1 */"
 if is_main_ucode and TRIGEN_RETURN_MARKER not in text:

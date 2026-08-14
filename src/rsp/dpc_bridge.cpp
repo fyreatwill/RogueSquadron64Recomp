@@ -404,6 +404,28 @@ static bool log_tri_writer() {
     return enabled;
 }
 
+extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage) {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_M4_ACCUM");
+        return e && *e && *e != '0';
+    }();
+    if (!enabled) return;
+    static uint32_t lines = 0;
+    if (lines++ >= 96) return;
+    auto *rsp = static_cast<RSP *>(opaque);
+    fprintf(stderr, "[m4-accum] task=%u phase=%u stage=%u", g_e9prov.task,
+            rs64_phase_ord(), stage);
+    for (unsigned lane = 0; lane < 8; ++lane) {
+        fprintf(stderr, " l%u:v4=%04X v0=%04X v6=%04X v29=%04X acch=%04X accm=%04X accl=%04X",
+                lane, rsp->vpu.r[4].u16(lane), rsp->vpu.r[0].u16(lane),
+                rsp->vpu.r[6].u16(lane), rsp->vpu.r[29].u16(lane),
+                rsp->vpu.acch.u16(lane), rsp->vpu.accm.u16(lane),
+                rsp->vpu.accl.u16(lane));
+    }
+    fputc('\n', stderr);
+    fflush(stderr);
+}
+
 struct Rs64F5VtxColorState {
     uint32_t task = 0xFFFFFFFFu;
     uint32_t ordinal = 0;

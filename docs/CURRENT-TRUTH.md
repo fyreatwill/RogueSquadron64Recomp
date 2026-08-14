@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1013 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1014 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
@@ -180,6 +180,17 @@ in-range sign-extending middle word. The DMEM-0x60 table has no `0x8000` lane,
 so `H-v29-selection` is refuted, but the saturation-vs-ordinary arithmetic
 split remains unresolved without a complete pre/post accumulator tuple.
 
+The s1014 runtime probe is landed in the regeneration fixup and DPC bridge. It
+records all eight `v4`, `v0`, `v6`, `v29`, and `ACCH:ACCM:ACCL` lanes before and
+after the final `vmadh`, with a post-VGE record and an independent VMADH
+positive control. The first build/run reached VI-1024 but fired neither
+control nor target because the main generated file was not the executing shade
+overlay. The corrected overlay-20 build likewise reached VI-1024 with zero
+control records; the log shows title/menu work. A prescribed Start-driven
+512-width attempt never reached 512 (last width 1024), so the discriminator
+remains unevaluable. This is a phase-selection result, not evidence for any M4
+hypothesis.
+
 ## Recent evidence ledger
 
 Details are in `PORTING-STATE.md`; durable summaries are in
@@ -206,14 +217,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1011 | `v6` producer audit: `r3=DMEM[0x134]&1`; both mode arms share the final compare/store, and DMEM `0x60` is a signed table vector. Selected narrow `H-v6-clip-predicate`; sentinel origin remains open. |
 | s1012 | Independent RSP semantics and the local VGE implementation agree that `vge` selects `v6` or a `v29` lane; it cannot synthesize the observed sentinel. The numeric-origin lead moves to the preceding `vmadh v6,v4,v0` accumulator/high-half path; no mitigation. |
 | s1013 | Static accumulator audit: the final VMADH consumes shared state last updated by `vmadn v7,v5,v0`; `v29` cannot supply `0x8000`. Saturation versus an in-range sign-extending middle word remains open because no complete lane tuple is captured. |
+| s1014 | Landed regeneration-owned M4 accumulator/VGE probe with a VMADH positive control. Two VI-1024 captures fired neither control; a Start-driven 512 gate timed out at 1024. No numeric conclusion. |
 
 ## Ranked backlog
 
-1. Capture the complete per-lane `ACCH:ACCM:ACCL`, `v4`, and `v0` tuple before
-   and after the final `vmadh v6,v4,v0`, with an independent positive-control
-   RSP operation in the same phase-gated run; use it to choose saturation or
-   ordinary arithmetic. Do not propose a mitigation until the numeric path is
-   proven.
+1. Reach the executing Factor 5 shade overlay with the landed M4 probe: first
+   establish a positive input/phase control for the port (the documented Start
+   schedule did not leave VI-1024), then run the 512-width gate and classify the
+   complete accumulator tuples. Do not treat another VI-1024 zero as evidence.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
