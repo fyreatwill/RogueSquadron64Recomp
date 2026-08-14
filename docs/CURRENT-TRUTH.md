@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s981 (2026-08-13). The active blocker is authoritative
+Reviewed through s982 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -337,6 +337,15 @@ closed; M3 work is limited to systematic idiom-class audits.
   callback harness exists in the oracle tree, so the harness arm was not run;
   the first-body versus emulator-state fault remains unresolved. Static
   single-source evidence only; retail remains unevaluable.
+- s982 ran the corrected dylib under LLDB with the whole-RDRAM positive control
+  and PIF read watch. Setup and the first PIF read passed, then the process
+  faulted at `read_with_bp_checks+268` (`ldr w8,[x0]`) immediately after
+  `r4300_pc(r4300)` and before the direct call to callback `0x1b80`; the
+  callback breakpoint did not fire. Source line 81 and disassembly independently
+  identify the failing boundary as the wrapper's `r4300_pc` result dereference,
+  not callback body or retail behavior. The active hypothesis is now
+  H-oracle-r4300-pc-wrapper-state; no recomp mitigation or retail phase
+  conclusion follows.
 
 ## Recent evidence ledger
 
@@ -395,6 +404,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s979 | Corrected `iter974-armB2` static audit found a direct aligned callback target with `w2=4,w3=3`; fixed 3-second PIF arm passed setup/control, reached wrapper pre-callback, then died `rc=139` before callback first marker or return. Runtime callback call/entry boundary remains selected; retail phase is unevaluable. |
 | s980 | Static ownership audit found matching handler types, `opaque=&dev->r4300` for the debugger wrapper, and a saved PIF handler with `opaque=&dev->pif`; restore logic is coherent. This refutes trampoline/type and invalid-opaque hypotheses but does not explain the callback-entry/first-body crash. Single-source static evidence; no runtime arm. |
 | s981 | Corrected dylib audit found direct calls to local callback `0x1b80` with `w2=4,w3=3` and a normal aligned callback prologue, refuting a target/prologue discrepancy. No isolated harness exists, so callback runtime and retail phase remain unevaluable. |
+| s982 | LLDB run passed setup and reached the first PIF wrapper read, then faulted at `read_with_bp_checks+268` while dereferencing the result of `r4300_pc(r4300)`; callback `0x1b80` was not entered. Source and disassembly agree; retail remains unevaluable. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -412,13 +422,13 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Resolve the corrected oracle's remaining callback-entry/first-body fault
-   with one bounded debugger probe on the existing dylib: break at the direct
-   callback target `0x1b80`, capture registers and the faulting instruction,
-   and do not add callback markers or edit the recomp runtime. The target,
-   argument registers, handler ownership/type, and opaque paths are now
-   structurally coherent; do not infer a retail phase result or add a runtime
-   mitigation.
+3. Audit the corrected oracle's `r4300_pc` wrapper contract in one bounded
+   source/disassembly pass: identify the concrete `r4300_pc` definition,
+   expected `r4300` object layout, and the opaque passed to the installed PIF
+   debugger handler, then reconcile them with the s982 fault at `ldr w8,[x0]`.
+   Do not edit the recomp runtime or infer a retail phase result. No
+   mitigation is authorized until the writer/owner of the invalid callback
+   state pointer is identified.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if

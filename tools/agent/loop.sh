@@ -5,7 +5,7 @@
 # NEXT.md), which is exactly what they were built for. Usage-limit windows
 # become sleeps, not handoffs.
 #
-# Env: ITER_CAP (default 40), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12),
+# Env: ITER_CAP (default 80), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12),
 #      LOOP_MODEL (default sonnet), MAX_NO_CONTRACT (default 2),
 #      SLEEP_ON_ERROR (120s) / MAX_ERR_RETRIES (4) for nonzero-rc-without-limit-wording,
 #      SOAKS_BETWEEN_ITERS (2) / SOAK_TIMEOUT (600s) for the queued-soak runner,
@@ -33,7 +33,7 @@ for arg in "$@"; do
     *) echo "usage: $0 [key=value ...]  e.g. model=opus  runner=grok RUNNER_MODEL=grok-4.6" >&2; exit 2 ;;
   esac
 done
-ITER_CAP="${ITER_CAP:-40}"
+ITER_CAP="${ITER_CAP:-80}"
 SLEEP_ON_LIMIT="${SLEEP_ON_LIMIT:-1800}"
 MAX_LIMIT_WAITS="${MAX_LIMIT_WAITS:-12}"
 MAX_NO_CONTRACT="${MAX_NO_CONTRACT:-2}"

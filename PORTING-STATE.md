@@ -59997,6 +59997,30 @@ for source, object, and dylib.
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
 
+### s982 — PIF wrapper faults before callback entry
+
+Ran the corrected `iter974-armB2` oracle dylib under LLDB with the documented
+whole-RDRAM write positive control and a PIF read watch. The oracle attached,
+installed both watches, and reached the first wrapped PIF read at
+`0x1fc007e4`; the positive-control path was therefore active. The process
+then stopped with `EXC_BAD_ACCESS` at `read_with_bp_checks+268`, instruction
+`ldr w8, [x0]`, immediately after the wrapper's call to `r4300_pc(r4300)`.
+The breakpoint on callback `check_breakpoints_on_mem_access` at local dylib
+address `0x1b80` did not fire.
+
+The independent source/disassembly check maps this exactly to source
+`memory.c:81`, where the wrapper evaluates `*r4300_pc(r4300)-0x4` before the
+callback call; the dylib has `bl _r4300_pc` at `0xae0`, then the faulting load
+at `0xae4`, followed only afterward by argument setup and
+`bl _check_breakpoints_on_mem_access`. This rules out callback-body entry,
+callback diagnostics, and a retail phase result. It selects the
+`r4300_pc`/wrapper-state ownership audit as the next unit. The first attempted
+command used the Windows-only `build/Debug` ROM path and exited before launch;
+the corrected `build/rogue_squadron.z64` path produced the result above.
+
+ORIGIN: external oracle wrapper dereferences the value returned by
+`r4300_pc`; no recomp guest value was changed and no mitigation was landed.
+
 ## Session 979 (2026-08-13) — Corrected oracle arm dies before callback entry
 
 Ran the planned corrected-oracle static/runtime boundary audit. `nm` places

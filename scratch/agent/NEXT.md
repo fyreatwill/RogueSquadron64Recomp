@@ -1,32 +1,32 @@
-# NEXT work unit (s982)
+# NEXT work unit (s983)
 
-Perform one bounded debugger callback-entry probe on the corrected external
-oracle dylib. Do not edit the recomp runtime, add callback markers, or run a
+Perform one bounded read-only source/disassembly audit of the corrected
+oracle's `r4300_pc` wrapper contract. Do not edit the recomp runtime or run a
 retail soak.
 
-HYPOTHESIS-ID: oracle-pif-callback-runtime
+HYPOTHESIS-ID: oracle-pif-r4300-pc-wrapper-state
 
 Competing hypotheses:
 
-- H-pif-core-entry: the callback breakpoint is hit and the fault occurs in
-  its first body instructions or diagnostic operation.
-- H-pif-call-state: the callback breakpoint is hit and the fault occurs only
-  after a state-dependent load/call, identifying emulator/core state as the
-  remaining boundary.
-- H-pif-pre-entry: the wrapper's direct branch does not reach `0x1b80`, or
-  the debugger shows a fault before callback entry despite the static target.
+- H-pif-r4300-opaque: the installed wrapper receives an object that is not
+  the `r4300_core` expected by `read_with_bp_checks`, so `r4300_pc` returns an
+  invalid pointer.
+- H-pif-r4300-pc-layout: the opaque is a valid core object, but the compiled
+  `r4300_pc` accessor/layout disagrees with the wrapper's expected return
+  contract.
+- H-pif-wrapper-state: `r4300_pc` and layout are coherent; a state-dependent
+  owner/writer leaves the returned PC pointer invalid before the callback.
 
-Discriminating measurement: one debugger run must capture whether `0x1b80` is
-hit, the register values at entry, and the exact faulting instruction. Entry
-plus a fault in the prologue/diagnostic path selects H-pif-core-entry; entry
-plus a later state-dependent fault selects H-pif-call-state; no entry selects
-H-pif-pre-entry.
+Discriminating measurement: map the concrete `r4300_pc` definition, the
+`r4300_core` layout, the PIF debugger-handler opaque assignment, and the
+failing wrapper instructions into one ownership chain. An opaque-type
+mismatch selects H-pif-r4300-opaque; an accessor/layout mismatch selects
+H-pif-r4300-pc-layout; a coherent chain with a state writer selects
+H-pif-wrapper-state.
 
-Exact command:
-
-`lldb -- /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build/Debug/rogue_squadron.z64 --secs 8 --watch-write 0x0:0x800000 --watch-read 0x1fc00000:0x1fc01000 --vi-poll --vi-trace`
-
-At the debugger prompt: `br s -n check_breakpoints_on_mem_access`, `run`,
-then on stop `register read x0 x1 x2 x3 pc sp` and `continue`; capture the
-faulting instruction/backtrace if it stops again. The existing source and
-binary audits are the baseline. No retail phase result may be inferred.
+Exact commands: grep the oracle source for `r4300_pc`,
+`read_with_bp_checks`, and PIF handler installation; inspect the corresponding
+dylib symbols with `nm -an` and `otool -tvV`; read only bounded function
+windows. The s982 evidence is in
+`scratch/agent/oracle_probe_s982_fixed.log`; no retail phase result may be
+inferred.
