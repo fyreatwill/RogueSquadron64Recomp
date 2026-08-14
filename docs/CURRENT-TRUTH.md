@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1108 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1109 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -37,6 +37,11 @@ compact and records only live conclusions, boundaries, and next work.
   mismatch live. The probe sampled values at call boundaries, not the writer
   instruction, and its shared last-PC field is not reliable writer
   attribution; writer-PC attribution remains open.
+- The s1109 generated-store capture and its calibrated Start/A retry both
+  passed positive generated-store controls and produced repeated A89F rows,
+  but each stopped at VI width 640 during the 180-second gate timeout. No
+  A0 writer result or E9-phase result is admissible; the launch recipe must be
+  recovered before retrying the writer discriminator.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -317,13 +322,13 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 
 ## Ranked next steps
 
-1. Attribute the writer of `0x8011A8A0`: add regeneration-safe generated-store
-   probes for every byte/halfword/word store whose physical target is
-   `0x11A89F..0x11A8A0`, then repeat the same VI-1024 capture. Preserve queue
-   behavior and require the VI/E9 controls plus an A0 writer row before
-   selecting the writer. The s1108 probe is landed and buildable; its A89F
-   rows are useful control evidence, but the A0 question remains open because
-   both captures stopped before VI 1024.
+1. Recover the VI-1024 launch phase before attributing the writer of
+   `0x8011A8A0`: s1109's original and calibrated Start/A schedules both
+   stopped at width 640 even though the generated-store positive controls and
+   A89F rows fired. Then repeat the same VI-1024 capture with the existing
+   regeneration-safe generated-store probes. Preserve queue behavior and
+   require the VI/E9 controls plus an A0 writer row before selecting the
+   writer. The probe is landed and buildable; A0 remains open.
 2. If generated stores remain absent, build the missing debugger-enabled
    retail oracle core before relying on an independent physical write watch;
    the current machine has the front end but no core dylib.
@@ -331,7 +336,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
    omission only when a reproducible lead appears; preserve delete-before-
-   regen ordering and audit fixup counts.
+regen ordering and audit fixup counts.
 
 ## Method and safety rules
 

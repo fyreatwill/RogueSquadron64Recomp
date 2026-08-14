@@ -63178,3 +63178,21 @@ mitigation changed.
 
 ORIGIN: diagnostic-only store attribution; no value was skipped, rewritten, or
 otherwise mitigated.
+
+## Session 1109 (2026-08-14) — submit writer capture stopped at VI 640
+
+Ran the prescribed phase-gated generated-store capture with the s1108 probe,
+targeted submit-boundary logs, and the documented six-second Start schedule.
+The run reached VI widths 320 and 640, fired the positive generated-store
+control, and emitted repeated generated A89F rows, but the 180-second gate
+timed out without VI width 1024 or any E9-phase control. A calibrated
+Start/Start/Start/A plus spaced navigation retry produced the same result:
+positive controls and repeated A89F rows, but last width 640 and no A0 row.
+
+Both captures are invalid for the writer discriminator. They rule out a
+completely inactive generated-store probe, but do not classify the A0 writer,
+the E9 boundary, or the queue behavior. No queue behavior, game logic, or
+mitigation changed.
+
+ORIGIN: diagnostic-only capture and launch-recipe change; no value was
+skipped, rewritten, or otherwise mitigated.
