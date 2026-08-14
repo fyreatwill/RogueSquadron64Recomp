@@ -60925,3 +60925,28 @@ ORIGIN: the exact source write was observed at the generated `MEM_W` site
 `0x8000D92C`; the non-overlap is bounded by the same-run generated-store
 census. The zero-shade values originate in the RT64 shade diagnostic and
 zero-shade replacement path; neither path was changed by this session.
+
+## Session 998 (2026-08-13) — stamped shade-side task and display-list identity
+
+The maintenance check stayed below threshold at 55,254 bytes. Added the
+current LLE task serial and `State::displayListAddress` to the RT64
+`[shade-raw]` and `[fix-zero-shade]` diagnostics, exported the RT64 submodule
+patch, ran the documented regeneration/fixup pipeline, and built the Debug
+target successfully. The phase-gated ungated-LLE capture reached VI width 1024
+at 78.4 seconds and completed 40 gated frames with positive controls: 48
+phase-4 and 48 phase-6 payload rows, 21 raw-shade rows, 8 replacements, 9
+shade-DMA controls, 129 write-fault records, and no crash marker.
+
+What it showed: the zero rows are task 197, with DL starts `0x4B7930` and
+`0x4B7BE8`. The same phase's VTXCOLOR census includes nonzero `0x732A10`,
+whose generated write is `0x5F5F74FF`, and `0x732F38`, with no phase-6 generated
+write. `[f5-state-payload]` does not yet carry the task serial, so the new
+identity proves task/DL coverage but cannot assign a particular VTXCOLOR source
+to a shade replacement. H-exact-zero-source versus H-untouched-zero-source
+remains unevaluable; no mitigation conclusion followed.
+
+What it rules out: a null shade-side instrument or a failed phase capture. It
+does not rule out either source-ownership hypothesis. ORIGIN: no mitigation or
+value rewrite was added; the diagnostic values originate in the RT64 shade
+assembly/replacement path, while the compared source write is generated
+`MEM_W` site `0x8000D92C`.
