@@ -63341,3 +63341,27 @@ newest debugger core is the usable capture. No port code, queue behavior, or
 mitigation changed.
 
 ORIGIN: observation only; no value was skipped, rewritten, or otherwise mitigated.
+
+## Session 1117 (2026-08-14) — classified the retail mode-record selector route
+
+Performed the planned bounded, runtime-free audit of the generated callers and
+mode-selection functions. `initVideoBootWrapper` is called from the video
+thread with display/config arguments and calls `initVideoSubsystem`; the
+recurring `advanceVideoFrame` route is called by `runVideoFrameTick` and uses
+the same `swapBufferWithViMode` machinery. In both selector functions the
+table base is formed as `0x80130000-0x72B0 = 0x80128D50`. The three lifecycle
+selector bytes at `0x8011A864`, `0x8011A865`, and `0x8011A862` select one of
+the four record offsets `0x00`, `0x50`, `0xA0`, or `0xF0`; each record is
+copied in 16-byte chunks, and its word at `+8` is the width-bearing value
+passed through the active VI-mode structure before `osViSetMode`.
+
+No selector path computes a pointer outside the table, and the companion tree
+contains symbol annotations but no second implementation or caller that
+changes this route. This selects `H-mode-record-state-gate` over
+`H-mode-record-pointer-corrupt`. It does not yet identify the writer/copy that
+populates the RAM records or the concrete widths in those records, so
+`H-mode-record-constant` versus a phase-dependent non-320 record remains open.
+No build, oracle capture, runtime code, or mitigation was used.
+
+ORIGIN: generated control-flow/data-flow plus companion symbol census; no
+value was skipped, rewritten, or otherwise mitigated.
