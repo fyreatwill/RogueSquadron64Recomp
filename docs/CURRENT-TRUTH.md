@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s947 (2026-08-13). The active blocker is authoritative
+Reviewed through s948 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -103,6 +103,14 @@ closed; M3 work is limited to systematic idiom-class audits.
   add no allocator-targeted edge. This selects
   H-stop-voices-by-handle-index-unclassified: no mismatch writer was found,
   but runtime indirect reachability and handle-value legitimacy remain open.
+- s948 exhaustively inventoried generated `+0x64` reads in funcs_21–23. Five
+  live reads are voice-record/sorted-node contract uses, one is the unrelated
+  floating-point envelope field in `advanceVolumeFadeEnvelope`, and one in
+  `soundMacroOpKeyOnNote` uses its caller context after note-on to feed a
+  slot-indexed table. The sound-macro context and its `+0x64` writer lifecycle
+  remain unresolved, so H-stop-voices-by-handle-index-unclassified remains
+  selected; no mismatch or mitigation conclusion followed. The stack
+  spill/reload at `startNoteOnVoice` was excluded as non-object data.
 
 ## Recent evidence ledger
 
@@ -127,6 +135,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s945 | Three inline node-copy sites derive `0x8013D880 + slot*0x17C` voice records. The standalone allocator copy has no direct generated caller and receives `$a0` without a proven dispatch edge; the structural contract remains single-source and incomplete. |
 | s946 | Exhaustive generated-source/overlay/companion search found no direct allocator reference and only the unrelated generic comparator `jalr`; static standalone reachability is selected dead, while runtime pointer/value legitimacy remains unproven. |
 | s947 | All remaining funcs_21–23 `+0x64` stores classified as voice-handle sentinels/copy or unrelated fade floats; no mismatch writer or allocator-targeted indirect edge, but runtime legitimacy remains unproven. |
+| s948 | Exhaustive `+0x64` read inventory: five voice/sorted-node reads, one unrelated fade float, and one unresolved sound-macro context read; stack spill excluded. No mismatch or mitigation conclusion. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -134,9 +143,10 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign by exhaustively classifying all audio
-   `+0x64` readers and their consumer structures, using the s947 writer
-   inventory and s946 no-caller result as static baselines.
+1. Continue the active M3 campaign by classifying the `soundMacroOpKeyOnNote`
+   context `+0x64` field: enumerate all callers, all `+0x64` writers for that
+   context, and the slot-indexed table's consumers. Use the s948 read inventory
+   and s947 writer inventory as static baselines.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0

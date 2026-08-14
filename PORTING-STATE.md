@@ -59448,3 +59448,34 @@ H-stop-voices-by-handle-index-unclassified remains selected.
 ORIGIN: exhaustive generated `+0x64` store/field-context inventory plus
 independent audio-overlay `jalr` and companion-symbol cross-check; no guest
 value mutation or mitigation.
+
+## Session 948 (2026-08-13) — `+0x64` read inventory leaves sound-macro context unresolved
+
+Performed the planned source-only M3 read/consumer audit. No build, game run,
+soak, generated-source edit, guard, mitigation, or behavior change was made.
+
+The exhaustive generated funcs_21–23 inventory found eight textual `+0x64`
+loads. The `startNoteOnVoice` stack spill/reload is not an object-field read.
+The five voice-path reads are `freeSynthVoiceFromActiveList`
+(`0x800862F8`), `allocVoiceHandleNode` (`0x8008651C`), and the three sorted
+node insertion/reuse copies at `0x80086E38`, `0x80087384`, and `0x800877D8`;
+their surrounding structures are the voice record or its handle-list node.
+`advanceVolumeFadeEnvelope` reads `+0x64` as a float envelope field, which is
+unrelated to the voice handle. `soundMacroOpKeyOnNote` reads `+0x64` from
+`s0`, where `s0` is initialized directly from its `a0` caller context; after
+calling `startNoteOnVoice`, it uses that value to populate the slot-indexed
+table at `0x8014 - 0x276C`. The source does not establish that this context is
+the voice record or classify the field's complete writer lifecycle.
+
+The independent second static line is the companion-symbol cross-check:
+`soundMacroOpKeyOnNote` is named at `0x80089C44`, `advanceVolumeFadeEnvelope`
+at `0x8008F4D8`, and the voice readers match the named voice/handle functions;
+the companion metadata supplies no additional sound-macro field contract.
+Thus H-stop-voices-by-handle-index-valid and
+H-stop-voices-by-handle-index-mismatch are not selected;
+H-stop-voices-by-handle-index-unclassified remains selected. The next probe
+must enumerate sound-macro callers, `a0` provenance, `+0x64` writers, and
+consumers of the slot-indexed table.
+
+ORIGIN: exhaustive generated `+0x64` read inventory plus independent
+companion-symbol cross-check; no guest value mutation or mitigation.
