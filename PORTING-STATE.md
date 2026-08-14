@@ -63954,3 +63954,27 @@ in this phase-scoped run, but does not establish the owner of any non-generated
 state and does not evaluate the corrected NPC boundary because VI-1024 was not
 reached. The next work unit is a complete generated/companion state-writer
 census.
+
+## Session 1155 (2026-08-14) — censused post-640 VI state writers
+
+Performed the prescribed bounded census against the live generated tree at
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs` and the
+companion `rogue_squadron64` symbol inventory. `buildAndRegisterDefaultMaterial`
+(`0x80017B88`) has selector stores at guest PCs `0x80017C80` (byte
+`0x8011A862`), `0x80017CD0` (`0x8011A864`), and `0x80017CEC`
+(`0x8011A865`). Its generated callers are `initVideoBootWrapper`'s path and
+the per-frame `advanceVideoFrame` path at callsites `0x800183F8` and
+`0x800185DC`, as independently named by the companion symbols. Thus this
+writer is post-640-capable. `applyPendingViChanges` (`0x8001B7F0`) stores
+`0x8011A862` at `0x8001B80C`/`0x8001B844` and `0x8011A865` at
+`0x8001B828`/`0x8001B860`; `clearPendingViChanges` only clears pending masks.
+
+`selectAndApplyViMode` (`0x8001BB6C`) reads the source records at
+`0x80128D50`, `0x80128DA0`, `0x80128DF0`, and `0x80128E40`, then copies four
+16-byte chunks into the active copied record at `0x80128C90`. No generated
+store to those source records was found. The companion symbol file names the
+same writer/caller functions and defines the relevant data symbols
+`D_8011A862..D_8011A867`, `D_80128C90`, `D_80128D50`, and `D_80128E40`; it
+contains no additional named writer. This selects H1/post-640-capable writer
+and rules out H2/H3 as static explanations. It does not yet prove a post-640
+value change, so the next unit is a phase-gated writer-value capture.

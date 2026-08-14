@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1154 (2026-08-14).
+in the ledger. Reviewed through s1155 (2026-08-14).
 
 ## Current state
 
@@ -135,6 +135,19 @@ in the ledger. Reviewed through s1154 (2026-08-14).
   zero. This selects the producer-absent active-loop path (H2) and moves the
   next audit to the state writer; the corrected NPC boundary remains
   unevaluable at runtime.
+- The s1155 complete generated/companion state-writer census found reachable
+  post-640-capable selector writers. `buildAndRegisterDefaultMaterial`
+  (`0x80017B88`) writes selector bytes at `0x8011A862`, `0x8011A864`, and
+  `0x8011A865`; its companion inventory identifies both boot and per-frame
+  `advanceVideoFrame` callers. `applyPendingViChanges` (`0x8001B7F0`) also
+  writes `0x8011A862` and `0x8011A865`. `selectAndApplyViMode` reads source
+  records at `0x80128D50`, `0x80128DA0`, `0x80128DF0`, or `0x80128E40` and
+  copies four 16-byte chunks into `0x80128C90`; the census found no generated
+  writer to those source records. This selects H1: a generated post-640-capable
+  selector writer exists, so the next audit is its actual phase ordering and
+  value change, not a non-generated-owner pivot. The `NEXT.md` shorthand
+  `0x8011A865..67` was imprecise; the three selector bytes used by the code are
+  the non-contiguous `0x8011A862`, `0x8011A864`, and `0x8011A865`.
 
 ## Retail VI descriptor boundary
 
@@ -260,18 +273,18 @@ corruption.
 | s1152 | Added durable phase-scoped markers at all 13 generated `submitGfxFrame` callsites and rebuilt. The corrected retry passed selector and slot controls, logged 168 callsite rows including phase-6 `0x800A64AC`, and ran crash-free through 640→2→640, but never reached VI-1024 and logged zero unified-E9 rows. Owner hypotheses remain unevaluable. |
 | s1153 | Repeated the callsite capture with the documented phase-relative input schedule and all controls. Selector positive control fired, slot dispatch logged 6,424 rows, and callsites logged 168 rows including phase-6 `0x800A64AC`; the run stayed crash-free through 640→2→640 but produced no VI-1024, E9 provenance, or unified-E9 rows. After three consecutive unevaluable owner attempts, this thread is closed without selecting H1/H2/H3. |
 | s1154 | Ran the phase-scoped producer census with the independent selector positive control and slot-dispatch control. The run timed out at width 640 after 640→2→640; selector positive fired once, slot dispatch logged 6,438 rows, generated selector/predecessor/producer markers were zero, and no crash/SIGBUS occurred. This selects H2, the stable loop without a generated VI producer, and sends the investigation to the state writer. |
+| s1155 | Static-censused the live generated tree and companion symbols. `buildAndRegisterDefaultMaterial` writes selector bytes at `0x8011A862/0x8011A864/0x8011A865` from boot and per-frame callers; `applyPendingViChanges` writes `0x8011A862/0x8011A865`. `selectAndApplyViMode` reads the four source records at `0x80128D50/0x80128DA0/0x80128DF0/0x80128E40` and copies them to `0x80128C90`; no generated source-record writer was found. This selects H1, a post-640-capable generated selector writer, and moves the next probe to writer phase/value attribution. |
 
 ## Ranked next steps
 
-1. Audit the state writer feeding the post-640 VI path: enumerate every
-   generated store to the active mode/descriptor selector bytes and copied
-   mode records, then classify each writer as reachable before or after the
-   final committed 640 record. Keep the existing selector positive and slot
-   dispatch controls if a runtime check is needed. The discriminator is a
-   reachable post-640 writer that changes the selected record versus no such
-   writer in the generated graph; the latter sends the investigation to the
-   non-generated/runtime state owner. Do not repeat the closed callsite-owner
-   capture.
+1. Runtime-tag the two generated selector-writer families identified in s1155:
+   `buildAndRegisterDefaultMaterial` callers and `applyPendingViChanges`.
+   Gate every row on the committed VI phase and log old/new values for the
+   three non-contiguous selector bytes. Keep the selector positive and slot
+   dispatch controls. The discriminator is a selector value change after the
+   final committed 640 record (H1 causal writer) versus post-640 writer entry
+   with unchanged values (writer is not causal); do not repeat the closed
+   callsite-owner capture.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
