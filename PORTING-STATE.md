@@ -62976,3 +62976,25 @@ waits, and runtime probing should first verify exact host queue wiring.
 
 ORIGIN: generated MIPS output, companion symbol/architecture annotations, and
 static queue address arithmetic; no mitigation or game-data change was made.
+
+## Session 1099 (2026-08-14) — traced host submit completion routes
+
+Performed the planned bounded host/runtime audit of the two blocking waits
+inside `submitGfxFrame`. The HLE graphics path calls `sp_complete()` before
+`send_dl` and `dp_complete()` after it; the LLE task thread calls
+`sp_complete()` after `run_task`. All three route through
+`enqueue_external_message_src`, using the dynamically registered
+`events_context.sp` or `.dp` queue pointer. `osSetEventMesg` is the sole host
+registration point for those pointers, and external messages are drained by
+the game-thread queue operations with DP requeue enabled by default.
+
+This proves the host producer routes exist but does not prove their exact guest
+targets: no producer hard-codes `0x8011A818` or `0x8011A7E8`, and the generated
+registration call sites are outside this checkout. The exact SP/DP registration
+and completion mapping remains a runtime-trace question. It rules out a simple
+missing host producer, but not a missing registration, wrong queue, or swapped
+event mapping. No build, run, or runtime code changed.
+
+ORIGIN: `lib/N64ModernRuntime/ultramodern/src/events.cpp` event registration,
+HLE/LLE completion call sites, `mesgqueue.cpp` external delivery, and the
+architecture queue contract; no mitigation or game-data change was made.

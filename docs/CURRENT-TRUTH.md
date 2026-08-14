@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1098 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1099 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -287,14 +287,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1096 | Bounded static audit used the preserved generated snapshot and retail ROM. All words `0x8006D980..0x8006D9C8` matched under `ROM = VRAM - 0x80000000 + 0xC00`; the `0x8006D9B4` target increments `$s0`, runs the six frame/input calls, and loops back to `0x8006D9B0`. Selects `H-target-loop`, rules out `H-target-exit` and `H-static-mismatch`; no runtime code or mitigation changed. |
 | s1097 | Bounded generated/companion audit found one normal `submitGfxFrame` epilogue and explicit continuations at all nine caller sites, but also reachable blocking `osRecvMesg(..., MQ_BLOCK)` calls at `0x8000C0B4` and `0x8000C2B8`. Selects `H-submit-nonreturn` as a legitimate wait boundary while retaining the independent fact that the audited idle-loop invocation returned once; no build, runtime code, or mitigation changed. |
 | s1098 | Bounded queue-contract audit maps `0x8000C0B4` to `D_8011A818` and `0x8000C2B8` to `D_8011A7E8`; both are `osRecvMesg(..., BLOCK)`. Generated/companion evidence identifies consumers but no matching in-tree producer for either wait: the first is an external SP-completion boundary, and the second depends on host DP forwarding documented in the architecture notes. Selects `H-queue-unmatched`; no build, runtime code, or mitigation changed. |
+| s1099 | Bounded host/runtime audit found that HLE and LLE SP completion plus HLE DP completion all enqueue through `events_context.sp/.dp`, populated dynamically by `osSetEventMesg`; no host producer hard-codes either guest queue. The exact `0x8011A818`/`0x8011A7E8` registration mapping is unresolved and becomes the next runtime-trace discriminator. No build, run, or mitigation changed. |
 
 ## Ranked next steps
 
-1. Perform one bounded host/runtime audit of the two unmatched submit waits:
-   trace the SP completion route for `D_8011A818` and the DP forwarding route
-   for `D_8011A7E8` through `src/main`, ultramodern events, and the existing
-   queue-control instrumentation. Do not build or run; determine whether each
-   external producer is wired to the exact guest queue address.
+1. Add one batched, phase-scoped host registration/completion trace, then run
+   one phase-gated capture. Log every `osSetEventMesg` SP/DP registration and
+   the first bounded `sp_complete`/`dp_complete` target, joined by queue
+   address. Positive controls must include the existing VI-1024 transition.
+   This distinguishes exact SP/DP queue matches from missing registration or
+   swapped/wrong queue targets.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
