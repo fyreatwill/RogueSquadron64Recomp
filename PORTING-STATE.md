@@ -61391,3 +61391,21 @@ but it does not classify `H-accumulator-saturation`, `H-v4-v0-arithmetic`, or
 establish which generated ucode overlay is active and whether the probe-bearing
 symbol is in the linked executable before another capture. No mitigation or
 code change was made.
+## Session 1019 (2026-08-14) — found stale link for M4 probe
+
+Ran the prescribed artifact/runtime-path audit without launching another game
+capture. The probe-bearing `build/factor5_ucode/factor5_ucode_ovl20_recompiled.c`
+contained five `rs64_m4_accum_probe` call sites, while the CMake target listed
+only the base, boot, and B ucode sources. No ovl20 object existed, and the
+linked `build/RogueSquadron64Recomp` contained the bridge's
+`ROGUESQ_LOG_M4_ACCUM` string but neither `rs64_m4_accum_probe` nor
+`factor5_ucode_ovl20`; the ovl20 source timestamp was later than the linked
+executable. The saved s1018 log independently had zero M4 rows and zero
+VMADH-control rows despite reaching VI-1024 and delivering its keys.
+
+This selects `H-stale-build-link` and rules out using s1018 to classify the
+accumulator, ordinary-arithmetic, or VGE hypotheses. It also rules out
+`H-env-or-callsite` for that executable: the probe-bearing call sites were not
+linked at all. No mitigation or code change was made. The next unit is one
+reconfigure/build and artifact-control validation, followed by the capture
+only if the generated-source and executable controls both pass.

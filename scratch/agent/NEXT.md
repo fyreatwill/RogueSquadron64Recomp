@@ -1,33 +1,39 @@
-# NEXT work unit (s1018)
+# NEXT work unit (s1019)
 
 HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-Audit why the corrected 1024-gated capture did not execute the landed M4 probe.
-Use the saved s1018 capture and static artifact inspection; do not run another
-game capture until the probe-bearing artifact and active ucode path are
-identified.
+Perform one bounded build-and-artifact validation, then (only if the controls
+pass) one corrected 1024-gated M4 capture. The s1019 audit selected
+`H-stale-build-link`: `factor5_ucode_ovl20_recompiled.c` contains the probe, but
+it was newer than the executable; CMake compiles only base/boot/B ucode and
+`build/RogueSquadron64Recomp` contains neither the probe symbol nor ovl20.
 
-Competing hypotheses and discriminating measurement:
+Competing hypotheses and discriminator:
 
-- `H-stale-build-link`: the probe-bearing generated overlay is not present in
-  the linked executable used by `build/Debug`.
-- `H-active-ucode-mismatch`: the executable contains the probe, but runtime
-  selects a different Factor 5 ucode artifact or overlay for the observed
-  scene.
-- `H-env-or-callsite`: the active artifact and symbol are present, but the
-  environment gate or probe call site is not reached/recognized.
+- `H-fixup-splice`: reconfiguration reruns the fixup and inserts the current
+  ovl20 probe calls into the main generated ucode, after which the executable
+  contains the probe string.
+- `H-fixup-not-rerun`: the build remains stale or fixup does not splice the
+  current ovl20 source; the main source and executable remain probe-free.
+- `H-runtime-unreached`: source, main composite, and executable controls all
+  pass, but a phase-gated capture still has zero M4 and VMADH-control rows.
 
-The discriminator is one artifact/runtime table: source hook presence in the
-active generated overlay, symbol/string presence in the linked executable,
-runtime ucode-selection records in the saved log, and env-gate parsing. A
-missing linked symbol selects stale-build/link; a present symbol with a
-different active ucode selects overlay mismatch; all artifact and selection
-controls positive with zero rows selects env/call-site reachability.
+The discriminating measurement is the complete artifact table before running:
+ovl20 source probe calls, main generated-source probe calls, executable probe
+string, and build timestamps. Missing main/executable controls selects
+`H-fixup-not-rerun`; all controls positive followed by zero runtime rows
+selects `H-runtime-unreached`. If controls pass, run the existing s1018 recipe
+with its full passive instrumentation and compare VI-1024, VMADH-control, and
+M4-row counts in one capture.
 
-Exact commands:
+Commands:
 
-`rg -n "rs64_m4_accum_probe|ROGUESQ_LOG_M4_ACCUM" build/factor5_ucode/factor5_ucode_ovl20_recompiled.c src/rsp/dpc_bridge.cpp`
+    cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+    cmake --build build --target RogueSquadron64Recomp -j4
+    rg -n "rs64_m4_accum_probe|ROGUESQ_LOG_M4_ACCUM" build/factor5_ucode/factor5_ucode_recompiled.c build/factor5_ucode/factor5_ucode_ovl20_recompiled.c
+    strings build/RogueSquadron64Recomp | rg "rs64_m4_accum_probe|M4_ACCUM|factor5_ucode_ovl20"
 
-`strings build/Debug/RogueSquadron64Recomp.exe | rg "rs64_m4_accum_probe|M4_ACCUM|factor5_ucode|ovl20"`
-
-`rg -n "loadUCode|ucode|overlay|IMEM|M4|m4" scratch/agent/probe_results/m4_accum_1024/run.log | tail -120`
+Do not launch the game if either generated-source or executable controls are
+missing. If all controls pass, reuse the exact s1018 phase/input environment
+and launch from `build/`, capture to a non-dot final path, and terminate with
+SIGKILL.

@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1018 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1019 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
@@ -17,7 +17,10 @@ phase-relative key worker only after 512, so it cannot drive the transition that
 may be needed to reach 512. s1018 corrected the gate to 1024 and delivered the
 scheduled keys, but the run stayed at 1024 and emitted neither the M4 target nor
 its VMADH positive control. This is a valid phase-control result but an invalid
-M4 capture; the active instrument path remains to be identified.
+M4 capture. s1019 found the concrete artifact defect: the probe-bearing ovl20
+source was generated after the last CMake build, and ovl20 is not a standalone
+CMake source; the linked executable contains neither its probe symbol nor its
+ucode image. This is a stale-build/link result, not an M4 numeric result.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -229,16 +232,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1016 | Start control was positive in both the isolated and accumulator runs, but VI remained at 640 and never reached the required 512 phase; M4 and VMADH-control counts were zero. The null is phase-selection evidence only and does not classify accumulator hypotheses. |
 | s1017 | Static audit: `PROBE_PHASE_WIDTH` is an exact latest-width equality gate, and `PROBE_KEYS_FROM_PHASE=1` launches keys only after the gate. A 512-gated run therefore cannot send the Start needed to cause a 512 transition; selected `H-key-schedule-phase`, no runtime M4 conclusion. |
 | s1018 | Corrected 1024-gated capture reached VI-1024 at 78.3s and delivered all scheduled keys, but remained at 1024 for 85 frames with zero M4 and VMADH-control rows. Phase control passed; probe control failed, so no M4 hypothesis was classified. |
+| s1019 | Artifact audit found ovl20 probe source newer than the build; CMake compiles only base/boot/B ucode, and the linked executable has neither `rs64_m4_accum_probe` nor `factor5_ucode_ovl20`. Selected `H-stale-build-link`; no M4 hypothesis classified. |
 
 ## Ranked backlog
 
-1. Audit the active Factor 5 instrument path before another M4 capture. Compare
-   the probe-bearing overlay source/object/executable with runtime ucode
-   selection and the saved s1018 log. Missing linked symbol selects a stale
-   build; a present symbol with a different selected ucode selects an active
-   overlay mismatch; positive artifact and selection controls with zero rows
-   selects env/call-site reachability. Do not classify M4 from a zero-control
-   capture.
+1. Reconfigure and build once so the fixup splices the current probe-bearing
+   ovl20 source into the main Factor 5 translation, then verify the linked
+   executable contains the probe string and main generated source contains its
+   calls. Only after those controls pass, run the corrected 1024-gated M4
+   capture; do not classify M4 from a zero-control capture.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
