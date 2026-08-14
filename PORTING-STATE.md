@@ -62157,3 +62157,15 @@ conclusion follows.
 
 ORIGIN: generated `funcs_34.c`/`funcs_35.c` switch, handler, and bounded source
 search only; no guest value, runtime behavior, or writer was changed.
+## Session 1056 (2026-08-14) — enumerated literal selector-zero stores
+
+Performed the prescribed bounded static audit in generated `funcs_34.c`; no
+build or runtime run was needed. Exact `sh $zero, -0xB0($s1)` stores in
+`menuOverlayInit` are limited to `0x800C5AF4` in case 2, reached when the
+`drawRadarIcon` return-derived value differs from `s3[0]`, and `0x800C5B3C` in
+case 5, an unconditional results-screen path. No other literal-zero store to
+`0x800CFF50` exists in the function. Neither branch has a local controller,
+timer, demo, or attract predicate; the nearest sources are radar/level state
+and the results-screen handler. This selects `H-selector0-state` as static,
+single-source evidence and rules out a direct input/demo explanation for these
+writers. The upstream producer of the selector value remains open.
