@@ -290,14 +290,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   `memory.o`, non-LTO `dbg_breakpoints.o`) emitted the correct `w2=4,w3=3`
   at both sites. This selects the LTO treatment of `dbg_breakpoints.c` as the
   sufficient build boundary; no runtime or retail conclusion followed.
-- s976 preserved the linker's generated all-LTO object and inspected it
-  alongside the final dylib. With the debugger feature and normal macOS
-  dylib/binutils link inputs enabled, both artifacts retain the callback's
-  four-argument ARM64 ABI (`x0=pc`, `x1=address`, `x2=size`, `x3=flags`) and
-  both wrapper sites emit `w2=4,w3=3` before the callback; the indirect
-  wrapper target remains in `x3` through `br x3`. This selects recipe/toolchain
-  state over LTO lowering or final-link reshaping and does not authorize a
-  runtime change.
+- s976 [superseded by s977] preserved one apparently correct all-LTO object
+  and dylib, so it selected recipe/toolchain state over LTO lowering. The
+  conclusion was believable because `nm`/`otool` showed the expected ABI in
+  both preserved artifacts, but s977's forced clean rebuild with the same
+  recorded recipe reproduced the bad shape. The s976 artifacts therefore
+  represented an unclassified build-state difference, not proof that the
+  all-LTO recipe was correct.
 - s977 forced a clean all-LTO rebuild with the recorded DEBUGGER/macOS/
   Homebrew recipe; the fresh `/tmp/s977-lto.o` and dylib again emit `w2=3`
   with `w3` unset at both callback calls. A one-variable arm compiling only
