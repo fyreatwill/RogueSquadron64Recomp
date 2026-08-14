@@ -1,31 +1,35 @@
-# NEXT work unit (s1151)
+# NEXT work unit (s1152)
 
 HYPOTHESIS-ID: vi-submitgfx-owner
 
-Add one phase-scoped marker at the shared generated `submitGfxFrame` entry and
-classify which caller family owns the post-640 loop. Do not add a guard or
-repeat the NPC boundary test.
+Add phase-scoped markers at every generated `submitGfxFrame` callsite, tagged
+with the static caller guest address. Do not repeat the shared-entry `$ra`
+probe: s1151 showed `ctx->r31 == 0` for all 457 entry rows under the generated
+C-call ABI.
 
 Competing hypotheses and discriminator:
 
-- H1/mission-owner: post-640 slot dispatch and E9/render submission are driven
-  by a mission frame caller of `submitGfxFrame`; the marker identifies that
-  caller and its state edge.
-- H2/cinematic-owner: the continuing path is a cinematic/menu caller of
-  `submitGfxFrame`, separate from the mission selector predecessor.
-- H3/host-only: generated `submitGfxFrame` is not reached in the continuing
-  phase; E9 activity is produced by a host/runtime path without a game-side
-  submit edge.
+- H1/mission-owner: post-640 calls are emitted by callsites in the mission
+  frame-loop family; those static caller tags fire after the 640 transition.
+- H2/cinematic-owner: post-640 calls are emitted by cinematic/menu callsites;
+  those tags fire while mission-family tags remain absent.
+- H3/host-only: selector positive control, task-control E9, and slot dispatch
+  remain live but no generated callsite tag fires in the target phase.
 
-The discriminating measurement is one phase-gated run with the marker enabled
-at the shared entry, logging the guest return address and phase ordinal, plus
-the existing independent host selector positive control and task-control E9
-control. H1/H2 are split by the caller address family; H3 is selected if the
-positive E9 control and slot dispatch continue but the scoped `submitGfxFrame`
-marker remains zero. A null is valid only if both positive controls fire.
+The discriminating measurement is one build/run containing all callsite tags,
+the independent `ROGUESQ_LOG_VI_SELECTOR` positive control, task-control E9,
+slot-dispatch logging, and the 1024 VI phase gate. A caller-family result is
+valid only when VI-1024 and the E9 positive control are both observed; an
+early crash or pre-1024 stall is unevaluable.
 
-Before building, add the marker through the regeneration/fixup path, not by
-editing generated output directly. Then build and run the existing 1024
-phase-gated recipe with the marker, selector positive control, slot dispatch,
-and task-control E9 categories enabled. Capture output under
-`scratch/agent/soak_results/s1151_vi_submitgfx_owner/` and kill with SIGKILL.
+Use the durable fixup/regeneration path. The currently available generated
+output is already fixup-sentinel-marked, so extend the controlled fixup mode
+in `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` rather
+than editing generated C by hand. Build with:
+
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+
+Run from `build/`, capture under
+`scratch/agent/soak_results/s1152_vi_submitgfx_callsites/`, arm the selector,
+E9, slot, and passive breadcrumb env vars, and kill with SIGKILL through
+`tools/probe.sh`.

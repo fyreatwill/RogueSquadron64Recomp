@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1150 (2026-08-14).
+in the ledger. Reviewed through s1151 (2026-08-14).
 
 ## Current state
 
@@ -105,6 +105,14 @@ in the ledger. Reviewed through s1150 (2026-08-14).
   game-call predecessor. Generated and companion-symbol inventories agree on
   the phase-loop families, selecting H2 path separation and ruling out a
   missing generated owner edge in this census.
+
+- The s1151 shared `submitGfxFrame` entry probe is live: selector positive,
+  task-control E9, and slot-dispatch controls all fired, and the entry ran in
+  phases 2/4/6. The run stalled before VI-1024 and hit the known
+  `fillSampleStreamRange+336` SIGBUS family. Generated direct calls do not
+  populate `ctx->r31` for this shared C call, so every logged guest return
+  address was zero; caller ownership is unevaluable, and the next probe must
+  tag callsites rather than infer the owner from the shared entry.
 
 ## Retail VI descriptor boundary
 
@@ -226,15 +234,16 @@ corruption.
 | s1148 | Rebuilt the regenerated selector probe after the first capture exposed stale instrumentation, then ran a controlled capture with an independent host positive control. The selector caller/control/selection remained absent while six host VI calls, slot dispatch, and task-control E9 activity were live; the run crashed in `fillSampleStreamRange+336` before VI-1024. This selects the post-640 selector-caller-absent loop and leaves NPC-boundary causality unevaluable. |
 | s1149 | Added phase-aware entry and exact-edge markers for the sole generated selector predecessor, made the probe script idempotent, rebuilt, and ran the 1024 phase-gated capture. The independent selector positive control fired, slot dispatch reached 8,192 rows, and the run reached only the 640→2→640 sequence before SIGBUS in `allocateDisplayListBuffer+3648` at guest PC `0x8000E29C`; all predecessor and selector markers were zero. This selects H2 again and rules out a reachable post-640 invocation of the unique selector predecessor in this run; NPC-boundary runtime causality remains unevaluable. |
 | s1150 | Static owner census found 144 direct `slotDispatcherIter` sites in 72 generated callers, including the mission and cinematic frame-loop families. `freeRenderSubsystemResources` is the sole generated caller of `selectAndApplyViMode`, while E9 production is host-side through `submit_rsp_task` and RSP task handling. Companion symbols agree on the named phase-loop owners and contain no omitted owner edge; this selects H2 path separation and rules out H3 for the censused graph. |
+| s1151 | The shared `submitGfxFrame` entry marker fired in phases 2/4/6 with selector, E9, and slot controls live, but the run stalled before VI-1024 in `fillSampleStreamRange+336`. All guest return addresses were zero because generated direct C calls do not populate `ctx->r31`; the shared-entry owner discriminator is invalid, so callsites must be tagged directly. |
 
 ## Ranked next steps
 
-1. Add one phase-scoped owner marker at the shared `submitGfxFrame` edge and
-   classify its caller family during a 1024-gated run. The static census shows
-   the active post-640 loop has separate slot-dispatch and host E9/render
-   submission paths; do not add a runtime guard or repeat the corrected NPC
-   boundary test. Only after positive task-control E9 and VI width 1024 are
-   both observed should the owner path be judged by its crash outcome.
+1. Add phase-scoped markers at every generated `submitGfxFrame` callsite,
+   tagged with the static caller guest address, and classify the owner during a
+   1024-gated run. The shared entry's `ctx->r31` is zero under the generated C
+   call ABI, so do not repeat that probe or infer ownership from it. Only after
+   positive task-control E9 and VI width 1024 are both observed should the
+   owner path be judged by its crash outcome.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

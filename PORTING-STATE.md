@@ -63891,3 +63891,19 @@ registration. This selects H2 path separation for the censused graph and rules
 out H3 missing-from-generation. It does not identify which `submitGfxFrame`
 caller owns the active post-640 loop, so the next step is one scoped marker at
 that shared entry; no runtime guard or NPC-boundary repeat was made.
+
+## Session 1151 (2026-08-14) — tested the shared submitGfxFrame owner marker
+
+Added a phase-scoped `submitGfxFrame` entry marker through the durable
+`fixup_game_funcs.py` path, rebuilt the Debug target, and ran the 1024-gated
+capture with the independent VI selector positive control, task-control E9,
+and slot-dispatch controls enabled. The selector control fired once, E9
+provenance recorded 194 full-control rows, slot dispatch recorded 8,192 rows,
+and the shared entry marker fired 457 times across phases 2/4/6. The run did
+not reach VI-1024 and crashed in the known `fillSampleStreamRange+336` family.
+
+Every marker row had `ctx->r31 == 0`, so the generated direct C-call ABI does
+not preserve a usable guest return address at this shared entry. This makes
+the caller-family discriminator unevaluable, not evidence for H1, H2, or H3.
+It rules out only the assumption that the shared entry can identify its owner
+through `ctx->r31`; the next experiment must tag each generated callsite.
