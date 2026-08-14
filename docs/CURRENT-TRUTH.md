@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1169 (2026-08-14).
+in the ledger. Reviewed through s1170 (2026-08-14).
 
 ## Current state
 
@@ -246,6 +246,15 @@ in the ledger. Reviewed through s1169 (2026-08-14).
   out a corrupted callback `$sp`/`$ra` handoff in this capture. The run stayed
   in `640→2→640`, reached no VI-1024, and had no crash, so downstream origin
   remains open.
+- The s1170 complete callback-idiom census found 7 in-scope generated
+  indirect invocation sites: 1 periodic worker site, 1 four-slot VI callback
+  site, 2 `musyxSynthFrame` sites, 1 mixer-init site, and 1 site in each audio
+  wait helper. Every site has a balanced stack adjustment and saved/restored
+  `$ra`, and all seven owning function boundaries match companion symbols.
+  The current poll's observed target `0x8009123C` also matches
+  `musyxSynthFrame`; no malformed site or unresolved in-scope row was found.
+  This selects H2 and moves the audit into the downstream `musyxSynthFrame`
+  operation class.
 
 ## Retail VI descriptor boundary
 
@@ -386,18 +395,22 @@ corruption.
 | s1167 | Rebuilt and ran the operation-boundary capture with slot, writeback, crash, DPC, and RT64-allocation categories. Controls passed; the run stayed pre-1024 and hit a Bus error at guest PC `0x8000B650` in `musyxSynthFrame+2796`. No DPC/RT64 operation or allocation marker followed the final writeback row before the fault, so this selects the valid different-failure H3 arm and adds no mitigation. |
 | s1168 | Completed the generated `musyxSynthFrame` callsite audit. The only two direct callers are the inline pumps in `shutdownAudioEngine` and `waitForMusyXAudioTaskDone`; their `-0x20/+0x20` and `-0x18/+0x18` frames, saved-return slots, and companion overlay registration agree. The ordinary periodic path is the separately documented indirect VI callback lookup. This selects H2 for the generated idiom, rejects H1/H3 as literal callsite explanations, and adds no build, runtime probe, or mitigation. |
 | s1169 | Rebuilt and ran one phase-gated indirect-callback capture. Callback-table slot reads and `get_function(0x8009123C)` resolution were both live; phase-4/6 entry rows consistently showed `entry_sp=0x8011C8C0`, `prologue_sp=0x8011C880`, and `entry_ra=0`. The valid `(rdram,ctx)` handoff selects H2 and rules out callback stack/return corruption for this run; no VI-1024 or crash occurred, so downstream origin remains open. |
+| s1170 | Completed the bounded static callback census without building or running. There were 7 in-scope generated indirect invocation sites: periodic worker (1), VI callback loop (1 site over 4 table slots), `musyxSynthFrame` (2), mixer init (1), shutdown wait (1), and audio-task wait (1). All 7 had balanced `$sp`/`$ra` contracts and companion-symbol-matched owning boundaries; the current poll's observed `0x8009123C` target matched `musyxSynthFrame`, with no malformed or unresolved in-scope row. This selects H2 and moves the audit to downstream `musyxSynthFrame` operations. |
 
 ## Ranked next steps
 
-1. Audit the complete generated indirect-callback invocation idiom after the
-   s1169 runtime handoff passed. Enumerate every `LOOKUP_FUNC`/`get_function`
-   callback invocation in the callback-thread and audio callback families,
-   classify how each site initializes `ctx->r29`, `ctx->r31`, and the function
-   pointer before the host call, and compare all callback-table targets against
-   companion symbols. The discriminator is a complete site table: a malformed
-   site or target selects the remaining runtime-ABI hypothesis; a balanced
-   table moves the fault audit into `musyxSynthFrame`'s downstream operation
-   class. Do not add a mitigation.
+1. Audit the complete downstream operation idiom in `musyxSynthFrame` after
+   the s1170 callback census selected H2. Enumerate each operation family
+   after the valid callback entry, including voice-array indexing, sample/data
+   pointer formation, command-list writes, and host/RSP submission; record
+   guest PC, source operands, bounds/validity checks, and the first operation
+   that can produce the known `0x8000B650` fault family. Competing hypotheses
+   are (H1) a bounded voice/sample operation produces the wild value, (H2) the
+   command-list or submission operation does, and (H3) the census cannot tie
+   the fault to an operation family. The discriminator is one complete
+   operation table with independent source and destination classifications;
+   H1/H2 require a specific writer and legitimate/illegitimate assessment,
+   while H3 requires an explicitly unresolved path. Do not add a mitigation.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

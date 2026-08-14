@@ -1,40 +1,35 @@
-# NEXT work unit (s1170)
+# NEXT work unit (s1171)
 
-HYPOTHESIS-ID: indirect-callback-idiom-census
+HYPOTHESIS-ID: musyx-downstream-operation-census
 
-Perform one bounded static census of the generated indirect-callback
-invocation idiom after s1169's valid `musyxSynthFrame` handoff. Do not build,
+Perform one bounded static census of the complete downstream operation idiom
+in `musyxSynthFrame` after the s1170 callback census selected H2. Do not build,
 run, or add a mitigation in this unit.
 
 Competing hypotheses and discriminator:
 
-- H1: another callback-table `LOOKUP_FUNC` site has a malformed guest-frame
-  handoff or target address; the complete site table contains an unbalanced
-  `$sp`/`$ra` setup or a target that does not match companion symbols.
-- H2: every callback-thread/audio callback site has the same balanced runtime
-  ABI and valid target registration; the remaining fault is inside a
-  downstream `musyxSynthFrame` operation class.
-- H3: the source census cannot distinguish callback dispatch from unrelated
-  dynamic lookup sites; the table has unresolved sites or target identities,
-  so it is unevaluable and must not be used to justify a guard.
+- H1: a bounded voice-array, sample-pointer, or resampling operation produces
+  the wild value behind the known `0x8000B650` fault family.
+- H2: command-list construction or host/RSP submission produces it after the
+  voice/sample operations have completed.
+- H3: the static census cannot tie the fault to an operation family because a
+  source or destination path remains unresolved.
 
-The discriminating measurement is one complete table covering every generated
-`LOOKUP_FUNC`/`get_function` callback invocation in `viRetraceHandlerThread`,
-the audio callback families, and every callback-table target observed in the
-current state poll. Each row must include caller guest PC, lookup target
-expression, `$sp` adjustment, `$ra` save/restore evidence, call ABI, and
-companion-symbol match. H1 requires at least one malformed row; H2 requires
-all in-scope rows balanced and matched; H3 is the outcome if any in-scope row
-cannot be classified.
+The discriminating measurement is one complete operation table for every
+operation family after the `musyxSynthFrame` callback entry: caller/guest PC,
+source operands, array/index bounds, pointer formation, destination writes,
+and the first operation capable of producing the known fault value. H1 or H2
+requires a specific writer plus a legitimate/illegitimate assessment; H3 is
+the outcome if any in-scope path remains unresolved.
 
 Exact commands:
 
-    rg -n "LOOKUP_FUNC|get_function\(" ../N64Recomp/RecompiledFuncs/funcs_*.c
-    sed -n '29890,30030p' ../N64Recomp/RecompiledFuncs/funcs_4.c
-    rg -n "0x8011A8A4|0x8011A8A8|0x8009123C|callback" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files
-    rg -n "viRetraceHandlerThread|musyx|callback" ../N64Recomp/symbols ../rogue_squadron64/symbol_files
+    rg -n "musyxSynthFrame|0x800912|LOOKUP_FUNC|musyxMixActiveVoices|musyxRenderVoiceSamples|musyxBuildVoiceCommandList|submit|MEM_[WHD]" ../N64Recomp/RecompiledFuncs/funcs_24.c
+    sed -n '4266,5560p' ../N64Recomp/RecompiledFuncs/funcs_24.c
+    sed -n '3570,4265p' ../N64Recomp/RecompiledFuncs/funcs_24.c
+    rg -n "^(musyxSynthFrame|musyxMixActiveVoices|musyxRenderVoiceSamples|musyxBuildVoiceCommandList)\s*=" ../rogue_squadron64/symbol_files/*.txt
 
-Record the row counts, unresolved rows, and companion-symbol matches in the
-next ledger entry. If the census is balanced, the following unit should audit
-the complete downstream operation idiom in `musyxSynthFrame`, not add a
-single-site skip.
+Record operation-family row counts, unresolved rows, first possible writer,
+and legitimate/illegitimate classification in the next ledger entry. If the
+table cannot identify a writer, do not add a guard; choose the next
+ground-truth or source-census discriminator.

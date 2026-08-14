@@ -64219,3 +64219,21 @@ This selects H2 and rules out a corrupted callback `$sp`/`$ra` handoff in this
 capture; it does not explain the downstream `musyxSynthFrame` fault family.
 The next unit is a complete static census of the generated indirect-callback
 invocation idiom.
+
+## Session 1170 (2026-08-14) — completed indirect callback idiom census
+
+Performed the prescribed no-build, no-run static census. The in-scope
+generated tree contains 7 indirect callback invocation sites: one in
+`periodicCallbackWorker`, one site in `viRetraceHandlerThread` iterating four
+callback-table slots, two in `musyxSynthFrame`, one in `initN64RspMixer`, and
+one each in `shutdownAudioEngine` and `waitForMusyXAudioTaskDone`. The owning
+frames are balanced: periodic `-0x18/+0x18` with `$ra` at `+0x14`, VI
+`-0x58/+0x58` with `$ra` at `+0x54`, synth `-0x40/+0x40` with `$ra` at
+`+0x3C`, mixer init `-0x28/+0x28` with `$ra` at `+0x20`, shutdown
+`-0x20/+0x20` with `$ra` at `+0x18`, and audio wait `-0x18/+0x18` with `$ra`
+at `+0x10`. All seven owning function boundaries match companion symbols.
+The current state poll's observed target `0x8009123C` matches the companion
+`musyxSynthFrame` symbol. No malformed site or unresolved in-scope row was
+found. This selects H2 and rules out another literal generated callback-frame
+idiom as the explanation; the next audit is the downstream `musyxSynthFrame`
+operation class. No mitigation was added.
