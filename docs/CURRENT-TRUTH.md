@@ -21,6 +21,13 @@ in the ledger. Reviewed through s1161 (2026-08-14).
   spill of guest `$sp` at `funcs_8.c:22810`. Direct callers and statically
   addressed indirect targets are balanced; `0x8010B350` is compiled data with
   no generated writer. General runtime caller-frame corruption remains open.
+- The s1162 complete frame-idiom census found 144 direct
+  `slotDispatcherIter` calls in 72 generated callers. All 72 caller entries
+  match their companion symbol boundaries, and every site has a balanced
+  stack decrement/increment plus a saved `$ra`; no static indirect target to
+  `0x8003E8DC` exists. The former `0x80078894` boundary family is now a
+  separate `npcPowerGeneratorUpdate` function, so this audit selects H1 and
+  moves the fault-origin question to runtime-side frame/value writes.
 - The NPC function-boundary input correction is landed in the companion symbol
   files: `npcPowerGeneratorUpdate` is now sourced as main `.text` at
   `0x80077AF0`. Regenerated ELF, N64Recomp output, fixups, and the Debug target
@@ -327,15 +334,22 @@ corruption.
 | s1159 | Ran the consumer-order capture and a fixed retry. Both passed selector-positive and slot-dispatch controls; both observed the selector transition and host request, but zero generated selector-consumer entry/selection/callsite rows. This selects H3, an independent host VI path, and moves the next unit to a complete static call-path census. |
 | s1160 | Static-censused all five generated `osViSetMode_recomp` edges and the sole selector consumer. The direct `applyPendingViChanges` edge at `0x8001B8DC` is the only edge on the `0x80019914` writer path and can submit `0x80128DF0` without entering `selectAndApplyViMode`; the other edges are boot/reset, frame-swap, or selector-owned paths. This identifies H3's generated owner and closes the duplicate-edge ambiguity without a build or run. |
 | s1161 | Rebuilt and ran the phase-gated runtime reconciliation with selector-positive and slot-dispatch controls. The controls fired (1 and 6,864); at stable VI width 640, the direct `0x8001B8DC` marker carried `0x80128DF0` and the host independently logged the same request, while selector-consumer markers stayed zero. This selects H3 and rules out a stale/misplaced direct-call marker for this lifecycle. The run timed out before VI-1024, with no crash. |
+| s1162 | Completed the whole generated `slotDispatcherIter` caller census: 144 direct sites across 72 callers, zero static indirect targets to `0x8003E8DC`, 72/72 companion-entry matches, and no unbalanced stack/return idiom. The `0x80078894` site is inside the corrected standalone `npcPowerGeneratorUpdate` boundary. This selects H1 and rules out a generated caller-frame idiom or the old coalesced-boundary explanation; runtime-side frame/value origin remains open. |
 
 ## Ranked next steps
 
-1. Perform a systematic M3 audit of the generated `slotDispatcherIter` caller
-   frame idiom around the recurring `+872` SIGBUS. Enumerate every direct and
-   indirect callsite in the generated tree and companion symbols, classify each
-   stack/register contract, and identify one bounded runtime marker table that
-   distinguishes balanced callers from the `0x80078894` boundary family. Do not
-   add a mitigation; any wild value needs an ORIGIN writer attribution first.
+1. Perform one bounded runtime-origin audit for the recurring
+   `slotDispatcherIter+872` SIGBUS. Use the existing phase-gated slot-dispatch
+   and crash controls, then attribute the guest `$sp`/spill value to the last
+   generated or host-side writer before the failing prologue. Do not add a
+   mitigation; any wild value needs an `ORIGIN:` writer attribution and a
+   legitimacy assessment first.
+
+The s1162 generated frame-idiom census is closed: 144 direct calls across 72
+callers all have balanced stack and return contracts, all companion entry
+addresses agree, and no static indirect call targets `slotDispatcherIter`.
+The corrected `npcPowerGeneratorUpdate` boundary contains the old
+`0x80078894` call, so the remaining +872 fault-origin question is runtime-side.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

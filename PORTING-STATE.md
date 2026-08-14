@@ -64086,3 +64086,29 @@ zero. This selects H3, the direct generated owner submitting the descriptor
 without entering `selectAndApplyViMode`, and rules out a stale or misplaced
 direct-call marker for this lifecycle. The pre-1024 timeout means this does not
 classify later 1024 behavior or parser/rendering causality.
+## Session 1162 (2026-08-14) — completed the slot-dispatcher frame-idiom census
+
+Ran the complete static census over the generated recompilation and companion
+symbol inputs. It found 144 direct `slotDispatcherIter` calls in 72 generated
+callers. The callers cover 49 distinct stack-frame idioms, but every site has
+the expected balanced stack decrement/increment, a saved `$ra`, and a return
+path. All 72 generated entry addresses match the companion symbol boundary;
+there are zero static `LOOKUP_FUNC(0x8003E8DC)` indirect targets. The old
+`0x80078894` site is in the corrected standalone `npcPowerGeneratorUpdate`
+function, not a coalesced `forwardToNpcGeneratorSpawn` body.
+
+This selects H1: no generated caller-frame idiom or old function-boundary
+defect explains the recurring `slotDispatcherIter+872` SIGBUS. It rules out H2
+and H3 for the complete static class, but does not identify the runtime-side
+writer/value origin. No build, runtime experiment, mitigation, or new
+instrument was needed; a runtime null would not have been informative for this
+static discriminator.
+
+| Census item | Result |
+|---|---:|
+| Direct call sites | 144 |
+| Generated callers | 72 |
+| Static indirect targets to `0x8003E8DC` | 0 |
+| Companion entry-address matches | 72/72 |
+| Unbalanced stack/return callers | 0 |
+| Distinct balanced frame idioms | 49 |

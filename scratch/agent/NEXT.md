@@ -1,36 +1,35 @@
-# NEXT work unit (s1162)
+# NEXT work unit (s1163)
 
-HYPOTHESIS-ID: slot-dispatcher-frame-idiom-audit
+HYPOTHESIS-ID: slot-dispatcher-runtime-origin
 
-Perform one bounded M3 idiom-class audit of the recurring
-`slotDispatcherIter+872` SIGBUS. Enumerate all generated direct/indirect
-`slotDispatcherIter` callsites, join each to its companion symbol/function
-boundary, and classify the caller's stack adjustment, saved-register use, and
-return path. Use the existing static inventory plus one phase-gated runtime
-marker table only if the census leaves multiple live classes; do not add a skip
-or guard.
+Perform one bounded runtime-origin audit of the recurring
+`slotDispatcherIter+872` SIGBUS. Build one phase-gated capture with the existing
+slot-dispatch positive control and crash markers, and attribute the guest `$sp`
+and failing spill address to the last generated or host-side writer. Do not add
+a skip or guard; any wild value requires an `ORIGIN:` writer attribution and a
+legitimacy assessment.
 
 Competing hypotheses and discriminator:
 
-- H1: all live callers share one balanced generated frame idiom; the SIGBUS is
-  caused by a runtime-side frame/value writer outside this call class.
-- H2: one generated caller class has a distinct stack/return contract that can
-  explain the `+872` spill.
-- H3: the `0x80078894` boundary family is coalesced or mis-split and is the
-  unique unbalanced generated caller.
+- H1: a runtime-side writer corrupts the caller frame/value before the failing
+  dispatcher entry.
+- H2: the generated dispatcher prologue observes a legitimate but invalid
+  caller `$sp` due to an unobserved ABI transition.
+- H3: the crash value is produced inside the dispatcher prologue itself.
 
-The discriminating measurement is a complete callsite classification table:
-for every reachable caller, the generated prologue/epilogue contract and the
-companion symbol boundary must agree. H1 is selected if every live class is
-balanced; H2 if one distinct balanced/unbalanced idiom remains; H3 if the
-`0x80078894` family alone has a boundary mismatch. A runtime null is invalid
-unless its independent phase and slot-dispatch controls fire.
+The discriminating measurement is a writer-attribution row immediately before
+the crash: H1 requires a prior writer and a changed value; H2 requires an ABI
+transition with no ordinary writer; H3 requires the prologue's own first write
+to create the bad value. A null is invalid unless the independent phase and
+slot-dispatch controls fire.
 
 Commands:
 
-    rg -n "slotDispatcherIter|0x80078894|jal.*800788" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64
-    rg -n "slotDispatcherIter|80078894" syms tools docs ../rogue_squadron64
+    sed -n '1,240p' tools/oracle/README.md
+    sed -n '1,260p' docs/F5-UCODE-REFERENCE.md
+    cmake --build build --config Debug --target RogueSquadron64Recomp
+    env ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_LOG_SLOT_SP_GUARD=1 zsh scratch/agent/run-slot-origin.sh
 
-Expected outcomes: the census must produce one table covering all sites, with
-no conclusion from a partial grep. Do not infer parser or renderer causality
-from this frame-contract audit.
+Expected outcomes: one run must pass the slot-dispatch positive control and
+emit a bounded pre-crash writer row, or prove the capture unevaluable. Do not
+infer parser or renderer causality from this frame-origin audit.
