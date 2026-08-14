@@ -4,9 +4,9 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s994 (2026-08-13). The active blocker is authoritative
-FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
-closed; M3 work is limited to systematic idiom-class audits. The
+Reviewed through s995 (2026-08-13). The active M4 lead is the zero-shade
+writer/value ownership boundary after the post-sec2 gate. M5 audio
+de-stubbing is closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
 a human directory-permission grant (s983) — see Next work unit.
 
@@ -445,6 +445,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s992 | Added an env-gated, regeneration-owned fixup pass for simple generated `MEM_B/MEM_H/MEM_W` assignments. It matched 42,818 stores across all 50 current generated files in a static dry run and emits a same-run control marker plus phase, guest PC, width, and effective address for target-range stores. No build or game capture ran because 34 generated files already carry the fixup sentinel and the external tree has unrelated dirty source/generated changes; a second fixup pass would be unsafe. This advances instrumentation only and makes no writer or legitimacy conclusion. |
 | s993 | Clean regeneration/build/capture passed controls and found 39 phase-4 plus 59 phase-6 exact-target generated-store sites, with 154/86 non-target shared-page records. H-generated-target is selected; assigned values and legitimacy remain open. |
 | s994 | Static classification mapped all 98 s993 target records (97 distinct PCs) to eight named generated functions in funcs_3/4/6. The 97 PC assignments are 68 register copies and 29 zero initializations; no RHS directly constructs a wild pointer/index. This selects H-copy-shaped structurally, but register-value legitimacy and the shade writer remain unproven. |
+| s995 | Regenerated, built, and phase-gated one value-bearing capture. Controls fired (9,104 generated-store records, 129 write-fault records, 210 F5-state controls, 9 shade-DMA controls, 10 zero-shade replacements); phase 4/6 yielded 39/59 target rows covering all 97 classified PCs. Values were zeros, display-list words, colors, and in-RDRAM pointers; no phase-4/6 out-of-domain value appeared. This selects H-bounded-value over H-wild-value, while destination ownership and shade-source linkage remain open. The target-only subtag was corrected afterward to compare physical addresses; analysis used the value-bearing control rows, whose coverage was complete. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -476,50 +477,50 @@ entries and do not authorize mitigations.
    the invalid callback state pointer is identified.
 4. M4 correctness remains active: phase-6 VTXCOLOR payloads are demonstrably
    nonzero while decoded shade is exact ZERO, and s988 finds no overlap from the
-   instrumented RSP DMEM-to-RDRAM DMA path. s994 mapped all 98 target records to
-   eight named generated functions: 68 register-copy RHS values and 29 zero
-   initializations across 97 distinct PCs. This selects a copy-shaped
-   generated-store structure, but does not establish whether register values or
-   destination objects are legitimate, nor which store owns shade. The next
-   probe must capture assigned values and effective destinations together. The
-   `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an ORIGIN
-   conclusion.
+   instrumented RSP DMEM-to-RDRAM DMA path. s995 covered all 98 target records
+   with values and effective destinations; phase-4/6 values stayed within
+   coherent display-list, color, pointer, or zero-shaped domains, selecting
+   H-bounded-value over H-wild-value. Destination ownership and the exact
+   shade-source linkage remain open. The next probe must join generated-store
+   destinations/values to the F5 VTXCOLOR source/payload rows in one gated run.
+   The `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an
+   ORIGIN conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s995)
+## Next work unit (s996)
 
-HYPOTHESIS-ID: m4-zero-shade-writer-values
+HYPOTHESIS-ID: m4-zero-shade-destination-source-join
 
-Extend the regeneration-owned ordinary generated-store census to capture the
-assigned RHS value along with phase, guest PC, width, and effective physical
-address, then run one phase-gated capture. Keep the existing all-store and
-shade/DMA positive controls in the same build/run. Do not add a mitigation or
-hand-edit generated files.
+Join the existing generated-store value/destination records to the F5
+VTXCOLOR source/payload records by phase and physical address, using one
+phase-gated capture. Determine whether a generated store writes the exact
+source bytes later consumed by the zero-shade VTXCOLOR path, or whether the
+source remains untouched and the conversion is downstream. Do not add a
+mitigation or hand-edit generated files.
 
-Competing hypotheses are H-bounded-value (target RHS values are coherent for
-their named record fields), H-wild-value (a target RHS is an out-of-domain
-pointer/index/state value), and H-wrong-owner (values are locally coherent but
-the destination object is not the expected VTXCOLOR owner). The discriminating
-measurement is a phase-gated value/destination table with positive controls,
-covering all exact-target records from the 97 classified PCs; a run with no
-control or incomplete target coverage is invalid.
+Competing hypotheses are H-same-source (a generated store writes the bytes
+consumed by VTXCOLOR), H-nearby-owner (generated stores touch the surrounding
+allocation but not the consumed source), and H-downstream (the source is
+untouched and shade becomes zero after VTXCOLOR decoding). The discriminating
+measurement is an exact-address join with phase-4 and phase-6 controls and
+complete coverage of the 98 target records; a run with no controls or missing
+source rows is invalid.
 
 Exact commands:
 
-First run the fixup script's static match-count/dry-run check, then regenerate
-and build using the documented `make_elf.py -> N64Recomp -> fixup_game_funcs.py
--> cmake` order. Launch the existing phase-gated probe recipe from `build/`
-with `ROGUESQ_LOG_VTX_GENERATED_WRITES=1`, retaining its four provenance
-controls and all-DMA control. Extract phase-4/phase-6 target rows and classify
-RHS values by the eight s994 function groups. Same-run controls must visibly
-fire before any null result is considered.
+Run the fixup static check, regenerate/build in the documented order, and
+launch the existing phase-gated probe with generated-write, F5-state, shade-DMA,
+and write-fault controls. Extract phase-4/phase-6 generated rows and
+phase-matched `[f5-state-payload]` source rows, then join on exact physical
+address and report any later overwrite/value change. Same-run controls must
+visibly fire before a null join is considered.
 
-Expected outcomes: bounded values in coherent fields select H-bounded-value;
-out-of-domain values select H-wild-value and require identifying the writer
-before any mitigation; coherent values paired with an unexpected destination
-select H-wrong-owner. If the capture cannot cover the classified PC set, do
-not select a value hypothesis.
+Expected outcomes: exact source-address writes select H-same-source; only
+nearby/non-source writes select H-nearby-owner; complete absence of generated
+writes at the consumed addresses, with source payloads still nonzero before
+decode, selects H-downstream. If controls or target/source coverage fail, make
+no causal selection.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

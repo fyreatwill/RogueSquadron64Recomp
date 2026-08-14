@@ -60787,3 +60787,62 @@ mitigation or generated-file edit was made.
 ORIGIN: the only classified writers are the generated assignments listed
 above; this session inspected their RHS and did not change their values or
 add a guard.
+
+## Session 995 (2026-08-13) — classified generated VTXCOLOR-store values
+
+### Work unit
+
+The planned M4 unit extended the regeneration-owned ordinary generated-store
+census to log the assigned RHS value together with phase, guest PC, width, and
+effective address. Competing hypotheses were H-bounded-value, H-wild-value,
+and H-wrong-owner. The discriminating measurement was a phase-gated value /
+destination table with complete coverage of the s994 target-PC set and
+same-run controls.
+
+### Result
+
+The fresh `make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake` pipeline
+completed and the phase-gated run reached VI width 1024 after 78.3 seconds.
+The run completed 180 seconds after the gate, captured 34 frames, and emitted
+no `[CRASH]` or `[ABORT]` marker. Positive controls visibly fired: 9,104
+value-bearing generated-store control rows, 129 write-fault rows, 210 F5-state
+control rows, 9 shade-DMA/all-DMA control rows, and 10 zero-shade replacement
+rows.
+
+Filtering the value-bearing control rows by physical target range produced 39
+phase-4 and 59 phase-6 records, 98 records across 97 unique PCs. This exactly
+matches s993/s994 coverage. The eight named function groups showed zero
+initializers, display-list command words, color words, and pointers within the
+RDRAM address space; phase 4 and phase 6 independently showed no out-of-domain
+RHS value. The recurring values were coherent with the generated assignments
+classified in s994: `heapFreeListDequeue` carried record/DL words and pointers,
+`loadTextureTile` carried RDP command words and texture addresses, and the
+render-list emitters carried command words, pointers, and zero field
+initializers.
+
+The initial s995 target-only subtag compared the virtual `addr` against
+physical bounds and therefore emitted zero target-only rows. This did not
+invalidate the measurement: every all-store control row contained both the
+physical address and RHS value, and the phase-4/phase-6 filtered coverage was
+complete. The regeneration script was corrected after the run to compute
+`s992_phys` before the target test; the current generated tree remains the
+binary used for the valid capture.
+
+This selects H-bounded-value over H-wild-value. It does not establish the
+destination object's semantic owner or join the stores to the exact F5
+VTXCOLOR source bytes, so H-wrong-owner / downstream shade conversion remain
+open. No mitigation was added or changed.
+
+### What it rules out
+
+It rules out an observed phase-4/phase-6 target store carrying an obviously
+wild pointer, index, or state value, and independently confirms that the full
+classified target-PC set is live in both the value-bearing census and the
+phase-gated run. It does not rule out a locally coherent store writing the
+wrong object, a later overwrite, or a renderer/state conversion after the
+VTXCOLOR payload is read.
+
+ORIGIN: the value-bearing rows originate at the generated `MEM_B/MEM_H/MEM_W`
+assignments in the eight s994-classified functions; the target-only condition
+was diagnostic-only and was corrected to use physical addresses. No guest
+value was changed and no mitigation was landed.
