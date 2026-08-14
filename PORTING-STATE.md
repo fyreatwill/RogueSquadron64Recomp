@@ -62744,3 +62744,19 @@ identify the earlier state gate. No mitigation was added.
 
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
+
+## Session 1086 (2026-08-14) — watched the full retail mission-state block
+
+Ran one debugger-on retail-oracle capture with the established eleven-Start
+schedule, whole-RDRAM positive-control write watch, PIF trace, VI trace, and a
+physical read/write watch on the full `0x130B10:0x130B58` mission-state block.
+The whole-RDRAM watch reached its 10,000-hit cap and was removed; all eleven
+Start presses were observed in PIF reads; and the run advanced 7,199 VI frames
+while remaining at width 320/origin `0x006dd280`. The full target block recorded
+zero reads and zero writes, and the process exited cleanly after 120 seconds.
+This selects single-source `H-gate-not-reached` for the established schedule
+and rules out any access to this state object on the tested retail route. It
+does not identify the earlier state gate. No mitigation was added.
+
+ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
+positive controls; no port or game data was changed.
