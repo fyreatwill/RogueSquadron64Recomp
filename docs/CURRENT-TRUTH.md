@@ -6,14 +6,16 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1014 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1015 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
-numeric source of the shade record. M5 audio de-stubbing
-is closed. M3 work is limited to complete idiom-class audits. The retail-oracle
-callback thread is no longer directory-blocked (`.claude/settings.json`
-currently lists `rs64-oracle`); see backlog.
+numeric source of the shade record. The landed M4 accumulator probe has not
+yet fired on the executing code path in two attempts — its positive control
+never armed, so both are phase-selection nulls, not M4 results. M5 audio
+de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
+retail-oracle callback thread is no longer directory-blocked
+(`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
 
 ## Current truth
 
@@ -218,6 +220,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1012 | Independent RSP semantics and the local VGE implementation agree that `vge` selects `v6` or a `v29` lane; it cannot synthesize the observed sentinel. The numeric-origin lead moves to the preceding `vmadh v6,v4,v0` accumulator/high-half path; no mitigation. |
 | s1013 | Static accumulator audit: the final VMADH consumes shared state last updated by `vmadn v7,v5,v0`; `v29` cannot supply `0x8000`. Saturation versus an in-range sign-extending middle word remains open because no complete lane tuple is captured. |
 | s1014 | Landed regeneration-owned M4 accumulator/VGE probe with a VMADH positive control. Two VI-1024 captures fired neither control; a Start-driven 512 gate timed out at 1024. No numeric conclusion. |
+| s1015 | Closed the s1014 null-result question: root cause is phase-gate failure (positive control never armed), not an M4 result. Refutes treating either s1014 capture as evidence for/against any M4 hypothesis; next step is isolating the phase/input control before re-running the probe. |
 
 ## Ranked backlog
 
@@ -235,14 +238,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 4. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
-## Next work unit (s1013)
+## Next work unit (s1015)
 
 HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-Explain the numeric `-0.5/+0.5` sentinel at the input to the final `vge` by
-tracing `vmadh v6,v4,v0`, the RSP accumulator high-half/saturation rules, and
-the lane values entering that instruction. Static audit only; no build/run
-required. Do not edit generated output.
+The s1014 runtime probe is landed but has not yet fired on the executing code
+path: two VI-1024 captures produced zero records on both the target and its
+independent VMADH positive control, so neither is evidence. Before re-running
+the probe, first verify the phase/input control in isolation (confirm a Start
+keypress is observed and that VI leaves 1024 under the documented schedule),
+then run the `PROBE_PHASE_WIDTH=512` capture with `ROGUESQ_LOG_M4_ACCUM=1`.
+Exact commands are in `scratch/agent/NEXT.md`.
 
 Competing hypotheses and the discriminating measurement:
 

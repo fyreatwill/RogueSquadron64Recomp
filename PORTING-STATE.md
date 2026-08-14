@@ -61319,3 +61319,28 @@ key-post attempts being reported. Therefore the discriminator did not run:
 the zero count is invalid because the positive control did not fire. This
 rules out interpreting either VI-1024 null as an M4 result, and leaves the
 numeric saturation/arithmetic/VGE alternatives open. No mitigation was added.
+
+## Session 1015 (2026-08-14) — closed the s1014 null-result question; named the next discriminator
+
+Checkpoint continuation of s1014; no build or run performed this session. The
+s1014 probe's two zero-record captures were left ambiguous between "M4 result"
+and "instrument never armed." This resolves that ambiguity: the root cause is
+phase-gate failure, not an M4 finding. Evidence already in s1014 is sufficient
+on its own — the Start-driven schedule's last observed width was 1024 (never
+reaching the required 512), and the independent VMADH positive control also
+produced zero records in both captures, so the probe never executed on the
+target code path in either run. This closes the s1014 null-result question
+and refutes treating either capture as evidence for or against
+`H-accumulator-saturation`, `H-v4-v0-arithmetic`, or `H-v29-selection`, all of
+which remain open exactly as s1013 left them.
+
+Next discriminator (unchanged plan, now stated explicitly as the immediate
+next step rather than left implicit): before re-running the accumulator probe,
+first verify the phase/input control in isolation — confirm a Start keypress
+is observed (`ROGUESQ_LOG_INPUT=1`) and that VI leaves 1024 under the
+documented Start schedule. Only once that control is positive is a
+`PROBE_PHASE_WIDTH=512` capture with `ROGUESQ_LOG_M4_ACCUM=1` meaningful; a
+third zero-record run without first isolating the input/phase control would
+repeat this same ambiguity. Exact commands are in `scratch/agent/NEXT.md`
+(HYPOTHESIS-ID `m4-zero-shade-accumulator-origin`). No mitigation was added;
+no code changed this session.
