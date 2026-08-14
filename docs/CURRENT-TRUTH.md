@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1158 (2026-08-14).
+in the ledger. Reviewed through s1159 (2026-08-14).
 
 ## Current state
 
@@ -172,6 +172,14 @@ in the ledger. Reviewed through s1158 (2026-08-14).
   `01/00/00→01/00/01`. The tagged callsite and host VI request independently
   agree on the transition. This selects H2 for s1157's non-reproduction: its
   pending input/state path was different, not an address or store defect.
+- The s1159 consumer capture and fixed retry both passed the selector-positive
+  and slot-dispatch controls. The post-640 writer transition
+  `01/00/00→01/00/01` occurred, and host `osViSetMode` then requested
+  `0x80128DF0` (width 640), but generated `selectAndApplyViMode` entry,
+  selection, and callsite markers remained zero. This selects H3: the host VI
+  request is on an independent path and the generated selector consumer is
+  not reached after the transition. No crash occurred; the next audit is the
+  complete generated VI call-path census.
 
 ## Retail VI descriptor boundary
 
@@ -301,16 +309,18 @@ corruption.
 | s1156 | Added durable callsite probes and a host committed-width accessor, rebuilt successfully, and ran one phase-gated capture. The selector positive control fired once, slot dispatch logged 6,424 rows, all three tagged writer callsites ran, and `0x80019914` changed selector `01/00/00→01/00/01` at committed width 640 after the `640→2→640` lifecycle. This selects H1, while the saturated apply-site budget leaves downstream consumer ordering open. |
 | s1157 | Rebuilt and ran the phase-gated consumer capture. Selector positive and slot-dispatch controls passed, but the live `0x80019914` writer rows stayed `00/00/00→00/00/00`; no generated selector-consumer rows appeared. Host VI requests still recorded `320→2→640→640→2→640`. The planned H1/H2/H3 discriminator was unevaluable and the next unit moves to the missing-transition cause. |
 | s1158 | Re-ran the phase-gated writer capture with pending-mask and store-path attribution included. Selector-positive and slot-dispatch controls passed. The post-640 sequence showed pending `0/0`, then request-mask `pending B=0x11`, then `applyPendingViChanges` storing selector A and changing `01/00/00→01/00/01`; host VI logging independently recorded the matching 640 request. This selects H2 for s1157's non-reproduction and rules out an address/store defect in this capture. |
+| s1159 | Ran the consumer-order capture and a fixed retry. Both passed selector-positive and slot-dispatch controls; both observed the selector transition and host request, but zero generated selector-consumer entry/selection/callsite rows. This selects H3, an independent host VI path, and moves the next unit to a complete static call-path census. |
 
 ## Ranked next steps
 
-1. With the reproduced post-640 selector transition, run one phase-gated
-   consumer-order capture through `selectAndApplyViMode` and its following
-   `osViSetMode` request. Retain the selector-positive and slot-dispatch
-   controls, and correlate selector bytes, selected source record, copied
-   record, and host request. Distinguish a correct consumer of the new
-   selector from a stale/wrong source-record selection; do not infer parser or
-   renderer causality from a missing later phase.
+1. Perform a bounded static census of every generated `osViSetMode_recomp`
+   callsite and the sole generated `selectAndApplyViMode` caller. Record guest
+   address, containing function, mode-pointer setup, and whether the call can
+   follow `applyPendingViChanges` at `0x80019914`. The discriminator is whether
+   the observed `0x80128DF0` request has a direct generated owner distinct from
+   the selector consumer (H3) or is only reachable through that consumer
+   (H1/H2). Do not build or add runtime counters unless the census leaves two
+   live paths.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

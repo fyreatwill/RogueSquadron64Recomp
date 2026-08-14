@@ -64031,3 +64031,23 @@ different. It rules out an address or store implementation defect for this
 capture, but does not yet establish that `selectAndApplyViMode` consumes the
 new selector correctly. The next unit traces that consumer and its following
 VI request.
+
+## Session 1159 (2026-08-14) — separated the post-640 VI consumer path
+
+Rebuilt the Debug target and ran the phase-gated consumer-order capture with
+the selector-positive and slot-dispatch controls. The first capture reached
+the stable 640→2→640 lifecycle without a crash; its writer trace showed the
+post-640 selector transition but the generated selector markers were absent.
+Because the transition had to be observed before judging the consumer, a fixed
+retry was run with the same phase gate and writer/request-mask diagnostics.
+
+The retry passed the selector-positive and slot-dispatch controls. It recorded
+`applyPendingViChanges` changing selector bytes `01/00/00→01/00/01`, followed
+by host `osViSetMode` request `mode_ptr=0x80128DF0`, width 640. The generated
+`selectAndApplyViMode` entry, selected-record, and callsite markers were all
+zero, while host VI requests and slot dispatch remained active; no crash marker
+appeared. This selects H3: the host VI request is produced on an independent
+path and the generated selector consumer is not reached after the transition.
+It rules out H1/H2 for this observed lifecycle, but does not yet identify the
+independent generated owner. The next unit is a complete static census of all
+generated `osViSetMode_recomp` callsites and the sole selector-consumer caller.
