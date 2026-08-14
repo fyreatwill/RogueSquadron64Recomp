@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1050 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1051 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -125,9 +125,15 @@ retail-oracle callback thread is no longer directory-blocked
   closes duration as the explanation for the tested attract path; the 512
   hangar phase remains unevaluable.
 
-s1050's static audit refuted the proposed linkage between `gGameSettings+0x20`
-(`0x80130B60`) and menu dispatch. `menuOverlayInit` selects its jump-table
-index from the halfword at `0x800CCF50` (`0x800D - 0xB0`), not from the game
+s1051's static selector audit found that `menuOverlayInit` reads
+`0x800CFF50` (the prior NEXT spelling `0x800CCF50` was a typo), but its eight
+`mainGameLoop` callers pass constant selector arguments `{9,2,2,3,3,8,3,3}`.
+Within the overlay, index 0 is produced by non-input case/handler branches;
+the audited chain contains no timer/demo read or controller-mask test. This
+selects `H-selector-upstream` for the index-0 transition, while the caller's
+upstream state source remains open. s1050's static audit refuted the proposed linkage between `gGameSettings+0x20`
+ (`0x80130B60`) and menu dispatch. `menuOverlayInit` selects its jump-table
+index from the halfword at `0x800CFF50` (`0x800D - 0xB0`), not from the game
 settings byte. The exhaustive generated-code sweep found one exact writer of
 `gGameSettings+0x20`: `resetMixerVolumesAndFlags+12` (`0x8006ED5C`) stores the
 constant `0x7F`; its caller is an audio/settings reset path and has no local
@@ -384,8 +390,9 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    no Start read is present on this chain. This selects
    `H-retail-timing-state` as static single-source evidence. s1049 found the
    direct `gGameSettings+0x20` reset at `0x8006ED5C` and no external direct
-   `0x800CFF50` writer. Continue with pointer-mediated copies and the caller
-   that selects index 0. Do not arm the freelist watch until a 512 hangar-origin
+   `0x800CFF50` writer. s1051 found all eight callers pass constants and that
+   index 0 is generated inside non-input handler branches; continue by
+   auditing the caller's upstream state source. Do not arm the freelist watch until a 512 hangar-origin
    phase is reached.
 2. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume

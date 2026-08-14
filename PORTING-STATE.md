@@ -62009,6 +62009,34 @@ ORIGIN: generated recomp source, symbol table, and architecture-document
 inspection only; no mitigation, guest value, or recomp runtime behavior was
 changed.
 
+## Session 1051 (2026-08-14) — audited menu selector writers and callers
+
+Ran the prescribed bounded static audit without building or running the game.
+Corrected the selector address to `0x800CFF50` (`0x800D-0xB0`; `0x800CCF50`
+in NEXT was a typo). `menuOverlayInit` reads it at `0x800C5944` for the
+0..10 jump table, and reads it again at `0x800C5A5C` and `0x800C5D24` for
+post-handler/state checks. Its entry store at `0x800C58E0` copies `a1 & 0xff`.
+All eight callers are in `mainGameLoop` and pass constants `{9,2,2,3,3,8,3,3}`;
+no caller-side controller mask, timer, or demo read guards these calls.
+
+The exhaustive writer list inside `menuOverlayInit` is the case/handler state
+machine: `0x800C5AA4=1`, `0x800C5AC8=6`, `0x800C5AE8=2`, `0x800C5AF4=0`,
+`0x800C5B20=5`, `0x800C5B3C=0`, `0x800C5B5C/BA8/C08/C60/C7C/CA4/CE8=12`,
+`0x800C5BEC` copies the preceding handler result, `0x800C5C18=1`,
+`0x800C5C40=11`, `0x800C5C94=2`, and `0x800C5CD4=2`. The two index-0 writes
+are reached from non-input case branches: the radar path compares its handler
+data byte against `0x10` at `0x800C5AF0`, and the results path clears the state
+at `0x800C5B3C`. `menuControllerInput` is called in another case, but no
+controller mask feeds either index-0 write. This selects `H-selector-upstream`
+as a static result: index 0 is produced by persistent/case-handler state, not
+by a local input or timer/demo decision. It does not identify the upstream
+state that makes `mainGameLoop` choose its caller argument; that remains open.
+
+This rules out the specific `gGameSettings+0x20`/menu-selector conflation and
+the local input/timer explanations for index 0. It does not establish the
+retail transition or justify arming the freelist watch. Evidence is static and
+single-source; no runtime conclusion follows.
+
 ## Session 1049 (2026-08-14) — audited retail state writers
 
 Performed the prescribed bounded static audit without building, running the
