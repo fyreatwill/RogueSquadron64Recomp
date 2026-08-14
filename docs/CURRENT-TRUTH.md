@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1082 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1083 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -64,6 +64,11 @@ Static audits classify the width-320 handoff as state-shaped:
   unrelated globals, and the companion tree has no assignment to the target
   byte. This selects static `H-no-later-clobber`; overlay-loader/DMA ownership
   remains outside this generated/companion source census.
+- The s1083 loader audit found that all three `loadOverlay` cases DMA overlay
+  code to `0x800A5130` and clear BSS at `0x8010B6D0`, `0x800CD520`, or
+  `0x800B0940`; none can target `0x80130B30`. The host PI path forwards the
+  descriptor's DRAM destination unchanged. This selects static
+  `H-loader-no-alias`; runtime execution/value remains open.
 - `menuOverlayInit` dispatches the halfword at `0x800CFF50`; its eight
   generated callers pass `{9,2,2,3,3,8,3,3}` and use state/asset/unlock/
   counter predicates, with no local controller, timer, or demo read.
@@ -206,14 +211,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1080 | Bounded static gate audit identified `s4=0x80130B10`, so `0x8003E07C` reads `0x80130B30` (`D_80130B10+0x20`). `runIdleFramesAndLoadSaveData` stores constant `1` at `0x8006DAB8`; the reset routine clears the 0x28-byte containing block. Generated and companion evidence selects static `H-gate-writer`; runtime execution/value remains open. |
 | s1081 | Bounded audit found the sole generated caller at `mainGameLoop:0x8003E010`; all save-loop branches rejoin the common tail, and the unconditional `0x8006DAB8` store writes `1` after reset. Companion ordering annotation agrees. Selects static `H-writer-reached`; later clobbers and runtime reachability remain open. |
 | s1082 | Complete post-return generated/companion alias census found 67 offset-`0x20` byte stores but no concrete `0x80130B30` writer after `runIdleFramesAndLoadSaveData` and before the `0x8003E07C` gate read. The only exact target is the known in-callee `0x8006DAB8` store; main-loop writes are unrelated. Selects static `H-no-later-clobber`; loader/DMA ownership remains outside the source census. |
+| s1083 | Bounded `loadOverlay`/DMA audit found fixed overlay code destination `0x800A5130` and BSS clears at `0x8010B6D0`, `0x800CD520`, and `0x800B0940`; host PI forwards these destinations and does not synthesize a target write. Selects static `H-loader-no-alias`; runtime gate value/reachability remains open. |
 
 ## Ranked next steps
 
-1. Perform one bounded static audit of `loadOverlay`'s DMA destination and
-   host overlay-loader writes after `runIdleFramesAndLoadSaveData` returns and
-   before the `mainGameLoop` gate at `0x8003E07C`; classify whether that opaque
-   path can touch `0x80130B30`. Do not arm a freelist watch without an
-   independently observed `0x6abxxx` hangar-origin 512 transition.
+1. Run the retail oracle with whole-RDRAM and VI/PIF positive controls plus a
+   physical write watch on `0x130B30:0x130B31`, using the established eleven-
+   Start schedule. A target write with a guest PC distinguishes gate execution
+   from the current static-only result; a controlled zero while the run reaches
+   only width 320 leaves the state gate unresolved. Do not arm a freelist watch
+   without an independently observed `0x6abxxx` hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

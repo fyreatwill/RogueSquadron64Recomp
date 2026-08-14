@@ -62690,3 +62690,25 @@ those remain the next boundary. No mitigation was added.
 ## Session 1082 (2026-08-14) — censused post-return gate aliases
 
 Ran the prescribed bounded static census, without building or running the game. The generated tree contains 67 `MEM_B(0X20, ...)` byte stores, but none is a concrete write to `0x80130B30` after `runIdleFramesAndLoadSaveData` returns and before `mainGameLoop` reads the byte at `0x8003E07C`. The only exact target is the known `0x8006DAB8` store inside `runIdleFramesAndLoadSaveData`; the intervening main-loop writes target unrelated globals. The companion tree has no assignment to the target byte. This selects static `H-no-later-clobber` and rules out a generated/companion post-return clobber. The `loadOverlay` call's host/DMA destination remains outside this source census and is the next bounded audit; this is static-source evidence, not runtime reachability.
+
+## Session 1083 (2026-08-14) — audited overlay DMA gate alias
+
+Ran the prescribed bounded static audit without building, running the game, or
+running the retail oracle. `loadOverlay` has three fixed descriptor cases. All
+three copy overlay code to `0x800A5130`; their post-DMA zero fills target
+`0x8010B6D0` (size `0x1B30`), `0x800CD520` (size `0x2EC0`), or `0x800B0940`
+(size `0x15B0`). The generated `processOverlayDmaStruct` passes each
+descriptor's source, destination, and size to the DMA helper, and the host
+`osPiStartDma_recomp` forwards the descriptor DRAM address unchanged to
+`do_dma`; its overlay-registration hook only updates the function map for
+ROM-to-RDRAM transfers. None of these ranges can write `0x80130B30`.
+
+This selects static `H-loader-no-alias` and rules out the overlay loader as a
+post-return clobber of the gate byte. It does not prove that the known
+`0x8006DAB8` writer executes in the retail attract route, establish the runtime
+gate value, or explain why the oracle remains at width 320. No mitigation or
+runtime conclusion was added.
+
+ORIGIN: generated `loadOverlay`/`processOverlayDmaStruct`, companion overlay
+descriptor notes and symbols, and bounded host `do_dma`/`osPiStartDma_recomp`
+inspection; no game data or runtime behavior was changed.

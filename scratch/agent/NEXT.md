@@ -1,32 +1,34 @@
-# NEXT work unit (s1083)
+# NEXT work unit (s1084)
 
 HYPOTHESIS-ID: oracle-512-state-gate-owner
 
-Run exactly one bounded static audit of `loadOverlay`'s DMA destination and
-host overlay-loader writes after `runIdleFramesAndLoadSaveData` returns and
-before the `mainGameLoop` gate at `0x8003E07C`. Do not build, run the oracle,
-change the input schedule, or arm a freelist watch.
+Run exactly one retail-oracle measurement using the established eleven-Start
+schedule. Do not build the port or change the schedule. Use the debugger-on
+oracle with a whole-RDRAM positive-control write watch, the existing PIF and VI
+controls, and a physical write watch on `0x130B30:0x130B31`.
+
+Expected command shape (use the configured core path from prior oracle
+recipes):
+
+```sh
+tools/oracle/build/rs64_oracle --core "$ORACLE_CORE" --rom \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --secs 120 --press 6:start,11:start,16:start,21:start,26:start,31:start,\
+36:start,41:start,46:start,51:start,56:start --hold-ms 150 \
+  --watch-write 0x0:0x800000 --watch-write 0x130B30:0x130B31 \
+  --vi-trace --pif-trace
+```
 
 Competing hypotheses and discriminator:
 
-* `H-loader-no-alias`: loader/DMA destinations exclude `0x80130B30`, so the
-  static no-later-clobber result survives the opaque call.
-* `H-loader-alias`: a loader/DMA write can touch the target byte before the
-  gate.
-* `H-loader-open`: the host/loader path is not statically traceable enough to
-  classify its destination.
+* `H-gate-write-exec`: target writes occur with a guest PC before/around the
+  expected transition.
+* `H-gate-not-reached`: whole-RDRAM/PIF/VI controls pass, but the target write
+  is absent and the run remains width 320.
+* `H-gate-unresolved`: controls or phase transition fail, so the target null is
+  not interpretable.
 
-Discriminating measurement: the loader's concrete destination/range selects
-`H-loader-no-alias` or `H-loader-alias`; an unresolved destination selects
-`H-loader-open`.
-Before any build, run:
-
-```sh
-rg -n -S '80130B30|D_80130B10|MEM_B\(0X20|MEM_B\(0x20' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs patches src docs scratch tools --glob '*.{c,h,cpp,md,txt,sh}'
-rg -n -S '80130B30|D_80130B10|0x80130B30' \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64 --glob '*.{c,h,txt,s}'
-```
-
-Then inspect only the bounded `loadOverlay` implementation, its DMA/host
-helpers, and overlay destination symbols. Do not run a build or runtime probe.
+Discriminating measurement: a target write with an attributed guest PC selects
+`H-gate-write-exec`; an absent target write with positive controls and no 512
+hangar transition selects `H-gate-not-reached`; failed controls select
+`H-gate-unresolved`.
