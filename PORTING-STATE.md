@@ -62220,3 +62220,29 @@ conclusion follows.
 
 ORIGIN: generated `RecompiledFuncs/funcs_30.c` and bounded cross-file search;
 no guest value, runtime behavior, or writer was changed.
+
+## Session 1059 (2026-08-14) — enumerated ordinary hangar frame-return stores
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. The exact generated-store census found three
+word stores to `0x800CD6D4` (`0x800AB14C`, `0x800AC914`, and `0x800AD0DC`) and
+no word store to `0x800CD6D0`; the only exact-address write there is a byte
+store at `0x800A9424` in `loadCutsceneAssetsByIndex`.
+
+The `0x800AB14C` writer stores `0x00FFFFFE` only after
+`getControllerNewButtonsPressed` reports B (`0x4000`) and
+`isPlayerShipActive` reports inactive, so it classifies as the already-known
+input-gated sentinel path. The two ordinary `0x800CD6D4` stores load a byte
+from the indexed table at `0x800D-0x3C08 + D_800D291C`, then store it as the
+selected hangar value; neither site reads controller, timer, demo, or attract
+state. Their immediate helper is `updateTextOverlayLookupEntry`, and the table
+producer remains unresolved. The fallback word has no generated direct writer
+in this tree. This selects `H-frame-word-boundary` for the ordinary producer
+question while preserving the separate `H-frame-word-input` sentinel result.
+
+This rules out a direct ordinary-word controller/timer/demo writer at the
+enumerated sites, but does not classify the unresolved table/data producer.
+
+ORIGIN: generated `RecompiledFuncs/funcs_27.c` and `funcs_28.c`, with bounded
+cross-file literal-offset search; no guest value, runtime behavior, or writer
+was changed.

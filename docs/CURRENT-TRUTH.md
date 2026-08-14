@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1058 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1059 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -455,6 +455,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1056 | Exact selector-zero store audit: only `0x800C5AF4` (case-2 radar-result mismatch) and `0x800C5B3C` (unconditional case-5 results screen) write literal zero; neither has a local controller/timer/demo/attract predicate. Selects `H-selector0-state`; upstream selector production remains open. |
 | s1057 | Complete `runHangarSelectionFrame` return audit: the `0x00FFFFFE` sentinel requires newly pressed B (`0x4000`) plus inactive player state; the ordinary return is selected from `0x800D:0xFFFFD6D4` or fallback `0xFFFFD6D0` after `accumulateShipThrottleCharge`. Selects `H-frame-ret-input` for the sentinel path; normal return producer remains open. |
 | s1058 | Audited `accumulateShipThrottleCharge`: ship/charge state and threshold constants are its only predicates; it returns 1 only when the charge counter reaches 7, otherwise 0. Selects `H-throttle-ret-state`; the two ordinary return-word producers remain an explicit generated-source boundary. |
+| s1059 | Enumerated direct generated stores for the two ordinary frame-return words. `0x800CD6D4` has one B/inactive-ship sentinel writer and two state/table-derived hangar-exit writers; `0x800CD6D0` has no direct word writer, only one byte store in `loadCutsceneAssetsByIndex`. Selects `H-frame-word-input` only for the already-known sentinel path; ordinary producer classification remains `H-frame-word-boundary` pending the unresolved table/data producers. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -483,11 +484,13 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 2. The normal frame-return producer is now classified as state-shaped:
    `accumulateShipThrottleCharge` has no local controller, timer, demo, or
    attract source and returns 1 only when its ship charge counter reaches 7.
-   The two data words it selects remain an explicit writer boundary. The next
-   bounded static lead is to enumerate their direct generated stores and the
-   immediate callers of any unresolved helper; do not infer their meaning from
-   the values or arm a freelist watch until the retail oracle reaches a
-   hangar-origin phase.
+   Direct-store enumeration found two state/table-derived `0x800CD6D4` stores,
+   one B/inactive-ship sentinel store at that address, and no direct word store
+   to `0x800CD6D0` (only a byte store during cutscene-asset setup). The next
+   bounded static lead is to inspect the immediate callers and data producers
+   of the two state/table-derived hangar-exit stores; do not infer their
+   meaning from values or arm a freelist watch until the retail oracle reaches
+   a hangar-origin phase.
 3. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume
    only with a new discriminator or independent ground truth.
