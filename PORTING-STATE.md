@@ -59420,3 +59420,31 @@ independent runtime writer/value evidence.
 ORIGIN: exhaustive allocator reference, audio-overlay `jalr`, comparator
 target-setup, overlay-registration, and companion-symbol inventory; no guest
 value mutation or mitigation.
+
+## Session 947 (2026-08-13) — remaining audio `+0x64` writers are sentinels/copy or unrelated fade state
+
+Performed the planned source-only M3 writer/value-flow audit for the voice-record handle field at `+0x64`. No build, game run, soak, generated-source edit, guard, mitigation, or behavior change was made.
+
+The exhaustive funcs_21–23 store inventory found seven voice-record sites:
+`0x800897B8`, `0x80089814`, and `0x80089A9C` write the `-1` sentinel in
+sound-macro cleanup/reuse paths; `0x8008C1C4` copies `$s1` in the
+tick-audio-channel release path; `0x8008DA68`, `0x8008DB80`, and `0x8008DC84`
+write `-1` in release/stop-by-handle/stop-all paths. The remaining three
+overlay stores at `0x8008F534`, `0x8008F5AC`, and `0x8008F5D0` are in
+`advanceVolumeFadeEnvelope` and operate on its float fade field, not the
+voice-record handle. No incompatible writer was found.
+
+The independent second static line is the indirect-edge and companion-symbol
+cross-check: funcs_21–23 contain only the generic comparator `jalr` at
+`0x80085C70`; the companion metadata identifies it as a comparator callback
+and adds no allocator-targeted edge. The companion file names
+`allocVoiceHandleNode` and `startNoteOnVoice` but does not provide a hidden
+writer or caller. This does not establish H-stop-voices-by-handle-index-valid:
+runtime indirect function-pointer reachability, `$s1` value legitimacy, and
+the complete handle lifecycle remain open. H-stop-voices-by-handle-index-valid
+and H-stop-voices-by-handle-index-mismatch are not selected;
+H-stop-voices-by-handle-index-unclassified remains selected.
+
+ORIGIN: exhaustive generated `+0x64` store/field-context inventory plus
+independent audio-overlay `jalr` and companion-symbol cross-check; no guest
+value mutation or mitigation.
