@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s976 (2026-08-13). The active blocker is authoritative
+Reviewed through s977 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -298,6 +298,14 @@ closed; M3 work is limited to systematic idiom-class audits.
   wrapper target remains in `x3` through `br x3`. This selects recipe/toolchain
   state over LTO lowering or final-link reshaping and does not authorize a
   runtime change.
+- s977 forced a clean all-LTO rebuild with the recorded DEBUGGER/macOS/
+  Homebrew recipe; the fresh `/tmp/s977-lto.o` and dylib again emit `w2=3`
+  with `w3` unset at both callback calls. A one-variable arm compiling only
+  `dbg_breakpoints.o` with `-fno-lto` and relinking the same object set emits
+  `w2=4,w3=3` at both sites. This refutes recipe nondeterminism for the
+  reproduced command and independently selects `dbg_breakpoints.c` LTO
+  treatment as the smallest corrective boundary; no retail or runtime claim
+  follows.
 
 ## Recent evidence ledger
 
@@ -351,6 +359,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s974 | From a fresh all-LTO baseline, non-LTO `memory.o` plus LTO `dbg_breakpoints.o` remains bad, while LTO `memory.o` plus non-LTO `dbg_breakpoints.o` is correct at both callback sites. This selects the `dbg_breakpoints.c` LTO transformation boundary; no runtime or retail conclusion follows. |
 | s975 | LTO `dbg_breakpoints.o` IR still defines a four-argument callback, while non-LTO object code saves `x3` and the all-LTO linked dylib omits `x3` and substitutes constant `4` in the first callback diagnostic. The non-LTO dylib preserves `w2=4,w3=3`. This selects LTO lowering of `dbg_breakpoints.c` at link time; no runtime or retail conclusion follows. |
 | s976 | Preserved all-LTO object and final dylib both retain `x0=pc,x1=address,x2=size,x3=flags`; both wrapper call sites emit `w2=4,w3=3`, and `br x3` preserves the indirect target. The s975 mismatch is recipe/toolchain-state dependent; no runtime or retail conclusion follows. |
+| s977 | Forced clean all-LTO reproduces the bad `w2=3`/unset-`w3` shape; compiling only `dbg_breakpoints.o` with `-fno-lto` restores `w2=4,w3=3` at both sites. The smallest corrective boundary is independently selected; retail remains unevaluable. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -368,11 +377,11 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch. s976 reproduced a correct all-LTO object and dylib,
-   selecting recipe/toolchain state after s975's mismatch. Compare the exact
-   expanded s975 and s976 build/link environments and reproduce the smallest
-   one-variable difference; do not infer retail behavior or change the runtime.
+3. Use the corrected oracle arm (only `dbg_breakpoints.o` compiled with
+   `-fno-lto`) for one bounded PIF read-watch run with a whole-RDRAM positive
+   control. If the callback entry and return markers survive, the prior PIF
+   crash was an all-LTO artifact; if it still crashes, inspect the corrected
+   callback path before any retail phase conclusion.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -380,40 +389,32 @@ entries and do not authorize mitigations.
 
 ## Next work unit
 
-HYPOTHESIS-ID: oracle-pif-breakpoints-recipe
+HYPOTHESIS-ID: oracle-pif-callback-runtime
 
-Run one bounded static recipe-diff experiment. Capture `make -pn` and
-`make -n` for the known-bad s975 all-LTO recipe and the known-good s976
-recipe, then compare feature variables, expanded compile/link flags, object
-lists, and library search paths. Rebuild only the smallest one-variable
-variant that the diff identifies, preserving `/tmp/s977-lto.o`; inspect the
-callback entry and both wrapper call sites with `nm` and `otool -tvV`. Do not
-edit the recomp runtime or retry retail PIF/callback hypotheses.
+Run one bounded external-oracle PIF read-watch arm using the freshly linked
+oracle dylib whose only non-LTO object is `dbg_breakpoints.o`. Preserve a
+whole-RDRAM write positive control, enable VI polling, and compare the
+wrapper/callback markers with the exit code and VI count. Do not edit the
+recomp runtime.
 
 Competing hypotheses:
 
-- H-pif-breakpoints-recipe-feature: `DEBUGGER=1` or another feature/input
-  difference changes which callback-bearing objects enter the all-LTO link.
-- H-pif-breakpoints-recipe-link: overwritten macOS dylib flags or library
-  search paths alter the linker's LTO materialization or selected inputs.
-- H-pif-breakpoints-recipe-toolchain: the same expanded recipe still produces
-  different callback code, selecting compiler/linker nondeterminism or a
-  stale external artifact.
+- H-pif-callback-artifact: the prior pre-start `rc=139` was caused by the
+  all-LTO callback lowering; the corrected arm reaches callback return.
+- H-pif-callback-path: the corrected ABI still crashes at callback entry or
+  return, selecting a remaining debugger callback/path defect.
+- H-pif-phase: the corrected arm survives, but retail remains at VI 320 and
+  callback-table reachability is still phase-unevaluable.
 
-Discriminating measurement: the first expanded flag/object difference that
-reproduces the callback mismatch. A feature/object-list difference selects
-recipe-feature; a linker-input/flag difference selects recipe-link; identical
-expanded recipes with divergent fresh artifacts selects recipe-toolchain.
+Discriminating measurement: whole-RDRAM writes must fire; then the PIF
+wrapper pre-callback, callback first-statement, and post-callback markers are
+compared with exit status and VI count. Return/completion selects
+H-pif-callback-artifact; pre-return crash selects H-pif-callback-path;
+survival with VI 320 selects H-pif-phase.
 
-Exact commands:
+Exact command:
 
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix && make -pn DEBUGGER=1 > /tmp/s977-good-vars.txt && make -n all DEBUGGER=1 LDFLAGS="-framework CoreFoundation -dynamiclib -Wl,-object_path_lto,/tmp/s977-lto.o" LDLIBS="-lm -ldl -lz -L/opt/homebrew/opt/libpng/lib -lpng16 -L/opt/homebrew/lib -lSDL2main -lSDL2 -Wl,-framework,Cocoa -L/opt/homebrew/opt/freetype/lib -lfreetype -L/opt/homebrew/Cellar/binutils/2.47/lib -lopcodes -lbfd -framework OpenGL" > /tmp/s977-good-link.txt`
-
-`rg -n "^(DEBUGGER|OPTFLAGS|LDFLAGS|LDLIBS|SOURCE|OBJECTS) ?[:+]?=" /tmp/s977-good-vars.txt; rg -n "clang\+\+.*-object_path_lto|DEBUGGER|lopcodes|lbfd" /tmp/s977-good-link.txt`
-
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix && make clean && make all DEBUGGER=1 LDFLAGS="-framework CoreFoundation -dynamiclib -Wl,-object_path_lto,/tmp/s977-lto.o" LDLIBS="-lm -ldl -lz -L/opt/homebrew/opt/libpng/lib -lpng16 -L/opt/homebrew/lib -lSDL2main -lSDL2 -Wl,-framework,Cocoa -L/opt/homebrew/opt/freetype/lib -lfreetype -L/opt/homebrew/Cellar/binutils/2.47/lib -lopcodes -lbfd -framework OpenGL"`
-
-`file /tmp/s977-lto.o libmupen64plus.dylib && nm -a /tmp/s977-lto.o libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks" && otool -tvV libmupen64plus.dylib | rg -n -A 45 "_check_breakpoints_on_mem_access:|_read_with_bp_checks:"`
+`env DYLD_LIBRARY_PATH=/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build/Debug/rogue_squadron.z64 --secs 8 --watch-write 0x0:0x800000 --watch-read 0x1fc00000:0x1fc01000 --vi-poll --vi-trace`
 
 ## Closed and parked
 

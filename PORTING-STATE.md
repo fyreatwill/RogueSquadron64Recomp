@@ -59997,6 +59997,29 @@ for source, object, and dylib.
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 977 (2026-08-13) — dbg_breakpoints non-LTO arm restores callback ABI
+
+Ran the prescribed static recipe comparison and forced a clean all-LTO
+external-oracle rebuild with `DEBUGGER=1`, explicit `all`, macOS dynamic-link
+flags, and the Homebrew binutils/OpenGL inputs. The fresh `/tmp/s977-lto.o`
+and dylib both reproduce the bad callback call shape at both wrapper sites:
+`w0=pc`, `x1=address`, `w2=3`, with `w3` unset before
+`_check_breakpoints_on_mem_access`. This makes the result reproducible for
+the recorded command rather than an unexplained toolchain fluctuation.
+
+Built the smallest mixed arm by recompiling only `dbg_breakpoints.o` with
+`OPTFLAGS=-O3 -fno-lto` and relinking the existing object set with the same
+LTO flags and library inputs. The resulting dylib is Mach-O ARM64 and both
+wrapper sites emit `w2=4,w3=3` before the callback. This independently selects
+the LTO treatment of `dbg_breakpoints.c` as the corrective boundary. No retail
+run, runtime change, or mitigation was made.
+
+Evidence: `/tmp/s977-lto.o`, `/tmp/s977-armB-lto.o`, the fresh oracle dylib,
+`file`, `nm`, `make -nB`, and `otool -tvV` output. Static build evidence only.
+
+ORIGIN: external oracle source-to-artifact build audit; no guest value was
+changed and no mitigation was landed.
+
 ## Session 976 (2026-08-13) — Preserved all-LTO artifacts retain callback ABI
 
 Ran the planned all-LTO oracle rebuild after correcting recipe-state failures
