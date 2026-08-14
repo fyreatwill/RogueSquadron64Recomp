@@ -129,6 +129,20 @@ closed; M3 work is limited to systematic idiom-class audits.
   caller. The structure is coherent, but channel-field lifecycle and runtime
   legitimacy remain unproven; H-channel-context-field-unclassified remains
   selected.
+- s951 closed the two remaining edges: `funcs_21–23` contain exactly one
+  `LOOKUP_FUNC`/`jalr` site total (`funcs_21.c:2837`, a generic comparator
+  callback in `binarySearchWithComparator`, unreachable from
+  `tickAudioChannel`/`soundMacroOpKeyOnNote`), so no indirect dispatch can
+  reach the channel object with an unaudited writer; and
+  `tickAudioChannel`'s sole caller `tickAllAudioChannels` (`funcs_23.c:4061`)
+  passes `$a0 = 0x8013D880 + index*0x17C` — fixed-array indexing, not a
+  computed pointer. Both pre-registered discriminator conditions are met, so
+  this selects **H-channel-context-field-sentinel-contract**, closing the
+  `m3-audio-stop-voices-by-handle-contract` thread (active since s938).
+  Residual curiosity (unverified, non-blocking): the store target
+  `0x8013D894` is exactly `0x8013D880 + 0x14`, the same base/stride as the
+  channel array itself, i.e. the store may write into the channel's own
+  struct rather than a separate table — not confirmed this session.
 
 ## Recent evidence ledger
 
@@ -156,6 +170,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s948 | Exhaustive `+0x64` read inventory: five voice/sorted-node reads, one unrelated fade float, and one unresolved sound-macro context read; stack spill excluded. No mismatch or mitigation conclusion. |
 | s949 | One direct sound-macro caller (`tickAudioChannel`) passes `$s0`; its context `+0x64` feeds the `0x17C`-stride table. Six table writers were found, but channel-field provenance and read-side consumers remain unresolved. |
 | s950 | Complete generated audio inventory found eight `-0x276C` table stores, no reads, and only the `soundMacroOpKeyOnNote` store sourced from channel `+0x64`; all generated channel-field writers are `-1` stores. Structure is coherent but lifecycle/legitimacy remains unclassified. |
+| s951 | Closed the channel `+0x64` hypothesis thread: no reachable indirect-dispatch edge and fixed-array channel-object origin select H-channel-context-field-sentinel-contract. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -163,10 +178,13 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign by classifying the `tickAudioChannel`
-   channel-context `+0x64` field and consumers of the table at
-   `0x8013D894 + index*0x17C`; enumerate all channel-object writers/readers,
-   computed-address consumers, and companion-symbol contracts.
+1. The `tickAudioChannel`/`stopVoicesByHandle` M3 class (s938–s951) is
+   CLOSED — see s951. Next M3 idiom-class candidate: `slotDispatcherIter+872`
+   is the terminal SIGBUS in the large majority of recent `s790_postsec2_reachability`
+   soak runs (s765, s820, s821, s832, s837, s840, s844 — see
+   scratch/agent/SOAK-RESULTS.md) after VI 1024 and all positive controls
+   pass; it has never itself been idiom-class audited (grep-enumerated,
+   classified, guarded-or-proven-dead). Start there.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
@@ -176,34 +194,49 @@ entries and do not authorize mitigations.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
+HYPOTHESIS-ID: m3-slotdispatcheriter-872-class
 
-Audit the remaining channel-object origin and indirect-dispatch edges for
-`+0x64`: enumerate all audio-overlay function-pointer tables/registrations and
-all callers that can pass a channel object to the `+0x64` writers/readers;
-cross-check whether any non-generated or indirect writer can replace the
-observed `-1` sentinel. Source-only; do not add a guard, change game behavior,
-build, or run a soak.
+`slotDispatcherIter+872` is the single most recurring terminal SIGBUS across
+the `s790_postsec2_reachability` soak queue (7+ hits, always after VI 1024 and
+all positive controls pass — see ranked backlog item 1). No prior session has
+idiom-class audited it. Source-only first pass: grep-enumerate every access
+this function makes at/near the `+872` offset, identify what object it
+dereferences, find its writers, and classify each write as legitimate,
+sentinel, or wild — following the `-0x25A4` idiom-class model (grep-enumerate
+the whole class, classify every site, guard or prove dead, close the class).
+Do not build, run the game, or land a guard/mitigation until the writer set
+is classified — a mitigation without a named writer and a legitimacy verdict
+violates iron rule 11 (see `tools/agent/ITERATION.md`).
 
 Competing hypotheses:
 
-- H-channel-context-field-valid: channel `+0x64` is a legitimate value for
-  the per-slot table and every computed consumer uses the same contract.
-- H-channel-context-field-unclassified: a writer, computed consumer, or
-  object-origin edge remains unresolved.
-- H-channel-context-field-sentinel-contract: all reachable channel-field
-  writers intentionally maintain `-1`, making the table write a deliberate
-  sentinel propagation rather than an invalid voice value.
-- H-channel-context-field-mismatch: a channel-field writer or table consumer
-  treats `+0x64` as an incompatible field/value.
+- H-slotdispatcheriter-872-legitimate-oob: the dereferenced object/offset is
+  legitimate but the crash is a real out-of-bounds index reaching it (a real
+  bug to fix, not a stub artifact).
+- H-slotdispatcheriter-872-stale-pointer: the object was freed/reused and the
+  `+872` dereference reads a stale or wild pointer (freelist-adjacent, per
+  the s640–s659 precedent — do not mitigate without naming the writer).
+- H-slotdispatcheriter-872-stub-artifact: the crash is downstream of an
+  audio- or another degenerate-path stub rather than a genuine game-state bug.
+- H-slotdispatcheriter-872-unclassified: the writer/object-origin set is not
+  yet fully enumerated.
 
-Discriminating measurement: complete audio-overlay function-pointer
-registration/call edges and channel-object origin set for every `+0x64` access.
-A reachable non-sentinel writer or incompatible object selects mismatch; only
-sentinel writers with closed dispatch/origin edges select the sentinel
-contract; any unresolved indirect edge selects unclassified.
+Discriminating measurement: complete generated-source inventory of
+`slotDispatcherIter`'s `+872`-offset access(es) and every writer of the
+object/field it reads, cross-checked against companion symbols. A reachable
+writer with a provably invalid/stale value selects stale-pointer; a
+consistently legitimate writer set with the crash still reachable via normal
+control flow selects legitimate-oob; provenance rooted in a known stub path
+selects stub-artifact; anything unresolved selects unclassified.
 
-Exact commands: `rg -n -C 10 "0x8008BC10|tickAudioChannel|0X64|0x64|jalr|LOOKUP_FUNC" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`; `rg -n -C 8 -- "-0X276C|-0x276C|-0X271C|-0x271C|0X17C|0x17C|0x8013D894|0x8013D880" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`. No game build or soak is planned.
+Exact starting commands (adjust paths once the function's guest address is
+confirmed via `main_overlay.txt` or `nm`/symbol lookup — it was not looked up
+this session):
+
+`rg -n "slotDispatcherIter" ../rogue_squadron64/symbol_files/main_overlay.txt`
+then locate its generated body in `../N64Recomp/RecompiledFuncs/funcs_*.c` by
+guest address and grep for the offset(s) near `+872` (`0x368`) from whatever
+base register it uses.
 
 ## Closed and parked
 

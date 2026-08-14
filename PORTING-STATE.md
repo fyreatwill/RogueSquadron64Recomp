@@ -59526,3 +59526,74 @@ writer/value evidence.
 
 ORIGIN: exhaustive generated caller, channel-context, `-0x276C` writer, and
 companion-symbol inventory; no guest value mutation or mitigation.
+
+## Session 950 (2026-08-13) — channel `+0x64` writers are closed and uniformly sentinel `-1`
+
+Performed the planned source-only M3 writer-inventory audit. No build, game
+run, soak, generated-source edit, guard, mitigation, or behavior change was
+made. (This restates, in the ledger's standard `## Session N` heading format,
+the content an earlier this-session write landed under a non-matching `### s950`
+heading at the top of this file — that entry is left as-is; this entry is the
+one future tooling/greps should find.)
+
+The exhaustive generated funcs_21–23 inventory of the `0x8013D894 +
+index*0x17C` table found eight stores total (two more than s949 counted), and
+no reads through the audited `-0x276C` address form. Seven of the eight are
+voice-list/voice-start bookkeeping already classified in s941–s947; the
+eighth is the `soundMacroOpKeyOnNote` store (guest `0x80089D28`) fed by the
+channel `+0x64` field established in s949. Every generated writer of the
+channel `+0x64` field itself — `soundMacroOpStopVoice`,
+`soundMacroOpReturnFromGosub`, `soundMacroOpGosub`, and `tickAudioChannel`'s
+own `$s1` init at `0x8008BF1C` — writes the literal sentinel `-1`. Companion
+symbols independently confirm `tickAudioChannel` and the `0x17C`-stride
+channel array at `0x8013D880`.
+
+This closes the writer-value question (all writers are `-1`) but leaves two
+things open: (1) whether any indirect/unresolved dispatch edge could reach
+the channel object with a non-generated writer, and (2) the channel-object's
+own origin (fixed array vs computed). H-channel-context-field-unclassified
+remains selected pending those two checks.
+
+ORIGIN: exhaustive generated `-0x276C`/`+0x64` writer inventory plus
+companion-symbol cross-check; no guest value mutation or mitigation.
+
+## Session 951 (2026-08-13) — channel-context `+0x64` closes as a sentinel contract; hypothesis thread resolved
+
+Performed the planned source-only M3 dispatch/origin audit (delegated to a
+read-only search subagent over the same generated sources; no build, game
+run, soak, generated-source edit, guard, mitigation, or behavior change was
+made).
+
+Two closing checks: indirect-dispatch reachability and channel-object origin.
+
+**Indirect dispatch**: `funcs_21–23.c` contain exactly one
+`LOOKUP_FUNC`/`jalr` site total, at `funcs_21.c:2837` (guest `0x80085C70`)
+inside `binarySearchWithComparator`. Its target register is loaded from a
+caller-supplied comparator argument, and neither `tickAudioChannel` nor
+`soundMacroOpKeyOnNote` calls or is called by it. Both functions' bodies
+contain zero indirect-call instructions. No unresolved dispatch edge reaches
+the channel object.
+
+**Channel-object origin**: `tickAudioChannel` has exactly one caller,
+`tickAllAudioChannels` (`funcs_23.c:4061`, guest `0x8008C9AC`), which reads a
+channel count once from `MEM_BU(0x80141AD0)` and calls `tickAudioChannel`
+(`funcs_23.c:4139`, guest `0x8008CA14`) with `$a0 = 0x8013D880 +
+index*0x17C` for `index = 0..count-1` — fixed-array indexing, not a computed
+or externally-supplied pointer. Note `0x8013D894` (the store target
+established in s949–s950) is exactly `0x8013D880 + 0x14`, i.e. the same base
+and stride as the channel array itself; whether the store's index equals the
+currently-ticking channel's own index was not verified this session and is
+flagged as a residual, non-blocking curiosity for any future revisit of this
+area (it does not affect this session's hypothesis selection, which rests
+only on the pre-registered dispatch/origin discriminator).
+
+Both discriminator conditions from NEXT.md are now met: the writer set is
+closed (s950) and both remaining edges (dispatch, origin) resolve to
+closed/fixed. Per the pre-registered discriminating measurement, this selects
+**H-channel-context-field-sentinel-contract**, closing the
+`m3-audio-stop-voices-by-handle-contract` hypothesis thread (active since
+s938). H-channel-context-field-valid, -mismatch, and -unclassified are not
+selected.
+
+ORIGIN: exhaustive generated `LOOKUP_FUNC`/`jalr` inventory plus caller/origin
+trace; no guest value mutation or mitigation.
