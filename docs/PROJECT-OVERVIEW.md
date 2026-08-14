@@ -2744,6 +2744,13 @@ change was made.
   internally consistent. The stop path calls `freeSynthVoiceFromActiveList`
   and `stopVoiceMarkRetrigger`, not `musyxStopVoice`; base/count lifecycle,
   active-list pointer legitimacy, and register-indirect callers remain open.
+- s940 `stopVoicesByHandle`: generated code and companion symbols agree that
+  `D_8013D880` is 32 records of stride `0x17C`, with the active count at
+  `0x80141AD0`. Count writers clamp to `0..0x20`; reset, release, stop, and
+  macro-stop paths clear record `+0` and write `-1` to `+0x64`, while
+  `startNoteOnVoice` writes the constructed handle. The four direct callers
+  pass linked-list node `+0x8` handles, but node `+0xC` index provenance and
+  complete runtime value legitimacy remain open (single-source static result).
 
 These results leave the active M3 thread at `stopVoicesByHandle`, with no
 mitigation authorized absent an ORIGIN naming the writer and assessing value

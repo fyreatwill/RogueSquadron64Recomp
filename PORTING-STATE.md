@@ -59206,3 +59206,35 @@ evidence.
 ORIGIN: complete generated caller/callee, list-node and index provenance,
 derived access ranges, helper edges, guard coverage, termination, and
 companion-symbol inventory; no value mutation or mitigation.
+
+## Session 940 (2026-08-13) — voice-record base/count lifecycle is structurally coherent but not fully classified
+
+Performed the planned source-only M3 lifecycle audit for `stopVoicesByHandle`
+(`0x8008DA98`). Enumerated generated writers and readers for the 32-record
+`D_8013D880` array, its `0x17C` stride, count byte `0x80141AD0`, record `+0`
+active field, record `+0x64` handle field, and the `-1` sentinel. Cross-checked
+the companion `main_overlay.txt` and decomp symbol metadata. No build, game run,
+soak, generated-source edit, guard, mitigation, or behavior change was made.
+
+The companion data declaration is `type_size:0x17C count:0x20` at
+`D_8013D880`. `setDisplayMode` and `reapplyDisplayMode` validate the count
+against `0x21`, so the stored count is `0..0x20`, matching a 32-entry
+`i < count` walk. `resetMusyXEngineState` initializes every slot's `+0` and
+`+0x64` state to zero and `-1`; release, stop, and sound-macro stop paths clear
+`+0` and write `-1` to `+0x64`; `startNoteOnVoice` writes a constructed handle
+to `+0x64` and an active pointer to `+0`. The four direct callers of
+`stopVoicesByHandle` remain consistent: each passes sorted-list node `+0x8`,
+then the callee reads node `+0xC` as the voice index and masks it to eight bits.
+
+The result rejects full lifecycle classification. The record base, stride,
+count bound, and sentinel writers are compatible in generated code, but the
+source inventory does not independently prove that every node `+0xC` value is
+an in-range slot index before truncation, nor that all register-indirect
+writers/callers preserve the same node contract. H-stop-voices-by-handle-index-
+unclassified remains selected; no mitigation is authorized. This is a
+single-source static result from generated code plus companion symbol metadata,
+not independent runtime writer/value evidence.
+
+ORIGIN: complete generated lifecycle writer/reader, count-range, stride,
+sentinel, caller, node-field, helper-edge, and companion-symbol inventory; no
+guest value mutation or mitigation.

@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s939 (2026-08-13). The active blocker is authoritative
+Reviewed through s940 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -43,7 +43,12 @@ closed; M3 work is limited to systematic idiom-class audits.
   global base/count lifecycle or register-indirect callers. s938 found one
   direct `stopVoiceByKey` caller and a bounded allocator-produced index, but
   the path uses `stopVoiceMarkRetrigger` rather than `musyxStopVoice`; active
-  list pointer and base/count legitimacy remain unproven.
+  list pointer and base/count legitimacy remain unproven. s940 found that
+  `D_8013D880` is a 32-entry `0x17C`-stride record array and that count writers
+  clamp to `0..0x20`; reset/release/stop paths use `-1` for the `+0x64` handle
+  sentinel and note-on constructs the handle. The four
+  `stopVoicesByHandle` callers agree on linked-list node `+0x8` handles, but
+  node `+0xC` index provenance and runtime value legitimacy remain unproven.
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. M4 correctness remains parked behind the active blocker.
 
@@ -62,6 +67,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s936 | Maintenance pass: compacted this file and migrated durable s925–s935 outcomes to PROJECT-OVERVIEW. No experiment ran. |
 | s938 | `stopVoiceByKey` has one direct streamed-voice caller and coherent local index arithmetic; base/count and active-list legitimacy remain open. |
 | s939 | `stopVoicesByHandle` has four direct callers in two song-list walks; handle lookup and termination are coherent, but the node `+0xC` to 8-bit voice-index contract and voice-table lifecycle remain unproven. |
+| s940 | `D_8013D880`/`0x80141AD0` inventory found compatible 32-slot bounds and `-1` handle clearing across reset/release/stop paths, but did not prove node `+0xC` index provenance or runtime value legitimacy. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -69,10 +75,10 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign with a bounded voice-record base/count
-   lifecycle audit for `stopVoicesByHandle` (`0x8008DA98`): enumerate every
-   writer and initializer of the record base, voice count, record handle
-   fields, and sentinel values used by its `0x17C`-stride scan.
+1. Continue the active M3 campaign with a bounded audit of the sorted handle
+   node `+0xC` index writer/initializer contract consumed by
+   `stopVoicesByHandle` (`0x8008DA98`), including every allocator, unlink,
+   reuse, and sentinel path that can populate or invalidate that field.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
