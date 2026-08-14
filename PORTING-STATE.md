@@ -61794,3 +61794,27 @@ remain unevaluated because the sentinel endpoint was never captured. It rules
 out treating this recipe's normal target rows as the missing shade event and
 closes the unchanged M4 capture recipe pending a genuinely new discriminator.
 The next unit is a two-arm retail attract-path input-shape discriminator.
+
+## Session 1039 (2026-08-14) — retail pulse versus hold did not leave attract
+
+Ran the queued retail-oracle discriminator with the repository ROM
+`9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`, preserved
+debugger core `iter974-armB2`, pure interpreter (`debugger=1 emulator=0`), and
+the whole-RDRAM write watch as the same-run positive control. The pulse arm
+used eleven named Start presses at 6,11,...,56 seconds with `--hold-ms 150`;
+the hold arm used the same schedule with `--hold-ms 2000`.
+
+Both arms completed 60 seconds / 3,600 VI, reached the 10,000 whole-RDRAM
+callback threshold, removed watch index 0 with `rc=0`, and produced all eleven
+Start pad edges. Independent VI polling and callback traces stayed at width
+320, origin `0x006dd280`, throughout both arms; neither reached 512, 640, or
+1024. The freelist watch was intentionally not armed.
+
+This selects `H-retail-path-independent` for pulse-versus-hold input shape and
+rules out missed callback observation, failed input attachment, and a simple
+Start-level-versus-edge requirement as explanations for the unchanged phase.
+It does not explain the attract path or make the freelist-writer question
+evaluable. ORIGIN: independent retail oracle whole-RDRAM callback, PIF pad,
+and VI callback/poll controls; no guest value or recomp runtime behavior was
+changed. The next unit is a timing/cadence discriminator, not another hold
+shape repeat.

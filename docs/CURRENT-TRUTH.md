@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1038 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1039 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -109,8 +109,12 @@ retail-oracle callback thread is no longer directory-blocked
   file records `Start = "key(13)"`, while the verified scancode-40 presses
   still produced Start pad words (`0x10000000`). The whole-RDRAM positive
   control reached 10,000 callbacks and was removed; 3,599 VI stayed at width
-  320/origin `0x006dd280`. This closes the local config-order explanation and
+ 320/origin `0x006dd280`. This closes the local config-order explanation and
   leaves the retail phase-path question open; no freelist watch was armed.
+  s1039 tested the same eleven Start events as 150 ms pulses and as 2000 ms
+  holds; both arms stayed at width 320/origin `0x006dd280` after passing the
+  whole-RDRAM control. This selects `H-retail-path-independent` for these
+  input shapes; the hangar phase remains unevaluable.
 
 ## M4 zero-shade evidence
 
@@ -316,13 +320,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1036 | Audited the oracle source order and ran a fresh-config 60-second schedule. CoreStartup precedes input-plugin attachment, whose first startup creates the missing sections; generated `Start = key(13)` nevertheless accepted verified scancode-40 Start presses. The whole-RDRAM control/removal passed and 3,599 VI stayed at width 320/origin `0x006dd280`; no freelist watch was armed. This closes local config ordering and leaves the phase-path explanation open. |
 | s1037 | Added an independent VI-register poll audit and repeated the verified 11-Start schedule. Whole-RDRAM callbacks reached 10,000 and were removed; all 11 presses produced Start pad words, and callback/poll traces stayed at width 320/origin `0x006dd280` for 3,599 VI. Selected `H-retail-attract`; the 512 hangar phase and freelist watch remain unevaluable. |
 | s1038 | Corrected LLE M4 capture reached VI-1024, passed 64/64 stage-1 controls, and produced 683/683/682 stage-10/11/12 rows. No `v6`, `v29`, `acch`, or `accm` endpoint reached `0x8000`; no crash marker appeared. Controlled null; M4 recipe closed pending a new discriminator. |
+| s1039 | Retail oracle pulse-vs-hold discriminator: both eleven-Start arms passed 10,000 whole-RDRAM callbacks with removal `rc=0`, delivered all Start pad edges, and completed 3,600 VI at width 320/origin `0x006dd280`. Selected `H-retail-path-independent` for these input shapes; freelist watch remains unevaluable. |
 
 ## Ranked backlog
 
 1. The retail oracle remains in the width-320 attract path despite verified
-   Start edges and independent VI polling. Do not arm the freelist watch until
-   a 512 hangar-origin phase is reached; further retail work needs a new
-   attract-path discriminator rather than another nominal Start soak.
+   Start edges, long Start holds, and independent VI polling. Do not arm the
+   freelist watch until a 512 hangar-origin phase is reached; next test the
+   timing/cadence of the attract schedule rather than repeating input shape.
 2. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume
    only with a new discriminator or independent ground truth.
