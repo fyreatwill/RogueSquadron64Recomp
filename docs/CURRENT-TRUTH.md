@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1043 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1044 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -333,6 +333,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1040 | Retail oracle cadence discriminator: documented five-second and rapid one-second eleven-Start schedules both passed the 10,000 whole-RDRAM control/removal, delivered all 11 Start pad edges, and completed 3,599 VI at width 320/origin `0x006dd280`. Neither cadence reached 512; timing cadence is not sufficient in this 60-second window, and the freelist watch remains unevaluable. |
 | s1041 | Retail oracle first-input discriminator: eleven 150 ms Start pulses beginning at 1 second versus the documented 6-second start both passed the 10,000 whole-RDRAM control/removal, delivered all 11 Start pad edges, and completed 3,599 VI at width 320/origin `0x006dd280`. Neither first-input timing reached 512; the tested timing window is not sufficient to explain the attract path, and the freelist watch remains unevaluable. |
 | s1042 | Extended the same early-versus-documented Start arms to 120 seconds. Both passed the 10,000 whole-RDRAM control/removal and delivered all 11 Start pad edges; both completed 7,199 VI with no transition beyond width 320/origin `0x006dd280`. This closes duration as an explanation for the tested attract path, while the 512 hangar phase and freelist writer remain unevaluable. |
+| s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
 

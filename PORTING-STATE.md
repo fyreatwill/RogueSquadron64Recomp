@@ -61839,6 +61839,28 @@ was not armed, so its writer remains unevaluable.
 ORIGIN: independent retail-oracle whole-RDRAM callback, PIF pad, and VI
 callback/poll controls; no guest value or recomp runtime behavior was changed.
 
+## Session 1044 (2026-08-14) — reconstructed M4 accumulator remained a controlled null
+
+Ran the bounded offline reconstruction against
+`scratch/agent/soak_results/s1027_m4_accum/run.log`. The checker extracted 682
+complete stage-10/11/12 triplets and applied the runtime's exact accumulator
+high-half and saturation equations to every lane. All 5,456 predicted
+post-VMADH values matched the observed stage-11 `v6` values. No real lane
+contained `0x8000` before saturation, after saturation, or in the observed
+post-VGE stage-12 value.
+
+The checker included independent synthetic controls: one produced `0x8000`
+only through negative saturation, and one carried an in-range `0x8000` middle
+word without saturation; both reached the expected post-VGE value and passed.
+This validates extraction and model behavior, but is a controlled null for the
+real numeric-origin hypotheses. It rules out a reconstruction mismatch as the
+cause of the missing endpoint; saturation versus ordinary arithmetic remains
+unevaluable because the capture contains no endpoint. No runtime or mitigation
+change was made.
+
+ORIGIN: no mitigation or guest value was changed; the result is an offline
+reconstruction of values already emitted by the runtime probe.
+
 ## Session 1043 (2026-08-14) — retail Start+A did not leave width 320
 
 Ran the planned same-build retail-oracle discriminator concurrently for 120
