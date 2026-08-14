@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s957 (2026-08-13). The active blocker is authoritative
+Reviewed through s958 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -219,6 +219,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s955 | Retail oracle positive control passed (15.1M whole-RDRAM writes), but VI stayed 320 and callback-table writes were zero; PIF/input checks did not reach the required phase. Callback writer hypotheses remain unclassified. |
 | s956 | Named-`start` schedule delivered all 11 presses; positive control passed (15,068,831 whole-RDRAM writes), but 5,399 frames stayed at VI 320 and callback-table writes remained zero. No PIF transition was logged; phase remains unevaluable. |
 | s957 | Concurrent undriven/driven controls both passed (10,120,336/10,146,403 whole-RDRAM writes); driven delivered 11 presses, but both stayed at VI 320/origin `0x006dd280` with no PIF trace. Core/setup phase remains selected; callback-table watch is unevaluable. |
+| s958 | Config/help audit plus corrected 30-second pair passed whole-RDRAM controls (5,201,480/5,203,031); driven delivered five `sym=40` presses, but both stayed at VI 320/origin `0x006dd280` with no PIF trace. Timeline is ruled out; input-read/core setup remains phase blocker. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -236,11 +237,12 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Resolve the oracle configuration/phase discrepancy before retrying the
-   callback-table watch: the documented schedule should reach VI 1024, but
-   s957's named-button arm stayed at VI 320 despite 11 delivered presses.
-   Check the actual input plugin/config path and rerun a short undriven/driven
-   phase control without the unsupported `--configdir` argument.
+3. Resolve the oracle input-read/core setup discrepancy before retrying the
+   callback-table watch: s958 confirmed the config section and named-scancode
+   press delivery, but both 30-second arms stayed at VI 320 with no PIF reads.
+   Audit the oracle's plugin attachment and PIF polling path, then run one
+   bounded control that can distinguish “game never reads PIF” from “PIF trace
+   is not attached.”
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -250,10 +252,11 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-Audit the oracle's actual config/input-plugin path, then run a bounded 30-second
-undriven versus named-`start` phase control without `--configdir`. The current
-run proved the watch and press scheduler, but contradicted the documented phase
-timeline, so callback-table nulls remain uninterpretable.
+Audit the oracle source for input-plugin attachment and PIF-trace read timing,
+then run one bounded 30-second positive-control arm with `--press 6:start`
+using `--verbose --vi-poll --pif-trace`, plus the smallest source/config check
+needed to identify whether the game reaches a PIF read. Do not retry the
+callback-table watch yet.
 
 Competing hypotheses:
 
@@ -261,15 +264,17 @@ Competing hypotheses:
   is using a different mapping/config than the documented setup.
 - H-oracle-core-phase: the configured core/RSP/setup genuinely remains at VI
   320 despite accepted button injections.
-- H-oracle-timeline: the exact recipe progresses only after a longer emulated
-  interval, so 30 seconds is insufficient.
+- H-oracle-pif-trace-path: the input plugin is attached and presses are
+  delivered, but the game never reaches its PIF-read loop in the current core
+  setup.
+- H-oracle-pif-instrument: the game does read PIF, but this oracle build's
+  trace hook is not attached to that read path.
 
-Discriminating measurement: command help/config inspection plus paired 30-second
-runs using named `start`, whole-RDRAM watch, `--vi-poll`, and `--pif-trace`.
-An actual config-path/input-map discrepancy selects config-path; VI >320 in
-the corrected arm selects the stale-config explanation; both arms at VI 320
-with the documented plugin path selects core/setup; a late transition only in
-the longer control selects timeline.
+Discriminating measurement: source/config wiring plus verbose runtime evidence
+of input-plugin attachment and PIF reads in the same driven run. Attachment
+failure selects setup; attachment with no PIF reads selects core/setup; PIF
+reads without trace lines selects an oracle trace-hook defect. The whole-RDRAM
+positive control must visibly fire.
 
 Exact starting commands:
 

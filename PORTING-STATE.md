@@ -59749,3 +59749,25 @@ Captures: `scratch/agent/oracle_results/s957_oracle_phase/`.
 
 ORIGIN: retail oracle paired whole-RDRAM controls, VI polling, press delivery
 records, and PIF tracing; no guest value mutation or mitigation was landed.
+
+## Session 958 (2026-08-13) — corrected 30-second oracle pair still at VI 320
+
+Audited the retail-oracle config and frontend wiring, then ran the prescribed
+undriven and named-`start` arms without `--configdir` for 30 seconds. The config
+contains `[Input-SDL-Control1]`, `plugin = 2`, and `Start = "key(13)"`, while
+the oracle help and README document named `start` as the verified SDL2-scancode
+route. Both arms passed the same whole-RDRAM positive control: 5,201,480 and
+5,203,031 writes, with 1,799 and 1,793 VI frames respectively. Both remained at
+VI width 320/origin `0x006dd280`; the driven arm logged all five `sym=40`
+presses, but neither arm produced a PIF-trace record. Both exited cleanly.
+
+This rules out the 30-second timeline hypothesis and a dead watch or press
+scheduler. It does not prove that the game is reading controller input or that
+the callback-table phase is reachable. The active explanation is now the
+retail core/setup or input-read phase; callback-table writes remain
+phase-unevaluable. No build, generated-source edit, guard, mitigation, or
+behavior change was made. Captures: `scratch/agent/oracle_results/s958_oracle_phase/`.
+
+ORIGIN: retail-oracle config/help audit plus paired whole-RDRAM controls,
+VI-poll, press-delivery, and PIF traces; no guest value mutation or mitigation
+was landed.

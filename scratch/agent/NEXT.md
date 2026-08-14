@@ -1,36 +1,32 @@
-# NEXT work unit (s958)
+# NEXT work unit (s959)
 
-Audit the oracle's actual config/input-plugin path, then run a bounded
-30-second undriven versus named-`start` phase control without `--configdir`.
-The s957 run proved the watch and press scheduler, but contradicted the
-documented phase timeline; callback-table nulls remain uninterpretable. No
-build or generated-code edit is needed.
+Audit the oracle source for input-plugin attachment and PIF-trace read timing,
+then run one bounded 30-second positive-control arm with `--press 6:start`
+using `--verbose --vi-poll --pif-trace`. The s958 pair confirmed config/help
+wiring and press delivery but both stayed at VI 320 with no PIF reads. No build
+or generated-code edit is needed.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
 Competing hypotheses:
 
-- H-oracle-config-path: `--configdir` is ignored or the selected input plugin
-  is using a different mapping/config than the documented setup.
-- H-oracle-core-phase: the configured core/RSP/setup genuinely remains at VI
-  320 despite accepted button injections.
-- H-oracle-timeline: the exact recipe progresses only after a longer emulated
-  interval, so 30 seconds is insufficient.
+- H-oracle-config-path: the selected input plugin or config is not the one
+  assumed by the documented recipe.
+- H-oracle-core-phase: the configured core/RSP/setup remains at VI 320 and the
+  game never reaches its PIF-read loop.
+- H-oracle-pif-instrument: the game reads PIF, but this oracle build's trace
+  hook is not attached to that read path.
 
-Discriminating measurement: inspect command/config wiring, then compare paired
-30-second runs using named `start`, a whole-RDRAM positive control,
-`--vi-poll`, and `--pif-trace`. An actual config-path/input-map discrepancy
-selects config-path; VI >320 in the corrected arm selects stale-config; both
-arms at VI 320 with the documented plugin path selects core/setup; a late
-transition only in the longer control selects timeline. The positive control
-must visibly fire in both arms.
+Discriminating measurement: source/config wiring plus verbose runtime evidence
+of input-plugin attachment and PIF reads in the same driven run. Attachment
+failure selects setup; attachment with no PIF reads selects core/setup; PIF
+reads without trace lines selects an oracle trace-hook defect. The whole-RDRAM
+positive control must visibly fire.
 
 Exact starting commands (create the result directory first):
 
-`mkdir -p scratch/agent/oracle_results/s958_oracle_phase`
+`mkdir -p scratch/agent/oracle_results/s959_oracle_phase`
 
-`rg -n "Input-SDL-Control1|Start|plugin" /Users/williambuckley/Documents/Tools/rs64-oracle/cfg`
+`rg -n "Input-SDL-Control1|Start|plugin|pif|PIF|press" /Users/williambuckley/Documents/Tools/rs64-oracle/src /Users/williambuckley/Documents/Tools/rs64-oracle/cfg`
 
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 30 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --pif-trace > scratch/agent/oracle_results/s958_oracle_phase/undriven.log 2>&1`
-
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 30 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --pif-trace --press 6:start,11:start,16:start,21:start,26:start > scratch/agent/oracle_results/s958_oracle_phase/driven.log 2>&1`
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 30 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --pif-trace --verbose --press 6:start > scratch/agent/oracle_results/s959_oracle_phase/driven.log 2>&1`
