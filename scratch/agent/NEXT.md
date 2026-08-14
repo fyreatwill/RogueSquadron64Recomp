@@ -1,29 +1,32 @@
-# NEXT work unit (s1133)
+# NEXT work unit (s1134)
 
-HYPOTHESIS-ID: animation-framestart-regeneration-omission
+HYPOTHESIS-ID: m4-ground-truth-accumulator-origin
 
-Perform one bounded static census of the isolated animation/frameStart SIGBUS
-and its possible regeneration omission. Do not build or run. First enumerate
-all generated references and fixup-script references for the implicated
-function/site, then classify each as regenerated, fixup-restored, or absent.
+Perform one bounded M4 ground-truth preparation step: read the oracle and
+Factor 5 reference instructions needed to define an independent accumulator
+origin measurement, then identify the smallest complete pre/post discriminator
+that can be armed in one future build/run. Do not build or run this iteration.
+Do not add instrumentation yet.
 
 Competing hypotheses and discriminator:
 
-- H-regenerated: the expected animation/frameStart function and call/data
-  references are present in generated output; the SIGBUS is runtime state.
-- H-fixup-restored: generated output omits the site, but a fixup script restores
-  it deterministically during regeneration.
-- H-omitted: both generated output and fixup scripts omit the expected site,
-  making regeneration loss the actionable defect.
+- H-game-writes: the retail oracle can attribute a legitimate writer/value
+  transition for the accumulator before the zero-shade read.
+- H-runtime-only: the oracle sees no matching retail writer, so the port/runtime
+  or recompiled execution remains the only source under test.
+- H-unreachable: the oracle controls do not reach the corresponding shaded
+  emitter phase, making this discriminator unavailable rather than negative.
 
-Discriminator: a complete reference/fixup census with every expected address
-classified. Presence in generated code selects H-regenerated; absence there
-but an explicit fixup match selects H-fixup-restored; absence in both selects
-H-omitted. Any unclassified reference means the audit is inconclusive.
+Discriminator: an oracle whole-RDRAM positive control plus a targeted physical
+watch covering the candidate accumulator address range, with PC attribution
+and phase reachability. A retail writer/value transition selects H-game-writes;
+zero targeted hits after a healthy whole-RDRAM control selects H-runtime-only
+only if the shaded phase is reached; no phase reach selects H-unreachable.
 
-Do not build or run. Use bounded windows only:
+Required reading/commands:
 
 ```sh
-rg -n 'frameStart|animation|0x800[0-9A-Fa-f]{4}' ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n 'frameStart|animation|0x800[0-9A-Fa-f]{4}' tools patches docs
+sed -n '1,240p' tools/oracle/README.md
+sed -n '1,260p' docs/F5-UCODE-REFERENCE.md
+rg -n -i 'accumulator|shade|VGE|vmadh|zero-shade|M4' tools/oracle docs ../N64Recomp/RecompiledFuncs/funcs_*.c | head -240
 ```

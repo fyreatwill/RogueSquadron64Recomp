@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1132 (2026-08-14).
+in the ledger. Reviewed through s1133 (2026-08-14).
 
 ## Current state
 
@@ -105,14 +105,21 @@ closed after controlled nulls; no mitigation is authorized.
 | s1125–s1129 | Boot config `0x1800`, selector `1/0/0`, preserved index 0, and boot-first ordering were resolved. |
 | s1130–s1131 | First consumer ordering was resolved; this maintenance pass compacted the live file and migrated durable detail. |
 | s1132 | Traced the active VI pointer to copied-table `base+0xF0` and closed host width-rewrite as a cause. |
+| s1133 | Static census found `frameStartReset` fully regenerated with 14 call sites and overlay registration; no active fixup restoration exists, closing regeneration omission. |
 
 ## Ranked next steps
 
-1. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
-   omission only as a bounded static census when a reproducible lead appears;
-   preserve delete-before-regen ordering and audit fixup counts.
-2. Keep M4 parked unless an independent ground-truth path or a new complete
+1. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
+
+The bounded frameStart/regeneration census is closed: `frameStartReset` is
+present in generated output with its 0x8000A6CC body, 14 generated call sites,
+the `funcs.h` declaration, and the overlay registration at offset 0xA28C with
+size 0x190. The active fixup script contains no executable frameStart/reset
+or site-restoration rule; its mentions are historical comments. This selects
+H-regenerated and rules out regeneration omission as the explanation for the
+isolated SIGBUS. The remaining fault-origin question is runtime-side and does
+not justify a mitigation from this census.
 
 ## Method and safety rules
 

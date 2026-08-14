@@ -63571,3 +63571,15 @@ no mitigation.
 ## Session 1132 (2026-08-14) — traced active VI descriptor pointer
 
 Ran the prescribed bounded static audit for the remaining VI descriptor boundary; no build or runtime experiment was needed. In `funcs_5.c`, the four-record copy populates `0x80128D50 + {0x00,0x50,0xA0,0xF0}`. The branch immediately before `0x8001B720` chooses exactly one of those four addresses from stack bytes `0x15F` and `0x17F`; the established boot values `0/0` select `0x80128E40` (`base+0xF0`). The generated call passes `a0` unchanged. Independently, `upstream_compat.cpp` forwards `ctx->r4` unchanged to `osViSetMode`, and `events.cpp` stores the mode pointer while the VI commit reads `common_regs->width`; there is no width rewrite. This rules out an adjusted active-record pointer and a host consumer rewrite as explanations for the 320-width commit. The remaining next lead is the bounded animation/frameStart regeneration-omission census.
+## Session 1133 (2026-08-14) — closed frameStart regeneration omission
+
+Ran the prescribed bounded static census with no build or game run. The
+generated tree contains `frameStartReset`'s complete `0x8000A6CC` body, the
+`funcs.h` declaration, 14 generated call sites, and the overlay registration
+at offset `0x0000A28C` with `rom_size=0x190`. The active
+`fixup_game_funcs.py` has no executable frameStart/reset or site-restoration
+rule; its matches are historical comments only. This selects
+`H-regenerated`, rules out regeneration omission as the explanation for the
+isolated SIGBUS, and leaves runtime fault origin open. No mitigation was
+added. ORIGIN: generated definition/call/header/overlay census plus active
+fixup-script census; no mitigation.
