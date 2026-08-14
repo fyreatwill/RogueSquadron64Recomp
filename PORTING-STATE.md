@@ -63297,3 +63297,27 @@ behavior, or mitigation changed.
 
 ORIGIN: toolchain/setup work only; no value was skipped, rewritten, or
 otherwise mitigated.
+
+## Session 1115 (2026-08-14) — classified retail VI writer PCs
+
+Performed the prescribed bounded static audit of the eight writer PCs from the
+retail capture. Generated output places selector stores at
+`0x80017CA0/7CB0/7CD0/7CEC` inside `buildAndRegisterDefaultMaterial`
+(`0x80017B88`), whose callers are boot `initVideoBootWrapper` and recurring
+`advanceVideoFrame`; the values are direct bit extracts from the function's
+input, with no 512/1024 branch dominating the stores. Pending-mask stores at
+`0x8001BA80/BA88` are the final clears in `applyPendingViChanges`
+(`0x8001B7F0`), called by the repeating `viRetraceHandlerThread` loop at
+`0x80019914`. A0 stores at `0x80019D9C/9F60` are in the persistent
+`spTaskSchedulerThread` task-state and completion paths.
+
+Independent retail-ROM bytes matched the generated instruction at all eight
+PCs using `ROM = VRAM - 0x80000000 + 0xC00`: selector bytes were
+`a022a866`, `a022a867`, `a022a864`, `a022a865`; A0 was `a2710000` and
+`a020a8a0`; pending masks were `ac208e94` and `ac208e90`. This selects static
+`H-mode-loop`, rules out `H-mode-transition` for these writer PCs, and leaves
+the mode-record caller/argument producer open. No build, runtime capture,
+queue behavior, or mitigation changed.
+
+ORIGIN: static source/ROM classification only; no value was skipped, rewritten,
+or otherwise mitigated.
