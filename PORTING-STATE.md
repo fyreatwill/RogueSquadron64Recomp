@@ -63813,3 +63813,15 @@ This is UNEVALUABLE, not a recurrence or a changed boundary outcome: the
 positive task-control and target-phase gates were both absent. It rules out
 only an instrumentation-dead explanation for slot dispatch; it does not
 classify the corrected NPC boundary or the recurring SIGBUS.
+## Session 1146 (2026-08-14) — classified the pre-1024 trace as an active loop
+
+Analyzed the existing `scratch/agent/next_s1145/run.log` as the planned
+bounded reachability work unit. The last VI transition was width 640 at about
+7.3 seconds; slot dispatch continued through visible record `n=2341`, and
+host/audio activity continued through `host-start n=10000` and
+`audtask-dispatch n=10752`. There were no `VI-1024`, task-control E9,
+unified-E9, crash, or SIGBUS markers. This selects the stable active
+pre-phase-loop hypothesis over an early execution halt for this trace, while
+leaving the missing 1024 transition and corrected NPC-boundary runtime effect
+open. It rules out interpreting the absent crash marker as evidence about the
+boundary.
