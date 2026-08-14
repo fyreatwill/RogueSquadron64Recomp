@@ -1,44 +1,31 @@
-# NEXT work unit (s1150)
+# NEXT work unit (s1151)
 
-HYPOTHESIS-ID: vi-post640-owner-audit
+HYPOTHESIS-ID: vi-submitgfx-owner
 
-Audit the active post-640 loop owner that continues phase-6 slot dispatch after
-the final 640 producer call without entering `freeRenderSubsystemResources`.
-Do not repeat the NPC boundary test or add a runtime guard.
+Add one phase-scoped marker at the shared generated `submitGfxFrame` entry and
+classify which caller family owns the post-640 loop. Do not add a guard or
+repeat the NPC boundary test.
 
-Competing hypotheses and discriminator before the work unit:
+Competing hypotheses and discriminator:
 
-- H1/known owner: the continuing slot/task path has a statically identifiable
-  caller or state predecessor that should invoke the VI selector, but its
-  transition condition is false.
-- H2/separate owner: the continuing phase-6 path belongs to a separate frame or
-  scheduler owner with no selector edge; the missing selector is architectural
-  path separation.
-- H3/generated omission: the expected owner edge exists in the retail/decomp
-  symbol inventory but is absent from generated output or overlay registration.
+- H1/mission-owner: post-640 slot dispatch and E9/render submission are driven
+  by a mission frame caller of `submitGfxFrame`; the marker identifies that
+  caller and its state edge.
+- H2/cinematic-owner: the continuing path is a cinematic/menu caller of
+  `submitGfxFrame`, separate from the mission selector predecessor.
+- H3/host-only: generated `submitGfxFrame` is not reached in the continuing
+  phase; E9 activity is produced by a host/runtime path without a game-side
+  submit edge.
 
-Discriminating measurement: enumerate all generated callers and state-machine
-predecessors of the phase-6 slot-dispatch entry and the task-control E9 producer,
-then compare that graph against the companion symbol inventory and overlay
-registration. One complete census must classify the owner as known-with-gate,
-separate-without-selector, or missing-from-generation. Do not add a marker until
-the census identifies a single highest-information edge.
+The discriminating measurement is one phase-gated run with the marker enabled
+at the shared entry, logging the guest return address and phase ordinal, plus
+the existing independent host selector positive control and task-control E9
+control. H1/H2 are split by the caller address family; H3 is selected if the
+positive E9 control and slot dispatch continue but the scoped `submitGfxFrame`
+marker remains zero. A null is valid only if both positive controls fire.
 
-Exact commands:
-
-```sh
-rg -n 'slotDispatcherIter|0x8003E8DC|submit.*Task|osViSetMode_recomp|freeRenderSubsystemResources|selectAndApplyViMode' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h src
-rg -n 'slotDispatcherIter|freeRenderSubsystemResources|selectAndApplyViMode|0x8003E8DC|0x80018650|0x8001BB6C' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/rogue_squadron64 2>/dev/null | head -240
-rg -n 'slotDispatcherIter|submit_rsp_task|task-control|E9' src lib/N64ModernRuntime /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -300
-```
-
-Expected outcomes:
-
-- KNOWN-WITH-GATE/H1: a complete generated predecessor chain reaches the
-  active owner and exposes one state/condition to audit next.
-- SEPARATE-WITHOUT-SELECTOR/H2: slot/E9 activity has a distinct owner graph
-  with no selector edge; close the missing-selector theory and pivot to that
-  owner's intended VI lifecycle.
-- MISSING-FROM-GENERATION/H3: the companion symbols or overlay table contains
-  an owner edge absent from generated output; identify the durable regeneration
-  input correction before any runtime test.
+Before building, add the marker through the regeneration/fixup path, not by
+editing generated output directly. Then build and run the existing 1024
+phase-gated recipe with the marker, selector positive control, slot dispatch,
+and task-control E9 categories enabled. Capture output under
+`scratch/agent/soak_results/s1151_vi_submitgfx_owner/` and kill with SIGKILL.

@@ -63875,3 +63875,19 @@ control, and selection markers. This selects H2 for this capture: the active
 post-640 loop continues without entering the unique generated selector
 predecessor. It rules out a selector-state-input explanation and does not
 evaluate the corrected NPC boundary or explain the SIGBUS.
+## Session 1150 (2026-08-14) — censused the post-640 owner graph
+
+Ran the bounded static owner census from NEXT. The generated tree contains
+144 direct `slotDispatcherIter` call sites across 72 caller functions,
+including `runInMissionFrame`, `cinematicLoopBody`, and
+`cinematicSlotBatchDispatch`. `freeRenderSubsystemResources` is the only
+generated direct caller of `selectAndApplyViMode`. The E9 producer is not a
+generated game-call predecessor: task submission enters host-side
+`submit_rsp_task` and RSP task handling before the E9 consumer path.
+
+The companion symbol inventory agrees on the named mission/cinematic frame
+families and contains no owner edge absent from generated output or overlay
+registration. This selects H2 path separation for the censused graph and rules
+out H3 missing-from-generation. It does not identify which `submitGfxFrame`
+caller owns the active post-640 loop, so the next step is one scoped marker at
+that shared entry; no runtime guard or NPC-boundary repeat was made.
