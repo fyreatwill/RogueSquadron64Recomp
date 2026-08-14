@@ -63046,3 +63046,25 @@ behavior changed.
 ORIGIN: generated call arguments and adjacent `osCreateMesgQueue` sequences,
 the independent data-symbol map, and the blocking `osRecvMesg` sites; this is
 an explanatory source classification, not a mitigation.
+
+## Session 1102 (2026-08-14) — audited generated submit producers
+
+Performed the planned read-only census of all 44 generated `osSendMesg` and 2
+generated `osJamMesg` call sites, plus every host SP/DP completion enqueue
+route. Two direct generated sends target the blocking consumer queues: the
+`spTaskSchedulerThread` send at `0x80019F1C` computes
+`0x80120000 - 0x57E8 = 0x8011A818`, and the
+`dpInterruptHandlerThread` send at `0x8001C3CC` computes
+`0x80120000 - 0x5818 = 0x8011A7E8`. The remaining generated sends target
+unrelated fixed queues or computed object/argument queues. Host
+`sp_complete()` and `dp_complete()` enqueue only through dynamic
+`events_context.sp/.dp` registrations; no host path hard-codes either target.
+
+This selects static `H-game-producer`/role separation and rules out
+`H-host-boundary` and `H-unwired` as explanations for producer existence. It
+does not establish that either producer executes on the observed blocked path;
+call reachability, branch gating, and lifecycle alignment are the next open
+questions. No build, runtime code, queue behavior, or mitigation changed.
+
+ORIGIN: generated queue-call census and host completion source audit; this is
+an ownership/reachability classification, not a mitigation.

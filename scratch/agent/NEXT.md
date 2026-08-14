@@ -1,31 +1,34 @@
-# NEXT work unit (s1102)
+# NEXT work unit (s1103)
 
 HYPOTHESIS-ID: submit-producer-boundary
 
-Perform one bounded static audit of every generated `osSendMesg` and
-`osJamMesg` path that could target the separately initialized queues
-`0x8011A818` and `0x8011A7E8`, plus the host forwarding code that can enqueue
-SP/DP completion messages. Do not change queue behavior or build.
+Perform one bounded runtime-free call-chain audit for the two now-proven
+generated queue producers: trace the callers and loop/re-entry conditions of
+`spTaskSchedulerThread`'s send to `0x8011A818` and
+`dpInterruptHandlerThread`'s send to `0x8011A7E8`, and compare them with the
+two blocking consumer entry paths. Do not change queue behavior or build.
 
 Competing hypotheses:
 
-* H-game-producer: generated code sends to one or both blocking queues, so the
-  event registrations are intentionally for separate completion queues.
-* H-host-boundary: neither queue has a generated producer; one queue is meant
-  to be populated only across a non-generated host/overlay boundary.
-* H-unwired: neither queue has a producer or forwarding path, so the blocking
-  waits are genuinely disconnected from the registered event queues.
+* H-producer-reachable: each direct send is reachable from its corresponding
+  scheduler/interrupt loop before the blocking wait can persist.
+* H-producer-gated: one or both sends are behind a state/flag branch that can
+  leave the consumer blocked despite the static producer.
+* H-producer-loop-mismatch: producer and consumer are in separate lifecycle
+  loops, so the direct sends do not service the observed waits.
 
-Discriminator: produce a complete target table for all static send/jam sites
-and host enqueue sites. A direct generated send to each queue selects
-H-game-producer; a host-only route selects H-host-boundary; no route to a queue
-selects H-unwired. Any unresolved computed target must name its exact
-non-generated boundary rather than infer a match.
+Discriminator: for each queue, produce a bounded call/branch table from its
+producer entry to the send and from the consumer entry to its blocking recv.
+An unconditional or positively dominated producer path in the same active
+loop selects H-producer-reachable; a flag/branch that can skip the send selects
+H-producer-gated; distinct lifecycle ownership with no common activation path
+selects H-producer-loop-mismatch. Computed calls must name their exact target
+boundary rather than infer reachability.
 
 Exact commands:
 
 ```sh
-rg -n -C 5 "osSendMesg|osJamMesg|0x8011A818|0x8011A7E8|D_8011A818|D_8011A7E8|0X8012.*57E8|0X8012.*5818" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs src lib/N64ModernRuntime docs/game-architecture.md
-rg -n -C 5 "enqueue_external_message|enqueue_external_message_src|events_context\.sp|events_context\.dp|sp_complete|dp_complete" lib/N64ModernRuntime src
+rg -n -C 8 "spTaskSchedulerThread|dpInterruptHandlerThread|waitForPostSwapAck|osRecvMesg_recomp|0x80019F1C|0x8001C3D8|0x8000C0B4|0x8000C2B8" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs docs/game-architecture.md
+rg -n -C 5 "jal.*spTaskSchedulerThread|jal.*dpInterruptHandlerThread|func_80019F|func_8001C3|func_8000C0|func_8000C2" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 git diff --check
 ```
