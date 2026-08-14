@@ -61686,3 +61686,19 @@ input delivery, but does not rule out a retail freelist writer because the run
 never reached the hangar-origin 512 phase. The first attempt used the generated
 default config and had the same phase result; the corrected rerun was the
 interpretable capture.
+## Session 1034 (2026-08-14) — verified retail oracle input discriminator stayed at width 320
+
+The first two attempts were invalid because the generated temporary config
+still mapped Start to `key(13)` while the scheduled press used symbol 40. A
+third run verified `Start = "key(40)"` before launch. Its whole-RDRAM positive
+control reached 10,000 callbacks and removed watch index 0 with `rc=0`; the
+input trace showed Start (`0x10000000`) and A (`0x80000000`) pad words for the
+Start-only and Start+A arms. The run completed 5,398 VI, but no VI transition
+left width 320/origin `0x006dd280`.
+
+This selects `H-retail-phase-independent` for the current oracle
+core/config/ROM path over Start-not-consumed and A-confirmation-required. It
+rules out callback failure and invalid scheduled input, but does not establish
+anything about the retail freelist writer because the hangar-origin 512 phase
+was not reached. No recomp runtime change or mitigation was made. ORIGIN:
+external retail-oracle debugger/input traces; no guest value was changed.

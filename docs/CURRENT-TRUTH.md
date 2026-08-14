@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1033 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1034 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle callback audit remains open
 because the bounded watch run did not reach its target phase. M4 zero-shade is parked after its third consecutive controlled null:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
@@ -100,14 +100,14 @@ retail-oracle callback thread is no longer directory-blocked
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. The legacy audio idiom audits and their structural limitations are in
   PROJECT-OVERVIEW §§9–12 and §30.
-- Retail oracle work: the corrected oracle callback is live. s1033's bounded
-  pure-interpreter run removed only whole-RDRAM watch index 0 after 10,000
-  callbacks (`rc=0`), showed all 11 injected Starts in PIF RAM, and completed
-  10,799 VI, but stayed at width 320/origin `0x006dd280`; the freelist watch
-  had zero hits. This selects `H-oracle-phase-blocked`: it is valid phase and
-  input-control evidence, not evidence that retail leaves the freelist
-  untouched. The next oracle unit must explain the width-320 path before
-  another freelist null is interpreted.
+- Retail oracle work: the corrected oracle callback is live. s1034's verified
+  pure-interpreter input discriminator removed only whole-RDRAM watch index 0
+  after 10,000 callbacks (`rc=0`), showed Start (`0x10000000`) and A
+  (`0x80000000`) button words for both arms, and completed 5,398 VI, but stayed
+  at width 320/origin `0x006dd280`. This selects
+  `H-retail-phase-independent` for the current core/config/ROM path over
+  Start-not-consumed and A-confirmation-required. The freelist watch remains
+  unevaluable; the next oracle unit is an environment/phase-path audit.
 
 ## M4 zero-shade evidence
 
@@ -299,17 +299,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1030 | The postponed-`a` ordinary-dispatch recipe reached VI-1024, delivered all scheduled inputs, and captured 108 frames but still produced no slot-dispatch or guard marker; `H-no-sp-event` recurred, so the recipe family is closed without classifying `$sp` corruption. |
 | s1031 | The corrected retail oracle armed both watches and its whole-RDRAM positive control visibly fired 200 callbacks, confirming callback liveness. The all-RDRAM watch slowed the run to VI 62 / 1.2 emulated seconds before SIGKILL; the freelist watch had no hit or usable PC attribution, so the retail question remains unevaluable. |
 | s1032 | Added thresholded removal of only watch index 0 after 10,000 positive-control callbacks. The marker reported removal `rc=0` and index 1 remained armed; the 180-second run completed 10,799 VI but stayed at width 320, with zero freelist hits. Callback instrumentation is validated, but the retail target phase remains unevaluable. |
-| s1033 | Re-ran the threshold-removal oracle with the documented 11-Start schedule. The positive-control marker fired, PIF RAM showed the Start bit on every injected edge, and 10,799 VI completed, but VI stayed at width 320/origin `0x006dd280`; the freelist watch had zero hits. This selects `H-oracle-phase-blocked` and rules out callback failure and any retail freelist conclusion. |
+| s1033 | Re-ran the threshold-removal oracle with the documented 11-Start schedule. The positive-control marker fired, PIF RAM showed the Start bit on every injected edge, and 10,799 VI completed, but VI stayed at width 320/origin `0x006dd280`; the freelist watch had zero hits. This ruled out callback failure and any retail freelist conclusion. |
+| s1034 | Ran the verified Start-only versus Start+A discriminator. The config was confirmed as `Start = key(40)`; the whole-RDRAM positive control reached 10,000 callbacks and was removed, pad words showed Start and A edges, and 5,398 VI completed with no transition beyond width 320/origin `0x006dd280`. This selects `H-retail-phase-independent` for this oracle environment; the freelist watch remains unevaluable. |
 
 ## Ranked backlog
 
-1. Resume the retail-oracle phase audit without the freelist watch: run one
-   bounded input-path discriminator using the existing whole-RDRAM positive
-   control, PIF trace, and VI trace. Compare the documented Start-only schedule
-   against the smallest documented-compatible Start+A edge schedule in the same
-   run; determine whether the title remains at width 320 because Start is not
-   consumed or because an A confirmation is required. Do not interpret a
-   freelist null until a 512 hangar-origin phase is reached.
+1. Audit the retail-oracle width-320 path without the freelist watch: inspect
+   the oracle README/core configuration and run one bounded phase-path check
+   that verifies the ROM identity, pure-interpreter/core mode, and controller
+   protocol against an independent early-boot marker. The s1034 input arms are
+   already positive, so do not repeat Start/A timing or interpret a freelist
+   null until a 512 hangar-origin phase is reached.
 2. The M4 accumulator/VGE numeric-origin question remains open after three
    controlled nulls; resume only with a new discriminator or independent ground
    truth.
