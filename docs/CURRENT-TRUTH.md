@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s929 (2026-08-13). The active blocker is the authoritative
+Reviewed through s930 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -394,6 +394,36 @@ whose active case does not increment the count; only an inactive byte advances
 the count to one. The companion one-slot description establishes intended
 shape, not a local termination bound. No runtime conclusion follows.
 
+## s930 — `audioCompandS16` is structurally classified
+
+Performed the planned source-only M3 idiom inventory of `audioCompandS16`
+(`0x8009DD7C`) in `../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated all
+four generated references, entry/target shapes, the complete helper's sign
+and region paths, arithmetic bounds, clamp, sign restoration, and return mask.
+Cross-checked `main_overlay.txt`. No build, game run, or soak was run.
+
+Three references are fixed tail-call entries from
+`audioMixSampleS16_1_3` (`0x8009DD3C`), `audioMixSampleS16_1_1`
+(`0x8009DD54`), and `audioMixSampleS16_3_1` (`0x8009DD64`); their weighted
+mix arithmetic falls into the common helper. The fourth is the overlap-style
+`bltzal $zero` site in `renderVoiceAudioBlock` at `0x8009DC10`, which the
+generated C represents as a fixed helper edge; its condition is false for
+ordinary MIPS `$zero`, so it is not independently reachable in that
+representation. No data-derived target or caller-shape split exists.
+
+The helper records sign and takes magnitude, then selects fixed regions at
+`0x2B33` and `0x4E66`: double below the first, `x+0x2B33` below the second,
+and `x>>2+0x6600` otherwise. It clamps the positive result to `0x7FFF`,
+restores sign, and masks to 16 bits. There is no loop, indirect call, pointer
+access, or local termination hazard. Dynamic input legitimacy remains
+unproven. H-compand-shape-mismatch is ruled out and H-compand-classified is
+supported structurally, while the broader H-compand-unclassified remains
+open. No guard, mitigation, generated-code edit, or game behavior changed.
+
+ORIGIN: complete generated helper/reference, target, arithmetic-bound,
+termination, and companion-symbol inventory; no guest value mutation or
+mitigation.
+
 ## Ranked backlog
 
 1. Do not use the process-wide `0x8000834c` breadcrumb to select a helper crash
@@ -520,28 +550,30 @@ mitigation.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-audio-compand-class
+HYPOTHESIS-ID: m3-audio-rsp-mixer-class
 
-Audit the complete `audioCompandS16` idiom at `0x8009DD7C`, including every
-generated caller and every interior target entering its sign/region paths.
+Audit the complete `initN64RspMixer` idiom at `0x8009189C` in
+`../N64Recomp/RecompiledFuncs/funcs_24.c`, including every generated caller,
+all helper calls, loop bounds, global/table writes, and input clamps.
 Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-compand-unclassified: an entry path reaches the helper with an invalid
-  sign/region contract or an unsafe indirect edge.
-- H-compand-classified: all entries and callers use fixed arithmetic contracts,
-  with bounded region selection, clamp, sign restoration, and termination.
-- H-compand-shape-mismatch: one caller or interior entry uses a distinct
-  contract; record the exact split and stop.
+- H-rsp-mixer-unclassified: a caller or initialization path supplies an
+  invalid count/pointer/derived size or reaches an unsafe helper edge.
+- H-rsp-mixer-classified: callers agree, count clamping is bounded, and all
+  allocation/table-write/helper paths have fixed safe contracts.
+- H-rsp-mixer-shape-mismatch: callers or helper paths use distinct contracts;
+  record the exact split and stop.
 
-Discriminating measurement: enumerate every `audioCompandS16` reference,
-caller register setup, target address, sign/region branches, arithmetic bounds,
-and return path; cross-check `main_overlay.txt` and the complete generated
-helper. Any data-derived target, omitted clamp/sign path, unsafe arithmetic
-bound, or caller/entry shape split rejects classification.
+Discriminating measurement: enumerate every `initN64RspMixer` reference,
+caller register setup, complete callee control flow, helper signatures, loop
+termination, derived allocation sizes, and every global/table write; cross-
+check `main_overlay.txt` and the complete generated helper. Any caller-shape
+split, unbounded walk, data-derived unsafe edge, or unbounded derived size
+rejects classification.
 
-Exact commands: `rg -n -C 8 "audioCompandS16|8009DD7C|DD7C" ../N64Recomp/RecompiledFuncs/funcs_27.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every reference. No game build or soak is planned.
+Exact commands: `rg -n -C 8 "initN64RspMixer|8009189C|9189C" ../N64Recomp/RecompiledFuncs/funcs_24.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every reference. No game build or soak is planned.
 
 ## Closed and parked
 

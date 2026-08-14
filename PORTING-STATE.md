@@ -58899,3 +58899,31 @@ claimed. No guard, mitigation, generated-code edit, or game behavior changed.
 ORIGIN: complete generated caller/target, register-derivation, access-range,
 termination, and companion-symbol inventory; no guest value mutation or
 mitigation.
+## Session 930 (2026-08-13) — audioCompandS16 is structurally classified
+
+Performed the planned source-only M3 idiom inventory of `audioCompandS16`
+(`0x8009DD7C`) in `../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated all
+four generated references, entry/target shapes, the complete helper's sign
+and region paths, arithmetic bounds, clamp, sign restoration, and return mask.
+Cross-checked `main_overlay.txt`. No build, game run, or soak was run.
+
+Three references are fixed tail-call entries from `audioMixSampleS16_1_3`
+(`0x8009DD3C`), `audioMixSampleS16_1_1` (`0x8009DD54`), and
+`audioMixSampleS16_3_1` (`0x8009DD64`). The fourth is the overlap-style
+`bltzal $zero` site in `renderVoiceAudioBlock` at `0x8009DC10`; generated C
+represents it as a fixed helper edge, but its condition is false for ordinary
+MIPS `$zero`, so it is not independently reachable in that representation.
+No data-derived target or caller-shape split exists.
+
+The helper records sign, takes magnitude, selects fixed regions at `0x2B33`
+and `0x4E66`, clamps to `0x7FFF`, restores sign, and masks to 16 bits. It has
+no loop, indirect call, pointer access, or local termination hazard. Dynamic
+input legitimacy remains unproven; this is a single-source static result from
+generated code plus companion symbols. H-compand-shape-mismatch is ruled out
+and H-compand-classified is supported structurally, while the broader
+H-compand-unclassified remains open. No guard, mitigation, generated-code
+edit, or game behavior changed.
+
+ORIGIN: complete generated helper/reference, target, arithmetic-bound,
+termination, and companion-symbol inventory; no guest value mutation or
+mitigation.

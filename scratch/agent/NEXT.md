@@ -1,24 +1,26 @@
-# NEXT work unit (s930)
+# NEXT work unit (s931)
 
-HYPOTHESIS-ID: m3-audio-compand-class
+HYPOTHESIS-ID: m3-audio-rsp-mixer-class
 
-Audit the complete `audioCompandS16` idiom at `0x8009DD7C`, including every
-generated caller and every interior target entering its sign/region paths.
+Audit the complete `initN64RspMixer` idiom at `0x8009189C` in
+`../N64Recomp/RecompiledFuncs/funcs_24.c`, including every generated caller,
+all helper calls, loop bounds, global/table writes, and input clamps.
 Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-compand-unclassified: an entry path reaches the helper with an invalid
-  sign/region contract or an unsafe indirect edge.
-- H-compand-classified: all entries and callers use fixed arithmetic contracts,
-  with bounded region selection, clamp, sign restoration, and termination.
-- H-compand-shape-mismatch: one caller or interior entry uses a distinct
-  contract; record the exact split and stop.
+- H-rsp-mixer-unclassified: a caller or initialization path supplies an
+  invalid count/pointer/derived size or reaches an unsafe helper edge.
+- H-rsp-mixer-classified: callers agree, count clamping is bounded, and all
+  allocation/table-write/helper paths have fixed safe contracts.
+- H-rsp-mixer-shape-mismatch: callers or helper paths use distinct contracts;
+  record the exact split and stop.
 
-Discriminating measurement: enumerate every `audioCompandS16` reference,
-caller register setup, target address, sign/region branches, arithmetic bounds,
-and return path; cross-check `main_overlay.txt` and the complete generated
-helper. Any data-derived target, omitted clamp/sign path, unsafe arithmetic
-bound, or caller/entry shape split rejects classification.
+Discriminating measurement: enumerate every `initN64RspMixer` reference,
+caller register setup, complete callee control flow, helper signatures, loop
+termination, derived allocation sizes, and every global/table write; cross-
+check `main_overlay.txt` and the complete generated helper. Any caller-shape
+split, unbounded walk, data-derived unsafe edge, or unbounded derived size
+rejects classification.
 
-Exact commands: `rg -n -C 8 "audioCompandS16|8009DD7C|DD7C" ../N64Recomp/RecompiledFuncs/funcs_27.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every reference. No game build or soak is planned.
+Exact commands: `rg -n -C 8 "initN64RspMixer|8009189C|9189C" ../N64Recomp/RecompiledFuncs/funcs_24.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every reference. No game build or soak is planned.
