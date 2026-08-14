@@ -60049,6 +60049,28 @@ mitigation follows.
 ORIGIN: external oracle LTO object-to-dylib audit; no guest value was changed
 and no mitigation was landed.
 
+## Session 971 (2026-08-13) — Non-LTO assembly preserves the callback arguments
+
+Compiled `memory.c` and `dbg_breakpoints.c` once with the successful ARM64
+compile flags and `-fno-lto`, adding the SDL include path required by the
+debugger translation unit. Fresh `read_with_bp_checks` assembly emits
+`mov w2, #4` and `mov w3, #3` before `_check_breakpoints_on_mem_access` at both
+callback sites. The current LTO dylib at `0x13d64` emits `w2=3` and leaves
+`w3` unset.
+
+This selects the LTO transformation at the object-to-dylib boundary over an
+effective source/declaration ABI defect. It does not identify the exact LTO
+pass or prove that correcting the call will make retail progress; no runtime
+or retail arm was run, and no mitigation was landed. The next unit links the
+oracle non-LTO and compares the resulting dylib directly.
+
+Evidence: `/tmp/rs64-memory-nonlto.s` and `/tmp/rs64-dbg-breakpoints-nonlto.s`
+from the fresh compile, plus `nm` and `otool -tvV` on the current dylib. This
+is static single-source/build evidence only.
+
+ORIGIN: external oracle non-LTO compiler/codegen comparison; no guest value
+was changed and no mitigation was landed.
+
 ## Session 968 (2026-08-13) — Source and object are correct; linked dylib is not
 
 Traced the external oracle callback mismatch through the exact Makefile recipe,

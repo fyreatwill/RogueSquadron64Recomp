@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s969 (2026-08-13). The active blocker is authoritative
+Reviewed through s971 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -264,6 +264,11 @@ closed; M3 work is limited to systematic idiom-class audits.
   preprocessing showing four arguments `(pc,address,4,flags=3)`. Stale
   product selection is refuted; the remaining boundary is LTO bitcode-to-code
   transformation/ABI state. This is static single-source evidence only.
+- s971 compiled both oracle translation units with `-fno-lto` and inspected
+  fresh ARM64 assembly. `read_with_bp_checks` emits `w2=4,w3=3` at both
+  callback sites, while the current LTO dylib emits `w2=3` with `w3` unset.
+  This selects an LTO transformation at the object-to-dylib boundary over an
+  effective source/ABI defect. No runtime or retail conclusion followed.
 
 ## Recent evidence ledger
 
@@ -311,6 +316,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 
 | s968 | Exact source/preprocessed C, fresh LLVM IR, and current object bitcode all contain `(pc,address,4,flags=3)`; linked dylib disassembly alone emits `w2=3` with `w3` unset at `0x13d64`. Link/LTO artifact mismatch selected; stale-product versus link-stage transformation remains open. |
 | s969 | Forced the exact oracle rebuild successfully with current Homebrew binutils libraries. Source/object/dylib timestamps were 19:49:20/20:07:30/20:07:33 and fresh object/dylib hashes changed; the new dylib still emits `w0=pc`, `x1=address`, `w2=3`, with no `w3` before `_check_breakpoints_on_mem_access` at `0x13d64`. Stale-product hypothesis is refuted; link-stage/object-to-dylib transformation remains selected. |
+| s971 | Fresh non-LTO ARM64 assembly emits `w2=4,w3=3` at both callback sites, while the current LTO dylib emits `w2=3` with `w3` unset. This selects the LTO transformation boundary; the source/ABI hypothesis is refuted for non-LTO codegen and no runtime or retail conclusion follows. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -329,11 +335,9 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s970 crossed the object-to-dylib identity boundary
-   and found an LTO bitcode object with no relocations plus local final-symbol
-   binding; the four-argument source still becomes a three-register call.
-   Inspect compiler-emitted non-LTO assembly/IR and the exact LTO inputs next;
-   do not infer retail callback-table behavior until this boundary is crossed.
+   callback-table watch: s971 shows non-LTO assembly is correct while the
+   current LTO dylib is not. Build a non-LTO linked dylib and compare its
+   callback call before investigating LTO inputs or inferring retail behavior.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -343,21 +347,21 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: oracle-pif-link-artifact
 
-Compile the oracle `memory.c` and `dbg_breakpoints.c` once with the exact
-successful compile flags but `-fno-lto -S`, then inspect the emitted ARM64
-assembly call and compare it with the current LTO dylib call. Do not edit the
-recomp runtime or retry retail PIF/callback hypotheses.
+Build one non-LTO oracle dylib using the successful target flags with
+`OPTFLAGS='-O3 -fno-lto'`, then inspect its `read_with_bp_checks` callback call
+and compare it with the current LTO dylib. Do not edit the recomp runtime or
+retry retail PIF/callback hypotheses.
 
 Competing hypotheses:
 
-- H-pif-nonlto-correct: non-LTO compile emits the required `w2=4,w3=3`, so
-  LTO is the transformation boundary.
-- H-pif-source-abi: non-LTO compile reproduces the shifted/missing argument,
-  so the source's effective declaration or ABI state is not what preprocessing
-  suggests.
-- H-pif-other-link-input: non-LTO compile is correct but the current linked
-  image differs for an input or link-state reason not visible from symbol
-  binding.
+- H-pif-nonlto-linked-correct: a non-LTO linked dylib preserves `w2=4,w3=3`,
+  isolating the defect to LTO.
+- H-pif-nonlto-linked-wrong: the non-LTO linked dylib also shifts or drops an
+  argument, selecting a link-stage input or symbol-state defect independent
+  of LTO.
+- H-pif-nonlto-build-blocked: the target cannot be linked non-LTO with the
+  successful flags, so the next discriminating measurement is the exact link
+  failure and no runtime hypothesis is tested.
 
 Discriminating measurement: compare the fresh non-LTO assembly call with the
 LTO dylib call. Correct non-LTO `w2=4,w3=3` selects an LTO transformation;
@@ -366,13 +370,13 @@ non-LTO result or link discrepancy selects another link-input/state defect.
 
 Exact starting checks/commands:
 
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix && make -B DEBUGGER=1 all`
+`cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix && make -B DEBUGGER=1 OPTFLAGS='-O3 -fno-lto' all`
 
-`stat -f "%Sm %N" -t "%Y-%m-%d %H:%M:%S" ../../src/device/memory/memory.c ../../src/debugger/dbg_breakpoints.c _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
+`stat -f "%Sm %N" -t "%Y-%m-%d %H:%M:%S" _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
 
 `nm -an libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks"`
 
-`otool -tvV libmupen64plus.dylib | sed -n '19840,19930p'`
+`otool -tvV libmupen64plus.dylib | rg -n -A 45 "_read_with_bp_checks:" | rg -n -C 8 "check_breakpoints_on_mem_access|mov[[:space:]]+w[23]"`
 
 ## Closed and parked
 
