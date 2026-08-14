@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1086 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1087 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -28,12 +28,12 @@ compact and records only live conclusions, boundaries, and next work.
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. Audio remains stubbed; the legacy audio audits are archived in the
   project overview.
-- The s1084-s1086 retail oracle runs passed the whole-RDRAM positive control,
+- The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
   `0x130B30:0x130B31` in s1085 and the full block in s1086. These
-  single-source oracle results select `H-gate-not-reached` for the established
-  schedule; the specific state gate remains open.
+  single-source oracle results now select `H-pre-main-loop-state-gate` for the
+  established schedule: `0x8003E010` executed once, but `0x8003E07C` did not.
 
 ## Retail oracle boundary
 
@@ -221,17 +221,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1084 | Retail oracle with whole-RDRAM control, eleven Start/PIF controls, and `0x130B30:0x130B31` write watch reached 7,199 VI frames but stayed at width 320/origin `0x006dd280`; target writes were zero. Selects single-source `H-gate-not-reached`; the blocking gate is still unresolved. |
 | s1085 | Repeated the established retail oracle schedule with the same controls and a physical read/write watch on `0x130B30:0x130B31`; whole-RDRAM reached 10,000 hits, all eleven PIF Start presses arrived, VI reached 7,199 at width 320, and the target watch had zero hits. This independently selects single-source `H-gate-not-reached`; the gate read itself was not reached. |
 | s1086 | Repeated the established oracle schedule with a physical read/write watch on the full `0x130B10:0x130B58` mission-state block. Whole-RDRAM reached 10,000 hits, all eleven PIF Start presses arrived, VI reached 7,199 at width 320/origin `0x006dd280`, and the full block had zero hits. This selects single-source `H-gate-not-reached` and rules out any access to this state object on the tested retail route. |
+| s1087 | Added guest-PC execution watches to the oracle and ran the established schedule. Whole-RDRAM reached 10,000 callbacks, all eleven PIF Start presses arrived, and VI reached 7,198 at width 320/origin `0x006dd280`; `0x8003E010` hit once, `0x8003E07C` hit zero times, and the mission-state block remained silent. This selects single-source `H-pre-main-loop-state-gate`: the preceding transition executes, but the gate read is not reached. |
 
 ## Ranked next steps
 
-1. Add a guest-PC execution breakpoint/watch to the retail oracle, then run the
-   established eleven-Start schedule with whole-RDRAM/VI/PIF controls and
-   breakpoints at the `mainGameLoop` gate read (`0x8003E07C`) and its preceding
-   state transition. A hit at the gate separates an oracle address/alias issue
-   from an earlier route gate; no hit with positive controls confirms the route
-   exits before `mainGameLoop` reaches this state machine. Do not arm a freelist
-   watch without an independently observed `0x6abxxx` hangar-origin 512
-   transition.
+1. Use the new oracle execution watch to bracket the call at `0x8003E010`:
+   watch `runIdleFramesAndLoadSaveData` entry (`0x8006D900`), the return/delay
+   continuation (`0x8003E018`), and the gate read (`0x8003E07C`) under the same
+   eleven-Start, whole-RDRAM, VI, and PIF controls. Entry/return/gate outcomes
+   distinguish callee non-entry, callee non-return, and an address-specific
+   post-return route gate. Do not arm a freelist watch without an independently
+   observed `0x6abxxx` hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

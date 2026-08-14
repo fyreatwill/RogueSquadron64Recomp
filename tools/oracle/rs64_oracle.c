@@ -82,6 +82,7 @@ static unsigned int g_detail_watch_mask;
 static int g_verbose;
 static int g_watches_armed;
 static int g_positive_watch_removed;
+static long g_pc_hits;
 
 static double now_s(void)
 {
@@ -160,6 +161,11 @@ static void dbg_update(unsigned int pc)
     for (i = 0; i < g_nwatch; i++) {
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end)
             g_watch[i].hits++;
+        if ((g_watch[i].flags & M64P_BKP_FLAG_EXEC) &&
+            pc >= g_watch[i].start && pc < g_watch[i].end) {
+            g_watch[i].hits++;
+            g_pc_hits++;
+        }
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
             (g_detail_watch_mask & (1u << i)))
             detail_hit = 1;
@@ -173,9 +179,10 @@ static void dbg_update(unsigned int pc)
     }
     if (g_hits <= g_hit_cap || detail_hit) {
         unsigned int prev = (unsigned int)pDebugGetState(M64P_DBG_PREVIOUS_PC);
-        printf("[hit] %s%s addr=0x%08x pc=0x%08x prev_pc=0x%08x t=%.1fs n=%ld\n",
+        printf("[hit] %s%s%s addr=0x%08x pc=0x%08x prev_pc=0x%08x t=%.1fs n=%ld\n",
                (flags & M64P_BKP_FLAG_WRITE) ? "w" : "",
                (flags & M64P_BKP_FLAG_READ)  ? "r" : "",
+               (flags & M64P_BKP_FLAG_EXEC)  ? "x" : "",
                accessed, pc, prev, now_s() - g_t0, g_hits);
         if (g_hits == g_hit_cap)
             printf("[oracle] hit cap %ld reached, counting silently from here\n", g_hit_cap);
@@ -444,6 +451,26 @@ static void add_watch(const char *arg, unsigned int flags, const char *label)
     g_nwatch++;
 }
 
+static void add_pc_watches(const char *arg)
+{
+    char *copy = strdup(arg), *tok, *save = NULL;
+    if (!copy) exit(2);
+    for (tok = strtok_r(copy, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
+        uint32_t pc = (uint32_t)strtoul(tok, NULL, 0);
+        if (g_nwatch >= MAX_WATCHES) {
+            fprintf(stderr, "[oracle] too many watches\n");
+            free(copy);
+            exit(2);
+        }
+        g_watch[g_nwatch].start = pc;
+        g_watch[g_nwatch].end = pc + 4;
+        g_watch[g_nwatch].flags = M64P_BKP_FLAG_EXEC;
+        g_watch[g_nwatch].label = "pc";
+        g_nwatch++;
+    }
+    free(copy);
+}
+
 static void usage(void)
 {
     fprintf(stderr,
@@ -451,6 +478,7 @@ static void usage(void)
         "  --watch-write A[:B]   log writes to physical [A,B), e.g. 0x1F3CC0:0x1F3CD0\n"
         "  --watch-read  A[:B]   log reads\n"
         "  --watch-rw    A[:B]   log both\n"
+        "  --watch-pc    A[,B...] watch execution at guest PCs\n"
         "  --secs N              run for N seconds (default 120)\n"
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
         "  --detail-watch N      always log hits for watch index N\n"
@@ -524,6 +552,8 @@ int main(int argc, char **argv)
             add_watch(argv[++i], M64P_BKP_FLAG_READ, "read");
         else if (!strcmp(argv[i], "--watch-rw") && i + 1 < argc)
             add_watch(argv[++i], M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE, "rw");
+        else if (!strcmp(argv[i], "--watch-pc") && i + 1 < argc)
+            add_pc_watches(argv[++i]);
         else if (!strcmp(argv[i], "--hold-ms") && i + 1 < argc)    g_hold_ms = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--input") && i + 1 < argc)      inputpath = argv[++i];
         else if (!strcmp(argv[i], "--press") && i + 1 < argc) {
@@ -642,6 +672,7 @@ int main(int argc, char **argv)
         printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s)\n",
                g_watch[i].label, g_watch[i].start, g_watch[i].end,
                g_watch[i].hits);
+    printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses
      * rely on is invisible in-memory defaults - i.e. an unverifiable

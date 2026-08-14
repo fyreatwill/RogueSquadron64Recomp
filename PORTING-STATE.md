@@ -62729,6 +62729,23 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1087 (2026-08-14) — added the retail execution gate watch
+
+Added a `--watch-pc A[,B...]` execution-breakpoint option to the retail oracle,
+then built and ran one established eleven-Start capture with whole-RDRAM,
+mission-state read/write, VI, and PIF controls. The whole-RDRAM watch reached
+its 10,000-hit threshold and was removed; all eleven Start presses were
+observed in PIF reads; and the run advanced 7,198 VI frames at width 320 with
+origin `0x006dd280`. The execution watch at `0x8003E010` hit once, while the
+`mainGameLoop` gate read at `0x8003E07C` hit zero times; the mission-state block
+also had zero accesses. This selects single-source `H-pre-main-loop-state-gate`
+for the established schedule: the preceding transition executes, but the gate
+read is not reached. The new capability is validated by the positive controls;
+the specific earlier state/return boundary remains open.
+
+ORIGIN: retail ROM debugger execution callbacks and independent whole-RDRAM/PIF/VI
+positive controls; no mitigation or game-data change was made.
+
 ## Session 1085 (2026-08-14) — confirmed retail gate-read silence
 
 Ran one debugger-on retail-oracle capture with the established eleven-Start
