@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1167 (2026-08-14).
+in the ledger. Reviewed through s1168 (2026-08-14).
 
 ## Current state
 
@@ -228,6 +228,15 @@ in the ledger. Reviewed through s1167 (2026-08-14).
   writeback skips. Together with s1165's controlled stable arm, this advances
   H3: no RT64 resource marker precedes the pre-1024 failure family, and
   writeback skips alone do not select H2. No mitigation was added.
+- The s1168 complete generated-call audit found exactly two direct
+  `musyxSynthFrame` callers: the inline wait pumps in `shutdownAudioEngine`
+  and `waitForMusyXAudioTaskDone`. Their frames are `-0x20/+0x20` and
+  `-0x18/+0x18`, respectively, with saved `$ra` slots at `+0x18` and
+  `+0x10`; both callers match the companion overlay registration. The
+  generated tree also contains the function definition and no other direct
+  or statically addressed wrapper call. The periodic active path is the
+  separately documented indirect VI callback lookup, so this selects H2 for
+  the generated idiom and rejects H1/H3 as literal callsite explanations.
 
 ## Retail VI descriptor boundary
 
@@ -366,16 +375,16 @@ corruption.
 | s1165 | Rebuilt and ran the pre-1024 writeback reachability capture. Slot dispatch logged 8,192 entries; writeback control logged 25 rows including 32 wild-width skips, with zero overlaps and zero crashes. The process stayed in 640→2→640 beyond the 600-second cap and was SIGKILLed. Compared with s1164, this supports nondeterministic reachability (H3) and shows wild skips alone do not classify the crash; no mitigation was added. |
 | s1166 | Rebuilt and ran the resource-marker capture with slot, writeback, crash, and RT64-allocation controls. All controls passed; there were no RT64-allocation markers and no `copyToRAM` fault. The run instead hit an Apple Metal compiler-cache SIGSEGV at guest PC `0x8000B650` before VI-1024, after 30 wild-width and 4 OOB skips. Together with s1165, this advances H3 and closes the resource-marker audit; no mitigation was added. |
 | s1167 | Rebuilt and ran the operation-boundary capture with slot, writeback, crash, DPC, and RT64-allocation categories. Controls passed; the run stayed pre-1024 and hit a Bus error at guest PC `0x8000B650` in `musyxSynthFrame+2796`. No DPC/RT64 operation or allocation marker followed the final writeback row before the fault, so this selects the valid different-failure H3 arm and adds no mitigation. |
+| s1168 | Completed the generated `musyxSynthFrame` callsite audit. The only two direct callers are the inline pumps in `shutdownAudioEngine` and `waitForMusyXAudioTaskDone`; their `-0x20/+0x20` and `-0x18/+0x18` frames, saved-return slots, and companion overlay registration agree. The ordinary periodic path is the separately documented indirect VI callback lookup. This selects H2 for the generated idiom, rejects H1/H3 as literal callsite explanations, and adds no build, runtime probe, or mitigation. |
 
 ## Ranked next steps
 
-1. Perform a systematic generated-call idiom audit for `musyxSynthFrame` and
-   its callers before another reactive pre-1024 capture. The s1167 different
-   failure at guest PC `0x8000B650` had no preceding DPC/RT64 operation marker,
-   so runtime operation ordering is closed for this arm. Enumerate every
-   generated callsite, classify its stack/return contract and argument-source
-   idiom, and select the next bounded runtime probe only if a complete class
-   audit leaves a reachable discriminator. Do not add a mitigation.
+1. Audit the indirect VI callback dispatch contract at the `musyxSynthFrame`
+   phase boundary before another reactive pre-1024 capture. The s1168 static
+   class audit found two balanced generated wait-pump callers and confirmed
+   the normal periodic path is indirect. Use one phase-gated runtime capture
+   with an independent callback positive control and entry `$sp`/`$ra`
+   handoff discriminator. Do not add a mitigation.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

@@ -64179,3 +64179,26 @@ by no DPC/RT64 operation marker and no `[rt64-alloc]` marker before the fault.
 This is a valid different-failure H3 arm, not evidence of a preceding RT64
 operation and not authorization for a mitigation. The next unit is a complete
 static generated-call idiom audit for `musyxSynthFrame` and its callers.
+
+## Session 1168 (2026-08-14) — audited musyxSynthFrame generated call idiom
+
+Completed the full generated-tree inventory for `musyxSynthFrame`. The
+function definition is at guest `0x8009123C`; the only two direct generated
+callers are the inline wait pumps in `shutdownAudioEngine` (call site
+`0x80091D60`) and `waitForMusyXAudioTaskDone` (call site `0x80091ED0`). The
+first caller allocates `-0x20`, saves `$ra` at `+0x18`, restores `$ra` at
+`+0x18`, and returns with `+0x20`. The second allocates `-0x18`, saves and
+restores `$ra` at `+0x10`, and returns with `+0x18`. Both direct calls pass the
+same generated `(rdram, ctx)` arguments, and the companion overlay table
+registers `musyxSynthFrame` at offset `0x90DFC` with size `0x660`, matching the
+generated function's location and extent.
+
+There is no additional direct or statically addressed generated wrapper call.
+The normal periodic entry is the separately documented indirect VI callback
+lookup through `get_function`, so the inventory is not empty. This selects H2
+for the generated idiom and rules out H1 (malformed generated caller) and H3
+as literally defined. It rules out neither corruption in the indirect callback
+handoff nor the downstream `0x8000B650` path. No build, runtime experiment,
+instrument, mitigation, or source change was needed. The next unit is a single
+phase-gated runtime audit of the indirect callback's guest `$sp`/`$ra` handoff,
+with a positive control in the same run.

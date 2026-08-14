@@ -1,34 +1,38 @@
-# NEXT work unit (s1168)
+# NEXT work unit (s1169)
 
-HYPOTHESIS-ID: musyx-synth-call-idiom
+HYPOTHESIS-ID: musyx-synth-indirect-callback-contract
 
-Perform one complete static idiom-class audit of every generated callsite of
-`musyxSynthFrame` (and any generated wrapper it directly calls) to determine
-whether the pre-1024 `0x8000B650` failures share a malformed caller contract.
-Do not add a guard, skip, restore, or runtime counter.
+Perform one bounded runtime capture of the indirect VI callback dispatch that
+invokes `musyxSynthFrame`, with a phase-scoped positive control and a single
+discriminator for the callback's guest stack/return register handoff at entry.
+Do not add a guard, skip, restore, or mitigation.
 
 Competing hypotheses and discriminator:
 
-- H1: at least one reachable generated caller has an unbalanced stack/return
-  contract or a wrong direct-call boundary; that site is a concrete next probe.
-- H2: all generated callers have balanced contracts and agree with companion
-  symbol boundaries; the fault is outside this generated call idiom.
-- H3: no generated callsite exists in the active tree, so the `musyxSynthFrame`
-  frame is reached through a runtime-side or indirect path and this class is
-  the wrong audit target.
+- H1: the indirect callback dispatcher hands `musyxSynthFrame` a corrupted
+  guest `$sp`/`$ra`; the entry discriminator shows a bad value before the
+  function's prologue executes.
+- H2: the dispatcher handoff is valid at entry and the fault is downstream of
+  callback dispatch; the same run reaches the independent callback positive
+  control and records valid entry state.
+- H3: the callback path is not reached in the pre-1024 arm; the independent
+  positive control is absent, making the capture unevaluable rather than a
+  null result.
 
-The discriminating measurement is the complete callsite table: every textual
-and generated `musyxSynthFrame` edge, companion entry address, stack delta/
-restore pair, saved-return idiom, and direct-versus-indirect dispatch form.
-One malformed reachable site selects H1; a complete balanced table selects
-H2; an empty generated inventory selects H3. A partial grep is not a result.
+The discriminating measurement is one phase-gated callback-entry table with
+the independent callback positive control, entry `$sp`/`$ra`, and the first
+`musyxSynthFrame` prologue values in the same run. A bad handoff with the
+control live selects H1; a valid handoff with the control live selects H2;
+missing control is H3/unevaluable.
 
 Exact commands:
 
-    rg -n "musyxSynthFrame|8000B650" RecompiledFuncs src lib docs tools
-    rg -n "musyxSynthFrame" ../N64Recomp/RecompiledFuncs 2>/dev/null
-    sed -n 'START,ENDp' RecompiledFuncs/funcs_*.c
+    sed -n '4200,4320p' ../N64Recomp/RecompiledFuncs/funcs_24.c
+    sed -n '420,510p' lib/N64ModernRuntime/librecomp/src/overlays.cpp
+    rg -n "tickfunc|8009123C|0x11A8A8|callback" src lib/N64ModernRuntime
+    rg -n "ROGUESQ_LOG_TICKFUNC_CALLER|AUDIOTICK_TRACE|PROBE_PHASE" tools scratch/agent
 
-Record the full site inventory and companion-symbol comparison in the session
-entry and use it to choose the next phase-gated runtime unit. No build is
-needed unless the census finds a source-boundary correction.
+Before building, write the exact positive-control and handoff fields into the
+instrument plan; batch them in one build and run. If the existing callback
+entry instrumentation cannot expose the handoff, redesign the probe before
+building rather than adding a non-discriminating field.
