@@ -62008,3 +62008,25 @@ table index 0. The next audit will enumerate those writers.
 ORIGIN: generated recomp source, symbol table, and architecture-document
 inspection only; no mitigation, guest value, or recomp runtime behavior was
 changed.
+
+## Session 1049 (2026-08-14) — audited retail state writers
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. The menu state named `0x800CFF50` is the
+halfword at `0x800D0000-0xB0`, not an instruction address. Exhaustive generated
+store search found its stores only inside `menuOverlayInit` (`0x800C58A0`), in
+dispatch cases selected after the `0x800C5A5C` read; no external direct writer
+or controller read setting it to zero was found. Table case 0 calls
+`runHangarMenuFromOverlay` at `0x800C5A8C`.
+
+`gGameSettings+0x20` is `0x80130B60`. The direct absolute writer found is
+`resetMixerVolumesAndFlags` at `0x8006ED5C`, which constructs `0x80130B40`
+and stores constant `0x7F` at offset `0x20`. This is a non-input reset, not a
+complete explanation of the retail transition; pointer-mediated copies and
+the preceding index-0 setup remain open. The audit selects
+`H-retail-state-writer-timer` as a static lead only and rules out spending the
+next iteration on another Start-button schedule.
+
+ORIGIN: generated recomp source, symbol table, and architecture-document
+inspection only; no mitigation, guest value, or recomp runtime behavior was
+changed.

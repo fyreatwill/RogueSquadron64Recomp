@@ -1,37 +1,33 @@
-# NEXT work unit (s1049)
+# NEXT work unit (s1050)
 
 HYPOTHESIS-ID: retail-state-transition-input
 
-Perform one bounded static audit of the writers that can set
-`gGameSettings+0x20` and the menu state halfword at `0x800CFF50`. Do not run
-the game or arm a freelist watch. Trace only the callers/branches that can
-enable the width-320 menu loop or set table index 0 before the
-`0x800C5A5C` dispatch.
+Perform one bounded static audit of pointer-mediated copies into
+`gGameSettings+0x20` (`0x80130B60`) and the callers that can select table index
+0 at `menuOverlayInit`. Do not run the game or arm a freelist watch.
 
-## Competing hypotheses and discriminator
+Competing hypotheses and discriminator:
 
-* `H-retail-state-writer-input`: an input edge/mask directly writes either
-  `gGameSettings+0x20` or `0x800CFF50=0`.
-* `H-retail-state-writer-timer`: a timer, attract counter, or demo predicate
-  writes one of those fields without an input gate.
-* `H-retail-state-writer-upstream`: the fields are only copied from another
-  persistent state object; the missing transition is upstream of this menu
-  overlay.
+* `H-retail-copy-input`: a caller reads controller edge/mask data, then copies
+  or writes the menu-enable byte/state.
+* `H-retail-copy-timer`: the copy is guarded only by timer/demo/attract state.
+* `H-retail-copy-upstream`: the values arrive from a persistent state object or
+  return value, with no local input/timer decision.
 
-Discriminating measurement: produce one writer table listing every generated
-store/copy into `gGameSettings+0x20` and `0x800CFF50`, its guarding predicates,
-and its caller. A direct input mask selects the input-writer hypothesis; a
-timer/demo-only guard selects the timing-writer hypothesis; only upstream
-copy sources with no local decision select the upstream-writer hypothesis.
+Discriminating measurement: produce one table of every callsite that passes a
+pointer to `gGameSettings`, every store/copy at offset `0x20`, and every
+index-0 selection branch, including the nearest guard and caller. An input
+mask selects the input-copy hypothesis; timer/demo-only guards select the
+timer-copy hypothesis; source-object copies with no local decision select the
+upstream-copy hypothesis.
 
-## Exact commands
+Exact commands:
 
 ```sh
-rg -n -C 4 "0x800CFF50|800CFF50|gGameSettings|D_80130B40|0x20\(.*s[0-9]+\)|demoStep|demoInputs" syms docs /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs 2>/dev/null | head -400
-rg -n -C 5 "sh[[:space:]]+.*0x20|MEM_H\(0X20|MEM_W\(0X20|0x800CFF50|800CFF50" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c 2>/dev/null | head -400
-rg -n -C 3 "getControllerNewButtonsPressed|demoStep|demoInputs|0x80109AE0|0x8010BCA0" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c syms docs 2>/dev/null | head -300
+rg -n -B 8 -A 12 "0x80130B40|0XB40|0xB40|MEM_[HWB]\\(0X20|800C5A84|case 0" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -800
+rg -n -C 5 "getControllerNewButtonsPressed|demoStep|demoInputs|0x80109AE0|0x8010BCA0|0x800C5A5C|0x800A75C0" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -500
 ```
 
-Expected output is one bounded table with ROM/guest addresses and a selected
-hypothesis. No build is needed unless the audit finds an existing source probe
-that cannot be interpreted statically.
+Expected output is one bounded writer/caller table and a selected hypothesis.
+No build or runtime run is needed unless the static table exposes an existing
+probe whose semantics cannot be read from generated code.
