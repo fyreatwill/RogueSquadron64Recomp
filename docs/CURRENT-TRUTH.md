@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s953 (2026-08-13). The active blocker is authoritative
+Reviewed through s954 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -160,6 +160,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   from a non-frame value. Eight callers contain unrelated `LOOKUP_FUNC`/`jalr`
   calls, so indirect target behavior remains the only unresolved caller-side
   context-corruption branch; no legitimacy or mitigation conclusion followed.
+- s954 classified the statically addressed indirect targets in all eight
+  callers. Every target either has no `ctx->r29` write or only the generated
+  frame decrement/restore pair; no target-side non-frame `$sp` writer was
+  found. `runInMissionFrame` additionally dispatches a pointer loaded from
+  `0x8010B350 + i*8`, so its target set remains runtime-driven and unresolved.
+  The active hypothesis remains H-slotdispatcheriter-stacksp-unclassified;
+  no guard or mitigation followed.
 
 ## Recent evidence ledger
 
@@ -190,6 +197,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s951 | Closed the channel `+0x64` hypothesis thread: no reachable indirect-dispatch edge and fixed-array channel-object origin select H-channel-context-field-sentinel-contract. |
 | s952 | Mapped `slotDispatcherIter+872` to `funcs_8.c:22810`, the prologue spill of guest `$sp`/`ctx->r29`; 144 direct callers in 19 files are the next writer/origin class. No guard or mitigation. |
 | s953 | Audited all 144 direct callers in 72 generated functions: frame entry/restore is structurally balanced and no non-frame `$sp` writer exists; eight callers retain indirect-call targets as the unresolved shared-context branch. No guard or mitigation. |
+| s954 | Audited all indirect targets in the eight callers: 26 statically addressed targets are frame-balanced or leaf functions; the `runInMissionFrame` callback table at `0x8010B350` remains runtime-driven and unresolved. No guard or mitigation. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session

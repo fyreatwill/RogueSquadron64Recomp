@@ -59652,3 +59652,31 @@ the active hypothesis remains H-slotdispatcheriter-stacksp-unclassified.
 
 ORIGIN: exhaustive generated direct-call/frame-assignment inventory plus
 companion-symbol cross-check; no guest value mutation or mitigation.
+
+## Session 954 (2026-08-13) — static indirect targets are frame-balanced; callback table remains dynamic
+
+Performed the planned source-only audit of the eight enclosing callers that
+contain both `slotDispatcherIter` and `LOOKUP_FUNC`/`jalr`. No build, game run,
+soak, generated-source edit, guard, mitigation, or behavior change was made.
+
+The eight callers are `forwardToNpcGeneratorSpawn`, `runInMissionFrame`,
+`npcTexturedEffectUpdateWithSlotChain`, `npcWordDevastatorUpdate`,
+`attachedAudioVisualEmitterNpcHandler`, `npcShieldGeneratorUpdate`,
+`emitTrailPuffAndCue`, and `cutsceneActorNpcHandler`. The static inventory
+contained 26 distinct target addresses. Cross-checking each address against
+the generated declarations and function bodies found no target-side non-frame
+`ctx->r29` assignment: leaf targets have zero writes, while non-leaf targets
+have only the generated entry decrement and matching restore (plus the
+duplicated MIPS return delay-slot restore).
+
+`runInMissionFrame` is a separate unresolved edge. It loads the callback from
+`0x8010B350 + i*8` (`lbu` entry selector at `0x8010B350`, function pointer at
+entry `+4`) and dispatches it through `LOOKUP_FUNC(ctx->r2)`. Static target
+enumeration cannot identify the runtime contents or the callback writers, so
+this work unit selects H-slotdispatcheriter-stacksp-unclassified rather than
+indirect-balanced. No target is known to be a stub, and no mitigation was
+landed.
+
+ORIGIN: generated target-body/frame-write inventory, `funcs.h` declarations,
+companion symbol cross-check, and direct inspection of the runtime callback
+load; no guest value mutation or mitigation.
