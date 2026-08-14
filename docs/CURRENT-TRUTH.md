@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s990 (2026-08-13). The active blocker is authoritative
+Reviewed through s991 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -441,6 +441,8 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s989 | Added a recoverable macOS page-fault census for the two shared host pages covering the phase-4 and phase-6 VTXCOLOR ranges. The run reached VI 1024, completed the 180-second capture without a crash, and logged 128 recovered write faults; 124 phase-4 records were all outside the exact target range and no phase-6 exact-range record occurred. F5-state/shade controls and all-DMA controls fired. This selects no directly faulting CPU store in the observed target bytes, bounded by page sharing; dynamic copies and renderer/state conversion remain open. No mitigation. |
 | s990 | `nm`/`atos` and ARM64 disassembly independently classified the five requested phase-4 fault PCs as generated game functions: `soundMacroSetFlagBitTremolo`, `tickSongSequence`, `decodeAndFillVoiceBlock`, `soundMacroPlayRandomKeyNote`, and `stepSongPitchBendLanes`. No PC resolved to allocator/renderer runtime code. The associated global guest breadcrumbs do not match those host functions' guest ranges, so they cannot attribute the faulting store. H-generated is selected for host-PC ownership only; no target-byte writer or legitimacy conclusion follows. No mitigation. |
 
+| s991 | The planned ordinary-generated-write probe was blocked before build: generated `*.c` files compile as C and `MEM_W/MEM_H/MEM_B` are raw lvalue macros, so a common header hook cannot distinguish writes from reads or capture a per-store guest PC. The next probe must be implemented in the regeneration-owned fixup script. No runtime or mitigation conclusion. |
+
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
 entries and do not authorize mitigations.
@@ -481,28 +483,38 @@ entries and do not authorize mitigations.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s990)
+## Next work unit (s992)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
-Classify the five unique phase-4 host fault PCs from s989 with the local symbol
-table and ARM64 disassembly, and compare their call sites with the generated
-guest breadcrumb. Competing hypotheses are H-generated (fault PCs resolve to
-generated game stores), H-runtime (fault PCs resolve to allocator/renderer
-runtime stores), and H-page-gap (all faults are unrelated stores on shared
-pages). The discriminating measurement is independent PC-to-symbol/disassembly
-classification for the repeated PCs `0x103300418`, `0x103356134`,
-`0x103383458`, `0x103300210`, and `0x10334D084`; do not add a guard or infer
-target-byte ownership from a page fault alone.
+Add a regeneration-safe, env-gated fixup pass in
+`../N64Recomp/fixup_game_funcs.py` that wraps only generated ordinary store
+statements whose effective address can be tested against the phase-4/phase-6
+pages. The wrapper must record the store's guest PC, width, physical address,
+and current phase immediately before the lvalue assignment, while retaining a
+same-run positive-control marker and the existing F5/shade and all-DMA
+controls. Run the resulting phase-gated probe once; do not edit generated
+files by hand and do not add a mitigation.
+
+Competing hypotheses are H-generated-target (exact target overlap with a
+matching guest PC), H-generated-unrelated (only non-target writes on the
+shared pages), and H-runtime-copy (no generated-store overlap, leaving only
+runtime copy/state conversion). The discriminating measurement is the
+phase-scoped count and records for exact target generated stores versus
+non-target shared-page stores; the positive control must visibly fire.
 
 Exact commands:
 
-`nm -n build/RogueSquadron64Recomp` (use nearest preceding symbols), then
-`otool -tvV build/RogueSquadron64Recomp` around those symbols and map any
-generated caller with the existing local symbol/guest-PC tools.
+Before building, add the pass to the existing fixup script and verify its
+match count against a regenerated-source dry run. Then run:
 
-Use only the s989 run log as input; no build or soak is needed unless the
-symbol/disassembly artifacts are unavailable. Land no mitigation.
+`env ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LLE_FORCE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_PHASE_TIMEOUT=180 PROBE_START=0 PROBE_KEYS='20:start' zsh tools/probe.sh scratch/agent/probe_s991 180 1`
+
+The pass must be regeneration-safe: if it cannot identify store statements
+without wrapping reads, stop and record the match-count measurement rather
+than inserting a temporary generated-file probe.
+
+The s991 feasibility result is not evidence about target-byte ownership.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

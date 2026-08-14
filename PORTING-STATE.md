@@ -60671,3 +60671,23 @@ of the generated write. No guard or shade mitigation was added.
 ORIGIN: the recovered page-fault records originate in the macOS page-protection
 watcher; this session only classified their host PCs and did not alter memory
 ownership or payload values.
+
+## Session 991 (2026-08-13) — scoped generated-write probe feasibility
+
+The planned M4 work unit was to build a phase-gated probe that records the
+guest PC immediately before ordinary generated `MEM_*` writes on the two
+shared VTXCOLOR pages. Ground-truth inspection of the build and memory
+definitions stopped the work before a build: `CMakeLists.txt` adds
+`RecompiledFuncs/*.c` as C sources, while `lib/N64ModernRuntime/N64Recomp/include/recomp.h`
+defines `MEM_W`, `MEM_H`, and `MEM_B` as raw lvalue dereferences. A common
+macro/header hook therefore cannot tell a read from the later assignment or
+capture a store boundary. Editing generated files would be regeneration-hostile.
+
+This iteration ran no build or game capture. It rules out only the proposed
+common-MEM-macro implementation, not any writer hypothesis. The existing
+`mprotect` watcher remains write-only but page-granular; the next probe must be
+implemented in the regeneration-owned `../N64Recomp/fixup_game_funcs.py` and
+must first report its match count. No guard or shade mitigation was added.
+
+ORIGIN: static build/macro feasibility audit; no runtime value or ownership was
+changed.
