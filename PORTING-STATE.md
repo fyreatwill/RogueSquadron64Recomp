@@ -60095,6 +60095,31 @@ Evidence: forced environment-preserved non-LTO build, `stat`, `nm`, and
 ORIGIN: external oracle non-LTO linked-artifact audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 973 (2026-08-13) — Two-object mixed LTO oracle is correct
+
+Built two isolated oracle cores with the successful environment-preserved
+Homebrew binutils path: an all-non-LTO control and an LTO build whose fresh
+`memory.o` and `dbg_breakpoints.o` were rebuilt with `-fno-lto` before the
+final link. The mixed arm retained LLVM bitcode for unrelated objects; its
+object formats and timestamps confirmed the intended composition.
+
+Both fresh dylibs emit `mov w2, #0x4` and `mov w3, #0x3` before
+`_check_breakpoints_on_mem_access` at both `read_with_bp_checks` call sites.
+The mixed recipe is therefore reproducible and correct. This rules out a
+generic LTO/non-LTO link interaction between the two callback objects, while
+leaving the individual LTO treatment of `memory.c`, `dbg_breakpoints.c`, or
+their joint all-LTO interaction unresolved. No runtime oracle arm was run, so
+there is no retail or positive-control claim from this static unit; no runtime
+change or mitigation was made.
+
+Evidence: isolated artifacts under
+`/Users/williambuckley/Documents/Tools/rs64-oracle/iter973/`, `file`, `stat`,
+`nm`, and `otool -tvV` disassembly. The next unit builds the two single-object
+mixed arms.
+
+ORIGIN: external oracle LTO object-composition audit; no guest value was
+changed and no mitigation was landed.
+
 ## Session 968 (2026-08-13) — Source and object are correct; linked dylib is not
 
 Traced the external oracle callback mismatch through the exact Makefile recipe,

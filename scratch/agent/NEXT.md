@@ -1,27 +1,29 @@
-# NEXT work unit (s973)
+# NEXT work unit (s974)
 
-Build two oracle dylibs in isolated copies using the same successful
-environment-preserved binutils path: an all-non-LTO control and a mixed arm
-with fresh non-LTO `memory.o`/`dbg_breakpoints.o` but an LTO link of the
-remaining objects. Compare both callback call sites. Do not edit the recomp
-runtime or retry retail PIF/callback hypotheses.
+Build two isolated single-object mixed oracle dylibs from the successful s973
+copies: arm A has fresh non-LTO `memory.o` with LTO `dbg_breakpoints.o`; arm B
+has LTO `memory.o` with fresh non-LTO `dbg_breakpoints.o`. Compare both
+callback call sites against s973's all-LTO and two-object-mixed disassemblies.
+Do not edit the recomp runtime or retry retail PIF/callback hypotheses.
 
 HYPOTHESIS-ID: oracle-pif-lto-boundary
 
 Competing hypotheses:
 
-- H-pif-mixed-correct: non-LTO callback objects remain correct when linked
-  with the other LTO objects, localizing the defect to LTO-produced callback
-  bitcode or its optimization.
-- H-pif-mixed-wrong: the mixed link shifts/drops arguments, selecting an
-  interaction between LTO objects and non-LTO callback objects.
+- H-pif-memory-lto: arm A is correct and arm B is wrong, identifying
+  `memory.c`'s LTO treatment as sufficient for the bad call.
+- H-pif-breakpoints-lto: arm B is correct and arm A is wrong, identifying
+  `dbg_breakpoints.c`'s LTO treatment as sufficient for the bad call.
+- H-pif-joint-lto: both single-object arms remain wrong while the two-object
+  mixed arm is correct, selecting an interaction that requires both objects
+  to be LTO.
 - H-pif-lto-input-recipe: the mixed arm cannot be reproduced with identical
   inputs/flags, selecting a build-recipe or toolchain-state defect instead.
 
-Discriminating measurement: compare `w2,w3` at both callback calls in the two
-fresh dylibs. Correct mixed `w2=4,w3=3` localizes the defect to LTO-produced
-callback objects; shifted mixed calls select an LTO/non-LTO interaction; an
-unreproducible mixed recipe selects build-state rather than runtime.
+Discriminating measurement: compare `w2,w3` at both callback calls in both
+fresh dylibs. Only arm A correct selects `memory.c`; only arm B correct selects
+`dbg_breakpoints.c`; both wrong with the two-object mixed arm correct selects
+joint LTO; an unreproducible arm selects build-state rather than runtime.
 
 Exact commands:
 

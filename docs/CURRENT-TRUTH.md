@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s972 (2026-08-13). The active blocker is authoritative
+Reviewed through s973 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -276,6 +276,14 @@ closed; M3 work is limited to systematic idiom-class audits.
   artifacts; ordinary non-LTO compile/link is independently correct. This
   selects the LTO transformation boundary over source, ABI, and non-LTO link
   hypotheses. No runtime or retail conclusion followed.
+- s973 built isolated all-non-LTO and mixed oracle dylibs. The mixed arm used
+  fresh non-LTO `memory.o` and `dbg_breakpoints.o` with all other objects left
+  as LTO bitcode; both callback sites in both fresh dylibs emit `w2=4,w3=3`.
+  The mixed recipe is reproducible and correct, ruling out a generic
+  LTO/non-LTO link interaction between those two callback objects. The
+  remaining static boundary is the individual LTO treatment of `memory.c`,
+  `dbg_breakpoints.c`, or their interaction when both are LTO; no runtime or
+  retail conclusion follows.
 
 ## Recent evidence ledger
 
@@ -325,6 +333,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s969 | Forced the exact oracle rebuild successfully with current Homebrew binutils libraries. Source/object/dylib timestamps were 19:49:20/20:07:30/20:07:33 and fresh object/dylib hashes changed; the new dylib still emits `w0=pc`, `x1=address`, `w2=3`, with no `w3` before `_check_breakpoints_on_mem_access` at `0x13d64`. Stale-product hypothesis is refuted; link-stage/object-to-dylib transformation remains selected. |
 | s971 | Fresh non-LTO ARM64 assembly emits `w2=4,w3=3` at both callback sites, while the current LTO dylib emits `w2=3` with `w3` unset. This selects the LTO transformation boundary; the source/ABI hypothesis is refuted for non-LTO codegen and no runtime or retail conclusion follows. |
 | s972 | Fresh non-LTO linked dylib emits `w2=4,w3=3` at both callback sites after using the environment-preserved binutils path. This independently selects LTO over source, non-LTO codegen, and non-LTO link; no runtime or retail conclusion follows. |
+| s973 | Isolated all-non-LTO and mixed dylibs both emit `w2=4,w3=3` at both callback sites; the reproducible mixed arm rules out a generic link interaction between the two callback objects and selects single-object LTO treatment or their all-LTO interaction. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -343,9 +352,11 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s972 shows a fresh non-LTO linked dylib is correct
-   while the LTO dylib is not. Audit the LTO compiler/link inputs and run one
-   controlled mixed-artifact comparison before inferring retail behavior.
+   callback-table watch: s973 shows that fresh non-LTO `memory.o` plus
+   `dbg_breakpoints.o` is sufficient to restore both callback call sites even
+   when the rest of the dylib remains LTO. Build two single-object mixed arms
+   to identify whether `memory.c`, `dbg_breakpoints.c`, or their joint LTO
+   treatment creates the bad call; do not infer retail behavior yet.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -355,26 +366,28 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: oracle-pif-lto-boundary
 
-Build two oracle dylibs in isolated copies using the same successful
-environment-preserved binutils path: an all-non-LTO control and a mixed arm
-with fresh non-LTO `memory.o`/`dbg_breakpoints.o` but an LTO link of the
-remaining objects. Compare both callback call sites. Do not edit the recomp
-runtime or retry retail PIF/callback hypotheses.
+Build two isolated single-object mixed oracle dylibs from the successful s973
+copies: arm A has fresh non-LTO `memory.o` with LTO `dbg_breakpoints.o`; arm B
+has LTO `memory.o` with fresh non-LTO `dbg_breakpoints.o`. Compare both
+callback call sites against s973's all-LTO and two-object-mixed disassemblies.
+Do not edit the recomp runtime or retry retail PIF/callback hypotheses.
 
 Competing hypotheses:
 
-- H-pif-mixed-correct: non-LTO callback objects remain correct when linked
-  with the other LTO objects, localizing the defect to LTO-produced callback
-  bitcode or its optimization.
-- H-pif-mixed-wrong: the mixed link shifts/drops arguments, selecting an
-  interaction between LTO objects and non-LTO callback objects.
+- H-pif-memory-lto: arm A is correct and arm B is wrong, identifying
+  `memory.c`'s LTO treatment as sufficient for the bad call.
+- H-pif-breakpoints-lto: arm B is correct and arm A is wrong, identifying
+  `dbg_breakpoints.c`'s LTO treatment as sufficient for the bad call.
+- H-pif-joint-lto: both single-object arms remain wrong while the two-object
+  mixed arm is correct, selecting an interaction that requires both objects
+  to be LTO.
 - H-pif-lto-input-recipe: the mixed arm cannot be reproduced with identical
   inputs/flags, selecting a build-recipe or toolchain-state defect instead.
 
-Discriminating measurement: compare `w2,w3` at both callback calls in the two
-fresh dylibs. Correct mixed `w2=4,w3=3` localizes the defect to LTO-produced
-callback objects; shifted mixed calls select an LTO/non-LTO interaction; an
-unreproducible mixed recipe selects build-state rather than runtime.
+Discriminating measurement: compare `w2,w3` at both callback calls in both
+fresh dylibs. Only arm A correct selects `memory.c`; only arm B correct selects
+`dbg_breakpoints.c`; both wrong with the two-object mixed arm correct selects
+joint LTO; an unreproducible arm selects build-state rather than runtime.
 
 Exact starting checks/commands:
 
