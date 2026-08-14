@@ -1,32 +1,30 @@
-# NEXT work unit (s1098)
+# NEXT work unit (s1099)
 
-HYPOTHESIS-ID: submit-blocking-queue-contract
+HYPOTHESIS-ID: submit-external-queue-wiring
 
-Perform one bounded static audit of the two blocking queue waits inside
-`submitGfxFrame` (`0x8000C0B4`, `0x8000C2B8`). Identify each queue, its producer
-and consumer paths, and whether the companion/generated sources establish a
-legitimate message path on the idle-loop call. Use static generated/companion
-evidence only; do not build, run, or change runtime code.
+Perform one bounded static host/runtime audit of the two unmatched blocking
+waits inside `submitGfxFrame`. Trace the external SP-completion producer for
+`D_8011A818` and the DP forwarding producer for `D_8011A7E8` through
+`src/main`, ultramodern events, and existing queue-control code. Do not build,
+run, or change runtime code.
 
 Competing hypotheses:
 
-* H-queue-legitimate: both waits have identified producers and consumers that
-  can satisfy them on the idle-loop path.
-* H-queue-unmatched: at least one wait has no statically reachable producer or
-  has a producer/consumer contract incompatible with this call.
-* H-queue-mismatch: generated and companion queue identities or blocking modes
-  disagree, so the wait boundary cannot yet be classified.
+* H-host-wired: both external producers target the exact guest queues and use
+  compatible message/event routes.
+* H-sp-unwired: the SP completion route does not target `D_8011A818`.
+* H-dp-unwired: the DP forwarding route does not target `D_8011A7E8`.
+* H-address-mismatch: both routes exist but resolve to different queue objects.
 
-Discriminator: produce a two-row queue table containing physical queue address,
-block mode, message producer, message consumer, and idle-loop reachability. Two
-matched producer/consumer rows select H-queue-legitimate; any unmatched or
-incompatible row selects H-queue-unmatched; source disagreement selects
-H-queue-mismatch and stops runtime probing.
+Discriminator: produce a two-row table containing guest queue address, host
+producer function, exact target address, event/message kind, and consumer. Two
+exact producer targets select H-host-wired; a missing or wrong SP target selects
+H-sp-unwired; a missing or wrong DP target selects H-dp-unwired; differing
+queue-object identities select H-address-mismatch.
 
 Exact commands:
 
 ```sh
-rg -n "8000C0B4|8000C2B8|osRecvMesg|submitGfxFrame" ../N64Recomp/RecompiledFuncs ../rogue_squadron64
-rg -n "8011A7E8|8012A7E8|800331D0|submitGfxFrame" ../N64Recomp/RecompiledFuncs ../rogue_squadron64
-sed -n 'START,ENDp' <generated-or-companion-file>
+rg -n "D_8011A818|D_8011A7E8|enqueue_external_message|sp_task_queue|dpInterrupt|OS_EVENT_DP|osSendMesg" src lib/N64ModernRuntime docs
+sed -n 'START,ENDp' <host-or-runtime-file>
 ```

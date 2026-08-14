@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1097 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1098 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -286,14 +286,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1095 | Full established-schedule retail oracle rerun passed controls: whole-RDRAM 10,000 callbacks, eleven PIF Start presses, and 7,198 VI frames at width 320/origin `0x006dd280`. Execution hits were `0x8006D9B0=1`, `0x8006D9B4=1`, and `0x8006D9BC=0`. Single-source runtime result selects `H-taken-branch`; the initial truncated attempt was invalid. |
 | s1096 | Bounded static audit used the preserved generated snapshot and retail ROM. All words `0x8006D980..0x8006D9C8` matched under `ROM = VRAM - 0x80000000 + 0xC00`; the `0x8006D9B4` target increments `$s0`, runs the six frame/input calls, and loops back to `0x8006D9B0`. Selects `H-target-loop`, rules out `H-target-exit` and `H-static-mismatch`; no runtime code or mitigation changed. |
 | s1097 | Bounded generated/companion audit found one normal `submitGfxFrame` epilogue and explicit continuations at all nine caller sites, but also reachable blocking `osRecvMesg(..., MQ_BLOCK)` calls at `0x8000C0B4` and `0x8000C2B8`. Selects `H-submit-nonreturn` as a legitimate wait boundary while retaining the independent fact that the audited idle-loop invocation returned once; no build, runtime code, or mitigation changed. |
+| s1098 | Bounded queue-contract audit maps `0x8000C0B4` to `D_8011A818` and `0x8000C2B8` to `D_8011A7E8`; both are `osRecvMesg(..., BLOCK)`. Generated/companion evidence identifies consumers but no matching in-tree producer for either wait: the first is an external SP-completion boundary, and the second depends on host DP forwarding documented in the architecture notes. Selects `H-queue-unmatched`; no build, runtime code, or mitigation changed. |
 
 ## Ranked next steps
 
-1. Perform one bounded static audit of the two blocking queue waits inside
-   `submitGfxFrame` (`0x8000C0B4`, `0x8000C2B8`): identify each queue, its
-   producer/consumer paths, and whether the companion/generated sources
-   establish a legitimate message path on the idle-loop call. Do not build or
-   run.
+1. Perform one bounded host/runtime audit of the two unmatched submit waits:
+   trace the SP completion route for `D_8011A818` and the DP forwarding route
+   for `D_8011A7E8` through `src/main`, ultramodern events, and the existing
+   queue-control instrumentation. Do not build or run; determine whether each
+   external producer is wired to the exact guest queue address.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

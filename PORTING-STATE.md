@@ -62959,3 +62959,20 @@ does not identify the earlier state gate. No mitigation was added.
 
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
+## Session 1098 (2026-08-14) — audited submit queue contracts
+
+Performed the planned bounded static audit of the two blocking waits inside
+`submitGfxFrame`. Generated code computes `0x8000C0B4`'s queue as
+`0x8011A818` and `0x8000C2B8`'s queue as `0x8011A7E8`; both pass a null message
+pointer and mode `1`, so both are `OS_MESG_BLOCK` waits. The SP scheduler
+creates the size-1 `0x8011A818` queue, while the companion symbol file names
+`0x8011A7E8` as an `OSMesgQueue` used by the post-swap acknowledgement path.
+The generated/companion census found consumers and surrounding state changes,
+but no matching in-tree producer send for either exact queue. The architecture
+notes separately describe SP completion and host DP forwarding as external
+producer boundaries. This selects `H-queue-unmatched`: the static source set
+does not establish a legitimate producer/consumer contract for the idle-loop
+waits, and runtime probing should first verify exact host queue wiring.
+
+ORIGIN: generated MIPS output, companion symbol/architecture annotations, and
+static queue address arithmetic; no mitigation or game-data change was made.
