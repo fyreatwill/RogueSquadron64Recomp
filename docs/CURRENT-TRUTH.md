@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1118 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1119 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -409,16 +409,18 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1116 | Corrected retail-oracle capture passed whole-RDRAM (38,782), ten Start/PIF controls, and VI (7,198 frames), but stayed width 320/origin `0x006dd280`. All eight audited writer PCs fired, including recurring pending-mask and A0 writers. Selects `H-retail-stays-prephase` and refutes `H-writer-watch-invalid`; the mode-record caller/argument route remains open. |
 | s1117 | Bounded generated audit found boot `initVideoBootWrapper` and recurring `advanceVideoFrame` feed the same fixed mode-selection machinery. `swapBufferWithViMode`/`selectAndApplyViMode` select offsets `0x00/0x50/0xA0/0xF0` from RAM table base `0x80128D50` using lifecycle selector bytes `0x8011A864/65/62`; width is loaded from record `+8` before `osViSetMode`. No pointer escapes the table and the companion tree has no additional implementation/caller. Selects `H-mode-record-state-gate`, rules out `H-mode-record-pointer-corrupt`, and leaves table population/width values open; no build or run. ORIGIN: generated control-flow/data-flow plus companion symbol census, no mitigation. |
 | s1118 | Bounded generated/ROM audit found `initVideoSubsystem` copies four 0x50-byte records into `0x80128D50` from `osViModeTable` at `0x80039330`. Source indices come from `0x8003780C..0x782F`; the independent ROM table has widths 320, 640, and 1280 at distinct index classes. Selects `H-mode-record-populated/state-dependent`, rules out `H-mode-record-uninitialized` and `H-mode-record-constant`; the active selector-state producer remains open. Single-source static result; no build or run. ORIGIN: generated copy/data-flow plus direct retail-ROM table bytes, no mitigation. |
+| s1119 | Bounded generated/companion census found `getViModeType` returns `rsViModeType` at `0x8010FF20`; its sole setter is the boot call at `0x80001224`, which maps `osResetType` at `0x80000300` to 0/1/2. The mode-type value therefore has a lifecycle/reset source, not a controller/demo source. Selector bytes `0x8011A864/65/62` have only the material bitfield-unpack writer `buildAndRegisterDefaultMaterial` (bits of its render-state argument) plus the pending-mask applier `applyPendingViChanges` (mask-driven clear/set), called from the VI retrace loop; no direct controller/demo writer was found. Selects `H-selector-lifecycle/config` over fixed-zero and input/demo-tainted; the concrete state that selects a non-320 descriptor remains runtime-open. No build or run. ORIGIN: generated control/data-flow and companion symbol census, no mitigation. |
 
 ## Ranked next steps
 
-1. Trace the producer of selector bytes `0x8011A864/65/62` and the mode-type
-   value feeding the `0x8003780C..0x782F` descriptor-index arrays. Identify
-   the exact state predicate that can select a non-320 record; do not add
-   another runtime field first.
-2. Only if that audit identifies a phase predicate or input state, run one
-   phase-gated retail-oracle capture watching that state with the established
-   whole-RDRAM/PIF/VI controls.
+1. Run one phase-gated retail-oracle capture watching `rsViModeType`
+   (`0x10FF20` physical), selector bytes `0x11A862..0x11A865`, and the
+   descriptor-index bytes `0x3780C..0x782F`, with whole-RDRAM/PIF/VI controls.
+   Identify the exact state transition, if any, that selects a non-320 record.
+2. If all watched state remains reset/320-class through the established
+   schedule, audit the retail `osResetType`/mode-table input boundary next;
+   if a non-320 index appears, map its selector and caller predicate before
+   touching the port.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
