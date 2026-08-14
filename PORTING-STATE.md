@@ -58978,3 +58978,24 @@ Rules out: H-voice-init-shape-mismatch and the local-control portion of
 H-voice-init-classified. Leaves H-voice-init-unclassified active. ORIGIN:
 complete generated caller/callee, guard-coverage, access-range, and
 companion-symbol inventory; no guest value mutation or mitigation.
+## Session 933 (2026-08-13) — `musyxSetVoiceAdsrFromTable` is structurally classified
+
+Ran the planned source-only M3 idiom audit. The sole SoundMacro dispatcher
+caller passes the same voice-slot/program-pointer shape throughout, and the
+callee's binary search over the fixed 8-byte ADSR table has bounded lower and
+upper updates. Count-management writers cap the table at 256 entries. A
+successful match reads four halfwords and calls `musyxStoreVoiceAdsrParams`,
+whose existing base guard precedes fixed writes at slot offsets `+0x28`,
+`+0x2A`, `+0x2C`, and `+0x30`.
+
+Rules out H-adsr-table-shape-mismatch and the local-control portion of
+H-adsr-table-classified. Leaves H-adsr-table-unclassified active for the
+caller-derived voice slot, program pointer, table contents, and count state.
+This is a single-source static result from generated code, count-management
+code, and companion symbol metadata; no independent runtime writer/value
+evidence was claimed. No build, run, soak, guard, mitigation, or behavior
+change.
+
+ORIGIN: complete generated caller/callee, count-writer, access-range,
+termination, helper-edge, and companion-symbol inventory; no guest value
+mutation or mitigation.

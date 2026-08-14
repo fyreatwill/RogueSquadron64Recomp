@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s932 (2026-08-13). The active blocker is the authoritative
+Reviewed through s933 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -312,6 +312,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s928 | `renderVoiceAudioBlock` inventory: one direct caller and one shared voice-record/output contract; four fixed lattice stages, three fixed mix transforms, one fixed compand edge, and no local loop. Nested stereo mixing has eight indirect calls per stage, with targets derived from fixed return-address offsets; dynamic voice/output pointer legitimacy remains unproven; no mitigation. |
 | s926 | `applyVoiceDelayFilter` inventory: three direct callers share one voice-base/delay/channel-table/stack-output shape; its 120-halfword shift and 40-halfword mix loops terminate, but the voice base, return-address-derived table read, and output/input ranges lack local bounds or legitimacy proof. Caller-shape mismatch is ruled out; full classification is not. No mitigation. |
 | s927 | `runVoiceLatticeFilter` inventory: four callers share matching source/output offsets and counts (13, 14, 13, 120 iterations); the helper has two sequential halfword walks, no helper edge, and fixed termination. Its eight coefficient loads from the caller's voice record are fixed, and all local walks are bounded by the supplied counts. Dynamic pointer/value legitimacy remains unproven; no mitigation. |
+| s933 | `musyxSetVoiceAdsrFromTable` inventory: one caller with a matching `(voice-slot, program-pointer)` shape; the ADSR search uses the fixed 8-byte table at `0x80148C68`, count at `0x8013AF0C`, and bounded lower/upper updates. Count writers cap the table at 256 entries, and the selected entry reads four halfwords before a fixed store helper writes slot offsets `+0x28..+0x30`. Dynamic voice-slot, program-pointer, table contents, and count legitimacy remain unproven; no mitigation. |
 | s929 | `audioMixStereoBlock8` inventory: one caller and one shared voice-record shape; the selector at `+0x188` swaps two fixed eight-halfword ranges at `+0x168` and `+0x178`, and each of four stages performs exactly eight calls at offsets `0..0xE`. `$t3` resolves only from fixed return-address offsets to `0x8009DD48`, `0x8009DD60`, `0x8009DD70`, and `0x8009DD88`; no data-derived target, unbounded walk, or caller-shape split; dynamic voice-buffer/value legitimacy remains unproven; no mitigation. |
 
 All runtime claims above had positive controls in the relevant capture. A
@@ -462,6 +463,49 @@ writer/value evidence was claimed.
 
 ORIGIN: complete generated caller/callee, access-range, guard-coverage, and
 companion-symbol inventory; no guest value mutation or mitigation.
+
+## s933 — `musyxSetVoiceAdsrFromTable` is structurally classified
+
+Performed the planned source-only M3 idiom inventory of
+`musyxSetVoiceAdsrFromTable` (`0x8008A8C4`) in
+`../N64Recomp/RecompiledFuncs/funcs_22.c`. Enumerated the sole generated
+caller, its register setup, the complete binary-search body, all table and
+slot accesses, the count-management writers, the helper edge, and the
+companion `main_overlay.txt` mapping. No build, game run, soak, guard, or
+behavior change was made.
+
+The only caller is the SoundMacro dispatcher at `0x8008C398`; it passes the
+voice-slot base in `$a0` and the program pointer `0x8013ACC0` in `$a1`. No
+caller-shape split was found. The callee reads the ADSR id from `$a1+0`,
+stores its byte-shifted form at `0x8013AC5C`, and searches the fixed 8-byte
+records rooted at `0x80148C68`. The active count is loaded from
+`0x8013AF0C`; the search initializes lower bound 1 and upper bound `count+1`,
+probes index `((lower+upper)>>1)-1`, and updates one bound until the signed
+comparison returns zero or the interval closes. With a legitimate positive
+count, every probe index is within `[0,count-1]`, so each probe reads only the
+record's `+4` halfword. The zero-count path skips table access.
+
+The count-management family was checked in `funcs_21.c`: insertion and
+removal operate under the Factor 5 mutex, scan with the count, and reject
+insertion at the `0x100` cap; their count stores therefore support the
+256-entry bound used by the search. A successful match is passed to
+`musyxStoreVoiceAdsrParams`, which has the existing voice-array-base guard and
+writes the four selected halfwords to slot offsets `+0x28`, `+0x2A`, `+0x2C`,
+and `+0x30`; the caller-derived voice-slot base and the program pointer are
+not independently validated here.
+
+H-adsr-table-shape-mismatch is ruled out. H-adsr-table-classified is supported
+for caller shape, table stride, search termination, and local access ranges.
+The broader H-adsr-table-unclassified remains open for dynamic legitimacy of
+the voice slot, program pointer, table contents, and count state. This is a
+single-source static result: generated code, count-management code, and
+companion symbol metadata agree on the structure, but no independent runtime
+writer/value evidence was claimed. No guard, mitigation, generated-code edit,
+or game behavior changed.
+
+ORIGIN: complete generated caller/callee, count-writer, access-range,
+termination, helper-edge, and companion-symbol inventory; no guest value
+mutation or mitigation.
 
 ## Ranked backlog
 

@@ -1,27 +1,27 @@
-# NEXT work unit (s933)
+# NEXT work unit (s934)
 
-HYPOTHESIS-ID: m3-audio-adsr-table-class
+HYPOTHESIS-ID: m3-audio-adsr-store-class
 
-Audit the complete `musyxSetVoiceAdsrFromTable` idiom at `0x8008A8C4` in
-`../N64Recomp/RecompiledFuncs/funcs_22.c`, including every generated caller,
-voice-index arithmetic, ADSR-table search bounds, table-entry reads, slot
-writes, and helper edges. Source-only; do not add a guard, change game
-behavior, build, or run a soak.
+Audit the complete `musyxStoreVoiceAdsrParams` idiom at `0x800922C4` in
+`../N64Recomp/RecompiledFuncs/funcs_24.c`, including every generated caller,
+voice-index arithmetic, voice-array base derivation, ADSR-record reads, slot
+writes, existing guard coverage, and helper edges. Source-only; do not add a
+guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-adsr-table-unclassified: a caller or ADSR id supplies an invalid slot,
-  table base, or search index, or a derived slot write escapes its intended
-  voice record.
-- H-adsr-table-classified: callers agree, the table search is bounded by its
-  sentinel/count contract, and all slot/table accesses have fixed safe ranges.
-- H-adsr-table-shape-mismatch: callers use distinct contracts; record
-  the exact split and stop.
+- H-adsr-store-unclassified: a caller supplies an invalid voice index, base,
+  or ADSR record pointer, or the derived slot write can escape its intended
+  0x88-byte voice record.
+- H-adsr-store-classified: callers agree, the existing base guard covers the
+  array entry, and the index/record accesses have fixed safe ranges.
+- H-adsr-store-shape-mismatch: callers use distinct index or record contracts;
+  record the exact split and stop.
 
 Discriminating measurement: enumerate every reference and caller register
-setup, inspect the complete callee and all loop/sentinel exits, derive every
-table and slot access range, classify every helper edge, and cross-check
-`main_overlay.txt`. Any caller split, uncovered derived access, or unproven
-termination path rejects classification.
+setup, inspect the complete callee, derive the exact `index*0x88` range and all
+record/slot accesses, classify the base guard and helper edges, and cross-check
+`main_overlay.txt`. Any caller split, unbounded index, uncovered base path, or
+out-of-record access rejects classification.
 
-Exact command: `rg -n -C 12 "musyxSetVoiceAdsrFromTable|8008A8C4|8A8C4" ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_24.c ../N64Recomp/RecompiledFuncs/funcs_26.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
+Exact command: `rg -n -C 12 "musyxStoreVoiceAdsrParams|800922C4|922C4" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
