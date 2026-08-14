@@ -1,33 +1,35 @@
-# NEXT work unit (s1052)
+# NEXT work unit (s1053)
 
 HYPOTHESIS-ID: retail-state-transition-input
 
-Perform one bounded static audit of the upstream state passed by `mainGameLoop`
-to `menuOverlayInit`: trace the eight call sites' constant `a1` selectors and
-the guards/data that choose those call sites. Do not run the game or arm a
-freelist watch.
+Perform one bounded static audit of the state producer that makes
+`mainGameLoop` enter the width-320 `menuOverlayInit` call path. Trace the
+construction of `s4`/`s5` and the value read at `s4+0x20` immediately before
+the `0x8003E07C` gate. Do not build, run the game, or arm a freelist watch.
 
 Competing hypotheses and discriminator:
 
-* `H-caller-input`: a caller selection is guarded by controller edge/mask data.
-* `H-caller-demo`: a caller selection is guarded by timer/demo/attract state.
-* `H-caller-state`: a caller selection follows persistent state, asset flags, or
-  a return value without a local input/timer decision.
+* `H-state-input`: the upstream byte is copied or set from controller edge or
+  button-mask data.
+* `H-state-demo`: the upstream byte is driven by timer/demo/attract state.
+* `H-state-persistent`: the upstream byte comes from persistent/settings,
+  overlay state, or a return value without a local input/timer source.
 
-Discriminating measurement: produce one table for all eight `mainGameLoop`
-call sites showing the selector constant, the immediately preceding branch/data
-source, and any controller/timer/demo read. A controller mask selects
-`H-caller-input`; timer/demo-only state selects `H-caller-demo`; persistent
-state/return/asset data with no local input decision selects `H-caller-state`.
+Discriminating measurement: produce one bounded writer/producer table for the
+exact value consumed as `MEM_BU(ctx->r20, 0x20)` at `0x8003E07C`, including the
+base pointer's construction, every direct store/copy into that byte or its
+source field, and the guarding branch. A controller source selects
+`H-state-input`; timer/demo-only data selects `H-state-demo`; persistent,
+overlay, or return-value data with no input/timer source selects
+`H-state-persistent`. If the base pointer cannot be resolved from generated
+code, report that exact unresolved edge rather than widening the sweep.
 
 Exact commands:
 
 ```sh
-rg -n -B 18 -A 12 "LOOKUP_FUNC\\(0x800C58A0\\)|jal +0x800C58A0|menuOverlayInit" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -1000
-rg -n -B 10 -A 14 "getControllerNewButtonsPressed|demoStep|demoInputs|timer|8003E0|mainGameLoop" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c | head -1000
+rg -n -B 20 -A 20 '0x8003E07C|MEM_BU\(ctx->r20, 0X20\)|ctx->r20 =|s4' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c | head -1200
+rg -n -B 12 -A 12 '0x80130B60|0x80130B40|0x20\)|getController|buttons|demo|timer|attract' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -1600
 ```
 
-Expected output is one bounded caller/guard table and a selected hypothesis,
-or an explicit unresolved source. No build or runtime run is needed unless the
-static table exposes an existing probe whose semantics cannot be read from
-generated code.
+Expected output is one producer/base-pointer table and a selected hypothesis
+or an explicitly unresolved source. No build or runtime run is needed.

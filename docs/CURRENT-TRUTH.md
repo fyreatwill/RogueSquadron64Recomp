@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1051 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1052 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -141,6 +141,16 @@ controller or timer guard. No pointer-mediated input copy or timer-only copy
 to this byte was found. This closes the input-state address conflation; the
 writer/caller classification is a single-source residual, not evidence for a
 retail transition mechanism.
+
+s1052 audited all eight `mainGameLoop` call sites of `menuOverlayInit`. Their
+selector constants are `{9,2,2,3,3,8,3,3}`. The immediate guards and data
+sources are local state/asset/unlock bytes, the VI-mode/unlock check, the
+menu-state byte at `s4+0x21`, the overlay counter at `fp+0xB10`, and the
+overlay/menu bytes at `s4+0x25` and `s5+0xB40`; the generated function has no
+controller-mask, timer, or demo read on these dispatch paths. This selects
+`H-caller-state` over `H-caller-input` and `H-caller-demo` as static,
+single-source evidence. The upstream producer of the state that reaches these
+callers remains open; no runtime conclusion or freelist watch follows.
 
 ## M4 zero-shade evidence
 
@@ -376,6 +386,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1047 | Static audit of the controller edge producer and first hangar handoff: edges are `D_8013A960[idx]`, but `runHangarSelectionFrame` uses B-only `0x4000` and adjacent menu actions use composite `0x5000/0x9000/0xD000` masks. The audited handoff is state-table driven and does not include the width-320 attract dispatcher, so `H-retail-other-input` is only a single-source lead; no retail phase conclusion. |
 | s1048 | Static single-source audit: `mainGameLoop` gates `menuOverlayInit` on `gGameSettings+0x20`; `menuOverlayInit` dispatches the halfword at `0x800CFF50` through `0x800A75C0`, with table case 0 calling `runHangarMenuFromOverlay`. No Start read appears on this chain, while the state halfword has multiple non-input writers. Selects `H-retail-timing-state`; the `gGameSettings+0x20` writer and transition into index 0 remain open. |
 | s1049 | Static writer audit: generated `0x800CFF50` stores are confined to `menuOverlayInit` dispatch cases; no external direct writer or input read sets it to zero. The direct `gGameSettings+0x20` store found is `resetMixerVolumesAndFlags` `0x8006ED5C`, constant `0x7F`, a non-input reset. Selects `H-retail-state-writer-timer` as a static lead only; pointer-mediated copies and the index-0 transition remain open. |
+| s1052 | Static audit of all eight `mainGameLoop` callers: selector constants are `{9,2,2,3,3,8,3,3}` and local guards use state/asset/unlock/counter data; no controller, timer, or demo read appears. Selects `H-caller-state` as static single-source evidence; upstream state producer remains open. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -391,8 +402,10 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    `H-retail-timing-state` as static single-source evidence. s1049 found the
    direct `gGameSettings+0x20` reset at `0x8006ED5C` and no external direct
    `0x800CFF50` writer. s1051 found all eight callers pass constants and that
-   index 0 is generated inside non-input handler branches; continue by
-   auditing the caller's upstream state source. Do not arm the freelist watch until a 512 hangar-origin
+   index 0 is generated inside non-input handler branches; s1052 found the
+   caller guards are state/asset/unlock/counter based, with no local
+   controller/timer/demo read. This selects `H-caller-state` as static,
+   single-source evidence; audit the upstream state producer next. Do not arm the freelist watch until a 512 hangar-origin
    phase is reached.
 2. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume

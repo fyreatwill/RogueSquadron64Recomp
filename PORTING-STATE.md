@@ -62077,3 +62077,22 @@ single-source static evidence; it does not explain the retail width-320 path.
 ORIGIN: generated recomp source, symbol table, and architecture-document
 inspection only; no mitigation, guest value, or recomp runtime behavior was
 changed.
+
+## Session 1052 (2026-08-14) — audited main-game menu caller guards
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. All eight `menuOverlayInit` calls are in
+`mainGameLoop` and pass selector constants `{9,2,2,3,3,8,3,3}`. The immediate
+guards/data sources are `s4+0x20` state, VI-mode plus unlock state,
+`s4+0x21`, `s4+0x4`, `s3+0x10` flags, `s5+0xB40`, `s4+0x1F`, `s4+0x25`, and
+the overlay counter at `fp+0xB10`. The local generated function contains no
+controller-mask, timer, or demo read on these paths. This selects
+`H-caller-state` over `H-caller-input` and `H-caller-demo` as static,
+single-source evidence; the upstream producer of the state remains open.
+
+This rules out a local caller-side input/timer explanation for the width-320
+dispatch and does not establish the retail transition. No mitigation or
+runtime conclusion follows.
+
+ORIGIN: generated `mainGameLoop` source and bounded symbol/read search only;
+no guest value, runtime behavior, or writer was changed.
