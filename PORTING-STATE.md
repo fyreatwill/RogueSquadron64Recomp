@@ -59997,6 +59997,37 @@ for source, object, and dylib.
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 976 (2026-08-13) — Preserved all-LTO artifacts retain callback ABI
+
+Ran the planned all-LTO oracle rebuild after correcting recipe-state failures
+in the prescribed command: `make` without an explicit target selected the
+help target; command-line `LDFLAGS` replaced the macOS `-dynamiclib` flags;
+`DEBUGGER=1` was required to include the callback-bearing debugger sources;
+and Homebrew binutils/OpenGL paths were required for the final link. The
+successful build preserved `/tmp/s976-lto.o` with
+`-Wl,-object_path_lto,/tmp/s976-lto.o` and produced a fresh dylib.
+
+`file`, `nm`, and `otool -tvV` show the generated LTO object and final dylib
+both contain `check_breakpoints_on_mem_access` and `read_with_bp_checks`.
+Their callback entries preserve the four ARM64 arguments (`x0=pc`,
+`x1=address`, `x2=size`, `x3=flags`), both wrapper sites emit `w2=4,w3=3`
+before the direct callback call, and the wrapper's indirect target is loaded
+into `x3` and returned through `br x3`. This is the opposite of the s975
+bad-artifact shape: the generated object is correct and the final link keeps
+it correct. It selects recipe/toolchain state over LTO lowering or final-link
+reshaping; no runtime or retail arm was run and no mitigation was landed.
+
+The next unit is a static diff of the expanded s975/s976 recipes, followed by
+the smallest one-variable reproduction of the mismatch.
+
+Evidence: `/tmp/s976-lto.o`, the fresh
+`/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix/libmupen64plus.dylib`,
+and their `file`/`nm`/`otool -tvV` output. This is static single-source/build
+evidence only.
+
+ORIGIN: external oracle LTO object-to-dylib audit; no guest value was changed
+and no mitigation was landed.
+
 ## Session 975 (2026-08-13) — LTO callback object is correct before final lowering
 
 Ran the planned static comparison using the existing fresh s974 oracle
