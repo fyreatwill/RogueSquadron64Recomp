@@ -310,6 +310,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s923 | MusyX per-slot queue inventory: `initMusyXVoiceSlot` creates `slot+0x11AC` with buffer `slot+0x11C4` and capacity 1; `serviceStreamingVoice` has the only generated receive site, gated by `slot+0x11DC`, using nonblocking `osRecvMesg(queue, NULL, 0)` and checking only the return. The two init callers share the slot-base contract and the receive path has no message dereference or queue retry loop; dynamic queue/state writer legitimacy remains unproven, so no guard or behavior change. |
 | s924 | `decodeAndFillVoiceBlock` inventory: one direct caller passes the voice slot and `+0x198` block-table entry; the helper masks the bitstream word index to a `0..0xFFC` offset from `slot+0x1A0`, decodes into a fixed stack block, and runs four filter/pan iterations before updating `+0x11C8`. Local control and caller shape are coherent; dynamic pointer/table/value legitimacy remains unproven; no mitigation. |
 | s934 | `musyxStoreVoiceAdsrParams` inventory: one caller passes a byte-loaded voice index and a stack ADSR record; the helper computes an `index*0x88` slot and performs four fixed ADSR reads/writes. The base guard covers only KSEG0 range, not index-versus-mixer-count, so derived slot legitimacy remains unproven; no mitigation. |
+| s935 | `musyxTriggerVoiceAttack` inventory: the callee masks `$a0` to 16 bits, computes `index*0x88` from mixer base `0x801496F8`, and performs fixed slot accesses through `+0x6C`. The `tickAudioChannel` caller supplies inherited `$s6`, initialized to zero by `tickAllAudioChannels`; the streamed-voice caller supplies a `0x80153420 + 0x1228*k` record pointer through `$s0`. These are distinct contracts, and the latter low-halfword value is not a bounded mixer index. Existing base-only guard does not resolve the mismatch; no mitigation. |
 | s928 | `renderVoiceAudioBlock` inventory: one direct caller and one shared voice-record/output contract; four fixed lattice stages, three fixed mix transforms, one fixed compand edge, and no local loop. Nested stereo mixing has eight indirect calls per stage, with targets derived from fixed return-address offsets; dynamic voice/output pointer legitimacy remains unproven; no mitigation. |
 | s926 | `applyVoiceDelayFilter` inventory: three direct callers share one voice-base/delay/channel-table/stack-output shape; its 120-halfword shift and 40-halfword mix loops terminate, but the voice base, return-address-derived table read, and output/input ranges lack local bounds or legitimacy proof. Caller-shape mismatch is ruled out; full classification is not. No mitigation. |
 | s927 | `runVoiceLatticeFilter` inventory: four callers share matching source/output offsets and counts (13, 14, 13, 120 iterations); the helper has two sequential halfword walks, no helper edge, and fixed termination. Its eight coefficient loads from the caller's voice record are fixed, and all local walks are bounded by the supplied counts. Dynamic pointer/value legitimacy remains unproven; no mitigation. |
@@ -673,32 +674,71 @@ ORIGIN: complete generated caller/callee, index arithmetic, base/count,
 access-range, guard-coverage, termination, and companion-symbol inventory;
 no guest value mutation or mitigation.
 
+## s935 — `musyxTriggerVoiceAttack` has a caller-contract mismatch
+
+Performed the planned source-only M3 idiom audit of `musyxTriggerVoiceAttack`
+(`0x8009231C`) in `../N64Recomp/RecompiledFuncs/funcs_24.c`. Enumerated the
+complete callee, both generated callers, register setup, voice-array base and
+stride, slot accesses, existing guard, helper edges, and the companion symbol
+mapping. No build, game run, soak, guard, or behavior change was made.
+
+The callee has no helper calls or loops. It masks `$a0` to 16 bits, computes
+`base + (index * 0x88)`, reads slot `+0x28`, then writes `+0x6C`, `+0x60`,
+`+0x68`, `+0x5C`, `+0x64`, `+0x0`, and `+0x58`. All accesses fit a nominal
+0x88-byte record and local termination is fixed. Its existing guard checks
+only that the base loaded from `0x801496F8` is in KSEG0; it does not check the
+masked index against the mixer count.
+
+The callers do not share one contract. `tickAudioChannel` at `0x8008CE7C`
+passes `$s6`; `tickAllAudioChannels` initializes `$s6` to zero and no later
+write establishes a per-channel mixer index before this call. The other caller
+is `startStreamedSampleVoice` at `0x80098194`, which passes its `$s0`; its sole
+caller `serviceVoicePoolFrame` sets that value to
+`0x80153420 + 0x1228*k`, a Factor 5 voice-record pointer. The attack helper
+then masks that pointer and interprets the low halfword as a mixer index (for
+`k=0`, `0x3420`), which is not bounded by the 0x20 mixer voice count and can
+escape the allocated mixer array. The mismatch is therefore established, but
+the intended writer/translation and runtime legitimacy are not.
+
+H-voice-attack-classified is rejected. H-voice-attack-shape-mismatch is
+selected, with H-voice-attack-unclassified still open for the intended
+pointer-to-index contract and its writers. This is a single-source static
+result from generated code and companion symbol metadata; no independent
+runtime writer/value evidence was claimed. No mitigation, generated-code edit,
+or game behavior changed.
+
+ORIGIN: complete generated caller/callee, register derivation, pointer/index
+contract comparison, access-range, guard-coverage, termination, and
+companion-symbol inventory; no guest value mutation or mitigation.
+
 ## Next work unit
 
-HYPOTHESIS-ID: m3-audio-voice-attack-class
+HYPOTHESIS-ID: m3-audio-voice-stop-contract
 
-Audit the complete `musyxTriggerVoiceAttack` idiom at `0x8009231C` in
+Audit the complete `musyxStopVoice` idiom at `0x80092368` in
 `../N64Recomp/RecompiledFuncs/funcs_24.c`, including every generated caller,
-voice-index arithmetic, voice-slot accesses, state transitions, existing
-guard coverage, and helper edges. Source-only; do not add a guard, change
-game behavior, build, or run a soak.
+the relationship between pointer/index arguments, voice-slot arithmetic,
+state writes, existing guard coverage, and sibling callers in the same audio
+paths. Source-only; do not add a guard, change game behavior, build, or run a
+soak.
 
 Competing hypotheses:
 
-- H-voice-attack-unclassified: a caller supplies an invalid voice index/base,
-  or a derived slot access escapes its intended 0x88 voice record.
-- H-voice-attack-classified: callers agree, the existing guards cover the
-  base/index contract, and all state/slot accesses have fixed safe ranges.
-- H-voice-attack-shape-mismatch: callers use distinct contracts; record the
-  exact split and stop.
+- H-voice-stop-unclassified: a caller supplies an invalid voice index/base,
+  or the stop target escapes its intended mixer record.
+- H-voice-stop-classified: callers agree on a bounded mixer index and the
+  existing guards cover the base/index contract.
+- H-voice-stop-shape-mismatch: callers use pointer and index contracts that
+  must be translated or are distinct; record the exact split and stop.
 
 Discriminating measurement: enumerate every reference and caller register
 setup, inspect the complete callee and all state/slot accesses, derive every
 address range and termination path, classify every helper edge, and
-cross-check `main_overlay.txt`. Any caller split, uncovered derived access,
-or unproven termination path rejects classification.
+cross-check `main_overlay.txt` plus the two caller chains identified in s935.
+Any pointer/index split, uncovered derived access, or unproven termination
+path rejects classification.
 
-Exact command: `rg -n -C 12 "musyxTriggerVoiceAttack|8009231C|9231C" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
+Exact command: `rg -n -C 12 "musyxStopVoice|80092368|92368" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
 
 ## Closed and parked
 

@@ -59038,3 +59038,30 @@ mitigation, generated-code edit, or game behavior changed.
 ORIGIN: complete generated caller/callee, index arithmetic, base/count,
 access-range, guard-coverage, termination, and companion-symbol inventory;
 no guest value mutation or mitigation.
+
+## Session 935 (2026-08-13) — `musyxTriggerVoiceAttack` has a caller-contract mismatch
+
+Ran the planned source-only M3 idiom audit of `musyxTriggerVoiceAttack`
+(`0x8009231C`) in `../N64Recomp/RecompiledFuncs/funcs_24.c`. The callee masks
+`$a0` to 16 bits, computes a `0x88`-stride slot from mixer base `0x801496F8`,
+reads `+0x28`, and writes fixed fields through `+0x6C`; it has no helper,
+loop, or local termination hazard. Its existing base guard checks only KSEG0
+range and does not bound the index against the mixer count.
+
+The two callers do not agree. `tickAudioChannel` at `0x8008CE7C` passes `$s6`,
+which `tickAllAudioChannels` initialized to zero with no per-channel index
+write before the call. `startStreamedSampleVoice` at `0x80098194` passes its
+`$s0`; its caller `serviceVoicePoolFrame` sets that to
+`0x80153420 + 0x1228*k`, a Factor 5 voice-record pointer. The attack helper
+then interprets the pointer's low halfword (for `k=0`, `0x3420`) as a mixer
+index, outside the 0x20-count mixer array. H-voice-attack-classified is
+rejected; H-voice-attack-shape-mismatch is selected, while the intended
+pointer-to-index translation and its writers remain unclassified.
+
+This is a single-source static result from generated code and companion symbol
+metadata; no independent runtime writer/value evidence was claimed. No build,
+run, soak, guard, mitigation, or behavior change. Rules out the classified
+contract hypothesis and establishes a concrete caller mismatch. ORIGIN:
+complete generated caller/callee, register derivation, pointer/index contract
+comparison, access-range, guard-coverage, termination, and companion-symbol
+inventory; no guest value mutation or mitigation.

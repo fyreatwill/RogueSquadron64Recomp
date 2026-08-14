@@ -1,26 +1,28 @@
-# NEXT work unit (s935)
+# NEXT work unit (s936)
 
-HYPOTHESIS-ID: m3-audio-voice-attack-class
+HYPOTHESIS-ID: m3-audio-voice-stop-contract
 
-Audit the complete `musyxTriggerVoiceAttack` idiom at `0x8009231C` in
+Audit the complete `musyxStopVoice` idiom at `0x80092368` in
 `../N64Recomp/RecompiledFuncs/funcs_24.c`, including every generated caller,
-voice-index arithmetic, voice-slot accesses, state transitions, existing
-guard coverage, and helper edges. Source-only; do not add a guard, change
-game behavior, build, or run a soak.
+the relationship between pointer/index arguments, voice-slot arithmetic,
+state writes, existing guard coverage, and sibling callers in the same audio
+paths. Source-only; do not add a guard, change game behavior, build, or run a
+soak.
 
 Competing hypotheses:
 
-- H-voice-attack-unclassified: a caller supplies an invalid voice index/base,
-  or a derived slot access escapes its intended 0x88 voice record.
-- H-voice-attack-classified: callers agree, the existing guards cover the
-  base/index contract, and all state/slot accesses have fixed safe ranges.
-- H-voice-attack-shape-mismatch: callers use distinct contracts; record the
-  exact split and stop.
+- H-voice-stop-unclassified: a caller supplies an invalid voice index/base,
+  or the stop target escapes its intended mixer record.
+- H-voice-stop-classified: callers agree on a bounded mixer index and the
+  existing guards cover the base/index contract.
+- H-voice-stop-shape-mismatch: callers use pointer and index contracts that
+  must be translated or are distinct; record the exact split and stop.
 
 Discriminating measurement: enumerate every reference and caller register
 setup, inspect the complete callee and all state/slot accesses, derive every
 address range and termination path, classify every helper edge, and
-cross-check `main_overlay.txt`. Any caller split, uncovered derived access,
-or unproven termination path rejects classification.
+cross-check `main_overlay.txt` plus the two caller chains identified in s935.
+Any pointer/index split, uncovered derived access, or unproven termination
+path rejects classification.
 
-Exact command: `rg -n -C 12 "musyxTriggerVoiceAttack|8009231C|9231C" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
+Exact command: `rg -n -C 12 "musyxStopVoice|80092368|92368" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
