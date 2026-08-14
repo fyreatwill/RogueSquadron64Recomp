@@ -61499,3 +61499,21 @@ Factor 5 probe path. It cannot discriminate accumulator saturation, ordinary
 `v4`/`v0` arithmetic, or VGE selection, and the null is not evidence against
 any of them. The enlarged budget is retained for the next reproduction attempt;
 no mitigation was added.
+
+## Session 1025 (2026-08-14) — corrected LLE arm reproduced controlled M4 null
+
+Built the macOS executable successfully. The first phase-gated capture omitted
+the required LLE arm (`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, and
+`ROGUESQ_LLE_SOLO=1`); it reached VI-1024 and logged input edges but produced
+zero M4 rows, so it was a configuration failure rather than a numeric null.
+The fixed same-build capture reached VI-1024, logged 14 input edges and 138
+stage-1 VMADH controls, and filled the 512-row M4 budget with 125 stage-10,
+125 stage-11, and 124 stage-12 rows. It contained 124 complete triplets.
+
+Across all 992 paired lanes, stage-12 `v6` equaled stage-11 `v6`; no shade
+`v6` became `0x8000` after the VMADH. The only two `0x8000` values in complete
+triplets were unrelated stage-1/control `accl` fields. This valid capture does
+not select accumulator saturation, ordinary `v4`/`v0` arithmetic, or VGE
+selection. ORIGIN: the `0x8000` control values are produced by the independent
+VMADH positive-control record, not by the live shade endpoint; they are not a
+legitimate explanation for the zero-shade sentinel.
