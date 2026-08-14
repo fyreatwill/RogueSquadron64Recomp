@@ -2980,6 +2980,32 @@ if is_main_ucode and TRIGEN_BRANCH_MARKER not in text:
             sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 13b: phase-scoped Factor 5 state census. Keep this separate from the
+# inline-advance marker so an existing generated file can gain the probe
+# without replaying older fixups.
+# ---------------------------------------------------------------------------
+F5_STATE_MARKER = "/* fixup: F5 state census v1 */"
+if is_main_ucode and F5_STATE_MARKER not in text:
+    decl_anchor = re.compile(r"(extern \"C\" void rs64_inline_probe_resume[^\n]*\n)")
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1);  ' +
+        F5_STATE_MARKER + "\n",
+        text, count=1)
+    state_anchor = re.compile(
+        r"(    r20 = RSP_MEM_W_LOAD\(0X4, r17\);\n)"
+        r"(    if \(\(r19 >> 24\) == 0xE9\) rs64_e9prov_guest)"
+    )
+    text, n_state = state_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_f5_state_probe(r17, r19, r20);  " + F5_STATE_MARKER + "\n" +
+        m.group(2),
+        text, count=1)
+    if n_decl != 1 or n_state != 1:
+        print(f"fixup_factor5_ucode: FIXUP 13b ANCHOR FAILED (decl={n_decl} state={n_state}).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 # Fixup 18: record L_11B0's actual indirect continuation (s726).
 # ---------------------------------------------------------------------------
 TRIGEN_RETURN_MARKER = "/* fixup: TriGen L_11B0 return audit v1 */"

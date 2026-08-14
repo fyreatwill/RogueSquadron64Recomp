@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s984 (2026-08-13). The active blocker is authoritative
+Reviewed through s985 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -434,6 +434,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s982 | LLDB run passed setup and reached the first PIF wrapper read, then faulted at `read_with_bp_checks+268` while dereferencing the result of `r4300_pc(r4300)`; callback `0x1b80` was not entered. Source and disassembly agree; retail remains unevaluable. |
 | s983 | Oracle work blocked: `rs64-oracle` fell outside this session's directory sandbox (verified). Substituted a static writer audit closing `runInMissionFrame`'s callback-table edge: `0x8010B350` is `data` per `roguesquadron.yaml`, and no generated-source store targets it anywhere. |
 | s984 | Oracle directory was absent, so the iteration pivoted once to M4. Static RT64/F5 decode audit refuted a shade lane/order defect; prior same-combiner A/B evidence independently keeps the cause upstream in F5 shade-state or game lighting. No mitigation or build/run. |
+| s985 | The isolated ungated-LLE F5 census passed fetch/state controls. Phase 6 had 355 `0x02 VTXCOLOR` and 1,520 `0x03 MOVEMEM` updates, including nonzero color-source addresses such as `0x80737EA0`, while the same phase produced exact `ZERO` shade words; phase 4 had the same update family but good/negative shades. Together with s984's independent decoder audit, this selects H-game-light-state over H-f5-stream and H-decode-layout. The exact game writer/value lifecycle remains unclassified; no mitigation followed. Default HLE and gated-LLE captures had zero hook controls and were invalid configuration arms, not null evidence. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -464,27 +465,34 @@ entries and do not authorize mitigations.
    retail phase result. No mitigation is authorized until the writer/owner of
    the invalid callback state pointer is identified.
 4. M4 correctness is the active fallback: outdoor `baseFixed=-32768` zero
-   shade is now at the writer/state split after s984 refuted a decoder-layout
-   defect. Next is a phase-gated marker of Factor 5 color/light updates paired
-   with scoped raw shade samples; attribution S=0 triangles and I4
-   `sample=64x128` follow only after this origin is classified. The
+   shade is selected as a game-light/state origin after s985. The next probe
+   must sample the RDRAM payload named by phase-6 `0x02 VTXCOLOR` (and the
+   relevant `0x03 MOVEMEM` source) beside good phase-4 data, so the actual
+   writer/value legitimacy can be named. Attribution S=0 triangles and I4
+   `sample=64x128` follow only after that origin is classified. The
    `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an ORIGIN
    conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s985)
+## Next work unit (s986)
 
-HYPOTHESIS-ID: m4-zero-shade-origin
+HYPOTHESIS-ID: m4-zero-shade-writer
 
-Run one phase-gated, same-run recomp probe to split the two remaining zero-shade
-origins. Batch a positive-control marker for every Factor 5 vertex-color/light
-state update with scoped `ROGUESQ_LOG_SHADE_RAW` samples in the 512 outdoor
-phase; do not change `ROGUESQ_FIX_ZERO_SHADE`. A control must visibly fire in
-the same capture. If color/light updates precede zero shade words, select
-H-game-light-state; if the update stream is absent or carries zero values while
-boot carries good values, select H-f5-stream. Do not land a mitigation until
-the writer and legitimacy are named.
+Run one phase-gated, same-run recomp probe in isolated ungated LLE mode. Extend
+the existing positive-controlled F5 census to sample the RDRAM bytes at each
+phase-6 `0x02 VTXCOLOR` source address and the relevant `0x03 MOVEMEM` source,
+then pair those values with scoped `ROGUESQ_LOG_SHADE_RAW` records. Keep
+`ROGUESQ_FIX_ZERO_SHADE` unchanged. Nonzero payload with zero shade moves the
+writer boundary downstream of VTXCOLOR; zero payload identifies the game state
+writer as the origin. Positive fetch and state controls must fire in the same
+capture.
+
+Exact command shape:
+
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 ROGUESQ_FIX_ZERO_SHADE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='8:start' zsh tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/runs/s986_f5_state_payload 60 0.5`
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

@@ -1,27 +1,33 @@
-# NEXT work unit (s984)
+# NEXT work unit (s986)
 
-HYPOTHESIS-ID: m4-zero-shade-origin
-
-The oracle fallback is unavailable in this environment: `/Users/williambuckley/Documents/Tools/rs64-oracle` does not exist, and `.claude/settings.json` does not grant it. This iteration pivots once to M4 item 4.
+HYPOTHESIS-ID: m4-zero-shade-writer
 
 ## One work unit
 
-Perform a bounded static decode/origin audit of the outdoor `baseFixed=-32768` shade population. Compare the checked-in RT64 RDP shade-word assembly and vertex reconstruction with the independent Factor 5 reference's `VTXCOLOR`/`MOVEMEM` semantics and the existing s19/s20 evidence. Do not build, run, or change the mitigation in this unit.
+Extend the existing positive-controlled F5 census to sample the RDRAM bytes at
+each phase-6 `0x02 VTXCOLOR` source address and the relevant `0x03 MOVEMEM`
+source, then pair those values with scoped `ROGUESQ_LOG_SHADE_RAW` records in
+isolated ungated LLE mode. Keep `ROGUESQ_FIX_ZERO_SHADE` unchanged.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-decode-layout: RT64 assembles the eight RDP shade words with a wrong lane/order/sign convention; a corrected decode would explain outdoor zeros while boot triangles only appear healthy accidentally.
-- H-f5-stream: the LLE/RSP stream really supplies the near-zero shade words for this population; RT64's decode is structurally correct, so the writer is upstream in Factor 5 state emission.
-- H-game-light-state: the F5 stream is correctly carrying game-produced values, but the game's light/vertex-color state is legitimately or accidentally initialized to the near-zero values before terrain draws.
+- H-downstream-writer: nonzero VTXCOLOR payload reaches the F5 path, but a later writer/state conversion produces zero shade.
+- H-game-state-zero: VTXCOLOR/MOVEMEM payload bytes are already zero or sentinel-valued in the zero-shade phase, identifying the game state writer as origin.
+- H-payload-address: the command source addresses point outside the expected RDRAM/color data region, so the apparent nonzero update stream is an address/ownership mismatch.
 
-Discriminating measurement for this unit: independently verify the RT64 reconstruction equations and word-lane order against the RDP field layout used by the reference, then check whether the existing good-vs-zero evidence uses the same combiner and decode path. Outcomes: a lane/order mismatch selects H-decode-layout; a matching decoder with raw zero words selects H-f5-stream or H-game-light-state, which remain split and require the next batched positive-control runtime probe of F5 color-state writes versus shade decode.
+Discriminating measurement: sample the payload bytes named by each positive
+controlled update and compare phase-6 zero-shade values against phase-4
+good-shade values. Nonzero payload with zero shade selects H-downstream-writer;
+zero/sentinel payload selects H-game-state-zero; out-of-region or unstable
+addresses select H-payload-address. Missing fetch/state controls invalidate the
+run.
 
-Exact audit commands:
+Exact commands:
 
-`sed -n '430,540p' lib/rt64/src/gbi/rt64_gbi_rdp.cpp`
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
 
-`rg -n "VTXCOLOR|MOVEMEM|shade|color" docs/F5-UCODE-REFERENCE.md docs/PROJECT-OVERVIEW.md`
+`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 ROGUESQ_FIX_ZERO_SHADE=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='8:start' zsh tools/probe.sh /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/scratch/agent/runs/s986_f5_state_payload 60 0.5`
 
-`sed -n '19,90p' PORTING-STATE.md` is forbidden; use only the already-read s19/s20 windows and targeted grep if needed.
-
-Expected result: no source change unless the equations contradict the reference. If they match, record the audit as a non-mitigation result and make the next unit a phase-gated, same-run probe that marks every F5 color-state update and pairs it with scoped shade-raw samples.
+Expected result: the run reaches the 512-width positive control and emits
+`[f5-state-control]` records for both opcodes. Fold the phase-tagged state and
+shade classes into the ledger; do not land a mitigation from this probe.

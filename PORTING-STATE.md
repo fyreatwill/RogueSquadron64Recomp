@@ -60496,3 +60496,42 @@ the near-zero values are illegitimate, so no mitigation ORIGIN conclusion is
 authorized. Next work is a phase-gated, same-run positive-control probe that
 marks Factor 5 color/light-state updates and pairs them with scoped raw shade
 samples.
+
+## Session 985 (2026-08-13) — phase-gated F5 state census split zero-shade origin
+
+### Work unit
+
+NEXT.md recorded three hypotheses: an RT64 decode defect, absent/zero Factor 5
+state emission, or game light-state production of the zero shade. The planned
+probe added a regeneration-safe hook after every generated Factor 5 command
+fetch, with bounded phase-scoped controls for `0x02 VTXCOLOR` and `0x03
+MOVEMEM`, and paired it with `ROGUESQ_LOG_SHADE_RAW`. `ROGUESQ_FIX_ZERO_SHADE`
+stayed enabled and unchanged.
+
+### Result
+
+Two default-HLE/gated-LLE captures produced zero hook and shade controls and
+were invalid configuration arms: `ROGUESQ_LLE_FORCE` was off in the first, and
+the second used the attribution-only LLE gate. The corrected isolated ungated
+LLE run reached VI 1024 after 78.3 seconds and passed the positive controls:
+fetch markers fired in phases 2/4/6/8; phase 6 recorded 355 `0x02` updates and
+1,520 `0x03` updates. The first VTXCOLOR records included nonzero source
+addresses (`0x80737EA0`, `0x807384D0`, etc.) and nonzero command payload fields.
+
+In the same run, phase 6 produced exact `ZERO` shade samples with
+`baseFixed=(-32768,-32768,-32768,32768)`, while phase 4 had the same VTXCOLOR/
+MOVEMEM update family and produced both `good` and `NEG` shade samples. The
+decoder equations were independently checked in s984. This selects
+H-game-light-state over H-f5-stream and H-decode-layout. It does not yet prove
+that the referenced RDRAM payload values are legitimate or identify their game
+writer, so no mitigation was landed.
+
+### What it rules out
+
+It rules out treating the zero shade as a missing F5 state-update stream or as
+an RT64 lane/order defect. It also rules out trusting the two zero-control
+default/gated captures as null evidence. The remaining work is payload/value
+ownership at the VTXCOLOR/MOVEMEM source, not another decoder A/B.
+
+ORIGIN: phase-6 F5 state hook records the command fetch and source address; it
+does not yet name the RDRAM writer. No mitigation was added.

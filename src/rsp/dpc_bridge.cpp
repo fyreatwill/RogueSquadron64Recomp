@@ -483,6 +483,48 @@ extern "C" void rs64_inline_probe_dispatch(uint32_t r17, uint32_t w0, uint32_t t
         opcode == 0xBD ? 16 : 8;
 }
 
+extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
+    static const bool enabled = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_F5_STATE");
+        return e && *e && *e != '0';
+    }();
+    if (!enabled) return;
+    const uint32_t opcode = w0 >> 24;
+
+    static uint32_t phase_seen = 0xFFFFFFFFu;
+    static uint32_t fetch_n = 0;
+    static uint32_t n02 = 0;
+    static uint32_t n03 = 0;
+    const uint32_t phase = rs64_phase_ord();
+    if (phase != phase_seen) {
+        if (phase_seen != 0xFFFFFFFFu) {
+            fprintf(stderr, "[f5-state-summary] phase=%u op02=%u op03=%u\n",
+                    phase_seen, n02, n03);
+        }
+        phase_seen = phase;
+        fetch_n = 0;
+        n02 = 0;
+        n03 = 0;
+    }
+    ++fetch_n;
+    if (fetch_n <= 4) {
+        fprintf(stderr, "[f5-fetch-control] phase=%u n=%u op=0x%02X w0=0x%08X w1=0x%08X\n",
+                phase, fetch_n, opcode, w0, w1);
+        fflush(stderr);
+    }
+    if (opcode != 0x02 && opcode != 0x03) return;
+    uint32_t &count = opcode == 0x02 ? n02 : n03;
+    ++count;
+    if (count <= 24) {
+        fprintf(stderr,
+                "[f5-state-control] phase=%u op=0x%02X n=%u r17=0x%06X "
+                "w0=0x%08X w1=0x%08X idx=0x%02X\n",
+                phase, opcode, count, r17 & 0x7FFFFFu, w0, w1,
+                (w0 >> 16) & 0xFFu);
+        fflush(stderr);
+    }
+}
+
 extern "C" void rs64_inline_probe_route(uint32_t r17, uint32_t target, uint32_t line) {
     if (!log_inline_advance() || !g_inline_probe.active || g_inline_probe.opcode != 0x05) return;
     const uint32_t line_no = g_inline_probe_route_lines.fetch_add(1, std::memory_order_relaxed);
