@@ -59996,3 +59996,30 @@ for source, object, and dylib.
 
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
+
+## Session 968 (2026-08-13) — Source and object are correct; linked dylib is not
+
+Traced the external oracle callback mismatch through the exact Makefile recipe,
+preprocessed C, LLVM IR, current object bitcode, and linked ARM64 dylib. The
+preprocessed call and freshly emitted IR both declare and call
+`check_breakpoints_on_mem_access` with four arguments: `pc`, `address`, `4`,
+and flags `3`. `llvm-dis` of the current `memory.o` and
+`dbg_breakpoints.o` independently shows the same four-argument call and
+four-argument callback definition. The linked dylib's `read_with_bp_checks`
+call at `0x13d64` instead emits `w0=pc`, `x1=address`, `w2=3`, and no `w3`.
+The callback entry at `0x48768` remains normally aligned and prologued.
+
+This selects a link/LTO artifact mismatch over preprocessing, source ABI, or
+callback-body hypotheses. It does not yet distinguish an incomplete/stale
+linked product from a final LTO/codegen transformation. No runtime change,
+oracle source change, build, mitigation, or retail conclusion was made. The
+next unit force-rebuilds the exact oracle target and repeats the disassembly.
+
+Evidence: exact expanded Makefile flags; `/tmp/rs64-memory.i`,
+`/tmp/rs64-memory.ll`, `/tmp/rs64-breakpoints.ll`; `llvm-dis` output from the
+current object bitcode; and independent `nm`/`otool` inspection of the linked
+dylib. The ordinary positive-control runtime arm was not rerun because this
+unit was static and the callback boundary remains unresolved.
+
+ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
+changed and no mitigation was landed.

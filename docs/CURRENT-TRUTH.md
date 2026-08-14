@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s967 (2026-08-13). The active blocker is authoritative
+Reviewed through s968 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -300,6 +300,8 @@ history is in PROJECT-OVERVIEW §§27–30.
 
 | s966 | First-statement callback marker paired with the wrapper markers: ordinary control completed (1,102,384 writes/298 VI), while PIF reached wrapper pre-call but no callback entry or wrapper return (`rc=139`). ABI/prologue boundary selected; retail remains unevaluable. |
 
+| s968 | Exact source/preprocessed C, fresh LLVM IR, and current object bitcode all contain `(pc,address,4,flags=3)`; linked dylib disassembly alone emits `w2=3` with `w3` unset at `0x13d64`. Link/LTO artifact mismatch selected; stale-product versus link-stage transformation remains open. |
+
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
 entries and do not authorize mitigations.
@@ -317,12 +319,11 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s967 found the current ARM64 artifact passes the
-   callback's four-argument source contract incorrectly (`w2=3`, unset `w3`),
-   despite current source/object timestamps. Audit the preprocessed source,
-   LLVM IR, and exact compile/link flags to explain this source-to-artifact
-   mismatch; do not infer retail callback-table behavior until this boundary
-   is crossed.
+   callback-table watch: s968 found source, preprocessed C, LLVM IR, and
+   object bitcode correct but the linked ARM64 dylib wrong (`w2=3`, unset
+   `w3`). Force the exact current build and disassemble the new dylib to
+   distinguish a stale product from a link/LTO transformation; do not infer
+   retail callback-table behavior until this boundary is crossed.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -330,36 +331,38 @@ entries and do not authorize mitigations.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
+HYPOTHESIS-ID: oracle-pif-link-artifact
 
-Perform one static ABI/prologue audit of the external oracle PIF wrapper call
-and `check_breakpoints_on_mem_access()` entry. Do not edit the recomp runtime
-or retry retail PIF/callback hypotheses until this boundary is explained.
+Force-rebuild the external oracle dylib from its current sources and exact
+Makefile recipe, then disassemble the new wrapper call and callback entry. Do
+not edit the recomp runtime or retry retail PIF/callback hypotheses until this
+boundary is explained.
 
 Competing hypotheses:
 
-- H-pif-call-abi: the wrapper's C call setup or ABI/return sequence is invalid
-  only for this PIF callback path.
-- H-pif-callback-prologue: control reaches the callback but its generated
-  prologue or first entry operation faults before the marker.
-- H-pif-callback-body: the first marker is reached and the existing callback
-  body is the failing region; this would overturn the current boundary label.
+- H-pif-stale-dylib: the current dylib is stale or assembled from a different
+  object/product set despite its timestamps.
+- H-pif-lto-link-transform: the exact current object bitcode is linked, but
+  the final LTO/codegen stage drops or repurposes the fourth argument.
+- H-pif-rebuild-correct: a forced rebuild restores `w3`; the prior artifact
+  was a stale or incomplete product and the callback crash boundary must then
+  be retested separately.
 
-Discriminating measurement: inspect compiler assembly/disassembly for the
-PIF wrapper call and callback entry, including argument registers, stack
-alignment, symbol address, and the first marker's emitted instructions. A
-valid call/entry sequence with a faulting first callback instruction selects
-the prologue; an invalid call target/register/stack sequence selects ABI; a
-reachable first marker selects callback body. Preserve the paired ordinary
-positive-control run if a rebuild is needed.
+Discriminating measurement: after `make -B DEBUGGER=1 all`, compare
+source/object/dylib timestamps and hashes, then inspect the new
+`read_with_bp_checks` call. `w3` restored selects stale/incomplete product;
+`w3` still absent with fresh objects selects link/LTO transformation; a
+changed call target or stack sequence selects a broader link/ABI defect.
 
 Exact starting checks/commands:
 
-`rg -n -C 20 "check_breakpoints_on_mem_access|read_with_bp_checks" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device/memory`
+`cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix && make -B DEBUGGER=1 all`
 
-`nm -an /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks"`
+`stat -f "%Sm %N" -t "%Y-%m-%d %H:%M:%S" ../../src/device/memory/memory.c ../../src/debugger/dbg_breakpoints.c _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
 
-`otool -tvV /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib | rg -n -C 12 "check_breakpoints_on_mem_access|read_with_bp_checks"`
+`nm -an libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks"`
+
+`otool -tvV libmupen64plus.dylib | sed -n '19840,19930p'`
 
 ## Closed and parked
 

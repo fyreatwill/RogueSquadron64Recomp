@@ -1,35 +1,38 @@
-# NEXT work unit (s968)
+# NEXT work unit (s969)
 
-Trace the external oracle source-to-artifact ABI mismatch through preprocessing,
-LLVM IR, and the exact compile/link flags. Do not edit the recomp runtime or
-retry retail PIF/callback hypotheses until this boundary is explained.
+Force-rebuild the external oracle dylib from its current sources and exact
+Makefile recipe, then disassemble the new wrapper call and callback entry. Do
+not edit the recomp runtime or retry retail PIF/callback hypotheses until this
+boundary is explained.
 
-HYPOTHESIS-ID: oracle-pif-call-abi-artifact
+HYPOTHESIS-ID: oracle-pif-link-artifact
 
 Competing hypotheses:
 
-- H-preprocess-prototype: the preprocessed translation unit sees a different
-  callback prototype or macro than the source/header audit suggests.
-- H-llvm-ir-call: preprocessing is correct but LLVM IR contains the wrong
-  argument order/count before code generation.
-- H-link-artifact: source/IR/object are correct and the linked dylib contains
-  an obsolete or mismatched object/link product.
+- H-pif-stale-dylib: the current dylib is stale or assembled from a different
+  object/product set despite its timestamps.
+- H-pif-lto-link-transform: the exact current object bitcode is linked, but
+  the final LTO/codegen stage drops or repurposes the fourth argument.
+- H-pif-rebuild-correct: a forced rebuild restores `w3`; the prior artifact
+  was a stale or incomplete product and the callback crash boundary must then
+  be retested separately.
 
-Discriminating measurement: compare the four-argument call in preprocessed C,
-LLVM IR, object disassembly, and linked-dylib disassembly. A wrong prototype in
-preprocessed C selects preprocessing; correct C but a three-argument/wrong-slot
-IR call selects the compiler/IR path; correct IR/object but wrong dylib selects
-link-artifact. Preserve the paired ordinary positive-control run if a rebuild
-is needed.
+Discriminating measurement: after the forced build, compare source/object/dylib
+timestamps and hashes, then inspect `read_with_bp_checks`. `w3` restored selects
+stale/incomplete product; `w3` still absent with fresh objects selects link/LTO
+transformation; a changed call target or stack sequence selects a broader
+link/ABI defect. If a rebuild is needed, preserve the paired ordinary
+positive-control run for the later runtime boundary test; do not run it in
+this static work unit.
 
 Exact commands:
 
-`rg -n "memory\\.c|dbg_breakpoints\\.c|clang|CFLAGS|DBG" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/Makefile`
+`cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix && make -B DEBUGGER=1 all`
 
-`clang -E <exact-build-flags> src/device/memory/memory.c | rg -n -C 4 "check_breakpoints_on_mem_access"`
+`stat -f "%Sm %N" -t "%Y-%m-%d %H:%M:%S" ../../src/device/memory/memory.c ../../src/debugger/dbg_breakpoints.c _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
 
-`clang -S -emit-llvm <exact-build-flags> src/device/memory/memory.c -o /tmp/rs64-memory.ll`
+`shasum -a 256 _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
 
-`rg -n -C 6 "check_breakpoints_on_mem_access" /tmp/rs64-memory.ll`
+`nm -an libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks"`
 
-`nm -an /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks"`
+`otool -tvV libmupen64plus.dylib | sed -n '19840,19930p'`
