@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1062 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1063 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -242,7 +242,13 @@ demo, or attract state. The menu asset path at `0x800C5B8C` reads byte
 into the fixed table at `0x800D-0x2BFC`. This selects `H-selector0-state` as
 static single-source evidence: the audited incoming paths are state/table
 shaped and have no direct input/demo source. The writers of the global field
-and the retail transition remain open; no runtime conclusion follows.
+and the retail transition remain open; no runtime conclusion follows. s1063's
+complete generated-store audit found the only provable field writer in
+`cycleIdleDemoId`: `0x8006F07C` increments the byte and reduces it modulo six,
+while the generated delay/return form at `0x8006F0AC` clears it. Both use the
+exact `0x80130B40 + 0x14` address construction and have no controller read.
+This selects `H-field-demo` for the generated writer, while pointer-mediated,
+non-generated, and wider-store aliases remain an explicit boundary.
 
 ## M4 zero-shade evidence
 
@@ -489,6 +495,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1060 | Both ordinary `0x800CD6D4` stores select a fixed table byte through `D_800D291C`; index writers and `updateTextOverlayLookupEntry` are setup/selection/ship-state shaped with no controller/timer/demo/attract read. Selects `H-exit-word-state` as static single-source evidence; retail transition remains open. |
 | s1061 | Case-0 `runHangarMenuFromOverlay` receives `s3[0]` at `0x80130B40`. Ten direct generated stores are reset, menu/asset, save/setup, fixed-flag, or cinematic-state shaped; none directly reads controller, timer, demo, or attract state. Selects `H-selector0-state` as static single-source evidence; pointer-mediated/non-generated writers and the retail transition remain open. |
 | s1062 | Incoming-value audit for the two non-constant writers found five cinematic call sites, all constant or menu-state/table-derived, with no direct controller/timer/demo/attract read. The menu asset path reads `s2+0x14`, where `s2` is initialized to fixed global `0x80130B40`, so the source is global state byte `0x80130B54` plus a fixed table lookup. Selects `H-selector0-state` as static single-source evidence; the field writers and retail transition remain open. |
+| s1063 | Generated-store audit of `0x80130B54` found `cycleIdleDemoId` at `0x8006F07C` as the only exact global-base writer, incrementing the field modulo six, plus the generated `0x8006F0AC` clear form. No controller read appears. Selects `H-field-demo` as static single-source evidence; pointer-mediated/non-generated aliases remain open. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog

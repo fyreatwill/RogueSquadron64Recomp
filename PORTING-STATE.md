@@ -62303,3 +62303,24 @@ out direct input/timer/demo/attract sources at these audited incoming paths,
 but does not classify the field writers or establish the retail transition.
 
 ORIGIN: bounded caller/argument inspection of generated `RecompiledFuncs/funcs_*.c`; no guest value, runtime behavior, or mitigation was changed.
+
+## Session 1063 (2026-08-14) — audited selector field writers
+
+Ran the bounded static audit specified in `scratch/agent/NEXT.md`; no build or
+runtime run was performed. The exact global-base sequence in `cycleIdleDemoId`
+constructs `0x80130B40` at `0x8006F04C`, reads byte `+0x14` at `0x8006F050`,
+and writes the incremented/modulo-six value at `0x8006F07C`. The generated
+return/delay-slot form at `0x8006F0AC` writes zero to the same field. No
+controller, timer, or demo API is read by this function; its surrounding
+state is the idle-demo selector. The only other `MEM_B(..., 0x14)` sites in
+the generated tree use local/argument-derived object pointers, not the exact
+`0x80130B40` base; no direct `0x80130B54` literal appears.
+
+This selects `H-field-demo` as static single-source evidence for the exact
+generated writer and rules out a direct controller source there. It does not
+prove the retail transition or exclude pointer-mediated/non-generated/wider
+store aliases.
+
+ORIGIN: generated `RecompiledFuncs/funcs_17.c` and complete generated-tree
+offset/store census; no guest value, runtime behavior, or mitigation was
+changed.
