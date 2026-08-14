@@ -60071,6 +60071,30 @@ is static single-source/build evidence only.
 ORIGIN: external oracle non-LTO compiler/codegen comparison; no guest value
 was changed and no mitigation was landed.
 
+## Session 972 (2026-08-13) — Non-LTO linked dylib preserves callback arguments
+
+Ran the planned non-LTO oracle build. The direct command first failed at the
+link step because `-lopcodes` was not on the search path. Supplying
+`LDFLAGS` as a make command-line variable then preserved the path but replaced
+the Makefile's dynamic-library flags and failed on `_main`. Passing the same
+binutils path through the environment preserved the Makefile flags and built
+`libmupen64plus.dylib` successfully.
+
+Fresh artifacts were timestamped 20:18:44 (`memory.o`), 20:18:49
+(`dbg_breakpoints.o`), and 20:18:51 (dylib). `otool -tvV` shows both
+`read_with_bp_checks` callback sites load `w2=4` and `w3=3` before
+`_check_breakpoints_on_mem_access`; the prior LTO dylib emitted `w2=3` with
+`w3` unset. This independently selects the LTO transformation boundary over
+source, ABI, non-LTO codegen, and ordinary non-LTO link hypotheses. It does
+not identify the LTO pass or prove retail progress; no runtime or retail arm
+was run and no mitigation was landed.
+
+Evidence: forced environment-preserved non-LTO build, `stat`, `nm`, and
+`otool -tvV` on the fresh dylib. This is static single-source/build evidence.
+
+ORIGIN: external oracle non-LTO linked-artifact audit; no guest value was
+changed and no mitigation was landed.
+
 ## Session 968 (2026-08-13) — Source and object are correct; linked dylib is not
 
 Traced the external oracle callback mismatch through the exact Makefile recipe,

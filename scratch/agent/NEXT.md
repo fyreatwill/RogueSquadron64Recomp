@@ -1,31 +1,31 @@
-# NEXT work unit (s972)
+# NEXT work unit (s973)
 
-Build one non-LTO oracle dylib using the successful target flags with
-`OPTFLAGS='-O3 -fno-lto'`, then inspect its `read_with_bp_checks` callback call
-and compare it with the current LTO dylib. Do not edit the recomp runtime or
-retry retail PIF/callback hypotheses.
+Build two oracle dylibs in isolated copies using the same successful
+environment-preserved binutils path: an all-non-LTO control and a mixed arm
+with fresh non-LTO `memory.o`/`dbg_breakpoints.o` but an LTO link of the
+remaining objects. Compare both callback call sites. Do not edit the recomp
+runtime or retry retail PIF/callback hypotheses.
 
-HYPOTHESIS-ID: oracle-pif-link-artifact
+HYPOTHESIS-ID: oracle-pif-lto-boundary
 
 Competing hypotheses:
 
-- H-pif-nonlto-linked-correct: a non-LTO linked dylib preserves `w2=4,w3=3`,
-  isolating the defect to LTO.
-- H-pif-nonlto-linked-wrong: the non-LTO linked dylib also shifts or drops an
-  argument, selecting a link-stage input or symbol-state defect independent
-  of LTO.
-- H-pif-nonlto-build-blocked: the target cannot be linked non-LTO with the
-  successful flags, so the exact link failure is the result and no runtime
-  hypothesis is tested.
+- H-pif-mixed-correct: non-LTO callback objects remain correct when linked
+  with the other LTO objects, localizing the defect to LTO-produced callback
+  bitcode or its optimization.
+- H-pif-mixed-wrong: the mixed link shifts/drops arguments, selecting an
+  interaction between LTO objects and non-LTO callback objects.
+- H-pif-lto-input-recipe: the mixed arm cannot be reproduced with identical
+  inputs/flags, selecting a build-recipe or toolchain-state defect instead.
 
-Discriminating measurement: compare the fresh non-LTO dylib call with the
-current LTO dylib. Correct non-LTO `w2=4,w3=3` isolates LTO; the same shifted
-call selects a non-LTO link/input defect; a failed link selects the build
-boundary and leaves the runtime unevaluable.
+Discriminating measurement: compare `w2,w3` at both callback calls in the two
+fresh dylibs. Correct mixed `w2=4,w3=3` localizes the defect to LTO-produced
+callback objects; shifted mixed calls select an LTO/non-LTO interaction; an
+unreproducible mixed recipe selects build-state rather than runtime.
 
 Exact commands:
 
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix && make -B DEBUGGER=1 OPTFLAGS='-O3 -fno-lto' all`
+`env LDFLAGS='-L/opt/homebrew/Cellar/binutils/2.47/lib' make -B DEBUGGER=1 OPTFLAGS='-O3 -fno-lto' all`
 
 `stat -f "%Sm %N" -t "%Y-%m-%d %H:%M:%S" _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
 
