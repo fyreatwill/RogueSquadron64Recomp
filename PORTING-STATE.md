@@ -61182,3 +61182,20 @@ instrumentation (DPC ranges, submit serials, DL ordinals) cannot attribute it.
 It does not yet distinguish a signed-color-load bug from a zero light path —
 that needs the ucode shade-emission trace. No mitigation or value rewrite was
 added; the guard is read-only.
+## Session 1008 (2026-08-14) — traced Factor 5 shade source
+
+Ran the prescribed static M4 work unit, comparing
+`build/factor5_ucode/factor5_ucode_recompiled.c` with the independent
+`reference/gliden64/F5Rogue.cpp`; no build or runtime capture was required.
+The generated path loads four unsigned color bytes and copies them into each
+transformed vertex at offset `0x10` (the color-table loads and stores at the
+generated lines 829–883). The shaded-triangle path later loads vertex data at
+`0x18` and emits shade halfwords from geometry/vector registers, with no read of
+the color word at `0x10` before the shade stores at `0x8..0x1E`. The lone signed
+byte load at `0x37($18)` feeds packed flag bytes, not shade. GLideN64's
+reference independently copies `colorData` into `vtx.r/g/b/a` before triangle
+submission. This selects `H-shade-source-mismatch`; the signed-load and
+emission-layout hypotheses are refuted by the two source inspections. It rules
+out changing the `lb` as a shade fix and gives no mitigation. The next audit
+must determine whether the absent color consumer exists in the original ELF or
+was lost in disassembly/RSPRecomp/fixup generation.

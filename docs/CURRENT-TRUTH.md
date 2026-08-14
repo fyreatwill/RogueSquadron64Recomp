@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1007 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1008 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, so the source-to-consumer join is
 closed and the question is the ucode shade-emission path. M5 audio de-stubbing
 is closed. M3 work is limited to complete idiom-class audits. The retail-oracle
@@ -92,11 +92,26 @@ The provenance campaign now establishes:
   the same task's op=0x02 vertex-color payload is nonzero and correct. This
   closes the source-to-consumer join (the data exists and is not used) and
   moves the question to the ucode shade-emission path. Non-zero-shade rows
-  additionally show sign-extended colors (0x8A -> -118), a signed-load
-  signature. See PORTING-STATE s1007.
+  additionally show sign-extended color-shaped fields (0x8A -> -118), but the
+  s1008 audit shows the lone signed load in the generated emission region feeds
+  flags rather than shade; the runtime field's exact producer remains open.
+  See PORTING-STATE s1007–s1008.
 
 All runtime claims above had positive controls in their relevant captures.
 Static single-source claims are explicitly described as such in the ledger.
+
+The s1008 static audit closes the current emission split. In the generated
+Factor 5 path, the four unsigned color bytes are loaded from the per-vertex
+color table and copied as a word to each transformed vertex at offset `0x10`
+(lines 829–883 of `build/factor5_ucode/factor5_ucode_recompiled.c`). The shaded
+triangle path later loads vertex data at `0x18` and emits shade halfwords from
+geometry/vector registers; an exhaustive search of that path finds no read of
+the color word at `0x10` before the shade stores at `0x8..0x1E`. The lone `lb`
+at `0x37($18)` feeds packed flag bytes at output offsets 0/1, not the shade
+vectors. GLideN64's independent F5Rogue reference instead copies `colorData`
+directly into `vtx.r/g/b/a` before triangle submission. This selects
+`H-shade-source-mismatch`; `H-signed-color-load` and `H-emission-layout` are
+refuted by the two source inspections. No mitigation is authorized.
 
 ## Recent evidence ledger
 
@@ -118,12 +133,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1005 | RT64 shade rows carried accepted serial/range fields; consumer ranges were child-DL-shaped and did not identify an individual F5 source update. |
 | s1006 | RT64 triangle-parse join rows carried the live last F5 state, but repeated zero-shade child DLs shared one task-level state; individual source mapping remains open. |
 | s1007 | Offline re-analysis: zero-shade rows are a fixed -0.5/+0.5 shade sentinel while the VTXCOLOR array is nonzero; source-join closed, question moves to ucode shade emission. |
+| s1008 | Static generated-vs-GLideN64 audit: color is copied to vertex `+0x10` but the shaded-triangle path consumes `+0x18`/geometry vectors and never reads it; the `lb` is flag-only. Selected `H-shade-source-mismatch`; no mitigation. |
 
 ## Ranked backlog
 
-1. Trace the recompiled F5 ucode's shaded-triangle shade emission against
-   `F5Rogue.cpp` (unsigned u8 RGBA copy) to find the constant -0.5 sentinel and
-   the sign-extension; the source-to-consumer join is closed.
+1. Trace the color-bearing vertex record from the Factor 5 ELF/disassembly
+   through `tools/fixup_factor5_ucode.py` and RSPRecomp generation. Determine
+   whether the missing shaded-triangle read of vertex `+0x10` is present in the
+   original microcode or was lost by the generated/fixup pipeline. Do not edit
+   generated output; name the exact producer/consumer instruction pair before
+   proposing a fix.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
@@ -134,32 +153,31 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 4. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
-## Next work unit (s1008)
+## Next work unit (s1009)
 
 HYPOTHESIS-ID: m4-zero-shade-emission-constant
 
-Trace the recompiled Factor 5 ucode's shaded-triangle shade emission against
-the GLideN64 reference (`reference/gliden64/F5Rogue.cpp`,
-`F3DSWRS_VertexColor` / `F3DSWRS_PrepareVertices`), which copies unsigned u8
-RGBA per vertex with no lighting and no -0.5 sentinel. Do not add a mitigation
-or hand-edit generated files. Static audit only — no build/run required.
+Trace the color-bearing vertex record from the Factor 5 ELF/disassembly through
+`tools/fixup_factor5_ucode.py` and RSPRecomp generation. Determine whether the
+missing shaded-triangle read of vertex `+0x10` is present in the original
+microcode or was lost by the generated/fixup pipeline. Do not edit generated
+output; static audit only — no build/run required.
 
 Competing hypotheses and the discriminating measurement:
 
-- `H-signed-color-load`: the ucode (or its RSPRecomp) sign-extends the color
-  byte (lb vs lbu), and the -0.5 sentinel is the sign-extended/zero color path.
-- `H-shade-source-mismatch`: the ucode emits shade from a light/normal register
-  that is uninitialized (-0.5) instead of the fetched color array.
-- `H-emission-layout`: the ucode writes the shade words to the wrong DP ring
-  offsets, so RT64 reads a constant.
+- `H-original-omits-color`: the retail microcode itself never consumes the
+  color word for the shaded-triangle emission path.
+- `H-generation-drops-color`: the original microcode has a color read, but
+  disassembly conversion, RSPRecomp, or the fixup pipeline omitted it.
+- `H-layout-misread`: the color read exists and feeds the generated vectors,
+  but the RT64-side shade interpretation points at the wrong record offsets.
 
-Discriminator: locate the generated ucode's color-fetch and shade-word store
-sites (RSP_MEM_*_LOAD sites touching the vertex-color array; RSP_MEM_*_STORE /
-DP-ring writes that produce the triangle shade words) and compare their width,
-signedness, and register source against F5Rogue.cpp. A signed load feeding the
-shade store selects `H-signed-color-load`; a store sourced from a non-color
-register selects `H-shade-source-mismatch`; correct sources with mismatched
-offsets selects `H-emission-layout`.
+Discriminator: locate the original ELF instruction sequence and the generated
+sequence around the vertex-record color store and the shaded-triangle entry.
+An absent color read in the ELF selects `H-original-omits-color`; a color read
+present only in ELF selects `H-generation-drops-color`; a generated color read
+feeding the shade vectors with a consumer-offset discrepancy selects
+`H-layout-misread`.
 
 The `slotDispatcherIter` sp-guard soak is a separate queued recipe
 (`scratch/agent/soak_queue/slot_sp_guard.sh`), not this work unit.
