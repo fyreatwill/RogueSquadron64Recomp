@@ -1,33 +1,31 @@
-# NEXT work unit (s1129)
+# NEXT work unit (s1130)
 
 HYPOTHESIS-ID: retail-oracle-active-descriptor-index
 
-Perform one bounded static audit of the recurring material-writer path after
-the boot descriptor chain is fixed. Determine whether the recurring
-`buildAndRegisterDefaultMaterial` call can change selector bytes before the
-first active VI mode selection, or only after the boot `0xF0` record has been
-copied.
+Perform one bounded static audit of the next live boundary: identify the
+first non-teardown consumer of the boot-selected `0xF0` descriptor after the
+resolved `initVideoSubsystem` copy, and determine whether any intervening
+generated store can change the active selector or mode record before that
+consumer.
 
 Competing hypotheses and discriminator:
 
-- H-boot-first: the boot call copies the `0xF0` index-0 record before any
-  recurring material writer can alter selector state.
-- H-recurring-first: a recurring material-writer call is boot-reachable before
-  the first `selectAndApplyViMode`/copy consumer and changes the selector.
-- H-selector-independent: the recurring writer may run early, but its writes
-  cannot affect the first mode selection because the consumer uses a separate
-  state or ordering barrier.
+- H-no-intervening-store: the copied `0xF0` record reaches the first active
+  consumer without an intervening selector/mode-record store.
+- H-selector-clobber: a generated store changes selector bytes before that
+  consumer.
+- H-record-clobber: a generated store changes the copied mode record before
+  that consumer.
 
-Discriminator: enumerate every generated caller of
-`buildAndRegisterDefaultMaterial` and the first generated caller/consumer order
-for `selectAndApplyViMode` or the `0x8001B66C` copy. A caller before the first
-consumer with a selector-changing argument proves H-recurring-first; all
-writer calls after the first consumer prove H-boot-first; an early writer plus
-independent selector state/order proves H-selector-independent.
+Discriminator: enumerate all generated stores to selector bytes
+`0x8011A862..0x8011A865` and the four copied-record ranges after
+`0x8001B66C`, then order them against the first non-teardown consumer call.
+An intervening selector or record store selects its corresponding clobber
+hypothesis; no intervening store selects H-no-intervening-store.
 
 Do not build or run. Use bounded windows only:
 
 ```sh
-rg -n -C 18 'buildAndRegisterDefaultMaterial|selectAndApplyViMode|0x8001B66C|0x80017B88|0x8001C' ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -C 12 'buildAndRegisterDefaultMaterial|selectAndApplyViMode' rogue_squadron64/src rogue_squadron64/include
+rg -n 'MEM_[BHW].*(0X8011A862|0X8011A863|0X8011A864|0X8011A865)|0x8011A862|0x8011A863|0x8011A864|0x8011A865' ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -C 12 '0x8001B66C|swapBufferWithViMode|osViSetMode_recomp|buildAndRegisterDefaultMaterial' ../N64Recomp/RecompiledFuncs/funcs_*.c
 ```

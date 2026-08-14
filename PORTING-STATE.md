@@ -63528,3 +63528,18 @@ copy at `0x8001B66C` therefore receives index 0 at `sp+0x108`, and the
 out `H-replace-index` and `H-copy-source-misread`, and closes the active
 descriptor-source boundary. ORIGIN: generated control-flow/stack-argument
 audit plus direct retail-ROM descriptor mapping; no mitigation.
+
+## Session 1129 (2026-08-14) — ordered recurring material writer
+
+Ran the prescribed bounded static caller/order audit with no build or game
+run. The generated tree has exactly two callers of
+`buildAndRegisterDefaultMaterial`: `advanceVideoFrame` at `0x800183F8` and
+`initVideoBootWrapper` at `0x800185DC`. Both call `initVideoSubsystem` first;
+the recurring path also calls `swapBufferWithViMode` at `0x800182C8` before
+the material writer. `selectAndApplyViMode` is only called by
+`freeRenderSubsystemResources` at `0x800186C0`, a teardown path. Therefore no
+recurring writer precedes the first boot record consumer/copy at
+`0x8001B66C`. This selects `H-boot-first`, rules out `H-recurring-first` and
+`H-selector-independent`, and keeps the `0x1800 -> A/B/C=1/0/0 -> 0xF0`
+width-320 chain fixed. No mitigation or runtime behavior changed. ORIGIN:
+generated caller/order census; no mitigation.

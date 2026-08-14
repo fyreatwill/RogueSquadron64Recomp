@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1128 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1129 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -487,17 +487,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1127 | Bounded generated/data audit traced `gameConfig+0x44 = 0x1800` through the boot stack argument. Bits 8/7/2 write selector `A/B/C=1/0/0`; the selector branch reaches copied-record offset `0xF0`, whose boot source block is the NTSC index-0 descriptor with width 320. Selects `H-selector-zero-to-320`; rules out argument transformation and a non-320 zero-selector arm. No build or run. ORIGIN: generated argument/branch/copy flow plus direct retail-ROM descriptor bytes; no mitigation. |
 | s1128 | Bounded static audit enumerated the `sp+0x108` descriptor stores. The initial `0x8001A418..A424` loop loads the `0x782C` NTSC index-0 record; `0x8001A92C..A938` is gated by `s7==0` at `0x8001A364`, while `0x8001ADC0..ADCC` and `0x8001B2C4..B2D0` are on that alternate `s7==0` route. The boot wrapper's stack-derived `t9` and `s7` are nonzero, so no later store replaces index 0 before the four-record copy at `0x8001B66C`; the `0xF0` source remains index 0 / width 320. Selects `H-preserve-index0`; rules out `H-replace-index` and `H-copy-source-misread`. No build or run. ORIGIN: generated control-flow/stack-argument audit plus direct retail-ROM descriptor mapping; no mitigation. |
 
+| s1129 | Bounded caller/order audit found exactly two generated callers of `buildAndRegisterDefaultMaterial`: `advanceVideoFrame` at `0x800183F8` and `initVideoBootWrapper` at `0x800185DC`. Both call `initVideoSubsystem` first; the recurring path also calls `swapBufferWithViMode` at `0x800182C8` before the material writer. `selectAndApplyViMode` has only the teardown caller at `0x800186C0`. Thus no recurring writer precedes the first boot record consumer/copy at `0x8001B66C`; selects `H-boot-first`, rules out `H-recurring-first` and `H-selector-independent`. No build or run. ORIGIN: generated caller/order census; no mitigation. |
+
 ## Ranked next steps
 
-1. Audit the conditional descriptor writes in `initVideoSubsystem` that can
-   overwrite source block `sp+0x108` after the initial index-0 load; classify
-   whether the boot call preserves index 0 or replaces it before the four
-   records are copied.
-2. Reconcile the selected boot record with the recurring material-writer path;
-   keep the resolved `0x1800 -> A/B/C=1/0/0 -> 0xF0` chain fixed.
-3. Keep M4 parked unless an independent ground-truth path or a new complete
+1. Reconcile the selected boot record with the now-ordered recurring
+   material-writer path; keep the resolved `0x1800 -> A/B/C=1/0/0 -> 0xF0`
+   chain fixed.
+2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
-4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
+3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
    omission only when a reproducible lead appears; preserve delete-before-
 regen ordering and audit fixup counts.
 
