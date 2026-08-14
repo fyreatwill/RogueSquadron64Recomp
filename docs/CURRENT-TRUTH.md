@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1053 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1054 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -152,6 +152,14 @@ No controller, timer, or demo value feeds the store. This selects
 `H-state-persistent` as static, single-source evidence: the gate byte is fixed
 setup/overlay state, not an input or demo transition. The retail phase remains
 unevaluable.
+
+s1054's bounded case-9 audit found that selector value 9 dispatches directly to
+`runMenuModelViewerScreen(0)` at `0x800C5C98`. Its delay-slot store at
+`0x800C5CA4` writes selector value 12 to `0x800CFF50`, then joins common
+cleanup. The handler contains no controller-mask, timer, demo, unlock, or asset
+read; the selector-9 path therefore supplies no local cause for the width-320
+to-index-0 transition. This selects `H-selector-state` over
+`H-selector-input` and `H-selector-demo` as static, single-source evidence.
 
 s1052 audited all eight `mainGameLoop` call sites of `menuOverlayInit`. Their
 selector constants are `{9,2,2,3,3,8,3,3}`. The immediate guards and data
@@ -399,6 +407,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1049 | Static writer audit: generated `0x800CFF50` stores are confined to `menuOverlayInit` dispatch cases; no external direct writer or input read sets it to zero. The direct `gGameSettings+0x20` store found is `resetMixerVolumesAndFlags` `0x8006ED5C`, constant `0x7F`, a non-input reset. Selects `H-retail-state-writer-timer` as a static lead only; pointer-mediated copies and the index-0 transition remain open. |
 | s1052 | Static audit of all eight `mainGameLoop` callers: selector constants are `{9,2,2,3,3,8,3,3}` and local guards use state/asset/unlock/counter data; no controller, timer, or demo read appears. Selects `H-caller-state` as static single-source evidence; upstream state producer remains open. |
 | s1053 | Static producer audit: `mainGameLoop` reads `0x80130B30` via `s4=0x80130B10`; `runIdleFramesAndLoadSaveData+0x1B8` stores constant `1`, while `resetGameSettingsAndMissionStats` clears the containing block. No input/timer/demo source reaches this byte. Selects `H-state-persistent` as static single-source evidence; retail phase remains unevaluable. |
+| s1054 | Bounded selector-9 audit: `menuOverlayInit` dispatches selector 9 to `runMenuModelViewerScreen(0)`, then writes selector 12 at `0x800C5CA4`; the handler has no input/timer/demo source. Selects `H-selector-state` as static single-source evidence; the upstream producer of selector 0 remains open. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -419,8 +428,10 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    controller/timer/demo read. This selects `H-caller-state` as static,
    single-source evidence. s1053 traced the exact gate byte to the fixed setup
    writer in `runIdleFramesAndLoadSaveData` and selected `H-state-persistent`;
-   the retail phase remains unevaluable. Do not arm the freelist watch until a
-   512 hangar-origin phase is reached.
+   the retail phase remains unevaluable. s1054 found selector 9 is a
+   model-viewer handler that writes selector 12 and has no input/timer/demo
+   source; selector 0's upstream state producer remains open. Do not arm the
+   freelist watch until a 512 hangar-origin phase is reached.
 2. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume
    only with a new discriminator or independent ground truth.

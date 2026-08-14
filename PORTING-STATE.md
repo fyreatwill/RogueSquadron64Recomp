@@ -62117,3 +62117,21 @@ mitigation or runtime conclusion follows.
 
 ORIGIN: generated `funcs_8.c`/`funcs_17.c` and bounded exact-store search only;
 no guest value, runtime behavior, or writer was changed.
+
+## Session 1054 (2026-08-14) — audited the selector-9 handler
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. In `menuOverlayInit`, selector value 9
+dispatches through the generated switch to `L_800C5C98`, which calls
+`runMenuModelViewerScreen(0)` at `0x800C5C98`. The delay-slot instruction at
+`0x800C5CA4` writes selector value 12 to `0x800CFF50`, then control joins the
+common cleanup at `L_800C5CEC`. The case-9 handler has no controller-mask,
+timer, demo, unlock, or asset read.
+
+This selects `H-selector-state` over `H-selector-input` and `H-selector-demo`
+as static, single-source evidence. It rules out a local case-9 input/timer/demo
+cause for the width-320 to index-0 transition, but does not identify the
+upstream producer of selector 0. No mitigation or runtime conclusion follows.
+
+ORIGIN: generated `funcs_34.c` switch and bounded case-9 source search only;
+no guest value, runtime behavior, or writer was changed.
