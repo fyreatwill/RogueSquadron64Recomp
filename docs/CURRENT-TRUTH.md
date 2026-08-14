@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1117 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1118 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -115,6 +115,15 @@ compact and records only live conclusions, boundaries, and next work.
   implementation adds another caller. This selects
   `H-mode-record-state-gate` over pointer corruption, but the producer that
   populates the records and the concrete widths remain open.
+- The s1118 producer audit found a real initialization/copy path: `initVideoSubsystem`
+  copies four 0x50-byte records into `0x80128D50` from the ROM-backed
+  `osViModeTable` at `0x80039330`. The source index is selected through the
+  mode-type-index bytes at `0x8003780C..0x782F`; the retail table contains
+  width-320 records (indices 0-7, 14-21, 28-35), width-640 records (9, 11,
+  13, 23, 25, 27, 37, 39, 41), and width-1280 records (8, 10, 12, 22, 24,
+  26, 36, 38, 40). This rules out an uninitialized table and a fixed-320
+  descriptor source, but does not yet identify which selector state reaches
+  the active record on the retail width-320 path. Single-source static result.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -399,12 +408,13 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1115 | Bounded generated/ROM/companion audit maps selector writes to the boot-plus-per-frame `buildAndRegisterDefaultMaterial`, pending-mask clears to the repeating VI-retrace `applyPendingViChanges`, and A0 writes to the persistent SP scheduler's task-state/completion paths. All eight generated instructions match independent retail-ROM bytes under `ROM = VRAM - 0x80000000 + 0xC00`. Selects static `H-mode-loop`, rules out a transition-dominated writer among these PCs, and leaves the mode-record caller/argument producer open. |
 | s1116 | Corrected retail-oracle capture passed whole-RDRAM (38,782), ten Start/PIF controls, and VI (7,198 frames), but stayed width 320/origin `0x006dd280`. All eight audited writer PCs fired, including recurring pending-mask and A0 writers. Selects `H-retail-stays-prephase` and refutes `H-writer-watch-invalid`; the mode-record caller/argument route remains open. |
 | s1117 | Bounded generated audit found boot `initVideoBootWrapper` and recurring `advanceVideoFrame` feed the same fixed mode-selection machinery. `swapBufferWithViMode`/`selectAndApplyViMode` select offsets `0x00/0x50/0xA0/0xF0` from RAM table base `0x80128D50` using lifecycle selector bytes `0x8011A864/65/62`; width is loaded from record `+8` before `osViSetMode`. No pointer escapes the table and the companion tree has no additional implementation/caller. Selects `H-mode-record-state-gate`, rules out `H-mode-record-pointer-corrupt`, and leaves table population/width values open; no build or run. ORIGIN: generated control-flow/data-flow plus companion symbol census, no mitigation. |
+| s1118 | Bounded generated/ROM audit found `initVideoSubsystem` copies four 0x50-byte records into `0x80128D50` from `osViModeTable` at `0x80039330`. Source indices come from `0x8003780C..0x782F`; the independent ROM table has widths 320, 640, and 1280 at distinct index classes. Selects `H-mode-record-populated/state-dependent`, rules out `H-mode-record-uninitialized` and `H-mode-record-constant`; the active selector-state producer remains open. Single-source static result; no build or run. ORIGIN: generated copy/data-flow plus direct retail-ROM table bytes, no mitigation. |
 
 ## Ranked next steps
 
-1. Audit the producer of the RAM mode records at `0x80128D50`: trace the
-   initialization/copy path and the selector-byte producers back to the
-   static mode descriptors, identifying exact `+8` width values. Do not add
+1. Trace the producer of selector bytes `0x8011A864/65/62` and the mode-type
+   value feeding the `0x8003780C..0x782F` descriptor-index arrays. Identify
+   the exact state predicate that can select a non-320 record; do not add
    another runtime field first.
 2. Only if that audit identifies a phase predicate or input state, run one
    phase-gated retail-oracle capture watching that state with the established

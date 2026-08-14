@@ -63365,3 +63365,16 @@ No build, oracle capture, runtime code, or mitigation was used.
 
 ORIGIN: generated control-flow/data-flow plus companion symbol census; no
 value was skipped, rewritten, or otherwise mitigated.
+## Session 1118 (2026-08-14) — classified VI mode-record population
+
+Performed the prescribed bounded static audit, without building or running.
+`initVideoSubsystem` copies four 0x50-byte records into the RAM table at
+`0x80128D50`; each source record is selected from the ROM-backed
+`osViModeTable` at `0x80039330` using the mode-type-index bytes at
+`0x8003780C..0x782F`. Direct retail-ROM decoding under the established main
+overlay mapping found width 320 at indices 0-7, 14-21, and 28-35; width 640
+at 9, 11, 13, 23, 25, 27, 37, 39, and 41; and width 1280 at 8, 10, 12, 22,
+24, 26, 36, 38, and 40. This rules out an uninitialized table and a fixed-
+320 descriptor source, while leaving the active selector-state producer open.
+The result is single-source static evidence; no runtime claim or mitigation
+was made.
