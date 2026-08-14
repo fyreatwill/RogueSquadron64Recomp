@@ -1,36 +1,43 @@
-# NEXT work unit (s1030)
+# NEXT work unit (s1031)
 
-HYPOTHESIS-ID: m3-slot-sp-corruption
+HYPOTHESIS-ID: retail-oracle-callback-audit
 
-Run/consume exactly one queued recipe: `s1029_slot_sp_guard_late_a.sh`.
-s1029's ordinary-dispatch recipe reached VI-1024 but exited after 65 frames
-at sticky guest PC `0x8000834c`, before the slot-dispatch family or SP guard.
-The only change is postponing the late `a` input to frame 300; do not re-run
-the s1028 recipe verbatim and do not reopen M4.
+Perform one bounded ground-truth audit of the archived s983 retail-oracle
+callback probe. Do not build or change the recomp runtime in this unit. The
+slot-SP recipe family has now produced two phase-positive no-event runs; do
+not enqueue another key-schedule variant and do not reopen M4.
 
 ## Competing hypotheses and discriminator
 
-* `H-slot-caller-corrupts-sp`: an invalid guard row at the `+872` entry has a
-  return address/register state identifying a caller boundary that already
-  carries the wild guest `$sp`.
-* `H-slot-entry-or-runtime-corrupts-sp`: an invalid guard row has a valid
-  caller boundary but an invalid entry `$sp`, implicating dispatch/runtime
-  state.
-* `H-no-sp-event`: the run again exits before `slotDispatcherIter` or its
-  `+872` family; this is a reachability result and classifies neither model.
+* `H-oracle-callback-live`: the retail oracle reaches the callback and the
+  whole-RDRAM positive control fires, so an address-specific watch can be
+  interpreted.
+* `H-oracle-callback-blocked`: the positive control fails or the callback
+  path is still blocked before callback entry; no retail phase conclusion is
+  allowed.
+* `H-oracle-watch-discriminates`: with the positive control live, the
+  address-specific watch reports a retail PC/write attribution that separates
+  the s983 callback hypotheses.
 
-Discriminating measurement: the phase-gated run must produce either a
-`[slot-sp-guard] INVALID` register dump at the slot-dispatch family or a
-slot-dispatch crash/marker. A dump's `ra`/entry registers split the first two
-hypotheses; no slot marker with an early `0x8000834c` exit selects only
-`H-no-sp-event`.
+Discriminating measurement: one oracle run must first show the documented
+whole-RDRAM positive-control watch firing (about 1.6M events in 8 emulated
+seconds), then report whether the callback is entered and, if so, the
+address-specific watch's retail PC attribution. Positive control plus
+callback attribution selects `H-oracle-watch-discriminates`; positive control
+without callback selects a callback-path hypothesis; no positive control
+makes the run invalid and selects neither.
 
-The loop consumes the recipe automatically between iterations (up to two
-recipes, 600s cap). At the next iteration, read the SOAK-RESULTS tail. If an
-invalid guard row appears, cross-reference its `ra` against the direct
-`slotDispatcherIter` callers. If the run reaches `+872` with zero guard hits,
-record a real evaluable null. If it again dies at `0x8000834c` before slot
-dispatch, record `H-no-sp-event` and pivot rather than requeueing verbatim.
+## Exact preflight
 
-Do not re-run the M4 accumulator probe (three controlled nulls already
-recorded, s1025-s1027) unless a genuinely new discriminator is identified.
+```sh
+sed -n '1,240p' tools/oracle/README.md
+rg -n "callback|read_with_bp_checks|whole-RDRAM|positive" tools/oracle
+git status --short
+```
+
+If the existing oracle recipe is runnable, execute exactly one run from its
+documented command with a whole-RDRAM watch armed first. Capture to a path
+whose final component does not begin with `.`. If the positive control fails,
+stop and record the oracle as blocked; do not interpret address-specific
+nulls. If the callback is live, record the PC/watch attribution and update
+the ledger with the selected callback hypothesis.

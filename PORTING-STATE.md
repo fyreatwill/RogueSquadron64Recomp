@@ -61619,3 +61619,15 @@ from entry/runtime-corrupted `$sp`. It also rules out treating this recipe as
 an evaluable null for the `+872` site. The next queued recipe postpones the
 late `a` input to frame 300 while retaining ordinary dispatch and the guard.
 No mitigation or generated-code change was made. ORIGIN: not applicable.
+
+## Session 1030 (2026-08-14) — postponed-input slot-SP recipe still missed dispatch
+
+Consumed the queued `s1029_slot_sp_guard_late_a.sh` recipe and inspected its
+bounded capture log. The phase gate was a positive control: VI width 1024 was
+reached after 78.3s. The recipe delivered the postponed `a` at 300s and
+captured 108 frames, but produced no `[slot-sp-guard]`, `slotDispatcherIter`,
+or SIGBUS marker. The run therefore again exited before the target slot-SP
+event; this selects `H-no-sp-event` and does not distinguish caller-corrupted
+`$sp` from entry/runtime-corrupted `$sp`. The ordinary slot-SP recipe family
+is closed for now rather than being re-run with another key schedule. No
+mitigation or generated-code change was made. ORIGIN: not applicable.

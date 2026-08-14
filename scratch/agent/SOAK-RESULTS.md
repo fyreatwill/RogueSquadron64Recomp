@@ -479,3 +479,4 @@
 20260814-013347 | slot_sp_guard | rc=0 | 286s | scratch/agent/soak_results/slot_sp_guard_20260814-013347.log
 20260814-s1009 | slot_sp_guard ANALYZED | UNEVALUABLE | crashed at slotDispatcherIter+8592 after 57 frames; no ROGUESQ_LOG_SLOT_SP_GUARD record before crash, so the +872 caller remains unclassified
 20260814-041217 | s1028_slot_sp_guard | rc=3 | 297s | scratch/agent/soak_results/s1028_slot_sp_guard_20260814-041217.log
+20260814-042134 | s1029_slot_sp_guard_late_a | rc=0 | 441s | scratch/agent/soak_results/s1029_slot_sp_guard_late_a_20260814-042134.log

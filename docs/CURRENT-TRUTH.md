@@ -6,8 +6,9 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1029 (2026-08-14). The active investigation is M3 slot-SP
-corruption; M4 zero-shade is parked after its third consecutive controlled null:
+Reviewed through s1030 (2026-08-14). M3 slot-SP corruption is parked after two
+phase-positive no-event recipes; the next ground-truth unit is the retail
+oracle callback audit. M4 zero-shade is parked after its third consecutive controlled null:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
@@ -293,16 +294,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1026 | A 2048-row corrected LLE capture passed VI/input/stage-1 controls and produced 161 complete M4 triplets. No tested shade/accumulator endpoint reached 0x8000; only low `accl` fields did. Numeric hypotheses remain unevaluable. |
 | s1027 | Split the caps to 64 stage-1 controls and 2048 target rows. VI-1024, input, all controls, and all target rows passed; no `v6`, `v29`, `acch`, or `accm` endpoint reached 0x8000 (22 `accl` hits only). Third controlled M4 null; pivot to slot-SP diagnostic. |
 | s1029 | The changed ordinary-dispatch slot-SP recipe reached VI-1024, but exited after 65 frames at sticky guest PC `0x8000834c` before `slotDispatcherIter` or `[slot-sp-guard]`; classify as `H-no-sp-event` and adjust the key schedule rather than selecting a corruption model. |
+| s1030 | The postponed-`a` ordinary-dispatch recipe reached VI-1024, delivered all scheduled inputs, and captured 108 frames but still produced no slot-dispatch or guard marker; `H-no-sp-event` recurred, so the recipe family is closed without classifying `$sp` corruption. |
 
 ## Ranked backlog
 
-1. Consume the adjusted ordinary-dispatch slot-SP recipe
-   (`scratch/agent/soak_queue/s1029_slot_sp_guard_late_a.sh`) with the late
-   `a` postponed. If `[slot-sp-guard] INVALID` appears at the `+872` family,
-   classify caller-vs-entry/runtime corruption from its `ra` and entry
-   registers; if it again exits at `0x8000834c` without a slot-dispatch marker,
-   record another `H-no-sp-event` and pivot rather than re-running the same
-   recipe. Keep the M4 numeric question parked.
+1. Resume the archived retail-oracle callback audit from s983, beginning with
+   `tools/oracle/README.md` and the existing callback probe, now that the
+   slot-SP recipe family has twice failed to reach the target event. Arm the
+   whole-RDRAM positive control before any address-specific watch. Do not infer
+   a retail phase result from a null callback or modify the recomp runtime from
+   this audit.
 2. The M4 accumulator/VGE numeric-origin question remains open after three
    controlled nulls; resume only with a new discriminator or independent ground
    truth.
@@ -310,8 +311,8 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    binary-verified diagnostic (`N64Recomp/fixup_game_funcs.py:25156-25185`,
    s1005): `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. The queued
-   `s1029_slot_sp_guard_late_a.sh` recipe is item 1 above; do not do another static
-   sweep.
+   `s1029_slot_sp_guard_late_a.sh` is closed after two phase-positive no-event
+   results; do not do another static sweep.
 4. Directory access to `rs64-oracle` is restored; resume the archived s983
    oracle callback audit when the loop is not actively running a capture. Do
    not self-grant access or infer a retail phase result.
