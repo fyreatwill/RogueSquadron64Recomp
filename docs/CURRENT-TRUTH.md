@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1010 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1011 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. The remaining
 question is the intended semantic source of that emitter's shade record. M5 audio de-stubbing
@@ -145,6 +145,16 @@ record-offset discrepancy was found. This selects
 vector-source path, not an explicit no-lighting fallback, while the intended
 RGBA source is the separate VTXCOLOR array. No mitigation is authorized.
 
+The s1011 `v6` producer audit finds `r3 = DMEM[0x134] & 1`; both arms of the
+`L_16B8` branch reach the same final `vge v6,v6,v29[1q]` and `L_1740` shade
+stores. `v6` is overwritten by `vmadh v6,v4,v0`, then compared against the
+DMEM-`0x60` table vector `0577 638F 1756 FF96 04D1 62CB 18CB FF8A` (from the
+captured ucode-data image). The source is transformed-vector arithmetic plus a
+table threshold, not VTXCOLOR or a lighting load. This refutes mode-semantic
+misread and the lighting-result interpretation; it selects the narrow
+`H-v6-clip-predicate` description for the final compare, while leaving the
+sentinel's numeric origin open. Full audit: [M4-V6-PRODUCER-AUDIT.md](M4-V6-PRODUCER-AUDIT.md).
+
 ## Recent evidence ledger
 
 Details are in `PORTING-STATE.md`; durable summaries are in
@@ -168,14 +178,13 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1008 | Static generated-vs-GLideN64 audit: color is copied to vertex `+0x10` but the shaded-triangle path consumes `+0x18`/geometry vectors and never reads it; the `lb` is flag-only. Selected `H-shade-source-mismatch`; no mitigation. |
 | s1009 | Retail ROM instruction audit: color stores are present at `0x1424/0x1428/0x1468`, but the shaded emitter at `0x1740` has no `+0x10` read; generated output preserves it and fixup does not remove it. Selected `H-original-omits-color`; no mitigation. |
 | s1010 | GLideN64 TriGen semantics vs retail/generated emitter: reference copies colorData into RGBA, while retail `L_1740` writes `+0x18` from vector `v6`; RT64 shade decoding uses the subsequent RDP coefficient block. Selected `H-missing-lighting-source`; no mitigation. |
+| s1011 | `v6` producer audit: `r3=DMEM[0x134]&1`; both mode arms share the final compare/store, and DMEM `0x60` is a signed table vector. Selected narrow `H-v6-clip-predicate`; sentinel origin remains open. |
 
 ## Ranked backlog
 
-1. Trace the retail Factor 5 `v6` producer through the `L_16B8` mode bit and
-   DMEM constants at `0x60`, identifying whether that vector is a legitimate
-   lighting/fog result or a clip predicate accidentally written as shade.
-   Name the mode condition and constant source before proposing any
-   mitigation.
+1. Explain the numeric `-0.5/+0.5` sentinel from the `vge` compare: trace the
+   lane semantics of `v4`, `v0`, `v29[1q]`, and the compare-result encoding,
+   using an independent RSP semantic reference before proposing any mitigation.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
@@ -186,31 +195,30 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 4. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
-## Next work unit (s1009)
+## Next work unit (s1012)
 
 HYPOTHESIS-ID: m4-zero-shade-emission-constant
 
-Trace the color-bearing vertex record from the Factor 5 ELF/disassembly through
-`tools/fixup_factor5_ucode.py` and RSPRecomp generation. Determine whether the
-missing shaded-triangle read of vertex `+0x10` is present in the original
-microcode or was lost by the generated/fixup pipeline. Do not edit generated
-output; static audit only — no build/run required.
+Explain the numeric `-0.5/+0.5` sentinel from the final `vge` compare. Trace
+the lane semantics of `v4`, `v0`, and `v29[1q]` against an independent RSP
+semantic reference. Static audit only; no build/run required. Do not edit
+generated output.
 
 Competing hypotheses and the discriminating measurement:
 
-- `H-original-omits-color`: the retail microcode itself never consumes the
-  color word for the shaded-triangle emission path.
-- `H-generation-drops-color`: the original microcode has a color read, but
-  disassembly conversion, RSPRecomp, or the fixup pipeline omitted it.
-- `H-layout-misread`: the color read exists and feeds the generated vectors,
-  but the RT64-side shade interpretation points at the wrong record offsets.
+- `H-vge-sentinel-encoding`: the RSP `vge` result naturally encodes the
+  observed fixed `-0.5/+0.5` coefficients after RT64's shade decode.
+- `H-v4-v0-source`: one operand lane is a fixed compare/clip source, producing
+  the sentinel before `vge`.
+- `H-shade-store-interpretation`: the compare result is ordinary, but the
+  downstream shade coefficient interpretation maps its predicate bits to the
+  sentinel.
 
-Discriminator: locate the original ELF instruction sequence and the generated
-sequence around the vertex-record color store and the shaded-triangle entry.
-An absent color read in the ELF selects `H-original-omits-color`; a color read
-present only in ELF selects `H-generation-drops-color`; a generated color read
-feeding the shade vectors with a consumer-offset discrepancy selects
-`H-layout-misread`.
+Discriminator: decode the exact `vge` lane result and RT64 coefficient mapping
+for the observed sentinel. A reference that produces the same sentinel from
+the compare selects `H-vge-sentinel-encoding`; a fixed operand selects
+`H-v4-v0-source`; a mismatch only after the RDP/RT64 store selects
+`H-shade-store-interpretation`.
 
 The `slotDispatcherIter` sp-guard soak is a separate queued recipe
 (`scratch/agent/soak_queue/slot_sp_guard.sh`), not this work unit.

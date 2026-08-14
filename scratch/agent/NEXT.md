@@ -10,25 +10,26 @@ HYPOTHESIS-ID: m4-zero-shade-emission-constant
 
 ## One work unit
 
-Trace the `v6` producer through the `L_16B8` mode bit and the DMEM constants
-loaded from `0x60`. Static audit only; no build/run required. Do not edit
+Explain the numeric `-0.5/+0.5` sentinel from the final `vge` compare,
+tracing the lane semantics of `v4`, `v0`, and `v29[1q]` against an independent
+RSP semantic reference. Static audit only; no build/run required. Do not edit
 generated output.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-v6-clip-predicate`: `v6` is a clip/test vector and `+0x18` is being
-  populated from the wrong register class.
-- `H-v6-lighting-result`: `v6` is the intended lighting/fog result, and the
-  sentinel is caused by a specific mode or constant path.
-- `H-v6-mode-misread`: the `L_16B8` branch or DMEM constant interpretation is
-  wrong in the generated/runtime model.
+- `H-vge-sentinel-encoding`: the RSP `vge` result naturally encodes the
+  observed fixed `-0.5/+0.5` coefficients after RT64's shade decode.
+- `H-v4-v0-source`: one operand lane is a fixed compare/clip source, producing
+  the sentinel before `vge`.
+- `H-shade-store-interpretation`: the compare result is ordinary, but the
+  downstream shade coefficient interpretation maps its predicate bits to the
+  sentinel.
 
-Discriminator: identify every producer of `v6` on both sides of `L_16B8`,
-decode the DMEM `0x60` vector values and the branch's mode bit, and compare
-their role with the reference's explicit RGBA color path. A clip/test-only
-producer selects `H-v6-clip-predicate`; a documented lighting/fog vector with
-sentinel-producing constants selects `H-v6-lighting-result`; a mismatch in
-branch/constant semantics selects `H-v6-mode-misread`.
+Discriminator: decode the exact `vge` lane result and RT64 coefficient mapping
+for the observed sentinel. A reference that produces the same sentinel from
+the compare selects `H-vge-sentinel-encoding`; a fixed operand selects
+`H-v4-v0-source`; a mismatch only after the RDP/RT64 store selects
+`H-shade-store-interpretation`.
 
 The `slotDispatcherIter` sp-guard soak crashed at a different site before
 producing a guard record; it remains a separate queued investigation and is

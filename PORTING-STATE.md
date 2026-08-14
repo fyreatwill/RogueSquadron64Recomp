@@ -61241,3 +61241,26 @@ error, and the claim that the sentinel is explicitly selected by a no-lighting
 fallback. It does not identify whether `v6` itself is a legitimate lighting
 vector or a clip/test vector; that is the next static discriminator. No
 mitigation was added.
+
+## Session 1011 (2026-08-14) — audited Factor 5 `v6` producer
+
+Ran the prescribed static M4 work unit without building or running. At the
+generated `L_16B8` entry, `r3` is `DMEM[0x134] & 1`. The initial `vge`/`vmrg`
+result in `v6` is consumed by the intermediate `v5`/`v4` arithmetic, then
+`vmadh v6,v4,v0` overwrites it. Both `r3` arms execute the same final
+`vge v6,v6,v29[1q]` and fall through to the `L_1740` shade stores; the
+nonzero arm only adjusts `v4`/`v5` afterward. The path contains no VTXCOLOR or
+lighting-source load.
+
+The two `ldv` operations source `v29` from DMEM `0x60`. The captured
+ucode-data image decodes that vector as signed halfwords
+`0577 638F 1756 FF96 04D1 62CB 18CB FF8A`, consistent with a varying table,
+not RGBA or a fixed lighting constant. This selects the narrow
+`H-v6-clip-predicate` description for the final compare, refutes
+`H-v6-mode-misread` and `H-v6-lighting-result`, and leaves the numeric
+`-0.5/+0.5` sentinel origin open. The full evidence is in
+`docs/M4-V6-PRODUCER-AUDIT.md`; no mitigation or generated-file edit was made.
+
+This rules out a mode-arm divergence and a lighting/color source at this
+stage. It does not yet explain the compare-result encoding or the fixed
+sentinel value; that is the next discriminator.
