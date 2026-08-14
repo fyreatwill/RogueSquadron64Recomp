@@ -61601,3 +61601,21 @@ loop to consume between iterations, per the soak-queue contract.
 No hypothesis is selected or refuted this session. ORIGIN: not applicable —
 no mitigation, guard, or generated-code change was made; only ground truth
 was verified and a queued recipe was scoped against prior evidence.
+
+## Session 1029 (2026-08-14) — ordinary slot-SP recipe reached phase but not the target event
+
+Consumed the queued `s1028_slot_sp_guard.sh` recipe from
+`scratch/agent/SOAK-RESULTS.md` and bounded log
+`scratch/agent/soak_results/s1028_slot_sp_guard_20260814-041217.log`. Its
+phase gate was a positive control: VI width 1024 was reached after 78.5s.
+The run delivered the scheduled early and late inputs, ran 65 frames, and
+then exited at 216.4s. The only crash marker was the host-symbol artifact
+with sticky guest PC `0x8000834c`; there were zero `[slot-sp-guard]`,
+`slotDispatcherIter`, and `SIGBUS` records in the capture.
+
+This is `H-no-sp-event`: the run reached the required phase but died before
+the slot-dispatch family, so it does not distinguish caller-corrupted `$sp`
+from entry/runtime-corrupted `$sp`. It also rules out treating this recipe as
+an evaluable null for the `+872` site. The next queued recipe postpones the
+late `a` input to frame 300 while retaining ordinary dispatch and the guard.
+No mitigation or generated-code change was made. ORIGIN: not applicable.

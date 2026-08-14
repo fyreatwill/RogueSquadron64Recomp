@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1028 (2026-08-14). The active investigation is M3 slot-SP
+Reviewed through s1029 (2026-08-14). The active investigation is M3 slot-SP
 corruption; M4 zero-shade is parked after its third consecutive controlled null:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
@@ -68,9 +68,10 @@ present in the generated `funcs_8.c` and in the compiled binary's strings. The
 guard already ran once pre-M4-detour (`SOAK-RESULTS.md` s1009): a forced-LLE
 recipe reached 57 frames and crashed at `slotDispatcherIter+8592` (not `+872`)
 with zero guard hits — a valid but unevaluable null, since that run never
-reached the `+872` fault site. `s1028_slot_sp_guard.sh` is queued with a
-changed, non-forced-LLE recipe and a longer key schedule to give the `+872`
-site a real chance to be reached; it has not run yet.
+reached the `+872` fault site. The changed non-forced-LLE recipe then reached
+VI-1024 but exited after 65 frames at sticky guest PC `0x8000834c`, before the
+slot-dispatch family or guard fired. A follow-up recipe postpones the late
+`a` input.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -291,15 +292,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1025 | The no-LLE recipe reproduced the zero-row configuration failure. The corrected LLE arm passed VI-1024, input, and stage-1 controls and produced 124 complete M4 triplets. All stage-12 v6 values matched stage-11 v6; no shade field reached 0x8000, so the numeric hypotheses remain unevaluable. |
 | s1026 | A 2048-row corrected LLE capture passed VI/input/stage-1 controls and produced 161 complete M4 triplets. No tested shade/accumulator endpoint reached 0x8000; only low `accl` fields did. Numeric hypotheses remain unevaluable. |
 | s1027 | Split the caps to 64 stage-1 controls and 2048 target rows. VI-1024, input, all controls, and all target rows passed; no `v6`, `v29`, `acch`, or `accm` endpoint reached 0x8000 (22 `accl` hits only). Third controlled M4 null; pivot to slot-SP diagnostic. |
+| s1029 | The changed ordinary-dispatch slot-SP recipe reached VI-1024, but exited after 65 frames at sticky guest PC `0x8000834c` before `slotDispatcherIter` or `[slot-sp-guard]`; classify as `H-no-sp-event` and adjust the key schedule rather than selecting a corruption model. |
 
 ## Ranked backlog
 
-1. Consume the queued `scratch/agent/soak_queue/s1028_slot_sp_guard.sh`
-   (non-forced-LLE recipe, longer key schedule) and classify the first
-   out-of-RDRAM guest `$sp` caller if the `+872` fault site is reached; the
-   prior forced-LLE guard run (s1009) crashed at a different offset
-   (`+8592`) with zero guard hits and did not reach it. Keep the M4 numeric
-   question parked unless a new discriminating lead appears.
+1. Consume the adjusted ordinary-dispatch slot-SP recipe
+   (`scratch/agent/soak_queue/s1029_slot_sp_guard_late_a.sh`) with the late
+   `a` postponed. If `[slot-sp-guard] INVALID` appears at the `+872` family,
+   classify caller-vs-entry/runtime corruption from its `ra` and entry
+   registers; if it again exits at `0x8000834c` without a slot-dispatch marker,
+   record another `H-no-sp-event` and pivot rather than re-running the same
+   recipe. Keep the M4 numeric question parked.
 2. The M4 accumulator/VGE numeric-origin question remains open after three
    controlled nulls; resume only with a new discriminator or independent ground
    truth.
@@ -365,7 +368,7 @@ only by saturation select `H-accumulator-saturation`; a matching `v29` lane
 selects `H-v29-selection`.
 
 The `slotDispatcherIter` sp-guard soak is a separate queued recipe
-(`scratch/agent/soak_queue/s1028_slot_sp_guard.sh`), not this work unit.
+(`scratch/agent/soak_queue/s1029_slot_sp_guard_late_a.sh`), not this work unit.
 
 ## Method and safety rules
 

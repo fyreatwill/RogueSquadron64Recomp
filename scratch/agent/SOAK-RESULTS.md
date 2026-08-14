@@ -478,3 +478,4 @@
 20260813-s844 | s790_postsec2_reachability | ADVANCED | VI 1024 reached; 392 positive E9 provenance rows; 112 candidate dispatches (0xB4/0xBF only), zero 0xB1, draw, or copy-assert rows; known slotDispatcherIter+872 SIGBUS at 202.8s. scratch/agent/soak_results/s790_postsec2_reachability_20260813-061248/run.log
 20260814-013347 | slot_sp_guard | rc=0 | 286s | scratch/agent/soak_results/slot_sp_guard_20260814-013347.log
 20260814-s1009 | slot_sp_guard ANALYZED | UNEVALUABLE | crashed at slotDispatcherIter+8592 after 57 frames; no ROGUESQ_LOG_SLOT_SP_GUARD record before crash, so the +872 caller remains unclassified
+20260814-041217 | s1028_slot_sp_guard | rc=3 | 297s | scratch/agent/soak_results/s1028_slot_sp_guard_20260814-041217.log
