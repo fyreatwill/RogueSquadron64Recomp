@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1063 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1064 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -496,6 +496,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1061 | Case-0 `runHangarMenuFromOverlay` receives `s3[0]` at `0x80130B40`. Ten direct generated stores are reset, menu/asset, save/setup, fixed-flag, or cinematic-state shaped; none directly reads controller, timer, demo, or attract state. Selects `H-selector0-state` as static single-source evidence; pointer-mediated/non-generated writers and the retail transition remain open. |
 | s1062 | Incoming-value audit for the two non-constant writers found five cinematic call sites, all constant or menu-state/table-derived, with no direct controller/timer/demo/attract read. The menu asset path reads `s2+0x14`, where `s2` is initialized to fixed global `0x80130B40`, so the source is global state byte `0x80130B54` plus a fixed table lookup. Selects `H-selector0-state` as static single-source evidence; the field writers and retail transition remain open. |
 | s1063 | Generated-store audit of `0x80130B54` found `cycleIdleDemoId` at `0x8006F07C` as the only exact global-base writer, incrementing the field modulo six, plus the generated `0x8006F0AC` clear form. No controller read appears. Selects `H-field-demo` as static single-source evidence; pointer-mediated/non-generated aliases remain open. |
+| s1064 | The selected table is the named `dLevelByDemoId` data object at `0x800CD404` (`0x800D-0x2BFC`). The complete generated-tree audit found its indexed byte read only at `menuOverlayInit+0x45c`; no generated store targets the table range. This selects `H-table-immutable` for generated code, while data initialization and pointer-mediated/non-generated writers remain an explicit boundary. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -528,7 +529,12 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    fixed table. Selects `H-selector0-state` as static single-source evidence;
    the field writers remain open. Do not arm the
    freelist watch until a 512 hangar-origin phase is reached.
-2. The normal frame-return producer is now classified as state-shaped:
+2. The table selected by `0x80130B54` is immutable in the generated tree:
+   `dLevelByDemoId` begins at `0x800CD404`, and the only generated access found
+   is the indexed read in `menuOverlayInit`. Treat its initialization or any
+   pointer-mediated/non-generated write as a boundary; do not infer a runtime
+   value or arm a freelist watch from this static result.
+3. The normal frame-return producer is now classified as state-shaped:
    `accumulateShipThrottleCharge` has no local controller, timer, demo, or
    attract source and returns 1 only when its ship charge counter reaches 7.
    Direct-store enumeration found two state/table-derived `0x800CD6D4` stores,
@@ -538,20 +544,20 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    ship-state shaped, with no controller/timer/demo/attract source. The retail
    transition remains open; do not infer its meaning from values or arm a
    freelist watch until the retail oracle reaches a hangar-origin phase.
-3. The M4 accumulator/VGE numeric-origin question remains open, but the
+4. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume
    only with a new discriminator or independent ground truth.
-4. The `slotDispatcherIter+872` guest-`$sp` corruption has a landed and
+5. The `slotDispatcherIter+872` guest-`$sp` corruption has a landed and
    binary-verified diagnostic (`N64Recomp/fixup_game_funcs.py:25156-25185`,
    s1005): `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. The queued
    `s1029_slot_sp_guard_late_a.sh` is closed after two phase-positive no-event
    results; do not do another static sweep.
-5. Directory access to `rs64-oracle` is restored; the callback ABI repair is
+6. Directory access to `rs64-oracle` is restored; the callback ABI repair is
    confirmed by runtime positive control, but target attribution still needs
    the bounded-watch change in item 1. Do not self-grant access or infer a
    retail phase result.
-5. Preserve regeneration delete-before-regen ordering and audit fixup counts
+7. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
 ## Phase-gate audit (s1017)

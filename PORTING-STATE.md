@@ -62324,3 +62324,24 @@ store aliases.
 ORIGIN: generated `RecompiledFuncs/funcs_17.c` and complete generated-tree
 offset/store census; no guest value, runtime behavior, or mitigation was
 changed.
+
+## Session 1064 (2026-08-14) — audited fixed demo-level table ownership
+
+Ran the bounded static audit specified in `scratch/agent/NEXT.md`; no build or
+runtime run was performed. The data-symbol table identifies
+`dLevelByDemoId` at `0x800CD404`, exactly `0x800D-0x2BFC`, with data symbols
+continuing through `0x800CD438`. The generated tree contains the indexed read
+in `menuOverlayInit` at `0x800C5B80`, after adding the byte at `0x80130B54` to
+the table base. The complete generated-store search found no store whose
+address construction targets the table range; nearby `0x800CD404` matches are
+instruction-PC comments or stack-local stores, not writes to the data object.
+
+This selects `H-table-immutable` for the generated tree and rules out a direct
+generated controller, timer, demo, or state writer. It does not establish the
+runtime table value or exclude ROM/data initialization, pointer-mediated
+stores, or host/runtime writes; those remain an explicit boundary. No
+mitigation or guest behavior changed.
+
+ORIGIN: `syms/rogue_squadron.datasyms.toml` data ownership plus complete
+generated `MEM_[BHW]`/address-form census; no guest value, runtime behavior, or
+mitigation was changed.
