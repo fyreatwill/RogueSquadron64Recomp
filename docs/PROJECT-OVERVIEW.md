@@ -2699,7 +2699,7 @@ the callback stall but cannot preserve the triggering writer association and
 races later writes. H-no-safe-value-api is selected. No runtime behavior,
 mitigation, or oracle source was changed; the coalescer question must pivot to
 another independent ground-truth source.
-## 30. M3 audio idiom audits s925–s935
+## 30. M3 audio idiom audits s925–s938
 
 This compact maintenance note preserves the durable outcomes removed from
 CURRENT-TRUTH during the s936 maintenance pass. All were source-only audits:
@@ -2738,7 +2738,13 @@ change was made.
   the callee has one fixed `+0x1` byte store through a `0x88` stride and no
   local loop/helper hazard. This is a structural pass for that chain only;
   base/count lifecycle legitimacy and register-indirect callers remain open.
+- s938 `stopVoiceByKey`: one direct caller passes the byte at its streamed-voice
+  record `+0x4624`; `allocateSynthVoice` returns either `-1` or an index below
+  the byte-sized active voice count, and the `0x17C` record arithmetic is
+  internally consistent. The stop path calls `freeSynthVoiceFromActiveList`
+  and `stopVoiceMarkRetrigger`, not `musyxStopVoice`; base/count lifecycle,
+  active-list pointer legitimacy, and register-indirect callers remain open.
 
-These results leave the active M3 thread at `stopVoiceByKey`, with no
+These results leave the active M3 thread at `stopVoicesByHandle`, with no
 mitigation authorized absent an ORIGIN naming the writer and assessing value
 legitimacy.

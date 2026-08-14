@@ -59122,3 +59122,46 @@ metadata; it is not independent runtime writer/value evidence.
 ORIGIN: complete generated caller/callee, register-provenance, index
 arithmetic, base/count, access-range, guard-coverage, termination, and
 companion-symbol inventory; no guest value mutation or mitigation.
+
+## Session 938 (2026-08-13) — `stopVoiceByKey` has one caller and a bounded local index path
+
+Performed the planned source-only M3 idiom audit of `stopVoiceByKey`
+(`0x80086914`) in `../N64Recomp/RecompiledFuncs/funcs_21.c`. Enumerated every
+generated reference and caller, caller register setup, key-to-index flow,
+voice-record accesses, helper edges, state writes, existing guards,
+termination, and the companion `main_overlay.txt` mapping. No build, game run,
+soak, generated-source edit, guard, mitigation, or behavior change was made.
+
+The generated tree contains exactly one direct call, at
+`startStreamedSampleVoice` (`0x80098054`). Its caller loads `$a0` from the
+streamed voice record's byte at `+0x4624` immediately before the call, and the
+callee masks it to eight bits. No second direct caller or literal reference to
+`0x80086914` was found; a register-indirect call cannot be excluded by this
+source search.
+
+`stopVoiceByKey` calls `allocateSynthVoice(key, 0xFF, 0xFFFF, 1)`. The allocator
+scans from index zero while `t0 < lbu(0x80141AD0)`, carries selected indices in
+`t2`/`t3`, returns `-1` on failure, and returns only a scanned index after a
+final key-byte check. Therefore its local index arithmetic is coherent: the
+caller checks `-1`, then computes `index * 0x17C` and accesses the record-area
+fields at the corresponding fixed offsets. It marks the record active, calls
+`freeSynthVoiceFromActiveList(base + index*0x17C)`, clears the handle and key,
+and conditionally calls `stopVoiceMarkRetrigger(index)` when
+`isAudioSlotActive(index)` is true. It does not call `musyxStopVoice`; that
+helper's separately audited direct chain is not this path.
+
+The index derivation and all local branches terminate, but the source does not
+prove the lifecycle or legitimacy of the global voice-array base/count, the
+active-list pointers consumed by `freeSynthVoiceFromActiveList`, or the absence
+of register-indirect callers. The existing base-pointer guards are inside
+`stopVoiceMarkRetrigger` and related helpers, not a proof of the allocator's
+record-array bounds. H-stop-by-key-shape-mismatch is refuted for the sole
+direct caller, and H-stop-by-key-classified is supported only for the local
+allocator/index shape. H-stop-by-key-unclassified remains selected for the
+unproven base/count and active-list contracts. This is a single-source static
+result from generated code plus companion symbol metadata; no independent
+runtime writer/value evidence was claimed.
+
+ORIGIN: complete generated caller/callee, register-provenance, index
+arithmetic, access-range, helper-edge, guard-coverage, termination, and
+companion-symbol inventory; no guest value mutation or mitigation.

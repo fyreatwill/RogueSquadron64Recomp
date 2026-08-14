@@ -1,27 +1,27 @@
-# NEXT work unit (s938)
+# NEXT work unit (s939)
 
-HYPOTHESIS-ID: m3-audio-stop-by-key-contract
+HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
 
-Audit the complete `stopVoiceByKey` idiom at `0x80086914` in
-`../N64Recomp/RecompiledFuncs/funcs_21.c`, including every generated caller,
-key-to-voice-index derivation, voice-array accesses, calls into low-level stop
-helpers, state writes, existing guard coverage, and termination paths. Source-
-only; do not add a guard, change game behavior, build, or run a soak.
+Audit the complete `stopVoicesByHandle` idiom at `0x8008DA98` in
+`../N64Recomp/RecompiledFuncs/funcs_23.c`, including every generated caller,
+handle-to-list-node derivation, list and voice-record accesses, helper edges,
+state writes, existing guard coverage, and termination paths. Source-only; do
+not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-stop-by-key-unclassified: a key resolves to an invalid voice index/base or
-  escapes the intended voice record before low-level stop.
-- H-stop-by-key-classified: callers and lookup logic agree on a bounded voice
-  index and existing guards cover the base/index contract.
-- H-stop-by-key-shape-mismatch: callers use distinct key, pointer, or index
-  contracts that are not translated consistently.
+- H-stop-voices-by-handle-unclassified: a handle resolves to an invalid list
+  node/voice pointer or escapes a terminated list walk.
+- H-stop-voices-by-handle-classified: callers and list logic agree on one
+  bounded handle/node contract and every termination path is covered.
+- H-stop-voices-by-handle-shape-mismatch: callers use distinct handle, node, or
+  voice-record contracts that are not translated consistently.
 
 Discriminating measurement: enumerate every reference and caller register
-setup, inspect the complete callee and all state/slot accesses, derive every
+setup, inspect the complete callee and all state/list accesses, derive every
 address range and termination path, classify every helper edge, and
-cross-check `main_overlay.txt` plus the `musyxStopVoice` edge audited in s937.
-Any key/pointer/index split, uncovered derived access, or unproven termination
-path rejects classification.
+cross-check `main_overlay.txt` plus the related `stopVoiceByHandle` contract.
+Any handle/node/voice-pointer split, uncovered derived access, or unproven
+termination path rejects classification.
 
-Exact command: `rg -n -C 12 "stopVoiceByKey|80086914|86914" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
+Exact command: `rg -n -C 12 "stopVoicesByHandle|8008DA98|8DA98" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
