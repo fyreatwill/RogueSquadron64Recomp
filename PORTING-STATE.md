@@ -62264,3 +62264,24 @@ This selects `H-exit-word-state` as static single-source evidence and rules out
 a direct input/timer/demo source in the audited chain. It does not establish
 the retail width-320-to-hangar transition, and the static source boundary is
 not ground truth for the retail ROM.
+
+## Session 1061 (2026-08-14) — audited selector-zero argument writers
+
+Ran the bounded static audit specified in `scratch/agent/NEXT.md`; no build or
+runtime run was performed. In `menuOverlayInit` case 0, the call to
+`runHangarMenuFromOverlay` passes `s3[0]`, which is the byte at
+`0x80130B40`. An exhaustive direct generated-store search found ten writers:
+reset zeros at `0x8003E1EC`, `0x8003E2E4`, and `0x8006E974`; fixed/state values
+in `mainGameLoop`; the menu asset-table byte at `0x800C5B8C`; save/setup state
+at `0x8006DC2C`; and the cinematic state byte at `0x800A5E5C`. Their visible
+inputs are constants, menu/asset tables, save state, or cinematic caller
+state. No site directly reads a controller edge, timer, demo counter, or
+attract flag.
+
+This selects `H-selector0-state` as static single-source evidence and rules
+out a direct input/timer/demo writer in the enumerated generated tree. It does
+not establish the retail transition; pointer-mediated or non-generated
+writers remain a boundary.
+
+ORIGIN: direct-store enumeration of the generated `RecompiledFuncs/funcs_*.c`
+tree; no guest value, runtime behavior, or mitigation was changed.
