@@ -62362,3 +62362,18 @@ consumes the selected byte or justify a freelist watch.
 ORIGIN: `.ovl.menu` section geometry in `syms/rogue_squadron.datasyms.toml`,
 ROM-byte inspection at `0x1345A4`, and the prior complete generated-tree store
 census; no guest value, runtime behavior, or mitigation was changed.
+
+## Session 1066 (2026-08-14) — audited cycle-id callers
+
+The bounded generated-code audit found exactly two calls to `cycleIdleDemoId`
+(`0x8006F044`): `mainGameLoop` sites `0x8003E240` and `0x8003E54C`. The first
+is on the main-loop cleanup path after the `0x80130B10+0x20` gate and state-byte
+checks; the second is selected by the loop's state jump table after
+asset/menu-state predicates. Neither caller chain contains a direct controller
+read, timer/demo counter test, or attract scheduler predicate. This selects
+`H-cycle-state` for generated callers as static, single-source evidence and
+rules out `H-cycle-input` and `H-cycle-demo` for those callers. Pointer-mediated
+or non-generated aliases and the upstream state producer remain open.
+
+ORIGIN: generated caller enumeration in `RecompiledFuncs/funcs_8.c`; no guest
+value, runtime behavior, or mitigation was changed.
