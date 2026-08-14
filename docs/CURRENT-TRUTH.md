@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1054 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1055 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -170,6 +170,18 @@ controller-mask, timer, or demo read on these dispatch paths. This selects
 `H-caller-state` over `H-caller-input` and `H-caller-demo` as static,
 single-source evidence. The upstream producer of the state that reaches these
 callers remains open; no runtime conclusion or freelist watch follows.
+
+s1055's bounded case-0 audit found that selector 0 dispatches to
+`runHangarMenuFromOverlay(0, 0, s3[0])` at `0x800C5A8C`. The handler's frame loop
+returns a value from `runHangarSelectionFrame`; after shutdown, that return is
+stored in `s3[1]` unless it is the `0x00FFFFFE` sentinel, and the handler returns
+`0`/`1` based on whether the value equals that sentinel. Back in `menuOverlayInit`,
+the nonzero return writes selector `1` to `0x800CFF50`; the zero-return path does
+not write the selector there and continues through common cleanup. The audited
+case-0 path contains no direct controller, timer, demo, or attract read; its
+observed selector transition is return-value/state-shaped. This selects
+`H-index0-state` as static, single-source evidence while leaving the producer of
+the frame return and the upstream selector-0 entry open.
 
 ## M4 zero-shade evidence
 
@@ -408,6 +420,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1052 | Static audit of all eight `mainGameLoop` callers: selector constants are `{9,2,2,3,3,8,3,3}` and local guards use state/asset/unlock/counter data; no controller, timer, or demo read appears. Selects `H-caller-state` as static single-source evidence; upstream state producer remains open. |
 | s1053 | Static producer audit: `mainGameLoop` reads `0x80130B30` via `s4=0x80130B10`; `runIdleFramesAndLoadSaveData+0x1B8` stores constant `1`, while `resetGameSettingsAndMissionStats` clears the containing block. No input/timer/demo source reaches this byte. Selects `H-state-persistent` as static single-source evidence; retail phase remains unevaluable. |
 | s1054 | Bounded selector-9 audit: `menuOverlayInit` dispatches selector 9 to `runMenuModelViewerScreen(0)`, then writes selector 12 at `0x800C5CA4`; the handler has no input/timer/demo source. Selects `H-selector-state` as static single-source evidence; the upstream producer of selector 0 remains open. |
+| s1055 | Bounded selector-0 audit: case 0 calls `runHangarMenuFromOverlay`; its frame-loop return updates `s3[1]` and yields only a 0/1 result, with no local controller/timer/demo source. Selects `H-index0-state`; the upstream selector-0 producer and frame-return source remain open. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog

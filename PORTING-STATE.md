@@ -62135,3 +62135,25 @@ upstream producer of selector 0. No mitigation or runtime conclusion follows.
 
 ORIGIN: generated `funcs_34.c` switch and bounded case-9 source search only;
 no guest value, runtime behavior, or writer was changed.
+
+## Session 1055 (2026-08-14) — audited the selector-0 handler
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. `menuOverlayInit` stores its selector argument
+at `0x800CFF50` (`0x800D-0xB0`) and dispatches selector 0 at `0x800C5A8C` to
+`runHangarMenuFromOverlay(0, 0, s3[0])`. The handler loops on
+`runHangarSelectionFrame`; after shutdown it stores the frame return in `s3[1]`
+unless the return is sentinel `0x00FFFFFE`, then returns 0/1 according to that
+sentinel comparison. The caller writes selector 1 to `0x800CFF50` only for a
+nonzero handler return; the zero-return path does not write the selector and
+continues through common cleanup. No direct controller-mask, timer, demo, or
+attract source appears in this bounded case-0 chain.
+
+This selects `H-index0-state` over `H-index0-input` and `H-index0-demo` as
+static, single-source evidence. It rules out a local case-0 input/timer/demo
+cause for the observed selector update, but leaves the producer of the frame
+return and the upstream producer of selector 0 open. No mitigation or runtime
+conclusion follows.
+
+ORIGIN: generated `funcs_34.c`/`funcs_35.c` switch, handler, and bounded source
+search only; no guest value, runtime behavior, or writer was changed.
