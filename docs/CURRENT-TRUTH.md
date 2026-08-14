@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s965 (2026-08-13). The active blocker is authoritative
+Reviewed through s966 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -240,6 +240,11 @@ closed; M3 work is limited to systematic idiom-class audits.
   failure and selects the callback call/early-entry boundary, but does not
   identify the callback's failing instruction. No runtime mitigation or
   retail conclusion followed.
+- s966 added a first-statement marker to `check_breakpoints_on_mem_access`.
+  With the same positive control, ordinary RDRAM completed (1,102,384 writes,
+  298 VI), while the PIF arm reached wrapper pre-call but not callback entry or
+  wrapper return (`rc=139`). This selects the callback call/entry boundary but
+  does not distinguish ABI from callee prologue; no retail conclusion followed.
 
 ## Recent evidence ledger
 
@@ -283,6 +288,8 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s964 | Callback-boundary markers showed the ordinary arm completing (1,105,307 writes/one read/299 VI), while the PIF arm reached wrapped read entry but produced no pre-lookup marker before `rc=139`; lookup/state/update remain unevaluable and the failure is earlier in the PIF read-with-breakpoint path. |
 | s965 | Wrapper before/after markers showed the ordinary arm completing (1,102,500 writes/one read/298 VI), while the PIF arm reached the wrapper pre-callback marker at `0x1fc007e4`, emitted no post-callback marker, and exited `rc=139`; the failure is at callback call/early-entry, not before the wrapper. |
 
+| s966 | First-statement callback marker paired with the wrapper markers: ordinary control completed (1,102,384 writes/298 VI), while PIF reached wrapper pre-call but no callback entry or wrapper return (`rc=139`). ABI/prologue boundary selected; retail remains unevaluable. |
+
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
 entries and do not authorize mitigations.
@@ -300,11 +307,11 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s965 crossed the wrapper pre-call marker but not the
-   post-call marker. Add a first-statement callback marker to distinguish call
-   ABI/prologue failure from early callback-body failure, paired with the
-   ordinary-RDRAM positive control; do not infer retail callback-table
-   behavior until this boundary is crossed.
+   callback-table watch: s966 crossed the wrapper pre-call marker but not the
+   callback first-statement marker. Audit the caller/callee assembly and
+   callback signature to distinguish call ABI failure from callee-prologue
+   failure; do not infer retail callback-table behavior until this boundary is
+   crossed.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -314,38 +321,34 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-Make one minimal source-level diagnostic in the external oracle core at the
-first statement of `check_breakpoints_on_mem_access()` so the PIF-region read
-watch can distinguish callback call/prologue failure from early callback-body
-failure.
-Do not edit the recomp runtime or retry retail PIF/callback hypotheses until
-this passes.
+Perform one static ABI/prologue audit of the external oracle PIF wrapper call
+and `check_breakpoints_on_mem_access()` entry. Do not edit the recomp runtime
+or retry retail PIF/callback hypotheses until this boundary is explained.
 
 Competing hypotheses:
 
-- H-pif-wrapper-before: the PIF wrapper crashes before invoking
-  `check_breakpoints_on_mem_access()`.
-- H-pif-callback-entry: the wrapper invokes the callback, but argument/state
-  setup or entry crashes before its first instruction marker.
-- H-pif-wrapper-after: the callback returns, but the saved-handler restore or
-  wrapper return path crashes.
+- H-pif-call-abi: the wrapper's C call setup or ABI/return sequence is invalid
+  only for this PIF callback path.
+- H-pif-callback-prologue: control reaches the callback but its generated
+  prologue or first entry operation faults before the marker.
+- H-pif-callback-body: the first marker is reached and the existing callback
+  body is the failing region; this would overturn the current boundary label.
 
-Discriminating measurement: add rate-limited markers immediately before and
-after the PIF wrapper's call to `check_breakpoints_on_mem_access()`, then run
-ordinary-RDRAM and PIF-region read-watch arms in one bounded batch. The
-whole-RDRAM write control must fire in both. No pre-call marker selects an
-earlier wrapper/device fault; pre-call plus no post-call marker selects the
-callback path; both markers select the restore/return path.
+Discriminating measurement: inspect compiler assembly/disassembly for the
+PIF wrapper call and callback entry, including argument registers, stack
+alignment, symbol address, and the first marker's emitted instructions. A
+valid call/entry sequence with a faulting first callback instruction selects
+the prologue; an invalid call target/register/stack sequence selects ABI; a
+reachable first marker selects callback body. Preserve the paired ordinary
+positive-control run if a rebuild is needed.
 
 Exact starting checks/commands:
 
-`rg -n -C 8 "check_breakpoints_on_mem_access|update_debugger|lookup_breakpoint" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger`
+`rg -n -C 20 "check_breakpoints_on_mem_access|read_with_bp_checks" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device/memory`
 
-`tools/oracle/build_core.sh && tools/oracle/build.sh`
+`nm -an /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks"`
 
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 5 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --verbose --watch-read 0x00001000:0x00001004`
-
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 5 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --verbose --watch-read 0x1fc007c0:0x1fc007c4`
+`otool -tvV /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib | rg -n -C 12 "check_breakpoints_on_mem_access|read_with_bp_checks"`
 
 ## Closed and parked
 
