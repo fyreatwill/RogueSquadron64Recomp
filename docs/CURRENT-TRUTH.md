@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1020 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1021 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
@@ -22,7 +22,12 @@ source was generated after the last CMake build, and ovl20 is not a standalone
 CMake source. s1020 reconfigured and rebuilt: the composite source and
 executable now contain the probe, but the build graph still links only
 base/boot/B ucode, with no ovl20 object or executable ovl20 marker. This
-remains a link-path result, not an M4 numeric result.
+remains a link-path result, not an M4 numeric result. s1021 completed the
+source-to-dispatch audit: standalone ovl20 is a fixup-6q splice input, and its
+region is already present in the linked composite. The executable contains 68
+ovl20 route markers and the M4 helper, but correctly has no standalone ovl20
+object or symbol. The missing-standalone-link interpretation is refuted; no
+runtime capture was launched.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -236,15 +241,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1018 | Corrected 1024-gated capture reached VI-1024 at 78.3s and delivered all scheduled keys, but remained at 1024 for 85 frames with zero M4 and VMADH-control rows. Phase control passed; probe control failed, so no M4 hypothesis was classified. |
 | s1019 | Artifact audit found ovl20 probe source newer than the build; CMake compiles only base/boot/B ucode, and the linked executable has neither `rs64_m4_accum_probe` nor `factor5_ucode_ovl20`. Selected `H-stale-build-link`; no M4 hypothesis classified. |
 | s1020 | Reconfigure/build linked `rs64_m4_accum_probe` in the executable and regenerated the composite source, but CMake still omitted `factor5_ucode_ovl20_recompiled.c`; no executable ovl20 marker exists. Capture withheld; M4 remains unevaluated. |
+| s1021 | Source/build-graph audit showed standalone ovl20 is a fixup-6q splice input, not a runtime TU: the linked composite contains 68 ovl20 route markers and `_rs64_m4_accum_probe`, while no standalone ovl20 object/symbol is expected. The missing-link interpretation is refuted; M4 remains unevaluated. |
 
 ## Ranked backlog
 
-1. Trace the intended ovl20 integration path in CMake and the Factor 5
-   generation/fixup scripts, then make the smallest build-graph change that
-   causes the probe-bearing ovl20 implementation to be linked or deliberately
-   spliced into the active dispatch path. Rebuild and verify source, object,
-   symbol, and active-overlay controls; only then run the corrected 1024-gated
-   M4 capture. Do not classify M4 from a base-ucode-only control.
+1. Run the corrected 1024-gated M4 capture with full passive instrumentation
+   now that the composite source, linked probe helper, and ovl20 route markers
+   all pass. Compare VI-1024, VMADH-control, and M4-row counts in one capture;
+   do not classify M4 from a phase/control failure.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak

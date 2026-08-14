@@ -61423,3 +61423,22 @@ ovl20 object, and the executable had no `factor5_ucode_ovl20` marker. The
 complete artifact discriminator therefore selected the active-overlay/link
 path defect, not `H-runtime-unreached`; the M4 capture was correctly withheld.
 No mitigation or code change was made.
+
+## Session 1021 (2026-08-14) — resolved ovl20 composite link interpretation
+
+Ran the prescribed CMake reconfigure and full executable build, then compared
+the generated source, CMake object/link graph, and executable symbols. The
+standalone `factor5_ucode_ovl20_recompiled.c` contains the probe-bearing
+translation, but fixup 6q reads that file and splices its bounded `L_12A0`
+region into the active composite `factor5_ucode_recompiled.c`. The composite
+contains 68 ovl20 route markers and the linked executable contains
+`_rs64_m4_accum_probe`; CMake and the link line contain only the boot,
+composite main, and B ucode objects, with no standalone ovl20 object or
+`factor5_ucode_ovl20` symbol.
+
+This selects `H-ovl20-unused-source` as a runtime-link hypothesis: adding the
+standalone TU would link an uncalled duplicate implementation rather than fix
+dispatch. It rules out `H-ovl20-dispatch-generated` and the s1020
+interpretation that the absence of an ovl20 symbol means the active path is
+missing. The shared probe and composite controls passed, so no game capture
+was needed in this artifact work unit. No mitigation or code change was made.
