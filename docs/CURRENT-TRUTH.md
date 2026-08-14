@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1045 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1046 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -334,6 +334,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1041 | Retail oracle first-input discriminator: eleven 150 ms Start pulses beginning at 1 second versus the documented 6-second start both passed the 10,000 whole-RDRAM control/removal, delivered all 11 Start pad edges, and completed 3,599 VI at width 320/origin `0x006dd280`. Neither first-input timing reached 512; the tested timing window is not sufficient to explain the attract path, and the freelist watch remains unevaluable. |
 | s1042 | Extended the same early-versus-documented Start arms to 120 seconds. Both passed the 10,000 whole-RDRAM control/removal and delivered all 11 Start pad edges; both completed 7,199 VI with no transition beyond width 320/origin `0x006dd280`. This closes duration as an explanation for the tested attract path, while the 512 hangar phase and freelist writer remain unevaluable. |
 | s1045 | Concurrent retail-oracle Start-only versus Start+Z schedules both passed 10,000 whole-RDRAM callbacks, delivered 11 Start edges, and completed 120 seconds with VI callback/poll fixed at width 320/origin `0x006dd280`; the enriched arm also delivered 11 Z words. Selects `H-retail-path-independent` for this tested input variant; hangar phase remains unevaluable. |
+| s1046 | Source/config audit found the documented eleven `start` events map to scancode 40 and verified Start pad words; the generated `Start = key(13)` is an SDL1-era config label, not the named-button injection. The 150 ms hold and absolute schedule match, and the VI origin distinction is compatible. Selects `H-retail-state`; the state transition remains open. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -341,10 +342,10 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 1. The retail oracle remains in the width-320 attract path despite verified
    Start edges, long Start holds, rapid cadence, early first input, 120 seconds,
    simultaneous A, and Start+Z. s1045's callback/poll agreement and PIF Z
-   control are live. Do not arm the freelist watch until a 512 hangar-origin
+   control are live. s1046 closes the documented recipe/input contract as
+   `H-retail-state`. Do not arm the freelist watch until a 512 hangar-origin
    phase is reached; the next probe must identify a genuinely different
-   state/control sequence or audit the documented hangar recipe against the
-   oracle's input contract.
+   state/control sequence.
 2. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume
    only with a new discriminator or independent ground truth.

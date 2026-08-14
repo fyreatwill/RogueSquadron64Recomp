@@ -61944,3 +61944,23 @@ was not armed.
 
 ORIGIN: independent retail-oracle whole-RDRAM callback, PIF pad, and VI
 callback/poll controls; no guest value or recomp runtime behavior was changed.
+## Session 1046 (2026-08-14) — documented retail hangar recipe matches oracle contract
+
+Performed the planned source/config audit without running the game or arming a
+freelist watch. Compared the README's eleven `start` events at 6,11,...,56
+seconds with `rs64_oracle.c`, its `--help`, the generated s1045 configs, and
+the s1045 logs. The named button maps to SDL2 scancode 40; all eleven logs
+used `sym=40` and the prior PIF controls verified the Start word. The generated
+`Start = key(13)` line is an SDL1-era config label and is not the injected
+value. `g_hold_ms=150` and the director's absolute-time sleep preserve the
+documented schedule. The README's 512 origin distinction is compatible with
+the VI width/origin observation contract.
+
+This selects `H-retail-state` for the tested recipe and rules out a current
+input-name, scancode, hold-duration, schedule, or VI-observation contract
+mismatch. It does not identify why the retail state machine remains at width
+320; the hangar phase and freelist writer remain unevaluable. See
+`scratch/agent/s1046-retail-recipe-audit.md`.
+
+ORIGIN: no mitigation, guest value, or recomp runtime behavior was changed;
+the conclusion comes from independent source/config/log inspection.
