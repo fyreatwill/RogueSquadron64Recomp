@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s998 (2026-08-13). The active M4 lead is the zero-shade
+Reviewed through s999 (2026-08-13). The active M4 lead is the zero-shade
 writer/value ownership boundary after the post-sec2 gate. s996 found mixed
 ownership: two phase-6 VTXCOLOR sources had exact generated writes, while the
 other sampled sources—including the nonzero payload at `0x737EA0`—had no
@@ -452,6 +452,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s996 | Clean regeneration/build and a phase-gated VI-1024 capture passed the generated-store, F5 fetch/state/payload, shade-DMA, write-fault, and fix-zero-shade controls. The exact physical-address join found 2 phase-6 VTXCOLOR sources with generated writes at the source address and matching color words; the other 22 phase-4/6 sampled sources had no generated-store overlap, including the nonzero `0x737EA0` payload. The run reached 37 gated frames before a host crash at `last-guest-pc=0x80001F88`; controls and source rows were already present. This selects mixed source ownership, not a universal downstream-only explanation; it does not yet identify which source feeds each zero-shade replacement. |
 | s997 | The clean Debug build and one phase-gated ungated-LLE capture passed all controls: 48 phase-4 and 48 phase-6 payload rows, 21 raw-shade rows, 8 zero-shade replacements, 9 shade-DMA controls, 130 write-fault records, and no crash marker. In the task containing the zero-shade rows, `0x732A10` had an exact phase-6 generated write while `0x732F38` had no phase-6 generated-store row; however, `[shade-raw]` carries no source/task identifier, so neither source can be assigned to a replacement. The causal split remains unevaluable; no hypothesis or mitigation conclusion followed. |
 | s998 | Added task serial and display-list-start identity to `[shade-raw]` and `[fix-zero-shade]`, regenerated and built cleanly, then reached VI 1024 and completed 40 gated frames with all controls positive: 48/48 phase-4/6 payload rows, 21 raw-shade rows, 8 replacements, 9 shade-DMA controls, 129 write-fault records, and no crash. Zero rows were identified as task 197 at DL starts `0x4B7930`/`0x4B7BE8`; phase-6 still contained nonzero sources including `0x732A10` (same-phase generated write) and `0x732F38` (no same-phase generated write). Because `[f5-state-payload]` still lacks the task serial, this enables only a task-level, not source-level, join; the causal split remains unevaluable. |
+| s999 | Added the current LLE task serial to `[f5-state-payload]`, regenerated/fixed up and built cleanly, then completed 40 phase-gated VI-1024 frames with positive controls: 48 phase-4 and 48 phase-6 payload rows, 54 raw-shade rows, 9 replacements, 9 shade-DMA controls, 129 write-fault records, 9,046 generated-store controls, and no crash marker. The zero-shade records were in task 204; its 24 phase-6 VTXCOLOR sources included exact generated writes at `0x732A10`, `0x732F38`, and `0x733460`, while the remaining same-task sources—including nonzero `0x737EA0`—had no phase-6 generated-store overlap. This selects H-mixed: source ownership is not uniformly generated-written or untouched. The source-to-individual-replacement mapping remains open. ORIGIN: exact overlaps are generated `MEM_W` writes observed by the s992 fixup and payload source reads; no mitigation or value rewrite was added. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -493,37 +494,37 @@ entries and do not authorize mitigations.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s999)
+## Next work unit (s1000)
 
 HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
-Stamp the current F5 task serial on each `[f5-state-payload]` row, then join
-the task/DL-identified zero-shade records to the same-task VTXCOLOR source
-population and generated-store rows in one phase-gated capture. Do not add a
-mitigation or hand-edit generated files.
+Add a phase-scoped ordinal to each F5 `0x02` VTXCOLOR payload update and to
+each RT64 raw-shade/zero-shade record for the same task/DL stream. Join the
+ordinal and display-list identity to test whether each zero-shade replacement
+maps to a specific source update. Do not add a mitigation or hand-edit
+generated files.
 
-Competing hypotheses are H-exact-zero-source (the zero-shade task's source
-population has only same-run generated writes), H-untouched-zero-source (it
-has nonzero payloads and no same-run generated writes), and H-mixed (both
-source populations occur). The discriminating measurement is the common task
-serial on payload and shade-side rows, with DL identity retained for each
-replacement. A run with no controls, no stamped payload rows, no raw-shade
-records, or no source rows is invalid.
+Competing hypotheses are H-source-ordinal (each zero shade maps to a stable
+source ordinal), H-dl-boundary (the mapping is DL-local and resets at the DL
+boundary), and H-no-consumer-join (no stable mapping exists). The
+discriminating measurement is a same-run table keyed by task, F5 update
+ordinal, RT64 command/DL identity, and source address. A run with no controls,
+no ordinal-bearing payload rows, no raw-shade records, or no source rows is
+invalid.
 
 Exact commands:
 
-Add the task serial to the existing F5 payload diagnostic at its producer,
-preserving source and payload bytes. Run the fixup static check, regenerate/
-build in the documented order, and launch the existing phase-gated probe with
-generated-write, F5 state/payload, shade-DMA, write-fault, and raw-shade
-controls (`ROGUESQ_LOG_SHADE_RAW=1`). Extract phase-4/phase-6 payload,
-generated-write, raw-shade, and zero-shade rows and join by task serial, then
-retain DL identity when reporting each replacement.
+Add the ordinal fields to the existing F5 payload and RT64 shade diagnostics,
+preserving task, source, payload, and DL fields. Run the fixup static check,
+regenerate/build in the documented order, and launch the existing phase-gated
+probe with generated-write, F5 state/payload, shade-DMA, write-fault, and
+raw-shade controls. Extract phase-4/phase-6 rows and report the mapped source,
+generated-store overlap/value, task, and DL for every replacement.
 
-Expected outcomes: a zero-shade record tied to a source with a generated write
-selects H-exact-zero-source; records tied only to untouched nonzero sources
-select H-untouched-zero-source; both populations select H-mixed. If controls or
-source/raw-shade identity coverage fail, make no causal selection.
+Expected outcomes: a stable task-global mapping selects H-source-ordinal; a
+mapping that changes only at DL boundaries selects H-dl-boundary; no stable
+mapping selects H-no-consumer-join. If controls or identity coverage fail,
+make no causal selection.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

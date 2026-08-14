@@ -60950,3 +60950,33 @@ does not rule out either source-ownership hypothesis. ORIGIN: no mitigation or
 value rewrite was added; the diagnostic values originate in the RT64 shade
 assembly/replacement path, while the compared source write is generated
 `MEM_W` site `0x8000D92C`.
+
+## Session 999 (2026-08-13) — joined zero-shade tasks to F5 payload sources
+
+Ran the prescribed s999 work unit. The independent retail-oracle positive
+control was attempted first but was unevaluable because the bundled oracle
+frontend could not load a missing `libmupen64plus.dylib`; this did not affect
+the recomp capture. Added the current `g_e9prov.task` serial to each
+`[f5-state-payload]` row, regenerated with `make_elf.py`, N64Recomp, and the
+regeneration-owned fixup (`RS64_FIXUP_S992_GENERATED_WRITES=1`), and built the
+Debug target successfully.
+
+The phase-gated ungated-LLE run reached VI width 1024 at 78.7 seconds and
+completed 40 gated frames. Positive controls fired: 48 phase-4 and 48 phase-6
+payload rows, 54 raw-shade rows, 9 zero-shade replacements, 9 shade-DMA
+controls, 129 recovered write-fault records, and 9,046 generated-store control
+rows; no crash or abort marker occurred.
+
+Task 204 contained the zero-shade records. Its 24 phase-6 VTXCOLOR source
+records included exact phase-6 generated-store overlaps at `0x732A10`,
+`0x732F38`, and `0x733460`; the other task-204 sources, including nonzero
+`0x737EA0`, had no phase-6 generated-store overlap. The same-task source
+population therefore contains both generated-written and untouched sources,
+selecting H-mixed. This rules out a universal generated-write or universal
+untouched-source explanation, but does not identify which source update feeds
+each individual zero-shade replacement.
+
+ORIGIN: exact overlaps are generated `MEM_W` writes observed by the s992
+fixup and source bytes read by the F5 payload diagnostic; no mitigation or
+value rewrite was added. The no-overlap classification is bounded by the
+phase-scoped generated-store census.
