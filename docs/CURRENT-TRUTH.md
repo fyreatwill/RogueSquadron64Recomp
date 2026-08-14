@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1155 (2026-08-14).
+in the ledger. Reviewed through s1156 (2026-08-14).
 
 ## Current state
 
@@ -148,6 +148,14 @@ in the ledger. Reviewed through s1155 (2026-08-14).
   value change, not a non-generated-owner pivot. The `NEXT.md` shorthand
   `0x8011A865..67` was imprecise; the three selector bytes used by the code are
   the non-contiguous `0x8011A862`, `0x8011A864`, and `0x8011A865`.
+- The s1156 phase-gated writer capture passed the independent selector positive
+  control and slot-dispatch control. All three tagged generated callsites ran;
+  after committed width 640, `applyPendingViChanges` at callsite `0x80019914`
+  changed selector bytes `01/00/00` to `01/00/01`. Host phase transitions
+  independently recorded the same `640→2→640` lifecycle. This selects H1,
+  a post-640 selector writer as the causal candidate. The writer log's 512-row
+  budget saturated later `0x80019914` rows, so downstream consumer ordering is
+  the next bounded check.
 
 ## Retail VI descriptor boundary
 
@@ -274,17 +282,19 @@ corruption.
 | s1153 | Repeated the callsite capture with the documented phase-relative input schedule and all controls. Selector positive control fired, slot dispatch logged 6,424 rows, and callsites logged 168 rows including phase-6 `0x800A64AC`; the run stayed crash-free through 640→2→640 but produced no VI-1024, E9 provenance, or unified-E9 rows. After three consecutive unevaluable owner attempts, this thread is closed without selecting H1/H2/H3. |
 | s1154 | Ran the phase-scoped producer census with the independent selector positive control and slot-dispatch control. The run timed out at width 640 after 640→2→640; selector positive fired once, slot dispatch logged 6,438 rows, generated selector/predecessor/producer markers were zero, and no crash/SIGBUS occurred. This selects H2, the stable loop without a generated VI producer, and sends the investigation to the state writer. |
 | s1155 | Static-censused the live generated tree and companion symbols. `buildAndRegisterDefaultMaterial` writes selector bytes at `0x8011A862/0x8011A864/0x8011A865` from boot and per-frame callers; `applyPendingViChanges` writes `0x8011A862/0x8011A865`. `selectAndApplyViMode` reads the four source records at `0x80128D50/0x80128DA0/0x80128DF0/0x80128E40` and copies them to `0x80128C90`; no generated source-record writer was found. This selects H1, a post-640-capable generated selector writer, and moves the next probe to writer phase/value attribution. |
+| s1156 | Added durable callsite probes and a host committed-width accessor, rebuilt successfully, and ran one phase-gated capture. The selector positive control fired once, slot dispatch logged 6,424 rows, all three tagged writer callsites ran, and `0x80019914` changed selector `01/00/00→01/00/01` at committed width 640 after the `640→2→640` lifecycle. This selects H1, while the saturated apply-site budget leaves downstream consumer ordering open. |
 
 ## Ranked next steps
 
-1. Runtime-tag the two generated selector-writer families identified in s1155:
-   `buildAndRegisterDefaultMaterial` callers and `applyPendingViChanges`.
-   Gate every row on the committed VI phase and log old/new values for the
-   three non-contiguous selector bytes. Keep the selector positive and slot
-   dispatch controls. The discriminator is a selector value change after the
-   final committed 640 record (H1 causal writer) versus post-640 writer entry
-   with unchanged values (writer is not causal); do not repeat the closed
-   callsite-owner capture.
+1. Trace the selected post-640 writer through the consumer in one phase-gated
+   capture: retain the selector positive and slot-dispatch controls, and tag
+   `applyPendingViChanges` at `0x80019914` together with
+   `selectAndApplyViMode`'s selected source record, copied-record width, and
+   the following `osViSetMode` request. The discriminator is an ordered
+   post-640 tuple where the selector change is followed by a changed selected
+   record/request (writer-to-consumer chain), versus selector change with an
+   unchanged consumer (the write is unrelated/transient), versus no consumer
+   invocation (ordering/path gap). Do not repeat the closed owner census.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

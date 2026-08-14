@@ -63978,3 +63978,22 @@ same writer/caller functions and defines the relevant data symbols
 contains no additional named writer. This selects H1/post-640-capable writer
 and rules out H2/H3 as static explanations. It does not yet prove a post-640
 value change, so the next unit is a phase-gated writer-value capture.
+
+## Session 1156 (2026-08-14) — captured the post-640 selector writer
+
+Ran the bounded writer work unit after adding durable callsite instrumentation
+to the probe script and a host accessor for committed VI width. The Debug target
+built successfully. The phase-gated capture passed the independent
+`[vi-selector-positive]` control once and the slot-dispatch control with 6,424
+rows; host phase lines recorded `640→2→640` and the run remained crash-free for
+the 180-second post-gate window.
+
+All three tagged generated callsites ran. The discriminating table included
+`applyPendingViChanges` callsite `0x80019914` at committed width 640 changing
+selector bytes `01/00/00` to `01/00/01`; the two
+`buildAndRegisterDefaultMaterial` callsites were also live. This selects H1,
+the post-640 selector writer as the causal candidate, and rules out H2/H3 for
+this capture. The apply-site writer budget saturated at 512 rows, so later
+consumer ordering is not yet established; the next unit traces that writer
+through `selectAndApplyViMode` and the following VI request. No mitigation was
+added.

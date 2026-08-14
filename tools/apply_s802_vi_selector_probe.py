@@ -61,6 +61,8 @@ if '[vi-predecessor-entry]' not in text:
 
 caller = Path('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c')
 caller_text = caller.read_text()
+if 'extern uint32_t rs64_vi_committed_width(void);' not in caller_text:
+    caller_text = caller_text.replace('#include "funcs.h"\n', '#include "funcs.h"\n\nextern uint32_t rs64_vi_committed_width(void);\n', 1)
 call_needle = '    selectAndApplyViMode(rdram, ctx);\n'
 call_probe = ('    static int vi_call_en = -1, vi_call_n = 0;\n'
               '    if (vi_call_en < 0) { const char* e = getenv("ROGUESQ_LOG_VI_SELECTOR"); vi_call_en = (e && *e && *e != \'0\') ? 1 : 0; }\n'
@@ -87,5 +89,47 @@ if '[vi-predecessor-edge]' not in caller_text:
     if caller_text.count(marker) != 1:
         raise SystemExit('selector call probe count mismatch for predecessor edge')
     caller_text = caller_text.replace(marker, edge_probe + marker, 1)
+
+def writer_callsite(callsite, callee):
+    return '''    { /* PATCH: s1156 selector-writer callsite. */
+        static int vi_w_en = -1, vi_w_n = 0;
+        if (vi_w_en < 0) {
+            const char* a = getenv("ROGUESQ_LOG_ALL");
+            const char* e = getenv("ROGUESQ_LOG_VI_WRITERS");
+            vi_w_en = ((a && *a && *a != '0') || (e && *e && *e != '0')) ? 1 : 0;
+        }
+        uint32_t vi_w_before_a = U32(MEM_BU(S32(0x8012 << 16), -0x579B));
+        uint32_t vi_w_before_b = U32(MEM_BU(S32(0x8012 << 16), -0x579C));
+        uint32_t vi_w_before_c = U32(MEM_BU(S32(0x8012 << 16), -0x579E));
+        uint32_t vi_w_phase = rs64_vi_committed_width();
+        ''' + callee + '''
+        uint32_t vi_w_after_a = U32(MEM_BU(S32(0x8012 << 16), -0x579B));
+        uint32_t vi_w_after_b = U32(MEM_BU(S32(0x8012 << 16), -0x579C));
+        uint32_t vi_w_after_c = U32(MEM_BU(S32(0x8012 << 16), -0x579E));
+        if (vi_w_en && vi_w_n < 512) {
+            fprintf(stderr, "[vi-selector-writer] site=0x''' + callsite + ''' committed_width=%u old=%02X/%02X/%02X new=%02X/%02X/%02X n=%d\\n",
+                    (unsigned)vi_w_phase, (unsigned)vi_w_before_a, (unsigned)vi_w_before_b,
+                    (unsigned)vi_w_before_c, (unsigned)vi_w_after_a, (unsigned)vi_w_after_b,
+                    (unsigned)vi_w_after_c, vi_w_n);
+            fflush(stderr);
+        }
+        ++vi_w_n;
+    }
+'''
+
+if '[vi-selector-writer] site=0x800183F8' not in caller_text:
+    for callsite, callee in (
+        ('800183F8', 'buildAndRegisterDefaultMaterial(rdram, ctx);'),
+        ('800185DC', 'buildAndRegisterDefaultMaterial(rdram, ctx);'),
+        ('80019914', 'applyPendingViChanges(rdram, ctx);'),
+    ):
+        label = '    // 0x' + callsite + ': jal'
+        try:
+            label_pos = caller_text.index(label)
+            call_pos = caller_text.index('    ' + callee + '\n', label_pos)
+        except ValueError:
+            raise SystemExit('writer callsite count mismatch for ' + callsite)
+        end = call_pos + len('    ' + callee + '\n')
+        caller_text = caller_text[:call_pos] + writer_callsite(callsite, callee) + caller_text[end:]
     caller.write_text(caller_text)
 print(path)

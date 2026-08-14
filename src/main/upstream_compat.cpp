@@ -233,6 +233,10 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     osViSetMode(rdram, (int32_t)ctx->r4);
 }
 
+extern "C" uint32_t rs64_vi_committed_width() {
+    return ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
+}
+
 extern "C" void osViSetXScale_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_count = 0;
     int n = ++s_count;
