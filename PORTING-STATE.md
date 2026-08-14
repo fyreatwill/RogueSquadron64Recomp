@@ -61044,3 +61044,30 @@ result for the provenance join.
 ORIGIN: no mitigation, game-logic change, or renderer-state change was added;
 the crash originated in the existing NPC update path before the measurement
 phase.
+
+## Session 1003 (2026-08-14) — joined task DPC bounds to zero-shade consumers
+
+Added task-local first/last accepted DPC ranges and aggregate physical bounds,
+reset at task defer begin and populated only at committed RT64 submission.
+The Debug build linked successfully. The prescribed phase-gated capture reached
+VI width 1024 at 78.7s and completed 40 post-gate frames with positive controls:
+168 F5 state/payload rows, 21 shade-raw rows, 8 zero-shade replacements, 9
+shade-DMA controls, 130 recovered write-fault records, and 22,544 generated
+write records.
+
+Zero-shade task 193 had F5 root `0x73E7C8`, first accepted range
+`[0x4B7800,0x4B7838)`, last `[0x4C9018,0x4C9318)`, and aggregate bounds
+`[0x4B7800,0x4C9318)`. Its independent RT64 shade rows used consumer DLs
+`0x4B7930`, `0x4B7BE8`, and `0x4B8B28`, all inside those bounds. This selects
+H-dpc-range-contains-consumer for the observed task/range join, but does not
+identify the F5 source update feeding any individual replacement.
+
+What it rules out: for this valid task, the repeated RT64 consumer DLs are not
+outside the accepted DPC output bounds and therefore are not disjoint from the
+F5 task's committed output range. It does not rule out child-DL indirection or
+establish a source-to-replacement mapping. No mitigation or value rewrite was
+added.
+
+ORIGIN: the new values are diagnostic snapshots of accepted
+`submit_rdp_range` intervals after defer/merge; no game or renderer state is
+changed.

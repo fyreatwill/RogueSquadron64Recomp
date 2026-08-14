@@ -55,6 +55,15 @@ static int s_dpc_poll_repeats = 0;
 static uint32_t s_submit_dl_base = 0;
 static uint32_t s_submit_last_end = 0;
 
+// Task-local committed output bounds. These are reset before each deferred
+// task and populated only when a range is accepted for RT64 submission.
+static uint32_t s_task_first_lo = 0;
+static uint32_t s_task_first_hi = 0;
+static uint32_t s_task_last_lo = 0;
+static uint32_t s_task_last_hi = 0;
+static uint32_t s_task_min_lo = 0xFFFFFFFFu;
+static uint32_t s_task_max_hi = 0;
+
 // Reset all cross-task DPC emulation state. The ucode's boot/entry takes
 // resume-vs-fresh branches based on DPC registers; state leaking from the
 // previous task steers ~1/5 tasks into a resume path that loads the trig
@@ -1422,6 +1431,16 @@ extern "C" void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi) {
 extern "C" uint64_t rs64_dpc_get_last_submit_serial() {
     return g_submit_serial.load(std::memory_order_acquire);
 }
+extern "C" void rs64_dpc_get_task_range(uint32_t *first_lo, uint32_t *first_hi,
+                                          uint32_t *last_lo, uint32_t *last_hi,
+                                          uint32_t *min_lo, uint32_t *max_hi) {
+    if (first_lo) *first_lo = s_task_first_lo;
+    if (first_hi) *first_hi = s_task_first_hi;
+    if (last_lo) *last_lo = s_task_last_lo;
+    if (last_hi) *last_hi = s_task_last_hi;
+    if (min_lo) *min_lo = s_task_min_lo;
+    if (max_hi) *max_hi = s_task_max_hi;
+}
 extern "C" uint32_t rs64_e9prov_current_task() {
     return g_e9prov.task;
 }
@@ -1443,6 +1462,14 @@ static void rs64_dpc_record_submit(uint32_t lo, uint32_t hi) {
     rs64_count_submitted_e9(lo, hi);
     const uint32_t after = g_task_bridge_e9.load(std::memory_order_acquire);
     const uint64_t serial = g_submit_serial.fetch_add(1, std::memory_order_acq_rel) + 1;
+    if (s_task_first_hi == 0) {
+        s_task_first_lo = lo;
+        s_task_first_hi = hi;
+    }
+    s_task_last_lo = lo;
+    s_task_last_hi = hi;
+    if (lo < s_task_min_lo) s_task_min_lo = lo;
+    if (hi > s_task_max_hi) s_task_max_hi = hi;
     if (log_tri_writer() && (g_e9prov.control || g_e9prov.target) &&
         g_rdram_for_submit != nullptr) {
         static std::atomic<uint32_t> writer_lines{0};
@@ -2882,6 +2909,12 @@ void rsp_dpc_submit(uint8_t* rdram, uint32_t start, uint32_t end) {
 extern "C" void rs64_dpc_defer_begin() {
     g_defer_active = true;
     g_deferred_ranges.clear();
+    s_task_first_lo = 0;
+    s_task_first_hi = 0;
+    s_task_last_lo = 0;
+    s_task_last_hi = 0;
+    s_task_min_lo = 0xFFFFFFFFu;
+    s_task_max_hi = 0;
 }
 
 extern "C" void rs64_dpc_defer_end(int commit) {

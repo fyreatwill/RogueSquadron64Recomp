@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s1002 (2026-08-14). The active M4 lead is the zero-shade
+Reviewed through s1003 (2026-08-14). The active M4 lead is the zero-shade
 writer/value ownership boundary after the post-sec2 gate. s996 found mixed
 ownership: two phase-6 VTXCOLOR sources had exact generated writes, while the
 other sampled sources—including the nonzero payload at `0x737EA0`—had no
@@ -455,6 +455,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s999 | Added the current LLE task serial to `[f5-state-payload]`, regenerated/fixed up and built cleanly, then completed 40 phase-gated VI-1024 frames with positive controls: 48 phase-4 and 48 phase-6 payload rows, 54 raw-shade rows, 9 replacements, 9 shade-DMA controls, 129 write-fault records, 9,046 generated-store controls, and no crash marker. The zero-shade records were in task 204; its 24 phase-6 VTXCOLOR sources included exact generated writes at `0x732A10`, `0x732F38`, and `0x733460`, while the remaining same-task sources—including nonzero `0x737EA0`—had no phase-6 generated-store overlap. This selects H-mixed: source ownership is not uniformly generated-written or untouched. The source-to-individual-replacement mapping remains open. ORIGIN: exact overlaps are generated `MEM_W` writes observed by the s992 fixup and payload source reads; no mitigation or value rewrite was added. |
 | s1000 | Added task-local F5 VTXCOLOR ordinals and RT64 task/DL-local shade ordinals, with the F5 command address, then completed a valid phase-gated capture: payload=120, raw-shade=19, replacements=8, shade-DMA=9, write-fault=128, generated-write controls=6974, and VI-1024 reached. In task 184, F5 ordinals ran task-global 1..24, while zero-shade rows reset at DL boundaries (`0x4B7930` ord 1..5, `0x4B7BE8` ord 1..2, `0x4B8B28` ord 5..10). This rejects H-source-ordinal and selects the observed H-dl-boundary shape, but does not identify the F5 source consumed by each RT64 DL because F5 `r17` is a DMEM command address, not the RT64 DL start. No mitigation or value rewrite was added. |
 | s1001 | Added the task root DL to shared provenance and printed it on each F5 payload row. The Debug capture reached VI-1024 with positive controls: 96 phase-4/6 payload rows, 19 raw-shade rows, 8 replacements, 9 shade-DMA controls, 130 write-fault records, and generated-write controls. Zero-shade task 187 had F5 root `0x73E7C8`, while its repeated RT64 consumer DLs were `0x4B7930`, `0x4B7BE8`, and `0x4B8B28`; root identity therefore does not join directly. This selects the observed H-child-dl-join shape, but does not identify the source update feeding an individual replacement. No mitigation or value rewrite was added. |
+| s1003 | Added task-scoped committed DPC first/last ranges and aggregate physical bounds, then ran a valid phase-gated capture: VI-1024 at 78.7s, 168 F5 payload/control rows, 21 shade-raw rows, 8 zero-shade replacements, 9 shade-DMA controls, 130 write-fault records, and 22,544 generated-write records. Zero-shade task 193 had root `0x73E7C8`, committed bounds `[0x4B7800,0x4C9318)`, and RT64 consumer DLs `0x4B7930`, `0x4B7BE8`, `0x4B8B28` inside that range. This selects H-dpc-range-contains-consumer for the observed task/range join; source-to-individual-replacement mapping remains open. No mitigation. ORIGIN: diagnostics record accepted DPC ranges after defer/merge; no game or renderer state is changed. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -489,8 +490,9 @@ entries and do not authorize mitigations.
    instrumented RSP DMEM-to-RDRAM DMA path. s995 selected bounded generated
    values. s996–s1001 show mixed source ownership and a DL-boundary-shaped
    consumer, while s1001 shows the F5 task root is not the RT64 consumer DL.
-   The child-DL association is supported by same-task repeated rows, but the
-   source-to-individual-replacement join remains open.
+   The child-DL association is supported by same-task repeated rows, and s1003
+   confirmed the task's accepted DPC bounds contain all three repeated RT64
+   consumer DLs. The source-to-individual-replacement join remains open.
    The `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an
    ORIGIN conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -505,34 +507,56 @@ gate. The F5 payload and control markers fired, but no root/consumer join is
 admissible from either run. This does not overturn s1001's valid root-DL
 result; it only leaves the DPC-range join unmeasured.
 
-## Next work unit (s1003)
+## s1003 validation note
+
+s1003 added task-local first/last accepted DPC ranges plus aggregate physical
+bounds, reset at `rs64_dpc_defer_begin` and populated at committed submission.
+The clean Debug build and one prescribed phase-gated capture were valid: VI
+1024 arrived at 78.7 seconds and 40 post-gate frames completed. Controls were
+positive: 168 F5 state/payload rows, 21 shade-raw rows, 8 zero-shade
+replacements, 9 shade-DMA controls, 130 write-fault records, and 22,544
+generated-write records.
+
+The zero-shade task was 193 with F5 root `0x73E7C8`. Its first accepted DPC
+range was `[0x4B7800,0x4B7838)`, last was `[0x4C9018,0x4C9318)`, and task
+bounds were `[0x4B7800,0x4C9318)`. The independent RT64 shade rows for that
+task used consumer DLs `0x4B7930`, `0x4B7BE8`, and `0x4B8B28`; all are inside
+the committed bounds. This selects H-dpc-range-contains-consumer for this
+observed task/range join. It does not identify which F5 source update feeds an
+individual replacement, and it makes no retail ownership claim.
+
+ORIGIN: the new values are derived from accepted `submit_rdp_range` intervals
+after task defer/merge; no command, framebuffer, or shade value is modified.
+
+## Next work unit (s1004)
 
 HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
-Add a task-scoped snapshot of the F5-emitted DPC/RDP output range and print its
-first/last physical range on the task's payload summary. Preserve the root DL,
-F5 ordinal, and RT64 task/DL-local ordinal. Do not add a mitigation or hand-edit
-generated files.
+Add the accepted DPC submission range and submit serial to each RT64
+task/DL-local shade row, preserving F5 root DL, F5 update ordinal, source, and
+the existing zero-shade replacement ordinal. Do not add a mitigation or
+hand-edit generated files.
 
-Competing hypotheses are H-dpc-range-contains-consumer (the emitted range
-contains the RT64 consumer DL), H-dpc-range-disjoint (the consumer comes from
-another task/range), and H-no-range-join (range coverage is incomplete). The
-discriminating measurement is a same-run table keyed by task, F5 root DL, F5
-update ordinal, F5 source, DPC range, RT64 DL, and RT64 ordinal. A run with no
-positive controls, no root identity, no DPC range, no ordinal-bearing payload
-rows, or no zero-shade rows is invalid.
+Competing hypotheses are H-submission-range-source-join (a shade row's RT64
+submission interval identifies the F5 source update), H-child-range-only (the
+interval joins only the child DL and cannot identify a source), and
+H-range-coverage-incomplete (the RT64 row has no matching accepted interval).
+The discriminating measurement is a same-run table keyed by task, F5 root DL,
+F5 update ordinal/source, submit serial/range, RT64 DL, and RT64 ordinal. A
+run with no positive controls, root identity, range-bearing shade rows, or
+zero-shade rows is invalid.
 
 Exact commands:
 
-Thread each committed F5 DPC range into task-scoped provenance, print the
-bounded first/last range once per task, run the static fixup check, export
-submodule patches if needed, build Debug, and launch the existing phase-gated
-probe with all current controls.
+Thread the accepted submit serial/range into RT64's shade-row diagnostic, run
+the static fixup check, build Debug, and launch the existing phase-gated probe
+with all current controls.
 
-Expected outcomes: a DPC range containing the repeated RT64 consumer DL selects
-H-dpc-range-contains-consumer; a repeated disjoint range with complete task
-coverage selects H-dpc-range-disjoint; otherwise select H-no-range-join. If
-controls, root/range identity, or zero rows fail, make no causal selection.
+Expected outcomes: a unique submit interval/serial consistently associated
+with the zero-shade child DL selects H-submission-range-source-join; only
+child-DL coverage selects H-child-range-only; missing rows select
+H-range-coverage-incomplete. If controls, range-bearing shade rows, or zero
+rows fail, make no causal selection.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

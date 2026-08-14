@@ -91,6 +91,9 @@ extern RspExitReason factor5_ucode_b(uint8_t* rdram, uint32_t ucode_addr);
 extern "C" void rs64_dpc_defer_begin();
 extern "C" void rs64_dpc_reset();
 extern "C" void rs64_dpc_defer_end(int commit);
+extern "C" void rs64_dpc_get_task_range(uint32_t *first_lo, uint32_t *first_hi,
+                                         uint32_t *last_lo, uint32_t *last_hi,
+                                         uint32_t *min_lo, uint32_t *max_hi);
 extern RspExitReason factor5_boot (uint8_t* rdram, uint32_t ucode_addr);
 extern uint8_t dmem[];
 extern "C" void rs64_dpc_drain_histogram(uint32_t out[64]);
@@ -689,6 +692,24 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     // Drop the task's RDP output if the ucode wandered into garbage (trig
     // data executed as DL) — RT64 must never see those streams.
     rs64_dpc_defer_end(r != RspExitReason::UnhandledJumpTarget);
+    static const bool s_log_f5_state = [] {
+        const char *e = std::getenv("ROGUESQ_LOG_F5_STATE");
+        return e && *e && *e != '0';
+    }();
+    if (s_log_f5_state && (task_serial <= 4 || rs64_phase_ord() >= 4)) {
+        uint32_t first_lo = 0, first_hi = 0, last_lo = 0, last_hi = 0;
+        uint32_t min_lo = 0xFFFFFFFFu, max_hi = 0;
+        rs64_dpc_get_task_range(&first_lo, &first_hi, &last_lo, &last_hi, &min_lo, &max_hi);
+        fprintf(stderr,
+                "[f5-dpc-task-range] phase=%u task=%u root_dl=0x%06X "
+                "first=[0x%06X,0x%06X) last=[0x%06X,0x%06X) "
+                "bounds=[0x%06X,0x%06X) committed=%s\n",
+                rs64_phase_ord(), task_serial, dl_ptr & 0x7FFFFFu,
+                first_lo, first_hi, last_lo, last_hi,
+                min_lo == 0xFFFFFFFFu ? 0u : min_lo, max_hi,
+                first_hi != 0 ? "yes" : "no");
+        fflush(stderr);
+    }
     rs64_e9prov_task_end(task_serial);
     if (log_step) {
         fprintf(stderr, "[runner-step #%d] factor5_ucode returned %d\n",
