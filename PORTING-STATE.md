@@ -60887,3 +60887,41 @@ the s992 fixup and the F5 `0x02` source pointer/payload reader. The no-overlap
 rows are bounded by the phase-gated generated-store log and do not claim that
 unobserved renderer or indirect writes are impossible. The host crash is a
 capture limitation, not a mitigation or causal conclusion.
+
+## Session 997 (2026-08-13) — tested zero-shade source ownership join
+
+### What ran
+
+Ran the prescribed s997 work unit after reading the oracle and Factor 5
+reference instructions. The static check found 50 generated files with the
+regeneration sentinel and 42,818 ordinary-store candidates. The existing
+instrumented Debug build completed successfully. One ungated-LLE capture was
+phase-gated at VI width 1024 and ran the generated-store, F5 state/payload,
+shade-DMA, write-fault, raw-shade, and zero-shade controls together.
+
+### What it showed
+
+The phase gate passed at 78.3 seconds. The capture completed without a crash
+marker and recorded 48 phase-4 payload rows, 48 phase-6 payload rows, 21
+`shade-raw` rows, 8 `fix-zero-shade` replacements, 9 shade-DMA controls, and
+130 recovered write-fault records. The phase-6 task containing the zero-shade
+rows also contained nonzero VTXCOLOR payloads at `0x732A10` and `0x732F38`.
+`0x732A10` had one exact same-run generated `MEM_W` write with value
+`0x5F5F74FF`; `0x732F38` had no phase-6 generated-store row. The required
+controls were positive, so this is not a null-instrument result.
+
+### What it rules out
+
+It rules out claiming that the source-side join is absent because the source
+or shade controls failed. It does not distinguish H-exact-zero-source from
+H-untouched-zero-source: the current `[shade-raw]` and `[fix-zero-shade]`
+records carry raw shade values but no VTXCOLOR source, F5 task, or display-list
+identity. Nearest task/line ordering cannot assign the zero records to either
+`0x732A10` or `0x732F38`, so no causal hypothesis or mitigation conclusion is
+selected. The next unit must add the missing identity at the shade-side
+producer.
+
+ORIGIN: the exact source write was observed at the generated `MEM_W` site
+`0x8000D92C`; the non-overlap is bounded by the same-run generated-store
+census. The zero-shade values originate in the RT64 shade diagnostic and
+zero-shade replacement path; neither path was changed by this session.
