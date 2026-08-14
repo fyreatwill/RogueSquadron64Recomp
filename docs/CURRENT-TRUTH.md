@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1070 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1072 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -68,6 +68,13 @@ source evidence only: the runtime value of that index and whether this branch
 executes remain open. The same function's indexed `->unkC` read and
 `func_800C6728`'s indexed reads do not add another writer.
 
+The s1072 caller/initializer audit found one typed initialization of
+`rest01[3]`: `func_800C0084.c:793` assigns zero during HUD initialization.
+No later typed write, copy, or typed caller argument establishes a value of 2;
+the HUD handler is reached through the indirect raw-address dispatch documented
+in s433. Raw guest writes to the corresponding struct offset remain outside the
+companion field model, so this selects `H-index-open`, not `H-index-other`.
+
 ## M4 zero-shade boundary
 
 The independent Factor 5 command reference and same-combiner/white-shade
@@ -105,14 +112,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1069 | Maintenance compaction; no experiment or runtime conclusion. |
 | s1070 | Non-generated host/patch/overlay search found no selector access; companion struct confirms `demoId` at +0x14. Pointer-mediated ownership remained open. |
 | s1071 | Companion audit found a computed-base XOR write at `func_800C1D3C.c:389-390` that aliases +0x14 when `rest01[3]==2`; selects `H-pointer-write` (static, index value unclassified). |
+| s1072 | Caller/initializer audit found the HUD constructor's zero initialization at `func_800C0084.c:793`, but no typed proof of the runtime index; `H-index-open` remains. |
 
 ## Ranked next steps
 
-1. Audit the `func_800C1D3C` caller/initialization chain to classify
-   `arg0->rest01[3]` at the computed-base XOR write. A proven value 2 selects
-   an active demoId writer; a proven value outside 2 makes this alias inactive
-   on the audited path. Do not build unless the source boundary becomes
-   insufficient.
+1. Audit the two companion computed-base writers in
+   `controller_stuff/func_800B47C4.c` (the `temp_s1` index) to determine whether
+   either can alias `D_80130B40+0x14`. Keep the result static and source-bounded;
+   do not build unless the source boundary becomes insufficient.
 2. Keep the retail oracle parked until a new, falsifiable phase-path
    discriminator can reach the 512 hangar-origin phase. Do not arm the
    freelist watch from width-320 evidence.

@@ -62473,3 +62473,24 @@ caller/initializer provenance of `rest01[3]` and `temp_s1`.
 
 ORIGIN: companion-decomp source audit at the cited files and lines; no guest
 value, runtime behavior, or mitigation was changed.
+## Session 1072 (2026-08-14) — audited rest01 selector initialization chain
+
+Ran the prescribed bounded companion-decomp source audit; no build or runtime
+run was needed. The resulting table was:
+
+| Source/function | Field or path | Result |
+|---|---|---|
+| `hud_stuff/func_800C0084.c:793` | `temp_v0->rest01[3] = 0` | typed constructor initialization to zero |
+| `hud_stuff/func_800C0084.c` | all other `rest01[3]` references | no later typed write or copy found |
+| `hud_stuff/func_800C0084.c:866` | `func_800C1D3C(temp_s2, ...)` | call is within the HUD handler; no index argument is supplied |
+| s433 indirect dispatch path | raw `0x800C0084` handler address | reaches the handler without a typed companion caller |
+
+The audit does not prove `rest01[3] == 2` at the computed-base XOR write in
+`func_800C1D3C.c:389-390`, nor does it prove that the constructor's zero remains
+unchanged: raw guest writes to the corresponding struct offset are outside the
+companion field model. This selects `H-index-open`; it rules out only a typed
+companion writer/copy and a typed caller proof of index 2. No mitigation or
+runtime conclusion was added.
+
+ORIGIN: companion-decomp typed source at `hud_stuff/func_800C0084.c` and the
+documented indirect dispatch path from s433; static evidence only.
