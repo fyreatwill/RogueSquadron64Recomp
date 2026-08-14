@@ -1,39 +1,33 @@
-# NEXT work unit (s1038)
+# NEXT work unit (s1039)
 
-HYPOTHESIS-ID: m4-accumulator-origin
+HYPOTHESIS-ID: retail-attract-phase-path
 
-Perform one new, phase-gated M4 numeric-origin capture. Extend the existing
-regeneration-owned M4 probe to record every lane of the pre-VGE `vmadh
-v6,v4,v0` result, its `acch/accm/accl` tuple, the selected `v29` lane, and the
-final shade lane, with separate phase-scoped caps for stage-1 controls and
-target rows. Build once and run one corrected LLE arm at VI-1024. Do not
-change RT64 shade decoding or add a mitigation.
+Run one new retail-oracle attract-path discriminator with both arms in the
+same iteration: the verified eleven-pulse Start schedule versus the same
+schedule with a sustained Start hold at each edge. Keep the whole-RDRAM watch
+as the positive control and keep the freelist watch disarmed until a 512
+hangar-origin VI is observed.
 
 ## Competing hypotheses and discriminator
 
-* `H-saturated-high-half`: the sentinel is VMADH saturation; pre-VGE
-  accumulator high halves hit `0x8000` with overflow evidence.
-* `H-in-range-sign-extension`: the sentinel is an ordinary in-range VMADH
-  result whose sign-extended middle word is `0x8000`; high halves show no
-  saturation evidence.
-* `H-vge-selection`: the sentinel is already present in selectable `v29` or
-  pre-VGE `v6`, so one of those lanes equals the final `0x8000` pattern.
+* `H-retail-edge-only`: the attract transition consumes Start edges, so the
+  existing pulse arm reaches a non-320 phase while the hold arm does not.
+* `H-retail-level-only`: the transition requires a held Start level, so the
+  hold arm changes VI phase while the pulse arm remains at width 320.
+* `H-retail-path-independent`: neither input shape changes the phase; both
+  remain at width 320/origin `0x006dd280`.
 
-Discriminating measurement: classify the first complete pre-VGE/final tuple
-that follows a passing stage-1 control. A saturated high-half selects the first
-hypothesis; a non-saturated middle-word path selects the second; an already-
-sentinel selectable lane selects the third. If no endpoint is captured, the
-run is a controlled null and classifies none of them.
+Discriminating measurement: compare each arm's independent `--vi-poll` first
+width/origin transition and final VI count. A transition to 512 (especially
+origin `0x6abxxx`) makes it safe to arm the bounded freelist watch in a
+follow-up unit; unchanged 320 in both arms closes this input-shape family.
+The whole-RDRAM callback count must reach 10,000 in both arms.
 
 ## Exact commands
 
-```sh
-python3 tools/make_elf.py
-python3 tools/fixup_factor5_ucode.py
-cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_LOG_M4_ACCUM=1 ROGUESQ_LOG_M4_ACCUM_MAX=2048 ROGUESQ_LOG_M4_STAGE1_MAX=64 ROGUESQ_LLE_FORCE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 tools/probe.sh > scratch/agent/m4_s1038_capture.log 2>&1
-```
-
-Positive controls required in the same run: VI-1024, all 64 stage-1 controls,
-and the existing VMADH control. Analyze only phase-scoped rows and record
-whether each endpoint test fired.
+Use the prescribed debugger-on, pure-interpreter core and fresh config dirs.
+Run both arms concurrently, each with the same 60-second limit, 11 Start
+times, `--vi-trace --vi-poll --pif-trace`, and the whole-RDRAM watch with
+`--hit-cap 10000`; vary only the per-edge hold duration (150 ms pulse versus
+2000 ms hold). Record ROM identity, callback removal result, VI transitions,
+and pad words from both outputs. Do not arm the freelist watch in this unit.

@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1037 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1038 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -258,6 +258,14 @@ control records; the log shows title/menu work. A prescribed Start-driven
 remains unevaluable. This is a phase-selection result, not evidence for any M4
 hypothesis.
 
+The s1038 corrected LLE capture passed the phase gate and the stage-1 positive
+control (64/64). It filled the target budget with 683 stage-10, 683 stage-11,
+and 682 stage-12 rows, but no `v6`, `v29`, `acch`, or `accm` lane contained
+`0x8000`; no crash marker appeared. This is a controlled null after the M4
+probe was resumed, not evidence for any numeric-origin hypothesis. The M4
+capture recipe is closed pending a genuinely new discriminator; the next work
+unit is the retail attract-path discriminator.
+
 ## Recent evidence ledger
 
 Details are in `PORTING-STATE.md`; durable summaries are in
@@ -307,16 +315,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1035 | Ran the bounded retail-oracle environment/phase audit. The core identity and pure-interpreter mode matched the prescribed paths; the whole-RDRAM control/removal and Start/A pad controls passed, but 2,694 VI stayed at width 320/origin `0x006dd280`. Startup logged missing/incompatible input sections before config materialization. This refutes the controller-protocol hypothesis and leaves config/phase-path explanations open; the freelist watch was not evaluated. |
 | s1036 | Audited the oracle source order and ran a fresh-config 60-second schedule. CoreStartup precedes input-plugin attachment, whose first startup creates the missing sections; generated `Start = key(13)` nevertheless accepted verified scancode-40 Start presses. The whole-RDRAM control/removal passed and 3,599 VI stayed at width 320/origin `0x006dd280`; no freelist watch was armed. This closes local config ordering and leaves the phase-path explanation open. |
 | s1037 | Added an independent VI-register poll audit and repeated the verified 11-Start schedule. Whole-RDRAM callbacks reached 10,000 and were removed; all 11 presses produced Start pad words, and callback/poll traces stayed at width 320/origin `0x006dd280` for 3,599 VI. Selected `H-retail-attract`; the 512 hangar phase and freelist watch remain unevaluable. |
+| s1038 | Corrected LLE M4 capture reached VI-1024, passed 64/64 stage-1 controls, and produced 683/683/682 stage-10/11/12 rows. No `v6`, `v29`, `acch`, or `accm` endpoint reached `0x8000`; no crash marker appeared. Controlled null; M4 recipe closed pending a new discriminator. |
 
 ## Ranked backlog
 
-1. Resolve the M4 accumulator/VGE numeric-origin question with a new
-   discriminator or independent ground truth; it remains open after three
-   controlled nulls.
-2. The retail oracle remains in the width-320 attract path despite verified
+1. The retail oracle remains in the width-320 attract path despite verified
    Start edges and independent VI polling. Do not arm the freelist watch until
    a 512 hangar-origin phase is reached; further retail work needs a new
    attract-path discriminator rather than another nominal Start soak.
+2. The M4 accumulator/VGE numeric-origin question remains open, but the
+   existing capture recipe is closed after a fourth controlled null. Resume
+   only with a new discriminator or independent ground truth.
 3. The `slotDispatcherIter+872` guest-`$sp` corruption has a landed and
    binary-verified diagnostic (`N64Recomp/fixup_game_funcs.py:25156-25185`,
    s1005): `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the

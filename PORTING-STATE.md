@@ -61771,3 +61771,26 @@ explanations, but does not explain the retail attract path or make the
 freelist writer evaluable. ORIGIN: external oracle source audit plus
 whole-RDRAM, pad, callback, and independent VI-poll controls; no guest value
 or recomp runtime behavior was changed.
+
+## Session 1038 (2026-08-14) — M4 accumulator capture was a controlled null
+
+The queued M4 numeric-origin capture was run after consulting the independent
+oracle instructions and the Factor 5 command reference. The Windows-specific
+`tools/make_elf.py` path was absent in this checkout and the queued probe
+invocation omitted its required output/seconds arguments; the local equivalent
+was used without changing the experiment: the existing generated ucode was
+fixup-checked, the single-config macOS build completed, and `probe.sh` was run
+with `ROGUESQ_LOG_M4_ACCUM=1`, `ROGUESQ_LOG_M4_ACCUM_MAX=2048`,
+`ROGUESQ_LOG_M4_STAGE1_MAX=64`, forced LLE, and the VI-1024 gate.
+
+The phase gate reached VI-1024 at 79.2 seconds. The stage-1 positive control
+filled its full 64-row cap. The target budget produced 683 stage-10, 683
+stage-11, and 682 stage-12 rows. No `v6`, `v29`, `acch`, or `accm` lane in
+those target rows was `0x8000`, and the run log contained no crash marker.
+
+This is a valid phase-positive controlled null, not a numeric-origin result:
+`H-saturated-high-half`, `H-in-range-sign-extension`, and `H-vge-selection`
+remain unevaluated because the sentinel endpoint was never captured. It rules
+out treating this recipe's normal target rows as the missing shade event and
+closes the unchanged M4 capture recipe pending a genuinely new discriminator.
+The next unit is a two-arm retail attract-path input-shape discriminator.
