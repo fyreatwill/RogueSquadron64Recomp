@@ -62729,6 +62729,19 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1095 (2026-08-14) — selected the retail taken branch
+
+The first planned oracle attempt was truncated before its 120-second
+completion and was invalid. A full rerun of the same predeclared watch set
+passed controls: whole-RDRAM reached 10,000 callbacks, all eleven PIF Start
+presses arrived, and VI reached 7,198 frames at width 320/origin
+`0x006dd280`. Execution hits were `0x8006D9B0=1`, `0x8006D9B4=1`, and
+`0x8006D9BC=0`. This single-source runtime result selects `H-taken-branch`
+and explains the missing ordinary fall-through PC. No mitigation was added.
+
+ORIGIN: retail ROM debugger execution callbacks with independent whole-RDRAM,
+PIF, and VI positive controls.
+
 ## Session 1094 (2026-08-14) — classified retail loop branch PCs
 
 Ran the predeclared static ROM/generated audit, with no build or game run. The
