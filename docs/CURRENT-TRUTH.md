@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s986 (2026-08-13). The active blocker is authoritative
+Reviewed through s987 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -436,6 +436,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s984 | Oracle directory was absent, so the iteration pivoted once to M4. Static RT64/F5 decode audit refuted a shade lane/order defect; prior same-combiner A/B evidence independently keeps the cause upstream in F5 shade-state or game lighting. No mitigation or build/run. |
 | s985 | The isolated ungated-LLE F5 census passed fetch/state controls. Phase 6 had 355 `0x02 VTXCOLOR` and 1,520 `0x03 MOVEMEM` updates, including nonzero color-source addresses such as `0x80737EA0`, while the same phase produced exact `ZERO` shade words; phase 4 had the same update family but good/negative shades. Together with s984's independent decoder audit, this selects H-game-light-state over H-f5-stream and H-decode-layout. The exact game writer/value lifecycle remains unclassified; no mitigation followed. Default HLE and gated-LLE captures had zero hook controls and were invalid configuration arms, not null evidence. |
 | s986 | Added a phase-scoped RDRAM payload census and reran the isolated ungated-LLE probe. Positive controls fired: phase 4 had 579/36,495 and phase 6 had 355/1,525 `VTXCOLOR`/`MOVEMEM` updates. Phase-6 VTXCOLOR sources contained nonzero words (`0x737EA0`: `313131FF...`; later sources included `A6A6A6FF...` and `5F5F74FF...`) while the independent shade decoder emitted exact ZERO samples. This selects H-downstream-writer/state-conversion over H-game-state-zero and H-payload-address; the actual writer remains unclassified. The retail oracle whole-RDRAM control passed 7,651,765 and 12,581,730 writes in two arms, but all target watches stayed phase-unevaluable at VI-320. No mitigation followed. |
+| s987 | Exhaustive generated-source address inventory found zero literal references, zero direct stores, and no `lui` construction of the sampled `0x8072/0x8073xxxx` guest-pointer region for both phase-6 and phase-4 ranges. This refutes only a direct absolute game-side writer; dynamic register-relative stores, DMA/copy ownership, and renderer-state conversion remain unresolved. No build, runtime arm, or mitigation. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -467,37 +468,35 @@ entries and do not authorize mitigations.
    the invalid callback state pointer is identified.
 4. M4 correctness is the active fallback: phase-6 VTXCOLOR payloads are
    demonstrably nonzero while decoded shade is exact ZERO, selecting a
-   downstream writer/state-conversion boundary after s986. The next probe
-   must identify the writer for the sampled payload range using a bounded
-   source/runtime write-origin census; attribution S=0 triangles and I4
+   downstream writer/state-conversion boundary after s986–s987. The next probe
+   must distinguish dynamic DMA/copy writes from renderer conversion using a
+   bounded runtime write-origin census; attribution S=0 triangles and I4
    `sample=64x128` follow only after that origin is classified. The
    `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an ORIGIN
    conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s987)
+## Next work unit (s988)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
-Run one bounded writer inventory for the phase-6 VTXCOLOR payload range now
-known from s986 (`0x732A10..0x73E3B0`, with the phase-4 range
-`0x726200..0x726C50` as control). Enumerate generated stores and their base/
-index forms, classify each candidate by owning object and phase reachability,
-and add no mitigation. Competing hypotheses are H-game-writer (a game-side
-store owns the nonzero payload), H-dma-copy (a DMA/copy path owns it), and
-H-renderer-state (the payload is not subsequently written by game state and
-the zero is introduced after the F5 fetch). The discriminating measurement is
-an exhaustive writer set for the sampled addresses plus one positive source
-control: a reachable game-side writer selects H-game-writer, a reachable DMA/
-copy writer selects H-dma-copy, and no writer in either region leaves only the
-downstream renderer boundary.
+Run one bounded runtime write-origin census for the phase-6 VTXCOLOR payload
+range `0x732A10..0x73E3B0`, retaining phase-4 `0x726200..0x726C50` as the
+positive control. Instrument existing RDRAM write/DMA-origin hooks in one
+build, phase-gate every record, and run the isolated ungated-LLE recipe with
+the established F5-state and shade controls. Competing hypotheses are
+H-dma-copy, H-game-dynamic, and H-renderer-state. A phase-gated DMA/copy or
+guest-PC origin selects its writer class; no post-payload write with controls
+firing selects H-renderer-state. Land no mitigation.
 
 Exact commands:
 
-`rg -n -C 3 '0x(732A10|732F38|733460|733988|7340C0|7344E0|734A08|737EA0|7384D0|7388F0|739238|739B80|739FA0|73A4C8|73A9F0|73B020|73B758|73BD88|73C4C0|73C9E8|73CF10|73D540|73DC78|73E3B0)|0x726200|0x726728|0x726C50' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`
+`rg -n -C 3 'RDRAM|rdram|DMA|do_dma|write' src/main/main.cpp src/main/upstream_compat.cpp`
 
-`rg -n -C 2 'MEM_[BHDW]|MEM_B|MEM_H|MEM_W|MEM_D' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | rg '732A|732F|7334|7339|7340|7344|734A|737E|7384|7388|7392|739B|739F|73A4|73A9|73B0|73B7|73BD|73C4|73C9|73CF|73D5|73DC|73E3|7262|7267|726C'`
+Build once, then run the existing isolated ungated-LLE capture with the s986
+F5-state and shade controls. Phase-gate every new write record; do not use a
+stopwatch or add a guard.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

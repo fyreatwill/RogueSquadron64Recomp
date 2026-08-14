@@ -60572,3 +60572,26 @@ phase-unevaluable oracle a negative result.
 ORIGIN: the new `[f5-state-payload]` records read the VTXCOLOR source bytes;
 the independent `[shade-raw ... ZERO]` records read the decoded shade state.
 Neither identifies the writer, and no mitigation was added.
+
+## Session 987 (2026-08-13) — generated-source VTXCOLOR writer census
+
+The planned M4 work unit was a bounded static writer inventory for the
+phase-6 VTXCOLOR payload range `0x732A10..0x73E3B0`, with phase-4
+`0x726200..0x726C50` as control. The exact address search and the generated
+`MEM_*` store search both completed without a build or runtime arm.
+
+The exhaustive generated-source inventory found zero literal references to
+the sampled phase-6 or phase-4 addresses, zero direct stores to those literal
+addresses, and no `lui` construction of the corresponding
+`0x8072/0x8073xxxx` guest-pointer region. Generated stores are
+register-relative/dynamic; the inventory therefore refutes only a direct
+absolute game-side writer. It does not distinguish a dynamic game store from
+a DMA/copy writer or a later renderer-state conversion.
+
+This rules out treating the address census as an origin proof or landing a
+mitigation. The next work unit must observe runtime write origins with the
+existing phase-gated F5/shade controls. No build, runtime run, or mitigation
+was performed.
+
+ORIGIN: exhaustive generated-source literal/address-construction search; no
+guest value was changed and no mitigation was added.
