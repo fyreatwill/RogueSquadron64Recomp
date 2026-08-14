@@ -309,6 +309,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s913 | `getVoicePlaybackProgressByKey` inventory: two callers agree on a handle-plus-output-float contract and the helper's `0x80154620`/`0x1228` slot shape; the helper has an explicit `speechFileLoaded` gate but no finite scan bound or sentinel, and its miss path reaches the 32-bit counter wrap. Slot progress reads and queue handoff are classified, but scan termination and dynamic writer/value legitimacy remain unproven; no guard or behavior change. |
 | s923 | MusyX per-slot queue inventory: `initMusyXVoiceSlot` creates `slot+0x11AC` with buffer `slot+0x11C4` and capacity 1; `serviceStreamingVoice` has the only generated receive site, gated by `slot+0x11DC`, using nonblocking `osRecvMesg(queue, NULL, 0)` and checking only the return. The two init callers share the slot-base contract and the receive path has no message dereference or queue retry loop; dynamic queue/state writer legitimacy remains unproven, so no guard or behavior change. |
 | s924 | `decodeAndFillVoiceBlock` inventory: one direct caller passes the voice slot and `+0x198` block-table entry; the helper masks the bitstream word index to a `0..0xFFC` offset from `slot+0x1A0`, decodes into a fixed stack block, and runs four filter/pan iterations before updating `+0x11C8`. Local control and caller shape are coherent; dynamic pointer/table/value legitimacy remains unproven; no mitigation. |
+| s928 | `renderVoiceAudioBlock` inventory: one direct caller and one shared voice-record/output contract; four fixed lattice stages, three fixed mix transforms, one fixed compand edge, and no local loop. Nested stereo mixing has eight indirect calls per stage, with targets derived from fixed return-address offsets; dynamic voice/output pointer legitimacy remains unproven; no mitigation. |
 | s926 | `applyVoiceDelayFilter` inventory: three direct callers share one voice-base/delay/channel-table/stack-output shape; its 120-halfword shift and 40-halfword mix loops terminate, but the voice base, return-address-derived table read, and output/input ranges lack local bounds or legitimacy proof. Caller-shape mismatch is ruled out; full classification is not. No mitigation. |
 | s927 | `runVoiceLatticeFilter` inventory: four callers share matching source/output offsets and counts (13, 14, 13, 120 iterations); the helper has two sequential halfword walks, no helper edge, and fixed termination. Its eight coefficient loads from the caller's voice record are fixed, and all local walks are bounded by the supplied counts. Dynamic pointer/value legitimacy remains unproven; no mitigation. |
 
@@ -442,35 +443,75 @@ ORIGIN: complete generated helper/caller, register setup, access-range,
 termination, and companion-symbol inventory; no guest value mutation or
 mitigation.
 
+## s928 — `renderVoiceAudioBlock` is structurally classified
+
+Performed the planned source-only M3 idiom inventory of
+`renderVoiceAudioBlock` (`0x8009DB44`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated its complete generated
+body, the sole direct caller, every nested helper edge, memory access range,
+and termination. Cross-checked the companion `main_overlay.txt` mapping and
+the generated symbol table. No build, game run, or soak was run.
+
+`updateVoiceChannelParams` at `0x8009C4C0` is the only generated caller. It
+passes the same voice-record base through `$a0`, caller-derived source and
+destination buffers through `$a1/$a2`, and the caller's output/control value
+through `$a3`; no second caller shape exists. The render body loads and later
+restores eight coefficient words at `$a0+0x140..0x15C`, reads and restores a
+halfword at `$a0+0x164`, and performs four fixed stages at source/output
+offsets `0`, `0x1A`, `0x36`, and `0x50`. The nested lattice counts are
+`0xC, 0xD, 0xC, 0x77`, producing 13, 14, 13, and 120 bounded iterations.
+
+The three arithmetic mix helpers and the compander have no memory access or
+loop. Each of the four `audioMixStereoBlock8` calls has eight bounded sample
+steps, and its `$t3` indirect target is formed from a fixed `$ra` offset at
+the callsite; the four offsets select the documented mix/compand entry paths,
+not a guest-data-derived function pointer. The generated body has no
+unbounded control path or caller-shape split.
+
+### What it showed
+
+H-render-shape-mismatch is ruled out. H-render-classified is supported for
+caller shape, local accesses, nested edge identity, and termination. The
+broader H-render-unclassified remains open only for dynamic legitimacy of
+the voice-record base, source/output pointers, coefficient/state values, and
+the data consumed by the nested stereo mixer. This is a single-source static
+classification supported by generated code plus companion symbol artifacts;
+no independent runtime writer/value evidence was claimed. No guard,
+mitigation, generated-code edit, or game behavior changed.
+
+ORIGIN: complete generated helper/caller, nested-edge, access-range,
+termination, and companion-symbol inventory; no guest value mutation or
+mitigation.
+
 ## Next work unit
 
-HYPOTHESIS-ID: m3-render-voice-audio-class
+HYPOTHESIS-ID: m3-audio-mix-stereo-class
 
-Audit the complete `renderVoiceAudioBlock` idiom at `0x8009DB44`, including all
-generated callers, its voice-record coefficient/state ranges, indirect-call
-edges, nested audio helper contracts, and termination.
+Audit the complete `audioMixStereoBlock8` idiom at `0x8009DC98`, including its
+caller-derived `$t3` indirect targets, both voice-buffer ranges, all eight
+sample steps, and every generated caller.
 Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-render-unclassified: a caller or nested helper uses an unchecked voice
-  record, stack/output pointer, indirect target, or unbounded control path.
-- H-render-classified: all callers share one fixed render contract, every
-  nested helper edge is structurally bounded, and only dynamic value
-  legitimacy remains open.
-- H-render-shape-mismatch: one caller uses a distinct render contract; record
-  the exact split and stop.
+- H-stereo-unclassified: a caller supplies a data-derived or invalid indirect
+  target, an unbounded sample range, or a mismatched voice-buffer shape.
+- H-stereo-classified: all callers use the same fixed eight-pair contract,
+  the four return-address-derived targets are fixed and valid, and all local
+  accesses terminate within bounded ranges.
+- H-stereo-shape-mismatch: one caller uses a distinct buffer/target contract;
+  record the exact split and stop.
 
-Discriminating measurement: enumerate every memory access, indirect/direct
-helper edge, caller argument setup, and loop/termination condition in the
-generated body and each nested edge; cross-check `main_overlay.txt` and
-companion symbols. Any omitted access, unsafe bound, unbounded control, or
-shape split rejects full classification.
+Discriminating measurement: enumerate every generated caller's `$a0` setup,
+the `$t3` origin and resolved target at each call, all eight source/destination
+halfword offsets, and loop/termination conditions; cross-check
+`main_overlay.txt` and each target helper body. Any omitted access, unsafe
+bound, unbounded loop, invalid target, or shape split rejects classification.
 
-Exact commands: inspect `funcs_27.c` around `0x8009DB44`, `rg` every
-`renderVoiceAudioBlock` reference and nested helper call, then inspect the
-matching `main_overlay.txt` entry and each direct nested helper body. No game
-build or soak is planned.
+Exact commands: inspect `funcs_27.c` around `0x8009DC98`, `rg` every
+`audioMixStereoBlock8` reference and its `$t3` setup, then inspect the matching
+`main_overlay.txt` entries and all four target helper bodies. No game build or
+soak is planned.
 
 ## Closed and parked
 

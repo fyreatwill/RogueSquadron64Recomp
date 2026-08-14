@@ -58836,3 +58836,35 @@ mitigation, generated-code edit, or game behavior changed.
 ORIGIN: complete generated helper/caller, register setup, access-range,
 termination, and companion-symbol inventory; no guest value mutation or
 mitigation.
+
+## Session 928 (2026-08-13) — renderVoiceAudioBlock is structurally classified
+
+Performed the planned source-only M3 idiom inventory of
+`renderVoiceAudioBlock` (`0x8009DB44`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated the complete generated
+body, its direct callers, nested helper edges, memory ranges, and termination,
+then cross-checked `main_overlay.txt` and the generated symbol table. No
+build, game run, or soak was run.
+
+There is exactly one generated caller, `updateVoiceChannelParams` at
+`0x8009C4C0`. It passes one voice-record base/output contract. The render
+helper loads and restores eight words at `$a0+0x140..0x15C` and one halfword
+at `$a0+0x164`, then executes four fixed lattice stages at offsets
+`0`, `0x1A`, `0x36`, and `0x50`, with 13, 14, 13, and 120 iterations. Its
+three arithmetic mix helpers and compander are straight-line code. The four
+nested `audioMixStereoBlock8` calls each perform eight sample-pair steps; the
+indirect `$t3` targets come from fixed return-address offsets at the callsites,
+not guest-data-derived pointers, and select the documented mix/compand paths.
+
+H-render-shape-mismatch is ruled out. H-render-classified is supported for
+caller shape, local accesses, nested edge identity, and termination, while
+dynamic legitimacy of the voice record, source/output pointers, coefficient
+and state values remains open. This is a single-source static classification;
+no independent runtime writer/value evidence was claimed. The result rules
+out an unbounded render path, omitted render helper edge, and incompatible
+caller as the complete explanation. No guard, mitigation, generated-code
+edit, or game behavior changed.
+
+ORIGIN: complete generated helper/caller, nested-edge, access-range,
+termination, and companion-symbol inventory; no guest value mutation or
+mitigation.
