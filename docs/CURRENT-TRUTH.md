@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s1000 (2026-08-13). The active M4 lead is the zero-shade
+Reviewed through s1001 (2026-08-13). The active M4 lead is the zero-shade
 writer/value ownership boundary after the post-sec2 gate. s996 found mixed
 ownership: two phase-6 VTXCOLOR sources had exact generated writes, while the
 other sampled sources—including the nonzero payload at `0x737EA0`—had no
@@ -454,6 +454,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s998 | Added task serial and display-list-start identity to `[shade-raw]` and `[fix-zero-shade]`, regenerated and built cleanly, then reached VI 1024 and completed 40 gated frames with all controls positive: 48/48 phase-4/6 payload rows, 21 raw-shade rows, 8 replacements, 9 shade-DMA controls, 129 write-fault records, and no crash. Zero rows were identified as task 197 at DL starts `0x4B7930`/`0x4B7BE8`; phase-6 still contained nonzero sources including `0x732A10` (same-phase generated write) and `0x732F38` (no same-phase generated write). Because `[f5-state-payload]` still lacks the task serial, this enables only a task-level, not source-level, join; the causal split remains unevaluable. |
 | s999 | Added the current LLE task serial to `[f5-state-payload]`, regenerated/fixed up and built cleanly, then completed 40 phase-gated VI-1024 frames with positive controls: 48 phase-4 and 48 phase-6 payload rows, 54 raw-shade rows, 9 replacements, 9 shade-DMA controls, 129 write-fault records, 9,046 generated-store controls, and no crash marker. The zero-shade records were in task 204; its 24 phase-6 VTXCOLOR sources included exact generated writes at `0x732A10`, `0x732F38`, and `0x733460`, while the remaining same-task sources—including nonzero `0x737EA0`—had no phase-6 generated-store overlap. This selects H-mixed: source ownership is not uniformly generated-written or untouched. The source-to-individual-replacement mapping remains open. ORIGIN: exact overlaps are generated `MEM_W` writes observed by the s992 fixup and payload source reads; no mitigation or value rewrite was added. |
 | s1000 | Added task-local F5 VTXCOLOR ordinals and RT64 task/DL-local shade ordinals, with the F5 command address, then completed a valid phase-gated capture: payload=120, raw-shade=19, replacements=8, shade-DMA=9, write-fault=128, generated-write controls=6974, and VI-1024 reached. In task 184, F5 ordinals ran task-global 1..24, while zero-shade rows reset at DL boundaries (`0x4B7930` ord 1..5, `0x4B7BE8` ord 1..2, `0x4B8B28` ord 5..10). This rejects H-source-ordinal and selects the observed H-dl-boundary shape, but does not identify the F5 source consumed by each RT64 DL because F5 `r17` is a DMEM command address, not the RT64 DL start. No mitigation or value rewrite was added. |
+| s1001 | Added the task root DL to shared provenance and printed it on each F5 payload row. The Debug capture reached VI-1024 with positive controls: 96 phase-4/6 payload rows, 19 raw-shade rows, 8 replacements, 9 shade-DMA controls, 130 write-fault records, and generated-write controls. Zero-shade task 187 had F5 root `0x73E7C8`, while its repeated RT64 consumer DLs were `0x4B7930`, `0x4B7BE8`, and `0x4B8B28`; root identity therefore does not join directly. This selects the observed H-child-dl-join shape, but does not identify the source update feeding an individual replacement. No mitigation or value rewrite was added. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -486,45 +487,43 @@ entries and do not authorize mitigations.
 4. M4 correctness remains active: phase-6 VTXCOLOR payloads are demonstrably
    nonzero while decoded shade is exact ZERO, and s988 finds no overlap from the
    instrumented RSP DMEM-to-RDRAM DMA path. s995 selected bounded generated
-   values. s996–s998 show that source ownership varies by capture. s998 added
-   task/DL identity to shade-side records, but payload rows still omit the task,
-   so the source-level join remains incomplete; nearest task/line order is not
-   causal. The next probe must stamp the same task identity on payload rows.
+   values. s996–s1001 show mixed source ownership and a DL-boundary-shaped
+   consumer, while s1001 shows the F5 task root is not the RT64 consumer DL.
+   The child-DL association is supported by same-task repeated rows, but the
+   source-to-individual-replacement join remains open.
    The `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an
    ORIGIN conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s1001)
+## Next work unit (s1002)
 
 HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
-Add the F5 task's root display-list start address to shared task provenance and
-print it on every `[f5-state-payload]` row. Preserve the existing task-global
-F5 ordinal and RT64 task/DL-local ordinal. Do not add a mitigation or hand-edit
+Add a task-scoped snapshot of the F5-emitted DPC/RDP output range and print its
+first/last physical range on the task's payload summary. Preserve the root DL,
+F5 ordinal, and RT64 task/DL-local ordinal. Do not add a mitigation or hand-edit
 generated files.
 
-Competing hypotheses are H-root-dl-join (the F5 root DL identity matches one
-RT64 DL and its local ordinal), H-child-dl-join (the source is associated with
-a child DL that must be captured separately), and H-no-consumer-join (root
-identity still cannot connect the streams). The discriminating measurement is
-a same-run table keyed by task, F5 root DL, F5 update ordinal, F5 command
-address/source, RT64 DL, and RT64 ordinal. A run with no positive controls, no
-root identity, no ordinal-bearing payload rows, or no zero-shade rows is
-invalid.
+Competing hypotheses are H-dpc-range-contains-consumer (the emitted range
+contains the RT64 consumer DL), H-dpc-range-disjoint (the consumer comes from
+another task/range), and H-no-range-join (range coverage is incomplete). The
+discriminating measurement is a same-run table keyed by task, F5 root DL, F5
+update ordinal, F5 source, DPC range, RT64 DL, and RT64 ordinal. A run with no
+positive controls, no root identity, no DPC range, no ordinal-bearing payload
+rows, or no zero-shade rows is invalid.
 
 Exact commands:
 
-Thread `dl_ptr` from the graphics-task submitter into `rs64_e9prov_task_begin`
-or an equivalent task-scoped provenance setter, print it on F5 payload rows,
-run the fixup static check, export submodule patches if needed, build Debug,
-and launch the existing phase-gated probe with all current controls.
+Thread each committed F5 DPC range into task-scoped provenance, print the
+bounded first/last range once per task, run the static fixup check, export
+submodule patches if needed, build Debug, and launch the existing phase-gated
+probe with all current controls.
 
-Expected outcomes: a root DL matching one RT64 DL with aligned local ordinals
-selects H-root-dl-join; a root mismatch with a child-DL explanation supported
-by repeated task/DL rows selects H-child-dl-join; otherwise select
-H-no-consumer-join. If controls or root identity coverage fail, make no causal
-selection.
+Expected outcomes: a DPC range containing the repeated RT64 consumer DL selects
+H-dpc-range-contains-consumer; a repeated disjoint range with complete task
+coverage selects H-dpc-range-disjoint; otherwise select H-no-range-join. If
+controls, root/range identity, or zero rows fail, make no causal selection.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

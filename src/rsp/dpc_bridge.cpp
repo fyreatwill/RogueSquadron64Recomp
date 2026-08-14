@@ -111,6 +111,7 @@ static std::atomic<uint32_t> g_task_rdp_fullsyncs{0};
 static uint32_t g_task_op_count[64] = {0};
 
 struct Rs64E9Provenance {
+    uint32_t root_dl = 0;
     struct Condition {
         uint32_t address;
         uint64_t serial;
@@ -418,9 +419,10 @@ extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
     g_e9prov.aligned_dl = guestDl;
 }
 
-extern "C" void rs64_e9prov_task_begin(uint32_t task) {
+extern "C" void rs64_e9prov_task_begin(uint32_t task, uint32_t root_dl) {
     g_e9prov = {};
     g_e9prov.task = task;
+    g_e9prov.root_dl = root_dl & 0x007FFFFFu;
     g_task_bridge_e9.store(0, std::memory_order_release);
     g_task_synthetic_fullsyncs.store(0, std::memory_order_release);
     g_e9_boundary_lines = 0;
@@ -531,8 +533,8 @@ extern "C" void rs64_f5_state_probe(uint32_t r17, uint32_t w0, uint32_t w1) {
                 (w0 >> 16) & 0xFFu);
         const uint32_t source = opcode == 0x02 ? (w1 & 0x7FFFFFu) :
             ((r17 + 8u) & 0x7FFFFFu);
-        fprintf(stderr, "[f5-state-payload] phase=%u task=%u ord=%u pc=0x%06X op=0x%02X source=0x%06X bytes=",
-                phase, g_e9prov.task, ordinal, r17 & 0x7FFFFFu, opcode, source);
+        fprintf(stderr, "[f5-state-payload] phase=%u task=%u root_dl=0x%06X ord=%u pc=0x%06X op=0x%02X source=0x%06X bytes=",
+                phase, g_e9prov.task, g_e9prov.root_dl, ordinal, r17 & 0x7FFFFFu, opcode, source);
         if (g_rdram_for_submit != nullptr && source + 16u <= 0x800000u) {
             for (uint32_t i = 0; i < 16; ++i)
                 fprintf(stderr, "%02X", (unsigned)g_rdram_for_submit[(source + i) ^ 3]);

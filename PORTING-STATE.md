@@ -61004,3 +61004,25 @@ mapping or authorize changing `ROGUESQ_FIX_ZERO_SHADE`.
 
 ORIGIN: the ordinal observations are emitted at the existing F5 payload and
 RT64 shade/replacement sites; no mitigation or value rewrite was added.
+
+## Session 1001 (2026-08-13) — joined F5 root DL to RT64 consumer DLs
+
+Added the task root display-list start to shared F5 provenance, normalized to
+the physical 23-bit address domain, and printed it on every F5 payload row.
+The Debug build linked successfully. The phase-gated capture reached VI 1024;
+positive controls included 96 phase-4/6 payload rows, 19 raw-shade rows, 8
+zero-shade replacements, 9 shade-DMA controls, 130 recovered write-fault
+records, and generated-write controls.
+
+For zero-shade task 187, all 24 sampled phase-6 F5 payload rows carried root
+`0x73E7C8`. The independent RT64 shade-side rows for the same task repeatedly
+used consumer DLs `0x4B7930`, `0x4B7BE8`, and `0x4B8B28`, with zero replacements
+at those DL-local ordinals. The root does not equal a consumer DL, so the
+root-DL join is ruled out. Same-task repeated consumer rows support the
+child-DL association shape, but the capture does not identify which F5 source
+update feeds an individual replacement. No mitigation or value rewrite was
+added.
+
+ORIGIN: this change only records `task->t.data_ptr` at the existing F5 task
+boundary and emits diagnostic provenance; it does not alter game or renderer
+state.

@@ -6,8 +6,9 @@ HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
 Add the F5 task's root display-list start address to shared task provenance and
 print it on every `[f5-state-payload]` row. Preserve the existing task-global
-F5 ordinal and RT64 task/DL-local ordinal. Do not add a mitigation or hand-edit
-generated files.
+F5 ordinal and RT64 task/DL-local ordinal. Normalize the root to the same
+physical 23-bit address domain as the existing source/DL fields. Do not add a
+mitigation or hand-edit generated files.
 
 Competing hypotheses and discriminating measurement:
 
@@ -20,7 +21,11 @@ Competing hypotheses and discriminating measurement:
 The discriminating measurement is a same-run table keyed by task, F5 root DL,
 F5 update ordinal, F5 command address/source, RT64 DL, and RT64 ordinal. A
 capture is invalid if the controls, root identity, ordinal-bearing payloads,
-or zero-shade rows do not all fire in the gated phase.
+or zero-shade rows do not all fire in the gated phase. Ground-truth status:
+the retail oracle is independently available only for physical CPU-memory
+writes and cannot observe this F5/RT64 stream; the F5 command semantics are
+anchored by docs/F5-UCODE-REFERENCE.md, so this iteration measures joins and
+makes no retail ownership claim.
 
 ## Exact commands
 

@@ -101,7 +101,7 @@ extern "C" void rs64_rdp_advance_report(uint32_t task, uint32_t guestDl,
 extern "C" void rs64_e9prov_aligned(uint32_t task, uint32_t guestDl,
                                       uint32_t guestE9);
 extern "C" void rs64_e9prov_task_join_report(uint32_t task);
-extern "C" void rs64_e9prov_task_begin(uint32_t task);
+extern "C" void rs64_e9prov_task_begin(uint32_t task, uint32_t root_dl);
 extern "C" void rs64_e9prov_task_end(uint32_t task);
 extern "C" void rs64_inline_probe_trigen_stage(uint32_t dl_ptr, uint32_t boot_130,
                                                   uint32_t staged_130, uint32_t skipped_host_130,
@@ -568,7 +568,7 @@ static RspExitReason factor5_gfx_runner(uint8_t* rdram, uint32_t ucode_addr) {
     }
     { static int tn2 = 0; if (++tn2 <= 16) rs64_canary("pre-ucode", tn2); }
     const uint32_t task_serial = g_rs64_lle_task_n.fetch_add(1, std::memory_order_relaxed) + 1;
-    rs64_e9prov_task_begin(task_serial);
+    rs64_e9prov_task_begin(task_serial, dl_ptr);
     rs64_dpc_defer_begin();
     // ROGUESQ_LOG_TASKMS=1 (session 37) — wall time of the ucode call per task,
     // phase-scoped. s36 put 82% of Gfx Thread samples inside factor5_ucode but
