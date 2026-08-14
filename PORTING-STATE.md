@@ -61344,3 +61344,21 @@ third zero-record run without first isolating the input/phase control would
 repeat this same ambiguity. Exact commands are in `scratch/agent/NEXT.md`
 (HYPOTHESIS-ID `m4-zero-shade-accumulator-origin`). No mitigation was added;
 no code changed this session.
+
+## Session 1016 (2026-08-14) — phase-gated M4 probe failed to reach 512
+
+Ran the prescribed input control followed by the accumulator probe. The
+control was positive: the run logged host Start edges and game-side
+`newbtn` records with `start_new=1` at the scheduled inputs. It reached the
+normal 320/640 phases but never left 640; the 512 phase gate did not fire.
+The accumulator run likewise logged repeated positive Start controls but no
+512 transition, no M4 accumulator rows, and no independent VMADH positive-
+control rows. The capture therefore does not discriminate
+`H-accumulator-saturation`, `H-v4-v0-arithmetic`, or `H-v29-selection`.
+
+This rules out “the scripted Start was not delivered” as the immediate
+explanation, but does not identify why this schedule fails to enter the
+required 512 phase. It rules out treating the zero M4 count as runtime shade
+evidence. The next work unit is a bounded audit of the probe phase gate and
+input-to-transition mapping before another accumulator run. No mitigation or
+code change was made.

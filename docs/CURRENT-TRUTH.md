@@ -6,13 +6,14 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1015 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1016 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
 numeric source of the shade record. The landed M4 accumulator probe has not
-yet fired on the executing code path in two attempts — its positive control
-never armed, so both are phase-selection nulls, not M4 results. M5 audio
+yet fired on the executing code path in three attempts — its positive control
+never armed. s1016 verified that Start is delivered, but the required 512 phase
+is never entered, so these remain phase-selection nulls, not M4 results. M5 audio
 de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -221,13 +222,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1013 | Static accumulator audit: the final VMADH consumes shared state last updated by `vmadn v7,v5,v0`; `v29` cannot supply `0x8000`. Saturation versus an in-range sign-extending middle word remains open because no complete lane tuple is captured. |
 | s1014 | Landed regeneration-owned M4 accumulator/VGE probe with a VMADH positive control. Two VI-1024 captures fired neither control; a Start-driven 512 gate timed out at 1024. No numeric conclusion. |
 | s1015 | Closed the s1014 null-result question: root cause is phase-gate failure (positive control never armed), not an M4 result. Refutes treating either s1014 capture as evidence for/against any M4 hypothesis; next step is isolating the phase/input control before re-running the probe. |
+| s1016 | Start control was positive in both the isolated and accumulator runs, but VI remained at 640 and never reached the required 512 phase; M4 and VMADH-control counts were zero. The null is phase-selection evidence only and does not classify accumulator hypotheses. |
 
 ## Ranked backlog
 
-1. Reach the executing Factor 5 shade overlay with the landed M4 probe: first
-   establish a positive input/phase control for the port (the documented Start
-   schedule did not leave VI-1024), then run the 512-width gate and classify the
-   complete accumulator tuples. Do not treat another VI-1024 zero as evidence.
+1. Audit the probe's phase gate and input-to-transition mapping: explain why
+   positive game-side Start records leave VI at 640 but never produce the
+   required 512 phase, then rerun the landed M4 probe only after a positive
+   512 control. Do not treat another 640/1024 capture as M4 evidence.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak

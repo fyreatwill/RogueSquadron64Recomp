@@ -1,32 +1,36 @@
-# NEXT work unit (s1015)
+# NEXT work unit (s1016)
 
 HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-Use the landed M4 probe, but first make the phase/input control positive. Run
-one short probe with the documented Start schedule and the repository's
-current input log enabled, verifying that a Start is observed and that VI
-leaves 1024. Then use that verified schedule with
-`PROBE_PHASE_WIDTH=512` and `ROGUESQ_LOG_M4_ACCUM=1`; do not rebuild unless
-the control check shows the binary lacks the probe.
+Perform one bounded static audit of the phase gate and input-to-transition
+mapping before another M4 run. Read `tools/probe.sh` and grep the implementation
+of `PROBE_PHASE_WIDTH`, `PROBE_PHASE_TIMEOUT`, `PROBE_KEYS`, `PROBE_LEAVE_OK`,
+and the VI phase recorder. Trace whether the requested 512 gate means an exact
+VI width, a transition after a key event, or a phase ordinal that the current
+menu/attract path cannot reach. Do not build or run unless the audit finds a
+concrete missing control that must be tested.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-accumulator-saturation`: the complete tuple shows signed endpoint output
-  created by VMADH saturation.
-- `H-v4-v0-arithmetic`: the post-VMADH middle word is already `0x8000` in a
-  sign-extending, in-range accumulator result.
-- `H-v29-selection`: the post-VGE record selects a `v29` lane equal to
-  `0x8000`.
+- `H-gate-exact-width`: the harness waits for an exact width that this path
+  never emits; enumerate every observed/possible width and compare the gate
+  predicate.
+- `H-key-schedule-phase`: Start is delivered, but the scripted event is at the
+  wrong game state or frame; map each key event to the state/VI transition
+  recorded by the probe.
+- `H-probe-contract-mismatch`: the environment variable or timeout is parsed
+  differently from the documented contract; compare parser/default behavior
+  with the command used in s1016.
 
-The complete tuple makes the alternatives mutually exclusive; the independent
-VMADH control must visibly fire before a null result is meaningful. If input is
-positive but 512 still never appears, investigate phase transition/input
-mapping rather than interpreting M4 zeros.
+The discriminator is a source-level truth table: for each gate predicate,
+input event, and VI transition, state whether s1016's observed sequence can
+ satisfy it. A single unambiguous mismatch selects one hypothesis and gives
+ the exact corrected command for the next runtime capture. If all predicates
+ are satisfiable but no 512 transition is game-reachable, report the missing
+ state/input prerequisite rather than rerunning the accumulator probe.
 
-Exact commands:
+Exact starting commands:
 
-`env ROGUESQ_LOG_INPUT=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/input_control_1015 20 1`
+`rg -n 'PROBE_PHASE_WIDTH|PROBE_PHASE_TIMEOUT|PROBE_KEYS|PROBE_LEAVE_OK|512|phase' tools/probe.sh tools src lib | head -240`
 
-Then, if the control is positive:
-
-`env ROGUESQ_LOG_M4_ACCUM=1 ROGUESQ_LOG_INPUT=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=150 zsh tools/probe.sh scratch/agent/accum_probe_1015 30 1`
+`rg -n 'PROBE_PHASE_WIDTH|PROBE_PHASE_TIMEOUT|PROBE_KEYS|PROBE_LEAVE_OK|vi_width|phase' src lib tools -g '*.{c,cpp,h,sh,ps1}'`
