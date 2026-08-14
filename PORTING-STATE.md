@@ -63455,3 +63455,18 @@ selects `H-index-state-dependent`, rules out a fixed non-320 index or mapping
 error, and leaves the initial selector value/writer open. ORIGIN: generated
 setter and copy path, independent mapped retail-ROM bytes, and table-width
 reads; no mitigation.
+
+## Session 1124 (2026-08-14) — classified the VI selector as render-state-driven
+
+The required bounded static audit traced `selectAndApplyViMode` and its selector
+inputs. The routine chooses copied mode-record offsets `0x00`, `0x50`, `0xA0`,
+or `0xF0` from bytes `0x8011A864`, `0x8011A865`, and `0x8011A862`. The only
+identified writer is `buildAndRegisterDefaultMaterial` at `0x80017B88`, which
+derives the bytes from bits 2, 3, 4, 5, 7, and 8 of its `$s1` render-state
+argument. Generated callers show this writer on both boot video initialization
+and recurring `advanceVideoFrame`; the selector is therefore runtime-populated,
+not a fixed 320 initializer. The independent retail-oracle width-320 result
+constrains the active initial choice to the 320-wide copied records at offsets
+`0x00`, `0x50`, or `0xA0` (indices `{0,2,4,6}`), while the concrete boot `$s1`
+argument remains open. This selects `H-selector-runtime-320` over fixed-320 and
+non-320. No build, run, mitigation, or generated-file edit was performed.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1123 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1124 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -159,6 +159,17 @@ compact and records only live conclusions, boundaries, and next work.
   one of indices `0,2,4,6`. This selects `H-index-state-dependent` over a
   fixed non-320 index or mapping error and reconciles the oracle width.
   Static result; no build or run.
+- The s1124 selector audit resolves the choice mechanism: `selectAndApplyViMode`
+  maps `0x8011A865/64/62` to copied-record offsets `0x00/0x50/0xA0/0xF0`,
+  while `buildAndRegisterDefaultMaterial` writes those bytes from bits 8/7,
+  5/4/3, and 2 of its `$s1` render-state argument. The writer is reached from
+  boot video initialization and recurring `advanceVideoFrame`, so the active
+  selector is runtime-populated rather than a fixed 320 initializer. The
+  independent retail width-320 capture constrains the initial result to
+  offsets `0x00/0x50/0xA0` whose records are indices `{0,2,4,6}`; no concrete
+  offset is claimed until the boot caller's `$s1` provenance is traced. This
+  selects `H-selector-runtime-320` over fixed-320 and non-320. Static plus
+  retail evidence; no build or run.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -453,14 +464,18 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1120 | Ran the prescribed retail-oracle selector capture. Independent controls passed: 10,009 whole-RDRAM callbacks, nine scheduled Start events, and 7,196 VI frames. The watched ranges recorded zero `rsViModeType` writes, four selector-range writes, and zero descriptor-index writes; VI stayed width 320 at `0x006dd280`. Selector activity occurred before the first press, selecting `H-retail-selector-prephase` over input-tainted and observed non-320 selection. The global 200-hit print cap hid individual selector addresses/values, so the result does not claim a concrete selector value. This is phase-qualified single-source retail evidence; no mitigation or port behavior changed. ORIGIN: physical oracle watch with independent whole-RDRAM/PIF/VI controls, no mitigation. |
 | s1121 | Bounded generated/companion/ROM audit corrected the mode-type input: `setViModeType` loads `osTvType` at `0x80000300`, maps 0/1/2 to `rsViModeType`, and never reads `osResetType` at `0x8000030C`; retail ROM words match. `initVideoSubsystem` contains ten reads of `0x8003780C..0x7830`, each indexed by `rsViModeType`, but no generated, companion, or symbolized writer for those descriptor-index bytes. Selects `H-non-generated-index-source` for the index producer and leaves raw/data/host ownership open. No build or run. ORIGIN: generated instruction/data-flow, independent ROM bytes, and companion symbol census, no mitigation. |
 | s1122 | Bounded non-generated/data-boundary audit found `librecomp::init` writes `osTvType=1` and `osResetType=0`; the former is the setter input and the latter is not read by `setViModeType`. No host/runtime, patch, generated, or companion store targets `0x8003780C..0x8003782F`; the initial ROM DMA supplies those bytes, and the retail image at the `+0xC00` mapped offsets matches the indexed generated `lbu` reads. Nearby generated stores target only `0x80037808`. Selects `H-host-init` for `osTvType` and `H-rom-data` for the descriptor-index window; the active index-to-width reconciliation remains open. No build or run. ORIGIN: host initialization, generated store/read census, companion/symbol census, and independent retail-ROM bytes; no mitigation. |
+| s1123 | Bounded descriptor audit resolves `setViModeType(osTvType=1)` to `rsViModeType=0`. The NTSC index bytes in call order are `{12,0,6,4,11,9,10,8,13,2}`, with mixed record widths; the observed retail width 320 therefore requires selector state to choose one of indices `{0,2,4,6}`. Selects `H-index-state-dependent`; no build or run. ORIGIN: generated index reads and independent retail-ROM table bytes; no mitigation. |
+| s1124 | Bounded generated/companion audit found `selectAndApplyViMode` maps selector bytes `0x8011A865/64/62` to copied-record offsets `0x00/0x50/0xA0/0xF0`. `buildAndRegisterDefaultMaterial` writes those bytes from bits of its `$s1` render-state argument and is called by boot video initialization and recurring `advanceVideoFrame`; the selector is therefore runtime-populated, not a fixed initializer. The independent retail width-320 capture constrains the active initial choice to the 320-wide copied records at offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`), but the concrete boot argument remains open. Selects `H-selector-runtime-320`; no build or run. ORIGIN: generated control/data-flow, companion caller/symbol census, and independent retail VI-width evidence; no mitigation. |
 
 ## Ranked next steps
 
-1. Trace the lifecycle selector bytes at `0x8011A864/65/62` through the
-   initial mode-record selection to identify which copied NTSC record
-   `{0,2,4,6}` is active on the retail width-320 path.
-2. If the initial selector is statically fixed to one 320 record, park the
-   retail width-320 route; otherwise classify the selector producer/state path.
+1. Trace the boot caller's `$s1` render-state argument into
+   `buildAndRegisterDefaultMaterial` at `0x80017B88`, then evaluate selector
+   bytes `0x8011A864/65/62` at the initial mode-record copy. Identify which
+   copied NTSC record `{0,2,4,6}` is active on the retail width-320 path.
+2. If the boot argument is computed from a non-generated display/config source,
+   classify that producer; otherwise park the selector route with the concrete
+   record identified.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

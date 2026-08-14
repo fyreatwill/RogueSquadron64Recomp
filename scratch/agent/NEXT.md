@@ -1,33 +1,35 @@
-# NEXT work unit (s1124)
+# NEXT work unit (s1125)
 
 HYPOTHESIS-ID: retail-oracle-active-descriptor-index
 
-Perform one bounded static audit of the initial lifecycle selector state that
-chooses among the NTSC records copied by `initVideoSubsystem`. s1123 resolved
-`rsViModeType=0` and found the ROM-backed indices used in call order
-`0x7830..0x780C` are `{12,0,6,4,11,9,10,8,13,2}`, with mixed record widths;
-the retail width-320 observation therefore requires the active selector to
-choose one of `{0,2,4,6}`.
+Perform one bounded static audit of the boot caller's `$s1` render-state
+argument passed to `buildAndRegisterDefaultMaterial` at `0x80017B88`.
+The prior audit established that selector bytes `0x8011A865/64/62` are derived
+from bits 8/7, 5/4/3, and 2 of `$s1`, and that the retail width-320 path must
+choose copied-record offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`).
 
 Competing hypotheses and discriminator:
 
-- H-selector-fixed-320: boot selector state chooses one fixed 320-wide record.
-- H-selector-runtime-320: lifecycle state chooses a 320-wide record but is
-  populated or changed outside the static initializer.
-- H-selector-non320: selector state chooses a non-320 record, contradicting
+- H-boot-arg-fixed: the boot caller supplies a statically fixed render-state
+  value selecting one concrete 320 record.
+- H-boot-arg-runtime: the boot argument is assembled from runtime display/config
+  state, so the concrete selector cannot be resolved statically at the caller.
+- H-boot-arg-non320: the boot argument selects a non-320 record, contradicting
   the independent retail-oracle width-320 observation.
 
-Discriminator: concrete selector values at the initial mode copy and their
-writer/data-flow must select one hypothesis. Do not build or run; no
-mitigation is authorized.
+Discriminator: trace the argument loads/stores immediately before the boot call
+to `buildAndRegisterDefaultMaterial` and decode bits 2, 3, 4, 5, 7, and 8.
+A concrete value selecting `{0,2,4,6}` proves H-boot-arg-fixed; a runtime
+load/merge proves H-boot-arg-runtime; a concrete non-320 choice would require
+reconciling or overturning the retail observation. Do not build or run.
 
-Exact commands (no build or game run):
+Exact commands:
 
 ```sh
-rg -n -C 12 '0x8011A864|0x8011A865|0x8011A862|selectAndApplyViMode|swapBufferWithViMode' ../N64Recomp/RecompiledFuncs/funcs_5.c ../N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n -C 8 '8011A864|8011A865|8011A862' /Users/williambuckley/Documents/Tools/rogue_squadron64/docs/mips_to_c /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+rg -n -C 30 '0x800183F8|0x800185DC|buildAndRegisterDefaultMaterial\(' ../N64Recomp/RecompiledFuncs/funcs_4.c
+rg -n -C 20 'initVideoBootWrapper|advanceVideoFrame|0x800183[BCDE]|0x800185[D-F]' ../N64Recomp/RecompiledFuncs/funcs_4.c
+rg -n -C 8 'buildAndRegisterDefaultMaterial|initVideoBootWrapper|advanceVideoFrame' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt /Users/williambuckley/Documents/Tools/rogue_squadron64/docs/mips_to_c
 ```
 
-Use bounded `sed` windows around each selector writer and the initial mode
-copy. Append the fixed/runtime/non-320 classification to the ledger and
-current truth. No mitigation is authorized.
+Use bounded `sed` windows around both call sites. Append the argument/value
+classification to the ledger and current truth. No mitigation is authorized.
