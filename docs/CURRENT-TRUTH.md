@@ -199,6 +199,14 @@ closed; M3 work is limited to systematic idiom-class audits.
   over 287 VI frames in 5 seconds. This is a tool/core read-breakpoint failure,
   not evidence about retail PIF reads; the PIF-watch hypothesis is blocked
   pending an oracle-path fix.
+- s961 isolated the oracle failure by comparing read watches in one bounded
+  batch. An ordinary RDRAM read watch survived with 1,105,122 whole-RDRAM
+  write-control hits, one read hit, and 299 VI frames. PIF RAM and PIF ROM
+  read watches both crashed `rc=139` during RDRAM initialization before VI or
+  any hit. The oracle source maps `0x1FC00000` to `read_pif_mem`, unlike the
+  surviving plain-RDRAM handler. This selects a PIF-region debugger-handler
+  defect over a generic read-watch defect; retail PIF activity remains
+  unevaluable and no runtime mitigation followed.
 
 ## Recent evidence ledger
 
@@ -236,6 +244,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s958 | Config/help audit plus corrected 30-second pair passed whole-RDRAM controls (5,201,480/5,203,031); driven delivered five `sym=40` presses, but both stayed at VI 320/origin `0x006dd280` with no PIF trace. Timeline is ruled out; input-read/core setup remains phase blocker. |
 | s959 | Source audit and one driven arm confirmed input-plugin attachment and scancode-40 delivery; whole-RDRAM control passed with 5,189,202 hits. The PIF trace is a VI poll rather than game-read attribution; VI stayed 320, so callback-table reachability remains unevaluable. |
 | s960 | Physical PIF read watch crashed the oracle twice before VI, both paired and isolated; whole-RDRAM-only control passed with 1,082,129 hits/287 VI. PIF read activity remains unevaluable; investigate the debugger read-watch path. |
+| s961 | Ordinary RDRAM read watch survived with 1,105,122 write-control hits, one read hit, and 299 VI; PIF RAM and PIF ROM read watches both crashed pre-VI. Source mapping selects a PIF-region handler defect over a generic read-watch defect; no retail PIF conclusion. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -253,11 +262,12 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Fix or isolate the oracle debugger read-watch path before retrying the
-   callback-table watch: s960's physical PIF read watch crashes during RDRAM
-   initialization while the same core/configuration with only a whole-RDRAM
-   write watch reaches 287 VI. The next run must distinguish a core breakpoint
-   defect from a PIF-region mapping issue.
+3. Fix or isolate the oracle PIF-region debugger read-watch path before
+   retrying the callback-table watch: s961 showed ordinary RDRAM read watches
+   survive while both PIF RAM and PIF ROM read watches crash during RDRAM
+   initialization. The next work unit should make one minimal oracle-core
+   handler fix or diagnostic that preserves the ordinary-RDRAM positive
+   control and tests whether a PIF read watch can survive initialization.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -267,37 +277,38 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-Audit the oracle source for input-plugin attachment and PIF-trace read timing,
-then run one bounded 30-second positive-control arm with `--press 6:start`
-using `--verbose --vi-poll --pif-trace`, plus the smallest source/config check
-needed to identify whether the game reaches a PIF read. Do not retry the
-callback-table watch yet.
+Make one minimal source-level fix or diagnostic in the external oracle core's
+debugger/memory handler so a PIF-region read watch can survive initialization.
+Do not edit the recomp runtime or retry retail PIF/callback hypotheses until
+this passes.
 
 Competing hypotheses:
 
-- H-oracle-config-path: `--configdir` is ignored or the selected input plugin
-  is using a different mapping/config than the documented setup.
-- H-oracle-core-phase: the configured core/RSP/setup genuinely remains at VI
-  320 despite accepted button injections.
-- H-oracle-pif-trace-path: the input plugin is attached and presses are
-  delivered, but the game never reaches its PIF-read loop in the current core
-  setup.
-- H-oracle-pif-instrument: the game does read PIF, but this oracle build's
-  trace hook is not attached to that read path.
+- H-pif-saved-handler: the debugger wrapper calls an invalid or incomplete
+  saved handler for the PIF device mapping.
+- H-pif-early-breakpoint: the first PIF read hits during core/boot setup and
+  the synchronous debugger callback/step sequence is unsafe at that point.
+- H-pif-address-normalization: the physical PIF address reaches the wrapper in
+  a form that the PIF handler or breakpoint lookup does not support.
 
-Discriminating measurement: source/config wiring plus verbose runtime evidence
-of input-plugin attachment and PIF reads in the same driven run. Attachment
-failure selects setup; attachment with no PIF reads selects core/setup; PIF
-reads without trace lines selects an oracle trace-hook defect. The whole-RDRAM
-positive control must visibly fire.
+Discriminating measurement: rebuild the external core with exactly one source
+change or diagnostic, then run ordinary-RDRAM and PIF-region read-watch arms in
+the same bounded batch, each with `--watch-write 0x0:0x800000 --hit-cap 200
+--vi-poll --verbose`. Ordinary read survival with PIF survival selects a
+fixed PIF handler path; ordinary survival with PIF still crashing selects the
+remaining PIF-specific branch; a logged PIF hit before failure selects the
+early-breakpoint callback path. The whole-RDRAM write control must visibly
+fire in every arm.
 
-Exact starting commands:
+Exact starting checks/commands:
 
-`rg -n "Input-SDL-Control1|Start|plugin" /Users/williambuckley/Documents/Tools/rs64-oracle/cfg`
+`rg -n -C 8 "read_with_bp_checks|activate_memory_break_read|read_pif_mem|MM_PIF_MEM" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device`
 
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 30 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --pif-trace > scratch/agent/oracle_results/s958_oracle_phase/undriven.log 2>&1`
+`tools/oracle/build_core.sh && tools/oracle/build.sh`
 
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 30 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --pif-trace --press 6:start,11:start,16:start,21:start,26:start > scratch/agent/oracle_results/s958_oracle_phase/driven.log 2>&1`
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 5 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --verbose --watch-read 0x00001000:0x00001004`
+
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 5 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --verbose --watch-read 0x1fc007c0:0x1fc007c4`
 
 ## Closed and parked
 

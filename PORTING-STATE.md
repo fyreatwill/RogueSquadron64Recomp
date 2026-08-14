@@ -59821,3 +59821,24 @@ generated-code, mitigation, or submodule change was made.
 
 ORIGIN: oracle debugger read-watch crash reproduced in paired and isolated
 attempts; no guest value mutation or mitigation was landed.
+
+## Session 961 (2026-08-13) — ordinary read watch survives; PIF-region read watch crashes
+
+Ran the bounded oracle comparison with the same whole-RDRAM write positive
+control. A read watch on ordinary RDRAM (`0x00001000:0x00001004`) completed
+with 1,105,122 write hits, one read hit, and 299 VI frames. A read watch on
+PIF RAM (`0x1FC007C0:0x1FC007C4`) exited `rc=139` during RDRAM
+initialization, before VI or any hit. A second PIF-region watch on PIF ROM
+(`0x1FC00000:0x1FC00004`) reproduced the same pre-VI crash.
+
+The oracle source independently maps `MM_PIF_MEM=0x1FC00000` to the
+`read_pif_mem` device handler, while the surviving control uses the RDRAM
+handler. This selects a PIF-region debugger-handler/memory-mapping defect
+over a generic read-watch defect. It rules out neither retail PIF reads nor
+the callback-table hypothesis: the PIF watch never reaches a reportable hit.
+No recomp runtime, generated code, mitigation, or submodule change was made.
+Captures: `scratch/agent/oracle_results/s961_read_watch/`.
+
+ORIGIN: oracle source audit plus ordinary-RDRAM and two independent PIF-region
+read-watch arms, all paired with the whole-RDRAM positive control; no guest
+value mutation or mitigation was landed.

@@ -1,36 +1,36 @@
-# NEXT work unit (s961)
+# NEXT work unit (s962)
 
-Isolate the oracle debugger read-watch crash with one bounded source-level
-probe/fix attempt: compare the existing read-watch callback path against a
-read watch on an ordinary RDRAM word, and inspect the core's memory-handler
-activation for the PIF region. Do not retry the retail PIF hypothesis until a
-read watch survives initialization. If editing under the oracle's external
-core is required, record the exact external path and rebuild result; do not
-edit the recomp runtime.
+Make one minimal source-level fix or diagnostic in the external oracle core's
+debugger/memory handler so a PIF-region read watch can survive initialization.
+Do not edit the recomp runtime or retry retail PIF/callback hypotheses until
+this passes.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
 Competing hypotheses:
 
-- H-oracle-read-breakpoint-core: any debugger read watch triggers the core's
-  pre-VI crash, independent of address.
-- H-oracle-pif-mapping: only a read watch in the PIF region activates an
-  invalid/uninitialized memory handler.
-- H-oracle-callback-reentry: the PIF read watch reaches the callback during
-  initialization and the frontend callback/resume sequence crashes.
+- H-pif-saved-handler: the debugger wrapper calls an invalid or incomplete
+  saved handler for the PIF device mapping.
+- H-pif-early-breakpoint: the first PIF read hits during core/boot setup and
+  the synchronous debugger callback/step sequence is unsafe at that point.
+- H-pif-address-normalization: the physical PIF address reaches the wrapper in
+  a form that the PIF handler or breakpoint lookup does not support.
 
-Discriminating measurement: a same-build/read-watch arm on a normal mapped
-RDRAM range, paired with the already-proven whole-RDRAM write control. A crash
-on both read-watch addresses selects the generic debugger read path; survival
-on RDRAM but crash on PIF selects PIF mapping/handler; a logged read hit before
-the crash selects callback re-entry or a later PIF-specific failure.
+Discriminating measurement: rebuild the external core with exactly one source
+change or diagnostic, then run ordinary-RDRAM and PIF-region read-watch arms in
+the same bounded batch, each with `--watch-write 0x0:0x800000 --hit-cap 200
+--vi-poll --verbose`. Ordinary read survival with PIF survival selects a
+fixed PIF handler path; ordinary survival with PIF still crashing selects the
+remaining PIF-specific branch; a logged PIF hit before failure selects the
+early-breakpoint callback path. The whole-RDRAM write control must visibly
+fire in every arm.
 
-Exact starting checks:
+Exact starting checks/commands:
 
-`rg -n "activate_memory_break_read|read_with_bp_checks|check_breakpoints_on_mem_access|dbg_update|pDebugStep" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src tools/oracle`
+`rg -n -C 8 "read_with_bp_checks|activate_memory_break_read|read_pif_mem|MM_PIF_MEM" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device`
 
-`mkdir -p scratch/agent/oracle_results/s961_read_watch`
+`tools/oracle/build_core.sh && tools/oracle/build.sh`
 
-Use the existing oracle binary and ROM, with a short bounded run and both
-`--watch-read 0x00001000:0x00001004` and the whole-RDRAM write control. Preserve
-`--vi-poll --verbose --press 6:start`; the whole-RDRAM watch must visibly fire.
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 5 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --verbose --watch-read 0x00001000:0x00001004`
+
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 5 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --verbose --watch-read 0x1fc007c0:0x1fc007c4`
