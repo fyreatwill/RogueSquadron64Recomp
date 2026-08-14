@@ -111,6 +111,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   remain unresolved, so H-stop-voices-by-handle-index-unclassified remains
   selected; no mismatch or mitigation conclusion followed. The stack
   spill/reload at `startNoteOnVoice` was excluded as non-object data.
+- s949 found exactly one direct generated caller of `soundMacroOpKeyOnNote`:
+  `tickAudioChannel` at `0x8008C1EC`, passing `$s0`. The callee reads that
+  channel-context object's `+0x64` after `startNoteOnVoice` and writes it to
+  the `0x8013D894 + index*0x17C` table; six generated `-0x276C` stores
+  populate that table, but no direct read-side consumer was found through the
+  audited address forms. Channel-field provenance and table consumers remain
+  unresolved; no mismatch or mitigation conclusion followed.
 
 ## Recent evidence ledger
 
@@ -136,6 +143,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s946 | Exhaustive generated-source/overlay/companion search found no direct allocator reference and only the unrelated generic comparator `jalr`; static standalone reachability is selected dead, while runtime pointer/value legitimacy remains unproven. |
 | s947 | All remaining funcs_21–23 `+0x64` stores classified as voice-handle sentinels/copy or unrelated fade floats; no mismatch writer or allocator-targeted indirect edge, but runtime legitimacy remains unproven. |
 | s948 | Exhaustive `+0x64` read inventory: five voice/sorted-node reads, one unrelated fade float, and one unresolved sound-macro context read; stack spill excluded. No mismatch or mitigation conclusion. |
+| s949 | One direct sound-macro caller (`tickAudioChannel`) passes `$s0`; its context `+0x64` feeds the `0x17C`-stride table. Six table writers were found, but channel-field provenance and read-side consumers remain unresolved. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -143,10 +151,10 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign by classifying the `soundMacroOpKeyOnNote`
-   context `+0x64` field: enumerate all callers, all `+0x64` writers for that
-   context, and the slot-indexed table's consumers. Use the s948 read inventory
-   and s947 writer inventory as static baselines.
+1. Continue the active M3 campaign by classifying the `tickAudioChannel`
+   channel-context `+0x64` field and consumers of the table at
+   `0x8013D894 + index*0x17C`; enumerate all channel-object writers/readers,
+   computed-address consumers, and companion-symbol contracts.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
@@ -158,28 +166,28 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
 
-Audit every generated `+0x64` read in funcs_21–23 and classify its consumer
-structure and contract: voice-record handle comparison/copy, unrelated fade
-state, or unresolved provenance. Cross-check the record base, slot arithmetic,
-register-indirect audio-overlay edges, and companion-symbol names. Source-only;
-do not add a guard, change game behavior, build, or run a soak.
+Audit the `tickAudioChannel` channel context around `0x8008BC10` and every
+generated use of its `+0x64` field; enumerate all computed consumers and
+writers of the table at `0x8013D894 + index*0x17C`, then cross-check companion
+symbols and the known voice table. Source-only; do not add a guard, change
+game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-stop-voices-by-handle-index-valid: all live `+0x64` reads consume the
-  composite-handle/sentinel contract established by note-on and stop paths.
-- H-stop-voices-by-handle-index-unclassified: a consumer structure or source
-  remains unresolved.
-- H-stop-voices-by-handle-index-mismatch: a `+0x64` read treats an unrelated
-  field as a voice handle or reaches an incompatible structure.
+- H-channel-context-field-valid: channel `+0x64` is a legitimate value for
+  the per-slot table and every computed consumer uses the same contract.
+- H-channel-context-field-unclassified: a writer, computed consumer, or
+  object-origin edge remains unresolved.
+- H-channel-context-field-mismatch: a channel-field writer or table consumer
+  treats `+0x64` as an incompatible field/value.
 
-Discriminating measurement: exhaustive `+0x64` read inventory, consumer
-context, record-base/slot-flow, all audio-overlay `jalr` setup, and
-companion-symbol cross-check. Voice-handle consumers throughout select valid;
-an unrelated/incompatible consumer selects mismatch; unresolved structure or
-flow selects unclassified.
+Discriminating measurement: complete channel-context `+0x64` reader/writer
+set, table address arithmetic, all computed consumers, and companion-symbol
+cross-check. Consistent field/value and table contracts select valid; an
+incompatible structure or consumer selects mismatch; any unresolved edge
+selects unclassified.
 
-Exact command: `rg -n -C 8 "MEM_W\\(ctx->r[0-9]+, 0X64\\)|lw +\\$[^,]+, 0x64\\(" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c; rg -n -C 6 "jalr|8013D880|0x17C|80086450|80086FC4" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify every read and edge. No game build or soak is planned.
+Exact commands: `rg -n -C 10 "0x8008BC10|tickAudioChannel|0X64|0x64" ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`; `rg -n -C 8 -- "-0X276C|-0x276C|-0X271C|-0x271C|0X17C|0x17C|0x8013D894|0x8013D880" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`. No game build or soak is planned.
 
 ## Closed and parked
 

@@ -59479,3 +59479,30 @@ consumers of the slot-indexed table.
 
 ORIGIN: exhaustive generated `+0x64` read inventory plus independent
 companion-symbol cross-check; no guest value mutation or mitigation.
+
+## Session 949 (2026-08-13) — sound-macro `+0x64` context is the tick-audio-channel object
+
+Performed the planned source-only M3 caller/context/table audit. No build,
+game run, soak, generated-source edit, guard, mitigation, or behavior change
+was made.
+
+The generated source contains exactly one direct call to
+`soundMacroOpKeyOnNote`, at `0x8008C1EC` inside `tickAudioChannel`, with
+`$a0=$s0`. The callee initializes its `s0` from that argument, reads
+`s0+0x64` after `startNoteOnVoice`, and stores the context field into
+`0x8013D894 + index*0x17C` (the `0x8014 - 0x276C` table). This proves the
+read is not directly supplied a voice-record pointer at the call site; it is
+an unresolved channel-context field contract.
+
+The generated `-0x276C` store inventory found six writers: one in
+`soundMacroOpKeyOnNote`, two in `freeSynthVoiceFromActiveList`, and three in
+sorted voice insertion/reuse paths. The requested literal-address search did
+not expose a direct read-side consumer for this table; computed-address
+consumers and the channel object's complete `+0x64` writer/value lifecycle
+remain open. The result selects H-sound-macro-context-unclassified.
+H-sound-macro-context-valid and H-sound-macro-context-mismatch were not
+selected. This is a single-source static result, not independent runtime
+writer/value evidence.
+
+ORIGIN: exhaustive generated caller, channel-context, `-0x276C` writer, and
+companion-symbol inventory; no guest value mutation or mitigation.
