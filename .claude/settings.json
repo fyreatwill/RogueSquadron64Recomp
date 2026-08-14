@@ -2,11 +2,13 @@
   "permissions": {
     "additionalDirectories": [
       "/Users/williambuckley/Documents/Tools/N64Recomp",
-      "/Users/williambuckley/Documents/Tools/rogue_squadron64"
+      "/Users/williambuckley/Documents/Tools/rogue_squadron64",
+      "/Users/williambuckley/Documents/Tools/rs64-oracle"
     ],
     "allow": [
       "Read(//Users/williambuckley/Documents/Tools/N64Recomp/**)",
       "Read(//Users/williambuckley/Documents/Tools/rogue_squadron64/**)",
+      "Read(//Users/williambuckley/Documents/Tools/rs64-oracle/**)",
       "Read(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
       "Edit(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
       "Write(//Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/**)",
