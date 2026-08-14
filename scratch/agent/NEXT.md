@@ -1,34 +1,33 @@
-# NEXT work unit (s1103)
+# NEXT work unit (s1104)
 
 HYPOTHESIS-ID: submit-producer-boundary
 
-Perform one bounded runtime-free call-chain audit for the two now-proven
-generated queue producers: trace the callers and loop/re-entry conditions of
-`spTaskSchedulerThread`'s send to `0x8011A818` and
-`dpInterruptHandlerThread`'s send to `0x8011A7E8`, and compare them with the
-two blocking consumer entry paths. Do not change queue behavior or build.
+Perform one bounded runtime-free audit of the remaining gate ownership for the
+two queue pairs. Trace the writers/readers of the SP task-state bytes guarding
+`spTaskSchedulerThread`'s `0x8011A818` send and the DP flag guarding
+`dpInterruptHandlerThread`'s `0x8011A7E8` send, and compare them with the
+consumer-side gates. Do not change queue behavior or build.
 
 Competing hypotheses:
 
-* H-producer-reachable: each direct send is reachable from its corresponding
-  scheduler/interrupt loop before the blocking wait can persist.
-* H-producer-gated: one or both sends are behind a state/flag branch that can
-  leave the consumer blocked despite the static producer.
-* H-producer-loop-mismatch: producer and consumer are in separate lifecycle
-  loops, so the direct sends do not service the observed waits.
+* H-gate-writer: the producer gate is written by the expected scheduler/DP
+  lifecycle and can be correlated with the consumer gate.
+* H-gate-stale: a clear/reset or missing writer can leave the producer send
+  suppressed while the consumer blocks.
+* H-gate-alias: the apparent gate is an alias/object field, so its ownership
+  cannot be assigned from the fixed-address census.
 
-Discriminator: for each queue, produce a bounded call/branch table from its
-producer entry to the send and from the consumer entry to its blocking recv.
-An unconditional or positively dominated producer path in the same active
-loop selects H-producer-reachable; a flag/branch that can skip the send selects
-H-producer-gated; distinct lifecycle ownership with no common activation path
-selects H-producer-loop-mismatch. Computed calls must name their exact target
-boundary rather than infer reachability.
+Discriminator: for each gate, enumerate every generated read and write and
+the controlling lifecycle branch. A same-lifecycle writer/read selects
+H-gate-writer; a clear without a matching set or an independently stale flag
+selects H-gate-stale; an object/index-derived access selects H-gate-alias.
+Computed calls must name their exact target boundary rather than infer
+reachability.
 
 Exact commands:
 
 ```sh
-rg -n -C 8 "spTaskSchedulerThread|dpInterruptHandlerThread|waitForPostSwapAck|osRecvMesg_recomp|0x80019F1C|0x8001C3D8|0x8000C0B4|0x8000C2B8" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs docs/game-architecture.md
-rg -n -C 5 "jal.*spTaskSchedulerThread|jal.*dpInterruptHandlerThread|func_80019F|func_8001C3|func_8000C0|func_8000C2" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+rg -n -C 8 "0x8011A89D|0x8011A89E|0x80019ED4|0x80019EE4|0x8001C3C4|0x8000C0A4|0x8000C2A8" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs docs/game-architecture.md
+rg -n -C 5 "MEM_[BWL].*(5762|5763|5764|72BC|72C0|72C4|72C8|72CC)|lbu.*(5762|5763|5764|72BC|72C0|72C4|72C8|72CC)|sb.*(5762|5763|5764|72BC|72C0|72C4|72C8|72CC)" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
 git diff --check
 ```

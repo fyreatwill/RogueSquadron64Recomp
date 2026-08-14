@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1102 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1103 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -291,15 +291,19 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1100 | Batched phase-gated host trace passed VI-1024 and 413 positive E9 provenance rows. SP registered and completed on `0x8011A420` with message `0x80128C70`; DP registered and completed on `0x8011A408` with message `0`. Both pairs fired repeatedly and matched internally, but neither target is the blocking consumer pair `0x8011A818`/`0x8011A7E8`. Selects wrong-target/unwired SP and DP routes, rules out missing host completion calls, and supersedes s1099's unresolved registration mapping. |
 | s1101 | Bounded generated-source audit enumerated all five `osSetEventMesg` calls. SP event 4 registers `D_8011A420`, which is directly created with count 8; the same scheduler then separately creates/uses `D_8011A818`. DP event 9 registers `D_8011A408`, directly created with count 1; its handler separately creates `D_8011A7E8`, the blocking `waitForPostSwapAck` queue. The two address pairs differ by `0x3F8` and `0x3E0`, have separate data symbols, and no pointer-mediated alias was found. Selects static `H-real-mismatch`/role-separation, while the non-generated producer or forwarding boundary remains open; no build or runtime code changed. |
 | s1102 | Complete static census of 44 generated `osSendMesg` and 2 `osJamMesg` sites found direct sends to both blocking queues: `spTaskSchedulerThread` at `0x80019F1C` computes `0x80120000-0x57E8 = 0x8011A818`, and `dpInterruptHandlerThread` at `0x8001C3CC` computes `0x80120000-0x5818 = 0x8011A7E8`. All other sites are unrelated fixed queues or computed object/argument queues. Host completion remains dynamic through `events_context.sp/.dp` and has no hard-coded target. This selects static `H-game-producer`/role-separation and rules out `H-host-boundary` and `H-unwired` for producer existence; execution reachability and lifecycle gating remain open. No build, runtime code, or queue behavior changed. |
+| s1103 | Bounded producer/consumer branch audit found both direct sends are conditionally gated within their persistent producer loops: SP `0x80019F1C` is reached only through task-state branches at `0x80019ED4/0x80019EE4` (with an alternate gated send at `0x80019F40`), and DP `0x8001C3D8` requires nonzero flag byte `0x8011A89D`. The blocking consumers are likewise conditional at `0x8000C0A4` (SP) and `0x8000C2A8` (DP). This selects `H-producer-gated`, rules out unconditional reachability and lifecycle absence, and leaves gate ownership/value open. No build, runtime code, or queue behavior changed. |
 
 ## Ranked next steps
 
 1. Audit the producer/consumer call and branch reachability for the direct
    `0x8011A818` and `0x8011A7E8` sends; distinguish reachable, gated, and
    lifecycle-mismatched paths without changing queue behavior.
-2. Keep M4 parked unless an independent ground-truth path or a new complete
+2. Audit writers/readers and clear/set ownership for the SP/DP gate bytes found
+   in s1103; distinguish stale flags from expected lifecycle gating without
+   changing queue behavior.
+3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
-3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
+4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
    omission only when a reproducible lead appears; preserve delete-before-
    regen ordering and audit fixup counts.
 

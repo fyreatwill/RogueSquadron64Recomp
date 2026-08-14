@@ -63068,3 +63068,14 @@ questions. No build, runtime code, queue behavior, or mitigation changed.
 
 ORIGIN: generated queue-call census and host completion source audit; this is
 an ownership/reachability classification, not a mitigation.
+## Session 1103 (2026-08-14) — audited queue producer and consumer gates
+
+Ran the planned bounded, runtime-free call-chain audit; no build or run was
+needed. `spTaskSchedulerThread` sends to `0x8011A818` at `0x80019F1C`, but the
+send is selected only by task-state branches at `0x80019ED4/0x80019EE4`, with
+an alternate state-gated send at `0x80019F40`. `dpInterruptHandlerThread`
+sends to `0x8011A7E8` at `0x8001C3D8` only when its flag byte at `0x8011A89D`
+is nonzero. The blocking consumers are also branch-gated: SP at
+`0x8000C0A4`, DP at `0x8000C2A8`. This selects `H-producer-gated` and rules
+out absent direct producers and a purely separate lifecycle. It does not
+classify who writes or clears the gate bytes.
