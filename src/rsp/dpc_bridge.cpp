@@ -411,7 +411,7 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage) {
     }();
     if (!enabled) return;
     static uint32_t lines = 0;
-    if (lines++ >= 512) return;
+    if (lines++ >= 2048) return;
     auto *rsp = static_cast<RSP *>(opaque);
     fprintf(stderr, "[m4-accum] task=%u phase=%u stage=%u", g_e9prov.task,
             rs64_phase_ord(), stage);

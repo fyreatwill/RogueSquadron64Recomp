@@ -61517,3 +61517,22 @@ not select accumulator saturation, ordinary `v4`/`v0` arithmetic, or VGE
 selection. ORIGIN: the `0x8000` control values are produced by the independent
 VMADH positive-control record, not by the live shade endpoint; they are not a
 legitimate explanation for the zero-shade sentinel.
+
+## Session 1026 (2026-08-14) — extended M4 accumulator capture remained controlled null
+
+Raised the phase-scoped `rs64_m4_accum_probe` cap from 512 to 2048 and built
+the executable successfully. Ran the corrected same-build LLE-only recipe
+with the full phase-relative key schedule. The harness captured 155 frames and
+returned success; VI-1024 was reached, 14 input edges were delivered, and the
+probe logged 598 exact stage-1 positive-control rows plus 484 stage-10, 483
+stage-11, and 483 stage-12 rows, yielding 161 complete triplets.
+
+Across the complete M4 rows, no `v6`, `v29`, `acch`, or `accm` field contained
+`0x8000`. The 44 rows containing `0x8000` had it only in `accl`, including
+stage-10/11 low-half values; none was the tested shade endpoint. The larger
+budget therefore produces a valid, controlled null and does not select
+accumulator saturation, ordinary `v4`/`v0` arithmetic, or VGE selection. It
+does rule out the prior concern that the 512 cap alone prevented useful
+sampling. No mitigation was added. ORIGIN: the observed low-half `accl`
+endpoint is an accumulator field from the live probe, but it is not the
+post-VMADH shade `v6`/high-half sentinel under test.

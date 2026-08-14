@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1025 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1026 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
@@ -49,6 +49,13 @@ The corrected same-build LLE arm reached VI-1024, logged 14 input edges and
 triplets. Every stage-12 v6 matched stage-11 v6; the only two 0x8000 values
 were unrelated stage-1 accl fields, and no shade v6 endpoint was created.
 The numeric hypotheses remain unevaluable.
+s1026 raised the same phase-scoped cap to 2048 and repeated the corrected LLE
+recipe. VI-1024, 14 input edges, 598 stage-1 controls, and 161 complete M4
+triplets all passed. No M4 `v6`, `v29`, `acch`, or `accm` field contained
+0x8000; 44 rows contained it only in `accl`, outside the tested endpoint.
+The larger budget therefore remains a controlled null, not a numeric
+classification. The next capture must budget the stage-1 control separately
+so later M4 tasks are sampled.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -267,14 +274,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1023 | Offline pairing of the valid capture found 19 stage-1 controls, 25 complete M4 triplets, and one trailing stage-10/11 pair. Stage-12 `v6` equaled stage-11 `v6` in all complete triplets; zero lanes also equaled stage-11 `v29`, but no M4 field contained `0x8000`. The live control's two `0x8000` values were unrelated `accl` fields, so saturation, ordinary arithmetic, and VGE selection remain unevaluable. |
 | s1024 | Raised the M4 row cap from 96 to 512 and rebuilt. The first two recipes were invalid (phase-stop and abbreviated schedule); the final full schedule reached VI-1024 and logged input edges but produced no stage-1 or M4 rows. Numeric hypotheses remain unevaluable; no mitigation. |
 | s1025 | The no-LLE recipe reproduced the zero-row configuration failure. The corrected LLE arm passed VI-1024, input, and stage-1 controls and produced 124 complete M4 triplets. All stage-12 v6 values matched stage-11 v6; no shade field reached 0x8000, so the numeric hypotheses remain unevaluable. |
+| s1026 | A 2048-row corrected LLE capture passed VI/input/stage-1 controls and produced 161 complete M4 triplets. No tested shade/accumulator endpoint reached 0x8000; only low `accl` fields did. Numeric hypotheses remain unevaluable. |
 
 ## Ranked backlog
 
-1. Extend the now-valid LLE M4 capture to a 2048-row phase-scoped budget,
-   retaining the full phase-relative input schedule and simultaneous
-   input/DPC/M4 logging. First prove VI-1024 and the stage-1 control; then
-   pair stage-10/11/12 rows and test whether a later task produces a shade
-   `0x8000` endpoint.
+1. Separate the stage-1 positive-control budget from the M4-row budget, keeping
+   the same corrected LLE recipe and logging. Prove VI-1024/input/stage-1,
+   then sample at least 2048 M4 rows from later tasks and pair stage-10/11/12
+   rows for a shade `0x8000` endpoint; do not repeat the shared-cap null.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
