@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s955 (2026-08-13). The active blocker is authoritative
+Reviewed through s956 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -173,6 +173,12 @@ closed; M3 work is limited to systematic idiom-class audits.
   PIF tracing showed injected controller-state changes without reaching the
   required later phase. The table watch had zero hits and is phase-unevaluable,
   not evidence against any callback writer hypothesis.
+- s956 repeated the documented named-`start` oracle schedule for 90 seconds
+  with whole-RDRAM, VI, PIF, and callback-table watches. The positive control
+  fired 15,068,831 times and 5,399 VI frames ran, but VI remained width 320;
+  the callback-table watch had zero hits. All 11 `sym=40` injections were
+  logged, with no PIF transition. This remains phase-unevaluable and points
+  the next probe at the input/phase path, not callback-table legitimacy.
 
 ## Recent evidence ledger
 
@@ -205,6 +211,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s953 | Audited all 144 direct callers in 72 generated functions: frame entry/restore is structurally balanced and no non-frame `$sp` writer exists; eight callers retain indirect-call targets as the unresolved shared-context branch. No guard or mitigation. |
 | s954 | Audited all indirect targets in the eight callers: 26 statically addressed targets are frame-balanced or leaf functions; the `runInMissionFrame` callback table at `0x8010B350` remains runtime-driven and unresolved. No guard or mitigation. |
 | s955 | Retail oracle positive control passed (15.1M whole-RDRAM writes), but VI stayed 320 and callback-table writes were zero; PIF/input checks did not reach the required phase. Callback writer hypotheses remain unclassified. |
+| s956 | Named-`start` schedule delivered all 11 presses; positive control passed (15,068,831 whole-RDRAM writes), but 5,399 frames stayed at VI 320 and callback-table writes remained zero. No PIF transition was logged; phase remains unevaluable. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -222,9 +229,10 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Repair/validate the retail-oracle input/phase recipe before retrying the
-   `0x8010B350` callback-table watch; require a positive Start/PIF control and
-   VI transition beyond 320 in the same run.
+3. Run same-iteration undriven and named-`start` oracle controls with
+   `--vi-poll` plus `--vi-trace`/`--pif-trace` and whole-RDRAM watches. Establish
+   whether the driven arm changes PIF state or VI beyond 320 before retrying
+   the `0x8010B350` callback-table watch.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if

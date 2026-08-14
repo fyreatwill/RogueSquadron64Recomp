@@ -59705,3 +59705,23 @@ change was made. Captures: `scratch/agent/oracle_results/s955_callback_table/`.
 
 ORIGIN: retail oracle physical watch plus whole-RDRAM positive control and
 PIF/VI traces; no guest value mutation or mitigation was landed.
+
+## Session 956 (2026-08-13) — named-start oracle schedule still phase-unevaluable
+
+Performed the planned retail-oracle phase validation with the documented
+named-`start` schedule, whole-RDRAM write positive control, callback-table
+watch at physical `0x0010B350–0x0010B750`, VI trace, and PIF trace. The run
+completed 90 seconds / 5,399 VI frames. The whole-RDRAM control fired
+15,068,831 times, proving the debugger/watch path was live. All 11 scheduled
+presses were logged as `sym=40`, but VI never advanced beyond width 320 and no
+PIF trace transition was emitted. The callback-table watch had zero hits.
+
+This rules out a dead watch or an absent emulator run, but it does not rule out
+callback-table writes: the required mission phase was not reached. The current
+input/phase failure remains unresolved; next run must compare undriven and
+driven controls with an independent `--vi-poll` signal before retrying the
+table watch. No build, generated-source edit, guard, mitigation, or behavior
+change was made. Capture: `scratch/agent/oracle_results/s956_callback_phase/`.
+
+ORIGIN: retail oracle whole-RDRAM positive control, named-input delivery log,
+and VI/PIF traces; no guest value mutation or mitigation was landed.
