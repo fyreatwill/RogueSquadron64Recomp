@@ -59725,3 +59725,27 @@ change was made. Capture: `scratch/agent/oracle_results/s956_callback_phase/`.
 
 ORIGIN: retail oracle whole-RDRAM positive control, named-input delivery log,
 and VI/PIF traces; no guest value mutation or mitigation was landed.
+
+## Session 957 (2026-08-13) — paired oracle phase control remains at VI 320
+
+Ran the prescribed undriven and named-`start` retail-oracle arms concurrently
+for 60 seconds. Both used a whole-RDRAM write watch, `--vi-poll`,
+`--vi-trace`, and `--pif-trace`; no build or runtime change was made. The
+undriven arm recorded 10,120,336 whole-RDRAM hits and the driven arm recorded
+10,146,403, passing the positive control in both arms. The driven arm logged
+all 11 scheduled `sym=40` presses. Nevertheless, both arms stayed at VI width
+320 with origin `0x006dd280` for the run, and neither log contained a PIF-trace
+record. Both processes exited cleanly.
+
+This rules out a dead oracle/watch process and proves the press scheduler
+fires, but it does not establish that the game accepted Start or reached the
+callback-table phase. The result selects the core/setup phase hypothesis for
+this configuration over a driven-versus-undriven phase difference. The
+callback-table watch remains unevaluable. The next probe checks the actual
+config/input-plugin path and repeats the phase control without the unsupported
+`--configdir` argument.
+
+Captures: `scratch/agent/oracle_results/s957_oracle_phase/`.
+
+ORIGIN: retail oracle paired whole-RDRAM controls, VI polling, press delivery
+records, and PIF tracing; no guest value mutation or mitigation was landed.

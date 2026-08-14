@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s956 (2026-08-13). The active blocker is authoritative
+Reviewed through s957 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -179,6 +179,12 @@ closed; M3 work is limited to systematic idiom-class audits.
   the callback-table watch had zero hits. All 11 `sym=40` injections were
   logged, with no PIF transition. This remains phase-unevaluable and points
   the next probe at the input/phase path, not callback-table legitimacy.
+- s957 ran undriven and named-`start` retail-oracle arms concurrently for 60
+  seconds with whole-RDRAM controls, VI polling, and PIF tracing. Controls
+  passed (10,120,336 and 10,146,403 hits); driven delivered all 11 `sym=40`
+  presses, but both arms stayed at VI width 320/origin `0x006dd280`, with no
+  PIF-trace records. This selects the core/setup phase hypothesis for this
+  oracle configuration; callback-table zeros remain phase-unevaluable.
 
 ## Recent evidence ledger
 
@@ -212,6 +218,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s954 | Audited all indirect targets in the eight callers: 26 statically addressed targets are frame-balanced or leaf functions; the `runInMissionFrame` callback table at `0x8010B350` remains runtime-driven and unresolved. No guard or mitigation. |
 | s955 | Retail oracle positive control passed (15.1M whole-RDRAM writes), but VI stayed 320 and callback-table writes were zero; PIF/input checks did not reach the required phase. Callback writer hypotheses remain unclassified. |
 | s956 | Named-`start` schedule delivered all 11 presses; positive control passed (15,068,831 whole-RDRAM writes), but 5,399 frames stayed at VI 320 and callback-table writes remained zero. No PIF transition was logged; phase remains unevaluable. |
+| s957 | Concurrent undriven/driven controls both passed (10,120,336/10,146,403 whole-RDRAM writes); driven delivered 11 presses, but both stayed at VI 320/origin `0x006dd280` with no PIF trace. Core/setup phase remains selected; callback-table watch is unevaluable. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -229,10 +236,11 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Run same-iteration undriven and named-`start` oracle controls with
-   `--vi-poll` plus `--vi-trace`/`--pif-trace` and whole-RDRAM watches. Establish
-   whether the driven arm changes PIF state or VI beyond 320 before retrying
-   the `0x8010B350` callback-table watch.
+3. Resolve the oracle configuration/phase discrepancy before retrying the
+   callback-table watch: the documented schedule should reach VI 1024, but
+   s957's named-button arm stayed at VI 320 despite 11 delivered presses.
+   Check the actual input plugin/config path and rerun a short undriven/driven
+   phase control without the unsupported `--configdir` argument.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -242,36 +250,34 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-The retail oracle callback-table watch was phase-unevaluable: its whole-RDRAM
-positive control passed, but VI remained 320 and the input recipe did not prove
-the required Start transition. First validate the oracle's input/phase path;
-do not interpret a callback-table null until VI has crossed 320 in that same
-run.
+Audit the oracle's actual config/input-plugin path, then run a bounded 30-second
+undriven versus named-`start` phase control without `--configdir`. The current
+run proved the watch and press scheduler, but contradicted the documented phase
+timeline, so callback-table nulls remain uninterpretable.
 
 Competing hypotheses:
 
-- H-slotdispatcheriter-stacksp-indirect-corruption: an indirect target writes
-  or fails to restore the shared guest `$sp`.
-- H-slotdispatcheriter-stacksp-indirect-balanced: all indirect targets
-  preserve the context, leaving no caller-side writer.
-- H-slotdispatcheriter-stacksp-stub-artifact: an indirect target is a known
-  degenerate stub and is the corruption origin.
-- H-slotdispatcheriter-stacksp-unclassified: target provenance or mutation
-  remains unresolved.
+- H-oracle-config-path: `--configdir` is ignored or the selected input plugin
+  is using a different mapping/config than the documented setup.
+- H-oracle-core-phase: the configured core/RSP/setup genuinely remains at VI
+  320 despite accepted button injections.
+- H-oracle-timeline: the exact recipe progresses only after a longer emulated
+  interval, so 30 seconds is insufficient.
 
-Discriminating measurement: complete generated-source inventory of the eight
-indirect target addresses and their target bodies' `ctx->r29` writes, with
-companion-symbol cross-checks. An incorrect target-side `$sp` write selects
-indirect-corruption; balanced targets select indirect-balanced; a known stub
-target selects stub-artifact; anything unresolved selects unclassified.
+Discriminating measurement: command help/config inspection plus paired 30-second
+runs using named `start`, whole-RDRAM watch, `--vi-poll`, and `--pif-trace`.
+An actual config-path/input-map discrepancy selects config-path; VI >320 in
+the corrected arm selects the stale-config explanation; both arms at VI 320
+with the documented plugin path selects core/setup; a late transition only in
+the longer control selects timeline.
 
 Exact starting commands:
 
-`rg -n "LOOKUP_FUNC|jalr" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+`rg -n "Input-SDL-Control1|Start|plugin" /Users/williambuckley/Documents/Tools/rs64-oracle/cfg`
 
-`rg -n "ctx->r29\\s*=" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 30 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --pif-trace > scratch/agent/oracle_results/s958_oracle_phase/undriven.log 2>&1`
 
-Cross-check every indirect target against `funcs.h` and the companion map.
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 30 --watch-write 0x0:0x800000 --hit-cap 200 --vi-poll --pif-trace --press 6:start,11:start,16:start,21:start,26:start > scratch/agent/oracle_results/s958_oracle_phase/driven.log 2>&1`
 
 ## Closed and parked
 
