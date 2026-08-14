@@ -62729,6 +62729,27 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1091 (2026-08-14) — bracketed the retail branch-delay boundary
+
+The first invocation was allowed to complete but its terminal output detached
+from the tool response before the summary was collected. The same predeclared
+capture was rerun with output redirected to `scratch/agent/oracle_s1091.log`.
+The established eleven-Start schedule passed the whole-RDRAM positive control
+with 10,003 callbacks, all eleven Start presses were delivered in PIF reads,
+and the run completed 7,204 VI frames at width 320/origin `0x006dd280`. The
+mission-state watch was silent. Execution hits were
+`0x8006D900=1`, `0x8006D9B0=1`, `0x8006D9B4=1`, while
+`0x8006D9B8=0`, `0x8006D9BC=0`, all eight post-loop PCs, the four existing
+milestones, continuation, and gate were zero. This selects single-source
+`H-branch-delay-boundary`: the branch PC is reached but neither the watched
+delay slot nor the first sequential instruction is reported. It leaves open
+whether the debugger callback omits a MIPS delay-slot execution or the branch
+target returns to the loop before the later body. No mitigation or game-data
+change was made.
+
+ORIGIN: retail ROM debugger execution callbacks and independent whole-RDRAM/PIF/VI
+positive controls; no mitigation or game-data change was made.
+
 ## Session 1090 (2026-08-14) — narrowed the retail loop-exit boundary
 
 The first planned command failed before emulation because the retail-oracle

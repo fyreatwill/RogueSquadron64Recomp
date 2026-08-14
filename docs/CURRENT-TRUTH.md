@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1089 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1091 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -37,10 +37,11 @@ compact and records only live conclusions, boundaries, and next work.
   The s1090 dense bracket reached `0x8006D9B0` once, but none of the post-loop
   PCs `0x8006D9C0`, `0x8006D9D0`, `0x8006D9E0`, `0x8006D9F0`, `0x8006DA10`,
   `0x8006DA30`, `0x8006DA50`, or `0x8006DA70` fired; continuation, gate, and
-  later milestones remained silent. This selects single-source
-  `H-loop-exit-path`: the retail callee reaches the loop-boundary compare but
-  does not execute the first post-loop instruction. The branch/delay-slot
-  boundary remains open.
+  later milestones remained silent. The s1091 branch bracket then hit
+  `0x8006D9B4` once while `0x8006D9B8` and `0x8006D9BC` stayed silent. This
+  selects single-source `H-branch-delay-boundary`; whether the PC callback
+  omits a MIPS delay-slot execution or the retail path branches back before
+  the later body remains open.
 
 ## Retail oracle boundary
 
@@ -232,17 +233,18 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1088 | Ran the bracketed retail execution capture with entry `0x8006D900`, continuation `0x8003E018`, and gate `0x8003E07C`. Whole-RDRAM reached 10,001 callbacks, all eleven PIF Start presses arrived, and VI reached 7,197 at width 320/origin `0x006dd280`; hits were `1/0/0`, and the mission-state block was silent. Selects single-source `H-callee-does-not-return`; the exact internal loop/subcall boundary remains open. |
 | s1089 | Ran the established eleven-Start retail-oracle capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, and four internal milestone watches. Controls were positive: whole-RDRAM reached 10,002 callbacks, PIF delivered all eleven presses, and VI reached 7,205 at width 320/origin `0x006dd280`. PC hits were `0x8006D900=1`, `0x8006D9B0=1`, and `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, `0x8003E07C=0`; the mission-state block was silent. Selects single-source `H-save-tail-boundary`: the callee reaches the first internal milestone but not the save/load-tail milestones. It rules out callee non-entry and a failed positive-control/watch setup, but does not identify the subcall or loop body that blocks before `0x8006DA7C`. |
 | s1090 | Rebuilt the retail oracle after increasing watch capacity from 16 to 24 (the planned 17-watch discriminator otherwise failed before emulation), then ran the established eleven-Start capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, four milestones, and eight post-loop bracket PCs. Controls were positive: whole-RDRAM reached 10,002 callbacks, PIF delivered all eleven presses, and VI reached 7,199 at width 320/origin `0x006dd280`; the mission-state block was silent. Hits were `0x8006D900=1`, `0x8006D9B0=1`, all eight post-loop PCs `=0`, `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and `0x8003E07C=0`. Selects single-source `H-loop-exit-path`: the callee reaches the loop-boundary compare but not `0x8006D9C0`; the exact branch/delay-slot boundary remains open. |
+| s1091 | Ran the established eleven-Start retail-oracle capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, four milestones, eight post-loop PCs, and three branch-region PCs. Controls were positive: whole-RDRAM reached 10,003 callbacks, PIF delivered all eleven presses, and VI reached 7,204 at width 320/origin `0x006dd280`; the mission-state block was silent. Hits were `0x8006D900=1`, `0x8006D9B0=1`, `0x8006D9B4=1`, while `0x8006D9B8=0`, `0x8006D9BC=0`, all eight post-loop PCs `=0`, `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and `0x8003E07C=0`. Selects single-source `H-branch-delay-boundary`; the remaining distinction is oracle delay-slot callback behavior versus a taken branch target. |
 
 ## Ranked next steps
 
-1. Use one established retail-oracle capture with the same controls and watch
-   `0x8006D9B4` (branch), `0x8006D9B8` (branch delay slot), and `0x8006D9BC`
-   (first sequential instruction) immediately after positive
-   `0x8006D9B0`. Keep the existing entry/continuation/gate, four milestone,
-   and post-loop watches. A 9B4/9B8 hit selects the branch/delay boundary; a
-   9BC hit selects a watch gap or later control-flow explanation; all three
-   silent repeats the exit-path boundary. Do not arm a freelist watch without
-   an independently observed `0x6abxxx` hangar-origin 512 transition.
+1. Resolve the selected branch/delay boundary with one established
+   retail-oracle capture retaining the positive controls and existing PC set,
+   adding the statically identified branch target `0x8006D980` and nearby loop
+   instructions. Compare target hits against `0x8006D9B4`, `0x8006D9B8`, and
+   `0x8006D9BC`; a target hit with 9B4 and no 9B8/9BC selects a taken-branch
+   or PC-callback boundary, while a 9BC hit reopens the watch-gap arm. Do not
+   arm a freelist watch without an independently observed `0x6abxxx`
+   hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
