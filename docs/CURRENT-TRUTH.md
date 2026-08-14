@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s938 (2026-08-13). The active blocker is authoritative
+Reviewed through s939 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -61,6 +61,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s925–s937 | Audio filter/mixer/voice idioms were audited; see PROJECT-OVERVIEW §30. s935 rejected a shared attack-helper contract; s937 structurally passed `musyxStopVoice` but left runtime index/base legitimacy open. |
 | s936 | Maintenance pass: compacted this file and migrated durable s925–s935 outcomes to PROJECT-OVERVIEW. No experiment ran. |
 | s938 | `stopVoiceByKey` has one direct streamed-voice caller and coherent local index arithmetic; base/count and active-list legitimacy remain open. |
+| s939 | `stopVoicesByHandle` has four direct callers in two song-list walks; handle lookup and termination are coherent, but the node `+0xC` to 8-bit voice-index contract and voice-table lifecycle remain unproven. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -68,9 +69,10 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign with a complete `stopVoicesByHandle`
-   caller/callee contract audit at `0x8008DA98`, including every generated
-   caller, list-node derivation, access range, and termination path.
+1. Continue the active M3 campaign with a bounded voice-record base/count
+   lifecycle audit for `stopVoicesByHandle` (`0x8008DA98`): enumerate every
+   writer and initializer of the record base, voice count, record handle
+   fields, and sentinel values used by its `0x17C`-stride scan.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
@@ -82,32 +84,31 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
 
-Audit the complete `stopVoicesByHandle` idiom at `0x8008DA98` in
-`../N64Recomp/RecompiledFuncs/funcs_23.c`, including every generated caller,
-handle-to-list-node derivation, list and voice-record accesses, helper edges,
-state writes, existing guard coverage, and termination paths. Source-only; do
-not add a guard, change game behavior, build, or run a soak.
+Audit the voice-record base/count lifecycle consumed by `stopVoicesByHandle`
+at `0x8008DA98`: enumerate every generated writer/initializer of the record
+base at `0x8013D880`, the voice count at `0x80141AD0`, record handle fields at
+`base + index*0x17C + 0x64`, and the `-1` sentinel used by the scan. Include
+all callers/helpers that establish or invalidate those values and the
+companion symbol/decomp evidence. Source-only; do not add a guard, change
+game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-stop-voices-by-handle-unclassified: a handle resolves to an invalid list
-  node/voice pointer or escapes a terminated list walk.
-- H-stop-voices-by-handle-classified: callers and list logic agree on one
-  bounded handle/node contract and every termination path is covered.
-- H-stop-voices-by-handle-shape-mismatch: callers use distinct handle, node, or
-  voice-record contracts that are not translated consistently.
+- H-stop-voices-by-handle-lifecycle-valid: initialization and all writers prove
+  a bounded count, valid base, in-range node index, and a reachable `-1`
+  sentinel for every scan.
+- H-stop-voices-by-handle-lifecycle-unclassified: the local arithmetic is
+  coherent, but base/count/index or sentinel legitimacy is not proven.
+- H-stop-voices-by-handle-lifecycle-mismatch: different writers or helpers use
+  incompatible bases, strides, counts, handle offsets, or sentinel meanings.
 
-Discriminating measurement: enumerate every reference and caller register
-setup, inspect the complete callee and all state/list accesses, derive every
-address range and termination path, classify every helper edge, and
-cross-check `main_overlay.txt` plus the related `stopVoiceByHandle` contract.
-Any handle/node/voice-pointer split, uncovered derived access, or unproven
-termination path rejects classification.
+Discriminating measurement: an exhaustive generated-source reference inventory
+for the four lifecycle addresses/fields, with each writer's phase and range,
+plus decomp-symbol cross-check. Any writer that can produce an out-of-range
+index/base, any incompatible field contract, or any unproven sentinel path
+selects unclassified/mismatch; otherwise the lifecycle is classified.
 
-Exact command:
-`rg -n -C 12 "stopVoicesByHandle|8008DA98|8DA98" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`,
-then inspect the complete helper and every caller. No game build or soak is
-planned.
+Exact command: `rg -n -C 8 "8013D880|80141AD0|0x64|0x17C|0x2780|0x271C|0x2770|0x276C|0x2768|0x2758" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each writer and lifecycle edge. No game build or soak is planned.
 
 ## Closed and parked
 

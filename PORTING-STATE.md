@@ -59165,3 +59165,44 @@ runtime writer/value evidence was claimed.
 ORIGIN: complete generated caller/callee, register-provenance, index
 arithmetic, access-range, helper-edge, guard-coverage, termination, and
 companion-symbol inventory; no guest value mutation or mitigation.
+
+## Session 939 (2026-08-13) — `stopVoicesByHandle` has coherent lookup but unproven voice-index lifecycle
+
+Performed the planned source-only M3 idiom audit of `stopVoicesByHandle`
+(`0x8008DA98`) in `../N64Recomp/RecompiledFuncs/funcs_23.c`. Enumerated every
+generated caller, caller register setup, handle-list derivation, voice-record
+access, helper edge, state write, existing guard coverage, and termination
+path, and cross-checked `main_overlay.txt`. No build, game run, soak, generated
+source edit, guard, mitigation, or behavior change was made.
+
+The generated tree contains exactly four direct calls, all in the song code:
+two in `stopSongByHandle` (`0x8009590C`, `0x80095930`) and two in
+`tickSongSequence` (`0x80095BBC`, `0x80095BE0`). Each caller loads `$a0` from
+linked-list node field `+0x8`, then advances the same list through node field
+`+0x0`; the two heads are song record fields `+0xE78` and `+0xE7C`. No other
+direct call or literal reference was found; register-indirect calls cannot be
+excluded by this source search.
+
+The callee treats `-1` as a no-op, walks the sorted handle list rooted at
+`0x8013AE00` (`0x80140000-0x5100`), compares node `+0x8`, and obtains a slot
+index from node `+0xC`. It truncates that value to eight bits, computes
+`index * 0x17C`, and uses the voice-record table rooted at `0x8013D880`
+(`0x80140000-0x2780`). It checks record `+0x64` against the original handle,
+conditionally calls `freeSynthVoiceFromActiveList(record)`, resets record
+fields `+0x64`, `+0x0`, `+0x2E`, and `+0x28`, calls
+`beginVoiceFadeRelease(index)`, then advances by the next table entry's
+`+0x10` handle until that field equals `-1`. All local branches terminate,
+and the helper edges have been classified structurally.
+
+The result rejects full classification. The source does not prove that node
+`+0xC` is always an in-range voice index before the eight-bit truncation, that
+the record base and voice count lifecycle are compatible, or that the `-1`
+sentinel is reachable and legitimate for every scan. The shape-mismatch
+hypothesis is not selected for the four direct callers: their handle/list
+contract is consistent. This is a single-source static result from generated
+code and companion symbol metadata; it is not independent runtime writer/value
+evidence.
+
+ORIGIN: complete generated caller/callee, list-node and index provenance,
+derived access ranges, helper edges, guard coverage, termination, and
+companion-symbol inventory; no value mutation or mitigation.
