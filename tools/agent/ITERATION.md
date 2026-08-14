@@ -95,6 +95,14 @@ CURRENT-TRUTH "Next steps" (or NEXT.md if present). Before building anything:
    single iteration could have shown. Build the arms, run them concurrently
    (one game instance uses ~50% of one core), report the comparison in this
    session's entry.
+14. A DIAGNOSTIC FIELD IS NOT A WORK UNIT. Threading one join key / counter /
+   ordinal per iteration - and concluding "still X-shaped, the individual
+   source remains open" - is churn, not a sweep: the discriminator never
+   moves (s1003-s1006 burned six iterations this way). Design the WHOLE
+   discriminating table (all keys) in ONE instrument, ONE build, ONE run. A
+   diagnostic-only iteration that selects nothing is not ADVANCED-worthy; the
+   Stop gate flags it. If the measurement cannot discriminate, stop adding
+   fields and re-read docs/F5-UCODE-REFERENCE.md or the oracle.
 
 ## Ground truth that is not our runtime
 - `tools/oracle/README.md` - runs the RETAIL ROM under mupen64plus with memory
