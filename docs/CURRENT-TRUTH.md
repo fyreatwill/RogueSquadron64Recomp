@@ -221,6 +221,13 @@ in the ledger. Reviewed through s1165 (2026-08-14).
   s1164 crash capture, this supports H3, nondeterministic pre-1024 reachability,
   and shows wild-width skips alone do not discriminate the crash cause. H1/H2
   remains unevaluable; no mitigation was added.
+- The s1166 resource-marker capture passed slot-dispatch (8,192), writeback
+  control (57), and crash controls. It recorded no `[rt64-alloc]` marker and
+  no `copyToRAM` fault; instead it hit an Apple Metal compiler-cache SIGSEGV
+  at guest PC `0x8000B650` before VI 1024, after 30 wild-width and 4 OOB
+  writeback skips. Together with s1165's controlled stable arm, this advances
+  H3: no RT64 resource marker precedes the pre-1024 failure family, and
+  writeback skips alone do not select H2. No mitigation was added.
 
 ## Retail VI descriptor boundary
 
@@ -357,16 +364,15 @@ corruption.
 | s1163 | Rebuilt and ran the phase-gated runtime-origin capture with slot-dispatch and stack-guard controls. Slot dispatch produced 8,192 bounded entries through phase 6, but the run stayed in `640→2→640` for 209 seconds and was SIGKILLed after no VI-1024 transition; stack-guard and crash rows were zero. The planned writer-origin discriminator was unevaluable, so no H1/H2/H3 conclusion or mitigation is justified. |
 | s1164 | Rebuilt and reran the runtime-origin capture. Slot-dispatch and crash controls were live (8,192 dispatch entries and 36 crash rows), but VI 1024 was not reached; the process terminated in RT64 `copyToRAM` at guest PC `0x8000B650` with `si_addr=0x11ffbc000`, after wild-width writeback skips, and no slot-SP guard row. The writer-origin discriminator remains unevaluable; no H1/H2/H3 conclusion or mitigation is justified. |
 | s1165 | Rebuilt and ran the pre-1024 writeback reachability capture. Slot dispatch logged 8,192 entries; writeback control logged 25 rows including 32 wild-width skips, with zero overlaps and zero crashes. The process stayed in 640→2→640 beyond the 600-second cap and was SIGKILLed. Compared with s1164, this supports nondeterministic reachability (H3) and shows wild skips alone do not classify the crash; no mitigation was added. |
+| s1166 | Rebuilt and ran the resource-marker capture with slot, writeback, crash, and RT64-allocation controls. All controls passed; there were no RT64-allocation markers and no `copyToRAM` fault. The run instead hit an Apple Metal compiler-cache SIGSEGV at guest PC `0x8000B650` before VI-1024, after 30 wild-width and 4 OOB skips. Together with s1165, this advances H3 and closes the resource-marker audit; no mitigation was added. |
 
 ## Ranked next steps
 
-1. Perform one bounded, phase-gated source audit of the pre-1024 `copyToRAM`
-   crash family, using the existing `[ost-wb]` controls plus RT64 resource
-   failure markers. The s1164/s1165 pair supports nondeterministic reachability
-   (H3), while wild skips occur in both arms and are not sufficient evidence.
-   The discriminator is a positive-control-gated comparison of the failing
-   resource/operation marker against the same pre-1024 writeback sequence; do
-   not add a mitigation or infer ownership from a skip alone.
+1. Audit the next independent pre-1024 failure source or operation boundary
+   with a phase-gated positive-control capture. The s1164/s1165/s1166 sequence
+   supports nondeterministic reachability (H3); no RT64 allocation marker
+   preceded either failure, and wild-width/OOB skips occur without selecting a
+   cause. Do not add a mitigation or infer ownership from a skip alone.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

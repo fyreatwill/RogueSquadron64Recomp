@@ -64153,3 +64153,16 @@ was SIGKILLed. Compared with s1164's controlled pre-1024 `copyToRAM` crash,
 this supports H3, nondeterministic reachability gating, and rules out
 wild-width skips alone as a sufficient crash discriminator. The causal H1/H2
 distinction remains unevaluable; no mitigation was added.
+
+## Session 1166 (2026-08-14) — pre-1024 resource markers stayed absent
+
+Rebuilt the Debug target and ran the prescribed phase-gated resource-marker
+capture with slot-dispatch, writeback, crash, and RT64 allocation controls.
+Slot dispatch was live with 8,192 bounded entries, writeback controls produced
+57 rows, and crash logging was live. No `[rt64-alloc]` marker appeared and the
+run did not reach the prior RT64 `copyToRAM` fault; it instead hit an Apple
+Metal compiler-cache SIGSEGV at guest PC `0x8000B650` before VI 1024. The
+failure followed 30 wild-width and 4 OOB writeback skips. Together with the
+controlled stable s1165 arm, this advances H3, rules out a preceding RT64
+resource marker in this capture, and shows writeback skips alone do not select
+H2. No mitigation was added.
