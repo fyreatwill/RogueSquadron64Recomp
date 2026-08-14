@@ -1,32 +1,49 @@
-# NEXT work unit (s983)
+# NEXT work unit (s984)
 
-Perform one bounded read-only source/disassembly audit of the corrected
-oracle's `r4300_pc` wrapper contract. Do not edit the recomp runtime or run a
-retail soak.
+HYPOTHESIS-ID: oracle-pif-callback-runtime
 
-HYPOTHESIS-ID: oracle-pif-r4300-pc-wrapper-state
+**First check, before anything else:** is `~/Documents/Tools/rs64-oracle` in
+this session's `.claude/settings.json` `permissions.additionalDirectories`?
+Test with `cat ~/Documents/Tools/rs64-oracle/README.md` (an allowlisted
+command whose only failure mode left is the directory-sandbox block). s983
+found it hard-blocked (`ls`/`cat`/`grep`/`Read` all refuse the path; `nm` is
+not allowlisted and is auto-denied headless) — new since s982, which
+successfully drove LLDB against a path under it.
 
-Competing hypotheses:
+## If the oracle is now reachable
 
-- H-pif-r4300-opaque: the installed wrapper receives an object that is not
-  the `r4300_core` expected by `read_with_bp_checks`, so `r4300_pc` returns an
-  invalid pointer.
-- H-pif-r4300-pc-layout: the opaque is a valid core object, but the compiled
-  `r4300_pc` accessor/layout disagrees with the wrapper's expected return
-  contract.
-- H-pif-wrapper-state: `r4300_pc` and layout are coherent; a state-dependent
-  owner/writer leaves the returned PC pointer invalid before the callback.
+Resume the original planned unit exactly:
 
-Discriminating measurement: map the concrete `r4300_pc` definition, the
-`r4300_core` layout, the PIF debugger-handler opaque assignment, and the
-failing wrapper instructions into one ownership chain. An opaque-type
-mismatch selects H-pif-r4300-opaque; an accessor/layout mismatch selects
-H-pif-r4300-pc-layout; a coherent chain with a state writer selects
-H-pif-wrapper-state.
+Run one bounded external-oracle binary-level callback-entry probe against the
+corrected dylib. Do not add another callback marker or edit the recomp
+runtime. Competing hypotheses (H-pif-core-entry / H-pif-binary-target /
+H-pif-harness) and the discriminating measurement are unchanged from the
+s982 write-up in `docs/CURRENT-TRUTH.md` Next work unit section. Exact
+command:
 
-Exact commands: grep the oracle source for `r4300_pc`,
-`read_with_bp_checks`, and PIF handler installation; inspect the corresponding
-dylib symbols with `nm -an` and `otool -tvV`; read only bounded function
-windows. The s982 evidence is in
-`scratch/agent/oracle_probe_s982_fixed.log`; no retail phase result may be
-inferred.
+`env DYLD_LIBRARY_PATH=/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build/Debug/rogue_squadron.z64 --secs 8 --watch-write 0x0:0x800000 --watch-read 0x1fc00000:0x1fc01000 --vi-poll --vi-trace`
+
+## If the oracle is still blocked
+
+Do NOT substitute a second consecutive iteration on this thread (s983 already
+used the one legitimate substitution). Two options:
+
+1. Go BLOCKED: write `scratch/agent/BLOCKED.md` asking a human to add
+   `/Users/williambuckley/Documents/Tools/rs64-oracle` to
+   `permissions.additionalDirectories` in `.claude/settings.json` (mirroring
+   the existing `N64Recomp`/`rogue_squadron64` entries), or to say the oracle
+   thread should be abandoned/redirected.
+2. Pivot `HYPOTHESIS-ID` to backlog item 4 (M4 zero-shade root cause) as a
+   real, budgeted work unit — read PORTING-STATE.md Sessions 19–20
+   (2026-07-25/26, grep `baseFixed`) first; do not restart that investigation
+   cold or duplicate its existing conclusions.
+
+## Housekeeping already done in s983 (do not repeat)
+
+The `runInMissionFrame` callback table at `0x8010B350` (backlog #1's last
+open indirect-target edge from s954) is now closed: it is static `data`
+(`roguesquadron.yaml`, `bss` starts at `0x8010B6D0`) with zero generated-code
+writers (exhaustive `0x4CB0`-offset grep across `N64Recomp/RecompiledFuncs`).
+Backlog #1's remaining open question is the general caller-frame/`$sp`
+corruption mechanism for `slotDispatcherIter+872`, which has no queued static
+lead — it needs a runtime instrument, not another source sweep.

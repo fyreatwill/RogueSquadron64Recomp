@@ -4,9 +4,11 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s982 (2026-08-13). The active blocker is authoritative
+Reviewed through s983 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
-closed; M3 work is limited to systematic idiom-class audits.
+closed; M3 work is limited to systematic idiom-class audits. The
+oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
+a human directory-permission grant (s983) — see Next work unit.
 
 ## User directive
 
@@ -346,6 +348,20 @@ closed; M3 work is limited to systematic idiom-class audits.
   not callback body or retail behavior. The active hypothesis is now
   H-oracle-r4300-pc-wrapper-state; no recomp mitigation or retail phase
   conclusion follows.
+- s983: `~/Documents/Tools/rs64-oracle` is now OUTSIDE this session's
+  `.claude/settings.json` `additionalDirectories` (only `N64Recomp` and
+  `rogue_squadron64` are listed) — `ls`/`cat`/`grep`/`Read` hard-block that
+  path and `nm` is auto-denied headless, verified this session, and this is
+  new since s982 (whose log shows the same tooling working). The entire
+  oracle-pif-callback-runtime thread is blocked pending a human adding that
+  directory. Substituted: closed `runInMissionFrame`'s callback-table edge
+  (the last open item from s954/backlog #1) with two independent static
+  lines — `roguesquadron.yaml` classifies `0x8010B350` as `data` (`bss` starts
+  only at `0x8010B6D0`), and an exhaustive generated-source grep for the
+  table's literal offset finds zero stores anywhere, only two in-function
+  reads. This selects static-compiled-data over a runtime writer for this one
+  table; H-slotdispatcheriter-stacksp-unclassified's general `$sp` corruption
+  question remains open.
 
 ## Recent evidence ledger
 
@@ -405,6 +421,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s980 | Static ownership audit found matching handler types, `opaque=&dev->r4300` for the debugger wrapper, and a saved PIF handler with `opaque=&dev->pif`; restore logic is coherent. This refutes trampoline/type and invalid-opaque hypotheses but does not explain the callback-entry/first-body crash. Single-source static evidence; no runtime arm. |
 | s981 | Corrected dylib audit found direct calls to local callback `0x1b80` with `w2=4,w3=3` and a normal aligned callback prologue, refuting a target/prologue discrepancy. No isolated harness exists, so callback runtime and retail phase remain unevaluable. |
 | s982 | LLDB run passed setup and reached the first PIF wrapper read, then faulted at `read_with_bp_checks+268` while dereferencing the result of `r4300_pc(r4300)`; callback `0x1b80` was not entered. Source and disassembly agree; retail remains unevaluable. |
+| s983 | Oracle work blocked: `rs64-oracle` fell outside this session's directory sandbox (verified). Substituted a static writer audit closing `runInMissionFrame`'s callback-table edge: `0x8010B350` is `data` per `roguesquadron.yaml`, and no generated-source store targets it anywhere. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -415,28 +432,49 @@ entries and do not authorize mitigations.
 1. The `tickAudioChannel`/`stopVoicesByHandle` M3 class (s938–s951) is
    CLOSED — see s951. The recurring `slotDispatcherIter+872` terminal SIGBUS
    is now localized to the generated prologue spill at `funcs_8.c:22810`.
-   Audit all 144 direct callers for guest `$sp`/`ctx->r29` provenance and
-   caller-frame balance before considering any runtime change; do not guard
-   the dispatcher prologue. s953 found no non-frame `$sp` writer in the 72
-   direct callers; audit the eight callers containing `LOOKUP_FUNC`/`jalr`
-   targets for context mutation before closing the class.
+   s953 found no non-frame `$sp` writer in the 72 direct callers; s954 found
+   the 26 statically-addressed indirect targets are frame-balanced; s983
+   closed the remaining `runInMissionFrame` callback-table edge as static
+   compiled data with no generated-code writer. No further indirect-target
+   candidates are known; the general caller-frame/`$sp` corruption mechanism
+   for this SIGBUS remains open with no queued static lead — next progress
+   needs a runtime instrument (oracle or phase-gated recomp capture), not
+   another static sweep.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Audit the corrected oracle's `r4300_pc` wrapper contract in one bounded
-   source/disassembly pass: identify the concrete `r4300_pc` definition,
-   expected `r4300` object layout, and the opaque passed to the installed PIF
-   debugger handler, then reconcile them with the s982 fault at `ldr w8,[x0]`.
-   Do not edit the recomp runtime or infer a retail phase result. No
-   mitigation is authorized until the writer/owner of the invalid callback
-   state pointer is identified.
+3. BLOCKED pending human action: `~/Documents/Tools/rs64-oracle` is outside
+   this session's `.claude/settings.json` `additionalDirectories` (s983).
+   Once access is restored, audit the corrected oracle's `r4300_pc` wrapper
+   contract in one bounded source/disassembly pass: identify the concrete
+   `r4300_pc` definition, expected `r4300` object layout, and the opaque
+   passed to the installed PIF debugger handler, then reconcile them with the
+   s982 fault at `ldr w8,[x0]`. Do not edit the recomp runtime or infer a
+   retail phase result. No mitigation is authorized until the writer/owner of
+   the invalid callback state pointer is identified.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
-   triangles, then I4 `sample=64x128`, each with independent controls.
+   triangles, then I4 `sample=64x128`, each with independent controls. Prior
+   root-cause work is in PORTING-STATE.md Sessions 19–20 (2026-07-25/26); the
+   `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) papers over it without an
+   ORIGIN conclusion — do not restart this cold without reading those two
+   sessions plus PROJECT-OVERVIEW's rendering archive first.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
 ## Next work unit
 
 HYPOTHESIS-ID: oracle-pif-callback-runtime
+
+**Blocked precondition (s983):** `~/Documents/Tools/rs64-oracle` is outside
+this session's `.claude/settings.json` `permissions.additionalDirectories`
+(only `N64Recomp` and `rogue_squadron64` are listed). `ls`/`cat`/`grep`/`Read`
+hard-block that path this session; `nm`/`otool` are not allowlisted and are
+auto-denied headless. Before attempting the unit below, either (a) a human
+adds `/Users/williambuckley/Documents/Tools/rs64-oracle` to
+`additionalDirectories` in `.claude/settings.json`, or (b) confirm the
+exclusion is intentional and pivot this hypothesis thread's `HYPOTHESIS-ID`
+to something that does not need the oracle. Do not self-grant the directory —
+it is a session sandbox boundary, not a project convention. If access is
+restored, resume the work unit exactly as below.
 
 Run one bounded external-oracle binary-level callback-entry probe against the
 corrected dylib. Do not add another callback marker or edit the recomp
@@ -461,6 +499,12 @@ H-pif-core-entry; a target/prologue discrepancy selects H-pif-binary-target.
 Exact command:
 
 `env DYLD_LIBRARY_PATH=/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build/Debug/rogue_squadron.z64 --secs 8 --watch-write 0x0:0x800000 --watch-read 0x1fc00000:0x1fc01000 --vi-poll --vi-trace`
+
+If the oracle remains blocked next iteration too, do not substitute a second
+time in a row — either pick backlog item 4 (M4 zero-shade root cause, after
+reading PORTING-STATE Sessions 19–20) as a real, budgeted work unit, or go
+BLOCKED and ask the human directly rather than generating another audit to
+stay busy.
 
 ## Closed and parked
 

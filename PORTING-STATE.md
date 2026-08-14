@@ -60386,3 +60386,77 @@ unit was static and the callback boundary remains unresolved.
 
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
+
+## Session 983 (2026-08-13) — oracle access blocked this session; runInMissionFrame callback table classified as static data
+
+### Planned unit blocked: rs64-oracle is outside this session's sandbox
+
+The planned unit (audit the corrected oracle's `r4300_pc` wrapper contract,
+per `scratch/agent/NEXT.md`) requires reading source and disassembly under
+`~/Documents/Tools/rs64-oracle`. That path is not in `.claude/settings.json`'s
+`permissions.additionalDirectories` (only `N64Recomp` and `rogue_squadron64`
+are listed for this session). Verified this iteration: `ls`, `cat`, `grep`,
+and the `Read` tool all returned a hard "may only list/concatenate files from
+the allowed working directories" block against `rs64-oracle` paths; `nm`
+(not allowlisted in `.claude/settings.json`) returned "requires approval"
+with no human present to grant it in this headless run. This is new since
+s982, whose log (`scratch/agent/oracle_probe_s982_fixed.log`) shows the same
+session successfully driving LLDB against a `rs64-oracle` dylib path. This
+blocks the entire `oracle-pif-callback-runtime` thread (active s955–s982),
+not just this unit.
+
+Falsifying check: add `~/Documents/Tools/rs64-oracle` to
+`permissions.additionalDirectories` in `.claude/settings.json` (mirroring the
+existing two entries) and rerun any of `cat`/`nm`/`otool` against a path
+under it — if it now succeeds, the block is confirmed to be this setting.
+
+No recomp runtime change, oracle source change, build, or retail run was
+attempted. `SUBSTITUTION.md` records the same finding for the Stop-hook
+contract.
+
+### Substituted unit: static writer audit of the `runInMissionFrame` callback table
+
+s954 left one unresolved edge in the closed-out M3 `slotDispatcherIter` class
+(backlog #1): `runInMissionFrame` dispatches a function pointer loaded from
+`0x8010B350 + i*8`, and static target enumeration could not identify runtime
+contents or writers. This session closed that specific edge without any
+runtime instrument.
+
+`funcs_42.c:6798` (`runInMissionFrame`) computes the table base as a literal
+`lui $s7,0x8011` / `addiu $s0,$s0,-0x4CB0` pair (`0x80110000-0x4CB0 =
+0x8010B350`), then scans 8-byte entries (`byte0` = a bit index tested against
+a flags word at `-0x3620($s7)`, `+4` = function pointer) until `byte0`
+matches a sentinel, dispatching via `LOOKUP_FUNC(ctx->r2)`. Every reference to
+this table in the function is a load (`lbu`/`lw`); the only store nearby
+targets the unrelated flags word at `-0x3620($s7)`, clearing a bit after
+dispatch — not the table itself.
+
+Two independent lines of evidence:
+1. **Segment classification.** `rogue_squadron64/roguesquadron.yaml` marks
+   `bss` starting only at `0x8010B6D0`; everything from `0x8010B350` through
+   the named symbols after it (`playerCraftHobObjectNames@0x8010B3A0`,
+   `playerCraftUpdateFunctions@0x8010B3C4`, …) is `data` — i.e. ROM-initialized,
+   not zero-filled-then-populated. `syms/rogue_squadron.datasyms.toml` brackets
+   the table cleanly: `D_8010B304` before, `playerCraftHobObjectNames` at
+   `0x8010B3A0` after, giving the table an exact `0x50`-byte (10-entry) span
+   with no named symbol landing inside it.
+2. **Exhaustive writer search.** `grep -rn "0X4CB0\|0x4CB0\|0x4cb0"` across all
+   of `N64Recomp/RecompiledFuncs/*.c` (the full generated codebase) returns
+   exactly 5 lines: 2 reads inside `runInMissionFrame` itself (`funcs_42.c`,
+   both against the `0x8011`-based table pointer), 1 unrelated `$zero`-based
+   byte load at fixed low address `0x4CB0` (`funcs_8.c`), and 1 unrelated
+   `lwc1 -0x4CB0($at)` in `funcs_13.c` where `$at = 0x8004<<16` — a completely
+   different address (`0x8003B350`), confirmed by reading its immediately
+   preceding `lui`. Zero stores anywhere target `0x8010B350`.
+
+This selects **static-compiled-data** over any runtime-writer hypothesis for
+this specific table: it is ROM-baked dispatch data with no generated-code
+writer, so it cannot be the shared-context corruption vector for the
+`slotDispatcherIter+872` class. This closes `runInMissionFrame`'s indirect
+edge from s954's backlog #1; it does NOT close
+H-slotdispatcheriter-stacksp-unclassified overall — the general `$sp`
+corruption mechanism remains open, this only rules out one candidate writer.
+
+ORIGIN: `roguesquadron.yaml` segment split (independent build-config source,
+not generated code) plus exhaustive generated-source grep; no guest value was
+read or changed and no mitigation was landed.
