@@ -61839,6 +61839,31 @@ was not armed, so its writer remains unevaluable.
 ORIGIN: independent retail-oracle whole-RDRAM callback, PIF pad, and VI
 callback/poll controls; no guest value or recomp runtime behavior was changed.
 
+## Session 1043 (2026-08-14) — retail Start+A did not leave width 320
+
+Ran the planned same-build retail-oracle discriminator concurrently for 120
+seconds: eleven 150 ms Start-only pulses at 6,11,...,56 seconds versus the
+same schedule with simultaneous A presses. Both used the debugger-on,
+pure-interpreter `iter974-armB2` core, independent VI polling, PIF tracing,
+and the whole-RDRAM write watch.
+
+Both arms completed cleanly. Each reached the 10,000 whole-RDRAM callback cap,
+delivered all eleven Start edges with the expected `0x10000000` Start pad word,
+and produced live VI polls for the full horizon. The only post-boot VI phase
+was width 320 at origin `0x006dd280`: Start-only produced 7,200 VI and Start+A
+7,304 VI, with neither arm reaching width 512, 640, or 1024.
+
+This selects `H-retail-input-state-independent` for the tested Start+A shape
+and rules out A confirmation as the explanation for the width-320 attract
+path. It also rules out a missed-control or short-duration result because the
+independent whole-RDRAM, PIF, and VI controls were positive in the same runs.
+The hangar phase and freelist writer remain unevaluable; the freelist watch was
+not armed. The next unit returns to the parked M4 numeric-origin question with
+a new offline accumulator reconstruction discriminator.
+
+ORIGIN: independent retail-oracle whole-RDRAM callback, PIF pad, and VI
+callback/poll controls; no guest value or recomp runtime behavior was changed.
+
 ## Session 1041 (2026-08-14) — retail first-input timing did not leave width 320
 
 Ran the planned retail-oracle discriminator with both arms concurrently for

@@ -1,45 +1,33 @@
-# NEXT work unit (s1043)
+# NEXT work unit (s1044)
 
-HYPOTHESIS-ID: retail-attract-phase-path
+HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-Run one same-build/same-run retail-oracle discriminator for the documented
-6,11,...,56-second schedule: compare eleven 150 ms Start-only pulses with
-eleven 150 ms simultaneous Start+A pulses. Keep the whole-RDRAM watch as the
-positive control and keep the freelist watch disarmed until an independent VI
-poll reports a 512 phase with hangar origin `0x6abxxx`.
+Perform one bounded offline reconstruction of the Factor 5 shade producer from
+the captured M4 stage rows and the exact RSP accumulator rules. Do not change
+runtime code or add a mitigation. Locate the saved stage-10/11/12 capture,
+extract complete triplets, and compute the four lanes before `vmadh v6,v4,v0`,
+after the accumulator high-half/saturation step, and after `vge v6,v6,v29[1q]`.
+The checker must include a synthetic positive control that reaches 0x8000 so a
+zero result cannot be mistaken for a dead parser or bad extraction.
 
 ## Competing hypotheses and discriminator
 
-* `H-retail-start-state`: Start-only is insufficient because the retail path
-  requires A confirmation; the Start+A arm reaches a 512 hangar-origin phase.
-* `H-retail-input-state-independent`: both arms stay at width 320/origin
-  `0x006dd280`, so adding A does not explain the duration-independent attract
-  path.
-* `H-retail-attract-demo`: an arm reaches width 512 with origin `0x690xxx`,
-  identifying the attract demo rather than the hangar and leaving input-state
-  handling unresolved.
+* `H-accumulator-saturation`: 0x8000 appears only after the accumulator
+  high-half/saturation step, selecting saturation as the sentinel origin.
+* `H-v4-v0-arithmetic`: 0x8000 is already present before saturation, selecting
+  ordinary `v4`/`v0` arithmetic as the origin.
+* `H-v29-selection`: no pre-saturation endpoint exists, but the final `vge`
+  selects a matching 0x8000 lane from the DMEM-0x60 threshold vector.
 
-Discriminating measurement: compare each arm's first `--vi-poll` width/origin
-transition, transition time, and final VI count. A 512 transition at
-`0x6abxxx` selects `H-retail-start-state` and permits a bounded freelist-watch
-follow-up; identical width-320 traces select `H-retail-input-state-independent`;
-`0x690xxx` selects `H-retail-attract-demo`. The whole-RDRAM callback count must
-reach 10,000 in both arms, and every scheduled Start edge must be visible.
+Discriminating measurement: classify the first stage at which any real row
+contains 0x8000, and verify the synthetic control reaches the expected stage.
+Pre-saturation, post-saturation, and threshold-only outcomes select the three
+hypotheses above; no endpoint in real rows leaves the numeric origin open.
 
 ## Exact commands
 
-Use the validated debugger-on, pure-interpreter core
-`/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib`
-and repository ROM `rogue_squadron.z64`. Launch both commands concurrently
-for 120 seconds, with distinct capture paths:
-
 ```sh
-tools/oracle/build/rs64_oracle --core CORE --rom rogue_squadron.z64 --secs 120 \
-  --oracle-debugger 1 --oracle-emulator 0 --vi-trace --vi-poll --pif-trace \
-  --watch-write 0x0:0x2000000 --hit-cap 10000 --hold-ms 150 \
-  --press '6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start'
+rg -n "stage-(10|11|12)|vmadh|vge|0x8000" scratch/agent logs docs
+rg -l "stage-10" scratch/agent logs | head -20
+sed -n 'START,ENDp' <the_selected_capture>
 ```
-
-The comparison arm uses the same schedule with simultaneous A, expressed as
-two events at each timestamp:
-`6:start,6:a,11:start,11:a,16:start,16:a,21:start,21:a,26:start,26:a,31:start,31:a,36:start,36:a,41:start,41:a,46:start,46:a,51:start,51:a,56:start,56:a`.

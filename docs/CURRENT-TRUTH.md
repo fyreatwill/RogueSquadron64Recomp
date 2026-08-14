@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1042 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1043 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -337,11 +337,10 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 ## Ranked backlog
 
 1. The retail oracle remains in the width-320 attract path despite verified
-   Start edges, long Start holds, rapid cadence, early first input, and a
-   120-second horizon. Do not arm the freelist watch until a 512 hangar-origin
-   phase is reached; next test the documented schedule with Start+A together,
-   using the same whole-RDRAM and VI controls, to discriminate input-state
-   handling from the duration-independent attract path.
+   Start edges, long Start holds, rapid cadence, early first input, 120 seconds,
+   and simultaneous A. Do not arm the freelist watch until a 512 hangar-origin
+   phase is reached; pursue a new independent phase-path discriminator rather
+   than another Start-shape repeat.
 2. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume
    only with a new discriminator or independent ground truth.
