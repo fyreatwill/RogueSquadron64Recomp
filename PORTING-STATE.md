@@ -62571,3 +62571,23 @@ Edge-without-selector, both-without-hangar-512, and selector-plus-`0x6abxxx`
 512 outcomes separate state, downstream-state, and solved-route hypotheses;
 missing edge writes with positive PIF identifies an execution/alias boundary.
 This rules out no runtime hypothesis yet because the measurement is pending.
+
+## Session 1077 (2026-08-14) — ran retail VI-512 discriminator
+
+Ran the one-arm retail-oracle discriminator with the documented eleven-Start
+schedule, physical watches on `0x13A960..0x13A970` and
+`0x130B40..0x130B58`, a whole-RDRAM positive control, `--vi-trace`,
+`--vi-poll`, and `--pif-trace`. The 120-second run completed with `rc=0` and
+7,199 VI. The whole-RDRAM watch reached its 10,000-hit cap; PIF traces showed
+the scheduled Start word (`0x10000000`) at each press; callback and polling
+both reported width 320 with origin `0x006dd280`. The controller-edge and
+selector/state watches each recorded zero writes.
+
+This selects the predeclared `H-oracle-route-open` outcome: positive input
+delivery did not reach either expected writer, so another timing/cadence arm
+would not discriminate. The next observation must be a guest execution
+breakpoint or physical read watch on the consumer/alias path. It rules out
+only the expected writer path, not the state gate itself.
+
+ORIGIN: independent retail-oracle watch callbacks, PIF reads, and VI
+callback/poll traces; no recompiled runtime, game data, or mitigation changed.

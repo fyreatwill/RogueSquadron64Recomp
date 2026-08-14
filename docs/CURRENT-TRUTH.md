@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1076 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1077 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -102,6 +102,18 @@ gate; absent edge writes with positive PIF selects an execution/alias boundary;
 selector writes plus `0x6abxxx` 512 solves the route. This is a design result,
 not runtime evidence.
 
+The s1077 retail run passed all positive controls: the whole-RDRAM watch reached
+its 10,000-hit cap, PIF traces showed the injected Start bit at all eleven
+scheduled presses, and VI callback/poll traces agreed while advancing 7,199
+frames. Neither controller-edge storage (`0x13A960..0x13A970`) nor selector/
+state storage (`0x130B40..0x130B58`) was written. VI remained width 320 with
+origin `0x006dd280` through 120 seconds. This is a single-source oracle result
+with independent control and target-watch lines: it selects the
+`H-oracle-route-open` branch, because positive PIF delivery does not reach the
+expected edge-storage writer. Another input schedule is not discriminating;
+the missing observation is a read watch or guest execution breakpoint on the
+consumer/alias path.
+
 ## M4 zero-shade boundary
 
 The independent Factor 5 command reference and same-combiner/white-shade
@@ -144,12 +156,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1074 | Complete generated raw `MEM_B(0X14, ctx->rN)` census found 31 stores. Only the two `cycleIdleDemoId` stores use the fixed selector base; the other 29 use object/argument/stack-derived bases. No additional generated writer reaches `0x80130B54`; the non-generated/index-mediated boundary remains open. |
 | s1075 | The only generated call to the actual `menuControllerInput` entry passes `a0=0`, selecting masked index 0; no raw dispatch entry targets `0x800B47C4/0x800B47D0`. The generated caller class is non-2, while an untyped guest-entry possibility remains single-source open. |
 | s1076 | Designed a same-run retail discriminator joining controller-edge writes, selector/state writes, PIF reads, whole-RDRAM callbacks, and VI phase transitions. No run was performed; the route remains open pending this measurement. |
+| s1077 | Ran the eleven-Start discriminator: whole-RDRAM, PIF, and VI controls were positive; both target write ranges were silent and VI stayed width 320 at `0x006dd280`. Selected the execution/alias observation boundary; another schedule is not justified. |
 
 ## Ranked next steps
 
-1. Run the s1076 retail-oracle discriminator from
-   `docs/ORACLE-512-DISCRIMINATOR.md`; only arm a freelist watch after a
-   `0x6abxxx` hangar-origin 512 transition is independently observed.
+1. Add or expose one independent oracle observation on the controller
+   consumer/alias path (guest execution breakpoint or physical read watch),
+   then rerun the same eleven-Start schedule; do not arm a freelist watch
+   without an independently observed `0x6abxxx` hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
