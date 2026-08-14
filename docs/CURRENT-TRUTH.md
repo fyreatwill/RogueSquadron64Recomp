@@ -397,13 +397,11 @@ build state rather than runtime.
 
 Exact starting checks/commands:
 
-`env LDFLAGS='-L/opt/homebrew/Cellar/binutils/2.47/lib' make -B DEBUGGER=1 OPTFLAGS='-O3 -fno-lto' all`
+`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-alllto/projects/unix && llvm-nm -m _obj/debugger/dbg_breakpoints.o && llvm-dis _obj/debugger/dbg_breakpoints.o -o /tmp/s975-breakpoints.ll`
 
-`stat -f "%Sm %N" -t "%Y-%m-%d %H:%M:%S" _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
+`cd /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB3/projects/unix && nm -m _obj/debugger/dbg_breakpoints.o && otool -tvV _obj/debugger/dbg_breakpoints.o | rg -n -A 45 "check_breakpoints_on_mem_access|read_with_bp_checks"`
 
-`nm -an libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks"`
-
-`otool -tvV libmupen64plus.dylib | rg -n -A 45 "_read_with_bp_checks:" | rg -n -C 8 "check_breakpoints_on_mem_access|mov[[:space:]]+w[23]"`
+`rg -n -C 8 "check_breakpoints_on_mem_access|define .*check_breakpoints" /tmp/s975-breakpoints.ll`
 
 ## Closed and parked
 
