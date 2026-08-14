@@ -63470,3 +63470,18 @@ constrains the active initial choice to the 320-wide copied records at offsets
 `0x00`, `0x50`, or `0xA0` (indices `{0,2,4,6}`), while the concrete boot `$s1`
 argument remains open. This selects `H-selector-runtime-320` over fixed-320 and
 non-320. No build, run, mitigation, or generated-file edit was performed.
+
+## Session 1125 (2026-08-14) — traced boot video selector argument
+
+The bounded static audit traced `thread3_video_handle`'s boot call to
+`initVideoBootWrapper`. The caller loads `gameConfig+0x44` at `0x800012B8`,
+stores it in the outgoing stack slot at `0x800012BC`, and the wrapper forwards
+that slot into the flags/render-state argument consumed by
+`buildAndRegisterDefaultMaterial` at `0x80017B88`. The callee extracts selector
+bits 2, 3, 4, 5, 7, and 8 from the value. This selects `H-boot-arg-runtime`
+over a statically fixed literal and leaves the producer/initial value of
+`gameConfig+0x44` as the next static boundary. It rules out resolving the
+active 320 record from the immediate boot call alone; the independent retail
+width-320 evidence still constrains the active record to indices `{0,2,4,6}`.
+No build or run occurred. ORIGIN: generated caller/callee data-flow plus
+independent retail VI-width evidence; no mitigation.

@@ -466,16 +466,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1122 | Bounded non-generated/data-boundary audit found `librecomp::init` writes `osTvType=1` and `osResetType=0`; the former is the setter input and the latter is not read by `setViModeType`. No host/runtime, patch, generated, or companion store targets `0x8003780C..0x8003782F`; the initial ROM DMA supplies those bytes, and the retail image at the `+0xC00` mapped offsets matches the indexed generated `lbu` reads. Nearby generated stores target only `0x80037808`. Selects `H-host-init` for `osTvType` and `H-rom-data` for the descriptor-index window; the active index-to-width reconciliation remains open. No build or run. ORIGIN: host initialization, generated store/read census, companion/symbol census, and independent retail-ROM bytes; no mitigation. |
 | s1123 | Bounded descriptor audit resolves `setViModeType(osTvType=1)` to `rsViModeType=0`. The NTSC index bytes in call order are `{12,0,6,4,11,9,10,8,13,2}`, with mixed record widths; the observed retail width 320 therefore requires selector state to choose one of indices `{0,2,4,6}`. Selects `H-index-state-dependent`; no build or run. ORIGIN: generated index reads and independent retail-ROM table bytes; no mitigation. |
 | s1124 | Bounded generated/companion audit found `selectAndApplyViMode` maps selector bytes `0x8011A865/64/62` to copied-record offsets `0x00/0x50/0xA0/0xF0`. `buildAndRegisterDefaultMaterial` writes those bytes from bits of its `$s1` render-state argument and is called by boot video initialization and recurring `advanceVideoFrame`; the selector is therefore runtime-populated, not a fixed initializer. The independent retail width-320 capture constrains the active initial choice to the 320-wide copied records at offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`), but the concrete boot argument remains open. Selects `H-selector-runtime-320`; no build or run. ORIGIN: generated control/data-flow, companion caller/symbol census, and independent retail VI-width evidence; no mitigation. |
+| s1125 | Bounded generated audit traced the boot selector input through `thread3_video_handle`: `gameConfig+0x44` is loaded into the outgoing stack slot consumed by `initVideoBootWrapper`, then forwarded to the `buildAndRegisterDefaultMaterial` flags/render-state slot. The callee extracts selector bits 2, 3, 4, 5, 7, and 8 from that runtime-loaded value. Selects `H-boot-arg-runtime` over a fixed literal; the producer and initial value of `gameConfig+0x44` remain open. Retail width 320 still constrains the initial record to offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`). No build or run. ORIGIN: generated caller/callee data-flow and independent retail VI-width evidence; no mitigation. |
 
 ## Ranked next steps
 
-1. Trace the boot caller's `$s1` render-state argument into
-   `buildAndRegisterDefaultMaterial` at `0x80017B88`, then evaluate selector
-   bytes `0x8011A864/65/62` at the initial mode-record copy. Identify which
-   copied NTSC record `{0,2,4,6}` is active on the retail width-320 path.
-2. If the boot argument is computed from a non-generated display/config source,
-   classify that producer; otherwise park the selector route with the concrete
-   record identified.
+1. Classify the producer and boot-time value of `gameConfig+0x44`, the runtime
+   field feeding the selector bits in `buildAndRegisterDefaultMaterial`.
+2. Use that value to identify which copied NTSC record `{0,2,4,6}` is active
+   on the retail width-320 path; if the field is non-generated, classify its
+   owner before considering any runtime probe.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
