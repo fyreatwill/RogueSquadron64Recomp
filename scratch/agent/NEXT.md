@@ -1,30 +1,29 @@
-# NEXT work unit (s1132)
+# NEXT work unit (s1133)
 
-HYPOTHESIS-ID: retail-oracle-active-descriptor-index
+HYPOTHESIS-ID: animation-framestart-regeneration-omission
 
-Perform one bounded static audit of the remaining active-descriptor boundary:
-trace the source of the `0xF0` record pointer passed at `0x8001B720` into
-`osViSetMode_recomp`, and classify whether the host VI commit copies width 320
-from that record or changes it before commit.
+Perform one bounded static census of the isolated animation/frameStart SIGBUS
+and its possible regeneration omission. Do not build or run. First enumerate
+all generated references and fixup-script references for the implicated
+function/site, then classify each as regenerated, fixup-restored, or absent.
 
 Competing hypotheses and discriminator:
 
-- H-record-pointer-0xF0: the `a0` pointer at `0x8001B720` is the copied table
-  base plus `0xF0`, so the committed width comes from the boot-selected record.
-- H-pointer-adjusted: control flow or an addend changes `a0` to another copied
-  record before the consumer.
-- H-consumer-rewrites: `osViSetMode_recomp` or its immediate host path changes
-  the width after loading the selected record.
+- H-regenerated: the expected animation/frameStart function and call/data
+  references are present in generated output; the SIGBUS is runtime state.
+- H-fixup-restored: generated output omits the site, but a fixup script restores
+  it deterministically during regeneration.
+- H-omitted: both generated output and fixup scripts omit the expected site,
+  making regeneration loss the actionable defect.
 
-Discriminator: follow `a0` from the selector branch through `0x8001B720`, then
-inspect the host `osViSetMode_recomp` implementation for the width load/store.
-An unchanged `base+0xF0` pointer and width-320 load selects
-H-record-pointer-0xF0; an adjusted pointer selects H-pointer-adjusted; a host
-rewrite selects H-consumer-rewrites.
+Discriminator: a complete reference/fixup census with every expected address
+classified. Presence in generated code selects H-regenerated; absence there
+but an explicit fixup match selects H-fixup-restored; absence in both selects
+H-omitted. Any unclassified reference means the audit is inconclusive.
 
 Do not build or run. Use bounded windows only:
 
 ```sh
-rg -n -C 16 '0x8001B6F0|0x8001B720|osViSetMode_recomp' ../N64Recomp/RecompiledFuncs/funcs_5.c
-rg -n -C 12 'osViSetMode_recomp|vi_mode|width' src lib/N64ModernRuntime/ultramodern/src
+rg -n 'frameStart|animation|0x800[0-9A-Fa-f]{4}' ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n 'frameStart|animation|0x800[0-9A-Fa-f]{4}' tools patches docs
 ```

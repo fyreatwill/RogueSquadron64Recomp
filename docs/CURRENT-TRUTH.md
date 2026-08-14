@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1131 (2026-08-14).
+in the ledger. Reviewed through s1132 (2026-08-14).
 
 ## Current state
 
@@ -54,9 +54,15 @@ Evidence and boundaries:
   `s7` is nonzero, so index 0 is preserved.
 - The four-record copy writes table offsets `0x00/0x50/0xA0/0xF0`, then
   reaches `osViSetMode_recomp` without an intervening selector or record store.
-- The exact `a0` pointer at `0x8001B720` and host-side width commit are the
-  remaining boundary. The next audit must resolve them; do not reopen the
-  already-closed selector/source chain.
+- At `0x8001B720`, generated code selects among `0x80128D50`, `0x80128DA0`,
+  `0x80128DF0`, and `0x80128E40` using only stack bytes `0x15F` and `0x17F`.
+  Boot's established `0x15F=0`/`0x17F=0` state selects `0x80128E40`, exactly
+  `base+0xF0`.
+- The host `osViSetMode_recomp` forwards `ctx->r4` unchanged to `osViSetMode`;
+  the runtime stores the pointer and control, while the VI commit reads
+  `common_regs->width` from that mode. No host-side width rewrite exists. This
+  closes the active-descriptor pointer/consumer boundary with independent
+  generated-code and host-runtime evidence.
 
 ## M4 zero-shade boundary
 
@@ -98,17 +104,15 @@ closed after controlled nulls; no mitigation is authorized.
 | s1118–s1124 | Mode table, TV-type input, selector state, and mixed descriptor widths were reconciled. |
 | s1125–s1129 | Boot config `0x1800`, selector `1/0/0`, preserved index 0, and boot-first ordering were resolved. |
 | s1130–s1131 | First consumer ordering was resolved; this maintenance pass compacted the live file and migrated durable detail. |
+| s1132 | Traced the active VI pointer to copied-table `base+0xF0` and closed host width-rewrite as a cause. |
 
 ## Ranked next steps
 
-1. Trace the `0xF0` record pointer and host width commit at
-   `osViSetMode`; keep the resolved `0x1800 -> A/B/C=1/0/0 -> 0xF0` chain
-   and the no-intervening-store result fixed.
+1. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
+   omission only as a bounded static census when a reproducible lead appears;
+   preserve delete-before-regen ordering and audit fixup counts.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
-3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
-   omission only when a reproducible lead appears; preserve delete-before-
-   regen ordering and audit fixup counts.
 
 ## Method and safety rules
 
