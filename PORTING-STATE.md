@@ -58927,3 +58927,36 @@ edit, or game behavior changed.
 ORIGIN: complete generated helper/reference, target, arithmetic-bound,
 termination, and companion-symbol inventory; no guest value mutation or
 mitigation.
+
+## Session 931 (2026-08-13) — initN64RspMixer is structurally classified
+
+Performed the planned source-only M3 idiom inventory of `initN64RspMixer`
+(`0x8009189C`) in `../N64Recomp/RecompiledFuncs/funcs_24.c`. Enumerated the
+complete helper, both generated callers, all helper edges, clamps, arithmetic,
+global/table writes, and the fixed callback-registration target. Cross-checked
+`main_overlay.txt`. No build, game run, or soak was run.
+
+The only callers are `initAudioSubsystem` at `0x80091C58` and
+`reapplyAudioConfig` at `0x80091D14`. Both pass the same four-argument shape:
+an input pointer whose first word is the audio value, a voice count clamped to
+`0x20`, a halfword-sized data parameter, and a mode-derived byte. The helper
+calls `allocateSongChannelArray` and `setupSongRenderBuffers` with the clamped
+count and input value, then has a zero-data branch or computes a data-derived
+allocation size before calling `rs_malloc`. It installs fixed function/data
+addresses at `0x801499D0..0x801499E0`, clears mixer state, registers the fixed
+`musyxSynthFrame` callback through the initialized `0x80007910` target, and
+copies a fixed 0x14-byte configuration block. There are no local loops.
+
+H-rsp-mixer-shape-mismatch is ruled out: both callers agree and the helper
+edges are fixed. H-rsp-mixer-classified is supported for caller shape, clamp,
+termination, fixed callback target, and fixed table writes. The broader
+H-rsp-mixer-unclassified remains active because the input pointer, its first
+word, the halfword data parameter, and the derived multiplication/allocation
+size have no local legitimacy or overflow proof. This is a single-source
+static result from generated code plus companion symbols; no independent
+runtime writer/value evidence was claimed. No guard, mitigation, generated
+code edit, or game behavior changed.
+
+ORIGIN: complete generated helper/caller, arithmetic, access-range,
+termination, callback-target, and companion-symbol inventory; no guest value
+mutation or mitigation.
