@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1122 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1123 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -150,6 +150,15 @@ compact and records only live conclusions, boundaries, and next work.
   `0x80037808`, not the index window. This selects `H-host-init` for
   `osTvType` and `H-rom-data` for the index bytes; the active index-to-width
   reconciliation remains open.
+- The s1123 descriptor audit resolves `setViModeType(osTvType=1)` to
+  `rsViModeType=0`. The ten NTSC index bytes, read in call order
+  `0x7830..0x780C`, are `{12,0,6,4,11,9,10,8,13,2}` as table indices; their
+  record `+8` widths are `{1280,320,320,320,640,640,1280,1280,640,320}`.
+  The fixed mode-type input therefore defines a mixed copied descriptor set,
+  and the observed retail width 320 requires the lifecycle selector to choose
+  one of indices `0,2,4,6`. This selects `H-index-state-dependent` over a
+  fixed non-320 index or mapping error and reconciles the oracle width.
+  Static result; no build or run.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -447,11 +456,11 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 
 ## Ranked next steps
 
-1. Resolve the active NTSC descriptor index and table-record width from the
-   ROM-backed `0x8003780C..0x7830` bytes, then reconcile it with the retail
-   oracle's width-320 path.
-2. If the resolved record is fixed at 320, park the retail width-320 route; if
-   it is non-320, audit the mode-record copy/state path for the contradiction.
+1. Trace the lifecycle selector bytes at `0x8011A864/65/62` through the
+   initial mode-record selection to identify which copied NTSC record
+   `{0,2,4,6}` is active on the retail width-320 path.
+2. If the initial selector is statically fixed to one 320 record, park the
+   retail width-320 route; otherwise classify the selector producer/state path.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

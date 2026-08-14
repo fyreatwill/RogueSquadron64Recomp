@@ -63438,3 +63438,20 @@ host/patch writer and a direct generated writer, but does not yet prove which
 ROM index is active or what width its table record carries. ORIGIN: host
 initialization, generated store/read census, companion/symbol census, and
 independent retail-ROM bytes; no mitigation.
+
+## Session 1123 (2026-08-14) — resolved the NTSC descriptor index set
+
+Ran the prescribed bounded static audit with no build or game run. The
+generated `setViModeType` path loads `osTvType` from `0x80000300`; for the
+host-initialized NTSC value 1, it takes the `rsViModeType=0` path. The ten
+ROM-backed bytes read by `initVideoSubsystem` at `0x8003780C..0x80037830`
+are, in call order `0x7830..0x780C`, `0C,00,06,04,0B,09,0A,08,0D,02`,
+selecting table indices `12,0,6,4,11,9,10,8,13,2`. Retail ROM reads at
+`osViModeTable + index*0x50 + 8` give widths `1280,320,320,320,640,640,
+1280,1280,640,320`. Thus `osTvType` and the immutable index window define a
+mixed descriptor set; the observed retail width 320 is consistent only when
+the lifecycle selector chooses one of the 320 records `{0,2,4,6}`. This
+selects `H-index-state-dependent`, rules out a fixed non-320 index or mapping
+error, and leaves the initial selector value/writer open. ORIGIN: generated
+setter and copy path, independent mapped retail-ROM bytes, and table-width
+reads; no mitigation.
