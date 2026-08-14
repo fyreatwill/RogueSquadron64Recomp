@@ -1,36 +1,39 @@
-# NEXT work unit (s1058)
+# NEXT work unit (s1059)
 
 HYPOTHESIS-ID: retail-state-transition-input
 
-Perform one bounded static audit of `accumulateShipThrottleCharge`, the
-ordinary return producer left open by s1057. Do not build, run the game, or
-arm a freelist watch.
+Perform one bounded static audit of the two ordinary return data words selected
+by `runHangarSelectionFrame`: enumerate all generated stores whose effective
+addresses are `0x800CD6D4` and `0x800CD6D0` (the `0x800D:0xFFFFD6D4` and
+`0x800D:0xFFFFD6D0` notation used in the ledger), then inspect the immediate
+callers of any unresolved producer. Do not build, run the game, or arm a
+freelist watch.
 
 Competing hypotheses and discriminator:
 
-* `H-throttle-ret-input`: a return branch or its immediate predicate reads a
+* `H-frame-word-input`: a direct writer or its immediate caller reads a
   controller edge or button mask.
-* `H-throttle-ret-demo`: a return branch or its immediate predicate reads a
-  timer, attract, or demo counter.
-* `H-throttle-ret-state`: all return branches are driven by throttle/ship/menu
-  state, asset, or persistent values, with no local input/timer/demo source.
+* `H-frame-word-demo`: a direct writer or its immediate caller reads a timer,
+  attract, or demo counter.
+* `H-frame-word-state`: all classified writers are driven by ship/menu/asset or
+  persistent state, with no local input/timer/demo source.
+* `H-frame-word-boundary`: one or both words have no generated direct writer or
+  the producer is behind an unresolved helper, so classification must remain
+  open.
 
-Discriminating measurement: produce one complete table of every return-value
-write/branch in `accumulateShipThrottleCharge`, including the branch address,
-predicate, returned constant/register, and nearest producer for the two global
-values consumed by `runHangarSelectionFrame` (`0x800D:0xFFFFD6D4` and
-`0x800D:0xFFFFD6D0`). Any direct controller source selects input; any direct
-timer/demo source selects demo; otherwise select state. A missing writer or
-unresolved helper is a boundary result and must be reported, not inferred.
+Discriminating measurement: produce one complete table with writer PC,
+effective address calculation, width, value source, and immediate caller for
+both words. Any direct controller source selects input; any direct timer/demo
+source selects demo; only state-shaped writers select state. A missing writer
+or unresolved helper selects the boundary hypothesis and must not be inferred.
 
 Exact commands:
 
 ```sh
-rg -n '^RECOMP_FUNC .*accumulateShipThrottleCharge|0x800B4168' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c
-rg -n -B 16 -A 24 'accumulateShipThrottleCharge|FFFFD6D4|FFFFD6D0|0x800AB188|jr.*ra' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c
-rg -n -B 12 -A 18 'getControllerNewButtonsPressed|timer|demo|attract|accumulateShipThrottleCharge' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_28.c | head -600
+rg -n -B 8 -A 12 '0x800CD6D4|0x800CD6D0|FFFFD6D4|FFFFD6D0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -B 6 -A 10 'lui.*0x800D|addiu.*-0x292C|addiu.*-0x292[CD]|sw.*-0x292C|sw.*-0x2930' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -B 14 -A 20 'getControllerNewButtonsPressed|timer|demo|attract|0x800CD6D4|0x800CD6D0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head -600
 ```
 
-Expected output is one complete ordinary-return branch table and a selected
-hypothesis or an explicitly unresolved producer boundary. No build or runtime
-run is needed.
+Expected output is one complete writer/caller table and a selected hypothesis
+or explicitly unresolved producer boundary. No build or runtime run is needed.

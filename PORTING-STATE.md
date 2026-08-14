@@ -62192,3 +62192,31 @@ sources. No runtime or retail transition conclusion follows.
 
 ORIGIN: generated `RecompiledFuncs/funcs_28.c` and bounded caller/branch source
 search only; no guest value, runtime behavior, or writer was changed.
+
+## Session 1058 (2026-08-14) — audited normal hangar throttle return producer
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. `accumulateShipThrottleCharge` at
+`0x800B4168` reads the ship pointer at `0x800D-0x37A4`, the per-frame delta
+argument, the ship byte at `+0x2F`, and two floating-point threshold constants.
+It has no controller, timer, demo, or attract read. The return table is:
+
+* `0x800B4174`: null ship pointer branches to `0x800B421C`, returns 0.
+* `0x800B41A8`: charge above the upper threshold writes byte `+0x2F = 0xFF`
+  and increments the global counter at `0x800D-0x37A0`; if the incremented
+  counter is below 7, returns 1 at `0x800B41D4`, otherwise continues.
+* `0x800B41EC`: charge at or below the lower threshold skips the clamp/write;
+  otherwise the truncated charge (or lower-threshold difference with the sign
+  bit) is written to byte `+0x2F`.
+* `0x800B421C`: the common return sets `v0 = 0`, returns 0.
+
+The branch predicates are ship/charge state only. The two ordinary return
+words consumed by `runHangarSelectionFrame` remain data references at the
+ledger's `0x800D:0xFFFFD6D4` and `0x800D:0xFFFFD6D0` notation; this generated
+tree did not expose a direct writer classification for those data words. This
+selects `H-throttle-ret-state` over input and demo alternatives, while leaving
+the word producers as an explicit boundary. No retail transition or runtime
+conclusion follows.
+
+ORIGIN: generated `RecompiledFuncs/funcs_30.c` and bounded cross-file search;
+no guest value, runtime behavior, or writer was changed.
