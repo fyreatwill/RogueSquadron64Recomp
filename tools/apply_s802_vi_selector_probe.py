@@ -40,6 +40,25 @@ if 'PATCH: s802 VI selector probe' not in text:
     text = text.replace(label, selected, 1)
 path.write_text(text)
 
+text = path.read_text()
+if '[vi-predecessor-entry]' not in text:
+    predecessor_entry = '''    /* PATCH: s1149 predecessor entry probe. */
+    static int vi_pred_entry_n = 0;
+    static uint32_t vi_pred_entry_prev_width = 0xFFFFFFFFu;
+    uint32_t vi_pred_entry_width = U32(MEM_W(0x8, S32(0x8013 << 16) - 0x7370));
+    if (vi_sel_en && (vi_pred_entry_n < 8 || vi_pred_entry_width != vi_pred_entry_prev_width)) {
+        fprintf(stderr, "[vi-predecessor-entry] n=%d width=%u\\n", vi_pred_entry_n, (unsigned)vi_pred_entry_width);
+        fflush(stderr);
+    }
+    vi_pred_entry_prev_width = vi_pred_entry_width;
+    ++vi_pred_entry_n;
+'''
+    selector_counter = '    vi_sel_prev = vi_sel_key;\n    ++vi_sel_n;\n'
+    if text.count(selector_counter) != 1:
+        raise SystemExit('selector function count mismatch for predecessor entry')
+    text = text.replace(selector_counter, selector_counter + predecessor_entry, 1)
+    path.write_text(text)
+
 caller = Path('/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c')
 caller_text = caller.read_text()
 call_needle = '    selectAndApplyViMode(rdram, ctx);\n'
@@ -55,5 +74,18 @@ if caller_text.count(call_needle) != 1:
     raise SystemExit('selector callsite count mismatch')
 if '[vi-selector-callsite]' not in caller_text:
     caller_text = caller_text.replace(call_needle, call_probe, 1)
+if '[vi-predecessor-edge]' not in caller_text:
+    edge_probe = ('    /* PATCH: s1149 exact predecessor edge probe. */\n'
+                  '    static int vi_pred_edge_n = 0;\n'
+                  '    if (vi_call_en && vi_pred_edge_n < 16) {\n'
+                  '        uint32_t vi_pred_edge_width = U32(MEM_W(0x8, S32(0x8013 << 16) - 0x7370));\n'
+                  '        fprintf(stderr, "[vi-predecessor-edge] n=%d width=%u\\n", vi_pred_edge_n, (unsigned)vi_pred_edge_width);\n'
+                  '        fflush(stderr);\n'
+                  '    }\n'
+                  '    ++vi_pred_edge_n;\n')
+    marker = '    static int vi_call_en = -1, vi_call_n = 0;\n'
+    if caller_text.count(marker) != 1:
+        raise SystemExit('selector call probe count mismatch for predecessor edge')
+    caller_text = caller_text.replace(marker, edge_probe + marker, 1)
     caller.write_text(caller_text)
 print(path)

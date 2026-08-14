@@ -63857,3 +63857,21 @@ in `fillSampleStreamRange+336`, with last guest PC `0x8000B650`.
 This selects the post-640 selector-caller-absent loop (H2) and rules out a
 selector-state-input explanation for this run. It does not evaluate the
 corrected NPC boundary, and it does not explain the SIGBUS.
+
+## Session 1149 (2026-08-14) — audited the unique VI selector predecessor
+
+Enumerated the generated VI path: `selectAndApplyViMode` has one direct caller,
+`freeRenderSubsystemResources` at `0x80018650`, with no other generated direct
+callers. Added idempotent, phase-aware entry and exact-edge markers to the
+existing selector probe script, rebuilt the Debug target, and ran the 1024
+phase-gated capture with the independent selector positive control and slot
+dispatch control enabled.
+
+The positive control fired once and slot dispatch reached 8,192 rows. The run
+reached only the 640→2→640 VI sequence, then hit the pre-1024 SIGBUS in
+`allocateDisplayListBuffer+3648` at guest PC `0x8000E29C`. The new predecessor
+entry and exact-edge markers were both zero, as were selector callsite,
+control, and selection markers. This selects H2 for this capture: the active
+post-640 loop continues without entering the unique generated selector
+predecessor. It rules out a selector-state-input explanation and does not
+evaluate the corrected NPC boundary or explain the SIGBUS.

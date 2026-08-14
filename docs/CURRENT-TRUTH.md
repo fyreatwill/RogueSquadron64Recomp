@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1148 (2026-08-14).
+in the ledger. Reviewed through s1149 (2026-08-14).
 
 ## Current state
 
@@ -89,6 +89,14 @@ in the ledger. Reviewed through s1148 (2026-08-14).
   `fillSampleStreamRange+336` SIGBUS at guest PC `0x8000B650`, with no VI-1024
   phase. This selects a selector-caller-absent post-640 loop (H2); it does not
   evaluate the corrected NPC boundary.
+- The s1149 predecessor audit retained the independent selector positive
+  control and sustained 8,192 slot-dispatch records, but reached only the
+  640→2→640 VI sequence before a pre-1024 SIGBUS in
+  `allocateDisplayListBuffer+3648` (guest PC `0x8000E29C`). The new entry and
+  exact-edge predecessor markers, plus all selector markers, were zero. This
+  selects H2 again: the post-640 loop continues without entering the unique
+  generated selector predecessor. The corrected NPC boundary remains
+  unevaluable.
 
 ## Retail VI descriptor boundary
 
@@ -208,16 +216,17 @@ corruption.
 | s1146 | Analyzed the s1145 trace: VI stopped changing at width 640 around 7.3s, while slot dispatch and host/audio activity continued to the end of the captured log. This selects a stable active pre-phase loop over an early halt, but leaves the missing 1024 transition unexplained. |
 | s1147 | Added a latched phase-scoped `osViSetMode` producer marker and corrected its transient-width gating after the first capture exposed a 640→2→640 sequence. The fixed capture saw producer calls through the requested 640 call, then none; slot/host/audio controls continued, with no E9 or VI-1024. This selects the producer-absent stable loop and leaves NPC-boundary runtime causality unevaluable. |
 | s1148 | Rebuilt the regenerated selector probe after the first capture exposed stale instrumentation, then ran a controlled capture with an independent host positive control. The selector caller/control/selection remained absent while six host VI calls, slot dispatch, and task-control E9 activity were live; the run crashed in `fillSampleStreamRange+336` before VI-1024. This selects the post-640 selector-caller-absent loop and leaves NPC-boundary causality unevaluable. |
+| s1149 | Added phase-aware entry and exact-edge markers for the sole generated selector predecessor, made the probe script idempotent, rebuilt, and ran the 1024 phase-gated capture. The independent selector positive control fired, slot dispatch reached 8,192 rows, and the run reached only the 640→2→640 sequence before SIGBUS in `allocateDisplayListBuffer+3648` at guest PC `0x8000E29C`; all predecessor and selector markers were zero. This selects H2 again and rules out a reachable post-640 invocation of the unique selector predecessor in this run; NPC-boundary runtime causality remains unevaluable. |
 
 ## Ranked next steps
 
-1. Identify the missing state-path edge that should invoke the game-side VI
-   selector after the final 640 producer call. Audit the selector's static
-   caller and its state-machine predecessors, then add one bounded marker at
-   that edge if needed. Do not add a runtime guard or repeat the corrected NPC
-   boundary test. Only after positive task-control E9 and VI width 1024 are
-   both observed should the corrected NPC boundary be judged by its crash
-   outcome.
+1. Identify the active post-640 loop owner that continues slot dispatch after
+   the final 640 producer call without entering `freeRenderSubsystemResources`.
+   Audit the static callers and state-machine predecessors of the observed
+   phase-6 slot/task path, then choose one bounded owner marker. Do not add a
+   runtime guard or repeat the corrected NPC boundary test. Only after positive
+   task-control E9 and VI width 1024 are both observed should that boundary be
+   judged by its crash outcome.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
