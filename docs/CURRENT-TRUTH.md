@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s979 (2026-08-13). The active blocker is authoritative
+Reviewed through s981 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -330,6 +330,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   refutes a handler/trampoline type mismatch and an invalid callback opaque,
   but leaves the runtime callback-entry/first-body fault unresolved. This is
   static single-source evidence; retail remains unevaluable.
+- s981 inspected the corrected `iter974-armB2` dylib directly. Both wrapper
+  call sites branch to local `_check_breakpoints_on_mem_access` at `0x1b80`
+  with `w2=4,w3=3`, and the callback has a normal aligned ARM64 prologue.
+  This refutes a linked-image target/prologue discrepancy. No isolated
+  callback harness exists in the oracle tree, so the harness arm was not run;
+  the first-body versus emulator-state fault remains unresolved. Static
+  single-source evidence only; retail remains unevaluable.
 
 ## Recent evidence ledger
 
@@ -387,6 +394,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s978 | Corrected `dbg_breakpoints.o` arm passed the same-run whole-RDRAM control (616,120 writes/2 s) but still died `rc=139` after PIF wrapper pre-callback and before callback entry/return. Static caller shape is correct; callback path remains selected and retail phase is unevaluable. |
 | s979 | Corrected `iter974-armB2` static audit found a direct aligned callback target with `w2=4,w3=3`; fixed 3-second PIF arm passed setup/control, reached wrapper pre-callback, then died `rc=139` before callback first marker or return. Runtime callback call/entry boundary remains selected; retail phase is unevaluable. |
 | s980 | Static ownership audit found matching handler types, `opaque=&dev->r4300` for the debugger wrapper, and a saved PIF handler with `opaque=&dev->pif`; restore logic is coherent. This refutes trampoline/type and invalid-opaque hypotheses but does not explain the callback-entry/first-body crash. Single-source static evidence; no runtime arm. |
+| s981 | Corrected dylib audit found direct calls to local callback `0x1b80` with `w2=4,w3=3` and a normal aligned callback prologue, refuting a target/prologue discrepancy. No isolated harness exists, so callback runtime and retail phase remain unevaluable. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -405,11 +413,12 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Resolve the corrected oracle's remaining callback-entry/first-body fault
-   with one external binary-level probe that does not add a callback marker:
-   compare the direct call target and first instructions in the corrected
-   dylib under a debugger or isolated harness. The handler ownership/type and
-   opaque paths are structurally coherent; do not infer a retail phase result
-   or add a runtime mitigation.
+   with one bounded debugger probe on the existing dylib: break at the direct
+   callback target `0x1b80`, capture registers and the faulting instruction,
+   and do not add callback markers or edit the recomp runtime. The target,
+   argument registers, handler ownership/type, and opaque paths are now
+   structurally coherent; do not infer a retail phase result or add a runtime
+   mitigation.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if

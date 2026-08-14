@@ -60187,6 +60187,32 @@ Evidence: fresh all-LTO and arm artifacts under
 ORIGIN: external oracle LTO object-composition audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 981 (2026-08-13) — Corrected oracle callback target and prologue are valid
+
+Ran the planned binary-level probe against the corrected `iter974-armB2`
+oracle dylib. `nm -n` places `_check_breakpoints_on_mem_access` at `0x1b80`
+and `_read_with_bp_checks` at `0x9d8`. `otool -tvV` shows both wrapper call
+sites loading `w2=4` and `w3=3` before a direct branch to the local callback;
+the callback begins at `0x1b80` with a normal aligned stack frame and saves
+registers before its first diagnostic/global-state operations. The linked
+target and prologue therefore match the static source model; H-pif-binary-
+target is refuted.
+
+The oracle tree contains no isolated callback harness or executable entry
+point. Consequently the H-pif-harness arm was not run, and this static probe
+does not distinguish a fault in the callback's first body operation from a
+fault dependent on emulator/core state. No retail run, recomp runtime change,
+or mitigation was made.
+
+Evidence: `nm -n` and bounded `otool -tvV` output from
+`/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib`,
+plus the corresponding source windows in `memory.c` and
+`dbg_breakpoints.c`. This is static single-source evidence; the callback
+runtime remains unevaluable.
+
+ORIGIN: external oracle binary target/prologue audit; no guest value was
+changed and no mitigation was landed.
+
 ## Session 969 (2026-08-13) — Fresh oracle rebuild still drops callback argument
 
 Forced the external oracle's exact current target to rebuild. The first link
