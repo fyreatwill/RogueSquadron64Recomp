@@ -59997,6 +59997,36 @@ for source, object, and dylib.
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 979 (2026-08-13) — Corrected oracle arm dies before callback entry
+
+Ran the planned corrected-oracle static/runtime boundary audit. `nm` places
+`read_with_bp_checks` at `0x9d8` and `check_breakpoints_on_mem_access` at
+`0x1b80`. `otool` shows both PIF call sites load `pc-4` into `w0`, the physical
+address into `x1`, `w2=4`, and `w3=3`, then directly branch-and-link to the local
+callback. The callback has a normal 16-byte-aligned `sub sp,#0xb0` prologue;
+its first diagnostic marker follows that prologue. Static inspection therefore
+does not support an unresolved target or the old missing-argument artifact.
+
+The prescribed run initially failed because `build/Debug/rogue_squadron.z64`
+is absent. I reran the identical 3-second arm with the verified repository-root
+ROM. Watch setup succeeded, the PIF wrapper fired at `0x1fc007e4`, and the
+whole-RDRAM positive control was installed in the same run; the process exited
+`rc=139` after `[oracle-pif-wrapper] pre-callback` and before either
+`[oracle-pif-cb] first-statement` or the post-callback marker. VI remained
+unevaluable because the crash precedes the first poll.
+
+This selects H-pif-callback-path at the runtime call/entry boundary over
+H-pif-direct-target as a static-symbol explanation and over the all-LTO
+argument artifact. It does not identify the failing instruction, and it says
+nothing about retail callback-table reachability. No recomp-runtime change or
+mitigation was made.
+
+Evidence: `nm`/`otool -tvV` on the preserved `iter974-armB2` dylib, plus the
+same-configuration oracle run with the whole-RDRAM watch control.
+
+ORIGIN: external oracle callback-boundary experiment; no guest value was
+changed and no mitigation was landed.
+
 ## Session 978 (2026-08-13) — Corrected oracle arm still dies at callback boundary
 
 Ran the planned bounded retail-oracle PIF read-watch arm. The exact command

@@ -1,33 +1,38 @@
-# NEXT work unit (s979)
+# NEXT work unit (s980)
 
-Classify the corrected oracle callback crash boundary with one static/runtime
-audit. Use the already validated `iter974-armB2` dylib and inspect the exact
-`read_with_bp_checks` call, callback symbol binding, callback prologue, and
-first diagnostic body; then run one 3-second PIF-watch arm under the same
-positive-control setup. Do not edit the recomp runtime.
+Audit the external oracle's runtime PIF handler replacement and saved-pointer
+path as one bounded static unit. Do not edit the recomp runtime and do not add
+another callback marker until the ownership path is classified.
 
 HYPOTHESIS-ID: oracle-pif-callback-runtime
 
 Competing hypotheses:
 
-- H-pif-direct-target: the corrected caller's direct branch resolves to an
-  invalid or incompatible callback address at runtime.
-- H-pif-prologue: the callback target is correct, but entry/prologue state
-  (stack, ABI, or symbol body) faults before the first marker.
-- H-pif-marker-body: callback entry succeeds and the first diagnostic body
-  faults before its marker, so the marker placement is misleading.
+- H-pif-handler-trampoline: PIF breakpoint activation installs a wrapper or
+  saved handler with an incompatible function type; the direct callback call
+  is valid but the runtime memory-handler transition corrupts state.
+- H-pif-callback-state: the callback target and ABI are valid, but callback
+  entry faults because the debugger state/opaque pointer is invalid or stale.
+- H-pif-core-reentrancy: the callback entry is valid, but the first callback
+  operations re-enter or touch core state in a context that is not safe; the
+  current marker placement is after the failing operation.
 
-Discriminating measurement: `nm`/`otool` must identify the direct branch target
-and callback entry/prologue, while the positive-control PIF run must compare
-wrapper pre-callback, callback first-statement, and post-callback markers. A
-bad/unresolved target selects H-pif-direct-target; a valid target with no first
-marker selects H-pif-prologue; a first marker followed by no return selects
-H-pif-marker-body.
+Discriminating measurement: enumerate every assignment and invocation of the
+PIF handler and saved pointer from `activate_memory_break_read` through
+`read_with_bp_checks`, then compare the declared callback types, casts, and
+opaque lifetimes. A mismatched handler/trampoline type selects
+H-pif-handler-trampoline; coherent ownership with an invalid callback state
+selects H-pif-callback-state; coherent types/state with an unsafe first-body
+operation selects H-pif-core-reentrancy. Do not infer a retail phase result
+from this oracle boundary.
 
 Exact commands:
 
-`nm -n /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib | rg 'read_with_bp_checks|check_breakpoints_on_mem_access'`
+`rg -n -C 8 'activate_memory_break_read|read_with_bp_checks|check_breakpoints_on_mem_access|saved_handler|handler|opaque' /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger/dbg_breakpoints.c /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device/memory/memory.c`
 
-`otool -tvV /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib | sed -n '1,1155p' | rg 'read_with_bp_checks|check_breakpoints|mov w[0-3]|bl\s'`
+`sed -n '1,240p' /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger/dbg_breakpoints.h; sed -n '1,260p' /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device/memory/memory.h`
 
-`env DYLD_LIBRARY_PATH=/Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/rogue_squadron.z64 --secs 3 --watch-write 0x0:0x800000 --watch-read 0x1fc00000:0x1fc01000 --vi-poll --vi-trace`
+`nm -n /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib | rg 'read_with_bp_checks|check_breakpoints_on_mem_access|activate_memory_break_read|read_pif_mem'`
+
+Expected outcomes: classify the handler/saved-pointer type and lifetime, or
+record the exact unresolved edge. No mitigation is authorized by this audit.

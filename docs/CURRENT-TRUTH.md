@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s978 (2026-08-13). The active blocker is authoritative
+Reviewed through s979 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -313,6 +313,14 @@ closed; M3 work is limited to systematic idiom-class audits.
   missing-argument explanation is refuted as the runtime cause; the remaining
   callback call/entry path is selected. This is single-source oracle evidence;
   retail phase remains unevaluable.
+- s979 independently audited the corrected `iter974-armB2` dylib: both PIF
+  call sites pass `pc-4`, address, size `4`, and flags `3` directly to the
+  local callback at `0x1b80`, whose entry has a normal aligned prologue and
+  first marker after entry. The fixed 3-second PIF arm passed watch setup and
+  the whole-RDRAM positive control, reached PIF wrapper pre-callback at
+  `0x1fc007e4`, then exited `rc=139` before callback entry or return. This
+  selects the runtime callback call/entry boundary over the old LTO argument
+  artifact; retail phase remains unevaluable. No mitigation or runtime change.
 
 ## Recent evidence ledger
 
@@ -368,6 +376,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s976 | Preserved all-LTO object and final dylib both retain `x0=pc,x1=address,x2=size,x3=flags`; both wrapper call sites emit `w2=4,w3=3`, and `br x3` preserves the indirect target. The s975 mismatch is recipe/toolchain-state dependent; no runtime or retail conclusion follows. |
 | s977 | Forced clean all-LTO reproduces the bad `w2=3`/unset-`w3` shape; compiling only `dbg_breakpoints.o` with `-fno-lto` restores `w2=4,w3=3` at both sites. The smallest corrective boundary is independently selected; retail remains unevaluable. |
 | s978 | Corrected `dbg_breakpoints.o` arm passed the same-run whole-RDRAM control (616,120 writes/2 s) but still died `rc=139` after PIF wrapper pre-callback and before callback entry/return. Static caller shape is correct; callback path remains selected and retail phase is unevaluable. |
+| s979 | Corrected `iter974-armB2` static audit found a direct aligned callback target with `w2=4,w3=3`; fixed 3-second PIF arm passed setup/control, reached wrapper pre-callback, then died `rc=139` before callback first marker or return. Runtime callback call/entry boundary remains selected; retail phase is unevaluable. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -385,11 +394,12 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Use the corrected oracle arm (only `dbg_breakpoints.o` compiled with
-   `-fno-lto`) for one bounded PIF read-watch run with a whole-RDRAM positive
-   control. If the callback entry and return markers survive, the prior PIF
-   crash was an all-LTO artifact; if it still crashes, inspect the corrected
-   callback path before any retail phase conclusion.
+3. Audit the corrected oracle's callback boundary: trace the runtime handler
+   replacement/saved-pointer path from `activate_memory_break_read` through
+   `read_with_bp_checks` and the callback's first instruction. The static
+   target is valid but the fixed arm still dies between the direct branch and
+   callback first marker; do not infer a retail phase result or add a runtime
+   mitigation.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
