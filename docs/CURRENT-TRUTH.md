@@ -58,13 +58,15 @@ Static audits classify the width-320 handoff as state-shaped:
   ROM offset `0x1345A4` contains `00 05 07 0A 0B 11 00 00`. Overlay DMA is
   the loader; no generated population writer was found.
 
-The bounded non-generated source audit found no host/runtime or patch access,
-no overlay-loader/data write, and no direct companion-decomp access to
-`0x80130B54`. The companion struct independently identifies the byte as
-`D_80130B40.demoId` at offset `0x14`; its named `cycleIdleDemoId` writer is
-already in the generated audit. Whole-struct or pointer-mediated writes remain
-the only unresolved boundary; this selects `H-boundary` (single-source static
-audit, not a runtime classification).
+The s1070 bounded non-generated source audit found no host/runtime or patch
+access, no overlay-loader/data write, and no direct companion access to
+`0x80130B54`. The s1071 companion audit found a pointer-mediated write in
+`func_800C1D3C.c:389-390`: `&D_80130B40 + 4*arg0->rest01[3]`, then XOR-write
+through `->unkC`. The containing field is `+0x14` when
+`arg0->rest01[3] == 2`, so `H-pointer-write` is selected. This is static
+source evidence only: the runtime value of that index and whether this branch
+executes remain open. The same function's indexed `->unkC` read and
+`func_800C6728`'s indexed reads do not add another writer.
 
 ## M4 zero-shade boundary
 
@@ -101,14 +103,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1063–s1065 | Demo-id writer and immutable `dLevelByDemoId` ROM ownership were classified in generated/data paths. |
 | s1066–s1068 | `cycleIdleDemoId` callers, clear form, and all generated aliases were audited; non-generated ownership remains. |
 | s1069 | Maintenance compaction; no experiment or runtime conclusion. |
-| s1070 | Non-generated host/patch/overlay search found no selector access; companion struct confirms `demoId` at +0x14. Pointer-mediated ownership remains `H-boundary` (single-source). |
+| s1070 | Non-generated host/patch/overlay search found no selector access; companion struct confirms `demoId` at +0x14. Pointer-mediated ownership remained open. |
+| s1071 | Companion audit found a computed-base XOR write at `func_800C1D3C.c:389-390` that aliases +0x14 when `rest01[3]==2`; selects `H-pointer-write` (static, index value unclassified). |
 
 ## Ranked next steps
 
-1. Audit whole-struct and pointer-mediated companion-decomp paths that can
-   write `D_80130B40.demoId` (+0x14), using the bounded source list in
-   `scratch/agent/NEXT.md`. A concrete field/whole-struct writer selects
-   `H-pointer-write`; only reads retain `H-boundary`. Do not build.
+1. Audit the `func_800C1D3C` caller/initialization chain to classify
+   `arg0->rest01[3]` at the computed-base XOR write. A proven value 2 selects
+   an active demoId writer; a proven value outside 2 makes this alias inactive
+   on the audited path. Do not build unless the source boundary becomes
+   insufficient.
 2. Keep the retail oracle parked until a new, falsifiable phase-path
    discriminator can reach the 512 hangar-origin phase. Do not arm the
    freelist watch from width-320 evidence.

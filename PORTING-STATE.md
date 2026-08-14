@@ -62429,6 +62429,7 @@ ownership audit of `0x80130B54`.
 
 ORIGIN: documentation maintenance only; no guest value, runtime behavior, or
 mitigation was changed.
+
 ## Session 1070 (2026-08-14) — audited non-generated selector ownership
 
 Ran the prescribed bounded source audit; no build or runtime run was needed.
@@ -62449,3 +62450,26 @@ writer was found. This selects `H-boundary`, single-source static evidence;
 whole-struct or pointer-mediated writes remain open. The audit rules out a
 direct non-generated writer and an overlay-loader ownership explanation, not
 pointer-mediated guest ownership.
+
+## Session 1071 (2026-08-14) — audited pointer-mediated selector ownership
+
+Ran the prescribed companion-decomp source audit; no build or runtime run was
+needed. The complete relevant table was:
+
+| Source/function | Field or expression | Width/access | Direction and result |
+|---|---|---|---|
+| `ctx.c:646-706` | `D_80130B40.demoId` at `+0x14` | 8-bit declaration | ownership declaration only |
+| `hud_stuff/func_800C1D3C.c:389-390` | `(&D_80130B40 + 4*arg0->rest01[3])->unkC` | XOR assignment through a computed base; 32-bit decomp field | write; aliases `+0x14` when `rest01[3] == 2` |
+| `hud_stuff/func_800C1D3C.c:494` | `(&D_80130B40 + 4*arg0->rest01[3])->unkC` | bit-test read | read only; no writer |
+| `unsorted_thoughts/func_800C6728.c:40,45,49` | same computed `->unkC` base | bit-test reads | read only; no writer |
+| `controller_stuff/func_800B47C4.c:640,1007` | `(&D_80130B40 + 4*temp_s1)->unkC` | computed-base XOR assignment | pointer-mediated write, but no proof `temp_s1 == 2` in this audit |
+| remaining direct-reference functions | named fields (`unk05`, `unk06`, `unk10`, `unk13`, `unk18`, `unk21`, `unk22`, `unk23`, `unk24`, `unk28`, language, volumes, cheat flags) | byte/word reads or writes | none targets `+0x14`; no whole-struct copy destination found |
+
+This selects `H-pointer-write`: the companion tree contains a concrete
+computed-base writer capable of reaching the selector byte. It does not yet
+prove that either index is 2 at runtime, nor that the branch executes. The
+indexed reads are not alternative writers. The next discriminator is the
+caller/initializer provenance of `rest01[3]` and `temp_s1`.
+
+ORIGIN: companion-decomp source audit at the cited files and lines; no guest
+value, runtime behavior, or mitigation was changed.
