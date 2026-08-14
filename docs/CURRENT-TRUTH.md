@@ -6,7 +6,8 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1026 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1027 (2026-08-14). The active investigation is M3 slot-SP
+corruption; M4 zero-shade is parked after its third consecutive controlled null:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
@@ -56,6 +57,11 @@ triplets all passed. No M4 `v6`, `v29`, `acch`, or `accm` field contained
 The larger budget therefore remains a controlled null, not a numeric
 classification. The next capture must budget the stage-1 control separately
 so later M4 tasks are sampled.
+s1027 split the budget to 64 stage-1 controls and 2048 target rows. VI-1024,
+input, all 64 controls, and all 2048 target rows passed; no M4 `v6`, `v29`,
+`acch`, or `accm` field contained 0x8000 (22 unrelated `accl` fields did).
+This is the third controlled M4 null, so no numeric hypothesis is selected and
+the next iteration pivots to the landed slot-SP diagnostic.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -275,21 +281,24 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1024 | Raised the M4 row cap from 96 to 512 and rebuilt. The first two recipes were invalid (phase-stop and abbreviated schedule); the final full schedule reached VI-1024 and logged input edges but produced no stage-1 or M4 rows. Numeric hypotheses remain unevaluable; no mitigation. |
 | s1025 | The no-LLE recipe reproduced the zero-row configuration failure. The corrected LLE arm passed VI-1024, input, and stage-1 controls and produced 124 complete M4 triplets. All stage-12 v6 values matched stage-11 v6; no shade field reached 0x8000, so the numeric hypotheses remain unevaluable. |
 | s1026 | A 2048-row corrected LLE capture passed VI/input/stage-1 controls and produced 161 complete M4 triplets. No tested shade/accumulator endpoint reached 0x8000; only low `accl` fields did. Numeric hypotheses remain unevaluable. |
+| s1027 | Split the caps to 64 stage-1 controls and 2048 target rows. VI-1024, input, all controls, and all target rows passed; no `v6`, `v29`, `acch`, or `accm` endpoint reached 0x8000 (22 `accl` hits only). Third controlled M4 null; pivot to slot-SP diagnostic. |
 
 ## Ranked backlog
 
-1. Separate the stage-1 positive-control budget from the M4-row budget, keeping
-   the same corrected LLE recipe and logging. Prove VI-1024/input/stage-1,
-   then sample at least 2048 M4 rows from later tasks and pair stage-10/11/12
-   rows for a shade `0x8000` endpoint; do not repeat the shared-cap null.
-2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
+1. Run the landed `ROGUESQ_LOG_SLOT_SP_GUARD=1` diagnostic under the standard
+   post-sec2 soak and classify the first out-of-RDRAM guest `$sp` caller; keep
+   the M4 numeric question parked unless a new discriminating lead appears.
+2. The M4 accumulator/VGE numeric-origin question remains open after three
+   controlled nulls; resume only with a new discriminator or independent ground
+   truth.
+3. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
    and classify the captured caller; do not do another static sweep.
-3. Directory access to `rs64-oracle` is restored; resume the archived s983
+4. Directory access to `rs64-oracle` is restored; resume the archived s983
    oracle callback audit when the loop is not actively running a capture. Do
    not self-grant access or infer a retail phase result.
-4. Preserve regeneration delete-before-regen ordering and audit fixup counts
+5. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
 ## Phase-gate audit (s1017)

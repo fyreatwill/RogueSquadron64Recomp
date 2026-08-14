@@ -61536,3 +61536,22 @@ does rule out the prior concern that the 512 cap alone prevented useful
 sampling. No mitigation was added. ORIGIN: the observed low-half `accl`
 endpoint is an accumulator field from the live probe, but it is not the
 post-VMADH shade `v6`/high-half sentinel under test.
+
+## Session 1027 (2026-08-14) — split M4 probe budgets remained controlled null
+
+Added independent environment-controlled caps to `rs64_m4_accum_probe`, with
+the capture using 64 stage-1 positive-control rows and 2048 stage-10/11/12
+target rows. The executable built successfully. The corrected phase-gated LLE
+capture reached VI-1024, delivered four host-start input edges, logged all 64
+stage-1 controls, and filled the target budget with 683 stage-10, 683 stage-11,
+and 682 stage-12 rows. No crash marker occurred.
+
+Across the target rows, no `v6`, `v29`, `acch`, or `accm` field contained
+`0x8000`; 22 unrelated low-half `accl` fields did. This is a valid later-task
+coverage result but does not select accumulator saturation, ordinary `v4`/`v0`
+arithmetic, or VGE selection. It rules out the shared-cap explanation for the
+previous null, and after three consecutive controlled M4 nulls the next probe
+pivots to `ROGUESQ_LOG_SLOT_SP_GUARD=1`. No mitigation was added.
+ORIGIN: the `accl` values are produced by the live M4 accumulator state, but
+they are not the tested post-VMADH shade endpoint and are not a legitimate
+explanation for the zero-shade sentinel.

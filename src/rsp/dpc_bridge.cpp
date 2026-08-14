@@ -410,8 +410,19 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage) {
         return e && *e && *e != '0';
     }();
     if (!enabled) return;
-    static uint32_t lines = 0;
-    if (lines++ >= 2048) return;
+    static const uint32_t control_cap = [] {
+        const char *e = std::getenv("ROGUESQ_M4_CONTROL_CAP");
+        return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 64u;
+    }();
+    static const uint32_t target_cap = [] {
+        const char *e = std::getenv("ROGUESQ_M4_TARGET_CAP");
+        return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 2048u;
+    }();
+    static uint32_t control_lines = 0;
+    static uint32_t target_lines = 0;
+    uint32_t *lines = stage == 1 ? &control_lines : &target_lines;
+    const uint32_t cap = stage == 1 ? control_cap : target_cap;
+    if ((*lines)++ >= cap) return;
     auto *rsp = static_cast<RSP *>(opaque);
     fprintf(stderr, "[m4-accum] task=%u phase=%u stage=%u", g_e9prov.task,
             rs64_phase_ord(), stage);
