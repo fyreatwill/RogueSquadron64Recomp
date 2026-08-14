@@ -60642,3 +60642,32 @@ ORIGIN: the new watcher observes write faults on shared host pages and reports
 the faulting host PC/LR plus exact-range overlap; it changes page protection
 only to retry the faulting store and makes no legitimacy claim about any
 payload writer.
+## Session 990 (2026-08-13) — classified phase-4 recovered fault PCs
+
+Ran the prescribed static work unit using only the s989 fault log plus the
+local binary, symbol table, ARM64 disassembly, and regenerated-source
+snapshot. `atos` independently mapped the five requested host PCs as follows:
+
+- `0x103300418` → `soundMacroSetFlagBitTremolo` (`funcs_22.c:5890`)
+- `0x103356134` → `tickSongSequence` (`funcs_25.c:6125`)
+- `0x103383458` → `decodeAndFillVoiceBlock` (`funcs_27.c:2711`)
+- `0x103300210` → `soundMacroPlayRandomKeyNote` (`funcs_22.c:5834`)
+- `0x10334D084` → `stepSongPitchBendLanes` (`funcs_25.c:3123`)
+
+`otool -tvV` confirmed the PCs are inside generated ARM64 bodies, including
+ordinary generated guest-memory operations at the relevant offsets; none is
+an allocator or renderer-runtime symbol. The associated s989 global
+`guest_pc` breadcrumbs point to addresses outside these functions' guest
+ranges (and one `decodeAndFillVoiceBlock` PC varies between two stale values),
+so the breadcrumb cannot be used to attribute the host faulting store.
+
+This selects H-generated over H-runtime for host-PC ownership and rules out
+only the claim that all five recovered faults are unrelated runtime stores.
+It does not prove that any fault wrote the sampled VTXCOLOR bytes: s989's
+fault addresses were outside the exact target ranges on shared pages, and the
+host PC alone does not establish the value, destination offset, or legitimacy
+of the generated write. No guard or shade mitigation was added.
+
+ORIGIN: the recovered page-fault records originate in the macOS page-protection
+watcher; this session only classified their host PCs and did not alter memory
+ownership or payload values.

@@ -1,33 +1,37 @@
-# NEXT work unit (s990)
+# NEXT work unit (s991)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
 ## One work unit
 
-Classify the five unique phase-4 host fault PCs from s989 with the local
-symbol table and ARM64 disassembly, and compare their call sites with the
-generated guest breadcrumb. This is a bounded static classification of the
-faults that actually occurred; do not add a guard or infer target-byte
-ownership from a page fault alone.
+Design one batched, phase-gated runtime probe that records the generated
+guest PC immediately before every ordinary `MEM_*` write whose host address
+falls on the two shared phase-4/phase-6 pages, then compares exact target
+range overlap against the s989 recovered page-fault census. Do not add a
+guard or change shade behavior.
 
 ## Competing hypotheses and discriminating measurement
 
-- H-generated: fault PCs resolve to generated game stores.
-- H-runtime: fault PCs resolve to allocator/renderer runtime stores.
-- H-page-gap: all faults are unrelated stores on shared host pages.
+- H-generated-target: a generated `MEM_*` write overlaps the exact target
+  range and carries a matching guest PC.
+- H-generated-unrelated: generated writes occur only at non-target offsets,
+  leaving the page-sharing gap unresolved.
+- H-runtime-copy: exact target overlap appears only through a runtime copy or
+  renderer/state-conversion path, not generated `MEM_*`.
 
-Discriminating measurement: independent PC-to-symbol/disassembly
-classification for the repeated PCs `0x103300418`, `0x103356134`,
-`0x103383458`, `0x103300210`, and `0x10334D084`, with the s989 guest-PC/LR
-records as the comparison. A generated store selects H-generated; a runtime
-store selects H-runtime; only unrelated shared-page stores select H-page-gap.
+Discriminating measurement: same-run positive-control records plus phase-4 and
+phase-6 counts of (a) exact-target ordinary generated writes with guest PC,
+(b) non-target page writes with guest PC, and (c) exact-target runtime-copy
+writes. Exact-target (a) selects H-generated-target; only non-target (b)
+selects H-generated-unrelated; exact-target (c) selects H-runtime-copy.
 
 ## Exact commands
 
-`nm -n build/RogueSquadron64Recomp` (use the nearest preceding symbols), then
-`otool -tvV build/RogueSquadron64Recomp` around those symbols and map any
-generated caller with the existing local symbol/guest-PC tools.
+Before editing, inspect the existing phase/page-fault hooks and fixup path:
 
-Use only `scratch/agent/soak_results/s989_vtx_write_fault/run.log` as input;
-no build or soak is needed unless the symbol/disassembly artifacts are
-unavailable. Land no mitigation.
+`rg -n "vtx-write-fault|PROBE_PHASE_WIDTH|MEM_[BHW]|MEM_W" src N64Recomp tools`
+
+Arm every measurement in one build/run and require the existing F5/shade and
+all-DMA controls to fire. If ordinary generated writes cannot be scoped to
+the shared pages without a regeneration-hostile edit, stop and record the
+blocking measurement rather than adding a temporary generated-file probe.

@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s989 (2026-08-13). The active blocker is authoritative
+Reviewed through s990 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -439,6 +439,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s987 | Exhaustive generated-source address inventory found zero literal references, zero direct stores, and no `lui` construction of the sampled `0x8072/0x8073xxxx` guest-pointer region for both phase-6 and phase-4 ranges. This refutes only a direct absolute game-side writer; dynamic register-relative stores, DMA/copy ownership, and renderer-state conversion remain unresolved. No build, runtime arm, or mitigation. |
 | s988 | Added a phase-gated `dma_dmem_to_rdram` origin census with an independent all-DMA control. The corrected ungated-LLE run reached VI 1024, fired phase-4 and phase-6 DMA controls, and recorded zero DMA writes overlapping phase-4 `0x726200..0x726C50` or phase-6 `0x732A10..0x73E3B0`. This rules out the instrumented RSP DMEM-to-RDRAM DMA path as the sampled payload writer, but does not distinguish dynamic CPU stores from renderer/state conversion; the hook does not observe ordinary generated CPU stores. The first run was invalid because its positive control was not emitted, then the fixed build/run passed controls. No mitigation. |
 | s989 | Added a recoverable macOS page-fault census for the two shared host pages covering the phase-4 and phase-6 VTXCOLOR ranges. The run reached VI 1024, completed the 180-second capture without a crash, and logged 128 recovered write faults; 124 phase-4 records were all outside the exact target range and no phase-6 exact-range record occurred. F5-state/shade controls and all-DMA controls fired. This selects no directly faulting CPU store in the observed target bytes, bounded by page sharing; dynamic copies and renderer/state conversion remain open. No mitigation. |
+| s990 | `nm`/`atos` and ARM64 disassembly independently classified the five requested phase-4 fault PCs as generated game functions: `soundMacroSetFlagBitTremolo`, `tickSongSequence`, `decodeAndFillVoiceBlock`, `soundMacroPlayRandomKeyNote`, and `stepSongPitchBendLanes`. No PC resolved to allocator/renderer runtime code. The associated global guest breadcrumbs do not match those host functions' guest ranges, so they cannot attribute the faulting store. H-generated is selected for host-PC ownership only; no target-byte writer or legitimacy conclusion follows. No mitigation. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
