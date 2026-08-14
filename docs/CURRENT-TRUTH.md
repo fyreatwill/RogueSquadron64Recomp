@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1027 (2026-08-14). The active investigation is M3 slot-SP
+Reviewed through s1028 (2026-08-14). The active investigation is M3 slot-SP
 corruption; M4 zero-shade is parked after its third consecutive controlled null:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
@@ -61,7 +61,16 @@ s1027 split the budget to 64 stage-1 controls and 2048 target rows. VI-1024,
 input, all 64 controls, and all 2048 target rows passed; no M4 `v6`, `v29`,
 `acch`, or `accm` field contained 0x8000 (22 unrelated `accl` fields did).
 This is the third controlled M4 null, so no numeric hypothesis is selected and
-the next iteration pivots to the landed slot-SP diagnostic.
+the next iteration pivots to the landed slot-SP diagnostic. s1028 verified
+against ground truth (not just the backlog's word) that the guard is genuinely
+landed: the fixup patch is `N64Recomp/fixup_game_funcs.py:25156-25185` (s1005),
+present in the generated `funcs_8.c` and in the compiled binary's strings. The
+guard already ran once pre-M4-detour (`SOAK-RESULTS.md` s1009): a forced-LLE
+recipe reached 57 frames and crashed at `slotDispatcherIter+8592` (not `+872`)
+with zero guard hits — a valid but unevaluable null, since that run never
+reached the `+872` fault site. `s1028_slot_sp_guard.sh` is queued with a
+changed, non-forced-LLE recipe and a longer key schedule to give the `+872`
+site a real chance to be reached; it has not run yet.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -285,16 +294,21 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 
 ## Ranked backlog
 
-1. Run the landed `ROGUESQ_LOG_SLOT_SP_GUARD=1` diagnostic under the standard
-   post-sec2 soak and classify the first out-of-RDRAM guest `$sp` caller; keep
-   the M4 numeric question parked unless a new discriminating lead appears.
+1. Consume the queued `scratch/agent/soak_queue/s1028_slot_sp_guard.sh`
+   (non-forced-LLE recipe, longer key schedule) and classify the first
+   out-of-RDRAM guest `$sp` caller if the `+872` fault site is reached; the
+   prior forced-LLE guard run (s1009) crashed at a different offset
+   (`+8592`) with zero guard hits and did not reach it. Keep the M4 numeric
+   question parked unless a new discriminating lead appears.
 2. The M4 accumulator/VGE numeric-origin question remains open after three
    controlled nulls; resume only with a new discriminator or independent ground
    truth.
-3. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
-   diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
-   stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
-   and classify the captured caller; do not do another static sweep.
+3. The `slotDispatcherIter+872` guest-`$sp` corruption has a landed and
+   binary-verified diagnostic (`N64Recomp/fixup_game_funcs.py:25156-25185`,
+   s1005): `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
+   stack pointer is out of RDRAM at `slotDispatcherIter` entry. The queued
+   `s1028_slot_sp_guard.sh` recipe is item 1 above; do not do another static
+   sweep.
 4. Directory access to `rs64-oracle` is restored; resume the archived s983
    oracle callback audit when the loop is not actively running a capture. Do
    not self-grant access or infer a retail phase result.
@@ -351,7 +365,7 @@ only by saturation select `H-accumulator-saturation`; a matching `v29` lane
 selects `H-v29-selection`.
 
 The `slotDispatcherIter` sp-guard soak is a separate queued recipe
-(`scratch/agent/soak_queue/slot_sp_guard.sh`), not this work unit.
+(`scratch/agent/soak_queue/s1028_slot_sp_guard.sh`), not this work unit.
 
 ## Method and safety rules
 

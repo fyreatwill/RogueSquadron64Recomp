@@ -61555,3 +61555,49 @@ pivots to `ROGUESQ_LOG_SLOT_SP_GUARD=1`. No mitigation was added.
 ORIGIN: the `accl` values are produced by the live M4 accumulator state, but
 they are not the tested post-VMADH shade endpoint and are not a legitimate
 explanation for the zero-shade sentinel.
+
+## Session 1028 (2026-08-14) — verified the slot-SP guard is genuinely landed and requeued it under a changed recipe
+
+Checkpoint close-out: the prior iteration committed only the queued soak
+script (`scratch/agent/soak_queue/s1028_slot_sp_guard.sh`, commit 84095402)
+without a PORTING-STATE entry, so this session closes that gap rather than
+running a new experiment.
+
+Before trusting the backlog's "landed" claim for
+`ROGUESQ_LOG_SLOT_SP_GUARD`, checked ground truth directly instead of taking
+CURRENT-TRUTH's word for it (iron rule 12): grepping this repo alone for
+`SLOT_SP_GUARD`/`SLOT_DISPATCH` finds nothing, because the guard lives in the
+sibling `N64Recomp` working directory, not here. The fixup patch is at
+`N64Recomp/fixup_game_funcs.py:25156-25185` (landed s1005): it gates on
+`ROGUESQ_LOG_SLOT_SP_GUARD`, checks `ctx->r29` against the RDRAM range at the
+`slotDispatcherIter` prologue spill (`0x8003E8DC`), and dumps `sp`/`ra`/`a0`-
+`a1`/`s0`-`s7`/`fp`/`gp` on an out-of-range value. Confirmed present in the
+generated `N64Recomp/RecompiledFuncs/funcs_8.c:34593` and in the compiled
+`build/RogueSquadron64Recomp` binary (the `[slot-sp-guard] INVALID ...`
+format string is in the binary's strings, and the binary (03:54) postdates
+the generated source (00:27)). The guard is real and running.
+
+The soak has already run once, before the M4 detour: `SOAK-RESULTS.md`
+`20260814-013347` / s1009 analysis — `ROGUESQ_LLE_FORCE=1
+ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1` plus
+the guard, reached VI-1024-equivalent phase gating, ran 57 frames, and
+crashed at `slotDispatcherIter+8592` — a different offset from the recurring
+`+872` prologue-spill fault — with zero guard hits before the crash. That is
+a valid null (the guard armed; nothing invalid was seen) but UNEVALUABLE
+against the `+872` question, because the run never reached the fault site the
+guard targets.
+
+The newly queued `s1028_slot_sp_guard.sh` is not a duplicate of that run: it
+drops the forced-LLE/stub-missing-funcs flags (runs normal dispatch instead
+of the forced/solo LLE path used in the s1009 recipe), swaps
+`SLOT_DISPATCH`/`VTX_*`/`F5_STATE`/`SHADE_RAW` logging for
+`INPUT`/`DPC`/`THREADS`/`INIT`, and extends the key schedule to 10 events
+through frame 250 instead of 7 through 160. This changes which code path runs
+and gives the recipe a real chance to reach the `+872` site under ordinary
+dispatch, which the s1009 recipe's forced-LLE configuration may have
+bypassed. No new run was executed this session; the recipe is queued for the
+loop to consume between iterations, per the soak-queue contract.
+
+No hypothesis is selected or refuted this session. ORIGIN: not applicable —
+no mitigation, guard, or generated-code change was made; only ground truth
+was verified and a queued recipe was scoped against prior evidence.
