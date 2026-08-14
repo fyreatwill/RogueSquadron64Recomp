@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1153 (2026-08-14).
+in the ledger. Reviewed through s1154 (2026-08-14).
 
 ## Current state
 
@@ -128,6 +128,13 @@ in the ledger. Reviewed through s1153 (2026-08-14).
   still produced no VI-1024, E9 provenance, or unified-E9 row. The
   `vi-submitgfx-owner` thread is therefore closed as unevaluable after three
   consecutive attempts; the callsite data does not select H1/H2/H3.
+- The s1154 post-640 producer census timed out at width 640 after the stable
+  640→2→640 sequence. The independent selector positive control fired once,
+  slot dispatch logged 6,438 rows, and there were no crash or SIGBUS markers;
+  generated selector, predecessor, and `osViSetMode` producer markers were all
+  zero. This selects the producer-absent active-loop path (H2) and moves the
+  next audit to the state writer; the corrected NPC boundary remains
+  unevaluable at runtime.
 
 ## Retail VI descriptor boundary
 
@@ -252,18 +259,19 @@ corruption.
 | s1151 | The shared `submitGfxFrame` entry marker fired in phases 2/4/6 with selector, E9, and slot controls live, but the run stalled before VI-1024 in `fillSampleStreamRange+336`. All guest return addresses were zero because generated direct C calls do not populate `ctx->r31`; the shared-entry owner discriminator is invalid, so callsites must be tagged directly. |
 | s1152 | Added durable phase-scoped markers at all 13 generated `submitGfxFrame` callsites and rebuilt. The corrected retry passed selector and slot controls, logged 168 callsite rows including phase-6 `0x800A64AC`, and ran crash-free through 640→2→640, but never reached VI-1024 and logged zero unified-E9 rows. Owner hypotheses remain unevaluable. |
 | s1153 | Repeated the callsite capture with the documented phase-relative input schedule and all controls. Selector positive control fired, slot dispatch logged 6,424 rows, and callsites logged 168 rows including phase-6 `0x800A64AC`; the run stayed crash-free through 640→2→640 but produced no VI-1024, E9 provenance, or unified-E9 rows. After three consecutive unevaluable owner attempts, this thread is closed without selecting H1/H2/H3. |
+| s1154 | Ran the phase-scoped producer census with the independent selector positive control and slot-dispatch control. The run timed out at width 640 after 640→2→640; selector positive fired once, slot dispatch logged 6,438 rows, generated selector/predecessor/producer markers were zero, and no crash/SIGBUS occurred. This selects H2, the stable loop without a generated VI producer, and sends the investigation to the state writer. |
 
 ## Ranked next steps
 
-1. Pivot to the stable post-640 loop: make one phase-scoped producer census
-   covering every `osViSetMode` caller and the state/input predecessor that
-   can activate it, with an independent host selector positive control. The
-   discriminator is whether any generated producer/predecessor fires after
-   the final 640 commit while slot dispatch and host input continue. A
-   producer-positive result selects an unobserved state gate; a producer-zero
-   result selects the active-loop path and moves the investigation to the
-   state writer. Do not repeat the callsite-owner capture until VI-1024 and an
-   E9 control are both present.
+1. Audit the state writer feeding the post-640 VI path: enumerate every
+   generated store to the active mode/descriptor selector bytes and copied
+   mode records, then classify each writer as reachable before or after the
+   final committed 640 record. Keep the existing selector positive and slot
+   dispatch controls if a runtime check is needed. The discriminator is a
+   reachable post-640 writer that changes the selected record versus no such
+   writer in the generated graph; the latter sends the investigation to the
+   non-generated/runtime state owner. Do not repeat the closed callsite-owner
+   capture.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

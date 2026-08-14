@@ -63938,3 +63938,19 @@ required target phase and E9 row were absent. It closes the owner thread after
 three consecutive non-discriminating attempts and rules out neither owner nor
 cause; the next work unit pivots to a whole post-640 VI-producer/state-gate
 census.
+
+## Session 1154 (2026-08-14) — censused the post-640 VI producer path
+
+Rebuilt the existing macOS target and ran the phase-gated producer census with
+the selector positive control, slot-dispatch control, and documented input
+schedule. The run reached the stable 640→2→640 sequence, then timed out after
+180 seconds at width 640. The selector positive control fired once, slot
+dispatch logged 6,438 rows, and there were no crash or SIGBUS markers. Generated
+selector, predecessor, and `osViSetMode` producer markers were all zero.
+
+This selects H2: the active post-640 loop continues without a generated VI
+producer or selector predecessor. It rules out a reachable generated producer
+in this phase-scoped run, but does not establish the owner of any non-generated
+state and does not evaluate the corrected NPC boundary because VI-1024 was not
+reached. The next work unit is a complete generated/companion state-writer
+census.
