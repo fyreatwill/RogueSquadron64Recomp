@@ -83,6 +83,15 @@ tree has no typed caller or initializer for this function, so it cannot prove
 pointer-mediated `+0x14` writer remains possible but its runtime index and
 branch execution are unclassified.
 
+The s1075 generated caller/raw-dispatch audit found one direct call, at
+`funcs_34.c:11137-11140`: `func_800C5B44` invokes the actual handler entry
+`menuControllerInput` at `0x800B47D0` with `a0 = 0`, proving index 0 for that
+path. No other generated or raw `0x800B47C4/0x800B47D0` references exist;
+`0x800B47C4` is only the 12-byte `fake_func` splat trampoline registered in
+the menu overlay. This rules out a generated caller selecting index 2, but
+does not classify an untyped guest entry into the companion's nominal
+`func_800B47C4` path.
+
 ## M4 zero-shade boundary
 
 The independent Factor 5 command reference and same-combiner/white-shade
@@ -123,19 +132,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1072 | Caller/initializer audit found the HUD constructor's zero initialization at `func_800C0084.c:793`, but no typed proof of the runtime index; `H-index-open` remains. |
 | s1073 | `func_800B47C4` masks an external `arg0` into `temp_s1` before its computed-base XOR write; no companion caller proves the index, so `H-temp-s1-open` remains. |
 | s1074 | Complete generated raw `MEM_B(0X14, ctx->rN)` census found 31 stores. Only the two `cycleIdleDemoId` stores use the fixed selector base; the other 29 use object/argument/stack-derived bases. No additional generated writer reaches `0x80130B54`; the non-generated/index-mediated boundary remains open. |
+| s1075 | The only generated call to the actual `menuControllerInput` entry passes `a0=0`, selecting masked index 0; no raw dispatch entry targets `0x800B47C4/0x800B47D0`. The generated caller class is non-2, while an untyped guest-entry possibility remains single-source open. |
 
 ## Ranked next steps
 
-1. Audit generated callers and raw-dispatch entries for `func_800B47C4`,
-   classifying the provenance of its masked `arg0` before the computed-base
-   XOR write. Keep the result static and source-bounded; do not build unless
-   the source boundary becomes insufficient.
-2. Keep the retail oracle parked until a new, falsifiable phase-path
-   discriminator can reach the 512 hangar-origin phase. Do not arm the
-   freelist watch from width-320 evidence.
-3. Keep M4 parked unless an independent ground-truth path or a new complete
+1. Design one new falsifiable retail-oracle phase-path discriminator that could
+   reach the 512 hangar-origin phase; audit existing controls and closed
+   schedule/input explanations first. Do not arm the freelist watch from
+   width-320 evidence.
+2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
-4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
+3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
    omission only when a reproducible lead appears; preserve delete-before-
    regen ordering and audit fixup counts.
 

@@ -62536,3 +62536,25 @@ open.
 ORIGIN: complete generated `MEM_B(0X14, ctx->rN)` census and fixed-base
 address-expression search in `RecompiledFuncs/funcs_*.c`; no guest value,
 runtime behavior, or mitigation was changed.
+
+## Session 1075 (2026-08-14) — audited generated menu-handler callers
+
+Ran the prescribed bounded generated-source audit; no build or runtime run was
+needed. The complete relevant table was:
+
+| Entry/reference | Passed argument | Masked-index result | Branch reachability |
+|---|---|---|---|
+| `funcs_34.c:11137-11140`, `func_800C5B44` → `0x800B47D0` / `menuControllerInput` | `a0 = 0`, `a1 = s4 & 0xFF` | `arg0 & 0xFF = 0` | The handler is called; its internal XOR branch remains conditional, but this call cannot select the `+0x14` alias |
+| generated/raw search for `0x800B47C4` or `0x800B47D0` | no additional entries | none | none |
+| overlay registration | `fake_func_800B47C4` at `0x800B47C4`, `menuControllerInput` at `0x800B47D0` | not a caller | not applicable | the former is a 12-byte splat trampoline |
+
+This selects `H-B47C4-other-index` for the generated caller class and rules out
+a generated or listed raw-dispatch entry selecting index 2. It does not prove
+the companion function's nominal `func_800B47C4` label has no untyped guest
+entry, so the broader non-generated ownership question remains single-source
+open. No mitigation or runtime conclusion was added.
+
+ORIGIN: generated caller and overlay-registration search in
+`RecompiledFuncs/funcs_*.c` and `recomp_overlays.inl`, cross-checked against
+`symbol_files/menu_overlay.txt` and the companion function's branch; no guest
+value, runtime behavior, or mitigation was changed.
