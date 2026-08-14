@@ -61702,3 +61702,26 @@ rules out callback failure and invalid scheduled input, but does not establish
 anything about the retail freelist writer because the hangar-origin 512 phase
 was not reached. No recomp runtime change or mitigation was made. ORIGIN:
 external retail-oracle debugger/input traces; no guest value was changed.
+## Session 1035 (2026-08-14) — retail oracle phase/config audit stayed at width 320
+
+Ran the prescribed bounded retail-oracle environment/phase audit after first
+consulting `tools/oracle/README.md`. The first launcher attempt was invalid
+before startup because this host has neither `xxhsum` nor GNU `timeout`; the
+fixed run used SHA-256 for the ROM identity record and the oracle's own
+45-second stop. The corrected run used the prescribed core and RSP paths,
+reported `debugger=1 emulator=0`, passed the whole-RDRAM positive control at
+10,000 callbacks, removed only watch index 0 with `rc=0`, and left the target
+watch unarmed. Its `[pad]` trace showed Start `0x10000000` at the scheduled
+edges and A `0x80000000` after the A press; VI reached 2,694 while remaining
+at width 320/origin `0x006dd280`. Startup also logged that the Input-SDL
+config sections were missing/incompatible before the front-end materialized
+the generated config, whose mapping was recorded as `Start = key(13)` and
+`A Button = key(304)`; the front-end's scancode injection still produced the
+expected pad words.
+
+This rules out callback failure and the controller-protocol explanation for
+the missing phase transition. It does not rule out config initialization,
+ROM identity mismatch beyond the recorded SHA-256, or a phase-path mismatch;
+the 512 hangar phase and freelist watch remain unevaluable. The next unit is a
+source/config initialization audit, followed by one clean scheduled run if a
+local ordering defect is found.

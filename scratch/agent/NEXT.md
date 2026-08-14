@@ -1,53 +1,53 @@
-# NEXT work unit (s1035)
+# NEXT work unit (s1036)
 
-HYPOTHESIS-ID: retail-oracle-phase-environment-audit
+HYPOTHESIS-ID: retail-oracle-config-initialization
 
-Run one bounded retail-oracle environment/phase-path audit. Do not build or
-change the recomp runtime, and do not arm the freelist watch. s1034 proved the
-whole-RDRAM callback control, verified `Start = key(40)`, and showed both Start
-and A pad words, yet the retail path stayed at width 320.
+Perform one bounded source/config audit of the retail oracle, then make the
+smallest config-initialization fix if the cause is local and rerun its
+documented phase schedule. Do not change the recomp runtime or arm the
+freelist watch.
 
 ## Competing hypotheses and discriminator
 
-* `H-rom-or-core-mismatch`: the oracle is not running the expected retail
-  image/core configuration, so its stable width-320 path is not comparable to
-  the documented timeline.
-* `H-phase-marker-misread`: width 320/origin `0x006dd280` is a legitimate
-  early phase in this setup, but the assumed 512 transition marker or timing
-  belongs to a different configuration.
-* `H-controller-protocol`: the pad words are visible at the input layer, but
-  the selected input plugin/core does not expose them to the title's expected
-  controller path.
+* `H-config-order`: CoreStartup reads the config before the front-end creates
+  or versions the Input-SDL sections; fixing initialization removes the
+  warning and preserves the verified mapping.
+* `H-plugin-defaults`: the warning is harmless because the attached input
+  plugin uses its own defaults; a clean config run still remains at width
+  320/origin `0x006dd280`.
+* `H-phase-path`: configuration is clean and the documented 11-Start schedule
+  still reaches no 512 phase, so the README timeline belongs to another
+  environment or an unobserved transition.
 
-Discriminating measurement: before the run, record the ROM hash, selected core,
-RSP plugin, generated input mapping, and emulator mode from the oracle's own
-startup/config output. In one bounded run, require the existing 10,000-callback
-positive-control/removal marker, the early-boot VI/origin marker, and the
-controller/PIF marker. A mismatch in ROM/core/config selects
-`H-rom-or-core-mismatch`; matching identity plus a documented early-phase
-marker but no 512 transition selects `H-phase-marker-misread`; matching
-identity with pad activity but no PIF/controller activity selects
-`H-controller-protocol`. Missing positive control invalidates the run.
+Discriminating measurement: inspect the order of `CoreStartup`, config-section
+creation/versioning, and input-plugin attachment in `tools/oracle/rs64_oracle.c`.
+Then run one 60-second arm with the whole-RDRAM watch removed at 10,000
+callbacks, `[pad]` and VI traces, and the documented 11-Start schedule.
+Missing input-section warnings after the fix select `H-config-order`; clean
+startup plus the same width-320/origin path selects `H-plugin-defaults` or
+`H-phase-path` according to whether the plugin reports defaults versus an
+explicit configured mapping. Missing positive control invalidates the run.
 
 ## Exact command
 
 ```sh
-mkdir -p /tmp/rs64-oracle-s1035
-xxhsum rogue_squadron.z64 > scratch/agent/oracle_s1035_rom_hash.txt
+mkdir -p /tmp/rs64-oracle-s1036
+shasum -a 256 rogue_squadron.z64 > scratch/agent/oracle_s1036_rom_hash.txt
 tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/rogue_squadron.z64 \
   --rsp /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib \
   --datadir /opt/homebrew/share/mupen64plus \
-  --configdir /tmp/rs64-oracle-s1035 \
-  --secs 45 \
+  --configdir /tmp/rs64-oracle-s1036 \
+  --secs 60 \
   --watch-write 0x0:0x800000 \
-  --press 6:start,11:start,16:start,21:start,21.2:a \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
   --hold-ms 150 --vi-trace --pif-trace \
-  > scratch/agent/oracle_s1035_capture.log 2>&1
+  > scratch/agent/oracle_s1036_capture.log 2>&1
 ```
 
-Verify the generated config maps `Start = "key(40)"` before interpreting
-input. The whole-RDRAM watch must be removed at the validated threshold and is
-not a target; do not interpret a freelist null until a 512 hangar-origin phase
-is reached.
+Before running, inspect the config/attachment order and patch only if the
+warning is caused by local ordering. Verify the generated config maps
+`Start = "key(40)"` before interpreting input. The whole-RDRAM watch must be
+removed at the validated threshold and is not a target; do not interpret a
+freelist null until a 512 hangar-origin phase is reached.
