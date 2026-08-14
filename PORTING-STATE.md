@@ -63761,3 +63761,24 @@ This selects H-input-merged and rules out `fixup_game_funcs.py` and a
 N64Recomp emission bug for this defect. The durable correction is to fix source
 symbol ownership/input so the `0x80077AF0` boundary is present in the main
 `.text` ELF representation; generated C must not be hand-edited.
+
+## Session 1143 (2026-08-14) — corrected NPC function-boundary input
+
+Moved `npcPowerGeneratorUpdate = 0x80077AF0` from `mission_overlay.txt` to
+`main_overlay.txt`, preserving the existing generated-code regeneration flow.
+After clearing only the generated `RecompiledFuncs/funcs_*.c` and `funcs.h`
+outputs, ran `make_elf.py`, N64Recomp, `fixup_game_funcs.py`, and the Debug
+CMake target. The ELF now independently reports
+`forwardToNpcGeneratorSpawn` at `0x80077AC0` with size `0x30`, followed by
+`npcPowerGeneratorUpdate` at `0x80077AF0` with size `0x134C`; generated
+`funcs.h` and `funcs_18.c` contain separate declarations and definitions. The
+Debug target linked successfully. No game run was performed.
+
+This selects H1/input-boundary and rules out H2/other-boundary for the static
+coalescing defect. It does not establish that the corrected boundary causes or
+prevents the recurring runtime `slotDispatcherIter+872` SIGBUS; that is the
+next phase-gated run. The ordinary N64Recomp unsupported-instruction warnings
+and C compiler format warnings remained non-fatal.
+
+ORIGIN: the correction changes only companion symbol-file ownership; no guest
+value was skipped, rewritten, guarded, or otherwise mitigated.

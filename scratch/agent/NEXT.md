@@ -1,25 +1,32 @@
-# NEXT work unit (s1143)
+# NEXT work unit (s1144)
 
 HYPOTHESIS-ID: m3-generated-boundary-anomaly
 
-Apply the smallest input correction identified in s1142: make the companion
-symbol input emit `npcPowerGeneratorUpdate` at `0x80077AF0` in the main `.text`
-section, then run the required regeneration chain and verify the split. Do not
-hand-edit generated C and do not run the game in this work unit.
+Run one bounded phase-gated stability test using the regenerated binary from
+s1143. Do not change code or add a runtime guard.
+
+Competing hypotheses and discriminator before the run:
+
+- H1/runtime-relevant boundary: the corrected split changes the recurring
+  `slotDispatcherIter+872` SIGBUS outcome during a VI-phase-gated run.
+- H2/runtime-independent recurrence: the same SIGBUS recurs with controls and
+  phase progression, leaving runtime frame corruption open despite the static
+  correction.
+
+Discriminating measurement: one run's phase marker and crash classification,
+with positive controls visibly firing. A changed crash outcome selects H1; an
+in-phase recurrence selects H2. A pre-phase crash is unevaluable.
 
 ```sh
-rg -n 'npcPowerGeneratorUpdate|80077AF0' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
-python3 /Users/williambuckley/Documents/Tools/rogue_squadron64/tools/make_elf.py
-cd /Users/williambuckley/Documents/Tools/N64Recomp && ./build/N64Recomp rogue_squadron.toml
-objdump -t /Users/williambuckley/Documents/Tools/rogue_squadron64/build/roguesquadron.elf | rg -i '80077ac0|80077af0|80078e3c'
-rg -n 'void npcPowerGeneratorUpdate|void forwardToNpcGeneratorSpawn|80077AF0' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_18.c
+env ROGUESQ_LOG_ALL=1 zsh tools/run-one-stability.sh 300 scratch/agent/next_s1144.log
+grep -n 'VI 1024\|slotDispatcherIter+872\|CRASH\|control' scratch/agent/next_s1144.log | tail -40
 ```
 
-Expected discriminating outcomes:
+Expected outcomes:
 
-- PASS: ELF shows `forwardToNpcGeneratorSpawn` size `0x30` and a distinct
-  `npcPowerGeneratorUpdate` symbol at `0x80077AF0`; generated C has two host
-  functions. This validates the input correction.
-- FAIL: ELF still omits `0x80077AF0`; the source ownership/input fix was not
-  applied or `make_elf.py` still rejects it. Stop before running the game and
-  inspect only that mapping.
+- PASS/H1: target phase and controls are reached and the boundary-sensitive
+  crash outcome changes relative to the established recurrence.
+- RECURRENCE/H2: controls and target phase are reached, then the same
+  `slotDispatcherIter+872` SIGBUS recurs; do not mitigate it.
+- UNEVALUABLE: no positive control or no target phase; report that instead of
+  interpreting a null crash marker.

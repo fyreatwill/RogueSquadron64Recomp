@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1142 (2026-08-14).
+in the ledger. Reviewed through s1143 (2026-08-14).
 
 ## Current state
 
@@ -21,6 +21,10 @@ in the ledger. Reviewed through s1142 (2026-08-14).
   spill of guest `$sp` at `funcs_8.c:22810`. Direct callers and statically
   addressed indirect targets are balanced; `0x8010B350` is compiled data with
   no generated writer. General runtime caller-frame corruption remains open.
+- The NPC function-boundary input correction is landed in the companion symbol
+  files: `npcPowerGeneratorUpdate` is now sourced as main `.text` at
+  `0x80077AF0`. Regenerated ELF, N64Recomp output, fixups, and the Debug target
+  all pass; no runtime effect is established yet.
   The register-dump probe is landed and binary-verified; phase-positive
   no-event soaks did not classify the site.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
@@ -165,14 +169,15 @@ corruption.
 | s1140 | Audited all 144 static calls to `slotDispatcherIter`: 143 caller contracts balance; one `0x80078894` site is after an emitted return in a coalesced generated block and needs boundary resolution. |
 | s1141 | Independent decomp and generated symbol boundaries identify `0x80077AF0` as a distinct `npcPowerGeneratorUpdate` entry ending at `0x80078E3C`; the generated host coalesces it after `forwardToNpcGeneratorSpawn`'s return. This selects a regeneration/input boundary defect and closes the static ambiguity. |
 | s1142 | Bounded regeneration audit found the split is lost in `make_elf.py`: `npcPowerGeneratorUpdate` is only in `mission_overlay.txt`, but `vram_to_shndx` rejects that source at `0x80077AF0` because it lies in the `.text` VRAM range. The ELF contains `forwardToNpcGeneratorSpawn` at `0x80077AC0` with size `0x137C` and no `0x80077AF0` symbol; N64Recomp then faithfully emits one body. The smallest durable correction is to put the function boundary in the main-overlay symbol input before ELF generation, not to change fixup or N64Recomp. |
+| s1143 | Moved `npcPowerGeneratorUpdate` to `main_overlay.txt`, regenerated the ELF and host output, and ran fixup plus CMake. The ELF now has `forwardToNpcGeneratorSpawn` size `0x30` and `npcPowerGeneratorUpdate` at `0x80077AF0` size `0x134C`; generated C has separate functions and the Debug target links. This validates H1/input-boundary and rules out H2 for this defect; runtime causality remains untested. |
 
 ## Ranked next steps
 
-1. Correct the companion symbol input so `npcPowerGeneratorUpdate` is emitted
-   as a main `.text` function at `0x80077AF0`, regenerate the ELF and N64Recomp
-   output, and verify `forwardToNpcGeneratorSpawn` ends at `0x80077AF0` without
-   hand-editing generated C. Only then build/run to test the isolated boundary
-   correction; do not add a runtime guard.
+1. Run one phase-gated stability test with the regenerated binary and compare
+   only whether the recurring `slotDispatcherIter+872` SIGBUS still occurs.
+   Keep passive breadcrumbs and positive controls enabled; do not add a runtime
+   guard. A clean run tests boundary relevance but does not prove sole
+   causality; recurrence leaves runtime frame corruption open.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
