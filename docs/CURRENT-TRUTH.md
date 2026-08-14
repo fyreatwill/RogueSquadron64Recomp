@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1061 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1062 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -231,6 +231,18 @@ cinematic state byte. None has a direct controller, timer, demo, or attract
 read. This selects `H-selector0-state` as static single-source evidence;
 pointer-mediated or non-generated writes remain an explicit boundary, and no
 retail transition conclusion follows.
+
+s1062 audited the incoming values for the two non-constant generated writers
+of `0x80130B40`. The cinematic writer at `0x800A5E5C` is reached from five
+call sites: two pass constants, two pass the current menu-state byte, and one
+passes a loop/table-derived index; none directly reads controller, timer,
+demo, or attract state. The menu asset path at `0x800C5B8C` reads byte
+`s2+0x14`; `s2` is initialized inside `menuOverlayInit` to the fixed global
+`0x80130B40`, so this is global state byte `0x80130B54` followed by an index
+into the fixed table at `0x800D-0x2BFC`. This selects `H-selector0-state` as
+static single-source evidence: the audited incoming paths are state/table
+shaped and have no direct input/demo source. The writers of the global field
+and the retail transition remain open; no runtime conclusion follows.
 
 ## M4 zero-shade evidence
 
@@ -476,6 +488,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1059 | Enumerated direct generated stores for the two ordinary frame-return words. `0x800CD6D4` has one B/inactive-ship sentinel writer and two state/table-derived hangar-exit writers; `0x800CD6D0` has no direct word writer, only one byte store in `loadCutsceneAssetsByIndex`. Selects `H-frame-word-input` only for the already-known sentinel path; ordinary producer classification remains `H-frame-word-boundary` pending the unresolved table/data producers. |
 | s1060 | Both ordinary `0x800CD6D4` stores select a fixed table byte through `D_800D291C`; index writers and `updateTextOverlayLookupEntry` are setup/selection/ship-state shaped with no controller/timer/demo/attract read. Selects `H-exit-word-state` as static single-source evidence; retail transition remains open. |
 | s1061 | Case-0 `runHangarMenuFromOverlay` receives `s3[0]` at `0x80130B40`. Ten direct generated stores are reset, menu/asset, save/setup, fixed-flag, or cinematic-state shaped; none directly reads controller, timer, demo, or attract state. Selects `H-selector0-state` as static single-source evidence; pointer-mediated/non-generated writers and the retail transition remain open. |
+| s1062 | Incoming-value audit for the two non-constant writers found five cinematic call sites, all constant or menu-state/table-derived, with no direct controller/timer/demo/attract read. The menu asset path reads `s2+0x14`, where `s2` is initialized to fixed global `0x80130B40`, so the source is global state byte `0x80130B54` plus a fixed table lookup. Selects `H-selector0-state` as static single-source evidence; the field writers and retail transition remain open. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -502,8 +515,11 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    producer remains open. s1061 traced the case-0 argument to `0x80130B40`
    and classified all ten direct generated stores as reset/menu/asset/
    save/setup/cinematic state, with no direct controller/timer/demo/attract
-   read. The remaining producer boundary is pointer-mediated or outside the
-   generated tree. Do not arm the
+   read. s1062 traced the two non-constant incoming paths: cinematic callers
+   remain constant/menu-state/table-derived, while the menu asset path reads
+   global state byte `0x80130B54` through fixed global base `0x80130B40` and a
+   fixed table. Selects `H-selector0-state` as static single-source evidence;
+   the field writers remain open. Do not arm the
    freelist watch until a 512 hangar-origin phase is reached.
 2. The normal frame-return producer is now classified as state-shaped:
    `accumulateShipThrottleCharge` has no local controller, timer, demo, or

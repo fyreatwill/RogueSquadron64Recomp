@@ -62285,3 +62285,21 @@ writers remain a boundary.
 
 ORIGIN: direct-store enumeration of the generated `RecompiledFuncs/funcs_*.c`
 tree; no guest value, runtime behavior, or mitigation was changed.
+
+## Session 1062 (2026-08-14) — audited selector-zero incoming producers
+
+Ran the bounded static audit specified in `scratch/agent/NEXT.md`; no build or
+runtime run was performed. The cinematic writer at `0x800A5E5C` has five
+generated call sites: two pass constants, two pass the current menu-state
+byte, and one passes a loop/table-derived index. None directly reads a
+controller edge, timer, demo counter, or attract flag. The menu asset-path
+writer at `0x800C5B8C` reads `s2+0x14`; `s2` is initialized inside
+`menuOverlayInit` to the fixed global `0x80130B40`, so the source is global
+state byte `0x80130B54` followed by the fixed table at `0x800D-0x2BFC`.
+The writers of that global field remain unresolved.
+
+This selects `H-selector0-state` as static single-source evidence. It rules
+out direct input/timer/demo/attract sources at these audited incoming paths,
+but does not classify the field writers or establish the retail transition.
+
+ORIGIN: bounded caller/argument inspection of generated `RecompiledFuncs/funcs_*.c`; no guest value, runtime behavior, or mitigation was changed.
