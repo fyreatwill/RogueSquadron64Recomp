@@ -1,34 +1,41 @@
-# NEXT work unit (s1094)
+# NEXT work unit (s1095)
 
 HYPOTHESIS-ID: retail-loop-pc-delay-classification
 
-Perform one bounded static audit of the retail ROM/generated instructions at
-`0x8006D980..0x8006D9BC`. Classify every watched PC from s1092 as a branch,
-delay slot, taken target, or ordinary sequential instruction, using the ROM
-disassembly/symbol context and the generated function. No ROM run is planned.
+Run one established-schedule retail-oracle capture with execution watches on
+`0x8006D9B0`, `0x8006D9B4`, and `0x8006D9BC`. Keep the whole-RDRAM, PIF, and VI
+controls in the same run. This is one bounded runtime discriminator for the
+static result that `9BC` is ordinary fall-through code.
 
-Competing hypotheses and discriminator:
+Competing hypotheses:
 
-* H-zeroes-are-delay: every zero PC in the s1092 bracket is a delay slot, so
-  the callback-semantic result fully explains the missing PCs.
-* H-nondelay-missing: at least one zero PC is an ordinary or taken-target
-  instruction, leaving a genuine retail control-flow boundary open.
-* H-address-map-error: the static address mapping does not correspond to the
-  watched generated function, so the classification cannot be transferred.
+* H-taken-branch: `9B4` fires, `9BC` stays zero, and the branch target/return
+  path explains the missing fall-through instruction.
+* H-fall-through: `9BC` fires after the compare, proving the retail path took
+  the fall-through and that the earlier zero was a watch/callback anomaly.
+* H-invalid-run: any positive control is absent, so the PC zeros cannot be
+  interpreted.
 
-Discriminating measurement: one complete instruction table for the inclusive
-bracket, with opcode/address/role and an independent ROM-vs-generated address
-check. All-delay classification selects H-zeroes-are-delay; any verified
-non-delay zero selects H-nondelay-missing; a failed address check selects
-H-address-map-error.
+Discriminator: positive whole-RDRAM callbacks, all eleven PIF Start presses,
+and VI callback/poll agreement must all be present. With those controls,
+`9B4>0` plus `9BC=0` selects H-taken-branch; `9BC>0` selects H-fall-through;
+missing controls select H-invalid-run.
 
-Exact commands:
+Exact command:
 
 ```sh
-rg -n -C 8 "8006D980|8006D9(8[048]|9[048]|A[048]|B[048C])" \
-  docs syms RecompiledFuncs tools
-rg -n -C 6 "func_8006D9|8006D980|8006D9B4" RecompiledFuncs tools
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rsp /opt/homebrew/lib/mupen64plus/mupen64plus-rsp-hle.dylib \
+  --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/rogue_squadron.z64 \
+  --configdir scratch/agent/oracle_s1095_config --secs 120 --hold-ms 150 \
+  --watch-write 0x0:0x800000 --hit-cap 10000 \
+  --watch-pc 0x8006D9B0,0x8006D9B4,0x8006D9BC \
+  --press '6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' \
+  --vi-trace --vi-poll --pif-trace \
+  > scratch/agent/oracle_s1095.log 2>&1
 ```
 
-Keep the oracle capacity increase; it is required by the established
-discriminator.
+Use the existing oracle binary and do not build the recomp for this static-
+boundary follow-up. If the command is queued as a soak, the recipe must
+watchdog and SIGKILL the process group.

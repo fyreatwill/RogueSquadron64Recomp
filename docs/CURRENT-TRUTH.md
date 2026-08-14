@@ -61,6 +61,15 @@ the exact half-open range `[pc, pc+4)`. Thus zero PCs that are delay slots are
 callback omissions by construction; non-delay PCs remain valid retail
 evidence.
 
+The s1094 ROM/generated audit classifies the full `0x8006D980..0x8006D9BC`
+bracket. The generated function and raw ROM agree under an independent
+`ROM = VRAM - 0x80000000 + 0xC00` mapping. `0x8006D9B8` is the `bne` delay
+slot and can be absent from the oracle callback stream, but `0x8006D9BC` is
+the ordinary fall-through `addiu`, not a delay slot. This supersedes the
+broader s1093 implication that the remaining zero PCs could all be callback
+omissions: the delay-slot explanation remains valid for `9B8`, while `9BC`
+requires a branch-taken/runtime explanation.
+
 ## Retail oracle boundary
 
 The retail oracle reaches only the width-320 attract path under the tested
@@ -254,15 +263,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1091 | Ran the established eleven-Start retail-oracle capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, four milestones, eight post-loop PCs, and three branch-region PCs. Controls were positive: whole-RDRAM reached 10,003 callbacks, PIF delivered all eleven presses, and VI reached 7,204 at width 320/origin `0x006dd280`; the mission-state block was silent. Hits were `0x8006D900=1`, `0x8006D9B0=1`, `0x8006D9B4=1`, while `0x8006D9B8=0`, `0x8006D9BC=0`, all eight post-loop PCs `=0`, `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and `0x8003E07C=0`. Selects single-source `H-branch-delay-boundary`; the remaining distinction is oracle delay-slot callback behavior versus a taken branch target. |
 
 | s1092 | The initial planned run was rejected by the oracle's 24-watch capacity; increasing the front-end capacity to 64 and rerunning the same capture passed controls: whole-RDRAM 10,015 callbacks, eleven PIF Start presses, and 7,204 VI frames at width 320/origin `0x006dd280`. `0x8006D9B4` hit once, `0x8006D980` twice, and nearby even loop PCs `0x8006D988`–`0x8006D9A8` twice each; `0x8006D9B8`, `0x8006D9BC`, odd nearby PCs, and post-loop PCs were zero. Selects single-source `H-taken-target`; delay-slot callback coverage remained open pending source audit. |
-| s1093 | Audited the retail oracle source. `R4300Emulator=0` selects `run_pure_interpreter`, whose loop calls `update_debugger` before each top-level instruction; `DECLARE_JUMP` recursively executes the delay slot without another debugger update. `--watch-pc` uses `[pc,pc+4)`, so zero PCs that are delay slots are callback omissions by construction. Selects single-source `H-delay-callback-omits`; non-delay PCs remain independently unresolved. |
+| s1093 | Audited the retail oracle source. `R4300Emulator=0` selects `run_pure_interpreter`, whose loop calls `update_debugger` before each top-level instruction; `DECLARE_JUMP` recursively executes the delay slot without another debugger update. `--watch-pc` uses `[pc,pc+4)`, so zero PCs that are delay slots are callback omissions by construction. This established the callback arm for delay slots, while non-delay PCs remained unresolved. |
+| s1094 | Static ROM/generated audit classified every PC from `0x8006D980..0x8006D9BC`. The independent ROM mapping matched all generated words; `0x8006D9B8` is the `bne` delay slot, but `0x8006D9BC` is ordinary fall-through code. Selects `H-nondelay-missing` for the zero `9BC` watch and leaves only the runtime taken-vs-fall-through question. |
 
 ## Ranked next steps
 
-1. Classify the remaining non-delay PCs around the retail loop boundary by a
-   bounded ROM/generated-instruction audit. Keep the selected delay-slot
-   callback explanation and do not reopen the state-gate arm. Do not arm a
-   freelist watch without an independently observed `0x6abxxx` hangar-origin
-   512 transition.
+1. Run one established-schedule retail oracle capture watching `0x8006D9B0`,
+  `0x8006D9B4`, and `0x8006D9BC`, with whole-RDRAM, PIF, and VI controls.
+  A positive `9B4` plus zero `9BC` selects the taken-branch explanation; a
+  `9BC` hit selects fall-through execution; missing controls invalidate the
+  run. Do not reopen the state-gate arm or arm a freelist watch without an
+  independently observed `0x6abxxx` hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

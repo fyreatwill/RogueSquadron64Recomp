@@ -62729,6 +62729,18 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1094 (2026-08-14) — classified retail loop branch PCs
+
+Ran the predeclared static ROM/generated audit, with no build or game run. The
+generated `runIdleFramesAndLoadSaveData` body and raw ROM agree for every
+instruction in `0x8006D980..0x8006D9BC` under the independent ROM base mapping
+`ROM = VRAM - 0x80000000 + 0xC00`. `0x8006D9B8` is the `bne` delay slot and its
+oracle zero is explained by the pure-interpreter callback behavior;
+`0x8006D9BC` is ordinary fall-through `addiu` code, so its zero is not a
+delay-slot callback omission. This selects `H-nondelay-missing` and leaves the
+runtime taken-branch versus fall-through question for the next oracle capture.
+No mitigation or runtime code changed.
+
 ## Session 1093 (2026-08-14) — resolved retail oracle delay-slot callback semantics
 
 Performed the planned bounded source audit without a new ROM capture. The
