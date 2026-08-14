@@ -1,43 +1,40 @@
-# NEXT work unit (s955)
+# NEXT work unit (s956)
 
-Pre-run decision: ground-truth audit of the runtime callback entries used by
-`runInMissionFrame`; do not build, run, or land a guard. The static arm in
-s954 is complete and found no target-side non-frame `$sp` writer.
+Validate the retail-oracle input/phase path before retrying the callback-table
+watch. Do not build, edit generated code, add a guard, or interpret the table's
+zero-hit result until the same run crosses VI width 320.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-The 144 direct callers and all statically addressed targets are frame-balanced
-or leaf functions. `runInMissionFrame` still loads an indirect callback from
-the runtime table beginning at `0x8010B350`, and that target/value lifecycle
-could still mutate the shared context before a later dispatcher call.
+The callback-table oracle arm is currently phase-unevaluable. The whole-RDRAM
+watch passed, but the retail run stayed at VI 320; PIF tracing showed injected
+state changes without establishing the documented Start transition.
 
 Competing hypotheses:
 
-- H-slotdispatcheriter-stacksp-indirect-corruption: a runtime callback in the
-  table writes or fails to restore the shared guest `$sp`.
-- H-slotdispatcheriter-stacksp-indirect-balanced: all runtime callbacks
-  preserve the context, leaving no caller-side writer.
-- H-slotdispatcheriter-stacksp-stub-artifact: a runtime callback is a known
-  degenerate stub and is the corruption origin.
-- H-slotdispatcheriter-stacksp-unclassified: callback writer/value provenance
-  remains unresolved.
+- H-oracle-config-mapping: the active input configuration maps the injected
+  values differently from the documented Start mapping.
+- H-oracle-core-phase: input is accepted, but this core/ROM/config combination
+  is stuck in an early retail phase for an unrelated setup reason.
+- H-oracle-undriven-timeline: the run is healthy and simply needs the full
+  undriven boot interval before the VI transition; the prior 45-second run was
+  too short for this environment.
+- H-oracle-callback-unclassified: the phase is reached, but the callback table
+  remains unwritten or its writer/value path is not observable by this watch.
 
-Discriminating measurement: use the retail oracle's physical-address watch to
-record writes to callback entries `0x8010B350 + i*8` and the function-pointer
-words at `+4`, with a whole-RDRAM positive control armed in the same run; then
-cross-reference observed callback addresses against generated bodies and
-`funcs.h`. A callback address with a non-frame `ctx->r29` write selects
-indirect-corruption; only balanced observed callbacks select
-indirect-balanced; a known stub selects stub-artifact; absent writer/value
-coverage selects unclassified.
+Discriminating measurement: run one oracle capture with the documented
+`rs64-oracle/cfg` config, whole-RDRAM write positive control, PIF trace, VI
+trace, and both a named `start` schedule and a no-input control arm built into
+the same capture if the tool supports it. A PIF word corresponding to Start
+plus VI > 320 selects config/input acceptance; whole-RDRAM hits with VI 320
+selects an early-phase/setup issue; VI > 320 with zero callback-table writes
+selects callback-unclassified. Do not use a table null from VI 320.
 
 Exact starting commands:
 
 `sed -n '1,220p' tools/oracle/README.md`
 
-`rg -n "0x8010B350|runInMissionFrame|callback" tools/oracle docs ../rogue_squadron64/symbol_files/main_overlay.txt`
+`tools/oracle/build/rs64_oracle --configdir /Users/williambuckley/Documents/Tools/rs64-oracle/cfg --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 90 --watch-write 0x0:0x800000 --watch-write 0x10B350:0x10B750 --hit-cap 200 --detail-watch 1 --vi-trace --pif-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150 > scratch/agent/oracle_results/s956_callback_phase/run.log 2>&1`
 
-Arm a whole-RDRAM positive control and physical watches for
-`0x8010B350..0x8010B6?` in the oracle recipe, run the retail ROM from the
-documented boot/attract path, then inspect the callback writer PC and values.
-Do not use the recomp runtime as ground truth for this table.
+The whole-RDRAM watch must visibly fire. Report VI width transitions and PIF
+words first; only then classify the callback-table watch.

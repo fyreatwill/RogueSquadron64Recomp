@@ -59680,3 +59680,28 @@ landed.
 ORIGIN: generated target-body/frame-write inventory, `funcs.h` declarations,
 companion symbol cross-check, and direct inspection of the runtime callback
 load; no guest value mutation or mitigation.
+
+## Session 955 (2026-08-13) — retail callback-table oracle run was phase-unevaluable
+
+Performed the planned retail-oracle watch of physical `0x0010B350–0x0010B750`
+for the runtime callback table, with a whole-RDRAM write watch as the same-run
+positive control. The 90-second run produced 15,065,931 whole-RDRAM hits, so
+the debugger/watch instrumentation was live, but it stayed at VI width 320 and
+the callback-table watch had zero hits. This is not evidence that retail never
+writes the table: the run never reached the callback's mission phase.
+
+Two corrected input runs reproduced the phase failure. PIF tracing showed that
+raw SDL value 13 changed the controller word to `0x00020000`, while named
+`start` value 40 changed it to `0x10000000`; neither advanced beyond VI 320
+before the stop. The 45-second documented-config run passed the same whole-
+RDRAM control with 7,673,229 hits and still had zero table hits; the 25-second
+raw-13 run passed with 4,381,509 hits. The oracle input/phase path remains an
+infrastructure blocker for this measurement; callback writer/value hypotheses
+remain unclassified.
+
+This is a single-source oracle/instrumentation result, not a runtime-legitimacy
+conclusion. No build, generated-source edit, guard, mitigation, or behavior
+change was made. Captures: `scratch/agent/oracle_results/s955_callback_table/`.
+
+ORIGIN: retail oracle physical watch plus whole-RDRAM positive control and
+PIF/VI traces; no guest value mutation or mitigation was landed.
