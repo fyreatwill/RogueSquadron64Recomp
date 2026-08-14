@@ -2699,3 +2699,42 @@ the callback stall but cannot preserve the triggering writer association and
 races later writes. H-no-safe-value-api is selected. No runtime behavior,
 mitigation, or oracle source was changed; the coalescer question must pivot to
 another independent ground-truth source.
+## 30. M3 audio idiom audits s925–s935
+
+This compact maintenance note preserves the durable outcomes removed from
+CURRENT-TRUTH during the s936 maintenance pass. All were source-only audits:
+no build, game run, soak, guard, generated-code edit, mitigation, or behavior
+change was made.
+
+- s925 `filterVoiceSampleBlock`: three callers share the voice-channel shape;
+  fixed loops terminate, but caller-owned buffers, the selector table, and
+  the `a1`-derived output range remain unclassified.
+- s926 `applyVoiceDelayFilter`: three callers agree on shape and all loops
+  terminate; voice/table/output pointers and derived ranges remain unproven.
+- s927 `runVoiceLatticeFilter`: four callers share fixed source/output walks
+  of 13, 14, 13, and 120 iterations; dynamic pointer/value legitimacy remains
+  unproven.
+- s928 `renderVoiceAudioBlock`: one coherent caller, four fixed lattice stages,
+  fixed mixer/compander edges, and no local unbounded path; dynamic buffer and
+  voice-record legitimacy remains unproven.
+- s929 `audioMixStereoBlock8`: one caller, fixed eight-sample ranges, and
+  return-address-derived fixed targets; no data-derived target or local walk,
+  but dynamic voice-buffer legitimacy remains unproven.
+- s930 `audioCompandS16`: fixed arithmetic regions, clamp, sign restoration,
+  and no memory/control hazard; dynamic input legitimacy remains unproven.
+- s932 `musyxInitVoiceFromSample`: callers agree on the nominal contract, but
+  the masked voice index is not bounded and descriptor legitimacy is open.
+- s933 `musyxSetVoiceAdsrFromTable`: bounded table search and capped count
+  classify local structure; voice-slot, program, table, and count legitimacy
+  remain unproven.
+- s934 `musyxStoreVoiceAdsrParams`: fixed ADSR accesses and writes, but the
+  base-only guard does not prove the byte-loaded index is below the mixer
+  count.
+- s935 `musyxTriggerVoiceAttack`: the ordinary audio caller and streamed-voice
+  caller supply distinct contracts; the latter passes a voice-record pointer
+  where the callee interprets a mixer index. Existing base-only protection
+  does not resolve the mismatch.
+
+These results leave the active M3 thread at `musyxStopVoice`, with no
+mitigation authorized absent an ORIGIN naming the writer and assessing value
+legitimacy.

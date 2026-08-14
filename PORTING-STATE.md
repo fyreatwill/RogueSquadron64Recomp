@@ -59065,3 +59065,18 @@ contract hypothesis and establishes a concrete caller mismatch. ORIGIN:
 complete generated caller/callee, register derivation, pointer/index contract
 comparison, access-range, guard-coverage, termination, and companion-symbol
 inventory; no guest value mutation or mitigation.
+
+## Session 936 (2026-08-13) — maintenance compaction
+
+The required size check measured `docs/CURRENT-TRUTH.md` at 60,243 bytes, so
+this was a maintenance iteration. No source audit, build, game run, or soak
+was performed. The file was reduced from 775 lines / 60,243 bytes to 139 lines
+/ 7,290 bytes. Durable s925–s935 audit outcomes were migrated to
+`docs/PROJECT-OVERVIEW.md` §30; the active `musyxStopVoice` work unit and its
+competing hypotheses/discriminating measurement were retained for the next
+iteration. The maintenance trigger and compaction policy are now reflected in
+CURRENT-TRUTH, whose review headline advances to s936.
+
+This rules out only documentation drift as the reason to retain the oversized
+front matter. It does not advance or overturn any runtime, parser, writer, or
+legitimacy conclusion. No ORIGIN mitigation was introduced.
