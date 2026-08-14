@@ -72,6 +72,14 @@ closed; M3 work is limited to systematic idiom-class audits.
   unproven. H-stop-voices-by-handle-index-unclassified remains selected.
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. M4 correctness remains parked behind the active blocker.
+- s944 audited `startNoteOnVoice`: there are exactly four direct callers and no
+  generated-source or companion-symbol register-indirect reference. Its return
+  is the sorted-list handle counter, not the voice slot; the allocated slot is
+  packed into the low byte of the voice record's composite `+0x64` handle at
+  `0x80087294`. The four sorted-node `+0xC` copies preserve that full-handle
+  contract, and `stopVoicesByHandle` extracts the low byte as the slot before
+  validating the full handle. Runtime legitimacy of all record pointers and
+  the complete indirect handle lifecycle remains unproven.
 
 ## Recent evidence ledger
 
@@ -92,6 +100,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s941 | Four node `+0xC` insertion/reuse writers all copy voice `+0x64`; list links and sentinels are coherent, but complete `+0x64` provenance and indirect paths remain unclassified. |
 | s942 | Classified generated `+0x64` stores by domain; voice paths are sentinel/constructed-handle or `$s1` initialized to `-1`, but indirect provenance and runtime slot legitimacy remain unproven. |
 | s943 | Exhaustive source audit found the allocator plus three duplicated sorted-node insertion/reuse writers; no direct allocator call and no proven indirect edge were found, while pointer/value lifecycle remains unclassified. |
+| s944 | Four direct `startNoteOnVoice` callers were found; the return is a list handle, while voice `+0x64` is a composite handle with the allocated slot in its low byte. Node `+0xC` and `stopVoicesByHandle` agree structurally; indirect pointer/lifecycle legitimacy remains open. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -99,9 +108,9 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign by tracing every `startNoteOnVoice` caller
-   and returned slot into the voice-record `+0x64` field, then connect those
-   paths to the four sorted-node copies. Separate voice-record pointers from
+1. Continue the active M3 campaign by tracing the voice-record pointer
+   provenance at each of the four sorted-node `+0xC` copy sites, including
+   callers that inline the insertion body; separate record pointers from
    channel/fade structures and classify unresolved indirect edges.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
@@ -114,28 +123,30 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
 
-Audit every direct and register-indirect caller of `startNoteOnVoice`, trace
-its returned slot/index into the voice table and `+0x64` handle field, and
-connect each record to the four sorted handle-list node `+0xC` copies consumed
-by `stopVoicesByHandle` at `0x8008DA98`. Cross-check companion decomp evidence.
-Source-only; do not add a guard, change game behavior, build, or run a soak.
+Audit the voice-record pointer provenance at the four sorted handle-list node
+`+0xC` copy sites (`0x80086524`, `0x80086E40`, `0x8008738C`, `0x800877E0`),
+including their inline callers and any register-indirect dispatch edges. Confirm
+each source pointer is the `0x8013D880 + slot*0x17C` voice record rather than a
+channel/fade record, and connect it to the composite `+0x64` handle lifecycle.
+Cross-check companion decomp symbols. Source-only; do not add a guard, change
+game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-stop-voices-by-handle-index-valid: every `+0x64` value copied into node
-  `+0xC` is a bounded 32-slot index, with compatible allocator and reuse paths.
+- H-stop-voices-by-handle-index-valid: every node `+0xC` source is a live voice
+  record and its copied `+0x64` composite handle has a compatible low-byte slot.
 - H-stop-voices-by-handle-index-unclassified: one or more `+0x64` writers,
   indirect paths, or value domains remain unproven.
-- H-stop-voices-by-handle-index-mismatch: a writer or caller uses an
-  incompatible handle/state value, index domain, or node layout.
+- H-stop-voices-by-handle-index-mismatch: a reachable copy uses a non-voice
+  record or incompatible handle/state value.
 
-Discriminating measurement: an exhaustive generated-source inventory of every
-`allocVoiceHandleNode` call, register-indirect dispatch edge, voice-record
-pointer derivation, node `+0xC` copy, and list termination, plus a decomp-symbol
-cross-check. A proven bounded index at every reachable copy selects valid; a
-non-index value selects mismatch; an unresolved edge selects unclassified.
+Discriminating measurement: an exhaustive generated-source inventory of each
+copy site's base register derivation, slot arithmetic, caller boundary, and
+register-indirect edge, plus a decomp-symbol cross-check. Four proven voice
+record pointers select valid; a channel/fade pointer selects mismatch; an
+unresolved edge selects unclassified.
 
-Exact command: `rg -n -C 8 "startNoteOnVoice|80086FC4|0x64\\(|0x18\\)|0xC\\(" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each caller and value-flow edge. No game build or soak is planned.
+Exact command: `rg -n -C 8 "80086524|80086E40|8008738C|800877E0|0x17C|-0x2780|jalr" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each copy-site pointer flow. No game build or soak is planned.
 
 ## Closed and parked
 

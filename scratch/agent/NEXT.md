@@ -1,28 +1,31 @@
-# NEXT work unit (s944)
+# NEXT work unit (s945)
 
 Pre-run decision: source-only; do not build, run the game, or enqueue a soak.
-The discriminating measurement is a complete caller/return/value-flow inventory
-for `startNoteOnVoice` and the voice-record `+0x64` writers feeding the four
-sorted-node `+0xC` copies. A bounded returned slot plus a proven record pointer
-selects valid; an incompatible value selects mismatch; an unresolved edge
-selects unclassified.
+The discriminating measurement is a complete pointer-flow inventory for the
+four sorted-node `+0xC` copy sites. Four proven voice-record pointers select
+valid; a channel/fade pointer selects mismatch; an unresolved edge selects
+unclassified.
 
 HYPOTHESIS-ID: m3-audio-stop-voices-by-handle-contract
 
-Audit every direct and register-indirect caller of `startNoteOnVoice`, trace
-its returned slot/index into the voice table and `+0x64` handle field, and
-connect each record to the four sorted handle-list node `+0xC` copies consumed
-by `stopVoicesByHandle` at `0x8008DA98`. Separate voice-record pointers, slot
-indices, handle values, and channel/fade structures. Cross-check companion
-decomp symbols. No guard, behavior change, build, or soak.
+Audit the voice-record pointer provenance at `0x80086524`, `0x80086E40`,
+`0x8008738C`, and `0x800877E0`, including inline callers and register-indirect
+edges. Separate voice-record pointers, slot indices, composite handles, and
+channel/fade structures. Cross-check companion decomp symbols. No guard,
+behavior change, build, or soak.
 
 Competing hypotheses:
 
-- H-stop-voices-by-handle-index-valid: every reachable node copy receives a
-  bounded 32-slot voice index from a compatible voice-record pointer.
+- H-stop-voices-by-handle-index-valid: every reachable node copy receives
+  `+0x64` from a live voice-record pointer with a compatible low-byte slot.
 - H-stop-voices-by-handle-index-unclassified: an indirect edge, caller state,
   or pointer/value domain remains unproven.
-- H-stop-voices-by-handle-index-mismatch: a reachable edge uses an incompatible
-  pointer, handle, state value, or index domain.
+- H-stop-voices-by-handle-index-mismatch: a reachable edge uses a channel/fade
+  pointer or incompatible handle/state value.
 
-Exact command: `rg -n -C 8 "startNoteOnVoice|80086FC4|0x64\\(|0x18\\)|0xC\\(" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each caller and value-flow edge. No game build or soak is planned.
+Discriminating measurement: inventory each copy site's base-register
+derivation, slot arithmetic, caller boundary, and register-indirect edge, then
+cross-check companion symbols. Four proven voice-record pointers select valid;
+a non-voice pointer selects mismatch; an unresolved edge selects unclassified.
+
+Exact command: `rg -n -C 8 "80086524|80086E40|8008738C|800877E0|0x17C|-0x2780|jalr" ../N64Recomp/RecompiledFuncs/funcs_21.c ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_23.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then classify each copy-site pointer flow. No game build or soak is planned.

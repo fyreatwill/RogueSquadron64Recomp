@@ -59328,3 +59328,36 @@ not independent runtime writer/value evidence.
 ORIGIN: exhaustive allocator callsite, register-indirect edge, node-copy,
 voice-record pointer, list-link, consumer, and companion-symbol inventory; no
 guest value mutation or mitigation.
+
+## Session 944 (2026-08-13) — note-on return is a handle; node copies preserve the composite-handle contract
+
+Performed the planned source-only M3 audit of every direct and
+register-indirect reference to `startNoteOnVoice` and its connection to the
+voice-record `+0x64` field and sorted-list node `+0xC`. No build, game run,
+soak, generated-source edit, guard, mitigation, or behavior change was made.
+
+The generated source contains exactly four direct callers at `0x800876E0`,
+`0x80087828`, `0x80087CBC`, and `0x80089CF0`. No other generated-source or
+companion-symbol reference to `0x80086FC4` is present, and no register-indirect
+caller targeting it was identified. `startNoteOnVoice` calls
+`allocateSynthVoice`, which returns the voice slot in `$s1`; the note-on path
+constructs the voice record's composite `+0x64` handle at `0x80087294`, with
+that slot in the low byte, then returns the sorted-list handle counter in
+`$v0`. The four callers use that return as a handle, not as a voice-table slot.
+
+The node-copy sites at `0x80086524`, `0x80086E40`, `0x8008738C`, and
+`0x800877E0` all copy the owning voice record's `+0x64` into node `+0xC`.
+`stopVoicesByHandle` loads node `+0xC`, uses its low byte to select the voice
+record, and compares the full composite handle at voice `+0x64` before
+releasing it. This rules out the proposed return-slot mismatch and establishes
+structural agreement between note-on, node insertion, and stop. It does not
+prove runtime legitimacy of every inlined insertion-site record pointer or the
+complete indirect handle lifecycle. H-stop-voices-by-handle-index-valid is not
+established; H-stop-voices-by-handle-index-mismatch is not demonstrated;
+H-stop-voices-by-handle-index-unclassified remains selected. This is a
+single-source static result from generated code plus companion symbol metadata,
+not independent runtime writer/value evidence.
+
+ORIGIN: exhaustive `startNoteOnVoice` caller/return, voice-slot arithmetic,
+composite-handle construction, node-copy, stop-consumer, register-indirect,
+and companion-symbol inventory; no guest value mutation or mitigation.
