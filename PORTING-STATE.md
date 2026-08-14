@@ -63196,3 +63196,21 @@ mitigation changed.
 
 ORIGIN: diagnostic-only capture and launch-recipe change; no value was
 skipped, rewritten, or otherwise mitigated.
+
+## Session 1110 (2026-08-14) — targeted submit writer retry stopped at VI 640
+
+Ran the prescribed targeted-only retry with `ROGUESQ_LOG_ALL` removed while
+retaining the generated-store and submit-boundary probes. The 180-second
+phase gate reached widths 320 and 640, then timed out with last width 640.
+The positive generated-store control fired 34 times; generated A89F stores
+fired 256 times; submit-boundary logging recorded 286 sends and 427 receives,
+including repeated `gate89f=2 gate8a0=1` observations. No A0
+(`0x8011A8A0`) writer row or VI-1024/E9 phase was observed.
+
+This rejects broad-log overhead as the explanation for the s1109 launch miss
+under this targeted recipe, but does not distinguish an input-route miss from
+transient launch state. It rules out an inactive store probe, not the A0
+writer. No queue behavior, game logic, or mitigation changed.
+
+ORIGIN: diagnostic-only capture; no value was skipped, rewritten, or otherwise
+mitigated.
