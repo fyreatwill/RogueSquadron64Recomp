@@ -1,38 +1,36 @@
-# NEXT work unit (s1009)
+# NEXT work unit (s1010)
 
-s1008 (offline static audit): the generated Factor 5 path loads four unsigned
-color bytes and copies them to each transformed vertex at `+0x10`. The shaded
-triangle path later reads vertex data at `+0x18` and emits shade halfwords from
-geometry/vector registers; no read of `+0x10` occurs before those stores. The
-only `lb` in the region (`0x37($18)`) feeds packed flags, not shade. The
-independent GLideN64 reference copies `colorData` directly to vertex RGBA.
-`H-shade-source-mismatch` is selected; no mitigation was made.
+s1009 (static retail-ROM audit): the original Factor 5 stream stores color at
+record `+0x10` but the shaded emitter at PC `0x1740` never reads that word.
+Generated output preserves the instruction sequence; the fixup script does not
+remove a color read. `H-original-omits-color` is selected. No mitigation was
+made.
 
 HYPOTHESIS-ID: m4-zero-shade-emission-constant
 
 ## One work unit
 
-Trace the color-bearing vertex record from the Factor 5 ELF/disassembly through
-`tools/fixup_factor5_ucode.py` and RSPRecomp generation. Determine whether the
-missing shaded-triangle read of vertex `+0x10` is present in the original
-microcode or was lost by the generated/fixup pipeline. Static audit only; do
-not build, run, or edit generated output.
+Trace the intended shade-record semantics from the retail Factor 5 emitter
+through the GLideN64 reference and generated `TriGen`/triangle consumers.
+Static audit only; no build/run required. Do not edit generated output.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-original-omits-color`: the retail microcode itself never consumes the
-  color word for shaded-triangle emission.
-- `H-generation-drops-color`: the original microcode has a color read, but
-  disassembly conversion, RSPRecomp, or fixup omitted it.
-- `H-layout-misread`: a generated color read feeds the vectors, but RT64 reads
-  the wrong record offsets.
+- `H-intentional-sentinel`: the emitter intentionally writes the fixed shade
+  sentinel for an unlit/no-lighting mode, and the consumer is correct.
+- `H-missing-lighting-source`: a lighting/vector source should populate shade,
+  but the original emitter selects or preserves the sentinel incorrectly.
+- `H-record-consumer-mismatch`: the emitter writes a valid shade record, but
+  RT64 or the downstream triangle consumer reads a different record layout.
 
-Discriminator: compare the original ELF instruction sequence and the generated
-sequence around the vertex-record color store and shaded-triangle entry. A
-color read absent in both selects `H-original-omits-color`; present only in the
-ELF selects `H-generation-drops-color`; present in generated code and feeding
-shade vectors with an offset discrepancy selects `H-layout-misread`. Record the
-exact producer/consumer instruction pair before proposing any fix.
+Discriminator: map the original `0x1740` shade stores and their vector
+producers to the reference's `PrepareVtxData`/triangle record fields, then map
+the generated `TriGen` output and RT64 triangle read offsets. A reference
+no-lighting path that intentionally yields the sentinel selects
+`H-intentional-sentinel`; a valid lighting source absent or bypassed selects
+`H-missing-lighting-source`; matching producer data with a downstream offset
+discrepancy selects `H-record-consumer-mismatch`.
 
-The `slotDispatcherIter` sp-guard soak remains queued separately in
-`scratch/agent/soak_queue/slot_sp_guard.sh`.
+The `slotDispatcherIter` sp-guard soak crashed at a different site before
+producing a guard record; it remains a separate queued investigation and is
+not this work unit.

@@ -61199,3 +61199,25 @@ emission-layout hypotheses are refuted by the two source inspections. It rules
 out changing the `lb` as a shade fix and gives no mitigation. The next audit
 must determine whether the absent color consumer exists in the original ELF or
 was lost in disassembly/RSPRecomp/fixup generation.
+## Session 1009 (2026-08-14) — audited retail Factor 5 shade emission
+
+Ran the prescribed static M4 work unit without building or running. The game
+ELF from `tools/make_elf.py` does not contain the runtime-loaded Factor 5 IMEM
+image, so the independent original was the retail ROM text segment configured
+at ROM `0x025610`. Rabbitizer disassembly of that exact segment showed the
+color-bearing record stores at PC `0x1424`, `0x1428`, and delay-slot `0x1468`,
+all targeting record `+0x10`. The shaded-triangle emitter at PC `0x1740`
+stores `v6` to `+0x18`, then related vector values to `+0x1E..+0x22`; its
+consumer block contains no load from `+0x10`. The generated C preserves these
+instructions, and the relevant `tools/fixup_factor5_ucode.py` stages contain
+no transformation that could delete a color load. This selects
+`H-original-omits-color` and refutes generation-loss and layout-misread for
+the missing color read. The earlier `H-shade-source-mismatch` conclusion was
+believable because GLideN64's semantic reference copies colorData into RGBA,
+but the mismatch is now localized to the retail ucode path. No mitigation or
+generated-file edit was made.
+
+The queued `slot_sp_guard` soak also completed between iterations, but it was
+not this work unit: it crashed at `slotDispatcherIter+8592` after 57 captured
+frames and produced no slot-SP guard record, so it does not classify the
+original `+872` family.

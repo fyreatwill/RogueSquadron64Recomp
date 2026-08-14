@@ -6,9 +6,10 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1008 (2026-08-14). The active investigation is M4 zero-shade:
-the emitted shade is a constant sentinel, so the source-to-consumer join is
-closed and the question is the ucode shade-emission path. M5 audio de-stubbing
+Reviewed through s1009 (2026-08-14). The active investigation is M4 zero-shade:
+the emitted shade is a constant sentinel, and the retail Factor 5 instruction
+stream omits a color-word read in the shaded-triangle emitter. The remaining
+question is the intended semantic source of that emitter's shade record. M5 audio de-stubbing
 is closed. M3 work is limited to complete idiom-class audits. The retail-oracle
 callback thread is no longer directory-blocked (`.claude/settings.json`
 currently lists `rs64-oracle`); see backlog.
@@ -113,6 +114,22 @@ directly into `vtx.r/g/b/a` before triangle submission. This selects
 `H-shade-source-mismatch`; `H-signed-color-load` and `H-emission-layout` are
 refuted by the two source inspections. No mitigation is authorized.
 
+The s1009 retail-stream audit resolves the generation question. The game ELF
+made by `tools/make_elf.py` contains game code and overlay sections, not the
+runtime-loaded Factor 5 IMEM image; the authoritative original is the ROM
+text segment at `0x025610`. Its instruction sequence has the color-bearing
+record stores at PC `0x1424`, `0x1428`, and delay-slot `0x1468`, all targeting
+record `+0x10`. The shaded-triangle emitter at PC `0x1740` stores shade from
+`v6` at `+0x18` and related geometry vectors at `+0x1E..+0x22`; the preceding
+consumer block has no load from `+0x10`. The generated C preserves this exact
+sequence, and `tools/fixup_factor5_ucode.py` has no transformation that could
+remove a color load. This selects `H-original-omits-color`; generation-loss
+and layout-misread are refuted for this specific missing read. The prior
+`H-shade-source-mismatch` wording was believable because the independent
+GLideN64 semantic implementation copies colorData into RGBA, but it is now
+refined: the mismatch is present in the retail ucode path, not introduced by
+RSPRecomp. No mitigation is authorized.
+
 ## Recent evidence ledger
 
 Details are in `PORTING-STATE.md`; durable summaries are in
@@ -134,15 +151,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1006 | RT64 triangle-parse join rows carried the live last F5 state, but repeated zero-shade child DLs shared one task-level state; individual source mapping remains open. |
 | s1007 | Offline re-analysis: zero-shade rows are a fixed -0.5/+0.5 shade sentinel while the VTXCOLOR array is nonzero; source-join closed, question moves to ucode shade emission. |
 | s1008 | Static generated-vs-GLideN64 audit: color is copied to vertex `+0x10` but the shaded-triangle path consumes `+0x18`/geometry vectors and never reads it; the `lb` is flag-only. Selected `H-shade-source-mismatch`; no mitigation. |
+| s1009 | Retail ROM instruction audit: color stores are present at `0x1424/0x1428/0x1468`, but the shaded emitter at `0x1740` has no `+0x10` read; generated output preserves it and fixup does not remove it. Selected `H-original-omits-color`; no mitigation. |
 
 ## Ranked backlog
 
-1. Trace the color-bearing vertex record from the Factor 5 ELF/disassembly
-   through `tools/fixup_factor5_ucode.py` and RSPRecomp generation. Determine
-   whether the missing shaded-triangle read of vertex `+0x10` is present in the
-   original microcode or was lost by the generated/fixup pipeline. Do not edit
-   generated output; name the exact producer/consumer instruction pair before
-   proposing a fix.
+1. Trace the retail Factor 5 shaded-triangle record semantics against the
+   GLideN64 reference and the generated `TriGen`/triangle consumers. Identify
+   whether the fixed `-0.5/+0.5` shade sentinel is an intentional no-lighting
+   value or an incorrect vector/register source. Name the original producer,
+   record offset, and consumer before proposing any mitigation.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
