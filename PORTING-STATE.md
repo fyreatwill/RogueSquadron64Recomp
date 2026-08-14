@@ -59873,9 +59873,9 @@ The ordinary arm completed with 1,105,162 whole-RDRAM write hits, one ordinary
 read hit, and 299 VI frames. The PIF arm logged both PIF mappings, breakpoint
 activation (`0x1fc007c0:0x1fc007c4`), and the first wrapped PIF read at
 `0x1fc007e4`, then exited `rc=139` without an oracle completion line. Thus
-PIF mapping/device initialization and saved-handler invocation are past the
-immediate failure boundary. The remaining defect is in the debugger callback
-path after `read_with_bp_checks()` enters; this diagnostic batch does not
+PIF mapping/device initialization and entry into `read_with_bp_checks()` are
+past the immediate failure boundary. The saved handler is invoked only after
+the breakpoint callback returns, so this diagnostic batch does not
 distinguish lookup, state transition, and `update_debugger()` internals.
 
 This rules out the prior hypothesis that the PIF watch dies before breakpoint
