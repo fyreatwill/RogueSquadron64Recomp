@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1039 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1040 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -321,13 +321,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1037 | Added an independent VI-register poll audit and repeated the verified 11-Start schedule. Whole-RDRAM callbacks reached 10,000 and were removed; all 11 presses produced Start pad words, and callback/poll traces stayed at width 320/origin `0x006dd280` for 3,599 VI. Selected `H-retail-attract`; the 512 hangar phase and freelist watch remain unevaluable. |
 | s1038 | Corrected LLE M4 capture reached VI-1024, passed 64/64 stage-1 controls, and produced 683/683/682 stage-10/11/12 rows. No `v6`, `v29`, `acch`, or `accm` endpoint reached `0x8000`; no crash marker appeared. Controlled null; M4 recipe closed pending a new discriminator. |
 | s1039 | Retail oracle pulse-vs-hold discriminator: both eleven-Start arms passed 10,000 whole-RDRAM callbacks with removal `rc=0`, delivered all Start pad edges, and completed 3,600 VI at width 320/origin `0x006dd280`. Selected `H-retail-path-independent` for these input shapes; freelist watch remains unevaluable. |
+| s1040 | Retail oracle cadence discriminator: documented five-second and rapid one-second eleven-Start schedules both passed the 10,000 whole-RDRAM control/removal, delivered all 11 Start pad edges, and completed 3,599 VI at width 320/origin `0x006dd280`. Neither cadence reached 512; timing cadence is not sufficient in this 60-second window, and the freelist watch remains unevaluable. |
 
 ## Ranked backlog
 
 1. The retail oracle remains in the width-320 attract path despite verified
-   Start edges, long Start holds, and independent VI polling. Do not arm the
-   freelist watch until a 512 hangar-origin phase is reached; next test the
-   timing/cadence of the attract schedule rather than repeating input shape.
+   Start edges, long Start holds, rapid cadence, and independent VI polling.
+   Do not arm the freelist watch until a 512 hangar-origin phase is reached;
+   next test whether the missing transition is caused by the first-input
+   timing window, using an early-start versus documented-start schedule.
 2. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume
    only with a new discriminator or independent ground truth.

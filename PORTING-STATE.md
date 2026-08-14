@@ -61818,3 +61818,23 @@ evaluable. ORIGIN: independent retail oracle whole-RDRAM callback, PIF pad,
 and VI callback/poll controls; no guest value or recomp runtime behavior was
 changed. The next unit is a timing/cadence discriminator, not another hold
 shape repeat.
+
+## Session 1040 (2026-08-14) — retail cadence did not leave attract
+
+Ran the prescribed retail-oracle cadence discriminator with repository ROM
+`9c32d0087fa2b83c5ee6f19ee86683907653ed8f30e7d4680a0adac334559dd7`, preserved
+debugger core `iter974-armB2`, and pure interpreter mode. The five-second arm
+used Start at 6,11,...,56 seconds; the rapid arm used Start at 6,7,...,16
+seconds. Both used 150 ms holds, `--vi-trace`, independent `--vi-poll`,
+`--pif-trace`, and a whole-RDRAM write watch as the same-run positive control.
+
+Both arms reached the 10,000 callback threshold, removed watch index 0 with
+`rc=0`, delivered all eleven Start pad edges, and completed 3,599 VI in 60
+seconds. Callback and poll traces stayed at width 320, origin `0x006dd280`;
+neither cadence reached width 512, 640, or 1024. This selects
+`H-retail-cadence-insufficient` for these schedules and rules out a simple
+five-second-window versus one-second-cadence explanation. The freelist watch
+was not armed, so its writer remains unevaluable.
+
+ORIGIN: independent retail-oracle whole-RDRAM callback, PIF pad, and VI
+callback/poll controls; no guest value or recomp runtime behavior was changed.
