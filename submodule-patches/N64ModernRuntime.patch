@@ -483,7 +483,7 @@ index ae0f44f..8eaf259 100644
      OSTask* task = TO_PTR(OSTask, ctx->r4);
      if (task->t.type == M_GFXTASK) {
 diff --git a/librecomp/src/ultra_translation.cpp b/librecomp/src/ultra_translation.cpp
-index e0d367e..559416f 100644
+index e0d367e..3a3e726 100644
 --- a/librecomp/src/ultra_translation.cpp
 +++ b/librecomp/src/ultra_translation.cpp
 @@ -20,7 +20,7 @@ extern "C" void osStartThread_recomp(uint8_t* rdram, recomp_context* ctx) {
@@ -504,7 +504,12 @@ index e0d367e..559416f 100644
      assert(false);
      // osYieldThread(rdram);
  }
-@@ -53,7 +53,7 @@ extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+@@ -49,11 +49,11 @@ extern "C" void osCreateMesgQueue_recomp(uint8_t* rdram, recomp_context* ctx) {
+     osCreateMesgQueue(rdram, (int32_t)ctx->r4, (int32_t)ctx->r5, (s32)ctx->r6);
+ }
+ 
+-extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
++extern "C" __attribute__((weak)) void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
      ctx->r2 = osRecvMesg(rdram, (int32_t)ctx->r4, (int32_t)ctx->r5, (s32)ctx->r6);
  }
  

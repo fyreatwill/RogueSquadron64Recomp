@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1104 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1106 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -28,6 +28,15 @@ compact and records only live conclusions, boundaries, and next work.
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. Audio remains stubbed; the legacy audio audits are archived in the
   project overview.
+- The corrected s1106 phase-gated submit-boundary capture reached VI 1024 and
+  recorded 818 target send/receive rows. The blocking queues were used at
+  `0x8011A818` and `0x8011A7E8`; SP rows repeatedly saw `0x8011A8A0=1` while
+  `0x8011A89F` stayed zero, so the stale-zero gate hypothesis is false on
+  this port path. Event wiring independently continued to complete SP on
+  `0x8011A420` and DP on `0x8011A408`, leaving the producer/consumer queue-role
+  mismatch live. The probe sampled values at call boundaries, not the writer
+  instruction, and its shared last-PC field is not reliable writer
+  attribution; writer-PC attribution remains open.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -241,6 +250,14 @@ independent ground truth. No mitigation is authorized.
 
 ## Evidence ledger
 
+### Superseded conclusions
+
+- The s1105 single-source conclusion `H-gate-stale-or-unseen-writer` is
+  superseded on the port path by s1106's corrected physical-byte sample:
+  `0x8011A8A0` was nonzero at repeated SP send boundaries. It was believable
+  because the complete static census found no generated nonzero writer, but
+  that census did not measure runtime byte values or non-generated writes.
+
 Details are in `PORTING-STATE.md`; durable summaries are in
 `PROJECT-OVERVIEW.md`.
 
@@ -294,16 +311,18 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1103 | Bounded producer/consumer branch audit found both direct sends are conditionally gated within their persistent producer loops: SP `0x80019F1C` is reached only through task-state branches at `0x80019ED4/0x80019EE4` (with an alternate gated send at `0x80019F40`), and DP `0x8001C3D8` requires nonzero flag byte `0x8011A89D`. The blocking consumers are likewise conditional at `0x8000C0A4` (SP) and `0x8000C2A8` (DP). This selects `H-producer-gated`, rules out unconditional reachability and lifecycle absence, and leaves gate ownership/value open. No build, runtime code, or queue behavior changed. |
 | s1104 | Complete generated gate census separates the roles. `0x8011A89D/0x8011A89E` are set to 1 by `setPostSwapPendingFlags` and consumed/cleared by submit/advance paths. The SP producer’s `0x80019ED4/0x80019EE4` reads are through `s2 = (0x8011A89C + 3)`, i.e. `0x8011A89F/0x8011A8A0`; the same producer clears those bytes after its sends, and no generated nonzero writer was found. `dpInterruptHandlerThread` reads through `s0 = 0x8011A408`, so `0x8011A89D` is not its direct fixed-address flag in this generated snapshot. This selects static `H-sp-gate-stale-or-external-writer` while ruling out the `H-8011A89D-is-DP-gate` role assignment; non-generated ownership and runtime values remain open. No build, runtime code, or queue behavior changed. |
 | s1105 | Non-generated/companion ownership census found no host/runtime, patch, or companion read/write of `0x8011A89F`, `0x8011A8A0`, or `0x8011A408`; the companion has only undefined-symbol declarations. Generated boundaries positively matched `spTaskSchedulerThread` and `dpInterruptHandlerThread`: SP resolves `s2=0x8011A89F`, `s3=0x8011A8A0`, and clears both; DP uses `s0=0x8011A408` as its queue object. Selects static `H-gate-stale-or-unseen-writer`, rules out an in-tree external writer and source-level alias, and leaves runtime values/execution open. No build, runtime code, queue behavior, or mitigation changed. |
+| s1106 | Built the submit-boundary probe and ran a corrected VI-1024-gated capture after rejecting an invalid first run whose physical addresses omitted the KSEG0 `0x100000` offset. The fixed run passed the VI-1024 control, produced 818 scoped target rows with no crash markers, and showed repeated `0x8011A8A0=1` at SP sends while `0x8011A89F` was normally zero. It also observed both blocking consumers and the separate `0x8011A408` DP object, while event wiring continued to complete on `0x8011A420`/`0x8011A408`. Selects runtime `H-nonzero-gate`, rules out a stale-zero gate and fixed-address alias for these calls, but does not identify the writer PC. The first capture was invalid; no queue behavior changed. |
 
 ## Ranked next steps
 
-1. Run one phase-gated value/PC capture for SP gate bytes `0x8011A89F/0x8011A8A0`,
-   the DP handler object at `0x8011A408`, and both blocking consumers. Keep
-   queue behavior unchanged; distinguish a runtime nonzero writer/value from
-   a gate that remains zero on the blocked path.
-2. If the capture shows the gates remain zero, use the independent retail
-   oracle to watch the corresponding physical bytes or producer PCs before
-   changing any queue or gate behavior.
+1. Attribute the writer of `0x8011A8A0`: add regeneration-safe generated-store
+   probes for every byte/halfword/word store whose physical target is
+   `0x11A89F..0x11A8A0`, then repeat the same VI-1024 capture. Preserve queue
+   behavior and require the VI/E9 controls plus a writer row before selecting
+   the writer.
+2. If generated stores remain absent, build the missing debugger-enabled
+   retail oracle core before relying on an independent physical write watch;
+   the current machine has the front end but no core dylib.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

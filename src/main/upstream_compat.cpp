@@ -666,6 +666,46 @@ extern "C" void osSpTaskStartGo_recomp(uint8_t* rdram, recomp_context* ctx) {
 // We override the librecomp default (link warning re: duplicate symbol is
 // expected; lld-link picks our version). The behavior is identical otherwise.
 extern "C" int32_t osSendMesg(uint8_t* rdram, int32_t mq_, OSMesg mesg, s32 flag);
+extern "C" int32_t osRecvMesg(uint8_t* rdram, int32_t mq_, PTR(OSMesg) mesg, s32 flag);
+extern "C" uint32_t rs64_phase_ord(void);
+
+static bool submit_boundary_log_enabled() {
+    static const bool enabled = [] {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* specific = std::getenv("ROGUESQ_LOG_SUBMIT_BOUNDARY");
+        return (all && *all && *all != '0') || (specific && *specific && *specific != '0');
+    }();
+    return enabled;
+}
+
+static void log_submit_boundary(uint8_t* rdram, const char* kind, uint32_t mq, uint32_t flag) {
+    if (!submit_boundary_log_enabled()) return;
+    static std::atomic<uint32_t> phase_seen{0xFFFFFFFFu};
+    static std::atomic<uint32_t> phase_rows{0};
+    const uint32_t phase = rs64_phase_ord();
+    uint32_t prior = phase_seen.load(std::memory_order_relaxed);
+    if (prior != phase && phase_seen.compare_exchange_strong(prior, phase, std::memory_order_relaxed)) {
+        phase_rows.store(0, std::memory_order_relaxed);
+    }
+    const uint32_t row = phase_rows.fetch_add(1, std::memory_order_relaxed);
+    if (row >= 256) return;
+    const uint32_t gate0 = rdram[0x11A89Fu ^ 3u];
+    const uint32_t gate1 = rdram[0x11A8A0u ^ 3u];
+    const uint32_t obj = mq == 0x8011A408u ? 0x11A408u : 0u;
+    std::fprintf(stderr,
+        "[submit-boundary] phase=%u row=%u kind=%s mq=0x%08X flag=%u guest_pc=0x%08X gate89f=%u gate8a0=%u obj_valid=%u obj_msg=0x%08X obj_count=%u\n",
+        phase, row, kind, mq, flag, (unsigned)g_rs64_last_guest_pc,
+        gate0, gate1, obj ? 1u : 0u,
+        obj ? ((uint32_t)rdram[(obj + 0x0Cu) ^ 3u] << 24 |
+               (uint32_t)rdram[(obj + 0x0Du) ^ 3u] << 16 |
+               (uint32_t)rdram[(obj + 0x0Eu) ^ 3u] << 8 |
+               (uint32_t)rdram[(obj + 0x0Fu) ^ 3u]) : 0u,
+        obj ? ((uint32_t)rdram[(obj + 0x08u) ^ 3u] << 24 |
+               (uint32_t)rdram[(obj + 0x09u) ^ 3u] << 16 |
+               (uint32_t)rdram[(obj + 0x0Au) ^ 3u] << 8 |
+               (uint32_t)rdram[(obj + 0x0Bu) ^ 3u]) : 0u);
+    std::fflush(stderr);
+}
 
 extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_log_stk = -1;
@@ -707,7 +747,19 @@ extern "C" void osSendMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
             }
         }
     }
+    const uint32_t mq_addr = (uint32_t)ctx->r4;
+    if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
+        log_submit_boundary(rdram, "send", mq_addr, (uint32_t)ctx->r6);
+    }
     ctx->r2 = osSendMesg(rdram, (int32_t)ctx->r4, (OSMesg)ctx->r5, (s32)ctx->r6);
+}
+
+extern "C" void osRecvMesg_recomp(uint8_t* rdram, recomp_context* ctx) {
+    const uint32_t mq_addr = (uint32_t)ctx->r4;
+    if (mq_addr == 0x8011A818u || mq_addr == 0x8011A7E8u || mq_addr == 0x8011A408u) {
+        log_submit_boundary(rdram, "recv", mq_addr, (uint32_t)ctx->r6);
+    }
+    ctx->r2 = osRecvMesg(rdram, (int32_t)ctx->r4, (PTR(OSMesg))ctx->r5, (s32)ctx->r6);
 }
 
 // Override upstream's osStopThread_recomp because upstream's osStopThread
@@ -731,4 +783,3 @@ extern "C" void osStopThread_recomp(uint8_t* rdram, recomp_context* ctx) {
         t->state = OSThreadState::STOPPED;
     }
 }
-

@@ -63100,3 +63100,19 @@ changed.
 
 ORIGIN: companion/host/patch ownership census with generated symbol-path
 positive controls; this is a source classification, not a mitigation.
+## Session 1106 (2026-08-14) — captured submit gate values at queue boundaries
+
+Added a diagnostic-only `osSendMesg_recomp`/`osRecvMesg_recomp` probe for the
+SP gate bytes, the DP handler object, and both blocking queue addresses. The
+first VI-1024-gated run was invalid: the probe used physical offsets without
+the KSEG0 `0x100000` subtraction and observed unrelated bytes. Corrected the
+offsets, rebuilt successfully, and reran the same phase-gated recipe. The
+fixed run reached VI 1024, captured 18 frames, passed the phase and event
+wiring controls, and recorded 818 scoped target rows with no crash markers.
+The rows repeatedly showed sends to `0x8011A818` and `0x8011A7E8`; at SP sends,
+`0x8011A8A0` was 1 while `0x8011A89F` was normally 0. Both blocking consumers
+were observed, and the separate DP registration/completion continued on
+`0x8011A408` while SP remained wired to `0x8011A420`. This rules out a stale
+zero value and a fixed-address alias for these observed calls, but does not
+identify the writer instruction: the probe samples at call boundaries and the
+shared last-guest-PC field is cross-thread. Queue behavior was unchanged.
