@@ -61672,3 +61672,17 @@ slowdown as the sole explanation for the observed phase result, but does not
 rule out a phase/input-state issue. No recomp runtime change or mitigation was
 made. ORIGIN: external retail-oracle debugger callback; no guest value was
 changed.
+## Session 1033 (2026-08-14) — bounded retail oracle remained at the 320 phase
+
+Ran the validated `rs64_oracle` threshold-removal capture with the debugger
+core, pure interpreter, whole-RDRAM watch first, freelist watch second, PIF/VI
+traces, and the documented 11-Start schedule. The whole-RDRAM positive control
+reached 10,000 callbacks and was removed with `rc=0`, while watch index 1
+remained armed. Every injected Start produced the PIF button word
+`0x10000000`; the run completed 10,799 VI over 180 seconds, but VI stayed at
+width 320 with origin `0x006dd280`. The freelist watch at physical
+`0x1F3CC0:0x1F3CD0` had zero hits. This rules out callback failure and invalid
+input delivery, but does not rule out a retail freelist writer because the run
+never reached the hangar-origin 512 phase. The first attempt used the generated
+default config and had the same phase result; the corrected rerun was the
+interpretable capture.

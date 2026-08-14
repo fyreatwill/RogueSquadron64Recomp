@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1032 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1033 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle callback audit remains open
 because the bounded watch run did not reach its target phase. M4 zero-shade is parked after its third consecutive controlled null:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
@@ -100,12 +100,14 @@ retail-oracle callback thread is no longer directory-blocked
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. The legacy audio idiom audits and their structural limitations are in
   PROJECT-OVERVIEW §§9–12 and §30.
-- Retail oracle work: the corrected oracle callback is live. s1032's bounded
-  tool change removed only whole-RDRAM watch index 0 after 10,000 callbacks
-  (`rc=0`) while leaving index 1 armed. The 180-second pure-interpreter run
-  completed 10,799 VI but stayed at width 320; the freelist watch had zero
-  hits. This is a valid positive-control/removal result but an unevaluable
-  phase/path result, not evidence that retail leaves the freelist untouched.
+- Retail oracle work: the corrected oracle callback is live. s1033's bounded
+  pure-interpreter run removed only whole-RDRAM watch index 0 after 10,000
+  callbacks (`rc=0`), showed all 11 injected Starts in PIF RAM, and completed
+  10,799 VI, but stayed at width 320/origin `0x006dd280`; the freelist watch
+  had zero hits. This selects `H-oracle-phase-blocked`: it is valid phase and
+  input-control evidence, not evidence that retail leaves the freelist
+  untouched. The next oracle unit must explain the width-320 path before
+  another freelist null is interpreted.
 
 ## M4 zero-shade evidence
 
@@ -297,14 +299,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1030 | The postponed-`a` ordinary-dispatch recipe reached VI-1024, delivered all scheduled inputs, and captured 108 frames but still produced no slot-dispatch or guard marker; `H-no-sp-event` recurred, so the recipe family is closed without classifying `$sp` corruption. |
 | s1031 | The corrected retail oracle armed both watches and its whole-RDRAM positive control visibly fired 200 callbacks, confirming callback liveness. The all-RDRAM watch slowed the run to VI 62 / 1.2 emulated seconds before SIGKILL; the freelist watch had no hit or usable PC attribution, so the retail question remains unevaluable. |
 | s1032 | Added thresholded removal of only watch index 0 after 10,000 positive-control callbacks. The marker reported removal `rc=0` and index 1 remained armed; the 180-second run completed 10,799 VI but stayed at width 320, with zero freelist hits. Callback instrumentation is validated, but the retail target phase remains unevaluable. |
+| s1033 | Re-ran the threshold-removal oracle with the documented 11-Start schedule. The positive-control marker fired, PIF RAM showed the Start bit on every injected edge, and 10,799 VI completed, but VI stayed at width 320/origin `0x006dd280`; the freelist watch had zero hits. This selects `H-oracle-phase-blocked` and rules out callback failure and any retail freelist conclusion. |
 
 ## Ranked backlog
 
-1. Resume the retail-oracle callback audit with a phase-reachability experiment:
-   keep the validated threshold-removal tool, but determine why the documented
-   Start schedule remains at width 320 before interpreting the freelist null.
-   Do not modify the recomp runtime or claim retail ownership from a run that
-   does not reach the hangar-origin 512 phase.
+1. Resume the retail-oracle phase audit without the freelist watch: run one
+   bounded input-path discriminator using the existing whole-RDRAM positive
+   control, PIF trace, and VI trace. Compare the documented Start-only schedule
+   against the smallest documented-compatible Start+A edge schedule in the same
+   run; determine whether the title remains at width 320 because Start is not
+   consumed or because an A confirmation is required. Do not interpret a
+   freelist null until a 512 hangar-origin phase is reached.
 2. The M4 accumulator/VGE numeric-origin question remains open after three
    controlled nulls; resume only with a new discriminator or independent ground
    truth.
