@@ -59300,3 +59300,31 @@ not independent runtime writer/value evidence.
 ORIGIN: exhaustive generated `+0x64` store/reference, voice-record versus
 channel/fade domain, node-copy, register-provenance, and companion-symbol
 inventory; no guest value mutation or mitigation.
+
+## Session 943 (2026-08-13) — allocator call edges remain unclassified
+
+Performed the planned source-only M3 audit of `allocVoiceHandleNode` and the
+four sorted handle-list node `+0xC` writers consumed by `stopVoicesByHandle`.
+No build, game run, soak, generated-source edit, guard, mitigation, or
+behavior change was made.
+
+The generated source has no direct `jal 0x80086450` call to
+`allocVoiceHandleNode`. The only nearby register-indirect call is the generic
+binary-search comparator callback at `0x80085C70`; its target is not proven to
+be the allocator. The four sorted-node copies are the allocator body at
+`0x80086524` and duplicated insertion/reuse bodies at `0x80086E40`,
+`0x8008738C`, and `0x800877E0`. Each copies a voice-record `+0x64` into node
+`+0xC`, sets the node links, stores the sorted handle at `+0x8`, and attaches
+the node through voice `+0x18`. The consumer walks the same sorted list and
+uses the copied field as the voice-table index.
+
+This establishes the structural node contract but not the complete indirect
+dispatch or handle-to-slot value lifecycle. H-stop-voices-by-handle-index-valid
+is not established; H-stop-voices-by-handle-index-mismatch is not demonstrated;
+H-stop-voices-by-handle-index-unclassified remains selected. This is a
+single-source static result from generated code plus companion symbol metadata,
+not independent runtime writer/value evidence.
+
+ORIGIN: exhaustive allocator callsite, register-indirect edge, node-copy,
+voice-record pointer, list-link, consumer, and companion-symbol inventory; no
+guest value mutation or mitigation.
