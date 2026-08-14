@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s966 (2026-08-13). The active blocker is authoritative
+Reviewed through s967 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -245,6 +245,16 @@ closed; M3 work is limited to systematic idiom-class audits.
   298 VI), while the PIF arm reached wrapper pre-call but not callback entry or
   wrapper return (`rc=139`). This selects the callback call/entry boundary but
   does not distinguish ABI from callee prologue; no retail conclusion followed.
+- s967 audited the external oracle's current source and generated ARM64
+  artifact. The source declares four callback arguments and calls it as
+  `(pc,address,4,READ|ENABLED)`, but the emitted `read_with_bp_checks` call at
+  `0x13d64` sets `w0=pc`, `x1=address`, `w2=3`, and does not set `w3`; the
+  callback at `0x48768` has a normal 16-byte-aligned prologue and its first
+  marker follows that prologue. Object and dylib timestamps are after both
+  edited sources, so this is not safely attributable to a stale dylib. This
+  selects an oracle ABI/compiler-artifact mismatch over callback body; the
+  exact source-to-artifact cause and crash instruction remain open. No runtime
+  mitigation or retail conclusion followed.
 
 ## Recent evidence ledger
 
@@ -307,11 +317,12 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s966 crossed the wrapper pre-call marker but not the
-   callback first-statement marker. Audit the caller/callee assembly and
-   callback signature to distinguish call ABI failure from callee-prologue
-   failure; do not infer retail callback-table behavior until this boundary is
-   crossed.
+   callback-table watch: s967 found the current ARM64 artifact passes the
+   callback's four-argument source contract incorrectly (`w2=3`, unset `w3`),
+   despite current source/object timestamps. Audit the preprocessed source,
+   LLVM IR, and exact compile/link flags to explain this source-to-artifact
+   mismatch; do not infer retail callback-table behavior until this boundary
+   is crossed.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if

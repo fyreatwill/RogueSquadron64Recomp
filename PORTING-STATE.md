@@ -59969,3 +59969,30 @@ Captures: `scratch/agent/oracle_runs/s966b/ordinary.log` and
 ORIGIN: external oracle callback-entry diagnostic plus paired ordinary/PIF arms
 with visible whole-RDRAM controls; no guest value was changed and no
 mitigation was landed.
+
+## Session 967 (2026-08-13) — Oracle callback artifact has an ABI mismatch
+
+Performed the prescribed static ABI/prologue audit of the external oracle's
+PIF read wrapper and `check_breakpoints_on_mem_access()` entry. The source
+declaration is four arguments and the source call is
+`(pc, address, 4, M64P_BKP_FLAG_ENABLED | M64P_BKP_FLAG_READ)`. The current
+ARM64 artifact's `read_with_bp_checks` call at `0x13d64` instead loads
+`w0=pc`, `x1=address`, `w2=3`, and does not initialize `w3` before the direct
+branch to `_check_breakpoints_on_mem_access` at `0x48768`. The callee has a
+normal `sub sp,#0xb0` prologue with 16-byte alignment; its first PIF marker is
+after the prologue, so no evidence selects a callback-body instruction.
+
+The object and dylib timestamps are later than both edited source files, so
+the mismatch cannot be dismissed as an old dylib without explaining the
+source-to-artifact pipeline. This selects the ABI/compiler-artifact hypothesis
+over the callee-body hypothesis, but does not identify the exact compiler or
+link step causing it. No build, runtime change, mitigation, or retail
+conclusion was made. The next unit audits preprocessing, LLVM IR, and exact
+compile/link flags for this call.
+
+Evidence: source declaration/call in `rs64-oracle` and independent `nm` plus
+`otool -tvV` inspection of the object-linked dylib; timestamps were checked
+for source, object, and dylib.
+
+ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
+changed and no mitigation was landed.
