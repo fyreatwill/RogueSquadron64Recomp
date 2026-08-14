@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1115 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1116 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -99,6 +99,13 @@ compact and records only live conclusions, boundaries, and next work.
   instruction under `ROM = VRAM - 0x80000000 + 0xC00`. This selects static
   `H-mode-loop`, rules out `H-mode-transition` for these eight writers, and
   leaves the mode-selection input/state producer open.
+- The s1116 corrected retail-oracle capture passed independent controls:
+  38,782 whole-RDRAM callbacks, all ten scheduled Start/PIF edges, and 7,198
+  VI frames. It stayed at width 320/origin `0x006dd280`, while all eight
+  audited writer PCs fired (selector writers once, pending-mask writers
+  7,198 times, and A0 writers 7,193 times). This selects
+  `H-retail-stays-prephase` and refutes `H-writer-watch-invalid`; the
+  mode-record caller/argument route remains open.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -381,18 +388,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1112 | Bounded static audit traced the 640/1024 VI writes to the internal mode-selection/copy route in `initVideoSubsystem`, `swapBufferWithViMode`, and `selectAndApplyViMode`. The controlling selector bytes and pending masks are lifecycle/config state, while `tools/probe.sh` supplies only keyboard events and observes committed VI registers. The logger is downstream of the mode commit and therefore does not hide a 1024 transition. Selects static `H-state-lifecycle`; no build, runtime capture, or mitigation changed. |
 | s1114 | The corrected retail-oracle capture passed whole-RDRAM, PIF, and VI callback/poll controls, reaching 7,199 VI frames at width 320. Detailed physical writes attributed selector `0x11A864` to `0x80017CA0/7CB0/7CD0/7CEC`, pending masks to `0x8001BA80/BA88`, and A0 to `0x80019D9C/9F60`; no 512/1024 phase occurred. Selects `H-mode-writer` for the pre-phase lifecycle route and leaves phase-qualified A0 ownership open. The initial `return` schedule was invalid (`sym=0`, no PIF control) and was superseded by the `start` schedule. |
 | s1115 | Bounded generated/ROM/companion audit maps selector writes to the boot-plus-per-frame `buildAndRegisterDefaultMaterial`, pending-mask clears to the repeating VI-retrace `applyPendingViChanges`, and A0 writes to the persistent SP scheduler's task-state/completion paths. All eight generated instructions match independent retail-ROM bytes under `ROM = VRAM - 0x80000000 + 0xC00`. Selects static `H-mode-loop`, rules out a transition-dominated writer among these PCs, and leaves the mode-record caller/argument producer open. |
+| s1116 | Corrected retail-oracle capture passed whole-RDRAM (38,782), ten Start/PIF controls, and VI (7,198 frames), but stayed width 320/origin `0x006dd280`. All eight audited writer PCs fired, including recurring pending-mask and A0 writers. Selects `H-retail-stays-prephase` and refutes `H-writer-watch-invalid`; the mode-record caller/argument route remains open. |
 
 ## Ranked next steps
 
-1. Run one phase-gated retail-oracle capture with the rebuilt debugger core,
-   keeping whole-RDRAM/PIF/VI controls and watches on the selector/pending/A0
-   target ranges. Use the documented eleven-Start schedule that reaches the
-   512 hangar phase; classify writer rows by VI phase and reject any target
-   null before 512/1024. The audit predicts recurring pre-phase state writes,
-   not a transition-dominated A0 writer.
-2. If the oracle still stays at width 320, audit the callers and arguments of
-   `initVideoBootWrapper`/`advanceVideoFrame` and the mode-record table around
-   `0x80128D50`; do not add another writer field first.
+1. Audit the generated and companion callers/arguments of
+   `initVideoBootWrapper`/`advanceVideoFrame`, plus the mode-record table
+   around `0x80128D50`, to classify why the retail path remains at width 320.
+   Do not add another writer field first.
+2. Only if that static route identifies a phase predicate or input state,
+   run one phase-gated retail-oracle capture watching that state with the
+   established whole-RDRAM/PIF/VI controls.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

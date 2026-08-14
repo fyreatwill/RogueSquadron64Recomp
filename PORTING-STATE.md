@@ -63321,3 +63321,23 @@ queue behavior, or mitigation changed.
 
 ORIGIN: static source/ROM classification only; no value was skipped, rewritten,
 or otherwise mitigated.
+
+## Session 1116 (2026-08-14) — retail oracle remained on width-320 pre-phase
+
+Ran the corrected retail-oracle capture with the debugger-enabled core,
+whole-RDRAM positive control, ten scheduled `start` presses, PIF tracing, VI
+tracing, and all eight writer-PC watches. The run passed 38,782 whole-RDRAM
+callbacks, delivered all ten scheduled Start/PIF edges, and advanced 7,198 VI
+frames. It remained at width 320/origin `0x006dd280` for the full 120 seconds.
+
+All audited PCs fired: selector writers `0x80017CA0/7CB0/7CD0/7CEC` once,
+pending-mask writers `0x8001BA80/BA88` 7,198 times, and A0 writers
+`0x80019D9C/9F60` 7,193 times. This selects single-source
+`H-retail-stays-prephase`, rules out `H-writer-watch-invalid` for this run,
+and leaves the mode-record caller/argument producer as the next static audit.
+The initial attempt was invalid because a tee pipeline masked the oracle's
+early exit and emitted no completion verdict; the direct rerun with the
+newest debugger core is the usable capture. No port code, queue behavior, or
+mitigation changed.
+
+ORIGIN: observation only; no value was skipped, rewritten, or otherwise mitigated.

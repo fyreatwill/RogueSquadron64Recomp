@@ -1,36 +1,38 @@
-# NEXT work unit (s1116)
+# NEXT work unit (s1117)
 
 HYPOTHESIS-ID: retail-oracle-mode-state-route
 
-Run one bounded retail-oracle capture using the already-built debugger core and
-the documented eleven-Start hangar-driving schedule. Arm independent controls
-and all eight audited writer PCs in the same run:
+Perform one bounded static audit of the generated and companion callers and
+arguments of `initVideoBootWrapper` and `advanceVideoFrame`, and the mode
+record table around `0x80128D50`. Do not build or run another oracle capture;
+the s1116 controls were positive and all eight writer watches fired, but
+retail stayed at width 320.
+
+Before inspecting details, competing hypotheses and discriminator:
+
+- H-mode-record-constant: callers pass a fixed 320-mode record or the table
+  entry is fixed; finding the concrete record/index and width selects this.
+- H-mode-record-state-gate: a state/feature/input predicate selects the
+  320 record; finding the guarding branch and its producer selects this.
+- H-mode-record-pointer-corrupt: the caller/table pointer is computed or
+  overwritten before the mode copy; finding a non-table target or writer
+  selects this.
+
+Discriminator: identify every caller, argument construction, table base/index,
+and width-bearing load/store from generated output plus companion symbols. A
+concrete 320 constant/table entry selects H-mode-record-constant; a reachable
+predicate and its state producer selects H-mode-record-state-gate; a pointer
+or overwrite outside the expected table selects H-mode-record-pointer-corrupt.
+If all three remain unresolved, record the exact missing boundary and choose
+one source-level witness for the next unit; do not add another runtime field.
+
+Commands:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core "$ORACLE_CORE" --rom build/rogue_squadron.z64 --secs 120 \
-  --press 8:start,14:start,20:start,26:start,32:start,38:start,44:start,50:start,56:start,62:start \
-  --watch-write 0x0:0x800000 \
-  --watch-pc 0x80017CA0,0x80017CB0,0x80017CD0,0x80017CEC,0x8001BA80,0x8001BA88,0x80019D9C,0x80019F60 \
-  --vi-trace --pif-trace
+rg -n "initVideoBootWrapper|advanceVideoFrame|initVideoSubsystem|swapBufferWithViMode|selectAndApplyViMode|80128D50|D_80128D50" RecompiledFuncs patches lib src tools
+rg -n "initVideoBootWrapper|advanceVideoFrame|initVideoSubsystem|swapBufferWithViMode|selectAndApplyViMode|80128D50|D_80128D50" ../rogue_squadron64 2>/dev/null
+rg -n "80017CA0|80017CB0|80017CD0|80017CEC|8011A864|8011A865|8011A862|80128D50" RecompiledFuncs syms docs
 ```
 
-Use the repository's actual debugger-core path in place of `$ORACLE_CORE` if
-needed. Capture output under `scratch/agent/soak_results/`, and use SIGKILL if
-a watchdog is required. Do not trust a target null unless whole-RDRAM, PIF,
-and VI controls are positive.
-
-Competing hypotheses:
-
-- H-retail-reaches-hangar — the established schedule reaches 512 and produces
-  a phase-qualified writer table.
-- H-retail-stays-prephase — controls remain positive but retail stays at width
-  320/640, so the mode-record caller/argument route is the boundary.
-- H-writer-watch-invalid — the run reaches 512 but the PC-watch arm is absent
-  or misconfigured; this is refuted if controls are positive and an audited PC
-  fires.
-
-Discriminator: VI phase plus positive controls. A 512 hangar phase with audited
-PC hits selects H-retail-reaches-hangar; positive controls with no 512/1024
-select H-retail-stays-prephase; a positive-control failure invalidates the run
-and selects only H-writer-watch-invalid for repair.
+Read only bounded windows around hits; append the classification and ruled-out
+alternatives to `PORTING-STATE.md` and `docs/CURRENT-TRUTH.md`.
