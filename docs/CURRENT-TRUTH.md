@@ -6,15 +6,18 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1017 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1018 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
 numeric source of the shade record. The landed M4 accumulator probe has not
-yet fired on the executing code path in three attempts — its positive control
+yet fired on the executing code path in four attempts — its positive control
 never armed. s1017 identified that the 512-gated recipe starts its
 phase-relative key worker only after 512, so it cannot drive the transition that
-may be needed to reach 512. These remain phase-selection nulls, not M4 results.
+may be needed to reach 512. s1018 corrected the gate to 1024 and delivered the
+scheduled keys, but the run stayed at 1024 and emitted neither the M4 target nor
+its VMADH positive control. This is a valid phase-control result but an invalid
+M4 capture; the active instrument path remains to be identified.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -225,16 +228,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1015 | Closed the s1014 null-result question: root cause is phase-gate failure (positive control never armed), not an M4 result. Refutes treating either s1014 capture as evidence for/against any M4 hypothesis; next step is isolating the phase/input control before re-running the probe. |
 | s1016 | Start control was positive in both the isolated and accumulator runs, but VI remained at 640 and never reached the required 512 phase; M4 and VMADH-control counts were zero. The null is phase-selection evidence only and does not classify accumulator hypotheses. |
 | s1017 | Static audit: `PROBE_PHASE_WIDTH` is an exact latest-width equality gate, and `PROBE_KEYS_FROM_PHASE=1` launches keys only after the gate. A 512-gated run therefore cannot send the Start needed to cause a 512 transition; selected `H-key-schedule-phase`, no runtime M4 conclusion. |
+| s1018 | Corrected 1024-gated capture reached VI-1024 at 78.3s and delivered all scheduled keys, but remained at 1024 for 85 frames with zero M4 and VMADH-control rows. Phase control passed; probe control failed, so no M4 hypothesis was classified. |
 
 ## Ranked backlog
 
-1. Rerun the landed M4 accumulator probe with a 1024 gate and
-   `PROBE_LEAVE_OK=1`: the 512 gate was self-blocking because
-   `PROBE_KEYS_FROM_PHASE=1` starts the key schedule only after the requested
-   width is reached. Use the documented 1024-relative Start/A schedule, then
-   measure whether it transitions to 512 and fires both the M4 target and
-   VMADH positive control. Do not treat another 640/1024-only capture as M4
-   evidence.
+1. Audit the active Factor 5 instrument path before another M4 capture. Compare
+   the probe-bearing overlay source/object/executable with runtime ucode
+   selection and the saved s1018 log. Missing linked symbol selects a stale
+   build; a present symbol with a different selected ucode selects an active
+   overlay mismatch; positive artifact and selection controls with zero rows
+   selects env/call-site reachability. Do not classify M4 from a zero-control
+   capture.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
@@ -256,9 +260,10 @@ key worker only after that exact width is observed. Therefore a
 `PROBE_PHASE_WIDTH=512` run cannot send the Start event that may be required
 to leave the title/attract path and enter 512; s1016's positive Start records
 came from a separate ungated control and do not refute this ordering defect.
-The next capture must gate on reachable 1024, keep capturing after width
-changes, and send the documented schedule relative to 1024. Exact commands
-are in `scratch/agent/NEXT.md`.
+The s1018 capture did gate on reachable 1024 and send the documented schedule,
+but it stayed at 1024 and produced no probe-control rows. The next step is an
+artifact/runtime-path audit before another capture; exact commands are in
+`scratch/agent/NEXT.md`.
 
 The source-level truth table selected `H-key-schedule-phase`:
 

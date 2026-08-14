@@ -1,28 +1,33 @@
-# NEXT work unit (s1017)
+# NEXT work unit (s1018)
 
 HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-Run one corrected, phase-gated M4 accumulator capture. Gate on reachable
-1024, keep capturing after the width changes, and send the documented menu
-schedule relative to 1024; do not gate directly on 512 because that starts
-the key worker too late to cause the transition.
+Audit why the corrected 1024-gated capture did not execute the landed M4 probe.
+Use the saved s1018 capture and static artifact inspection; do not run another
+game capture until the probe-bearing artifact and active ucode path are
+identified.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-512-reached`: the 1024-relative schedule transitions to 512 and both the
-  M4 target and VMADH positive control fire.
-- `H-schedule-still-wrong`: Start is positive but the schedule leaves 1024
-  without reaching 512; the input/state prerequisite remains wrong.
-- `H-probe-control-failure`: the corrected run fails to arm the 1024 gate or
-  its independent control, making the capture invalid rather than M4 evidence.
+- `H-stale-build-link`: the probe-bearing generated overlay is not present in
+  the linked executable used by `build/Debug`.
+- `H-active-ucode-mismatch`: the executable contains the probe, but runtime
+  selects a different Factor 5 ucode artifact or overlay for the observed
+  scene.
+- `H-env-or-callsite`: the active artifact and symbol are present, but the
+  environment gate or probe call site is not reached/recognized.
 
-The discriminator is one same-run table: phase timeline, key records, M4
-accumulator rows, and VMADH positive-control rows. A 512 transition plus both
-controls makes the M4 rows evaluable; no 512 transition keeps the M4 question
-open; missing 1024/control records invalidates the run.
+The discriminator is one artifact/runtime table: source hook presence in the
+active generated overlay, symbol/string presence in the linked executable,
+runtime ucode-selection records in the saved log, and env-gate parsing. A
+missing linked symbol selects stale-build/link; a present symbol with a
+different active ucode selects overlay mismatch; all artifact and selection
+controls positive with zero rows selects env/call-site reachability.
 
-Exact starting commands:
+Exact commands:
 
-Exact command (from repo root; build only after the 1024 control is positive):
+`rg -n "rs64_m4_accum_probe|ROGUESQ_LOG_M4_ACCUM" build/factor5_ucode/factor5_ucode_ovl20_recompiled.c src/rsp/dpc_bridge.cpp`
 
-`env ROGUESQ_LOG_INPUT=1 ROGUESQ_LOG_M4_ACCUM=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" zsh tools/probe.sh scratch/agent/probe_results/m4_accum_1024 300 2`
+`strings build/Debug/RogueSquadron64Recomp.exe | rg "rs64_m4_accum_probe|M4_ACCUM|factor5_ucode|ovl20"`
+
+`rg -n "loadUCode|ucode|overlay|IMEM|M4|m4" scratch/agent/probe_results/m4_accum_1024/run.log | tail -120`

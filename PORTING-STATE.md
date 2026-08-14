@@ -61375,3 +61375,19 @@ selects `H-key-schedule-phase` and refutes a parser/default mismatch; the
 static audit does not establish whether 512 is reached by the corrected
 schedule, and no M4 accumulator hypothesis is classified. The next capture is
 1024-gated with `PROBE_LEAVE_OK=1` and the documented 1024-relative schedule.
+## Session 1018 (2026-08-14) — corrected M4 gate still missed instrument path
+
+Ran the prescribed 1024-gated M4 accumulator capture with
+`PROBE_KEYS_FROM_PHASE=1`, `PROBE_LEAVE_OK=1`, and the documented relative
+Start/A schedule. The phase control passed: VI-1024 was reached at 78.3s and
+all scheduled key events were reported. The process completed cleanly after 85
+frames, but the trace never reached VI-512 and contained zero M4 accumulator
+rows and zero independent VMADH positive-control rows.
+
+This is a valid phase/input control result but an invalid accumulator capture.
+It rules out the earlier 512-gate self-blocking explanation for this recipe,
+but it does not classify `H-accumulator-saturation`, `H-v4-v0-arithmetic`, or
+`H-v29-selection`. The next work unit is an artifact/runtime-path audit:
+establish which generated ucode overlay is active and whether the probe-bearing
+symbol is in the linked executable before another capture. No mitigation or
+code change was made.
