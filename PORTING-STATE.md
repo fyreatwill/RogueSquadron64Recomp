@@ -59802,3 +59802,22 @@ edit, guard, mitigation, or behavior change was made. Capture:
 ORIGIN: retail-oracle source/config audit, plugin-attachment log, press log,
 whole-RDRAM positive control, and VI/PIF polling; no guest value mutation or
 mitigation was landed.
+
+## Session 960 (2026-08-13) — PIF read watch crashes oracle before VI
+
+Attempted the prescribed 30-second retail-oracle arm with a physical PIF-range
+read watch (`0x1FC007C0:0x1FC007C8`), whole-RDRAM write positive control,
+`--vi-poll`, `--verbose`, and `--press 6:start`. The process exited `rc=139`
+while the core was initializing RDRAM, after the watch was installed and before
+the first VI or any `[hit]` record. Removing the whole-RDRAM watch reproduced
+the identical pre-VI `rc=139`, so the failure is not watch interaction.
+
+As the same-configuration positive-control baseline, a 5-second run with only
+the whole-RDRAM write watch completed with 1,082,129 hits and 287 VI frames.
+This proves the core, ROM, debugger, and write-watch path run; it does not prove
+anything about retail PIF reads. The planned PIF measurement was therefore
+unevaluable and substituted with an oracle-path isolation result. No runtime,
+generated-code, mitigation, or submodule change was made.
+
+ORIGIN: oracle debugger read-watch crash reproduced in paired and isolated
+attempts; no guest value mutation or mitigation was landed.

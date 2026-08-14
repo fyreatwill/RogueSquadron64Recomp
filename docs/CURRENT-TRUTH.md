@@ -192,6 +192,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   run cannot distinguish absent game PIF reads from an unobserved trace path.
   VI stayed at 320/origin `0x006dd280`; callback-table reachability remains
   unevaluable. The next probe is a direct physical PIF-range read watch.
+- s960 attempted the direct physical PIF-range read watch twice: once paired
+  with the whole-RDRAM write control and once alone. Both runs exited `rc=139`
+  during RDRAM initialization, before the first VI, with no watch hit. A
+  same-configuration whole-RDRAM-only control passed with 1,082,129 write hits
+  over 287 VI frames in 5 seconds. This is a tool/core read-breakpoint failure,
+  not evidence about retail PIF reads; the PIF-watch hypothesis is blocked
+  pending an oracle-path fix.
 
 ## Recent evidence ledger
 
@@ -228,6 +235,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s957 | Concurrent undriven/driven controls both passed (10,120,336/10,146,403 whole-RDRAM writes); driven delivered 11 presses, but both stayed at VI 320/origin `0x006dd280` with no PIF trace. Core/setup phase remains selected; callback-table watch is unevaluable. |
 | s958 | Config/help audit plus corrected 30-second pair passed whole-RDRAM controls (5,201,480/5,203,031); driven delivered five `sym=40` presses, but both stayed at VI 320/origin `0x006dd280` with no PIF trace. Timeline is ruled out; input-read/core setup remains phase blocker. |
 | s959 | Source audit and one driven arm confirmed input-plugin attachment and scancode-40 delivery; whole-RDRAM control passed with 5,189,202 hits. The PIF trace is a VI poll rather than game-read attribution; VI stayed 320, so callback-table reachability remains unevaluable. |
+| s960 | Physical PIF read watch crashed the oracle twice before VI, both paired and isolated; whole-RDRAM-only control passed with 1,082,129 hits/287 VI. PIF read activity remains unevaluable; investigate the debugger read-watch path. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -245,12 +253,11 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Resolve the oracle input-read/core setup discrepancy before retrying the
-   callback-table watch: s958 confirmed the config section and named-scancode
-   press delivery, but both 30-second arms stayed at VI 320 with no PIF reads.
-   Audit the oracle's plugin attachment and PIF polling path, then run one
-   bounded control that can distinguish “game never reads PIF” from “PIF trace
-   is not attached.”
+3. Fix or isolate the oracle debugger read-watch path before retrying the
+   callback-table watch: s960's physical PIF read watch crashes during RDRAM
+   initialization while the same core/configuration with only a whole-RDRAM
+   write watch reaches 287 VI. The next run must distinguish a core breakpoint
+   defect from a PIF-region mapping issue.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
