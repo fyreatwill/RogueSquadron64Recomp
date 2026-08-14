@@ -1,32 +1,33 @@
-# NEXT work unit (s963)
+# NEXT work unit (s964)
 
-Instrument one external-core initialization path around debugger breakpoint
-installation and device mapping. Do not retry retail PIF/callback hypotheses
-until the PIF-region read-watch arm survives or the failing frame is named.
+Instrument one external-core breakpoint callback path around lookup, debugger
+state transition, and `update_debugger()`. Do not retry retail PIF/callback
+hypotheses until the PIF-region read-watch arm survives or the failing stage is
+named.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
 Competing hypotheses:
 
-- H-pif-map-install: installing a breakpoint over region `0x1fc0` leaves an
-  invalid handler or saved-handler state during device/RDRAM initialization.
-- H-pif-device-init: the PIF device is initialized with a handler/base state
-  that is invalid independently of breakpoint installation.
-- H-pif-debug-callback: the debugger callback or breakpoint table is entered
-  during initialization and crashes before the first emulated instruction.
+- H-pif-lookup: breakpoint lookup on the first PIF access dereferences invalid
+  breakpoint-table state.
+- H-pif-state-transition: pausing the debugger run state on a PIF hit enters an
+  invalid state transition before the callback returns.
+- H-pif-update-callback: `update_debugger()` or its frontend callback crashes
+  after the breakpoint has been identified.
 
-Discriminating measurement: add one rate-limited diagnostic at the PIF mapping,
-breakpoint activation, and first debugger-read entry points, rebuild the core,
-then run ordinary-RDRAM and PIF-region read-watch arms in the same bounded
-batch. The whole-RDRAM write control must visibly fire in both. A crash before
-the PIF activation marker selects device/mapping initialization; activation
-followed by a crash before debugger-read selects breakpoint/callback setup; a
-PIF debugger-read marker selects the saved-handler or address path. Remove or
-keep the diagnostic based on whether it identifies a concrete failing stage.
+Discriminating measurement: add one rate-limited diagnostic before and after
+breakpoint lookup, before and after the debugger state transition, and before
+and after `update_debugger()`, then run ordinary-RDRAM and PIF-region
+read-watch arms in one bounded batch. The whole-RDRAM write control must fire
+in both. A crash before lookup return selects table lookup; a crash after
+lookup but before state-transition return selects debugger-state handling; a
+crash after state transition but before callback return selects
+`update_debugger()`.
 
 Exact commands:
 
-`rg -n -C 8 "map_region|activate_memory_break_read|add_breakpoint_struct|init_pif|init_memory|read_with_bp_checks" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger`
+`rg -n -C 8 "check_breakpoints_on_mem_access|update_debugger|lookup_breakpoint" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger`
 
 `tools/oracle/build_core.sh && tools/oracle/build.sh`
 

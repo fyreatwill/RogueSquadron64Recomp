@@ -59861,3 +59861,30 @@ activation, and debugger-read entry as one batch.
 ORIGIN: external oracle core `pif_address()` source audit, paired ordinary/PIF
 read-watch arms, and whole-RDRAM positive controls; no recomp runtime,
 generated-code, or mitigation change was made.
+
+## Session 963 (2026-08-13) — PIF mapping and read entry pass; callback path crashes
+
+Added one batched diagnostic to the external oracle core at PIF mapping,
+breakpoint activation, and wrapped PIF-read entry. Rebuilt the core and oracle
+front-end, then ran ordinary-RDRAM and PIF-RAM read-watch arms concurrently,
+both with the whole-RDRAM write positive control.
+
+The ordinary arm completed with 1,105,162 whole-RDRAM write hits, one ordinary
+read hit, and 299 VI frames. The PIF arm logged both PIF mappings, breakpoint
+activation (`0x1fc007c0:0x1fc007c4`), and the first wrapped PIF read at
+`0x1fc007e4`, then exited `rc=139` without an oracle completion line. Thus
+PIF mapping/device initialization and saved-handler invocation are past the
+immediate failure boundary. The remaining defect is in the debugger callback
+path after `read_with_bp_checks()` enters; this diagnostic batch does not
+distinguish lookup, state transition, and `update_debugger()` internals.
+
+This rules out the prior hypothesis that the PIF watch dies before breakpoint
+activation or before the first PIF read. It does not classify retail PIF
+activity, the callback-table hypothesis, or any recomp-runtime writer. No
+runtime mitigation or submodule change was made.
+
+Captures: `scratch/agent/oracle_runs/963_pif_diag/`.
+
+ORIGIN: external oracle diagnostics at mapping/activation/read entry plus
+paired ordinary/PIF arms with visible whole-RDRAM controls; no guest value was
+changed and no mitigation was landed.

@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s962 (2026-08-13). The active blocker is authoritative
+Reviewed through s963 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -216,6 +216,13 @@ closed; M3 work is limited to systematic idiom-class audits.
   crash; the remaining fault is in the PIF-specific debugger/init path. An
   attempted LLDB batch produced no backtrace and was terminated, so the exact
   failing frame remains unclassified.
+- s963 added one batched diagnostic to the external oracle core. The ordinary
+  arm completed with 1,105,162 whole-RDRAM write hits and 299 VI frames. The
+  PIF-RAM arm reached PIF mapping, breakpoint activation, and the first wrapped
+  PIF read at `0x1fc007e4`, then exited `rc=139` before completion. This rules
+  out mapping/device initialization as the immediate failure and localizes the
+  remaining defect to the debugger callback path after read entry; no runtime
+  mitigation or retail conclusion followed.
 
 ## Recent evidence ledger
 
@@ -255,6 +262,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s960 | Physical PIF read watch crashed the oracle twice before VI, both paired and isolated; whole-RDRAM-only control passed with 1,082,129 hits/287 VI. PIF read activity remains unevaluable; investigate the debugger read-watch path. |
 | s961 | Ordinary RDRAM read watch survived with 1,105,122 write-control hits, one read hit, and 299 VI; PIF RAM and PIF ROM read watches both crashed pre-VI. Source mapping selects a PIF-region handler defect over a generic read-watch defect; no retail PIF conclusion. |
 | s962 | Core rebuild with `pif_address()` base stripping left ordinary RDRAM healthy (1,105,106 writes/one read/299 VI) but PIF read watch still crashed `rc=139` after RDRAM init and before emulator start. Latent normalization bug recorded; pre-start PIF debugger/init failure remains. |
+| s963 | Batched oracle diagnostics showed ordinary RDRAM completing (1,105,162 writes/299 VI), while PIF mapping and activation succeeded and the first wrapped PIF read entered before `rc=139`; immediate failure is in the debugger callback path after read entry. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -272,12 +280,12 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Isolate the remaining oracle PIF-region pre-start crash before retrying the
-   callback-table watch: s962 showed that stripping the PIF mapping base fixes
-   a latent handler offset but does not prevent `rc=139` during initialization.
-   The next unit should instrument the debugger breakpoint-install and device
-   mapping path to identify the failing frame, paired with the ordinary-RDRAM
-   positive control.
+3. Isolate the remaining oracle PIF-region crash before retrying the
+   callback-table watch: s963 showed mapping, activation, and wrapped read
+   entry all succeed, but the first PIF read still exits `rc=139`. The next
+   unit should instrument `check_breakpoints_on_mem_access()` around lookup,
+   debugger state transition, and `update_debugger()`, paired with the
+   ordinary-RDRAM positive control.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -287,32 +295,33 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-Make one minimal source-level fix or diagnostic in the external oracle core's
-debugger/memory handler so a PIF-region read watch can survive initialization.
+Make one minimal source-level diagnostic in the external oracle core's
+breakpoint callback path so a PIF-region read watch can survive or name the
+failing callback stage.
 Do not edit the recomp runtime or retry retail PIF/callback hypotheses until
 this passes.
 
 Competing hypotheses:
 
-- H-pif-saved-handler: the debugger wrapper calls an invalid or incomplete
-  saved handler for the PIF device mapping.
-- H-pif-early-breakpoint: the first PIF read hits during core/boot setup and
-  the synchronous debugger callback/step sequence is unsafe at that point.
-- H-pif-address-normalization: the physical PIF address reaches the wrapper in
-  a form that the PIF handler or breakpoint lookup does not support.
+- H-pif-lookup: breakpoint lookup on the first PIF access dereferences invalid
+  breakpoint-table state.
+- H-pif-state-transition: pausing the debugger run state on a PIF hit enters an
+  invalid state transition before the callback returns.
+- H-pif-update-callback: `update_debugger()` or its frontend callback crashes
+  after the breakpoint has been identified.
 
-Discriminating measurement: rebuild the external core with exactly one source
-change or diagnostic, then run ordinary-RDRAM and PIF-region read-watch arms in
-the same bounded batch, each with `--watch-write 0x0:0x800000 --hit-cap 200
---vi-poll --verbose`. Ordinary read survival with PIF survival selects a
-fixed PIF handler path; ordinary survival with PIF still crashing selects the
-remaining PIF-specific branch; a logged PIF hit before failure selects the
-early-breakpoint callback path. The whole-RDRAM write control must visibly
-fire in every arm.
+Discriminating measurement: add one rate-limited diagnostic before and after
+breakpoint lookup, before and after the debugger state transition, and before
+and after `update_debugger()`, then run ordinary-RDRAM and PIF-region
+read-watch arms in one bounded batch. The whole-RDRAM write control must fire
+in both. A crash before lookup return selects table lookup; a crash after
+lookup but before state-transition return selects debugger-state handling; a
+crash after state transition but before callback return selects
+`update_debugger()`.
 
 Exact starting checks/commands:
 
-`rg -n -C 8 "read_with_bp_checks|activate_memory_break_read|read_pif_mem|MM_PIF_MEM" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device`
+`rg -n -C 8 "check_breakpoints_on_mem_access|update_debugger|lookup_breakpoint" /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/debugger`
 
 `tools/oracle/build_core.sh && tools/oracle/build.sh`
 
