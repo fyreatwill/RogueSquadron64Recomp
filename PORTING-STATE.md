@@ -62030,3 +62030,22 @@ next iteration on another Start-button schedule.
 ORIGIN: generated recomp source, symbol table, and architecture-document
 inspection only; no mitigation, guest value, or recomp runtime behavior was
 changed.
+
+## Session 1050 (2026-08-14) — separated menu selector state from game settings
+
+Ran the prescribed bounded static audit of pointer-mediated copies into
+`gGameSettings+0x20` and the `menuOverlayInit` index-0 path; no build or runtime
+run was needed. The generated body of `menuOverlayInit` reads its selector
+halfword from `0x800CCF50` (`0x800D - 0xB0`) and dispatches indices 0 through 10
+from the `0x800A75C0` jump table. It does not read `gGameSettings+0x20`
+(`0x80130B60`) for that choice. The exhaustive exact-address writer sweep found
+one writer of `0x80130B60`: `resetMixerVolumesAndFlags+12` at `0x8006ED5C`,
+which stores constant `0x7F`; its caller at `0x800B58B0` is an audio/settings
+reset path, with no controller or timer guard. No pointer-mediated input copy
+or timer-only copy to this byte was found. This rules out the proposed
+input-state address linkage and leaves the writer classification as
+single-source static evidence; it does not explain the retail width-320 path.
+
+ORIGIN: generated recomp source, symbol table, and architecture-document
+inspection only; no mitigation, guest value, or recomp runtime behavior was
+changed.

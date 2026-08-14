@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1049 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1050 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -124,6 +124,17 @@ retail-oracle callback thread is no longer directory-blocked
   edges, but both stayed at width 320/origin `0x006dd280` for 7,199 VI. This
   closes duration as the explanation for the tested attract path; the 512
   hangar phase remains unevaluable.
+
+s1050's static audit refuted the proposed linkage between `gGameSettings+0x20`
+(`0x80130B60`) and menu dispatch. `menuOverlayInit` selects its jump-table
+index from the halfword at `0x800CCF50` (`0x800D - 0xB0`), not from the game
+settings byte. The exhaustive generated-code sweep found one exact writer of
+`gGameSettings+0x20`: `resetMixerVolumesAndFlags+12` (`0x8006ED5C`) stores the
+constant `0x7F`; its caller is an audio/settings reset path and has no local
+controller or timer guard. No pointer-mediated input copy or timer-only copy
+to this byte was found. This closes the input-state address conflation; the
+writer/caller classification is a single-source residual, not evidence for a
+retail transition mechanism.
 
 ## M4 zero-shade evidence
 
