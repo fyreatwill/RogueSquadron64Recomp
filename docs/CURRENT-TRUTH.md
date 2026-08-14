@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1083 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1084 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -28,6 +28,12 @@ compact and records only live conclusions, boundaries, and next work.
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. Audio remains stubbed; the legacy audio audits are archived in the
   project overview.
+- The s1084 retail oracle run passed the whole-RDRAM positive control, showed
+  all eleven Start presses in PIF reads, and advanced 7,199 VI frames while
+  remaining at width 320/origin `0x006dd280`. No write hit
+  `0x130B30:0x130B31`. This single-source oracle result selects
+  `H-gate-not-reached` for the established schedule; the specific state gate
+  remains open.
 
 ## Retail oracle boundary
 
@@ -212,14 +218,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1081 | Bounded audit found the sole generated caller at `mainGameLoop:0x8003E010`; all save-loop branches rejoin the common tail, and the unconditional `0x8006DAB8` store writes `1` after reset. Companion ordering annotation agrees. Selects static `H-writer-reached`; later clobbers and runtime reachability remain open. |
 | s1082 | Complete post-return generated/companion alias census found 67 offset-`0x20` byte stores but no concrete `0x80130B30` writer after `runIdleFramesAndLoadSaveData` and before the `0x8003E07C` gate read. The only exact target is the known in-callee `0x8006DAB8` store; main-loop writes are unrelated. Selects static `H-no-later-clobber`; loader/DMA ownership remains outside the source census. |
 | s1083 | Bounded `loadOverlay`/DMA audit found fixed overlay code destination `0x800A5130` and BSS clears at `0x8010B6D0`, `0x800CD520`, and `0x800B0940`; host PI forwards these destinations and does not synthesize a target write. Selects static `H-loader-no-alias`; runtime gate value/reachability remains open. |
+| s1084 | Retail oracle with whole-RDRAM control, eleven Start/PIF controls, and `0x130B30:0x130B31` write watch reached 7,199 VI frames but stayed at width 320/origin `0x006dd280`; target writes were zero. Selects single-source `H-gate-not-reached`; the blocking gate is still unresolved. |
 
 ## Ranked next steps
 
-1. Run the retail oracle with whole-RDRAM and VI/PIF positive controls plus a
-   physical write watch on `0x130B30:0x130B31`, using the established eleven-
-   Start schedule. A target write with a guest PC distinguishes gate execution
-   from the current static-only result; a controlled zero while the run reaches
-   only width 320 leaves the state gate unresolved. Do not arm a freelist watch
+1. Run the retail oracle with the established eleven-Start schedule, retaining
+   the whole-RDRAM/VI/PIF controls and adding a physical read watch on
+   `0x130B30:0x130B31`. A guest-PC read with no write narrows the issue to the
+   runtime value/branch; no read leaves the gate's caller path unreached; a
+   write identifies execution of the known writer. Do not arm a freelist watch
    without an independently observed `0x6abxxx` hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
