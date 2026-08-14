@@ -467,14 +467,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1123 | Bounded descriptor audit resolves `setViModeType(osTvType=1)` to `rsViModeType=0`. The NTSC index bytes in call order are `{12,0,6,4,11,9,10,8,13,2}`, with mixed record widths; the observed retail width 320 therefore requires selector state to choose one of indices `{0,2,4,6}`. Selects `H-index-state-dependent`; no build or run. ORIGIN: generated index reads and independent retail-ROM table bytes; no mitigation. |
 | s1124 | Bounded generated/companion audit found `selectAndApplyViMode` maps selector bytes `0x8011A865/64/62` to copied-record offsets `0x00/0x50/0xA0/0xF0`. `buildAndRegisterDefaultMaterial` writes those bytes from bits of its `$s1` render-state argument and is called by boot video initialization and recurring `advanceVideoFrame`; the selector is therefore runtime-populated, not a fixed initializer. The independent retail width-320 capture constrains the active initial choice to the 320-wide copied records at offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`), but the concrete boot argument remains open. Selects `H-selector-runtime-320`; no build or run. ORIGIN: generated control/data-flow, companion caller/symbol census, and independent retail VI-width evidence; no mitigation. |
 | s1125 | Bounded generated audit traced the boot selector input through `thread3_video_handle`: `gameConfig+0x44` is loaded into the outgoing stack slot consumed by `initVideoBootWrapper`, then forwarded to the `buildAndRegisterDefaultMaterial` flags/render-state slot. The callee extracts selector bits 2, 3, 4, 5, 7, and 8 from that runtime-loaded value. Selects `H-boot-arg-runtime` over a fixed literal; the producer and initial value of `gameConfig+0x44` remain open. Retail width 320 still constrains the initial record to offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`). No build or run. ORIGIN: generated caller/callee data-flow and independent retail VI-width evidence; no mitigation. |
+| s1126 | Bounded generated/host/patch/companion and ROM-data audit found `getGameConfig` returns `gBootConfig` at `0x80037560`, with no writer to `+0x44`; the main overlay mapping places that word at ROM `0x381A4`, where the retail image contains `0x00001800`. Bits 2, 3, 4, 5, 7, and 8 are all zero, selecting `H-config-field-literal` and ruling out a concrete non-320 config value. The selector-to-record mapping remains open. No build or run. ORIGIN: generated store census, companion/host/patch census, section mapping, and direct retail-ROM bytes; no mitigation. |
 
 ## Ranked next steps
 
-1. Classify the producer and boot-time value of `gameConfig+0x44`, the runtime
-   field feeding the selector bits in `buildAndRegisterDefaultMaterial`.
-2. Use that value to identify which copied NTSC record `{0,2,4,6}` is active
-   on the retail width-320 path; if the field is non-generated, classify its
-   owner before considering any runtime probe.
+1. Use boot `gameConfig+0x44 = 0x00001800` to evaluate the exact
+   `selectAndApplyViMode` branch and identify which copied NTSC record
+   `{0,2,4,6}` is active on the retail width-320 path.
+2. Reconcile the selected boot record with the recurring material-writer path;
+   if the boot stack argument is transformed before the writer, trace that
+   transformation statically before considering any runtime probe.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

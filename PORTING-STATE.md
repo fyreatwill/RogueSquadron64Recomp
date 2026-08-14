@@ -63485,3 +63485,17 @@ active 320 record from the immediate boot call alone; the independent retail
 width-320 evidence still constrains the active record to indices `{0,2,4,6}`.
 No build or run occurred. ORIGIN: generated caller/callee data-flow plus
 independent retail VI-width evidence; no mitigation.
+
+## Session 1126 (2026-08-14) — resolved boot config selector value
+
+Ran the prescribed bounded static audit with no build or game run.
+`getGameConfig` returns `gBootConfig` at `0x80037560`; the generated,
+host, patch, and companion census found no writer to `gBootConfig+0x44`.
+The main overlay mapping is `ROM = VRAM - 0x80000000 + 0xC00`, placing that
+word at ROM `0x381A4`; the retail ROM contains `0x00001800` there. Bits 2, 3,
+4, 5, 7, and 8 are all zero, selecting `H-config-field-literal` and ruling
+out a concrete non-320 config value. The exact selector-to-record branch
+remains open. This rules out runtime population of the field in the audited
+sources, but does not yet identify the copied record or width. ORIGIN:
+generated store/read census, host/patch/companion census, section mapping,
+and direct retail-ROM bytes; no mitigation.

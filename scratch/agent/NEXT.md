@@ -1,39 +1,36 @@
-# NEXT work unit (s1126)
+# NEXT work unit (s1127)
 
 HYPOTHESIS-ID: retail-oracle-active-descriptor-index
 
-Perform one bounded static audit of the producer and boot-time value of
-`gameConfig+0x44`, which feeds the selector bits in
-`buildAndRegisterDefaultMaterial` at `0x80017B88`. The prior audit established
-that `thread3_video_handle` loads this field and forwards it through
-`initVideoBootWrapper`; the retail width-320 path must choose copied-record
-offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`).
+Perform one bounded static audit of the exact selector branch after the
+resolved boot value `gameConfig+0x44 = 0x00001800`. Trace the stack argument
+through `initVideoBootWrapper` into `buildAndRegisterDefaultMaterial`, map its
+zero bits to selector bytes, then evaluate `selectAndApplyViMode`'s branch and
+the copied-record index/width.
 
 Competing hypotheses and discriminator:
 
-- H-config-field-literal: `gameConfig+0x44` is initialized with a concrete
-  value before `thread3_video_handle`, selecting one of `{0,2,4,6}`.
-- H-config-field-runtime: the field is populated or merged from runtime or
-  non-generated display/config state, so static source cannot resolve its
-  initial selector value.
-- H-config-field-non320: the field's concrete value selects a non-320 record,
-  requiring reconciliation with the independent retail width-320 observation.
+- H-selector-zero-to-320: zero selector bytes take the `0x50` branch, whose
+  NTSC record is one of the independently observed 320-wide indices.
+- H-selector-zero-to-other: zero selector bytes take `0x00`, `0xA0`, or `0xF0`,
+  requiring a different mapping or explaining the retail width discrepancy.
+- H-argument-transformed: the `0x1800` field is transformed before the
+  material writer, so its zero selector bits are not the effective boot bits.
 
-Discriminator: enumerate all generated, host, patch, companion, and ROM/data
-initialization paths for the game-config object and offset `+0x44`, then
-decode bits 2, 3, 4, 5, 7, and 8 at the boot call. A concrete pre-call store
-selecting `{0,2,4,6}` proves H-config-field-literal; a runtime/non-generated
-producer proves H-config-field-runtime; a concrete non-320 value requires
-reconciling or overturning the retail observation. Do not build or run.
+Discriminator: the generated branch trace must produce one concrete selector
+byte tuple, copied-record offset, table index, and width. A zero tuple that
+selects the 320 record proves H-selector-zero-to-320; a non-320 record selects
+H-selector-zero-to-other; any intervening nonzero-producing operation selects
+H-argument-transformed. Do not build or run.
 
 Exact commands:
 
 ```sh
-rg -n -C 25 'thread3_video_handle|0x800012B8|0x800012BC|0x44\\(\\$a3\\)|getGameConfig' ../N64Recomp/RecompiledFuncs/funcs_0.c
-rg -n -C 20 '0x8011.*63E4|gameConfig|0x44|thread3_video_handle' ../N64Recomp/RecompiledFuncs/funcs_0.c ../N64Recomp/RecompiledFuncs/funcs_*.c src patches syms
-rg -n -C 10 'getGameConfig|D_8011.*63E|0x801163E|0x44' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt /Users/williambuckley/Documents/Tools/rogue_squadron64/docs/mips_to_c
+rg -n -C 40 'initVideoBootWrapper|0x800012B8|0x800012BC|0x80017B88|0x80017C7C|0x80017C90|0x80017CA0|0x80017CB0|0x80017CC0|0x80017CCC' ../N64Recomp/RecompiledFuncs/funcs_0.c ../N64Recomp/RecompiledFuncs/funcs_4.c
+rg -n -C 35 'selectAndApplyViMode|0x8001BB80|0x8001BB98|0x8001BBB0|0x8001BBC4' ../N64Recomp/RecompiledFuncs/funcs_5.c
+xxd -g 1 -s $((0x80037560 - 0x80000000 + 0xC00 + 0x44)) -l 4 build/rogue_squadron.z64
 ```
 
-Use bounded `sed` windows around the config getter, all exact `+0x44` stores,
-and the boot call. Append the producer/value classification to the ledger and
-current truth. No mitigation is authorized.
+Use bounded `sed` windows around the argument construction, selector stores,
+selector branch, and ROM word. Append the branch/index/width classification to
+the ledger and current truth. No mitigation is authorized.
