@@ -56,6 +56,19 @@ compact and records only live conclusions, boundaries, and next work.
   writer hypothesis: the positive controls prove the probes were active, but
   the required phase discriminator was absent. The launch-route/state boundary
   is now the next static-audit target.
+- The s1112 bounded VI-route audit classifies the missing 640-to-1024 transition
+  as lifecycle-driven at source level. `initVideoBootWrapper` and
+  `advanceVideoFrame` feed `initVideoSubsystem` from display/config arguments;
+  the mode selectors used by `swapBufferWithViMode`/`selectAndApplyViMode` are
+  internal bytes at `0x8011A864`, `0x8011A865`, and `0x8011A862`, plus pending
+  feature masks at `0x80128E94`/`0x80128E90`. The selected mode records are
+  copied through the internal table around `0x80128D50` and can carry widths
+  320, 512, 640, or 1024. `tools/probe.sh` only injects keyboard events and
+  phase-gates on the host's post-update `[phase]` line; it does not set these
+  mode flags. The host logger reads `get_vi_regs()` after `ScreenUpdateAction`
+  commits the next state, so no unobserved 1024 write or logger mismatch was
+  found. This selects static `H-state-lifecycle`; the retail writer/consumer
+  boundary remains open.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -335,18 +348,18 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1108 | Added a regeneration-safe `MEM_B`/`MEM_H`/`MEM_W` store probe to the external `fixup_game_funcs.py`, regenerated all 50 function files, and built successfully. The probe's positive control fired and the local captures logged 256 target rows, all for physical `0x11A89F` from generated PCs `0x80017F98`, `0x80019D34`, `0x80019DD4`, and `0x80019FE4`; no `0x11A8A0` row appeared. Both captures failed the required VI-1024 phase control (one stopped at width 320; the Start-assisted retry reached width 640), so this is not a valid final discriminator for the A0 writer. It does establish a generated writer for the neighboring A89F byte and leaves A0 open; no queue behavior or mitigation changed. |
 | s1110 | Removed `ROGUESQ_LOG_ALL` while retaining the targeted store and submit-boundary probes. The 180-second capture passed the generated-store control 34 times, produced 256 A89F rows, 286 sends, and 427 receives, and repeatedly sampled `gate89f=2 gate8a0=1`, but never reached VI width 1024 (last width 640) and produced no A0 row. This rejects broad-log overhead for the targeted recipe, but cannot separate input-route from transient-state; no E9-phase or writer attribution is valid. No queue behavior or mitigation changed. |
 | s1111 | Restored s1106's no-key, 1.0-second launch shape with targeted store and submit-boundary probes. The run passed the generated-store control and logged 256 A89F stores plus 713 submit-boundary rows, but remained at width 640 for the phase gate; no A0 row or E9-phase controls were observed. This consumes the recovery budget and leaves the writer discriminator invalid; no queue behavior or mitigation changed. |
+| s1112 | Bounded static audit traced the 640/1024 VI writes to the internal mode-selection/copy route in `initVideoSubsystem`, `swapBufferWithViMode`, and `selectAndApplyViMode`. The controlling selector bytes and pending masks are lifecycle/config state, while `tools/probe.sh` supplies only keyboard events and observes committed VI registers. The logger is downstream of the mode commit and therefore does not hide a 1024 transition. Selects static `H-state-lifecycle`; no build, runtime capture, or mitigation changed. |
 
 ## Ranked next steps
 
-1. Perform one bounded static launch-route audit before any further writer
-   capture: enumerate the host/game predicates that move VI from the observed
-   640 route to 1024, then compare them with `tools/probe.sh`'s key semantics
-   and the current targeted environment. The s1109, s1110, and s1111 captures
-   all had positive probe controls but no VI-1024/E9 phase; further recipe A/B
-   runs are not justified until this boundary is classified. A0 remains open.
-2. If generated stores remain absent, build the missing debugger-enabled
-   retail oracle core before relying on an independent physical write watch;
-   the current machine has the front end but no core dylib.
+1. Build the missing debugger-enabled retail oracle core before relying on an
+   independent physical write watch. The s1112 route audit selects lifecycle
+   state as the static explanation for the missing 1024 phase; the oracle can
+   now provide an independent PC/value trace for the relevant mode-state
+   writers and the hangar transition. A0 remains open.
+2. After the oracle core exists, run one phase-gated positive-control capture
+   with watches on the mode-selector/pending-state family and the A0 target;
+   do not spend another port A/B until that independent route is available.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

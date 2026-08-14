@@ -63232,3 +63232,26 @@ logic, or mitigation changed.
 
 ORIGIN: diagnostic-only phase-gated capture and existing generated-store probe;
 no value was skipped, rewritten, or otherwise mitigated.
+
+## Session 1112 (2026-08-14) — audited the VI 640-to-1024 launch route
+
+Performed the prescribed bounded, build-free static audit. The generated
+route enters `initVideoSubsystem` from `initVideoBootWrapper` and
+`advanceVideoFrame`, both fed by display/config arguments. The per-mode calls
+in `swapBufferWithViMode` and `selectAndApplyViMode` choose internal mode
+records around `0x80128D50`; the selector bytes are `0x8011A864`,
+`0x8011A865`, and `0x8011A862`, and pending feature masks are at
+`0x80128E94`/`0x80128E90`. Existing logs show those mode records carrying
+widths 320, 512, 640, and 1024.
+
+`tools/probe.sh` injects keyboard events and waits for the host's `[phase]`
+width line; it does not write the mode selectors or pending masks. The host
+phase line is emitted after `ScreenUpdateAction` commits the next VI state and
+reads `get_vi_regs()`, so the audit found no hidden 1024 write or logger
+observation mismatch. This selects static `H-state-lifecycle` and rules out a
+missing key predicate as the source-level explanation for the recent width-640
+timeouts. It does not identify the retail writer or prove runtime values of
+the selector state; no build, capture, queue behavior, or mitigation changed.
+
+ORIGIN: static source/data-flow classification only; no value was skipped,
+rewritten, or otherwise mitigated.
