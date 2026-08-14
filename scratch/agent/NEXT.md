@@ -1,30 +1,24 @@
-# NEXT work unit (s929)
+# NEXT work unit (s930)
 
-HYPOTHESIS-ID: m3-audio-mix-stereo-class
+HYPOTHESIS-ID: m3-audio-compand-class
 
-Audit the complete `audioMixStereoBlock8` idiom at `0x8009DC98`, including
-every generated caller, its caller-derived `$t3` indirect targets, both
-voice-buffer ranges, all eight sample steps, and target-helper contracts.
+Audit the complete `audioCompandS16` idiom at `0x8009DD7C`, including every
+generated caller and every interior target entering its sign/region paths.
 Source-only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-stereo-unclassified: a caller supplies a data-derived or invalid indirect
-  target, an unbounded sample range, or a mismatched voice-buffer shape.
-- H-stereo-classified: all callers use the same fixed eight-pair contract,
-  the return-address-derived targets are fixed and valid, and all local
-  accesses terminate within bounded ranges.
-- H-stereo-shape-mismatch: one caller uses a distinct buffer/target contract;
-  record the exact split and stop.
+- H-compand-unclassified: an entry path reaches the helper with an invalid
+  sign/region contract or an unsafe indirect edge.
+- H-compand-classified: all entries and callers use fixed arithmetic contracts,
+  with bounded region selection, clamp, sign restoration, and termination.
+- H-compand-shape-mismatch: one caller or interior entry uses a distinct
+  contract; record the exact split and stop.
 
-Discriminating measurement: enumerate every generated caller's `$a0` setup,
-the `$t3` origin and resolved target at each call, all eight source/destination
-halfword offsets, and loop/termination conditions; cross-check
-`main_overlay.txt` and all four target helper bodies. Any omitted access,
-unsafe bound, unbounded loop, invalid target, or shape split rejects
-classification.
+Discriminating measurement: enumerate every `audioCompandS16` reference,
+caller register setup, target address, sign/region branches, arithmetic bounds,
+and return path; cross-check `main_overlay.txt` and the complete generated
+helper. Any data-derived target, omitted clamp/sign path, unsafe arithmetic
+bound, or caller/entry shape split rejects classification.
 
-Exact commands: inspect `../N64Recomp/RecompiledFuncs/funcs_27.c` around
-`0x8009DC98`, `rg` every `audioMixStereoBlock8` reference and its `$t3`
-setup, then inspect the matching `../rogue_squadron64/symbol_files/main_overlay.txt`
-entries and all four target helper bodies. No game build or soak is planned.
+Exact commands: `rg -n -C 8 "audioCompandS16|8009DD7C|DD7C" ../N64Recomp/RecompiledFuncs/funcs_27.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every reference. No game build or soak is planned.

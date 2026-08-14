@@ -58868,3 +58868,34 @@ edit, or game behavior changed.
 ORIGIN: complete generated helper/caller, nested-edge, access-range,
 termination, and companion-symbol inventory; no guest value mutation or
 mitigation.
+
+## Session 929 (2026-08-13) — audioMixStereoBlock8 is structurally classified
+
+Performed the planned source-only M3 idiom inventory of
+`audioMixStereoBlock8` (`0x8009DC98`) in
+`../N64Recomp/RecompiledFuncs/funcs_27.c`. Enumerated every generated
+caller, the `$a0`/`$t3` setup, all sample accesses, the four indirect target
+paths, and local termination. Cross-checked the companion
+`main_overlay.txt` mapping and all four target helper bodies. No build, game
+run, or soak was run.
+
+`renderVoiceAudioBlock` at `0x8009DB44` is the only generated caller. Its four
+callsites derive `$t3` from fixed `$ra` offsets and resolve to
+`0x8009DD48`, `0x8009DD60`, `0x8009DD70`, and `0x8009DD88`, fixed interior
+continuation points in the weighted-mix/compand paths. The helper reads the
+selector at `$a0+0x188`; its two branches select or swap `$a0+0x168` and
+`$a0+0x178`. Each path reads exactly eight halfword pairs at offsets
+`0, 2, 4, 6, 8, 0xA, 0xC, 0xE`, covering both fixed 16-byte ranges. There is
+no loop or other termination path.
+
+H-stereo-shape-mismatch and the local-control portion of
+H-stereo-unclassified are ruled out. H-stereo-classified is supported for
+caller shape, fixed target derivation, access ranges, and termination. Dynamic
+legitimacy of the voice-record base, selector, and sample values remains open.
+This is a single-source static classification supported by generated code plus
+companion symbol artifacts; no independent runtime writer/value evidence was
+claimed. No guard, mitigation, generated-code edit, or game behavior changed.
+
+ORIGIN: complete generated caller/target, register-derivation, access-range,
+termination, and companion-symbol inventory; no guest value mutation or
+mitigation.
