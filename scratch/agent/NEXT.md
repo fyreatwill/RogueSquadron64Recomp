@@ -1,33 +1,30 @@
-# NEXT work unit (s1104)
+# NEXT work unit (s1105)
 
 HYPOTHESIS-ID: submit-producer-boundary
 
-Perform one bounded runtime-free audit of the remaining gate ownership for the
-two queue pairs. Trace the writers/readers of the SP task-state bytes guarding
-`spTaskSchedulerThread`'s `0x8011A818` send and the DP flag guarding
-`dpInterruptHandlerThread`'s `0x8011A7E8` send, and compare them with the
-consumer-side gates. Do not change queue behavior or build.
+Perform one bounded runtime-free audit of non-generated and companion ownership
+for SP bytes `0x8011A89F/0x8011A8A0` and the DP handler byte/object at
+`0x8011A408`. Do not change queue behavior or build.
 
 Competing hypotheses:
 
-* H-gate-writer: the producer gate is written by the expected scheduler/DP
-  lifecycle and can be correlated with the consumer gate.
-* H-gate-stale: a clear/reset or missing writer can leave the producer send
-  suppressed while the consumer blocks.
-* H-gate-alias: the apparent gate is an alias/object field, so its ownership
-  cannot be assigned from the fixed-address census.
+* H-external-writer: companion, host, or patch code supplies the missing
+  nonzero producer gate and identifies the lifecycle boundary.
+* H-gate-stale: the generated clear/reset is the only writer, leaving the
+  producer send suppressed while the consumer blocks.
+* H-gate-alias: the SP bytes or `0x8011A408` are fields reached through an
+  object/index boundary, so fixed-address ownership is misleading.
 
-Discriminator: for each gate, enumerate every generated read and write and
-the controlling lifecycle branch. A same-lifecycle writer/read selects
-H-gate-writer; a clear without a matching set or an independently stale flag
-selects H-gate-stale; an object/index-derived access selects H-gate-alias.
-Computed calls must name their exact target boundary rather than infer
-reachability.
+Discriminator: enumerate every companion/host/patch read and write and map it
+to the exact generated boundary. A nonzero external writer selects
+H-external-writer; only generated clears with no nonzero writer selects
+H-gate-stale; object/index-mediated access selects H-gate-alias. A null result
+is valid only if the same audit visibly fires a positive-control symbol/path.
 
 Exact commands:
 
 ```sh
-rg -n -C 8 "0x8011A89D|0x8011A89E|0x80019ED4|0x80019EE4|0x8001C3C4|0x8000C0A4|0x8000C2A8" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs docs/game-architecture.md
-rg -n -C 5 "MEM_[BWL].*(5762|5763|5764|72BC|72C0|72C4|72C8|72CC)|lbu.*(5762|5763|5764|72BC|72C0|72C4|72C8|72CC)|sb.*(5762|5763|5764|72BC|72C0|72C4|72C8|72CC)" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+rg -n -C 6 "8011A89F|8011A8A0|8011A408|A89F|A8A0|5BF8" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64 src lib patches docs
+rg -n -C 5 "8011A89F|8011A8A0|8011A408|A89F|A8A0|5BF8" /Users/williambuckley/Documents/Tools/rogue_squadron64 src lib patches docs
 git diff --check
 ```

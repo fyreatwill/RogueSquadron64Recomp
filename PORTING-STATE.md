@@ -63079,3 +63079,6 @@ is nonzero. The blocking consumers are also branch-gated: SP at
 `0x8000C0A4`, DP at `0x8000C2A8`. This selects `H-producer-gated` and rules
 out absent direct producers and a purely separate lifecycle. It does not
 classify who writes or clears the gate bytes.
+## Session 1104 (2026-08-14) — audited submit gate ownership
+
+Ran the prescribed bounded generated-source census; no build or runtime run was needed. The direct SP producer send at `0x80019F1C` is guarded by pointer-derived bytes `0x8011A89F/0x8011A8A0`, not the fixed `0x8011A89D/0x8011A89E` flags. The producer clears both state bytes after its send paths, while no generated nonzero writer was found. The fixed `0x8011A89D/0x8011A89E` flags are set by `setPostSwapPendingFlags` and consumed/cleared by submit/advance paths. The DP handler’s branch reads through `s0 = 0x8011A408`, so assigning `0x8011A89D` as its direct DP gate is a role conflation in the generated snapshot. This rules out the fixed-flag role assignment and unconditional lifecycle-writer hypothesis; it does not yet distinguish a non-generated writer from a genuinely stale SP gate. `git diff --check` passed.
