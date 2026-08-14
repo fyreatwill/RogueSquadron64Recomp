@@ -62169,3 +62169,26 @@ timer, demo, or attract predicate; the nearest sources are radar/level state
 and the results-screen handler. This selects `H-selector0-state` as static,
 single-source evidence and rules out a direct input/demo explanation for these
 writers. The upstream producer of the selector value remains open.
+
+## Session 1057 (2026-08-14) — audited hangar frame return branches
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. In `runHangarSelectionFrame`, the return
+sentinel `0x00FFFFFE` is assigned at `0x800AB134` only on the path where
+`getControllerNewButtonsPressed` yields newly pressed B (`0x4000`) and
+`isPlayerShipActive` returns zero. A zero B mask or an active player ship
+branches directly to the common return preparation and cannot assign that
+sentinel. The ordinary path calls `accumulateShipThrottleCharge`; if its
+low-byte result is nonzero, the function returns the word at
+`0x800D:0xFFFFD6D4`, otherwise it returns the word at
+`0x800D:0xFFFFD6D0`. The `0xFFFFD6D4` value is also written by the B/inactive
+path before the common return, while the nearby audio/voice condition only
+controls whether the voice-loop helper runs.
+
+This selects `H-frame-ret-input` for the sentinel branch over the timer/demo
+and state-only alternatives. It does not classify the normal return producer:
+the next boundary is `accumulateShipThrottleCharge` and its two global-value
+sources. No runtime or retail transition conclusion follows.
+
+ORIGIN: generated `RecompiledFuncs/funcs_28.c` and bounded caller/branch source
+search only; no guest value, runtime behavior, or writer was changed.
