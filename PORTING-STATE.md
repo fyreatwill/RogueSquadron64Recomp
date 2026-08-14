@@ -60021,6 +60021,34 @@ was intentionally not rerun because this remained a static boundary unit.
 ORIGIN: external oracle rebuild and linked-assembly audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 970 (2026-08-13) — LTO bitcode boundary and local callback binding confirmed
+
+Captured the successful forced oracle link command. It explicitly includes
+the freshly rebuilt `_obj/device/memory/memory.o` and links
+`libmupen64plus.dylib` with `-O3 -flto`. `file` and `nm -m` show that
+`memory.o` is an LLVM bitcode wrapper, not machine code: its
+`check_breakpoints_on_mem_access` reference is an undefined external and
+`otool -rv` cannot report relocations. Thus the requested object-level
+machine-call/relocation comparison is not available at this LTO boundary.
+
+The final dylib contains `_read_with_bp_checks` as a non-external local text
+symbol at `0x13c58` and `_check_breakpoints_on_mem_access` as a non-external
+local text symbol at `0x48768`; the call at `0x13d64` is a direct local
+`bl`. The linked call still sets `w0=pc`, `x1=address`, and `w2=3`, while
+leaving `w3` unset. The source declaration and preprocessing independently
+show the four-argument call `(pc,address,4,flags=3)`. This rules out stale
+product selection and makes the unresolved defect specifically the LTO
+bitcode-to-final-code transformation or its ABI state; no runtime or oracle
+source change was made.
+
+Evidence: `/tmp/rs64-oracle-link.log`, `file`, `nm -m`, `otool -tvV`,
+`otool -rv`, source grep, and preprocessing from the successful rebuild.
+The result is static single-source/build evidence; no retail conclusion or
+mitigation follows.
+
+ORIGIN: external oracle LTO object-to-dylib audit; no guest value was changed
+and no mitigation was landed.
+
 ## Session 968 (2026-08-13) — Source and object are correct; linked dylib is not
 
 Traced the external oracle callback mismatch through the exact Makefile recipe,

@@ -255,6 +255,15 @@ closed; M3 work is limited to systematic idiom-class audits.
   selects an oracle ABI/compiler-artifact mismatch over callback body; the
   exact source-to-artifact cause and crash instruction remain open. No runtime
   mitigation or retail conclusion followed.
+- s970 captured the successful forced oracle link. The fresh
+  `_obj/device/memory/memory.o` is LLVM bitcode under `-flto`, so it has no
+  machine-code relocation to compare; `nm -m` shows its callback reference as
+  undefined external. The final dylib binds both wrapper and callback as
+  non-external local symbols and emits a direct local call at `0x13d64`, still
+  passing `w0=pc`, `x1=address`, `w2=3` with `w3` unset despite source and
+  preprocessing showing four arguments `(pc,address,4,flags=3)`. Stale
+  product selection is refuted; the remaining boundary is LTO bitcode-to-code
+  transformation/ABI state. This is static single-source evidence only.
 
 ## Recent evidence ledger
 
@@ -320,12 +329,11 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s969 force-rebuilt the exact current target and
-   reproduced the ABI mismatch in a fresh dylib, refuting stale-product drift.
-   Capture the actual link command and inspect object relocations/symbol
-   linkage to distinguish a linker/LTO transform from a wrong object or symbol
-   selected at link; do not infer retail callback-table behavior until this
-   boundary is crossed.
+   callback-table watch: s970 crossed the object-to-dylib identity boundary
+   and found an LTO bitcode object with no relocations plus local final-symbol
+   binding; the four-argument source still becomes a three-register call.
+   Inspect compiler-emitted non-LTO assembly/IR and the exact LTO inputs next;
+   do not infer retail callback-table behavior until this boundary is crossed.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -335,25 +343,26 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: oracle-pif-link-artifact
 
-Capture the exact successful oracle link command, then disassemble the fresh
-`memory.o` call site and inspect its relocation plus the linked dylib's symbol
-binding. Do not edit the recomp runtime or retry retail PIF/callback
-hypotheses until the object-to-dylib boundary is explained.
+Compile the oracle `memory.c` and `dbg_breakpoints.c` once with the exact
+successful compile flags but `-fno-lto -S`, then inspect the emitted ARM64
+assembly call and compare it with the current LTO dylib call. Do not edit the
+recomp runtime or retry retail PIF/callback hypotheses.
 
 Competing hypotheses:
 
-- H-pif-stale-dylib: the current dylib is stale or assembled from a different
-  object/product set despite its timestamps.
-- H-pif-lto-link-transform: the exact current object bitcode is linked, but
-  the final LTO/codegen stage drops or repurposes the fourth argument.
-- H-pif-wrong-object-selected: the link selects a different/older object or
-  symbol body than the freshly rebuilt `memory.o`, despite the dylib being new.
+- H-pif-nonlto-correct: non-LTO compile emits the required `w2=4,w3=3`, so
+  LTO is the transformation boundary.
+- H-pif-source-abi: non-LTO compile reproduces the shifted/missing argument,
+  so the source's effective declaration or ABI state is not what preprocessing
+  suggests.
+- H-pif-other-link-input: non-LTO compile is correct but the current linked
+  image differs for an input or link-state reason not visible from symbol
+  binding.
 
-Discriminating measurement: save the verbose link command and compare the
-fresh object call/relocation with the linked call target. Matching object and
-link inputs but missing `w3` selects link/LTO transformation; a different
-object or symbol input selects wrong-object selection; a changed relocation or
-call target selects a broader link/ABI defect.
+Discriminating measurement: compare the fresh non-LTO assembly call with the
+LTO dylib call. Correct non-LTO `w2=4,w3=3` selects an LTO transformation;
+the same shifted call selects an effective source/ABI defect; a different
+non-LTO result or link discrepancy selects another link-input/state defect.
 
 Exact starting checks/commands:
 
