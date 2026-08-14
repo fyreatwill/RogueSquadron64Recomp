@@ -58999,3 +58999,42 @@ change.
 ORIGIN: complete generated caller/callee, count-writer, access-range,
 termination, helper-edge, and companion-symbol inventory; no guest value
 mutation or mitigation.
+
+## Session 934 (2026-08-13) — `musyxStoreVoiceAdsrParams` remains structurally unresolved
+
+Performed the planned source-only M3 idiom inventory of
+`musyxStoreVoiceAdsrParams` (`0x800922C4`) in
+`../N64Recomp/RecompiledFuncs/funcs_24.c`. Enumerated the complete helper,
+the sole generated caller, caller register setup, voice-array base and count
+globals, all ADSR record reads, all slot writes, existing guard coverage, and
+the companion `main_overlay.txt` mapping. No build, game run, soak, guard, or
+behavior change was made.
+
+The only caller is `musyxSetVoiceAdsrFromTable` at `0x8008A9DC`. It loads the
+voice index from `$s5+0x67` with `lbu`, supplying `0..255` without a local
+check against the mixer voice count at `0x80149700`; the allocator path
+describes a 0x88-stride mixer voice table whose setup count is capped at
+`0x20`. It passes `$a1 = $sp+0x10`, where the caller has just written four
+byte-swapped ADSR halfwords from the matched table record. No second caller
+or caller-shape split exists.
+
+The callee loads the heap-array base pointer from `0x801496F8`; its existing
+guard rejects only values outside `0x80000000..0x807FFFFF`. It computes
+`index * 0x88` and writes at slot offsets `+0x28`, `+0x2A`, `+0x2C`, and
+`+0x30`. The record reads are fixed at `+0`, `+2`, `+4`, and `+6`; there are
+no helper calls, loops, or local termination hazards. The stack record is
+locally coherent, but the derived slot can escape the allocated voice array
+when the byte index is not otherwise constrained.
+
+H-adsr-store-shape-mismatch is ruled out. H-adsr-store-classified is supported
+for fixed record and slot access shapes only, not full safety: the base guard
+does not establish index bounds, and no independent writer/value proof shows
+that `$s5+0x67` is always below the active voice count.
+H-adsr-store-unclassified remains selected. This is a single-source static
+result from generated code, allocator/count code, and companion symbol
+metadata; no independent runtime writer/value evidence was claimed. No
+mitigation, generated-code edit, or game behavior changed.
+
+ORIGIN: complete generated caller/callee, index arithmetic, base/count,
+access-range, guard-coverage, termination, and companion-symbol inventory;
+no guest value mutation or mitigation.

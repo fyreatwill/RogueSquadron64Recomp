@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s933 (2026-08-13). The active blocker is the authoritative
+Reviewed through s934 (2026-08-13). The active blocker is the authoritative
 FULL_SYNC/E9 accounting path after the post-sec2 gate. M5 audio de-stubbing is
 closed. M3 work is limited to systematic idiom-class audits.
 
@@ -309,6 +309,7 @@ short ledger below preserves the decision points needed for the next unit:
 | s913 | `getVoicePlaybackProgressByKey` inventory: two callers agree on a handle-plus-output-float contract and the helper's `0x80154620`/`0x1228` slot shape; the helper has an explicit `speechFileLoaded` gate but no finite scan bound or sentinel, and its miss path reaches the 32-bit counter wrap. Slot progress reads and queue handoff are classified, but scan termination and dynamic writer/value legitimacy remain unproven; no guard or behavior change. |
 | s923 | MusyX per-slot queue inventory: `initMusyXVoiceSlot` creates `slot+0x11AC` with buffer `slot+0x11C4` and capacity 1; `serviceStreamingVoice` has the only generated receive site, gated by `slot+0x11DC`, using nonblocking `osRecvMesg(queue, NULL, 0)` and checking only the return. The two init callers share the slot-base contract and the receive path has no message dereference or queue retry loop; dynamic queue/state writer legitimacy remains unproven, so no guard or behavior change. |
 | s924 | `decodeAndFillVoiceBlock` inventory: one direct caller passes the voice slot and `+0x198` block-table entry; the helper masks the bitstream word index to a `0..0xFFC` offset from `slot+0x1A0`, decodes into a fixed stack block, and runs four filter/pan iterations before updating `+0x11C8`. Local control and caller shape are coherent; dynamic pointer/table/value legitimacy remains unproven; no mitigation. |
+| s934 | `musyxStoreVoiceAdsrParams` inventory: one caller passes a byte-loaded voice index and a stack ADSR record; the helper computes an `index*0x88` slot and performs four fixed ADSR reads/writes. The base guard covers only KSEG0 range, not index-versus-mixer-count, so derived slot legitimacy remains unproven; no mitigation. |
 | s928 | `renderVoiceAudioBlock` inventory: one direct caller and one shared voice-record/output contract; four fixed lattice stages, three fixed mix transforms, one fixed compand edge, and no local loop. Nested stereo mixing has eight indirect calls per stage, with targets derived from fixed return-address offsets; dynamic voice/output pointer legitimacy remains unproven; no mitigation. |
 | s926 | `applyVoiceDelayFilter` inventory: three direct callers share one voice-base/delay/channel-table/stack-output shape; its 120-halfword shift and 40-halfword mix loops terminate, but the voice base, return-address-derived table read, and output/input ranges lack local bounds or legitimacy proof. Caller-shape mismatch is ruled out; full classification is not. No mitigation. |
 | s927 | `runVoiceLatticeFilter` inventory: four callers share matching source/output offsets and counts (13, 14, 13, 120 iterations); the helper has two sequential halfword walks, no helper edge, and fixed termination. Its eight coefficient loads from the caller's voice record are fixed, and all local walks are bounded by the supplied counts. Dynamic pointer/value legitimacy remains unproven; no mitigation. |
@@ -631,33 +632,73 @@ ORIGIN: complete generated caller/target, register-derivation, access-range,
 termination, and companion-symbol inventory; no guest value mutation or
 mitigation.
 
+## s934 — `musyxStoreVoiceAdsrParams` remains structurally unresolved
+
+Performed the planned source-only M3 idiom inventory of
+`musyxStoreVoiceAdsrParams` (`0x800922C4`) in
+`../N64Recomp/RecompiledFuncs/funcs_24.c`. Enumerated the complete helper,
+the sole generated caller, caller register setup, voice-array base and count
+globals, all ADSR record reads, all slot writes, existing guard coverage, and
+the companion `main_overlay.txt` mapping. No build, game run, soak, guard, or
+behavior change was made.
+
+The only caller is `musyxSetVoiceAdsrFromTable` at `0x8008A9DC`. It loads the
+voice index from `$s5+0x67` with `lbu`, so the register setup supplies a
+`0..255` value without a local check against the mixer voice count at
+`0x80149700`; the companion and allocator path describe the array as a
+0x88-stride mixer voice table whose setup count is capped at `0x20`. It passes
+`$a1 = $sp+0x10`, where the caller has just written four byte-swapped ADSR
+halfwords from the matched table record. No second caller or caller-shape
+split exists.
+
+The callee loads the heap-array base pointer from `0x801496F8`, and the
+existing guard rejects only values outside `0x80000000..0x807FFFFF`. It then
+computes `index * 0x88` and writes halfwords at slot offsets `+0x28`, `+0x2A`,
+`+0x30`, plus the converted sustain float at `+0x2C`. The record reads are
+the fixed offsets `+0`, `+2`, `+4`, and `+6`; there are no helper calls, loops,
+or local termination hazards. The stack record is locally coherent, but the
+derived slot can escape the allocated voice array when the byte index is not
+otherwise constrained.
+
+H-adsr-store-shape-mismatch is ruled out. H-adsr-store-classified is supported
+for fixed record and slot access shapes only, not for full safety: the base
+guard does not establish index bounds, and no independent writer/value proof
+establishes that `$s5+0x67` is always below the active voice count.
+H-adsr-store-unclassified remains selected. This is a single-source static
+result from generated code, allocator/count code, and companion symbol
+metadata; no independent runtime writer/value evidence was claimed. No
+mitigation, generated-code edit, or game behavior changed.
+
+ORIGIN: complete generated caller/callee, index arithmetic, base/count,
+access-range, guard-coverage, termination, and companion-symbol inventory;
+no guest value mutation or mitigation.
+
 ## Next work unit
 
-HYPOTHESIS-ID: m3-audio-adsr-table-class
+HYPOTHESIS-ID: m3-audio-voice-attack-class
 
-Audit the complete `musyxSetVoiceAdsrFromTable` idiom at `0x8008A8C4` in
-`../N64Recomp/RecompiledFuncs/funcs_22.c`, including every generated caller,
-voice-index arithmetic, ADSR-table search bounds, table-entry reads, slot
-writes, and helper edges. Source-only; do not add a guard, change game
-behavior, build, or run a soak.
+Audit the complete `musyxTriggerVoiceAttack` idiom at `0x8009231C` in
+`../N64Recomp/RecompiledFuncs/funcs_24.c`, including every generated caller,
+voice-index arithmetic, voice-slot accesses, state transitions, existing
+guard coverage, and helper edges. Source-only; do not add a guard, change
+game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-adsr-table-unclassified: a caller or ADSR id supplies an invalid slot,
-  table base, or search index, or a derived slot write escapes its intended
-  voice record.
-- H-adsr-table-classified: callers agree, the table search is bounded by its
-  sentinel/count contract, and all slot/table accesses have fixed safe ranges.
-- H-adsr-table-shape-mismatch: callers use distinct contracts; record the
+- H-voice-attack-unclassified: a caller supplies an invalid voice index/base,
+  or a derived slot access escapes its intended 0x88 voice record.
+- H-voice-attack-classified: callers agree, the existing guards cover the
+  base/index contract, and all state/slot accesses have fixed safe ranges.
+- H-voice-attack-shape-mismatch: callers use distinct contracts; record the
   exact split and stop.
 
 Discriminating measurement: enumerate every reference and caller register
-setup, inspect the complete callee and all loop/sentinel exits, derive every
-table and slot access range, classify every helper edge, and cross-check
-`main_overlay.txt`. Any caller split, uncovered derived access, or unproven
-termination path rejects classification.
+setup, inspect the complete callee and all state/slot accesses, derive every
+address range and termination path, classify every helper edge, and
+cross-check `main_overlay.txt`. Any caller split, uncovered derived access,
+or unproven termination path rejects classification.
 
-Exact command: `rg -n -C 12 "musyxSetVoiceAdsrFromTable|8008A8C4|8A8C4" ../N64Recomp/RecompiledFuncs/funcs_22.c ../N64Recomp/RecompiledFuncs/funcs_24.c ../N64Recomp/RecompiledFuncs/funcs_26.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
+Exact command: `rg -n -C 12 "musyxTriggerVoiceAttack|8009231C|9231C" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`, then inspect the complete helper and every caller. No game build or soak is planned.
 
 ## Closed and parked
 
