@@ -62096,3 +62096,24 @@ runtime conclusion follows.
 
 ORIGIN: generated `mainGameLoop` source and bounded symbol/read search only;
 no guest value, runtime behavior, or writer was changed.
+
+## Session 1053 (2026-08-14) — traced the width-320 gate-byte producer
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. In `mainGameLoop`, `s4` is constructed as
+`0x80130B10` and `s5` as `0x80130000`; the gate at `0x8003E07C` reads byte
+`0x80130B30` (`s4+0x20`). The exact generated-code writer sweep found one
+matching byte store: `runIdleFramesAndLoadSaveData` at `0x8006DAB8`, storing
+constant `1` after its save/idle setup and before the controller-poll loop.
+`resetGameSettingsAndMissionStats` clears `0x80130B10..0x80130B37` via
+`rs_memset` and is called by the setup routine; the save-reset path also calls
+the reset. No controller-mask, timer, or demo source reaches the exact store.
+
+This selects `H-state-persistent` over `H-state-input` and `H-state-demo` as
+static, single-source evidence. It rules out a local input/timer/demo writer
+for the gate byte, but does not establish why the retail oracle remains in
+width 320 or identify the later producer of the menu selector state. No
+mitigation or runtime conclusion follows.
+
+ORIGIN: generated `funcs_8.c`/`funcs_17.c` and bounded exact-store search only;
+no guest value, runtime behavior, or writer was changed.
