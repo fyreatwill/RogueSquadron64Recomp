@@ -63214,3 +63214,21 @@ writer. No queue behavior, game logic, or mitigation changed.
 
 ORIGIN: diagnostic-only capture; no value was skipped, rewritten, or otherwise
 mitigated.
+
+## Session 1111 (2026-08-14) — recovered launch shape but missed VI-1024
+
+Ran the prescribed single phase-gated capture with the exact s1106 launch
+shape: no `PROBE_KEYS`, 1.0-second capture interval, and the current targeted
+generated-store, submit-boundary, and slot-SP controls. The run reached the
+width-640 route but never reached VI 1024 before the 180-second phase timeout.
+Positive controls were active: the generated-store control fired and the log
+contained 256 generated A89F stores plus 713 submit-boundary rows. No
+`0x8011A8A0` writer row or E9-phase controls were observed, so the required
+writer discriminator is invalid for this capture. Repeating the prior launch
+shape after s1109 and s1110 consumes the recovery budget without selecting
+input-route versus transient-state; further A/B recipe runs are stopped pending
+a static audit of the 640-to-1024 launch predicates. No queue behavior, game
+logic, or mitigation changed.
+
+ORIGIN: diagnostic-only phase-gated capture and existing generated-store probe;
+no value was skipped, rewritten, or otherwise mitigated.

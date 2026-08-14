@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1110 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1111 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -48,6 +48,14 @@ compact and records only live conclusions, boundaries, and next work.
   This rejects broad-log overhead for this recipe, but does not distinguish
   an input-route miss from a transient launch state; no E9/VI-1024 conclusion
   is admissible.
+- The s1111 retry restored the exact s1106 launch shape (no `PROBE_KEYS`,
+  1.0-second capture interval) while retaining the targeted probes. It again
+  stopped at width 640, but the generated-store control fired 256 times and
+  submit-boundary logging produced 713 rows; no A0 writer row or VI-1024/E9
+  phase occurred. This consumes the recovery budget without selecting a
+  writer hypothesis: the positive controls prove the probes were active, but
+  the required phase discriminator was absent. The launch-route/state boundary
+  is now the next static-audit target.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -326,14 +334,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1107 | Checkpoint iteration (no build/run): restated s1106's discrimination inline and ran one bounded static check. `syms/rogue_squadron.datasyms.toml` has no symbol between `D_8011A7E8` and `D_8011A8D0`, so the gate bytes sit in the SP/DP scheduler's own unlabeled static block; none of s1083's overlay DMA destinations overlap it. Selects static `H-core-bss-not-overlay`, ruling out a DMA/preexisting-ROM-content explanation and narrowing `H-nongenerated-writer` to an actual non-generated code path. Ranked next step is unchanged. |
 | s1108 | Added a regeneration-safe `MEM_B`/`MEM_H`/`MEM_W` store probe to the external `fixup_game_funcs.py`, regenerated all 50 function files, and built successfully. The probe's positive control fired and the local captures logged 256 target rows, all for physical `0x11A89F` from generated PCs `0x80017F98`, `0x80019D34`, `0x80019DD4`, and `0x80019FE4`; no `0x11A8A0` row appeared. Both captures failed the required VI-1024 phase control (one stopped at width 320; the Start-assisted retry reached width 640), so this is not a valid final discriminator for the A0 writer. It does establish a generated writer for the neighboring A89F byte and leaves A0 open; no queue behavior or mitigation changed. |
 | s1110 | Removed `ROGUESQ_LOG_ALL` while retaining the targeted store and submit-boundary probes. The 180-second capture passed the generated-store control 34 times, produced 256 A89F rows, 286 sends, and 427 receives, and repeatedly sampled `gate89f=2 gate8a0=1`, but never reached VI width 1024 (last width 640) and produced no A0 row. This rejects broad-log overhead for the targeted recipe, but cannot separate input-route from transient-state; no E9-phase or writer attribution is valid. No queue behavior or mitigation changed. |
+| s1111 | Restored s1106's no-key, 1.0-second launch shape with targeted store and submit-boundary probes. The run passed the generated-store control and logged 256 A89F stores plus 713 submit-boundary rows, but remained at width 640 for the phase gate; no A0 row or E9-phase controls were observed. This consumes the recovery budget and leaves the writer discriminator invalid; no queue behavior or mitigation changed. |
 
 ## Ranked next steps
 
-1. Audit and recover the VI-1024 launch recipe before attributing the writer
-   of `0x8011A8A0`: s1110's targeted-only recipe still stopped at width 640
-   with positive controls and A89F rows. Use the prior successful s1106 launch
-   shape as the comparison, change one recipe input only, and require VI 1024
-   plus the E9 controls before accepting an A0 writer result. A0 remains open.
+1. Perform one bounded static launch-route audit before any further writer
+   capture: enumerate the host/game predicates that move VI from the observed
+   640 route to 1024, then compare them with `tools/probe.sh`'s key semantics
+   and the current targeted environment. The s1109, s1110, and s1111 captures
+   all had positive probe controls but no VI-1024/E9 phase; further recipe A/B
+   runs are not justified until this boundary is classified. A0 remains open.
 2. If generated stores remain absent, build the missing debugger-enabled
    retail oracle core before relying on an independent physical write watch;
    the current machine has the front end but no core dylib.
