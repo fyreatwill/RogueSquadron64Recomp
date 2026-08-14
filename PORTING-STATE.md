@@ -62670,3 +62670,19 @@ runtime remains at width 320.
 
 ORIGIN: generated `funcs_8.c`/`funcs_17.c`, companion `ctx.c`, and bounded exact
 address searches; no runtime value was observed and no mitigation was added.
+
+## Session 1081 (2026-08-14) — audited idle-writer control flow
+
+Ran the prescribed bounded static audit, with no build or runtime experiment.
+The generated tree has one caller of `runIdleFramesAndLoadSaveData`,
+`mainGameLoop` at `0x8003E010`. The routine's 32-frame loop and all
+save-load/pending-save branches rejoin the common tail. Its reset call at
+`0x8006D9CC` clears the 0x28-byte `D_80130B10` block, and the unconditional
+`0x8006DAB8` instruction then stores constant `1` at `D_80130B10+0x20`
+(`0x80130B30`) before return. The companion symbol annotation independently
+records reset-before-save-load ordering.
+
+This selects static `H-writer-reached` and rules out a generated caller or
+early-exit path that leaves the reset value zero. It does not prove runtime
+execution, exclude a later clobber, or resolve overlay/alias reachability;
+those remain the next boundary. No mitigation was added.
