@@ -61649,3 +61649,26 @@ attribution or phase conclusion follows. The next unit must remove the
 positive-control watch after a logged threshold while retaining the target
 watch. No recomp runtime change or mitigation was made. ORIGIN: external
 retail-oracle debugger callback; no guest value was changed.
+
+## Session 1032 (2026-08-14) — bounded retail oracle watch removal validated
+
+Implemented one bounded change in `tools/oracle/rs64_oracle.c`: after watch
+index 0 (the whole-RDRAM positive control) reached 10,000 callbacks, the tool
+removed only breakpoint index 0 and logged the threshold and return code;
+watch index 1 (the freelist range) was left armed. `tools/oracle/build.sh`
+built successfully.
+
+The single documented retail capture used the pure interpreter, the whole-
+RDRAM watch first, the freelist watch second, the documented 11-Start schedule,
+and `--vi-trace --pif-trace`. The positive control reached 10,000 callbacks;
+removal reported `rc=0`; all 11 Start presses produced PIF-visible
+`0x10000000` edges; and the run completed 10,799 VI in 180 seconds. Retail
+remained at VI width 320, however, and the freelist watch recorded zero hits.
+
+This advances and validates the callback/removal instrument, but does not
+answer the retail freelist question: the run never reached the required
+hangar-origin 512 phase. It rules out callback absence and all-RDRAM-watch
+slowdown as the sole explanation for the observed phase result, but does not
+rule out a phase/input-state issue. No recomp runtime change or mitigation was
+made. ORIGIN: external retail-oracle debugger callback; no guest value was
+changed.

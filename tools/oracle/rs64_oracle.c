@@ -81,6 +81,7 @@ static long g_hit_cap = 200;          /* stop logging after this many, keep runn
 static unsigned int g_detail_watch_mask;
 static int g_verbose;
 static int g_watches_armed;
+static int g_positive_watch_removed;
 
 static double now_s(void)
 {
@@ -162,6 +163,13 @@ static void dbg_update(unsigned int pc)
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
             (g_detail_watch_mask & (1u << i)))
             detail_hit = 1;
+    }
+    if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].hits == 10000) {
+        int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX, 0, NULL);
+        printf("[oracle] positive-control threshold reached: watch index 0 callbacks=%ld; removal rc=%d; watch index 1 remains armed\n",
+               g_watch[0].hits, rc);
+        fflush(stdout);
+        g_positive_watch_removed = 1;
     }
     if (g_hits <= g_hit_cap || detail_hit) {
         unsigned int prev = (unsigned int)pDebugGetState(M64P_DBG_PREVIOUS_PC);
