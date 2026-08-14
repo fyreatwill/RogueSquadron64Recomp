@@ -6,13 +6,19 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1022 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1023 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
 numeric source of the shade record. The corrected s1022 capture proved the
 probe path live with 19 independent VMADH controls and 77 M4 stage rows, but
-the sampled rows contained no 0x8000 endpoint before the recurring crash. s1017
+the sampled rows contained no 0x8000 endpoint before the recurring crash. s1023
+paired the valid rows offline: 19 stage-1 controls passed, 25 complete M4
+stage-10/11/12 triplets were available, and one stage-10/11 pair was trailing;
+none of the M4 fields contained 0x8000. Stage-12 v6 matched stage-11 v6 in
+all 25 triplets, with the zero lanes also matching v29, but no endpoint was
+present to discriminate arithmetic from VGE selection. The M4 numeric origin
+therefore remains unevaluable from this capture. s1017
 identified that the 512-gated recipe starts its
 phase-relative key worker only after 512, so it cannot drive the transition that
 may be needed to reach 512. s1018 corrected the gate to 1024 and delivered the
@@ -246,14 +252,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1020 | Reconfigure/build linked `rs64_m4_accum_probe` in the executable and regenerated the composite source, but CMake still omitted `factor5_ucode_ovl20_recompiled.c`; no executable ovl20 marker exists. Capture withheld; M4 remains unevaluated. |
 | s1021 | Source/build-graph audit showed standalone ovl20 is a fixup-6q splice input, not a runtime TU: the linked composite contains 68 ovl20 route markers and `_rs64_m4_accum_probe`, while no standalone ovl20 object/symbol is expected. The missing-link interpretation is refuted; M4 remains unevaluated. |
 | s1022 | The first capture omitted `ROGUESQ_LOG_M4_ACCUM` and was invalid despite VI-1024. The corrected capture reached VI-1024, fired 19 VMADH controls and 77 M4 stage rows, then hit `slotDispatcherIter+8592`; sampled endpoints lacked the 0x8000 sentinel, so no numeric hypothesis was selected. |
+| s1023 | Offline pairing of the valid capture found 19 stage-1 controls, 25 complete M4 triplets, and one trailing stage-10/11 pair. Stage-12 `v6` equaled stage-11 `v6` in all complete triplets; zero lanes also equaled stage-11 `v29`, but no M4 field contained `0x8000`. The live control's two `0x8000` values were unrelated `accl` fields, so saturation, ordinary arithmetic, and VGE selection remain unevaluable. |
 
 ## Ranked backlog
 
-1. Perform one bounded offline analysis of the valid s1022 stage-10/11/12
-   tuples: pair each M4 invocation and test whether stage-12 `v6` is copied
-   from stage-11 `v6` or selected from `v29`; report exact row counts and
-   whether any endpoint can explain 0x8000. Do not infer the old zero-shade
-   sentinel from rows that never contain it.
+1. Run one corrected phase-gated M4 capture with a larger, phase-scoped
+   accumulator budget so the live stage-10/11/12 tuples include a zero-shade
+   endpoint; keep the stage-1 VMADH control in the same run. Pair rows by
+   invocation and classify saturation versus ordinary arithmetic versus VGE
+   selection only if `0x8000` appears.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak

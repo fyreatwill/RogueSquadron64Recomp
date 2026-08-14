@@ -61462,3 +61462,22 @@ zero-shade sentinel. It does rule out the prior “probe not linked/unreached”
 interpretation and closes the missing-environment-variable failure. The
 recurring crash remains a capture-duration limit, not an M4 explanation. No
 mitigation or code change was made.
+
+## Session 1023 (2026-08-14) — paired M4 accumulator tuples offline
+
+Ran the prescribed read-only analysis on
+`scratch/agent/soak_results/s790_postsec2_reachability_20260814-024858/run.log`.
+The capture contains 19 stage-1 VMADH-control rows, 26 stage-10 rows, 26
+stage-11 rows, and 25 stage-12 rows. Pairing contiguous stage-10/11/12 rows
+produced 25 complete triplets and one trailing stage-10/11 pair. The positive
+control is live; its only two `0x8000` values are `accl` in stage-1 lanes 0 and
+6, not shade endpoints.
+
+Across all 25 complete M4 triplets, stage-12 `v6` equals stage-11 `v6` in every
+lane. The zero-valued lanes also equal the corresponding stage-11 `v29`, but
+no M4 stage-10/11/12 field contains `0x8000`, including stage-12 `v6` and the
+accumulator fields. Thus the tuple pairing cannot distinguish saturation,
+ordinary `v4`/`v0` arithmetic, or VGE selection: no candidate endpoint appears
+in the sampled invocation. This is a valid null result because the independent
+control passed, but it does not select an M4 hypothesis. No mitigation or code
+change was made.
