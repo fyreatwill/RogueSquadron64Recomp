@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s968 (2026-08-13). The active blocker is authoritative
+Reviewed through s969 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -301,6 +301,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s966 | First-statement callback marker paired with the wrapper markers: ordinary control completed (1,102,384 writes/298 VI), while PIF reached wrapper pre-call but no callback entry or wrapper return (`rc=139`). ABI/prologue boundary selected; retail remains unevaluable. |
 
 | s968 | Exact source/preprocessed C, fresh LLVM IR, and current object bitcode all contain `(pc,address,4,flags=3)`; linked dylib disassembly alone emits `w2=3` with `w3` unset at `0x13d64`. Link/LTO artifact mismatch selected; stale-product versus link-stage transformation remains open. |
+| s969 | Forced the exact oracle rebuild successfully with current Homebrew binutils libraries. Source/object/dylib timestamps were 19:49:20/20:07:30/20:07:33 and fresh object/dylib hashes changed; the new dylib still emits `w0=pc`, `x1=address`, `w2=3`, with no `w3` before `_check_breakpoints_on_mem_access` at `0x13d64`. Stale-product hypothesis is refuted; link-stage/object-to-dylib transformation remains selected. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -319,11 +320,12 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s968 found source, preprocessed C, LLVM IR, and
-   object bitcode correct but the linked ARM64 dylib wrong (`w2=3`, unset
-   `w3`). Force the exact current build and disassemble the new dylib to
-   distinguish a stale product from a link/LTO transformation; do not infer
-   retail callback-table behavior until this boundary is crossed.
+   callback-table watch: s969 force-rebuilt the exact current target and
+   reproduced the ABI mismatch in a fresh dylib, refuting stale-product drift.
+   Capture the actual link command and inspect object relocations/symbol
+   linkage to distinguish a linker/LTO transform from a wrong object or symbol
+   selected at link; do not infer retail callback-table behavior until this
+   boundary is crossed.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -333,10 +335,10 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: oracle-pif-link-artifact
 
-Force-rebuild the external oracle dylib from its current sources and exact
-Makefile recipe, then disassemble the new wrapper call and callback entry. Do
-not edit the recomp runtime or retry retail PIF/callback hypotheses until this
-boundary is explained.
+Capture the exact successful oracle link command, then disassemble the fresh
+`memory.o` call site and inspect its relocation plus the linked dylib's symbol
+binding. Do not edit the recomp runtime or retry retail PIF/callback
+hypotheses until the object-to-dylib boundary is explained.
 
 Competing hypotheses:
 
@@ -344,15 +346,14 @@ Competing hypotheses:
   object/product set despite its timestamps.
 - H-pif-lto-link-transform: the exact current object bitcode is linked, but
   the final LTO/codegen stage drops or repurposes the fourth argument.
-- H-pif-rebuild-correct: a forced rebuild restores `w3`; the prior artifact
-  was a stale or incomplete product and the callback crash boundary must then
-  be retested separately.
+- H-pif-wrong-object-selected: the link selects a different/older object or
+  symbol body than the freshly rebuilt `memory.o`, despite the dylib being new.
 
-Discriminating measurement: after `make -B DEBUGGER=1 all`, compare
-source/object/dylib timestamps and hashes, then inspect the new
-`read_with_bp_checks` call. `w3` restored selects stale/incomplete product;
-`w3` still absent with fresh objects selects link/LTO transformation; a
-changed call target or stack sequence selects a broader link/ABI defect.
+Discriminating measurement: save the verbose link command and compare the
+fresh object call/relocation with the linked call target. Matching object and
+link inputs but missing `w3` selects link/LTO transformation; a different
+object or symbol input selects wrong-object selection; a changed relocation or
+call target selects a broader link/ABI defect.
 
 Exact starting checks/commands:
 

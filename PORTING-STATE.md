@@ -59997,6 +59997,30 @@ for source, object, and dylib.
 ORIGIN: external oracle source-to-artifact ABI audit; no guest value was
 changed and no mitigation was landed.
 
+## Session 969 (2026-08-13) — Fresh oracle rebuild still drops callback argument
+
+Forced the external oracle's exact current target to rebuild. The first link
+attempt exposed a missing `-lopcodes` search path; rerunning with the existing
+Homebrew binutils directory and the required macOS dynamic-library flags
+completed successfully. Source/object/dylib timestamps were 19:49:20,
+20:07:30, and 20:07:33 respectively; fresh SHA-256 hashes were recorded for
+both rebuilt objects and the dylib.
+
+The fresh linked dylib still calls `_check_breakpoints_on_mem_access` at
+`0x13d64` with `w0=pc`, `x1=address`, and `w2=3`, without setting `w3`. The
+callee remains normally aligned and prologued at `0x48768`. This refutes stale
+or incomplete dylib output as the explanation and selects a link-stage or
+object-to-dylib transformation. It does not classify the PIF crash's exact
+instruction or provide retail callback-table evidence. No recomp runtime,
+guest value, or mitigation was changed.
+
+Evidence: successful forced-build output; `stat`, `shasum`, `nm`, and
+`otool -tvV` on the fresh artifacts. The ordinary runtime positive-control arm
+was intentionally not rerun because this remained a static boundary unit.
+
+ORIGIN: external oracle rebuild and linked-assembly audit; no guest value was
+changed and no mitigation was landed.
+
 ## Session 968 (2026-08-13) — Source and object are correct; linked dylib is not
 
 Traced the external oracle callback mismatch through the exact Makefile recipe,

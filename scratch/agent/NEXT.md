@@ -1,37 +1,34 @@
-# NEXT work unit (s969)
+# NEXT work unit (s970)
 
-Force-rebuild the external oracle dylib from its current sources and exact
-Makefile recipe, then disassemble the new wrapper call and callback entry. Do
-not edit the recomp runtime or retry retail PIF/callback hypotheses until this
-boundary is explained.
+Capture the exact successful oracle link command, then disassemble the fresh
+`memory.o` call site and inspect its relocation plus the linked dylib's symbol
+binding. Do not edit the recomp runtime or retry retail PIF/callback
+hypotheses until the object-to-dylib boundary is explained.
 
 HYPOTHESIS-ID: oracle-pif-link-artifact
 
 Competing hypotheses:
 
-- H-pif-stale-dylib: the current dylib is stale or assembled from a different
-  object/product set despite its timestamps.
-- H-pif-lto-link-transform: the exact current object bitcode is linked, but
-  the final LTO/codegen stage drops or repurposes the fourth argument.
-- H-pif-rebuild-correct: a forced rebuild restores `w3`; the prior artifact
-  was a stale or incomplete product and the callback crash boundary must then
-  be retested separately.
+- H-pif-lto-link-transform: matching fresh object/link inputs reach the final
+  dylib, but link/LTO/codegen drops or repurposes the fourth argument.
+- H-pif-wrong-object-selected: the link selects a different/older object or
+  symbol body than the freshly rebuilt `memory.o`, despite the dylib being new.
+- H-pif-relocation-target: the object has a different relocation or call target
+  than expected, exposing a broader ABI or symbol-binding defect.
 
-Discriminating measurement: after the forced build, compare source/object/dylib
-timestamps and hashes, then inspect `read_with_bp_checks`. `w3` restored selects
-stale/incomplete product; `w3` still absent with fresh objects selects link/LTO
-transformation; a changed call target or stack sequence selects a broader
-link/ABI defect. If a rebuild is needed, preserve the paired ordinary
-positive-control run for the later runtime boundary test; do not run it in
-this static work unit.
+Discriminating measurement: save the verbose link command and compare the
+fresh object call/relocation with the linked call target. Matching object and
+link inputs but missing `w3` selects link/LTO transformation; a different
+object or symbol input selects wrong-object selection; a changed relocation or
+call target selects a broader link/ABI defect.
 
 Exact commands:
 
-`cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix && make -B DEBUGGER=1 all`
+`cd /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix && make -B DEBUGGER=1 STRINGS=/opt/homebrew/opt/binutils/bin/strings LDFLAGS="-framework CoreFoundation -dynamiclib -L/opt/homebrew/Cellar/binutils/2.47/lib" V=1 all 2>&1 | tee /tmp/rs64-oracle-link.log`
 
-`stat -f "%Sm %N" -t "%Y-%m-%d %H:%M:%S" ../../src/device/memory/memory.c ../../src/debugger/dbg_breakpoints.c _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
+`otool -tvV _obj/device/memory/memory.o | rg -n -C 12 "check_breakpoints_on_mem_access"`
 
-`shasum -a 256 _obj/device/memory/memory.o _obj/debugger/dbg_breakpoints.o libmupen64plus.dylib`
+`otool -rv _obj/device/memory/memory.o | rg -n -C 8 "check_breakpoints_on_mem_access|memory.o"`
 
 `nm -an libmupen64plus.dylib | rg "check_breakpoints_on_mem_access|read_with_bp_checks"`
 
