@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1088 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1089 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -34,6 +34,11 @@ compact and records only live conclusions, boundaries, and next work.
   `0x130B30:0x130B31` in s1085 and the full block in s1086. These
   single-source oracle results now select `H-pre-main-loop-state-gate` for the
   established schedule: `0x8003E010` executed once, but `0x8003E07C` did not.
+  The s1089 internal milestone capture reached `0x8006D9B0` once, then reached
+  none of `0x8006DA7C`, `0x8006DAB8`, or `0x8006DAF0`; continuation and gate
+  remained silent. This selects single-source `H-save-tail-boundary`: the
+  retail callee passes the first-loop milestone but does not reach the
+  save/load-tail milestones on this schedule.
 
 ## Retail oracle boundary
 
@@ -223,16 +228,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1086 | Repeated the established oracle schedule with a physical read/write watch on the full `0x130B10:0x130B58` mission-state block. Whole-RDRAM reached 10,000 hits, all eleven PIF Start presses arrived, VI reached 7,199 at width 320/origin `0x006dd280`, and the full block had zero hits. This selects single-source `H-gate-not-reached` and rules out any access to this state object on the tested retail route. |
 | s1087 | Added guest-PC execution watches to the oracle and ran the established schedule. Whole-RDRAM reached 10,000 callbacks, all eleven PIF Start presses arrived, and VI reached 7,198 at width 320/origin `0x006dd280`; `0x8003E010` hit once, `0x8003E07C` hit zero times, and the mission-state block remained silent. This selects single-source `H-pre-main-loop-state-gate`: the preceding transition executes, but the gate read is not reached. |
 | s1088 | Ran the bracketed retail execution capture with entry `0x8006D900`, continuation `0x8003E018`, and gate `0x8003E07C`. Whole-RDRAM reached 10,001 callbacks, all eleven PIF Start presses arrived, and VI reached 7,197 at width 320/origin `0x006dd280`; hits were `1/0/0`, and the mission-state block was silent. Selects single-source `H-callee-does-not-return`; the exact internal loop/subcall boundary remains open. |
+| s1089 | Ran the established eleven-Start retail-oracle capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, and four internal milestone watches. Controls were positive: whole-RDRAM reached 10,002 callbacks, PIF delivered all eleven presses, and VI reached 7,205 at width 320/origin `0x006dd280`. PC hits were `0x8006D900=1`, `0x8006D9B0=1`, and `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, `0x8003E07C=0`; the mission-state block was silent. Selects single-source `H-save-tail-boundary`: the callee reaches the first internal milestone but not the save/load-tail milestones. It rules out callee non-entry and a failed positive-control/watch setup, but does not identify the subcall or loop body that blocks before `0x8006DA7C`. |
 
 ## Ranked next steps
 
-1. Use one more established retail-oracle capture with the same controls and
-   execution watches at `0x8006D9B0,0x8006DA7C,0x8006DAB8,0x8006DAF0` inside
-   `runIdleFramesAndLoadSaveData`. These milestones distinguish failure before
-   the 32-frame loop exits, reaching the save/load tail, reaching the known
-   mission-state writer, and reaching the final eight-frame loop. Keep the
-   entry/continuation/gate watches in the same run; do not arm a freelist watch
-   without an independently observed `0x6abxxx` hangar-origin 512 transition.
+1. Use one established retail-oracle capture with the same controls and add a
+   denser PC bracket between the positive `0x8006D9B0` milestone and the silent
+   `0x8006DA7C` milestone. Keep the entry/continuation/gate and four existing
+   milestone watches in the same run. The bracket must distinguish a loop-body
+   subcall from the loop's exit branch before adding any state or freelist
+   watch; do not arm a freelist watch without an independently observed
+   `0x6abxxx` hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

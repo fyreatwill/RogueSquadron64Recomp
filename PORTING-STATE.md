@@ -62729,6 +62729,27 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1089 (2026-08-14) — located the retail save-tail boundary
+
+Ran the established eleven-Start retail-oracle capture with the whole-RDRAM
+positive-control write watch, mission-state read/write watch, VI/PIF traces,
+entry/continuation/gate execution watches, and four internal milestones inside
+`runIdleFramesAndLoadSaveData`. The frontend was rebuilt with
+`tools/oracle/build.sh`; the stale CMake-style build path was not used. The
+whole-RDRAM control reached 10,002 callbacks and was removed, all eleven Start
+presses were observed in PIF reads, and the run completed 7,205 VI frames at
+width 320/origin `0x006dd280`. The mission-state block recorded zero hits.
+Execution hits were `0x8006D900=1`, `0x8006D9B0=1`,
+`0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and
+`0x8003E07C=0`. This selects single-source `H-save-tail-boundary`: the
+callee reaches the first internal milestone but not the save/load-tail
+milestones. It rules out callee non-entry and a failed positive-control/watch
+setup, but does not identify the loop-body subcall or exit path before
+`0x8006DA7C`. No mitigation or game-data change was made.
+
+ORIGIN: retail ROM debugger execution callbacks and independent whole-RDRAM/PIF/VI
+positive controls; no mitigation or game-data change was made.
+
 ## Session 1087 (2026-08-14) — added the retail execution gate watch
 
 Added a `--watch-pc A[,B...]` execution-breakpoint option to the retail oracle,
