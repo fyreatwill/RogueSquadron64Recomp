@@ -60595,3 +60595,24 @@ was performed.
 
 ORIGIN: exhaustive generated-source literal/address-construction search; no
 guest value was changed and no mitigation was added.
+
+## Session 988 (2026-08-13) — RSP DMA origin census finds no VTXCOLOR-range writer
+
+The planned runtime M4 work unit added a phase-gated callback at the existing
+`dma_dmem_to_rdram` write path. The first capture was invalid because the new
+hook only logged target overlaps and therefore had no visible positive
+control; that run was killed and not used as evidence. The fixed build emitted
+an independent all-DMA control in phase 4 and phase 6, reached VI 1024, and
+the F5-state/shade controls also fired. No DMA write overlapped the phase-4
+control range `0x726200..0x726C50` or phase-6 target range
+`0x732A10..0x73E3B0`.
+
+This rules out the instrumented RSP DMEM-to-RDRAM DMA path as the sampled
+payload writer. It does not distinguish dynamic generated CPU stores, other
+copy paths, or renderer/state conversion because ordinary RDRAM writes are
+not observed by this callback. No mitigation was landed. The next work unit
+must use a recoverable target-page write-fault census with the DMA control
+retained.
+
+ORIGIN: the new callback observes only `dma_dmem_to_rdram`; it names that
+writer class and makes no legitimacy claim about the remaining writers.

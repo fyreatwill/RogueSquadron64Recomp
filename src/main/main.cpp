@@ -120,6 +120,39 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 // name; defined once here.
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
 
+extern "C" void rs64_probe_dma_write_origin(uint32_t dram_addr, uint32_t len,
+                                               uint32_t dmem_addr) {
+    static std::atomic<uint64_t> all_dma{0};
+    static std::atomic<uint64_t> target_dma{0};
+    static std::atomic<uint32_t> last_phase{0xFFFFFFFFu};
+    const uint32_t phase = rs64_phase_ord();
+    const uint64_t all = all_dma.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (phase != 4 && phase != 6) return;
+    static std::atomic<uint64_t> phase_dma{0};
+    const uint64_t phase_n = phase_dma.fetch_add(1, std::memory_order_relaxed) + 1;
+    const uint32_t old_phase = last_phase.exchange(phase, std::memory_order_relaxed);
+    if (old_phase != phase || phase_n <= 8) {
+        fprintf(stderr, "[shade-dma-control] phase=%u n=%llu all=%llu dram=0x%06X..0x%06X dmem=0x%03X\n",
+                phase, (unsigned long long)phase_n, (unsigned long long)all,
+                dram_addr, dram_addr + len, dmem_addr);
+        fflush(stderr);
+    }
+    const uint32_t lo = (phase == 6) ? 0x732A10u : 0x726200u;
+    const uint32_t hi = (phase == 6) ? 0x73E3B0u : 0x726C50u;
+    const uint32_t end = dram_addr + len;
+    if (end <= lo || dram_addr >= hi) return;
+    const uint32_t hit_lo = dram_addr > lo ? dram_addr : lo;
+    const uint32_t hit_hi = end < hi ? end : hi;
+    const uint64_t hit = target_dma.fetch_add(1, std::memory_order_relaxed) + 1;
+    if (hit <= 32) {
+        fprintf(stderr, "[shade-dma] phase=%u all=%llu hit=%llu dram=0x%06X..0x%06X "
+                       "overlap=0x%06X..0x%06X dmem=0x%03X\n",
+                phase, (unsigned long long)all, (unsigned long long)hit,
+                dram_addr, end, hit_lo, hit_hi, dmem_addr);
+        fflush(stderr);
+    }
+}
+
 // s586 H7 writer discrimination: LLE task depth + serial for the FS_SLOT
 // poller / task-boundary snapshots. depth>0 ⇒ mutation during RSP LLE;
 // depth==0 + intertask_delta ⇒ guest/DMA window between tasks.

@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..bb3352d 100644
+index b0d6bef..1b6f61c 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -22,7 +22,7 @@ index b0d6bef..bb3352d 100644
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -94,6 +95,21 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,6 +95,23 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -40,11 +40,13 @@ index b0d6bef..bb3352d 100644
 +extern uint32_t g_rsp_last_chunk_dram;
 +extern uint32_t g_rsp_last_chunk_dmem;
 +extern uint32_t g_rsp_last_chunk_len;
++extern "C" void rs64_probe_dma_write_origin(uint32_t dram_addr, uint32_t len,
++                                               uint32_t dmem_addr);
 +
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,11 +117,98 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,11 +119,98 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -143,6 +145,14 @@ index b0d6bef..bb3352d 100644
 +    }
      for (uint32_t i = 0; i < rd_len; i++) {
          RSP_MEM_B(i, dmem_addr) = MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
+     }
+@@ -121,6 +226,7 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+     if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
+     if (dram_addr >= 0x800000) return;
+     if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
++    rs64_probe_dma_write_origin(dram_addr, wr_len, dmem_addr);
+     for (uint32_t i = 0; i < wr_len; i++) {
+         MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000)) = RSP_MEM_B(i, dmem_addr);
      }
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
 index 8c8e5d1..e058a76 100644

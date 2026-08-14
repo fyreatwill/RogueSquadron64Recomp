@@ -437,6 +437,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s985 | The isolated ungated-LLE F5 census passed fetch/state controls. Phase 6 had 355 `0x02 VTXCOLOR` and 1,520 `0x03 MOVEMEM` updates, including nonzero color-source addresses such as `0x80737EA0`, while the same phase produced exact `ZERO` shade words; phase 4 had the same update family but good/negative shades. Together with s984's independent decoder audit, this selects H-game-light-state over H-f5-stream and H-decode-layout. The exact game writer/value lifecycle remains unclassified; no mitigation followed. Default HLE and gated-LLE captures had zero hook controls and were invalid configuration arms, not null evidence. |
 | s986 | Added a phase-scoped RDRAM payload census and reran the isolated ungated-LLE probe. Positive controls fired: phase 4 had 579/36,495 and phase 6 had 355/1,525 `VTXCOLOR`/`MOVEMEM` updates. Phase-6 VTXCOLOR sources contained nonzero words (`0x737EA0`: `313131FF...`; later sources included `A6A6A6FF...` and `5F5F74FF...`) while the independent shade decoder emitted exact ZERO samples. This selects H-downstream-writer/state-conversion over H-game-state-zero and H-payload-address; the actual writer remains unclassified. The retail oracle whole-RDRAM control passed 7,651,765 and 12,581,730 writes in two arms, but all target watches stayed phase-unevaluable at VI-320. No mitigation followed. |
 | s987 | Exhaustive generated-source address inventory found zero literal references, zero direct stores, and no `lui` construction of the sampled `0x8072/0x8073xxxx` guest-pointer region for both phase-6 and phase-4 ranges. This refutes only a direct absolute game-side writer; dynamic register-relative stores, DMA/copy ownership, and renderer-state conversion remain unresolved. No build, runtime arm, or mitigation. |
+| s988 | Added a phase-gated `dma_dmem_to_rdram` origin census with an independent all-DMA control. The corrected ungated-LLE run reached VI 1024, fired phase-4 and phase-6 DMA controls, and recorded zero DMA writes overlapping phase-4 `0x726200..0x726C50` or phase-6 `0x732A10..0x73E3B0`. This rules out the instrumented RSP DMEM-to-RDRAM DMA path as the sampled payload writer, but does not distinguish dynamic CPU stores from renderer/state conversion; the hook does not observe ordinary generated CPU stores. The first run was invalid because its positive control was not emitted, then the fixed build/run passed controls. No mitigation. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -466,37 +467,41 @@ entries and do not authorize mitigations.
    s982 fault at `ldr w8,[x0]`. Do not edit the recomp runtime or infer a
    retail phase result. No mitigation is authorized until the writer/owner of
    the invalid callback state pointer is identified.
-4. M4 correctness is the active fallback: phase-6 VTXCOLOR payloads are
-   demonstrably nonzero while decoded shade is exact ZERO, selecting a
-   downstream writer/state-conversion boundary after s986–s987. The next probe
-   must distinguish dynamic DMA/copy writes from renderer conversion using a
-   bounded runtime write-origin census; attribution S=0 triangles and I4
-   `sample=64x128` follow only after that origin is classified. The
+4. M4 correctness remains active: phase-6 VTXCOLOR payloads are demonstrably
+   nonzero while decoded shade is exact ZERO, and s988 finds no overlap from the
+   instrumented RSP DMEM-to-RDRAM DMA path. Dynamic CPU stores, unobserved copy
+   paths, and renderer/state conversion remain open. The next probe must observe
+   target-page write faults with the DMA control retained; attribution S=0
+   triangles and I4 `sample=64x128` follow only after origin is classified. The
    `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an ORIGIN
    conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s988)
+## Next work unit (s989)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
-Run one bounded runtime write-origin census for the phase-6 VTXCOLOR payload
-range `0x732A10..0x73E3B0`, retaining phase-4 `0x726200..0x726C50` as the
-positive control. Instrument existing RDRAM write/DMA-origin hooks in one
-build, phase-gate every record, and run the isolated ungated-LLE recipe with
-the established F5-state and shade controls. Competing hypotheses are
-H-dma-copy, H-game-dynamic, and H-renderer-state. A phase-gated DMA/copy or
-guest-PC origin selects its writer class; no post-payload write with controls
-firing selects H-renderer-state. Land no mitigation.
+Run one bounded macOS target-page write-fault census for the same phase-6
+VTXCOLOR range, retaining phase 4 as the positive control and retaining the
+s988 DMA census. Protect only the pages covering both ranges after RDRAM is
+captured; recover each write fault, record fault PC/LR plus phase and overlap,
+then re-arm. Competing hypotheses are H-game-dynamic (guest-generated CPU
+store faults), H-renderer-state (no target-page faults after payload capture),
+and H-watch-gap (faults occur but cannot be safely recovered/attributed).
+Discriminating measurement: phase-gated target-page fault records with the
+existing all-DMA and F5/shade controls. A target fault with a generated-code
+PC selects H-game-dynamic; zero target faults with controls firing selects
+H-renderer-state only for this process's writable target pages; handler loss or
+unrecoverable faults selects H-watch-gap. Land no mitigation.
 
 Exact commands:
 
-`rg -n -C 3 'RDRAM|rdram|DMA|do_dma|write' src/main/main.cpp src/main/upstream_compat.cpp`
+`rg -n -C 3 'SIGSEGV|mprotect|RDRAM|rdram|DMA|do_dma|write' src/main/main.cpp src/main/upstream_compat.cpp lib/N64ModernRuntime/librecomp/include/librecomp/rsp.hpp`
 
 Build once, then run the existing isolated ungated-LLE capture with the s986
-F5-state and shade controls. Phase-gate every new write record; do not use a
-stopwatch or add a guard.
+F5-state/shade controls and `ROGUESQ_FIX_ZERO_SHADE=0`. Phase-gate every fault
+record; do not use a stopwatch or add a guard.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.
