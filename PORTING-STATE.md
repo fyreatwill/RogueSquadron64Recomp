@@ -61751,3 +61751,23 @@ fix, but does not explain why the retail phase schedule does not reach the
 512 hangar phase. The retail phase path and any freelist-writer question remain
 unevaluable. ORIGIN: external retail-oracle source audit plus debugger/PIF/VI
 traces; no guest value or recomp runtime behavior was changed.
+
+## Session 1037 (2026-08-14) — retail phase path remained in attract
+
+Audited the oracle's input and VI paths. `--press` dispatches SDL key events
+through the attached input plugin, and `--vi-poll` reads the core's VI origin
+and width registers independently of the VI callback trace.
+
+Ran the prescribed 60-second fresh-config schedule with the whole-RDRAM
+positive-control watch and 11 Start presses. The watch reached 10,000 hits and
+was removed; every press produced a Start pad word `0x10000000`. The run
+completed 3,599 VI. Both callback and independent poll traces remained at
+width 320/origin `0x006dd280`; no 512, 640, or 1024 transition occurred, and
+the freelist watch was not armed.
+
+This selects `H-retail-attract` over missed VI observation or input transition.
+It rules out the callback path, input attachment, and local config-order
+explanations, but does not explain the retail attract path or make the
+freelist writer evaluable. ORIGIN: external oracle source audit plus
+whole-RDRAM, pad, callback, and independent VI-poll controls; no guest value
+or recomp runtime behavior was changed.
