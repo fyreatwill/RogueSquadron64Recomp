@@ -62429,3 +62429,23 @@ ownership audit of `0x80130B54`.
 
 ORIGIN: documentation maintenance only; no guest value, runtime behavior, or
 mitigation was changed.
+## Session 1070 (2026-08-14) — audited non-generated selector ownership
+
+Ran the prescribed bounded source audit; no build or runtime run was needed.
+The exact-reference table was:
+
+| Source | Reference | Width/access | Classification |
+|---|---|---|---|
+| `syms/rogue_squadron.datasyms.toml:1071` | `D_80130B40` symbol at `0x80130B40` | metadata only | read/write unknown; no access |
+| `src/main/register_overlays.cpp:13-18` | overlay registration/DMA policy | no selector address | no write; overlay loader only |
+| `lib/.../pi.cpp:295-310` | ROM-to-RDRAM DMA and `load_overlays_by_start` | no selector address | no write; code registration only |
+| `lib/.../overlays.cpp:250-267` | overlay section start match | no selector address | no write; code registration only |
+| `docs/mips_to_c/ctx.c:646-706` (companion) | `D_80130B40.demoId` at `+0x14` | 8-bit field declaration | read/write owner unresolved |
+| `symbol_files/main_overlay.txt:1614` (companion) | `cycleIdleDemoId` | named function comment | generated writer already audited |
+| `symbol_files/main_overlay.txt:2123` (companion) | `dLevelByDemoId` | 6-byte data comment | separate ROM-backed table, not selector storage |
+
+No host/runtime, patch/fixup, overlay-data, or direct companion executable
+writer was found. This selects `H-boundary`, single-source static evidence;
+whole-struct or pointer-mediated writes remain open. The audit rules out a
+direct non-generated writer and an overlay-loader ownership explanation, not
+pointer-mediated guest ownership.

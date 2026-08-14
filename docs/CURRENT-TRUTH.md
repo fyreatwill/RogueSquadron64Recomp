@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1069 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1070 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -58,8 +58,13 @@ Static audits classify the width-320 handoff as state-shaped:
   ROM offset `0x1345A4` contains `00 05 07 0A 0B 11 00 00`. Overlay DMA is
   the loader; no generated population writer was found.
 
-The remaining ownership boundary for `0x80130B54` is non-generated host,
-overlay-data, or pointer-mediated access. It is the active s1069 audit.
+The bounded non-generated source audit found no host/runtime or patch access,
+no overlay-loader/data write, and no direct companion-decomp access to
+`0x80130B54`. The companion struct independently identifies the byte as
+`D_80130B40.demoId` at offset `0x14`; its named `cycleIdleDemoId` writer is
+already in the generated audit. Whole-struct or pointer-mediated writes remain
+the only unresolved boundary; this selects `H-boundary` (single-source static
+audit, not a runtime classification).
 
 ## M4 zero-shade boundary
 
@@ -96,18 +101,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1063–s1065 | Demo-id writer and immutable `dLevelByDemoId` ROM ownership were classified in generated/data paths. |
 | s1066–s1068 | `cycleIdleDemoId` callers, clear form, and all generated aliases were audited; non-generated ownership remains. |
 | s1069 | Maintenance compaction; no experiment or runtime conclusion. |
+| s1070 | Non-generated host/patch/overlay search found no selector access; companion struct confirms `demoId` at +0x14. Pointer-mediated ownership remains `H-boundary` (single-source). |
 
 ## Ranked next steps
 
-1. Complete the bounded non-generated ownership audit of selector byte
-   `0x80130B54` specified in `scratch/agent/NEXT.md`. Search host/runtime,
-   patches/fixups, overlay-loader/data initialization, and companion decomp
-   references. Classify every reference as real writer, read-only alias, or
-   unresolved boundary. A direct host/patch writer selects `H-host-write`; an
-   overlay/data-only source selects `H-overlay-data`; a concrete
-   pointer-mediated guest writer selects `H-pointer-write`; otherwise retain
-   `H-boundary`. Do not build unless a concrete host/patch writer needs a
-   runtime classification.
+1. Audit whole-struct and pointer-mediated companion-decomp paths that can
+   write `D_80130B40.demoId` (+0x14), using the bounded source list in
+   `scratch/agent/NEXT.md`. A concrete field/whole-struct writer selects
+   `H-pointer-write`; only reads retain `H-boundary`. Do not build.
 2. Keep the retail oracle parked until a new, falsifiable phase-path
    discriminator can reach the 512 hangar-origin phase. Do not arm the
    freelist watch from width-320 evidence.
