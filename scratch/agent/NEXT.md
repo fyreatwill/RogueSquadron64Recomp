@@ -1,35 +1,37 @@
-# NEXT work unit (s1148)
+# NEXT work unit (s1149)
 
 HYPOTHESIS-ID: vi-post640-state-path
 
-Audit the generated/runtime callers of the VI mode selector after the final
-640 producer call. Do not add a runtime guard or repeat the NPC boundary test.
+Audit the missing state-path edge before the game-side VI mode selector after
+the final 640 producer call. Do not add a runtime guard or repeat the NPC
+boundary test.
 
 Competing hypotheses and discriminator before the work unit:
 
-- H1/selector condition: the post-640 caller runs but its selector/state
-  inputs prevent a 1024 mode request.
-- H2/caller absent: the active loop continues in slot/host/audio work without
-  reaching any post-640 mode-selector caller.
-- H3/boundary relevance: the corrected boundary reaches the target phase;
-  this requires both a positive task-control E9 row and a VI-1024 marker.
+- H1/state predecessor: a known state-machine predecessor runs after the last
+  640 producer call but its transition condition prevents the selector edge.
+- H2/edge absent: no reachable predecessor invokes the selector in the active
+  post-640 loop; slot/host/audio activity is a separate path.
+- H3/target reached: a new bounded marker reaches the selector and the run
+  reaches VI-1024 with positive task-control E9.
 
-Discriminating measurement: statically enumerate every generated call to the
-VI selector/mode-setting path and correlate it with one phase-scoped runtime
-state marker after the final 640 producer call. A post-640 selector marker
-with unchanged selector inputs selects H1; continued positive activity with
-no selector marker selects H2; VI-1024 plus task-control E9 selects H3.
+Discriminating measurement: enumerate every static predecessor of the sole
+`selectAndApplyViMode` caller and add one phase-scoped marker at the highest
+reachable predecessor, retaining the producer, selector-positive, slot,
+host/audio, E9, and VI controls. A live predecessor with no selector call
+selects H1; continued controls with no predecessor marker selects H2; selector
+call plus VI-1024 and task-control E9 selects H3.
 
 ```sh
-rg -n 'osViSetMode|setViMode|VI_.*1024|vi-selector' src lib tools docs | head -160
-rg -n 'func_.*setVi|func_.*Vi|osViSetMode_recomp|ROGUESQ_LOG_VI_SELECTOR' RecompiledFuncs src tools | head -160
+rg -n 'selectAndApplyViMode|0x8001BB6C|0x800186C0|osViSetMode_recomp|setViModeType' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs src tools
+rg -n 'state|mode|video|VI|selector' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_4.c /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_5.c | head -240
 ```
 
 Expected outcomes:
 
-- SELECTOR ACTIVE/H1: a post-640 selector call is present; compare its state
-  inputs with the expected 1024 descriptor selection.
-- SELECTOR ABSENT/H2: static callers are known but runtime state markers stop
-  while host/audio/slot controls continue; isolate the missing state-path edge.
-- TARGET REACHED/H3: VI-1024 and a positive task-control E9 row both appear;
-  then run the corrected-boundary crash comparison.
+- PREDECESSOR ACTIVE/H1: the state predecessor fires post-640 but the
+  selector does not; audit its condition and state inputs.
+- PREDECESSOR ABSENT/H2: controls continue but no predecessor marker fires;
+  identify the active loop's separate owner.
+- TARGET REACHED/H3: selector call, VI-1024, and positive task-control E9 all
+  appear; then run the corrected-boundary crash comparison.

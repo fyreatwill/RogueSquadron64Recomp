@@ -63840,3 +63840,20 @@ active (6,424 rows), host input reached 10,000, and audio dispatch reached
 producer-absent stable loop after the last 640 transition and rules out an
 early process halt for this run; the corrected NPC-boundary runtime effect
 remains unevaluable because the target phase and task-control E9 were absent.
+
+## Session 1148 (2026-08-14) — isolated the post-640 selector-caller gap
+
+Audited the generated VI path and found one selector definition, one generated
+caller, three direct `osViSetMode_recomp` calls in the selector body, and the
+host consumer. The first capture was invalid for selector absence because
+regeneration had removed the existing generated probe; producer, slot, and E9
+controls were live. Reapplied the probe, added the independent
+`[vi-selector-positive]` host control, rebuilt, and ran the phase-gated capture.
+The controlled run emitted the positive control once, all six host VI calls,
+three post-640 producer records, 8,192 slot records, and task-control E9 rows,
+but zero selector callsite/control/selection records. It crashed before VI-1024
+in `fillSampleStreamRange+336`, with last guest PC `0x8000B650`.
+
+This selects the post-640 selector-caller-absent loop (H2) and rules out a
+selector-state-input explanation for this run. It does not evaluate the
+corrected NPC boundary, and it does not explain the SIGBUS.

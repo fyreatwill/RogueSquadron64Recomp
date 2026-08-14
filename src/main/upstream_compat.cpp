@@ -183,6 +183,15 @@ extern "C" void osViSwapBuffer_recomp(uint8_t* rdram, recomp_context* ctx) {
 extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_count = 0;
     int n = ++s_count;
+    static int selector_control = -1;
+    if (selector_control < 0) {
+        const char* e = std::getenv("ROGUESQ_LOG_VI_SELECTOR");
+        selector_control = (e && *e && *e != '0') ? 1 : 0;
+    }
+    if (selector_control && n == 1) {
+        fprintf(stderr, "[vi-selector-positive] osViSetMode_recomp is live\n");
+        fflush(stderr);
+    }
     uint32_t mode_ptr = (uint32_t)ctx->r4;
     uint32_t rdram_off = mode_ptr & 0x00FFFFFF;
     auto read_u32 = [&](uint32_t off) -> uint32_t {
