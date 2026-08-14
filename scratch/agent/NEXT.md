@@ -1,5 +1,9 @@
 # NEXT work unit (s1004)
 
+Maintenance note: s1004 was a documentation compaction iteration because
+CURRENT-TRUTH exceeded the 60,000-byte threshold. The work unit below remains
+unrun and is still the next unit.
+
 HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
 
 ## One work unit

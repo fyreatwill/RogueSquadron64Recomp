@@ -2755,3 +2755,44 @@ change was made.
 These results leave the active M3 thread at `stopVoicesByHandle`, with no
 mitigation authorized absent an ORIGIN naming the writer and assessing value
 legitimacy.
+
+## 31. M4 zero-shade and oracle archive s984–s1003
+
+This compact archive was migrated from `CURRENT-TRUTH.md` during the s1004
+maintenance pass. Full records remain in `PORTING-STATE.md`.
+
+- s984 audited RT64's shaded-triangle decode against the independent Factor 5
+  command reference. Position and signed shade lanes are structurally correct;
+  same-combiner and white-shade A/B evidence keep the cause upstream in F5
+  shade-state or game lighting. No mitigation followed.
+- s985–s990 established nonzero phase-6 VTXCOLOR payloads alongside exact-zero
+  decoded shade, mixed direct generated-store ownership, no overlap from the
+  instrumented DMEM-to-RDRAM DMA path, no exact target-byte CPU fault store in
+  the sampled pages, and generated-function ownership for sampled fault PCs.
+  None identified a universal writer or authorized a mitigation.
+- s991–s995 moved generated-store instrumentation into the regeneration-owned
+  fixup path. A clean capture found 97 classified target PCs, mostly register
+  copies or zero initializations; value-bearing rows were bounded and included
+  display-list words, colors, pointers, and zeros. Source ownership remained
+  unresolved.
+- s996–s999 added task identity to shade/payload rows. Captures showed mixed
+  source ownership, including exact generated writes for some phase-6 sources
+  and no overlap for others. Task-level identity was insufficient to map one
+  source update to one zero-shade replacement.
+- s1000–s1001 added F5 and RT64 ordinals and the F5 root DL. F5 ordinals are
+  task-global while RT64 ordinals reset at child-DL boundaries. The F5 root DL
+  does not equal the repeated RT64 consumer DL, selecting a child-DL-shaped
+  association without identifying the source update.
+- s1002's two retries crashed before the VI-1024 gate and were invalid.
+- s1003 added accepted DPC first/last ranges and aggregate physical bounds.
+  In the valid capture, zero-shade task 193 had root `0x73E7C8`, bounds
+  `[0x4B7800,0x4C9318)`, and consumer DLs `0x4B7930`, `0x4B7BE8`, and
+  `0x4B8B28`, all within the accepted range. This supports only
+  `H-dpc-range-contains-consumer`; source-to-individual-replacement mapping
+  remains open. ORIGIN: these are diagnostics derived from accepted DPC
+  intervals and do not modify game or renderer state.
+
+The s955–s983 oracle line is also retained here as history: s982 localized the
+corrected external core's fault to dereferencing `r4300_pc(r4300)` before the
+debug callback, and s983 verified the oracle directory was unavailable in the
+session sandbox. It remains blocked pending human directory access.

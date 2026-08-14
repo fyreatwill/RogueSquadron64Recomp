@@ -61071,3 +61071,19 @@ added.
 ORIGIN: the new values are diagnostic snapshots of accepted
 `submit_rdp_range` intervals after defer/merge; no game or renderer state is
 changed.
+
+## Session 1004 (2026-08-14) — compacted current truth
+
+Maintenance iteration. The required size check found `docs/CURRENT-TRUTH.md`
+at 60,345 bytes, above the 60,000-byte threshold, so no experiment or build
+was run. The file was compacted from 642 lines to 148 lines and durable
+s984–s1003 M4/oracle history was migrated to `docs/PROJECT-OVERVIEW.md` §31.
+The active s1004 submission-range/source-join work unit was preserved in
+`scratch/agent/NEXT.md` and remains next.
+
+What it showed: the maintenance gate is satisfied and the compacted truth
+still records the positive-control rules, current M4 evidence, blocked oracle
+thread, backlog, and exact next command.
+
+What it rules out: nothing about runtime behavior; no causal experiment was
+attempted. No mitigation or game/runtime change was made.
