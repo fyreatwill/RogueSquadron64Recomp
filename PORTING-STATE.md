@@ -63650,3 +63650,19 @@ documented setup dead ends, not runtime evidence.
 
 ORIGIN: independent retail-oracle control and VI observations; no guest value
 was skipped, rewritten, or otherwise mitigated.
+## Session 1137 (2026-08-14) — audited retail oracle post-press stall
+
+Ran the prescribed no-target-watch retail-oracle arm with the debugger-enabled
+`iter974-armB2` core, retail ROM, VI trace, whole-RDRAM positive control, and
+the eleven-Start schedule. The positive control reached 10,000 callbacks and
+was removed successfully; all eleven presses were delivered through 56.1s.
+The run emitted only the initial VI record (width 320, origin `0x006dd280`)
+and produced no later VI progress through the bounded 180-second horizon. A
+process sample taken after the last press found the main emulation thread in
+`main_run -> gen_interrupt -> vi_vertical_interrupt_event -> nanosleep` for
+763/777 samples; the live run was then SIGKILLed. The no-target arm therefore
+rules out the M4 watch as the launch cause and selects a core/emulator progress
+stall over a watch-instrumentation fault. It does not classify the retail
+`0x688..0x710` ownership question because the matching shaded phase was never
+reached; the process-state attribution is single-run evidence pending an
+independent execution-mode check. No mitigation was added.

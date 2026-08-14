@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1136 (2026-08-14).
+in the ledger. Reviewed through s1137 (2026-08-14).
 
 ## Current state
 
@@ -35,6 +35,12 @@ in the ledger. Reviewed through s1136 (2026-08-14).
   any later VI transition at width 320/origin `0x006dd280`; its targeted
   `0x688:0x710` watch had zero hits and is unevaluable for the shaded phase.
   No hangar watch conclusion is valid.
+- The no-target retail audit reproduced the post-56-second stall with the same
+  whole-RDRAM control and all eleven presses. A process sample found the main
+  emulation thread in `gen_interrupt → vi_vertical_interrupt_event → nanosleep`
+  for 763/777 samples. This rules out the M4 target watch as the launch cause,
+  but is single-run evidence for a core/emulator progress stall and does not
+  make the retail M4 ownership watch evaluable.
 
 ## Retail VI descriptor boundary
 
@@ -118,13 +124,16 @@ does not yet establish retail reachability or ownership of that range.
 | s1132 | Traced the active VI pointer to copied-table `base+0xF0` and closed host width-rewrite as a cause. |
 | s1133 | Static census found `frameStartReset` fully regenerated with 14 call sites and overlay registration; no active fixup restoration exists, closing regeneration omission. |
 | s1134–s1135 | Defined and executed the paired M4 port capture; VMADH model and VGE/store path matched on 128 lanes with an independent control. |
+| s1137 | Reproduced the retail post-press stall with no M4 target watch; whole-RDRAM control and input passed, but the run never left VI width 320 and sampled in the core's VI-event sleep path. |
 
 ## Ranked next steps
 
-1. Diagnose the retail-oracle stall after the 56-second scheduled press before
-   repeating the M4 target watch. Use one bounded setup/runtime audit to
-   distinguish a core/plugin deadlock from a ROM state-path stall; only a run
-   that reaches the matching shaded VI phase can classify `0x688..0x710`.
+1. Run one independent execution-mode audit of the retail-oracle stall using
+   the same ROM, core, positive-control watch, VI trace, and input schedule but
+   `--oracle-emulator 1`. If it advances beyond width 320, classify the
+   interpreter path as the stall; if it reproduces the stop, keep the core
+   progress/state-path boundary open. Only a run that reaches the matching
+   shaded VI phase can classify `0x688..0x710`.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
