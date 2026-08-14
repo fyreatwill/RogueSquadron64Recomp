@@ -62414,3 +62414,18 @@ run was needed.
 
 ORIGIN: complete generated-tree writer, overlap-lane, and computed-base
 enumeration; no guest value, runtime behavior, or mitigation was changed.
+
+## Session 1069 (2026-08-14) — compacted current truth
+
+The maintenance gate fired because `docs/CURRENT-TRUTH.md` was 60,005 bytes.
+The file was compacted from 678 lines to 141 lines and from 60,005 bytes to
+8,279 bytes. Redundant M4 phase/probe detail and duplicated historical ledger
+text were reduced to durable conclusions already represented in
+`PROJECT-OVERVIEW.md` and this append-only ledger. The active selector-byte
+boundary, retail-oracle limits, M4 boundary, safety rules, and a monotonic
+ranked backlog were retained. No build, runtime experiment, mitigation, or
+source behavior changed. The next work unit remains the bounded non-generated
+ownership audit of `0x80130B54`.
+
+ORIGIN: documentation maintenance only; no guest value, runtime behavior, or
+mitigation was changed.
