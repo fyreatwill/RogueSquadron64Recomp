@@ -63907,3 +63907,19 @@ not preserve a usable guest return address at this shared entry. This makes
 the caller-family discriminator unevaluable, not evidence for H1, H2, or H3.
 It rules out only the assumption that the shared entry can identify its owner
 through `ctx->r31`; the next experiment must tag each generated callsite.
+
+## Session 1152 (2026-08-14) — tagged every submitGfxFrame callsite
+
+Extended the durable `fixup_game_funcs.py` controlled mode to insert
+phase-scoped static guest callsite tags at all 13 generated
+`submitGfxFrame` callsites, fixed the cross-translation-unit helper linkage,
+rebuilt the Debug target, and ran the required 1024-gated capture. The first
+capture used the wrong E9 environment name and is invalid for that control;
+the corrected retry used both documented E9 variables. Both runs passed the
+selector positive control, recorded 6,438 slot-dispatch rows and 168 callsite
+rows, and ran without a crash through the same 640→2→640 sequence. Neither
+reached VI-1024; the corrected retry recorded zero unified-E9 rows. Callsite
+rows include phase-6 `0x800A64AC`, but without the target phase and E9 control
+the H1/H2/H3 owner split is unevaluable. This rules out only the prior shared
+entry `$ra` method as the owner discriminator; it does not select an owner or
+explain the pre-1024 loop.
