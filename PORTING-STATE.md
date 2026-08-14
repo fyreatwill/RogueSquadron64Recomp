@@ -61362,3 +61362,16 @@ required 512 phase. It rules out treating the zero M4 count as runtime shade
 evidence. The next work unit is a bounded audit of the probe phase gate and
 input-to-transition mapping before another accumulator run. No mitigation or
 code change was made.
+## Session 1017 (2026-08-14) — audited phase-gate/input sequencing
+
+Performed the prescribed static audit of `tools/probe.sh`, the VI phase
+recorder, and the phase-relative key scheduler. The gate compares the latest
+`[phase] vi_width=N` record to `PROBE_PHASE_WIDTH` exactly; it is not a phase
+ordinal or transition predicate. When `PROBE_KEYS_FROM_PHASE=1`, the key worker
+is started only after that equality succeeds. Consequently, the s1016 recipe
+gated on 512 before starting its Start schedule, so it could not deliver the
+event that may be required to leave the 640/title path and enter 512. This
+selects `H-key-schedule-phase` and refutes a parser/default mismatch; the
+static audit does not establish whether 512 is reached by the corrected
+schedule, and no M4 accumulator hypothesis is classified. The next capture is
+1024-gated with `PROBE_LEAVE_OK=1` and the documented 1024-relative schedule.

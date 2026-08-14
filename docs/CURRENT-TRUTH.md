@@ -6,15 +6,16 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1016 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1017 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
 numeric source of the shade record. The landed M4 accumulator probe has not
 yet fired on the executing code path in three attempts — its positive control
-never armed. s1016 verified that Start is delivered, but the required 512 phase
-is never entered, so these remain phase-selection nulls, not M4 results. M5 audio
-de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
+never armed. s1017 identified that the 512-gated recipe starts its
+phase-relative key worker only after 512, so it cannot drive the transition that
+may be needed to reach 512. These remain phase-selection nulls, not M4 results.
+M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
 
@@ -223,13 +224,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1014 | Landed regeneration-owned M4 accumulator/VGE probe with a VMADH positive control. Two VI-1024 captures fired neither control; a Start-driven 512 gate timed out at 1024. No numeric conclusion. |
 | s1015 | Closed the s1014 null-result question: root cause is phase-gate failure (positive control never armed), not an M4 result. Refutes treating either s1014 capture as evidence for/against any M4 hypothesis; next step is isolating the phase/input control before re-running the probe. |
 | s1016 | Start control was positive in both the isolated and accumulator runs, but VI remained at 640 and never reached the required 512 phase; M4 and VMADH-control counts were zero. The null is phase-selection evidence only and does not classify accumulator hypotheses. |
+| s1017 | Static audit: `PROBE_PHASE_WIDTH` is an exact latest-width equality gate, and `PROBE_KEYS_FROM_PHASE=1` launches keys only after the gate. A 512-gated run therefore cannot send the Start needed to cause a 512 transition; selected `H-key-schedule-phase`, no runtime M4 conclusion. |
 
 ## Ranked backlog
 
-1. Audit the probe's phase gate and input-to-transition mapping: explain why
-   positive game-side Start records leave VI at 640 but never produce the
-   required 512 phase, then rerun the landed M4 probe only after a positive
-   512 control. Do not treat another 640/1024 capture as M4 evidence.
+1. Rerun the landed M4 accumulator probe with a 1024 gate and
+   `PROBE_LEAVE_OK=1`: the 512 gate was self-blocking because
+   `PROBE_KEYS_FROM_PHASE=1` starts the key schedule only after the requested
+   width is reached. Use the documented 1024-relative Start/A schedule, then
+   measure whether it transitions to 512 and fires both the M4 target and
+   VMADH positive control. Do not treat another 640/1024-only capture as M4
+   evidence.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
@@ -240,19 +245,38 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 4. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
-## Next work unit (s1015)
+## Phase-gate audit (s1017)
 
 HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-The s1014 runtime probe is landed but has not yet fired on the executing code
-path: two VI-1024 captures produced zero records on both the target and its
-independent VMADH positive control, so neither is evidence. Before re-running
-the probe, first verify the phase/input control in isolation (confirm a Start
-keypress is observed and that VI leaves 1024 under the documented schedule),
-then run the `PROBE_PHASE_WIDTH=512` capture with `ROGUESQ_LOG_M4_ACCUM=1`.
-Exact commands are in `scratch/agent/NEXT.md`.
+The phase-gate audit found a harness sequencing defect, not an M4 result.
+`PROBE_PHASE_WIDTH` is an exact comparison against the latest `[phase]
+vi_width=N` line. With `PROBE_KEYS_FROM_PHASE=1`, `tools/probe.sh` starts the
+key worker only after that exact width is observed. Therefore a
+`PROBE_PHASE_WIDTH=512` run cannot send the Start event that may be required
+to leave the title/attract path and enter 512; s1016's positive Start records
+came from a separate ungated control and do not refute this ordering defect.
+The next capture must gate on reachable 1024, keep capturing after width
+changes, and send the documented schedule relative to 1024. Exact commands
+are in `scratch/agent/NEXT.md`.
 
-Competing hypotheses and the discriminating measurement:
+The source-level truth table selected `H-key-schedule-phase`:
+
+| Condition | Implementation | s1016 512-gated run |
+|---|---|---|
+| Gate predicate | `cur_width() == PROBE_PHASE_WIDTH` | waits for exact 512 |
+| Key worker start | after gate when `PROBE_KEYS_FROM_PHASE=1` | never starts |
+| Start can cause transition | requires an event before/while leaving 640 | impossible in this recipe |
+| Non-gated control | keys start immediately when phase mode is off | Start positive, but no 512 transition observed |
+
+`H-gate-exact-width` is not selected: the gate is behaving as implemented,
+and 512 is only a target width, not a phase ordinal. `H-probe-contract-mismatch`
+is refuted by the source/default parsing matching the documented variables.
+
+The next runtime discriminator is whether the corrected 1024-relative schedule
+produces a 512 transition and fires the independent VMADH control.
+
+Competing M4 hypotheses remain unevaluated:
 
 - `H-accumulator-saturation`: `vmadh v6,v4,v0` produces the signed endpoint
   pattern through the RSP accumulator high-half and saturation behavior.

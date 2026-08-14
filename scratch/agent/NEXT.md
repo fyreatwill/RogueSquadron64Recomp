@@ -1,36 +1,28 @@
-# NEXT work unit (s1016)
+# NEXT work unit (s1017)
 
 HYPOTHESIS-ID: m4-zero-shade-accumulator-origin
 
-Perform one bounded static audit of the phase gate and input-to-transition
-mapping before another M4 run. Read `tools/probe.sh` and grep the implementation
-of `PROBE_PHASE_WIDTH`, `PROBE_PHASE_TIMEOUT`, `PROBE_KEYS`, `PROBE_LEAVE_OK`,
-and the VI phase recorder. Trace whether the requested 512 gate means an exact
-VI width, a transition after a key event, or a phase ordinal that the current
-menu/attract path cannot reach. Do not build or run unless the audit finds a
-concrete missing control that must be tested.
+Run one corrected, phase-gated M4 accumulator capture. Gate on reachable
+1024, keep capturing after the width changes, and send the documented menu
+schedule relative to 1024; do not gate directly on 512 because that starts
+the key worker too late to cause the transition.
 
 Competing hypotheses and discriminating measurement:
 
-- `H-gate-exact-width`: the harness waits for an exact width that this path
-  never emits; enumerate every observed/possible width and compare the gate
-  predicate.
-- `H-key-schedule-phase`: Start is delivered, but the scripted event is at the
-  wrong game state or frame; map each key event to the state/VI transition
-  recorded by the probe.
-- `H-probe-contract-mismatch`: the environment variable or timeout is parsed
-  differently from the documented contract; compare parser/default behavior
-  with the command used in s1016.
+- `H-512-reached`: the 1024-relative schedule transitions to 512 and both the
+  M4 target and VMADH positive control fire.
+- `H-schedule-still-wrong`: Start is positive but the schedule leaves 1024
+  without reaching 512; the input/state prerequisite remains wrong.
+- `H-probe-control-failure`: the corrected run fails to arm the 1024 gate or
+  its independent control, making the capture invalid rather than M4 evidence.
 
-The discriminator is a source-level truth table: for each gate predicate,
-input event, and VI transition, state whether s1016's observed sequence can
- satisfy it. A single unambiguous mismatch selects one hypothesis and gives
- the exact corrected command for the next runtime capture. If all predicates
- are satisfiable but no 512 transition is game-reachable, report the missing
- state/input prerequisite rather than rerunning the accumulator probe.
+The discriminator is one same-run table: phase timeline, key records, M4
+accumulator rows, and VMADH positive-control rows. A 512 transition plus both
+controls makes the M4 rows evaluable; no 512 transition keeps the M4 question
+open; missing 1024/control records invalidates the run.
 
 Exact starting commands:
 
-`rg -n 'PROBE_PHASE_WIDTH|PROBE_PHASE_TIMEOUT|PROBE_KEYS|PROBE_LEAVE_OK|512|phase' tools/probe.sh tools src lib | head -240`
+Exact command (from repo root; build only after the 1024 control is positive):
 
-`rg -n 'PROBE_PHASE_WIDTH|PROBE_PHASE_TIMEOUT|PROBE_KEYS|PROBE_LEAVE_OK|vi_width|phase' src lib tools -g '*.{c,cpp,h,sh,ps1}'`
+`env ROGUESQ_LOG_INPUT=1 ROGUESQ_LOG_M4_ACCUM=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS="3:start 7:start 11:start 15:a 100:start 130:start 160:a 190:start 220:a 250:start" zsh tools/probe.sh scratch/agent/probe_results/m4_accum_1024 300 2`
