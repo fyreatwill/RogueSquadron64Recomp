@@ -1,29 +1,31 @@
-# NEXT work unit (s1141)
+# NEXT work unit (s1142)
 
 HYPOTHESIS-ID: m3-generated-boundary-anomaly
 
-Perform one bounded static boundary audit of the generated
-`forwardToNpcGeneratorSpawn` range. Do not build or run the game. Determine
-whether guest `0x80078894` is a real second MIPS function entry coalesced into
-the `forwardToNpcGeneratorSpawn` C body or dead code after the emitted return:
+Perform one bounded static audit of the regeneration/input path for the
+coalesced `0x80077AC0`/`0x80077AF0` range. Do not build or run the game.
+Locate where the distinct `npcPowerGeneratorUpdate` boundary is lost and name
+the smallest durable correction that will regenerate two host functions.
 
 ```sh
-rg -n 'forwardToNpcGeneratorSpawn|80077AC0|80077AF0|80078894|800789FC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/N64Recomp --glob '!funcs_*.c' --glob '!PORTING-STATE.md'
-sed -n '19660,19725p;22440,22470p' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_18.c
+rg -n 'forwardToNpcGeneratorSpawn|npcPowerGeneratorUpdate|80077AC0|80077AF0|77680|789FC' . /Users/williambuckley/Documents/Tools/N64Recomp --glob '!funcs_*.c' --glob '!PORTING-STATE.md' --glob '!*.log'
+rg -n 'fixup_game_funcs|recomp_overlays|single_file_output|function.*table|symbols|syms' tools patches *.toml CMakeLists.txt
 ```
 
 Competing hypotheses and the discriminating measurement:
 
-- H-coalesced-real: the ROM/decomp or function table identifies a distinct
-  entry near `0x80077AF0`, proving the emitted C return/body boundary is a
-  generated target defect.
-- H-dead-tail: no distinct entry exists and the host C return makes
-  `0x80078894` unreachable; the anomaly is not a live frame-contract cause.
-- H-wrong-target: the overlay table assigns `0x80078894` to an unintended
-  host function/range; identify the concrete map mismatch.
+- H-input-merged: the source/config function table itself presents one
+  merged range, so the durable fix is in the generator input or symbol-map
+  generation.
+- H-fixup-merged: the source table is split but `fixup_game_funcs.py` or a
+  post-generation transform merges/relabels the functions; the correction is
+  in that transform.
+- H-generator-bug: the source and generated symbol tables are split, but
+  N64Recomp emits one host body; the correction belongs in N64Recomp or its
+  invocation, not a game guard.
 
-The discriminating measurement is the exact ROM/decomp function boundary plus
-the generated overlay-table entry and host reachability at `0x80078894`.
-Record one row for the site with target, entry, and exit stack evidence. Do
-not add a mitigation. If `H-dead-tail` wins, close the static frame-contract
-thread and select a runtime-origin probe.
+The discriminating measurement is the first representation in the
+regeneration chain whose range omits the split at `0x80077AF0`, followed by
+the concrete generated invocation/output that coalesces the body. Record the
+representation, range, and correction. Do not hand-edit generated C or add a
+runtime mitigation.

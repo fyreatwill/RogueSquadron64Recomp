@@ -63704,6 +63704,7 @@ never reached. No mitigation was added.
 
 ORIGIN: independent VI-poll and scheduled-input controls; no guest value was
 skipped, rewritten, or otherwise mitigated.
+
 ## Session 1140 (2026-08-14) — audited slot-dispatcher caller frame contracts
 
 Ran the prescribed no-build whole-class source audit. Enumerated 144 static
@@ -63723,3 +63724,24 @@ This is single-source evidence of a generated function-boundary/coalescing
 anomaly, not proof of a runtime frame defect. The audit rules out a broad
 static caller-frame imbalance, but leaves that range for the next bounded
 boundary check and keeps runtime-side corruption open.
+
+## Session 1141 (2026-08-14) — resolved coalesced NPC function boundary
+
+Ran the prescribed no-build static boundary audit. The independent decomp
+symbol files identify `npcPowerGeneratorUpdate` at guest `0x80077AF0`, while
+`forwardToNpcGeneratorSpawn` begins at `0x80077AC0`. The generated symbol table
+assigns `0x80077AC0` size `0x30` and `0x80077AF0` size `0x134C`, ending at
+`0x80078E3C`; `spawnDebrisBurstFromTemplate` starts at that address. The
+generated overlay table instead registers one `forwardToNpcGeneratorSpawn`
+range spanning the contiguous region, and `funcs_18.c` emits the second
+`0x80077AF0` prologue and live `jal 0x8003E8DC` at `0x80078894` after an
+unconditional C `return` for the first function.
+
+This selects H-coalesced-real and identifies a generated/input function-boundary
+defect. It rules out H-dead-tail and the claim that this site is merely an
+unreachable post-return artifact. It does not establish that this coalescing
+causes the recurring runtime SIGBUS, and no mitigation was added.
+
+ORIGIN: the distinct boundary is established by independent decomp symbols
+and the generated symbol table; no guest value was skipped, rewritten, or
+guarded.

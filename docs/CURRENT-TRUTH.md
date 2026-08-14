@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1139 (2026-08-14).
+in the ledger. Reviewed through s1141 (2026-08-14).
 
 ## Current state
 
@@ -117,11 +117,15 @@ and invoke the returned `(rdram, ctx)` function pointer.
 One site, guest `0x80078894`, is a generated-source anomaly rather than a
 balanced reachable caller: it occurs in the `forwardToNpcGeneratorSpawn`
 block after an unconditional emitted C `return` at `0x80077AEC`, before a
-second `sp -= 0x118` prologue. The overlay table maps the named function at
-`0x80077AC0` across this range, so static text alone cannot establish whether
-the original MIPS entry was intentionally coalesced. This is single-source
-static evidence and remains open as a mapping/generation follow-up; it is not
-evidence of runtime stack corruption.
+second `sp -= 0x118` prologue. Independent decomp symbols identify
+`npcPowerGeneratorUpdate` at `0x80077AF0`; the generated symbol table gives it
+size `0x134C`, ending at `0x80078E3C`, where `spawnDebrisBurstFromTemplate`
+begins. The generated host body nevertheless places the `0x80077AF0` prologue
+and live `0x80078894` call after the earlier function's emitted `return`. This
+selects H-coalesced-real: preserve the `0x80077AF0` function boundary in the
+regeneration/input function table so a separate host function is emitted. It
+is a generated-boundary defect, not evidence by itself of runtime stack
+corruption.
 
 ## Superseded conclusions
 
@@ -159,17 +163,16 @@ evidence of runtime stack corruption.
 | s1137 | Reproduced the retail post-press stall with no M4 target watch; whole-RDRAM control and input passed, but the run never left VI width 320 and sampled in the core's VI-event sleep path. |
 | s1138 | Reproduced the width-320 stall with `--oracle-emulator 1`; whole-RDRAM control and all eleven presses passed, so the stall is not specific to the prior execution mode. |
 | s1140 | Audited all 144 static calls to `slotDispatcherIter`: 143 caller contracts balance; one `0x80078894` site is after an emitted return in a coalesced generated block and needs boundary resolution. |
+| s1141 | Independent decomp and generated symbol boundaries identify `0x80077AF0` as a distinct `npcPowerGeneratorUpdate` entry ending at `0x80078E3C`; the generated host coalesces it after `forwardToNpcGeneratorSpawn`'s return. This selects a regeneration/input boundary defect and closes the static ambiguity. |
 
 ## Ranked next steps
 
-1. Resolve the single-source `forwardToNpcGeneratorSpawn` range anomaly:
-   compare the ROM/decomp function boundaries and generated overlay entry for
-   `0x80077AC0..0x80078DF4`, determining whether `0x80078894` belongs to a
-   second MIPS function coalesced into unreachable C. If it is a generated
-   target defect, identify the regeneration/fixup correction; if it is dead or
-   intentionally coalesced, close it and proceed to a runtime-origin probe for
-   the recurring `slotDispatcherIter+872` SIGBUS. Do not add a guard from this
-   census.
+1. Trace the regeneration/input path that produced the coalesced
+   `0x80077AC0`/`0x80077AF0` host body. Confirm where the function table loses
+   the `npcPowerGeneratorUpdate` boundary, and identify the smallest durable
+   correction that regenerates two host functions without hand-editing
+   `RecompiledFuncs/funcs_18.c`. Do not build or run until the input correction
+   is located; do not add a runtime guard.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
