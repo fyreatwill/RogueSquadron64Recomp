@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1135 (2026-08-14).
+in the ledger. Reviewed through s1136 (2026-08-14).
 
 ## Current state
 
@@ -28,10 +28,13 @@ in the ledger. Reviewed through s1135 (2026-08-14).
 - The port-side VI 640-to-1024 transition is lifecycle-driven. The host logger
   observes committed VI state correctly; the active mode bytes, copied records,
   and pending masks are ordinary runtime state, not an unobserved host write.
-- Retail oracle controls are healthy: whole-RDRAM, scheduled PIF input, and VI
-  callback/poll controls pass. The tested retail ROM remains on the width-320
-  attract path and does not reach the 512 hangar-origin phase, so no hangar
-  watch conclusion is valid.
+- Retail oracle controls remain healthy in completed runs: whole-RDRAM,
+  scheduled PIF input, and VI callback/poll controls pass. The latest targeted
+  M4 arm passed the whole-RDRAM control (10,000 callbacks, removed cleanly)
+  and delivered all scheduled presses through 56 seconds, but stalled before
+  any later VI transition at width 320/origin `0x006dd280`; its targeted
+  `0x688:0x710` watch had zero hits and is unevaluable for the shaded phase.
+  No hangar watch conclusion is valid.
 
 ## Retail VI descriptor boundary
 
@@ -118,10 +121,10 @@ does not yet establish retail reachability or ownership of that range.
 
 ## Ranked next steps
 
-1. Run the retail oracle arm using whole-RDRAM control plus a targeted watch
-   over physical `0x688..0x710` (the observed `r9+0x18..0x4F` record range,
-   widened to cover the observed r9 span). Require `--vi-trace`; a targeted
-   null is unevaluable unless the matching shaded phase is reached.
+1. Diagnose the retail-oracle stall after the 56-second scheduled press before
+   repeating the M4 target watch. Use one bounded setup/runtime audit to
+   distinguish a core/plugin deadlock from a ROM state-path stall; only a run
+   that reaches the matching shaded VI phase can classify `0x688..0x710`.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

@@ -63627,3 +63627,26 @@ port side; this selects the remaining live hypothesis as retail-side
 ownership of the `0x670..0x6C0` record, which s1136's oracle watch over
 physical `0x688..0x710` is designed to discriminate next (see
 `scratch/agent/NEXT.md`, `HYPOTHESIS-ID: m4-ground-truth-accumulator-origin`).
+## Session 1136 (2026-08-14) — retail M4 watch stayed pre-phase
+
+Ran the prescribed retail-oracle M4 ground-truth arm with the debugger-enabled
+`iter974-armB2` core, the retail ROM, Homebrew RSP/input plugins, whole-RDRAM
+positive control, targeted physical watch `0x688:0x710`, VI tracing, and the
+documented eleven-Start schedule. Two launch attempts were invalid before the
+experiment: one used a relative executable path from `build/` (rc=127), and
+one transcribed the core path incorrectly (dlopen failure). The corrected arm
+passed the actual control: watch index 0 reached 10,000 callbacks and was
+removed with rc=0. All eleven Start presses were delivered through 56.1s.
+
+The valid arm emitted only one VI record, width 320 at origin `0x006dd280`,
+and then stopped producing progress after the 56-second press. The targeted
+watch remained armed and produced zero hits, but the matching shaded phase was
+not reached, so this is `H-phase-unreached`, not evidence that retail never
+writes the candidate range. The process was SIGKILLed after the stall; no
+targeted PC attribution or hangar conclusion is valid. This selects the next
+work unit as a no-target oracle stall audit to distinguish core/instrument
+deadlock from a retail state-path stall. The failed launch attempts are
+documented setup dead ends, not runtime evidence.
+
+ORIGIN: independent retail-oracle control and VI observations; no guest value
+was skipped, rewritten, or otherwise mitigated.

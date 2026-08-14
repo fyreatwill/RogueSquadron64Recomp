@@ -1,30 +1,32 @@
-# NEXT work unit (s1136)
+# NEXT work unit (s1137)
 
-HYPOTHESIS-ID: m4-ground-truth-accumulator-origin
+HYPOTHESIS-ID: m4-retail-oracle-stall
 
-Run the retail oracle arm with whole-RDRAM positive control and a targeted
-physical watch over `0x688:0x710`, derived from the port capture's
-`r9=0x670..0x6C0` and output record `r9+0x18..0x4F`. Include `--vi-trace` and
-the documented Start schedule; do not interpret a targeted null unless the
-matching shaded phase is reached. Do not change the port probe.
+Run one bounded oracle stall audit using the known-good `iter974-armB2` core,
+the same retail ROM, plugins, and documented Start schedule, but with only the
+whole-RDRAM positive-control watch and `--vi-trace` (no M4 target watch). Keep
+the 180-second horizon and capture the process state if output stops after the
+last press. Do not change the port probe or infer anything about the candidate
+record range.
 
 Competing hypotheses and discriminating outcomes:
 
-- H-retail-writer: retail PC-attributed writes hit the candidate range in the
-  reached phase, so the game owns this record edge.
-- H-retail-null: whole-RDRAM control and matching phase pass, but the target
-  range stays quiet; the candidate port-side source is rejected.
-- H-phase-unreached: whole-RDRAM control passes but the matching shaded phase
-  is not reached; the targeted null is unevaluable.
+- H-core-deadlock: the debugger core stops advancing at a repeatable emulated
+  time while the positive control has already passed.
+- H-ROM-path-stall: the core continues but the retail state machine remains at
+  width 320 after the schedule; a longer/independent progress signal advances.
+- H-launch-instrument-fault: removing the target watch changes the stall and
+  the positive control or VI trace progresses beyond the prior stopping point.
 
-Discriminator: whole-RDRAM hit count, targeted PC-attributed hits, and VI phase
-reachability from the same oracle invocation.
+Discriminator: final positive-control count, last VI/press timestamp, and
+whether the no-target arm advances beyond the prior width-320 stop.
 
 Expected command shape (resolve the configured oracle core/ROM paths from
 `tools/oracle/README.md`):
 
 ```sh
-tools/oracle/build/rs64_oracle --core <debugger-core> --rom <retail-rom> \
-  --secs 180 --watch-write 0x0:0x800000 --watch-write 0x688:0x710 \
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --secs 180 --watch-write 0x0:0x800000 \
   --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start
 ```
