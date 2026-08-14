@@ -193,18 +193,22 @@ ARTIFACTS
     block "OUTCOME says ADVANCED but this iteration only MODIFIED existing documentation (PORTING-STATE.md / docs/) and produced no cited run artifacts under scratch/. Editing the ledger is how you record progress, not how you make it. Either land a real change (code, instrument, tool, patch, a NEW document, or — in a triggered maintenance iteration — a >=200-net-line CURRENT-TRUTH compaction), or run the experiment now and cite its scratch/ artifact BY FILENAME in the PORTING-STATE.md session entry — or set OUTCOME=SUBSTITUTED and write SUBSTITUTION.md explaining why the work unit could not run."
   fi
   # CHURN GUARD (2026-08-14): a diagnostic-only ADVANCED iteration - one whose
-  # code change adds only fprintf/getenv/log-tag lines and whose session entry
-  # selects/refutes/closes nothing - is landing an instrument, not narrowing a
-  # hypothesis (s1003-s1006 threaded one join key per iteration this way).
+  # code change adds only instrumentation (fprintf/getenv/log-tag/rs64_* probe
+  # lines, or extends an existing [shade-raw]/[f5-state-payload] format string
+  # with one more provenance field) and whose session entry selects/refutes/
+  # closes nothing - is landing an instrument, not narrowing a hypothesis
+  # (s998-s1006 threaded one join key per iteration this way).
   # Only fires on >=2 instrumentation lines AND zero discrimination phrases, so
-  # a probe that selects/refutes/plans is never blocked.
+  # a probe that selects/refutes/plans is never blocked. NOTE the discrimination
+  # match is word-level (no 'H-' suffix) because the ledger writes "This selects\n
+  # H-..." across a line break.
   diag="$(git diff ${range:-HEAD~1..HEAD} -- . ':(exclude)docs' ':(exclude)PORTING-STATE.md' ':(exclude)CLAUDE.md' ':(exclude)tools/agent' ':(exclude)scratch' ':(exclude).claude' 2>/dev/null \
     | grep '^+' | grep -vE '^\+[[:space:]]*(#|//|\*)' \
-    | grep -cE '(fprintf|getenv|ROGUESQ_LOG_)' || true)"
+    | grep -cE '(fprintf|getenv|ROGUESQ_LOG_|rs64_[A-Za-z0-9_]+|\[(shade-raw|f5-state|fix-zero-shade))' || true)"
   case "$diag" in ''|*[!0-9]*) diag=0 ;; esac
   if [ "$diag" -ge 2 ]; then
     ps_added="$(git diff ${range:-HEAD~1..HEAD} -- PORTING-STATE.md 2>/dev/null | grep '^+' || true)"
-    if ! printf '%s\n' "$ps_added" | grep -qE 'selects H-|refutes H-|closes|resolves|root cause|discriminate'; then
+    if ! printf '%s\n' "$ps_added" | grep -qE '\b(selects|refutes|closes|resolves|root cause|discriminate)\b'; then
       block "OUTCOME says ADVANCED but this iteration's change is diagnostic-only ($diag instrumentation lines) and its session entry names no discrimination or next discriminator. Landing an instrument is not narrowing a hypothesis. Reach a discriminating conclusion (selects/refutes H-...), name the next discriminator, or set OUTCOME accordingly."
     fi
   fi
