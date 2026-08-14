@@ -1,0 +1,8 @@
+--- a/src/mupen64plus-core/src/device/pif/pif.h
++++ b/src/mupen64plus-core/src/device/pif/pif.h
+@@
+ static osal_inline uint32_t pif_address(uint32_t address)
+ {
+-    return (address & 0xfffc);
++    return ((address & 0xffff) & 0xfffc);
+ }

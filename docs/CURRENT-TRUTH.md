@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s959 (2026-08-13). The active blocker is authoritative
+Reviewed through s962 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -207,6 +207,15 @@ closed; M3 work is limited to systematic idiom-class audits.
   surviving plain-RDRAM handler. This selects a PIF-region debugger-handler
   defect over a generic read-watch defect; retail PIF activity remains
   unevaluable and no runtime mitigation followed.
+- s962 tested one external-core address-normalization fix: `pif_address()` now
+  strips the `0x1FC00000` mapping base before indexing `pif->base`. The
+  ordinary-RDRAM arm still passed its positive control (1,105,106 writes, one
+  read, 299 VI), while the PIF-RAM arm still exited `rc=139` after RDRAM
+  initialization, before emulator start, VI, or any PIF hit. The normalization
+  defect is real as a latent handler bug but does not explain this pre-start
+  crash; the remaining fault is in the PIF-specific debugger/init path. An
+  attempted LLDB batch produced no backtrace and was terminated, so the exact
+  failing frame remains unclassified.
 
 ## Recent evidence ledger
 
@@ -245,6 +254,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s959 | Source audit and one driven arm confirmed input-plugin attachment and scancode-40 delivery; whole-RDRAM control passed with 5,189,202 hits. The PIF trace is a VI poll rather than game-read attribution; VI stayed 320, so callback-table reachability remains unevaluable. |
 | s960 | Physical PIF read watch crashed the oracle twice before VI, both paired and isolated; whole-RDRAM-only control passed with 1,082,129 hits/287 VI. PIF read activity remains unevaluable; investigate the debugger read-watch path. |
 | s961 | Ordinary RDRAM read watch survived with 1,105,122 write-control hits, one read hit, and 299 VI; PIF RAM and PIF ROM read watches both crashed pre-VI. Source mapping selects a PIF-region handler defect over a generic read-watch defect; no retail PIF conclusion. |
+| s962 | Core rebuild with `pif_address()` base stripping left ordinary RDRAM healthy (1,105,106 writes/one read/299 VI) but PIF read watch still crashed `rc=139` after RDRAM init and before emulator start. Latent normalization bug recorded; pre-start PIF debugger/init failure remains. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -262,12 +272,12 @@ entries and do not authorize mitigations.
    targets for context mutation before closing the class.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
-3. Fix or isolate the oracle PIF-region debugger read-watch path before
-   retrying the callback-table watch: s961 showed ordinary RDRAM read watches
-   survive while both PIF RAM and PIF ROM read watches crash during RDRAM
-   initialization. The next work unit should make one minimal oracle-core
-   handler fix or diagnostic that preserves the ordinary-RDRAM positive
-   control and tests whether a PIF read watch can survive initialization.
+3. Isolate the remaining oracle PIF-region pre-start crash before retrying the
+   callback-table watch: s962 showed that stripping the PIF mapping base fixes
+   a latent handler offset but does not prevent `rc=139` during initialization.
+   The next unit should instrument the debugger breakpoint-install and device
+   mapping path to identify the failing frame, paired with the ordinary-RDRAM
+   positive control.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if

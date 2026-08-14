@@ -59842,3 +59842,22 @@ Captures: `scratch/agent/oracle_results/s961_read_watch/`.
 ORIGIN: oracle source audit plus ordinary-RDRAM and two independent PIF-region
 read-watch arms, all paired with the whole-RDRAM positive control; no guest
 value mutation or mitigation was landed.
+
+## Session 962 (2026-08-13) — PIF address normalization is latent; pre-start crash remains
+
+Applied one source-level change in the external oracle core: `pif_address()`
+now strips the `0x1FC00000` mapping base before indexing `pif->base`. Rebuilt
+the core and oracle front-end. In one concurrent bounded comparison, the
+ordinary-RDRAM read-watch arm passed the positive control with 1,105,106
+whole-RDRAM writes, one ordinary read hit, and 299 VI frames. The PIF-RAM arm
+still exited `rc=139` immediately after RDRAM initialization, before the core
+reported emulator start, before VI, and before any PIF read hit. This rules out
+the normalization change as the explanation for the observed pre-start crash,
+while recording it as a real latent handler-offset defect. An LLDB batch
+backtrace attempt produced no usable frame and was terminated; it did not
+advance attribution. The next unit instruments PIF mapping, breakpoint
+activation, and debugger-read entry as one batch.
+
+ORIGIN: external oracle core `pif_address()` source audit, paired ordinary/PIF
+read-watch arms, and whole-RDRAM positive controls; no recomp runtime,
+generated-code, or mitigation change was made.
