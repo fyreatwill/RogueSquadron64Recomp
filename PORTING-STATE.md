@@ -61142,3 +61142,43 @@ zero-shade replacement source. It does not rule out an ordered event join.
 
 ORIGIN: diagnostic-only F5 state snapshots and RT64 parse rows; no game or
 renderer value is changed.
+
+## Session 1007 (2026-08-14) — zero-shade is a constant sentinel, not a source join
+
+Offline re-analysis of the saved s1000 capture
+(`scratch/agent/s1000_vtx_source_consumer_20260813_final/run.log`), no new
+build or run.
+
+Finding: every `[shade-raw ... ZERO]` row carries the fixed decoded shade base
+(-32768,-32768,-32768,+32768) = `0xFFFF8000` RGB / `0x00008000` alpha — a
+constant -0.5/+0.5 sentinel that never varies across the zero-shade task's
+repeated consumer DLs (`0x4B7930` / `0x4B7BE8` / `0x4B8B28`). The same task's
+`[f5-state-payload] op=0x02` rows show the vertex-color array is nonzero and
+correct (`0x737EA0` = `313131FF...`, `0x73A4C8` = `A6A6A6FF...`), so the
+fetched color data is not what reaches the emitted shade words. This is the
+same `0xFFFF/0x8000 -> -0.5` pattern already noted in rt64_gbi_rdp.cpp's
+FIX_ZERO_SHADE comment, and it separates the M4 question from the s1003-s1006
+source-to-consumer join: the divergence is upstream, in the ucode's shade
+emission, not in source selection.
+
+Secondary finding: non-zero-shade triangles show sign-extended colors —
+`[shade-raw #1 NEG] baseFixed=(-7700480,...)` = -117.5, i.e. color byte 0x8A
+(138) became 0xFF8A (-118). A signed (`lb`) vs unsigned (`lbu`) load signature.
+The GLideN64 reference (`reference/gliden64/F5Rogue.cpp`,
+`F3DSWRS_PrepareVertices`) copies unsigned u8 RGBA per vertex, so the LLE
+shade emission diverges from the reference in two independent ways (constant
+sentinel + sign-extension).
+
+Landed (diagnostic, regen-safe): a `ROGUESQ_LOG_SLOT_SP_GUARD=1` guard at
+`slotDispatcherIter` entry that dumps sp/ra/a0/a1/s0-s7/fp/gp when the guest
+stack pointer is outside RDRAM, converting the recurring slotDispatcherIter+872
+SIGBUS into a diagnosable caller dump. Added to
+`~/Documents/Tools/N64Recomp/fixup_game_funcs.py` and applied to
+`RecompiledFuncs/funcs_8.c`; the Debug build links clean. Default off.
+
+What it rules out: for the sampled zero-shade task, the emitted shade is a
+fixed sentinel rather than a missing/zero color array, so source-selection
+instrumentation (DPC ranges, submit serials, DL ordinals) cannot attribute it.
+It does not yet distinguish a signed-color-load bug from a zero light path —
+that needs the ucode shade-emission trace. No mitigation or value rewrite was
+added; the guard is read-only.

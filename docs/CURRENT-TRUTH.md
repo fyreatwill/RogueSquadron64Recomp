@@ -6,10 +6,12 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1006 (2026-08-14). The active investigation is M4
-zero-shade source-to-consumer association. M5 audio de-stubbing is closed.
-M3 work is limited to complete idiom-class audits. The retail-oracle callback
-thread is blocked on directory access and is not the current work unit.
+Reviewed through s1007 (2026-08-14). The active investigation is M4 zero-shade:
+the emitted shade is a constant sentinel, so the source-to-consumer join is
+closed and the question is the ucode shade-emission path. M5 audio de-stubbing
+is closed. M3 work is limited to complete idiom-class audits. The retail-oracle
+callback thread is no longer directory-blocked (`.claude/settings.json`
+currently lists `rs64-oracle`); see backlog.
 
 ## Current truth
 
@@ -28,14 +30,18 @@ thread is blocked on directory access and is not the current work unit.
   spill of guest `$sp` at `funcs_8.c:22810`. All 144 direct callers have
   balanced frame shapes; statically addressed indirect targets are balanced;
   `0x8010B350` is compiled data with no generated writer. The general runtime
-  caller-frame corruption mechanism remains open, but no static lead is queued.
+  caller-frame corruption mechanism remains open, but a
+  `ROGUESQ_LOG_SLOT_SP_GUARD=1` register-dump diagnostic is now landed (see
+  backlog).
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. The legacy audio idiom audits and their structural limitations are in
   PROJECT-OVERVIEW §§9–12 and §30.
-- Retail oracle work is blocked: `/Users/williambuckley/Documents/Tools/rs64-oracle`
-  is outside the permitted directory set. s982 localized its corrected-core
-  failure to dereferencing `r4300_pc(r4300)` in `read_with_bp_checks` before
-  callback entry. No retail phase conclusion or recomp mitigation follows.
+- Retail oracle work: the s983 directory block is stale — `.claude/settings.json`
+  currently lists `rs64-oracle` in `additionalDirectories` and `Read`. s982
+  localized the corrected-core failure to dereferencing `r4300_pc(r4300)` in
+  `read_with_bp_checks` before callback entry. No retail phase conclusion or
+  recomp mitigation follows; resume only when the loop is not actively running
+  a capture.
 
 ## M4 zero-shade evidence
 
@@ -80,6 +86,15 @@ The provenance campaign now establishes:
   they do not identify the individual update feeding a replacement. This
   selects `H-child-range-only`. No mitigation follows.
 
+- Offline re-analysis of the saved s1000 capture shows every zero-shade row
+  carries the fixed decoded shade base (-32768,-32768,-32768,+32768) =
+  `0xFFFF8000` RGB / `0x00008000` alpha — a constant -0.5/+0.5 sentinel — while
+  the same task's op=0x02 vertex-color payload is nonzero and correct. This
+  closes the source-to-consumer join (the data exists and is not used) and
+  moves the question to the ucode shade-emission path. Non-zero-shade rows
+  additionally show sign-extended colors (0x8A -> -118), a signed-load
+  signature. See PORTING-STATE s1007.
+
 All runtime claims above had positive controls in their relevant captures.
 Static single-source claims are explicitly described as such in the ledger.
 
@@ -102,51 +117,52 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1003 | Accepted DPC bounds contained all observed repeated RT64 consumer DLs in a valid capture; individual source mapping remains open. |
 | s1005 | RT64 shade rows carried accepted serial/range fields; consumer ranges were child-DL-shaped and did not identify an individual F5 source update. |
 | s1006 | RT64 triangle-parse join rows carried the live last F5 state, but repeated zero-shade child DLs shared one task-level state; individual source mapping remains open. |
+| s1007 | Offline re-analysis: zero-shade rows are a fixed -0.5/+0.5 shade sentinel while the VTXCOLOR array is nonzero; source-join closed, question moves to ucode shade emission. |
 
 ## Ranked backlog
 
-1. Continue the M4 source-to-consumer join by correlating ordered F5 VTXCOLOR
-   state with emitted RDP triangle consumers; the accepted range alone is
-   child-DL-shaped.
-2. Keep the `slotDispatcherIter+872` runtime `$sp` corruption family parked
-   until an independent runtime boundary is available; do not perform another
-   static sweep without a new idiom class.
-3. Once directory access is restored, resume the blocked oracle callback audit
-   exactly as documented in the archived s983 work unit. Do not self-grant
-   access or infer a retail phase result.
+1. Trace the recompiled F5 ucode's shaded-triangle shade emission against
+   `F5Rogue.cpp` (unsigned u8 RGBA copy) to find the constant -0.5 sentinel and
+   the sign-extension; the source-to-consumer join is closed.
+2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
+   diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
+   stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
+   and classify the captured caller; do not do another static sweep.
+3. Directory access to `rs64-oracle` is restored; resume the archived s983
+   oracle callback audit when the loop is not actively running a capture. Do
+   not self-grant access or infer a retail phase result.
 4. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 
-## Next work unit (s1007)
+## Next work unit (s1008)
 
-HYPOTHESIS-ID: m4-zero-shade-source-consumer-join
+HYPOTHESIS-ID: m4-zero-shade-emission-constant
 
-Add one bounded event-order trace that records every F5 VTXCOLOR update as a
-task-local sequence and records that sequence at each RT64 triangle parse,
-alongside the existing shade serial/range rows. Preserve existing join rows.
-Do not add a mitigation or hand-edit generated files.
+Trace the recompiled Factor 5 ucode's shaded-triangle shade emission against
+the GLideN64 reference (`reference/gliden64/F5Rogue.cpp`,
+`F3DSWRS_VertexColor` / `F3DSWRS_PrepareVertices`), which copies unsigned u8
+RGBA per vertex with no lighting and no -0.5 sentinel. Do not add a mitigation
+or hand-edit generated files. Static audit only — no build/run required.
 
 Competing hypotheses and the discriminating measurement:
 
-- `H-triangle-source-join`: ordered F5 VTXCOLOR events and emitted triangle
-  rows identify the source update feeding a zero-shade replacement.
-- `H-child-range-only`: the consumer remains associated only with its child DL.
-- `H-triangle-source-missing`: the event stream is not live at triangle
-  emission or has no usable ordered join.
+- `H-signed-color-load`: the ucode (or its RSPRecomp) sign-extends the color
+  byte (lb vs lbu), and the -0.5 sentinel is the sign-extended/zero color path.
+- `H-shade-source-mismatch`: the ucode emits shade from a light/normal register
+  that is uninitialized (-0.5) instead of the fetched color array.
+- `H-emission-layout`: the ucode writes the shade words to the wrong DP ring
+  offsets, so RT64 reads a constant.
 
-The discriminating table must key task, F5 root DL, F5 update ordinal/source,
-triangle emission order, submit serial/range, RT64 DL, and shade ordinal. It is
-invalid unless positive controls, root identity, triangle rows, range-bearing
-shade rows, and zero-shade rows all fire in the VI-1024-gated phase.
+Discriminator: locate the generated ucode's color-fetch and shade-word store
+sites (RSP_MEM_*_LOAD sites touching the vertex-color array; RSP_MEM_*_STORE /
+DP-ring writes that produce the triangle shade words) and compare their width,
+signedness, and register source against F5Rogue.cpp. A signed load feeding the
+shade store selects `H-signed-color-load`; a store sourced from a non-color
+register selects `H-shade-source-mismatch`; correct sources with mismatched
+offsets selects `H-emission-layout`.
 
-Exact launch recipe:
-
-`env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LOG_VTX_WRITE_FAULT=1 ROGUESQ_LOG_F5_STATE=1 ROGUESQ_LOG_SHADE_RAW=1 ROGUESQ_LOG_TRI_WRITER=1 PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_KEYS='3:start 7:start 11:start 15:a 100:start 130:start 160:a' zsh tools/probe.sh scratch/agent/s1007_f5_event_order_20260814 180 3`
-
-An individual F5 source appearing immediately before the consumer triangle
-selects `H-triangle-source-join`; only child-DL association selects
-`H-child-range-only`; absent/unstable state selects `H-triangle-source-missing`.
-If controls fail, record the run as invalid and make no causal selection.
+The `slotDispatcherIter` sp-guard soak is a separate queued recipe
+(`scratch/agent/soak_queue/slot_sp_guard.sh`), not this work unit.
 
 ## Method and safety rules
 
