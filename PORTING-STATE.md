@@ -62729,6 +62729,25 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1092 (2026-08-14) — resolved the retail branch target
+
+The planned oracle capture initially failed before emulation because the
+front-end's 24-watch capacity could not hold the predeclared 32-PC set. The
+capacity was increased to 64, then the identical eleven-Start capture ran to
+completion. Whole-RDRAM reached 10,015 callbacks, all eleven Start presses
+were observed in PIF reads, and VI reached 7,204 frames at width 320/origin
+`0x006dd280`; the mission-state block was silent. `0x8006D9B4` hit once and
+the taken target `0x8006D980` hit twice. Nearby even loop PCs
+`0x8006D988`–`0x8006D9A8` each hit twice, while `0x8006D9B8`, `0x8006D9BC`,
+the odd nearby PCs, and all post-loop PCs stayed at zero. This selects
+single-source `H-taken-target` and rules out the prior watch-gap arm; delay-
+slot callback coverage remains open. The initial capacity failure was not
+evidence about the ROM.
+
+ORIGIN: retail ROM debugger execution callbacks and independent whole-RDRAM/PIF/VI
+positive controls; the only code change was diagnostic watch capacity, with no
+mitigation or game-data change.
+
 ## Session 1091 (2026-08-14) — bracketed the retail branch-delay boundary
 
 The first invocation was allowed to complete but its terminal output detached
