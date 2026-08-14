@@ -62762,6 +62762,25 @@ identify the earlier state gate. No mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1088 (2026-08-14) — bracketed the retail pre-gate call
+
+The first invocation used the stale CMake build command from NEXT.md and did
+not start because `tools/oracle/build` has no `CMakeCache.txt`. The available
+`tools/oracle/build.sh` frontend was then used to build the same watch set and
+run the established eleven-Start retail schedule, with output preserved in
+`scratch/agent/oracle-s1088.log`. The whole-RDRAM positive control reached
+10,001 callbacks, all eleven Start presses were observed in PIF reads, and the
+run completed 7,197 VI frames at width 320/origin `0x006dd280`. The mission-
+state block watch was silent. Guest-PC hits were entry `0x8006D900: 1`,
+continuation `0x8003E018: 0`, and gate `0x8003E07C: 0`. This selects
+single-source `H-callee-does-not-return`: the callee is entered but does not
+reach the recorded continuation on this retail route. It rules out callee
+non-entry and a gate-only watch-address explanation, but does not locate the
+internal loop or subcall boundary.
+
+ORIGIN: retail ROM debugger execution callbacks and independent whole-RDRAM/PIF/VI
+positive controls; no mitigation or game-data change was made.
+
 ## Session 1086 (2026-08-14) — watched the full retail mission-state block
 
 Ran one debugger-on retail-oracle capture with the established eleven-Start
