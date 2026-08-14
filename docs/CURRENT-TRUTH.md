@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1138 (2026-08-14).
+in the ledger. Reviewed through s1139 (2026-08-14).
 
 ## Current state
 
@@ -47,6 +47,11 @@ in the ledger. Reviewed through s1138 (2026-08-14).
   no later VI transition occurred through 180 seconds. This reproduces the
   stall across execution modes, but does not distinguish core scheduling from
   debugger/watch overhead and does not evaluate the M4 target range.
+- The debugger-off, `--oracle-emulator 1`, VI-poll audit stayed at width 320 /
+  origin `0x006dd280` for the full 180-second bound. All eleven presses were
+  delivered and VI polling remained active, so debugger/watch overhead is
+  ruled out as the launch cause. The core scheduling/state-path boundary is
+  still open; the shaded M4 range remains unevaluable.
 
 ## Retail VI descriptor boundary
 
@@ -135,13 +140,13 @@ does not yet establish retail reachability or ownership of that range.
 
 ## Ranked next steps
 
-1. Run one debugger-off retail-oracle audit using the same core, ROM, eleven-
-   Start schedule, and `--oracle-emulator 1`, with `--vi-poll` and no debugger
-   watch. If VI polling advances beyond width 320, debugger/watch callbacks
-   remain the live stall hypothesis; if it also stays at width 320, rule out
-   debugger/watch overhead and keep the core scheduling/state-path boundary
-   open. Only a run that reaches the matching shaded VI phase can classify
-   `0x688..0x710`.
+1. Perform a systematic M3 audit of generated indirect-call frame contracts:
+   enumerate every `LOOKUP_FUNC` site in `RecompiledFuncs/funcs_*.c` that can
+   reach `slotDispatcherIter` or its callback chain, and classify the caller's
+   stack adjustment, saved return register, and host dispatch wrapper. A
+   balanced audit across the whole class rules out a static frame-contract
+   defect; one unbalanced path identifies the next bounded fix/probe. Keep the
+   runtime-side corruption hypothesis open if all sites balance.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,

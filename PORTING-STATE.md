@@ -63685,3 +63685,22 @@ classify retail ownership of `0x688..0x710` because the matching shaded phase
 was not reached. No mitigation was added.
 
 ORIGIN: independent whole-RDRAM and input controls plus VI trace; no guest value was skipped, rewritten, or otherwise mitigated.
+
+## Session 1139 (2026-08-14) — ruled out debugger overhead in retail stall
+
+Ran the prescribed debugger-off retail-oracle audit with the same
+`iter974-armB2` core and retail ROM, `--oracle-emulator 1`, VI polling, and
+the eleven-Start schedule. VI polling reached the initial width 320,
+origin `0x006dd280`, at 0.3s and remained active through 179.3s without any
+later width/origin transition. All eleven scheduled presses were delivered
+through 56.1s. The oracle exited at the 180s bound with rc=3, reporting
+`0 VI (~0.0s emulated)` and zero execution-watch hits.
+
+The positive VI-poll control therefore passed while the debugger-off arm still
+stalled at width 320. This rules out debugger/watch overhead as the launch
+cause and leaves the core scheduling/state-path boundary open. It does not
+classify the M4 `0x688..0x710` ownership question because the shaded phase was
+never reached. No mitigation was added.
+
+ORIGIN: independent VI-poll and scheduled-input controls; no guest value was
+skipped, rewritten, or otherwise mitigated.
