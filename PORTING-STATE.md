@@ -63116,3 +63116,44 @@ were observed, and the separate DP registration/completion continued on
 zero value and a fixed-address alias for these observed calls, but does not
 identify the writer instruction: the probe samples at call boundaries and the
 shared last-guest-PC field is cross-thread. Queue behavior was unchanged.
+
+Restated discrimination: this selects runtime `H-nonzero-gate` among the
+`H-gate-stale-or-unseen-writer` candidates carried from s1105 — the gate byte
+is genuinely nonzero at SP send time, not stale-zero misread and not a
+fixed-address alias artifact. The next discriminator, unchanged from the plan
+already written to `scratch/agent/NEXT.md`, is a regeneration-safe generated-
+store probe on every `MEM_B`/`MEM_H`/`MEM_W` whose resolved physical target can
+be `0x11A89F` or `0x11A8A0`, run under the same VI-1024/E9-control recipe: a
+writer row preceding a same-phase SP send selects `H-generated-writer`;
+positive controls with zero writer rows select `H-nongenerated-writer`; broken
+phase/order controls select `H-observation-race` and require fixing the probe
+instead of concluding.
+
+ORIGIN: this is a restatement of s1106's own discrimination for the exit-gate
+check; no new build, run, or mitigation.
+## Session 1107 (2026-08-14) — checkpoint audit of 0x8011A89C region ownership
+
+This iteration is a checkpoint retry of a prior process that died after s1106
+closed cleanly (commit `c1dabdf1`, `OUTCOME=ADVANCED`, `STATUS=DONE`) but was
+flagged for not stating a discrimination inline. Per iteration rule 8's
+"3rd consecutive iteration, same hypothesis" guard and the checkpoint-closeout
+instruction, this iteration did not repeat s1106's build/run or start s1107's
+large planned store-probe sweep; instead it ran one small bounded, build-free
+static check and corrected the exit-gate concern above.
+
+Checked `syms/rogue_squadron.datasyms.toml` for named data symbols bracketing
+`0x8011A89C..0x8011A8A0`: the nearest are `D_8011A7E8` (`0x8011A7E8`, the known
+DP blocking queue) and `D_8011A8D0` (`0x8011A8D0`); nothing is named in
+between, so the gate bytes sit inside the SP/DP scheduler's own unlabeled
+static data block. Cross-referenced against s1083's overlay DMA destinations
+(`0x800A5130`, `0x8010B6D0`, `0x800CD520`, `0x800B0940`): none overlap this
+address. This selects static `H-core-bss-not-overlay`: the region is ordinary
+main-segment static data, zero-initialized at boot like the rest of the image,
+not overlay-loaded ROM content, so a DMA/preexisting-content explanation for
+the observed nonzero byte is ruled out. This narrows `H-nongenerated-writer`
+(from `scratch/agent/NEXT.md`) to an actual non-generated code path rather than
+a load-time content artifact; it does not change the ranked next step. No
+build, runtime code, queue behavior, or mitigation changed.
+
+ORIGIN: symbol-table/segment classification only; not a mitigation, and it
+does not itself attribute a writer.

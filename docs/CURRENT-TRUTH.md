@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1106 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1107 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -312,6 +312,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1104 | Complete generated gate census separates the roles. `0x8011A89D/0x8011A89E` are set to 1 by `setPostSwapPendingFlags` and consumed/cleared by submit/advance paths. The SP producer’s `0x80019ED4/0x80019EE4` reads are through `s2 = (0x8011A89C + 3)`, i.e. `0x8011A89F/0x8011A8A0`; the same producer clears those bytes after its sends, and no generated nonzero writer was found. `dpInterruptHandlerThread` reads through `s0 = 0x8011A408`, so `0x8011A89D` is not its direct fixed-address flag in this generated snapshot. This selects static `H-sp-gate-stale-or-external-writer` while ruling out the `H-8011A89D-is-DP-gate` role assignment; non-generated ownership and runtime values remain open. No build, runtime code, or queue behavior changed. |
 | s1105 | Non-generated/companion ownership census found no host/runtime, patch, or companion read/write of `0x8011A89F`, `0x8011A8A0`, or `0x8011A408`; the companion has only undefined-symbol declarations. Generated boundaries positively matched `spTaskSchedulerThread` and `dpInterruptHandlerThread`: SP resolves `s2=0x8011A89F`, `s3=0x8011A8A0`, and clears both; DP uses `s0=0x8011A408` as its queue object. Selects static `H-gate-stale-or-unseen-writer`, rules out an in-tree external writer and source-level alias, and leaves runtime values/execution open. No build, runtime code, queue behavior, or mitigation changed. |
 | s1106 | Built the submit-boundary probe and ran a corrected VI-1024-gated capture after rejecting an invalid first run whose physical addresses omitted the KSEG0 `0x100000` offset. The fixed run passed the VI-1024 control, produced 818 scoped target rows with no crash markers, and showed repeated `0x8011A8A0=1` at SP sends while `0x8011A89F` was normally zero. It also observed both blocking consumers and the separate `0x8011A408` DP object, while event wiring continued to complete on `0x8011A420`/`0x8011A408`. Selects runtime `H-nonzero-gate`, rules out a stale-zero gate and fixed-address alias for these calls, but does not identify the writer PC. The first capture was invalid; no queue behavior changed. |
+| s1107 | Checkpoint iteration (no build/run): restated s1106's discrimination inline and ran one bounded static check. `syms/rogue_squadron.datasyms.toml` has no symbol between `D_8011A7E8` and `D_8011A8D0`, so the gate bytes sit in the SP/DP scheduler's own unlabeled static block; none of s1083's overlay DMA destinations overlap it. Selects static `H-core-bss-not-overlay`, ruling out a DMA/preexisting-ROM-content explanation and narrowing `H-nongenerated-writer` to an actual non-generated code path. Ranked next step is unchanged. |
 
 ## Ranked next steps
 
