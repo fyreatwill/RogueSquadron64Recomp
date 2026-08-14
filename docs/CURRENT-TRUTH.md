@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1095 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1096 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -78,6 +78,15 @@ eleven presses, and 7,198 VI frames in 120 seconds at width 320/origin
 the compare's taken path explains the absent ordinary fall-through PC. The
 initial attempt was truncated before its 120-second completion and is invalid;
 the full rerun is the usable capture.
+
+The s1096 static audit closes the branch-target classification. The preserved
+generated snapshot and independently mapped retail ROM agree word-for-word from
+`0x8006D980` through `0x8006D9C8`. `0x8006D9B4` is `bne $v0,$zero,0x8006D980`;
+the taken target increments `$s0`, executes the six input/frame submission
+calls at `0x8006D988`–`0x8006D9AC`, and returns to the compare at
+`0x8006D9B0`. The target is therefore a valid loop-back, not an exit or a
+generated/ROM mismatch. The non-taken path begins at `0x8006D9B8`'s delay-slot
+instruction and continues through the cleanup path at `0x8006D9BC`.
 
 ## Retail oracle boundary
 
@@ -275,16 +284,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1093 | Audited the retail oracle source. `R4300Emulator=0` selects `run_pure_interpreter`, whose loop calls `update_debugger` before each top-level instruction; `DECLARE_JUMP` recursively executes the delay slot without another debugger update. `--watch-pc` uses `[pc,pc+4)`, so zero PCs that are delay slots are callback omissions by construction. This established the callback arm for delay slots, while non-delay PCs remained unresolved. |
 | s1094 | Static ROM/generated audit classified every PC from `0x8006D980..0x8006D9BC`. The independent ROM mapping matched all generated words; `0x8006D9B8` is the `bne` delay slot, but `0x8006D9BC` is ordinary fall-through code. Selects `H-nondelay-missing` for the zero `9BC` watch and leaves only the runtime taken-vs-fall-through question. |
 | s1095 | Full established-schedule retail oracle rerun passed controls: whole-RDRAM 10,000 callbacks, eleven PIF Start presses, and 7,198 VI frames at width 320/origin `0x006dd280`. Execution hits were `0x8006D9B0=1`, `0x8006D9B4=1`, and `0x8006D9BC=0`. Single-source runtime result selects `H-taken-branch`; the initial truncated attempt was invalid. |
+| s1096 | Bounded static audit used the preserved generated snapshot and retail ROM. All words `0x8006D980..0x8006D9C8` matched under `ROM = VRAM - 0x80000000 + 0xC00`; the `0x8006D9B4` target increments `$s0`, runs the six frame/input calls, and loops back to `0x8006D9B0`. Selects `H-target-loop`, rules out `H-target-exit` and `H-static-mismatch`; no runtime code or mitigation changed. |
 
 ## Ranked next steps
 
-1. Perform one bounded static audit of the taken branch at `0x8006D9B4`:
-  inspect the generated function and raw ROM words through its branch target,
-  then enumerate the target's immediate control-flow successors and any
-  writes/reads that can explain why the loop does not return to `0x8006D9BC`.
-  This follows the single-source s1095 runtime selection and must not add a
-  mitigation or reopen the state-gate arm. Do not arm a freelist watch without
-  an independently observed `0x6abxxx` hangar-origin 512 transition.
+1. Perform one bounded static audit of `submitGfxFrame` (`0x8000C07C`) and its
+  immediate callers/return assumptions on the `runIdleFramesAndLoadSaveData`
+  loop path. Classify whether it can legitimately fail to return after the
+  final loop iteration, or whether the remaining boundary must be outside this
+  callee. Use generated/companion evidence only; do not add a guard or rerun
+  the established oracle schedule.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

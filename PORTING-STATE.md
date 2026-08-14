@@ -62729,6 +62729,23 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1096 (2026-08-14) — classified the retail loop branch target
+
+Performed the single bounded static audit from NEXT.md without building or
+changing runtime code. The checkout's preserved generated snapshot
+`scratch/agent/s389_verify/before_current_applied/funcs_17.c` identifies the
+`0x8006D9B4` taken branch as a transfer to `L_8006D980`. Independently reading
+the retail ROM with `ROM = VRAM - 0x80000000 + 0xC00` produced matching words
+for `0x8006D980..0x8006D9C8`: the target increments `$s0`, calls the six
+input/frame routines at `0x8006D988`, `0x8006D990`, `0x8006D998`, `0x8006D9A0`,
+and `0x8006D9A8` with their delay slots, then reaches the compare at
+`0x8006D9B0`. The branch target is a genuine loop-back and not an exit;
+generated and ROM evidence also rule out an address-mapping mismatch. This
+explains the retail `0x8006D9B4` hit with absent `0x8006D9BC`, but does not by
+itself identify why the recomp path fails to reach later cleanup. No
+mitigation was added and no ORIGIN line is needed beyond the static ROM/source
+provenance above.
+
 ## Session 1095 (2026-08-14) — selected the retail taken branch
 
 The first planned oracle attempt was truncated before its 120-second
