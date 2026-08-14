@@ -63666,3 +63666,22 @@ stall over a watch-instrumentation fault. It does not classify the retail
 `0x688..0x710` ownership question because the matching shaded phase was never
 reached; the process-state attribution is single-run evidence pending an
 independent execution-mode check. No mitigation was added.
+
+## Session 1138 (2026-08-14) — repeated retail stall across execution modes
+
+Ran the prescribed retail-oracle execution-mode audit with the same
+`iter974-armB2` core and retail ROM, `--oracle-emulator 1`, VI tracing, the
+whole-RDRAM positive-control watch, and the eleven-Start schedule. The control
+reached 10,000 callbacks and was removed successfully; all eleven presses were
+delivered through 56.1s. The run emitted only the initial VI record at 1.2s,
+width 320 and origin `0x006dd280`, then stopped producing VI transitions until
+the 180s bound. It exited cleanly with 10,799 emulated VI frames and zero
+execution-watch hits.
+
+This reproduces the width-320 stall under execution mode 1, so the prior
+execution-mode-specific interpreter hypothesis is ruled out. It does not
+distinguish core scheduling from debugger/watch overhead, and it does not
+classify retail ownership of `0x688..0x710` because the matching shaded phase
+was not reached. No mitigation was added.
+
+ORIGIN: independent whole-RDRAM and input controls plus VI trace; no guest value was skipped, rewritten, or otherwise mitigated.

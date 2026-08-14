@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1137 (2026-08-14).
+in the ledger. Reviewed through s1138 (2026-08-14).
 
 ## Current state
 
@@ -41,6 +41,12 @@ in the ledger. Reviewed through s1137 (2026-08-14).
   for 763/777 samples. This rules out the M4 target watch as the launch cause,
   but is single-run evidence for a core/emulator progress stall and does not
   make the retail M4 ownership watch evaluable.
+- The independent `--oracle-emulator 1` audit also stopped at the initial VI
+  width 320/origin `0x006dd280` after delivering all eleven presses. Its
+  whole-RDRAM control reached 10,000 callbacks and was removed successfully;
+  no later VI transition occurred through 180 seconds. This reproduces the
+  stall across execution modes, but does not distinguish core scheduling from
+  debugger/watch overhead and does not evaluate the M4 target range.
 
 ## Retail VI descriptor boundary
 
@@ -125,15 +131,17 @@ does not yet establish retail reachability or ownership of that range.
 | s1133 | Static census found `frameStartReset` fully regenerated with 14 call sites and overlay registration; no active fixup restoration exists, closing regeneration omission. |
 | s1134–s1135 | Defined and executed the paired M4 port capture; VMADH model and VGE/store path matched on 128 lanes with an independent control. |
 | s1137 | Reproduced the retail post-press stall with no M4 target watch; whole-RDRAM control and input passed, but the run never left VI width 320 and sampled in the core's VI-event sleep path. |
+| s1138 | Reproduced the width-320 stall with `--oracle-emulator 1`; whole-RDRAM control and all eleven presses passed, so the stall is not specific to the prior execution mode. |
 
 ## Ranked next steps
 
-1. Run one independent execution-mode audit of the retail-oracle stall using
-   the same ROM, core, positive-control watch, VI trace, and input schedule but
-   `--oracle-emulator 1`. If it advances beyond width 320, classify the
-   interpreter path as the stall; if it reproduces the stop, keep the core
-   progress/state-path boundary open. Only a run that reaches the matching
-   shaded VI phase can classify `0x688..0x710`.
+1. Run one debugger-off retail-oracle audit using the same core, ROM, eleven-
+   Start schedule, and `--oracle-emulator 1`, with `--vi-poll` and no debugger
+   watch. If VI polling advances beyond width 320, debugger/watch callbacks
+   remain the live stall hypothesis; if it also stays at width 320, rule out
+   debugger/watch overhead and keep the core scheduling/state-path boundary
+   open. Only a run that reaches the matching shaded VI phase can classify
+   `0x688..0x710`.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
