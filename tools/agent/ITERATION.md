@@ -156,7 +156,14 @@ real one.
 Before you may stop, ALL of:
 1. Append a dated session entry to PORTING-STATE.md: what ran, what it
    showed, what it rules out. Include failed experiments — a documented dead
-   end is a result.
+   end is a result. The heading MUST match this shape EXACTLY, because the
+   Stop gate greps for it verbatim (`^+## Session `):
+   `## Session N (date) — title`
+   e.g. `## Session 983 (2026-08-13) — audited r4300_pc wrapper contract`.
+   N is the next integer after the previous entry's number. No other shape
+   satisfies the gate — not `## sNNN`, not a leading date, not a missing
+   "Session" word. Sessions 877-926 drifted into these variants and every one
+   of them failed this check.
 2. Update docs/CURRENT-TRUTH.md: next-steps reordered; any overturned
    conclusion moved to the superseded section WITH why it was believable.
 3. Rewrite scratch/agent/NEXT.md for the next iteration: the single next work
