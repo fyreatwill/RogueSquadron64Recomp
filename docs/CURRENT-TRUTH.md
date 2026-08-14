@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s963 (2026-08-13). The active blocker is authoritative
+Reviewed through s964 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -223,6 +223,15 @@ closed; M3 work is limited to systematic idiom-class audits.
   out mapping/device initialization as the immediate failure and localizes the
   remaining defect to the debugger callback path after read entry; no runtime
   mitigation or retail conclusion followed.
+- s964 added rate-limited PIF-only markers around breakpoint lookup, the
+  `RUNNING`→`PAUSED` state assignment, and `update_debugger()` in the external
+  oracle core. The ordinary arm passed its controls with 1,105,307 whole-RDRAM
+  writes, one ordinary read, and 299 VI frames. The PIF arm reached the wrapped
+  read at `0x1fc007e4` but emitted no pre-lookup marker and exited before an
+  oracle completion line. This localizes the immediate crash before
+  `check_breakpoints_on_mem_access()` enters lookup; the three instrumented
+  callback stages remain unevaluable. No runtime mitigation or retail
+  conclusion followed.
 
 ## Recent evidence ledger
 
@@ -263,6 +272,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s961 | Ordinary RDRAM read watch survived with 1,105,122 write-control hits, one read hit, and 299 VI; PIF RAM and PIF ROM read watches both crashed pre-VI. Source mapping selects a PIF-region handler defect over a generic read-watch defect; no retail PIF conclusion. |
 | s962 | Core rebuild with `pif_address()` base stripping left ordinary RDRAM healthy (1,105,106 writes/one read/299 VI) but PIF read watch still crashed `rc=139` after RDRAM init and before emulator start. Latent normalization bug recorded; pre-start PIF debugger/init failure remains. |
 | s963 | Batched oracle diagnostics showed ordinary RDRAM completing (1,105,162 writes/299 VI), while PIF mapping and activation succeeded and the first wrapped PIF read entered before `rc=139`; immediate failure is in the debugger callback path after read entry. |
+| s964 | Callback-boundary markers showed the ordinary arm completing (1,105,307 writes/one read/299 VI), while the PIF arm reached wrapped read entry but produced no pre-lookup marker before `rc=139`; lookup/state/update remain unevaluable and the failure is earlier in the PIF read-with-breakpoint path. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -281,11 +291,11 @@ entries and do not authorize mitigations.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. Isolate the remaining oracle PIF-region crash before retrying the
-   callback-table watch: s963 showed mapping, activation, and wrapped read
-   entry all succeed, but the first PIF read still exits `rc=139`. The next
-   unit should instrument `check_breakpoints_on_mem_access()` around lookup,
-   debugger state transition, and `update_debugger()`, paired with the
-   ordinary-RDRAM positive control.
+   callback-table watch: s964 showed the first wrapped PIF read but no entry
+   marker from `check_breakpoints_on_mem_access()`. Instrument the PIF
+   `read_with_bp_checks()` call boundary and its callback argument/return path,
+   paired with the ordinary-RDRAM positive control; do not infer anything
+   about callback internals until this boundary is crossed.
 4. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
    triangles, then I4 `sample=64x128`, each with independent controls.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
@@ -295,29 +305,27 @@ entries and do not authorize mitigations.
 
 HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-Make one minimal source-level diagnostic in the external oracle core's
-breakpoint callback path so a PIF-region read watch can survive or name the
-failing callback stage.
+Make one minimal source-level diagnostic in the external oracle core around
+the PIF `read_with_bp_checks()` call boundary so the PIF-region read watch can
+cross the wrapper or name the first failing call boundary.
 Do not edit the recomp runtime or retry retail PIF/callback hypotheses until
 this passes.
 
 Competing hypotheses:
 
-- H-pif-lookup: breakpoint lookup on the first PIF access dereferences invalid
-  breakpoint-table state.
-- H-pif-state-transition: pausing the debugger run state on a PIF hit enters an
-  invalid state transition before the callback returns.
-- H-pif-update-callback: `update_debugger()` or its frontend callback crashes
-  after the breakpoint has been identified.
+- H-pif-wrapper-before: the PIF wrapper crashes before invoking
+  `check_breakpoints_on_mem_access()`.
+- H-pif-callback-entry: the wrapper invokes the callback, but argument/state
+  setup or entry crashes before its first instruction marker.
+- H-pif-wrapper-after: the callback returns, but the saved-handler restore or
+  wrapper return path crashes.
 
-Discriminating measurement: add one rate-limited diagnostic before and after
-breakpoint lookup, before and after the debugger state transition, and before
-and after `update_debugger()`, then run ordinary-RDRAM and PIF-region
-read-watch arms in one bounded batch. The whole-RDRAM write control must fire
-in both. A crash before lookup return selects table lookup; a crash after
-lookup but before state-transition return selects debugger-state handling; a
-crash after state transition but before callback return selects
-`update_debugger()`.
+Discriminating measurement: add rate-limited markers immediately before and
+after the PIF wrapper's call to `check_breakpoints_on_mem_access()`, then run
+ordinary-RDRAM and PIF-region read-watch arms in one bounded batch. The
+whole-RDRAM write control must fire in both. No pre-call marker selects an
+earlier wrapper/device fault; pre-call plus no post-call marker selects the
+callback path; both markers select the restore/return path.
 
 Exact starting checks/commands:
 

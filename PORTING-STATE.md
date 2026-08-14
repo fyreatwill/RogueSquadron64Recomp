@@ -59888,3 +59888,28 @@ Captures: `scratch/agent/oracle_runs/963_pif_diag/`.
 ORIGIN: external oracle diagnostics at mapping/activation/read entry plus
 paired ordinary/PIF arms with visible whole-RDRAM controls; no guest value was
 changed and no mitigation was landed.
+
+## Session 964 (2026-08-13) — PIF read reaches wrapper but not callback entry
+
+Added rate-limited PIF-only markers in the external oracle core around
+`lookup_breakpoint`, the `RUNNING` to `PAUSED` state assignment, and
+`update_debugger()`. Rebuilt the core and oracle front-end, then ran ordinary
+RDRAM and PIF-RAM read-watch arms concurrently with the same whole-RDRAM write
+positive control.
+
+The ordinary arm completed with 1,105,307 whole-RDRAM write hits, one ordinary
+read hit, and 299 VI frames. The PIF arm logged the first wrapped read at
+`0x1fc007e4`, but produced no pre-lookup marker and exited `rc=139` before an
+oracle completion line. Therefore the callback's lookup, state transition,
+and `update_debugger()` stages were not entered or could not be observed;
+the immediate failure boundary is earlier than the first instruction of
+`check_breakpoints_on_mem_access()` in the PIF read-with-breakpoint path.
+
+This rules out the prior interpretation that the callback internals were the
+immediate classified site, but does not classify the PIF wrapper/device call
+boundary, retail PIF activity, the callback-table hypothesis, or any recomp
+runtime writer. No runtime mitigation or submodule change was made.
+
+ORIGIN: external oracle callback-boundary diagnostics plus paired ordinary/PIF
+arms with visible whole-RDRAM controls; no guest value was changed and no
+mitigation was landed.
