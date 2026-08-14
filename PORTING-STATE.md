@@ -64166,3 +64166,16 @@ failure followed 30 wild-width and 4 OOB writeback skips. Together with the
 controlled stable s1165 arm, this advances H3, rules out a preceding RT64
 resource marker in this capture, and shows writeback skips alone do not select
 H2. No mitigation was added.
+
+## Session 1167 (2026-08-14) — pre-1024 operation boundary had a different failure
+
+Rebuilt the Debug target and ran the prescribed phase-gated operation-boundary
+capture with slot-dispatch, writeback, crash, DPC, and RT64-allocation
+categories. The positive controls passed: 8,192 bounded slot-dispatch rows,
+54 writeback rows, and crash logging. The process stayed in the `640→2→640`
+lifecycle and then raised Bus error signal 10 at guest PC `0x8000B650`, with
+`musyxSynthFrame+2796` as the host symbol. The final writeback row was followed
+by no DPC/RT64 operation marker and no `[rt64-alloc]` marker before the fault.
+This is a valid different-failure H3 arm, not evidence of a preceding RT64
+operation and not authorization for a mitigation. The next unit is a complete
+static generated-call idiom audit for `musyxSynthFrame` and its callers.

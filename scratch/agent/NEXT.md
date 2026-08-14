@@ -1,34 +1,34 @@
-# NEXT work unit (s1167)
+# NEXT work unit (s1168)
 
-HYPOTHESIS-ID: pre1024-failure-source
+HYPOTHESIS-ID: musyx-synth-call-idiom
 
-Audit the existing pre-1024 host/RT64 operation markers around guest PC
-`0x8000B650` in one phase-gated run. Do not add a skip, guard, restore, or new
-counter. Use the existing crash, slot-dispatch, writeback, DPC, and RT64
-operation/resource categories; attribute the first marker after the last
-writeback control and before the crash.
+Perform one complete static idiom-class audit of every generated callsite of
+`musyxSynthFrame` (and any generated wrapper it directly calls) to determine
+whether the pre-1024 `0x8000B650` failures share a malformed caller contract.
+Do not add a guard, skip, restore, or runtime counter.
 
 Competing hypotheses and discriminator:
 
-- H1: a DPC/RT64 operation marker identifies a specific operation immediately
-  before the pre-1024 failure.
-- H2: the host Metal/compiler failure is independent of the guest writeback
-  stream and has no preceding RT64 operation marker.
-- H3: the run stays stable or fails in another host operation, so the current
-  `0x8000B650` family is nondeterministic and not classifiable from this arm.
+- H1: at least one reachable generated caller has an unbalanced stack/return
+  contract or a wrong direct-call boundary; that site is a concrete next probe.
+- H2: all generated callers have balanced contracts and agree with companion
+  symbol boundaries; the fault is outside this generated call idiom.
+- H3: no generated callsite exists in the active tree, so the `musyxSynthFrame`
+  frame is reached through a runtime-side or indirect path and this class is
+  the wrong audit target.
 
-The discriminating measurement is the ordered marker window from the final
-phase-scoped `[ost-wb]` row through `[CRASH][last-guest-pc]`, with slot,
-writeback, and crash positive controls live. A specific preceding operation
-selects H1; a valid crash with no operation marker selects H2; a valid stable
-arm or different failure selects H3. A null is invalid unless all controls
-fire.
+The discriminating measurement is the complete callsite table: every textual
+and generated `musyxSynthFrame` edge, companion entry address, stack delta/
+restore pair, saved-return idiom, and direct-versus-indirect dispatch form.
+One malformed reachable site selects H1; a complete balanced table selects
+H2; an empty generated inventory selects H3. A partial grep is not a result.
 
 Exact commands:
 
-    cmake --build build --config Debug --target RogueSquadron64Recomp
-    env GAME_EXTRA_ENV='ROGUESQ_LOG_SLOT_DISPATCH=1 ROGUESQ_LOG_CRASH=1 ROGUESQ_LOG_OST_WB=1 ROGUESQ_LOG_DPC=1 ROGUESQ_LOG_RT64_ALLOC=1' PROBE_MODE=start_only HOLD_S=0 CAPTURE_TICK_S=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh pre1024_source_s1167 240 12
+    rg -n "musyxSynthFrame|8000B650" RecompiledFuncs src lib docs tools
+    rg -n "musyxSynthFrame" ../N64Recomp/RecompiledFuncs 2>/dev/null
+    sed -n 'START,ENDp' RecompiledFuncs/funcs_*.c
 
-Expected outcomes: classify the first ordered host operation marker before a
-reproduced fault, or record a valid control-passing stable/different-failure
-arm as H3. No mitigation is authorized by this work unit.
+Record the full site inventory and companion-symbol comparison in the session
+entry and use it to choose the next phase-gated runtime unit. No build is
+needed unless the census finds a source-boundary correction.

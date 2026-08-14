@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1165 (2026-08-14).
+in the ledger. Reviewed through s1167 (2026-08-14).
 
 ## Current state
 
@@ -365,14 +365,17 @@ corruption.
 | s1164 | Rebuilt and reran the runtime-origin capture. Slot-dispatch and crash controls were live (8,192 dispatch entries and 36 crash rows), but VI 1024 was not reached; the process terminated in RT64 `copyToRAM` at guest PC `0x8000B650` with `si_addr=0x11ffbc000`, after wild-width writeback skips, and no slot-SP guard row. The writer-origin discriminator remains unevaluable; no H1/H2/H3 conclusion or mitigation is justified. |
 | s1165 | Rebuilt and ran the pre-1024 writeback reachability capture. Slot dispatch logged 8,192 entries; writeback control logged 25 rows including 32 wild-width skips, with zero overlaps and zero crashes. The process stayed in 640→2→640 beyond the 600-second cap and was SIGKILLed. Compared with s1164, this supports nondeterministic reachability (H3) and shows wild skips alone do not classify the crash; no mitigation was added. |
 | s1166 | Rebuilt and ran the resource-marker capture with slot, writeback, crash, and RT64-allocation controls. All controls passed; there were no RT64-allocation markers and no `copyToRAM` fault. The run instead hit an Apple Metal compiler-cache SIGSEGV at guest PC `0x8000B650` before VI-1024, after 30 wild-width and 4 OOB skips. Together with s1165, this advances H3 and closes the resource-marker audit; no mitigation was added. |
+| s1167 | Rebuilt and ran the operation-boundary capture with slot, writeback, crash, DPC, and RT64-allocation categories. Controls passed; the run stayed pre-1024 and hit a Bus error at guest PC `0x8000B650` in `musyxSynthFrame+2796`. No DPC/RT64 operation or allocation marker followed the final writeback row before the fault, so this selects the valid different-failure H3 arm and adds no mitigation. |
 
 ## Ranked next steps
 
-1. Audit the next independent pre-1024 failure source or operation boundary
-   with a phase-gated positive-control capture. The s1164/s1165/s1166 sequence
-   supports nondeterministic reachability (H3); no RT64 allocation marker
-   preceded either failure, and wild-width/OOB skips occur without selecting a
-   cause. Do not add a mitigation or infer ownership from a skip alone.
+1. Perform a systematic generated-call idiom audit for `musyxSynthFrame` and
+   its callers before another reactive pre-1024 capture. The s1167 different
+   failure at guest PC `0x8000B650` had no preceding DPC/RT64 operation marker,
+   so runtime operation ordering is closed for this arm. Enumerate every
+   generated callsite, classify its stack/return contract and argument-source
+   idiom, and select the next bounded runtime probe only if a complete class
+   audit leaves a reachable discriminator. Do not add a mitigation.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry
