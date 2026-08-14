@@ -59392,3 +59392,31 @@ metadata, not independent runtime writer/value evidence.
 ORIGIN: exhaustive four-site pointer-flow, slot scaling, direct-call,
 register-indirect, and companion-symbol inventory; no guest value mutation or
 mitigation.
+
+## Session 946 (2026-08-13) — standalone allocator has no generated reachability edge
+
+Performed the planned source-only M3 reachability audit for
+`allocVoiceHandleNode` at `0x80086450`. No build, game run, soak, generated
+source edit, guard, mitigation, or behavior change was made.
+
+An exhaustive search of `RecompiledFuncs`, the audio overlay registration
+table, and the companion symbol file found the allocator only at its function
+definition, prototype, overlay registration, and symbol declaration. There
+are no direct generated calls or address references. The only audio-overlay
+`jalr` is the callback in `binarySearchWithComparator` at `0x80085C70`; its
+target is loaded from the caller's stack and the companion metadata identifies
+the routine as a generic comparator. No generated caller or assignment makes
+that target `allocVoiceHandleNode`, so it is not an allocator reachability edge
+in the available static source.
+
+This selects H-stop-voices-by-handle-index-valid for the standalone-body
+question at the static call-graph level: the body is dead in the generated
+source graph, while the three inline node-copy sites remain voice-record
+provenance. It does not prove runtime function-pointer reachability or the
+legitimacy of every copied handle value. H-stop-voices-by-handle-index-mismatch
+was not demonstrated. This remains a single-source static result, not
+independent runtime writer/value evidence.
+
+ORIGIN: exhaustive allocator reference, audio-overlay `jalr`, comparator
+target-setup, overlay-registration, and companion-symbol inventory; no guest
+value mutation or mitigation.
