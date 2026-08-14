@@ -63619,3 +63619,11 @@ arithmetic hypothesis and a VGE mutation on the captured path. It does not
 establish retail ownership or reachability because the run lacked VI-1024;
 the targeted retail null remains unevaluable until its matching phase is
 proven. No mitigation was added.
+
+Discrimination: the matched 128-lane VMADH model and the 0/128 VGE delta
+together refute both `H-m4-active-accumulator` (arithmetic still active on
+this path) and `H-m4-vge-mutation` (VGE changes the captured lanes) on the
+port side; this selects the remaining live hypothesis as retail-side
+ownership of the `0x670..0x6C0` record, which s1136's oracle watch over
+physical `0x688..0x710` is designed to discriminate next (see
+`scratch/agent/NEXT.md`, `HYPOTHESIS-ID: m4-ground-truth-accumulator-origin`).
