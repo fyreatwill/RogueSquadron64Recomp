@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1074 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1076 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -92,6 +92,16 @@ the menu overlay. This rules out a generated caller selecting index 2, but
 does not classify an untyped guest entry into the companion's nominal
 `func_800B47C4` path.
 
+The s1076 oracle design audit found one phase-gated discriminator that keeps
+the closed eleven-Start schedule: combine the whole-RDRAM, PIF, and VI
+callback/poll controls with physical write watches on controller edge storage
+(`0x13A960..0x13A970`) and the selector/state family
+(`0x130B40..0x130B58`). Edge writes without selector writes select a state
+gate; both write classes without hangar-origin 512 select a downstream state
+gate; absent edge writes with positive PIF selects an execution/alias boundary;
+selector writes plus `0x6abxxx` 512 solves the route. This is a design result,
+not runtime evidence.
+
 ## M4 zero-shade boundary
 
 The independent Factor 5 command reference and same-combiner/white-shade
@@ -133,13 +143,13 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1073 | `func_800B47C4` masks an external `arg0` into `temp_s1` before its computed-base XOR write; no companion caller proves the index, so `H-temp-s1-open` remains. |
 | s1074 | Complete generated raw `MEM_B(0X14, ctx->rN)` census found 31 stores. Only the two `cycleIdleDemoId` stores use the fixed selector base; the other 29 use object/argument/stack-derived bases. No additional generated writer reaches `0x80130B54`; the non-generated/index-mediated boundary remains open. |
 | s1075 | The only generated call to the actual `menuControllerInput` entry passes `a0=0`, selecting masked index 0; no raw dispatch entry targets `0x800B47C4/0x800B47D0`. The generated caller class is non-2, while an untyped guest-entry possibility remains single-source open. |
+| s1076 | Designed a same-run retail discriminator joining controller-edge writes, selector/state writes, PIF reads, whole-RDRAM callbacks, and VI phase transitions. No run was performed; the route remains open pending this measurement. |
 
 ## Ranked next steps
 
-1. Design one new falsifiable retail-oracle phase-path discriminator that could
-   reach the 512 hangar-origin phase; audit existing controls and closed
-   schedule/input explanations first. Do not arm the freelist watch from
-   width-320 evidence.
+1. Run the s1076 retail-oracle discriminator from
+   `docs/ORACLE-512-DISCRIMINATOR.md`; only arm a freelist watch after a
+   `0x6abxxx` hangar-origin 512 transition is independently observed.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

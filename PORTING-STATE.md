@@ -62558,3 +62558,16 @@ ORIGIN: generated caller and overlay-registration search in
 `RecompiledFuncs/funcs_*.c` and `recomp_overlays.inl`, cross-checked against
 `symbol_files/menu_overlay.txt` and the companion function's branch; no guest
 value, runtime behavior, or mitigation was changed.
+## Session 1076 (2026-08-14) — designed retail VI-512 discriminator
+
+Ran the bounded design audit only; no build or runtime run was performed.
+Read the oracle README, current oracle frontend/recipe, and current-truth
+entries. Existing whole-RDRAM, PIF, and VI callback/poll controls are positive;
+the tested Start, Start+Z, hold, cadence, first-input, and duration schedules
+are closed. Designed one same-run discriminator using the documented
+eleven-Start schedule plus physical watches on controller edge storage
+`0x13A960..0x13A970` and selector/state storage `0x130B40..0x130B58`.
+Edge-without-selector, both-without-hangar-512, and selector-plus-`0x6abxxx`
+512 outcomes separate state, downstream-state, and solved-route hypotheses;
+missing edge writes with positive PIF identifies an execution/alias boundary.
+This rules out no runtime hypothesis yet because the measurement is pending.
