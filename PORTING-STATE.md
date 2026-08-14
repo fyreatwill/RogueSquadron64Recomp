@@ -61283,3 +61283,21 @@ file edit was made.
 The queued `slot_sp_guard` recipe was folded into this iteration's soak
 results separately: it crashed at `slotDispatcherIter+8592` before producing
 the guard record, so the original `+872` caller remains unclassified.
+
+## Session 1013 (2026-08-14) — audited Factor 5 shade accumulator path
+
+Ran the prescribed static M4 work unit without building or running. The final
+shade sequence is `vmadn v7,v5,v0` followed by `vmadh v6,v4,v0`; because the RSP
+accumulator is shared, the latter consumes the accumulator state left by the
+former, not the state from the preceding `vmadm v4,v4,v19[0]`. The local VMADH
+model updates `ACCH:ACCM` from the signed high-half plus `v4*v0` and returns
+the middle slice with signed saturation. The DMEM-0x60 table contains no
+`0x8000` lane, so the final VGE cannot select the observed sentinel from
+`v29`.
+
+This refutes `H-v29-selection` and corrects the accumulator dataflow. It does
+not choose saturation over an in-range sign-extending middle word: no complete
+pre/post `ACCH:ACCM:ACCL`, `v4`, and `v0` tuple exists in the current captures.
+The next work unit is one scoped runtime capture with a positive control. No
+mitigation or generated-file edit was made. Full audit:
+`docs/M4-ACCUMULATOR-AUDIT.md`.
