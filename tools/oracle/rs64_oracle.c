@@ -80,6 +80,7 @@ static long g_hits;
 static long g_hit_cap = 200;          /* stop logging after this many, keep running */
 static unsigned int g_detail_watch_mask;
 static int g_verbose;
+static int g_watches_armed;
 
 static double now_s(void)
 {
@@ -98,10 +99,10 @@ static void core_msg(void *ctx, int level, const char *msg)
 
 /* ---- debugger callbacks ------------------------------------------------ */
 
-/* Called once, when the debugger is initialised and the CPU is about to run.
- * Breakpoints can only be installed from here on: the core allocates its
- * breakpoint table as part of debugger init. */
-static void dbg_init(void)
+/* Installs every --watch-* the user asked for. Split out of dbg_init() (see
+ * below) so it can be deferred to first VI instead of running at debugger
+ * init. */
+static void arm_watches(void)
 {
     int i;
     for (i = 0; i < g_nwatch; i++) {
@@ -125,6 +126,23 @@ static void dbg_init(void)
         }
     }
     fflush(stdout);
+}
+
+/* Called once, when the debugger is initialised and the CPU is about to run.
+ * Does NOT arm watches here even though the breakpoint table already exists
+ * by this point (it's allocated as part of debugger init, before this
+ * callback fires): poweron_r4300() hasn't run yet, so r4300's PC-tracking
+ * field is still NULL, and pif_bootrom_hle_execute() - an internal bootstrap
+ * read of the PIF ROM that happens before run_pure_interpreter() ever sets
+ * that field - runs before a single CPU instruction does. A PIF-region watch
+ * armed here sees that internal read and crashes inside r4300_pc() computing
+ * NULL->addr (measured s982: fault at read_with_bp_checks+268, address
+ * 0x28 == offsetof(precomp_instr, addr)). Watches arm instead on the first
+ * VI (see dbg_vi), by which point the interpreter loop has long since
+ * initialized pc, and there is no meaningful "current instruction" to
+ * attribute a bootstrap-phase read to anyway. */
+static void dbg_init(void)
+{
     pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
 }
 
@@ -195,6 +213,11 @@ static void dbg_vi(void)
 {
     unsigned width, origin;
     double t;
+
+    if (!g_watches_armed) {
+        g_watches_armed = 1;
+        arm_watches();
+    }
 
     g_vis++;
 
