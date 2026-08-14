@@ -64014,3 +64014,20 @@ writer transition was absent, so this run rules out neither consumer behavior
 nor the selector writer. The next unit instruments pending selector inputs and
 store-path evidence at `0x80019914` to explain the non-reproduction before
 retrying consumer ordering.
+## Session 1158 (2026-08-14) — explained the selector-writer non-reproduction
+
+Rebuilt the Debug target and ran the phase-gated writer capture with the
+independent selector-positive and slot-dispatch controls. The capture reached
+committed width 640 and remained crash-free for the 180-second observation
+window. The complete writer attribution showed repeated `apply-mask` entries
+with pending masks `0x00000000/0x00000000`; a `request-mask` row then set
+pending B to `0x00000011`. The following apply at callsite `0x80019914`
+stored selector A and changed `01/00/00` to `01/00/01`. Host VI logging
+independently recorded the matching 640 request, while the selector-positive
+control fired once and slot dispatch logged 6,438 rows.
+
+This selects H2 for s1157's non-reproduction: its pending input/state path was
+different. It rules out an address or store implementation defect for this
+capture, but does not yet establish that `selectAndApplyViMode` consumes the
+new selector correctly. The next unit traces that consumer and its following
+VI request.
