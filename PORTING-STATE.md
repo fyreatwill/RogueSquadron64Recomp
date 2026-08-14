@@ -62686,3 +62686,7 @@ This selects static `H-writer-reached` and rules out a generated caller or
 early-exit path that leaves the reset value zero. It does not prove runtime
 execution, exclude a later clobber, or resolve overlay/alias reachability;
 those remain the next boundary. No mitigation was added.
+
+## Session 1082 (2026-08-14) — censused post-return gate aliases
+
+Ran the prescribed bounded static census, without building or running the game. The generated tree contains 67 `MEM_B(0X20, ...)` byte stores, but none is a concrete write to `0x80130B30` after `runIdleFramesAndLoadSaveData` returns and before `mainGameLoop` reads the byte at `0x8003E07C`. The only exact target is the known `0x8006DAB8` store inside `runIdleFramesAndLoadSaveData`; the intervening main-loop writes target unrelated globals. The companion tree has no assignment to the target byte. This selects static `H-no-later-clobber` and rules out a generated/companion post-return clobber. The `loadOverlay` call's host/DMA destination remains outside this source census and is the next bounded audit; this is static-source evidence, not runtime reachability.
