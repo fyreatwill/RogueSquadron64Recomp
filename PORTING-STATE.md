@@ -59080,3 +59080,45 @@ CURRENT-TRUTH, whose review headline advances to s936.
 This rules out only documentation drift as the reason to retain the oversized
 front matter. It does not advance or overturn any runtime, parser, writer, or
 legitimacy conclusion. No ORIGIN mitigation was introduced.
+
+## Session 937 (2026-08-13) — `musyxStopVoice` has one direct caller with constant-zero index
+
+Performed the planned source-only M3 idiom audit of `musyxStopVoice`
+(`0x80092368`) in `../N64Recomp/RecompiledFuncs/funcs_24.c`. Enumerated every
+generated reference, the complete callee, its base/count lifecycle symbols,
+the direct caller register setup, all derived accesses, existing guard
+coverage, termination, and the companion `main_overlay.txt` mapping. No build,
+game run, soak, generated-source edit, guard, mitigation, or behavior change
+was made.
+
+The generated tree contains exactly one direct call, at `tickAudioChannel`
+(`0x8008CED0`). Its caller `tickAllAudioChannels` initializes `$s6` to zero at
+`0x8008C9BC`, passes the channel pointer to `tickAudioChannel`, and has no
+write or increment of `$s6` before the stop call; `tickAudioChannel` itself
+does not modify `$s6`. Therefore the observed direct chain supplies `$a0 = 0`,
+not a channel pointer or an unconstrained per-channel index. No second direct
+caller or literal reference to `0x80092368` was found. A register-indirect
+call cannot be excluded by this source search.
+
+The callee loads mixer base `0x801496F8` from `0x80150000-0x6908`, computes
+`base + (a0*0x11)*8`, equivalently `base + a0*0x88`, and performs exactly one
+state write at the resulting slot's `+0x1` byte. It has no helper call, loop,
+branch, or alternate return. `allocateSongChannelArray` allocates the same
+0x88-stride array and stores the requested 16-bit voice count at
+`0x80149700`; the existing entry guard validates only that the loaded base is
+in KSEG0 and does not validate count or index. For the sole direct caller,
+index zero is within any nonempty allocated array, but this source inventory
+does not prove that the base/count lifecycle is live at every call or that an
+indirect caller cannot supply another index.
+
+H-stop-shape-mismatch is refuted for the only direct caller: no pointer/index
+split exists there, and the low-level helper's access shape is coherent.
+H-stop-classified is supported only for that direct caller's constant-zero
+index and fixed `+0x1` access. H-stop-unclassified remains selected for the
+unproven base/count lifecycle and possible register-indirect callers. This is
+a single-source static result from generated code and companion symbol
+metadata; it is not independent runtime writer/value evidence.
+
+ORIGIN: complete generated caller/callee, register-provenance, index
+arithmetic, base/count, access-range, guard-coverage, termination, and
+companion-symbol inventory; no guest value mutation or mitigation.

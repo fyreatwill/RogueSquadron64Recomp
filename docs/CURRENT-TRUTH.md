@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s936 (2026-08-13). The active blocker is authoritative
+Reviewed through s937 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -35,10 +35,12 @@ closed; M3 work is limited to systematic idiom-class audits.
 - s862–s880 found invalid port coalescer entry state, but retail remains at VI
   width 320 and the oracle has no safe post-write writer/value channel. The
   coalescer line is parked.
-- s881–s935 completed a long sequence of static idiom inventories. Local
+- s881–s937 completed a long sequence of static idiom inventories. Local
   bounds, caller shapes, and termination were classified where stated, but
-  dynamic writer/value legitimacy remains unproven. The latest finding is the
-  s935 pointer/index contract mismatch in `musyxTriggerVoiceAttack`.
+  dynamic writer/value legitimacy remains unproven. s935 found a pointer/index
+  mismatch in `musyxTriggerVoiceAttack`; s937 found that `musyxStopVoice` has
+  one direct caller that passes constant zero, but no independent proof of
+  global base/count lifecycle or register-indirect callers.
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. M4 correctness remains parked behind the active blocker.
 
@@ -53,7 +55,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s841–s853 | Copy/triangle candidates were RDP-owned; residual extended path remained unobserved. |
 | s854–s880 | Breadcrumb, coalescer, retail-oracle, and independent-writer routes were classified or parked; no legitimacy conclusion. |
 | s881–s924 | Complete M3 inventories covered model/audio/song/MusyX idioms; no behavior or mitigation changes. |
-| s925–s935 | Audio filter/mixer/voice idioms were audited; see PROJECT-OVERVIEW §30. The latest result rejects a single shared voice-index contract. |
+| s925–s937 | Audio filter/mixer/voice idioms were audited; see PROJECT-OVERVIEW §30. s935 rejected a shared attack-helper contract; s937 structurally passed `musyxStopVoice` but left runtime index/base legitimacy open. |
 | s936 | Maintenance pass: compacted this file and migrated durable s925–s935 outcomes to PROJECT-OVERVIEW. No experiment ran. |
 
 All runtime claims in the ledger had positive controls in the relevant
@@ -62,9 +64,10 @@ entries and do not authorize mitigations.
 
 ## Ranked backlog
 
-1. Continue the active M3 campaign with the complete `musyxStopVoice` idiom
-   audit below; require every reference, caller contract, access range, and
-   termination path to be classified.
+1. Continue the active M3 campaign with a complete `stopVoiceByKey` caller/
+   callee contract audit, including its relation to the direct
+   `musyxStopVoice` path; require every reference, index derivation, access
+   range, and termination path to be classified.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0
@@ -74,33 +77,32 @@ entries and do not authorize mitigations.
 
 ## Next work unit
 
-HYPOTHESIS-ID: m3-audio-voice-stop-contract
+HYPOTHESIS-ID: m3-audio-stop-by-key-contract
 
-Audit the complete `musyxStopVoice` idiom at `0x80092368` in
-`../N64Recomp/RecompiledFuncs/funcs_24.c`, including every generated caller,
-the relationship between pointer/index arguments, voice-slot arithmetic,
-state writes, existing guard coverage, and sibling callers in the same audio
-paths. Source-only; do not add a guard, change game behavior, build, or run a
-soak.
+Audit the complete `stopVoiceByKey` idiom at `0x80086914` in
+`../N64Recomp/RecompiledFuncs/funcs_21.c`, including every generated caller,
+key-to-voice-index derivation, voice-array accesses, calls into low-level stop
+helpers, state writes, existing guard coverage, and termination paths. Source-
+only; do not add a guard, change game behavior, build, or run a soak.
 
 Competing hypotheses:
 
-- H-voice-stop-unclassified: a caller supplies an invalid voice index/base, or
-  the stop target escapes its intended mixer record.
-- H-voice-stop-classified: callers agree on a bounded mixer index and existing
-  guards cover the base/index contract.
-- H-voice-stop-shape-mismatch: callers use pointer and index contracts that
-  must be translated or are distinct; record the exact split and stop.
+- H-stop-by-key-unclassified: a key resolves to an invalid voice index/base or
+  escapes the intended voice record before low-level stop.
+- H-stop-by-key-classified: callers and lookup logic agree on a bounded voice
+  index and existing guards cover the base/index contract.
+- H-stop-by-key-shape-mismatch: callers use distinct key, pointer, or index
+  contracts that are not translated consistently.
 
 Discriminating measurement: enumerate every reference and caller register
 setup, inspect the complete callee and all state/slot accesses, derive every
 address range and termination path, classify every helper edge, and
-cross-check `main_overlay.txt` plus the two caller chains identified in s935.
-Any pointer/index split, uncovered derived access, or unproven termination
+cross-check `main_overlay.txt` plus the `musyxStopVoice` edge audited in s937.
+Any key/pointer/index split, uncovered derived access, or unproven termination
 path rejects classification.
 
 Exact command:
-`rg -n -C 12 "musyxStopVoice|80092368|92368" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`,
+`rg -n -C 12 "stopVoiceByKey|80086914|86914" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files/main_overlay.txt`,
 then inspect the complete helper and every caller. No game build or soak is
 planned.
 

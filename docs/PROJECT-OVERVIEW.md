@@ -2734,7 +2734,11 @@ change was made.
   caller supply distinct contracts; the latter passes a voice-record pointer
   where the callee interprets a mixer index. Existing base-only protection
   does not resolve the mismatch.
+- s937 `musyxStopVoice`: one direct generated caller passes constant index zero;
+  the callee has one fixed `+0x1` byte store through a `0x88` stride and no
+  local loop/helper hazard. This is a structural pass for that chain only;
+  base/count lifecycle legitimacy and register-indirect callers remain open.
 
-These results leave the active M3 thread at `musyxStopVoice`, with no
+These results leave the active M3 thread at `stopVoiceByKey`, with no
 mitigation authorized absent an ORIGIN naming the writer and assessing value
 legitimacy.
