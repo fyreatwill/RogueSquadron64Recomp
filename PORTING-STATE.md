@@ -61964,3 +61964,25 @@ mismatch. It does not identify why the retail state machine remains at width
 
 ORIGIN: no mitigation, guest value, or recomp runtime behavior was changed;
 the conclusion comes from independent source/config/log inspection.
+
+## Session 1047 (2026-08-14) — audited the retail hangar handoff input masks
+
+Performed the prescribed bounded static audit without running the game or
+arming a freelist watch. The controller path at `0x80079CE0` produces edge
+values in `D_8013A960`, and `0x80079F50` returns them by controller index.
+The first available hangar frame, `runHangarSelectionFrame` at `0x800AAD9C`,
+reads the edge at `0x800AB0EC` but immediately tests B-only `0x4000` at
+`0x800AB0F4`. Adjacent menu paths use composite `0x5000`, `0x9000`, and
+`0xD000` masks. The overlay handoff at `0x800C6854` is selected by the state
+table at `0x800C5A5C`, and its audited edge contains no width-320 attract
+caller or Start predicate.
+
+This leaves `H-retail-other-input` as a single-source/static lead in the next
+menu layer, but does not select it for the retail attract transition. It rules
+out treating the first hangar-loop B test as the missing Start gate and rules
+out another button schedule as a justified next step. The next audit must
+trace the width-320 caller and state writer into `0x800C5A5C`; the hangar phase
+and freelist writer remain unevaluable.
+
+ORIGIN: generated retail/decomp source and symbol inspection only; no
+mitigation, guest value, or recomp runtime behavior was changed.
