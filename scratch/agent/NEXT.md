@@ -1,36 +1,38 @@
-# NEXT work unit (s1074)
+# NEXT work unit (s1075)
 
 HYPOTHESIS-ID: selector-nongenerated-ownership
 
-Perform one bounded generated-source audit of raw stores that can reach
-`0x80130B54` / `D_80130B40+0x14`, excluding already classified named-field
-accesses. Start with generated files and address expressions, then trace only
-the base/index assignments needed to classify each candidate.
+Perform one bounded generated-source audit of callers and raw-dispatch entries
+for `func_800B47C4` (`0x800B47C4`). Trace only the argument provenance needed
+to classify `temp_s1 = arg0 & 0xFF` before its computed-base XOR write at the
+companion source line 1007. Include direct generated calls and indirect
+raw-address references; do not build or run.
 
 Competing hypotheses and discriminator:
 
-* `H-raw-generated-writer`: a raw generated store reaches `0x80130B54`, adding
-  a concrete generated writer beyond the named-field sweep.
-* `H-raw-other-field`: every candidate resolves to another field/base or a
-  non-aliasing index, closing this raw-store class.
-* `H-raw-open`: one or more candidates retain unresolved base/index provenance;
-  keep the pointer-mediated possibility without claiming runtime corruption.
+* `H-B47C4-index-2`: a generated caller or dispatch path proves `arg0 & 0xFF`
+  can be 2, selecting the selector-byte alias as a concrete path.
+* `H-B47C4-other-index`: all callers prove another index or an unrelated call
+  contract, ruling out this generated path to `+0x14`.
+* `H-B47C4-open`: at least one caller/dispatch path leaves `arg0` provenance
+  unresolved; preserve the pointer-mediated possibility without claiming
+  runtime corruption.
 
-Discriminating measurement: one table containing every raw candidate, its
-effective address expression, width, writer function, and base/index proof.
-A candidate proven to target `0x80130B54` selects `H-raw-generated-writer`;
-all candidates proven elsewhere selects `H-raw-other-field`; unresolved
-provenance selects `H-raw-open`.
+Discriminating measurement: one table containing every generated caller or
+raw-dispatch entry, its passed `arg0` expression, the resulting masked-index
+proof, and whether the call can reach the XOR branch. A proven index of 2
+selects `H-B47C4-index-2`; all proven non-2 paths select
+`H-B47C4-other-index`; any unresolved provenance selects `H-B47C4-open`.
 
 Exact commands:
 
 ```sh
-rg -n -S '0x80130B54|0x130B54|D_80130B40|\+ 0x14|\+0x14' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
-  --glob 'funcs_*.c' --glob '*.h' 2>/dev/null
-rg -n -B 8 -A 12 '0x80130B54|0x130B54|D_80130B40' \
+rg -n -B 8 -A 12 '800B47C4|func_800B47C4|0x800B47C4' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --glob 'funcs_*.c' 2>/dev/null
+rg -n -S '800B47C4|func_800B47C4|0x800B47C4' \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64 \
+  --glob '*.{c,h,md}' 2>/dev/null
 ```
 
 No build or runtime run is needed for a source-classification result.

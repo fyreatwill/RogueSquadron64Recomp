@@ -62515,3 +62515,24 @@ targets `+0x14`. No mitigation or runtime conclusion was added.
 
 ORIGIN: companion-decomp source audit at the cited lines; no guest value,
 runtime behavior, or mitigation was changed.
+
+## Session 1074 (2026-08-14) — audited raw generated selector stores
+
+Ran the prescribed bounded generated-source audit; no build or runtime run
+was needed. Literal searches for `0x80130B54`, `0x130B54`, and
+`D_80130B40` found no raw generated address expression. The complete generated
+`MEM_B(0X14, ctx->rN)` census found 31 stores (including duplicated delay-slot
+forms). The only fixed selector-base stores are `cycleIdleDemoId` at guest PCs
+`0x8006F07C` and `0x8006F0AC`, already classified as the modulo-six increment
+and internal clear. The remaining 29 stores use object, argument, or
+stack-derived bases: generated comments identify bases such as `$a1`, `$s1`,
+`$s0`, `$v0`, and `$s2`, with no `0x80130B40` construction reaching those
+stores. No generated halfword/word overlap was found in the fixed-base
+selector window. This selects `H-raw-other-field` for the newly audited raw
+generated class and rules out an additional generated writer; the
+pointer-mediated `func_800B47C4` index path and non-generated writers remain
+open.
+
+ORIGIN: complete generated `MEM_B(0X14, ctx->rN)` census and fixed-base
+address-expression search in `RecompiledFuncs/funcs_*.c`; no guest value,
+runtime behavior, or mitigation was changed.

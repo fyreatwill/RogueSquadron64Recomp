@@ -122,14 +122,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1071 | Companion audit found a computed-base XOR write at `func_800C1D3C.c:389-390` that aliases +0x14 when `rest01[3]==2`; selects `H-pointer-write` (static, index value unclassified). |
 | s1072 | Caller/initializer audit found the HUD constructor's zero initialization at `func_800C0084.c:793`, but no typed proof of the runtime index; `H-index-open` remains. |
 | s1073 | `func_800B47C4` masks an external `arg0` into `temp_s1` before its computed-base XOR write; no companion caller proves the index, so `H-temp-s1-open` remains. |
+| s1074 | Complete generated raw `MEM_B(0X14, ctx->rN)` census found 31 stores. Only the two `cycleIdleDemoId` stores use the fixed selector base; the other 29 use object/argument/stack-derived bases. No additional generated writer reaches `0x80130B54`; the non-generated/index-mediated boundary remains open. |
 
 ## Ranked next steps
 
-1. Audit raw generated stores to `0x80130B54` / `D_80130B40+0x14` that are not
-   represented as named-field accesses, classifying each writer and whether
-   its base/index can reach the selector byte. Keep the result static and
-   source-bounded; do not build unless the source boundary becomes
-   insufficient.
+1. Audit generated callers and raw-dispatch entries for `func_800B47C4`,
+   classifying the provenance of its masked `arg0` before the computed-base
+   XOR write. Keep the result static and source-bounded; do not build unless
+   the source boundary becomes insufficient.
 2. Keep the retail oracle parked until a new, falsifiable phase-path
    discriminator can reach the 512 hangar-origin phase. Do not arm the
    freelist watch from width-320 evidence.
