@@ -60691,3 +60691,23 @@ must first report its match count. No guard or shade mitigation was added.
 
 ORIGIN: static build/macro feasibility audit; no runtime value or ownership was
 changed.
+
+## Session 992 (2026-08-13) — added regeneration-safe generated-store census
+
+Implemented the M4 generated-store probe in the regeneration-owned
+`../N64Recomp/fixup_game_funcs.py`. With `RS64_FIXUP_S992_GENERATED_WRITES=1`,
+it wraps only simple generated `MEM_B`, `MEM_H`, and `MEM_W` lvalue assignments,
+computes the effective 32-bit address immediately before the assignment, and
+logs a same-run control marker plus guest PC, width, phase, and target-range
+address information. A static dry run over the current 50 generated files
+matched 42,818 assignments.
+
+No build or game capture ran. The external generated tree is already dirty and
+34 files carry the fixup sentinel, so rerunning the additive fixup would violate
+its delete-before-regen contract and could duplicate existing patches. The
+match count proves only that the assignment pattern is enumerable; it does not
+identify a target writer or establish value legitimacy. The next iteration must
+regenerate cleanly, apply the pass, build, and run the phase-gated capture.
+
+ORIGIN: this session added diagnostic instrumentation only; no memory guard,
+shade change, or ownership mitigation was introduced.

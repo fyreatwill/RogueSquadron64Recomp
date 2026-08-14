@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s991 (2026-08-13). The active blocker is authoritative
+Reviewed through s992 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -442,6 +442,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s990 | `nm`/`atos` and ARM64 disassembly independently classified the five requested phase-4 fault PCs as generated game functions: `soundMacroSetFlagBitTremolo`, `tickSongSequence`, `decodeAndFillVoiceBlock`, `soundMacroPlayRandomKeyNote`, and `stepSongPitchBendLanes`. No PC resolved to allocator/renderer runtime code. The associated global guest breadcrumbs do not match those host functions' guest ranges, so they cannot attribute the faulting store. H-generated is selected for host-PC ownership only; no target-byte writer or legitimacy conclusion follows. No mitigation. |
 
 | s991 | The planned ordinary-generated-write probe was blocked before build: generated `*.c` files compile as C and `MEM_W/MEM_H/MEM_B` are raw lvalue macros, so a common header hook cannot distinguish writes from reads or capture a per-store guest PC. The next probe must be implemented in the regeneration-owned fixup script. No runtime or mitigation conclusion. |
+| s992 | Added an env-gated, regeneration-owned fixup pass for simple generated `MEM_B/MEM_H/MEM_W` assignments. It matched 42,818 stores across all 50 current generated files in a static dry run and emits a same-run control marker plus phase, guest PC, width, and effective address for target-range stores. No build or game capture ran because 34 generated files already carry the fixup sentinel and the external tree has unrelated dirty source/generated changes; a second fixup pass would be unsafe. This advances instrumentation only and makes no writer or legitimacy conclusion. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -483,18 +484,16 @@ entries and do not authorize mitigations.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s992)
+## Next work unit (s993)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
-Add a regeneration-safe, env-gated fixup pass in
-`../N64Recomp/fixup_game_funcs.py` that wraps only generated ordinary store
-statements whose effective address can be tested against the phase-4/phase-6
-pages. The wrapper must record the store's guest PC, width, physical address,
-and current phase immediately before the lvalue assignment, while retaining a
-same-run positive-control marker and the existing F5/shade and all-DMA
-controls. Run the resulting phase-gated probe once; do not edit generated
-files by hand and do not add a mitigation.
+Regenerate a clean `../N64Recomp/RecompiledFuncs/` tree, run the new
+`fixup_game_funcs.py` pass with `RS64_FIXUP_S992_GENERATED_WRITES=1`, verify
+the reported 42k-scale match count, then build and run the phase-gated probe.
+Do not edit generated files by hand or add a mitigation. Preserve the existing
+F5/shade and all-DMA controls and require the new
+`[vtx-generated-write-control] control=1` marker.
 
 Competing hypotheses are H-generated-target (exact target overlap with a
 matching guest PC), H-generated-unrelated (only non-target writes on the
@@ -505,16 +504,21 @@ non-target shared-page stores; the positive control must visibly fire.
 
 Exact commands:
 
-Before building, add the pass to the existing fixup script and verify its
-match count against a regenerated-source dry run. Then run:
+After the documented delete-before-regen pipeline (`make_elf.py`, N64Recomp,
+then fixup), build and run:
 
-`env ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LLE_FORCE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_PHASE_TIMEOUT=180 PROBE_START=0 PROBE_KEYS='20:start' zsh tools/probe.sh scratch/agent/probe_s991 180 1`
+`env RS64_FIXUP_S992_GENERATED_WRITES=1 python3 ../N64Recomp/fixup_game_funcs.py`
+
+`cmake --build build --config Debug --target RogueSquadron64Recomp`
+
+`env ROGUESQ_LOG_VTX_GENERATED_WRITES=1 ROGUESQ_LLE_FORCE=1 PROBE_PHASE_WIDTH=1024 PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 PROBE_PHASE_TIMEOUT=180 PROBE_START=0 PROBE_KEYS='20:start' zsh tools/probe.sh scratch/agent/probe_s993 180 1`
 
 The pass must be regeneration-safe: if it cannot identify store statements
 without wrapping reads, stop and record the match-count measurement rather
 than inserting a temporary generated-file probe.
 
-The s991 feasibility result is not evidence about target-byte ownership.
+The s992 dry-run match count and control design are not evidence about
+target-byte ownership.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.
