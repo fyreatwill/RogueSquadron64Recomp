@@ -1,53 +1,52 @@
-# NEXT work unit (s1036)
+# NEXT work unit (s1037)
 
-HYPOTHESIS-ID: retail-oracle-config-initialization
+HYPOTHESIS-ID: retail-oracle-phase-path
 
-Perform one bounded source/config audit of the retail oracle, then make the
-smallest config-initialization fix if the cause is local and rerun its
-documented phase schedule. Do not change the recomp runtime or arm the
-freelist watch.
+Perform one bounded phase-path audit of the retail oracle and one phase-gated
+run using the already verified input path. Do not change the recomp runtime or
+arm the freelist watch.
 
 ## Competing hypotheses and discriminator
 
-* `H-config-order`: CoreStartup reads the config before the front-end creates
-  or versions the Input-SDL sections; fixing initialization removes the
-  warning and preserves the verified mapping.
-* `H-plugin-defaults`: the warning is harmless because the attached input
-  plugin uses its own defaults; a clean config run still remains at width
-  320/origin `0x006dd280`.
-* `H-phase-path`: configuration is clean and the documented 11-Start schedule
-  still reaches no 512 phase, so the README timeline belongs to another
-  environment or an unobserved transition.
+* `H-phase-transition`: the retail/core setup has a deterministic transition
+  condition not met by the nominal 11-Start wall-clock schedule; a phase-gated
+  or input-held schedule produces a VI width/origin transition beyond 320.
+* `H-retail-attract`: Start is consumed, but this ROM/core/plugin combination
+  remains in an attract path whose later transition is not caused by Start; the
+  phase-gated run stays at width 320/origin `0x006dd280` with positive pad
+  controls.
+* `H-vi-observation`: the game changes state but the VI callback/read path
+  misses the relevant transition; an independent VI poll or core trace shows a
+  width/origin change absent from the callback trace.
 
-Discriminating measurement: inspect the order of `CoreStartup`, config-section
-creation/versioning, and input-plugin attachment in `tools/oracle/rs64_oracle.c`.
-Then run one 60-second arm with the whole-RDRAM watch removed at 10,000
-callbacks, `[pad]` and VI traces, and the documented 11-Start schedule.
-Missing input-section warnings after the fix select `H-config-order`; clean
-startup plus the same width-320/origin path selects `H-plugin-defaults` or
-`H-phase-path` according to whether the plugin reports defaults versus an
-explicit configured mapping. Missing positive control invalidates the run.
+Discriminating measurement: audit the retail input/VI transition code and run
+one 60-second arm with `--hit-cap 10000`, whole-RDRAM positive control,
+`--vi-trace --vi-poll --pif-trace`, and a phase-gated schedule whose controls
+are keyed to observed VI transitions rather than wall-clock assumptions.
+Positive control and pad edges must fire. A width/origin transition in the
+poller or callback selects `H-phase-transition` or `H-vi-observation`; no
+transition with positive controls selects `H-retail-attract`.
 
-## Exact command
+## Exact commands
 
 ```sh
-mkdir -p /tmp/rs64-oracle-s1036
-shasum -a 256 rogue_squadron.z64 > scratch/agent/oracle_s1036_rom_hash.txt
+rg -n "M64CMD_SEND_SDL|press|dbg_vi|VI_WIDTH|VI_ORIGIN" tools/oracle/rs64_oracle.c /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src
+mkdir -p /tmp/rs64-oracle-s1037
+shasum -a 256 rogue_squadron.z64 > scratch/agent/oracle_s1037_rom_hash.txt
 tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/rogue_squadron.z64 \
   --rsp /opt/homebrew/Cellar/mupen64plus/2.6.0/lib/mupen64plus/mupen64plus-rsp-hle.dylib \
   --datadir /opt/homebrew/share/mupen64plus \
-  --configdir /tmp/rs64-oracle-s1036 \
+  --configdir /tmp/rs64-oracle-s1037 \
   --secs 60 \
-  --watch-write 0x0:0x800000 \
+  --hit-cap 10000 --watch-write 0x0:0x800000 \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --hold-ms 150 --vi-trace --pif-trace \
-  > scratch/agent/oracle_s1036_capture.log 2>&1
+  --hold-ms 150 --vi-trace --vi-poll --pif-trace \
+  > scratch/agent/oracle_s1037_capture.log 2>&1
 ```
 
-Before running, inspect the config/attachment order and patch only if the
-warning is caused by local ordering. Verify the generated config maps
-`Start = "key(40)"` before interpreting input. The whole-RDRAM watch must be
-removed at the validated threshold and is not a target; do not interpret a
-freelist null until a 512 hangar-origin phase is reached.
+The whole-RDRAM watch must be removed at the validated threshold and is not a
+target. Do not interpret a freelist null until a 512 hangar-origin phase is
+reached. If the phase-gated schedule cannot be implemented without a source
+change, stop before building and record the exact missing transition signal.

@@ -61725,3 +61725,29 @@ ROM identity mismatch beyond the recorded SHA-256, or a phase-path mismatch;
 the 512 hangar phase and freelist watch remain unevaluable. The next unit is a
 source/config initialization audit, followed by one clean scheduled run if a
 local ordering defect is found.
+
+## Session 1036 (2026-08-14) — retail oracle config order was not the phase blocker
+
+Audited `tools/oracle/rs64_oracle.c` and the debugger-core startup path before
+running anything. `CoreStartup` calls `ConfigInit`, opens the Core section, and
+returns; the front end then calls each plugin's `PluginStartup`, where the
+Input-SDL plugin creates or repairs `Input-SDL-Control1..4`. The fresh-config
+"missing or incompatible" messages therefore describe first-run section
+initialization, not an input-before-CoreStartup ordering defect. No local code
+change was justified.
+
+Ran the 60-second fresh-config schedule with the whole-RDRAM positive-control
+watch, `--hit-cap 10000`, VI/PIF traces, and the eleven named Start presses.
+The positive control visibly reached 10,000 callbacks and was removed with
+`rc=0`; the run completed 3,599 VI. The generated config recorded
+`Start = "key(13)"`, yet every injected scancode 40 produced the Start pad
+word `0x10000000`, and the oracle completed normally. VI remained width 320
+with origin `0x006dd280`; no freelist watch was armed.
+
+This closes the local config-order explanation and confirms the plugin's
+first-run warning is harmless for verified input delivery. It rules out
+callback failure, input attachment failure, and the proposed config-order
+fix, but does not explain why the retail phase schedule does not reach the
+512 hangar phase. The retail phase path and any freelist-writer question remain
+unevaluable. ORIGIN: external retail-oracle source audit plus debugger/PIF/VI
+traces; no guest value or recomp runtime behavior was changed.
