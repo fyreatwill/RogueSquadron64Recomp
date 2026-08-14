@@ -310,7 +310,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    binary-verified diagnostic (`N64Recomp/fixup_game_funcs.py:25156-25185`,
    s1005): `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. The queued
-   `s1028_slot_sp_guard.sh` recipe is item 1 above; do not do another static
+   `s1029_slot_sp_guard_late_a.sh` recipe is item 1 above; do not do another static
    sweep.
 4. Directory access to `rs64-oracle` is restored; resume the archived s983
    oracle callback audit when the loop is not actively running a capture. Do
