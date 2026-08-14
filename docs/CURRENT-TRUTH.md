@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1030 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1031 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the next ground-truth unit is the retail
 oracle callback audit. M4 zero-shade is parked after its third consecutive controlled null:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
@@ -100,12 +100,13 @@ retail-oracle callback thread is no longer directory-blocked
 - M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
   lead. The legacy audio idiom audits and their structural limitations are in
   PROJECT-OVERVIEW §§9–12 and §30.
-- Retail oracle work: the s983 directory block is stale — `.claude/settings.json`
-  currently lists `rs64-oracle` in `additionalDirectories` and `Read`. s982
-  localized the corrected-core failure to dereferencing `r4300_pc(r4300)` in
-  `read_with_bp_checks` before callback entry. No retail phase conclusion or
-  recomp mitigation follows; resume only when the loop is not actively running
-  a capture.
+- Retail oracle work: the corrected oracle callback is now live. A same-run
+  whole-RDRAM positive-control watch produced 200 visible callback hits and
+  armed the archived freelist watch, but the all-RDRAM breakpoint slowed the
+  pure-interpreter run to VI 62 / about 1.2 emulated seconds before the
+  bounded capture was SIGKILLed. The freelist watch therefore has no
+  interpretable null or PC attribution yet; no retail phase conclusion or
+  recomp mitigation follows.
 
 ## M4 zero-shade evidence
 
@@ -295,15 +296,17 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1027 | Split the caps to 64 stage-1 controls and 2048 target rows. VI-1024, input, all controls, and all target rows passed; no `v6`, `v29`, `acch`, or `accm` endpoint reached 0x8000 (22 `accl` hits only). Third controlled M4 null; pivot to slot-SP diagnostic. |
 | s1029 | The changed ordinary-dispatch slot-SP recipe reached VI-1024, but exited after 65 frames at sticky guest PC `0x8000834c` before `slotDispatcherIter` or `[slot-sp-guard]`; classify as `H-no-sp-event` and adjust the key schedule rather than selecting a corruption model. |
 | s1030 | The postponed-`a` ordinary-dispatch recipe reached VI-1024, delivered all scheduled inputs, and captured 108 frames but still produced no slot-dispatch or guard marker; `H-no-sp-event` recurred, so the recipe family is closed without classifying `$sp` corruption. |
+| s1031 | The corrected retail oracle armed both watches and its whole-RDRAM positive control visibly fired 200 callbacks, confirming callback liveness. The all-RDRAM watch slowed the run to VI 62 / 1.2 emulated seconds before SIGKILL; the freelist watch had no hit or usable PC attribution, so the retail question remains unevaluable. |
 
 ## Ranked backlog
 
-1. Resume the archived retail-oracle callback audit from s983, beginning with
-   `tools/oracle/README.md` and the existing callback probe, now that the
-   slot-SP recipe family has twice failed to reach the target event. Arm the
-   whole-RDRAM positive control before any address-specific watch. Do not infer
-   a retail phase result from a null callback or modify the recomp runtime from
-   this audit.
+1. Resume the retail-oracle callback audit with a bounded oracle-tool change:
+   auto-remove the whole-RDRAM positive-control breakpoint after its measured
+   callback threshold while leaving the archived address-specific watch armed;
+   then run one same-build capture through the documented hangar schedule.
+   This is needed because s1031 proved callback liveness but reached only VI 62
+   before the all-RDRAM watch made further progress impractical. Do not infer a
+   retail phase result from a null callback or modify the recomp runtime.
 2. The M4 accumulator/VGE numeric-origin question remains open after three
    controlled nulls; resume only with a new discriminator or independent ground
    truth.
@@ -313,9 +316,10 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. The queued
    `s1029_slot_sp_guard_late_a.sh` is closed after two phase-positive no-event
    results; do not do another static sweep.
-4. Directory access to `rs64-oracle` is restored; resume the archived s983
-   oracle callback audit when the loop is not actively running a capture. Do
-   not self-grant access or infer a retail phase result.
+4. Directory access to `rs64-oracle` is restored; the callback ABI repair is
+   confirmed by runtime positive control, but target attribution still needs
+   the bounded-watch change in item 1. Do not self-grant access or infer a
+   retail phase result.
 5. Preserve regeneration delete-before-regen ordering and audit fixup counts
    if a reproducible omission appears.
 

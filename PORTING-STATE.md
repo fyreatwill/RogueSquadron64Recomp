@@ -61631,3 +61631,21 @@ event; this selects `H-no-sp-event` and does not distinguish caller-corrupted
 `$sp` from entry/runtime-corrupted `$sp`. The ordinary slot-SP recipe family
 is closed for now rather than being re-run with another key schedule. No
 mitigation or generated-code change was made. ORIGIN: not applicable.
+
+## Session 1031 (2026-08-14) — retail oracle callback positive control is live
+
+Ran one corrected retail-oracle capture with the whole-RDRAM write watch first
+and the archived freelist range `0x1F3CC0:0x1F3CD0` second, using the documented
+Start schedule and VI/PIF traces. Both watches armed successfully. The
+whole-RDRAM positive control visibly produced 200 callback hits before its
+print cap, proving that the repaired callback path is live in this run.
+
+The all-RDRAM breakpoint made the pure-interpreter capture extremely slow: it
+reached only VI 62 / about 1.2 emulated seconds, while the scheduled presses
+were delivered but no later VI phase or freelist-watch hit occurred. The
+process was stopped with SIGKILL after the bounded wait. This is not an
+address-specific null: the target phase was never reached, so no retail PC
+attribution or phase conclusion follows. The next unit must remove the
+positive-control watch after a logged threshold while retaining the target
+watch. No recomp runtime change or mitigation was made. ORIGIN: external
+retail-oracle debugger callback; no guest value was changed.
