@@ -63018,3 +63018,31 @@ game data was changed.
 ORIGIN: same-run host registration/completion rows plus VI-1024 and E9
 positive controls, cross-checked against the independent generated/companion
 consumer census from s1098; diagnostic-only runtime instrumentation.
+
+## Session 1101 (2026-08-14) — audited SP and DP registration queue objects
+
+Performed the planned bounded source audit against the current generated tree
+at `N64Recomp/RecompiledFuncs`, the data-symbol map, and the known blocking
+consumer functions. All five generated `osSetEventMesg` calls were enumerated:
+
+| call site | event | registered queue | initializer / role |
+|---|---:|---|---|
+| `func_800016D8` | 14 | `0x8010DFD8` | directly created in the same setup function, count 1 |
+| `func_80002E50` | 5 | `0x80110520` | direct static queue base in the service-rumble setup |
+| `spTaskSchedulerThread`, `0x80019C48` | 4 | `0x8011A420` | created immediately before registration, count 8; message `0x80128C70` |
+| `dpInterruptHandlerThread`, `0x8001C358` | 9 | `0x8011A408` | created immediately before registration, count 1; message 0 |
+| `initAudioSubsystem`, `0x80091BA0` | 6 | `0x80149670` | queue expression is a direct static address in the audio setup |
+
+The SP scheduler then separately creates `0x8011A818` and the DP handler
+separately creates `0x8011A7E8`; the blocking consumers at `0x8000C0B4` and
+`0x8000C2B8` use those latter addresses. The registered/consumed address
+pairs are therefore distinct (`0x3F8` and `0x3E0` apart), and the data-symbol
+map lists `D_8011A420` and `D_8011A7E8` as separate objects. No generated
+pointer alias or relocation boundary connects either pair. This selects
+static `H-real-mismatch`/role separation and leaves the producer or host
+forwarding boundary for the next audit. No build, runtime code, or queue
+behavior changed.
+
+ORIGIN: generated call arguments and adjacent `osCreateMesgQueue` sequences,
+the independent data-symbol map, and the blocking `osRecvMesg` sites; this is
+an explanatory source classification, not a mitigation.

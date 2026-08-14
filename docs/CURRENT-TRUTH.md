@@ -289,14 +289,14 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1098 | Bounded queue-contract audit maps `0x8000C0B4` to `D_8011A818` and `0x8000C2B8` to `D_8011A7E8`; both are `osRecvMesg(..., BLOCK)`. Generated/companion evidence identifies consumers but no matching in-tree producer for either wait: the first is an external SP-completion boundary, and the second depends on host DP forwarding documented in the architecture notes. Selects `H-queue-unmatched`; no build, runtime code, or mitigation changed. |
 | s1099 | Bounded host/runtime audit found that HLE and LLE SP completion plus HLE DP completion all enqueue through `events_context.sp/.dp`, populated dynamically by `osSetEventMesg`; no host producer hard-codes either guest queue. The exact `0x8011A818`/`0x8011A7E8` registration mapping is unresolved and becomes the next runtime-trace discriminator. No build, run, or mitigation changed. |
 | s1100 | Batched phase-gated host trace passed VI-1024 and 413 positive E9 provenance rows. SP registered and completed on `0x8011A420` with message `0x80128C70`; DP registered and completed on `0x8011A408` with message `0`. Both pairs fired repeatedly and matched internally, but neither target is the blocking consumer pair `0x8011A818`/`0x8011A7E8`. Selects wrong-target/unwired SP and DP routes, rules out missing host completion calls, and supersedes s1099's unresolved registration mapping. |
+| s1101 | Bounded generated-source audit enumerated all five `osSetEventMesg` calls. SP event 4 registers `D_8011A420`, which is directly created with count 8; the same scheduler then separately creates/uses `D_8011A818`. DP event 9 registers `D_8011A408`, directly created with count 1; its handler separately creates `D_8011A7E8`, the blocking `waitForPostSwapAck` queue. The two address pairs differ by `0x3F8` and `0x3E0`, have separate data symbols, and no pointer-mediated alias was found. Selects static `H-real-mismatch`/role-separation, while the non-generated producer or forwarding boundary remains open; no build or runtime code changed. |
 
 ## Ranked next steps
 
-1. Audit every generated registration call and the initialization of the
-   `0x8011A420` SP and `0x8011A408` DP queues. Reconcile those actual event
-   targets with the blocking consumers at `0x8011A818` and `0x8011A7E8`, then
-   identify whether the consumer addresses are stale labels, aliases, or a
-   real producer/consumer mismatch. Do not change queue behavior.
+1. Audit every generated `osSendMesg`/`osJamMesg` path and non-generated host
+   forwarding boundary for the separately initialized `0x8011A818` and
+   `0x8011A7E8` queues. Classify whether each queue has a game producer,
+   external producer, or no producer; do not change queue behavior.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
