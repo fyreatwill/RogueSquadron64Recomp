@@ -1,31 +1,29 @@
-# NEXT work unit (s1140)
+# NEXT work unit (s1141)
 
-HYPOTHESIS-ID: m3-runtime-frame-contract
+HYPOTHESIS-ID: m3-generated-boundary-anomaly
 
-Perform one whole-class source audit of generated indirect-call frame
-contracts for the recurring `slotDispatcherIter+872` SIGBUS. Do not build or
-run the game. Enumerate every `LOOKUP_FUNC` site in the generated tree that
-can reach `slotDispatcherIter` or its callback chain, then classify the caller
-frame setup/teardown, saved return register, and host `get_function` wrapper:
+Perform one bounded static boundary audit of the generated
+`forwardToNpcGeneratorSpawn` range. Do not build or run the game. Determine
+whether guest `0x80078894` is a real second MIPS function entry coalesced into
+the `forwardToNpcGeneratorSpawn` C body or dead code after the emitted return:
 
 ```sh
-rg -n 'LOOKUP_FUNC|slotDispatcherIter' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/lib/N64ModernRuntime/librecomp/src
-rg -n 'slotDispatcherIter|0x8003E8DC' /Users/williambuckley/Documents/Tools/N64Recomp /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/docs --glob '!PORTING-STATE.md'
+rg -n 'forwardToNpcGeneratorSpawn|80077AC0|80077AF0|80078894|800789FC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/N64Recomp --glob '!funcs_*.c' --glob '!PORTING-STATE.md'
+sed -n '19660,19725p;22440,22470p' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_18.c
 ```
 
 Competing hypotheses and the discriminating measurement:
 
-- H-static-unbalanced: at least one reachable indirect caller has a missing
-  frame restore, wrong saved-`ra` handling, or an incompatible host wrapper;
-  identify the exact site and contract defect.
-- H-static-balanced-runtime: every reachable site has balanced generated
-  frames and the wrapper preserves the recomp context contract; static frame
-  shape is ruled out and runtime-side corruption remains open.
-- H-wrong-target: a call resolves to an unintended overlay/function target;
-  the target map shows a concrete mismatch even though each local frame is
-  balanced.
+- H-coalesced-real: the ROM/decomp or function table identifies a distinct
+  entry near `0x80077AF0`, proving the emitted C return/body boundary is a
+  generated target defect.
+- H-dead-tail: no distinct entry exists and the host C return makes
+  `0x80078894` unreachable; the anomaly is not a live frame-contract cause.
+- H-wrong-target: the overlay table assigns `0x80078894` to an unintended
+  host function/range; identify the concrete map mismatch.
 
-The discriminating table is one row per reachable call site, including target
-resolution evidence and entry/exit stack deltas. A partial grep or a counter
-is not a result. If all sites balance, do not add a mitigation; choose the
-next runtime-origin probe.
+The discriminating measurement is the exact ROM/decomp function boundary plus
+the generated overlay-table entry and host reachability at `0x80078894`.
+Record one row for the site with target, entry, and exit stack evidence. Do
+not add a mitigation. If `H-dead-tail` wins, close the static frame-contract
+thread and select a runtime-origin probe.

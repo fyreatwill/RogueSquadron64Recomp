@@ -63704,3 +63704,22 @@ never reached. No mitigation was added.
 
 ORIGIN: independent VI-poll and scheduled-input controls; no guest value was
 skipped, rewritten, or otherwise mitigated.
+## Session 1140 (2026-08-14) — audited slot-dispatcher caller frame contracts
+
+Ran the prescribed no-build whole-class source audit. Enumerated 144 static
+`jal 0x8003E8DC` call sites across 72 generated caller functions. Every caller
+had a generated `$ra` save and restore; 143 sites had matching caller stack
+entry/exit deltas. `slotDispatcherIter` has the expected `-0x38`/`+0x38`
+contract with `$ra` at `0x34($sp)`. The two relevant indirect callback sites
+are the update callback in `slotDispatcherIter` and the destructor callback in
+`destroyNpcSlotByIndex`; both use `LOOKUP_FUNC`, which expands to
+`get_function(int32_t)` and the standard `(rdram, ctx)` wrapper.
+
+The only exception is guest `0x80078894` in the generated
+`forwardToNpcGeneratorSpawn` block. It appears after an unconditional emitted
+C `return` at `0x80077AEC`, followed by a second `sp -= 0x118` prologue, while
+the overlay table maps the named function at `0x80077AC0` over the whole range.
+This is single-source evidence of a generated function-boundary/coalescing
+anomaly, not proof of a runtime frame defect. The audit rules out a broad
+static caller-frame imbalance, but leaves that range for the next bounded
+boundary check and keeps runtime-side corruption open.

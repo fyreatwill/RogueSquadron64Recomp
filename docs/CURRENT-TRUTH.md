@@ -102,6 +102,27 @@ result on all 128 lanes; VGE changed 0/128 lanes. The target records used
 `r9+0x18..0x4F`. The run did not reach VI-1024 (it remained at 640), so this
 does not yet establish retail reachability or ownership of that range.
 
+## M3 indirect-call frame audit
+
+The s1140 whole-class source census found 144 static `jal 0x8003E8DC`
+sites in 72 generated caller functions. 143 sites have an ordinary balanced
+caller contract: each caller saves/restores `$ra`, has matching negative and
+positive `$sp` adjustments, and calls the generated `slotDispatcherIter`
+entry directly. `slotDispatcherIter` itself uses `sp -= 0x38`, saves `$ra` at
+`0x34($sp)`, restores it, and returns with `sp += 0x38`. Its update callback
+and `destroyNpcSlotByIndex`'s destructor callback are the only relevant
+`LOOKUP_FUNC` sites; both expand to the standard `get_function(int32_t)` ABI
+and invoke the returned `(rdram, ctx)` function pointer.
+
+One site, guest `0x80078894`, is a generated-source anomaly rather than a
+balanced reachable caller: it occurs in the `forwardToNpcGeneratorSpawn`
+block after an unconditional emitted C `return` at `0x80077AEC`, before a
+second `sp -= 0x118` prologue. The overlay table maps the named function at
+`0x80077AC0` across this range, so static text alone cannot establish whether
+the original MIPS entry was intentionally coalesced. This is single-source
+static evidence and remains open as a mapping/generation follow-up; it is not
+evidence of runtime stack corruption.
+
 ## Superseded conclusions
 
 - s1105's `H-gate-stale-or-unseen-writer` was superseded by s1106's corrected
@@ -137,16 +158,18 @@ does not yet establish retail reachability or ownership of that range.
 | s1134–s1135 | Defined and executed the paired M4 port capture; VMADH model and VGE/store path matched on 128 lanes with an independent control. |
 | s1137 | Reproduced the retail post-press stall with no M4 target watch; whole-RDRAM control and input passed, but the run never left VI width 320 and sampled in the core's VI-event sleep path. |
 | s1138 | Reproduced the width-320 stall with `--oracle-emulator 1`; whole-RDRAM control and all eleven presses passed, so the stall is not specific to the prior execution mode. |
+| s1140 | Audited all 144 static calls to `slotDispatcherIter`: 143 caller contracts balance; one `0x80078894` site is after an emitted return in a coalesced generated block and needs boundary resolution. |
 
 ## Ranked next steps
 
-1. Perform a systematic M3 audit of generated indirect-call frame contracts:
-   enumerate every `LOOKUP_FUNC` site in `RecompiledFuncs/funcs_*.c` that can
-   reach `slotDispatcherIter` or its callback chain, and classify the caller's
-   stack adjustment, saved return register, and host dispatch wrapper. A
-   balanced audit across the whole class rules out a static frame-contract
-   defect; one unbalanced path identifies the next bounded fix/probe. Keep the
-   runtime-side corruption hypothesis open if all sites balance.
+1. Resolve the single-source `forwardToNpcGeneratorSpawn` range anomaly:
+   compare the ROM/decomp function boundaries and generated overlay entry for
+   `0x80077AC0..0x80078DF4`, determining whether `0x80078894` belongs to a
+   second MIPS function coalesced into unreachable C. If it is a generated
+   target defect, identify the regeneration/fixup correction; if it is dead or
+   intentionally coalesced, close it and proceed to a runtime-origin probe for
+   the recurring `slotDispatcherIter+872` SIGBUS. Do not add a guard from this
+   census.
 
 The bounded frameStart/regeneration census is closed: `frameStartReset` is
 present in generated output with its 0x8000A6CC body, 14 generated call sites,
