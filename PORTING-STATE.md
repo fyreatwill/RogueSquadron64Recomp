@@ -61481,3 +61481,21 @@ ordinary `v4`/`v0` arithmetic, or VGE selection: no candidate endpoint appears
 in the sampled invocation. This is a valid null result because the independent
 control passed, but it does not select an M4 hypothesis. No mitigation or code
 change was made.
+
+## Session 1024 (2026-08-14) — enlarged M4 accumulator budget capture was unreached
+
+Raised the phase-scoped `rs64_m4_accum_probe` row cap from 96 to 512 and built
+the executable successfully. The first capture omitted `PROBE_LEAVE_OK=1` and
+stopped when VI left 1024; the second used an abbreviated phase-relative key
+schedule. Both were invalid because no stage-1 positive control fired. A final
+capture used the full established schedule with `PROBE_LEAVE_OK=1`,
+`ROGUESQ_LOG_INPUT=1`, and `ROGUESQ_LOG_M4_ACCUM=1`. It reached VI-1024 at
+78.2s, logged the scheduled input edges, later reached the 512 presentation
+phase, and ran its 300s post-gate window, but emitted zero stage-1, stage-10,
+stage-11, or stage-12 rows and no crash marker.
+
+The final run therefore proves the phase and input controls but not the active
+Factor 5 probe path. It cannot discriminate accumulator saturation, ordinary
+`v4`/`v0` arithmetic, or VGE selection, and the null is not evidence against
+any of them. The enlarged budget is retained for the next reproduction attempt;
+no mitigation was added.
