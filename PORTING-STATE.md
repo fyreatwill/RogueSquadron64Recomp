@@ -64112,3 +64112,19 @@ static discriminator.
 | Companion entry-address matches | 72/72 |
 | Unbalanced stack/return callers | 0 |
 | Distinct balanced frame idioms | 49 |
+
+## Session 1163 (2026-08-14) — runtime-origin capture stayed pre-1024
+
+Rebuilt the Debug target and ran one phase-gated runtime-origin capture using
+the existing mission driver with slot-dispatch, stack-guard, link, and crash
+markers enabled. The independent slot-dispatch control was live: the bounded
+capture produced 8,192 entry rows through host phase 6. The game then remained
+in the known `640→2→640` lifecycle for 209 seconds, without reaching VI 1024;
+the run was terminated with SIGKILL. There were zero stack-guard and crash
+rows. This is unevaluable for the planned `slotDispatcherIter+872` writer
+discriminator, not evidence that the guard is absent at the eventual fault.
+
+The result rules out neither H1 (runtime-side writer), H2 (ABI transition),
+nor H3 (prologue-origin value), and justifies no mitigation. The missing
+`scratch/agent/run-slot-origin.sh` launcher was substituted by the equivalent
+existing phase-gated driver; the build and capture completed successfully.

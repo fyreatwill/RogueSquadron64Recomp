@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1161 (2026-08-14).
+in the ledger. Reviewed through s1163 (2026-08-14).
 
 ## Current state
 
@@ -202,6 +202,12 @@ in the ledger. Reviewed through s1161 (2026-08-14).
   generated selector-consumer markers remained zero. This selects H3 at runtime
   and rules out a stale or misplaced direct-call marker for this lifecycle. The
   run reached no 1024 phase and had no crash.
+- The s1163 runtime-origin capture rebuilt successfully and passed its
+  independent slot-dispatch control (8,192 bounded entry rows through phase 6).
+  It remained in the known `640→2→640` lifecycle for 209 seconds, never reached
+  VI 1024, and produced zero stack-guard or crash rows. The `slotDispatcherIter+872`
+  writer-origin discriminator is unevaluable in this capture; the positive
+  control does not make the eventual fault path observable.
 
 ## Retail VI descriptor boundary
 
@@ -335,6 +341,7 @@ corruption.
 | s1160 | Static-censused all five generated `osViSetMode_recomp` edges and the sole selector consumer. The direct `applyPendingViChanges` edge at `0x8001B8DC` is the only edge on the `0x80019914` writer path and can submit `0x80128DF0` without entering `selectAndApplyViMode`; the other edges are boot/reset, frame-swap, or selector-owned paths. This identifies H3's generated owner and closes the duplicate-edge ambiguity without a build or run. |
 | s1161 | Rebuilt and ran the phase-gated runtime reconciliation with selector-positive and slot-dispatch controls. The controls fired (1 and 6,864); at stable VI width 640, the direct `0x8001B8DC` marker carried `0x80128DF0` and the host independently logged the same request, while selector-consumer markers stayed zero. This selects H3 and rules out a stale/misplaced direct-call marker for this lifecycle. The run timed out before VI-1024, with no crash. |
 | s1162 | Completed the whole generated `slotDispatcherIter` caller census: 144 direct sites across 72 callers, zero static indirect targets to `0x8003E8DC`, 72/72 companion-entry matches, and no unbalanced stack/return idiom. The `0x80078894` site is inside the corrected standalone `npcPowerGeneratorUpdate` boundary. This selects H1 and rules out a generated caller-frame idiom or the old coalesced-boundary explanation; runtime-side frame/value origin remains open. |
+| s1163 | Rebuilt and ran the phase-gated runtime-origin capture with slot-dispatch and stack-guard controls. Slot dispatch produced 8,192 bounded entries through phase 6, but the run stayed in `640→2→640` for 209 seconds and was SIGKILLed after no VI-1024 transition; stack-guard and crash rows were zero. The planned writer-origin discriminator was unevaluable, so no H1/H2/H3 conclusion or mitigation is justified. |
 
 ## Ranked next steps
 
