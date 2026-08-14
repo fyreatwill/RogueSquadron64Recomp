@@ -63179,6 +63179,29 @@ mitigation changed.
 ORIGIN: diagnostic-only store attribution; no value was skipped, rewritten, or
 otherwise mitigated.
 
+## Session 1114 (2026-08-14) — attributed retail mode-state writers
+
+Ran the planned phase-gated retail-oracle capture with the rebuilt debugger
+core. The first invocation used the stale `return` symbol and was invalid:
+presses logged `sym=0`, no PIF control was observed, and the run remained at
+width 320. The corrected `start` schedule passed the whole-RDRAM positive
+control with 38,791 callbacks, showed eleven PIF reads of the Start word
+`0x10000000`, and advanced 7,199 VI frames. VI callback and independent poll
+observations agreed, with no transition beyond width 320/origin `0x006dd280`.
+
+The detailed same-table rerun attributed four writes to selector `0x8011A864`
+from PCs `0x80017CA0`, `0x80017CB0`, `0x80017CD0`, and `0x80017CEC`; pending
+mask writes to `0x80128E90/0x80128E94` from `0x8001BA88/0x8001BA80`; and the
+A0 byte `0x8011A8A0` to `0x80019D9C` and `0x80019F60`. This selects
+`H-mode-writer` for the pre-phase lifecycle route: mode-family writes are
+real retail activity before the missing 512/1024 phase. The A0 writers are
+observed but not phase-qualified, so this does not select `H-A0-writer` or
+explain the port's transition. It rules out a null retail writer and an
+invalid target-watch setup; it does not identify whether the mode writers are
+boot initialization, frame-state refresh, or transition producers.
+
+ORIGIN: observation/classification only; no value was skipped, rewritten, or otherwise mitigated.
+
 ## Session 1109 (2026-08-14) — submit writer capture stopped at VI 640
 
 Ran the prescribed phase-gated generated-store capture with the s1108 probe,

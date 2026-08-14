@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1113 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1114 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -77,6 +77,16 @@ compact and records only live conclusions, boundaries, and next work.
   documented `build/Debug` ROM path is absent on this checkout; rerunning with
   the existing `build/rogue_squadron.z64` path passed. This selects
   `H-oracle-core`; no target-watch or hangar-phase conclusion is admissible yet.
+- The s1114 corrected retail-oracle capture passed independent controls: 38,791
+  whole-RDRAM callbacks, eleven PIF Start words, 7,199 VI frames, and matching
+  VI callback/poll observations. It remained at width 320, but detailed writes
+  identified selector `0x11A864` writers at `0x80017CA0`, `0x80017CB0`,
+  `0x80017CD0`, and `0x80017CEC`; pending-mask writers at `0x8001BA80` and
+  `0x8001BA88`; and A0 writers at `0x80019D9C` and `0x80019F60`. Since no
+  512/1024 phase was reached, this selects `H-mode-writer` for the pre-phase
+  lifecycle route; the A0 writers are observed but are not phase-qualified.
+  The initial `return`-symbol attempt was invalid (`sym=0`, no PIF control) and
+  was superseded by the documented `start`-symbol reruns.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -357,16 +367,21 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1110 | Removed `ROGUESQ_LOG_ALL` while retaining the targeted store and submit-boundary probes. The 180-second capture passed the generated-store control 34 times, produced 256 A89F rows, 286 sends, and 427 receives, and repeatedly sampled `gate89f=2 gate8a0=1`, but never reached VI width 1024 (last width 640) and produced no A0 row. This rejects broad-log overhead for the targeted recipe, but cannot separate input-route from transient-state; no E9-phase or writer attribution is valid. No queue behavior or mitigation changed. |
 | s1111 | Restored s1106's no-key, 1.0-second launch shape with targeted store and submit-boundary probes. The run passed the generated-store control and logged 256 A89F stores plus 713 submit-boundary rows, but remained at width 640 for the phase gate; no A0 row or E9-phase controls were observed. This consumes the recovery budget and leaves the writer discriminator invalid; no queue behavior or mitigation changed. |
 | s1112 | Bounded static audit traced the 640/1024 VI writes to the internal mode-selection/copy route in `initVideoSubsystem`, `swapBufferWithViMode`, and `selectAndApplyViMode`. The controlling selector bytes and pending masks are lifecycle/config state, while `tools/probe.sh` supplies only keyboard events and observes committed VI registers. The logger is downstream of the mode commit and therefore does not hide a 1024 transition. Selects static `H-state-lifecycle`; no build, runtime capture, or mitigation changed. |
+| s1114 | The corrected retail-oracle capture passed whole-RDRAM, PIF, and VI callback/poll controls, reaching 7,199 VI frames at width 320. Detailed physical writes attributed selector `0x11A864` to `0x80017CA0/7CB0/7CD0/7CEC`, pending masks to `0x8001BA80/BA88`, and A0 to `0x80019D9C/9F60`; no 512/1024 phase occurred. Selects `H-mode-writer` for the pre-phase lifecycle route and leaves phase-qualified A0 ownership open. The initial `return` schedule was invalid (`sym=0`, no PIF control) and was superseded by the `start` schedule. |
 
 ## Ranked next steps
 
-1. Run one phase-gated retail-oracle capture with the rebuilt debugger core,
-   whole-RDRAM/PIF/VI controls, and watches on the mode-selector/pending-state
-   family plus the A0 target. Do not interpret target zeros unless all controls
-   pass and the 512/1024 phase is reached.
-2. Keep M4 parked unless an independent ground-truth path or a new complete
+1. Perform one bounded static audit of the s1114 retail writer PCs in the
+   generated output, ROM mapping, and companion symbols. Classify each write as
+   boot initialization, per-frame scheduler state, or phase-transition state;
+   do not change code. This determines whether the next oracle needs a new
+   phase-driving input route or a narrower writer watch.
+2. Run a phase-gated retail-oracle capture with the rebuilt debugger core only
+   after that audit selects a phase-driving route; keep whole-RDRAM/PIF/VI
+   controls and the A0 watch armed, and reject any target null before 512/1024.
+3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
-3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
+4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
    omission only when a reproducible lead appears; preserve delete-before-
 regen ordering and audit fixup counts.
 

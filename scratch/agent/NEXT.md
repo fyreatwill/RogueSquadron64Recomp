@@ -1,38 +1,33 @@
-# NEXT work unit (s1114)
+# NEXT work unit (s1115)
 
 HYPOTHESIS-ID: retail-oracle-mode-state-route
 
-Run one phase-gated retail-oracle capture using the rebuilt debugger-enabled
-core. Keep the whole-RDRAM, PIF, and VI controls armed; watch the mode selector
-and pending-mask family identified by s1112 plus target `0x8011A8A0` (physical
-`0x11A8A0`). Do not interpret target zeros unless the controls pass and the
-512/1024 phase is reached.
+Perform one bounded static audit of the retail writer PCs identified in s1114:
+`0x80017CA0`, `0x80017CB0`, `0x80017CD0`, `0x80017CEC`, `0x8001BA80`,
+`0x8001BA88`, `0x80019D9C`, and `0x80019F60`. Locate each instruction in the
+generated function files and the independently mapped retail ROM, then compare
+the surrounding control flow and companion symbols. Use bounded searches such
+as:
+
+```sh
+rg -n -i '80017ca0|80017cb0|80017cd0|80017cec|8001ba80|8001ba88|80019d9c|80019f60' RecompiledFuncs tools syms docs
+rg -n '8011A864|80128E90|80128E94|8011A8A0' RecompiledFuncs tools syms docs
+```
+
+Classify every writer as boot initialization, per-frame scheduler state, or
+phase-transition state. Do not edit code or run another oracle capture unless
+the source audit cannot locate a writer.
 
 Competing hypotheses:
 
-* H-mode-writer: selector/pending-state writes occur before the 512/1024 phase,
-  and their PC/value trace identifies the retail lifecycle gate.
-* H-A0-writer: the A0 byte is written by the retail route, with a PC/value
-  attribution independent of the port's generated-store probe.
-* H-pre-phase-boundary: all controls pass but neither watched state family nor
-  A0 is reached before the established attract route ends; the boundary is
-  earlier than the suspected consumers.
+- H-mode-init — selector/pending writes are boot/config initialization and do
+  not drive the missing phase.
+- H-mode-loop — they are repeatedly refreshed scheduler state and the port's
+  lifecycle is the likely boundary.
+- H-mode-transition — at least one writer is dominated by the 512/1024 mode
+  selection predicate and is the phase-transition producer.
 
-Discriminator: the phase-gated run's independent PC-attributed writes and
-controls. Mode-family writes before 512/1024 select H-mode-writer; an A0 write
-with controls and phase selects H-A0-writer; positive controls without either
-watch class or the phase select H-pre-phase-boundary. A zero target watch with
-failed controls is invalid.
-
-Exact commands:
-
-```sh
-mkdir -p scratch/agent/oracle_mode_capture
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom build/rogue_squadron.z64 --secs 120 --watch-write 0:0x800000 --watch-write 0x11A862:0x11A866 --watch-write 0x128E90:0x128E98 --watch-write 0x11A8A0:0x11A8A1 --vi-trace --vi-poll --pif-trace --press 6:return,12:return,18:return,24:return,30:return,36:return,42:return,48:return,54:return,60:return,66:return > scratch/agent/oracle_mode_capture/run.log 2>&1
-```
-
-The whole-RDRAM watch must reach its positive-control threshold, PIF must show
-the scheduled Start edges, and VI callback/poll traces must agree. If the
-front end's watch capacity rejects this four-watch command, increase capacity
-in one bounded source edit and rerun the same complete table; do not drop a
-watch.
+Discriminator: the writer's surrounding branch/caller and ROM match. A boot-
+only store selects H-mode-init; a recurring unconditional or frame-gated store
+selects H-mode-loop; a writer dominated by the 512/1024 mode-selection
+predicate selects H-mode-transition.
