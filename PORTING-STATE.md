@@ -61409,3 +61409,17 @@ accumulator, ordinary-arithmetic, or VGE hypotheses. It also rules out
 linked at all. No mitigation or code change was made. The next unit is one
 reconfigure/build and artifact-control validation, followed by the capture
 only if the generated-source and executable controls both pass.
+
+## Session 1020 (2026-08-14) — confirmed ovl20 remains outside the link graph
+
+Ran the prescribed reconfigure/build and artifact validation without launching
+another game capture. The regenerated composite
+`build/factor5_ucode/factor5_ucode_recompiled.c` and the probe-bearing ovl20
+source each contained the accumulator call sites. `nm` showed
+`_rs64_m4_accum_probe` in the executable, so the shared helper control passed.
+The CMake link graph still listed only `factor5_boot_recompiled.c`,
+`factor5_ucode_recompiled.c`, and `factor5_ucode_b_recompiled.c`; it produced no
+ovl20 object, and the executable had no `factor5_ucode_ovl20` marker. The
+complete artifact discriminator therefore selected the active-overlay/link
+path defect, not `H-runtime-unreached`; the M4 capture was correctly withheld.
+No mitigation or code change was made.

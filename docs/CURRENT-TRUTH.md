@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1019 (2026-08-14). The active investigation is M4 zero-shade:
+Reviewed through s1020 (2026-08-14). The active investigation is M4 zero-shade:
 the emitted shade is a constant sentinel, and the retail Factor 5 instruction
 stream omits a color-word read in the shaded-triangle emitter. VGE cannot create
 the sentinel; the remaining question is the preceding accumulator/high-half
@@ -19,8 +19,10 @@ scheduled keys, but the run stayed at 1024 and emitted neither the M4 target nor
 its VMADH positive control. This is a valid phase-control result but an invalid
 M4 capture. s1019 found the concrete artifact defect: the probe-bearing ovl20
 source was generated after the last CMake build, and ovl20 is not a standalone
-CMake source; the linked executable contains neither its probe symbol nor its
-ucode image. This is a stale-build/link result, not an M4 numeric result.
+CMake source. s1020 reconfigured and rebuilt: the composite source and
+executable now contain the probe, but the build graph still links only
+base/boot/B ucode, with no ovl20 object or executable ovl20 marker. This
+remains a link-path result, not an M4 numeric result.
 M5 audio de-stubbing is closed. M3 work is limited to complete idiom-class audits. The
 retail-oracle callback thread is no longer directory-blocked
 (`.claude/settings.json` currently lists `rs64-oracle`); see backlog.
@@ -233,14 +235,16 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1017 | Static audit: `PROBE_PHASE_WIDTH` is an exact latest-width equality gate, and `PROBE_KEYS_FROM_PHASE=1` launches keys only after the gate. A 512-gated run therefore cannot send the Start needed to cause a 512 transition; selected `H-key-schedule-phase`, no runtime M4 conclusion. |
 | s1018 | Corrected 1024-gated capture reached VI-1024 at 78.3s and delivered all scheduled keys, but remained at 1024 for 85 frames with zero M4 and VMADH-control rows. Phase control passed; probe control failed, so no M4 hypothesis was classified. |
 | s1019 | Artifact audit found ovl20 probe source newer than the build; CMake compiles only base/boot/B ucode, and the linked executable has neither `rs64_m4_accum_probe` nor `factor5_ucode_ovl20`. Selected `H-stale-build-link`; no M4 hypothesis classified. |
+| s1020 | Reconfigure/build linked `rs64_m4_accum_probe` in the executable and regenerated the composite source, but CMake still omitted `factor5_ucode_ovl20_recompiled.c`; no executable ovl20 marker exists. Capture withheld; M4 remains unevaluated. |
 
 ## Ranked backlog
 
-1. Reconfigure and build once so the fixup splices the current probe-bearing
-   ovl20 source into the main Factor 5 translation, then verify the linked
-   executable contains the probe string and main generated source contains its
-   calls. Only after those controls pass, run the corrected 1024-gated M4
-   capture; do not classify M4 from a zero-control capture.
+1. Trace the intended ovl20 integration path in CMake and the Factor 5
+   generation/fixup scripts, then make the smallest build-graph change that
+   causes the probe-bearing ovl20 implementation to be linked or deliberately
+   spliced into the active dispatch path. Rebuild and verify source, object,
+   symbol, and active-overlay controls; only then run the corrected 1024-gated
+   M4 capture. Do not classify M4 from a base-ucode-only control.
 2. The `slotDispatcherIter+872` guest-`$sp` corruption now has a landed
    diagnostic: `ROGUESQ_LOG_SLOT_SP_GUARD=1` dumps the register file when the
    stack pointer is out of RDRAM at `slotDispatcherIter` entry. Queue the soak
@@ -280,8 +284,10 @@ The source-level truth table selected `H-key-schedule-phase`:
 and 512 is only a target width, not a phase ordinal. `H-probe-contract-mismatch`
 is refuted by the source/default parsing matching the documented variables.
 
-The next runtime discriminator is whether the corrected 1024-relative schedule
-produces a 512 transition and fires the independent VMADH control.
+The next artifact discriminator is whether the active ovl20 implementation is
+present in the linked dispatch path, not merely whether the shared probe helper
+is linked. The runtime discriminator remains whether the corrected
+1024-relative schedule fires the independent VMADH control.
 
 Competing M4 hypotheses remain unevaluated:
 
