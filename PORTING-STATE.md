@@ -63555,3 +63555,16 @@ rules out selector/record clobber before the first consumer. The `a0` pointer
 passed to the consumer and the host-side width commit remain open. No build,
 run, or mitigation changed. ORIGIN: generated store census and bounded
 control-flow ordering; no mitigation.
+
+## Session 1131 (2026-08-14) — compacted current truth
+
+Maintenance iteration triggered because `docs/CURRENT-TRUTH.md` was 60,031
+bytes. Rewrote it to a compact live-state file, preserving the active retail
+VI descriptor chain, M3/M4 boundaries, superseded conclusions, ranked next
+steps, and a session-range evidence summary. Migrated the durable s1048–s1131
+retail descriptor lineage to `docs/PROJECT-OVERVIEW.md`. The file fell from
+526 lines / 60,031 bytes to 127 lines / 7,426 bytes, a net reduction of 399
+lines. No build, run, or runtime conclusion occurred. This rules out only
+documentation drift as the maintenance target; the `0x8001B720` pointer and
+host width commit remain the next work unit. ORIGIN: documentation compaction;
+no mitigation.

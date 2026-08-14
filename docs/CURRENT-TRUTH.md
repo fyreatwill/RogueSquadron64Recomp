@@ -2,8 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1129 (2026-08-14). This file is deliberately
-compact and records only live conclusions, boundaries, and next work.
+in the ledger. Reviewed through s1131 (2026-08-14).
 
 ## Current state
 
@@ -19,488 +18,97 @@ compact and records only live conclusions, boundaries, and next work.
   FULL_SYNC was absent in the decisive capture. Remaining deltas are
   boundary/span-shaped and the residual extended condition is unclassified.
 - The recurring `slotDispatcherIter+872` SIGBUS is the generated prologue
-  spill of guest `$sp` at `funcs_8.c:22810`. All 144 direct callers have
-  balanced frame shapes; statically addressed indirect targets are balanced;
-  `0x8010B350` is compiled data with no generated writer. The general runtime
-  caller-frame corruption mechanism remains open. A
-  `ROGUESQ_LOG_SLOT_SP_GUARD=1` register dump is landed and binary-verified;
-  two phase-positive no-event soaks did not classify the +872 site.
-- M5 audio de-stubbing is closed. Do not reopen it without a genuinely new
-  lead. Audio remains stubbed; the legacy audio audits are archived in the
-  project overview.
-- The corrected s1106 phase-gated submit-boundary capture reached VI 1024 and
-  recorded 818 target send/receive rows. The blocking queues were used at
-  `0x8011A818` and `0x8011A7E8`; SP rows repeatedly saw `0x8011A8A0=1` while
-  `0x8011A89F` stayed zero, so the stale-zero gate hypothesis is false on
-  this port path. Event wiring independently continued to complete SP on
-  `0x8011A420` and DP on `0x8011A408`, leaving the producer/consumer queue-role
-  mismatch live. The probe sampled values at call boundaries, not the writer
-  instruction, and its shared last-PC field is not reliable writer
-  attribution; writer-PC attribution remains open.
-- The s1109 generated-store capture and its calibrated Start/A retry both
-  passed positive generated-store controls and produced repeated A89F rows,
-  but each stopped at VI width 640 during the 180-second gate timeout. No
-  A0 writer result or E9-phase result is admissible; the launch recipe must be
-  recovered before retrying the writer discriminator.
-- The s1110 targeted-only retry passed the generated-store control 34 times,
-  produced 256 A89F rows, and logged 286 sends plus 427 receives, but stayed
-  at VI width 640 for 180 seconds. No A0 (`0x8011A8A0`) writer row appeared.
-  This rejects broad-log overhead for this recipe, but does not distinguish
-  an input-route miss from a transient launch state; no E9/VI-1024 conclusion
-  is admissible.
-- The s1111 retry restored the exact s1106 launch shape (no `PROBE_KEYS`,
-  1.0-second capture interval) while retaining the targeted probes. It again
-  stopped at width 640, but the generated-store control fired 256 times and
-  submit-boundary logging produced 713 rows; no A0 writer row or VI-1024/E9
-  phase occurred. This consumes the recovery budget without selecting a
-  writer hypothesis: the positive controls prove the probes were active, but
-  the required phase discriminator was absent. The launch-route/state boundary
-  is now the next static-audit target.
-- The s1112 bounded VI-route audit classifies the missing 640-to-1024 transition
-  as lifecycle-driven at source level. `initVideoBootWrapper` and
-  `advanceVideoFrame` feed `initVideoSubsystem` from display/config arguments;
-  the mode selectors used by `swapBufferWithViMode`/`selectAndApplyViMode` are
-  internal bytes at `0x8011A864`, `0x8011A865`, and `0x8011A862`, plus pending
-  feature masks at `0x80128E94`/`0x80128E90`. The selected mode records are
-  copied through the internal table around `0x80128D50` and can carry widths
-  320, 512, 640, or 1024. `tools/probe.sh` only injects keyboard events and
-  phase-gates on the host's post-update `[phase]` line; it does not set these
-  mode flags. The host logger reads `get_vi_regs()` after `ScreenUpdateAction`
-  commits the next state, so no unobserved 1024 write or logger mismatch was
-  found. This selects static `H-state-lifecycle`; the retail writer/consumer
-  boundary remains open.
-- The s1113 oracle setup check rebuilt the debugger-enabled Mupen64Plus core,
-  confirmed `DebugBreakpointCommand` is exported, rebuilt `rs64_oracle`, and
-  loaded the core successfully against the repository ROM. The 8-second
-  whole-RDRAM positive control reached the oracle's 10,000-callback threshold
-  and advanced 479 VI frames. The first invocation failed only because the
-  documented `build/Debug` ROM path is absent on this checkout; rerunning with
-  the existing `build/rogue_squadron.z64` path passed. This selects
-  `H-oracle-core`; no target-watch or hangar-phase conclusion is admissible yet.
-- The s1114 corrected retail-oracle capture passed independent controls: 38,791
-  whole-RDRAM callbacks, eleven PIF Start words, 7,199 VI frames, and matching
-  VI callback/poll observations. It remained at width 320, but detailed writes
-  identified selector `0x11A864` writers at `0x80017CA0`, `0x80017CB0`,
-  `0x80017CD0`, and `0x80017CEC`; pending-mask writers at `0x8001BA80` and
-  `0x8001BA88`; and A0 writers at `0x80019D9C` and `0x80019F60`. Since no
-  512/1024 phase was reached, this selects `H-mode-writer` for the pre-phase
-  lifecycle route; the A0 writers are observed but are not phase-qualified.
-  The initial `return`-symbol attempt was invalid (`sym=0`, no PIF control) and
-  was superseded by the documented `start`-symbol reruns.
-- The s1115 writer audit maps all eight retail PCs to ordinary generated
-  functions and matching retail-ROM instructions. Selector writes at
-  `0x80017CA0/7CB0/7CD0/7CEC` are the bitfield unpack in
-  `buildAndRegisterDefaultMaterial`, called during boot and by the per-frame
-  `advanceVideoFrame`; they are not dominated by a 512/1024 mode predicate.
-  Pending-mask writes at `0x8001BA80/BA88` are the clear-at-return tail of
-  `applyPendingViChanges`, called from the repeating VI retrace loop. A0
-  writes at `0x80019D9C/9F60` are in the repeating `spTaskSchedulerThread`
-  task-state/completion paths. Independent ROM bytes match each generated
-  instruction under `ROM = VRAM - 0x80000000 + 0xC00`. This selects static
-  `H-mode-loop`, rules out `H-mode-transition` for these eight writers, and
-  leaves the mode-selection input/state producer open.
-- The s1116 corrected retail-oracle capture passed independent controls:
-  38,782 whole-RDRAM callbacks, all ten scheduled Start/PIF edges, and 7,198
-  VI frames. It stayed at width 320/origin `0x006dd280`, while all eight
-  audited writer PCs fired (selector writers once, pending-mask writers
-  7,198 times, and A0 writers 7,193 times). This selects
-  `H-retail-stays-prephase` and refutes `H-writer-watch-invalid`; the
-  mode-record caller/argument route remains open.
-- The s1117 bounded caller/table audit found that both boot and per-frame
-  routes eventually use the fixed RAM table base `0x80128D50`; the selectors
-  choose record offsets `0x00`, `0x50`, `0xA0`, or `0xF0` from lifecycle bytes
-  at `0x8011A864`, `0x8011A865`, and `0x8011A862`. The width-bearing load is
-  the table record's word at offset `+8`, copied to the active VI mode before
-  `osViSetMode`. No computed pointer leaves the table and no companion
-  implementation adds another caller. This selects
-  `H-mode-record-state-gate` over pointer corruption, but the producer that
-  populates the records and the concrete widths remain open.
-- The s1118 producer audit found a real initialization/copy path: `initVideoSubsystem`
-  copies four 0x50-byte records into `0x80128D50` from the ROM-backed
-  `osViModeTable` at `0x80039330`. The source index is selected through the
-  mode-type-index bytes at `0x8003780C..0x782F`; the retail table contains
-  width-320 records (indices 0-7, 14-21, 28-35), width-640 records (9, 11,
-  13, 23, 25, 27, 37, 39, 41), and width-1280 records (8, 10, 12, 22, 24,
-  26, 36, 38, 40). This rules out an uninitialized table and a fixed-320
-  descriptor source, but does not yet identify which selector state reaches
-  the active record on the retail width-320 path. Single-source static result.
-- The s1120 retail-oracle capture passed independent controls: 10,009 whole-RDRAM
-  callbacks, all nine scheduled Start events, and 7,196 VI frames. It recorded
-  zero writes to `rsViModeType` (`0x8010FF20`), four writes to the selector range
-  `0x8011A862..0x8011A865`, and zero writes to the descriptor-index range
-  `0x8003780C..0x8003782F`; VI remained width 320 at origin `0x006dd280`.
-  Selector activity was confined to boot before the first press, selecting
-  runtime `H-retail-selector-prephase` over input-tainted and observed non-320
-  selection. The oracle's global hit-print cap suppressed individual selector
-  addresses/values, so no concrete selector value is claimed.
-- The s1121 reset/mode-index audit corrects s1119's input label: generated
-  `setViModeType` reads `osTvType` at `0x80000300`, not `osResetType` at
-  `0x8000030C`, and maps that value to `rsViModeType` at `0x8010FF20`.
-  Retail ROM words independently match the generated setter. `initVideoSubsystem`
-  has ten descriptor-index reads at `0x8003780C..0x7830`, all indexed by that
-  mode-type byte; no generated, companion, or symbolized writer for the index
-  bytes was found. This selects `H-non-generated-index-source` for the concrete
-  descriptor-index producer, while leaving the raw/data/host owner open.
-- The s1122 non-generated/data-boundary audit resolves the ownership split:
-  `librecomp::init` explicitly writes `osTvType` (`0x80000300`) to NTSC value
-  1, while no host, patch, generated, or companion store targets
-  `0x8003780C..0x8003782F`. The window is populated by the initial ROM DMA;
-  bytes at the established `ROM = VRAM - 0x80000000 + 0xC00` offsets match the
-  indexed `lbu` readers. The only nearby generated writes target
-  `0x80037808`, not the index window. This selects `H-host-init` for
-  `osTvType` and `H-rom-data` for the index bytes; the active index-to-width
-  reconciliation remains open.
-- The s1123 descriptor audit resolves `setViModeType(osTvType=1)` to
-  `rsViModeType=0`. The ten NTSC index bytes, read in call order
-  `0x7830..0x780C`, are `{12,0,6,4,11,9,10,8,13,2}` as table indices; their
-  record `+8` widths are `{1280,320,320,320,640,640,1280,1280,640,320}`.
-  The fixed mode-type input therefore defines a mixed copied descriptor set,
-  and the observed retail width 320 requires the lifecycle selector to choose
-  one of indices `0,2,4,6`. This selects `H-index-state-dependent` over a
-  fixed non-320 index or mapping error and reconciles the oracle width.
-  Static result; no build or run.
-- The s1124 selector audit resolves the choice mechanism: `selectAndApplyViMode`
-  maps `0x8011A865/64/62` to copied-record offsets `0x00/0x50/0xA0/0xF0`,
-  while `buildAndRegisterDefaultMaterial` writes those bytes from bits 8/7,
-  5/4/3, and 2 of its `$s1` render-state argument. The writer is reached from
-  boot video initialization and recurring `advanceVideoFrame`, so the active
-  selector is runtime-populated rather than a fixed 320 initializer. The
-  independent retail width-320 capture constrains the initial result to
-  offsets `0x00/0x50/0xA0` whose records are indices `{0,2,4,6}`; no concrete
-  offset is claimed until the boot caller's `$s1` provenance is traced. This
-  selects `H-selector-runtime-320` over fixed-320 and non-320. Static plus
-  retail evidence; no build or run.
-- The s1127 selector audit resolves the boot branch. The literal
-  `gameConfig+0x44 = 0x00001800` reaches `buildAndRegisterDefaultMaterial`,
-  which writes selector bytes `A/B/C = 1/0/0` from bits 8/7/2.
-  `selectAndApplyViMode` therefore takes the `0xF0` branch. The four-record
-  copy maps that destination to source block `sp+0x108`, the NTSC index-0
-  descriptor with record `+8` width 320. This selects
-  `H-selector-zero-to-320` and rules out argument transformation and a
-  non-320 zero-selector arm. Static result; no build or run.
-- The s1128 descriptor-source audit found four `sp+0x108` write families in
-  `initVideoSubsystem`. The initial `0x8001A418..A424` loop loads the NTSC
-  `0x782C` index-0 descriptor. The later `0x8001A92C..A938` overwrite is
-  reached only by `s7==0` at `0x8001A364`; the `0x8001ADC0..ADCC` and
-  `0x8001B2C4..B2D0` families are on that same alternate route. The boot
-  wrapper's incoming stack words make both `t9` at `0x8001A358` and `s7` at
-  `0x8001A364` nonzero, so boot falls through the initial-load route and
-  preserves index 0 through the `0xF0` copy. Static result; no build or run.
-- The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
-  showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
-  while remaining at width 320/origin `0x006dd280`. No read or write hit
-  `0x130B30:0x130B31` in s1085 and the full block in s1086. These
-  single-source oracle results now select `H-pre-main-loop-state-gate` for the
-  established schedule: `0x8003E010` executed once, but `0x8003E07C` did not.
-  The s1090 dense bracket reached `0x8006D9B0` once, but none of the post-loop
-  PCs `0x8006D9C0`, `0x8006D9D0`, `0x8006D9E0`, `0x8006D9F0`, `0x8006DA10`,
-  `0x8006DA30`, `0x8006DA50`, or `0x8006DA70` fired; continuation, gate, and
-  later milestones remained silent. The s1091 branch bracket then hit
-  `0x8006D9B4` once while `0x8006D9B8` and `0x8006D9BC` stayed silent. This
-  selects single-source `H-branch-delay-boundary`; whether the PC callback
-  omits a MIPS delay-slot execution or the retail path branches back before
-  the later body remains open.
+  spill of guest `$sp` at `funcs_8.c:22810`. Direct callers and statically
+  addressed indirect targets are balanced; `0x8010B350` is compiled data with
+  no generated writer. General runtime caller-frame corruption remains open.
+  The register-dump probe is landed and binary-verified; phase-positive
+  no-event soaks did not classify the site.
+- M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
+  a genuinely new lead.
+- The port-side VI 640-to-1024 transition is lifecycle-driven. The host logger
+  observes committed VI state correctly; the active mode bytes, copied records,
+  and pending masks are ordinary runtime state, not an unobserved host write.
+- Retail oracle controls are healthy: whole-RDRAM, scheduled PIF input, and VI
+  callback/poll controls pass. The tested retail ROM remains on the width-320
+  attract path and does not reach the 512 hangar-origin phase, so no hangar
+  watch conclusion is valid.
 
-The s1092 retail oracle capture added the statically identified taken target
-and nearby loop PCs. Controls remained positive: whole-RDRAM reached 10,015
-callbacks, all eleven Start presses were observed in PIF reads, and VI reached
-7,204 at width 320/origin `0x006dd280`; the mission-state block was silent.
-`0x8006D9B4` hit once and `0x8006D980` hit twice; nearby even loop PCs
-`0x8006D988` through `0x8006D9A8` each hit twice, while `0x8006D9B8`,
-`0x8006D9BC`, all odd nearby PCs, and all post-loop PCs remained silent. This
-selects single-source `H-taken-target`: retail execution reaches the taken
-loop target, and the remaining delay-slot distinction is an oracle callback
-coverage question rather than an unresolved branch target. The s1093 source
-audit resolves that question: the oracle forces `R4300Emulator=0`, so
-`run_pure_interpreter` calls `update_debugger(current PC)` before each
-top-level instruction, while `DECLARE_JUMP` recursively executes the delay
-slot without another debugger update. `--watch-pc` maps each requested PC to
-the exact half-open range `[pc, pc+4)`. Thus zero PCs that are delay slots are
-callback omissions by construction; non-delay PCs remain valid retail
-evidence.
+## Retail VI descriptor boundary
 
-The s1094 ROM/generated audit classifies the full `0x8006D980..0x8006D9BC`
-bracket. The generated function and raw ROM agree under an independent
-`ROM = VRAM - 0x80000000 + 0xC00` mapping. `0x8006D9B8` is the `bne` delay
-slot and can be absent from the oracle callback stream, but `0x8006D9BC` is
-the ordinary fall-through `addiu`, not a delay slot. This supersedes the
-broader s1093 implication that the remaining zero PCs could all be callback
-omissions: the delay-slot explanation remains valid for `9B8`, while `9BC`
-requires a branch-taken/runtime explanation.
+The active static chain is now:
 
-The s1095 established-schedule retail oracle run passed the whole-RDRAM,
-eleven-Start/PIF, and VI controls: 10,000 positive-control callbacks, all
-eleven presses, and 7,198 VI frames in 120 seconds at width 320/origin
-`0x006dd280`. Execution watches recorded `0x8006D9B0=1`, `0x8006D9B4=1`, and
-`0x8006D9BC=0`. This single-source runtime result selects `H-taken-branch`:
-the compare's taken path explains the absent ordinary fall-through PC. The
-initial attempt was truncated before its 120-second completion and is invalid;
-the full rerun is the usable capture.
+`osTvType=1` → `rsViModeType=0` → NTSC descriptor index bytes →
+`gameConfig+0x44=0x1800` → selector `A/B/C=1/0/0` → copied-record offset
+`0xF0` → index-0 descriptor → width 320.
 
-The s1096 static audit closes the branch-target classification. The preserved
-generated snapshot and independently mapped retail ROM agree word-for-word from
-`0x8006D980` through `0x8006D9C8`. `0x8006D9B4` is `bne $v0,$zero,0x8006D980`;
-the taken target increments `$s0`, executes the six input/frame submission
-calls at `0x8006D988`–`0x8006D9AC`, and returns to the compare at
-`0x8006D9B0`. The target is therefore a valid loop-back, not an exit or a
-generated/ROM mismatch. The non-taken path begins at `0x8006D9B8`'s delay-slot
-instruction and continues through the cleanup path at `0x8006D9BC`.
+Evidence and boundaries:
 
-## Retail oracle boundary
-
-The retail oracle reaches only the width-320 attract path under the tested
-Start, A, Z, hold, cadence, first-input, and 120-second schedules. The whole-
-RDRAM callback control, input-edge controls, and VI callback/poll agreement
-are positive. It does not reach the 512 hangar-origin phase, so no freelist
-watch or hangar conclusion is valid. The local config-order explanation and
-the tested timing/input-shape explanations are closed.
-
-Static audits classify the width-320 handoff as state-shaped:
-
-- `mainGameLoop` gates `menuOverlayInit` on byte `0x80130B30`, which is
-  `D_80130B10+0x20` in the mission-state block, not `gGameSettings+0x20`.
-  `runIdleFramesAndLoadSaveData` has a direct generated writer at
-  `0x8006DAB8` that stores constant `1`; `resetGameSettingsAndMissionStats`
-  clears the containing 0x28-byte block first. Static ownership is therefore
-  `H-gate-writer`; runtime reachability/value and any later raw alias remain
-  open.
-- The s1081 bounded path audit found one generated caller of
-  `runIdleFramesAndLoadSaveData`: `mainGameLoop` at `0x8003E010`. Its 32-frame
-  loop and all save-load/pending-save branches rejoin the common tail; after
-  `resetGameSettingsAndMissionStats` clears `D_80130B10`, the unconditional
-  `0x8006DAB8` store writes `1` to `0x80130B30` before return. The companion
-  symbol annotation independently records reset-before-save-load ordering.
-  This selects static `H-writer-reached` and rules out a generated
-  caller/early-exit path that leaves the reset zero. Runtime execution, later
-  clobbers, and overlay/alias reachability remain open.
-- The s1082 post-return alias census found 67 generated `MEM_B(0x20, ...)`
-  sites, but no concrete write to `0x80130B30` after
-  `runIdleFramesAndLoadSaveData` returns and before the `mainGameLoop` read at
-  `0x8003E07C`. The only exact generated target is the known
-  `0x8006DAB8` store inside that callee; intervening main-loop writes target
-  unrelated globals, and the companion tree has no assignment to the target
-  byte. This selects static `H-no-later-clobber`; overlay-loader/DMA ownership
-  remains outside this generated/companion source census.
-- The s1083 loader audit found that all three `loadOverlay` cases DMA overlay
-  code to `0x800A5130` and clear BSS at `0x8010B6D0`, `0x800CD520`, or
-  `0x800B0940`; none can target `0x80130B30`. The host PI path forwards the
-  descriptor's DRAM destination unchanged. This selects static
-  `H-loader-no-alias`; runtime execution/value remains open.
-- `menuOverlayInit` dispatches the halfword at `0x800CFF50`; its eight
-  generated callers pass `{9,2,2,3,3,8,3,3}` and use state/asset/unlock/
-  counter predicates, with no local controller, timer, or demo read.
-- Selector 9 calls `runMenuModelViewerScreen(0)` and writes selector 12.
-  Selector 0 calls `runHangarMenuFromOverlay`; its result and exact zero
-  stores are state-shaped, not direct input/demo transitions.
-- The case-0 argument is byte `0x80130B40`. Generated stores are reset,
-  menu/asset, save/setup, fixed-flag, or cinematic-state shaped.
-- `0x80130B54` is the demo-id byte within that global. The complete generated
-  alias sweep found only `cycleIdleDemoId`'s modulo-six increment and its
-  internal clear. Its two callers are state/overlay paths.
-- `dLevelByDemoId` at `0x800CD404` is immutable ROM-backed `.ovl.menu` data;
-  ROM offset `0x1345A4` contains `00 05 07 0A 0B 11 00 00`. Overlay DMA is
-  the loader; no generated population writer was found.
-
-The s1070 bounded non-generated source audit found no host/runtime or patch
-access, no overlay-loader/data write, and no direct companion access to
-`0x80130B54`. The s1071 companion audit found a pointer-mediated write in
-`func_800C1D3C.c:389-390`: `&D_80130B40 + 4*arg0->rest01[3]`, then XOR-write
-through `->unkC`. The containing field is `+0x14` when
-`arg0->rest01[3] == 2`, so `H-pointer-write` is selected. This is static
-source evidence only: the runtime value of that index and whether this branch
-executes remain open. The same function's indexed `->unkC` read and
-`func_800C6728`'s indexed reads do not add another writer.
-
-The s1072 caller/initializer audit found one typed initialization of
-`rest01[3]`: `func_800C0084.c:793` assigns zero during HUD initialization.
-No later typed write, copy, or typed caller argument establishes a value of 2;
-the HUD handler is reached through the indirect raw-address dispatch documented
-in s433. Raw guest writes to the corresponding struct offset remain outside the
-companion field model, so this selects `H-index-open`, not `H-index-other`.
-
-The s1073 audit of `controller_stuff/func_800B47C4.c` found the computed-base
-writer: `temp_s1 = arg0 & 0xFF` at line 597, `sp138 = &D_80130B40 +
-4*temp_s1` at line 640, and `sp138->unkC ^= ...` at line 1007. The companion
-tree has no typed caller or initializer for this function, so it cannot prove
-`temp_s1 == 2` or a non-2 value. This selects `H-temp-s1-open`; the
-pointer-mediated `+0x14` writer remains possible but its runtime index and
-branch execution are unclassified.
-
-The s1075 generated caller/raw-dispatch audit found one direct call, at
-`funcs_34.c:11137-11140`: `func_800C5B44` invokes the actual handler entry
-`menuControllerInput` at `0x800B47D0` with `a0 = 0`, proving index 0 for that
-path. No other generated or raw `0x800B47C4/0x800B47D0` references exist;
-`0x800B47C4` is only the 12-byte `fake_func` splat trampoline registered in
-the menu overlay. This rules out a generated caller selecting index 2, but
-does not classify an untyped guest entry into the companion's nominal
-`func_800B47C4` path.
-
-The s1076 oracle design audit found one phase-gated discriminator that keeps
-the closed eleven-Start schedule: combine the whole-RDRAM, PIF, and VI
-callback/poll controls with physical write watches on controller edge storage
-(`0x13A960..0x13A970`) and the selector/state family
-(`0x130B40..0x130B58`). Edge writes without selector writes select a state
-gate; both write classes without hangar-origin 512 select a downstream state
-gate; absent edge writes with positive PIF selects an execution/alias boundary;
-selector writes plus `0x6abxxx` 512 solves the route. This is a design result,
-not runtime evidence.
-
-The s1077 retail run passed all positive controls: the whole-RDRAM watch reached
-its 10,000-hit cap, PIF traces showed the injected Start bit at all eleven
-scheduled presses, and VI callback/poll traces agreed while advancing 7,199
-frames. Neither controller-edge storage (`0x13A960..0x13A970`) nor selector/
-state storage (`0x130B40..0x130B58`) was written. VI remained width 320 with
-origin `0x006dd280` through 120 seconds. This is a single-source oracle result
-with independent control and target-watch lines: it selects the
-`H-oracle-route-open` branch, because positive PIF delivery does not reach the
-expected edge-storage writer. Another input schedule is not discriminating;
-the missing observation is a read watch or guest execution breakpoint on the
-consumer/alias path.
-
-The s1078 retail read-watch run added physical reads on
-`0x13A960..0x13A970` and `0x130B40..0x130B58` to the same eleven-Start
-schedule. Whole-RDRAM callbacks reached the 10,000-hit cap, PIF traces showed
-all eleven injected Start edges, and VI callback/poll traces agreed for 7,198
-frames. Neither target range was read, and VI remained width 320 at
-`0x006dd280`. Under the predeclared discriminator this selects
-`H-consumer-not-reached`: positive PIF delivery does not reach the expected
-consumer reads before the attract loop. This is a single-source retail-oracle
-result with independent positive-control lines; it does not identify which
-state gate prevents the consumer path.
-
-The s1079 static consumer-boundary audit enumerated 55 generated direct calls to
-`getControllerNewButtonsPressed` across 16 generated function names (including
-the duplicate `static_5_800AF6AC` copy). The menu/controller handler
-has exactly one generated direct caller: `menuOverlayInit` at `0x800C5B44`, which
-passes `a0=0`; `0x800B47C4` is only the preceding `fake_func` splat trampoline.
-No raw generated, companion, or patch dispatch target for `0x80079F50`,
-`0x800B47C4`, or `0x800B47D0` was found. `mainGameLoop` conditionally enters
-`menuOverlayInit` through the state/asset byte at its `0x8003E07C` gate, and
-`menuOverlayInit` then selects its handler through the selector jump table at
-`0x800C5A7C`. This selects `H-gate-state` at static-source level; the runtime
-value/ownership of the gate remains open.
+- `librecomp::init` writes `osTvType=1`; `setViModeType` reads that address,
+  not `osResetType`.
+- The NTSC index window is ROM-backed and contains mixed 320/640/1280
+  descriptors. The active selector must choose one of the 320 records.
+- `gameConfig+0x44` has no audited writer and is `0x00001800` in the retail
+  image. Its relevant bits produce selector bytes `A/B/C=1/0/0`.
+- `initVideoSubsystem` initially loads the NTSC index-0 record into `sp+0x108`.
+  The alternate overwrite families require `s7==0`; boot's stack-derived
+  `s7` is nonzero, so index 0 is preserved.
+- The four-record copy writes table offsets `0x00/0x50/0xA0/0xF0`, then
+  reaches `osViSetMode_recomp` without an intervening selector or record store.
+- The exact `a0` pointer at `0x8001B720` and host-side width commit are the
+  remaining boundary. The next audit must resolve them; do not reopen the
+  already-closed selector/source chain.
 
 ## M4 zero-shade boundary
 
-The independent Factor 5 command reference and same-combiner/white-shade
-evidence refute RT64 shade lane/order as the cause. The VTXCOLOR payload is
-nonzero, while decoded shade is the fixed `0xFFFF8000` RGB /
-`0x00008000` alpha sentinel. Task/root-DL and child-consumer-DL joins are
-live but do not identify an individual replacement source.
+Independent Factor 5 command-reference and same-combiner evidence refute RT64
+shade lane/order as the cause. The VTXCOLOR payload is nonzero, while decoded
+shade is the fixed `0xFFFF8000` RGB / `0x00008000` alpha sentinel. Retail ROM
+and generated code show the shaded emitter reads geometry/vector data rather
+than the nearby color field. The missing-lighting/vector numeric origin before
+`vmadh v6,v4,v0` remains unresolved. The accumulator/VGE capture recipe is
+closed after controlled nulls; no mitigation is authorized.
 
-The retail ROM instruction audit shows color stores at `0x1424`, `0x1428`,
-and `0x1468`, but the shaded emitter at `0x1740` reads geometry/vector data
-for `+0x18` and does not read color `+0x10`. Generated output preserves this
-sequence; fixup does not remove a color read. VGE selects an existing lane;
-it cannot synthesize the sentinel. The missing-lighting/vector numeric origin
-before `vmadh v6,v4,v0` remains unresolved. The accumulator/VGE capture recipe
-is closed after controlled nulls; resume only with a new discriminator or
-independent ground truth. No mitigation is authorized.
+## Superseded conclusions
 
-## Evidence ledger
+- s1105's `H-gate-stale-or-unseen-writer` was superseded by s1106's corrected
+  physical-byte sample, which repeatedly observed nonzero `0x8011A8A0` at SP
+  send boundaries. The old result was believable because the static census
+  found no generated nonzero writer, but it did not measure non-generated
+  runtime stores.
+- s1119's claim that `setViModeType` maps `osResetType` was superseded by the
+  generated load and symbol evidence showing `osTvType` at `0x80000300`.
+- Earlier width-320 explanations based on a fixed selector, bad mode table,
+  or a host logger mismatch are closed by the static chain and independent
+  retail controls above.
 
-### Superseded conclusions
-
-- The s1105 single-source conclusion `H-gate-stale-or-unseen-writer` is
-  superseded on the port path by s1106's corrected physical-byte sample:
-  `0x8011A8A0` was nonzero at repeated SP send boundaries. It was believable
-  because the complete static census found no generated nonzero writer, but
-  that census did not measure runtime byte values or non-generated writes.
-
-- The s1119 label that `setViModeType` maps `osResetType` is superseded. It was
-  believable because the routine is a VI lifecycle helper and the adjacent
-  libultra symbols include `osResetType`, but its actual load is offset `0x300`,
-  independently named `osTvType` in the datasyms and companion symbol file.
-
-Details are in `PORTING-STATE.md`; durable summaries are in
-`PROJECT-OVERVIEW.md`.
+## Evidence ledger summary
 
 | Sessions | Durable result |
 |---|---|
-| s820–s880 | Post-sec2 accounting, breadcrumb, coalescer, and oracle routes were classified or parked. |
-| s881–s951 | Complete M3 idiom inventories closed the audio channel-field thread. |
-| s952–s983 | Dispatcher stack-spill family was localized; oracle callback work was repaired later. |
-| s984–s1013 | Shade decode/source/emission audits moved M4 to the accumulator numeric-origin boundary. |
-| s1014–s1038 | M4 probe phase/build controls were repaired; controlled captures remained null and the recipe closed. |
-| s1039–s1047 | Retail input, cadence, timing, and callback controls were positive; attract remained width 320. |
-| s1048–s1056 | Width-320 caller and selector dispatch were state-shaped; selector-0 upstream remained open. |
-| s1057–s1062 | Hangar return and selector-0 argument paths were state/table-shaped with non-generated boundaries. |
-| s1063–s1065 | Demo-id writer and immutable `dLevelByDemoId` ROM ownership were classified in generated/data paths. |
-| s1066–s1068 | `cycleIdleDemoId` callers, clear form, and all generated aliases were audited; non-generated ownership remains. |
-| s1069 | Maintenance compaction; no experiment or runtime conclusion. |
-| s1070 | Non-generated host/patch/overlay search found no selector access; companion struct confirms `demoId` at +0x14. Pointer-mediated ownership remained open. |
-| s1071 | Companion audit found a computed-base XOR write at `func_800C1D3C.c:389-390` that aliases +0x14 when `rest01[3]==2`; selects `H-pointer-write` (static, index value unclassified). |
-| s1072 | Caller/initializer audit found the HUD constructor's zero initialization at `func_800C0084.c:793`, but no typed proof of the runtime index; `H-index-open` remains. |
-| s1073 | `func_800B47C4` masks an external `arg0` into `temp_s1` before its computed-base XOR write; no companion caller proves the index, so `H-temp-s1-open` remains. |
-| s1074 | Complete generated raw `MEM_B(0X14, ctx->rN)` census found 31 stores. Only the two `cycleIdleDemoId` stores use the fixed selector base; the other 29 use object/argument/stack-derived bases. No additional generated writer reaches `0x80130B54`; the non-generated/index-mediated boundary remains open. |
-| s1075 | The only generated call to the actual `menuControllerInput` entry passes `a0=0`, selecting masked index 0; no raw dispatch entry targets `0x800B47C4/0x800B47D0`. The generated caller class is non-2, while an untyped guest-entry possibility remains single-source open. |
-| s1076 | Designed a same-run retail discriminator joining controller-edge writes, selector/state writes, PIF reads, whole-RDRAM callbacks, and VI phase transitions. No run was performed; the route remains open pending this measurement. |
-| s1077 | Ran the eleven-Start discriminator: whole-RDRAM, PIF, and VI controls were positive; both target write ranges were silent and VI stayed width 320 at `0x006dd280`. Selected the execution/alias observation boundary; another schedule is not justified. |
-| s1078 | Added physical read watches for the controller-edge and selector/state ranges. Whole-RDRAM, eleven PIF Start edges, and VI callback/poll controls were positive; both reads were silent and VI stayed width 320 at `0x006dd280`. Selected `H-consumer-not-reached`; the blocking state gate remains open. |
-| s1079 | Enumerated 55 generated controller-consumer calls across 16 generated function names (one duplicate copy) and one direct `menuControllerInput` caller (`menuOverlayInit`, `a0=0`); no raw target dispatch exists. `mainGameLoop`'s state/asset gate at `0x8003E07C` precedes the menu selector jump table. Selected static `H-gate-state`; runtime gate ownership/value remains open. |
-| s1080 | Bounded static gate audit identified `s4=0x80130B10`, so `0x8003E07C` reads `0x80130B30` (`D_80130B10+0x20`). `runIdleFramesAndLoadSaveData` stores constant `1` at `0x8006DAB8`; the reset routine clears the 0x28-byte containing block. Generated and companion evidence selects static `H-gate-writer`; runtime execution/value remains open. |
-| s1081 | Bounded audit found the sole generated caller at `mainGameLoop:0x8003E010`; all save-loop branches rejoin the common tail, and the unconditional `0x8006DAB8` store writes `1` after reset. Companion ordering annotation agrees. Selects static `H-writer-reached`; later clobbers and runtime reachability remain open. |
-| s1082 | Complete post-return generated/companion alias census found 67 offset-`0x20` byte stores but no concrete `0x80130B30` writer after `runIdleFramesAndLoadSaveData` and before the `0x8003E07C` gate read. The only exact target is the known in-callee `0x8006DAB8` store; main-loop writes are unrelated. Selects static `H-no-later-clobber`; loader/DMA ownership remains outside the source census. |
-| s1083 | Bounded `loadOverlay`/DMA audit found fixed overlay code destination `0x800A5130` and BSS clears at `0x8010B6D0`, `0x800CD520`, and `0x800B0940`; host PI forwards these destinations and does not synthesize a target write. Selects static `H-loader-no-alias`; runtime gate value/reachability remains open. |
-| s1084 | Retail oracle with whole-RDRAM control, eleven Start/PIF controls, and `0x130B30:0x130B31` write watch reached 7,199 VI frames but stayed at width 320/origin `0x006dd280`; target writes were zero. Selects single-source `H-gate-not-reached`; the blocking gate is still unresolved. |
-| s1085 | Repeated the established retail oracle schedule with the same controls and a physical read/write watch on `0x130B30:0x130B31`; whole-RDRAM reached 10,000 hits, all eleven PIF Start presses arrived, VI reached 7,199 at width 320, and the target watch had zero hits. This independently selects single-source `H-gate-not-reached`; the gate read itself was not reached. |
-| s1086 | Repeated the established oracle schedule with a physical read/write watch on the full `0x130B10:0x130B58` mission-state block. Whole-RDRAM reached 10,000 hits, all eleven PIF Start presses arrived, VI reached 7,199 at width 320/origin `0x006dd280`, and the full block had zero hits. This selects single-source `H-gate-not-reached` and rules out any access to this state object on the tested retail route. |
-| s1087 | Added guest-PC execution watches to the oracle and ran the established schedule. Whole-RDRAM reached 10,000 callbacks, all eleven PIF Start presses arrived, and VI reached 7,198 at width 320/origin `0x006dd280`; `0x8003E010` hit once, `0x8003E07C` hit zero times, and the mission-state block remained silent. This selects single-source `H-pre-main-loop-state-gate`: the preceding transition executes, but the gate read is not reached. |
-| s1088 | Ran the bracketed retail execution capture with entry `0x8006D900`, continuation `0x8003E018`, and gate `0x8003E07C`. Whole-RDRAM reached 10,001 callbacks, all eleven PIF Start presses arrived, and VI reached 7,197 at width 320/origin `0x006dd280`; hits were `1/0/0`, and the mission-state block was silent. Selects single-source `H-callee-does-not-return`; the exact internal loop/subcall boundary remains open. |
-| s1089 | Ran the established eleven-Start retail-oracle capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, and four internal milestone watches. Controls were positive: whole-RDRAM reached 10,002 callbacks, PIF delivered all eleven presses, and VI reached 7,205 at width 320/origin `0x006dd280`. PC hits were `0x8006D900=1`, `0x8006D9B0=1`, and `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, `0x8003E07C=0`; the mission-state block was silent. Selects single-source `H-save-tail-boundary`: the callee reaches the first internal milestone but not the save/load-tail milestones. It rules out callee non-entry and a failed positive-control/watch setup, but does not identify the subcall or loop body that blocks before `0x8006DA7C`. |
-| s1090 | Rebuilt the retail oracle after increasing watch capacity from 16 to 24 (the planned 17-watch discriminator otherwise failed before emulation), then ran the established eleven-Start capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, four milestones, and eight post-loop bracket PCs. Controls were positive: whole-RDRAM reached 10,002 callbacks, PIF delivered all eleven presses, and VI reached 7,199 at width 320/origin `0x006dd280`; the mission-state block was silent. Hits were `0x8006D900=1`, `0x8006D9B0=1`, all eight post-loop PCs `=0`, `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and `0x8003E07C=0`. Selects single-source `H-loop-exit-path`: the callee reaches the loop-boundary compare but not `0x8006D9C0`; the exact branch/delay-slot boundary remains open. |
-| s1091 | Ran the established eleven-Start retail-oracle capture with whole-RDRAM, mission-state, VI, PIF, entry/continuation/gate, four milestones, eight post-loop PCs, and three branch-region PCs. Controls were positive: whole-RDRAM reached 10,003 callbacks, PIF delivered all eleven presses, and VI reached 7,204 at width 320/origin `0x006dd280`; the mission-state block was silent. Hits were `0x8006D900=1`, `0x8006D9B0=1`, `0x8006D9B4=1`, while `0x8006D9B8=0`, `0x8006D9BC=0`, all eight post-loop PCs `=0`, `0x8006DA7C=0`, `0x8006DAB8=0`, `0x8006DAF0=0`, `0x8003E018=0`, and `0x8003E07C=0`. Selects single-source `H-branch-delay-boundary`; the remaining distinction is oracle delay-slot callback behavior versus a taken branch target. |
-
-| s1092 | The initial planned run was rejected by the oracle's 24-watch capacity; increasing the front-end capacity to 64 and rerunning the same capture passed controls: whole-RDRAM 10,015 callbacks, eleven PIF Start presses, and 7,204 VI frames at width 320/origin `0x006dd280`. `0x8006D9B4` hit once, `0x8006D980` twice, and nearby even loop PCs `0x8006D988`–`0x8006D9A8` twice each; `0x8006D9B8`, `0x8006D9BC`, odd nearby PCs, and post-loop PCs were zero. Selects single-source `H-taken-target`; delay-slot callback coverage remained open pending source audit. |
-| s1093 | Audited the retail oracle source. `R4300Emulator=0` selects `run_pure_interpreter`, whose loop calls `update_debugger` before each top-level instruction; `DECLARE_JUMP` recursively executes the delay slot without another debugger update. `--watch-pc` uses `[pc,pc+4)`, so zero PCs that are delay slots are callback omissions by construction. This established the callback arm for delay slots, while non-delay PCs remained unresolved. |
-| s1094 | Static ROM/generated audit classified every PC from `0x8006D980..0x8006D9BC`. The independent ROM mapping matched all generated words; `0x8006D9B8` is the `bne` delay slot, but `0x8006D9BC` is ordinary fall-through code. Selects `H-nondelay-missing` for the zero `9BC` watch and leaves only the runtime taken-vs-fall-through question. |
-| s1095 | Full established-schedule retail oracle rerun passed controls: whole-RDRAM 10,000 callbacks, eleven PIF Start presses, and 7,198 VI frames at width 320/origin `0x006dd280`. Execution hits were `0x8006D9B0=1`, `0x8006D9B4=1`, and `0x8006D9BC=0`. Single-source runtime result selects `H-taken-branch`; the initial truncated attempt was invalid. |
-| s1096 | Bounded static audit used the preserved generated snapshot and retail ROM. All words `0x8006D980..0x8006D9C8` matched under `ROM = VRAM - 0x80000000 + 0xC00`; the `0x8006D9B4` target increments `$s0`, runs the six frame/input calls, and loops back to `0x8006D9B0`. Selects `H-target-loop`, rules out `H-target-exit` and `H-static-mismatch`; no runtime code or mitigation changed. |
-| s1097 | Bounded generated/companion audit found one normal `submitGfxFrame` epilogue and explicit continuations at all nine caller sites, but also reachable blocking `osRecvMesg(..., MQ_BLOCK)` calls at `0x8000C0B4` and `0x8000C2B8`. Selects `H-submit-nonreturn` as a legitimate wait boundary while retaining the independent fact that the audited idle-loop invocation returned once; no build, runtime code, or mitigation changed. |
-| s1098 | Bounded queue-contract audit maps `0x8000C0B4` to `D_8011A818` and `0x8000C2B8` to `D_8011A7E8`; both are `osRecvMesg(..., BLOCK)`. Generated/companion evidence identifies consumers but no matching in-tree producer for either wait: the first is an external SP-completion boundary, and the second depends on host DP forwarding documented in the architecture notes. Selects `H-queue-unmatched`; no build, runtime code, or mitigation changed. |
-| s1099 | Bounded host/runtime audit found that HLE and LLE SP completion plus HLE DP completion all enqueue through `events_context.sp/.dp`, populated dynamically by `osSetEventMesg`; no host producer hard-codes either guest queue. The exact `0x8011A818`/`0x8011A7E8` registration mapping is unresolved and becomes the next runtime-trace discriminator. No build, run, or mitigation changed. |
-| s1100 | Batched phase-gated host trace passed VI-1024 and 413 positive E9 provenance rows. SP registered and completed on `0x8011A420` with message `0x80128C70`; DP registered and completed on `0x8011A408` with message `0`. Both pairs fired repeatedly and matched internally, but neither target is the blocking consumer pair `0x8011A818`/`0x8011A7E8`. Selects wrong-target/unwired SP and DP routes, rules out missing host completion calls, and supersedes s1099's unresolved registration mapping. |
-| s1101 | Bounded generated-source audit enumerated all five `osSetEventMesg` calls. SP event 4 registers `D_8011A420`, which is directly created with count 8; the same scheduler then separately creates/uses `D_8011A818`. DP event 9 registers `D_8011A408`, directly created with count 1; its handler separately creates `D_8011A7E8`, the blocking `waitForPostSwapAck` queue. The two address pairs differ by `0x3F8` and `0x3E0`, have separate data symbols, and no pointer-mediated alias was found. Selects static `H-real-mismatch`/role-separation, while the non-generated producer or forwarding boundary remains open; no build or runtime code changed. |
-| s1102 | Complete static census of 44 generated `osSendMesg` and 2 `osJamMesg` sites found direct sends to both blocking queues: `spTaskSchedulerThread` at `0x80019F1C` computes `0x80120000-0x57E8 = 0x8011A818`, and `dpInterruptHandlerThread` at `0x8001C3CC` computes `0x80120000-0x5818 = 0x8011A7E8`. All other sites are unrelated fixed queues or computed object/argument queues. Host completion remains dynamic through `events_context.sp/.dp` and has no hard-coded target. This selects static `H-game-producer`/role-separation and rules out `H-host-boundary` and `H-unwired` for producer existence; execution reachability and lifecycle gating remain open. No build, runtime code, or queue behavior changed. |
-| s1103 | Bounded producer/consumer branch audit found both direct sends are conditionally gated within their persistent producer loops: SP `0x80019F1C` is reached only through task-state branches at `0x80019ED4/0x80019EE4` (with an alternate gated send at `0x80019F40`), and DP `0x8001C3D8` requires nonzero flag byte `0x8011A89D`. The blocking consumers are likewise conditional at `0x8000C0A4` (SP) and `0x8000C2A8` (DP). This selects `H-producer-gated`, rules out unconditional reachability and lifecycle absence, and leaves gate ownership/value open. No build, runtime code, or queue behavior changed. |
-| s1104 | Complete generated gate census separates the roles. `0x8011A89D/0x8011A89E` are set to 1 by `setPostSwapPendingFlags` and consumed/cleared by submit/advance paths. The SP producer’s `0x80019ED4/0x80019EE4` reads are through `s2 = (0x8011A89C + 3)`, i.e. `0x8011A89F/0x8011A8A0`; the same producer clears those bytes after its sends, and no generated nonzero writer was found. `dpInterruptHandlerThread` reads through `s0 = 0x8011A408`, so `0x8011A89D` is not its direct fixed-address flag in this generated snapshot. This selects static `H-sp-gate-stale-or-external-writer` while ruling out the `H-8011A89D-is-DP-gate` role assignment; non-generated ownership and runtime values remain open. No build, runtime code, or queue behavior changed. |
-| s1105 | Non-generated/companion ownership census found no host/runtime, patch, or companion read/write of `0x8011A89F`, `0x8011A8A0`, or `0x8011A408`; the companion has only undefined-symbol declarations. Generated boundaries positively matched `spTaskSchedulerThread` and `dpInterruptHandlerThread`: SP resolves `s2=0x8011A89F`, `s3=0x8011A8A0`, and clears both; DP uses `s0=0x8011A408` as its queue object. Selects static `H-gate-stale-or-unseen-writer`, rules out an in-tree external writer and source-level alias, and leaves runtime values/execution open. No build, runtime code, queue behavior, or mitigation changed. |
-| s1106 | Built the submit-boundary probe and ran a corrected VI-1024-gated capture after rejecting an invalid first run whose physical addresses omitted the KSEG0 `0x100000` offset. The fixed run passed the VI-1024 control, produced 818 scoped target rows with no crash markers, and showed repeated `0x8011A8A0=1` at SP sends while `0x8011A89F` was normally zero. It also observed both blocking consumers and the separate `0x8011A408` DP object, while event wiring continued to complete on `0x8011A420`/`0x8011A408`. Selects runtime `H-nonzero-gate`, rules out a stale-zero gate and fixed-address alias for these calls, but does not identify the writer PC. The first capture was invalid; no queue behavior changed. |
-| s1107 | Checkpoint iteration (no build/run): restated s1106's discrimination inline and ran one bounded static check. `syms/rogue_squadron.datasyms.toml` has no symbol between `D_8011A7E8` and `D_8011A8D0`, so the gate bytes sit in the SP/DP scheduler's own unlabeled static block; none of s1083's overlay DMA destinations overlap it. Selects static `H-core-bss-not-overlay`, ruling out a DMA/preexisting-ROM-content explanation and narrowing `H-nongenerated-writer` to an actual non-generated code path. Ranked next step is unchanged. |
-| s1108 | Added a regeneration-safe `MEM_B`/`MEM_H`/`MEM_W` store probe to the external `fixup_game_funcs.py`, regenerated all 50 function files, and built successfully. The probe's positive control fired and the local captures logged 256 target rows, all for physical `0x11A89F` from generated PCs `0x80017F98`, `0x80019D34`, `0x80019DD4`, and `0x80019FE4`; no `0x11A8A0` row appeared. Both captures failed the required VI-1024 phase control (one stopped at width 320; the Start-assisted retry reached width 640), so this is not a valid final discriminator for the A0 writer. It does establish a generated writer for the neighboring A89F byte and leaves A0 open; no queue behavior or mitigation changed. |
-| s1110 | Removed `ROGUESQ_LOG_ALL` while retaining the targeted store and submit-boundary probes. The 180-second capture passed the generated-store control 34 times, produced 256 A89F rows, 286 sends, and 427 receives, and repeatedly sampled `gate89f=2 gate8a0=1`, but never reached VI width 1024 (last width 640) and produced no A0 row. This rejects broad-log overhead for the targeted recipe, but cannot separate input-route from transient-state; no E9-phase or writer attribution is valid. No queue behavior or mitigation changed. |
-| s1111 | Restored s1106's no-key, 1.0-second launch shape with targeted store and submit-boundary probes. The run passed the generated-store control and logged 256 A89F stores plus 713 submit-boundary rows, but remained at width 640 for the phase gate; no A0 row or E9-phase controls were observed. This consumes the recovery budget and leaves the writer discriminator invalid; no queue behavior or mitigation changed. |
-| s1112 | Bounded static audit traced the 640/1024 VI writes to the internal mode-selection/copy route in `initVideoSubsystem`, `swapBufferWithViMode`, and `selectAndApplyViMode`. The controlling selector bytes and pending masks are lifecycle/config state, while `tools/probe.sh` supplies only keyboard events and observes committed VI registers. The logger is downstream of the mode commit and therefore does not hide a 1024 transition. Selects static `H-state-lifecycle`; no build, runtime capture, or mitigation changed. |
-| s1114 | The corrected retail-oracle capture passed whole-RDRAM, PIF, and VI callback/poll controls, reaching 7,199 VI frames at width 320. Detailed physical writes attributed selector `0x11A864` to `0x80017CA0/7CB0/7CD0/7CEC`, pending masks to `0x8001BA80/BA88`, and A0 to `0x80019D9C/9F60`; no 512/1024 phase occurred. Selects `H-mode-writer` for the pre-phase lifecycle route and leaves phase-qualified A0 ownership open. The initial `return` schedule was invalid (`sym=0`, no PIF control) and was superseded by the `start` schedule. |
-| s1115 | Bounded generated/ROM/companion audit maps selector writes to the boot-plus-per-frame `buildAndRegisterDefaultMaterial`, pending-mask clears to the repeating VI-retrace `applyPendingViChanges`, and A0 writes to the persistent SP scheduler's task-state/completion paths. All eight generated instructions match independent retail-ROM bytes under `ROM = VRAM - 0x80000000 + 0xC00`. Selects static `H-mode-loop`, rules out a transition-dominated writer among these PCs, and leaves the mode-record caller/argument producer open. |
-| s1116 | Corrected retail-oracle capture passed whole-RDRAM (38,782), ten Start/PIF controls, and VI (7,198 frames), but stayed width 320/origin `0x006dd280`. All eight audited writer PCs fired, including recurring pending-mask and A0 writers. Selects `H-retail-stays-prephase` and refutes `H-writer-watch-invalid`; the mode-record caller/argument route remains open. |
-| s1117 | Bounded generated audit found boot `initVideoBootWrapper` and recurring `advanceVideoFrame` feed the same fixed mode-selection machinery. `swapBufferWithViMode`/`selectAndApplyViMode` select offsets `0x00/0x50/0xA0/0xF0` from RAM table base `0x80128D50` using lifecycle selector bytes `0x8011A864/65/62`; width is loaded from record `+8` before `osViSetMode`. No pointer escapes the table and the companion tree has no additional implementation/caller. Selects `H-mode-record-state-gate`, rules out `H-mode-record-pointer-corrupt`, and leaves table population/width values open; no build or run. ORIGIN: generated control-flow/data-flow plus companion symbol census, no mitigation. |
-| s1118 | Bounded generated/ROM audit found `initVideoSubsystem` copies four 0x50-byte records into `0x80128D50` from `osViModeTable` at `0x80039330`. Source indices come from `0x8003780C..0x782F`; the independent ROM table has widths 320, 640, and 1280 at distinct index classes. Selects `H-mode-record-populated/state-dependent`, rules out `H-mode-record-uninitialized` and `H-mode-record-constant`; the active selector-state producer remains open. Single-source static result; no build or run. ORIGIN: generated copy/data-flow plus direct retail-ROM table bytes, no mitigation. |
-| s1119 | Bounded generated/companion census found `getViModeType` returns `rsViModeType` at `0x8010FF20`; its sole setter is the boot call at `0x80001224`, which maps `osResetType` at `0x80000300` to 0/1/2. The mode-type value therefore has a lifecycle/reset source, not a controller/demo source. Selector bytes `0x8011A864/65/62` have only the material bitfield-unpack writer `buildAndRegisterDefaultMaterial` (bits of its render-state argument) plus the pending-mask applier `applyPendingViChanges` (mask-driven clear/set), called from the VI retrace loop; no direct controller/demo writer was found. Selects `H-selector-lifecycle/config` over fixed-zero and input/demo-tainted; the concrete state that selects a non-320 descriptor remains runtime-open. No build or run. ORIGIN: generated control/data-flow and companion symbol census, no mitigation. |
-| s1120 | Ran the prescribed retail-oracle selector capture. Independent controls passed: 10,009 whole-RDRAM callbacks, nine scheduled Start events, and 7,196 VI frames. The watched ranges recorded zero `rsViModeType` writes, four selector-range writes, and zero descriptor-index writes; VI stayed width 320 at `0x006dd280`. Selector activity occurred before the first press, selecting `H-retail-selector-prephase` over input-tainted and observed non-320 selection. The global 200-hit print cap hid individual selector addresses/values, so the result does not claim a concrete selector value. This is phase-qualified single-source retail evidence; no mitigation or port behavior changed. ORIGIN: physical oracle watch with independent whole-RDRAM/PIF/VI controls, no mitigation. |
-| s1121 | Bounded generated/companion/ROM audit corrected the mode-type input: `setViModeType` loads `osTvType` at `0x80000300`, maps 0/1/2 to `rsViModeType`, and never reads `osResetType` at `0x8000030C`; retail ROM words match. `initVideoSubsystem` contains ten reads of `0x8003780C..0x7830`, each indexed by `rsViModeType`, but no generated, companion, or symbolized writer for those descriptor-index bytes. Selects `H-non-generated-index-source` for the index producer and leaves raw/data/host ownership open. No build or run. ORIGIN: generated instruction/data-flow, independent ROM bytes, and companion symbol census, no mitigation. |
-| s1122 | Bounded non-generated/data-boundary audit found `librecomp::init` writes `osTvType=1` and `osResetType=0`; the former is the setter input and the latter is not read by `setViModeType`. No host/runtime, patch, generated, or companion store targets `0x8003780C..0x8003782F`; the initial ROM DMA supplies those bytes, and the retail image at the `+0xC00` mapped offsets matches the indexed generated `lbu` reads. Nearby generated stores target only `0x80037808`. Selects `H-host-init` for `osTvType` and `H-rom-data` for the descriptor-index window; the active index-to-width reconciliation remains open. No build or run. ORIGIN: host initialization, generated store/read census, companion/symbol census, and independent retail-ROM bytes; no mitigation. |
-| s1123 | Bounded descriptor audit resolves `setViModeType(osTvType=1)` to `rsViModeType=0`. The NTSC index bytes in call order are `{12,0,6,4,11,9,10,8,13,2}`, with mixed record widths; the observed retail width 320 therefore requires selector state to choose one of indices `{0,2,4,6}`. Selects `H-index-state-dependent`; no build or run. ORIGIN: generated index reads and independent retail-ROM table bytes; no mitigation. |
-| s1124 | Bounded generated/companion audit found `selectAndApplyViMode` maps selector bytes `0x8011A865/64/62` to copied-record offsets `0x00/0x50/0xA0/0xF0`. `buildAndRegisterDefaultMaterial` writes those bytes from bits of its `$s1` render-state argument and is called by boot video initialization and recurring `advanceVideoFrame`; the selector is therefore runtime-populated, not a fixed initializer. The independent retail width-320 capture constrains the active initial choice to the 320-wide copied records at offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`), but the concrete boot argument remains open. Selects `H-selector-runtime-320`; no build or run. ORIGIN: generated control/data-flow, companion caller/symbol census, and independent retail VI-width evidence; no mitigation. |
-| s1125 | Bounded generated audit traced the boot selector input through `thread3_video_handle`: `gameConfig+0x44` is loaded into the outgoing stack slot consumed by `initVideoBootWrapper`, then forwarded to the `buildAndRegisterDefaultMaterial` flags/render-state slot. The callee extracts selector bits 2, 3, 4, 5, 7, and 8 from that runtime-loaded value. Selects `H-boot-arg-runtime` over a fixed literal; the producer and initial value of `gameConfig+0x44` remain open. Retail width 320 still constrains the initial record to offsets `0x00/0x50/0xA0` (indices `{0,2,4,6}`). No build or run. ORIGIN: generated caller/callee data-flow and independent retail VI-width evidence; no mitigation. |
-| s1126 | Bounded generated/host/patch/companion and ROM-data audit found `getGameConfig` returns `gBootConfig` at `0x80037560`, with no writer to `+0x44`; the main overlay mapping places that word at ROM `0x381A4`, where the retail image contains `0x00001800`. Bits 2, 3, 4, 5, 7, and 8 are all zero, selecting `H-config-field-literal` and ruling out a concrete non-320 config value. The selector-to-record mapping remains open. No build or run. ORIGIN: generated store census, companion/host/patch census, section mapping, and direct retail-ROM bytes; no mitigation. |
-| s1127 | Bounded generated/data audit traced `gameConfig+0x44 = 0x1800` through the boot stack argument. Bits 8/7/2 write selector `A/B/C=1/0/0`; the selector branch reaches copied-record offset `0xF0`, whose boot source block is the NTSC index-0 descriptor with width 320. Selects `H-selector-zero-to-320`; rules out argument transformation and a non-320 zero-selector arm. No build or run. ORIGIN: generated argument/branch/copy flow plus direct retail-ROM descriptor bytes; no mitigation. |
-| s1128 | Bounded static audit enumerated the `sp+0x108` descriptor stores. The initial `0x8001A418..A424` loop loads the `0x782C` NTSC index-0 record; `0x8001A92C..A938` is gated by `s7==0` at `0x8001A364`, while `0x8001ADC0..ADCC` and `0x8001B2C4..B2D0` are on that alternate `s7==0` route. The boot wrapper's stack-derived `t9` and `s7` are nonzero, so no later store replaces index 0 before the four-record copy at `0x8001B66C`; the `0xF0` source remains index 0 / width 320. Selects `H-preserve-index0`; rules out `H-replace-index` and `H-copy-source-misread`. No build or run. ORIGIN: generated control-flow/stack-argument audit plus direct retail-ROM descriptor mapping; no mitigation. |
-
-| s1129 | Bounded caller/order audit found exactly two generated callers of `buildAndRegisterDefaultMaterial`: `advanceVideoFrame` at `0x800183F8` and `initVideoBootWrapper` at `0x800185DC`. Both call `initVideoSubsystem` first; the recurring path also calls `swapBufferWithViMode` at `0x800182C8` before the material writer. `selectAndApplyViMode` has only the teardown caller at `0x800186C0`. Thus no recurring writer precedes the first boot record consumer/copy at `0x8001B66C`; selects `H-boot-first`, rules out `H-recurring-first` and `H-selector-independent`. No build or run. ORIGIN: generated caller/order census; no mitigation. |
-
-| s1130 | Bounded generated audit ordered the first post-copy consumer. The loop beginning at `0x8001B66C` writes all four copied records through the table base and then reaches `osViSetMode_recomp` at `0x8001B720`; no selector-byte or copied-record store intervenes. Selector stores are confined to the material-builder and pending-change paths outside this interval. Selects `H-no-intervening-store`, rules out selector and record clobber before the first consumer, and leaves the exact `a0` pointer/host width provenance open. No build or run. ORIGIN: generated store census and bounded control-flow ordering; no mitigation. |
+| s820–s880 | Post-sec2 accounting, breadcrumb, coalescer, and oracle routes classified or parked. |
+| s881–s951 | M3 idiom inventories closed the audio-channel-field thread. |
+| s952–s983 | Dispatcher stack-spill family localized; oracle callback work repaired later. |
+| s984–s1013 | Shade decode/source/emission audits moved M4 to accumulator numeric origin. |
+| s1014–s1038 | M4 controls repaired; controlled captures remained null and the recipe closed. |
+| s1039–s1056 | Retail input/cadence controls passed; width-320 caller and selector dispatch were state-shaped. |
+| s1057–s1079 | Hangar/selector/demo/controller boundaries were traced to the pre-main-loop state gate. |
+| s1080–s1099 | Generated and retail-oracle audits localized the pre-main-loop path and closed callback delay-slot ambiguity. |
+| s1100–s1111 | Port submit/gate probes passed controls but repeated captures lacked the VI-1024 phase; writer attribution stayed open. |
+| s1112–s1117 | VI lifecycle and retail-oracle setup were corrected; retail remained width 320 with positive controls. |
+| s1118–s1124 | Mode table, TV-type input, selector state, and mixed descriptor widths were reconciled. |
+| s1125–s1129 | Boot config `0x1800`, selector `1/0/0`, preserved index 0, and boot-first ordering were resolved. |
+| s1130–s1131 | First consumer ordering was resolved; this maintenance pass compacted the live file and migrated durable detail. |
 
 ## Ranked next steps
 
-1. Trace the `0xF0` record pointer and host width commit at `osViSetMode`;
-   keep the resolved `0x1800 -> A/B/C=1/0/0 -> 0xF0` chain fixed and the
-   no-intervening-store result from s1130.
+1. Trace the `0xF0` record pointer and host width commit at
+   `osViSetMode`; keep the resolved `0x1800 -> A/B/C=1/0/0 -> 0xF0` chain
+   and the no-intervening-store result fixed.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
    omission only when a reproducible lead appears; preserve delete-before-
-regen ordering and audit fixup counts.
+   regen ordering and audit fixup counts.
 
 ## Method and safety rules
 
@@ -517,10 +125,3 @@ regen ordering and audit fixup counts.
 - A null result is worthless without a positive control in the same run.
   Before any mitigation, name the writer and assess legitimacy with an
   `ORIGIN:` line.
-
-## Closed and parked
-
-M5 audio, overlay boot/menu, old ucode/DMA experiments, rendering dead ends,
-earlier idiom campaigns, duplicate-symbol work, and the M3 audio class are
-closed or archived in `PROJECT-OVERVIEW.md`. The slot-SP guard, M4 capture
-recipe, and retail width-320 schedules are parked as described above.

@@ -2803,3 +2803,32 @@ The s955–s983 oracle line is also retained here as history: s982 localized the
 corrected external core's fault to dereferencing `r4300_pc(r4300)` before the
 debug callback, and s983 verified the oracle directory was unavailable in the
 session sandbox. It remains blocked pending human directory access.
+
+## 32. Retail VI descriptor boundary (s1048–s1131)
+
+The retail oracle's independent whole-RDRAM, PIF-input, and VI callback/poll
+controls pass, but the tested ROM remains on the width-320 attract path and
+does not reach the hangar-origin phase. The width-320 path is now resolved as
+a descriptor lifecycle rather than an input, logger, or fixed-table defect.
+
+`librecomp::init` sets `osTvType=1`; generated `setViModeType` maps that to
+`rsViModeType=0`, and the ROM-backed NTSC index window supplies mixed
+320/640/1280 records. The boot config word at `gameConfig+0x44` is unwritten
+in the audited sources and is `0x00001800` in the retail image. Its relevant
+bits produce selector bytes `A/B/C=1/0/0`, selecting copied-record offset
+`0xF0`. The initial descriptor load is NTSC index 0 (width 320); alternate
+overwrite families require `s7==0`, while the boot wrapper's stack-derived
+`s7` is nonzero, so index 0 is preserved.
+
+The four-record copy writes table offsets `0x00/0x50/0xA0/0xF0` and reaches
+`osViSetMode_recomp` without an intervening selector or record store. The
+remaining boundary is the exact `a0` pointer at `0x8001B720` and the host-side
+width load/commit. This detail is intentionally kept as the next live audit in
+`CURRENT-TRUTH.md`; the selector/source chain should not be reopened.
+
+The same period closed the recurring material-writer ordering question: boot
+initialization calls the descriptor setup before the material writer, and the
+recurring path is not before the first boot consumer. The M3 slot-stack-spill
+family and M4 zero-shade investigation remain parked as described in the live
+truth file. Maintenance s1131 compressed the detailed session ledger from the
+live file into the append-only `PORTING-STATE.md` and this durable summary.
