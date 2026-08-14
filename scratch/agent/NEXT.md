@@ -1,36 +1,37 @@
-# NEXT work unit (s1122)
+# NEXT work unit (s1123)
 
-HYPOTHESIS-ID: retail-oracle-mode-index-non-generated-boundary
+HYPOTHESIS-ID: retail-oracle-active-descriptor-index
 
-Perform one bounded static audit of the non-generated/data boundary for
-`osTvType` (`0x80000300`) and descriptor-index bytes
-`0x8003780C..0x8003782F`. s1121 proved that `setViModeType` reads `osTvType`,
-not `osResetType`, and found no generated or companion writer for the index
-bytes.
+Perform one bounded static audit that resolves the active descriptor index
+for the port's host-initialized NTSC path. s1122 found the host writes
+`osTvType=1`, while the index window is ROM-backed immutable data at the
+established `VRAM -> ROM (+0xC00)` mapping; generated code only reads it.
+Trace `setViModeType`'s exact `rsViModeType` result for `osTvType=1`, map every
+indexed byte used by `initVideoSubsystem`, and read the corresponding
+`osViModeTable` record width from the retail ROM. Reconcile that static width
+with the independent retail-oracle width-320 observation.
 
 Competing hypotheses and discriminator:
 
-- H-host-init: the host/runtime initializes `osTvType` or the index bytes.
-- H-rom-data: the index bytes are immutable ROM/data and the apparent missing
-  writer is intentional; the retail width-320 result is data-selected.
-- H-raw-guest-writer: a generated census missed a computed/raw guest store.
+- H-index-320: active NTSC index bytes select a 320-wide record.
+- H-index-non320: active NTSC index bytes select a non-320 record, exposing a
+  source-level contradiction with the retail oracle or an address mapping
+  error.
+- H-index-state-dependent: the active byte is not fixed by `osTvType=1` and
+  requires another lifecycle state before the mode copy.
 
-Discriminator: enumerate host/runtime/patch initialization and every generated
-computed address reaching `0x80000300` or `0x8003780C..0x782F`; reconcile those
-with section/data symbols and the retail ROM image. A host store selects
-H-host-init; immutable source bytes with no store select H-rom-data; a complete
-computed guest store selects H-raw-guest-writer. If none can be proved, retain
-the boundary as open and do not infer a width or add a probe.
+Discriminator: the concrete `rsViModeType`, indexed ROM bytes, and table `+8`
+width must select one hypothesis. Do not build or run; no mitigation is
+authorized.
 
 Exact commands (no build or game run):
 
 ```sh
-rg -n '80000300|8000030C|8003780C|8003780c|800378[0-2][0-9]|3780C|3780c|osTvType|osResetType|rsViModeType' src lib patches ../N64Recomp/RecompiledFuncs /Users/williambuckley/Documents/Tools/rogue_squadron64
-rg -n 'MEM_[BWH].*(0X378|0x378|0X300|0x300)|ADD32\([^)]*0X780|addiu.*0x78' ../N64Recomp/RecompiledFuncs
-rg -n 'D_800378|osTvType|osResetType|rsViModeType|osViModeTable' syms /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+rg -n -C 8 'setViModeType|0X780C|0X7810|0X7814|0X7818|0X781C|0X7820|0X7824|0X7828|0X782C|0X7830' ../N64Recomp/RecompiledFuncs/funcs_0.c ../N64Recomp/RecompiledFuncs/funcs_5.c
+rg -n 'osViModeTable|OSViMode' /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files /Users/williambuckley/Documents/Tools/rogue_squadron64/docs/mips_to_c
+xxd -g 1 -s <mapped-index-offset> -l 0x30 build/rogue_squadron.z64
 ```
 
-Use bounded `sed` windows around every generated/host hit and inspect the ROM
-bytes only at the corresponding mapped offsets. Append the classified owner or
-the explicitly open boundary to the ledger and current truth. No mitigation is
-authorized.
+Use bounded `sed` windows around the setter and indexed reads. Append the
+resolved index/width or the explicitly open state dependency to the ledger and
+current truth. No mitigation is authorized.

@@ -141,6 +141,15 @@ compact and records only live conclusions, boundaries, and next work.
   mode-type byte; no generated, companion, or symbolized writer for the index
   bytes was found. This selects `H-non-generated-index-source` for the concrete
   descriptor-index producer, while leaving the raw/data/host owner open.
+- The s1122 non-generated/data-boundary audit resolves the ownership split:
+  `librecomp::init` explicitly writes `osTvType` (`0x80000300`) to NTSC value
+  1, while no host, patch, generated, or companion store targets
+  `0x8003780C..0x8003782F`. The window is populated by the initial ROM DMA;
+  bytes at the established `ROM = VRAM - 0x80000000 + 0xC00` offsets match the
+  indexed `lbu` readers. The only nearby generated writes target
+  `0x80037808`, not the index window. This selects `H-host-init` for
+  `osTvType` and `H-rom-data` for the index bytes; the active index-to-width
+  reconciliation remains open.
 - The s1084-s1087 retail oracle runs passed the whole-RDRAM positive control,
   showed all eleven Start presses in PIF reads, and advanced 7,199 VI frames
   while remaining at width 320/origin `0x006dd280`. No read or write hit
@@ -434,15 +443,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1119 | Bounded generated/companion census found `getViModeType` returns `rsViModeType` at `0x8010FF20`; its sole setter is the boot call at `0x80001224`, which maps `osResetType` at `0x80000300` to 0/1/2. The mode-type value therefore has a lifecycle/reset source, not a controller/demo source. Selector bytes `0x8011A864/65/62` have only the material bitfield-unpack writer `buildAndRegisterDefaultMaterial` (bits of its render-state argument) plus the pending-mask applier `applyPendingViChanges` (mask-driven clear/set), called from the VI retrace loop; no direct controller/demo writer was found. Selects `H-selector-lifecycle/config` over fixed-zero and input/demo-tainted; the concrete state that selects a non-320 descriptor remains runtime-open. No build or run. ORIGIN: generated control/data-flow and companion symbol census, no mitigation. |
 | s1120 | Ran the prescribed retail-oracle selector capture. Independent controls passed: 10,009 whole-RDRAM callbacks, nine scheduled Start events, and 7,196 VI frames. The watched ranges recorded zero `rsViModeType` writes, four selector-range writes, and zero descriptor-index writes; VI stayed width 320 at `0x006dd280`. Selector activity occurred before the first press, selecting `H-retail-selector-prephase` over input-tainted and observed non-320 selection. The global 200-hit print cap hid individual selector addresses/values, so the result does not claim a concrete selector value. This is phase-qualified single-source retail evidence; no mitigation or port behavior changed. ORIGIN: physical oracle watch with independent whole-RDRAM/PIF/VI controls, no mitigation. |
 | s1121 | Bounded generated/companion/ROM audit corrected the mode-type input: `setViModeType` loads `osTvType` at `0x80000300`, maps 0/1/2 to `rsViModeType`, and never reads `osResetType` at `0x8000030C`; retail ROM words match. `initVideoSubsystem` contains ten reads of `0x8003780C..0x7830`, each indexed by `rsViModeType`, but no generated, companion, or symbolized writer for those descriptor-index bytes. Selects `H-non-generated-index-source` for the index producer and leaves raw/data/host ownership open. No build or run. ORIGIN: generated instruction/data-flow, independent ROM bytes, and companion symbol census, no mitigation. |
+| s1122 | Bounded non-generated/data-boundary audit found `librecomp::init` writes `osTvType=1` and `osResetType=0`; the former is the setter input and the latter is not read by `setViModeType`. No host/runtime, patch, generated, or companion store targets `0x8003780C..0x8003782F`; the initial ROM DMA supplies those bytes, and the retail image at the `+0xC00` mapped offsets matches the indexed generated `lbu` reads. Nearby generated stores target only `0x80037808`. Selects `H-host-init` for `osTvType` and `H-rom-data` for the descriptor-index window; the active index-to-width reconciliation remains open. No build or run. ORIGIN: host initialization, generated store/read census, companion/symbol census, and independent retail-ROM bytes; no mitigation. |
 
 ## Ranked next steps
 
-1. Bound the non-generated/data owner of `0x8003780C..0x782F` and `osTvType`:
-   reconcile boot/host initialization, raw data symbols, and any runtime
-   writes against the ten `initVideoSubsystem` reads before touching the port.
-2. If that boundary proves the retail table is fixed to width 320, park the
-   retail width-320 route; if it exposes a non-320 producer, map its lifecycle
-   predicate and input.
+1. Resolve the active NTSC descriptor index and table-record width from the
+   ROM-backed `0x8003780C..0x7830` bytes, then reconcile it with the retail
+   oracle's width-320 path.
+2. If the resolved record is fixed at 320, park the retail width-320 route; if
+   it is non-320, audit the mode-record copy/state path for the contradiction.
 3. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 4. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

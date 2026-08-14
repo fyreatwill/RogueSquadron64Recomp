@@ -63422,3 +63422,19 @@ helper's role and nearby reset symbols, but the actual load offset is the
 independently named TV-type global. No build, runtime run, or mitigation
 changed. ORIGIN: generated instruction/data-flow, independent retail ROM
 bytes, and companion symbol census, no mitigation.
+
+## Session 1122 (2026-08-14) — classified the non-generated VI index boundary
+
+Ran the prescribed bounded static audit with no build or game run. `librecomp::init`
+explicitly writes `osTvType` at `0x80000300` to NTSC value 1 and writes
+`osResetType` separately; `setViModeType` consumes the former. No host/runtime,
+patch, generated, or companion store targets `0x8003780C..0x8003782F`.
+The initial ROM DMA supplies that window, and the retail bytes at the mapped
+`ROM = VRAM - 0x80000000 + 0xC00` offsets match the indexed generated `lbu`
+reads. Nearby generated stores target only `0x80037808`. This selects
+`H-host-init` for `osTvType` and `H-rom-data` for the descriptor-index bytes;
+the active index-to-width reconciliation remains open. It rules out a missed
+host/patch writer and a direct generated writer, but does not yet prove which
+ROM index is active or what width its table record carries. ORIGIN: host
+initialization, generated store/read census, companion/symbol census, and
+independent retail-ROM bytes; no mitigation.
