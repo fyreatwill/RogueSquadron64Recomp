@@ -1,38 +1,40 @@
-# NEXT work unit (s1169)
+# NEXT work unit (s1170)
 
-HYPOTHESIS-ID: musyx-synth-indirect-callback-contract
+HYPOTHESIS-ID: indirect-callback-idiom-census
 
-Perform one bounded runtime capture of the indirect VI callback dispatch that
-invokes `musyxSynthFrame`, with a phase-scoped positive control and a single
-discriminator for the callback's guest stack/return register handoff at entry.
-Do not add a guard, skip, restore, or mitigation.
+Perform one bounded static census of the generated indirect-callback
+invocation idiom after s1169's valid `musyxSynthFrame` handoff. Do not build,
+run, or add a mitigation in this unit.
 
 Competing hypotheses and discriminator:
 
-- H1: the indirect callback dispatcher hands `musyxSynthFrame` a corrupted
-  guest `$sp`/`$ra`; the entry discriminator shows a bad value before the
-  function's prologue executes.
-- H2: the dispatcher handoff is valid at entry and the fault is downstream of
-  callback dispatch; the same run reaches the independent callback positive
-  control and records valid entry state.
-- H3: the callback path is not reached in the pre-1024 arm; the independent
-  positive control is absent, making the capture unevaluable rather than a
-  null result.
+- H1: another callback-table `LOOKUP_FUNC` site has a malformed guest-frame
+  handoff or target address; the complete site table contains an unbalanced
+  `$sp`/`$ra` setup or a target that does not match companion symbols.
+- H2: every callback-thread/audio callback site has the same balanced runtime
+  ABI and valid target registration; the remaining fault is inside a
+  downstream `musyxSynthFrame` operation class.
+- H3: the source census cannot distinguish callback dispatch from unrelated
+  dynamic lookup sites; the table has unresolved sites or target identities,
+  so it is unevaluable and must not be used to justify a guard.
 
-The discriminating measurement is one phase-gated callback-entry table with
-the independent callback positive control, entry `$sp`/`$ra`, and the first
-`musyxSynthFrame` prologue values in the same run. A bad handoff with the
-control live selects H1; a valid handoff with the control live selects H2;
-missing control is H3/unevaluable.
+The discriminating measurement is one complete table covering every generated
+`LOOKUP_FUNC`/`get_function` callback invocation in `viRetraceHandlerThread`,
+the audio callback families, and every callback-table target observed in the
+current state poll. Each row must include caller guest PC, lookup target
+expression, `$sp` adjustment, `$ra` save/restore evidence, call ABI, and
+companion-symbol match. H1 requires at least one malformed row; H2 requires
+all in-scope rows balanced and matched; H3 is the outcome if any in-scope row
+cannot be classified.
 
 Exact commands:
 
-    sed -n '4200,4320p' ../N64Recomp/RecompiledFuncs/funcs_24.c
-    sed -n '420,510p' lib/N64ModernRuntime/librecomp/src/overlays.cpp
-    rg -n "tickfunc|8009123C|0x11A8A8|callback" src lib/N64ModernRuntime
-    rg -n "ROGUESQ_LOG_TICKFUNC_CALLER|AUDIOTICK_TRACE|PROBE_PHASE" tools scratch/agent
+    rg -n "LOOKUP_FUNC|get_function\(" ../N64Recomp/RecompiledFuncs/funcs_*.c
+    sed -n '29890,30030p' ../N64Recomp/RecompiledFuncs/funcs_4.c
+    rg -n "0x8011A8A4|0x8011A8A8|0x8009123C|callback" ../N64Recomp/RecompiledFuncs/funcs_*.c ../rogue_squadron64/symbol_files
+    rg -n "viRetraceHandlerThread|musyx|callback" ../N64Recomp/symbols ../rogue_squadron64/symbol_files
 
-Before building, write the exact positive-control and handoff fields into the
-instrument plan; batch them in one build and run. If the existing callback
-entry instrumentation cannot expose the handoff, redesign the probe before
-building rather than adding a non-discriminating field.
+Record the row counts, unresolved rows, and companion-symbol matches in the
+next ledger entry. If the census is balanced, the following unit should audit
+the complete downstream operation idiom in `musyxSynthFrame`, not add a
+single-site skip.

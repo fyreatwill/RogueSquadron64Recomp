@@ -155,7 +155,7 @@ index b0d6bef..1b6f61c 100644
          MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000)) = RSP_MEM_B(i, dmem_addr);
      }
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..e058a76 100644
+index 8c8e5d1..25ab070 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
 @@ -4,6 +4,7 @@
@@ -166,16 +166,17 @@ index 8c8e5d1..e058a76 100644
  
  #include "ultramodern/ultramodern.hpp"
  
-@@ -12,6 +13,8 @@
+@@ -12,6 +13,9 @@
  #include "overlays.hpp"
  #include "sections.h"
  
 +extern "C" void rs64_e9prov_section2_latch();
++extern "C" uint32_t rs64_phase_ord();
 +
  static recomp::overlays::overlay_section_table_data_t sections_info {};
  static recomp::overlays::overlays_by_index_t overlays_info {};
  
-@@ -198,8 +201,14 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
+@@ -198,8 +202,14 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
              return addr < entry.size + entry.rom_addr;
          }
      );
@@ -192,7 +193,7 @@ index 8c8e5d1..e058a76 100644
          load_overlay(std::distance(&sections_info.code_sections[0], it), it->rom_addr - rom + ram_addr);
      }
  }
-@@ -238,6 +247,25 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
+@@ -238,6 +248,25 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
      }
  }
  
@@ -218,7 +219,7 @@ index 8c8e5d1..e058a76 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -361,9 +389,121 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,9 +390,121 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
@@ -297,7 +298,7 @@ index 8c8e5d1..e058a76 100644
 +        if (enabled) {
 +            static int n = 0;
 +            if (n < 40 || (n % 128) == 0) {
-+                fprintf(stderr, "[tickfunc-caller-control] musyxSynthFrame resolved n=%d\n", n);
++                fprintf(stderr, "[tickfunc-caller-control] musyxSynthFrame resolved phase=%u n=%d\n", rs64_phase_ord(), n);
 +            }
 +            n++;
 +        }

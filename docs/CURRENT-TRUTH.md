@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1168 (2026-08-14).
+in the ledger. Reviewed through s1169 (2026-08-14).
 
 ## Current state
 
@@ -237,6 +237,15 @@ in the ledger. Reviewed through s1168 (2026-08-14).
   or statically addressed wrapper call. The periodic active path is the
   separately documented indirect VI callback lookup, so this selects H2 for
   the generated idiom and rejects H1/H3 as literal callsite explanations.
+- The s1169 phase-gated callback capture passed both independent controls:
+  callback-table slot reads and indirect `get_function(0x8009123C)` resolution
+  were live in phases 4 and 6. Sampled `musyxSynthFrame` entries consistently
+  received `entry_sp=0x8011C8C0`, `prologue_sp=0x8011C880`, and `entry_ra=0`;
+  the latter is expected for the runtime's indirect `(rdram, ctx)` ABI. This
+  selects H2, a valid callback handoff with the fault downstream, and rules
+  out a corrupted callback `$sp`/`$ra` handoff in this capture. The run stayed
+  in `640→2→640`, reached no VI-1024, and had no crash, so downstream origin
+  remains open.
 
 ## Retail VI descriptor boundary
 
@@ -376,15 +385,19 @@ corruption.
 | s1166 | Rebuilt and ran the resource-marker capture with slot, writeback, crash, and RT64-allocation controls. All controls passed; there were no RT64-allocation markers and no `copyToRAM` fault. The run instead hit an Apple Metal compiler-cache SIGSEGV at guest PC `0x8000B650` before VI-1024, after 30 wild-width and 4 OOB skips. Together with s1165, this advances H3 and closes the resource-marker audit; no mitigation was added. |
 | s1167 | Rebuilt and ran the operation-boundary capture with slot, writeback, crash, DPC, and RT64-allocation categories. Controls passed; the run stayed pre-1024 and hit a Bus error at guest PC `0x8000B650` in `musyxSynthFrame+2796`. No DPC/RT64 operation or allocation marker followed the final writeback row before the fault, so this selects the valid different-failure H3 arm and adds no mitigation. |
 | s1168 | Completed the generated `musyxSynthFrame` callsite audit. The only two direct callers are the inline pumps in `shutdownAudioEngine` and `waitForMusyXAudioTaskDone`; their `-0x20/+0x20` and `-0x18/+0x18` frames, saved-return slots, and companion overlay registration agree. The ordinary periodic path is the separately documented indirect VI callback lookup. This selects H2 for the generated idiom, rejects H1/H3 as literal callsite explanations, and adds no build, runtime probe, or mitigation. |
+| s1169 | Rebuilt and ran one phase-gated indirect-callback capture. Callback-table slot reads and `get_function(0x8009123C)` resolution were both live; phase-4/6 entry rows consistently showed `entry_sp=0x8011C8C0`, `prologue_sp=0x8011C880`, and `entry_ra=0`. The valid `(rdram,ctx)` handoff selects H2 and rules out callback stack/return corruption for this run; no VI-1024 or crash occurred, so downstream origin remains open. |
 
 ## Ranked next steps
 
-1. Audit the indirect VI callback dispatch contract at the `musyxSynthFrame`
-   phase boundary before another reactive pre-1024 capture. The s1168 static
-   class audit found two balanced generated wait-pump callers and confirmed
-   the normal periodic path is indirect. Use one phase-gated runtime capture
-   with an independent callback positive control and entry `$sp`/`$ra`
-   handoff discriminator. Do not add a mitigation.
+1. Audit the complete generated indirect-callback invocation idiom after the
+   s1169 runtime handoff passed. Enumerate every `LOOKUP_FUNC`/`get_function`
+   callback invocation in the callback-thread and audio callback families,
+   classify how each site initializes `ctx->r29`, `ctx->r31`, and the function
+   pointer before the host call, and compare all callback-table targets against
+   companion symbols. The discriminator is a complete site table: a malformed
+   site or target selects the remaining runtime-ABI hypothesis; a balanced
+   table moves the fault audit into `musyxSynthFrame`'s downstream operation
+   class. Do not add a mitigation.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

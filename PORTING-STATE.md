@@ -64202,3 +64202,20 @@ handoff nor the downstream `0x8000B650` path. No build, runtime experiment,
 instrument, mitigation, or source change was needed. The next unit is a single
 phase-gated runtime audit of the indirect callback's guest `$sp`/`$ra` handoff,
 with a positive control in the same run.
+
+## Session 1169 (2026-08-14) — validated indirect musyx callback handoff
+
+Added a durable phase-scoped callback-entry probe to the fixup script and its
+generated output, plus a phase field on the existing `get_function` positive
+control. Re-exported the runtime submodule patch and rebuilt the Debug target.
+The single capture gated on VI width 640 and passed both independent controls:
+callback-table slot reads and `get_function(0x8009123C)` resolution were live
+in phases 4 and 6. Sampled `musyxSynthFrame` entries consistently showed
+`entry_sp=0x8011C8C0`, computed first-prologue `sp=0x8011C880`, and
+`entry_ra=0`. The zero return register is consistent with the runtime's
+indirect `(rdram, ctx)` call ABI, while the stack handoff is stable and valid.
+The run stayed in `640→2→640`, reached no VI-1024, and had no crash markers.
+This selects H2 and rules out a corrupted callback `$sp`/`$ra` handoff in this
+capture; it does not explain the downstream `musyxSynthFrame` fault family.
+The next unit is a complete static census of the generated indirect-callback
+invocation idiom.
