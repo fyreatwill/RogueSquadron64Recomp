@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s950 (2026-08-13). The active blocker is authoritative
+Reviewed through s952 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits.
 
@@ -143,6 +143,16 @@ closed; M3 work is limited to systematic idiom-class audits.
   `0x8013D894` is exactly `0x8013D880 + 0x14`, the same base/stride as the
   channel array itself, i.e. the store may write into the channel's own
   struct rather than a separate table — not confirmed this session.
+- s952 resolved the recurring `slotDispatcherIter+872` symbol to
+  `funcs_8.c:22810`, the generated prologue spill `MEM_W(0x1C, ctx->r29)`.
+  `atos`/DWARF maps the host offset and `otool` independently shows the
+  prologue store; the companion map identifies `slotDispatcherIter` as the
+  NPC-list walker at `0x8003E8DC`. This is a guest-stack-pointer
+  (`$sp`/`ctx->r29`) failure before any `gNpcSlotList` access, not an NPC
+  record `+0x368` field. The source has 144 direct generated call sites in 19
+  files, so the writer/origin class is caller stack-state, not a single slot
+  writer; no caller audit or mitigation was attempted. The active hypothesis
+  is H-slotdispatcheriter-stacksp-unclassified.
 
 ## Recent evidence ledger
 
@@ -171,6 +181,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s949 | One direct sound-macro caller (`tickAudioChannel`) passes `$s0`; its context `+0x64` feeds the `0x17C`-stride table. Six table writers were found, but channel-field provenance and read-side consumers remain unresolved. |
 | s950 | Complete generated audio inventory found eight `-0x276C` table stores, no reads, and only the `soundMacroOpKeyOnNote` store sourced from channel `+0x64`; all generated channel-field writers are `-1` stores. Structure is coherent but lifecycle/legitimacy remains unclassified. |
 | s951 | Closed the channel `+0x64` hypothesis thread: no reachable indirect-dispatch edge and fixed-array channel-object origin select H-channel-context-field-sentinel-contract. |
+| s952 | Mapped `slotDispatcherIter+872` to `funcs_8.c:22810`, the prologue spill of guest `$sp`/`ctx->r29`; 144 direct callers in 19 files are the next writer/origin class. No guard or mitigation. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -179,12 +190,11 @@ entries and do not authorize mitigations.
 ## Ranked backlog
 
 1. The `tickAudioChannel`/`stopVoicesByHandle` M3 class (s938–s951) is
-   CLOSED — see s951. Next M3 idiom-class candidate: `slotDispatcherIter+872`
-   is the terminal SIGBUS in the large majority of recent `s790_postsec2_reachability`
-   soak runs (s765, s820, s821, s832, s837, s840, s844 — see
-   scratch/agent/SOAK-RESULTS.md) after VI 1024 and all positive controls
-   pass; it has never itself been idiom-class audited (grep-enumerated,
-   classified, guarded-or-proven-dead). Start there.
+   CLOSED — see s951. The recurring `slotDispatcherIter+872` terminal SIGBUS
+   is now localized to the generated prologue spill at `funcs_8.c:22810`.
+   Audit all 144 direct callers for guest `$sp`/`ctx->r29` provenance and
+   caller-frame balance before considering any runtime change; do not guard
+   the dispatcher prologue.
 2. Do not use the process-wide `0x8000834c` breadcrumb to select a crash site;
    require an independently phase-gated caller/state boundary.
 3. M4 correctness: outdoor `baseFixed=-32768` zero shade, attribution S=0

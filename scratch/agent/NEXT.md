@@ -1,50 +1,46 @@
-# NEXT work unit (s952)
+# NEXT work unit (s953)
 
-Pre-run decision: source-only first pass; do not build, run the game, land a
-guard/mitigation, or enqueue a soak until the writer/object set is classified.
+Pre-run decision: source-only caller audit; do not build, run the game, land a
+guard/mitigation, or enqueue a soak until guest `$sp` provenance is classified.
 
-HYPOTHESIS-ID: m3-slotdispatcheriter-872-class
+HYPOTHESIS-ID: m3-slotdispatcheriter-stacksp-class
 
-`slotDispatcherIter+872` is the single most recurring terminal SIGBUS across
-the `s790_postsec2_reachability` soak queue (s765, s820, s821, s832, s837,
-s840, s844 — 7+ hits, always after VI 1024 and all positive controls pass;
-see scratch/agent/SOAK-RESULTS.md). No prior session has idiom-class audited
-it. This is the s938–s951 audio channel-context class's replacement as the
-active M3 thread (that class CLOSED at s951 — see docs/CURRENT-TRUTH.md).
+`slotDispatcherIter+872` is the recurring terminal SIGBUS, but s952 mapped it
+to `funcs_8.c:22810`: the prologue spill `MEM_W(0x1C, ctx->r29)`. The callee
+fails while saving registers, before it reads `gNpcSlotList`; the active class
+is caller-supplied guest stack-pointer state. The source has 144 direct call
+sites in 19 generated files. Follow the `-0x25A4` idiom-class model and
+enumerate every caller's frame setup, call boundary, and epilogue.
 
-Follow the `-0x25A4` idiom-class model: grep-enumerate the whole class,
-classify every site, guard or prove dead, close the class.
-
-Step 1 (not yet done): find `slotDispatcherIter`'s guest address —
-`rg -n "slotDispatcherIter" ../rogue_squadron64/symbol_files/main_overlay.txt`
-— then locate its generated body in `../N64Recomp/RecompiledFuncs/funcs_*.c`
-by guest address and grep for the offset(s) near `+872` (`0x368`) from
-whatever base register it uses. Enumerate every writer of that
-object/field across the generated source, and cross-check with companion
-symbols for an independent second line of evidence per iron rule 4.
+Step 1: enumerate the 144 direct sites and their enclosing functions. For each
+site, record nearby `ctx->r29` adjustments and any calls that can return with
+the context changed. Cross-check guest addresses against `funcs.h` and
+`../rogue_squadron64/symbol_files/main_overlay.txt`.
 
 Competing hypotheses:
 
-- H-slotdispatcheriter-872-legitimate-oob: the dereferenced object/offset is
-  legitimate but the crash is a real out-of-bounds index reaching it (a real
-  bug to fix, not a stub artifact).
-- H-slotdispatcheriter-872-stale-pointer: the object was freed/reused and the
-  `+872` dereference reads a stale or wild pointer (freelist-adjacent, per
-  the s640–s659 precedent — do NOT mitigate without naming the writer; that
-  precedent burned four iterations on mitigation-without-explanation).
-- H-slotdispatcheriter-872-stub-artifact: the crash is downstream of an
-  audio- or another degenerate-path stub rather than a genuine game-state bug.
-- H-slotdispatcheriter-872-unclassified: the writer/object-origin set is not
-  yet fully enumerated.
+- H-slotdispatcheriter-stacksp-caller-corruption: a caller enters with a wild
+  or mis-restored `$sp`, selecting a real caller-side corruption class.
+- H-slotdispatcheriter-stacksp-balanced: all callers are structurally
+  balanced; the invalid `$sp` is introduced by shared runtime/context state.
+- H-slotdispatcheriter-stacksp-stub-artifact: a known degenerate stub path
+  corrupts the shared context before a normal caller invokes the dispatcher.
+- H-slotdispatcheriter-stacksp-unclassified: the caller/writer set is not yet
+  fully enumerated.
 
-Discriminating measurement: complete generated-source inventory of
-`slotDispatcherIter`'s `+872`-offset access(es) and every writer of the
-object/field it reads, cross-checked against companion symbols. A reachable
-writer with a provably invalid/stale value selects stale-pointer; a
-consistently legitimate writer set with the crash still reachable via normal
-control flow selects legitimate-oob; provenance rooted in a known stub path
-selects stub-artifact; anything unresolved selects unclassified.
+Discriminating measurement: complete caller-site inventory of `$sp` prologue,
+epilogue, and call-boundary state, cross-checked with companion symbols. An
+unbalanced or wild caller selects caller corruption; balanced callers with no
+shared-state writer select runtime/context state; a chain rooted in a known
+stub selects stub-artifact; anything unresolved selects unclassified.
 
-This is a large, multi-file source audit — consider delegating the grep
-sweep itself to a subagent (as s951 did) and keeping only the classified
-result in the main session, rather than reading full grep dumps directly.
+Exact starting commands:
+
+`rg -n "slotDispatcherIter\\(rdram, ctx\\);" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+
+`rg -n -B12 -A8 "slotDispatcherIter\\(rdram, ctx\\);" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+
+`rg -n "ctx->r29 =|MEM_W\\(.*ctx->r29|addiu.*\\$sp|jal.*8003E8DC" ../N64Recomp/RecompiledFuncs/funcs_*.c`
+
+Cross-check the resulting guest addresses against
+`../rogue_squadron64/symbol_files/main_overlay.txt` and `funcs.h`.

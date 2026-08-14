@@ -59597,3 +59597,34 @@ selected.
 
 ORIGIN: exhaustive generated `LOOKUP_FUNC`/`jalr` inventory plus caller/origin
 trace; no guest value mutation or mitigation.
+
+## Session 952 (2026-08-13) — `slotDispatcherIter+872` is the guest-stack prologue spill
+
+Performed the planned source-only M3 idiom-class localization. No build, game
+run, soak, generated-source edit, guard, mitigation, or behavior change was
+made. The queued soak verdicts were folded at iteration start: the recurring
+post-VI-1024 terminal symbol remains `slotDispatcherIter+872`, with positive
+controls passing in the evaluated runs.
+
+The companion symbol map places `slotDispatcherIter` at guest `0x8003E8DC`
+and describes it as the `gNpcSlotList` walker. In the generated body,
+`funcs_8.c:22810` is the prologue instruction for guest `0x8003E90C`:
+`MEM_W(0x1C, ctx->r29) = ctx->r19`. The current executable independently
+maps host offset `+872` to that source line through `atos`/DWARF, and `otool`
+shows the corresponding host store. Thus the recurring fault is an invalid
+guest stack pointer (`$sp`, represented by `ctx->r29`) while saving the callee
+frame, before the function reaches any NPC record or `gNpcSlotList` access.
+It is not an NPC record `+0x368` access and does not name a stale slot writer.
+
+The generated source contains 144 direct `slotDispatcherIter(rdram, ctx)`
+call sites across 19 files. The callee itself adjusts `ctx->r29` only for its
+own `0x38` frame and restores it at return; the value at the faulting spill is
+caller-supplied state. The writer/origin class is therefore the 144 caller
+frame boundaries and any shared context corruption between them. This source
+audit does not classify that caller set, so it selects
+H-slotdispatcheriter-stacksp-unclassified. H-slotdispatcheriter-872-legitimate-oob,
+stale-pointer, and stub-artifact were not selected. No mitigation was landed.
+
+ORIGIN: `atos`/DWARF source mapping, `otool` instruction mapping, generated
+prologue, companion symbol map, and 144-site call inventory; no guest value
+mutation or mitigation.
