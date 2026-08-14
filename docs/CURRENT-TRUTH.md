@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1059 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1060 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -213,6 +213,16 @@ the generated source contains no direct writer classification for those data
 words, so their producers remain an explicit boundary. This selects
 `H-throttle-ret-state` over the input and demo alternatives as static,
 single-source evidence; no retail transition or runtime conclusion follows.
+
+s1060 audited the two ordinary `0x800CD6D4` stores at `0x800AC914` and
+`0x800AD0DC`. Both read `D_800D291C`, use it as a byte index into the fixed
+table at `0x800D-0x3C08`, and pass the selected byte to
+`updateTextOverlayLookupEntry`. The index writers found in the generated tree
+are setup/selection/ship-state paths, including the craft-selection table scan
+and a fixed ship-state value; the table has no generated writer in the audited
+tree. The helper reads the current ship pointer and float/asset fields, with no
+controller, timer, demo, or attract read. This selects `H-exit-word-state` as
+static single-source evidence; no retail transition conclusion follows.
 
 ## M4 zero-shade evidence
 
@@ -456,6 +466,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1057 | Complete `runHangarSelectionFrame` return audit: the `0x00FFFFFE` sentinel requires newly pressed B (`0x4000`) plus inactive player state; the ordinary return is selected from `0x800D:0xFFFFD6D4` or fallback `0xFFFFD6D0` after `accumulateShipThrottleCharge`. Selects `H-frame-ret-input` for the sentinel path; normal return producer remains open. |
 | s1058 | Audited `accumulateShipThrottleCharge`: ship/charge state and threshold constants are its only predicates; it returns 1 only when the charge counter reaches 7, otherwise 0. Selects `H-throttle-ret-state`; the two ordinary return-word producers remain an explicit generated-source boundary. |
 | s1059 | Enumerated direct generated stores for the two ordinary frame-return words. `0x800CD6D4` has one B/inactive-ship sentinel writer and two state/table-derived hangar-exit writers; `0x800CD6D0` has no direct word writer, only one byte store in `loadCutsceneAssetsByIndex`. Selects `H-frame-word-input` only for the already-known sentinel path; ordinary producer classification remains `H-frame-word-boundary` pending the unresolved table/data producers. |
+| s1060 | Both ordinary `0x800CD6D4` stores select a fixed table byte through `D_800D291C`; index writers and `updateTextOverlayLookupEntry` are setup/selection/ship-state shaped with no controller/timer/demo/attract read. Selects `H-exit-word-state` as static single-source evidence; retail transition remains open. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -487,10 +498,10 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    Direct-store enumeration found two state/table-derived `0x800CD6D4` stores,
    one B/inactive-ship sentinel store at that address, and no direct word store
    to `0x800CD6D0` (only a byte store during cutscene-asset setup). The next
-   bounded static lead is to inspect the immediate callers and data producers
-   of the two state/table-derived hangar-exit stores; do not infer their
-   meaning from values or arm a freelist watch until the retail oracle reaches
-   a hangar-origin phase.
+   s1060 classified the indexed table and helper chain as setup/selection/
+   ship-state shaped, with no controller/timer/demo/attract source. The retail
+   transition remains open; do not infer its meaning from values or arm a
+   freelist watch until the retail oracle reaches a hangar-origin phase.
 3. The M4 accumulator/VGE numeric-origin question remains open, but the
    existing capture recipe is closed after a fourth controlled null. Resume
    only with a new discriminator or independent ground truth.

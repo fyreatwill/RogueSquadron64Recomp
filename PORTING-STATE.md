@@ -62246,3 +62246,21 @@ enumerated sites, but does not classify the unresolved table/data producer.
 ORIGIN: generated `RecompiledFuncs/funcs_27.c` and `funcs_28.c`, with bounded
 cross-file literal-offset search; no guest value, runtime behavior, or writer
 was changed.
+## Session 1060 (2026-08-14) — classified ordinary hangar-exit return sources
+
+Ran the bounded static audit specified in `scratch/agent/NEXT.md`; no build or
+runtime run was performed. Both ordinary stores of `0x800CD6D4`, at
+`0x800AC914` and `0x800AD0DC`, load the index byte at `0x800D291C`, add it to
+the fixed table base `0x800D-0x3C08`, and pass the selected byte to
+`updateTextOverlayLookupEntry`. The generated tree's index writers are
+setup/selection/ship-state paths: `mallocCraftSelectionData` initializes and
+scans the craft-selection table, `updateHangarBayScene` derives a table value
+after writing hangar state, and its later path writes the fixed ship-state
+value 7. The table itself has no generated writer in the audited tree.
+`updateTextOverlayLookupEntry` reads the current ship pointer and float/asset
+fields and contains no controller, timer, demo, or attract read.
+
+This selects `H-exit-word-state` as static single-source evidence and rules out
+a direct input/timer/demo source in the audited chain. It does not establish
+the retail width-320-to-hangar transition, and the static source boundary is
+not ground truth for the retail ROM.
