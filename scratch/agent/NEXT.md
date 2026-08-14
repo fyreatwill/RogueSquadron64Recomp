@@ -1,35 +1,35 @@
-# NEXT work unit (s1048)
+# NEXT work unit (s1049)
 
 HYPOTHESIS-ID: retail-state-transition-input
 
-Perform one bounded static audit of the width-320 attract state's actual
-caller and state writer around the table dispatch at `0x800C5A5C`. Do not run
-the game or arm a freelist watch. Trace only the caller chain that selects the
-state-table index and the writes that could enter the `0x800C6854` hangar
-handoff; do not guess another button schedule.
+Perform one bounded static audit of the writers that can set
+`gGameSettings+0x20` and the menu state halfword at `0x800CFF50`. Do not run
+the game or arm a freelist watch. Trace only the callers/branches that can
+enable the width-320 menu loop or set table index 0 before the
+`0x800C5A5C` dispatch.
 
 ## Competing hypotheses and discriminator
 
-* `H-retail-start-gate`: the width-320 caller reads a Start edge or Start bit
-  and writes the hangar-selecting state when it is present.
-* `H-retail-other-input`: the caller requires a different button or composite
-  mask before writing that state.
-* `H-retail-timing-state`: the caller has no missing input read, but a timer,
-  attract counter, or persistent state predicate prevents the state write.
+* `H-retail-state-writer-input`: an input edge/mask directly writes either
+  `gGameSettings+0x20` or `0x800CFF50=0`.
+* `H-retail-state-writer-timer`: a timer, attract counter, or demo predicate
+  writes one of those fields without an input gate.
+* `H-retail-state-writer-upstream`: the fields are only copied from another
+  persistent state object; the missing transition is upstream of this menu
+  overlay.
 
-Discriminating measurement: produce one caller/state table from the width-320
-function to the `0x800C5A5C` jump table, listing every input read, mask,
-timer/attract predicate, and state write. A Start predicate selects
-`H-retail-start-gate`; another button/composite mask selects
-`H-retail-other-input`; only non-input predicates with a complete input path
-selects `H-retail-timing-state`.
+Discriminating measurement: produce one writer table listing every generated
+store/copy into `gGameSettings+0x20` and `0x800CFF50`, its guarding predicates,
+and its caller. A direct input mask selects the input-writer hypothesis; a
+timer/demo-only guard selects the timing-writer hypothesis; only upstream
+copy sources with no local decision select the upstream-writer hypothesis.
 
 ## Exact commands
 
 ```sh
-rg -n -C 4 "0x800C5A5C|0x800C6854|0x006dd280|0x6ab400|0x6ab800|512|attract|hangar" docs tools syms
-rg -n -C 5 "800C5A5C|800C6854|state-0xB0|D_8013A960|getControllerNewButtonsPressed" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs 2>/dev/null | head -300
-rg -n -C 3 "0x800C5A5C|0x800C6854|0x80109AE0|demoStep|demoInputs" syms docs /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs 2>/dev/null | head -300
+rg -n -C 4 "0x800CFF50|800CFF50|gGameSettings|D_80130B40|0x20\(.*s[0-9]+\)|demoStep|demoInputs" syms docs /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs 2>/dev/null | head -400
+rg -n -C 5 "sh[[:space:]]+.*0x20|MEM_H\(0X20|MEM_W\(0X20|0x800CFF50|800CFF50" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c 2>/dev/null | head -400
+rg -n -C 3 "getControllerNewButtonsPressed|demoStep|demoInputs|0x80109AE0|0x8010BCA0" /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c syms docs 2>/dev/null | head -300
 ```
 
 Expected output is one bounded table with ROM/guest addresses and a selected

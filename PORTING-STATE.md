@@ -61986,3 +61986,25 @@ and freelist writer remain unevaluable.
 
 ORIGIN: generated retail/decomp source and symbol inspection only; no
 mitigation, guest value, or recomp runtime behavior was changed.
+## Session 1048 (2026-08-14) — traced the width-320 state-table caller
+
+Performed the prescribed bounded static audit without building, running the
+game, or arming a freelist watch. In `mainGameLoop` (`0x8003DFA0`), the
+width-320/menu path is gated by `gGameSettings+0x20` and calls
+`menuOverlayInit` (`0x800C58A0`) with state arguments such as 9, 2, and 3;
+there is no Start read on that caller chain. In `menuOverlayInit`, the
+halfword at `0x800CFF50` is read at `0x800C5A5C`, bounded to 0..10, and
+dispatched through `0x800A75C0`. Table case 0 calls
+`runHangarMenuFromOverlay` at `0x800C5A8C`; other cases perform menu/asset
+actions and write other state values. The same function has multiple writes to
+`0x800CFF50` under menu/asset and flag predicates, including non-input paths.
+
+This selects `H-retail-timing-state` as static single-source evidence: the
+audited width-320 chain does not gate the hangar handoff on Start or another
+button. It rules out another button schedule as the next move, but does not
+identify the upstream writer of `gGameSettings+0x20` or the transition to
+table index 0. The next audit will enumerate those writers.
+
+ORIGIN: generated recomp source, symbol table, and architecture-document
+inspection only; no mitigation, guest value, or recomp runtime behavior was
+changed.
