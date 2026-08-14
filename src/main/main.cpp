@@ -2185,6 +2185,113 @@ struct FlzFaultRingRec {
 static constexpr int kFlzFaultRing = 16;
 static FlzFaultRingRec g_flz_fault_ring[kFlzFaultRing];
 static std::atomic<uint64_t> g_flz_fault_ring_w{0};
+static size_t fl_zero_page_size();
+
+// Phase-gated write-fault census for the F5 VTXCOLOR payload pages. This is
+// diagnostic only: the handler makes the faulting store retry after briefly
+// restoring page write access, then the watcher re-arms the page.
+static std::atomic<uint8_t*> g_vtx_fault_rdram{nullptr};
+static std::atomic<int> g_vtx_fault_enabled{0};
+static std::atomic<uint64_t> g_vtx_fault_n{0};
+static std::atomic<uint64_t> g_vtx_fault_phase4_n{0};
+static std::atomic<uint64_t> g_vtx_fault_phase6_n{0};
+static std::atomic<int> g_vtx_fault_armed{0};
+static uintptr_t g_vtx_fault_pages[2] = {};
+static size_t g_vtx_fault_page = 0;
+
+static bool vtx_fault_page_for(uintptr_t fa, int* page_index) {
+    for (int i = 0; i < 2; ++i) {
+        if (g_vtx_fault_pages[i] != 0 && fa >= g_vtx_fault_pages[i] &&
+            fa < g_vtx_fault_pages[i] + g_vtx_fault_page) {
+            if (page_index) *page_index = i;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool vtx_fault_try_handle_fault(siginfo_t* info, void* ucontext_raw) {
+    if (!g_vtx_fault_enabled.load(std::memory_order_acquire) ||
+        !info || !info->si_addr) return false;
+    int page_index = -1;
+    const uintptr_t fa = (uintptr_t)info->si_addr;
+    if (!vtx_fault_page_for(fa, &page_index)) return false;
+
+    mprotect((void*)g_vtx_fault_pages[page_index], g_vtx_fault_page,
+             PROT_READ | PROT_WRITE);
+    g_vtx_fault_armed.fetch_sub(1, std::memory_order_release);
+
+    uint64_t n = g_vtx_fault_n.fetch_add(1, std::memory_order_relaxed) + 1;
+    const uint32_t phys = (uint32_t)(fa - (uintptr_t)g_vtx_fault_rdram.load(
+        std::memory_order_relaxed));
+    const uint32_t phase = rs64_phase_ord();
+    const uint32_t p4lo = 0x726200u, p4hi = 0x726C50u;
+    const uint32_t p6lo = 0x732A10u, p6hi = 0x73E3B0u;
+    const bool p4 = phys < p4hi && phys + 1 >= p4lo;
+    const bool p6 = phys < p6hi && phys + 1 >= p6lo;
+    if (p4) g_vtx_fault_phase4_n.fetch_add(1, std::memory_order_relaxed);
+    if (p6) g_vtx_fault_phase6_n.fetch_add(1, std::memory_order_relaxed);
+
+    uint64_t pc = 0, lr = 0;
+#if defined(__APPLE__) && defined(__aarch64__)
+    if (ucontext_raw) {
+        ucontext_t* uc = static_cast<ucontext_t*>(ucontext_raw);
+        if (uc->uc_mcontext) {
+            pc = (uint64_t)uc->uc_mcontext->__ss.__pc;
+            lr = (uint64_t)uc->uc_mcontext->__ss.__lr;
+        }
+    }
+#else
+    (void)ucontext_raw;
+#endif
+    if (n <= 128) {
+        fprintf(stderr,
+            "[vtx-write-fault] n=%llu phase=%u phys=0x%06X page=%d "
+            "overlap=p4:%d,p6:%d pc=0x%llX lr=0x%llX guest_pc=0x%08X\n",
+            (unsigned long long)n, phase, phys, page_index, p4 ? 1 : 0,
+            p6 ? 1 : 0, (unsigned long long)pc, (unsigned long long)lr,
+            (unsigned)g_rs64_last_guest_pc);
+        fflush(stderr);
+    }
+    return true;
+}
+
+static void start_vtx_write_fault_watch() {
+    static std::thread t{[]{
+        uint8_t* rdram = nullptr;
+        while (!(rdram = (uint8_t*)g_recomp_rdram_for_wp_raw)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
+        g_vtx_fault_rdram.store(rdram, std::memory_order_release);
+        g_vtx_fault_page = fl_zero_page_size();
+        const uint32_t ranges[] = {0x726200u, 0x732A10u};
+        for (int i = 0; i < 2; ++i) {
+            uintptr_t host = (uintptr_t)rdram + ranges[i];
+            g_vtx_fault_pages[i] = host & ~(uintptr_t)(g_vtx_fault_page - 1);
+            mprotect((void*)g_vtx_fault_pages[i], g_vtx_fault_page, PROT_READ);
+        }
+        g_vtx_fault_armed.store(2, std::memory_order_release);
+        g_vtx_fault_enabled.store(1, std::memory_order_release);
+        fprintf(stderr,
+            "[vtx-write-fault-control] armed pages=0x%llX,0x%llX page=%zu "
+            "ranges=p4:0x726200..0x726C50,p6:0x732A10..0x73E3B0\n",
+            (unsigned long long)g_vtx_fault_pages[0],
+            (unsigned long long)g_vtx_fault_pages[1], g_vtx_fault_page);
+        fflush(stderr);
+        for (;;) {
+            for (int i = 0; i < 2; ++i) {
+                uintptr_t page = g_vtx_fault_pages[i];
+                if (page && g_vtx_fault_enabled.load(std::memory_order_relaxed)) {
+                    // Give the faulting store time to retire before re-arming.
+                    std::this_thread::sleep_for(std::chrono::microseconds(250));
+                    if (mprotect((void*)page, g_vtx_fault_page, PROT_READ) == 0)
+                        g_vtx_fault_armed.fetch_add(1, std::memory_order_release);
+                }
+            }
+        }
+    }};
+    t.detach();
+}
 
 static size_t fl_zero_page_size() {
     long p = sysconf(_SC_PAGESIZE);
@@ -3264,6 +3371,15 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    {
+        const char* e = std::getenv("ROGUESQ_LOG_VTX_WRITE_FAULT");
+        if (e && *e && *e != '0') {
+            fprintf(stderr, "[vtx-write-fault] watcher enabled\n");
+            fflush(stderr);
+            start_vtx_write_fault_watch();
+        }
+    }
+
 #if defined(__APPLE__) && defined(__aarch64__)
     // Must run before the sigaction() install below and outside any signal
     // context -- see rs64_build_local_symbol_table's own comment.
@@ -3340,6 +3456,11 @@ int main(int argc, char* argv[]) {
         sa.sa_flags = SA_SIGINFO;
         sigemptyset(&sa.sa_mask);
         sa.sa_sigaction = [](int sig, siginfo_t* info, void* ucontext_raw) {
+            if (sig == SIGSEGV || sig == SIGBUS) {
+                if (vtx_fault_try_handle_fault(info, ucontext_raw)) {
+                    return;
+                }
+            }
             // s646/s647: freelist page-fault watch (PROT_READ trap). Recoverable.
             // (s647: SIGTRAP/SS path REFUTED — do not re-add.)
             if (sig == SIGSEGV || sig == SIGBUS) {

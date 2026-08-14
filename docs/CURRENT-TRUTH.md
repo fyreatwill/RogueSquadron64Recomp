@@ -4,7 +4,7 @@ Front matter for `PORTING-STATE.md`. Durable history is in
 [`docs/PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); do not reopen closed
 lineages without a new class-level lead.
 
-Reviewed through s987 (2026-08-13). The active blocker is authoritative
+Reviewed through s989 (2026-08-13). The active blocker is authoritative
 FULL_SYNC/E9 accounting after the post-sec2 gate. M5 audio de-stubbing is
 closed; M3 work is limited to systematic idiom-class audits. The
 oracle-pif-callback-runtime thread (s955–s982) is environment-blocked pending
@@ -438,6 +438,7 @@ history is in PROJECT-OVERVIEW §§27–30.
 | s986 | Added a phase-scoped RDRAM payload census and reran the isolated ungated-LLE probe. Positive controls fired: phase 4 had 579/36,495 and phase 6 had 355/1,525 `VTXCOLOR`/`MOVEMEM` updates. Phase-6 VTXCOLOR sources contained nonzero words (`0x737EA0`: `313131FF...`; later sources included `A6A6A6FF...` and `5F5F74FF...`) while the independent shade decoder emitted exact ZERO samples. This selects H-downstream-writer/state-conversion over H-game-state-zero and H-payload-address; the actual writer remains unclassified. The retail oracle whole-RDRAM control passed 7,651,765 and 12,581,730 writes in two arms, but all target watches stayed phase-unevaluable at VI-320. No mitigation followed. |
 | s987 | Exhaustive generated-source address inventory found zero literal references, zero direct stores, and no `lui` construction of the sampled `0x8072/0x8073xxxx` guest-pointer region for both phase-6 and phase-4 ranges. This refutes only a direct absolute game-side writer; dynamic register-relative stores, DMA/copy ownership, and renderer-state conversion remain unresolved. No build, runtime arm, or mitigation. |
 | s988 | Added a phase-gated `dma_dmem_to_rdram` origin census with an independent all-DMA control. The corrected ungated-LLE run reached VI 1024, fired phase-4 and phase-6 DMA controls, and recorded zero DMA writes overlapping phase-4 `0x726200..0x726C50` or phase-6 `0x732A10..0x73E3B0`. This rules out the instrumented RSP DMEM-to-RDRAM DMA path as the sampled payload writer, but does not distinguish dynamic CPU stores from renderer/state conversion; the hook does not observe ordinary generated CPU stores. The first run was invalid because its positive control was not emitted, then the fixed build/run passed controls. No mitigation. |
+| s989 | Added a recoverable macOS page-fault census for the two shared host pages covering the phase-4 and phase-6 VTXCOLOR ranges. The run reached VI 1024, completed the 180-second capture without a crash, and recovered 129 write faults; 124 phase-4 records were all outside the exact target range and no phase-6 exact-range record occurred. F5-state/shade controls and all-DMA controls fired. This selects no directly faulting CPU store in the observed target bytes, bounded by page sharing; dynamic copies and renderer/state conversion remain open. No mitigation. |
 
 All runtime claims in the ledger had positive controls in the relevant
 capture. Static single-source results are labelled as such in the session
@@ -469,39 +470,38 @@ entries and do not authorize mitigations.
    the invalid callback state pointer is identified.
 4. M4 correctness remains active: phase-6 VTXCOLOR payloads are demonstrably
    nonzero while decoded shade is exact ZERO, and s988 finds no overlap from the
-   instrumented RSP DMEM-to-RDRAM DMA path. Dynamic CPU stores, unobserved copy
-   paths, and renderer/state conversion remain open. The next probe must observe
-   target-page write faults with the DMA control retained; attribution S=0
-   triangles and I4 `sample=64x128` follow only after origin is classified. The
-   `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON) remains without an ORIGIN
-   conclusion.
+   instrumented RSP DMEM-to-RDRAM DMA path. s989's recoverable page census saw
+   129 writes to the two shared host pages, but none at either exact target
+   range; phase-4 and phase-6 F5/shade controls and all-DMA controls fired. This
+   selects no directly faulting CPU store in the observed writable target bytes,
+   bounded by the page-sharing gap; dynamic copy paths and renderer/state
+   conversion remain open. The `ROGUESQ_FIX_ZERO_SHADE` mitigation (default ON)
+   remains without an ORIGIN conclusion.
 5. Retain the regeneration delete-before-regen rule and audit fixup counts if
    a reproducible omission appears.
 
-## Next work unit (s989)
+## Next work unit (s990)
 
 HYPOTHESIS-ID: m4-zero-shade-writer
 
-Run one bounded macOS target-page write-fault census for the same phase-6
-VTXCOLOR range, retaining phase 4 as the positive control and retaining the
-s988 DMA census. Protect only the pages covering both ranges after RDRAM is
-captured; recover each write fault, record fault PC/LR plus phase and overlap,
-then re-arm. Competing hypotheses are H-game-dynamic (guest-generated CPU
-store faults), H-renderer-state (no target-page faults after payload capture),
-and H-watch-gap (faults occur but cannot be safely recovered/attributed).
-Discriminating measurement: phase-gated target-page fault records with the
-existing all-DMA and F5/shade controls. A target fault with a generated-code
-PC selects H-game-dynamic; zero target faults with controls firing selects
-H-renderer-state only for this process's writable target pages; handler loss or
-unrecoverable faults selects H-watch-gap. Land no mitigation.
+Classify the five unique phase-4 host fault PCs from s989 with the local symbol
+table and ARM64 disassembly, and compare their call sites with the generated
+guest breadcrumb. Competing hypotheses are H-generated (fault PCs resolve to
+generated game stores), H-runtime (fault PCs resolve to allocator/renderer
+runtime stores), and H-page-gap (all faults are unrelated stores on shared
+pages). The discriminating measurement is independent PC-to-symbol/disassembly
+classification for the repeated PCs `0x103300418`, `0x103356134`,
+`0x103383458`, `0x103300210`, and `0x10334D084`; do not add a guard or infer
+target-byte ownership from a page fault alone.
 
 Exact commands:
 
-`rg -n -C 3 'SIGSEGV|mprotect|RDRAM|rdram|DMA|do_dma|write' src/main/main.cpp src/main/upstream_compat.cpp lib/N64ModernRuntime/librecomp/include/librecomp/rsp.hpp`
+`nm -n build/RogueSquadron64Recomp` (use nearest preceding symbols), then
+`otool -tvV build/RogueSquadron64Recomp` around those symbols and map any
+generated caller with the existing local symbol/guest-PC tools.
 
-Build once, then run the existing isolated ungated-LLE capture with the s986
-F5-state/shade controls and `ROGUESQ_FIX_ZERO_SHADE=0`. Phase-gate every fault
-record; do not use a stopwatch or add a guard.
+Use only the s989 run log as input; no build or soak is needed unless the
+symbol/disassembly artifacts are unavailable. Land no mitigation.
 
 The old oracle unit below is blocked and retained only as history; it is not the
 next work unit.

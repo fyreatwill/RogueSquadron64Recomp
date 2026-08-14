@@ -60616,3 +60616,29 @@ retained.
 
 ORIGIN: the new callback observes only `dma_dmem_to_rdram`; it names that
 writer class and makes no legitimacy claim about the remaining writers.
+
+## Session 989 (2026-08-13) — target-page write-fault census finds no exact VTXCOLOR writer
+
+The planned M4 work unit added a recoverable macOS `mprotect` census for the
+two host pages covering phase-4 `0x726200..0x726C50` and phase-6
+`0x732A10..0x73E3B0`. The single ungated-LLE capture reached VI-1024 after
+78.2 seconds and completed its 180-second probe without a crash. The watcher
+control fired and recovered 129 write faults; 124 occurred in phase 4, but
+every phase-4 fault address was outside the exact target interval, and no
+phase-6 exact-target fault was recorded. Existing F5-state/shade controls
+fired in phases 4 and 6, and the independent all-DMA control fired while its
+target-overlap count stayed zero.
+
+This selects no directly faulting generated CPU store in the observed target
+bytes, but only for the writable bytes covered by this page-level census. The
+target ranges share 16-KiB host pages with unrelated active writes, so a fault
+at `0x725DDC`/`0x725E84` or another non-target offset leaves a page-sharing
+window in which an exact target write could occur after recovery. The result
+therefore does not select renderer/state conversion as the complete origin;
+dynamic copy paths and the page-sharing gap remain open. No mitigation was
+added.
+
+ORIGIN: the new watcher observes write faults on shared host pages and reports
+the faulting host PC/LR plus exact-range overlap; it changes page protection
+only to retry the faulting store and makes no legitimacy claim about any
+payload writer.
