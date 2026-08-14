@@ -62377,3 +62377,21 @@ or non-generated aliases and the upstream state producer remain open.
 
 ORIGIN: generated caller enumeration in `RecompiledFuncs/funcs_8.c`; no guest
 value, runtime behavior, or mitigation was changed.
+
+## Session 1067 (2026-08-14) — audited cycle-id clear-form callers
+
+The bounded static audit searched the complete generated tree, companion
+symbols, and the `mainGameLoop` context around every `cycleIdleDemoId` and
+`0x8006F0AC` reference. No build or runtime run was needed. `0x8006F0AC` is
+the clear form internal to `cycleIdleDemoId`, not a separately called target.
+The only two generated callers are `mainGameLoop` sites `0x8003E240` and
+`0x8003E54C`: the first follows the cleanup/state-gate path, and the second
+follows the state jump-table path after asset/menu-state predicates. Neither
+caller chain contains a direct controller edge, timer/demo counter test, or
+attract scheduler predicate. This selects `H-clear-state` for generated
+callers and rules out `H-clear-input` and `H-clear-demo` there. Pointer-mediated
+aliases, non-generated callers, and the upstream state producer remain open.
+
+ORIGIN: generated caller enumeration and bounded control-flow inspection in
+`RecompiledFuncs/funcs_8.c`; no guest value, runtime behavior, or mitigation
+was changed.

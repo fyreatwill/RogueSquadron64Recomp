@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1066 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1067 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -261,6 +261,16 @@ caller chain. This selects `H-cycle-state` for generated callers as static,
 single-source evidence; pointer-mediated calls, non-generated aliases, and the
 upstream state producer remain an explicit boundary.
 
+s1067 completed the requested clear-form caller audit. The generated
+`0x8006F0AC` instruction is internal to `cycleIdleDemoId`; the only two
+generated callers are the same `mainGameLoop` sites at `0x8003E240` and
+`0x8003E54C`. Their immediate predicates are state/overlay cleanup and the
+state jump-table path, respectively. No generated caller chain contains a
+direct controller edge, timer/demo/attract scheduler predicate, or separate
+clear target. This independently supports `H-clear-state` for generated
+callers; pointer-mediated aliases and non-generated callers remain an explicit
+boundary.
+
 ## M4 zero-shade evidence
 
 The independent F5 command-reference audit and same-combiner/white-shade A/B
@@ -510,6 +520,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1064 | The selected table is the named `dLevelByDemoId` data object at `0x800CD404` (`0x800D-0x2BFC`). The complete generated-tree audit found its indexed byte read only at `menuOverlayInit+0x45c`; no generated store targets the table range. This selects `H-table-immutable` for generated code, while data initialization and pointer-mediated/non-generated writers remain an explicit boundary. |
 | s1065 | The data-symbol section places `dLevelByDemoId` inside `.ovl.menu`, ROM `0x10C2D0`–`0x1346BF`, VRAM `0x800A5130`–`0x800CD51F`; its computed ROM offset is `0x1345A4`, whose bytes are `00 05 07 0A 0B 11 00 00`. This independently selects `H-table-ROM`: the source is immutable ROM/overlay data, with normal overlay DMA as the loader rather than a generated population routine. |
 | s1066 | Complete generated caller audit found exactly two `cycleIdleDemoId` sites, both in `mainGameLoop` (`0x8003E240`, `0x8003E54C`). Their immediate paths are menu/overlay state gates and a state jump table; neither directly reads controller, timer, demo, or attract state. Selects `H-cycle-state` for generated callers; pointer-mediated/non-generated aliases and the upstream state producer remain open. |
+| s1067 | The clear/return form at `0x8006F0AC` is internal to `cycleIdleDemoId`; its only generated callers are `mainGameLoop` sites `0x8003E240` and `0x8003E54C`. Both are state/overlay paths with no direct controller, timer/demo, or attract predicate. Selects `H-clear-state` for generated callers; pointer-mediated/non-generated aliases remain open. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
