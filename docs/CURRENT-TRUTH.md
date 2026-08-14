@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1078 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1080 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -40,9 +40,13 @@ the tested timing/input-shape explanations are closed.
 
 Static audits classify the width-320 handoff as state-shaped:
 
-- `mainGameLoop` gates `menuOverlayInit` on `gGameSettings+0x20`; the direct
-  generated writer is the constant `0x7F` reset in
-  `resetMixerVolumesAndFlags`.
+- `mainGameLoop` gates `menuOverlayInit` on byte `0x80130B30`, which is
+  `D_80130B10+0x20` in the mission-state block, not `gGameSettings+0x20`.
+  `runIdleFramesAndLoadSaveData` has a direct generated writer at
+  `0x8006DAB8` that stores constant `1`; `resetGameSettingsAndMissionStats`
+  clears the containing 0x28-byte block first. Static ownership is therefore
+  `H-gate-writer`; runtime reachability/value and any later raw alias remain
+  open.
 - `menuOverlayInit` dispatches the halfword at `0x800CFF50`; its eight
   generated callers pass `{9,2,2,3,3,8,3,3}` and use state/asset/unlock/
   counter predicates, with no local controller, timer, or demo read.
@@ -182,14 +186,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1077 | Ran the eleven-Start discriminator: whole-RDRAM, PIF, and VI controls were positive; both target write ranges were silent and VI stayed width 320 at `0x006dd280`. Selected the execution/alias observation boundary; another schedule is not justified. |
 | s1078 | Added physical read watches for the controller-edge and selector/state ranges. Whole-RDRAM, eleven PIF Start edges, and VI callback/poll controls were positive; both reads were silent and VI stayed width 320 at `0x006dd280`. Selected `H-consumer-not-reached`; the blocking state gate remains open. |
 | s1079 | Enumerated 55 generated controller-consumer calls across 16 generated function names (one duplicate copy) and one direct `menuControllerInput` caller (`menuOverlayInit`, `a0=0`); no raw target dispatch exists. `mainGameLoop`'s state/asset gate at `0x8003E07C` precedes the menu selector jump table. Selected static `H-gate-state`; runtime gate ownership/value remains open. |
+| s1080 | Bounded static gate audit identified `s4=0x80130B10`, so `0x8003E07C` reads `0x80130B30` (`D_80130B10+0x20`). `runIdleFramesAndLoadSaveData` stores constant `1` at `0x8006DAB8`; the reset routine clears the 0x28-byte containing block. Generated and companion evidence selects static `H-gate-writer`; runtime execution/value remains open. |
 
 ## Ranked next steps
 
-1. Perform one bounded static audit of the `mainGameLoop` state/asset gate at
-   `0x8003E07C`: enumerate its backing object, all generated/non-generated
-   writers, and the initialization path that can leave it zero before the
-   width-320 attract loop. Do not arm a freelist watch without an independently
-   observed `0x6abxxx` hangar-origin 512 transition.
+1. Perform one bounded static audit of the `runIdleFramesAndLoadSaveData`
+   path surrounding writer `0x8006DAB8`: enumerate its callers, early exits,
+   and reset-to-store ordering that could prevent the concrete `1` writer from
+   executing before the width-320 attract loop. Do not arm a freelist watch
+   without an independently observed `0x6abxxx` hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

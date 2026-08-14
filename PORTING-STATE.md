@@ -62650,3 +62650,23 @@ retail width-320 consumer silence. No mitigation or runtime conclusion was
 added.
 
 ORIGIN: generated caller census in `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`, companion source/symbol search in `rogue_squadron64`, and direct inspection of the gate/selector instructions; no game data or runtime behavior was changed.
+## Session 1080 (2026-08-14) — audited main loop gate ownership
+
+Performed the prescribed bounded static audit without building, running the
+game, running the retail oracle, changing the input schedule, or arming a
+freelist watch. In `mainGameLoop`, the prologue constructs `s4` as
+`0x80130B10`; therefore the `lbu 0x20($s4)` at `0x8003E07C` reads
+`0x80130B30`, a byte in the mission-state block, not `gGameSettings+0x20`.
+The generated writer census found the concrete store at `0x8006DAB8` in
+`runIdleFramesAndLoadSaveData`: base `0x80130B10`, offset `0x20`, constant
+`1`. The reset routine clears `0x80130B10..0x80130B37` before later setup.
+The companion structure independently identifies `D_80130B10` as the
+0x28-byte mission-state object, while its typed source has no direct writer for
+the `+0x20` byte. This selects static `H-gate-writer` and rules out the prior
+`gGameSettings+0x20` identity plus a pointer-only ownership explanation for
+the known generated path. It does not establish that the writer executes in
+the retail attract route, whether a later raw clobber occurs, or why the
+runtime remains at width 320.
+
+ORIGIN: generated `funcs_8.c`/`funcs_17.c`, companion `ctx.c`, and bounded exact
+address searches; no runtime value was observed and no mitigation was added.
