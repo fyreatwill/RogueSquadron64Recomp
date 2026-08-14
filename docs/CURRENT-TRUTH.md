@@ -125,6 +125,18 @@ consumer reads before the attract loop. This is a single-source retail-oracle
 result with independent positive-control lines; it does not identify which
 state gate prevents the consumer path.
 
+The s1079 static consumer-boundary audit enumerated 55 generated direct calls to
+`getControllerNewButtonsPressed` across 16 generated function names (including
+the duplicate `static_5_800AF6AC` copy). The menu/controller handler
+has exactly one generated direct caller: `menuOverlayInit` at `0x800C5B44`, which
+passes `a0=0`; `0x800B47C4` is only the preceding `fake_func` splat trampoline.
+No raw generated, companion, or patch dispatch target for `0x80079F50`,
+`0x800B47C4`, or `0x800B47D0` was found. `mainGameLoop` conditionally enters
+`menuOverlayInit` through the state/asset byte at its `0x8003E07C` gate, and
+`menuOverlayInit` then selects its handler through the selector jump table at
+`0x800C5A7C`. This selects `H-gate-state` at static-source level; the runtime
+value/ownership of the gate remains open.
+
 ## M4 zero-shade boundary
 
 The independent Factor 5 command reference and same-combiner/white-shade
@@ -169,15 +181,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1076 | Designed a same-run retail discriminator joining controller-edge writes, selector/state writes, PIF reads, whole-RDRAM callbacks, and VI phase transitions. No run was performed; the route remains open pending this measurement. |
 | s1077 | Ran the eleven-Start discriminator: whole-RDRAM, PIF, and VI controls were positive; both target write ranges were silent and VI stayed width 320 at `0x006dd280`. Selected the execution/alias observation boundary; another schedule is not justified. |
 | s1078 | Added physical read watches for the controller-edge and selector/state ranges. Whole-RDRAM, eleven PIF Start edges, and VI callback/poll controls were positive; both reads were silent and VI stayed width 320 at `0x006dd280`. Selected `H-consumer-not-reached`; the blocking state gate remains open. |
+| s1079 | Enumerated 55 generated controller-consumer calls across 16 generated function names (one duplicate copy) and one direct `menuControllerInput` caller (`menuOverlayInit`, `a0=0`); no raw target dispatch exists. `mainGameLoop`'s state/asset gate at `0x8003E07C` precedes the menu selector jump table. Selected static `H-gate-state`; runtime gate ownership/value remains open. |
 
 ## Ranked next steps
 
-1. Perform one bounded static audit of the retail-input consumer boundary:
-   enumerate generated callers/raw dispatches of `getControllerNewButtonsPressed`
-   and the menu/controller state handlers, then classify the first gate that
-   can prevent those reads before the width-320 attract loop. Do not arm a
-   freelist watch without an independently observed `0x6abxxx` hangar-origin
-   512 transition.
+1. Perform one bounded static audit of the `mainGameLoop` state/asset gate at
+   `0x8003E07C`: enumerate its backing object, all generated/non-generated
+   writers, and the initialization path that can leave it zero before the
+   width-320 attract loop. Do not arm a freelist watch without an independently
+   observed `0x6abxxx` hangar-origin 512 transition.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration

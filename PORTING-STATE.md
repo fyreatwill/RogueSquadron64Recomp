@@ -62613,3 +62613,40 @@ path, and it does not justify any freelist mitigation or hangar conclusion.
 
 ORIGIN: independent retail-oracle memory-watch callbacks, PIF reads, and VI
 callback/poll traces; no recompiled runtime, game data, or mitigation changed.
+
+## Session 1079 (2026-08-14) — audited retail input consumer boundary
+
+Ran the bounded static audit specified in NEXT.md; no build or runtime run was
+needed. The generated tree contains 55 direct calls to
+`getControllerNewButtonsPressed` across 16 generated function names (including
+one duplicate `static_5_800AF6AC` copy). The complete
+caller table is: `cinematicLoopBody` (`0x800A6200`), `runHangarSelectionFrame`
+(`0x800AB0EC`), `updateHangarBayScene` (nine sites: `0x800AC0E8`, `0x800AC2AC`,
+`0x800AC33C`, `0x800AC41C`, `0x800AC7F0`, `0x800AC808`, `0x800AC8B8`,
+`0x800ACE8C`, `0x800AD02C`),
+`craftSelectionVoiceLineHelper` (`0x800AE288`), `tickCraftSelectScreen`
+(`0x800AFAE4`, `0x800AFD70`, `0x800AFE68`, `0x800AFEC0`, `0x800AFFA8`),
+`static_5_800AF6AC` has the same five addresses in the duplicate funcs_49
+copy,
+`handleLevelSelectStartConfirm` (`0x800B06A4`), `menuControllerInput` (17
+sites from `0x800B4F34` through `0x800B7984`), `handleNabooActionButtons`
+(`0x800BE874`), `eliteRoguesMenuHandler` (`0x800BF0B4`, `0x800BF0E0`),
+`runMenuRandomBackdropScreen` (`0x800BFB44`, `0x800BFC44`),
+`menuSubtype02Handler` (five sites from `0x800C34B8` through `0x800C3644`),
+`setupCraftPreviewModel` (`0x800C43F0`), `menuOverlayInit`'s results-screen
+helper (three sites `0x800C6170`, `0x800C619C`, `0x800C61C8`), and
+`runModelViewerLoop` (`0x800CA4CC`). The generated output has exactly one
+direct call to `menuControllerInput`: `menuOverlayInit` at `0x800C5B44`, with
+`a0=0`; `0x800B47C4` is only the preceding 12-byte `fake_func` trampoline.
+The companion tree and generated tree contain no raw dispatch target for
+`0x80079F50`, `0x800B47C4`, or `0x800B47D0`.
+
+`mainGameLoop` reads the state/asset byte at `0x8003E07C` before its indirect
+`menuOverlayInit` call; `menuOverlayInit` then uses the selector jump table at
+`0x800C5A7C`. This selects `H-gate-state` for the static audit: a concrete
+pre-consumer gate exists, while its runtime value and writer ownership remain
+open. It rules out a missing raw handler dispatch as the explanation for the
+retail width-320 consumer silence. No mitigation or runtime conclusion was
+added.
+
+ORIGIN: generated caller census in `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs`, companion source/symbol search in `rogue_squadron64`, and direct inspection of the gate/selector instructions; no game data or runtime behavior was changed.
