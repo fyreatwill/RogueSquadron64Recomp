@@ -6,7 +6,7 @@ remain in the ledger. This file was compacted in the s1004 maintenance pass
 from 60,345 bytes / 642 lines. It is intentionally a current-state document,
 not a second ledger.
 
-Reviewed through s1067 (2026-08-14). M3 slot-SP corruption is parked after two
+Reviewed through s1068 (2026-08-14). M3 slot-SP corruption is parked after two
 phase-positive no-event recipes; the retail oracle phase audit found live
 whole-RDRAM and pad controls but no transition beyond the early width-320
 phase. M4 zero-shade is parked after its third consecutive controlled null:
@@ -271,6 +271,18 @@ clear target. This independently supports `H-clear-state` for generated
 callers; pointer-mediated aliases and non-generated callers remain an explicit
 boundary.
 
+s1068 audited every generated store that could alias selector byte
+`0x80130B54`, including the `0x80130B40` base window, wider-store lanes, and
+computed-base stores. The complete generated writer table has only
+`cycleIdleDemoId+0x38` (`0x8006F07C`), which increments the byte modulo six,
+and its internal `+0x68` clear form (`0x8006F0AC`). No generated halfword or
+word overlaps byte lane `+0x14`; nearby stores target `+0x38..+0x3A`,
+`+0x00`, or `+0x16`, while the computed menu store at `0x800C5B8C` targets
+`0x80130B40`, not the selector. The generated writer set is therefore
+state/demo-cycle shaped, selecting `H-alias-state` over direct-input and
+timer/demo aliases; non-generated or pointer-mediated writers remain an
+explicit boundary.
+
 ## M4 zero-shade evidence
 
 The independent F5 command-reference audit and same-combiner/white-shade A/B
@@ -521,6 +533,7 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1065 | The data-symbol section places `dLevelByDemoId` inside `.ovl.menu`, ROM `0x10C2D0`–`0x1346BF`, VRAM `0x800A5130`–`0x800CD51F`; its computed ROM offset is `0x1345A4`, whose bytes are `00 05 07 0A 0B 11 00 00`. This independently selects `H-table-ROM`: the source is immutable ROM/overlay data, with normal overlay DMA as the loader rather than a generated population routine. |
 | s1066 | Complete generated caller audit found exactly two `cycleIdleDemoId` sites, both in `mainGameLoop` (`0x8003E240`, `0x8003E54C`). Their immediate paths are menu/overlay state gates and a state jump table; neither directly reads controller, timer, demo, or attract state. Selects `H-cycle-state` for generated callers; pointer-mediated/non-generated aliases and the upstream state producer remain open. |
 | s1067 | The clear/return form at `0x8006F0AC` is internal to `cycleIdleDemoId`; its only generated callers are `mainGameLoop` sites `0x8003E240` and `0x8003E54C`. Both are state/overlay paths with no direct controller, timer/demo, or attract predicate. Selects `H-clear-state` for generated callers; pointer-mediated/non-generated aliases remain open. |
+| s1068 | Complete generated alias sweep for `0x80130B54`: only `cycleIdleDemoId` writes the byte, at `0x8006F07C` (modulo-six increment) and its internal clear at `0x8006F0AC`. No wider store overlaps the byte lane and the computed menu store at `0x800C5B8C` targets `0x80130B40`. Selects `H-alias-state`; pointer-mediated/non-generated writers remain the boundary. |
 | s1044 | Offline reconstruction of 682 complete M4 stage triplets matched all 5,456 observed post-VMADH lanes. Synthetic saturation and in-range `0x8000` controls passed; real rows had no `0x8000` pre-saturation, post-saturation, or post-VGE. The accumulator model is validated, but the real numeric origin remains open. |
 
 ## Ranked backlog
@@ -551,7 +564,11 @@ Details are in `PORTING-STATE.md`; durable summaries are in
    remain constant/menu-state/table-derived, while the menu asset path reads
    global state byte `0x80130B54` through fixed global base `0x80130B40` and a
    fixed table. Selects `H-selector0-state` as static single-source evidence;
-   the field writers remain open. Do not arm the
+   s1068's complete alias sweep found no generated overlapping or computed-base
+   writer beyond `cycleIdleDemoId`'s modulo-six increment and internal clear,
+   both state/demo-cycle machinery with no local controller or timer
+   predicate. Non-generated/pointer-mediated ownership is now the specific
+   boundary. Do not arm the
    freelist watch until a 512 hangar-origin phase is reached.
 2. The table selected by `0x80130B54` is immutable ROM-backed data:
    `dLevelByDemoId` begins at `0x800CD404` inside the `.ovl.menu` section, whose

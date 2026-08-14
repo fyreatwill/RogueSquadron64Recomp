@@ -62395,3 +62395,22 @@ aliases, non-generated callers, and the upstream state producer remain open.
 ORIGIN: generated caller enumeration and bounded control-flow inspection in
 `RecompiledFuncs/funcs_8.c`; no guest value, runtime behavior, or mitigation
 was changed.
+
+## Session 1068 (2026-08-14) — audited selector-field aliases
+
+The bounded static audit searched every generated store in the selector's
+`0x80130B40` base window, wider-store lanes that could cover byte `+0x14`,
+and computed-base stores. The complete generated writer table contains only
+`cycleIdleDemoId+0x38` (`0x8006F07C`), which increments
+`0x80130B54` modulo six, and its internal clear form at `0x8006F0AC`.
+No generated halfword or word overlaps the selector byte. Nearby generated
+writes target `0x80130B38`–`0x80130B3A`, `0x80130B40`, or
+`0x80130B56`; the computed menu store at `0x800C5B8C` targets the base byte
+`0x80130B40`, not `+0x14`. Both selector writers are state/demo-cycle shaped
+and have no local controller or timer predicate. This selects `H-alias-state`
+for generated code and rules out generated input/timer aliases; non-generated
+or pointer-mediated writers remain the explicit boundary. No build or runtime
+run was needed.
+
+ORIGIN: complete generated-tree writer, overlap-lane, and computed-base
+enumeration; no guest value, runtime behavior, or mitigation was changed.
