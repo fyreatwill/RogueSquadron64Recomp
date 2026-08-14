@@ -62729,6 +62729,26 @@ mitigation was added.
 ORIGIN: retail ROM debugger callbacks and independent whole-RDRAM/PIF/VI
 positive controls; no port or game data was changed.
 
+## Session 1097 (2026-08-14) — classified submitGfxFrame blocking transfers
+
+Performed the planned bounded static audit without building or running. The
+generated `submitGfxFrame` at `0x8000C07C` has one ordinary epilogue at
+`0x8000C6D4..0x8000C6EC`; all nine generated caller sites resume through an
+explicit `after_*` continuation, including the idle-loop call at
+`0x8006D9A8`. This matches the earlier retail observation that one invocation
+reached `0x8006D9B0`. The target also has two reachable blocking
+`osRecvMesg(..., MQ_BLOCK)` calls at `0x8000C0B4` and `0x8000C2B8`, followed by
+yield helpers, so the static discriminator selects `H-submit-nonreturn` as a
+legitimate wait boundary. The companion symbol map independently describes
+the queue/yield orchestration; no alternate tail transfer or noreturn caller
+assumption was found. This identifies a possible blocking boundary but does
+not prove that the audited invocation stalled there.
+
+ORIGIN: generated `../N64Recomp/RecompiledFuncs/funcs_3.c`, all direct caller
+sites, and companion `symbol_files/main_overlay.txt`; the prior retail return
+observation is single-source runtime evidence. No mitigation, runtime code,
+build, or game data changed.
+
 ## Session 1096 (2026-08-14) — classified the retail loop branch target
 
 Performed the single bounded static audit from NEXT.md without building or

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1096 (2026-08-14). This file is deliberately
+in the ledger. Reviewed through s1097 (2026-08-14). This file is deliberately
 compact and records only live conclusions, boundaries, and next work.
 
 ## Current state
@@ -285,15 +285,15 @@ Details are in `PORTING-STATE.md`; durable summaries are in
 | s1094 | Static ROM/generated audit classified every PC from `0x8006D980..0x8006D9BC`. The independent ROM mapping matched all generated words; `0x8006D9B8` is the `bne` delay slot, but `0x8006D9BC` is ordinary fall-through code. Selects `H-nondelay-missing` for the zero `9BC` watch and leaves only the runtime taken-vs-fall-through question. |
 | s1095 | Full established-schedule retail oracle rerun passed controls: whole-RDRAM 10,000 callbacks, eleven PIF Start presses, and 7,198 VI frames at width 320/origin `0x006dd280`. Execution hits were `0x8006D9B0=1`, `0x8006D9B4=1`, and `0x8006D9BC=0`. Single-source runtime result selects `H-taken-branch`; the initial truncated attempt was invalid. |
 | s1096 | Bounded static audit used the preserved generated snapshot and retail ROM. All words `0x8006D980..0x8006D9C8` matched under `ROM = VRAM - 0x80000000 + 0xC00`; the `0x8006D9B4` target increments `$s0`, runs the six frame/input calls, and loops back to `0x8006D9B0`. Selects `H-target-loop`, rules out `H-target-exit` and `H-static-mismatch`; no runtime code or mitigation changed. |
+| s1097 | Bounded generated/companion audit found one normal `submitGfxFrame` epilogue and explicit continuations at all nine caller sites, but also reachable blocking `osRecvMesg(..., MQ_BLOCK)` calls at `0x8000C0B4` and `0x8000C2B8`. Selects `H-submit-nonreturn` as a legitimate wait boundary while retaining the independent fact that the audited idle-loop invocation returned once; no build, runtime code, or mitigation changed. |
 
 ## Ranked next steps
 
-1. Perform one bounded static audit of `submitGfxFrame` (`0x8000C07C`) and its
-  immediate callers/return assumptions on the `runIdleFramesAndLoadSaveData`
-  loop path. Classify whether it can legitimately fail to return after the
-  final loop iteration, or whether the remaining boundary must be outside this
-  callee. Use generated/companion evidence only; do not add a guard or rerun
-  the established oracle schedule.
+1. Perform one bounded static audit of the two blocking queue waits inside
+   `submitGfxFrame` (`0x8000C0B4`, `0x8000C2B8`): identify each queue, its
+   producer/consumer paths, and whether the companion/generated sources
+   establish a legitimate message path on the idle-loop call. Do not build or
+   run.
 2. Keep M4 parked unless an independent ground-truth path or a new complete
    pre/post accumulator discriminator becomes available.
 3. Re-evaluate the isolated animation/frameStart SIGBUS and regeneration
