@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1445 (2026-08-15).
+the authority for session detail. Reviewed through s1446 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1445 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80099C4C..0x80099C50`.
+   census over the next adjacent function, `0x80099C50..0x80099CFC`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -60,9 +60,11 @@ the authority for session detail. Reviewed through s1445 (2026-08-15).
    `fake_func_80094348` unchanged (s1378: already-fake two-instruction
    jump fragment before `startSongSequence`), `fake_func_8009711C`
    unchanged (s1408: already-fake one-instruction jump fragment before
-   `resetSongSubsystemCounter`), and `fake_func_80097D58`
+   `resetSongSubsystemCounter`), `fake_func_80097D58`
    unchanged (s1420: already-fake two-instruction epilogue fragment
-   before `clearStreamedVoiceFlags`).
+   before `clearStreamedVoiceFlags`), and `fake_func_80099C4C`
+   unchanged (s1446 H2: already-fake one-word `beq` gap before
+   `transformVec3ByAffineMatrix`).
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -314,6 +316,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1443 | Exact companion/generated 3D-frame census synchronized `update3DAudioFrame` at `0x800998E8`; no build or runtime run. |
 | s1444 | Exact companion/generated 3D-list census synchronized `reset3DAudioLists` at `0x80099C2C`; no build or runtime run. |
 | s1445 | Exact companion/generated audio-noop census synchronized `noopHandler_80099C44` at `0x80099C44`; no build or runtime run. |
+| s1446 | Exact companion/generated census selected H2 for already-fake `fake_func_80099C4C` at `0x80099C4C` (one-word `beq` gap); left unchanged; no build or runtime run. |
 
 ## Method and safety rules
 

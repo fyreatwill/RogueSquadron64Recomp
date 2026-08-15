@@ -70761,3 +70761,34 @@ as were `fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
 `func_8008ED6C`. No build or runtime run was justified for an exact-name
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is the already-fake `fake_func_80099C4C` at `0x80099C4C`.
+
+## Session 1446 (2026-08-15) — parked the already-fake 0x80099C4C gap-filler
+
+Performed the bounded exact-name census over `0x80099C4C..0x80099C50`.
+
+No new soak-queue verdicts since s1445; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `fake_func_80099C4C`, size `0x4`; `0x80099C4C+0x4=0x80099C50`. Overlay `rom_size` is `0x4` at offset `0x0009980C` (`0x80099C4C-0x80000440`) |
+| Generated definition | `funcs_26.c` defines `fake_func_80099C4C` at `0x80099C4C` as a `__builtin_trap()` gap-filler (`PATCH: fake_func gap-filler decoded from data bytes; body was invalid C.`). `funcs.h` and `recomp_overlays.inl` already use that name. The four-byte span sits between independently named `noopHandler_80099C44` at `0x80099C44` and generated `transformVec3ByAffineMatrix` at `0x80099C50` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `fake_func_80099C4C = 0x80099C4C; // defined:true` immediately before `transformVec3ByAffineMatrix = 0x80099C50`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x80099C4C`. No later companion list supplies a semantic name |
+| Caller evidence | Zero generated `jal 0x80099C4C` sites and zero `fake_func_80099C4C` call sites. The word is not a reachable function |
+| Semantic evidence | Retail ROM word at `0x80099C4C` is `0x1043000E` (`beq $v0, $v1, +0x38`), a lone branch with no owned delay slot: the next word is `lwc1 $f0, 0($a0)` at `0x80099C50`, the start of the following function. Same already-fake one-word gap class as `fake_func_8009711C` |
+| Confidence | High |
+
+The complete comparison selects H2 for `0x80099C4C`: the companion,
+generated, overlay, and TOML names already agree on the already-fake
+gap-filler, the `0x4` boundary is exact, and there is no independent
+semantic name to synchronize. H1 is ruled out because inventing a name
+for the orphan `beq` would fabricate a source. H3 is ruled out because
+the independent naming source exists and already marks the site fake.
+The TOML entry stays unchanged, as do `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is `func_80099C50` at `0x80099C50`.
