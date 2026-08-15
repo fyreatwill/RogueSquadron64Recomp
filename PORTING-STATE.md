@@ -64614,3 +64614,19 @@ build, runtime run, or mitigation was performed.
 ORIGIN: complete generated partial-load inventory and helper contract; the
 reviewed writers are bounded structure/local stores, unrelated subsystems, or
 malformed/data-like code, and no mitigation was added.
+
+## Session 1191 (2026-08-14) — classified generated partial-load sites
+
+Rechecked the complete generated `do_lwl`/`do_lwr` inventory without building
+or running. All 418 calls were classified: ordinary pairs feed bounded
+structure or stack-local partial stores, and the unpaired duplicate-load and
+large/negative-offset sites are malformed or data-like tails. None reaches a
+`slotDispatcherIter` caller or supplies a store span overlapping its saved
+frame. The `MEM_W`-based helpers read one aligned guest word and apply the
+guest merge masks exactly, with no host-side span broadening. H3 selected; this
+rules out the partial-load/helper class as the current frame-corruption origin.
+No mitigation was added.
+
+ORIGIN: no mitigation-shaped machinery was added; the reviewed writers are
+bounded or non-executable/data-like, and no legitimate writer-to-frame edge was
+established.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1190 (2026-08-14).
+in the ledger. Reviewed through s1191 (2026-08-14).
 
 ## Current state
 
@@ -121,6 +121,12 @@ in the ledger. Reviewed through s1190 (2026-08-14).
   helpers align and read one exact guest word through `MEM_W`, then apply the
   guest merge masks, with no host-side span broadening. H3 selected; no
   mitigation added.
+- The s1191 site-by-site recheck classified all 418 `do_lwl`/`do_lwr` calls:
+  ordinary pairs feed bounded structure or stack-local partial stores, while
+  the unpaired duplicate-load and large/negative-offset sites are malformed or
+  data-like tails. None reaches a `slotDispatcherIter` caller or supplies a
+  store span overlapping its saved frame. The `MEM_W`-based helper contract is
+  exact, so H3 remains selected; no mitigation was added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
