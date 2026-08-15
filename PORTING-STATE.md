@@ -67485,3 +67485,28 @@ ruled out for this function; there is neither a partial/conflicting match nor
 an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
 
+## Session 1336 (2026-08-15) — synchronized the audio-stub-return-zero symbol
+
+Performed the bounded exact-name census over `0x80092120..0x80092128`.
+
+No new soak-queue verdicts since s1335; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092120`, size `0x8`; it ends exactly at the next generated function, `0x80092128`. Overlay `rom_size` is `0x8` |
+| Generated definition | `funcs_24.c` defines `audioStubReturnZero` at `0x80092120` as `jr $ra` / `addu $v0, $zero, $zero`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `audioStubReturnZero = 0x80092120`. The annotated companion list independently names `musyxInitVoiceFromSample` at `0x80092128` and does not remap `0x80092120` |
+| Caller evidence | One generated `jal 0x80092120` site: `anyAudioSlotActive` at `0x8008E5A8`. That caller then `andi $v0, 0xFF` and treats a nonzero return as an early-true path; companion independently names that caller as the slot-active aggregate (s1297) |
+| Semantic evidence | Body is a two-instruction stub that always writes `$v0 = 0` and returns. That is exactly the companion name, and it is why `anyAudioSlotActive` never takes the stub's early-true branch |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x8` boundary is exact, and the body is the audio-side zero-return stub
+used by `anyAudioSlotActive`. H2 and H3 are ruled out for this function;
+there is neither a partial/conflicting match nor an absent independent name.
+The stale address-encoded TOML entry was synchronized. No build or runtime
+run was justified for an exact-name census.
+
