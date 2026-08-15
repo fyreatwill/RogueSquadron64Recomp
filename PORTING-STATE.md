@@ -66159,3 +66159,19 @@ Generated definitions and TOML sizes match; the bodies provide the distinct
 macro-handler and channel-field-clear evidence. H1 selected and all seven
 stale symbol-map entries were synchronized. No build or runtime run was
 justified. This rules out partial or absent naming evidence for this region.
+
+## Session 1276 (2026-08-15) — synchronized adjacent MusyX macro symbols
+
+Performed the bounded exact-name census over `0x80089B50..0x8008A014`.
+The companion symbol file independently identifies all 13 generated entries:
+`soundMacroOpLoopRandomCount`, `soundMacroOpKeyOnNote`,
+`soundMacroOpKeyOffByNote`, `soundMacroOpAddPitchBend`,
+`setChannelProgHalfwordAt28`, `soundMacroOpSetPitchBendGlide`,
+`soundMacroOpAddKeyByte`, `setChannelProgByteAt2E`,
+`soundMacroOpStoreGlobalRegister`, `setChannelKeyOffsetAt6E`,
+`soundMacroOpPortamentoStartWait`, `computeChannelPitchSweepStep`, and
+`soundMacroOpStartNoteAbsoluteSweep`. Generated definitions and TOML sizes
+match; the bodies provide direct channel-state, pitch, key, portamento, and
+note-sweep evidence. H1 selected and all 13 stale symbol-map entries were
+synchronized. No build or runtime run was justified. This rules out partial
+or absent naming evidence for this region.
