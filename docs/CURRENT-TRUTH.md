@@ -138,6 +138,15 @@ in the ledger. Reviewed through s1225 (2026-08-14).
   renders eight frames, and applies account unlocks. No input-controlled
   writer or concrete retail-entry transition occurs before `mainGameLoop`'s
   state-byte consumers; no debugger target is justified from this chain.
+- The s1226 caller/boot-config audit confirms H2 for the remaining generated
+  handoff. `mainGameLoop` has no direct generated caller: `main` starts the
+  idle thread, that starts `thread3_video_handle`, and the latter registers
+  `mainBootstrapWorker` as a service worker. The worker invokes the callback at
+  the boot-config pointer's `+0x04` through `jalr`; the companion map identifies
+  that callback as `mainGameLoop`. No input-dependent transition precedes it.
+  The unresolved boundary is provenance/initialization of the
+  `gBootConfig+0x04` data value or an external front-end handoff, not a missing
+  generated caller. Static source evidence only.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -217,11 +226,11 @@ in the ledger. Reviewed through s1225 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Audit the caller and boot-config path that enters `mainGameLoop` after
-   `runIdleFramesAndLoadSaveData`, looking for the actual retail-entry event
-   or an external/front-end handoff. Do not arm an oracle target write unless
-   that chain identifies a concrete input-controlled producer or transition,
-   and never write `0x80130B60..62` as state bytes.
+1. Audit the bounded provenance of `gBootConfig+0x04`: identify the ROM/data
+   initializer and the runtime/front-end callback registration that supplies
+   `mainGameLoop`. Establish whether the retail entry event is outside the
+   generated game path. Do not build or run until this data/runtime boundary
+   is named; do not arm an oracle target write without a concrete producer.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.

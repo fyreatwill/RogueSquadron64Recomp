@@ -1,32 +1,30 @@
-# NEXT work unit (s1226)
+# NEXT work unit (s1227)
 
 HYPOTHESIS-ID: retail-entry-capability
 
-The s1225 audit selected H2 for the post-idle chain: `loadSaveDataIfNotLoaded`
-only reads/copies EEPROM data, `classifySaveStateFromInput` has no generated
-caller, and the post-load loop has controller polling/render/account-unlock
-work but no input-controlled writer to the retail state bytes.
+The s1226 audit selected H2 for the generated handoff: `mainGameLoop` has no
+direct generated caller. `thread3_video_handle` obtains `gBootConfig`, and
+`mainBootstrapWorker` invokes its `+0x04` callback through `jalr`; the
+companion map names that callback `mainGameLoop`. No input-dependent branch
+precedes it.
 
-Work unit: perform a bounded generated/companion audit of the caller and
-boot-config path that enters `mainGameLoop` after `runIdleFramesAndLoadSaveData`.
-Identify the first concrete retail-entry event or external/front-end handoff;
-if the caller path is event-free, prove that the missing transition is outside
-the generated game path. Do not build, run, or write an oracle target in this
-unit.
+Work unit: perform a bounded provenance audit of `gBootConfig+0x04`. Identify
+the ROM/data initializer and runtime/front-end registration that supplies the
+`mainGameLoop` callback. Decide whether the missing retail-entry event is
+outside the generated game path. Do not build, run, or write an oracle target.
 
 Competing hypotheses and discriminator:
-- H1: the caller/boot-config chain contains a concrete input-controlled or
-  event-controlled retail-entry transition.
-- H2: the generated path enters `mainGameLoop` unconditionally after setup and
-  the missing retail transition is an unmodeled front-end/event handoff.
-- H3: the caller or boot-config boundary is incomplete/malformed and requires
+- H1: `gBootConfig+0x04` is initialized by a concrete input/event-controlled
+  transition or front-end handoff.
+- H2: the callback is a static/unconditional ROM or data initializer and the
+  missing retail transition is outside the generated game path.
+- H3: the config callback provenance is incomplete/malformed and requires
   symbol or regeneration work before the entry route can be named.
 
-Discriminator: enumerate every caller of `mainGameLoop`, its boot-config
-producer/consumer, and the exact calls immediately before and after the entry.
-A concrete input/event-dependent transition selects H1; an unconditional
-generated entry with no such transition selects H2; missing or malformed
-boundaries select H3 and require regeneration/source repair before oracle work.
+Discriminator: trace the exact writer/initializer of the four bytes at
+`0x80037564`, then trace the runtime callback registration and first invocation.
+An input/event-dependent writer selects H1; a static data initializer with an
+unconditional callback selects H2; absent/malformed provenance selects H3.
 
 Exact commands:
 ```
@@ -37,7 +35,5 @@ rg -n "mainGameLoop|gBootConfig|8003DFA0|boot" \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
 ```
 
-Read bounded windows around every exact hit and record the complete caller /
-boot-config table in the ledger. If H1 selects a target, the following
-iteration must define whole-RDRAM, VI, and debugger-write positive controls
-before any oracle run.
+Then inspect the ROM/data provenance with bounded searches for `0x80037564`,
+`gBootConfig`, and the linker/ELF data section containing the 0x50-byte config.

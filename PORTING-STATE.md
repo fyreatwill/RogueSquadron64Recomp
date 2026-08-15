@@ -65285,3 +65285,22 @@ separate caller/boot-config handoff remains open. Static source evidence only.
 ORIGIN: generated `funcs_0.c`, `funcs_8.c`, `funcs_17.c`, `funcs_31.c`, plus
 the companion `main_overlay.txt` and save-data documentation. No mitigation,
 oracle write, build, or runtime behavior was changed.
+
+## Session 1226 (2026-08-14) — audited main-game boot-config handoff
+
+Ran the bounded generated/companion caller audit without building or running.
+There is no direct generated caller of `mainGameLoop`. `main` starts the idle
+thread; `idle_thread_handle` starts `thread3_video_handle`; that worker obtains
+`gBootConfig` via `getGameConfig`, registers `mainBootstrapWorker`, and the
+bootstrap worker invokes the callback at the boot-config pointer plus `0x04`
+through `jalr`. The companion symbol map identifies this callback as
+`mainGameLoop` at `0x8003DFA0`. The generated path has no input-dependent
+transition before that callback, so H2 is selected: the remaining retail-entry
+boundary is the provenance/initialization of the boot-config callback or an
+external front-end handoff. This rules out a missing direct generated caller
+as the explanation and leaves the config-data provenance as the next audit.
+Static source evidence only; no oracle target, build, or runtime behavior was
+changed.
+
+ORIGIN: generated `funcs_0.c`/`funcs_8.c` and companion `main_overlay.txt`.
+No mitigation was added.
