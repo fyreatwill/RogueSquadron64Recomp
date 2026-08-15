@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1229 (2026-08-14).
+in the ledger. Reviewed through s1230 (2026-08-14).
 
 ## Current state
 
@@ -239,12 +239,11 @@ in the ledger. Reviewed through s1229 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Inspect the actual retail EEPROM file and the core's ROM-open save-media
-   path: determine whether the file exists, has the expected size, and differs
-   from a formatted blank image, then map the file's selected save type and
-   filename to the loaded ROM. This is data/source evidence only; do not build
-   or run. A nonblank file loaded before execution selects H1 for save-media
-   state; a blank/missing file or an unselected path selects H2.
+1. The s1230 save-media audit found a selected USA v1.0 4 KiB EEPROM and an
+   existing legacy-path 512-byte file with 164 nonzero bytes, selecting H1 for
+   nonblank persistent state. This does not prove that the state causes the
+   missing transition; next is a phase-gated paired retail comparison using
+   the existing file versus a temporary blank EEPROM path.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -358,6 +357,7 @@ order.
 | s1227 | Bounded provenance audit found `gBootConfig` at `0x80037560` is ROM-backed in the main image (ROM `0x38160`), with bytes `80 03 DF A0` at `+0x04` (`mainGameLoop`). No generated writer exists; `thread3_video_handle` registers `mainBootstrapWorker`, whose `jalr` consumes that static callback. H2 selected; the missing retail-entry event is outside this generated handoff. No build or run. |
 | s1228 | Bounded source audit found the oracle performs `ROM_OPEN` then `M64CMD_EXECUTE`, attaches input only for scheduled presses, and performs optional save/load only after five seconds. The port enters directly through `recomp_entrypoint` and the same static boot-config callback chain. No source-visible external event bridges the oracle's 320 phase to later retail entry; H2 selected. No build or run. |
 | s1229 | Installed Mupen64Plus 2.6.0 UI source confirms `CoreStartup` → `ROM_OPEN` → plugin attach → optional `STATE_LOAD` only for `--savestate` → `EXECUTE`; no reset, EEPROM injection, or alternate entry command exists. Core ROM-open code does load save media via its ROM database/config, leaving actual EEPROM contents as the next boundary. H2 selected for the external-command hypothesis. No build or run. |
+| s1230 | The actual save directory contains one 512-byte EEPROM file with 164 nonzero bytes and no `0xff` bytes. Its `-47CAC4E2` suffix matches the ROM's MD5 key; the ROM database selects USA v1.0 with `Eeprom 4KB`, and the core's old-goodname path loads an existing `.eep` before the fallback path, then truncates non-16K EEPROM to 0x200. H1 is selected for nonblank, selected persistent state; whether these bytes cause retail entry remains open. No build or run. |
 
 ## Method and safety rules
 

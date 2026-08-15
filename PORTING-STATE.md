@@ -65365,3 +65365,27 @@ it does not rule out persistent EEPROM state. Static source/config evidence only
 ORIGIN: installed Mupen64Plus 2.6.0 UI/core source bundle, `/opt/homebrew`
 configuration, and `tools/oracle/rs64_oracle.c`. No mitigation, build, or
 runtime behavior was changed.
+
+## Session 1230 (2026-08-14) — audited retail EEPROM selection and contents
+
+Ran the read-only save-media audit without building or running. The configured
+Mupen64Plus save directory contains one file,
+`Star Wars - Rogue Squadron (U) (-47CAC4E2.eep`, exactly 512 bytes. It has
+164 nonzero bytes, zero `0xff` bytes, and structured save data, so it is not a
+formatted blank EEPROM. The `47CAC4E2` suffix matches the ROM's database MD5
+key prefix. The installed database entry for `Star Wars - Rogue Squadron (U)
+(M3) (V1.0) [!]` has `RefMD5=47CAC4E2A6309458342F21A9018FFBF0` and
+`SaveType=Eeprom 4KB`.
+
+The Mupen64Plus 2.6.0 source confirms ROM-open first checks the legacy
+`<ROM_SETTINGS.goodname>.eep` path and only then falls back to the MD5-named
+path. It opens EEPROM storage at 0x800 bytes, uses the existing file when
+present, and truncates non-16K EEPROM to 0x200 bytes. H1 is selected for
+nonblank, selected persistent state. This rules out missing/blank EEPROM and
+wrong save-type/path as explanations for the current retail entry failure, but
+does not show that the saved values cause the missing transition. The next
+discriminator is a phase-gated existing-file versus temporary blank-EEPROM
+oracle comparison. No build or run was performed.
+
+ORIGIN: save directory, installed Mupen64Plus 2.6.0 source bundle, and
+`/opt/homebrew/share/mupen64plus/mupen64plus.ini`. No mitigation was added.
