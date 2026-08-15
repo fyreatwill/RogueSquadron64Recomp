@@ -26,12 +26,12 @@ selected selects H1; blank/missing selects H2; a path/type mismatch selects H3.
 
 Exact commands:
 ```
-find "$HOME/Library/Application Support/Mupen64Plus/save" -maxdepth 1 -type f -print -exec stat -f '%N %z bytes' {} \\
-  \\\;
+find "$HOME/Library/Application Support/Mupen64Plus/save" -maxdepth 1 -type f -print -exec stat -f '%N %z bytes' {} \
+  \;
 xxd -g 1 "$HOME/Library/Application Support/Mupen64Plus/save/Star Wars - Rogue Squadron (U) (-47CAC4E2.eep" | head -20
-rg -n -C 8 "open_eep_file|get_eeprom_path|ROM_SETTINGS\\.savetype|M64CMD_ROM_OPEN" \\
+rg -n -C 8 "open_eep_file|get_eeprom_path|ROM_SETTINGS\.savetype|M64CMD_ROM_OPEN" \
   /var/folders 2>/dev/null | rg "mupen64plus-bundle-src-2.6.0|open_eep_file|get_eeprom_path|ROM_SETTINGS.savetype|M64CMD_ROM_OPEN" | head -180
-rg -n -i "rogue|squadron|47cac4e2|eeprom|savetype" \\
-  /opt/homebrew/share/mupen64plus/mupen64plus.ini \\
+rg -n -i "rogue|squadron|47cac4e2|eeprom|savetype" \
+  /opt/homebrew/share/mupen64plus/mupen64plus.ini \
   "$HOME/Library/Application Support/Mupen64Plus/mupen64plus.cfg"
 ```
