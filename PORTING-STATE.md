@@ -69358,3 +69358,34 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `getSongStateByteByHandle` at `0x80096540`.
+
+## Session 1402 (2026-08-15) — synchronized the get-song-state-byte-by-handle symbol
+
+Performed the bounded exact-name census over `0x80096540..0x800965E4`.
+
+No new soak-queue verdicts since s1401; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80096540`, size `0xA4`; `0x80096540+0xA4=0x800965E4`. Overlay `rom_size` is `0xA4`. Generated prologue at `0x80096540` (`lui $v0, 0x800A` / `lbu $v0, 0xF50($v0)`) and `jr $ra` at `0x800965DC` with delay `nop` at `0x800965E0` |
+| Generated definition | `funcs_25.c` defines `getSongStateByteByHandle` at `0x80096540`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `setSongChannelParamByHandle` at `0x800965E4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `getSongStateByteByHandle = 0x80096540` in the sequential `defined:true` list, immediately after already-synchronized `setSongParamPairCmdLocked` and before `setSongChannelParamByHandle`. Menu, mission, and cinematic lists do not remap it. The earlier annotated song-command block names `getSongParamByHandle` / `isSongHandleActive` and the song-cmd appliers, and omits this getter, matching other already-synchronized sequential-list-only names; that omission is not a conflicting name |
+| Caller evidence | No generated `jal 0x80096540` sites and no C-level `getSongStateByteByHandle(...)` call sites. The already-synchronized sibling `getSongParamByHandle` (`0x80095700`) uses the same handle-to-slot walk and does have callers (`tickSongFadeTimer`); this helper is the byte-width counterpart of that getter, not an unused fragment |
+| Semantic evidence | Gates on `gMusyXActiveFlag` at `0x800A0F50`. Masks `$a0` with `0x7FFFFFFF` and walks the 8-slot song table at `0x80149A00` with stride `0xEF8`, skipping a slot whose byte at slot+`0xEC1` is set. A live slot whose word at table+0 matches the masked handle is selected (slot index folded with the handle high bit); the helper then returns the byte at slot+`0xEC4` (inside the companion-documented control block `slot+0xEC0..0xEF0`, adjacent to the `getSongParamByHandle` halfword at slot+`0xEC6` and the `quiesceSongSlotCmd` state byte at slot+`0xEC0`). Inactive MusyX or no matching slot returns 0. Matches a song-state-byte getter by handle. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80096540`: the companion and
+generated names agree, the body is a complete handle-to-slot walker and
+control-block byte reader of matching size `0xA4`, and there is neither a
+conflicting companion name nor a size split. H2 and H3 are ruled out for
+this address. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0xA4`). `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`setSongChannelParamByHandle` at `0x800965E4`.
