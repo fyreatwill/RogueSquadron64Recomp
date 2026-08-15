@@ -66201,3 +66201,15 @@ provide independent table/program, pitch-envelope, ADSR, vibrato, volume-ramp,
 pitch-relative, curve, and voice-volume evidence. H1 selected; all eight stale
 symbol-map entries were synchronized. No build or runtime run was justified.
 This rules out partial or absent naming evidence for this region.
+## Session 1279 (2026-08-15) — synchronized adjacent MusyX macro symbols
+
+Performed the bounded exact-name census over `0x8008AE50..0x8008B284`.
+The companion symbol file independently identifies all five generated entries:
+`soundMacroSetupVolumeRamp`, `soundMacroPlayRandomKeyNote`,
+`soundMacroSetFlagBitVibrato`, `soundMacroSetFlagBitTremolo`, and
+`soundMacroPushEffectEvent`. Generated definitions and TOML sizes match
+exactly: `0x258`, `0x1AC`, `0x18`, `0x18`, and `0xB8`. Generated bodies provide
+volume-ramp, random-key, flag-bit, and effect-event semantics; direct callers
+were confirmed for the two larger handlers. H1 selected and all five stale
+symbol-map entries were synchronized. No build or runtime run was justified.
+This rules out partial or absent naming evidence for this region.
