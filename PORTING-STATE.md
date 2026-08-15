@@ -66381,3 +66381,23 @@ sole caller supplies a persisted audio-settings gate bit. H2 and H3 are ruled
 out; the mapping is neither partial/conflicting nor absent. The stale
 address-encoded TOML entry is therefore synchronized. No build or runtime run
 was justified for an exact-name census.
+
+## Session 1290 (2026-08-15) — synchronized the MusyX command dispatcher symbol
+
+Performed the bounded exact-name census over `0x8008DD60..0x8008E0B0`.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008DD60`, size `0x350`; it ends exactly at the next generated function, `0x8008E0B0` |
+| Generated definition | `funcs_23.c` defines `dispatchAudioCommand` at `0x8008DD60` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `dispatchAudioCommand = 0x8008DD60` |
+| Caller evidence | Seven generated call sites come from four named callers: `playSimpleAudioCmd`, `applyMusicOrSfxVolume`, `startSongSequence`, and `queueAudioVoiceCmdLocked` |
+| Semantic evidence | The body dispatches command categories and writes per-command records in the MusyX command area |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x350` boundary is exact, and independent callers plus body semantics
+support the dispatcher role. H2 and H3 are ruled out for this function; there
+is neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
