@@ -66599,3 +66599,27 @@ heads support the sequencer-state clear. H2 and H3 are ruled out for this
 function; there is neither a partial/conflicting match nor an absent
 independent name. The stale address-encoded TOML entry was synchronized. No
 build or runtime run was justified for an exact-name census.
+
+## Session 1300 (2026-08-15) — synchronized the MusyX state-table getter symbol
+
+Performed the bounded exact-name census over `0x8008E8B8..0x8008E8D8`.
+
+No new soak-queue verdicts since s1299; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E8B8`, size `0x20`; it ends exactly at the next generated function, `0x8008E8D8`. Overlay `rom_size` is `0x20` |
+| Generated definition | `funcs_23.c` defines `getMusyXStateTableIfActive` at `0x8008E8B8`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `getMusyXStateTableIfActive = 0x8008E8B8` |
+| Caller evidence | No generated `jal 0x8008E8B8` sites. `initN64RspMixer` (`0x8009189C`) writes the returned table: word `0x80140808` plus adjacent bytes `0x8014080C`/`0x8014080D` |
+| Semantic evidence | Body loads `gMusyXActiveFlag` at `0x800A0F50`, then returns `0x80140808` if the flag is nonzero and `0` otherwise (`sltu`/`negu`/`and`). Companion independently names that gate byte; `initN64RspMixer` is the MusyX RSP-mixer installer that populates the same table |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x20` boundary is exact, and the gated table-pointer return matches the
+named getter. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
+
