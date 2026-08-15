@@ -1437,7 +1437,7 @@ functions = [
     { name = "startSongSequence", vram = 0x80094350, size = 0x608 },
     { name = "stepActiveSongTracks", vram = 0x80094958, size = 0x45C },
     { name = "tickScheduledSongEvents", vram = 0x80094DB4, size = 0x130 },
-    { name = "func_80094EE4", vram = 0x80094EE4, size = 0x1AC },
+    { name = "stepSongPitchBendLanes", vram = 0x80094EE4, size = 0x1AC },
     { name = "func_80095090", vram = 0x80095090, size = 0x1B4 },
     { name = "func_80095244", vram = 0x80095244, size = 0x36C },
     { name = "func_800955B0", vram = 0x800955B0, size = 0x150 },
