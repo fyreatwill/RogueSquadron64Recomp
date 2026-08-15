@@ -71917,3 +71917,39 @@ adjacent generated function is independently named
 `renderVoiceAudioBlock` at `0x8009DB44` (TOML still `func_8009DB44`,
 size `0x154`; overlay `rom_size` is `0x154` and meets independently
 named `audioMixStereoBlock8` at `0x8009DC98`).
+
+## Session 1480 (2026-08-15) — synchronized the render-voice-audio-block symbol
+
+Performed the bounded exact-name census over `0x8009DB44..0x8009DC98`.
+
+No new soak-queue verdicts since s1479; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_8009DB44`, size `0x154`; `0x8009DB44+0x154=0x8009DC98`. Overlay `rom_size` is `0x154` at offset `0x0009D704` (`0x8009DB44-0x80000440`) and meets independently named `audioMixStereoBlock8` with no pad lump |
+| Generated definition | `funcs_27.c` defines `renderVoiceAudioBlock` at `0x8009DB44`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x154` function between independently named `runVoiceLatticeFilter` and independently named `audioMixStereoBlock8`. It ends `jr $ra` / `addiu $sp, $sp, 0x44` at `0x8009DC90` / `0x8009DC94` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `renderVoiceAudioBlock = 0x8009DB44` and `audioMixStereoBlock8 = 0x8009DC98`. Menu, mission, cinematic, ignored, libultra, and zlib lists do not remap `0x8009DB44`. No companion C/asm body exists |
+| Caller evidence | One generated `jal 0x8009DB44` site and no `j 0x8009DB44` or `func_*` callers. Independently named `computeVoicePanCoefficients` (`0x8009C2D0`, size `0x218`) calls it at `0x8009C4C0` (delay-slot `sh $v0, 0xE($t0)`). Whole-ROM scan found the `jal` encoding `0x0C0276D1` once at file `0x9D0C0` (that VRAM site) and zero `j` encodings (`0x080276D1`) or absolute `0x8009DB44` pointer words. The function itself reaches independently named `audioMixStereoBlock8` four times via `bgezal $zero, L_8009DC98` at `0x8009DBB0` / `0x8009DBD4` / `0x8009DBF8` / `0x8009DC1C` and independently named `runVoiceLatticeFilter` four times via `bgezal $zero, L_8009D980` at `0x8009DBC0` / `0x8009DBE4` / `0x8009DC08` / `0x8009DC2C` |
+| Semantic evidence | Retail ROM words at file `0x9E744` (`(vram&0xFFFFFF)+0xC00`) are `0x27BDFFBC` / `0xAFBF0000` (`addiu $sp, $sp, -0x44` / `sw $ra, 0x0($sp)`). Same-run positive controls: `0x8009D7D0` file `0x9E3D0` is `0x2481FFF9`, `0x8009D8C4` file `0x9E4C4` is `0x848B0166`, `0x8009D980` file `0x9E580` is `0x852A0000`, tail of the previous function `0x8009DB3C`/`0x8009DB40` files `0x9E73C`/`0x9E740` are `0x03E00008`/`0x00000000`, this tail `0x8009DC90`/`0x8009DC94` files `0x9E890`/`0x9E894` are `0x03E00008`/`0x27BD0044`, and `0x8009DC98` file `0x9E898` is `0x84810188` (`lh $at, 0x188($a0)`). The body saves `$ra`/`$a0..$a3`/`$s0..$s7`, loads eight lattice-state words from `$a0+0x140` and `$a3` from `$a0+0x164`, then runs four fixed stages at output offsets `0`/`0x1A`/`0x36`/`0x50` that pair a mix-selector `bltzal $zero` (`audioMixSampleS16_1_3` / `_1_1` / `_3_1` / `audioCompandS16`) with `audioMixStereoBlock8` and `runVoiceLatticeFilter` counts `0xC`/`0xD`/`0xC`/`0x77`, then writes the eight words and `$a3` back. Matches the companion name, the one named caller, s928's structural inventory, and the independently named mix/lattice helpers |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009DB44`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x154`, the four-stage mix/lattice render plus the named
+`computeVoicePanCoefficients` caller match the name, and there is neither
+a conflicting companion name nor a size split inside the live body. The
+stale address-encoded TOML entry was synchronized (name only; size left at
+`0x154`). `func_8009D978` remains the eight-byte Q15 delay-mix table and
+was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `audioMixStereoBlock8` at `0x8009DC98` (TOML still
+`func_8009DC98`, size `0xA4`; overlay `rom_size` is `0xA4` and meets
+independently named `audioMixSampleS16_1_3` at `0x8009DD3C`).

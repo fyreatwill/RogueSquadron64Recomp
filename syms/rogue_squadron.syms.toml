@@ -1539,7 +1539,7 @@ functions = [
     { name = "applyVoiceDelayFilter", vram = 0x8009D8C4, size = 0xB4 },
     { name = "func_8009D978", vram = 0x8009D978, size = 0x8 },
     { name = "runVoiceLatticeFilter", vram = 0x8009D980, size = 0x1C4 },
-    { name = "func_8009DB44", vram = 0x8009DB44, size = 0x154 },
+    { name = "renderVoiceAudioBlock", vram = 0x8009DB44, size = 0x154 },
     { name = "func_8009DC98", vram = 0x8009DC98, size = 0xA4 },
     { name = "func_8009DD3C", vram = 0x8009DD3C, size = 0x18 },
     { name = "func_8009DD54", vram = 0x8009DD54, size = 0x10 },

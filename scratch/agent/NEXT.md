@@ -1,9 +1,9 @@
-# NEXT work unit (s1480)
+# NEXT work unit (s1481)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8009DB44..0x8009DC98`. Do not build or run. Record its address,
+function, `0x8009DC98..0x8009DD3C`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -26,11 +26,11 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The generated
-entry at this address is already `renderVoiceAudioBlock`; the companion
-splat list maps `renderVoiceAudioBlock = 0x8009DB44`. TOML is still
-`func_8009DB44` (size `0x154`, ends at `0x8009DC98`); overlay `rom_size`
-is also `0x154` and meets independently named `audioMixStereoBlock8` at
-`0x8009DC98`. Confirm the complete function, matching size, and
+entry at this address is already `audioMixStereoBlock8`; the companion
+splat list maps `audioMixStereoBlock8 = 0x8009DC98`. TOML is still
+`func_8009DC98` (size `0xA4`, ends at `0x8009DD3C`); overlay `rom_size`
+is also `0xA4` and meets independently named `audioMixSampleS16_1_3` at
+`0x8009DD3C`. Confirm the complete function, matching size, and
 caller/semantic evidence before synchronizing the TOML name.
 
 Competing hypotheses and discriminator:
@@ -49,7 +49,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '8009DB44\|8009DC98\|renderVoiceAudioBlock\|audioMixStereoBlock8' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '8009DB44\|8009DC98\|renderVoiceAudioBlock' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '8009DB44\|8009DC98' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009DC98\|8009DD3C\|audioMixStereoBlock8\|audioMixSampleS16_1_3' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009DC98\|8009DD3C\|audioMixStereoBlock8' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '8009DC98\|8009DD3C' syms/rogue_squadron.syms.toml
 ```
