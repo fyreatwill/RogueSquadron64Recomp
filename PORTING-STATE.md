@@ -66227,6 +66227,19 @@ were confirmed for the two larger handlers. H1 selected and all five stale
 symbol-map entries were synchronized. No build or runtime run was justified.
 This rules out partial or absent naming evidence for this region.
 
+## Session 1282 (2026-08-15) — synchronized adjacent MusyX sequencer symbols
+
+Performed the bounded exact-name census over `0x8008BC10..0x8008C9AC`.
+The companion `main_overlay.txt` independently maps `0x8008BC10` to
+`tickAudioChannel` and `0x8008C9AC` to `tickAllAudioChannels`. The generated
+definitions and callers use those same names, and the TOML sizes match the
+generated boundaries exactly (`0xD9C` and `0xFB4`). The channel-tick body
+processes the per-channel MusyX command stream and the outer body iterates the
+active channel array, providing semantic evidence for both mappings. Both
+stale symbol-map entries were synchronized with high confidence. No build or
+runtime run was justified for an exact-name census. This rules out partial or
+absent naming evidence for this adjacent sequencer pair.
+
 ## Session 1281 (2026-08-15) — synchronized adjacent MusyX voice symbols
 
 Performed the bounded exact-name census over `0x8008B9CC..0x8008BA60`.
