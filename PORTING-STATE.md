@@ -68319,3 +68319,31 @@ H3 are ruled out. The stale address-encoded TOML entry was synchronized
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is the
 independently named `truncDouble` at `0x80093E54`.
+
+## Session 1367 (2026-08-15) — synchronized the trunc-double symbol
+
+Performed the bounded exact-name census over `0x80093E54..0x80093E60`.
+
+No new soak-queue verdicts since s1366; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80093E54`, size `0xC`; `0x80093E54+0xC=0x80093E60`. Overlay `rom_size` is `0xC`. Generated `jr $ra` at `0x80093E58`, delay `cvt.d.w $f0,$f0` at `0x80093E5C` |
+| Generated definition | `funcs_24.c` defines `truncDouble` at `0x80093E54`; `funcs.h` and `recomp_overlays.inl` already use that name. First instruction is `trunc.w.d $f0,$f12`; the body is a complete two-instruction helper ending at the next generated definition, `ceilDouble` at `0x80093E60` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `truncDouble = 0x80093E54`. The same file independently names the preceding `expandBytesToPcm16ViaTable` at `0x80093D10` and the following `ceilDouble` at `0x80093E60`. The sequential `defined:true` list jumps from the unnamed resample kernels to the fake-function / math-primitive block and does not remap this address. No later companion list remaps it |
+| Caller evidence | Four generated `jal 0x80093E54` sites: two in `musyxRenderVoiceSamples` (`0x80090004` loads a double from `0x8($s1)` into `$f12`; `0x80090884` divides `$f20/$f2` into `$f12`) and two in `musyxKeyOnVoice` (`0x80090AB4` and `0x80090BAC`, both load the double at voice `+0x50` into `$f12`). Companion annotates 5 callers; the fifth is not a static jal in the generated tree and does not remap the name |
+| Semantic evidence | The entire body is `trunc.w.d $f0,$f12` then `cvt.d.w $f0,$f0` in the delay slot: truncate-toward-zero on the MIPS `$f12` double argument and return the result as a double in `$f0`. That is the operation; no game-domain context is required, matching the independent companion name |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the body is a complete truncate-toward-zero double helper of matching size
+`0xC`, and there is neither a conflicting companion name nor a size split. H2
+and H3 are ruled out. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0xC`). `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C` were left unchanged.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is the
+independently named `ceilDouble` at `0x80093E60`.

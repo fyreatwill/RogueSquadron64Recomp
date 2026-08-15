@@ -1420,7 +1420,7 @@ functions = [
     { name = "zeroAudioBufferWords", vram = 0x800934A4, size = 0x2C },
     { name = "decodeAdpcmSampleBlock", vram = 0x800934D0, size = 0x840 },
     { name = "expandBytesToPcm16ViaTable", vram = 0x80093D10, size = 0x144 },
-    { name = "func_80093E54", vram = 0x80093E54, size = 0xC },
+    { name = "truncDouble", vram = 0x80093E54, size = 0xC },
     { name = "func_80093E60", vram = 0x80093E60, size = 0xC },
     { name = "func_80093E6C", vram = 0x80093E6C, size = 0x8 },
     { name = "fake_func_80093E74", vram = 0x80093E74, size = 0xC },
