@@ -68998,3 +68998,33 @@ synchronized (name only; size left at `0x48`). `fake_func_80094348`,
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `tickSongSequence` at `0x80095ADC`.
+
+## Session 1390 (2026-08-15) — synchronized the tick-song-sequence symbol
+
+Performed the bounded exact-name census over `0x80095ADC..0x80095D58`.
+
+No new soak-queue verdicts since s1389; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80095ADC`, size `0x27C`; `0x80095ADC+0x27C=0x80095D58`. Overlay `rom_size` is `0x27C`. Generated prologue at `0x80095ADC` (`addiu $sp, $sp, -0x20`, save `$s1`/`$ra`/`$s2`/`$s0`, `$s1=$a0`) and `jr $ra` at `0x80095D50` with delay `nop` at `0x80095D54` |
+| Generated definition | `funcs_25.c` defines `tickSongSequence` at `0x80095ADC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `tickSongSequenceLocked` at `0x80095D58` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `tickSongSequence = 0x80095ADC` in the annotated song-stepper block. Menu, mission, and cinematic lists do not remap it. The later sequential `defined:true` list jumps from `stopSongByHandleLocked` to `tickSongSequenceLocked` and also omits already-synchronized `startSongSequence` / `advanceSongRegion` / `tickActiveSongs`, so the omission is not a conflicting name |
+| Caller evidence | Three generated `jal 0x80095ADC` sites: `tickAllAudioChannels` at `0x8008D834` (passes a handle loaded from `0x80141B28+s0`); `tickSongSequenceLocked` at `0x80095D7C` (flag-gated mutex wrap forwarding saved `$a0`); and `tickActiveSongs` at `0x80095DC8` (iterates 8 slots, stride `0xEF8`, base `0x80149A00`, passing each slot handle). Matches the companion's caller graph |
+| Semantic evidence | Looks up one of 8 song slots (base `0x80149A00`, stride `0xEF8`) by the incoming handle. When slot+`0xEC0` is set and slot+`0xEC1` is clear, walks the slot+`0xE78`/`0xE7C` lists, calls independently named `stopVoicesByHandle` (`0x8008DA98`) on each node+8, relinks the lists onto the freelist at `0x801529C4`, and sets slot+`0xEC1=1`. High-bit handle path can clear slot+`0xEF0`. The companion comment overstates region-advance / command-dispatch callees (this body does not call `advanceSongRegion`); that is comment inaccuracy, not a second name. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80095ADC`: the companion and
+generated names agree, the body is a complete per-slot song tick of matching
+size `0x27C`, and there is neither a conflicting companion name nor a size
+split. H2 and H3 are ruled out for this address. The stale address-encoded
+TOML entry was synchronized (name only; size left at `0x27C`).
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`tickSongSequenceLocked` at `0x80095D58`.
