@@ -70267,3 +70267,35 @@ and `func_8008ED6C`. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `isAudioVoiceActive` at `0x800989B8`.
+
+## Session 1431 (2026-08-15) — synchronized the is-audio-voice-active symbol
+
+Performed the bounded exact-name census over `0x800989B8..0x800989D8`.
+
+No new soak-queue verdicts since s1430; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800989B8`, size `0x20`; `0x800989B8+0x20=0x800989D8`. Overlay `rom_size` is `0x20` at offset `0x00098578` (`0x800989B8-0x80000440`). Generated body starts `lui $v0, 0x800A` at `0x800989B8` (loads `gMusyXActiveFlag` at `0x800A0F50`) and ends `jr $ra` / `nop` at `0x800989D0` / `0x800989D4` |
+| Generated definition | `funcs_26.c` defines `isAudioVoiceActive` at `0x800989B8`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x20` leaf between independently named `updateActive3DAudioSource` at `0x800988E8` and generated `play3DSoundEvent` at `0x800989D8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `isAudioVoiceActive = 0x800989B8` as the MusyX-gated predicate that returns `(HU[a0+0x8] & 0x1)`, a leaf off the spatial-SFX side and not a voice allocator. Menu, mission, cinematic, and ignored lists do not remap `0x800989B8`. No conflicting companion name |
+| Caller evidence | Exactly 2 generated `jal 0x800989B8` sites, both in the independently named wingman path: `npcWingmanUpdateEngineAudio` (`0x800D9380`) and `npcWingmanUpdate` (`0x800D9828`). Each passes `s0+0xA0` as `a0` (embedded source object) and treats `$v0` as the still-active bit (`npcWingmanUpdateEngineAudio` writes it back to `s0+0xF0`). Live predicate sites, not allocators |
+| Semantic evidence | Body loads `gMusyXActiveFlag` (`0x800A0F50`); if the flag is zero it returns 0, otherwise it returns `(MEM_HU(a0, 8) & 1)`. That is a MusyX-gated active-bit test on the source object, matching the companion comment exactly. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800989B8`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x20`, the 2 `jal` callers are wingman source-active predicates, and there
+is neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x20`). `fake_func_80097D58` remains
+the already-fake two-instruction epilogue fragment and was left unchanged,
+as were `fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`play3DSoundEvent` at `0x800989D8`.
