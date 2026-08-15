@@ -64819,3 +64819,21 @@ instrument, or mitigation change was added.
 
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
+
+## Session 1203 (2026-08-14) — 0.0s retail Start schedule remained phase-incomplete
+
+Ran the prescribed debugger-enabled retail oracle comparison concurrently:
+an undriven control and a schedule whose first Start was at 0.0s, with 150 ms
+holds and the same later presses. Both arms passed the whole-RDRAM positive
+control at 10,000 callbacks and completed about 3,600 VI frames in 60 seconds.
+The driven arm logged the later scheduled presses; each produced a verified
+`0x10000000` PIF word that returned to zero.
+
+Moving the first press from 0.1s to 0.0s still did not change the state path:
+both arms remained at VI width 320 with origin `0x006dd280`, and neither
+produced a later VI transition. This selects H1, that the tested schedule
+remains phase-incomplete, and leaves M4 target watches UNEVALUABLE. The
+documented 6s-first hangar schedule is the next independent reachability route.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1202 (2026-08-14).
+in the ledger. Reviewed through s1203 (2026-08-14).
 
 ## Current state
 
@@ -95,12 +95,18 @@ in the ledger. Reviewed through s1202 (2026-08-14).
   `0x10000000` PIF words that returned to zero, but both arms remained at VI
   width 320 with origin `0x006dd280` for about 3,600 VI frames. The tested
   schedule remains phase-incomplete; M4 target watches are still unevaluable.
+- The s1203 debugger-enabled comparison passed whole-RDRAM controls in both
+  arms. The `0.0s`-first driven arm produced verified `0x10000000` PIF words
+  for the later presses, but both arms remained at VI width 320 with origin
+  `0x006dd280` for about 3,600 VI frames. This schedule remains
+  phase-incomplete; M4 target watches are unevaluable. The oracle's documented
+  6s-first hangar schedule is now the next independent reachability route.
 
 ## Active investigation and ranked next steps
 
-1. Make one further debugger-enabled retail schedule change, moving the first
-   Start to `0.0s` while retaining the 150 ms hold and later presses. Compare it
-   with the undriven control. Require changed PIF words plus a later VI phase
+1. Run the oracle's documented debugger-enabled hangar schedule, with the
+   first Start at `6s` and later presses at 11s through 56s, against an
+   undriven control. Require whole-RDRAM and PIF controls plus a later VI phase
    before arming any M4 target watch; do not treat the existing target-watch
    null as evidence.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
@@ -192,6 +198,7 @@ order.
 | s1200 | Earlier-first-Start schedule passed controls and changed PIF words, but both arms still stayed at width 320/origin `0x006dd280`; schedule remains phase-incomplete. |
 | s1201 | First Start moved to 0.2s; both arms passed controls, the driven arm changed PIF words, but both remained at VI 320/origin `0x006dd280`; schedule remains phase-incomplete. |
 | s1202 | First Start moved to 0.1s; both arms passed controls, the driven arm changed PIF words, but both remained at VI 320/origin `0x006dd280`; schedule remains phase-incomplete. |
+| s1203 | First Start moved to 0.0s; both arms passed controls, the driven arm changed PIF words, but both remained at VI 320/origin `0x006dd280`; schedule remains phase-incomplete. |
 
 ## Method and safety rules
 
