@@ -115,6 +115,14 @@ in the ledger. Reviewed through s1221 (2026-08-14).
   `mainGameLoop` reads `D_80130B10+0x20..22` at `0x80130B30..32`. Those three
   oracle writes therefore tested volume fields, not menu/cinematic/mission
   state, and cannot select H2.
+- The s1223 generated/companion census selected H2 for the corrected state
+  bytes. `resetGameSettingsAndMissionStats` clears all 0x28 bytes at
+  `0x80130B10`; the only direct non-reset writes to offsets `0x20..21` are
+  `runIdleFramesAndLoadSaveData` at `0x8006DAB8/BC` (`B30=1`, `B31=0`) before
+  the main loop begins. `B32` has no direct writer in the generated census.
+  `applySaveSlotToMissionState` writes the save-state prefix and status, while
+  `initPlayerMissionStateFromSettings` writes only offsets 2, 3, and 5..7.
+  No later producer supplies a justified debugger target for retail entry.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -194,10 +202,11 @@ in the ledger. Reviewed through s1221 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Use the corrected `D_80130B10+0x20..22` identity to audit its generated
-   writers and state-machine callers, then design one positive-control oracle
-   write only if a concrete retail-entry route is justified. Do not write
-   `0x80130B60..62` again as state bytes.
+1. Audit the `mainGameLoop` consumers and upstream boot/input call chain for
+   the already-established `B30=1/B31=0/B32=0` transition, looking for the
+   actual retail-entry event rather than another state-byte write. Do not arm
+   an oracle target write unless that chain identifies a concrete producer or
+   transition, and never write `0x80130B60..62` as state bytes.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.

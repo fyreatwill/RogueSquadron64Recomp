@@ -1,43 +1,46 @@
-# NEXT work unit (s1223)
+# NEXT work unit (s1224)
 
 HYPOTHESIS-ID: retail-entry-capability
 
-The s1222 census corrected the address identity: `mainGameLoop` reads
-`D_80130B10+0x20..22` at physical `0x130B30..32`. `gGameSettings+0x20..22`
-at `0x130B60..62` are volume bytes, so the s1219–s1221 oracle writes were not
-state-entry tests.
+The s1223 census selected H2: `D_80130B10+0x20..22` at physical
+`0x130B30..32` are reset/idle transition bytes, not a later retail-entry
+control surface. `runIdleFramesAndLoadSaveData` is the only direct non-reset
+writer (`B30=1`, `B31=0`); `B32` has no direct generated writer. The main loop
+consumes these bytes after the idle routine.
 
-Work unit: perform a bounded generated/companion census of every writer and
-caller affecting `D_80130B10+0x20..22`, including reset/demo paths, and identify
-one justified target for a future debugger-enabled oracle run. Do not build,
-run, or write another oracle target in this unit.
+Work unit: perform a bounded generated/companion audit of every `mainGameLoop`
+consumer of `B30..32` and its upstream boot/input transition callers. Identify
+the first state-changing event after the idle initializer, or prove the chain
+has no reachable input-controlled producer. Do not build, run, or write an
+oracle target in this unit.
 
 Competing hypotheses and discriminator:
-- H1: `B30..32` have a reachable producer beyond the idle reset path; the
-  census identifies its writer, call chain, and a future target.
-- H2: `B30..32` are reset/transient mission-state bytes and no producer offers
-  a retail-entry route; the state-machine gate is downstream of a different
-  input or boot transition.
-- H3: the generated or companion boundary is incomplete around the mission
-  state object; missing intervals or unresolved aliases require regeneration
-  or symbol-boundary work before any oracle write.
+- H1: a later input-controlled producer or transition feeds the consumed
+  state, yielding a justified future oracle target.
+- H2: the idle initializer is the terminal producer and retail entry is driven
+  by another event/call path, so no state-byte write is justified.
+- H3: the consumer/caller boundary is incomplete or malformed and requires
+  symbol or regeneration work before the entry route can be named.
 
-Discriminator: enumerate exact generated loads/stores of physical `0x130B30`,
-`0x130B31`, and `0x130B32`, map all containing functions and callers, then
-reconcile with `D_80130B10_type` and `mainGameLoop`. A reachable non-reset
-writer supports H1; only reset/clear/consume edges supports H2; missing or
-malformed intervals supports H3 and stops oracle work.
+Discriminator: enumerate every `mainGameLoop` load of offsets 0x20, 0x21, and
+0x22, then trace each branch's called function and all upstream callers back to
+the idle initializer. A later input-controlled producer selects H1; only the
+idle/reset producer with downstream consumers selects H2; missing or malformed
+boundaries select H3 and stop oracle work.
 
 Exact commands:
 ```
-rg -n "0X[Bb]10|0X[Bb]30|0X[Bb]31|0X[Bb]32|D_80130B10|gMissionState" \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
+rg -n -C 8 "MEM_BU\([^\n]*0X2[012]" \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c
+rg -n "mainGameLoop|runIdleFramesAndLoadSaveData|pollControllerInputs|loadOverlay" \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+rg -n "func_8003E07C|func_8003E0DC|D_80130B10" \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/docs \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
-rg -n "mainGameLoop|runIdleFramesAndLoadSaveData|resetGameSettingsAndMissionStats" \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
 ```
 
-Read bounded windows around every exact hit and record the complete writer /
-caller table in the ledger. If H1 selects a target, the next iteration must
-define whole-RDRAM, VI, and debugger-write positive controls before running it.
+Read bounded windows around every exact hit and record the complete consumer /
+caller table in the ledger. If H1 selects a target, the following iteration
+must define whole-RDRAM, VI, and debugger-write positive controls before any
+oracle run.

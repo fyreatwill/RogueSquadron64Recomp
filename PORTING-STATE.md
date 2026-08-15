@@ -65215,10 +65215,38 @@ operations as `gGameSettings` volume restoration.
 This selects H2 for the originally proposed `gGameSettings` target: the three
 s1219–s1221 debugger writes were volume-field tests, not menu/cinematic/mission
 state tests, so their unchanged retail path is unevaluable for that question.
-H1 remains open for the corrected `D_80130B30..32` producer path; H3 was not
+H2 is selected for the corrected `D_80130B30..32` producer path; H3 was not
 selected because the generated intervals and companion struct boundary agree.
 No mitigation, oracle write, or runtime conclusion was added.
 
 ORIGIN: generated `funcs_8.c`, `funcs_17.c`, `funcs_32.c`, and `funcs_33.c`,
 plus independent `rogue_squadron64` `ctx.c` and symbol annotations. No game
 data or runtime behavior was changed.
+## Session 1223 (2026-08-14) — audited corrected mission-state writers
+
+Ran the prescribed static generated/companion census for the corrected
+`D_80130B10+0x20..22` identity, without building or running. The exact writer
+and caller table is:
+
+- `resetGameSettingsAndMissionStats` (`0x8006E53C`), called by
+  `runIdleFramesAndLoadSaveData` (`0x8006D9CC`) and
+  `resetSettingsClearSaveAndReload` (`0x8006EC94`), clears the full 0x28-byte
+  `D_80130B10` block, including physical `0x80130B30..32`.
+- `runIdleFramesAndLoadSaveData` (`0x8006D900`), called once by
+  `mainGameLoop` (`0x8003E010`), directly stores `B30=1` at `0x8006DAB8` and
+  `B31=0` at `0x8006DABC`; no direct `B32` store exists there.
+- `applySaveSlotToMissionState` (`0x8006DB2C`), called by the save-select
+  controller path, writes the state prefix/status and offsets `0x1F/0x24`,
+  not `0x20..22`.
+- `initPlayerMissionStateFromSettings` (`0x8006E9E4`), called by
+  `initMission` (`0x800FA384`), writes offsets `0x2`, `0x3`, and `0x5..7`,
+  not `0x20..22`.
+
+The main loop initializes its state pointer at `0x8003DFD4..D8` and consumes
+`B30`, `B31`, and `B32` at `0x8003E07C`, `0x8003E0DC`, and `0x8003E114` after
+the idle call. The companion symbol/struct files agree that the object is
+`gMissionState`/`D_80130B10`, size 0x28. H2 is selected: the only direct
+non-reset producer is the boot idle initializer, so no debugger write target
+for retail entry is justified. This rules out a later input-controlled writer
+for these three bytes and the prior `0x130B60..62` misaddress as an entry
+mechanism; it does not identify the separate event that advances retail boot.
