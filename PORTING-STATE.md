@@ -70924,3 +70924,40 @@ already-fake one-word `beq` gap and was left unchanged, as were
 runtime run was justified for an exact-name census. This does not
 reopen M5 audio de-stubbing. The next adjacent generated function is
 already-fake `fake_func_80099FDC` at `0x80099FDC`.
+
+## Session 1451 (2026-08-15) — parked the already-fake 0x80099FDC aspMain gap
+
+Performed the bounded exact-name census over `0x80099FDC..0x8009AF60`.
+
+No new soak-queue verdicts since s1450; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `fake_func_80099FDC`, size `0x4`; `0x80099FDC+0x4=0x80099FE0`. Overlay `rom_size` is `0xF84` at offset `0x00099B9C` (`0x80099FDC-0x80000440`); `0x80099FDC+0xF84=0x8009AF60`. The size split is the recompiler lumping the one-word gap with the following RSP text |
+| Generated definition | `funcs_26.c` defines `fake_func_80099FDC` at `0x80099FDC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body starts `bne $v0, $zero, L_80099FEC` at `0x80099FDC`, then decodes `aspMain` as CPU (`mfc0 $a2, Compare`, COP2/`lwc2`, `do_break`) through `jr $t0` / three `nop`s at `0x8009AF50..0x8009AF5C`. Next generated function is `findVoiceSlotByAge` at `0x8009AF60` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `fake_func_80099FDC = 0x80099FDC; // defined:true` with `// No accompanying "real" function`, then separately `aspMainTextStart = 0x80099FE0; // size:0xF80 name_end:aspMainTextEnd`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x80099FDC` or `0x80099FE0`. The later curated list names `findVoiceSlotByAge` at `0x8009AF60` without assigning a CPU-function name to `0x80099FDC` |
+| Caller evidence | Zero generated `jal 0x80099FDC` sites and zero `fake_func_80099FDC` call sites. The word is not a reachable function |
+| Semantic evidence | Retail ROM word at `0x80099FDC` (file `0x9ABDC` = `(vram&0xFFFFFF)+0xC00`) is `0x14400003` (`bne $v0, $zero, +3`). The delay slot and branch target sit inside independently named `aspMain` text: file `0x9ABE0` is `0x40065800` (`mfc0 $a2, Compare`), matching `roguesquadron.yaml` `[0x9ABE0, textbin, "main/aspMainText"]` and `0x80099FE0+0xF80=0x8009AF60`. Same already-fake one-word gap class as `fake_func_80099C4C`, except the next object is RSP ucode rather than a CPU function |
+| Confidence | High |
+
+The complete comparison selects H2 for `0x80099FDC`: the companion,
+generated, overlay, and TOML names already agree on the already-fake
+gap-filler, the independent `aspMainTextStart` name is four bytes later
+and is RSP `textbin` rather than a CPU function, and there is no
+independent semantic CPU-function name to synchronize. H1 is ruled out
+because renaming the site `aspMainTextStart` would fabricate a callable
+function at the wrong address and treat ucode as MIPS. H3 is ruled out
+because the independent naming source exists and already marks the site
+fake. The TOML entry stays unchanged (name and size `0x4`; the overlay
+`0xF84` span is the misparsed ucode lump, not a reason to widen the
+named gap). `fake_func_80099C4C` remains the already-fake one-word
+`beq` gap and was left unchanged, as were `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`findVoiceSlotByAge` at `0x8009AF60`.

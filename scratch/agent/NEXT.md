@@ -1,9 +1,9 @@
-# NEXT work unit (s1451)
+# NEXT work unit (s1452)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x80099FDC..0x8009AF60`. Do not build or run. Record its address,
+function, `0x8009AF60..0x8009B048`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -15,11 +15,13 @@ entries unchanged. Leave `func_8008ED6C` unchanged (s1309 H2),
 `fake_func_80094348` unchanged (s1378: already-fake two-instruction
 jump fragment), `fake_func_8009711C` unchanged (s1408: already-fake
 one-instruction jump fragment), `fake_func_80097D58` unchanged
-(s1420: already-fake two-instruction epilogue fragment), and
+(s1420: already-fake two-instruction epilogue fragment),
 `fake_func_80099C4C` unchanged (s1446 H2: already-fake one-word `beq`
-gap). The generated entry at this address is already `fake_func_80099FDC`;
-leave that TOML entry unchanged unless the companion, size, and
-caller/semantic evidence independently support a real exact name.
+gap), and `fake_func_80099FDC` unchanged (s1451 H2: already-fake
+one-word `bne` gap before `aspMainTextStart`). The generated entry at
+this address is already `findVoiceSlotByAge`; synchronize the stale
+TOML `func_8009AF60` only if the companion, size, and caller/semantic
+evidence independently support that exact name.
 
 Competing hypotheses and discriminator:
 
@@ -37,7 +39,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '80099FDC\|8009AF60\|fake_func_80099FDC' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '80099FDC\|8009AF60' ../N64Recomp/RecompiledFuncs/funcs_26.c
-grep -n -C 3 '80099FDC\|8009AF60' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009AF60\|8009B048\|findVoiceSlotByAge' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009AF60\|8009B048' ../N64Recomp/RecompiledFuncs/funcs_26.c
+grep -n -C 3 '8009AF60\|8009B048' syms/rogue_squadron.syms.toml
 ```
