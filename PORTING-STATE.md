@@ -68405,3 +68405,32 @@ address-encoded TOML entry was synchronized (name only; size left at `0x8`).
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `musyxComputeNotePlaybackRate` at `0x80093E80`.
+
+## Session 1370 (2026-08-15) — synchronized the musyx-compute-note-playback-rate symbol
+
+Performed the bounded exact-name census over `0x80093E80..0x80093F18`.
+
+No new soak-queue verdicts since s1369; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80093E80`, size `0x98`; `0x80093E80+0x98=0x80093F18`. Overlay `rom_size` is `0x98`. Generated prologue at `0x80093E80` (`addiu $sp,$sp,-0xC`) and `jr $ra` at `0x80093F10` with delay `addiu $sp,$sp,0xC` at `0x80093F14` |
+| Generated definition | `funcs_25.c` defines `musyxComputeNotePlaybackRate` at `0x80093E80`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `divideByMixerBaseFrequency` at `0x80093F18` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxComputeNotePlaybackRate = 0x80093E80`. The same file independently names the preceding `sqrtf_recomp` at `0x80093E6C` and the following `divideByMixerBaseFrequency` at `0x80093F18`. The sequential `defined:true` list records `fake_func_80093E74` at `0x80093E74` and does not remap `0x80093E80`. No later companion list remaps it |
+| Caller evidence | Nine generated `jal 0x80093E80` sites: `findActiveVoiceByKeyPair` (`0x80086D30`), `soundMacroOpStartNoteAbsoluteSweep` (`0x8008A038`), `soundMacroOpStartNoteRelativeSweep` (`0x8008A178`), `soundMacroOpStartNoteTransposedSweep` (`0x8008A298`), two in `soundMacroOpPlaySampleKeymap` (`0x8008A578`, `0x8008A5BC`), `refreshVoicePlaybackRate` (`0x8008B9FC`), `soundMacroSetPitchTarget` (`0x8008BBA0`), and `tickAllAudioChannels` (`0x8008CDE4`). Callers pass a note byte in `$a0` and a context word in `$a1` (typically `0x60($s0)`). Companion annotates "10 callers"; the missing tenth static jal does not remap the name |
+| Semantic evidence | If `$a1 == -1`, the body substitutes `0x40005622` (low 24 bits `0x5622` = 22050 Hz). It takes the top byte of `$a1` as the base note, indexes LUT `0x800A31D0` or `0x800A2FD0` from the signed note delta, multiplies by the low 24 bits of `$a1`, folds `hi<<12 | lo>>20`, and `jal`s `0x80093F18`. That is the classic semitone-relative playback-rate compute; no conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80093E80`: the companion and
+generated names agree, the body is a complete note-rate helper of matching
+size `0x98`, and there is neither a conflicting companion name nor a size
+split. H2 and H3 are ruled out for this address. The stale address-encoded
+TOML entry was synchronized (name only; size left at `0x98`).
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `divideByMixerBaseFrequency` at `0x80093F18`.
