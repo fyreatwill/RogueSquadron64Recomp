@@ -184,6 +184,9 @@ static void dbg_update(unsigned int pc)
                (flags & M64P_BKP_FLAG_READ)  ? "r" : "",
                (flags & M64P_BKP_FLAG_EXEC)  ? "x" : "",
                accessed, pc, prev, now_s() - g_t0, g_hits);
+        if ((flags & (M64P_BKP_FLAG_WRITE | M64P_BKP_FLAG_READ)) &&
+            accessed >= 0x001496F8 && accessed < 0x001496FC)
+            printf("[voice-base] value=0x%08x\n", pDebugMemRead32(0x001496F8));
         if (g_hits == g_hit_cap)
             printf("[oracle] hit cap %ld reached, counting silently from here\n", g_hit_cap);
         fflush(stdout);

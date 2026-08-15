@@ -265,6 +265,16 @@ in the ledger. Reviewed through s1171 (2026-08-14).
   but static source does not reveal its runtime writer or legitimacy, and no
   operation directly identifies the later `0x8000B650` host fault. This is
   H3 for the port-only census; no mitigation was added.
+- The s1172 retail-oracle arm passed the whole-RDRAM positive control (10,000
+  callbacks, removed cleanly) and delivered the eleven-Start schedule through
+  the known width-320/origin `0x006dd280` stall at about 56 seconds. The
+  watched retail global `0x001496F8` had one pre-store write attributed to
+  guest PC `0x8008F0EC`; the debugger callback reports the old value
+  `0xFFFFFFFF`, so this does not reveal the allocated voice-array address.
+  No later audio phase was reached, and the target was the global pointer
+  field rather than a voice sample field; the intended origin discriminator is
+  therefore H3/unevaluable. The oracle gained a small diagnostic that prints
+  the watched field value at a detailed access.
 
 ## Retail VI descriptor boundary
 
@@ -407,15 +417,16 @@ corruption.
 | s1169 | Rebuilt and ran one phase-gated indirect-callback capture. Callback-table slot reads and `get_function(0x8009123C)` resolution were both live; phase-4/6 entry rows consistently showed `entry_sp=0x8011C8C0`, `prologue_sp=0x8011C880`, and `entry_ra=0`. The valid `(rdram,ctx)` handoff selects H2 and rules out callback stack/return corruption for this run; no VI-1024 or crash occurred, so downstream origin remains open. |
 | s1170 | Completed the bounded static callback census without building or running. There were 7 in-scope generated indirect invocation sites: periodic worker (1), VI callback loop (1 site over 4 table slots), `musyxSynthFrame` (2), mixer init (1), shutdown wait (1), and audio-task wait (1). All 7 had balanced `$sp`/`$ra` contracts and companion-symbol-matched owning boundaries; the current poll's observed `0x8009123C` target matched `musyxSynthFrame`, with no malformed or unresolved in-scope row. This selects H2 and moves the audit to downstream `musyxSynthFrame` operations. |
 | s1171 | Completed the bounded static downstream operation census without building or running. The generated chain contains 26 direct and 2 indirect calls in `musyxSynthFrame`, bounded voice-array iteration in `musyxMixActiveVoices`, command-ring construction in `musyxBuildVoiceCommandList`, and sample/stream pointer formation from voice fields `+0x34/+0x38/+0x3C/+0x40` in `musyxRenderVoiceSamples`. The first possible wild pointer is the per-voice sample/stream path, but its runtime writer and legitimacy remain unresolved and no static operation ties it to the later `0x8000B650` host fault. This selects H3 for the port-only census; no mitigation was added. |
+| s1172 | Ran the retail oracle with a whole-RDRAM control and the eleven-Start schedule. The control reached 10,000 callbacks and was removed; the run stalled at width 320/origin `0x006dd280` after all presses. A write to the global voice-base field `0x001496F8` was attributed to PC `0x8008F0EC`, but the callback is pre-store and exposed only `0xFFFFFFFF`; no audio phase or sample-field write was reached. This is H3/unevaluable for the intended discriminator; no mitigation was added. |
 
 ## Ranked next steps
 
-1. Use the retail oracle to attribute writes to the first unresolved MusyX
-   voice/sample-pointer path identified in s1171. Arm and validate the
-   whole-RDRAM positive control, then watch the physically mapped retail
-   voice-array/sample-pointer range with PC attribution and phase gating. H1
-   is a retail writer hit; H2 is phase-reached with no target write; H3 is an
-   unevaluable pre-audio or unmappable arm. Do not add a mitigation.
+1. Correct the retail-oracle arm by deriving the post-store voice-array base
+   from the next readable value after `0x001496F8` is initialized, then run one
+   phase-gated watch over the resulting `0x88`-stride voice/sample fields with
+   the whole-RDRAM positive control. H1 is a retail writer hit; H2 is a
+   phase-reached target null; H3 is pre-audio or unmappable. Do not add a
+   mitigation.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

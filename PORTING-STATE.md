@@ -64261,3 +64261,24 @@ port-only discriminator therefore selects H3 (unresolved origin), rules out
 another malformed callback or literal command-list-call explanation, and does
 not authorize a mitigation. The next work unit is an independent retail-oracle
 write-attribution watch with a whole-RDRAM positive control.
+
+## Session 1172 (2026-08-14) — tested retail MusyX voice-base attribution
+
+Ran the retail oracle with a whole-RDRAM write control, a watch on physical
+`0x001496F8`, and the documented eleven-Start schedule. The control reached
+10,000 callbacks and was removed cleanly; all eleven presses were delivered.
+The run reached only width 320/origin `0x006dd280` and then reproduced the
+known approximately-56-second retail stall, so the later audio-active phase
+was not reached. The global field had one write attributed to guest PC
+`0x8008F0EC`. Because the debugger callback fires before the store, its
+immediate memory read was the old `0xFFFFFFFF`, not the allocated pointer.
+The watch was also the global base-pointer field, not a voice sample field, so
+this is H3/unevaluable for the intended origin discriminator. A small oracle
+diagnostic was added to print the watched field at detailed accesses; no game
+mitigation was added.
+
+This rules out neither a retail writer of the sample fields nor a null sample
+field path. It does establish the positive control and the pre-store nature of
+the current base-pointer callback. The next unit must distinguish read and
+write callbacks and capture a post-store value before mapping the dynamic
+voice-array range.

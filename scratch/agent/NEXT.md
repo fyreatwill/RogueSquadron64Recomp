@@ -1,38 +1,33 @@
-# NEXT work unit (s1172)
+# NEXT work unit (s1173)
 
 HYPOTHESIS-ID: musyx-downstream-ground-truth-pointer-origin
 
-Run one ground-truth-assisted pointer-origin experiment for the first
-unresolved MusyX sample/stream pointer path identified at
-`musyxRenderVoiceSamples` (`0x8009004C`–`0x80090050`). Consult
-`tools/oracle/README.md`, arm a whole-RDRAM positive control, and add one
-physical watch covering the retail voice-array/sample-pointer region that
-corresponds to the port-side `0x801496F8` voice base. Build all watch/control
-arms together and phase-gate the result. Do not add a mitigation.
+Fix the oracle's watch accounting so a read watch is distinguished from a
+write watch, then run one short calibration arm that captures the first
+post-store read of retail `0x001496F8`. Use that value to define the next
+voice-array/sample-field range; do not infer it from the pre-store callback.
 
 Competing hypotheses and discriminator:
 
-- H1: retail writes the watched voice/sample-pointer field before the
-  corresponding port-side operation, identifying a legitimate game writer.
-- H2: retail reaches the phase and positive control but never writes the
-  watched field, moving origin to command-list/submission or an unmodeled
-  runtime path.
-- H3: the oracle remains pre-audio or the target range is not reached, so the
-  pointer-origin question is unevaluable.
+- H1: a distinct post-store read exposes a valid KSEG0 voice-array base; the
+  target range can be mapped and the next retail writer watch is actionable.
+- H2: the field is written but no post-store read occurs before the retail
+  width-320/origin `0x006dd280` stall; the current oracle path cannot map the
+  dynamic array and needs a different ground-truth readout.
+- H3: the watch callback flags or address semantics remain unusable, shown by
+  a read/write count mismatch in the positive-control calibration; no origin
+  conclusion is allowed.
 
-The s1171 census result was H3 for the port-only operation table: the first
-possible wild pointer is a voice/sample field load, but its runtime writer and
-legitimacy are unresolved. The next measurement must therefore be independent
-retail write attribution, not another port-side field.
+The discriminating measurement is the first callback after the attributed
+`0x001496F8` write whose flags contain READ, plus separate per-watch counts.
+H1 is a valid pointer value; H2 is a clean post-store-read zero before the
+stall; H3 is any callback/accounting mismatch or failed whole-RDRAM control.
 
 Exact commands:
 
-    sed -n '1,140p' tools/oracle/README.md
-    rg -n "whole-RDRAM|watch-write|positive control|physical" tools/oracle/README.md
-    rg -n "voice|musyx|audio|phase|watch" scratch/agent tools/oracle docs | head -120
-    git status --short
+    apply_patch tools/oracle/rs64_oracle.c
+    ./tools/oracle/build.sh
+    ./tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 10 --watch-write 0x0:0x800000 --hit-cap 10000 --watch-write 0x1496F8:0x1496FC --detail-watch 1 --watch-read 0x1496F8:0x1496FC --detail-watch 2 --press 6:start --hold-ms 150 --vi-trace
 
-Record whole-RDRAM callback count, watched-range writes, PC attribution, and
-phase reachability. If the watch is not physically mappable or the positive
-control fails, record H3 and choose a corrected oracle arm; do not infer a
-null origin result.
+Require the whole-RDRAM threshold/removal, a write attribution, and a
+separately identified read callback before using any pointer value.
