@@ -66669,3 +66669,26 @@ the three independently named callers support the locked-task wrapper. H2 and
 H3 are ruled out for this function; there is neither a partial/conflicting
 match nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1303 (2026-08-15) — synchronized the MusyX engine-init symbol
+
+Performed the bounded exact-name census over `0x8008E940..0x8008EA14`.
+
+No new soak-queue verdicts since s1302; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E940`, size `0xD4`; it ends exactly at the next generated function, `0x8008EA14`. Overlay `rom_size` is `0xD4` |
+| Generated definition | `funcs_23.c` defines `initMusyXEngine` at `0x8008E940`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `initMusyXEngine = 0x8008E940` |
+| Caller evidence | No generated `jal 0x8008E940` sites. `setDisplayMode` (`0x8008EA14`) and `reapplyDisplayMode` (`0x8008EB5C`) each inline a similar reset chain instead of calling this helper. Companion independently names those two siblings |
+| Semantic evidence | Body `jal resetSongSubsystemCounter` (`0x80097120`), zeros the same list-head words later documented on `clearMusyXSequencerState`, then `jal initSongSequencerPools` (`0x80097088`), `jal resetMusyXEngineState` (`0x8008E614`), `jal clearStreamedVoiceFlags` (`0x80097D60`), `jal reset3DAudioLists` (`0x80099C2C`), and stores `1` to `gMusyXActiveFlag` at `0x800A0F50`. Companion independently names that gate byte and those five callees |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0xD4` boundary is exact, and the first-time MusyX reset plus the
+independently named gate-byte store support the engine-init name. H2 and H3
+are ruled out for this function; there is neither a partial/conflicting match
+nor an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
