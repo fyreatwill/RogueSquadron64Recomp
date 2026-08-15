@@ -67868,3 +67868,30 @@ getter. H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio de-stubbing.
+
+## Session 1351 (2026-08-15) — synchronized the writeback-dcache-halfwords symbol
+
+Performed the bounded exact-name census over `0x80092588..0x800925A8`.
+
+No new soak-queue verdicts since s1350; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092588`, size `0x20`; it ends exactly at the next generated function, `0x800925A8`. Overlay `rom_size` is `0x20` |
+| Generated definition | `funcs_24.c` defines `writebackDCacheHalfwords` at `0x80092588`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `writebackDCacheHalfwords = 0x80092588`. The same file independently names the adjacent functions `getVoiceUserField` at `0x80092564` and `copyFourHalfwordsWriteback` at `0x800925A8`. No later companion list remaps this address |
+| Caller evidence | Two generated `jal 0x80092588` sites in already-named `serviceStreamedVoices` at `0x80097DF4`. After a streamed-voice callback, one call writebacks from the current cursor for `(limit - cursor)` halfwords, and the other writebacks from the sample-buffer base for the record cursor count |
+| Semantic evidence | Body saves `$ra`, delay-slot `sll $a1, $a1, 1`, then `jal 0x800358B0`. That target is independently named `osWritebackDCache` in the TOML. The companion independently documents the same wrapper: `(addr, halfword_count) → osWritebackDCache(addr, count * 2)` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x20` boundary is exact, and the body is the documented halfword-count
+`osWritebackDCache` wrapper. H2 and H3 are ruled out for this function; there
+is neither a partial/conflicting match nor an absent independent name. The
+companion's "3 callers" note is a count mismatch with the two generated `jal`
+sites, not a naming conflict. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
+This does not reopen M5 audio de-stubbing.
