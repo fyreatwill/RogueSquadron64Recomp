@@ -66320,3 +66320,23 @@ voice-handle stop semantics. The stale address-encoded TOML entry is therefore
 synchronized. H2 and H3 are ruled out for this function; there is neither a
 conflicting/partial mapping nor an absent independent name. No build or runtime
 run was justified for an exact-name census.
+
+## Session 1287 (2026-08-15) — synchronized the all-voices stop symbol
+
+Performed the bounded exact-name census over `0x8008DBF4..0x8008DD20`.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008DBF4`, size `0x12C`; it ends exactly at the next generated function, `0x8008DD20` |
+| Generated definition | `funcs_23.c` defines `stopAllSynthVoices` at `0x8008DBF4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `stopAllSynthVoices = 0x8008DBF4` |
+| Caller evidence | `tickMusyXIfActive` calls it at `0x8008DA2C` with `a0=0` as part of the gated MusyX update |
+| Semantic evidence | The body walks the configured voice count in `0x17C`-byte strides, removes active voices, clears allocation/state fields, and calls `beginVoiceFadeRelease` for every slot |
+| Confidence | High |
+
+The complete table selects H1: the companion and generated names agree, the
+boundary is exact, and independent caller/body evidence supports the
+all-synth-voices stop semantics. The stale address-encoded TOML entry is
+therefore synchronized. H2 and H3 are ruled out for this function; there is
+neither a conflicting/partial mapping nor an absent independent name. No build
+or runtime run was justified for an exact-name census.
