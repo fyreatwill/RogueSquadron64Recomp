@@ -66133,3 +66133,16 @@ justified.
 This rules out the absence of independent naming evidence for this region; it
 does not change the closed audio runtime status or the next census at
 `0x80089414..0x800897D4`.
+## Session 1274 (2026-08-15) — synchronized MusyX macro symbols
+
+Performed the bounded exact-name census over `0x80089414..0x800897D4`.
+The companion symbol file independently identifies all eight generated
+entries: `flagVoiceChainForStop`, `stopVoiceByHandleLocked`,
+`shiftChannelStreamLeft8`, `computeChannelTempoStepFromTable`,
+`computeChannelWaitDuration`, `soundMacroOpWaitTicks`,
+`soundMacroOpStopVoice`, and `soundMacroOpReturnFromGosub`. Generated
+definitions and TOML sizes match; generated callers and bodies provide the
+voice-chain, channel-timing, mutex-wrapper, and macro-operation evidence.
+H1 selected and all eight stale symbol-map entries were synchronized. No build
+or runtime run was justified. This rules out the absence of independent naming
+evidence for this region; it does not change the closed audio runtime status.
