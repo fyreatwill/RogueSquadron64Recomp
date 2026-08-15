@@ -1,8 +1,8 @@
-# NEXT work unit (s1263)
+# NEXT work unit (s1264)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Do not build or run. Perform one bounded exact-name census over the next adjacent generated-symbol region, `0x80083C28..0x80083D20`. Record every entry's address, size, generated definition, companion name/source, caller evidence, and confidence before editing. Synchronize only exact independent names in `syms/rogue_squadron.syms.toml`; leave address-encoded and explicitly fake entries unchanged.
+Do not build or run. Perform one bounded exact-name census over the next adjacent generated-symbol region, `0x80083D6C..0x80083EB0`. Record every entry's address, size, generated definition, companion name/source, caller evidence, and confidence before editing. Synchronize only exact independent names in `syms/rogue_squadron.syms.toml`; leave address-encoded and explicitly fake entries unchanged.
 
 Competing hypotheses and discriminator:
 
@@ -15,7 +15,7 @@ The discriminator is the complete comparison table: full exact coverage selects 
 Exact commands:
 
 ```
-rg -n '80083C28|80083C50|80083C70|80083C9C|80083D20' ../rogue_squadron64/symbol_files/main_overlay.txt syms/rogue_squadron.syms.toml ../N64Recomp/RecompiledFuncs/funcs_20.c
-rg -n -C 3 '80083C28|80083C50|80083C70|80083C9C|80083D20' ../rogue_squadron64/symbol_files/main_overlay.txt
-rg -n '80083C28|80083C50|80083C70|80083C9C|80083D20' ../N64Recomp/RecompiledFuncs/funcs_20.c ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n '80083D6C|80083D9C|80083E24|80083E68|80083EB0' ../rogue_squadron64/symbol_files/main_overlay.txt syms/rogue_squadron.syms.toml ../N64Recomp/RecompiledFuncs/funcs_20.c
+rg -n -C 3 '80083D6C|80083D9C|80083E24|80083E68|80083EB0' ../rogue_squadron64/symbol_files/main_overlay.txt
+rg -n '80083D6C|80083D9C|80083E24|80083E68|80083EB0' ../N64Recomp/RecompiledFuncs/funcs_20.c ../N64Recomp/RecompiledFuncs/funcs_*.c
 ```

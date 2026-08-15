@@ -65958,3 +65958,22 @@ repository symbol-map entries; no build or runtime run was needed. This rules
 out a repository-symbol naming mismatch in this NPC walker/debris region, but
 does not explain the external retail-entry boundary or recurring runtime
 SIGBUS.
+
+## Session 1263 (2026-08-15) — synchronized audio helper symbols
+
+Ran the bounded exact-name census over `0x80083C28..0x80083D20`. The complete
+comparison table was:
+
+| VRAM | Size | Generated definition | Companion mapping/source | Caller evidence | Confidence |
+|---|---:|---|---|---|---|
+| `0x80083C28` | `0x28` | `audioSeqMallocZero` | same name in `main_overlay.txt` | definition only; no direct generated `jal` found | exact/high |
+| `0x80083C50` | `0x20` | `audioSeqFree` | same name in `main_overlay.txt` | definition only; no direct generated `jal` found | exact/high |
+| `0x80083C70` | `0x2C` | `unusedRand` | same name in `main_overlay.txt`, already synchronized | definition only; no direct generated `jal` found | exact/high |
+| `0x80083C9C` | `0x84` | `lookupSineFromAngleTable` | same name in `main_overlay.txt` | definition only; no direct generated `jal` found | exact/high |
+| `0x80083D20` | `0x4C` | `setTrackVoiceTickBudget` | same name in `main_overlay.txt` | 3 direct generated callers in `funcs_25.c` | exact/high |
+
+All five generated boundaries match the repository sizes and all five have
+independent companion names. H1 selected. Synchronized the four stale
+repository symbol-map entries; no build or runtime run was needed. This rules
+out a repository-symbol naming mismatch in this audio-helper region, but does
+not explain the external retail-entry boundary or recurring runtime SIGBUS.

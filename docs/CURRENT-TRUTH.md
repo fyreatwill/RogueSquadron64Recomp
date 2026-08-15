@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1262 (2026-08-15).
+in the ledger. Reviewed through s1263 (2026-08-15).
 
 ## Current state
 
@@ -365,7 +365,22 @@ caller references agree; the two-point handler has no direct generated `jal`
 but has an exact companion description. H1 was selected. Synchronized six
 stale repository symbol-map entries; no build or runtime run was needed.
 
+The s1263 bounded `0x80083C28..0x80083D20` census found exact companion and
+generated names and matching sizes for `audioSeqMallocZero`, `audioSeqFree`,
+`unusedRand`, `lookupSineFromAngleTable`, and `setTrackVoiceTickBudget`.
+`unusedRand` was already synchronized; four stale repository symbol-map
+entries were updated. Three generated callers corroborate
+`setTrackVoiceTickBudget`; the other entries have exact definitions but no
+direct generated callers. H1 selected; no build or runtime run was needed.
+
 ## Durable boundaries
+
+### Next steps
+
+Continue the generated-symbol renaming sweep with the adjacent
+`0x80083D6C..0x80083EB0` region. Keep explicitly fake or address-encoded
+entries unchanged and require an independent companion mapping before each
+rename.
 
 ### M3 dispatcher/frame origin
 
@@ -479,6 +494,7 @@ order.
 | s1260 | The bounded `0x8007EF1C..0x80081ABC` census found exact companion/generated names for four NPC functions: `npcWordDevastatorUpdate`, `attachedAudioVisualEmitterNpcHandler`, `npcShieldGeneratorUpdate`, and `npcVortexUpdate`. Generated definitions and sizes agree; two stale address-encoded symbol-map entries were synchronized. H1 selected; no build or run. |
 | s1261 | The bounded `0x800820E4..0x80083008` census found 19 exact companion/generated names, including NPC spawn, cheat/CRC, and model-animation helpers. Three were already synchronized; intervening explicitly fake or address-encoded entries remained unchanged, and 16 stale repository symbol-map entries were synchronized. H2 selected; no build or run. |
 | s1262 | The bounded `0x80083154..0x80083468` census found exact companion/generated names and matching sizes for all five model-animation functions. Generated callers corroborate `setModelAnimSlotCycleDuration` and `parseModelAnimType2Entry`; no direct generated calls were found for the other three. Synchronized five stale repository symbol-map entries. H1 selected; no build or run. |
+| s1263 | The bounded `0x80083C28..0x80083D20` census found exact companion/generated names and matching sizes for five entries. `unusedRand` was already synchronized; four stale symbol-map entries were updated, with three generated callers corroborating `setTrackVoiceTickBudget`. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
