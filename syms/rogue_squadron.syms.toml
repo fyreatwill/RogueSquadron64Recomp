@@ -1475,7 +1475,7 @@ functions = [
     { name = "parseSndFiles", vram = 0x80097518, size = 0x3D4 },
     { name = "unloadLastSndFileGroup", vram = 0x800978EC, size = 0x1DC },
     { name = "returnZeroAudioStub", vram = 0x80097AC8, size = 0x8 },
-    { name = "func_80097AD0", vram = 0x80097AD0, size = 0x15C },
+    { name = "playSongByIdLockCtl", vram = 0x80097AD0, size = 0x15C },
     { name = "func_80097C2C", vram = 0x80097C2C, size = 0x12C },
     { name = "fake_func_80097D58", vram = 0x80097D58, size = 0x8 },
     { name = "func_80097D60", vram = 0x80097D60, size = 0x48 },
