@@ -65430,3 +65430,30 @@ but does not identify the remaining external retail-entry boundary.
 ORIGIN: independent retail execution under the DEBUGGER=1 Mupen64Plus core,
 with controls from whole-RDRAM writes, VI polling, and PIF reads. No
 mitigation, build, or runtime code change was made.
+
+## Session 1233 (2026-08-14) — completed the retail startup-event census
+
+Ran the queued bounded static audit without building or running. The installed
+Mupen64Plus core's `CoreDoCommand` contract allows `ROM_OPEN`, plugin attach,
+`EXECUTE`, explicit state load/save/slot commands, SDL key events, reset,
+advance-frame, media-loader, and netplay commands. The actual oracle wrapper
+calls `ROM_OPEN`, attaches RSP and optional SDL input, then calls `EXECUTE`; its
+optional state save/load is scheduled after five seconds. It does not invoke
+reset, state-slot, advance-frame, media-loader, or netplay before execution.
+
+The core's ROM-open path validates/copies the ROM, selects ROM database/config
+settings, and leaves EEPROM/SRAM loading to the selected save-media path. The
+ROM database entry selects `Eeprom 4KB`; no media/config disagreement was found
+in this census. The generated port-side bootstrap remains the separate static
+`recomp_entrypoint` -> idle/video-thread -> `gBootConfig+4` handoff already
+recorded in s1232.
+
+The complete startup-event table selects H2: no available front-end command,
+callback, or media/config mismatch explains the missing retail transition
+before the stable VI-320 loop. This rules out an unenumerated startup route,
+but does not identify the reset/entry-state difference between retail R4300
+execution and the port.
+
+ORIGIN: installed Mupen64Plus core source, `tools/oracle/rs64_oracle.c`, ROM
+database/config, and generated/companion boot records. No mitigation, build,
+or runtime code change was made.

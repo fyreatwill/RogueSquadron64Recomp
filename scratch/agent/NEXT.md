@@ -1,36 +1,35 @@
-# NEXT work unit (s1233)
+# NEXT work unit (s1234)
 
-HYPOTHESIS-ID: retail-entry-boundary
+HYPOTHESIS-ID: retail-reset-entry-equivalence
 
-Run one bounded static audit of the remaining external retail-entry boundary:
-enumerate the ROM/decomp and installed-oracle startup paths that can alter
-execution state after `ROM_OPEN` and before the first stable VI-320 loop.
-Include EEPROM load, reset/state commands, SDL input attachment, and any
-front-end callback or savestate handoff. Do not build or run; this is one
-source/config census.
+Run one bounded static source/config audit comparing the retail R4300 reset
+entry state with the port's `recomp_entrypoint`. Enumerate the retail core's
+`g_start_address`/reset-vector initialization and first boot transition, then
+the port's entrypoint, initial register/context setup, and first idle/video
+thread creation. Do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: the front-end/core has an unenumerated state-changing route that can
-  explain the missing retail entry.
-- H2: startup only opens ROM/save media, attaches input, and executes; the
-  missing event is outside the available oracle/front-end contract.
-- H3: the retail-entry boundary is actually an EEPROM/core-format issue, shown
-  by a mismatch between selected media, load semantics, or ROM configuration.
+- H1: retail begins from a reset/vector or initial-state contract that the
+  port does not reproduce, explaining the stable VI-320 divergence.
+- H2: both paths establish equivalent game entry state, so reset entry is not
+  the missing retail transition.
+- H3: the paths differ only in a documented non-state configuration such as
+  core emulator mode or ROM setup; the difference cannot explain the entry
+  state by itself.
 
-Discriminator: a complete startup-event table. A previously unknown
-state-changing command/callback selects H1; a complete ROM-open-to-execute
-contract with no such route selects H2; a media/config/load disagreement
-selects H3.
+Discriminator: a side-by-side entry-state table covering reset PC, reset
+register/RDRAM setup, ROM/boot handoff, and first generated call. A concrete
+unmatched state-setting operation selects H1; equivalent contracts select H2;
+only documented emulator/configuration differences select H3.
 
 Exact commands:
 
 ```
-rg -n -C 5 'ROM_OPEN|M64CMD_EXECUTE|M64CMD_RESET|M64CMD_STATE_LOAD|M64CMD_STATE_SAVE|SDL|EEPROM|eeprom|savestate' tools/oracle ../rogue_squadron64 ../mupen64plus* 2>/dev/null
-rg -n -C 4 'CoreStartup|ROM_OPEN|STATE_LOAD|EXECUTE|EEPROM|savestate|reset' /usr/local/include /opt/homebrew/include /usr/local/src /opt/homebrew/src 2>/dev/null
-rg -n -C 4 'mainBootstrapWorker|mainGameLoop|gBootConfig|8003DFA0' ../N64Recomp/RecompiledFuncs ../rogue_squadron64/symbol_files
+rg -n -C 8 'g_start_address|start_address|A4000040|reset|main_run|ROM_OPEN|M64CMD_EXECUTE' /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/main /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/api
+rg -n -C 8 'recomp_entrypoint|entrypoint|run_thread_function|r29|r31|osCreateThread|idle_thread_handle|thread3_video_handle' src ../N64Recomp/RecompiledFuncs/funcs_0.c ../N64Recomp/RecompiledFuncs/funcs.h
+rg -n -C 5 'A4000040|80000000|recomp_entrypoint|g_start_address' /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
 ```
 
-Record each startup event as ROM-open, media load, input, state command, reset,
-or indirect handoff, and state whether it can occur before the first stable
-VI-320 loop.
+Record the first state-setting operation and first generated/retail call on
+each side, then state which hypothesis the complete table selects.
