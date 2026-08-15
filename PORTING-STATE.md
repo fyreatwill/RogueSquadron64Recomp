@@ -65145,3 +65145,24 @@ separately documented cinematic sub-state target. No mitigation was added.
 ORIGIN: the only injected value was the deliberately selected state-machine
 probe at `gGameSettings+0x20`; no renderer or corruption value was skipped,
 guarded, or restored.
+
+## Session 1220 (2026-08-14) — tested gGameSettings cinematic sub-state write
+
+The first paired launch exposed a stale command flag (`--debug`); both arms
+exited with usage status 2 before emulation. Re-running with the documented
+DEBUGGER=1 core and `--oracle-debugger 1` completed both arms concurrently for
+75.0 seconds and 4,499 VI frames.
+
+The target arm wrote `0x00010000` to physical `0x130B60` at VI 1, setting
+`gGameSettings+0x21` (`0x80130B61`), and the `[debug-write]` marker fired. Both
+arms independently passed the whole-RDRAM positive control at 10,000
+callbacks. VI callback and VI-poll traces agreed that both stayed at width
+320/origin `0x006dd280`; neither arm reached a later phase. H2 is selected:
+this cinematic sub-state write did not change retail entry. The result rules
+out a missing write and control disruption for this target, but does not rule
+out the separately documented mission sub-state byte. No mitigation was
+added.
+
+ORIGIN: the only injected value was the deliberately selected state-machine
+probe at `gGameSettings+0x21`; no renderer or corruption value was skipped,
+guarded, or restored.

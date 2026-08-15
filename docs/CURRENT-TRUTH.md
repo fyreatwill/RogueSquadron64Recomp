@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1219 (2026-08-14).
+in the ledger. Reviewed through s1220 (2026-08-14).
 
 ## Current state
 
@@ -117,6 +117,14 @@ in the ledger. Reviewed through s1219 (2026-08-14).
   change the retail path (H2); the debugger write and control surfaces remain
   valid. The next target may test the separately documented cinematic
   sub-state byte at `gGameSettings+0x21`.
+- The s1220 debugger-enabled oracle pair wrote `0x00010000` to physical
+  `0x130B60` at VI 1, setting the documented cinematic sub-state byte
+  `gGameSettings+0x21`. Both arms independently passed the whole-RDRAM
+  positive control at 10,000 callbacks; the target write marker fired, and
+  callback plus VI-poll traces both stayed at width 320/origin `0x006dd280`
+  for 75 seconds / 4,499 VI frames. H2 is selected for this target; the next
+  justified state-byte route is the documented mission sub-state byte
+  `gGameSettings+0x22`.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -196,11 +204,10 @@ in the ledger. Reviewed through s1219 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Probe the separately documented cinematic sub-state byte
-   `gGameSettings+0x21` (`0x80130B61`, physical word write
-   `0x130B60:0x00010000`) with the same paired whole-RDRAM/PIF/VI controls.
-   Use a phase-gated later width/origin outcome; do not arm M4 watches unless
-   a later phase is reached.
+1. Probe the separately documented mission sub-state byte `gGameSettings+0x22`
+   (`0x80130B62`, physical word write `0x130B60:0x00000100`) with the same
+   paired whole-RDRAM/PIF/VI controls. Use a phase-gated later width/origin
+   outcome; do not arm M4 watches unless a later phase is reached.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -306,6 +313,7 @@ order.
 | s1216 | Continuous Start from 6s and the eleven-pulse control both passed whole-RDRAM/PIF/VI controls but remained at VI 320/origin `0x006dd280`; this hold variation does not provide later retail entry. |
 | s1217 | DEBUGGER=1 core write/read/resume path validated with a harmless RDRAM word; paired oracle arms passed whole-RDRAM/PIF/VI controls. Refutes H3 (control-disruption/absent control) and closes the control-surface question; H1/H2 remain open pending a state-changing target. |
 | s1218 | Checkpoint-recovery only: restated s1217 in gate-recognized terms, no new experiment. |
+| s1220 | `gGameSettings+0x21` target write passed whole-RDRAM and VI controls but both arms stayed at width 320/origin `0x006dd280`; cinematic sub-state target did not change retail entry. |
 
 ## Method and safety rules
 
