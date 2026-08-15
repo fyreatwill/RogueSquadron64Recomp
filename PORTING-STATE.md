@@ -67034,3 +67034,28 @@ sample-stream cache list that s1316's initializer created. H2 and H3 are
 ruled out for this function; there is neither a partial/conflicting match nor
 an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1318 (2026-08-15) — synchronized the sample-stream recycle symbol
+
+Performed the bounded exact-name census over `0x8008F9C8..0x8008FAAC`.
+
+No new soak-queue verdicts since s1317; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008F9C8`, size `0xE4`; it ends exactly at the next generated function, `0x8008FAAC`. Overlay `rom_size` is `0xE4` |
+| Generated definition | `funcs_23.c` defines `recycleSampleStreamBlock` at `0x8008F9C8` through the matching epilogue at `0x8008FAA4`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `recycleSampleStreamBlock = 0x8008F9C8`. No later companion list remaps this address |
+| Caller evidence | No generated `jal 0x8008F9C8` in the RecompiledFuncs corpus. The independently named siblings `initSampleStreamBlockCache` (s1316) and `moveSampleBlockToFront` (s1317) own the same list heads; `fillSampleStreamRange` walks the head at `0x801499B4` |
+| Semantic evidence | Body first pops an unused node from the pool cursor at `0x801499CC` (initialized by s1316) and inserts it as the cache head; if that cursor is empty it unlinks the tail at `0x801499E4` and moves that LRU node to the head at `0x801499B4`, returning the recycled node in `v0` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0xE4` boundary is exact, and the body recycles a sample-stream cache
+block from the unused pool or the LRU tail onto the list s1316 created. H2
+and H3 are ruled out for this function; there is neither a partial/conflicting
+match nor an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
