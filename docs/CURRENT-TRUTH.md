@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1434 (2026-08-15).
+the authority for session detail. Reviewed through s1435 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1434 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80098E84..0x80098EEC`.
+   census over the next adjacent function, `0x80098EEC..0x80098FA8`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -303,6 +303,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1432 | Exact companion/generated 3D-source census synchronized `play3DSoundEvent` at `0x800989D8`; no build or runtime run. |
 | s1433 | Exact companion/generated 3D-source census synchronized `play3DSoundEventVariant` at `0x80098BDC`; no build or runtime run. |
 | s1434 | Exact companion/generated list-unlink census synchronized `factor5RemoveListNode` at `0x80098DE0`; no build or runtime run. |
+| s1435 | Exact companion/generated MusyX-gate census synchronized `mostlyMusyxFlagGatedHelper` at `0x80098E84`; no build or runtime run. |
 
 ## Method and safety rules
 

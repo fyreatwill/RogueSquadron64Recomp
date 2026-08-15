@@ -70398,3 +70398,36 @@ as were `fake_func_8009711C`, `fake_func_80094348`,
 runtime run was justified for an exact-name census. This does not
 reopen M5 audio de-stubbing. The next adjacent generated function is
 the independently named `mostlyMusyxFlagGatedHelper` at `0x80098E84`.
+
+## Session 1435 (2026-08-15) — synchronized the mostly-musyx-flag-gated-helper symbol
+
+Performed the bounded exact-name census over `0x80098E84..0x80098EEC`.
+
+No new soak-queue verdicts since s1434; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80098E84`, size `0x68`; `0x80098E84+0x68=0x80098EEC`. Overlay `rom_size` is `0x68` at offset `0x00098A44` (`0x80098E84-0x80000440`). Generated body starts `lui $v0, 0x800A` / `lbu 0xF50` at `0x80098E84` and ends `jr $ra` / `nop` at `0x80098EE4` / `0x80098EE8` |
+| Generated definition | `funcs_26.c` defines `mostlyMusyxFlagGatedHelper` at `0x80098E84`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x68` function between independently named `factor5RemoveListNode` at `0x80098DE0` and generated `tickAndReap3DAudioVoices` at `0x80098EEC` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `mostlyMusyxFlagGatedHelper = 0x80098E84` as a MusyX-active-gated helper: reads `gMusyXActiveFlag` at `0x800A0F50` (same gate as `tickMusyXIfActive`), early-returns when MusyX is inactive, otherwise works on caller-supplied `a0`. Menu, mission, cinematic, and ignored lists do not remap `0x80098E84`. No conflicting companion name |
+| Caller evidence | Exactly 7 generated `jal 0x80098E84` sites in 6 independently named enclosing functions: `npcTieVariantHandleDestruction` (1), `npcTieVariantUpdate` (1), `tickHudInstanceTargetingAndSpawns` (2), `hangarTickCameraOrbit` (1), `attached3DSoundEmitterNpcHandler` (1), and `npcTurretUpdate` (1). Zero `func_*` callers. Companion comment says "4 callers"; the extra three sites are the same 3D-audio object/handle pattern, not a conflicting name |
+| Semantic evidence | Body loads `gMusyXActiveFlag` (`0x800A0F50`) and returns `-1` if zero. When active it `factor5MutexAcquire`s, tests bit `0x10000` of word `a0+0x8`, and if set loads `a0+0x34` as the return value (else leaves `-1`). Then `factor5MutexRelease`. Callers pass a 3D-audio object (`s1+0x40`, `s0`, `a0+0x228`, `s1+0x8`, `s1+0x8C`) and feed `v0` into independently named `safeLookup3DSoundEntry` or `spreadVoiceByteParamLocked`. That matches the companion MusyX-gate / `a0` comment; the `+0x34` handle return is additional, not a conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80098E84`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x68`, all 7 `jal` callers are independently named 3D-audio/NPC/hangar
+sites, and there is neither a conflicting companion name nor a size
+split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x68`). `fake_func_80097D58` remains the already-fake two-instruction
+epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`tickAndReap3DAudioVoices` at `0x80098EEC`.
