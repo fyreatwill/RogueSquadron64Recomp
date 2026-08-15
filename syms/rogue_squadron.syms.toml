@@ -1392,7 +1392,7 @@ functions = [
     { name = "musyxInitVoiceFromSample", vram = 0x80092128, size = 0x14C },
     { name = "musyxStartVoiceRelease", vram = 0x80092274, size = 0x50 },
     { name = "musyxStoreVoiceAdsrParams", vram = 0x800922C4, size = 0x58 },
-    { name = "func_8009231C", vram = 0x8009231C, size = 0x4C },
+    { name = "musyxTriggerVoiceAttack", vram = 0x8009231C, size = 0x4C },
     { name = "func_80092368", vram = 0x80092368, size = 0x20 },
     { name = "func_80092388", vram = 0x80092388, size = 0x8 },
     { name = "func_80092390", vram = 0x80092390, size = 0x54 },

@@ -67586,3 +67586,28 @@ H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio de-stubbing.
+
+## Session 1340 (2026-08-15) — synchronized the musyx-trigger-voice-attack symbol
+
+Performed the bounded exact-name census over `0x8009231C..0x80092368`.
+
+No new soak-queue verdicts since s1339; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8009231C`, size `0x4C`; it ends exactly at the next generated function, `0x80092368`. Overlay `rom_size` is `0x4C` |
+| Generated definition | `funcs_24.c` defines `musyxTriggerVoiceAttack` at `0x8009231C`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxTriggerVoiceAttack = 0x8009231C` with the annotated contract `key-on trigger: +0x0=1 active, zero env accumulators, +0x64=1.0f, +0x28->+0x58` and names the next function `musyxStopVoice` at `0x80092368` |
+| Caller evidence | Two generated `jal 0x8009231C` sites. `tickAllAudioChannels` at `0x8008C9AC` (already synchronized) calls it from `0x8008CE7C` with voice index in `a0` from `$s6` after setting the channel flag word's 0x10 bit. `startStreamedSampleVoice` at `0x80097FE8` calls it from `0x80098194` with voice index in `a0` from `$s0` after pitch-bend and modulation setup |
+| Semantic evidence | Slot index is `voiceIdx * 0x88` against the voice-array base at `0x801496F8`. The body zeros `+0x6C`/`+0x60`/`+0x68`/`+0x5C`, stores the `0x8003DE60` float into `+0x64`, writes `1` to `+0x0`, and copies halfword `+0x28` to `+0x58`. That is exactly the companion key-on trigger contract |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x4C` boundary is exact, and the body is the key-on voice-slot writer.
+H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio de-stubbing.
