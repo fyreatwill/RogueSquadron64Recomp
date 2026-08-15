@@ -66909,3 +66909,26 @@ the song decode/sample buffers. H2 and H3 are ruled out for this function;
 there is neither a partial/conflicting match nor an absent independent name.
 The stale address-encoded TOML entry was synchronized. No build or runtime
 run was justified for an exact-name census.
+
+## Session 1313 (2026-08-15) — synchronized the volume-fade envelope symbol
+
+Performed the bounded exact-name census over `0x8008F4D8..0x8008F65C`.
+
+No new soak-queue verdicts since s1312; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008F4D8`, size `0x184`; it ends exactly at the next generated function, `0x8008F65C`. Overlay `rom_size` is `0x184` |
+| Generated definition | `funcs_23.c` defines `advanceVolumeFadeEnvelope` at `0x8008F4D8` through the matching epilogue at `0x8008F654`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `advanceVolumeFadeEnvelope = 0x8008F4D8`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x8008F4D8` in `musyxRenderVoiceSamples` at `0x800908E8`. Companion independently names that per-voice mix kernel `musyxRenderVoiceSamples = 0x8008FFAC` |
+| Semantic evidence | Body is a four-state fade machine on `+0x6C`. It interpolates start/target floats at `+0x68`/`+0x64` into the current volume at `+0x5C` and advances elapsed time at `+0x60` by a rate-scaled increment from `a1` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x184` boundary is exact, the only caller is the independently named
+per-voice mix kernel, and the body advances a volume fade envelope. H2 and H3
+are ruled out for this function; there is neither a partial/conflicting match
+nor an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
