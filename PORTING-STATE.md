@@ -65389,3 +65389,25 @@ oracle comparison. No build or run was performed.
 
 ORIGIN: save directory, installed Mupen64Plus 2.6.0 source bundle, and
 `/opt/homebrew/share/mupen64plus/mupen64plus.ini`. No mitigation was added.
+
+## Session 1231 (2026-08-14) — compared existing and blank retail EEPROM state
+
+Ran the planned phase-gated paired retail oracle comparison without building.
+The existing arm used the configured selected EEPROM directory; the blank arm
+used an isolated `SaveSRAMPath` containing a same-named 512-byte zero-filled
+EEPROM. Both arms used the documented eleven-Start schedule, whole-RDRAM
+positive control, VI polling/trace, and PIF trace.
+
+Both arms passed the positive control at its 10,000-hit cap, logged all eleven
+Start press/release pairs through PIF reads, and completed about 7,200 VI
+frames in 120 seconds. Both showed the same initial transitions, 0 -> 320 at
+origin `0x00000280` and then 320 at origin `0x006dd280`, with no later phase
+transition. The blank file remained exactly 512 bytes and zero-filled.
+
+This selects H2: the selected nonblank EEPROM contents do not cause the
+missing retail transition. It rules out the tested persistent-state cause,
+but does not identify the remaining external retail-entry boundary.
+
+ORIGIN: independent retail execution under the DEBUGGER=1 Mupen64Plus core,
+with controls from whole-RDRAM writes, VI polling, and PIF reads. No
+mitigation, build, or runtime code change was made.

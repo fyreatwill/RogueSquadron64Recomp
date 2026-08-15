@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1230 (2026-08-14).
+in the ledger. Reviewed through s1231 (2026-08-14).
 
 ## Current state
 
@@ -239,11 +239,12 @@ in the ledger. Reviewed through s1230 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. The s1230 save-media audit found a selected USA v1.0 4 KiB EEPROM and an
-   existing legacy-path 512-byte file with 164 nonzero bytes, selecting H1 for
-   nonblank persistent state. This does not prove that the state causes the
-   missing transition; next is a phase-gated paired retail comparison using
-   the existing file versus a temporary blank EEPROM path.
+1. The s1231 phase-gated EEPROM comparison passed whole-RDRAM, PIF, and VI
+   controls in both arms. The existing nonblank EEPROM and an isolated
+   same-named 512-byte zero-filled EEPROM both stayed at VI 320/origin
+   `0x006dd280` for 120 seconds. Persistent EEPROM contents are not the cause
+   of the missing retail transition; the external retail-entry boundary remains
+   open.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -304,6 +305,11 @@ order.
   are closed by the generated descriptor chain and independent retail controls.
 - The old boot/menu overlay-dispatch explanation is closed by the current
   mission/post-sec2 behavior and is no longer the active blocker.
+- The s1230 claim that the selected nonblank EEPROM was the leading cause of
+  the missing retail transition was superseded by s1231. It was believable
+  because the file was selected by the ROM database and contained structured
+  nonblank data, but replacing it with an isolated zero-filled 512-byte file
+  produced the same phase-gated VI result with positive controls intact.
 
 ## Evidence ledger summary
 
@@ -358,6 +364,7 @@ order.
 | s1228 | Bounded source audit found the oracle performs `ROM_OPEN` then `M64CMD_EXECUTE`, attaches input only for scheduled presses, and performs optional save/load only after five seconds. The port enters directly through `recomp_entrypoint` and the same static boot-config callback chain. No source-visible external event bridges the oracle's 320 phase to later retail entry; H2 selected. No build or run. |
 | s1229 | Installed Mupen64Plus 2.6.0 UI source confirms `CoreStartup` → `ROM_OPEN` → plugin attach → optional `STATE_LOAD` only for `--savestate` → `EXECUTE`; no reset, EEPROM injection, or alternate entry command exists. Core ROM-open code does load save media via its ROM database/config, leaving actual EEPROM contents as the next boundary. H2 selected for the external-command hypothesis. No build or run. |
 | s1230 | The actual save directory contains one 512-byte EEPROM file with 164 nonzero bytes and no `0xff` bytes. Its `-47CAC4E2` suffix matches the ROM's MD5 key; the ROM database selects USA v1.0 with `Eeprom 4KB`, and the core's old-goodname path loads an existing `.eep` before the fallback path, then truncates non-16K EEPROM to 0x200. H1 is selected for nonblank, selected persistent state; whether these bytes cause retail entry remains open. No build or run. |
+| s1231 | Paired phase-gated retail oracle arms used the existing selected EEPROM versus an isolated same-named 512-byte zero-filled EEPROM. Both passed the whole-RDRAM control (10,000 capped writes), 11 PIF-confirmed Start press/release pairs, and VI polling; both had the same 0→320/origin `0x280` then 320/origin `0x006dd280` transitions and completed about 7,200 VI frames. H2 selected: EEPROM contents do not cause the missing retail transition. |
 
 ## Method and safety rules
 
