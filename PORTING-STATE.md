@@ -66401,3 +66401,23 @@ support the dispatcher role. H2 and H3 are ruled out for this function; there
 is neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1291 (2026-08-15) — synchronized the simple audio-command wrapper symbol
+
+Performed the bounded exact-name census over `0x8008E0B0..0x8008E120`.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E0B0`, size `0x70`; it ends exactly at the next generated function, `0x8008E120` |
+| Generated definition | `funcs_23.c` defines `playSimpleAudioCmd` at `0x8008E0B0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `playSimpleAudioCmd = 0x8008E0B0` |
+| Caller evidence | Thirty-three generated call sites invoke the wrapper; the companion pause-menu reconstruction calls it with the UI-sound tuple `(0x7F, 0, 0xA)` |
+| Semantic evidence | When MusyX is active, the body acquires the Factor 5 mutex, narrows its three inputs, calls `dispatchAudioCommand` with a zero fourth argument, and releases the mutex |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x70` boundary is exact, and caller plus body evidence supports the simple
+audio-command wrapper role. H2 and H3 are ruled out for this function; there
+is neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
