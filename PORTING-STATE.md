@@ -69979,3 +69979,35 @@ unchanged, as were `fake_func_8009711C`, `fake_func_80094348`,
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `serviceStreamedVoices` at `0x80097DA8`.
+
+## Session 1422 (2026-08-15) — synchronized the service-streamed-voices symbol
+
+Performed the bounded exact-name census over `0x80097DA8..0x80097F54`.
+
+No new soak-queue verdicts since s1421; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80097DA8`, size `0x1AC`; `0x80097DA8+0x1AC=0x80097F54`. Overlay `rom_size` is `0x1AC` at offset `0x00097968` (`0x80097DA8-0x80000440`). Generated body starts `lui $v0, 0x8014` at `0x80097DA8` and ends `jr $ra` / `nop` at `0x80097F4C` / `0x80097F50` |
+| Generated definition | `funcs_26.c` defines `serviceStreamedVoices` at `0x80097DA8`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x1AC` function between independently named `clearStreamedVoiceFlags` at `0x80097D60` and generated `flushStreamedVoiceBuffers` at `0x80097F54` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `serviceStreamedVoices = 0x80097DA8` in the sequential streamed-voice family, immediately after `clearStreamedVoiceFlags` and before `flushStreamedVoiceBuffers`. Menu, mission, cinematic, and ignored lists do not remap `0x80097DA8`. No conflicting companion name |
+| Caller evidence | One generated `jal 0x80097DA8` in independently named `musyxSynthFrame` at `0x800917D0`. The call is gated on `gMusyXActiveFlag` (`MEM_BU[0x800A0F50]`): `beq $v1, $zero` skips the service when MusyX is inactive. Companion comments already describe `musyxSynthFrame` as the per-frame synth tick |
+| Semantic evidence | Body loads the slot/mode count at `MEM_BU[0x80141AD0]` (the same count used by independently named `clearStreamedVoiceFlags`, `tickAllAudioChannels`, and `anyAudioSlotActive`), then walks the `0x18`-stride records at `0x80152A20`. For each slot whose flag byte is `1`, it calls `getVoiceUserField(slot)`, compares the returned sample cursor against the record `+0x10` cursor, dispatches the `+0x4` callback over the sample buffer at `+0x8`, writebacks via `writebackDCacheHalfwords`, and stores the new cursor. That is a per-frame streamed-voice buffer service. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80097DA8`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x1AC`, the single `jal` caller matches the per-frame MusyX-active service
+role, and there is neither a conflicting companion name nor a size split. H2
+and H3 are ruled out for this address. The stale address-encoded TOML entry
+was synchronized (name only; size left at `0x1AC`). `fake_func_80097D58`
+remains the already-fake two-instruction epilogue fragment and was left
+unchanged, as were `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `flushStreamedVoiceBuffers` at `0x80097F54`.
