@@ -69851,3 +69851,35 @@ unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is the independently named `returnZeroAudioStub` at
 `0x80097AC8`.
+
+## Session 1418 (2026-08-15) — synchronized the return-zero-audio-stub symbol
+
+Performed the bounded exact-name census over `0x80097AC8..0x80097AD0`.
+
+No new soak-queue verdicts since s1417; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80097AC8`, size `0x8`; `0x80097AC8+0x8=0x80097AD0`. Overlay `rom_size` is `0x8` at offset `0x00097688` (`0x80097AC8-0x80000440`). Generated body is `jr $ra` at `0x80097AC8` with delay `addu $v0, $zero, $zero` at `0x80097ACC` |
+| Generated definition | `funcs_26.c` defines `returnZeroAudioStub` at `0x80097AC8`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x8` function between already-named `unloadLastSndFileGroup` (`jr`/`nop` at `0x80097AC0`/`0x80097AC4`) and generated `playSongByIdLockCtl` at `0x80097AD0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `returnZeroAudioStub = 0x80097AC8` in the final-pass stub list, independently of the already-synchronized sibling `audioStubReturnZero` at `0x80092120`. Menu, mission, cinematic, and ignored lists do not remap `0x80097AC8`. No conflicting companion name |
+| Caller evidence | No generated `jal 0x80097AC8` site; `find_callers.py` against `RecompiledFuncs` returned none. The similarly named `audioStubReturnZero` at `0x80092120` remains the `anyAudioSlotActive` early-true stub (s1336). A `lui 0x800A` / `addiu 0x7AC8` site at `0x800CB64C` builds `0x800A7AC8`, not this address |
+| Semantic evidence | Body is a two-instruction stub that always writes `$v0 = 0` and returns. That is exactly the companion name. Distinct address and independently assigned name from `audioStubReturnZero`. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80097AC8`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x8`, and there is neither a conflicting companion name nor a size split.
+Absence of a `jal` caller does not select H2; the independent name and
+zero-return body still match. H2 and H3 are ruled out for this address. The
+stale address-encoded TOML entry was synchronized (name only; size left at
+`0x8`). `fake_func_8009711C` remains the already-fake one-instruction jump
+fragment and was left unchanged, as were `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C`. No build or runtime run was justified
+for an exact-name census. This does not reopen M5 audio de-stubbing. The
+next adjacent generated function is the independently named
+`playSongByIdLockCtl` at `0x80097AD0`.
