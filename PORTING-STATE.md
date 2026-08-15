@@ -64572,3 +64572,13 @@ probe, or mitigation was added.
 
 ORIGIN: complete generated `MEM_WU` inventory and host accessor contract;
 reviewed loads are bounded or unrelated, and no mitigation was added.
+## Session 1188 (2026-08-14) — audited generated doubleword loads
+
+The complete generated `MEM_D`/`LD` census found 1,404 references: 1,247
+`r29` frame restores and 157 non-`r29` loads. Only 11 load directly into GPRs;
+the remaining loads feed floating-point state. The non-frame GPR loads are in
+bounded decode/audio or malformed/data-like blocks, with no reachable chain to
+a store overlapping the `slotDispatcherIter` saved frame. `LD` reconstructs
+two exact guest words at the computed address through `MEM_W`; it adds no
+address or span broadening. H3 selected. No build, runtime run, or mitigation
+was performed.

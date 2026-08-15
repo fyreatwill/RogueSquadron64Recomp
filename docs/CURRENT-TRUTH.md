@@ -551,6 +551,7 @@ corruption.
 | s1185 | Completed the generated narrow-store audit without building or running. There are 23,128 `MEM_H`/`MEM_HU`/`MEM_B`/`MEM_BU` references and 351 stores in the 72 target callers, including 83 caller-`r29` stores; all are caller-local or bounded object/global writes with no span covering the callee's saved frame. The four host macros preserve the computed address and exact byte/halfword span. H3 selected; no mitigation added. |
 | s1186 | Completed the generated `MEM_W` audit without building or running. There are 3,633 word stores in the 72 target callers; all caller-`r29` stores use nonnegative offsets outside the callee's saved frame, and the non-`r29` stores are bounded object/global or unrelated paths with no stack-derived negative alias. The host macro is an exact four-byte write. H3 selected; no mitigation added. |
 | s1187 | Completed the generated `MEM_WU` load audit without building or running. Five loads were classified: two bounded texture-row assembly loads, one unrelated OS/global-mask load, and two unrelated audio-generated loads (one after an explicit return, one in a malformed tail). The `MEM_WU` macro is an exact unsigned four-byte access matching the computed guest address. H3 selected; no mitigation added. |
+| s1188 | Completed the generated `MEM_D`/`LD` audit without building or running. There are 1,404 references: 1,247 `r29` frame restores and 157 non-`r29` loads. Only 11 load directly into GPRs; the rest feed floating-point state. The non-frame GPR loads are bounded decode/audio or malformed/data-like blocks with no reachable edge to a frame-overlapping store. `LD` reconstructs exactly two guest words at the computed address, with no host-side span broadening. H3 selected; no mitigation added. |
 
 ## Ranked next steps
 
@@ -560,7 +561,7 @@ corruption.
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
 2. Continue the M3 systematic static audit with the next complete generated
-   load idiom: enumerate `MEM_D`/`LD` loads and their address/value consumers.
+   partial-load idiom: enumerate `do_ldl`/`do_ldr` and their consumers.
    Classify every site for a target-path pointer or frame-overlapping writer;
    do not add a guard unless a reachable writer edge is established.
 
