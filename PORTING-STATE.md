@@ -67611,3 +67611,28 @@ H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio de-stubbing.
+
+## Session 1341 (2026-08-15) — synchronized the musyx-stop-voice symbol
+
+Performed the bounded exact-name census over `0x80092368..0x80092388`.
+
+No new soak-queue verdicts since s1340; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092368`, size `0x20`; it ends exactly at the next generated function, `0x80092388`. Overlay `rom_size` is `0x20` |
+| Generated definition | `funcs_24.c` defines `musyxStopVoice` at `0x80092368`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxStopVoice = 0x80092368` with the annotated contract `immediate stop: clear voice-slot +0x1 playing sub-flag` and names the next named function `musyxSetVoicePitchBend` at `0x80092390` (the intervening 8-byte island is the address-encoded stub `noopHandler_80092388`) |
+| Caller evidence | One generated `jal 0x80092368` site: `tickAllAudioChannels` at `0x8008C9AC` (already synchronized) calls it from `0x8008CED0` with voice index in `a0` from `$s6` after the 0x80 channel-flag stop path. That is the same `$s6` voice index the same function passed to `musyxTriggerVoiceAttack` at `0x8008CE7C` |
+| Semantic evidence | Slot index is `voiceIdx * 0x88` against the voice-array base at `0x801496F8`. The body stores `0` to byte `+0x1`. That is exactly the companion immediate-stop contract |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x20` boundary is exact, and the body is the voice-slot `+0x1` clearer.
+H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio de-stubbing.
