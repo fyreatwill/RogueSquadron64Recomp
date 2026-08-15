@@ -66507,3 +66507,26 @@ locked fader-ramp wrapper. H2 and H3 are ruled out for this function; there
 is neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run
 was justified for an exact-name census.
+
+## Session 1296 (2026-08-15) — synchronized the audio-fader-state symbol
+
+Performed the bounded exact-name census over `0x8008E54C..0x8008E57C`.
+
+No new soak-queue verdicts since s1295; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E54C`, size `0x30`; it ends exactly at the next generated function, `0x8008E57C`. Overlay `rom_size` is `0x30` |
+| Generated definition | `funcs_23.c` defines `setAudioFaderState` at `0x8008E54C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setAudioFaderState = 0x8008E54C` |
+| Caller evidence | Three generated `jal 0x8008E54C` sites: `musyxSetSequenceParamLocked` (`0x800881A8`, `a1=3`), `startSongSequence` (`0x8009457C`, `a1=0`), and `setSongChannelParamByHandle` (`0x80096688`, `a1=2`). All pass a `u8` slot index in `a0` and a discrete state byte in `a1` |
+| Semantic evidence | Body gates on the MusyX-active byte at `0x800A0F50`. If set, it indexes the `0x28`-byte fader table at `0x80141B20` by `a0` and stores `a1` at slot `+0x0C` (`0x80141B2C`). That is the same state byte `isAudioFaderRampActive` tests for value `4` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x30` boundary is exact, and caller plus body evidence supports the
+fader-state setter. H2 and H3 are ruled out for this function; there is
+neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run
+was justified for an exact-name census.
