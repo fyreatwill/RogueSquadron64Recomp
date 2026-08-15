@@ -71361,3 +71361,36 @@ No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is independently named `accumulateVoiceSampleOffset` at
 `0x8009BD7C`.
+
+## Session 1464 (2026-08-15) — synchronized the accumulate-voice-sample-offset symbol
+
+Performed the bounded exact-name census over `0x8009BD7C..0x8009BE08`.
+
+No new soak-queue verdicts since s1463; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009BD7C`, size `0x8C`; `0x8009BD7C+0x8C=0x8009BE08`. Overlay `rom_size` is `0x8C` at offset `0x0009B93C` (`0x8009BD7C-0x80000440`). Generated body starts `addiu $sp, $sp, -0x20` at `0x8009BD7C` and ends `jr $ra` / delay-slot `nop` at `0x8009BE00` / `0x8009BE04` |
+| Generated definition | `funcs_26.c` defines `accumulateVoiceSampleOffset` at `0x8009BD7C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x8C` function between independently named `shutdownMusyXVoices` at `0x8009BCC4` and independently named `dmaVoiceSampleAndSignal` at `0x8009BE08` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `accumulateVoiceSampleOffset = 0x8009BD7C`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009BD7C`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Zero generated `jal 0x8009BD7C` sites and zero `func_*` callers. Exactly one address constructor: independently named `serviceVoicePoolFrame` at `0x8009B774`/`0x8009B778` builds `0x800A0000-0x4284=0x8009BD7C` and stores it at `0x20($sp)` for independently named `startStreamedSampleVoice`. That callee loads the incoming stack word at `0x88($sp)` into `$s4` and writes it to `0x80152A24` plus the per-voice stride. Matches a callback install, not a missing mapping |
+| Semantic evidence | Gates on independently named `speechFileLoaded` at `0x800A5121`. When set, multiplies the stack slot index (`0x30($sp)` after the `0x20` frame, the fifth argument) by stride `0x1228`, forms `0x80153420+offset`, calls independently named `consumeVoiceSamples` (`0x8009C240`) with that slot and `$a1+$a3`, then reads/writes `0x8015463C+offset` as `old+(a1+a3)`. Returns zero on both the gated and active paths. Matches the companion accumulate-offset name |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009BD7C`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x8C`, the independently named callback installer and sample-offset field
+match, and there is neither a conflicting companion name nor a size split.
+H2 and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x8C`). `fake_func_80099FDC`
+remains the already-fake one-word `bne` gap and was left unchanged, as were
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is independently named `dmaVoiceSampleAndSignal` at
+`0x8009BE08`.

@@ -1521,7 +1521,7 @@ functions = [
     { name = "initMusyXVoiceTable", vram = 0x8009BBA0, size = 0xE8 },
     { name = "findFreeSpeechVoiceSlot", vram = 0x8009BC88, size = 0x3C },
     { name = "shutdownMusyXVoices", vram = 0x8009BCC4, size = 0xB8 },
-    { name = "func_8009BD7C", vram = 0x8009BD7C, size = 0x8C },
+    { name = "accumulateVoiceSampleOffset", vram = 0x8009BD7C, size = 0x8C },
     { name = "func_8009BE08", vram = 0x8009BE08, size = 0x38 },
     { name = "func_8009BE40", vram = 0x8009BE40, size = 0xD4 },
     { name = "func_8009BF14", vram = 0x8009BF14, size = 0x32C },
