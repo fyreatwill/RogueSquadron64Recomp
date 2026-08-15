@@ -1487,7 +1487,7 @@ functions = [
     { name = "stopStreamedVoice", vram = 0x80098298, size = 0x78 },
     { name = "compute3DSourceSpatialMix", vram = 0x80098310, size = 0x37C },
     { name = "applyVoice3DMixParams", vram = 0x8009868C, size = 0x25C },
-    { name = "func_800988E8", vram = 0x800988E8, size = 0xD0 },
+    { name = "updateActive3DAudioSource", vram = 0x800988E8, size = 0xD0 },
     { name = "func_800989B8", vram = 0x800989B8, size = 0x20 },
     { name = "func_800989D8", vram = 0x800989D8, size = 0x204 },
     { name = "func_80098BDC", vram = 0x80098BDC, size = 0x204 },

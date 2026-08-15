@@ -70235,3 +70235,35 @@ and `func_8008ED6C`. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `updateActive3DAudioSource` at `0x800988E8`.
+
+## Session 1430 (2026-08-15) — synchronized the update-active-3d-audio-source symbol
+
+Performed the bounded exact-name census over `0x800988E8..0x800989B8`.
+
+No new soak-queue verdicts since s1429; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800988E8`, size `0xD0`; `0x800988E8+0xD0=0x800989B8`. Overlay `rom_size` is `0xD0` at offset `0x000984A8` (`0x800988E8-0x80000440`). Generated body starts `lui $v0, 0x800A` at `0x800988E8` (loads `gMusyXActiveFlag` at `0x800A0F50` before the stack frame) and ends `jr $ra` / `nop` at `0x800989B0` / `0x800989B4` |
+| Generated definition | `funcs_26.c` defines `updateActive3DAudioSource` at `0x800988E8`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xD0` function between independently named `applyVoice3DMixParams` at `0x8009868C` and generated `isAudioVoiceActive` at `0x800989B8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `updateActive3DAudioSource = 0x800988E8` as the counterpart to `play3DSoundEvent` that updates an already-playing source. Menu, mission, cinematic, and ignored lists do not remap `0x800988E8`. No conflicting companion name. A later sequential list places `tickAndReap3DAudioVoices` at `0x80098EEC`; that is a later function, not a second mapping of this address |
+| Caller evidence | Exactly 33 generated `jal 0x800988E8` sites, matching the companion caller count. Hosts include companion-named NPC/update paths (`audioCueDispatcherNpcHandler`, `guidedEffectNpcHandler`, `npcPowerGeneratorUpdate`, `npcWordDevastatorUpdate`, `npcShieldGeneratorUpdate`, `npcVortexUpdate`, `updatePositionalAudioSource`, `hangarTickCameraOrbit`, `tickCutsceneObject`, `attached3DSoundEmitterNpcHandler`, `npcTurretUpdate`, `npcAtAtUpdate`, `npcAtStUpdate`, `npcShuttleUpdate`, `npcWingmanUpdateEngineAudio`, `npcTieVariantUpdate`, `tickHudInstanceTargetingAndSpawns`, and others). All are live 3D-source position/velocity update sites, not allocators |
+| Semantic evidence | Body gates on `gMusyXActiveFlag` (`0x800A0F50`), then calls independently named `factor5MutexAcquire` (`0x80092010`) / `factor5MutexRelease` (`0x8009205C`). It copies `a1` vec3 into entry `+0xC/+0x10/+0x14` (position), `a2` vec3 into `+0x18/+0x1C/+0x20` (velocity), and converts `a3` as a u8 divided by the float at `0x8003DEC0` into `+0x28` and conditionally `+0x2C` (pan). That is an in-place spatial-source field update, not a play, mix, or stream helper. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800988E8`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xD0`, the 33 `jal` callers are 3D-source update paths, and there is
+neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0xD0`). `fake_func_80097D58` remains
+the already-fake two-instruction epilogue fragment and was left unchanged,
+as were `fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`isAudioVoiceActive` at `0x800989B8`.
