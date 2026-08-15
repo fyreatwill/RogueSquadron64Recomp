@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1346 (2026-08-15).
+the authority for session detail. Reviewed through s1347 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1346 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x800924F0..0x80092510`.
+   census over the next adjacent function, `0x80092510..0x80092530`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded: s1309 selected H2 for that 4-byte island.
@@ -203,6 +203,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1344 | Exact companion/generated voice-mod census synchronized `setVoiceModulationParams` at `0x800923E4`; no build or runtime run. |
 | s1345 | Exact companion/generated voice-stop census synchronized `stopVoiceMarkRetrigger` at `0x8009244C`; no build or runtime run. |
 | s1346 | Exact companion/generated voice-fade census synchronized `beginVoiceFadeRelease` at `0x80092490`; no build or runtime run. |
+| s1347 | Exact companion/generated voice-slot census synchronized `deactivateVoice` at `0x800924F0`; no build or runtime run. |
 
 ## Method and safety rules
 

@@ -67767,3 +67767,29 @@ partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio
 de-stubbing.
+
+## Session 1347 (2026-08-15) — synchronized the deactivate-voice symbol
+
+Performed the bounded exact-name census over `0x800924F0..0x80092510`.
+
+No new soak-queue verdicts since s1346; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x800924F0`, size `0x20`; it ends exactly at the next generated function, `0x80092510`. Overlay `rom_size` is `0x20` |
+| Generated definition | `funcs_24.c` defines `deactivateVoice` at `0x800924F0`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `deactivateVoice = 0x800924F0`. The same file independently names the adjacent functions `beginVoiceFadeRelease` at `0x80092490` and `tickAudioBufferUpdate` at `0x80092510` |
+| Caller evidence | No generated `jal 0x800924F0` sites. The helper is a 8-instruction leaf; callers, if any, are not static JAL sites in the current recompiled set |
+| Semantic evidence | Body takes `a0` as a voice index, scales it by `0x88` off the voice-array base at `0x801496F8`, and stores `0` at slot `+0`. Same combine as the already-named `musyxStopVoice` at `0x80092368`, which instead stores `0` at slot `+1`. Clearing the first byte of the `0x88`-byte voice record is the documented deactivate/active-flag write |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x20` boundary is exact, and the body is the documented voice-slot
+deactivate write. H2 and H3 are ruled out for this function; there is neither
+a partial/conflicting match nor an absent independent name. Missing static
+JAL sites do not create a naming conflict. The stale address-encoded TOML
+entry was synchronized. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing.
