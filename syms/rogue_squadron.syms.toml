@@ -1387,7 +1387,7 @@ functions = [
     { name = "factor5MutexRelease", vram = 0x8009205C, size = 0x48 },
     { name = "factor5QueueBlock", vram = 0x800920A4, size = 0x2C },
     { name = "factor5QueueSignal", vram = 0x800920D0, size = 0x2C },
-    { name = "func_800920FC", vram = 0x800920FC, size = 0x24 },
+    { name = "isAudioSlotActive", vram = 0x800920FC, size = 0x24 },
     { name = "func_80092120", vram = 0x80092120, size = 0x8 },
     { name = "func_80092128", vram = 0x80092128, size = 0x14C },
     { name = "func_80092274", vram = 0x80092274, size = 0x50 },

@@ -67459,3 +67459,29 @@ by `musyxSynthFrame` to wake the matching `factor5QueueBlock`. H2 and H3 are
 ruled out for this function; there is neither a partial/conflicting match nor
 an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1335 (2026-08-15) — synchronized the audio-slot-active symbol
+
+Performed the bounded exact-name census over `0x800920FC..0x80092120`.
+
+No new soak-queue verdicts since s1334; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x800920FC`, size `0x24`; it ends exactly at the next generated function, `0x80092120`. Overlay `rom_size` is `0x24` |
+| Generated definition | `funcs_24.c` defines `isAudioSlotActive` at `0x800920FC` through the matching epilogue at `0x8009211C`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `isAudioSlotActive = 0x800920FC` and independently names `anyAudioSlotActive` as the OR-aggregate over this helper. The later companion list names `audioStubReturnZero` at `0x80092120` and does not remap `0x800920FC` |
+| Caller evidence | Seven generated `jal 0x800920FC` sites: `stopVoiceByKey` (`0x80086988`), `silenceVoiceSlot` (`0x800869F4`), `findActiveVoiceByKeyPair` (`0x80086C48`), `startNoteOnVoice` (`0x800870BC`), `computeChannelWaitDuration` (`0x80089630`), `tickAudioChannel` (`0x8008C944`), and `anyAudioSlotActive` (`0x8008E5CC`). Companion independently names that last caller as the slot-active aggregate (s1297) |
+| Semantic evidence | Body loads the slot-table base at `*(0x801496F8)` (`lui 0x8015` / `lw -0x6908`), indexes by `a0 * 0x88`, and returns `sltu $zero, byte0`. That is the per-slot active-flag test the companion independently names. The companion comment's table pointer `0x801487F8` does not match the generated load; the name, stride, and return predicate still agree |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x24` boundary is exact, and the body is the per-index audio-slot active
+test used by `anyAudioSlotActive` and the voice-key helpers. H2 and H3 are
+ruled out for this function; there is neither a partial/conflicting match nor
+an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
+
