@@ -70530,3 +70530,36 @@ epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `unlinkMusyXListNode` at `0x80099310`.
+
+## Session 1439 (2026-08-15) — synchronized the unlink-musyx-list-node symbol
+
+Performed the bounded exact-name census over `0x80099310..0x80099394`.
+
+No new soak-queue verdicts since s1438; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80099310`, size `0x84`; `0x80099310+0x84=0x80099394`. Overlay `rom_size` is `0x84` at offset `0x00098ED0` (`0x80099310-0x80000440`). Generated body starts `lui $v0, 0x800A` at `0x80099310` and ends `jr $ra` / `nop` at `0x8009938C` / `0x80099390` |
+| Generated definition | `funcs_26.c` defines `unlinkMusyXListNode` at `0x80099310`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x84` function between independently named `register3DAudioListenerNode` at `0x8009912C` and generated `enqueueSoundInPriorityGroup` at `0x80099394` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `unlinkMusyXListNode = 0x80099310` with a full comment. Menu, mission, cinematic, and ignored lists do not remap `0x80099310`. Sibling `factor5RemoveListNode` at `0x80098DE0` is a different function (list head `0x80153414`, not `0x80153418`). No conflicting companion name |
+| Caller evidence | Exactly one generated `jal 0x80099310` site, inside independently named `teardownAudioListenerNode`: `a0 = 0x80139A80` (`0x80140000-0x6580`). Zero `func_*` callers |
+| Semantic evidence | Body loads `gMusyXActiveFlag` (`0x800A0F50`) and returns 0 if clear. Otherwise `factor5MutexAcquire`s, unlinks `a0` from the doubly-linked list (`next.prev = prev` when next nonzero; `prev.next = next` when prev nonzero; otherwise writes `next` into list head `0x80153418`), `factor5MutexRelease`s, and returns 1. That matches the companion comment and is the inverse of the `register3DAudioListenerNode` insert onto the same head |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80099310`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x84`, the single `jal` caller is the independently named listener
+teardown path, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x84`). `fake_func_80097D58` remains the already-fake two-instruction
+epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`enqueueSoundInPriorityGroup` at `0x80099394`.
