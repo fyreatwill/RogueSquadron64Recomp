@@ -1463,7 +1463,7 @@ functions = [
     { name = "playSongIfMusyXActive", vram = 0x80096C88, size = 0x5C },
     { name = "isSongHandleFree", vram = 0x80096CE4, size = 0x24 },
     { name = "tickAllActiveSongs", vram = 0x80096D08, size = 0x380 },
-    { name = "func_80097088", vram = 0x80097088, size = 0x94 },
+    { name = "initSongSequencerPools", vram = 0x80097088, size = 0x94 },
     { name = "fake_func_8009711C", vram = 0x8009711C, size = 0x4 },
     { name = "func_80097120", vram = 0x80097120, size = 0x10 },
     { name = "func_80097130", vram = 0x80097130, size = 0xB8 },

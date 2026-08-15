@@ -69541,3 +69541,34 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `initSongSequencerPools` at `0x80097088`.
+
+## Session 1408 (2026-08-15) — synchronized the init-song-sequencer-pools symbol
+
+Performed the bounded exact-name census over `0x80097088..0x8009711C`.
+
+No new soak-queue verdicts since s1407; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80097088`, size `0x94`; `0x80097088+0x94=0x8009711C`. Overlay `rom_size` is `0x94` at offset `0x00096C48` (`0x80097088-0x80000440`). Generated prologue at `0x80097088` (`addu $a0, $zero, $zero` / `addiu $a1, $zero, 0x1`) and `jr $ra` at `0x80097114` with delay `nop` at `0x80097118` |
+| Generated definition | `funcs_25.c` defines `initSongSequencerPools` at `0x80097088`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete two-loop initializer ending at the next generated definition, `fake_func_8009711C` at `0x8009711C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `initSongSequencerPools = 0x80097088` in the sequential `defined:true` list, immediately after already-synchronized `tickAllActiveSongs` and before `bindMacroIdsToSoundGroup`. The annotated `setDisplayMode` comment still writes the address-encoded `func_80097088` as a callee of the boot reset chain and does not remap this function to a different name. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | Three generated `jal 0x80097088` sites, all in independently named functions: `initMusyXEngine` at `0x8008E940` (`0x8008E9C4`), `setDisplayMode` at `0x8008EA14` (`0x8008EB08`), and `reapplyDisplayMode` at `0x8008EB5C` (`0x8008EC50`). Each sits in the same reset chain after `resetSongSubsystemCounter` and before `resetMusyXEngineState`. No other `jal 0x80097088` sites |
+| Semantic evidence | First loop walks 8 song slots (`sltiu $a0, 8`) at stride `0xEF8`, writing `0` to `0x8014A8C0+i*0xEF8` (slot+`0xEC0` active byte at `0x80149A00+0xEC0`) and `1` to slot+`0xEC1`. Then stores pool base `0x801511C0` at `0x801529C4` and links 256 (`0x100`) nodes of stride `0x18` into a freelist (prev at node+4, next at node+0), terminating the tail with `0` and zeroing `0x801499F0`. Matches the companion song-sequencer pool initializer. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80097088`: the companion and
+generated names agree, the body is a complete 8-slot plus 256-node pool
+initializer of matching size `0x94`, and there is neither a conflicting
+companion name nor a size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size left
+at `0x94`). `fake_func_8009711C` is an already-fake one-instruction
+`j L_8009713C` fragment (`do_break`) and was left unchanged, as were
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is
+the independently named `resetSongSubsystemCounter` at `0x80097120`.

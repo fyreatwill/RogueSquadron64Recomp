@@ -1,9 +1,9 @@
-# NEXT work unit (s1408)
+# NEXT work unit (s1409)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x80097088..0x8009711C`. Do not build or run. Record its address,
+function, `0x80097120..0x80097130`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -12,8 +12,9 @@ entries unchanged. Leave `func_8008ED6C` unchanged (s1309 H2),
 (s1357 H3), `func_80092CF0` unchanged (s1359 H3),
 `func_80092F10` unchanged (s1360: TOML-only live-tail fragment),
 `fake_func_80093E74` unchanged (s1369: already-fake epilogue fragment),
-and `fake_func_80094348` unchanged (s1378: already-fake two-instruction
-jump fragment).
+`fake_func_80094348` unchanged (s1378: already-fake two-instruction
+jump fragment), and `fake_func_8009711C` unchanged (s1408: already-fake
+one-instruction jump fragment).
 
 Competing hypotheses and discriminator:
 
@@ -31,7 +32,7 @@ H3.
 Commands:
 
 ```
-grep -n -C 5 '80097088\|8009711C' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '80097088\|8009711C' ../N64Recomp/RecompiledFuncs/funcs_25.c
-grep -n -C 3 '80097088\|8009711C' syms/rogue_squadron.syms.toml
+grep -n -C 5 '80097120\|80097130' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '80097120\|80097130' ../N64Recomp/RecompiledFuncs/funcs_25.c
+grep -n -C 3 '80097120\|80097130' syms/rogue_squadron.syms.toml
 ```
