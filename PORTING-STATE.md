@@ -67009,3 +67009,28 @@ cache. H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1317 (2026-08-15) — synchronized the sample-stream move-to-front symbol
+
+Performed the bounded exact-name census over `0x8008F95C..0x8008F9C8`.
+
+No new soak-queue verdicts since s1316; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008F95C`, size `0x6C`; it ends exactly at the next generated function, `0x8008F9C8`. Overlay `rom_size` is `0x6C` |
+| Generated definition | `funcs_23.c` defines `moveSampleBlockToFront` at `0x8008F95C` through the matching epilogue at `0x8008F9C0`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `moveSampleBlockToFront = 0x8008F95C`. No later companion list remaps this address |
+| Caller evidence | No generated `jal 0x8008F95C` in the RecompiledFuncs corpus. The independently named siblings `initSampleStreamBlockCache` (s1316) and `recycleSampleStreamBlock` own the same list heads; `fillSampleStreamRange` walks that list; `recycleSampleStreamBlock` inlines the same unlink/relink for the tail node |
+| Semantic evidence | Body takes node `a0`, returns if it is already the head at `0x801499B4`, unlinks it from the doubly-linked list (`+0`/`+4`), updates the tail at `0x801499E4` when the node was last, then inserts it as the new head with `prev=0` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x6C` boundary is exact, and the body is a move-to-front on the
+sample-stream cache list that s1316's initializer created. H2 and H3 are
+ruled out for this function; there is neither a partial/conflicting match nor
+an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
