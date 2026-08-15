@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1480 (2026-08-15).
+the authority for session detail. Reviewed through s1481 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1480 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009DC98..0x8009DD3C`.
+   census over the next adjacent function, `0x8009DD3C..0x8009DD54`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -78,11 +78,12 @@ the authority for session detail. Reviewed through s1480 (2026-08-15).
    unchanged (s1478: eight-byte PC-relative Q15 delay-mix table
    `0CCD 2CCD 5333 7FFF`, not a function). s1479 synchronized
    `runVoiceLatticeFilter` at `0x8009D980`. s1480 synchronized
-   `renderVoiceAudioBlock` at `0x8009DB44` (H1; generated already
-   named; TOML was `func_8009DB44`). The generated entry at
-   `0x8009DC98` is already `audioMixStereoBlock8`; TOML is still
-   `func_8009DC98` (size `0xA4`); overlay `rom_size` is `0xA4` and
-   meets independently named `audioMixSampleS16_1_3` at `0x8009DD3C`.
+   `renderVoiceAudioBlock` at `0x8009DB44`. s1481 synchronized
+   `audioMixStereoBlock8` at `0x8009DC98` (H1; generated already
+   named; TOML was `func_8009DC98`). The generated entry at
+   `0x8009DD3C` is already `audioMixSampleS16_1_3`; TOML is still
+   `func_8009DD3C` (size `0x18`); overlay `rom_size` is `0x18` and
+   meets independently named `audioMixSampleS16_1_1` at `0x8009DD54`.
    Confirm companion, size, callers, and semantics before synchronizing.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
@@ -370,6 +371,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1478 | Exact companion/generated voice-delay census synchronized `applyVoiceDelayFilter` at `0x8009D8C4`; left `func_8009D978` as an eight-byte Q15 coefficient pad; no build or runtime run. |
 | s1479 | Exact companion/generated voice-lattice census synchronized `runVoiceLatticeFilter` at `0x8009D980`; no build or runtime run. |
 | s1480 | Exact companion/generated voice-render census synchronized `renderVoiceAudioBlock` at `0x8009DB44`; no build or runtime run. |
+| s1481 | Exact companion/generated stereo-mix census synchronized `audioMixStereoBlock8` at `0x8009DC98`; no build or runtime run. |
 
 ## Method and safety rules
 
