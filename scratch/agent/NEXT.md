@@ -1,29 +1,28 @@
-# NEXT work unit (s1245)
+# NEXT work unit (s1246)
 
-HYPOTHESIS-ID: generated-save-account-naming-sweep
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The external retail-entry dependency remains open. Do not build or run.
-Proceed with one bounded generated-symbol naming sweep over the next helper
-region `0x8007218C..0x80072CE8`, using companion names and generated call sites.
+Proceed with one bounded generated-symbol naming sweep over
+`0x80072CF0..0x80073E4C`, using companion names and generated declarations.
 
 Competing hypotheses and discriminator:
 
-- H1: the remaining helper region has exact companion mappings sufficient to
-  rename a coherent function family without invented semantics.
+- H1: the selected region has exact companion mappings sufficient to rename a
+  coherent helper family.
 - H2: mappings are partial or ambiguous, so only exact names can be safely
-  applied and the remainder stays `func_*`.
+  synchronized and the remainder stays `func_*`.
 - H3: the region has no usable independent naming source and should be parked.
 
-Discriminator: one table covering every `func_*` symbol in the selected region,
-with generated address, companion name/source, callers, and confidence. A
-complete exact mapping selects H1; only a subset safe to rename selects H2;
-absence of independent names selects H3. No code or runtime mitigation is
-justified by this sweep.
+Discriminator: one table covering every generated function in the selected
+range, with address, generated name, companion name/source, callers, and
+confidence. Complete exact agreement selects H1; only a safe subset selects
+H2; no independent names selects H3. No runtime mitigation is justified.
 
 Exact commands:
 
 ```
-rg -n 'RECOMP_FUNC void (func_|fake_func_)|0x800721|0x80072C' ../N64Recomp/RecompiledFuncs/funcs_17.c ../N64Recomp/RecompiledFuncs/funcs_18.c
-rg -n -C 3 '800721|800722|800723|800724|800725|800726|800727|800728|800729|80072A|80072B|80072C' ../rogue_squadron64/symbol_files ../rogue_squadron64/docs docs/game-architecture.md syms
-sed -n '1680,3980p' ../N64Recomp/RecompiledFuncs/funcs_18.c
+sed -n '3920,4750p' ../N64Recomp/RecompiledFuncs/funcs_18.c | rg '^RECOMP_FUNC'
+rg -n '80072CF0|80072EC4|80073750|800739A4|80073BD8|80073E4C' ../rogue_squadron64/symbol_files syms/rogue_squadron.syms.toml
+rg -n -C 3 'initWaterSprayParticles|npcWaterSprayUpdate|spawnDestructionEffectBurst|spawnDistanceScaledDebrisBurst|spawnDirectionalDebrisBurst|distanceAndDopplerNpcHelper' ../rogue_squadron64/symbol_files/main_overlay.txt
 ```

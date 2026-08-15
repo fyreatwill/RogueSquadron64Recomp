@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1244 (2026-08-15).
+in the ledger. Reviewed through s1245 (2026-08-15).
 
 ## Current state
 
@@ -251,7 +251,7 @@ in the ledger. Reviewed through s1244 (2026-08-15).
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
    exact-name sweep over the next adjacent helper region after
-   `0x80071064..0x8007202C`; it needs no external retail-entry artifact. Keep
+   `0x8007218C..0x80072CE8`; it needs no external retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
@@ -359,6 +359,7 @@ order.
 | s1242 | The bounded `0x8006F388..0x8006F4AC` census found four exact companion/generated names and one explicitly fake tail; synchronized `isSaveStateNotPending` in the repository symbol map. H2 selected; no build or run. |
 | s1243 | The bounded `0x8006F6A0..0x800700A8` census found exact companion/generated names for all three functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1244 | The bounded `0x80071064..0x8007202C` census found exact companion/generated names for all five functions and synchronized the repository symbol map. H1 selected; no build or run. |
+| s1245 | The bounded `0x8007218C..0x80072CE8` census found exact companion/generated names for all 13 functions, including one explicitly fake tail, and synchronized 12 stale repository symbol-map entries. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |

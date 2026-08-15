@@ -65654,3 +65654,20 @@ Ran the single bounded generated/companion census for
 entries at those addresses; generated C already used the names. H1 selected.
 No build or runtime run was needed, and the external retail-entry boundary
 remains open.
+
+## Session 1245 (2026-08-15) — synchronized adjacent helper symbol names
+
+Ran the single bounded generated/companion census for
+`0x8007218C..0x80072CE8`. The generated declarations and companion
+`main_overlay.txt` independently agree on 12 exact human names:
+`composeRandomRotationMatrixVariant`, `scaleVec3ByRandomRange`,
+`spawnDebris1Npc`, `spawnOrientedEffectIfBudgetOk`,
+`spawnOrientedEffectIfBudgetOkAlt`, `spawnOrientedNpc`,
+`gameStateByteGatedNpcHelper`, `spawnMultiEventNpcWrapper`,
+`spawnNpcChildForActivePlayerCell`, `sendSlotActionTwelve`,
+`walkDatTreeAndCollectSubtypes`, and `walkDatTreeAndScaleLeafByFloat`.
+The interval's thirteenth entry, `0x80072CE8`, is explicitly
+`fake_func_80072CE8` and remains address-encoded. Synchronized the 12 stale
+repository symbol-map entries; generated C already used these names. H1
+selected. No build or runtime run was needed, and the external retail-entry
+boundary remains open.
