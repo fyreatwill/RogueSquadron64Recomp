@@ -70695,3 +70695,36 @@ epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `reset3DAudioLists` at `0x80099C2C`.
+
+## Session 1444 (2026-08-15) — synchronized the reset-3d-audio-lists symbol
+
+Performed the bounded exact-name census over `0x80099C2C..0x80099C44`.
+
+No new soak-queue verdicts since s1443; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80099C2C`, size `0x18`; `0x80099C2C+0x18=0x80099C44`. Overlay `rom_size` is `0x18` at offset `0x000997EC` (`0x80099C2C-0x80000440`). Generated body starts `lui $at, 0x8015` at `0x80099C2C` and ends `jr $ra` / `nop` at `0x80099C3C` / `0x80099C40` |
+| Generated definition | `funcs_26.c` defines `reset3DAudioLists` at `0x80099C2C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x18` function between independently named `update3DAudioFrame` at `0x800998E8` and generated `noopHandler_80099C44` at `0x80099C44` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `reset3DAudioLists = 0x80099C2C`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x80099C2C`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry. No conflicting companion name |
+| Caller evidence | Exactly three generated `jal 0x80099C2C` sites, all in independently named reset-chain callers: `initMusyXEngine` at `0x8008E9E8`, `setDisplayMode` at `0x8008EB2C`, and `reapplyDisplayMode` at `0x8008EC74`. Each follows `clearStreamedVoiceFlags`. Zero `func_*` callers |
+| Semantic evidence | Body stores zero to `D_80153414` then `D_80153418`. Those are the independently established 3D-source/voice list head and MusyX listener-list head (s905; `factor5RemoveListNode` / `tickAndReap3DAudioVoices` / `update3DAudioFrame` vs `register3DAudioListenerNode` / `unlinkMusyXListNode`). That matches the companion name and the display-mode/MusyX state-reset chain |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80099C2C`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x18`, the three `jal` callers are independently named reset-chain
+paths, and there is neither a conflicting companion name nor a size
+split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x18`). `fake_func_80097D58` remains the already-fake two-instruction
+epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`noopHandler_80099C44` at `0x80099C44`.
