@@ -65591,3 +65591,14 @@ save/account generated-symbol naming sweep. No build or game run.
 
 ORIGIN: adjacent Mupen64Plus frontend source, installed frontend help, local
 savestate file headers, and the audited oracle source. No mitigation.
+## Session 1240 (2026-08-15) — synchronized save-account symbol names
+
+Ran the bounded generated-symbol naming sweep selected by NEXT. The companion
+`rogue_squadron64` symbol files and the current generated `funcs_2.c` and
+`funcs_17.c` independently agreed on 19 exact names covering EEPROM save
+helpers, the save service worker, high-score helpers, and account helpers. The
+repository `syms/rogue_squadron.syms.toml` had those addresses but retained
+`func_*` names (and `loadDefaultHighscores`); synchronized it to the exact
+human names, including `loadDefaultHighScores`. No build or runtime run was
+needed. This rules out H3 for the selected family and leaves no ambiguous
+rename in that table; it does not address the external retail-entry boundary.
