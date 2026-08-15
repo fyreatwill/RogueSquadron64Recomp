@@ -69178,3 +69178,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `quiesceSongSlotCmd` at `0x80095FEC`.
+
+## Session 1396 (2026-08-15) — synchronized the quiesce-song-slot-cmd symbol
+
+Performed the bounded exact-name census over `0x80095FEC..0x800960D0`.
+
+No new soak-queue verdicts since s1395; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80095FEC`, size `0xE4`; `0x80095FEC+0xE4=0x800960D0`. Overlay `rom_size` is `0xE4`. Generated prologue at `0x80095FEC` (`addu $a1, $a0, $zero`; `addu $a0, $zero, $zero`; mask handle with `0x7FFFFFFF`) and `jr $ra` at `0x800960C8` with delay `nop` at `0x800960CC` |
+| Generated definition | `funcs_25.c` defines `quiesceSongSlotCmd` at `0x80095FEC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `quiesceSongSlotCmdLocked` at `0x800960D0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `quiesceSongSlotCmd = 0x80095FEC` in the annotated song-command dispatch block (unconditional quiesce before re-issuing commands) and does not list a second name at this address in the sequential `defined:true` list (that list jumps from already-synchronized `applySongU16ParamCmdLocked` to `quiesceSongSlotCmdLocked`). Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | Three generated `jal 0x80095FEC` sites: independently named `quiesceSongSlotCmdLocked` at `0x800960F4` (mutex wrap) and two sites inside independently named `processSongByHandle` at `0x800969B4` and `0x80096A38`. Companion already names this function as a `processSongByHandle` fan-out applier |
+| Semantic evidence | 8-slot handle scan at base `0x80149A00` stride `0xEF8` (index `*0xEF8` via the `sll 4/subu/sll 5/subu/sll 3` idiom). On a matching handle: store `1` at `slot+0xEC0` (`0x8014A8C0` via `-0x5740($at)`) and clear flag bit `0x08` at `slot+0xEEE` (`0x8014A8EE` via `-0x5712($at)`, `andi 0xF7`). Matches the companion comment exactly. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80095FEC`: the companion and
+generated names agree, the body is a complete song-slot quiesce applier of
+matching size `0xE4`, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at `0xE4`).
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`quiesceSongSlotCmdLocked` at `0x800960D0`.
