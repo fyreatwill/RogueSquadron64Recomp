@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1431 (2026-08-15).
+the authority for session detail. Reviewed through s1432 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1431 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x800989D8..0x80098BDC`.
+   census over the next adjacent function, `0x80098BDC..0x80098DE0`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -300,6 +300,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1429 | Exact companion/generated 3D-mix census synchronized `applyVoice3DMixParams` at `0x8009868C`; no build or runtime run. |
 | s1430 | Exact companion/generated 3D-source census synchronized `updateActive3DAudioSource` at `0x800988E8`; no build or runtime run. |
 | s1431 | Exact companion/generated 3D-source census synchronized `isAudioVoiceActive` at `0x800989B8`; no build or runtime run. |
+| s1432 | Exact companion/generated 3D-source census synchronized `play3DSoundEvent` at `0x800989D8`; no build or runtime run. |
 
 ## Method and safety rules
 
