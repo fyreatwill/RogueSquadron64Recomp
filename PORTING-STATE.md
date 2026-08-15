@@ -69148,3 +69148,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `applySongU16ParamCmdLocked` at `0x80095F94`.
+
+## Session 1395 (2026-08-15) — synchronized the apply-song-u16-param-cmd-locked symbol
+
+Performed the bounded exact-name census over `0x80095F94..0x80095FEC`.
+
+No new soak-queue verdicts since s1394; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80095F94`, size `0x58`; `0x80095F94+0x58=0x80095FEC`. Overlay `rom_size` is `0x58`. Generated prologue at `0x80095F94` (`lui $v0, 0x800A`; `lbu $v0, 0xF50($v0)`; `addiu $sp, $sp, -0x20`; save `$s0`/`$s1`/`$ra`; `$s0=$a0`, `$s1=$a1`) and `jr $ra` at `0x80095FE4` with delay `nop` at `0x80095FE8` |
+| Generated definition | `funcs_25.c` defines `applySongU16ParamCmdLocked` at `0x80095F94`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `quiesceSongSlotCmd` at `0x80095FEC` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `applySongU16ParamCmdLocked = 0x80095F94` in the sequential `defined:true` list, immediately after already-synchronized `setSongPauseStateByHandle` and before `quiesceSongSlotCmdLocked`. Menu, mission, and cinematic lists do not remap it. The earlier annotated song-command block names the unlocked sibling `applySongU16ParamCmd` at `0x80095EA8` and the next unlocked applier `quiesceSongSlotCmd` at `0x80095FEC`, and omits this locked wrapper, matching other already-synchronized locked siblings (`tickSongSequenceLocked`, `stopSongByHandleLocked`), so the omission is not a conflicting name |
+| Caller evidence | No generated `jal 0x80095F94` site in `RecompiledFuncs`. The unlocked sibling is called from this wrapper at `0x80095FC4` and from independently named `processSongByHandle` at `0x80096A0C` and `0x80096B08` (already-locked dispatch). Absence of a jal to the wrapper is consistent with it being the public mutex entry; it is not a conflicting caller |
+| Semantic evidence | Same MusyX-flag-gated mutex wrap as independently named `tickSongSequenceLocked` / `stopSongByHandleLocked`: load `gMusyXActiveFlag` at `0x800A0F50`, early-return when clear, otherwise `factor5MutexAcquire` (`0x80092010`), call the unlocked sibling `applySongU16ParamCmd` (`0x80095EA8`) with saved handle and `$a1` masked to u16, then `factor5MutexRelease` (`0x8009205C`). Size `0x58` rather than the one-arg `0x48` siblings because this wrapper saves both `$s0` and `$s1`. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80095F94`: the companion and
+generated names agree, the body is a complete MusyX-flag-gated mutex wrap of
+matching size `0x58`, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at `0x58`).
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`quiesceSongSlotCmd` at `0x80095FEC`.
