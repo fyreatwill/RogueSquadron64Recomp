@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1249 (2026-08-15).
+in the ledger. Reviewed through s1250 (2026-08-15).
 
 ## Current state
 
@@ -254,7 +254,7 @@ in the ledger. Reviewed through s1249 (2026-08-15).
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
    exact-name sweep over the next adjacent helper region after
-   `0x8007602C..0x80076998`, beginning at `0x80076BE4`; it needs no external
+   `0x80076BE4..0x800779B4`, beginning at `0x80077AC0`; it needs no external
    retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -264,6 +264,17 @@ in the ledger. Reviewed through s1249 (2026-08-15).
    Before any probe, read `tools/oracle/README.md` and
    `docs/F5-UCODE-REFERENCE.md`, define positive controls, and phase-gate all
    animated comparisons.
+
+The s1250 bounded `0x80076BE4..0x800779B4` census found exact companion and
+generated names for eight functions: `npcWakeUpdate`,
+`spawnGatedDistanceEffectPair`, `spawnRandomParticleWithParent`,
+`distanceFromCameraToPoint`, `spawnEffectNpcWithRampedScale`,
+`spawnEffectNpcWithRampedScaleExt`,
+`buildNpcAnchoredCameraEffectTransformWrapper`,
+`spawnWaterSprayDebrisAndBurst`, and `spawnSpeedGatedTrailEffect`.
+The companion symbol file and generated declarations/definitions agree;
+the two intervening unnamed helpers remain address-encoded. The repository
+symbol map was synchronized; no runtime change or build was needed.
 
 The s1249 bounded `0x8007602C..0x80076998` census found exact companion and
 generated names for all four functions: `computeWalkerLimbStrideTargets`,
@@ -373,6 +384,7 @@ order.
 | s1246 | The bounded `0x80072CF0..0x80073E4C` census found exact companion/generated names for all six functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1247 | The bounded `0x8007413C..0x80074D44` census found exact companion/generated names for all five functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1248 | The bounded `0x80075218..0x80075BB0` census found exact companion/generated names for all four functions and synchronized the repository symbol map. H1 selected; no build or run. |
+| s1250 | The bounded `0x80076BE4..0x800779B4` census found exact companion/generated names for eight functions; two unnamed intervening helpers remain address-encoded. Synchronized the repository symbol map. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |

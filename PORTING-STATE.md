@@ -65719,3 +65719,18 @@ Ran the single bounded generated/companion census for
 Synchronized the four stale repository symbol-map entries; generated C already
 used the names. H1 selected. No build or runtime run was needed, and the
 external retail-entry boundary remains open.
+## Session 1250 (2026-08-15) — synchronized adjacent NPC-effect helper symbols
+
+Ran the single bounded generated/companion census for
+`0x80076BE4..0x800779B4`. The companion `main_overlay.txt` and generated
+declarations/definitions independently agree on eight exact names:
+`npcWakeUpdate`, `spawnGatedDistanceEffectPair`,
+`spawnRandomParticleWithParent`, `distanceFromCameraToPoint`,
+`spawnEffectNpcWithRampedScale`, `spawnEffectNpcWithRampedScaleExt`,
+`buildNpcAnchoredCameraEffectTransformWrapper`,
+`spawnWaterSprayDebrisAndBurst`, and `spawnSpeedGatedTrailEffect`.
+The intervening `0x80077784` and `0x800777F0` helpers have no independent
+companion names in this interval and remain address-encoded.
+Synchronized the eight stale repository symbol-map entries. H1 selected.
+No build or runtime run was needed; the external retail-entry boundary remains
+open.
