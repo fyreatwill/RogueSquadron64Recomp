@@ -68818,3 +68818,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `advanceSongRegion` at `0x80095244`.
+
+## Session 1384 (2026-08-15) — synchronized the advance-song-region symbol
+
+Performed the bounded exact-name census over `0x80095244..0x800955B0`.
+
+No new soak-queue verdicts since s1383; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80095244`, size `0x36C`; `0x80095244+0x36C=0x800955B0`. Overlay `rom_size` is `0x36C`. Generated prologue at `0x80095244` (`addiu $sp, $sp, -0x30`) and `jr $ra` at `0x800955A8` with delay `nop` at `0x800955AC` |
+| Generated definition | `funcs_25.c` defines `advanceSongRegion` at `0x80095244`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `updateSongTempoTickRate` at `0x800955B0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `advanceSongRegion = 0x80095244` and independently comments that `tickSongSequence` advances via this helper. The same file independently names the preceding real function `stepSongModulationLanes` at `0x80095090` and the following real function `updateSongTempoTickRate` at `0x800955B0`. Menu, mission, and cinematic lists do not remap it. The sequential `defined:true` list records `startSongSequence` then jumps to `fake_func_8009711C` and does not remap this address |
+| Caller evidence | One generated `jal 0x80095244` site: `tickAllActiveSongs` at `0x80096EEC`, immediately before `stepActiveSongTracks`, `stepSongPitchBendLanes`, and `stepSongModulationLanes`. Companion independently names that caller and the flanking steppers |
+| Semantic evidence | Loads the song-tick table pointer at `0x801529C0`. Outer loop walks `$s1` from 0 to `< 0x40` with `$s2` strides of `0x10`. Each live slot reads the region pointer at table+`0x12C`, the event cursor at +`0x134`, and the tick increment at table+`0x120`; skips empty `0x12C`; treats halfword `0xFFFE` as wrap/reset and `0xFFFF` as stream terminator (clears `0x12C`); otherwise indexes the next event and can call already-named `updateSongTempoTickRate` (`0x800955B0`). That matches the companion walk/advance/terminator comment. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80095244`: the companion and
+generated names agree, the body is a complete 64-slot region/event cursor
+walker of matching size `0x36C`, and there is neither a conflicting companion
+name nor a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x36C`). `fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`updateSongTempoTickRate` at `0x800955B0`.
