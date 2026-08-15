@@ -65326,3 +65326,24 @@ was changed.
 
 ORIGIN: `syms/rogue_squadron.datasyms.toml`, retail ROM bytes, generated
 `RecompiledFuncs/funcs_0.c`, and companion `main_overlay.txt`.
+
+## Session 1228 (2026-08-14) — audited oracle/front-end entry route
+
+Ran the bounded source audit without building or running. `tools/oracle/rs64_oracle.c`
+opens the ROM, attaches the SDL input plugin only when a press schedule exists,
+and enters with `M64CMD_EXECUTE`; its optional `M64CMD_STATE_SAVE`/
+`M64CMD_STATE_LOAD` cycle is issued by the director after five seconds, not at
+startup. The documented first external state-changing events are therefore the
+scheduled SDL key commands. The port's generated path starts at
+`recomp_entrypoint`, creates the idle/video threads, registers
+`mainBootstrapWorker`, and invokes static `gBootConfig+4` as `mainGameLoop`.
+
+No source-visible reset, EEPROM/save load, or alternate entry command bridges
+the oracle's 320-width phase to later retail entry. H2 is selected: the missing
+transition is outside the in-tree oracle CLI and generated boot path. This rules
+out an unexamined in-tree startup command and an entrypoint mismatch; it does
+not identify the external launcher state. No mitigation, build, or runtime
+behavior was changed.
+
+ORIGIN: `tools/oracle/rs64_oracle.c`, generated `funcs_0.c`/`funcs_8.c`, and
+`main_overlay.txt`.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1227 (2026-08-14).
+in the ledger. Reviewed through s1228 (2026-08-14).
 
 ## Current state
 
@@ -158,6 +158,7 @@ in the ledger. Reviewed through s1227 (2026-08-14).
   boundary is the external/front-end retail-entry route, not config
   initialization. Two independent lines are the ROM bytes/section mapping and
   the generated caller/registration chain.
+- The s1228 bounded source audit found no hidden oracle startup/reset or later-entry command. `rs64_oracle.c` performs `ROM_OPEN`, attaches input only when a press schedule exists, then calls `M64CMD_EXECUTE`; its optional state save/load happens after five seconds inside the same run. The port starts directly at `recomp_entrypoint`, whose generated path creates the idle and video threads; `thread3_video_handle` registers `mainBootstrapWorker`, which invokes static `gBootConfig+4`. The first explicit oracle state-changing event is therefore scheduled SDL input, while the port has no matching external handoff. H2 is selected; the remaining boundary is outside the in-tree oracle CLI and generated boot path. Source evidence only.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -237,11 +238,11 @@ in the ledger. Reviewed through s1227 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Audit the external/front-end retail-entry route now that the generated
-   callback is proven static: trace the oracle/core startup state and first
-   input handoff to identify the first missing transition. This is a source
-   audit only; do not build or run until a concrete state-changing event is
-   named.
+1. Audit the installed Mupen64Plus front-end/core startup contract beyond the
+   in-tree oracle: identify whether the external launcher supplies a reset type,
+   EEPROM/save image, or alternate entry command before `M64CMD_EXECUTE`. This
+   is source/config evidence only; do not build or run until a concrete
+   state-changing event is named.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -353,6 +354,7 @@ order.
 | s1222 | Corrected the state-byte identity: `mainGameLoop` reads `D_80130B10+0x20..22` (`0x80130B30..32`), not `gGameSettings+0x20..22` (`0x80130B60..62`). The prior writes were volume-field tests; generated/companion census found `runIdleFramesAndLoadSaveData` writes `B30=1,B31=0`, while demo save/restore writes only `B60..62`. No generated-boundary defect was found. |
 | s1225 | Post-idle generated/companion audit found `loadSaveDataIfNotLoaded` is EEPROM-only, `classifySaveStateFromInput` is uncalled, and the remaining post-load loop has polling/render/account-unlock work but no input-controlled retail-entry writer. H2 selected; no oracle target justified. |
 | s1227 | Bounded provenance audit found `gBootConfig` at `0x80037560` is ROM-backed in the main image (ROM `0x38160`), with bytes `80 03 DF A0` at `+0x04` (`mainGameLoop`). No generated writer exists; `thread3_video_handle` registers `mainBootstrapWorker`, whose `jalr` consumes that static callback. H2 selected; the missing retail-entry event is outside this generated handoff. No build or run. |
+| s1228 | Bounded source audit found the oracle performs `ROM_OPEN` then `M64CMD_EXECUTE`, attaches input only for scheduled presses, and performs optional save/load only after five seconds. The port enters directly through `recomp_entrypoint` and the same static boot-config callback chain. No source-visible external event bridges the oracle's 320 phase to later retail entry; H2 selected. No build or run. |
 
 ## Method and safety rules
 
