@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1367 (2026-08-15).
+the authority for session detail. Reviewed through s1368 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1367 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80093E60..0x80093E6C`.
+   census over the next adjacent function, `0x80093E6C..0x80093E74`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -229,6 +229,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1365 | Exact companion/generated ADPCM census synchronized `decodeAdpcmSampleBlock` at `0x800934D0`; no build or runtime run. |
 | s1366 | Exact companion/generated PCM expand census synchronized `expandBytesToPcm16ViaTable` at `0x80093D10`; no build or runtime run. |
 | s1367 | Exact companion/generated math-primitive census synchronized `truncDouble` at `0x80093E54`; no build or runtime run. |
+| s1368 | Exact companion/generated math-primitive census synchronized `ceilDouble` at `0x80093E60`; no build or runtime run. |
 
 ## Method and safety rules
 
