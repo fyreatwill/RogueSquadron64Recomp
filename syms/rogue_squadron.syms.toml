@@ -1448,7 +1448,7 @@ functions = [
     { name = "tickSongSequence", vram = 0x80095ADC, size = 0x27C },
     { name = "tickSongSequenceLocked", vram = 0x80095D58, size = 0x48 },
     { name = "tickActiveSongs", vram = 0x80095DA0, size = 0x54 },
-    { name = "func_80095DF4", vram = 0x80095DF4, size = 0xB4 },
+    { name = "setSongPauseStateByHandle", vram = 0x80095DF4, size = 0xB4 },
     { name = "func_80095EA8", vram = 0x80095EA8, size = 0xEC },
     { name = "func_80095F94", vram = 0x80095F94, size = 0x58 },
     { name = "func_80095FEC", vram = 0x80095FEC, size = 0xE4 },

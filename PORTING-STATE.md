@@ -69088,3 +69088,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `setSongPauseStateByHandle` at `0x80095DF4`.
+
+## Session 1393 (2026-08-15) — synchronized the set-song-pause-state-by-handle symbol
+
+Performed the bounded exact-name census over `0x80095DF4..0x80095EA8`.
+
+No new soak-queue verdicts since s1392; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80095DF4`, size `0xB4`; `0x80095DF4+0xB4=0x80095EA8`. Overlay `rom_size` is `0xB4`. Generated prologue at `0x80095DF4` (`lui $v0, 0x800A`; `lbu $v0, 0xF50($v0)`; early-out when `gMusyXActiveFlag` is clear) and `jr $ra` at `0x80095EA0` with delay `nop` at `0x80095EA4` |
+| Generated definition | `funcs_25.c` defines `setSongPauseStateByHandle` at `0x80095DF4`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `applySongU16ParamCmd` at `0x80095EA8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setSongPauseStateByHandle = 0x80095DF4` in the sequential `defined:true` list, immediately after already-synchronized `tickSongSequenceLocked` and before `applySongU16ParamCmdLocked`. Menu, mission, and cinematic lists do not remap it. The earlier annotated song-command block starts at `applySongU16ParamCmd` and omits this handle-lookup setter, matching other already-synchronized handle APIs that live in the sequential list rather than that cmd-applier block (`isSongHandleActive`, `stopSongByHandle`), so the omission is not a conflicting name |
+| Caller evidence | One generated `jal 0x80095DF4` site: independently named `startLevelBackgroundMusic` at `0x800EF4DC`, passing the song handle at `0x8010C0E0` with `$a1=0`. That handle is the same one already-synchronized `stopAllMusicWithFade` / `stopMusicAndResetAudio` use. `$a1=0` is the unpause/play argument on the level-BGM start path |
+| Semantic evidence | Same 8-slot handle lookup as independently named `isSongHandleActive`: `gMusyXActiveFlag` at `0x800A0F50`, mask `$a0` with `0x7FFFFFFF`, skip slots whose `slot+0xEC1` is set, match the handle at base `0x80149A00` stride `0xEF8`. On a clear-high-bit match, stores `!($a1 & 0xFF)` to `slot+0xEC5` and returns 1; not-found, high-bit handle, or inactive MusyX returns 0. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80095DF4`: the companion and
+generated names agree, the body is a complete handle-to-pause-byte setter of
+matching size `0xB4`, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at `0xB4`).
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`applySongU16ParamCmd` at `0x80095EA8`.
