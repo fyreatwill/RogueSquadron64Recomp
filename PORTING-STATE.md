@@ -67434,3 +67434,28 @@ used by `musyxSynthFrame`. H2 and H3 are ruled out for this function; there
 is neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run
 was justified for an exact-name census.
+
+## Session 1334 (2026-08-15) — synchronized the Factor 5 queue-signal symbol
+
+Performed the bounded exact-name census over `0x800920D0..0x800920FC`.
+
+No new soak-queue verdicts since s1333; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x800920D0`, size `0x2C`; it ends exactly at the next generated function, `0x800920FC`. Overlay `rom_size` is `0x2C` |
+| Generated definition | `funcs_24.c` defines `factor5QueueSignal` at `0x800920D0` through the matching epilogue at `0x800920F4`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `factor5QueueSignal = 0x800920D0` and independently names the queue `D_80149990` plus `osSendMesg` at `0x80033410`. The later companion list names `isAudioSlotActive` at `0x800920FC` and does not remap `0x800920D0` |
+| Caller evidence | One generated site: `musyxSynthFrame` (`0x8009123C`) at `jal 0x80091868`. Companion independently names that caller as the per-frame synth tick; it pairs this signal with the `factor5QueueBlock` wait at `jal 0x8009125C` (s1333) |
+| Semantic evidence | Body builds `0x80149990`, then `jal 0x80033410` (`osSendMesg`) with `a1=0` and `a2=0` (NOBLOCK). It never loads or stores the recursion counter `D_800A1780`. That is the low-level nonblocking send the companion independently names |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x2C` boundary is exact, and the body is the Factor 5 queue-signal used
+by `musyxSynthFrame` to wake the matching `factor5QueueBlock`. H2 and H3 are
+ruled out for this function; there is neither a partial/conflicting match nor
+an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
