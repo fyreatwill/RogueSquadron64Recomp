@@ -1472,7 +1472,7 @@ functions = [
     { name = "registerSndSampleTable", vram = 0x8009735C, size = 0xD4 },
     { name = "applySndMidiSetupRecords", vram = 0x80097430, size = 0x84 },
     { name = "releaseSndMidiSetupRecords", vram = 0x800974B4, size = 0x64 },
-    { name = "func_80097518", vram = 0x80097518, size = 0x3D4 },
+    { name = "parseSndFiles", vram = 0x80097518, size = 0x3D4 },
     { name = "func_800978EC", vram = 0x800978EC, size = 0x1DC },
     { name = "func_80097AC8", vram = 0x80097AC8, size = 0x8 },
     { name = "func_80097AD0", vram = 0x80097AD0, size = 0x15C },

@@ -69789,3 +69789,34 @@ unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is the independently named `parseSndFiles` at
 `0x80097518`.
+
+## Session 1416 (2026-08-15) — synchronized the parse-snd-files symbol
+
+Performed the bounded exact-name census over `0x80097518..0x800978EC`.
+
+No new soak-queue verdicts since s1415; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80097518`, size `0x3D4`; `0x80097518+0x3D4=0x800978EC`. Overlay `rom_size` is `0x3D4` at offset `0x000970D8` (`0x80097518-0x80000440`). Generated prologue at `0x80097518` (`lui $v0, 0x800A` / `lbu` of the MusyX-active byte / `addiu $sp, $sp, -0x58`) and `jr $ra` at `0x800978E4` with delay `nop` at `0x800978E8` |
+| Generated definition | `funcs_26.c` defines `parseSndFiles` at `0x80097518`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x3D4` function ending at the next generated definition, `unloadLastSndFileGroup` at `0x800978EC` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `parseSndFiles = 0x80097518` with the comment that it parses SND file sections (pool/proj/sdir). A second companion mapping names the following function `unloadLastSndFileGroup = 0x800978EC`, confirming the `0x3D4` boundary. `docs/snd_files/snd_files.md` independently attributes the pool/proj/sdir shape to this address. Menu, mission, cinematic, and ignored lists do not remap `0x80097518`. No conflicting companion name |
+| Caller evidence | Four generated `jal 0x80097518` sites: two in already-named `loadSndFiles` (`0x800663B0`), one in already-named `parseLoadedSndSection` (`0x80066918`; companion documents 12 callers that package SND-loader globals as args 1-3), and two in already-named `initLevelMusicBank` (`0x800EF048`) |
+| Semantic evidence | Body walks counted SND sections terminated by `0xFFFFFFFF`, matches a `u16` id, then walks `0xFFFF`-terminated halfword id lists and registers them through `factor5BucketedTableInsertEntry`, `relocateSndPointer`, `factor5SortedTableInsertWidePair`, `factor5SecondSortedTableInsertValue`, `factor5SortedTableInsertValue`, `factor5SortedTableInsertTaggedValue`, and `factor5SortedTableInsertVoiceRecord`. Matches parsing pool/proj/sdir SND sections into the Factor 5 tables. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80097518`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x3D4`, and there is neither a conflicting companion name nor a size split.
+H2 and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x3D4`). `fake_func_8009711C`
+remains the already-fake one-instruction jump fragment and was left
+unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is the independently named `unloadLastSndFileGroup` at
+`0x800978EC`.
