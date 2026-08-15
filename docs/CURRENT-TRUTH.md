@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1171 (2026-08-14).
+in the ledger. Reviewed through s1174 (2026-08-14).
 
 ## Current state
 
@@ -285,6 +285,14 @@ in the ledger. Reviewed through s1171 (2026-08-14).
   it does not expose the allocated voice-array base. The first s1173 arm was
   invalid because the frontend attributed one callback to both overlapping
   watches; the fixed rerun is the evidence used here.
+- The s1174 post-step retail-oracle calibration passed the whole-RDRAM control
+  (10,000 writes, removed cleanly), retained one write at `0x8008F0EC`, and
+  produced a post-step callback. The field still read `0xFFFFFFFF` after the
+  stepped instruction; the read watch remained `0/0/0`. This selects H2: the
+  field is not a valid voice-array base in this path, and no voice range may
+  be inferred from it. The post-step callback reported `pc=0x80000000` and
+  `prev_pc=0x8008F0EC`, so its PC is not an independent instruction
+  attribution.
 
 ## Retail VI descriptor boundary
 
@@ -429,16 +437,18 @@ corruption.
 | s1171 | Completed the bounded static downstream operation census without building or running. The generated chain contains 26 direct and 2 indirect calls in `musyxSynthFrame`, bounded voice-array iteration in `musyxMixActiveVoices`, command-ring construction in `musyxBuildVoiceCommandList`, and sample/stream pointer formation from voice fields `+0x34/+0x38/+0x3C/+0x40` in `musyxRenderVoiceSamples`. The first possible wild pointer is the per-voice sample/stream path, but its runtime writer and legitimacy remain unresolved and no static operation ties it to the later `0x8000B650` host fault. This selects H3 for the port-only census; no mitigation was added. |
 | s1172 | Ran the retail oracle with a whole-RDRAM control and the eleven-Start schedule. The control reached 10,000 callbacks and was removed; the run stalled at width 320/origin `0x006dd280` after all presses. A write to the global voice-base field `0x001496F8` was attributed to PC `0x8008F0EC`, but the callback is pre-store and exposed only `0xFFFFFFFF`; no audio phase or sample-field write was reached. This is H3/unevaluable for the intended discriminator; no mitigation was added. |
 | s1173 | Fixed the oracle's overlapping-watch accounting so each callback is counted only when its actual READ/WRITE flags match the watch. The whole-RDRAM write control reached 10,000 and was removed; the voice-base write watch recorded one write at `0x8008F0EC`, the read watch recorded zero, and no post-store read occurred before the width-320 stall. The corrected result selects H2 for the calibration: this path has no readable post-store pointer value, so no voice-array range was inferred and no mitigation was added. |
+| s1174 | Added a one-instruction debugger step after the attributed retail write and captured the field in the following callback. The whole-RDRAM control still reached 10,000 and was removed, the write watch remained `1/0/1`, and the read watch remained `0/0/0`; the post-step field was still `0xFFFFFFFF`. This selects H2: the watched field is not a usable voice-array base in this path. The post-step callback's `pc=0x80000000`/`prev_pc=0x8008F0EC` pair is not a second instruction attribution. No mitigation was added. |
 
 ## Ranked next steps
 
-1. Add a one-instruction post-step snapshot after the attributed write to
-   `0x001496F8`, then rerun the 10-second oracle calibration with the same
-   whole-RDRAM, write, read, input, and VI controls. H1 is a valid changed
-   pointer in the post-step snapshot; H2 is the same old/invalid value, proving
-   the current callback timing cannot expose the store; H3 is any positive-
-   control or watch-accounting regression. Do not infer a voice range or add a
-   mitigation until H1 is observed.
+1. Audit the retail writer neighborhood around `0x001496F8`: identify the
+   generated instruction and nearby object/global fields written by the same
+   routine, then run one batched oracle watch over the bounded neighboring
+   range with PC attribution and the whole-RDRAM positive control. H1 is a
+   nearby field receiving a valid KSEG0 allocation before/after the sentinel;
+   H2 is only sentinel/initialization traffic with no candidate pointer; H3 is
+   a control or accounting regression. Do not infer a voice range or add a
+   mitigation from the `0xFFFFFFFF` field alone.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

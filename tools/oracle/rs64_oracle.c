@@ -87,6 +87,7 @@ static int g_positive_watch_removed;
 static long g_pc_hits;
 static int g_voice_base_write_seen;
 static int g_voice_base_read_after_write_seen;
+static int g_voice_base_post_step_pending;
 
 static double now_s(void)
 {
@@ -160,6 +161,22 @@ static void dbg_update(unsigned int pc)
     int i;
     int detail_hit = 0;
     unsigned int access_flags = flags;
+
+    /* Memory breakpoints stop before the instruction performs its access.
+     * The stepping callback is the first debugger callback after that
+     * instruction, so sample the field there instead of treating the
+     * pre-store value as the store result. */
+    if (g_voice_base_post_step_pending) {
+        g_voice_base_post_step_pending = 0;
+        printf("[voice-base] post-step pc=0x%08x prev_pc=0x%08x value=0x%08x\n",
+               pc, (unsigned int)pDebugGetState(M64P_DBG_PREVIOUS_PC),
+               pDebugMemRead32(0x001496F8));
+        fflush(stdout);
+        pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
+        pDebugStep();
+        return;
+    }
+
     pDebugBreakpointTriggeredBy(&flags, &accessed);
     access_flags = flags & (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE);
 
@@ -205,6 +222,7 @@ static void dbg_update(unsigned int pc)
                 g_voice_base_write_seen = 1;
                 printf("[voice-base] write pc=0x%08x value=0x%08x\n",
                        pc, pDebugMemRead32(0x001496F8));
+                g_voice_base_post_step_pending = 1;
             } else if ((flags & M64P_BKP_FLAG_READ) && g_voice_base_write_seen &&
                        !g_voice_base_read_after_write_seen) {
                 g_voice_base_read_after_write_seen = 1;
@@ -217,7 +235,9 @@ static void dbg_update(unsigned int pc)
         fflush(stdout);
     }
 
-    pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
+    pDebugSetRunState(g_voice_base_post_step_pending
+                      ? M64P_DBG_RUNSTATE_STEPPING
+                      : M64P_DBG_RUNSTATE_RUNNING);
     pDebugStep();
 }
 

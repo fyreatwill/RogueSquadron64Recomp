@@ -64305,3 +64305,21 @@ expose a voice-array base. It rules out the prior overlapping-watch accounting
 explanation, but not the retail sample-field writer or the port-side fault
 origin. No mitigation was added. The next unit is a one-instruction post-step
 snapshot after the attributed write.
+
+## Session 1174 (2026-08-14) — captured retail post-step voice-base value
+
+Added a one-instruction debugger step after the retail oracle's attributed
+write to physical `0x001496F8`, then captured the field in the following
+callback. The calibration passed the independent whole-RDRAM positive control:
+10,000 writes were observed and watch index 0 was removed cleanly. The target
+write remained one write at guest PC `0x8008F0EC`; the write watch reported
+`1/0/1` (hits/reads/writes), and the overlapping read watch reported `0/0/0`.
+The post-step snapshot fired, but the field remained `0xFFFFFFFF`.
+
+This selects H2: the watched field is not a usable voice-array base in this
+retail path, so no `0x88`-stride voice range may be inferred from it. The
+post-step callback reported `pc=0x80000000` and `prev_pc=0x8008F0EC`; that PC
+pair is not an independent instruction attribution. The run still reached
+only the known VI width-320/origin `0x006dd280` stall. No mitigation was added.
+The next work unit is a bounded writer-neighborhood audit around the field,
+with a batched oracle watch and the same positive control.
