@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1478 (2026-08-15).
+the authority for session detail. Reviewed through s1479 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1478 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009D980..0x8009DB44`.
+   census over the next adjacent function, `0x8009DB44..0x8009DC98`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -76,12 +76,12 @@ the authority for session detail. Reviewed through s1478 (2026-08-15).
    unchanged (s1477: eight-byte PC-relative packed-nibble table
    `C7 D7 E3 E7 F1 F3 F5 F7`, not a function), and `func_8009D978`
    unchanged (s1478: eight-byte PC-relative Q15 delay-mix table
-   `0CCD 2CCD 5333 7FFF`, not a function). s1478 synchronized
-   `applyVoiceDelayFilter` at `0x8009D8C4` (H1; generated already
-   named; TOML was `func_8009D8C4`). The generated entry at
-   `0x8009D980` is already `runVoiceLatticeFilter`; TOML is still
-   `func_8009D980` (size `0x1C4`); overlay `rom_size` is `0x1C4` and
-   meets independently named `renderVoiceAudioBlock` at `0x8009DB44`.
+   `0CCD 2CCD 5333 7FFF`, not a function). s1479 synchronized
+   `runVoiceLatticeFilter` at `0x8009D980` (H1; generated already
+   named; TOML was `func_8009D980`). The generated entry at
+   `0x8009DB44` is already `renderVoiceAudioBlock`; TOML is still
+   `func_8009DB44` (size `0x154`); overlay `rom_size` is `0x154` and
+   meets independently named `audioMixStereoBlock8` at `0x8009DC98`.
    Confirm companion, size, callers, and semantics before synchronizing.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
@@ -367,6 +367,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1476 | Exact companion/generated census selected H2 for already-fake `fake_func_8009D7CC` at `0x8009D7CC` (one-instruction `mtc1` fragment); left unchanged; no build or runtime run. |
 | s1477 | Exact companion/generated voice-filter census synchronized `filterVoiceSampleBlock` at `0x8009D7D0`; left `func_8009D8BC` as an eight-byte lookup-table pad; no build or runtime run. |
 | s1478 | Exact companion/generated voice-delay census synchronized `applyVoiceDelayFilter` at `0x8009D8C4`; left `func_8009D978` as an eight-byte Q15 coefficient pad; no build or runtime run. |
+| s1479 | Exact companion/generated voice-lattice census synchronized `runVoiceLatticeFilter` at `0x8009D980`; no build or runtime run. |
 
 ## Method and safety rules
 
