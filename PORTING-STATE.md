@@ -67234,3 +67234,28 @@ H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1326 (2026-08-15) — synchronized the audio-subsystem init symbol
+
+Performed the bounded exact-name census over `0x80091B3C..0x80091C88`.
+
+No new soak-queue verdicts since s1325; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80091B3C`, size `0x14C`; it ends exactly at the next generated function, `0x80091C88`. Overlay `rom_size` is `0x14C` |
+| Generated definition | `funcs_24.c` defines `initAudioSubsystem` at `0x80091B3C` through the matching epilogue at `0x80091C80`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `initAudioSubsystem = 0x80091B3C`. No later companion list remaps this address |
+| Caller evidence | One generated site: `setDisplayMode` (`0x8008EA14`) at `jal 0x80091B3C`. Companion independently names that caller and comments that the boot display-mode path installs audio through this function |
+| Semantic evidence | Body `jal 0x80091FC4` (`initFactor5Mutex`), creates the AI message queue at `0x80149670`, `osSetEventMesg` event 6, `osAiSetFrequency`, `osCreateThread`/`osStartThread` with entry `0x8008ED70` (`runAiAudioStreamPlaybackLoop`), then `jal 0x8009189C` (`initN64RspMixer`) |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x14C` boundary is exact, and the body is the boot-time audio-subsystem
+initializer. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
