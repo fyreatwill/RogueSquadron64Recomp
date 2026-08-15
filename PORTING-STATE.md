@@ -64732,3 +64732,18 @@ unevaluable. No code or mitigation change was added.
 
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
+
+## Session 1198 (2026-08-14) — revised retail input still stayed at boot VI
+
+Ran the prescribed debugger-enabled retail oracle comparison: an undriven
+control and an 11-press schedule with 150 ms holds. Both arms passed the
+whole-RDRAM positive control (10,000 callbacks) and emitted PIF/VI records.
+The driven arm's PIF word changed to `0x10000000` at each Start press and
+returned to zero, proving the input reached the game. Neither arm left VI
+width 320 or origin `0x006dd280`; no M4 target watch was armed. This selects
+the timing/state-path hypothesis (H1), not retail-independent width-320 (H3),
+and leaves the M4 target watches unevaluable. The next discriminator moves the
+first Start earlier into the boot/title interval.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
