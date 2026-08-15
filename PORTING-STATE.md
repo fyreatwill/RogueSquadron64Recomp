@@ -66885,3 +66885,27 @@ documented by the stride-`0x88` audits. H2 and H3 are ruled out for this
 function; there is neither a partial/conflicting match nor an absent
 independent name. The stale address-encoded TOML entry was synchronized. No
 build or runtime run was justified for an exact-name census.
+
+## Session 1312 (2026-08-15) — synchronized the song-render buffer setup symbol
+
+Performed the bounded exact-name census over `0x8008F2FC..0x8008F4D8`.
+
+No new soak-queue verdicts since s1311; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008F2FC`, size `0x1DC`; it ends exactly at the next generated function, `0x8008F4D8`. Overlay `rom_size` is `0x1DC` |
+| Generated definition | `funcs_23.c` defines `setupSongRenderBuffers` at `0x8008F2FC` through the matching epilogue at `0x8008F4D0`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setupSongRenderBuffers = 0x8008F2FC`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x8008F2FC` in `initN64RspMixer` at `0x80091944`, immediately after `allocateSongChannelArray`. Companion independently names that mixer init `initN64RspMixer = 0x8009189C` |
+| Semantic evidence | Body converts the rate argument to float, stores the 16-bit count at `0x8014971C` and a 16-byte-aligned size at `0x80149720`, `rs_malloc`s `count * 24`, creates a 1-slot `osCreateMesgQueue`, then calls `buildSongDecodeBufferRing` and `initSampleStreamBlockCache` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x1DC` boundary is exact, the only caller is the independently named
+RSP-mixer init that just allocated the channel array, and the body allocates
+the song decode/sample buffers. H2 and H3 are ruled out for this function;
+there is neither a partial/conflicting match nor an absent independent name.
+The stale address-encoded TOML entry was synchronized. No build or runtime
+run was justified for an exact-name census.

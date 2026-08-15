@@ -1364,7 +1364,7 @@ functions = [
     { name = "func_8008ED6C", vram = 0x8008ED6C, size = 0x154 },
     { name = "buildSongTempoSchedule", vram = 0x8008EEC0, size = 0x1E0 },
     { name = "allocateSongChannelArray", vram = 0x8008F0A0, size = 0x25C },
-    { name = "func_8008F2FC", vram = 0x8008F2FC, size = 0x1DC },
+    { name = "setupSongRenderBuffers", vram = 0x8008F2FC, size = 0x1DC },
     { name = "func_8008F4D8", vram = 0x8008F4D8, size = 0x184 },
     { name = "func_8008F65C", vram = 0x8008F65C, size = 0xFC },
     { name = "func_8008F758", vram = 0x8008F758, size = 0x100 },
