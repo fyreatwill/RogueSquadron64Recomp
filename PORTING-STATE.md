@@ -65977,3 +65977,23 @@ independent companion names. H1 selected. Synchronized the four stale
 repository symbol-map entries; no build or runtime run was needed. This rules
 out a repository-symbol naming mismatch in this audio-helper region, but does
 not explain the external retail-entry boundary or recurring runtime SIGBUS.
+
+## Session 1264 (2026-08-15) — synchronized audio channel helper symbols
+
+Ran the bounded exact-name census over `0x80083D6C..0x80083EB0`. The complete
+comparison table was:
+
+| VRAM | Size | Generated definition | Companion mapping/source | Caller evidence | Confidence |
+|---|---:|---|---|---|---|
+| `0x80083D6C` | `0x30` | `getTrackVoiceTickBudget` | same name in `main_overlay.txt` and generated overlay table | definition only; no direct generated caller found | exact/high |
+| `0x80083D9C` | `0x88` | `setChannelNoteCell` | same name in `main_overlay.txt` and generated overlay table | 10 direct generated callers in `funcs_25.c` | exact/high |
+| `0x80083E24` | `0x44` | `setChannelByteParam` | same name in `main_overlay.txt` and generated overlay table | definition only; no direct generated caller found | exact/high |
+| `0x80083E68` | `0x48` | `getChannelByteParam` | same name in `main_overlay.txt` and generated overlay table | definition only; no direct generated caller found | exact/high |
+| `0x80083EB0` | `0x44` | `setChannelByteParamAlt` | same name in `main_overlay.txt` and generated overlay table | definition only; no direct generated caller found | exact/high |
+
+All five generated boundaries match the repository sizes and all five have
+independent companion names. H1 selected. Synchronized the five stale
+repository symbol-map entries; the adjacent `0x80083EF4` entry was outside
+scope and unchanged. No build or runtime run was needed. This rules out a
+repository-symbol naming mismatch in this audio-channel helper region, but
+does not explain the external retail-entry boundary or recurring runtime SIGBUS.
