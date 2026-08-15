@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1214 (2026-08-14).
+in the ledger. Reviewed through s1215 (2026-08-14).
 
 ## Current state
 
@@ -85,6 +85,13 @@ in the ledger. Reviewed through s1214 (2026-08-14).
   The whole-RDRAM positive control reached 10,000 callbacks before the save
   and remained active through 1,506 VI frames. The lifecycle is therefore
   validated, but the run stayed at width 320 and did not test later phases.
+- The s1215 paired debugger-enabled reachability comparison passed the
+  whole-RDRAM positive control in both arms (10,000 callbacks each), and both
+  arms observed the scheduled Start press/release words in PIF RAM. The state
+  arm saved and loaded at the 320-boot boundary with `save_rc=0`, `load_rc=0`,
+  and a valid state file, but both arms remained at VI width 320 with origin
+  `0x006dd280` for the full run. Savestate lifecycle is usable; this state
+  route does not provide the missing later retail entry (H2 selected).
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -164,11 +171,10 @@ in the ledger. Reviewed through s1214 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Use the validated savestate lifecycle for one paired debugger-enabled retail
-   reachability comparison: save a 320-boot state, load it, and apply the
-   documented 6-second Start cadence after load. Keep whole-RDRAM and PIF/VI
-   controls armed; only a later VI width/origin phase makes M4 watches
-   evaluable.
+1. Do not repeat the failed 320-boot savestate route. Design one independent
+   retail-entry strategy before arming M4 watches; it must preserve the
+   validated whole-RDRAM and PIF/VI controls and have a phase-gated later
+   width/origin outcome.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.

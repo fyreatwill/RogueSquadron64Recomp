@@ -393,6 +393,7 @@ static int g_npress;
 static int g_hold_ms = 150;
 static int g_have_input;
 static int g_state_smoke;
+static int g_state_reach;
 static const char *g_state_path;
 
 static int keycode(const char *s)
@@ -454,7 +455,7 @@ static void *director(void *arg)
     double t = 0;
     int i;
 
-    if (g_state_smoke) {
+    if (g_state_smoke || g_state_reach) {
         m64p_error save_result, load_result = M64ERR_SYSTEM_FAIL;
         long before_hits, before_vis, after_save_hits, after_load_hits;
         long save_vis, load_vis;
@@ -463,7 +464,8 @@ static void *director(void *arg)
         before_hits = g_hits;
         before_vis = g_vis;
         save_result = pCoreDoCommand(M64CMD_STATE_SAVE, 1, (void *)g_state_path);
-        printf("[state] save rc=%d path=%s before_hits=%ld before_vi=%ld\n",
+        printf("[state-%s] save rc=%d path=%s before_hits=%ld before_vi=%ld\n",
+               g_state_reach ? "reach" : "smoke",
                save_result, g_state_path, before_hits, before_vis);
         fflush(stdout);
 
@@ -477,7 +479,8 @@ static void *director(void *arg)
             load_result = pCoreDoCommand(M64CMD_STATE_LOAD, 0, (void *)g_state_path);
         after_load_hits = g_hits;
         load_vis = g_vis;
-        printf("[state] file=%s save_rc=%d load_rc=%d exists=%d save_hits=%ld load_hits=%ld save_vi=%ld load_vi=%ld\n",
+        printf("[state-%s] file=%s save_rc=%d load_rc=%d exists=%d save_hits=%ld load_hits=%ld save_vi=%ld load_vi=%ld\n",
+               g_state_reach ? "reach" : "smoke",
                g_state_path, save_result, load_result, state_file_exists(g_state_path),
                after_save_hits, after_load_hits, save_vis, load_vis);
         fflush(stdout);
@@ -584,7 +587,7 @@ static void usage(void)
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
         "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
-        "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE=1\n"
+        "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE/REACH=1\n"
         "  --verbose             pass through core info messages\n"
         "\n"
         "Watch addresses are PHYSICAL and are masked with 0x1FFFFFFF on input,\n"
@@ -664,9 +667,10 @@ int main(int argc, char **argv)
     }
     if (!rom) usage();
     g_state_smoke = getenv("ORACLE_STATE_SMOKE") != NULL;
+    g_state_reach = getenv("ORACLE_STATE_REACH") != NULL;
     g_state_path = state_path;
-    if (g_state_smoke && !g_state_path) {
-        fprintf(stderr, "[oracle] ORACLE_STATE_SMOKE=1 requires --state-path\n");
+    if ((g_state_smoke || g_state_reach) && !g_state_path) {
+        fprintf(stderr, "[oracle] ORACLE_STATE_SMOKE/REACH=1 requires --state-path\n");
         return 2;
     }
 

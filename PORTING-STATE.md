@@ -64733,6 +64733,27 @@ unevaluable. No code or mitigation change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+## Session 1215 (2026-08-14) — savestate route did not change retail entry
+
+Added an explicit `ORACLE_STATE_REACH=1` mode to the independent retail
+oracle, preserving the previously validated smoke lifecycle while labeling
+the reach arm separately. Built once, then ran an undriven control and a state
+arm concurrently for 70 seconds with whole-RDRAM, PIF, and VI controls. Both
+arms reached the whole-RDRAM positive-control threshold of 10,000 callbacks,
+completed cleanly, and showed the scheduled Start press/release words in PIF
+RAM. The state arm saved and loaded at the 320-boot boundary with
+`save_rc=0`, `load_rc=0`, and a nonempty state file.
+
+Both arms nevertheless stayed at VI width 320 with origin `0x006dd280` for
+the complete run. This selects H2: the savestate lifecycle is technically
+usable but this 320-boot state route does not provide the missing later retail
+entry. It rules out a broken state-file lifecycle and an instrumentation loss;
+it does not rule out another independent entry strategy or the M4 target
+hypothesis. No mitigation was added.
+
+ORIGIN: no game or renderer value was skipped, rewritten, or guarded; this
+iteration only added oracle mode labeling and observed both arms.
+
 ## Session 1214 (2026-08-14) — validated oracle savestate lifecycle
 
 Added an opt-in `ORACLE_STATE_SMOKE=1` path to `tools/oracle/rs64_oracle.c`.
