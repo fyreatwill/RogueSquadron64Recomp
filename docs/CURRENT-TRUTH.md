@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1184 (2026-08-14).
+in the ledger. Reviewed through s1185 (2026-08-14).
 
 ## Current state
 
@@ -88,6 +88,15 @@ in the ledger. Reviewed through s1184 (2026-08-14).
   write only that word through `MEM_W`, so the host accessor does not broaden
   the operation. This selects H3 and rules out the partial-store/accessor
   class; no mitigation was added.
+- The s1185 complete generated narrow-store audit found 23,128 `MEM_H`/
+  `MEM_HU`/`MEM_B`/`MEM_BU` references, including 351 stores in the 72
+  `slotDispatcherIter` callers (83 based on caller `r29`). Those stores target
+  caller locals or bounded object/global data; none has a destination/span
+  capable of covering the callee's saved-register frame. `slotDispatcherIter`
+  itself has only ordinary prologue `MEM_W` stores plus bounded byte stores.
+  The four host macros preserve the computed guest address and exact 1/2-byte
+  access span. This selects H3 and rules out the narrow-store/accessor class;
+  no mitigation was added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
@@ -523,6 +532,7 @@ corruption.
 | s1182 | Completed the broader generated dynamic-writer census without building or running. It enumerated 72 `zmemcpy`, 20 `memcpy_recomp`, four `osPiStartDma_recomp`, 13 controller, and flash helper sites. Dynamic copy/DMA destinations have no proven mission/cinematic edge plus frame-overlap span; controller and flash writes are bounded to their own structures. This selects H3 and rules out a named reachable writer-to-frame edge; no mitigation was added. |
 | s1183 | Completed the generated `SD`/wide-copy audit without building or running. It classified 1,356 non-`r29` `SD` sites and 13 target-path `zmemcpy` calls; target callers use ordinary frame-local stores and fixed bounded copy lengths, with no reachable destination/span covering the `slotDispatcherIter` saved frame. The `SD` macro and host accessor add no hidden broadening. H3 selected; no mitigation added. |
 | s1184 | Completed the generated `do_swl`/`do_swr` partial-store audit without building or running. There are 414 calls across 66 functions; only five functions also call `slotDispatcherIter`, and their partial stores are caller-local or bounded object/global writes with no span covering the callee's saved frame. The helpers align to and write one guest word through `MEM_W`, with no host-side span broadening. H3 selected; no mitigation added. |
+| s1185 | Completed the generated narrow-store audit without building or running. There are 23,128 `MEM_H`/`MEM_HU`/`MEM_B`/`MEM_BU` references and 351 stores in the 72 target callers, including 83 caller-`r29` stores; all are caller-local or bounded object/global writes with no span covering the callee's saved frame. The four host macros preserve the computed address and exact byte/halfword span. H3 selected; no mitigation added. |
 
 ## Ranked next steps
 
@@ -531,11 +541,10 @@ corruption.
    reaches an audio-initialization or voice-allocation phase beyond the driven
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
-2. Continue the M3 systematic static audit with the next highest-information
-   generated memory-write idiom after the closed `do_swl`/`do_swr` class.
-   Enumerate one complete idiom class, its reachable writers, destination
-   expressions, and whether its span can cover the `slotDispatcherIter`
-   saved frame before adding instrumentation or a guard.
+2. Continue the M3 systematic static audit with generated `MEM_W` stores in
+   the 72 `slotDispatcherIter` callers. Enumerate every target-path store,
+   classify its destination/span, and verify the host word accessor before
+   adding instrumentation or a guard.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

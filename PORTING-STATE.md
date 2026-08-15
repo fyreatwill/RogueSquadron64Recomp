@@ -64514,3 +64514,23 @@ the current explanation. No build, runtime probe, or mitigation was added.
 ORIGIN: complete generated `do_swl`/`do_swr` inventory and host accessor
 contract; reviewed writers are legitimate local/bounded stores or unrelated
 malformed regions, and no mitigation was added.
+
+## Session 1185 (2026-08-14) — audited generated narrow stores
+
+Completed the prescribed static M3 narrow-store audit without building or
+running. The generated tree contains 23,128 `MEM_H`/`MEM_HU`/`MEM_B`/
+`MEM_BU` references. Across the 72 functions with 144 direct
+`slotDispatcherIter` calls, there are 351 narrow stores, including 83 stores
+based on the caller's `r29`. They target caller locals or bounded object/global
+data; no destination expression plus one- or two-byte span can cover the
+callee's saved-register frame. `slotDispatcherIter` itself has only ordinary
+prologue `MEM_W` stores and bounded byte stores.
+
+The four host macros preserve the computed guest address, apply only the
+MIPS big-endian byte-lane XOR, and access exactly one byte or halfword. This
+selects H3 and rules out the narrow-store/accessor class as the current
+origin. No build, runtime probe, or mitigation was added.
+
+ORIGIN: complete generated narrow-store inventory and host accessor contract;
+reviewed writers are legitimate caller-local/bounded stores or unrelated
+regions, and no mitigation was added.

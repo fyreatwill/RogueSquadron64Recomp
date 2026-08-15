@@ -1,32 +1,28 @@
-# NEXT work unit (s1185)
+# NEXT work unit (s1186)
 
 HYPOTHESIS-ID: m3-stack-memory-value-origin
 
-Work unit: complete one static audit of generated narrow stores (MEM_H,
-MEM_HU, MEM_B, and MEM_BU) and their host-side RDRAM accessors that could
-corrupt the shared stack value before slotDispatcherIter. Do not build or
-run.
+Work unit: complete one static audit of generated `MEM_W` stores in every
+function that directly calls `slotDispatcherIter`. Do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: a reachable generated narrow-store site writes a mission/cinematic
-  destination overlapping a target saved-register frame. Discriminator: an
-  enumerated site has a target-path edge and a destination expression whose
-  byte span can overlap that frame.
-- H2: the host implementation of a narrow store broadens the generated
-  address, alignment, or write span enough to cover the frame. Discriminator:
-  its accessor contract writes outside the guest byte/halfword range specified
-  by the MIPS operation.
-- H3: all narrow stores are frame-local, bounded away, unrelated, or
-  non-executable, and the host accessors preserve their specified ranges.
-  Discriminator: no enumerated site has both target-path reachability and a
-  frame-overlap span, while the accessor contracts remain exact.
+- H1: a reachable target-path word store writes a destination overlapping the
+  callee's saved-register frame. Discriminator: an enumerated store has a
+  target-path edge and a destination expression/span that overlaps that frame.
+- H2: the host `MEM_W` accessor broadens or misplaces a generated word store.
+  Discriminator: its contract writes outside the computed four-byte guest
+  range or applies an address transform beyond the documented KSEG0 mapping.
+- H3: all target-path word stores are caller-local, bounded, unrelated, or
+  non-executable, and the host accessor is exact. Discriminator: no enumerated
+  site has both reachability and frame overlap, while the accessor remains a
+  four-byte write at the computed address.
 
 Exact commands:
 
-rg -n 'MEM_H\(|MEM_HU\(|MEM_B\(|MEM_BU\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
-rg -n -C 3 'slotDispatcherIter|MEM_H\(|MEM_HU\(|MEM_B\(|MEM_BU\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
-rg -n -A14 -B4 '#define MEM_H|#define MEM_B|#define MEM_HU|#define MEM_BU' lib/N64ModernRuntime/N64Recomp/include/recomp.h
+rg -n -F 'MEM_W(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
+rg -n -C 4 'slotDispatcherIter|MEM_W\([^;]+\)\s*=' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
+rg -n -A8 -B4 '#define MEM_W' lib/N64ModernRuntime/N64Recomp/include/recomp.h
 git diff --check
 
 Classify every hit as reachable overlapping writer, dynamic but potentially
