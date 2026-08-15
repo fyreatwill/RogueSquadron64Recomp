@@ -64733,6 +64733,23 @@ unevaluable. No code or mitigation change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+## Session 1209 (2026-08-14) — repeated title A pulses remained phase-incomplete
+
+Ran the prescribed debugger-enabled retail oracle comparison. The driven arm
+pressed A at 17, 18, 19, and 20 seconds, then Start at 25–55 seconds; the
+undriven arm was paired from the same 60-second recipe. Both arms passed the
+whole-RDRAM positive control with 10,000 writes, emitted 3,599 VI frames, and
+stayed at VI width 320 with origin `0x006dd280`. The driven PIF trace verified
+four A press/release pairs and all seven Start press/release pairs.
+
+This selects H2: repeated A confirmation edges do not provide the missing
+retail entry mechanism. It rules out this title-window pulse schedule, not
+the broader retail execution-path hypothesis. M4 target watches remain
+UNEVALUABLE. No code, instrument, or mitigation change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
+
 ## Session 1206 (2026-08-14) — early-A retail path stayed phase-incomplete
 
 Ran the debugger-enabled retail oracle comparison concurrently: an undriven
