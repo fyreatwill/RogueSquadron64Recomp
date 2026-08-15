@@ -67059,3 +67059,28 @@ block from the unused pool or the LRU tail onto the list s1316 created. H2
 and H3 are ruled out for this function; there is neither a partial/conflicting
 match nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1319 (2026-08-15) — synchronized the sample-stream range fill symbol
+
+Performed the bounded exact-name census over `0x8008FAAC..0x8008FFAC`.
+
+No new soak-queue verdicts since s1318; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008FAAC`, size `0x500`; it ends exactly at the next generated function, `0x8008FFAC`. Overlay `rom_size` is `0x500` |
+| Generated definition | `funcs_24.c` defines `fillSampleStreamRange` at `0x8008FAAC` through the matching epilogue at `0x8008FFA4`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `fillSampleStreamRange = 0x8008FAAC`. No later companion list remaps this address |
+| Caller evidence | Four generated `jal 0x8008FAAC` sites in `musyxRenderVoiceSamples` at `0x8009024C`, `0x800902CC`, `0x8009039C`, and `0x800903F0`. Companion independently names that kernel `musyxRenderVoiceSamples = 0x8008FFAC` |
+| Semantic evidence | Body walks the range-list head at `0x801499B4` (the same list s1316/s1317/s1318 own), matches `node+0xC` against `a3`, and fills stream-range gaps using the `0x600` block size established by `initSampleStreamBlockCache` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x500` boundary is exact, and the body fills sample-stream ranges from
+the cache list the preceding four symbols manage. H2 and H3 are ruled out
+for this function; there is neither a partial/conflicting match nor an
+absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.

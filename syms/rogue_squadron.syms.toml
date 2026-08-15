@@ -1371,7 +1371,7 @@ functions = [
     { name = "initSampleStreamBlockCache", vram = 0x8008F858, size = 0x104 },
     { name = "moveSampleBlockToFront", vram = 0x8008F95C, size = 0x6C },
     { name = "recycleSampleStreamBlock", vram = 0x8008F9C8, size = 0xE4 },
-    { name = "func_8008FAAC", vram = 0x8008FAAC, size = 0x500 },
+    { name = "fillSampleStreamRange", vram = 0x8008FAAC, size = 0x500 },
     { name = "func_8008FFAC", vram = 0x8008FFAC, size = 0xA90 },
     { name = "func_80090A3C", vram = 0x80090A3C, size = 0x3C8 },
     { name = "func_80090E04", vram = 0x80090E04, size = 0x230 },
