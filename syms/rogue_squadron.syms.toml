@@ -1490,7 +1490,7 @@ functions = [
     { name = "updateActive3DAudioSource", vram = 0x800988E8, size = 0xD0 },
     { name = "isAudioVoiceActive", vram = 0x800989B8, size = 0x20 },
     { name = "play3DSoundEvent", vram = 0x800989D8, size = 0x204 },
-    { name = "func_80098BDC", vram = 0x80098BDC, size = 0x204 },
+    { name = "play3DSoundEventVariant", vram = 0x80098BDC, size = 0x204 },
     { name = "func_80098DE0", vram = 0x80098DE0, size = 0xA4 },
     { name = "func_80098E84", vram = 0x80098E84, size = 0x68 },
     { name = "func_80098EEC", vram = 0x80098EEC, size = 0xBC },

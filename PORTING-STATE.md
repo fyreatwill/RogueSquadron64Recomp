@@ -70332,3 +70332,36 @@ No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is the independently named `play3DSoundEventVariant` at
 `0x80098BDC`.
+
+## Session 1433 (2026-08-15) — synchronized the play-3d-sound-event-variant symbol
+
+Performed the bounded exact-name census over `0x80098BDC..0x80098DE0`.
+
+No new soak-queue verdicts since s1432; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80098BDC`, size `0x204`; `0x80098BDC+0x204=0x80098DE0`. Overlay `rom_size` is `0x204` at offset `0x0009879C` (`0x80098BDC-0x80000440`). Generated body starts `addiu $sp, $sp, -0x68` at `0x80098BDC` and ends `jr $ra` / `nop` at `0x80098DD8` / `0x80098DDC` |
+| Generated definition | `funcs_26.c` defines `play3DSoundEventVariant` at `0x80098BDC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x204` function between independently named `play3DSoundEvent` at `0x800989D8` and generated `factor5RemoveListNode` at `0x80098DE0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `play3DSoundEventVariant = 0x80098BDC` as the 36-caller sibling of `play3DSoundEvent` with different param positions under the same factor5 mutex + audio-entry pattern. Menu, mission, cinematic, and ignored lists do not remap `0x80098BDC`. No conflicting companion name |
+| Caller evidence | Exactly 36 generated `jal 0x80098BDC` sites in 26 enclosing functions, all independently named. Highest-count live sites include `tickEnemyCraftWithDestruction` (4), `npcWordDevastatorUpdate` (2), `emit3DSoundsForActiveNpcs` (2), `tickAtAtBodyTransform` (2), `updateAtStBodyKinematics` (2), `npcTankDroidComputeAimMotion` (2), `tickCraftSplineOrientation` (2), and `tickCraftSplineOrientationDual` (2). Named 3D-source/emitter callers also include `audioCueDispatcherNpcHandler` (1), `npcProbeDriod` (1), `runModelViewerSoundDemo` (1), and `npcTrainCarUpdate` (1). Zero `func_*` callers. Companion caller count matches exactly |
+| Semantic evidence | Body loads `gMusyXActiveFlag` (`0x800A0F50`) and early-outs if zero, then `factor5MutexAcquire`. It copies `a1` vec3 to source+`0xC` (position), `a2` vec3 to source+`0x18` (velocity), `a3`/`f20` to source+`0x24` (volume), stack `0x78`/`f22` to source+`0x30` (pitch), and `lhu` stack `0x82` to source+`0x3C` (id). Extra stack args `0x7C`/`0x86`/`0x8B`/`0x8F` land at source+`0x8`/`+0x38`/`+0x28`/`+0x2C`. Null `a0` uses default source `0x80152D20` and calls independently named `compute3DSourceSpatialMix` (`0x80098310`), `bsearchFactor5TableByU16Key` (`0x80087EE8`), and `applyVoice3DMixParams` (`0x8009868C`); nonzero `a0` inserts the source at list head `0x80153414` instead. Both paths `factor5MutexRelease`. That matches the companion sibling/different-param-position comment. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80098BDC`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x204`, all 36 `jal` callers are independently named 3D-source play
+sites and match the companion count, and there is neither a conflicting
+companion name nor a size split. H2 and H3 are ruled out for this
+address. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0x204`). `fake_func_80097D58` remains the
+already-fake two-instruction epilogue fragment and was left unchanged,
+as were `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not
+reopen M5 audio de-stubbing. The next adjacent generated function is
+the independently named `factor5RemoveListNode` at `0x80098DE0`.
