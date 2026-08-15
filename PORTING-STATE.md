@@ -67309,3 +67309,28 @@ called from `shutdownMusyXEngine`. H2 and H3 are ruled out for this function;
 there is neither a partial/conflicting match nor an absent independent name.
 The stale address-encoded TOML entry was synchronized. No build or runtime
 run was justified for an exact-name census.
+
+## Session 1329 (2026-08-15) — synchronized the MusyX audio-task wait symbol
+
+Performed the bounded exact-name census over `0x80091EB0..0x80091FC4`.
+
+No new soak-queue verdicts since s1328; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80091EB0`, size `0x114`; it ends exactly at the next generated function, `0x80091FC4`. Overlay `rom_size` is `0x114` |
+| Generated definition | `funcs_24.c` defines `waitForMusyXAudioTaskDone` at `0x80091EB0` through the matching epilogue at `0x80091FBC`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `waitForMusyXAudioTaskDone = 0x80091EB0` and independently names the countdown halfword `D_8014998A` plus the gate `gMusyXActiveFlag` at `0x800A0F50` |
+| Caller evidence | One generated site: `musyxNoopStub` (`0x8008ED00`) at `jal 0x80091EB0`. Companion independently names that caller as the wait-then-teardown stub that then frees `0x8013AF14` |
+| Semantic evidence | Body reads `gMusyXActiveFlag` at `0x800A0F50` and early-returns if clear, stores countdown `0x10` at `0x8014998A`, waits/pumps until that halfword clears, then frees the audio-buffer/voice-array pointers. Companion independently names that wait-spin |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x114` boundary is exact, and the body is the MusyX audio-task wait path
+called from `musyxNoopStub`. H2 and H3 are ruled out for this function;
+there is neither a partial/conflicting match nor an absent independent name.
+The stale address-encoded TOML entry was synchronized. No build or runtime
+run was justified for an exact-name census.
