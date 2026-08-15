@@ -66280,3 +66280,23 @@ stop routines, providing semantic evidence for the mapping. H1 is selected
 with high confidence and the stale symbol-map entry is synchronized. No build
 or runtime run was justified for an exact-name census. This rules out partial,
 conflicting, or absent naming evidence for this function.
+
+## Session 1285 (2026-08-15) — synchronized the synth-voice release symbol
+
+Performed the bounded exact-name census over `0x8008DA4C..0x8008DA98`.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008DA4C`, size `0x4C`; it ends exactly at the next generated function, `0x8008DA98` |
+| Generated definition | `funcs_23.c` defines `releaseSynthVoice` at `0x8008DA4C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `releaseSynthVoice = 0x8008DA4C` |
+| Caller evidence | No generated direct call site was found; no caller claim is used |
+| Semantic evidence | The body calls `freeSynthVoiceFromActiveList`, clears owner/state fields, and masks active flag bits on the voice |
+| Confidence | High |
+
+The complete table selects H1: the companion and generated names agree, the
+boundary is exact, and the body independently supports release semantics. The
+stale address-encoded TOML entry is therefore synchronized. H2 and H3 are
+ruled out for this function; there is neither a conflicting/partial mapping
+nor an absent independent name. No build or runtime run was justified for an
+exact-name census.
