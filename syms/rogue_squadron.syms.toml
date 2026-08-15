@@ -1532,7 +1532,7 @@ functions = [
     { name = "computeVoicePanCoefficients", vram = 0x8009C2D0, size = 0x218 },
     { name = "updateVoiceChannelParams", vram = 0x8009C4E8, size = 0xD4 },
     { name = "updateVoiceChannelParamsLarge", vram = 0x8009C5BC, size = 0x348 },
-    { name = "func_8009C904", vram = 0x8009C904, size = 0xEC8 },
+    { name = "decodeAndFillVoiceBlock", vram = 0x8009C904, size = 0xEC8 },
     { name = "fake_func_8009D7CC", vram = 0x8009D7CC, size = 0x4 },
     { name = "func_8009D7D0", vram = 0x8009D7D0, size = 0xEC },
     { name = "func_8009D8BC", vram = 0x8009D8BC, size = 0x8 },

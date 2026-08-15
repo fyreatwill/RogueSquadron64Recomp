@@ -71736,3 +71736,37 @@ COP1 fragment and was left unchanged, as were `fake_func_80099FDC`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is independently named
 `decodeAndFillVoiceBlock` at `0x8009C904` (TOML still `func_8009C904`).
+
+## Session 1475 (2026-08-15) — synchronized the decode-and-fill-voice-block symbol
+
+Performed the bounded exact-name census over `0x8009C904..0x8009D7CC`.
+
+No new soak-queue verdicts since s1474; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009C904`, size `0xEC8`; `0x8009C904+0xEC8=0x8009D7CC`. Overlay `rom_size` is `0xEC8` at offset `0x0009C4C4` (`0x8009C904-0x80000440`) |
+| Generated definition | `funcs_27.c` defines `decodeAndFillVoiceBlock` at `0x8009C904`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xEC8` function between independently named `updateVoiceChannelParamsLarge` at `0x8009C5BC` and already-fake `fake_func_8009D7CC` at `0x8009D7CC`. It ends `jr $ra` / `nop` at `0x8009D7C4` / `0x8009D7C8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `decodeAndFillVoiceBlock = 0x8009C904` (batch7 voice-synth list). Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009C904`. No companion C/asm body exists |
+| Caller evidence | Exactly one generated `jal 0x8009C904` site and zero `func_*` callers: independently named `serviceStreamingVoice` at `0x8009C0E4` passes the voice slot as `$a0` and an output pointer from `slot+0x198` plus `((slot+0x11D8 % slot+0x19C) >> 2) << 3` as `$a1`. Whole-ROM scan found one `jal` encoding `0x0C027241` at file `0x9CCE4` (matches `0x8009C0E4`) and zero `j` encodings (`0x08027241`) or absolute `0x8009C904` pointer words |
+| Semantic evidence | Retail ROM words at file `0x9D504` (`(vram&0xFFFFFF)+0xC00`) are `0x27BDFEC0` (`addiu $sp, $sp, -0x140`). Same-run positive controls: `0x8009C2BC` file `0x9CEBC` is `0x24020004`, `0x8009C2C8` file `0x9CEC8` is `0x46041082`, `0x8009C2D0` file `0x9CED0` is `0x27BDFFE8`, `0x8009C4E8` file `0x9D0E8` is `0x27BDFF78`, `0x8009C5BC` file `0x9D1BC` is `0x27BDFEE0`, `0x8009C8FC`/`0x8009C900` files `0x9D4FC`/`0x9D500` are `0x03E00008`/`0x00000000`, `0x8009D7C4`/`0x8009D7C8` files `0x9E3C4`/`0x9E3C8` are `0x03E00008`/`0x00000000` (`jr $ra` / `nop`), and `0x8009D7CC` file `0x9E3CC` is `0x44802000` (`mtc1 $zero, $f4`). The function saves `$a0` as the voice object (`$fp`) and `$a1` as the output table, reads bitstream cursor `slot+0x11C8` into a word at `slot+0x1A0+((cursor>>3)&0xFFC)`, then either `bzero`s the `0x140`-byte destination when `+0x18A`/`+0x18C` gate it or decodes a fixed `0x68`-bit / `+0x1A`-stride span into stack halfword fields. A four-iteration tail then calls independently named `filterVoiceSampleBlock`, `applyVoiceDelayFilter`, and `computeVoicePanCoefficients`, and writes the advanced bit cursor back to `slot+0x11C8`. Matches the companion name, s924's source inventory, and s1467's independently named caller |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009C904`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xEC8`, the bitstream-decode-then-filter/delay/pan sequence matches the
+name, and there is neither a conflicting companion name nor a size split.
+The stale address-encoded TOML entry was synchronized (name only; size left
+at `0xEC8`). `fake_func_8009C2C8` remains the already-fake two-instruction
+COP1 fragment and was left unchanged, as were `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is already-fake `fake_func_8009D7CC` at
+`0x8009D7CC` (one-instruction `mtc1` fragment before independently named
+`filterVoiceSampleBlock` at `0x8009D7D0`).

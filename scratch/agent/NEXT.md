@@ -1,9 +1,9 @@
-# NEXT work unit (s1475)
+# NEXT work unit (s1476)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8009C904..0x8009D7CC`. Do not build or run. Record its address,
+function, `0x8009D7CC..0x8009D7D0`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -19,12 +19,13 @@ one-instruction jump fragment), `fake_func_80097D58` unchanged
 `fake_func_80099C4C` unchanged (s1446 H2: already-fake one-word `beq`
 gap), `fake_func_80099FDC` unchanged (s1451 H2: already-fake
 one-word `bne` gap before `aspMainTextStart`), and
-`fake_func_8009C2C8` unchanged (s1471 H2: already-fake two-instruction
-COP1 multiply-accumulate fragment). The generated entry at this address
-is already `decodeAndFillVoiceBlock`; the TOML entry is still
-`func_8009C904`. Confirm the companion, size, and caller/semantic
-evidence independently before synchronizing or leaving a residual
-mismatch.
+`fake_func_8009C2C8` unchanged (s1471 H2: already-fake
+two-instruction COP1 multiply-accumulate fragment). The generated
+entry at this address is already `fake_func_8009D7CC`; the companion
+splat list also marks `fake_func_8009D7CC = 0x8009D7CC`. Confirm the
+one-instruction `mtc1 $zero, $f4` fragment, size `0x4`, and the next
+independently named `filterVoiceSampleBlock` at `0x8009D7D0` before
+leaving the fake unchanged.
 
 Competing hypotheses and discriminator:
 
@@ -42,7 +43,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '8009C904\|8009D7CC\|func_8009C904\|decodeAndFillVoiceBlock' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '8009C904\|8009D7CC' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '8009C904\|8009D7CC' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009D7CC\|8009D7D0\|fake_func_8009D7CC\|filterVoiceSampleBlock' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009D7CC\|8009D7D0' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '8009D7CC\|8009D7D0' syms/rogue_squadron.syms.toml
 ```
