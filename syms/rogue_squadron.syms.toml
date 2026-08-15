@@ -1458,7 +1458,7 @@ functions = [
     { name = "queueAudioVoiceCmdLocked", vram = 0x80096284, size = 0x244 },
     { name = "queueAudioVoiceCmd", vram = 0x800964C8, size = 0x78 },
     { name = "getSongStateByteByHandle", vram = 0x80096540, size = 0xA4 },
-    { name = "func_800965E4", vram = 0x800965E4, size = 0xC0 },
+    { name = "setSongChannelParamByHandle", vram = 0x800965E4, size = 0xC0 },
     { name = "func_800966A4", vram = 0x800966A4, size = 0x5E4 },
     { name = "func_80096C88", vram = 0x80096C88, size = 0x5C },
     { name = "func_80096CE4", vram = 0x80096CE4, size = 0x24 },
