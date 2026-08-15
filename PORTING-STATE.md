@@ -66441,3 +66441,23 @@ music/SFX volume-apply role. H2 and H3 are ruled out for this function; there
 is neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1293 (2026-08-15) — synchronized the audio-fader-ramp predicate symbol
+
+Performed the bounded exact-name census over `0x8008E1C4..0x8008E218`.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E1C4`, size `0x54`; it ends exactly at the next generated function, `0x8008E218`. Overlay `rom_size` is `0x54` |
+| Generated definition | `funcs_23.c` defines `isAudioFaderRampActive` at `0x8008E1C4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `isAudioFaderRampActive = 0x8008E1C4` |
+| Caller evidence | One generated call site in `tickAllActiveSongs` (`0x80096D08`) invokes it as `jal 0x8008E1C4`; the `v0` predicate is stored as a byte at `0x801499F8` |
+| Semantic evidence | Body is a u8-index predicate over a 0x28-byte slot table at `0x80141B20`: return 0 if state byte `+0x0C == 4` or word `+0x04 == 0`, else the sign bit of word `+0x00`. Adjacent companion names `setupAudioFaderRamp` / `setAudioFaderRampLocked` / `setAudioFaderState` write the same table fields |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x54` boundary is exact, and caller plus body evidence supports the
+fader-ramp-active predicate. H2 and H3 are ruled out for this function; there
+is neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
