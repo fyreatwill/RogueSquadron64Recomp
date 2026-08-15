@@ -65752,3 +65752,25 @@ all four entries, so H1 was selected. Synchronized the four stale
 `func_*` entries in `syms/rogue_squadron.syms.toml`; no build or run was needed.
 This rules out a repository-symbol naming mismatch in this region. It does not
 explain the external retail-entry boundary or the recurring runtime SIGBUS.
+
+## Session 1252 (2026-08-15) — synchronized heavy-mech helper symbols
+
+Ran the planned bounded generated/companion census over
+`0x80079278..0x80079C10`. The comparison table was:
+
+| VRAM | Generated definition | Companion symbol | Result |
+|---|---|---|---|
+| `0x80079278` | explicit `fake_func_80079278` padding entry | `fake_func_80079278` | exact fake/padding entry |
+| `0x80079280` | `heavyMechSubEffectNpcHandler` in `funcs_19.c` | `heavyMechSubEffectNpcHandler` | exact |
+| `0x800799C0` | `concatChildTransformAlongChain` in `funcs_19.c` | `concatChildTransformAlongChain` | exact |
+| `0x80079A70` | `initWaterSprayEffectAndSfx` in `funcs_19.c` | `initWaterSprayEffectAndSfx` | exact |
+| `0x80079A94` | `spawnNpcWithRandomRotation` in `funcs_19.c` | `spawnNpcWithRandomRotation` | exact |
+| `0x80079BC8` | `spawnHeavyMechSubEffect` in `funcs_19.c` | `spawnHeavyMechSubEffect` | exact |
+| `0x80079C10` | `setRandomFacingDirection` in `funcs_19.c` | `setRandomFacingDirection` | exact |
+
+The companion names, generated declarations/definitions, and cross-file call
+sites independently agree for all six real functions; H1 was selected.
+Synchronized the six stale repository symbol-map entries. No build or runtime
+run was needed. This rules out a repository-symbol naming mismatch in this
+region, but does not explain the external retail-entry boundary or recurring
+runtime SIGBUS.

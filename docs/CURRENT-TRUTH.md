@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1251 (2026-08-15).
+in the ledger. Reviewed through s1252 (2026-08-15).
 
 ## Current state
 
@@ -253,8 +253,8 @@ in the ledger. Reviewed through s1251 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
-   exact-name sweep over the next adjacent helper region after
-   `0x80076BE4..0x800779B4`, beginning at `0x80077AC0`; it needs no external
+   exact-name sweep over the next adjacent controller-helper region after
+   `0x80079278..0x80079C10`, beginning at `0x80079CD8`; it needs no external
    retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -288,6 +288,16 @@ generated names for all four functions: `forwardToNpcGeneratorSpawn`,
 `initSpawnedNpcHealthAndDetail`. The companion symbol file, generated
 definitions/call sites, and address/size entries agree; the repository symbol
 map was synchronized. H1 selected; no runtime change or build was needed.
+
+The s1252 bounded `0x80079278..0x80079C10` census found exact companion and
+generated names for all six real functions: `heavyMechSubEffectNpcHandler`,
+`concatChildTransformAlongChain`, `initWaterSprayEffectAndSfx`,
+`spawnNpcWithRandomRotation`, `spawnHeavyMechSubEffect`, and
+`setRandomFacingDirection`. The `0x80079278` eight-byte padding entry remains
+the independently labeled `fake_func_80079278`; generated definitions,
+companion symbols, and cross-file call sites agree for the six functions.
+The repository symbol map was synchronized. H1 selected; no runtime change
+or build was needed.
 
 ## Durable boundaries
 
@@ -393,6 +403,7 @@ order.
 | s1248 | The bounded `0x80075218..0x80075BB0` census found exact companion/generated names for all four functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1250 | The bounded `0x80076BE4..0x800779B4` census found exact companion/generated names for eight functions; two unnamed intervening helpers remain address-encoded. Synchronized the repository symbol map. H1 selected; no build or run. |
 | s1251 | The bounded `0x80077AC0..0x800791FC` census found exact companion/generated names for all four functions and synchronized the repository symbol map. H1 selected; no build or run. |
+| s1252 | The bounded `0x80079278..0x80079C10` census found exact companion/generated names for six functions; the `0x80079278` padding entry remains `fake_func_80079278`. Synchronized the repository symbol map. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
