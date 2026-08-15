@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1199 (2026-08-14).
+in the ledger. Reviewed through s1200 (2026-08-14).
 
 ## Current state
 
@@ -79,14 +79,19 @@ in the ledger. Reviewed through s1199 (2026-08-14).
   words that returned to zero, but both arms still remained at VI width 320
   with origin `0x006dd280`. The schedule remains phase-incomplete; M4 target
   watches are still unevaluable.
+- The s1200 debugger-enabled comparison passed whole-RDRAM controls in both
+  arms. The earlier-first-Start arm produced eleven verified `0x10000000` PIF
+  words that returned to zero, but both arms still remained at VI width 320
+  with origin `0x006dd280` for about 3,600 VI frames. The schedule remains
+  phase-incomplete; M4 target watches are still unevaluable.
 
 ## Active investigation and ranked next steps
 
 1. Make one further debugger-enabled retail schedule change, moving the first
-   Start earlier than the s1199 `2:start` press while retaining the 150 ms hold
-   and later presses. Compare it with the undriven control. Require changed
-   PIF words plus a later VI phase before arming any M4 target watch; do not
-   treat the existing target-watch null as evidence.
+   Start to `0.2s` (earlier than the s1200 `0.5s` press) while retaining the
+   150 ms hold and later presses. Compare it with the undriven control. Require
+   changed PIF words plus a later VI phase before arming any M4 target watch;
+   do not treat the existing target-watch null as evidence.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -173,6 +178,7 @@ order.
 | s1197 | Debugger-enabled driven/undriven oracle arms passed controls; driven PIF words changed but both stayed at width 320, selecting schedule/path redesign. |
 | s1198 | Revised 150 ms Start schedule passed controls and changed PIF words, but both arms stayed at width 320/origin `0x006dd280`; H1 timing/state-path remains selected. |
 | s1199 | Earlier first-Start schedule passed controls and changed PIF words, but both arms still stayed at width 320/origin `0x006dd280`; schedule remains phase-incomplete. |
+| s1200 | Earlier-first-Start schedule passed controls and changed PIF words, but both arms still stayed at width 320/origin `0x006dd280`; schedule remains phase-incomplete. |
 
 ## Method and safety rules
 
