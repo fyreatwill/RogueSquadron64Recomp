@@ -67259,3 +67259,28 @@ initializer. H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1327 (2026-08-15) — synchronized the audio-reconfig symbol
+
+Performed the bounded exact-name census over `0x80091C88..0x80091D40`.
+
+No new soak-queue verdicts since s1326; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80091C88`, size `0xB8`; it ends exactly at the next generated function, `0x80091D40`. Overlay `rom_size` is `0xB8` |
+| Generated definition | `funcs_24.c` defines `reapplyAudioConfig` at `0x80091C88` through the matching epilogue at `0x80091D38`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `reapplyAudioConfig = 0x80091C88`. The later companion list names `shutdownAudioEngine` at `0x80091D40` and does not remap `0x80091C88` |
+| Caller evidence | One generated site: `reapplyDisplayMode` (`0x8008EB5C`) at `jal 0x80091C88`. Companion independently names that caller and comments that the runtime display-mode path reconfigures audio through this function |
+| Semantic evidence | Body `jal 0x80091FC4` (`initFactor5Mutex`), `osAiSetFrequency`, stores the frequency at `0x801496F4` and back through the caller's frequency pointer, then `jal 0x8009189C` (`initN64RspMixer`). There is no message-queue, event, or thread creation; that is the structural difference from sibling `initAudioSubsystem` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0xB8` boundary is exact, and the body is the runtime audio-reconfig path
+without thread creation. H2 and H3 are ruled out for this function; there is
+neither a partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
