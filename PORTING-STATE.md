@@ -70011,3 +70011,35 @@ unchanged, as were `fake_func_8009711C`, `fake_func_80094348`,
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `flushStreamedVoiceBuffers` at `0x80097F54`.
+
+## Session 1423 (2026-08-15) — synchronized the flush-streamed-voice-buffers symbol
+
+Performed the bounded exact-name census over `0x80097F54..0x80097FE8`.
+
+No new soak-queue verdicts since s1422; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80097F54`, size `0x94`; `0x80097F54+0x94=0x80097FE8`. Overlay `rom_size` is `0x94` at offset `0x00097B14` (`0x80097F54-0x80000440`). Generated body starts `lui $v0, 0x8014` at `0x80097F54` and ends `jr $ra` / `nop` at `0x80097FE0` / `0x80097FE4` |
+| Generated definition | `funcs_26.c` defines `flushStreamedVoiceBuffers` at `0x80097F54`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x94` function between independently named `serviceStreamedVoices` at `0x80097DA8` and generated `startStreamedSampleVoice` at `0x80097FE8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `flushStreamedVoiceBuffers = 0x80097F54` in the sequential streamed-voice family, immediately after `serviceStreamedVoices` and before `startStreamedSampleVoice`. Menu, mission, cinematic, and ignored lists do not remap `0x80097F54`. No conflicting companion name |
+| Caller evidence | One generated `jal 0x80097F54` in independently named `musyxSynthFrame` at `0x800916A8`. Companion comments already describe `musyxSynthFrame` as the per-frame synth tick. s1352 independently recorded this same site as the sole caller of `copyFourHalfwordsWriteback` |
+| Semantic evidence | Body loads the slot/mode count at `MEM_BU[0x80141AD0]` (the same count used by independently named `clearStreamedVoiceFlags` and `serviceStreamedVoices`), then walks the `0x18`-stride records at `0x80152A20`. For each slot whose flag byte is `1`, it passes the pointer at `+0x8` (`0x80152A28`) and the halfword index at `+0xC` (`0x80152A2C`) to independently named `copyFourHalfwordsWriteback`. That is a flush/writeback of streamed-voice sample buffers. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80097F54`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x94`, the single `jal` caller matches the per-frame MusyX synth flush
+role, and there is neither a conflicting companion name nor a size split. H2
+and H3 are ruled out for this address. The stale address-encoded TOML entry
+was synchronized (name only; size left at `0x94`). `fake_func_80097D58`
+remains the already-fake two-instruction epilogue fragment and was left
+unchanged, as were `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `startStreamedSampleVoice` at `0x80097FE8`.
