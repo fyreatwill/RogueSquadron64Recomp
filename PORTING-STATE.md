@@ -66027,3 +66027,21 @@ matching generated C definition, and caller evidence; the existing TOML sizes
 matched the generated address ranges. Synchronized all 20 names in
 `syms/rogue_squadron.syms.toml`. H1 selected. No build or runtime run was
 justified; this was a source census and symbol-map change.
+
+## Session 1267 (2026-08-15) — synchronized Factor 5 table symbols
+
+Performed the bounded exact-name census over `0x80085A94..0x8008603C`. The complete comparison table was:
+
+| VRAM | Size | Generated definition | Companion mapping/source | Caller evidence | Confidence |
+|---|---:|---|---|---|---|
+| `0x80085A94` | `0x178` | `factor5BucketedTableRemoveEntry` | same name in `main_overlay.txt` | direct generated caller in `funcs_26.c` | exact/high |
+| `0x80085C0C` | `0xCC` | `binarySearchWithComparator` | same name in `main_overlay.txt` | comparator callback path; no direct generated `jal` | exact/high |
+| `0x80085CD8` | `0x10` | `func_80085CD8` | no independent companion mapping | called from generated `factor5BucketedTableLookupValue` | address-encoded/parked |
+| `0x80085CE8` | `0x128` | `factor5BucketedTableLookupValue` | same name in `main_overlay.txt` | direct generated callers in `funcs_22.c` and `funcs_23.c` | exact/high |
+| `0x80085E10` | `0x10` | `compareHalfwordAtOffset8` | same name in `main_overlay.txt` | direct comparator call from the paired table path | exact/high |
+| `0x80085E20` | `0x134` | `factor5SortedTableLookupWidePairRecord` | same name in `main_overlay.txt` | paired with offset-8 comparator; no direct generated `jal` | exact/high |
+| `0x80085F54` | `0x10` | `compareHalfwordAtOffset4_v2` | same name in `main_overlay.txt` | direct calls from generated table paths | exact/high |
+| `0x80085F64` | `0xD8` | `factor5SecondSortedTableLookupValue` | same name in `main_overlay.txt` | paired with offset-4 comparator; no direct generated `jal` | exact/high |
+| `0x8008603C` | `0xD8` | `factor5SortedTableLookupValue` | same name in `main_overlay.txt` | paired with offset-4 comparator; no direct generated `jal` | exact/high |
+
+Generated boundaries match the repository sizes. H2 was selected: eight stale repository symbol-map entries were synchronized and the unmapped comparator helper was left unchanged. No build or runtime run was justified; this was a source census and symbol-map change.
