@@ -65683,3 +65683,15 @@ Ran the single bounded generated/companion census for
 Synchronized the six stale repository symbol-map entries; generated C already
 used the names. H1 selected. No build or runtime run was needed, and the
 external retail-entry boundary remains open.
+
+## Session 1247 (2026-08-15) — synchronized explosion and particle helper symbols
+
+Ran the single bounded generated/companion census for
+`0x8007413C..0x80074D44`. The generated declarations and companion
+`main_overlay.txt` independently agree on five exact human names:
+`explosionEffectNpcHandler`, `triggerDistanceScaledExplosion`,
+`triggerObjectDestructionEffects`, `transformLimbStrideAnchorsLocal`, and
+`randomParticleWithParentNpcHandler`. The caller enumeration added no
+ambiguous target. Synchronized the five stale repository symbol-map entries;
+generated C already used the names. H1 selected. No build or runtime run was
+needed, and the external retail-entry boundary remains open.

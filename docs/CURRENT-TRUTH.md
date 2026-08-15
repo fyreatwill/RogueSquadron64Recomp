@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1246 (2026-08-15).
+in the ledger. Reviewed through s1247 (2026-08-15).
 
 ## Current state
 
@@ -171,6 +171,7 @@ in the ledger. Reviewed through s1246 (2026-08-15).
 - The s1243 bounded `0x8006F6A0..0x800700A8` census found exact companion/generated names for all three functions: `npcDebris1Update`, `orientedNpcHandler`, and `multiEventTemplateNpcHandler`. Generated C already carried those names; the repository symbol map was synchronized. H1 selected; no build or run.
 - The s1244 bounded `0x80071064..0x8007202C` census found exact companion/generated names for all five functions: `walkDatTreeAndAllocSubtypeBuffers`, `dispatchDatSubtypeByRandomIndex`, `walkDatTreeAndVisitChildren`, `loadSfxAsset`, and `composeRandomRotationMatrix`. Generated C already carried the names; the repository symbol map was synchronized. H1 selected; no build or run.
 - The s1246 bounded `0x80072CF0..0x80073E4C` census found exact companion/generated names for all six functions: `initWaterSprayParticles`, `npcWaterSprayUpdate`, `spawnDestructionEffectBurst`, `spawnDistanceScaledDebrisBurst`, `spawnDirectionalDebrisBurst`, and `distanceAndDopplerNpcHelper`. Generated C already carried the names; the repository symbol map was synchronized. H1 selected; no build or run.
+- The s1247 bounded `0x8007413C..0x80074D44` census found exact companion/generated names for all five functions: `explosionEffectNpcHandler`, `triggerDistanceScaledExplosion`, `triggerObjectDestructionEffects`, `transformLimbStrideAnchorsLocal`, and `randomParticleWithParentNpcHandler`. Generated C already carried the names; the repository symbol map was synchronized. The companion symbol file and generated declarations independently agree; caller enumeration added no ambiguity. H1 selected; no build or run.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -252,7 +253,7 @@ in the ledger. Reviewed through s1246 (2026-08-15).
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
    exact-name sweep over the next adjacent helper region after
-   `0x80072CF0..0x80073E4C`; it needs no external retail-entry artifact. Keep
+   `0x8007413C..0x80074D44`; it needs no external retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
@@ -362,6 +363,7 @@ order.
 | s1244 | The bounded `0x80071064..0x8007202C` census found exact companion/generated names for all five functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1245 | The bounded `0x8007218C..0x80072CE8` census found exact companion/generated names for all 13 functions, including one explicitly fake tail, and synchronized 12 stale repository symbol-map entries. H1 selected; no build or run. |
 | s1246 | The bounded `0x80072CF0..0x80073E4C` census found exact companion/generated names for all six functions and synchronized the repository symbol map. H1 selected; no build or run. |
+| s1247 | The bounded `0x8007413C..0x80074D44` census found exact companion/generated names for all five functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
