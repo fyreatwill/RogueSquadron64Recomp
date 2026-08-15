@@ -66646,3 +66646,26 @@ the four audio-setup callers support the named wrapper. H2 and H3 are ruled
 out for this function; there is neither a partial/conflicting match nor an
 absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1302 (2026-08-15) — synchronized the MusyX locked-task symbol
+
+Performed the bounded exact-name census over `0x8008E904..0x8008E940`.
+
+No new soak-queue verdicts since s1301; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E904`, size `0x3C`; it ends exactly at the next generated function, `0x8008E940`. Overlay `rom_size` is `0x3C` |
+| Generated definition | `funcs_23.c` defines `runMusyXTaskLocked` at `0x8008E904`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `runMusyXTaskLocked = 0x8008E904` |
+| Caller evidence | Three generated `jal 0x8008E904` sites: `menuControllerInput` (`0x800B47D0`), `runMenuShipSelectScreen` (`0x800C131C`), and thin wrapper `runMusyXTaskWrapper` (`0x800CBD6C`). Companion independently names those three callers. The first two sit after `tickMusyXIfActive` plus an `anyAudioSlotActive` wait |
+| Semantic evidence | Body loads `gMusyXActiveFlag` at `0x800A0F50` and, when nonzero, `jal factor5MutexAcquire` (`0x80092010`), `jal freeAudioScratchBuffer` (`0x80092530`), then `jal factor5MutexRelease` (`0x8009205C`). Companion independently names that gate byte and those three callees. Sibling `syncMusyXIfActive` at `0x8008E8D8` is the unlocked gated counterpart |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x3C` boundary is exact, and the mutex-wrapped scratch-buffer free plus
+the three independently named callers support the locked-task wrapper. H2 and
+H3 are ruled out for this function; there is neither a partial/conflicting
+match nor an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
