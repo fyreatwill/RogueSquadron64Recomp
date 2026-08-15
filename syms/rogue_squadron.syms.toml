@@ -1515,7 +1515,7 @@ functions = [
     { name = "stopVoiceByHandle", vram = 0x8009B33C, size = 0x90 },
     { name = "isVoiceHandleActive", vram = 0x8009B3CC, size = 0x98 },
     { name = "setVoiceMixByKey", vram = 0x8009B464, size = 0x144 },
-    { name = "func_8009B5A8", vram = 0x8009B5A8, size = 0x300 },
+    { name = "serviceVoicePoolFrame", vram = 0x8009B5A8, size = 0x300 },
     { name = "func_8009B8A8", vram = 0x8009B8A8, size = 0x190 },
     { name = "loadSpeechFile", vram = 0x8009BA38, size = 0x168 },
     { name = "func_8009BBA0", vram = 0x8009BBA0, size = 0xE8 },

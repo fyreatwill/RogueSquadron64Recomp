@@ -71160,3 +71160,37 @@ left unchanged, as were `fake_func_80099C4C`, `fake_func_80097D58`,
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is independently named `serviceVoicePoolFrame` at
 `0x8009B5A8`.
+
+## Session 1458 (2026-08-15) — synchronized the service-voice-pool-frame symbol
+
+Performed the bounded exact-name census over `0x8009B5A8..0x8009B8A8`.
+
+No new soak-queue verdicts since s1457; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009B5A8`, size `0x300`; `0x8009B5A8+0x300=0x8009B8A8`. Overlay `rom_size` is `0x300` at offset `0x0009B168` (`0x8009B5A8-0x80000440`). Generated body starts `lui $v0, 0x800A` at `0x8009B5A8` and ends `jr $ra` / delay-slot `nop` at `0x8009B8A0` / `0x8009B8A4` |
+| Generated definition | `funcs_26.c` defines `serviceVoicePoolFrame` at `0x8009B5A8`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x300` function between independently named `setVoiceMixByKey` at `0x8009B464` and independently named `getVoicePlaybackProgressByKey` at `0x8009B8A8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `serviceVoicePoolFrame = 0x8009B5A8`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009B5A8`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Zero `jal 0x8009B5A8` sites. Two independently named generated constructors of `0x8009B5A8` (`lui $a0, 0x800A` / `addiu $a0, $a0, -0x4A58`): `initMusyXVoiceTable` at `0x8009BBA0` (addiu at `0x8009BC44`) passes the pointer to independently named `registerSiCallback`, then sets the enable byte at `0x800A5121` to 1; `shutdownMusyXVoices` at `0x8009BCC4` (addiu at `0x8009BD1C`) passes the same pointer to independently named `findAndZeroTableSlotMatching` and clears `0x800A5121`. Zero `func_*` callers |
+| Semantic evidence | Early-outs when the enable byte at `0x800A5121` is 0. Otherwise receives the voice-control queue at `0x80154650`, timestamps with `osGetTime`, walks the MusyX voice table at `0x80154620` (stride `0x1228`), and on an active slot calls independently named `serviceStreamingVoice`, `advanceVoiceStateToPlaying`, `startStreamedSampleVoice`, `stopVoice`, or `stopStreamedVoice` according to the slot-type byte. Sends the queue again after a second timestamp. Matches the companion name and the SI-callback register/unregister pair |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009B5A8`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x300`, both address constructors are independently named voice-table
+init/teardown paths that register or unregister it as an SI callback,
+and there is neither a conflicting companion name nor a size split. H2
+and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x300`).
+`fake_func_80099FDC` remains the already-fake one-word `bne` gap and was
+left unchanged, as were `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is independently named `getVoicePlaybackProgressByKey`
+at `0x8009B8A8`.
