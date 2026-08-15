@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1254 (2026-08-15).
+in the ledger. Reviewed through s1255 (2026-08-15).
 
 ## Current state
 
@@ -322,6 +322,16 @@ rules out a repository-symbol naming mismatch in this controller/image-helper
 region, but does not explain the external retail-entry boundary or recurring
 runtime SIGBUS.
 
+The s1255 bounded `0x8007A86C..0x8007AD30` census found exact companion and
+generated names for three real functions: `allocateNpcMeshVertexBuffer`,
+`transformMeshVerticesForNpc`, and `npcDeformingMeshUpdate`. The `0x8007A86C`
+entry remains an explicitly named `fake_func` 4-byte stub. Companion symbols,
+generated definitions, sizes, and call sites agree; the repository symbol map
+was synchronized for the three stale entries. H1 was selected; no runtime
+change or build was needed. This rules out a repository-symbol naming mismatch
+in this NPC mesh-helper region, but does not explain the external retail-entry
+boundary or recurring runtime SIGBUS.
+
 ## Durable boundaries
 
 ### M3 dispatcher/frame origin
@@ -428,6 +438,7 @@ order.
 | s1251 | The bounded `0x80077AC0..0x800791FC` census found exact companion/generated names for all four functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1252 | The bounded `0x80079278..0x80079C10` census found exact companion/generated names for six functions; the `0x80079278` padding entry remains `fake_func_80079278`. Synchronized the repository symbol map. H1 selected; no build or run. |
 | s1254 | The bounded `0x8007A068..0x8007A260` census found exact companion/generated names for four real functions; `0x8007A0E8` remains an explicitly fake padding entry. Synchronized two stale repository symbol-map entries. H1 selected; no build or run. |
+| s1255 | The bounded `0x8007A86C..0x8007AD30` census found exact companion/generated names for three real functions; `0x8007A86C` remains an explicitly fake 4-byte stub. Synchronized three stale repository symbol-map entries. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |

@@ -65811,3 +65811,17 @@ stale repository symbol-map entries at `0x8007A0F0` and `0x8007A260`; no build
 or runtime run was needed. This rules out a repository-symbol naming mismatch
 in this controller/image-helper region, but does not explain the external
 retail-entry boundary or recurring runtime SIGBUS.
+
+## Session 1255 (2026-08-15) — synchronized NPC mesh-helper symbols
+
+Ran the planned bounded generated/companion census over
+`0x8007A86C..0x8007AD30`. The comparison covered four entries: the explicit
+`fake_func_8007A86C` 4-byte stub and three real functions. Exact independent
+companion names matched the generated definitions, sizes, and call sites for
+`allocateNpcMeshVertexBuffer` at `0x8007A870`,
+`transformMeshVerticesForNpc` at `0x8007A9C8`, and
+`npcDeformingMeshUpdate` at `0x8007AD30`. H1 was selected for the exact-name
+subset. Synchronized the three stale repository symbol-map entries; no build
+or runtime run was needed. This rules out a repository-symbol naming mismatch
+in this NPC mesh-helper region, but does not explain the external retail-entry
+boundary or recurring runtime SIGBUS.
