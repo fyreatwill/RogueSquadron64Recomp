@@ -64747,3 +64747,21 @@ first Start earlier into the boot/title interval.
 
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
+
+## Session 1199 (2026-08-14) — earlier retail input still stayed at boot VI
+
+Ran the prescribed debugger-enabled retail oracle comparison concurrently:
+an undriven control and an earlier-first-Start schedule with 150 ms holds.
+Both arms passed the whole-RDRAM positive control at 10,000 callbacks and
+completed 3,599 VI frames in about 60 seconds. The driven arm logged every
+scheduled press and its pad/PIF words changed to `0x10000000` during each
+press, then returned to zero, independently validating input delivery.
+
+The earlier first press still did not change the state path: both arms
+remained at VI width 320 with origin `0x006dd280`, and neither produced a
+later VI transition. The result selects H1, that this schedule remains
+phase-incomplete, and leaves M4 target watches UNEVALUABLE. No code,
+instrument, or mitigation change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
