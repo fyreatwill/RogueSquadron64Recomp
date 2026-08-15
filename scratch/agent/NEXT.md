@@ -1,9 +1,9 @@
-# NEXT work unit (s1447)
+# NEXT work unit (s1448)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x80099C50..0x80099CFC`. Do not build or run. Record its address,
+function, `0x80099CFC..0x80099D68`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -17,10 +17,9 @@ jump fragment), `fake_func_8009711C` unchanged (s1408: already-fake
 one-instruction jump fragment), `fake_func_80097D58` unchanged
 (s1420: already-fake two-instruction epilogue fragment), and
 `fake_func_80099C4C` unchanged (s1446 H2: already-fake one-word `beq`
-gap). The generated entry at this address is already
-`transformVec3ByAffineMatrix`; synchronize the stale TOML
-`func_80099C50` only if the companion, size, and caller/semantic
-evidence independently support that exact name.
+gap). The generated entry at this address is already `normalizeVec3`;
+synchronize the stale TOML `func_80099CFC` only if the companion, size,
+and caller/semantic evidence independently support that exact name.
 
 Competing hypotheses and discriminator:
 
@@ -38,7 +37,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '80099C50\|80099CFC\|transformVec3ByAffineMatrix' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '80099C50\|80099CFC' ../N64Recomp/RecompiledFuncs/funcs_26.c
-grep -n -C 3 '80099C50\|80099CFC' syms/rogue_squadron.syms.toml
+grep -n -C 5 '80099CFC\|80099D68\|normalizeVec3' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '80099CFC\|80099D68' ../N64Recomp/RecompiledFuncs/funcs_26.c
+grep -n -C 3 '80099CFC\|80099D68' syms/rogue_squadron.syms.toml
 ```
