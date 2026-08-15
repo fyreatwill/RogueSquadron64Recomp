@@ -69511,3 +69511,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `tickAllActiveSongs` at `0x80096D08`.
+
+## Session 1407 (2026-08-15) — synchronized the tick-all-active-songs symbol
+
+Performed the bounded exact-name census over `0x80096D08..0x80097088`.
+
+No new soak-queue verdicts since s1406; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80096D08`, size `0x380`; `0x80096D08+0x380=0x80097088`. Overlay `rom_size` is `0x380` at offset `0x000968C8` (`0x80096D08-0x80000440`). Generated prologue at `0x80096D08` (`lui $v0, 0x8014` / `lw $v0, 0x2038($v0)`) and `jr $ra` at `0x80097080` with delay `nop` at `0x80097084` |
+| Generated definition | `funcs_25.c` defines `tickAllActiveSongs` at `0x80096D08`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete 8-slot walker ending at the next generated definition, `initSongSequencerPools` at `0x80097088` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `tickAllActiveSongs = 0x80096D08` in the sequential `defined:true` list, immediately after already-synchronized `isSongHandleFree` and before `initSongSequencerPools`. The annotated MusyX song-playback block names the earlier sibling `tickActiveSongs` at `0x80095DA0` (already synchronized in s1392) and does not remap this later function. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | Three generated `jal 0x80096D08` sites, all in independently named `musyxSynthFrame` at `0x8009123C` (`0x8009149C`, `0x8009155C`, `0x80091610`). Each is immediately followed by `jal 0x8008D960` (`tickAudioSequencerFrame`). No other `jal 0x80096D08` sites |
+| Semantic evidence | Early-outs when `MEM_W[0x80142038]` is zero. Walks 8 song slots (`sltiu $s5, 8`) at stride `0xEF8` from `0x80149A00+0xEC0` (active byte at slot+`0xEC0`). Per occupied slot it calls already-named `isAudioFaderRampActive`, `setTrackVoiceTickBudget`, `advanceSongRegion`, `stepActiveSongTracks`, `stepSongPitchBendLanes`, `stepSongModulationLanes`, then a 0x40-entry tempo increment, `tickScheduledSongEvents`, and walks the fired-event list at slot+`0xE7C` via `validateVoiceHandle`. Matches the companion all-slots song ticker, distinct from `tickActiveSongs`. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80096D08`: the companion and
+generated names agree, the body is a complete 8-slot song ticker of
+matching size `0x380`, and there is neither a conflicting companion name
+nor a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x380`). `fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`initSongSequencerPools` at `0x80097088`.
