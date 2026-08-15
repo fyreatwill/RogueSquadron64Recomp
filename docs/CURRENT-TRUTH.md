@@ -254,7 +254,7 @@ in the ledger. Reviewed through s1252 (2026-08-15).
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
    exact-name sweep over the next adjacent controller-helper region after
-   `0x80079278..0x80079C10`, beginning at `0x80079CD8`; it needs no external
+   `0x80079CD8..0x8007A034`, beginning at `0x8007A068`; it needs no external
    retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -281,6 +281,18 @@ generated names for all four functions: `computeWalkerLimbStrideTargets`,
 `extrapolateNpcPositionForCurrentMode`, `npcPowerGeneratorHandleDestruction`,
 and `spawnDirectionalDebrisBurstAnchored`. The repository symbol map was
 synchronized; no runtime change or build was needed.
+
+The s1253 bounded `0x80079CD8..0x8007A034` census found exact companion names
+for four previously address-encoded controller helpers:
+`isControllerStickReady`, `pollControllerUntilButtonsLatched`,
+`getControllerStickXPercentageGated`, and
+`getControllerStickYPercentageGated`. The generated C/header already carried
+those names; the repository symbol map was synchronized. The `0x80079CD8`
+entry remains the explicitly documented `fake_func` padding entry. H1 was
+selected for the exact-name subset; no build or runtime run was needed. This
+rules out a repository-symbol naming mismatch in this controller region, but
+does not explain the external retail-entry boundary or recurring runtime
+SIGBUS.
 
 The s1251 bounded `0x80077AC0..0x800791FC` census found exact companion and
 generated names for all four functions: `forwardToNpcGeneratorSpawn`,

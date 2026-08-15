@@ -65774,3 +65774,20 @@ Synchronized the six stale repository symbol-map entries. No build or runtime
 run was needed. This rules out a repository-symbol naming mismatch in this
 region, but does not explain the external retail-entry boundary or recurring
 runtime SIGBUS.
+
+## Session 1253 (2026-08-15) — synchronized controller-helper symbols
+
+Ran the planned bounded generated/companion census over
+`0x80079CD8..0x8007A034`. The comparison covered all eleven entries, including
+the documented `fake_func_80079CD8` padding entry. Four address-encoded symbol
+map entries had exact independent companion names:
+`isControllerStickReady` at `0x80079EF4`,
+`pollControllerUntilButtonsLatched` at `0x80079F70`,
+`getControllerStickXPercentageGated` at `0x8007A000`, and
+`getControllerStickYPercentageGated` at `0x8007A034`. The generated C/header
+already carried those names, and the companion map, generated definitions,
+sizes, and caller census agreed. H1 was selected for the exact-name subset;
+the repository symbol map was synchronized. No build or runtime run was
+needed. This rules out a repository-symbol naming mismatch in this controller
+region, but does not explain the external retail-entry boundary or recurring
+runtime SIGBUS.
