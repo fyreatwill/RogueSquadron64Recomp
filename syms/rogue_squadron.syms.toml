@@ -1481,7 +1481,7 @@ functions = [
     { name = "clearStreamedVoiceFlags", vram = 0x80097D60, size = 0x48 },
     { name = "serviceStreamedVoices", vram = 0x80097DA8, size = 0x1AC },
     { name = "flushStreamedVoiceBuffers", vram = 0x80097F54, size = 0x94 },
-    { name = "func_80097FE8", vram = 0x80097FE8, size = 0x1FC },
+    { name = "startStreamedSampleVoice", vram = 0x80097FE8, size = 0x1FC },
     { name = "func_800981E4", vram = 0x800981E4, size = 0xC },
     { name = "func_800981F0", vram = 0x800981F0, size = 0xA8 },
     { name = "func_80098298", vram = 0x80098298, size = 0x78 },
