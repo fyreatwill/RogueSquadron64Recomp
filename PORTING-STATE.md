@@ -66201,6 +66201,19 @@ provide independent table/program, pitch-envelope, ADSR, vibrato, volume-ramp,
 pitch-relative, curve, and voice-volume evidence. H1 selected; all eight stale
 symbol-map entries were synchronized. No build or runtime run was justified.
 This rules out partial or absent naming evidence for this region.
+
+## Session 1280 (2026-08-15) — synchronized MusyX sequencer handlers
+
+Performed the bounded exact-name census over `0x8008B33C..0x8008B8DC`.
+The companion `main_overlay.txt` independently maps all seven entries to
+`seqCmdHandler40` through `seqCmdHandler46`; the generated definitions use
+the same names and each TOML size is the exact `0xF0` span to the next
+function. Generated semantics distinguish the handlers by command number,
+channel ring/counter offsets, and bit shifts, while the generated audio tick
+dispatcher directly calls all seven handlers. H1 selected, and all seven
+stale symbol-map entries were synchronized. No build or runtime run was
+justified for an exact-name census. This rules out partial or absent naming
+evidence for this region.
 ## Session 1279 (2026-08-15) — synchronized adjacent MusyX macro symbols
 
 Performed the bounded exact-name census over `0x8008AE50..0x8008B284`.
