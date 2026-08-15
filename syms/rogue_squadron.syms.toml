@@ -1429,7 +1429,7 @@ functions = [
     { name = "scaleFixedPointByRatioA", vram = 0x80093F3C, size = 0x24 },
     { name = "scaleFixedPointByRatioB", vram = 0x80093F60, size = 0x24 },
     { name = "scaleByPitchTableA", vram = 0x80093F84, size = 0x30 },
-    { name = "func_80093FB4", vram = 0x80093FB4, size = 0x30 },
+    { name = "scaleByPitchTableB", vram = 0x80093FB4, size = 0x30 },
     { name = "func_80093FE4", vram = 0x80093FE4, size = 0x78 },
     { name = "func_8009405C", vram = 0x8009405C, size = 0x78 },
     { name = "func_800940D4", vram = 0x800940D4, size = 0x274 },
