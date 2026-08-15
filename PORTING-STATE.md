@@ -68968,3 +68968,33 @@ this address. The stale address-encoded TOML entry was synchronized
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `stopSongByHandleLocked` at `0x80095A94`.
+
+## Session 1389 (2026-08-15) — synchronized the stop-song-by-handle-locked symbol
+
+Performed the bounded exact-name census over `0x80095A94..0x80095ADC`.
+
+No new soak-queue verdicts since s1388; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80095A94`, size `0x48`; `0x80095A94+0x48=0x80095ADC`. Overlay `rom_size` is `0x48`. Generated prologue at `0x80095A94` (`lui $v0, 0x800A` / `lbu $v0, 0xF50($v0)`, `addiu $sp, $sp, -0x18`, save `$s0`/`$ra`, `$s0=$a0`) and `jr $ra` at `0x80095AD4` with delay `nop` at `0x80095AD8` |
+| Generated definition | `funcs_25.c` defines `stopSongByHandleLocked` at `0x80095A94`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `tickSongSequence` at `0x80095ADC` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `stopSongByHandleLocked = 0x80095A94` in the sequential `defined:true` list. The same file independently names the preceding real function `stopSongByHandle` at `0x8009582C` and the following real function `tickSongSequence` at `0x80095ADC`. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | No generated `jal 0x80095A94` site. The helper is the public locked wrapper around independently named `stopSongByHandle`; its only outbound calls are `factor5MutexAcquire` (`0x80092010`), `stopSongByHandle` (`0x8009582C`) with saved `$a0`, and `factor5MutexRelease` (`0x8009205C`). Absence of inbound jals does not conflict with the name or size |
+| Semantic evidence | Loads independently named `gMusyXActiveFlag` at `0x800A0F50` and returns immediately when the byte is 0. When the flag is set it acquires the Factor 5 mutex, forwards the incoming handle in `$a0` to `stopSongByHandle`, then releases the mutex. Matches the established MusyX locked-wrapper idiom (`playSongIfMusyXActive`, `stopVoiceByHandleLocked`). No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80095A94`: the companion and
+generated names agree, the body is a complete flag-gated mutex wrap of
+independently named `stopSongByHandle` of matching size `0x48`, and there
+is neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x48`). `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `tickSongSequence` at `0x80095ADC`.
