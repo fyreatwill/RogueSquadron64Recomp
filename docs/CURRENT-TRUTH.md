@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1238 (2026-08-15).
+in the ledger. Reviewed through s1239 (2026-08-15).
 
 ## Current state
 
@@ -166,6 +166,7 @@ in the ledger. Reviewed through s1238 (2026-08-15).
 - The s1236 non-GPR reset-context census selects H2 for the active VI-320 boundary. Retail's PIF reset record supplies `rom_type`, `s7`, `reset_type`, and CIC seed to IPL3, and the retail boot path sets CP0 Status/Config; the port initializes the corresponding OS globals but has no CP0 Config model. The generated bootstrap has no CP0 read/write and no caller of `getOsResetType`; the first generated CP0 Context/Status sites are later TLB/FPU support paths, not the bootstrap handoff. No reset-context value is consumed before overwrite on the generated entry path. This is supported independently by the Mupen64Plus PIF/CP0 source, the generated instruction census, and the port runtime initialization.
 - The s1237 complete ROM_OPEN-to-EXECUTE census selects H2 for the external-entry hypothesis. The oracle calls ROM_OPEN, attaches optional plugins, installs debugger callbacks, starts its director/poller, and calls EXECUTE; the core's ROM_OPEN path only opens/configures the ROM, while EXECUTE enters `main_run`. State load/save, reset, and input are explicit commands with separate timing/state requirements, and no hidden state-changing handoff was found. The available oracle checkout has no console-frontend source directory, so the UI portion relies on the prior s1229 audit rather than a new local recheck. No build or run.
 - The s1238 artifact check found no new frontend/launcher source, binary invocation, savestate, or other retail-entry artifact in the workspace beyond the already-audited oracle and prior logs. The prescribed discriminator cannot run without external ground truth; H3 is selected and the external retail-entry boundary is blocked on a human-supplied artifact. No build or run.
+- The s1239 unblock audit corrected the literal artifact census: the adjacent `rs64-oracle/src/mupen64plus-core` checkout contains the Mupen64Plus console frontend source, the installed `mupen64plus` binary exposes `--savestate`, and two existing `.st` files are present. Their source and help contracts still reduce to the already-audited `ROM_OPEN` → plugin attach → optional `STATE_LOAD` → `EXECUTE` lifecycle; no unmatched retail-entry handoff was found. The artifact-absence claim is refuted, but the external dependency is real and remains open because the available artifacts are equivalent. No build or game run.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -245,12 +246,10 @@ in the ledger. Reviewed through s1238 (2026-08-15).
 
 ## Active investigation and ranked next steps
 
-1. Obtain or identify a genuinely new retail-entry route outside the audited
-   oracle/core contract. The generated bootstrap, reset-context, EEPROM, input,
-   state, and ROM_OPEN-to-EXECUTE classes are closed; do not add runtime probes
-   without a concrete state-changing handoff and positive control. The next
-   useful action is a human-supplied frontend/launcher artifact or a new
-   callable retail state source, not another census of the same lifecycle.
+1. Continue the in-tree generated-symbol renaming campaign with one bounded
+   save/account region sweep; it needs no external retail-entry artifact. Keep
+   the external retail-entry dependency open and do not add runtime probes
+   without a genuinely unmatched state-changing handoff and positive control.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -322,6 +321,12 @@ order.
   directly, but the complete generated-path census found the saved `s3..s7`/`t3`
   values dead or overwritten before game-visible use; only `sp`/`ra`
   bookkeeping remains different.
+- The s1238 claim that no frontend, launcher, or savestate artifact was locally
+  available was superseded by s1239. It was believable because the workspace
+  root search omitted the adjacent oracle source checkout, but the frontend
+  source, installed `--savestate` invocation, and existing state files are
+  present. They do not resolve the blocker because their handoff contract was
+  already audited and contains no new retail state source.
 
 ## Evidence ledger summary
 

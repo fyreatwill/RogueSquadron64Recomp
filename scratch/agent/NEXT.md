@@ -1,31 +1,31 @@
-# NEXT work unit (s1239, blocked)
+# NEXT work unit (s1240)
 
-HYPOTHESIS-ID: retail-external-entry-boundary-closed
+HYPOTHESIS-ID: generated-save-account-naming-sweep
 
-The prior external/front-end census is complete. Do not build or run. The
-workspace artifact check in s1238 found no genuinely new retail-entry artifact.
-The next work unit is blocked until the human supplies one frontend/launcher
-source or binary invocation, or another callable retail state source, that can
-perform a state-changing handoff not represented by the audited oracle/core
-contract.
+The external retail-entry dependency remains open: the adjacent Mupen64Plus
+frontend source, installed `--savestate` binary invocation, and existing state
+files were audited in s1239 and add no unmatched handoff. Do not build or run.
+Proceed with one bounded generated-symbol naming sweep in the save/account
+region, using the companion decomp names and generated call sites.
 
 Competing hypotheses and discriminator:
 
-- H1: the supplied artifact contains a state-changing handoff absent from the
-  port; its command/data and timing identify the next probe.
-- H2: the supplied artifact is equivalent to the audited contract and contains
-  no such handoff; the retail transition remains externally unavailable.
-- H3: no artifact can be supplied; the investigation is blocked on external
-  ground truth, not on an untested in-tree path.
+- H1: a bounded save/account region has exact companion mappings sufficient to
+  rename a coherent function family without invented semantics.
+- H2: mappings are partial or ambiguous, so only exact names can be safely
+  applied and the remainder stays `func_*`.
+- H3: the region has no usable independent naming source and should be parked.
 
-Discriminator: one artifact-backed event table listing source/invocation,
-lifecycle point, state-changing side effect, and port equivalent. A concrete
-unmatched handoff selects H1; a complete equivalent table selects H2; absent
-artifact selects H3 and requires BLOCKED.md.
+Discriminator: one table covering every `func_*` symbol in the selected region,
+with generated address, companion name/source, callers, and confidence. A
+complete exact mapping selects H1; only a subset safe to rename selects H2;
+absence of independent names selects H3. No code or runtime mitigation is
+justified by this sweep.
 
 Exact commands after the artifact is supplied:
 
 ```
-find /path/to/new-artifact -maxdepth 3 -type f -print
-rg -n -C 4 'ROM_OPEN|EXECUTE|STATE_LOAD|STATE_SAVE|RESET|CoreDoCommand|EEPROM|savestate|entry|load' /path/to/new-artifact
+rg -n 'func_[0-9A-Fa-f]{8}' RecompiledFuncs/funcs_*.c | rg '8005|8006|8007'
+rg -n -C 3 'save|account|EEPROM|func_[0-9A-Fa-f]{8}' ../rogue_squadron64 docs/game-architecture.md syms
+sed -n 'START,ENDp' RecompiledFuncs/funcs_N.c
 ```

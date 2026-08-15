@@ -65572,3 +65572,22 @@ before further investigation.
 
 ORIGIN: bounded `find` over the workspace, with the audited oracle/core
 contract recorded in s1237. No mitigation.
+## Session 1239 (2026-08-15) — re-scoped after finding equivalent frontend artifacts
+
+The unblock audit refuted the literal s1238 artifact-absence claim. The
+adjacent `../rs64-oracle/src/mupen64plus-core` checkout contains the Mupen64Plus
+console frontend source; `/opt/homebrew/bin/mupen64plus --help` exposes the
+`--savestate` invocation; and `scratch/agent/oracle-smoke.st` plus
+`oracle-reach.st` are existing local savestates. These are independently
+visible in source/help/file-type evidence.
+
+The frontend `CoreDoCommand` source still shows only the already-audited
+`ROM_OPEN` → plugin attach → optional `M64CMD_STATE_LOAD` → `M64CMD_EXECUTE`
+contract. The savestate lifecycle was already measured in s1214–s1215. No
+unmatched state-changing retail handoff was found, so the external dependency
+remains real even though the claim that no artifact exists was false. This
+iteration took route 3: it re-scoped the next work unit to a bounded in-tree
+save/account generated-symbol naming sweep. No build or game run.
+
+ORIGIN: adjacent Mupen64Plus frontend source, installed frontend help, local
+savestate file headers, and the audited oracle source. No mitigation.
