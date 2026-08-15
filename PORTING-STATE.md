@@ -68235,3 +68235,31 @@ only; size left at `0x1E0`). `func_800927B0`, `func_80092A54`,
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is the
 independently named `zeroAudioBufferWords` at `0x800934A4`.
+
+## Session 1364 (2026-08-15) — synchronized the zero-audio-buffer-words symbol
+
+Performed the bounded exact-name census over `0x800934A4..0x800934D0`.
+
+No new soak-queue verdicts since s1363; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800934A4`, size `0x2C`; `0x800934A4+0x2C=0x800934D0`. Overlay `rom_size` is `0x2C`. Generated `jr $ra` at `0x800934C8`, delay `nop` at `0x800934CC` |
+| Generated definition | `funcs_24.c` defines `zeroAudioBufferWords` at `0x800934A4`; `funcs.h` and `recomp_overlays.inl` already use that name. First instruction is `addu $t0,$a0,$zero`; the body is a complete function ending at the next generated definition, `decodeAdpcmSampleBlock` at `0x800934D0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `zeroAudioBufferWords = 0x800934A4`. The same file independently names the preceding `copyVoiceSamplesLut` at `0x800932C4` and the following `decodeAdpcmSampleBlock` at `0x800934D0`. The sequential `defined:true` list jumps from the unnamed resample kernels (`func_800927B0`/`func_80092A54`/`func_80092CF0`) to the fake-function block and does not remap this address. No later companion list remaps it |
+| Caller evidence | No generated `jal 0x800934A4` exists. The ROM has no literal `0x800934A4` word, so the dispatch is not a static pointer table |
+| Semantic evidence | Copies dest `$a0` into `$t0` and takes `$t1=$a1>>2`. Each iteration does `cache 0x0D`, `sd $zero,0($t0)`, `sd $zero,8($t0)`, decrements `$t1`, `cache 0x19`, and advances dest by `0x10` until `$t1` is zero. That is a 16-byte (four-word) store-zero loop over a word count, matching the independent companion name |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the body is a complete word-zeroing loop of matching size `0x2C`, and there
+is neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0x2C`). `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C` were left unchanged.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is the
+independently named `decodeAdpcmSampleBlock` at `0x800934D0`.
