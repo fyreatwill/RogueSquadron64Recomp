@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1186 (2026-08-14).
+in the ledger. Reviewed through s1187 (2026-08-14).
 
 ## Current state
 
@@ -105,6 +105,14 @@ in the ledger. Reviewed through s1186 (2026-08-14).
   negative alias. The host `MEM_W` macro writes exactly four bytes at the
   computed guest address. This selects H3 and rules out the word-store/
   accessor class; no mitigation was added.
+- The s1187 complete `MEM_WU` load audit found five loads. Two are the
+  bounded texture-row 64-bit assembly loop in `swizzleTextureRowsToTmem`, one
+  is an unrelated `__OSGlobalIntMask` block, and the two `audioCompandS16`
+  hits are outside the target path (the first follows an explicit return and
+  the second is in its malformed generated tail). `MEM_WU` mirrors `MEM_W`
+  and performs an exact unsigned four-byte load at the computed guest
+  address. This selects H3 and rules out the unsigned-load/accessor class;
+  no mitigation was added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
@@ -542,6 +550,7 @@ corruption.
 | s1184 | Completed the generated `do_swl`/`do_swr` partial-store audit without building or running. There are 414 calls across 66 functions; only five functions also call `slotDispatcherIter`, and their partial stores are caller-local or bounded object/global writes with no span covering the callee's saved frame. The helpers align to and write one guest word through `MEM_W`, with no host-side span broadening. H3 selected; no mitigation added. |
 | s1185 | Completed the generated narrow-store audit without building or running. There are 23,128 `MEM_H`/`MEM_HU`/`MEM_B`/`MEM_BU` references and 351 stores in the 72 target callers, including 83 caller-`r29` stores; all are caller-local or bounded object/global writes with no span covering the callee's saved frame. The four host macros preserve the computed address and exact byte/halfword span. H3 selected; no mitigation added. |
 | s1186 | Completed the generated `MEM_W` audit without building or running. There are 3,633 word stores in the 72 target callers; all caller-`r29` stores use nonnegative offsets outside the callee's saved frame, and the non-`r29` stores are bounded object/global or unrelated paths with no stack-derived negative alias. The host macro is an exact four-byte write. H3 selected; no mitigation added. |
+| s1187 | Completed the generated `MEM_WU` load audit without building or running. Five loads were classified: two bounded texture-row assembly loads, one unrelated OS/global-mask load, and two unrelated audio-generated loads (one after an explicit return, one in a malformed tail). The `MEM_WU` macro is an exact unsigned four-byte access matching the computed guest address. H3 selected; no mitigation added. |
 
 ## Ranked next steps
 
@@ -550,10 +559,10 @@ corruption.
    reaches an audio-initialization or voice-allocation phase beyond the driven
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
-2. Continue the M3 systematic static audit with the five generated `MEM_WU`
-   loads and their address/value consumers. Enumerate whether any load feeds
-   a target-path pointer or store; do not add a guard unless a reachable
-   writer edge is established.
+2. Continue the M3 systematic static audit with the next complete generated
+   load idiom: enumerate `MEM_D`/`LD` loads and their address/value consumers.
+   Classify every site for a target-path pointer or frame-overlapping writer;
+   do not add a guard unless a reachable writer edge is established.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

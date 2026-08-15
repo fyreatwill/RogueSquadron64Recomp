@@ -64554,3 +64554,21 @@ runtime probe, or mitigation was added.
 ORIGIN: complete generated `MEM_W` inventory, pre-call destination review,
 and host accessor contract; reviewed writers are legitimate local/bounded
 stores or unrelated regions, and no mitigation was added.
+
+## Session 1187 (2026-08-14) — audited generated unsigned-word loads
+
+Completed the prescribed static M3 `MEM_WU` audit without building or running.
+The generated tree contains five loads: two in the bounded
+`swizzleTextureRowsToTmem` texture-row 64-bit assembly loop, one in an
+unrelated `__OSGlobalIntMask` block, and two in `audioCompandS16`. The first
+audio hit follows an explicit return; the second is in the malformed
+generated audio tail. None has a target-path consumer or a frame-overlapping
+writer.
+
+`include/rsp_dpc_macros.h` defines `MEM_WU` with the same address calculation
+as `MEM_W` and an exact unsigned four-byte load. This selects H3 and rules out
+the unsigned-load/accessor class as the current origin. No build, runtime
+probe, or mitigation was added.
+
+ORIGIN: complete generated `MEM_WU` inventory and host accessor contract;
+reviewed loads are bounded or unrelated, and no mitigation was added.
