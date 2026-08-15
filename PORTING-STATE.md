@@ -67715,3 +67715,29 @@ partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio
 de-stubbing.
+
+## Session 1345 (2026-08-15) — synchronized the stop-voice-mark-retrigger symbol
+
+Performed the bounded exact-name census over `0x8009244C..0x80092490`.
+
+No new soak-queue verdicts since s1344; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8009244C`, size `0x44`; it ends exactly at the next generated function, `0x80092490`. Overlay `rom_size` is `0x44` |
+| Generated definition | `funcs_24.c` defines `stopVoiceMarkRetrigger` at `0x8009244C`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `stopVoiceMarkRetrigger = 0x8009244C`. The same file independently names the adjacent functions `setVoiceModulationParams` at `0x800923E4` and `beginVoiceFadeRelease` at `0x80092490` |
+| Caller evidence | Three generated `jal 0x8009244C` sites: `stopVoiceByKey` at `0x80086914` calls it from `0x8008699C` with the allocated voice index in `a0` after `isAudioSlotActive`; `silenceVoiceSlot` at `0x800869DC` calls it from `0x80086A08` after the same slot-active check; `tickAudioChannel` at `0x8008BC10` (already synchronized) calls it from `0x8008BC58` with `a0` from the channel byte at `$s0+0x67` while clearing the low channel-state bit |
+| Semantic evidence | Body takes `a0` as a voice index, scales it by `0x88` off the voice-array base at `0x801496F8`, returns if slot `+0` is zero, otherwise stores `0` at slot `+0` and `1` at slot `+0x85`. That is a stop plus a retrigger-mark write |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x44` boundary is exact, and the body is the documented stop-and-mark
+wrapper. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio
+de-stubbing.
