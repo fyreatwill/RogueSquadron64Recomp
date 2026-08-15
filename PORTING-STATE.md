@@ -67947,3 +67947,30 @@ out for this function; there is neither a partial/conflicting match nor an
 absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
 This does not reopen M5 audio de-stubbing.
+
+## Session 1354 (2026-08-15) — synchronized the resample-voice-point-table-samples symbol
+
+Performed the bounded exact-name census over `0x8009264C..0x800927B0`.
+
+No new soak-queue verdicts since s1353; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8009264C`, size `0x164`; it ends exactly at the next generated function, `0x800927B0`. Overlay `rom_size` is `0x164` |
+| Generated definition | `funcs_24.c` defines `resampleVoicePointTableSamples` at `0x8009264C`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `resampleVoicePointTableSamples = 0x8009264C`. The same file independently names the adjacent functions `relocateSndPointer` at `0x800925F4` and `resampleVoiceLutSamples` at `0x800928D4`, plus the rest of the resample/copy family. No later companion list remaps this address |
+| Caller evidence | No generated `jal 0x8009264C` exists; the sibling resample wrappers (`0x800928D4`, `0x80092BA8`, `0x80092E48`) likewise have no direct jal. This function is the outer wrapper: it `jal`s the inner kernel `func_800927B0` twice per output pair. The ROM has no literal `0x8009264C` word, so the format dispatch is not a static pointer table |
+| Semantic evidence | Loads a voice/render context from `$a0` (source, dest, end, loop, output count, step, scale) and interpolation state from `$a1`. Mode `$a1+0xE==1` reads successive s16 point-table samples, differences them, and multiplies by the scale; the inner kernel packs the interpolated pair and this wrapper `sd`s it with `cache 0x19` writeback. Exhausted sources zero-fill. That is linear interpolation from a point table of voice samples |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x164` boundary is exact, and the body is a point-table voice resampler
+in the independently named resample family. H2 and H3 are ruled out for this
+function; there is neither a partial/conflicting match nor an absent
+independent name. The stale address-encoded TOML entry was synchronized.
+`func_800927B0` and `func_8008ED6C` were left unchanged. No build or runtime
+run was justified for an exact-name census. This does not reopen M5 audio
+de-stubbing.

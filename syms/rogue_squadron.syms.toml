@@ -1406,7 +1406,7 @@ functions = [
     { name = "writebackDCacheHalfwords", vram = 0x80092588, size = 0x20 },
     { name = "copyFourHalfwordsWriteback", vram = 0x800925A8, size = 0x4C },
     { name = "relocateSndPointer", vram = 0x800925F4, size = 0x58 },
-    { name = "func_8009264C", vram = 0x8009264C, size = 0x164 },
+    { name = "resampleVoicePointTableSamples", vram = 0x8009264C, size = 0x164 },
     { name = "func_800927B0", vram = 0x800927B0, size = 0x124 },
     { name = "func_800928D4", vram = 0x800928D4, size = 0x180 },
     { name = "func_80092A54", vram = 0x80092A54, size = 0x154 },

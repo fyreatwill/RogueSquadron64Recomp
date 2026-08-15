@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1353 (2026-08-15).
+the authority for session detail. Reviewed through s1354 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1353 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009264C..0x800927B0`.
+   census over the next adjacent function, `0x800927B0..0x800928D4`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded: s1309 selected H2 for that 4-byte island.
@@ -210,6 +210,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1351 | Exact companion/generated cache-writeback census synchronized `writebackDCacheHalfwords` at `0x80092588`; no build or runtime run. |
 | s1352 | Exact companion/generated halfword-copy census synchronized `copyFourHalfwordsWriteback` at `0x800925A8`; no build or runtime run. |
 | s1353 | Exact companion/generated SND-pointer census synchronized `relocateSndPointer` at `0x800925F4`; no build or runtime run. |
+| s1354 | Exact companion/generated voice-resample census synchronized `resampleVoicePointTableSamples` at `0x8009264C`; no build or runtime run. |
 
 ## Method and safety rules
 
