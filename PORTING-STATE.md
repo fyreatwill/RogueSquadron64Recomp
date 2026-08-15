@@ -67663,3 +67663,29 @@ ruled out for this function; there is neither a partial/conflicting match
 nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
 This does not reopen M5 audio de-stubbing.
+
+## Session 1343 (2026-08-15) — synchronized the musyx-set-voice-pitch-bend symbol
+
+Performed the bounded exact-name census over `0x80092390..0x800923E4`.
+
+No new soak-queue verdicts since s1342; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092390`, size `0x54`; it ends exactly at the next generated function, `0x800923E4`. Overlay `rom_size` is `0x54` |
+| Generated definition | `funcs_24.c` defines `musyxSetVoicePitchBend` at `0x80092390`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxSetVoicePitchBend = 0x80092390` with the annotated contract `(voiceIdx, value): clamp <=0x2000, store into slot +0x4 pitch/period field`. The same file independently names the adjacent functions `noopHandler_80092388` at `0x80092388` and `setVoiceModulationParams` at `0x800923E4` |
+| Caller evidence | Two generated `jal 0x80092390` sites: `tickAllAudioChannels` at `0x8008C9AC` (already synchronized) calls it from `0x8008D424` with voice index in `a0` from `$s6` and a 16-bit modulator-derived period in `a1` from `$s2`; `startStreamedSampleVoice` at `0x80097FE8` (companion-named; TOML still `func_80097FE8`) calls it from `0x8009816C` with voice index in `a0` from `$s0` and a truncated 16-bit period in `a1` |
+| Semantic evidence | Body takes `a1` as a u16, `sltiu` against `0x2001`, and stores either the raw value or the clamp `0x2000` as a halfword at voice-slot `+0x4`. Slot index is `a0 * 0x88` off the voice-array base at `0x801496F8`. That matches the companion pitch-bend contract and the `musyxInitVoiceFromSample` default of `+0x4 = 0x1000` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x54` boundary is exact, and the body implements the documented clamp-
+and-store pitch-bend write. H2 and H3 are ruled out for this function; there
+is neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run
+was justified for an exact-name census. This does not reopen M5 audio
+de-stubbing.

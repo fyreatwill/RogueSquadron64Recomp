@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1342 (2026-08-15).
+the authority for session detail. Reviewed through s1343 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1342 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80092390..0x800923E4`.
+   census over the next adjacent function, `0x800923E4..0x8009244C`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded: s1309 selected H2 for that 4-byte island.
@@ -199,6 +199,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1340 | Exact companion/generated voice-attack census synchronized `musyxTriggerVoiceAttack` at `0x8009231C`; no build or runtime run. |
 | s1341 | Exact companion/generated voice-stop census synchronized `musyxStopVoice` at `0x80092368`; no build or runtime run. |
 | s1342 | Exact companion/generated audio-noop census synchronized `noopHandler_80092388` at `0x80092388`; no build or runtime run. |
+| s1343 | Exact companion/generated pitch-bend census synchronized `musyxSetVoicePitchBend` at `0x80092390`; no build or runtime run. |
 
 ## Method and safety rules
 

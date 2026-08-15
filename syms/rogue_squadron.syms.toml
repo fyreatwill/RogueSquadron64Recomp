@@ -1395,7 +1395,7 @@ functions = [
     { name = "musyxTriggerVoiceAttack", vram = 0x8009231C, size = 0x4C },
     { name = "musyxStopVoice", vram = 0x80092368, size = 0x20 },
     { name = "noopHandler_80092388", vram = 0x80092388, size = 0x8 },
-    { name = "func_80092390", vram = 0x80092390, size = 0x54 },
+    { name = "musyxSetVoicePitchBend", vram = 0x80092390, size = 0x54 },
     { name = "func_800923E4", vram = 0x800923E4, size = 0x68 },
     { name = "func_8009244C", vram = 0x8009244C, size = 0x44 },
     { name = "func_80092490", vram = 0x80092490, size = 0x60 },
