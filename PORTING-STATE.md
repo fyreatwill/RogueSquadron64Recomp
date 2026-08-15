@@ -64639,3 +64639,20 @@ method rules, and a compressed session-range ledger. The file is now 8,683
 bytes. No build, runtime experiment, instrumentation, mitigation, or code
 change was performed. This rules out no technical hypothesis; it preserves
 the next M3 `do_sdl`/`do_sdr` static audit for s1193.
+## Session 1193 (2026-08-14) — audited generated doubleword partial stores
+
+Ran the planned static `do_sdl`/`do_sdr` audit without building or running.
+The current generated tree contains five emitted calls: two `sdl` and three
+`sdr`, all in malformed generated regions. The `0x8003A3AC` site is between
+the named `pows` table at `0x8003A380` and `D_8003A4C4`, so it is data-like
+rather than executable. The four audio-region sites are embedded in generated
+bodies reported with 214 and 154 trapped cross-function gotos; they do not
+establish a reachable target-path writer. Static inspection of `do_sdl` and
+`do_sdr` shows an aligned 8-byte read/merge followed by two 32-bit writes;
+that helper-contract conclusion is single-source evidence.
+
+This selects H3 for the class: no reachable frame-overlapping writer was found,
+and no mitigation was added. It rules out these five emitted sites as the
+current `slotDispatcherIter+872` writer chain, but does not rule out runtime
+guest-memory corruption. The next work unit pivots to the M4 VMADH accumulator
+producer chain.

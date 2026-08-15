@@ -1,35 +1,34 @@
-# NEXT work unit (s1193)
+# NEXT work unit (s1194)
 
-HYPOTHESIS-ID: m3-stack-memory-value-origin
+HYPOTHESIS-ID: m4-vmadh-accumulator-origin
 
-Work unit: complete one static audit of every generated `do_sdl`/`do_sdr`
-store site. Do not build or run.
+Work unit: perform one bounded static audit of the producer chain feeding the
+Factor 5 `vmadh v6,v4,v0` shade calculation. Do not build or run.
 
-The prior iteration was maintenance-only: `CURRENT-TRUTH.md` was compacted
-from 619 lines to 140 lines. This work unit is unchanged and is now ready to
-run.
+Read `docs/F5-UCODE-REFERENCE.md` first, then enumerate the generated VMADH
+sites and the preceding writes/loads to the relevant vector lanes. Compare
+the port-side VMADH model and the paired combiner evidence already summarized
+in `CURRENT-TRUTH.md`.
 
 Competing hypotheses and discriminator:
 
-- H1: a doubleword partial store reaches a target-path destination that overlaps
-  the `slotDispatcherIter` saved-register frame. Discriminator: a complete
-  reachable writer edge with a frame-overlapping destination/span.
-- H2: the host helper broadens the guest store span or changes the MIPS merge
-  contract. Discriminator: helper code reads/writes outside the aligned
-  doubleword or differs from the documented merge semantics.
-- H3: all sites are bounded, unrelated, malformed, or exact and do not form a
-  frame-overlapping writer chain. Discriminator: complete site classification
-  finds no H1 edge and an exact helper contract.
+- H1: a producer fails to initialize or preserve the accumulator/vector lane.
+  Discriminator: a complete static chain reaches `vmadh` with an uninitialized
+  or overwritten operand.
+- H2: the source lanes are correct but VMADH lane/order modeling is wrong.
+  Discriminator: the generated/reference command and the independent control
+  disagree with the port-side lane mapping.
+- H3: the fixed sentinel is a legitimate Factor 5 lighting/clipping state.
+  Discriminator: all producers and lane mapping are accounted for, with no
+  uninitialized write and no model disagreement.
 
 Exact commands:
 
-rg -n -e 'do_sdl|do_sdr' /Users/williambuckley/Documents/Tools/N64Recomp --glob '*.{h,hpp,c,cpp,py}'
-rg -n -C 10 -e 'do_sdl|do_sdr' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
-sed -n '220,264p' /Users/williambuckley/Documents/Tools/N64Recomp/include/recomp.h
+rg -n -C 12 -e 'vmadh|VMADH|v4|v6' /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp /Users/williambuckley/Documents/Tools/N64Recomp --glob '*.{c,h,cpp,hpp,md,txt}'
+rg -n -C 8 -e 'shade|VTXCOLOR|0xFFFF8000|0x00008000' /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp --glob '*.{c,cpp,h,md,txt}'
 git diff --check
 
-Classify all five current generated sites as reachable pointer producer,
-bounded scalar/structure store, unrelated subsystem, or non-executable/data-like
-code. If H1 or H2 is selected, the next unit is one phase-gated positive-control
-capture at the exact consumer; if H3 is selected, continue to the next
-highest-information static idiom without adding a guard.
+If H1 is selected, identify the exact producer before proposing any
+mitigation. If H2 is selected, the next unit is a static model correction. If
+H3 is selected, design the smallest ground-truth-backed probe only after
+reading the oracle instructions and defining a positive control.

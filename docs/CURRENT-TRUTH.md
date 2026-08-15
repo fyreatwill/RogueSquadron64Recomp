@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1192 (2026-08-14).
+in the ledger. Reviewed through s1193 (2026-08-14).
 
 ## Current state
 
@@ -26,6 +26,12 @@ in the ledger. Reviewed through s1192 (2026-08-14).
 - The corrected `npcPowerGeneratorUpdate` boundary is sourced as main `.text`
   at `0x80077AF0`; regenerated ELF, N64Recomp output, fixups, and Debug target
   pass. Runtime boundary tests stayed pre-1024 and are unevaluable.
+- The complete generated `do_sdl`/`do_sdr` census found five emitted calls.
+  The `0x8003A3AC` call lies in the `pows`/`D_8003A4C4` data interval, and the
+  four `audioCompandS16` calls lie in a malformed oversized generated body
+  with 214 trapped cross-function gotos. No reachable target-path writer or
+  frame-overlapping span was established. The helper's aligned-dword merge and
+  two-word write are exact by static inspection (single-source evidence).
 - M5 audio de-stubbing is closed. Audio remains stubbed. Retail execution
   watches passed whole-RDRAM controls but stayed at VI 320 and never executed
   the four identified `musyxInitVoiceFromSample` writers. Do not reopen without
@@ -45,14 +51,13 @@ in the ledger. Reviewed through s1192 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Continue the M3 systematic static audit. The next complete generated idiom
-   is `do_sdl`/`do_sdr` (see `scratch/agent/NEXT.md`); classify every site for
-   a target-path pointer or frame-overlapping writer. Do not add a guard unless
-   a reachable writer edge is established.
+1. Resume the M4 accumulator-origin audit: trace the producer chain feeding
+   the `vmadh v6,v4,v0` shade calculation and separate missing initialization,
+   lane/order, and legitimate-sentinel explanations before any runtime probe.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
-3. Revisit runtime instrumentation only after the static idiom campaign finds
-   a concrete candidate. Before any probe, read `tools/oracle/README.md` and
+3. Revisit runtime instrumentation only after a concrete candidate exists.
+   Before any probe, read `tools/oracle/README.md` and
    `docs/F5-UCODE-REFERENCE.md`, define positive controls, and phase-gate all
    animated comparisons.
 
@@ -72,7 +77,8 @@ Completed writer/load classes, all with H3 selected and no mitigation, are:
 
 - stack-relative stores, `r29` assignments, dynamic copy/DMA/controller/flash;
 - `SD`, `do_swl`/`do_swr`, narrow stores, `MEM_W`, and `MEM_WU`;
-- `MEM_D`/`LD`, `do_ldl`/`do_ldr`, and `do_lwl`/`do_lwr`.
+- `MEM_D`/`LD`, `do_ldl`/`do_ldr`, and `do_lwl`/`do_lwr`;
+- `do_sdl`/`do_sdr` (five emitted sites; all malformed or data-like).
 
 The latest `do_lwl`/`do_lwr` census classified all 418 calls: ordinary pairs
 feed bounded structure or stack-local partial stores; unpaired and large or
@@ -126,7 +132,8 @@ order.
 | s1172–s1177 | Retail oracle calibration and execution watches passed controls but stayed at VI 320; audio destination origin remains unevaluable. |
 | s1178–s1189 | Complete `$sp`, dynamic writer, store, and load idiom audits selected H3; no frame-overlapping writer or helper broadening found. |
 | s1190–s1191 | Partial-load consumer/site rechecks classified all `do_lwl`/`do_lwr` calls and kept H3 selected. |
-| s1192 | Maintenance compaction only; no experiment or code change. The next static class remains `do_sdl`/`do_sdr`. |
+| s1192 | Maintenance compaction only; no experiment or code change. |
+| s1193 | Complete `do_sdl`/`do_sdr` static census selected H3; no reachable frame writer or mitigation. |
 
 ## Method and safety rules
 
