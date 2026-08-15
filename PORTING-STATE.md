@@ -65881,6 +65881,26 @@ repository-symbol naming mismatch in this NPC textured-effect region, but
 does not explain the external retail-entry boundary or recurring runtime
 SIGBUS.
 
+## Session 1262 (2026-08-15) — synchronized model-animation symbols
+
+Ran the bounded exact-name census over `0x80083154..0x80083468`. The complete
+comparison table was:
+
+| VRAM | Size | Generated definition | Companion mapping/source | Caller evidence | Confidence |
+|---|---:|---|---|---|---|
+| `0x80083154` | `0x7C` | `setModelAnimChannelEntryDuration` | same name in `main_overlay.txt` | definition only; no direct generated `jal` found | exact/high |
+| `0x800831D0` | `0x88` | `getModelAnimChannelEntryDuration` | same name in `main_overlay.txt` | definition only; no direct generated `jal` found | exact/high |
+| `0x80083258` | `0xC0` | `setModelAnimSlotCycleDuration` | same name in `main_overlay.txt` | 15 direct generated callers | exact/high |
+| `0x80083318` | `0x150` | `sampleModelAnimKeyframeVec3` | same name and detailed description in `main_overlay.txt` | definition only; no direct generated `jal` found | exact/high |
+| `0x80083468` | `0x7C0` | `parseModelAnimType2Entry` | same name and model-animation documentation reference in `main_overlay.txt`/docs | 6 direct generated callers | exact/high |
+
+All five generated boundaries match the repository sizes and all five have
+independent companion names. H1 selected. Synchronized the five stale
+repository symbol-map entries; no build or runtime run was needed. This rules
+out a repository-symbol naming mismatch in this model-animation region, but
+does not explain the external retail-entry boundary or recurring runtime
+SIGBUS.
+
 ## Session 1260 (2026-08-15) — synchronized NPC devastator and vortex symbols
 
 The bounded `0x8007EF1C..0x80081ABC` census compared the repository symbol map,
