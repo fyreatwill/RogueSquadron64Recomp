@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1225 (2026-08-14).
+in the ledger. Reviewed through s1227 (2026-08-14).
 
 ## Current state
 
@@ -147,6 +147,17 @@ in the ledger. Reviewed through s1225 (2026-08-14).
   The unresolved boundary is provenance/initialization of the
   `gBootConfig+0x04` data value or an external front-end handoff, not a missing
   generated caller. Static source evidence only.
+- The s1227 bounded provenance audit closes the config-data side of that
+  handoff. `gBootConfig` is the 0x50-byte ROM-backed object at `0x80037560` in
+  the main `.text` image (`ROM 0x38160`); the retail ROM bytes at `+0x04` are
+  `80 03 DF A0`, exactly `0x8003DFA0`. No generated store targets
+  `0x80037564`. `thread3_video_handle` passes `0x80000C68` to
+  `registerServiceWorker`; `mainBootstrapWorker` later loads `gBootConfig+4`
+  and calls it. H2 is selected: the callback is a static ROM initializer and
+  the missing retail-entry event is outside this generated handoff. The next
+  boundary is the external/front-end retail-entry route, not config
+  initialization. Two independent lines are the ROM bytes/section mapping and
+  the generated caller/registration chain.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -226,11 +237,11 @@ in the ledger. Reviewed through s1225 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Audit the bounded provenance of `gBootConfig+0x04`: identify the ROM/data
-   initializer and the runtime/front-end callback registration that supplies
-   `mainGameLoop`. Establish whether the retail entry event is outside the
-   generated game path. Do not build or run until this data/runtime boundary
-   is named; do not arm an oracle target write without a concrete producer.
+1. Audit the external/front-end retail-entry route now that the generated
+   callback is proven static: trace the oracle/core startup state and first
+   input handoff to identify the first missing transition. This is a source
+   audit only; do not build or run until a concrete state-changing event is
+   named.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -341,6 +352,7 @@ order.
 
 | s1222 | Corrected the state-byte identity: `mainGameLoop` reads `D_80130B10+0x20..22` (`0x80130B30..32`), not `gGameSettings+0x20..22` (`0x80130B60..62`). The prior writes were volume-field tests; generated/companion census found `runIdleFramesAndLoadSaveData` writes `B30=1,B31=0`, while demo save/restore writes only `B60..62`. No generated-boundary defect was found. |
 | s1225 | Post-idle generated/companion audit found `loadSaveDataIfNotLoaded` is EEPROM-only, `classifySaveStateFromInput` is uncalled, and the remaining post-load loop has polling/render/account-unlock work but no input-controlled retail-entry writer. H2 selected; no oracle target justified. |
+| s1227 | Bounded provenance audit found `gBootConfig` at `0x80037560` is ROM-backed in the main image (ROM `0x38160`), with bytes `80 03 DF A0` at `+0x04` (`mainGameLoop`). No generated writer exists; `thread3_video_handle` registers `mainBootstrapWorker`, whose `jalr` consumes that static callback. H2 selected; the missing retail-entry event is outside this generated handoff. No build or run. |
 
 ## Method and safety rules
 

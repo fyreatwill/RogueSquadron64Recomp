@@ -1,39 +1,35 @@
-# NEXT work unit (s1227)
+# NEXT work unit (s1228)
 
-HYPOTHESIS-ID: retail-entry-capability
+HYPOTHESIS-ID: external-retail-entry-route
 
-The s1226 audit selected H2 for the generated handoff: `mainGameLoop` has no
-direct generated caller. `thread3_video_handle` obtains `gBootConfig`, and
-`mainBootstrapWorker` invokes its `+0x04` callback through `jalr`; the
-companion map names that callback `mainGameLoop`. No input-dependent branch
-precedes it.
+The s1227 audit selected H2: `gBootConfig+0x04` is a static ROM initializer
+(`ROM 0x38160 + 4 = 0x8003DFA0`), not a runtime writer. The generated path
+registers and invokes `mainBootstrapWorker` normally.
 
-Work unit: perform a bounded provenance audit of `gBootConfig+0x04`. Identify
-the ROM/data initializer and runtime/front-end registration that supplies the
-`mainGameLoop` callback. Decide whether the missing retail-entry event is
-outside the generated game path. Do not build, run, or write an oracle target.
+Work unit: perform a bounded source audit of the external/front-end retail
+entry route. Trace the oracle's Mupen startup/reset state, controller handoff,
+and first state-changing event against the port's `start_game`/entrypoint
+setup. Do not build, run, or write a target state.
 
 Competing hypotheses and discriminator:
-- H1: `gBootConfig+0x04` is initialized by a concrete input/event-controlled
-  transition or front-end handoff.
-- H2: the callback is a static/unconditional ROM or data initializer and the
-  missing retail transition is outside the generated game path.
-- H3: the config callback provenance is incomplete/malformed and requires
-  symbol or regeneration work before the entry route can be named.
+- H1: the oracle/front-end starts from a different reset or save/input state,
+  and its first missing transition is identifiable in source.
+- H2: the oracle enters the same static boot path; the later retail transition
+  requires an unavailable front-end capability or external state.
+- H3: the port and oracle use different entrypoint/bootstrap semantics, so the
+  comparison is invalid until that mismatch is named.
 
-Discriminator: trace the exact writer/initializer of the four bytes at
-`0x80037564`, then trace the runtime callback registration and first invocation.
-An input/event-dependent writer selects H1; a static data initializer with an
-unconditional callback selects H2; absent/malformed provenance selects H3.
+Discriminator: identify one concrete state-changing event after the first
+320-width phase and the code path that delivers it. A source-visible reset,
+save, or input-state difference selects H1; identical static boot with no
+callable later-entry capability selects H2; an entrypoint/bootstrap mismatch
+selects H3.
 
 Exact commands:
 ```
-rg -n -C 10 "mainGameLoop|gBootConfig|boot config|0x8003DFA0|8003DFA0" \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c
-rg -n "mainGameLoop|gBootConfig|8003DFA0|boot" \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64/docs \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files
+rg -n -C 10 "start_game|entrypoint|M64CMD_(RESET|STATE)|savestate|press|PIF|controller" \
+  tools/oracle src/main lib/N64ModernRuntime/librecomp/src
+rg -n -C 8 "osResetType|gBootConfig|mainBootstrapWorker|mainGameLoop|idle_thread" \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/main_overlay.txt
 ```
-
-Then inspect the ROM/data provenance with bounded searches for `0x80037564`,
-`gBootConfig`, and the linker/ELF data section containing the 0x50-byte config.

@@ -65304,3 +65304,25 @@ changed.
 
 ORIGIN: generated `funcs_0.c`/`funcs_8.c` and companion `main_overlay.txt`.
 No mitigation was added.
+
+## Session 1227 (2026-08-14) — audited boot-config callback provenance
+
+Ran the bounded provenance audit without building or running. The data-symbol
+map places the 0x50-byte `gBootConfig` object at `0x80037560` inside the main
+ROM-backed `.text` image, whose ROM base is `0x1040`; the corresponding ROM
+offset is `0x38160`. The retail ROM at that offset contains
+`00 00 00 00 80 03 DF A0 ...`, so `gBootConfig+0x04` is the static callback
+pointer `0x8003DFA0`, `mainGameLoop`. No generated store targets
+`0x80037564`.
+
+The generated chain independently shows `thread3_video_handle` passing
+`0x80000C68` (`mainBootstrapWorker`) to `registerServiceWorker`, and the
+worker loading its config pointer plus four bytes before `jalr`. H2 is
+selected: the callback is statically initialized, and the missing retail-entry
+event is outside this generated handoff. This rules out a runtime/input writer
+or malformed callback provenance; the external/front-end retail-entry route is
+the next boundary. No mitigation, oracle target, build, or runtime behavior
+was changed.
+
+ORIGIN: `syms/rogue_squadron.datasyms.toml`, retail ROM bytes, generated
+`RecompiledFuncs/funcs_0.c`, and companion `main_overlay.txt`.
