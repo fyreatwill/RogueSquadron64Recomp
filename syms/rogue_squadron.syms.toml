@@ -1383,7 +1383,7 @@ functions = [
     { name = "shutdownAudioEngine", vram = 0x80091D40, size = 0x170 },
     { name = "waitForMusyXAudioTaskDone", vram = 0x80091EB0, size = 0x114 },
     { name = "initFactor5Mutex", vram = 0x80091FC4, size = 0x4C },
-    { name = "func_80092010", vram = 0x80092010, size = 0x4C },
+    { name = "factor5MutexAcquire", vram = 0x80092010, size = 0x4C },
     { name = "func_8009205C", vram = 0x8009205C, size = 0x48 },
     { name = "func_800920A4", vram = 0x800920A4, size = 0x2C },
     { name = "func_800920D0", vram = 0x800920D0, size = 0x2C },
