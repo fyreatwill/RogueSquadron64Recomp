@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1218 (2026-08-14).
+in the ledger. Reviewed through s1219 (2026-08-14).
 
 ## Current state
 
@@ -109,6 +109,14 @@ in the ledger. Reviewed through s1218 (2026-08-14).
   question. No later phase was reached, so it does not yet select H1 or H2 for
   the retail-entry-capability hypothesis; the next step is a justified
   state-changing target, not another control-surface check.
+- The s1219 paired debugger-enabled oracle run wrote `0x01000000` to physical
+  `0x130B60` (`gGameSettings+0x20`, the documented menu sub-state byte) at VI
+  1. The write marker fired; both arms passed the whole-RDRAM control at
+  10,000 hits, logged all eleven scheduled Start words in PIF RAM, and stayed
+  at VI width 320/origin `0x006dd280` for 75 seconds. This target did not
+  change the retail path (H2); the debugger write and control surfaces remain
+  valid. The next target may test the separately documented cinematic
+  sub-state byte at `gGameSettings+0x21`.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -188,10 +196,11 @@ in the ledger. Reviewed through s1218 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Use the now-validated debugger control surface to identify one
-   state-changing RAM or CPU-register target at the 320 boundary. Any target
-   probe must keep the whole-RDRAM, PIF, and VI positive controls in both arms
-   and use a phase-gated later width/origin outcome before M4 watches are armed.
+1. Probe the separately documented cinematic sub-state byte
+   `gGameSettings+0x21` (`0x80130B61`, physical word write
+   `0x130B60:0x00010000`) with the same paired whole-RDRAM/PIF/VI controls.
+   Use a phase-gated later width/origin outcome; do not arm M4 watches unless
+   a later phase is reached.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.

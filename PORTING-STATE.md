@@ -65125,3 +65125,23 @@ is SUBSTITUTED (see scratch/agent/SUBSTITUTION.md) — fixing ledger wording is
 not landing knowledge.
 
 ORIGIN: not applicable; no mitigation-shaped code was touched.
+
+## Session 1219 (2026-08-14) — tested gGameSettings menu sub-state write
+
+Ran the planned paired DEBUGGER=1 retail-oracle arms concurrently for 75
+seconds. The target arm wrote `0x01000000` to physical `0x130B60` (virtual
+`0x80130B60`, `gGameSettings+0x20`, documented menu sub-state) at VI 1 while
+the control arm was undriven. The `[debug-write]` marker fired, so the write
+path was exercised at the intended 320 boundary.
+
+Both arms passed the whole-RDRAM positive control at its 10,000-hit cap,
+logged the eleven scheduled Start press/release words through PIF RAM, and
+produced VI callback/poll records. Both remained at width 320 with origin
+`0x006dd280` for about 75 seconds (4498/4499 VI frames). The target therefore
+did not change the retail path: H2 selected. This rules out a missing debugger
+write and control disruption for this target, but does not rule out the
+separately documented cinematic sub-state target. No mitigation was added.
+
+ORIGIN: the only injected value was the deliberately selected state-machine
+probe at `gGameSettings+0x20`; no renderer or corruption value was skipped,
+guarded, or restored.

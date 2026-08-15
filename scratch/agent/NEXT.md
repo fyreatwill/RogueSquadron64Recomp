@@ -1,9 +1,9 @@
-# NEXT work unit (resume after s1218 checkpoint)
+# NEXT work unit (s1220)
 
 HYPOTHESIS-ID: retail-entry-capability
 
-RESUME instruction — no experiment ran in s1218 (checkpoint-recovery only,
-see PORTING-STATE.md Session 1218). The plan below is unchanged from s1217.
+The s1219 `gGameSettings.unk20` target did not change the retail path: both
+paired arms stayed at width 320/origin `0x006dd280`, with all controls valid.
 
 What already exists and is validated (do not re-validate):
 - The project's DEBUGGER=1 Mupen64Plus core + console frontend expose a
@@ -15,13 +15,14 @@ What already exists and is validated (do not re-validate):
   correctly before and after resume, with whole-RDRAM/PIF/VI controls passing
   in both arms. See PORTING-STATE.md s1217.
 
-Work unit: select ONE justified, state-changing RAM or CPU-register target at
-the 320 boundary and smoke-test it with `--debug-write` (or a comparable
-debugger write) instead of the harmless control word. "Justified" means
-sourced from retail symbols or oracle state observations already in the
-ledger/docs (`docs/F5-UCODE-REFERENCE.md`, VI descriptor boundary notes in
-CURRENT-TRUTH.md) — not a guess. Write down the exact address, its symbol,
-and why it is expected to matter BEFORE running anything.
+Work unit: smoke-test the next justified state-changing RAM target at the
+retail 320 boundary: `gGameSettings+0x21`, symbol/documentation name
+`gGameSettings.unk21` / cinematic sub-state, virtual `0x80130B61`, physical
+byte `0x130B61`. Because the debugger writes one aligned 32-bit word, use
+`0x130B60:0x00010000` to set +0x21 to 1 while clearing the other three bytes.
+`docs/game-architecture.md` identifies this byte as the cinematic branch
+tested by `mainGameLoop`, and `src/main/rt64_render_context.cpp` independently
+labels the same address `gGameSettings+0x21 (cinematic sub-state)`.
 
 Competing hypotheses and discriminator:
 - H1: the justified target changes the retail state path and reaches a later
@@ -35,15 +36,18 @@ Discriminator: a later VI width/origin ONLY in the target arm selects H1;
 width 320 in both arms selects H2; a failed whole-RDRAM/PIF/VI control in the
 target arm selects H3.
 
+The write itself is also checked: `[debug-write]` must fire at VI width 320;
+absence makes the target arm invalid rather than H2.
+
 Required in the same run: paired undriven/control arm vs. the target-write
 arm, both logging whole-RDRAM callback counts, PIF trace, and VI width/origin
 records. Do not arm M4 target watches unless a later VI width/origin phase is
 actually reached first.
 
-Exact command shape (fill in the real target before running):
+Exact command shape:
 ```
-tools/oracle/build/rs64_oracle --debug --rom <ROM> --savestate ... \
-  --debug-write 0xVADDR:0xVALUE --whole-rdram-watch --pif-trace --vi-trace
+tools/oracle/build/rs64_oracle --debug --rom rogue_squadron.z64 \
+  --secs 75 --debug-write 0x130B60:0x00010000 \
+  --watch-write 0x0:0x800000 --hit-cap 10000 --vi-trace --vi-poll --pif-trace
 ```
-(control arm: identical command minus `--debug-write`, run concurrently per
-iron rule 13).
+(Control arm: identical command minus `--debug-write`, run concurrently.)
