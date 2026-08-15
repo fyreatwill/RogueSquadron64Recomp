@@ -69758,3 +69758,34 @@ unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is the independently named `releaseSndMidiSetupRecords` at
 `0x800974B4`.
+
+## Session 1415 (2026-08-15) — synchronized the release-snd-midi-setup-records symbol
+
+Performed the bounded exact-name census over `0x800974B4..0x80097518`.
+
+No new soak-queue verdicts since s1414; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800974B4`, size `0x64`; `0x800974B4+0x64=0x80097518`. Overlay `rom_size` is `0x64` at offset `0x00097074` (`0x800974B4-0x80000440`). Generated prologue at `0x800974B4` (`addiu $sp, $sp, -0x28`) and `jr $ra` at `0x80097510` with delay `nop` at `0x80097514` |
+| Generated definition | `funcs_25.c` defines `releaseSndMidiSetupRecords` at `0x800974B4`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x64` function ending at the next generated definition, `parseSndFiles` at `0x80097518` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `releaseSndMidiSetupRecords = 0x800974B4` in the sequential SND-registration family, immediately after `applySndMidiSetupRecords` and before `unloadLastSndFileGroup`. A second companion mapping names the following function `parseSndFiles = 0x80097518`, confirming the `0x64` boundary. Menu, mission, cinematic, and ignored lists do not remap `0x800974B4`. No conflicting companion name |
+| Caller evidence | No generated `jal 0x800974B4` sites. The sibling `applySndMidiSetupRecords` / `registerSndMacroTable` / `registerSndCurveTable` / `registerSndSampleTable` family likewise has no direct `jal` sites, consistent with table-dispatched SND-file registration rather than a missing mapping |
+| Semantic evidence | Body reads a `u16` count at `a0+0` and, while the index is less than that count, walks `0xC`-byte records. Each iteration loads the `u16` key at `+4` and calls `factor5SortedTableRemoveVoiceRecord` (`0x80085770`). This is the inverse of `applySndMidiSetupRecords`, which walks the same counted `0xC`-byte records and inserts them via `factor5SortedTableInsertVoiceRecord`. Matches releasing a counted MIDI/voice setup-record table. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800974B4`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x64`, and there is neither a conflicting companion name nor a size split.
+H2 and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x64`). `fake_func_8009711C`
+remains the already-fake one-instruction jump fragment and was left
+unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is the independently named `parseSndFiles` at
+`0x80097518`.
