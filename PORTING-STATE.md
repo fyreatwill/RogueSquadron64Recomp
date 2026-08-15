@@ -66017,3 +66017,13 @@ repository symbol-map entries. No build or runtime run was needed. This rules
 out a repository-symbol naming mismatch in this channel-state/modulator
 region, but does not explain the external retail-entry boundary or recurring
 runtime SIGBUS.
+## Session 1266 (2026-08-15) — synchronized voice and Factor 5 table symbols
+
+Performed the bounded exact-name census requested for `0x80084AE8..0x8008588C`.
+The complete table contained 20 entries: nine voice-modulator evaluator wrappers
+and eleven Factor 5 sorted/bucketed table helpers. Every entry had an exact
+independent name in `../rogue_squadron64/symbol_files/main_overlay.txt`, a
+matching generated C definition, and caller evidence; the existing TOML sizes
+matched the generated address ranges. Synchronized all 20 names in
+`syms/rogue_squadron.syms.toml`. H1 selected. No build or runtime run was
+justified; this was a source census and symbol-map change.

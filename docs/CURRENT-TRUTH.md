@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1265 (2026-08-15).
+in the ledger. Reviewed through s1266 (2026-08-15).
 
 ## Current state
 
@@ -173,6 +173,7 @@ in the ledger. Reviewed through s1265 (2026-08-15).
 - The s1246 bounded `0x80072CF0..0x80073E4C` census found exact companion/generated names for all six functions: `initWaterSprayParticles`, `npcWaterSprayUpdate`, `spawnDestructionEffectBurst`, `spawnDistanceScaledDebrisBurst`, `spawnDirectionalDebrisBurst`, and `distanceAndDopplerNpcHelper`. Generated C already carried the names; the repository symbol map was synchronized. H1 selected; no build or run.
 - The s1247 bounded `0x8007413C..0x80074D44` census found exact companion/generated names for all five functions: `explosionEffectNpcHandler`, `triggerDistanceScaledExplosion`, `triggerObjectDestructionEffects`, `transformLimbStrideAnchorsLocal`, and `randomParticleWithParentNpcHandler`. Generated C already carried the names; the repository symbol map was synchronized. The companion symbol file and generated declarations independently agree; caller enumeration added no ambiguity. H1 selected; no build or run.
 - The s1248 bounded `0x80075218..0x80075BB0` census found exact companion/generated names for all four functions: `buildRandomCameraFacingOrientation`, `spawnScaledOrientedEffectTriple`, `heavyRandomBurstNpcHandler`, and `buildNpcAnchoredCameraEffectTransform`. Generated C and the companion symbol file independently agree; the repository symbol map was synchronized. H1 selected; no build or run.
+- The s1266 bounded `0x80084AE8..0x8008588C` census found exact companion/generated names for all 20 entries: nine voice-modulator evaluators and eleven Factor 5 sorted/bucketed table helpers. Generated definitions and companion symbols independently agree, caller evidence is present for every entry, and existing sizes match; the repository symbol map was synchronized. H1 selected; no build or run.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -393,6 +394,12 @@ controller, and evaluator paths; the companion symbol file and generated
 definitions independently agree for all five. The repository symbol map was
 synchronized; H1 selected. No runtime change or build was needed.
 
+The s1266 bounded `0x80084AE8..0x8008588C` census found exact companion and
+generated names with matching sizes for all 20 entries: nine voice-modulator
+evaluators and eleven Factor 5 sorted/bucketed table helpers. Every entry has
+caller evidence in the generated tree, and the repository symbol map was
+synchronized. H1 selected; no runtime change or build was needed.
+
 ## Durable boundaries
 
 ### Next steps
@@ -517,6 +524,7 @@ order.
 | s1263 | The bounded `0x80083C28..0x80083D20` census found exact companion/generated names and matching sizes for five entries. `unusedRand` was already synchronized; four stale symbol-map entries were updated, with three generated callers corroborating `setTrackVoiceTickBudget`. H1 selected; no build or run. |
 | s1264 | The bounded `0x80083D6C..0x80083EB0` census found exact companion/generated names and matching sizes for all five entries. `setChannelNoteCell` had ten direct generated callers; the other four were definition-only in the generated tree. Five stale symbol-map entries were synchronized; `0x80083EF4` remained unchanged as outside scope. H1 selected; no build or run. |
 | s1265 | The bounded `0x80083EF4..0x80084860` census found exact companion/generated names and matching sizes for all five entries: `getChannelByteParamAlt`, `resetChannelStateRecord`, `getChannelControllerValue`, `initVoiceModulatorRecords`, and `evaluateVoiceModulatorRecord`. Generated callers corroborate reset, controller, and evaluator paths; five stale symbol-map entries were synchronized. H1 selected; no build or run. |
+| s1266 | The bounded `0x80084AE8..0x8008588C` census found exact companion/generated names and matching sizes for all 20 entries: nine voice-modulator evaluators and eleven Factor 5 sorted/bucketed table helpers. Every entry had generated caller evidence; 20 stale symbol-map entries were synchronized. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
