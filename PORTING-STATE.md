@@ -67818,3 +67818,28 @@ wrapper. H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio de-stubbing.
+
+## Session 1349 (2026-08-15) — synchronized the free-audio-scratch-buffer symbol
+
+Performed the bounded exact-name census over `0x80092530..0x80092564`.
+
+No new soak-queue verdicts since s1348; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092530`, size `0x34`; it ends exactly at the next generated function, `0x80092564`. Overlay `rom_size` is `0x34` |
+| Generated definition | `funcs_24.c` defines `freeAudioScratchBuffer` at `0x80092530`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `freeAudioScratchBuffer = 0x80092530`. The same file independently names the adjacent functions `tickAudioBufferUpdate` at `0x80092510` and `getVoiceUserField` at `0x80092564`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x80092530` in already-named `runMusyXTaskLocked` at `0x8008E920`. That gate loads `gMusyXActiveFlag` at `0x800A0F50` and, when nonzero, calls `factor5MutexAcquire`, this wrapper, then `factor5MutexRelease` |
+| Semantic evidence | Body loads the word at `0x80149768`, returns if it is zero, otherwise stores zero there and `jal rs_free` (`0x80001C98`) with `$a0 = 0`. The same null-then-`rs_free(0)` sequence is inlined in already-named `shutdownAudioEngine` at `0x80091D8C` and `waitForMusyXAudioTaskDone` at `0x80091EFC`. Companion independently names this standalone wrapper |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x34` boundary is exact, and the body is the documented locked scratch-buffer
+free wrapper. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio de-stubbing.

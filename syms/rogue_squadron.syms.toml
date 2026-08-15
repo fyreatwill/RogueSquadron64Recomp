@@ -1401,7 +1401,7 @@ functions = [
     { name = "beginVoiceFadeRelease", vram = 0x80092490, size = 0x60 },
     { name = "deactivateVoice", vram = 0x800924F0, size = 0x20 },
     { name = "tickAudioBufferUpdate", vram = 0x80092510, size = 0x20 },
-    { name = "func_80092530", vram = 0x80092530, size = 0x34 },
+    { name = "freeAudioScratchBuffer", vram = 0x80092530, size = 0x34 },
     { name = "func_80092564", vram = 0x80092564, size = 0x24 },
     { name = "func_80092588", vram = 0x80092588, size = 0x20 },
     { name = "func_800925A8", vram = 0x800925A8, size = 0x4C },
