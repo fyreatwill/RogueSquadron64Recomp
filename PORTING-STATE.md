@@ -71770,3 +71770,38 @@ exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is already-fake `fake_func_8009D7CC` at
 `0x8009D7CC` (one-instruction `mtc1` fragment before independently named
 `filterVoiceSampleBlock` at `0x8009D7D0`).
+
+## Session 1476 (2026-08-15) — parked the already-fake 0x8009D7CC mtc1 fragment
+
+Performed the bounded exact-name census over `0x8009D7CC..0x8009D7D0`.
+
+No new soak-queue verdicts since s1475; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `fake_func_8009D7CC`, size `0x4`; `0x8009D7CC+0x4=0x8009D7D0`. Overlay `rom_size` is `0x4` at offset `0x0009D38C` (`0x8009D7CC-0x80000440`) |
+| Generated definition | `funcs_27.c` defines `fake_func_8009D7CC` at `0x8009D7CC` as `mtc1 $zero, $f4` (`ctx->f4.u32l = 0`), with no `jr $ra`. `funcs.h` and `recomp_overlays.inl` already use that name. The four-byte span sits between independently named `decodeAndFillVoiceBlock` at `0x8009C904` (ends `jr $ra` / `nop` at `0x8009D7C4` / `0x8009D7C8`) and generated `filterVoiceSampleBlock` at `0x8009D7D0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `fake_func_8009D7CC = 0x8009D7CC; // defined:true` immediately before `filterVoiceSampleBlock = 0x8009D7D0`. Menu, mission, cinematic, ignored, libultra, and zlib lists do not remap `0x8009D7CC`. No companion C/asm body exists. No later companion list supplies a semantic name |
+| Caller evidence | Zero generated `jal 0x8009D7CC` sites and zero `fake_func_8009D7CC` call sites. Whole-ROM scan found zero `jal` encodings (`0x0C0275F3`), zero `j` encodings (`0x080275F3`), and zero absolute `0x8009D7CC` pointer words. The word is not a reachable function |
+| Semantic evidence | Retail ROM words at file `0x9E3CC` (`(vram&0xFFFFFF)+0xC00`) are `0x44802000` (`mtc1 $zero, $f4`). Same-run positive controls: `0x8009C904` file `0x9D504` is `0x27BDFEC0`, `0x8009D7C4`/`0x8009D7C8` files `0x9E3C4`/`0x9E3C8` are `0x03E00008`/`0x00000000` (`jr $ra` / `nop`), and `0x8009D7D0` file `0x9E3D0` is `0x2481FFF9` (`addiu $at, $a0, -7`). The preceding `decodeAndFillVoiceBlock` is a complete integer function ending `jr $ra` / `nop`. The following `filterVoiceSampleBlock` is a complete `0xEC` function starting `addiu $at, $a0, -7` and ending `jr $ra` / `nop` at `0x8009D8B4` / `0x8009D8B8`; its body is integer sample-filter work, not this orphan COP1 move. Same already-fake one-instruction fragment class as `fake_func_80099C4C` / `fake_func_80099FDC` / `fake_func_8009711C` |
+| Confidence | High |
+
+The complete comparison selects H2 for `0x8009D7CC`: the companion,
+generated, overlay, and TOML names already agree on the already-fake
+fragment, the `0x4` boundary is exact, and there is no independent
+semantic name to synchronize. H1 is ruled out because inventing a name
+for the orphan `mtc1 $zero, $f4` would fabricate a source. H3 is
+ruled out because the independent naming source exists and already
+marks the site fake. The TOML entry stays unchanged, as do
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not
+reopen M5 audio de-stubbing. The next adjacent generated function is
+independently named `filterVoiceSampleBlock` at `0x8009D7D0` (TOML
+still `func_8009D7D0`, size `0xEC`; overlay `rom_size` is `0xF4` and
+lumps the following eight-byte `0x8009D8BC` pad).

@@ -1,9 +1,9 @@
-# NEXT work unit (s1476)
+# NEXT work unit (s1477)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8009D7CC..0x8009D7D0`. Do not build or run. Record its address,
+function, `0x8009D7D0..0x8009D8C4`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -18,14 +18,19 @@ one-instruction jump fragment), `fake_func_80097D58` unchanged
 (s1420: already-fake two-instruction epilogue fragment),
 `fake_func_80099C4C` unchanged (s1446 H2: already-fake one-word `beq`
 gap), `fake_func_80099FDC` unchanged (s1451 H2: already-fake
-one-word `bne` gap before `aspMainTextStart`), and
+one-word `bne` gap before `aspMainTextStart`),
 `fake_func_8009C2C8` unchanged (s1471 H2: already-fake
-two-instruction COP1 multiply-accumulate fragment). The generated
-entry at this address is already `fake_func_8009D7CC`; the companion
-splat list also marks `fake_func_8009D7CC = 0x8009D7CC`. Confirm the
-one-instruction `mtc1 $zero, $f4` fragment, size `0x4`, and the next
-independently named `filterVoiceSampleBlock` at `0x8009D7D0` before
-leaving the fake unchanged.
+two-instruction COP1 multiply-accumulate fragment), and
+`fake_func_8009D7CC` unchanged (s1476 H2: already-fake
+one-instruction `mtc1 $zero, $f4` fragment). The generated entry at
+this address is already `filterVoiceSampleBlock`; the companion splat
+list maps `filterVoiceSampleBlock = 0x8009D7D0`. TOML is still
+`func_8009D7D0` (size `0xEC`, ends at `0x8009D8BC`); overlay
+`rom_size` is `0xF4` and lumps the eight-byte `func_8009D8BC` pad
+before independently named `applyVoiceDelayFilter` at `0x8009D8C4`.
+Confirm the complete function, matching size, and caller/semantic
+evidence before synchronizing the TOML name. Classify the `0x8009D8BC`
+pad in the same table; do not invent a name for it.
 
 Competing hypotheses and discriminator:
 
@@ -43,7 +48,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '8009D7CC\|8009D7D0\|fake_func_8009D7CC\|filterVoiceSampleBlock' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '8009D7CC\|8009D7D0' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '8009D7CC\|8009D7D0' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009D7D0\|8009D8BC\|8009D8C4\|filterVoiceSampleBlock\|applyVoiceDelayFilter' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009D7D0\|8009D8BC\|filterVoiceSampleBlock' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '8009D7D0\|8009D8BC\|8009D8C4' syms/rogue_squadron.syms.toml
 ```
