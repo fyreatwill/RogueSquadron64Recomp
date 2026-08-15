@@ -70365,3 +70365,36 @@ as were `fake_func_8009711C`, `fake_func_80094348`,
 runtime run was justified for an exact-name census. This does not
 reopen M5 audio de-stubbing. The next adjacent generated function is
 the independently named `factor5RemoveListNode` at `0x80098DE0`.
+
+## Session 1434 (2026-08-15) — synchronized the factor5-remove-list-node symbol
+
+Performed the bounded exact-name census over `0x80098DE0..0x80098E84`.
+
+No new soak-queue verdicts since s1433; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80098DE0`, size `0xA4`; `0x80098DE0+0xA4=0x80098E84`. Overlay `rom_size` is `0xA4` at offset `0x000989A0` (`0x80098DE0-0x80000440`). Generated body starts `lui $v0, 0x800A` / `lbu 0xF50` at `0x80098DE0` and ends `jr $ra` / `nop` at `0x80098E7C` / `0x80098E80` |
+| Generated definition | `funcs_26.c` defines `factor5RemoveListNode` at `0x80098DE0`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xA4` function between independently named `play3DSoundEventVariant` at `0x80098BDC` and generated `mostlyMusyxFlagGatedHelper` at `0x80098E84` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `factor5RemoveListNode = 0x80098DE0` as the 67-caller Factor 5 list helper: mutex-gated doubly-linked removal that updates list head `0x80153414` and gates on MusyX-active `0x800A0F50`. Menu, mission, cinematic, and ignored lists do not remap `0x80098DE0`. Sibling `unlinkMusyXListNode` is a different function at `0x80099310` (list head `0x80153418`). No conflicting companion name |
+| Caller evidence | Exactly 67 generated `jal 0x80098DE0` sites in 39 enclosing functions, all independently named. Highest-count live sites include `guidedEffectNpcHandler` (4), `npcTankDroidUpdate` (4), `npcGroundTransportUpdate` (4), `npcTrainCarUpdate` (4), `npcWordDevastatorUpdate` (3), and `tickAtAtBodyTransform` (3). Named unlink/teardown callers also include `destroySceneNpcsAndUnlink` (1), `teardownHudInstancesAndUnbindNpcs` (1), `resetHudInstancesAndUnbindNpcs` (1), and `attached3DSoundEmitterNpcHandler` (1). Zero `func_*` callers. Companion caller count matches exactly |
+| Semantic evidence | Body loads `gMusyXActiveFlag` (`0x800A0F50`) and returns 0 if zero, else `factor5MutexAcquire`. It unlinks `a0` as a doubly-linked node (`+0x0`/`+0x4`): if prev nonzero, `prev+0x4 = next`; if next nonzero, `next+0x0 = prev`; if next is null, writes prev to list head `0x80153414`. After unlink it copies `lhu +0xA` into word `+0x8` and, if word `+0x34 != -1`, calls independently named `flagVoiceChainForStop` (`0x80089414`). Then `factor5MutexRelease` and returns 1. That matches the companion mutex/list-head/MusyX-gate comment; the post-unlink field copy and voice-chain stop are additional teardown, not a conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80098DE0`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xA4`, all 67 `jal` callers are independently named NPC/teardown/unlink
+sites and match the companion count, and there is neither a conflicting
+companion name nor a size split. H2 and H3 are ruled out for this
+address. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0xA4`). `fake_func_80097D58` remains the
+already-fake two-instruction epilogue fragment and was left unchanged,
+as were `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not
+reopen M5 audio de-stubbing. The next adjacent generated function is
+the independently named `mostlyMusyxFlagGatedHelper` at `0x80098E84`.
