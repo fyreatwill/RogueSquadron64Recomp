@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1248 (2026-08-15).
+in the ledger. Reviewed through s1249 (2026-08-15).
 
 ## Current state
 
@@ -254,7 +254,8 @@ in the ledger. Reviewed through s1248 (2026-08-15).
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
    exact-name sweep over the next adjacent helper region after
-   `0x80075218..0x80075BB0`; it needs no external retail-entry artifact. Keep
+   `0x8007602C..0x80076998`, beginning at `0x80076BE4`; it needs no external
+   retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
@@ -263,6 +264,12 @@ in the ledger. Reviewed through s1248 (2026-08-15).
    Before any probe, read `tools/oracle/README.md` and
    `docs/F5-UCODE-REFERENCE.md`, define positive controls, and phase-gate all
    animated comparisons.
+
+The s1249 bounded `0x8007602C..0x80076998` census found exact companion and
+generated names for all four functions: `computeWalkerLimbStrideTargets`,
+`extrapolateNpcPositionForCurrentMode`, `npcPowerGeneratorHandleDestruction`,
+and `spawnDirectionalDebrisBurstAnchored`. The repository symbol map was
+synchronized; no runtime change or build was needed.
 
 ## Durable boundaries
 

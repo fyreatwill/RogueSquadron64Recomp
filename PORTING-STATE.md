@@ -65708,3 +65708,14 @@ callers and no naming ambiguity. Synchronized the four stale repository
 symbol-map entries; generated C already used the names. H1 selected. No build
 or runtime run was needed, and the external retail-entry boundary remains
 open.
+
+## Session 1249 (2026-08-15) — synchronized adjacent helper symbols
+
+Ran the single bounded generated/companion census for
+`0x8007602C..0x80076998`. The generated declarations and companion
+`main_overlay.txt` independently agree on four exact human names:
+`computeWalkerLimbStrideTargets`, `extrapolateNpcPositionForCurrentMode`,
+`npcPowerGeneratorHandleDestruction`, and `spawnDirectionalDebrisBurstAnchored`.
+Synchronized the four stale repository symbol-map entries; generated C already
+used the names. H1 selected. No build or runtime run was needed, and the
+external retail-entry boundary remains open.
