@@ -67536,3 +67536,28 @@ nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
 This does not reopen M5 audio de-stubbing.
 
+## Session 1338 (2026-08-15) — synchronized the musyx-start-voice-release symbol
+
+Performed the bounded exact-name census over `0x80092274..0x800922C4`.
+
+No new soak-queue verdicts since s1337; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092274`, size `0x50`; it ends exactly at the next generated function, `0x800922C4`. Overlay `rom_size` is `0x50` |
+| Generated definition | `funcs_24.c` defines `musyxStartVoiceRelease` at `0x80092274`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxStartVoiceRelease = 0x80092274` with the annotated contract `SoundMacro key-off: state +0x6C=3, capture env level +0x5C->+0x68, enter ADSR release` and names the next function `musyxStoreVoiceAdsrParams` at `0x800922C4` |
+| Caller evidence | Two generated `jal 0x80092274` sites: `soundMacroOpKeyOff` at `0x8008A6C4` (companion-named and already synchronized) and `tickAudioChannel` at `0x8008BC10` (already synchronized). Both pass `a1=1` after loading the voice index from channel `+0x67` |
+| Semantic evidence | Slot index is `voiceIdx * 0x88` against base `0x801496F8`. Always writes default release `+0x30 = 0x14`. Nonzero flag writes state `+0x6C = 3`, captures env `+0x5C` into `+0x68`, zeros `+0x60/+0x64`, and copies release into `+0x58`. That is exactly the companion key-off contract |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x50` boundary is exact, and the body is the SoundMacro/sequencer key-off
+release entry. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio de-stubbing.
+
