@@ -1359,7 +1359,7 @@ functions = [
     { name = "setDisplayMode", vram = 0x8008EA14, size = 0x148 },
     { name = "reapplyDisplayMode", vram = 0x8008EB5C, size = 0x148 },
     { name = "shutdownMusyXEngine", vram = 0x8008ECA4, size = 0x5C },
-    { name = "func_8008ED00", vram = 0x8008ED00, size = 0x5C },
+    { name = "musyxNoopStub", vram = 0x8008ED00, size = 0x5C },
     { name = "func_8008ED5C", vram = 0x8008ED5C, size = 0x10 },
     { name = "func_8008ED6C", vram = 0x8008ED6C, size = 0x154 },
     { name = "func_8008EEC0", vram = 0x8008EEC0, size = 0x1E0 },

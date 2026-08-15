@@ -66762,3 +66762,26 @@ plus `shutdownAudioEngine` call support the engine-shutdown name. H2 and H3
 are ruled out for this function; there is neither a partial/conflicting match
 nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1307 (2026-08-15) — synchronized the MusyX wait-teardown symbol
+
+Performed the bounded exact-name census over `0x8008ED00..0x8008ED5C`.
+
+No new soak-queue verdicts since s1306; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008ED00`, size `0x5C`; it ends exactly at the next generated function, `0x8008ED5C`. Overlay `rom_size` is `0x5C` |
+| Generated definition | `funcs_23.c` defines `musyxNoopStub` at `0x8008ED00`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxNoopStub = 0x8008ED00` |
+| Caller evidence | One generated `jal 0x8008ED00` site: `runVideoFrameTick` (`funcs_0.c`) at `0x80001388`, the first call of the video-tick body |
+| Semantic evidence | Body is the wait-then-teardown sibling of `shutdownMusyXEngine`: it reads `gMusyXActiveFlag` at `0x800A0F50` and early-returns if clear, then `jal waitForMusyXAudioTaskDone` (`0x80091EB0`), frees the word at `0x8013AF14` via `rs_free` (`0x80001C98`) when nonzero, `jal noopHandler_80099C44` (`0x80099C44`), and stores `0` back to the same gate byte. Companion independently names that gate byte, the wait callee, and the no-op handler. The independently attested name describes the flag-clear early-return (the common no-op path), not the teardown body |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x5C` boundary is exact, and the video-tick caller plus the independently
+named gate-byte teardown support synchronizing the attested name. H2 and H3
+are ruled out for this function; there is neither a partial/conflicting match
+nor an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
