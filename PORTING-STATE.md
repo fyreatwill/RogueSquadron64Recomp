@@ -68178,3 +68178,31 @@ left unchanged. No build or runtime run was justified for an exact-name
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is the independently named `copyVoiceSamplesS16` at
 `0x8009314C`.
+
+## Session 1362 (2026-08-15) — synchronized the copy-voice-samples-s16 symbol
+
+Performed the bounded exact-name census over `0x8009314C..0x800932C4`.
+
+No new soak-queue verdicts since s1361; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009314C`, size `0x178`; `0x8009314C+0x178=0x800932C4`. Overlay `rom_size` is `0x178`. Generated `jr $ra` at `0x800932BC`, delay `addiu $sp,$sp,0x1C` at `0x800932C0` |
+| Generated definition | `funcs_24.c` defines `copyVoiceSamplesS16` at `0x8009314C`; `funcs.h` and `recomp_overlays.inl` already use that name. First instruction is `addiu $sp,$sp,-0x1C`; the body is a complete function ending at the next generated definition, `copyVoiceSamplesLut` at `0x800932C4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `copyVoiceSamplesS16 = 0x8009314C`. The same file independently names the preceding packed LUT wrapper `resampleVoiceLutSamplesPacked` at `0x80092E48` and the sibling `copyVoiceSamplesLut` at `0x800932C4`. The sequential `defined:true` list jumps from `packFourLutResampledSamples` to the fake-function block and does not remap this address. No later companion list remaps it |
+| Caller evidence | No generated `jal 0x8009314C` exists; the sibling resample wrappers (`0x8009264C`, `0x800928D4`, `0x80092BA8`, `0x80092E48`) likewise have no direct jal. The ROM has no literal `0x8009314C` word, so the format dispatch is not a static pointer table |
+| Semantic evidence | Loads a voice/render context from `$a0` (source `$t1`, dest `$t2`, end `$s2`, loop `$s3`, output count `$t8>>3`). Each iteration `lhu`s eight consecutive s16 samples (advance source by 2, wrap to loop start at end), packs four halves into `$t3` via `or`/`dsll 16`, and `sd`s them to dest+0 and dest+8 with `cache 0x0D`/`0x19` writeback. No interpolation, no LUT, no phase accumulator. That is a straight s16 voice-sample copy, the independently named sibling of `copyVoiceSamplesLut` (which `lbu`s and indexes `D_800A1790`) |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the body is a complete s16 voice-sample copy of matching size `0x178`, and
+there is neither a conflicting companion name nor a size split. H2 and H3
+are ruled out. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0x178`). `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C` were left unchanged.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is the
+independently named `copyVoiceSamplesLut` at `0x800932C4`.
