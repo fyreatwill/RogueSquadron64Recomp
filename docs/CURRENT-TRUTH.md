@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1177 (2026-08-14).
+in the ledger. Reviewed through s1180 (2026-08-14).
 
 ## Current state
 
@@ -481,6 +481,8 @@ corruption.
 | s1176 | Correlated all s1175 writer PCs to generated instructions. `0x8008EDB8` is a dynamic 16-entry AI buffer-pointer table store; `0x8008EE04/0x8008EE6C` update the audio-buffer index byte; `0x8008F0CC` stores the channel count; `0x8008F0E4/0x8008F0EC` store allocation and voice-base globals; and `0x80091BC0` stores the audio scratch pointer. None is a sample/stream-field writer. The first such generated stores are `musyxInitVoiceFromSample` at `0x800921E8/0x80092220/0x80092228/0x80092230`, targeting computed voice-slot offsets `+0x34/+0x38/+0x3C/+0x40`. This selects H1 for the next ground-truth execution watch, with the target range still unmeasured. |
 | s1177 | Ran the retail oracle execution watch for all four `musyxInitVoiceFromSample` PCs with separate whole-RDRAM controls. The write control reached 10,000 callbacks and the read control reached 64,047,786 callbacks; all eleven scheduled presses were delivered. The run remained at VI 320 and all four writer PCs had zero hits. This selects H2 for the driven attract path and rules out authorizing a destination-range watch from this capture; no mitigation was added. |
 
+| s1180 | Completed the static earlier-`$sp` value-origin audit without building or running. The 144 direct `slotDispatcherIter` sites across 72 callers contain only balanced frame arithmetic; no caller has a non-prologue `r29` load or assignment. Runtime code has one executable `r29` initializer, `run_thread_function` from the scheduler's thread `sp`; hook/event paths preserve whole contexts but do not replace it. This selects H3 and rules out a direct caller-side or named runtime context handoff as the invalid-value source. The next unit is an earlier guest value-producer audit; no mitigation was added. |
+
 ## Ranked next steps
 
 1. Keep audio closed. Do not add a destination watch or mitigation from the
@@ -488,11 +490,11 @@ corruption.
    reaches an audio-initialization or voice-allocation phase beyond the driven
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
-2. Audit the earlier guest `$sp` value origin for the `slotDispatcherIter+872`
-   fault. Trace every generated computation and load feeding the 72 direct
-   caller entries, then classify whether any path can produce the observed
-   invalid frame value. Do not add a guard until the producer is named and its
-   value is classified as legitimate or corrupt.
+2. Audit the earlier guest value producers feeding the context inherited by
+   `slotDispatcherIter` callers. Enumerate generated non-prologue `r29`
+   assignments and context-preserving call edges, then rank reachable sources
+   that can poison the shared guest context. Do not add a guard until a writer
+   is named and its value is classified as legitimate or corrupt.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

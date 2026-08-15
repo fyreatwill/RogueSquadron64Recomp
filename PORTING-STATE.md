@@ -64418,3 +64418,23 @@ context-producing edge.
 
 ORIGIN: generated store census plus runtime RDRAM-write inventory; no guest
 value mutation or mitigation.
+
+## Session 1180 (2026-08-14) — audited caller-side stack value origin
+
+Performed the planned static M3 work unit without building or running. The
+generated tree contains 144 direct `slotDispatcherIter` calls across 72 named
+callers. A function-scoped audit found no non-prologue `ctx->r29` load or
+assignment in any of those callers; each uses ordinary `ADD32(ctx->r29,
+ -frame)`/`ADD32(ctx->r29, +frame)` movement with the existing saved-return
+idiom. The runtime census independently found only the scheduler-provided
+`sp` assignment in `run_thread_function`; hook and event paths preserve whole
+contexts and do not replace `r29`.
+
+This selects H3: no direct caller-side computation or named runtime context
+handoff can explain the invalid value. It rules out a caller `$sp` guard or
+runtime wrapper rewrite as an explanation, but does not identify the earlier
+guest value producer. The next unit is a global non-prologue `r29` producer and
+context-edge reachability audit. No mitigation was added.
+
+ORIGIN: complete generated caller census plus independent runtime context
+assignment census; no guest value mutation or mitigation.
