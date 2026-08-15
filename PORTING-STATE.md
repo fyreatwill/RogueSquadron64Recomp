@@ -64376,3 +64376,24 @@ all presses were delivered. The run stayed at VI 320 and all four candidate
 writer PCs had zero hits. This selects H2 for the driven attract path and rules
 out a destination-range watch based on this lead. It does not prove that the
 writers are dead on every path, and no mitigation was added.
+
+## Session 1178 (2026-08-14) — audited runtime guest-stack ownership
+
+Ran the planned static M3 work unit, with no build or runtime experiment. The
+independent ground-truth contract was checked first: the retail oracle's
+whole-RDRAM watch is the required positive control for physical-RDRAM writer
+questions, while the Factor 5 reference is irrelevant to this context ABI
+question. A repository-wide runtime/context census found exactly one
+executable `r29` assignment, `run_thread_function` initialization from the
+scheduler-provided `sp`. `recomp_trigger_event` and `run_hook` save and restore
+whole contexts but do not invent a new stack value; their callback paths only
+alias the existing context. The Rogue Squadron `GameEntry` leaves
+`thread_create_callback` null, and no runtime helper writes `ctx->r29`.
+
+Together with s1162's complete generated caller census (72/72 balanced
+`slotDispatcherIter` callers and no static indirect target), this selects H3
+for the context-writer discriminator: a direct runtime/generated `$sp`
+replacement is not supported. It rules out a `$sp` guard or wrapper restore as
+an explanation, but does not identify the writer that corrupts guest stack
+memory/value contents. The next unit is a complete stack-memory writer-class
+census; no mitigation was added.

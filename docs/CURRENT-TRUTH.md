@@ -34,6 +34,15 @@ in the ledger. Reviewed through s1177 (2026-08-14).
   all pass; no runtime effect is established yet.
   The register-dump probe is landed and binary-verified; phase-positive
   no-event soaks did not classify the site.
+- The s1178 runtime/generated-context `$sp` ownership census found one
+  executable runtime assignment to `r29`, in `run_thread_function`, sourced
+  from the scheduler-provided thread stack pointer. The only other context
+  effects are whole-context save/restore in mod event/hook dispatch; the
+  Rogue Squadron `GameEntry` has no thread-create callback, and no runtime
+  helper assigns `ctx->r29`. Combined with s1162's independent 72/72 balanced
+  generated caller census, this selects H3 for the context-writer branch:
+  the remaining `slotDispatcherIter+872` origin is guest stack-memory/value
+  corruption, not a direct `$sp` replacement. No mitigation was added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
@@ -470,6 +479,12 @@ corruption.
    zero-hit writer capture. Reopen only with a new independent lead that
    reaches an audio-initialization or voice-allocation phase beyond the driven
    VI-320 attract path and can first pass the whole-RDRAM controls.
+
+2. Audit the complete guest stack-memory writer class for the
+   `slotDispatcherIter+872` fault. Start with the failing caller's frame range
+   and enumerate generated stores plus host/runtime RDRAM writes that can
+   overlap it. Do not add a guard until the writer is named and its value is
+   classified as legitimate or corrupt.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry
