@@ -69451,3 +69451,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `playSongIfMusyXActive` at `0x80096C88`.
+
+## Session 1405 (2026-08-15) — synchronized the play-song-if-musyx-active symbol
+
+Performed the bounded exact-name census over `0x80096C88..0x80096CE4`.
+
+No new soak-queue verdicts since s1404; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80096C88`, size `0x5C`; `0x80096C88+0x5C=0x80096CE4`. Overlay `rom_size` is `0x5C` at offset `0x00096848` (`0x80096C88-0x80000440`). Generated prologue at `0x80096C88` (`lui $v0, 0x800A`) and `jr $ra` at `0x80096CDC` with delay `nop` at `0x80096CE0` |
+| Generated definition | `funcs_25.c` defines `playSongIfMusyXActive` at `0x80096C88`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `isSongHandleFree` at `0x80096CE4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `playSongIfMusyXActive = 0x80096C88` in the annotated MusyX song-playback block (gate `gMusyXActiveFlag` `0x800A0F50`; acquire / `processSongByHandle(a0,a1,0)` / release; callers `updateHangarBayScene`, `func_800ED200`). The sequential `defined:true` list jumps from already-synchronized `setSongChannelParamByHandle` to `isSongHandleFree` and omits this wrapper; that omission is not a conflicting name. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | Two generated `jal 0x80096C88` sites: independently named `updateHangarBayScene` at `0x800AC1F8` (menu overlay names that hangar updater and says it calls this once for bay music) and `tickActiveSongSlots` / `func_800ED200` at `0x800ED890` (mission overlay maps `tickActiveSongSlots = 0x800ED200`; main-overlay comment still uses the address-encoded caller). No other `jal 0x80096C88` sites |
+| Semantic evidence | Loads the byte at `0x800A0F50` and returns immediately when it is zero. Otherwise saves `a0`/`a1`, calls already-named `factor5MutexAcquire` (`0x80092010`), `processSongByHandle` (`0x800966A4`) with `a2=0`, then `factor5MutexRelease` (`0x8009205C`). Matches the companion gated play wrapper. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80096C88`: the companion and
+generated names agree, the body is a complete MusyX-gated play wrapper of
+matching size `0x5C`, and there is neither a conflicting companion name
+nor a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x5C`). `fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`isSongHandleFree` at `0x80096CE4`.
