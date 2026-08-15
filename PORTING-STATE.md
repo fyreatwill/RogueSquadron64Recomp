@@ -69947,3 +69947,35 @@ the already-fake two-instruction epilogue fragment (`lw $fp, 0x88($sp)` /
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is
 the independently named `clearStreamedVoiceFlags` at `0x80097D60`.
+
+## Session 1421 (2026-08-15) — synchronized the clear-streamed-voice-flags symbol
+
+Performed the bounded exact-name census over `0x80097D60..0x80097DA8`.
+
+No new soak-queue verdicts since s1420; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80097D60`, size `0x48`; `0x80097D60+0x48=0x80097DA8`. Overlay `rom_size` is `0x48` at offset `0x00097920` (`0x80097D60-0x80000440`). Generated body starts `lui $v0, 0x8014` at `0x80097D60` and ends `jr $ra` / `nop` at `0x80097DA0` / `0x80097DA4` |
+| Generated definition | `funcs_26.c` defines `clearStreamedVoiceFlags` at `0x80097D60`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x48` function between already-fake `fake_func_80097D58` (`lw $fp` / `addiu $sp` at `0x80097D58` / `0x80097D5C`) and generated `serviceStreamedVoices` at `0x80097DA8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `clearStreamedVoiceFlags = 0x80097D60` (force-applied). Menu, mission, cinematic, and ignored lists do not remap `0x80097D60`. No conflicting companion name |
+| Caller evidence | Three generated `jal 0x80097D60` sites in independently named reset-chain callers: `initMusyXEngine` at `0x8008E9E0`, `setDisplayMode` at `0x8008EB24`, and `reapplyDisplayMode` at `0x8008EC6C`. Companion comments on those display-mode functions already list `func_80097D60` in the same state-reset chain after `resetMusyXEngineState` and before `reset3DAudioLists` |
+| Semantic evidence | Body loads the slot/mode count at `MEM_BU[0x80141AD0]` (the same count used by independently named `tickAllAudioChannels` and `anyAudioSlotActive`), then stores zero to the byte at `0x80152A20 + i*0x18` for each slot. That is a per-slot streamed-voice flag clear. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80097D60`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x48`, the three `jal` callers match the reset-chain role, and there is
+neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x48`). `fake_func_80097D58`
+remains the already-fake two-instruction epilogue fragment and was left
+unchanged, as were `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `serviceStreamedVoices` at `0x80097DA8`.

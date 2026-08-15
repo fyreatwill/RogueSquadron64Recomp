@@ -1478,7 +1478,7 @@ functions = [
     { name = "playSongByIdLockCtl", vram = 0x80097AD0, size = 0x15C },
     { name = "playSongById", vram = 0x80097C2C, size = 0x12C },
     { name = "fake_func_80097D58", vram = 0x80097D58, size = 0x8 },
-    { name = "func_80097D60", vram = 0x80097D60, size = 0x48 },
+    { name = "clearStreamedVoiceFlags", vram = 0x80097D60, size = 0x48 },
     { name = "func_80097DA8", vram = 0x80097DA8, size = 0x1AC },
     { name = "func_80097F54", vram = 0x80097F54, size = 0x94 },
     { name = "func_80097FE8", vram = 0x80097FE8, size = 0x1FC },
