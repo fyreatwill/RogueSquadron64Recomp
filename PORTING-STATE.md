@@ -65602,3 +65602,20 @@ repository `syms/rogue_squadron.syms.toml` had those addresses but retained
 human names, including `loadDefaultHighScores`. No build or runtime run was
 needed. This rules out H3 for the selected family and leaves no ambiguous
 rename in that table; it does not address the external retail-entry boundary.
+
+## Session 1241 (2026-08-15) — synchronized adjacent save-account symbol names
+
+The bounded generated/companion census covered every symbol-table entry in
+`0x8006E8CC..0x8006F1A8`. The companion project's authoritative
+`main_overlay.txt` supplied exact names for all 16 remaining address-encoded
+entries: `createAccountProfile`, `initPlayerMissionStateFromSettings`,
+`packAccountProgressBits`, `getSaveScratchBufferPtr`, `findUnusedAccountId`,
+`resetSettingsClearSaveAndReload`, `initIdleDemoTimersAndSave`,
+`resetMixerVolumesAndFlags`, `isUnlockBitSet`,
+`syncMissionUnlockBitsToSettings`, `copyAccountRecordAndMarkActive`,
+`clearAccountRecordAndMarkInactive`, `cycleIdleDemoId`,
+`classifySaveStateFromInput`, `loadSaveDataIfNotLoaded`, and
+`persistSaveDataBody` (the interval's generated declarations already used
+these names). The repository `syms/rogue_squadron.syms.toml` was synchronized
+to the same exact mappings. H1 selected. No build or run; the external
+retail-entry boundary remains open.

@@ -248,10 +248,10 @@ in the ledger. Reviewed through s1240 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
-   adjacent save/account helper sweep (the remaining `0x8006E8CC..0x8006F1A8`
-   region); it needs no external retail-entry artifact. Keep the external
-   retail-entry dependency open and do not add runtime probes without a
-   genuinely unmatched state-changing handoff and positive control.
+   exact-name sweep over the adjacent account/high-score helpers
+   `0x8006F388..0x8006F4AC`; it needs no external retail-entry artifact. Keep
+   the external retail-entry dependency open and do not add runtime probes
+   without a genuinely unmatched state-changing handoff and positive control.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -353,6 +353,7 @@ order.
 | s1237 | Complete ROM_OPEN-to-EXECUTE census found only ROM open/configuration, plugin/callback setup, explicit input/state commands, and EXECUTE→main_run; no hidden state-changing handoff. H2 selected. No build or run. |
 | s1238 | Workspace artifact check found no new frontend/launcher artifact beyond the audited oracle/core and prior logs. The planned artifact-backed event table was unevaluable; H3 selected and the external retail-entry boundary is blocked on human-supplied ground truth. No build or run. |
 | s1240 | Exact companion/generated save-account mapping covered 19 symbols; synchronized the repository symbol map with those names and corrected `loadDefaultHighScores`. No build or run. |
+| s1241 | The bounded `0x8006E8CC..0x8006F1A8` census found exact authoritative companion names for all 16 remaining address-encoded symbol-table entries; generated code already carried those names, so the repository symbol table was synchronized. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
