@@ -64733,6 +64733,25 @@ unevaluable. No code or mitigation change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+## Session 1206 (2026-08-14) — early-A retail path stayed phase-incomplete
+
+Ran the debugger-enabled retail oracle comparison concurrently: an undriven
+control and a driven arm with an early A press at 0.5 seconds followed by the
+documented Start cadence at 6,11,16,21,26,31,36,41,46,51,56 seconds. Both arms
+used the custom DEBUGGER=1 core, whole-RDRAM watch, PIF trace, VI trace, and
+150 ms holds. Both passed the whole-RDRAM positive control at 10,000 callbacks
+and completed cleanly; the driven arm logged the scheduled Start words as
+`0x10000000` and their returns to zero.
+
+The undriven arm completed 3,600 VI frames and the driven arm 3,601. Both
+remained at VI width 320 with origin `0x006dd280`; the early A variation did
+not reach a later phase. This rules out this particular input-path change,
+while leaving the general retail entry strategy open. M4 target watches remain
+UNEVALUABLE. No code, instrument, or mitigation change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
+
 ## Session 1198 (2026-08-14) — revised retail input still stayed at boot VI
 
 Ran the prescribed debugger-enabled retail oracle comparison: an undriven

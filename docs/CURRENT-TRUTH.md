@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1205 (2026-08-14).
+in the ledger. Reviewed through s1206 (2026-08-14).
 
 ## Current state
 
@@ -112,14 +112,20 @@ in the ledger. Reviewed through s1205 (2026-08-14).
   eleven Start presses, but undriven and driven runs remained at VI width 320
   with origin `0x006dd280` for 3,600 and 3,597 VI frames respectively. The
   emulator-mode hypothesis is refuted; M4 target watches remain unevaluable.
+- The s1206 debugger-enabled comparison passed whole-RDRAM controls in both
+  arms. An early A press followed by the documented Start cadence did not
+  change the driven path: undriven and driven runs remained at VI width 320
+  with origin `0x006dd280` for 3,600 and 3,601 VI frames. The available
+  `--press` path variation is therefore insufficient; seek a different retail
+  entry strategy before arming M4 watches.
 
 ## Active investigation and ranked next steps
 
-1. Run a new independent retail reachability experiment that changes the
-   execution path rather than only the R4300 emulator mode, paired with an
-   undriven control. Require whole-RDRAM and PIF/VI controls plus a later VI
-   phase before arming any M4 target watch; do not treat a target null as
-   evidence.
+1. Run a new independent retail reachability experiment using a different
+   button path (A confirmation at the title/menu cadence rather than the
+   ineffective early-A variation), paired with an undriven control. Require
+   whole-RDRAM and PIF/VI controls plus a later VI phase before arming any M4
+   target watch; do not treat a target null as evidence.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -212,6 +218,7 @@ order.
 | s1203 | First Start moved to 0.0s; both arms passed controls, the driven arm changed PIF words, but both remained at VI 320/origin `0x006dd280`; schedule remains phase-incomplete. |
 | s1204 | Documented 6s-first hangar schedule passed controls and delivered all eleven Start presses, but both arms remained at VI 320/origin `0x006dd280`; route is not reproducible in this oracle configuration. |
 | s1205 | Alternate R4300 emulator mode 1 passed whole-RDRAM controls; driven input delivered all eleven verified Start presses, but both arms remained at VI 320/origin `0x006dd280`; mode change does not explain the retail reachability failure. |
+| s1206 | Early A plus the documented Start cadence passed whole-RDRAM and PIF/VI controls, but both arms remained at VI 320/origin `0x006dd280`; this input variation does not provide a later retail path. |
 
 ## Method and safety rules
 
