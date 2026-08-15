@@ -66623,3 +66623,26 @@ partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
 
+
+## Session 1301 (2026-08-15) — synchronized the MusyX gated-sync symbol
+
+Performed the bounded exact-name census over `0x8008E8D8..0x8008E904`.
+
+No new soak-queue verdicts since s1300; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E8D8`, size `0x2C`; it ends exactly at the next generated function, `0x8008E904`. Overlay `rom_size` is `0x2C` |
+| Generated definition | `funcs_23.c` defines `syncMusyXIfActive` at `0x8008E8D8`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `syncMusyXIfActive = 0x8008E8D8` |
+| Caller evidence | Four generated `jal 0x8008E8D8` sites: `cueMenuScreenAudioA` (`0x800C47E4`), `cueMenuScreenAudioB` (`0x800C4908`), `cueMenuScreenAudioC` (`0x800C4970`), and `runModelViewerSoundDemo` (`0x800CAE84`). Companion independently names those four callers as menu or model-viewer audio setup |
+| Semantic evidence | Body loads `gMusyXActiveFlag` at `0x800A0F50` and, when nonzero, `jal tickAudioBufferUpdate` (`0x80092510`). Companion independently names that gate byte and that callee. Sibling `runMusyXTaskLocked` at `0x8008E904` is the mutex-wrapped counterpart |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x2C` boundary is exact, and the gated `tickAudioBufferUpdate` call plus
+the four audio-setup callers support the named wrapper. H2 and H3 are ruled
+out for this function; there is neither a partial/conflicting match nor an
+absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
