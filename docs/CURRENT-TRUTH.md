@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1264 (2026-08-15).
+in the ledger. Reviewed through s1265 (2026-08-15).
 
 ## Current state
 
@@ -253,7 +253,8 @@ in the ledger. Reviewed through s1264 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
-   exact-name sweep over the next adjacent region, `0x80083C28..0x80083D20`;
+   exact-name sweep over the next adjacent region after
+   `0x80083EF4..0x80084860`;
    it needs no external retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -383,12 +384,21 @@ references in the generated tree. The repository symbol map was synchronized;
 the adjacent `0x80083EF4` entry was outside the bounded region and unchanged.
 H1 selected; no runtime change or build was needed.
 
+The s1265 bounded `0x80083EF4..0x80084860` census found exact companion and
+generated names with matching sizes for all five entries:
+`getChannelByteParamAlt`, `resetChannelStateRecord`,
+`getChannelControllerValue`, `initVoiceModulatorRecords`, and
+`evaluateVoiceModulatorRecord`. Generated callers corroborate reset,
+controller, and evaluator paths; the companion symbol file and generated
+definitions independently agree for all five. The repository symbol map was
+synchronized; H1 selected. No runtime change or build was needed.
+
 ## Durable boundaries
 
 ### Next steps
 
-Continue the generated-symbol renaming sweep with the adjacent
-`0x80083EF4..0x80084860` region. Keep explicitly fake or address-encoded
+Continue the generated-symbol renaming sweep with the next adjacent region
+after `0x80083EF4..0x80084860`. Keep explicitly fake or address-encoded
 entries unchanged and require an independent companion mapping before each
 rename.
 
@@ -506,6 +516,7 @@ order.
 | s1262 | The bounded `0x80083154..0x80083468` census found exact companion/generated names and matching sizes for all five model-animation functions. Generated callers corroborate `setModelAnimSlotCycleDuration` and `parseModelAnimType2Entry`; no direct generated calls were found for the other three. Synchronized five stale repository symbol-map entries. H1 selected; no build or run. |
 | s1263 | The bounded `0x80083C28..0x80083D20` census found exact companion/generated names and matching sizes for five entries. `unusedRand` was already synchronized; four stale symbol-map entries were updated, with three generated callers corroborating `setTrackVoiceTickBudget`. H1 selected; no build or run. |
 | s1264 | The bounded `0x80083D6C..0x80083EB0` census found exact companion/generated names and matching sizes for all five entries. `setChannelNoteCell` had ten direct generated callers; the other four were definition-only in the generated tree. Five stale symbol-map entries were synchronized; `0x80083EF4` remained unchanged as outside scope. H1 selected; no build or run. |
+| s1265 | The bounded `0x80083EF4..0x80084860` census found exact companion/generated names and matching sizes for all five entries: `getChannelByteParamAlt`, `resetChannelStateRecord`, `getChannelControllerValue`, `initVoiceModulatorRecords`, and `evaluateVoiceModulatorRecord`. Generated callers corroborate reset, controller, and evaluator paths; five stale symbol-map entries were synchronized. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |

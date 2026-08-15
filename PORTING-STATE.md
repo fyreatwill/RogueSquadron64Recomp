@@ -65997,3 +65997,23 @@ repository symbol-map entries; the adjacent `0x80083EF4` entry was outside
 scope and unchanged. No build or runtime run was needed. This rules out a
 repository-symbol naming mismatch in this audio-channel helper region, but
 does not explain the external retail-entry boundary or recurring runtime SIGBUS.
+
+## Session 1265 (2026-08-15) — synchronized audio channel state symbols
+
+Ran the bounded exact-name census over `0x80083EF4..0x80084860`. The complete
+comparison table was:
+
+| VRAM | Size | Generated definition | Companion mapping/source | Caller evidence | Confidence |
+|---|---:|---|---|---|---|
+| `0x80083EF4` | `0x48` | `getChannelByteParamAlt` | same name in `main_overlay.txt` and generated overlay table | definition only; no direct generated caller found | exact/high |
+| `0x80083F3C` | `0x5D4` | `resetChannelStateRecord` | same name in `main_overlay.txt` and generated overlay table | direct generated caller in `funcs_25.c` | exact/high |
+| `0x80084510` | `0x294` | `getChannelControllerValue` | same name in `main_overlay.txt` and generated overlay table | two direct generated callers in `funcs_20.c` | exact/high |
+| `0x800847A4` | `0xBC` | `initVoiceModulatorRecords` | same name in `main_overlay.txt` and generated overlay table | definition only; no direct generated caller found | exact/high |
+| `0x80084860` | `0x288` | `evaluateVoiceModulatorRecord` | same name in `main_overlay.txt` and generated overlay table | direct generated callers in `funcs_20.c`, `funcs_21.c`, `funcs_22.c`, and `funcs_23.c` | exact/high |
+
+All five generated boundaries match the repository sizes and all five have
+independent companion names. H1 selected. Synchronized the five stale
+repository symbol-map entries. No build or runtime run was needed. This rules
+out a repository-symbol naming mismatch in this channel-state/modulator
+region, but does not explain the external retail-entry boundary or recurring
+runtime SIGBUS.
