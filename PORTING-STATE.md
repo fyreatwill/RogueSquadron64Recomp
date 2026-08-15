@@ -66058,3 +66058,14 @@ evidence. Synchronized all five stale entries in
 `syms/rogue_squadron.syms.toml`; H1 selected. No build or runtime run was
 needed, and this does not alter the open external retail-entry boundary or
 runtime SIGBUS investigation.
+## Session 1269 (2026-08-15) — compacted current truth
+
+The maintenance gate fired because `docs/CURRENT-TRUTH.md` was 60,678 bytes.
+Compacted it from 598 lines to 139 lines, migrated the durable current
+checkpoint to `docs/PROJECT-OVERVIEW.md`, merged repeated session evidence into
+range-based ledger rows, pruned superseded detail already preserved in the
+append-only ledger, and replaced the active backlog with one monotonic
+numbered sequence. No build, runtime experiment, or soak ran. This rules out
+no new runtime hypothesis; it establishes that the compact state now points to
+the generated-symbol sweep and preserves the external retail-entry, audio,
+M3, VI, and M4 boundaries.

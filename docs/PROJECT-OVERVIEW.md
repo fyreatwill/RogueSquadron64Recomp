@@ -219,6 +219,21 @@ silently when absent. Both are worth verifying explicitly at the start of any vi
 
 ## 5. What actually worked
 
+### 5.0 Current durable checkpoint (s1269)
+
+The overlay-dispatch issue is closed enough for mission entry and post-sec2
+outdoor presentation. The recurring `slotDispatcherIter+872` SIGBUS has no
+statically reachable frame-overlapping writer after complete caller, context,
+store, and load-idiom audits. The active VI boot descriptor is the 320 record,
+and the independent retail oracle controls pass while its available entry
+recipe remains at width 320/origin `0x006dd280`. Audio de-stubbing is closed
+because retail controls never reached voice initialization. These are
+boundaries, not mitigations: future guards require an `ORIGIN:` naming the
+writer and judging the value legitimate. The generated-symbol renaming sweep
+is the current low-risk workstream; exact companion/generated names are
+synchronized while fake or address-only entries remain unchanged. See
+`CURRENT-TRUTH.md` for the live backlog and `PORTING-STATE.md` for evidence.
+
 - **Two independent sources before concluding.** Every finding that survived has two: task timing
   *and* CPU%; stream census *and* draw-hook counters; a probe *and* its positive control.
 - **Discriminating experiments, not supporting evidence.** The useful measurements were the ones
