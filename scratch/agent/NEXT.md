@@ -1,10 +1,10 @@
-# NEXT work unit (s1246)
+# NEXT work unit (s1247)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The external retail-entry dependency remains open. Do not build or run.
 Proceed with one bounded generated-symbol naming sweep over
-`0x80072CF0..0x80073E4C`, using companion names and generated declarations.
+`0x8007413C..0x80074DA4`, using companion names and generated declarations.
 
 Competing hypotheses and discriminator:
 
@@ -22,7 +22,7 @@ H2; no independent names selects H3. No runtime mitigation is justified.
 Exact commands:
 
 ```
-sed -n '3920,4750p' ../N64Recomp/RecompiledFuncs/funcs_18.c | rg '^RECOMP_FUNC'
-rg -n '80072CF0|80072EC4|80073750|800739A4|80073BD8|80073E4C' ../rogue_squadron64/symbol_files syms/rogue_squadron.syms.toml
-rg -n -C 3 'initWaterSprayParticles|npcWaterSprayUpdate|spawnDestructionEffectBurst|spawnDistanceScaledDebrisBurst|spawnDirectionalDebrisBurst|distanceAndDopplerNpcHelper' ../rogue_squadron64/symbol_files/main_overlay.txt
+rg -n '^RECOMP_FUNC' ../N64Recomp/RecompiledFuncs/funcs_18.c | awk -F: '$1>=7480 && $1<=8200'
+rg -n '8007413C|80074600|8007483C|80074B74|80074DA4' ../rogue_squadron64/symbol_files syms/rogue_squadron.syms.toml
+rg -n -C 3 'triggerDistanceScaledExplosion|triggerObjectDestructionEffects|buildRandomCameraFacingOrientation|spawnScaledOrientedEffectTriple|buildNpcAnchoredCameraEffectTransform' ../rogue_squadron64/symbol_files/main_overlay.txt
 ```

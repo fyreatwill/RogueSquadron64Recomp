@@ -65671,3 +65671,15 @@ The interval's thirteenth entry, `0x80072CE8`, is explicitly
 repository symbol-map entries; generated C already used these names. H1
 selected. No build or runtime run was needed, and the external retail-entry
 boundary remains open.
+
+## Session 1246 (2026-08-15) — synchronized water and debris helper symbols
+
+Ran the single bounded generated/companion census for
+`0x80072CF0..0x80073E4C`. The generated declarations and companion
+`main_overlay.txt` independently agree on six exact human names:
+`initWaterSprayParticles`, `npcWaterSprayUpdate`,
+`spawnDestructionEffectBurst`, `spawnDistanceScaledDebrisBurst`,
+`spawnDirectionalDebrisBurst`, and `distanceAndDopplerNpcHelper`.
+Synchronized the six stale repository symbol-map entries; generated C already
+used the names. H1 selected. No build or runtime run was needed, and the
+external retail-entry boundary remains open.
