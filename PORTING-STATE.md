@@ -69665,3 +69665,34 @@ unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is the independently named `registerSndCurveTable` at
 `0x800972A0`.
+
+## Session 1412 (2026-08-15) — synchronized the register-snd-curve-table symbol
+
+Performed the bounded exact-name census over `0x800972A0..0x8009735C`.
+
+No new soak-queue verdicts since s1411; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800972A0`, size `0xBC`; `0x800972A0+0xBC=0x8009735C`. Overlay `rom_size` is `0xBC` at offset `0x00096E60` (`0x800972A0-0x80000440`). Generated prologue at `0x800972A0` (`addiu $sp, $sp, -0x28`) and `jr $ra` at `0x80097354` with delay `nop` at `0x80097358` |
+| Generated definition | `funcs_25.c` defines `registerSndCurveTable` at `0x800972A0`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xBC` function ending at the next generated definition, `registerSndSampleTable` at `0x8009735C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `registerSndCurveTable = 0x800972A0` in the sequential SND-registration family, immediately after `registerSndMacroTable` and before `registerSndSampleTable`. Menu, mission, cinematic, and ignored lists do not remap it. No conflicting companion name |
+| Caller evidence | No generated `jal 0x800972A0` sites. The sibling `bindMacroIdsToSoundGroup` / `registerSndMacroTable` / `registerSndSampleTable` family likewise has no direct `jal` sites, consistent with table-dispatched SND-file registration rather than a missing mapping |
+| Semantic evidence | Body walks a `0xFFFF`-terminated `u16` ID list in `a0` against a linked record chain rooted at `a1+0xC`. A matching ID at record+4 inserts record+0xC via `factor5SortedTableInsertTaggedValue` (`0x80084E44`), passing the `u16` at record+0xA as the tag. The immediately preceding `registerSndMacroTable` is the same walk with root `a1+8` and `factor5SortedTableInsertValue`. Matches registering a SND curve table into the group. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800972A0`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xBC`, and there is neither a conflicting companion name nor a size split.
+H2 and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0xBC`). `fake_func_8009711C`
+remains the already-fake one-instruction jump fragment and was left
+unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is the independently named `registerSndSampleTable` at
+`0x8009735C`.
