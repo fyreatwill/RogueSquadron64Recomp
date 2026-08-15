@@ -66861,3 +66861,27 @@ mutex-published table. H2 and H3 are ruled out for this function; there is
 neither a partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1311 (2026-08-15) — synchronized the song-channel array allocator symbol
+
+Performed the bounded exact-name census over `0x8008F0A0..0x8008F2FC`.
+
+No new soak-queue verdicts since s1310; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008F0A0`, size `0x25C`; it ends exactly at the next generated function, `0x8008F2FC`. Overlay `rom_size` is `0x25C` |
+| Generated definition | `funcs_23.c` defines `allocateSongChannelArray` at `0x8008F0A0` through the matching epilogue at `0x8008F2F4`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `allocateSongChannelArray = 0x8008F0A0`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x8008F0A0` in `initN64RspMixer` at `0x80091934`. Companion independently names that mixer init `initN64RspMixer = 0x8009189C` and comments that it installs the voice-slot array |
+| Semantic evidence | Body stores the 16-bit count at `0x80149700`, `rs_malloc`s `count * 0x88` (136-byte slot stride), publishes the same pointer to `0x801496FC`/`0x801496F8`, and zero-inits each slot at `+0x0`/`+0x85` with `+0x84 = 0xFF`. Later `rs_malloc`s include the documented `N*(count+1)*136` pair and a `0x298`-byte buffer that is `rs_memset`/`osWritebackDCache`'d |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x25C` boundary is exact, the only caller is an independently named
+RSP-mixer init, and the body is the voice/channel-array allocator already
+documented by the stride-`0x88` audits. H2 and H3 are ruled out for this
+function; there is neither a partial/conflicting match nor an absent
+independent name. The stale address-encoded TOML entry was synchronized. No
+build or runtime run was justified for an exact-name census.
