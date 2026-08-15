@@ -67793,3 +67793,28 @@ a partial/conflicting match nor an absent independent name. Missing static
 JAL sites do not create a naming conflict. The stale address-encoded TOML
 entry was synchronized. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing.
+
+## Session 1348 (2026-08-15) — synchronized the tick-audio-buffer-update symbol
+
+Performed the bounded exact-name census over `0x80092510..0x80092530`.
+
+No new soak-queue verdicts since s1347; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092510`, size `0x20`; it ends exactly at the next generated function, `0x80092530`. Overlay `rom_size` is `0x20` |
+| Generated definition | `funcs_24.c` defines `tickAudioBufferUpdate` at `0x80092510`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `tickAudioBufferUpdate = 0x80092510`. The same file independently names the adjacent functions `deactivateVoice` at `0x800924F0` and `freeAudioScratchBuffer` at `0x80092530`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x80092510` in already-named `syncMusyXIfActive` at `0x8008E8EC`. That gate loads `gMusyXActiveFlag` at `0x800A0F50` and, when nonzero, calls this wrapper |
+| Semantic evidence | Entire body is an 8-instruction leaf: save `$ra`, `jal buildSongTempoSchedule` (`0x8008EEC0`, synchronized in s1310), restore `$ra`, return. Companion independently names that thin wrapper and that callee |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x20` boundary is exact, and the body is the documented gated tempo-schedule
+wrapper. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio de-stubbing.
