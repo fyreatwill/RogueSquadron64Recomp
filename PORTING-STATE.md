@@ -66083,3 +66083,21 @@ H1 selected and all nine stale symbol-map entries were synchronized. No build
 or runtime run was justified. This rules out only the absence of independent
 naming evidence for this region; it does not change the closed audio runtime
 status.
+
+## Session 1271 (2026-08-15) — synchronized MusyX note-event symbols
+
+Performed the bounded exact-name census over `0x80086FC4..0x800880D8`.
+The companion symbol file independently identifies all seven generated entries:
+`startNoteOnVoice`, `applyNoteEventToGroup`, `dispatchSequencerNoteEvent`,
+`musyxNoteEventLockedDispatch`, `bsearchFactor5TableByU16Key`,
+`validateVoiceHandle`, and `musyxSetSequenceParamLocked`. Generated definitions
+and TOML sizes match; generated callers and companion descriptions provide
+semantic evidence. Synchronized all seven stale symbol-map entries. The stale
+decomp documentation has address-encoded calls at `0x80087EE8`, but the
+authoritative symbol file and generated body identify it as
+`bsearchFactor5TableByU16Key`, so it was not treated as ambiguity. No build or
+runtime run was performed.
+
+This rules out the need to leave these seven entries address-encoded; it does
+not establish names for the following region, whose census starts at
+`0x800881F4`.
