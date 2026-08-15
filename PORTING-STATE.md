@@ -71394,3 +71394,36 @@ No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is independently named `dmaVoiceSampleAndSignal` at
 `0x8009BE08`.
+
+## Session 1465 (2026-08-15) — synchronized the dma-voice-sample-and-signal symbol
+
+Performed the bounded exact-name census over `0x8009BE08..0x8009BE40`.
+
+No new soak-queue verdicts since s1464; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009BE08`, size `0x38`; `0x8009BE08+0x38=0x8009BE40`. Overlay `rom_size` is `0x38` at offset `0x0009B9C8` (`0x8009BE08-0x80000440`). Generated body starts `addiu $sp, $sp, -0x18` at `0x8009BE08` and ends `jr $ra` / delay-slot `nop` at `0x8009BE38` / `0x8009BE3C` |
+| Generated definition | `funcs_27.c` defines `dmaVoiceSampleAndSignal` at `0x8009BE08`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x38` function between independently named `accumulateVoiceSampleOffset` at `0x8009BD7C` and independently named `initMusyXVoiceSlot` at `0x8009BE40` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `dmaVoiceSampleAndSignal = 0x8009BE08`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009BE08`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Zero generated `jal 0x8009BE08` sites and zero `func_*` callers. Exactly one address constructor: independently named `allocAndConfigureNewVoice` at `0x8009B1D4`/`0x8009B1D8` builds `0x800A0000-0x41F8=0x8009BE08` and stores it at `0x10($sp)` for independently named `initMusyXVoiceSlot`. That callee loads the incoming stack word at `0x38($sp)` into `$s1` and writes it to slot `+0x190`. Matches a DMA-completion callback install, not a missing mapping |
+| Semantic evidence | Saves `$s0`/`$ra`, copies incoming `$a3` to `$s0`, calls independently named `synchronousDmaTransfer` (`0x80005200`) with `$a0..$a3` unchanged, then `osSendMesg($a3, 0, 1)` and returns. No global or voice-slot load/store of its own. Matches the companion DMA-then-signal name |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009BE08`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x38`, the independently named callback installer and DMA-then-mesg shape
+match, and there is neither a conflicting companion name nor a size split.
+H2 and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x38`). `fake_func_80099FDC`
+remains the already-fake one-word `bne` gap and was left unchanged, as were
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is independently named `initMusyXVoiceSlot` at
+`0x8009BE40`.
