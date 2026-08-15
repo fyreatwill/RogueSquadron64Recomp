@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1185 (2026-08-14).
+in the ledger. Reviewed through s1186 (2026-08-14).
 
 ## Current state
 
@@ -97,6 +97,14 @@ in the ledger. Reviewed through s1185 (2026-08-14).
   The four host macros preserve the computed guest address and exact 1/2-byte
   access span. This selects H3 and rules out the narrow-store/accessor class;
   no mitigation was added.
+- The s1186 complete generated word-store audit found 3,633 `MEM_W` stores
+  across the 72 direct `slotDispatcherIter` callers. Every caller-frame
+  `r29` store uses a nonnegative offset, while the callee's saved-register
+  frame is `incoming_sp-0x1C..incoming_sp-0x4`; the 1,442 non-`r29` stores
+  are bounded object/global writes or unrelated paths, with no stack-derived
+  negative alias. The host `MEM_W` macro writes exactly four bytes at the
+  computed guest address. This selects H3 and rules out the word-store/
+  accessor class; no mitigation was added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
@@ -533,6 +541,7 @@ corruption.
 | s1183 | Completed the generated `SD`/wide-copy audit without building or running. It classified 1,356 non-`r29` `SD` sites and 13 target-path `zmemcpy` calls; target callers use ordinary frame-local stores and fixed bounded copy lengths, with no reachable destination/span covering the `slotDispatcherIter` saved frame. The `SD` macro and host accessor add no hidden broadening. H3 selected; no mitigation added. |
 | s1184 | Completed the generated `do_swl`/`do_swr` partial-store audit without building or running. There are 414 calls across 66 functions; only five functions also call `slotDispatcherIter`, and their partial stores are caller-local or bounded object/global writes with no span covering the callee's saved frame. The helpers align to and write one guest word through `MEM_W`, with no host-side span broadening. H3 selected; no mitigation added. |
 | s1185 | Completed the generated narrow-store audit without building or running. There are 23,128 `MEM_H`/`MEM_HU`/`MEM_B`/`MEM_BU` references and 351 stores in the 72 target callers, including 83 caller-`r29` stores; all are caller-local or bounded object/global writes with no span covering the callee's saved frame. The four host macros preserve the computed address and exact byte/halfword span. H3 selected; no mitigation added. |
+| s1186 | Completed the generated `MEM_W` audit without building or running. There are 3,633 word stores in the 72 target callers; all caller-`r29` stores use nonnegative offsets outside the callee's saved frame, and the non-`r29` stores are bounded object/global or unrelated paths with no stack-derived negative alias. The host macro is an exact four-byte write. H3 selected; no mitigation added. |
 
 ## Ranked next steps
 
@@ -541,10 +550,10 @@ corruption.
    reaches an audio-initialization or voice-allocation phase beyond the driven
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
-2. Continue the M3 systematic static audit with generated `MEM_W` stores in
-   the 72 `slotDispatcherIter` callers. Enumerate every target-path store,
-   classify its destination/span, and verify the host word accessor before
-   adding instrumentation or a guard.
+2. Continue the M3 systematic static audit with the five generated `MEM_WU`
+   loads and their address/value consumers. Enumerate whether any load feeds
+   a target-path pointer or store; do not add a guard unless a reachable
+   writer edge is established.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

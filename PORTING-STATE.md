@@ -64534,3 +64534,23 @@ origin. No build, runtime probe, or mitigation was added.
 ORIGIN: complete generated narrow-store inventory and host accessor contract;
 reviewed writers are legitimate caller-local/bounded stores or unrelated
 regions, and no mitigation was added.
+
+## Session 1186 (2026-08-14) — audited generated word stores
+
+Completed the prescribed static M3 `MEM_W` audit without building or running.
+The generated tree contains 3,633 word stores across the 72 direct
+`slotDispatcherIter` callers. Every caller-frame `r29` store uses a
+nonnegative offset, while `slotDispatcherIter` saves registers in the
+incoming frame range `incoming_sp-0x1C..incoming_sp-0x4`. The 1,442
+non-`r29` stores are bounded object/global writes or unrelated paths; no
+stack-derived negative alias or destination/span covering the callee frame
+was found.
+
+The host `MEM_W` macro is an exact four-byte write at the computed guest
+address after the documented KSEG0 translation. This selects H3 and rules
+out the generated word-store/accessor class as the current origin. No build,
+runtime probe, or mitigation was added.
+
+ORIGIN: complete generated `MEM_W` inventory, pre-call destination review,
+and host accessor contract; reviewed writers are legitimate local/bounded
+stores or unrelated regions, and no mitigation was added.
