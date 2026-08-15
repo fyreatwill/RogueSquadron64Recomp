@@ -66069,3 +66069,17 @@ numbered sequence. No build, runtime experiment, or soak ran. This rules out
 no new runtime hypothesis; it establishes that the compact state now points to
 the generated-symbol sweep and preserves the external retail-entry, audio,
 M3, VI, and M4 boundaries.
+
+## Session 1270 (2026-08-15) — synchronized MusyX voice symbols
+
+Performed the bounded exact-name census over `0x80086450..0x80086F44`.
+The companion symbol file independently identifies all nine generated entries:
+`allocVoiceHandleNode`, `resolveVoiceSlotByHandle`, `allocateSynthVoice`,
+`stopVoiceByKey`, `silenceVoiceSlot`, `computeVoiceGlidePitch`,
+`queryVoicePlayPositionByHandle`, `findActiveVoiceByKeyPair`, and
+`findVoiceForNote`. Generated definitions and TOML sizes match; generated
+callers confirm the voice-management relationships where calls are present.
+H1 selected and all nine stale symbol-map entries were synchronized. No build
+or runtime run was justified. This rules out only the absence of independent
+naming evidence for this region; it does not change the closed audio runtime
+status.
