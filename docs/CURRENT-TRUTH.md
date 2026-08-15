@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1362 (2026-08-15).
+the authority for session detail. Reviewed through s1363 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1362 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x800932C4..0x800934A4`.
+   census over the next adjacent function, `0x800934A4..0x800934D0`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -224,6 +224,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1360 | Exact companion/generated voice-resample census synchronized `resampleVoiceLutSamplesPacked` at `0x80092E48`; left `func_80092F10` address-encoded (TOML-only live tail); no build or runtime run. |
 | s1361 | Exact companion/generated voice-resample census synchronized `packFourLutResampledSamples` at `0x80092F94`; no build or runtime run. |
 | s1362 | Exact companion/generated voice-copy census synchronized `copyVoiceSamplesS16` at `0x8009314C`; no build or runtime run. |
+| s1363 | Exact companion/generated voice-copy census synchronized `copyVoiceSamplesLut` at `0x800932C4`; no build or runtime run. |
 
 ## Method and safety rules
 

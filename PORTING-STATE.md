@@ -68206,3 +68206,32 @@ only; size left at `0x178`). `func_800927B0`, `func_80092A54`,
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is the
 independently named `copyVoiceSamplesLut` at `0x800932C4`.
+
+
+## Session 1363 (2026-08-15) — synchronized the copy-voice-samples-lut symbol
+
+Performed the bounded exact-name census over `0x800932C4..0x800934A4`.
+
+No new soak-queue verdicts since s1362; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800932C4`, size `0x1E0`; `0x800932C4+0x1E0=0x800934A4`. Overlay `rom_size` is `0x1E0`. Generated `jr $ra` at `0x8009349C`, delay `addiu $sp,$sp,0x1C` at `0x800934A0` |
+| Generated definition | `funcs_24.c` defines `copyVoiceSamplesLut` at `0x800932C4`; `funcs.h` and `recomp_overlays.inl` already use that name. First instruction is `addiu $sp,$sp,-0x1C`; the body is a complete function ending at the next generated definition, `zeroAudioBufferWords` at `0x800934A4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `copyVoiceSamplesLut = 0x800932C4`. The same file independently names the sibling `copyVoiceSamplesS16` at `0x8009314C` and the following `zeroAudioBufferWords` at `0x800934A4`. The sequential `defined:true` list jumps from `packFourLutResampledSamples` to the fake-function block and does not remap this address. No later companion list remaps it |
+| Caller evidence | No generated `jal 0x800932C4` exists; the sibling `copyVoiceSamplesS16` at `0x8009314C` likewise has no direct jal. The ROM has no literal `0x800932C4` word, so the format dispatch is not a static pointer table |
+| Semantic evidence | Loads a voice/render context from `$a0` (source `$t1`, dest `$t2`, end `$s2`, loop `$s3`, output count `$t8>>3`) and LUT base `$s5=D_800A1790`. Each iteration `lbu`s eight consecutive source bytes (advance source by 1, wrap to loop start at end), indexes the u16 LUT via `sample<<1` + `0x800A1790`, packs four LUT halves into `$t3` via `or`/`dsll 16`, and `sd`s them to dest+0 and dest+8 with `cache 0x0D`/`0x19` writeback. No interpolation and no phase accumulator. That is the independently named LUT sibling of `copyVoiceSamplesS16` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the body is a complete LUT voice-sample copy of matching size `0x1E0`, and
+there is neither a conflicting companion name nor a size split. H2 and H3
+are ruled out. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0x1E0`). `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C` were left unchanged.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is the
+independently named `zeroAudioBufferWords` at `0x800934A4`.
