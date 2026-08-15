@@ -1446,7 +1446,7 @@ functions = [
     { name = "stopSongByHandle", vram = 0x8009582C, size = 0x268 },
     { name = "stopSongByHandleLocked", vram = 0x80095A94, size = 0x48 },
     { name = "tickSongSequence", vram = 0x80095ADC, size = 0x27C },
-    { name = "func_80095D58", vram = 0x80095D58, size = 0x48 },
+    { name = "tickSongSequenceLocked", vram = 0x80095D58, size = 0x48 },
     { name = "func_80095DA0", vram = 0x80095DA0, size = 0x54 },
     { name = "func_80095DF4", vram = 0x80095DF4, size = 0xB4 },
     { name = "func_80095EA8", vram = 0x80095EA8, size = 0xEC },
