@@ -1,10 +1,10 @@
-# NEXT work unit (s1244)
+# NEXT work unit (s1245)
 
 HYPOTHESIS-ID: generated-save-account-naming-sweep
 
 The external retail-entry dependency remains open. Do not build or run.
 Proceed with one bounded generated-symbol naming sweep over the next helper
-region `0x80071064..0x8007202C`, using companion names and generated call sites.
+region `0x8007218C..0x80072CE8`, using companion names and generated call sites.
 
 Competing hypotheses and discriminator:
 
@@ -23,7 +23,7 @@ justified by this sweep.
 Exact commands:
 
 ```
-rg -n 'RECOMP_FUNC void (func_|fake_func_)|0x800710|0x800720' ../N64Recomp/RecompiledFuncs/funcs_17.c
-rg -n -C 3 '800710|800711|800712|800713|800714|800715|800716|800717|800718|800719|80071A|80071B|80071C|80071D|80071E|80071F|800720' ../rogue_squadron64/symbol_files ../rogue_squadron64/docs docs/game-architecture.md syms
-sed -n '8500,9800p' ../N64Recomp/RecompiledFuncs/funcs_17.c
+rg -n 'RECOMP_FUNC void (func_|fake_func_)|0x800721|0x80072C' ../N64Recomp/RecompiledFuncs/funcs_17.c ../N64Recomp/RecompiledFuncs/funcs_18.c
+rg -n -C 3 '800721|800722|800723|800724|800725|800726|800727|800728|800729|80072A|80072B|80072C' ../rogue_squadron64/symbol_files ../rogue_squadron64/docs docs/game-architecture.md syms
+sed -n '1680,3980p' ../N64Recomp/RecompiledFuncs/funcs_18.c
 ```

@@ -65642,3 +65642,15 @@ and `multiEventTemplateNpcHandler`. Synchronized the stale repository
 symbol-map entries at those addresses; generated C already used the names.
 H1 selected. No build or runtime run was needed, and the external retail-entry
 boundary remains open.
+
+## Session 1244 (2026-08-15) — synchronized DAT and SFX helper symbol names
+
+Ran the single bounded generated/companion census for
+`0x80071064..0x8007202C`. The generated declarations and companion
+`main_overlay.txt` independently agree on five exact human names:
+`walkDatTreeAndAllocSubtypeBuffers`, `dispatchDatSubtypeByRandomIndex`,
+`walkDatTreeAndVisitChildren`, `loadSfxAsset`, and
+`composeRandomRotationMatrix`. Synchronized the stale repository symbol-map
+entries at those addresses; generated C already used the names. H1 selected.
+No build or runtime run was needed, and the external retail-entry boundary
+remains open.
