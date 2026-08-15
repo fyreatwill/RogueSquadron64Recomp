@@ -66202,20 +66202,6 @@ pitch-relative, curve, and voice-volume evidence. H1 selected; all eight stale
 symbol-map entries were synchronized. No build or runtime run was justified.
 This rules out partial or absent naming evidence for this region.
 
-## Session 1281 (2026-08-15) — synchronized adjacent MusyX voice symbols
-
-Performed the bounded exact-name census over `0x8008B9CC..0x8008BA60`.
-The companion `main_overlay.txt` independently maps `0x8008B9CC` to
-`refreshVoicePlaybackRate` and `0x8008BA60` to `soundMacroSetPitchTarget`.
-The generated definitions use those same names, the TOML sizes match the
-generated boundaries exactly (`0x94` and `0x1B0`), and generated references
-include the overlay table plus a direct call to `soundMacroSetPitchTarget`.
-Function bodies provide independent voice playback-rate and pitch-target
-field-update evidence. Both mappings were high-confidence exact matches and
-the stale symbol-map entries were synchronized. No build or runtime run was
-justified for an exact-name census. This rules out partial or absent naming
-evidence for this region.
-
 ## Session 1280 (2026-08-15) — synchronized MusyX sequencer handlers
 
 Performed the bounded exact-name census over `0x8008B33C..0x8008B8DC`.
@@ -66240,3 +66226,17 @@ volume-ramp, random-key, flag-bit, and effect-event semantics; direct callers
 were confirmed for the two larger handlers. H1 selected and all five stale
 symbol-map entries were synchronized. No build or runtime run was justified.
 This rules out partial or absent naming evidence for this region.
+
+## Session 1281 (2026-08-15) — synchronized adjacent MusyX voice symbols
+
+Performed the bounded exact-name census over `0x8008B9CC..0x8008BA60`.
+The companion `main_overlay.txt` independently maps `0x8008B9CC` to
+`refreshVoicePlaybackRate` and `0x8008BA60` to `soundMacroSetPitchTarget`.
+The generated definitions use those same names, the TOML sizes match the
+generated boundaries exactly (`0x94` and `0x1B0`), and generated references
+include the overlay table plus a direct call to `soundMacroSetPitchTarget`.
+Function bodies provide independent voice playback-rate and pitch-target
+field-update evidence. Both mappings were high-confidence exact matches and
+the stale symbol-map entries were synchronized. No build or runtime run was
+justified for an exact-name census. This rules out partial or absent naming
+evidence for this region.
