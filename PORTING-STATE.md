@@ -69328,3 +69328,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `queueAudioVoiceCmd` at `0x800964C8`.
+
+## Session 1401 (2026-08-15) — synchronized the queue-audio-voice-cmd symbol
+
+Performed the bounded exact-name census over `0x800964C8..0x80096540`.
+
+No new soak-queue verdicts since s1400; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800964C8`, size `0x78`; `0x800964C8+0x78=0x80096540`. Overlay `rom_size` is `0x78`. Generated prologue at `0x800964C8` (`lui $v0, 0x800A` / `lbu $v0, 0xF50($v0)`) and `jr $ra` at `0x80096538` with delay `nop` at `0x8009653C` |
+| Generated definition | `funcs_25.c` defines `queueAudioVoiceCmd` at `0x800964C8`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `getSongStateByteByHandle` at `0x80096540` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `queueAudioVoiceCmd = 0x800964C8` in the annotated Factor 5 audio API block as the mutex-wrapped public entry that calls inner `func_80096284` (already synchronized as `queueAudioVoiceCmdLocked`). The sequential `defined:true` list omits it (jumps from already-synchronized `setSongParamPairCmdLocked` to `getSongStateByteByHandle` at `0x80096540`) because the annotated block already named it; that omission is not a conflicting name. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | 23 generated `jal 0x800964C8` sites, matching the companion's 23-caller count: `menuControllerInput` (4), `menuSubtype02Handler` (4), `tickActiveSongSlots` (3), `spawnCutsceneEffectsAndCues` (2), `updateHangarBayScene` (2), `runMenuRandomBackdropScreen` (2), and one each from `tickCraftSelectScreen`, `playExitSoundAndToggleScreenMeshes`, `runMenuShipSelectScreen`, `runModelViewerLoop`, `stopAllMusicWithFade`, and `static_5_800AF6AC`. The body itself calls independently named `factor5MutexAcquire`, `queueAudioVoiceCmdLocked`, and `factor5MutexRelease` |
+| Semantic evidence | Gates on the MusyX-active flag at `0x800A0F50`; if set, acquires the Factor 5 mutex, forwards four args as `(type u8, id u16, param, flags u8)` into `queueAudioVoiceCmdLocked`, then releases. Matches the companion's mutex'd queue-of-audio-voice-command description and the already-synchronized locked inner. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800964C8`: the companion and
+generated names agree, the body is a complete MusyX-gated mutex wrapper of
+matching size `0x78`, and there is neither a conflicting companion name nor
+a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x78`). `fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`getSongStateByteByHandle` at `0x80096540`.

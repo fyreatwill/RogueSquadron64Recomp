@@ -1456,7 +1456,7 @@ functions = [
     { name = "setSongParamPairCmd", vram = 0x80096118, size = 0x104 },
     { name = "setSongParamPairCmdLocked", vram = 0x8009621C, size = 0x68 },
     { name = "queueAudioVoiceCmdLocked", vram = 0x80096284, size = 0x244 },
-    { name = "func_800964C8", vram = 0x800964C8, size = 0x78 },
+    { name = "queueAudioVoiceCmd", vram = 0x800964C8, size = 0x78 },
     { name = "func_80096540", vram = 0x80096540, size = 0xA4 },
     { name = "func_800965E4", vram = 0x800965E4, size = 0xC0 },
     { name = "func_800966A4", vram = 0x800966A4, size = 0x5E4 },
