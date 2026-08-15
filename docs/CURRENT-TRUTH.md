@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1331 (2026-08-15).
+the authority for session detail. Reviewed through s1332 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1331 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009205C..0x800920A4`.
+   census over the next adjacent function, `0x800920A4..0x800920D0`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded: s1309 selected H2 for that 4-byte island.
@@ -188,6 +188,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1329 | Exact companion/generated audio-wait census synchronized `waitForMusyXAudioTaskDone` at `0x80091EB0`; no build or runtime run. |
 | s1330 | Exact companion/generated mutex-init census synchronized `initFactor5Mutex` at `0x80091FC4`; no build or runtime run. |
 | s1331 | Exact companion/generated mutex-acquire census synchronized `factor5MutexAcquire` at `0x80092010`; no build or runtime run. |
+| s1332 | Exact companion/generated mutex-release census synchronized `factor5MutexRelease` at `0x8009205C`; no build or runtime run. |
 
 ## Method and safety rules
 

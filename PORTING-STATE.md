@@ -67384,3 +67384,28 @@ acquire used by `tickMusyXIfActive` and `runMusyXTaskLocked`. H2 and H3 are
 ruled out for this function; there is neither a partial/conflicting match nor
 an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1332 (2026-08-15) — synchronized the Factor 5 mutex-release symbol
+
+Performed the bounded exact-name census over `0x8009205C..0x800920A4`.
+
+No new soak-queue verdicts since s1331; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8009205C`, size `0x48`; it ends exactly at the next generated function, `0x800920A4`. Overlay `rom_size` is `0x48` |
+| Generated definition | `funcs_24.c` defines `factor5MutexRelease` at `0x8009205C` through the matching epilogue at `0x8009209C`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `factor5MutexRelease = 0x8009205C` and independently names the recursion counter `D_800A1780` plus `osSendMesg` at `0x80033410`. The later companion list names `factor5QueueBlock` at `0x800920A4` and does not remap `0x8009205C` |
+| Caller evidence | Generated sites include `tickMusyXIfActive` (`0x8008DA00`) at `jal 0x8008DA34` and `runMusyXTaskLocked` (`0x8008E904`) at `jal 0x8008E928`. Companion independently names those MusyX tick and locked-task wrappers as acquire/release pairs around this function |
+| Semantic evidence | Body loads `D_800A1780` at `0x800A1780`. If the counter is `<= 0` it skips; otherwise it decrements and stores. When the stored value is nonzero it skips the wake; when it reaches 0 it `jal 0x80033410` (`osSendMesg`) on queue `0x80149990` with `a2=0` (NOBLOCK). That is the recursive-release path the companion independently names |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x48` boundary is exact, and the body is the Factor 5 recursive mutex
+release used by `tickMusyXIfActive` and `runMusyXTaskLocked`. H2 and H3 are
+ruled out for this function; there is neither a partial/conflicting match nor
+an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
