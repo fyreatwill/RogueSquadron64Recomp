@@ -64452,3 +64452,23 @@ found, and no enumerated producer has a call edge into the target family.
 This selects H3 and rules out a reachable direct `$sp` producer or named
 context handoff. The next unit is a complete static census of broader guest
 memory/value writer classes; no mitigation was added.
+
+## Session 1182 (2026-08-14) — audited dynamic guest memory writers
+
+Completed the prescribed static M3 writer-class audit without building or
+running. The generated tree contains 72 `zmemcpy` callsites, 20
+`memcpy_recomp` callsites, four `osPiStartDma_recomp` callsites, 13 controller
+calls, and the flash helper definitions. The copy/DMA paths use runtime
+computed destinations, but no enumerated mission/cinematic edge also proves a
+span capable of covering the `slotDispatcherIter` saved-register frame;
+controller and flash writes are bounded to their device/state structures. The
+target frame's concrete stores remain the generated prologue stores, with no
+named writer-to-frame edge established.
+
+This selects H3 and rules out a reachable named dynamic writer as the current
+explanation. It rules out a mitigation based on these classes and leaves the
+broader wide-store/accessor idiom as the next static audit. No build, runtime
+probe, or mitigation was added.
+
+ORIGIN: complete generated dynamic-writer inventory and host accessor review;
+no guest value mutation or mitigation.
