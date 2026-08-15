@@ -1526,7 +1526,7 @@ functions = [
     { name = "initMusyXVoiceSlot", vram = 0x8009BE40, size = 0xD4 },
     { name = "serviceStreamingVoice", vram = 0x8009BF14, size = 0x32C },
     { name = "consumeVoiceSamples", vram = 0x8009C240, size = 0x60 },
-    { name = "func_8009C2A0", vram = 0x8009C2A0, size = 0x1C },
+    { name = "advanceVoiceStateToPlaying", vram = 0x8009C2A0, size = 0x1C },
     { name = "func_8009C2BC", vram = 0x8009C2BC, size = 0xC },
     { name = "fake_func_8009C2C8", vram = 0x8009C2C8, size = 0x8 },
     { name = "func_8009C2D0", vram = 0x8009C2D0, size = 0x218 },

@@ -71530,3 +71530,36 @@ No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is independently named `advanceVoiceStateToPlaying` at
 `0x8009C2A0`.
+
+## Session 1469 (2026-08-15) — synchronized the advance-voice-state-to-playing symbol
+
+Performed the bounded exact-name census over `0x8009C2A0..0x8009C2BC`.
+
+No new soak-queue verdicts since s1468; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009C2A0`, size `0x1C`; `0x8009C2A0+0x1C=0x8009C2BC`. Overlay `rom_size` is `0x1C` at offset `0x0009BE60` (`0x8009C2A0-0x80000440`). Generated body starts `lbu $v1, 0x11DD($a0)` at `0x8009C2A0` and ends `jr $ra` / delay-slot `nop` at `0x8009C2B4` / `0x8009C2B8` |
+| Generated definition | `funcs_27.c` defines `advanceVoiceStateToPlaying` at `0x8009C2A0`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x1C` function between independently named `consumeVoiceSamples` at `0x8009C240` and independently named `stopVoice` at `0x8009C2BC` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `advanceVoiceStateToPlaying = 0x8009C2A0` with the next companion symbol `stopVoice` at `0x8009C2BC`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009C2A0`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Exactly one generated `jal 0x8009C2A0` site and zero `func_*` callers. Independently named `serviceVoicePoolFrame` at `0x8009B708` (s1458) passes the slot pointer `$s1` as `$a0` before the jal |
+| Semantic evidence | Load stream state `slot+0x11DD`; if it equals 2, write 3 and return, otherwise return without writing. Matches the companion name and the slot-state layout from s1464 / s1466 / s1467 / s1468 (`serviceStreamingVoice` treats states 1/2/3; `consumeVoiceSamples` operates on state 3 and may write 4; `stopVoice` writes 4) |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009C2A0`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x1C`, the independently named voice-pool caller plus the 2-to-3 state
+write match, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x1C`). `fake_func_80099FDC` remains the already-fake one-word `bne`
+gap and was left unchanged, as were `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is independently named `stopVoice` at `0x8009C2BC`.
