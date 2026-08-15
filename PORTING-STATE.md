@@ -65812,6 +65812,23 @@ or runtime run was needed. This rules out a repository-symbol naming mismatch
 in this controller/image-helper region, but does not explain the external
 retail-entry boundary or recurring runtime SIGBUS.
 
+## Session 1257 (2026-08-15) — synchronized NPC textured-effect symbols
+
+Ran the planned bounded generated/companion census over
+`0x8007C2A0..0x8007CAE8`. The comparison found exact independent companion
+names and matching generated definitions for all five requested functions:
+`initNpcTexturedEffectFromTemplate` at `0x8007C2A0`,
+`npcTexturedEffectUpdate` at `0x8007C4F0`,
+`npcTexturedEffectUpdateVariant` at `0x8007C6B4`,
+`npcTexturedEffectUpdateConditional` at `0x8007C878`, and
+`npcTexturedEffectUpdateWithSlotChain` at `0x8007CAE8`. The intervening
+`0x8007C9B0` helper was outside the requested endpoint set and remains
+address-encoded. H1 was selected. Synchronized the five stale repository
+symbol-map entries; no build or runtime run was needed. This rules out a
+repository-symbol naming mismatch in this NPC textured-effect region, but
+does not explain the external retail-entry boundary or recurring runtime
+SIGBUS.
+
 ## Session 1255 (2026-08-15) — synchronized NPC mesh-helper symbols
 
 Ran the planned bounded generated/companion census over
