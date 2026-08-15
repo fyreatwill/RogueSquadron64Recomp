@@ -67689,3 +67689,29 @@ is neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run
 was justified for an exact-name census. This does not reopen M5 audio
 de-stubbing.
+
+## Session 1344 (2026-08-15) — synchronized the set-voice-modulation-params symbol
+
+Performed the bounded exact-name census over `0x800923E4..0x8009244C`.
+
+No new soak-queue verdicts since s1343; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x800923E4`, size `0x68`; it ends exactly at the next generated function, `0x8009244C`. Overlay `rom_size` is `0x68` |
+| Generated definition | `funcs_24.c` defines `setVoiceModulationParams` at `0x800923E4`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setVoiceModulationParams = 0x800923E4`. The same file independently names the adjacent functions `musyxSetVoicePitchBend` at `0x80092390` and `stopVoiceMarkRetrigger` at `0x8009244C`, and independently names the sole callee `computeVoiceVolumePanCoefficients` at `0x800940D4` |
+| Caller evidence | Three generated `jal 0x800923E4` sites: `tickAllAudioChannels` at `0x8008C9AC` (already synchronized) calls it from `0x8008D710` with voice index in `a0` from `$s6` after `evaluateVoiceModulatorRecord`; `startStreamedSampleVoice` at `0x80097FE8` (companion-named; TOML still `func_80097FE8`) calls it from `0x8009818C` after `musyxSetVoicePitchBend` and before `musyxTriggerVoiceAttack`; `setVoiceVolumePanLocked` at `0x800981F0` (companion-named; TOML still `func_800981F0`) calls it from `0x80098264` under `factor5MutexAcquire`/`factor5MutexRelease` with byte-masked volume/pan arguments shifted into the high halfword |
+| Semantic evidence | Body takes `a0` as a voice index, scales it by `0x88` off the voice-array base at `0x801496F8`, and forwards `a1`/`a2`/`a3` plus the fifth stack argument together with pointers to slot `+0x44`/`+0x46`/`+0x48`/`+0x4A` into `computeVoiceVolumePanCoefficients`. That is a wrapper that applies volume/pan/modulation parameters into the voice slot |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x68` boundary is exact, and the body is the documented volume/pan
+wrapper. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio
+de-stubbing.
