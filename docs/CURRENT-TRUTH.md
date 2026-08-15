@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1175 (2026-08-14).
+in the ledger. Reviewed through s1176 (2026-08-14).
 
 ## Current state
 
@@ -35,7 +35,15 @@ in the ledger. Reviewed through s1175 (2026-08-14).
   The register-dump probe is landed and binary-verified; phase-positive
   no-event soaks did not classify the site.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
-  a genuinely new lead.
+  a genuinely new lead. The s1176 static correlation found that the s1175
+  writer PCs are not sample/stream-field writers: `runAiAudioStreamPlaybackLoop`
+  writes a dynamic 16-entry AI buffer-pointer table, `allocateSongChannelArray`
+  writes audio-global count/allocation/voice-base fields, and
+  `initAudioSubsystem` writes its audio scratch pointer. The first generated
+  sample/stream-field writer is instead `musyxInitVoiceFromSample` at
+  `0x800921E8`, `0x80092220`, `0x80092228`, and `0x80092230`, storing descriptor
+  fields into the computed voice slot at `+0x34/+0x38/+0x3C/+0x40`. No voice
+  range is inferred from `0x001496F8`.
 - The port-side VI 640-to-1024 transition is lifecycle-driven. The host logger
   observes committed VI state correctly; the active mode bytes, copied records,
   and pending masks are ordinary runtime state, not an unobserved host write.
@@ -449,17 +457,19 @@ corruption.
 | s1172 | Ran the retail oracle with a whole-RDRAM control and the eleven-Start schedule. The control reached 10,000 callbacks and was removed; the run stalled at width 320/origin `0x006dd280` after all presses. A write to the global voice-base field `0x001496F8` was attributed to PC `0x8008F0EC`, but the callback is pre-store and exposed only `0xFFFFFFFF`; no audio phase or sample-field write was reached. This is H3/unevaluable for the intended discriminator; no mitigation was added. |
 | s1173 | Fixed the oracle's overlapping-watch accounting so each callback is counted only when its actual READ/WRITE flags match the watch. The whole-RDRAM write control reached 10,000 and was removed; the voice-base write watch recorded one write at `0x8008F0EC`, the read watch recorded zero, and no post-store read occurred before the width-320 stall. The corrected result selects H2 for the calibration: this path has no readable post-store pointer value, so no voice-array range was inferred and no mitigation was added. |
 | s1174 | Added a one-instruction debugger step after the attributed retail write and captured the field in the following callback. The whole-RDRAM control still reached 10,000 and was removed, the write watch remained `1/0/1`, and the read watch remained `0/0/0`; the post-step field was still `0xFFFFFFFF`. This selects H2: the watched field is not a usable voice-array base in this path. The post-step callback's `pc=0x80000000`/`prev_pc=0x8008F0EC` pair is not a second instruction attribution. No mitigation was added. |
+| s1176 | Correlated all s1175 writer PCs to generated instructions. `0x8008EDB8` is a dynamic 16-entry AI buffer-pointer table store; `0x8008EE04/0x8008EE6C` update the audio-buffer index byte; `0x8008F0CC` stores the channel count; `0x8008F0E4/0x8008F0EC` store allocation and voice-base globals; and `0x80091BC0` stores the audio scratch pointer. None is a sample/stream-field writer. The first such generated stores are `musyxInitVoiceFromSample` at `0x800921E8/0x80092220/0x80092228/0x80092230`, targeting computed voice-slot offsets `+0x34/+0x38/+0x3C/+0x40`. This selects H1 for the next ground-truth execution watch, with the target range still unmeasured. |
 
 ## Ranked next steps
 
-1. Correlate the s1175 writer PCs (`0x8008EDB8`, `0x8008EE04`,
-   `0x8008EE6C`, `0x8008F0CC`, `0x8008F0E4`, `0x8008F0EC`) with the generated
-   MusyX initialization body and companion symbols, then select the first
-   actual sample/stream-field writer for a future retail watch. H1 is that
-   one of these routines writes a valid KSEG0 sample pointer into a voice
-   slot; H2 is that this block is only mixer bookkeeping/sentinel traffic and
-   the writer is elsewhere; H3 is a remaining oracle attribution/accounting
-   defect. Do not infer a voice range or add a mitigation from `0x801496F8`.
+1. Run one retail oracle execution/watch capture for the statically identified
+   `musyxInitVoiceFromSample` stores, with separate whole-RDRAM read and write
+   positive controls. Use the documented twelve-button schedule and
+   `--vi-trace`; report writer-PC execution separately from read/write totals.
+   H1 predicts the writer PCs execute during the driven run; H2 predicts no
+   execution in this path; H3 predicts execution without a corresponding
+   valid descriptor or destination attribution. Do not infer a voice range or
+   add a mitigation from `0x801496F8`; only a positive writer execution result
+   can authorize the next destination watch.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

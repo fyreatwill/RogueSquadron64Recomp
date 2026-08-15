@@ -64345,3 +64345,23 @@ and does not establish that every adjacent field is non-pointer-valued because
 the neighborhood watch reports attribution rather than stored values. The next
 unit is static correlation of these writer PCs to the generated MusyX body and
 the first real sample/stream-field writer.
+## Session 1176 (2026-08-14) — mapped retail MusyX writer PCs to generated fields
+
+Completed the prescribed static correlation of every s1175 retail writer PC
+against the generated MusyX/audio bodies and companion symbols. `0x8008EDB8`
+is the dynamic 16-entry AI buffer-pointer table store in
+`runAiAudioStreamPlaybackLoop`; `0x8008EE04` and `0x8008EE6C` update the
+audio-buffer index byte; `0x8008F0CC` stores the channel count;
+`0x8008F0E4` and `0x8008F0EC` store allocation and voice-base globals in
+`allocateSongChannelArray`; and `0x80091BC0` stores the audio scratch pointer
+in `initAudioSubsystem`. None is a sample/stream-field writer. The first
+actual generated sample/stream stores are in `musyxInitVoiceFromSample`:
+`0x800921E8` writes voice `+0x34`, while `0x80092220`, `0x80092228`, and
+`0x80092230` write `+0x38`, `+0x3C`, and `+0x40` from the sample descriptor.
+
+This selects H1 for the next ground-truth execution watch and rules out H2's
+interpretation that one of the six s1175 PCs itself writes a sample/stream
+field. It does not establish retail reachability, a valid descriptor, or a
+voice destination range; no build, runtime experiment, oracle watch, or
+mitigation was run in this session. In particular, no range was inferred
+from `0x001496F8`.
