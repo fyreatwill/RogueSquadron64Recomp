@@ -1,27 +1,27 @@
-# NEXT work unit (s1173)
+# NEXT work unit (s1174)
 
 HYPOTHESIS-ID: musyx-downstream-ground-truth-pointer-origin
 
-Fix the oracle's watch accounting so a read watch is distinguished from a
-write watch, then run one short calibration arm that captures the first
-post-store read of retail `0x001496F8`. Use that value to define the next
-voice-array/sample-field range; do not infer it from the pre-store callback.
+Add a one-instruction post-step snapshot in the retail oracle after the
+attributed write to physical `0x001496F8`, then rerun the calibration. The
+current callback is before the MIPS store, so its `DebugMemRead32` value is not
+the value written by that instruction.
 
 Competing hypotheses and discriminator:
 
-- H1: a distinct post-store read exposes a valid KSEG0 voice-array base; the
-  target range can be mapped and the next retail writer watch is actionable.
-- H2: the field is written but no post-store read occurs before the retail
-  width-320/origin `0x006dd280` stall; the current oracle path cannot map the
-  dynamic array and needs a different ground-truth readout.
-- H3: the watch callback flags or address semantics remain unusable, shown by
-  a read/write count mismatch in the positive-control calibration; no origin
-  conclusion is allowed.
+- H1: stepping the triggering instruction and reading the field immediately
+  afterward exposes a changed, valid KSEG0 voice-array base; the next `0x88`-
+  stride voice/sample watch can be defined.
+- H2: the post-step snapshot is still `0xFFFFFFFF` or otherwise invalid; the
+  callback timing/API cannot expose the store and a different ground-truth
+  readout is required.
+- H3: stepping perturbs the debugger path or breaks accounting, shown by a
+  missing whole-RDRAM positive control or a read/write count mismatch; no
+  pointer conclusion is allowed.
 
-The discriminating measurement is the first callback after the attributed
-`0x001496F8` write whose flags contain READ, plus separate per-watch counts.
-H1 is a valid pointer value; H2 is a clean post-store-read zero before the
-stall; H3 is any callback/accounting mismatch or failed whole-RDRAM control.
+The discriminating measurement is the value printed after stepping the exact
+instruction attributed to `0x8008F0EC`, together with the whole-RDRAM threshold
+and separate per-watch read/write totals.
 
 Exact commands:
 
@@ -29,5 +29,5 @@ Exact commands:
     ./tools/oracle/build.sh
     ./tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 10 --watch-write 0x0:0x800000 --hit-cap 10000 --watch-write 0x1496F8:0x1496FC --detail-watch 1 --watch-read 0x1496F8:0x1496FC --detail-watch 2 --press 6:start --hold-ms 150 --vi-trace
 
-Require the whole-RDRAM threshold/removal, a write attribution, and a
-separately identified read callback before using any pointer value.
+Require the whole-RDRAM threshold/removal, a write attribution, and the
+post-step snapshot before using any pointer value.

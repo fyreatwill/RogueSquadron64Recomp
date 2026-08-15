@@ -73,6 +73,8 @@ struct watch {
     unsigned int flags;
     const char *label;
     long hits;
+    long read_hits;
+    long write_hits;
 };
 static struct watch g_watch[MAX_WATCHES];
 static int g_nwatch;
@@ -83,6 +85,8 @@ static int g_verbose;
 static int g_watches_armed;
 static int g_positive_watch_removed;
 static long g_pc_hits;
+static int g_voice_base_write_seen;
+static int g_voice_base_read_after_write_seen;
 
 static double now_s(void)
 {
@@ -155,25 +159,36 @@ static void dbg_update(unsigned int pc)
     uint32_t flags = 0, accessed = 0;
     int i;
     int detail_hit = 0;
+    unsigned int access_flags = flags;
     pDebugBreakpointTriggeredBy(&flags, &accessed);
+    access_flags = flags & (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE);
 
     g_hits++;
     for (i = 0; i < g_nwatch; i++) {
-        if (accessed >= g_watch[i].start && accessed < g_watch[i].end)
+        if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
+            (access_flags & g_watch[i].flags &
+             (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE))) {
             g_watch[i].hits++;
+            if (access_flags & M64P_BKP_FLAG_READ)
+                g_watch[i].read_hits++;
+            if (access_flags & M64P_BKP_FLAG_WRITE)
+                g_watch[i].write_hits++;
+        }
         if ((g_watch[i].flags & M64P_BKP_FLAG_EXEC) &&
             pc >= g_watch[i].start && pc < g_watch[i].end) {
             g_watch[i].hits++;
             g_pc_hits++;
         }
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
+            (access_flags & g_watch[i].flags &
+             (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE)) &&
             (g_detail_watch_mask & (1u << i)))
             detail_hit = 1;
     }
-    if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].hits == 10000) {
+    if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].write_hits == 10000) {
         int rc = pDebugBreakpointCommand(M64P_BKP_CMD_REMOVE_IDX, 0, NULL);
         printf("[oracle] positive-control threshold reached: watch index 0 callbacks=%ld; removal rc=%d; watch index 1 remains armed\n",
-               g_watch[0].hits, rc);
+               g_watch[0].write_hits, rc);
         fflush(stdout);
         g_positive_watch_removed = 1;
     }
@@ -185,8 +200,18 @@ static void dbg_update(unsigned int pc)
                (flags & M64P_BKP_FLAG_EXEC)  ? "x" : "",
                accessed, pc, prev, now_s() - g_t0, g_hits);
         if ((flags & (M64P_BKP_FLAG_WRITE | M64P_BKP_FLAG_READ)) &&
-            accessed >= 0x001496F8 && accessed < 0x001496FC)
-            printf("[voice-base] value=0x%08x\n", pDebugMemRead32(0x001496F8));
+            accessed >= 0x001496F8 && accessed < 0x001496FC) {
+            if (flags & M64P_BKP_FLAG_WRITE) {
+                g_voice_base_write_seen = 1;
+                printf("[voice-base] write pc=0x%08x value=0x%08x\n",
+                       pc, pDebugMemRead32(0x001496F8));
+            } else if ((flags & M64P_BKP_FLAG_READ) && g_voice_base_write_seen &&
+                       !g_voice_base_read_after_write_seen) {
+                g_voice_base_read_after_write_seen = 1;
+                printf("[voice-base] first-read-after-write pc=0x%08x value=0x%08x\n",
+                       pc, pDebugMemRead32(0x001496F8));
+            }
+        }
         if (g_hits == g_hit_cap)
             printf("[oracle] hit cap %ld reached, counting silently from here\n", g_hit_cap);
         fflush(stdout);
@@ -672,9 +697,9 @@ int main(int argc, char **argv)
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",
            g_hits, now_s() - g_t0, g_vis, g_vis / 60.0);
     for (int i = 0; i < g_nwatch; i++)
-        printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s)\n",
+        printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s), %ld read(s), %ld write(s)\n",
                g_watch[i].label, g_watch[i].start, g_watch[i].end,
-               g_watch[i].hits);
+               g_watch[i].hits, g_watch[i].read_hits, g_watch[i].write_hits);
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses

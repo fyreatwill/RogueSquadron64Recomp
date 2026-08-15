@@ -64282,3 +64282,26 @@ field path. It does establish the positive control and the pre-store nature of
 the current base-pointer callback. The next unit must distinguish read and
 write callbacks and capture a post-store value before mapping the dynamic
 voice-array range.
+
+## Session 1173 (2026-08-14) — corrected retail oracle watch accounting
+
+The planned retail-oracle calibration initially exposed an accounting defect:
+the frontend incremented every watch covering an accessed address, even when
+that watch's configured READ/WRITE mask did not match the callback flags. That
+first arm was invalid for the target discriminator. The fixed build counted
+accesses only when the actual callback flags matched the watch, and printed
+separate per-watch read/write totals.
+
+The fixed 10-second run passed the independent whole-RDRAM positive control:
+10,000 writes were observed and watch index 0 was removed successfully. The
+retail field `0x001496F8` had one write attributed to guest PC `0x8008F0EC`.
+The write watch reported `1 hit, 0 reads, 1 write`; the overlapping read watch
+reported `0/0/0`. No post-store read occurred before the known VI
+width-320/origin `0x006dd280` stall, despite the scheduled Start input.
+
+This selects H2 for the calibration discriminator: the current retail path
+reaches the pointer-field write but not a later readable access, so it does not
+expose a voice-array base. It rules out the prior overlapping-watch accounting
+explanation, but not the retail sample-field writer or the port-side fault
+origin. No mitigation was added. The next unit is a one-instruction post-step
+snapshot after the attributed write.
