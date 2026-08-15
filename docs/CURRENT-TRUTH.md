@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1257 (2026-08-15).
+in the ledger. Reviewed through s1258 (2026-08-15).
 
 ## Current state
 
@@ -253,8 +253,8 @@ in the ledger. Reviewed through s1257 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
-   exact-name sweep over the next adjacent NPC textured-effect region after
-   `0x8007AEF8..0x8007C298`, beginning at `0x8007C2A0`; it needs no external
+   exact-name sweep over the next adjacent NPC effect region after
+   `0x8007CD84..0x8007D81C`, beginning at `0x8007DD94`; it needs no external
    retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -348,6 +348,14 @@ generated names for all five requested textured-effect functions:
 was outside the requested endpoint set and remains address-encoded. The
 repository symbol map was synchronized for the five exact stale entries; H1
 was selected. No build or runtime run was needed.
+
+The s1258 bounded `0x8007CD84..0x8007D81C` census found exact companion and
+generated names for all four requested NPC effect functions:
+`aimOrientNpcTowardTarget`, `spawnDatDrivenAudioVisualEmitters`,
+`spawnNamedTexturedEmitterNpc`, and `npcQuatOrientedMultiPhaseUpdate`.
+Companion symbols, generated definitions, sizes, and caller references agree;
+H1 was selected. Synchronized the four stale repository symbol-map entries; no
+build or runtime run was needed.
 
 ## Durable boundaries
 
@@ -458,6 +466,7 @@ order.
 | s1255 | The bounded `0x8007A86C..0x8007AD30` census found exact companion/generated names for three real functions; `0x8007A86C` remains an explicitly fake 4-byte stub. Synchronized three stale repository symbol-map entries. H1 selected; no build or run. |
 | s1256 | The bounded `0x8007AEF8..0x8007C298` census found exact companion/generated names for three real functions; `0x8007C298` remains an explicitly fake 8-byte stub. Synchronized three stale repository symbol-map entries. H1 selected; no build or run. |
 | s1257 | The bounded `0x8007C2A0..0x8007CAE8` census found exact companion/generated names for five textured-effect functions; the intervening `0x8007C9B0` helper remains address-encoded because it was outside the requested endpoint set. Synchronized five stale repository symbol-map entries. H1 selected; no build or run. |
+| s1258 | The bounded `0x8007CD84..0x8007D81C` census found exact companion/generated names for all four requested NPC effect functions and synchronized four stale repository symbol-map entries. Caller references in the generated NPC update paths agree. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |

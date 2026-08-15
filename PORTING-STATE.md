@@ -65857,3 +65857,18 @@ symbol-map entries; no build or runtime run was needed. This rules out a
 repository-symbol naming mismatch in this NPC textured-effect region, but
 does not explain the external retail-entry boundary or recurring runtime
 SIGBUS.
+
+## Session 1258 (2026-08-15) — synchronized NPC effect symbols
+
+Ran the planned bounded generated/companion census over
+`0x8007CD84..0x8007D81C`. The comparison found exact independent companion
+names and matching generated definitions and sizes for all four requested
+functions: `aimOrientNpcTowardTarget` at `0x8007CD84`,
+`spawnDatDrivenAudioVisualEmitters` at `0x8007D1BC`,
+`spawnNamedTexturedEmitterNpc` at `0x8007D470`, and
+`npcQuatOrientedMultiPhaseUpdate` at `0x8007D81C`. Generated caller references
+in the NPC effect update paths agree. H1 was selected. Synchronized the four
+stale repository symbol-map entries; no build or runtime run was needed. This
+rules out a repository-symbol naming mismatch in this NPC effect region, but
+does not explain the external retail-entry boundary or recurring runtime
+SIGBUS.
