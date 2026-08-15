@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1193 (2026-08-14).
+in the ledger. Reviewed through s1195 (2026-08-14).
 
 ## Current state
 
@@ -46,14 +46,25 @@ in the ledger. Reviewed through s1193 (2026-08-14).
   Host logging independently agrees with the generated pointer and committed
   VI state. The active boot descriptor chain selects the index-0 320 record.
 - M4 shade-lane/order is not the cause. Port-side VMADH modeling and an
-  independent control matched all 128 lanes, but retail reachability of the
-  target range remains open.
+  independent control matched all 128 lanes. The s1194 producer-chain audit
+  accounted for the final operands: `v0` is loaded from the state block and
+  `v4` is produced by the documented accumulator chain. H1 (missing operand
+  initialization/preservation) is not supported statically; H2 is already
+  refuted. H3, a legitimate clipping/saturation sentinel, is the leading
+  static explanation, but the exact numeric origin and retail target
+  reachability remain open.
+- The s1195 paired M4 capture was controlled but phase-unreached. The port
+  reached only transient 320/640 widths with zero M4 rows; retail passed its
+  whole-RDRAM control but stayed at width 320 and produced zero writes to the
+  candidate `0x688:0x710` range. Neither arm selects an M4 hypothesis.
 
 ## Active investigation and ranked next steps
 
-1. Resume the M4 accumulator-origin audit: trace the producer chain feeding
-   the `vmadh v6,v4,v0` shade calculation and separate missing initialization,
-   lane/order, and legitimate-sentinel explanations before any runtime probe.
+1. Resolve M4 phase reachability with one independent oracle execution-mode
+   check: pair the debugger-on no-target run with a debugger-off `--vi-poll`
+   run (and `--pif-trace` input control) using the verified eleven-Start
+   schedule. Do not treat the existing target-watch null as evidence until a
+   matching shaded phase is positively reached.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -134,6 +145,8 @@ order.
 | s1190–s1191 | Partial-load consumer/site rechecks classified all `do_lwl`/`do_lwr` calls and kept H3 selected. |
 | s1192 | Maintenance compaction only; no experiment or code change. |
 | s1193 | Complete `do_sdl`/`do_sdr` static census selected H3; no reachable frame writer or mitigation. |
+| s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
+| s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 
 ## Method and safety rules
 

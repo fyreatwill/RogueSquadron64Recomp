@@ -1,34 +1,38 @@
-# NEXT work unit (s1194)
+# NEXT work unit (s1196)
 
 HYPOTHESIS-ID: m4-vmadh-accumulator-origin
 
-Work unit: perform one bounded static audit of the producer chain feeding the
-Factor 5 `vmadh v6,v4,v0` shade calculation. Do not build or run.
-
-Read `docs/F5-UCODE-REFERENCE.md` first, then enumerate the generated VMADH
-sites and the preceding writes/loads to the relevant vector lanes. Compare
-the port-side VMADH model and the paired combiner evidence already summarized
-in `CURRENT-TRUTH.md`.
+Work unit: perform one bounded independent oracle execution-mode/reachability
+check for the M4 shaded phase. Run both oracle arms in this iteration: the
+debugger-on arm retains a whole-RDRAM positive control and no target watch;
+the debugger-off arm uses `--vi-poll` plus `--pif-trace` as independent phase
+and input controls. Do not run the M4 target watch again until a matching
+shaded VI phase is reached.
 
 Competing hypotheses and discriminator:
 
-- H1: a producer fails to initialize or preserve the accumulator/vector lane.
-  Discriminator: a complete static chain reaches `vmadh` with an uninitialized
-  or overwritten operand.
-- H2: the source lanes are correct but VMADH lane/order modeling is wrong.
-  Discriminator: the generated/reference command and the independent control
-  disagree with the port-side lane mapping.
-- H3: the fixed sentinel is a legitimate Factor 5 lighting/clipping state.
-  Discriminator: all producers and lane mapping are accounted for, with no
-  uninitialized write and no model disagreement.
+- H1: debugger/watch instrumentation is causing the retail post-boot stall.
+  If debugger-off `--vi-poll` advances beyond width 320 while debugger-on
+  remains at width 320, the execution mode is the discriminator.
+- H2: the input schedule is not reaching the intended state path. If both
+  arms show the same PIF button reads and both remain at width 320, input is
+  not the differing factor.
+- H3: the retail ROM/core state path itself remains at width 320 under both
+  modes. If both arms pass their controls, show the same eleven input events,
+  and remain at width 320, select H3 and redesign the reachability route.
 
-Exact commands:
+Positive controls: debugger-on whole-RDRAM watch must reach 10,000 callbacks;
+debugger-off `--vi-poll` must report a nonzero width; `--pif-trace` must show
+the scheduled Start reads. Phase comparisons use VI transitions, not elapsed
+wall time.
 
-rg -n -C 12 -e 'vmadh|VMADH|v4|v6' /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp /Users/williambuckley/Documents/Tools/N64Recomp --glob '*.{c,h,cpp,hpp,md,txt}'
-rg -n -C 8 -e 'shade|VTXCOLOR|0xFFFF8000|0x00008000' /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp --glob '*.{c,cpp,h,md,txt}'
-git diff --check
+Exact commands (run both arms, 180 seconds each):
 
-If H1 is selected, identify the exact producer before proposing any
-mitigation. If H2 is selected, the next unit is a static model correction. If
-H3 is selected, design the smallest ground-truth-backed probe only after
-reading the oracle instructions and defining a positive control.
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 180 --watch-write 0x0:0x800000 --vi-trace --pif-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`
+
+`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 180 --oracle-debugger 0 --oracle-emulator 1 --vi-poll --pif-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start`
+
+If H1 is selected, use the debugger-off phase transition as the next M4
+reachability route. If H2 is selected, repair the input recipe before any
+target watch. If H3 is selected, document the dual-mode controlled stall and
+ask for a new retail execution path; do not infer ownership from a null.

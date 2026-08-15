@@ -64656,3 +64656,39 @@ and no mitigation was added. It rules out these five emitted sites as the
 current `slotDispatcherIter+872` writer chain, but does not rule out runtime
 guest-memory corruption. The next work unit pivots to the M4 VMADH accumulator
 producer chain.
+## Session 1194 (2026-08-14) — audited final M4 operand producer chain
+
+Ran the bounded static audit of the producer chain feeding Factor 5
+`vmadh v6,v4,v0`. The generated path loads `v0` from the state block and
+produces `v4` through the documented contiguous accumulator chain; no
+uninitialized or frame-overlapping producer was found. The prior independent
+port VMADH control already matched all 128 lanes, so H2 remains refuted. H1
+is unsupported statically and H3, a legitimate clipping/saturation sentinel,
+is the leading explanation, but its numeric origin and retail reachability
+remain open. No mitigation or code change was added.
+
+ORIGIN: static producer/load census only; no value was skipped or rewritten.
+
+## Session 1195 (2026-08-14) — paired M4 capture remained phase-unreached
+
+Ran the planned paired M4 ground-truth work unit after reading the oracle
+instructions and Factor 5 reference. Rebuilt the Debug target successfully.
+The port arm was phase-gated at VI width 512 with the existing M4 accumulator
+probe and independent stage-1 RSP control. It reached only transient
+widths 320/640, never reached width 512 or phase 6, and logged zero stage-1,
+stage-10, stage-11, stage-12, and stage-13 rows. This is a controlled
+unreachability, not a numeric M4 null.
+
+The retail arm used the debugger-enabled `iter974-armB2` core, the retail ROM,
+whole-RDRAM watch `0x0:0x800000`, targeted physical watch `0x688:0x710`, VI
+trace, and the verified eleven-Start schedule. The whole-RDRAM positive
+control reached 10,000 callbacks and was removed successfully; the run
+completed 10,798 VI in 180 seconds. Retail emitted only width 320 at origin
+`0x006dd280`; the target watch had zero hits. Because the matching shaded
+phase was not reached, the target null is UNEVALUABLE and no M4 hypothesis is
+selected. This rules out neither legitimate saturation nor arithmetic/source
+divergence. No mitigation or code change was added.
+
+ORIGIN: no value was skipped or rewritten; both instruments were observational
+and their positive controls passed. The next discriminator is an independent
+oracle execution-mode/reachability check, not another target-watch rerun.
