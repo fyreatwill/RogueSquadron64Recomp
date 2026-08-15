@@ -66175,3 +66175,15 @@ match; the bodies provide direct channel-state, pitch, key, portamento, and
 note-sweep evidence. H1 selected and all 13 stale symbol-map entries were
 synchronized. No build or runtime run was justified. This rules out partial
 or absent naming evidence for this region.
+## Session 1277 (2026-08-15) — synchronized adjacent MusyX macro symbols
+
+Performed the bounded exact-name census over `0x8008A12C..0x8008A6FC`.
+The companion symbol file independently identifies all six generated entries:
+`soundMacroOpStartNoteRelativeSweep`, `soundMacroOpStartNoteTransposedSweep`,
+`soundMacroOpPlaySampleKeymap`, `soundMacroOpKeyOff`,
+`setChannelFlag24Bit80`, and `soundMacroOpSetPanSweep`. Generated definitions
+and TOML sizes match exactly: `0x140`, `0x120`, `0x338`, `0x24`, `0x14`, and
+`0x12C`. Body evidence distinguishes note/sweep, sample-keymap, key-off,
+channel-flag, and pan-sweep behavior. H1 selected; all six stale symbol-map
+entries were synchronized. No build or runtime run was justified. This rules
+out partial or absent naming evidence for this region.

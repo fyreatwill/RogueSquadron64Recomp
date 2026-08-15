@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1276 (2026-08-15).
+the authority for session detail. Reviewed through s1277 (2026-08-15).
 
 ## Current state
 
@@ -132,6 +132,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1274 | Exact companion/generated MusyX macro-symbol census synchronized eight entries at `0x80089414..0x800897D4`; no build or runtime run. |
 | s1275 | Exact companion/generated MusyX macro-symbol census synchronized seven entries at `0x80089838..0x80089B40`; no build or runtime run. |
 | s1276 | Exact companion/generated MusyX macro-symbol census synchronized 13 entries at `0x80089B50..0x8008A014`; no build or runtime run. |
+| s1277 | Exact companion/generated MusyX macro-symbol census synchronized six entries at `0x8008A12C..0x8008A6FC`; no build or runtime run. |
 
 ## Method and safety rules
 

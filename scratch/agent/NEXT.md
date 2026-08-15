@@ -1,9 +1,9 @@
-# NEXT work unit (s1277)
+# NEXT work unit (s1278)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-symbol region, `0x8008A12C..0x8008A6FC`. Do not build or run. Record each
+symbol region, `0x8008A828..0x8008ACB4`. Do not build or run. Record each
 entry's address, size, generated definition, companion name/source, caller or
 semantic evidence, and confidence before editing. Synchronize only exact
 independent names in `syms/rogue_squadron.syms.toml`; leave address-encoded,
@@ -24,6 +24,6 @@ H3. No runtime mitigation or experiment is justified.
 Commands:
 
 ```
-rg -n '8008A12C|8008A26C|8008A38C|8008A6C4|8008A6E8|8008A6FC' ../rogue_squadron64/symbol_files/main_overlay.txt syms/rogue_squadron.syms.toml ../N64Recomp/RecompiledFuncs/funcs_22.c
-rg -n -C 3 '8008A12C|8008A26C|8008A38C|8008A6C4|8008A6E8|8008A6FC' ../rogue_squadron64/symbol_files/main_overlay.txt
+rg -n '8008A828|8008A878|8008A8C4|8008AA24|8008AAA4|8008AB0C|8008AB7C|8008ACB4' ../rogue_squadron64/symbol_files/main_overlay.txt syms/rogue_squadron.syms.toml ../N64Recomp/RecompiledFuncs/funcs_22.c
+rg -n -C 3 '8008A828|8008A878|8008A8C4|8008AA24|8008AAA4|8008AB0C|8008AB7C|8008ACB4' ../rogue_squadron64/symbol_files/main_overlay.txt
 ```
