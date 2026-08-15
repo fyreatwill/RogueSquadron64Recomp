@@ -66484,3 +66484,26 @@ fader-ramp setup. H2 and H3 are ruled out for this function; there is neither
 a partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1295 (2026-08-15) — synchronized the locked audio-fader-ramp wrapper symbol
+
+Performed the bounded exact-name census over `0x8008E4E4..0x8008E54C`.
+
+No new soak-queue verdicts since s1294; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E4E4`, size `0x68`; it ends exactly at the next generated function, `0x8008E54C`. Overlay `rom_size` is `0x68` |
+| Generated definition | `funcs_23.c` defines `setAudioFaderRampLocked` at `0x8008E4E4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setAudioFaderRampLocked = 0x8008E4E4` |
+| Caller evidence | Seven generated `jal 0x8008E4E4` sites: `tickSpeechSubsystem` (`0x80067590`, `0x800675A0`, `0x8006765C`) and `beginMissionEndTransition` / `endMissionEndTransition` (`0x800FAF8C`, `0x800FAF9C`, `0x800FB0D4`, `0x800FB0E4`). All pass the inner `setupAudioFaderRamp` triple `(volume, duration, slot-selector)` |
+| Semantic evidence | Body gates on the MusyX-active byte at `0x800A0F50`. If set, it acquires `factor5MutexAcquire` (`0x80092010`), forwards `a0`/`a1`/`a2` as `u8`/`u16`/`u8` into `setupAudioFaderRamp` (`0x8008E218`), then `factor5MutexRelease` (`0x8009205C`). Callers use selectors `0xFD`/`0xFE`/`0xFF` already documented on the inner setup |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x68` boundary is exact, and caller plus body evidence supports the
+locked fader-ramp wrapper. H2 and H3 are ruled out for this function; there
+is neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run
+was justified for an exact-name census.
