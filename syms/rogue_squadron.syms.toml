@@ -1385,7 +1385,7 @@ functions = [
     { name = "initFactor5Mutex", vram = 0x80091FC4, size = 0x4C },
     { name = "factor5MutexAcquire", vram = 0x80092010, size = 0x4C },
     { name = "factor5MutexRelease", vram = 0x8009205C, size = 0x48 },
-    { name = "func_800920A4", vram = 0x800920A4, size = 0x2C },
+    { name = "factor5QueueBlock", vram = 0x800920A4, size = 0x2C },
     { name = "func_800920D0", vram = 0x800920D0, size = 0x2C },
     { name = "func_800920FC", vram = 0x800920FC, size = 0x24 },
     { name = "func_80092120", vram = 0x80092120, size = 0x8 },
