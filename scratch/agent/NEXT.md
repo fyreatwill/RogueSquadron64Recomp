@@ -1,9 +1,9 @@
-# NEXT work unit (s1459)
+# NEXT work unit (s1460)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8009B8A8..0x8009BA38`. Do not build or run. Record its address,
+function, `0x8009BA38..0x8009BBA0`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -18,15 +18,16 @@ one-instruction jump fragment), `fake_func_80097D58` unchanged
 (s1420: already-fake two-instruction epilogue fragment),
 `fake_func_80099C4C` unchanged (s1446 H2: already-fake one-word `beq`
 gap), and `fake_func_80099FDC` unchanged (s1451 H2: already-fake
-one-word `bne` gap before `aspMainTextStart`). The generated entry at
-this address is already `getVoicePlaybackProgressByKey`; synchronize the
-stale TOML `func_8009B8A8` only if the companion, size, and
-caller/semantic evidence independently support that exact name.
+one-word `bne` gap before `aspMainTextStart`). The generated and TOML
+entries at this address are already `loadSpeechFile`; confirm the
+companion, size, and caller/semantic evidence independently support that
+exact name. Leave the already-matching TOML entry unchanged unless a
+residual mismatch is found.
 
 Competing hypotheses and discriminator:
 
 - H1: the function has an exact independent companion mapping and can be
-  synchronized.
+  synchronized (or is already synchronized under that exact name).
 - H2: the mapping is partial, already-fake, or ambiguous, so the entry must
   remain unchanged.
 - H3: no independent naming source exists and the region should be parked.
@@ -39,7 +40,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '8009B8A8\|8009BA38\|getVoicePlaybackProgressByKey' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '8009B8A8\|8009BA38' ../N64Recomp/RecompiledFuncs/funcs_26.c
-grep -n -C 3 '8009B8A8\|8009BA38' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009BA38\|8009BBA0\|loadSpeechFile' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009BA38\|8009BBA0' ../N64Recomp/RecompiledFuncs/funcs_26.c
+grep -n -C 3 '8009BA38\|8009BBA0' syms/rogue_squadron.syms.toml
 ```

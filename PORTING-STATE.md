@@ -71194,3 +71194,36 @@ left unchanged, as were `fake_func_80099C4C`, `fake_func_80097D58`,
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is independently named `getVoicePlaybackProgressByKey`
 at `0x8009B8A8`.
+
+## Session 1459 (2026-08-15) — synchronized the get-voice-playback-progress-by-key symbol
+
+Performed the bounded exact-name census over `0x8009B8A8..0x8009BA38`.
+
+No new soak-queue verdicts since s1458; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009B8A8`, size `0x190`; `0x8009B8A8+0x190=0x8009BA38`. Overlay `rom_size` is `0x190` at offset `0x0009B468` (`0x8009B8A8-0x80000440`). Generated body starts `addiu $sp, $sp, -0x28` at `0x8009B8A8` and ends `jr $ra` / delay-slot `nop` at `0x8009BA30` / `0x8009BA34` |
+| Generated definition | `funcs_26.c` defines `getVoicePlaybackProgressByKey` at `0x8009B8A8`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x190` function between independently named `serviceVoicePoolFrame` at `0x8009B5A8` and independently named `loadSpeechFile` at `0x8009BA38` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `getVoicePlaybackProgressByKey = 0x8009B8A8`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009B8A8`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Two `jal 0x8009B8A8` sites, both already calling the generated name, and zero `func_*` callers. Independently named `tickVoiceSubtitleDisplay` at `0x80055CB0` (jal at `0x80055FA8`) loads a handle from a caller-owned record (`lw $a0, 0x8($v1)`) and a stack float out-param (`addiu $a1, $sp, 0x18`), then tests `c.lt.s $f2, $f0` against the returned progress. Independently named `getSpeechPlaybackElapsedTime` at `0x800679D0` (jal at `0x80067A54`) loads a handle from a speech-slot table and a stack out-param (`addiu $a1, $sp, 0x10`), then subtracts the returned `$f0` from the stored float. Companion `main_overlay.txt` independently names both callers |
+| Semantic evidence | Early-outs when the handle in `$a0` is `-1` or the enable byte at `0x800A5121` is 0. Otherwise walks the MusyX voice table at `0x80154620` (stride `0x1228`), matches the handle at slot `+0x24` (`0x80154644` on slot 0), and receives the voice-control queue at `0x80154650`. For a type-2 slot it converts words at `+0x1C` / `+0x8` (`0x8015463C` / `0x80154628`) to floats and returns their ratio in `$f0`; stores the slot float at `+0x20` (`0x80154640`) through caller `$a1`; then `osSendMesg`s the same queue. Matches the companion name and both progress-consuming callers |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009B8A8`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x190`, both callers are independently named speech/subtitle paths that
+consume the returned progress float, and there is neither a conflicting
+companion name nor a size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size left
+at `0x190`). `fake_func_80099FDC` remains the already-fake one-word `bne`
+gap and was left unchanged, as were `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C`. No build or runtime run was justified
+for an exact-name census. This does not reopen M5 audio de-stubbing. The
+next adjacent generated function is independently named `loadSpeechFile`
+at `0x8009BA38`.
