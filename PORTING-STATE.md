@@ -71227,3 +71227,37 @@ gap and was left unchanged, as were `fake_func_80099C4C`,
 for an exact-name census. This does not reopen M5 audio de-stubbing. The
 next adjacent generated function is independently named `loadSpeechFile`
 at `0x8009BA38`.
+
+## Session 1460 (2026-08-15) — confirmed the load-speech-file symbol
+
+Performed the bounded exact-name census over `0x8009BA38..0x8009BBA0`.
+
+No new soak-queue verdicts since s1459; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `loadSpeechFile`, size `0x168`; `0x8009BA38+0x168=0x8009BBA0`. Overlay `rom_size` is `0x168` at offset `0x0009B5F8` (`0x8009BA38-0x80000440`). Generated body starts `lui $v0, 0x800A` at `0x8009BA38` and ends `jr $ra` / delay-slot `nop` at `0x8009BB98` / `0x8009BB9C` |
+| Generated definition | `funcs_26.c` defines `loadSpeechFile` at `0x8009BA38`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x168` function between independently named `getVoicePlaybackProgressByKey` at `0x8009B8A8` and independently named `initMusyXVoiceTable` at `0x8009BBA0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `loadSpeechFile = 0x8009BA38`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009BA38`. No companion C/asm body exists; the name is independent of the already-matching TOML entry |
+| Caller evidence | One `jal 0x8009BA38` site, already calling the generated name, and zero `func_*` callers. Independently named `initSpeechSubsystem` at `0x80066A90` (jal at `0x80066B90`) first calls independently named `initMusyXVoiceTable` at `0x8009BBA0`, resets the speech-state block at `0x80139C70`, then on mode 0 resolves the speech master asset (asset id at `0x800A05C8`) and passes that pointer plus the asset handle into `loadSpeechFile`. Companion `main_overlay.txt` independently names the caller |
+| Semantic evidence | Early-outs when independently named `speechFileLoaded` at `0x800A5121` is 0. If independently named `speechSampleOffsets` at `0x8015467C` is non-null and independently named `speechSampleOffsetsLoaded` at `0x800A5120` is set, frees the old table through independently named `rs_free` at `0x80001C98`. The non-KSEG0 path resolves `$a0` through independently named `getAssetRamAddress` at `0x8000591C` into independently named `speechFile` at `0x80154684`, allocates 4 bytes via independently named `rs_malloc` at `0x80001ACC`, DMAs the first word through independently named `setupAssetDma` at `0x80004E70` into independently named `numSpeechSamples` at `0x80154670`, then allocates `count*4` and DMAs the offset table into `speechSampleOffsets`, setting `speechSampleOffsetsLoaded`. The KSEG0 path stores `$a0` / `$a0+4` / `*($a0)` into the same three globals and clears the loaded-offsets byte. Success paths return 1. Matches the companion name, the independently named speech globals, and the speech-subsystem caller |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009BA38`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x168`, the only caller is an independently named speech-subsystem init
+that loads the speech master asset first, the globals and callees are
+independently named speech/asset symbols, and there is neither a
+conflicting companion name nor a size split. H2 and H3 are ruled out for
+this address. The already-matching TOML entry was left unchanged (name
+`loadSpeechFile`, size `0x168`). `fake_func_80099FDC` remains the
+already-fake one-word `bne` gap and was left unchanged, as were
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is independently named `initMusyXVoiceTable` at `0x8009BBA0`.
