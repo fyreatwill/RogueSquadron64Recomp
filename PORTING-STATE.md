@@ -65872,3 +65872,26 @@ stale repository symbol-map entries; no build or runtime run was needed. This
 rules out a repository-symbol naming mismatch in this NPC effect region, but
 does not explain the external retail-entry boundary or recurring runtime
 SIGBUS.
+
+## Session 1259 (2026-08-15) — synchronized NPC walker and debris symbols
+
+Ran the planned bounded generated/companion census over
+`0x8007DD94..0x8007E810`. The comparison table was:
+
+| VRAM | Generated definition | Companion symbol | Size | Result |
+|---|---|---|---:|---|
+| `0x8007DD94` | `emitPresetSparkBurst` | `emitPresetSparkBurst` | `0x1CC` | exact |
+| `0x8007DF60` | `updateWalkerLegStrideAndDust` | `updateWalkerLegStrideAndDust` | `0x1F4` | exact |
+| `0x8007E154` | `npcWalkerUpdate` | `npcWalkerUpdate` | `0x20C` | exact |
+| `0x8007E360` | `submitOrientedEffectMesh` | `submitOrientedEffectMesh` | `0x1A4` | exact |
+| `0x8007E504` | `twoPointPositionedNpcHandler` | `twoPointPositionedNpcHandler` | `0x30C` | exact |
+| `0x8007E810` | `spawnWorldDevastatorVacuumDebris` | `spawnWorldDevastatorVacuumDebris` | `0x70C` | exact |
+
+Generated caller references are present for `emitPresetSparkBurst`,
+`updateWalkerLegStrideAndDust`, `npcWalkerUpdate`, `submitOrientedEffectMesh`,
+and `spawnWorldDevastatorVacuumDebris`; no direct generated `jal` to the
+two-point handler was found. H1 was selected. Synchronized six stale
+repository symbol-map entries; no build or runtime run was needed. This rules
+out a repository-symbol naming mismatch in this NPC walker/debris region, but
+does not explain the external retail-entry boundary or recurring runtime
+SIGBUS.
