@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1308 (2026-08-15).
+the authority for session detail. Reviewed through s1309 (2026-08-15).
 
 ## Current state
 
@@ -47,9 +47,10 @@ the authority for session detail. Reviewed through s1308 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8008ED6C..0x8008ED70`.
+   census over the next adjacent function, `0x8008EEC0..0x8008F0A0`.
    Synchronize only names independently supported by the companion project,
-   generated definitions, sizes, and caller/semantic evidence.
+   generated definitions, sizes, and caller/semantic evidence. Leave
+   `func_8008ED6C` address-encoded: s1309 selected H2 for that 4-byte island.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -164,6 +165,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1306 | Exact companion/generated MusyX shutdown census synchronized `shutdownMusyXEngine` at `0x8008ECA4`; no build or runtime run. |
 | s1307 | Exact companion/generated MusyX wait-teardown census synchronized `musyxNoopStub` at `0x8008ED00`; no build or runtime run. |
 | s1308 | Exact companion/generated MusyX getter census synchronized `isMusyXActive` at `0x8008ED5C`; no build or runtime run. |
+| s1309 | Overlapping `0x8008ED6C`/`0x8008ED70` census selected H2 for truncated `func_8008ED6C` and H1 for `runAiAudioStreamPlaybackLoop` at `0x8008ED70`; no build or runtime run. |
 
 ## Method and safety rules
 

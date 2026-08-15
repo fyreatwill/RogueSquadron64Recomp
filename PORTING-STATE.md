@@ -66808,3 +66808,32 @@ the entire body. H2 and H3 are ruled out for this function; there is neither
 a partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1309 (2026-08-15) — synchronized the AI audio stream playback-loop symbol
+
+Performed the bounded exact-name census over `0x8008ED6C..0x8008ED70`.
+
+No new soak-queue verdicts since s1308; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+The prescribed span is not one function. Generated output and the companion
+file split it into a 4-byte island at `0x8008ED6C` and a `0x150` body at
+`0x8008ED70`. The complete comparison table is the discriminator.
+
+| Evidence | `0x8008ED6C` | `0x8008ED70` |
+|---|---|---|
+| Address and size | TOML `func_8008ED6C` size `0x154` (ends at `0x8008EEC0`). Overlay `rom_size` is `0x4` | TOML `func_8008ED70` size `0x150`; overlay `rom_size` is `0x150`. Both end at `0x8008EEC0` |
+| Generated definition | `funcs_23.c` defines `serviceAudioOutputBuffers` as one instruction, `lwc1 $f2, 0x0($a0)`, with no `jr $ra` | `funcs_23.c` defines `runAiAudioStreamPlaybackLoop` from the `addiu $sp, $sp, -0x30` prologue through the matching epilogue at `0x8008EEB8` |
+| Independent companion source | `main_overlay.txt` sequential list maps `serviceAudioOutputBuffers = 0x8008ED6C` and the next sequential symbol `buildSongTempoSchedule = 0x8008EEC0` | A later companion list maps `runAiAudioStreamPlaybackLoop = 0x8008ED70` |
+| Caller evidence | No generated `jal 0x8008ED6C` and no `0x8008ED6C` function-pointer materialization | No generated `jal 0x8008ED70`. Runtime thread-create records use `entry=0x8008ED70` as the audio playback thread |
+| Semantic evidence | A single float load is not buffer servicing. Early PORTING-STATE already called this a mislabeled boundary created by the `0x8008ED70` symbol | Body allocates a `0x3000` buffer, builds a 16-entry pointer table at `0x801496B0`, and loops on `osRecvMesg` / `osAiSetNextBuffer`. s1176 independently mapped writers `0x8008EDB8` / `0x8008EE04` / `0x8008EE6C` inside this body |
+| Confidence | Low for the companion name on the 4-byte island | High |
+
+The complete comparison selects H2 for `0x8008ED6C` and H1 for `0x8008ED70`.
+The 4-byte island has a companion name, but the generated/TOML sizes conflict,
+the body does not match that name, and the companion itself also names
+`0x8008ED70`. That address-encoded TOML entry stays unchanged. The `0x150`
+function has an exact companion name, matching generated/TOML size, and
+independent thread-entry plus AI-buffer evidence, so its stale address-encoded
+TOML entry was synchronized. H3 is ruled out for both addresses: independent
+names exist. No build or runtime run was justified for an exact-name census.

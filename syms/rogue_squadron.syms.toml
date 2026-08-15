@@ -1545,7 +1545,7 @@ functions = [
     { name = "func_8009DD54", vram = 0x8009DD54, size = 0x10 },
     { name = "func_8009DD64", vram = 0x8009DD64, size = 0x18 },
     { name = "func_8009DD7C", vram = 0x8009DD7C, size = 0x54 },
-    { name = "func_8008ED70", vram = 0x8008ED70, size = 0x150 },
+    { name = "runAiAudioStreamPlaybackLoop", vram = 0x8008ED70, size = 0x150 },
 ]
 
 [[section]]
