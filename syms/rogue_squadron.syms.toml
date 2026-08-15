@@ -1465,7 +1465,7 @@ functions = [
     { name = "tickAllActiveSongs", vram = 0x80096D08, size = 0x380 },
     { name = "initSongSequencerPools", vram = 0x80097088, size = 0x94 },
     { name = "fake_func_8009711C", vram = 0x8009711C, size = 0x4 },
-    { name = "func_80097120", vram = 0x80097120, size = 0x10 },
+    { name = "resetSongSubsystemCounter", vram = 0x80097120, size = 0x10 },
     { name = "func_80097130", vram = 0x80097130, size = 0xB8 },
     { name = "func_800971E8", vram = 0x800971E8, size = 0xB8 },
     { name = "func_800972A0", vram = 0x800972A0, size = 0xBC },

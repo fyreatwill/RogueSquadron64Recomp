@@ -69572,3 +69572,34 @@ at `0x94`). `fake_func_8009711C` is an already-fake one-instruction
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is
 the independently named `resetSongSubsystemCounter` at `0x80097120`.
+
+## Session 1409 (2026-08-15) — synchronized the reset-song-subsystem-counter symbol
+
+Performed the bounded exact-name census over `0x80097120..0x80097130`.
+
+No new soak-queue verdicts since s1408; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80097120`, size `0x10`; `0x80097120+0x10=0x80097130`. Overlay `rom_size` is `0x10` at offset `0x00096CE0` (`0x80097120-0x80000440`). Generated prologue at `0x80097120` (`lui $at, 0x8015`) and `jr $ra` at `0x80097128` with delay `nop` at `0x8009712C` |
+| Generated definition | `funcs_25.c` defines `resetSongSubsystemCounter` at `0x80097120`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete four-instruction halfword store ending at the next generated definition, `bindMacroIdsToSoundGroup` at `0x80097130` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `resetSongSubsystemCounter = 0x80097120` in the sequential `defined:true` list, immediately after already-parked `fake_func_8009711C` and before `bindMacroIdsToSoundGroup`. The annotated `setDisplayMode` / `reapplyDisplayMode` comments still write the address-encoded `func_80097120` as a callee of the boot reset chain and do not remap this function to a different name. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | Three generated `jal 0x80097120` sites, all in independently named functions: `initMusyXEngine` at `0x8008E940` (`0x8008E94C`), `setDisplayMode` at `0x8008EA14` (`0x8008EA90`), and `reapplyDisplayMode` at `0x8008EB5C` (`0x8008EBD8`). Each sits at the start of the same reset chain, before `initSongSequencerPools`. No other `jal 0x80097120` sites |
+| Semantic evidence | Body stores halfword `0` at `0x80152A10` (`lui $at, 0x8015` / `sh $zero, 0x2A10($at)`) and returns. Companion `playSongById` independently names `0x80152A10` as the song-bank table count for table `0x801529D0`; prior ledger notes also record the increment at `0x80097898`. Matches a counter-reset leaf. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80097120`: the companion and
+generated names agree, the body is a complete halfword-zero of matching size
+`0x10`, and there is neither a conflicting companion name nor a size split.
+H2 and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x10`). `fake_func_8009711C`
+remains the already-fake one-instruction `j L_8009713C` fragment and was left
+unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is the independently named `bindMacroIdsToSoundGroup` at
+`0x80097130`.
