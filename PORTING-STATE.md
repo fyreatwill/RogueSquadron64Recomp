@@ -65264,3 +65264,24 @@ This selects H2 and rules out using `0x80130B30..32` as an oracle debugger
 target. It does not identify the actual retail-entry event; that remains the
 next source-audit target. Static source evidence only; no build or run was
 appropriate for this bounded unit.
+
+## Session 1225 (2026-08-14) — audited post-idle save and input chain
+
+Ran the prescribed bounded generated/companion audit without building or
+running. `loadSaveDataIfNotLoaded` (`0x8006F10C`) has one caller from
+`runIdleFramesAndLoadSaveData` (`0x8006D900`) and only performs EEPROM record
+loads, retry, checksum/body-copy, and save-message handling. The generated
+`classifySaveStateFromInput` (`0x8006F0B8`) census has no caller, so it is not
+an active input transition. After the load, the idle routine polls controller
+status, renders eight frames, and applies account unlocks; none writes the
+retail state triplet or branches to a new entry event. `mainGameLoop` is then
+called once by its boot path and consumes the state bytes.
+
+H2 is selected: this post-idle chain is save/reset/event-free with respect to
+retail entry, so no debugger target or oracle run is justified. This rules out
+the audited load/input chain as the missing input-controlled transition; the
+separate caller/boot-config handoff remains open. Static source evidence only.
+
+ORIGIN: generated `funcs_0.c`, `funcs_8.c`, `funcs_17.c`, `funcs_31.c`, plus
+the companion `main_overlay.txt` and save-data documentation. No mitigation,
+oracle write, build, or runtime behavior was changed.

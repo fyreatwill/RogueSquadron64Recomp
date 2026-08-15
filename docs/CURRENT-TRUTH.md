@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1224 (2026-08-14).
+in the ledger. Reviewed through s1225 (2026-08-14).
 
 ## Current state
 
@@ -132,6 +132,12 @@ in the ledger. Reviewed through s1224 (2026-08-14).
   fill the same structure. No input-controlled writer reaches this triplet,
   so no debugger target or oracle run is justified from it. This is static
   source evidence; the independent retail entry path remains unresolved.
+- The s1225 post-idle chain audit confirms H2. `loadSaveDataIfNotLoaded`
+  has only EEPROM-read/copy logic, `classifySaveStateFromInput` has no
+  generated caller, and the post-load loop only polls controller status,
+  renders eight frames, and applies account unlocks. No input-controlled
+  writer or concrete retail-entry transition occurs before `mainGameLoop`'s
+  state-byte consumers; no debugger target is justified from this chain.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -211,11 +217,11 @@ in the ledger. Reviewed through s1224 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Audit the boot/input transition after `runIdleFramesAndLoadSaveData`,
-   starting at `loadSaveDataIfNotLoaded` and its controller/save-state callers,
-   looking for the actual retail-entry event. Do not arm an oracle target write
-   unless that chain identifies a concrete input-controlled producer or
-   transition, and never write `0x80130B60..62` as state bytes.
+1. Audit the caller and boot-config path that enters `mainGameLoop` after
+   `runIdleFramesAndLoadSaveData`, looking for the actual retail-entry event
+   or an external/front-end handoff. Do not arm an oracle target write unless
+   that chain identifies a concrete input-controlled producer or transition,
+   and never write `0x80130B60..62` as state bytes.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -325,6 +331,7 @@ order.
 | s1221 | `gGameSettings+0x22` target write fired and both arms passed whole-RDRAM/VI controls, but both stayed at width 320/origin `0x006dd280`; mission sub-state target did not change retail entry. No-input oracle recipe produced no PIF events in either arm. |
 
 | s1222 | Corrected the state-byte identity: `mainGameLoop` reads `D_80130B10+0x20..22` (`0x80130B30..32`), not `gGameSettings+0x20..22` (`0x80130B60..62`). The prior writes were volume-field tests; generated/companion census found `runIdleFramesAndLoadSaveData` writes `B30=1,B31=0`, while demo save/restore writes only `B60..62`. No generated-boundary defect was found. |
+| s1225 | Post-idle generated/companion audit found `loadSaveDataIfNotLoaded` is EEPROM-only, `classifySaveStateFromInput` is uncalled, and the remaining post-load loop has polling/render/account-unlock work but no input-controlled retail-entry writer. H2 selected; no oracle target justified. |
 
 ## Method and safety rules
 
