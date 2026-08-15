@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1210 (2026-08-14).
+in the ledger. Reviewed through s1212 (2026-08-14).
 
 ## Current state
 
@@ -68,7 +68,12 @@ in the ledger. Reviewed through s1210 (2026-08-14).
   PIF words, but driven and undriven execution both remained at VI width 320
   with origin `0x006dd280`. Input delivery is validated; the fixed schedule
   does not reach the intended later state path. M4 target watches remain
-  unevaluable.
+   unevaluable.
+- The s1212 source audit found that `tools/oracle/rs64_oracle.c` exposes only
+  timed SDL keydown/keyup injection (`--press`), debugger watches/traces, and
+  VI polling. It has no savestate, reset-state, direct pad-state setter, or
+  other callable alternate entry route. The current retail-entry blocker is
+  therefore an external/front-end capability gap, not an untried CLI option.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -151,8 +156,9 @@ in the ledger. Reviewed through s1210 (2026-08-14).
 1. Find a new independent retail entry strategy before arming M4 target
    watches. The documented cadence under emulator modes 0, 1, and 2, title-
    time A variations, and a controller chord all pass controls but remain at
-   width 320 / origin `0x006dd280`; first audit the oracle for an unexposed
-   savestate or direct-pad-input capability.
+   width 320 / origin `0x006dd280`; the oracle source audit found no alternate
+   route, so audit the available emulator/front-end for savestate or direct
+   controller injection support.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -251,6 +257,7 @@ order.
 | s1209 | Repeated A at 17–20 seconds plus seven Start presses passed whole-RDRAM and PIF/VI controls, but both arms remained at VI 320/origin `0x006dd280`; repeated confirmation edges do not provide a later retail path. |
 | s1210 | R4300 emulator mode 2 passed whole-RDRAM controls in both arms; the driven arm delivered all eleven verified Start presses, but both arms remained at VI 320/origin `0x006dd280` for about 3,600 VI frames. Mode 2 does not explain the retail reachability failure; seek a different entry strategy. |
 | s1211 | Controller chord plus eleven Start presses passed whole-RDRAM and PIF/VI controls; both arms remained at VI 320/origin `0x006dd280` for about 3,600 VI frames. The new input path does not provide a later retail entry. |
+| s1212 | Oracle source audit found only scheduled SDL key injection; no savestate, reset-state, direct pad setter, or alternate callable entry route exists in the in-tree CLI. |
 
 ## Method and safety rules
 

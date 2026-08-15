@@ -64733,6 +64733,19 @@ unevaluable. No code or mitigation change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+## Session 1212 (2026-08-14) — oracle CLI has no alternate retail entry route
+
+The bounded source audit of `tools/oracle/rs64_oracle.c` searched its CLI,
+runner, and documented controls for an unexposed savestate, reset-state, or
+direct pad-state route. The only game-entry mechanism is scheduled SDL
+keydown/keyup injection through `M64CMD_SEND_SDL_KEYDOWN` and
+`M64CMD_SEND_SDL_KEYUP`; the remaining controls are debugger watches/traces
+and VI polling. No savestate API, reset command, direct pad setter, or other
+callable route exists in the oracle. This selects H2: the documented input
+cadence and variations remain the only in-tree route, so the retail entry
+investigation needs an external/front-end capability before M4 watches can be
+armed. No build or game run was performed.
+
 ## Session 1210 (2026-08-14) — emulator mode 2 stayed phase-incomplete
 
 Ran the prescribed debugger-enabled retail oracle comparison concurrently:
