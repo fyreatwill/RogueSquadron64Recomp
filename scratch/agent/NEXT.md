@@ -1,26 +1,33 @@
-# NEXT work unit (s1216)
+# NEXT work unit (s1217)
 
-HYPOTHESIS-ID: retail-entry-strategy
+HYPOTHESIS-ID: retail-entry-capability
 
-Work unit: design and run one independent retail-entry strategy after the
-320-boot savestate route failed. Do not arm M4 target watches unless a later VI
-width/origin phase is reached. Preserve the whole-RDRAM positive control and
-PIF/VI controls in every arm.
+Work unit: audit and smoke-test one genuinely independent retail-entry
+capability: the installed Mupen64Plus debugger/front-end's scripted memory or
+register control. Determine whether it can pause the retail core, write a
+known harmless RAM word, and resume; if so, use one phase-gated write at the
+320 title boundary in a paired undriven/control run. Do not arm M4 target
+watches unless a later VI width/origin phase is reached.
 
 Competing hypotheses and discriminator:
 
-- H1: a genuinely independent entry route reaches a later VI width/origin
-  phase, making the retail M4 target watches evaluable.
-- H2: the route remains at width 320/origin `0x006dd280`, so it does not reach
-  the intended state path.
-- H3: the route disrupts whole-RDRAM or PIF/VI controls, making its null
-  result unevaluable.
+- H1: the debugger/front-end exposes a safe, callable control that can alter
+  the retail state path and reach a later VI width/origin phase.
+- H2: the control surface is absent or cannot affect the state path; the run
+  remains at width 320/origin `0x006dd280`.
+- H3: the control disrupts whole-RDRAM or PIF/VI controls, making the result
+  unevaluable.
 
-Discriminator: phase-gated VI width/origin plus positive-control and PIF
-records in the same run. A later phase selects H1; width 320 selects H2;
-missing controls selects H3.
+Discriminator: first a documented debugger command/API that demonstrably writes
+the harmless control word and resumes; then phase-gated VI width/origin plus
+positive-control and PIF records in the same paired run. A later phase only in
+the controlled arm selects H1; width 320 selects H2; missing controls selects
+H3. If no callable control exists, record the capability gap and do not invent
+another button schedule.
 
-Before implementation, identify the route and its independent ground-truth
-control in `tools/oracle/README.md`; batch both A/B arms in one build/run. The
-previous route and exact result are in `scratch/agent/oracle-control.log` and
-`scratch/agent/oracle-state.log`.
+Ground-truth controls are the oracle's whole-RDRAM watch, PIF trace, and VI
+trace described in `tools/oracle/README.md`; use them in both arms. Inspect
+only the installed debugger/front-end sources and help first, then run one
+bounded smoke from the repository root. Exact command form must be recorded
+after the capability audit; no build is allowed until a positive write/resume
+control is named.

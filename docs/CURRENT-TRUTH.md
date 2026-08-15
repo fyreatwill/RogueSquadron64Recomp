@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1215 (2026-08-14).
+in the ledger. Reviewed through s1216 (2026-08-14).
 
 ## Current state
 
@@ -92,6 +92,12 @@ in the ledger. Reviewed through s1215 (2026-08-14).
   and a valid state file, but both arms remained at VI width 320 with origin
   `0x006dd280` for the full run. Savestate lifecycle is usable; this state
   route does not provide the missing later retail entry (H2 selected).
+- The s1216 paired debugger-enabled comparison passed the whole-RDRAM control
+  at 10,000 callbacks in both arms. A continuous Start hold from 6s produced
+  the expected PIF word, while the pulse control produced all eleven expected
+  Start words; both arms nevertheless remained at VI width 320/origin
+  `0x006dd280` for about 70s. Continuous Start is therefore another refuted
+  retail-entry variation (H2); M4 watches remain unevaluable.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -171,10 +177,11 @@ in the ledger. Reviewed through s1215 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Do not repeat the failed 320-boot savestate route. Design one independent
-   retail-entry strategy before arming M4 watches; it must preserve the
-   validated whole-RDRAM and PIF/VI controls and have a phase-gated later
-   width/origin outcome.
+1. Stop varying SDL button timing/chords and the 320-boot savestate route.
+   Identify one genuinely independent retail-entry capability (debugger
+   memory/register control or an equivalent front-end path) before arming M4
+   watches; it must preserve the validated whole-RDRAM and PIF/VI controls and
+   have a phase-gated later width/origin outcome.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -276,6 +283,8 @@ order.
 | s1213 | Installed Mupen64Plus front-end/core audit found startup savestate loading and CoreDoCommand save/load/reset commands; route-exists hypothesis selected. |
 | s1212 | Oracle source audit found only scheduled SDL key injection; no savestate, reset-state, direct pad setter, or alternate callable entry route exists in the in-tree CLI. |
 | s1214 | Oracle state smoke created and loaded a state with rc=0 while whole-RDRAM and VI controls stayed positive; route validated, later phase unreached. |
+| s1215 | Startup savestate save/load passed with whole-RDRAM and PIF/VI controls, but both arms remained at VI 320/origin `0x006dd280`; the state route does not provide later retail entry. |
+| s1216 | Continuous Start from 6s and the eleven-pulse control both passed whole-RDRAM/PIF/VI controls but remained at VI 320/origin `0x006dd280`; this hold variation does not provide later retail entry. |
 
 ## Method and safety rules
 

@@ -65060,3 +65060,20 @@ change was added.
 
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
+## Session 1216 (2026-08-14) — continuous Start hold stayed phase-incomplete
+
+Ran the planned paired debugger-enabled retail oracle comparison concurrently:
+the control used Start pulses at 6,11,16,21,26,31,36,41,46,51,56 seconds;
+the independent route held Start continuously from 6 seconds. Both arms passed
+the whole-RDRAM positive control at 10,000 callbacks. The hold arm produced a
+PIF-confirmed Start word and the pulse arm produced all eleven expected Start
+words. Both completed cleanly for about 70 seconds and remained at VI width
+320 with origin `0x006dd280`; neither reached a later phase.
+
+This selects H2 for the continuous-hold route and rules out this button-level
+entry variation. It does not rule out the retail state machine, the M4 target,
+or a genuinely independent debugger/front-end control path. M4 watches remain
+UNEVALUABLE. No code, instrument, or mitigation change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
