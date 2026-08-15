@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1447 (2026-08-15).
+the authority for session detail. Reviewed through s1448 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1447 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80099CFC..0x80099D68`.
+   census over the next adjacent function, `0x80099D68..0x80099DCC`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -64,9 +64,9 @@ the authority for session detail. Reviewed through s1447 (2026-08-15).
    unchanged (s1420: already-fake two-instruction epilogue fragment
    before `clearStreamedVoiceFlags`), and `fake_func_80099C4C`
    unchanged (s1446 H2: already-fake one-word `beq` gap before
-   `transformVec3ByAffineMatrix`). The generated entry at `0x80099CFC`
-   is already `normalizeVec3`; synchronize the stale TOML
-   `func_80099CFC` only if the companion, size, and caller/semantic
+   `transformVec3ByAffineMatrix`). The generated entry at `0x80099D68`
+   is already `crossProductVec3`; synchronize the stale TOML
+   `func_80099D68` only if the companion, size, and caller/semantic
    evidence independently support that exact name.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
@@ -321,6 +321,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1445 | Exact companion/generated audio-noop census synchronized `noopHandler_80099C44` at `0x80099C44`; no build or runtime run. |
 | s1446 | Exact companion/generated census selected H2 for already-fake `fake_func_80099C4C` at `0x80099C4C` (one-word `beq` gap); left unchanged; no build or runtime run. |
 | s1447 | Exact companion/generated affine-transform census synchronized `transformVec3ByAffineMatrix` at `0x80099C50`; no build or runtime run. |
+| s1448 | Exact companion/generated vec3-normalize census synchronized `normalizeVec3` at `0x80099CFC`; no build or runtime run. |
 
 ## Method and safety rules
 

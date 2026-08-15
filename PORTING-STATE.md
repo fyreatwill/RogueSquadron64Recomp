@@ -70825,3 +70825,36 @@ left unchanged, as were `fake_func_80097D58`, `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named `normalizeVec3`
 at `0x80099CFC`.
+
+## Session 1448 (2026-08-15) — synchronized the normalize-vec3 symbol
+
+Performed the bounded exact-name census over `0x80099CFC..0x80099D68`.
+
+No new soak-queue verdicts since s1447; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80099CFC`, size `0x6C`; `0x80099CFC+0x6C=0x80099D68`. Overlay `rom_size` is `0x6C` at offset `0x000998BC` (`0x80099CFC-0x80000440`). Generated body starts `addiu $sp, $sp, -0x18` at `0x80099CFC` and ends `jr $ra` / `nop` at `0x80099D60` / `0x80099D64` |
+| Generated definition | `funcs_26.c` defines `normalizeVec3` at `0x80099CFC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x6C` function between independently named `transformVec3ByAffineMatrix` at `0x80099C50` and generated `crossProductVec3` at `0x80099D68` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `normalizeVec3 = 0x80099CFC`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x80099CFC`. A distinct companion symbol `normalizeVec3InPlace` lives at `0x800187E8` (generated size `0x30`) and is not this function. No companion C/asm body exists; the name is independent of the address-encoded TOML entry. No conflicting companion name |
+| Caller evidence | Exactly one generated `jal 0x80099CFC` site, in independently named `compute3DSourceSpatialMix` at `0x80098624`. Arg is `a0=sp+0x30`, the same stack vec3 written by the preceding `transformVec3ByAffineMatrix` call. The caller skips the jal when that vec3 compares as the zero sentinel. Zero `func_*` callers |
+| Semantic evidence | Body loads the three floats at `a0+0/+4/+8`, squares and sums them, calls independently named `sqrtf_recomp` (`0x80093E6C`), divides each component by the length, and stores them back in place. That is an in-place unit-length vec3 normalize, matching the companion name and the spatial-mix caller |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80099CFC`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x6C`, the single `jal` caller is an independently named 3D-mix path,
+and there is neither a conflicting companion name nor a size split. H2
+and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x6C`).
+`fake_func_80099C4C` remains the already-fake one-word `beq` gap and was
+left unchanged, as were `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named `crossProductVec3`
+at `0x80099D68`.

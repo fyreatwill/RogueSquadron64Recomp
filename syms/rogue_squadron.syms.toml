@@ -1505,7 +1505,7 @@ functions = [
     { name = "noopHandler_80099C44", vram = 0x80099C44, size = 0x8 },
     { name = "fake_func_80099C4C", vram = 0x80099C4C, size = 0x4 },
     { name = "transformVec3ByAffineMatrix", vram = 0x80099C50, size = 0xAC },
-    { name = "func_80099CFC", vram = 0x80099CFC, size = 0x6C },
+    { name = "normalizeVec3", vram = 0x80099CFC, size = 0x6C },
     { name = "func_80099D68", vram = 0x80099D68, size = 0x64 },
     { name = "func_80099DCC", vram = 0x80099DCC, size = 0x210 },
     { name = "fake_func_80099FDC", vram = 0x80099FDC, size = 0x4 },
