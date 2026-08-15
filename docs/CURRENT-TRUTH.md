@@ -109,34 +109,12 @@ in the ledger. Reviewed through s1221 (2026-08-14).
   question. No later phase was reached, so it does not yet select H1 or H2 for
   the retail-entry-capability hypothesis; the next step is a justified
   state-changing target, not another control-surface check.
-- The s1219 paired debugger-enabled oracle run wrote `0x01000000` to physical
-  `0x130B60` (`gGameSettings+0x20`, the documented menu sub-state byte) at VI
-  1. The write marker fired; both arms passed the whole-RDRAM control at
-  10,000 hits, logged all eleven scheduled Start words in PIF RAM, and stayed
-  at VI width 320/origin `0x006dd280` for 75 seconds. This target did not
-  change the retail path (H2); the debugger write and control surfaces remain
-  valid. The next target may test the separately documented cinematic
-  sub-state byte at `gGameSettings+0x21`.
-- The s1220 debugger-enabled oracle pair wrote `0x00010000` to physical
-  `0x130B60` at VI 1, setting the documented cinematic sub-state byte
-  `gGameSettings+0x21`. Both arms independently passed the whole-RDRAM
-  positive control at 10,000 callbacks; the target write marker fired, and
-  callback plus VI-poll traces both stayed at width 320/origin `0x006dd280`
-  for 75 seconds / 4,499 VI frames. H2 is selected for this target; the next
-  justified state-byte route is the documented mission sub-state byte
-  `gGameSettings+0x22`.
-- The s1221 debugger-enabled oracle pair wrote `0x00000100` to physical
-  `0x130B60` at VI 1, setting the documented mission sub-state byte
-  `gGameSettings+0x22`. The target write marker fired; both arms independently
-  hit the whole-RDRAM positive-control cap at 10,000 writes, and both VI
-  callback/poll traces stayed at width 320/origin `0x006dd280` for 75 seconds
-  (4,500/4,499 VI frames). H2 is selected for this target: the mission
-  sub-state write did not change retail entry. This no-input recipe emitted no
-  PIF button events in either arm because the oracle reported no input plugin;
-  that shared limitation does not affect the positive whole-RDRAM or VI
-  controls. No further documented `gGameSettings` state-byte target is
-  currently justified; identify the next independent retail-entry route from
-  the generated state-machine consumers before another write probe.
+- The s1219–s1221 debugger writes to `0x130B60` were misidentified as three
+  `gGameSettings` state bytes. The s1222 census reconciled the addresses:
+  `gGameSettings` is `0x80130B40`, so `0x80130B60..62` are volume bytes, while
+  `mainGameLoop` reads `D_80130B10+0x20..22` at `0x80130B30..32`. Those three
+  oracle writes therefore tested volume fields, not menu/cinematic/mission
+  state, and cannot select H2.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -216,11 +194,10 @@ in the ledger. Reviewed through s1221 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Audit the generated `mainGameLoop` state-byte consumers and writers around
-   `gGameSettings+0x20..0x22` to identify one independently justified retail
-   entry route or prove that the three documented bytes are only transient
-   flags. Keep the audit complete and bounded; do not add another debugger
-   write target without a new discriminator.
+1. Use the corrected `D_80130B10+0x20..22` identity to audit its generated
+   writers and state-machine callers, then design one positive-control oracle
+   write only if a concrete retail-entry route is justified. Do not write
+   `0x80130B60..62` again as state bytes.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -328,6 +305,8 @@ order.
 | s1218 | Checkpoint-recovery only: restated s1217 in gate-recognized terms, no new experiment. |
 | s1220 | `gGameSettings+0x21` target write passed whole-RDRAM and VI controls but both arms stayed at width 320/origin `0x006dd280`; cinematic sub-state target did not change retail entry. |
 | s1221 | `gGameSettings+0x22` target write fired and both arms passed whole-RDRAM/VI controls, but both stayed at width 320/origin `0x006dd280`; mission sub-state target did not change retail entry. No-input oracle recipe produced no PIF events in either arm. |
+
+| s1222 | Corrected the state-byte identity: `mainGameLoop` reads `D_80130B10+0x20..22` (`0x80130B30..32`), not `gGameSettings+0x20..22` (`0x80130B60..62`). The prior writes were volume-field tests; generated/companion census found `runIdleFramesAndLoadSaveData` writes `B30=1,B31=0`, while demo save/restore writes only `B60..62`. No generated-boundary defect was found. |
 
 ## Method and safety rules
 

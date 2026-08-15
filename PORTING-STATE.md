@@ -65187,3 +65187,38 @@ machine for the next independent retail-entry route.
 ORIGIN: the only injected value was the deliberately selected state-machine
 probe at `gGameSettings+0x22`; no renderer or corruption value was skipped,
 guarded, or restored.
+## Session 1222 (2026-08-14) — corrected the retail state-byte identity
+
+Performed the prescribed bounded static census without building, running the
+port, or running the retail oracle. The generated `mainGameLoop` prologue
+constructs `s4 = 0x80130B10`; its reads at `0x8003E07C`, `0x8003E0DC`,
+`0x8003E114`, and `0x8003E130` therefore access physical `0x80130B30..32`
+(with the final `+0x21` reread), not `gGameSettings+0x20..22` at
+`0x80130B60..62`.
+
+The generated writer/consumer table for the relevant exact object is:
+
+| Address | Generated site | Role |
+|---|---|---|
+| `0x80130B30` | `runIdleFramesAndLoadSaveData` `0x8006DAB8` | unconditional set to `1` after `resetGameSettingsAndMissionStats`; `mainGameLoop` menu/asset gate read |
+| `0x80130B31` | `runIdleFramesAndLoadSaveData` `0x8006DABC` | unconditional clear to `0`; `mainGameLoop` cinematic gate read |
+| `0x80130B32` | `mainGameLoop` `0x8003E114` | consumer only in the audited generated tree; no exact writer found |
+
+The companion `D_80130B10_type` defines this as the 0x28-byte mission-state
+object, independently confirming the base. In contrast, generated
+`initDemoPlayState` (`0x800BEC74..80`) and `restoreGameSettingsAfterDemo`
+(`0x800BF3EC..F8`) access `0x80130B60..62`, and
+`applyVolumeSettingsToMixer` reads the same three bytes as volume settings.
+The companion symbol annotations independently describe those demo save/restore
+operations as `gGameSettings` volume restoration.
+
+This selects H2 for the originally proposed `gGameSettings` target: the three
+s1219–s1221 debugger writes were volume-field tests, not menu/cinematic/mission
+state tests, so their unchanged retail path is unevaluable for that question.
+H1 remains open for the corrected `D_80130B30..32` producer path; H3 was not
+selected because the generated intervals and companion struct boundary agree.
+No mitigation, oracle write, or runtime conclusion was added.
+
+ORIGIN: generated `funcs_8.c`, `funcs_17.c`, `funcs_32.c`, and `funcs_33.c`,
+plus independent `rogue_squadron64` `ctx.c` and symbol annotations. No game
+data or runtime behavior was changed.
