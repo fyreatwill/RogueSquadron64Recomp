@@ -64438,3 +64438,17 @@ context-edge reachability audit. No mitigation was added.
 
 ORIGIN: complete generated caller census plus independent runtime context
 assignment census; no guest value mutation or mitigation.
+## Session 1181 (2026-08-14) — audited generated stack-value producers
+
+Ran the prescribed static audit without building or running. The generated
+tree contains 4,919 `ctx->r29` assignments; 67 are outside the ordinary
+`ADD32(ctx->r29, ...)` frame idiom. Five are `r30` frame setups, three are
+`recomp_entrypoint` bootstrap writes, and the remaining 59 are confined to
+the audio/data-like `fake_func_80024A0C`, `fake_func_80099FDC`,
+`audioCompandS16`, `static_3_800A21xx`–`static_3_800A2FE4`, and
+`__OSGlobalIntMask` blocks. The 144 direct `slotDispatcherIter` callsites
+remain balanced; no generated alternate context object or context pointer was
+found, and no enumerated producer has a call edge into the target family.
+This selects H3 and rules out a reachable direct `$sp` producer or named
+context handoff. The next unit is a complete static census of broader guest
+memory/value writer classes; no mitigation was added.

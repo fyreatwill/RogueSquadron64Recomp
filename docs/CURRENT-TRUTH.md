@@ -51,6 +51,18 @@ in the ledger. Reviewed through s1180 (2026-08-14).
   paths with no statically named edge into the failing frame. This selects H3:
   no writer-to-frame edge is established, so the next audit moves to the
   earlier guest `$sp` value origin. No mitigation was added.
+- The s1181 complete generated `$sp`-value audit found 4,919 `ctx->r29`
+  assignments total. The 144 `slotDispatcherIter` callsites remain ordinary
+  balanced frame arithmetic. The broader tree has 67 assignments outside the
+  normal `ADD32(ctx->r29, ...)` idiom: five `ADD32(ctx->r30, 0)` frame setups,
+  three `recomp_entrypoint` bootstrap writes, and 59 data/audio/OS/helper
+  assignments in `fake_func_80024A0C`, `fake_func_80099FDC`,
+  `audioCompandS16`, the `static_3_800A21xx` through `static_3_800A2FE4`
+  blocks, and `__OSGlobalIntMask`. None has a generated call edge into the
+  target family, and no generated context object or alternate context pointer
+  is constructed. This selects H3: no reachable invalid direct producer or
+  context-preserving handoff was found; the next audit is broader guest
+  memory/value corruption, with no mitigation added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
@@ -482,6 +494,7 @@ corruption.
 | s1177 | Ran the retail oracle execution watch for all four `musyxInitVoiceFromSample` PCs with separate whole-RDRAM controls. The write control reached 10,000 callbacks and the read control reached 64,047,786 callbacks; all eleven scheduled presses were delivered. The run remained at VI 320 and all four writer PCs had zero hits. This selects H2 for the driven attract path and rules out authorizing a destination-range watch from this capture; no mitigation was added. |
 
 | s1180 | Completed the static earlier-`$sp` value-origin audit without building or running. The 144 direct `slotDispatcherIter` sites across 72 callers contain only balanced frame arithmetic; no caller has a non-prologue `r29` load or assignment. Runtime code has one executable `r29` initializer, `run_thread_function` from the scheduler's thread `sp`; hook/event paths preserve whole contexts but do not replace it. This selects H3 and rules out a direct caller-side or named runtime context handoff as the invalid-value source. The next unit is an earlier guest value-producer audit; no mitigation was added. |
+| s1181 | Completed the whole generated `r29` assignment and context-edge audit without building or running. There are 4,919 `ctx->r29` assignments; 67 are outside ordinary frame arithmetic, with five valid `r30` frame setups, three entrypoint bootstrap writes, and 59 assignments in unrelated/data-like audio, OS, and helper blocks. The 144 target callsites remain balanced, no generated alternate context is constructed, and none of the enumerated producer blocks has a call edge into the target family. This selects H3 and moves the investigation to broader guest memory/value writers; no mitigation was added. |
 
 ## Ranked next steps
 
@@ -490,11 +503,12 @@ corruption.
    reaches an audio-initialization or voice-allocation phase beyond the driven
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
-2. Audit the earlier guest value producers feeding the context inherited by
-   `slotDispatcherIter` callers. Enumerate generated non-prologue `r29`
-   assignments and context-preserving call edges, then rank reachable sources
-   that can poison the shared guest context. Do not add a guard until a writer
-   is named and its value is classified as legitimate or corrupt.
+2. Audit the broader guest memory/value writers that can corrupt the shared
+   stack value before `slotDispatcherIter`. Start with dynamic writes to the
+   saved-register/prologue neighborhoods and generated DMA/zmemcpy/controller
+   paths; enumerate the complete writer classes before adding instrumentation.
+   Do not add a guard until a writer is named and its value is classified as
+   legitimate or corrupt.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry
