@@ -69820,3 +69820,34 @@ unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is the independently named `unloadLastSndFileGroup` at
 `0x800978EC`.
+
+## Session 1417 (2026-08-15) — synchronized the unload-last-snd-file-group symbol
+
+Performed the bounded exact-name census over `0x800978EC..0x80097AC8`.
+
+No new soak-queue verdicts since s1416; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800978EC`, size `0x1DC`; `0x800978EC+0x1DC=0x80097AC8`. Overlay `rom_size` is `0x1DC` at offset `0x000974AC` (`0x800978EC-0x80000440`). Generated prologue at `0x800978EC` (`lui $v0, 0x800A` / `lbu` of the MusyX-active byte / `addiu $sp, $sp, -0x30`) and `jr $ra` at `0x80097AC0` with delay `nop` at `0x80097AC4` |
+| Generated definition | `funcs_26.c` defines `unloadLastSndFileGroup` at `0x800978EC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x1DC` function ending at the next generated definition, `returnZeroAudioStub` at `0x80097AC8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `unloadLastSndFileGroup = 0x800978EC` in the sequential SND-registration family, immediately after `releaseSndMidiSetupRecords`/`parseSndFiles` and before `serviceStreamedVoices`. A second companion mapping names the following stub `returnZeroAudioStub = 0x80097AC8`, confirming the `0x1DC` boundary. Menu, mission, cinematic, and ignored lists do not remap `0x800978EC`. No conflicting companion name |
+| Caller evidence | One generated `jal 0x800978EC` site in already-named `menuSubtype02Handler` (`0x800C30C8`), immediately after `freeAudioCacheEntry(-1)` on a menu-subtype teardown path |
+| Semantic evidence | Body is gated on the MusyX-active byte at `0x800A0F50` and a non-zero group count at `0x80152A10`. It decrements that count, selects the last pointer in the `0x801529D0` table, then walks `0xFFFF`-terminated halfword id lists and unregisters them through `factor5BucketedTableRemoveEntry`, `factor5SortedTableRemoveWidePair`, `factor5SecondSortedTableRemoveValue`, `factor5SortedTableRemoveValue`, `factor5SortedTableRemoveTaggedValue`, and `factor5SortedTableRemoveVoiceRecord`. Inverse of the `parseSndFiles` registration walk. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800978EC`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x1DC`, and there is neither a conflicting companion name nor a size split.
+H2 and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x1DC`). `fake_func_8009711C`
+remains the already-fake one-instruction jump fragment and was left
+unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is the independently named `returnZeroAudioStub` at
+`0x80097AC8`.
