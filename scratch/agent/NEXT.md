@@ -1,9 +1,9 @@
-# NEXT work unit (s1484)
+# NEXT work unit (s1485)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8009DD64..0x8009DD7C`. Do not build or run. Record its address,
+function, `0x8009DD7C..0x8009DDD0`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -26,12 +26,15 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The generated
-entry at this address is already `audioMixSampleS16_3_1`; the companion
-splat list maps `audioMixSampleS16_3_1 = 0x8009DD64`. TOML is still
-`func_8009DD64` (size `0x18`, ends at `0x8009DD7C`); overlay `rom_size`
-is also `0x18` and meets independently named `audioCompandS16` at
-`0x8009DD7C`. Confirm the complete function, matching size, and
-caller/semantic evidence before synchronizing the TOML name.
+entry at this address is already `audioCompandS16`; the companion splat
+list maps `audioCompandS16 = 0x8009DD7C`. TOML is still `func_8009DD7C`
+(size `0x54`, ends at `0x8009DDD0`). Overlay last-entry `rom_size` is
+`0x73B4` (section remainder at offset `0x0009D93C`, not the function).
+The live body is `0x54` and ends at `jr $ra` / `andi $t2, $t2, 0xFFFF`
+(`0x8009DDC8`/`0x8009DDCC`); generated words after `0x8009DDD0` are
+data-like. Confirm the complete live function, matching size, and
+caller/semantic evidence before synchronizing the TOML name. Do not treat
+the overlay remainder as part of the named function.
 
 Competing hypotheses and discriminator:
 
@@ -42,14 +45,15 @@ Competing hypotheses and discriminator:
 - H3: no independent naming source exists and the region should be parked.
 
 The complete comparison table is the discriminator: an exact companion name
-with matching generated/TOML size and semantic or caller evidence selects H1;
-an incomplete, already-fake, or conflicting match selects H2; and no
-independent name selects H3.
+with matching generated/TOML live-body size and semantic or caller evidence
+selects H1; an incomplete, already-fake, or conflicting match selects H2;
+and no independent name selects H3. The oversized overlay `rom_size` is
+not by itself H2 if the live `jr $ra` body matches TOML `0x54`.
 
 Commands:
 
 ```
-grep -n -C 5 '8009DD64\|8009DD7C\|audioMixSampleS16_3_1\|audioCompandS16' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '8009DD64\|8009DD7C\|audioMixSampleS16_3_1' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '8009DD64\|8009DD7C' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009DD7C\|8009DDD0\|audioCompandS16' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009DD7C\|8009DDD0\|audioCompandS16' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '8009DD7C\|8009DDD0' syms/rogue_squadron.syms.toml
 ```

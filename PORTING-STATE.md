@@ -72060,3 +72060,39 @@ M5 audio de-stubbing. The next adjacent generated function is
 independently named `audioMixSampleS16_3_1` at `0x8009DD64` (TOML still
 `func_8009DD64`, size `0x18`; overlay `rom_size` is `0x18` and meets
 independently named `audioCompandS16` at `0x8009DD7C`).
+
+## Session 1484 (2026-08-15) — synchronized the audio-mix-sample-s16-3-1 symbol
+
+Performed the bounded exact-name census over `0x8009DD64..0x8009DD7C`.
+
+No new soak-queue verdicts since s1483; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_8009DD64`, size `0x18`; `0x8009DD64+0x18=0x8009DD7C`. Overlay `rom_size` is `0x18` at offset `0x0009D924` (`0x8009DD64-0x80000440`) and meets independently named `audioCompandS16` with no pad lump |
+| Generated definition | `funcs_27.c` defines `audioMixSampleS16_3_1` at `0x8009DD64`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x18` function between independently named `audioMixSampleS16_1_1` and independently named `audioCompandS16`. Six live words: `sra $t2, $t2, 1` / `sra $t4, $t4, 2` / `addu $t4, $t4, $t2` / `sra $t2, $t2, 1` / `b L_8009DD7C` / `addu $t2, $t2, $t4`. The delay-slot add completes `0.75*t2 + 0.25*t4` and tail-calls independently named `audioCompandS16` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `audioMixSampleS16_3_1 = 0x8009DD64` and `audioCompandS16 = 0x8009DD7C`. Menu, mission, cinematic, ignored, libultra, and zlib lists do not remap `0x8009DD64`. No companion C/asm body exists |
+| Caller evidence | One generated `bltzal $zero, L_8009DD64` site and no `jal`/`j`/`func_*` callers. Independently named `renderVoiceAudioBlock` (`0x8009DB44`) captures `$ra` at `0x8009DBEC` and then `addiu $t3, $ra, 0x170` at `0x8009DBF4` (`0x8009DBF4+0x170=0x8009DD64`) before `bgezal` into `audioMixStereoBlock8`. Whole-ROM scan found zero `jal` encodings (`0x0C027759`), zero `j` encodings (`0x08027759`), and zero absolute `0x8009DD64` pointer words. Matches the `$t3` mix-function-pointer contract in the companion comment for `audioMixStereoBlock8` |
+| Semantic evidence | Retail ROM words at file `0x9E964` (`(vram&0xFFFFFF)+0xC00`) are `0x000A5043` / `0x000C6083` / `0x018A6021` / `0x000A5043` / `0x10000001` / `0x014C5021` (`sra $t2, $t2, 1` / `sra $t4, $t4, 2` / `addu $t4, $t4, $t2` / `sra $t2, $t2, 1` / `b +1` / `addu $t2, $t2, $t4`). Same-run positive controls: `0x8009D7D0` file `0x9E3D0` is `0x2481FFF9`, `0x8009D8C4` file `0x9E4C4` is `0x848B0166`, `0x8009D980` file `0x9E580` is `0x852A0000`, `0x8009DB44` file `0x9E744` is `0x27BDFFBC`, previous helper start `0x8009DD54` file `0x9E954` is `0x000A5043`, previous helper start `0x8009DD3C` file `0x9E93C` is `0x000A5083`, this start `0x8009DD64` file `0x9E964` is `0x000A5043`, and next start `0x8009DD7C` file `0x9E97C` is `0x05410003` (`bgez $t2`). Arithmetic is `((t2>>1)>>1) + ((t4>>2)+(t2>>1))` = `0.75*t2 + 0.25*t4`, then tail-call to `audioCompandS16` at `0x8009DD7C`. Matches the companion comment |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009DD64`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x18`, the weighted 3:1 s16 mix plus the named `renderVoiceAudioBlock`
+`$t3` capture match the name, and there is neither a conflicting companion
+name nor a size split inside the live body. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x18`).
+`func_8009D978` remains the eight-byte Q15 delay-mix table and was left
+unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `audioCompandS16` at `0x8009DD7C` (TOML still
+`func_8009DD7C`, size `0x54`; overlay last-entry `rom_size` is `0x73B4`
+and the live body ends at `jr $ra` / `andi $t2, $t2, 0xFFFF`).
