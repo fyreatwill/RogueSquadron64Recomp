@@ -68878,3 +68878,33 @@ this address. The stale address-encoded TOML entry was synchronized
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `getSongParamByHandle` at `0x80095700`.
+
+## Session 1386 (2026-08-15) — synchronized the get-song-param-by-handle symbol
+
+Performed the bounded exact-name census over `0x80095700..0x800957AC`.
+
+No new soak-queue verdicts since s1385; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80095700`, size `0xAC`; `0x80095700+0xAC=0x800957AC`. Overlay `rom_size` is `0xAC`. Generated prologue at `0x80095700` (`lui $v0, 0x800A` then `lbu` of `0x800A0F50`) and `jr $ra` at `0x800957A4` with delay `nop` at `0x800957A8` |
+| Generated definition | `funcs_25.c` defines `getSongParamByHandle` at `0x80095700`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `isSongHandleActive` at `0x800957AC` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `getSongParamByHandle = 0x80095700`. The same file independently names the preceding real function `updateSongTempoTickRate` at `0x800955B0` and the following real function `isSongHandleActive` at `0x800957AC`. Menu, mission, and cinematic lists do not remap it. The sequential `defined:true` list records `startSongSequence` then jumps to `fake_func_8009711C` and does not remap this address |
+| Caller evidence | Two generated `jal 0x80095700` sites, both in independently named `tickSongFadeTimer` (`0x800EE730`, mission overlay): `0x800EE7B4` and `0x800EE7DC`. Each loads the song handle at `0x8010C0E0` into `$a0` and treats the return as a u16: the first stores it at `0x8010C30C` and accumulates it at `0x8010C308`; the second compares a fresh read against that accumulator. The same function then calls independently named `isSongHandleActive` at `0x800EE824` |
+| Semantic evidence | Gates on `gMusyXActiveFlag` at `0x800A0F50`. Masks `$a0` with `0x7FFFFFFF` and walks the 8-slot song table at `0x80149A00` with stride `0xEF8`. A live slot whose word at table+0 matches the masked handle is selected; the helper then returns the halfword at slot+`0xEC6` (inside the companion-documented control block `slot+0xEC0..0xEF0`). Inactive MusyX or no matching slot returns 0. Matches a song-parameter getter by handle. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80095700`: the companion and
+generated names agree, the body is a complete handle-to-slot walker and
+u16-param reader of matching size `0xAC`, and there is neither a
+conflicting companion name nor a size split. H2 and H3 are ruled out for
+this address. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0xAC`). `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `isSongHandleActive` at `0x800957AC`.

@@ -1441,7 +1441,7 @@ functions = [
     { name = "stepSongModulationLanes", vram = 0x80095090, size = 0x1B4 },
     { name = "advanceSongRegion", vram = 0x80095244, size = 0x36C },
     { name = "updateSongTempoTickRate", vram = 0x800955B0, size = 0x150 },
-    { name = "func_80095700", vram = 0x80095700, size = 0xAC },
+    { name = "getSongParamByHandle", vram = 0x80095700, size = 0xAC },
     { name = "func_800957AC", vram = 0x800957AC, size = 0x80 },
     { name = "func_8009582C", vram = 0x8009582C, size = 0x268 },
     { name = "func_80095A94", vram = 0x80095A94, size = 0x48 },
