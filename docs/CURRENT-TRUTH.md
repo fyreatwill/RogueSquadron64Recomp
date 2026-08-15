@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1203 (2026-08-14).
+in the ledger. Reviewed through s1204 (2026-08-14).
 
 ## Current state
 
@@ -101,13 +101,19 @@ in the ledger. Reviewed through s1203 (2026-08-14).
   `0x006dd280` for about 3,600 VI frames. This schedule remains
   phase-incomplete; M4 target watches are unevaluable. The oracle's documented
   6s-first hangar schedule is now the next independent reachability route.
+- The s1204 debugger-enabled comparison passed whole-RDRAM and PIF/VI controls
+  in both arms. The documented 6s-first hangar schedule delivered all eleven
+  Start presses as verified `0x10000000` PIF words, but both arms remained at VI
+  width 320 with origin `0x006dd280` for about 3,600 VI frames. The documented
+  route is not reproducible in this oracle configuration; M4 target watches
+  remain unevaluable. Seek a new independent retail execution path.
 
 ## Active investigation and ranked next steps
 
-1. Run the oracle's documented debugger-enabled hangar schedule, with the
-   first Start at `6s` and later presses at 11s through 56s, against an
-   undriven control. Require whole-RDRAM and PIF controls plus a later VI phase
-   before arming any M4 target watch; do not treat the existing target-watch
+1. Run a new independent retail execution-mode comparison using the oracle's
+   debugger-enabled hangar schedule under the alternate R4300 emulator mode,
+   paired with an undriven control. Require whole-RDRAM and PIF controls plus
+   a later VI phase before arming any M4 target watch; do not treat a target
    null as evidence.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
@@ -199,6 +205,7 @@ order.
 | s1201 | First Start moved to 0.2s; both arms passed controls, the driven arm changed PIF words, but both remained at VI 320/origin `0x006dd280`; schedule remains phase-incomplete. |
 | s1202 | First Start moved to 0.1s; both arms passed controls, the driven arm changed PIF words, but both remained at VI 320/origin `0x006dd280`; schedule remains phase-incomplete. |
 | s1203 | First Start moved to 0.0s; both arms passed controls, the driven arm changed PIF words, but both remained at VI 320/origin `0x006dd280`; schedule remains phase-incomplete. |
+| s1204 | Documented 6s-first hangar schedule passed controls and delivered all eleven Start presses, but both arms remained at VI 320/origin `0x006dd280`; route is not reproducible in this oracle configuration. |
 
 ## Method and safety rules
 

@@ -64748,6 +64748,7 @@ first Start earlier into the boot/title interval.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+
 ## Session 1199 (2026-08-14) — earlier retail input still stayed at boot VI
 
 Ran the prescribed debugger-enabled retail oracle comparison concurrently:
@@ -64834,6 +64835,25 @@ both arms remained at VI width 320 with origin `0x006dd280`, and neither
 produced a later VI transition. This selects H1, that the tested schedule
 remains phase-incomplete, and leaves M4 target watches UNEVALUABLE. The
 documented 6s-first hangar schedule is the next independent reachability route.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
+
+## Session 1204 (2026-08-14) — documented hangar schedule stayed phase-incomplete
+
+Ran the prescribed debugger-enabled retail oracle comparison concurrently: an
+undriven control and the documented hangar schedule with Start presses at
+6,11,16,21,26,31,36,41,46,51,56 seconds, each held for 150 ms. Both arms
+passed the whole-RDRAM positive control at 10,000 callbacks, emitted debugger
+PIF/VI records, and completed about 3,600 VI frames in 60 seconds. The driven
+arm logged all eleven presses; each produced a verified `0x10000000` PIF word
+that returned to zero.
+
+The documented schedule did not reach the hangar or any later VI phase: both
+arms remained at VI width 320 with origin `0x006dd280`. This selects H1, that
+the documented route is not reproducible in this oracle configuration, and
+leaves M4 target watches UNEVALUABLE. No code, instrument, or mitigation change
+was added. The next independent comparison is alternate R4300 emulator mode.
 
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
