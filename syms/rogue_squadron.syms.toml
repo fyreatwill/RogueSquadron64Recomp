@@ -1375,7 +1375,7 @@ functions = [
     { name = "musyxRenderVoiceSamples", vram = 0x8008FFAC, size = 0xA90 },
     { name = "musyxKeyOnVoice", vram = 0x80090A3C, size = 0x3C8 },
     { name = "musyxMixActiveVoices", vram = 0x80090E04, size = 0x230 },
-    { name = "func_80091034", vram = 0x80091034, size = 0x208 },
+    { name = "musyxBuildVoiceCommandList", vram = 0x80091034, size = 0x208 },
     { name = "func_8009123C", vram = 0x8009123C, size = 0x660 },
     { name = "func_8009189C", vram = 0x8009189C, size = 0x2A0 },
     { name = "func_80091B3C", vram = 0x80091B3C, size = 0x14C },

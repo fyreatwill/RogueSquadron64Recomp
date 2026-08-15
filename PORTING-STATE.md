@@ -67159,3 +67159,28 @@ the `0x230` boundary is exact, and the body is the active-voice mixer that
 for this function; there is neither a partial/conflicting match nor an
 absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1323 (2026-08-15) — synchronized the voice command-list builder symbol
+
+Performed the bounded exact-name census over `0x80091034..0x8009123C`.
+
+No new soak-queue verdicts since s1322; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80091034`, size `0x208`; it ends exactly at the next generated function, `0x8009123C`. Overlay `rom_size` is `0x208` |
+| Generated definition | `funcs_24.c` defines `musyxBuildVoiceCommandList` at `0x80091034` through the matching epilogue at `0x80091234`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxBuildVoiceCommandList = 0x80091034`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x80091034` in `musyxSynthFrame` at `0x80091330`, passing a voice-array pointer in `a0` and a count in `a1`. Companion independently names that frame tick `musyxSynthFrame = 0x8009123C` and says it builds a command list per output block |
+| Semantic evidence | Body walks voices with stride `idx*0x88`, `lbu +0x22` then `jal 0x80090A3C` (`musyxKeyOnVoice`) when that byte is zero, otherwise appends to the RSP cmd-list whose head is `0x80149750` (`0x80150000-0x68B0`) and count is `0x80149760` (`0x80150000-0x68A0`) |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x208` boundary is exact, and the body is the per-voice command-list
+builder that `musyxSynthFrame` calls before mixing. H2 and H3 are ruled out
+for this function; there is neither a partial/conflicting match nor an
+absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
