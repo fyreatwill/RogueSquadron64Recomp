@@ -69058,3 +69058,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named `tickActiveSongs` at
 `0x80095DA0`.
+
+## Session 1392 (2026-08-15) — synchronized the tick-active-songs symbol
+
+Performed the bounded exact-name census over `0x80095DA0..0x80095DF4`.
+
+No new soak-queue verdicts since s1391; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80095DA0`, size `0x54`; `0x80095DA0+0x54=0x80095DF4`. Overlay `rom_size` is `0x54`. Generated prologue at `0x80095DA0` (`addiu $sp, $sp, -0x20`; save `$s1`/`$s0`/`$ra`; zero `$s1`/`$s0`) and `jr $ra` at `0x80095DEC` with delay `nop` at `0x80095DF0` |
+| Generated definition | `funcs_25.c` defines `tickActiveSongs` at `0x80095DA0`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `setSongPauseStateByHandle` at `0x80095DF4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `tickActiveSongs = 0x80095DA0` in the annotated song-stepper block (`tickMusyXIfActive -> tickActiveSongs`). Menu, mission, and cinematic lists do not remap it. The later sequential `defined:true` list jumps from `tickSongSequenceLocked` to `setSongPauseStateByHandle` and also omits already-synchronized `tickSongSequence` / `advanceSongRegion` / `startSongSequence`, so the omission is not a conflicting name. Companion `tickAllActiveSongs` at `0x80096D08` is a different later function |
+| Caller evidence | One generated `jal 0x80095DA0` site: `tickMusyXIfActive` at `0x8008DA1C`, after `factor5MutexAcquire` and before `tickAndReap3DAudioVoices` / `stopAllSynthVoices`. Companion independently names that caller as the only per-frame entry that drives the eight-slot song stepper |
+| Semantic evidence | Loop of eight iterations (`$s1` 0..7), stride `0xEF8`, loads each slot handle from `0x80150000+$s0-0x6600` (`0x80149A00`) and calls already-synchronized `tickSongSequence` (`0x80095ADC`). Matches the companion comment exactly. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80095DA0`: the companion and
+generated names agree, the body is a complete 8-slot song-tick iterator of
+matching size `0x54`, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at `0x54`).
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`setSongPauseStateByHandle` at `0x80095DF4`.
