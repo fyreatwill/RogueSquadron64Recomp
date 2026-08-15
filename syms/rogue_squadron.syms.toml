@@ -1452,7 +1452,7 @@ functions = [
     { name = "applySongU16ParamCmd", vram = 0x80095EA8, size = 0xEC },
     { name = "applySongU16ParamCmdLocked", vram = 0x80095F94, size = 0x58 },
     { name = "quiesceSongSlotCmd", vram = 0x80095FEC, size = 0xE4 },
-    { name = "func_800960D0", vram = 0x800960D0, size = 0x48 },
+    { name = "quiesceSongSlotCmdLocked", vram = 0x800960D0, size = 0x48 },
     { name = "func_80096118", vram = 0x80096118, size = 0x104 },
     { name = "func_8009621C", vram = 0x8009621C, size = 0x68 },
     { name = "func_80096284", vram = 0x80096284, size = 0x244 },
