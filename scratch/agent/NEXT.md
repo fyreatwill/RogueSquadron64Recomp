@@ -1,29 +1,32 @@
-# NEXT work unit (s1183)
+# NEXT work unit (s1184)
 
 HYPOTHESIS-ID: m3-stack-memory-value-origin
 
-Work unit: complete one static audit of generated `SD`/wide-copy writers and
-their host-side RDRAM accessors that could corrupt the shared stack value before
-`slotDispatcherIter`. Do not build or run.
+Work unit: complete one static audit of generated `do_swl`/`do_swr` partial
+stores and their host-side RDRAM accessors that could corrupt the shared stack
+value before `slotDispatcherIter`. Do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: a generated wide store has a reachable mission/cinematic destination
-  expression overlapping a target saved-register frame. Discriminator: an
-  enumerated `SD`/wide-copy site has both a reachable target-path edge and a
-  statically possible frame-overlap span.
-- H2: the host accessor broadens a generated wide store into a dynamic RDRAM
-  write that can cover the frame. Discriminator: the host implementation or
-  call contract permits an unbounded/dynamic destination on a reachable edge.
-- H3: all wide-store/accessor classes are frame-local, bounded away, or
-  unrelated. Discriminator: no enumerated site has both target-path reachability
-  and a destination expression capable of covering the frame.
+- H1: a reachable generated partial-store pair writes a mission/cinematic
+  destination overlapping a target saved-register frame. Discriminator: an
+  enumerated pair has a target-path edge and a destination expression whose
+  byte span can overlap that frame.
+- H2: the host implementation of a partial store broadens the generated
+  address or write span enough to cover the frame. Discriminator: its accessor
+  contract writes outside the guest-aligned byte range specified by the MIPS
+  operation.
+- H3: all partial-store pairs are frame-local, bounded away, unrelated, or
+  non-executable. Discriminator: no enumerated pair has both target-path
+  reachability and a frame-overlap span, and the host accessor preserves the
+  specified byte range.
 
 Exact commands:
 
 ```
-rg -n 'SD\(|LD\(|MEM_[DQ]\(|wide|copy|memcpy|RDRAM|rdram' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs src lib/N64ModernRuntime --glob '*.c' --glob '*.cpp' --glob '*.h'
-rg -n 'slotDispatcherIter|0x8011C8|SD\(|MEM_[DQ]\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
+rg -n 'do_swl|do_swr|do_sdl|do_sdr|SWL|SWR|SDL|SDR' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs src lib/N64ModernRuntime --glob '*.c' --glob '*.cpp' --glob '*.h'
+rg -n -C 3 'slotDispatcherIter|do_swl|do_swr' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
+rg -n -A80 'static inline .*do_swl|static inline .*do_swr|do_swl\(' lib/N64ModernRuntime/N64Recomp/include/recomp.h lib/N64ModernRuntime/N64Recomp/src /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob '*.h' --glob '*.cpp' --glob '*.c'
 git diff --check
 ```
 

@@ -64472,3 +64472,25 @@ probe, or mitigation was added.
 
 ORIGIN: complete generated dynamic-writer inventory and host accessor review;
 no guest value mutation or mitigation.
+
+## Session 1183 (2026-08-14) — audited generated wide-store writers
+
+Completed the prescribed static M3 `SD`/wide-copy audit without building or
+running. The generated tree contains 1,356 `SD` sites whose base is not the
+ordinary `ctx->r29` frame pointer. The target-path caller census contains only
+ordinary `r29` frame stores plus 13 `zmemcpy` calls with fixed lengths
+`0x0E`, `0x30`, `0x58`, or `0x168`; their destinations are caller locals or
+bounded game structures. One target caller copies 0x30 bytes to `r29+0x48`,
+which is its own caller-local region, not the callee's saved-register frame.
+
+The `SD` macro writes exactly two guest words at the computed address, and the
+host RDRAM accessor preserves that computed destination; neither adds hidden
+address masking or span broadening. The remaining non-`r29` sites are in
+utility/audio/data-like or malformed/unreachable generated regions, with no
+enumerated mission/cinematic edge to the target frame. This selects H3 and
+rules out the wide-store/accessor class as the current origin. No build,
+runtime probe, or mitigation was added.
+
+ORIGIN: generated `SD` sites and `zmemcpy` destination/length expressions;
+the reviewed writers are legitimate frame-local or bounded data writes, and
+no writer-to-target-frame edge was established.

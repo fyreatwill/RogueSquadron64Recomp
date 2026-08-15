@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1181 (2026-08-14).
+in the ledger. Reviewed through s1183 (2026-08-14).
 
 ## Current state
 
@@ -71,6 +71,15 @@ in the ledger. Reviewed through s1181 (2026-08-14).
   and flash writes are bounded to their device/state structures. This selects
   H3 for the writer-class audit: no named writer-to-frame edge or legitimate/
   corrupt value origin was established, and no mitigation was added.
+- The s1183 complete generated wide-store audit found 1,356 non-`r29`
+  `SD` sites, but the target-path callers contain only ordinary `r29` frame
+  stores plus 13 `zmemcpy` calls with fixed lengths. Their destinations are
+  caller locals or bounded game structures; none has both a reachable
+  mission/cinematic edge and a span capable of covering the
+  `slotDispatcherIter` saved frame. The `SD` macro and host RDRAM accessor
+  both preserve the computed destination and add no hidden broadening. This
+  selects H3 and rules out the wide-store/accessor class as the current
+  origin; no mitigation was added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
@@ -504,6 +513,7 @@ corruption.
 | s1180 | Completed the static earlier-`$sp` value-origin audit without building or running. The 144 direct `slotDispatcherIter` sites across 72 callers contain only balanced frame arithmetic; no caller has a non-prologue `r29` load or assignment. Runtime code has one executable `r29` initializer, `run_thread_function` from the scheduler's thread `sp`; hook/event paths preserve whole contexts but do not replace it. This selects H3 and rules out a direct caller-side or named runtime context handoff as the invalid-value source. The next unit is an earlier guest value-producer audit; no mitigation was added. |
 | s1181 | Completed the whole generated `r29` assignment and context-edge audit without building or running. There are 4,919 `ctx->r29` assignments; 67 are outside ordinary frame arithmetic, with five valid `r30` frame setups, three entrypoint bootstrap writes, and 59 assignments in unrelated/data-like audio, OS, and helper blocks. The 144 target callsites remain balanced, no generated alternate context is constructed, and none of the enumerated producer blocks has a call edge into the target family. This selects H3 and moves the investigation to broader guest memory/value writers; no mitigation was added. |
 | s1182 | Completed the broader generated dynamic-writer census without building or running. It enumerated 72 `zmemcpy`, 20 `memcpy_recomp`, four `osPiStartDma_recomp`, 13 controller, and flash helper sites. Dynamic copy/DMA destinations have no proven mission/cinematic edge plus frame-overlap span; controller and flash writes are bounded to their own structures. This selects H3 and rules out a named reachable writer-to-frame edge; no mitigation was added. |
+| s1183 | Completed the generated `SD`/wide-copy audit without building or running. It classified 1,356 non-`r29` `SD` sites and 13 target-path `zmemcpy` calls; target callers use ordinary frame-local stores and fixed bounded copy lengths, with no reachable destination/span covering the `slotDispatcherIter` saved frame. The `SD` macro and host accessor add no hidden broadening. H3 selected; no mitigation added. |
 
 ## Ranked next steps
 
@@ -513,10 +523,10 @@ corruption.
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
 2. Continue the M3 systematic static audit with the next highest-information
-   dynamic-store idiom: generated `SD`/wide-copy writers and their host-side
+   partial-store idiom: generated `do_swl`/`do_swr` writers and their host-side
    RDRAM accessors. Enumerate each reachable writer, its destination expression,
-   and whether it can span the `slotDispatcherIter` saved frame before adding
-   instrumentation or a guard.
+   and whether the paired writes can span the `slotDispatcherIter` saved frame
+   before adding instrumentation or a guard.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry
