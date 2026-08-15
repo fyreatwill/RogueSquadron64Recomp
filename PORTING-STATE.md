@@ -72096,3 +72096,41 @@ M5 audio de-stubbing. The next adjacent generated function is
 independently named `audioCompandS16` at `0x8009DD7C` (TOML still
 `func_8009DD7C`, size `0x54`; overlay last-entry `rom_size` is `0x73B4`
 and the live body ends at `jr $ra` / `andi $t2, $t2, 0xFFFF`).
+
+## Session 1485 (2026-08-15) — synchronized the audio-compand-s16 symbol
+
+Performed the bounded exact-name census over `0x8009DD7C..0x8009DDD0`.
+
+No new soak-queue verdicts since s1484; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_8009DD7C`, size `0x54`; `0x8009DD7C+0x54=0x8009DDD0`. Overlay last-entry `rom_size` is `0x73B4` at offset `0x0009D93C` (`0x8009DD7C-0x80000440`); that is the remaining main-overlay section, not the function. Live body is independently `0x54` and meets companion data `WedgesControllerSettings` at `0x8009DDD0` |
+| Generated definition | `funcs_27.c` defines `audioCompandS16` at `0x8009DD7C`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x54` function after independently named `audioMixSampleS16_3_1`. It starts `bgez $t2, L_8009DD8C` / `addu $t4, $zero, $zero` and ends at `jr $ra` / `andi $t2, $t2, 0xFFFF` (`0x8009DDC8`/`0x8009DDCC`). Generated words after `0x8009DDD0` (`b L_8009DDF4`, `sllv $zero`, `j L_80000400`, never-taken `bltz $zero`) are data-like and match controller-settings words, not a live tail |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `audioCompandS16 = 0x8009DD7C` and `WedgesControllerSettings = 0x8009DDD0`. The three preceding helpers are documented as falling through to this saturator. Menu, mission, cinematic, ignored, libultra, and zlib lists do not remap `0x8009DD7C`. No companion C/asm body exists |
+| Caller evidence | Three generated tail-calls: independently named `audioMixSampleS16_1_3`, `audioMixSampleS16_1_1`, and `audioMixSampleS16_3_1` each `b L_8009DD7C` after forming a weighted s16 mix in `$t2`. Independently named `audioMixStereoBlock8` has one `bltzal $zero, L_8009DD7C` site (never taken; link-address capture). Independently named `renderVoiceAudioBlock` installs a `$t3` mix-function pointer onto those helpers (s1484), which then tail-call this saturator. Whole-ROM scan found zero `jal` encodings (`0x0C02775F`), zero `j` encodings (`0x0802775F`), and zero absolute `0x8009DD7C` pointer words |
+| Semantic evidence | Retail ROM words at file `0x9E97C` (`(vram&0xFFFFFF)+0xC00`) are `0x05410003` / `0x00006021` / `0x000A5023` / `0x340C0001` / `0x2541D4CD` / `0x04200006` / `0x000A0840` / `0x2541B19A` / `0x04200003` / `0x25412B33` / `0x000A0883` / `0x24216600` / `0x242A8001` / `0x19400002` / `0x00205021` / `0x340A7FFF` / `0x15800002` / `0x000A5023` / `0x000A5023` / `0x03E00008` / `0x314AFFFF` (`bgez $t2` / `addu $t4, $zero, $zero` / `negu $t2` / `ori $t4, 1` / `addiu $at, $t2, -0x2B33` / `bltz` / `sll $at, $t2, 1` / `addiu $at, $t2, -0x4E66` / `bltz` / `addiu $at, $t2, 0x2B33` / `sra $at, $t2, 2` / `addiu $at, 0x6600` / clamp vs `0x7FFF` / restore sign via `$t4` / `jr $ra` / `andi $t2, 0xFFFF`). Same-run positive controls: `0x8009D7D0` file `0x9E3D0` is `0x2481FFF9`, `0x8009D8C4` file `0x9E4C4` is `0x848B0166`, `0x8009D980` file `0x9E580` is `0x852A0000`, `0x8009DB44` file `0x9E744` is `0x27BDFFBC`, previous helper start `0x8009DD64` file `0x9E964` is `0x000A5043`, this start `0x8009DD7C` file `0x9E97C` is `0x05410003`, and next data `0x8009DDD0` file `0x9E9D0` is `0x10000008`. Arithmetic is the 3-region piecewise-linear soft-clip on `$t2`: `\|x\|<0x2B33 → 2x`, `<0x4E66 → x+0x2B33`, else `x/4+0x6600`; clamp `±0x7FFF`; restore sign. Matches the companion comment |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009DD7C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x54`, the three named mix helpers tail-call it, and there is
+neither a conflicting companion name nor a size split inside the live
+body. The oversized overlay last-entry `rom_size` `0x73B4` is the
+section remainder and is not H2. The stale address-encoded TOML entry
+was synchronized (name only; size left at `0x54`).
+`func_8009D978` remains the eight-byte Q15 delay-mix table and was left
+unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. After `0x8009DDD0` the main overlay is data; the
+next adjacent generated function is independently named
+`cinematicLoopBody` at `0x800A5D80` (TOML still `func_800A5D80`, size
+`0x8A0`; overlay `rom_size` is `0x8A0` and the live body ends at
+`jr $ra` / `addiu $sp, $sp, 0xD8`).

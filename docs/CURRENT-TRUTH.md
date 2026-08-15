@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1484 (2026-08-15).
+the authority for session detail. Reviewed through s1485 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1484 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009DD7C..0x8009DDD0`.
+   census over the next adjacent function, `0x800A5D80..0x800A6620`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -86,13 +86,17 @@ the authority for session detail. Reviewed through s1484 (2026-08-15).
    `audioMixSampleS16_1_1` at `0x8009DD54` (H1; generated already
    named; TOML was `func_8009DD54`). s1484 synchronized
    `audioMixSampleS16_3_1` at `0x8009DD64` (H1; generated already
-   named; TOML was `func_8009DD64`). The generated entry at
-   `0x8009DD7C` is already `audioCompandS16`; TOML is still
-   `func_8009DD7C` (size `0x54`). Overlay last-entry `rom_size` is
-   `0x73B4` (section remainder). Live body is `0x54` and ends at
-   `jr $ra` / `andi $t2, $t2, 0xFFFF` (`0x8009DDC8`/`0x8009DDCC`);
-   generated tail after `0x8009DDD0` is data-like. Confirm companion,
-   size, callers, and semantics before synchronizing.
+   named; TOML was `func_8009DD64`). s1485 synchronized
+   `audioCompandS16` at `0x8009DD7C` (H1; generated already named;
+   TOML was `func_8009DD7C`; overlay last-entry `rom_size` `0x73B4`
+   is the section remainder, not the live `0x54` body). After
+   `0x8009DDD0` the main overlay is data (controller settings through
+   `aspMainDataStart`); the next generated function is independently
+   named `cinematicLoopBody` at `0x800A5D80` in `.ovl.cinematic`.
+   TOML is still `func_800A5D80` (size `0x8A0`, meets independently
+   named `load_cutscene` at `0x800A6620`). Overlay `rom_size` is
+   `0x8A0`. Confirm companion, size, callers, and semantics before
+   synchronizing.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -383,6 +387,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1482 | Exact companion/generated s16-mix census synchronized `audioMixSampleS16_1_3` at `0x8009DD3C`; no build or runtime run. |
 | s1483 | Exact companion/generated s16-mix census synchronized `audioMixSampleS16_1_1` at `0x8009DD54`; no build or runtime run. |
 | s1484 | Exact companion/generated s16-mix census synchronized `audioMixSampleS16_3_1` at `0x8009DD64`; no build or runtime run. |
+| s1485 | Exact companion/generated s16-compand census synchronized `audioCompandS16` at `0x8009DD7C`; no build or runtime run. |
 
 ## Method and safety rules
 

@@ -1544,7 +1544,7 @@ functions = [
     { name = "audioMixSampleS16_1_3", vram = 0x8009DD3C, size = 0x18 },
     { name = "audioMixSampleS16_1_1", vram = 0x8009DD54, size = 0x10 },
     { name = "audioMixSampleS16_3_1", vram = 0x8009DD64, size = 0x18 },
-    { name = "func_8009DD7C", vram = 0x8009DD7C, size = 0x54 },
+    { name = "audioCompandS16", vram = 0x8009DD7C, size = 0x54 },
     { name = "runAiAudioStreamPlaybackLoop", vram = 0x8008ED70, size = 0x150 },
 ]
 
