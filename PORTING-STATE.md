@@ -70563,3 +70563,36 @@ epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `enqueueSoundInPriorityGroup` at `0x80099394`.
+
+## Session 1440 (2026-08-15) — synchronized the enqueue-sound-in-priority-group symbol
+
+Performed the bounded exact-name census over `0x80099394..0x8009952C`.
+
+No new soak-queue verdicts since s1439; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80099394`, size `0x198`; `0x80099394+0x198=0x8009952C`. Overlay `rom_size` is `0x198` at offset `0x00098F54` (`0x80099394-0x80000440`). Generated body starts `addiu $sp, $sp, -0x8` at `0x80099394` and ends `jr $ra` / `nop` at `0x80099524` / `0x80099528` |
+| Generated definition | `funcs_26.c` defines `enqueueSoundInPriorityGroup` at `0x80099394`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x198` function between independently named `unlinkMusyXListNode` at `0x80099310` and generated `enqueueSpatialSoundInPriorityGroup` at `0x8009952C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `enqueueSoundInPriorityGroup = 0x80099394`. Menu, mission, cinematic, and ignored lists do not remap `0x80099394`. Sibling `enqueueSpatialSoundInPriorityGroup` at `0x8009952C` is a different function (spatial enqueue). No conflicting companion name. s901 independently classified the same body as a priority-group enqueue |
+| Caller evidence | Exactly one generated `jal 0x80099394` site, inside independently named `update3DAudioFrame` at `0x80099B0C`: `a0 = s0` (sound record) and `a1` = float priority from `sp+0x18`. The same caller jal's `0x8009952C` on the spatial path. Zero `func_*` callers |
+| Semantic evidence | Body loads group count `D_80152EF0` and the record's `+0x38` group key, then scans table `D_80152D70` in `0xC` strides. A miss allocates a new slot (clears `D_80152D74/78`, stores the key, increments the count). It then walks the per-group list at `D_80152D78` comparing the incoming float against node `+0x4` and inserts a 12-byte queue node from pool `D_80153290` / cursor `D_80153410` (`next`, priority, record pointer). That matches the companion name |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80099394`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x198`, the single `jal` caller is the independently named 3D-audio
+frame path, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x198`). `fake_func_80097D58` remains the already-fake two-instruction
+epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`enqueueSpatialSoundInPriorityGroup` at `0x8009952C`.
