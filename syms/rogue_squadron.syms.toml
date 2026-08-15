@@ -1440,7 +1440,7 @@ functions = [
     { name = "stepSongPitchBendLanes", vram = 0x80094EE4, size = 0x1AC },
     { name = "stepSongModulationLanes", vram = 0x80095090, size = 0x1B4 },
     { name = "advanceSongRegion", vram = 0x80095244, size = 0x36C },
-    { name = "func_800955B0", vram = 0x800955B0, size = 0x150 },
+    { name = "updateSongTempoTickRate", vram = 0x800955B0, size = 0x150 },
     { name = "func_80095700", vram = 0x80095700, size = 0xAC },
     { name = "func_800957AC", vram = 0x800957AC, size = 0x80 },
     { name = "func_8009582C", vram = 0x8009582C, size = 0x268 },

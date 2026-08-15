@@ -68848,3 +68848,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `updateSongTempoTickRate` at `0x800955B0`.
+
+## Session 1385 (2026-08-15) — synchronized the update-song-tempo-tick-rate symbol
+
+Performed the bounded exact-name census over `0x800955B0..0x80095700`.
+
+No new soak-queue verdicts since s1384; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800955B0`, size `0x150`; `0x800955B0+0x150=0x80095700`. Overlay `rom_size` is `0x150`. Generated prologue at `0x800955B0` (`lui $v0, 0x8015`) then `addiu $sp, $sp, -0x18` at `0x800955B8`, and `jr $ra` at `0x800956F8` with delay `nop` at `0x800956FC` |
+| Generated definition | `funcs_25.c` defines `updateSongTempoTickRate` at `0x800955B0`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `getSongParamByHandle` at `0x80095700` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `updateSongTempoTickRate = 0x800955B0`. The same file independently names the preceding real function `advanceSongRegion` at `0x80095244` and the following real function `getSongParamByHandle` at `0x80095700`. Menu, mission, and cinematic lists do not remap it. The sequential `defined:true` list records `startSongSequence` then jumps to `fake_func_8009711C` and does not remap this address |
+| Caller evidence | One generated `jal 0x800955B0` site: `advanceSongRegion` at `0x8009532C`. After the region wrap/reset it loads `table+0x10C` then `+0x14` into `$a0` and calls this helper. Companion independently names that caller |
+| Semantic evidence | Loads the song-tick table pointer at `0x801529C0`. Copies table+`0xE68` to +`0xE6C`, stores `$a0` (the caller-supplied tempo-event list) at +`0xE74`, and zeros +`0xE70`. Walks 8-byte events until word `-1`; when accumulated tick (`stored $a0` + table+`0x120`) is not less than the event time, stores event+4 to table+`0x124` and calls already-named `setTrackVoiceTickBudget`. Then divides `(MEM_W[0x80142038] << 16)` by `MEM_W[0x801440C0]` — the same global-tempo / divisor pair the companion documents on `tickAudioSequencerFrame` — and scales table+`0x124` by `3<<9`, magic `0x88888889`, that quotient, and halfword +`0xEC2`. Writes the high bits to table+`0x11C`, mid bits to +`0x118`, and half of `0x11C` to +`0x120` (the tick increment `advanceSongRegion` reads). Matches a tempo/tick-rate updater. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800955B0`: the companion and
+generated names agree, the body is a complete tempo-event walker and
+tick-rate writer of matching size `0x150`, and there is neither a
+conflicting companion name nor a size split. H2 and H3 are ruled out for
+this address. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x150`). `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `getSongParamByHandle` at `0x80095700`.
