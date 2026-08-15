@@ -1,9 +1,9 @@
-# NEXT work unit (s1356)
+# NEXT work unit (s1357)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x800928D4..0x80092A54`. Do not build or run. Record its address,
+function, `0x80092A54..0x80092BA8`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -26,7 +26,7 @@ H3.
 Commands:
 
 ```
-grep -n -C 5 '800928D4\|80092A54' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '800928D4\|80092A54' ../N64Recomp/RecompiledFuncs/funcs_24.c
-grep -n -C 3 '800928D4\|80092A54' syms/rogue_squadron.syms.toml
+grep -n -C 5 '80092A54\|80092BA8' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '80092A54\|80092BA8' ../N64Recomp/RecompiledFuncs/funcs_24.c
+grep -n -C 3 '80092A54\|80092BA8' syms/rogue_squadron.syms.toml
 ```

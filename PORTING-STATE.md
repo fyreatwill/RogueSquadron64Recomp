@@ -68002,3 +68002,30 @@ unchanged, as does `func_8008ED6C` (s1309 H2). No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio de-stubbing.
 The next adjacent generated function is the independently named
 `resampleVoiceLutSamples` at `0x800928D4`.
+
+## Session 1356 (2026-08-15) — synchronized the resample-voice-lut-samples symbol
+
+Performed the bounded exact-name census over `0x800928D4..0x80092A54`.
+
+No new soak-queue verdicts since s1355; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x800928D4`, size `0x180`; it ends exactly at the next generated function, `0x80092A54`. Overlay `rom_size` is `0x180` |
+| Generated definition | `funcs_24.c` defines `resampleVoiceLutSamples` at `0x800928D4`; `funcs.h` and `recomp_overlays.inl` already use that name. The `jr $ra` at `0x800929F4` is the normal return; the live zero-fill tail `0x800929FC..0x80092A50` is reached from the exhausted-source branch and joins the epilogue at `L_800929C4`. Reused labels `L_800929FC`/`04`/`0C`/`10` on `func_80092A54` are a N64Recomp artifact |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `resampleVoiceLutSamples = 0x800928D4`. The same file independently names the adjacent wrappers `resampleVoicePointTableSamples` at `0x8009264C` and `resampleVoiceConstantSamples` at `0x80092BA8`. The sequential `defined:true` list jumps from `func_800927B0` to `func_80092A54` and does not remap this address. No later companion list remaps it |
+| Caller evidence | No generated `jal 0x800928D4` exists; the sibling resample wrappers (`0x8009264C`, `0x80092BA8`, `0x80092E48`) likewise have no direct jal. This function is the outer wrapper: it `jal`s the inner kernel `func_80092A54` twice per output pair. The ROM has no literal `0x800928D4` word, so the format dispatch is not a static pointer table |
+| Semantic evidence | Loads a voice/render context from `$a0` (source, dest, end, loop, output count, step, scale) and interpolation state from `$a1` when `$a2!=1`. Mode `$a2==1` reads successive u8 samples, indexes the s16 LUT at `D_800A1790` (`sample<<1` + `0x800A1790`), differences adjacent LUT entries, and multiplies by the scale; the inner kernel packs the interpolated pair and this wrapper `sd`s it with `cache 0x19` writeback. Exhausted sources zero-fill. That is linear interpolation from an 8-bit-indexed voice LUT |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x180` boundary is exact, and the body is a LUT voice resampler in the
+independently named resample family. H2 and H3 are ruled out for this
+function; there is neither a partial/conflicting match nor an absent
+independent name. The stale address-encoded TOML entry was synchronized.
+`func_800927B0` and `func_8008ED6C` were left unchanged. No build or runtime
+run was justified for an exact-name census. This does not reopen M5 audio
+de-stubbing.

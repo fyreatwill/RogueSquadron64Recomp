@@ -1408,7 +1408,7 @@ functions = [
     { name = "relocateSndPointer", vram = 0x800925F4, size = 0x58 },
     { name = "resampleVoicePointTableSamples", vram = 0x8009264C, size = 0x164 },
     { name = "func_800927B0", vram = 0x800927B0, size = 0x124 },
-    { name = "func_800928D4", vram = 0x800928D4, size = 0x180 },
+    { name = "resampleVoiceLutSamples", vram = 0x800928D4, size = 0x180 },
     { name = "func_80092A54", vram = 0x80092A54, size = 0x154 },
     { name = "func_80092BA8", vram = 0x80092BA8, size = 0xC4 },
     { name = "func_80092CF0", vram = 0x80092CF0, size = 0x158 },
