@@ -67561,3 +67561,28 @@ partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio de-stubbing.
 
+
+## Session 1339 (2026-08-15) — synchronized the musyx-store-voice-adsr-params symbol
+
+Performed the bounded exact-name census over `0x800922C4..0x8009231C`.
+
+No new soak-queue verdicts since s1338; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x800922C4`, size `0x58`; it ends exactly at the next generated function, `0x8009231C`. Overlay `rom_size` is `0x58` |
+| Generated definition | `funcs_24.c` defines `musyxStoreVoiceAdsrParams` at `0x800922C4`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxStoreVoiceAdsrParams = 0x800922C4` with the annotated contract `writes attack+0x28 decay+0x2A sustain(float)+0x2C release+0x30 into the 0x88 voice slot` and names the next function `musyxTriggerVoiceAttack` at `0x8009231C` |
+| Caller evidence | One generated `jal 0x800922C4` site: `musyxSetVoiceAdsrFromTable` at `0x8008A9DC` (companion-named SoundMacro op 0x0C SetAdsr, already synchronized). After a four-halfword byte-swap it passes voice index from channel `+0x67` in `a0` and the swapped ADSR block at `sp+0x10` in `a1` |
+| Semantic evidence | Slot index is `voiceIdx * 0x88` against the voice-array base at `0x801496F8`. The body stores `a1+0` into `+0x28`, `a1+2` into `+0x2A`, converts `a1+4` to float and writes `+0x2C`, then stores `a1+6` into `+0x30`. That is exactly the companion ADSR-store contract |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x58` boundary is exact, and the body is the SetAdsr voice-slot writer.
+H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio de-stubbing.
