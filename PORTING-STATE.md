@@ -67209,3 +67209,28 @@ builds a command list and mixes per output block. H2 and H3 are ruled out
 for this function; there is neither a partial/conflicting match nor an
 absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1325 (2026-08-15) — synchronized the N64 RSP mixer-init symbol
+
+Performed the bounded exact-name census over `0x8009189C..0x80091B3C`.
+
+No new soak-queue verdicts since s1324; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8009189C`, size `0x2A0`; it ends exactly at the next generated function, `0x80091B3C`. Overlay `rom_size` is `0x2A0` |
+| Generated definition | `funcs_24.c` defines `initN64RspMixer` at `0x8009189C` through the matching epilogue at `0x80091B34`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `initN64RspMixer = 0x8009189C`. No later companion list remaps this address |
+| Caller evidence | Two generated sites: `initAudioSubsystem` (`0x80091B3C`) at `jal 0x8009189C` and `reapplyAudioConfig` (`0x80091C88`) at `jal 0x8009189C`. Companion independently names both callers and comments that each installs or reconfigures the mixer through this function |
+| Semantic evidence | Body clamps the `u16` voice-count argument to `0x20`, then writes five DMEM-mixer callback words at `0x801499D0..0x801499E0`. It then `jal 0x8008F0A0` / `jal 0x8008F2FC` (`allocateSongChannelArray`, `setupSongRenderBuffers`) |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x2A0` boundary is exact, and the body is the MusyX RSP-mixer initializer.
+H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.

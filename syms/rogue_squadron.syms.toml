@@ -1377,7 +1377,7 @@ functions = [
     { name = "musyxMixActiveVoices", vram = 0x80090E04, size = 0x230 },
     { name = "musyxBuildVoiceCommandList", vram = 0x80091034, size = 0x208 },
     { name = "musyxSynthFrame", vram = 0x8009123C, size = 0x660 },
-    { name = "func_8009189C", vram = 0x8009189C, size = 0x2A0 },
+    { name = "initN64RspMixer", vram = 0x8009189C, size = 0x2A0 },
     { name = "func_80091B3C", vram = 0x80091B3C, size = 0x14C },
     { name = "func_80091C88", vram = 0x80091C88, size = 0xB8 },
     { name = "func_80091D40", vram = 0x80091D40, size = 0x170 },
