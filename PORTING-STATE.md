@@ -69915,3 +69915,35 @@ unchanged, as were `fake_func_80094348`, `fake_func_80093E74`,
 census. This does not reopen M5 audio de-stubbing. The next adjacent
 generated function is the independently named `playSongById` at
 `0x80097C2C`.
+
+## Session 1420 (2026-08-15) — synchronized the play-song-by-id symbol
+
+Performed the bounded exact-name census over `0x80097C2C..0x80097D58`.
+
+No new soak-queue verdicts since s1419; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80097C2C`, size `0x12C`; `0x80097C2C+0x12C=0x80097D58`. Overlay `rom_size` is `0x12C` at offset `0x000977EC` (`0x80097C2C-0x80000440`). Generated body starts `lui $v0, 0x800A` at `0x80097C2C` and ends `jr $ra` / `nop` at `0x80097D50` / `0x80097D54` |
+| Generated definition | `funcs_26.c` defines `playSongById` at `0x80097C2C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x12C` function between already-named `playSongByIdLockCtl` (`jr`/`nop` at `0x80097C24`/`0x80097C28`) and already-fake `fake_func_80097D58` at `0x80097D58` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `playSongById = 0x80097C2C` in the song-command dispatch list. Menu, mission, cinematic, and ignored lists do not remap `0x80097C2C`. No conflicting companion name |
+| Caller evidence | Fourteen generated `jal 0x80097C2C` sites in independently named gameplay/menu callers: `processSongByHandle` at `0x80096C0C`, `spawnCutsceneEffectsAndCues`, `mallocCraftSelectionData`, `initCraftSelectScreen`, `menuControllerInput`, `runMenuRandomBackdropScreen` (two sites), `runMenuShipSelectScreen`, `menuSubtype02Handler` (three sites), `runModelViewerSoundDemo`, and `tickActiveSongSlots` (two sites). Companion independently names this as the public play-by-id entry with many overlay callers. `startSongSequence` at `0x80094350` lists this function as a caller |
+| Semantic evidence | Body gates on the MusyX-active byte at `0x800A0F50`, walks the song-bank table at `0x801529D0` (count `0x80152A10`, sub-entry stride `0x84`) matching `(sgid,sid)`, then `factor5MutexAcquire` / `startSongSequence` / `factor5MutexRelease`. That is the always-locked public wrapper of the already-named `playSongByIdLockCtl` path. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80097C2C`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x12C`, the fourteen `jal` callers match the public play-by-id role, and
+there is neither a conflicting companion name nor a size split. H2 and H3
+are ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x12C`). `fake_func_80097D58` is
+the already-fake two-instruction epilogue fragment (`lw $fp, 0x88($sp)` /
+`addiu $sp, $sp, 0x90`) and was left unchanged, as were `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is
+the independently named `clearStreamedVoiceFlags` at `0x80097D60`.

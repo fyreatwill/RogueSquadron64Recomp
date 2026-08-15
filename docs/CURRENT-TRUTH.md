@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1419 (2026-08-15).
+the authority for session detail. Reviewed through s1420 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1419 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80097C2C..0x80097D58`.
+   census over the next adjacent function, `0x80097D60..0x80097DA8`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -58,9 +58,11 @@ the authority for session detail. Reviewed through s1419 (2026-08-15).
    `resampleVoiceLutSamplesPacked`), `fake_func_80093E74`
    unchanged (s1369: already-fake three-instruction epilogue fragment),
    `fake_func_80094348` unchanged (s1378: already-fake two-instruction
-   jump fragment before `startSongSequence`), and `fake_func_8009711C`
+   jump fragment before `startSongSequence`), `fake_func_8009711C`
    unchanged (s1408: already-fake one-instruction jump fragment before
-   `resetSongSubsystemCounter`).
+   `resetSongSubsystemCounter`), and `fake_func_80097D58`
+   unchanged (s1420: already-fake two-instruction epilogue fragment
+   before `clearStreamedVoiceFlags`).
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -286,6 +288,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1417 | Exact companion/generated SND-unload census synchronized `unloadLastSndFileGroup` at `0x800978EC`; no build or runtime run. |
 | s1418 | Exact companion/generated audio-stub census synchronized `returnZeroAudioStub` at `0x80097AC8`; no build or runtime run. |
 | s1419 | Exact companion/generated song-play census synchronized `playSongByIdLockCtl` at `0x80097AD0`; no build or runtime run. |
+| s1420 | Exact companion/generated song-play census synchronized `playSongById` at `0x80097C2C`; left `fake_func_80097D58` unchanged; no build or runtime run. |
 
 ## Method and safety rules
 
