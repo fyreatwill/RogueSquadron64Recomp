@@ -64397,3 +64397,24 @@ replacement is not supported. It rules out a `$sp` guard or wrapper restore as
 an explanation, but does not identify the writer that corrupts guest stack
 memory/value contents. The next unit is a complete stack-memory writer-class
 census; no mitigation was added.
+
+## Session 1179 (2026-08-14) — completed guest stack-memory writer census
+
+Performed the planned static M3 work unit with no build or runtime experiment.
+The generated tree contains 18,773 stack-relative stores across 1,719
+functions: 17,457 word stores, 682 halfword stores, and 634 byte stores. The
+`slotDispatcherIter` body has only its own saved-register prologue stores,
+including the faulting `MEM_W(0x1C, ctx->r29)` at guest `0x8003E90C`; no other
+generated site names that frame as a destination. The host/runtime census found
+generic dynamically addressed PI/RSP DMA, zmemcpy, controller/flash, and
+diagnostic RDRAM writers, but no statically named edge into the failing frame.
+
+This selects H3 for the planned discriminator: no concrete writer-to-frame edge
+was established, so the apparent prologue fault remains an earlier guest
+`$sp` value-origin problem. It rules out naming a generated or runtime frame
+writer from this census and does not justify a guard or value rewrite. The next
+unit is a static audit of every caller-side `$sp` computation/load and its
+context-producing edge.
+
+ORIGIN: generated store census plus runtime RDRAM-write inventory; no guest
+value mutation or mitigation.

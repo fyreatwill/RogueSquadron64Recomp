@@ -43,6 +43,14 @@ in the ledger. Reviewed through s1177 (2026-08-14).
   generated caller census, this selects H3 for the context-writer branch:
   the remaining `slotDispatcherIter+872` origin is guest stack-memory/value
   corruption, not a direct `$sp` replacement. No mitigation was added.
+- The s1179 complete stack-memory writer census found 18,773 generated
+  stack-relative stores across 1,719 functions (17,457 word, 682 halfword,
+  634 byte). `slotDispatcherIter`'s exact prologue stores are the only
+  concrete writes to its saved-register frame; runtime writers are generic
+  dynamically addressed PI/RSP DMA, zmemcpy, controller/flash, and diagnostic
+  paths with no statically named edge into the failing frame. This selects H3:
+  no writer-to-frame edge is established, so the next audit moves to the
+  earlier guest `$sp` value origin. No mitigation was added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
@@ -480,11 +488,11 @@ corruption.
    reaches an audio-initialization or voice-allocation phase beyond the driven
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
-2. Audit the complete guest stack-memory writer class for the
-   `slotDispatcherIter+872` fault. Start with the failing caller's frame range
-   and enumerate generated stores plus host/runtime RDRAM writes that can
-   overlap it. Do not add a guard until the writer is named and its value is
-   classified as legitimate or corrupt.
+2. Audit the earlier guest `$sp` value origin for the `slotDispatcherIter+872`
+   fault. Trace every generated computation and load feeding the 72 direct
+   caller entries, then classify whether any path can produce the observed
+   invalid frame value. Do not add a guard until the producer is named and its
+   value is classified as legitimate or corrupt.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry
