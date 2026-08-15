@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1473 (2026-08-15).
+the authority for session detail. Reviewed through s1474 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1473 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009C5BC..0x8009C904`.
+   census over the next adjacent function, `0x8009C904..0x8009D7CC`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -70,11 +70,11 @@ the authority for session detail. Reviewed through s1473 (2026-08-15).
    misparsed RSP text lump, not a CPU function), and
    `fake_func_8009C2C8` unchanged (s1471 H2: already-fake
    two-instruction COP1 multiply-accumulate fragment before
-   `computeVoicePanCoefficients`). s1473 synchronized
-   `updateVoiceChannelParams` at `0x8009C4E8` (H1; generated
-   already named; TOML was `func_8009C4E8`). The generated entry at
-   `0x8009C5BC` is already `updateVoiceChannelParamsLarge`; the TOML
-   entry is still `func_8009C5BC`.
+   `computeVoicePanCoefficients`). s1474 synchronized
+   `updateVoiceChannelParamsLarge` at `0x8009C5BC` (H1; generated
+   already named; TOML was `func_8009C5BC`). The generated entry at
+   `0x8009C904` is already `decodeAndFillVoiceBlock`; the TOML
+   entry is still `func_8009C904`.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -354,6 +354,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1471 | Exact companion/generated census selected H2 for already-fake `fake_func_8009C2C8` at `0x8009C2C8` (two-instruction COP1 fragment); left unchanged; no build or runtime run. |
 | s1472 | Exact companion/generated voice-pan census synchronized `computeVoicePanCoefficients` at `0x8009C2D0`; no build or runtime run. |
 | s1473 | Exact companion/generated voice-channel census synchronized `updateVoiceChannelParams` at `0x8009C4E8`; no build or runtime run. |
+| s1474 | Exact companion/generated voice-channel census synchronized `updateVoiceChannelParamsLarge` at `0x8009C5BC`; no build or runtime run. |
 
 ## Method and safety rules
 

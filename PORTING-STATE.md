@@ -71702,3 +71702,37 @@ exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is independently named
 `updateVoiceChannelParamsLarge` at `0x8009C5BC` (TOML still
 `func_8009C5BC`).
+
+## Session 1474 (2026-08-15) — synchronized the update-voice-channel-params-large symbol
+
+Performed the bounded exact-name census over `0x8009C5BC..0x8009C904`.
+
+No new soak-queue verdicts since s1473; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009C5BC`, size `0x348`; `0x8009C5BC+0x348=0x8009C904`. Overlay `rom_size` is `0x348` at offset `0x0009C17C` (`0x8009C5BC-0x80000440`) |
+| Generated definition | `funcs_27.c` defines `updateVoiceChannelParamsLarge` at `0x8009C5BC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x348` function between independently named `updateVoiceChannelParams` at `0x8009C4E8` and generated `decodeAndFillVoiceBlock` at `0x8009C904`. It ends `jr $ra` / `nop` at `0x8009C8FC` / `0x8009C900` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `updateVoiceChannelParamsLarge = 0x8009C5BC` (batch7 voice-synth list). Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009C5BC`. No companion C/asm body exists |
+| Caller evidence | Zero generated `jal 0x8009C5BC` sites and zero `func_*` callers. Whole-ROM scan found zero `jal`/`j` encodings (`0x0C02716F` / `0x0802716F`) and zero absolute `0x8009C5BC` pointer words. Same as the smaller sibling: callers are not a static main-text jal (compressed overlay or constructed pointer remain open and do not split the name) |
+| Semantic evidence | Retail ROM words at file `0x9D1BC` (`(vram&0xFFFFFF)+0xC00`) are `0x27BDFEE0` (`addiu $sp, $sp, -0x120`). Same-run positive controls: `0x8009C2BC` file `0x9CEBC` is `0x24020004`, `0x8009C2C8` file `0x9CEC8` is `0x46041082`, `0x8009C2D0` file `0x9CED0` is `0x27BDFFE8`, `0x8009C4E8` file `0x9D0E8` is `0x27BDFF78`, `0x8009C8FC`/`0x8009C900` files `0x9D4FC`/`0x9D500` are `0x03E00008`/`0x00000000` (`jr $ra` / `nop`), and `0x8009C904` file `0x9D504` is `0x27BDFEC0`. The function saves `$a0` as the voice object (`$s7`) and `$a2` as `$fp`, unpacks packed channel-parameter bytes from `$a1` into stack halfword tables, then runs a four-iteration loop that calls independently named `filterVoiceSampleBlock` then `applyVoiceDelayFilter` while advancing paired halfword streams and a `+0x1A` stride, then calls independently named `computeVoicePanCoefficients` with the voice object as `$a0`/`$a2`. It is the packed larger sibling of `updateVoiceChannelParams` (frame `0x120` vs `0x88`; the sibling takes already-unpacked halfword streams). Matches the companion name and s1472's independently named caller site at `0x8009C8C4` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009C5BC`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x348`, the unpack-then-four-iteration filter/delay/pan sequence matches
+the larger-sibling name, and there is neither a conflicting companion name
+nor a size split. Zero static jal sites do not select H2 or H3. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x348`). `fake_func_8009C2C8` remains the already-fake two-instruction
+COP1 fragment and was left unchanged, as were `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`decodeAndFillVoiceBlock` at `0x8009C904` (TOML still `func_8009C904`).
