@@ -1414,7 +1414,7 @@ functions = [
     { name = "func_80092CF0", vram = 0x80092CF0, size = 0x158 },
     { name = "resampleVoiceLutSamplesPacked", vram = 0x80092E48, size = 0xC8 },
     { name = "func_80092F10", vram = 0x80092F10, size = 0x84 },
-    { name = "func_80092F94", vram = 0x80092F94, size = 0x1B8 },
+    { name = "packFourLutResampledSamples", vram = 0x80092F94, size = 0x1B8 },
     { name = "func_8009314C", vram = 0x8009314C, size = 0x178 },
     { name = "func_800932C4", vram = 0x800932C4, size = 0x1E0 },
     { name = "func_800934A4", vram = 0x800934A4, size = 0x2C },

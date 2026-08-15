@@ -68148,3 +68148,33 @@ definition and no independent companion name. `func_800927B0`,
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is the
 independently named `packFourLutResampledSamples` at `0x80092F94`.
+
+## Session 1361 (2026-08-15) — synchronized the pack-four-lut-resampled-samples symbol
+
+Performed the bounded exact-name census over `0x80092F94..0x8009314C`.
+
+No new soak-queue verdicts since s1360; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80092F94`, size `0x1B8`; `0x80092F94+0x1B8=0x8009314C`. Overlay `rom_size` is `0x1B8`. Generated `jr $ra` at `0x80093144`, delay `or $t3,$t3,$t6` at `0x80093148` |
+| Generated definition | `funcs_24.c` defines `packFourLutResampledSamples` at `0x80092F94`; `funcs.h` and `recomp_overlays.inl` already use that name. Reused label `L_80092F10` at the function start is the N64Recomp artifact noted in s1360; the first instruction is `srl $t0,$t7,16` at `0x80092F94` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `packFourLutResampledSamples = 0x80092F94` with the force-applied comment. The sequential `defined:true` list places that name immediately after `func_80092CF0`. The later named list jumps from `resampleVoiceLutSamplesPacked = 0x80092E48` to `copyVoiceSamplesS16 = 0x8009314C` and does not remap this address. No later companion list remaps it |
+| Caller evidence | `resampleVoiceLutSamplesPacked` `jal`s `0x80092F94` twice per output pair (`0x80092EBC`, `0x80092EC8`). No other generated `jal 0x80092F94` exists. That is the inner pack kernel of the independently named packed LUT resampler |
+| Semantic evidence | Leaf kernel: reads adjacent LUT indices as bytes from `$t1`, `sll 1` plus `$s5` (LUT base), `lh`s, differences them, and `mult`s by the incoming phase fraction (`srl $t7,16`). AND/shift/OR packs four interpolated s16 halves into `$t3` and returns it in the `jr $ra` delay slot. That matches the independently reserved pack-four LUT name; s1355/s1357/s1359 parked the sibling inner kernels because this name was already reserved here |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the body is a complete four-sample LUT pack kernel of matching size `0x1B8`,
+and the only callers are the two `jal`s from the independently named packed
+LUT wrapper. H2 and H3 are ruled out; there is neither a partial/conflicting
+name nor an absent independent name. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x1B8`). `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C` were
+left unchanged. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is the independently named `copyVoiceSamplesS16` at
+`0x8009314C`.
