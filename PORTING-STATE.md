@@ -66045,3 +66045,16 @@ Performed the bounded exact-name census over `0x80085A94..0x8008603C`. The compl
 | `0x8008603C` | `0xD8` | `factor5SortedTableLookupValue` | same name in `main_overlay.txt` | paired with offset-4 comparator; no direct generated `jal` | exact/high |
 
 Generated boundaries match the repository sizes. H2 was selected: eight stale repository symbol-map entries were synchronized and the unmapped comparator helper was left unchanged. No build or runtime run was justified; this was a source census and symbol-map change.
+
+## Session 1268 (2026-08-15) — synchronized Factor 5 and audio table symbols
+
+Performed the bounded exact-name census over `0x80086114..0x800862F4`.
+The companion symbol file independently identifies all five generated entries
+as `compareHalfwordAtOffset4_v3`, `factor5SortedTableLookupTaggedValue`,
+`cmpU16ByValue`, `musyxSortedInsertByU16`, and
+`freeSynthVoiceFromActiveList`. Generated definitions and TOML sizes match;
+comparator/insertion call sites and companion descriptions provide semantic
+evidence. Synchronized all five stale entries in
+`syms/rogue_squadron.syms.toml`; H1 selected. No build or runtime run was
+needed, and this does not alter the open external retail-entry boundary or
+runtime SIGBUS investigation.

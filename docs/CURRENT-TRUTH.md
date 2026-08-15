@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1267 (2026-08-15).
+in the ledger. Reviewed through s1268 (2026-08-15).
 
 ## Current state
 
@@ -175,6 +175,7 @@ in the ledger. Reviewed through s1267 (2026-08-15).
 - The s1248 bounded `0x80075218..0x80075BB0` census found exact companion/generated names for all four functions: `buildRandomCameraFacingOrientation`, `spawnScaledOrientedEffectTriple`, `heavyRandomBurstNpcHandler`, and `buildNpcAnchoredCameraEffectTransform`. Generated C and the companion symbol file independently agree; the repository symbol map was synchronized. H1 selected; no build or run.
 - The s1266 bounded `0x80084AE8..0x8008588C` census found exact companion/generated names for all 20 entries: nine voice-modulator evaluators and eleven Factor 5 sorted/bucketed table helpers. Generated definitions and companion symbols independently agree, caller evidence is present for every entry, and existing sizes match; the repository symbol map was synchronized. H1 selected; no build or run.
 - The s1267 bounded `0x80085A94..0x8008603C` census found exact independent names for eight of nine entries: `factor5BucketedTableRemoveEntry`, `binarySearchWithComparator`, `factor5BucketedTableLookupValue`, `compareHalfwordAtOffset8`, `factor5SortedTableLookupWidePairRecord`, `compareHalfwordAtOffset4_v2`, `factor5SecondSortedTableLookupValue`, and `factor5SortedTableLookupValue`. Generated boundaries and TOML sizes match; direct callers exist for the bucketed/comparator helpers where emitted, while the sort/comparator pairings provide the remaining semantic evidence. `0x80085CD8` has no independent companion mapping and remains address-encoded. H2 selected; eight repository symbols were synchronized; no build or runtime run.
+- The s1268 bounded `0x80086114..0x800862F4` census found exact independent names for all five entries: `compareHalfwordAtOffset4_v3`, `factor5SortedTableLookupTaggedValue`, `cmpU16ByValue`, `musyxSortedInsertByU16`, and `freeSynthVoiceFromActiveList`. Generated boundaries and TOML sizes match; comparator/insertion call sites and companion descriptions provide independent semantic evidence. Five repository symbols were synchronized. H1 selected; no build or runtime run.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -256,7 +257,7 @@ in the ledger. Reviewed through s1267 (2026-08-15).
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
    exact-name sweep over the next adjacent region after
-   `0x80083EF4..0x80084860`;
+   `0x80086114..0x800862F4`;
    it needs no external retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -409,12 +410,21 @@ sort/comparator pairings provide the remaining semantic evidence.
 Eight repository symbols were synchronized; H2 selected. No runtime change or
 build was needed.
 
+The s1268 bounded `0x80086114..0x800862F4` census found exact independent names
+for all five entries: `compareHalfwordAtOffset4_v3`,
+`factor5SortedTableLookupTaggedValue`, `cmpU16ByValue`,
+`musyxSortedInsertByU16`, and `freeSynthVoiceFromActiveList`. Generated
+boundaries and TOML sizes match; comparator/insertion call sites and
+companion descriptions provide independent semantic evidence. Five stale
+repository symbols were synchronized. H1 selected; no build or runtime run
+was needed.
+
 ## Durable boundaries
 
 ### Next steps
 
 Continue the generated-symbol renaming sweep with the next adjacent region
-after `0x80083EF4..0x80084860`. Keep explicitly fake or address-encoded
+after `0x80086114..0x800862F4`. Keep explicitly fake or address-encoded
 entries unchanged and require an independent companion mapping before each
 rename.
 
@@ -535,6 +545,7 @@ order.
 | s1265 | The bounded `0x80083EF4..0x80084860` census found exact companion/generated names and matching sizes for all five entries: `getChannelByteParamAlt`, `resetChannelStateRecord`, `getChannelControllerValue`, `initVoiceModulatorRecords`, and `evaluateVoiceModulatorRecord`. Generated callers corroborate reset, controller, and evaluator paths; five stale symbol-map entries were synchronized. H1 selected; no build or run. |
 | s1266 | The bounded `0x80084AE8..0x8008588C` census found exact companion/generated names and matching sizes for all 20 entries: nine voice-modulator evaluators and eleven Factor 5 sorted/bucketed table helpers. Every entry had generated caller evidence; 20 stale symbol-map entries were synchronized. H1 selected; no build or run. |
 | s1267 | The bounded `0x80085A94..0x8008603C` census found exact independent names and matching sizes for eight of nine entries; `0x80085CD8` had no independent companion mapping and remained address-encoded. Eight stale symbol-map entries were synchronized. H2 selected; no build or run. |
+| s1268 | The bounded `0x80086114..0x800862F4` census found exact independent companion/generated names for all five entries and synchronized five stale symbol-map entries. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
