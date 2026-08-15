@@ -254,7 +254,7 @@ in the ledger. Reviewed through s1253 (2026-08-15).
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
    exact-name sweep over the next adjacent controller-helper region after
-   `0x80079CD8..0x8007A034`, beginning at `0x8007A068`; it needs no external
+   `0x8007A068..0x8007A260`, beginning at `0x8007A86C`; it needs no external
    retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -310,6 +310,17 @@ the independently labeled `fake_func_80079278`; generated definitions,
 companion symbols, and cross-file call sites agree for the six functions.
 The repository symbol map was synchronized. H1 selected; no runtime change
 or build was needed.
+
+The s1254 bounded `0x8007A068..0x8007A260` census found exact companion and
+generated names for all four real functions: `getControllerStickXPercentage`,
+`getControllerStickYPercentage`, `sampleRgbBoxFilter2x2AtSubpixel`, and
+`downscaleImageHalfResBoxFilter`. The `0x8007A0E8` entry is explicitly a
+`fake_func` padding entry. Generated definitions, companion symbols, sizes,
+and call sites agree; the repository symbol map was synchronized for the two
+stale entries. H1 was selected; no runtime change or build was needed. This
+rules out a repository-symbol naming mismatch in this controller/image-helper
+region, but does not explain the external retail-entry boundary or recurring
+runtime SIGBUS.
 
 ## Durable boundaries
 
@@ -416,6 +427,7 @@ order.
 | s1250 | The bounded `0x80076BE4..0x800779B4` census found exact companion/generated names for eight functions; two unnamed intervening helpers remain address-encoded. Synchronized the repository symbol map. H1 selected; no build or run. |
 | s1251 | The bounded `0x80077AC0..0x800791FC` census found exact companion/generated names for all four functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1252 | The bounded `0x80079278..0x80079C10` census found exact companion/generated names for six functions; the `0x80079278` padding entry remains `fake_func_80079278`. Synchronized the repository symbol map. H1 selected; no build or run. |
+| s1254 | The bounded `0x8007A068..0x8007A260` census found exact companion/generated names for four real functions; `0x8007A0E8` remains an explicitly fake padding entry. Synchronized two stale repository symbol-map entries. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |

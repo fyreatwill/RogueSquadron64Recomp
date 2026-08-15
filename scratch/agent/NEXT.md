@@ -1,10 +1,10 @@
-# NEXT work unit (s1254)
+# NEXT work unit (s1255)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The external retail-entry dependency remains open. Do not build or run.
 Perform one bounded generated-symbol naming sweep over the next adjacent
-controller-helper region, `0x8007A068..0x8007A260`. Record address, size,
+controller/image-helper region, `0x8007A86C..0x8007AD30`. Record address, size,
 generated definition, companion name/source, callers, and confidence before
 editing. Synchronize only exact names in `syms/rogue_squadron.syms.toml`.
 
@@ -23,7 +23,7 @@ H3. No runtime mitigation or experiment is justified.
 Exact commands:
 
 ```
-rg -n '8007A068|8007A0A8|8007A0E8|8007A0F0|8007A260' ../rogue_squadron64/symbol_files/main_overlay.txt syms/rogue_squadron.syms.toml ../N64Recomp/RecompiledFuncs/funcs_19.c
-rg -n -C 3 'getControllerStickXPercentage|getControllerStickYPercentage|sampleRgbBoxFilter2x2AtSubpixel|downscaleImageHalfResBoxFilter' ../rogue_squadron64/symbol_files/main_overlay.txt
-rg -n '8007A068|8007A0A8|8007A0E8|8007A0F0|8007A260' ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n '8007A86C|8007A870|8007A9C8|8007AD30' ../rogue_squadron64/symbol_files/main_overlay.txt syms/rogue_squadron.syms.toml ../N64Recomp/RecompiledFuncs/funcs_19.c
+rg -n -C 3 'allocateNpcMeshVertexBuffer|transformMeshVerticesForNpc|npcDeformingMeshUpdate' ../rogue_squadron64/symbol_files/main_overlay.txt
+rg -n '8007A86C|8007A870|8007A9C8|8007AD30' ../N64Recomp/RecompiledFuncs/funcs_19.c
 ```

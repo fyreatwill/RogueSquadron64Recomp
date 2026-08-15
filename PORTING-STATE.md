@@ -65791,3 +65791,23 @@ the repository symbol map was synchronized. No build or runtime run was
 needed. This rules out a repository-symbol naming mismatch in this controller
 region, but does not explain the external retail-entry boundary or recurring
 runtime SIGBUS.
+
+## Session 1254 (2026-08-15) — synchronized controller image-helper symbols
+
+Ran the planned bounded generated/companion census over
+`0x8007A068..0x8007A260`. The comparison table was:
+
+| VRAM | Generated definition | Companion symbol | Result |
+|---|---|---|---|
+| `0x8007A068` | `getControllerStickXPercentage` in `funcs_19.c` | `getControllerStickXPercentage` | exact |
+| `0x8007A0A8` | `getControllerStickYPercentage` in `funcs_19.c` | `getControllerStickYPercentage` | exact |
+| `0x8007A0E8` | explicit `fake_func_8007A0E8` padding entry | `fake_func_8007A0E8` | exact fake/padding entry |
+| `0x8007A0F0` | `sampleRgbBoxFilter2x2AtSubpixel` in `funcs_19.c` | `sampleRgbBoxFilter2x2AtSubpixel` | exact |
+| `0x8007A260` | `downscaleImageHalfResBoxFilter` in `funcs_19.c` | `downscaleImageHalfResBoxFilter` | exact |
+
+The companion names, generated definitions, sizes, and call sites independently
+agree for all four real functions. H1 was selected. Synchronized the two
+stale repository symbol-map entries at `0x8007A0F0` and `0x8007A260`; no build
+or runtime run was needed. This rules out a repository-symbol naming mismatch
+in this controller/image-helper region, but does not explain the external
+retail-entry boundary or recurring runtime SIGBUS.
