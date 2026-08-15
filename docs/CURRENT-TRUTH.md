@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1356 (2026-08-15).
+the authority for session detail. Reviewed through s1357 (2026-08-15).
 
 ## Current state
 
@@ -47,11 +47,12 @@ the authority for session detail. Reviewed through s1356 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80092A54..0x80092BA8`.
+   census over the next adjacent function, `0x80092BA8..0x80092CF0`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
-   `func_8008ED6C` address-encoded (s1309 H2) and `func_800927B0`
-   address-encoded (s1355 H3: no independent companion name).
+   `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
+   address-encoded (s1355 H3), and `func_80092A54` address-encoded
+   (s1357 H3: no independent companion name).
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -214,6 +215,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1354 | Exact companion/generated voice-resample census synchronized `resampleVoicePointTableSamples` at `0x8009264C`; no build or runtime run. |
 | s1355 | Exact companion/generated census selected H3 for `func_800927B0` at `0x800927B0` (complete `0x124` inner kernel; no independent name); left address-encoded; no build or runtime run. |
 | s1356 | Exact companion/generated voice-resample census synchronized `resampleVoiceLutSamples` at `0x800928D4`; no build or runtime run. |
+| s1357 | Exact companion/generated census selected H3 for `func_80092A54` at `0x80092A54` (complete `0x154` inner LUT kernel; no independent name); left address-encoded; no build or runtime run. |
 
 ## Method and safety rules
 
