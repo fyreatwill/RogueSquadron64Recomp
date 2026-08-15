@@ -65858,6 +65858,26 @@ repository-symbol naming mismatch in this NPC textured-effect region, but
 does not explain the external retail-entry boundary or recurring runtime
 SIGBUS.
 
+## Session 1260 (2026-08-15) — synchronized NPC devastator and vortex symbols
+
+The bounded `0x8007EF1C..0x80081ABC` census compared the repository symbol map,
+generated definitions, and the companion `main_overlay.txt` independently. The
+complete table was:
+
+| Address | Size | Generated definition | Companion mapping/source | Confidence |
+|---|---:|---|---|---|
+| `0x8007EF1C` | `0x11A4` | `npcWordDevastatorUpdate` in `funcs_19.c` | same name, `defined:true` | exact/high |
+| `0x800800C0` | `0x1290` | `attachedAudioVisualEmitterNpcHandler` in `funcs_19.c` | same name, one spawn-site handler description | exact/high |
+| `0x80081350` | `0x76C` | `npcShieldGeneratorUpdate` in `funcs_19.c` | same name, `defined:true` | exact/high |
+| `0x80081ABC` | `0x628` | `npcVortexUpdate` in `funcs_20.c` | same name, NPC vortex handler description | exact/high |
+
+Generated function boundaries match the recorded sizes. Synchronized the two
+stale address-encoded entries in `syms/rogue_squadron.syms.toml`; the other two
+entries were already correct. The complete comparison selects H1. No build or
+run was justified, and no runtime conclusion changed. This rules out a
+repository-symbol naming mismatch in this NPC effect region, but does not
+explain the external retail-entry boundary or recurring runtime SIGBUS.
+
 ## Session 1258 (2026-08-15) — synchronized NPC effect symbols
 
 Ran the planned bounded generated/companion census over
