@@ -71563,3 +71563,37 @@ gap and was left unchanged, as were `fake_func_80099C4C`,
 No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is independently named `stopVoice` at `0x8009C2BC`.
+
+## Session 1470 (2026-08-15) — synchronized the stop-voice symbol
+
+Performed the bounded exact-name census over `0x8009C2BC..0x8009C2C8`.
+
+No new soak-queue verdicts since s1469; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009C2BC`, size `0xC`; `0x8009C2BC+0xC=0x8009C2C8`. Overlay `rom_size` is `0xC` at offset `0x0009BE7C` (`0x8009C2BC-0x80000440`). Generated body starts `addiu $v0, $zero, 0x4` at `0x8009C2BC` and ends `jr $ra` / delay-slot `sb $v0, 0x11DD($a0)` at `0x8009C2C0` / `0x8009C2C4` |
+| Generated definition | `funcs_27.c` defines `stopVoice` at `0x8009C2BC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xC` function between independently named `advanceVoiceStateToPlaying` at `0x8009C2A0` and already-fake `fake_func_8009C2C8` at `0x8009C2C8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `stopVoice = 0x8009C2BC` with the next companion symbol `fake_func_8009C2C8` at `0x8009C2C8`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009C2BC`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Exactly two generated `jal 0x8009C2BC` sites and zero `func_*` callers. Independently named `stopVoiceSlotSynced` at `0x8009B2E8` (s1454) builds the slot pointer `$s0+0x80153420` as `$a0` before the jal. Independently named `serviceVoicePoolFrame` at `0x8009B798` (s1458) passes the slot pointer `$s1` as `$a0` on the `startStreamedSampleVoice` failure path (`$v0 == -1`) before the jal |
+| Semantic evidence | Unconditionally writes stream state 4 to `slot+0x11DD` and returns. Matches the companion name and the slot-state layout from s1464 / s1466 / s1467 / s1468 / s1469 (`advanceVoiceStateToPlaying` writes 3 from 2; `consumeVoiceSamples` operates on state 3 and may write 4 when remaining samples go non-positive; this function is the explicit stop/terminal write of 4) |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009C2BC`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xC`, the independently named stop-slot and voice-pool callers plus the
+unconditional state-4 write match, and there is neither a conflicting
+companion name nor a size split. H2 and H3 are ruled out for this
+address. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0xC`). `fake_func_80099FDC` remains the
+already-fake one-word `bne` gap and was left unchanged, as were
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is already-fake `fake_func_8009C2C8` at `0x8009C2C8`.

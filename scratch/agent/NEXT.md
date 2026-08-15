@@ -1,9 +1,9 @@
-# NEXT work unit (s1470)
+# NEXT work unit (s1471)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8009C2BC..0x8009C2C8`. Do not build or run. Record its address,
+function, `0x8009C2C8..0x8009C2D0`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -18,11 +18,11 @@ one-instruction jump fragment), `fake_func_80097D58` unchanged
 (s1420: already-fake two-instruction epilogue fragment),
 `fake_func_80099C4C` unchanged (s1446 H2: already-fake one-word `beq`
 gap), and `fake_func_80099FDC` unchanged (s1451 H2: already-fake
-one-word `bne` gap before `aspMainTextStart`). The generated entry at
-this address is already `stopVoice`; the TOML entry is still
-`func_8009C2BC`. Confirm the companion, size, and caller/semantic
-evidence independently support that exact name before synchronizing the
-TOML entry or treating any residual mismatch.
+one-word `bne` gap before `aspMainTextStart`). The generated and TOML
+entries at this address are already `fake_func_8009C2C8`. Confirm the
+companion, size, and caller/semantic evidence independently before
+leaving the already-fake entry unchanged or treating any residual
+mismatch.
 
 Competing hypotheses and discriminator:
 
@@ -40,7 +40,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '8009C2BC\|8009C2C8\|stopVoice' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '8009C2BC\|8009C2C8' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '8009C2BC\|8009C2C8' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009C2C8\|8009C2D0\|fake_func_8009C2C8\|computeVoicePanCoefficients' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009C2C8\|8009C2D0' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '8009C2C8\|8009C2D0' syms/rogue_squadron.syms.toml
 ```
