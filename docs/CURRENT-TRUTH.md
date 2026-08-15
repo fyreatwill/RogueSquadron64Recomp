@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1189 (2026-08-14).
+in the ledger. Reviewed through s1190 (2026-08-14).
 
 ## Current state
 
@@ -113,6 +113,14 @@ in the ledger. Reviewed through s1189 (2026-08-14).
   and performs an exact unsigned four-byte load at the computed guest
   address. This selects H3 and rules out the unsigned-load/accessor class;
   no mitigation was added.
+- The s1190 complete generated `do_lwl`/`do_lwr` audit found 418 helper
+  invocations (212 `do_lwl`, 206 `do_lwr`) across 29 generated files. Normal
+  pairs immediately feed bounded partial stores or structure fields; the
+  unpaired and large/negative-offset hits are malformed/data-like tails and
+  do not form a reachable `slotDispatcherIter` frame-writer chain. The
+  helpers align and read one exact guest word through `MEM_W`, then apply the
+  guest merge masks, with no host-side span broadening. H3 selected; no
+  mitigation added.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
   a genuinely new lead. The s1177 retail execution watch found no execution of
   any of the four statically identified `musyxInitVoiceFromSample`
@@ -569,9 +577,9 @@ corruption.
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
 2. Continue the M3 systematic static audit with the next complete generated
-   partial-load idiom: enumerate `do_lwl`/`do_lwr` and their consumers.
-   Classify every site for a target-path pointer or frame-overlapping writer;
-   do not add a guard unless a reachable writer edge is established.
+   load/store idiom from `NEXT.md`; classify every site for a target-path
+   pointer or frame-overlapping writer and do not add a guard unless a
+   reachable writer edge is established.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

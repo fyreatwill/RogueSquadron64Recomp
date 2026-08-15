@@ -1,27 +1,28 @@
-# NEXT work unit (s1190)
+# NEXT work unit (s1191)
 
 HYPOTHESIS-ID: m3-stack-memory-value-origin
 
-Work unit: complete one static audit of all generated `do_lwl`/`do_lwr` partial
-loads and their consumers. Do not build or run.
+Work unit: complete one static audit of the next distinct generated partial
+load/store idiom after `do_lwl`/`do_lwr`, using the current generator/runtime
+source to enumerate it and its consumers. Do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: a partial load feeds a reachable target-path pointer that later writes
-  the saved-register frame. Discriminator: a complete dataflow chain from one
-  `do_ldl`/`do_ldr` result reaches a frame-overlapping store.
-- H2: the partial-load helper or its alignment/merge contract creates a wild
-  pointer/value. Discriminator: the host helper writes outside the guest
-  aligned word or differs from the guest merge semantics.
-- H3: all partial loads are bounded, unrelated, or exact and do not feed a
+- H1: the next idiom feeds a reachable target-path pointer that later writes
+  the saved-register frame. Discriminator: a complete chain from one
+  enumerated load reaches a frame-overlapping store.
+- H2: its host helper or merge contract broadens the guest access or creates a
+  wild value. Discriminator: helper code reads outside the documented guest
+  span or differs from the MIPS merge semantics.
+- H3: all sites are bounded, unrelated, malformed, or exact and do not feed a
   frame-overlapping writer. Discriminator: no load-to-frame chain is found and
-  the helper's address/span behavior is exact.
+  the helper contract is exact.
 
 Exact commands:
 
-rg -n -e 'do_lwl\(|do_lwr\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
-rg -n -C 8 -e 'do_lwl\(|do_lwr\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
-rg -n -A35 -B4 -e 'do_lwl|do_lwr' lib/N64ModernRuntime/N64Recomp/include/recomp.h
+rg -n -e 'MEM_LWL|MEM_LWR|do_lwl|do_lwr' /Users/williambuckley/Documents/Tools/N64Recomp --glob '*.{h,hpp,c,cpp,py}'
+rg -n -C 8 -e 'MEM_LWL|MEM_LWR|do_lwl|do_lwr' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
+rg -n -A35 -B4 -e 'MEM_LWL|MEM_LWR|do_lwl|do_lwr' /Users/williambuckley/Documents/Tools/N64Recomp/include/recomp.h
 git diff --check
 
 Classify every hit as reachable pointer producer, bounded scalar load,

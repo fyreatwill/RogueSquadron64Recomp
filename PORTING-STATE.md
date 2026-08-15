@@ -64594,3 +64594,23 @@ align to an eight-byte boundary, read exactly one guest doubleword through
 H3 selected; this rules out the partial-load/accessor class as the current
 frame-corruption origin. No mitigation was added. The next audit is
 `do_lwl`/`do_lwr`.
+
+## Session 1190 (2026-08-14) — audited generated partial-load consumers
+
+Completed the generated `do_lwl`/`do_lwr` audit without building or running.
+The census found 418 helper invocations across 29 generated files: 212
+`do_lwl` and 206 `do_lwr`. Normal load pairs immediately feed bounded
+`do_swl`/`do_swr` stores or structure fields. The unpaired and large/negative
+offset hits are in malformed/data-like tails; none is in the 72
+`slotDispatcherIter` callers or on a reachable chain to a store overlapping
+the callee's saved frame.
+
+`do_lwl` and `do_lwr` align the computed guest address, read exactly one guest
+word through `MEM_W`, and apply the MIPS merge masks. The host helpers do not
+broaden the access span or alter the guest address. H3 selected, ruling out
+this partial-load/helper class as the current frame-corruption origin. No
+build, runtime run, or mitigation was performed.
+
+ORIGIN: complete generated partial-load inventory and helper contract; the
+reviewed writers are bounded structure/local stores, unrelated subsystems, or
+malformed/data-like code, and no mitigation was added.
