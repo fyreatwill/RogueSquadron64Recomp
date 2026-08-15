@@ -68057,3 +68057,33 @@ unchanged, as do `func_800927B0` (s1355 H3) and `func_8008ED6C` (s1309 H2).
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is the
 independently named `resampleVoiceConstantSamples` at `0x80092BA8`.
+
+## Session 1358 (2026-08-15) — synchronized the resample-voice-constant-samples symbol
+
+Performed the bounded exact-name census over `0x80092BA8..0x80092CF0`.
+
+No new soak-queue verdicts since s1357; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092BA8`, size `0xC4` (`jr $ra` at `0x80092C64`, delay `0x80092C68`; `0x80092BA8+0xC4=0x80092C6C`). Overlay `rom_size` is `0x148`; the generated body continues through the live exhausted-source tail `0x80092C6C..0x80092CEC` and ends at the next generated function, `0x80092CF0`. Companion marks `.L80092C6C` as a label, not a function |
+| Generated definition | `funcs_24.c` defines `resampleVoiceConstantSamples` at `0x80092BA8`; `funcs.h` and `recomp_overlays.inl` already use that name. The `jr $ra` at `0x80092C64` is the normal return; the live pack/zero-fill tail `0x80092C6C..0x80092CEC` is reached from the inner kernel (`beq $s3, $zero, L_80092C6C` / `L_80092C7C`) and joins the epilogue at `L_80092C40`. Reused labels `L_80092C6C`/`7C`/`8C`/`9C` on `func_80092CF0` are a N64Recomp artifact |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `resampleVoiceConstantSamples = 0x80092BA8`. The same file independently names the adjacent wrappers `resampleVoiceLutSamples` at `0x800928D4` and `resampleVoiceLutSamplesPacked` at `0x80092E48`. The sequential `defined:true` list jumps from `func_80092A54` to `func_80092CF0` and does not remap this address. No later companion list remaps it |
+| Caller evidence | No generated `jal 0x80092BA8` exists; the sibling resample wrappers (`0x8009264C`, `0x800928D4`, `0x80092E48`) likewise have no direct jal. This function is the outer wrapper: it `jal`s the inner kernel `func_80092CF0` twice per output pair. The ROM has no literal `0x80092BA8` word, so the format dispatch is not a static pointer table |
+| Semantic evidence | Loads a voice/render context from `$a0` (source, dest, end, loop, output count, step, phase increment) and interpolation state from `$a1+0xA` when `$a2!=1`. Mode `$a2==1` starts the phase at 0. The inner kernel `lh`s adjacent s16 samples (not u8+LUT), differences them, and `mult`s by the incoming fraction; this wrapper `sd`s `$t3` with `cache 0x19` writeback. Exhausted sources zero-fill via the live tail. That is linear interpolation of raw s16 voice samples, the independently named sibling of the LUT and point-table resamplers |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the body is a complete constant-width s16 voice resampler in the independently
+named resample family, and the `0xC4` versus `0x148` split is the `jr $ra`
+return versus the live tail, not a conflicting function. H2 and H3 are ruled
+out for this function; there is neither a partial/conflicting name nor an
+absent independent name. The stale address-encoded TOML entry was synchronized
+(name only; size left at the documented `0xC4` return path). `func_800927B0`,
+`func_80092A54`, and `func_8008ED6C` were left unchanged. No build or runtime
+run was justified for an exact-name census. This does not reopen M5 audio
+de-stubbing. The next adjacent generated function is the address-encoded
+inner kernel `func_80092CF0` at `0x80092CF0`.
