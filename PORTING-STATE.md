@@ -67974,3 +67974,31 @@ independent name. The stale address-encoded TOML entry was synchronized.
 `func_800927B0` and `func_8008ED6C` were left unchanged. No build or runtime
 run was justified for an exact-name census. This does not reopen M5 audio
 de-stubbing.
+
+## Session 1355 (2026-08-15) — parked the unnamed point-table resample kernel
+
+Performed the bounded exact-name census over `0x800927B0..0x800928D4`.
+
+No new soak-queue verdicts since s1354; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800927B0`, size `0x124`; it ends exactly at the next generated function, `0x800928D4`. Overlay `rom_size` is `0x124` |
+| Generated definition | `funcs_24.c` defines `func_800927B0` at `0x800927B0` through `jr $ra` at `0x800928CC`; `funcs.h` and `recomp_overlays.inl` already use that address-encoded name. Reused labels `L_80092758`/`60`/`68`/`6C` are a N64Recomp artifact from the previous function's dead tail; the instruction comments are sequential `0x800927B0..0x800928D0` and the body is not truncated |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` sequential list maps `func_800927B0 = 0x800927B0; // defined:true`. The later named list jumps from `resampleVoicePointTableSamples = 0x8009264C` to `resampleVoiceLutSamples = 0x800928D4`. No later companion list remaps `0x800927B0` |
+| Caller evidence | Two generated `jal 0x800927B0` sites inside `resampleVoicePointTableSamples` at `0x800926F8` and `0x80092704`. The wrapper `sd`s `$t3` and `cache 0x19` writebacks after each call. No other generated jal and no ROM literal `0x800927B0` word |
+| Semantic evidence | Leaf kernel: AND/shift/OR packs four interpolated s16 halves into `$t3`, advances source `$t1`, differences adjacent point-table samples, and `mult`s by the incoming scale. That is the inner pack step of the independently named point-table resampler. Companion reserved `packFourLutResampledSamples` for `0x80092F94`, so inventing a pack-four-point-table name would be a fabricated independent source |
+| Confidence | High that no independent name exists |
+
+The complete comparison selects H3: there is no independent companion name,
+only the address-encoded `func_800927B0` mapping. H1 is ruled out because
+there is nothing exact to synchronize. H2 is ruled out because the
+generated/TOML/`rom_size` `0x124` boundary is exact and there is no conflicting
+companion name, only an absent one. The address-encoded TOML entry stays
+unchanged, as does `func_8008ED6C` (s1309 H2). No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio de-stubbing.
+The next adjacent generated function is the independently named
+`resampleVoiceLutSamples` at `0x800928D4`.
