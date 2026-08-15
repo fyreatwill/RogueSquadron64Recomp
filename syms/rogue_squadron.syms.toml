@@ -1427,7 +1427,7 @@ functions = [
     { name = "musyxComputeNotePlaybackRate", vram = 0x80093E80, size = 0x98 },
     { name = "divideByMixerBaseFrequency", vram = 0x80093F18, size = 0x24 },
     { name = "scaleFixedPointByRatioA", vram = 0x80093F3C, size = 0x24 },
-    { name = "func_80093F60", vram = 0x80093F60, size = 0x24 },
+    { name = "scaleFixedPointByRatioB", vram = 0x80093F60, size = 0x24 },
     { name = "func_80093F84", vram = 0x80093F84, size = 0x30 },
     { name = "func_80093FB4", vram = 0x80093FB4, size = 0x30 },
     { name = "func_80093FE4", vram = 0x80093FE4, size = 0x78 },
