@@ -68375,3 +68375,33 @@ are ruled out. The stale address-encoded TOML entry was synchronized
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is the
 independently named `sqrtf_recomp` at `0x80093E6C`.
+
+## Session 1369 (2026-08-15) — synchronized the sqrtf-recomp symbol
+
+Performed the bounded exact-name census over `0x80093E6C..0x80093E74`.
+
+No new soak-queue verdicts since s1368; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80093E6C`, size `0x8`; `0x80093E6C+0x8=0x80093E74`. Overlay `rom_size` is `0x8`. Generated `jr $ra` at `0x80093E6C`, delay `sqrt.s $f0,$f12` at `0x80093E70` |
+| Generated definition | `funcs_25.c` defines `sqrtf_recomp` at `0x80093E6C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete two-instruction helper ending at the next generated definition, `fake_func_80093E74` at `0x80093E74` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `sqrtf_recomp = 0x80093E6C`. The same file independently names the preceding `ceilDouble` at `0x80093E60` and the following `musyxComputeNotePlaybackRate` at `0x80093E80`. The sequential `defined:true` list records `fake_func_80093E74` at `0x80093E74` and does not remap `0x80093E6C`. No later companion list remaps it |
+| Caller evidence | Four generated `jal 0x80093E6C` sites: three in `compute3DSourceSpatialMix` (`0x800983D8`, `0x800984AC`, `0x80098550`) and one in `normalizeVec3` (`0x80099D28`). Each passes a summed-squares float in `$f12` and consumes `$f0`. Companion annotates "5 callers"; the missing fifth static jal does not remap the name |
+| Semantic evidence | The entire body is `jr $ra` with delay-slot `sqrt.s $f0,$f12`: single-precision square root of the MIPS `$f12` argument, returned in `$f0`. That is the operation; no game-domain context is required, matching the independent companion name |
+| Adjacent fake | `fake_func_80093E74` is a three-instruction epilogue fragment (`lw $ra,0x24($sp); lw $fp,0x20($sp); addiu $sp,$sp,0x28`), size `0xC`, already named fake in both companion and TOML. Left unchanged |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80093E6C`: the companion and
+generated names agree, the body is a complete single-precision square-root
+helper of matching size `0x8`, and there is neither a conflicting companion
+name nor a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at `0x8`).
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `musyxComputeNotePlaybackRate` at `0x80093E80`.

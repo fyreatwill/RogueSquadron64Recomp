@@ -1422,7 +1422,7 @@ functions = [
     { name = "expandBytesToPcm16ViaTable", vram = 0x80093D10, size = 0x144 },
     { name = "truncDouble", vram = 0x80093E54, size = 0xC },
     { name = "ceilDouble", vram = 0x80093E60, size = 0xC },
-    { name = "func_80093E6C", vram = 0x80093E6C, size = 0x8 },
+    { name = "sqrtf_recomp", vram = 0x80093E6C, size = 0x8 },
     { name = "fake_func_80093E74", vram = 0x80093E74, size = 0xC },
     { name = "func_80093E80", vram = 0x80093E80, size = 0x98 },
     { name = "func_80093F18", vram = 0x80093F18, size = 0x24 },
