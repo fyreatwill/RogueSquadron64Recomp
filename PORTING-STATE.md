@@ -68291,3 +68291,31 @@ only; size left at `0x840`). `func_800927B0`, `func_80092A54`,
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is the
 independently named `expandBytesToPcm16ViaTable` at `0x80093D10`.
+
+## Session 1366 (2026-08-15) — synchronized the expand-bytes-to-pcm16-via-table symbol
+
+Performed the bounded exact-name census over `0x80093D10..0x80093E54`.
+
+No new soak-queue verdicts since s1365; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80093D10`, size `0x144`; `0x80093D10+0x144=0x80093E54`. Overlay `rom_size` is `0x144`. Generated `jr $ra` at `0x80093E4C`, delay `addiu $sp,$sp,0x20` at `0x80093E50` |
+| Generated definition | `funcs_24.c` defines `expandBytesToPcm16ViaTable` at `0x80093D10`; `funcs.h` and `recomp_overlays.inl` already use that name. First instruction is `addiu $sp,$sp,-0x20`; the body is a complete function ending at the next generated definition, `truncDouble` at `0x80093E54` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `expandBytesToPcm16ViaTable = 0x80093D10`. The same file independently names the preceding `decodeAdpcmSampleBlock` at `0x800934D0` and the following `truncDouble` at `0x80093E54`. The sequential `defined:true` list jumps from the unnamed resample kernels to the fake-function / math-primitive block and does not remap this address. No later companion list remaps it |
+| Caller evidence | No generated `jal 0x80093D10` exists. The generated tree has no other `0x80093D10` word besides the function-start comment, so the dispatch is not a static jal |
+| Semantic evidence | Saves `$s0..$s7`, sets table `$t3=0x800A1790` (companion `D_800A1790` type `u16`; next symbol `D_800A1990` so 0x200 bytes = 256 halfwords), dest `$t2=$a1`, group count `$t0=$a2>>3`, src `$t1=$a0`. The unrolled body loads 8 source bytes, indexes `byte<<1 + table`, stores 8 PCM16 halfwords, and advances dest by `0x10`. A remainder loop (`$a2 & 7`) expands leftover bytes the same way. That is a byte-to-PCM16 table expand, matching the independent companion name |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the body is a complete byte-to-PCM16 table expander of matching size `0x144`,
+and there is neither a conflicting companion name nor a size split. H2 and
+H3 are ruled out. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x144`). `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C` were left unchanged.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is the
+independently named `truncDouble` at `0x80093E54`.
