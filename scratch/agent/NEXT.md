@@ -1,35 +1,32 @@
-# NEXT work unit (s1214)
+# NEXT work unit (s1215)
 
 HYPOTHESIS-ID: retail-entry-strategy
 
-Work unit: add one bounded savestate lifecycle to `tools/oracle/rs64_oracle.c`
-using the installed core API, and run one smoke test that proves save and load
-can be invoked without losing debugger callbacks or the existing positive
-controls. Do not yet use the state to classify M4 target watches.
+Work unit: use the validated state lifecycle for one paired debugger-enabled
+retail reachability comparison. The control runs the documented 6-second Start
+cadence from boot; the state arm saves after the 320 boot phase, loads that
+state, then applies the same cadence. Do not arm M4 target watches unless a
+later VI width/origin phase is reached.
 
 Competing hypotheses and discriminator:
 
-- H1: `M64CMD_STATE_SAVE` and `M64CMD_STATE_LOAD` work in the oracle lifecycle;
-  a saved file exists and the same run reports whole-RDRAM plus debugger/VI
-  controls on both sides of the load.
-- H2: the API calls are present but cannot create or restore a compatible state
-  from this ROM/core setup; the route is unusable and the returned error/log
-  identifies the missing lifecycle condition.
-- H3: state save/load works but disrupts debugger callbacks or positive-control
-  delivery; the smoke test shows which control disappears after the load.
+- H1: loading a 320-boot state preserves execution and the cadence reaches a
+  later VI phase; the state route is a usable retail-entry strategy.
+- H2: load succeeds but the state arm remains at width 320 like the control;
+  the route works technically but does not provide the missing entry state.
+- H3: load succeeds but whole-RDRAM or PIF/VI controls disappear afterward;
+  the route disrupts the oracle instrumentation and is unusable.
 
-Discriminator: one state file plus the return codes and post-load control
-counts from the same oracle process. A successful API symbol lookup alone is
-not a positive result.
+Discriminator: phase-gated VI width/origin plus post-load whole-RDRAM and PIF
+controls in the paired arms. A later phase selects H1; width 320 selects H2;
+missing post-load controls selects H3.
 
 Exact implementation/test commands (run from the repository root):
 
-    rg -n 'CoreDoCommand|M64CMD_(STATE_SAVE|STATE_LOAD|RESET)|whole|pif|vi' tools/oracle/rs64_oracle.c
     tools/oracle/build.sh
-    env ORACLE_STATE_SMOKE=1 tools/oracle/build/rs64_oracle --core "$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom build/Debug/rogue_squadron.z64 --secs 20 --watch-write 0x0:0x800000 --pif-trace --vi-poll --state-path scratch/agent/oracle-smoke.st
+    env ORACLE_STATE_REACH=1 tools/oracle/build/rs64_oracle --core "$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom rogue_squadron.z64 --secs 70 --watch-write 0x0:0x800000 --pif-trace --vi-trace --state-path scratch/agent/oracle-reach.st
 
-The smoke must save after ROM/plugin/debugger setup, load the same path, and
-report both return codes and control counts. If H1 is selected, the following
-unit can use the state for a paired 60-second oracle reachability comparison;
-if H2 or H3 is selected, record the exact failing lifecycle/control and pivot
-before arming M4 watches.
+The reachability arm must save/load at a phase boundary, report both return
+codes, and keep the whole-RDRAM positive control plus PIF/VI traces active. Run
+the undriven and state-driven arms concurrently if the harness supports it;
+otherwise one invocation must emit both arms from one built binary.

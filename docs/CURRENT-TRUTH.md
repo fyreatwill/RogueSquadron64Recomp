@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1213 (2026-08-14).
+in the ledger. Reviewed through s1214 (2026-08-14).
 
 ## Current state
 
@@ -81,6 +81,10 @@ in the ledger. Reviewed through s1213 (2026-08-14).
   hypothesis; the remaining work is to add state-file lifecycle calls to the
   debugger-enabled oracle and verify that its whole-RDRAM/PIF/VI controls stay
   positive.
+- The s1214 oracle state smoke created and loaded a state with return code 0.
+  The whole-RDRAM positive control reached 10,000 callbacks before the save
+  and remained active through 1,506 VI frames. The lifecycle is therefore
+  validated, but the run stayed at width 320 and did not test later phases.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -160,11 +164,11 @@ in the ledger. Reviewed through s1213 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Add a bounded savestate lifecycle to the debugger-enabled oracle using the
-   installed core API (`M64CMD_STATE_SAVE`/`LOAD`), then run a positive-control
-   save/load smoke test before using the state as a retail-entry route. The
-   front-end/core audit established the callable route, but no state file has
-   yet been created or loaded through the oracle.
+1. Use the validated savestate lifecycle for one paired debugger-enabled retail
+   reachability comparison: save a 320-boot state, load it, and apply the
+   documented 6-second Start cadence after load. Keep whole-RDRAM and PIF/VI
+   controls armed; only a later VI width/origin phase makes M4 watches
+   evaluable.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -265,6 +269,7 @@ order.
 | s1211 | Controller chord plus eleven Start presses passed whole-RDRAM and PIF/VI controls; both arms remained at VI 320/origin `0x006dd280` for about 3,600 VI frames. The new input path does not provide a later retail entry. |
 | s1213 | Installed Mupen64Plus front-end/core audit found startup savestate loading and CoreDoCommand save/load/reset commands; route-exists hypothesis selected. |
 | s1212 | Oracle source audit found only scheduled SDL key injection; no savestate, reset-state, direct pad setter, or alternate callable entry route exists in the in-tree CLI. |
+| s1214 | Oracle state smoke created and loaded a state with rc=0 while whole-RDRAM and VI controls stayed positive; route validated, later phase unreached. |
 
 ## Method and safety rules
 

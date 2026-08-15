@@ -32,6 +32,7 @@
 #include <pthread.h>
 #include <unistd.h>
 #include <time.h>
+#include <sys/stat.h>
 
 #include "m64p_types.h"
 #include "m64p_frontend.h"
@@ -391,6 +392,8 @@ static struct press g_press[256];
 static int g_npress;
 static int g_hold_ms = 150;
 static int g_have_input;
+static int g_state_smoke;
+static const char *g_state_path;
 
 static int keycode(const char *s)
 {
@@ -407,6 +410,12 @@ static void sleep_s(double secs)
     ts.tv_sec = (time_t)secs;
     ts.tv_nsec = (long)((secs - (double)ts.tv_sec) * 1e9);
     nanosleep(&ts, NULL);
+}
+
+static int state_file_exists(const char *path)
+{
+    struct stat st;
+    return path != NULL && stat(path, &st) == 0 && st.st_size > 0;
 }
 
 static void *vi_poller(void *arg)
@@ -444,6 +453,35 @@ static void *director(void *arg)
     double secs = *(double *)arg;
     double t = 0;
     int i;
+
+    if (g_state_smoke) {
+        m64p_error save_result, load_result = M64ERR_SYSTEM_FAIL;
+        long before_hits, before_vis, after_save_hits, after_load_hits;
+        long save_vis, load_vis;
+
+        sleep_s(5.0);
+        before_hits = g_hits;
+        before_vis = g_vis;
+        save_result = pCoreDoCommand(M64CMD_STATE_SAVE, 1, (void *)g_state_path);
+        printf("[state] save rc=%d path=%s before_hits=%ld before_vi=%ld\n",
+               save_result, g_state_path, before_hits, before_vis);
+        fflush(stdout);
+
+        /* STATE_SAVE queues work on the emulator thread. Wait for the file so
+         * LOAD cannot race the asynchronous writer. */
+        for (i = 0; i < 100 && !state_file_exists(g_state_path); i++)
+            sleep_s(0.1);
+        after_save_hits = g_hits;
+        save_vis = g_vis;
+        if (state_file_exists(g_state_path))
+            load_result = pCoreDoCommand(M64CMD_STATE_LOAD, 0, (void *)g_state_path);
+        after_load_hits = g_hits;
+        load_vis = g_vis;
+        printf("[state] file=%s save_rc=%d load_rc=%d exists=%d save_hits=%ld load_hits=%ld save_vi=%ld load_vi=%ld\n",
+               g_state_path, save_result, load_result, state_file_exists(g_state_path),
+               after_save_hits, after_load_hits, save_vis, load_vis);
+        fflush(stdout);
+    }
 
     for (i = 0; i < g_npress; i++) {
         if (g_press[i].at >= secs) break;
@@ -546,6 +584,7 @@ static void usage(void)
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
         "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
+        "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE=1\n"
         "  --verbose             pass through core info messages\n"
         "\n"
         "Watch addresses are PHYSICAL and are masked with 0x1FFFFFFF on input,\n"
@@ -564,6 +603,7 @@ int main(int argc, char **argv)
     const char *configdir = NULL;
     const char *videopath = NULL;
     const char *audiopath = NULL;
+    const char *state_path = NULL;
     double secs = 120.0;
     int oracle_debugger = 1;
     int oracle_emulator = 0;
@@ -618,10 +658,17 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
         else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
+        else if (!strcmp(argv[i], "--state-path") && i + 1 < argc) state_path = argv[++i];
         else if (!strcmp(argv[i], "--verbose"))                    g_verbose = 1;
         else usage();
     }
     if (!rom) usage();
+    g_state_smoke = getenv("ORACLE_STATE_SMOKE") != NULL;
+    g_state_path = state_path;
+    if (g_state_smoke && !g_state_path) {
+        fprintf(stderr, "[oracle] ORACLE_STATE_SMOKE=1 requires --state-path\n");
+        return 2;
+    }
 
     g_core = dlopen(corepath, RTLD_NOW);
     if (!g_core) { fprintf(stderr, "[oracle] dlopen core: %s\n", dlerror()); return 1; }

@@ -64733,6 +64733,29 @@ unevaluable. No code or mitigation change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+## Session 1214 (2026-08-14) — validated oracle savestate lifecycle
+
+Added an opt-in `ORACLE_STATE_SMOKE=1` path to `tools/oracle/rs64_oracle.c`.
+It invokes `M64CMD_STATE_SAVE` during execution, waits for the asynchronous
+state file to appear, then invokes `M64CMD_STATE_LOAD` on that file and reports
+watch/VI counts around the operations. The oracle was rebuilt and run for 20
+seconds against the available retail ROM with a whole-RDRAM write watch,
+`--pif-trace`, and `--vi-poll`.
+
+The positive control reached its 10,000-callback threshold before the save.
+The save returned 0, the state file existed, the load returned 0, and the run
+continued to 1,506 VI frames with the whole-RDRAM watch still reporting 10,000
+hits. The state route is therefore usable and does not remove debugger/control
+callbacks. The run stayed at width 320/origin `0x006dd280`, so this experiment
+does not establish reachability of the hangar or M4 target phase.
+
+This rules out H2 (API route unusable) and H3 (state load disrupts the positive
+controls) for this core/ROM setup. It selects H1 only for lifecycle viability,
+not for retail-entry reachability. No mitigation or value rewrite was added.
+
+ORIGIN: no game or renderer value was skipped or rewritten; the change only
+added opt-in savestate calls and observational counters around the core API.
+
 ## Session 1213 (2026-08-14) — audited Mupen64Plus state-entry capabilities
 
 Performed the prescribed bounded source/configuration audit without running
