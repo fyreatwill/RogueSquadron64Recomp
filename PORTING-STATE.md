@@ -67895,3 +67895,29 @@ companion's "3 callers" note is a count mismatch with the two generated `jal`
 sites, not a naming conflict. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
 This does not reopen M5 audio de-stubbing.
+
+## Session 1352 (2026-08-15) — synchronized the copy-four-halfwords-writeback symbol
+
+Performed the bounded exact-name census over `0x800925A8..0x800925F4`.
+
+No new soak-queue verdicts since s1351; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x800925A8`, size `0x4C`; it ends exactly at the next generated function, `0x800925F4`. Overlay `rom_size` is `0x4C` |
+| Generated definition | `funcs_24.c` defines `copyFourHalfwordsWriteback` at `0x800925A8`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `copyFourHalfwordsWriteback = 0x800925A8`. The same file independently names the adjacent functions `writebackDCacheHalfwords` at `0x80092588` and `relocateSndPointer` at `0x800925F4`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x800925A8` site in already-named `flushStreamedVoiceBuffers` at `0x80097F54`. For each active 0x18-byte streamed-voice slot (`0x80152A20` flag == 1), it passes the slot pointer at `0x80152A28` and the halfword index at `0x80152A2C` |
+| Semantic evidence | Body copies four halfwords from the base pointer to `base + (index << 1)`, then `jal 0x800358B0` with length 8. That target is independently named `osWritebackDCache` in the TOML. The generated name matches the four-halfword copy plus 8-byte writeback |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x4C` boundary is exact, and the body is a four-halfword copy followed by
+an 8-byte `osWritebackDCache`. H2 and H3 are ruled out for this function;
+there is neither a partial/conflicting match nor an absent independent name.
+The stale address-encoded TOML entry was synchronized. No build or runtime
+run was justified for an exact-name census. This does not reopen M5 audio
+de-stubbing.
