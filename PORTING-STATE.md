@@ -65825,3 +65825,18 @@ subset. Synchronized the three stale repository symbol-map entries; no build
 or runtime run was needed. This rules out a repository-symbol naming mismatch
 in this NPC mesh-helper region, but does not explain the external retail-entry
 boundary or recurring runtime SIGBUS.
+
+## Session 1256 (2026-08-15) — synchronized NPC shield/audio-helper symbols
+
+Ran the planned bounded generated/companion census over
+`0x8007AEF8..0x8007C298`. The comparison covered four entries, including the
+explicit `fake_func_8007C298` 8-byte stub. Exact independent companion names
+matched the generated definitions and sizes for `npcShieldUpdate` at
+`0x8007AEF8`, `heavyAttachedAudioEmitterNpcHandler` at `0x8007BC18`, and
+`loadShieldPalette` at `0x8007C268`; companion comments supplied the available
+caller evidence (`loadShieldPalette` has one asset caller and the audio helper
+is listed among the flag-wrapper callers). H1 was selected for the exact-name
+subset. Synchronized the three stale repository symbol-map entries; no build
+or runtime run was needed. This rules out a repository-symbol naming mismatch
+in this NPC shield/audio-helper region, but does not explain the external
+retail-entry boundary or recurring runtime SIGBUS.

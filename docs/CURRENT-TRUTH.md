@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1255 (2026-08-15).
+in the ledger. Reviewed through s1256 (2026-08-15).
 
 ## Current state
 
@@ -331,6 +331,14 @@ was synchronized for the three stale entries. H1 was selected; no runtime
 change or build was needed. This rules out a repository-symbol naming mismatch
 in this NPC mesh-helper region, but does not explain the external retail-entry
 boundary or recurring runtime SIGBUS.
+
+The s1256 bounded `0x8007AEF8..0x8007C298` census found exact companion and
+generated names for three real functions: `npcShieldUpdate`,
+`heavyAttachedAudioEmitterNpcHandler`, and `loadShieldPalette`. The
+`0x8007C298` entry remains the independently documented `fake_func` 8-byte
+stub. Companion symbols, generated definitions, sizes, and available caller
+evidence agree; H1 was selected for the exact-name subset. Synchronized the
+three stale repository symbol-map entries; no build or runtime run was needed.
 
 ## Durable boundaries
 
