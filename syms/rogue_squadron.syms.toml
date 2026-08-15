@@ -1398,7 +1398,7 @@ functions = [
     { name = "musyxSetVoicePitchBend", vram = 0x80092390, size = 0x54 },
     { name = "setVoiceModulationParams", vram = 0x800923E4, size = 0x68 },
     { name = "stopVoiceMarkRetrigger", vram = 0x8009244C, size = 0x44 },
-    { name = "func_80092490", vram = 0x80092490, size = 0x60 },
+    { name = "beginVoiceFadeRelease", vram = 0x80092490, size = 0x60 },
     { name = "func_800924F0", vram = 0x800924F0, size = 0x20 },
     { name = "func_80092510", vram = 0x80092510, size = 0x20 },
     { name = "func_80092530", vram = 0x80092530, size = 0x34 },
