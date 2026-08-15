@@ -67843,3 +67843,28 @@ free wrapper. H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census. This does not reopen M5 audio de-stubbing.
+
+## Session 1350 (2026-08-15) — synchronized the get-voice-user-field symbol
+
+Performed the bounded exact-name census over `0x80092564..0x80092588`.
+
+No new soak-queue verdicts since s1349; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80092564`, size `0x24`; it ends exactly at the next generated function, `0x80092588`. Overlay `rom_size` is `0x24` |
+| Generated definition | `funcs_24.c` defines `getVoiceUserField` at `0x80092564`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `getVoiceUserField = 0x80092564`. The same file independently names the adjacent functions `freeAudioScratchBuffer` at `0x80092530` and `writebackDCacheHalfwords` at `0x80092588`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x80092564` in already-named `serviceStreamedVoices` at `0x80097DF4`. That loop walks streamed-voice records and compares the returned word against the record cursor before either callback branch |
+| Semantic evidence | Body loads the voice-array base at `0x801496F8` (`lui 0x8015` / `lw -0x6908`), indexes `$a0` by stride `0x88` (`sll 4; addu; sll 3`), and returns the word at `+0x14`. The same base-and-stride idiom is in already-named `isAudioSlotActive` at `0x800920FC` and `musyxInitVoiceFromSample` at `0x80092128`. Companion independently names this standalone getter |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x24` boundary is exact, and the body is the documented voice-slot user-field
+getter. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio de-stubbing.
