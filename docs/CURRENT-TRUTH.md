@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1452 (2026-08-15).
+the authority for session detail. Reviewed through s1453 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1452 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009B048..0x8009B268`.
+   census over the next adjacent function, `0x8009B268..0x8009B33C`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -326,6 +326,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1450 | Exact companion/generated orientation-inverse census synchronized `invertOrientationMatrix` at `0x80099DCC`; no build or runtime run. |
 | s1451 | Exact companion/generated census selected H2 for already-fake `fake_func_80099FDC` at `0x80099FDC` (one-word `bne` gap before `aspMain` text); left unchanged; no build or runtime run. |
 | s1452 | Exact companion/generated voice-slot census synchronized `findVoiceSlotByAge` at `0x8009AF60`; no build or runtime run. |
+| s1453 | Exact companion/generated voice-slot census synchronized `allocAndConfigureNewVoice` at `0x8009B048`; no build or runtime run. |
 
 ## Method and safety rules
 

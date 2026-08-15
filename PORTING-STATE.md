@@ -70995,3 +70995,36 @@ already-fake one-word `bne` gap and was left unchanged, as were
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is independently named
 `allocAndConfigureNewVoice` at `0x8009B048`.
+
+## Session 1453 (2026-08-15) — synchronized the alloc-and-configure-new-voice symbol
+
+Performed the bounded exact-name census over `0x8009B048..0x8009B268`.
+
+No new soak-queue verdicts since s1452; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009B048`, size `0x220`; `0x8009B048+0x220=0x8009B268`. Overlay `rom_size` is `0x220` at offset `0x0009AC08` (`0x8009B048-0x80000440`). Generated body starts `addiu $sp, $sp, -0x40` at `0x8009B048` and ends `jr $ra` / delay-slot `nop` at `0x8009B260` / `0x8009B264` |
+| Generated definition | `funcs_26.c` defines `allocAndConfigureNewVoice` at `0x8009B048`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x220` function between independently named `findVoiceSlotByAge` at `0x8009AF60` and independently named `stopVoiceSlotSynced` at `0x8009B268` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `allocAndConfigureNewVoice = 0x8009B048` with a MusyX voice-slot allocator comment. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009B048`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry. No conflicting companion name |
+| Caller evidence | Exactly one generated `jal 0x8009B048` site, in independently named `enqueueSpeechClip` at `0x80066D18`. That matches the companion caller note. After building stack bytes and a volume argument, it calls and treats `-1` as allocation failure. Zero `func_*` callers |
+| Semantic evidence | Body gates on the max-voice byte at `0x800A5121`, rejects `voiceId >= MEM_W(0x80154670)`, walks the MusyX table at `0x80154620` (active byte, stride `0x1228`) for an empty slot, creates `osCreateMesgQueue(slot+0x11E0, slot+0x11F8, 2)`, writes mix/config bytes, calls independently named `initMusyXVoiceSlot` then `findVoiceSlotByAge`, and returns `-1` on failure. That matches the companion allocator description |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009B048`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x220`, the single `jal` caller is the independently named speech
+enqueue path, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x220`). `fake_func_80099FDC` remains the already-fake one-word `bne`
+gap and was left unchanged, as were `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not
+reopen M5 audio de-stubbing. The next adjacent generated function is
+independently named `stopVoiceSlotSynced` at `0x8009B268`.
