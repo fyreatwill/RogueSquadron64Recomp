@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1283 (2026-08-15).
+the authority for session detail. Reviewed through s1284 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1283 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8008DA00..0x8008DA4C`.
+   census over the next adjacent function, `0x8008DA4C..0x8008DA98`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence.
 2. Keep the external retail-entry boundary parked until a new independent
@@ -139,6 +139,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1281 | Exact companion/generated MusyX voice-symbol census synchronized `refreshVoicePlaybackRate` at `0x8008B9CC` and `soundMacroSetPitchTarget` at `0x8008BA60`; no build or runtime run. |
 | s1282 | Exact companion/generated MusyX sequencer census synchronized `tickAudioChannel` at `0x8008BC10` and `tickAllAudioChannels` at `0x8008C9AC`; no build or runtime run. |
 | s1283 | Exact companion/generated MusyX sequencer census synchronized `tickAudioSequencerFrame` at `0x8008D960`; no build or runtime run. |
+| s1284 | Exact companion/generated MusyX update census synchronized `tickMusyXIfActive` at `0x8008DA00`; no build or runtime run. |
 
 ## Method and safety rules
 

@@ -66267,3 +66267,16 @@ H1 is selected with high confidence and the stale symbol-map entry is
 synchronized. No build or runtime run was justified for an exact-name census.
 This rules out partial, conflicting, or absent naming evidence for this
 function.
+
+## Session 1284 (2026-08-15) — synchronized the MusyX update symbol
+
+Performed the bounded exact-name census over `0x8008DA00..0x8008DA4C`.
+The companion `main_overlay.txt` independently maps `0x8008DA00` to
+`tickMusyXIfActive`. The TOML size and next generated entry establish the
+exact `0x4C` boundary, and the generated definition and callers use the same
+name. The body gates on `gMusyXActiveFlag`, brackets the active path with the
+Factor 5 mutex, and calls the song tick, 3D voice tick/reap, and synth-voice
+stop routines, providing semantic evidence for the mapping. H1 is selected
+with high confidence and the stale symbol-map entry is synchronized. No build
+or runtime run was justified for an exact-name census. This rules out partial,
+conflicting, or absent naming evidence for this function.
