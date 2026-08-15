@@ -253,8 +253,8 @@ in the ledger. Reviewed through s1256 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
-   exact-name sweep over the next adjacent controller-helper region after
-   `0x8007A068..0x8007A260`, beginning at `0x8007A86C`; it needs no external
+   exact-name sweep over the next adjacent NPC textured-effect region after
+   `0x8007AEF8..0x8007C298`, beginning at `0x8007C2A0`; it needs no external
    retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -447,6 +447,7 @@ order.
 | s1252 | The bounded `0x80079278..0x80079C10` census found exact companion/generated names for six functions; the `0x80079278` padding entry remains `fake_func_80079278`. Synchronized the repository symbol map. H1 selected; no build or run. |
 | s1254 | The bounded `0x8007A068..0x8007A260` census found exact companion/generated names for four real functions; `0x8007A0E8` remains an explicitly fake padding entry. Synchronized two stale repository symbol-map entries. H1 selected; no build or run. |
 | s1255 | The bounded `0x8007A86C..0x8007AD30` census found exact companion/generated names for three real functions; `0x8007A86C` remains an explicitly fake 4-byte stub. Synchronized three stale repository symbol-map entries. H1 selected; no build or run. |
+| s1256 | The bounded `0x8007AEF8..0x8007C298` census found exact companion/generated names for three real functions; `0x8007C298` remains an explicitly fake 8-byte stub. Synchronized three stale repository symbol-map entries. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
