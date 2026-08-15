@@ -68087,3 +68087,32 @@ absent independent name. The stale address-encoded TOML entry was synchronized
 run was justified for an exact-name census. This does not reopen M5 audio
 de-stubbing. The next adjacent generated function is the address-encoded
 inner kernel `func_80092CF0` at `0x80092CF0`.
+
+## Session 1359 (2026-08-15) — parked the unnamed constant resample kernel
+
+Performed the bounded exact-name census over `0x80092CF0..0x80092E48`.
+
+No new soak-queue verdicts since s1358; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80092CF0`, size `0x158`; it ends exactly at the next generated function, `0x80092E48`. Overlay `rom_size` is `0x158` |
+| Generated definition | `funcs_24.c` defines `func_80092CF0` at `0x80092CF0` through `jr $ra` at `0x80092E40` (`or $t3` delay at `0x80092E44`); `funcs.h` and `recomp_overlays.inl` already use that address-encoded name. Reused labels `L_80092C6C`/`7C`/`8C`/`9C` are a N64Recomp artifact from the previous function's live tail; the instruction comments are sequential `0x80092CF0..0x80092E44` and the body is not truncated |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` sequential list maps `func_80092CF0 = 0x80092CF0; // defined:true`. The later named list jumps from `resampleVoiceConstantSamples = 0x80092BA8` to `resampleVoiceLutSamplesPacked = 0x80092E48`. No later companion list remaps `0x80092CF0` |
+| Caller evidence | Two generated `jal 0x80092CF0` sites inside `resampleVoiceConstantSamples` at `0x80092C18` and `0x80092C24`. The wrapper `sd`s `$t3` and `cache 0x19` writebacks after each call. No other generated jal and no ROM literal `0x80092CF0` word |
+| Semantic evidence | Leaf kernel: AND/shift/OR packs four interpolated s16 halves into `$t3`, advances source `$t1`, differences adjacent raw s16 samples, and `mult`s by the incoming fraction. That is the inner pack step of the independently named constant-width s16 resampler. Companion reserved `packFourLutResampledSamples` for `0x80092F94`, so inventing a pack-four-constant-kernel name would be a fabricated independent source |
+| Confidence | High that no independent name exists |
+
+The complete comparison selects H3: there is no independent companion name,
+only the address-encoded `func_80092CF0` mapping. H1 is ruled out because
+there is nothing exact to synchronize. H2 is ruled out because the
+generated/TOML/`rom_size` `0x158` boundary is exact and there is no conflicting
+companion name, only an absent one. The address-encoded TOML entry stays
+unchanged, as do `func_800927B0` (s1355 H3), `func_80092A54` (s1357 H3), and
+`func_8008ED6C` (s1309 H2). No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`resampleVoiceLutSamplesPacked` at `0x80092E48`.
