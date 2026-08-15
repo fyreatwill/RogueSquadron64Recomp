@@ -1494,7 +1494,7 @@ functions = [
     { name = "factor5RemoveListNode", vram = 0x80098DE0, size = 0xA4 },
     { name = "mostlyMusyxFlagGatedHelper", vram = 0x80098E84, size = 0x68 },
     { name = "tickAndReap3DAudioVoices", vram = 0x80098EEC, size = 0xBC },
-    { name = "func_80098FA8", vram = 0x80098FA8, size = 0x184 },
+    { name = "setMusyX3DProperties", vram = 0x80098FA8, size = 0x184 },
     { name = "func_8009912C", vram = 0x8009912C, size = 0x1E4 },
     { name = "func_80099310", vram = 0x80099310, size = 0x84 },
     { name = "func_80099394", vram = 0x80099394, size = 0x198 },
