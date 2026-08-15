@@ -1467,7 +1467,7 @@ functions = [
     { name = "fake_func_8009711C", vram = 0x8009711C, size = 0x4 },
     { name = "resetSongSubsystemCounter", vram = 0x80097120, size = 0x10 },
     { name = "bindMacroIdsToSoundGroup", vram = 0x80097130, size = 0xB8 },
-    { name = "func_800971E8", vram = 0x800971E8, size = 0xB8 },
+    { name = "registerSndMacroTable", vram = 0x800971E8, size = 0xB8 },
     { name = "func_800972A0", vram = 0x800972A0, size = 0xBC },
     { name = "func_8009735C", vram = 0x8009735C, size = 0xD4 },
     { name = "func_80097430", vram = 0x80097430, size = 0x84 },
