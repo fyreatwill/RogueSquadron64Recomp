@@ -64494,3 +64494,23 @@ runtime probe, or mitigation was added.
 ORIGIN: generated `SD` sites and `zmemcpy` destination/length expressions;
 the reviewed writers are legitimate frame-local or bounded data writes, and
 no writer-to-target-frame edge was established.
+
+## Session 1184 (2026-08-14) — audited generated partial stores
+
+Completed the prescribed static M3 `do_swl`/`do_swr` audit without building
+or running. The generated tree contains 414 partial-store calls across 66
+functions. Only five functions also call `slotDispatcherIter`: their stores
+target caller-frame locals or bounded object/global data, and no destination
+expression plus store span can cover the callee's saved-register frame. The
+remaining sites are unrelated subsystem/data paths, bounded structures, or
+malformed/non-target generated regions; no reachable writer-to-target-frame
+edge was established.
+
+The host helpers compute the guest address, align it to one word, and update
+only that aligned `MEM_W` word. They do not broaden the computed address or
+write span. This selects H3 and rules out the partial-store/accessor class as
+the current explanation. No build, runtime probe, or mitigation was added.
+
+ORIGIN: complete generated `do_swl`/`do_swr` inventory and host accessor
+contract; reviewed writers are legitimate local/bounded stores or unrelated
+malformed regions, and no mitigation was added.
