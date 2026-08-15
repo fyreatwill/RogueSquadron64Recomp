@@ -64237,3 +64237,27 @@ The current state poll's observed target `0x8009123C` matches the companion
 found. This selects H2 and rules out another literal generated callback-frame
 idiom as the explanation; the next audit is the downstream `musyxSynthFrame`
 operation class. No mitigation was added.
+
+## Session 1171 (2026-08-14) — censused MusyX downstream operations
+
+Performed the prescribed no-build, no-run static census of the generated
+downstream audio chain. `musyxSynthFrame` contains 26 direct calls and two
+indirect calls after the valid callback entry, including command-list setup,
+voice-array maintenance, `musyxMixActiveVoices`, the callback handoff, stream
+flush/service, and timing teardown. `musyxBuildVoiceCommandList` iterates the
+caller-provided bounded voice count, constructs the command-ring entry from
+the voice index and channel tables, and advances the ring count. The mixer
+uses the voice base at `0x801496F8`, stride `0x88`, and the active-byte gate
+before calling `musyxRenderVoiceSamples`; its post-call writes update voice
+state only. The render kernel's first unclassified pointer path loads voice
+fields `+0x34`, `+0x38`, `+0x3C`, and `+0x40` at guest PCs `0x8009004C`–
+`0x80090050`, forms stream/output ranges, and calls the stream helpers.
+
+This identifies the first possible wild pointer as the per-voice sample/stream
+path, but the generated source does not identify its runtime writer or prove
+the loaded values legitimate, and no operation in this chain directly ties the
+later `0x8000B650` host fault to a command-list or sample write. The complete
+port-only discriminator therefore selects H3 (unresolved origin), rules out
+another malformed callback or literal command-list-call explanation, and does
+not authorize a mitigation. The next work unit is an independent retail-oracle
+write-attribution watch with a whole-RDRAM positive control.

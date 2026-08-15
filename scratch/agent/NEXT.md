@@ -1,35 +1,38 @@
-# NEXT work unit (s1171)
+# NEXT work unit (s1172)
 
-HYPOTHESIS-ID: musyx-downstream-operation-census
+HYPOTHESIS-ID: musyx-downstream-ground-truth-pointer-origin
 
-Perform one bounded static census of the complete downstream operation idiom
-in `musyxSynthFrame` after the s1170 callback census selected H2. Do not build,
-run, or add a mitigation in this unit.
+Run one ground-truth-assisted pointer-origin experiment for the first
+unresolved MusyX sample/stream pointer path identified at
+`musyxRenderVoiceSamples` (`0x8009004C`–`0x80090050`). Consult
+`tools/oracle/README.md`, arm a whole-RDRAM positive control, and add one
+physical watch covering the retail voice-array/sample-pointer region that
+corresponds to the port-side `0x801496F8` voice base. Build all watch/control
+arms together and phase-gate the result. Do not add a mitigation.
 
 Competing hypotheses and discriminator:
 
-- H1: a bounded voice-array, sample-pointer, or resampling operation produces
-  the wild value behind the known `0x8000B650` fault family.
-- H2: command-list construction or host/RSP submission produces it after the
-  voice/sample operations have completed.
-- H3: the static census cannot tie the fault to an operation family because a
-  source or destination path remains unresolved.
+- H1: retail writes the watched voice/sample-pointer field before the
+  corresponding port-side operation, identifying a legitimate game writer.
+- H2: retail reaches the phase and positive control but never writes the
+  watched field, moving origin to command-list/submission or an unmodeled
+  runtime path.
+- H3: the oracle remains pre-audio or the target range is not reached, so the
+  pointer-origin question is unevaluable.
 
-The discriminating measurement is one complete operation table for every
-operation family after the `musyxSynthFrame` callback entry: caller/guest PC,
-source operands, array/index bounds, pointer formation, destination writes,
-and the first operation capable of producing the known fault value. H1 or H2
-requires a specific writer plus a legitimate/illegitimate assessment; H3 is
-the outcome if any in-scope path remains unresolved.
+The s1171 census result was H3 for the port-only operation table: the first
+possible wild pointer is a voice/sample field load, but its runtime writer and
+legitimacy are unresolved. The next measurement must therefore be independent
+retail write attribution, not another port-side field.
 
 Exact commands:
 
-    rg -n "musyxSynthFrame|0x800912|LOOKUP_FUNC|musyxMixActiveVoices|musyxRenderVoiceSamples|musyxBuildVoiceCommandList|submit|MEM_[WHD]" ../N64Recomp/RecompiledFuncs/funcs_24.c
-    sed -n '4266,5560p' ../N64Recomp/RecompiledFuncs/funcs_24.c
-    sed -n '3570,4265p' ../N64Recomp/RecompiledFuncs/funcs_24.c
-    rg -n "^(musyxSynthFrame|musyxMixActiveVoices|musyxRenderVoiceSamples|musyxBuildVoiceCommandList)\s*=" ../rogue_squadron64/symbol_files/*.txt
+    sed -n '1,140p' tools/oracle/README.md
+    rg -n "whole-RDRAM|watch-write|positive control|physical" tools/oracle/README.md
+    rg -n "voice|musyx|audio|phase|watch" scratch/agent tools/oracle docs | head -120
+    git status --short
 
-Record operation-family row counts, unresolved rows, first possible writer,
-and legitimate/illegitimate classification in the next ledger entry. If the
-table cannot identify a writer, do not add a guard; choose the next
-ground-truth or source-census discriminator.
+Record whole-RDRAM callback count, watched-range writes, PC attribution, and
+phase reachability. If the watch is not physically mappable or the positive
+control fails, record H3 and choose a corrected oracle arm; do not infer a
+null origin result.
