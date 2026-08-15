@@ -66957,3 +66957,29 @@ song-render buffer setup, and the body builds a decode-buffer ring. H2 and H3
 are ruled out for this function; there is neither a partial/conflicting match
 nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1315 (2026-08-15) — synchronized the sample-stream block acquire symbol
+
+Performed the bounded exact-name census over `0x8008F758..0x8008F858`.
+
+No new soak-queue verdicts since s1314; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008F758`, size `0x100`; it ends exactly at the next generated function, `0x8008F858`. Overlay `rom_size` is `0x100` |
+| Generated definition | `funcs_23.c` defines `acquireSampleStreamBlock` at `0x8008F758` through the matching epilogue at `0x8008F850`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `acquireSampleStreamBlock = 0x8008F758`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x8008F758` in `musyxRenderVoiceSamples` at `0x800902DC`. Companion independently names that kernel `musyxRenderVoiceSamples = 0x8008FFAC` |
+| Semantic evidence | Body walks the used-list at `0x801499B0` for a node whose `+0xC` tag matches `a0`, or pops the freelist at `0x801499AC`, marks `+0x10 = 2`, records a `0x100`-byte block, and returns the node's `+0x8` pointer |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x100` boundary is exact, the only caller is the independently named
+voice-sample kernel, and the body acquires a tagged 256-byte stream block.
+H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
