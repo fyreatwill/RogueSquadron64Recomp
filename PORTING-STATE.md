@@ -71328,3 +71328,36 @@ already-fake one-word `bne` gap and was left unchanged, as were
 No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is independently named `shutdownMusyXVoices` at `0x8009BCC4`.
+
+## Session 1463 (2026-08-15) — synchronized the shutdown-musyx-voices symbol
+
+Performed the bounded exact-name census over `0x8009BCC4..0x8009BD7C`.
+
+No new soak-queue verdicts since s1462; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009BCC4`, size `0xB8`; `0x8009BCC4+0xB8=0x8009BD7C`. Overlay `rom_size` is `0xB8` at offset `0x0009B884` (`0x8009BCC4-0x80000440`). Generated body starts `addiu $sp, $sp, -0x18` at `0x8009BCC4` and ends `jr $ra` / delay-slot `nop` at `0x8009BD74` / `0x8009BD78` |
+| Generated definition | `funcs_26.c` defines `shutdownMusyXVoices` at `0x8009BCC4`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xB8` function between independently named `findFreeSpeechVoiceSlot` at `0x8009BC88` and independently named `accumulateVoiceSampleOffset` at `0x8009BD7C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `shutdownMusyXVoices = 0x8009BCC4` with a teardown comment. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009BCC4`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry. The same file's `finalizeCurrentSpeechBuffer` comment still writes `func_8009BCC4` as the callee, and the teardown comment writes buffer addresses `0x80154E7C`/`0x80154E74`; those are stale comment text for the same address (generated loads are `0x8015467C`/`0x80154674`), not a conflicting symbol |
+| Caller evidence | Exactly one generated `jal 0x8009BCC4` site: independently named `finalizeCurrentSpeechBuffer` at `0x800678EC`. Zero `func_*` callers. Zero `lui`/`addiu` address constructors of `0x8009BCC4`. Matches the companion caller note |
+| Semantic evidence | Seeds `$s0=0` and calls independently named `stopVoiceSlotSynced` (`0x8009B268`) with `$a0=$s0`, then increments `$s0` and repeats only while `$s0<=0` (slot 0 only). Walks the independently named MusyX voice table at `0x80154620` (`lui $at, 0x8015` / `lbu 0x4620($at)`) with stride `0x1228` until one empty active-flag is counted. Zeros the max-voice-count byte at `0x800A5121`, passes `0x8009B5A8` (`serviceVoicePoolFrame`) to independently named `findAndZeroTableSlotMatching`, then `rs_free`s `MEM[0x8015467C]` if byte `0x800A5120` is set and `MEM[0x80154674]` unconditionally. Matches the companion teardown name |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009BCC4`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xB8`, the independently named caller and voice-table teardown match, and
+there is neither a conflicting companion name nor a size split. H2 and H3
+are ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0xB8`). `fake_func_80099FDC` remains
+the already-fake one-word `bne` gap and was left unchanged, as were
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is independently named `accumulateVoiceSampleOffset` at
+`0x8009BD7C`.
