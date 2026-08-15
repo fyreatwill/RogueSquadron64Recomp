@@ -66187,3 +66187,17 @@ and TOML sizes match exactly: `0x140`, `0x120`, `0x338`, `0x24`, `0x14`, and
 channel-flag, and pan-sweep behavior. H1 selected; all six stale symbol-map
 entries were synchronized. No build or runtime run was justified. This rules
 out partial or absent naming evidence for this region.
+## Session 1278 (2026-08-15) — synchronized MusyX macro and voice symbols
+
+Performed the bounded exact-name census over `0x8008A828..0x8008ACB4`.
+The companion symbol file independently identifies all eight generated entries:
+`soundMacroOpSetProgramTableValue`, `soundMacroOpStartPitchEnvelope`,
+`musyxSetVoiceAdsrFromTable`, `soundMacroOpStartVibrato`,
+`soundMacroOpSetVolumeRamp`, `soundMacroOpSetPitchRelativeToNote`,
+`evaluateSoundMacroCurveTable`, and `soundMacroSetVoiceVolume`. Generated
+definitions and TOML sizes match exactly: `0x50`, `0x4C`, `0x160`, `0x80`,
+`0x68`, `0x70`, `0x138`, and `0x19C`. Companion comments and generated bodies
+provide independent table/program, pitch-envelope, ADSR, vibrato, volume-ramp,
+pitch-relative, curve, and voice-volume evidence. H1 selected; all eight stale
+symbol-map entries were synchronized. No build or runtime run was justified.
+This rules out partial or absent naming evidence for this region.
