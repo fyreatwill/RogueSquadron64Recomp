@@ -71495,3 +71495,38 @@ No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is independently named `consumeVoiceSamples` at
 `0x8009C240`.
+
+## Session 1468 (2026-08-15) — synchronized the consume-voice-samples symbol
+
+Performed the bounded exact-name census over `0x8009C240..0x8009C2A0`.
+
+No new soak-queue verdicts since s1467; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009C240`, size `0x60`; `0x8009C240+0x60=0x8009C2A0`. Overlay `rom_size` is `0x60` at offset `0x0009BE00` (`0x8009C240-0x80000440`). Generated body starts `lbu $v1, 0x11DD($a0)` at `0x8009C240` and ends `jr $ra` / delay-slot `nop` at `0x8009C298` / `0x8009C29C` |
+| Generated definition | `funcs_27.c` defines `consumeVoiceSamples` at `0x8009C240`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x60` function between independently named `serviceStreamingVoice` at `0x8009BF14` and independently named `advanceVoiceStateToPlaying` at `0x8009C2A0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `consumeVoiceSamples = 0x8009C240` with the next companion symbol `advanceVoiceStateToPlaying` at `0x8009C2A0`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009C240`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Exactly one generated `jal 0x8009C240` site and zero `func_*` callers. Independently named `accumulateVoiceSampleOffset` at `0x8009BD7C` (s1464) builds a slot pointer into table `0x80153420` (stride `0x1228`) and passes the slot as `$a0` plus a sample count as `$a1` before the jal |
+| Semantic evidence | If stream state `slot+0x11DD` is not 3, return 0. If it is 3, subtract `$a1` from remaining at `+0x11A8`; when remaining drops to `<=0`, write state 4 and zero remaining. Then advance consumed offset `+0x11D4` by `min($a1, +0x11D8 - +0x11D4)` and return that count. Matches the companion name and the slot-state / remaining / window layout from s1464 / s1466 / s1467 (`serviceStreamingVoice` treats states 1/2/3; `advanceVoiceStateToPlaying` is 2->3; `stopVoice` writes 4) |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009C240`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x60`, the independently named sample-offset caller plus the state-3
+consume / remaining-exhaust / window-advance control flow match, and
+there is neither a conflicting companion name nor a size split. H2 and
+H3 are ruled out for this address. The stale address-encoded TOML entry
+was synchronized (name only; size left at `0x60`). `fake_func_80099FDC`
+remains the already-fake one-word `bne` gap and was left unchanged, as
+were `fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is independently named `advanceVoiceStateToPlaying` at
+`0x8009C2A0`.

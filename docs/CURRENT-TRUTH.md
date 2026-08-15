@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1467 (2026-08-15).
+the authority for session detail. Reviewed through s1468 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1467 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009C240..0x8009C2A0`.
+   census over the next adjacent function, `0x8009C2A0..0x8009C2BC`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -67,11 +67,11 @@ the authority for session detail. Reviewed through s1467 (2026-08-15).
    `transformVec3ByAffineMatrix`), and `fake_func_80099FDC`
    unchanged (s1451 H2: already-fake one-word `bne` gap before
    `aspMainTextStart` at `0x80099FE0`; overlay `0xF84` is the
-   misparsed RSP text lump, not a CPU function). s1467 synchronized
-   `serviceStreamingVoice` at `0x8009BF14` (H1; generated already
-   named; TOML was `func_8009BF14`). The generated entry at
-   `0x8009C240` is already `consumeVoiceSamples`; the TOML entry is
-   still `func_8009C240`.
+   misparsed RSP text lump, not a CPU function). s1468 synchronized
+   `consumeVoiceSamples` at `0x8009C240` (H1; generated already
+   named; TOML was `func_8009C240`). The generated entry at
+   `0x8009C2A0` is already `advanceVoiceStateToPlaying`; the TOML
+   entry is still `func_8009C2A0`.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -345,6 +345,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1465 | Exact companion/generated voice-DMA census synchronized `dmaVoiceSampleAndSignal` at `0x8009BE08`; no build or runtime run. |
 | s1466 | Exact companion/generated voice-slot census synchronized `initMusyXVoiceSlot` at `0x8009BE40`; no build or runtime run. |
 | s1467 | Exact companion/generated streamed-voice census synchronized `serviceStreamingVoice` at `0x8009BF14`; no build or runtime run. |
+| s1468 | Exact companion/generated voice-consume census synchronized `consumeVoiceSamples` at `0x8009C240`; no build or runtime run. |
 
 ## Method and safety rules
 
