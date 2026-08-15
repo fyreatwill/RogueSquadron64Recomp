@@ -1344,7 +1344,7 @@ functions = [
     { name = "setMusyXVoiceTickGate", vram = 0x8008DD50, size = 0x10 },
     { name = "dispatchAudioCommand", vram = 0x8008DD60, size = 0x350 },
     { name = "playSimpleAudioCmd", vram = 0x8008E0B0, size = 0x70 },
-    { name = "func_8008E120", vram = 0x8008E120, size = 0xA4 },
+    { name = "applyMusicOrSfxVolume", vram = 0x8008E120, size = 0xA4 },
     { name = "func_8008E1C4", vram = 0x8008E1C4, size = 0x54 },
     { name = "func_8008E218", vram = 0x8008E218, size = 0x2CC },
     { name = "func_8008E4E4", vram = 0x8008E4E4, size = 0x68 },

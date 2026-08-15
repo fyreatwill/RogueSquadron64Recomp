@@ -66421,3 +66421,23 @@ audio-command wrapper role. H2 and H3 are ruled out for this function; there
 is neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1292 (2026-08-15) — synchronized the music/SFX volume symbol
+
+Performed the bounded exact-name census over `0x8008E120..0x8008E1C4`.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E120`, size `0xA4`; it ends exactly at the next generated function, `0x8008E1C4` |
+| Generated definition | `funcs_23.c` defines `applyMusicOrSfxVolume` at `0x8008E120`; overlay rom_size is `0xA4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `applyMusicOrSfxVolume = 0x8008E120` |
+| Caller evidence | Two generated call sites in `applyVolumeSettingsToMixer` (`0x8006E468`) invoke it as `jal 0x8008E120`; first with applyMusic=1/applySfx=0, then applyMusic=0/applySfx=1 |
+| Semantic evidence | Body is gated by the MusyX-active byte at `0x800A0F50`, acquires the Factor 5 mutex, and calls `dispatchAudioCommand` with category `0x15` then `0x16` when the matching flag is set |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0xA4` boundary is exact, and caller plus body evidence supports the
+music/SFX volume-apply role. H2 and H3 are ruled out for this function; there
+is neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
