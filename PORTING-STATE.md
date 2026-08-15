@@ -72134,3 +72134,40 @@ next adjacent generated function is independently named
 `cinematicLoopBody` at `0x800A5D80` (TOML still `func_800A5D80`, size
 `0x8A0`; overlay `rom_size` is `0x8A0` and the live body ends at
 `jr $ra` / `addiu $sp, $sp, 0xD8`).
+
+## Session 1486 (2026-08-15) — synchronized the cinematic-loop-body symbol
+
+Performed the bounded exact-name census over `0x800A5D80..0x800A6620`.
+
+No new soak-queue verdicts since s1485; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A5D80`, size `0x8A0`; `0x800A5D80+0x8A0=0x800A6620`. Overlay `.ovl.cinematic` entry `rom_size` is `0x8A0` at offset `0x00000C50` (`0x800A5D80-0x800A5130`). Live body is independently `0x8A0` and meets independently named `load_cutscene` at `0x800A6620` |
+| Generated definition | `funcs_27.c` defines `cinematicLoopBody` at `0x800A5D80`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x8A0` function, first named entry of `.ovl.cinematic` after the overlay trampoline at `0x800A5130`. It starts `addiu $sp, $sp, -0xD8` / `sw $s7, 0xB4($sp)` and ends at `jr $ra` / `addiu $sp, $sp, 0xD8` (`0x800A6618`/`0x800A661C`). Next generated function is independently named `load_cutscene` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `cinematicLoopBody = 0x800A5D80` with comment "inner cinematic frame loop". Menu, mission, libultra, and zlib lists do not remap `0x800A5D80`. `undefined_funcs_auto.txt` still has leftover `func_800A5D80`; that is the splat auto stub, not an independent competing name. No companion C/asm body exists |
+| Caller evidence | Six retail `jal` encodings `0x0C029760` and zero `j` / absolute pointer words. Five sites are `LOOKUP_FUNC(0x800A5D80)` in independently named `mainGameLoop` after `loadOverlay(2)` (`0x8003E10C`, `0x8003E1A0`, `0x8003E1C4`, `0x8003E324`, `0x8003E3F4`; file `0x3ED0C`/`0x3EDA0`/`0x3EDC4`/`0x3EF24`/`0x3EFF4`). One site is a direct `cinematicLoopBody` call from independently named `dispatchCinematicFromMainLoop` (`0x800AE914`; overlay file `0x140D64`) with args `a0=3, a1=2`. Same-run ROM words at those six file offsets are `0x0C029760` |
+| Semantic evidence | Retail ROM words at file `0x1381D0` (`0x137580+(0x800A5D80-0x800A5130)`) are `0x27BDFF28` / `0xAFB700B4` (`addiu $sp, $sp, -0xD8` / `sw $s7, 0xB4($sp)`). Epilogue file `0x138A68` is `0x03E00008` / `0x27BD00D8`. Next start file `0x138A70` is `0x27BDFFA0` (`load_cutscene`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, `setupCutsceneLevel` file `0x139134` is `0x27BDFFE0`, and the six caller `jal` words above are `0x0C029760`. The generated body has 61 `jal` sites including independently named `shouldShowCutsceneForLevelStage`, `load_cutscene`, `setupCutsceneLevel`, `cinematicComputeDt`, `cinematicStageAdvancer`, `slotDispatcherIter` (seven times), `submitGfxFrame`, and `cinematicShutdownAudioAndAssets`. Matches the companion "inner cinematic frame loop" comment and the documented `mainGameLoop` -> overlay-2 -> cinematic handler chain |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A5D80`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x8A0`, `mainGameLoop` and `dispatchCinematicFromMainLoop` call it
+after loading overlay 2, and there is neither a conflicting companion name
+nor a size split inside the live body. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x8A0`).
+`func_8009D978` remains the eight-byte Q15 delay-mix table and was left
+unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `load_cutscene` at `0x800A6620` (TOML already
+`load_cutscene`, size `0x2E4`; overlay `rom_size` is `0x2E4`; live body
+ends at `jr $ra` / `addiu $sp, $sp, 0x60` before independently named
+`cinematicSlotUpdate`).
