@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1293 (2026-08-15).
+the authority for session detail. Reviewed through s1294 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1293 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8008E218..0x8008E4E4`.
+   census over the next adjacent function, `0x8008E4E4..0x8008E54C`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence.
 2. Keep the external retail-entry boundary parked until a new independent
@@ -149,6 +149,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1291 | Exact companion/generated MusyX wrapper census synchronized `playSimpleAudioCmd` at `0x8008E0B0`; no build or runtime run. |
 | s1292 | Exact companion/generated MusyX volume census synchronized `applyMusicOrSfxVolume` at `0x8008E120`; no build or runtime run. |
 | s1293 | Exact companion/generated MusyX fader census synchronized `isAudioFaderRampActive` at `0x8008E1C4`; no build or runtime run. |
+| s1294 | Exact companion/generated MusyX fader census synchronized `setupAudioFaderRamp` at `0x8008E218`; no build or runtime run. |
 
 ## Method and safety rules
 

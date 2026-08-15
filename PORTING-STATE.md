@@ -66461,3 +66461,26 @@ fader-ramp-active predicate. H2 and H3 are ruled out for this function; there
 is neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1294 (2026-08-15) — synchronized the audio-fader-ramp setup symbol
+
+Performed the bounded exact-name census over `0x8008E218..0x8008E4E4`.
+
+No new soak-queue verdicts since s1293; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E218`, size `0x2CC`; it ends exactly at the next generated function, `0x8008E4E4`. Overlay `rom_size` is `0x2CC` |
+| Generated definition | `funcs_23.c` defines `setupAudioFaderRamp` at `0x8008E218` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setupAudioFaderRamp = 0x8008E218` |
+| Caller evidence | One generated call site in `setAudioFaderRampLocked` (`0x8008E4E4`) invokes it as `jal 0x8008E218` after an optional `factor5MutexAcquire` and before `factor5MutexRelease` |
+| Semantic evidence | Body writes the same 0x28-byte slot table at `0x80141B20` used by `isAudioFaderRampActive`: duration at `+0x1C`, step `(target-current)/duration` at `+0x18`, target `a0<<16` at `+0x14`. `a2` selects all 32 slots (`0xFF`), inactive (`0xFD`), active-state-1 (`0xFE`), or a single slot. `a1==0` is forced to 1 |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x2CC` boundary is exact, and caller plus body evidence supports the
+fader-ramp setup. H2 and H3 are ruled out for this function; there is neither
+a partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
