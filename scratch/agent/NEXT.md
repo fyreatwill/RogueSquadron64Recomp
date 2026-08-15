@@ -1,32 +1,30 @@
-# NEXT work unit (s1237)
+# NEXT work unit (s1238)
 
-HYPOTHESIS-ID: retail-external-entry-boundary
+HYPOTHESIS-ID: retail-external-entry-boundary-closed
 
-Run one bounded source census of the remaining external/front-end retail-entry
-boundary. Compare every command or lifecycle event between ROM_OPEN and
-EXECUTE in `tools/oracle/rs64_oracle.c`, the installed console frontend/core,
-and the port's `recomp_entrypoint`; classify each as a possible state-changing
-handoff or ordinary setup. Do not build or run.
+The prior external/front-end census is complete. Do not build or run. The next
+work unit is to obtain and inspect one genuinely new retail-entry artifact: a
+frontend/launcher source or binary invocation that can perform a state-changing
+handoff not represented by the audited oracle/core contract. If no such artifact
+is available, stop and ask the human for it rather than repeating source searches.
 
 Competing hypotheses and discriminator:
 
-- H1: an unaccounted front-end/core event changes retail game state before or
-  during EXECUTE; the port lacks an equivalent handoff.
-- H2: ROM_OPEN-to-EXECUTE has no hidden state-changing event; the missing
-  transition is outside the available launcher contract.
-- H3: the apparent difference is only emulator/runtime bookkeeping, with no
-  game-state handoff at all.
+- H1: the supplied artifact contains a state-changing handoff absent from the
+  port; its command/data and timing identify the next probe.
+- H2: the supplied artifact is equivalent to the audited contract and contains
+  no such handoff; the retail transition remains externally unavailable.
+- H3: no artifact can be supplied; the investigation is blocked on external
+  ground truth, not on an untested in-tree path.
 
-Discriminator: one event table listing source location, lifecycle point,
-state-changing side effect, and port equivalent. A concrete unmatched
-state-changing event selects H1; a complete matched table selects H2; only
-host bookkeeping with no game-state side effect selects H3.
+Discriminator: one artifact-backed event table listing source/invocation,
+lifecycle point, state-changing side effect, and port equivalent. A concrete
+unmatched handoff selects H1; a complete equivalent table selects H2; absent
+artifact selects H3 and requires BLOCKED.md.
 
 Exact commands:
 
 ```
-rg -n -C 4 'ROM_OPEN|EXECUTE|STATE_LOAD|STATE_SAVE|RESET|CoreDoCommand|attach|startup|EEPROM|savestate|press' tools/oracle /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-ui-console
-rg -n -C 4 'recomp_entrypoint|start_game|load_stored_rom|M64CMD|ROM_OPEN|STATE_LOAD|reset|EEPROM' src lib/N64ModernRuntime/librecomp/src
+find /path/to/new-artifact -maxdepth 3 -type f -print
+rg -n -C 4 'ROM_OPEN|EXECUTE|STATE_LOAD|STATE_SAVE|RESET|CoreDoCommand|EEPROM|savestate|entry|load' /path/to/new-artifact
 ```
-
-Classify every lifecycle event before choosing the next boundary.

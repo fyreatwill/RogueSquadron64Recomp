@@ -65529,3 +65529,27 @@ PIF/CP0 source and the generated/runtime census.
 ORIGIN: independent Mupen64Plus PIF/CP0 source, generated funcs_0/4/7 census,
 and librecomp `init`/`run_thread_function`. No mitigation, build, or runtime
 code change was made.
+
+## Session 1237 (2026-08-15) — censused ROM_OPEN-to-EXECUTE lifecycle
+
+Ran the bounded external/front-end retail-entry source census without building
+or running. In `tools/oracle/rs64_oracle.c`, the lifecycle is ROM_OPEN, optional
+plugin attachment, debugger callback setup, director/poller startup, and
+EXECUTE. The only state-changing commands in the wrapper are explicit input,
+state save/load, and STOP; the state commands run on their documented timing
+and emulator-state paths. In the available Mupen64Plus core,
+`M64CMD_ROM_OPEN` calls `open_rom`, marks the ROM open, and initializes cheat
+state; `M64CMD_EXECUTE` only checks state, calls `plugin_check`, and enters
+`main_run`. RESET and state commands are not pre-EXECUTE handoffs.
+
+The checked oracle checkout does not contain the console-frontend source
+directory named by the prior work unit, so this iteration did not re-audit that
+already-recorded UI source. The event table therefore has no unmatched
+state-changing handoff in the available oracle/core path and selects H2: the
+missing retail transition remains outside the audited launcher contract. This
+rules out another hidden ROM_OPEN-to-EXECUTE core event, but not an external
+frontend artifact that is not present in the checkout. No build, run, or code
+change was made.
+
+ORIGIN: `tools/oracle/rs64_oracle.c`, Mupen64Plus `src/api/frontend.c`, and the
+port `recomp_entrypoint`/`start_game` path. No mitigation.
