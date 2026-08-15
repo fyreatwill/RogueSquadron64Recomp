@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1228 (2026-08-14).
+in the ledger. Reviewed through s1229 (2026-08-14).
 
 ## Current state
 
@@ -159,6 +159,7 @@ in the ledger. Reviewed through s1228 (2026-08-14).
   initialization. Two independent lines are the ROM bytes/section mapping and
   the generated caller/registration chain.
 - The s1228 bounded source audit found no hidden oracle startup/reset or later-entry command. `rs64_oracle.c` performs `ROM_OPEN`, attaches input only when a press schedule exists, then calls `M64CMD_EXECUTE`; its optional state save/load happens after five seconds inside the same run. The port starts directly at `recomp_entrypoint`, whose generated path creates the idle and video threads; `thread3_video_handle` registers `mainBootstrapWorker`, which invokes static `gBootConfig+4`. The first explicit oracle state-changing event is therefore scheduled SDL input, while the port has no matching external handoff. H2 is selected; the remaining boundary is outside the in-tree oracle CLI and generated boot path. Source evidence only.
+- The s1229 installed Mupen64Plus 2.6.0 front-end/core audit found the same contract outside the oracle: the console UI calls `CoreStartup`, `M64CMD_ROM_OPEN`, plugin attach, optional `M64CMD_STATE_LOAD` only for `--savestate`, then `M64CMD_EXECUTE`; it has no reset, EEPROM injection, or alternate entry command. The core does load EEPROM/SRAM through ROM database/config during ROM open, so save-media provenance remains a separate data question, not a launcher handoff. H2 is selected for the external-command hypothesis; the next boundary is whether the existing retail EEPROM file carries meaningful state. Source/config evidence only.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -238,11 +239,12 @@ in the ledger. Reviewed through s1228 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Audit the installed Mupen64Plus front-end/core startup contract beyond the
-   in-tree oracle: identify whether the external launcher supplies a reset type,
-   EEPROM/save image, or alternate entry command before `M64CMD_EXECUTE`. This
-   is source/config evidence only; do not build or run until a concrete
-   state-changing event is named.
+1. Inspect the actual retail EEPROM file and the core's ROM-open save-media
+   path: determine whether the file exists, has the expected size, and differs
+   from a formatted blank image, then map the file's selected save type and
+   filename to the loaded ROM. This is data/source evidence only; do not build
+   or run. A nonblank file loaded before execution selects H1 for save-media
+   state; a blank/missing file or an unselected path selects H2.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -355,6 +357,7 @@ order.
 | s1225 | Post-idle generated/companion audit found `loadSaveDataIfNotLoaded` is EEPROM-only, `classifySaveStateFromInput` is uncalled, and the remaining post-load loop has polling/render/account-unlock work but no input-controlled retail-entry writer. H2 selected; no oracle target justified. |
 | s1227 | Bounded provenance audit found `gBootConfig` at `0x80037560` is ROM-backed in the main image (ROM `0x38160`), with bytes `80 03 DF A0` at `+0x04` (`mainGameLoop`). No generated writer exists; `thread3_video_handle` registers `mainBootstrapWorker`, whose `jalr` consumes that static callback. H2 selected; the missing retail-entry event is outside this generated handoff. No build or run. |
 | s1228 | Bounded source audit found the oracle performs `ROM_OPEN` then `M64CMD_EXECUTE`, attaches input only for scheduled presses, and performs optional save/load only after five seconds. The port enters directly through `recomp_entrypoint` and the same static boot-config callback chain. No source-visible external event bridges the oracle's 320 phase to later retail entry; H2 selected. No build or run. |
+| s1229 | Installed Mupen64Plus 2.6.0 UI source confirms `CoreStartup` → `ROM_OPEN` → plugin attach → optional `STATE_LOAD` only for `--savestate` → `EXECUTE`; no reset, EEPROM injection, or alternate entry command exists. Core ROM-open code does load save media via its ROM database/config, leaving actual EEPROM contents as the next boundary. H2 selected for the external-command hypothesis. No build or run. |
 
 ## Method and safety rules
 

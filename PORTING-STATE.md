@@ -65347,3 +65347,21 @@ behavior was changed.
 
 ORIGIN: `tools/oracle/rs64_oracle.c`, generated `funcs_0.c`/`funcs_8.c`, and
 `main_overlay.txt`.
+
+## Session 1229 (2026-08-14) — audited installed Mupen64Plus startup contract
+
+Ran the bounded installed front-end/core source and configuration audit without
+building or running. The Mupen64Plus 2.6.0 console UI source calls
+`CoreStartup`, `M64CMD_ROM_OPEN`, attaches plugins, optionally calls
+`M64CMD_STATE_LOAD` only when `--savestate` is supplied, and then calls
+`M64CMD_EXECUTE`. There is no reset command, EEPROM injection call, or alternate
+entry command in that route. The core source separately resolves ROM save type
+and loads EEPROM/SRAM through its ROM database/config during ROM open. H2 is
+selected for the external-command hypothesis: no launcher handoff explains the
+missing retail transition, while the actual EEPROM contents remain an open
+save-media question. This rules out a hidden front-end reset/entry operation;
+it does not rule out persistent EEPROM state. Static source/config evidence only.
+
+ORIGIN: installed Mupen64Plus 2.6.0 UI/core source bundle, `/opt/homebrew`
+configuration, and `tools/oracle/rs64_oracle.c`. No mitigation, build, or
+runtime behavior was changed.
