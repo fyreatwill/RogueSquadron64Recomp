@@ -66837,3 +66837,27 @@ function has an exact companion name, matching generated/TOML size, and
 independent thread-entry plus AI-buffer evidence, so its stale address-encoded
 TOML entry was synchronized. H3 is ruled out for both addresses: independent
 names exist. No build or runtime run was justified for an exact-name census.
+
+## Session 1310 (2026-08-15) — synchronized the song-tempo schedule builder symbol
+
+Performed the bounded exact-name census over `0x8008EEC0..0x8008F0A0`.
+
+No new soak-queue verdicts since s1309; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008EEC0`, size `0x1E0`; it ends exactly at the next generated function, `0x8008F0A0`. Overlay `rom_size` is `0x1E0` |
+| Generated definition | `funcs_23.c` defines `buildSongTempoSchedule` at `0x8008EEC0` through the matching epilogue at `0x8008F098`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `buildSongTempoSchedule = 0x8008EEC0`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x8008EEC0` in `tickAudioBufferUpdate` at `0x80092518`. Companion independently names that thin wrapper `tickAudioBufferUpdate = 0x80092510`; its entire body is this call |
+| Semantic evidence | Body early-outs on the engine pointer at `0x80149770`, reads a song-header tempo halfword, converts with the `/1000` reciprocal `0x10624DD3`, sizes and `rs_malloc`s a `0x48`-byte header plus a 192-slot-derived schedule buffer, copies per-channel converted words and four optional header halfwords, writebacks the header, and publishes the table to `0x80149768` under `factor5MutexAcquire`/`factor5MutexRelease` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x1E0` boundary is exact, the only caller is an independently named
+audio-buffer tick, and the body is a tempo-to-schedule conversion plus a
+mutex-published table. H2 and H3 are ruled out for this function; there is
+neither a partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
