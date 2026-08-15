@@ -66530,3 +66530,26 @@ fader-state setter. H2 and H3 are ruled out for this function; there is
 neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run
 was justified for an exact-name census.
+
+## Session 1297 (2026-08-15) — synchronized the any-audio-slot-active symbol
+
+Performed the bounded exact-name census over `0x8008E57C..0x8008E614`.
+
+No new soak-queue verdicts since s1296; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E57C`, size `0x98`; it ends exactly at the next generated function, `0x8008E614`. Overlay `rom_size` is `0x98` |
+| Generated definition | `funcs_23.c` defines `anyAudioSlotActive` at `0x8008E57C`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `anyAudioSlotActive = 0x8008E57C` |
+| Caller evidence | Ten generated `jal 0x8008E57C` sites: `waitForAnyAudioSlot` (`0x800668C0`), `gracefulMenuShutdown` (`0x800AE75C`), `drainAudioAndFinalizeSpeechBuffer` (`0x800B24D4`), `menuControllerInput` (`0x800B8050`), `runMenuRandomBackdropScreen` (`0x800BFF60`), `runMenuShipSelectScreen` (`0x800C1750`), `runMenuModelViewerScreen` (`0x800C2DB0`), `menuSubtype02Handler` (`0x800C3F64`), `menuOverlayInit` (`0x800C5930`), and `runModelViewerLoop` (`0x800CA580`) |
+| Semantic evidence | Body gates on the MusyX-active byte at `0x800A0F50`. If set, it ORs `isAudioSlotActive(i)` for `i=0..MEM_BU(0x80141AD0)` after a `0x80092120` stub check, then returns the inverted u8 (`sltiu` of the aggregate). `waitForAnyAudioSlot` loops while that return is zero |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x98` boundary is exact, and caller plus body evidence supports the
+slot-active aggregate. H2 and H3 are ruled out for this function; there is
+neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run
+was justified for an exact-name census.

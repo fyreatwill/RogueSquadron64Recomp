@@ -1349,7 +1349,7 @@ functions = [
     { name = "setupAudioFaderRamp", vram = 0x8008E218, size = 0x2CC },
     { name = "setAudioFaderRampLocked", vram = 0x8008E4E4, size = 0x68 },
     { name = "setAudioFaderState", vram = 0x8008E54C, size = 0x30 },
-    { name = "func_8008E57C", vram = 0x8008E57C, size = 0x98 },
+    { name = "anyAudioSlotActive", vram = 0x8008E57C, size = 0x98 },
     { name = "func_8008E614", vram = 0x8008E614, size = 0x248 },
     { name = "func_8008E85C", vram = 0x8008E85C, size = 0x5C },
     { name = "func_8008E8B8", vram = 0x8008E8B8, size = 0x20 },
