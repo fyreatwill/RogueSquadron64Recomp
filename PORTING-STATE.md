@@ -67334,3 +67334,28 @@ called from `musyxNoopStub`. H2 and H3 are ruled out for this function;
 there is neither a partial/conflicting match nor an absent independent name.
 The stale address-encoded TOML entry was synchronized. No build or runtime
 run was justified for an exact-name census.
+
+## Session 1330 (2026-08-15) — synchronized the Factor 5 mutex-init symbol
+
+Performed the bounded exact-name census over `0x80091FC4..0x80092010`.
+
+No new soak-queue verdicts since s1329; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80091FC4`, size `0x4C`; it ends exactly at the next generated function, `0x80092010`. Overlay `rom_size` is `0x4C` |
+| Generated definition | `funcs_24.c` defines `initFactor5Mutex` at `0x80091FC4` through the matching epilogue at `0x80092008`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `initFactor5Mutex = 0x80091FC4` and independently names the queue `D_80149990` plus the token buffer `D_801499A8`. The later companion list names `factor5MutexAcquire` at `0x80092010` and does not remap `0x80091FC4` |
+| Caller evidence | Two generated sites: `initAudioSubsystem` (`0x80091B3C`) at `jal 0x80091B64` and `reapplyAudioConfig` (`0x80091C88`) at `jal 0x80091CAC`. Companion independently names both callers as the boot and runtime audio paths that install this mutex |
+| Semantic evidence | Body builds `0x80149990`/`0x801499A8`, `jal 0x8002B300` (`osCreateMesgQueue`) with count 1, then `jal 0x80033410` (`osSendMesg`) with a null token. That is the create-queue-and-post-initial-token path the companion independently names |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x4C` boundary is exact, and the body is the Factor 5 mutex initializer
+called from `initAudioSubsystem` and `reapplyAudioConfig`. H2 and H3 are ruled
+out for this function; there is neither a partial/conflicting match nor an
+absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
