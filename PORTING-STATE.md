@@ -70497,3 +70497,36 @@ epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `register3DAudioListenerNode` at `0x8009912C`.
+
+## Session 1438 (2026-08-15) — synchronized the register-3d-audio-listener-node symbol
+
+Performed the bounded exact-name census over `0x8009912C..0x80099310`.
+
+No new soak-queue verdicts since s1437; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009912C`, size `0x1E4`; `0x8009912C+0x1E4=0x80099310`. Overlay `rom_size` is `0x1E4` at offset `0x00098CEC` (`0x8009912C-0x80000440`). Generated body starts `addiu $sp, $sp, -0x78` at `0x8009912C` and ends `jr $ra` / `nop` at `0x80099308` / `0x8009930C` |
+| Generated definition | `funcs_26.c` defines `register3DAudioListenerNode` at `0x8009912C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x1E4` function between independently named `setMusyX3DProperties` at `0x80098FA8` and generated `unlinkMusyXListNode` at `0x80099310` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `register3DAudioListenerNode = 0x8009912C` in the compact 3D-audio list. Menu, mission, cinematic, and ignored lists do not remap `0x8009912C`. The commented MusyX list jumps from `setMusyX3DProperties` to `unlinkMusyXListNode = 0x80099310`; that is an omission of a comment, not a second mapping. No conflicting companion name |
+| Caller evidence | Exactly 4 generated `jal 0x8009912C` sites, all inside independently named functions: `initAudioListenerFromCamera`, `updateHangarBayScene`, `emit3DSoundsForActiveNpcs`, and `runModelViewerSoundDemo`. Zero `func_*` callers |
+| Semantic evidence | Body gates on `gMusyXActiveFlag` (`0x800A0F50`), `factor5MutexAcquire`s, inserts `a0` as the new head of the doubly-linked list at `0x80153418` (`next=old head`, `prev=0`, `oldhead.prev=node`, `head=node`), copies `a1`/`a2`/`a3` vec3fs to `dst+0xC`/`+0x18`/`+0x24`, negates the stack velocity into `dst+0x3C..+0x44`, stores extra stack floats at `dst+0x78/+0x7C/+0x80`, calls independently named `crossProductVec3` and `invertOrientationMatrix`, stores a stack word at `dst+0x8` and a scaled stack byte at `dst+0x84`, then `factor5MutexRelease`. That is a locked 3D-listener-node insert plus the same spatial write layout as `setMusyX3DProperties`, matching the companion name |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009912C`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x1E4`, the four `jal` callers are independently named listener/scene/NPC
+sites, and there is neither a conflicting companion name nor a size
+split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x1E4`). `fake_func_80097D58` remains the already-fake two-instruction
+epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`unlinkMusyXListNode` at `0x80099310`.
