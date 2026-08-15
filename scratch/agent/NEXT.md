@@ -1,42 +1,44 @@
-# NEXT work unit (s1221)
+# NEXT work unit (s1222)
 
 HYPOTHESIS-ID: retail-entry-capability
 
-The s1220 paired target set `gGameSettings+0x21` via physical
-`0x130B60:0x00010000`. The write fired at VI 1, both arms passed the
-whole-RDRAM control, and callback plus VI-poll traces stayed at width
-320/origin `0x006dd280` for 75 seconds. The cinematic sub-state target did not
-change retail entry.
+The s1221 paired target set `gGameSettings+0x22` via physical
+`0x130B60:0x00000100`. The write fired at VI 1, both arms passed whole-RDRAM
+and VI controls, and callback plus VI-poll traces stayed at width
+320/origin `0x006dd280` for 75 seconds. The recipe had no input plugin, so no
+PIF button events were emitted in either arm. The mission sub-state target did
+not change retail entry; no further documented state-byte write is justified.
 
-Work unit: smoke-test the next justified state-changing RAM target at the
-retail 320 boundary: `gGameSettings+0x22`, documented as the mission
-sub-state, virtual `0x80130B62`, physical byte `0x130B62`. Use the oracle's
-aligned debugger write `0x130B60:0x00000100` to set only byte +0x22 to 1.
+Work unit: perform a bounded static census of the generated `mainGameLoop`
+state-machine consumers and writers for `gGameSettings+0x20..0x22`, using the
+companion architecture description to identify one independently justified
+retail-entry route or prove these bytes are only transient flags. Do not build
+or run the port and do not add another debugger write target in this unit.
 
 Competing hypotheses and discriminator:
-- H1: the mission sub-state target changes the retail state path and reaches a
-  later VI width/origin phase.
-- H2: the target is not state-changing, or the run remains at width 320/origin
-  `0x006dd280`.
-- H3: the target write disrupts the whole-RDRAM, PIF, or VI controls, making
-  the result unevaluable.
+- H1: one of the three bytes is written by a producer that the oracle probes
+  have not modeled; the census identifies its writer, timing, and a justified
+  next target.
+- H2: the bytes are only transient/cleared flags, and their consumers explain
+  why direct writes at the 320 boundary do not persist into a later phase.
+- H3: the generated boundary is incomplete or misnamed, so the apparent byte
+  census cannot account for all state transitions and requires a regeneration
+  or symbol-boundary check.
 
-Discriminator: a later VI width/origin only in the target arm selects H1;
-width 320 in both arms selects H2; a failed positive control in the target arm
-selects H3. The `[debug-write]` marker must fire at VI width 320; absence
-invalidates the target arm rather than selecting H2.
+Discriminator: enumerate every generated load/store of the three byte offsets,
+map each site to its containing function and control-flow role, and reconcile
+the complete set against the `mainGameLoop` pseudocode. A complete producer /
+consumer map selecting a new writer or target supports H1; a complete map with
+only transient clear/set/consume edges supports H2; any missing or malformed
+generated interval supports H3 and stops further oracle writes.
 
-Required in the same run: paired undriven/control and target-write arms,
-both with whole-RDRAM watch, VI callback/poll traces, and PIF trace. Do not
-arm M4 watches unless a later VI phase is reached.
-
-Exact command shape (use the DEBUGGER=1 core path):
+Exact commands:
 ```
-tools/oracle/build/rs64_oracle --oracle-debugger 1 \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/rogue_squadron.z64 \
-  --secs 75 --debug-write 0x130B60:0x00000100 \
-  --watch-write 0x0:0x800000 --hit-cap 10000 --vi-trace --vi-poll --pif-trace
+rg -n "80130B[456789A-F]|130B[456789A-F]|gGameSettings|unk20|unk21|unk22" \
+  RecompiledFuncs tools docs/game-architecture.md
+rg -n "func_8003DFA0|mainGameLoop" RecompiledFuncs/funcs_*.c
 ```
 
-Control arm: identical command minus `--debug-write`, run concurrently.
+Read bounded windows around every hit, classify all three byte offsets, and
+record the complete table in the session ledger. If H1 selects a target, write
+the next oracle recipe only after it has a positive-control plan.

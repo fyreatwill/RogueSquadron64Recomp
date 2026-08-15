@@ -125,6 +125,18 @@ in the ledger. Reviewed through s1220 (2026-08-14).
   for 75 seconds / 4,499 VI frames. H2 is selected for this target; the next
   justified state-byte route is the documented mission sub-state byte
   `gGameSettings+0x22`.
+- The s1221 debugger-enabled oracle pair wrote `0x00000100` to physical
+  `0x130B60` at VI 1, setting the documented mission sub-state byte
+  `gGameSettings+0x22`. The target write marker fired; both arms independently
+  hit the whole-RDRAM positive-control cap at 10,000 writes, and both VI
+  callback/poll traces stayed at width 320/origin `0x006dd280` for 75 seconds
+  (4,500/4,499 VI frames). H2 is selected for this target: the mission
+  sub-state write did not change retail entry. This no-input recipe emitted no
+  PIF button events in either arm because the oracle reported no input plugin;
+  that shared limitation does not affect the positive whole-RDRAM or VI
+  controls. No further documented `gGameSettings` state-byte target is
+  currently justified; identify the next independent retail-entry route from
+  the generated state-machine consumers before another write probe.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -204,10 +216,11 @@ in the ledger. Reviewed through s1220 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Probe the separately documented mission sub-state byte `gGameSettings+0x22`
-   (`0x80130B62`, physical word write `0x130B60:0x00000100`) with the same
-   paired whole-RDRAM/PIF/VI controls. Use a phase-gated later width/origin
-   outcome; do not arm M4 watches unless a later phase is reached.
+1. Audit the generated `mainGameLoop` state-byte consumers and writers around
+   `gGameSettings+0x20..0x22` to identify one independently justified retail
+   entry route or prove that the three documented bytes are only transient
+   flags. Keep the audit complete and bounded; do not add another debugger
+   write target without a new discriminator.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -314,6 +327,7 @@ order.
 | s1217 | DEBUGGER=1 core write/read/resume path validated with a harmless RDRAM word; paired oracle arms passed whole-RDRAM/PIF/VI controls. Refutes H3 (control-disruption/absent control) and closes the control-surface question; H1/H2 remain open pending a state-changing target. |
 | s1218 | Checkpoint-recovery only: restated s1217 in gate-recognized terms, no new experiment. |
 | s1220 | `gGameSettings+0x21` target write passed whole-RDRAM and VI controls but both arms stayed at width 320/origin `0x006dd280`; cinematic sub-state target did not change retail entry. |
+| s1221 | `gGameSettings+0x22` target write fired and both arms passed whole-RDRAM/VI controls, but both stayed at width 320/origin `0x006dd280`; mission sub-state target did not change retail entry. No-input oracle recipe produced no PIF events in either arm. |
 
 ## Method and safety rules
 

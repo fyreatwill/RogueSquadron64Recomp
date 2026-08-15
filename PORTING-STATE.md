@@ -65166,3 +65166,24 @@ added.
 ORIGIN: the only injected value was the deliberately selected state-machine
 probe at `gGameSettings+0x21`; no renderer or corruption value was skipped,
 guarded, or restored.
+
+## Session 1221 (2026-08-14) — tested gGameSettings mission sub-state write
+
+Ran the planned paired DEBUGGER=1 retail-oracle arms concurrently for 75
+seconds. The target arm wrote `0x00000100` to physical `0x130B60` at VI 1,
+setting `gGameSettings+0x22` (`0x80130B62`), and the `[debug-write]` marker
+fired.
+
+Both arms independently passed the whole-RDRAM positive control at 10,000
+writes. VI callback and VI-poll traces agreed that both stayed at width 320
+with origin `0x006dd280` for 75 seconds (4,500/4,499 VI frames); neither
+reached a later phase. H2 is selected: this mission sub-state write did not
+change retail entry. The oracle reported no input plugin attached, so this
+no-input recipe produced no PIF button events in either arm; that shared
+limitation does not affect the positive whole-RDRAM or VI controls. No further
+documented state-byte target is currently justified; audit the generated state
+machine for the next independent retail-entry route.
+
+ORIGIN: the only injected value was the deliberately selected state-machine
+probe at `gGameSettings+0x22`; no renderer or corruption value was skipped,
+guarded, or restored.
