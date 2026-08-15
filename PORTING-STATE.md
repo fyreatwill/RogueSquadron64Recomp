@@ -69238,3 +69238,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `setSongParamPairCmd` at `0x80096118`.
+
+## Session 1398 (2026-08-15) — synchronized the set-song-param-pair-cmd symbol
+
+Performed the bounded exact-name census over `0x80096118..0x8009621C`.
+
+No new soak-queue verdicts since s1397; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80096118`, size `0x104`; `0x80096118+0x104=0x8009621C`. Overlay `rom_size` is `0x104`. Generated prologue at `0x80096118` (`addu $a3, $a0, $zero`) and `jr $ra` at `0x80096214` with delay `nop` at `0x80096218` |
+| Generated definition | `funcs_25.c` defines `setSongParamPairCmd` at `0x80096118`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `setSongParamPairCmdLocked` at `0x8009621C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setSongParamPairCmd = 0x80096118` in the annotated song-command dispatch block and does not list a conflicting name in the sequential `defined:true` list (that list names the locked sibling `setSongParamPairCmdLocked = 0x8009621C` immediately after already-synchronized `quiesceSongSlotCmdLocked`). Menu, mission, and cinematic lists do not remap `0x80096118` |
+| Caller evidence | Six generated `jal 0x80096118` sites: one in independently named `tickAllAudioChannels` at `0x8008D86C`; one in independently named `setSongParamPairCmdLocked` at `0x80096258`; four in generated `processSongByHandle` at `0x800969EC`, `0x80096AC4`, `0x80096BF0`, and `0x80096C54` |
+| Semantic evidence | Matches the companion comment: scan eight song slots at base `0x80149A00` stride `0xEF8` for the handle; on a non-negative slot index store `$a1/$a2` to slot+`0x110`/`+0x114` (`sw` at `-0x64F0/-0x64EC` from `0x80150000`); on the latched path store the same pair to slot+`0xEE4`/`+0xEE8` and OR cmd-flag bit `0x10` at slot+`0xEEE`. Address arithmetic independently matches the companion offsets. Exact musical role (pan/volume-ramp class) remains unconfirmed and is not needed for the name |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80096118`: the companion and
+generated names agree, the body is a complete `0x104` song-cmd applier, and
+there is neither a conflicting companion name nor a size split. H2 and H3
+are ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x104`).
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`setSongParamPairCmdLocked` at `0x8009621C`.
