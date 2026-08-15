@@ -1,9 +1,9 @@
-# NEXT work unit (s1457)
+# NEXT work unit (s1458)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8009B464..0x8009B5A8`. Do not build or run. Record its address,
+function, `0x8009B5A8..0x8009B8A8`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -19,8 +19,8 @@ one-instruction jump fragment), `fake_func_80097D58` unchanged
 `fake_func_80099C4C` unchanged (s1446 H2: already-fake one-word `beq`
 gap), and `fake_func_80099FDC` unchanged (s1451 H2: already-fake
 one-word `bne` gap before `aspMainTextStart`). The generated entry at
-this address is already `setVoiceMixByKey`; synchronize the stale
-TOML `func_8009B464` only if the companion, size, and caller/semantic
+this address is already `serviceVoicePoolFrame`; synchronize the stale
+TOML `func_8009B5A8` only if the companion, size, and caller/semantic
 evidence independently support that exact name.
 
 Competing hypotheses and discriminator:
@@ -39,7 +39,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '8009B464\|8009B5A8\|setVoiceMixByKey' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '8009B464\|8009B5A8' ../N64Recomp/RecompiledFuncs/funcs_26.c
-grep -n -C 3 '8009B464\|8009B5A8' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009B5A8\|8009B8A8\|serviceVoicePoolFrame' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009B5A8\|8009B8A8' ../N64Recomp/RecompiledFuncs/funcs_26.c
+grep -n -C 3 '8009B5A8\|8009B8A8' syms/rogue_squadron.syms.toml
 ```

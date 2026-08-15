@@ -71127,3 +71127,36 @@ gap and was left unchanged, as were `fake_func_80099C4C`,
 runtime run was justified for an exact-name census. This does not
 reopen M5 audio de-stubbing. The next adjacent generated function is
 independently named `setVoiceMixByKey` at `0x8009B464`.
+
+## Session 1457 (2026-08-15) — synchronized the set-voice-mix-by-key symbol
+
+Performed the bounded exact-name census over `0x8009B464..0x8009B5A8`.
+
+No new soak-queue verdicts since s1456; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009B464`, size `0x144`; `0x8009B464+0x144=0x8009B5A8`. Overlay `rom_size` is `0x144` at offset `0x0009B024` (`0x8009B464-0x80000440`). Generated body starts `lui $v0, 0x800A` at `0x8009B464` and ends `jr $ra` / delay-slot `nop` at `0x8009B5A0` / `0x8009B5A4` |
+| Generated definition | `funcs_26.c` defines `setVoiceMixByKey` at `0x8009B464`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x144` function between independently named `isVoiceHandleActive` at `0x8009B3CC` and independently named `serviceVoicePoolFrame` at `0x8009B5A8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setVoiceMixByKey = 0x8009B464`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009B464`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Two generated `jal 0x8009B464` sites, both independently named speech-path functions: `applySpeechVolumeScalar` at `0x80066D8C` (jal `0x80066EA4`) and `tickSpeechSubsystem` at `0x80067300` (jal `0x80067800`). Both pass `$a0` as the voice handle, `$a1` as a truncated volume byte, `$a2=0x40`, `$a3=0`, and a zero stack fifth argument. Zero `func_*` callers |
+| Semantic evidence | Early-outs when the voice-count byte at `0x800A5121` is 0. Otherwise scans the MusyX voice table at `0x80154620` (stride `0x1228`), matches the handle word at slot+`0x24`, locks the slot queue at `0x80154650`, and if the slot's voice id at +`0xC` is not `-1` calls independently named `setVoiceVolumePanLocked` with the incoming mix bytes. Stores those bytes at slot+`0x1`/`+0x2`/`+0x3` and returns 1. Matches the companion name and the speech-volume callers |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009B464`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x144`, both `jal` callers are independently named speech-volume paths,
+and there is neither a conflicting companion name nor a size split. H2
+and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x144`).
+`fake_func_80099FDC` remains the already-fake one-word `bne` gap and was
+left unchanged, as were `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is independently named `serviceVoicePoolFrame` at
+`0x8009B5A8`.

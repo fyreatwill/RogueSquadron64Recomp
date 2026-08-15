@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1456 (2026-08-15).
+the authority for session detail. Reviewed through s1457 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1456 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009B464..0x8009B5A8`.
+   census over the next adjacent function, `0x8009B5A8..0x8009B8A8`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -67,8 +67,8 @@ the authority for session detail. Reviewed through s1456 (2026-08-15).
    `transformVec3ByAffineMatrix`), and `fake_func_80099FDC`
    unchanged (s1451 H2: already-fake one-word `bne` gap before
    `aspMainTextStart` at `0x80099FE0`; overlay `0xF84` is the
-   misparsed RSP text lump, not a CPU function). s1456 synchronized
-   `isVoiceHandleActive` at `0x8009B3CC`.
+   misparsed RSP text lump, not a CPU function). s1457 synchronized
+   `setVoiceMixByKey` at `0x8009B464`.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -331,6 +331,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1454 | Exact companion/generated voice-slot census synchronized `stopVoiceSlotSynced` at `0x8009B268`; no build or runtime run. |
 | s1455 | Exact companion/generated voice-slot census synchronized `stopVoiceByHandle` at `0x8009B33C`; no build or runtime run. |
 | s1456 | Exact companion/generated voice-slot census synchronized `isVoiceHandleActive` at `0x8009B3CC`; no build or runtime run. |
+| s1457 | Exact companion/generated voice-mix census synchronized `setVoiceMixByKey` at `0x8009B464`; no build or runtime run. |
 
 ## Method and safety rules
 
