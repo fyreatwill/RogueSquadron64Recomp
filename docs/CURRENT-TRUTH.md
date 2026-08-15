@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1217 (2026-08-14).
+in the ledger. Reviewed through s1218 (2026-08-14).
 
 ## Current state
 
@@ -104,8 +104,11 @@ in the ledger. Reviewed through s1217 (2026-08-14).
   write at `0x80007FFC` read back as `0xDEADBEEF` before and after resume.
   Paired 12-second oracle arms both passed the whole-RDRAM control (10,000
   callbacks), PIF input, and VI controls; the write arm logged its phase-gated
-  write at VI 1 / width 320. No later phase was reached, so this validates the
-  control surface but does not yet test a state-changing address.
+  write at VI 1 / width 320. This REFUTES H3 (control-disruption/absent
+  control) and CLOSES the "does a state-changing debugger route exist"
+  question. No later phase was reached, so it does not yet select H1 or H2 for
+  the retail-entry-capability hypothesis; the next step is a justified
+  state-changing target, not another control-surface check.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -292,6 +295,8 @@ order.
 | s1214 | Oracle state smoke created and loaded a state with rc=0 while whole-RDRAM and VI controls stayed positive; route validated, later phase unreached. |
 | s1215 | Startup savestate save/load passed with whole-RDRAM and PIF/VI controls, but both arms remained at VI 320/origin `0x006dd280`; the state route does not provide later retail entry. |
 | s1216 | Continuous Start from 6s and the eleven-pulse control both passed whole-RDRAM/PIF/VI controls but remained at VI 320/origin `0x006dd280`; this hold variation does not provide later retail entry. |
+| s1217 | DEBUGGER=1 core write/read/resume path validated with a harmless RDRAM word; paired oracle arms passed whole-RDRAM/PIF/VI controls. Refutes H3 (control-disruption/absent control) and closes the control-surface question; H1/H2 remain open pending a state-changing target. |
+| s1218 | Checkpoint-recovery only: restated s1217 in gate-recognized terms, no new experiment. |
 
 ## Method and safety rules
 

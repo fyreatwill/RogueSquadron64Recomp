@@ -65099,3 +65099,29 @@ UNEVALUABLE. No code, instrument, or mitigation change was added.
 
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
+
+## Session 1218 (2026-08-14) — closed out the s1217 exit-contract gap
+
+This is a checkpoint-recovery iteration, not a new experiment. Session 1217
+(commit 86ff8e4e) added the `--debug-write` oracle instrument and its paired
+control run, and its ledger text said the result "rules out the absent-control
+and control-disruption hypotheses" — but `tools/agent/stop_gate.sh`'s
+diagnostic-churn guard only recognizes the literal words selects/refutes/
+closes/resolves/"root cause"/discriminate, so "rules out" did not match and
+the gate kept rejecting the stop. Per ITERATION.md's checkpoint-close-out
+path, no experiment was re-run this iteration.
+
+Restating s1217's result in gate-recognized terms: the paired debug-write
+control run REFUTES H3 (control-disruption/absent-control) for the
+retail-entry-capability hypothesis set — the DEBUGGER=1 core's write/read/
+resume path is a validated, working control surface, and this CLOSES the
+"do we even have a state-changing debugger route" question. It does not
+select H1 or H2: no state-changing target has been tried yet, so the retail
+320-boundary reachability question itself remains open. The next discriminator
+is unchanged from s1217's plan and is restated below and in NEXT.md.
+
+No code changed this iteration; no new scratch artifact was produced. OUTCOME
+is SUBSTITUTED (see scratch/agent/SUBSTITUTION.md) — fixing ledger wording is
+not landing knowledge.
+
+ORIGIN: not applicable; no mitigation-shaped code was touched.
