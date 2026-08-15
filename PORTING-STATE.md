@@ -66101,3 +66101,18 @@ runtime run was performed.
 This rules out the need to leave these seven entries address-encoded; it does
 not establish names for the following region, whose census starts at
 `0x800881F4`.
+
+## Session 1272 (2026-08-15) — synchronized MusyX voice-command symbols
+
+Performed the bounded exact-name census over `0x800881F4..0x80088A24`.
+The companion symbol file independently identifies all seven generated entries:
+`musyxQuerySequenceLocked`, `setVoiceParamByHandle`,
+`setVoiceParamByHandleLocked`, `applyVoiceCmdByHandle`,
+`applyVoiceCmdByHandleLocked`, `spreadVoiceKeyTransposeAcrossChain`, and
+`spreadVoiceKeyTransposeLocked`. Generated definitions and TOML sizes match;
+the generated bodies show the expected query, handle-resolution, locked-wrapper,
+and voice-chain relationships. H1 selected and all seven stale symbol-map
+entries were synchronized. No build or runtime run was justified.
+
+This rules out the absence of independent naming evidence for this region; it
+does not establish names for the following `0x80088A8C..0x80089244` census.
