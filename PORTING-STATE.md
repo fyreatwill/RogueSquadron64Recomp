@@ -70961,3 +70961,37 @@ and `func_8008ED6C`. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is independently named
 `findVoiceSlotByAge` at `0x8009AF60`.
+
+## Session 1452 (2026-08-15) — synchronized the find-voice-slot-by-age symbol
+
+Performed the bounded exact-name census over `0x8009AF60..0x8009B048`.
+
+No new soak-queue verdicts since s1451; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009AF60`, size `0xE8`; `0x8009AF60+0xE8=0x8009B048`. Overlay `rom_size` is `0xE8` at offset `0x0009AB20` (`0x8009AF60-0x80000440`). Generated body starts `addiu $t0, $zero, 0x1` at `0x8009AF60` and ends `jr $ra` / delay-slot `nop` at `0x8009B040` / `0x8009B044` |
+| Generated definition | `funcs_26.c` defines `findVoiceSlotByAge` at `0x8009AF60`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xE8` function between already-fake `fake_func_80099FDC` / `aspMain` text and independently named `allocAndConfigureNewVoice` at `0x8009B048` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `findVoiceSlotByAge = 0x8009AF60`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009AF60`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry. No conflicting companion name |
+| Caller evidence | Exactly one generated `jal 0x8009AF60` site, in independently named `allocAndConfigureNewVoice` at `0x8009B220`. After `initMusyXVoiceSlot` and `osSendMesg`, it sets `a0=$s1` (the free-slot index from the `0x80154620` / stride-`0x1228` walk) and calls. Zero `func_*` callers |
+| Semantic evidence | Body walks the MusyX voice table at `0x80154620` (active byte, stride `0x1228`), compares each slot's word at `+0x24` (`0x80154644`) to the generation counter at `0x80154648`, then stamps slot `a0` with that generation and increments the counter (wrap at `-1` to `0`). That is an age-stamp / uniqueness walk over voice slots, matching the companion name and the post-alloc caller |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009AF60`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xE8`, the single `jal` caller is the independently named voice-alloc
+path passing the just-chosen slot index, and there is neither a
+conflicting companion name nor a size split. H2 and H3 are ruled out
+for this address. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0xE8`). `fake_func_80099FDC` remains the
+already-fake one-word `bne` gap and was left unchanged, as were
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`allocAndConfigureNewVoice` at `0x8009B048`.
