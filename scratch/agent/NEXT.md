@@ -1,34 +1,36 @@
-# NEXT work unit (s1232)
+# NEXT work unit (s1233)
 
 HYPOTHESIS-ID: retail-entry-boundary
 
-Run one bounded static provenance audit of the retail-entry boundary that
-remains after the EEPROM comparison: enumerate every generated read and write
-of the boot state triplet at `0x80130B30..0x80130B32` and every consumer of the
-`mainGameLoop` handoff, then reconcile those sites against the companion
-decomp symbols and the ROM-backed boot data. Do not build or run; this is one
-ranked source census, not a new runtime probe.
+Run one bounded static audit of the remaining external retail-entry boundary:
+enumerate the ROM/decomp and installed-oracle startup paths that can alter
+execution state after `ROM_OPEN` and before the first stable VI-320 loop.
+Include EEPROM load, reset/state commands, SDL input attachment, and any
+front-end callback or savestate handoff. Do not build or run; this is one
+source/config census.
 
 Competing hypotheses and discriminator:
 
-- H1: a generated producer outside the already audited idle/save chain writes
-  the triplet or callback handoff and can explain the missing retail entry.
-- H2: all producers are already known reset/save/default paths, so the missing
-  event is outside the generated boot path and needs a new external lead.
-- H3: the address identity or companion mapping is wrong, shown by a
-  consistent disagreement between generated addresses, ROM bytes, and symbols.
+- H1: the front-end/core has an unenumerated state-changing route that can
+  explain the missing retail entry.
+- H2: startup only opens ROM/save media, attaches input, and executes; the
+  missing event is outside the available oracle/front-end contract.
+- H3: the retail-entry boundary is actually an EEPROM/core-format issue, shown
+  by a mismatch between selected media, load semantics, or ROM configuration.
 
-Discriminator: a complete address-and-consumer table. A reachable, previously
-unknown producer selects H1; a complete known-producer table with matching ROM
-callback provenance selects H2; any address/symbol disagreement selects H3.
+Discriminator: a complete startup-event table. A previously unknown
+state-changing command/callback selects H1; a complete ROM-open-to-execute
+contract with no such route selects H2; a media/config/load disagreement
+selects H3.
 
 Exact commands:
 
 ```
-rg -n -C 4 '80130B30|80130B31|80130B32|D_80130B10|mainGameLoop|gBootConfig|80037560' RecompiledFuncs tools docs
-rg -n -C 3 '80130B30|80130B31|80130B32|80037560|mainGameLoop' syms rogue_squadron64 2>/dev/null
-rg -n -C 3 '8003DFA0|80037564|mainBootstrapWorker|registerServiceWorker|thread3_video_handle' RecompiledFuncs tools docs
+rg -n -C 5 'ROM_OPEN|M64CMD_EXECUTE|M64CMD_RESET|M64CMD_STATE_LOAD|M64CMD_STATE_SAVE|SDL|EEPROM|eeprom|savestate' tools/oracle ../rogue_squadron64 ../mupen64plus* 2>/dev/null
+rg -n -C 4 'CoreStartup|ROM_OPEN|STATE_LOAD|EXECUTE|EEPROM|savestate|reset' /usr/local/include /opt/homebrew/include /usr/local/src /opt/homebrew/src 2>/dev/null
+rg -n -C 4 'mainBootstrapWorker|mainGameLoop|gBootConfig|8003DFA0' ../N64Recomp/RecompiledFuncs ../rogue_squadron64/symbol_files
 ```
 
-Record each site as read, write, ROM initializer, or indirect handoff, and
-state whether it is reachable before `mainGameLoop`.
+Record each startup event as ROM-open, media load, input, state command, reset,
+or indirect handoff, and state whether it can occur before the first stable
+VI-320 loop.

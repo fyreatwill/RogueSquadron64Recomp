@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1231 (2026-08-14).
+in the ledger. Reviewed through s1232 (2026-08-14).
 
 ## Current state
 
@@ -160,6 +160,7 @@ in the ledger. Reviewed through s1231 (2026-08-14).
   the generated caller/registration chain.
 - The s1228 bounded source audit found no hidden oracle startup/reset or later-entry command. `rs64_oracle.c` performs `ROM_OPEN`, attaches input only when a press schedule exists, then calls `M64CMD_EXECUTE`; its optional state save/load happens after five seconds inside the same run. The port starts directly at `recomp_entrypoint`, whose generated path creates the idle and video threads; `thread3_video_handle` registers `mainBootstrapWorker`, which invokes static `gBootConfig+4`. The first explicit oracle state-changing event is therefore scheduled SDL input, while the port has no matching external handoff. H2 is selected; the remaining boundary is outside the in-tree oracle CLI and generated boot path. Source evidence only.
 - The s1229 installed Mupen64Plus 2.6.0 front-end/core audit found the same contract outside the oracle: the console UI calls `CoreStartup`, `M64CMD_ROM_OPEN`, plugin attach, optional `M64CMD_STATE_LOAD` only for `--savestate`, then `M64CMD_EXECUTE`; it has no reset, EEPROM injection, or alternate entry command. The core does load EEPROM/SRAM through ROM database/config during ROM open, so save-media provenance remains a separate data question, not a launcher handoff. H2 is selected for the external-command hypothesis; the next boundary is whether the existing retail EEPROM file carries meaningful state. Source/config evidence only.
+- The s1232 generated/companion provenance census found no new retail-entry producer or address disagreement. `mainGameLoop` reads `D_80130B10+0x20/+0x21/+0x22` at `0x8003E07C`, `0x8003E0DC`, `0x8003E128`, and `0x8003E114`; the targeted writers remain reset/default initialization, `runIdleFramesAndLoadSaveData` (`B30=1/B31=0`), and save-state application. The companion map agrees on `mainGameLoop=0x8003DFA0`, `mainBootstrapWorker=0x80000C68`, `thread3_video_handle=0x80001088`, and `gBootConfig=0x80037560`. The bootstrap path registers `mainBootstrapWorker`, which loads `gBootConfig+4` and indirect-calls the static `mainGameLoop` pointer. H2 is selected: the missing retail transition remains outside this generated handoff. No build or run.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -365,6 +366,7 @@ order.
 | s1229 | Installed Mupen64Plus 2.6.0 UI source confirms `CoreStartup` → `ROM_OPEN` → plugin attach → optional `STATE_LOAD` only for `--savestate` → `EXECUTE`; no reset, EEPROM injection, or alternate entry command exists. Core ROM-open code does load save media via its ROM database/config, leaving actual EEPROM contents as the next boundary. H2 selected for the external-command hypothesis. No build or run. |
 | s1230 | The actual save directory contains one 512-byte EEPROM file with 164 nonzero bytes and no `0xff` bytes. Its `-47CAC4E2` suffix matches the ROM's MD5 key; the ROM database selects USA v1.0 with `Eeprom 4KB`, and the core's old-goodname path loads an existing `.eep` before the fallback path, then truncates non-16K EEPROM to 0x200. H1 is selected for nonblank, selected persistent state; whether these bytes cause retail entry remains open. No build or run. |
 | s1231 | Paired phase-gated retail oracle arms used the existing selected EEPROM versus an isolated same-named 512-byte zero-filled EEPROM. Both passed the whole-RDRAM control (10,000 capped writes), 11 PIF-confirmed Start press/release pairs, and VI polling; both had the same 0→320/origin `0x280` then 320/origin `0x006dd280` transitions and completed about 7,200 VI frames. H2 selected: EEPROM contents do not cause the missing retail transition. |
+| s1232 | Complete targeted generated/companion census found the expected triplet reads, only known reset/idle/save writers, and matching callback/config addresses and handoff. H2 selected: no generated producer or symbol mismatch explains the missing retail transition. No build or run. |
 
 ## Method and safety rules
 

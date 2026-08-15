@@ -65390,6 +65390,25 @@ oracle comparison. No build or run was performed.
 ORIGIN: save directory, installed Mupen64Plus 2.6.0 source bundle, and
 `/opt/homebrew/share/mupen64plus/mupen64plus.ini`. No mitigation was added.
 
+## Session 1232 (2026-08-14) — audited retail-entry triplet and callback provenance
+
+Ran the bounded generated/companion census from NEXT against the actual sibling
+trees (`../N64Recomp/RecompiledFuncs` and `../rogue_squadron64`; the queued
+project-relative paths were absent). `mainGameLoop` directly reads
+`D_80130B10+0x20/+0x21/+0x22` at `0x8003E07C`, `0x8003E0DC`, `0x8003E128`, and
+`0x8003E114`. The only targeted producers remain the known reset/default,
+`runIdleFramesAndLoadSaveData` (`B30=1/B31=0`), and save-state paths; no new
+reachable producer was found. The companion symbols agree on
+`mainGameLoop=0x8003DFA0`, `mainBootstrapWorker=0x80000C68`,
+`thread3_video_handle=0x80001088`, and `gBootConfig=0x80037560`; generated
+bootstrap code registers the worker, which loads `gBootConfig+4` and performs
+the indirect handoff. This selects H2 and rules out a generated producer or
+symbol/address mismatch as the missing retail-entry explanation. No build or
+run.
+
+ORIGIN: sibling generated tree, companion symbol files, and ROM-backed config
+already recorded in the repository. No mitigation was added.
+
 ## Session 1231 (2026-08-14) — compared existing and blank retail EEPROM state
 
 Ran the planned phase-gated paired retail oracle comparison without building.
