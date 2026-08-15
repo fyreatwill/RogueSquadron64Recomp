@@ -1,9 +1,13 @@
-# NEXT work unit (s1192)
+# NEXT work unit (s1193)
 
 HYPOTHESIS-ID: m3-stack-memory-value-origin
 
 Work unit: complete one static audit of every generated `do_sdl`/`do_sdr`
 store site. Do not build or run.
+
+The prior iteration was maintenance-only: `CURRENT-TRUTH.md` was compacted
+from 619 lines to 140 lines. This work unit is unchanged and is now ready to
+run.
 
 Competing hypotheses and discriminator:
 

@@ -64630,3 +64630,12 @@ No mitigation was added.
 ORIGIN: no mitigation-shaped machinery was added; the reviewed writers are
 bounded or non-executable/data-like, and no legitimate writer-to-frame edge was
 established.
+## Session 1192 (2026-08-14) — compacted current truth
+
+Triggered the mandatory maintenance iteration because `docs/CURRENT-TRUTH.md`
+was 60,293 bytes. Replaced its repeated 619-line history with a 140-line
+current-state record: active M3/M4/M5 boundaries, superseded conclusions,
+method rules, and a compressed session-range ledger. The file is now 8,683
+bytes. No build, runtime experiment, instrumentation, mitigation, or code
+change was performed. This rules out no technical hypothesis; it preserves
+the next M3 `do_sdl`/`do_sdr` static audit for s1193.
