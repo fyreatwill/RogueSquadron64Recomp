@@ -64714,3 +64714,21 @@ No target watch, mitigation, or code change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational. The
 debugger-off arm is unsuitable for PIF-read comparison by design, not evidence
 of a game stall.
+
+## Session 1197 (2026-08-14) — debugger-enabled input schedule stayed pre-phase
+
+Ran the planned debugger-enabled retail control concurrently with an undriven
+baseline and the eleven-Start schedule. Both arms passed the whole-RDRAM
+positive control at 10,000 callbacks, emitted PIF/VI records, and completed
+about 3,599 VI frames in 60 seconds. Both stayed at width 320 with origin
+`0x006dd280`.
+
+The driven arm logged all eleven Start injections and its PIF words changed
+from the undriven startup values to the repeated driven values (including
+`0x10000000` while the scheduled press was held/reported). Thus input delivery
+is validated, but the schedule did not reach the intended later state path.
+This selects schedule/path redesign (H2 in NEXT), and leaves M4 target watches
+unevaluable. No code or mitigation change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.

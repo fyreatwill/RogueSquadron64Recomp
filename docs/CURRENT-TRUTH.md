@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1196 (2026-08-14).
+in the ledger. Reviewed through s1197 (2026-08-14).
 
 ## Current state
 
@@ -63,13 +63,19 @@ in the ledger. Reviewed through s1196 (2026-08-14).
   produce VI/PIF callbacks and reported zero emulated VI in its summary. The
   two arms therefore do not select H1, H2, or H3: the eleven injected Start
   events were logged, but only the debugger-on arm can verify PIF reads.
+- The s1197 debugger-enabled retail control passed whole-RDRAM and PIF/VI
+  controls in both arms. The eleven driven Start events changed the observed
+  PIF words, but driven and undriven execution both remained at VI width 320
+  with origin `0x006dd280`. Input delivery is validated; the fixed schedule
+  does not reach the intended later state path. M4 target watches remain
+  unevaluable.
 
 ## Active investigation and ranked next steps
 
-1. Resolve M4 phase reachability with a debugger-enabled driven-versus-
-   undriven oracle input control. Compare PIF button reads and VI transitions
-   phase-by-phase; do not treat the existing target-watch null as evidence
-   until a matching shaded phase is positively reached.
+1. Redesign the debugger-enabled retail input schedule using the s1197 PIF
+   words and VI timing, then compare a revised driven arm with the undriven
+   control. Require changed PIF words plus a later VI phase before arming any
+   M4 target watch; do not treat the existing target-watch null as evidence.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -153,6 +159,7 @@ order.
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
+| s1197 | Debugger-enabled driven/undriven oracle arms passed controls; driven PIF words changed but both stayed at width 320, selecting schedule/path redesign. |
 
 ## Method and safety rules
 
