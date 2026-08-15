@@ -71597,3 +71597,37 @@ already-fake one-word `bne` gap and was left unchanged, as were
 No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is already-fake `fake_func_8009C2C8` at `0x8009C2C8`.
+
+## Session 1471 (2026-08-15) — parked the already-fake 0x8009C2C8 cop1 fragment
+
+Performed the bounded exact-name census over `0x8009C2C8..0x8009C2D0`.
+
+No new soak-queue verdicts since s1470; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `fake_func_8009C2C8`, size `0x8`; `0x8009C2C8+0x8=0x8009C2D0`. Overlay `rom_size` is `0x8` at offset `0x0009BE88` (`0x8009C2C8-0x80000440`) |
+| Generated definition | `funcs_27.c` defines `fake_func_8009C2C8` at `0x8009C2C8` as `mul.s $f2, $f2, $f4` then `add.s $f0, $f0, $f2`, with no `jr $ra`. `funcs.h` and `recomp_overlays.inl` already use that name. The eight-byte span sits between independently named `stopVoice` at `0x8009C2BC` and generated `computeVoicePanCoefficients` at `0x8009C2D0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `fake_func_8009C2C8 = 0x8009C2C8; // defined:true` immediately before `computeVoicePanCoefficients = 0x8009C2D0`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009C2C8`. No companion C/asm body exists. No later companion list supplies a semantic name |
+| Caller evidence | Zero generated `jal 0x8009C2C8` sites and zero `fake_func_8009C2C8` call sites. The two words are not a reachable function |
+| Semantic evidence | Retail ROM words at file `0x9CEC8` (`(vram&0xFFFFFF)+0xC00`) are `0x46041082` / `0x46020000` (`mul.s $f2, $f2, $f4` / `add.s $f0, $f0, $f2`). Same-run positive controls: `0x80099FDC` file `0x9ABDC` is `0x14400003`, and `0x8009C2BC` file `0x9CEBC` is `0x24020004`. The preceding `stopVoice` is a complete integer function ending `jr $ra` / delay-slot `sb $v0, 0x11DD($a0)`. The following `computeVoicePanCoefficients` is a complete `0x218` function starting `addiu $sp, $sp, -0x18` and ending `jr $ra` / `nop`; its body is integer fixed-point, not these two COP1 ops. Same already-fake two-instruction fragment class as `fake_func_80094348` / `fake_func_80097D58` |
+| Confidence | High |
+
+The complete comparison selects H2 for `0x8009C2C8`: the companion,
+generated, overlay, and TOML names already agree on the already-fake
+fragment, the `0x8` boundary is exact, and there is no independent
+semantic name to synchronize. H1 is ruled out because inventing a name
+for the orphan COP1 multiply-accumulate would fabricate a source. H3 is
+ruled out because the independent naming source exists and already
+marks the site fake. The TOML entry stays unchanged, as do
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`computeVoicePanCoefficients` at `0x8009C2D0` (TOML still
+`func_8009C2D0`).

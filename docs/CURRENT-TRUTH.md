@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1470 (2026-08-15).
+the authority for session detail. Reviewed through s1471 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1470 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009C2C8..0x8009C2D0`.
+   census over the next adjacent function, `0x8009C2D0..0x8009C4E8`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -64,13 +64,17 @@ the authority for session detail. Reviewed through s1470 (2026-08-15).
    unchanged (s1420: already-fake two-instruction epilogue fragment
    before `clearStreamedVoiceFlags`), `fake_func_80099C4C`
    unchanged (s1446 H2: already-fake one-word `beq` gap before
-   `transformVec3ByAffineMatrix`), and `fake_func_80099FDC`
+   `transformVec3ByAffineMatrix`), `fake_func_80099FDC`
    unchanged (s1451 H2: already-fake one-word `bne` gap before
    `aspMainTextStart` at `0x80099FE0`; overlay `0xF84` is the
-   misparsed RSP text lump, not a CPU function). s1470 synchronized
-   `stopVoice` at `0x8009C2BC` (H1; generated already named; TOML was
-   `func_8009C2BC`). The generated and TOML entries at `0x8009C2C8`
-   are already `fake_func_8009C2C8`.
+   misparsed RSP text lump, not a CPU function), and
+   `fake_func_8009C2C8` unchanged (s1471 H2: already-fake
+   two-instruction COP1 multiply-accumulate fragment before
+   `computeVoicePanCoefficients`). s1470 synchronized `stopVoice` at
+   `0x8009C2BC` (H1; generated already named; TOML was
+   `func_8009C2BC`). The generated entry at `0x8009C2D0` is already
+   `computeVoicePanCoefficients`; the TOML entry is still
+   `func_8009C2D0`.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -347,6 +351,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1468 | Exact companion/generated voice-consume census synchronized `consumeVoiceSamples` at `0x8009C240`; no build or runtime run. |
 | s1469 | Exact companion/generated voice-state census synchronized `advanceVoiceStateToPlaying` at `0x8009C2A0`; no build or runtime run. |
 | s1470 | Exact companion/generated voice-state census synchronized `stopVoice` at `0x8009C2BC`; no build or runtime run. |
+| s1471 | Exact companion/generated census selected H2 for already-fake `fake_func_8009C2C8` at `0x8009C2C8` (two-instruction COP1 fragment); left unchanged; no build or runtime run. |
 
 ## Method and safety rules
 
