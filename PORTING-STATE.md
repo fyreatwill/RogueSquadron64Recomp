@@ -67109,3 +67109,28 @@ kernel that the preceding stream-cache symbols feed. H2 and H3 are ruled out
 for this function; there is neither a partial/conflicting match nor an
 absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1321 (2026-08-15) — synchronized the voice key-on symbol
+
+Performed the bounded exact-name census over `0x80090A3C..0x80090E04`.
+
+No new soak-queue verdicts since s1320; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x80090A3C`, size `0x3C8`; it ends exactly at the next generated function, `0x80090E04`. Overlay `rom_size` is `0x3C8` |
+| Generated definition | `funcs_24.c` defines `musyxKeyOnVoice` at `0x80090A3C` through the matching epilogue at `0x80090DFC`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxKeyOnVoice = 0x80090A3C`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x80090A3C` in `musyxBuildVoiceCommandList` at `0x800910A8`, after `lbu +0x22` is zero, passing the voice slot as `a0`. Companion independently names that builder `musyxBuildVoiceCommandList = 0x80091034` and says it key-ons when `+0x22==0` |
+| Semantic evidence | Body keeps `a0` as the voice pointer, loads the double at `+0x50` into `truncDouble`, writes the truncated rate to `+0x20`, computes loop byte-counts at `+0x3C`/`+0x3D`/`+0x3E`, and writes envelope/loop fields through `+0x4E` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x3C8` boundary is exact, and the body is the voice key-on path that
+`musyxBuildVoiceCommandList` calls before mixing. H2 and H3 are ruled out
+for this function; there is neither a partial/conflicting match nor an
+absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.

@@ -1373,7 +1373,7 @@ functions = [
     { name = "recycleSampleStreamBlock", vram = 0x8008F9C8, size = 0xE4 },
     { name = "fillSampleStreamRange", vram = 0x8008FAAC, size = 0x500 },
     { name = "musyxRenderVoiceSamples", vram = 0x8008FFAC, size = 0xA90 },
-    { name = "func_80090A3C", vram = 0x80090A3C, size = 0x3C8 },
+    { name = "musyxKeyOnVoice", vram = 0x80090A3C, size = 0x3C8 },
     { name = "func_80090E04", vram = 0x80090E04, size = 0x230 },
     { name = "func_80091034", vram = 0x80091034, size = 0x208 },
     { name = "func_8009123C", vram = 0x8009123C, size = 0x660 },
