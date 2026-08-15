@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1195 (2026-08-14).
+in the ledger. Reviewed through s1196 (2026-08-14).
 
 ## Current state
 
@@ -57,14 +57,19 @@ in the ledger. Reviewed through s1195 (2026-08-14).
   reached only transient 320/640 widths with zero M4 rows; retail passed its
   whole-RDRAM control but stayed at width 320 and produced zero writes to the
   candidate `0x688:0x710` range. Neither arm selects an M4 hypothesis.
+- The s1196 retail execution-mode check passed its debugger-on whole-RDRAM
+  control and produced 10,799 VI frames at width 320. The debugger-off
+  `--vi-poll` arm also stayed at width 320, but debugger-disabled mode cannot
+  produce VI/PIF callbacks and reported zero emulated VI in its summary. The
+  two arms therefore do not select H1, H2, or H3: the eleven injected Start
+  events were logged, but only the debugger-on arm can verify PIF reads.
 
 ## Active investigation and ranked next steps
 
-1. Resolve M4 phase reachability with one independent oracle execution-mode
-   check: pair the debugger-on no-target run with a debugger-off `--vi-poll`
-   run (and `--pif-trace` input control) using the verified eleven-Start
-   schedule. Do not treat the existing target-watch null as evidence until a
-   matching shaded phase is positively reached.
+1. Resolve M4 phase reachability with a debugger-enabled driven-versus-
+   undriven oracle input control. Compare PIF button reads and VI transitions
+   phase-by-phase; do not treat the existing target-watch null as evidence
+   until a matching shaded phase is positively reached.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -147,6 +152,7 @@ order.
 | s1193 | Complete `do_sdl`/`do_sdr` static census selected H3; no reachable frame writer or mitigation. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
+| s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
 
 ## Method and safety rules
 

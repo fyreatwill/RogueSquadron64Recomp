@@ -64692,3 +64692,25 @@ divergence. No mitigation or code change was added.
 ORIGIN: no value was skipped or rewritten; both instruments were observational
 and their positive controls passed. The next discriminator is an independent
 oracle execution-mode/reachability check, not another target-watch rerun.
+
+## Session 1196 (2026-08-14) — oracle execution-mode check remained input-unevaluable
+
+Ran both arms of the planned retail reachability check concurrently with the
+`iter974-armB2` core and the eleven-Start schedule. The debugger-on arm passed
+the whole-RDRAM positive control at 10,000 callbacks, completed 10,799 VI
+frames, and stayed at width 320 with origin `0x006dd280`. The debugger-off arm
+used `--vi-poll`, reported nonzero width 320 continuously, logged all eleven
+scheduled Start injections, and also stayed at origin `0x006dd280`.
+
+The arms are not symmetric for input evidence: the oracle documentation says
+debugger-disabled mode cannot produce VI/PIF callbacks, and its final summary
+therefore reported zero emulated VI despite the frontend poll seeing width
+320. No PIF button reads were available from that arm. The result does not
+select H1, H2, or H3; it rules out neither input delivery nor a retail state
+path that remains at width 320. The next work unit is a debugger-enabled
+driven-versus-undriven input control with whole-RDRAM and PIF positive controls.
+No target watch, mitigation, or code change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational. The
+debugger-off arm is unsuitable for PIF-read comparison by design, not evidence
+of a game stall.
