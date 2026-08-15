@@ -1483,7 +1483,7 @@ functions = [
     { name = "flushStreamedVoiceBuffers", vram = 0x80097F54, size = 0x94 },
     { name = "startStreamedSampleVoice", vram = 0x80097FE8, size = 0x1FC },
     { name = "streamSampleCountToByteSize", vram = 0x800981E4, size = 0xC },
-    { name = "func_800981F0", vram = 0x800981F0, size = 0xA8 },
+    { name = "setVoiceVolumePanLocked", vram = 0x800981F0, size = 0xA8 },
     { name = "func_80098298", vram = 0x80098298, size = 0x78 },
     { name = "func_80098310", vram = 0x80098310, size = 0x37C },
     { name = "func_8009868C", vram = 0x8009868C, size = 0x25C },
