@@ -64323,3 +64323,25 @@ pair is not an independent instruction attribution. The run still reached
 only the known VI width-320/origin `0x006dd280` stall. No mitigation was added.
 The next work unit is a bounded writer-neighborhood audit around the field,
 with a batched oracle watch and the same positive control.
+
+## Session 1175 (2026-08-14) — audited retail MusyX writer neighborhood
+
+Ran the prescribed retail oracle neighborhood watch over physical
+`0x001496D0:0x00149730`, with separate read/write watches and the whole-RDRAM
+positive control. The control reached 10,000 writes and was removed cleanly;
+the bounded range recorded 1,142 writes and 2,828 reads during 593 VI frames.
+The attributed write PCs were `0x8008EDB8` for the `0xD0:0xEC` block,
+`0x8008EE04`/`0x8008EE6C` for `0xF0`, `0x8008F0CC` for `0xF4`, `0x8008F0E4`
+for `0xFC`, `0x8008F0EC` for `0xF8`, and `0x80091BC0` also for `0xF4`.
+The companion symbol inventory identifies `0x80149700` as the mixer voice-count
+field, not a pointer. The known `0x801496F8` write still exposed only the
+pre-store sentinel `0xFFFFFFFF`; no adjacent KSEG0 pointer value was exposed.
+
+This advances the investigation by selecting the bounded-block/bookkeeping
+interpretation as the current H2 lead and rules out the positive-control and
+watch-accounting regressions for this run. It does not identify the actual
+sample/stream writer, does not authorize a voice-range inference or mitigation,
+and does not establish that every adjacent field is non-pointer-valued because
+the neighborhood watch reports attribution rather than stored values. The next
+unit is static correlation of these writer PCs to the generated MusyX body and
+the first real sample/stream-field writer.

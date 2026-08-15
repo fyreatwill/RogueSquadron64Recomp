@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1174 (2026-08-14).
+in the ledger. Reviewed through s1175 (2026-08-14).
 
 ## Current state
 
@@ -293,6 +293,17 @@ in the ledger. Reviewed through s1174 (2026-08-14).
   be inferred from it. The post-step callback reported `pc=0x80000000` and
   `prev_pc=0x8008F0EC`, so its PC is not an independent instruction
   attribution.
+- The s1175 retail neighborhood watch passed the whole-RDRAM positive control
+  (10,000 writes, removed cleanly) and ran through 593 VI frames. The bounded
+  `0x001496D0:0x00149730` range was active: 1,142 writes and 2,828 reads.
+  PC attribution grouped writes at `0x8008EDB8` (the `D0:EC` block),
+  `0x8008EE04/0x8008EE6C` (`0xF0` polling state), `0x8008F0CC` (`0xF4`),
+  `0x8008F0E4` (`0xFC`), and `0x8008F0EC` (`0xF8` sentinel write), with
+  `0x80091BC0` also writing `0xF4`. The companion symbols identify
+  `0x80149700` as the mixer voice-count field, not a pointer. No adjacent
+  KSEG0 pointer value was exposed by this watch, so the neighborhood does not
+  yet provide a voice-array origin; the next lead must identify the actual
+  sample-field writer rather than infer a range from `0x801496F8`.
 
 ## Retail VI descriptor boundary
 
@@ -441,14 +452,14 @@ corruption.
 
 ## Ranked next steps
 
-1. Audit the retail writer neighborhood around `0x001496F8`: identify the
-   generated instruction and nearby object/global fields written by the same
-   routine, then run one batched oracle watch over the bounded neighboring
-   range with PC attribution and the whole-RDRAM positive control. H1 is a
-   nearby field receiving a valid KSEG0 allocation before/after the sentinel;
-   H2 is only sentinel/initialization traffic with no candidate pointer; H3 is
-   a control or accounting regression. Do not infer a voice range or add a
-   mitigation from the `0xFFFFFFFF` field alone.
+1. Correlate the s1175 writer PCs (`0x8008EDB8`, `0x8008EE04`,
+   `0x8008EE6C`, `0x8008F0CC`, `0x8008F0E4`, `0x8008F0EC`) with the generated
+   MusyX initialization body and companion symbols, then select the first
+   actual sample/stream-field writer for a future retail watch. H1 is that
+   one of these routines writes a valid KSEG0 sample pointer into a voice
+   slot; H2 is that this block is only mixer bookkeeping/sentinel traffic and
+   the writer is elsewhere; H3 is a remaining oracle attribution/accounting
+   defect. Do not infer a voice range or add a mitigation from `0x801496F8`.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry
