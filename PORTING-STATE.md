@@ -65478,3 +65478,26 @@ overwrite by the generated game path. The next unit will census those uses.
 
 ORIGIN: independent Mupen64Plus device/PIF source and the port's runtime plus
 generated entrypoint. No mitigation, build, or runtime code change was made.
+
+## Session 1235 (2026-08-14) — censused retail reset-context GPR consumers
+
+Ran the bounded generated/retail register-use census without building or
+running. Retail's PIF IPL3 writes `s3..s7` (`r19..r23`), `t3` (`r11`), `sp`,
+and `ra` before game entry. On the generated bootstrap path, `thread3_video_handle`
+loads its `s3..s5` values from the video descriptor before using them, and
+`mainGameLoop` saves all `s3..s7` immediately, then overwrites `s4/s5/s3/s7`
+before game-visible reads and writes `s6` before its first use. `t3` has no use
+in the entry, main, video-thread, bootstrap-worker, or main-game-loop paths.
+`run_thread_function` zero-initializes each context and supplies its stack;
+`recomp_entrypoint` sets `$sp` before calling `main`. `ra` and `sp` therefore
+remain different only as return/stack bookkeeping, while the PIF/IPL3 GPR
+values are dead or overwritten before game-visible use.
+
+The complete table selects H3, narrowing the s1234 H1 result: this GPR class
+does not explain the stable VI-320 divergence. It rules out a pre-overwrite
+consumer of the retail-only GPR context, but leaves CP0/reset-context state as
+the next boundary.
+
+ORIGIN: independent Mupen64Plus PIF source, generated funcs_0/8/17 census, and
+librecomp `run_thread_function`. No mitigation, build, or runtime code change
+was made.
