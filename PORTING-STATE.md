@@ -64895,3 +64895,20 @@ code, instrument, or mitigation change was added.
 
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
+
+## Session 1207 (2026-08-14) — title-time A route remained phase-incomplete
+
+Ran the prescribed debugger-enabled retail oracle comparison concurrently: an
+undriven control and a driven arm with A at 6 seconds followed by Start at
+11,16,21,26,31,36,41,46,51,56 seconds. Both arms passed the whole-RDRAM
+positive control at 10,000 callbacks and completed cleanly. The driven arm
+logged the scheduled A and Start scancodes with PIF/VI tracing enabled.
+
+The undriven arm completed 3,600 VI frames and the driven arm 3,599; both
+remained at VI width 320 with origin `0x006dd280`. This title-time A variation
+did not change the retail state path, selecting H2 and ruling out the tested
+button timing as an entry mechanism. M4 target watches remain UNEVALUABLE.
+No code, instrument, or mitigation change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
