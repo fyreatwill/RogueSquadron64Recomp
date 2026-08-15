@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1405 (2026-08-15).
+the authority for session detail. Reviewed through s1406 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1405 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80096CE4..0x80096D08`.
+   census over the next adjacent function, `0x80096D08..0x80097088`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -270,6 +270,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1403 | Exact companion/generated song-setter census synchronized `setSongChannelParamByHandle` at `0x800965E4`; no build or runtime run. |
 | s1404 | Exact companion/generated song-dispatch census synchronized `processSongByHandle` at `0x800966A4`; no build or runtime run. |
 | s1405 | Exact companion/generated song-play census synchronized `playSongIfMusyXActive` at `0x80096C88`; no build or runtime run. |
+| s1406 | Exact companion/generated song-predicate census synchronized `isSongHandleFree` at `0x80096CE4`; no build or runtime run. |
 
 ## Method and safety rules
 

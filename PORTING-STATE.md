@@ -69481,3 +69481,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `isSongHandleFree` at `0x80096CE4`.
+
+## Session 1406 (2026-08-15) — synchronized the is-song-handle-free symbol
+
+Performed the bounded exact-name census over `0x80096CE4..0x80096D08`.
+
+No new soak-queue verdicts since s1405; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80096CE4`, size `0x24`; `0x80096CE4+0x24=0x80096D08`. Overlay `rom_size` is `0x24` at offset `0x000968A4` (`0x80096CE4-0x80000440`). Generated prologue at `0x80096CE4` (`lw $a0, 0x0($a0)`) and `jr $ra` at `0x80096D00` with delay `nop` at `0x80096D04` |
+| Generated definition | `funcs_25.c` defines `isSongHandleFree` at `0x80096CE4`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `tickAllActiveSongs` at `0x80096D08` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `isSongHandleFree = 0x80096CE4` in the sequential `defined:true` list, immediately after already-synchronized `setSongChannelParamByHandle` and before `tickAllActiveSongs`. The annotated MusyX song-playback block names `playSongIfMusyXActive` / `processSongByHandle` and omits this leaf; that omission is not a conflicting name. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | One generated `jal 0x80096CE4` site: independently named `startLevelBackgroundMusic` at `0x800EF454` (mission overlay maps `startLevelBackgroundMusic = 0x800EF2F8`). The site builds pointer `0x8010C140` (`lui $v0, 0x8011` then `addiu $s0, $v0, -0x3EC0`) into `$a0` and treats the return as a u8 predicate (`andi $v0, 0xFF` then `beq $v0, $zero` skip). No other `jal 0x80096CE4` sites |
+| Semantic evidence | Loads the word at `$a0`. If `*a0 == -1` it returns 1. Otherwise it returns `((*a0 >> 31) ^ 1)`: 1 when bit 31 is clear and 0 when bit 31 is set. The `-1` special case is the empty-slot sentinel; without it `0xFFFFFFFF` would look occupied because bit 31 is set. Complementary to already-named `isSongHandleActive` (a handle-value walker of the 8-slot table): this is a pointer-to-handle-word leaf. The caller proceeds only when the predicate is true, then copies `0x20` bytes from that pointer. Matches the companion free-handle predicate. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80096CE4`: the companion and
+generated names agree, the body is a complete handle-word free predicate of
+matching size `0x24`, and there is neither a conflicting companion name
+nor a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x24`). `fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`tickAllActiveSongs` at `0x80096D08`.

@@ -1461,7 +1461,7 @@ functions = [
     { name = "setSongChannelParamByHandle", vram = 0x800965E4, size = 0xC0 },
     { name = "processSongByHandle", vram = 0x800966A4, size = 0x5E4 },
     { name = "playSongIfMusyXActive", vram = 0x80096C88, size = 0x5C },
-    { name = "func_80096CE4", vram = 0x80096CE4, size = 0x24 },
+    { name = "isSongHandleFree", vram = 0x80096CE4, size = 0x24 },
     { name = "func_80096D08", vram = 0x80096D08, size = 0x380 },
     { name = "func_80097088", vram = 0x80097088, size = 0x94 },
     { name = "fake_func_8009711C", vram = 0x8009711C, size = 0x4 },
