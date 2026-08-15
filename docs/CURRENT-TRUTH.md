@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1476 (2026-08-15).
+the authority for session detail. Reviewed through s1477 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1476 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009D7D0..0x8009D8C4`.
+   census over the next adjacent function, `0x8009D8C4..0x8009D980`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -70,14 +70,16 @@ the authority for session detail. Reviewed through s1476 (2026-08-15).
    misparsed RSP text lump, not a CPU function),
    `fake_func_8009C2C8` unchanged (s1471 H2: already-fake
    two-instruction COP1 multiply-accumulate fragment before
-   `computeVoicePanCoefficients`), and `fake_func_8009D7CC`
+   `computeVoicePanCoefficients`), `fake_func_8009D7CC`
    unchanged (s1476 H2: already-fake one-instruction `mtc1 $zero, $f4`
-   fragment before `filterVoiceSampleBlock`). s1475 synchronized
-   `decodeAndFillVoiceBlock` at `0x8009C904` (H1; generated
-   already named; TOML was `func_8009C904`). The generated entry at
-   `0x8009D7D0` is already `filterVoiceSampleBlock`; TOML is still
-   `func_8009D7D0` (size `0xEC`); overlay `rom_size` is `0xF4` and
-   lumps the eight-byte `0x8009D8BC` pad. Confirm companion, size,
+   fragment before `filterVoiceSampleBlock`), and `func_8009D8BC`
+   unchanged (s1477: eight-byte PC-relative packed-nibble table
+   `C7 D7 E3 E7 F1 F3 F5 F7`, not a function). s1477 synchronized
+   `filterVoiceSampleBlock` at `0x8009D7D0` (H1; generated already
+   named; TOML was `func_8009D7D0`). The generated entry at
+   `0x8009D8C4` is already `applyVoiceDelayFilter`; TOML is still
+   `func_8009D8C4` (size `0xB4`); overlay `rom_size` is `0xBC` and
+   lumps the eight-byte `0x8009D978` pad. Confirm companion, size,
    callers, and semantics before synchronizing.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
@@ -361,6 +363,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1474 | Exact companion/generated voice-channel census synchronized `updateVoiceChannelParamsLarge` at `0x8009C5BC`; no build or runtime run. |
 | s1475 | Exact companion/generated voice-decode census synchronized `decodeAndFillVoiceBlock` at `0x8009C904`; no build or runtime run. |
 | s1476 | Exact companion/generated census selected H2 for already-fake `fake_func_8009D7CC` at `0x8009D7CC` (one-instruction `mtc1` fragment); left unchanged; no build or runtime run. |
+| s1477 | Exact companion/generated voice-filter census synchronized `filterVoiceSampleBlock` at `0x8009D7D0`; left `func_8009D8BC` as an eight-byte lookup-table pad; no build or runtime run. |
 
 ## Method and safety rules
 

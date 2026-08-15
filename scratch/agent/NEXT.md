@@ -1,9 +1,9 @@
-# NEXT work unit (s1477)
+# NEXT work unit (s1478)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8009D7D0..0x8009D8C4`. Do not build or run. Record its address,
+function, `0x8009D8C4..0x8009D980`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -20,17 +20,19 @@ one-instruction jump fragment), `fake_func_80097D58` unchanged
 gap), `fake_func_80099FDC` unchanged (s1451 H2: already-fake
 one-word `bne` gap before `aspMainTextStart`),
 `fake_func_8009C2C8` unchanged (s1471 H2: already-fake
-two-instruction COP1 multiply-accumulate fragment), and
+two-instruction COP1 multiply-accumulate fragment),
 `fake_func_8009D7CC` unchanged (s1476 H2: already-fake
-one-instruction `mtc1 $zero, $f4` fragment). The generated entry at
-this address is already `filterVoiceSampleBlock`; the companion splat
-list maps `filterVoiceSampleBlock = 0x8009D7D0`. TOML is still
-`func_8009D7D0` (size `0xEC`, ends at `0x8009D8BC`); overlay
-`rom_size` is `0xF4` and lumps the eight-byte `func_8009D8BC` pad
-before independently named `applyVoiceDelayFilter` at `0x8009D8C4`.
-Confirm the complete function, matching size, and caller/semantic
-evidence before synchronizing the TOML name. Classify the `0x8009D8BC`
-pad in the same table; do not invent a name for it.
+one-instruction `mtc1 $zero, $f4` fragment), and
+`func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
+table, not a function). The generated entry at this address is already
+`applyVoiceDelayFilter`; the companion splat list maps
+`applyVoiceDelayFilter = 0x8009D8C4`. TOML is still `func_8009D8C4`
+(size `0xB4`, ends at `0x8009D978`); overlay `rom_size` is `0xBC` and
+lumps the eight-byte `func_8009D978` pad before independently named
+`runVoiceLatticeFilter` at `0x8009D980`. Confirm the complete function,
+matching size, and caller/semantic evidence before synchronizing the
+TOML name. Classify the `0x8009D978` pad in the same table; do not
+invent a name for it.
 
 Competing hypotheses and discriminator:
 
@@ -48,7 +50,7 @@ independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '8009D7D0\|8009D8BC\|8009D8C4\|filterVoiceSampleBlock\|applyVoiceDelayFilter' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '8009D7D0\|8009D8BC\|filterVoiceSampleBlock' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '8009D7D0\|8009D8BC\|8009D8C4' syms/rogue_squadron.syms.toml
+grep -n -C 5 '8009D8C4\|8009D978\|8009D980\|applyVoiceDelayFilter\|runVoiceLatticeFilter' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '8009D8C4\|8009D978\|applyVoiceDelayFilter' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '8009D8C4\|8009D978\|8009D980' syms/rogue_squadron.syms.toml
 ```

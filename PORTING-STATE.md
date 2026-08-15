@@ -71805,3 +71805,41 @@ reopen M5 audio de-stubbing. The next adjacent generated function is
 independently named `filterVoiceSampleBlock` at `0x8009D7D0` (TOML
 still `func_8009D7D0`, size `0xEC`; overlay `rom_size` is `0xF4` and
 lumps the following eight-byte `0x8009D8BC` pad).
+
+## Session 1477 (2026-08-15) — synchronized the filter-voice-sample-block symbol
+
+Performed the bounded exact-name census over `0x8009D7D0..0x8009D8C4`.
+
+No new soak-queue verdicts since s1476; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_8009D7D0`, size `0xEC`; `0x8009D7D0+0xEC=0x8009D8BC`. Overlay `rom_size` is `0xF4` at offset `0x0009D390` (`0x8009D7D0-0x80000440`) and lumps the following eight-byte `func_8009D8BC` pad. Independently named `applyVoiceDelayFilter` starts at `0x8009D8C4` |
+| Generated definition | `funcs_27.c` defines `filterVoiceSampleBlock` at `0x8009D7D0`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xEC` function between already-fake `fake_func_8009D7CC` at `0x8009D7CC` and the eight-byte pad at `0x8009D8BC`. It ends `jr $ra` / `nop` at `0x8009D8B4` / `0x8009D8B8`. A never-taken `bltzal $zero, L_8009D8BC` is the MIPS `$ra`-capture idiom (`addiu $t7, $ra, 0xD4` then `lb` of a table byte); the recompiler also emits dead `L_8009D8BC` / `static_3_8009D8BC` for the pad |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `filterVoiceSampleBlock = 0x8009D7D0` (force-applied; replaced placeholder) and `applyVoiceDelayFilter = 0x8009D8C4`. Menu, mission, cinematic, ignored, libultra, and zlib lists do not remap `0x8009D7D0` or `0x8009D8BC`. No companion C/asm body exists. No companion name exists for `0x8009D8BC` |
+| Caller evidence | Exactly three generated `jal 0x8009D7D0` sites and zero `func_*` callers: independently named `updateVoiceChannelParams` at `0x8009C540`, `updateVoiceChannelParamsLarge` at `0x8009C88C`, and `decodeAndFillVoiceBlock` at `0x8009D740`. Each immediately follows with `jal 0x8009D8C4` (`applyVoiceDelayFilter`). Whole-ROM scan found three `jal` encodings `0x0C0275F4` at files `0x9D140` / `0x9D48C` / `0x9E340` (match those VRAM sites) and zero `j` encodings (`0x080275F4`) or absolute `0x8009D7D0` pointer words |
+| Semantic evidence | Retail ROM words at file `0x9E3D0` (`(vram&0xFFFFFF)+0xC00`) are `0x2481FFF9` (`addiu $at, $a0, -7`). Same-run positive controls: `0x8009C904` file `0x9D504` is `0x27BDFEC0`, `0x8009D7C4`/`0x8009D7C8` files `0x9E3C4`/`0x9E3C8` are `0x03E00008`/`0x00000000` (`jr $ra` / `nop`), `0x8009D7CC` file `0x9E3CC` is `0x44802000` (`mtc1 $zero, $f4`), `0x8009D8B4`/`0x8009D8B8` files `0x9E4B4`/`0x9E4B8` are `0x03E00008`/`0x00000000`, and `0x8009D8C4` file `0x9E4C4` is `0x848B0166` (`lh $t3, 0x166($a0)`). The body scales 13 source halfwords, zeros a 40-halfword dest span, and copies the filtered block with stride 6. For `$a0<=7` it loads a packed-nibble byte from `0x8009D8BC+$a0`. Pad words at files `0x9E4BC`/`0x9E4C0` are `0xC7D7E3E7`/`0xF1F3F5F7` (bytes `C7 D7 E3 E7 F1 F3 F5 F7`), a lookup table misdecoded as `lwc1`/`scd`, not a function. Matches the companion name, s924's source inventory, and the independently named filter-then-delay callers |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009D7D0`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xEC`, the sample-block filter plus named callers match the name, and
+there is neither a conflicting companion name nor a size split inside
+the live body. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0xEC`). The eight-byte `func_8009D8BC` pad
+is classified as a PC-relative packed-nibble table, not a function; no
+independent name exists, so it stays address-encoded. `fake_func_8009D7CC`
+remains the already-fake one-instruction `mtc1` fragment and was left
+unchanged, as were `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`applyVoiceDelayFilter` at `0x8009D8C4` (TOML still `func_8009D8C4`,
+size `0xB4`; overlay `rom_size` is `0xBC` and lumps the following
+eight-byte `0x8009D978` pad).
