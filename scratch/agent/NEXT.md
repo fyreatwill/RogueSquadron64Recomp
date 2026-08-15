@@ -1,9 +1,9 @@
-# NEXT work unit (s1445)
+# NEXT work unit (s1446)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x80099C44..0x80099C4C`. Do not build or run. Record its address,
+function, `0x80099C4C..0x80099C50`. Do not build or run. Record its address,
 size, generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
@@ -15,25 +15,27 @@ entries unchanged. Leave `func_8008ED6C` unchanged (s1309 H2),
 `fake_func_80094348` unchanged (s1378: already-fake two-instruction
 jump fragment), `fake_func_8009711C` unchanged (s1408: already-fake
 one-instruction jump fragment), and `fake_func_80097D58` unchanged
-(s1420: already-fake two-instruction epilogue fragment).
+(s1420: already-fake two-instruction epilogue fragment). The generated
+entry at this address is already `fake_func_80099C4C`; do not invent a
+semantic name for an already-fake gap-filler.
 
 Competing hypotheses and discriminator:
 
 - H1: the function has an exact independent companion mapping and can be
   synchronized.
-- H2: the mapping is partial or ambiguous, so the address-encoded entry must
+- H2: the mapping is partial, already-fake, or ambiguous, so the entry must
   remain unchanged.
 - H3: no independent naming source exists and the region should be parked.
 
 The complete comparison table is the discriminator: an exact companion name
 with matching generated/TOML size and semantic or caller evidence selects H1;
-an incomplete or conflicting match selects H2; and no independent name selects
-H3.
+an incomplete, already-fake, or conflicting match selects H2; and no
+independent name selects H3.
 
 Commands:
 
 ```
-grep -n -C 5 '80099C44\|80099C4C' ../rogue_squadron64/symbol_files/main_overlay.txt
-grep -n -C 4 '80099C44\|80099C4C' ../N64Recomp/RecompiledFuncs/funcs_26.c
-grep -n -C 3 '80099C44\|80099C4C' syms/rogue_squadron.syms.toml
+grep -n -C 5 '80099C4C\|80099C50' ../rogue_squadron64/symbol_files/main_overlay.txt
+grep -n -C 4 '80099C4C\|80099C50' ../N64Recomp/RecompiledFuncs/funcs_26.c
+grep -n -C 3 '80099C4C\|80099C50' syms/rogue_squadron.syms.toml
 ```

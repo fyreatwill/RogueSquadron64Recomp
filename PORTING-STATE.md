@@ -70728,3 +70728,36 @@ epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `noopHandler_80099C44` at `0x80099C44`.
+
+## Session 1445 (2026-08-15) — synchronized the shutdown-path audio noop-handler symbol
+
+Performed the bounded exact-name census over `0x80099C44..0x80099C4C`.
+
+No new soak-queue verdicts since s1444; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80099C44`, size `0x8`; `0x80099C44+0x8=0x80099C4C`. Overlay `rom_size` is `0x8` at offset `0x00099804` (`0x80099C44-0x80000440`). Generated body is `jr $ra` at `0x80099C44` and `nop` at `0x80099C48` |
+| Generated definition | `funcs_26.c` defines `noopHandler_80099C44` at `0x80099C44`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x8` function between independently named `reset3DAudioLists` at `0x80099C2C` and generated `fake_func_80099C4C` at `0x80099C4C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `noopHandler_80099C44 = 0x80099C44` in the documented `noopHandler` family (`pure jr-ra stub (Factor 5 audio)`). Menu, mission, cinematic, ignored, and libultra lists do not remap `0x80099C44`. The same file independently names the adjacent functions `reset3DAudioLists` at `0x80099C2C` and `fake_func_80099C4C` at `0x80099C4C`. TOML already synchronized the same family members `noopHandler_800825C0` and `noopHandler_80092388`. No conflicting companion name |
+| Caller evidence | Exactly two generated `jal 0x80099C44` sites, both in independently named MusyX teardown callers: `shutdownMusyXEngine` at `0x8008ECE0` and `musyxNoopStub` at `0x8008ED3C`. Each follows `shutdownAudioEngine` / `waitForMusyXAudioTaskDone` plus an optional `rs_free` of the word at `0x8013AF14`, then stores `0` to `gMusyXActiveFlag` at `0x800A0F50`. Zero `func_*` callers |
+| Semantic evidence | Body is a two-instruction `jr $ra` / `nop` with no register use. That matches the companion inert-callback contract and the already-attested teardown callers (s1306 / s1307), which jal the stub after engine shutdown and before clearing the active-flag byte |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80099C44`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x8`, the two `jal` callers are independently named MusyX teardown paths,
+and there is neither a conflicting companion name nor a size split. The
+address suffix is the companion's disambiguator among the documented
+byte-identical stubs, not an invented address-encoded name. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x8`). `fake_func_80097D58` remains
+the already-fake two-instruction epilogue fragment and was left unchanged,
+as were `fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is the already-fake `fake_func_80099C4C` at `0x80099C4C`.

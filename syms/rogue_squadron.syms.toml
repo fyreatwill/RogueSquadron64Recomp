@@ -1502,7 +1502,7 @@ functions = [
     { name = "dispatchPrioritizedSoundQueue", vram = 0x80099720, size = 0x1C8 },
     { name = "update3DAudioFrame", vram = 0x800998E8, size = 0x344 },
     { name = "reset3DAudioLists", vram = 0x80099C2C, size = 0x18 },
-    { name = "func_80099C44", vram = 0x80099C44, size = 0x8 },
+    { name = "noopHandler_80099C44", vram = 0x80099C44, size = 0x8 },
     { name = "fake_func_80099C4C", vram = 0x80099C4C, size = 0x4 },
     { name = "func_80099C50", vram = 0x80099C50, size = 0xAC },
     { name = "func_80099CFC", vram = 0x80099CFC, size = 0x6C },
