@@ -68463,3 +68463,32 @@ TOML entry was synchronized (name only; size left at `0x24`).
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `scaleFixedPointByRatioA` at `0x80093F3C`.
+
+## Session 1372 (2026-08-15) — synchronized the scale-fixed-point-by-ratio-a symbol
+
+Performed the bounded exact-name census over `0x80093F3C..0x80093F60`.
+
+No new soak-queue verdicts since s1371; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80093F3C`, size `0x24`; `0x80093F3C+0x24=0x80093F60`. Overlay `rom_size` is `0x24`. Generated prologue at `0x80093F3C` (`lui $t0,0x10`) and `jr $ra` at `0x80093F58` with delay `or $v0,$t0,$t1` at `0x80093F5C` |
+| Generated definition | `funcs_25.c` defines `scaleFixedPointByRatioA` at `0x80093F3C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `scaleFixedPointByRatioB` at `0x80093F60` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `scaleFixedPointByRatioA = 0x80093F3C`. The same file independently names the preceding `divideByMixerBaseFrequency` at `0x80093F18` and the following `scaleFixedPointByRatioB` at `0x80093F60`. The sequential `defined:true` list records `fake_func_80093E74` at `0x80093E74` and does not remap `0x80093F3C`. No later companion list remaps it |
+| Caller evidence | Six generated `jal 0x80093F3C` sites: `computeChannelPitchSweepStep` (`0x80089F80`), `soundMacroOpStartNoteAbsoluteSweep` (`0x8008A06C`), `soundMacroOpStartNoteRelativeSweep` (`0x8008A1AC`), `soundMacroOpStartNoteTransposedSweep` (`0x8008A2CC`), `soundMacroOpPlaySampleKeymap` (`0x8008A5DC`), and `tickAllAudioChannels` (`0x8008D2D8`). Five sweep callers load a 16-bit word from `0x72($s0)` (or the already-masked `$a0` after a keymap rate store) and consume `$v0` as a scaled 16-bit target versus the current word at `0x70`; `tickAllAudioChannels` passes the low 16 bits of `scaleByPitchTableA` |
+| Semantic evidence | The body loads the compile-time constant `0x10D390`, unsigned-multiplies `$a0` by it, and returns `(lo >> 20) \| (hi << 12)`. That is `(uint64_t)$a0 * 0x10D390 >> 20`, a Q20 fixed-point scale by ratio `1.0516357421875`. Every caller then does `(scaled - current) * duration / 100` using the `0x51EB851F` reciprocal. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80093F3C`: the companion and
+generated names agree, the body is a complete fixed-point ratio helper of
+matching size `0x24`, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at `0x24`).
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `scaleFixedPointByRatioB` at `0x80093F60`.
