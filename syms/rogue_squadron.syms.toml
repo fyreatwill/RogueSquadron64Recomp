@@ -1518,7 +1518,7 @@ functions = [
     { name = "serviceVoicePoolFrame", vram = 0x8009B5A8, size = 0x300 },
     { name = "getVoicePlaybackProgressByKey", vram = 0x8009B8A8, size = 0x190 },
     { name = "loadSpeechFile", vram = 0x8009BA38, size = 0x168 },
-    { name = "func_8009BBA0", vram = 0x8009BBA0, size = 0xE8 },
+    { name = "initMusyXVoiceTable", vram = 0x8009BBA0, size = 0xE8 },
     { name = "func_8009BC88", vram = 0x8009BC88, size = 0x3C },
     { name = "func_8009BCC4", vram = 0x8009BCC4, size = 0xB8 },
     { name = "func_8009BD7C", vram = 0x8009BD7C, size = 0x8C },
