@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1221 (2026-08-14).
+in the ledger. Reviewed through s1224 (2026-08-14).
 
 ## Current state
 
@@ -123,6 +123,15 @@ in the ledger. Reviewed through s1221 (2026-08-14).
   `applySaveSlotToMissionState` writes the save-state prefix and status, while
   `initPlayerMissionStateFromSettings` writes only offsets 2, 3, and 5..7.
   No later producer supplies a justified debugger target for retail entry.
+- The s1224 bounded consumer/caller audit confirms H2. `mainGameLoop` reads
+  `D_80130B10+0x20` at `0x8003E07C`, `+0x21` at `0x8003E0DC` and
+  `0x8003E128`, and `+0x22` at `0x8003E114`; the reads only select overlay,
+  unlock, cinematic, and mission-frame work. The idle initializer writes
+  `B30=1/B31=0`, while `applySaveSlotToMissionState` writes all three from a
+  save record during `loadSaveDataIfNotLoaded`; reset/default paths clear or
+  fill the same structure. No input-controlled writer reaches this triplet,
+  so no debugger target or oracle run is justified from it. This is static
+  source evidence; the independent retail entry path remains unresolved.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -202,10 +211,10 @@ in the ledger. Reviewed through s1221 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Audit the `mainGameLoop` consumers and upstream boot/input call chain for
-   the already-established `B30=1/B31=0/B32=0` transition, looking for the
-   actual retail-entry event rather than another state-byte write. Do not arm
-   an oracle target write unless that chain identifies a concrete producer or
+1. Audit the boot/input transition after `runIdleFramesAndLoadSaveData`,
+   starting at `loadSaveDataIfNotLoaded` and its controller/save-state callers,
+   looking for the actual retail-entry event. Do not arm an oracle target write
+   unless that chain identifies a concrete input-controlled producer or
    transition, and never write `0x80130B60..62` as state bytes.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.

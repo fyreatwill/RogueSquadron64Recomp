@@ -65250,3 +65250,17 @@ non-reset producer is the boot idle initializer, so no debugger write target
 for retail entry is justified. This rules out a later input-controlled writer
 for these three bytes and the prior `0x130B60..62` misaddress as an entry
 mechanism; it does not identify the separate event that advances retail boot.
+
+## Session 1224 (2026-08-14) — audited main-loop retail-entry consumers
+
+Audited the generated `mainGameLoop` consumers at `0x8003E07C` (B30),
+`0x8003E0DC` and `0x8003E128` (B31), and `0x8003E114` (B32), plus the
+post-idle writer/caller chain. The idle routine writes `0x130B30=1` and
+`0x130B31=0`; `applySaveSlotToMissionState`, reached through
+`loadSaveDataIfNotLoaded`, copies save-record fields into all three bytes;
+reset/default paths clear or fill the structure. Controller polling occurs in
+the idle frame loop and no input-controlled writer to this triplet was found.
+This selects H2 and rules out using `0x80130B30..32` as an oracle debugger
+target. It does not identify the actual retail-entry event; that remains the
+next source-audit target. Static source evidence only; no build or run was
+appropriate for this bounded unit.
