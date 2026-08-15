@@ -66146,3 +66146,16 @@ voice-chain, channel-timing, mutex-wrapper, and macro-operation evidence.
 H1 selected and all eight stale symbol-map entries were synchronized. No build
 or runtime run was justified. This rules out the absence of independent naming
 evidence for this region; it does not change the closed audio runtime status.
+
+## Session 1275 (2026-08-15) — synchronized adjacent MusyX macro symbols
+
+Performed the bounded exact-name census over `0x80089838..0x80089B40`.
+The companion symbol file independently identifies all seven generated
+entries: `soundMacroOpGosubLoopCounterFiftyFour`,
+`soundMacroOpGosubLoopCounterThirty`, `soundMacroOpGosubModulatorLoop`,
+`soundMacroOpGosubRandomLoop`, `soundMacroOpGosub`,
+`soundMacroOpGosubAltReturnFrame`, and `clearChannelFieldsAt1Cand20`.
+Generated definitions and TOML sizes match; the bodies provide the distinct
+macro-handler and channel-field-clear evidence. H1 selected and all seven
+stale symbol-map entries were synchronized. No build or runtime run was
+justified. This rules out partial or absent naming evidence for this region.
