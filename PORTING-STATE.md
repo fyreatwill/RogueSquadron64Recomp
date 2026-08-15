@@ -68608,3 +68608,32 @@ address-encoded TOML entry was synchronized (name only; size left at `0x78`).
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `computeNoteRatePairFromTableB` at `0x8009405C`.
+
+## Session 1377 (2026-08-15) — synchronized the compute-note-rate-pair-from-table-b symbol
+
+Performed the bounded exact-name census over `0x8009405C..0x800940D4`.
+
+No new soak-queue verdicts since s1376; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009405C`, size `0x78`; `0x8009405C+0x78=0x800940D4`. Overlay `rom_size` is `0x78`. Generated prologue at `0x8009405C` (`ori $t0,$zero,0x300`) and `jr $ra` at `0x800940CC` with delay `nop` at `0x800940D0` |
+| Generated definition | `funcs_25.c` defines `computeNoteRatePairFromTableB` at `0x8009405C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `computeVoiceVolumePanCoefficients` at `0x800940D4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `computeNoteRatePairFromTableB = 0x8009405C`. The same file independently names the preceding `computeNoteRatePairFromTableA` at `0x80093FE4` and the following `computeVoiceVolumePanCoefficients` at `0x800940D4`. Menu, mission, and cinematic lists do not remap it. The sequential `defined:true` list records `fake_func_80093E74` at `0x80093E74` and does not remap `0x8009405C` |
+| Caller evidence | One generated `jal 0x8009405C` site: `tickAllAudioChannels` at `0x8008D174`. The signed remainder of `(modulator - 0x2000)` selects the pair: `bgez` takes A at `0x8008D1C0`, otherwise B at `0x8008D174`. Both write through `$a1=$sp+0x18` and `$a2=$sp+0x1C` and pass `$a3 = $s2 >> 16`. The B path negates the remainder, multiplies by the byte at `-0x2712($at)`, and feeds the `>>7` index into this helper |
+| Semantic evidence | The body is the Table-A twin: it divides `$a0` by `0x300`, indexes `D_800A3FD4` by `(remainder << 2)`, Q20-scales `$a3` by the adjacent pair of table words, shifts each product by the quotient, and stores the two results through `$a1`/`$a2`. Companion data independently sizes `D_800A3FD4` as `u32[0xC04]` (`769` words), matching `D_800A33D0` and exactly `768` remainder slots plus the `+4` pair read. That is a note-rate pair from table B. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009405C`: the companion and
+generated names agree, the body is a complete note-rate pair helper of
+matching size `0x78`, and there is neither a conflicting companion name nor
+a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at `0x78`).
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `computeVoiceVolumePanCoefficients` at `0x800940D4`.

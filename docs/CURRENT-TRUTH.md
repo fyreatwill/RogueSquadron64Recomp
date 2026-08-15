@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1376 (2026-08-15).
+the authority for session detail. Reviewed through s1377 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1376 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8009405C..0x800940D4`.
+   census over the next adjacent function, `0x800940D4..0x80094348`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -239,6 +239,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1374 | Exact companion/generated pitch-table census synchronized `scaleByPitchTableA` at `0x80093F84`; no build or runtime run. |
 | s1375 | Exact companion/generated pitch-table census synchronized `scaleByPitchTableB` at `0x80093FB4`; no build or runtime run. |
 | s1376 | Exact companion/generated note-rate census synchronized `computeNoteRatePairFromTableA` at `0x80093FE4`; no build or runtime run. |
+| s1377 | Exact companion/generated note-rate census synchronized `computeNoteRatePairFromTableB` at `0x8009405C`; no build or runtime run. |
 
 ## Method and safety rules
 
