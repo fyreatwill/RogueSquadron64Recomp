@@ -66715,3 +66715,27 @@ named audio-init / MusyX-reset chain support the display-mode name. H2 and H3
 are ruled out for this function; there is neither a partial/conflicting match
 nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1305 (2026-08-15) — synchronized the display-mode runtime symbol
+
+Performed the bounded exact-name census over `0x8008EB5C..0x8008ECA4`.
+
+No new soak-queue verdicts since s1304; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008EB5C`, size `0x148`; it ends exactly at the next generated function, `0x8008ECA4`. Overlay `rom_size` is `0x148` |
+| Generated definition | `funcs_23.c` defines `reapplyDisplayMode` at `0x8008EB5C`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `reapplyDisplayMode = 0x8008EB5C` |
+| Caller evidence | One generated `jal 0x8008EB5C` site: `runVideoFrameTick` (`funcs_0.c`) at `0x8000153C`. Companion independently names this as the runtime mode-change path; `setDisplayMode` is the sibling boot-time variant |
+| Semantic evidence | Body clamps the mode byte to `< 0x21` (else stores `0x20`) at `0x80141AD0`, zeros `gMusyXActiveFlag` at `0x800A0F50`, then `jal reapplyAudioConfig` (`0x80091C88`), `jal resetSongSubsystemCounter` (`0x80097120`), `jal initSongSequencerPools` (`0x80097088`), `jal resetMusyXEngineState` (`0x8008E614`), `jal clearStreamedVoiceFlags` (`0x80097D60`), `jal reset3DAudioLists` (`0x80099C2C`), and stores `1` back to the same gate byte. Companion independently names those six callees and the sibling `setDisplayMode`; the only structural difference from the boot path is `reapplyAudioConfig` instead of `initAudioSubsystem` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x148` boundary is exact, and the video-tick caller plus the independently
+named audio-reconfig / MusyX-reset chain support the runtime display-mode name.
+H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.

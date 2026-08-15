@@ -1357,7 +1357,7 @@ functions = [
     { name = "runMusyXTaskLocked", vram = 0x8008E904, size = 0x3C },
     { name = "initMusyXEngine", vram = 0x8008E940, size = 0xD4 },
     { name = "setDisplayMode", vram = 0x8008EA14, size = 0x148 },
-    { name = "func_8008EB5C", vram = 0x8008EB5C, size = 0x148 },
+    { name = "reapplyDisplayMode", vram = 0x8008EB5C, size = 0x148 },
     { name = "func_8008ECA4", vram = 0x8008ECA4, size = 0x5C },
     { name = "func_8008ED00", vram = 0x8008ED00, size = 0x5C },
     { name = "func_8008ED5C", vram = 0x8008ED5C, size = 0x10 },
