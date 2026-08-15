@@ -70139,3 +70139,35 @@ and `func_8008ED6C`. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `stopStreamedVoice` at `0x80098298`.
+
+## Session 1427 (2026-08-15) — synchronized the stop-streamed-voice symbol
+
+Performed the bounded exact-name census over `0x80098298..0x80098310`.
+
+No new soak-queue verdicts since s1426; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80098298`, size `0x78`; `0x80098298+0x78=0x80098310`. Overlay `rom_size` is `0x78` at offset `0x00097E58` (`0x80098298-0x80000440`). Generated body starts `lui $v0, 0x800A` / `lbu $v0, 0xF50($v0)` at `0x80098298` and ends `jr $ra` / `nop` at `0x80098308` / `0x8009830C` |
+| Generated definition | `funcs_26.c` defines `stopStreamedVoice` at `0x80098298`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x78` function between independently named `setVoiceVolumePanLocked` at `0x800981F0` and generated `compute3DSourceSpatialMix` at `0x80098310` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `stopStreamedVoice = 0x80098298` in the sequential streamed-voice / 3D-mix family, immediately after `setVoiceVolumePanLocked` and before `compute3DSourceSpatialMix`. Menu, mission, cinematic, and ignored lists do not remap `0x80098298`. No conflicting companion name |
+| Caller evidence | One generated `jal 0x80098298` in companion-named `serviceVoicePoolFrame` at `0x8009B804` (`funcs_26.c` already uses that name; TOML still `func_8009B5A8`). The caller loads the voice index from the current streamed record's `+0x0` field, calls this function, then stores `-1` back to that field |
+| Semantic evidence | Body gates on the MusyX-active byte at `MEM_BU[0x800A0F50]`. On the live path it acquires `factor5MutexAcquire`, indexes the 0x18-byte streamed-voice table at `0x80152A20+index*0x18` (same stride and table as independently named `startStreamedSampleVoice` / `clearStreamedVoiceFlags`), and if the state byte is `1` it zeros that byte and forwards the index to independently named `silenceVoiceSlot`, then `factor5MutexRelease`. That is a locked streamed-voice stop. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80098298`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x78`, the single `jal` caller is the voice-pool service path, and there
+is neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x78`). `fake_func_80097D58` remains
+the already-fake two-instruction epilogue fragment and was left unchanged,
+as were `fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`compute3DSourceSpatialMix` at `0x80098310`.
