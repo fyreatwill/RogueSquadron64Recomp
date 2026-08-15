@@ -19871,6 +19871,29 @@ still incrementing. The crash is not preceded by, or a consequence of, a
 stall condition — it happens mid-normal-execution, ~51 log lines before the
 SIGBUS.
 
+## Session 1261 (2026-08-15) — synchronized NPC cheat and model-animation symbols
+
+Ran the planned bounded generated/companion census over
+`0x800820E4..0x80083008`. The complete comparison found 19 exact independent
+names with matching generated definitions and recorded sizes:
+`clearObjectPoolStateFlag`, `npcSpawnInitTimedEffect`,
+`npcSpawnInitMarkActive`, `applyCheatCodeFromInput`,
+`isCheatCodeIndexAllowed`, `rs_crc32`, `make_crc32_lut`,
+`noopHandler_800825C0`, `findModelAnimKeyframeByPhase`,
+`resetModelAnimSlotTable`, `allocateModelAnimSlot`,
+`appendAnimHandleAndDescendantsToBuffer`, `flattenAnimTreeAndAllocateSlot`,
+`model_animation_offset_convert`, `releaseModelAnimSlot`,
+`markModelAnimChannelEntryActive`, `clearModelAnimChannelEntry`,
+`seekModelAnimChannelToTime`, and `seekAllModelAnimChannelsInSlotToTime`.
+The requested region therefore had a safe exact subset: the explicitly fake
+`0x80082268` and `0x800825C8` entries stayed fake, while no independent name
+was found for the intervening address-encoded entries outside that subset.
+Three of those entries were already synchronized; 16 stale repository
+symbol-map entries were synchronized. Generated caller
+references independently agree for the cheat/CRC and model-animation helpers;
+no build or runtime run was needed. H2 was selected: this does not explain the
+external retail-entry boundary or recurring runtime SIGBUS.
+
 **Conclusion: Outcome B (clean null) from NEXT.md, with a bonus correction.**
 There is no shared trigger between s210's `evalCubicSplineAtTime` crash and
 s211's graphics-task-submission stall (item -35) — the ~10s proximity in
