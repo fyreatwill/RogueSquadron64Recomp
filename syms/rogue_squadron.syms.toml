@@ -1389,7 +1389,7 @@ functions = [
     { name = "factor5QueueSignal", vram = 0x800920D0, size = 0x2C },
     { name = "isAudioSlotActive", vram = 0x800920FC, size = 0x24 },
     { name = "audioStubReturnZero", vram = 0x80092120, size = 0x8 },
-    { name = "func_80092128", vram = 0x80092128, size = 0x14C },
+    { name = "musyxInitVoiceFromSample", vram = 0x80092128, size = 0x14C },
     { name = "func_80092274", vram = 0x80092274, size = 0x50 },
     { name = "func_800922C4", vram = 0x800922C4, size = 0x58 },
     { name = "func_8009231C", vram = 0x8009231C, size = 0x4C },
