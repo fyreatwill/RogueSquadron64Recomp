@@ -70203,3 +70203,35 @@ and `func_8008ED6C`. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `applyVoice3DMixParams` at `0x8009868C`.
+
+## Session 1429 (2026-08-15) — synchronized the apply-voice-3d-mix-params symbol
+
+Performed the bounded exact-name census over `0x8009868C..0x800988E8`.
+
+No new soak-queue verdicts since s1428; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009868C`, size `0x25C`; `0x8009868C+0x25C=0x800988E8`. Overlay `rom_size` is `0x25C` at offset `0x0009824C` (`0x8009868C-0x80000440`). Generated body starts `addiu $sp, $sp, -0x30` at `0x8009868C` and ends `jr $ra` / `nop` at `0x800988E0` / `0x800988E4` |
+| Generated definition | `funcs_26.c` defines `applyVoice3DMixParams` at `0x8009868C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x25C` function between independently named `compute3DSourceSpatialMix` at `0x80098310` and generated `updateActive3DAudioSource` at `0x800988E8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `applyVoice3DMixParams = 0x8009868C` in the sequential 3D-mix family, immediately after `compute3DSourceSpatialMix` and before `tickAndReap3DAudioVoices`. Menu, mission, cinematic, and ignored lists do not remap `0x8009868C`. No conflicting companion name |
+| Caller evidence | Four generated `jal 0x8009868C` sites: companion-named `play3DSoundEvent` at `0x800989D8` (`0x80098B3C`), companion-named `play3DSoundEventVariant` at `0x80098BDC` (`0x80098D40`), companion-named `dispatchPrioritizedSoundQueue` at `0x80099720` (`0x80099864`), and companion-named `update3DAudioFrame` at `0x800998E8` (`0x80099B68`). All four are 3D-source play/dispatch/update paths; generated code already uses the companion names while TOML still has `func_800989D8` / `func_80098BDC` / `func_80099720` / `func_800998E8` |
+| Semantic evidence | Body takes the source entry in `a0` and mix floats in `a1`/`a2`/`a3` plus stack extras at `0x40($sp)`/`0x44($sp)`. It loads flags at `a0+0x8`, the voice handle at `a0+0x34`, and a scale at `a0+0x40`, converts the floats to 0..`0x7F` byte params and a 0..`0x3FFF` key-transpose, then applies them through independently named `spreadVoiceByteParamAcrossChain` (`0x8008905C`), `setVoiceParamByHandle` (`0x800883C4`), `applyVoiceCmdByHandle` (`0x800885AC`), and `spreadVoiceKeyTransposeAcrossChain` (`0x80088794`). That is a voice-side apply of already-computed 3D mix params, not a spatial solver or stream helper. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009868C`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x25C`, the four `jal` callers are 3D-source play/dispatch/update paths, and
+there is neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x25C`). `fake_func_80097D58` remains
+the already-fake two-instruction epilogue fragment and was left unchanged,
+as were `fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`updateActive3DAudioSource` at `0x800988E8`.
