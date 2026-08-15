@@ -67084,3 +67084,28 @@ the cache list the preceding four symbols manage. H2 and H3 are ruled out
 for this function; there is neither a partial/conflicting match nor an
 absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1320 (2026-08-15) — synchronized the per-voice resample/mix symbol
+
+Performed the bounded exact-name census over `0x8008FFAC..0x80090A3C`.
+
+No new soak-queue verdicts since s1319; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008FFAC`, size `0xA90`; it ends exactly at the next generated function, `0x80090A3C`. Overlay `rom_size` is `0xA90` |
+| Generated definition | `funcs_24.c` defines `musyxRenderVoiceSamples` at `0x8008FFAC` through the matching epilogue at `0x80090A34`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxRenderVoiceSamples = 0x8008FFAC`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x8008FFAC` in `musyxMixActiveVoices` at `0x80090F00`. Companion independently names that mixer `musyxMixActiveVoices = 0x80090E04` and says it calls this kernel per active voice |
+| Semantic evidence | Body keeps `a0` as the voice pointer, reads rate `+0x4` and position `+0x8`, walks loop fields `+0x3C`/`+0x40`, and calls `fillSampleStreamRange` at `0x8009024C`, `0x800902CC`, `0x8009039C`, and `0x800903F0` |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0xA90` boundary is exact, and the body is the per-voice resample/mix
+kernel that the preceding stream-cache symbols feed. H2 and H3 are ruled out
+for this function; there is neither a partial/conflicting match nor an
+absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.

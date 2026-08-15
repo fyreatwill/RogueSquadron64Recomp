@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1319 (2026-08-15).
+the authority for session detail. Reviewed through s1320 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1319 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8008FFAC..0x80090A3C`.
+   census over the next adjacent function, `0x80090A3C..0x80090E04`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded: s1309 selected H2 for that 4-byte island.
@@ -176,6 +176,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1317 | Exact companion/generated stream-cache census synchronized `moveSampleBlockToFront` at `0x8008F95C`; no build or runtime run. |
 | s1318 | Exact companion/generated stream-cache census synchronized `recycleSampleStreamBlock` at `0x8008F9C8`; no build or runtime run. |
 | s1319 | Exact companion/generated stream-range census synchronized `fillSampleStreamRange` at `0x8008FAAC`; no build or runtime run. |
+| s1320 | Exact companion/generated voice-mix census synchronized `musyxRenderVoiceSamples` at `0x8008FFAC`; no build or runtime run. |
 
 ## Method and safety rules
 
