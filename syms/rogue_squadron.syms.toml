@@ -1536,7 +1536,7 @@ functions = [
     { name = "fake_func_8009D7CC", vram = 0x8009D7CC, size = 0x4 },
     { name = "filterVoiceSampleBlock", vram = 0x8009D7D0, size = 0xEC },
     { name = "func_8009D8BC", vram = 0x8009D8BC, size = 0x8 },
-    { name = "func_8009D8C4", vram = 0x8009D8C4, size = 0xB4 },
+    { name = "applyVoiceDelayFilter", vram = 0x8009D8C4, size = 0xB4 },
     { name = "func_8009D978", vram = 0x8009D978, size = 0x8 },
     { name = "func_8009D980", vram = 0x8009D980, size = 0x1C4 },
     { name = "func_8009DB44", vram = 0x8009DB44, size = 0x154 },
