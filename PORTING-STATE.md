@@ -66983,3 +66983,29 @@ H2 and H3 are ruled out for this function; there is neither a
 partial/conflicting match nor an absent independent name. The stale
 address-encoded TOML entry was synchronized. No build or runtime run was
 justified for an exact-name census.
+
+## Session 1316 (2026-08-15) — synchronized the sample-stream block cache init symbol
+
+Performed the bounded exact-name census over `0x8008F858..0x8008F95C`.
+
+No new soak-queue verdicts since s1315; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008F858`, size `0x104`; it ends exactly at the next generated function, `0x8008F95C`. Overlay `rom_size` is `0x104` |
+| Generated definition | `funcs_23.c` defines `initSampleStreamBlockCache` at `0x8008F858` through the matching epilogue at `0x8008F954`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `initSampleStreamBlockCache = 0x8008F858`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x8008F858` in `setupSongRenderBuffers` at `0x8008F4B8`. Companion independently names that caller `setupSongRenderBuffers = 0x8008F2FC` (s1312) |
+| Semantic evidence | Body takes a 16-bit count, `rs_malloc`s `count * 0x600` payload plus `count * 0x18` nodes, invalidates the payload D-cache, zeros the list heads at `0x801499B4`/`0x801499E4`, and links 24-byte nodes each pointing at a successive 0x600-byte block |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x104` boundary is exact, the only caller is the independently named
+song-render setup, and the body initializes a counted sample-stream block
+cache. H2 and H3 are ruled out for this function; there is neither a
+partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
