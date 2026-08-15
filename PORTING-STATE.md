@@ -68668,3 +68668,33 @@ TOML entry was synchronized (name only; size left at `0x274`).
 for an exact-name census. This does not reopen M5 audio de-stubbing. The
 next adjacent generated function is the independently named
 `startSongSequence` at `0x80094350`.
+
+## Session 1379 (2026-08-15) — synchronized the start-song-sequence symbol
+
+Performed the bounded exact-name census over `0x80094350..0x80094958`.
+
+No new soak-queue verdicts since s1378; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80094350`, size `0x608`; `0x80094350+0x608=0x80094958`. Overlay `rom_size` is `0x608`. Generated prologue at `0x80094350` (`addiu $sp,$sp,-0x50`) and `jr $ra` at `0x80094950` with delay `nop` at `0x80094954` |
+| Generated definition | `funcs_25.c` defines `startSongSequence` at `0x80094350`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `stepActiveSongTracks` at `0x80094958` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `startSongSequence = 0x80094350`. The same file independently names the preceding real function `computeVoiceVolumePanCoefficients` at `0x800940D4` and the following real function `stepActiveSongTracks` at `0x80094958`. Menu, mission, and cinematic lists do not remap it. The sequential `defined:true` list records `fake_func_80094348` at `0x80094348` immediately before this function and does not remap `0x80094350` |
+| Caller evidence | Three generated `jal 0x80094350` sites in two named callers: `playSongByIdLockCtl` at `0x80097B9C` (already-locked path) and `0x80097BC4` (mutex-wrapped), and `playSongById` at `0x80097CF0` (mutex-wrapped). Companion independently names both callers as the only `startSongSequence` entry points. Each site passes the resolved song-bank pointers plus the extra stack header argument |
+| Semantic evidence | The body walks eight slots at base `0x80150000-0x6600=0x80149A00` with stride `0xEF8`, fails with `$v0=-1` when none is free, otherwise writes the song handle at `slot+0x4`, stores the setup header at `slot+0x88`/`+0x10C`, fills two 0x80-byte per-track voice arrays at `slot+0x8` and `slot+0x8C` with `0xFF`, then remaps occupied `chanMap` entries (header `+0x5`, stride 8, terminator `0xFF`). Arg5 is the stack header at `0x60($sp)`. Callees include already-named `setAudioFaderState` (`0x8008E54C`) and `dispatchAudioCommand` (`0x8008DD60`). That is song-slot claim and sequence start. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80094350`: the companion and
+generated names agree, the body is a complete song-slot/start helper of
+matching size `0x608`, and there is neither a conflicting companion name
+nor a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x608`). `fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`stepActiveSongTracks` at `0x80094958`.
