@@ -1,33 +1,31 @@
-# NEXT work unit (s1217)
+# NEXT work unit (s1218)
 
 HYPOTHESIS-ID: retail-entry-capability
 
-Work unit: audit and smoke-test one genuinely independent retail-entry
-capability: the installed Mupen64Plus debugger/front-end's scripted memory or
-register control. Determine whether it can pause the retail core, write a
-known harmless RAM word, and resume; if so, use one phase-gated write at the
-320 title boundary in a paired undriven/control run. Do not arm M4 target
-watches unless a later VI width/origin phase is reached.
+Work unit: select and smoke-test one state-changing debugger target at the 320
+boundary, using the validated DEBUGGER=1 core and oracle write path. The
+harmless control target is already proven; do not repeat it. Candidate targets
+must be justified from the retail symbols/oracle state observations before
+being written. Run paired undriven/control arms with whole-RDRAM, PIF, and VI
+controls. Do not arm M4 target watches unless a later VI width/origin phase is
+reached.
 
 Competing hypotheses and discriminator:
 
-- H1: the debugger/front-end exposes a safe, callable control that can alter
-  the retail state path and reach a later VI width/origin phase.
-- H2: the control surface is absent or cannot affect the state path; the run
-  remains at width 320/origin `0x006dd280`.
-- H3: the control disrupts whole-RDRAM or PIF/VI controls, making the result
+- H1: a justified RAM/register target changes the retail state path and reaches
+  a later VI width/origin phase.
+- H2: the target is not state-changing or the run remains at width
+  320/origin `0x006dd280`.
+- H3: the target disrupts whole-RDRAM or PIF/VI controls, making the result
   unevaluable.
 
-Discriminator: first a documented debugger command/API that demonstrably writes
-the harmless control word and resumes; then phase-gated VI width/origin plus
-positive-control and PIF records in the same paired run. A later phase only in
-the controlled arm selects H1; width 320 selects H2; missing controls selects
-H3. If no callable control exists, record the capability gap and do not invent
-another button schedule.
+Discriminator: a later VI width/origin only in the target arm selects H1;
+width 320 in both arms selects H2; missing whole-RDRAM/PIF/VI controls selects
+H3. The already-demonstrated console and oracle write/read/resume controls are
+the positive control for the debugger path.
 
 Ground-truth controls are the oracle's whole-RDRAM watch, PIF trace, and VI
-trace described in `tools/oracle/README.md`; use them in both arms. Inspect
-only the installed debugger/front-end sources and help first, then run one
-bounded smoke from the repository root. Exact command form must be recorded
-after the capability audit; no build is allowed until a positive write/resume
-control is named.
+trace described in `tools/oracle/README.md`; use them in both arms. Read the
+specific symbol/data source and `docs/F5-UCODE-REFERENCE.md` before adding a
+new target instrument. Exact command form and expected outcomes must be
+recorded before the oracle build.

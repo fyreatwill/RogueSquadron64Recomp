@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1216 (2026-08-14).
+in the ledger. Reviewed through s1217 (2026-08-14).
 
 ## Current state
 
@@ -98,6 +98,14 @@ in the ledger. Reviewed through s1216 (2026-08-14).
   Start words; both arms nevertheless remained at VI width 320/origin
   `0x006dd280` for about 70s. Continuous Start is therefore another refuted
   retail-entry variation (H2); M4 watches remain unevaluable.
+- The s1217 debugger capability audit found that the Homebrew core is not
+  debugger-enabled, but the project's DEBUGGER=1 core and console frontend
+  expose a working pause/write/read/resume path. A harmless virtual-RDRAM
+  write at `0x80007FFC` read back as `0xDEADBEEF` before and after resume.
+  Paired 12-second oracle arms both passed the whole-RDRAM control (10,000
+  callbacks), PIF input, and VI controls; the write arm logged its phase-gated
+  write at VI 1 / width 320. No later phase was reached, so this validates the
+  control surface but does not yet test a state-changing address.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -177,11 +185,10 @@ in the ledger. Reviewed through s1216 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Stop varying SDL button timing/chords and the 320-boot savestate route.
-   Identify one genuinely independent retail-entry capability (debugger
-   memory/register control or an equivalent front-end path) before arming M4
-   watches; it must preserve the validated whole-RDRAM and PIF/VI controls and
-   have a phase-gated later width/origin outcome.
+1. Use the now-validated debugger control surface to identify one
+   state-changing RAM or CPU-register target at the 320 boundary. Any target
+   probe must keep the whole-RDRAM, PIF, and VI positive controls in both arms
+   and use a phase-gated later width/origin outcome before M4 watches are armed.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.

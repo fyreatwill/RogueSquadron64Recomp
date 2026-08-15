@@ -68,6 +68,7 @@ static int        (*pDebugBreakpointCommand)(m64p_dbg_bkp_command, unsigned int,
 static void       (*pDebugBreakpointTriggeredBy)(uint32_t *, uint32_t *);
 static int        (*pDebugGetState)(m64p_dbg_state);
 static unsigned int (*pDebugMemRead32)(unsigned int);
+static void (*pDebugMemWrite32)(unsigned int, unsigned int);
 
 struct watch {
     uint32_t start, end;
@@ -89,6 +90,9 @@ static long g_pc_hits;
 static int g_voice_base_write_seen;
 static int g_voice_base_read_after_write_seen;
 static int g_voice_base_post_step_pending;
+static int g_debug_write_enabled;
+static unsigned g_debug_write_addr, g_debug_write_value;
+static int g_debug_write_done;
 
 static double now_s(void)
 {
@@ -284,6 +288,17 @@ static void dbg_vi(void)
     }
 
     g_vis++;
+
+    if (g_debug_write_enabled && !g_debug_write_done) {
+        unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
+        if (width == 320) {
+            pDebugMemWrite32(g_debug_write_addr, g_debug_write_value);
+            g_debug_write_done = 1;
+            printf("[debug-write] vi=%ld width=%u addr=0x%08x value=0x%08x\n",
+                   g_vis, width, g_debug_write_addr, g_debug_write_value);
+            fflush(stdout);
+        }
+    }
 
     if (g_pif_trace) {
         /* Log the whole 8-byte block, not a halfword we assumed was the
@@ -587,6 +602,7 @@ static void usage(void)
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
         "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
+        "  --debug-write VADDR:VALUE  write one 32-bit word on first VI width 320\n"
         "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE/REACH=1\n"
         "  --verbose             pass through core info messages\n"
         "\n"
@@ -661,6 +677,16 @@ int main(int argc, char **argv)
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
         else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
+        else if (!strcmp(argv[i], "--debug-write") && i + 1 < argc) {
+            unsigned addr, value;
+            if (sscanf(argv[++i], "%x:%x", &addr, &value) != 2) {
+                fprintf(stderr, "[oracle] bad --debug-write '%s'\n", argv[i]);
+                return 2;
+            }
+            g_debug_write_enabled = 1;
+            g_debug_write_addr = addr;
+            g_debug_write_value = value;
+        }
         else if (!strcmp(argv[i], "--state-path") && i + 1 < argc) state_path = argv[++i];
         else if (!strcmp(argv[i], "--verbose"))                    g_verbose = 1;
         else usage();
@@ -693,6 +719,7 @@ int main(int argc, char **argv)
     SYM(pDebugBreakpointTriggeredBy, "DebugBreakpointTriggeredBy");
     SYM(pDebugGetState, "DebugGetState");
     SYM(pDebugMemRead32, "DebugMemRead32");
+    SYM(pDebugMemWrite32, "DebugMemWrite32");
 #undef SYM
 
     /* DataPath must hold mupen64plus.ini or the core has no per-ROM settings

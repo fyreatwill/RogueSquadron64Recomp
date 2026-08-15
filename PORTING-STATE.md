@@ -64733,6 +64733,28 @@ unevaluable. No code or mitigation change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+## Session 1217 (2026-08-14) — validated debugger write and resume control
+
+The installed Homebrew Mupen64Plus core rejected `--debug` because its
+debugger implementation is disabled. The project’s DEBUGGER=1 core accepted
+the console frontend and exposed `write`, `mem`, `run`, and `pause`. Writing
+virtual RDRAM `0x80007FFC` to `0xDEADBEEF` read back as `deadbeef` before and
+after resume, a positive write/read/resume control.
+
+The oracle gained `--debug-write VADDR:VALUE`, which performs one 32-bit write
+on the first VI callback whose width is 320. Paired 12-second control and write
+arms both passed the whole-RDRAM positive control at 10,000 callbacks, logged
+the expected PIF input, and produced VI width/origin records. The write arm
+logged `[debug-write] vi=1 width=320 addr=0x80007ffc value=0xdeadbeef`; both
+arms remained at width 320 with origin `0x006dd280`.
+
+This validates an independent debugger/front-end control surface and rules out
+the absent-control and control-disruption hypotheses. It does not select a
+state-changing target or reach a later retail phase. No mitigation was added.
+
+ORIGIN: the only injected value was the harmless positive-control word at
+`0x80007FFC`; it is not a game-state address and was not used as an explanation.
+
 ## Session 1215 (2026-08-14) — savestate route did not change retail entry
 
 Added an explicit `ORACLE_STATE_REACH=1` mode to the independent retail
