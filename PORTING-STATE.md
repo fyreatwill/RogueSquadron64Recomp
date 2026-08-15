@@ -64733,6 +64733,25 @@ unevaluable. No code or mitigation change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+## Session 1213 (2026-08-14) — audited Mupen64Plus state-entry capabilities
+
+Performed the prescribed bounded source/configuration audit without running
+the game. The installed `/opt/homebrew/bin/mupen64plus` is Mupen64Plus 2.6.0
+and advertises `--savestate (filepath)`, which loads a state at startup. Its
+installed headers declare `M64CMD_STATE_LOAD`, `M64CMD_STATE_SAVE`,
+`M64CMD_STATE_SET_SLOT`, and `M64CMD_RESET` for the exported `CoreDoCommand`
+API; the core dylib exports `CoreDoCommand` and the debugger entry points.
+The oracle currently uses `CoreDoCommand` for ROM/plugin setup, execution,
+SDL key injection, and debugger callbacks but has no state lifecycle calls.
+
+This selects the route-exists hypothesis and rules out “the installed
+front-end/core has no savestate or reset mechanism.” It does not yet prove a
+state file can be created/restored in the oracle or that controls survive a
+load; that is the next bounded smoke test. No M4 target watches were armed.
+
+ORIGIN: no runtime value was skipped or rewritten; this was an observational
+front-end/core capability audit.
+
 ## Session 1212 (2026-08-14) — oracle CLI has no alternate retail entry route
 
 The bounded source audit of `tools/oracle/rs64_oracle.c` searched its CLI,

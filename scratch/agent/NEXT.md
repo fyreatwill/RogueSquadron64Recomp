@@ -1,35 +1,35 @@
-# NEXT work unit (s1213)
+# NEXT work unit (s1214)
 
 HYPOTHESIS-ID: retail-entry-strategy
 
-Work unit: perform one bounded source/configuration audit of the available
-mupen64plus front-end/core setup for an external savestate, reset-state, or
-direct controller-state injection route that can preserve debugger callbacks
-and the existing whole-RDRAM/PIF/VI positive controls. Do not run the game or
-add instrumentation.
+Work unit: add one bounded savestate lifecycle to `tools/oracle/rs64_oracle.c`
+using the installed core API, and run one smoke test that proves save and load
+can be invoked without losing debugger callbacks or the existing positive
+controls. Do not yet use the state to classify M4 target watches.
 
 Competing hypotheses and discriminator:
 
-- H1: the installed front-end/core exposes a usable alternate route; use it
-  for the next debugger-enabled driven/undriven reachability comparison.
-- H2: no usable external route is available; the retail investigation remains
-  blocked on obtaining one.
-- H3: a route exists but cannot preserve the positive-control setup; validate
-  that incompatibility before using the comparison.
+- H1: `M64CMD_STATE_SAVE` and `M64CMD_STATE_LOAD` work in the oracle lifecycle;
+  a saved file exists and the same run reports whole-RDRAM plus debugger/VI
+  controls on both sides of the load.
+- H2: the API calls are present but cannot create or restore a compatible state
+  from this ROM/core setup; the route is unusable and the returned error/log
+  identifies the missing lifecycle condition.
+- H3: state save/load works but disrupts debugger callbacks or positive-control
+  delivery; the smoke test shows which control disappears after the load.
 
-Discriminator: a concrete installed executable/API/config path, its invocation
-point, and whether it leaves the existing whole-RDRAM/PIF/VI controls intact.
-Documentation or a grep hit without a callable path is H2.
+Discriminator: one state file plus the return codes and post-load control
+counts from the same oracle process. A successful API symbol lookup alone is
+not a positive result.
 
-Exact commands (run from the repository root; inspect only, no game run):
+Exact implementation/test commands (run from the repository root):
 
-    rg -n -i 'savestate|save state|load state|reset|direct.*pad|pad.*direct|controller.*inject|inject.*controller|SDL.*button|press' tools/oracle /opt/homebrew/include /opt/homebrew/share/mupen64plus 2>/dev/null
-    rg -n -i 'm64p_command|SAVE|LOAD|STATE|RESET|SEND_SDL|BUTTON|input' /opt/homebrew/include /opt/homebrew/share/mupen64plus 2>/dev/null
-    command -v mupen64plus || true
-    ls -l /opt/homebrew/bin/mupen64plus /opt/homebrew/lib/mupen64plus 2>/dev/null || true
+    rg -n 'CoreDoCommand|M64CMD_(STATE_SAVE|STATE_LOAD|RESET)|whole|pif|vi' tools/oracle/rs64_oracle.c
+    tools/oracle/build.sh
+    env ORACLE_STATE_SMOKE=1 tools/oracle/build/rs64_oracle --core "$HOME/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib" --rom build/Debug/rogue_squadron.z64 --secs 20 --watch-write 0x0:0x800000 --pif-trace --vi-poll --state-path scratch/agent/oracle-smoke.st
 
-If H1 is selected, document the exact callable route and design one paired
-60-second oracle run. If H2 is selected, ask for or install no plugin in this
-iteration; record the specific missing capability and identify the narrowest
-human/environment change needed. If H3 is selected, repair the
-control-preserving invocation before running the comparison.
+The smoke must save after ROM/plugin/debugger setup, load the same path, and
+report both return codes and control counts. If H1 is selected, the following
+unit can use the state for a paired 60-second oracle reachability comparison;
+if H2 or H3 is selected, record the exact failing lifecycle/control and pivot
+before arming M4 watches.
