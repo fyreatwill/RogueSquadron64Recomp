@@ -69298,3 +69298,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `queueAudioVoiceCmdLocked` at `0x80096284`.
+
+## Session 1400 (2026-08-15) — synchronized the queue-audio-voice-cmd-locked symbol
+
+Performed the bounded exact-name census over `0x80096284..0x800964C8`.
+
+No new soak-queue verdicts since s1399; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80096284`, size `0x244`; `0x80096284+0x244=0x800964C8`. Overlay `rom_size` is `0x244`. Generated prologue at `0x80096284` (`addiu $sp, $sp, -0x30`) and `jr $ra` at `0x800964C0` with delay `nop` at `0x800964C4` |
+| Generated definition | `funcs_25.c` defines `queueAudioVoiceCmdLocked` at `0x80096284`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `queueAudioVoiceCmd` at `0x800964C8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `queueAudioVoiceCmdLocked = 0x80096284` in the annotated song-command block as the locked inner body of `queueAudioVoiceCmd` at `0x800964C8`. The sequential `defined:true` list omits it (jumps from already-synchronized `setSongParamPairCmdLocked` to `getSongStateByteByHandle` at `0x80096540`) because the annotated block already named it; that omission is not a conflicting name. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | Seven generated `jal 0x80096284` sites: one inside independently named `queueAudioVoiceCmd` at `0x80096510` (mutex acquire, four saved args, then this inner, then `factor5MutexRelease`), and six inside independently named `processSongByHandle` at `0x800966A4` (`0x80096824` a3=2, `0x80096848` a3=3, `0x80096860` a3=1, `0x80096924` a3=1, `0x800969C8` a3=0, `0x80096A78` a3=0). The body itself calls independently named `dispatchAudioCommand` at `0x8008DD60` |
+| Semantic evidence | Searches the 8-slot song table at `0x80149A00` stride `0xEF8` for a matching handle; on a found non-negative slot it walks the `0x40`-entry voice table at slot+`0x528` (`0x80149F28`) emitting via `dispatchAudioCommand`; the a3 switch writes control bytes/flags at slot+`0xEE0`/`0xEEE`/`0xEF0`. Matches the companion's find-slot / voice-table / control-field description. The wrapper `queueAudioVoiceCmd` is the mutex wrap; this inner is the already-held-lock body. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80096284`: the companion and
+generated names agree, the body is a complete slot-lookup and voice-command
+emitter of matching size `0x244`, and there is neither a conflicting
+companion name nor a size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size left
+at `0x244`). `fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`queueAudioVoiceCmd` at `0x800964C8`.
