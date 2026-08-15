@@ -139,13 +139,20 @@ in the ledger. Reviewed through s1210 (2026-08-14).
   provide the missing retail entry mechanism; M4 target watches remain
   unevaluable.
 
+- The s1211 controller-chord comparison passed whole-RDRAM controls in both
+  arms. The driven arm's A/B/Z/L/R/directional chord and later Start presses
+  were visible in PIF reads, but driven and undriven runs remained at VI width
+  320 with origin `0x006dd280` (3,609 and 3,599 VI frames). This new input
+  path does not provide a later retail entry; M4 target watches remain
+  unevaluable.
+
 ## Active investigation and ranked next steps
 
 1. Find a new independent retail entry strategy before arming M4 target
-   watches. The documented cadence under emulator modes 0, 1, and 2, plus
-   title-time A variations, all pass controls but remain at width 320 /
-   origin `0x006dd280`; the oracle CLI has no savestate or direct-pad-input
-   path beyond scheduled SDL button presses.
+   watches. The documented cadence under emulator modes 0, 1, and 2, title-
+   time A variations, and a controller chord all pass controls but remain at
+   width 320 / origin `0x006dd280`; first audit the oracle for an unexposed
+   savestate or direct-pad-input capability.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -243,6 +250,7 @@ order.
 | s1208 | A at 18 seconds plus a revised Start cadence passed whole-RDRAM and PIF/VI controls, but both arms remained at VI 320/origin `0x006dd280`; this later title-time A variation does not provide a later retail path. |
 | s1209 | Repeated A at 17–20 seconds plus seven Start presses passed whole-RDRAM and PIF/VI controls, but both arms remained at VI 320/origin `0x006dd280`; repeated confirmation edges do not provide a later retail path. |
 | s1210 | R4300 emulator mode 2 passed whole-RDRAM controls in both arms; the driven arm delivered all eleven verified Start presses, but both arms remained at VI 320/origin `0x006dd280` for about 3,600 VI frames. Mode 2 does not explain the retail reachability failure; seek a different entry strategy. |
+| s1211 | Controller chord plus eleven Start presses passed whole-RDRAM and PIF/VI controls; both arms remained at VI 320/origin `0x006dd280` for about 3,600 VI frames. The new input path does not provide a later retail entry. |
 
 ## Method and safety rules
 

@@ -64965,3 +64965,22 @@ UNEVALUABLE. No code, instrument, or mitigation change was added.
 
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
+
+## Session 1211 (2026-08-14) — controller chord did not change retail entry
+
+Ran the prescribed debugger-enabled retail oracle comparison concurrently: an
+undriven control and a driven arm with A/B/Z/L/R plus all four directions at
+0.5–4.5 seconds, followed by Start at 6,11,16,21,26,31,36,41,46,51,56 seconds.
+Both arms passed the whole-RDRAM positive control at 10,000 callbacks and
+completed cleanly. The driven arm logged the chord and all later Start events
+through PIF reads.
+
+The undriven arm completed 3,599 VI frames and the driven arm 3,609; both
+remained at VI width 320 with origin `0x006dd280`. The chord is therefore H2:
+it does not provide a later retail entry, and M4 target watches remain
+UNEVALUABLE. The result rules out this input-path variation, not the retail
+state machine or the target M4 hypothesis. No code, instrument, or mitigation
+change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
