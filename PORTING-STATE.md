@@ -67184,3 +67184,28 @@ builder that `musyxSynthFrame` calls before mixing. H2 and H3 are ruled out
 for this function; there is neither a partial/conflicting match nor an
 absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1324 (2026-08-15) — synchronized the MusyX per-frame synth-tick symbol
+
+Performed the bounded exact-name census over `0x8009123C..0x8009189C`.
+
+No new soak-queue verdicts since s1323; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8009123C`, size `0x660`; it ends exactly at the next generated function, `0x8009189C`. Overlay `rom_size` is `0x660` |
+| Generated definition | `funcs_24.c` defines `musyxSynthFrame` at `0x8009123C` through the matching epilogue at `0x80091894`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `musyxSynthFrame = 0x8009123C`. No later companion list remaps this address |
+| Caller evidence | Two generated wait-pump sites in `shutdownAudioEngine` (`0x80091D60`) and `waitForMusyXAudioTaskDone` (`0x80091ED0`); the periodic entry is the documented VI-callback `get_function(0x8009123C)` lookup. Companion independently names that mixer-init neighbor `initN64RspMixer = 0x8009189C` |
+| Semantic evidence | Body `jal 0x80091034` (`musyxBuildVoiceCommandList`) once, then three gated `jal 0x8008D960` / `jal 0x80090E04` pairs (`tickAudioSequencerFrame` then `musyxMixActiveVoices`) per output block |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x660` boundary is exact, and the body is the per-frame synth tick that
+builds a command list and mixes per output block. H2 and H3 are ruled out
+for this function; there is neither a partial/conflicting match nor an
+absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
