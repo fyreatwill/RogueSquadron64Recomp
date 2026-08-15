@@ -65632,3 +65632,13 @@ Synchronized the stale repository symbol-map entry for `0x8006F388` to
 `isSaveStateNotPending`; no build or runtime run was needed. H2 selected:
 the safe exact subset is complete and the fake tail is not a rename target.
 This does not address the external retail-entry boundary.
+
+## Session 1243 (2026-08-15) — synchronized NPC helper symbol names
+
+Ran the single bounded generated/companion census for `0x8006F6A0..0x800700A8`.
+The generated declarations and companion `main_overlay.txt` independently
+agree on three exact human names: `npcDebris1Update`, `orientedNpcHandler`,
+and `multiEventTemplateNpcHandler`. Synchronized the stale repository
+symbol-map entries at those addresses; generated C already used the names.
+H1 selected. No build or runtime run was needed, and the external retail-entry
+boundary remains open.
