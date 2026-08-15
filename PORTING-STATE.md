@@ -70629,3 +70629,36 @@ epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `dispatchPrioritizedSoundQueue` at `0x80099720`.
+
+## Session 1442 (2026-08-15) — synchronized the dispatch-prioritized-sound-queue symbol
+
+Performed the bounded exact-name census over `0x80099720..0x800998E8`.
+
+No new soak-queue verdicts since s1441; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80099720`, size `0x1C8`; `0x80099720+0x1C8=0x800998E8`. Overlay `rom_size` is `0x1C8` at offset `0x000992E0` (`0x80099720-0x80000440`). Generated body starts `lui $v0, 0x8015` at `0x80099720` and ends `jr $ra` / `nop` at `0x800998E0` / `0x800998E4` |
+| Generated definition | `funcs_26.c` defines `dispatchPrioritizedSoundQueue` at `0x80099720`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x1C8` function between independently named `enqueueSpatialSoundInPriorityGroup` at `0x8009952C` and generated `update3DAudioFrame` at `0x800998E8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `dispatchPrioritizedSoundQueue = 0x80099720`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x80099720`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry. No conflicting companion name. s903 independently classified the same body as the prioritized sound dispatcher |
+| Caller evidence | Exactly one generated `jal 0x80099720` site, inside independently named `update3DAudioFrame` at `0x80099BF4` (no arguments set immediately before the jal; it walks the already-built group tables). Zero `func_*` callers |
+| Semantic evidence | Body loads group count `D_80152EF0` and, while `s4 < count`, walks each 12-byte group at `D_80152D74` / pending tail `D_80152D78`. For each queued node it compares the `+0x4` float against two constant thresholds, then `musyxNoteEventLockedDispatch(note, 0x7F, 0x40)` plus `applyVoice3DMixParams` on the node's `+0x18` voice record before popping the pending head. That matches the companion name and is the consume/dispatch sibling of the two priority-enqueue writers |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80099720`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x1C8`, the single `jal` caller is the independently named 3D-audio
+frame path, and there is neither a conflicting companion name nor a
+size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x1C8`). `fake_func_80097D58` remains the already-fake two-instruction
+epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`update3DAudioFrame` at `0x800998E8`.
