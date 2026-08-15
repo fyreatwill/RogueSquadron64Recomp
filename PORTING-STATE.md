@@ -66553,3 +66553,26 @@ slot-active aggregate. H2 and H3 are ruled out for this function; there is
 neither a partial/conflicting match nor an absent independent name. The
 stale address-encoded TOML entry was synchronized. No build or runtime run
 was justified for an exact-name census.
+
+## Session 1298 (2026-08-15) — synchronized the MusyX engine-reset symbol
+
+Performed the bounded exact-name census over `0x8008E614..0x8008E85C`.
+
+No new soak-queue verdicts since s1297; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008E614`, size `0x248`; it ends exactly at the next generated function, `0x8008E85C`. Overlay `rom_size` is `0x248` |
+| Generated definition | `funcs_23.c` defines `resetMusyXEngineState` at `0x8008E614`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `resetMusyXEngineState = 0x8008E614` |
+| Caller evidence | Three generated `jal 0x8008E614` sites: `initMusyXEngine` (`0x8008E940`), `setDisplayMode` (`0x8008EA14`), and `reapplyDisplayMode` (`0x8008EB5C`). Each zeros `0x8013ACF4` and then calls this reset after `initSongSequencerPools`; the display-mode pair continues to `clearStreamedVoiceFlags` |
+| Semantic evidence | Body writes `0x2800`/`0x300` engine words, then initializes 32 `0x17C`-byte voice slots at `D_8013D880` (`+0=0`, `+0x64=-1`) and 32 `0x28`-byte fader slots at `0x80141B20` (`+0x0C=4`). It also rebuilds a 32-entry `0x10`-stride linked list at `0x8013AD00`. That matches the previously established voice-table and fader-table layout |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x248` boundary is exact, and caller plus body evidence supports the
+engine-state reset. H2 and H3 are ruled out for this function; there is
+neither a partial/conflicting match nor an absent independent name. The
+stale address-encoded TOML entry was synchronized. No build or runtime run
+was justified for an exact-name census.
