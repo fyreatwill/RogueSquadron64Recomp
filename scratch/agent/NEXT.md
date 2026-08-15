@@ -1,10 +1,10 @@
-# NEXT work unit (s1251)
+# NEXT work unit (s1252)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 The external retail-entry dependency remains open. Do not build or run.
 Proceed with one bounded generated-symbol naming sweep over the next adjacent
-helper region, `0x80077AC0..0x800791FC`, using companion names and generated
+helper region, `0x80079278..0x80079C10`, using companion names and generated
 declarations. Cover every generated function through the next coherent helper
 boundary and synchronize only exact names.
 
@@ -24,7 +24,6 @@ independent names select H3. No runtime mitigation is justified.
 Exact commands:
 
 ```
-rg -n '80077AC0|80077AF0|80078E3C|800791FC' ../rogue_squadron64/symbol_files/main_overlay.txt syms/rogue_squadron.syms.toml
-rg -n '80077AC0|80077AF0|80078E3C|800791FC' ../N64Recomp/RecompiledFuncs/funcs_18.c
-rg -n -C 3 'forwardToNpcGeneratorSpawn|npcPowerGeneratorUpdate|spawnDebrisBurstFromTemplate|initSpawnedNpcHealthAndDetail' ../rogue_squadron64/symbol_files/main_overlay.txt
+rg -n '80079278|80079280|800799C0|80079A70|80079A94|80079BC8|80079C10' ../rogue_squadron64/symbol_files/main_overlay.txt syms/rogue_squadron.syms.toml ../N64Recomp/RecompiledFuncs/funcs_18.c
+rg -n -C 3 'heavyMechSubEffectNpcHandler|concatChildTransformAlongChain|initWaterSprayEffectAndSfx|spawnNpcWithRandomRotation|spawnHeavyMechSubEffect' ../rogue_squadron64/symbol_files/main_overlay.txt
 ```

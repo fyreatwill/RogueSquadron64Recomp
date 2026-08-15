@@ -65734,3 +65734,21 @@ companion names in this interval and remain address-encoded.
 Synchronized the eight stale repository symbol-map entries. H1 selected.
 No build or runtime run was needed; the external retail-entry boundary remains
 open.
+
+## Session 1251 (2026-08-15) — synchronized NPC generator helper symbols
+
+Ran the planned bounded generated-symbol census over `0x80077AC0..0x800791FC`.
+The comparison table was:
+
+| VRAM | Generated definition/call sites | Companion symbol | Result |
+|---|---|---|---|
+| `0x80077AC0` | `forwardToNpcGeneratorSpawn` in `funcs_18.c`; two generated callers | `forwardToNpcGeneratorSpawn` | exact |
+| `0x80077AF0` | `npcPowerGeneratorUpdate` in `funcs_18.c` | `npcPowerGeneratorUpdate` | exact |
+| `0x80078E3C` | `spawnDebrisBurstFromTemplate` in `funcs_18.c`; two generated callers | `spawnDebrisBurstFromTemplate` | exact |
+| `0x800791FC` | `initSpawnedNpcHealthAndDetail` in `funcs_18.c` | `initSpawnedNpcHealthAndDetail` | exact |
+
+The independent companion names and generated definitions/call sites agree for
+all four entries, so H1 was selected. Synchronized the four stale
+`func_*` entries in `syms/rogue_squadron.syms.toml`; no build or run was needed.
+This rules out a repository-symbol naming mismatch in this region. It does not
+explain the external retail-entry boundary or the recurring runtime SIGBUS.

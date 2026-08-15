@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1250 (2026-08-15).
+in the ledger. Reviewed through s1251 (2026-08-15).
 
 ## Current state
 
@@ -282,6 +282,13 @@ generated names for all four functions: `computeWalkerLimbStrideTargets`,
 and `spawnDirectionalDebrisBurstAnchored`. The repository symbol map was
 synchronized; no runtime change or build was needed.
 
+The s1251 bounded `0x80077AC0..0x800791FC` census found exact companion and
+generated names for all four functions: `forwardToNpcGeneratorSpawn`,
+`npcPowerGeneratorUpdate`, `spawnDebrisBurstFromTemplate`, and
+`initSpawnedNpcHealthAndDetail`. The companion symbol file, generated
+definitions/call sites, and address/size entries agree; the repository symbol
+map was synchronized. H1 selected; no runtime change or build was needed.
+
 ## Durable boundaries
 
 ### M3 dispatcher/frame origin
@@ -385,6 +392,7 @@ order.
 | s1247 | The bounded `0x8007413C..0x80074D44` census found exact companion/generated names for all five functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1248 | The bounded `0x80075218..0x80075BB0` census found exact companion/generated names for all four functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1250 | The bounded `0x80076BE4..0x800779B4` census found exact companion/generated names for eight functions; two unnamed intervening helpers remain address-encoded. Synchronized the repository symbol map. H1 selected; no build or run. |
+| s1251 | The bounded `0x80077AC0..0x800791FC` census found exact companion/generated names for all four functions and synchronized the repository symbol map. H1 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |
