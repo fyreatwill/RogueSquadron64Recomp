@@ -1507,7 +1507,7 @@ functions = [
     { name = "transformVec3ByAffineMatrix", vram = 0x80099C50, size = 0xAC },
     { name = "normalizeVec3", vram = 0x80099CFC, size = 0x6C },
     { name = "crossProductVec3", vram = 0x80099D68, size = 0x64 },
-    { name = "func_80099DCC", vram = 0x80099DCC, size = 0x210 },
+    { name = "invertOrientationMatrix", vram = 0x80099DCC, size = 0x210 },
     { name = "fake_func_80099FDC", vram = 0x80099FDC, size = 0x4 },
     { name = "func_8009AF60", vram = 0x8009AF60, size = 0xE8 },
     { name = "func_8009B048", vram = 0x8009B048, size = 0x220 },

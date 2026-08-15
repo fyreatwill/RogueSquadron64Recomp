@@ -70891,3 +70891,36 @@ already-fake one-word `beq` gap and was left unchanged, as were
 runtime run was justified for an exact-name census. This does not
 reopen M5 audio de-stubbing. The next adjacent generated function is
 the independently named `invertOrientationMatrix` at `0x80099DCC`.
+
+## Session 1450 (2026-08-15) — synchronized the invert-orientation-matrix symbol
+
+Performed the bounded exact-name census over `0x80099DCC..0x80099FDC`.
+
+No new soak-queue verdicts since s1449; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80099DCC`, size `0x210`; `0x80099DCC+0x210=0x80099FDC`. Overlay `rom_size` is `0x210` at offset `0x0009998C` (`0x80099DCC-0x80000440`). Generated body starts `lwc1 $f14, 0x10($a1)` at `0x80099DCC` and ends `jr $ra` / delay-slot `swc1 $f0, 0x2C($a0)` at `0x80099FD4` / `0x80099FD8` |
+| Generated definition | `funcs_26.c` defines `invertOrientationMatrix` at `0x80099DCC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x210` function between independently named `crossProductVec3` at `0x80099D68` and already-fake `fake_func_80099FDC` at `0x80099FDC` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `invertOrientationMatrix = 0x80099DCC`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x80099DCC`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry. No conflicting companion name |
+| Caller evidence | Exactly two generated `jal 0x80099DCC` sites, both in independently named 3D-audio writers: `setMusyX3DProperties` at `0x800990DC` and `register3DAudioListenerNode` at `0x800992A4`. Both set `a0=node+0x48` and `a1=sp+0x10` after `crossProductVec3` writes `node+0x30` and that result is copied into the stack matrix. Zero `func_*` callers |
+| Semantic evidence | Body reads a 12-float 3x4 affine from `a1` (offsets `0x00..0x2C`), builds 3x3 cofactors by 2x2 minors, writes the inverse orientation at `a0+0x00/0x0C/0x18`, `+0x04/0x10/0x1C`, `+0x08/0x14/0x20`, then inverted translation at `a0+0x24/0x28/0x2C`. That is dest = inverse(src orientation), matching the companion name and the 3D-listener callers |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80099DCC`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x210`, both `jal` callers are independently named 3D-audio paths that
+feed a stack orientation into the inverse, and there is neither a
+conflicting companion name nor a size split. H2 and H3 are ruled out
+for this address. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x210`). `fake_func_80099C4C` remains the
+already-fake one-word `beq` gap and was left unchanged, as were
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not
+reopen M5 audio de-stubbing. The next adjacent generated function is
+already-fake `fake_func_80099FDC` at `0x80099FDC`.
