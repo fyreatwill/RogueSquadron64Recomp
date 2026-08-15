@@ -66116,3 +66116,20 @@ entries were synchronized. No build or runtime run was justified.
 
 This rules out the absence of independent naming evidence for this region; it
 does not establish names for the following `0x80088A8C..0x80089244` census.
+
+## Session 1273 (2026-08-15) — synchronized MusyX voice-chain symbols
+
+Performed the bounded exact-name census over `0x80088A8C..0x80089244`.
+The companion symbol file independently identifies all six generated entries:
+`spreadVoicePanVolumeAcrossChain`, `safeLookup3DSoundEntry`,
+`spreadVoiceParamPairLocked`, `spreadVoiceByteParamAcrossChain`,
+`spreadVoiceByteParamLocked`, and `spreadVoiceParamLockedVariant`.
+Generated definitions and TOML sizes match; the generated bodies show the
+voice-chain traversal and mutex-wrapper relationships, with direct generated
+callers for the wrapper and byte-propagation paths. H1 selected and all six
+stale symbol-map entries were synchronized. No build or runtime run was
+justified.
+
+This rules out the absence of independent naming evidence for this region; it
+does not change the closed audio runtime status or the next census at
+`0x80089414..0x800897D4`.
