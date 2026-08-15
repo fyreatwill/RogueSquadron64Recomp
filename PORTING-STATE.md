@@ -64733,6 +64733,25 @@ unevaluable. No code or mitigation change was added.
 ORIGIN: no value was skipped or rewritten; both arms were observational and
 their whole-RDRAM and PIF/VI controls passed.
 
+## Session 1205 (2026-08-14) — alternate emulator mode stayed phase-incomplete
+
+Ran the prescribed debugger-enabled retail oracle comparison concurrently: an
+undriven control and the documented hangar schedule, both with alternate R4300
+emulator mode 1, whole-RDRAM watch, PIF trace, VI trace, and 150 ms Start
+presses at 6,11,16,21,26,31,36,41,46,51,56 seconds. Both arms passed the
+whole-RDRAM positive control at 10,000 callbacks and completed cleanly. The
+driven arm logged all eleven presses, each producing a verified `0x10000000`
+PIF word that returned to zero.
+
+The undriven arm completed 3,600 VI frames and the driven arm 3,597; both
+remained at VI width 320 with origin `0x006dd280`. Alternate emulator mode did
+not change the retail reachability result, selecting H1 and ruling out the
+tested emulator-mode explanation. M4 target watches remain UNEVALUABLE. No
+code, instrument, or mitigation change was added.
+
+ORIGIN: no value was skipped or rewritten; both arms were observational and
+their whole-RDRAM and PIF/VI controls passed.
+
 ## Session 1198 (2026-08-14) — revised retail input still stayed at boot VI
 
 Ran the prescribed debugger-enabled retail oracle comparison: an undriven

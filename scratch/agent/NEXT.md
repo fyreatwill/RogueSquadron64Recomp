@@ -1,35 +1,35 @@
-# NEXT work unit (s1205)
+# NEXT work unit (s1206)
 
-HYPOTHESIS-ID: retail-execution-mode-reachability
+HYPOTHESIS-ID: retail-execution-path-reachability
 
-Work unit: run one debugger-enabled retail execution-mode comparison with two
-arms: an undriven baseline and the documented hangar schedule with Start
-presses at `6,11,16,21,26,31,36,41,46,51,56s`, both using
-`--oracle-emulator 1` and 150 ms holds. Keep the whole-RDRAM watch,
-`--pif-trace`, and `--vi-trace` in both arms. Compare by PIF words and VI
+Work unit: choose and run one new debugger-enabled retail reachability
+comparison that changes the execution path, not just R4300 emulator mode,
+paired with an undriven control. Preserve the whole-RDRAM watch,
+`--pif-trace`, and `--vi-trace` in both arms. Compare PIF words and VI
 transitions/origins, not wall-clock timing. Do not arm an M4 target watch until
-a later VI phase is reached.
+a later VI phase is reached. Before building any new arm, inspect the oracle
+CLI/config for an available path-changing option and record the exact commands
+here.
 
 Competing hypotheses and discriminator:
 
-- H1: alternate emulator mode still changes driven PIF words but both arms
-  remain at VI 320; route failure is independent of interpreter mode.
-- H2: alternate emulator mode reaches a later VI phase in the driven arm;
-  interpreter execution was the reachability blocker.
-- H3: either arm fails its whole-RDRAM/PIF controls; the comparison is invalid
-  and the execution-mode explanation is not tested.
+- H1: a path-changing configuration reaches a later VI phase in the driven arm;
+  the previous failure was specific to the tested execution route.
+- H2: both arms still remain at VI 320/origin `0x006dd280` while controls pass;
+  the failure is independent of the next route change and needs a different
+  retail entry strategy.
+- H3: either arm fails whole-RDRAM or PIF/VI controls; the comparison is
+  invalid and the path hypothesis is untested.
 
 Positive controls: each arm's whole-RDRAM watch must reach 10,000 callbacks;
-each arm must emit debugger-enabled PIF and VI trace records. A null without
-both controls is invalid.
+the driven arm must show the scheduled PIF `0x10000000` press/release pairs;
+both arms must emit debugger-enabled VI trace records. A null without all
+controls is invalid.
 
-Exact commands (run both arms in this iteration, 60 seconds each):
+Exact commands: fill in both complete commands after selecting the one
+path-changing option; run both arms in this iteration for 60 seconds each.
 
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 60 --watch-write 0x0:0x800000 --vi-trace --pif-trace --oracle-emulator 1`
-
-`tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/iter974-armB2/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 60 --watch-write 0x0:0x800000 --vi-trace --pif-trace --oracle-emulator 1 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --hold-ms 150`
-
-If H1 is selected, retain the mode-independent failure and seek a different
-retail execution path. If H2 is selected, retain the alternate mode and arm
-the next independent reachability measurement. If H3 is selected, repair the
-control setup before drawing any conclusion.
+If H1 is selected, retain the path change and arm the next independent
+reachability measurement. If H2 is selected, seek a different retail entry
+strategy. If H3 is selected, repair the control setup before drawing any
+conclusion.
