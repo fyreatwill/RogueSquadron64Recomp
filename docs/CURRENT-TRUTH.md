@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1176 (2026-08-14).
+in the ledger. Reviewed through s1177 (2026-08-14).
 
 ## Current state
 
@@ -35,7 +35,11 @@ in the ledger. Reviewed through s1176 (2026-08-14).
   The register-dump probe is landed and binary-verified; phase-positive
   no-event soaks did not classify the site.
 - M5 audio de-stubbing is closed. Audio remains stubbed; do not reopen without
-  a genuinely new lead. The s1176 static correlation found that the s1175
+  a genuinely new lead. The s1177 retail execution watch found no execution of
+  any of the four statically identified `musyxInitVoiceFromSample`
+  sample/stream stores during the driven attract path. Whole-RDRAM read and
+  write controls passed, but the run stayed at VI 320; no destination watch is
+  authorized. The s1176 static correlation found that the s1175
   writer PCs are not sample/stream-field writers: `runAiAudioStreamPlaybackLoop`
   writes a dynamic 16-entry AI buffer-pointer table, `allocateSongChannelArray`
   writes audio-global count/allocation/voice-base fields, and
@@ -458,18 +462,14 @@ corruption.
 | s1173 | Fixed the oracle's overlapping-watch accounting so each callback is counted only when its actual READ/WRITE flags match the watch. The whole-RDRAM write control reached 10,000 and was removed; the voice-base write watch recorded one write at `0x8008F0EC`, the read watch recorded zero, and no post-store read occurred before the width-320 stall. The corrected result selects H2 for the calibration: this path has no readable post-store pointer value, so no voice-array range was inferred and no mitigation was added. |
 | s1174 | Added a one-instruction debugger step after the attributed retail write and captured the field in the following callback. The whole-RDRAM control still reached 10,000 and was removed, the write watch remained `1/0/1`, and the read watch remained `0/0/0`; the post-step field was still `0xFFFFFFFF`. This selects H2: the watched field is not a usable voice-array base in this path. The post-step callback's `pc=0x80000000`/`prev_pc=0x8008F0EC` pair is not a second instruction attribution. No mitigation was added. |
 | s1176 | Correlated all s1175 writer PCs to generated instructions. `0x8008EDB8` is a dynamic 16-entry AI buffer-pointer table store; `0x8008EE04/0x8008EE6C` update the audio-buffer index byte; `0x8008F0CC` stores the channel count; `0x8008F0E4/0x8008F0EC` store allocation and voice-base globals; and `0x80091BC0` stores the audio scratch pointer. None is a sample/stream-field writer. The first such generated stores are `musyxInitVoiceFromSample` at `0x800921E8/0x80092220/0x80092228/0x80092230`, targeting computed voice-slot offsets `+0x34/+0x38/+0x3C/+0x40`. This selects H1 for the next ground-truth execution watch, with the target range still unmeasured. |
+| s1177 | Ran the retail oracle execution watch for all four `musyxInitVoiceFromSample` PCs with separate whole-RDRAM controls. The write control reached 10,000 callbacks and the read control reached 64,047,786 callbacks; all eleven scheduled presses were delivered. The run remained at VI 320 and all four writer PCs had zero hits. This selects H2 for the driven attract path and rules out authorizing a destination-range watch from this capture; no mitigation was added. |
 
 ## Ranked next steps
 
-1. Run one retail oracle execution/watch capture for the statically identified
-   `musyxInitVoiceFromSample` stores, with separate whole-RDRAM read and write
-   positive controls. Use the documented twelve-button schedule and
-   `--vi-trace`; report writer-PC execution separately from read/write totals.
-   H1 predicts the writer PCs execute during the driven run; H2 predicts no
-   execution in this path; H3 predicts execution without a corresponding
-   valid descriptor or destination attribution. Do not infer a voice range or
-   add a mitigation from `0x801496F8`; only a positive writer execution result
-   can authorize the next destination watch.
+1. Keep audio closed. Do not add a destination watch or mitigation from the
+   zero-hit writer capture. Reopen only with a new independent lead that
+   reaches an audio-initialization or voice-allocation phase beyond the driven
+   VI-320 attract path and can first pass the whole-RDRAM controls.
 
 The s1162 generated frame-idiom census is closed: 144 direct calls across 72
 callers all have balanced stack and return contracts, all companion entry

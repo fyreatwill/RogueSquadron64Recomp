@@ -64365,3 +64365,14 @@ field. It does not establish retail reachability, a valid descriptor, or a
 voice destination range; no build, runtime experiment, oracle watch, or
 mitigation was run in this session. In particular, no range was inferred
 from `0x001496F8`.
+
+## Session 1177 (2026-08-14) — tested retail MusyX sample-writer execution
+
+Ran the retail oracle for 180 seconds with execution watches at
+`0x800921E8`, `0x80092220`, `0x80092228`, and `0x80092230`, plus independent
+whole-RDRAM read/write controls and the eleven scheduled Start presses. The
+write control reached 10,000 callbacks and the read control reached 64,047,786;
+all presses were delivered. The run stayed at VI 320 and all four candidate
+writer PCs had zero hits. This selects H2 for the driven attract path and rules
+out a destination-range watch based on this lead. It does not prove that the
+writers are dead on every path, and no mitigation was added.
