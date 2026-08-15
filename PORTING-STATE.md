@@ -68637,3 +68637,34 @@ address-encoded TOML entry was synchronized (name only; size left at `0x78`).
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `computeVoiceVolumePanCoefficients` at `0x800940D4`.
+
+## Session 1378 (2026-08-15) — synchronized the compute-voice-volume-pan-coefficients symbol
+
+Performed the bounded exact-name census over `0x800940D4..0x80094348`.
+
+No new soak-queue verdicts since s1377; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800940D4`, size `0x274`; `0x800940D4+0x274=0x80094348`. Overlay `rom_size` is `0x274`. Generated prologue at `0x800940D4` (`addiu $sp,$sp,-0x4`) and `jr $ra` at `0x80094340` with delay `addiu $sp,$sp,0x4` at `0x80094344` |
+| Generated definition | `funcs_25.c` defines `computeVoiceVolumePanCoefficients` at `0x800940D4`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `fake_func_80094348` at `0x80094348` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `computeVoiceVolumePanCoefficients = 0x800940D4`. The same file independently names the preceding `computeNoteRatePairFromTableB` at `0x8009405C` and the following real function `startSongSequence` at `0x80094350`. Menu, mission, and cinematic lists do not remap it. The sequential `defined:true` list records `fake_func_80094348` at `0x80094348` and does not remap `0x800940D4` |
+| Caller evidence | One generated `jal 0x800940D4` site: `setVoiceModulationParams` at `0x80092434`. That wrapper loads the voice-array pointer at `0x801496F8`, indexes by `$a0 * 0x88`, then passes `$a0=voice+0x46`, `$a1=voice+0x44`, `$a2`/`$a3` = the original volume/pan arguments, stack `+0x10` = the original `$a3`, `+0x14=voice+0x48`, `+0x18` = the extra stack arg, and `+0x1C=voice+0x4A` |
+| Semantic evidence | The body clamps `$a2` to `0x7F0000`, indexes `D_800A4BD8` by `(value >> 16) << 2`, and interpolates adjacent `f32` knots with the low 16 bits scaled by `D_800A4DD8[0]`. Companion data independently sizes `D_800A4BD8` as `f32[0x200]` (`128` floats), which is exactly the `0x00..0x7F` high-byte range. A second identical kernel against `0x800A4DE8` (index `>> 22`) produces the complementary pan side; `$a3==0x800000` takes the centered negate path. Four `sh` stores write `voice+0x44/+0x46/+0x48/+0x4A`. That is volume/pan coefficient computation. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800940D4`: the companion and
+generated names agree, the body is a complete volume/pan helper of matching
+size `0x274`, and there is neither a conflicting companion name nor a size
+split. H2 and H3 are ruled out for this address. The stale address-encoded
+TOML entry was synchronized (name only; size left at `0x274`).
+`fake_func_80094348` is an already-fake two-instruction `j L_80094370` /
+`nop` fragment (`do_break`) and was left unchanged, as were
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C`. No build or runtime run was justified
+for an exact-name census. This does not reopen M5 audio de-stubbing. The
+next adjacent generated function is the independently named
+`startSongSequence` at `0x80094350`.

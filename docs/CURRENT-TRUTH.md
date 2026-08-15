@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1377 (2026-08-15).
+the authority for session detail. Reviewed through s1378 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1377 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x800940D4..0x80094348`.
+   census over the next adjacent function, `0x80094350..0x80094958`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -55,8 +55,10 @@ the authority for session detail. Reviewed through s1377 (2026-08-15).
    (s1357 H3), `func_80092CF0` address-encoded
    (s1359 H3: no independent companion name), `func_80092F10`
    address-encoded (s1360: TOML-only live-tail fragment of
-   `resampleVoiceLutSamplesPacked`), and `fake_func_80093E74`
-   unchanged (s1369: already-fake three-instruction epilogue fragment).
+   `resampleVoiceLutSamplesPacked`), `fake_func_80093E74`
+   unchanged (s1369: already-fake three-instruction epilogue fragment),
+   and `fake_func_80094348` unchanged (s1378: already-fake two-instruction
+   jump fragment before `startSongSequence`).
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -240,6 +242,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1375 | Exact companion/generated pitch-table census synchronized `scaleByPitchTableB` at `0x80093FB4`; no build or runtime run. |
 | s1376 | Exact companion/generated note-rate census synchronized `computeNoteRatePairFromTableA` at `0x80093FE4`; no build or runtime run. |
 | s1377 | Exact companion/generated note-rate census synchronized `computeNoteRatePairFromTableB` at `0x8009405C`; no build or runtime run. |
+| s1378 | Exact companion/generated voice-pan census synchronized `computeVoiceVolumePanCoefficients` at `0x800940D4`; left `fake_func_80094348` unchanged; no build or runtime run. |
 
 ## Method and safety rules
 

@@ -1432,7 +1432,7 @@ functions = [
     { name = "scaleByPitchTableB", vram = 0x80093FB4, size = 0x30 },
     { name = "computeNoteRatePairFromTableA", vram = 0x80093FE4, size = 0x78 },
     { name = "computeNoteRatePairFromTableB", vram = 0x8009405C, size = 0x78 },
-    { name = "func_800940D4", vram = 0x800940D4, size = 0x274 },
+    { name = "computeVoiceVolumePanCoefficients", vram = 0x800940D4, size = 0x274 },
     { name = "fake_func_80094348", vram = 0x80094348, size = 0x8 },
     { name = "func_80094350", vram = 0x80094350, size = 0x608 },
     { name = "func_80094958", vram = 0x80094958, size = 0x45C },
