@@ -1060,7 +1060,7 @@ functions = [
     { name = "persistSaveDataBody", vram = 0x8006F1A8, size = 0xCC },
     { name = "triggerSaveMessage", vram = 0x8006F274, size = 0x58 },
     { name = "saveServiceWorker", vram = 0x8006F2CC, size = 0xBC },
-    { name = "func_8006F388", vram = 0x8006F388, size = 0x14 },
+    { name = "isSaveStateNotPending", vram = 0x8006F388, size = 0x14 },
     { name = "setAccountHighscore", vram = 0x8006F39C, size = 0x4C },
     { name = "getAccountHighscore", vram = 0x8006F3E8, size = 0x54 },
     { name = "getSecondaryWeaponCount", vram = 0x8006F43C, size = 0x70 },

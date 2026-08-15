@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1240 (2026-08-15).
+in the ledger. Reviewed through s1242 (2026-08-15).
 
 ## Current state
 
@@ -167,7 +167,7 @@ in the ledger. Reviewed through s1240 (2026-08-15).
 - The s1237 complete ROM_OPEN-to-EXECUTE census selects H2 for the external-entry hypothesis. The oracle calls ROM_OPEN, attaches optional plugins, installs debugger callbacks, starts its director/poller, and calls EXECUTE; the core's ROM_OPEN path only opens/configures the ROM, while EXECUTE enters `main_run`. State load/save, reset, and input are explicit commands with separate timing/state requirements, and no hidden state-changing handoff was found. The available oracle checkout has no console-frontend source directory, so the UI portion relies on the prior s1229 audit rather than a new local recheck. No build or run.
 - The s1238 artifact check found no new frontend/launcher source, binary invocation, savestate, or other retail-entry artifact in the workspace beyond the already-audited oracle and prior logs. The prescribed discriminator cannot run without external ground truth; H3 is selected and the external retail-entry boundary is blocked on a human-supplied artifact. No build or run.
 - The s1239 unblock audit corrected the literal artifact census: the adjacent `rs64-oracle/src/mupen64plus-core` checkout contains the Mupen64Plus console frontend source, the installed `mupen64plus` binary exposes `--savestate`, and two existing `.st` files are present. Their source and help contracts still reduce to the already-audited `ROM_OPEN` → plugin attach → optional `STATE_LOAD` → `EXECUTE` lifecycle; no unmatched retail-entry handoff was found. The artifact-absence claim is refuted, but the external dependency is real and remains open because the available artifacts are equivalent. No build or game run.
-- The s1240 save/account naming sweep found an exact companion/generated mapping for 19 symbols spanning EEPROM, service-worker, high-score, and account helpers. The repository symbol map now uses those human names, including the corrected `loadDefaultHighScores` spelling; no ambiguous or invented name was applied. This is source maintenance only and does not alter the external retail-entry boundary.
+- The s1240–s1242 save/account naming sweeps found exact companion/generated mappings across EEPROM, service-worker, high-score, and account helpers. The adjacent `0x8006F388..0x8006F4AC` census has four exact human names; `0x8006F4AC` is explicitly a companion `fake_func` and remains address-encoded. The repository symbol map now also uses `isSaveStateNotPending` at `0x8006F388`; no ambiguous or invented name was applied. This is source maintenance only and does not alter the external retail-entry boundary.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -248,7 +248,7 @@ in the ledger. Reviewed through s1240 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the in-tree generated-symbol renaming campaign with one bounded
-   exact-name sweep over the adjacent account/high-score helpers
+   exact-name sweep over the next adjacent helper region after
    `0x8006F388..0x8006F4AC`; it needs no external retail-entry artifact. Keep
    the external retail-entry dependency open and do not add runtime probes
    without a genuinely unmatched state-changing handoff and positive control.
@@ -354,6 +354,7 @@ order.
 | s1238 | Workspace artifact check found no new frontend/launcher artifact beyond the audited oracle/core and prior logs. The planned artifact-backed event table was unevaluable; H3 selected and the external retail-entry boundary is blocked on human-supplied ground truth. No build or run. |
 | s1240 | Exact companion/generated save-account mapping covered 19 symbols; synchronized the repository symbol map with those names and corrected `loadDefaultHighScores`. No build or run. |
 | s1241 | The bounded `0x8006E8CC..0x8006F1A8` census found exact authoritative companion names for all 16 remaining address-encoded symbol-table entries; generated code already carried those names, so the repository symbol table was synchronized. H1 selected; no build or run. |
+| s1242 | The bounded `0x8006F388..0x8006F4AC` census found four exact companion/generated names and one explicitly fake tail; synchronized `isSaveStateNotPending` in the repository symbol map. H2 selected; no build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |

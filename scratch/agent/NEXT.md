@@ -1,12 +1,10 @@
-# NEXT work unit (s1242)
+# NEXT work unit (s1243)
 
 HYPOTHESIS-ID: generated-save-account-naming-sweep
 
-The external retail-entry dependency remains open: the adjacent Mupen64Plus
-frontend source, installed `--savestate` binary invocation, and existing state
-files add no unmatched handoff. Do not build or run. Proceed with one bounded
-generated-symbol naming sweep over the adjacent account/high-score helper
-region `0x8006F388..0x8006F4AC`, using companion names and generated call sites.
+The external retail-entry dependency remains open. Do not build or run.
+Proceed with one bounded generated-symbol naming sweep over the next helper
+region `0x8006F6A0..0x800700A8`, using companion names and generated call sites.
 
 Competing hypotheses and discriminator:
 
@@ -22,10 +20,10 @@ complete exact mapping selects H1; only a subset safe to rename selects H2;
 absence of independent names selects H3. No code or runtime mitigation is
 justified by this sweep.
 
-Exact commands after the artifact is supplied:
+Exact commands:
 
 ```
-rg -n 'func_[0-9A-Fa-f]{8}' ../N64Recomp/RecompiledFuncs/funcs_*.c | rg '8006F3|8006F4'
-rg -n -C 3 'highscore|secondary weapon|8006F3|8006F4' ../rogue_squadron64 docs/game-architecture.md syms
-sed -n '4950,5200p' ../N64Recomp/RecompiledFuncs/funcs_17.c
+rg -n 'RECOMP_FUNC void (func_|fake_func_)|0x8006F[6-9A-Fa-f]|0x800700' ../N64Recomp/RecompiledFuncs/funcs_17.c
+rg -n -C 3 '8006F6|8006F7|8006F8|8006F9|8006FA|8006FB|8006FC|8006FD|8006FE|8006FF|800700' ../rogue_squadron64/symbol_files ../rogue_squadron64/docs docs/game-architecture.md syms
+sed -n '5300,7600p' ../N64Recomp/RecompiledFuncs/funcs_17.c
 ```

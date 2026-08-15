@@ -65619,3 +65619,16 @@ entries: `createAccountProfile`, `initPlayerMissionStateFromSettings`,
 these names). The repository `syms/rogue_squadron.syms.toml` was synchronized
 to the same exact mappings. H1 selected. No build or run; the external
 retail-entry boundary remains open.
+
+## Session 1242 (2026-08-15) — completed adjacent account-helper name census
+
+Ran the single bounded generated/companion census for every function in
+`0x8006F388..0x8006F4AC`. The generated declarations and companion
+`main_overlay.txt` independently agree on four exact human names:
+`isSaveStateNotPending`, `setAccountHighscore`, `getAccountHighscore`, and
+`getSecondaryWeaponCount`. The fifth entry, `0x8006F4AC`, is explicitly
+`fake_func_8006F4AC` in the companion source and remains address-encoded.
+Synchronized the stale repository symbol-map entry for `0x8006F388` to
+`isSaveStateNotPending`; no build or runtime run was needed. H2 selected:
+the safe exact subset is complete and the fake tail is not a rename target.
+This does not address the external retail-entry boundary.
