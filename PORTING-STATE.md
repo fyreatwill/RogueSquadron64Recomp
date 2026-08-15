@@ -71061,3 +71061,36 @@ were `fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is independently named `stopVoiceByHandle`
 at `0x8009B33C`.
+
+## Session 1455 (2026-08-15) — synchronized the stop-voice-by-handle symbol
+
+Performed the bounded exact-name census over `0x8009B33C..0x8009B3CC`.
+
+No new soak-queue verdicts since s1454; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009B33C`, size `0x90`; `0x8009B33C+0x90=0x8009B3CC`. Overlay `rom_size` is `0x90` at offset `0x0009AEFC` (`0x8009B33C-0x80000440`). Generated body starts `addiu $sp, $sp, -0x18` at `0x8009B33C` and ends `jr $ra` / delay-slot `nop` at `0x8009B3C4` / `0x8009B3C8` |
+| Generated definition | `funcs_26.c` defines `stopVoiceByHandle` at `0x8009B33C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x90` function between independently named `stopVoiceSlotSynced` at `0x8009B268` and independently named `isVoiceHandleActive` at `0x8009B3CC` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `stopVoiceByHandle = 0x8009B33C`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009B33C`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry. The `stopSpeechSlotIfActive` comment still writes `func_8009B33C` as the stop callee; that is stale comment text for the same address, not a conflicting symbol. Distinct from already-named `stopVoiceByHandleLocked` at `0x800894F0` |
+| Caller evidence | Eight generated `jal 0x8009B33C` sites, all independently named speech-path functions: `enqueueSpeechClip` at `0x80066C90`, `playSpeechClip` at `0x80066FD0`, `queueSpeechClipWithPriority` at `0x800671E4`, `tickSpeechSubsystem` at `0x800676F8`, `resetSpeechSubsystem` at `0x80067884`, `stopSpeechSlotIfActive` at `0x80067BEC` (after `isVoiceHandleActive`, `$a0` is the slot handle), `stopAllSpeechSlots` at `0x80067C64`, and `advanceSpeechRingAndStopHead` at `0x80067CF8`. Zero `func_*` callers |
+| Semantic evidence | Early-outs when the incoming handle is `-1` or the voice-count byte at `0x800A5121` is 0. Otherwise scans the MusyX voice table at `0x80154620` (stride `0x1228`), matches the handle word at slot+`0x24`, and on a hit calls independently named `stopVoiceSlotSynced` with the slot index, then returns 1; otherwise returns 0. Matches the companion comment and the `stopSpeechSlotIfActive` query-then-stop contract |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009B33C`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x90`, all eight `jal` callers are independently named speech-handle
+paths, and there is neither a conflicting companion name nor a size
+split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x90`). `fake_func_80099FDC` remains the already-fake one-word `bne`
+gap and was left unchanged, as were `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not
+reopen M5 audio de-stubbing. The next adjacent generated function is
+independently named `isVoiceHandleActive` at `0x8009B3CC`.

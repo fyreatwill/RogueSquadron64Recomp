@@ -1512,7 +1512,7 @@ functions = [
     { name = "findVoiceSlotByAge", vram = 0x8009AF60, size = 0xE8 },
     { name = "allocAndConfigureNewVoice", vram = 0x8009B048, size = 0x220 },
     { name = "stopVoiceSlotSynced", vram = 0x8009B268, size = 0xD4 },
-    { name = "func_8009B33C", vram = 0x8009B33C, size = 0x90 },
+    { name = "stopVoiceByHandle", vram = 0x8009B33C, size = 0x90 },
     { name = "func_8009B3CC", vram = 0x8009B3CC, size = 0x98 },
     { name = "func_8009B464", vram = 0x8009B464, size = 0x144 },
     { name = "func_8009B5A8", vram = 0x8009B5A8, size = 0x300 },
