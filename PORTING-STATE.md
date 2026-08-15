@@ -67921,3 +67921,29 @@ there is neither a partial/conflicting match nor an absent independent name.
 The stale address-encoded TOML entry was synchronized. No build or runtime
 run was justified for an exact-name census. This does not reopen M5 audio
 de-stubbing.
+
+## Session 1353 (2026-08-15) — synchronized the relocate-snd-pointer symbol
+
+Performed the bounded exact-name census over `0x800925F4..0x8009264C`.
+
+No new soak-queue verdicts since s1352; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x800925F4`, size `0x58`; it ends exactly at the next generated function, `0x8009264C`. Overlay `rom_size` is `0x58` |
+| Generated definition | `funcs_24.c` defines `relocateSndPointer` at `0x800925F4`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `relocateSndPointer = 0x800925F4`. The same file independently names the adjacent functions `copyFourHalfwordsWriteback` at `0x800925A8` and `resampleVoicePointTableSamples` at `0x8009264C`. No later companion list remaps this address |
+| Caller evidence | Two generated `jal 0x800925F4` sites. Already-named `registerSndSampleTable` at `0x8009735C` relocates its second argument before walking the sample table. Already-named `parseSndFiles` at `0x80097518` relocates `$s3` while parsing SND file sections |
+| Semantic evidence | Body returns a KSEG0 (`0x80xxxxxx`) or KSEG1 (`0xB0xxxxxx`) pointer unchanged; otherwise it `jalr`s the mixer callback at `0x801499E0`. `initN64RspMixer` installs `0x8000591C` there, independently named `getAssetRamAddress` in the companion |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x58` boundary is exact, and the body is a mapped-pointer passthrough or
+`getAssetRamAddress` relocation of an SND file pointer. H2 and H3 are ruled
+out for this function; there is neither a partial/conflicting match nor an
+absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
+This does not reopen M5 audio de-stubbing.
