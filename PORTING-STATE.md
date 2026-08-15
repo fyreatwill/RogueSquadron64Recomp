@@ -71461,3 +71461,37 @@ No build or runtime run was justified for an exact-name census. This
 does not reopen M5 audio de-stubbing. The next adjacent generated
 function is independently named `serviceStreamingVoice` at
 `0x8009BF14`.
+
+## Session 1467 (2026-08-15) — synchronized the service-streaming-voice symbol
+
+Performed the bounded exact-name census over `0x8009BF14..0x8009C240`.
+
+No new soak-queue verdicts since s1466; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009BF14`, size `0x32C`; `0x8009BF14+0x32C=0x8009C240`. Overlay `rom_size` is `0x32C` at offset `0x0009BAD4` (`0x8009BF14-0x80000440`). Generated body starts `addiu $sp, $sp, -0x28` at `0x8009BF14` and ends `jr $ra` / delay-slot `nop` at `0x8009C238` / `0x8009C23C` |
+| Generated definition | `funcs_27.c` defines `serviceStreamingVoice` at `0x8009BF14`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0x32C` function between independently named `initMusyXVoiceSlot` at `0x8009BE40` and independently named `consumeVoiceSamples` at `0x8009C240` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `serviceStreamingVoice = 0x8009BF14` with the next companion symbol `consumeVoiceSamples` at `0x8009C240`. Menu, mission, cinematic, ignored, and libultra lists do not remap `0x8009BF14`. No companion C/asm body exists; the name is independent of the address-encoded TOML entry |
+| Caller evidence | Exactly one generated `jal 0x8009BF14` site and zero `func_*` callers. Independently named `serviceVoicePoolFrame` at `0x8009B644` walks table `0x80154620` (stride `0x1228`) and, for each active slot, passes the slot pointer as `$a0` before the jal |
+| Semantic evidence | Saves `$s0..$s3`/`$ra` and takes the voice slot in `$a0`. If `slot+0x11DC` is set, `osRecvMesg`s `slot+0x11AC`, advances `slot+0x11D0` by `0x400`, decrements remaining at `+0x11A4` by `0x100`, and clears `+0x11DC`. When stream state `+0x11DD` is 1/2/3 and the DMA window is under `0xC01`, it jalrs the DMA callback at `slot+0x190`. A fill loop then calls independently named `decodeAndFillVoiceBlock` at `0x8009C904`, and a tail pad `bzero`s leftover frames. Matches the companion name and the slot-init queue/callback layout from s1466 |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009BF14`: the companion and
+generated names agree, the body is a complete function of matching size
+`0x32C`, the independently named pool-frame caller plus the DMA-complete /
+refill / decode-fill control flow match, and there is neither a conflicting
+companion name nor a size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x32C`). `fake_func_80099FDC` remains the already-fake one-word
+`bne` gap and was left unchanged, as were `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is independently named `consumeVoiceSamples` at
+`0x8009C240`.
