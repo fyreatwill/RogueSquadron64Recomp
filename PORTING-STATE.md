@@ -68938,3 +68938,33 @@ this address. The stale address-encoded TOML entry was synchronized
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `stopSongByHandle` at `0x8009582C`.
+
+## Session 1388 (2026-08-15) — synchronized the stop-song-by-handle symbol
+
+Performed the bounded exact-name census over `0x8009582C..0x80095A94`.
+
+No new soak-queue verdicts since s1387; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_8009582C`, size `0x268`; `0x8009582C+0x268=0x80095A94`. Overlay `rom_size` is `0x268`. Generated prologue at `0x8009582C` (`addiu $sp, $sp, -0x20`, save `$s1/$ra/$s2/$s0`, `$s1=$a0`) and `jr $ra` at `0x80095A8C` with delay `nop` at `0x80095A90` |
+| Generated definition | `funcs_25.c` defines `stopSongByHandle` at `0x8009582C`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `stopSongByHandleLocked` at `0x80095A94` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `stopSongByHandle = 0x8009582C`. The same file independently names the preceding real function `isSongHandleActive` at `0x800957AC` and the following real function `stopSongByHandleLocked` at `0x80095A94`. Menu, mission, and cinematic lists do not remap it. The sequential `defined:true` list records `startSongSequence` then jumps to `fake_func_8009711C` and does not remap this address |
+| Caller evidence | Two generated `jal 0x8009582C` sites. One is in independently named `stopSongByHandleLocked` (`0x80095AB8`): after `gMusyXActiveFlag` at `0x800A0F50` and `factor5MutexAcquire`, it forwards saved `$a0` as the handle. The other is in independently named `tickAllAudioChannels` (`0x8008D850`): after channel-state byte `0x80141B2D+$s0` equals 2, it loads the channel song-handle word at `0x80141B28+$s0` into `$a0`. No conflicting handle or return convention |
+| Semantic evidence | Masks `$a0` with `0x7FFFFFFF` and walks the 8-slot song table at `0x80149A00` with stride `0xEF8`. A slot whose lock byte at `+0xEC1` is 0 and whose word at table+0 matches the masked handle is selected; the original handle high bit is folded into the slot index. No match or inactive `+0xEC0` / busy `+0xEC1` returns without teardown. A high-bit handle only ORs `0x8` into status `+0xEEE`. Otherwise the helper clears `+0xEC0`, walks slot lists `+0xE78` and `+0xE7C` calling independently named `stopVoicesByHandle` on each node `+0x8` handle, then splices both lists onto the global freelist at `0x801529C4` and zeros the heads. Matches a song-stop-by-handle teardown. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x8009582C`: the companion and
+generated names agree, the body is a complete handle-to-slot walker and
+voice/list teardown of matching size `0x268`, and there is neither a
+conflicting companion name nor a size split. H2 and H3 are ruled out for
+this address. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x268`). `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `stopSongByHandleLocked` at `0x80095A94`.
