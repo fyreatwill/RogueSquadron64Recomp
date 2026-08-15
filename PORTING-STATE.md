@@ -70075,3 +70075,35 @@ and `func_8008ED6C`. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `streamSampleCountToByteSize` at `0x800981E4`.
+
+## Session 1425 (2026-08-15) — synchronized the stream-sample-count-to-byte-size symbol
+
+Performed the bounded exact-name census over `0x800981E4..0x800981F0`.
+
+No new soak-queue verdicts since s1424; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800981E4`, size `0xC`; `0x800981E4+0xC=0x800981F0`. Overlay `rom_size` is `0xC` at offset `0x00097DA4` (`0x800981E4-0x80000440`). Generated body is `addiu $v0, $a0, 0x4` at `0x800981E4` and `jr $ra` / `sll $v0, $v0, 1` at `0x800981E8` / `0x800981EC` |
+| Generated definition | `funcs_26.c` defines `streamSampleCountToByteSize` at `0x800981E4`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xC` function between independently named `startStreamedSampleVoice` at `0x80097FE8` and generated `setVoiceVolumePanLocked` at `0x800981F0` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `streamSampleCountToByteSize = 0x800981E4` in the sequential streamed-voice family, immediately after `startStreamedSampleVoice` and before `setVoiceVolumePanLocked`. Menu, mission, cinematic, and ignored lists do not remap `0x800981E4`. No conflicting companion name |
+| Caller evidence | One generated `jal 0x800981E4` in companion-named `initMusyXVoiceTable` at `0x8009BBA0` (`funcs_26.c` already uses that name; TOML still `func_8009BBA0`). The delay slot loads `$a0 = 0x10E0`; the return is passed to independently named `rs_malloc` |
+| Semantic evidence | Body is `return (a0 + 4) << 1`. That is a 16-bit sample-count-to-byte-size conversion with a four-sample pad: `0x10E0` samples become `0x21C8` bytes, then allocated. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800981E4`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xC`, the single `jal` caller is the MusyX voice-table init path, and there
+is neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0xC`). `fake_func_80097D58` remains
+the already-fake two-instruction epilogue fragment and was left unchanged,
+as were `fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`setVoiceVolumePanLocked` at `0x800981F0`.
