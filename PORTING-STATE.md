@@ -66253,3 +66253,17 @@ active channel array, providing semantic evidence for both mappings. Both
 stale symbol-map entries were synchronized with high confidence. No build or
 runtime run was justified for an exact-name census. This rules out partial or
 absent naming evidence for this adjacent sequencer pair.
+
+## Session 1283 (2026-08-15) — synchronized the audio sequencer frame symbol
+
+Performed the bounded exact-name census over `0x8008D960..0x8008DA00`.
+The companion `main_overlay.txt` independently maps `0x8008D960` to
+`tickAudioSequencerFrame`. The generated definition and three generated call
+sites use the same name, while the TOML size and generated overlay metadata
+both give the exact `0xA0` boundary. The body clears four frame counters,
+derives the per-tick sample budget from the global tempo and divisor, and then
+calls `tickAllAudioChannels`, providing semantic evidence for the mapping.
+H1 is selected with high confidence and the stale symbol-map entry is
+synchronized. No build or runtime run was justified for an exact-name census.
+This rules out partial, conflicting, or absent naming evidence for this
+function.

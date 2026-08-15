@@ -1334,7 +1334,7 @@ functions = [
     { name = "soundMacroSetPitchTarget", vram = 0x8008BA60, size = 0x1B0 },
     { name = "tickAudioChannel", vram = 0x8008BC10, size = 0xD9C },
     { name = "tickAllAudioChannels", vram = 0x8008C9AC, size = 0xFB4 },
-    { name = "func_8008D960", vram = 0x8008D960, size = 0xA0 },
+    { name = "tickAudioSequencerFrame", vram = 0x8008D960, size = 0xA0 },
     { name = "func_8008DA00", vram = 0x8008DA00, size = 0x4C },
     { name = "func_8008DA4C", vram = 0x8008DA4C, size = 0x4C },
     { name = "func_8008DA98", vram = 0x8008DA98, size = 0x15C },
