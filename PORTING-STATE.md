@@ -66340,3 +66340,24 @@ all-synth-voices stop semantics. The stale address-encoded TOML entry is
 therefore synchronized. H2 and H3 are ruled out for this function; there is
 neither a conflicting/partial mapping nor an absent independent name. No build
 or runtime run was justified for an exact-name census.
+
+## Session 1288 (2026-08-15) — synchronized the MusyX channel-slot byte accessors
+
+Performed the bounded exact-name census over `0x8008DD20..0x8008DD50`.
+
+| Evidence | `0x8008DD20` | `0x8008DD38` |
+|---|---|---|
+| Address and size | TOML entry size `0x18`; ends at `0x8008DD38` | TOML entry size `0x18`; ends at `0x8008DD50` |
+| Generated definition | `getMusyXChannelSlotByte` | `setMusyXChannelSlotByte` |
+| Independent companion source | `main_overlay.txt` maps `getMusyXChannelSlotByte = 0x8008DD20` | `main_overlay.txt` maps `setMusyXChannelSlotByte = 0x8008DD38` |
+| Overlay metadata | ROM size `0x18` | ROM size `0x18` |
+| Semantic evidence | Masks the index to four bits and returns the selected byte from `0x80148C58` | Masks the index to four bits and stores `a1` to the selected byte at `0x80148C58` |
+| Confidence | High | High |
+
+The complete comparison selects H1 for both functions: exact independent
+companion names agree with the generated definitions, both size boundaries
+match the generated overlay metadata, and the bodies implement complementary
+get/set access to the same 16-byte table. H2 and H3 are ruled out; neither
+entry is partial, conflicting, or unsupported. The two stale address-encoded
+TOML entries were synchronized. No build or runtime run was justified for an
+exact-name census.
