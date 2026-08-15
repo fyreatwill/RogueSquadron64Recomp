@@ -68698,3 +68698,33 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `stepActiveSongTracks` at `0x80094958`.
+
+## Session 1380 (2026-08-15) — synchronized the step-active-song-tracks symbol
+
+Performed the bounded exact-name census over `0x80094958..0x80094DB4`.
+
+No new soak-queue verdicts since s1379; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80094958`, size `0x45C`; `0x80094958+0x45C=0x80094DB4`. Overlay `rom_size` is `0x45C`. Generated prologue at `0x80094958` (`addiu $sp,$sp,-0x48`) and `jr $ra` at `0x80094DAC` with delay `nop` at `0x80094DB0` |
+| Generated definition | `funcs_25.c` defines `stepActiveSongTracks` at `0x80094958`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `tickScheduledSongEvents` at `0x80094DB4` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `stepActiveSongTracks = 0x80094958`. The same file independently names the preceding real function `startSongSequence` at `0x80094350` and the following real function `tickScheduledSongEvents` at `0x80094DB4`. Menu, mission, and cinematic lists do not remap it. The sequential `defined:true` list records `fake_func_80094348` then `startSongSequence` before this function and the next fake at `fake_func_8009711C`; it does not remap `0x80094958` |
+| Caller evidence | One generated `jal 0x80094958` site: `tickAllActiveSongs` at `0x80096EF4`, immediately after `advanceSongRegion` and immediately before `stepSongPitchBendLanes` / `stepSongModulationLanes`. Companion independently names that caller and the flanking steppers. The same companion comment on `processSongByHandle` lists `func_80094958` as a caller, which is this address |
+| Semantic evidence | Outer loop walks 0x40 entries (`slti $s4, 0x40`) with stride `0x24` (`s1 += 0x24`) off the song-tick table pointer at `0x801529C0`. Each occupied entry is gated on word `+0x570`; the inner loop advances that cursor by 8 and terminates on a `0xFF` channel/map byte. Callees are already-named `processSongByHandle` (`0x800966A4`, handle at slot+`0xEC8`), `setChannelNoteCell` (`0x80083D9C`), and `dispatchSequencerNoteEvent` (`0x800878D0`). That is per-track stepping of the active song table. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80094958`: the companion and
+generated names agree, the body is a complete 64-track song stepper of
+matching size `0x45C`, and there is neither a conflicting companion name
+nor a size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x45C`). `fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`tickScheduledSongEvents` at `0x80094DB4`.
