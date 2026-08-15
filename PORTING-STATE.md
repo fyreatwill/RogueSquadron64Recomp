@@ -65695,3 +65695,16 @@ Ran the single bounded generated/companion census for
 ambiguous target. Synchronized the five stale repository symbol-map entries;
 generated C already used the names. H1 selected. No build or runtime run was
 needed, and the external retail-entry boundary remains open.
+
+## Session 1248 (2026-08-15) — synchronized camera-effect helper symbols
+
+Ran the single bounded generated/companion census for
+`0x80075218..0x80075BB0`. The generated declarations and companion
+`main_overlay.txt` independently agree on four exact human names:
+`buildRandomCameraFacingOrientation`, `spawnScaledOrientedEffectTriple`,
+`heavyRandomBurstNpcHandler`, and `buildNpcAnchoredCameraEffectTransform`.
+The caller enumeration found the anchored transform used by two generated
+callers and no naming ambiguity. Synchronized the four stale repository
+symbol-map entries; generated C already used the names. H1 selected. No build
+or runtime run was needed, and the external retail-entry boundary remains
+open.
