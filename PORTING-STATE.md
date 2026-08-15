@@ -66932,3 +66932,28 @@ per-voice mix kernel, and the body advances a volume fade envelope. H2 and H3
 are ruled out for this function; there is neither a partial/conflicting match
 nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1314 (2026-08-15) — synchronized the song decode-buffer ring symbol
+
+Performed the bounded exact-name census over `0x8008F65C..0x8008F758`.
+
+No new soak-queue verdicts since s1313; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008F65C`, size `0xFC`; it ends exactly at the next generated function, `0x8008F758`. Overlay `rom_size` is `0xFC` |
+| Generated definition | `funcs_23.c` defines `buildSongDecodeBufferRing` at `0x8008F65C` through the matching epilogue at `0x8008F750`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `buildSongDecodeBufferRing = 0x8008F65C`. No later companion list remaps this address |
+| Caller evidence | One generated `jal 0x8008F65C` in `setupSongRenderBuffers` at `0x8008F494`. Companion independently names that setup `setupSongRenderBuffers = 0x8008F2FC` (s1312) |
+| Semantic evidence | Body `rs_malloc`s `count * 20` node records and `count * 256` decode bytes, invalidates the decode span, then links the nodes into a 0x14-byte ring whose `+8` fields step by 0x100 through the decode buffer |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0xFC` boundary is exact, the only caller is the independently named
+song-render buffer setup, and the body builds a decode-buffer ring. H2 and H3
+are ruled out for this function; there is neither a partial/conflicting match
+nor an absent independent name. The stale address-encoded TOML entry was
+synchronized. No build or runtime run was justified for an exact-name census.
