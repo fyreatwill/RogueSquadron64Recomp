@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1188 (2026-08-14).
+in the ledger. Reviewed through s1189 (2026-08-14).
 
 ## Current state
 
@@ -553,6 +553,14 @@ corruption.
 | s1187 | Completed the generated `MEM_WU` load audit without building or running. Five loads were classified: two bounded texture-row assembly loads, one unrelated OS/global-mask load, and two unrelated audio-generated loads (one after an explicit return, one in a malformed tail). The `MEM_WU` macro is an exact unsigned four-byte access matching the computed guest address. H3 selected; no mitigation added. |
 | s1188 | Completed the generated `MEM_D`/`LD` audit without building or running. There are 1,404 references: 1,247 `r29` frame restores and 157 non-`r29` loads. Only 11 load directly into GPRs; the rest feed floating-point state. The non-frame GPR loads are bounded decode/audio or malformed/data-like blocks with no reachable edge to a frame-overlapping store. `LD` reconstructs exactly two guest words at the computed address, with no host-side span broadening. H3 selected; no mitigation added. |
 
+ - The s1189 complete partial-load audit found 240 live `do_ldl`/`do_ldr`
+   sites: 231 in malformed/data-like `__OSGlobalIntMask`, eight in
+   `lvj_checkComplexObjectives`, and one in `audioCompandS16`. None occurs in
+   the 72 `slotDispatcherIter` callers or target path; no load-to-frame writer
+   chain was found. The helpers align to an eight-byte boundary, read exactly
+   one guest doubleword through `MEM_W`, and merge by guest misalignment masks,
+   with no host-side span broadening. H3 selected; no mitigation added.
+
 ## Ranked next steps
 
 1. Keep audio closed. Do not add a destination watch or mitigation from the
@@ -561,7 +569,7 @@ corruption.
    VI-320 attract path and can first pass the whole-RDRAM controls.
 
 2. Continue the M3 systematic static audit with the next complete generated
-   partial-load idiom: enumerate `do_ldl`/`do_ldr` and their consumers.
+   partial-load idiom: enumerate `do_lwl`/`do_lwr` and their consumers.
    Classify every site for a target-path pointer or frame-overlapping writer;
    do not add a guard unless a reachable writer edge is established.
 

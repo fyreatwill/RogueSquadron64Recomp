@@ -64582,3 +64582,15 @@ a store overlapping the `slotDispatcherIter` saved frame. `LD` reconstructs
 two exact guest words at the computed address through `MEM_W`; it adds no
 address or span broadening. H3 selected. No build, runtime run, or mitigation
 was performed.
+## Session 1189 (2026-08-14) — audited generated partial loads
+
+Completed the generated `do_ldl`/`do_ldr` partial-load audit without building
+or running. The census found 240 live sites: 231 in malformed/data-like
+`__OSGlobalIntMask`, eight in `lvj_checkComplexObjectives`, and one in
+`audioCompandS16`; none is in the 72 `slotDispatcherIter` callers or target
+path, and no load-to-frame-overlap writer chain was found. `do_ldl`/`do_ldr`
+align to an eight-byte boundary, read exactly one guest doubleword through
+`MEM_W`, and apply the guest merge masks without host-side span broadening.
+H3 selected; this rules out the partial-load/accessor class as the current
+frame-corruption origin. No mitigation was added. The next audit is
+`do_lwl`/`do_lwr`.

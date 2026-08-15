@@ -1,8 +1,8 @@
-# NEXT work unit (s1189)
+# NEXT work unit (s1190)
 
 HYPOTHESIS-ID: m3-stack-memory-value-origin
 
-Work unit: complete one static audit of all generated `do_ldl`/`do_ldr` partial
+Work unit: complete one static audit of all generated `do_lwl`/`do_lwr` partial
 loads and their consumers. Do not build or run.
 
 Competing hypotheses and discriminator:
@@ -19,9 +19,9 @@ Competing hypotheses and discriminator:
 
 Exact commands:
 
-rg -n -e 'do_ldl\(|do_ldr\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
-rg -n -C 8 -e 'do_ldl\(|do_ldr\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
-rg -n -A35 -B4 -e 'do_ldl|do_ldr' lib/N64ModernRuntime/N64Recomp/include/recomp.h
+rg -n -e 'do_lwl\(|do_lwr\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
+rg -n -C 8 -e 'do_lwl\(|do_lwr\(' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs --glob 'funcs_*.c'
+rg -n -A35 -B4 -e 'do_lwl|do_lwr' lib/N64ModernRuntime/N64Recomp/include/recomp.h
 git diff --check
 
 Classify every hit as reachable pointer producer, bounded scalar load,
