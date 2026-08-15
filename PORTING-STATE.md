@@ -65457,3 +65457,24 @@ execution and the port.
 ORIGIN: installed Mupen64Plus core source, `tools/oracle/rs64_oracle.c`, ROM
 database/config, and generated/companion boot records. No mitigation, build,
 or runtime code change was made.
+
+## Session 1234 (2026-08-14) — compared retail reset entry with port bootstrap
+
+Ran the bounded static retail-reset versus port-entry audit without building
+or running. The retail core initializes a zeroed R4300 and uses
+`g_start_address=0xA4000040`; `poweron_device` precedes the PIF IPL3 HLE
+handoff. The PIF path sets CP0 status/config, parses reset context into
+`s3..s7`, sets `t3=0xA4000040`, `sp=0xA4001FF0`, and `ra=0xA4001550`, then
+leaves the reset PC at `0xA4000040` for IPL3 execution. The port's runtime
+`run_thread_function` starts the registered entry at `0x80000400` with a
+zeroed `recomp_context`, supplied stack/argument, and no equivalent PIF/IPL3
+register setup; `recomp_entrypoint` only sets `$sp=0x803FFFF0` before calling
+`main`.
+
+The side-by-side entry-state table selects H1: retail and port do not have
+equivalent reset/entry contracts. This identifies a concrete unmatched state
+boundary, but does not yet prove that a skipped register is consumed before
+overwrite by the generated game path. The next unit will census those uses.
+
+ORIGIN: independent Mupen64Plus device/PIF source and the port's runtime plus
+generated entrypoint. No mitigation, build, or runtime code change was made.

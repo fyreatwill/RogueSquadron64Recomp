@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1233 (2026-08-14).
+in the ledger. Reviewed through s1234 (2026-08-14).
 
 ## Current state
 
@@ -162,6 +162,7 @@ in the ledger. Reviewed through s1233 (2026-08-14).
 - The s1229 installed Mupen64Plus 2.6.0 front-end/core audit found the same contract outside the oracle: the console UI calls `CoreStartup`, `M64CMD_ROM_OPEN`, plugin attach, optional `M64CMD_STATE_LOAD` only for `--savestate`, then `M64CMD_EXECUTE`; it has no reset, EEPROM injection, or alternate entry command. The core does load EEPROM/SRAM through ROM database/config during ROM open, so save-media provenance remains a separate data question, not a launcher handoff. H2 is selected for the external-command hypothesis; the next boundary is whether the existing retail EEPROM file carries meaningful state. Source/config evidence only.
 - The s1232 generated/companion provenance census found no new retail-entry producer or address disagreement. `mainGameLoop` reads `D_80130B10+0x20/+0x21/+0x22` at `0x8003E07C`, `0x8003E0DC`, `0x8003E128`, and `0x8003E114`; the targeted writers remain reset/default initialization, `runIdleFramesAndLoadSaveData` (`B30=1/B31=0`), and save-state application. The companion map agrees on `mainGameLoop=0x8003DFA0`, `mainBootstrapWorker=0x80000C68`, `thread3_video_handle=0x80001088`, and `gBootConfig=0x80037560`. The bootstrap path registers `mainBootstrapWorker`, which loads `gBootConfig+4` and indirect-calls the static `mainGameLoop` pointer. H2 is selected: the missing retail transition remains outside this generated handoff. No build or run.
 - The s1233 startup-event census found no hidden state-changing route between `ROM_OPEN` and `EXECUTE`. The installed core's `ROM_OPEN` validates/copies the ROM and selects database/config settings; plugin attachment starts plugins; the oracle attaches SDL input only for a press schedule, then calls `M64CMD_EXECUTE`. `STATE_LOAD` is explicit and the wrapper's optional save/load occurs after five seconds; reset, state-slot, frame-advance, media-loader, and netplay commands are not invoked. The ROM database selects `Eeprom 4KB`, with no media/config disagreement. H2 is selected: the missing retail transition is outside the available startup/front-end contract. No build or run.
+- The s1234 static entry-state comparison selects H1 for the stable VI-320 divergence. Retail initializes a zeroed R4300, starts at `0xA4000040`, runs PIF IPL3 setup, sets CP0 status/config, parses reset context into `s3..s7`, sets `t3=0xA4000040`, `sp=0xA4001FF0`, `ra=0xA4001550`, and transfers to the game image. The port's runtime starts directly at `0x80000400`; `recomp_entrypoint` initializes only `$sp=0x803FFFF0` before calling `main`. The paths are not entry-state equivalent; no build or run.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -241,11 +242,10 @@ in the ledger. Reviewed through s1233 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. The s1231 phase-gated EEPROM comparison and s1233 startup-event census
-   passed their controls/source checks and found no persistent-media or
-   front-end command explanation for the missing retail transition. The
-   remaining boundary is reset/entry-state equivalence between retail R4300
-   startup and the port's `recomp_entrypoint`.
+1. Census the generated game-path uses of the retail-only PIF/IPL3 context
+   (`s3..s7`, `t3`, boot `sp`, and boot `ra`) and compare them with the port's
+   `recomp_context` initialization. Keep the reset-entry hypothesis open until
+   each register is classified as consumed, overwritten, or dead.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -368,6 +368,7 @@ order.
 | s1231 | Paired phase-gated retail oracle arms used the existing selected EEPROM versus an isolated same-named 512-byte zero-filled EEPROM. Both passed the whole-RDRAM control (10,000 capped writes), 11 PIF-confirmed Start press/release pairs, and VI polling; both had the same 0→320/origin `0x280` then 320/origin `0x006dd280` transitions and completed about 7,200 VI frames. H2 selected: EEPROM contents do not cause the missing retail transition. |
 | s1232 | Complete targeted generated/companion census found the expected triplet reads, only known reset/idle/save writers, and matching callback/config addresses and handoff. H2 selected: no generated producer or symbol mismatch explains the missing retail transition. No build or run. |
 | s1233 | Installed-core startup-event census found only ROM-open/config selection, plugin attach, optional scheduled SDL input, and explicit state commands before/after `EXECUTE`; ROM database selects Eeprom 4KB with no media/config disagreement. H2 selected: no available front-end command explains the missing retail transition. No build or run. |
+| s1234 | Static retail-reset versus port-entry audit found PIF IPL3 setup at `0xA4000040`, CP0/boot register initialization, and `s3..s7`, `t3`, `sp`, `ra` boot context before game entry; the port starts directly at `0x80000400` with only `$sp` initialized. H1 selected: entry-state contracts are not equivalent. No build or run. |
 
 ## Method and safety rules
 
