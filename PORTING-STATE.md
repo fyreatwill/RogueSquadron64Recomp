@@ -70431,3 +70431,36 @@ epilogue fragment and was left unchanged, as were `fake_func_8009711C`,
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `tickAndReap3DAudioVoices` at `0x80098EEC`.
+
+## Session 1436 (2026-08-15) — synchronized the tick-and-reap-3d-audio-voices symbol
+
+Performed the bounded exact-name census over `0x80098EEC..0x80098FA8`.
+
+No new soak-queue verdicts since s1435; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80098EEC`, size `0xBC`; `0x80098EEC+0xBC=0x80098FA8`. Overlay `rom_size` is `0xBC` at offset `0x00098AAC` (`0x80098EEC-0x80000440`). Generated body starts `addiu $sp, $sp, -0x20` at `0x80098EEC` and ends `jr $ra` / `nop` at `0x80098FA0` / `0x80098FA4` |
+| Generated definition | `funcs_26.c` defines `tickAndReap3DAudioVoices` at `0x80098EEC`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete `0xBC` function between independently named `mostlyMusyxFlagGatedHelper` at `0x80098E84` and generated `setMusyX3DProperties` at `0x80098FA8` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `tickAndReap3DAudioVoices = 0x80098EEC` in the compact 3D-audio list. Menu, mission, cinematic, and ignored lists do not remap `0x80098EEC`. No conflicting companion name. The `tickMusyXIfActive` comment still says `func_80098EEC (unknown)`; that is a stale comment, not a second mapping |
+| Caller evidence | Exactly 1 generated `jal 0x80098EEC` site, inside independently named `tickMusyXIfActive` (s1284), after `tickActiveSongs` and before `stopAllSynthVoices`. Zero `func_*` callers |
+| Semantic evidence | Body loads the 3D-audio list head at `0x80153414` (same head `factor5RemoveListNode` unlinks from), walks `node->next`, and when `gMusyXActiveFlag` (`0x800A0F50`) is set it `factor5MutexAcquire`s, unlinks the node (next/prev, or updates the head), copies halfword `+0xA` into word `+0x8`, and if the handle at `+0x34` is not `-1` calls independently named `flagVoiceChainForStop`. Then `factor5MutexRelease`. That is a per-frame tick-and-reap of the 3D-voice list, matching the companion name |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80098EEC`: the companion and
+generated names agree, the body is a complete function of matching size
+`0xBC`, the single `jal` caller is the independently named MusyX tick,
+and there is neither a conflicting companion name nor a size split. H2
+and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0xBC`).
+`fake_func_80097D58` remains the already-fake two-instruction epilogue
+fragment and was left unchanged, as were `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`setMusyX3DProperties` at `0x80098FA8`.
