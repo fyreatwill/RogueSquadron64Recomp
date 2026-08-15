@@ -1,12 +1,13 @@
-# NEXT work unit (s1238)
+# NEXT work unit (s1239, blocked)
 
 HYPOTHESIS-ID: retail-external-entry-boundary-closed
 
-The prior external/front-end census is complete. Do not build or run. The next
-work unit is to obtain and inspect one genuinely new retail-entry artifact: a
-frontend/launcher source or binary invocation that can perform a state-changing
-handoff not represented by the audited oracle/core contract. If no such artifact
-is available, stop and ask the human for it rather than repeating source searches.
+The prior external/front-end census is complete. Do not build or run. The
+workspace artifact check in s1238 found no genuinely new retail-entry artifact.
+The next work unit is blocked until the human supplies one frontend/launcher
+source or binary invocation, or another callable retail state source, that can
+perform a state-changing handoff not represented by the audited oracle/core
+contract.
 
 Competing hypotheses and discriminator:
 
@@ -22,7 +23,7 @@ lifecycle point, state-changing side effect, and port equivalent. A concrete
 unmatched handoff selects H1; a complete equivalent table selects H2; absent
 artifact selects H3 and requires BLOCKED.md.
 
-Exact commands:
+Exact commands after the artifact is supplied:
 
 ```
 find /path/to/new-artifact -maxdepth 3 -type f -print

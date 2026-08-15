@@ -65553,3 +65553,22 @@ change was made.
 
 ORIGIN: `tools/oracle/rs64_oracle.c`, Mupen64Plus `src/api/frontend.c`, and the
 port `recomp_entrypoint`/`start_game` path. No mitigation.
+
+## Session 1238 (2026-08-15) — checked for a new retail-entry artifact
+
+The prescribed work unit was to inspect one genuinely new frontend/launcher
+artifact and build an event table separating an unmatched state-changing
+handoff from the audited oracle/core lifecycle. A bounded workspace search
+found only `tools/oracle/rs64_oracle.c`, prior logs, and documentation; no new
+frontend source, launcher binary invocation, savestate, or callable retail
+state source was available. The artifact-backed discriminator therefore could
+not run, and no build or game run was performed.
+
+This selects H3 for the current work unit: the external retail-entry boundary
+is blocked on new ground truth, not on another untested in-tree lifecycle path.
+It rules out only the presence of a usable artifact in this workspace; it does
+not explain the retail transition itself. A human-supplied artifact is needed
+before further investigation.
+
+ORIGIN: bounded `find` over the workspace, with the audited oracle/core
+contract recorded in s1237. No mitigation.
