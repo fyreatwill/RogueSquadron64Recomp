@@ -1498,7 +1498,7 @@ functions = [
     { name = "register3DAudioListenerNode", vram = 0x8009912C, size = 0x1E4 },
     { name = "unlinkMusyXListNode", vram = 0x80099310, size = 0x84 },
     { name = "enqueueSoundInPriorityGroup", vram = 0x80099394, size = 0x198 },
-    { name = "func_8009952C", vram = 0x8009952C, size = 0x1F4 },
+    { name = "enqueueSpatialSoundInPriorityGroup", vram = 0x8009952C, size = 0x1F4 },
     { name = "func_80099720", vram = 0x80099720, size = 0x1C8 },
     { name = "func_800998E8", vram = 0x800998E8, size = 0x344 },
     { name = "func_80099C2C", vram = 0x80099C2C, size = 0x18 },
