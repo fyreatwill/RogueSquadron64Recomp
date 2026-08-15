@@ -68263,3 +68263,31 @@ only; size left at `0x2C`). `func_800927B0`, `func_80092A54`,
 No build or runtime run was justified for an exact-name census. This does
 not reopen M5 audio de-stubbing. The next adjacent generated function is the
 independently named `decodeAdpcmSampleBlock` at `0x800934D0`.
+
+## Session 1365 (2026-08-15) — synchronized the decode-adpcm-sample-block symbol
+
+Performed the bounded exact-name census over `0x800934D0..0x80093D10`.
+
+No new soak-queue verdicts since s1364; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800934D0`, size `0x840`; `0x800934D0+0x840=0x80093D10`. Overlay `rom_size` is `0x840`. Generated `jr $ra` at `0x80093D08`, delay `nop` at `0x80093D0C` |
+| Generated definition | `funcs_24.c` defines `decodeAdpcmSampleBlock` at `0x800934D0`; `funcs.h` and `recomp_overlays.inl` already use that name. First instruction is `addu $t6,$a1,$zero`; the body is a complete function ending at the next generated definition, `expandBytesToPcm16ViaTable` at `0x80093D10` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `decodeAdpcmSampleBlock = 0x800934D0`. The same file independently names the preceding `zeroAudioBufferWords` at `0x800934A4` and the following `expandBytesToPcm16ViaTable` at `0x80093D10`. The sequential `defined:true` list jumps from the unnamed resample kernels (`func_800927B0`/`func_80092A54`/`func_80092CF0`) to the fake-function block and does not remap this address. No later companion list remaps it |
+| Caller evidence | No generated `jal 0x800934D0` exists. The ROM has no literal `0x800934D0` word, so the dispatch is not a static pointer table |
+| Semantic evidence | Copies dest `$a1` into `$t6` and loads a 16-byte source block (`ld 0($a0)`, `ld 8($a0)`). Header bits index a predictor table at `0x800A1990`. The unrolled body extracts 4-bit nibbles (`andi $t2,0xF`), looks up a predictor (`sll $t1,4` + nibble), accumulates, saturates to `0x7FFF`/`-0x7FFF`, and stores 26 PCM16 halfwords. That is an ADPCM sample-block decoder, matching the independent companion name |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the body is a complete ADPCM block decoder of matching size `0x840`, and there
+is neither a conflicting companion name nor a size split. H2 and H3 are
+ruled out. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0x840`). `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C` were left unchanged.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is the
+independently named `expandBytesToPcm16ViaTable` at `0x80093D10`.
