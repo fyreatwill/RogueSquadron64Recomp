@@ -69420,3 +69420,34 @@ were left unchanged. No build or runtime run was justified for an
 exact-name census. This does not reopen M5 audio de-stubbing. The next
 adjacent generated function is the independently named
 `processSongByHandle` at `0x800966A4`.
+
+## Session 1404 (2026-08-15) — synchronized the process-song-by-handle symbol
+
+Performed the bounded exact-name census over `0x800966A4..0x80096C88`.
+
+No new soak-queue verdicts since s1403; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_800966A4`, size `0x5E4`; `0x800966A4+0x5E4=0x80096C88`. Overlay `rom_size` is `0x5E4`. Generated prologue at `0x800966A4` (`addiu $sp, $sp, -0x50`) and `jr $ra` at `0x80096C80` with delay `nop` at `0x80096C84` |
+| Generated definition | `funcs_25.c` defines `processSongByHandle` at `0x800966A4`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `playSongIfMusyXActive` at `0x80096C88` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `processSongByHandle = 0x800966A4` in the annotated MusyX song-playback block (handle mask `0x7FFFFFFF`, 8-slot table `0x80149A00` stride `0xEF8`, callers `func_80094958` / `playSongIfMusyXActive`). The sequential `defined:true` list jumps from already-synchronized `setSongChannelParamByHandle` to `isSongHandleFree` and omits this dispatcher; that omission is not a conflicting name. Menu, mission, and cinematic lists do not remap it |
+| Caller evidence | Two generated `jal 0x800966A4` sites: independently named `stepActiveSongTracks` at `0x80094B14` (companion still lists that caller as `func_80094958`; `a0=slot+0xEC8`, `a1=word slot+0xEF0`, `a2=1`) and generated `playSongIfMusyXActive` at `0x80096CBC` (`a2=0` after `factor5MutexAcquire`). The body fans out to already-named `queueAudioVoiceCmdLocked`, `quiesceSongSlotCmd`, `applySongU16ParamCmd`, `setSongParamPairCmd`, `playSongByIdLockCtl` (`0x80097AD0`), `playSongById` (`0x80097C2C`), and `factor5MutexAcquire`/`factor5MutexRelease` |
+| Semantic evidence | Masks the request word at `a0+0` with `0x7FFFFFFF` and walks the 8-slot song table at `0x80149A00` with stride `0xEF8`, skipping a slot whose byte at slot+`0xEC1` (`0x80150000-0x573F`) is set. A live slot whose word at table+0 (`0x80150000-0x6600`) matches the masked handle is selected (slot index folded with the handle high bit). Flag `0x4` at request+`0x26` copies 0x28 bytes into the selected slot's `+0xEC8` control block (`0x80150000-0x5738`) and returns the handle with bit 31 set. Otherwise it dispatches already-named song-command appliers from request flags and `a2`. Matches the companion process-by-handle dispatcher. No conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800966A4`: the companion and
+generated names agree, the body is a complete handle-to-slot walker and
+song-command dispatcher of matching size `0x5E4`, and there is neither a
+conflicting companion name nor a size split. H2 and H3 are ruled out for
+this address. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x5E4`). `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`
+were left unchanged. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is the independently named
+`playSongIfMusyXActive` at `0x80096C88`.
