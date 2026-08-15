@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1370 (2026-08-15).
+the authority for session detail. Reviewed through s1371 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1370 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x80093F18..0x80093F3C`.
+   census over the next adjacent function, `0x80093F3C..0x80093F60`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -233,6 +233,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1368 | Exact companion/generated math-primitive census synchronized `ceilDouble` at `0x80093E60`; no build or runtime run. |
 | s1369 | Exact companion/generated math-primitive census synchronized `sqrtf_recomp` at `0x80093E6C`; left `fake_func_80093E74` unchanged; no build or runtime run. |
 | s1370 | Exact companion/generated MusyX note-rate census synchronized `musyxComputeNotePlaybackRate` at `0x80093E80`; no build or runtime run. |
+| s1371 | Exact companion/generated mixer-divisor census synchronized `divideByMixerBaseFrequency` at `0x80093F18`; no build or runtime run. |
 
 ## Method and safety rules
 

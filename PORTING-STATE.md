@@ -68434,3 +68434,32 @@ TOML entry was synchronized (name only; size left at `0x98`).
 runtime run was justified for an exact-name census. This does not reopen
 M5 audio de-stubbing. The next adjacent generated function is the
 independently named `divideByMixerBaseFrequency` at `0x80093F18`.
+
+## Session 1371 (2026-08-15) — synchronized the divide-by-mixer-base-frequency symbol
+
+Performed the bounded exact-name census over `0x80093F18..0x80093F3C`.
+
+No new soak-queue verdicts since s1370; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `func_80093F18`, size `0x24`; `0x80093F18+0x24=0x80093F3C`. Overlay `rom_size` is `0x24`. Generated prologue at `0x80093F18` (`lui $t1,0x8014`) and `jr $ra` at `0x80093F34` with delay `nop` at `0x80093F38` |
+| Generated definition | `funcs_25.c` defines `divideByMixerBaseFrequency` at `0x80093F18`; `funcs.h` and `recomp_overlays.inl` already use that name. The body is a complete helper ending at the next generated definition, `scaleFixedPointByRatioA` at `0x80093F3C` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `divideByMixerBaseFrequency = 0x80093F18`. The same file independently names the preceding `musyxComputeNotePlaybackRate` at `0x80093E80` and the following `scaleFixedPointByRatioA` at `0x80093F3C`. The sequential `defined:true` list records `fake_func_80093E74` at `0x80093E74` and does not remap `0x80093F18`. No later companion list remaps it |
+| Caller evidence | Six generated `jal 0x80093F18` sites: `musyxComputeNotePlaybackRate` (`0x80093EFC`), three in `tickAudioChannel` (`0x8008C5BC`, `0x8008C5FC`, `0x8008C648`), `soundMacroOpStartPitchEnvelope` (`0x8008A89C`), and `soundMacroOpStartVibrato` (`0x8008AA64`). Callers pass a 16- or 32-bit rate word in `$a0` and consume `$v0` as a scaled quotient |
+| Semantic evidence | The body loads `MEM_W[0x801440C0]`, forms `(uint64_t)$a0 << 12`, unsigned-divides by that word, and returns the quotient in `$v0`. Companion independently documents `0x801440C0` as the tempo/mixer divisor used by `tickAudioSequencerFrame` (`(tempo × 0x7C × 0x100) / MEM_W[0x801440C0]`). `resetMusyXEngineState` writes `$a0` to that address. That is a 12-bit fixed-point divide by the mixer base frequency; no conflicting game-domain reading |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x80093F18`: the companion and
+generated names agree, the body is a complete mixer-divisor helper of matching
+size `0x24`, and there is neither a conflicting companion name nor a size
+split. H2 and H3 are ruled out for this address. The stale address-encoded
+TOML entry was synchronized (name only; size left at `0x24`).
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C` were left unchanged. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is the
+independently named `scaleFixedPointByRatioA` at `0x80093F3C`.
