@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1307 (2026-08-15).
+the authority for session detail. Reviewed through s1308 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1307 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x8008ED5C..0x8008ED6C`.
+   census over the next adjacent function, `0x8008ED6C..0x8008ED70`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence.
 2. Keep the external retail-entry boundary parked until a new independent
@@ -163,6 +163,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1305 | Exact companion/generated display-mode census synchronized `reapplyDisplayMode` at `0x8008EB5C`; no build or runtime run. |
 | s1306 | Exact companion/generated MusyX shutdown census synchronized `shutdownMusyXEngine` at `0x8008ECA4`; no build or runtime run. |
 | s1307 | Exact companion/generated MusyX wait-teardown census synchronized `musyxNoopStub` at `0x8008ED00`; no build or runtime run. |
+| s1308 | Exact companion/generated MusyX getter census synchronized `isMusyXActive` at `0x8008ED5C`; no build or runtime run. |
 
 ## Method and safety rules
 

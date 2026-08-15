@@ -66785,3 +66785,26 @@ named gate-byte teardown support synchronizing the attested name. H2 and H3
 are ruled out for this function; there is neither a partial/conflicting match
 nor an absent independent name. The stale address-encoded TOML entry was
 synchronized. No build or runtime run was justified for an exact-name census.
+
+## Session 1308 (2026-08-15) — synchronized the MusyX active-flag getter symbol
+
+Performed the bounded exact-name census over `0x8008ED5C..0x8008ED6C`.
+
+No new soak-queue verdicts since s1307; the SOAK-RESULTS tail is unchanged
+from 2026-08-14.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008ED5C`, size `0x10`; it ends exactly at the next generated function, `0x8008ED6C`. Overlay `rom_size` is `0x10` |
+| Generated definition | `funcs_23.c` defines `isMusyXActive` at `0x8008ED5C`; `funcs.h` and `recomp_overlays.inl` already use that name |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `isMusyXActive = 0x8008ED5C` |
+| Caller evidence | No generated `jal 0x8008ED5C` sites and no `0x8008ED5C` function-pointer materializations. Sibling MusyX entry points inline the same `lbu` of `0x800A0F50` rather than calling this getter |
+| Semantic evidence | Body is the four-instruction getter `lui $v0, 0x800A` / `lbu $v0, 0xF50($v0)` / `jr $ra` / `nop`. Companion independently names that byte `gMusyXActiveFlag` at `0x800A0F50` and describes this function as the one-line public getter. The same gate byte is the early-return load already used by `tickMusyXIfActive`, `shutdownMusyXEngine`, `musyxNoopStub`, and the other gated MusyX wrappers |
+| Confidence | High |
+
+The complete comparison selects H1: the companion and generated names agree,
+the `0x10` boundary is exact, and the independently named gate-byte load is
+the entire body. H2 and H3 are ruled out for this function; there is neither
+a partial/conflicting match nor an absent independent name. The stale
+address-encoded TOML entry was synchronized. No build or runtime run was
+justified for an exact-name census.
