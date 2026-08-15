@@ -1,30 +1,32 @@
-# NEXT work unit (s1236)
+# NEXT work unit (s1237)
 
-HYPOTHESIS-ID: retail-reset-context-cp0
+HYPOTHESIS-ID: retail-external-entry-boundary
 
-Run one bounded static generated/retail census of the non-GPR reset context:
-CP0 status/config, PIF reset type, and any OS reset-context memory populated by
-PIF/IPL3. Compare each field's first generated read and first write with the
-port runtime's initialization and `getOsResetType` path. Do not build or run.
+Run one bounded source census of the remaining external/front-end retail-entry
+boundary. Compare every command or lifecycle event between ROM_OPEN and
+EXECUTE in `tools/oracle/rs64_oracle.c`, the installed console frontend/core,
+and the port's `recomp_entrypoint`; classify each as a possible state-changing
+handoff or ordinary setup. Do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: a CP0/reset-context value is consumed by generated code before overwrite;
-  the direct port entry can explain the stable VI-320 divergence.
-- H2: every such value is dead or overwritten before game-visible use; the
-  remaining mismatch is outside this reset-context class.
-- H3: only host/runtime bookkeeping observes the difference, with no generated
-  consumer of CP0/reset context.
+- H1: an unaccounted front-end/core event changes retail game state before or
+  during EXECUTE; the port lacks an equivalent handoff.
+- H2: ROM_OPEN-to-EXECUTE has no hidden state-changing event; the missing
+  transition is outside the available launcher contract.
+- H3: the apparent difference is only emulator/runtime bookkeeping, with no
+  game-state handoff at all.
 
-Discriminator: one table listing each candidate field, its retail writer, first
-generated read, first generated overwrite, and consumer. A pre-overwrite game
-read selects H1; no generated read selects H2; only runtime/host reads select H3.
+Discriminator: one event table listing source location, lifecycle point,
+state-changing side effect, and port equivalent. A concrete unmatched
+state-changing event selects H1; a complete matched table selects H2; only
+host bookkeeping with no game-state side effect selects H3.
 
 Exact commands:
 
 ```
-rg -n -C 5 'CP0|cp0|status|config|reset_type|getOsResetType|osResetType|reset context|reset_context' /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device/pif /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/src/device/r4300 ../N64Recomp/RecompiledFuncs lib/N64ModernRuntime/librecomp/src src/main
-rg -n -C 5 'getOsResetType|osResetType|reset_type|CP0_STATUS|CP0_CONFIG|cp0_regs|MEM_W\([^)]*(reset|context)' ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -C 4 'ROM_OPEN|EXECUTE|STATE_LOAD|STATE_SAVE|RESET|CoreDoCommand|attach|startup|EEPROM|savestate|press' tools/oracle /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-ui-console
+rg -n -C 4 'recomp_entrypoint|start_game|load_stored_rom|M64CMD|ROM_OPEN|STATE_LOAD|reset|EEPROM' src lib/N64ModernRuntime/librecomp/src
 ```
 
-Classify every candidate field before choosing the next boundary.
+Classify every lifecycle event before choosing the next boundary.

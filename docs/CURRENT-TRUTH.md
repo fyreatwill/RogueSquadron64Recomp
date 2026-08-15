@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); detailed session records stay
-in the ledger. Reviewed through s1235 (2026-08-14).
+in the ledger. Reviewed through s1236 (2026-08-14).
 
 ## Current state
 
@@ -163,6 +163,7 @@ in the ledger. Reviewed through s1235 (2026-08-14).
 - The s1232 generated/companion provenance census found no new retail-entry producer or address disagreement. `mainGameLoop` reads `D_80130B10+0x20/+0x21/+0x22` at `0x8003E07C`, `0x8003E0DC`, `0x8003E128`, and `0x8003E114`; the targeted writers remain reset/default initialization, `runIdleFramesAndLoadSaveData` (`B30=1/B31=0`), and save-state application. The companion map agrees on `mainGameLoop=0x8003DFA0`, `mainBootstrapWorker=0x80000C68`, `thread3_video_handle=0x80001088`, and `gBootConfig=0x80037560`. The bootstrap path registers `mainBootstrapWorker`, which loads `gBootConfig+4` and indirect-calls the static `mainGameLoop` pointer. H2 is selected: the missing retail transition remains outside this generated handoff. No build or run.
 - The s1233 startup-event census found no hidden state-changing route between `ROM_OPEN` and `EXECUTE`. The installed core's `ROM_OPEN` validates/copies the ROM and selects database/config settings; plugin attachment starts plugins; the oracle attaches SDL input only for a press schedule, then calls `M64CMD_EXECUTE`. `STATE_LOAD` is explicit and the wrapper's optional save/load occurs after five seconds; reset, state-slot, frame-advance, media-loader, and netplay commands are not invoked. The ROM database selects `Eeprom 4KB`, with no media/config disagreement. H2 is selected: the missing retail transition is outside the available startup/front-end contract. No build or run.
 - The s1235 complete generated/retail register census narrows the s1234 entry-state result to H3. Retail's PIF IPL3 values in `s3..s7` and `t3` have no pre-overwrite consumer on the generated bootstrap path: `thread3_video_handle` loads its saved-register values from the video descriptor before using them, and `mainGameLoop` overwrites `s3/s4/s5/s7` before game-visible reads and writes `s6` before its first use. `t3` is absent from the path. `sp` and `ra` differ and are used for stack/return bookkeeping only. The port's `run_thread_function` zero-initializes contexts, supplies each thread stack, and `recomp_entrypoint` sets its own `$sp`; no build or run.
+- The s1236 non-GPR reset-context census selects H2 for the active VI-320 boundary. Retail's PIF reset record supplies `rom_type`, `s7`, `reset_type`, and CIC seed to IPL3, and the retail boot path sets CP0 Status/Config; the port initializes the corresponding OS globals but has no CP0 Config model. The generated bootstrap has no CP0 read/write and no caller of `getOsResetType`; the first generated CP0 Context/Status sites are later TLB/FPU support paths, not the bootstrap handoff. No reset-context value is consumed before overwrite on the generated entry path. This is supported independently by the Mupen64Plus PIF/CP0 source, the generated instruction census, and the port runtime initialization.
 - The s1198 debugger-enabled comparison passed whole-RDRAM and PIF/VI
   controls in both arms. The revised 150 ms Start presses produced the
   expected `0x10000000` PIF word and returned to zero, but both arms remained
@@ -242,11 +243,11 @@ in the ledger. Reviewed through s1235 (2026-08-14).
 
 ## Active investigation and ranked next steps
 
-1. Census generated uses of the remaining retail reset context outside GPRs:
-   CP0 status/config, reset type, and any OS reset-context memory populated by
-   PIF/IPL3. Compare first generated reads with the port's runtime initialization
-   and the `getOsResetType` path; keep the stable VI-320 boundary open only if a
-   value is consumed before overwrite.
+1. Identify the next external/front-end retail-entry boundary: the generated
+   bootstrap and reset-context classes are now closed, while the oracle/front
+   end has no alternate entry command. Use one falsifiable source census or a
+   new state-changing route; do not add runtime probes without a concrete
+   candidate and positive control.
 2. Keep audio closed unless a new independent ground-truth lead reaches a
    later audio phase and first passes whole-RDRAM controls.
 3. Revisit runtime instrumentation only after a concrete candidate exists.
@@ -338,6 +339,7 @@ order.
 | s1190–s1191 | Partial-load consumer/site rechecks classified all `do_lwl`/`do_lwr` calls and kept H3 selected. |
 | s1192 | Maintenance compaction only; no experiment or code change. |
 | s1193 | Complete `do_sdl`/`do_sdr` static census selected H3; no reachable frame writer or mitigation. |
+| s1236 | Complete CP0/PIF/reset-context census selected H2; no bootstrap consumer before overwrite. External retail-entry boundary remains open. No build or run. |
 | s1194 | Complete M4 final-operand producer-chain audit found initialized `v0` and a contiguous `v4` accumulator chain; H1 unsupported, H2 already refuted, H3 leading but numeric origin remains open. |
 | s1195 | Paired M4 port/oracle capture passed independent controls but both arms were phase-unreached; target null unevaluable. |
 | s1196 | Debugger-on/off oracle check stayed at width 320; off-mode callbacks are unavailable, so input reachability remained unevaluable. |

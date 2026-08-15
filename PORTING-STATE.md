@@ -65501,3 +65501,31 @@ the next boundary.
 ORIGIN: independent Mupen64Plus PIF source, generated funcs_0/8/17 census, and
 librecomp `run_thread_function`. No mitigation, build, or runtime code change
 was made.
+
+## Session 1236 (2026-08-14) — censused non-GPR reset context
+
+Ran the bounded generated/retail census of CP0 status/config, PIF reset type,
+and OS reset-context memory without building or running. Retail's PIF reset
+record writes `rom_type`, `s7`, `reset_type`, and CIC seed to IPL3 registers;
+the retail HLE boot path also writes CP0 Status `0x34000000` and Config
+`0x7006e463`. The port initializes `osTvType`, `osRomBase`, `osResetType`, and
+`osMemSize`, but its runtime context starts zeroed and only models CP0 Status
+through `status_reg`.
+
+The generated bootstrap contains no CP0 instruction. `getOsResetType` only
+reads `0x8000030F` and has no generated caller. The first generated CP0
+Context read is at `0x80024A20`, in a later TLB/OS path; Status reads/writes
+are likewise later FPU/OS support sites. The bootstrap's only reset-context
+memory reads are `osTvType` at `0x80000300` (used by `setViModeType`) and the
+pre-NMI path's later `0x80000300` read; no CP0 Config or reset-type read reaches
+the bootstrap handoff.
+
+The discriminator selects H2: this reset-context class has no pre-overwrite
+game consumer and does not explain the stable VI-320 divergence. It rules out
+CP0/PIF reset context as the next explanation, while leaving the external
+retail-entry boundary open. Two independent lines are the Mupen64Plus
+PIF/CP0 source and the generated/runtime census.
+
+ORIGIN: independent Mupen64Plus PIF/CP0 source, generated funcs_0/4/7 census,
+and librecomp `init`/`run_thread_function`. No mitigation, build, or runtime
+code change was made.
