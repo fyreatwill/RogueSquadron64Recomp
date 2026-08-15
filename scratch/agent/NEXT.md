@@ -1,13 +1,13 @@
-# NEXT work unit (s1289)
+# NEXT work unit (s1290)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent generated
-function, `0x8008DD50..0x8008DD60`. Do not build or run. Record its address,
-size, generated definition, companion name/source, caller or semantic
-evidence, and confidence before editing. Synchronize only an exact independent
-name in `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
-ambiguous entries unchanged.
+function, `0x8008DD60..0x8008E0B0`. Do not build or run. Record its address,
+size, generated definition, companion name/source, caller or semantic evidence,
+and confidence before editing. Synchronize only an exact independent name in
+`syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
+entries unchanged.
 
 Competing hypotheses and discriminator:
 
@@ -19,13 +19,13 @@ Competing hypotheses and discriminator:
 
 The complete comparison table is the discriminator: an exact companion name
 with matching generated/TOML size and semantic or caller evidence selects H1;
-an incomplete or conflicting match selects H2; and no independent name
-selects H3.
+an incomplete or conflicting match selects H2; and no independent name selects
+H3.
 
 Commands:
 
 ```
-rg -n -C 5 '8008DD50|8008DD60' ../rogue_squadron64/symbol_files/main_overlay.txt
-rg -n -C 4 '8008DD50|8008DD60' ../N64Recomp/RecompiledFuncs/funcs_23.c
-rg -n -C 3 '8008DD50|8008DD60' syms/rogue_squadron.syms.toml
+rg -n -C 5 '8008DD60|8008E0B0' ../rogue_squadron64/symbol_files/main_overlay.txt
+rg -n -C 4 '8008DD60|8008E0B0' ../N64Recomp/RecompiledFuncs/funcs_23.c
+rg -n -C 3 '8008DD60|8008E0B0' syms/rogue_squadron.syms.toml
 ```

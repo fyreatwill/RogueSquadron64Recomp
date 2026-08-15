@@ -1341,7 +1341,7 @@ functions = [
     { name = "stopAllSynthVoices", vram = 0x8008DBF4, size = 0x12C },
     { name = "getMusyXChannelSlotByte", vram = 0x8008DD20, size = 0x18 },
     { name = "setMusyXChannelSlotByte", vram = 0x8008DD38, size = 0x18 },
-    { name = "func_8008DD50", vram = 0x8008DD50, size = 0x10 },
+    { name = "setMusyXVoiceTickGate", vram = 0x8008DD50, size = 0x10 },
     { name = "func_8008DD60", vram = 0x8008DD60, size = 0x350 },
     { name = "func_8008E0B0", vram = 0x8008E0B0, size = 0x70 },
     { name = "func_8008E120", vram = 0x8008E120, size = 0xA4 },

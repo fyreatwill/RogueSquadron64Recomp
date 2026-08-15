@@ -66361,3 +66361,23 @@ get/set access to the same 16-byte table. H2 and H3 are ruled out; neither
 entry is partial, conflicting, or unsupported. The two stale address-encoded
 TOML entries were synchronized. No build or runtime run was justified for an
 exact-name census.
+
+## Session 1289 (2026-08-15) — synchronized the MusyX voice-tick gate symbol
+
+Performed the bounded exact-name census over `0x8008DD50..0x8008DD60`.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry `0x8008DD50`, size `0x10`; it ends exactly at the next generated function, `0x8008DD60` |
+| Generated definition | `funcs_23.c` defines `setMusyXVoiceTickGate` at `0x8008DD50` |
+| Independent companion source | `rogue_squadron64/symbol_files/main_overlay.txt` maps `setMusyXVoiceTickGate = 0x8008DD50` |
+| Caller evidence | The sole generated caller, `applyVolumeSettingsToMixer`, passes settings byte `+0x13` masked with `0x80` after applying music, SFX, and speech volume |
+| Semantic evidence | The four-instruction body stores `a0` to byte `0x801483C8`; the exact voice-tick role comes from the independent companion mapping |
+| Confidence | High for the exact synchronized name; the destination byte remains unnamed in the companion source |
+
+The complete comparison selects H1: the exact companion name and generated
+definition agree, the `0x10` size reaches the next function exactly, and the
+sole caller supplies a persisted audio-settings gate bit. H2 and H3 are ruled
+out; the mapping is neither partial/conflicting nor absent. The stale
+address-encoded TOML entry is therefore synchronized. No build or runtime run
+was justified for an exact-name census.
