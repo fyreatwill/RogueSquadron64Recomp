@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1442 (2026-08-15).
+the authority for session detail. Reviewed through s1443 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1442 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x800998E8..0x80099C2C`.
+   census over the next adjacent function, `0x80099C2C..0x80099C44`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -311,6 +311,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1440 | Exact companion/generated priority-enqueue census synchronized `enqueueSoundInPriorityGroup` at `0x80099394`; no build or runtime run. |
 | s1441 | Exact companion/generated spatial-enqueue census synchronized `enqueueSpatialSoundInPriorityGroup` at `0x8009952C`; no build or runtime run. |
 | s1442 | Exact companion/generated priority-dispatch census synchronized `dispatchPrioritizedSoundQueue` at `0x80099720`; no build or runtime run. |
+| s1443 | Exact companion/generated 3D-frame census synchronized `update3DAudioFrame` at `0x800998E8`; no build or runtime run. |
 
 ## Method and safety rules
 
