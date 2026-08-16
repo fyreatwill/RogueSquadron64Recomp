@@ -80848,3 +80848,39 @@ runtime run required.
 Next census: `npcWingmanStateNoop` / `func_800DA360` at
 `0x800DA360` (size `0x8`). Last-15 titles after s1736 still include
 s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
+
+## Session 1737 (2026-08-16) — synchronized the npcWingmanStateNoop symbol
+
+Exact generated-symbol census for `0x800DA360` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1728's
+maintenance compaction, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 6010; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanStateNoop = 0x800DA360` with comment "wingman state slot that no-ops/always-succeeds (returns 1)". Previous contiguous neighbor `npcWingmanState5 = 0x800DA234`; next contiguous neighbor `npcWingmanState6 = 0x800DA368`. `getNpcWingmanStateData` case 6 returns `0x800E0000 + -0x5CA0 = 0x800DA360` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanStateNoop` at VRAM `0x800DA360`; two-instruction body `jr $ra` / delay-slot `addiu $v0, $zero, 0x1`. Sets `$v0 = 1` and returns. Previous mission function is `npcWingmanState5` at `0x800DA234` (last insn `0x800DA35C`); next is `npcWingmanState6` at `0x800DA368`. `funcs.h` already declares the human name. No generated `jal npcWingmanStateNoop` — dispatch is the `getNpcWingmanStateData` case-6 pointer |
+| Body semantics | Matches the companion "no-ops/always-succeeds (returns 1)" mapping exactly. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800DA360", vram = 0x800DA360, size = 0x8 }` — size matches `0x800DA368 - 0x800DA360` |
+| Overlay section 4 | `{ .func = npcWingmanStateNoop, .offset = 0x00035230, .rom_size = 0x00000008 }` under `section_4_ovl_mission_funcs` (`0x800DA360 - 0x800A5130 = 0x35230`; `0x35104 + 0x12C = 0x35230`; `0x35230 + 0x8 = 0x35238` matches next `npcWingmanState6`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DA360`. No leftover `func_800DA360` in generated headers or overlay INL; no companion `D_800DA360` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated always-succeed noop body,
+previous (`npcWingmanState5` / `0x800DA234`) and next
+(`npcWingmanState6` / `0x800DA368`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcWingmanStateNoop`, and only the TOML name was a stale
+`func_800DA360` placeholder. Corrected TOML to `npcWingmanStateNoop`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcWingmanState6` / `func_800DA368` at
+`0x800DA368` (size `0xD8`). Last-15 titles after s1737 still include
+s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.

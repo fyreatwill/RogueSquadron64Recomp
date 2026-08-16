@@ -1835,7 +1835,7 @@ functions = [
     { name = "npcWingmanState3", vram = 0x800DA064, size = 0xD8 },
     { name = "npcWingmanState4", vram = 0x800DA13C, size = 0xF8 },
     { name = "npcWingmanState5", vram = 0x800DA234, size = 0x12C },
-    { name = "func_800DA360", vram = 0x800DA360, size = 0x8 },
+    { name = "npcWingmanStateNoop", vram = 0x800DA360, size = 0x8 },
     { name = "func_800DA368", vram = 0x800DA368, size = 0xD8 },
     { name = "func_800DA440", vram = 0x800DA440, size = 0x398 },
     { name = "func_800DA7D8", vram = 0x800DA7D8, size = 0x1D8 },
