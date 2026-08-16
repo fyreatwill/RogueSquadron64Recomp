@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1663 (2026-08-16).
+the authority for session detail. Reviewed through s1664 (2026-08-16).
 
 ## Current state
 
@@ -65,8 +65,8 @@ the authority for session detail. Reviewed through s1663 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   generated `initNpcActorFromSpawnMessage` / TOML `func_800C7DC0` at
-   `0x800C7DC0` (size `0x238`). Compare companion mapping if any, generated
+   generated `playNpcStateChangeEffect` / TOML `func_800C7FF8` at
+   `0x800C7FF8` (size `0x180`). Compare companion mapping if any, generated
    body, previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (likely a stale-TOML
    correction if the generated body already carries the human name). The
@@ -76,10 +76,10 @@ the authority for session detail. Reviewed through s1663 (2026-08-16).
    synchronized `setHudFlagBit40AndStoreArg`; s1651 confirmed
    `calculateDatItemDistanceToPlayer`; s1652–s1655 synchronized DAT-item
    helpers after stale TOML corrections; s1656–s1657 confirmed health
-   getters; s1658–s1663 synchronized DAT-effect and cue wrappers
-   (`despawnEffectOnNamedDatItem` through `triggerSoundCueByType`) after
-   stale TOML corrections. s1650 was the mandatory retail-entry revisit
-   (post-B A/Start/Z). The full s1590–s1649 archive is in
+   getters; s1658–s1664 synchronized DAT-effect, cue, and NPC-init wrappers
+   (`despawnEffectOnNamedDatItem` through `initNpcActorFromSpawnMessage`)
+   after stale TOML corrections. s1650 was the mandatory retail-entry
+   revisit (post-B A/Start/Z). The full s1590–s1649 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
@@ -199,6 +199,7 @@ ownership.
 | s1661 | Synchronized `delegateToLevelStageTick` (`0x800C7D60`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EF770` → `triggerStageMusicForNamedDatItem`), exact `0x800C7D44`/`0x800C7D7C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D7C` / `triggerNamedAssetCue`. |
 | s1662 | Synchronized `triggerNamedAssetCue` (`0x800C7D7C`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EF95C` → `triggerStageAmbientForNamedDatItem`), exact `0x800C7D60`/`0x800C7D98` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D98` / `triggerSoundCueByType`. |
 | s1663 | Synchronized `triggerSoundCueByType` (`0x800C7D98`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EFCD4` → `initSoundCueRequest`), exact `0x800C7D7C`/`0x800C7DB4` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7DC0` / `initNpcActorFromSpawnMessage`. |
+| s1664 | Synchronized `initNpcActorFromSpawnMessage` (`0x800C7DC0`, size `0x238`) after companion mission mapping, live generated NPC-actor-from-spawn-message body (ends `initObjectAnimSubstruct`), exact `0x800C7DB4`/`0x800C7FF8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7FF8` / `playNpcStateChangeEffect`. |
 
 ## Method and safety rules
 

@@ -78269,3 +78269,30 @@ boundaries and sizes. Corrected the stale TOML placeholder to
 `triggerSoundCueByType`. No build or runtime behavior conclusion was
 made. The next sweep candidate is `func_800C7DC0` / generated
 `initNpcActorFromSpawnMessage` (`0x800C7DC0`, size `0x238`).
+
+## Session 1664 (2026-08-16) — synchronized the initNpcActorFromSpawnMessage symbol
+
+Exact generated-symbol census for `0x800C7DC0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1650's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `initNpcActorFromSpawnMessage = 0x800C7DC0`; next `playNpcStateChangeEffect = 0x800C7FF8`; prior note that `func_800C7DC0` was deleted as a duplicate of this name |
+| Generated `funcs_36.c` | `RECOMP_FUNC void initNpcActorFromSpawnMessage` at VRAM `0x800C7DC0`; returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800C7FF4`; next function `playNpcStateChangeEffect` at `0x800C7FF8` |
+| Body semantics | Loads spawn-message actor from `a0+4`, initializes actor fields (`0x72`/`0x74`/`0x78`/`0x7C`/`0x80`/`0x84`), branches on actor state at `0x70`, and ends with `initObjectAnimSubstruct` — NPC-actor-from-spawn-message initializer |
+| TOML (before) | `{ name = "func_800C7DC0", vram = 0x800C7DC0, size = 0x238 }` — size matches `0x800C7FF8 - 0x800C7DC0` |
+| Overlay section 4 | `{ .func = initNpcActorFromSpawnMessage, .offset = 0x00022C90, .rom_size = 0x00000238 }` under `section_4_ovl_mission_funcs` |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`fake_func_800C7DB4` / `0x800C7DB4`) and next (`playNpcStateChangeEffect` /
+`0x800C7FF8`) boundaries, and TOML size already agreed; only the TOML name was
+a stale `func_800C7DC0` placeholder. Corrected TOML to
+`initNpcActorFromSpawnMessage`. No build or runtime run required.
+
+Next candidate: `func_800C7FF8` / generated `playNpcStateChangeEffect` at
+`0x800C7FF8` (size `0x180`).

@@ -1766,7 +1766,7 @@ functions = [
     { name = "triggerNamedAssetCue", vram = 0x800C7D7C, size = 0x1C },
     { name = "triggerSoundCueByType", vram = 0x800C7D98, size = 0x1C },
     { name = "fake_func_800C7DB4", vram = 0x800C7DB4, size = 0xC },
-    { name = "func_800C7DC0", vram = 0x800C7DC0, size = 0x238 },
+    { name = "initNpcActorFromSpawnMessage", vram = 0x800C7DC0, size = 0x238 },
     { name = "func_800C7FF8", vram = 0x800C7FF8, size = 0x180 },
     { name = "func_800C8178", vram = 0x800C8178, size = 0x38C },
     { name = "func_800C8504", vram = 0x800C8504, size = 0x474 },
