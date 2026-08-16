@@ -1,11 +1,11 @@
-# NEXT work unit (s1556)
+# NEXT work unit (s1557)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1555 synchronized `updatePlayerCraftPhysics` at `0x800B1BE8`.
+s1556 synchronized `applyCraftCapabilityFlags` at `0x800B36FC`.
 Resume the generated-symbol renaming sweep. Perform exactly one
 bounded exact-name census over the next adjacent generated function,
-`0x800B36FC..0x800B37C0`.
+`0x800B37C0..0x800B3A10`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -31,22 +31,22 @@ table, not a function), `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function), and
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler). The generated entry at this address
-is already `applyCraftCapabilityFlags`; the companion
-mission list maps `applyCraftCapabilityFlags = 0x800B36FC` with
-comment "ORs capability bits into the per-player craft record".
-TOML is still `func_800B36FC` (size `0xC4`, ends at generated
-`initPlayerCraftMovementMode` / TOML `func_800B37C0` at
-`0x800B37C0`). Overlay `rom_size` is `0xC4` at offset
-`0x0000E5CC`. Confirm the complete live function, matching
-size, and caller/semantic evidence before synchronizing the
-TOML name. Independently named `updatePlayerCraftPhysics`
-at `0x800B1BE8` (`rom_size` `0x1B14`) ends at this address.
-Last live instruction pair is `0x800B37B8`/`0x800B37BC`
-(`jr $ra` / `sh $v1, 0x0($a0)`). Menu-overlay
+is already `initPlayerCraftMovementMode`; the companion
+mission list maps `initPlayerCraftMovementMode = 0x800B37C0` with
+comment "10 callers, all playerXxxInit — sets up flight-vs-ground
+state from craft flags". TOML is still `func_800B37C0` (size
+`0x250`, ends at generated `tryPlaySpatialSoundWithGates` / TOML
+`func_800B3A10` at `0x800B3A10`). Overlay `rom_size` is `0x250`
+at offset `0x0000E690`. Confirm the complete live function,
+matching size, and caller/semantic evidence before synchronizing
+the TOML name. Independently named `applyCraftCapabilityFlags`
+at `0x800B36FC` (`rom_size` `0xC4`) ends at this address.
+Last live instruction pair is `0x800B3A08`/`0x800B3A0C`
+(`jr $ra` / `addiu $sp, $sp, 0x20`). Menu-overlay
 `tickFormatMessageWorker` at `0x800B3650` occupies overlapping
-VRAM from `.ovl.menu` across this body (`rom_size` `0x1D4`, ends
-`0x800B3824`), and generated `func_800B3824` starts at menu VRAM
-`0x800B3824`; neither is a mission size split.
+VRAM from `.ovl.menu` across the start of this body (`rom_size`
+`0x1D4`, ends `0x800B3824`), and generated `func_800B3824`
+starts at menu VRAM `0x800B3824`; neither is a mission size split.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -72,7 +72,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800B36FC\|800B37C0\|applyCraftCapabilityFlags' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B36FC\|800B37C0\|applyCraftCapabilityFlags' ../N64Recomp/RecompiledFuncs/funcs_30.c
-grep -n -C 3 '800B36FC\|800B37C0' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B37C0\|800B3A10\|initPlayerCraftMovementMode' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B37C0\|800B3A10\|initPlayerCraftMovementMode' ../N64Recomp/RecompiledFuncs/funcs_30.c
+grep -n -C 3 '800B37C0\|800B3A10' syms/rogue_squadron.syms.toml
 ```

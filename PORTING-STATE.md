@@ -74976,3 +74976,50 @@ offset `0x0000E5CC`; live body ends at generated
 `initPlayerCraftMovementMode` / TOML `func_800B37C0` at
 `0x800B37C0`). Independently named `updatePlayerCraftPhysics` at
 `0x800B1BE8` (`rom_size` `0x1B14`) ends at `0x800B36FC`.
+
+## Session 1556 (2026-08-16) — synchronized the apply-craft-capability-flags symbol
+
+Performed the bounded exact-name census over `0x800B36FC..0x800B37C0`.
+
+No new soak-queue verdicts since s1555; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit) and s1553 (maintenance compaction), so the every-15-sessions
+sweep-revisit rule did not fire. CURRENT-TRUTH is 16,460 bytes at session
+start, so Step 0 did not trigger a maintenance iteration. M5 remains closed
+and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B36FC`, size `0xC4`; `0x800B36FC+0xC4=0x800B37C0`. Overlay `.ovl.mission` entry `rom_size` is `0xC4` at offset `0x0000E5CC` (`0x800B36FC-0x800A5130`). Live body is independently `0xC4` and meets generated `initPlayerCraftMovementMode` at `0x800B37C0` |
+| Generated definition | `funcs_30.c` defines `applyCraftCapabilityFlags` at `0x800B36FC`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000E5CC`, `rom_size 0x000000C4`). The live mission body is a complete `0xC4` function: `lui $a3, 0x8011` / `addiu $a3, $a3, -0x4058` builds table `0x8011BFA8`, `lui $a2, 0x8011` / `addiu $a2, $a2, -0x41E8` builds table `0x8011BE18`, `lw $v1, 0xB8($a0)` loads the player index, then four `lhu`/`or`/`sh` passes OR halfwords from the 36-byte craft record (offsets `0`, `4`, `2`, `0x1E`) into the per-player u16 at `0x8011BFA8+index*2`. Last live instruction pair is `0x800B37B8`/`0x800B37BC` (`jr $ra` / `sh $v1, 0x0($a0)`). Next generated mission entry is already `initPlayerCraftMovementMode` at `0x800B37C0`. Independently named `updatePlayerCraftPhysics` at `0x800B1BE8` (`rom_size` `0x1B14`) ends at this address. Menu-overlay TOML `func_800B3650` (`tickFormatMessageWorker`, `rom_size` `0x1D4`, ends `0x800B3824`) occupies overlapping VRAM from `.ovl.menu` across this body and is not a split of this body. Generated `func_800B3824` starts at menu VRAM `0x800B3824` and is not this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `applyCraftCapabilityFlags = 0x800B36FC` with comment "ORs capability bits into the per-player craft record". The same mission list independently names the adjacent functions `updatePlayerCraftPhysics` at `0x800B1BE8` and `initPlayerCraftMovementMode` at `0x800B37C0`, and independently names the one generated caller. Companion `docs/mips_to_c/ctx.c` has no `800B36FC` type. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B36FC`. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B36FC` alias |
+| Caller evidence | 1 retail `jal` encoding `0x0C02CDBF` at file `0xB4578` (`0x800B3978`); zero `j` encodings and zero absolute `0x800B36FC` pointer words. The generated site is one named `applyCraftCapabilityFlags(...)` call from independently named `initPlayerCraftMovementMode` (`0x800B37C0`). The site is reached with `$a0` still the player/craft pointer (`$s0=$a0` in that function's prologue; the delay-slot `sw` writes `0x8011CA1C` and does not replace `$a0`). Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B42FC` (`0x0A5D30+(0x800B36FC-0x800A5130)`) are `0x3C078011` (`lui $a3, 0x8011`), `0x24E7BFA8` (`addiu $a3, $a3, -0x4058`), `0x3C068011` (`lui $a2, 0x8011`), `0x8C8300B8` (`lw $v1, 0xB8($a0)`). Last pair file `0x0B43B8`/`0x0B43BC` is `0x03E00008`/`0xA4830000` (`jr $ra` / `sh $v1, 0x0($a0)`). Next start file `0x0B43C0` is `0x27BDFFE0` (`addiu $sp, $sp, -0x20`, `initPlayerCraftMovementMode` prologue). Preceding epilogue file `0x0B42F4`/`0x0B42F8` is `0x03E00008`/`0x27BD01D8` (`updatePlayerCraftPhysics` `jr $ra` / `addiu $sp, $sp, 0x1D8`). The generated body performs exactly four capability-bit OR stores and no other calls. Menu occupant at the same VRAM (file `0x11A89C`) starts `0x00000000` (`nop` interior of `tickFormatMessageWorker`); that function's own start at file `0x11A7F0` is `0x27BDFF40` (`addiu $sp, $sp, -0xC0`). Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B36FC` is past that occupant; file `0x145B4C` is `0x8A31839F`. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B36FC`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0xC4`, the one ROM `jal` caller is independently named, the body
+ORs capability bits from the per-player craft record into the per-player
+u16 table, the overlapping menu occupant is a different overlay, and
+there is neither a conflicting companion name nor a mission size split.
+H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0xC4`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`initPlayerCraftMovementMode` at `0x800B37C0` (TOML still
+`func_800B37C0`, size `0x250`; overlay `rom_size` is `0x250` at
+offset `0x0000E690`; live body ends at generated
+`tryPlaySpatialSoundWithGates` / TOML `func_800B3A10` at
+`0x800B3A10`). Independently named `applyCraftCapabilityFlags` at
+`0x800B36FC` (`rom_size` `0xC4`) ends at `0x800B37C0`.

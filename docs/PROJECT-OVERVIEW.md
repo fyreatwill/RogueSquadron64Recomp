@@ -2855,7 +2855,7 @@ summary. Homebrew Rice later-phase results (s1496 hangar, s1512 M4 DMEM `r9`,
 s1528 leave-hangar 640, s1544 640 still menu-overlay) live in
 `CURRENT-TRUTH.md` and superseded the dummy-video 320-only parking.
 
-## 33. Generated-symbol renaming sweep (s1240–s1555)
+## 33. Generated-symbol renaming sweep (s1240–s1556)
 
 Migrated from `CURRENT-TRUTH.md` during the s1553 maintenance pass. Full
 per-session comparison tables remain in `PORTING-STATE.md`. Method: one
@@ -2865,9 +2865,9 @@ caller or semantic evidence agree (H1). Leave address-encoded, already-fake,
 or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
 justified for an exact-name census.
 
-**Cursor.** Next census is `applyCraftCapabilityFlags` at
-`0x800B36FC` (TOML still `func_800B36FC`, size `0xC4`). Last H1 sync is
-`updatePlayerCraftPhysics` at `0x800B1BE8` (s1555). About 1,548
+**Cursor.** Next census is `initPlayerCraftMovementMode` at
+`0x800B37C0` (TOML still `func_800B37C0`, size `0x250`). Last H1 sync is
+`applyCraftCapabilityFlags` at `0x800B36FC` (s1556). About 1,548
 placeholder `func_0x...` names remained when counted at s1487.
 
 **Covered ranges (H1 unless noted).**
@@ -2892,6 +2892,7 @@ placeholder `func_0x...` names remained when counted at s1487.
 | s1547–s1552 | Mission overlay: `findNearestSceneObjectToPoint` through `computeOrientedTransformFromQuat` at `0x800B1024`. |
 | s1554 | Mission overlay: `tickCinematicObjectStateMachine` at `0x800B13E0` (size `0x808`). |
 | s1555 | Mission overlay: `updatePlayerCraftPhysics` at `0x800B1BE8` (size `0x1B14`). |
+| s1556 | Mission overlay: `applyCraftCapabilityFlags` at `0x800B36FC` (size `0xC4`). |
 
 **Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
 `func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,
