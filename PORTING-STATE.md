@@ -74634,3 +74634,49 @@ live body ends at generated `spawnSceneDebrisAndEffectCluster` / TOML
 `func_800B01E4` at `0x800B01E4`). Independently named
 `findNearestSceneObjectToPoint` at `0x800AFCF4` (`rom_size` `0x158`)
 ends at `0x800AFE4C`.
+
+## Session 1548 (2026-08-15) — synchronized the load-player-start-position symbol
+
+Performed the bounded exact-name census over `0x800AFE4C..0x800B01E4`.
+
+No new soak-queue verdicts since s1547; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit), so the every-15-sessions sweep-revisit rule did not fire.
+CURRENT-TRUTH is 59051 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AFE4C`, size `0x398`; `0x800AFE4C+0x398=0x800B01E4`. Overlay `.ovl.mission` entry `rom_size` is `0x398` at offset `0x0000AD1C` (`0x800AFE4C-0x800A5130`). Live body is independently `0x398` and meets generated `spawnSceneDebrisAndEffectCluster` at `0x800B01E4` |
+| Generated definition | `funcs_29.c` defines `loadPlayerStartPosition` at `0x800AFE4C`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000AD1C`, `rom_size 0x00000398`). The live mission body is a complete `0x398` function: save `$a0` as the out-struct in `$s1`, treat `$a1` as a skip flag, optionally call independently named `findNearestSceneObjectToPoint`, and on miss (or when the skip flag is clear) call independently named `getLevelDatItemByName` with the mission-overlay string at `0x800A558C` (`"player_StartPosition"` at file `0x0A618C`), then copy that level-dat item's +0x10/+0x14/+0x18 position into the out-struct and finish with independently named `extractOrthonormalFrameFromStruct`. Last live instruction pair is `0x800B01DC`/`0x800B01E0` (`jr $ra` / `addiu $sp, $sp, 0x30`). Next generated mission entry is already `spawnSceneDebrisAndEffectCluster` at `0x800B01E4`. Independently named `findNearestSceneObjectToPoint` at `0x800AFCF4` (`rom_size` `0x158`) ends at this address. Menu-overlay TOML `func_800AF6AC` (`handleCraftSelectInput`, `rom_size` `0xA9C`, ends `0x800B0148`) plus `func_800B0148` (`spawnOrientedEffectWithEasedSpin`, `rom_size` `0x508`, ends `0x800B0650`) occupy overlapping VRAM from `.ovl.menu` and are not a split of this body. Cinematic-overlay `fake_func_800AF6A8` (`rom_size` `0x1298`) is the leftover cinematic data lump covering this VRAM from `.ovl.cinematic` |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `loadPlayerStartPosition = 0x800AFE4C`. The same mission list independently names the adjacent functions `findNearestSceneObjectToPoint` at `0x800AFCF4` and `spawnSceneDebrisAndEffectCluster` at `0x800B01E4`. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800AFE4C`. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` still carries a stale `func_800AFE4C` alias and is not an independent name |
+| Caller evidence | 22 retail `jal` encodings `0x0C02BF93` and zero `j` or absolute `0x800AFE4C` pointer words. Generated sites are 21 named `loadPlayerStartPosition(...)` calls plus one `LOOKUP_FUNC(0x800AFE4C)` from independently named `destroyEffectObjectAndAssets` at `0x80052E6C` (file `0x053A6C`). Other independently named callers include `playerSnowSpeederUpdate` at `0x800ACFF4`, `playerXwingUpdate` at `0x800B556C`, and `tickMissionTransitionAndTeardown` at `0x800FB5B0`. The companion comment's "23 callers" is not an independent extra site; the same-run ROM count is 22. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B0A4C` (`0x0A5D30+(0x800AFE4C-0x800A5130)`) are `0x27BDFFD0` (`addiu $sp, $sp, -0x30`), `0xAFB10024` (`sw $s1, 0x24($sp)`), `0x00808821` (`addu $s1, $a0, $zero`), `0x00A02021` (`addu $a0, $a1, $zero`), `0xAFBF0028` (`sw $ra, 0x28($sp)`). Last pair file `0x0B0DDC`/`0x0B0DE0` is `0x03E00008`/`0x27BD0030` (`jr $ra` / `addiu $sp, $sp, 0x30`). Next start file `0x0B0DE4` is `0x27BDFF50` (`addiu $sp, $sp, -0xB0`, `spawnSceneDebrisAndEffectCluster` prologue). Preceding epilogue file `0x0B0A44`/`0x0B0A48` is `0x03E00008`/`0x27BD0048` (`findNearestSceneObjectToPoint` `jr $ra` / `addiu $sp, $sp, 0x48`). Same-run `jal 0x80047B48` at file `0x0B0A7C` is `0x0C011ED2` (`getLevelDatItemByName`); delay slot `0x2484558C` (`addiu $a0, $a0, 0x558C`) forms `0x800A558C`, whose file `0x0A618C` is the ASCII string `player_StartPosition`. Menu occupant at the same VRAM (file `0x116FEC`) starts `0x24030001` (different overlay). Cinematic occupant (file `0x14229C`) is `0x00000000`. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1546 function file `0x141AB8` is still `0x3C02800B`, s1545 function file `0x141AAC` is still `0x8C82000C`, s1543 function file `0x141A5C` is still `0x27BDFFE8`, s1542 function file `0x1419A0` is still `0x3C02800B`, s1541 function file `0x141990` is still `0x3C02800B`, and s1540 initializer start `0x141858` is still `0x27BDFFD8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AFE4C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x398`, 22 ROM `jal` callers include independently named player-craft
+updates and a mission-transition teardown, the delay-slot string pointer
+is independently the level-dat key `player_StartPosition`, the overlapping
+menu and cinematic occupants are different overlays, and there is neither
+a conflicting companion name nor a mission size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x398`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`spawnSceneDebrisAndEffectCluster` at `0x800B01E4` (TOML still
+`func_800B01E4`, size `0x66C`; overlay `rom_size` is `0x66C` at
+offset `0x0000B0B4`; live body ends at generated
+`spawnNpcDestructionDebris` / TOML `func_800B0850` at `0x800B0850`).
+Independently named `loadPlayerStartPosition` at `0x800AFE4C`
+(`rom_size` `0x398`) ends at `0x800B01E4`.
