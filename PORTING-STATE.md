@@ -76358,3 +76358,33 @@ generated function body, and caller. Updated only the TOML placeholder to
 `computeTieInterceptorTransform`; no mitigation, build, or runtime change was
 made. The next bounded candidate is `func_800BC290`, independently named
 `triggerTieInterceptorEffect`, with size `0x268`.
+
+## Session 1595 (2026-08-16) — synchronized the triggerTieInterceptorEffect symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only older verdicts already represented in the ledger. The
+mandatory 15-title check showed that the recent history was not entirely
+symbol-sweep work because s1585 was the required retail-entry revisit, so this
+iteration continued the bounded generated-symbol sweep. No build or runtime
+run was needed.
+
+The work unit censused `0x800BC290..0x800BC4F8` using the companion mission
+symbol list, generated definition and callers, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `triggerTieInterceptorEffect = 0x800BC290`; `computeTieInterceptorOrientation = 0x800BC4F8` is the next companion boundary. |
+| Generated definition and callers | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `triggerTieInterceptorEffect` at `0x800BC290`; `playerTieInterceptorUpdate` calls it six times at `0x800BC5F8`, `0x800BC608`, `0x800BC648`, `0x800BC654`, `0x800BC66C`, and `0x800BC688`. |
+| Span and overlay table | The TOML placeholder had size `0x268`; `recomp_overlays.inl` records `triggerTieInterceptorEffect` at offset `0x17160` with ROM size `0x268`, followed by `computeTieInterceptorOrientation` at `0x800BC4F8`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and six generated callers. Updated only the TOML
+placeholder to `triggerTieInterceptorEffect`; no mitigation, build, or runtime
+change was made. The next bounded candidate is `func_800BC4F8`, independently
+named `computeTieInterceptorOrientation`, with size `0x318`.
