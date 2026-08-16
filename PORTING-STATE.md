@@ -73485,3 +73485,44 @@ ends at independently named generated `freeCutsceneResources` / TOML
 `func_800AEB38` at `0x800AEB38`). Independently named
 `cuts_0058_bubble_sort` at `0x800AEA28` (`rom_size` `0x108`) ends at
 `0x800AEB30`.
+
+## Session 1522 (2026-08-15) — synchronized the cinematic-teardown noop-handler symbol
+
+Performed the bounded exact-name census over `0x800AEB30..0x800AEB38`.
+
+No new soak-queue verdicts since s1521; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AEB30`, size `0x8`; `0x800AEB30+0x8=0x800AEB38`. Overlay `.ovl.cinematic` entry `rom_size` is `0x8` at offset `0x00009A00` (`0x800AEB30-0x800A5130`). Live body is independently `0x8` and meets independently named `freeCutsceneResources` at `0x800AEB38` |
+| Generated definition | `funcs_29.c` defines `noopHandler_800AEB30` at `0x800AEB30`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x00009A00`, `rom_size 0x00000008`). The live cinematic body is a complete `0x8` function: `jr $ra` / `nop`. Last live instruction pair is `0x800AEB30`/`0x800AEB34`. Next generated cinematic function is independently named `freeCutsceneResources`. Independently named `cuts_0058_bubble_sort` at `0x800AEA28` (`rom_size` `0x108`) ends at this address. Menu-overlay `hangarLoadShadows` at `0x800AE9E0` (`rom_size` `0xE0`, ends `0x800AEAC0`) does not reach this body; menu `initCraftSelectVectors` at `0x800AEAF0` (`rom_size` `0x58`, ends `0x800AEB48`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `playRandomCutsceneVoiceLine` / TOML `func_800AE960` at `0x800AE960` (size `0x398`, ends `0x800AECF8`) occupies overlapping VRAM from `.ovl.mission` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `noopHandler_800AEB30 = 0x800AEB30` (comment: `pure jr-ra stub`). Menu, mission, main, libultra, ignored, and zlib lists do not remap `0x800AEB30`. The same cinematic list independently names the adjacent functions `cuts_0058_bubble_sort` at `0x800AEA28` and `freeCutsceneResources` at `0x800AEB38`. TOML already synchronized the same family members `noopHandler_80092388` (s1342) and `noopHandler_80099C44` (s1445). The address suffix is the companion's disambiguator among the documented byte-identical stubs, not an invented address-encoded name. No conflicting companion name |
+| Caller evidence | One retail `jal` encoding `0x0C02BACC` and zero `j` or absolute `0x800AEB30` pointer words. Site: independently named `cinematicLoopBody` at `0x800A64E4` (cinematic file `0x138934`; delay `0x00000000`). Same-run ROM word at that file offset is `0x0C02BACC`. The generated caller is the matching `funcs_27.c` `jal 0x800AEB30` site. The site is the cinematic teardown arm after `cinematicDeactivator` and `waitForAnyAudioSlot`: `lui $v0, 0x800B` / `lw $a0, 0x1904($v0)` (`gCurrentCutsceneFile`) / `jal 0x800AEB30` / then `jal cinematicShutdownAudioAndAssets`. The stub ignores `$a0`. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x140F80` (`0x137580+(0x800AEB30-0x800A5130)`) are `0x03E00008` (`jr $ra`), `0x00000000` (`nop`). Next start file `0x140F88` is `0x27BDFFE8` (`freeCutsceneResources` `addiu $sp, $sp, -0x18`). Preceding epilogue file `0x140F78`/`0x140F7C` is `0x03E00008` / `0x27BD0040` (`cuts_0058_bubble_sort` `jr $ra` / restore `$sp`). The two-instruction body matches the companion inert-callback contract and the already-attested teardown callers of the `noopHandler_*` family (s1342 / s1445). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x140F80` is `0x03E00008`, the caller `jal` word above is `0x0C02BACC`, and the s1521/s1520/s1519/s1518/s1517/s1516/s1515/s1514/s1513 controls still read `0x3C02800B` at `0x140E68`, `0x27BDFFC0` at `0x140E78`, `0x308300FF` at `0x140DDC`, `0x30A700FF` at `0x140D78`, `0x27BDFFE8` at `0x140CC8`, `0x27BDFF78` at `0x140968`, `0x27BDFF20` at `0x1403C4`, `0x27BDFF80` at `0x140048`, `0x27BDFFB0` at `0x13FAE0`, `0x03E00008` at `0x140040`, and `0x27BDFFC0` at `0x13F674` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AEB30`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x8`, the single ROM `jal` caller is independently named
+`cinematicLoopBody` on the teardown path, and there is neither a
+conflicting companion name nor a cinematic size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x8`). `func_8009D978` remains
+the eight-byte Q15 delay-mix table and was left unchanged, as were
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`freeCutsceneResources` at `0x800AEB38` (TOML still `func_800AEB38`,
+size `0x44`; overlay `rom_size` is `0x44` at offset `0x00009A08`; live
+body ends at independently named generated `resetCutsceneActionSlots` /
+TOML `func_800AEB7C` at `0x800AEB7C`). Independently named
+`noopHandler_800AEB30` at `0x800AEB30` (`rom_size` `0x8`) ends at
+`0x800AEB38`.

@@ -2657,7 +2657,7 @@ functions = [
     { name = "getAssetNameForNpcType", vram = 0x800AE98C, size = 0x8C },
     { name = "getCutsceneRuntimeContext", vram = 0x800AEA18, size = 0x10 },
     { name = "cuts_0058_bubble_sort", vram = 0x800AEA28, size = 0x108 },
-    { name = "func_800AEB30", vram = 0x800AEB30, size = 0x8 },
+    { name = "noopHandler_800AEB30", vram = 0x800AEB30, size = 0x8 },
     { name = "func_800AEB38", vram = 0x800AEB38, size = 0x44 },
     { name = "func_800AEB7C", vram = 0x800AEB7C, size = 0x54 },
     { name = "func_800AEBD0", vram = 0x800AEBD0, size = 0x78 },
