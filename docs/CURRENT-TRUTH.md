@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1664 (2026-08-16).
+the authority for session detail. Reviewed through s1665 (2026-08-16).
 
 ## Current state
 
@@ -64,31 +64,34 @@ the authority for session detail. Reviewed through s1664 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Continue the generated-symbol renaming sweep. The next exact census is
-   generated `playNpcStateChangeEffect` / TOML `func_800C7FF8` at
-   `0x800C7FF8` (size `0x180`). Compare companion mapping if any, generated
+1. **Mandatory revisit (s1666).** The last-15 ledger titles after s1665
+   are all sweep-scoped (s1651–s1665). Do not resume the symbol sweep.
+   Use the Rice `--video` oracle recipe for one genuinely new route that
+   may leave a 640 frontend into a mission, or for a new M4 RDRAM
+   destination from a DMEM→RDRAM transfer other than `0xD60`. Known
+   hold/A/B/Z, valid-D-pad, post-viewer `C-up/C-down/C-left/C-right/L/R`,
+   and post-B A/Start/Z during the 1024 intermediate are already
+   classified or parked; do not repeat them. The 640 B-frontend identity
+   and any later input **after** that frontend arrives at ~96 s /
+   `0x00696100` remain open. Every oracle run needs whole-RDRAM, PIF, and
+   VI/PC positive controls.
+2. After the revisit, continue the generated-symbol renaming sweep at
+   generated `spawnNpcDestructionEffect` / TOML `func_800C8178` at
+   `0x800C8178` (size `0x38C`). Compare companion mapping if any, generated
    body, previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (likely a stale-TOML
    correction if the generated body already carries the human name). The
    s1639 census confirmed `checkComplexObjectives` was already
-   synchronized; s1640–s1646 synchronized several HUD/level-state helpers;
-   s1647–s1648 confirmed wrapper symbols already synchronized; s1649
-   synchronized `setHudFlagBit40AndStoreArg`; s1651 confirmed
-   `calculateDatItemDistanceToPlayer`; s1652–s1655 synchronized DAT-item
-   helpers after stale TOML corrections; s1656–s1657 confirmed health
-   getters; s1658–s1664 synchronized DAT-effect, cue, and NPC-init wrappers
-   (`despawnEffectOnNamedDatItem` through `initNpcActorFromSpawnMessage`)
-   after stale TOML corrections. s1650 was the mandatory retail-entry
-   revisit (post-B A/Start/Z). The full s1590–s1649 archive is in
-   `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
-   placeholder `func_0x...` names remained when counted at s1487.
-2. Use the Rice `--video` oracle recipe for one genuinely new route that may
-   leave a 640 frontend into a mission, or for a new M4 RDRAM destination
-   from a DMEM→RDRAM transfer other than `0xD60`. Known hold/A/B/Z,
-   valid-D-pad, post-viewer `C-up/C-down/C-left/C-right/L/R`, and post-B
-   A/Start/Z arms are already classified or parked; do not repeat them. The
-   640 B-frontend identity and any later input on that frontend remain open.
-   Every oracle run needs whole-RDRAM, PIF, and VI/PC positive controls.
+   synchronized; s1640–s1649 synchronized HUD/level-state helpers and
+   wrappers; s1651 confirmed `calculateDatItemDistanceToPlayer`;
+   s1652–s1657 synchronized or confirmed DAT-item helpers; s1658–s1665
+   synchronized DAT-effect, cue, NPC-init, and state-change-effect
+   wrappers (`despawnEffectOnNamedDatItem` through
+   `playNpcStateChangeEffect`) after stale TOML corrections. s1650 was
+   the previous mandatory retail-entry revisit (post-B A/Start/Z). The
+   full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
+   sweep is in §33. About 1,548 placeholder `func_0x...` names remained
+   when counted at s1487.
 3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. If that happens, write a bounded plan
    before changing any stub or trap.
@@ -200,6 +203,7 @@ ownership.
 | s1662 | Synchronized `triggerNamedAssetCue` (`0x800C7D7C`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EF95C` → `triggerStageAmbientForNamedDatItem`), exact `0x800C7D60`/`0x800C7D98` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D98` / `triggerSoundCueByType`. |
 | s1663 | Synchronized `triggerSoundCueByType` (`0x800C7D98`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EFCD4` → `initSoundCueRequest`), exact `0x800C7D7C`/`0x800C7DB4` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7DC0` / `initNpcActorFromSpawnMessage`. |
 | s1664 | Synchronized `initNpcActorFromSpawnMessage` (`0x800C7DC0`, size `0x238`) after companion mission mapping, live generated NPC-actor-from-spawn-message body (ends `initObjectAnimSubstruct`), exact `0x800C7DB4`/`0x800C7FF8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7FF8` / `playNpcStateChangeEffect`. |
+| s1665 | Synchronized `playNpcStateChangeEffect` (`0x800C7FF8`, size `0x180`) after companion mission mapping, live generated NPC state-change effect body (`lookupHmtTextureByName` ×2, emit-direction jitter, progress-channel ticks, `triggerCueWithSlotEffect`, `play3DSoundEvent`), exact `0x800C7DC0`/`0x800C8178` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `computeCellGridIndices` at `0x800C804C` is a different overlay, not a name collision. Next candidate is `func_800C8178` / `spawnNpcDestructionEffect`. Last-15 titles are now all sweep-scoped; s1666 must be the mandatory retail-entry or M4 revisit. |
 
 ## Method and safety rules
 

@@ -78296,3 +78296,34 @@ a stale `func_800C7DC0` placeholder. Corrected TOML to
 
 Next candidate: `func_800C7FF8` / generated `playNpcStateChangeEffect` at
 `0x800C7FF8` (size `0x180`).
+
+## Session 1665 (2026-08-16) — synchronized the playNpcStateChangeEffect symbol
+
+Exact generated-symbol census for `0x800C7FF8` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1650's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playNpcStateChangeEffect = 0x800C7FF8`; next `spawnNpcDestructionEffect = 0x800C8178`; prior `initNpcActorFromSpawnMessage = 0x800C7DC0` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void playNpcStateChangeEffect` at VRAM `0x800C7FF8`; returns through `jr $ra` / `addiu $sp, $sp, 0xE0` ending at `0x800C8174`; next function `spawnNpcDestructionEffect` at `0x800C8178` |
+| Body semantics | Loads actor from `a0+4`, looks up two HMT textures at `0x800A6994`, generates emit directions with jitter, ticks progress channels, triggers cue-with-slot effects, plays a 3D sound, and clears actor+`0x7C` — NPC state-change effect player |
+| TOML (before) | `{ name = "func_800C7FF8", vram = 0x800C7FF8, size = 0x180 }` — size matches `0x800C8178 - 0x800C7FF8` |
+| Overlay section 4 | `{ .func = playNpcStateChangeEffect, .offset = 0x00022EC8, .rom_size = 0x00000180 }` under `section_4_ovl_mission_funcs` |
+| Non-collision | Menu-overlay `computeCellGridIndices = 0x800C804C` lives in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`initNpcActorFromSpawnMessage` / `0x800C7DC0`) and next
+(`spawnNpcDestructionEffect` / `0x800C8178`) boundaries, and TOML size
+already agreed; only the TOML name was a stale `func_800C7FF8` placeholder.
+Corrected TOML to `playNpcStateChangeEffect`. No build or runtime run
+required.
+
+After this session the last-15 titles are s1651–s1665, all sweep-scoped.
+Next iteration must be the mandatory retail-entry or M4 revisit, not another
+census. Sweep resume candidate after that: `func_800C8178` /
+`spawnNpcDestructionEffect` at `0x800C8178` (size `0x38C`).
