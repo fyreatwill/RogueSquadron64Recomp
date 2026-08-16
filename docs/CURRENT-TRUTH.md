@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1493 (2026-08-15).
+the authority for session detail. Reviewed through s1494 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1493 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x800A76B8..0x800A7C4C`.
+   census over the next adjacent function, `0x800A7C4C..0x800A8420`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -93,13 +93,14 @@ the authority for session detail. Reviewed through s1493 (2026-08-15).
    s1491 synchronized `cinematicSlotBatchDispatch` at `0x800A70E4`.
    s1492 synchronized `slotEffectHandlerDispatch` at `0x800A71B8`.
    s1493 synchronized `cutscenePopulateSlotsFromLevelLists` at
-   `0x800A73E4`. The generated entry at `0x800A76B8` is already
-   `cinematicSlotDispatcher`; the companion cinematic splat list maps
-   `cinematicSlotDispatcher = 0x800A76B8`. TOML is still
-   `func_800A76B8` (size `0x594`, ends at independently named
-   `spawnCutsceneObjectsFromList` / TOML `func_800A7C4C` at
-   `0x800A7C4C`). Overlay `rom_size` is `0x594` at offset
-   `0x00002588`. Confirm the complete live function, matching size,
+   `0x800A73E4`. s1494 synchronized `cinematicSlotDispatcher` at
+   `0x800A76B8`. The generated entry at `0x800A7C4C` is already
+   `spawnCutsceneObjectsFromList`; the companion cinematic splat list
+   maps `spawnCutsceneObjectsFromList = 0x800A7C4C`. TOML is still
+   `func_800A7C4C` (size `0x7D4`, ends at independently named
+   `cutsceneDispatchSlotsByFlag` / TOML `func_800A8420` at
+   `0x800A8420`). Overlay `rom_size` is `0x7D4` at offset
+   `0x00002B1C`. Confirm the complete live function, matching size,
    and caller/semantic evidence before synchronizing the TOML name.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
@@ -400,6 +401,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1491 | Exact companion/generated cinematic-batch census synchronized `cinematicSlotBatchDispatch` at `0x800A70E4`; no build or runtime run. |
 | s1492 | Exact companion/generated cinematic-effect census synchronized `slotEffectHandlerDispatch` at `0x800A71B8`; no build or runtime run. |
 | s1493 | Exact companion/generated cinematic-slot census synchronized `cutscenePopulateSlotsFromLevelLists` at `0x800A73E4`; no build or runtime run. |
+| s1494 | Exact companion/generated cinematic-dispatch census synchronized `cinematicSlotDispatcher` at `0x800A76B8`; no build or runtime run. |
 
 ## Method and safety rules
 

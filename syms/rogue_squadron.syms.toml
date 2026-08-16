@@ -2630,7 +2630,7 @@ functions = [
     { name = "cinematicSlotBatchDispatch", vram = 0x800A70E4, size = 0xD4 },
     { name = "slotEffectHandlerDispatch", vram = 0x800A71B8, size = 0x22C },
     { name = "cutscenePopulateSlotsFromLevelLists", vram = 0x800A73E4, size = 0x2D4 },
-    { name = "func_800A76B8", vram = 0x800A76B8, size = 0x594 },
+    { name = "cinematicSlotDispatcher", vram = 0x800A76B8, size = 0x594 },
     { name = "func_800A7C4C", vram = 0x800A7C4C, size = 0x7D4 },
     { name = "func_800A8420", vram = 0x800A8420, size = 0x590 },
     { name = "func_800A89B0", vram = 0x800A89B0, size = 0xBEC },
