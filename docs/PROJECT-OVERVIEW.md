@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1733)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1734)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3010,10 +3010,11 @@ collision.
 | s1731 | Synchronized `npcWingmanUpdateEngineAudio` (`0x800D9234`, `0x18C`). Integrates engine-audio rate/accumulator at `+0xEC`/`+0xE8`, writes pitch/gain at `+0xE4`, `buildRotationMatrixSlot2` on two child slots, then `isAudioVoiceActive` / `updateActive3DAudioSource`. Sole caller `npcWingmanUpdate` at `0x800D9960`. |
 | s1732 | Confirmed `npcWingmanUpdate` (`0x800D93C0`, `0xBD0`). 11-way jump table at `0x800A7A00` on `(a1-1)` for `a1 ∈ 1..11`. Setup / teardown / live tick (`npcWingmanUpdateEngineAudio`, `npcWingmanSteerToward`, `npcWingmanBehaviorByMode`) / visibility / damage (`npcWingmanSpawnBurstEffects`) / range / slot-action. Table-dispatched; no leftover `func_800D93C0`. |
 | s1733 | Synchronized `npcWingmanState2` (`0x800D9F90`, `0xD4`). Two-way `+0x5E` toggle, HMT textures `0x800A781C`/`0x800A7820`, `npcWingmanStateEffectShared`, optional `play3DSoundEvent` `0x2`/`0x5A`/`0x28`. `getNpcWingmanStateData` case 2. |
+| s1734 | Synchronized `npcWingmanState3` (`0x800DA064`, `0xD8`). Same `+0x5E` toggle and shared emitter; both live phases use HMT name `0x800A7844` and pass `a2=0/1` into `lookupHmtTextureByName`; optional `play3DSoundEvent` `0x2`/`0x5A`/`0x28` with float `0x800A7AF4`. `getNpcWingmanStateData` case 3. |
 
-The sweep cursor after s1733 is `npcWingmanState3` at `0x800DA064`
-(size `0xD8`). Next contiguous neighbor is `func_800DA13C` /
-`npcWingmanState4` at `0x800DA13C`. Mandatory revisits in this window:
+The sweep cursor after s1734 is `npcWingmanState4` at `0x800DA13C`
+(size `0xF8`). Next contiguous neighbor is `func_800DA234` /
+`npcWingmanState5` at `0x800DA234`. Mandatory revisits in this window:
 s1650, s1666, s1682, s1698, s1714. s1728 is maintenance, so the next
 all-sweep 15-title window has not opened.
 
