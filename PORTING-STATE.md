@@ -79607,3 +79607,39 @@ required.
 Next census: `spawnScaledBootVec4Effect` at `0x800D2C58` (size `0x40`).
 Last-15 titles still include s1698's retail-entry revisit, so the next
 iteration continues the sweep.
+
+## Session 1703 (2026-08-16) — synchronized the spawnScaledBootVec4Effect symbol
+
+Exact generated-symbol census for `0x800D2C58` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 45304; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `spawnScaledBootVec4Effect = 0x800D2C58` with comment "wrapper -> computeBootConfigScaledVec4". Previous contiguous neighbor `npcInitFromTemplate = 0x800D2B5C`; next contiguous neighbor `fake_func_800D2C98 = 0x800D2C98` (explicit 8-byte leftover). The following named sibling is `npcInitWithMotionParams = 0x800D2CA0` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void spawnScaledBootVec4Effect` at VRAM `0x800D2C58`; prologue `mtc1 $a1, $f4` then `addiu $sp, $sp, -0x20`; returns through `jr $ra` / `addiu $sp, $sp, 0x20` ending at `0x800D2C94`; previous mission function is `npcInitFromTemplate` at `0x800D2B5C` (last insn `0x800D2C54`); next mission function is `fake_func_800D2C98` at `0x800D2C98`. `funcs.h` already declares the human name |
+| Body semantics | Thin wrapper: incoming `a1` is parked as a stack float; `a0 = 0`; `a1 = a2 = 0x3D400000`; dest `a3 = 0x8013800C`; second stack float is `D_800A73B8`; sole `jal` is `computeBootConfigScaledVec4` at `0x8004FBD0`. `playerAtStUpdate` at `0x800D2670` inlines the same `a0`/`0x3D400000`/`0x8013800C` call with `D_800A7374` instead. No generated `jal` callers of this wrapper. Name matches the companion wrapper comment |
+| TOML (before) | `{ name = "func_800D2C58", vram = 0x800D2C58, size = 0x40 }` — size matches `0x800D2C98 - 0x800D2C58` (last insn `0x800D2C94` + 4 = `0x40`) |
+| Overlay section 4 | `{ .func = spawnScaledBootVec4Effect, .offset = 0x0002DB28, .rom_size = 0x00000040 }` under `section_4_ovl_mission_funcs` (`0x800D2C58 - 0x800A5130 = 0x2DB28`; `0x2DA2C + 0xFC = 0x2DB28`; `0x2DB28 + 0x40 = 0x2DB68` matches next `fake_func_800D2C98`) |
+| Non-collision | No menu-overlay function occupies `0x800D2C58`. Companion menu grep is empty for this address, this name, and the neighboring `0x800D2C98`/`0x800D2CA0` window. Companion and generated greps found no other `func_800D2C58` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated boot-config vec4 wrapper body,
+previous (`npcInitFromTemplate` / `0x800D2B5C`) and next
+(`fake_func_800D2C98` / `0x800D2C98`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`spawnScaledBootVec4Effect`, and only the TOML name was a stale `func_800D2C58`
+placeholder. Corrected TOML to `spawnScaledBootVec4Effect`. This refutes H1
+(TOML was not already synchronized), H3 (no fake fragment, overlay
+collision, or size/boundary disagreement), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Next census: `fake_func_800D2C98` at `0x800D2C98` (size `0x8`).
+Last-15 titles still include s1698's retail-entry revisit, so the next
+iteration continues the sweep.
