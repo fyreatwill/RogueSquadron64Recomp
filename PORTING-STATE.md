@@ -77684,3 +77684,30 @@ ownership; H3 is ruled out by the live generated random-remainder body and
 exact adjacent boundaries and sizes. Updated the stale project TOML
 placeholder only. No build or runtime behavior conclusion was made. The next
 sweep candidate is `func_800C7830`/`addBooleanCountHandleWrapper`.
+
+## Session 1647 (2026-08-16) — confirmed the addBooleanCountHandleWrapper symbol
+
+Ran the exact generated-symbol census for `0x800C7830` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live wrapper and its generated, TOML, and
+section-4 boundaries agree; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator.
+
+The companion mission map names `addBooleanCountHandleWrapper` at
+`0x800C7830`, and the bounded companion-tree search found no competing C/H
+definition or caller annotation. The generated `funcs_35.c` definition
+already carries the human name and contains the live `0x34`-byte wrapper:
+it masks three byte arguments, calls `addBooleanCountHandle`, masks the
+return value, and restores the stack frame. Its exact preceding boundary is
+`randMod` at `0x800C77D0` with size `0x60`; its following boundary is
+`addTimerHandleWrapper` at `0x800C7864` with size `0x20` in `funcs_36.c`.
+The TOML entry and section-4 overlay table independently carry the same
+name, address, size, and ROM span `0x22700..0x22734`.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and
+overlay ownership; H3 is ruled out by the live wrapper body and exact
+adjacent boundaries and sizes. No source-map edit was needed because the
+generated definition and TOML entry were already synchronized. No build or
+runtime behavior conclusion was made. The next sweep candidate is
+`func_800C7864`/`addTimerHandleWrapper`.
