@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1505 (2026-08-15).
+the authority for session detail. Reviewed through s1506 (2026-08-15).
 
 ## Current state
 
@@ -54,7 +54,7 @@ the authority for session detail. Reviewed through s1505 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AA850..0x800AAC88`.
+   adjacent function, `0x800AAC88..0x800ABD0C`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -111,21 +111,22 @@ the authority for session detail. Reviewed through s1505 (2026-08-15).
    `0x800A9D70`. s1503 synchronized `updatePositionalAudioSource` at
    `0x800AA1BC`. s1504 synchronized
    `applyCutsceneSlotMaterialOverrides` at `0x800AA4F4`. s1505
-   synchronized `tickCutsceneActionSlots` at `0x800AA658`. The
-   generated entry at `0x800AA850` is already
-   `applyNamedEffectParameterDefaults`; the companion cinematic splat
-   list maps `applyNamedEffectParameterDefaults = 0x800AA850`. TOML is
-   still `func_800AA850` (size `0x438`, ends at independently named
-   `spawnCutsceneDebrisField` / TOML `func_800AAC88` at `0x800AAC88`).
-   Overlay `rom_size` is `0x438` at offset `0x00005720`. Confirm the
+   synchronized `tickCutsceneActionSlots` at `0x800AA658`. s1506
+   synchronized `applyNamedEffectParameterDefaults` at `0x800AA850`.
+   The generated entry at `0x800AAC88` is already
+   `spawnCutsceneDebrisField`; the companion cinematic splat list maps
+   `spawnCutsceneDebrisField = 0x800AAC88`. TOML is still
+   `func_800AAC88` (size `0x1084`, ends at independently named
+   `npcIncomingMissileUpdate` / TOML `func_800ABD0C` at `0x800ABD0C`).
+   Overlay `rom_size` is `0x1084` at offset `0x00005B58`. Confirm the
    complete live function, matching size, and caller/semantic evidence
    before synchronizing the TOML name. Menu-overlay
    `mallocCraftSelectionData` / TOML `hangarInitialize` at
    `0x800A9364` (`rom_size` `0x1A38`) occupies overlapping VRAM and
    is a different overlay, not a cinematic size split. Mission-overlay
-   `parseDatEventTriggers` at `0x800AA870`, `fake_func_800AAADC` at
-   `0x800AAADC`, and `playerSnowSpeederInit` at `0x800AAAE0` are
-   likewise a different overlay, not a split of this body.
+   `playerSnowSpeederInit` at `0x800AAAE0` and `func_800AADD4` at
+   `0x800AADD4` occupy overlapping VRAM and are a different overlay,
+   not a cinematic size split.
 2. Future oracle work (M4 numeric origin, hangar/mission watches) must use
    the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM, PIF,
    and VI positive controls in the same run. Do not re-audit dummy-video
@@ -444,6 +445,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1503 | Exact companion/generated cinematic-audio census synchronized `updatePositionalAudioSource` at `0x800AA1BC`; no build or runtime run. |
 | s1504 | Exact companion/generated cinematic-material census synchronized `applyCutsceneSlotMaterialOverrides` at `0x800AA4F4`; no build or runtime run. |
 | s1505 | Exact companion/generated cinematic-action census synchronized `tickCutsceneActionSlots` at `0x800AA658`; no build or runtime run. |
+| s1506 | Exact companion/generated cinematic-effect census synchronized `applyNamedEffectParameterDefaults` at `0x800AA850`; no build or runtime run. |
 
 ## Method and safety rules
 

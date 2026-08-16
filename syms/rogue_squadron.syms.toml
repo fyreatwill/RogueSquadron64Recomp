@@ -2641,7 +2641,7 @@ functions = [
     { name = "updatePositionalAudioSource", vram = 0x800AA1BC, size = 0x338 },
     { name = "applyCutsceneSlotMaterialOverrides", vram = 0x800AA4F4, size = 0x164 },
     { name = "tickCutsceneActionSlots", vram = 0x800AA658, size = 0x1F8 },
-    { name = "func_800AA850", vram = 0x800AA850, size = 0x438 },
+    { name = "applyNamedEffectParameterDefaults", vram = 0x800AA850, size = 0x438 },
     { name = "func_800AAC88", vram = 0x800AAC88, size = 0x1084 },
     { name = "func_800ABD0C", vram = 0x800ABD0C, size = 0x868 },
     { name = "func_800AC574", vram = 0x800AC574, size = 0x1E8 },
