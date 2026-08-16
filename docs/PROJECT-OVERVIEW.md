@@ -235,7 +235,7 @@ de-stubbing is closed. These are boundaries, not mitigations: future guards
 require an `ORIGIN:` naming the writer and judging the value legitimate. The
 generated-symbol renaming sweep is the current low-risk workstream; exact
 companion/generated names are synchronized through
-`npcWingmanSpawnBurstEffects` at `0x800D8988` (s1729). See §33–§35 for the
+`npcWingmanSteerToward` at `0x800D8CB8` (s1730). See §33–§35 for the
 archived census, `CURRENT-TRUTH.md` for the live backlog, and
 `PORTING-STATE.md` for evidence.
 
@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1727)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1730)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3006,11 +3006,13 @@ collision.
 | s1714 | Rice later-flush of attract-512 A/Start/C-up/L/Z (`--secs 133`). Hold stays attract 512 through 133.4 s. A/Start/C-up/L/Z all leave `512→1024` at 126.3–126.4 s origin `0x00790400`/`800` and stay on that title-like 1024 through 133.5 s. H2 for A/Start/C-up/L. H3-confirm for Z (second source; s1698 stay-512 was a flush cutoff). 1024 destination still unevaluable (Rice dies ~135 s). |
 | s1715–s1727 | Synchronized `npcDebrisFieldUpdate` through `npcWingmanBehaviorByMode` (`0x800D5208`–`0x800D80B4`): debris-field, simple-model init, shared effect-channel plus Mode0/Mode1 wrappers, tank-droid aim, wingman reset/state-data/shared-emitter/state-0/state-1/behavior-by-mode. Confirmed `npcTankDroidUpdate` (`0x800D6998`, `0xE80`). Companion `D_800D5208` is a leftover splat label, not a second occupant. |
 | s1729 | Synchronized `npcWingmanSpawnBurstEffects` (`0x800D8988`, `0x330`). Three `initNpcContextFromTransform` / `spawnRandomBurstNpcVariantWrapper` / `assignNpcTargetAndPosition` bursts. Sole caller `npcWingmanUpdate` at `0x800D9CA8`. |
+| s1730 | Synchronized `npcWingmanSteerToward` (`0x800D8CB8`, `0x57C`). Vec/quat steer: `vec3Dot`/`vec3Cross`/`vec3Length`, `quatFromAxisAngle(Safe)`, `quatMultiply`, `rotateVec3ByQuat`, `wrapAngleToCyclicRange`. Sole caller `npcWingmanUpdate` at `0x800D99DC`. |
 
-The sweep cursor after s1729 is `npcWingmanSteerToward` /
-`func_800D8CB8` at `0x800D8CB8` (size `0x57C`). Next contiguous neighbor is
-`npcWingmanUpdateEngineAudio` at `0x800D9234`. Mandatory revisits in this window:
-s1650, s1666, s1682, s1698, s1714.
+The sweep cursor after s1730 is `npcWingmanUpdateEngineAudio` /
+`func_800D9234` at `0x800D9234` (size `0x18C`). Next contiguous neighbor is
+`npcWingmanUpdate` at `0x800D93C0`. Mandatory revisits in this window:
+s1650, s1666, s1682, s1698, s1714. s1728 is maintenance, so the next
+all-sweep 15-title window has not opened.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

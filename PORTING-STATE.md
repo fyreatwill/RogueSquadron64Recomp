@@ -80594,3 +80594,40 @@ runtime run required.
 Next census: `npcWingmanSteerToward` / `func_800D8CB8` at
 `0x800D8CB8` (size `0x57C`). Last-15 titles still include s1714's
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1730 (2026-08-16) — synchronized the npcWingmanSteerToward symbol
+
+Exact generated-symbol census for `0x800D8CB8` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles after s1729 are
+s1715–s1729 and still include s1728's maintenance compaction, so the
+mandatory REVISIT gate did not fire. Step 0 `wc -c` was 6025; not a
+maintenance iteration. No new soak-queue verdicts beyond the already-folded
+s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanSteerToward = 0x800D8CB8` with comment "wingman steering/orientation (vec/quat)". Previous contiguous neighbor `npcWingmanSpawnBurstEffects = 0x800D8988`; next contiguous neighbor `npcWingmanUpdateEngineAudio = 0x800D9234`. No menu/cinematic/main overlay occupant and no `D_800D8CB8` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanSteerToward` at VRAM `0x800D8CB8`; prologue `addiu $sp, $sp, -0xD0`; saves `$s2`/`$s0`/`$s1`/`$ra`/`$s5`–`$s3` and `$f22`/`$f20`; `$s2 = a0`. Branches on `lbu 0x5C($s2) == 2`. 33 calls: `vec3Dot` (2), `constMinusSinfApprox` (2), `vec3Cross` (2), `vec3Length` (2), `quatFromCardinalAxis`, `quatFromAxisAngleSafe` (2), `quatMultiply`, `rotateVec3ByQuat` (6), `spawnNpcAnchoredEffectSlot` (2), `orthonormalizeFrame` (3), `wrapAngleToCyclicRange` (2), `play3DSoundEvent` (3), `destroyNpcSlotByIndex`, `rs_free`, `quatFromAxisAngle`, `initActorRenderDescriptorWithNpcVelocity`, `mat34CrossRowsAndCopyPos`. Writes orientation components at `s2+0x0/0x4/0x8` and wraps the result through `wrapAngleToCyclicRange`. Epilogue `jr $ra` / `addiu $sp, $sp, 0xD0` ends at `0x800D9230`. Previous mission function last insn is `0x800D8CB4`; next is `npcWingmanUpdateEngineAudio` at `0x800D9234`. `funcs.h` already declares the human name. One `jal` site in `npcWingmanUpdate` (`0x800D99DC`) |
+| Body semantics | Matches the companion "wingman steering/orientation (vec/quat)": two-path turn solver using vec3/quat helpers, angle wrap, and frame orthonormalization, invoked from the wingman update path. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800D8CB8", vram = 0x800D8CB8, size = 0x57C }` — size matches `0x800D9234 - 0x800D8CB8` (last insn `0x800D9230` + 4 = `0x57C`) |
+| Overlay section 4 | `{ .func = npcWingmanSteerToward, .offset = 0x00033B88, .rom_size = 0x0000057C }` under `section_4_ovl_mission_funcs` (`0x800D8CB8 - 0x800A5130 = 0x33B88`; `0x33858 + 0x330 = 0x33B88`; `0x33B88 + 0x57C = 0x34104` matches next `npcWingmanUpdateEngineAudio`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D8CB8`. No leftover `func_800D8CB8` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated wingman steer-toward body,
+previous (`npcWingmanSpawnBurstEffects` / `0x800D8988`) and next
+(`npcWingmanUpdateEngineAudio` / `0x800D9234`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcWingmanSteerToward`, and only the TOML name was a stale
+`func_800D8CB8` placeholder. Corrected TOML to `npcWingmanSteerToward`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcWingmanUpdateEngineAudio` / `func_800D9234` at
+`0x800D9234` (size `0x18C`). Last-15 titles after s1730 still include
+s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
