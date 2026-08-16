@@ -1,9 +1,9 @@
-# NEXT work unit (s1503)
+# NEXT work unit (s1504)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent
-generated function, `0x800AA1BC..0x800AA4F4`. Do not build or run. Record
+generated function, `0x800AA4F4..0x800AA658`. Do not build or run. Record
 its address, size, generated definition, companion name/source, caller or
 semantic evidence, and confidence before editing. Synchronize only an exact
 independent name in `syms/rogue_squadron.syms.toml`; leave address-encoded,
@@ -26,18 +26,21 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `updatePositionalAudioSource`;
+generated entry at this address is already `applyCutsceneSlotMaterialOverrides`;
 the companion cinematic splat list maps
-`updatePositionalAudioSource = 0x800AA1BC`. TOML is still
-`func_800AA1BC` (size `0x338`, ends at independently named
-`applyCutsceneSlotMaterialOverrides` / TOML `func_800AA4F4` at
-`0x800AA4F4`). Overlay `rom_size` is `0x338` at offset `0x0000508C`.
+`applyCutsceneSlotMaterialOverrides = 0x800AA4F4`. TOML is still
+`func_800AA4F4` (size `0x164`, ends at independently named
+`tickCutsceneActionSlots` / TOML `func_800AA658` at
+`0x800AA658`). Overlay `rom_size` is `0x164` at offset `0x000053C4`.
 Confirm the complete live function, matching size, and caller/semantic
-evidence before synchronizing the TOML name. Menu-overlay
+evidence before synchronizing the TOML name. Companion
+`resetCutsceneActionSlots` still comments that it "calls func_800AA4F4
+(cuts_0058 sub_type==0xB processor)" — evaluate that comment; it is
+not itself a conflicting splat-list name. Menu-overlay
 `mallocCraftSelectionData` / TOML `hangarInitialize` at `0x800A9364`
 occupies overlapping VRAM and is a different overlay, not a cinematic
-size split. Mission-overlay `clampVec3ToUnitIfLongerThan` at
-`0x800AA350` occupies overlapping VRAM and is a different overlay, not
+size split. Mission-overlay `buildTransformMatrixFromEulerAngles` at
+`0x800AA570` occupies overlapping VRAM and is a different overlay, not
 a cinematic size split.
 
 Any future oracle/M4 watch must use Homebrew Rice
@@ -60,7 +63,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AA1BC\|800AA4F4\|updatePositionalAudioSource' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AA1BC\|800AA4F4\|updatePositionalAudioSource' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '800AA1BC\|800AA4F4' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AA4F4\|800AA658\|applyCutsceneSlotMaterialOverrides' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AA4F4\|800AA658\|applyCutsceneSlotMaterialOverrides' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '800AA4F4\|800AA658' syms/rogue_squadron.syms.toml
 ```

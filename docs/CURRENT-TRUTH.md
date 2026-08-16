@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1502 (2026-08-15).
+the authority for session detail. Reviewed through s1503 (2026-08-15).
 
 ## Current state
 
@@ -54,7 +54,7 @@ the authority for session detail. Reviewed through s1502 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AA1BC..0x800AA4F4`.
+   adjacent function, `0x800AA4F4..0x800AA658`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -108,18 +108,22 @@ the authority for session detail. Reviewed through s1502 (2026-08-15).
    at `0x800A959C`. s1500 synchronized `initCutsceneScene` at
    `0x800A98AC`. s1501 synchronized `initSceneForMission` at
    `0x800A9ABC`. s1502 synchronized `emit3DSoundsForActiveNpcs` at
-   `0x800A9D70`. The generated entry at `0x800AA1BC` is already
-   `updatePositionalAudioSource`; the companion cinematic splat list
-   maps `updatePositionalAudioSource = 0x800AA1BC`. TOML is still
-   `func_800AA1BC` (size `0x338`, ends at independently named
-   `applyCutsceneSlotMaterialOverrides` / TOML `func_800AA4F4` at
-   `0x800AA4F4`). Overlay `rom_size` is `0x338` at offset
-   `0x0000508C`. Confirm the complete live function, matching size,
-   and caller/semantic evidence before synchronizing the TOML name.
-   Menu-overlay `mallocCraftSelectionData` / TOML `hangarInitialize`
-   at `0x800A9364` (`rom_size` `0x1A38`) occupies overlapping VRAM
-   and is a different overlay, not a cinematic size split. Mission-
-   overlay `clampVec3ToUnitIfLongerThan` at `0x800AA350` is likewise
+   `0x800A9D70`. s1503 synchronized `updatePositionalAudioSource` at
+   `0x800AA1BC`. The generated entry at `0x800AA4F4` is already
+   `applyCutsceneSlotMaterialOverrides`; the companion cinematic splat
+   list maps `applyCutsceneSlotMaterialOverrides = 0x800AA4F4`. TOML
+   is still `func_800AA4F4` (size `0x164`, ends at independently named
+   `tickCutsceneActionSlots` / TOML `func_800AA658` at `0x800AA658`).
+   Overlay `rom_size` is `0x164` at offset `0x000053C4`. Confirm the
+   complete live function, matching size, and caller/semantic evidence
+   before synchronizing the TOML name. Companion
+   `resetCutsceneActionSlots` still comments that it "calls
+   func_800AA4F4 (cuts_0058 sub_type==0xB processor)" — treat that as
+   a comment to evaluate, not a conflicting name. Menu-overlay
+   `mallocCraftSelectionData` / TOML `hangarInitialize` at
+   `0x800A9364` (`rom_size` `0x1A38`) occupies overlapping VRAM and
+   is a different overlay, not a cinematic size split. Mission-overlay
+   `buildTransformMatrixFromEulerAngles` at `0x800AA570` is likewise
    a different overlay, not a split of this body.
 2. Future oracle work (M4 numeric origin, hangar/mission watches) must use
    the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM, PIF,
@@ -436,6 +440,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1500 | Exact companion/generated cinematic-scene census synchronized `initCutsceneScene` at `0x800A98AC`; no build or runtime run. |
 | s1501 | Exact companion/generated cinematic-scene census synchronized `initSceneForMission` at `0x800A9ABC`; no build or runtime run. |
 | s1502 | Exact companion/generated cinematic-audio census synchronized `emit3DSoundsForActiveNpcs` at `0x800A9D70`; no build or runtime run. |
+| s1503 | Exact companion/generated cinematic-audio census synchronized `updatePositionalAudioSource` at `0x800AA1BC`; no build or runtime run. |
 
 ## Method and safety rules
 
