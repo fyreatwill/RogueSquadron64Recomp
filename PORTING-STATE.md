@@ -75939,3 +75939,29 @@ for this exact-name census. The next bounded candidate is `func_800B7A4C`,
 independently named `orientEffectToVelocity`, with size `0x3B0`; the next
 function begins at `0x800B7DFC`. This naming change does not reopen M5 audio
 de-stubbing.
+
+## Session 1581 (2026-08-16) — synchronized the orientEffectToVelocity symbol
+
+Performed the bounded exact-name census over `0x800B7A4C..0x800B7DFC`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 21,827 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail added no newer verdict requiring
+analysis. The last-15 title check included s1569's non-sweep retail-entry
+revisit, so the sweep-revisit rule did not fire. M5 remains closed and M3
+remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B7A4C` at `0x800B7A4C` with size `0x3B0`; the companion `../rogue_squadron64/symbol_files/mission_overlay.txt` independently maps `orientEffectToVelocity = 0x800B7A4C`. The next generated and companion boundary is `spawnTexturedExplosionBurst` at `0x800B7DFC`. |
+| Generated definition | `funcs_31.c` defines `orientEffectToVelocity` at `0x800B7A4C`; the next generated definition begins at `0x800B7DFC`, and the exact boundary difference is `0x3B0`, matching the TOML size. |
+| Caller and semantic evidence | Generated `funcs_31.c` calls `orientEffectToVelocity` from `playerYwingUpdate` at `0x800B843C`. The body performs the velocity-oriented effect transformation implied by the independently named helper. |
+| Confidence | High |
+
+The complete comparison selects H1. H2 is ruled out because the entry is not
+partial, conflicting, or boundary-mismatched; H3 is ruled out by the
+independent companion name, generated definition, exact span, and caller
+evidence. Updated only the TOML name; no build or runtime run was justified
+for this exact-name census. The next bounded candidate is `func_800B7DFC`,
+independently named `spawnTexturedExplosionBurst`, with size `0x68C`; the
+next function begins at `0x800B8488`. This naming change does not reopen M5
+audio de-stubbing.

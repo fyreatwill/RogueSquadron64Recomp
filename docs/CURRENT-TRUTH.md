@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1580 (2026-08-16).
+the authority for session detail. Reviewed through s1581 (2026-08-16).
 
 ## Current state
 
@@ -116,9 +116,12 @@ the authority for session detail. Reviewed through s1580 (2026-08-16).
    exact next-function boundary, and TOML size agree. s1580 synchronized
    `tickCraftAbilityCooldown` at `0x800B77D0` (size `0x27C`): the companion
    mission list, generated definition and caller, exact next-function
-   boundary, and TOML size agree. The next census is `func_800B7A4C`,
-   independently named `orientEffectToVelocity`, followed by
-   `spawnTexturedExplosionBurst` at `0x800B7DFC`.
+   boundary, and TOML size agree. s1581 synchronized
+   `orientEffectToVelocity` at `0x800B7A4C` (size `0x3B0`): the companion
+   mission list, generated definition and caller, exact next-function
+   boundary, and TOML size agree. The next census is `func_800B7DFC`,
+   independently named `spawnTexturedExplosionBurst`, followed by
+   `updateVwingEngineEffect` at `0x800B8C30`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -256,7 +259,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
-| s1270–s1579 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `findLockOnTarget` at `0x800B7590`. H2/H3 parks listed under Next steps #1, including s1570 `fake_func_800B42BC`. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
+| s1270–s1581 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `orientEffectToVelocity` at `0x800B7A4C`. H2/H3 parks listed under Next steps #1, including s1570 `fake_func_800B42BC`. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
@@ -289,6 +292,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1578 | H1: synchronized `updateEngineThrustEffect` at `0x800B6990` (size `0x7D8`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1579 | H1: synchronized `findLockOnTarget` at `0x800B7590` (size `0x34`); companion mapping, generated definition/three callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1580 | H1: synchronized `tickCraftAbilityCooldown` at `0x800B77D0` (size `0x27C`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
+| s1581 | H1: synchronized `orientEffectToVelocity` at `0x800B7A4C` (size `0x3B0`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
