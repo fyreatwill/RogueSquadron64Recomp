@@ -1610,7 +1610,7 @@ functions = [
     { name = "cancelSceneQueueHandle", vram = 0x800B3F0C, size = 0x44 },
     { name = "playSpeechClipOncePerChange", vram = 0x800B3F50, size = 0x64 },
     { name = "playSpeechClipOncePerLevel", vram = 0x800B3FB4, size = 0xEC },
-    { name = "func_800B40A0", vram = 0x800B40A0, size = 0x50 },
+    { name = "resetSpeechOncePerLevelFlag", vram = 0x800B40A0, size = 0x50 },
     { name = "func_800B40F0", vram = 0x800B40F0, size = 0x44 },
     { name = "func_800B4134", vram = 0x800B4134, size = 0x88 },
     { name = "func_800B41BC", vram = 0x800B41BC, size = 0x30 },
