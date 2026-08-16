@@ -73735,3 +73735,32 @@ body ends at independently named generated `initCutsceneSlotTable` /
 TOML `func_800AEFC8` at `0x800AEFC8`). Independently named
 `tickCutsceneNpcSlots` at `0x800AEE14` (`rom_size` `0x11C`) ends at
 `0x800AEF30`.
+
+## Session 1528 (2026-08-15) — Rice post-hangar A and extra Start reach 640/0x6a2900
+
+Mandatory revisit: the previous 15 session titles were all generated-symbol
+sweep work. M5 is closed and M3 is parked. This iteration re-attempted
+CURRENT-TRUTH Next step 2 (external retail-entry / hangar-mission) with a
+new angle: Rice already reaches hangar (s1496/s1512); dummy-video oracles
+never did, so they could not ask whether retail leaves AVAILABLE CRAFT.
+The port still dies on "one press past AVAILABLE CRAFT". Four concurrent
+Rice arms used whole-RDRAM write `0x0:0x800000` (`--hit-cap 10000`), the
+s1086 mission-state block `0x130B10:0x130B58` (`--detail-watch 1`), the
+controller-edge `0x13A960:0x13A970` (`--detail-watch 2`), `--vi-trace`,
+`--vi-poll`, `--pif-trace`, and Homebrew Rice. Logs:
+`scratch/agent/s1528_oracle_posthangar/{hold,morestart,lateA,hangarA}/run.log`.
+
+| Arm | Extra buttons | Controls | Phase after hangar 512 @ 38.4s |
+|---|---|---|---|
+| `hold` | eleven-Start only | RDRAM 31577 / removal rc=0; 11 Start / 11 PIF `7C4=0x10000000`; edge 21442 writes | stayed 512/`0x006ab400`/`800` through 99.4s; 0 `0x6a2900` |
+| `morestart` | + Start 61..81 | RDRAM 34082; 16 Start / 16 PIF Start | 512→640 at 67.1s origin `0x006a2e00` then `0x006a2900` |
+| `lateA` | + A 58..83 | RDRAM 34445; 11 Start + 6 A / 6 PIF `7C4=0x80000000` | 512→640 at 64.0s origin `0x006a2e00` then `0x006a2900` |
+| `hangarA` | + A 42..57 | RDRAM 37474; 11 Start + 4 A / 4 PIF A | 512→640 at 67.2s origin `0x006a2900` |
+
+All four reached 320→640→1024→512 hangar. Controller-edge writes (`pc=0x80079d10/0x80079d24`) fired on every arm (positive input-consumption control). No arm produced a third width after the leave-hangar 640. Attract `0x690xxx` never appeared.
+
+Mission-state `0x130B10:0x130B58` (s1086 was 0/0 at dummy 320) is live: 135–137 CPU writes on every arm, mostly pre-hangar (`pc=0x800078ec` x64). Hangar-resident writes at 38.1s and 52.6s exist on `hold` too. Only the three leaving arms add a post-64s pair: `0x130b40` from `pc=0x800c68d0` (inside independently named `runHangarMenuFromOverlay` at `0x800C6854`) immediately before the 512→640, then `0x130b50` from `0x8006e4b0`. `hold` has no `0x800c68d0` write.
+
+This selects refined H2 against H1/H3/H4. Extra A and extra Start both leave hangar; they go to the documented 640/`0x6a2900` phase, not a new outdoor-mission width. Retail survives the press that kills the port. The s1086 block is a hangar/leave writer, not silent. Do not name 640/`0x6a2900` as a mission without a second independent line. No mitigation.
+
+ORIGIN: observational oracle A/B plus already-named companion `runHangarMenuFromOverlay`; no guest value was skipped, rewritten, or guarded.

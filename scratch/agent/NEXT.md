@@ -1,8 +1,11 @@
-# NEXT work unit (s1528)
+# NEXT work unit (s1529)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1527 synchronized `tickCutsceneNpcSlots` at `0x800AEE14`.
+s1528 closed the mandatory 15-session revisit: Rice extra A or extra Start
+after hangar leaves to 640/`0x6a2900`; hold stays hangar; do not treat that
+640 phase as an outdoor mission.
+
 Resume the generated-symbol renaming sweep. Perform exactly one bounded
 exact-name census over the next adjacent generated function,
 `0x800AEF30..0x800AEFC8`. Do not build or run. Record its address, size,
@@ -49,7 +52,8 @@ cinematic function is `initCutsceneSlotTable`.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
-with the eleven-Start schedule (s1496). Dummy video stays at 320.
+with the eleven-Start schedule (s1496). Post-hangar extra A or extra
+Start reaches 640/`0x6a2900` (s1528). Dummy video stays at 320.
 Do not re-watch `0x688:0x710` (s1512 H2).
 
 Competing hypotheses and discriminator:

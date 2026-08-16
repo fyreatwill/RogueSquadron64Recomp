@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1527 (2026-08-15).
+the authority for session detail. Reviewed through s1528 (2026-08-15).
 
 ## Current state
 
@@ -34,8 +34,12 @@ the authority for session detail. Reviewed through s1527 (2026-08-15).
   `0x006dd280`. Homebrew Rice (`--video …/mupen64plus-video-rice.dylib`)
   with the eleven-Start schedule is the available later-phase recipe:
   320→640 at ~2.3s, 640→1024 at ~17.2s, 1024→512 hangar origin
-  `0x006ab400`/`0x006ab800` at ~38.4s (s707 and s1496). Do not add target
-  watches on a dummy-video arm. Glide64MK2 stayed at 320 in s707.
+  `0x006ab400`/`0x006ab800` at ~38.4s (s707 and s1496). After hangar, extra
+  Start or A leaves to 640 / `0x006a2900`/`0x006a2e00` (s1528); the
+  eleven-Start hold arm stays at hangar through 100s. That 640 phase is
+  the documented leave-hangar screen, not a proven outdoor mission. Do
+  not add target watches on a dummy-video arm. Glide64MK2 stayed at 320
+  in s707.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI submission.
   `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -156,11 +160,17 @@ the authority for session detail. Reviewed through s1527 (2026-08-15).
    split. Mission-overlay `playCutsceneObjectImpactSound` / TOML
    `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends
    `0x800AF04C`) likewise overlaps from `.ovl.mission`.
-2. Future oracle work (hangar/mission watches, or a new M4 RDRAM dest if
-   one is identified from a DMEM→RDRAM transfer that is not `0xD60`) must
-   use the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM,
-   PIF, and VI positive controls in the same run. Do not re-watch
-   `0x688:0x710` and do not re-audit dummy-video 320-only schedules.
+2. Future oracle work (the s1528 leave-hangar 640/`0x6a2900` phase, a
+   later mission watch, or a new M4 RDRAM dest if one is identified from
+   a DMEM→RDRAM transfer that is not `0xD60`) must use the Rice `--video`
+   recipe above, not dummy video. Hangar 512 and leave-hangar 640 are
+   both reachable; extra A or extra Start after the eleven-Start hangar
+   window selects 640/`0x6a2900`. Physical `0x130B10:0x130B58` is written
+   at hangar and at leave (`runHangarMenuFromOverlay` `0x800c68d0`). Pass
+   whole-RDRAM, PIF, and VI positive controls in the same run. Do not
+   re-watch `0x688:0x710`, do not re-audit dummy-video 320-only
+   schedules, and do not treat 640/`0x6a2900` as an outdoor mission
+   without a second independent line.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation; then write a new bounded plan before changing stubs.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator;
@@ -234,6 +244,10 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
   rejected. It was believable because the port probe treated `r9` as RDRAM
   (`r9 & 0x7FFFFF`) and the dummy-video nulls never reached hangar. s1512
   Rice hangar plus generated DMEM `ori $9, $zero, 0x670` close it.
+- The s1086 claim that retail never accesses `0x130B10:0x130B58` on the
+  eleven-Start schedule is superseded. It was believable because that run
+  stayed at dummy-video 320/`0x006dd280`. s1528 Rice hangar writes the
+  block, and leave-hangar arms add `0x800c68d0` → `0x130b40`.
 
 ## Evidence ledger summary
 
@@ -247,6 +261,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
+| s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
 | s1270 | Exact companion/generated voice-symbol census synchronized nine entries at `0x80086450..0x80086F44`; no build or runtime run. |
