@@ -2856,7 +2856,7 @@ summary. Homebrew Rice later-phase results (s1496 hangar, s1512 M4 DMEM `r9`,
 s1528 leave-hangar 640, s1544 640 still menu-overlay) live in
 `CURRENT-TRUTH.md` and superseded the dummy-video 320-only parking.
 
-## 33. Generated-symbol renaming sweep (s1240–s1575)
+## 33. Generated-symbol renaming sweep (s1240–s1576)
 
 Migrated from `CURRENT-TRUTH.md` during the s1553 maintenance pass. Full
 per-session comparison tables remain in `PORTING-STATE.md`. Method: one
@@ -2866,10 +2866,10 @@ caller or semantic evidence agree (H1). Leave address-encoded, already-fake,
 or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
 justified for an exact-name census.
 
-**Cursor.** Next census is `acquireLockOnTarget` at `0x800B63C8`
-(TOML placeholder, size `0x3D8`; next function `emitTexturedImpactEffect`
-at `0x800B67A0`). Last H1 sync is `resetEngineTrailQuads` at
-`0x800B5B4C` (s1575).
+**Cursor.** Next census is `emitTexturedImpactEffect` at `0x800B67A0`
+(TOML placeholder, size `0x1F0`; next function `updateEngineThrustEffect`
+at `0x800B6990`). Last H1 sync is `acquireLockOnTarget` at
+`0x800B63C8` (s1576).
 Last H2 park is `fake_func_800B42BC` (s1570). About 1,548
 placeholder `func_0x...` names remained when counted at s1487.
 
@@ -2914,6 +2914,7 @@ placeholder `func_0x...` names remained when counted at s1487.
 | s1573 | Mission overlay: `playXwingEngineSound` at `0x800B4F54` (size `0x4E0`). |
 | s1574 | Mission overlay: `isWeaponSlotReady` at `0x800B585C` (size `0x58`). |
 | s1575 | Mission overlay: `resetEngineTrailQuads` at `0x800B5B4C` (size `0x87C`). |
+| s1576 | Mission overlay: `acquireLockOnTarget` at `0x800B63C8` (size `0x3D8`). |
 
 **Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
 `func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,

@@ -1626,7 +1626,7 @@ functions = [
     { name = "fake_func_800B58B4", vram = 0x800B58B4, size = 0xC },
     { name = "playerAwingInit", vram = 0x800B58C0, size = 0x28C },
     { name = "resetEngineTrailQuads", vram = 0x800B5B4C, size = 0x87C },
-    { name = "func_800B63C8", vram = 0x800B63C8, size = 0x3D8 },
+    { name = "acquireLockOnTarget", vram = 0x800B63C8, size = 0x3D8 },
     { name = "func_800B67A0", vram = 0x800B67A0, size = 0x1F0 },
     { name = "func_800B6990", vram = 0x800B6990, size = 0x7D8 },
     { name = "playerAwingUpdate", vram = 0x800B7168, size = 0x428 },

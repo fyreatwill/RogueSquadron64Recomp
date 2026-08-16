@@ -75813,3 +75813,29 @@ was justified for this exact-name census. The next bounded candidate is
 `func_800B63C8`, independently named `acquireLockOnTarget`, with size
 `0x3D8`; `emitTexturedImpactEffect` begins at `0x800B67A0`. This naming
 change does not reopen M5 audio de-stubbing.
+
+## Session 1576 (2026-08-16) — synchronized the acquireLockOnTarget symbol
+
+Performed the bounded exact-name census over `0x800B63C8..0x800B67A0`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 19,328 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail had no newer verdict requiring
+analysis. The last-15 title check included s1569's non-sweep retail-entry
+revisit, so the sweep-revisit rule did not fire. M5 remains closed and M3
+remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B63C8` at `0x800B63C8` with size `0x3D8`; the companion mission list independently maps `acquireLockOnTarget = 0x800B63C8`. The next mission function is `emitTexturedImpactEffect` at `0x800B67A0`. |
+| Generated definition | `funcs_31.c` defines `acquireLockOnTarget` at `0x800B63C8`; the next generated definition is `emitTexturedImpactEffect` at `0x800B67A0`, giving the exact `0x3D8` live-body boundary. |
+| Caller evidence | Generated `funcs_31.c` contains direct calls to `acquireLockOnTarget` at `0x800B6CC4` and `0x800B75AC`. The adjacent `emitTexturedImpactEffect` callers also retain the independent generated name. |
+| Confidence | High |
+
+The complete comparison selects H1. H2 is ruled out because the entry is not
+partial, fake, or conflicting; H3 is ruled out by the independent companion
+name and generated definition/call evidence. Updated only the TOML name; no
+build or runtime run was justified for this exact-name census. The next
+bounded candidate is `func_800B67A0`, independently named
+`emitTexturedImpactEffect`, with size `0x1F0`; `updateEngineThrustEffect`
+begins at `0x800B6990`. This naming change does not reopen M5 audio
+de-stubbing.
