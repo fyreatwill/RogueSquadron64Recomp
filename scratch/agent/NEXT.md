@@ -1,13 +1,15 @@
-# NEXT work unit (s1544)
+# NEXT work unit (s1545)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1543 synchronized `cinematicDeactivator` at `0x800AF60C`. Resume
-the generated-symbol renaming sweep. Perform exactly one bounded exact-name
-census over the next adjacent generated function, `0x800AF65C..0x800AF668`.
+s1544 was the mandatory every-15-sessions revisit (Rice 640-identity:
+menu overlay stays resident; not mission/cinematic/hangar-tick;
+post-settle Start/B do not advance). Resume the generated-symbol
+renaming sweep. Perform exactly one bounded exact-name census over
+the next adjacent generated function, `0x800AF65C..0x800AF668`.
 Do not build or run. Record its address, size, generated definition,
-companion name/source, caller or semantic evidence, and confidence before
-editing. Synchronize only an exact independent name in
+companion name/source, caller or semantic evidence, and confidence
+before editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
 ambiguous entries unchanged. Leave `func_8008ED6C` unchanged
 (s1309 H2), `func_800927B0` unchanged (s1355 H3), `func_80092A54`
@@ -55,7 +57,9 @@ Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
 with the eleven-Start schedule (s1496). Post-hangar extra A or extra
 Start reaches 640/`0x6a2900` (s1528). Dummy video stays at 320.
-Do not re-watch `0x688:0x710` (s1512 H2).
+Do not re-watch `0x688:0x710` (s1512 H2). s1544: 640 is resident
+menu-overlay, not mission/cinematic/hangar-tick; post-settle Start/B
+do not advance.
 
 Competing hypotheses and discriminator:
 

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1543 (2026-08-15).
+the authority for session detail. Reviewed through s1544 (2026-08-15).
 
 ## Current state
 
@@ -36,10 +36,19 @@ the authority for session detail. Reviewed through s1543 (2026-08-15).
   320→640 at ~2.3s, 640→1024 at ~17.2s, 1024→512 hangar origin
   `0x006ab400`/`0x006ab800` at ~38.4s (s707 and s1496). After hangar, extra
   Start or A leaves to 640 / `0x006a2900`/`0x006a2e00` (s1528); the
-  eleven-Start hold arm stays at hangar through 100s. That 640 phase is
-  the documented leave-hangar screen, not a proven outdoor mission. Do
-  not add target watches on a dummy-video arm. Glide64MK2 stayed at 320
-  in s707.
+  eleven-Start hold arm stays at hangar through 100s. s1544: that 640
+  phase is still menu-overlay (last `loadOverlay` is menu path
+  `0x80000BA8` at 16.9s; mission path `0x80000B70` and `lv0`/`lv1`
+  inits stay 0) and is not a cinematic reload (`cinematicLoopBody`
+  only at boot 6.9s). Watched hangar frontend PCs
+  (`tickCraftSelectScreen`, `handleLevelSelectStartConfirm`,
+  `printLevelSelectWeaponText`) run at 512/`0x6ab400` then stop at
+  `runHangarMenuFromOverlay` (53s); they do not resume after the
+  512→640 edge. Post-settle Start and B reach PIF but do not change
+  width, origin, or overlay. The 640 handler is some other
+  menu-overlay function; do not name it a mission or LEVEL DESCRIPTION
+  without a second independent line. Do not add target watches on a
+  dummy-video arm. Glide64MK2 stayed at 320 in s707.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI submission.
   `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -62,8 +71,8 @@ the authority for session detail. Reviewed through s1543 (2026-08-15).
    `func_0x...` names remained when counted at s1487; no other stated
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
-   and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AF65C..0x800AF668`.
+   and M4 threads; s1544 was that revisit) with one bounded exact-name
+   census over the next adjacent function, `0x800AF65C..0x800AF668`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -180,17 +189,20 @@ the authority for session detail. Reviewed through s1543 (2026-08-15).
    `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at
    `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and likewise
    overlaps from `.ovl.mission`.
-2. Future oracle work (the s1528 leave-hangar 640/`0x6a2900` phase, a
-   later mission watch, or a new M4 RDRAM dest if one is identified from
-   a DMEM→RDRAM transfer that is not `0xD60`) must use the Rice `--video`
-   recipe above, not dummy video. Hangar 512 and leave-hangar 640 are
-   both reachable; extra A or extra Start after the eleven-Start hangar
-   window selects 640/`0x6a2900`. Physical `0x130B10:0x130B58` is written
-   at hangar and at leave (`runHangarMenuFromOverlay` `0x800c68d0`). Pass
-   whole-RDRAM, PIF, and VI positive controls in the same run. Do not
-   re-watch `0x688:0x710`, do not re-audit dummy-video 320-only
-   schedules, and do not treat 640/`0x6a2900` as an outdoor mission
-   without a second independent line.
+2. Future oracle work on the 640/`0x6a2900` handler, a later mission
+   watch, or a new M4 RDRAM dest (a DMEM→RDRAM transfer that is not
+   `0xD60`) must use the Rice `--video` recipe above, not dummy video.
+   s1544 closed the "is 640 a mission / cinematic / hangar tick loop?"
+   table: menu overlay stays resident, mission and cinematic paths stay
+   quiet, and the hangar tick set stops at `runHangarMenuFromOverlay`.
+   The remaining 640 question is which menu-overlay function runs after
+   that return. Extra A or extra Start after the eleven-Start hangar
+   window still selects 640/`0x6a2900`; post-settle Start and B do not
+   leave it. Physical `0x130B10:0x130B58` is written at hangar and at
+   leave (`runHangarMenuFromOverlay` `0x800c68d0`). Pass whole-RDRAM,
+   PIF, and VI positive controls in the same run. Do not re-watch
+   `0x688:0x710`, do not re-audit dummy-video 320-only schedules, and
+   do not treat 640/`0x6a2900` as an outdoor mission.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation; then write a new bounded plan before changing stubs.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator;
@@ -282,6 +294,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
+| s1544 | Rice 640-identity revisit: four arms, whole-RDRAM 10000/removal rc=0, 11 Start/PIF, 320→640→1024→512. Leave A reaches 640/`0x6a2900`; post-settle Start/B seen on PIF, no third width. Last overlay load is menu `0x80000BA8` at 16.9s; mission path and `lv0`/`lv1` inits 0. Hangar ticks run 40–52s then `runHangarMenuFromOverlay` at 53s; 0 watched PCs after the 512→640 edge. 640 is still menu-overlay, not mission/cinematic/hangar-tick. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
 | s1270 | Exact companion/generated voice-symbol census synchronized nine entries at `0x80086450..0x80086F44`; no build or runtime run. |

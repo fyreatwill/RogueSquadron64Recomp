@@ -74436,3 +74436,62 @@ adjacent generated cinematic function is independently named
 `cinematicInterpRatio` / TOML `func_800AF668` at `0x800AF668`).
 Independently named `cinematicDeactivator` at `0x800AF60C`
 (`rom_size` `0x50`) ends at `0x800AF65C`.
+
+## Session 1544 (2026-08-15) — identified leave-hangar 640 as resident menu overlay
+
+Mandatory revisit: the previous 15 session titles were all generated-symbol
+sweep "synchronized" entries. M5 is closed and M3 is parked. CURRENT-TRUTH
+is 56884 bytes at session start, so Step 0 did not trigger maintenance.
+No new soak-queue verdicts; the SOAK-RESULTS tail is unchanged from
+2026-08-14.
+
+This iteration re-attempted Next step 2 (external retail-entry / 640
+identity) with a new angle. s1528 already showed extra Start or A leaves
+hangar 512/`0x6ab400` to 640/`0x6a2900` and that no third *width*
+appeared. It did not identify that phase. Four concurrent Rice arms
+(`scratch/agent/s1544_oracle_640_identity/{hold,leave,leaveStart,leaveB}/run.log`)
+carried whole-RDRAM write `0x0:0x800000` (`--hit-cap 50000`), overlay-id
+write `0x375B0:0x375B4`, `bridgeMenu*` write `0xCDAC1:0xCDAC6`, and
+`--watch-pc` on `loadOverlay` plus its mission/menu/cinematic paths
+(`0x80000B70`/`0x80000BA8`/`0x80000BE8`/`0x80000C30`), named frontend
+PCs, and `lv0`/`lv1` mission inits. `--vi-trace`, `--vi-poll`, and
+`--pif-trace` (`[pad]` 7C4) ran on every arm.
+
+Same-run positive controls passed on every arm: whole-RDRAM 10056 /
+removal rc=0; `loadOverlay` 4 hits; menu path 2 + cinematic path 1 +
+store-id 3; `runHangarMenuFromOverlay` 1 at 53.0s; VI 320→640→1024→512
+at 0.8/2.5/17.2/38.4s; 11 Start injections with matching PIF
+`7C4=0x10000000`.
+
+| Arm | Extra after hangar | Phase after 38.4s | Overlay after 16.9s | Named PCs after 63.5s |
+|---|---|---|---|---|
+| `hold` | eleven-Start only | stayed 512/`0x6ab400` through 99.3s | no further load | 0 |
+| `leave` | A at 58, 63 (`7C4=0x80000000`) | 512→640 at 64.0s origin `0x6a2900` | no further load | 0 |
+| `leaveStart` | A 58/63 + Start 75/80/85/90 (`7C4=0x10000000`) | 640/`0x6a2900` through 99.6s | no further load | 0 |
+| `leaveB` | A 58/63 + B 75/80/85/90 (`7C4=0x40000000`) | 640/`0x6a2900` through 99.6s | no further load | 0 |
+
+Overlay path PCs: mission `0x80000B70` = 0 on every arm; cinematic
+`0x80000BE8` only at boot 6.9s; menu `0x80000BA8` at 0.9s and 16.9s.
+`cinematicLoopBody` only at 6.9s. `lv0_initializeObjectTracking` and
+`lv1_initializeObjectTracking` = 0. `bridgeMenu*` writes are hangar-
+resident (9 pre-38s, 29 at 38–63.5s, 0 after). Hangar 512 first runs
+`tickCraftSelectScreen` + `handleLevelSelectStartConfirm` +
+`tickMenuTransitionState` (~221 each, 40.2–52.5s; `printLevelSelectWeaponText`
+at 39.3/46.1s is menu-only VRAM) then `runHangarMenuFromOverlay` at 53.0s;
+those ticks do not resume after the 512→640 edge.
+
+This rejects H1–H5 as specified in NEXT.md. H4 (640 is mission) is
+rejected by two lines (no overlay-0 path, no lv0/lv1 init). H3 (640
+is a briefing cinematic) is rejected by two lines (no overlay-2
+reload, `cinematicLoopBody` only at boot). H1 (640 is the war-room
+tick set) and H2 (640 is still craft-select) are rejected for the 640
+phase: those PCs run at hangar 512 and go quiet at
+`runHangarMenuFromOverlay`. H5 is rejected for post-settle Start and
+B: PIF shows the buttons, width/origin/overlay do not change.
+640/`0x6a2900` is a later menu-overlay screen whose handler is not in
+the watched set. Do not name it LEVEL DESCRIPTION without a second
+line. No mitigation.
+
+ORIGIN: observational oracle A/B plus already-named `loadOverlay`
+paths and companion frontend symbols; no guest value was skipped,
+rewritten, or guarded.
