@@ -75070,3 +75070,50 @@ offset `0x0000E8E0`; live body ends at generated
 `scheduleSceneFormatMessageTimed` / TOML `func_800B3E4C` at
 `0x800B3E4C`). Independently named `initPlayerCraftMovementMode` at
 `0x800B37C0` (`rom_size` `0x250`) ends at `0x800B3A10`.
+
+## Session 1558 (2026-08-16) — synchronized the try-play-spatial-sound-with-gates symbol
+
+Performed the bounded exact-name census over `0x800B3A10..0x800B3E4C`.
+
+No new soak-queue verdicts since s1557; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit) and s1553 (maintenance compaction), so the every-15-sessions
+sweep-revisit rule did not fire. CURRENT-TRUTH is 16,688 bytes at session
+start, so Step 0 did not trigger a maintenance iteration. M5 remains closed
+and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B3A10`, size `0x43C`; `0x800B3A10+0x43C=0x800B3E4C`. Overlay `.ovl.mission` entry `rom_size` is `0x43C` at offset `0x0000E8E0` (`0x800B3A10-0x800A5130`). Live body is independently `0x43C` and meets generated `scheduleSceneFormatMessageTimed` at `0x800B3E4C` |
+| Generated definition | `funcs_30.c` defines `tryPlaySpatialSoundWithGates` at `0x800B3A10`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000E8E0`, `rom_size 0x0000043C`). The live mission body is a complete `0x43C` function: prologue `lui $v0, 0x8014` / `lbu $v0, -0x77C8($v0)` reads the global mute at `MEM_BU[0x80138838]`, then `addiu $sp, $sp, -0x88` and the `$s1/$s3/$ra/$s2/$s0/$f20` spill. `$s3` holds `triggerSpec` (`$a1`) and `$s1` holds `config` (`$a0`). Further gates load the system mute at `MEM_BU[0x80138926]`, the per-player level flag at `MEM_W[0x80130B40 + config+0xB8*4]+0xC` bit `0x800000`, and the per-player NPC flag at `gPlayerSlotTable[playerIdx]+0x184` bits `0x78`. When those pass and `triggerSpec+0x8 != 0`, the body `jal`s independently named `play3DSoundEvent` at `0x800989D8` with `maxDist=24.0f` (`0x41C0`), `distScale=MEM_W[0x800A57BC]`, `vol=0x7F`, and the `0x1B`/`0x5A` extras. Last live instruction pair is `0x800B3E44`/`0x800B3E48` (`jr $ra` / `addiu $sp, $sp, 0x88`). Next generated mission entry is already `scheduleSceneFormatMessageTimed` at `0x800B3E4C`. Independently named `initPlayerCraftMovementMode` at `0x800B37C0` (`rom_size` `0x250`) ends at this address. Menu-overlay TOML `func_800B3824` (`rom_size` `0x2D8`, ends `0x800B3AFC`) occupies overlapping VRAM from `.ovl.menu` across the start of this body and is not a split of this body. Generated `buildScaledFormatTextElement` starts at menu VRAM `0x800B3AFC` and is not this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `tryPlaySpatialSoundWithGates = 0x800B3A10` with comment "(config, triggerSpec) — 9 callers, guarded 3D sound trigger". The same mission list independently names the adjacent functions `initPlayerCraftMovementMode` at `0x800B37C0` and `scheduleSceneFormatMessageTimed` at `0x800B3E4C`, and independently names all nine generated callers plus `play3DSoundEvent` at `0x800989D8`. Companion `docs/mips_to_c/ctx.c` has no `800B3A10` type. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B3A10`. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B3A10` alias |
+| Caller evidence | 9 retail `jal` encodings `0x0C02CE84` at file `0xADE04` (`0x800AD204`), `0xB634C` (`0x800B574C`), `0xB8080` (`0x800B7480`), `0xB93B8` (`0x800B87B8`), `0xBAE98` (`0x800BA298`), `0xBC748` (`0x800BBB48`), `0xBD728` (`0x800BCB28`), `0xBE448` (`0x800BD848`), and `0xBF6EC` (`0x800BEAEC`); zero `j` encodings and zero absolute `0x800B3A10` pointer words. The generated sites are nine named `tryPlaySpatialSoundWithGates(...)` calls from independently named `playerSnowSpeederUpdate`, `playerXwingUpdate`, `playerAwingUpdate`, `playerYwingUpdate`, `playerVwingUpdate`, `playerFalconUpdate`, `playerTieInterceptorUpdate`, `playerT16Update`, and `playerNabooStarfighterUpdate`. Each `jal` VRAM sits inside that caller's TOML size. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B4610` (`0x0A5D30+(0x800B3A10-0x800A5130)`) are `0x3C028014` (`lui $v0, 0x8014`), `0x90428838` (`lbu $v0, -0x77C8($v0)`), `0x27BDFF78` (`addiu $sp, $sp, -0x88`), `0xAFB1006C` (`sw $s1, 0x6C($sp)`). Last pair file `0x0B4A44`/`0x0B4A48` is `0x03E00008`/`0x27BD0088` (`jr $ra` / `addiu $sp, $sp, 0x88`). Next start file `0x0B4A4C` is `0x3C028013` (`lui $v0, 0x8013`, `scheduleSceneFormatMessageTimed` prologue). Preceding epilogue file `0x0B4608`/`0x0B460C` is `0x03E00008`/`0x27BD0020` (`initPlayerCraftMovementMode` `jr $ra` / `addiu $sp, $sp, 0x20`). In-body `jal` at file `0x0B46D8` is `0x0C026276` (`jal 0x800989D8` / `play3DSoundEvent`); preceding `lw $s2, 0x8($s3)` at file `0x0B4638` is `0x8E720008`. Menu occupant at the same VRAM (file `0x11ABB0`) starts `0x4600010D` (`trunc.w.s` interior of `func_800B3824`); that function's own start at file `0x11A9C4` is `0x27BDF8F0` (`addiu $sp, $sp, -0x710`). Menu `buildScaledFormatTextElement` at file `0x11AC9C` is `0x27BDFF60` (`addiu $sp, $sp, -0xA0`). Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B3A10` is past that occupant. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28`, s1556 start file `0x0B42FC` is still `0x3C078011`, s1557 start file `0x0B43C0` is still `0x27BDFFE0` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B3A10`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x43C`, all nine ROM `jal` callers are independently named
+`playerXxxUpdate` functions, the body is the gated 3D-sound trigger that
+calls `play3DSoundEvent`, the overlapping menu occupant is a different
+overlay, and there is neither a conflicting companion name nor a mission
+size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x43C`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`scheduleSceneFormatMessageTimed` at `0x800B3E4C` (TOML still
+`func_800B3E4C`, size `0xC0`; overlay `rom_size` is `0xC0` at
+offset `0x0000ED1C`; live body ends at generated
+`cancelSceneQueueHandle` / TOML `func_800B3F0C` at
+`0x800B3F0C`). Independently named `tryPlaySpatialSoundWithGates` at
+`0x800B3A10` (`rom_size` `0x43C`) ends at `0x800B3E4C`.

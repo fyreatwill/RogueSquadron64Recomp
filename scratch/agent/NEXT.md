@@ -1,11 +1,11 @@
-# NEXT work unit (s1558)
+# NEXT work unit (s1559)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1557 synchronized `initPlayerCraftMovementMode` at `0x800B37C0`.
+s1558 synchronized `tryPlaySpatialSoundWithGates` at `0x800B3A10`.
 Resume the generated-symbol renaming sweep. Perform exactly one
 bounded exact-name census over the next adjacent generated function,
-`0x800B3A10..0x800B3E4C`.
+`0x800B3E4C..0x800B3F0C`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -31,23 +31,23 @@ table, not a function), `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function), and
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler). The generated entry at this address
-is already `tryPlaySpatialSoundWithGates`; the companion
-mission list maps `tryPlaySpatialSoundWithGates = 0x800B3A10` with
-comment "(config, triggerSpec) — 9 callers, guarded 3D sound
-trigger". TOML is still `func_800B3A10` (size `0x43C`, ends at
-generated `scheduleSceneFormatMessageTimed` / TOML `func_800B3E4C`
-at `0x800B3E4C`). Overlay `rom_size` is `0x43C` at offset
-`0x0000E8E0`. Confirm the complete live function, matching size,
-and caller/semantic evidence before synchronizing the TOML name.
-Independently named `initPlayerCraftMovementMode` at `0x800B37C0`
-(`rom_size` `0x250`) ends at this address. Last live instruction
-pair is `0x800B3E44`/`0x800B3E48` (`jr $ra` / `addiu $sp, $sp,
-0x88`). Menu-overlay `func_800B3824` at `0x800B3824` occupies
-overlapping VRAM from `.ovl.menu` across the start of this body
-(`rom_size` `0x2D8`, ends `0x800B3AFC`), and generated
-`buildScaledFormatTextElement` starts at menu VRAM `0x800B3AFC`;
-neither is a mission size split. This naming census does not
-reopen closed M5 audio de-stubbing.
+is already `scheduleSceneFormatMessageTimed`; the companion
+mission list maps `scheduleSceneFormatMessageTimed = 0x800B3E4C`
+with comment "schedules a timed scene format-message (cancels
+pending, timing table)". TOML is still `func_800B3E4C` (size
+`0xC0`, ends at generated `cancelSceneQueueHandle` / TOML
+`func_800B3F0C` at `0x800B3F0C`). Overlay `rom_size` is `0xC0`
+at offset `0x0000ED1C`. Confirm the complete live function,
+matching size, and caller/semantic evidence before synchronizing
+the TOML name. Independently named `tryPlaySpatialSoundWithGates`
+at `0x800B3A10` (`rom_size` `0x43C`) ends at this address. Last
+live instruction pair is `0x800B3F04`/`0x800B3F08` (`jr $ra` /
+`addiu $sp, $sp, 0x20`). Menu-overlay `func_800B3D14` at
+`0x800B3D14` occupies overlapping VRAM from `.ovl.menu` across
+the start of this body (`rom_size` `0x148`, ends `0x800B3E5C`),
+and generated `disposeFormatMsgQueueMember` starts at menu VRAM
+`0x800B3E5C`; neither is a mission size split. This naming census
+does not reopen closed M5 audio de-stubbing.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -73,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800B3A10\|800B3E4C\|tryPlaySpatialSoundWithGates' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B3A10\|800B3E4C\|tryPlaySpatialSoundWithGates' ../N64Recomp/RecompiledFuncs/funcs_30.c
-grep -n -C 3 '800B3A10\|800B3E4C' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B3E4C\|800B3F0C\|scheduleSceneFormatMessageTimed' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B3E4C\|800B3F0C\|scheduleSceneFormatMessageTimed' ../N64Recomp/RecompiledFuncs/funcs_30.c
+grep -n -C 3 '800B3E4C\|800B3F0C' syms/rogue_squadron.syms.toml
 ```
