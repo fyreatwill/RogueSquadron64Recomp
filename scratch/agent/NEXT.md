@@ -1,11 +1,11 @@
-# NEXT work unit (s1656)
+# NEXT work unit (s1657)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the exact generated-symbol census. The next candidate is
-`getDatItemHealth` at `0x800C7B60` (size `0xC8`). Generated and TOML already
-use the human name (s1655 observation) — confirm full independent agreement
-or leave unresolved and advance.
+`getDatItemHealthPercentage` at `0x800C7C28` (size `0x60`). Generated and
+TOML already use the human name (s1656 observation) — confirm full
+independent agreement or leave unresolved and advance.
 
 Competing hypotheses and discriminator:
 
@@ -21,18 +21,18 @@ Exact commands:
 
 ```sh
 # 1. Companion mapping / callers / semantics (bounded searches only)
-grep -rn 'getDatItemHealth\|0x800C7B60\|800C7B60' \
+grep -rn 'getDatItemHealthPercentage\|0x800C7C28\|800C7C28' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64 \
   --include='*.c' --include='*.h' --include='*.txt' --include='*.yaml' \
   --include='*.md' --include='*.ld' | grep -v '/build/' | head -80
 
 # 2. Generated definition + adjacent boundaries
-grep -rn 'getDatItemHealth\|func_800C7B60\|0x800C7B60\|0x800C7AB0\|0x800C7C28' \
+grep -rn 'getDatItemHealthPercentage\|func_800C7C28\|0x800C7C28\|0x800C7B60\|0x800C7C88' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --include='*.c' --include='*.h' --include='*.inl' | head -80
 
 # 3. TOML + overlay span
-grep -n '800C7B60\|getDatItemHealth' \
+grep -n '800C7C28\|getDatItemHealthPercentage' \
   syms/rogue_squadron.syms.toml | head -40
 ```
 
@@ -41,4 +41,6 @@ is required for this work unit. Before starting, re-check the last 15 ledger
 titles: if they are all sweep-scoped again, this iteration must be a REVISIT
 instead (retail-entry or M4 with a genuinely new angle). s1650 already
 consumed the retail-entry revisit for post-B A/Start/Z; do not repeat those
-inputs.
+inputs. After s1651–s1656, only one non-sweep title remains in the last-15
+window (s1650); another five consecutive sweep sessions will force the
+mandatory revisit.

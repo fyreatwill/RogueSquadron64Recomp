@@ -77956,3 +77956,36 @@ build or runtime run required. Next ranked candidate: `getDatItemHealth`
 (`0x800C7B60`, size `0xC8`) for confirmation that generated/TOML already
 agree, then advance.
 
+
+## Session 1656 (2026-08-16) — confirmed the getDatItemHealth symbol
+
+Ran the exact generated-symbol census for `0x800C7B60` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live DAT-item health getter and its generated,
+TOML, and section-4 boundaries agree; H2: the name belongs to another overlay
+or context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator.
+
+The companion mission map names `getDatItemHealth` at `0x800C7B60`. The
+bounded companion-tree search found no competing C/H definition or alternate
+address; the next companion symbol is `getDatItemHealthPercentage` at
+`0x800C7C28`. The generated `funcs_36.c` definition already carries the human
+name and contains the live `0xC8`-byte body: it looks up a named level DAT
+item via `getLevelDatItemByName`, rejects a null item with sentinel
+`0x7FFFFFFF`, otherwise either loads NPC current health through
+`getNpcContextByIndex` / `getNpcCurrentHealth` when the item's halfword
+index is not `0xFFFF`, dispatches slot type `0xB` through `slotDispatcherIter`
+when the NPC health pointer is missing, or reads a per-state health word from
+the DAT item structure when the index is the sentinel. Its exact preceding
+boundary is `initAnchoredActorTowardNamedDatItem` at `0x800C7AB0` with size
+`0xB0`, and its following boundary is `getDatItemHealthPercentage` at
+`0x800C7C28` with size `0x60`. The TOML entry already has the same human
+name, address, and size; the section-4 overlay table has the same function at
+ROM offset `0x22A30` with span `0xC8` (exact after `0x22980+0xB0`).
+
+H1 is selected. H2 is ruled out by the matching mission mapping and section-4
+ownership; H3 is ruled out by the live health-lookup body and exact adjacent
+boundaries and sizes. No source-map edit was needed because the generated
+definition and TOML entry were already synchronized. No build or runtime
+behavior conclusion was made. The next sweep candidate is
+`getDatItemHealthPercentage` (`0x800C7C28`, size `0x60`).
