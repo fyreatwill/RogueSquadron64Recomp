@@ -80105,3 +80105,39 @@ runtime run required.
 Next census: `npcInitSimpleModel` / `func_800D5FE0` at `0x800D5FE0`
 (size `0x154`). Last-15 titles still include s1714's retail-entry
 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1716 (2026-08-16) — synchronized the npcInitSimpleModel symbol
+
+Exact generated-symbol census for `0x800D5FE0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 53334; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcInitSimpleModel = 0x800D5FE0` with comment "minimal NPC init (health/motion/anim/detail, no extra logic)". Previous contiguous neighbor `npcDebrisFieldUpdate = 0x800D5208`; next contiguous neighbor `npcTickEffectChannelShared = 0x800D6134` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcInitSimpleModel` at VRAM `0x800D5FE0`; prologue `addiu $sp, $sp, -0x48`; `*(a0+4)` saved in `s0` (object); template pointer `*(s0+0x34)` saved in `s1`; returns through `jr $ra` / `addiu $sp, $sp, 0x48` ending at `0x800D6130`; previous mission function is `npcDebrisFieldUpdate` at `0x800D5208` (last insn `0x800D5FDC`); next mission function is `npcTickEffectChannelShared` at `0x800D6134`. `funcs.h` already declares the human name |
+| Body semantics | `sb $zero, 0xF3($s0)`; store `D_800A7690` at `+0xF8`; `sw $zero, 0xFC($s0)`; `setNpcHealth` (`jal 0x800F2070`); `initActorMotionParams` (`jal 0x800F2888`); `initObjectAnimSubstruct` ×2 (`jal 0x800F2B88`) with stack callbacks `0x800D7818` / `0x800D7834` (`npcTickEffectChannelSharedMode0` / `Mode1`); `setObjectDetailLevel` (`jal 0x800F2830`). No extra spawn/effect/destruction path. Name matches a minimal NPC health/motion/anim/detail init |
+| TOML (before) | `{ name = "func_800D5FE0", vram = 0x800D5FE0, size = 0x154 }` — size matches `0x800D6134 - 0x800D5FE0` (last insn `0x800D6130` + 4 = `0x154`) |
+| Overlay section 4 | `{ .func = npcInitSimpleModel, .offset = 0x00030EB0, .rom_size = 0x00000154 }` under `section_4_ovl_mission_funcs` (`0x800D5FE0 - 0x800A5130 = 0x30EB0`; `0x300D8 + 0xDD8 = 0x30EB0`; `0x30EB0 + 0x154 = 0x31004` matches next `npcTickEffectChannelShared`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D5FE0`. Companion and generated greps found no leftover `D_800D5FE0` splat and no other occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated minimal NPC-init body,
+previous (`npcDebrisFieldUpdate` / `0x800D5208`) and next
+(`npcTickEffectChannelShared` / `0x800D6134`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcInitSimpleModel`, and only the TOML name was a stale
+`func_800D5FE0` placeholder. Corrected TOML to `npcInitSimpleModel`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTickEffectChannelShared` / `func_800D6134` at
+`0x800D6134` (size `0x218`). Last-15 titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate does not fire.

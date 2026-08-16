@@ -1815,7 +1815,7 @@ functions = [
     { name = "npcInitChildLinkedToParent", vram = 0x800D4ED0, size = 0x1A8 },
     { name = "advanceNpcSpinOrientation", vram = 0x800D5078, size = 0x190 },
     { name = "npcDebrisFieldUpdate", vram = 0x800D5208, size = 0xDD8 },
-    { name = "func_800D5FE0", vram = 0x800D5FE0, size = 0x154 },
+    { name = "npcInitSimpleModel", vram = 0x800D5FE0, size = 0x154 },
     { name = "func_800D6134", vram = 0x800D6134, size = 0x218 },
     { name = "func_800D634C", vram = 0x800D634C, size = 0x64C },
     { name = "npcTankDroidUpdate", vram = 0x800D6998, size = 0xE80 },
