@@ -78893,3 +78893,34 @@ Remaining retail-entry lead is any input on the attract 512 this
 screen times out into (`0x00690400`). Next work resumes the
 generated-symbol sweep at `func_800CC9B8` /
 `tickAtAtAudioAndWeaponState`.
+
+## Session 1683 (2026-08-16) — synchronized the tickAtAtAudioAndWeaponState symbol
+
+Exact generated-symbol census for `0x800CC9B8` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 31938; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickAtAtAudioAndWeaponState = 0x800CC9B8`; previous contiguous helper `tickAtAtBodyTransform = 0x800CC2AC`; next contiguous helper `processAtAtSubFeatureSlot = 0x800CCB1C` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void tickAtAtAudioAndWeaponState` at VRAM `0x800CC9B8`; prologue `addiu $sp, $sp, -0x38`; returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800CCB18`; previous mission function is `tickAtAtBodyTransform` at `0x800CC2AC` (last insn `0x800CC9B4`); next mission function is `processAtAtSubFeatureSlot` at `0x800CCB1C` |
+| Body semantics | Actor in `$s0`/`$a0`. Tears down the current anim channel/slot (`clearModelAnimChannelEntry` on `+0x7C`, `releaseModelAnimSlot` on `+0x78`), sets state byte `+0x6F=1`, recalculates duration floats `+0x84`/`+0x88` from `0x800A6DBC`/`0x6DC0`/`0x6DC4`, then `play3DSoundEvent`, `initActorRenderDescriptorWithNpcVelocity` (clears `+0x6D`), `flattenAnimTreeAndAllocateSlot`, `markModelAnimChannelEntryActive`, `setModelAnimSlotCycleDuration`. Optional `+0xF0` timer path when `+0x6F==0` resets `+0xE7` and copies `+0x80`/`0x8010A630`. Called from `npcAtAtUpdate` at `0x800CE014` when byte `+0x90` is nonzero. Name matches the AT-AT audio/weapon-state tick |
+| TOML (before) | `{ name = "func_800CC9B8", vram = 0x800CC9B8, size = 0x164 }` — size matches `0x800CCB1C - 0x800CC9B8` (89 decoded insns, last+4 = `0x164`) |
+| Overlay section 4 | `{ .func = tickAtAtAudioAndWeaponState, .offset = 0x00027888, .rom_size = 0x00000164 }` under `section_4_ovl_mission_funcs` (`0x800CC9B8 - 0x800A5130 = 0x27888`; `0x2717C + 0x70C = 0x27888`; `0x27888 + 0x164 = 0x279EC` matches next `processAtAtSubFeatureSlot`) |
+| Non-collision | Menu-overlay `fake_func_800CC3D4 = 0x800CC3D4` (size `0x114C`) plus hangar/menu data live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. They appear inside the mission VRAM span in `funcs_37.c` only because overlays share VRAM |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated AT-AT audio/weapon-state tick,
+previous (`tickAtAtBodyTransform` / `0x800CC2AC`) and next
+(`processAtAtSubFeatureSlot` / `0x800CCB1C`) boundaries, TOML size, and
+section-4 overlay span agreed; only the TOML name was a stale `func_800CC9B8`
+placeholder. Corrected TOML to `tickAtAtAudioAndWeaponState`. No build or
+runtime run required.
+
+Next census: `func_800CCB1C` / `processAtAtSubFeatureSlot` at `0x800CCB1C`
+(size `0x17C`). Last-15 titles still include s1682, so the next iteration
+may continue the sweep.
