@@ -76657,3 +76657,26 @@ real generated body, and state-update semantics. Updated only the TOML
 placeholder to `applyDemoRecordedHudEvents`; no mitigation, build, or runtime
 change was made. The next bounded candidate is `func_800BEE18`, independently
 named `clearPlayerSlotHudTracking`, with size `0x94`.
+
+## Session 1606 (2026-08-16) — synchronized the clearPlayerSlotHudTracking symbol
+
+The work unit censused `0x800BEE18..0x800BEEAC` using the companion mission
+symbol list, generated definition and caller, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `clearPlayerSlotHudTracking = 0x800BEE18`; `initAllPlayersHudTracking = 0x800BEEAC` is the next companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `clearPlayerSlotHudTracking` at `0x800BEE18`; `initAllPlayersHudTracking` calls it at `0x800BEF20`/`0x800BEF24`. The body begins with the expected HUD-slot pointer and indicator-clearing operations and ends before `0x800BEEAC`. |
+| Span and overlay table | The TOML placeholder had size `0x94`; `recomp_overlays.inl` records `clearPlayerSlotHudTracking` at offset `0x19CE8` with ROM size `0x94`, followed by `initAllPlayersHudTracking` at `0x800BEEAC`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated body boundary, TOML
+size, and overlay-table span agree. H3 is ruled out by the companion mapping,
+real generated body, and generated caller. Updated only the TOML placeholder to
+`clearPlayerSlotHudTracking`; no mitigation, build, or runtime change was
+made. The next bounded candidate is `func_800BEFBC`, independently named
+`tickPlayerHudIndicators`, with size `0x2A8`.
