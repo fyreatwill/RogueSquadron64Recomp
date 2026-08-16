@@ -1,25 +1,25 @@
-# NEXT work unit (s1605)
+# NEXT work unit (s1606)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol renaming sweep with exactly one bounded
-exact-name census over `0x800BECDC..0x800BEE18`. Do not build or run.
+exact-name census over `0x800BEE18..0x800BEEAC`. Do not build or run.
 Record the address, size, generated definition, companion name/source,
 caller or semantic evidence, and confidence before editing. Synchronize only
 an exact independent name in `syms/rogue_squadron.syms.toml`; leave
 address-encoded, fake, fragment, data-like, or ambiguous entries unchanged.
 
-The TOML entry is `func_800BECDC` with size `0x13C`. The generated overlay
-table is expected to identify `applyDemoRecordedHudEvents` at this address;
-the preceding `initDemoPlayState` body must end at `0x800BECDC`, and
-`clearPlayerSlotHudTracking` is the next live entry at `0x800BEE18`. The
+The TOML entry is `func_800BEE18` with size `0x94`. The generated overlay
+table is expected to identify `clearPlayerSlotHudTracking` at this address;
+the preceding `applyDemoRecordedHudEvents` body must end at `0x800BEE18`, and
+`initAllPlayersHudTracking` is the next live entry at `0x800BEEAC`. The
 generated body and companion mission list must establish the live-body
 boundary and caller or semantic evidence before any rename.
 
 Competing hypotheses and discriminator:
 
 - H1: the function has an exact independent companion mapping and can be
-  synchronized to `applyDemoRecordedHudEvents`.
+  synchronized to `clearPlayerSlotHudTracking`.
 - H2: the mapping is partial or conflicting, or the generated/TOML span does
   not match, so the entry must remain unchanged.
 - H3: the region is a fragment/data-like or otherwise non-function region
@@ -34,8 +34,8 @@ one hypothesis.
 Commands:
 
 ```
-grep -n -C 5 -E '800BECDC|800BEE18|applyDemoRecordedHudEvents' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 -E '800BECDC|800BEE18|applyDemoRecordedHudEvents' ../N64Recomp/RecompiledFuncs/funcs_32.c
-grep -n -C 3 -E '800BECDC|800BEE18|applyDemoRecordedHudEvents' syms/rogue_squadron.syms.toml
-grep -n -C 3 'applyDemoRecordedHudEvents' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl ../N64Recomp/RecompiledFuncs/funcs_32.c
+grep -n -C 5 -E '800BEE18|800BEEAC|clearPlayerSlotHudTracking' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 -E '800BEE18|800BEEAC|clearPlayerSlotHudTracking' ../N64Recomp/RecompiledFuncs/funcs_32.c
+grep -n -C 3 -E '800BEE18|800BEEAC|clearPlayerSlotHudTracking' syms/rogue_squadron.syms.toml
+grep -n -C 3 'clearPlayerSlotHudTracking' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl ../N64Recomp/RecompiledFuncs/funcs_32.c
 ```

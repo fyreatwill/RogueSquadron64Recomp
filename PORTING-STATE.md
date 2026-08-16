@@ -76634,3 +76634,26 @@ generated body, and generated caller. Updated only the TOML placeholder to
 `initDemoPlayState`; no mitigation, build, or runtime change was made. The
 next bounded candidate is `func_800BECDC`, independently named
 `applyDemoRecordedHudEvents`, with size `0x13C`.
+
+## Session 1605 (2026-08-16) — synchronized the applyDemoRecordedHudEvents symbol
+
+The work unit censused `0x800BECDC..0x800BEE18` using the companion mission
+symbol list, generated definition and semantic body, the generated overlay
+table, and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `applyDemoRecordedHudEvents = 0x800BECDC`; `clearPlayerSlotHudTracking = 0x800BEE18` is the next companion boundary. |
+| Generated definition and semantic evidence | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `applyDemoRecordedHudEvents` at `0x800BECDC`; its body updates the per-player demo/HUD record, advances the demo index, and marks the record active before returning at `0x800BEE14`/`0x800BEE18`. |
+| Span and overlay table | The TOML placeholder had size `0x13C`; `recomp_overlays.inl` records `applyDemoRecordedHudEvents` at offset `0x19BAC` with ROM size `0x13C`, followed by `clearPlayerSlotHudTracking` at `0x800BEE18`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated body boundary, TOML
+size, and overlay-table span agree. H3 is ruled out by the companion mapping,
+real generated body, and state-update semantics. Updated only the TOML
+placeholder to `applyDemoRecordedHudEvents`; no mitigation, build, or runtime
+change was made. The next bounded candidate is `func_800BEE18`, independently
+named `clearPlayerSlotHudTracking`, with size `0x94`.

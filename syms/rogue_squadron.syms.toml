@@ -1670,7 +1670,7 @@ functions = [
     { name = "playerNabooStarfighterUpdate", vram = 0x800BE7D0, size = 0x42C },
     { name = "fake_func_800BEBFC", vram = 0x800BEBFC, size = 0x4 },
     { name = "initDemoPlayState", vram = 0x800BEC00, size = 0xDC },
-    { name = "func_800BECDC", vram = 0x800BECDC, size = 0x13C },
+    { name = "applyDemoRecordedHudEvents", vram = 0x800BECDC, size = 0x13C },
     { name = "func_800BEE18", vram = 0x800BEE18, size = 0x94 },
     { name = "func_800BEEAC", vram = 0x800BEEAC, size = 0x110 },
     { name = "func_800BEFBC", vram = 0x800BEFBC, size = 0x2A8 },
