@@ -80213,3 +80213,36 @@ runtime run required.
 Next census: `npcTankDroidUpdate` at `0x800D6998` (size `0xE80`). Last-15
 titles still include s1714's retail-entry revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1719 (2026-08-16) — confirmed the npcTankDroidUpdate symbol
+
+Exact generated-symbol census for `0x800D6998` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 55368; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTankDroidUpdate = 0x800D6998`. Coarse listing previous `npcShuttleUpdate = 0x800D3894`; next coarse neighbor `npcWingmanUpdate = 0x800D93C0` skips helpers; next contiguous neighbor `npcTickEffectChannelSharedMode0 = 0x800D7818`. Companion already lists this as the exclusive caller of `npcTankDroidComputeAimMotion` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTankDroidUpdate` at VRAM `0x800D6998`; prologue `addiu $sp, $sp, -0xC0`; object pointer `a0` saved in `s4`, object record `*(s4+4)` in `s1`; returns through `jr $ra` / `addiu $sp, $sp, 0xC0` ending at `0x800D7814`; previous mission function is `npcTankDroidComputeAimMotion` at `0x800D634C` (last insn `0x800D6994`); next mission function is `npcTickEffectChannelSharedMode0` at `0x800D7818`. `funcs.h` already declares the human name. Exclusive call to `npcTankDroidComputeAimMotion` is at `0x800D6E84` (`jal 0x800D634C`) |
+| Body semantics | Halfword state in `a1`; 9-way jump table at `0x800A7718` on `(a1-1)` for `a1 ∈ 1..9` (`sltiu` bound 9; out of range falls to the epilogue). Case 0 is setup (`walkMeshdef0List` at `0x800D6A08`, `createAndInitObject` at `0x800D6C34`). Case 2 is the live tick plus destruction (`npcTankDroidComputeAimMotion` at `0x800D6E84`, `spawnDebris1Npc` at `0x800D7120`, `spawnDestructionEffectBurst` at `0x800D7160`, `spawnByteAnimDebrisDefault` at `0x800D71B4`). Case 4 applies `dealDamageToNpc` at `0x800D7588`. Other live helpers include `lookupHmtMaterialByName` ×2, `play3DSoundEvent` ×2, `unregisterAndFreeNpcSlot` ×7, `popNpcSlotFromTail` ×8, `addNpcToVisibilityBucket`, `updateActive3DAudioSource`. Name matches the tank-droid `npcXxxUpdate` sibling of `npcAtAtUpdate` / `npcAtStUpdate` / `npcShuttleUpdate` |
+| TOML | `{ name = "npcTankDroidUpdate", vram = 0x800D6998, size = 0xE80 }` — already the human name; size matches `0x800D7818 - 0x800D6998` (last insn `0x800D7814` + 4 = `0xE80`). No leftover `func_800D6998` |
+| Overlay section 4 | `{ .func = npcTankDroidUpdate, .offset = 0x00031868, .rom_size = 0x00000E80 }` under `section_4_ovl_mission_funcs` (`0x800D6998 - 0x800A5130 = 0x31868`; `0x3121C + 0x64C = 0x31868`; `0x31868 + 0xE80 = 0x326E8` matches next `npcTickEffectChannelSharedMode0`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D6998`. Companion menu/cinematic greps are empty for this address and this name (menu max VRAM `0x800D03DC`; cinematic has no `800D` symbols). No leftover `func_800D6998` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 9-way tank-droid-update body,
+previous (`npcTankDroidComputeAimMotion` / `0x800D634C`) and next
+(`npcTickEffectChannelSharedMode0` / `0x800D7818`) boundaries, TOML name and
+size, and section-4 overlay span already agree. No TOML or generated-name
+change. This refutes H2 (no stale placeholder), H3 (no fake fragment, overlay
+collision, or size/boundary disagreement), and H4 (companion, generated body,
+TOML, and section-4 row are all present). No build or runtime run required.
+
+Next census: `npcTickEffectChannelSharedMode0` at `0x800D7818` (size `0x1C`).
+Last-15 titles still include s1714's retail-entry revisit, so the next
+iteration continues the sweep.
