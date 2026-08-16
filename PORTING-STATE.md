@@ -72496,3 +72496,33 @@ generated function is independently named `cutsceneDispatchSlotsByFlag`
 at `0x800A8420` (TOML still `func_800A8420`, size `0x590`; overlay
 `rom_size` is `0x590` at offset `0x000032F0`; live body ends at
 independently named `spawnCutsceneEffectsAndCues`).
+
+## Session 1496 (2026-08-15) — Rice video still phase-qualifies the retail oracle
+
+Mandatory revisit: the previous 15 session titles were all generated-symbol
+sweep work. The parked external retail-entry thread (CURRENT-TRUTH next
+step 2 / s1194–s1239) used dummy video and concluded there was no
+state-changing route. Dummy `ProcessDList` is empty. s707 had already
+shown Homebrew Rice reaches hangar; later dummy-only recipes forgot that
+route. This iteration re-measured dummy vs Rice on the current
+`iter974-armB2` core, retail ROM, and oracle frontend.
+
+No new soak-queue verdicts; the SOAK-RESULTS tail is unchanged from
+2026-08-14.
+
+Both 70-second arms used whole-RDRAM write `0x0:0x800000`, `--vi-trace`,
+`--vi-poll`, `--pif-trace`, and the eleven-Start schedule at 6..56s.
+Logs: `scratch/agent/s1496_oracle_video_ab/{dummy,rice}/run.log`.
+
+| Arm | Controls | Phase |
+|---|---|---|
+| Dummy (no `--video`) | whole-RDRAM 10000 callbacks / removal rc=0; 11 Start injections; PIF `7C4=0x10000000` on each press; initial VI 0→320 | stayed width 320 / origin `0x006dd280`; 4192 VI / 69.9s emulated |
+| Rice (`mupen64plus-video-rice.dylib`) | same whole-RDRAM threshold; 11 Start injections; PIF `7C4=0x10000000`; initial VI 0→320 | 320→640 at 2.3s (VI 99); 640→1024 at 17.2s (VI 994); 1024→512 hangar origin `0x006ab800` at 38.4s (VI 2244), then `0x006ab400`/`0x006ab800` through the rest of the run; 4147 VI / 69.1s emulated |
+
+This selects H1. Dummy-video 320-only recipes are not a missing external
+handoff; they omit RDP. Rice is the available later-phase retail-entry
+recipe. It rules out a post-s707 Rice regression on this core/ROM. It
+does not measure M4 `0x688:0x710` or MusyX writers. No mitigation.
+
+ORIGIN: observational oracle A/B only; no guest value was skipped,
+rewritten, or guarded.

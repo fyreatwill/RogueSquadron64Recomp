@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1495 (2026-08-15).
+the authority for session detail. Reviewed through s1496 (2026-08-15).
 
 ## Current state
 
@@ -25,14 +25,17 @@ the authority for session detail. Reviewed through s1495 (2026-08-15).
 - The complete `do_sdl`/`do_sdr` census found five emitted calls; all are
   malformed/data-like or in a malformed oversized generated body. No reachable
   target-path writer or frame-overlapping span was established.
-- M5 audio de-stubbing is closed. Audio remains stubbed. Retail watches passed
-  whole-RDRAM controls but stayed at VI 320 and never reached the identified
-  `musyxInitVoiceFromSample` writers. Do not reopen without a new independent
-  lead reaching audio initialization or voice allocation.
-- Retail oracle whole-RDRAM, scheduled PIF, and VI controls are healthy, but
-  the available recipe remains at width 320/origin `0x006dd280`. The external
-  retail-entry boundary is unresolved and currently lacks a new state-changing
-  route. Do not add target watches before that boundary is reached.
+- M5 audio de-stubbing is closed. Audio remains stubbed. Prior retail watches
+  that stayed at VI 320 used dummy video and never reached the identified
+  `musyxInitVoiceFromSample` writers. Do not reopen without a new bounded plan
+  that uses the Rice hangar recipe below.
+- Retail oracle whole-RDRAM, scheduled PIF, and VI controls are healthy.
+  Dummy video (`ProcessDList` no-op) stays at width 320 / origin
+  `0x006dd280`. Homebrew Rice (`--video …/mupen64plus-video-rice.dylib`)
+  with the eleven-Start schedule is the available later-phase recipe:
+  320→640 at ~2.3s, 640→1024 at ~17.2s, 1024→512 hangar origin
+  `0x006ab400`/`0x006ab800` at ~38.4s (s707 and s1496). Do not add target
+  watches on a dummy-video arm. Glide64MK2 stayed at 320 in s707.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI submission.
   `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -107,9 +110,10 @@ the authority for session detail. Reviewed through s1495 (2026-08-15).
    `0x800A89B0`). Overlay `rom_size` is `0x590` at offset
    `0x000032F0`. Confirm the complete live function, matching size,
    and caller/semantic evidence before synchronizing the TOML name.
-2. Keep the external retail-entry boundary parked until a new independent
-   artifact or state-changing handoff is available. Any future oracle work
-   must pass whole-RDRAM, PIF, and VI positive controls in the same run.
+2. Future oracle work (M4 numeric origin, hangar/mission watches) must use
+   the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM, PIF,
+   and VI positive controls in the same run. Do not re-audit dummy-video
+   320-only schedules as if no later-phase route exists.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation; then write a new bounded plan before changing stubs.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator;
@@ -169,6 +173,12 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
   refuted by the adjacent Mupen64Plus source, installed `--savestate` support,
   and existing state files. Their audited lifecycle still has no new retail
   state source.
+- The s1194–s1239 claim that the external retail-entry boundary "lacks a
+  new state-changing route" and that the available recipe remains at width
+  320 / `0x006dd280` is superseded. It was believable because those sessions
+  used dummy video, whose `ProcessDList` is empty, so the boot cinematic
+  never advances. s707 and the s1496 dummy-vs-Rice batch show Rice is the
+  later-phase route.
 
 ## Evidence ledger summary
 
@@ -179,7 +189,8 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s984–s1038 | M4 shade audits moved the issue to accumulator numeric origin. |
 | s1039–s1167 | Retail/port controls, VI lifecycle, and generated boundaries were resolved; late runtime paths remain phase-sensitive. |
 | s1168–s1193 | Audio and complete M3 store/load idiom audits closed without a mitigation; `do_sdl`/`do_sdr` selected H3. |
-| s1194–s1239 | M4 and retail-entry experiments passed controls but remained phase-incomplete; external handoff remains open. |
+| s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
+| s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
 | s1270 | Exact companion/generated voice-symbol census synchronized nine entries at `0x80086450..0x80086F44`; no build or runtime run. |
