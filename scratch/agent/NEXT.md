@@ -1,11 +1,11 @@
-# NEXT work unit (s1566)
+# NEXT work unit (s1567)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1565 synchronized `destroySceneNpcsAndUnlink` at `0x800B4134`.
+s1566 synchronized `decayWeaponCooldownTimer` at `0x800B41BC`.
 Resume the generated-symbol renaming sweep. Perform exactly one
 bounded exact-name census over the next adjacent generated function,
-`0x800B41BC..0x800B41EC`.
+`0x800B41EC..0x800B41FC`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -31,24 +31,25 @@ table, not a function), `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function), and
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler). The generated entry at this address
-is already `decayWeaponCooldownTimer`; the companion
-mission list maps `decayWeaponCooldownTimer = 0x800B41BC`
-with no extra comment. TOML is still `func_800B41BC` (size
-`0x30`, ends at generated `getWeaponChargeLevel` / TOML
-`func_800B41EC` at `0x800B41EC`). Overlay `rom_size` is `0x30`
-at offset `0x0000F08C`. Confirm the complete live function,
+is already `getWeaponChargeLevel`; the companion
+mission list maps `getWeaponChargeLevel = 0x800B41EC`
+with no extra comment. TOML is still `func_800B41EC` (size
+`0x10`, ends at generated `advancePitchTowardTarget` / TOML
+`func_800B41FC` at `0x800B41FC`). Overlay `rom_size` is `0x10`
+at offset `0x0000F0BC`. Confirm the complete live function,
 matching size, and caller/semantic evidence before synchronizing
-the TOML name. Independently named `destroySceneNpcsAndUnlink`
-at `0x800B4134` (`rom_size` `0x88`) ends at this address. Last
-live instruction pair is `0x800B41E4`/`0x800B41E8` (`jr $ra` /
-`nop`). The body starts `lui $v0, 0x8011`, loads a float timer
-at `0x801096B0` (`lwc1 $f2, -0x6950($v0)`), compares it against
-zero, and when positive subtracts `$a1` and stores the result
-back. Menu-overlay `accumulateShipThrottleCharge` at
-`0x800B4168` occupies overlapping VRAM from `.ovl.menu` through
-this entire body (`rom_size` `0xBC`, ends `0x800B4224`).
-Menu-overlay `computeThrottleChargeFraction` at `0x800B4224`
-(`rom_size` `0x40`) starts after this body. Neither is a
+the TOML name. Independently named `decayWeaponCooldownTimer`
+at `0x800B41BC` (`rom_size` `0x30`) ends at this address. Last
+live instruction pair is `0x800B41F4`/`0x800B41F8` (`jr $ra` /
+`nop`). The body is four instructions: `lui $v0, 0x8011`,
+`lwc1 $f0, -0x4860($v0)` (float at `0x8010B7A0`), then the
+return pair. Two retail `jal` encodings `0x0C02D07B` sit at
+files `0x100680` and `0x100698`. Menu-overlay
+`accumulateShipThrottleCharge` at `0x800B4168` occupies
+overlapping VRAM from `.ovl.menu` through this entire body
+(`rom_size` `0xBC`, ends `0x800B4224`). Menu-overlay
+`computeThrottleChargeFraction` at `0x800B4224` (`rom_size`
+`0x40`) starts after `advancePitchTowardTarget`. Neither is a
 mission size split. This naming census does not reopen closed
 M5 audio de-stubbing.
 
@@ -76,7 +77,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800B41BC\|800B41EC\|decayWeaponCooldownTimer' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B41BC\|800B41EC\|decayWeaponCooldownTimer' ../N64Recomp/RecompiledFuncs/funcs_30.c
-grep -n -C 3 '800B41BC\|800B41EC' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B41EC\|800B41FC\|getWeaponChargeLevel' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B41EC\|800B41FC\|getWeaponChargeLevel' ../N64Recomp/RecompiledFuncs/funcs_30.c
+grep -n -C 3 '800B41EC\|800B41FC' syms/rogue_squadron.syms.toml
 ```

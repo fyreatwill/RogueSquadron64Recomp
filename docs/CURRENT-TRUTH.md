@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1565 (2026-08-16).
+the authority for session detail. Reviewed through s1566 (2026-08-16).
 
 ## Current state
 
@@ -74,29 +74,31 @@ the authority for session detail. Reviewed through s1565 (2026-08-16).
    and M4 threads; s1544 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
-   sizes, and caller/semantic evidence. Per-session H1 syncs through s1565
+   sizes, and caller/semantic evidence. Per-session H1 syncs through s1566
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
-   Next census: `0x800B41BC..0x800B41EC`. The generated entry is already
-   `decayWeaponCooldownTimer`; the companion mission list maps
-   `decayWeaponCooldownTimer = 0x800B41BC` with no extra comment.
-   TOML is still `func_800B41BC` (size `0x30`, ends at generated
-   `getWeaponChargeLevel` / TOML `func_800B41EC` at `0x800B41EC`).
-   Overlay `rom_size` is `0x30` at offset `0x0000F08C`. Confirm the
+   Next census: `0x800B41EC..0x800B41FC`. The generated entry is already
+   `getWeaponChargeLevel`; the companion mission list maps
+   `getWeaponChargeLevel = 0x800B41EC` with no extra comment.
+   TOML is still `func_800B41EC` (size `0x10`, ends at generated
+   `advancePitchTowardTarget` / TOML `func_800B41FC` at `0x800B41FC`).
+   Overlay `rom_size` is `0x10` at offset `0x0000F0BC`. Confirm the
    complete live function, matching size, and caller/semantic
    evidence before synchronizing the TOML name. Independently named
-   `destroySceneNpcsAndUnlink` at `0x800B4134` (`rom_size` `0x88`)
-   ends at this address. Last live instruction pair is `0x800B41E4`
-   / `0x800B41E8` (`jr $ra` / `nop`). The body loads a float timer
-   at `0x801096B0`, compares it against zero, and when positive
-   subtracts `$a1` and stores the result back. Menu-overlay
-   `accumulateShipThrottleCharge` at `0x800B4168` (`rom_size`
-   `0xBC`, ends `0x800B4224`) occupies overlapping VRAM from
-   `.ovl.menu` through this entire body; menu-overlay
+   `decayWeaponCooldownTimer` at `0x800B41BC` (`rom_size` `0x30`)
+   ends at this address. Last live instruction pair is `0x800B41F4`
+   / `0x800B41F8` (`jr $ra` / `nop`). The body is four instructions:
+   `lui $v0, 0x8011`, `lwc1 $f0, -0x4860($v0)` (float at
+   `0x8010B7A0`), then the return pair. Two retail `jal`
+   encodings `0x0C02D07B` sit at files `0x100680` and `0x100698`.
+   Menu-overlay `accumulateShipThrottleCharge` at `0x800B4168`
+   (`rom_size` `0xBC`, ends `0x800B4224`) occupies overlapping
+   VRAM from `.ovl.menu` through this entire body; menu-overlay
    `computeThrottleChargeFraction` at `0x800B4224` (`rom_size`
-   `0x40`) starts after this body. Neither is a mission size split.
-   This naming census does not reopen closed M5 audio de-stubbing.
+   `0x40`) starts after `advancePitchTowardTarget`. Neither is a
+   mission size split. This naming census does not reopen closed
+   M5 audio de-stubbing.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -233,7 +235,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
-| s1270–s1565 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `destroySceneNpcsAndUnlink` at `0x800B4134`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
+| s1270–s1566 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `decayWeaponCooldownTimer` at `0x800B41BC`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
@@ -251,6 +253,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1563 | H1: synchronized `resetSpeechOncePerLevelFlag` at `0x800B40A0` (size `0x50`). |
 | s1564 | H1: synchronized `setPlayerSlotPositionVec3` at `0x800B40F0` (size `0x44`). |
 | s1565 | H1: synchronized `destroySceneNpcsAndUnlink` at `0x800B4134` (size `0x88`). |
+| s1566 | H1: synchronized `decayWeaponCooldownTimer` at `0x800B41BC` (size `0x30`). |
 
 ## Method and safety rules
 
