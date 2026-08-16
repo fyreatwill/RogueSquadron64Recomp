@@ -78442,3 +78442,33 @@ required.
 Next census: `func_800C8978` / `updateNpcOrientationFromMotion` at
 `0x800C8978` (size `0x518`). Last-15 titles still include s1666, so the
 next iteration may continue the sweep.
+
+## Session 1669 (2026-08-16) — synchronized the updateNpcOrientationFromMotion symbol
+
+Exact generated-symbol census for `0x800C8978` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `updateNpcOrientationFromMotion = 0x800C8978`; next `setupNpcModelForState = 0x800C8E90`; prior `spawnNpcImpactEffectVariant = 0x800C8504` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void updateNpcOrientationFromMotion` at VRAM `0x800C8978`; returns through `jr $ra` / `addiu $sp, $sp, 0x1C8` ending at `0x800C8E8C`; next mission function `setupNpcModelForState` at `0x800C8E90` |
+| Body semantics | Copies actor position from `a0+0xC/0x10/0x14`, `buildRotationMatrixSlot0` from `actor+0x60` and `composeRotationMatrixSlot1` from `actor+0x5C`, `transformVec3ByMat34` writes the rotated position back, then `isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` gate `getObjectMeshTransformOrLocal` + `computeAnchorRelativePositionByDistanceRatio`. Orientation math is `vec3Length` ×4, `vec3Dot` ×3, `vec3Cross` ×2, `vec3NormalizeInto`, `normalize_vector`, `quatFromAxisAngle`, `rotateVec3ByQuat`, `buildRotationMatrixSlot1`, `mat3x3InverseInto`, `mat34CrossRowsAndCopyPos`, plus `play3DSoundEventVariant` and `factor5RemoveListNode` |
+| TOML (before) | `{ name = "func_800C8978", vram = 0x800C8978, size = 0x518 }` — size matches `0x800C8E90 - 0x800C8978` |
+| Overlay section 4 | `{ .func = updateNpcOrientationFromMotion, .offset = 0x00023848, .rom_size = 0x00000518 }` under `section_4_ovl_mission_funcs` (`0x800C8978 - 0x800A5130 = 0x23848`; `0x23848 + 0x518 = 0x23D60` matches next) |
+| Non-collision | Menu-overlay `allocCellBitGroup = 0x800C888C` and `allocCellGeometryBuffer = 0x800C8A64` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. Generated source interleaves `allocCellGeometryBuffer` after this function by VRAM, not as a sibling |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`spawnNpcImpactEffectVariant` / `0x800C8504`) and next
+(`setupNpcModelForState` / `0x800C8E90`) boundaries, and TOML size already
+agreed; only the TOML name was a stale `func_800C8978` placeholder.
+Corrected TOML to `updateNpcOrientationFromMotion`. No build or runtime run
+required.
+
+Next census: `func_800C8E90` / `setupNpcModelForState` at `0x800C8E90`
+(size `0x100`). Last-15 titles still include s1666, so the next iteration
+may continue the sweep.

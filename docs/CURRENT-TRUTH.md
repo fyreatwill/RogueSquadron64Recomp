@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1668 (2026-08-16).
+the authority for session detail. Reviewed through s1669 (2026-08-16).
 
 ## Current state
 
@@ -72,13 +72,13 @@ the authority for session detail. Reviewed through s1668 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep at generated
-   `updateNpcOrientationFromMotion` / TOML `func_800C8978` at `0x800C8978`
-   (size `0x518`). Compare companion mapping if any, generated body,
+   `setupNpcModelForState` / TOML `func_800C8E90` at `0x800C8E90`
+   (size `0x100`). Compare companion mapping if any, generated body,
    previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (likely a stale-TOML
    correction if the generated body already carries the human name).
-   s1651–s1665 and s1667–s1668 synchronized or confirmed DAT-item through
-   NPC impact-effect helpers; s1650 and s1666 were the mandatory
+   s1651–s1665 and s1667–s1669 synchronized or confirmed DAT-item through
+   NPC orientation helpers; s1650 and s1666 were the mandatory
    retail-entry revisits. The full s1590–s1649 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
@@ -206,6 +206,7 @@ ownership.
 | s1666 | Rice post-arrival A/Start/Z on the 640 B-frontend (`1024→640` ~96 s, origin `0x00696100`/`0x00696600`). All arms passed whole-RDRAM and B-pad controls and reached that frontend before the 105 s presses. The 640 screen is neither hangar nor viewer; it times out at ~117.7 s to attract 512 (`0x00690400`). A/Start at 106.3 s cancel `640→1024→512` hangar (H3). Z on 640 is ignored (H2). `0x80000B70` is `loadOverlay+0x50`; A/Start hit it 0 times, Z once only after the later attract continuation. Hold died rc=139 at 135 s still on attract 512. Next sweep candidate is `func_800C8178` / `spawnNpcDestructionEffect`. |
 | s1667 | Synchronized `spawnNpcDestructionEffect` (`0x800C8178`, size `0x38C`) after companion mission mapping, live generated NPC destruction-effect body (`getObjectMeshTransformOrLocal`, `getObjectNpcTypeId`, `lookupHmtTextureByName` ×2, `triggerCueWithSlotEffect` ×4, `spawnByteAnimDebrisWithParam` ×2, `slotDispatcherIter` ×2, `play3DSoundEvent`), exact `0x800C7FF8`/`0x800C8504` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `buildDebrisCellBitfield` at `0x800C821C` is a different overlay, not a name collision. Next candidate is `func_800C8504` / `spawnNpcImpactEffectVariant`. |
 | s1668 | Synchronized `spawnNpcImpactEffectVariant` (`0x800C8504`, size `0x474`) after companion mission mapping, live generated NPC impact-effect body (`lookupHmtTextureByName` ×4, `generatePerpEmitDirectionWithJitter` ×4, `tickProgressChannel` ×6, `triggerCueWithSlotEffect` ×5, `getObjectMeshTransformOrLocal`, `getObjectNpcTypeId`, `slotDispatcherIter` ×2, `play3DSoundEvent`), exact `0x800C8178`/`0x800C8978` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `allocDebrisCellTable` at `0x800C8520` is a different overlay, not a name collision. Next candidate is `func_800C8978` / `updateNpcOrientationFromMotion`. |
+| s1669 | Synchronized `updateNpcOrientationFromMotion` (`0x800C8978`, size `0x518`) after companion mission mapping, live generated orientation-from-motion body (`buildRotationMatrixSlot0`/`composeRotationMatrixSlot1`, `transformVec3ByMat34`, `isPendingChildNpcActive`, `computeActorAnchorDeltaAfterLOS`, `getObjectMeshTransformOrLocal`, `computeAnchorRelativePositionByDistanceRatio`, `vec3Length` ×4, `vec3Dot` ×3, `vec3Cross` ×2, `quatFromAxisAngle`, `rotateVec3ByQuat`, `play3DSoundEventVariant`), exact `0x800C8504`/`0x800C8E90` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `allocCellGeometryBuffer` at `0x800C8A64` is a different overlay, not a name collision. Next candidate is `func_800C8E90` / `setupNpcModelForState`. |
 
 ## Method and safety rules
 
