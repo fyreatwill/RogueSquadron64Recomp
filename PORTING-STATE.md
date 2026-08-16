@@ -79395,3 +79395,74 @@ Next census after the mandatory revisit: `func_800D1578` /
 `advancePlayerAtStLocomotion` at `0x800D1578` (size `0x1B8`). Last-15 titles
 are now all sweep-scoped (s1683–s1697), so the next iteration must be the
 mandatory retail-entry or M4 revisit, not another sweep step.
+
+## Session 1698 (2026-08-16) — tested A/Start/Z/C/L/R/D-pad on attract 512
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1697 were all sweep-scoped (s1683–s1697), so this
+iteration did not resume the generated-symbol census. Step 0 `wc -c` was
+41522; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+s1682 had classified C/L/R and D-pad on the arrived 640 B-frontend (all
+ignored; same 117.7 s attract timeout as hold). Remaining unused lead:
+any input on the attract 512 that timeout reaches (`0x00690400` /
+`0x00690800`). Z-on-attract `512→1024` at 128.3 s was still
+single-source because the s1666 hold died at 135 s.
+
+Competing hypotheses: H1 a press on that attract 512 reaches mission-path
+PC `loadOverlay` `0x80000B20` / interior `0x80000B70` (elevated vs hold)
+or otherwise leaves into a new classified route; H2 the press is ignored
+(same attract 512 origin and no new VI/PC vs hold through the flush);
+H3 the press changes VI/origin/PC without mission entry (hangar cancel,
+viewer, or a new frontend), including independently confirming
+Z-on-attract `512→1024`; H4 the recipe is unevaluable. Discriminator:
+fourteen concurrent Rice arms (hold + A/Start/Z + C/L/R + D-pad) with
+whole-RDRAM, PIF, VI, and watched frontend/mission PCs. Presses only at
+119/123 so both land after the 117.7 s attract arrival and before the
+125 s flush. Combined table:
+`scratch/agent/s1698_attract512_input/summary.txt`.
+
+All 14 arms reached hangar `320→640→1024→512` then B-route
+`512→1024→640` then `640→512` attract at 117.6–117.7 s origin
+`0x00690400`/`0x00690800` before the 119 s press, fired the
+whole-RDRAM 10,000-callback control (10176–10188 hits), delivered B as
+pad word `0x40000000` three times (56.3/59.3/64.4 s), and exited rc=0
+at ~124.5 s emulated / 126.4 s wall with PC summaries flushed.
+Hangar-frame watches fired 59–61 times (same-run positive control).
+Candidate pads at 120.4/124.4: A `0x80000000`, Start `0x10000000`, Z
+`0x20000000`, C-up `0x00080000`, C-down `0x00040000`, C-left
+`0x00020000`, C-right `0x00010000`, L `0x00200000`, R `0x00100000`,
+D-up `0x08000000`, D-down `0x04000000`, D-left `0x02000000`, D-right
+`0x01000000`. Every arm including hold also shows boot-like
+`0x80010000` at 120.2 s. Hold and every stay-512 arm flip to
+attract-internal origin `0x00620400`/`0x00620800` around 123 s; that
+flip is not input.
+
+WIDTH: A, Start, C-up, and L do `512→1024` at 126.4 s origin
+`0x00790400`/`0x00790800` (title-like; same pair as the B-route
+intermediate 1024). Z, C-down, C-left, C-right, R, and valid D-pad stay
+on attract 512 through 125.8 s matching hold. This selects H3 for
+A/Start/C-up/L and H2 for Z/C-down/C-left/C-right/R/D-pad. The 125 s
+flush cuts off at the 1024 WIDTH change, so the destination of that
+1024 (hangar vs another frontend) is unevaluable; hangar-frame PCs did
+not increment and viewer stayed 0.
+
+PC: viewer `0x800C9BF0` = 0 all arms. `0x80000B70` (`loadOverlay+0x50`)
+= 1 on hold and every candidate, so the interior hit is the
+post-timeout attract path, not a 119/123 press. This refutes H1.
+loadOvl entry = 8 on every candidate vs 6 on hold, including the
+stay-512 arms, so that elevation is a button-side overlay entry, not a
+mission-entry discriminator. B47D0 / menuInit are 50–55 / 80–85 on
+candidates vs hold 70/99.
+
+H4 rejected by shared hangar/B-route/attract lifecycle, positive-control
+thresholds, delivered pads, hangar-frame PC fire, and clean 125 s
+flush. Z-on-attract `512→1024` at 128.3 s is not reproduced in this
+window (two delivered Z presses; still 512 at 125.8 s) and remains
+single-source. No recomp change or mitigation.
+
+Remaining retail-entry leads are the destination of the attract-512
+A/Start/C-up/L 1024 and the still-single-source 128.3 s Z leave. Next
+work resumes the generated-symbol sweep at `func_800D1578` /
+`advancePlayerAtStLocomotion`.

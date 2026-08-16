@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1697 (2026-08-16).
+the authority for session detail. Reviewed through s1698 (2026-08-16).
 
 ## Current state
 
@@ -49,11 +49,21 @@ the authority for session detail. Reviewed through s1697 (2026-08-16).
   valid D-pad on it are ignored (s1682): same 117.7 s attract timeout as
   hold, viewer PC zero, hangar-frame 59–62, and `0x80000B70` = 1 matching
   hold so the interior hit is the post-timeout attract path, not the
-  105/115 press. The watched "mission PC" `0x80000B70` is
+  105/115 press. On the attract 512 that timeout reaches, A, Start,
+  C-up, and L at 119/123 leave `512→1024` at 126.4 s origin
+  `0x00790400`/`0x00790800` (title-like; same pair as the B-route
+  intermediate). The 125 s flush cuts off at that WIDTH change, so the
+  1024 destination is unevaluable; hangar-frame PCs did not increment
+  and viewer stayed 0. Z, C-down, C-left, C-right, R, and valid D-pad
+  stay on attract 512 matching hold through 125.8 s (s1698). Z-on-attract
+  `512→1024` at 128.3 s (s1666, after a 126.4 s Z press) is still
+  single-source: this window ended at 125.8 s. `0x80000B70` = 1 on hold
+  and every candidate. The watched "mission PC" `0x80000B70` is
   `loadOverlay+0x50` (same function, `0x80000B20` size `0x124`), not a
   separate entry. Valid D-pad on hangar, post-viewer C/L/R, post-B
-  intermediate A/Start/Z, and post-arrival A/Start/Z/C/L/R/D-pad on the
-  640 B-frontend are classified or parked; do not repeat them.
+  intermediate A/Start/Z, post-arrival A/Start/Z/C/L/R/D-pad on the
+  640 B-frontend, and attract-512 A/Start/Z/C/L/R/D-pad in the
+  119–125 s window are classified or parked; do not repeat them.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI
   submission. `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -74,25 +84,28 @@ the authority for session detail. Reviewed through s1697 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. After s1697 the last-15 titles (s1683–s1697) are all sweep-scoped,
-   so the next iteration is the mandatory retail-entry / M4 revisit
-   (Next steps #2). Do not resume the census until that revisit lands.
-   Sweep resume after it: `func_800D1578` / `advancePlayerAtStLocomotion`
-   at `0x800D1578` (size `0x1B8`). s1651–s1665, s1667–s1681, and
+1. Resume the generated-symbol sweep at `func_800D1578` /
+   `advancePlayerAtStLocomotion` (`0x800D1578`, size `0x1B8`). After
+   s1698 the last-15 titles include the retail-entry revisit, so the
+   15-title gate does not fire. s1651–s1665, s1667–s1681, and
    s1683–s1697 synchronized or confirmed DAT-item through
-   `spawnPlayerAtStCannonFire`; s1650, s1666, and s1682 were the
-   mandatory retail-entry revisits. The full s1590–s1649 archive is in
-   `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
-   placeholder `func_0x...` names remained when counted at s1487.
+   `spawnPlayerAtStCannonFire`; s1650, s1666, s1682, and s1698 were
+   the mandatory retail-entry revisits. The full s1590–s1649 archive
+   is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33.
+   About 1,548 placeholder `func_0x...` names remained when counted
+   at s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
-   15-title gate only: any input on the attract 512 the 640 B-frontend
-   times out into (`0x00690400`; Z-on-attract `512→1024` at 128.3 s
-   is still single-source because s1666 hold died at 135 s). Do not
-   repeat hold/A/B/Z, valid D-pad on hangar, post-viewer C/L/R, post-B
-   intermediate A/Start/Z, or post-arrival A/Start/Z/C/L/R/D-pad on
-   the 640 B-frontend. Every oracle run needs whole-RDRAM, PIF, and
-   VI/PC positive controls. Alternative: a new M4 RDRAM destination
-   from a DMEM→RDRAM transfer other than `0xD60`.
+   15-title gate only: destination of the attract-512 A/Start/C-up/L
+   `512→1024` at 126.4 s (origin `0x00790400`/`800`; 125 s flush cut
+   off at the WIDTH change); Z-on-attract `512→1024` at 128.3 s is
+   still single-source (s1666; s1698's 125 s window ended at 125.8 s
+   still on 512). Do not repeat hangar hold/A/B/Z, valid D-pad on
+   hangar, post-viewer C/L/R, post-B intermediate A/Start/Z,
+   post-arrival A/Start/Z/C/L/R/D-pad on the 640 B-frontend, or
+   attract-512 A/Start/Z/C/L/R/D-pad in the 119–125 s window. Every
+   oracle run needs whole-RDRAM, PIF, and VI/PC positive controls.
+   Alternative: a new M4 RDRAM destination from a DMEM→RDRAM transfer
+   other than `0xD60`.
 3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. If that happens, write a bounded plan
    before changing any stub or trap.
@@ -237,6 +250,7 @@ ownership.
 | s1695 | Confirmed `npcAtStUpdate` (`0x800CFE7C`, size `0x120C`) was already synchronized: companion mission mapping, live generated 9-way AT-ST update (`advanceAtStDeathAnimPhase` ×3, `advanceAtStEffectPhaseSound`, `updateAtStBodyKinematics`, `npcAtStHandleDestruction`), exact `0x800CFD0C`/`0x800D1088` boundaries, TOML name and size, and section-4 span agreed. Menu concert-hall/medal data at the same VRAM window is a different overlay, not a name collision. Next candidate is `playerAtStInit`. |
 | s1696 | Confirmed `playerAtStInit` (`0x800D1088`, size `0x1C0`) was already synchronized: companion mission mapping, live generated player-AT-ST-init body (`initPlayerCraftMovementMode`, `refreshPlayerSecondaryWeaponHud`, craft record `0x80137DBC`), exact `0x800CFE7C`/`0x800D1248` boundaries, TOML name and size, and section-4 span agreed. Menu concert-hall/medal data at the same VRAM window is a different overlay, not a name collision. Next candidate is `func_800D1248` / `spawnPlayerAtStCannonFire`. |
 | s1697 | Synchronized `spawnPlayerAtStCannonFire` (`0x800D1248`, size `0x330`) after companion mission mapping, live generated player-AT-ST cannon-fire body (`lookupHmtTextureByName` on `0x800A700C`/`0x800A7010`, `acquireNpcTargetsInAimCone`, `dispatchCueByCategory`, `play3DSoundEvent` type `0xD`), exact `0x800D1088`/`0x800D1578` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Exclusive caller is `updatePlayerAtStBehavior` at `0x800D213C`. No menu function occupies the address. After this session the last-15 titles are all sweep-scoped, so s1698 is the mandatory retail-entry revisit. |
+| s1698 | Rice A/Start/Z/C/L/R/D-pad on attract 512 (`640→512` ~117.7 s, origin `0x00690400`/`800`). All 14 arms passed whole-RDRAM, B-pad, hangar, 640-arrival, and attract-arrival controls; `--secs 125` flush rc=0. Presses at 119/123 delivered the expected pad words. H3 A/Start/C-up/L: `512→1024` at 126.4 s origin `0x00790400`/`800`; viewer 0; B70=1 matching hold; 1024 destination unevaluable. H2 Z/C-down/C-left/C-right/R/D-pad: still attract 512 through 125.8 s. H1 rejected (no mission VI; B70 not elevated). Z-on-attract 128.3 s remains single-source. Next sweep candidate is `func_800D1578` / `advancePlayerAtStLocomotion`. |
 
 ## Method and safety rules
 
