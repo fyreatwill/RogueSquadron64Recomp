@@ -2635,7 +2635,7 @@ functions = [
     { name = "cutsceneDispatchSlotsByFlag", vram = 0x800A8420, size = 0x590 },
     { name = "spawnCutsceneEffectsAndCues", vram = 0x800A89B0, size = 0xBEC },
     { name = "initCutsceneAudioChannels", vram = 0x800A959C, size = 0x310 },
-    { name = "func_800A98AC", vram = 0x800A98AC, size = 0x210 },
+    { name = "initCutsceneScene", vram = 0x800A98AC, size = 0x210 },
     { name = "func_800A9ABC", vram = 0x800A9ABC, size = 0x2B4 },
     { name = "func_800A9D70", vram = 0x800A9D70, size = 0x44C },
     { name = "func_800AA1BC", vram = 0x800AA1BC, size = 0x338 },
