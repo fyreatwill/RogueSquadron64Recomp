@@ -79890,3 +79890,37 @@ section-4 row are all present). No build or runtime run required.
 Next census: `fake_func_800D4EC4` at `0x800D4EC4` (size `0xC`). Last-15
 titles still include s1698's retail-entry revisit, so the next iteration
 continues the sweep.
+
+## Session 1711 (2026-08-16) — confirmed the fake 800D4EC4 fragment
+
+Exact generated-symbol census for `0x800D4EC4` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 49821; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800D4EC4 = 0x800D4EC4` with the s432 note that `func_800D4ED0` was deleted as a duplicate of `npcInitChildLinkedToParent`. Previous contiguous function `npcShuttleUpdate = 0x800D3894`; next contiguous neighbor `npcInitChildLinkedToParent = 0x800D4ED0` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void fake_func_800D4EC4` at VRAM `0x800D4EC4`; body is the 12-byte leftover `lw $v1, 0x20($fp)` / `lw $a0, 0x4($v1)` / `addiu $v1, $a0, 0x8`. Previous `npcShuttleUpdate` returns through `jr $ra` / `addiu $sp, $sp, 0xB8` ending at `0x800D4EC0`; next is `npcInitChildLinkedToParent` at `0x800D4ED0` (`addiu $sp, $sp, -0x38`). `funcs.h` already declares the fake name |
+| Body semantics | Not an independent function. Twelve-byte leftover-instruction pad between the Imperial-shuttle updater and the child-NPC init helper; no prologue, no `$ra` save, no `jr $ra`, no generated `jal` callers. Companion already classifies it as fake. Same leftover class as `fake_func_800CEF1C` (s1689 leftover store) and `fake_func_800D2C98` (s1704 leftover trampoline) |
+| TOML | `{ name = "fake_func_800D4EC4", vram = 0x800D4EC4, size = 0xC }` — already the companion fake name; size matches `0x800D4ED0 - 0x800D4EC4`. No leftover `func_800D4EC4` |
+| Overlay section 4 | `{ .func = fake_func_800D4EC4, .offset = 0x0002FD94, .rom_size = 0x0000000C }` under `section_4_ovl_mission_funcs` (`0x800D4EC4 - 0x800A5130 = 0x2FD94`; `0x2E764 + 0x1630 = 0x2FD94`; `0x2FD94 + 0xC = 0x2FDA0` matches next `npcInitChildLinkedToParent`) |
+| Non-collision | No menu-overlay function occupies `0x800D4EC4`. Menu symbols in the same VRAM window end at `medalInfo` (`0x800D03DC`); the next menu symbol after that is none at or above `0x800D4EC4`. Companion and generated greps found no other `func_800D4EC4` occupant |
+
+### Outcome
+
+H1 selected. Companion classification, live generated 12-byte leftover
+instruction pad, previous (`npcShuttleUpdate` / `0x800D3894`) and next
+(`npcInitChildLinkedToParent` / `0x800D4ED0`) boundaries, TOML name and size,
+and section-4 overlay span already agree. This selects H1 and refutes H2
+(generated/TOML are not a stale `func_800D4EC4`) and H3 (no overlay collision,
+size/boundary disagreement, or missing independent name — the fake name is
+the agreed classification). H4 is refuted: companion, generated body, TOML,
+and section-4 row are all present. No TOML or generated-name change.
+
+Next census: `npcInitChildLinkedToParent` / `func_800D4ED0` at `0x800D4ED0`
+(size `0x1A8`). Last-15 titles still include s1698's retail-entry revisit, so
+the next iteration continues the sweep.
