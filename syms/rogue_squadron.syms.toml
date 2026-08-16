@@ -1829,7 +1829,7 @@ functions = [
     { name = "npcWingmanBehaviorByMode", vram = 0x800D80B4, size = 0x8D4 },
     { name = "npcWingmanSpawnBurstEffects", vram = 0x800D8988, size = 0x330 },
     { name = "npcWingmanSteerToward", vram = 0x800D8CB8, size = 0x57C },
-    { name = "func_800D9234", vram = 0x800D9234, size = 0x18C },
+    { name = "npcWingmanUpdateEngineAudio", vram = 0x800D9234, size = 0x18C },
     { name = "npcWingmanUpdate", vram = 0x800D93C0, size = 0xBD0 },
     { name = "func_800D9F90", vram = 0x800D9F90, size = 0xD4 },
     { name = "func_800DA064", vram = 0x800DA064, size = 0xD8 },

@@ -80631,3 +80631,40 @@ runtime run required.
 Next census: `npcWingmanUpdateEngineAudio` / `func_800D9234` at
 `0x800D9234` (size `0x18C`). Last-15 titles after s1730 still include
 s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
+
+## Session 1731 (2026-08-16) — synchronized the npcWingmanUpdateEngineAudio symbol
+
+Exact generated-symbol census for `0x800D9234` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles after s1730 are
+s1716–s1730 and still include s1728's maintenance compaction, so the
+mandatory REVISIT gate did not fire. Step 0 `wc -c` was 6025; not a
+maintenance iteration. No new soak-queue verdicts beyond the already-folded
+s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanUpdateEngineAudio = 0x800D9234` with comment "updates the wingman's positional engine-sound source". Previous contiguous neighbor `npcWingmanSteerToward = 0x800D8CB8`; next contiguous neighbor `npcWingmanUpdate = 0x800D93C0`. No menu/cinematic/main overlay occupant and no `D_800D9234` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanUpdateEngineAudio` at VRAM `0x800D9234`; prologue `addiu $sp, $sp, -0x28`; saves `$s0`/`$ra`/`$s1` and `$f20`; `$s0 = a0`. 6 calls: `cosf` (2), `buildRotationMatrixSlot2` (2), `isAudioVoiceActive`, `updateActive3DAudioSource`. Integrates `s0+0xEC` into `s0+0xE8` (clamp to `0x800A79A8` or 0), writes a `cosf`-shaped pitch/gain to `s0+0xE4`, applies `±0xE4` as slot-2 rotation params on children `s0+0x98` and `s0+0x9C`, then if flag `s0+0xF0` polls the voice at `s0+0xA0` and updates the 3D source from `s0+0x24` / `s0+0xF1`. Epilogue `jr $ra` / `addiu $sp, $sp, 0x28` ends at `0x800D93BC`. Previous mission function last insn is `0x800D9230`; next is `npcWingmanUpdate` at `0x800D93C0`. `funcs.h` already declares the human name. One `jal` site in `npcWingmanUpdate` (`0x800D9960`) |
+| Body semantics | Matches the companion "positional engine-sound source": engine-audio rate/accumulator, pitch/gain, two nozzle-orientation matrices, then an active 3D voice update. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800D9234", vram = 0x800D9234, size = 0x18C }` — size matches `0x800D93C0 - 0x800D9234` (last insn `0x800D93BC` + 4 = `0x18C`) |
+| Overlay section 4 | `{ .func = npcWingmanUpdateEngineAudio, .offset = 0x00034104, .rom_size = 0x0000018C }` under `section_4_ovl_mission_funcs` (`0x800D9234 - 0x800A5130 = 0x34104`; `0x33B88 + 0x57C = 0x34104`; `0x34104 + 0x18C = 0x34290` matches next `npcWingmanUpdate`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D9234`. No leftover `func_800D9234` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated wingman engine-audio body,
+previous (`npcWingmanSteerToward` / `0x800D8CB8`) and next
+(`npcWingmanUpdate` / `0x800D93C0`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcWingmanUpdateEngineAudio`, and only the TOML name was a stale
+`func_800D9234` placeholder. Corrected TOML to `npcWingmanUpdateEngineAudio`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcWingmanUpdate` at `0x800D93C0` (size `0xBD0`). Last-15
+titles after s1731 still include s1728's maintenance compaction, so the
+mandatory REVISIT gate does not fire.
