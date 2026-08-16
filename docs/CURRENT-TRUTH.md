@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1670 (2026-08-16).
+the authority for session detail. Reviewed through s1671 (2026-08-16).
 
 ## Current state
 
@@ -72,15 +72,16 @@ the authority for session detail. Reviewed through s1670 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep at generated
-   `npcTurretUpdate` at `0x800C8F90` (size `0x11FC`). Compare companion
-   mapping if any, generated body, previous and next boundaries, TOML
-   size, and overlay span. Synchronize only on complete independent
-   agreement (TOML already carries the human name, so this is likely an
-   H3 confirm-and-advance). s1651–s1665 and s1667–s1670 synchronized or
-   confirmed DAT-item through `setupNpcModelForState`; s1650 and s1666
-   were the mandatory retail-entry revisits. The full s1590–s1649 archive
-   is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
-   1,548 placeholder `func_0x...` names remained when counted at s1487.
+   `playNpcAmbientEffect` / `func_800CA18C` at `0x800CA18C` (size `0xE0`).
+   Compare companion mapping if any, generated body, previous and next
+   boundaries, TOML size, and overlay span. Synchronize only on complete
+   independent agreement (generated and overlay already carry the human
+   name; TOML is still `func_800CA18C`, so this is likely an H1 rename).
+   s1651–s1665 and s1667–s1671 synchronized or confirmed DAT-item through
+   `npcTurretUpdate`; s1650 and s1666 were the mandatory retail-entry
+   revisits. The full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34;
+   the earlier sweep is in §33. About 1,548 placeholder `func_0x...` names
+   remained when counted at s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
    15-title gate only: C/L/R or valid D-pad **on the arrived 640
    B-frontend**, or any input on the attract 512 it times out into
@@ -207,6 +208,7 @@ ownership.
 | s1668 | Synchronized `spawnNpcImpactEffectVariant` (`0x800C8504`, size `0x474`) after companion mission mapping, live generated NPC impact-effect body (`lookupHmtTextureByName` ×4, `generatePerpEmitDirectionWithJitter` ×4, `tickProgressChannel` ×6, `triggerCueWithSlotEffect` ×5, `getObjectMeshTransformOrLocal`, `getObjectNpcTypeId`, `slotDispatcherIter` ×2, `play3DSoundEvent`), exact `0x800C8178`/`0x800C8978` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `allocDebrisCellTable` at `0x800C8520` is a different overlay, not a name collision. Next candidate is `func_800C8978` / `updateNpcOrientationFromMotion`. |
 | s1669 | Synchronized `updateNpcOrientationFromMotion` (`0x800C8978`, size `0x518`) after companion mission mapping, live generated orientation-from-motion body (`buildRotationMatrixSlot0`/`composeRotationMatrixSlot1`, `transformVec3ByMat34`, `isPendingChildNpcActive`, `computeActorAnchorDeltaAfterLOS`, `getObjectMeshTransformOrLocal`, `computeAnchorRelativePositionByDistanceRatio`, `vec3Length` ×4, `vec3Dot` ×3, `vec3Cross` ×2, `quatFromAxisAngle`, `rotateVec3ByQuat`, `play3DSoundEventVariant`), exact `0x800C8504`/`0x800C8E90` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `allocCellGeometryBuffer` at `0x800C8A64` is a different overlay, not a name collision. Next candidate is `func_800C8E90` / `setupNpcModelForState`. |
 | s1670 | Synchronized `setupNpcModelForState` (`0x800C8E90`, size `0x100`) after companion mission mapping, live generated state-to-mesh body (`releaseMeshAsset`, state halfword `+0x70` picks `0x800A6A0C`/`0x6A18`/`0x6A24`/`0x6A30`, `walkMeshdef0List`, `initVec4TripletFromArgs`, `composeRotationMatrixSlot0`/`Slot1`/`Slot2`, `addVec3At0x24`), exact `0x800C8978`/`0x800C8F90` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `buildDebrisMeshFromCells` at `0x800C8C1C` is a different overlay, not a name collision. Next candidate is `npcTurretUpdate`. |
+| s1671 | Confirmed `npcTurretUpdate` (`0x800C8F90`, size `0x11FC`) was already synchronized: companion mission mapping, live generated 11-way turret-update body (`setupNpcModelForState`, `updateNpcOrientationFromMotion`, `safeLookup3DSoundEntry`, `play3DSoundEvent`, `unregisterAndFreeNpcSlot`), exact `0x800C8E90`/`0x800CA18C` boundaries, TOML name and size, and section-4 span agreed. Menu-overlay `cloneCellBufferWithAlloc` / `allocZeroedCellRecord` / `runModelViewerLoop` at `0x800C9A88`/`0x800C9B8C`/`0x800C9BF0` are a different overlay, not a name collision. Next candidate is `func_800CA18C` / `playNpcAmbientEffect`. |
 
 ## Method and safety rules
 

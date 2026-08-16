@@ -78501,3 +78501,31 @@ required.
 
 Next census: `npcTurretUpdate` at `0x800C8F90` (size `0x11FC`). Last-15
 titles still include s1666, so the next iteration may continue the sweep.
+
+## Session 1671 (2026-08-16) — confirmed the npcTurretUpdate symbol
+
+Exact generated-symbol census for `0x800C8F90` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTurretUpdate = 0x800C8F90`; later mission listing `playNpcAmbientEffect = 0x800CA18C`; prior `setupNpcModelForState = 0x800C8E90`. Coarse listing `npcProbeDriod = 0x800CABD4` skips the in-between helpers |
+| Generated `funcs_36.c` | `RECOMP_FUNC void npcTurretUpdate` at VRAM `0x800C8F90`; prologue `addiu $sp, $sp, -0xB8`; returns through `jr $ra` / `addiu $sp, $sp, 0xB8` ending at `0x800CA188`; next mission function `playNpcAmbientEffect` at `0x800CA18C` |
+| Body semantics | 11-way jump table on `(a1 - 1) < 0xB` via table `0x800A6AA8`. Actor at `a0+4`. Calls include `setupNpcModelForState`, `updateNpcOrientationFromMotion`, `safeLookup3DSoundEntry`, `play3DSoundEvent`, `unregisterAndFreeNpcSlot`, `dealDamageToNpc`, `getNpcCurrentHealth`, `spawnDestructionEffectBurst`, `spawnDebris1Npc`. Companion `main_overlay.txt` already names this as a `safeLookup3DSoundEntry` caller |
+| TOML | `{ name = "npcTurretUpdate", vram = 0x800C8F90, size = 0x11FC }` — already the human name; size matches `0x800CA18C - 0x800C8F90` |
+| Overlay section 4 | `{ .func = npcTurretUpdate, .offset = 0x00023E60, .rom_size = 0x000011FC }` under `section_4_ovl_mission_funcs` (`0x800C8F90 - 0x800A5130 = 0x23E60`; `0x23E60 + 0x11FC = 0x2505C` matches next `playNpcAmbientEffect`) |
+| Non-collision | Menu-overlay `cloneCellBufferWithAlloc = 0x800C9A88`, `allocZeroedCellRecord = 0x800C9B8C`, and `runModelViewerLoop = 0x800C9BF0` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. They appear between the two mission functions in `funcs_36.c` only because overlays share VRAM |
+
+### Outcome
+
+H3 selected. Companion mapping, live generated turret-update body, previous
+(`setupNpcModelForState` / `0x800C8E90`) and next (`playNpcAmbientEffect` /
+`0x800CA18C`) boundaries, TOML name and size, and section-4 overlay span
+already agree. No TOML or generated-name change.
+
+Next census: `func_800CA18C` / `playNpcAmbientEffect` at `0x800CA18C`
+(size `0xE0`). Last-15 titles still include s1666, so the next iteration
+may continue the sweep.
