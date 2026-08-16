@@ -80141,3 +80141,39 @@ runtime run required.
 Next census: `npcTickEffectChannelShared` / `func_800D6134` at
 `0x800D6134` (size `0x218`). Last-15 titles still include s1714's
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1717 (2026-08-16) — synchronized the npcTickEffectChannelShared symbol
+
+Exact generated-symbol census for `0x800D6134` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 53862; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTickEffectChannelShared = 0x800D6134` with comment "shared effect-tick body (attach-pos + cue + slot-dispatch + 3D sound)". Previous contiguous neighbor `npcInitSimpleModel = 0x800D5FE0`; next contiguous neighbor `npcTankDroidComputeAimMotion = 0x800D634C`. Mode wrappers `npcTickEffectChannelSharedMode0 = 0x800D7818` and `Mode1 = 0x800D7834` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTickEffectChannelShared` at VRAM `0x800D6134`; prologue `addiu $sp, $sp, -0x90`; `*(a0+4)` saved in `s0` (object); mode in `a2`; returns through `jr $ra` / `addiu $sp, $sp, 0x90` ending at `0x800D6348`; previous mission function is `npcInitSimpleModel` at `0x800D5FE0` (last insn `0x800D6130`); next mission function is `npcTankDroidComputeAimMotion` at `0x800D634C`. `funcs.h` already declares the human name. Mode0/Mode1 wrappers already named and `jal 0x800D6134` with `a2=0` / `a2=1` |
+| Body semantics | Mode `a2==0`: `lookupHmtTextureByName` (`jal 0x80058360`) on `0x800A769C`, `tickProgressChannel` (`jal 0x800F1870`), then if result==1 `triggerCueWithSlotEffect` (`jal 0x800F2FCC`) type 2, `slotDispatcherIter` (`jal 0x8003E8DC`) type `0xA`, `play3DSoundEvent` (`jal 0x800989D8`) type `0xD`/`0x7D`. Mode `a2!=0`: `lookupHmtTextureByName` on `0x800A76A0`, optional `resolveNpcAttachmentPos` (`jal 0x800F0F94`) when attachment float `+0xD4` is nonzero, `tickProgressChannel`, then if result==1 `triggerCueWithSlotEffect` and `play3DSoundEvent` type `0x1D`/`0x78`. Name matches a shared two-mode effect-tick (attach-pos + cue + slot-dispatch + 3D sound) |
+| TOML (before) | `{ name = "func_800D6134", vram = 0x800D6134, size = 0x218 }` — size matches `0x800D634C - 0x800D6134` (last insn `0x800D6348` + 4 = `0x218`) |
+| Overlay section 4 | `{ .func = npcTickEffectChannelShared, .offset = 0x00031004, .rom_size = 0x00000218 }` under `section_4_ovl_mission_funcs` (`0x800D6134 - 0x800A5130 = 0x31004`; `0x30EB0 + 0x154 = 0x31004`; `0x31004 + 0x218 = 0x3121C` matches next `npcTankDroidComputeAimMotion`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D6134`. Companion and generated greps found no leftover `D_800D6134` splat and no other occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated shared effect-tick body,
+previous (`npcInitSimpleModel` / `0x800D5FE0`) and next
+(`npcTankDroidComputeAimMotion` / `0x800D634C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcTickEffectChannelShared`, and only the TOML name was a stale
+`func_800D6134` placeholder. Corrected TOML to `npcTickEffectChannelShared`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTankDroidComputeAimMotion` / `func_800D634C` at
+`0x800D634C` (size `0x64C`). Last-15 titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate does not fire.
