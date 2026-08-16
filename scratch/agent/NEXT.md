@@ -1,9 +1,9 @@
-# NEXT work unit (s1498)
+# NEXT work unit (s1499)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent
-generated function, `0x800A89B0..0x800A959C`. Do not build or run. Record
+generated function, `0x800A959C..0x800A98AC`. Do not build or run. Record
 its address, size, generated definition, companion name/source, caller or
 semantic evidence, and confidence before editing. Synchronize only an exact
 independent name in `syms/rogue_squadron.syms.toml`; leave address-encoded,
@@ -26,14 +26,16 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `spawnCutsceneEffectsAndCues`;
+generated entry at this address is already `initCutsceneAudioChannels`;
 the companion cinematic splat list maps
-`spawnCutsceneEffectsAndCues = 0x800A89B0`. TOML is still
-`func_800A89B0` (size `0xBEC`, ends at independently named
-`initCutsceneAudioChannels` / TOML `func_800A959C` at `0x800A959C`).
-Overlay `rom_size` is `0xBEC` at offset `0x00003880`. Confirm the
+`initCutsceneAudioChannels = 0x800A959C`. TOML is still
+`func_800A959C` (size `0x310`, ends at independently named
+`initCutsceneScene` / TOML `func_800A98AC` at `0x800A98AC`).
+Overlay `rom_size` is `0x310` at offset `0x0000446C`. Confirm the
 complete live function, matching size, and caller/semantic evidence
-before synchronizing the TOML name.
+before synchronizing the TOML name. Menu-overlay `hangarInitialize`
+at `0x800A9364` occupies overlapping VRAM and is a different overlay,
+not a cinematic size split.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -55,7 +57,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800A89B0\|800A959C\|spawnCutsceneEffectsAndCues' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800A89B0\|800A959C\|spawnCutsceneEffectsAndCues' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '800A89B0\|800A959C' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800A959C\|800A98AC\|initCutsceneAudioChannels' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800A959C\|800A98AC\|initCutsceneAudioChannels' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '800A959C\|800A98AC' syms/rogue_squadron.syms.toml
 ```

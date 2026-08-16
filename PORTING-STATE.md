@@ -72562,3 +72562,39 @@ generated function is independently named `spawnCutsceneEffectsAndCues`
 at `0x800A89B0` (TOML still `func_800A89B0`, size `0xBEC`; overlay
 `rom_size` is `0xBEC` at offset `0x00003880`; live body ends at
 independently named `initCutsceneAudioChannels`).
+
+## Session 1498 (2026-08-15) — synchronized the spawn-cutscene-effects-and-cues symbol
+
+Performed the bounded exact-name census over `0x800A89B0..0x800A959C`.
+
+No new soak-queue verdicts since s1497; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A89B0`, size `0xBEC`; `0x800A89B0+0xBEC=0x800A959C`. Overlay `.ovl.cinematic` entry `rom_size` is `0xBEC` at offset `0x00003880` (`0x800A89B0-0x800A5130`). Live body is independently `0xBEC` and meets independently named `initCutsceneAudioChannels` / TOML `func_800A959C` at `0x800A959C` |
+| Generated definition | `funcs_27.c` defines `spawnCutsceneEffectsAndCues` at `0x800A89B0`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0xBEC` function. It starts `addiu $sp, $sp, -0x108` / `sw $s7, 0xCC($sp)` / `addu $s7, $a0, $zero` and ends at the sole `jr $ra` / `addiu $sp, $sp, 0x108` (`0x800A9594`/`0x800A9598`). Two interior `jr $v0` sites (`0x800A8AD4`, `0x800A8BF4`) are computed jumps, not extra exits. Next generated cinematic function is independently named `initCutsceneAudioChannels`. Menu-overlay `loadCutsceneAssetsByIndex` at `0x800A9270` (`rom_size` `0xF4`) and `hangarInitialize` at `0x800A9364` occupy overlapping VRAM from `.ovl.menu` and are not a cinematic size split |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `spawnCutsceneEffectsAndCues = 0x800A89B0` in the cinematic splat list. Menu, mission, main, libultra, and zlib lists do not remap `0x800A89B0` (menu instead names `loadCutsceneAssetsByIndex = 0x800A9270` in its own overlay). `undefined_funcs_auto.txt` has no `800A89` entry. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02A26C` and zero `j` or absolute `0x800A89B0` pointer words. The site is in independently named `cinematicLoopBody` at `0x800A6304` (overlay file `0x138754`; `cinematicLoopBody` is `0x800A5D80` size `0x8A0`, ends at `0x800A6620`). Same-run ROM word at that file offset is `0x0C02A26C`; the delay slot is `0xAFA00010` (`sw $zero, 0x10($sp)`). The call is `jal 0x800A89B0` with `$a0` from `0x1904($s4)`, `$a1` from `0xB28($s3)`, `$a2` from `$s2`, and `$a3` from `$f22` |
+| Semantic evidence | Retail ROM words at file `0x13AE00` (`0x137580+(0x800A89B0-0x800A5130)`) are `0x27BDFEF8` / `0xAFB700CC` / `0x0080B821` / `0x3C04800B` (`addiu $sp, $sp, -0x108` / `sw $s7, 0xCC($sp)` / `addu $s7, $a0, $zero` / `lui $a0, 0x800B`). The opener loads a halfword at `0x800B0B20` and `sltiu`/`beq`s to the epilogue when the value is not below `0xC8`. Named callees include independently named `spawnOrientedNpc`, `dispatchCueByCategory`, `scheduleCutsceneActionSlot`, `spawnCutsceneDebrisField`, `playSongById`, `queueAudioVoiceCmd`, and `playSimpleAudioCmd`. Epilogue file `0x13B9E4` is `0x03E00008` / `0x27BD0108`. Next start file `0x13B9EC` is `0x27BDFFC8` (`initCutsceneAudioChannels`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13AE00` is `0x27BDFEF8`, and the caller `jal` word above is `0x0C02A26C` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A89B0`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0xBEC`, `cinematicLoopBody` is the only caller, and there is
+neither a conflicting companion name nor a size split inside the live
+cinematic body. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0xBEC`). `func_8009D978` remains the eight-byte
+Q15 delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is independently named `initCutsceneAudioChannels`
+at `0x800A959C` (TOML still `func_800A959C`, size `0x310`; overlay
+`rom_size` is `0x310` at offset `0x0000446C`; live body ends at
+independently named `initCutsceneScene`).
