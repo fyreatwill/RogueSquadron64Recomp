@@ -76680,3 +76680,32 @@ real generated body, and generated caller. Updated only the TOML placeholder to
 `clearPlayerSlotHudTracking`; no mitigation, build, or runtime change was
 made. The next bounded candidate is `func_800BEFBC`, independently named
 `tickPlayerHudIndicators`, with size `0x2A8`.
+
+## Session 1607 (2026-08-16) — synchronized the tickPlayerHudIndicators symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained no newer verdict that changed the work-unit choice, so this
+iteration continued the bounded generated-symbol sweep. No build or runtime
+run was needed.
+
+The work unit censused `0x800BEFBC..0x800BF264` using the companion mission
+symbol list, generated definition and caller, generated overlay table, and
+TOML symbol span. The competing hypotheses were H1 (an exact independent
+companion mapping), H2 (a partial, conflicting, or span-mismatched mapping),
+and H3 (a fragment, data-like region, or missing independent name). The
+complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `tickPlayerHudIndicators = 0x800BEFBC`; `loadPlayerSlotHudPreset = 0x800BF264` is the next companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_33.c` defines `tickPlayerHudIndicators` at `0x800BEFBC`; its body updates four player HUD records, clamps the two indicator values, advances 16 indicator lanes, and calls `clearPlayerSlotHudTracking`. `../N64Recomp/RecompiledFuncs/funcs_42.c` calls it from `0x800FA7D8`. |
+| Span and overlay table | The TOML placeholder had size `0x2A8`; `recomp_overlays.inl` records `tickPlayerHudIndicators` at offset `0x19E8C` with ROM size `0x2A8`, followed by `loadPlayerSlotHudPreset` at offset `0x1A134`; the generated body returns at `0x800BF25C`/`0x800BF260` and the next function begins at `0x800BF264`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated live-body boundary,
+TOML size, and overlay-table span agree. H3 is ruled out by the companion
+mapping, real generated body, generated caller, and HUD-indicator semantics.
+Updated only the TOML placeholder to `tickPlayerHudIndicators`; no
+mitigation, build, or runtime change was made. The next bounded candidate is
+`func_800BF264`, independently named `loadPlayerSlotHudPreset`, with size
+`0x90`.

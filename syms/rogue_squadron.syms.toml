@@ -1673,7 +1673,7 @@ functions = [
     { name = "applyDemoRecordedHudEvents", vram = 0x800BECDC, size = 0x13C },
     { name = "clearPlayerSlotHudTracking", vram = 0x800BEE18, size = 0x94 },
     { name = "func_800BEEAC", vram = 0x800BEEAC, size = 0x110 },
-    { name = "func_800BEFBC", vram = 0x800BEFBC, size = 0x2A8 },
+    { name = "tickPlayerHudIndicators", vram = 0x800BEFBC, size = 0x2A8 },
     { name = "func_800BF264", vram = 0x800BF264, size = 0x90 },
     { name = "func_800BF2F4", vram = 0x800BF2F4, size = 0x64 },
     { name = "func_800BF358", vram = 0x800BF358, size = 0x4C },
