@@ -74589,3 +74589,48 @@ independently named `findNearestSceneObjectToPoint` at `0x800AFCF4`
 `loadPlayerStartPosition` / TOML `func_800AFE4C` at `0x800AFE4C`).
 Independently named `tickCutsceneObject` at `0x800AF04C` (`rom_size`
 `0xCA8`) ends at `0x800AFCF4`.
+
+## Session 1547 (2026-08-15) — synchronized the find-nearest-scene-object-to-point symbol
+
+Performed the bounded exact-name census over `0x800AFCF4..0x800AFE4C`.
+
+No new soak-queue verdicts since s1546; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit), so the every-15-sessions sweep-revisit rule did not fire.
+CURRENT-TRUTH is 58887 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AFCF4`, size `0x158`; `0x800AFCF4+0x158=0x800AFE4C`. Overlay `.ovl.mission` entry `rom_size` is `0x158` at offset `0x0000ABC4` (`0x800AFCF4-0x800A5130`). Live body is independently `0x158` and meets generated `loadPlayerStartPosition` at `0x800AFE4C` |
+| Generated definition | `funcs_29.c` defines `findNearestSceneObjectToPoint` at `0x800AFCF4`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000ABC4`, `rom_size 0x00000158`). The live mission body is a complete `0x158` function: load the scene-object list at `0x801375D8`, iterate entries whose type halfword is `2`, skip gated slots, subtract the query point (`$a0` +0/+4/+8) from the object position (+0x10/+0x14/+0x18), call independently named `vec3Length`, keep the nearest pointer in `$s2`, return it in `$v0`. Last live instruction pair is `0x800AFE44`/`0x800AFE48` (`jr $ra` / `addiu $sp, $sp, 0x48`). Next generated mission entry is already `loadPlayerStartPosition` at `0x800AFE4C`. Independently named `tickCutsceneObject` at `0x800AF04C` (`rom_size` `0xCA8`) ends at this address. Menu-overlay TOML `func_800AF3C0` (`tickCraftSelectScreen`, `rom_size` `0x2EC`, ends `0x800AF6AC`) plus `func_800AF6AC` (`rom_size` `0xA9C`, ends `0x800B0148`) occupy overlapping VRAM from `.ovl.menu` and are not a split of this body. Cinematic-overlay `fake_func_800AF6A8` (`rom_size` `0x1298`) is the leftover cinematic data lump covering this VRAM from `.ovl.cinematic` |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `findNearestSceneObjectToPoint = 0x800AFCF4`. The same mission list independently names the adjacent functions `tickCutsceneObject` at `0x800AF04C` and `loadPlayerStartPosition` at `0x800AFE4C`. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800AFCF4`. No conflicting companion name for this mission address |
+| Caller evidence | One retail `jal` encoding `0x0C02BF3D` and zero `j` or absolute `0x800AFCF4` pointer words. The site is independently named `loadPlayerStartPosition` at `0x800AFE68` (file `0x0B0A68`). Same-run ROM word at that file offset is `0x0C02BF3D`. Generated caller is the matching `funcs_29.c` `jal 0x800AFCF4` site inside `loadPlayerStartPosition`; the next instruction is `bne $v0, $zero` and the miss path calls independently named `getLevelDatItemByName`. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B08F4` (`0x0A5D30+(0x800AFCF4-0x800A5130)`) are `0x3C038013` (`lui $v1, 0x8013`), `0x8C6275D8` (`lw $v0, 0x75D8($v1)`), `0x27BDFFB8` (`addiu $sp, $sp, -0x48`), `0xAFB3002C` (`sw $s3, 0x2C($sp)`), `0x00809821` (`addu $s3, $a0, $zero`). Last pair file `0x0B0A44`/`0x0B0A48` is `0x03E00008`/`0x27BD0048` (`jr $ra` / `addiu $sp, $sp, 0x48`). Next start file `0x0B0A4C` is `0x27BDFFD0` (`addiu $sp, $sp, -0x30`, `loadPlayerStartPosition` prologue). Preceding epilogue file `0x0B08EC`/`0x0B08F0` is `0x03E00008`/`0x27BD0128` (`tickCutsceneObject` `jr $ra` / `addiu $sp, $sp, 0x128`). Same-run `jal 0x8001CF2C` at file `0x0B09E4` is `0x0C0073CB` (`vec3Length`). Menu occupant at the same VRAM (file `0x116E94`) starts `0x3C02800D` (different overlay). Cinematic occupant (file `0x142144`) is float data `0x41000000`/`0x41B00000`/`0x447A0000`. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1546 function file `0x141AB8` is still `0x3C02800B`, s1545 function file `0x141AAC` is still `0x8C82000C`, s1543 function file `0x141A5C` is still `0x27BDFFE8`, s1542 function file `0x1419A0` is still `0x3C02800B`, s1541 function file `0x141990` is still `0x3C02800B`, and s1540 initializer start `0x141858` is still `0x27BDFFD8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AFCF4`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x158`, the one ROM `jal` caller is independently named
+`loadPlayerStartPosition` and consumes the returned object pointer, the
+overlapping menu and cinematic occupants are different overlays, and
+there is neither a conflicting companion name nor a mission size split.
+H2 and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x158`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`loadPlayerStartPosition` at `0x800AFE4C` (TOML still `func_800AFE4C`,
+size `0x398`; overlay `rom_size` is `0x398` at offset `0x0000AD1C`;
+live body ends at generated `spawnSceneDebrisAndEffectCluster` / TOML
+`func_800B01E4` at `0x800B01E4`). Independently named
+`findNearestSceneObjectToPoint` at `0x800AFCF4` (`rom_size` `0x158`)
+ends at `0x800AFE4C`.

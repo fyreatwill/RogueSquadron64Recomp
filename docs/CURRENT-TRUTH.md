@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1546 (2026-08-15).
+the authority for session detail. Reviewed through s1547 (2026-08-15).
 
 ## Current state
 
@@ -72,7 +72,7 @@ the authority for session detail. Reviewed through s1546 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads; s1544 was that revisit) with one bounded exact-name
-   census over the next adjacent function, `0x800AFCF4..0x800AFE4C`.
+   census over the next adjacent function, `0x800AFE4C..0x800B01E4`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -176,27 +176,28 @@ the authority for session detail. Reviewed through s1546 (2026-08-15).
    at `0x800AF60C`. s1545 synchronized
    `getCinematicStateSubObject` at `0x800AF65C`. s1546
    synchronized `cinematicInterpRatio` at `0x800AF668`.
-   The generated entry at `0x800AFCF4` is already
-   `findNearestSceneObjectToPoint`; the companion mission
-   list maps `findNearestSceneObjectToPoint = 0x800AFCF4`.
-   TOML is still `func_800AFCF4` (size `0x158`, ends at
-   generated `loadPlayerStartPosition` / TOML
-   `func_800AFE4C` at `0x800AFE4C`). Overlay `rom_size`
-   is `0x158` at offset `0x0000ABC4`. Confirm the complete
+   s1547 synchronized `findNearestSceneObjectToPoint` at
+   `0x800AFCF4`. The generated entry at `0x800AFE4C` is
+   already `loadPlayerStartPosition`; the companion
+   mission list maps `loadPlayerStartPosition = 0x800AFE4C`
+   (23 callers; fills out_struct from level-dat
+   `"player_StartPosition"`). TOML is still
+   `func_800AFE4C` (size `0x398`, ends at generated
+   `spawnSceneDebrisAndEffectCluster` / TOML
+   `func_800B01E4` at `0x800B01E4`). Overlay `rom_size`
+   is `0x398` at offset `0x0000AD1C`. Confirm the complete
    live function, matching size, and caller/semantic
    evidence before synchronizing the TOML name.
-   Independently named `tickCutsceneObject` at
-   `0x800AF04C` (`rom_size` `0xCA8`) ends at this address.
-   Last live instruction pair is `0x800AFE44`/`0x800AFE48`
-   (`jr $ra` / `addiu $sp, $sp, 0x48`). Cinematic-overlay
-   data (`cutsceneTypeStrings` at `0x800AF6B0`,
-   `gCutsceneIdMappingTable` at `0x800AF7B4`) occupies
-   overlapping VRAM from `.ovl.cinematic` and is not a
-   mission size split. Menu-overlay
-   `tickCraftSelectScreen` / TOML `func_800AF3C0` at
-   `0x800AF3C0` (`rom_size` `0x2EC`, ends `0x800AF6AC`)
-   occupies a different overlay window that ends before
-   this address.
+   Independently named `findNearestSceneObjectToPoint`
+   at `0x800AFCF4` (`rom_size` `0x158`) ends at this
+   address. Last live instruction pair is
+   `0x800B01DC`/`0x800B01E0` (`jr $ra` /
+   `addiu $sp, $sp, 0x30`). Menu-overlay TOML
+   `func_800AF6AC` at `0x800AF6AC` (`rom_size` `0xA9C`,
+   ends `0x800B0148`) and cinematic-overlay
+   `fake_func_800AF6A8` data (`rom_size` `0x1298`)
+   occupy overlapping VRAM from other overlays and
+   are not a mission size split.
 2. Future oracle work on the 640/`0x6a2900` handler, a later mission
    watch, or a new M4 RDRAM dest (a DMEM→RDRAM transfer that is not
    `0xD60`) must use the Rice `--video` recipe above, not dummy video.
@@ -578,6 +579,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1543 | Exact companion/generated cinematic-teardown census synchronized `cinematicDeactivator` at `0x800AF60C`; no build or runtime run. |
 | s1545 | Exact companion/generated cinematic-getter census synchronized `getCinematicStateSubObject` at `0x800AF65C`; no build or runtime run. |
 | s1546 | Exact companion/generated cinematic-interp census synchronized `cinematicInterpRatio` at `0x800AF668`; left `fake_func_800AF6A8` unchanged (already-fake data tail); no build or runtime run. |
+| s1547 | Exact companion/generated mission-scene census synchronized `findNearestSceneObjectToPoint` at `0x800AFCF4`; no build or runtime run. |
 
 ## Method and safety rules
 

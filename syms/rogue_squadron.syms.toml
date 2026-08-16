@@ -1595,7 +1595,7 @@ functions = [
     { name = "func_800AECF8", vram = 0x800AECF8, size = 0x260 },
     { name = "func_800AEF58", vram = 0x800AEF58, size = 0xF4 },
     { name = "func_800AF04C", vram = 0x800AF04C, size = 0xCA8 },
-    { name = "func_800AFCF4", vram = 0x800AFCF4, size = 0x158 },
+    { name = "findNearestSceneObjectToPoint", vram = 0x800AFCF4, size = 0x158 },
     { name = "func_800AFE4C", vram = 0x800AFE4C, size = 0x398 },
     { name = "func_800B01E4", vram = 0x800B01E4, size = 0x66C },
     { name = "func_800B0850", vram = 0x800B0850, size = 0x238 },
