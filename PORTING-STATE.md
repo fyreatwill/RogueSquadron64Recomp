@@ -79502,3 +79502,39 @@ run required.
 Next census: `func_800D1730` / `updatePlayerAtStBehavior` at `0x800D1730`
 (size `0xAD8`). Last-15 titles still include s1698's retail-entry revisit,
 so the next iteration continues the sweep.
+
+## Session 1700 (2026-08-16) — synchronized the updatePlayerAtStBehavior symbol
+
+Exact generated-symbol census for `0x800D1730` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 43550; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `updatePlayerAtStBehavior = 0x800D1730`. Previous contiguous neighbor `advancePlayerAtStLocomotion = 0x800D1578`; next contiguous neighbor `playerAtStUpdate = 0x800D2208` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void updatePlayerAtStBehavior` at VRAM `0x800D1730`; prologue `addiu $sp, $sp, -0x58`; returns through `jr $ra` / `addiu $sp, $sp, 0x58` ending at `0x800D2204`; previous mission function is `advancePlayerAtStLocomotion` at `0x800D1578` (last insn `0x800D172C`); next mission function is `playerAtStUpdate` at `0x800D2208`. `funcs.h` already declares the human name |
+| Body semantics | Actor at `a0` (`s1`); dt in `a1` (`f22`). Controller mask is `0x8013B88` AND pad halfword `+0x12` at `0x8010BE18`; nonzero takes the `L_800D19A0` branch. Updates yaw/speed at `+0x64`/`+0x60` from stick (`0x8010BDD8+4`). `advancePlayerAtStLocomotion` ×2 at `0x800D189C`/`0x800D1A44` (`a0=s1`); blocked probe zeros `+0x60` and sets `+0xA2`/`+0xA3`. High `\|+0x60\|` vs `0x800A7260` runs `quatFromAxisAngle` on `+0x18`, `rotateVec3ByQuat` on `+0xC` and `+0x18`, then `orthonormalizeFrameAndSnapToZero`. Later `play3DSoundEvent` ×2, `setModelAnimSlotCycleDuration` ×2 (slot `+0x80`), `seekAllModelAnimChannelsInSlotToTime`, `wrapAngleToCyclicRange` into pos `+0`/`+8`, and `spawnPlayerAtStCannonFire` at `0x800D213C` (`a0=s1`). Exclusive generated caller is `playerAtStUpdate` at `0x800D2630` (`a0=s2`). Name matches a player-AT-ST per-frame behavior tick |
+| TOML (before) | `{ name = "func_800D1730", vram = 0x800D1730, size = 0xAD8 }` — size matches `0x800D2208 - 0x800D1730` (last insn `0x800D2204` + 4 = `0xAD8`) |
+| Overlay section 4 | `{ .func = updatePlayerAtStBehavior, .offset = 0x0002C600, .rom_size = 0x00000AD8 }` under `section_4_ovl_mission_funcs` (`0x800D1730 - 0x800A5130 = 0x2C600`; `0x2C448 + 0x1B8 = 0x2C600`; `0x2C600 + 0xAD8 = 0x2D0D8` matches next `playerAtStUpdate`) |
+| Non-collision | No menu-overlay function occupies `0x800D1730`. Companion menu grep is empty for this address and name. Companion and generated greps found no other `func_800D1730` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated player-AT-ST behavior-tick
+body, previous (`advancePlayerAtStLocomotion` / `0x800D1578`) and next
+(`playerAtStUpdate` / `0x800D2208`) boundaries, TOML size, and section-4
+overlay span agreed; the generated headers/body were already
+`updatePlayerAtStBehavior`, and only the TOML name was a stale
+`func_800D1730` placeholder. Corrected TOML to `updatePlayerAtStBehavior`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `playerAtStUpdate` at `0x800D2208` (size `0x954`). Last-15
+titles still include s1698's retail-entry revisit, so the next iteration
+continues the sweep.
