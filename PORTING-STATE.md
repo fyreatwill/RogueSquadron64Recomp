@@ -76606,3 +76606,31 @@ for this entry. No build or runtime run was performed because this was a
 bounded exact-name census; no runtime behavior or crash cause is concluded.
 The next census is `func_800BEC00`, independently mapped in the generated
 overlay table as `initDemoPlayState` with size `0xDC`.
+
+## Session 1604 (2026-08-16) — synchronized the initDemoPlayState symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only older verdicts already represented in the ledger, so no
+soak result changed the work-unit choice. This iteration continued the
+bounded generated-symbol sweep. No build or runtime run was needed.
+
+The work unit censused `0x800BEC00..0x800BECDC` using the companion mission
+symbol list, generated definition and caller, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `initDemoPlayState = 0x800BEC00`; the adjacent `fake_func_800BEBFC` gap is separate, and `applyDemoRecordedHudEvents = 0x800BECDC` is the next companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `initDemoPlayState` at `0x800BEC00`; `../N64Recomp/RecompiledFuncs/funcs_33.c` calls it from `loadAndStartDemo`. The body writes the demo settings/reset state, returns via `jr` at `0x800BECD4` with delay slot `0x800BECD8`, and the next entry begins at `0x800BECDC`. |
+| Span and overlay table | The TOML placeholder had size `0xDC`; `recomp_overlays.inl` records `initDemoPlayState` at offset `0x19AD0` with ROM size `0xDC`, followed by `applyDemoRecordedHudEvents` at `0x800BECDC`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping, real
+generated body, and generated caller. Updated only the TOML placeholder to
+`initDemoPlayState`; no mitigation, build, or runtime change was made. The
+next bounded candidate is `func_800BECDC`, independently named
+`applyDemoRecordedHudEvents`, with size `0x13C`.

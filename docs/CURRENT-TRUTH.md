@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1603 (2026-08-16).
+the authority for session detail. Reviewed through s1604 (2026-08-16).
 
 ## Current state
 
@@ -227,9 +227,12 @@ the authority for session detail. Reviewed through s1603 (2026-08-16).
    the sweep ordering. s1603 synchronized `tickPlayerCraftBlinkIndicator`
    at `0x800BE4A8` (size `0x328`): the companion mission list, generated
    definition and `playerNabooStarfighterUpdate` caller, exact next-function
-   boundary, overlay-table span, and TOML size agree. The next census is
-   `func_800BEC00`, independently named `initDemoPlayState`, with size
-   `0xDC`.
+   boundary, overlay-table span, and TOML size agree. s1604 synchronized
+   `initDemoPlayState` at `0x800BEC00` (size `0xDC`): the companion mission
+   list, generated definition and `loadAndStartDemo` caller, exact
+   `applyDemoRecordedHudEvents` boundary, overlay-table span, and TOML size
+   agree. The next census is `func_800BECDC`, independently named
+   `applyDemoRecordedHudEvents`, with size `0x13C`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -432,6 +435,7 @@ single-source and unevaluable as a retail ownership result.
 | s1601 | H1: synchronized `triggerNabooEngineEffect` at `0x800BE228` (size `0x280`); companion mission list, generated definition and three callers, exact `tickPlayerCraftBlinkIndicator` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1602 | M4 paired revisit: the existing LLE probe passed its independent arithmetic control, captured four phase-6 target tuples, and matched the local VMADH model on all 32 target lanes with no post-VGE change. This is a single-source local consistency result. Live DMA logging identified the port destination as runtime `0x4B7800..0x4B7808`; the retail oracle passed whole-RDRAM and VI controls through 320→640→1024→512 but wrote that candidate zero times. The targeted retail null is unevaluable across differing allocation/scene origins; no mitigation. |
 | s1603 | H1: synchronized `tickPlayerCraftBlinkIndicator` at `0x800BE4A8` (size `0x328`); companion mission mapping, generated definition and `playerNabooStarfighterUpdate` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1604 | H1: synchronized `initDemoPlayState` at `0x800BEC00` (size `0xDC`); companion mission mapping, generated definition and `loadAndStartDemo` caller, exact `applyDemoRecordedHudEvents` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
