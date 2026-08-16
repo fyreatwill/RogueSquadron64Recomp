@@ -89,7 +89,7 @@ the authority for session detail. Reviewed through s1635 (2026-08-16).
    `func_0x...` names remained when counted at s1487; no other stated
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
-   and M4 threads; s1620 was the latest revisit). One bounded exact-name census
+   and M4 threads; s1636 was the latest revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
    sizes, and caller/semantic evidence. Per-session H1 syncs through s1594
@@ -449,6 +449,11 @@ the authority for session detail. Reviewed through s1635 (2026-08-16).
    witness. Do not repeat invalid `up`/`down` names, re-watch `0x688:0x710`,
    do not re-audit dummy-video 320-only schedules, and do not treat
    640/`0x6a2900` as an outdoor mission.
+   s1636 tested post-viewer `cup`, `cdown`, `cleft`, `cright`, `l`, and `r`
+   arms against a hold control. All delivered distinct PIF words and
+   converged on the same 320→640→1024→512→640 route, with viewer PC once,
+   mission PC `0x80000B70` zero, and selector writes zero. This selects H2 for
+   these controls; use a genuinely different state or timeout route next.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation; then write a new bounded plan before changing stubs.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator;
@@ -632,6 +637,7 @@ single-source and unevaluable as a retail ownership result.
 | s1632 | H1: synchronized `applyNpcPositionDrift` at `0x800C6FFC` (size `0x124`); companion mapping, live generated body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 | s1633 | H1: synchronized `accumulateVectorInObjectFrame` at `0x800C713C` (size `0xF0`); companion mapping, live generated vector-frame accumulation body and eight callers, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 | s1634 | H1: synchronized `getConfigFloatValue` at `0x800C722C` (size `0x10`); companion mapping, live generated float-load body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
+| s1636 | Retail Rice post-viewer controls: hold plus `cup`, `cdown`, `cleft`, `cright`, `l`, and `r` all passed whole-RDRAM controls (10137 writes), delivered distinct PIF words, and converged on 320→640→1024→512→640. Viewer PC `0x800C9BF0` hit once in each; mission PC `0x80000B70` and selector writes were zero. H2 selected for these controls. |
 
 ## Method and safety rules
 

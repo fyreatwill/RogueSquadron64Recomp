@@ -77332,6 +77332,34 @@ ownership; H3 is ruled out by the live generated body and exact adjacent
 boundaries. Updated only the stale project TOML placeholder. No build or
 runtime behavior conclusion was made.
 
+## Session 1636 (2026-08-16) — tested post-viewer unmapped controls against retail mission entry
+
+Ran the new Rice retail-oracle batch from
+`scratch/agent/s1636_retail_unmapped_controls/run_all.sh`: a hold control and
+six concurrent post-viewer arms (`cup`, `cdown`, `cleft`, `cright`, `l`, and
+`r`) after the known eleven-Start hangar schedule. The competing hypotheses
+were H1: an untested control exits the case-6 viewer into mission entry; H2:
+the controls are consumed by the same viewer route; and H3: a control changes
+the frontend route without mission entry. Phase-gated VI transitions, PIF
+trace, whole-RDRAM positive control, selector writes, and watched PCs formed
+the discriminator.
+
+All seven arms exited 0, reached the same 320→640→1024→512→640 lifecycle, and
+passed the whole-RDRAM positive control (10,137 writes; the 10,000 callback
+threshold also fired). Each candidate produced its distinct PIF word at 70,
+78, 86, and 94 seconds: C-up `0x00080000`, C-down `0x00040000`, C-left
+`0x00020000`, C-right `0x00010000`, L `0x00200000`, and R `0x00100000`.
+Every arm had one `runModelViewerLoop` PC hit at `0x800C9BF0`, zero mission
+entry hits at `0x80000B70`, and zero selector writes at
+`0x13B40:0x13B48`; the watched frontend counts matched the hold arm within
+one hit. H2 is selected for these six controls.
+
+This rules out missing input delivery and a control-specific mission or
+alternate VI route for the tested buttons. It does not identify the still-open
+input/state/timeout route into a mission and gives no basis for a mitigation.
+The PIF, VI, and PC channels are independent in-run measurements from the
+single retail oracle, not a second emulator witness.
+
 ## Session 1633 (2026-08-16) — synchronized the accumulateVectorInObjectFrame symbol
 
 Ran the exact generated-symbol census for `0x800C713C` without building or

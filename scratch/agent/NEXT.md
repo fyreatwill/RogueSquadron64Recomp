@@ -1,4 +1,4 @@
-# NEXT work unit (s1636)
+# NEXT work unit (s1637)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -20,18 +20,18 @@ Competing hypotheses and discriminator:
 
 The complete comparison table is the discriminator: an independent mission
 name plus a live generated body, matching TOML/overlay span, and exact
-preceding `initializeObjectiveTracking` and following
-`calculateFriendliesSaved` boundaries select H1; an ownership conflict
-selects H2; no independent name, any span conflict, or non-function evidence
-selects H3. Each outcome selects one hypothesis.
+preceding `initializeObjectiveTracking` and following `calculateFriendliesSaved`
+boundaries select H1; an ownership conflict selects H2; no independent name,
+any span conflict, or non-function evidence selects H3. Each outcome selects
+one hypothesis.
 
-Before starting the census, run:
+Before the census, run:
 
 ```sh
 grep -n '^## Session ' PORTING-STATE.md | tail -15
 ```
 
-Use these bounded commands:
+Then run these bounded commands:
 
 ```sh
 rg -n -C 8 '800C72E8|800C7320|dispatchObjectiveSlot1' ../rogue_squadron64
