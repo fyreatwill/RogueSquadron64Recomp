@@ -77711,3 +77711,30 @@ adjacent boundaries and sizes. No source-map edit was needed because the
 generated definition and TOML entry were already synchronized. No build or
 runtime behavior conclusion was made. The next sweep candidate is
 `func_800C7864`/`addTimerHandleWrapper`.
+
+## Session 1648 (2026-08-16) — confirmed the addTimerHandleWrapper symbol
+
+Ran the exact generated-symbol census for `0x800C7864` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live timer wrapper and its generated, TOML, and
+section-4 boundaries agree; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator.
+
+The companion mission map names `addTimerHandleWrapper` at `0x800C7864`; the
+bounded companion-tree search found no competing C/H definition or caller
+annotation. The generated `funcs_36.c` definition already carries the human
+name and contains the live `0x20`-byte wrapper: it saves `$ra`, calls
+`addTimerHandle`, masks the return to one byte, and restores the stack frame.
+Its exact preceding boundary is `addBooleanCountHandleWrapper` at
+`0x800C7830` with size `0x34`, and its following boundary is
+`setHudFlagBit40AndStoreArg` at `0x800C7884` with size `0x1C`. The TOML entry
+has the same human name, address, and size; the section-4 overlay table has
+the same function at ROM offset `0x22734` with span `0x20`.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and
+overlay ownership; H3 is ruled out by the live wrapper body and exact
+adjacent boundaries and sizes. No source-map edit was needed because the
+generated definition and TOML entry were already synchronized. No build or
+runtime behavior conclusion was made. The next sweep candidate is
+`func_800C7884`/`setHudFlagBit40AndStoreArg`.
