@@ -2670,7 +2670,7 @@ functions = [
     { name = "destroyAllNpcsInSlotChain", vram = 0x800AF08C, size = 0x60 },
     { name = "maybeLoadYwingCutscene", vram = 0x800AF0EC, size = 0x78 },
     { name = "buildBobbingObjectMatrix", vram = 0x800AF164, size = 0xFC },
-    { name = "func_800AF260", vram = 0x800AF260, size = 0x24 },
+    { name = "cinematicShutdownAudioAndAssets", vram = 0x800AF260, size = 0x24 },
     { name = "func_800AF284", vram = 0x800AF284, size = 0x44 },
     { name = "func_800AF2C8", vram = 0x800AF2C8, size = 0x98 },
     { name = "func_800AF360", vram = 0x800AF360, size = 0xA8 },

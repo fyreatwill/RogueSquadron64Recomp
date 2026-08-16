@@ -1,10 +1,10 @@
-# NEXT work unit (s1536)
+# NEXT work unit (s1537)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1535 synchronized `buildBobbingObjectMatrix` at `0x800AF164`. Resume the
-generated-symbol renaming sweep. Perform exactly one bounded exact-name
-census over the next adjacent generated function, `0x800AF260..0x800AF284`.
+s1536 synchronized `cinematicShutdownAudioAndAssets` at `0x800AF260`. Resume
+the generated-symbol renaming sweep. Perform exactly one bounded exact-name
+census over the next adjacent generated function, `0x800AF284..0x800AF2C8`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence before
 editing. Synchronize only an exact independent name in
@@ -28,29 +28,28 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already
-`cinematicShutdownAudioAndAssets`; the companion cinematic list maps
-`cinematicShutdownAudioAndAssets = 0x800AF260` (2-call wrapper invoked
-from `cinematicLoopBody` on cutscene exit: `finalizeCurrentSpeechBuffer`
-then `func_80045708`). TOML is still `func_800AF260` (size `0x24`,
-ends at independently named generated `bytesDiffer` / TOML
-`func_800AF284` at `0x800AF284`). Overlay `rom_size` is `0x24` at
-offset `0x0000A130`. Confirm the complete live function, matching
-size, and caller/semantic evidence before synchronizing the TOML name.
-Independently named `buildBobbingObjectMatrix` at `0x800AF164`
-(`rom_size` `0xFC`) ends at this address. The generated body is
-`addiu $sp, $sp, -0x18` / `sw $ra, 0x10($sp)` / `jal 0x800678E4`
-(`finalizeCurrentSpeechBuffer`) / `jal 0x80045708`
-(`teardownAnimatedMapGridLayer`) / restore `$ra` / `jr $ra` /
-`addiu $sp, $sp, 0x18`. One retail `jal` encoding `0x0C02BC98` sits
-at file `0x13893C` (`0x800A64EC`, generated caller inside
-`cinematicLoopBody`). Menu-overlay `initCraftSelectScreen` / TOML
-`func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends
-`0x800AF3C0`) occupies overlapping VRAM and is a different overlay,
-not a cinematic size split. Mission-overlay `tickCutsceneObject` at
-`0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML
-`func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`)
-and likewise overlaps from `.ovl.mission`.
+generated entry at this address is already `bytesDiffer`; the companion
+cinematic list maps `bytesDiffer = 0x800AF284` (byte-comparison helper:
+`(a, b, len)` iterates the first `len` bytes of `a` and `b`; returns 1
+on the first mismatch, 0 if all equal; not `memcmp`). TOML is still
+`func_800AF284` (size `0x44`, ends at independently named generated
+`matchKeywordWithPriority` / TOML `func_800AF2C8` at `0x800AF2C8`).
+Overlay `rom_size` is `0x44` at offset `0x0000A154`. Confirm the
+complete live function, matching size, and caller/semantic evidence
+before synchronizing the TOML name. Independently named
+`cinematicShutdownAudioAndAssets` at `0x800AF260` (`rom_size` `0x24`)
+ends at this address. The generated body is `beq $a2, $zero, L_800AF2C0`
+/ `addu $a3, $zero, $zero` / loop `lbu`/`lbu`/`beq` returning 1 on the
+first mismatch else 0 after `len` bytes. One retail `jal` encoding
+`0x0C02BCA1` sits at file `0x139E40` (`0x800A79F0`, generated caller
+inside independently named `cinematicSlotDispatcher`). Menu-overlay
+`initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60`
+(`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping VRAM and
+is a different overlay, not a cinematic size split. Mission-overlay
+`tickCutsceneObject` at `0x800AF04C` continues
+`playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58`
+(size `0xF4`, ends `0x800AF04C`) and likewise overlaps from
+`.ovl.mission`.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -74,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AF260\|800AF284\|cinematicShutdownAudioAndAssets' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AF260\|800AF284\|cinematicShutdownAudioAndAssets' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AF260\|800AF284' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AF284\|800AF2C8\|bytesDiffer' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AF284\|800AF2C8\|bytesDiffer' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AF284\|800AF2C8' syms/rogue_squadron.syms.toml
 ```

@@ -74083,3 +74083,49 @@ adjacent generated cinematic function is independently named
 `bytesDiffer` / TOML `func_800AF284` at `0x800AF284`). Independently
 named `buildBobbingObjectMatrix` at `0x800AF164` (`rom_size` `0xFC`)
 ends at `0x800AF260`.
+
+## Session 1536 (2026-08-15) — synchronized the cinematic-shutdown-audio-and-assets symbol
+
+Performed the bounded exact-name census over `0x800AF260..0x800AF284`.
+
+No new soak-queue verdicts since s1535; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1528 (Rice post-hangar
+leave-to-640 revisit), so the every-15-sessions sweep-revisit rule did not
+fire. CURRENT-TRUTH is 55269 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AF260`, size `0x24`; `0x800AF260+0x24=0x800AF284`. Overlay `.ovl.cinematic` entry `rom_size` is `0x24` at offset `0x0000A130` (`0x800AF260-0x800A5130`). Live body is independently `0x24` and meets independently named `bytesDiffer` at `0x800AF284` |
+| Generated definition | `funcs_29.c` defines `cinematicShutdownAudioAndAssets` at `0x800AF260`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000A130`, `rom_size 0x00000024`). The live cinematic body is a complete `0x24` function: `addiu $sp, $sp, -0x18` / `sw $ra, 0x10($sp)` / `jal 0x800678E4` (`finalizeCurrentSpeechBuffer`) / `jal 0x80045708` (`teardownAnimatedMapGridLayer`) / `lw $ra, 0x10($sp)` / `jr $ra` / `addiu $sp, $sp, 0x18`. Last live instruction pair is `0x800AF27C`/`0x800AF280`. Next generated cinematic function is independently named `bytesDiffer`. Independently named `buildBobbingObjectMatrix` at `0x800AF164` (`rom_size` `0xFC`) ends at this address. Menu-overlay `initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and occupies overlapping VRAM from `.ovl.mission` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `cinematicShutdownAudioAndAssets = 0x800AF260` (2-call wrapper invoked from `cinematicLoopBody` on cutscene exit: `finalizeCurrentSpeechBuffer` then `func_80045708`). The same cinematic list independently names the adjacent functions `buildBobbingObjectMatrix` at `0x800AF164` and `bytesDiffer` at `0x800AF284`. The main overlay independently names the two callees: `finalizeCurrentSpeechBuffer = 0x800678E4` and `teardownAnimatedMapGridLayer = 0x80045708`. Menu, mission, libultra, ignored, and zlib lists do not remap `0x800AF260`. No conflicting companion name for this cinematic address |
+| Caller evidence | One retail `jal` encoding `0x0C02BC98` and zero `j` or absolute `0x800AF260` pointer words. The site is independently named `cinematicLoopBody` at `0x800A64EC` (file `0x13893C`; prev `0x0C02BACC` `jal 0x800AEB30` `noopHandler_800AEB30` after `lw $a0, 0x1904($v0)`; delay `0x00000000`; next `0x0C02BACE` `jal 0x800AEB38` `freeCutsceneResources`). Same-run ROM word at that file offset is `0x0C02BC98`. The generated caller is the matching `funcs_27.c` `jal 0x800AF260` site inside `cinematicLoopBody` (`0x800A5D80`), on the cutscene-exit path after `waitForAnyAudioSlot` and `noopHandler_800AEB30` and immediately before `freeCutsceneResources`. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x1416B0` (`0x137580+(0x800AF260-0x800A5130)`) are `0x27BDFFE8` (`addiu $sp, $sp, -0x18`), `0xAFBF0010` (`sw $ra, 0x10($sp)`), `0x0C019E39` (`jal 0x800678E4` `finalizeCurrentSpeechBuffer`), `0x00000000`, `0x0C0115C2` (`jal 0x80045708` `teardownAnimatedMapGridLayer`), `0x00000000`, `0x8FBF0010` (`lw $ra, 0x10($sp)`), `0x03E00008` (`jr $ra`), `0x27BD0018` (`addiu $sp, $sp, 0x18`). Next start file `0x1416D4` is `0x10C0000E` (`bytesDiffer` `beq $a2, $zero, L_800AF2C0`). Preceding epilogue file `0x1416AC` is `0x27BD0028` (`buildBobbingObjectMatrix` delay-slot restore `$sp`). The body is the cutscene-exit speech-buffer plus animated-map-grid teardown wrapper. Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x1416B0` is `0x27BDFFE8`, the caller `jal` word above is `0x0C02BC98`, and the s1535/s1534/s1533/s1532/s1531/s1530 controls still read `0x27BDFFD8` at `0x1415B4`, `0x27BDFFE8` at `0x14153C`, `0x27BDFFD8` at `0x1414DC`, `0x3406FFFF` at `0x14148C`, `0x27BDFFE8` at `0x141440`, and `0x00002021` at `0x141418` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AF260`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x24`, the one ROM `jal` caller is independently named
+`cinematicLoopBody` on the cutscene-exit path, the ROM `jal`s the
+independently named `finalizeCurrentSpeechBuffer` and
+`teardownAnimatedMapGridLayer` callees, the overlapping menu and mission
+functions are different overlays, and there is neither a conflicting
+companion name nor a cinematic size split. H2 and H3 are ruled out for
+this address. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x24`). `func_8009D978` remains the eight-byte
+Q15 delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated cinematic function is independently named
+`bytesDiffer` at `0x800AF284` (TOML still `func_800AF284`, size `0x44`;
+overlay `rom_size` is `0x44` at offset `0x0000A154`; live body ends at
+independently named generated `matchKeywordWithPriority` / TOML
+`func_800AF2C8` at `0x800AF2C8`). Independently named
+`cinematicShutdownAudioAndAssets` at `0x800AF260` (`rom_size` `0x24`)
+ends at `0x800AF284`.
