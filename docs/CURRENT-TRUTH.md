@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1517 (2026-08-15).
+the authority for session detail. Reviewed through s1518 (2026-08-15).
 
 ## Current state
 
@@ -59,7 +59,7 @@ the authority for session detail. Reviewed through s1517 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AE878..0x800AE928`.
+   adjacent function, `0x800AE928..0x800AE98C`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -128,18 +128,21 @@ the authority for session detail. Reviewed through s1517 (2026-08-15).
    at `0x800AD690`. s1515 synchronized
    `transformAndNormalizeDirectionByMatrix` at `0x800ADBF8`. s1516
    synchronized `loadBackdropAsset` at `0x800ADF74`. s1517
-   synchronized `initCinematicSceneAssets` at `0x800AE518`. The
-   generated entry at `0x800AE878` is already
-   `dispatchCinematicFromMainLoop`; the companion cinematic list maps
-   `dispatchCinematicFromMainLoop = 0x800AE878` (comment: 139L
-   main-loop child). TOML is still `func_800AE878` (size `0xB0`, ends
-   at independently named `shouldShowCutsceneForLevelStage` / TOML
-   `func_800AE928` at `0x800AE928`). Overlay `rom_size` is `0xB0` at
-   offset `0x00009748`. Confirm the complete live function, matching
+   synchronized `initCinematicSceneAssets` at `0x800AE518`. s1518
+   synchronized `dispatchCinematicFromMainLoop` at `0x800AE878`.
+   The generated entry at `0x800AE928` is already
+   `shouldShowCutsceneForLevelStage`; the companion cinematic list
+   maps `shouldShowCutsceneForLevelStage = 0x800AE928` (comment:
+   `(level u8, stage u8) → bool`, stage in `{0, 1}` or Corellia/Logo
+   stage 2). TOML is still `func_800AE928` (size `0x64`, ends at
+   independently named `getAssetNameForNpcType` / TOML
+   `func_800AE98C` at `0x800AE98C`). Overlay `rom_size` is `0x64` at
+   offset `0x000097F8`. Confirm the complete live function, matching
    size, and caller/semantic evidence before synchronizing the TOML
    name. Menu-overlay `composeInterpolatedNodeMatrices` at
-   `0x800AE814` occupies overlapping VRAM and is a different overlay,
-   not a cinematic size split.
+   `0x800AE814` (`rom_size` `0x1CC`, ends `0x800AE9E0`) occupies
+   overlapping VRAM and is a different overlay, not a cinematic size
+   split.
 2. Future oracle work (hangar/mission watches, or a new M4 RDRAM dest if
    one is identified from a DMEM→RDRAM transfer that is not `0xD60`) must
    use the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM,
@@ -479,6 +482,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1515 | Exact companion/generated cinematic-matrix census synchronized `transformAndNormalizeDirectionByMatrix` at `0x800ADBF8`; no build or runtime run. |
 | s1516 | Exact companion/generated cinematic-backdrop census synchronized `loadBackdropAsset` at `0x800ADF74`; no build or runtime run. |
 | s1517 | Exact companion/generated cinematic-asset census synchronized `initCinematicSceneAssets` at `0x800AE518`; no build or runtime run. |
+| s1518 | Exact companion/generated cinematic-dispatch census synchronized `dispatchCinematicFromMainLoop` at `0x800AE878`; no build or runtime run. |
 
 ## Method and safety rules
 

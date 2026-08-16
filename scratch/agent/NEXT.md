@@ -1,11 +1,11 @@
-# NEXT work unit (s1518)
+# NEXT work unit (s1519)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1517 synchronized `initCinematicSceneAssets` at `0x800AE518`.
+s1518 synchronized `dispatchCinematicFromMainLoop` at `0x800AE878`.
 Resume the generated-symbol renaming sweep. Perform exactly one bounded
 exact-name census over the next adjacent generated function,
-`0x800AE878..0x800AE928`. Do not build or run. Record its address, size,
+`0x800AE928..0x800AE98C`. Do not build or run. Record its address, size,
 generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name
 in `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
@@ -28,16 +28,19 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `dispatchCinematicFromMainLoop`;
-the companion cinematic list maps `dispatchCinematicFromMainLoop = 0x800AE878`
-(comment: 139L main-loop child). TOML is still `func_800AE878`
-(size `0xB0`, ends at independently named
-`shouldShowCutsceneForLevelStage` / TOML `func_800AE928` at
-`0x800AE928`). Overlay `rom_size` is `0xB0` at offset `0x00009748`.
-Confirm the complete live function, matching size, and caller/semantic
-evidence before synchronizing the TOML name. Menu-overlay
-`composeInterpolatedNodeMatrices` at `0x800AE814` occupies overlapping
-VRAM and is a different overlay, not a cinematic size split.
+generated entry at this address is already `shouldShowCutsceneForLevelStage`;
+the companion cinematic list maps `shouldShowCutsceneForLevelStage = 0x800AE928`
+(comment: `(level u8, stage u8) → bool`, stage in `{0, 1}` or Corellia/Logo
+stage 2). TOML is still `func_800AE928` (size `0x64`, ends at independently
+named `getAssetNameForNpcType` / TOML `func_800AE98C` at `0x800AE98C`).
+Overlay `rom_size` is `0x64` at offset `0x000097F8`. Confirm the complete
+live function, matching size, and caller/semantic evidence before
+synchronizing the TOML name. Menu-overlay
+`composeInterpolatedNodeMatrices` at `0x800AE814` (`rom_size` `0x1CC`,
+ends `0x800AE9E0`) occupies overlapping VRAM and is a different overlay,
+not a cinematic size split. Mission-overlay `func_800AE830` at
+`0x800AE830` (size `0x130`, ends `0x800AE960`) likewise overlaps from
+`.ovl.mission`.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -60,7 +63,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AE878\|800AE928\|dispatchCinematicFromMainLoop' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AE878\|800AE928\|dispatchCinematicFromMainLoop' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AE878\|800AE928' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AE928\|800AE98C\|shouldShowCutsceneForLevelStage' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AE928\|800AE98C\|shouldShowCutsceneForLevelStage' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AE928\|800AE98C' syms/rogue_squadron.syms.toml
 ```
