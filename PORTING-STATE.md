@@ -72598,3 +72598,40 @@ generated function is independently named `initCutsceneAudioChannels`
 at `0x800A959C` (TOML still `func_800A959C`, size `0x310`; overlay
 `rom_size` is `0x310` at offset `0x0000446C`; live body ends at
 independently named `initCutsceneScene`).
+
+## Session 1499 (2026-08-15) — synchronized the init-cutscene-audio-channels symbol
+
+Performed the bounded exact-name census over `0x800A959C..0x800A98AC`.
+
+No new soak-queue verdicts since s1498; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A959C`, size `0x310`; `0x800A959C+0x310=0x800A98AC`. Overlay `.ovl.cinematic` entry `rom_size` is `0x310` at offset `0x0000446C` (`0x800A959C-0x800A5130`). Live body is independently `0x310` and meets independently named `initCutsceneScene` / TOML `func_800A98AC` at `0x800A98AC` |
+| Generated definition | `funcs_27.c` defines `initCutsceneAudioChannels` at `0x800A959C`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x310` function. It starts `addiu $sp, $sp, -0x38` / `sw $s2, 0x18($sp)` / `addu $s2, $a0, $zero` and ends at the sole `jr $ra` / `addiu $sp, $sp, 0x38` (`0x800A98A4`/`0x800A98A8`). No interior `jr`. Next generated cinematic function is independently named `initCutsceneScene`. Menu-overlay `loadCutsceneAssetsByIndex` at `0x800A9270` (`rom_size` `0xF4`) and `mallocCraftSelectionData` at `0x800A9364` (`rom_size` `0x1A38`; previously cited as `hangarInitialize`) occupy overlapping VRAM from `.ovl.menu` and are not a cinematic size split |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `initCutsceneAudioChannels = 0x800A959C` in the cinematic splat list. Menu, mission, main, libultra, and zlib lists do not remap `0x800A959C` (menu instead names `mallocCraftSelectionData = 0x800A9364` in its own overlay). `undefined_funcs_auto.txt` has no `800A95` entry. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02A567` and zero `j` or absolute `0x800A959C` pointer words. The site is in independently named `load_cutscene` at `0x800A6894` (overlay file `0x138CE4`; `load_cutscene` is `0x800A6620` size `0x2E4`, ends at `0x800A6904`). Same-run ROM word at that file offset is `0x0C02A567`; the delay slot is `0x02602021` (`addu $a0, $s3, $zero`). The call is `jal 0x800A959C` with `$a0` from `$s3` |
+| Semantic evidence | Retail ROM words at file `0x13B9EC` (`0x137580+(0x800A959C-0x800A5130)`) are `0x27BDFFC8` / `0xAFB20018` / `0x00809021` / `0xAFB10014` (`addiu $sp, $sp, -0x38` / `sw $s2, 0x18($sp)` / `addu $s2, $a0, $zero` / `sw $s1, 0x14($sp)`). The opener zeros `0x800B1EE4`/`0x800B1EE0` and walks `$s2+0x4E` count of `0x18`-stride records at `$s2+0x58`. Type-1 slots copy halfword `+0x62` into word `+0x60`; the `0x10000`-clear path calls independently named `parseLoadedSndSection`, and the `0x20000`-clear path calls independently named `loadSongAssetByName`, recording loaded ids at `0x800B1EA0` with count `0x800B1EE4`. The closer issues independently named `playSimpleAudioCmd(0x7B, 0xFA, 0xFE)` and `playSimpleAudioCmd(0x7F, 0xFA, 0xFD)`, then recopies the type-1 `+0x62`/`+0x60` pair. Epilogue file `0x13BCF4` is `0x03E00008` / `0x27BD0038`. Next start file `0x13BCFC` is `0x27BDFF88` (`initCutsceneScene`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13B9EC` is `0x27BDFFC8`, and the caller `jal` word above is `0x0C02A567` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A959C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x310`, `load_cutscene` is the only caller, and there is
+neither a conflicting companion name nor a size split inside the live
+cinematic body. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x310`). `func_8009D978` remains the eight-byte
+Q15 delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is independently named `initCutsceneScene`
+at `0x800A98AC` (TOML still `func_800A98AC`, size `0x210`; overlay
+`rom_size` is `0x210` at offset `0x0000477C`; live body ends at
+independently named `initSceneForMission` / TOML `func_800A9ABC` at
+`0x800A9ABC`).
