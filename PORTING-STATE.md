@@ -79050,3 +79050,33 @@ No build or runtime run required.
 
 Next census: `npcAtAtUpdate` at `0x800CD71C` (size `0x1800`). Last-15 titles
 still include s1682, so the next iteration may continue the sweep.
+
+## Session 1688 (2026-08-16) — confirmed the npcAtAtUpdate symbol
+
+Exact generated-symbol census for `0x800CD71C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 35230; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcAtAtUpdate = 0x800CD71C`. Coarse listing previous `npcProbeDriod = 0x800CABD4` skips helpers; previous contiguous function `updateAtAtLegArticulation = 0x800CD558`; next contiguous neighbor `fake_func_800CEF1C = 0x800CEF1C`, then `advanceAtStEffectPhaseSound = 0x800CEF20`. Companion `main_overlay.txt` already describes this as the exclusive per-frame caller of the AT-AT leg-stride, body-transform, and sub-feature helpers |
+| Generated `funcs_37.c` | `RECOMP_FUNC void npcAtAtUpdate` at VRAM `0x800CD71C`; prologue `addiu $sp, $sp, -0x120`; returns through `jr $ra` / `addiu $sp, $sp, 0x120` ending at `0x800CEF18`; previous mission function is `updateAtAtLegArticulation` at `0x800CD558` (last insn `0x800CD718`); next mission function is `fake_func_800CEF1C` at `0x800CEF1C` |
+| Body semantics | 9-way jump table on `(a1 & 0xFFFF) - 1 < 9` via table `0x800A6F20`. Actor at `a0`; NPC context at `a0+4`. Case 0/7 inits (`walkMeshdef0List`, `createAndInitObject`, `allocateAndInitCraftNpcContext`, `load_model_animation` ×2, `flattenAnimTreeAndAllocateSlot`). Case 1 tears down (`clearModelAnimChannelEntry`, `releaseModelAnimSlot`, `factor5RemoveListNode`, `rs_free`, `destroyNpcSlotByIndex`, `releaseMeshAsset`). Case 2 is the live per-frame body (`tickAtAtAudioAndWeaponState`, `tickAtAtBodyTransform`, `processAtAtSubFeatureSlot`, `updateAtAtLegArticulation`, `npcAtAtHandleDestruction`). Case 3 poses/renders (`sampleTerrainAtNpcPosition`, `parseModelAnimType2Entry`, `addNpcToVisibilityBucket`, `updateActive3DAudioSource`). Case 4 combats/paths (`advanceNpcOnCurvedPath`, `extrapolateNpcPositionForCurrentMode`, `play3DSoundEvent`, `dealDamageToNpc`, `npcAtAtHandleDestruction`). Case 5 is the shared epilogue. Case 6 is a detail-level return (`setObjectDetailLevel`, `dispatchSlotAction5IfActive`). Case 8 frees slots (`unregisterAndFreeNpcSlot`, `popNpcSlotFromTail`). 137 named calls / 74 unique. Name matches the AT-AT NPC update |
+| TOML | `{ name = "npcAtAtUpdate", vram = 0x800CD71C, size = 0x1800 }` — already the human name; size matches `0x800CEF1C - 0x800CD71C` (1536 decoded insns, last+4 = `0x1800`). No leftover `func_800CD71C` |
+| Overlay section 4 | `{ .func = npcAtAtUpdate, .offset = 0x000285EC, .rom_size = 0x00001800 }` under `section_4_ovl_mission_funcs` (`0x800CD71C - 0x800A5130 = 0x285EC`; `0x28428 + 0x1C4 = 0x285EC`; `0x285EC + 0x1800 = 0x29DEC` matches next `fake_func_800CEF1C`) |
+| Non-collision | Menu-overlay hangar/bridge data (`hangarDesiredBay`, `bridgeMenuDesiredLevel`, `D_800CDB20`, `bridgeShipBlueprints`) and the menu decomp's `D_800CD71C` live in `menu_overlay.txt` at the same VRAM window; different overlay, not a name collision. No menu function occupies `0x800CD71C` |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated AT-AT NPC-update body, previous
+(`updateAtAtLegArticulation` / `0x800CD558`) and next (`fake_func_800CEF1C` /
+`0x800CEF1C`) boundaries, TOML name and size, and section-4 overlay span
+already agree. No TOML or generated-name change.
+
+Next census: `fake_func_800CEF1C` at `0x800CEF1C` (size `0x4`), then
+`func_800CEF20` / `advanceAtStEffectPhaseSound`. Last-15 titles still
+include s1682, so the next iteration may continue the sweep.
