@@ -21,7 +21,7 @@ stale "as of session N" headline. Git history preserves everything you delete.
 A net shrink of >=200 lines counts as ADVANCED (the Stop gate knows this). Do
 NOT run experiments in a maintenance iteration.
 
-## Strategic priority (user directive, 2026-08-04)
+## Strategic priority (user directives: 2026-08-04 items 1-3, 2026-08-15 item 4)
 When choosing the work unit, this order overrides Next-steps ordering:
 1. Maintenance, when Step 0 triggers it.
 2. **M5 audio de-stubbing.** First a design doc (docs/M5-AUDIO-PLAN.md):
@@ -36,6 +36,21 @@ When choosing the work unit, this order overrides Next-steps ordering:
    guard or prove dead, close the class). No reactive single-crash chases.
    Wait-for-recurrence breadcrumbs are passive: enqueue their soaks (see Soak
    queue below) and move on.
+4. **Generated-symbol renaming sweep** (HYPOTHESIS-ID:
+   generated-symbol-renaming-sweep), once 1-3 are inapplicable (M5 closed;
+   M3 parked pending a new discriminator). Real, bounded work — ~1,548
+   functions still carried placeholder `func_0x...` names when measured at
+   s1487 — but it is open-ended by address, not by session count, and it
+   stays perpetually actionable while the retail-entry boundary and M4
+   accumulator-origin threads sit parked awaiting a new idea that will not
+   arrive on its own. Before starting a sweep session, run
+   `grep -n '^## Session ' PORTING-STATE.md | tail -15`: if all 15 titles
+   belong to the sweep (contain "synchronized", "confirmed ... symbol", or
+   are a sweep-scoped census that selected H2/H3), this iteration is a
+   REVISIT instead — spend it re-attempting CURRENT-TRUTH's "external
+   retail-entry boundary" (Next steps #2) or its "M4 accumulator boundary"
+   (Durable boundaries) with a genuinely new angle, not another sweep step.
+   Otherwise resume the sweep.
 
 ## Do exactly one work unit
 A work unit is ONE experiment or ONE bounded change, chosen from the top of
