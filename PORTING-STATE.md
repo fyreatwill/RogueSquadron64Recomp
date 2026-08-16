@@ -78559,3 +78559,33 @@ run required.
 Next census: `func_800CA270` / `initNpcActorVariant` at `0x800CA270`
 (size `0x134`). Last-15 titles still include s1666, so the next iteration
 may continue the sweep.
+
+## Session 1673 (2026-08-16) — synchronized the initNpcActorVariant symbol
+
+Exact generated-symbol census for `0x800CA270` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `initNpcActorVariant = 0x800CA270`; next mission listing `spawnProbeDroidGroundImpactEffect = 0x800CA3A4`; prior `playNpcAmbientEffect = 0x800CA18C`. `fake_func_800CA26C = 0x800CA26C` is the 4-byte pad; companion deleted `func_800CA270` as a duplicate of `initNpcActorVariant` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void initNpcActorVariant` at VRAM `0x800CA270`; prologue `addiu $sp, $sp, -0x38`; returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800CA3A0`; previous generated functions are `playNpcAmbientEffect` at `0x800CA18C` then `fake_func_800CA26C` at `0x800CA26C`; next is `spawnProbeDroidGroundImpactEffect` at `0x800CA3A4` |
+| Body semantics | Actor at `a0+4`. Clears halfword `+0xE2` and word `+0x54`. `rand` masked to `0x7F`, converted to float, scaled by `0x800A6B80`/`0x6B84`/`0x6B88`, stored at `+0x58`. Then `setNpcHealth`, `initActorMotionParams`, `setObjectDetailLevel`, `initObjectAnimSubstruct`, `setEffectIntensity`. Same init family as `initNpcActorFromSpawnMessage` |
+| TOML (before) | `{ name = "func_800CA270", vram = 0x800CA270, size = 0x134 }` — size matches `0x800CA3A4 - 0x800CA270` |
+| Overlay section 4 | `{ .func = initNpcActorVariant, .offset = 0x00025140, .rom_size = 0x00000134 }` under `section_4_ovl_mission_funcs` (`0x800CA270 - 0x800A5130 = 0x25140`; `0x25140 + 0x134 = 0x25274` matches next `spawnProbeDroidGroundImpactEffect`) |
+| Non-collision | Menu-overlay `runModelViewerLoop = 0x800C9BF0` (size `0xA48`, ends `0x800CA638`) lives in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. `0x800CA270` is `+0x280` inside that menu function |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`playNpcAmbientEffect` / `0x800CA18C` then pad `fake_func_800CA26C` /
+`0x800CA26C`) and next (`spawnProbeDroidGroundImpactEffect` / `0x800CA3A4`)
+boundaries, and TOML size already agreed; only the TOML name was a stale
+`func_800CA270` placeholder. Corrected TOML to `initNpcActorVariant`. No
+build or runtime run required.
+
+Next census: `func_800CA3A4` / `spawnProbeDroidGroundImpactEffect` at
+`0x800CA3A4` (size `0x1BC`). Last-15 titles still include s1666, so the
+next iteration may continue the sweep.

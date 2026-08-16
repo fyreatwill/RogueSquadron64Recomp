@@ -1,16 +1,15 @@
-# NEXT work unit (s1673)
+# NEXT work unit (s1674)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the exact generated-symbol census. s1666 remains in the last-15
 titles as the mandatory retail-entry revisit, so this iteration is not
-a REVISIT. Candidate: generated `initNpcActorVariant` at `0x800CA270`
-(size `0x134`). Companion `mission_overlay.txt` already maps
-`initNpcActorVariant = 0x800CA270`. Adjacent: previous
-`playNpcAmbientEffect` / `0x800CA18C` then 4-byte pad
-`fake_func_800CA26C` (`0x800CA26C`, size `0x4`); next TOML
-`func_800CA3A4` (`0x800CA3A4`, size `0x1BC`, companion
-`spawnProbeDroidGroundImpactEffect = 0x800CA3A4`). Skip the pad.
+a REVISIT. Candidate: generated `spawnProbeDroidGroundImpactEffect` at
+`0x800CA3A4` (size `0x1BC`). Companion `mission_overlay.txt` already maps
+`spawnProbeDroidGroundImpactEffect = 0x800CA3A4`. Adjacent: previous
+`initNpcActorVariant` / `0x800CA270`; next TOML `func_800CA560`
+(`0x800CA560`, size `0x1C0`, companion
+`initProbeDroidScatterLaunch = 0x800CA560`).
 
 Competing hypotheses and discriminator:
 
@@ -27,26 +26,26 @@ Discriminator: one static comparison, no game run.
 
 ```sh
 # companion
-grep -n -C2 '800CA270\|initNpcActorVariant\|800CA3A4\|spawnProbeDroidGroundImpactEffect\|800CA26C' \
+grep -n -C2 '800CA3A4\|spawnProbeDroidGroundImpactEffect\|800CA560\|initProbeDroidScatterLaunch\|800CA270' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt
 # generated body + adjacent
-grep -n 'initNpcActorVariant\|func_800CA270\|spawnProbeDroidGroundImpactEffect\|func_800CA3A4\|fake_func_800CA26C\|playNpcAmbientEffect' \
+grep -n 'spawnProbeDroidGroundImpactEffect\|func_800CA3A4\|initProbeDroidScatterLaunch\|func_800CA560\|initNpcActorVariant' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_*.c | head
 # TOML + overlay tables
-grep -n '800CA270\|800CA3A4\|800CA26C\|initNpcActorVariant\|spawnProbeDroidGroundImpactEffect' \
+grep -n '800CA3A4\|800CA560\|800CA270\|spawnProbeDroidGroundImpactEffect\|initProbeDroidScatterLaunch' \
   syms/rogue_squadron.syms.toml \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
 
 Expected splits:
 
-- H1: generated function already named `initNpcActorVariant`, starts at
-  `0x800CA270`, ends at `0x800CA3A0`/`0x800CA3A4`, TOML size `0x134`,
-  section-4 `rom_size` matches; only TOML name changes from
-  `func_800CA270`.
+- H1: generated function already named `spawnProbeDroidGroundImpactEffect`,
+  starts at `0x800CA3A4`, ends at `0x800CA55C`/`0x800CA560`, TOML size
+  `0x1BC`, section-4 `rom_size` matches; only TOML name changes from
+  `func_800CA3A4`.
 - H2: any of those disagree.
-- H3: TOML already carries `initNpcActorVariant`.
+- H3: TOML already carries `spawnProbeDroidGroundImpactEffect`.
 
 Do not start another retail-entry experiment this iteration.
 After this census, the next candidate is whatever the next boundary
-is (likely `func_800CA3A4` / `spawnProbeDroidGroundImpactEffect`).
+is (likely `func_800CA560` / `initProbeDroidScatterLaunch`).

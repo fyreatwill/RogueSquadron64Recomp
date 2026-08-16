@@ -1775,7 +1775,7 @@ functions = [
     { name = "npcTurretUpdate", vram = 0x800C8F90, size = 0x11FC },
     { name = "playNpcAmbientEffect", vram = 0x800CA18C, size = 0xE0 },
     { name = "fake_func_800CA26C", vram = 0x800CA26C, size = 0x4 },
-    { name = "func_800CA270", vram = 0x800CA270, size = 0x134 },
+    { name = "initNpcActorVariant", vram = 0x800CA270, size = 0x134 },
     { name = "func_800CA3A4", vram = 0x800CA3A4, size = 0x1BC },
     { name = "func_800CA560", vram = 0x800CA560, size = 0x1C0 },
     { name = "func_800CA720", vram = 0x800CA720, size = 0x4B4 },

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1672 (2026-08-16).
+the authority for session detail. Reviewed through s1673 (2026-08-16).
 
 ## Current state
 
@@ -72,17 +72,16 @@ the authority for session detail. Reviewed through s1672 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep at generated
-   `initNpcActorVariant` / `func_800CA270` at `0x800CA270` (size `0x134`).
-   Compare companion mapping if any, generated body, previous and next
-   boundaries, TOML size, and overlay span. Synchronize only on complete
-   independent agreement (generated and overlay already carry the human
-   name; TOML is still `func_800CA270`, so this is likely an H1 rename).
-   Skip the 4-byte `fake_func_800CA26C` pad. s1651–s1665 and s1667–s1672
-   synchronized or confirmed DAT-item through `playNpcAmbientEffect`;
-   s1650 and s1666 were the mandatory retail-entry revisits. The full
-   s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier sweep
-   is in §33. About 1,548 placeholder `func_0x...` names remained when
-   counted at s1487.
+   `spawnProbeDroidGroundImpactEffect` / `func_800CA3A4` at `0x800CA3A4`
+   (size `0x1BC`). Compare companion mapping if any, generated body,
+   previous and next boundaries, TOML size, and overlay span. Synchronize
+   only on complete independent agreement (generated and overlay already
+   carry the human name; TOML is still `func_800CA3A4`, so this is likely
+   an H1 rename). s1651–s1665 and s1667–s1673 synchronized or confirmed
+   DAT-item through `initNpcActorVariant`; s1650 and s1666 were the
+   mandatory retail-entry revisits. The full s1590–s1649 archive is in
+   `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
+   placeholder `func_0x...` names remained when counted at s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
    15-title gate only: C/L/R or valid D-pad **on the arrived 640
    B-frontend**, or any input on the attract 512 it times out into
@@ -211,6 +210,7 @@ ownership.
 | s1670 | Synchronized `setupNpcModelForState` (`0x800C8E90`, size `0x100`) after companion mission mapping, live generated state-to-mesh body (`releaseMeshAsset`, state halfword `+0x70` picks `0x800A6A0C`/`0x6A18`/`0x6A24`/`0x6A30`, `walkMeshdef0List`, `initVec4TripletFromArgs`, `composeRotationMatrixSlot0`/`Slot1`/`Slot2`, `addVec3At0x24`), exact `0x800C8978`/`0x800C8F90` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `buildDebrisMeshFromCells` at `0x800C8C1C` is a different overlay, not a name collision. Next candidate is `npcTurretUpdate`. |
 | s1671 | Confirmed `npcTurretUpdate` (`0x800C8F90`, size `0x11FC`) was already synchronized: companion mission mapping, live generated 11-way turret-update body (`setupNpcModelForState`, `updateNpcOrientationFromMotion`, `safeLookup3DSoundEntry`, `play3DSoundEvent`, `unregisterAndFreeNpcSlot`), exact `0x800C8E90`/`0x800CA18C` boundaries, TOML name and size, and section-4 span agreed. Menu-overlay `cloneCellBufferWithAlloc` / `allocZeroedCellRecord` / `runModelViewerLoop` at `0x800C9A88`/`0x800C9B8C`/`0x800C9BF0` are a different overlay, not a name collision. Next candidate is `func_800CA18C` / `playNpcAmbientEffect`. |
 | s1672 | Synchronized `playNpcAmbientEffect` (`0x800CA18C`, size `0xE0`) after companion mission mapping, live generated ambient-effect body (`lookupHmtTextureByName`, `generatePerpEmitDirectionWithJitter`, `tickProgressChannel`, `triggerCueWithSlotEffect`, `play3DSoundEvent`), exact `0x800C8F90`/`0x800CA26C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `runModelViewerLoop` at `0x800C9BF0` (size `0xA48`) is a different overlay, not a name collision. Next candidate is `func_800CA270` / `initNpcActorVariant`. |
+| s1673 | Synchronized `initNpcActorVariant` (`0x800CA270`, size `0x134`) after companion mission mapping, live generated NPC-actor-init body (`setNpcHealth`, `initActorMotionParams`, `setObjectDetailLevel`, `initObjectAnimSubstruct`, `setEffectIntensity`), exact `0x800CA26C`/`0x800CA3A4` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `runModelViewerLoop` at `0x800C9BF0` (size `0xA48`) is a different overlay, not a name collision. Next candidate is `func_800CA3A4` / `spawnProbeDroidGroundImpactEffect`. |
 
 ## Method and safety rules
 
