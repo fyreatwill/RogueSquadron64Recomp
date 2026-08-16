@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1570 (2026-08-16).
+the authority for session detail. Reviewed through s1571 (2026-08-16).
 
 ## Current state
 
@@ -79,17 +79,16 @@ the authority for session detail. Reviewed through s1570 (2026-08-16).
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
-   Next census: `0x800B42C0..0x800B4588`. TOML is already
-   `playerXwingInit` (size `0x2C8`). Overlay `rom_size` is `0x2C8` at
-   offset `0x0000F190`. Generated `funcs_31.c` defines
-   `playerXwingInit` starting `addiu $sp, $sp, -0x50` and ending
-   `jr $ra` / `addiu $sp, $sp, 0x50`. Companion mission list maps
-   `playerXwingInit = 0x800B42C0`. Independently named (parked)
-   `fake_func_800B42BC` ends at this address. Independently named
-   `playWeaponFireSound` at `0x800B4588` (TOML still `func_800B4588`,
-   `rom_size` `0x738`) starts at the next word. Confirm the
-   already-named function. This naming census does not reopen closed
-   M5 audio de-stubbing.
+   s1571 confirmed the already-synchronized `playerXwingInit` at
+   `0x800B42C0` (size `0x2C8`), with the generated prologue/epilogue,
+   companion mission mapping, and two `playerXwingUpdate` call sites
+   agreeing. The next census is `0x800B4588..0x800B4CC0`:
+   `func_800B4588` has TOML size `0x738`, while the companion mission list
+   and generated `funcs_31.c` independently call it
+   `playWeaponFireSound`; the next named mission function is
+   `playerXwingFireBlaster` at `0x800B4CC0`. Synchronize only if the
+   complete comparison remains exact. This naming census does not reopen
+   closed M5 audio de-stubbing.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -250,6 +249,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1568 | H1: synchronized `advancePitchTowardTarget` at `0x800B41FC` (size `0xC0`). |
 | s1569 | Rice 640-handler revisit: hold stays 512 with `runHangarSelectionFrame` through 100s; leave A stops that inner loop at 63.7s and enters `runModelViewerLoop` (case 6) at 64.3s with `initModelViewer` / `buildModelViewerTextPage` / `loadJfifAsset`. Selector write `0x800C5AC8` is the generated set-6 path. Extra Start during 640 does not exit. Not a mission. |
 | s1570 | H2: parked already-fake `fake_func_800B42BC` at `0x800B42BC` (size `0x4`). |
+| s1571 | H1: confirmed `playerXwingInit` at `0x800B42C0` is already synchronized: exact `0x2C8` TOML/overlay/generated boundary, companion name, and two generated `playerXwingUpdate` calls agree; no file rename was needed. |
 
 ## Method and safety rules
 

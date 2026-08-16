@@ -75687,3 +75687,28 @@ at `0x800B42C0` (TOML already `playerXwingInit`, size `0x2C8`; overlay
 `addiu $sp, $sp, -0x50` and ends `jr $ra` / `addiu $sp, $sp, 0x50`).
 Independently named `playWeaponFireSound` at `0x800B4588` (TOML still
 `func_800B4588`, `rom_size` `0x738`) starts at the next word.
+
+## Session 1571 (2026-08-16) — confirmed the already-synchronized playerXwingInit symbol
+
+Performed the bounded exact-name census over `0x800B42C0..0x800B4588`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 17,837 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail had no newer verdict than the
+already-recorded s1029 line. The last-15 title check included s1569's
+non-sweep leave-hangar revisit, so the sweep-revisit rule did not fire.
+M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` already names `playerXwingInit` at `0x800B42C0` with size `0x2C8`. The generated mission overlay entry is offset `0x0000F190`, `rom_size 0x2C8`; the next function begins at `0x800B4588`. |
+| Generated definition | `RecompiledFuncs/funcs_31.c` defines `playerXwingInit` with `addiu $sp, $sp, -0x50` at `0x800B42C0` and returns through `jr $ra` / `addiu $sp, $sp, 0x50` at `0x800B4580` / `0x800B4584`. `funcs.h` and `recomp_overlays.inl` use the same name. The file also contains overlapping menu-overlay functions at these VRAM addresses; that is an overlay namespace overlap, not evidence against the mission function boundary. |
+| Independent companion source | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `playerXwingInit = 0x800B42C0`; the preceding `fake_func_800B42BC` is separately marked as an already-fake gap. |
+| Caller evidence | Generated `playerXwingUpdate` contains direct calls to `playerXwingInit` at `0x800B5584` and `0x800B5684`, matching two `jal 0x800B42C0` sites. |
+| Confidence | High |
+
+The comparison selects H1 in its already-synchronized form. H2 is ruled
+out because the entry is not partial, fake, or conflicting; H3 is ruled out
+by the independent companion mapping. No TOML edit was needed, and no build
+or runtime run was justified for this exact-name census. The next bounded
+candidate is `func_800B4588`, independently named `playWeaponFireSound`,
+with size `0x738` and mission-overlay offset `0x0000F458`.

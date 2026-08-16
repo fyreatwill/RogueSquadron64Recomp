@@ -1,11 +1,11 @@
-# NEXT work unit (s1571)
+# NEXT work unit (s1572)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1570 parked already-fake `fake_func_800B42BC` at `0x800B42BC` (H2).
-Resume the generated-symbol renaming sweep.
+s1571 confirmed the already-synchronized `playerXwingInit` at
+`0x800B42C0` (H1), so resume the generated-symbol renaming sweep.
 Perform exactly one bounded exact-name census over the next adjacent
-generated function, `0x800B42C0..0x800B4588`.
+generated function, `0x800B4588..0x800B4CC0`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -32,18 +32,15 @@ eight-byte PC-relative Q15 delay-mix table, not a function),
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler), and `fake_func_800B42BC` unchanged
 (s1570 H2: already-fake one-instruction `lw $v0, 0x2C($fp)` gap).
-TOML is already `playerXwingInit` (size `0x2C8`). Overlay `rom_size`
-is `0x2C8` at offset `0x0000F190`. Companion mission list maps
-`playerXwingInit = 0x800B42C0`. Generated `funcs_31.c` starts
-`addiu $sp, $sp, -0x50` and ends `jr $ra` / `addiu $sp, $sp, 0x50`
-at `0x800B4580` / `0x800B4584`. Confirm the already-named function
-before leaving the entry unchanged. Independently named (parked)
-`fake_func_800B42BC` at `0x800B42BC` (`rom_size` `0x4`) ends at this
-address. Independently named `playWeaponFireSound` at `0x800B4588`
-(TOML still `func_800B4588`, `rom_size` `0x738`) starts at the next
-word. Two generated `jal 0x800B42C0` sites live in
-`playerXwingUpdate`. This naming census does not reopen closed M5
-audio de-stubbing.
+TOML is still `func_800B4588` (size `0x738`). The mission
+overlay `rom_size` is `0x738` at offset `0x0000F458`, and the companion
+mission list maps `playWeaponFireSound = 0x800B4588`. Generated
+`funcs_31.c` already defines `playWeaponFireSound` at `0x800B4588`,
+starting with `addiu $sp, $sp, -0x58`; the next generated function is
+`playerXwingFireBlaster` at `0x800B4CC0`. A generated
+`playerXwingUpdate` call site targets `0x800B4588`. Apply the H1/H2/H3
+comparison below before changing the TOML entry. This naming census does
+not reopen closed M5 audio de-stubbing.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -55,20 +52,22 @@ Do not re-watch `0x688:0x710` (s1512 H2).
 Competing hypotheses and discriminator:
 
 - H1: the function has an exact independent companion mapping and can be
-  synchronized (or is already synchronized under that exact name).
+  synchronized to `playWeaponFireSound`.
 - H2: the mapping is partial, already-fake, or ambiguous, so the entry
   must remain unchanged.
 - H3: no independent naming source exists and the region should be parked.
 
 The complete comparison table is the discriminator: an exact companion
-name with matching generated/TOML live-body size and semantic or caller
+name with matching generated/TOML live-body size and caller or semantic
 evidence selects H1; an incomplete, already-fake, or conflicting match
-selects H2; and no independent name selects H3.
+selects H2; and no independent name selects H3. The measurement is the
+single comparison table across the companion map, generated boundaries,
+TOML size, and callers; each possible result selects one hypothesis.
 
 Commands:
 
 ```
-grep -n -C 5 '800B42C0\|800B4588\|playerXwingInit\|playWeaponFireSound' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B42C0\|playerXwingInit' ../N64Recomp/RecompiledFuncs/funcs_31.c
-grep -n -C 3 '800B42C0\|800B4588\|playerXwingInit' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B4588\|800B4CC0\|playWeaponFireSound\|playerXwingFireBlaster' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B4588\|800B4CC0\|playWeaponFireSound\|playerXwingFireBlaster' ../N64Recomp/RecompiledFuncs/funcs_31.c
+grep -n -C 3 '800B4588\|800B4CC0\|playWeaponFireSound\|playerXwingFireBlaster' syms/rogue_squadron.syms.toml
 ```
