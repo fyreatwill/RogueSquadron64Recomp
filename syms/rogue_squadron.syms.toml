@@ -1714,7 +1714,7 @@ functions = [
     { name = "fake_func_800C64A4", vram = 0x800C64A4, size = 0xC },
     { name = "func_800C64B0", vram = 0x800C64B0, size = 0x11C },
     { name = "tickHangarDisplayItemAnimations", vram = 0x800C65CC, size = 0x2D4 },
-    { name = "func_800C68A0", vram = 0x800C68A0, size = 0x75C },
+    { name = "hangarVehicleDisplayNpcHandler", vram = 0x800C68A0, size = 0x75C },
     { name = "func_800C6FFC", vram = 0x800C6FFC, size = 0x124 },
     { name = "func_800C7120", vram = 0x800C7120, size = 0x1C },
     { name = "func_800C713C", vram = 0x800C713C, size = 0xF0 },

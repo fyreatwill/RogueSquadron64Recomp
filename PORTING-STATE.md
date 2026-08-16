@@ -77284,3 +77284,28 @@ H1 is selected. H2 is ruled out by the matching mission mapping and overlay
 ownership; H3 is ruled out by the live generated body and exact adjacent
 boundaries. Updated only the stale project TOML placeholder to the synchronized
 name. No build or runtime behavior conclusion was made.
+
+## Session 1631 (2026-08-16) — synchronized the hangarVehicleDisplayNpcHandler symbol
+
+Ran the exact generated-symbol census for `0x800C68A0` without building or
+running. The competing hypotheses were H1: an independently supported
+mission-overlay name and exact generated/TOML/overlay span justify
+synchronization; H2: the matching name belongs to another overlay/context;
+and H3: no independent name is available, a boundary conflicts, or the entry
+is data-like. The complete companion/generated/TOML/overlay comparison was the
+discriminator.
+
+The companion mission map names `hangarVehicleDisplayNpcHandler` at
+`0x800C68A0` and describes the player's selected-craft hangar NPC setup. The
+generated `funcs_35.c` definition already carries that name and implements a
+live `0x75C`-byte handler that allocates and initializes the hangar vehicle
+display state, resolves the player vehicle and mesh, and links the NPC slot.
+Its exact preceding boundary is `tickHangarDisplayItemAnimations` at
+`0x800C65CC`; its following boundary is `applyNpcPositionDrift` at
+`0x800C6FFC`. The TOML size is `0x75C`, and the section-4 overlay table
+carries the same human name, ROM offset, and span.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and overlay
+ownership; H3 is ruled out by the live generated body and exact adjacent
+boundaries. Updated only the stale project TOML placeholder to the synchronized
+name. No build or runtime behavior conclusion was made.
