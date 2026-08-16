@@ -2865,9 +2865,9 @@ caller or semantic evidence agree (H1). Leave address-encoded, already-fake,
 or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
 justified for an exact-name census.
 
-**Cursor.** Next census is `scheduleSceneFormatMessageTimed` at
-`0x800B3E4C` (TOML still `func_800B3E4C`, size `0xC0`). Last H1 sync is
-`tryPlaySpatialSoundWithGates` at `0x800B3A10` (s1558). About 1,548
+**Cursor.** Next census is `cancelSceneQueueHandle` at
+`0x800B3F0C` (TOML still `func_800B3F0C`, size `0x44`). Last H1 sync is
+`scheduleSceneFormatMessageTimed` at `0x800B3E4C` (s1559). About 1,548
 placeholder `func_0x...` names remained when counted at s1487.
 
 **Covered ranges (H1 unless noted).**
@@ -2895,6 +2895,7 @@ placeholder `func_0x...` names remained when counted at s1487.
 | s1556 | Mission overlay: `applyCraftCapabilityFlags` at `0x800B36FC` (size `0xC4`). |
 | s1557 | Mission overlay: `initPlayerCraftMovementMode` at `0x800B37C0` (size `0x250`). |
 | s1558 | Mission overlay: `tryPlaySpatialSoundWithGates` at `0x800B3A10` (size `0x43C`). |
+| s1559 | Mission overlay: `scheduleSceneFormatMessageTimed` at `0x800B3E4C` (size `0xC0`). |
 
 **Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
 `func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,

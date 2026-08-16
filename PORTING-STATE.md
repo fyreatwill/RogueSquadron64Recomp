@@ -75117,3 +75117,52 @@ offset `0x0000ED1C`; live body ends at generated
 `cancelSceneQueueHandle` / TOML `func_800B3F0C` at
 `0x800B3F0C`). Independently named `tryPlaySpatialSoundWithGates` at
 `0x800B3A10` (`rom_size` `0x43C`) ends at `0x800B3E4C`.
+
+## Session 1559 (2026-08-16) — synchronized the schedule-scene-format-message-timed symbol
+
+Performed the bounded exact-name census over `0x800B3E4C..0x800B3F0C`.
+
+No new soak-queue verdicts since s1558; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit) and s1553 (maintenance compaction), so the every-15-sessions
+sweep-revisit rule did not fire. CURRENT-TRUTH is 16,835 bytes at session
+start, so Step 0 did not trigger a maintenance iteration. M5 remains closed
+and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B3E4C`, size `0xC0`; `0x800B3E4C+0xC0=0x800B3F0C`. Overlay `.ovl.mission` entry `rom_size` is `0xC0` at offset `0x0000ED1C` (`0x800B3E4C-0x800A5130`). Live body is independently `0xC0` and meets generated `cancelSceneQueueHandle` at `0x800B3F0C` |
+| Generated definition | `funcs_30.c` defines `scheduleSceneFormatMessageTimed` at `0x800B3E4C`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000ED1C`, `rom_size 0x000000C0`). The live mission body is a complete `0xC0` function: prologue `lui $v0, 0x8013` / `lw $v0, 0xB50($v0)` reads `MEM_W[0x80130B50]`, then `addiu $sp, $sp, -0x20` and the `$s0/$s1/$ra/$s2` spill. `$s0` holds the scene (`$a0`) and `$s1` holds the timing-table index (`$a1`). Gates on `MEM_W[0x80130B50]` bits `0x60` and on `MEM_W[0x8010CA20] != 0`. If `a1 < scene+0x1C4`, it queries independently named `isRumbleSlotActive` at `0x80003150` with `scene+0xBB` and early-outs when that slot is live. It then loads `scene+0x1C0` (sentinel `-1`) and, when a handle is present, `jal`s independently named `stopRumbleEffect` at `0x80002BA8` to cancel it. The body indexes the 12-byte timing table at `0x8010BBD0` (`index*3*4`) and `jal`s independently named `startRumbleEffect` at `0x80002ADC` with `scene+0xBB` and the table row, then stores the new handle to `scene+0x1C0` and the index to `scene+0x1C4`. Last live instruction pair is `0x800B3F04`/`0x800B3F08` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next generated mission entry is already `cancelSceneQueueHandle` at `0x800B3F0C`. Independently named `tryPlaySpatialSoundWithGates` at `0x800B3A10` (`rom_size` `0x43C`) ends at this address. Menu-overlay TOML `func_800B3D14` (`rom_size` `0x148`, ends `0x800B3E5C`; companion `rasterizeFormatMessageGlyphs`) occupies overlapping VRAM from `.ovl.menu` across the start of this body and is not a split of this body. Generated `disposeFormatMsgQueueMember` starts at menu VRAM `0x800B3E5C` and is not this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `scheduleSceneFormatMessageTimed = 0x800B3E4C` with comment "schedules a timed scene format-message (cancels pending, timing table)". The same mission list independently names the adjacent functions `tryPlaySpatialSoundWithGates` at `0x800B3A10` and `cancelSceneQueueHandle` at `0x800B3F0C`, and independently names all five generated callers plus `isRumbleSlotActive` / `stopRumbleEffect` / `startRumbleEffect`. Companion `docs/mips_to_c/ctx.c` has only the address-encoded prototype `void func_800B3E4C(struct inner_player_struct *arg0, s32 arg1)` and no competing independent name. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B3E4C`. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B3E4C` alias |
+| Caller evidence | 5 retail `jal` encodings `0x0C02CF93` at file `0xAD6A0` (`0x800ACAA0`), `0xAD734` (`0x800ACB34`), `0xAD8D0` (`0x800ACCD0`), `0xB5664` (`0x800B4A64`), and `0xB9E64` (`0x800B9264`); zero `j` encodings and zero absolute `0x800B3E4C` pointer words. The generated sites are five named `scheduleSceneFormatMessageTimed(...)` calls from independently named `tickCinematicEffectObject` (three sites), `playWeaponFireSound`, and `updateVwingEngineEffect`. Each `jal` VRAM sits inside that caller's TOML size (`0x800AC7B4+0x5E8=0x800ACD9C`, `0x800B4588+0x738=0x800B4CC0`, `0x800B8C30+0x9B0=0x800B95E0`). Delay slots pass timing indices `0x8` or `0x9`. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B4A4C` (`0x0A5D30+(0x800B3E4C-0x800A5130)`) are `0x3C028013` (`lui $v0, 0x8013`), `0x8C420B50` (`lw $v0, 0xB50($v0)`), `0x27BDFFE0` (`addiu $sp, $sp, -0x20`), `0xAFB00010` (`sw $s0, 0x10($sp)`). Last pair file `0x0B4B04`/`0x0B4B08` is `0x03E00008`/`0x27BD0020` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next start file `0x0B4B0C` is `0x27BDFFE0` (`addiu $sp, $sp, -0x20`, `cancelSceneQueueHandle` prologue). Preceding epilogue file `0x0B4A44`/`0x0B4A48` is `0x03E00008`/`0x27BD0088` (`tryPlaySpatialSoundWithGates` `jr $ra` / `addiu $sp, $sp, 0x88`). In-body `jal`s at file `0x0B4A9C`/`0x0B4AC0`/`0x0B4AE0` are `0x0C000C54` (`jal 0x80003150` / `isRumbleSlotActive`), `0x0C000AEA` (`jal 0x80002BA8` / `stopRumbleEffect`), and `0x0C000AB7` (`jal 0x80002ADC` / `startRumbleEffect`). Menu occupant at the same VRAM (file `0x11AFEC`) is `0x8FB10014` (`lw $s1, 0x14($sp)`, interior of `rasterizeFormatMessageGlyphs`); that function's own start at file `0x11AEB4` is `0x27BDFFD0` (`addiu $sp, $sp, -0x30`). Menu `disposeFormatMsgQueueMember` at file `0x11AFFC` is `0x27BDFFE8` (`addiu $sp, $sp, -0x18`). Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B3E4C` is past that occupant. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28`, s1556 start file `0x0B42FC` is still `0x3C078011`, s1557 start file `0x0B43C0` is still `0x27BDFFE0`, s1558 start file `0x0B4610` is still `0x3C028014` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B3E4C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0xC0`, all five ROM `jal` callers are independently named
+`tickCinematicEffectObject` / `playWeaponFireSound` /
+`updateVwingEngineEffect`, the body cancels the pending `scene+0x1C0`
+handle and reschedules from the timing table, the overlapping menu
+occupant is a different overlay, and there is neither a conflicting
+companion name nor a mission size split. H2 and H3 are ruled out for
+this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0xC0`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`cancelSceneQueueHandle` at `0x800B3F0C` (TOML still
+`func_800B3F0C`, size `0x44`; overlay `rom_size` is `0x44` at
+offset `0x0000EDDC`; live body ends at generated
+`playSpeechClipOncePerChange` / TOML `func_800B3F50` at
+`0x800B3F50`). Independently named `scheduleSceneFormatMessageTimed` at
+`0x800B3E4C` (`rom_size` `0xC0`) ends at `0x800B3F0C`.
