@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1709 (2026-08-16).
+the authority for session detail. Reviewed through s1710 (2026-08-16).
 
 ## Current state
 
@@ -85,15 +85,15 @@ the authority for session detail. Reviewed through s1709 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at
-   `npcShuttleUpdate` (`0x800D3894`, size `0x1630`). After s1709
+   `fake_func_800D4EC4` (`0x800D4EC4`, size `0xC`). After s1710
    the last-15 titles still include the s1698 retail-entry revisit,
    so the 15-title gate does not fire. s1651–s1665, s1667–s1681,
-   s1683–s1697, and s1699–s1709 synchronized or confirmed DAT-item
-   through `npcShuttleHandleDestruction`; s1650, s1666, s1682, and
-   s1698 were the mandatory retail-entry revisits. The full
-   s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
-   sweep is in §33. About 1,548 placeholder `func_0x...` names
-   remained when counted at s1487.
+   s1683–s1697, and s1699–s1710 synchronized or confirmed DAT-item
+   through `npcShuttleUpdate`; s1650, s1666, s1682, and s1698 were
+   the mandatory retail-entry revisits. The full s1590–s1649 archive
+   is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33.
+   About 1,548 placeholder `func_0x...` names remained when counted
+   at s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
    15-title gate only: destination of the attract-512 A/Start/C-up/L
    `512→1024` at 126.4 s (origin `0x00790400`/`800`; 125 s flush cut
@@ -262,6 +262,7 @@ ownership.
 | s1707 | Synchronized `npcTickEffectChannelB` (`0x800D307C`, size `0x1C4`) after companion mission mapping, live generated effect-channel-B body (`lookupHmtTextureByName` on `0x800A73F4`/`0x800A73F8`, `setObjectSubstructF10IfReady`, `resolveNpcAttachmentPos`, `tickProgressChannel`, `triggerCueWithSlotEffect` type 2, `play3DSoundEvent` type `0x48`), exact `0x800D2EE0`/`0x800D3240` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `npcTickEffectChannelWithSlotDispatch`. |
 | s1708 | Synchronized `npcTickEffectChannelWithSlotDispatch` (`0x800D3240`, size `0x18C`) after companion mission mapping, live generated effect-channel-plus-dispatch body (`lookupHmtTextureByName` on `0x800A7408`, `resolveNpcAttachmentPos`, `tickProgressChannel`, `triggerCueWithSlotEffect` type `0xB`, `getObjectNpcTypeId`, `slotDispatcherIter` type `0xA`, `play3DSoundEvent`), exact `0x800D307C`/`0x800D33CC` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `npcShuttleHandleDestruction`. |
 | s1709 | Synchronized `npcShuttleHandleDestruction` (`0x800D33CC`, size `0x4C8`) after companion mission mapping, live generated Imperial-shuttle destruction body (`spawnNpcType0xAFromTemplate`, `zmemcpy`, `gameStateByteGatedNpcHelper`, `spawnDestructionEffectBurst` ×2, `composeRandomRotationMatrix`, `scaleVec3ByRandomRange`, `spawnDebris1Npc`, `spawnDestructionDebris`, `spawnDirectionalDebrisBurst`, `rand_recomp` ×9, `vec3Length`, `normalize_vector`; exclusive caller `npcShuttleUpdate` at `0x800D4B28` after `dealDamageToNpc` `<= 0`), exact `0x800D3240`/`0x800D3894` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `npcShuttleUpdate`. |
+| s1710 | Confirmed `npcShuttleUpdate` (`0x800D3894`, size `0x1630`) was already synchronized: companion mission mapping, live generated 9-way Imperial-shuttle update (`walkMeshdef0List`, `createAndInitObject`, `dealDamageToNpc`, `npcShuttleHandleDestruction`, `distanceAndDopplerNpcHelper`, `slotDispatcherIter`), exact `0x800D33CC`/`0x800D4EC4` boundaries, TOML name and size, and section-4 span agreed. Menu concert-hall/medal data at the same VRAM window is a different overlay, not a name collision. Next candidate is `fake_func_800D4EC4`. |
 
 ## Method and safety rules
 

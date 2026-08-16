@@ -79857,3 +79857,36 @@ section-4 row are all present). No build or runtime run required.
 Next census: `npcShuttleUpdate` at `0x800D3894`
 (size `0x1630`). Last-15 titles still include s1698's retail-entry
 revisit, so the next iteration continues the sweep.
+
+## Session 1710 (2026-08-16) — confirmed the npcShuttleUpdate symbol
+
+Exact generated-symbol census for `0x800D3894` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 49286; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcShuttleUpdate = 0x800D3894`. Coarse listing previous `playerAtStUpdate = 0x800D2208`; next coarse neighbor `npcTankDroidUpdate = 0x800D6998` skips helpers; next contiguous neighbor `fake_func_800D4EC4 = 0x800D4EC4`. Companion already lists this as the exclusive caller of `npcShuttleHandleDestruction` and among the eight named callers of `distanceAndDopplerNpcHelper` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcShuttleUpdate` at VRAM `0x800D3894`; prologue `addiu $sp, $sp, -0xB8`; returns through `jr $ra` / `addiu $sp, $sp, 0xB8` ending at `0x800D4EC0`; previous mission function is `npcShuttleHandleDestruction` at `0x800D33CC` (last insn `0x800D3890`); next mission function is `fake_func_800D4EC4` at `0x800D4EC4`. `funcs.h` already declares the human name |
+| Body semantics | Actor at `a0` (`s4`); halfword state in `a1` (`s7`). 9-way jump table at `0x800A74C8` on `(a1-1)` for `a1 ∈ 1..9` (`sltiu` bound 9; out of range falls to the epilogue). Cases 0 and 7 share the setup path (`walkMeshdef0List`, `createAndInitObject`, `initActorAsType4`, `getLevelDatItemByName`, `initActorAsType1`). Case 1 tears down (`releaseMeshAsset`). Case 4 is the live tick plus destruction: `distanceAndDopplerNpcHelper` at `0x800D4A50`, `dealDamageToNpc` at `0x800D4B10`, then `npcShuttleHandleDestruction` at `0x800D4B2C` after `dealDamageToNpc` returns `<= 0`, then `unregisterAndFreeNpcSlot` ×4 and `popNpcSlotFromTail`. Case 8 is the slot-dispatch tail (`slotDispatcherIter` at `0x800D4D10`). Other live helpers include `validateActorTargetLOS` ×2, `spawnDestructionEffectBurst`, `play3DSoundEvent` ×3, `addNpcToVisibilityBucket`, `updateActive3DAudioSource`. Name matches the Imperial-shuttle `npcXxxUpdate` sibling of `npcAtAtUpdate` / `npcAtStUpdate` |
+| TOML | `{ name = "npcShuttleUpdate", vram = 0x800D3894, size = 0x1630 }` — already the human name; size matches `0x800D4EC4 - 0x800D3894` (last insn `0x800D4EC0` + 4 = `0x1630`). No leftover `func_800D3894` |
+| Overlay section 4 | `{ .func = npcShuttleUpdate, .offset = 0x0002E764, .rom_size = 0x00001630 }` under `section_4_ovl_mission_funcs` (`0x800D3894 - 0x800A5130 = 0x2E764`; `0x2E29C + 0x4C8 = 0x2E764`; `0x2E764 + 0x1630 = 0x2FD94` matches next `fake_func_800D4EC4`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D3894`. Companion menu/cinematic greps are empty for this address and this name (menu max VRAM `0x800D03DC`; cinematic max `0x800B072C`). Nearest menu symbols are concert-hall/medal data (`D_800D0120` / `D_800D03D0` / `medalInfo`) in the same VRAM window on a different overlay. No menu symbol falls in `[0x800D3894, 0x800D4EC4)` |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated Imperial-shuttle-update body,
+previous (`npcShuttleHandleDestruction` / `0x800D33CC`) and next
+(`fake_func_800D4EC4` / `0x800D4EC4`) boundaries, TOML name and size, and
+section-4 overlay span already agree. No TOML or generated-name change. This
+refutes H2 (no stale placeholder), H3 (no fake fragment, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No build or runtime run required.
+
+Next census: `fake_func_800D4EC4` at `0x800D4EC4` (size `0xC`). Last-15
+titles still include s1698's retail-entry revisit, so the next iteration
+continues the sweep.
