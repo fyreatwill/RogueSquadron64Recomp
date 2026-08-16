@@ -72460,3 +72460,39 @@ generated function is independently named `spawnCutsceneObjectsFromList`
 at `0x800A7C4C` (TOML still `func_800A7C4C`, size `0x7D4`; overlay
 `rom_size` is `0x7D4` at offset `0x00002B1C`; live body ends at
 independently named `cutsceneDispatchSlotsByFlag`).
+
+## Session 1495 (2026-08-15) — synchronized the spawn-cutscene-objects-from-list symbol
+
+Performed the bounded exact-name census over `0x800A7C4C..0x800A8420`.
+
+No new soak-queue verdicts since s1494; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A7C4C`, size `0x7D4`; `0x800A7C4C+0x7D4=0x800A8420`. Overlay `.ovl.cinematic` entry `rom_size` is `0x7D4` at offset `0x00002B1C` (`0x800A7C4C-0x800A5130`). Live body is independently `0x7D4` and meets independently named `cutsceneDispatchSlotsByFlag` / TOML `func_800A8420` at `0x800A8420` |
+| Generated definition | `funcs_27.c` defines `spawnCutsceneObjectsFromList` at `0x800A7C4C`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x7D4` function. It starts `addiu $sp, $sp, -0x850` / `sw $s7, 0x844($sp)` / `addu $s7, $zero, $zero` and ends at the sole `jr $ra` / `addiu $sp, $sp, 0x850` (`0x800A8418`/`0x800A841C`). Next generated function is independently named `cutsceneDispatchSlotsByFlag` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `spawnCutsceneObjectsFromList = 0x800A7C4C` in the s400 relocated splat list. Menu, mission, main, libultra, and zlib lists do not remap `0x800A7C4C`. `undefined_funcs_auto.txt` has no leftover `func_800A7C4C`. No companion C/asm body exists |
+| Caller evidence | Two retail `jal` encodings `0x0C029F13` and zero `j` or absolute `0x800A7C4C` pointer words. Both sites are in independently named `load_cutscene` at `0x800A6860` and `0x800A6878` (overlay files `0x138CB0` and `0x138CC8`). Same-run ROM words at those file offsets are `0x0C029F13`. The first site passes `a0=scene`, `a1=cutscene-id` byte, `a2=0` after `cuts_0058_bubble_sort`; the second passes `a2=1` after `initWaterSprayEffectAndSfx` |
+| Semantic evidence | Retail ROM words at file `0x13A09C` (`0x137580+(0x800A7C4C-0x800A5130)`) are `0x27BDF7B0` / `0xAFB70844` / `0x0000B821` / `0x3C02800B` (`addiu $sp, $sp, -0x850` / `sw $s7, 0x844($sp)` / `addu $s7, $zero, $zero` / `lui $v0, 0x800B`). The opener zeros 32 words at `0x800B0B40`. Twenty-five in-body `jal` sites call independently named `rs_strcmp`/`rs_strcpy`/`strlen_recomp`, `load_hmt_and_hob`, `allocAndSetupModelInstance`, `allocateAndInitCraftNpcContext`, `load_asset_with_malloc_flags`, `flattenAnimTreeAndAllocateSlot`, and `spawnNamedTexturedEmitterNpc`. Overlay immediates compare list bytes against `l_` at `0x800A52B4` and `pl_crafts/rmobil` at `0x800A52D0`. Epilogue file `0x13A868` is `0x03E00008` / `0x27BD0850`. Next start file `0x13A870` is `0x27BDFF78` (`cutsceneDispatchSlotsByFlag`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13A09C` is `0x27BDF7B0`, and both caller `jal` words above are `0x0C029F13` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A7C4C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x7D4`, `load_cutscene` is the only caller (two passes), and there
+is neither a conflicting companion name nor a size split inside the live
+body. The stale address-encoded TOML entry was synchronized (name only;
+size left at `0x7D4`). `func_8009D978` remains the eight-byte Q15
+delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is independently named `cutsceneDispatchSlotsByFlag`
+at `0x800A8420` (TOML still `func_800A8420`, size `0x590`; overlay
+`rom_size` is `0x590` at offset `0x000032F0`; live body ends at
+independently named `spawnCutsceneEffectsAndCues`).
