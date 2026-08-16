@@ -72672,3 +72672,40 @@ at `0x800A9ABC` (TOML still `func_800A9ABC`, size `0x2B4`; overlay
 `rom_size` is `0x2B4` at offset `0x0000498C`; live body ends at
 independently named `emit3DSoundsForActiveNpcs` / TOML `func_800A9D70` at
 `0x800A9D70`).
+
+## Session 1501 (2026-08-15) — synchronized the init-scene-for-mission symbol
+
+Performed the bounded exact-name census over `0x800A9ABC..0x800A9D70`.
+
+No new soak-queue verdicts since s1500; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A9ABC`, size `0x2B4`; `0x800A9ABC+0x2B4=0x800A9D70`. Overlay `.ovl.cinematic` entry `rom_size` is `0x2B4` at offset `0x0000498C` (`0x800A9ABC-0x800A5130`). Live body is independently `0x2B4` and meets independently named `emit3DSoundsForActiveNpcs` / TOML `func_800A9D70` at `0x800A9D70` |
+| Generated definition | `funcs_27.c` defines `initSceneForMission` at `0x800A9ABC`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x2B4` function. It starts `addiu $sp, $sp, -0x30` / `sw $s2, 0x18($sp)` / `addu $s2, $a0, $zero` and ends at the sole `jr $ra` / `addiu $sp, $sp, 0x30` (`0x800A9D68`/`0x800A9D6C`). No interior `jr`. Next generated cinematic function is independently named `emit3DSoundsForActiveNpcs`. Menu-overlay `mallocCraftSelectionData` at `0x800A9364` (`rom_size` `0x1A38`) occupies overlapping VRAM from `.ovl.menu` and is not a cinematic size split. Mission-overlay `computeAngleToTargetFromTransform` at `0x800A9B80` is a different overlay, not a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `initSceneForMission = 0x800A9ABC` in the cinematic splat list (`// 2 callers: bootstrap mission-scene runtime (text + NPCs + sound)`). Menu, mission, main, libultra, and zlib lists do not remap `0x800A9ABC` (menu instead names `mallocCraftSelectionData = 0x800A9364`; mission names `computeAngleToTargetFromTransform = 0x800A9B80` in its own overlay). `undefined_funcs_auto.txt` has `func_800A9B80 = 0x800A9B80` only. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02A6AF` and zero `j` or absolute `0x800A9ABC` pointer words. The site is in independently named `cinematicLoopBody` at `0x800A5F08` (overlay file `0x138358`; `cinematicLoopBody` is `0x800A5D80` size `0x8A0`, ends at `0x800A6620`). Same-run ROM word at that file offset is `0x0C02A6AF`; the delay slot is `0xAC400BA4` (`sw $zero, 0xBA4($v0)` with `$v0` from `lui $v0, 0x8013`). Incoming args persist from `0x800A5ECC..0x800A5ED8`: `$a0=$sp+0x18`, `$a1=$s0` (`andi $s7, 0xFF`), `$a2=$s1`. The companion comment says "2 callers"; the whole-ROM scan found only this `jal` |
+| Semantic evidence | Retail ROM words at file `0x13BF0C` (`0x137580+(0x800A9ABC-0x800A5130)`) are `0x27BDFFD0` / `0xAFB20018` / `0x00809021` / `0x3C04800B` (`addiu $sp, $sp, -0x30` / `sw $s2, 0x18($sp)` / `addu $s2, $a0, $zero` / `lui $a0, 0x800B`). The body `zmemcpy`s `0x50` bytes from `0x80037560` to `0x800B0960`, then calls independently named `runVideoFrameTick`, `findManifestEntryByName`, `clearSceneBssRegion`, `initNpcSlotList`, `allocNpcContextArrays`, `allocAllInitialNpcSlots`, `loadSndFiles`, `loadGameOrFrontTxtFile`, `initVoiceSubtitleSystem`, `setSubtitleOverlayScreenPos`, `selectRenderPresetByIndex`, and `allocateSlotTable` (twice). Epilogue file `0x13C1B8` is `0x03E00008` / `0x27BD0030`. Next start file `0x13C1C0` is `0x27BDFF68` (`emit3DSoundsForActiveNpcs`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13BF0C` is `0x27BDFFD0`, and the caller `jal` word above is `0x0C02A6AF` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A9ABC`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x2B4`, `cinematicLoopBody` is the only ROM `jal` caller, and there is
+neither a conflicting companion name nor a size split inside the live
+cinematic body. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x2B4`). `func_8009D978` remains the eight-byte
+Q15 delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is independently named `emit3DSoundsForActiveNpcs`
+at `0x800A9D70` (TOML still `func_800A9D70`, size `0x44C`; overlay
+`rom_size` is `0x44C` at offset `0x00004C40`; live body ends at
+independently named `updatePositionalAudioSource` / TOML `func_800AA1BC` at
+`0x800AA1BC`).

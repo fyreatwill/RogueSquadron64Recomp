@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1500 (2026-08-15).
+the authority for session detail. Reviewed through s1501 (2026-08-15).
 
 ## Current state
 
@@ -54,7 +54,7 @@ the authority for session detail. Reviewed through s1500 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800A9ABC..0x800A9D70`.
+   adjacent function, `0x800A9D70..0x800AA1BC`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -106,13 +106,14 @@ the authority for session detail. Reviewed through s1500 (2026-08-15).
    at `0x800A8420`. s1498 synchronized `spawnCutsceneEffectsAndCues`
    at `0x800A89B0`. s1499 synchronized `initCutsceneAudioChannels`
    at `0x800A959C`. s1500 synchronized `initCutsceneScene` at
-   `0x800A98AC`. The generated entry at `0x800A9ABC` is already
-   `initSceneForMission`; the companion cinematic splat list
-   maps `initSceneForMission = 0x800A9ABC`. TOML is still
-   `func_800A9ABC` (size `0x2B4`, ends at independently named
-   `emit3DSoundsForActiveNpcs` / TOML `func_800A9D70` at
-   `0x800A9D70`). Overlay `rom_size` is `0x2B4` at offset
-   `0x0000498C`. Confirm the complete live function, matching size,
+   `0x800A98AC`. s1501 synchronized `initSceneForMission` at
+   `0x800A9ABC`. The generated entry at `0x800A9D70` is already
+   `emit3DSoundsForActiveNpcs`; the companion cinematic splat list
+   maps `emit3DSoundsForActiveNpcs = 0x800A9D70`. TOML is still
+   `func_800A9D70` (size `0x44C`, ends at independently named
+   `updatePositionalAudioSource` / TOML `func_800AA1BC` at
+   `0x800AA1BC`). Overlay `rom_size` is `0x44C` at offset
+   `0x00004C40`. Confirm the complete live function, matching size,
    and caller/semantic evidence before synchronizing the TOML name.
    Menu-overlay `mallocCraftSelectionData` at `0x800A9364` occupies
    overlapping VRAM and is a different overlay, not a cinematic size
@@ -430,6 +431,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1498 | Exact companion/generated cinematic-spawn census synchronized `spawnCutsceneEffectsAndCues` at `0x800A89B0`; no build or runtime run. |
 | s1499 | Exact companion/generated cinematic-audio census synchronized `initCutsceneAudioChannels` at `0x800A959C`; no build or runtime run. |
 | s1500 | Exact companion/generated cinematic-scene census synchronized `initCutsceneScene` at `0x800A98AC`; no build or runtime run. |
+| s1501 | Exact companion/generated cinematic-scene census synchronized `initSceneForMission` at `0x800A9ABC`; no build or runtime run. |
 
 ## Method and safety rules
 
