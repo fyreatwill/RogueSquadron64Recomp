@@ -76586,3 +76586,23 @@ state or later DMA/consumer divergence. No mitigation was added. The next
 work unit resumes the symbol sweep at `func_800BE4A8`. The local
 VMADH/VGE closure is single-source runtime consistency evidence, not an
 independent retail arithmetic proof.
+
+## Session 1603 (2026-08-16) — synchronized the tickPlayerCraftBlinkIndicator symbol
+
+The bounded generated-symbol census compared `0x800BE4A8` through the exact
+`playerNabooStarfighterUpdate` boundary at `0x800BE7D0`. The companion mission
+symbol list independently maps `tickPlayerCraftBlinkIndicator` to
+`0x800BE4A8`; the generated definition has that name, and the generated
+`playerNabooStarfighterUpdate` body calls it from `0x800BEAB8`. The generated
+overlay table gives the function ROM span `0x328`, while the TOML entry has
+the same VRAM and size but the stale name `func_800BE4A8`. The next function
+starts at `0x800BE7D0` with the matching companion/generated name and TOML
+size `0x42C`.
+
+The complete comparison selects H1: the placeholder was synchronized to
+`tickPlayerCraftBlinkIndicator` in `syms/rogue_squadron.syms.toml`. It rules
+out a partial/conflicting companion mapping and a fragment/data-like region
+for this entry. No build or runtime run was performed because this was a
+bounded exact-name census; no runtime behavior or crash cause is concluded.
+The next census is `func_800BEC00`, independently mapped in the generated
+overlay table as `initDemoPlayState` with size `0xDC`.
