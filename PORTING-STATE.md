@@ -76026,3 +76026,34 @@ for this exact-name census. The next bounded candidate is `func_800B8C30`,
 independently named `updateVwingEngineEffect`, with size `0x9B0`; the next
 function begins at `0x800B95E0`. This naming change does not reopen M5 audio
 de-stubbing.
+
+## Session 1584 (2026-08-16) — synchronized the updateVwingEngineEffect symbol
+
+Performed the bounded exact-name census over `0x800B8C30..0x800B95E0`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 23,224 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail had no newer queued verdict
+requiring analysis. The last-15 title check included s1569's non-sweep
+retail-entry revisit and parked entries, so the sweep-revisit rule did not
+fire. M5 remains closed and M3 remains parked.
+
+The competing hypotheses were H1 (an exact independent companion mapping), H2
+(a partial, conflicting, or span-mismatched mapping), and H3 (a fragment,
+data-like region, or missing independent name). The complete comparison
+selected H1:
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B8C30` at `0x800B8C30` with size `0x9B0`; the companion `../rogue_squadron64/symbol_files/mission_overlay.txt` independently maps `updateVwingEngineEffect = 0x800B8C30`. The next companion boundary is `orientVwingSubmodelByQuat` at `0x800B95E0`, exactly `0x9B0` later. |
+| Generated definition | `../N64Recomp/RecompiledFuncs/funcs_31.c` defines `updateVwingEngineEffect` at `0x800B8C30`; the next generated definition begins at `0x800B95E0`. |
+| Caller and overlay evidence | Generated `funcs_32.c` calls `updateVwingEngineEffect` from `playerVwingUpdate` at `0x800BA258`. The generated overlay table independently records `updateVwingEngineEffect` at offset `0x13B00` with ROM size `0x9B0`, followed by `orientVwingSubmodelByQuat` at offset `0x144B0`. |
+| Confidence | High |
+
+H2 is ruled out because the companion mapping, generated definition, TOML
+size, exact next-function boundary, caller, and overlay-table span agree. H3
+is ruled out by the independent companion name, generated function body, and
+caller/overlay evidence. Updated only the TOML name; no build or runtime run
+was justified for this exact-name census. The next bounded candidate is
+`func_800B95E0`, independently named `orientVwingSubmodelByQuat`, with size
+`0x370`; the next function begins at `0x800B9950`. This naming change does not
+reopen M5 audio de-stubbing.

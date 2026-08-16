@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1583 (2026-08-16).
+the authority for session detail. Reviewed through s1584 (2026-08-16).
 
 ## Current state
 
@@ -126,9 +126,12 @@ the authority for session detail. Reviewed through s1583 (2026-08-16).
    `emitTexturedEffectCue` at `0x800B88C8` (size `0x12C`): the companion
    mission list, generated definition, exact `fake_func_800B89F4` boundary,
    and TOML size agree; the generated body's texture lookup/cue-dispatch
-   behavior supplies semantic evidence. The next census is
-   `func_800B8C30`, independently named `updateVwingEngineEffect`, with size
-   `0x9B0`.
+   behavior supplies semantic evidence. s1584 synchronized
+   `updateVwingEngineEffect` at `0x800B8C30` (size `0x9B0`): the companion
+   mission list, generated definition, `playerVwingUpdate` caller, exact
+   `orientVwingSubmodelByQuat` boundary, overlay-table span, and TOML size
+   agree. The next census is `func_800B95E0`, independently named
+   `orientVwingSubmodelByQuat`, with size `0x370`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)

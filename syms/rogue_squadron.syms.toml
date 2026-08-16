@@ -1640,7 +1640,7 @@ functions = [
     { name = "emitTexturedEffectCue", vram = 0x800B88C8, size = 0x12C },
     { name = "fake_func_800B89F4", vram = 0x800B89F4, size = 0xC },
     { name = "playerVwingInit", vram = 0x800B8A00, size = 0x230 },
-    { name = "func_800B8C30", vram = 0x800B8C30, size = 0x9B0 },
+    { name = "updateVwingEngineEffect", vram = 0x800B8C30, size = 0x9B0 },
     { name = "func_800B95E0", vram = 0x800B95E0, size = 0x370 },
     { name = "func_800B9950", vram = 0x800B9950, size = 0x5FC },
     { name = "playerVwingUpdate", vram = 0x800B9F4C, size = 0x4A0 },

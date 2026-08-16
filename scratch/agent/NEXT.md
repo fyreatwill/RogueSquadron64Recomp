@@ -1,25 +1,25 @@
-# NEXT work unit (s1584)
+# NEXT work unit (s1585)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol renaming sweep with exactly one bounded
-exact-name census over the next placeholder, `0x800B8C30..0x800B95E0`.
+exact-name census over the next placeholder, `0x800B95E0..0x800B9950`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence before
 editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
 entries unchanged. This naming census does not reopen M5 audio de-stubbing.
 
-The TOML entry is `func_800B8C30` with size `0x9B0`. The companion mission
-list maps `updateVwingEngineEffect = 0x800B8C30`; the generated definition
-already uses `updateVwingEngineEffect`. The next function is
-`orientVwingSubmodelByQuat` at `0x800B95E0`.
+The TOML entry is `func_800B95E0` with size `0x370`. The companion mission
+list maps `orientVwingSubmodelByQuat = 0x800B95E0`; the generated definition
+already uses `orientVwingSubmodelByQuat`. The next function is
+`tickVwingEngineAudio` at `0x800B9950`.
 Synchronize only if the complete comparison remains exact.
 
 Competing hypotheses and discriminator:
 
 - H1: the function has an exact independent companion mapping and can be
-  synchronized to `updateVwingEngineEffect`.
+  synchronized to `orientVwingSubmodelByQuat`.
 - H2: the mapping is partial, conflicting, or the generated/TOML span does
   not match, so the entry must remain unchanged.
 - H3: the region is a fragment/data-like or otherwise lacks an independent
@@ -34,7 +34,8 @@ one hypothesis.
 Commands:
 
 ```
-grep -n -C 5 -E '800B8C30|800B95E0|updateVwingEngineEffect' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 -E '800B8C30|800B95E0|updateVwingEngineEffect' ../N64Recomp/RecompiledFuncs/funcs_31.c
-grep -n -C 3 -E '800B8C30|800B95E0|updateVwingEngineEffect' syms/rogue_squadron.syms.toml
+grep -n -C 5 -E '800B95E0|800B9950|orientVwingSubmodelByQuat' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 -E '800B95E0|800B9950|orientVwingSubmodelByQuat' ../N64Recomp/RecompiledFuncs/funcs_31.c
+grep -n -C 3 -E '800B95E0|800B9950|orientVwingSubmodelByQuat' syms/rogue_squadron.syms.toml
+grep -n -C 3 'orientVwingSubmodelByQuat' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl ../N64Recomp/RecompiledFuncs/funcs_31.c
 ```
