@@ -97,6 +97,11 @@ the table with `--pif-trace` — do not assume.
 
 ### Reaching the hangar
 
+Dummy video (`ProcessDList` is a no-op) stays at width 320 / origin
+`0x006dd280` forever, even with live PIF Start presses. Attach Homebrew
+Rice; Glide64MK2 also stayed at 320 (s707, s1496):
+
+    --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
     --press 6:start,11:start,16:start,21:start,26:start,31:start,\
             36:start,41:start,46:start,51:start,56:start
 
@@ -119,11 +124,11 @@ Do not read a null as evidence about a phase the run never reached: the whole
 with this schedule.
 
 The RSP plugin is Homebrew's `mupen64plus-rsp-hle`, which handles MusyX audio
-tasks. Video and audio are left unattached and the core substitutes dummies
-(input too, unless `--press` or `--input` attaches it). Graphics are therefore
-not rendered at all — this instrument answers questions
-about **memory and CPU**, not about pixels. For questions about what the
-microcode is supposed to emit, read `docs/F5-UCODE-REFERENCE.md` instead.
+tasks. Audio is left unattached (core dummy). Video must be Rice for any
+phase past boot 320; dummy video does not complete DLs, so the cinematic
+never advances. Rice still answers **memory and CPU** questions, not pixel
+questions. For what the microcode is supposed to emit, read
+`docs/F5-UCODE-REFERENCE.md` instead.
 
 ## Questions worth asking it
 
