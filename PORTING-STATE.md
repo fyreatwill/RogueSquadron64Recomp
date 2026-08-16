@@ -77989,3 +77989,39 @@ boundaries and sizes. No source-map edit was needed because the generated
 definition and TOML entry were already synchronized. No build or runtime
 behavior conclusion was made. The next sweep candidate is
 `getDatItemHealthPercentage` (`0x800C7C28`, size `0x60`).
+
+## Session 1657 (2026-08-16) — confirmed the getDatItemHealthPercentage symbol
+
+Ran the exact generated-symbol census for `0x800C7C28` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live DAT-item health-percentage getter and its
+generated, TOML, and section-4 boundaries agree; H2: the name belongs to
+another overlay or context; and H3: the name or function evidence is absent,
+conflicting, or data-like. The complete comparison was the discriminator.
+
+The companion mission map names `getDatItemHealthPercentage` at `0x800C7C28`.
+The bounded companion-tree search found no competing C/H definition or
+alternate address; the adjacent companion symbols are `getDatItemHealth` at
+`0x800C7B60` and `despawnEffectOnNamedDatItem` at `0x800C7C88`. The generated
+`funcs_36.c` definition already carries the human name and contains the live
+`0x60`-byte body: it looks up a named level DAT item via
+`getLevelDatItemByName`, rejects a null item or sentinel halfword index
+`0xFFFF` by loading the default float at `0x800A6968`, otherwise resolves the
+item's halfword index through `getNpcContextByIndex` and returns
+`getNpcHealthPercentage` on the NPC health pointer at offset `0x10`. Its
+exact preceding boundary is `getDatItemHealth` at `0x800C7B60` with size
+`0xC8`, and its following boundary is `despawnEffectOnNamedDatItem` at
+`0x800C7C88` with size `0x64`. The TOML entry already has the same human
+name, address, and size; the section-4 overlay table has the same function at
+ROM offset `0x22AF8` with span `0x60` (exact after `0x22A30+0xC8`). A menu
+overlay entry `func_800C7B68` (`0x800C7B68`, size `0x4E4`) spans the same
+VRAM range under a different section and does not compete with the
+mission-side mapping.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and section-4
+ownership; H3 is ruled out by the live health-percentage body and exact
+adjacent boundaries and sizes. No source-map edit was needed because the
+generated definition and TOML entry were already synchronized. No build or
+runtime behavior conclusion was made. The next sweep candidate is
+`func_800C7C88` / companion `despawnEffectOnNamedDatItem` (`0x800C7C88`,
+size `0x64`).

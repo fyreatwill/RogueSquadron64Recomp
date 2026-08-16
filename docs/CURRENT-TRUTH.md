@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1656 (2026-08-16).
+the authority for session detail. Reviewed through s1657 (2026-08-16).
 
 ## Current state
 
@@ -65,26 +65,30 @@ the authority for session detail. Reviewed through s1656 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   `getDatItemHealthPercentage` at `0x800C7C28` (size `0x60`). Compare
-   companion mapping/callers and semantics, generated body, previous and
-   next boundaries, TOML size, and overlay span. Synchronize only on
-   complete independent agreement. The s1639 census confirmed
-   `checkComplexObjectives` was already synchronized; s1640 synchronized
-   `getAndSetByteAtLevelStateTable`; s1641 synchronized
-   `getGlobalFloatGameState`; s1642 synchronized `getObjectiveGlobalFloat`;
-   s1643 synchronized `setHudEnableBit4`; s1644 synchronized
-   `setHudEnableBit8`; s1645 synchronized `isLevelStateByteZero`; s1646
-   synchronized `randMod`; s1647 confirmed `addBooleanCountHandleWrapper`
-   was already synchronized; s1648 confirmed `addTimerHandleWrapper` was
-   already synchronized; s1649 synchronized `setHudFlagBit40AndStoreArg`
-   after correcting its stale TOML name; s1651 confirmed
-   `calculateDatItemDistanceToPlayer` was already synchronized; s1652
-   synchronized `getScaledPlayerCraftSpeed` after correcting its stale TOML
-   name; s1653 synchronized `spawnEffectOnNamedDatItem` after correcting
-   its stale TOML name; s1654 synchronized `initActorTowardNamedDatItem`
-   after correcting its stale TOML name; s1655 synchronized
+   companion `despawnEffectOnNamedDatItem` / generated
+   `despawnEffectOnNamedDatItem` / TOML `func_800C7C88` at `0x800C7C88`
+   (size `0x64`). Compare companion mapping/callers and semantics, generated
+   body, previous and next boundaries, TOML size, and overlay span.
+   Synchronize only on complete independent agreement (likely a stale-TOML
+   correction if the generated body already carries the human name). The
+   s1639 census confirmed `checkComplexObjectives` was already
+   synchronized; s1640 synchronized `getAndSetByteAtLevelStateTable`;
+   s1641 synchronized `getGlobalFloatGameState`; s1642 synchronized
+   `getObjectiveGlobalFloat`; s1643 synchronized `setHudEnableBit4`;
+   s1644 synchronized `setHudEnableBit8`; s1645 synchronized
+   `isLevelStateByteZero`; s1646 synchronized `randMod`; s1647 confirmed
+   `addBooleanCountHandleWrapper` was already synchronized; s1648 confirmed
+   `addTimerHandleWrapper` was already synchronized; s1649 synchronized
+   `setHudFlagBit40AndStoreArg` after correcting its stale TOML name;
+   s1651 confirmed `calculateDatItemDistanceToPlayer` was already
+   synchronized; s1652 synchronized `getScaledPlayerCraftSpeed` after
+   correcting its stale TOML name; s1653 synchronized
+   `spawnEffectOnNamedDatItem` after correcting its stale TOML name;
+   s1654 synchronized `initActorTowardNamedDatItem` after correcting its
+   stale TOML name; s1655 synchronized
    `initAnchoredActorTowardNamedDatItem` after correcting its stale TOML
-   name; s1656 confirmed `getDatItemHealth` was already synchronized.
+   name; s1656 confirmed `getDatItemHealth` was already synchronized;
+   s1657 confirmed `getDatItemHealthPercentage` was already synchronized.
    s1650 was the mandatory retail-entry revisit (post-B A/Start/Z). The
    full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
    sweep is in §33. About 1,548 placeholder `func_0x...` names remained when
@@ -199,6 +203,7 @@ ownership.
 | s1654 | Synchronized `initActorTowardNamedDatItem` (`0x800C79F0`, size `0xC0`) after companion mission mapping, live generated DAT-item actor-init body, exact `0x800C7978`/`0x800C7AB0` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7AB0`. |
 | s1655 | Synchronized `initAnchoredActorTowardNamedDatItem` (`0x800C7AB0`, size `0xB0`) after companion mission mapping, live generated DAT-item anchored-actor-init body, exact `0x800C79F0`/`0x800C7B60` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `getDatItemHealth`. |
 | s1656 | Confirmed `getDatItemHealth` (`0x800C7B60`, size `0xC8`) was already synchronized: companion mission mapping, live generated DAT-item health-lookup body, exact `0x800C7AB0`/`0x800C7C28` boundaries, TOML size, and section-4 span agreed; next candidate is `getDatItemHealthPercentage`. |
+| s1657 | Confirmed `getDatItemHealthPercentage` (`0x800C7C28`, size `0x60`) was already synchronized: companion mission mapping, live generated DAT-item health-percentage body, exact `0x800C7B60`/`0x800C7C88` boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7C88` / `despawnEffectOnNamedDatItem`. |
 
 ## Method and safety rules
 
