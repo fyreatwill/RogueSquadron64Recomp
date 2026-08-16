@@ -72388,3 +72388,39 @@ independently named `cutscenePopulateSlotsFromLevelLists` at `0x800A73E4`
 (TOML still `func_800A73E4`, size `0x2D4`; overlay `rom_size` is `0x2D4`
 at offset `0x000022B4`; live body ends at independently named
 `cinematicSlotDispatcher`).
+
+## Session 1493 (2026-08-15) — synchronized the cutscene-populate-slots-from-level-lists symbol
+
+Performed the bounded exact-name census over `0x800A73E4..0x800A76B8`.
+
+No new soak-queue verdicts since s1492; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A73E4`, size `0x2D4`; `0x800A73E4+0x2D4=0x800A76B8`. Overlay `.ovl.cinematic` entry `rom_size` is `0x2D4` at offset `0x000022B4` (`0x800A73E4-0x800A5130`). Live body is independently `0x2D4` and meets independently named `cinematicSlotDispatcher` / TOML `func_800A76B8` at `0x800A76B8` |
+| Generated definition | `funcs_27.c` defines `cutscenePopulateSlotsFromLevelLists` at `0x800A73E4`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x2D4` function. It starts `addiu $sp, $sp, -0x70` / `sw $s6, 0x58($sp)` / `addu $s6, $a0, $zero` and ends at `jr $ra` / `addiu $sp, $sp, 0x70` (`0x800A76B0`/`0x800A76B4`). Next generated function is independently named `cinematicSlotDispatcher` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `cutscenePopulateSlotsFromLevelLists = 0x800A73E4` with comment "per-frame: for current level (a2 u8 → 0x20-stride entry in slotTable), iterates 4+ action-list fields at +0x1334, +0x1318 etc. Each list entry indexes vec3f_list at slotArr+0x25AC (stride 12) and calls cinematicSlotUpdate. Called from cinematicLoopBody between processCutsceneActions and initCinematicDispatchSlots." Menu, mission, libultra, and zlib lists do not remap `0x800A73E4`. `undefined_funcs_auto.txt` has no leftover `func_800A73E4`. No companion C/asm body exists |
+| Caller evidence | Two retail `jal` encodings `0x0C029CF9` and zero `j` or absolute `0x800A73E4` pointer words. Both sites are in independently named `cinematicLoopBody` at `0x800A5FF4` and `0x800A6324` (overlay files `0x138444` and `0x138774`). Same-run ROM words at those file offsets are `0x0C029CF9`. The second site is immediately followed by independently named `initCinematicDispatchSlots` (`0x800A6FC0`) then `cutsceneDispatchSlotsByFlag` (`0x800A8420`) |
+| Semantic evidence | Retail ROM words at file `0x139834` (`0x137580+(0x800A73E4-0x800A5130)`) are `0x27BDFF90` / `0xAFB60058` / `0x0080B021` / `0xAFB10044` (`addiu $sp, $sp, -0x70` / `sw $s6, 0x58($sp)` / `addu $s6, $a0, $zero` / `sw $s1, 0x44($sp)`). Same-run words at file `0x139850`/`0x139854` are `0x30D000FF` / `0x00108140` (`andi $s0, $a2, 0xFF` / `sll $s0, $s0, 5` = 0x20-stride level index). Eight in-body `jal` encodings `0x0C029A41` at `0x800A745C`..`0x800A75A0` (overlay files `0x1398AC`..`0x1399F0`) call independently named `cinematicSlotUpdate`; generated loads of `0x1334($s0)`, `0x1318($s0)`, and `+0x25AC` index the same action-list and vec3f table named by the companion comment. Epilogue file `0x139B00` is `0x03E00008` / `0x27BD0070`. Next start file `0x139B08` is `0x27BDFF88` (`cinematicSlotDispatcher`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x139834` is `0x27BDFF90`, and both caller `jal` words above are `0x0C029CF9` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A73E4`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x2D4`, `cinematicLoopBody` is the only caller, and there is neither
+a conflicting companion name nor a size split inside the live body. The
+stale address-encoded TOML entry was synchronized (name only; size left at
+`0x2D4`). `func_8009D978` remains the eight-byte Q15 delay-mix table
+and was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `cinematicSlotDispatcher` at `0x800A76B8`
+(TOML still `func_800A76B8`, size `0x594`; overlay `rom_size` is `0x594`
+at offset `0x00002588`; live body ends at independently named
+`spawnCutsceneObjectsFromList`).
