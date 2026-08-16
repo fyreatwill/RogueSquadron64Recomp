@@ -1,13 +1,13 @@
-# NEXT work unit (s1642)
+# NEXT work unit (s1643)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Run one bounded exact-name census for `func_800C7728`, independently named
-`getObjectiveGlobalFloat` at `0x800C7728` (size `0x10`). Record the address,
-size, generated definition/body, companion references and semantic comment,
-TOML entry, section-4 overlay span, and previous/next boundaries before
-editing. Synchronize the stale project name only if all independent evidence
-agrees. Do not build or run.
+Run one bounded exact-name census for `func_800C7738`, independently named
+`setHudEnableBit4` at `0x800C7738` (size `0x34`). Record the address, size,
+generated definition/body, companion references and semantic comment, TOML
+entry, section-4 overlay span, and previous/next boundaries before editing.
+Synchronize the stale project name only if all independent evidence agrees.
+Do not build or run.
 
 Competing hypotheses and discriminator:
 
@@ -19,8 +19,8 @@ Competing hypotheses and discriminator:
   the entry is data-like; leave it parked.
 
 The complete comparison table selects exactly one outcome: independent
-`getObjectiveGlobalFloat` mapping plus a live generated body and exact
-`getGlobalFloatGameState` / `setHudEnableBit4` boundaries select H1;
+`setHudEnableBit4` mapping plus a live generated body and exact
+`getObjectiveGlobalFloat` / `setHudEnableBit8` boundaries select H1;
 ownership conflict selects H2; no name, any conflict, or non-function
 evidence selects H3.
 
@@ -33,8 +33,8 @@ grep -n '^## Session ' PORTING-STATE.md | tail -15
 Then run these bounded commands:
 
 ```sh
-rg -n -C 8 '800C7728|getObjectiveGlobalFloat' ../rogue_squadron64/symbol_files/mission_overlay.txt
-rg -n -C 12 '800C7718|800C7728|800C7738|getObjectiveGlobalFloat' ../N64Recomp/RecompiledFuncs/funcs_35.c
-rg -n -C 3 '800C7718|800C7728|800C7738' syms/rogue_squadron.syms.toml
-rg -n -C 3 '800C7718|800C7728|800C7738|getObjectiveGlobalFloat' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+rg -n -C 8 '800C7738|setHudEnableBit4' ../rogue_squadron64/symbol_files/mission_overlay.txt
+rg -n -C 12 '800C7728|800C7738|800C776C|setHudEnableBit4' ../N64Recomp/RecompiledFuncs/funcs_35.c
+rg -n -C 3 '800C7728|800C7738|800C776C' syms/rogue_squadron.syms.toml
+rg -n -C 3 '800C7728|800C7738|800C776C|setHudEnableBit4' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```

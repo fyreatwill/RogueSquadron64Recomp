@@ -77551,3 +77551,30 @@ ownership; H3 is ruled out by the live generated body and exact adjacent
 boundaries and sizes. Updated the stale project TOML placeholder only. No
 build or runtime behavior conclusion was made. The next sweep candidate is
 `func_800C7728`/`getObjectiveGlobalFloat`.
+
+## Session 1642 (2026-08-16) — synchronized the getObjectiveGlobalFloat symbol
+
+Ran the exact generated-symbol census for `0x800C7728` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live objective-float getter and its generated,
+TOML, and section-4 boundaries agree; H2: the name belongs to another
+overlay or context; and H3: the name or function evidence is absent,
+conflicting, or data-like. The complete comparison was the discriminator.
+
+The companion mission map names `getObjectiveGlobalFloat` at `0x800C7728`,
+immediately after `getGlobalFloatGameState` at `0x800C7718` and immediately
+before `setHudEnableBit4` at `0x800C7738`; no competing companion ownership
+was present. The generated `funcs_35.c` definition already carries the human
+name and implements the live `0x10`-byte getter: it loads the objective float
+at `0x8010C9E4` and returns it. Its exact preceding boundary is
+`getGlobalFloatGameState` at `0x800C7718` with size `0x10`, and its following
+boundary is `setHudEnableBit4` at `0x800C7738` with size `0x34`. The TOML
+entry had the same address and size but the placeholder name, while the
+section-4 overlay table carried `getObjectiveGlobalFloat` at ROM offset
+`0x225F8` with span `0x10`.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and overlay
+ownership; H3 is ruled out by the live generated body and exact adjacent
+boundaries and sizes. Updated the stale project TOML placeholder only. No
+build or runtime behavior conclusion was made. The next sweep candidate is
+`func_800C7738`/`setHudEnableBit4`.
