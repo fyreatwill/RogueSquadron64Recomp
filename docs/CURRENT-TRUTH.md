@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1742 (2026-08-16).
+detail. Reviewed through s1743 (2026-08-16).
 
 ## Current state
 
@@ -41,15 +41,20 @@ detail. Reviewed through s1742 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcTieVariantUpdate`
-   (`0x800DB11C`, size `0x110C`). Archive: `PROJECT-OVERVIEW.md` §33
-   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1742). About 1,548
-   placeholder `func_0x...` names remained at s1487.
-2. Next mandatory 15-title REVISIT (after the next all-sweep window): destination
-   of the attract A/Start/C-up/L/Z title-like 1024 is blocked by Rice death
-   around 135 s. Do not repeat §35 classified routes. A genuinely new angle is
-   required. Alternative: a new M4 RDRAM destination from a DMEM→RDRAM transfer
-   other than `0xD60`. Every oracle run needs whole-RDRAM, PIF, and VI/PC controls.
+1. Mandatory 15-title REVISIT (s1729–s1743 are all sweep). Do not extend
+   the s1714 `--secs 133` recipe — Rice dies ~135 s, ~7 s after the 1024
+   WIDTH. New angle: identify the title-like 1024 (`0x00790400`/`800` at
+   126.4 s) by overlay-resident PCs during the 126.4–133.5 s dwell
+   (`cinematicLoopBody` `0x800A5D80`, `runMenuContentStateMachine`
+   `0x800C1878`, `runInMissionFrame` `0x800FA6A4`), not by waiting for a
+   later VI. Alternative: a new M4 RDRAM destination from a DMEM→RDRAM
+   transfer other than `0xD60`. Every oracle run needs whole-RDRAM, PIF,
+   and VI/PC controls. Do not repeat §35 classified routes.
+2. Resume the generated-symbol sweep at `npcRadarDishInit` /
+   `func_800DC228` (`0x800DC228`, size `0xD8`) after the revisit.
+   Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
+   §35 (s1648–s1743). About 1,548 placeholder `func_0x...` names remained
+   at s1487.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -81,11 +86,11 @@ never-access) live in `PROJECT-OVERVIEW.md` §26 and §35. Most recent: s1698
 `512→1024` at 126.3 s; the stay was a flush cutoff.
 
 ## Evidence ledger summary
-Per-session rows through s1741 live in `PROJECT-OVERVIEW.md` §33–§35.
+Per-session rows through s1743 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1742 through `npcTieVariantHandleDestruction`; Rice revisits classified
+s1648–s1743 through `npcTieVariantUpdate`; Rice revisits classified
 hangar/B/attract and parked the title-like 1024 (§35). s1728 is maintenance only.
 
 ## Method and safety rules

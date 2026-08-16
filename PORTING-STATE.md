@@ -81065,3 +81065,38 @@ runtime run required.
 Next census: `npcTieVariantUpdate` / `func_800DB11C` at `0x800DB11C`
 (size `0x110C`). Last-15 titles after s1742 still include s1728's
 maintenance compaction, so the mandatory REVISIT gate does not fire.
+
+## Session 1743 (2026-08-16) — confirmed the npcTieVariantUpdate symbol
+
+Exact generated-symbol census for `0x800DB11C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1728's
+maintenance compaction, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 6027; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTieVariantUpdate = 0x800DB11C` (coarse listing). Previous contiguous neighbor `npcTieVariantHandleDestruction = 0x800DAB98`; next contiguous neighbor `npcRadarDishInit = 0x800DC228`. Companion `main_overlay.txt` names this as a caller of `safeLookup3DSoundEntry` and `distanceAndDopplerNpcHelper`. No menu/cinematic/main overlay occupant and no `D_800DB11C` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTieVariantUpdate` at VRAM `0x800DB11C`; prologue `addiu $sp, $sp, -0xB0`; object pointer `a0` saved in `s6`, halfword mode `a1` in `$fp`, `a2` in `s2`; object record `*(s6+4)` in `s1`. Returns through `jr $ra` / `addiu $sp, $sp, 0xB0` ending at `0x800DC224`. Previous mission function last insn is `0x800DB118`; next is `npcRadarDishInit` at `0x800DC228`. `funcs.h` already declares the human name. No leftover `func_800DB11C`. No direct `jal` site — table-dispatched like the other `npcXxxUpdate` siblings |
+| Body semantics | Halfword state in `a1`; 9-way jump table at `0x800A7C10` on `(a1-1)` for `a1 ∈ 1..9` (`sltiu` bound `0x9`; out of range falls to the epilogue at `0x800DC1E4`). Cases 0 and 7 share setup (`createAndInitObject`, `initActorAsType1` / `initActorAsType4`, `walkMeshdef0List`, `composeEulerRotationXYZ`, `getLevelDatItemByName`, `play3DSoundEventVariant`). Case 1 tears down (`getNpcCurrentHealth`, `factor5RemoveListNode`, `rs_free`). Case 2 is the live tick (`npcTieVariantTickAttachmentEffect` at `0x800DB7F8`, `npcTieVariantSteerToward` at `0x800DB80C`, debris/effect cluster, `distanceAndDopplerNpcHelper`, `spawnWaterSprayDebrisAndBurst`). Case 3 is 3D-audio (`updateActive3DAudioSource`, `mostlyMusyxFlagGatedHelper`, `safeLookup3DSoundEntry`). Case 4 is damage/destruction (`getNpcCurrentHealth`, `extrapolateNpcPositionForCurrentMode`, `play3DSoundEvent`, `dealDamageToNpc`, `unregisterAndFreeNpcSlot` at `jal 0x8003E7D0`, `popNpcSlotFromTail` at `jal 0x8003E684`, `npcTieVariantHandleDestruction` at `0x800DBF38`). Case 5 is `func_8004015C` / `func_8001CF2C` / `func_800F9C30`. Case 6 is a single `func_800EFD80`. Case 8 is `slotDispatcherIter` plus health/slot teardown. Name matches the TIE-variant `npcXxxUpdate` sibling of `npcWingmanUpdate` / `npcTankDroidUpdate` / `npcShuttleUpdate` |
+| TOML | `{ name = "npcTieVariantUpdate", vram = 0x800DB11C, size = 0x110C }` — already the human name; size matches `0x800DC228 - 0x800DB11C` (last insn `0x800DC224` + 4 = `0x110C`). No leftover `func_800DB11C` |
+| Overlay section 4 | `{ .func = npcTieVariantUpdate, .offset = 0x00035FEC, .rom_size = 0x0000110C }` under `section_4_ovl_mission_funcs` (`0x800DB11C - 0x800A5130 = 0x35FEC`; `0x35A68 + 0x584 = 0x35FEC`; `0x35FEC + 0x110C = 0x370F8` matches next `npcRadarDishInit`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DB11C`. Menu max VRAM is `0x800D03DC`; cinematic max is `0x800B072C`; neither reaches this address. No leftover `func_800DB11C` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 9-way TIE-variant-update body,
+previous (`npcTieVariantHandleDestruction` / `0x800DAB98`) and next
+(`npcRadarDishInit` / `0x800DC228`) boundaries, TOML name and size, and
+section-4 overlay span already agree. No TOML or generated-name change.
+This refutes H2 (no stale placeholder), H3 (no fake fragment, overlay
+collision, or size/boundary disagreement), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+After this entry the last-15 titles are s1729–s1743, all sweep-scoped
+(s1728 drops out). The next iteration is the mandatory 15-title REVISIT.
+Sweep cursor after the revisit: `npcRadarDishInit` / `func_800DC228` at
+`0x800DC228` (size `0xD8`).

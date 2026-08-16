@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1742)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1743)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3019,12 +3019,13 @@ collision.
 | s1740 | Synchronized `npcTieVariantSteerToward` (`0x800DA7D8`, `0x1D8`). Velocity-integrate + quat-rotate + heading-clamp; `wrapAngleToCyclicRange` / `isTerrainCellBlockedAtWorldXz` / `quatFromAxisAngle` / `rotateVec3ByQuat`. Sole generated caller `npcTieVariantUpdate` at `0x800DB80C`. |
 | s1741 | Synchronized `npcTieVariantTickAttachmentEffect` (`0x800DA9B0`, `0x1E8`). LOS check + attachment-timer cue: `validateActorTargetLOS` / `applyToObjectSubstructByFlag` / `lookupHmtTextureByName` / `triggerCueWithSlotEffect` / `slotDispatcherIter` / `play3DSoundEvent`. Sole generated caller `npcTieVariantUpdate` at `0x800DB7F8`. |
 | s1742 | Synchronized `npcTieVariantHandleDestruction` (`0x800DAB98`, `0x584`). Debris+rand+3D-sound destruction: `spawnDestructionDebris` / `spawnDestructionEffectBurst` / `spawnDirectionalDebrisBurst` / `spawnDebris1Npc` / `play3DSoundEvent`. Sole generated caller `npcTieVariantUpdate` at `0x800DBF38`, after `unregisterAndFreeNpcSlot` + `popNpcSlotFromTail`. |
+| s1743 | Confirmed `npcTieVariantUpdate` (`0x800DB11C`, `0x110C`). 9-way jump table at `0x800A7C10` on `(a1-1)` for `a1 ∈ 1..9`. Setup / teardown / live tick (`npcTieVariantTickAttachmentEffect`, `npcTieVariantSteerToward`) / 3D-audio / damage (`npcTieVariantHandleDestruction`) / slot-dispatch. Table-dispatched; no leftover `func_800DB11C`. |
 
-The sweep cursor after s1742 is `npcTieVariantUpdate` at `0x800DB11C`
-(size `0x110C`). Next contiguous neighbor is `npcRadarDishInit` /
-`func_800DC228` at `0x800DC228`. Mandatory revisits in this window: s1650,
-s1666, s1682, s1698, s1714. s1728 is maintenance, so the next all-sweep
-15-title window has not opened.
+The sweep cursor after s1743 is `npcRadarDishInit` / `func_800DC228` at
+`0x800DC228` (size `0xD8`). Mandatory revisits in this window: s1650,
+s1666, s1682, s1698, s1714. After s1743 the last-15 titles are
+s1729–s1743 (all sweep; s1728 dropped out), so the next iteration is the
+mandatory REVISIT.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
