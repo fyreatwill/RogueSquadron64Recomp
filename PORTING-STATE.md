@@ -78529,3 +78529,33 @@ already agree. No TOML or generated-name change.
 Next census: `func_800CA18C` / `playNpcAmbientEffect` at `0x800CA18C`
 (size `0xE0`). Last-15 titles still include s1666, so the next iteration
 may continue the sweep.
+
+## Session 1672 (2026-08-16) — synchronized the playNpcAmbientEffect symbol
+
+Exact generated-symbol census for `0x800CA18C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playNpcAmbientEffect = 0x800CA18C`; next mission listing `initNpcActorVariant = 0x800CA270`; prior `setupNpcModelForState = 0x800C8E90` then `npcTurretUpdate` (coarse listing skips the turret updater). `fake_func_800CA26C = 0x800CA26C` is the 4-byte pad; companion deleted `func_800CA270` as a duplicate of `initNpcActorVariant` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void playNpcAmbientEffect` at VRAM `0x800CA18C`; prologue `addiu $sp, $sp, -0x68`; returns through `jr $ra` / `addiu $sp, $sp, 0x68` ending at `0x800CA268`; next generated functions are `fake_func_800CA26C` at `0x800CA26C` then `initNpcActorVariant` at `0x800CA270` |
+| Body semantics | Actor at `a0+4`. Looks up HMT texture `0x800A69A0` via `lookupHmtTextureByName`, builds a perpendicular emit direction with `generatePerpEmitDirectionWithJitter`, then `tickProgressChannel`. On progress byte `== 1`, `triggerCueWithSlotEffect` plus `play3DSoundEvent` (cue `0x16`, radius `0x7F`, duration `0x28`). Returns 0. Same effect-tick idiom as `playNpcStateChangeEffect` |
+| TOML (before) | `{ name = "func_800CA18C", vram = 0x800CA18C, size = 0xE0 }` — size matches `0x800CA26C - 0x800CA18C` |
+| Overlay section 4 | `{ .func = playNpcAmbientEffect, .offset = 0x0002505C, .rom_size = 0x000000E0 }` under `section_4_ovl_mission_funcs` (`0x800CA18C - 0x800A5130 = 0x2505C`; `0x2505C + 0xE0 = 0x2513C` matches next `fake_func_800CA26C`) |
+| Non-collision | Menu-overlay `runModelViewerLoop = 0x800C9BF0` (size `0xA48`, ends `0x800CA638`) lives in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. `0x800CA18C` is `+0x59C` inside that menu function |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`npcTurretUpdate` / `0x800C8F90`) and next (`fake_func_800CA26C` /
+`0x800CA26C`, then `initNpcActorVariant` / `0x800CA270`) boundaries, and
+TOML size already agreed; only the TOML name was a stale `func_800CA18C`
+placeholder. Corrected TOML to `playNpcAmbientEffect`. No build or runtime
+run required.
+
+Next census: `func_800CA270` / `initNpcActorVariant` at `0x800CA270`
+(size `0x134`). Last-15 titles still include s1666, so the next iteration
+may continue the sweep.

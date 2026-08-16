@@ -1773,7 +1773,7 @@ functions = [
     { name = "updateNpcOrientationFromMotion", vram = 0x800C8978, size = 0x518 },
     { name = "setupNpcModelForState", vram = 0x800C8E90, size = 0x100 },
     { name = "npcTurretUpdate", vram = 0x800C8F90, size = 0x11FC },
-    { name = "func_800CA18C", vram = 0x800CA18C, size = 0xE0 },
+    { name = "playNpcAmbientEffect", vram = 0x800CA18C, size = 0xE0 },
     { name = "fake_func_800CA26C", vram = 0x800CA26C, size = 0x4 },
     { name = "func_800CA270", vram = 0x800CA270, size = 0x134 },
     { name = "func_800CA3A4", vram = 0x800CA3A4, size = 0x1BC },
