@@ -230,14 +230,14 @@ and the independent retail oracle controls pass. Dummy video stays at width
 available hangar-entry recipe (s707, s1496). After hangar, Start/A leave via
 case-6 `runModelViewerLoop`; pre-exit B is a distinct frontend route that
 times out to attract 512, whose A/Start/C-up/L/Z leave to a title-like 1024
-that Rice cannot dwell long enough to classify (s1650–s1714). Audio
-de-stubbing is closed. These are boundaries, not mitigations: future guards
-require an `ORIGIN:` naming the writer and judging the value legitimate. The
-generated-symbol renaming sweep is the current low-risk workstream; exact
-companion/generated names are synchronized through
-`npcWingmanState2` at `0x800D9F90` (s1733). See §33–§35 for the
-archived census, `CURRENT-TRUTH.md` for the live backlog, and
-`PORTING-STATE.md` for evidence.
+that is not a new cinematic, menu-SM, or mission-frame session (s1744
+H3-stop-tick; Rice still dies ~135 s). Audio de-stubbing is closed. These
+are boundaries, not mitigations: future guards require an `ORIGIN:` naming
+the writer and judging the value legitimate. The generated-symbol renaming
+sweep is the current low-risk workstream; exact companion/generated names
+are synchronized through `npcTieVariantUpdate` at `0x800DB11C` (s1743).
+See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
+backlog, and `PORTING-STATE.md` for evidence.
 
 - **Two independent sources before concluding.** Every finding that survived has two: task timing
   *and* CPU%; stream census *and* draw-hook counters; a probe *and* its positive control.
@@ -3020,12 +3020,12 @@ collision.
 | s1741 | Synchronized `npcTieVariantTickAttachmentEffect` (`0x800DA9B0`, `0x1E8`). LOS check + attachment-timer cue: `validateActorTargetLOS` / `applyToObjectSubstructByFlag` / `lookupHmtTextureByName` / `triggerCueWithSlotEffect` / `slotDispatcherIter` / `play3DSoundEvent`. Sole generated caller `npcTieVariantUpdate` at `0x800DB7F8`. |
 | s1742 | Synchronized `npcTieVariantHandleDestruction` (`0x800DAB98`, `0x584`). Debris+rand+3D-sound destruction: `spawnDestructionDebris` / `spawnDestructionEffectBurst` / `spawnDirectionalDebrisBurst` / `spawnDebris1Npc` / `play3DSoundEvent`. Sole generated caller `npcTieVariantUpdate` at `0x800DBF38`, after `unregisterAndFreeNpcSlot` + `popNpcSlotFromTail`. |
 | s1743 | Confirmed `npcTieVariantUpdate` (`0x800DB11C`, `0x110C`). 9-way jump table at `0x800A7C10` on `(a1-1)` for `a1 ∈ 1..9`. Setup / teardown / live tick (`npcTieVariantTickAttachmentEffect`, `npcTieVariantSteerToward`) / 3D-audio / damage (`npcTieVariantHandleDestruction`) / slot-dispatch. Table-dispatched; no leftover `func_800DB11C`. |
+| s1744 | Mandatory REVISIT. Six-arm Rice overlay-PC watch on the attract A/Start/C-up/L/Z title-like 1024. All arms passed controls. `cinematicLoopBody`/`load_cutscene` stay 2 (the 17.3 s and 65.4 s title-like 1024s); `runMenuContentStateMachine` stays 0; `runInMissionFrame` stays 1. Leave drops `0x800AA658` (−350) and `0x800C131C` (−180) vs hold attract. H3-stop-tick selected; H1/H2/H4 rejected. Extra `loadOverlay` +2 does not enter those four entries. |
 
-The sweep cursor after s1743 is `npcRadarDishInit` / `func_800DC228` at
+The sweep cursor after s1744 is `npcRadarDishInit` / `func_800DC228` at
 `0x800DC228` (size `0xD8`). Mandatory revisits in this window: s1650,
-s1666, s1682, s1698, s1714. After s1743 the last-15 titles are
-s1729–s1743 (all sweep; s1728 dropped out), so the next iteration is the
-mandatory REVISIT.
+s1666, s1682, s1698, s1714, s1744. After s1744 the last-15 titles include
+the revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
@@ -3048,14 +3048,18 @@ at 119/123 leave `512→1024` at 126.3–126.4 s origin `0x00790400`/`0x00790800
 through 133.5 s (s1714); hangar-frame PCs 60–61 matching hold; viewer 0;
 `0x80000B70` = 1 matching hold. Hold stays attract 512 through 133.4 s.
 C-down, C-left, C-right, R, and valid D-pad stay attract 512 through
-125.8 s (s1698; not retested past 126 s). The 1024 destination is still
-unevaluable: Rice dies around 135 s, and the only observed `1024→640` of
-this pair is s1666's single-source Z continuation at 159.4 s origin
-`0x00696100` (B-frontend). s1698's Z-stays-512 through 125.8 s was a flush
-cutoff; s1666's 128.3 s Z leave was the same leave after a later 126.4 s
-press. `0x80000B70` is `loadOverlay+0x50` (`0x80000B20`, size `0x124`).
-Still-open questions (1024 destination; M4 DMEM→RDRAM other than `0xD60`)
-live in `CURRENT-TRUTH.md`.
+125.8 s (s1698; not retested past 126 s). Overlay-resident entries on that
+1024 match hold (`cinematicLoopBody` 2, `load_cutscene` 2,
+`runMenuContentStateMachine` 0, `runInMissionFrame` 1) and drop the
+`0x800AA658` / `0x800C131C` tick that hold's attract continues (s1744
+H3-stop-tick). The 1024 is not a new cinematic, menu-SM, or mission-frame
+session. Rice dies around 135 s; the only observed `1024→640` of this pair
+is s1666's single-source Z continuation at 159.4 s origin `0x00696100`
+(B-frontend). s1698's Z-stays-512 through 125.8 s was a flush cutoff;
+s1666's 128.3 s Z leave was the same leave after a later 126.4 s press.
+`0x80000B70` is `loadOverlay+0x50` (`0x80000B20`, size `0x124`).
+Still-open questions (which function runs the 1024; M4 DMEM→RDRAM other
+than `0xD60`) live in `CURRENT-TRUTH.md`.
 
 **Superseded claims compacted out of CURRENT-TRUTH in s1728.** Stale/unseen
 writer (physical-byte samples saw nonzero `0x8011A8A0`). `setViModeType`

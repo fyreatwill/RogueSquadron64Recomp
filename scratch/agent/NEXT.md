@@ -1,50 +1,44 @@
-# NEXT work unit (s1744)
+# NEXT work unit (s1745)
 
-HYPOTHESIS-ID: external-retail-entry-boundary
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Mandatory 15-title REVISIT. Last-15 titles after s1743 are s1729–s1743,
-all sweep-scoped (synchronized / confirmed). Do not resume the
-generated-symbol census. Do not extend the s1714 `--secs 133` recipe —
-Rice dies ~135 s, ~7 s after the 1024 WIDTH, so a later flush cannot
-see a destination VI.
+Resume the generated-symbol census at `npcRadarDishInit` /
+`func_800DC228` (`0x800DC228`, size `0xD8`). s1744 closed the mandatory
+15-title REVISIT (H3-stop-tick on the attract 1024). Last-15 after this
+commit will include s1744, so the revisit gate does not fire.
 
-New angle: identify the attract A/Start/C-up/L/Z title-like 1024
-(`0x00790400`/`800` at 126.4 s) by overlay-resident PCs during the
-126.4–133.5 s dwell, not by waiting for a later WIDTH.
+Competing hypotheses:
 
-Competing hypotheses and discriminator:
+- H1: companion `npcRadarDishInit`, generated body, TOML name/size, and
+  overlay span already agree — confirm only.
+- H2: generated code still carries placeholder `func_800DC228` (or a
+  stale alias) and needs a TOML + fixup rename.
+- H3: overlay collision, leftover `fake_func_*`, or size/boundary
+  disagreement with the companion listing.
+- H4: companion, generated body, TOML, or section-4 row is missing.
 
-- H1: menu overlay is live on the 1024 —
-  `runMenuContentStateMachine` (`0x800C1878`) or
-  `runMenuShipSelectScreen` (`0x800C131C`) fire after 126.4 s on
-  A/Start arms and stay 0 on hold.
-- H2: cinematic overlay is live —
-  `cinematicLoopBody` (`0x800A5D80`), `load_cutscene` (`0x800A6620`),
-  or `tickCutsceneActionSlots` (`0x800AA658`) fire after 126.4 s.
-- H3: same attract/frontend state as hold, just a different
-  framebuffer — new overlay PCs stay 0 on every arm; hangar-frame /
-  viewer / `0x80000B70` still match hold (s1714).
-- H4: mission overlay is live — `runInMissionFrame` (`0x800FA6A4`)
-  fires after 126.4 s.
-
-Copy `scratch/agent/s1714_attract512_later_flush/run_pc.sh` to
-`scratch/agent/s1744_1024_overlay_pcs/run_pc.sh`. Keep the six-arm
-carrier (hold + A + Start + C-up + L + Z), `--secs 133`, whole-RDRAM
-`--watch-write 0x0:0x800000 --hit-cap 10000`, PIF/`[pad]`,
-`--vi-trace`, `--vi-poll`, and the s1714 hangar/viewer/`loadOverlay`
-PC list as controls. APPEND these PCs (not previously watched):
+Exact commands (read-only census; no game run):
 
 ```
-0x800A5D80,0x800A6620,0x800AA658,0x800C1878,0x800C131C,0x800FA6A4
+# companion
+grep -n 'npcRadarDish\|800DC228\|DC228' \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/*.txt
+# generated
+grep -n 'npcRadarDishInit\|func_800DC228\|0x800DC228' \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c
+# toml + overlay inl
+grep -n '800DC228\|npcRadarDishInit' \
+  syms/rogue_squadron.syms.toml RecompiledFuncs/recomp_overlays.inl
 ```
 
 Expected splits:
 
-- H1: menu PCs > 0 after 126.4 s on leave arms, 0 on hold.
-- H2: cinematic PCs > 0 after 126.4 s on leave arms, 0 on hold.
-- H3: all six new PCs stay 0; controls match s1714 hold.
-- H4: `runInMissionFrame` > 0 after 126.4 s on leave arms.
+- H1: all four sources already say `npcRadarDishInit`, size `0xD8`,
+  previous `npcTieVariantUpdate` / `0x800DB11C`, no leftover placeholder.
+- H2: generated still `func_800DC228` — rename in TOML and the fixup path.
+- H3: menu/cinematic occupant, leftover splat, or size != `0xD8`.
+- H4: a required source is absent.
 
-Do not repeat §35 classified button/VI routes. After this revisit the
-sweep resumes at `npcRadarDishInit` / `func_800DC228` (`0x800DC228`,
-size `0xD8`).
+Do not reopen the attract-1024 six-entry recipe. Next cursor after this
+address is whatever the census names as the following mission function.

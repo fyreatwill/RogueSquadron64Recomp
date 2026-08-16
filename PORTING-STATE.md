@@ -81100,3 +81100,77 @@ After this entry the last-15 titles are s1729–s1743, all sweep-scoped
 (s1728 drops out). The next iteration is the mandatory 15-title REVISIT.
 Sweep cursor after the revisit: `npcRadarDishInit` / `func_800DC228` at
 `0x800DC228` (size `0xD8`).
+
+## Session 1744 (2026-08-16) — rejected menu/cinematic/mission loops for the attract 1024
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1743 were s1729–s1743, all sweep-scoped. Step 0
+`wc -c` was 6285; not a maintenance iteration. No new soak-queue verdicts
+past the already-folded s1029-and-earlier tail.
+
+s1714 left the attract A/Start/C-up/L/Z title-like 1024
+(`0x00790400`/`800` at 126.4 s) unevaluable as a destination: Rice dies
+~135 s, so a later flush cannot see a next WIDTH. New angle: identify
+that 1024 by overlay-resident entry PCs during the 126.4–133.5 s dwell,
+not by waiting for a later VI.
+
+Competing hypotheses: H1 menu overlay live
+(`runMenuContentStateMachine` `0x800C1878` or `runMenuShipSelectScreen`
+`0x800C131C` extra vs hold after 126.4 s); H2 cinematic overlay live
+(`cinematicLoopBody` `0x800A5D80`, `load_cutscene` `0x800A6620`, or
+`tickCutsceneActionSlots` `0x800AA658` extra vs hold); H3 same
+attract/frontend overlay-entry set as hold, just a different framebuffer;
+H4 mission overlay live (`runInMissionFrame` `0x800FA6A4` extra vs hold).
+
+Discriminator: six concurrent Rice arms copied from
+`scratch/agent/s1714_attract512_later_flush/run_pc.sh` (`--secs 133`,
+whole-RDRAM 10k, PIF/`[pad]`, `--vi-trace`, `--vi-poll`, s1714
+hangar/viewer/`loadOverlay` PCs) with the six overlay entries appended.
+All three CPU overlays share VRAM `0x800A5130`; cinematic ends
+`0x800B0940`, menu `0x800CD520`, mission `0x8010B6D0`, so `0x800FA6A4`
+is mission-only, `0x800C1878`/`0x800C131C` are menu-or-mission, and
+`0x800A5D80` aliases per resident overlay. Lifetime leave-vs-hold is the
+post-119 s split (arms share `B_ROUTE` through 119 s). Artifacts:
+`scratch/agent/s1744_1024_overlay_pcs/summary.txt` and per-arm `run.log`.
+
+All six arms: rc=0, whole-RDRAM 10178–10188 with the 10k positive
+control, six new PCs armed (`[watch] pc` 6/6), B pad `0x40000000` ×3,
+hangar then B-route then `640→512` attract at 117.6–117.8 s, ~133.2–
+133.3 s emulated / 134.4 s wall. Leave pads at 120.3–124.4 delivered the
+expected words. Debugger `[vi]` WIDTH matches s1714: hold stays attract
+512; A/Start/C-up/L/Z all `512→1024` at 126.4–126.5 s origin
+`0x00790400`/`800`. Hangar-frame 59–61 vs hold 61, viewer 0,
+`0x80000B70` = 1 matching hold. `loadOverlay` 8 vs hold 6 (s1714
+reproduced).
+
+New-PC lifetime / leave-hold delta:
+
+| PC | hold | leave | delta |
+|---|---:|---:|---:|
+| `cinematicLoopBody` `0x800A5D80` | 2 | 2 | 0 |
+| `load_cutscene` `0x800A6620` | 2 | 2 | 0 |
+| `tickCutsceneActionSlots` `0x800AA658` | 1180 | 829–833 | −347..−351 |
+| `runMenuContentStateMachine` `0x800C1878` | 0 | 0 | 0 |
+| `runMenuShipSelectScreen` `0x800C131C` | 259 | 79–81 | −178..−180 |
+| `runInMissionFrame` `0x800FA6A4` | 1 | 1 | 0 |
+
+`cinematicLoopBody` = 2 on every arm, including hold that showed the two
+earlier title-like 1024s at 17.3 s and 65.4 s, is the same-run positive
+control that this watch fires when those 1024s occur. The 126.4 s 1024
+does not add a third entry.
+
+H1 rejected: `0x800C1878` is 0 on every arm; `0x800C131C` does not
+increase on leave (it drops). H2 rejected: no extra
+`cinematicLoopBody`/`load_cutscene`; `0x800AA658` drops. H4 rejected:
+`0x800FA6A4` stays 1. H3-stop-tick selected: the four inner-loop entries
+match hold; leave stops the high-frequency `0x800AA658` and
+`0x800C131C` activity that hold's attract 512 continues. The extra
+`loadOverlay` +2 does not enter those four functions. Overlay alias
+note (single-source from the TOML windows): `0x800AA658` is
+`tickCutsceneActionSlots` only while cinematic is mapped; under menu it
+sits inside `hangarInitialize` (`0x800A9364`, size `0x1A38`).
+
+The 1024 is still not a classified screen (not hangar, not viewer, not
+those three inner loops). Do not repeat this six-entry recipe. Next
+work resumes the generated-symbol sweep at `npcRadarDishInit` /
+`func_800DC228` at `0x800DC228` (size `0xD8`).
