@@ -79538,3 +79538,36 @@ run required.
 Next census: `playerAtStUpdate` at `0x800D2208` (size `0x954`). Last-15
 titles still include s1698's retail-entry revisit, so the next iteration
 continues the sweep.
+
+## Session 1701 (2026-08-16) — confirmed the playerAtStUpdate symbol
+
+Exact generated-symbol census for `0x800D2208` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 44214; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playerAtStUpdate = 0x800D2208`. Coarse listing previous `playerAtStInit = 0x800D1088`; next coarse neighbor `npcShuttleUpdate = 0x800D3894` skips helpers; next contiguous neighbor `npcInitFromTemplate = 0x800D2B5C`. Companion already lists this among the `playerXxxUpdate` callers of `resetTransientPlayerStateFlags` and `updatePlayerHudFrame`, and as a named caller of `flattenAnimTreeAndAllocateSlot`, `distanceAndDopplerNpcHelper`, and `spawnHeavyMechSubEffect` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void playerAtStUpdate` at VRAM `0x800D2208`; prologue `addiu $sp, $sp, -0xD8`; returns through `jr $ra` / `addiu $sp, $sp, 0xD8` ending at `0x800D2B58`; previous mission function is `updatePlayerAtStBehavior` at `0x800D1730` (last insn `0x800D2204`); next mission function is `npcInitFromTemplate` at `0x800D2B5C`. `funcs.h` already declares the human name |
+| Body semantics | Actor at `a0` (`s3`); halfword state in `a1`. `s4 = 0x80137DBC` (craft record). 15-way jump table at `0x800A7320` on `(a1-1)` for `a1 ∈ 1..15`: live cases 0/1/2/3/4/11/14 (5–10 and 12–13 fall through). Case 0 allocates `0x168`, `walkMeshdef0List`, `loadPlayerStartPosition`, `playerAtStInit`, `allocateAndInitCraftNpcContext`, then loads mesh/anim (`lookupHmtMaterialByName` ×2, `load_model_animation`, `flattenAnimTreeAndAllocateSlot`). Case 1 tears down (`rs_free` ×2, `releaseMeshAsset`, `teardownHudInstancesAndUnbindNpcs`). Case 2 is the per-frame tick: `updatePlayerAtStBehavior` at `0x800D2630` (`a0=s2`). Case 4 is destruction (`spawnNpcType0xAFromTemplate` ×2, `spawnByteAnimDebrisDefault`, `spawnDestructionEffectBurst`, `spawnHeavyMechSubEffect`, `destroyNpcSlotByIndex`). Common tail: `slotDispatcherIter`, `advanceNpcOnCurvedPath`, `updatePlayerHudFrame`. No generated `jal` callers; this is the table-registered `playerXxxUpdate` handler. Name matches player AT-ST update |
+| TOML | `{ name = "playerAtStUpdate", vram = 0x800D2208, size = 0x954 }` — already the human name; size matches `0x800D2B5C - 0x800D2208` (597 decoded insns, last+4 = `0x954`). No leftover `func_800D2208` |
+| Overlay section 4 | `{ .func = playerAtStUpdate, .offset = 0x0002D0D8, .rom_size = 0x00000954 }` under `section_4_ovl_mission_funcs` (`0x800D2208 - 0x800A5130 = 0x2D0D8`; `0x2C600 + 0xAD8 = 0x2D0D8`; `0x2D0D8 + 0x954 = 0x2DA2C` matches next `npcInitFromTemplate`) |
+| Non-collision | No menu-overlay function occupies `0x800D2208`. Companion menu grep is empty for this address and name. Nearest menu symbols are concert-hall/medal data (`D_800D0120` / `D_800D03D0` / `medalInfo`) in the same VRAM window on a different overlay. No menu symbol falls in `[0x800D2208, 0x800D2B5C)` |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated player-AT-ST-update body,
+previous (`updatePlayerAtStBehavior` / `0x800D1730`) and next
+(`npcInitFromTemplate` / `0x800D2B5C`) boundaries, TOML name and size, and
+section-4 overlay span already agree. No TOML or generated-name change. This
+refutes H2 (no stale placeholder), H3 (no fake fragment, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No build or runtime run required.
+
+Next census: `npcInitFromTemplate` at `0x800D2B5C` (size `0xFC`). Last-15
+titles still include s1698's retail-entry revisit, so the next iteration
+continues the sweep.
