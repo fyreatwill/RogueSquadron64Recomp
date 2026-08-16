@@ -73093,3 +73093,39 @@ independently named `computeCutsceneScreenScale` at `0x800AD224`
 `0x46C` at offset `0x000080F4`; live body ends at independently named
 `tickCutsceneCameraFromTimeline` / TOML `func_800AD690` at
 `0x800AD690`).
+
+## Session 1512 (2026-08-15) — rejected M4 RDRAM ownership of DMEM r9
+
+Mandatory revisit: the previous 15 session titles were all generated-symbol
+sweep work. M5 is closed and M3 is parked. This iteration re-attempted the
+parked M4 accumulator remainder (CURRENT-TRUTH durable boundary / s1135
+`0x688:0x710` watch) with a new angle: Homebrew Rice so the hangar/shaded
+phase is actually reached, plus the generated overlay-20 fact that
+`ori $9, $zero, 0x670` is a DMEM base and the only `SP_WR_LEN` DMA is from
+DMEM `0xD60`, not `0x670`.
+
+No new soak-queue verdicts; the SOAK-RESULTS tail is unchanged from
+2026-08-14.
+
+One 70-second Rice arm used whole-RDRAM write `0x0:0x800000` as watch 0,
+targeted physical `0x688:0x710` as watch 1, SP-DMEM
+`0x04000670:0x04000720` as watch 2 (`--detail-watch 1 --detail-watch 2`),
+`--vi-trace`, `--vi-poll`, `--pif-trace`, and the eleven-Start schedule.
+Log: `scratch/agent/s1512_oracle_m4_rice/run.log` (rc=0).
+
+| Control / observation | Result |
+|---|---|
+| Whole-RDRAM | 10000 callbacks; removal rc=0; watch 1 remained armed |
+| Start / PIF | 11 injections (`sym=40`); 11 PIF `7C4=0x10000000` reads at 6..56s |
+| VI callback | 0→320 at 0.9s; 320→640 at 2.6s (VI 99); 640→1024 at 17.3s (VI 978); 1024→512 hangar origin `0x006ab400` at 38.4s (VI 2245), then `0x006ab400`/`0x006ab800` through 70.2s; 4150 VI / 69.2s emulated |
+| `0x688:0x710` | 0 CPU writes (0 logged hits of any `addr=0x000006` / `0x0000070` form) |
+| `0x04000670:0x04000720` | 0 CPU writes |
+
+This selects H2. Hangar was reached, so the targeted zeros are evaluable.
+They reject the s1135 remainder that retail CPU-owns the captured
+`r9=0x670..0x6C0` record in RDRAM. Combined with the generated DMEM
+`ori $9` and the `0xD60` DMA write, `r9` is DMEM; the numeric origin stays
+inside the RSP. The oracle cannot watch `ACCH:ACCM:ACCL`. No mitigation.
+
+ORIGIN: observational oracle watches plus already-generated ucode; no guest
+value was skipped, rewritten, or guarded.

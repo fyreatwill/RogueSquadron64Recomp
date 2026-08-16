@@ -61,3 +61,16 @@ No result is admissible without both the port positive-control row and an
 oracle whole-RDRAM positive control. The oracle target range must be derived
 from the same port capture; hard-coding an address before that capture would
 make a null indistinguishable from watching the wrong record.
+
+## s1512 close of the parked `0x688:0x710` remainder
+
+s1135 treated captured `r9=0x670..0x6C0` as RDRAM and parked a CPU write
+watch on physical `0x688:0x710`. Dummy-video arms never reached the shaded
+phase. The s1512 Rice hangar recipe reached 512 / origin `0x006ab400` with
+the whole-RDRAM control passing (10000 callbacks, removal rc=0), 11 Start
+injections with matching PIF `7C4=0x10000000`, and both
+`0x688:0x710` and SP-DMEM `0x04000670:0x04000720` at zero CPU writes.
+Generated overlay 0x20 sets `ori $9, $zero, 0x670` and the only `SP_WR_LEN`
+site DMAs DMEM `0xD60`, not `0x670`. Do not re-watch `0x688:0x710`. A new
+M4 oracle target needs a real RDRAM destination, not the DMEM record base.
+The oracle still cannot see `ACCH:ACCM:ACCL`.

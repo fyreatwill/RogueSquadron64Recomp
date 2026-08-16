@@ -1,13 +1,16 @@
-# NEXT work unit (s1512)
+# NEXT work unit (s1513)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Perform exactly one bounded exact-name census over the next adjacent
-generated function, `0x800AD224..0x800AD690`. Do not build or run. Record
-its address, size, generated definition, companion name/source, caller or
-semantic evidence, and confidence before editing. Synchronize only an exact
-independent name in `syms/rogue_squadron.syms.toml`; leave address-encoded,
-fake, or ambiguous entries unchanged. Leave `func_8008ED6C` unchanged
+s1512 was the mandatory every-15-sessions revisit and closed the parked
+M4 `0x688:0x710` RDRAM-ownership remainder. Resume the generated-symbol
+renaming sweep. Perform exactly one bounded exact-name census over the
+next adjacent generated function, `0x800AD224..0x800AD690`. Do not build
+or run. Record its address, size, generated definition, companion
+name/source, caller or semantic evidence, and confidence before editing.
+Synchronize only an exact independent name in
+`syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
+ambiguous entries unchanged. Leave `func_8008ED6C` unchanged
 (s1309 H2), `func_800927B0` unchanged (s1355 H3), `func_80092A54`
 unchanged (s1357 H3), `func_80092CF0` unchanged (s1359 H3),
 `func_80092F10` unchanged (s1360: TOML-only live-tail fragment),
@@ -45,6 +48,7 @@ different overlays, not a cinematic size split.
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
 with the eleven-Start schedule (s1496). Dummy video stays at 320.
+Do not re-watch `0x688:0x710` (s1512 H2).
 
 Competing hypotheses and discriminator:
 

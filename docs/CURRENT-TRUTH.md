@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1511 (2026-08-15).
+the authority for session detail. Reviewed through s1512 (2026-08-15).
 
 ## Current state
 
@@ -43,9 +43,14 @@ the authority for session detail. Reviewed through s1511 (2026-08-15).
   with generated and committed VI state. The active boot descriptor selects
   the index-0 320 record.
 - M4 shade-lane/order is not the cause. Port VMADH modeling and an independent
-  control matched all 128 lanes; the leading static explanation is a legitimate
-  clipping/saturation sentinel. Exact numeric origin and retail reachability
-  remain open.
+  control matched all 128 lanes; VGE changed 0/128 (s1135). The s1135 remainder
+  that retail CPU-owns the captured record at physical `0x688..0x710` is
+  rejected (s1512): Rice reached hangar 512/`0x006ab400` with the whole-RDRAM
+  control passing, and both `0x688:0x710` and SP-DMEM `0x04000670:0x04000720`
+  had zero CPU writes. Generated `ori $9, $zero, 0x670` plus the only
+  `SP_WR_LEN` DMA from DMEM `0xD60` independently identify `r9` as DMEM.
+  The unresolved issue is the RSP-internal vector numeric origin before
+  `vmadh v6,v4,v0`; the oracle cannot watch RSP accumulators.
 
 ## Active investigation and ranked next steps
 
@@ -131,10 +136,11 @@ the authority for session detail. Reviewed through s1511 (2026-08-15).
    at `0x800AD320`, and `updateCinematicCameraStateMachine` / TOML
    `func_800AD418` at `0x800AD418` occupy overlapping VRAM and are
    different overlays, not a cinematic size split.
-2. Future oracle work (M4 numeric origin, hangar/mission watches) must use
-   the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM, PIF,
-   and VI positive controls in the same run. Do not re-audit dummy-video
-   320-only schedules as if no later-phase route exists.
+2. Future oracle work (hangar/mission watches, or a new M4 RDRAM dest if
+   one is identified from a DMEM→RDRAM transfer that is not `0xD60`) must
+   use the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM,
+   PIF, and VI positive controls in the same run. Do not re-watch
+   `0x688:0x710` and do not re-audit dummy-video 320-only schedules.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation; then write a new bounded plan before changing stubs.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator;
@@ -172,8 +178,11 @@ width. This boundary is independently established.
 
 Factor 5 reference data and paired combiner evidence refute an RT64 shade
 ordering explanation. VTXCOLOR is nonzero while decoded shade is the fixed
-`0xFFFF8000`/`0x00008000` sentinel. The unresolved issue is the vector numeric
-origin before `vmadh v6,v4,v0`, not RT64 lane order.
+`0xFFFF8000`/`0x00008000` sentinel. Port VMADH matched all 128 captured
+lanes; VGE mutated none. Physical `0x688..0x710` is not a retail CPU-written
+shade record (s1512 Rice hangar, two-line: quiet CPU watches plus generated
+DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
+`vmadh v6,v4,v0`, not RT64 lane order and not low-RDRAM ownership.
 
 ## Superseded conclusions
 
@@ -200,6 +209,11 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
   used dummy video, whose `ProcessDList` is empty, so the boot cinematic
   never advances. s707 and the s1496 dummy-vs-Rice batch show Rice is the
   later-phase route.
+- The s1135 remainder that physical `0x688..0x710` is the retail shade
+  record (parked as unevaluable under dummy video in s1136–s1239) is
+  rejected. It was believable because the port probe treated `r9` as RDRAM
+  (`r9 & 0x7FFFFF`) and the dummy-video nulls never reached hangar. s1512
+  Rice hangar plus generated DMEM `ori $9, $zero, 0x670` close it.
 
 ## Evidence ledger summary
 
@@ -212,6 +226,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1168–s1193 | Audio and complete M3 store/load idiom audits closed without a mitigation; `do_sdl`/`do_sdr` selected H3. |
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
+| s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
 | s1270 | Exact companion/generated voice-symbol census synchronized nine entries at `0x80086450..0x80086F44`; no build or runtime run. |
