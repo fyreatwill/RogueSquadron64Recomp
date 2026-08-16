@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1736)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1739)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3015,10 +3015,11 @@ collision.
 | s1736 | Synchronized `npcWingmanState5` (`0x800DA234`, `0x12C`). Two-way `+0x5E` toggle, HMT names `0x800A7844`/`0x800A784C`, dual `lookupHmtTextureByName` `a2=0/1` through `npcWingmanStateEffectShared`; OR of the two 8-bit returns, optional `play3DSoundEvent` `0x2F`/`0x6E`/`0x3C` with float `0x800A7AFC`. `getNpcWingmanStateData` case 5 (`0x800E0000 + -0x5DCC`). |
 | s1737 | Synchronized `npcWingmanStateNoop` (`0x800DA360`, `0x8`). Delay-slot `jr $ra` / `addiu $v0, $zero, 0x1` always returns 1. `getNpcWingmanStateData` case 6 (`0x800E0000 + -0x5CA0`). |
 | s1738 | Synchronized `npcWingmanState6` (`0x800DA368`, `0xD8`). Two-way `+0x5E` toggle, HMT name `0x800A7844` with `a2=0/1` through `npcWingmanStateEffectShared`; optional `play3DSoundEvent` `0x31`/`0x64`/`0x32` with float `0x800A7B00`. `getNpcWingmanStateData` case 7 (`0x800E0000 + -0x5C98`). |
+| s1739 | Synchronized `npcTieVariantTickEffects` (`0x800DA440`, `0x398`). Five-way jump table at `0x800A7B18` on object halfword `+0x8A`; cases 0/2/3, 1, and 4 each do HMT lookup + `tickProgressChannel` + `triggerCueWithSlotEffect`/`slotDispatcherIter`; shared `play3DSoundEvent` `0x31`/`0x6E`/`0x3C` with float `0x800A7B4C`. |
 
-The sweep cursor after s1738 is `npcTieVariantTickEffects` at `0x800DA440`
-(size `0x398`). Next contiguous neighbor is `func_800DA7D8` /
-`npcTieVariantSteerToward` at `0x800DA7D8`. Mandatory revisits in this window:
+The sweep cursor after s1739 is `npcTieVariantSteerToward` at `0x800DA7D8`
+(size `0x1D8`). Next contiguous neighbor is `func_800DA9B0` /
+`npcTieVariantTickAttachmentEffect` at `0x800DA9B0`. Mandatory revisits in this window:
 s1650, s1666, s1682, s1698, s1714. s1728 is maintenance, so the next
 all-sweep 15-title window has not opened.
 

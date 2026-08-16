@@ -80920,3 +80920,39 @@ runtime run required.
 Next census: `npcTieVariantTickEffects` / `func_800DA440` at
 `0x800DA440` (size `0x398`). Last-15 titles after s1738 still include
 s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
+
+## Session 1739 (2026-08-16) — synchronized the npcTieVariantTickEffects symbol
+
+Exact generated-symbol census for `0x800DA440` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1728's
+maintenance compaction, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 6017; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTieVariantTickEffects = 0x800DA440` with comment "TIE-variant effect-tick (cue + slot-dispatch)". Previous contiguous neighbor `npcWingmanState6 = 0x800DA368`; next contiguous neighbor `npcTieVariantSteerToward = 0x800DA7D8` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTieVariantTickEffects` at VRAM `0x800DA440`; prologue `addiu $sp, $sp, -0x100`; saves `$ra`/`$s3`/`$s2`/`$s1`/`$s0` and `$f22`/`$f20`. Loads NPC object `*(a0+4)` into `$s2`, `getObjectNpcTypeId(*(s2+0x38))`, then 5-way `jr` table at `0x800A7B18` on object halfword `+0x8A` (`>= 5` skips to epilogue). Cases 0/2/3 share `L_800DA4AC` (`setObjectSubstructF10IfReady` when `a1==0`, `lookupHmtTextureByName`, `tickProgressChannel`, `triggerCueWithSlotEffect`, `slotDispatcherIter`). Case 1 (`L_800DA594`) does two HMT lookups plus two cue/slot pairs. Case 4 (`L_800DA6D8`) is the single-cue path. Shared tail `L_800DA790` calls `play3DSoundEvent` with table `0x31/0x6E/0x3C` and float `0x800A7B4C`. Epilogue `jr $ra` / `addiu $sp, $sp, 0x100` ends at `0x800DA7D4` and returns 0. Previous mission function is `npcWingmanState6` at `0x800DA368` (last insn `0x800DA43C`); next is `npcTieVariantSteerToward` at `0x800DA7D8`. `funcs.h` already declares the human name. No generated `jal npcTieVariantTickEffects` |
+| Body semantics | Matches the companion "TIE-variant effect-tick (cue + slot-dispatch)": typed jump on `+0x8A`, HMT lookup, progress-channel tick, cue-with-slot-effect plus `slotDispatcherIter`, optional 3D sound. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800DA440", vram = 0x800DA440, size = 0x398 }` — size matches `0x800DA7D8 - 0x800DA440` (last insn `0x800DA7D4` + 4 = `0x398`) |
+| Overlay section 4 | `{ .func = npcTieVariantTickEffects, .offset = 0x00035310, .rom_size = 0x00000398 }` under `section_4_ovl_mission_funcs` (`0x800DA440 - 0x800A5130 = 0x35310`; `0x35238 + 0xD8 = 0x35310`; `0x35310 + 0x398 = 0x356A8` matches next `npcTieVariantSteerToward`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DA440`. No leftover `func_800DA440` in generated headers or overlay INL; no companion `D_800DA440` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated TIE-variant effect-tick body,
+previous (`npcWingmanState6` / `0x800DA368`) and next
+(`npcTieVariantSteerToward` / `0x800DA7D8`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcTieVariantTickEffects`, and only the TOML name was a stale
+`func_800DA440` placeholder. Corrected TOML to `npcTieVariantTickEffects`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTieVariantSteerToward` / `func_800DA7D8` at
+`0x800DA7D8` (size `0x1D8`). Last-15 titles after s1739 still include
+s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
