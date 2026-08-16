@@ -1799,7 +1799,7 @@ functions = [
     { name = "npcAtStUpdate", vram = 0x800CFE7C, size = 0x120C },
     { name = "playerAtStInit", vram = 0x800D1088, size = 0x1C0 },
     { name = "spawnPlayerAtStCannonFire", vram = 0x800D1248, size = 0x330 },
-    { name = "func_800D1578", vram = 0x800D1578, size = 0x1B8 },
+    { name = "advancePlayerAtStLocomotion", vram = 0x800D1578, size = 0x1B8 },
     { name = "func_800D1730", vram = 0x800D1730, size = 0xAD8 },
     { name = "playerAtStUpdate", vram = 0x800D2208, size = 0x954 },
     { name = "func_800D2B5C", vram = 0x800D2B5C, size = 0xFC },

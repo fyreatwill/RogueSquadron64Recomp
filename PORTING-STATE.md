@@ -79466,3 +79466,39 @@ Remaining retail-entry leads are the destination of the attract-512
 A/Start/C-up/L 1024 and the still-single-source 128.3 s Z leave. Next
 work resumes the generated-symbol sweep at `func_800D1578` /
 `advancePlayerAtStLocomotion`.
+
+## Session 1699 (2026-08-16) — synchronized the advancePlayerAtStLocomotion symbol
+
+Exact generated-symbol census for `0x800D1578` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 42934; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `advancePlayerAtStLocomotion = 0x800D1578`. Previous contiguous neighbor `spawnPlayerAtStCannonFire = 0x800D1248`; next contiguous neighbor `updatePlayerAtStBehavior = 0x800D1730`. Coarse listing also names `playerAtStUpdate = 0x800D2208` later |
+| Generated `funcs_37.c` | `RECOMP_FUNC void advancePlayerAtStLocomotion` at VRAM `0x800D1578`; prologue `addiu $sp, $sp, -0x70`; returns through `jr $ra` / `addiu $sp, $sp, 0x70` ending at `0x800D172C`; previous mission function is `spawnPlayerAtStCannonFire` at `0x800D1248` (last insn `0x800D1574`); next mission function is `updatePlayerAtStBehavior` at `0x800D1730`. `funcs.h` already declares the human name |
+| Body semantics | Actor at `a0` (`s0`). If float `+0x60` >= 0, proposed XZ is pos (`+0`/`+8`) plus vel (`+0xC`/`+0x14`); if `+0x60` < 0, proposed XZ is pos minus vel. `wrapAngleToCyclicRange` on that XZ vs `0x80138058`; if the result is less than `0x800A7248`, return 1. Else copy current pos, subtract `0x800A724C` from Y, scale vel by `0x800A7250` (and negate the scaled vel when `+0x60` < 0). Walk `findActiveNpcInSlotChain` on halfword `0x8013957C`, skip slot `+0x72` (self), and for each other NPC with context `+0xC` run `findSegmentObjectSphereHit` on the proposed step. Hit returns 1; exhausted iterator returns 0. Exclusive generated callers are two `updatePlayerAtStBehavior` sites at `0x800D189C` and `0x800D1A44` (`a0=s1`). Name matches a player-AT-ST locomotion collision probe |
+| TOML (before) | `{ name = "func_800D1578", vram = 0x800D1578, size = 0x1B8 }` — size matches `0x800D1730 - 0x800D1578` (last insn `0x800D172C` + 4 = `0x1B8`) |
+| Overlay section 4 | `{ .func = advancePlayerAtStLocomotion, .offset = 0x0002C448, .rom_size = 0x000001B8 }` under `section_4_ovl_mission_funcs` (`0x800D1578 - 0x800A5130 = 0x2C448`; `0x2C118 + 0x330 = 0x2C448`; `0x2C448 + 0x1B8 = 0x2C600` matches next `updatePlayerAtStBehavior`) |
+| Non-collision | No menu-overlay function occupies `0x800D1578`. Nearest menu symbols are earlier data `D_800D0120` / `D_800D03D0` / `medalInfo` in the same VRAM window on a different overlay. Companion and generated greps found no other `func_800D1578` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated player-AT-ST locomotion-probe
+body, previous (`spawnPlayerAtStCannonFire` / `0x800D1248`) and next
+(`updatePlayerAtStBehavior` / `0x800D1730`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`advancePlayerAtStLocomotion`, and only the TOML name was a stale
+`func_800D1578` placeholder. Corrected TOML to `advancePlayerAtStLocomotion`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `func_800D1730` / `updatePlayerAtStBehavior` at `0x800D1730`
+(size `0xAD8`). Last-15 titles still include s1698's retail-entry revisit,
+so the next iteration continues the sweep.
