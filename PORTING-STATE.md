@@ -75864,3 +75864,28 @@ build or runtime run was justified for this exact-name census. The next
 bounded candidate is `func_800B6990`, independently named
 `updateEngineThrustEffect`, with size `0x7D8`; `playerAwingUpdate` begins at
 `0x800B7168`. This naming change does not reopen M5 audio de-stubbing.
+
+## Session 1578 (2026-08-16) — synchronized the updateEngineThrustEffect symbol
+
+Performed the bounded exact-name census over `0x800B6990..0x800B7168`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 20,389 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail had no newer verdict requiring
+analysis. The last-15 title check included s1569's non-sweep retail-entry
+revisit, so the sweep-revisit rule did not fire. M5 remains closed and M3
+remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B6990` at `0x800B6990` with size `0x7D8`; the companion `../rogue_squadron64/symbol_files/mission_overlay.txt` independently maps `updateEngineThrustEffect = 0x800B6990`. The next companion function is `playerAwingUpdate` at `0x800B7168`. |
+| Generated definition | `funcs_31.c` already defines `updateEngineThrustEffect` at `0x800B6990`; its epilogue reaches `0x800B7164` and the next generated definition begins at `0x800B7168`, matching the exact `0x7D8` span. |
+| Caller and semantic evidence | Generated `funcs_31.c` calls `updateEngineThrustEffect` from `playerAwingUpdate` at `0x800B744C`. The generated body is the engine-thrust effect update between the preceding `emitTexturedImpactEffect` and following `playerAwingUpdate` boundaries. |
+| Confidence | High |
+
+The complete comparison selects H1. H2 is ruled out because the entry is not
+partial, fake, or conflicting; H3 is ruled out by the independent companion
+name and generated definition/caller evidence. Updated only the TOML name; no
+build or runtime run was justified for this exact-name census. The next
+bounded candidate is `func_800B7590`, independently named `findLockOnTarget`,
+with size `0x34`; the already-fake `fake_func_800B75C4` begins at
+`0x800B75C4`. This naming change does not reopen M5 audio de-stubbing.

@@ -1,24 +1,24 @@
-# NEXT work unit (s1578)
+# NEXT work unit (s1579)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol renaming sweep with exactly one bounded
-exact-name census over the next placeholder, `0x800B6990..0x800B7168`.
+exact-name census over the next placeholder, `0x800B7590..0x800B75C4`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence before
 editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
 entries unchanged. This naming census does not reopen M5 audio de-stubbing.
 
-The TOML entry is `func_800B6990` with size `0x7D8`. The companion mission
-list maps `updateEngineThrustEffect = 0x800B6990`; the next named mission
-function is `playerAwingUpdate` at `0x800B7168`. Synchronize only if the
-complete comparison remains exact.
+The TOML entry is `func_800B7590` with size `0x34`. The companion mission
+list maps `findLockOnTarget = 0x800B7590`; the next entry is the already-fake
+`fake_func_800B75C4` at `0x800B75C4`. Synchronize only if the complete
+comparison remains exact.
 
 Competing hypotheses and discriminator:
 
 - H1: the function has an exact independent companion mapping and can be
-  synchronized to `updateEngineThrustEffect`.
+  synchronized to `findLockOnTarget`.
 - H2: the mapping is partial, already-fake, or ambiguous, so the entry must
   remain unchanged.
 - H3: no independent naming source exists and the region should be parked.
@@ -31,7 +31,7 @@ and no independent name selects H3. Each outcome selects one hypothesis.
 Commands:
 
 ```
-grep -n -C 5 -E '800B6990|800B7168|updateEngineThrustEffect|playerAwingUpdate' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 -E '800B6990|800B7168|updateEngineThrustEffect|playerAwingUpdate' ../N64Recomp/RecompiledFuncs/funcs_31.c
-grep -n -C 3 -E '800B6990|800B7168|updateEngineThrustEffect|playerAwingUpdate' syms/rogue_squadron.syms.toml
+grep -n -C 5 -E '800B7590|800B75C4|findLockOnTarget|fake_func_800B75C4' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 -E '800B7590|800B75C4|findLockOnTarget|fake_func_800B75C4' ../N64Recomp/RecompiledFuncs/funcs_31.c
+grep -n -C 3 -E '800B7590|800B75C4|findLockOnTarget|fake_func_800B75C4' syms/rogue_squadron.syms.toml
 ```

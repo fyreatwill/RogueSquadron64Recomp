@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1577 (2026-08-16).
+the authority for session detail. Reviewed through s1578 (2026-08-16).
 
 ## Current state
 
@@ -75,7 +75,7 @@ the authority for session detail. Reviewed through s1577 (2026-08-16).
    and M4 threads; s1569 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
-   sizes, and caller/semantic evidence. Per-session H1 syncs through s1577
+   sizes, and caller/semantic evidence. Per-session H1 syncs through s1578
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
@@ -105,8 +105,15 @@ the authority for session detail. Reviewed through s1577 (2026-08-16).
    s1577 synchronized `emitTexturedImpactEffect` at `0x800B67A0` (size
    `0x1F0`): the companion mission list, generated definition and three
    generated callers, exact next-function boundary, and TOML size agree. The
-   next census is `func_800B6990`, independently named
+   next census was `func_800B6990`, independently named
    `updateEngineThrustEffect`.
+
+   s1578 synchronized `updateEngineThrustEffect` at `0x800B6990` (size
+   `0x7D8`): the companion mission list, generated definition and caller from
+   `playerAwingUpdate`, exact next-function boundary, and TOML size agree.
+   The next census is `func_800B7590`, independently named
+   `findLockOnTarget`, with the already-fake `fake_func_800B75C4` immediately
+   after its `0x34` span.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -274,6 +281,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1575 | H1: synchronized `resetEngineTrailQuads` at `0x800B5B4C` (size `0x87C`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1576 | H1: synchronized `acquireLockOnTarget` at `0x800B63C8` (size `0x3D8`); companion mapping, generated definition/two callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1577 | H1: synchronized `emitTexturedImpactEffect` at `0x800B67A0` (size `0x1F0`); companion mapping, generated definition/three callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
+| s1578 | H1: synchronized `updateEngineThrustEffect` at `0x800B6990` (size `0x7D8`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
