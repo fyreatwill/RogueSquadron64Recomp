@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1549 (2026-08-15).
+the authority for session detail. Reviewed through s1550 (2026-08-15).
 
 ## Current state
 
@@ -72,7 +72,7 @@ the authority for session detail. Reviewed through s1549 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads; s1544 was that revisit) with one bounded exact-name
-   census over the next adjacent function, `0x800B0850..0x800B0A88`.
+   census over the next adjacent function, `0x800B0A88..0x800B1024`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -180,29 +180,32 @@ the authority for session detail. Reviewed through s1549 (2026-08-15).
    `0x800AFCF4`. s1548 synchronized
    `loadPlayerStartPosition` at `0x800AFE4C`. s1549
    synchronized `spawnSceneDebrisAndEffectCluster` at
-   `0x800B01E4`. The generated entry at `0x800B0850`
-   is already `spawnNpcDestructionDebris`; the
-   companion mission list maps
-   `spawnNpcDestructionDebris = 0x800B0850`
-   (destroys an NPC and spawns its debris/particles
-   + speech). TOML is still `func_800B0850` (size
-   `0x238`, ends at generated
-   `updateSplineCraftTransform` / TOML
-   `func_800B0A88` at `0x800B0A88`). Overlay
-   `rom_size` is `0x238` at offset `0x0000B720`.
+   `0x800B01E4`. s1550 synchronized
+   `spawnNpcDestructionDebris` at `0x800B0850`.
+   The generated entry at `0x800B0A88` is already
+   `updateSplineCraftTransform`; the companion
+   mission list maps
+   `updateSplineCraftTransform = 0x800B0A88`
+   (builds a craft's spline orientation matrix +
+   plays sound). TOML is still `func_800B0A88`
+   (size `0x59C`, ends at generated
+   `computeOrientedTransformFromQuat` / TOML
+   `func_800B1024` at `0x800B1024`). Overlay
+   `rom_size` is `0x59C` at offset `0x0000B958`.
    Confirm the complete live function, matching
    size, and caller/semantic evidence before
    synchronizing the TOML name. Independently named
-   `spawnSceneDebrisAndEffectCluster` at
-   `0x800B01E4` (`rom_size` `0x66C`) ends at this
-   address. Last live instruction pair is
-   `0x800B0A80`/`0x800B0A84` (`jr $ra` /
-   `addiu $sp, $sp, 0x28`). Menu-overlay TOML
-   `func_800B07F4` at `0x800B07F4` (`rom_size`
-   `0x100`, ends `0x800B08F4`) and `func_800B08F4`
-   (`rom_size` `0xB3C`, ends `0x800B1430`) occupy
-   overlapping VRAM from `.ovl.menu` and are not a
-   mission size split.
+   `spawnNpcDestructionDebris` at `0x800B0850`
+   (`rom_size` `0x238`) ends at this address.
+   Last live instruction pair is
+   `0x800B101C`/`0x800B1020` (`jr $ra` /
+   `addiu $sp, $sp, 0xA0`). Menu-overlay TOML
+   `func_800B08F4` at `0x800B08F4` (`rom_size`
+   `0xB3C`, ends `0x800B1430`) occupies overlapping
+   VRAM from `.ovl.menu` and is not a mission size
+   split. Generated `runScriptedCraftCinematicEvent`
+   starts at menu VRAM `0x800B08F4` and is not this
+   body.
 2. Future oracle work on the 640/`0x6a2900` handler, a later mission
    watch, or a new M4 RDRAM dest (a DMEM→RDRAM transfer that is not
    `0xD60`) must use the Rice `--video` recipe above, not dummy video.
@@ -587,6 +590,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1547 | Exact companion/generated mission-scene census synchronized `findNearestSceneObjectToPoint` at `0x800AFCF4`; no build or runtime run. |
 | s1548 | Exact companion/generated mission-start census synchronized `loadPlayerStartPosition` at `0x800AFE4C`; no build or runtime run. |
 | s1549 | Exact companion/generated mission-debris census synchronized `spawnSceneDebrisAndEffectCluster` at `0x800B01E4`; no build or runtime run. |
+| s1550 | Exact companion/generated mission-debris census synchronized `spawnNpcDestructionDebris` at `0x800B0850`; no build or runtime run. |
 
 ## Method and safety rules
 

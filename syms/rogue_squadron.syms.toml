@@ -1598,7 +1598,7 @@ functions = [
     { name = "findNearestSceneObjectToPoint", vram = 0x800AFCF4, size = 0x158 },
     { name = "loadPlayerStartPosition", vram = 0x800AFE4C, size = 0x398 },
     { name = "spawnSceneDebrisAndEffectCluster", vram = 0x800B01E4, size = 0x66C },
-    { name = "func_800B0850", vram = 0x800B0850, size = 0x238 },
+    { name = "spawnNpcDestructionDebris", vram = 0x800B0850, size = 0x238 },
     { name = "func_800B0A88", vram = 0x800B0A88, size = 0x59C },
     { name = "func_800B1024", vram = 0x800B1024, size = 0x3BC },
     { name = "func_800B13E0", vram = 0x800B13E0, size = 0x808 },
