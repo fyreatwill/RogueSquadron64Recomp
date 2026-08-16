@@ -1785,7 +1785,7 @@ functions = [
     { name = "tickActorTexturedSoundEffect", vram = 0x800CC158, size = 0x154 },
     { name = "tickAtAtBodyTransform", vram = 0x800CC2AC, size = 0x70C },
     { name = "tickAtAtAudioAndWeaponState", vram = 0x800CC9B8, size = 0x164 },
-    { name = "func_800CCB1C", vram = 0x800CCB1C, size = 0x17C },
+    { name = "processAtAtSubFeatureSlot", vram = 0x800CCB1C, size = 0x17C },
     { name = "func_800CCC98", vram = 0x800CCC98, size = 0x6F4 },
     { name = "func_800CD38C", vram = 0x800CD38C, size = 0x1CC },
     { name = "func_800CD558", vram = 0x800CD558, size = 0x1C4 },

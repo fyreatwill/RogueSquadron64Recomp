@@ -78924,3 +78924,34 @@ runtime run required.
 Next census: `func_800CCB1C` / `processAtAtSubFeatureSlot` at `0x800CCB1C`
 (size `0x17C`). Last-15 titles still include s1682, so the next iteration
 may continue the sweep.
+
+## Session 1684 (2026-08-16) — synchronized the processAtAtSubFeatureSlot symbol
+
+Exact generated-symbol census for `0x800CCB1C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 32614; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `processAtAtSubFeatureSlot = 0x800CCB1C`; previous contiguous helper `tickAtAtAudioAndWeaponState = 0x800CC9B8`; next contiguous helper `npcAtAtHandleDestruction = 0x800CCC98` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void processAtAtSubFeatureSlot` at VRAM `0x800CCB1C`; prologue `addiu $sp, $sp, -0xB8`; returns through `jr $ra` / `addiu $sp, $sp, 0xB8` ending at `0x800CCC94`; previous mission function is `tickAtAtAudioAndWeaponState` at `0x800CC9B8` (last insn `0x800CCB18`); next mission function is `npcAtAtHandleDestruction` at `0x800CCC98` |
+| Body semantics | Actor in `$s1`/`$a0`. Builds a NUL-terminated HMT name `sf` + (`'1'` + byte `+0x6E`) on the stack, then `lookupHmtTextureByName` on actor `+0x30`. Walks `findActiveNpcInSlotChain` / `getNpcContextField8`, tests 3D delta against actor `+0x54` scaled by `0x800A6DD8`/`0x6DDC`, and on hit `slotDispatcherIter` type 9. `revalidateNpcSlotIterator` advances the chain; after the walk, `+0x6E` increments modulo 4. Called from `npcAtAtUpdate` at `0x800CE24C`. Name matches the AT-AT sub-feature slot tick |
+| TOML (before) | `{ name = "func_800CCB1C", vram = 0x800CCB1C, size = 0x17C }` — size matches `0x800CCC98 - 0x800CCB1C` (95 decoded insns, last+4 = `0x17C`) |
+| Overlay section 4 | `{ .func = processAtAtSubFeatureSlot, .offset = 0x000279EC, .rom_size = 0x0000017C }` under `section_4_ovl_mission_funcs` (`0x800CCB1C - 0x800A5130 = 0x279EC`; `0x27888 + 0x164 = 0x279EC`; `0x279EC + 0x17C = 0x27B68` matches next `npcAtAtHandleDestruction`) |
+| Non-collision | Menu-overlay `fake_func_800CC3D4 = 0x800CC3D4` (size `0x114C`) plus hangar/menu data live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. They appear inside the mission VRAM span in `funcs_37.c` only because overlays share VRAM |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated AT-AT sub-feature slot tick,
+previous (`tickAtAtAudioAndWeaponState` / `0x800CC9B8`) and next
+(`npcAtAtHandleDestruction` / `0x800CCC98`) boundaries, TOML size, and
+section-4 overlay span agreed; only the TOML name was a stale `func_800CCB1C`
+placeholder. Corrected TOML to `processAtAtSubFeatureSlot`. No build or
+runtime run required.
+
+Next census: `func_800CCC98` / `npcAtAtHandleDestruction` at `0x800CCC98`
+(size `0x6F4`). Last-15 titles still include s1682, so the next iteration
+may continue the sweep.
