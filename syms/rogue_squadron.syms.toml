@@ -1812,7 +1812,7 @@ functions = [
     { name = "npcShuttleHandleDestruction", vram = 0x800D33CC, size = 0x4C8 },
     { name = "npcShuttleUpdate", vram = 0x800D3894, size = 0x1630 },
     { name = "fake_func_800D4EC4", vram = 0x800D4EC4, size = 0xC },
-    { name = "func_800D4ED0", vram = 0x800D4ED0, size = 0x1A8 },
+    { name = "npcInitChildLinkedToParent", vram = 0x800D4ED0, size = 0x1A8 },
     { name = "func_800D5078", vram = 0x800D5078, size = 0x190 },
     { name = "func_800D5208", vram = 0x800D5208, size = 0xDD8 },
     { name = "func_800D5FE0", vram = 0x800D5FE0, size = 0x154 },

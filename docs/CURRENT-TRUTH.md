@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1711 (2026-08-16).
+the authority for session detail. Reviewed through s1712 (2026-08-16).
 
 ## Current state
 
@@ -85,13 +85,13 @@ the authority for session detail. Reviewed through s1711 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at
-   `npcInitChildLinkedToParent` (`0x800D4ED0`, size `0x1A8`). After
-   s1711 the last-15 titles still include the s1698 retail-entry
+   `advanceNpcSpinOrientation` (`0x800D5078`, size `0x190`). After
+   s1712 the last-15 titles still include the s1698 retail-entry
    revisit, so the 15-title gate does not fire. s1651–s1665,
-   s1667–s1681, s1683–s1697, and s1699–s1711 synchronized or
-   confirmed DAT-item through `fake_func_800D4EC4`; s1650, s1666,
-   s1682, and s1698 were the mandatory retail-entry revisits. The
-   full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
+   s1667–s1681, s1683–s1697, and s1699–s1712 synchronized or
+   confirmed DAT-item through `npcInitChildLinkedToParent`; s1650,
+   s1666, s1682, and s1698 were the mandatory retail-entry revisits.
+   The full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
    earlier sweep is in §33.
    About 1,548 placeholder `func_0x...` names remained when counted
    at s1487.
@@ -265,6 +265,7 @@ ownership.
 | s1709 | Synchronized `npcShuttleHandleDestruction` (`0x800D33CC`, size `0x4C8`) after companion mission mapping, live generated Imperial-shuttle destruction body (`spawnNpcType0xAFromTemplate`, `zmemcpy`, `gameStateByteGatedNpcHelper`, `spawnDestructionEffectBurst` ×2, `composeRandomRotationMatrix`, `scaleVec3ByRandomRange`, `spawnDebris1Npc`, `spawnDestructionDebris`, `spawnDirectionalDebrisBurst`, `rand_recomp` ×9, `vec3Length`, `normalize_vector`; exclusive caller `npcShuttleUpdate` at `0x800D4B28` after `dealDamageToNpc` `<= 0`), exact `0x800D3240`/`0x800D3894` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `npcShuttleUpdate`. |
 | s1710 | Confirmed `npcShuttleUpdate` (`0x800D3894`, size `0x1630`) was already synchronized: companion mission mapping, live generated 9-way Imperial-shuttle update (`walkMeshdef0List`, `createAndInitObject`, `dealDamageToNpc`, `npcShuttleHandleDestruction`, `distanceAndDopplerNpcHelper`, `slotDispatcherIter`), exact `0x800D33CC`/`0x800D4EC4` boundaries, TOML name and size, and section-4 span agreed. Menu concert-hall/medal data at the same VRAM window is a different overlay, not a name collision. Next candidate is `fake_func_800D4EC4`. |
 | s1711 | Confirmed `fake_func_800D4EC4` (`0x800D4EC4`, size `0xC`) was already classified as the explicit 12-byte leftover instruction pad (`lw $v1, 0x20($fp)` / `lw $a0, 0x4($v1)` / `addiu $v1, $a0, 0x8`) between `npcShuttleUpdate` and `npcInitChildLinkedToParent`: companion mapping, live generated fragment, exact `0x800D3894`/`0x800D4ED0` boundaries, TOML name and size, and section-4 span agreed. No menu function occupies the address. Next candidate is `func_800D4ED0` / `npcInitChildLinkedToParent`. |
+| s1712 | Synchronized `npcInitChildLinkedToParent` (`0x800D4ED0`, size `0x1A8`) after companion mission mapping, live generated child-NPC-init body (`setNpcHealth`, `setObjectDetailLevel`; flag `*(a0+0x14)&0x20` selects own template vs parent `*(a2+0xC)` for `+0x50/+0x54`; state byte `+0xC9` = 0/2; rand-scaled spin rates `+0x60/+0x64`), exact `0x800D4EC4`/`0x800D5078` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D5078` / `advanceNpcSpinOrientation`. |
 
 ## Method and safety rules
 

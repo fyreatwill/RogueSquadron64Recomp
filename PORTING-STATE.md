@@ -79924,3 +79924,39 @@ and section-4 row are all present. No TOML or generated-name change.
 Next census: `npcInitChildLinkedToParent` / `func_800D4ED0` at `0x800D4ED0`
 (size `0x1A8`). Last-15 titles still include s1698's retail-entry revisit, so
 the next iteration continues the sweep.
+
+## Session 1712 (2026-08-16) — synchronized the npcInitChildLinkedToParent symbol
+
+Exact generated-symbol census for `0x800D4ED0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 50346; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcInitChildLinkedToParent = 0x800D4ED0` with comment "init a child NPC bound to a parent (wires parent-link fields)". s432 deleted the duplicate `func_800D4ED0` placeholder. Previous contiguous neighbor `fake_func_800D4EC4 = 0x800D4EC4`; next contiguous neighbor `advanceNpcSpinOrientation = 0x800D5078` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcInitChildLinkedToParent` at VRAM `0x800D4ED0`; prologue `addiu $sp, $sp, -0x38`; returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800D5074`; previous mission function is `fake_func_800D4EC4` at `0x800D4EC4` (last insn `0x800D4ECC`); next mission function is `advanceNpcSpinOrientation` at `0x800D5078`. `funcs.h` already declares the human name |
+| Body semantics | Object at `a0` (`s0`); NPC context `s1 = *(s0+4)`; parent/source `s3 = a2`; template `s2 = *(s1+0x34)`. `setNpcHealth` at `0x800F2070` (`a0=*(s1+0x38)`, `a1=s2+0x6C`, `a2=s2`). `setObjectDetailLevel` at `0x800F2830` (`a1=*(template+0xA4)`). If `*(s0+0x14) & 0x20 == 0`, fill `s1+0x50` from template `+0x58` or scaled `+0xC8` (fallback 1) and `s1+0x54` from scaled `+0xC8`; else take parent template `s2 = *(s3+0xC)` and copy that scaled `+0xC8` into `+0x50/+0x54`. State byte `s1+0xC9` is 2 when `+0x54 <= 0`, else 0. Two `rand_recomp` `& 0x7F` values scaled by `D_800A75F0`/`D_800A75F4` become spin-rate floats at `+0x60/+0x64` (consumed by `advanceNpcSpinOrientation`). Copies world pos `+0xC/+0x10/+0x14` → `+0x6C/+0x70/+0x74` and rot `+0x18/+0x1C/+0x20` → `+0x78/+0x7C/+0x80`; zeros `+0x58/+0x5C/+0x68/+0xC8`. No generated `jal` callers. Name matches child-NPC init that optionally wires parent-derived fields from `a2` |
+| TOML (before) | `{ name = "func_800D4ED0", vram = 0x800D4ED0, size = 0x1A8 }` — size matches `0x800D5078 - 0x800D4ED0` (last insn `0x800D5074` + 4 = `0x1A8`) |
+| Overlay section 4 | `{ .func = npcInitChildLinkedToParent, .offset = 0x0002FDA0, .rom_size = 0x000001A8 }` under `section_4_ovl_mission_funcs` (`0x800D4ED0 - 0x800A5130 = 0x2FDA0`; `0x2FD94 + 0xC = 0x2FDA0`; `0x2FDA0 + 0x1A8 = 0x2FF48` matches next `advanceNpcSpinOrientation`) |
+| Non-collision | No menu-overlay function occupies `0x800D4ED0`. Companion menu grep is empty for this address and name; menu symbols in the same VRAM window end at `medalInfo` (`0x800D03DC`). Companion and generated greps found no other `func_800D4ED0` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated child-NPC-init body, previous
+(`fake_func_800D4EC4` / `0x800D4EC4`) and next
+(`advanceNpcSpinOrientation` / `0x800D5078`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcInitChildLinkedToParent`, and only the TOML name was a stale
+`func_800D4ED0` placeholder. Corrected TOML to `npcInitChildLinkedToParent`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `advanceNpcSpinOrientation` / `func_800D5078` at `0x800D5078`
+(size `0x190`). Last-15 titles still include s1698's retail-entry revisit, so
+the next iteration continues the sweep.
