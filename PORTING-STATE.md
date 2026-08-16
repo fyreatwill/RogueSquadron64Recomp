@@ -77236,3 +77236,28 @@ human name, while `syms/rogue_squadron.syms.toml` still used
 `getDisplayItemStateByte`. H2 and H3 are ruled out by the independent mission
 name, live body, exact adjacent boundaries, matching TOML size, and matching
 overlay span. No runtime behavior conclusion was made.
+
+## Session 1629 (2026-08-16) — classified the 800C64B0 symbol collision
+
+Ran the exact generated-symbol census for `0x800C64B0` without building or
+running. The competing hypotheses were H1: an independently supported mission
+name and exact generated/TOML/overlay span justify synchronization; H2: the
+matching name belongs to another overlay/context; and H3: no independent name
+is available, a boundary conflicts, or the entry is data-like. The complete
+companion/generated/TOML/overlay comparison was the discriminator.
+
+The generated `func_800C64B0` is a live `0x11C`-byte body. It walks the
+hangar display-item/object data, resolves a named entry, initializes a HUD
+element extreme, copies a configured float, clears a byte, and advances the
+display-item state. Its exact preceding boundary is
+`getDisplayItemStateByte` at `0x800C6498`; its next boundary is
+`0x800C65CC`. The project TOML gives size `0x11C`, and the mission overlay
+table carries the same ROM entry and span.
+
+However, `mission_overlay.txt` leaves `0x800C64B0` as `func_800C64B0`, while
+`main_overlay.txt` independently names the same VRAM `initHangarDisplayItemTimers`.
+The generated file also starts a distinct main-overlay function at that same
+address, confirming an overlay-context collision rather than a missing mission
+name. H2 is selected; H1 and H3 are ruled out by the live body and exact spans,
+but the ownership conflict prevents a safe mission rename. No file rename or
+runtime behavior conclusion was made.
