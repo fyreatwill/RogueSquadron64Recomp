@@ -1718,7 +1718,7 @@ functions = [
     { name = "applyNpcPositionDrift", vram = 0x800C6FFC, size = 0x124 },
     { name = "func_800C7120", vram = 0x800C7120, size = 0x1C },
     { name = "accumulateVectorInObjectFrame", vram = 0x800C713C, size = 0xF0 },
-    { name = "func_800C722C", vram = 0x800C722C, size = 0x10 },
+    { name = "getConfigFloatValue", vram = 0x800C722C, size = 0x10 },
     { name = "func_800C723C", vram = 0x800C723C, size = 0x2C },
     { name = "func_800C7268", vram = 0x800C7268, size = 0x48 },
     { name = "initializeObjectiveTracking", vram = 0x800C72B0, size = 0x38 },

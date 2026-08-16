@@ -77354,3 +77354,26 @@ H1 is selected. H2 is ruled out by the matching mission mapping and overlay
 ownership; H3 is ruled out by the live generated body and exact adjacent
 boundaries. Updated only the stale project TOML placeholder. No build or
 runtime behavior conclusion was made.
+
+## Session 1634 (2026-08-16) — synchronized the getConfigFloatValue symbol
+
+Ran the exact generated-symbol census for `0x800C722C` without building or
+running. The competing hypotheses were H1: an independently supported
+mission-overlay name and exact generated/TOML/overlay span justify
+synchronization; H2: the matching name belongs to another overlay/context;
+and H3: no independent name is available, a boundary conflicts, or the entry
+is data-like. The complete companion/generated/TOML/overlay comparison was the
+discriminator.
+
+The companion mission map names `getConfigFloatValue` at `0x800C722C`. The
+generated `funcs_35.c` definition already carries that name and implements a
+live 16-byte body that loads the configuration float from the mission state.
+Its exact preceding boundary is `accumulateVectorInObjectFrame` at
+`0x800C713C`; its following boundary is `findNamedEntryInCurrentObject` at
+`0x800C723C`. The TOML size is `0x10`, and the section-4 overlay table carries
+the same human name, ROM offset, and span.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and overlay
+ownership; H3 is ruled out by the live generated body and exact adjacent
+boundaries. Updated only the stale project TOML placeholder. No build or
+runtime behavior conclusion was made.

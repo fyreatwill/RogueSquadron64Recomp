@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1633 (2026-08-16).
+the authority for session detail. Reviewed through s1634 (2026-08-16).
 
 ## Current state
 
@@ -372,8 +372,14 @@ the authority for session detail. Reviewed through s1633 (2026-08-16).
    eight generated callers, exact `func_800C7120`/`getConfigFloatValue`
    boundaries, section-4 overlay span, and TOML size agree. The generated
    definition and overlay table already carried the human name; the project
-   TOML placeholder was updated. The next census is `func_800C722C`,
-   independently named `getConfigFloatValue`, with size `0x10`.
+   TOML placeholder was updated. s1634 synchronized `getConfigFloatValue` at
+   `0x800C722C` (size `0x10`): the companion mission mapping, live generated
+   float-load body, exact `accumulateVectorInObjectFrame`/
+   `findNamedEntryInCurrentObject` boundaries, section-4 overlay span, and
+   TOML size agree. The generated definition and overlay table already carried
+   the human name; the project TOML placeholder was updated. The next census
+   is `func_800C723C`, independently named `findNamedEntryInCurrentObject`,
+   with size `0x2C`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -620,6 +626,7 @@ single-source and unevaluable as a retail ownership result.
 | s1631 | H1: synchronized `hangarVehicleDisplayNpcHandler` at `0x800C68A0` (size `0x75C`); companion mapping, live generated NPC/craft display body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 | s1632 | H1: synchronized `applyNpcPositionDrift` at `0x800C6FFC` (size `0x124`); companion mapping, live generated body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 | s1633 | H1: synchronized `accumulateVectorInObjectFrame` at `0x800C713C` (size `0xF0`); companion mapping, live generated vector-frame accumulation body and eight callers, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
+| s1634 | H1: synchronized `getConfigFloatValue` at `0x800C722C` (size `0x10`); companion mapping, live generated float-load body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
