@@ -77497,3 +77497,31 @@ independent operation mapping, live generated body, and exact adjacent
 boundaries. No source-map edit was necessary, and no build or runtime
 behavior conclusion was made. The next sweep candidate is
 `func_800C7648`/`getAndSetByteAtLevelStateTable`.
+
+## Session 1640 (2026-08-16) — synchronized the getAndSetByteAtLevelStateTable symbol
+
+Ran the exact generated-symbol census for `0x800C7648` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live byte getter/setter and its generated,
+TOML, and section-4 boundaries agree; H2: the name belongs to another
+overlay or context; and H3: the name or function evidence is absent,
+conflicting, or data-like. The complete comparison was the discriminator.
+
+The companion mission map names `getAndSetByteAtLevelStateTable` at
+`0x800C7648`, lists four callers (`lv5_startMissionAndBriefing`,
+`lvb_checkComplexObjectives`, `lvb_initializeObjectTracking`, and
+`playVoice_0x65`), and describes an atomic byte swap at the level-state
+table. The generated `funcs_35.c` definition already carries the human name
+and implements the live `lbu`/`sb` getter-setter body using base `0x80140000`
+plus offset `-0x6608`; its exact preceding boundary is `getObjectiveCount`
+at `0x800C761C` with size `0x2C`, and its following boundary is
+`setObjectiveHiddenFlag` at `0x800C7660` with size `0x50`. The TOML entry
+has the same address and size `0x18`; the section-4 overlay table carries
+the human name at ROM offset `0x22518` with span `0x18`. Generated callers
+in `funcs_45.c` and `funcs_47.c` also use the human name.
+
+H1 is selected. H2 is ruled out by the matching mission mapping, callers,
+and overlay ownership; H3 is ruled out by the live byte-swap body and exact
+adjacent boundaries and sizes. Updated the stale project TOML placeholder
+only. No build or runtime behavior conclusion was made. The next sweep
+candidate is `func_800C7718`/`getGlobalFloatGameState`.

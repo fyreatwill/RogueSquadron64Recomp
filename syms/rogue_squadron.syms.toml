@@ -1735,7 +1735,7 @@ functions = [
     { name = "setObjectiveCount", vram = 0x800C75C0, size = 0x2C },
     { name = "increaseObjectiveCount", vram = 0x800C75EC, size = 0x30 },
     { name = "getObjectiveCount", vram = 0x800C761C, size = 0x2C },
-    { name = "func_800C7648", vram = 0x800C7648, size = 0x18 },
+    { name = "getAndSetByteAtLevelStateTable", vram = 0x800C7648, size = 0x18 },
     { name = "setObjectiveHiddenFlag", vram = 0x800C7660, size = 0x50 },
     { name = "activateObjectiveCompleteFlag", vram = 0x800C76B0, size = 0x30 },
     { name = "getObjectiveTimer", vram = 0x800C76E0, size = 0x1C },
