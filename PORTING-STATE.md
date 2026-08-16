@@ -80703,3 +80703,39 @@ required.
 Next census: `npcWingmanState2` at `0x800D9F90` (size `0xD4`). Last-15
 titles after s1732 still include s1728's maintenance compaction, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1733 (2026-08-16) — synchronized the npcWingmanState2 symbol
+
+Exact generated-symbol census for `0x800D9F90` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1728's
+maintenance compaction, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 6008; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanState2 = 0x800D9F90` with comment "wingman state handler (calls npcWingmanStateEffectShared)". Previous contiguous neighbor `npcWingmanUpdate = 0x800D93C0`; next contiguous neighbor `npcWingmanState3 = 0x800DA064`. `getNpcWingmanStateData` documents case 2 as this address (`0x800D7CF8/7EC0/9F90/...`) |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanState2` at VRAM `0x800D9F90`; prologue `addiu $sp, $sp, -0x60`; saves `$ra`/`$s0`; loads NPC object `*(a0+4)` into `$s0`. Reads byte `+0x5E`: `== 0` uses texture `0x800A781C`; `== 1` uses texture `0x800A7820`; else leaves `a1 = 0`. Then xor-toggles `+0x5E` bit 0. Both live paths: `lookupHmtTextureByName` (`jal 0x80058360`) then `npcWingmanStateEffectShared` (`jal 0x800D7A6C`, `a2=0`). If the shared emitter returns 1, `play3DSoundEvent` (`jal 0x800989D8`) with table `0x2/0x5A/0x28` and float `0x800A7AF0`. Epilogue `jr $ra` / `addiu $sp, $sp, 0x60` ends at `0x800DA060` and returns 0. Previous mission function is `npcWingmanUpdate` at `0x800D93C0` (last insn `0x800D9F8C`); next is `npcWingmanState3` at `0x800DA064`. `funcs.h` already declares the human name. No generated `jal npcWingmanState2` — dispatch is the `getNpcWingmanStateData` case-2 pointer |
+| Body semantics | Matches the companion "wingman state handler (calls npcWingmanStateEffectShared)": object-byte `+0x5E` phase toggle, HMT texture lookup, shared effect emitter, optional 3D sound. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800D9F90", vram = 0x800D9F90, size = 0xD4 }` — size matches `0x800DA064 - 0x800D9F90` (last insn `0x800DA060` + 4 = `0xD4`) |
+| Overlay section 4 | `{ .func = npcWingmanState2, .offset = 0x00034E60, .rom_size = 0x000000D4 }` under `section_4_ovl_mission_funcs` (`0x800D9F90 - 0x800A5130 = 0x34E60`; `0x34290 + 0xBD0 = 0x34E60`; `0x34E60 + 0xD4 = 0x34F34` matches next `npcWingmanState3`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D9F90`. No leftover `func_800D9F90` in generated headers or overlay INL; no companion `D_800D9F90` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated wingman state-2 handler body,
+previous (`npcWingmanUpdate` / `0x800D93C0`) and next
+(`npcWingmanState3` / `0x800DA064`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcWingmanState2`, and only the TOML name was a stale
+`func_800D9F90` placeholder. Corrected TOML to `npcWingmanState2`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcWingmanState3` / `func_800DA064` at
+`0x800DA064` (size `0xD8`). Last-15 titles after s1733 still include
+s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.

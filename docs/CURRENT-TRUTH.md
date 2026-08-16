@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1732 (2026-08-16).
+detail. Reviewed through s1733 (2026-08-16).
 
 ## Current state
 
@@ -41,9 +41,9 @@ detail. Reviewed through s1732 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcWingmanState2`
-   (`0x800D9F90`, size `0xD4`). Archive: `PROJECT-OVERVIEW.md` §33
-   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1732). About 1,548
+1. Resume the generated-symbol sweep at `npcWingmanState3`
+   (`0x800DA064`, size `0xD8`). Archive: `PROJECT-OVERVIEW.md` §33
+   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1733). About 1,548
    placeholder `func_0x...` names remained at s1487.
 2. Next mandatory 15-title REVISIT (after the next all-sweep window): destination
    of the attract A/Start/C-up/L/Z title-like 1024 is blocked by Rice death
@@ -81,11 +81,11 @@ never-access) live in `PROJECT-OVERVIEW.md` §26 and §35. Most recent: s1698
 `512→1024` at 126.3 s; the stay was a flush cutoff.
 
 ## Evidence ledger summary
-Per-session rows through s1732 live in `PROJECT-OVERVIEW.md` §33–§35.
+Per-session rows through s1733 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1732 through `npcWingmanUpdate`; Rice revisits classified hangar/B/attract
+s1648–s1733 through `npcWingmanState2`; Rice revisits classified hangar/B/attract
 and parked the title-like 1024 (§35). s1728 is maintenance only.
 
 ## Method and safety rules
