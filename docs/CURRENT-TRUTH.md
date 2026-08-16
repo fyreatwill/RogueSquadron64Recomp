@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1542 (2026-08-15).
+the authority for session detail. Reviewed through s1543 (2026-08-15).
 
 ## Current state
 
@@ -63,7 +63,7 @@ the authority for session detail. Reviewed through s1542 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AF60C..0x800AF65C`.
+   adjacent function, `0x800AF65C..0x800AF668`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -158,19 +158,20 @@ the authority for session detail. Reviewed through s1542 (2026-08-15).
    `0x800AF360`. s1540 synchronized `cinematicInitializer` at
    `0x800AF408`. s1541 synchronized `isCinematicActive` at
    `0x800AF540`. s1542 synchronized `cinematicStageAdvancer` at
-   `0x800AF550`.
-   The generated entry at `0x800AF60C` is already
-   `cinematicDeactivator`; the companion cinematic list maps
-   `cinematicDeactivator = 0x800AF60C` (comment: clears
-   cinematic state). TOML is still `func_800AF60C`
-   (size `0x50`, ends at independently named generated
-   `getCinematicStateSubObject` / TOML `func_800AF65C` at
-   `0x800AF65C`). Overlay `rom_size` is `0x50` at offset
-   `0x0000A4DC`. Confirm the complete live function, matching
-   size, and caller/semantic evidence before synchronizing
-   the TOML name. Independently named
-   `cinematicStageAdvancer` at `0x800AF550` (`rom_size`
-   `0xBC`) ends at this address. Menu-overlay
+   `0x800AF550`. s1543 synchronized `cinematicDeactivator`
+   at `0x800AF60C`.
+   The generated entry at `0x800AF65C` is already
+   `getCinematicStateSubObject`; the companion cinematic list
+   maps `getCinematicStateSubObject = 0x800AF65C`. TOML is
+   still `func_800AF65C` (size `0xC`, ends at independently
+   named generated `cinematicInterpRatio` / TOML
+   `func_800AF668` at `0x800AF668`). Overlay `rom_size` is
+   `0xC` at offset `0x0000A52C`. Confirm the complete live
+   function, matching size, and caller/semantic evidence
+   before synchronizing the TOML name. Independently named
+   `cinematicDeactivator` at `0x800AF60C` (`rom_size` `0x50`)
+   ends at this address. The generated body is
+   `lw $v0, 0xC($a0)` / `jr $ra` / `nop`. Menu-overlay
    `tickCraftSelectScreen` / TOML `func_800AF3C0` at
    `0x800AF3C0` (`rom_size` `0x2EC`, ends `0x800AF6AC`)
    occupies overlapping VRAM from `.ovl.menu` and is not a
@@ -553,6 +554,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1540 | Exact companion/generated cinematic-init census synchronized `cinematicInitializer` at `0x800AF408`; no build or runtime run. |
 | s1541 | Exact companion/generated cinematic-predicate census synchronized `isCinematicActive` at `0x800AF540`; no build or runtime run. |
 | s1542 | Exact companion/generated cinematic-stage census synchronized `cinematicStageAdvancer` at `0x800AF550`; no build or runtime run. |
+| s1543 | Exact companion/generated cinematic-teardown census synchronized `cinematicDeactivator` at `0x800AF60C`; no build or runtime run. |
 
 ## Method and safety rules
 

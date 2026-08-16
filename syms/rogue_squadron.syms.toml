@@ -2677,7 +2677,7 @@ functions = [
     { name = "cinematicInitializer", vram = 0x800AF408, size = 0x138 },
     { name = "isCinematicActive", vram = 0x800AF540, size = 0x10 },
     { name = "cinematicStageAdvancer", vram = 0x800AF550, size = 0xBC },
-    { name = "func_800AF60C", vram = 0x800AF60C, size = 0x50 },
+    { name = "cinematicDeactivator", vram = 0x800AF60C, size = 0x50 },
     { name = "func_800AF65C", vram = 0x800AF65C, size = 0xC },
     { name = "func_800AF668", vram = 0x800AF668, size = 0x40 },
     { name = "fake_func_800AF6A8", vram = 0x800AF6A8, size = 0x8 },
