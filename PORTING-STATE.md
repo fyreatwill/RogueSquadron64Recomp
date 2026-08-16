@@ -73288,3 +73288,42 @@ independently named `initCinematicSceneAssets` at `0x800AE518` (TOML
 still `func_800AE518`, size `0x360`; overlay `rom_size` is `0x360` at
 offset `0x000093E8`; live body ends at independently named
 `dispatchCinematicFromMainLoop` / TOML `func_800AE878` at `0x800AE878`).
+
+## Session 1517 (2026-08-15) — synchronized the init-cinematic-scene-assets symbol
+
+Performed the bounded exact-name census over `0x800AE518..0x800AE878`.
+
+No new soak-queue verdicts since s1516; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AE518`, size `0x360`; `0x800AE518+0x360=0x800AE878`. Overlay `.ovl.cinematic` entry `rom_size` is `0x360` at offset `0x000093E8` (`0x800AE518-0x800A5130`). Live body is independently `0x360` and meets independently named `dispatchCinematicFromMainLoop` / TOML `func_800AE878` at `0x800AE878` |
+| Generated definition | `funcs_28.c` defines `initCinematicSceneAssets` at `0x800AE518`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x000093E8`, `rom_size 0x00000360`). The live cinematic body is a complete `0x360` function. It starts `addiu $sp, $sp, -0x88` and ends at the sole live `jr $ra` / `addiu $sp, $sp, 0x88` (`0x800AE870`/`0x800AE874`) followed by `return`. Next generated cinematic function is independently named `dispatchCinematicFromMainLoop`. Menu-overlay `tickEasedCameraKeyframeBlend` at `0x800AE3EC` (`offset 0x000092BC`, `rom_size` `0x144`, ends `0x800AE530`) and the following `buildSecondaryWeaponString` at `0x800AE530` occupy overlapping VRAM from `.ovl.menu` and are not splits of this body. Mission-overlay `func_800AE3F0` at `0x800AE3F0` (size `0x1D4`, ends `0x800AE5C4`) and `computeCraftSelectTurnFromInput` at `0x800AE5C4` occupy overlapping VRAM from `.ovl.mission` and are likewise a different overlay. `hangarInitializeShipShadowHob` at `0x800AE088` ends `0x800AE264` and does not reach this address |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `initCinematicSceneAssets = 0x800AE518` (comment: cinematic asset loader, mallocs, `registerHmtTextureInTable`; called by `cinematicInitializer`). Menu, mission, main, libultra, and zlib lists do not remap `0x800AE518`. `undefined_funcs_auto.txt` has no leftover `func_800AE518` row. The only companion-tree hit is that cinematic list row. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02B946` and zero `j` or absolute `0x800AE518` pointer words. The site is independently named `cinematicInitializer`: `0x800AF458` (cinematic-file `0x1418A8`; delay `0xE4401EE8` = `swc1 $f0, 0x1EE8($v0)`). Same-run ROM word at that file offset is `0x0C02B946`. The generated caller is the matching `funcs_29.c` `jal 0x800AE518` site that already dispatches through the named function. Arguments: `$a0=0x40`, `$a1=0x10` (`addiu $a0, $zero, 0x40` / `addiu $a1, $zero, 0x10` at `0x800AF440`/`0x800AF448`; file `0x141890`/`0x141898` = `0x24040040`/`0x24050010`). Companion `cinematicInitializer` is independently the cinematic-state setup routine that stores the state pointer at `0x800B0934` |
+| Semantic evidence | Retail ROM words at file `0x140968` (`0x137580+(0x800AE518-0x800A5130)`) are `0x27BDFF78` (`addiu $sp, $sp, -0x88`). The body saves `$a0`/`$a1` in `$s2`/`$s1`, copies a 0x800A5B88 table onto the stack, then calls independently named `rs_malloc` (`jal 0x80001ACC` at `0x800AE5C8`; file `0x140A18` = `0x0C0006B3`) with `(0x38, 0x10)` and `rs_memset` of `0x38` bytes (`jal 0x800078E0` at `0x800AE5DC`; file `0x140A2C` = `0x0C001E38`). Four further `rs_malloc` sites (`0x800AE698`/`0x800AE6A8`/`0x800AE6D0`/`0x800AE718`) and two further `rs_memset` sites (`0x800AE6C0`/`0x800AE72C`) follow. It then calls independently named `registerHmtTextureInTable` (`jal 0x80022B90` at `0x800AE75C`; file `0x140BAC` = `0x0C008AE4`) and independently named `rs_free` (`jal 0x80001C98` at `0x800AE778`; file `0x140BC8` = `0x0C000726`). Epilogue file `0x140CC0`/`0x140CC4` is `0x03E00008` / `0x27BD0088`. Next start file `0x140CC8` is `0x27BDFFE8` (`dispatchCinematicFromMainLoop` `addiu $sp, $sp, -0x18`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x140968` is `0x27BDFF78`, the caller `jal` word above is `0x0C02B946`, and the s1516/s1515/s1514/s1513/s1511 controls still read `0x27BDFF20` at `0x1403C4`, `0x27BDFF80` at `0x140048`, `0x27BDFFB0` at `0x13FAE0`, `0x03E00008` at `0x140040`, and `0x27BDFFC0` at `0x13F674` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AE518`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x360`, the single ROM `jal` caller is independently named
+`cinematicInitializer` passing `(0x40, 0x10)`, and five `rs_malloc` plus
+`registerHmtTextureInTable` matches the companion comment. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x360`). `func_8009D978` remains the eight-byte Q15 delay-mix table and
+was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C`. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio
+de-stubbing. The next adjacent generated function is independently named
+`dispatchCinematicFromMainLoop` at `0x800AE878` (TOML still
+`func_800AE878`, size `0xB0`; overlay `rom_size` is `0xB0` at offset
+`0x00009748`; live body ends at independently named
+`shouldShowCutsceneForLevelStage` / TOML `func_800AE928` at
+`0x800AE928`).
