@@ -80246,3 +80246,39 @@ TOML, and section-4 row are all present). No build or runtime run required.
 Next census: `npcTickEffectChannelSharedMode0` at `0x800D7818` (size `0x1C`).
 Last-15 titles still include s1714's retail-entry revisit, so the next
 iteration continues the sweep.
+
+## Session 1720 (2026-08-16) — synchronized the npcTickEffectChannelSharedMode0 symbol
+
+Exact generated-symbol census for `0x800D7818` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 55862; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTickEffectChannelSharedMode0 = 0x800D7818` with comment "thin wrapper: npcTickEffectChannelShared mode 0". Previous contiguous neighbor `npcTankDroidUpdate = 0x800D6998`; next contiguous neighbor `npcTickEffectChannelSharedMode1 = 0x800D7834`. Shared body is `npcTickEffectChannelShared = 0x800D6134` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTickEffectChannelSharedMode0` at VRAM `0x800D7818`; prologue `addiu $sp, $sp, -0x18`; saves `$ra`; `addu $a2, $zero, $zero`; `jal 0x800D6134` → `npcTickEffectChannelShared`; returns through `jr $ra` / `addiu $sp, $sp, 0x18` ending at `0x800D7830`; previous mission function is `npcTankDroidUpdate` at `0x800D6998` (last insn `0x800D7814`); next mission function is `npcTickEffectChannelSharedMode1` at `0x800D7834`. `funcs.h` already declares the human name |
+| Body semantics | Thin 7-instruction wrapper that forces mode `a2=0` and tail-calls the already-named shared effect-tick. `npcInitSimpleModel` at `0x800D6074`/`0x800D608C` builds `0x800D7818` (`lui $v0, 0x800D` / `addiu $v0, $v0, 0x7818`) and passes it into `initObjectAnimSubstruct` as the mode-0 callback; the sibling `0x800D7834` is the mode-1 callback. Name matches the companion wrapper and the s1716/s1717 caller mapping |
+| TOML (before) | `{ name = "func_800D7818", vram = 0x800D7818, size = 0x1C }` — size matches `0x800D7834 - 0x800D7818` (last insn `0x800D7830` + 4 = `0x1C`) |
+| Overlay section 4 | `{ .func = npcTickEffectChannelSharedMode0, .offset = 0x000326E8, .rom_size = 0x0000001C }` under `section_4_ovl_mission_funcs` (`0x800D7818 - 0x800A5130 = 0x326E8`; `0x31868 + 0xE80 = 0x326E8`; `0x326E8 + 0x1C = 0x32704` matches next `npcTickEffectChannelSharedMode1`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D7818`. Menu max VRAM is `advanceWrappingPhaseAccumulator = 0x800C6660`. No leftover `func_800D7818` in generated headers or overlay INL; no companion `D_800D7818` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated thin mode-0 wrapper,
+previous (`npcTankDroidUpdate` / `0x800D6998`) and next
+(`npcTickEffectChannelSharedMode1` / `0x800D7834`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcTickEffectChannelSharedMode0`, and only the TOML name was a stale
+`func_800D7818` placeholder. Corrected TOML to `npcTickEffectChannelSharedMode0`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTickEffectChannelSharedMode1` / `func_800D7834` at
+`0x800D7834` (size `0x1C`). Last-15 titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate does not fire.

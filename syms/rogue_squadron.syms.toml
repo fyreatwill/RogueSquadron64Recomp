@@ -1819,7 +1819,7 @@ functions = [
     { name = "npcTickEffectChannelShared", vram = 0x800D6134, size = 0x218 },
     { name = "npcTankDroidComputeAimMotion", vram = 0x800D634C, size = 0x64C },
     { name = "npcTankDroidUpdate", vram = 0x800D6998, size = 0xE80 },
-    { name = "func_800D7818", vram = 0x800D7818, size = 0x1C },
+    { name = "npcTickEffectChannelSharedMode0", vram = 0x800D7818, size = 0x1C },
     { name = "func_800D7834", vram = 0x800D7834, size = 0x1C },
     { name = "func_800D7850", vram = 0x800D7850, size = 0x124 },
     { name = "func_800D7974", vram = 0x800D7974, size = 0xF8 },
