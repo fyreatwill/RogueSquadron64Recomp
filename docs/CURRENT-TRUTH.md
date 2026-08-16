@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1551 (2026-08-15).
+the authority for session detail. Reviewed through s1552 (2026-08-15).
 
 ## Current state
 
@@ -72,7 +72,7 @@ the authority for session detail. Reviewed through s1551 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads; s1544 was that revisit) with one bounded exact-name
-   census over the next adjacent function, `0x800B1024..0x800B13E0`.
+   census over the next adjacent function, `0x800B13E0..0x800B1BE8`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -184,30 +184,33 @@ the authority for session detail. Reviewed through s1551 (2026-08-15).
    `spawnNpcDestructionDebris` at `0x800B0850`.
    s1551 synchronized
    `updateSplineCraftTransform` at `0x800B0A88`.
-   The generated entry at `0x800B1024` is already
-   `computeOrientedTransformFromQuat`; the companion
+   s1552 synchronized
+   `computeOrientedTransformFromQuat` at `0x800B1024`.
+   The generated entry at `0x800B13E0` is already
+   `tickCinematicObjectStateMachine`; the companion
    mission list maps
-   `computeOrientedTransformFromQuat = 0x800B1024`
-   (pure transform/orientation builder from a quat).
-   TOML is still `func_800B1024`
-   (size `0x3BC`, ends at generated
-   `tickCinematicObjectStateMachine` / TOML
-   `func_800B13E0` at `0x800B13E0`). Overlay
-   `rom_size` is `0x3BC` at offset `0x0000BEF4`.
+   `tickCinematicObjectStateMachine = 0x800B13E0`.
+   TOML is still `func_800B13E0`
+   (size `0x808`, ends at generated
+   `updatePlayerCraftPhysics` / TOML
+   `func_800B1BE8` at `0x800B1BE8`). Overlay
+   `rom_size` is `0x808` at offset `0x0000C2B0`.
    Confirm the complete live function, matching
    size, and caller/semantic evidence before
    synchronizing the TOML name. Independently named
-   `updateSplineCraftTransform` at `0x800B0A88`
-   (`rom_size` `0x59C`) ends at this address.
-   Last live instruction pair is
-   `0x800B13D8`/`0x800B13DC` (`jr $ra` /
-   `addiu $sp, $sp, 0x90`). Menu-overlay TOML
+   `computeOrientedTransformFromQuat` at
+   `0x800B1024` (`rom_size` `0x3BC`) ends at this
+   address. Last live instruction pair is
+   `0x800B1BE0`/`0x800B1BE4` (`jr $ra` /
+   `addiu $sp, $sp, 0x20`). Menu-overlay TOML
    `func_800B08F4` at `0x800B08F4` (`rom_size`
    `0xB3C`, ends `0x800B1430`) occupies overlapping
-   VRAM from `.ovl.menu` and is not a mission size
-   split. Generated `runScriptedCraftCinematicEvent`
+   VRAM from `.ovl.menu` for the first `0x50` of
+   this body and is not a mission size split.
+   Generated `runScriptedCraftCinematicEvent`
    starts at menu VRAM `0x800B08F4` and is not this
-   body.
+   body. Generated `initMenuWidgetArray` starts at
+   menu VRAM `0x800B1430`.
 2. Future oracle work on the 640/`0x6a2900` handler, a later mission
    watch, or a new M4 RDRAM dest (a DMEM→RDRAM transfer that is not
    `0xD60`) must use the Rice `--video` recipe above, not dummy video.
@@ -594,6 +597,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1549 | Exact companion/generated mission-debris census synchronized `spawnSceneDebrisAndEffectCluster` at `0x800B01E4`; no build or runtime run. |
 | s1550 | Exact companion/generated mission-debris census synchronized `spawnNpcDestructionDebris` at `0x800B0850`; no build or runtime run. |
 | s1551 | Exact companion/generated mission-spline census synchronized `updateSplineCraftTransform` at `0x800B0A88`; no build or runtime run. |
+| s1552 | Exact companion/generated mission-transform census synchronized `computeOrientedTransformFromQuat` at `0x800B1024`; no build or runtime run. |
 
 ## Method and safety rules
 

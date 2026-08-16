@@ -1600,7 +1600,7 @@ functions = [
     { name = "spawnSceneDebrisAndEffectCluster", vram = 0x800B01E4, size = 0x66C },
     { name = "spawnNpcDestructionDebris", vram = 0x800B0850, size = 0x238 },
     { name = "updateSplineCraftTransform", vram = 0x800B0A88, size = 0x59C },
-    { name = "func_800B1024", vram = 0x800B1024, size = 0x3BC },
+    { name = "computeOrientedTransformFromQuat", vram = 0x800B1024, size = 0x3BC },
     { name = "func_800B13E0", vram = 0x800B13E0, size = 0x808 },
     { name = "func_800B1BE8", vram = 0x800B1BE8, size = 0x1B14 },
     { name = "func_800B36FC", vram = 0x800B36FC, size = 0xC4 },

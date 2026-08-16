@@ -1,11 +1,11 @@
-# NEXT work unit (s1552)
+# NEXT work unit (s1553)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1551 synchronized `updateSplineCraftTransform` at `0x800B0A88`.
+s1552 synchronized `computeOrientedTransformFromQuat` at `0x800B1024`.
 Resume the generated-symbol renaming sweep. Perform exactly one bounded
 exact-name census over the next adjacent generated function,
-`0x800B1024..0x800B13E0`.
+`0x800B13E0..0x800B1BE8`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -31,23 +31,23 @@ table, not a function), `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function), and
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler). The generated entry at this address
-is already `computeOrientedTransformFromQuat`; the companion
-mission list maps `computeOrientedTransformFromQuat = 0x800B1024`
-(pure transform/orientation builder from a quat). TOML is still
-`func_800B1024` (size `0x3BC`, ends at generated
-`tickCinematicObjectStateMachine` / TOML `func_800B13E0` at
-`0x800B13E0`). Overlay `rom_size` is `0x3BC` at offset
-`0x0000BEF4`. Confirm the complete live function, matching
+is already `tickCinematicObjectStateMachine`; the companion
+mission list maps `tickCinematicObjectStateMachine = 0x800B13E0`.
+TOML is still `func_800B13E0` (size `0x808`, ends at generated
+`updatePlayerCraftPhysics` / TOML `func_800B1BE8` at
+`0x800B1BE8`). Overlay `rom_size` is `0x808` at offset
+`0x0000C2B0`. Confirm the complete live function, matching
 size, and caller/semantic evidence before synchronizing the
-TOML name. Independently named `updateSplineCraftTransform`
-at `0x800B0A88` (`rom_size` `0x59C`) ends at this address.
-Last live instruction pair is `0x800B13D8`/`0x800B13DC`
-(`jr $ra` / `addiu $sp, $sp, 0x90`). Menu-overlay TOML
+TOML name. Independently named `computeOrientedTransformFromQuat`
+at `0x800B1024` (`rom_size` `0x3BC`) ends at this address.
+Last live instruction pair is `0x800B1BE0`/`0x800B1BE4`
+(`jr $ra` / `addiu $sp, $sp, 0x20`). Menu-overlay TOML
 `func_800B08F4` at `0x800B08F4` (`rom_size` `0xB3C`, ends
-`0x800B1430`) occupies overlapping VRAM from `.ovl.menu` and
-is not a mission size split. Generated
-`runScriptedCraftCinematicEvent` starts at menu VRAM
-`0x800B08F4` and is not this body.
+`0x800B1430`) occupies overlapping VRAM from `.ovl.menu` for
+the first `0x50` of this body and is not a mission size split.
+Generated `runScriptedCraftCinematicEvent` starts at menu VRAM
+`0x800B08F4` and is not this body. Generated
+`initMenuWidgetArray` starts at menu VRAM `0x800B1430`.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -73,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800B1024\|800B13E0\|computeOrientedTransformFromQuat' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B1024\|800B13E0\|computeOrientedTransformFromQuat' ../N64Recomp/RecompiledFuncs/funcs_30.c
-grep -n -C 3 '800B1024\|800B13E0' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B13E0\|800B1BE8\|tickCinematicObjectStateMachine' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B13E0\|800B1BE8\|tickCinematicObjectStateMachine' ../N64Recomp/RecompiledFuncs/funcs_30.c
+grep -n -C 3 '800B13E0\|800B1BE8' syms/rogue_squadron.syms.toml
 ```

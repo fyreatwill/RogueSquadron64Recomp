@@ -74819,3 +74819,49 @@ offset `0x0000BEF4`; live body ends at generated
 `tickCinematicObjectStateMachine` / TOML `func_800B13E0` at
 `0x800B13E0`). Independently named `updateSplineCraftTransform` at
 `0x800B0A88` (`rom_size` `0x59C`) ends at `0x800B1024`.
+
+## Session 1552 (2026-08-15) — synchronized the compute-oriented-transform-from-quat symbol
+
+Performed the bounded exact-name census over `0x800B1024..0x800B13E0`.
+
+No new soak-queue verdicts since s1551; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit), so the every-15-sessions sweep-revisit rule did not fire.
+CURRENT-TRUTH is 59938 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B1024`, size `0x3BC`; `0x800B1024+0x3BC=0x800B13E0`. Overlay `.ovl.mission` entry `rom_size` is `0x3BC` at offset `0x0000BEF4` (`0x800B1024-0x800A5130`). Live body is independently `0x3BC` and meets generated `tickCinematicObjectStateMachine` at `0x800B13E0` |
+| Generated definition | `funcs_30.c` defines `computeOrientedTransformFromQuat` at `0x800B1024`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000BEF4`, `rom_size 0x000003BC`). The live mission body is a complete `0x3BC` function: prologue `mtc1 $a1, $f6` then `addiu $sp, $sp, -0x90`, save `$a0` as the craft pointer in `$s1`, then build an orientation matrix (orthonormalize / quat-from-axis-angle / rotate-by-quat / mat3x4). Last live instruction pair is `0x800B13D8`/`0x800B13DC` (`jr $ra` / `addiu $sp, $sp, 0x90`). Next generated mission entry is already `tickCinematicObjectStateMachine` at `0x800B13E0`. Independently named `updateSplineCraftTransform` at `0x800B0A88` (`rom_size` `0x59C`) ends at this address. Menu-overlay TOML `func_800B08F4` (`runScriptedCraftCinematicEvent`, `rom_size` `0xB3C`, ends `0x800B1430`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Generated `runScriptedCraftCinematicEvent` starts at menu VRAM `0x800B08F4` and is not this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `computeOrientedTransformFromQuat = 0x800B1024` with comment "pure transform/orientation builder from a quat". The same mission list independently names the adjacent functions `updateSplineCraftTransform` at `0x800B0A88` and `tickCinematicObjectStateMachine` at `0x800B13E0`. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B1024`. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` has no `800B1024` alias |
+| Caller evidence | 1 retail `jal` encoding `0x0C02C409` and zero `j` or absolute `0x800B1024` pointer words. Generated site is one named `computeOrientedTransformFromQuat(...)` call from independently named `updatePlayerCraftPhysics` at `0x800B1BE8` (`0x800B1EAC`), gated on type-table flag bit `0x10` with `$a0` = craft pointer (sibling of the flag-`0x8` `updateSplineCraftTransform` branch at `0x800B1E90`). Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B1C24` (`0x0A5D30+(0x800B1024-0x800A5130)`) are `0x44853000` (`mtc1 $a1, $f6`), `0x27BDFF70` (`addiu $sp, $sp, -0x90`), `0xAFB1007C` (`sw $s1, 0x7C($sp)`), `0x00808821` (`addu $s1, $a0, $zero`). Last pair file `0x0B1FD8`/`0x0B1FDC` is `0x03E00008`/`0x27BD0090` (`jr $ra` / `addiu $sp, $sp, 0x90`). Next start file `0x0B1FE0` is `0x44853000` (`mtc1 $a1, $f6`, `tickCinematicObjectStateMachine` prologue). Preceding epilogue file `0x0B1C1C`/`0x0B1C20` is `0x03E00008`/`0x27BD00A0` (`updateSplineCraftTransform` `jr $ra` / `addiu $sp, $sp, 0xA0`). Same-run generated callees include independently named `orthonormalizeFrame`, `wrapAngleToCyclicRange`, `scaleVec3ByScalar`, `vec3Length`, `clampVec3ToUnitIfLongerThan`, `quatFromAxisAngleSafe`, `rotateVec3ByQuat`, `mat34CrossRowsAndCopyPos`, `initVec4TripletFromArgs`, and `mat3x4Multiply`, matching the companion comment "pure transform/orientation builder from a quat". Menu occupant at the same VRAM (file `0x1181C4`) starts `0xC444DAF0` (`lwc1`, interior of `runScriptedCraftCinematicEvent`). Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B1024` is past that occupant; file `0x143474` is zeros. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B1024`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x3BC`, 1 ROM `jal` caller is independently named player-physics
+update of a flag-`0x10` craft, the body independently calls the
+quat / orthonormalize / mat3x4 family, the overlapping menu occupant
+is a different overlay, and there is neither a conflicting companion
+name nor a mission size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x3BC`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`tickCinematicObjectStateMachine` at `0x800B13E0` (TOML still
+`func_800B13E0`, size `0x808`; overlay `rom_size` is `0x808` at
+offset `0x0000C2B0`; live body ends at generated
+`updatePlayerCraftPhysics` / TOML `func_800B1BE8` at
+`0x800B1BE8`). Independently named `computeOrientedTransformFromQuat` at
+`0x800B1024` (`rom_size` `0x3BC`) ends at `0x800B13E0`.
