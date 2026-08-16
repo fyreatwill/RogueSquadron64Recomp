@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1724 (2026-08-16).
+the authority for session detail. Reviewed through s1725 (2026-08-16).
 
 ## Current state
 
@@ -87,10 +87,10 @@ the authority for session detail. Reviewed through s1724 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcWingmanState0`
-   (`0x800D7CF8`, size `0x1C8`). s1651–s1665, s1667–s1681,
-   s1683–s1697, s1699–s1713, and s1715–s1724 synchronized or confirmed
-   DAT-item through `npcWingmanStateEffectShared`; s1650, s1666, s1682,
+1. Resume the generated-symbol sweep at `npcWingmanState1`
+   (`0x800D7EC0`, size `0x1F4`). s1651–s1665, s1667–s1681,
+   s1683–s1697, s1699–s1713, and s1715–s1725 synchronized or confirmed
+   DAT-item through `npcWingmanState0`; s1650, s1666, s1682,
    s1698, and s1714 were the mandatory retail-entry revisits. The
    full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
    earlier sweep is in §33. About 1,548 placeholder `func_0x...`
@@ -282,6 +282,7 @@ ownership.
 | s1722 | Synchronized `npcWingmanResetState` (`0x800D7850`, size `0x124`) after companion mission mapping, live generated wingman-reset body (`rs_memset` of `0x30` at `+0x68`, `setNpcHealth`, `initActorMotionParams`, `setObjectDetailLevel`, state byte `+0x5C` = 0/4, `lookupHmtMaterialByName` ×2), exact `0x800D7834`/`0x800D7974` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7974` / `getNpcWingmanStateData`. |
 | s1723 | Synchronized `getNpcWingmanStateData` (`0x800D7974`, size `0xF8`) after companion mission mapping, live generated state-byte switch (`lbu +0x5D`, clear `+0x5E`/`+0x5F`, 8-way `jr` at `0x800A77C0` to `0x800D7CF8`/`7EC0`/`9F90`/`A064`/`A13C`/`A234`/`A360`/`A368`, `initObjectAnimSubstruct`; state `>= 8` returns 0), exact `0x800D7850`/`0x800D7A6C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7A6C` / `npcWingmanStateEffectShared`. |
 | s1724 | Synchronized `npcWingmanStateEffectShared` (`0x800D7A6C`, size `0x28C`) after companion mission mapping, live generated shared per-state effect-emitter body (`resolveNpcAttachmentPos`, `tickProgressChannel`, 6-way `jr` at `0x800A77E8` on `a3`, `triggerCueWithSlotEffect` ×4, `getObjectNpcTypeId`, `slotDispatcherIter`, `play3DSoundEvent`; callers `npcWingmanState0`..`State6`), exact `0x800D7974`/`0x800D7CF8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7CF8` / `npcWingmanState0`. |
+| s1725 | Synchronized `npcWingmanState0` (`0x800D7CF8`, size `0x1C8`) after companion mission mapping, live generated wingman state-0 handler (`+0x53`/`+0x5E` phase, `lookupHmtTextureByName` ×2, `npcWingmanStateEffectShared` ×2, `play3DSoundEvent`; `getNpcWingmanStateData` case 0), exact `0x800D7A6C`/`0x800D7EC0` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7EC0` / `npcWingmanState1`. |
 
 ## Method and safety rules
 

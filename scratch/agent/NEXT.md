@@ -1,13 +1,13 @@
-# NEXT work unit (s1725)
+# NEXT work unit (s1726)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the census at `npcWingmanState0` at `0x800D7CF8`
-(size `0x1C8`). Last-15 titles after s1724 still include the s1714
+Resume the census at `npcWingmanState1` at `0x800D7EC0`
+(size `0x1F4`). Last-15 titles after s1725 still include the s1714
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
 
-s1724 synchronized `npcWingmanStateEffectShared` at `0x800D7A6C`
-(size `0x28C`): generated headers/body already used the companion name;
+s1725 synchronized `npcWingmanState0` at `0x800D7CF8`
+(size `0x1C8`): generated headers/body already used the companion name;
 only the TOML placeholder was stale.
 
 Competing hypotheses and discriminator:
@@ -16,7 +16,7 @@ Competing hypotheses and discriminator:
   and size, section-4 span, adjacent boundaries all already agree).
 - H2: companion mapping, live generated body, adjacent boundaries,
   TOML size, and section-4 span agree, but TOML and/or generated
-  headers still carry `func_800D7CF8` — synchronize the name.
+  headers still carry `func_800D7EC0` — synchronize the name.
 - H3: overlay collision, fake fragment, or size/boundary disagreement
   — classify the occupant and do not force the companion name.
 - H4: companion, generated body, TOML, or section-4 row is missing, or
@@ -24,14 +24,14 @@ Competing hypotheses and discriminator:
 
 ```sh
 # companion name, neighbors, overlay occupancy
-grep -n 'npcWingmanState0\|800D7CF8\|func_800D7CF8' \
+grep -n 'npcWingmanState1\|800D7EC0\|func_800D7EC0' \
   ~/Documents/Tools/rogue_squadron64/symbol_files/*
 # generated body + headers
-grep -n 'npcWingmanState0\|func_800D7CF8\|0x800D7CF8' \
+grep -n 'npcWingmanState1\|func_800D7EC0\|0x800D7EC0' \
   ../N64Recomp/RecompiledFuncs/funcs.h \
   ../N64Recomp/RecompiledFuncs/funcs_38.c
 # TOML + overlay span
-grep -n '800D7CF8\|npcWingmanState0' \
+grep -n '800D7EC0\|npcWingmanState1' \
   syms/rogue_squadron.syms.toml \
   ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
@@ -40,11 +40,11 @@ Expected splits:
 
 - H1: no source-map edit; confirm only.
 - H2: rename TOML and/or generated headers/body to
-  `npcWingmanState0`; size stays `0x1C8`.
+  `npcWingmanState1`; size stays `0x1F4`.
 - H3: document the collision or fragment; next candidate is the
   following contiguous mission function.
 - H4: leave the placeholder; write why semantics are unread.
 
 Next contiguous candidate after this address is whatever the generated
-and companion neighbors name past `0x800D7CF8 + 0x1C8 = 0x800D7EC0`
-(`npcWingmanState1` / `func_800D7EC0`).
+and companion neighbors name past `0x800D7EC0 + 0x1F4 = 0x800D80B4`
+(`func_800D80B4`).
