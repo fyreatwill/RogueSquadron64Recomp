@@ -1722,7 +1722,7 @@ functions = [
     { name = "findNamedEntryInCurrentObject", vram = 0x800C723C, size = 0x2C },
     { name = "copyCurrentObjectMatrix", vram = 0x800C7268, size = 0x48 },
     { name = "initializeObjectiveTracking", vram = 0x800C72B0, size = 0x38 },
-    { name = "func_800C72E8", vram = 0x800C72E8, size = 0x38 },
+    { name = "dispatchObjectiveSlot1", vram = 0x800C72E8, size = 0x38 },
     { name = "calculateFriendliesSaved", vram = 0x800C7320, size = 0x38 },
     { name = "checkComplexObjectives", vram = 0x800C7358, size = 0x38 },
     { name = "dealDamagetoDatItem", vram = 0x800C7390, size = 0x174 },

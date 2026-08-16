@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1635 (2026-08-16).
+the authority for session detail. Reviewed through s1637 (2026-08-16).
 
 ## Current state
 
@@ -383,8 +383,13 @@ the authority for session detail. Reviewed through s1635 (2026-08-16).
    exact `getConfigFloatValue`/`copyCurrentObjectMatrix` boundaries,
    section-4 overlay span, and TOML size agree. The generated definition and
    overlay table already carried the human name; the project TOML placeholder
-   was updated. The next census is `func_800C72E8`, independently named
-   `dispatchObjectiveSlot1`, with size `0x38`.
+   was updated. s1637 synchronized `dispatchObjectiveSlot1` at `0x800C72E8`
+   (size `0x38`): the companion mission mapping, live generated dispatcher
+   body, exact `initializeObjectiveTracking`/`calculateFriendliesSaved`
+   boundaries, section-4 overlay span, and TOML size agree. The generated
+   definition and overlay table already carried the human name; the project
+   TOML placeholder was updated. The next census is `func_800C7358`,
+   independently named `checkComplexObjectives`, with size `0x38`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -637,7 +642,9 @@ single-source and unevaluable as a retail ownership result.
 | s1632 | H1: synchronized `applyNpcPositionDrift` at `0x800C6FFC` (size `0x124`); companion mapping, live generated body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 | s1633 | H1: synchronized `accumulateVectorInObjectFrame` at `0x800C713C` (size `0xF0`); companion mapping, live generated vector-frame accumulation body and eight callers, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 | s1634 | H1: synchronized `getConfigFloatValue` at `0x800C722C` (size `0x10`); companion mapping, live generated float-load body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
+| s1635 | H1: synchronized `findNamedEntryInCurrentObject` at `0x800C723C` (size `0x2C`); companion mapping, live generated lookup/update body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 | s1636 | Retail Rice post-viewer controls: hold plus `cup`, `cdown`, `cleft`, `cright`, `l`, and `r` all passed whole-RDRAM controls (10137 writes), delivered distinct PIF words, and converged on 320→640→1024→512→640. Viewer PC `0x800C9BF0` hit once in each; mission PC `0x80000B70` and selector writes were zero. H2 selected for these controls. |
+| s1637 | H1: synchronized `dispatchObjectiveSlot1` at `0x800C72E8` (size `0x38`); companion mission mapping, live generated dispatcher body and caller, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
