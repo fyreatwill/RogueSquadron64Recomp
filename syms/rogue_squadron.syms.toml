@@ -1749,7 +1749,7 @@ functions = [
     { name = "randMod", vram = 0x800C77D0, size = 0x60 },
     { name = "addBooleanCountHandleWrapper", vram = 0x800C7830, size = 0x34 },
     { name = "addTimerHandleWrapper", vram = 0x800C7864, size = 0x20 },
-    { name = "func_800C7884", vram = 0x800C7884, size = 0x1C },
+    { name = "setHudFlagBit40AndStoreArg", vram = 0x800C7884, size = 0x1C },
     { name = "calculateDatItemDistanceToPlayer", vram = 0x800C78A0, size = 0xAC },
     { name = "func_800C794C", vram = 0x800C794C, size = 0x2C },
     { name = "func_800C7978", vram = 0x800C7978, size = 0x78 },

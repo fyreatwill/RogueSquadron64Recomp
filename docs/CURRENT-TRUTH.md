@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1648 (2026-08-16).
+the authority for session detail. Reviewed through s1649 (2026-08-16).
 
 ## Current state
 
@@ -62,8 +62,8 @@ the authority for session detail. Reviewed through s1648 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   `func_800C7884`, independently named `setHudFlagBit40AndStoreArg` at
-   `0x800C7884` (size `0x1C`). Compare companion mapping/callers and
+   `func_800C78A0`, independently named `calculateDatItemDistanceToPlayer` at
+   `0x800C78A0` (size `0xAC`). Compare companion mapping/callers and
    semantics, generated body, previous and next boundaries, TOML size, and
    overlay span. Synchronize only on complete independent agreement. The s1639 census confirmed
    `checkComplexObjectives` was already synchronized; s1640 synchronized
@@ -72,7 +72,9 @@ the authority for session detail. Reviewed through s1648 (2026-08-16).
    s1643 synchronized `setHudEnableBit4`; s1644 synchronized
    `setHudEnableBit8`; s1645 synchronized `isLevelStateByteZero`; s1646
    synchronized `randMod`; s1647 confirmed `addBooleanCountHandleWrapper`
-   was already synchronized. The full s1590–s1647 archive is in
+   was already synchronized; s1648 confirmed `addTimerHandleWrapper` was
+   already synchronized; s1649 synchronized `setHudFlagBit40AndStoreArg`
+   after correcting its stale TOML name. The full s1590–s1649 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
@@ -176,6 +178,7 @@ ownership.
 | s1646 | Synchronized `randMod` (`0x800C77D0`, size `0x60`) after the companion mission mapping, live generated signed-16-bit random-remainder body, exact adjacent boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7830`. |
 | s1647 | Confirmed `addBooleanCountHandleWrapper` (`0x800C7830`, size `0x34`) was already synchronized: companion mapping, live generated wrapper body, exact adjacent boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7864`. |
 | s1648 | Confirmed `addTimerHandleWrapper` (`0x800C7864`, size `0x20`) was already synchronized: companion mission mapping, live generated wrapper body, exact adjacent boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7884`. |
+| s1649 | Synchronized `setHudFlagBit40AndStoreArg` (`0x800C7884`, size `0x1C`) after the companion mapping, live generated body, exact `0x800C7864`/`0x800C78A0` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C78A0`. |
 
 ## Method and safety rules
 

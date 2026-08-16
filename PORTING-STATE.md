@@ -77738,3 +77738,33 @@ adjacent boundaries and sizes. No source-map edit was needed because the
 generated definition and TOML entry were already synchronized. No build or
 runtime behavior conclusion was made. The next sweep candidate is
 `func_800C7884`/`setHudFlagBit40AndStoreArg`.
+
+## Session 1649 (2026-08-16) — synchronized the setHudFlagBit40AndStoreArg symbol
+
+Ran the exact generated-symbol census for `0x800C7884` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live function and its generated, TOML, and
+section-4 boundaries agree; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator.
+
+The companion mission map names `setHudFlagBit40AndStoreArg` at
+`0x800C7884` and describes its 44 callers and unconditional writes of the
+argument to `0x8008EC10` plus HUD bit `0x40` at `0x8010CFE0`. The bounded
+companion-tree search found no competing C/H definition or caller annotation.
+The generated `funcs_36.c` definition already carries the human name and
+contains the live `0x1C`-byte body: it stores `$a0` at `0x8008EC10`, ORs the
+HUD flags with `0x40`, and stores the result at `0x8010CFE0`. Its exact
+preceding boundary is `addTimerHandleWrapper` at `0x800C7864` with size
+`0x20`; its following boundary is `calculateDatItemDistanceToPlayer` at
+`0x800C78A0` with size `0xAC`. The section-4 overlay table independently
+uses the human name at ROM offset `0x22754` with span `0x1C`; the TOML entry
+had the same address and size but the stale placeholder name
+`func_800C7884`.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and
+overlay ownership; H3 is ruled out by the live body and exact adjacent
+boundaries and sizes. The stale TOML name was synchronized to
+`setHudFlagBit40AndStoreArg`. No build or runtime behavior conclusion was
+made. The next sweep candidate is `func_800C78A0` /
+`calculateDatItemDistanceToPlayer`.
