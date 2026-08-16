@@ -75643,3 +75643,47 @@ No mitigation.
 ORIGIN: observational oracle A/B plus already-named `menuOverlayInit`
 switch and companion `getPlanetAssetForLevel` / `runModelViewerLoop`;
 no guest value was skipped, rewritten, or guarded.
+
+## Session 1570 (2026-08-16) — parked the already-fake 0x800B42BC xwing-init gap
+
+Performed the bounded exact-name census over `0x800B42BC..0x800B42C0`.
+
+No new soak-queue verdicts since s1569; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1569 (leave-hangar 640
+identified as `runModelViewerLoop`), so the every-15-sessions sweep-revisit
+rule did not fire. CURRENT-TRUTH is 17,639 bytes at session start, so Step 0
+did not trigger a maintenance iteration. M5 remains closed and M3 remains
+parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry already `fake_func_800B42BC`, size `0x4`; `0x800B42BC+0x4=0x800B42C0`. Overlay `.ovl.mission` `rom_size` is `0x4` at offset `0x0000F18C` (`0x800B42BC-0x800A5130`). `funcs.h` and `recomp_overlays.inl` already use that name |
+| Generated definition | `funcs_31.c` defines `fake_func_800B42BC` at `0x800B42BC` as one instruction `lw $v0, 0x2C($fp)` (`ctx->r2 = MEM_W(ctx->r30, 0X2C)`), with no `jr $ra`. Independently named `advancePitchTowardTarget` at `0x800B41FC` (`rom_size` `0xC0`) ends `jr $ra` / `nop` at `0x800B42B4` / `0x800B42B8`. Independently named `playerXwingInit` at `0x800B42C0` (`rom_size` `0x2C8`) starts `addiu $sp, $sp, -0x50` at the next word |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `fake_func_800B42BC = 0x800B42BC` with the comment that the real function is `playerXwingInit`, and separately maps `playerXwingInit = 0x800B42C0`. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B42BC`. Menu lists `destroyPlayerShipRecord = 0x800B4274` as the overlapping `.ovl.menu` occupant (`rom_size` `0x60`, ends `0x800B42D4`). Companion `docs/mips_to_c/ctx.c` has no prototype and no competing independent name. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B42BC` alias |
+| Caller evidence | Zero generated `jal 0x800B42BC` sites, zero `fake_func_800B42BC(` call sites, and zero `LOOKUP_FUNC(0x800B42BC)`. Whole-ROM scan found zero `jal` encodings (`0x0C02D0AF`), zero `j` encodings (`0x0802D0AF`), and zero absolute `0x800B42BC` pointer words. The word is not a reachable function. Same-scan positive control: `playerXwingInit` `jal` encoding `0x0C02D0B0` hits twice at files `0x0B6184` / `0x0B6284` (generated `jal 0x800B42C0` in `playerXwingUpdate` at `0x800B5584` / `0x800B5684`) |
+| Semantic evidence | Retail mission-overlay ROM words at file `0x0B4EBC` (`0x0A5D30+(0x800B42BC-0x800A5130)`) are `0x8FC2002C` (`lw $v0, 0x2C($fp)`). Same-run positive controls: `advancePitchTowardTarget` start file `0x0B4DFC` is still `0xC48200C0`; epilogue pair `0x0B4EB4` / `0x0B4EB8` is `0x03E00008` / `0x00000000` (`jr $ra` / `nop`); `playerXwingInit` start file `0x0B4EC0` is `0x27BDFFB0` (`addiu $sp, $sp, -0x50`); `getWeaponChargeLevel` start file `0x0B4DEC` is still `0x3C028011`; cinematic overlay base `0x137580` is still `0x08000000`. Menu occupant at the same VRAM (file `0x11B45C`) is `0x0C006DEE` (`jal 0x8001B7B8` inside `destroyPlayerShipRecord`); that is a different overlay, not a split of this mission word. Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B42BC` is past that occupant. The preceding `advancePitchTowardTarget` is a complete leaf ending `jr $ra` / `nop`. The following `playerXwingInit` is a complete `0x2C8` function starting a stack-frame prologue. The orphan `lw $v0, 0x2C($fp)` sits between them and is not a prologue. Same already-fake one-instruction fragment class as `fake_func_8009D7CC` / `fake_func_80099C4C` / `fake_func_800AF6A8` |
+| Confidence | High |
+
+The complete comparison selects H2 for `0x800B42BC`: the companion,
+generated, overlay, and TOML names already agree on the already-fake
+fragment, the `0x4` boundary is exact, and there is no independent
+semantic name to synchronize. H1 is ruled out because renaming the
+orphan `lw $v0, 0x2C($fp)` to `playerXwingInit` would collide with the
+already-named function at `0x800B42C0` and fabricate a source. H3 is
+ruled out because the independent naming source exists and already
+marks the site fake. The TOML entry stays unchanged, as do
+`fake_func_800AF6A8`, `func_8009D978`, `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named `playerXwingInit`
+at `0x800B42C0` (TOML already `playerXwingInit`, size `0x2C8`; overlay
+`rom_size` is `0x2C8` at offset `0x0000F190`; generated body starts
+`addiu $sp, $sp, -0x50` and ends `jr $ra` / `addiu $sp, $sp, 0x50`).
+Independently named `playWeaponFireSound` at `0x800B4588` (TOML still
+`func_800B4588`, `rom_size` `0x738`) starts at the next word.

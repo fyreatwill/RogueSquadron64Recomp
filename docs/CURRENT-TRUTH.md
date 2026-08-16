@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1569 (2026-08-16).
+the authority for session detail. Reviewed through s1570 (2026-08-16).
 
 ## Current state
 
@@ -79,19 +79,17 @@ the authority for session detail. Reviewed through s1569 (2026-08-16).
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
-   Next census: `0x800B42BC..0x800B42C0`. The generated entry is already
-   `fake_func_800B42BC`; the companion mission list maps
-   `fake_func_800B42BC = 0x800B42BC` with the comment that the real
-   function is `playerXwingInit`. TOML is already `fake_func_800B42BC`
-   (size `0x4`). Overlay `rom_size` is `0x4` at offset `0x0000F18C`.
-   The generated body is one instruction: `lw $v0, 0x2C($fp)` at
-   `0x800B42BC` (ROM `0x8FC2002C`), then the function ends. Confirm
-   the already-fake fragment before leaving the entry unchanged.
-   Independently named `advancePitchTowardTarget` at `0x800B41FC`
-   (`rom_size` `0xC0`) ends at this address. Independently named
-   `playerXwingInit` at `0x800B42C0` (`rom_size` `0x2C8`) starts at
-   the next word (`addiu $sp, $sp, -0x50`). This naming census does
-   not reopen closed M5 audio de-stubbing.
+   Next census: `0x800B42C0..0x800B4588`. TOML is already
+   `playerXwingInit` (size `0x2C8`). Overlay `rom_size` is `0x2C8` at
+   offset `0x0000F190`. Generated `funcs_31.c` defines
+   `playerXwingInit` starting `addiu $sp, $sp, -0x50` and ending
+   `jr $ra` / `addiu $sp, $sp, 0x50`. Companion mission list maps
+   `playerXwingInit = 0x800B42C0`. Independently named (parked)
+   `fake_func_800B42BC` ends at this address. Independently named
+   `playWeaponFireSound` at `0x800B4588` (TOML still `func_800B4588`,
+   `rom_size` `0x738`) starts at the next word. Confirm the
+   already-named function. This naming census does not reopen closed
+   M5 audio de-stubbing.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -123,6 +121,10 @@ the authority for session detail. Reviewed through s1569 (2026-08-16).
    - `fake_func_800AF6A8` (s1546 H2: already-fake cinematic overlay data-tail
      gap-filler; generated `__builtin_trap()`; companion Fake Function
      Fixing; next ROM word `0x0C03A807` is a `jal`, not a prologue)
+   - `fake_func_800B42BC` (s1570 H2: already-fake one-instruction
+     `lw $v0, 0x2C($fp)` gap before `playerXwingInit`; companion Fake
+     Function Fixing; zero jal/j/ptr; menu `destroyPlayerShipRecord`
+     occupies the same VRAM from `.ovl.menu`)
 
 2. Future oracle work on leaving the 640 crawl into a mission, or a
    new M4 RDRAM dest (a DMEM→RDRAM transfer that is not `0xD60`),
@@ -225,7 +227,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
-| s1270–s1568 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `advancePitchTowardTarget` at `0x800B41FC`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
+| s1270–s1570 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `advancePitchTowardTarget` at `0x800B41FC`. H2/H3 parks listed under Next steps #1, including s1570 `fake_func_800B42BC`. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
@@ -247,6 +249,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1567 | H1: synchronized `getWeaponChargeLevel` at `0x800B41EC` (size `0x10`). |
 | s1568 | H1: synchronized `advancePitchTowardTarget` at `0x800B41FC` (size `0xC0`). |
 | s1569 | Rice 640-handler revisit: hold stays 512 with `runHangarSelectionFrame` through 100s; leave A stops that inner loop at 63.7s and enters `runModelViewerLoop` (case 6) at 64.3s with `initModelViewer` / `buildModelViewerTextPage` / `loadJfifAsset`. Selector write `0x800C5AC8` is the generated set-6 path. Extra Start during 640 does not exit. Not a mission. |
+| s1570 | H2: parked already-fake `fake_func_800B42BC` at `0x800B42BC` (size `0x4`). |
 
 ## Method and safety rules
 

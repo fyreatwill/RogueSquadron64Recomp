@@ -235,7 +235,8 @@ mitigations: future guards require an `ORIGIN:` naming the writer and
 judging the value legitimate. The generated-symbol renaming sweep is the
 current low-risk workstream; exact companion/generated names are synchronized
 through `advancePitchTowardTarget` at `0x800B41FC` (s1568) while
-fake or address-only entries remain unchanged (see §33). See
+fake or address-only entries remain unchanged, including s1570 H2
+`fake_func_800B42BC` (see §33). See
 `CURRENT-TRUTH.md` for the live backlog and `PORTING-STATE.md` for evidence.
 
 - **Two independent sources before concluding.** Every finding that survived has two: task timing
@@ -2855,7 +2856,7 @@ summary. Homebrew Rice later-phase results (s1496 hangar, s1512 M4 DMEM `r9`,
 s1528 leave-hangar 640, s1544 640 still menu-overlay) live in
 `CURRENT-TRUTH.md` and superseded the dummy-video 320-only parking.
 
-## 33. Generated-symbol renaming sweep (s1240–s1568)
+## 33. Generated-symbol renaming sweep (s1240–s1570)
 
 Migrated from `CURRENT-TRUTH.md` during the s1553 maintenance pass. Full
 per-session comparison tables remain in `PORTING-STATE.md`. Method: one
@@ -2865,10 +2866,10 @@ caller or semantic evidence agree (H1). Leave address-encoded, already-fake,
 or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
 justified for an exact-name census.
 
-**Cursor.** Next census is `fake_func_800B42BC` at
-`0x800B42BC` (already fake; TOML size `0x4`; one `lw $v0, 0x2C($fp)`
-before `playerXwingInit`). Last H1 sync is
-`advancePitchTowardTarget` at `0x800B41FC` (s1568). About 1,548
+**Cursor.** Next census is `playerXwingInit` at `0x800B42C0`
+(TOML already that name, size `0x2C8`; overlay `rom_size` `0x2C8`).
+Last H1 sync is `advancePitchTowardTarget` at `0x800B41FC` (s1568).
+Last H2 park is `fake_func_800B42BC` (s1570). About 1,548
 placeholder `func_0x...` names remained when counted at s1487.
 
 **Covered ranges (H1 unless noted).**
@@ -2906,15 +2907,17 @@ placeholder `func_0x...` names remained when counted at s1487.
 | s1566 | Mission overlay: `decayWeaponCooldownTimer` at `0x800B41BC` (size `0x30`). |
 | s1567 | Mission overlay: `getWeaponChargeLevel` at `0x800B41EC` (size `0x10`). |
 | s1568 | Mission overlay: `advancePitchTowardTarget` at `0x800B41FC` (size `0xC0`). |
+| s1570 | H2 for already-fake one-word gap `fake_func_800B42BC` before `playerXwingInit`. |
 
 **Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
 `func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,
 `fake_func_80094348`, `fake_func_8009711C`, `fake_func_80097D58`,
 `fake_func_80099C4C`, `fake_func_80099FDC`, `fake_func_8009C2C8`,
 `fake_func_8009D7CC`, `func_8009D8BC`, `func_8009D978`,
-`fake_func_800AF6A8`. Reasons are in `CURRENT-TRUTH.md` Next steps #1.
+`fake_func_800AF6A8`, `fake_func_800B42BC`. Reasons are in
+`CURRENT-TRUTH.md` Next steps #1.
 
 **Revisit rule.** Every 15 consecutive sweep-titled sessions, spend the
 iteration on the retail-entry boundary or the M4 accumulator boundary
-instead. s1544 was the last such revisit (leave-hangar 640 is still
-resident menu overlay).
+instead. s1569 was the last such revisit (leave-hangar 640 is
+`runModelViewerLoop`).
