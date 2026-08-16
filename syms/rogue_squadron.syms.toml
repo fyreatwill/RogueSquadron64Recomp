@@ -2648,7 +2648,7 @@ functions = [
     { name = "spawnNpcBurstAlongSegment", vram = 0x800AC75C, size = 0x730 },
     { name = "processCutsceneActions", vram = 0x800ACE8C, size = 0x398 },
     { name = "computeCutsceneScreenScale", vram = 0x800AD224, size = 0x46C },
-    { name = "func_800AD690", vram = 0x800AD690, size = 0x568 },
+    { name = "tickCutsceneCameraFromTimeline", vram = 0x800AD690, size = 0x568 },
     { name = "func_800ADBF8", vram = 0x800ADBF8, size = 0x37C },
     { name = "func_800ADF74", vram = 0x800ADF74, size = 0x5A4 },
     { name = "func_800AE518", vram = 0x800AE518, size = 0x360 },

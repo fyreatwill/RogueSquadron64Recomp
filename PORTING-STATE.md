@@ -73169,3 +73169,44 @@ independently named `tickCutsceneCameraFromTimeline` at `0x800AD690`
 `0x568` at offset `0x00008560`; live body ends at independently named
 `transformAndNormalizeDirectionByMatrix` / TOML `func_800ADBF8` at
 `0x800ADBF8`).
+
+## Session 1514 (2026-08-15) — synchronized the tick-cutscene-camera-from-timeline symbol
+
+Performed the bounded exact-name census over `0x800AD690..0x800ADBF8`.
+
+No new soak-queue verdicts since s1511; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AD690`, size `0x568`; `0x800AD690+0x568=0x800ADBF8`. Overlay `.ovl.cinematic` entry `rom_size` is `0x568` at offset `0x00008560` (`0x800AD690-0x800A5130`). Live body is independently `0x568` and meets independently named `transformAndNormalizeDirectionByMatrix` / TOML `func_800ADBF8` at `0x800ADBF8` |
+| Generated definition | `funcs_28.c` defines `tickCutsceneCameraFromTimeline` at `0x800AD690`; `funcs.h` and `recomp_overlays.inl` already use that name. The live cinematic body is a complete `0x568` function. It starts `addiu $sp, $sp, -0x50` and ends at the sole live `jr $ra` / `addiu $sp, $sp, 0x50` (`0x800ADBF0`/`0x800ADBF4`) followed by `return`. Next generated cinematic function is independently named `transformAndNormalizeDirectionByMatrix`. Mission-overlay `updateCinematicCameraStateMachine` / TOML `func_800AD418` at `0x800AD418` (overlay offset `0x000082E8`, `rom_size` `0x944`, ends `0x800ADD5C`) and menu-overlay `hangarTickCameraOrbit` at `0x800ADB70` (overlay offset `0x00008A40`, `rom_size` `0x518`, ends `0x800AE088`) occupy overlapping VRAM from `.ovl.mission` / `.ovl.menu` and are not splits of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `tickCutsceneCameraFromTimeline = 0x800AD690` in the cinematic splat list (s400 relocation from `main_overlay.txt`; no extra comment). Menu, mission, main, libultra, and zlib lists do not remap `0x800AD690`. `undefined_funcs_auto.txt` has no leftover `func_800AD690` row. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02B5A4` and zero `j` or absolute `0x800AD690` pointer words. The site is independently named `cinematicLoopBody` at `0x800A6448` (cinematic-file `0x138898`; delay `0x00000000` = `nop`). Same-run ROM word at that file offset is `0x0C02B5A4`. The generated caller is `funcs_27.c` `jal 0x800AD690` that already dispatches through the named function, passing `MEM[0x800B0B28]` in `$a0` (`lw $a0, 0xB28($s3)` at `0x800A6440`; file `0x138890` = `0x8E640B28`) and `$f20` bits in `$a1` (`mfc1 $a1, $f20` at `0x800A6444`; file `0x138894` = `0x4405A000`) when `$t1==2` and `$s5==3`. Companion `cinematicLoopBody` is independently the per-frame cinematic loop. The `$s5==0x13` sibling at `0x800A6430` is independently named `computeCutsceneScreenScale` |
+| Semantic evidence | Retail ROM words at file `0x13FAE0` (`0x137580+(0x800AD690-0x800A5130)`) are `0x27BDFFB0` (`addiu $sp, $sp, -0x50`). The body saves `$a0` in `$s1`, loads `MEM[0x800B0B10]` (`lui $v0, 0x800B` / `lw $a0, 0xB10($v0)` at `0x800AD69C`/`0x800AD6A0`; file `0x13FAEC`/`0x13FAF0` = `0x3C02800B`/`0x8C440B10`), and calls independently named `getCinematicStateSubObject`. It loads the halfwords `MEM[0x800B09B2]` and `MEM[0x800B09B6]` (`lhu $v1, 0x9B2($v1)` / `lhu $v0, 0x9B6($v0)` at `0x800AD6D0`/`0x800AD6F0`; file `0x13FB20`/`0x13FB40` = `0x946309B2`/`0x944209B6`) and the FP constants at `0x800A5AA0`/`0x800A5AA4`/`0x800A5AA8` (`lwc1 $f2, 0x5AA0($at)` / `lwc1 $f6, 0x5AA4($at)` / `lwc1 $f2, 0x5AA8($at)` at `0x800AD6D8`/`0x800AD6EC`/`0x800AD6FC`; file `0x13FB28`/`0x13FB3C`/`0x13FB4C` = `0xC4225AA0`/`0xC4265AA4`/`0xC4225AA8`). Those constants are `0x3F4CCCCD`/`0x43700000`/`0xC2800000` at file `0x137EF0`/`0x137EF4`/`0x137EF8` (0.8/240.0/-64.0). Converted halfwords are scaled into the cinematic sub-object; `$s1` is then compared against timeline windows `0xAA`/`0xC8`/`0x186`/`0x1A4`/`0xAB`. The late path loads `MEM[0x800B0B2C]`, calls independently named `cosf`/`sinf` (`jal 0x8002B190`/`0x80033960` at `0x800ADB2C`/`0x800ADB60`; file `0x13FF7C`/`0x13FFB0` = `0x0C00AC64`/`0x0C00CE58`), and calls independently named `transformAndNormalizeDirectionByMatrix` (`jal 0x800ADBF8` at `0x800ADBC0`; file `0x140010` = `0x0C02B6FE`). Epilogue writes `MEM[0x800B0B1D]` (`sb $v0, 0xB1D($v1)` at `0x800ADBEC`; file `0x14003C` = `0xA0620B1D`). Epilogue file `0x140040` is `0x03E00008` / `0x27BD0050`. Next start file `0x140048` is `0x27BDFF80` (`transformAndNormalizeDirectionByMatrix` `addiu $sp, $sp, -0x80`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13FAE0` is `0x27BDFFB0`, the caller `jal` word above is `0x0C02B5A4`, and the s1513/s1511/s1510/s1509/s1508/s1507/s1506/s1505 controls still read `0x27BDFFC0` at `0x13F674`, `0x0C02B489` at `0x138880`, `0x9482004E` at `0x13F2DC`, `0x27BDFF30` at `0x13EBAC`, `0x27BDFFD8` at `0x13E9C4`, `0x27BDFF00` at `0x13E15C`, `0x27BDFEB0` at `0x13D0D8`, `0x3C02800B` at `0x13CCA0`, and `0x27BDFFA8` at `0x13CAA8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AD690`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x568`, the one ROM `jal` caller is independently named
+`cinematicLoopBody` passing `MEM[0x800B0B28]` in `$a0` when `$s5==3`,
+and the `getCinematicStateSubObject` / `0x800B09B2` / `0x800B09B6`
+loads plus timeline-window compares, `cosf`/`sinf` of `MEM[0x800B0B2C]`,
+and `transformAndNormalizeDirectionByMatrix` match the companion name.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x568`). `func_8009D978` remains the eight-byte Q15 delay-mix
+table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`transformAndNormalizeDirectionByMatrix` at `0x800ADBF8` (TOML still
+`func_800ADBF8`, size `0x37C`; overlay `rom_size` is `0x37C` at offset
+`0x00008AC8`; live body ends at independently named `loadBackdropAsset`
+/ TOML `func_800ADF74` at `0x800ADF74`).
