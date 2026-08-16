@@ -76752,3 +76752,25 @@ The exact companion name, generated body, 15 call sites, next-function
 boundary, overlay span, and size rule out H2's conflicting/incomplete-span
 case and H3's fragment/data-like case. No build or runtime run was needed;
 this was a bounded symbol-map synchronization.
+
+## Session 1610 (2026-08-16) — synchronized the applyResModeFromSettings symbol
+
+Ran the bounded generated-symbol census specified by the previous NEXT unit
+for `0x800BF358..0x800BF3A4`. The companion mission symbol list independently
+names `0x800BF358` `applyResModeFromSettings` and describes the resolution-mode
+flag propagation. The generated definition is already named
+`applyResModeFromSettings`; its live body reads `gGameSettings` flags, writes
+the propagated flag to the global state when the demo/cinematic condition is
+active, and mirrors the low bit into the two resolution-state halfwords. A
+generated caller at `0x8003E348` invokes the address after overlay loading.
+
+H1 selected: the next generated function starts at `0x800BF3A4`, and the
+generated overlay table records `applyResModeFromSettings` at offset
+`0x1A228` with ROM size `0x4C`, followed by
+`restoreGameSettingsAfterDemo` at `0x800BF3A4`. The TOML placeholder had the
+same `0x4C` size. The exact companion name, generated live body, caller,
+adjacent boundary, overlay span, and size rule out H2's conflicting/incomplete
+span case and H3's fragment/data-like case. Updated only the TOML symbol name;
+no build or runtime run was needed. The next bounded candidate is
+`func_800BF3A4`, independently named `restoreGameSettingsAfterDemo`, with
+size `0x64`.
