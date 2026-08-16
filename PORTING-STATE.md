@@ -80992,3 +80992,40 @@ runtime run required.
 Next census: `npcTieVariantTickAttachmentEffect` / `func_800DA9B0` at
 `0x800DA9B0` (size `0x1E8`). Last-15 titles after s1740 still include
 s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
+
+## Session 1741 (2026-08-16) — synchronized the npcTieVariantTickAttachmentEffect symbol
+
+Exact generated-symbol census for `0x800DA9B0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1728's
+maintenance compaction, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 6034; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTieVariantTickAttachmentEffect = 0x800DA9B0` with comment "TIE-variant attachment effect tick (LOS + cue)". Previous contiguous neighbor `npcTieVariantSteerToward = 0x800DA7D8`; next contiguous neighbor `npcTieVariantHandleDestruction = 0x800DAB98` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTieVariantTickAttachmentEffect` at VRAM `0x800DA9B0`; prologue `addiu $sp, $sp, -0x90`; saves `$ra`/`$s1`/`$s0` and `$f20`. `s1 = a0` (object), `a1` into `$f20` as dt. `validateActorTargetLOS` on `+0x38`; if LOS, `applyToObjectSubstructByFlag`. If attachment flag `+0xBA` is set, subtracts dt from timer `+0xA8`. On expiry: decrements an indexed slot counter, reloads timer from `+0xAC`, `lookupHmtTextureByName` at `0x800A7B5C`, builds a spawn position either from constant `0x800A7B60` (`+0xBB == 1`) or object `+0x24/+0x28/+0x2C` plus Y bump `0x800A7B64`. Then `getEffectIntensity` / `setEffectIntensity` on `+0xB0`, `triggerCueWithSlotEffect` type `0x9`, restore intensity, `slotDispatcherIter` type `0xA` slot `6` scale `+0xB4`, `play3DSoundEvent` `0x30`/`0x6E`/`0x3C` with float `0x800A7B6C`. Decrements remaining-count `+0xB8`; if that hits zero, clears `+0xBA`. Epilogue `jr $ra` / `addiu $sp, $sp, 0x90` ends at `0x800DAB94`. Previous mission function is `npcTieVariantSteerToward` at `0x800DA7D8` (last insn `0x800DA9AC`); next is `npcTieVariantHandleDestruction` at `0x800DAB98`. `funcs.h` already declares the human name. Sole generated `jal` is `npcTieVariantUpdate` at `0x800DB7F8` |
+| Body semantics | Matches the companion "TIE-variant attachment effect tick (LOS + cue)": LOS gate, attachment-timer countdown, HMT lookup, cue + slot-dispatch, 3D sound. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800DA9B0", vram = 0x800DA9B0, size = 0x1E8 }` — size matches `0x800DAB98 - 0x800DA9B0` (last insn `0x800DAB94` + 4 = `0x1E8`) |
+| Overlay section 4 | `{ .func = npcTieVariantTickAttachmentEffect, .offset = 0x00035880, .rom_size = 0x000001E8 }` under `section_4_ovl_mission_funcs` (`0x800DA9B0 - 0x800A5130 = 0x35880`; `0x356A8 + 0x1D8 = 0x35880`; `0x35880 + 0x1E8 = 0x35A68` matches next `npcTieVariantHandleDestruction`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DA9B0`. No leftover `func_800DA9B0` in generated headers or overlay INL; no companion `D_800DA9B0` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated TIE-variant attachment-effect
+tick body, previous (`npcTieVariantSteerToward` / `0x800DA7D8`) and next
+(`npcTieVariantHandleDestruction` / `0x800DAB98`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcTieVariantTickAttachmentEffect`, and only the TOML name was a stale
+`func_800DA9B0` placeholder. Corrected TOML to `npcTieVariantTickAttachmentEffect`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTieVariantHandleDestruction` / `func_800DAB98` at
+`0x800DAB98` (size `0x584`). Last-15 titles after s1741 still include
+s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
+

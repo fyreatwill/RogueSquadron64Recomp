@@ -1839,7 +1839,7 @@ functions = [
     { name = "npcWingmanState6", vram = 0x800DA368, size = 0xD8 },
     { name = "npcTieVariantTickEffects", vram = 0x800DA440, size = 0x398 },
     { name = "npcTieVariantSteerToward", vram = 0x800DA7D8, size = 0x1D8 },
-    { name = "func_800DA9B0", vram = 0x800DA9B0, size = 0x1E8 },
+    { name = "npcTieVariantTickAttachmentEffect", vram = 0x800DA9B0, size = 0x1E8 },
     { name = "func_800DAB98", vram = 0x800DAB98, size = 0x584 },
     { name = "npcTieVariantUpdate", vram = 0x800DB11C, size = 0x110C },
     { name = "func_800DC228", vram = 0x800DC228, size = 0xD8 },
