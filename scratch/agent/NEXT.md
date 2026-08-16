@@ -1,13 +1,13 @@
-# NEXT work unit (s1534)
+# NEXT work unit (s1535)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1533 synchronized `destroyAllNpcsInSlotChain` at `0x800AF08C`. Resume the
+s1534 synchronized `maybeLoadYwingCutscene` at `0x800AF0EC`. Resume the
 generated-symbol renaming sweep. Perform exactly one bounded 10→exact-name
-census over the next adjacent generated function, `0x800AF0EC..0x800AF164`.
+census over the next adjacent generated function, `0x800AF164..0x800AF260`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence before
-editing. Synchronize only an exact independent name in
+10→editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
 ambiguous entries unchanged. Leave `func_8008ED6C` unchanged
 (s1309 H2), `func_800927B0` unchanged (s1355 H3), `func_80092A54`
@@ -28,29 +28,28 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `maybeLoadYwingCutscene`;
-the companion cinematic list maps `maybeLoadYwingCutscene = 0x800AF0EC`
-(`a0=stateA, a1=stateB` — if `(a0==4 && a1==1)` or `(a0==7 && a1==0)`:
-`load_hmt_and_hob("frontend/cut_ywng/cut_ywng")` +
-`walkMeshdef0List("cut_ywng")`, stores the result at
-`MEM_W(0x800B0B18)`; otherwise clears it). TOML is still
-`func_800AF0EC` (size `0x78`, ends at independently named
-generated `buildBobbingObjectMatrix` / TOML `func_800AF164` at
-`0x800AF164`). Overlay `rom_size` is `0x78` at offset `0x00009FBC`.
-Confirm the complete live function, matching size, and caller/semantic
-evidence before synchronizing the TOML name. Independently named
-`destroyAllNpcsInSlotChain` at `0x800AF08C` (`rom_size` `0x60`) ends at
-this address. Menu-overlay `initCraftSelectScreen` / TOML
-`func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends
-`0x800AF3C0`) occupies overlapping VRAM and is a different overlay,
-not a cinematic size split. Mission-overlay `tickCutsceneObject` at
-`0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML
-`func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`)
-and likewise overlaps from `.ovl.mission`. Generated
-`tickCutsceneObject` appears before `maybeLoadYwingCutscene` in
-`funcs_29.c` only because that mission function shares the same
-VRAM window; the next cinematic function is
-`buildBobbingObjectMatrix`.
+generated entry at this address is already `buildBobbingObjectMatrix`;
+the companion cinematic list maps `buildBobbingObjectMatrix = 0x800AF164`
+(no comment). TOML is still `func_800AF164` (size `0xFC`, ends at
+independently named generated `cinematicShutdownAudioAndAssets` / TOML
+`func_800AF260` at `0x800AF260`). Overlay `rom_size` is `0xFC` at
+offset `0x0000A034`. Confirm the complete live function, matching size,
+and caller/semantic evidence before synchronizing the TOML name.
+Independently named `maybeLoadYwingCutscene` at `0x800AF0EC`
+(`rom_size` `0x78`) ends at this address. The generated body loads
+`MEM_W(0x800B0B18)` (the Y-wing mesh pointer stored by
+`maybeLoadYwingCutscene`), early-outs if null, then applies `sinf` /
+`composeRotationMatrixSlot2` / `composeRotationMatrixSlot0` /
+`addVec3At0x24` / `composeQuatToMat3x4`. One retail `jal` encoding
+`0x0C02BC59` sits at file `0x139ACC` (`0x800A767C`, generated caller
+inside `cutscenePopulateSlotsFromLevelLists`). Menu-overlay
+`initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60`
+(`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping VRAM and
+is a different overlay, not a cinematic size split. Mission-overlay
+`tickCutsceneObject` at `0x800AF04C` continues
+`playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58`
+(size `0xF4`, ends `0x800AF04C`) and likewise overlaps from
+`.ovl.mission`.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -74,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AF0EC\|800AF164\|maybeLoadYwingCutscene' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AF0EC\|800AF164\|maybeLoadYwingCutscene' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AF0EC\|800AF164' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AF164\|800AF260\|buildBobbingObjectMatrix' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AF164\|800AF260\|buildBobbingObjectMatrix' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AF164\|800AF260' syms/rogue_squadron.syms.toml
 ```

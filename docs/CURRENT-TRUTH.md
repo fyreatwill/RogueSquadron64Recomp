@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1533 (2026-08-15).
+the authority for session detail. Reviewed through s1534 (2026-08-15).
 
 ## Current state
 
@@ -63,7 +63,7 @@ the authority for session detail. Reviewed through s1533 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AF0EC..0x800AF164`.
+   adjacent function, `0x800AF164..0x800AF260`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -148,28 +148,26 @@ the authority for session detail. Reviewed through s1533 (2026-08-15).
    synchronized `initCutsceneSlotTable` at `0x800AEFC8`. s1531
    synchronized `insertCutsceneSlot` at `0x800AEFF0`. s1532
    synchronized `lookupCutsceneIdMapping` at `0x800AF03C`. s1533
-   synchronized `destroyAllNpcsInSlotChain` at `0x800AF08C`. The
-   generated entry at `0x800AF0EC` is already
-   `maybeLoadYwingCutscene`; the companion cinematic list maps
-   `maybeLoadYwingCutscene = 0x800AF0EC` (`a0=stateA, a1=stateB`
-   — if `(a0==4 && a1==1)` or `(a0==7 && a1==0)`:
-   `load_hmt_and_hob("frontend/cut_ywng/cut_ywng")` +
-   `walkMeshdef0List("cut_ywng")`, stores the result at
-   `MEM_W(0x800B0B18)`; otherwise clears it). TOML is still
-   `func_800AF0EC` (size `0x78`, ends at independently named
-   generated `buildBobbingObjectMatrix` / TOML `func_800AF164`
-   at `0x800AF164`). Overlay `rom_size` is `0x78` at offset
-   `0x00009FBC`. Confirm the complete live function, matching
-   size, and caller/semantic evidence before synchronizing the
-   TOML name. Independently named `destroyAllNpcsInSlotChain` at
-   `0x800AF08C` (`rom_size` `0x60`) ends at this address.
-   Menu-overlay `initCraftSelectScreen` / TOML `func_800AEC60`
-   at `0x800AEC60` (`rom_size` `0x760`, ends `0x800AF3C0`)
-   occupies overlapping VRAM from `.ovl.menu` and is not a
-   cinematic size split. Mission-overlay `tickCutsceneObject` at
-   `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML
-   `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends
-   `0x800AF04C`) and likewise overlaps from `.ovl.mission`.
+   synchronized `destroyAllNpcsInSlotChain` at `0x800AF08C`. s1534
+   synchronized `maybeLoadYwingCutscene` at `0x800AF0EC`. The
+   generated entry at `0x800AF164` is already
+   `buildBobbingObjectMatrix`; the companion cinematic list maps
+   `buildBobbingObjectMatrix = 0x800AF164` (no comment). TOML is
+   still `func_800AF164` (size `0xFC`, ends at independently named
+   generated `cinematicShutdownAudioAndAssets` / TOML
+   `func_800AF260` at `0x800AF260`). Overlay `rom_size` is `0xFC`
+   at offset `0x0000A034`. Confirm the complete live function,
+   matching size, and caller/semantic evidence before
+   synchronizing the TOML name. Independently named
+   `maybeLoadYwingCutscene` at `0x800AF0EC` (`rom_size` `0x78`)
+   ends at this address. Menu-overlay `initCraftSelectScreen` /
+   TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends
+   `0x800AF3C0`) occupies overlapping VRAM from `.ovl.menu` and
+   is not a cinematic size split. Mission-overlay
+   `tickCutsceneObject` at `0x800AF04C` continues
+   `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at
+   `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and likewise
+   overlaps from `.ovl.mission`.
 2. Future oracle work (the s1528 leave-hangar 640/`0x6a2900` phase, a
    later mission watch, or a new M4 RDRAM dest if one is identified from
    a DMEM→RDRAM transfer that is not `0xD60`) must use the Rice `--video`
@@ -535,6 +533,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1531 | Exact companion/generated cinematic-slot census synchronized `insertCutsceneSlot` at `0x800AEFF0`; no build or runtime run. |
 | s1532 | Exact companion/generated cinematic-lookup census synchronized `lookupCutsceneIdMapping` at `0x800AF03C`; no build or runtime run. |
 | s1533 | Exact companion/generated cinematic-NPC census synchronized `destroyAllNpcsInSlotChain` at `0x800AF08C`; no build or runtime run. |
+| s1534 | Exact companion/generated cinematic-load census synchronized `maybeLoadYwingCutscene` at `0x800AF0EC`; no build or runtime run. |
 
 ## Method and safety rules
 

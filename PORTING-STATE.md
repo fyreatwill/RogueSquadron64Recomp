@@ -73991,3 +73991,49 @@ body ends at independently named generated `buildBobbingObjectMatrix`
 `0x800AF0EC`. Mission-overlay `tickCutsceneObject` at `0x800AF04C`
 continues `playCutsceneObjectImpactSound` and occupies overlapping
 VRAM from `.ovl.mission`.
+
+## Session 1534 (2026-08-15) — synchronized the maybe-load-ywing-cutscene symbol
+
+Performed the bounded exact-name census over `0x800AF0EC..0x800AF164`.
+
+No new soak-queue verdicts since s1533; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1528 (Rice post-hangar
+leave-to-640 revisit), so the every-15-sessions sweep-revisit rule did not
+fire. CURRENT-TRUTH is 55007 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AF0EC`, size `0x78`; `0x800AF0EC+0x78=0x800AF164`. Overlay `.ovl.cinematic` entry `rom_size` is `0x78` at offset `0x00009FBC` (`0x800AF0EC-0x800A5130`). Live body is independently `0x78` and meets independently named `buildBobbingObjectMatrix` at `0x800AF164` |
+| Generated definition | `funcs_29.c` defines `maybeLoadYwingCutscene` at `0x800AF0EC`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x00009FBC`, `rom_size 0x00000078`). The live cinematic body is a complete `0x78` function: `addiu $sp, $sp, -0x18` / `lui $v0, 0x800B` / `andi $a0, $a0, 0xFF` / `sw $zero, 0xB18($v0)` clearing `MEM_W(0x800B0B18)` / `addiu $v0, $zero, 4` / `bne $a0, $v0, L_800AF118`. The `(a0==4)` arm then `andi $v1, $a1, 0xFF` / `addiu $v0, $zero, 1` / `beql $v1, $v0, L_800AF130`. The miss path is `addiu $v0, $zero, 7` / `bne $a0, $v0, L_800AF158` / `andi $v0, $a1, 0xFF` / `bne $v0, $zero, L_800AF158`. The load path is `addiu $a0, $a0, 0x5578` (string `0x800A5578`) / `jal 0x8005645C` (`load_hmt_and_hob`) / `jal 0x80056EB0` (`walkMeshdef0List`, string `0x800A5594`) / `sw $v0, 0xB18($v1)` storing the result at `MEM_W(0x800B0B18)`. Last live instruction pair is `0x800AF15C`/`0x800AF160` (`jr $ra` / `addiu $sp, $sp, 0x18`). Next generated cinematic function is independently named `buildBobbingObjectMatrix`. Independently named `destroyAllNpcsInSlotChain` at `0x800AF08C` (`rom_size` `0x60`) ends at this address. Menu-overlay `initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body (`0x800AF0EC` there is `addiu $a0, $zero, 2`). Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and occupies overlapping VRAM from `.ovl.mission`; it appears before `maybeLoadYwingCutscene` in `funcs_29.c` only because of that shared window |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `maybeLoadYwingCutscene = 0x800AF0EC` (`a0=stateA, a1=stateB` — if `(a0==4 && a1==1)` or `(a0==7 && a1==0)`: `load_hmt_and_hob("frontend/cut_ywng/cut_ywng")` + `walkMeshdef0List("cut_ywng")`, stores the result at `MEM_W(0x800B0B18)`; otherwise clears it). `main_overlay.txt` independently names those callees (`load_hmt_and_hob = 0x8005645C`, `walkMeshdef0List = 0x80056EB0`). Menu, mission, libultra, ignored, and zlib lists do not remap `0x800AF0EC`. The same cinematic list independently names the adjacent functions `destroyAllNpcsInSlotChain` at `0x800AF08C` and `buildBobbingObjectMatrix` at `0x800AF164`. No conflicting companion name for this cinematic address |
+| Caller evidence | One retail `jal` encoding `0x0C02BC3B` and zero `j` or absolute `0x800AF0EC` pointer words. The site is independently named `cinematicLoopBody` at `0x800A5F20` (file `0x138370`; prev `0x02002021` `addu $a0, $s0, $zero`; delay `0x02202821` `addu $a1, $s1, $zero`). Same-run ROM word at that file offset is `0x0C02BC3B`. The generated caller is the matching `funcs_27.c` `jal 0x800AF0EC` site inside `cinematicLoopBody` (`0x800A5D80`), immediately after `setupCutsceneLevel` and immediately before `load_cutscene`. The delay slot passes the cinematic state pair (`$s0`, `$s1`), matching the companion `(a0=stateA, a1=stateB)` contract. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x14153C` (`0x137580+(0x800AF0EC-0x800A5130)`) are `0x27BDFFE8` (`addiu $sp, $sp, -0x18`), `0x3C02800B` (`lui $v0, 0x800B`), `0x308400FF` (`andi $a0, $a0, 0xFF`), `0xAC400B18` (`sw $zero, 0xB18($v0)`), `0x24020004` (`addiu $v0, $zero, 4`), `0x14820005` (`bne $a0, $v0, L_800AF118`), `0xAFBF0010` (`sw $ra, 0x10($sp)`), `0x30A300FF` (`andi $v1, $a1, 0xFF`), `0x24020001` (`addiu $v0, $zero, 1`), `0x50620007` (`beql $v1, $v0, L_800AF130`), `0x3C04800A` (`lui $a0, 0x800A`), `0x24020007` (`addiu $v0, $zero, 7`), `0x1482000E` (`bne $a0, $v0, L_800AF158`), `0x30A200FF` (`andi $v0, $a1, 0xFF`), `0x1440000C` (`bne $v0, $zero, L_800AF158`), `0x24845578` (`addiu $a0, $a0, 0x5578`), `0x0C015917` (`jal 0x8005645C` `load_hmt_and_hob`), `0x0C015BAC` (`jal 0x80056EB0` `walkMeshdef0List`), `0xAC620B18` (`sw $v0, 0xB18($v1)`), epilogue `0x03E00008`/`0x27BD0018` (`jr $ra` / `addiu $sp, $sp, 0x18`). Same-run C-strings at file `0x1379C8` (`0x800A5578`) and `0x1379E4` (`0x800A5594`) are `frontend/cut_ywng/cut_ywng` and `cut_ywng`. Next start file `0x1415B4` is `0x27BDFFD8` (`buildBobbingObjectMatrix` `addiu $sp, $sp, -0x28`). Preceding epilogue file `0x141534` is `0x03E00008`/`0x27BD0028` (`destroyAllNpcsInSlotChain` `jr $ra` / restore `$sp`). The body is the Y-wing frontend-cutscene loader gated on the cinematic state pair. Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x14153C` is `0x27BDFFE8`, the caller `jal` word above is `0x0C02BC3B`, and the s1533/s1532/s1531/s1530/s1529 controls still read `0x27BDFFD8` at `0x1414DC`, `0x3406FFFF` at `0x14148C`, `0x27BDFFE8` at `0x141440`, `0x00002021` at `0x141418`, and `0x27BDFFD8` at `0x141380` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AF0EC`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x78`, the one ROM `jal` caller is independently named
+`cinematicLoopBody`, the ROM strings and callee `jal`s match the
+companion load contract, the overlapping menu and mission functions are
+different overlays, and there is neither a conflicting companion name
+nor a cinematic size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x78`). `func_8009D978` remains the eight-byte Q15 delay-mix
+table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated cinematic function is independently named
+`buildBobbingObjectMatrix` at `0x800AF164` (TOML still `func_800AF164`,
+size `0xFC`; overlay `rom_size` is `0xFC` at offset `0x0000A034`; live
+body ends at independently named generated
+`cinematicShutdownAudioAndAssets` / TOML `func_800AF260` at
+`0x800AF260`). Independently named `maybeLoadYwingCutscene` at
+`0x800AF0EC` (`rom_size` `0x78`) ends at `0x800AF164`.
+
