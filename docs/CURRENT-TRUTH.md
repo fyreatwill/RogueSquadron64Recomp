@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1496 (2026-08-15).
+the authority for session detail. Reviewed through s1497 (2026-08-15).
 
 ## Current state
 
@@ -54,7 +54,7 @@ the authority for session detail. Reviewed through s1496 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800A8420..0x800A89B0`.
+   adjacent function, `0x800A89B0..0x800A959C`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -102,13 +102,14 @@ the authority for session detail. Reviewed through s1496 (2026-08-15).
    s1493 synchronized `cutscenePopulateSlotsFromLevelLists` at
    `0x800A73E4`. s1494 synchronized `cinematicSlotDispatcher` at
    `0x800A76B8`. s1495 synchronized `spawnCutsceneObjectsFromList`
-   at `0x800A7C4C`. The generated entry at `0x800A8420` is already
-   `cutsceneDispatchSlotsByFlag`; the companion cinematic splat list
-   maps `cutsceneDispatchSlotsByFlag = 0x800A8420`. TOML is still
-   `func_800A8420` (size `0x590`, ends at independently named
-   `spawnCutsceneEffectsAndCues` / TOML `func_800A89B0` at
-   `0x800A89B0`). Overlay `rom_size` is `0x590` at offset
-   `0x000032F0`. Confirm the complete live function, matching size,
+   at `0x800A7C4C`. s1497 synchronized `cutsceneDispatchSlotsByFlag`
+   at `0x800A8420`. The generated entry at `0x800A89B0` is already
+   `spawnCutsceneEffectsAndCues`; the companion cinematic splat list
+   maps `spawnCutsceneEffectsAndCues = 0x800A89B0`. TOML is still
+   `func_800A89B0` (size `0xBEC`, ends at independently named
+   `initCutsceneAudioChannels` / TOML `func_800A959C` at
+   `0x800A959C`). Overlay `rom_size` is `0xBEC` at offset
+   `0x00003880`. Confirm the complete live function, matching size,
    and caller/semantic evidence before synchronizing the TOML name.
 2. Future oracle work (M4 numeric origin, hangar/mission watches) must use
    the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM, PIF,
@@ -419,6 +420,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1493 | Exact companion/generated cinematic-slot census synchronized `cutscenePopulateSlotsFromLevelLists` at `0x800A73E4`; no build or runtime run. |
 | s1494 | Exact companion/generated cinematic-dispatch census synchronized `cinematicSlotDispatcher` at `0x800A76B8`; no build or runtime run. |
 | s1495 | Exact companion/generated cinematic-spawn census synchronized `spawnCutsceneObjectsFromList` at `0x800A7C4C`; no build or runtime run. |
+| s1497 | Exact companion/generated cinematic-dispatch census synchronized `cutsceneDispatchSlotsByFlag` at `0x800A8420`; no build or runtime run. |
 
 ## Method and safety rules
 
