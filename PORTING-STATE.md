@@ -77926,3 +77926,33 @@ Independent agreement:
 H1 selected. Renamed TOML entry to `initActorTowardNamedDatItem`. No build or
 runtime run required. Next ranked candidate: `func_800C7AB0`, companion name
 `initAnchoredActorTowardNamedDatItem`, size `0xB0`.
+## Session 1655 (2026-08-16) — synchronized the initAnchoredActorTowardNamedDatItem symbol
+
+Exact census of `func_800C7AB0` / companion `initAnchoredActorTowardNamedDatItem` at
+`0x800C7AB0` (size `0xB0`).
+
+Independent agreement:
+- Companion: only `mission_overlay.txt` maps the name; previous
+  `initActorTowardNamedDatItem` at `0x800C79F0` and next
+  `despawnEffectOnNamedDatItem` at `0x800C7C88` (with TOML/generated neighbors
+  `getDatItemHealth` at `0x800C7B60`). No main/menu/cinematic collision.
+- Generated: live body in `funcs_36.c` already named
+  `initAnchoredActorTowardNamedDatItem`; prologue at `0x800C7AB0`, epilogue
+  `jr` at `0x800C7B58` / delay-slot stack restore at `0x800C7B5C`; previous
+  `initActorTowardNamedDatItem` ends at `0x800C7AB0` and next named entry
+  `getDatItemHealth` begins at `0x800C7B60`. Semantics:
+  `getLevelDatItemByName` (source) → reject null / halfword+6 `0xFFFF` →
+  `getLevelDatItemByName` (target name from `$a1`) → `getNpcContextByIndex`
+  → require actor `+0x112` flag == 1 → `initActorAsType1WithAnchor` with
+  position floats from actor `+0x4C`/`+0x50`.
+- Overlay span: `recomp_overlays.inl` section-4 entry
+  `.func = initAnchoredActorTowardNamedDatItem, .offset = 0x00022980, .rom_size = 0x000000B0`
+  (VRAM base `0x800A5130` → `0x800C7AB0`..`0x800C7B60` within `.ovl.mission`
+  size `0x665A0`).
+- TOML had stale placeholder `func_800C7AB0` with matching size `0xB0`.
+
+H1 selected. Renamed TOML entry to `initAnchoredActorTowardNamedDatItem`. No
+build or runtime run required. Next ranked candidate: `getDatItemHealth`
+(`0x800C7B60`, size `0xC8`) for confirmation that generated/TOML already
+agree, then advance.
+
