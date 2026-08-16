@@ -72709,3 +72709,40 @@ at `0x800A9D70` (TOML still `func_800A9D70`, size `0x44C`; overlay
 `rom_size` is `0x44C` at offset `0x00004C40`; live body ends at
 independently named `updatePositionalAudioSource` / TOML `func_800AA1BC` at
 `0x800AA1BC`).
+
+## Session 1502 (2026-08-15) — synchronized the emit-3d-sounds-for-active-npcs symbol
+
+Performed the bounded exact-name census over `0x800A9D70..0x800AA1BC`.
+
+No new soak-queue verdicts since s1501; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A9D70`, size `0x44C`; `0x800A9D70+0x44C=0x800AA1BC`. Overlay `.ovl.cinematic` entry `rom_size` is `0x44C` at offset `0x00004C40` (`0x800A9D70-0x800A5130`). Live body is independently `0x44C` and meets independently named `updatePositionalAudioSource` / TOML `func_800AA1BC` at `0x800AA1BC` |
+| Generated definition | `funcs_27.c` defines `emit3DSoundsForActiveNpcs` at `0x800A9D70`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x44C` function. It starts `addiu $sp, $sp, -0x98` / `sw $s6, 0x80($sp)` / `addu $s6, $a1, $zero` and ends at the sole `jr $ra` / `addiu $sp, $sp, 0x98` (`0x800AA1B4`/`0x800AA1B8`). The interior `jr $v0` at `0x800A9E30` is an 18-case jump table through `0x800A5430`, not a second return. Next generated cinematic function is independently named `updatePositionalAudioSource`. Menu-overlay `mallocCraftSelectionData` / TOML `hangarInitialize` at `0x800A9364` (`rom_size` `0x1A38`) occupies overlapping VRAM from `.ovl.menu` and is not a cinematic size split. Mission-overlay `computeAngleToTargetFromTransform` at `0x800A9B80`, `buildOrientationFromPosAndAngles` at `0x800A9E70`, and `stepAngleTowardTarget` at `0x800A9FCC` are a different overlay, not a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `emit3DSoundsForActiveNpcs = 0x800A9D70` in the cinematic splat list (no extra comment). Menu, mission, main, libultra, and zlib lists do not remap `0x800A9D70` (menu instead names `mallocCraftSelectionData = 0x800A9364`; mission names the overlapping angle/orientation helpers above in its own overlay). `undefined_funcs_auto.txt` has no `0x800A9D70` row. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02A75C` and zero `j` or absolute `0x800A9D70` pointer words. The site is in independently named `cinematicLoopBody` at `0x800A600C` (overlay file `0x13845C`; `cinematicLoopBody` is `0x800A5D80` size `0x8A0`, ends at `0x800A6620`). Same-run ROM word at that file offset is `0x0C02A75C`; the delay slot is `0xAC621A08` (`sw $v0, 0x1A08($v1)` with `$v1` from `lui $v1, 0x800B`). Incoming args persist from `0x800A5FFC..0x800A6004`: `$a1=0x800B1938`, `$a0=MEM_W($s4, 0x1904)` |
+| Semantic evidence | Retail ROM words at file `0x13C1C0` (`0x137580+(0x800A9D70-0x800A5130)`) are `0x27BDFF68` / `0xAFB60080` / `0x00A0B021` / `0xAFA40098` (`addiu $sp, $sp, -0x98` / `sw $s6, 0x80($sp)` / `addu $s6, $a1, $zero` / `sw $a0, 0x98($sp)`). The body `rs_memset`s `0xC` bytes at `$sp+0x58`, gates on the `lhu` at `arg0+0x4A`, then an 18-way type jump table that calls independently named `play3DSoundEvent` (five sites), `play3DSoundEventVariant` (two sites), and `register3DAudioListenerNode` (one site). Epilogue file `0x13C604` is `0x03E00008` / `0x27BD0098`. Next start file `0x13C60C` is `0x27BDFF70` (`updatePositionalAudioSource`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13C1C0` is `0x27BDFF68`, and the caller `jal` word above is `0x0C02A75C` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A9D70`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x44C`, `cinematicLoopBody` is the only ROM `jal` caller, and there is
+neither a conflicting companion name nor a size split inside the live
+cinematic body. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x44C`). `func_8009D978` remains the eight-byte
+Q15 delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated function is independently named `updatePositionalAudioSource`
+at `0x800AA1BC` (TOML still `func_800AA1BC`, size `0x338`; overlay
+`rom_size` is `0x338` at offset `0x0000508C`; live body ends at
+independently named `applyCutsceneSlotMaterialOverrides` / TOML
+`func_800AA4F4` at `0x800AA4F4`).

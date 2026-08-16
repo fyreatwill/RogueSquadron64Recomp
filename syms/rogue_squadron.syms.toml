@@ -2637,7 +2637,7 @@ functions = [
     { name = "initCutsceneAudioChannels", vram = 0x800A959C, size = 0x310 },
     { name = "initCutsceneScene", vram = 0x800A98AC, size = 0x210 },
     { name = "initSceneForMission", vram = 0x800A9ABC, size = 0x2B4 },
-    { name = "func_800A9D70", vram = 0x800A9D70, size = 0x44C },
+    { name = "emit3DSoundsForActiveNpcs", vram = 0x800A9D70, size = 0x44C },
     { name = "func_800AA1BC", vram = 0x800AA1BC, size = 0x338 },
     { name = "func_800AA4F4", vram = 0x800AA4F4, size = 0x164 },
     { name = "func_800AA658", vram = 0x800AA658, size = 0x1F8 },
