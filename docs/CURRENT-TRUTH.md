@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1607 (2026-08-16).
+the authority for session detail. Reviewed through s1608 (2026-08-16).
 
 ## Current state
 
@@ -242,8 +242,12 @@ the authority for session detail. Reviewed through s1607 (2026-08-16).
    (size `0x2A8`): the companion mission list, generated definition in the
    mission overlay file, generated `funcs_42.c` caller, exact
    `loadPlayerSlotHudPreset` boundary, overlay-table span, and TOML size
-   agree. The next census is `func_800BF264`, independently named
-   `loadPlayerSlotHudPreset`, with size `0x90`.
+   agree. s1608 synchronized `loadPlayerSlotHudPreset` at `0x800BF264`
+   (size `0x90`): the companion mission mapping, generated definition and
+   HUD-preset copy semantics, exact `countTrailingZeros16` boundary,
+   overlay-table span, and TOML size agree. The next census is
+   `func_800BF2F4`, independently named `countTrailingZeros16`, with size
+   `0x64`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -450,6 +454,7 @@ single-source and unevaluable as a retail ownership result.
 | s1605 | H1: synchronized `applyDemoRecordedHudEvents` at `0x800BECDC` (size `0x13C`); companion mission mapping, generated definition and demo-HUD state-update body, exact `clearPlayerSlotHudTracking` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1606 | H1: synchronized `clearPlayerSlotHudTracking` at `0x800BEE18` (size `0x94`); companion mission mapping, generated definition and `initAllPlayersHudTracking` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1607 | H1: synchronized `tickPlayerHudIndicators` at `0x800BEFBC` (size `0x2A8`); companion mission mapping, generated definition in `funcs_33.c`, generated caller in `funcs_42.c`, four-player/16-indicator HUD update semantics, exact `loadPlayerSlotHudPreset` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1608 | H1: synchronized `loadPlayerSlotHudPreset` at `0x800BF264` (size `0x90`); companion mapping, generated definition and HUD-preset copy semantics, exact `countTrailingZeros16` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 

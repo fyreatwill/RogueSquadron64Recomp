@@ -76709,3 +76709,26 @@ Updated only the TOML placeholder to `tickPlayerHudIndicators`; no
 mitigation, build, or runtime change was made. The next bounded candidate is
 `func_800BF264`, independently named `loadPlayerSlotHudPreset`, with size
 `0x90`.
+
+## Session 1608 (2026-08-16) — synchronized the loadPlayerSlotHudPreset symbol
+
+The work unit censused `0x800BF264..0x800BF2F4` using the companion mission
+symbol list, generated definition and semantic body, generated overlay table,
+and TOML symbol span. The competing hypotheses were H1 (an exact independent
+companion mapping), H2 (a partial, conflicting, or span-mismatched mapping),
+and H3 (a fragment, data-like region, or missing independent name). The
+complete comparison selected H1; no build or runtime run was needed.
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `loadPlayerSlotHudPreset = 0x800BF264`; `countTrailingZeros16 = 0x800BF2F4` is the next companion boundary. |
+| Generated definition and semantic evidence | `../N64Recomp/RecompiledFuncs/funcs_33.c` defines `loadPlayerSlotHudPreset` at `0x800BF264`; the body clears the selected HUD slot, copies 18 halfwords from the selected preset into the per-slot HUD storage, and returns through `0x800BF2F0`, immediately before the next function. No generated caller reference was found, so the body semantics are the caller-independent evidence. |
+| Span and overlay table | The TOML placeholder had size `0x90`; `recomp_overlays.inl` records `loadPlayerSlotHudPreset` at offset `0x1A134` with ROM size `0x90`, followed by `countTrailingZeros16` at offset `0x1A1C4`; the TOML next entry is `0x800BF2F4` with size `0x64`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated live-body boundary,
+TOML size, and overlay-table span agree. H3 is ruled out by the companion
+mapping, real generated body, and HUD-preset copy semantics. Updated only the
+TOML placeholder to `loadPlayerSlotHudPreset`; no mitigation, build, or
+runtime change was made. The next bounded candidate is `func_800BF2F4`,
+independently named `countTrailingZeros16`, with size `0x64`.
