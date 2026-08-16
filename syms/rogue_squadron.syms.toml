@@ -1792,7 +1792,7 @@ functions = [
     { name = "npcAtAtUpdate", vram = 0x800CD71C, size = 0x1800 },
     { name = "fake_func_800CEF1C", vram = 0x800CEF1C, size = 0x4 },
     { name = "advanceAtStEffectPhaseSound", vram = 0x800CEF20, size = 0x17C },
-    { name = "func_800CF09C", vram = 0x800CF09C, size = 0x170 },
+    { name = "tickAtStCannonFireEffect", vram = 0x800CF09C, size = 0x170 },
     { name = "func_800CF20C", vram = 0x800CF20C, size = 0x68C },
     { name = "func_800CF898", vram = 0x800CF898, size = 0x474 },
     { name = "func_800CFD0C", vram = 0x800CFD0C, size = 0x170 },

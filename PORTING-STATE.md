@@ -79150,3 +79150,39 @@ run required.
 Next census: `func_800CF09C` / `tickAtStCannonFireEffect` at `0x800CF09C`
 (size `0x170`). Last-15 titles still include s1682, so the next iteration may
 continue the sweep.
+
+## Session 1691 (2026-08-16) — synchronized the tickAtStCannonFireEffect symbol
+
+Exact generated-symbol census for `0x800CF09C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 36683; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickAtStCannonFireEffect = 0x800CF09C`. Previous contiguous neighbor `advanceAtStEffectPhaseSound = 0x800CEF20`; next contiguous function `updateAtStBodyKinematics = 0x800CF20C` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void tickAtStCannonFireEffect` at VRAM `0x800CF09C`; prologue `addiu $sp, $sp, -0x68`; returns through `jr $ra` / `addiu $sp, $sp, 0x68` ending at `0x800CF208`; previous mission function is `advanceAtStEffectPhaseSound` at `0x800CEF20` (last insn `0x800CF098`); next mission function is `updateAtStBodyKinematics` at `0x800CF20C` |
+| Body semantics | Actor at `a0`; inner object `s0 = *(a0+4)`. `a1==0` looks up HMT name `0x800A700C`, calls `setObjectSubstructF10IfReady`, writes `*(s0+0x64)=0` and `*(s0+0x6C) = *(sp+0x2C) - *(s0+4)`. `a1!=0` looks up HMT name `0x800A7010`. Then `resolveNpcAttachmentPos` when `*( *(0x80137CE4)*4 + *(s0+0x34) + 0xD8 ) != 0`, `generatePerpEmitDirectionWithJitter`, `tickProgressChannel`. On progress return 1: `triggerCueWithSlotEffect` type 3 (cue `0x8010A698`) and `play3DSoundEvent` type `0xD`. No static `jal 0x800CF09C` in generated funcs (effect-slot callback). Name matches the AT-ST cannon-fire effect tick |
+| TOML (before) | `{ name = "func_800CF09C", vram = 0x800CF09C, size = 0x170 }` — size matches `0x800CF20C - 0x800CF09C` (92 decoded insns, last+4 = `0x170`) |
+| Overlay section 4 | `{ .func = tickAtStCannonFireEffect, .offset = 0x00029F6C, .rom_size = 0x00000170 }` under `section_4_ovl_mission_funcs` (`0x800CF09C - 0x800A5130 = 0x29F6C`; `0x29DF0 + 0x17C = 0x29F6C`; `0x29F6C + 0x170 = 0x2A0DC` matches next `updateAtStBodyKinematics`) |
+| Non-collision | No menu-overlay function occupies `0x800CF09C`. Menu grep for `800CF09C`/`800CF20C` is empty. Menu m2c `D_800CF09C` in `func_800B47C4` is hangar data on a different overlay, not a name collision |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated AT-ST cannon-fire effect body,
+previous (`advanceAtStEffectPhaseSound` / `0x800CEF20`) and next
+(`updateAtStBodyKinematics` / `0x800CF20C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`tickAtStCannonFireEffect`, and only the TOML name was a stale
+`func_800CF09C` placeholder. Corrected TOML to `tickAtStCannonFireEffect`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `func_800CF20C` / `updateAtStBodyKinematics` at `0x800CF20C`
+(size `0x68C`). Last-15 titles still include s1682, so the next iteration may
+continue the sweep.
