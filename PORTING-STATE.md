@@ -79785,3 +79785,39 @@ runtime run required.
 Next census: `npcTickEffectChannelWithSlotDispatch` at `0x800D3240`
 (size `0x18C`). Last-15 titles still include s1698's retail-entry
 revisit, so the next iteration continues the sweep.
+
+## Session 1708 (2026-08-16) — synchronized the npcTickEffectChannelWithSlotDispatch symbol
+
+Exact generated-symbol census for `0x800D3240` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 47959; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTickEffectChannelWithSlotDispatch = 0x800D3240` with comment "effect-channel tick that also fans out via slotDispatcherIter". Previous contiguous neighbor `npcTickEffectChannelB = 0x800D307C`; next contiguous neighbor `npcShuttleHandleDestruction = 0x800D33CC` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void npcTickEffectChannelWithSlotDispatch` at VRAM `0x800D3240`; prologue `addiu $sp, $sp, -0x98`; returns through `jr $ra` / `addiu $sp, $sp, 0x98` ending at `0x800D33C8`; previous mission function is `npcTickEffectChannelB` at `0x800D307C` (last insn `0x800D323C`); next mission function is `npcShuttleHandleDestruction` at `0x800D33CC` in `funcs_38.c`. `funcs.h` already declares the human name |
+| Body semantics | Object at `a0`; `s1 = *(a0+4)`. Early-out if float `s1+0x60` `< D_800A7410`. Halfword `s1+0x5C` plus `a1=0x800A7408` for `lookupHmtTextureByName` (`0x80058360`) on `*(s1+0x30)`. Toggles `s1+0x5C` xor 1. Template float at `*(0x80137CE4)*4 + *(s1+0x34) + 0x100` gates `resolveNpcAttachmentPos` (`0x800F0F94`). Then `tickProgressChannel` (`0x800F1870`); if it returns 1, `triggerCueWithSlotEffect` (`0x800F2FCC`) type `0xB`, `getObjectNpcTypeId` (`0x800F2A00`), `slotDispatcherIter` (`0x8003E8DC`) type `0xA`, and `play3DSoundEvent` (`0x800989D8`). Exclusive installer is `npcInitWithMotionParams`: `+0xC5==2` installs `npcTickEffectChannelB` then a second `initObjectAnimSubstruct` with this function. Name matches the Channel-A/B siblings plus the extra dispatcher fan-out |
+| TOML (before) | `{ name = "func_800D3240", vram = 0x800D3240, size = 0x18C }` — size matches `0x800D33CC - 0x800D3240` (last insn `0x800D33C8` + 4 = `0x18C`) |
+| Overlay section 4 | `{ .func = npcTickEffectChannelWithSlotDispatch, .offset = 0x0002E110, .rom_size = 0x0000018C }` under `section_4_ovl_mission_funcs` (`0x800D3240 - 0x800A5130 = 0x2E110`; `0x2DF4C + 0x1C4 = 0x2E110`; `0x2E110 + 0x18C = 0x2E29C` matches next `npcShuttleHandleDestruction`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D3240`. Companion menu/cinematic/main greps are empty for this address, this name, and the entire `0x800D3xxx` window (menu max VRAM `0x800D03DC`; cinematic max `0x800B072C`). Companion and generated greps found no other `func_800D3240` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated effect-channel-plus-dispatch
+body, previous (`npcTickEffectChannelB` / `0x800D307C`) and next
+(`npcShuttleHandleDestruction` / `0x800D33CC`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcTickEffectChannelWithSlotDispatch`, and only the TOML name was a stale
+`func_800D3240` placeholder. Corrected TOML to
+`npcTickEffectChannelWithSlotDispatch`. This refutes H1 (TOML was not
+already synchronized), H3 (no fake fragment, overlay collision, or
+size/boundary disagreement), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No build or runtime run required.
+
+Next census: `npcShuttleHandleDestruction` at `0x800D33CC`
+(size `0x4C8`). Last-15 titles still include s1698's retail-entry
+revisit, so the next iteration continues the sweep.
