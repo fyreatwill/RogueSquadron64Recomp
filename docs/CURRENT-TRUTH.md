@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1536 (2026-08-15).
+the authority for session detail. Reviewed through s1537 (2026-08-15).
 
 ## Current state
 
@@ -63,7 +63,7 @@ the authority for session detail. Reviewed through s1536 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AF284..0x800AF2C8`.
+   adjacent function, `0x800AF2C8..0x800AF360`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -152,18 +152,17 @@ the authority for session detail. Reviewed through s1536 (2026-08-15).
    synchronized `maybeLoadYwingCutscene` at `0x800AF0EC`. s1535
    synchronized `buildBobbingObjectMatrix` at `0x800AF164`. s1536
    synchronized `cinematicShutdownAudioAndAssets` at `0x800AF260`.
-   The generated entry at `0x800AF284` is already `bytesDiffer`;
-   the companion cinematic list maps `bytesDiffer = 0x800AF284`
-   (byte-comparison helper: `(a, b, len)` iterates the first `len`
-   bytes and returns 1 on the first mismatch, 0 if all equal; not
-   `memcmp`). TOML is still `func_800AF284` (size `0x44`, ends at
-   independently named generated `matchKeywordWithPriority` / TOML
-   `func_800AF2C8` at `0x800AF2C8`). Overlay `rom_size` is `0x44`
-   at offset `0x0000A154`. Confirm the complete live function,
-   matching size, and caller/semantic evidence before
-   synchronizing the TOML name. Independently named
-   `cinematicShutdownAudioAndAssets` at `0x800AF260` (`rom_size`
-   `0x24`) ends at this address. Menu-overlay
+   s1537 synchronized `bytesDiffer` at `0x800AF284`.
+   The generated entry at `0x800AF2C8` is already
+   `matchKeywordWithPriority`; the companion cinematic list maps
+   `matchKeywordWithPriority = 0x800AF2C8` (no inline comment).
+   TOML is still `func_800AF2C8` (size `0x98`, ends at independently
+   named generated `cinematicComputeDt` / TOML `func_800AF360` at
+   `0x800AF360`). Overlay `rom_size` is `0x98` at offset
+   `0x0000A198`. Confirm the complete live function, matching size,
+   and caller/semantic evidence before synchronizing the TOML name.
+   Independently named `bytesDiffer` at `0x800AF284` (`rom_size`
+   `0x44`) ends at this address. Menu-overlay
    `initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60`
    (`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping
    VRAM from `.ovl.menu` and is not a cinematic size split.
@@ -539,6 +538,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1534 | Exact companion/generated cinematic-load census synchronized `maybeLoadYwingCutscene` at `0x800AF0EC`; no build or runtime run. |
 | s1535 | Exact companion/generated cinematic-matrix census synchronized `buildBobbingObjectMatrix` at `0x800AF164`; no build or runtime run. |
 | s1536 | Exact companion/generated cinematic-teardown census synchronized `cinematicShutdownAudioAndAssets` at `0x800AF260`; no build or runtime run. |
+| s1537 | Exact companion/generated cinematic-compare census synchronized `bytesDiffer` at `0x800AF284`; no build or runtime run. |
 
 ## Method and safety rules
 
