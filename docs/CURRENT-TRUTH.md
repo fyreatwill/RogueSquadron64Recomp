@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1652 (2026-08-16).
+the authority for session detail. Reviewed through s1653 (2026-08-16).
 
 ## Current state
 
@@ -65,8 +65,8 @@ the authority for session detail. Reviewed through s1652 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   `func_800C7978`, independently named `spawnEffectOnNamedDatItem` at
-   `0x800C7978` (size `0x78`). Compare companion mapping/callers and
+   `func_800C79F0`, independently named `initActorTowardNamedDatItem` at
+   `0x800C79F0` (size `0xC0`). Compare companion mapping/callers and
    semantics, generated body, previous and next boundaries, TOML size, and
    overlay span. Synchronize only on complete independent agreement. The s1639 census confirmed
    `checkComplexObjectives` was already synchronized; s1640 synchronized
@@ -80,10 +80,11 @@ the authority for session detail. Reviewed through s1652 (2026-08-16).
    after correcting its stale TOML name; s1651 confirmed
    `calculateDatItemDistanceToPlayer` was already synchronized; s1652
    synchronized `getScaledPlayerCraftSpeed` after correcting its stale TOML
-   name. s1650 was the mandatory retail-entry revisit (post-B A/Start/Z).
-   The full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
-   sweep is in §33. About 1,548 placeholder `func_0x...` names remained when
-   counted at s1487.
+   name; s1653 synchronized `spawnEffectOnNamedDatItem` after correcting
+   its stale TOML name. s1650 was the mandatory retail-entry revisit
+   (post-B A/Start/Z). The full s1590–s1649 archive is in
+   `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
+   placeholder `func_0x...` names remained when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
    leave a 640 frontend into a mission, or for a new M4 RDRAM destination
    from a DMEM→RDRAM transfer other than `0xD60`. Known hold/A/B/Z,
@@ -190,6 +191,7 @@ ownership.
 | s1650 | Rice post-B A/Start/Z revisit: all arms passed whole-RDRAM and hangar controls; zero mission/viewer PC. Hold and Z completed B-route 640 at `0x00696100`; A and Start cancelled the post-B 1024 intermediate back to hangar 512. H3 selected for A/Start; Z ignored. Mission entry still open only for a genuinely new route. |
 | s1651 | Confirmed `calculateDatItemDistanceToPlayer` (`0x800C78A0`, size `0xAC`) was already synchronized: companion mission mapping, live generated 3D DAT-item-to-player distance body, exact `0x800C7884`/`0x800C794C` boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C794C`. |
 | s1652 | Synchronized `getScaledPlayerCraftSpeed` (`0x800C794C`, size `0x2C`) after companion mission mapping, live generated craft-speed scale body, exact `0x800C78A0`/`0x800C7978` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7978`. |
+| s1653 | Synchronized `spawnEffectOnNamedDatItem` (`0x800C7978`, size `0x78`) after companion mission mapping, live generated DAT-item effect-spawn body, exact `0x800C794C`/`0x800C79F0` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C79F0`. |
 
 ## Method and safety rules
 

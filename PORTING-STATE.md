@@ -77869,3 +77869,31 @@ Independent agreement:
 H1 selected. Renamed TOML entry to `getScaledPlayerCraftSpeed`. No build or
 runtime run required. Next ranked candidate: `func_800C7978`, companion name
 `spawnEffectOnNamedDatItem`, size `0x78`.
+
+## Session 1653 (2026-08-16) — synchronized the spawnEffectOnNamedDatItem symbol
+
+Exact census of `func_800C7978` / companion `spawnEffectOnNamedDatItem` at
+`0x800C7978` (size `0x78`).
+
+Independent agreement:
+- Companion: only `mission_overlay.txt` maps the name; next symbol
+  `initActorTowardNamedDatItem` at `0x800C79F0` implies contiguous size `0x78`.
+  Family neighbors include `despawnEffectOnNamedDatItem` at `0x800C7C88`. No
+  main/menu/cinematic collision.
+- Generated: live body in `funcs_36.c` already named `spawnEffectOnNamedDatItem`;
+  prologue at `0x800C7978`, epilogue `jr` at `0x800C79E8` / delay-slot stack
+  restore at `0x800C79EC`; previous `getScaledPlayerCraftSpeed` ends at
+  `0x800C7978` and next named entry `initActorTowardNamedDatItem` begins at
+  `0x800C79F0`. Semantics: `getLevelDatItemByName` → reject null / halfword+6
+  `0xFFFF` → pack effect args (type 5, floats from `$a1`/`$a3`, byte from `$a2`)
+  → `slotDispatcherIter`. Callers at `0x80104BE8`, `0x80104C88`, `0x80107174`,
+  `0x80104F54` jal the live name.
+- Overlay span: `recomp_overlays.inl` section-4 entry
+  `.func = spawnEffectOnNamedDatItem, .offset = 0x00022848, .rom_size = 0x00000078`
+  (VRAM base `0x800A5130` → `0x800C7978`..`0x800C79F0` within `.ovl.mission`
+  size `0x665A0`).
+- TOML had stale placeholder `func_800C7978` with matching size `0x78`.
+
+H1 selected. Renamed TOML entry to `spawnEffectOnNamedDatItem`. No build or
+runtime run required. Next ranked candidate: `func_800C79F0`, companion name
+`initActorTowardNamedDatItem`, size `0xC0`.
