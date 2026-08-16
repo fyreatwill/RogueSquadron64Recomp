@@ -1771,7 +1771,7 @@ functions = [
     { name = "spawnNpcDestructionEffect", vram = 0x800C8178, size = 0x38C },
     { name = "spawnNpcImpactEffectVariant", vram = 0x800C8504, size = 0x474 },
     { name = "updateNpcOrientationFromMotion", vram = 0x800C8978, size = 0x518 },
-    { name = "func_800C8E90", vram = 0x800C8E90, size = 0x100 },
+    { name = "setupNpcModelForState", vram = 0x800C8E90, size = 0x100 },
     { name = "npcTurretUpdate", vram = 0x800C8F90, size = 0x11FC },
     { name = "func_800CA18C", vram = 0x800CA18C, size = 0xE0 },
     { name = "fake_func_800CA26C", vram = 0x800CA26C, size = 0x4 },

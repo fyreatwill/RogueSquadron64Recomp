@@ -78472,3 +78472,32 @@ required.
 Next census: `func_800C8E90` / `setupNpcModelForState` at `0x800C8E90`
 (size `0x100`). Last-15 titles still include s1666, so the next iteration
 may continue the sweep.
+
+## Session 1670 (2026-08-16) — synchronized the setupNpcModelForState symbol
+
+Exact generated-symbol census for `0x800C8E90` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `setupNpcModelForState = 0x800C8E90`; next mission NPC updater `npcTurretUpdate = 0x800C8F90`; prior `updateNpcOrientationFromMotion = 0x800C8978` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void setupNpcModelForState` at VRAM `0x800C8E90`; returns through `jr $ra` / `addiu $sp, $sp, 0x20` ending at `0x800C8F8C`; next mission function `npcTurretUpdate` at `0x800C8F90` |
+| Body semantics | Releases the actor mesh at `a0+0x30` via `releaseMeshAsset`, switches on the halfword state at `a0+0x70` (2 / 3 / 4 / default) to pick a mesh-name string at `0x800A6A0C` / `0x800A6A18` / `0x800A6A24` / `0x800A6A30`, `walkMeshdef0List` installs the new mesh, then copies the object transform from `a0+0x34` (`initVec4TripletFromArgs`, `composeRotationMatrixSlot0`/`Slot1`/`Slot2`, `addVec3At0x24`). One in-overlay caller is `npcTurretUpdate` at `0x800C972C` |
+| TOML (before) | `{ name = "func_800C8E90", vram = 0x800C8E90, size = 0x100 }` — size matches `0x800C8F90 - 0x800C8E90` |
+| Overlay section 4 | `{ .func = setupNpcModelForState, .offset = 0x00023D60, .rom_size = 0x00000100 }` under `section_4_ovl_mission_funcs` (`0x800C8E90 - 0x800A5130 = 0x23D60`; `0x23D60 + 0x100 = 0x23E60` matches next) |
+| Non-collision | Menu-overlay `buildDebrisMeshFromCells = 0x800C8C1C` (size `0xE6C`, ends `0x800C9A88`) lives in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. `0x800C8E90` is `+0x274` inside that menu function |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`updateNpcOrientationFromMotion` / `0x800C8978`) and next
+(`npcTurretUpdate` / `0x800C8F90`) boundaries, and TOML size already
+agreed; only the TOML name was a stale `func_800C8E90` placeholder.
+Corrected TOML to `setupNpcModelForState`. No build or runtime run
+required.
+
+Next census: `npcTurretUpdate` at `0x800C8F90` (size `0x11FC`). Last-15
+titles still include s1666, so the next iteration may continue the sweep.
