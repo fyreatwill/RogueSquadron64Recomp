@@ -78795,3 +78795,35 @@ runtime run required.
 Next census: `func_800CC2AC` / `tickAtAtBodyTransform` at `0x800CC2AC`
 (size `0x70C`). Last-15 titles still include s1666, so the next iteration
 may continue the sweep.
+
+## Session 1681 (2026-08-16) — synchronized the tickAtAtBodyTransform symbol
+
+Exact generated-symbol census for `0x800CC2AC` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 30179; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickAtAtBodyTransform = 0x800CC2AC`; previous contiguous helper `tickActorTexturedSoundEffect = 0x800CC158`; next contiguous helper `tickAtAtAudioAndWeaponState = 0x800CC9B8` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void tickAtAtBodyTransform` at VRAM `0x800CC2AC`; prologue `addiu $sp, $sp, -0x1C8`; returns through `jr $ra` / `addiu $sp, $sp, 0x1C8` ending at `0x800CC9B4`; previous mission function is `tickActorTexturedSoundEffect` at `0x800CC158` (last insn `0x800CC2A8`); next mission function is `tickAtAtAudioAndWeaponState` at `0x800CC9B8` |
+| Body semantics | Actor in `$s4`/`$a0`. Pending-child and LOS-anchor gates (`isPendingChildNpcActive`, `computeActorAnchorDeltaAfterLOS`) then `getObjectMeshTransformOrLocal`, `computeAnchorRelativePositionByDistanceRatio`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, `transformVec3ByMat34`, `buildRotationMatrixSlot0`/`Slot1`, `composeRotationMatrixSlot1`, `quatFromAxisAngle`, `rotateVec3ByQuat`, plus `vec3Length`/`vec3Dot`/`vec3Cross`/`normalize_vector` and `play3DSoundEventVariant`. Name matches the AT-AT body-transform tick |
+| TOML (before) | `{ name = "func_800CC2AC", vram = 0x800CC2AC, size = 0x70C }` — size matches `0x800CC9B8 - 0x800CC2AC` (533 decoded insns, last+4 = `0x70C`) |
+| Overlay section 4 | `{ .func = tickAtAtBodyTransform, .offset = 0x0002717C, .rom_size = 0x0000070C }` under `section_4_ovl_mission_funcs` (`0x800CC2AC - 0x800A5130 = 0x2717C`; `0x27028 + 0x154 = 0x2717C`; `0x2717C + 0x70C = 0x27888` matches next `tickAtAtAudioAndWeaponState`) |
+| Non-collision | Menu-overlay `compareStatstoMedalInfo = 0x800CC2B0`, `calculateShotAccuracy = 0x800CC374`, and `fake_func_800CC3D4 = 0x800CC3D4` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. They appear inside the mission VRAM span in `funcs_37.c` only because overlays share VRAM |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated AT-AT body-transform tick,
+previous (`tickActorTexturedSoundEffect` / `0x800CC158`) and next
+(`tickAtAtAudioAndWeaponState` / `0x800CC9B8`) boundaries, TOML size, and
+section-4 overlay span agreed; only the TOML name was a stale `func_800CC2AC`
+placeholder. Corrected TOML to `tickAtAtBodyTransform`. No build or runtime
+run required.
+
+After this session the last-15 titles are s1667–s1681, all sweep-scoped.
+Next iteration must be the mandatory retail-entry or M4 revisit, not another
+census. Sweep resume candidate after that: `func_800CC9B8` /
+`tickAtAtAudioAndWeaponState` at `0x800CC9B8` (size `0x164`).
