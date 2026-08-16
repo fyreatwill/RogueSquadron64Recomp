@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1665 (2026-08-16).
+the authority for session detail. Reviewed through s1666 (2026-08-16).
 
 ## Current state
 
@@ -39,11 +39,18 @@ the authority for session detail. Reviewed through s1665 (2026-08-16).
   Hold remains in `runHangarSelectionFrame` at 512. Pre-exit B is a distinct
   valid route (`sym=224`, pad word `0x400000`) through `512→1024→640` with no
   viewer or mission-entry PC, so not every hangar exit is case 6. After that
-  B intermediate 1024 phase begins, A or Start cancels back to hangar 512
-  (elevated hangar-frame PC counts, no mission entry); Z is ignored and the
-  B-route completes to 640 at `0x00696100` (s1650). Valid D-pad, post-viewer
-  control, and post-B A/Start/Z arms passed controls but have not reached
-  mission PC `0x80000B70`; do not repeat the already-tested inputs.
+  B intermediate 1024 phase begins, A or Start cancels back to hangar 512;
+  Z is ignored and the B-route completes to 640 at `0x00696100` (s1650).
+  That arrived 640 B-frontend is neither hangar nor viewer: hangar-frame
+  PCs stay at the earlier hangar-visit count, viewer `0x800C9BF0` is zero,
+  and the origin pair is `0x00696100`/`0x00696600`. It lasts about 21 s
+  then times out to attract 512 (`0x00690400`). A or Start pressed on it
+  cancel `640→1024→512` hangar; Z on it is ignored (s1666). The watched
+  "mission PC" `0x80000B70` is `loadOverlay+0x50` (same function,
+  `0x80000B20` size `0x124`), not a separate entry. Valid D-pad,
+  post-viewer C/L/R, post-B intermediate A/Start/Z, and post-arrival
+  A/Start/Z on the 640 B-frontend are classified or parked; do not repeat
+  them.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI
   submission. `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -64,34 +71,26 @@ the authority for session detail. Reviewed through s1665 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. **Mandatory revisit (s1666).** The last-15 ledger titles after s1665
-   are all sweep-scoped (s1651–s1665). Do not resume the symbol sweep.
-   Use the Rice `--video` oracle recipe for one genuinely new route that
-   may leave a 640 frontend into a mission, or for a new M4 RDRAM
-   destination from a DMEM→RDRAM transfer other than `0xD60`. Known
-   hold/A/B/Z, valid-D-pad, post-viewer `C-up/C-down/C-left/C-right/L/R`,
-   and post-B A/Start/Z during the 1024 intermediate are already
-   classified or parked; do not repeat them. The 640 B-frontend identity
-   and any later input **after** that frontend arrives at ~96 s /
-   `0x00696100` remain open. Every oracle run needs whole-RDRAM, PIF, and
-   VI/PC positive controls.
-2. After the revisit, continue the generated-symbol renaming sweep at
-   generated `spawnNpcDestructionEffect` / TOML `func_800C8178` at
-   `0x800C8178` (size `0x38C`). Compare companion mapping if any, generated
-   body, previous and next boundaries, TOML size, and overlay span.
+1. Continue the generated-symbol renaming sweep at generated
+   `spawnNpcDestructionEffect` / TOML `func_800C8178` at `0x800C8178`
+   (size `0x38C`). Compare companion mapping if any, generated body,
+   previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (likely a stale-TOML
-   correction if the generated body already carries the human name). The
-   s1639 census confirmed `checkComplexObjectives` was already
-   synchronized; s1640–s1649 synchronized HUD/level-state helpers and
-   wrappers; s1651 confirmed `calculateDatItemDistanceToPlayer`;
-   s1652–s1657 synchronized or confirmed DAT-item helpers; s1658–s1665
-   synchronized DAT-effect, cue, NPC-init, and state-change-effect
-   wrappers (`despawnEffectOnNamedDatItem` through
-   `playNpcStateChangeEffect`) after stale TOML corrections. s1650 was
-   the previous mandatory retail-entry revisit (post-B A/Start/Z). The
-   full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
-   sweep is in §33. About 1,548 placeholder `func_0x...` names remained
-   when counted at s1487.
+   correction if the generated body already carries the human name).
+   s1651–s1665 synchronized or confirmed DAT-item through NPC
+   state-change-effect helpers; s1650 and s1666 were the mandatory
+   retail-entry revisits. The full s1590–s1649 archive is in
+   `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
+   placeholder `func_0x...` names remained when counted at s1487.
+2. Remaining external retail-entry / M4 revisit leads, for the next
+   15-title gate only: C/L/R or valid D-pad **on the arrived 640
+   B-frontend**, or any input on the attract 512 it times out into
+   (`0x00690400`; Z-on-attract `512→1024` at 128.3 s is single-source
+   because hold died at 135 s). Do not repeat hold/A/B/Z, valid D-pad
+   on hangar, post-viewer C/L/R, post-B intermediate A/Start/Z, or
+   post-arrival A/Start/Z on the 640 B-frontend. Every oracle run needs
+   whole-RDRAM, PIF, and VI/PC positive controls. Alternative: a new M4
+   RDRAM destination from a DMEM→RDRAM transfer other than `0xD60`.
 3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. If that happens, write a bounded plan
    before changing any stub or trap.
@@ -203,7 +202,8 @@ ownership.
 | s1662 | Synchronized `triggerNamedAssetCue` (`0x800C7D7C`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EF95C` → `triggerStageAmbientForNamedDatItem`), exact `0x800C7D60`/`0x800C7D98` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D98` / `triggerSoundCueByType`. |
 | s1663 | Synchronized `triggerSoundCueByType` (`0x800C7D98`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EFCD4` → `initSoundCueRequest`), exact `0x800C7D7C`/`0x800C7DB4` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7DC0` / `initNpcActorFromSpawnMessage`. |
 | s1664 | Synchronized `initNpcActorFromSpawnMessage` (`0x800C7DC0`, size `0x238`) after companion mission mapping, live generated NPC-actor-from-spawn-message body (ends `initObjectAnimSubstruct`), exact `0x800C7DB4`/`0x800C7FF8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7FF8` / `playNpcStateChangeEffect`. |
-| s1665 | Synchronized `playNpcStateChangeEffect` (`0x800C7FF8`, size `0x180`) after companion mission mapping, live generated NPC state-change effect body (`lookupHmtTextureByName` ×2, emit-direction jitter, progress-channel ticks, `triggerCueWithSlotEffect`, `play3DSoundEvent`), exact `0x800C7DC0`/`0x800C8178` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `computeCellGridIndices` at `0x800C804C` is a different overlay, not a name collision. Next candidate is `func_800C8178` / `spawnNpcDestructionEffect`. Last-15 titles are now all sweep-scoped; s1666 must be the mandatory retail-entry or M4 revisit. |
+| s1665 | Synchronized `playNpcStateChangeEffect` (`0x800C7FF8`, size `0x180`) after companion mission mapping, live generated NPC state-change effect body (`lookupHmtTextureByName` ×2, emit-direction jitter, progress-channel ticks, `triggerCueWithSlotEffect`, `play3DSoundEvent`), exact `0x800C7DC0`/`0x800C8178` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `computeCellGridIndices` at `0x800C804C` is a different overlay, not a name collision. Next candidate is `func_800C8178` / `spawnNpcDestructionEffect`. Last-15 titles were then all sweep-scoped, so s1666 was the mandatory retail-entry revisit. |
+| s1666 | Rice post-arrival A/Start/Z on the 640 B-frontend (`1024→640` ~96 s, origin `0x00696100`/`0x00696600`). All arms passed whole-RDRAM and B-pad controls and reached that frontend before the 105 s presses. The 640 screen is neither hangar nor viewer; it times out at ~117.7 s to attract 512 (`0x00690400`). A/Start at 106.3 s cancel `640→1024→512` hangar (H3). Z on 640 is ignored (H2). `0x80000B70` is `loadOverlay+0x50`; A/Start hit it 0 times, Z once only after the later attract continuation. Hold died rc=139 at 135 s still on attract 512. Next sweep candidate is `func_800C8178` / `spawnNpcDestructionEffect`. |
 
 ## Method and safety rules
 

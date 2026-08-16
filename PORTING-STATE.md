@@ -78327,3 +78327,58 @@ After this session the last-15 titles are s1651–s1665, all sweep-scoped.
 Next iteration must be the mandatory retail-entry or M4 revisit, not another
 census. Sweep resume candidate after that: `func_800C8178` /
 `spawnNpcDestructionEffect` at `0x800C8178` (size `0x38C`).
+
+## Session 1666 (2026-08-16) — tested A/Start/Z on the arrived 640 B-frontend
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1665 were all sweep-scoped (s1651–s1665), so this
+iteration did not resume the generated-symbol census. s1650 had classified
+A/Start/Z during the post-B 1024 intermediate (A/Start cancel to hangar; Z
+ignored) but only one Z landed on the final 640 frontend. This session
+identifies that frontend and tests later A/Start/Z after `1024→640`.
+
+Competing hypotheses: H1 a later input on the arrived 640 B-frontend
+reaches mission-path PC `0x80000B70`; H2 the 640 screen is an already
+classified hangar or viewer frontend and later inputs match hold; H3 it is
+a distinct frontend and later inputs change VI/origin/PC without mission
+entry; H4 the recipe is unevaluable. Discriminator: four concurrent 160 s
+Rice arms (hold / A / Start / Z) with whole-RDRAM, PIF, VI, and watched
+frontend/mission PCs. Candidate presses at 105/115/125/135, after the
+known ~96 s `1024→640`.
+
+All four arms reached hangar `320→640→1024→512` then B-route
+`512→1024→640`, fired the whole-RDRAM 10,000-callback control, and
+delivered B as pad word `0x40000000` three times. Candidate pads after
+arrival: A `0x80000000`, Start `0x10000000`, Z `0x20000000`. Viewer PC
+`0x800C9BF0` was zero in every completed arm. Hold died rc=139 at 135.4 s
+during the later attract 512 (no PC summary) but the 96–117 s window is
+complete.
+
+Hold: `1024→640` at 96.5 s origin `0x00696600`, then `640→512` attract
+`0x00690400` at 117.7 s; still attract 512 at death. A and Start pressed
+at 106.3 s on that 640 screen, then `640→1024` at 107.6 s and
+`1024→512` hangar (`0x006ab400` / `0x006ab800`) at 128.7 s; hangar-frame
+PCs 60/60; `0x80000B70` zero. Z at 106.4 s and 116.4 s on 640 did not
+move VI; `640→512` attract at 117.7 s matches hold. Z then went
+`512→1024` at 128.3 s (Z pressed on attract at 126.4 s; hold still 512
+at 135 s) and `1024→640` at 159.4 s origin `0x00696100`. Z
+`0x80000B70` count is 1; `0x800B47D0`/`menuOverlayInit` jumped to 92/121
+versus 3/3 on A/Start.
+
+`0x80000B70` is `loadOverlay+0x50` (`loadOverlay` `0x80000B20` size
+`0x124`), an interior path of the overlay loader, not a separate mission
+entry. A/Start never took it. Z's single hit is after the 640 frontend
+had already timed out to attract, so it is not H1 for a 640-frontend
+press.
+
+H3 selected for A/Start (reproducible cancel `640→1024→512` hangar, zero
+viewer, zero `loadOverlay+0x50`). H2 selected for Z on the 640 frontend
+(ignored; same 117.7 s attract timeout as hold). H1 rejected. H4 rejected
+by shared hangar/B-route lifecycle, positive-control thresholds, and
+delivered pads. The 640 B-frontend is a distinct ~21 s screen at
+`0x00696100`/`0x00696600`, not hangar and not case-6 viewer.
+
+Z-on-later-attract `512→1024` is a new observation but single-source
+against a dead hold; do not treat it as mission entry. No recomp change
+or mitigation. Next work resumes the generated-symbol sweep at
+`func_800C8178` / `spawnNpcDestructionEffect`.
