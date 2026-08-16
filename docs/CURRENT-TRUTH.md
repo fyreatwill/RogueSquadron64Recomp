@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1701 (2026-08-16).
+the authority for session detail. Reviewed through s1702 (2026-08-16).
 
 ## Current state
 
@@ -84,11 +84,11 @@ the authority for session detail. Reviewed through s1701 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcInitFromTemplate`
-   (`0x800D2B5C`, size `0xFC`). After s1701 the last-15 titles
+1. Resume the generated-symbol sweep at `spawnScaledBootVec4Effect`
+   (`0x800D2C58`, size `0x40`). After s1702 the last-15 titles
    include the s1698 retail-entry revisit, so the 15-title gate does
-   not fire. s1651–s1665, s1667–s1681, s1683–s1697, and s1699–s1701
-   synchronized or confirmed DAT-item through `playerAtStUpdate`;
+   not fire. s1651–s1665, s1667–s1681, s1683–s1697, and s1699–s1702
+   synchronized or confirmed DAT-item through `npcInitFromTemplate`;
    s1650, s1666, s1682, and s1698 were the mandatory retail-entry
    revisits. The full s1590–s1649 archive is in `PROJECT-OVERVIEW.md`
    §34; the earlier sweep is in §33. About 1,548 placeholder
@@ -253,6 +253,7 @@ ownership.
 | s1699 | Synchronized `advancePlayerAtStLocomotion` (`0x800D1578`, size `0x1B8`) after companion mission mapping, live generated player-AT-ST locomotion-probe body (`wrapAngleToCyclicRange`, `findActiveNpcInSlotChain`, `getNpcContextByIndex`, `findSegmentObjectSphereHit`, `revalidateNpcSlotIterator`; exclusive callers `updatePlayerAtStBehavior` at `0x800D189C`/`0x800D1A44`), exact `0x800D1248`/`0x800D1730` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D1730` / `updatePlayerAtStBehavior`. |
 | s1700 | Synchronized `updatePlayerAtStBehavior` (`0x800D1730`, size `0xAD8`) after companion mission mapping, live generated player-AT-ST behavior-tick body (`advancePlayerAtStLocomotion` ×2, `quatFromAxisAngle`, `rotateVec3ByQuat` ×2, `orthonormalizeFrameAndSnapToZero`, `play3DSoundEvent` ×2, `setModelAnimSlotCycleDuration` ×2, `seekAllModelAnimChannelsInSlotToTime`, `wrapAngleToCyclicRange`, `spawnPlayerAtStCannonFire`; exclusive caller `playerAtStUpdate` at `0x800D2630`), exact `0x800D1578`/`0x800D2208` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `playerAtStUpdate`. |
 | s1701 | Confirmed `playerAtStUpdate` (`0x800D2208`, size `0x954`) was already synchronized: companion mission mapping, live generated 15-way player-AT-ST update (`playerAtStInit` ×2, `updatePlayerAtStBehavior`, `flattenAnimTreeAndAllocateSlot`, `spawnHeavyMechSubEffect`, `slotDispatcherIter`, `updatePlayerHudFrame`; craft record `0x80137DBC`), exact `0x800D1730`/`0x800D2B5C` boundaries, TOML name and size, and section-4 span agreed. Menu concert-hall/medal data at the same VRAM window is a different overlay, not a name collision. Next candidate is `func_800D2B5C` / `npcInitFromTemplate`. |
+| s1702 | Synchronized `npcInitFromTemplate` (`0x800D2B5C`, size `0xFC`) after companion mission mapping, live generated NPC-from-template init (`setNpcHealth`, `initActorMotionParams`, `initObjectAnimSubstruct`, `setObjectDetailLevel`; state byte `+0xFA` = 0/2), exact `0x800D2208`/`0x800D2C58` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D2C58` / `spawnScaledBootVec4Effect`. |
 
 ## Method and safety rules
 

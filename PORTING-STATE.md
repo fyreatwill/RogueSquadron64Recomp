@@ -79571,3 +79571,39 @@ section-4 row are all present). No build or runtime run required.
 Next census: `npcInitFromTemplate` at `0x800D2B5C` (size `0xFC`). Last-15
 titles still include s1698's retail-entry revisit, so the next iteration
 continues the sweep.
+
+## Session 1702 (2026-08-16) — synchronized the npcInitFromTemplate symbol
+
+Exact generated-symbol census for `0x800D2B5C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 44805; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcInitFromTemplate = 0x800D2B5C` with comment "NPC spawn/init: setNpcHealth then motion/anim/detail, state byte +0xFA". Previous contiguous neighbor `playerAtStUpdate = 0x800D2208`; next contiguous neighbor `spawnScaledBootVec4Effect = 0x800D2C58`. The following named sibling is `npcInitWithMotionParams = 0x800D2CA0` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void npcInitFromTemplate` at VRAM `0x800D2B5C`; prologue `addiu $sp, $sp, -0x38`; returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800D2C54`; previous mission function is `playerAtStUpdate` at `0x800D2208` (last insn `0x800D2B58`); next mission function is `spawnScaledBootVec4Effect` at `0x800D2C58`. `funcs.h` already declares the human name |
+| Body semantics | Object at `a0`; `s0 = *(a0+4)`; template `s1 = *(s0+0x34)`. Stores `0x800A73AC` into `s0+0x64` and zeros `s0+0x68`. `setNpcHealth` at `0x800F2070` (`a1=s1+0x6C`, `a2=s1`). `v0 <= 0` fail path stores `2` at state byte `s0+0xFA`. Success zeros `s0+0xFA` and `s0+0x7C`, copies scale `*(0x80137CE4)*4+s1+0xBC` into `s0+0x60`, then `initActorMotionParams` (`0x800F2888`; `a0=*(s0+0x38)`, `a1/a2/a3` from template `+0xB4/+0xB8/+0xC0`), `initObjectAnimSubstruct` (`0x800F2B88`; template `+0xC8/+0xCC/+0xD0` plus stack floats/`0x800CF09C` callback), and `setObjectDetailLevel` (`0x800F2830`; `a1=*(s1+0xA0)`). No generated `jal` callers. Name matches NPC spawn/init from a template record |
+| TOML (before) | `{ name = "func_800D2B5C", vram = 0x800D2B5C, size = 0xFC }` — size matches `0x800D2C58 - 0x800D2B5C` (last insn `0x800D2C54` + 4 = `0xFC`) |
+| Overlay section 4 | `{ .func = npcInitFromTemplate, .offset = 0x0002DA2C, .rom_size = 0x000000FC }` under `section_4_ovl_mission_funcs` (`0x800D2B5C - 0x800A5130 = 0x2DA2C`; `0x2D0D8 + 0x954 = 0x2DA2C`; `0x2DA2C + 0xFC = 0x2DB28` matches next `spawnScaledBootVec4Effect`) |
+| Non-collision | No menu-overlay function occupies `0x800D2B5C`. Companion menu grep is empty for this address, this name, and the entire `0x800D2xxx` window. Companion and generated greps found no other `func_800D2B5C` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated NPC-from-template init body,
+previous (`playerAtStUpdate` / `0x800D2208`) and next
+(`spawnScaledBootVec4Effect` / `0x800D2C58`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcInitFromTemplate`, and only the TOML name was a stale `func_800D2B5C`
+placeholder. Corrected TOML to `npcInitFromTemplate`. This refutes H1
+(TOML was not already synchronized), H3 (no fake fragment, overlay
+collision, or size/boundary disagreement), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Next census: `spawnScaledBootVec4Effect` at `0x800D2C58` (size `0x40`).
+Last-15 titles still include s1698's retail-entry revisit, so the next
+iteration continues the sweep.

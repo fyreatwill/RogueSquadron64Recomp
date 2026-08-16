@@ -1802,7 +1802,7 @@ functions = [
     { name = "advancePlayerAtStLocomotion", vram = 0x800D1578, size = 0x1B8 },
     { name = "updatePlayerAtStBehavior", vram = 0x800D1730, size = 0xAD8 },
     { name = "playerAtStUpdate", vram = 0x800D2208, size = 0x954 },
-    { name = "func_800D2B5C", vram = 0x800D2B5C, size = 0xFC },
+    { name = "npcInitFromTemplate", vram = 0x800D2B5C, size = 0xFC },
     { name = "func_800D2C58", vram = 0x800D2C58, size = 0x40 },
     { name = "fake_func_800D2C98", vram = 0x800D2C98, size = 0x8 },
     { name = "func_800D2CA0", vram = 0x800D2CA0, size = 0x240 },
