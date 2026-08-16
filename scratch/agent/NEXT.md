@@ -1,11 +1,11 @@
-# NEXT work unit (s1654)
+# NEXT work unit (s1655)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the exact generated-symbol census. The next candidate is
-`func_800C79F0`, independently named `initActorTowardNamedDatItem` at
-`0x800C79F0` (size `0xC0`). Generated already uses the human name; TOML still
-carries the placeholder `func_800C79F0` (s1653 observation) — synchronize
+`func_800C7AB0`, independently named `initAnchoredActorTowardNamedDatItem` at
+`0x800C7AB0` (size `0xB0`). Generated already uses the human name; TOML still
+carries the placeholder `func_800C7AB0` (s1654 observation) — synchronize
 only if the full independent comparison agrees.
 
 Competing hypotheses and discriminator:
@@ -22,18 +22,18 @@ Exact commands:
 
 ```sh
 # 1. Companion mapping / callers / semantics (bounded searches only)
-grep -rn 'initActorTowardNamedDatItem\|0x800C79F0\|800C79F0' \
+grep -rn 'initAnchoredActorTowardNamedDatItem\|0x800C7AB0\|800C7AB0' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64 \
   --include='*.c' --include='*.h' --include='*.txt' --include='*.yaml' \
   --include='*.md' --include='*.ld' | grep -v '/build/' | head -80
 
 # 2. Generated definition + adjacent boundaries
-grep -rn 'func_800C79F0\|initActorTowardNamedDatItem\|0x800C79F0\|0x800C7978\|0x800C7AB0' \
+grep -rn 'func_800C7AB0\|initAnchoredActorTowardNamedDatItem\|0x800C7AB0\|0x800C79F0\|0x800C7B60' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --include='*.c' --include='*.h' --include='*.inl' | head -80
 
 # 3. TOML + overlay span
-grep -n '800C79F0\|initActorTowardNamedDatItem' \
+grep -n '800C7AB0\|initAnchoredActorTowardNamedDatItem' \
   syms/rogue_squadron.syms.toml | head -40
 ```
 
