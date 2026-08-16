@@ -72899,3 +72899,41 @@ adjacent generated function is independently named
 `func_800AAC88`, size `0x1084`; overlay `rom_size` is `0x1084` at
 offset `0x00005B58`; live body ends at independently named
 `npcIncomingMissileUpdate` / TOML `func_800ABD0C` at `0x800ABD0C`).
+
+## Session 1507 (2026-08-15) — synchronized the spawn-cutscene-debris-field symbol
+
+Performed the bounded exact-name census over `0x800AAC88..0x800ABD0C`.
+
+No new soak-queue verdicts since s1506; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1496 (Rice-oracle revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AAC88`, size `0x1084`; `0x800AAC88+0x1084=0x800ABD0C`. Overlay `.ovl.cinematic` entry `rom_size` is `0x1084` at offset `0x00005B58` (`0x800AAC88-0x800A5130`). Live body is independently `0x1084` and meets independently named `npcIncomingMissileUpdate` / TOML `func_800ABD0C` at `0x800ABD0C` |
+| Generated definition | `funcs_28.c` defines `spawnCutsceneDebrisField` at `0x800AAC88`; `funcs.h` and `recomp_overlays.inl` already use that name. The live cinematic body is a complete `0x1084` function. It starts `addiu $sp, $sp, -0x150` / `lui $at, 0x800A` and ends at the sole `jr $ra` / `addiu $sp, $sp, 0x150` (`0x800ABD04`/`0x800ABD08`). Next generated cinematic function is independently named `npcIncomingMissileUpdate`. Menu-overlay `mallocCraftSelectionData` / TOML `hangarInitialize` at `0x800A9364` (`rom_size` `0x1A38`, ends `0x800AAD9C`) occupies overlapping VRAM from `.ovl.menu` and is not a cinematic size split. Mission-overlay `playerSnowSpeederInit` at `0x800AAAE0` and `func_800AADD4` at `0x800AADD4` are a different overlay, not a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `spawnCutsceneDebrisField = 0x800AAC88` in the cinematic splat list. Menu, mission, main, libultra, and zlib lists do not remap `0x800AAC88`. `undefined_funcs_auto.txt` has no leftover `func_800AAC88` row. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02AB22` and zero `j` or absolute `0x800AAC88` pointer words. The site is independently named `spawnCutsceneEffectsAndCues` at `0x800A9480` (cinematic-file `0x13B8D0`; delay `0x02402021` = `addu $a0, $s2, $zero`). Same-run ROM word at that file offset is `0x0C02AB22`. The generated caller is the matching `jal 0x800AAC88` site that already dispatches through the named function |
+| Semantic evidence | Retail ROM words at file `0x13D0D8` (`0x137580+(0x800AAC88-0x800A5130)`) are `0x27BDFEB0` / `0x3C01800A` (`addiu $sp, $sp, -0x150` / `lui $at, 0x800A`). The body loads scale floats `2.0`/`10.0`/`1.0` from `0x800A55D4`/`0x800A55D8`/`0x800A55DC`, then switches on cue word `$a0+8` via a 10-entry jump table at `0x800A55E0` (type 2 falls through to the epilogue). Cases `rs_strcmp` NPC names against cinematic strings `b_fac_hi`, `b_pwrtran_hi`, `cb_trns8`, and `b_20sb_hi` at `0x800A55A0`/`0x800A55AC`/`0x800A55BC`/`0x800A55C8`, then call independently named `spawnOrientedNpc` (20), `spawnDebris1Npc` (2), `spawnNpcBurstAlongSegment` (4), `composeRandomRotationMatrix` (2), `scaleVec3ByRandomRange` (2), `spawnEffectNpcWithRampedScaleExt` (1), and `rand` (6). Epilogue file `0x13E154` is `0x03E00008` / `0x27BD0150`. Next start file `0x13E15C` is `0x27BDFF00` (`npcIncomingMissileUpdate`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13D0D8` is `0x27BDFEB0`, the caller `jal` word above is `0x0C02AB22`, and the s1506/s1505 controls still read `0x3C02800B` at `0x13CCA0` and `0x27BDFFA8` at `0x13CAA8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AAC88`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x1084`, the one ROM `jal` caller passes the cue record from
+`spawnCutsceneEffectsAndCues`, and the jump-table debris/NPC spawn path
+matches the companion name. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x1084`). `func_8009D978` remains
+the eight-byte Q15 delay-mix table and was left unchanged, as were
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`npcIncomingMissileUpdate` at `0x800ABD0C` (TOML still
+`func_800ABD0C`, size `0x868`; overlay `rom_size` is `0x868` at
+offset `0x00006BDC`; live body ends at independently named
+`buildCutsceneGradientBuffers` / TOML `func_800AC574` at `0x800AC574`).
