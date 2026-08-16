@@ -78063,3 +78063,43 @@ adjacent boundaries and sizes. Corrected the stale TOML placeholder to
 `despawnEffectOnNamedDatItem`. No build or runtime behavior conclusion was
 made. The next sweep candidate is `func_800C7CEC` / generated
 `setLevelObjectTrackingScalar` (`0x800C7CEC`, size `0xC`).
+
+## Session 1659 (2026-08-16) — synchronized the setLevelObjectTrackingScalar symbol
+
+Ran the exact generated-symbol census for `0x800C7CEC` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live level-object tracking scalar store and its
+generated, TOML, and section-4 boundaries agree completely once any stale
+placeholder is corrected; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator. The last-15
+ledger titles still include s1650 (post-B retail-entry revisit), so the
+mandatory non-sweep revisit gate did not fire.
+
+The companion mission map names `setLevelObjectTrackingScalar` at
+`0x800C7CEC` with a detailed note: twelve callers, all
+`lvN_initializeObjectTracking` for levels 0..b; one-instruction setter
+`MEM_W[0x8013973C] = f12`. The bounded companion-tree search found no
+competing C/H definition or alternate address. The generated `funcs_36.c`
+definition already carries the human name and is the live `0xC`-byte body:
+
+- `lui $v0, 0x8014`
+- `jr $ra` delay: `swc1 $f12, -0x68C4($v0)`
+
+which stores `f12` at `0x80140000-0x68C4 = 0x8013973C`, matching the
+companion note exactly. Its preceding boundary is
+`despawnEffectOnNamedDatItem` at `0x800C7C88` with size `0x64`
+(`0x800C7C88+0x64 = 0x800C7CEC`), and its following boundary is
+`playObjectiveVoiceLine1` at `0x800C7CF8` with size `0x24`
+(`0x800C7CEC+0xC = 0x800C7CF8`). The TOML entry had the correct address and
+size `0xC` but still carried the placeholder `func_800C7CEC`. The section-4
+overlay table already lists the human-named function at ROM offset
+`0x22BBC` with span `0xC` (exact after `0x22B58+0x64`). Generated call
+sites in the level-init family already invoke the human name.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and section-4
+ownership; H3 is ruled out by the live one-instruction float store body and
+exact adjacent boundaries and sizes. Corrected the stale TOML placeholder to
+`setLevelObjectTrackingScalar`. No build or runtime behavior conclusion was
+made. The next sweep candidate is `func_800C7D44` / generated
+`dispatchHudEffectUpdate` (`0x800C7D44`, size `0x1C`).

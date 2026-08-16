@@ -1,17 +1,17 @@
-# NEXT work unit (s1659)
+# NEXT work unit (s1660)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the exact generated-symbol census. The next candidate is generated
-`setLevelObjectTrackingScalar` at `0x800C7CEC` (size `0xC`). Generated and
-overlays already use the human name; TOML still carries `func_800C7CEC`
-(s1658 observation) — confirm full independent agreement and correct the
+`dispatchHudEffectUpdate` at `0x800C7D44` (size `0x1C`). Generated and
+overlays already use the human name; TOML still carries `func_800C7D44`
+(s1659 observation) — confirm full independent agreement and correct the
 stale TOML name if the body/boundaries agree, or leave unresolved and
 advance.
 
 Competing hypotheses and discriminator:
 
-- H1: the live function is the level-object tracking scalar store, and
+- H1: the live function is the HUD-effect update dispatcher, and
   generated body, TOML size/name, previous/next boundaries, and section-4
   overlay span agree completely — synchronize any stale placeholder (TOML
   name).
@@ -24,18 +24,18 @@ Exact commands:
 
 ```sh
 # 1. Companion mapping / callers / semantics (bounded searches only)
-grep -rn 'setLevelObjectTrackingScalar\|0x800C7CEC\|800C7CEC' \
+grep -rn 'dispatchHudEffectUpdate\|0x800C7D44\|800C7D44' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64 \
   --include='*.c' --include='*.h' --include='*.txt' --include='*.yaml' \
   --include='*.md' --include='*.ld' | grep -v '/build/' | head -80
 
 # 2. Generated definition + adjacent boundaries
-grep -rn 'setLevelObjectTrackingScalar\|func_800C7CEC\|0x800C7CEC\|0x800C7C88\|0x800C7CF8' \
+grep -rn 'dispatchHudEffectUpdate\|func_800C7D44\|0x800C7D44\|0x800C7D1C\|0x800C7D60' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --include='*.c' --include='*.h' --include='*.inl' | head -80
 
 # 3. TOML + overlay span
-grep -n '800C7CEC\|setLevelObjectTrackingScalar\|func_800C7CEC' \
+grep -n '800C7D44\|dispatchHudEffectUpdate\|func_800C7D44' \
   syms/rogue_squadron.syms.toml | head -40
 ```
 

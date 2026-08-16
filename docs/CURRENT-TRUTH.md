@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1658 (2026-08-16).
+the authority for session detail. Reviewed through s1659 (2026-08-16).
 
 ## Current state
 
@@ -65,8 +65,8 @@ the authority for session detail. Reviewed through s1658 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   generated `setLevelObjectTrackingScalar` / TOML `func_800C7CEC` at
-   `0x800C7CEC` (size `0xC`). Compare companion mapping if any, generated
+   generated `dispatchHudEffectUpdate` / TOML `func_800C7D44` at
+   `0x800C7D44` (size `0x1C`). Compare companion mapping if any, generated
    body, previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (likely a stale-TOML
    correction if the generated body already carries the human name). The
@@ -89,10 +89,11 @@ the authority for session detail. Reviewed through s1658 (2026-08-16).
    name; s1656 confirmed `getDatItemHealth` was already synchronized;
    s1657 confirmed `getDatItemHealthPercentage` was already synchronized;
    s1658 synchronized `despawnEffectOnNamedDatItem` after correcting its
-   stale TOML name. s1650 was the mandatory retail-entry revisit
-   (post-B A/Start/Z). The full s1590–s1649 archive is in
-   `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
-   placeholder `func_0x...` names remained when counted at s1487.
+   stale TOML name; s1659 synchronized `setLevelObjectTrackingScalar`
+   after correcting its stale TOML name. s1650 was the mandatory
+   retail-entry revisit (post-B A/Start/Z). The full s1590–s1649 archive
+   is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
+   1,548 placeholder `func_0x...` names remained when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
    leave a 640 frontend into a mission, or for a new M4 RDRAM destination
    from a DMEM→RDRAM transfer other than `0xD60`. Known hold/A/B/Z,
@@ -205,6 +206,7 @@ ownership.
 | s1656 | Confirmed `getDatItemHealth` (`0x800C7B60`, size `0xC8`) was already synchronized: companion mission mapping, live generated DAT-item health-lookup body, exact `0x800C7AB0`/`0x800C7C28` boundaries, TOML size, and section-4 span agreed; next candidate is `getDatItemHealthPercentage`. |
 | s1657 | Confirmed `getDatItemHealthPercentage` (`0x800C7C28`, size `0x60`) was already synchronized: companion mission mapping, live generated DAT-item health-percentage body, exact `0x800C7B60`/`0x800C7C88` boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7C88` / `despawnEffectOnNamedDatItem`. |
 | s1658 | Synchronized `despawnEffectOnNamedDatItem` (`0x800C7C88`, size `0x64`) after companion mission mapping, live generated DAT-item effect-despawn body, exact `0x800C7C28`/`0x800C7CEC` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7CEC` / `setLevelObjectTrackingScalar`. |
+| s1659 | Synchronized `setLevelObjectTrackingScalar` (`0x800C7CEC`, size `0xC`) after companion mission mapping (12 `lvN_initializeObjectTracking` callers; `MEM_W[0x8013973C]=f12`), live generated one-instruction float store, exact `0x800C7C88`/`0x800C7CF8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D44` / `dispatchHudEffectUpdate`. |
 
 ## Method and safety rules
 
