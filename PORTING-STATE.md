@@ -78827,3 +78827,69 @@ After this session the last-15 titles are s1667–s1681, all sweep-scoped.
 Next iteration must be the mandatory retail-entry or M4 revisit, not another
 census. Sweep resume candidate after that: `func_800CC9B8` /
 `tickAtAtAudioAndWeaponState` at `0x800CC9B8` (size `0x164`).
+
+## Session 1682 (2026-08-16) — tested C/L/R and D-pad on the arrived 640 B-frontend
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1681 were all sweep-scoped (s1667–s1681), so this
+iteration did not resume the generated-symbol census. Step 0 `wc -c` was
+31034; not a maintenance iteration. No new soak-queue verdicts.
+
+s1666 had classified post-arrival A/Start/Z on the 640 B-frontend
+(A/Start cancel `640→1024→512` hangar; Z ignored). Remaining unused
+lead: C/L/R or valid D-pad on that same arrived 640 screen. Attract-512
+input was left as a later lead and was not mixed in.
+
+Competing hypotheses: H1 a C/L/R/D-pad press on the arrived 640
+B-frontend reaches mission-path PC `loadOverlay` `0x80000B20` /
+interior `0x80000B70` or otherwise leaves into a new classified route;
+H2 the press is ignored (same 117.7 s `640→512` attract timeout and
+origin `0x00690400` as hold); H3 the press changes VI/origin/PC without
+mission entry (A/Start-like cancel or a new frontend); H4 the recipe is
+unevaluable. Discriminator: eleven concurrent Rice arms (hold + cup /
+cdown / cleft / cright / l / r / dup / ddown / dleft / dright) with
+whole-RDRAM, PIF, VI, and watched frontend/mission PCs. Presses only at
+105/115 so both land inside the ~21 s 640 window (arrival ~96 s,
+timeout ~117.7 s).
+
+Batch 1 (`--secs 160`, `run_all.sh`) reproduced the known ~135 s
+Rice/core death (rc=137–139) before the oracle flushed `[oracle] watch
+pc` lines. WIDTH and PIF for the 96–117 s window were complete. Batch 2
+(`--secs 125`, `run_pc.sh` → `pc_flush/summary.txt`) is the same recipe
+stopped before that death; all 11 arms exited rc=0 at ~125.1 s emulated
+and flushed PC summaries. Combined table:
+`scratch/agent/s1682_broute_640_clr_dpad/summary.txt`. Hangar-frame
+watches fired 59–62 times (same-run positive control).
+
+All 11 arms reached hangar `320→640→1024→512` then B-route
+`512→1024→640`, fired the whole-RDRAM 10,000-callback control, and
+delivered B as pad word `0x40000000` three times (56.3/59.4/64.4 s)
+before the 96 s arrival. Candidate pads at 106.4/116.4: C-up
+`0x00080000`, C-down `0x00040000`, C-left `0x00020000`, C-right
+`0x00010000`, L `0x00200000`, R `0x00100000`, D-up `0x08000000`,
+D-down `0x04000000`, D-left `0x02000000`, D-right `0x01000000`. Every
+arm including hold also shows boot-like `0x80010000` at 120.2 s.
+
+WIDTH: every arm `1024→640` at 96.4–96.5 s origin
+`0x00696100`/`0x00696600`, then `640→512` attract
+`0x00690400`/`0x00690800` at 117.7 s. No arm did `640→1024` after
+the 105 s press.
+
+PC (125 s flush): viewer `0x800C9BF0` = 0 all arms. `0x80000B70`
+(`loadOverlay+0x50`) = 1 on hold and every candidate, so the interior
+hit is the post-timeout attract path, not a 105/115 press. loadOvl
+entry = 6, B20+88/C8 = 2/2, matching across the table. B47D0 /
+menuInit are 71–73 / 99–101 (hold 71/99); the elevation versus s1666
+A/Start (3/3) is the 117.7–125 s attract interval, also present on
+hold.
+
+H2 selected for all ten candidates. H1 rejected (no mission VI; viewer
+0; B70 not elevated versus hold). H3 rejected (no cancel and no new
+origin/phase versus hold). H4 rejected by shared hangar/B-route
+lifecycle, positive-control thresholds, delivered pads, hangar-frame
+PC fire, and clean 125 s flush. No recomp change or mitigation.
+
+Remaining retail-entry lead is any input on the attract 512 this
+screen times out into (`0x00690400`). Next work resumes the
+generated-symbol sweep at `func_800CC9B8` /
+`tickAtAtAudioAndWeaponState`.

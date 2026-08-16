@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1681 (2026-08-16).
+the authority for session detail. Reviewed through s1682 (2026-08-16).
 
 ## Current state
 
@@ -45,12 +45,15 @@ the authority for session detail. Reviewed through s1681 (2026-08-16).
   PCs stay at the earlier hangar-visit count, viewer `0x800C9BF0` is zero,
   and the origin pair is `0x00696100`/`0x00696600`. It lasts about 21 s
   then times out to attract 512 (`0x00690400`). A or Start pressed on it
-  cancel `640→1024→512` hangar; Z on it is ignored (s1666). The watched
-  "mission PC" `0x80000B70` is `loadOverlay+0x50` (same function,
-  `0x80000B20` size `0x124`), not a separate entry. Valid D-pad,
-  post-viewer C/L/R, post-B intermediate A/Start/Z, and post-arrival
-  A/Start/Z on the 640 B-frontend are classified or parked; do not repeat
-  them.
+  cancel `640→1024→512` hangar; Z on it is ignored (s1666). C, L, R, and
+  valid D-pad on it are ignored (s1682): same 117.7 s attract timeout as
+  hold, viewer PC zero, hangar-frame 59–62, and `0x80000B70` = 1 matching
+  hold so the interior hit is the post-timeout attract path, not the
+  105/115 press. The watched "mission PC" `0x80000B70` is
+  `loadOverlay+0x50` (same function, `0x80000B20` size `0x124`), not a
+  separate entry. Valid D-pad on hangar, post-viewer C/L/R, post-B
+  intermediate A/Start/Z, and post-arrival A/Start/Z/C/L/R/D-pad on the
+  640 B-frontend are classified or parked; do not repeat them.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI
   submission. `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -71,25 +74,26 @@ the authority for session detail. Reviewed through s1681 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. After s1681 the last-15 titles (s1667–s1681) are all sweep-scoped,
-   so the next iteration is the mandatory retail-entry / M4 revisit in
-   #2, not another census. Sweep resume candidate is generated
-   `func_800CC9B8` / `tickAtAtAudioAndWeaponState` at `0x800CC9B8`
-   (size `0x164`). s1651–s1665 and s1667–s1681 synchronized or
-   confirmed DAT-item through `tickAtAtBodyTransform`; s1650 and
-   s1666 were the mandatory retail-entry revisits. The full
-   s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
-   sweep is in §33. About 1,548 placeholder `func_0x...` names
-   remained when counted at s1487.
+1. After s1682 the last-15 titles (s1668–s1682) include the s1682
+   retail-entry revisit, so the next iteration resumes the generated-
+   symbol census at `func_800CC9B8` / `tickAtAtAudioAndWeaponState`
+   at `0x800CC9B8` (size `0x164`; next companion
+   `processAtAtSubFeatureSlot` at `0x800CCB1C`). s1651–s1665 and
+   s1667–s1681 synchronized or confirmed DAT-item through
+   `tickAtAtBodyTransform`; s1650, s1666, and s1682 were the
+   mandatory retail-entry revisits. The full s1590–s1649 archive is
+   in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
+   1,548 placeholder `func_0x...` names remained when counted at
+   s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
-   15-title gate only: C/L/R or valid D-pad **on the arrived 640
-   B-frontend**, or any input on the attract 512 it times out into
-   (`0x00690400`; Z-on-attract `512→1024` at 128.3 s is single-source
-   because hold died at 135 s). Do not repeat hold/A/B/Z, valid D-pad
-   on hangar, post-viewer C/L/R, post-B intermediate A/Start/Z, or
-   post-arrival A/Start/Z on the 640 B-frontend. Every oracle run needs
-   whole-RDRAM, PIF, and VI/PC positive controls. Alternative: a new M4
-   RDRAM destination from a DMEM→RDRAM transfer other than `0xD60`.
+   15-title gate only: any input on the attract 512 the 640 B-frontend
+   times out into (`0x00690400`; Z-on-attract `512→1024` at 128.3 s
+   is still single-source because s1666 hold died at 135 s). Do not
+   repeat hold/A/B/Z, valid D-pad on hangar, post-viewer C/L/R, post-B
+   intermediate A/Start/Z, or post-arrival A/Start/Z/C/L/R/D-pad on
+   the 640 B-frontend. Every oracle run needs whole-RDRAM, PIF, and
+   VI/PC positive controls. Alternative: a new M4 RDRAM destination
+   from a DMEM→RDRAM transfer other than `0xD60`.
 3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. If that happens, write a bounded plan
    before changing any stub or trap.
@@ -217,7 +221,8 @@ ownership.
 | s1678 | Synchronized `findNearestNpcWithinRange` (`0x800CBDA0`, size `0x29C`) after companion mission mapping, live generated nearest-NPC-in-range body (`getPlayerField2`, `getNpcContextField8`, `findActiveNpcInSlotChain`, `vec3Length` ×2, `c.lt.s` range reject, `getNpcContextByIndex`, `lookupHmtTextureByName`, `revalidateNpcSlotIterator`; two `tickCinematicEffectObject` callers), exact `0x800CABD4`/`0x800CC03C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `appendNodeToListHead` / `tickMultiPartVoiceLine` / `mallocVoiceLineStruct` / `setVoiceLineLoopFlag` at `0x800CBDC4`/`0x800CBE00`/`0x800CBF60`/`0x800CC02C` are a different overlay, not a name collision. Next candidate is `func_800CC03C` / `initActorFromSpawnTemplate`. |
 | s1679 | Synchronized `initActorFromSpawnTemplate` (`0x800CC03C`, size `0x11C`) after companion mission mapping, live generated spawn-template actor-init body (`setNpcHealth`, `setObjectDetailLevel`, `initActorMotionParams`, `initObjectAnimSubstruct`, `setEffectIntensity`; state byte `+0xE6` = 4/3 on fail), exact `0x800CBDA0`/`0x800CC158` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `setVoiceLineLoopFlag` / `fake_func_800CC038` / `loadMedalInfo` / `getMissionMedal` at `0x800CC02C`/`0x800CC038`/`0x800CC040`/`0x800CC070` are a different overlay, not a name collision. Next candidate is `func_800CC158` / `tickActorTexturedSoundEffect`. |
 | s1680 | Synchronized `tickActorTexturedSoundEffect` (`0x800CC158`, size `0x154`) after companion mission mapping, live generated textured-sound-effect tick body (`lookupHmtTextureByName` on `0x800A6D60`/`0x800A6D64`, `setObjectSubstructF10IfReady`, `tickProgressChannel`, `getObjectNpcTypeId`, `triggerCueWithSlotEffect`, `slotDispatcherIter`, `play3DSoundEvent`), exact `0x800CC03C`/`0x800CC2AC` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `calculatePlayerRank` / `getMedalInfo` at `0x800CC1A8`/`0x800CC200` are a different overlay, not a name collision. Next candidate is `func_800CC2AC` / `tickAtAtBodyTransform`. |
-| s1681 | Synchronized `tickAtAtBodyTransform` (`0x800CC2AC`, size `0x70C`) after companion mission mapping, live generated AT-AT body-transform tick (`isPendingChildNpcActive`, `computeActorAnchorDeltaAfterLOS`, `getObjectMeshTransformOrLocal`, `computeAnchorRelativePositionByDistanceRatio`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, `transformVec3ByMat34`, `buildRotationMatrixSlot0`/`Slot1`, `composeRotationMatrixSlot1`, `quatFromAxisAngle`, `rotateVec3ByQuat`, `play3DSoundEventVariant`), exact `0x800CC158`/`0x800CC9B8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `compareStatstoMedalInfo` / `calculateShotAccuracy` / `fake_func_800CC3D4` at `0x800CC2B0`/`0x800CC374`/`0x800CC3D4` are a different overlay, not a name collision. After this session the last-15 titles are all sweep-scoped, so the next iteration is the mandatory retail-entry revisit. Sweep resume candidate is `func_800CC9B8` / `tickAtAtAudioAndWeaponState`. |
+| s1681 | Synchronized `tickAtAtBodyTransform` (`0x800CC2AC`, size `0x70C`) after companion mission mapping, live generated AT-AT body-transform tick (`isPendingChildNpcActive`, `computeActorAnchorDeltaAfterLOS`, `getObjectMeshTransformOrLocal`, `computeAnchorRelativePositionByDistanceRatio`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, `transformVec3ByMat34`, `buildRotationMatrixSlot0`/`Slot1`, `composeRotationMatrixSlot1`, `quatFromAxisAngle`, `rotateVec3ByQuat`, `play3DSoundEventVariant`), exact `0x800CC158`/`0x800CC9B8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `compareStatstoMedalInfo` / `calculateShotAccuracy` / `fake_func_800CC3D4` at `0x800CC2B0`/`0x800CC374`/`0x800CC3D4` are a different overlay, not a name collision. After this session the last-15 titles were all sweep-scoped, so s1682 was the mandatory retail-entry revisit. |
+| s1682 | Rice C/L/R and D-pad on the arrived 640 B-frontend (`1024→640` ~96 s, origin `0x00696100`/`0x00696600`). All 11 arms passed whole-RDRAM, B-pad, hangar, and 640-arrival controls. Presses at 105/115 delivered the expected pad words. Every candidate matched hold: `640→512` attract at 117.7 s (`0x00690400`/`800`), viewer PC 0, hangar-frame 59–62. `0x80000B70` = 1 on hold and every candidate (post-timeout attract path, not the 105/115 press). H2 selected; H1/H3/H4 rejected. First 160 s batch died at the known ~135 s Rice crash before PC flush; `--secs 125` flush exited rc=0. Remaining retail-entry lead is attract-512 input. Next sweep candidate is `func_800CC9B8` / `tickAtAtAudioAndWeaponState`. |
 
 ## Method and safety rules
 
