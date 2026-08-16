@@ -1,9 +1,9 @@
-# NEXT work unit (s1510)
+# NEXT work unit (s1511)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent
-generated function, `0x800AC75C..0x800ACE8C`. Do not build or run. Record
+generated function, `0x800ACE8C..0x800AD224`. Do not build or run. Record
 its address, size, generated definition, companion name/source, caller or
 semantic evidence, and confidence before editing. Synchronize only an exact
 independent name in `syms/rogue_squadron.syms.toml`; leave address-encoded,
@@ -27,18 +27,20 @@ one-instruction `mtc1 $zero, $f4` fragment),
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
 generated entry at this address is already
-`spawnNpcBurstAlongSegment`; the companion cinematic splat
-list maps `spawnNpcBurstAlongSegment = 0x800AC75C`. TOML is
-still `func_800AC75C` (size `0x730`, ends at independently named
-`processCutsceneActions` / TOML `func_800ACE8C` at `0x800ACE8C`).
-Overlay `rom_size` is `0x730` at offset `0x0000762C`. Confirm the
+`processCutsceneActions`; the companion cinematic list maps
+`processCutsceneActions = 0x800ACE8C` (iterates
+`cuts_file.unk0058` entries; active count at +0x4E). TOML is
+still `func_800ACE8C` (size `0x398`, ends at independently named
+`computeCutsceneScreenScale` / TOML `func_800AD224` at `0x800AD224`).
+Overlay `rom_size` is `0x398` at offset `0x00007D5C`. Confirm the
 complete live function, matching size, and caller/semantic evidence
 before synchronizing the TOML name. Menu-overlay
 `updateHangarBayScene` / TOML `func_800AB658` at `0x800AB658`
 occupies overlapping VRAM and is a different overlay, not a
 cinematic size split. Mission-overlay
 `tickEffectObjectMotionAndOrientation` / TOML `func_800AC330` at
-`0x800AC330` occupies overlapping VRAM and is a different overlay,
+`0x800AC330` and `tickCinematicEffectObject` / TOML `func_800AC7B4`
+at `0x800AC7B4` occupy overlapping VRAM and are different overlays,
 not a cinematic size split.
 
 Any future oracle/M4 watch must use Homebrew Rice
@@ -61,7 +63,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AC75C\|800ACE8C\|spawnNpcBurstAlongSegment' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AC75C\|800ACE8C\|spawnNpcBurstAlongSegment' ../N64Recomp/RecompiledFuncs/funcs_28.c
-grep -n -C 3 '800AC75C\|800ACE8C' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800ACE8C\|800AD224\|processCutsceneActions' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800ACE8C\|800AD224\|processCutsceneActions' ../N64Recomp/RecompiledFuncs/funcs_28.c
+grep -n -C 3 '800ACE8C\|800AD224' syms/rogue_squadron.syms.toml
 ```
