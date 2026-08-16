@@ -2653,7 +2653,7 @@ functions = [
     { name = "loadBackdropAsset", vram = 0x800ADF74, size = 0x5A4 },
     { name = "initCinematicSceneAssets", vram = 0x800AE518, size = 0x360 },
     { name = "dispatchCinematicFromMainLoop", vram = 0x800AE878, size = 0xB0 },
-    { name = "func_800AE928", vram = 0x800AE928, size = 0x64 },
+    { name = "shouldShowCutsceneForLevelStage", vram = 0x800AE928, size = 0x64 },
     { name = "func_800AE98C", vram = 0x800AE98C, size = 0x8C },
     { name = "func_800AEA18", vram = 0x800AEA18, size = 0x10 },
     { name = "cuts_0058_bubble_sort", vram = 0x800AEA28, size = 0x108 },

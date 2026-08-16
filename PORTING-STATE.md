@@ -73366,3 +73366,43 @@ adjacent generated function is independently named
 `func_800AE928`, size `0x64`; overlay `rom_size` is `0x64` at offset
 `0x000097F8`; live body ends at independently named
 `getAssetNameForNpcType` / TOML `func_800AE98C` at `0x800AE98C`).
+
+## Session 1519 (2026-08-15) — synchronized the should-show-cutscene-for-level-stage symbol
+
+Performed the bounded exact-name census over `0x800AE928..0x800AE98C`.
+
+No new soak-queue verdicts since s1518; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AE928`, size `0x64`; `0x800AE928+0x64=0x800AE98C`. Overlay `.ovl.cinematic` entry `rom_size` is `0x64` at offset `0x000097F8` (`0x800AE928-0x800A5130`). Live body is independently `0x64` and meets independently named `getAssetNameForNpcType` / TOML `func_800AE98C` at `0x800AE98C` |
+| Generated definition | `funcs_29.c` defines `shouldShowCutsceneForLevelStage` at `0x800AE928`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x000097F8`, `rom_size 0x00000064`). The live cinematic body is a complete `0x64` function. It starts `andi $a3, $a1, 0xFF` (no stack frame) and ends at the sole live `jr $ra` / `addu $v0, $a2, $zero` (`0x800AE984`/`0x800AE988`) followed by `return`. Next generated cinematic function is independently named `getAssetNameForNpcType`. Menu-overlay `composeInterpolatedNodeMatrices` at `0x800AE814` (`offset 0x000096E4`, `rom_size` `0x1CC`, ends `0x800AE9E0`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `populateCutsceneSubtitleTextIds` / TOML `func_800AE830` at `0x800AE830` (size `0x130`, ends `0x800AE960`) and `playRandomCutsceneVoiceLine` / TOML `func_800AE960` at `0x800AE960` occupy overlapping VRAM from `.ovl.mission` and are likewise different overlays. `dispatchCinematicFromMainLoop` at `0x800AE878` ends `0x800AE928` and does not overlap this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `shouldShowCutsceneForLevelStage = 0x800AE928` (comment: `(level u8, stage u8) → bool`, stage in `{0, 1}` or Corellia/Logo stage 2). Menu, mission, libultra, and zlib lists do not remap `0x800AE928`. `undefined_funcs_auto.txt` has no leftover `func_800AE928` row. The only companion-tree named hit is that cinematic list row. No companion C/asm body exists. Companion `docs/cutscenses/cutscenes.md` independently defines cutscene types `0/1/2` as INTRO/EXTRO/SPECIAL and says only two SPECIAL files exist (Defection at Corellia and the logo sequence) |
+| Caller evidence | One retail `jal` encoding `0x0C02BA4A` and zero `j` or absolute `0x800AE928` pointer words. The site is independently named `cinematicLoopBody`: `0x800A5DCC` (cinematic file `0x13821C`; delay `0xA3A6007D` = `sb $a2, 0x7D($sp)`). Same-run ROM word at that file offset is `0x0C02BA4A`. The generated caller is the matching `funcs_27.c` `jal 0x800AE928` site. Arguments: `$a0` is incoming `cinematicLoopBody` `$a0` (level u8 via `$s7`), `$a1` is incoming `$a1` (stage u8 via `$s0`). After return, `andi $v0, $v0, 0xFF` then `beq $v0, $zero, L_800A65E4` skips the rest of the cinematic body. s1518 independently established `dispatchCinematicFromMainLoop` calls `cinematicLoopBody` with `($a0=3, $a1=2)` |
+| Semantic evidence | Retail ROM words at file `0x140D78` (`0x137580+(0x800AE928-0x800A5130)`) are `0x30A700FF` (`andi $a3, $a1, 0xFF`) and `0x2CE20001` (`sltiu $v0, $a3, 1`). The body sets `$a2=(stage==0)`, then `$a2=1` if `stage==1`, clears `$a2` if `level>=0x10`, then `$a2=1` if `level==3 && stage==2` or `level==0x13 && stage==2`, and returns `$a2`. That matches the companion predicate (stage in `{0, 1}` or two special-level stage-2 cases) and independently matches companion CutsceneType INTRO/EXTRO/SPECIAL with only two SPECIAL files. Epilogue file `0x140DD4`/`0x140DD8` is `0x03E00008` / `0x00C01021`. Next start file `0x140DDC` is `0x308300FF` (`getAssetNameForNpcType` `andi $v1, $a0, 0xFF`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x140D78` is `0x30A700FF`, the caller `jal` word above is `0x0C02BA4A`, and the s1518/s1517/s1516/s1515/s1514/s1513 controls still read `0x27BDFFE8` at `0x140CC8`, `0x27BDFF78` at `0x140968`, `0x27BDFF20` at `0x1403C4`, `0x27BDFF80` at `0x140048`, `0x27BDFFB0` at `0x13FAE0`, `0x03E00008` at `0x140040`, and `0x27BDFFC0` at `0x13F674` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AE928`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x64`, the single ROM `jal` caller is independently named
+`cinematicLoopBody` with `(level, stage)` and a false return skips the
+cinematic body, and the stage `{0,1}` plus two `stage==2` exceptions
+match both the companion comment and the independently documented
+INTRO/EXTRO/SPECIAL cutscene types. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x64`). `func_8009D978`
+remains the eight-byte Q15 delay-mix table and was left unchanged, as
+were `func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`getAssetNameForNpcType` at `0x800AE98C` (TOML still `func_800AE98C`,
+size `0x8C`; overlay `rom_size` is `0x8C` at offset `0x0000985C`; live
+body ends at independently named `getCutsceneRuntimeContext` / TOML
+`func_800AEA18` at `0x800AEA18`).
