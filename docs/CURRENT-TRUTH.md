@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1643 (2026-08-16).
+the authority for session detail. Reviewed through s1644 (2026-08-16).
 
 ## Current state
 
@@ -62,14 +62,15 @@ the authority for session detail. Reviewed through s1643 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   `func_800C776C`, independently named `setHudEnableBit8` at
-   `0x800C776C` (size `0x34`). Compare companion mapping/callers and
+   `func_800C77A0`, independently named `isLevelStateByteZero` at
+   `0x800C77A0` (size `0x10`). Compare companion mapping/callers and
    semantics, generated body, previous and next boundaries, TOML size, and
    overlay span. Synchronize only on complete independent agreement. The
    s1639 census confirmed `checkComplexObjectives` was already synchronized;
    s1640 synchronized `getAndSetByteAtLevelStateTable`; s1641 synchronized
    `getGlobalFloatGameState`; s1642 synchronized `getObjectiveGlobalFloat`;
-   s1643 synchronized `setHudEnableBit4`. The full s1590–s1643 archive is in
+   s1643 synchronized `setHudEnableBit4`; s1644 synchronized
+   `setHudEnableBit8`. The full s1590–s1644 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
@@ -168,6 +169,7 @@ ownership.
 | s1641 | Synchronized `getGlobalFloatGameState` (`0x800C7718`, size `0x10`) after companion mapping, live generated float-load body, TOML size, and section-4 span agreed; next candidate is `func_800C7728`. |
 | s1642 | Synchronized `getObjectiveGlobalFloat` (`0x800C7728`, size `0x10`) after companion mapping, live generated objective-float getter, exact adjacent boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7738`. |
 | s1643 | Synchronized `setHudEnableBit4` (`0x800C7738`, size `0x34`) after companion caller/semantic mapping, live generated body, exact adjacent boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C776C`. |
+| s1644 | Synchronized `setHudEnableBit8` (`0x800C776C`, size `0x34`) after companion caller/semantic mapping, live generated body, exact adjacent boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C77A0`. |
 
 ## Method and safety rules
 

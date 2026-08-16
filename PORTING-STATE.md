@@ -77604,3 +77604,29 @@ ownership; H3 is ruled out by the live generated body and exact adjacent
 boundaries and sizes. Updated the stale project TOML placeholder only. No
 build or runtime behavior conclusion was made. The next sweep candidate is
 `func_800C776C`/`setHudEnableBit8`.
+
+## Session 1644 (2026-08-16) — synchronized the setHudEnableBit8 symbol
+
+Ran the exact generated-symbol census for `0x800C776C` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live HUD bit-8 setter and its generated, TOML,
+and section-4 boundaries agree; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator.
+
+The companion mission map names `setHudEnableBit8` at `0x800C776C`, with 23
+callers and the semantic comment that it gates on `0x8010CA20`, sets HUD flag
+bit `0x8` at `0x8010CFE0`, and calls the same effect-dispatch path as the
+adjacent bit-4 setter. The generated `funcs_35.c` definition already carries
+the human name and contains the live `0x34`-byte function body. Its exact
+preceding boundary is `setHudEnableBit4` at `0x800C7738` with size `0x34`,
+and its following boundary is `isLevelStateByteZero` at `0x800C77A0` with
+size `0x10`. The TOML entry had the same address and size but the placeholder
+name, while the section-4 overlay table carried `setHudEnableBit8` at ROM
+offset `0x2263C` with span `0x34`.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and overlay
+ownership; H3 is ruled out by the live generated body and exact adjacent
+boundaries and sizes. Updated the stale project TOML placeholder only. No
+build or runtime behavior conclusion was made. The next sweep candidate is
+`func_800C77A0`/`isLevelStateByteZero`.

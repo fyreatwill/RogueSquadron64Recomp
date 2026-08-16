@@ -2942,7 +2942,7 @@ iteration on the retail-entry boundary or the M4 accumulator boundary
 instead. s1569 was the last such revisit (leave-hangar 640 is
 `runModelViewerLoop`).
 
-## 34. Recent sweep and Rice-route updates (s1590–s1643)
+## 34. Recent sweep and Rice-route updates (s1590–s1644)
 
 This section archives the post-§33 work that was compacted out of
 `CURRENT-TRUTH.md` during the s1638 maintenance pass. The sweep continued its
@@ -2970,8 +2970,9 @@ or runtime run.
 | s1641 | Synchronized `getGlobalFloatGameState` at `0x800C7718` (size `0x10`): companion mapping, live generated global-float getter, exact TOML size, section-4 span, and adjacent boundaries agreed. Next census: `func_800C7728`, companion name `getObjectiveGlobalFloat`, size `0x10`. |
 | s1642 | Synchronized `getObjectiveGlobalFloat` at `0x800C7728` (size `0x10`): companion mapping, live generated objective-float getter, exact adjacent boundaries, TOML size, and section-4 span agreed. Next census: `func_800C7738`, companion name `setHudEnableBit4`, size `0x34`. |
 | s1643 | Synchronized `setHudEnableBit4` at `0x800C7738` (size `0x34`): companion caller/semantic mapping, live generated body, exact adjacent boundaries, TOML size, and section-4 span agreed. Next census: `func_800C776C`, companion name `setHudEnableBit8`, size `0x34`. |
+| s1644 | Synchronized `setHudEnableBit8` at `0x800C776C` (size `0x34`): companion caller/semantic mapping, live generated body, exact adjacent boundaries, TOML size, and section-4 span agreed. Next census: `func_800C77A0`, companion name `isLevelStateByteZero`, size `0x10`. |
 
-The sweep cursor after s1643 is `func_800C776C`. The parked entries and the
+The sweep cursor after s1644 is `func_800C77A0`. The parked entries and the
 every-15-session revisit rule remain those recorded in §33 and the live truth
 file. The Rice route is now the only valid later-phase oracle recipe; dummy
 video's 320-only results are not evidence about hangar or mission entry.
