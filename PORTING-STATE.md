@@ -75496,3 +75496,49 @@ offset `0x0000F0BC`; live body ends at generated
 `advancePitchTowardTarget` / TOML `func_800B41FC` at
 `0x800B41FC`). Independently named `decayWeaponCooldownTimer` at
 `0x800B41BC` (`rom_size` `0x30`) ends at `0x800B41EC`.
+
+## Session 1567 (2026-08-16) — synchronized the get-weapon-charge-level symbol
+
+Performed the bounded exact-name census over `0x800B41EC..0x800B41FC`.
+
+No new soak-queue verdicts since s1566; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1553 (maintenance compaction),
+so the every-15-sessions sweep-revisit rule did not fire. CURRENT-TRUTH is
+17,719 bytes at session start, so Step 0 did not trigger a maintenance
+iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B41EC`, size `0x10`; `0x800B41EC+0x10=0x800B41FC`. Overlay `.ovl.mission` entry `rom_size` is `0x10` at offset `0x0000F0BC` (`0x800B41EC-0x800A5130`). Live body is independently `0x10` and meets generated `advancePitchTowardTarget` at `0x800B41FC` |
+| Generated definition | `funcs_30.c` defines `getWeaponChargeLevel` at `0x800B41EC`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000F0BC`, `rom_size 0x00000010`). The live mission body is a complete `0x10` leaf: `lui $v0, 0x8011`, `lwc1 $f0, -0x4860($v0)` (float at `0x8010B7A0`), then `jr $ra` / `nop`. Last live instruction pair is `0x800B41F4`/`0x800B41F8`. Next generated mission entry is already `advancePitchTowardTarget` at `0x800B41FC`. Independently named `decayWeaponCooldownTimer` at `0x800B41BC` (`rom_size` `0x30`) ends at this address. Menu-overlay `accumulateShipThrottleCharge` at `0x800B4168` (`rom_size` `0xBC`, ends `0x800B4224`) occupies overlapping VRAM from `.ovl.menu` through this entire body; menu-overlay `computeThrottleChargeFraction` at `0x800B4224` (`rom_size` `0x40`) starts after `advancePitchTowardTarget`. Neither is a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `getWeaponChargeLevel = 0x800B41EC` with no extra comment. The same mission list independently names the adjacent functions `decayWeaponCooldownTimer` at `0x800B41BC` and `advancePitchTowardTarget` at `0x800B41FC`. Companion `docs/mips_to_c/ctx.c` has no prototype and no competing independent name. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B41EC`. Menu lists `accumulateShipThrottleCharge = 0x800B4168` and `computeThrottleChargeFraction = 0x800B4224` as the overlapping `.ovl.menu` occupants. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B41EC` alias |
+| Caller evidence | Two retail `jal` encodings `0x0C02D07B` at files `0x100680` and `0x100698` (VRAM `0x800FFA80` / `0x800FFA98` inside generated `func_800FEF10`). Zero `j` encodings and zero absolute `0x800B41EC` pointer words. Two generated `getWeaponChargeLevel(` call sites in `funcs_43.c`; zero `LOOKUP_FUNC(0x800B41EC)`. First site delay-slot `mov.s $f20, $f0` then `c.lt.s $f20, $f0`; if `$f20` is below the returned float the second site reloads and `mov.s $f20, $f0` (clamp to the getter). Overlapping menu-overlay generated wrappers occupy the same VRAM and are not extra mission callers. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B4DEC` (`0x0A5D30+(0x800B41EC-0x800A5130)`) are `0x3C028011` (`lui $v0, 0x8011`), `0xC440B7A0` (`lwc1 $f0, -0x4860($v0)`), `0x03E00008`/`0x00000000` (`jr $ra` / `nop`). Next start file `0x0B4DFC` is `0xC48200C0` (`lwc1 $f2, 0xC0($a0)`, `advancePitchTowardTarget` prologue). Preceding epilogue file `0x0B4DE4`/`0x0B4DE8` is `0x03E00008`/`0x00000000` (`decayWeaponCooldownTimer` `jr $ra` / `nop`). Menu occupant at the same VRAM (file `0x11B38C`) is `0x45010005` (`bc1t` +5, interior of `accumulateShipThrottleCharge`); that function's own start at file `0x11B308` is `0x3C02800D` (`lui $v0, 0x800D`). Menu `computeThrottleChargeFraction` start at file `0x11B3C4` is `0x3C02800D`. Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B41EC` is past that occupant. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28`, s1556 start file `0x0B42FC` is still `0x3C078011`, s1557 start file `0x0B43C0` is still `0x27BDFFE0`, s1558 start file `0x0B4610` is still `0x3C028014`, s1559 start file `0x0B4A4C` is still `0x3C028013`, s1560 start file `0x0B4B0C` is still `0x27BDFFE0`, s1561 start file `0x0B4B50` is still `0x27BDFFE0`, s1562 start file `0x0B4BB4` is still `0x27BDFFE8`, s1563 start file `0x0B4CA0` is still `0x2402028C`, s1564 start file `0x0B4CF0` is still `0x3C038013`, s1565 start file `0x0B4D34` is still `0x27BDFFE0`, s1566 start file `0x0B4DBC` is still `0x3C028011` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B41EC`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x10`, the body loads the float at `0x8010B7A0` into `$f0` and
+returns, the two mission callers clamp a float against that return
+value, the overlapping menu occupants are a different overlay, and
+there is neither a conflicting companion name nor a mission size split.
+H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x10`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`advancePitchTowardTarget` at `0x800B41FC` (TOML still
+`func_800B41FC`, size `0xC0`; overlay `rom_size` is `0xC0` at
+offset `0x0000F0CC`; live body ends at generated
+`fake_func_800B42BC` / TOML `fake_func_800B42BC` at
+`0x800B42BC`). Independently named `getWeaponChargeLevel` at
+`0x800B41EC` (`rom_size` `0x10`) ends at `0x800B41FC`.
