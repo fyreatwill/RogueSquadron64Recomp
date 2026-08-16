@@ -2624,7 +2624,7 @@ size = 0xB810
 functions = [
     { name = "cinematicLoopBody", vram = 0x800A5D80, size = 0x8A0 },
     { name = "load_cutscene", vram = 0x800A6620, size = 0x2E4 },
-    { name = "func_800A6904", vram = 0x800A6904, size = 0x3E0 },
+    { name = "cinematicSlotUpdate", vram = 0x800A6904, size = 0x3E0 },
     { name = "func_800A6CE4", vram = 0x800A6CE4, size = 0x2DC },
     { name = "func_800A6FC0", vram = 0x800A6FC0, size = 0x124 },
     { name = "func_800A70E4", vram = 0x800A70E4, size = 0xD4 },

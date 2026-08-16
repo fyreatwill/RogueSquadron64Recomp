@@ -1,9 +1,9 @@
-# NEXT work unit (s1488)
+# NEXT work unit (s1489)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent
-generated function, `0x800A6904..0x800A6CE4`. Do not build or run. Record
+generated function, `0x800A6CE4..0x800A6FC0`. Do not build or run. Record
 its address, size, generated definition, companion name/source, caller or
 semantic evidence, and confidence before editing. Synchronize only an exact
 independent name in `syms/rogue_squadron.syms.toml`; leave address-encoded,
@@ -26,13 +26,13 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The generated
-entry at this address is already `cinematicSlotUpdate`; the companion
-cinematic splat list maps `cinematicSlotUpdate = 0x800A6904`. TOML is
-still `func_800A6904` (size `0x3E0`, ends at independently named
-`setupCutsceneLevel` / TOML `func_800A6CE4` at `0x800A6CE4`). Overlay
-`rom_size` is `0x3E0` at offset `0x000017D4`. Confirm the complete live
-function, matching size, and caller/semantic evidence before synchronizing
-the TOML name.
+entry at this address is already `setupCutsceneLevel`; the companion
+cinematic splat list maps `setupCutsceneLevel = 0x800A6CE4`. TOML is
+still `func_800A6CE4` (size `0x2DC`, ends at independently named
+`initCinematicDispatchSlots` / TOML `func_800A6FC0` at `0x800A6FC0`).
+Overlay `rom_size` is `0x2DC` at offset `0x00001BB4`. Confirm the
+complete live function, matching size, and caller/semantic evidence
+before synchronizing the TOML name.
 
 Competing hypotheses and discriminator:
 
@@ -50,7 +50,7 @@ and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800A6904\|800A6CE4\|cinematicSlotUpdate' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800A6904\|800A6CE4\|cinematicSlotUpdate' ../N64Recomp/RecompiledFuncs/funcs_27.c
-grep -n -C 3 '800A6904\|800A6CE4' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800A6CE4\|800A6FC0\|setupCutsceneLevel' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800A6CE4\|800A6FC0\|setupCutsceneLevel' ../N64Recomp/RecompiledFuncs/funcs_27.c
+grep -n -C 3 '800A6CE4\|800A6FC0' syms/rogue_squadron.syms.toml
 ```
