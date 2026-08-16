@@ -73406,3 +73406,42 @@ adjacent generated function is independently named
 size `0x8C`; overlay `rom_size` is `0x8C` at offset `0x0000985C`; live
 body ends at independently named `getCutsceneRuntimeContext` / TOML
 `func_800AEA18` at `0x800AEA18`).
+
+## Session 1520 (2026-08-15) — synchronized the get-asset-name-for-npc-type symbol
+
+Performed the bounded exact-name census over `0x800AE98C..0x800AEA18`.
+
+No new soak-queue verdicts since s1519; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AE98C`, size `0x8C`; `0x800AE98C+0x8C=0x800AEA18`. Overlay `.ovl.cinematic` entry `rom_size` is `0x8C` at offset `0x0000985C` (`0x800AE98C-0x800A5130`). Live body is independently `0x8C` and meets independently named `getCutsceneRuntimeContext` / TOML `func_800AEA18` at `0x800AEA18` |
+| Generated definition | `funcs_29.c` defines `getAssetNameForNpcType` at `0x800AE98C`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000985C`, `rom_size 0x0000008C`). The live cinematic body is a complete `0x8C` function. It starts `andi $v1, $a0, 0xFF` (no stack frame), range-checks `$v1 < 0x4C`, then `jr` through the 76-entry table at `0x800A5C08`. Named-type arms `jr $ra` with `lui $v0, 0x800A` / `addiu` string pointers; default and out-of-range arms `jr $ra` / `addu $v0, $zero, $zero`. Last live instruction pair is `0x800AEA10`/`0x800AEA14`. Next generated cinematic function is independently named `getCutsceneRuntimeContext`. Menu-overlay `composeInterpolatedNodeMatrices` at `0x800AE814` (`offset 0x000096E4`, `rom_size` `0x1CC`, ends `0x800AE9E0`) and `hangarLoadShadows` at `0x800AE9E0` (`offset 0x000098B0`, `rom_size` `0xE0`, ends `0x800AEAC0`) occupy overlapping VRAM from `.ovl.menu` and are not splits of this body. Mission-overlay `playRandomCutsceneVoiceLine` / TOML `func_800AE960` at `0x800AE960` (size `0x398`, ends `0x800AECF8`) occupies overlapping VRAM from `.ovl.mission`. `shouldShowCutsceneForLevelStage` at `0x800AE928` ends `0x800AE98C` and does not overlap this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `getAssetNameForNpcType = 0x800AE98C` (comment: 2 callers, `(npc_type_id u8) → const char* or NULL`). Menu, mission, libultra, and zlib lists do not remap `0x800AE98C`. `undefined_funcs_auto.txt` still has a leftover `func_800AE98C` row; the named cinematic mapping is the independent source. Companion `main_overlay.txt` independently describes the same 76-case jump table on NPC type id `0..0x4B` returning per-type asset names (`b_lrsp`, `megaturret`, `b_ttu_hi`) or NULL. Companion `docs/dat_files/load_level_dat.c` calls `func_800AE98C(temp_a0_3 & 0xFF)` and stores the result at `unk5C`. No companion C/asm body exists for the lookup itself |
+| Caller evidence | One retail `jal` encoding `0x0C02BA63` and zero `j` or absolute `0x800AE98C` pointer words. The site is independently named `loadDatFile` (companion also `load_level_dat`): `0x80046FE8` (main file `0x047BE8`; delay `0x308400FF` = `andi $a0, $a0, 0xFF`). Same-run ROM word at that file offset is `0x0C02BA63`. The generated caller is the matching `funcs_10.c` `jal 0x800AE98C` site inside `loadDatFile` at `0x80046784`. Arguments: `$a0` is the NPC type low byte after `lhu` from `+0x0` of the DAT item. After return, `sw $v0, 0x5C($s0)` stores the name pointer, then `sh $zero, 0x0($s0)` clears the type halfword. Companion comment "2 callers" is a count mismatch: ROM and generated each have one `jal` |
+| Semantic evidence | Retail ROM words at file `0x140DDC` (`0x137580+(0x800AE98C-0x800A5130)`) are `0x308300FF` (`andi $v1, $a0, 0xFF`) and `0x2C62004C` (`sltiu $v0, $v1, 0x4C`). Jump-table file `0x138038` (`0x800A5C08`) first word is `0x800AE9B4`. Same-run string reads at the named return pointers are `i_gtu_hi` (`0x800A54CC`, type 13), `megaturret` (`0x800A54F4`, type 40), `r_tur_hi` (`0x800A550C`, type 65), `b_ttu_hi` (`0x800A5524`, type 66), `b_lrsp` (`0x800A5BE4`, type 42), `reb_transport` (`0x800A5BEC`, type 43), and `r_combat` (`0x800A5BFC`, type 46). Types `0/20/33/51/68/74/75` and the remaining in-range ids return NULL. That matches the companion signature and the independently documented 76-case asset-name lookup. Epilogue file `0x140E60`/`0x140E64` is `0x03E00008` / `0x00001021`. Next start file `0x140E68` is `0x3C02800B` (`getCutsceneRuntimeContext` `lui $v0, 0x800B`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x140DDC` is `0x308300FF`, the caller `jal` word above is `0x0C02BA63`, and the s1519/s1518/s1517/s1516/s1515/s1514/s1513 controls still read `0x30A700FF` at `0x140D78`, `0x27BDFFE8` at `0x140CC8`, `0x27BDFF78` at `0x140968`, `0x27BDFF20` at `0x1403C4`, `0x27BDFF80` at `0x140048`, `0x27BDFFB0` at `0x13FAE0`, `0x03E00008` at `0x140040`, and `0x27BDFFC0` at `0x13F674` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AE98C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x8C`, the single ROM `jal` caller is independently named
+`loadDatFile` with `(npc_type_id u8)` and stores the returned pointer at
+`+0x5C`, and the jump-table arms return the independently documented
+asset-name strings or NULL. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x8C`). `func_8009D978`
+remains the eight-byte Q15 delay-mix table and was left unchanged, as
+were `func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`getCutsceneRuntimeContext` at `0x800AEA18` (TOML still `func_800AEA18`,
+size `0x10`; overlay `rom_size` is `0x10` at offset `0x000098E8`; live
+body ends at independently named `cuts_0058_bubble_sort` at
+`0x800AEA28`).
