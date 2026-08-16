@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1694 (2026-08-16).
+the authority for session detail. Reviewed through s1695 (2026-08-16).
 
 ## Current state
 
@@ -74,11 +74,11 @@ the authority for session detail. Reviewed through s1694 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. After s1694 the last-15 titles (s1680–s1694) include the s1682
+1. After s1695 the last-15 titles (s1681–s1695) include the s1682
    retail-entry revisit, so the next iteration resumes the generated-
-   symbol census at `npcAtStUpdate` at `0x800CFE7C` (size `0x120C`).
-   s1651–s1665, s1667–s1681, and s1683–s1694 synchronized or confirmed
-   DAT-item through `advanceAtStDeathAnimPhase`; s1650, s1666, and
+   symbol census at `playerAtStInit` at `0x800D1088` (size `0x1C0`).
+   s1651–s1665, s1667–s1681, and s1683–s1695 synchronized or confirmed
+   DAT-item through `npcAtStUpdate`; s1650, s1666, and
    s1682 were the mandatory retail-entry revisits. The full s1590–s1649
    archive is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in
    §33. About 1,548 placeholder `func_0x...` names remained when
@@ -233,6 +233,7 @@ ownership.
 | s1692 | Synchronized `updateAtStBodyKinematics` (`0x800CF20C`, size `0x68C`) after companion mission mapping, live generated AT-ST body-kinematics tick (`isPendingChildNpcActive`, `computeActorAnchorDeltaAfterLOS`, `getObjectMeshTransformOrLocal`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, `transformVec3ByMat34`, `vec3NormalizeInto`, `buildRotationMatrixSlot0`/`Slot1`, `composeRotationMatrixSlot1`, `vec3Dot` ×6, `vec3Length` ×8, `vec3Cross` ×4, `constMinusSinfApprox` ×6, `quatFromAxisAngle` ×2, `rotateVec3ByQuat` ×2, `play3DSoundEventVariant` ×2, `factor5RemoveListNode`; exclusive caller `npcAtStUpdate` at `0x800D0820`), exact `0x800CF09C`/`0x800CF898` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu m2c `func_800CF20C` in hangar/save files is data on a different overlay, not a name collision. Next candidate is `func_800CF898` / `npcAtStHandleDestruction`. |
 | s1693 | Synchronized `npcAtStHandleDestruction` (`0x800CF898`, size `0x474`) after companion mission mapping, live generated AT-ST walker-destruction body (`clearModelAnimChannelEntry`, `releaseModelAnimSlot`, `spawnNpcType0xAFromTemplate`, `spawnByteAnimDebrisDefault`, `spawnOrientedNpc` ×2, `spawnDestructionEffectBurst`, `rand_recomp` ×4, `composeRandomRotationMatrix`, `scaleVec3ByRandomRange`, `spawnDebris1Npc`, `spawnSplineWalkerCraft`; exclusive caller `npcAtStUpdate` at `0x800D0DAC` after `dealDamageToNpc` `<= 0`), exact `0x800CF20C`/`0x800CFD0C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu m2c `func_800CF898` in `func_800B47C4` is hangar/controller data on a different overlay, not a name collision. Next candidate is `func_800CFD0C` / `advanceAtStDeathAnimPhase`. |
 | s1694 | Synchronized `advanceAtStDeathAnimPhase` (`0x800CFD0C`, size `0x170`) after companion mission mapping, live generated AT-ST death-anim phase-advance body (`clearModelAnimChannelEntry`, `releaseModelAnimSlot`, `+0xAB` 1/2/3 → `+0x7E` 2/1/0 tables, `flattenAnimTreeAndAllocateSlot`, `markModelAnimChannelEntryActive`, `setModelAnimSlotCycleDuration`, `advanceAtStEffectPhaseSound`; exclusive caller `npcAtStUpdate` at `0x800D0678`/`0x800D06E4`/`0x800D07CC`), exact `0x800CF898`/`0x800CFE7C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu concert-hall bytes at `0x800CFE3D`/`0x800CFE3E` are a different overlay, not a name collision. Next candidate is `npcAtStUpdate`. |
+| s1695 | Confirmed `npcAtStUpdate` (`0x800CFE7C`, size `0x120C`) was already synchronized: companion mission mapping, live generated 9-way AT-ST update (`advanceAtStDeathAnimPhase` ×3, `advanceAtStEffectPhaseSound`, `updateAtStBodyKinematics`, `npcAtStHandleDestruction`), exact `0x800CFD0C`/`0x800D1088` boundaries, TOML name and size, and section-4 span agreed. Menu concert-hall/medal data at the same VRAM window is a different overlay, not a name collision. Next candidate is `playerAtStInit`. |
 
 ## Method and safety rules
 

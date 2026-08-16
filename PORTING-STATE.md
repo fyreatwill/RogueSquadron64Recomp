@@ -79293,3 +79293,35 @@ run required.
 
 Next census: `npcAtStUpdate` at `0x800CFE7C` (size `0x120C`). Last-15 titles
 still include s1682, so the next iteration may continue the sweep.
+
+## Session 1695 (2026-08-16) — confirmed the npcAtStUpdate symbol
+
+Exact generated-symbol census for `0x800CFE7C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 39766; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcAtStUpdate = 0x800CFE7C`. Coarse listing previous `npcAtAtUpdate = 0x800CD71C` skips helpers; previous contiguous function `advanceAtStDeathAnimPhase = 0x800CFD0C`; next contiguous neighbor `playerAtStInit = 0x800D1088`. Companion `main_overlay.txt` already lists this among the AT-family callers of `flattenAnimTreeAndAllocateSlot` and `checkAndReturnByteFlagAsU8`; `npcAtStHandleDestruction` names it as exclusive caller |
+| Generated `funcs_37.c` | `RECOMP_FUNC void npcAtStUpdate` at VRAM `0x800CFE7C`; prologue `addiu $sp, $sp, -0xF8`; returns through `jr $ra` / `addiu $sp, $sp, 0xF8` ending at `0x800D1084`; previous mission function is `advanceAtStDeathAnimPhase` at `0x800CFD0C` (last insn `0x800CFE78`); next mission function is `playerAtStInit` at `0x800D1088` |
+| Body semantics | 9-way jump table on `(a1 & 0xFFFF) - 1 < 9` via table `0x800A7140`. Actor at `a0` (`s4`); mode in `a1` (`s7`). Case 0/7 inits (`walkMeshdef0List`, `spawnInheritedNpcVariantA`, `allocateAndInitCraftNpcContext`, `createAndInitObject`, `initActorAsType1`, `load_model_animation` ×3, `flattenAnimTreeAndAllocateSlot`). Case 1 tears down (`clearModelAnimChannelEntry`, `releaseModelAnimSlot`, `factor5RemoveListNode`, `rs_free`, `destroyNpcSlotByIndex`, `releaseMeshAsset`). Case 2 is the live per-frame body (`advanceAtStDeathAnimPhase` ×3, `advanceAtStEffectPhaseSound`, `updateAtStBodyKinematics`). Case 3 poses/renders (`sampleTerrainAtNpcPosition`, `parseModelAnimType2Entry`, `updateActive3DAudioSource`, `addNpcToVisibilityBucket`, `advanceNpcOnCurvedPath`). Case 4 combats/paths (`extrapolateNpcPositionForCurrentMode`, `play3DSoundEvent`, `dealDamageToNpc`, `npcAtStHandleDestruction`). Case 5 is the shared epilogue. Case 6 is a detail-level return (`setObjectDetailLevel`, `dispatchSlotAction5IfActive`). Case 8 frees slots (`unregisterAndFreeNpcSlot`, `popNpcSlotFromTail`). 114 named calls / 72 unique. Name matches the AT-ST NPC update |
+| TOML | `{ name = "npcAtStUpdate", vram = 0x800CFE7C, size = 0x120C }` — already the human name; size matches `0x800D1088 - 0x800CFE7C` (1155 decoded insns, last+4 = `0x120C`). No leftover `func_800CFE7C` |
+| Overlay section 4 | `{ .func = npcAtStUpdate, .offset = 0x0002AD4C, .rom_size = 0x0000120C }` under `section_4_ovl_mission_funcs` (`0x800CFE7C - 0x800A5130 = 0x2AD4C`; `0x2ABDC + 0x170 = 0x2AD4C`; `0x2AD4C + 0x120C = 0x2BF58` matches next `playerAtStInit`) |
+| Non-collision | No menu-overlay function occupies `0x800CFE7C`. Nearest menu symbols are concert-hall bytes at `0x800CFE3D`/`0x800CFE3E` and later data `D_800D0120` / `D_800D03D0` / `medalInfo` in the same VRAM window on a different overlay |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated AT-ST NPC-update body, previous
+(`advanceAtStDeathAnimPhase` / `0x800CFD0C`) and next (`playerAtStInit` /
+`0x800D1088`) boundaries, TOML name and size, and section-4 overlay span
+already agree. No TOML or generated-name change. This refutes H2 (no stale
+placeholder), H3 (no fake fragment, overlay collision, or size/boundary
+disagreement), and H4 (companion, generated body, TOML, and section-4 row
+are all present). No build or runtime run required.
+
+Next census: `playerAtStInit` at `0x800D1088` (size `0x1C0`). Last-15 titles
+still include s1682, so the next iteration may continue the sweep.
