@@ -1604,7 +1604,7 @@ functions = [
     { name = "tickCinematicObjectStateMachine", vram = 0x800B13E0, size = 0x808 },
     { name = "updatePlayerCraftPhysics", vram = 0x800B1BE8, size = 0x1B14 },
     { name = "applyCraftCapabilityFlags", vram = 0x800B36FC, size = 0xC4 },
-    { name = "func_800B37C0", vram = 0x800B37C0, size = 0x250 },
+    { name = "initPlayerCraftMovementMode", vram = 0x800B37C0, size = 0x250 },
     { name = "func_800B3A10", vram = 0x800B3A10, size = 0x43C },
     { name = "func_800B3E4C", vram = 0x800B3E4C, size = 0xC0 },
     { name = "func_800B3F0C", vram = 0x800B3F0C, size = 0x44 },

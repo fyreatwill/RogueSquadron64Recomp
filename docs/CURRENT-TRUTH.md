@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1556 (2026-08-16).
+the authority for session detail. Reviewed through s1557 (2026-08-16).
 
 ## Current state
 
@@ -74,27 +74,27 @@ the authority for session detail. Reviewed through s1556 (2026-08-16).
    and M4 threads; s1544 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
-   sizes, and caller/semantic evidence. Per-session H1 syncs through s1556
+   sizes, and caller/semantic evidence. Per-session H1 syncs through s1557
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
-   Next census: `0x800B37C0..0x800B3A10`. The generated entry is already
-   `initPlayerCraftMovementMode`; the companion mission list maps
-   `initPlayerCraftMovementMode = 0x800B37C0` with comment "10
-   callers, all playerXxxInit — sets up flight-vs-ground state from
-   craft flags". TOML is still `func_800B37C0` (size `0x250`, ends at
-   generated `tryPlaySpatialSoundWithGates` / TOML `func_800B3A10` at
-   `0x800B3A10`). Overlay `rom_size` is `0x250` at offset
-   `0x0000E690`. Confirm the complete live function, matching size,
+   Next census: `0x800B3A10..0x800B3E4C`. The generated entry is already
+   `tryPlaySpatialSoundWithGates`; the companion mission list maps
+   `tryPlaySpatialSoundWithGates = 0x800B3A10` with comment
+   "(config, triggerSpec) — 9 callers, guarded 3D sound trigger".
+   TOML is still `func_800B3A10` (size `0x43C`, ends at generated
+   `scheduleSceneFormatMessageTimed` / TOML `func_800B3E4C` at
+   `0x800B3E4C`). Overlay `rom_size` is `0x43C` at offset
+   `0x0000E8E0`. Confirm the complete live function, matching size,
    and caller/semantic evidence before synchronizing the TOML name.
-   Independently named `applyCraftCapabilityFlags` at `0x800B36FC`
-   (`rom_size` `0xC4`) ends at this address. Last live instruction
-   pair is `0x800B3A08` / `0x800B3A0C` (`jr $ra` / `addiu $sp, $sp,
-   0x20`). Menu-overlay `tickFormatMessageWorker` at `0x800B3650`
-   (`rom_size` `0x1D4`, ends `0x800B3824`) occupies overlapping VRAM
-   from `.ovl.menu` across the start of this body, and generated
-   `func_800B3824` starts at menu VRAM `0x800B3824`; neither is a
-   mission size split.
+   Independently named `initPlayerCraftMovementMode` at `0x800B37C0`
+   (`rom_size` `0x250`) ends at this address. Last live instruction
+   pair is `0x800B3E44` / `0x800B3E48` (`jr $ra` / `addiu $sp, $sp,
+   0x88`). Menu-overlay `func_800B3824` (`rom_size` `0x2D8`, ends
+   `0x800B3AFC`) and generated `buildScaledFormatTextElement` at
+   `0x800B3AFC` occupy overlapping VRAM from `.ovl.menu`; neither is
+   a mission size split. This naming census does not reopen closed
+   M5 audio de-stubbing.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -231,7 +231,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
-| s1270–s1556 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `applyCraftCapabilityFlags` at `0x800B36FC`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
+| s1270–s1557 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `initPlayerCraftMovementMode` at `0x800B37C0`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
@@ -240,6 +240,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1554 | H1: synchronized `tickCinematicObjectStateMachine` at `0x800B13E0` (size `0x808`). |
 | s1555 | H1: synchronized `updatePlayerCraftPhysics` at `0x800B1BE8` (size `0x1B14`). |
 | s1556 | H1: synchronized `applyCraftCapabilityFlags` at `0x800B36FC` (size `0xC4`). |
+| s1557 | H1: synchronized `initPlayerCraftMovementMode` at `0x800B37C0` (size `0x250`). |
 
 ## Method and safety rules
 

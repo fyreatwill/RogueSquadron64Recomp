@@ -75023,3 +75023,50 @@ offset `0x0000E690`; live body ends at generated
 `tryPlaySpatialSoundWithGates` / TOML `func_800B3A10` at
 `0x800B3A10`). Independently named `applyCraftCapabilityFlags` at
 `0x800B36FC` (`rom_size` `0xC4`) ends at `0x800B37C0`.
+
+## Session 1557 (2026-08-16) — synchronized the init-player-craft-movement-mode symbol
+
+Performed the bounded exact-name census over `0x800B37C0..0x800B3A10`.
+
+No new soak-queue verdicts since s1556; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit) and s1553 (maintenance compaction), so the every-15-sessions
+sweep-revisit rule did not fire. CURRENT-TRUTH is 16,604 bytes at session
+start, so Step 0 did not trigger a maintenance iteration. M5 remains closed
+and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B37C0`, size `0x250`; `0x800B37C0+0x250=0x800B3A10`. Overlay `.ovl.mission` entry `rom_size` is `0x250` at offset `0x0000E690` (`0x800B37C0-0x800A5130`). Live body is independently `0x250` and meets generated `tryPlaySpatialSoundWithGates` at `0x800B3A10` |
+| Generated definition | `funcs_30.c` defines `initPlayerCraftMovementMode` at `0x800B37C0`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000E690`, `rom_size 0x00000250`). The live mission body is a complete `0x250` function: prologue `addiu $sp, $sp, -0x20` / `sw $s0, 0x10($sp)` / `addu $s0, $a0, $zero` keeps the player/craft pointer in `$s0`, `lw $v1, 0xB8($s0)` loads the player index, then `lhu` from `0x80137DB8 + index*0x1A0 + 0x184` tests craft flag bit `0x40`. Clear → store movement mode `2` at `+0x1C8` and zero `+0x184`/`+0x15C`; set → copy the flight float at `0x800A57AC` into `+0x184`. The body then reaps the `+0x1CC` NPC slot chain (`getNextSlotNpcTypeId` / `destroyNpcSlotByIndex` / `destroyNpcSlotChain`), unlinks `+0x208` when `+0x24C` is set, `allocateNpcSlot`s a replacement, writes `+0x16C`/`+0xC8` from the `0x800A57B0`/`0x57B4`/`0x57B8` constants, and calls `dispatchEffectObjectBehavior`, independently named `applyCraftCapabilityFlags`, and `populateCutsceneSubtitleTextIds`. Last live instruction pair is `0x800B3A08`/`0x800B3A0C` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next generated mission entry is already `tryPlaySpatialSoundWithGates` at `0x800B3A10`. Independently named `applyCraftCapabilityFlags` at `0x800B36FC` (`rom_size` `0xC4`) ends at this address. Menu-overlay TOML `func_800B3650` (`tickFormatMessageWorker`, `rom_size` `0x1D4`, ends `0x800B3824`) occupies overlapping VRAM from `.ovl.menu` across the start of this body and is not a split of this body. Generated `func_800B3824` starts at menu VRAM `0x800B3824` and is not this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `initPlayerCraftMovementMode = 0x800B37C0` with comment "10 callers, all playerXxxInit — sets up flight-vs-ground state from craft flags". The same mission list independently names the adjacent functions `applyCraftCapabilityFlags` at `0x800B36FC` and `tryPlaySpatialSoundWithGates` at `0x800B3A10`, and independently names all ten generated callers. Companion `docs/mips_to_c/ctx.c` has no `800B37C0` type. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B37C0`. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B37C0` alias |
+| Caller evidence | 10 retail `jal` encodings `0x0C02CDF0` at file `0xAB740` (`0x800AAB40`), `0xB4F18` (`0x800B4318`), `0xB651C` (`0x800B591C`), `0xB822C` (`0x800B762C`), `0xB965C` (`0x800B8A5C`), `0xBB04C` (`0x800BA44C`), `0xBC98C` (`0x800BBD8C`), `0xBD89C` (`0x800BCC9C`), `0xBE6AC` (`0x800BDAAC`), and `0xD1CBC` (`0x800D10BC`); zero `j` encodings and zero absolute `0x800B37C0` pointer words. The generated sites are ten named `initPlayerCraftMovementMode(...)` calls from independently named `playerSnowSpeederInit`, `playerXwingInit`, `playerAwingInit`, `playerYwingInit`, `playerVwingInit`, `playerFalconInit`, `playerTieInterceptorInit`, `playerT16Init`, `playerNabooStarfighterInit`, and `playerAtStInit`. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B43C0` (`0x0A5D30+(0x800B37C0-0x800A5130)`) are `0x27BDFFE0` (`addiu $sp, $sp, -0x20`), `0xAFB00010` (`sw $s0, 0x10($sp)`), `0x00808021` (`addu $s0, $a0, $zero`), `0x3C028011` (`lui $v0, 0x8011`). Last pair file `0x0B4608`/`0x0B460C` is `0x03E00008`/`0x27BD0020` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next start file `0x0B4610` is `0x3C028014` (`lui $v0, 0x8014`, `tryPlaySpatialSoundWithGates` prologue). Preceding epilogue file `0x0B43B8`/`0x0B43BC` is `0x03E00008`/`0xA4830000` (`applyCraftCapabilityFlags` `jr $ra` / `sh $v1, 0x0($a0)`). The generated body selects flight versus ground from craft flag bit `0x40` and then runs the shared player-craft init sequence. Menu occupant at the same VRAM (file `0x11A960`) starts `0x10400007` (`beq` interior of `tickFormatMessageWorker`); that function's own start at file `0x11A7F0` is `0x27BDFF40` (`addiu $sp, $sp, -0xC0`). Menu `func_800B3824` at file `0x11A9C4` is `0x27BDF8F0` (`addiu $sp, $sp, -0x710`). Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B37C0` is past that occupant; file `0x145C10` is `0xEE712C4F`. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28`, s1556 start file `0x0B42FC` is still `0x3C078011` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B37C0`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x250`, all ten ROM `jal` callers are independently named
+`playerXxxInit` functions, the body sets flight-versus-ground state from
+craft flags, the overlapping menu occupant is a different overlay, and
+there is neither a conflicting companion name nor a mission size split.
+H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x250`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`tryPlaySpatialSoundWithGates` at `0x800B3A10` (TOML still
+`func_800B3A10`, size `0x43C`; overlay `rom_size` is `0x43C` at
+offset `0x0000E8E0`; live body ends at generated
+`scheduleSceneFormatMessageTimed` / TOML `func_800B3E4C` at
+`0x800B3E4C`). Independently named `initPlayerCraftMovementMode` at
+`0x800B37C0` (`rom_size` `0x250`) ends at `0x800B3A10`.
