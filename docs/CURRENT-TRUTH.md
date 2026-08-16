@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1712 (2026-08-16).
+the authority for session detail. Reviewed through s1713 (2026-08-16).
 
 ## Current state
 
@@ -84,29 +84,30 @@ the authority for session detail. Reviewed through s1712 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at
-   `advanceNpcSpinOrientation` (`0x800D5078`, size `0x190`). After
-   s1712 the last-15 titles still include the s1698 retail-entry
-   revisit, so the 15-title gate does not fire. s1651–s1665,
-   s1667–s1681, s1683–s1697, and s1699–s1712 synchronized or
-   confirmed DAT-item through `npcInitChildLinkedToParent`; s1650,
-   s1666, s1682, and s1698 were the mandatory retail-entry revisits.
-   The full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
-   earlier sweep is in §33.
-   About 1,548 placeholder `func_0x...` names remained when counted
-   at s1487.
-2. Remaining external retail-entry / M4 revisit leads, for the next
-   15-title gate only: destination of the attract-512 A/Start/C-up/L
-   `512→1024` at 126.4 s (origin `0x00790400`/`800`; 125 s flush cut
-   off at the WIDTH change); Z-on-attract `512→1024` at 128.3 s is
-   still single-source (s1666; s1698's 125 s window ended at 125.8 s
-   still on 512). Do not repeat hangar hold/A/B/Z, valid D-pad on
-   hangar, post-viewer C/L/R, post-B intermediate A/Start/Z,
+1. Mandatory 15-title REVISIT. After s1713 the last-15 titles are
+   all sweep-scoped (s1699–s1713), so the next iteration must not
+   resume the census. Remaining unused retail-entry lead: destination
+   of the attract-512 A/Start/C-up/L `512→1024` at 126.4 s (origin
+   `0x00790400`/`800`; s1698's 125 s flush cut off at the WIDTH
+   change). New angle: a later flush after 126.4 s and before the
+   ~135 s Rice death (about `--secs 133`) so the 1024 destination
+   and the still-single-source Z-on-attract `512→1024` at 128.3 s
+   (s1666) become evaluable. Do not repeat hangar hold/A/B/Z, valid
+   D-pad on hangar, post-viewer C/L/R, post-B intermediate A/Start/Z,
    post-arrival A/Start/Z/C/L/R/D-pad on the 640 B-frontend, or
    attract-512 A/Start/Z/C/L/R/D-pad in the 119–125 s window. Every
    oracle run needs whole-RDRAM, PIF, and VI/PC positive controls.
    Alternative: a new M4 RDRAM destination from a DMEM→RDRAM transfer
    other than `0xD60`.
+2. Resume the generated-symbol sweep after that revisit at
+   `npcDebrisFieldUpdate` (`0x800D5208`, size `0xDD8`). s1651–s1665,
+   s1667–s1681, s1683–s1697, and s1699–s1713 synchronized or
+   confirmed DAT-item through `advanceNpcSpinOrientation`; s1650,
+   s1666, s1682, and s1698 were the mandatory retail-entry revisits.
+   The full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
+   earlier sweep is in §33.
+   About 1,548 placeholder `func_0x...` names remained when counted
+   at s1487.
 3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. If that happens, write a bounded plan
    before changing any stub or trap.
@@ -266,6 +267,7 @@ ownership.
 | s1710 | Confirmed `npcShuttleUpdate` (`0x800D3894`, size `0x1630`) was already synchronized: companion mission mapping, live generated 9-way Imperial-shuttle update (`walkMeshdef0List`, `createAndInitObject`, `dealDamageToNpc`, `npcShuttleHandleDestruction`, `distanceAndDopplerNpcHelper`, `slotDispatcherIter`), exact `0x800D33CC`/`0x800D4EC4` boundaries, TOML name and size, and section-4 span agreed. Menu concert-hall/medal data at the same VRAM window is a different overlay, not a name collision. Next candidate is `fake_func_800D4EC4`. |
 | s1711 | Confirmed `fake_func_800D4EC4` (`0x800D4EC4`, size `0xC`) was already classified as the explicit 12-byte leftover instruction pad (`lw $v1, 0x20($fp)` / `lw $a0, 0x4($v1)` / `addiu $v1, $a0, 0x8`) between `npcShuttleUpdate` and `npcInitChildLinkedToParent`: companion mapping, live generated fragment, exact `0x800D3894`/`0x800D4ED0` boundaries, TOML name and size, and section-4 span agreed. No menu function occupies the address. Next candidate is `func_800D4ED0` / `npcInitChildLinkedToParent`. |
 | s1712 | Synchronized `npcInitChildLinkedToParent` (`0x800D4ED0`, size `0x1A8`) after companion mission mapping, live generated child-NPC-init body (`setNpcHealth`, `setObjectDetailLevel`; flag `*(a0+0x14)&0x20` selects own template vs parent `*(a2+0xC)` for `+0x50/+0x54`; state byte `+0xC9` = 0/2; rand-scaled spin rates `+0x60/+0x64`), exact `0x800D4EC4`/`0x800D5078` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D5078` / `advanceNpcSpinOrientation`. |
+| s1713 | Synchronized `advanceNpcSpinOrientation` (`0x800D5078`, size `0x190`) after companion mission mapping, live generated spin-orientation body (`+0x58/+0x5C` accumulators advanced by `dt * +0x60` and wrapped; `+0x68` by `dt * D_800A7604` and clamped; `sinf` + `quatFromCardinalAxis` ×2, `quatMultiply`, `rotateVec3ByQuat` ×2), exact `0x800D4ED0`/`0x800D5208` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Exclusive caller is `npcDebrisFieldUpdate` at `0x800D58FC`. No menu function occupies the address. Last-15 titles are now all sweep-scoped, so s1714 is the mandatory retail-entry revisit. Next sweep candidate is `func_800D5208` / `npcDebrisFieldUpdate`. |
 
 ## Method and safety rules
 

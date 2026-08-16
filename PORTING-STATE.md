@@ -79960,3 +79960,40 @@ runtime run required.
 Next census: `advanceNpcSpinOrientation` / `func_800D5078` at `0x800D5078`
 (size `0x190`). Last-15 titles still include s1698's retail-entry revisit, so
 the next iteration continues the sweep.
+
+## Session 1713 (2026-08-16) — synchronized the advanceNpcSpinOrientation symbol
+
+Exact generated-symbol census for `0x800D5078` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 50919; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `advanceNpcSpinOrientation = 0x800D5078` with comment "advance spin angle accumulators by dt*rate, wrap, build quat orientation". Previous contiguous neighbor `npcInitChildLinkedToParent = 0x800D4ED0`; next contiguous neighbor `npcDebrisFieldUpdate = 0x800D5208` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void advanceNpcSpinOrientation` at VRAM `0x800D5078`; prologue `mtc1 $a1, $f6` then `addiu $sp, $sp, -0x68`; returns through `jr $ra` / `addiu $sp, $sp, 0x68` ending at `0x800D5204`; previous mission function is `npcInitChildLinkedToParent` at `0x800D4ED0` (last insn `0x800D5074`); next mission function is `npcDebrisFieldUpdate` at `0x800D5208`. `funcs.h` already declares the human name |
+| Body semantics | Object at `a0` (`s2`); `a1` is dt in `f6`. `+0x58` and `+0x5C` accumulators each add `dt * *(s2+0x60)` and wrap when they exceed `D_800A75F8` (subtract `D_800A75FC` / `D_800A7600`). `+0x68` adds `dt * D_800A7604` and clamps to `D_800A75F8`. Then `sinf(+0x58 * D_800A7608) * +0x68` into `quatFromCardinalAxis` axis 0, `sinf(+0x5C * D_800A7608) * +0x68` into `quatFromCardinalAxis` axis 2, `quatMultiply`, `rotateVec3ByQuat` of `+0x6C` into `+0xC/+0x10/+0x14` and of `+0x78` into `+0x18/+0x1C/+0x20`. Exclusive generated caller is `npcDebrisFieldUpdate` at `0x800D58FC` (`a0=s1`, `a1=f20`). Name matches advancing the spin-angle accumulators written by `npcInitChildLinkedToParent` and building the quat orientation |
+| TOML (before) | `{ name = "func_800D5078", vram = 0x800D5078, size = 0x190 }` — size matches `0x800D5208 - 0x800D5078` (last insn `0x800D5204` + 4 = `0x190`) |
+| Overlay section 4 | `{ .func = advanceNpcSpinOrientation, .offset = 0x0002FF48, .rom_size = 0x00000190 }` under `section_4_ovl_mission_funcs` (`0x800D5078 - 0x800A5130 = 0x2FF48`; `0x2FDA0 + 0x1A8 = 0x2FF48`; `0x2FF48 + 0x190 = 0x300D8` matches next `npcDebrisFieldUpdate`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D5078`. Companion menu/cinematic/main greps are empty for this address and name. Companion and generated greps found no other `func_800D5078` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated spin-orientation body, previous
+(`npcInitChildLinkedToParent` / `0x800D4ED0`) and next
+(`npcDebrisFieldUpdate` / `0x800D5208`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`advanceNpcSpinOrientation`, and only the TOML name was a stale
+`func_800D5078` placeholder. Corrected TOML to `advanceNpcSpinOrientation`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census after the mandatory revisit: `npcDebrisFieldUpdate` /
+`func_800D5208` at `0x800D5208` (size `0xDD8`). Last-15 titles are now
+all sweep-scoped (s1699–s1713), so the next iteration must be the
+mandatory retail-entry or M4 revisit, not another sweep step.
