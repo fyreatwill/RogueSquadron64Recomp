@@ -76842,3 +76842,22 @@ overlay span, and size rule out H2's conflicting/incomplete-span case and
 H3's fragment/data-like case. No build or runtime run was needed; this was a
 bounded symbol-map synchronization. The next bounded candidate is the
 explicitly fake `fake_func_800BF498` entry with size `0x8`.
+
+## Session 1614 (2026-08-16) — confirmed the fake 800BF498 fragment
+
+Ran the bounded generated-symbol census for `0x800BF498..0x800BF4A0`. The
+companion mission symbol list explicitly classifies `0x800BF498` as
+`fake_func_800BF498`. The generated definition contains only the two
+instructions `lw $v0, 0x48($fp)` and `sw $v0, 0x1C($fp)`, and the generated
+overlay table retains the same fake entry. The TOML entry is also
+`fake_func_800BF498` with size `0x8`. The previous
+`getDemoRecordedTimestep` body ends at `0x800BF498`; the next generated and
+overlay-table body, `attached3DSoundEmitterNpcHandler`, begins at
+`0x800BF4A0`.
+
+H1 selected: this is an explicitly fake two-instruction frame fragment and
+must remain unchanged. The exact companion classification, generated body,
+TOML span, overlay span, and adjacent handler boundary rule out H2's naming
+or span conflict and H3's data-like/non-independent-function explanation.
+No build or runtime run was needed; this was a bounded census only. The next
+candidate is `fake_func_800BF784` with size `0xC`.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1613 (2026-08-16).
+the authority for session detail. Reviewed through s1614 (2026-08-16).
 
 ## Current state
 
@@ -266,8 +266,9 @@ the authority for session detail. Reviewed through s1613 (2026-08-16).
    with size `0x30`. s1613 synchronized `getDemoRecordedTimestep` at
    `0x800BF468` (size `0x30`): the companion mission mapping, generated
    timestep-lookup body and caller, exact previous and next boundaries,
-   overlay-table span, and TOML size agree. The next census is the
-   explicitly fake `fake_func_800BF498` entry with size `0x8`.
+   overlay-table span, and TOML size agree. s1614 confirmed that the next
+   entry, `fake_func_800BF498` (size `0x8`), is an explicitly fake fragment;
+   the next census is `fake_func_800BF784` with size `0xC`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -303,9 +304,9 @@ the authority for session detail. Reviewed through s1613 (2026-08-16).
      `lw $v0, 0x2C($fp)` gap before `playerXwingInit`; companion Fake
      Function Fixing; zero jal/j/ptr; menu `destroyPlayerShipRecord`
      occupies the same VRAM from `.ovl.menu`)
-   - `fake_func_800BF498` (s1614 candidate: companion explicitly marks the
-     8-byte entry fake; generated body is only an `lw`/`sw` frame fragment
-     before `attached3DSoundEmitterNpcHandler` at `0x800BF4A0`)
+   - `fake_func_800BF498` (s1614 H1: companion, generated C, TOML, and
+     overlay table agree on the explicit 8-byte `lw`/`sw` frame fragment;
+     `attached3DSoundEmitterNpcHandler` begins at `0x800BF4A0`)
 
 2. Future oracle work on leaving the 640 crawl into a mission, or a
    new M4 RDRAM dest (a DMEM→RDRAM transfer that is not `0xD60`),
