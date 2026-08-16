@@ -1,10 +1,12 @@
-# NEXT work unit (s1651)
+# NEXT work unit (s1652)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the exact generated-symbol census. The next candidate is
-`func_800C78A0`, independently named `calculateDatItemDistanceToPlayer` at
-`0x800C78A0` (size `0xAC`).
+`func_800C794C`, independently named `getScaledPlayerCraftSpeed` at
+`0x800C794C` (size `0x2C`). Generated already uses the human name; TOML still
+carries the placeholder `func_800C794C` (s1651 observation) — synchronize
+only if the full independent comparison agrees.
 
 Competing hypotheses and discriminator:
 
@@ -20,16 +22,16 @@ Exact commands:
 
 ```sh
 # 1. Companion mapping / callers / semantics (bounded searches only)
-rg -n 'calculateDatItemDistanceToPlayer|0x800C78A0|800C78A0' \
+rg -n 'getScaledPlayerCraftSpeed|0x800C794C|800C794C' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64 --glob '!**/build/**' | head -80
 
 # 2. Generated definition + adjacent boundaries
-rg -n 'func_800C78A0|calculateDatItemDistanceToPlayer|0x800C78A0|0x800C7884|0x800C794C' \
-  RecompiledFuncs -g'*.c' -g'*.h' -g'*.inl' | head -80
+rg -n 'func_800C794C|getScaledPlayerCraftSpeed|0x800C794C|0x800C78A0|0x800C7978' \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs -g'*.c' -g'*.h' -g'*.inl' | head -80
 
 # 3. TOML + overlay span
-rg -n '800C78A0|calculateDatItemDistanceToPlayer' \
-  us.rev1.toml overlays.json syms 2>/dev/null | head -40
+rg -n '800C794C|getScaledPlayerCraftSpeed' \
+  syms/rogue_squadron.syms.toml | head -40
 ```
 
 Synchronize only on complete independent agreement. No build or runtime run

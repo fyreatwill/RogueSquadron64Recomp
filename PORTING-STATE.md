@@ -77813,3 +77813,34 @@ back to hangar. It does not identify the 640 B-frontend or prove any later
 input on that frontend reaches a mission. No recomp change or mitigation was
 made. Next work resumes the generated-symbol sweep at `func_800C78A0` /
 `calculateDatItemDistanceToPlayer`.
+
+## Session 1651 (2026-08-16) — confirmed the calculateDatItemDistanceToPlayer symbol
+
+Ran the exact generated-symbol census for `0x800C78A0` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live DAT-item distance function and its
+generated, TOML, and section-4 boundaries agree; H2: the name belongs to
+another overlay or context; and H3: the name or function evidence is absent,
+conflicting, or data-like. The complete comparison was the discriminator.
+
+The companion mission map names `calculateDatItemDistanceToPlayer` at
+`0x800C78A0`. The bounded companion-tree search found no competing C/H
+definition or alternate address. The generated `funcs_36.c` definition
+already carries the human name and contains the live `0xAC`-byte body: it
+looks up a named level DAT item, rejects a null or sentinel (`0xFFFF`) item
+field with a constant float return, otherwise loads the item and player
+entity position records through `getNpcContextField8` /
+`getPlayerField2`, and returns the 3D Euclidean distance via `sqrt.s` of the
+sum of squared axis deltas. Its exact preceding boundary is
+`setHudFlagBit40AndStoreArg` at `0x800C7884` with size `0x1C`, and its
+following boundary is `getScaledPlayerCraftSpeed` at `0x800C794C` with size
+`0x2C`. The TOML entry already has the same human name, address, and size;
+the section-4 overlay table has the same function at ROM offset `0x22770`
+with span `0xAC`.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and
+overlay ownership; H3 is ruled out by the live distance body and exact
+adjacent boundaries and sizes. No source-map edit was needed because the
+generated definition and TOML entry were already synchronized. No build or
+runtime behavior conclusion was made. The next sweep candidate is
+`func_800C794C`/`getScaledPlayerCraftSpeed`.
