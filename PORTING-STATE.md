@@ -79258,3 +79258,38 @@ run required.
 Next census: `func_800CFD0C` / `advanceAtStDeathAnimPhase` at `0x800CFD0C`
 (size `0x170`). Last-15 titles still include s1682, so the next iteration may
 continue the sweep.
+
+## Session 1694 (2026-08-16) — synchronized the advanceAtStDeathAnimPhase symbol
+
+Exact generated-symbol census for `0x800CFD0C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 39071; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `advanceAtStDeathAnimPhase = 0x800CFD0C`. Previous contiguous neighbor `npcAtStHandleDestruction = 0x800CF898`; next contiguous function `npcAtStUpdate = 0x800CFE7C` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void advanceAtStDeathAnimPhase` at VRAM `0x800CFD0C`; prologue `addiu $sp, $sp, -0x18`; returns through `jr $ra` / `addiu $sp, $sp, 0x18` ending at `0x800CFE78`; previous mission function is `npcAtStHandleDestruction` at `0x800CF898` (last insn `0x800CFD08`); next mission function is `npcAtStUpdate` at `0x800CFE7C` |
+| Body semantics | Actor at `a0` (`s0`). Tears down current anim (`clearModelAnimChannelEntry` on `*(s0+0x90)`, `releaseModelAnimSlot` on `*(s0+0x8C)`), then branches on death-phase byte `+0xAB`: 1 writes halfword `+0x7E=2` from tables `0x800A70C0`/`0x70C4`; 2 zeros `+0x94` and writes `+0x7E=1` from `0x800A70C8`/`0x70CC`; 3 writes `+0x7E=0` from `0x800A70D0`/`0x70D4`; other values return. Then rescales `+0x9C`/`+0x98`, `flattenAnimTreeAndAllocateSlot`, `markModelAnimChannelEntryActive`, `setModelAnimSlotCycleDuration`, `advanceAtStEffectPhaseSound` (`a1=12.0f`, `a2=1`), and clears `+0xAB`. Exclusive static caller is `npcAtStUpdate` at `0x800D0678` / `0x800D06E4` / `0x800D07CC` (`a0=s2`; one site writes `+0xAB=3` first). Name matches the AT-ST death-anim phase advance |
+| TOML (before) | `{ name = "func_800CFD0C", vram = 0x800CFD0C, size = 0x170 }` — size matches `0x800CFE7C - 0x800CFD0C` (92 decoded insns, last+4 = `0x170`) |
+| Overlay section 4 | `{ .func = advanceAtStDeathAnimPhase, .offset = 0x0002ABDC, .rom_size = 0x00000170 }` under `section_4_ovl_mission_funcs` (`0x800CFD0C - 0x800A5130 = 0x2ABDC`; `0x2A768 + 0x474 = 0x2ABDC`; `0x2ABDC + 0x170 = 0x2AD4C` matches next `npcAtStUpdate`) |
+| Non-collision | No menu-overlay function occupies `0x800CFD0C`. Nearest menu symbols are concert-hall bytes at `0x800CFE3D`/`0x800CFE3E` (inside this VRAM window on a different overlay). Companion and generated greps found no `func_800CFD0C` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated AT-ST death-anim phase-advance
+body, previous (`npcAtStHandleDestruction` / `0x800CF898`) and next
+(`npcAtStUpdate` / `0x800CFE7C`) boundaries, TOML size, and section-4 overlay
+span agreed; the generated headers/body were already
+`advanceAtStDeathAnimPhase`, and only the TOML name was a stale
+`func_800CFD0C` placeholder. Corrected TOML to `advanceAtStDeathAnimPhase`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `npcAtStUpdate` at `0x800CFE7C` (size `0x120C`). Last-15 titles
+still include s1682, so the next iteration may continue the sweep.
