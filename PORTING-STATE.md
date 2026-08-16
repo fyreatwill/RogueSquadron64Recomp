@@ -80177,3 +80177,39 @@ runtime run required.
 Next census: `npcTankDroidComputeAimMotion` / `func_800D634C` at
 `0x800D634C` (size `0x64C`). Last-15 titles still include s1714's
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1718 (2026-08-16) — synchronized the npcTankDroidComputeAimMotion symbol
+
+Exact generated-symbol census for `0x800D634C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 54553; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTankDroidComputeAimMotion = 0x800D634C` with comment "tank-droid aim/orientation solver (mat/quat math)". Previous contiguous neighbor `npcTickEffectChannelShared = 0x800D6134`; next contiguous neighbor `npcTankDroidUpdate = 0x800D6998` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTankDroidComputeAimMotion` at VRAM `0x800D634C`; prologue `addiu $sp, $sp, -0x1B8`; object pointer `a0` saved in `s4`; returns through `jr $ra` / `addiu $sp, $sp, 0x1B8` ending at `0x800D6994`; previous mission function is `npcTickEffectChannelShared` at `0x800D6134` (last insn `0x800D6348`); next mission function is `npcTankDroidUpdate` at `0x800D6998`. `funcs.h` already declares the human name. Exclusive caller is `npcTankDroidUpdate` at `0x800D6E84` (`jal 0x800D634C`) |
+| Body semantics | `isPendingChildNpcActive` (`jal 0x800F06BC`), `computeActorAnchorDeltaAfterLOS` (`jal 0x800F09A8`), `getObjectMeshTransformOrLocal` (`jal 0x800F2988`), `mat34CrossRowsAndCopyPos` (`jal 0x80059B50`), `mat3x3InverseInto` (`jal 0x8001C774`), `transformVec3ByMat34` (`jal 0x800193E8`), `vec3NormalizeInto` (`jal 0x8001CFA0`), `buildRotationMatrixSlot0` (`jal 0x8001CC3C`) / `Slot1` (`jal 0x8001CD6C`), `composeRotationMatrixSlot1` (`jal 0x8001CCCC`), `vec3Dot` (`jal 0x8001CFE8`) / `vec3Cross` (`jal 0x80019548`) / `vec3Length` (`jal 0x8001CF2C`), `constMinusSinfApprox` (`jal 0x8001C5CC`), `quatFromAxisAngle` (`jal 0x8001D240`), `rotateVec3ByQuat` (`jal 0x8001D3C4`), `play3DSoundEventVariant` (`jal 0x80098BDC`), `normalize_vector` (`jal 0x8001CF58`), `factor5RemoveListNode` (`jal 0x80098DE0`). Name matches a tank-droid aim/orientation solver |
+| TOML (before) | `{ name = "func_800D634C", vram = 0x800D634C, size = 0x64C }` — size matches `0x800D6998 - 0x800D634C` (last insn `0x800D6994` + 4 = `0x64C`) |
+| Overlay section 4 | `{ .func = npcTankDroidComputeAimMotion, .offset = 0x0003121C, .rom_size = 0x0000064C }` under `section_4_ovl_mission_funcs` (`0x800D634C - 0x800A5130 = 0x3121C`; `0x31004 + 0x218 = 0x3121C`; `0x3121C + 0x64C = 0x31868` matches next `npcTankDroidUpdate`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D634C`. Companion and generated greps found no leftover `D_800D634C` splat and no other occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated tank-droid aim/orientation
+solver, previous (`npcTickEffectChannelShared` / `0x800D6134`) and next
+(`npcTankDroidUpdate` / `0x800D6998`) boundaries, TOML size, and section-4
+overlay span agreed; the generated headers/body were already
+`npcTankDroidComputeAimMotion`, and only the TOML name was a stale
+`func_800D634C` placeholder. Corrected TOML to `npcTankDroidComputeAimMotion`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTankDroidUpdate` at `0x800D6998` (size `0xE80`). Last-15
+titles still include s1714's retail-entry revisit, so the mandatory
+REVISIT gate does not fire.
