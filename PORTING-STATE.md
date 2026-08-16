@@ -75889,3 +75889,28 @@ build or runtime run was justified for this exact-name census. The next
 bounded candidate is `func_800B7590`, independently named `findLockOnTarget`,
 with size `0x34`; the already-fake `fake_func_800B75C4` begins at
 `0x800B75C4`. This naming change does not reopen M5 audio de-stubbing.
+
+## Session 1579 (2026-08-16) — synchronized the findLockOnTarget symbol
+
+Performed the bounded exact-name census over `0x800B7590..0x800B75C4`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 21,001 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail added no new discriminator. The
+last-15 title check included s1569's non-sweep retail-entry revisit, so the
+sweep-revisit rule did not fire. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B7590` at `0x800B7590` with size `0x34`; the companion `../rogue_squadron64/symbol_files/mission_overlay.txt` independently maps `findLockOnTarget = 0x800B7590`. The next generated and companion boundary is the already-fake `fake_func_800B75C4`. |
+| Generated definition | `funcs_31.c` defines `findLockOnTarget` at `0x800B7590`; its epilogue reaches `0x800B75C0` and the next generated definition begins at `0x800B75C4`, matching the exact `0x34` span. |
+| Caller and semantic evidence | Generated `funcs_31.c` has call sites to `0x800B7590` at `0x800B53DC`, `0x800B7AB4`, and `0x800B9EF4`. The body performs the lock-on target mode checks expected for the independently named function. |
+| Confidence | High |
+
+The complete comparison selects H1. H2 is ruled out because the entry is not
+partial, fake, or conflicting; H3 is ruled out by the independent companion
+name and generated definition/caller evidence. Updated only the TOML name; no
+build or runtime run was justified for this exact-name census. The next
+bounded candidate is `func_800B77D0`, independently named
+`tickCraftAbilityCooldown`, with size `0x27C`; `orientEffectToVelocity`
+begins at `0x800B7A4C`. This naming change does not reopen M5 audio
+de-stubbing.

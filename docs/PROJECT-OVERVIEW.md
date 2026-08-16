@@ -2856,7 +2856,7 @@ summary. Homebrew Rice later-phase results (s1496 hangar, s1512 M4 DMEM `r9`,
 s1528 leave-hangar 640, s1544 640 still menu-overlay) live in
 `CURRENT-TRUTH.md` and superseded the dummy-video 320-only parking.
 
-## 33. Generated-symbol renaming sweep (s1240–s1578)
+## 33. Generated-symbol renaming sweep (s1240–s1579)
 
 Migrated from `CURRENT-TRUTH.md` during the s1553 maintenance pass. Full
 per-session comparison tables remain in `PORTING-STATE.md`. Method: one
@@ -2866,10 +2866,10 @@ caller or semantic evidence agree (H1). Leave address-encoded, already-fake,
 or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
 justified for an exact-name census.
 
-**Cursor.** Next census is `func_800B7590`, independently named
-`findLockOnTarget`, at `0x800B7590` (TOML placeholder, size `0x34`; next
-entry is the already-fake `fake_func_800B75C4`). Last H1 sync is
-`updateEngineThrustEffect` at `0x800B6990` (s1578).
+**Cursor.** Next census is `func_800B77D0`, independently named
+`tickCraftAbilityCooldown`, at `0x800B77D0` (TOML placeholder, size `0x27C`;
+next entry is `orientEffectToVelocity` at `0x800B7A4C`). Last H1 sync is
+`findLockOnTarget` at `0x800B7590` (s1579).
 Last H2 park is `fake_func_800B42BC` (s1570). About 1,548
 placeholder `func_0x...` names remained when counted at s1487.
 
@@ -2917,6 +2917,7 @@ placeholder `func_0x...` names remained when counted at s1487.
 | s1576 | Mission overlay: `acquireLockOnTarget` at `0x800B63C8` (size `0x3D8`). |
 | s1577 | Mission overlay: `emitTexturedImpactEffect` at `0x800B67A0` (size `0x1F0`). |
 | s1578 | Mission overlay: `updateEngineThrustEffect` at `0x800B6990` (size `0x7D8`). |
+| s1579 | Mission overlay: `findLockOnTarget` at `0x800B7590` (size `0x34`). |
 
 **Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
 `func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,
