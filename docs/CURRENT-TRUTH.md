@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1537 (2026-08-15).
+the authority for session detail. Reviewed through s1538 (2026-08-15).
 
 ## Current state
 
@@ -63,7 +63,7 @@ the authority for session detail. Reviewed through s1537 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AF2C8..0x800AF360`.
+   adjacent function, `0x800AF360..0x800AF408`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -153,20 +153,25 @@ the authority for session detail. Reviewed through s1537 (2026-08-15).
    synchronized `buildBobbingObjectMatrix` at `0x800AF164`. s1536
    synchronized `cinematicShutdownAudioAndAssets` at `0x800AF260`.
    s1537 synchronized `bytesDiffer` at `0x800AF284`.
-   The generated entry at `0x800AF2C8` is already
-   `matchKeywordWithPriority`; the companion cinematic list maps
-   `matchKeywordWithPriority = 0x800AF2C8` (no inline comment).
-   TOML is still `func_800AF2C8` (size `0x98`, ends at independently
-   named generated `cinematicComputeDt` / TOML `func_800AF360` at
-   `0x800AF360`). Overlay `rom_size` is `0x98` at offset
-   `0x0000A198`. Confirm the complete live function, matching size,
-   and caller/semantic evidence before synchronizing the TOML name.
-   Independently named `bytesDiffer` at `0x800AF284` (`rom_size`
-   `0x44`) ends at this address. Menu-overlay
-   `initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60`
-   (`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping
-   VRAM from `.ovl.menu` and is not a cinematic size split.
-   Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues
+   s1538 synchronized `matchKeywordWithPriority` at
+   `0x800AF2C8`.
+   The generated entry at `0x800AF360` is already
+   `cinematicComputeDt`; the companion cinematic list maps
+   `cinematicComputeDt = 0x800AF360` (comment: per-frame
+   delta-time computer). TOML is still `func_800AF360` (size
+   `0xA8`, ends at independently named generated
+   `cinematicInitializer` / TOML `func_800AF408` at
+   `0x800AF408`). Overlay `rom_size` is `0xA8` at offset
+   `0x0000A230`. Confirm the complete live function, matching
+   size, and caller/semantic evidence before synchronizing
+   the TOML name. Independently named
+   `matchKeywordWithPriority` at `0x800AF2C8` (`rom_size`
+   `0x98`) ends at this address. Menu-overlay
+   `initCraftSelectScreen` / TOML `func_800AEC60` at
+   `0x800AEC60` (`rom_size` `0x760`, ends `0x800AF3C0`)
+   occupies overlapping VRAM from `.ovl.menu` and is not a
+   cinematic size split. Mission-overlay `tickCutsceneObject`
+   at `0x800AF04C` continues
    `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at
    `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and likewise
    overlaps from `.ovl.mission`.
@@ -539,6 +544,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1535 | Exact companion/generated cinematic-matrix census synchronized `buildBobbingObjectMatrix` at `0x800AF164`; no build or runtime run. |
 | s1536 | Exact companion/generated cinematic-teardown census synchronized `cinematicShutdownAudioAndAssets` at `0x800AF260`; no build or runtime run. |
 | s1537 | Exact companion/generated cinematic-compare census synchronized `bytesDiffer` at `0x800AF284`; no build or runtime run. |
+| s1538 | Exact companion/generated cinematic-keyword census synchronized `matchKeywordWithPriority` at `0x800AF2C8`; no build or runtime run. |
 
 ## Method and safety rules
 

@@ -74172,3 +74172,47 @@ size `0x98`; overlay `rom_size` is `0x98` at offset `0x0000A198`; live
 body ends at independently named generated `cinematicComputeDt` / TOML
 `func_800AF360` at `0x800AF360`). Independently named `bytesDiffer` at
 `0x800AF284` (`rom_size` `0x44`) ends at `0x800AF2C8`.
+
+## Session 1538 (2026-08-15) — synchronized the match-keyword-with-priority symbol
+
+Performed the bounded exact-name census over `0x800AF2C8..0x800AF360`.
+
+No new soak-queue verdicts since s1537; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1528 (Rice post-hangar
+leave-to-640 revisit), so the every-15-sessions sweep-revisit rule did not
+fire. CURRENT-TRUTH is 55605 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AF2C8`, size `0x98`; `0x800AF2C8+0x98=0x800AF360`. Overlay `.ovl.cinematic` entry `rom_size` is `0x98` at offset `0x0000A198` (`0x800AF2C8-0x800A5130`). Live body is independently `0x98` and meets independently named `cinematicComputeDt` at `0x800AF360` |
+| Generated definition | `funcs_29.c` defines `matchKeywordWithPriority` at `0x800AF2C8`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000A198`, `rom_size 0x00000098`). The live cinematic body is a complete `0x98` function: `lw $v0, 0x0($a0)` / `lw $t0, 0x30($v0)` / `lbu $v0, 0x0($t0)` / empty-table `beq` to the zero return, then a 6-byte compare loop (`slti $a0, 0x6`) plus a trailing-null check. Match path reads the priority byte at `+7` and `jr $ra` / `slt $v0, $a2, $v0`. Mismatch path advances `byte[7]*36+8` (`sll 3` / `addu` / `sll 2` / `addiu $t0, $v1, 0x8`) and continues while the next header byte is nonzero. Last live instruction pair is `0x800AF358`/`0x800AF35C`. Next generated cinematic function is independently named `cinematicComputeDt`. Independently named `bytesDiffer` at `0x800AF284` (`rom_size` `0x44`) ends at this address. Menu-overlay `initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and occupies overlapping VRAM from `.ovl.mission` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `matchKeywordWithPriority = 0x800AF2C8` (no inline comment). The same cinematic list independently names the adjacent functions `bytesDiffer` at `0x800AF284` and `cinematicComputeDt` at `0x800AF360`. Menu, mission, libultra, ignored, and zlib lists do not remap `0x800AF2C8`. No conflicting companion name for this cinematic address |
+| Caller evidence | One retail `jal` encoding `0x0C02BCB2` and zero `j` or absolute `0x800AF2C8` pointer words. The site is independently named `spawnCutsceneEffectsAndCues` at `0x800A9248` (file `0x13B698`; prev `0x8C440050` `lw $a0, 0x50($v0)`; delay `0x02003021` `addu $a2, $s0, $zero`; next `0x304200FF` `andi $v0, $v0, 0xFF`). Same-run ROM word at that file offset is `0x0C02BCB2`. The generated caller is the matching `funcs_27.c` `jal 0x800AF2C8` site inside `spawnCutsceneEffectsAndCues` (`0x800A89B0`), after loading `$a1` from a stack keyword slot and `$s0` as `$s3 & 1` for the priority argument. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x141718` (`0x137580+(0x800AF2C8-0x800A5130)`) are `0x8C820000` (`lw $v0, 0x0($a0)`), `0x8C480030` (`lw $t0, 0x30($v0)`), `0x91020000` (`lbu $v0, 0x0($t0)`), `0x10400020` (`beq $v0, $zero, L_800AF358`), `0x00000000` (`nop`), then the 6-byte compare loop, the match-path `0x91020007`/`0x03E00008`/`0x00C2102A` (`lbu $v0, 0x7($t0)` / `jr $ra` / `slt $v0, $a2, $v0`), and the miss-path stride `0x000218C0`/`0x00621821`/`0x00031880` (`sll`/`addu`/`sll` = `*36`) ending `0x03E00008`/`0x00001021`. Next start file `0x1417B0` is `0x27BDFFB8` (`cinematicComputeDt` `addiu $sp, $sp, -0x48`). Preceding epilogue file `0x141710` is `0x03E00008`/`0x00001021` (`bytesDiffer` `jr $ra` / `addu $v0, $zero, $zero`). The body is the keyword-table walker used by `spawnCutsceneEffectsAndCues` to accept a cue name only when `$a2` is below the entry's priority byte. Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x141718` is `0x8C820000`, the caller `jal` word above is `0x0C02BCB2`, and the s1537/s1536/s1535/s1534/s1533/s1532/s1531/s1530 controls still read `0x10C0000E` at `0x1416D4`, `0x27BDFFE8` at `0x1416B0`, `0x27BDFFD8` at `0x1415B4`, `0x27BDFFE8` at `0x14153C`, `0x27BDFFD8` at `0x1414DC`, `0x3406FFFF` at `0x14148C`, `0x27BDFFE8` at `0x141440`, and `0x00002021` at `0x141418` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AF2C8`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x98`, the one ROM `jal` caller is independently named
+`spawnCutsceneEffectsAndCues` on the cue-keyword plus priority path, the
+overlapping menu and mission functions are different overlays, and there
+is neither a conflicting companion name nor a cinematic size split. H2
+and H3 are ruled out for this address. The stale address-encoded TOML
+entry was synchronized (name only; size left at `0x98`). `func_8009D978`
+remains the eight-byte Q15 delay-mix table and was left unchanged, as
+were `func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated cinematic function is independently named
+`cinematicComputeDt` at `0x800AF360` (TOML still `func_800AF360`,
+size `0xA8`; overlay `rom_size` is `0xA8` at offset `0x0000A230`; live
+body ends at independently named generated `cinematicInitializer` / TOML
+`func_800AF408` at `0x800AF408`). Independently named
+`matchKeywordWithPriority` at `0x800AF2C8` (`rom_size` `0x98`) ends at
+`0x800AF360`.
