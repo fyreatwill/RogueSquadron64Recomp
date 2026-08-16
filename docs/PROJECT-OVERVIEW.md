@@ -3011,10 +3011,11 @@ collision.
 | s1732 | Confirmed `npcWingmanUpdate` (`0x800D93C0`, `0xBD0`). 11-way jump table at `0x800A7A00` on `(a1-1)` for `a1 ∈ 1..11`. Setup / teardown / live tick (`npcWingmanUpdateEngineAudio`, `npcWingmanSteerToward`, `npcWingmanBehaviorByMode`) / visibility / damage (`npcWingmanSpawnBurstEffects`) / range / slot-action. Table-dispatched; no leftover `func_800D93C0`. |
 | s1733 | Synchronized `npcWingmanState2` (`0x800D9F90`, `0xD4`). Two-way `+0x5E` toggle, HMT textures `0x800A781C`/`0x800A7820`, `npcWingmanStateEffectShared`, optional `play3DSoundEvent` `0x2`/`0x5A`/`0x28`. `getNpcWingmanStateData` case 2. |
 | s1734 | Synchronized `npcWingmanState3` (`0x800DA064`, `0xD8`). Same `+0x5E` toggle and shared emitter; both live phases use HMT name `0x800A7844` and pass `a2=0/1` into `lookupHmtTextureByName`; optional `play3DSoundEvent` `0x2`/`0x5A`/`0x28` with float `0x800A7AF4`. `getNpcWingmanStateData` case 3. |
+| s1735 | Synchronized `npcWingmanState4` (`0x800DA13C`, `0xF8`). Dual HMT lookup on name `0x800A7848` with `a2=0` then `a2=1` (no `+0x5E` toggle); both go through `npcWingmanStateEffectShared`; OR of the two 8-bit returns, optional `play3DSoundEvent` `0x2`/`0x5A`/`0x28` with float `0x800A7AF8`. `getNpcWingmanStateData` case 4 (`0x800E0000 + -0x5EC4`). |
 
-The sweep cursor after s1734 is `npcWingmanState4` at `0x800DA13C`
-(size `0xF8`). Next contiguous neighbor is `func_800DA234` /
-`npcWingmanState5` at `0x800DA234`. Mandatory revisits in this window:
+The sweep cursor after s1735 is `npcWingmanState5` at `0x800DA234`
+(size `0x12C`). Next contiguous neighbor is `func_800DA360` /
+`npcWingmanStateNoop` at `0x800DA360`. Mandatory revisits in this window:
 s1650, s1666, s1682, s1698, s1714. s1728 is maintenance, so the next
 all-sweep 15-title window has not opened.
 
