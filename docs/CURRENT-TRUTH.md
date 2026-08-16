@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1581 (2026-08-16).
+the authority for session detail. Reviewed through s1582 (2026-08-16).
 
 ## Current state
 
@@ -119,9 +119,12 @@ the authority for session detail. Reviewed through s1581 (2026-08-16).
    boundary, and TOML size agree. s1581 synchronized
    `orientEffectToVelocity` at `0x800B7A4C` (size `0x3B0`): the companion
    mission list, generated definition and caller, exact next-function
-   boundary, and TOML size agree. The next census is `func_800B7DFC`,
-   independently named `spawnTexturedExplosionBurst`, followed by
-   `updateVwingEngineEffect` at `0x800B8C30`.
+   boundary, and TOML size agree. s1582 synchronized
+   `spawnTexturedExplosionBurst` at `0x800B7DFC` (size `0x68C`): the
+   companion mission list, generated definition, `playerYwingUpdate` caller,
+   exact next-function boundary, and TOML size agree. The next census is
+   `func_800B88C8`, independently named `emitTexturedEffectCue`, with size
+   `0x12C`; the next function is `fake_func_800B89F4`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -293,6 +296,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1579 | H1: synchronized `findLockOnTarget` at `0x800B7590` (size `0x34`); companion mapping, generated definition/three callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1580 | H1: synchronized `tickCraftAbilityCooldown` at `0x800B77D0` (size `0x27C`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1581 | H1: synchronized `orientEffectToVelocity` at `0x800B7A4C` (size `0x3B0`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
+| s1582 | H1: synchronized `spawnTexturedExplosionBurst` at `0x800B7DFC` (size `0x68C`); companion mapping, generated definition, `playerYwingUpdate` caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
