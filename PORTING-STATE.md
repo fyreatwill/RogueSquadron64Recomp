@@ -79186,3 +79186,39 @@ run required.
 Next census: `func_800CF20C` / `updateAtStBodyKinematics` at `0x800CF20C`
 (size `0x68C`). Last-15 titles still include s1682, so the next iteration may
 continue the sweep.
+
+## Session 1692 (2026-08-16) — synchronized the updateAtStBodyKinematics symbol
+
+Exact generated-symbol census for `0x800CF20C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 37306; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `updateAtStBodyKinematics = 0x800CF20C`. Previous contiguous neighbor `tickAtStCannonFireEffect = 0x800CF09C`; next contiguous function `npcAtStHandleDestruction = 0x800CF898` (comment: AT-ST walker destruction). Companion also lists `advanceAtStDeathAnimPhase = 0x800CFD0C` after the destruction function |
+| Generated `funcs_37.c` | `RECOMP_FUNC void updateAtStBodyKinematics` at VRAM `0x800CF20C`; prologue `addiu $sp, $sp, -0x1B8`; returns through `jr $ra` / `addiu $sp, $sp, 0x1B8` ending at `0x800CF894`; previous mission function is `tickAtStCannonFireEffect` at `0x800CF09C` (last insn `0x800CF208`); next mission function is `npcAtStHandleDestruction` at `0x800CF898` |
+| Body semantics | Actor at `a0` (`s4`); dt in `a1` (`f22`). Inner object at `*(s4+0x38)`. `isPendingChildNpcActive` then `computeActorAnchorDeltaAfterLOS`, `getObjectMeshTransformOrLocal`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, `transformVec3ByMat34`, `vec3NormalizeInto`, `buildRotationMatrixSlot0`, `composeRotationMatrixSlot1`. Later: `vec3Dot` ×6, `vec3Length` ×8, `vec3Cross` ×4, `constMinusSinfApprox` ×6, `quatFromAxisAngle` ×2, `rotateVec3ByQuat` ×2, `buildRotationMatrixSlot1`, `play3DSoundEventVariant` ×2, `factor5RemoveListNode`. Exclusive static caller is `npcAtStUpdate` at `0x800D0820` (`a0=s2`, `a1=f20`). Name matches the AT-ST body-kinematics tick, same family as `tickAtAtBodyTransform` |
+| TOML (before) | `{ name = "func_800CF20C", vram = 0x800CF20C, size = 0x68C }` — size matches `0x800CF898 - 0x800CF20C` (419 decoded insns, last+4 = `0x68C`) |
+| Overlay section 4 | `{ .func = updateAtStBodyKinematics, .offset = 0x0002A0DC, .rom_size = 0x0000068C }` under `section_4_ovl_mission_funcs` (`0x800CF20C - 0x800A5130 = 0x2A0DC`; `0x29F6C + 0x170 = 0x2A0DC`; `0x2A0DC + 0x68C = 0x2A768` matches next `npcAtStHandleDestruction`) |
+| Non-collision | No menu-overlay function occupies `0x800CF20C`. Menu grep for `800CF20C` is empty of functions; nearest menu symbols are concert-hall bytes at `0x800CFE3D`/`0x800CFE3E`. Menu m2c `func_800CF20C` in `func_800B47C4` / `func_800BEA00` is hangar/save data (`+0x4C`/`+0x54`) on a different overlay, not a name collision |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated AT-ST body-kinematics body,
+previous (`tickAtStCannonFireEffect` / `0x800CF09C`) and next
+(`npcAtStHandleDestruction` / `0x800CF898`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`updateAtStBodyKinematics`, and only the TOML name was a stale
+`func_800CF20C` placeholder. Corrected TOML to `updateAtStBodyKinematics`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `func_800CF898` / `npcAtStHandleDestruction` at `0x800CF898`
+(size `0x474`). Last-15 titles still include s1682, so the next iteration may
+continue the sweep.

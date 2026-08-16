@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1691 (2026-08-16).
+the authority for session detail. Reviewed through s1692 (2026-08-16).
 
 ## Current state
 
@@ -74,12 +74,12 @@ the authority for session detail. Reviewed through s1691 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. After s1691 the last-15 titles (s1677–s1691) include the s1682
+1. After s1692 the last-15 titles (s1678–s1692) include the s1682
    retail-entry revisit, so the next iteration resumes the generated-
-   symbol census at `func_800CF20C` / `updateAtStBodyKinematics`
-   at `0x800CF20C` (size `0x68C`). s1651–s1665, s1667–s1681, and
-   s1683–s1691 synchronized or confirmed DAT-item through
-   `tickAtStCannonFireEffect`; s1650, s1666, and s1682 were the
+   symbol census at `func_800CF898` / `npcAtStHandleDestruction`
+   at `0x800CF898` (size `0x474`). s1651–s1665, s1667–s1681, and
+   s1683–s1692 synchronized or confirmed DAT-item through
+   `updateAtStBodyKinematics`; s1650, s1666, and s1682 were the
    mandatory retail-entry revisits. The full s1590–s1649 archive is
    in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
    1,548 placeholder `func_0x...` names remained when counted at
@@ -231,6 +231,7 @@ ownership.
 | s1689 | Confirmed `fake_func_800CEF1C` (`0x800CEF1C`, size `0x4`) was already classified as the explicit 4-byte leftover store (`sw $s1, 0x44($sp)`) between `npcAtAtUpdate` and `advanceAtStEffectPhaseSound`: companion mapping, live generated fragment, exact `0x800CD71C`/`0x800CEF20` boundaries, TOML name and size, and section-4 span agreed. No menu function occupies the address. Next candidate is `func_800CEF20` / `advanceAtStEffectPhaseSound`. |
 | s1690 | Synchronized `advanceAtStEffectPhaseSound` (`0x800CEF20`, size `0x17C`) after companion mission mapping, live generated AT-ST effect-phase sound body (`+0x7E` phase 0/1/2 tables, progress wrap, `play3DSoundEvent` type 5/6; callers `advanceAtStDeathAnimPhase`/`npcAtStUpdate`), exact `0x800CEF1C`/`0x800CF09C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800CF09C` / `tickAtStCannonFireEffect`. |
 | s1691 | Synchronized `tickAtStCannonFireEffect` (`0x800CF09C`, size `0x170`) after companion mission mapping, live generated AT-ST cannon-fire effect tick (`lookupHmtTextureByName` on `0x800A700C`/`0x800A7010`, `setObjectSubstructF10IfReady`, `resolveNpcAttachmentPos`, `generatePerpEmitDirectionWithJitter`, `tickProgressChannel`, `triggerCueWithSlotEffect` type 3, `play3DSoundEvent` type `0xD`), exact `0x800CEF20`/`0x800CF20C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800CF20C` / `updateAtStBodyKinematics`. |
+| s1692 | Synchronized `updateAtStBodyKinematics` (`0x800CF20C`, size `0x68C`) after companion mission mapping, live generated AT-ST body-kinematics tick (`isPendingChildNpcActive`, `computeActorAnchorDeltaAfterLOS`, `getObjectMeshTransformOrLocal`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, `transformVec3ByMat34`, `vec3NormalizeInto`, `buildRotationMatrixSlot0`/`Slot1`, `composeRotationMatrixSlot1`, `vec3Dot` ×6, `vec3Length` ×8, `vec3Cross` ×4, `constMinusSinfApprox` ×6, `quatFromAxisAngle` ×2, `rotateVec3ByQuat` ×2, `play3DSoundEventVariant` ×2, `factor5RemoveListNode`; exclusive caller `npcAtStUpdate` at `0x800D0820`), exact `0x800CF09C`/`0x800CF898` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu m2c `func_800CF20C` in hangar/save files is data on a different overlay, not a name collision. Next candidate is `func_800CF898` / `npcAtStHandleDestruction`. |
 
 ## Method and safety rules
 
