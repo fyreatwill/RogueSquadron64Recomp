@@ -1768,7 +1768,7 @@ functions = [
     { name = "fake_func_800C7DB4", vram = 0x800C7DB4, size = 0xC },
     { name = "initNpcActorFromSpawnMessage", vram = 0x800C7DC0, size = 0x238 },
     { name = "playNpcStateChangeEffect", vram = 0x800C7FF8, size = 0x180 },
-    { name = "func_800C8178", vram = 0x800C8178, size = 0x38C },
+    { name = "spawnNpcDestructionEffect", vram = 0x800C8178, size = 0x38C },
     { name = "func_800C8504", vram = 0x800C8504, size = 0x474 },
     { name = "func_800C8978", vram = 0x800C8978, size = 0x518 },
     { name = "func_800C8E90", vram = 0x800C8E90, size = 0x100 },

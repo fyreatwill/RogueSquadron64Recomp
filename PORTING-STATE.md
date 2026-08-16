@@ -78382,3 +78382,33 @@ Z-on-later-attract `512→1024` is a new observation but single-source
 against a dead hold; do not treat it as mission entry. No recomp change
 or mitigation. Next work resumes the generated-symbol sweep at
 `func_800C8178` / `spawnNpcDestructionEffect`.
+
+## Session 1667 (2026-08-16) — synchronized the spawnNpcDestructionEffect symbol
+
+Exact generated-symbol census for `0x800C8178` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `spawnNpcDestructionEffect = 0x800C8178`; next `spawnNpcImpactEffectVariant = 0x800C8504`; prior `playNpcStateChangeEffect = 0x800C7FF8` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void spawnNpcDestructionEffect` at VRAM `0x800C8178`; returns through `jr $ra` / `addiu $sp, $sp, 0x108` ending at `0x800C8500`; next mission function `spawnNpcImpactEffectVariant` at `0x800C8504` |
+| Body semantics | Loads actor from `a0+4`, fetches mesh transform via `getObjectMeshTransformOrLocal`, early-outs on scale/count, then `getObjectNpcTypeId`, two `lookupHmtTextureByName` at `0x800A6994`, four `triggerCueWithSlotEffect`, two `spawnByteAnimDebrisWithParam`, two `slotDispatcherIter`, and `play3DSoundEvent` — NPC destruction-effect spawn |
+| TOML (before) | `{ name = "func_800C8178", vram = 0x800C8178, size = 0x38C }` — size matches `0x800C8504 - 0x800C8178` |
+| Overlay section 4 | `{ .func = spawnNpcDestructionEffect, .offset = 0x00023048, .rom_size = 0x0000038C }` under `section_4_ovl_mission_funcs` (`0x800C8178 - 0x800A5130 = 0x23048`) |
+| Non-collision | Menu-overlay `buildDebrisCellBitfield = 0x800C821C` lives in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. Generated source interleaves it after this function by VRAM, not as a sibling |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`playNpcStateChangeEffect` / `0x800C7FF8`) and next
+(`spawnNpcImpactEffectVariant` / `0x800C8504`) boundaries, and TOML size
+already agreed; only the TOML name was a stale `func_800C8178` placeholder.
+Corrected TOML to `spawnNpcDestructionEffect`. No build or runtime run
+required.
+
+Next census: `func_800C8504` / `spawnNpcImpactEffectVariant` at
+`0x800C8504` (size `0x474`). Last-15 titles still include s1666, so the
+next iteration may continue the sweep.
