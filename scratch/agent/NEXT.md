@@ -1,19 +1,20 @@
-# NEXT work unit (s1663)
+# NEXT work unit (s1664)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the exact generated-symbol census. The next candidate is generated
-`triggerSoundCueByType` at `0x800C7D98` (size `0x1C`). Generated and
-overlays already use the human name; TOML still carries `func_800C7D98`
-(s1662 observation) — confirm full independent agreement and correct the
+`initNpcActorFromSpawnMessage` at `0x800C7DC0` (size `0x238`). Generated and
+overlays already use the human name; TOML still carries `func_800C7DC0`
+(s1663 observation) — confirm full independent agreement and correct the
 stale TOML name if the body/boundaries agree, or leave unresolved and
 advance.
 
 Competing hypotheses and discriminator:
 
-- H1: the live function is the sound-cue-by-type trigger, and generated
-  body, TOML size/name, previous/next boundaries, and section-4 overlay
-  span agree completely — synchronize any stale placeholder (TOML name).
+- H1: the live function is the NPC-actor-from-spawn-message initializer, and
+  generated body, TOML size/name, previous/next boundaries, and section-4
+  overlay span agree completely — synchronize any stale placeholder (TOML
+  name).
 - H2: the name belongs to another overlay or conflicting context — leave
   the generated placeholder and record the collision.
 - H3: the name or function evidence is absent, conflicting, or data-like
@@ -23,18 +24,18 @@ Exact commands:
 
 ```sh
 # 1. Companion mapping / callers / semantics (bounded searches only)
-grep -rn 'triggerSoundCueByType\|0x800C7D98\|800C7D98' \
+grep -rn 'initNpcActorFromSpawnMessage\|0x800C7DC0\|800C7DC0' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64 \
   --include='*.c' --include='*.h' --include='*.txt' --include='*.yaml' \
   --include='*.md' --include='*.ld' | grep -v '/build/' | head -80
 
 # 2. Generated definition + adjacent boundaries
-grep -rn 'triggerSoundCueByType\|func_800C7D98\|0x800C7D98\|0x800C7D7C\|0x800C7DB4' \
+grep -rn 'initNpcActorFromSpawnMessage\|func_800C7DC0\|0x800C7DC0\|0x800C7DB4\|0x800C7FF8' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --include='*.c' --include='*.h' --include='*.inl' | head -80
 
 # 3. TOML + overlay span
-grep -n '800C7D98\|triggerSoundCueByType\|func_800C7D98' \
+grep -n '800C7DC0\|initNpcActorFromSpawnMessage\|func_800C7DC0' \
   syms/rogue_squadron.syms.toml | head -40
 ```
 

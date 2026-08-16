@@ -78228,3 +78228,44 @@ boundaries and sizes. Corrected the stale TOML placeholder to
 `triggerNamedAssetCue`. No build or runtime behavior conclusion was
 made. The next sweep candidate is `func_800C7D98` / generated
 `triggerSoundCueByType` (`0x800C7D98`, size `0x1C`).
+
+## Session 1663 (2026-08-16) — synchronized the triggerSoundCueByType symbol
+
+Ran the exact generated-symbol census for `0x800C7D98` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live sound-cue-by-type trigger and its
+generated, TOML, and section-4 boundaries agree completely once any stale
+placeholder is corrected; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator. The last-15
+ledger titles still include s1650 (post-B retail-entry revisit), so the
+mandatory non-sweep revisit gate did not fire.
+
+The companion mission map names `triggerSoundCueByType` at `0x800C7D98`
+as a one-line wrapper that forwards `a0` to `initSoundCueRequest` at
+`0x800EFCD4`, with 28 callers across gameplay, weapon, and UI sites.
+Companion notes on sister cue wrappers at `0x800C7D60` and `0x800C7D7C`
+place this as the type-keyed entry of the same family. The bounded
+companion-tree search found no competing C/H definition or alternate
+address. The generated `funcs_36.c` definition already carries the human
+name and is the live `0x1C`-byte body:
+
+- prologue `addiu $sp, $sp, -0x18` / `sw $ra, 0x10($sp)`
+- `jal 0x800EFCD4` → `initSoundCueRequest`
+- epilogue restore/`jr $ra` with `addiu $sp, $sp, 0x18`
+
+Its preceding boundary is `triggerNamedAssetCue` at `0x800C7D7C` with
+size `0x1C` (`0x800C7D7C+0x1C = 0x800C7D98`), and its following boundary is
+`fake_func_800C7DB4` at `0x800C7DB4` with size `0xC`
+(`0x800C7D98+0x1C = 0x800C7DB4`). The TOML entry had the correct address and
+size `0x1C` but still carried the placeholder `func_800C7D98`. The section-4
+overlay table already lists the human-named function at ROM offset
+`0x22C68` with span `0x1C` (exact after `0x22C4C+0x1C`). Multiple generated
+call sites in `funcs_43.c`–`funcs_49.c` already invoke the human name.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and section-4
+ownership; H3 is ruled out by the live thin-wrapper body and exact adjacent
+boundaries and sizes. Corrected the stale TOML placeholder to
+`triggerSoundCueByType`. No build or runtime behavior conclusion was
+made. The next sweep candidate is `func_800C7DC0` / generated
+`initNpcActorFromSpawnMessage` (`0x800C7DC0`, size `0x238`).
