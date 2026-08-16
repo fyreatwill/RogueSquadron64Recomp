@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1620 (2026-08-16).
+the authority for session detail. Reviewed through s1621 (2026-08-16).
 
 ## Current state
 
@@ -300,8 +300,12 @@ the authority for session detail. Reviewed through s1620 (2026-08-16).
    so no rename was made. s1619 synchronized `plotRadarBlipRow` at
    `0x800C435C` (size `0x174`): the companion mission mapping, live generated
    radar-row body, exact `initializeRadar` boundary, overlay-table span, and
-   TOML size agree. The next census is `func_800C4D8C`, independently named
-   `updateCraftSelectAnimState`, with size `0x454`.
+   TOML size agree. s1621 synchronized `updateCraftSelectAnimState` at
+   `0x800C4D8C` (size `0x454`): the companion mission mapping, live generated
+   definition and caller, exact `initializeRadar`/`placeRadarDots` boundaries,
+   overlay-table span, and TOML size agree. The next census is `func_800C5580`,
+   independently named `findClosestRadarContactAndSetSweep`, with size
+   `0x398`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -538,6 +542,7 @@ single-source and unevaluable as a retail ownership result.
 | s1618 | H3: bounded census of `func_800C41B0` at `0x800C41B0` (size `0x1AC`) found a live generated radar-blip body, exact `fake_func_800C41AC`/`plotRadarBlipRow` boundaries, matching TOML size, and matching mission overlay span, but the only independent name at the address is `plotRadarBlipColumn` in `main_overlay.txt`; the mission mapping remains address-coded. The overlay-context conflict leaves the name unvalidated; no rename, build, or runtime run was needed. |
 | s1619 | H1: synchronized `plotRadarBlipRow` at `0x800C435C` (size `0x174`); the companion mission mapping, live generated radar-row body, exact `initializeRadar` boundary, overlay-table span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
 | s1620 | Retail Rice valid-D-pad revisit: all five arms passed whole-RDRAM (10135–10137 writes), PIF, and VI controls through 320→640→1024→512. `dup` (`0x08000000`) and `ddown` (`0x04000000`) plus A reached 640/model-viewer (`runModelViewerLoop=1`); `dleft` (`0x02000000`) and `dright` (`0x01000000`) plus A stayed in 512 through 110 s (`runModelViewerLoop=0`). All had zero mission-entry PCs and selector writes. This single-source retail result rules out the earlier invalid-direction null and generic no-route-effect claim; it does not identify mission entry. |
+| s1621 | H1: synchronized `updateCraftSelectAnimState` at `0x800C4D8C` (size `0x454`); the companion mission mapping, live generated definition and caller, exact `initializeRadar`/`placeRadarDots` boundaries, overlay-table span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
 
 ## Method and safety rules
 

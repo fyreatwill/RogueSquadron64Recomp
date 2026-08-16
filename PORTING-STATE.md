@@ -77034,6 +77034,33 @@ visible in the PIF trace: `dup=0x08000000`, `ddown=0x04000000`,
 model-viewer hits. All five arms had zero mission-entry PC
 `0x80000B70` hits and zero selector writes at `0x13B40:0x13B48`.
 
+## Session 1621 (2026-08-16) — synchronized the updateCraftSelectAnimState symbol
+
+The planned work unit was one bounded generated-symbol census over
+`0x800C4D8C..0x800C51E0`; no build or runtime run was required. The competing
+hypotheses were H1: the companion mission name `updateCraftSelectAnimState`
+is correct and the exact generated/TOML/overlay span supports synchronization,
+H2: no independent mission name exists, and H3: the name or span belongs to
+another overlay/context or non-function data. The discriminator was the
+complete companion/generated/TOML/overlay comparison.
+
+The companion `mission_overlay.txt` independently names `0x800C4D8C`
+`updateCraftSelectAnimState` and describes a per-slot sine/cosine craft-select
+animation update. The live generated definition starts at `0x800C4D8C`, loops
+over the selected craft slots, updates the animation values, and returns at
+`0x800C51DC`. The project TOML gives size `0x454`; `initializeRadar` precedes
+it at the exact `0x800C44D0` boundary and `placeRadarDots` begins at the exact
+`0x800C51E0` boundary. The generated `recomp_overlays.inl` entry independently
+carries `updateCraftSelectAnimState` with ROM size `0x454`, and a generated
+caller invokes it from `initializeRadar`.
+
+H1 is selected. The generated definition and overlay table already carried the
+human name, while `syms/rogue_squadron.syms.toml` still used `func_800C4D8C`;
+that tracked placeholder was synchronized to `updateCraftSelectAnimState`.
+H2 and H3 are ruled out by the independent mission name, live body, generated
+caller, exact adjacent boundaries, matching TOML size, and matching overlay
+span. No runtime behavior conclusion was made.
+
 This selects H2 for `dup`/`ddown` and an H1-type distinct hangar route for
 `dleft`/`dright`; H3 is refuted by delivered pad words and the divergent
 lifecycles, and H4 is refuted by the positive controls. The experiment rules

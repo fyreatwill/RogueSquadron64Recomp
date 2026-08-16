@@ -1700,7 +1700,7 @@ functions = [
     { name = "func_800C41B0", vram = 0x800C41B0, size = 0x1AC },
     { name = "plotRadarBlipRow", vram = 0x800C435C, size = 0x174 },
     { name = "initializeRadar", vram = 0x800C44D0, size = 0x8BC },
-    { name = "func_800C4D8C", vram = 0x800C4D8C, size = 0x454 },
+    { name = "updateCraftSelectAnimState", vram = 0x800C4D8C, size = 0x454 },
     { name = "placeRadarDots", vram = 0x800C51E0, size = 0x3A0 },
     { name = "func_800C5580", vram = 0x800C5580, size = 0x398 },
     { name = "func_800C5918", vram = 0x800C5918, size = 0x678 },
