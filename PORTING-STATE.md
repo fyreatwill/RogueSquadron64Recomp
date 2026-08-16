@@ -76925,3 +76925,28 @@ window. It does not identify the B-selected 640 route or answer which input
 leaves case 6 into a mission. The directional question remains open because
 the names were not mapped to valid SDL symbols in these fresh config dirs;
 do not treat their nulls as evidence.
+
+## Session 1617 (2026-08-16) — classified the 800BF790 symbol collision
+
+The planned work unit was one bounded generated-symbol census over
+`0x800BF790..0x800BFDC4`; no build or runtime run was required. The competing
+hypotheses were H1: the companion name `updateHudHealthIndicator` is the
+correct mission-overlay rename, H2: no independent semantic name exists, and
+H3: the name or span is from a conflicting overlay/data context. The
+discriminator was the complete companion/generated/TOML/overlay comparison.
+
+The generated `funcs_33.c` definition is live and spans `0x634` bytes. Its
+body starts with the `0x800BF790` stack frame, calls
+`getPlayerHealthPercentage`, and updates HUD health/indicator fields before
+returning at `0x800BFFB8`; the next generated definition is
+`setHudSecondaryWeaponInfo` at `0x800BFDC4`. The project TOML and generated
+`section_4_ovl_mission_funcs` both give the exact `0x800BF784` predecessor,
+`0x800BF790`/`0x634` entry, and `0x800BFDC4` successor boundaries.
+
+The companion `mission_overlay.txt` still lists `func_800BF790`, while
+`main_overlay.txt` lists `updateHudHealthIndicator` at the same VRAM address
+inside an old bisection/exclusion block. The HUD companion source also calls
+the address-coded symbol. H3 is selected: the human label is not independently
+validated for this mission-overlay entry, so `syms/rogue_squadron.syms.toml`
+was left unchanged. This rules out treating the main-overlay label as a safe
+mission rename; it does not establish a runtime behavior conclusion.

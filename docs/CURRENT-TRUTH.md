@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1616 (2026-08-16).
+the authority for session detail. Reviewed through s1617 (2026-08-16).
 
 ## Current state
 
@@ -282,7 +282,16 @@ the authority for session detail. Reviewed through s1616 (2026-08-16).
    entry, `fake_func_800BF498` (size `0x8`), is an explicitly fake fragment;
    `fake_func_800BF498` (size `0x8`), is an explicitly fake fragment. s1615
    likewise confirmed `fake_func_800BF784` (size `0xC`) as an explicit fake
-   fragment; the next census is `func_800BF790` with size `0x634`.
+   fragment; the next census is `func_800BF790` with size `0x634`. s1617
+   classified `func_800BF790` at `0x800BF790` (size `0x634`) as H3: its live
+   generated body calls `getPlayerHealthPercentage` and updates HUD health
+   fields, and the generated/TOML/section-4 overlay span is exact from
+   `fake_func_800BF784` through `func_800BFDC4`; however, the companion
+   `mission_overlay.txt` deliberately leaves this mission entry address-coded
+   while `main_overlay.txt` carries `updateHudHealthIndicator` at the same
+   VRAM address. That is an overlay-context conflict, not an independently
+   validated mission name, so no rename was made. The next census is
+   `func_800C41B0` with size `0x1AC`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -507,6 +516,7 @@ single-source and unevaluable as a retail ownership result.
 
 | s1615 | H1: confirmed `fake_func_800BF784` at `0x800BF784` (size `0xC`) is an explicit three-instruction fake fragment; companion mapping, generated body, TOML size, exact `func_800BF790` boundary, and overlay-table span agree. No rename, build, or runtime run was needed. |
 | s1616 | Retail Rice input revisit: four arms passed whole-RDRAM controls and reached hangar 512. Pre-exit B was delivered and selected a distinct 512→1024→640 route (`0x00790400`→`0x00696100`) with zero model-viewer and mission-entry PCs; A followed the known case-6 512→640 viewer route. Up/Down were invalid `sym=0` injections and remain unevaluable. Selector watch `0x13B40:0x13B48` stayed quiet. Single-source retail execution, with generated B-mask branch as an independent static control. |
+| s1617 | H3: bounded census of `func_800BF790` at `0x800BF790` (size `0x634`) found a live generated HUD-health body and exact mission section/TOML boundaries, but the companion name `updateHudHealthIndicator` exists only in the separate/ambiguous main-overlay list while the mission mapping remains address-coded. The overlay-context conflict leaves the mission name unvalidated; no rename, build, or runtime run was needed. |
 
 ## Method and safety rules
 
