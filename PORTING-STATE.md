@@ -80390,3 +80390,39 @@ runtime run required.
 Next census: `npcWingmanStateEffectShared` / `func_800D7A6C` at
 `0x800D7A6C` (size `0x28C`). Last-15 titles still include s1714's
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1724 (2026-08-16) — synchronized the npcWingmanStateEffectShared symbol
+
+Exact generated-symbol census for `0x800D7A6C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 57935; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanStateEffectShared = 0x800D7A6C` with comment "shared per-state effect emitter for wingman state handlers". Previous contiguous neighbor `getNpcWingmanStateData = 0x800D7974`; next contiguous neighbor `npcWingmanState0 = 0x800D7CF8`. Companion also notes `npcWingmanState2` "calls npcWingmanStateEffectShared" |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanStateEffectShared` at VRAM `0x800D7A6C`; prologue `lui $v0, 0x8013` / `lw $v0, 0x7CE4($v0)` then `addiu $sp, $sp, -0x68`; saves `$s0..$s3`/`$ra`; copies `a0/a1/a3` to `$s0/$s1/$s2`; optional `resolveNpcAttachmentPos` (`jal 0x800F0F94`) when the attachment-scale float at `*(player_table + obj+0x34)+0xE0` is nonzero; `tickProgressChannel` (`jal 0x800F1870`); 6-way `jr` through table `0x800A77E8` on `$s2` (`a3`) when that tick returns 1; cases 0/1 `triggerCueWithSlotEffect` type 0 or `0xC`; case 2 type `0xA`; case 3 `getObjectNpcTypeId` then `triggerCueWithSlotEffect` type `0xA` and `slotDispatcherIter` (`jal 0x8003E8DC`); case 4 type 8 plus `play3DSoundEvent` type `0x47`; case 5 type `0xD` plus `play3DSoundEvent` type `0x46`. Epilogue `jr $ra` / `addiu $sp, $sp, 0x68` ends at `0x800D7CF4`. Previous mission function is `getNpcWingmanStateData` at `0x800D7974` (last insn `0x800D7A68`); next is `npcWingmanState0` at `0x800D7CF8`. `funcs.h` already declares the human name. Generated callers: `npcWingmanState0` ×2, `npcWingmanState1` ×3, `npcWingmanState2` ×1, `npcWingmanState3` ×1, `npcWingmanState4` ×2, `npcWingmanState5` ×2, `npcWingmanState6` ×1 |
+| Body semantics | Matches the companion "shared per-state effect emitter": progress-channel tick, a 6-way cue-type switch, optional attachment-pos resolve, slot dispatch, and 3D sound. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800D7A6C", vram = 0x800D7A6C, size = 0x28C }` — size matches `0x800D7CF8 - 0x800D7A6C` (last insn `0x800D7CF4` + 4 = `0x28C`) |
+| Overlay section 4 | `{ .func = npcWingmanStateEffectShared, .offset = 0x0003293C, .rom_size = 0x0000028C }` under `section_4_ovl_mission_funcs` (`0x800D7A6C - 0x800A5130 = 0x3293C`; `0x32844 + 0xF8 = 0x3293C`; `0x3293C + 0x28C = 0x32BC8` matches next `npcWingmanState0`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D7A6C`. Menu max VRAM is `advanceWrappingPhaseAccumulator = 0x800C6660`. No leftover `func_800D7A6C` in generated headers or overlay INL; no companion `D_800D7A6C` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated shared per-state effect-emitter
+body, previous (`getNpcWingmanStateData` / `0x800D7974`) and next
+(`npcWingmanState0` / `0x800D7CF8`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcWingmanStateEffectShared`, and only the TOML name was a stale
+`func_800D7A6C` placeholder. Corrected TOML to `npcWingmanStateEffectShared`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcWingmanState0` / `func_800D7CF8` at
+`0x800D7CF8` (size `0x1C8`). Last-15 titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate does not fire.
