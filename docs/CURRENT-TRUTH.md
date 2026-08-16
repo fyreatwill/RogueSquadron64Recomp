@@ -77,7 +77,8 @@ the authority for session detail. Reviewed through s1650 (2026-08-16).
    synchronized `randMod`; s1647 confirmed `addBooleanCountHandleWrapper`
    was already synchronized; s1648 confirmed `addTimerHandleWrapper` was
    already synchronized; s1649 synchronized `setHudFlagBit40AndStoreArg`
-   after correcting its stale TOML name. The full s1590–s1649 archive is in
+   after correcting its stale TOML name. s1650 was the mandatory retail-entry
+   revisit (post-B A/Start/Z). The full s1590–s1649 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
