@@ -78764,3 +78764,34 @@ runtime run required.
 Next census: `func_800CC158` / `tickActorTexturedSoundEffect` at `0x800CC158`
 (size `0x154`). Last-15 titles still include s1666, so the next iteration
 may continue the sweep.
+
+## Session 1680 (2026-08-16) — synchronized the tickActorTexturedSoundEffect symbol
+
+Exact generated-symbol census for `0x800CC158` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 29506; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickActorTexturedSoundEffect = 0x800CC158`; previous contiguous helper `initActorFromSpawnTemplate = 0x800CC03C`; next contiguous helper `tickAtAtBodyTransform = 0x800CC2AC` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void tickActorTexturedSoundEffect` at VRAM `0x800CC158`; prologue `addiu $sp, $sp, -0x88`; returns through `jr $ra` / `addiu $sp, $sp, 0x88` ending at `0x800CC2A8`; previous mission function is `initActorFromSpawnTemplate` at `0x800CC03C` (last insn `0x800CC154`); next mission function is `tickAtAtBodyTransform` at `0x800CC2AC` |
+| Body semantics | Loads actor from `$a0+4`. `$a1==0` looks up texture name at `0x800A6D60` then `setObjectSubstructF10IfReady`; `$a1!=0` looks up `0x800A6D64`. Common path: `lookupHmtTextureByName`, `tickProgressChannel`; progress `==1` then `getObjectNpcTypeId`, `triggerCueWithSlotEffect`, `slotDispatcherIter`, `play3DSoundEvent`. Name matches the body |
+| TOML (before) | `{ name = "func_800CC158", vram = 0x800CC158, size = 0x154 }` — size matches `0x800CC2AC - 0x800CC158` |
+| Overlay section 4 | `{ .func = tickActorTexturedSoundEffect, .offset = 0x00027028, .rom_size = 0x00000154 }` under `section_4_ovl_mission_funcs` (`0x800CC158 - 0x800A5130 = 0x27028`; `0x26F0C + 0x11C = 0x27028`; `0x27028 + 0x154 = 0x2717C` matches next `tickAtAtBodyTransform`) |
+| Non-collision | Menu-overlay `calculatePlayerRank = 0x800CC1A8` and `getMedalInfo = 0x800CC200` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. They appear inside the mission VRAM span in `funcs_37.c` only because overlays share VRAM |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated textured-sound-effect tick body,
+previous (`initActorFromSpawnTemplate` / `0x800CC03C`) and next
+(`tickAtAtBodyTransform` / `0x800CC2AC`) boundaries, TOML size, and
+section-4 overlay span agreed; only the TOML name was a stale `func_800CC158`
+placeholder. Corrected TOML to `tickActorTexturedSoundEffect`. No build or
+runtime run required.
+
+Next census: `func_800CC2AC` / `tickAtAtBodyTransform` at `0x800CC2AC`
+(size `0x70C`). Last-15 titles still include s1666, so the next iteration
+may continue the sweep.

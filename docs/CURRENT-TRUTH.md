@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1679 (2026-08-16).
+the authority for session detail. Reviewed through s1680 (2026-08-16).
 
 ## Current state
 
@@ -72,14 +72,14 @@ the authority for session detail. Reviewed through s1679 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep at generated
-   `func_800CC158` / `tickActorTexturedSoundEffect` at `0x800CC158`
-   (size `0x154`). Compare companion mapping if any, generated body,
+   `func_800CC2AC` / `tickAtAtBodyTransform` at `0x800CC2AC`
+   (size `0x70C`). Compare companion mapping if any, generated body,
    previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (generated and
    overlay already carry the companion name; TOML is still
-   `func_800CC158`, so this is likely an H1). s1651–s1665 and
-   s1667–s1679 synchronized or confirmed DAT-item through
-   `initActorFromSpawnTemplate`; s1650 and s1666 were the mandatory
+   `func_800CC2AC`, so this is likely an H1). s1651–s1665 and
+   s1667–s1680 synchronized or confirmed DAT-item through
+   `tickActorTexturedSoundEffect`; s1650 and s1666 were the mandatory
    retail-entry revisits. The full s1590–s1649 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
@@ -218,6 +218,7 @@ ownership.
 | s1677 | Confirmed `npcProbeDriod` (`0x800CABD4`, size `0x11CC`) was already synchronized: companion mission mapping (keep the `Driod` typo), live generated 6-way probe-droid update (`updateProbeDroidHopState` ×3, `initProbeDroidScatterLaunch`, `createAndInitObject`, `dealDamageToNpc`, `spawnDestructionEffectBurst`), exact `0x800CA720`/`0x800CBDA0` boundaries, TOML name and size, and section-4 span agreed. Menu-overlay `runModelViewerSoundDemo` / `loadModelViewerModels` / `shutdownModelViewer` at `0x800CADB8`/`0x800CB604`/`0x800CBB30` are a different overlay, not a name collision. Next candidate is `func_800CBDA0` / `findNearestNpcWithinRange`. |
 | s1678 | Synchronized `findNearestNpcWithinRange` (`0x800CBDA0`, size `0x29C`) after companion mission mapping, live generated nearest-NPC-in-range body (`getPlayerField2`, `getNpcContextField8`, `findActiveNpcInSlotChain`, `vec3Length` ×2, `c.lt.s` range reject, `getNpcContextByIndex`, `lookupHmtTextureByName`, `revalidateNpcSlotIterator`; two `tickCinematicEffectObject` callers), exact `0x800CABD4`/`0x800CC03C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `appendNodeToListHead` / `tickMultiPartVoiceLine` / `mallocVoiceLineStruct` / `setVoiceLineLoopFlag` at `0x800CBDC4`/`0x800CBE00`/`0x800CBF60`/`0x800CC02C` are a different overlay, not a name collision. Next candidate is `func_800CC03C` / `initActorFromSpawnTemplate`. |
 | s1679 | Synchronized `initActorFromSpawnTemplate` (`0x800CC03C`, size `0x11C`) after companion mission mapping, live generated spawn-template actor-init body (`setNpcHealth`, `setObjectDetailLevel`, `initActorMotionParams`, `initObjectAnimSubstruct`, `setEffectIntensity`; state byte `+0xE6` = 4/3 on fail), exact `0x800CBDA0`/`0x800CC158` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `setVoiceLineLoopFlag` / `fake_func_800CC038` / `loadMedalInfo` / `getMissionMedal` at `0x800CC02C`/`0x800CC038`/`0x800CC040`/`0x800CC070` are a different overlay, not a name collision. Next candidate is `func_800CC158` / `tickActorTexturedSoundEffect`. |
+| s1680 | Synchronized `tickActorTexturedSoundEffect` (`0x800CC158`, size `0x154`) after companion mission mapping, live generated textured-sound-effect tick body (`lookupHmtTextureByName` on `0x800A6D60`/`0x800A6D64`, `setObjectSubstructF10IfReady`, `tickProgressChannel`, `getObjectNpcTypeId`, `triggerCueWithSlotEffect`, `slotDispatcherIter`, `play3DSoundEvent`), exact `0x800CC03C`/`0x800CC2AC` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `calculatePlayerRank` / `getMedalInfo` at `0x800CC1A8`/`0x800CC200` are a different overlay, not a name collision. Next candidate is `func_800CC2AC` / `tickAtAtBodyTransform`. |
 
 ## Method and safety rules
 
