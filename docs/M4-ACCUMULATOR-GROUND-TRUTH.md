@@ -74,3 +74,21 @@ Generated overlay 0x20 sets `ori $9, $zero, 0x670` and the only `SP_WR_LEN`
 site DMAs DMEM `0xD60`, not `0x670`. Do not re-watch `0x688:0x710`. A new
 M4 oracle target needs a real RDRAM destination, not the DMEM record base.
 The oracle still cannot see `ACCH:ACCM:ACCL`.
+
+## s1602 paired result
+
+The corrected LLE-solo port run passed the independent stage-1 arithmetic
+control and captured four phase-6 target rows. The exact local VMADH model
+matched all 32 target lanes, and post-VGE values were unchanged. This closes
+the local VMADH/VGE mismatch hypotheses for the captured path as a
+single-source runtime consistency result, not an independent retail arithmetic
+proof.
+
+The port's live shade-DMA control identified `0x4B7800..0x4B7808` as a real
+runtime destination, while the probe `r9=0x670/0x6C0` values remained DMEM.
+The retail Rice oracle passed its whole-RDRAM positive control and reached
+the 512 hangar, but wrote the port candidate zero times. Because the port
+destination is runtime-allocated and the port/oracle scene origins differ,
+that targeted null is single-source and does not establish retail ownership
+or source-state divergence. A future M4 oracle target still needs a stable
+cross-runtime address or an independently attributed writer identity.

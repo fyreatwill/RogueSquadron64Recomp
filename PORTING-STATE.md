@@ -76553,3 +76553,36 @@ generated function body, and three generated callers. Updated only the TOML
 placeholder to `triggerNabooEngineEffect`; no mitigation, build, or runtime
 change was made. The next bounded candidate is `func_800BE4A8`, independently
 named `tickPlayerCraftBlinkIndicator`, with size `0x328`.
+
+## Session 1602 (2026-08-16) — revisited the M4 accumulator boundary
+
+The last 15 ledger titles were all generated-symbol sweep sessions, so the
+mandatory revisit selected the parked M4 accumulator boundary. Before the
+run, the oracle README and Factor 5 reference were read. Two recipe mistakes
+were documented and killed with SIGKILL: a 1024 phase gate with all keys
+phase-relative deadlocked at 640, and the same reachability recipe without
+the known LLE-solo flags also stayed at 640 despite four verified Start
+edges. Neither arm was used as evidence.
+
+The corrected LLE-solo port arm used the existing regeneration-safe M4 probe,
+with a phase-6 target gate, an eight-row independent arithmetic control cap,
+and a 16-row target cap. The control fired eight times. Four complete target
+rows each produced stages 10/11/12/13, carrying pre-VMADH
+`ACCH:ACCM:ACCL`, `v4`, `v0`, post-VMADH `v6`, post-VGE `v6`, and stored bytes.
+The exact `rsp_vu_impl.hpp` VMADH/accumulator model matched all 32 target
+lanes; post-VGE values were unchanged. The live shade-DMA control identified
+the real port destination as runtime `0x4B7800..0x4B7808`; the probe's
+`r9=0x670/0x6C0` values are DMEM and were not treated as RDRAM.
+
+The paired retail oracle used Rice, the eleven-Start schedule, whole-RDRAM
+watching, and VI polling/tracing. Whole-RDRAM reached its 10,000-callback
+positive control and the independent VI trace reached 320→640→1024→512 at
+the hangar origin `0x006ab800`; the targeted `0x4B7800..0x4B7808` watch had
+zero writes. That target null is single-source and unevaluable as a retail
+ownership result because the port destination is runtime-allocated and the
+port/oracle scene origins differ. The run rules out a local VMADH arithmetic
+or VGE-change defect for the captured path, but does not identify the source
+state or later DMA/consumer divergence. No mitigation was added. The next
+work unit resumes the symbol sweep at `func_800BE4A8`. The local
+VMADH/VGE closure is single-source runtime consistency evidence, not an
+independent retail arithmetic proof.

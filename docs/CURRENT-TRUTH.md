@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1601 (2026-08-16).
+the authority for session detail. Reviewed through s1602 (2026-08-16).
 
 ## Current state
 
@@ -63,8 +63,13 @@ the authority for session detail. Reviewed through s1601 (2026-08-16).
   control passing, and both `0x688:0x710` and SP-DMEM `0x04000670:0x04000720`
   had zero CPU writes. Generated `ori $9, $zero, 0x670` plus the only
   `SP_WR_LEN` DMA from DMEM `0xD60` independently identify `r9` as DMEM.
-  The unresolved issue is the RSP-internal vector numeric origin before
-  `vmadh v6,v4,v0`; the oracle cannot watch RSP accumulators.
+  s1602's new phase-6 paired capture matched the local VMADH model on all 32
+  target lanes and showed no VGE change. This is a single-source local
+  consistency result, not an independent retail arithmetic proof; the
+  unresolved issue is source state or the later DMA/consumer boundary. The
+  retail watch at the port's runtime-allocated `0x4B7800` candidate was
+  quiet, but port/oracle scene origins and allocation state differ, so that
+  null is single-source and not a retail source-state conclusion.
 
 ## Active investigation and ranked next steps
 
@@ -218,7 +223,8 @@ the authority for session detail. Reviewed through s1601 (2026-08-16).
    `0x280`. s1601 synchronized `triggerNabooEngineEffect` at `0x800BE228`
    (size `0x280`): the companion mission list, generated definition, three
    generated callers, exact `tickPlayerCraftBlinkIndicator` boundary,
-   overlay-table span, and TOML size agree. The next census is
+   overlay-table span, and TOML size agree. s1602's M4 revisit did not alter
+   the sweep ordering. The next census is
    `func_800BE4A8`, independently named `tickPlayerCraftBlinkIndicator`,
    with size `0x328`.
 
@@ -308,8 +314,16 @@ ordering explanation. VTXCOLOR is nonzero while decoded shade is the fixed
 `0xFFFF8000`/`0x00008000` sentinel. Port VMADH matched all 128 captured
 lanes; VGE mutated none. Physical `0x688..0x710` is not a retail CPU-written
 shade record (s1512 Rice hangar, two-line: quiet CPU watches plus generated
-DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
-`vmadh v6,v4,v0`, not RT64 lane order and not low-RDRAM ownership.
+DMEM `r9`). s1602 captured four phase-6 target rows (32 lanes): every
+post-VMADH lane matched the exact `rsp_vu_impl.hpp` accumulator model, and
+post-VGE values were unchanged. This is a single-source local consistency
+result: no VMADH/VGE mismatch was observed in that capture. The unresolved
+boundary is source state or later DMA/consumer identity, not RT64 lane order
+or low-RDRAM ownership. The port's live DMA control identified
+`0x4B7800..0x4B7808` as a runtime destination for one phase-6 transfer, but
+the retail oracle's whole-RDRAM-positive run reached the 512 hangar with zero
+writes there; differing allocator/scene origins make that targeted null
+single-source and unevaluable as a retail ownership result.
 
 ## Superseded conclusions
 
@@ -413,6 +427,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1599 | H1: synchronized `triggerT16Effect` at `0x800BD958` (size `0xF8`); companion mission list, generated definition and effect/sound dispatch body, exact `playerNabooStarfighterInit` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1600 | H1: synchronized `buildNabooSubmodelTransform` at `0x800BDC9C` (size `0x58C`); companion mission list, generated definition and caller, exact `triggerNabooEngineEffect` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1601 | H1: synchronized `triggerNabooEngineEffect` at `0x800BE228` (size `0x280`); companion mission list, generated definition and three callers, exact `tickPlayerCraftBlinkIndicator` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1602 | M4 paired revisit: the existing LLE probe passed its independent arithmetic control, captured four phase-6 target tuples, and matched the local VMADH model on all 32 target lanes with no post-VGE change. This is a single-source local consistency result. Live DMA logging identified the port destination as runtime `0x4B7800..0x4B7808`; the retail oracle passed whole-RDRAM and VI controls through 320→640→1024→512 but wrote that candidate zero times. The targeted retail null is unevaluable across differing allocation/scene origins; no mitigation. |
 
 ## Method and safety rules
 
