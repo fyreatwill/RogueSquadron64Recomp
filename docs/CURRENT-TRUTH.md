@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1585 (2026-08-16).
+the authority for session detail. Reviewed through s1586 (2026-08-16).
 
 ## Current state
 
@@ -142,6 +142,12 @@ the authority for session detail. Reviewed through s1585 (2026-08-16).
    H3 for the tested buttons: none exits the viewer in the observed interval.
    The retail-entry question remains open for a different input or state
    condition; do not repeat these A/B/Z arms.
+
+   s1586 synchronized `orientVwingSubmodelByQuat` at `0x800B95E0` (size
+   `0x370`): the companion mission list, generated definition and three
+   generated callers, exact next-function boundary, overlay-table span, and
+   TOML size agree. The next census is `func_800B9950`, independently named
+   `tickVwingEngineAudio`, with size `0x5FC`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -303,6 +309,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1569 | Rice 640-handler revisit: hold stays 512 with `runHangarSelectionFrame` through 100s; leave A stops that inner loop at 63.7s and enters `runModelViewerLoop` (case 6) at 64.3s with `initModelViewer` / `buildModelViewerTextPage` / `loadJfifAsset`. Selector write `0x800C5AC8` is the generated set-6 path. Extra Start during 640 does not exit. Not a mission. |
 | s1584 | H1: synchronized `updateVwingEngineEffect` at `0x800B8C30` (size `0x9B0`); companion mapping, generated definition, `playerVwingUpdate` caller, exact `orientVwingSubmodelByQuat` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1585 | Rice model-viewer-input revisit: four arms (hold, A, B, Z) passed whole-RDRAM/PIF/VI controls and reached 640; all stayed in case-6 viewer with zero mission-path PC `0x80000B70`, identical watched PCs and target writes. Selects H3 for the tested buttons; no mitigation. |
+| s1586 | H1: synchronized `orientVwingSubmodelByQuat` at `0x800B95E0` (size `0x370`); companion mapping, generated definition and three callers, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1570 | H2: parked already-fake `fake_func_800B42BC` at `0x800B42BC` (size `0x4`). |
 | s1571 | H1: confirmed `playerXwingInit` at `0x800B42C0` is already synchronized: exact `0x2C8` TOML/overlay/generated boundary, companion name, and two generated `playerXwingUpdate` calls agree; no file rename was needed. |
 | s1572 | H1: synchronized `playWeaponFireSound` at `0x800B4588` (size `0x738`); companion mapping, generated definition, TOML boundary, and a generated caller agree. No build or runtime run was needed. |

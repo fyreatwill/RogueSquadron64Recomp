@@ -76095,3 +76095,32 @@ write at the transition boundary.
 This selects H3 for A/B/Z and rules out H1, H2, and H4 for those arms. The
 retail-entry question remains open for a different input or state condition;
 do not repeat these candidate arms. No port build or mitigation was made.
+
+## Session 1586 (2026-08-16) — synchronized the orientVwingSubmodelByQuat symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail had no newer verdict requiring analysis. The mandatory 15-title check
+showed that the recent history was not entirely symbol-sweep work because
+s1585 was the required retail-entry revisit, so this iteration resumed the
+bounded generated-symbol sweep. No build or runtime run was needed.
+
+The work unit censused `0x800B95E0..0x800B9950` using the companion mission
+symbol list, generated definition and callers, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `orientVwingSubmodelByQuat = 0x800B95E0`, immediately followed by `tickVwingEngineAudio = 0x800B9950`. |
+| Generated definition and callers | `../N64Recomp/RecompiledFuncs/funcs_31.c` defines `orientVwingSubmodelByQuat` at `0x800B95E0`; `tickVwingEngineAudio` begins at `0x800B9950`; generated `tickVwingEngineAudio` calls the function at `0x800B9AC4`, `0x800B9B14`, and `0x800B9CBC`. |
+| Span and overlay table | The TOML placeholder had size `0x370`, exactly the `0x800B95E0` to `0x800B9950` boundary. `recomp_overlays.inl` records `orientVwingSubmodelByQuat` at offset `0x144B0` with ROM size `0x370`, followed by `tickVwingEngineAudio`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and three callers. Updated only the TOML placeholder
+to `orientVwingSubmodelByQuat`; no mitigation, build, or runtime change was
+made. The next bounded candidate is `func_800B9950`, independently named
+`tickVwingEngineAudio`, with size `0x5FC`.
