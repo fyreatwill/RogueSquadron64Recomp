@@ -80318,3 +80318,39 @@ runtime run required.
 Next census: `npcWingmanResetState` / `func_800D7850` at
 `0x800D7850` (size `0x124`). Last-15 titles still include s1714's
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1722 (2026-08-16) — synchronized the npcWingmanResetState symbol
+
+Exact generated-symbol census for `0x800D7850` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 56862; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanResetState = 0x800D7850` with comment "wingman (re)init: memset, health, state byte, load HMT materials". Previous contiguous neighbor `npcTickEffectChannelSharedMode1 = 0x800D7834`; next contiguous neighbor `getNpcWingmanStateData = 0x800D7974` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanResetState` at VRAM `0x800D7850`; prologue `addiu $sp, $sp, -0x28`; saves `$ra`/`$s1`/`$s0`; `memset` of `0x30` bytes at `s0+0x68` (`jal 0x800078E0` / `rs_memset`); `setNpcHealth`; `initActorMotionParams`; `setObjectDetailLevel`; success path `sb $zero, 0x5C($s0)`, fail path `sb 4` at `+0x5C` and `sb 1` at `+0x84`; `lookupHmtMaterialByName` ×2 on `0x800A77A0`/`0x800A77AC` stored at `+0x98`/`+0x9C`; returns through `jr $ra` / `addiu $sp, $sp, 0x28` ending at `0x800D7970`. Previous mission function is `npcTickEffectChannelSharedMode1` at `0x800D7834` (last insn `0x800D784C`); next is `getNpcWingmanStateData` at `0x800D7974`. `funcs.h` already declares the human name |
+| Body semantics | Matches the companion (re)init: memset of the `+0x68` block, health/motion/detail setup, state byte at `+0x5C`, two HMT material lookups |
+| TOML (before) | `{ name = "func_800D7850", vram = 0x800D7850, size = 0x124 }` — size matches `0x800D7974 - 0x800D7850` (last insn `0x800D796C` + 4 = `0x124`) |
+| Overlay section 4 | `{ .func = npcWingmanResetState, .offset = 0x00032720, .rom_size = 0x00000124 }` under `section_4_ovl_mission_funcs` (`0x800D7850 - 0x800A5130 = 0x32720`; `0x32704 + 0x1C = 0x32720`; `0x32720 + 0x124 = 0x32844` matches next `getNpcWingmanStateData`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D7850`. Menu max VRAM is `advanceWrappingPhaseAccumulator = 0x800C6660`. No leftover `func_800D7850` in generated headers or overlay INL; no companion `D_800D7850` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated wingman-reset body,
+previous (`npcTickEffectChannelSharedMode1` / `0x800D7834`) and next
+(`getNpcWingmanStateData` / `0x800D7974`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcWingmanResetState`, and only the TOML name was a stale
+`func_800D7850` placeholder. Corrected TOML to `npcWingmanResetState`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `getNpcWingmanStateData` / `func_800D7974` at
+`0x800D7974` (size `0xF8`). Last-15 titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate does not fire.

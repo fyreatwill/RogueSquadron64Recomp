@@ -1821,7 +1821,7 @@ functions = [
     { name = "npcTankDroidUpdate", vram = 0x800D6998, size = 0xE80 },
     { name = "npcTickEffectChannelSharedMode0", vram = 0x800D7818, size = 0x1C },
     { name = "npcTickEffectChannelSharedMode1", vram = 0x800D7834, size = 0x1C },
-    { name = "func_800D7850", vram = 0x800D7850, size = 0x124 },
+    { name = "npcWingmanResetState", vram = 0x800D7850, size = 0x124 },
     { name = "func_800D7974", vram = 0x800D7974, size = 0xF8 },
     { name = "func_800D7A6C", vram = 0x800D7A6C, size = 0x28C },
     { name = "func_800D7CF8", vram = 0x800D7CF8, size = 0x1C8 },

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1721 (2026-08-16).
+the authority for session detail. Reviewed through s1722 (2026-08-16).
 
 ## Current state
 
@@ -87,10 +87,10 @@ the authority for session detail. Reviewed through s1721 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcWingmanResetState`
-   (`0x800D7850`, size `0x124`). s1651–s1665, s1667–s1681,
-   s1683–s1697, s1699–s1713, and s1715–s1721 synchronized or confirmed
-   DAT-item through `npcTickEffectChannelSharedMode1`; s1650, s1666, s1682,
+1. Resume the generated-symbol sweep at `getNpcWingmanStateData`
+   (`0x800D7974`, size `0xF8`). s1651–s1665, s1667–s1681,
+   s1683–s1697, s1699–s1713, and s1715–s1722 synchronized or confirmed
+   DAT-item through `npcWingmanResetState`; s1650, s1666, s1682,
    s1698, and s1714 were the mandatory retail-entry revisits. The
    full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
    earlier sweep is in §33. About 1,548 placeholder `func_0x...`
@@ -279,6 +279,7 @@ ownership.
 | s1719 | Confirmed `npcTankDroidUpdate` (`0x800D6998`, size `0xE80`) was already synchronized: companion mission mapping, live generated 9-way tank-droid update (`npcTankDroidComputeAimMotion`, `walkMeshdef0List`, `createAndInitObject`, `dealDamageToNpc`, `spawnDestructionEffectBurst`), exact `0x800D634C`/`0x800D7818` boundaries, TOML name and size, and section-4 span agreed. No menu function occupies the address. Next candidate is `func_800D7818` / `npcTickEffectChannelSharedMode0`. |
 | s1720 | Synchronized `npcTickEffectChannelSharedMode0` (`0x800D7818`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal npcTickEffectChannelShared` / `0x800D6134` with `a2=0`; `npcInitSimpleModel` registers it as the mode-0 anim callback), exact `0x800D6998`/`0x800D7834` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7834` / `npcTickEffectChannelSharedMode1`. |
 | s1721 | Synchronized `npcTickEffectChannelSharedMode1` (`0x800D7834`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal npcTickEffectChannelShared` / `0x800D6134` with `a2=1`; `npcInitSimpleModel` registers it as the mode-1 anim callback), exact `0x800D7818`/`0x800D7850` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7850` / `npcWingmanResetState`. |
+| s1722 | Synchronized `npcWingmanResetState` (`0x800D7850`, size `0x124`) after companion mission mapping, live generated wingman-reset body (`rs_memset` of `0x30` at `+0x68`, `setNpcHealth`, `initActorMotionParams`, `setObjectDetailLevel`, state byte `+0x5C` = 0/4, `lookupHmtMaterialByName` ×2), exact `0x800D7834`/`0x800D7974` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7974` / `getNpcWingmanStateData`. |
 
 ## Method and safety rules
 
