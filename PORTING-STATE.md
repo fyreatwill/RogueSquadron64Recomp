@@ -78589,3 +78589,32 @@ build or runtime run required.
 Next census: `func_800CA3A4` / `spawnProbeDroidGroundImpactEffect` at
 `0x800CA3A4` (size `0x1BC`). Last-15 titles still include s1666, so the
 next iteration may continue the sweep.
+
+## Session 1674 (2026-08-16) — synchronized the spawnProbeDroidGroundImpactEffect symbol
+
+Exact generated-symbol census for `0x800CA3A4` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `spawnProbeDroidGroundImpactEffect = 0x800CA3A4`; next mission listing `initProbeDroidScatterLaunch = 0x800CA560`; prior `initNpcActorVariant = 0x800CA270` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void spawnProbeDroidGroundImpactEffect` at VRAM `0x800CA3A4`; prologue `addiu $sp, $sp, -0xD8`; returns through `jr $ra` / `addiu $sp, $sp, 0xD8` ending at `0x800CA55C`; previous generated function is `initNpcActorVariant` at `0x800CA270`; next is `initProbeDroidScatterLaunch` at `0x800CA560` |
+| Body semantics | Actor at `a0+4`. Copies constant vec3 from `0x800A6B94`, subtracts actor position from `getObjectMeshTransformOrLocal`, builds an orthonormal basis (`vec3Cross` ×2, `normalize_vector` ×3), then `generatePerpEmitDirectionWithJitter`, `tickProgressChannel`, `triggerCueWithSlotEffect`, `play3DSoundEvent` (type `0x1D` / cue `0x73`). Same emit-effect family as `playNpcAmbientEffect` |
+| TOML (before) | `{ name = "func_800CA3A4", vram = 0x800CA3A4, size = 0x1BC }` — size matches `0x800CA560 - 0x800CA3A4` |
+| Overlay section 4 | `{ .func = spawnProbeDroidGroundImpactEffect, .offset = 0x00025274, .rom_size = 0x000001BC }` under `section_4_ovl_mission_funcs` (`0x800CA3A4 - 0x800A5130 = 0x25274`; `0x25274 + 0x1BC = 0x25430` matches next `initProbeDroidScatterLaunch`) |
+| Non-collision | Menu-overlay `runModelViewerLoop = 0x800C9BF0` (size `0xA48`, ends `0x800CA638`) lives in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. `0x800CA3A4` is `+0x3B4` inside that menu function |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`initNpcActorVariant` / `0x800CA270`) and next (`initProbeDroidScatterLaunch`
+/ `0x800CA560`) boundaries, and TOML size already agreed; only the TOML name
+was a stale `func_800CA3A4` placeholder. Corrected TOML to
+`spawnProbeDroidGroundImpactEffect`. No build or runtime run required.
+
+Next census: `func_800CA560` / `initProbeDroidScatterLaunch` at `0x800CA560`
+(size `0x1C0`). Last-15 titles still include s1666, so the next iteration may
+continue the sweep.
