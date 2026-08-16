@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1619 (2026-08-16).
+the authority for session detail. Reviewed through s1620 (2026-08-16).
 
 ## Current state
 
@@ -89,7 +89,7 @@ the authority for session detail. Reviewed through s1619 (2026-08-16).
    `func_0x...` names remained when counted at s1487; no other stated
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
-   and M4 threads; s1569 was that revisit). One bounded exact-name census
+   and M4 threads; s1620 was the latest revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
    sizes, and caller/semantic evidence. Per-session H1 syncs through s1594
@@ -354,10 +354,18 @@ the authority for session detail. Reviewed through s1619 (2026-08-16).
    512→1024→640 route with no case-6 or mission PC, while A selects
    case 6; the B route is not yet identified as a mission. The remaining
    retail-entry question is which input or timeout leaves case 6 into a
-   mission overlay, and what the B-selected 640 route represents. Pass
-   whole-RDRAM, PIF, and VI positive controls in the same run. Do
-   not re-watch `0x688:0x710`, do not re-audit dummy-video 320-only
-   schedules, and do not treat 640/`0x6a2900` as an outdoor mission.
+   mission overlay, and what the B-selected 640 route represents. s1620
+   fixed the earlier directional-input defect: verified `dup` and `ddown`
+   pad words still reached the 640/model-viewer route after A, while
+   verified `dleft` and `dright` pad words left the retail run in the 512
+   hangar route through 110 s. All five Rice arms reached
+   320→640→1024→512, passed whole-RDRAM, PIF, and VI controls, had zero
+   mission-entry `0x80000B70` hits, and had zero selector writes at
+   `0x13B40:0x13B48`. This is single-source retail-oracle execution with
+   independent PIF and VI/PC measurement channels, not a second emulator
+   witness. Do not repeat invalid `up`/`down` names, re-watch `0x688:0x710`,
+   do not re-audit dummy-video 320-only schedules, and do not treat
+   640/`0x6a2900` as an outdoor mission.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation; then write a new bounded plan before changing stubs.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator;
@@ -529,6 +537,7 @@ single-source and unevaluable as a retail ownership result.
 | s1617 | H3: bounded census of `func_800BF790` at `0x800BF790` (size `0x634`) found a live generated HUD-health body and exact mission section/TOML boundaries, but the companion name `updateHudHealthIndicator` exists only in the separate/ambiguous main-overlay list while the mission mapping remains address-coded. The overlay-context conflict leaves the mission name unvalidated; no rename, build, or runtime run was needed. |
 | s1618 | H3: bounded census of `func_800C41B0` at `0x800C41B0` (size `0x1AC`) found a live generated radar-blip body, exact `fake_func_800C41AC`/`plotRadarBlipRow` boundaries, matching TOML size, and matching mission overlay span, but the only independent name at the address is `plotRadarBlipColumn` in `main_overlay.txt`; the mission mapping remains address-coded. The overlay-context conflict leaves the name unvalidated; no rename, build, or runtime run was needed. |
 | s1619 | H1: synchronized `plotRadarBlipRow` at `0x800C435C` (size `0x174`); the companion mission mapping, live generated radar-row body, exact `initializeRadar` boundary, overlay-table span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
+| s1620 | Retail Rice valid-D-pad revisit: all five arms passed whole-RDRAM (10135–10137 writes), PIF, and VI controls through 320→640→1024→512. `dup` (`0x08000000`) and `ddown` (`0x04000000`) plus A reached 640/model-viewer (`runModelViewerLoop=1`); `dleft` (`0x02000000`) and `dright` (`0x01000000`) plus A stayed in 512 through 110 s (`runModelViewerLoop=0`). All had zero mission-entry PCs and selector writes. This single-source retail result rules out the earlier invalid-direction null and generic no-route-effect claim; it does not identify mission entry. |
 
 ## Method and safety rules
 

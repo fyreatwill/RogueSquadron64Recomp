@@ -77004,3 +77004,41 @@ the human name, while `syms/rogue_squadron.syms.toml` still used
 `plotRadarBlipRow`. H2 and H3 are ruled out by the independent mission name,
 live radar-row body, exact adjacent boundaries, matching TOML size, and
 matching overlay span. No runtime behavior conclusion was made.
+
+## Session 1620 (2026-08-16) — tested valid directional hangar routes at retail
+
+The mandatory 15-title check required a retail-entry revisit instead of the
+next generated-symbol census. The new work unit corrected s1616's invalid
+directional arms: the oracle source verifies `dup`, `ddown`, `dleft`, and
+`dright`, while `up` and `down` are not key names. The competing hypotheses
+were H1: valid directional navigation changes the selected route and can move
+toward a distinct post-hangar state; H2: valid direction is accepted but A
+still follows the known model-viewer route; H3: valid direction has no route
+effect; and H4: input or phase delivery is unevaluable. The discriminator was
+the within-run PIF pad word plus phase-gated VI/PC lifecycle, with all five
+arms carrying whole-RDRAM, PIF, and VI controls.
+
+The five concurrent Rice arms were the A control (`58:a,63:a`), `dup`,
+`ddown`, `dleft`, and `dright`, each preceded by the eleven documented Start
+presses. Every arm returned rc=0, reached 320→640→1024→512, passed the
+whole-RDRAM positive control with 10135–10137 writes, and delivered the A
+word `0x80000000` when pressed. The directional words were independently
+visible in the PIF trace: `dup=0x08000000`, `ddown=0x04000000`,
+`dleft=0x02000000`, and `dright=0x01000000`.
+
+`a-control` changed 512→640 at 64.1 s (`0x006a2900`) and hit
+`runModelViewerLoop` once. `dup` changed at 65.3 s to
+`0x006a2e00`, and `ddown` changed at 65.3 s to `0x006a2900`; both hit
+`runModelViewerLoop` once. `dleft` and `dright` remained in 512 through the
+110 s window, with 1644 and 1687 `runHangarSelectionFrame` hits and zero
+model-viewer hits. All five arms had zero mission-entry PC
+`0x80000B70` hits and zero selector writes at `0x13B40:0x13B48`.
+
+This selects H2 for `dup`/`ddown` and an H1-type distinct hangar route for
+`dleft`/`dright`; H3 is refuted by delivered pad words and the divergent
+lifecycles, and H4 is refuted by the positive controls. The experiment rules
+out the earlier invalid-direction null and the claim that valid directional
+input is generically ignored, but it does not identify mission entry or the
+left/right hangar state. This is single-source retail-oracle execution with
+independent PIF and VI/PC measurement channels, not a second emulator
+witness. No mitigation, generated-code change, or build was made.
