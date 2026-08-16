@@ -1,56 +1,76 @@
-# NEXT work unit (s1697)
+# NEXT work unit (s1698)
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: external-retail-entry-boundary
 
-Resume the exact generated-symbol census. Last-15 titles after s1696
-include the s1682 retail-entry revisit, so the 15-title REVISIT gate
-does not fire. Do not start another retail-entry or M4 experiment.
+Mandatory 15-title REVISIT. After s1697 the last-15 titles (s1683–s1697)
+are all sweep-scoped (synchronized / confirmed-symbol / fake-fragment
+census). Do not resume the generated-symbol sweep.
 
-Candidate: `spawnPlayerAtStCannonFire` at `0x800D1248` (size `0x330`).
-Companion, generated headers, and overlays.inl already use
-`spawnPlayerAtStCannonFire`. TOML still has placeholder `func_800D1248`.
-Previous is `playerAtStInit` at `0x800D1088`. Next companion /
-generated neighbor is `advancePlayerAtStLocomotion` at `0x800D1578`
-(TOML still `func_800D1578`).
+Remaining unused lead from CURRENT-TRUTH Next steps #2: any input on the
+attract 512 the 640 B-frontend times out into (`0x00690400` /
+`0x00690800` at ~117.7 s). Z-on-attract `512→1024` at 128.3 s is still
+single-source because the s1666 hold died at 135 s.
+
+Do not repeat hold/A/B/Z on hangar, valid D-pad on hangar, post-viewer
+C/L/R, post-B intermediate A/Start/Z, or post-arrival A/Start/Z/C/L/R/D-pad
+on the 640 B-frontend. Those are classified.
+
+Sweep resume after this revisit: `func_800D1578` /
+`advancePlayerAtStLocomotion` at `0x800D1578` (size `0x1B8`).
 
 Competing hypotheses and discriminator:
 
-- H1: companion name, live generated body, exact
-  `0x800D1088`/`0x800D1578` boundaries, TOML size, and section-4 overlay
-  span already agree — confirm and leave (or only correct a stale TOML
-  placeholder).
-- H2: the generated symbol is still `func_800D1248` (or a wrong name)
-  while companion/body/span agree — synchronize the name in TOML /
-  generated headers via the usual census edits.
-- H3: skip this address (fake fragment, overlay collision that is the
-  real occupant, size/boundary disagreement, or no independent name).
-- H4: the site is not evaluable this iteration (missing companion file,
-  generated body, or TOML/section-4 row).
+- H1: a press on that attract 512 reaches mission-path PC `loadOverlay`
+  `0x80000B20` / interior `0x80000B70` (elevated vs hold) or otherwise
+  leaves into a new classified route (mission / viewer / hangar cancel).
+- H2: the press is ignored (same attract 512 origin `0x00690400` and no
+  new VI/PC vs hold through the flush).
+- H3: the press changes VI/origin/PC without mission entry (hangar
+  cancel, viewer, or a new frontend). Includes independently confirming
+  Z-on-attract `512→1024`.
+- H4: the recipe is unevaluable (no 117.7 s attract arrival, failed
+  whole-RDRAM/PIF/hangar controls, or the ~135 s Rice/core death eats
+  the flush).
 
-Discriminator: one static census, no game run.
+Discriminator: concurrent Rice arms (hold + A/Start/Z + C/L/R + D-pad)
+on the same B-route that s1682 used, with presses only after the
+117.7 s `640→512` attract arrival. Whole-RDRAM, PIF, VI, and watched
+frontend/mission PCs in every arm.
 
-```sh
-# companion
-grep -n 'spawnPlayerAtStCannonFire\|800D1248\|advancePlayerAtStLocomotion\|800D1578\|playerAtStInit\|800D1088' \
-  ~/Documents/Tools/rogue_squadron64/symbol_files/mission_overlay.txt \
-  ~/Documents/Tools/rogue_squadron64/symbol_files/menu_overlay.txt
-# generated + TOML + overlay table
-grep -n 'spawnPlayerAtStCannonFire\|func_800D1248\|0x800D1248\|advancePlayerAtStLocomotion\|func_800D1578\|0x800D1578' \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h \
-  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl \
-  syms/rogue_squadron.syms.toml
-# body window in the owning funcs_*.c (expect funcs_37.c from s1696)
-```
+Copy `scratch/agent/s1682_broute_640_clr_dpad/run_pc.sh` into a new
+`scratch/agent/s1698_attract512_input/` directory. Change:
+
+- `OUT` to that new directory
+- `--secs 125` so the oracle exits before the known ~135 s Rice/core
+  death and flushes `[oracle] watch pc` lines (s1682 batch 1 at 160 s
+  died first)
+- press suffix `119:<btn>,123:<btn>` so both land inside 117.7–125 s
+- keep `B_ROUTE` (`eleven-Start + 55:b,58:b,63:b`) and the same
+  `--watch-write` / `--watch-pc` / `--vi-trace --vi-poll --pif-trace`
+  set as s1682
+
+Expected same-run positive controls (must fire in every arm):
+
+- whole-RDRAM `--watch-write 0x0:0x800000 --hit-cap 10000` reaches
+  the 10,000-callback threshold
+- hangar-frame PCs `0x800AAD9C` / `0x800AB0EC` / `0x800AB1C4` fire
+- B delivered as pad word `0x40000000` around 56/59/64 s
+- `1024→640` at ~96.4 s origin `0x00696100`/`0x00696600`
+- `640→512` at ~117.7 s origin `0x00690400`/`0x00690800` **before**
+  the 119 s candidate press
 
 Expected splits:
 
-- H1: all four sources already use `spawnPlayerAtStCannonFire` and size
-  `0x330`; record confirmation; next candidate `func_800D1578` /
-  `advancePlayerAtStLocomotion`.
-- H2: rename a stale placeholder where the generated/TOML copy is stale
-  (TOML is currently `func_800D1248` — likely this arm).
-- H3: leave the current name and document why; pick the next contiguous
-  mission function.
-- H4: stop and write the missing artifact.
+- H1: a candidate elevates `0x80000B70` vs hold, or leaves to a
+  mission/viewer VI+PC the hold arm does not take.
+- H2: every candidate matches hold through 125 s (still attract 512
+  `0x00690400`; viewer 0; B70 not elevated vs hold).
+- H3: VI/origin/PC diverge without mission entry. If Z (and only Z)
+  does `512→1024` inside the 119–125 s window, that independently
+  confirms the s1666 128.3 s single-source lead.
+- H4: attract 512 never arrives, or PC summaries are missing because
+  the 135 s death fired.
 
-Do not expand into a second function in the same iteration.
+Do not mix in an M4 DMEM destination in the same run. Alternative only
+if this attract-512 recipe is actually blocked this iteration: a new M4
+RDRAM destination from a DMEM→RDRAM transfer other than `0xD60`.

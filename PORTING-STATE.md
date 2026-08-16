@@ -79358,3 +79358,40 @@ are all present). No build or runtime run required.
 Next census: `func_800D1248` / `spawnPlayerAtStCannonFire` at `0x800D1248`
 (size `0x330`). Last-15 titles still include s1682, so the next iteration
 may continue the sweep.
+
+## Session 1697 (2026-08-16) — synchronized the spawnPlayerAtStCannonFire symbol
+
+Exact generated-symbol census for `0x800D1248` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 40799; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `spawnPlayerAtStCannonFire = 0x800D1248`. Previous contiguous neighbor `playerAtStInit = 0x800D1088`; next contiguous neighbor `advancePlayerAtStLocomotion = 0x800D1578`. Coarse listing also names `updatePlayerAtStBehavior = 0x800D1730` immediately after |
+| Generated `funcs_37.c` | `RECOMP_FUNC void spawnPlayerAtStCannonFire` at VRAM `0x800D1248`; prologue `addiu $sp, $sp, -0x148`; returns through `jr $ra` / `addiu $sp, $sp, 0x148` ending at `0x800D1574`; previous mission function is `playerAtStInit` at `0x800D1088` (last insn `0x800D1244`); next mission function is `advancePlayerAtStLocomotion` at `0x800D1578`. `funcs.h` already declares the human name |
+| Body semantics | Actor at `a0` (`s2`). Copies the vec3 at `0x800A721C` onto the stack, writes spawn-type byte `0xE` at `sp+0xD8`, then `lookupHmtTextureByName` on `0x800A700C` (`a1==0`) or `0x800A7010` (`a1!=0`) — the same pair `tickAtStCannonFireEffect` uses. Scales the looked-up basis by `0x800A7228`, builds a world pose, `acquireNpcTargetsInAimCone`, and on a hit `getNpcContextByIndex` then `transformMeshPartIntoWorld` / `computeAnchorRelativePositionByDistanceRatio` / `computeTurnVectorTowardTarget` / `quatFromAxisAngleSafe` / `rotateVec3ByQuat` ×2. Always ends with `dispatchCueByCategory` (stack arg 1) and `play3DSoundEvent` type `0xD`. Exclusive generated caller is `updatePlayerAtStBehavior` at `0x800D213C` (`a0=s1`, `a1` = byte `+0x5C`). Name matches player AT-ST cannon-fire spawn |
+| TOML (before) | `{ name = "func_800D1248", vram = 0x800D1248, size = 0x330 }` — size matches `0x800D1578 - 0x800D1248` (last insn `0x800D1574` + 4 = `0x330`) |
+| Overlay section 4 | `{ .func = spawnPlayerAtStCannonFire, .offset = 0x0002C118, .rom_size = 0x00000330 }` under `section_4_ovl_mission_funcs` (`0x800D1248 - 0x800A5130 = 0x2C118`; `0x2BF58 + 0x1C0 = 0x2C118`; `0x2C118 + 0x330 = 0x2C448` matches next `advancePlayerAtStLocomotion`) |
+| Non-collision | No menu-overlay function occupies `0x800D1248`. Nearest menu symbols are earlier data `D_800D0120` / `D_800D03D0` / `medalInfo` in the same VRAM window on a different overlay. Companion and generated greps found no other `func_800D1248` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated player-AT-ST cannon-fire body,
+previous (`playerAtStInit` / `0x800D1088`) and next
+(`advancePlayerAtStLocomotion` / `0x800D1578`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`spawnPlayerAtStCannonFire`, and only the TOML name was a stale
+`func_800D1248` placeholder. Corrected TOML to `spawnPlayerAtStCannonFire`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census after the mandatory revisit: `func_800D1578` /
+`advancePlayerAtStLocomotion` at `0x800D1578` (size `0x1B8`). Last-15 titles
+are now all sweep-scoped (s1683–s1697), so the next iteration must be the
+mandatory retail-entry or M4 revisit, not another sweep step.
