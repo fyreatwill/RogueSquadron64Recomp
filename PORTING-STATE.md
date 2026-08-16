@@ -76977,3 +76977,30 @@ boundaries are coherent, but the main-overlay label is not independently
 validated for this mission-overlay entry, so no rename was made. This rules out
 treating `plotRadarBlipColumn` as a safe mission rename; it does not establish
 a runtime behavior conclusion.
+
+## Session 1619 (2026-08-16) — synchronized the plotRadarBlipRow symbol
+
+The planned work unit was one bounded generated-symbol census over
+`0x800C435C..0x800C44D0`; no build or runtime run was required. The competing
+hypotheses were H1: the companion mission name `plotRadarBlipRow` is correct
+and the exact generated/TOML/overlay span supports synchronization, H2: no
+independent mission name exists, and H3: the name or span belongs to another
+overlay/context or non-function data. The discriminator was the complete
+companion/generated/TOML/overlay comparison.
+
+The companion `mission_overlay.txt` independently names `0x800C435C`
+`plotRadarBlipRow` and describes a horizontal radar-blip plot. The live
+generated body starts at `0x800C435C`, clamps the radar row and column range,
+converts two craft coordinate bytes into packed blip values, and writes the
+two horizontal-row bytes before returning at `0x800C44CC`. The project TOML
+gives size `0x174`; `fake_func_800C41AC`/`func_800C41B0` precede it, and
+`initializeRadar` begins at the exact `0x800C44D0` boundary. The generated
+`recomp_overlays.inl` entry independently carries `plotRadarBlipRow` with
+ROM size `0x174`.
+
+H1 is selected. The generated definition and overlay table already carried
+the human name, while `syms/rogue_squadron.syms.toml` still used
+`func_800C435C`; that tracked placeholder was synchronized to
+`plotRadarBlipRow`. H2 and H3 are ruled out by the independent mission name,
+live radar-row body, exact adjacent boundaries, matching TOML size, and
+matching overlay span. No runtime behavior conclusion was made.

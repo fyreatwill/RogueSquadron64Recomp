@@ -1,30 +1,29 @@
-# NEXT work unit (s1619)
+# NEXT work unit (s1620)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Run exactly one bounded exact-name census over `0x800C435C..0x800C44D0`.
-Record the address, size, generated definition/body, companion references, and
-the previous/next boundaries before editing. Synchronize a name only if an
-independent mission-overlay name and the generated/TOML/overlay span agree.
-Do not build or run.
+Run exactly one bounded exact-name census over `0x800C4D8C..0x800C51E0`.
+Record the address, size, generated definition/body, companion references,
+and the previous/next boundaries before editing. Synchronize a name only if
+an independent mission-overlay name and the generated/TOML/overlay span
+agree. Do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: `func_800C435C` has an independently supported mission-overlay semantic
-  name, and its live generated body plus exact span support synchronization.
+- H1: `func_800C4D8C` has the independently supported mission-overlay name
+  `updateCraftSelectAnimState`, and its live generated body plus exact span
+  support synchronization.
 - H2: the companion project has no independent semantic name for this entry,
   so the address-encoded placeholder remains the least-assumptive label.
-- H3: a name is present only in another overlay/context, or the generated,
-  TOML, and overlay boundaries conflict or are data-like, so the entry stays
-  parked pending correction.
+- H3: the name is from another overlay/context, or the generated, TOML, and
+  overlay boundaries conflict or the entry is data-like, so it stays parked.
 
-The complete comparison table is the discriminator: an independent
-mission-overlay name plus a live generated body, matching `0x174`
-TOML/overlay span, and exact preceding `func_800C41B0` and following
-`initializeRadar` boundaries select H1; no independent mission name with
-otherwise coherent boundaries selects H2; another-overlay ownership, any span
-conflict, or non-function evidence selects H3. Each outcome selects one
-hypothesis.
+The complete comparison table is the discriminator: an independent mission
+name plus a live generated body, matching `0x454` TOML/overlay span, and exact
+preceding `initializeRadar` and following `placeRadarDots` boundaries select
+H1; no independent mission name with otherwise coherent boundaries selects
+H2; another-overlay ownership, any span conflict, or non-function evidence
+selects H3. Each outcome selects one hypothesis.
 
 Before starting the census, run:
 
@@ -32,13 +31,11 @@ Before starting the census, run:
 grep -n '^## Session ' PORTING-STATE.md | tail -15
 ```
 
-The current 15-title tail includes s1616's retail-entry revisit, so the
-mandatory every-15 sessions rule permits this sweep census. Use these bounded
-commands:
+Use these bounded commands:
 
 ```
-rg -n -C 8 '800C435C|plotRadarBlipRow' ../rogue_squadron64
-rg -n -C 12 '800C435C|800C44D0' ../N64Recomp/RecompiledFuncs/funcs_33.c
-rg -n -C 3 '800C435C|800C44D0' syms/rogue_squadron.syms.toml
-rg -n -C 3 'plotRadarBlipRow|func_800C435C|800C44D0' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+rg -n -C 8 '800C4D8C|updateCraftSelectAnimState' ../rogue_squadron64
+rg -n -C 12 '800C4D8C|800C51E0' ../N64Recomp/RecompiledFuncs/funcs_34.c
+rg -n -C 3 '800C4D8C|800C51E0' syms/rogue_squadron.syms.toml
+rg -n -C 3 'updateCraftSelectAnimState|func_800C4D8C|800C51E0' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```

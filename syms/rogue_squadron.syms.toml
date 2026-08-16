@@ -1698,7 +1698,7 @@ functions = [
     { name = "func_800C40F8", vram = 0x800C40F8, size = 0xB4 },
     { name = "fake_func_800C41AC", vram = 0x800C41AC, size = 0x4 },
     { name = "func_800C41B0", vram = 0x800C41B0, size = 0x1AC },
-    { name = "func_800C435C", vram = 0x800C435C, size = 0x174 },
+    { name = "plotRadarBlipRow", vram = 0x800C435C, size = 0x174 },
     { name = "initializeRadar", vram = 0x800C44D0, size = 0x8BC },
     { name = "func_800C4D8C", vram = 0x800C4D8C, size = 0x454 },
     { name = "placeRadarDots", vram = 0x800C51E0, size = 0x3A0 },
