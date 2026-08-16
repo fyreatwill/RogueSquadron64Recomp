@@ -1,11 +1,11 @@
-# NEXT work unit (s1551)
+# NEXT work unit (s1552)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1550 synchronized `spawnNpcDestructionDebris` at `0x800B0850`.
+s1551 synchronized `updateSplineCraftTransform` at `0x800B0A88`.
 Resume the generated-symbol renaming sweep. Perform exactly one bounded
 exact-name census over the next adjacent generated function,
-`0x800B0A88..0x800B1024`.
+`0x800B1024..0x800B13E0`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -31,18 +31,18 @@ table, not a function), `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function), and
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler). The generated entry at this address
-is already `updateSplineCraftTransform`; the companion mission
-list maps `updateSplineCraftTransform = 0x800B0A88` (builds a
-craft's spline orientation matrix + plays sound). TOML is still
-`func_800B0A88` (size `0x59C`, ends at generated
-`computeOrientedTransformFromQuat` / TOML `func_800B1024` at
-`0x800B1024`). Overlay `rom_size` is `0x59C` at offset
-`0x0000B958`. Confirm the complete live function, matching
+is already `computeOrientedTransformFromQuat`; the companion
+mission list maps `computeOrientedTransformFromQuat = 0x800B1024`
+(pure transform/orientation builder from a quat). TOML is still
+`func_800B1024` (size `0x3BC`, ends at generated
+`tickCinematicObjectStateMachine` / TOML `func_800B13E0` at
+`0x800B13E0`). Overlay `rom_size` is `0x3BC` at offset
+`0x0000BEF4`. Confirm the complete live function, matching
 size, and caller/semantic evidence before synchronizing the
-TOML name. Independently named `spawnNpcDestructionDebris`
-at `0x800B0850` (`rom_size` `0x238`) ends at this address.
-Last live instruction pair is `0x800B101C`/`0x800B1020`
-(`jr $ra` / `addiu $sp, $sp, 0xA0`). Menu-overlay TOML
+TOML name. Independently named `updateSplineCraftTransform`
+at `0x800B0A88` (`rom_size` `0x59C`) ends at this address.
+Last live instruction pair is `0x800B13D8`/`0x800B13DC`
+(`jr $ra` / `addiu $sp, $sp, 0x90`). Menu-overlay TOML
 `func_800B08F4` at `0x800B08F4` (`rom_size` `0xB3C`, ends
 `0x800B1430`) occupies overlapping VRAM from `.ovl.menu` and
 is not a mission size split. Generated
@@ -73,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800B0A88\|800B1024\|updateSplineCraftTransform' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B0A88\|800B1024\|updateSplineCraftTransform' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800B0A88\|800B1024' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B1024\|800B13E0\|computeOrientedTransformFromQuat' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B1024\|800B13E0\|computeOrientedTransformFromQuat' ../N64Recomp/RecompiledFuncs/funcs_30.c
+grep -n -C 3 '800B1024\|800B13E0' syms/rogue_squadron.syms.toml
 ```
