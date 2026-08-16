@@ -75354,3 +75354,50 @@ offset `0x0000EFC0`; live body ends at generated
 `destroySceneNpcsAndUnlink` / TOML `func_800B4134` at
 `0x800B4134`). Independently named `resetSpeechOncePerLevelFlag` at
 `0x800B40A0` (`rom_size` `0x50`) ends at `0x800B40F0`.
+
+## Session 1564 (2026-08-16) — synchronized the set-player-slot-position-vec3 symbol
+
+Performed the bounded exact-name census over `0x800B40F0..0x800B4134`.
+
+No new soak-queue verdicts since s1563; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1553 (maintenance compaction),
+so the every-15-sessions sweep-revisit rule did not fire. CURRENT-TRUTH is
+17,371 bytes at session start, so Step 0 did not trigger a maintenance
+iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B40F0`, size `0x44`; `0x800B40F0+0x44=0x800B4134`. Overlay `.ovl.mission` entry `rom_size` is `0x44` at offset `0x0000EFC0` (`0x800B40F0-0x800A5130`). Live body is independently `0x44` and meets generated `destroySceneNpcsAndUnlink` at `0x800B4134` |
+| Generated definition | `funcs_30.c` defines `setPlayerSlotPositionVec3` at `0x800B40F0`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000EFC0`, `rom_size 0x00000044`). The live mission body is a complete `0x44` leaf: `lui $v1, 0x8013` / `addiu $v1, 0x7DB8` (player-slot table `0x80137DB8`, independently named `gPlayers` in `syms/rogue_squadron.datasyms.toml`), `andi $a0, 0xFF`, then the `*4+1` / `*4+1` / `*32` index sequence (stride `0x2A0`). It loads three words from `$a1+0`/`+4`/`+8` and stores them to slot `+0x19C`/`+0x1A0`/`+0x1A4`. Last live instruction pair is `0x800B412C`/`0x800B4130` (`jr $ra` / `nop`). Next generated mission entry is already `destroySceneNpcsAndUnlink` at `0x800B4134`. Independently named `resetSpeechOncePerLevelFlag` at `0x800B40A0` (`rom_size` `0x50`) ends at this address. Menu-overlay `updateTextOverlayLookupEntry` at `0x800B4048` (`rom_size` `0x120`, ends `0x800B4168`) occupies overlapping VRAM from `.ovl.menu` across this entire body; menu-overlay `accumulateShipThrottleCharge` at `0x800B4168` (`rom_size` `0xBC`) starts after this body. Neither is a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `setPlayerSlotPositionVec3 = 0x800B40F0` with comment "copies a vec3 into a player slot's position field". The same mission list independently names the adjacent functions `resetSpeechOncePerLevelFlag` at `0x800B40A0` and `destroySceneNpcsAndUnlink` at `0x800B4134`. Companion `docs/mips_to_c/ctx.c` has no prototype and no competing independent name. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B40F0`. Menu lists `updateTextOverlayLookupEntry = 0x800B4048` and `accumulateShipThrottleCharge = 0x800B4168` as the overlapping `.ovl.menu` occupants. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` still carries the placeholder `func_800B40F0 = 0x800B40F0`; `undefined_syms_auto.txt` has no `800B40F0` alias |
+| Caller evidence | 1 retail `jal` encoding `0x0C02D03C` at file `0x802C4` (`0x8007F6C4`); zero `j` encodings and zero absolute `0x800B40F0` pointer words. The generated site is one `LOOKUP_FUNC(0x800B40F0)` call (cross-overlay from main `.text`). Independently named owner: `npcWordDevastatorUpdate` at `0x8007EF1C` in `main_overlay.txt` (same address listed as `npcWorldDevastatorUpdate` in the mission list). Delay slot is `swc1 $f0, 0x60($sp)`; `$a1` is `addiu $a1, $sp, 0x58` and `$a0` is `addu $a0, $zero, $zero` (player index 0) after a bc1f-not-taken scale of the stack vec3. Overlapping menu-overlay generated wrappers occupy the same VRAM and are not extra mission callers. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B4CF0` (`0x0A5D30+(0x800B40F0-0x800A5130)`) are `0x3C038013` (`lui $v1, 0x8013`), `0x24637DB8` (`addiu $v1, $v1, 0x7DB8`), `0x308400FF` (`andi $a0, $a0, 0xFF`), `0x00041080` (`sll $v0, $a0, 2`). Last pair file `0x0B4D2C`/`0x0B4D30` is `0x03E00008`/`0x00000000` (`jr $ra` / `nop`). Next start file `0x0B4D34` is `0x27BDFFE0` (`addiu $sp, $sp, -0x20`, `destroySceneNpcsAndUnlink` prologue). Preceding epilogue file `0x0B4CE8`/`0x0B4CEC` is `0x03E00008`/`0x00000000` (`resetSpeechOncePerLevelFlag` `jr $ra` / `nop`). Stores at `0x800B4120`/`0x800B4124`/`0x800B4128` are `sw` to `0x19C`/`0x1A0`/`0x1A4($v0)`. Menu occupant at the same VRAM (file `0x11B290`) is `0x3C01800A` (`lui $at, 0x800A`, interior of `updateTextOverlayLookupEntry`); that function's own start at file `0x11B1E8` is `0x00A04021` (`addu $t0, $a1, $zero`). Menu `accumulateShipThrottleCharge` start at file `0x11B308` is `0x3C02800D`. Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B40F0` is past that occupant. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28`, s1556 start file `0x0B42FC` is still `0x3C078011`, s1557 start file `0x0B43C0` is still `0x27BDFFE0`, s1558 start file `0x0B4610` is still `0x3C028014`, s1559 start file `0x0B4A4C` is still `0x3C028013`, s1560 start file `0x0B4B0C` is still `0x27BDFFE0`, s1561 start file `0x0B4B50` is still `0x27BDFFE0`, s1562 start file `0x0B4BB4` is still `0x27BDFFE8`, s1563 start file `0x0B4CA0` is still `0x2402028C` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B40F0`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x44`, the single ROM `jal` caller sits inside an independently
+named main-overlay NPC update and passes player index 0 plus a stack
+vec3, the body copies that vec3 into independently named `gPlayers`
+at stride `0x2A0`, the overlapping menu occupants are a different
+overlay, and there is neither a conflicting companion name nor a
+mission size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x44`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`destroySceneNpcsAndUnlink` at `0x800B4134` (TOML still
+`func_800B4134`, size `0x88`; overlay `rom_size` is `0x88` at
+offset `0x0000F004`; live body ends at generated
+`decayWeaponCooldownTimer` / TOML `func_800B41BC` at
+`0x800B41BC`). Independently named `setPlayerSlotPositionVec3` at
+`0x800B40F0` (`rom_size` `0x44`) ends at `0x800B4134`.

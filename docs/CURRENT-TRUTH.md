@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1563 (2026-08-16).
+the authority for session detail. Reviewed through s1564 (2026-08-16).
 
 ## Current state
 
@@ -74,28 +74,29 @@ the authority for session detail. Reviewed through s1563 (2026-08-16).
    and M4 threads; s1544 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
-   sizes, and caller/semantic evidence. Per-session H1 syncs through s1563
+   sizes, and caller/semantic evidence. Per-session H1 syncs through s1564
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
-   Next census: `0x800B40F0..0x800B4134`. The generated entry is already
-   `setPlayerSlotPositionVec3`; the companion mission list maps
-   `setPlayerSlotPositionVec3 = 0x800B40F0` with comment "copies a
-   vec3 into a player slot's position field". TOML is still
-   `func_800B40F0` (size `0x44`, ends at generated
-   `destroySceneNpcsAndUnlink` / TOML `func_800B4134` at
-   `0x800B4134`). Overlay `rom_size` is `0x44` at offset
-   `0x0000EFC0`. Confirm the complete live function, matching size,
-   and caller/semantic evidence before synchronizing the TOML name.
-   Independently named `resetSpeechOncePerLevelFlag` at `0x800B40A0`
-   (`rom_size` `0x50`) ends at this address. Last live instruction
-   pair is `0x800B412C` / `0x800B4130` (`jr $ra` / `nop`). The
-   body is a leaf: it indexes the player-slot table at `0x80137DB8`
-   from the low byte of `$a0` (stride `0x2A0`) and copies three
-   words from `$a1` to slot `+0x19C`/`+0x1A0`/`+0x1A4`.
+   Next census: `0x800B4134..0x800B41BC`. The generated entry is already
+   `destroySceneNpcsAndUnlink`; the companion mission list maps
+   `destroySceneNpcsAndUnlink = 0x800B4134` with comment "(scene) —
+   9 callers, scene cleanup". TOML is still `func_800B4134` (size
+   `0x88`, ends at generated `decayWeaponCooldownTimer` / TOML
+   `func_800B41BC` at `0x800B41BC`). Overlay `rom_size` is `0x88`
+   at offset `0x0000F004`. Confirm the complete live function,
+   matching size, and caller/semantic evidence before synchronizing
+   the TOML name. Independently named `setPlayerSlotPositionVec3`
+   at `0x800B40F0` (`rom_size` `0x44`) ends at this address. Last
+   live instruction pair is `0x800B41B4` / `0x800B41B8` (`jr $ra`
+   / `addiu $sp, $sp, 0x20`). The body saves `$s0`/`$ra`/`$s1` on
+   a `0x20` frame, copies `$a0` to `$s0`, and starts by loading
+   the NPC slot-chain head at `scene+0x1CC` against `0xFFFF`.
    Menu-overlay `updateTextOverlayLookupEntry` at `0x800B4048`
    (`rom_size` `0x120`, ends `0x800B4168`) occupies overlapping
-   VRAM from `.ovl.menu` across this entire body and is not a
+   VRAM from `.ovl.menu` through the first `0x34` bytes of this
+   body; menu-overlay `accumulateShipThrottleCharge` at
+   `0x800B4168` (`rom_size` `0xBC`) starts mid-body. Neither is a
    mission size split. This naming census does not reopen closed
    M5 audio de-stubbing.
 
@@ -234,7 +235,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
-| s1270–s1563 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `resetSpeechOncePerLevelFlag` at `0x800B40A0`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
+| s1270–s1564 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `setPlayerSlotPositionVec3` at `0x800B40F0`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
@@ -250,6 +251,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1561 | H1: synchronized `playSpeechClipOncePerChange` at `0x800B3F50` (size `0x64`). |
 | s1562 | H1: synchronized `playSpeechClipOncePerLevel` at `0x800B3FB4` (size `0xEC`). |
 | s1563 | H1: synchronized `resetSpeechOncePerLevelFlag` at `0x800B40A0` (size `0x50`). |
+| s1564 | H1: synchronized `setPlayerSlotPositionVec3` at `0x800B40F0` (size `0x44`). |
 
 ## Method and safety rules
 
