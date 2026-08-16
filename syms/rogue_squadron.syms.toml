@@ -1746,7 +1746,7 @@ functions = [
     { name = "setHudEnableBit8", vram = 0x800C776C, size = 0x34 },
     { name = "isLevelStateByteZero", vram = 0x800C77A0, size = 0x10 },
     { name = "setFriendliesSaved", vram = 0x800C77B0, size = 0x20 },
-    { name = "func_800C77D0", vram = 0x800C77D0, size = 0x60 },
+    { name = "randMod", vram = 0x800C77D0, size = 0x60 },
     { name = "addBooleanCountHandleWrapper", vram = 0x800C7830, size = 0x34 },
     { name = "addTimerHandleWrapper", vram = 0x800C7864, size = 0x20 },
     { name = "func_800C7884", vram = 0x800C7884, size = 0x1C },
