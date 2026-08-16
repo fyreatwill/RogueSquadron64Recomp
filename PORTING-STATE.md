@@ -81029,3 +81029,39 @@ Next census: `npcTieVariantHandleDestruction` / `func_800DAB98` at
 `0x800DAB98` (size `0x584`). Last-15 titles after s1741 still include
 s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
 
+
+## Session 1742 (2026-08-16) — synchronized the npcTieVariantHandleDestruction symbol
+
+Exact generated-symbol census for `0x800DAB98` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1728's
+maintenance compaction, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 6040; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTieVariantHandleDestruction = 0x800DAB98` with comment "(1082L) TIE variant destruction. Caller: npcTieVariantUpdate. Called after unregisterAndFreeNpcSlot + popNpcSlotFromTail". Previous contiguous neighbor `npcTieVariantTickAttachmentEffect = 0x800DA9B0`; next contiguous neighbor `npcTieVariantUpdate = 0x800DB11C`. Companion `main_overlay.txt` also names this as a caller of `spawnDestructionDebris` (`0x8006F4B0`) |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTieVariantHandleDestruction` at VRAM `0x800DAB98`; prologue `addiu $sp, $sp, -0x78`; saves `$ra`/`$s0`–`$s4` and `$f20`/`$f22`/`$f24`. `s1 = a0` (object), `s3 = a1`, `s0 = a2`, `s4 = a3`. Body is the spawnDebris+rand+3D-sound cluster: `spawnDestructionDebris` (`jal 0x8006F4B0`), `spawnDestructionEffectBurst`, `spawnDirectionalDebrisBurst`, `spawnDebris1Npc`, `spawnOrientedNpc`, `spawnNpcType0xAFromTemplate`, ten `rand_recomp` draws, `play3DSoundEvent`, plus `scaleVec3ByRandomRange` / `composeRandomRotationMatrix` / `buildRandomCameraFacingOrientation`. Epilogue `jr $ra` / `addiu $sp, $sp, 0x78` ends at `0x800DB118`. Previous mission function is `npcTieVariantTickAttachmentEffect` at `0x800DA9B0` (last insn `0x800DAB94`); next is `npcTieVariantUpdate` at `0x800DB11C`. `funcs.h` already declares the human name. Sole generated `jal` is `npcTieVariantUpdate` at `0x800DBF38`, immediately after `unregisterAndFreeNpcSlot` (`jal 0x8003E7D0`) and `popNpcSlotFromTail` (`jal 0x8003E684`) |
+| Body semantics | Matches the companion "TIE variant destruction" label and the spawnDebris+rand+3D-sound cluster used to identify destruction handlers. Caller site matches the companion comment exactly. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800DAB98", vram = 0x800DAB98, size = 0x584 }` — size matches `0x800DB11C - 0x800DAB98` (last insn `0x800DB118` + 4 = `0x584`) |
+| Overlay section 4 | `{ .func = npcTieVariantHandleDestruction, .offset = 0x00035A68, .rom_size = 0x00000584 }` under `section_4_ovl_mission_funcs` (`0x800DAB98 - 0x800A5130 = 0x35A68`; `0x35880 + 0x1E8 = 0x35A68`; `0x35A68 + 0x584 = 0x35FEC` matches next `npcTieVariantUpdate`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DAB98`. No leftover `func_800DAB98` in generated headers or overlay INL; no companion `D_800DAB98` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated TIE-variant destruction body,
+previous (`npcTieVariantTickAttachmentEffect` / `0x800DA9B0`) and next
+(`npcTieVariantUpdate` / `0x800DB11C`) boundaries, TOML size, and section-4
+overlay span agreed; the generated headers/body were already
+`npcTieVariantHandleDestruction`, and only the TOML name was a stale
+`func_800DAB98` placeholder. Corrected TOML to `npcTieVariantHandleDestruction`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTieVariantUpdate` / `func_800DB11C` at `0x800DB11C`
+(size `0x110C`). Last-15 titles after s1742 still include s1728's
+maintenance compaction, so the mandatory REVISIT gate does not fire.
