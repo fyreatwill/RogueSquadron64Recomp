@@ -77186,3 +77186,29 @@ human name, while `syms/rogue_squadron.syms.toml` still used
 `registerObjectAndResolveDatItem`. H2 and H3 are ruled out by the independent
 mission name, live body, exact adjacent boundaries, matching TOML size, and
 matching overlay span. No runtime behavior conclusion was made.
+
+## Session 1627 (2026-08-16) — synchronized the accumulateClampedFloatField symbol
+
+Ran the exact generated-symbol census for `0x800C6468` without building or
+running. The competing hypotheses were H1: the companion mission name
+`accumulateClampedFloatField` is correct and the exact generated/TOML/overlay
+span supports synchronization; H2: the name belongs to another
+overlay/context; and H3: the entry is data-like or has a conflicting span.
+The discriminator was the complete companion/generated/TOML/overlay
+comparison.
+
+The companion `mission_overlay.txt` independently names `0x800C6468`
+`accumulateClampedFloatField`. The live generated definition loads the
+object's float field, compares it with the configured limit, and adds the
+incoming float value before storing the result. It starts immediately after
+`getAvailableShipsForLevel` at `0x800C6468` and ends immediately before
+`getDisplayItemStateByte` at `0x800C6498`. The project TOML gives size `0x30`;
+the generated `recomp_overlays.inl` independently carries the same name, ROM
+entry, and `0x30` span.
+
+H1 is selected. The generated definition and overlay table already used the
+human name, while `syms/rogue_squadron.syms.toml` still used
+`func_800C6468`; that tracked placeholder was synchronized to
+`accumulateClampedFloatField`. H2 and H3 are ruled out by the independent
+mission name, live body, exact adjacent boundaries, matching TOML size, and
+matching overlay span. No runtime behavior conclusion was made.
