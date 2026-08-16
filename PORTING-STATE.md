@@ -79821,3 +79821,39 @@ section-4 row are all present). No build or runtime run required.
 Next census: `npcShuttleHandleDestruction` at `0x800D33CC`
 (size `0x4C8`). Last-15 titles still include s1698's retail-entry
 revisit, so the next iteration continues the sweep.
+
+## Session 1709 (2026-08-16) — synchronized the npcShuttleHandleDestruction symbol
+
+Exact generated-symbol census for `0x800D33CC` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 48556; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcShuttleHandleDestruction = 0x800D33CC` with comment "(931L) Imperial Shuttle destruction. Caller: npcShuttleUpdate". Previous contiguous neighbor `npcTickEffectChannelWithSlotDispatch = 0x800D3240`; next contiguous neighbor `npcShuttleUpdate = 0x800D3894` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcShuttleHandleDestruction` at VRAM `0x800D33CC`; prologue `addiu $sp, $sp, -0x98`; returns through `jr $ra` / `addiu $sp, $sp, 0x98` ending at `0x800D3890`; previous mission function is `npcTickEffectChannelWithSlotDispatch` at `0x800D3240` (last insn `0x800D33C8` in `funcs_37.c`); next mission function is `npcShuttleUpdate` at `0x800D3894`. `funcs.h` already declares the human name |
+| Body semantics | Object at `a0` (`s0`). Early `a3 xor 0xC` test branches the non-0xC path into a scale-from-`s0+0x4C` `spawnNpcType0xAFromTemplate` (`0x800612A4`) plus `zmemcpy` (`0x80018EF4`) 0x30-byte copy and halfword `s0+0x5E = 4`. Destruction cluster: `gameStateByteGatedNpcHelper` (`0x800727C0`), `spawnDestructionEffectBurst` (`0x80073750`) ×2, `composeRandomRotationMatrix` (`0x8007202C`), `scaleVec3ByRandomRange` (`0x80072300`), `spawnDebris1Npc` (`0x80072384`), `spawnDestructionDebris` (`0x8006F4B0`), `spawnDirectionalDebrisBurst` (`0x80073BD8`), `rand` (`0x80003430`) ×9, `vec3Length` (`0x8001CF2C`), `normalize_vector` (`0x8001CF58`). Exclusive caller is `npcShuttleUpdate` at `0x800D4B28` after `dealDamageToNpc` returns `<= 0`, then `unregisterAndFreeNpcSlot` ×2. Name matches the AT-AT / AT-ST / water-craft destruction siblings |
+| TOML (before) | `{ name = "func_800D33CC", vram = 0x800D33CC, size = 0x4C8 }` — size matches `0x800D3894 - 0x800D33CC` (last insn `0x800D3890` + 4 = `0x4C8`) |
+| Overlay section 4 | `{ .func = npcShuttleHandleDestruction, .offset = 0x0002E29C, .rom_size = 0x000004C8 }` under `section_4_ovl_mission_funcs` (`0x800D33CC - 0x800A5130 = 0x2E29C`; `0x2E110 + 0x18C = 0x2E29C`; `0x2E29C + 0x4C8 = 0x2E764` matches next `npcShuttleUpdate`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D33CC`. Companion menu/cinematic greps are empty for this address and this name (menu max VRAM `0x800D03DC`; cinematic max `0x800B072C`). Main overlay mentions the name only as a caller of `spawnDestructionDebris`. Companion and generated greps found no other `func_800D33CC` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated Imperial-shuttle destruction
+body, previous (`npcTickEffectChannelWithSlotDispatch` / `0x800D3240`) and next
+(`npcShuttleUpdate` / `0x800D3894`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcShuttleHandleDestruction`, and only the TOML name was a stale
+`func_800D33CC` placeholder. Corrected TOML to
+`npcShuttleHandleDestruction`. This refutes H1 (TOML was not
+already synchronized), H3 (no fake fragment, overlay collision, or
+size/boundary disagreement), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No build or runtime run required.
+
+Next census: `npcShuttleUpdate` at `0x800D3894`
+(size `0x1630`). Last-15 titles still include s1698's retail-entry
+revisit, so the next iteration continues the sweep.
