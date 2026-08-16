@@ -1,11 +1,11 @@
-# NEXT work unit (s1521)
+# NEXT work unit (s1522)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1520 synchronized `getAssetNameForNpcType` at `0x800AE98C`.
+s1521 synchronized `getCutsceneRuntimeContext` at `0x800AEA18`.
 Resume the generated-symbol renaming sweep. Perform exactly one bounded
 exact-name census over the next adjacent generated function,
-`0x800AEA18..0x800AEA28`. Do not build or run. Record its address, size,
+`0x800AEB30..0x800AEB38`. Do not build or run. Record its address, size,
 generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name
 in `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
@@ -28,20 +28,23 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `getCutsceneRuntimeContext`;
-the companion cinematic list maps `getCutsceneRuntimeContext = 0x800AEA18`.
-TOML is still `func_800AEA18` (size `0x10`, ends at independently named
-`cuts_0058_bubble_sort` at `0x800AEA28`). Overlay `rom_size` is `0x10`
-at offset `0x000098E8`. Confirm the complete live function, matching
+generated entry at this address is already `noopHandler_800AEB30`;
+the companion cinematic list maps `noopHandler_800AEB30 = 0x800AEB30`
+(comment: pure `jr $ra` stub). TOML is still `func_800AEB30` (size
+`0x8`, ends at independently named generated `freeCutsceneResources`
+/ TOML `func_800AEB38` at `0x800AEB38`). Overlay `rom_size` is `0x8`
+at offset `0x00009A00`. Confirm the complete live function, matching
 size, and caller/semantic evidence before synchronizing the TOML name.
-Companion `main_overlay.txt` notes independently named
-`isNpcWithinActiveReferenceRange` at `0x80047D40` calls `func_800AEA18`
-when scene byte `0x80130B39` is nonzero (cinematic camera). Menu-overlay
+Independently named `cuts_0058_bubble_sort` at `0x800AEA28`
+(`rom_size` `0x108`) ends at this address. Menu-overlay
 `hangarLoadShadows` at `0x800AE9E0` (`rom_size` `0xE0`, ends
-`0x800AEAC0`) occupies overlapping VRAM and is a different overlay, not
-a cinematic size split. Mission-overlay `playRandomCutsceneVoiceLine` /
-TOML `func_800AE960` at `0x800AE960` (size `0x398`) likewise overlaps
-from `.ovl.mission`.
+`0x800AEAC0`) occupies overlapping VRAM and is a different overlay,
+not a cinematic size split. Mission-overlay
+`playRandomCutsceneVoiceLine` / TOML `func_800AE960` at `0x800AE960`
+(size `0x398`) likewise overlaps from `.ovl.mission`. Companion
+`noopHandler_80092388` (s1342) and `noopHandler_80099C44` (s1445)
+were synchronized under the companion's `noopHandler_*` spelling;
+do not invent a new name.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -64,7 +67,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AEA18\|800AEA28\|getCutsceneRuntimeContext' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AEA18\|800AEA28\|getCutsceneRuntimeContext' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AEA18\|800AEA28' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AEB30\|800AEB38\|noopHandler_800AEB30' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AEB30\|800AEB38\|noopHandler_800AEB30' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AEB30\|800AEB38' syms/rogue_squadron.syms.toml
 ```

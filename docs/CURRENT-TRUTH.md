@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1520 (2026-08-15).
+the authority for session detail. Reviewed through s1521 (2026-08-15).
 
 ## Current state
 
@@ -59,7 +59,7 @@ the authority for session detail. Reviewed through s1520 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AEA18..0x800AEA28`.
+   adjacent function, `0x800AEB30..0x800AEB38`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -132,19 +132,22 @@ the authority for session detail. Reviewed through s1520 (2026-08-15).
    synchronized `dispatchCinematicFromMainLoop` at `0x800AE878`.
    s1519 synchronized `shouldShowCutsceneForLevelStage` at
    `0x800AE928`. s1520 synchronized `getAssetNameForNpcType` at
-   `0x800AE98C`. The generated entry at `0x800AEA18` is already
-   `getCutsceneRuntimeContext`; the companion cinematic list maps
-   `getCutsceneRuntimeContext = 0x800AEA18`. TOML is still
-   `func_800AEA18` (size `0x10`, ends at independently named
-   `cuts_0058_bubble_sort` at `0x800AEA28`). Overlay `rom_size` is
-   `0x10` at offset `0x000098E8`. Confirm the complete live function,
-   matching size, and caller/semantic evidence before synchronizing
-   the TOML name. Menu-overlay `hangarLoadShadows` at `0x800AE9E0`
-   (`rom_size` `0xE0`, ends `0x800AEAC0`) occupies overlapping VRAM
-   and is a different overlay, not a cinematic size split.
-   Mission-overlay `playRandomCutsceneVoiceLine` / TOML
-   `func_800AE960` at `0x800AE960` (size `0x398`) likewise overlaps
-   from `.ovl.mission`.
+   `0x800AE98C`. s1521 synchronized `getCutsceneRuntimeContext` at
+   `0x800AEA18`. The generated entry at `0x800AEB30` is already
+   `noopHandler_800AEB30`; the companion cinematic list maps
+   `noopHandler_800AEB30 = 0x800AEB30` (comment: pure `jr $ra` stub).
+   TOML is still `func_800AEB30` (size `0x8`, ends at independently
+   named generated `freeCutsceneResources` / TOML `func_800AEB38` at
+   `0x800AEB38`). Overlay `rom_size` is `0x8` at offset `0x00009A00`.
+   Confirm the complete live function, matching size, and
+   caller/semantic evidence before synchronizing the TOML name.
+   Independently named `cuts_0058_bubble_sort` at `0x800AEA28`
+   (`rom_size` `0x108`) ends at this address. Menu-overlay
+   `hangarLoadShadows` at `0x800AE9E0` (`rom_size` `0xE0`, ends
+   `0x800AEAC0`) occupies overlapping VRAM and is a different overlay,
+   not a cinematic size split. Mission-overlay
+   `playRandomCutsceneVoiceLine` / TOML `func_800AE960` at
+   `0x800AE960` (size `0x398`) likewise overlaps from `.ovl.mission`.
 2. Future oracle work (hangar/mission watches, or a new M4 RDRAM dest if
    one is identified from a DMEM→RDRAM transfer that is not `0xD60`) must
    use the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM,
@@ -487,6 +490,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1518 | Exact companion/generated cinematic-dispatch census synchronized `dispatchCinematicFromMainLoop` at `0x800AE878`; no build or runtime run. |
 | s1519 | Exact companion/generated cinematic-predicate census synchronized `shouldShowCutsceneForLevelStage` at `0x800AE928`; no build or runtime run. |
 | s1520 | Exact companion/generated cinematic-NPC census synchronized `getAssetNameForNpcType` at `0x800AE98C`; no build or runtime run. |
+| s1521 | Exact companion/generated cinematic-getter census synchronized `getCutsceneRuntimeContext` at `0x800AEA18`; no build or runtime run. |
 
 ## Method and safety rules
 

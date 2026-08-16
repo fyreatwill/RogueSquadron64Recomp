@@ -73445,3 +73445,43 @@ adjacent generated function is independently named
 size `0x10`; overlay `rom_size` is `0x10` at offset `0x000098E8`; live
 body ends at independently named `cuts_0058_bubble_sort` at
 `0x800AEA28`).
+
+## Session 1521 (2026-08-15) — synchronized the get-cutscene-runtime-context symbol
+
+Performed the bounded exact-name census over `0x800AEA18..0x800AEA28`.
+
+No new soak-queue verdicts since s1520; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AEA18`, size `0x10`; `0x800AEA18+0x10=0x800AEA28`. Overlay `.ovl.cinematic` entry `rom_size` is `0x10` at offset `0x000098E8` (`0x800AEA18-0x800A5130`). Live body is independently `0x10` and meets independently named `cuts_0058_bubble_sort` at `0x800AEA28` |
+| Generated definition | `funcs_29.c` defines `getCutsceneRuntimeContext` at `0x800AEA18`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x000098E8`, `rom_size 0x00000010`). The live cinematic body is a complete `0x10` function: `lui $v0, 0x800B` / `lw $v0, 0x1A08($v0)` / `jr $ra` / `nop`. It returns the word at `0x800B1A08`. Last live instruction pair is `0x800AEA20`/`0x800AEA24`. Next generated cinematic function is independently named `cuts_0058_bubble_sort`. Menu-overlay `hangarLoadShadows` at `0x800AE9E0` (`offset 0x000098B0`, `rom_size` `0xE0`, ends `0x800AEAC0`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `playRandomCutsceneVoiceLine` / TOML `func_800AE960` at `0x800AE960` (size `0x398`, ends `0x800AECF8`) occupies overlapping VRAM from `.ovl.mission`. `getAssetNameForNpcType` at `0x800AE98C` ends `0x800AEA18` and does not overlap this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `getCutsceneRuntimeContext = 0x800AEA18`. Menu, mission, libultra, and zlib lists do not remap `0x800AEA18`. Companion `main_overlay.txt` independently names `isNpcWithinActiveReferenceRange` at `0x80047D40` and documents that the cinematic-camera arm calls `func_800AEA18` when scene byte `0x80130B39` is nonzero. No companion C/asm body exists for the getter itself |
+| Caller evidence | Two retail `jal` encodings `0x0C02BA86` and zero `j` or absolute `0x800AEA18` pointer words. Sites: `parseDatItemSubtypes1To5` at `0x80047A18` (main file `0x048618`; delay `0x00000000`) and independently named `isNpcWithinActiveReferenceRange` at `0x80047D88` (main file `0x048988`; delay `0x00000000`). Same-run ROM words at those file offsets are `0x0C02BA86`. Both generated callers are the matching `funcs_10.c` `jal 0x800AEA18` sites. Each is the cinematic arm of the same three-way reference-point select: `lbu` `0x80130B39` nonzero → this getter; bit 3 of `0x8010CA1C` → fixed point `0x801375F8`; else player slot 0 via `getCraftRecordByIdx`. After return both do `addu $a0, $v0, $zero` and `jal isPointXzWithinRangeOfRef` |
+| Semantic evidence | Retail ROM words at file `0x140E68` (`0x137580+(0x800AEA18-0x800A5130)`) are `0x3C02800B` (`lui $v0, 0x800B`), `0x8C421A08` (`lw $v0, 0x1A08($v0)`), `0x03E00008` (`jr $ra`), `0x00000000` (`nop`). Next start file `0x140E78` is `0x27BDFFC0` (`cuts_0058_bubble_sort` `addiu $sp, $sp, -0x40`). Preceding epilogue file `0x140E60`/`0x140E64` is `0x03E00008` / `0x00001021` (`getAssetNameForNpcType`). Independently named `cinematicLoopBody` stores `$v0` to `0x800B1A08` in the delay slot of `jal emit3DSoundsForActiveNpcs` at `0x800A6010` (and again at `0x800A6340`); later cinematic loads read the same word (`0x800A6454`, `0x800A8904`). The getter therefore returns the cached cinematic runtime/camera context pointer used as the active reference point. Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x140E68` is `0x3C02800B`, both caller `jal` words above are `0x0C02BA86`, and the s1520/s1519/s1518/s1517/s1516/s1515/s1514/s1513 controls still read `0x308300FF` at `0x140DDC`, `0x30A700FF` at `0x140D78`, `0x27BDFFE8` at `0x140CC8`, `0x27BDFF78` at `0x140968`, `0x27BDFF20` at `0x1403C4`, `0x27BDFF80` at `0x140048`, `0x27BDFFB0` at `0x13FAE0`, `0x03E00008` at `0x140040`, and `0x27BDFFC0` at `0x13F674` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AEA18`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x10`, both ROM `jal` callers are independently named and use the
+returned pointer as the cinematic-camera reference, and the load target
+`0x800B1A08` is the independently stored cinematic context word. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x10`). `func_8009D978` remains the eight-byte Q15 delay-mix table and
+was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`, `func_80092CF0`,
+`func_80092F10`, and `func_8008ED6C`. No build or runtime run was
+justified for an exact-name census. This does not reopen M5 audio
+de-stubbing. The next adjacent generated function is independently named
+`noopHandler_800AEB30` at `0x800AEB30` (TOML still `func_800AEB30`, size
+`0x8`; overlay `rom_size` is `0x8` at offset `0x00009A00`; live body
+ends at independently named generated `freeCutsceneResources` / TOML
+`func_800AEB38` at `0x800AEB38`). Independently named
+`cuts_0058_bubble_sort` at `0x800AEA28` (`rom_size` `0x108`) ends at
+`0x800AEB30`.
