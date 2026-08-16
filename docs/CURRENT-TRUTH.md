@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1649 (2026-08-16).
+the authority for session detail. Reviewed through s1650 (2026-08-16).
 
 ## Current state
 
@@ -38,9 +38,12 @@ the authority for session detail. Reviewed through s1649 (2026-08-16).
   `runModelViewerLoop` (`0x800C9BF0`), not a mission or cinematic reload.
   Hold remains in `runHangarSelectionFrame` at 512. Pre-exit B is a distinct
   valid route (`sym=224`, pad word `0x400000`) through `512→1024→640` with no
-  viewer or mission-entry PC, so not every hangar exit is case 6. Valid D-pad
-  and post-viewer control arms passed controls but have not reached mission
-  PC `0x80000B70`; do not repeat the already-tested inputs.
+  viewer or mission-entry PC, so not every hangar exit is case 6. After that
+  B intermediate 1024 phase begins, A or Start cancels back to hangar 512
+  (elevated hangar-frame PC counts, no mission entry); Z is ignored and the
+  B-route completes to 640 at `0x00696100` (s1650). Valid D-pad, post-viewer
+  control, and post-B A/Start/Z arms passed controls but have not reached
+  mission PC `0x80000B70`; do not repeat the already-tested inputs.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI
   submission. `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -78,11 +81,12 @@ the authority for session detail. Reviewed through s1649 (2026-08-16).
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
-   leave the 640 text crawl into a mission, or for a new M4 RDRAM destination
+   leave a 640 frontend into a mission, or for a new M4 RDRAM destination
    from a DMEM→RDRAM transfer other than `0xD60`. Known hold/A/B/Z,
-   valid-D-pad, and post-viewer `C-up/C-down/C-left/C-right/L/R` arms are
-   already classified or parked; do not repeat them. Every oracle run needs
-   whole-RDRAM, PIF, and VI/PC positive controls.
+   valid-D-pad, post-viewer `C-up/C-down/C-left/C-right/L/R`, and post-B
+   A/Start/Z arms are already classified or parked; do not repeat them. The
+   640 B-frontend identity and any later input on that frontend remain open.
+   Every oracle run needs whole-RDRAM, PIF, and VI/PC positive controls.
 3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. If that happens, write a bounded plan
    before changing any stub or trap.
@@ -179,6 +183,7 @@ ownership.
 | s1647 | Confirmed `addBooleanCountHandleWrapper` (`0x800C7830`, size `0x34`) was already synchronized: companion mapping, live generated wrapper body, exact adjacent boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7864`. |
 | s1648 | Confirmed `addTimerHandleWrapper` (`0x800C7864`, size `0x20`) was already synchronized: companion mission mapping, live generated wrapper body, exact adjacent boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7884`. |
 | s1649 | Synchronized `setHudFlagBit40AndStoreArg` (`0x800C7884`, size `0x1C`) after the companion mapping, live generated body, exact `0x800C7864`/`0x800C78A0` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C78A0`. |
+| s1650 | Rice post-B A/Start/Z revisit: all arms passed whole-RDRAM and hangar controls; zero mission/viewer PC. Hold and Z completed B-route 640 at `0x00696100`; A and Start cancelled the post-B 1024 intermediate back to hangar 512. H3 selected for A/Start; Z ignored. Mission entry still open only for a genuinely new route. |
 
 ## Method and safety rules
 

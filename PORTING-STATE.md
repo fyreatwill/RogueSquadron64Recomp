@@ -77768,3 +77768,48 @@ boundaries and sizes. The stale TOML name was synchronized to
 `setHudFlagBit40AndStoreArg`. No build or runtime behavior conclusion was
 made. The next sweep candidate is `func_800C78A0` /
 `calculateDatItemDistanceToPlayer`.
+
+## Session 1650 (2026-08-16) — tested post-B A/Start/Z against retail mission entry
+
+The mandatory 15-title check found only sweep sessions, so this iteration
+revisited the external retail-entry boundary instead of another
+generated-symbol census. Prior work had classified pre-exit B as a distinct
+valid hangar route (`512→1024→640` at `0x00696100`, not case-6 model viewer)
+and had classified post-viewer A/Start/Z and C/L/R arms without mission
+entry. It had not tested A, Start, or Z after the B-route began.
+
+Competing hypotheses: H1 post-B A/Start/Z reach mission PC `0x80000B70`; H2
+the B-route frontend ignores them and all arms retain the B lifecycle; H3 a
+post-B control changes to another frontend without mission entry; H4 the
+recipe or input delivery is unevaluable. The discriminator was the four-arm
+Rice comparison under whole-RDRAM, PIF, VI, and watched frontend/mission PCs.
+
+All four concurrent 110 s arms (`hold`, `a`, `start`, `z`) used eleven Start
+presses plus pre-exit B at 55/58/63; the candidate arms then pressed A, Start,
+or Z at 75/82/89/96. Every arm reached hangar `320→640→1024→512`, fired the
+whole-RDRAM positive control (10,000 callbacks), and delivered B as pad word
+`0x40000000`. Candidate pads were also delivered: A `0x80000000`, Start
+`0x10000000`, Z `0x20000000`. Mission PC `0x80000B70` and model-viewer PC
+`0x800C9BF0` were zero in every arm.
+
+Hold completed the known B lifecycle: `512→1024` at 65.2 s, then
+`1024→640` at 96.3 s origin `0x00696100`, hangar-frame PC count 61. Z matched
+hold exactly through the final 640 origin, with one Z delivery on the 640
+frontend at 97.3 s and no VI change. A and Start diverted the post-B
+intermediate 1024 phase: after `512→1024` at 65.3 s they returned
+`1024→512` at 85.6 s (origins `0x006ab800` / `0x006ab400`), raised hangar-frame
+PC counts to 297/295, and never reached the 640 B-frontend.
+
+H3 is selected for A and Start (reproducible return to hangar 512, zero
+mission entry). Z is H2-shaped (ignored; retains B-route 640). H1 is rejected
+by zero mission PC hits. H4 is rejected by the shared hangar lifecycle,
+positive-control thresholds, and delivered pad words. The post-control presses
+land mostly during the intermediate 1024 phase after B leaves hangar, not on
+the final 640 B-frontend (except the last ~97 s press).
+
+This rules out A/Start/Z after pre-exit B as mission-entry inputs in the
+observed 110-second window and shows A/Start can cancel the B intermediate
+back to hangar. It does not identify the 640 B-frontend or prove any later
+input on that frontend reaches a mission. No recomp change or mitigation was
+made. Next work resumes the generated-symbol sweep at `func_800C78A0` /
+`calculateDatItemDistanceToPlayer`.
