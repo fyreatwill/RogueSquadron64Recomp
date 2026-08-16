@@ -1,11 +1,11 @@
-# NEXT work unit (s1561)
+# NEXT work unit (s1562)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1560 synchronized `cancelSceneQueueHandle` at `0x800B3F0C`.
+s1561 synchronized `playSpeechClipOncePerChange` at `0x800B3F50`.
 Resume the generated-symbol renaming sweep. Perform exactly one
 bounded exact-name census over the next adjacent generated function,
-`0x800B3F50..0x800B3FB4`.
+`0x800B3FB4..0x800B40A0`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -31,22 +31,24 @@ table, not a function), `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function), and
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler). The generated entry at this address
-is already `playSpeechClipOncePerChange`; the companion
-mission list maps `playSpeechClipOncePerChange = 0x800B3F50`
-with comment "dedup'd voice-line dispatch (skips if same as last)".
-TOML is still `func_800B3F50` (size `0x64`, ends at generated
-`playSpeechClipOncePerLevel` / TOML `func_800B3FB4` at
-`0x800B3FB4`). Overlay `rom_size` is `0x64` at offset
-`0x0000EE20`. Confirm the complete live function, matching size,
+is already `playSpeechClipOncePerLevel`; the companion
+mission list maps `playSpeechClipOncePerLevel = 0x800B3FB4`
+with comment "plays a voice line once per level (14-entry ring)".
+TOML is still `func_800B3FB4` (size `0xEC`, ends at generated
+`resetSpeechOncePerLevelFlag` / TOML `func_800B40A0` at
+`0x800B40A0`). Overlay `rom_size` is `0xEC` at offset
+`0x0000EE84`. Confirm the complete live function, matching size,
 and caller/semantic evidence before synchronizing the TOML name.
-Independently named `cancelSceneQueueHandle` at `0x800B3F0C`
-(`rom_size` `0x44`) ends at this address. Last live instruction
-pair is `0x800B3FAC`/`0x800B3FB0` (`jr $ra` / `addiu $sp, $sp, 0x20`).
+Independently named `playSpeechClipOncePerChange` at `0x800B3F50`
+(`rom_size` `0x64`) ends at this address. Last live instruction
+pair is `0x800B4098`/`0x800B409C` (`jr $ra` / `addiu $sp, $sp, 0x18`).
 Menu-overlay `enqueueFormatMessage` at `0x800B3F24` occupies
-overlapping VRAM from `.ovl.menu` across this body (`rom_size` `0xB4`,
-ends `0x800B3FD8`); generated `pollServiceMessageByte` sits between
-the speech names in `funcs.h` and is not a mission size split. This
-naming census does not reopen closed M5 audio de-stubbing.
+overlapping VRAM from `.ovl.menu` across the start of this body
+(`rom_size` `0xB4`, ends `0x800B3FD8`); generated
+`pollServiceMessageByte` at menu VRAM `0x800B3FD8` (`rom_size`
+`0x48`, ends `0x800B4020`) occupies the interior. Neither is a
+mission size split. This naming census does not reopen closed
+M5 audio de-stubbing.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -72,7 +74,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800B3F50\|800B3FB4\|playSpeechClipOncePerChange' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B3F50\|800B3FB4\|playSpeechClipOncePerChange' ../N64Recomp/RecompiledFuncs/funcs_30.c
-grep -n -C 3 '800B3F50\|800B3FB4' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B3FB4\|800B40A0\|playSpeechClipOncePerLevel' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B3FB4\|800B40A0\|playSpeechClipOncePerLevel' ../N64Recomp/RecompiledFuncs/funcs_30.c
+grep -n -C 3 '800B3FB4\|800B40A0' syms/rogue_squadron.syms.toml
 ```

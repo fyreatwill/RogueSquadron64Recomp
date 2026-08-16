@@ -1608,7 +1608,7 @@ functions = [
     { name = "tryPlaySpatialSoundWithGates", vram = 0x800B3A10, size = 0x43C },
     { name = "scheduleSceneFormatMessageTimed", vram = 0x800B3E4C, size = 0xC0 },
     { name = "cancelSceneQueueHandle", vram = 0x800B3F0C, size = 0x44 },
-    { name = "func_800B3F50", vram = 0x800B3F50, size = 0x64 },
+    { name = "playSpeechClipOncePerChange", vram = 0x800B3F50, size = 0x64 },
     { name = "func_800B3FB4", vram = 0x800B3FB4, size = 0xEC },
     { name = "func_800B40A0", vram = 0x800B40A0, size = 0x50 },
     { name = "func_800B40F0", vram = 0x800B40F0, size = 0x44 },
