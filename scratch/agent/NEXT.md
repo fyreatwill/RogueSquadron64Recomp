@@ -1,14 +1,11 @@
-# NEXT work unit (s1728)
+# NEXT work unit (s1729)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the census at `npcWingmanSpawnBurstEffects` at `0x800D8988`
-(size `0x330`). Last-15 titles after s1727 still include the s1714
+(size `0x330`). s1728 was a triggered maintenance compaction (no
+sweep step). Last-15 titles after s1728 still include the s1714
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
-
-s1727 synchronized `npcWingmanBehaviorByMode` at `0x800D80B4`
-(size `0x8D4`): generated headers/body already used the companion name;
-only the TOML placeholder was stale.
 
 Competing hypotheses and discriminator:
 

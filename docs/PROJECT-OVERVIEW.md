@@ -219,7 +219,7 @@ silently when absent. Both are worth verifying explicitly at the start of any vi
 
 ## 5. What actually worked
 
-### 5.0 Current durable checkpoint (s1553)
+### 5.0 Current durable checkpoint (s1728)
 
 The overlay-dispatch issue is closed enough for mission entry and post-sec2
 outdoor presentation. The recurring `slotDispatcherIter+872` SIGBUS has no
@@ -227,17 +227,17 @@ statically reachable frame-overlapping writer after complete caller, context,
 store, and load-idiom audits. The active VI boot descriptor is the 320 record,
 and the independent retail oracle controls pass. Dummy video stays at width
 320/origin `0x006dd280`; Homebrew Rice with the eleven-Start schedule is the
-available hangar-entry recipe (s707, s1496). After hangar, extra Start or A
-leaves to menu-overlay 640/`0x006a2900` (s1528, s1544); that is not a
-mission or cinematic. Audio de-stubbing is closed because prior dummy-video
-retail watches never reached voice initialization. These are boundaries, not
-mitigations: future guards require an `ORIGIN:` naming the writer and
-judging the value legitimate. The generated-symbol renaming sweep is the
-current low-risk workstream; exact companion/generated names are synchronized
-through `advancePitchTowardTarget` at `0x800B41FC` (s1568) while
-fake or address-only entries remain unchanged, including s1570 H2
-`fake_func_800B42BC` (see §33). See
-`CURRENT-TRUTH.md` for the live backlog and `PORTING-STATE.md` for evidence.
+available hangar-entry recipe (s707, s1496). After hangar, Start/A leave via
+case-6 `runModelViewerLoop`; pre-exit B is a distinct frontend route that
+times out to attract 512, whose A/Start/C-up/L/Z leave to a title-like 1024
+that Rice cannot dwell long enough to classify (s1650–s1714). Audio
+de-stubbing is closed. These are boundaries, not mitigations: future guards
+require an `ORIGIN:` naming the writer and judging the value legitimate. The
+generated-symbol renaming sweep is the current low-risk workstream; exact
+companion/generated names are synchronized through
+`npcWingmanBehaviorByMode` at `0x800D80B4` (s1727). See §33–§35 for the
+archived census, `CURRENT-TRUTH.md` for the live backlog, and
+`PORTING-STATE.md` for evidence.
 
 - **Two independent sources before concluding.** Every finding that survived has two: task timing
   *and* CPU%; stream census *and* draw-hook counters; a probe *and* its positive control.
@@ -2976,7 +2976,80 @@ or runtime run.
 | s1647 | Confirmed `addBooleanCountHandleWrapper` at `0x800C7830` (size `0x34`) was already synchronized: companion mapping, live generated wrapper body, exact adjacent boundaries, TOML size, and section-4 span agreed. Next census: `func_800C7864`, companion name `addTimerHandleWrapper`, size `0x20`. |
 | s1648 | Confirmed `addTimerHandleWrapper` at `0x800C7864` (size `0x20`) was already synchronized: companion mission mapping, live generated wrapper body, exact adjacent boundaries, TOML size, and section-4 span agreed. Next census: `func_800C7884`, companion name `setHudFlagBit40AndStoreArg`, size `0x1C`. |
 
-The sweep cursor after s1648 is `func_800C7884`. The parked entries and the
-every-15-session revisit rule remain those recorded in §33 and the live truth
-file. The Rice route is now the only valid later-phase oracle recipe; dummy
-video's 320-only results are not evidence about hangar or mission entry.
+The sweep cursor after s1647 is `func_800C7864` / `addTimerHandleWrapper`.
+s1648–s1727 continue in §35. The parked entries and the every-15-session
+revisit rule remain those recorded in §33 and the live truth file. The Rice
+route is now the only valid later-phase oracle recipe; dummy video's 320-only
+results are not evidence about hangar or mission entry.
+
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1727)
+
+Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
+unchanged from §33–§34: one adjacent generated function per session;
+synchronize the TOML name only when companion mapping, live generated body,
+exact adjacent boundaries, overlay span, and size agree. Exact-name censuses
+do not require a build or runtime run. Menu-overlay functions that share a
+VRAM window with a mission occupant are a different overlay, not a name
+collision.
+
+| Sessions | Durable result |
+|---|---|
+| s1648–s1649 | Confirmed `addTimerHandleWrapper` (`0x800C7864`, `0x20`); synchronized `setHudFlagBit40AndStoreArg` (`0x800C7884`, `0x1C`). |
+| s1650 | Rice post-B A/Start/Z: all arms passed whole-RDRAM and hangar controls; zero mission/viewer PC. Hold and Z completed B-route 640 at `0x00696100`; A and Start cancelled the post-B 1024 intermediate back to hangar 512. H3 for A/Start; Z ignored. |
+| s1651–s1665 | Confirmed `calculateDatItemDistanceToPlayer`, `getDatItemHealth`, `getDatItemHealthPercentage`. Synchronized `getScaledPlayerCraftSpeed` through `playNpcStateChangeEffect` (`0x800C794C`–`0x800C7FF8`): DAT-item distance/speed/spawn/init/despawn, HUD-effect and named-asset wrappers, NPC spawn-from-message and state-change effect. Menu `computeCellGridIndices` at `0x800C804C` is a different overlay. |
+| s1666 | Rice post-arrival A/Start/Z on the 640 B-frontend (`0x00696100`/`0x00696600`). The 640 screen is neither hangar nor viewer; it times out at ~117.7 s to attract 512 (`0x00690400`). A/Start at 106.3 s cancel `640→1024→512` hangar (H3). Z on 640 is ignored (H2). `0x80000B70` is `loadOverlay+0x50`. Hold died rc=139 at 135 s still on attract 512. |
+| s1667–s1681 | Synchronized `spawnNpcDestructionEffect` through `tickAtAtBodyTransform` (`0x800C8178`–`0x800CC2AC`); confirmed `npcTurretUpdate` (`0x800C8F90`, `0x11FC`) and `npcProbeDriod` (`0x800CABD4`, `0x11CC`, keep the `Driod` typo). Covers NPC destruction/impact/orientation/model, turret, ambient, probe-droid hop/scatter, nearest-NPC, spawn-template, textured-sound, and AT-AT body transform. Menu occupants in this VRAM window (`runModelViewerLoop` `0x800C9BF0`, medal/voice helpers) are a different overlay. |
+| s1682 | Rice C/L/R and D-pad on the arrived 640 B-frontend. All 11 arms passed controls and matched hold: `640→512` attract at 117.7 s, viewer 0, hangar-frame 59–62, `0x80000B70`=1 (post-timeout attract path). H2 selected. `--secs 125` flush rc=0; 160 s batch died at the known ~135 s Rice crash. |
+| s1683–s1697 | Synchronized AT-AT audio/sub-feature/destruction/footstep/leg through AT-ST effect/cannon/kinematics/destruction/death-anim and `spawnPlayerAtStCannonFire` (`0x800CC9B8`–`0x800D1248`). Confirmed `npcAtAtUpdate` (`0x800CD71C`, `0x1800`), leftover `fake_func_800CEF1C` (`0x4`), `npcAtStUpdate` (`0x800CFE7C`, `0x120C`), and `playerAtStInit` (`0x800D1088`, `0x1C0`). |
+| s1698 | Rice A/Start/Z/C/L/R/D-pad on attract 512. All 14 arms passed controls; `--secs 125` flush rc=0. H3 A/Start/C-up/L: `512→1024` at 126.4 s origin `0x00790400`/`800`; 1024 destination unevaluable. H2 Z/C-down/C-left/C-right/R/D-pad: still attract 512 through 125.8 s (later superseded for Z by s1714). |
+| s1699–s1713 | Synchronized player-AT-ST locomotion/behavior, `npcInitFromTemplate`, `spawnScaledBootVec4Effect`, `npcInitWithMotionParams`, effect channels A/B/dispatch, shuttle destruction, child-link init, and `advanceNpcSpinOrientation` (`0x800D1578`–`0x800D5078`). Confirmed `playerAtStUpdate` (`0x800D2208`, `0x954`), leftover `fake_func_800D2C98` (`0x8`), `npcShuttleUpdate` (`0x800D3894`, `0x1630`), leftover `fake_func_800D4EC4` (`0xC`). |
+| s1714 | Rice later-flush of attract-512 A/Start/C-up/L/Z (`--secs 133`). Hold stays attract 512 through 133.4 s. A/Start/C-up/L/Z all leave `512→1024` at 126.3–126.4 s origin `0x00790400`/`800` and stay on that title-like 1024 through 133.5 s. H2 for A/Start/C-up/L. H3-confirm for Z (second source; s1698 stay-512 was a flush cutoff). 1024 destination still unevaluable (Rice dies ~135 s). |
+| s1715–s1727 | Synchronized `npcDebrisFieldUpdate` through `npcWingmanBehaviorByMode` (`0x800D5208`–`0x800D80B4`): debris-field, simple-model init, shared effect-channel plus Mode0/Mode1 wrappers, tank-droid aim, wingman reset/state-data/shared-emitter/state-0/state-1/behavior-by-mode. Confirmed `npcTankDroidUpdate` (`0x800D6998`, `0xE80`). Companion `D_800D5208` is a leftover splat label, not a second occupant. |
+
+The sweep cursor after s1727 is `npcWingmanSpawnBurstEffects` /
+`func_800D8988` at `0x800D8988` (size `0x330`). Next contiguous neighbor is
+`npcWingmanSteerToward` at `0x800D8CB8`. Mandatory revisits in this window:
+s1650, s1666, s1682, s1698, s1714.
+
+**Classified Rice frontend routes (do not repeat).** Dummy video stays at
+width 320 / origin `0x006dd280`. Homebrew Rice with
+`--video …/mupen64plus/mupen64plus-video-rice.dylib` and the eleven-Start
+schedule reaches `320→640` at about 2.3s, `640→1024` at about 17.2s, and
+`1024→512` hangar at about 38.4s, origins `0x006ab400`/`0x006ab800` (s707,
+s1496). Hangar hold stays in `runHangarSelectionFrame` at 512. Extra Start
+or A leaves to a 640 planet/text-crawl viewer at `0x006a2900`/`0x006a2e00`
+— menu-overlay case 6 `runModelViewerLoop` (`0x800C9BF0`), not a mission or
+cinematic. Pre-exit B (`sym=224`, pad `0x400000`) is a distinct
+`512→1024→640` with no viewer or mission-entry PC; after that intermediate
+1024, A or Start cancels back to hangar 512 and Z is ignored. The arrived B
+640 (`0x00696100`/`0x00696600`) is neither hangar nor viewer (hangar-frame
+PCs stay at the earlier visit count, viewer PC 0) and times out at ~117.7 s
+to attract 512 (`0x00690400`). On that 640, A/Start cancel
+`640→1024→512` hangar; Z, C, L, R, and valid D-pad are ignored (s1650,
+s1666, s1682). On the attract 512 that timeout reaches, A/Start/C-up/L/Z
+at 119/123 leave `512→1024` at 126.3–126.4 s origin `0x00790400`/`0x00790800`
+(title-like; same pair as the B-route intermediate) and stay on that 1024
+through 133.5 s (s1714); hangar-frame PCs 60–61 matching hold; viewer 0;
+`0x80000B70` = 1 matching hold. Hold stays attract 512 through 133.4 s.
+C-down, C-left, C-right, R, and valid D-pad stay attract 512 through
+125.8 s (s1698; not retested past 126 s). The 1024 destination is still
+unevaluable: Rice dies around 135 s, and the only observed `1024→640` of
+this pair is s1666's single-source Z continuation at 159.4 s origin
+`0x00696100` (B-frontend). s1698's Z-stays-512 through 125.8 s was a flush
+cutoff; s1666's 128.3 s Z leave was the same leave after a later 126.4 s
+press. `0x80000B70` is `loadOverlay+0x50` (`0x80000B20`, size `0x124`).
+Still-open questions (1024 destination; M4 DMEM→RDRAM other than `0xD60`)
+live in `CURRENT-TRUTH.md`.
+
+**Superseded claims compacted out of CURRENT-TRUTH in s1728.** Stale/unseen
+writer (physical-byte samples saw nonzero `0x8011A8A0`). `setViModeType`
+maps `osTvType`, not `osResetType`. Boot/menu overlay-dispatch closed by
+mission and post-sec2 behavior. Nonblank-EEPROM refuted by paired
+existing-versus-zero EEPROM runs. Broad retail-only GPR mismatch: saved
+`s3..s7`/`t3` dead or overwritten; `sp`/`ra` differ only in bookkeeping.
+Frontend/launcher/savestate artifacts exist; audited lifecycle still has
+no new retail state source. s1194–s1239 "no new retail-entry route /
+stays 320" used dummy video; Rice supplies the later phase. s1135
+"`0x688..0x710` is the retail shade record" rejected by s1512. s1086
+"retail never accesses `0x130B10:0x130B58`" superseded by s1528. s1698
+"Z on attract 512 stays 512 through 125.8 s" superseded by s1714.

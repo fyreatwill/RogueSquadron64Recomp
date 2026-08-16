@@ -80534,3 +80534,27 @@ runtime run required.
 Next census: `npcWingmanSpawnBurstEffects` / `func_800D8988` at
 `0x800D8988` (size `0x330`). Last-15 titles still include s1714's
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1728 (2026-08-16) — compacted current truth and archived s1648-s1727
+
+Maintenance was triggered before work selection because
+`docs/CURRENT-TRUTH.md` measured 60,209 bytes, over the 60,000-byte
+threshold. No experiment, build, runtime run, or source-code change
+was performed. The repeated s1648–s1727 symbol-census rows and the
+classified Rice frontend-route catalog were migrated to
+`docs/PROJECT-OVERVIEW.md` §35. `docs/CURRENT-TRUTH.md` was reduced
+from 300 lines / 60,209 bytes to 98 lines / 6,028 bytes (git
+numstat shrink 279−77 = 202 net lines), retaining current state, one
+monotonic five-item backlog, durable M3/VI/M4 boundaries, a pointer
+to archived superseded claims, the evidence summary, and method
+rules. `scratch/agent/NEXT.md` was rewritten for the next exact
+census at `0x800D8988`. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+This maintenance result rules out neither the active symbol
+hypothesis nor the parked retail-entry/M4 hypotheses: it
+intentionally collected no new evidence. It does rule out stale
+duplicated truth-file prose as the source of the live state summary;
+the deleted detail remains in the append-only ledger and the project
+overview.
+
