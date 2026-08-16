@@ -76123,4 +76123,33 @@ and overlay-table span agree. H3 is ruled out by the companion mapping,
 generated function body, and three callers. Updated only the TOML placeholder
 to `orientVwingSubmodelByQuat`; no mitigation, build, or runtime change was
 made. The next bounded candidate is `func_800B9950`, independently named
-`tickVwingEngineAudio`, with size `0x5FC`.
+   `tickVwingEngineAudio`, with size `0x5FC`.
+
+## Session 1587 (2026-08-16) — synchronized the tickVwingEngineAudio symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail had no newer verdict requiring analysis. The mandatory 15-title check
+showed that the recent history was not entirely symbol-sweep work because
+s1585 was the required retail-entry revisit, so this iteration continued the
+bounded generated-symbol sweep. No build or runtime run was needed.
+
+The work unit censused `0x800B9950..0x800B9F4C` using the companion mission
+symbol list, generated definition and caller, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `tickVwingEngineAudio = 0x800B9950`; `playerVwingUpdate = 0x800B9F4C` is the next companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_31.c` defines `tickVwingEngineAudio` at `0x800B9950`; `funcs_32.c` calls it from `playerVwingUpdate` at `0x800BA264`. |
+| Span and overlay table | The TOML placeholder had size `0x5FC`, and `recomp_overlays.inl` records `tickVwingEngineAudio` at offset `0x14820` with ROM size `0x5FC`, followed by `playerVwingUpdate` at `0x800B9F4C`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and caller. Updated only the TOML placeholder to
+`tickVwingEngineAudio`; no mitigation, build, or runtime change was made.
+The next bounded candidate is `func_800BA620`, independently named
+`computeFalconFlightTransform`, with size `0x3E0`.
