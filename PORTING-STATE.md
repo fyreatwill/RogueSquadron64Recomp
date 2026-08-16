@@ -72823,3 +72823,41 @@ size `0x1F8`; overlay `rom_size` is `0x1F8` at offset `0x00005528`;
 live body ends at independently named
 `applyNamedEffectParameterDefaults` / TOML `func_800AA850` at
 `0x800AA850`).
+
+## Session 1505 (2026-08-15) — synchronized the tick-cutscene-action-slots symbol
+
+Performed the bounded exact-name census over `0x800AA658..0x800AA850`.
+
+No new soak-queue verdicts since s1504; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1496 (Rice-oracle revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AA658`, size `0x1F8`; `0x800AA658+0x1F8=0x800AA850`. Overlay `.ovl.cinematic` entry `rom_size` is `0x1F8` at offset `0x00005528` (`0x800AA658-0x800A5130`). Live body is independently `0x1F8` and meets independently named `applyNamedEffectParameterDefaults` / TOML `func_800AA850` at `0x800AA850` |
+| Generated definition | `funcs_27.c` defines `tickCutsceneActionSlots` at `0x800AA658`; `funcs.h` and `recomp_overlays.inl` already use that name. The live cinematic body is a complete `0x1F8` function. It starts `addiu $sp, $sp, -0x58` and ends at the sole `jr $ra` / `addiu $sp, $sp, 0x58` (`0x800AA848`/`0x800AA84C`). Next generated cinematic function is independently named `applyNamedEffectParameterDefaults`. Menu-overlay `mallocCraftSelectionData` / TOML `hangarInitialize` at `0x800A9364` (`rom_size` `0x1A38`) occupies overlapping VRAM from `.ovl.menu` and is not a cinematic size split. Mission-overlay `buildTransformMatrixFromEulerAngles` at `0x800AA570`, `fake_func_800AA6CC` at `0x800AA6CC`, and `npcPredictedRangeCheck` at `0x800AA6D0` are a different overlay, not a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `tickCutsceneActionSlots = 0x800AA658` in the cinematic splat list, with the per-frame 16-entry `MEM[0x800B0BC0]` walk. `tickCutsceneNpcSlots` comments that it is "Called from cinematicLoopBody after tickCutsceneActionSlots+npcIncomingMissileUpdate"; that names this body, not a competing splat. Menu, mission, main, libultra, and zlib lists do not remap `0x800AA658`. `undefined_funcs_auto.txt` has no `0x800AA658` row. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02A996` and zero `j` or absolute `0x800AA658` pointer words. The site is in independently named `cinematicLoopBody` at `0x800A6358` (overlay file `0x1387A8`; `cinematicLoopBody` is `0x800A5D80`). Same-run ROM word at that file offset is `0x0C02A996`; the delay slot is `0x4600B306` (`mov.s $f12, $f22`). The generated caller is the matching `jal 0x800AA658` that already dispatches to `tickCutsceneActionSlots` |
+| Semantic evidence | Retail ROM words at file `0x13CAA8` (`0x137580+(0x800AA658-0x800A5130)`) are `0x27BDFFA8` / `0xF7B80048` (`addiu $sp, $sp, -0x58` / `sdc1 $f24, 0x48($sp)`). The body bases `s4` at `0x800B0BC0`, walks `s2` while `< 0x10`, indexes with `(i*5)<<2` (`0x14` stride), skips entries whose byte at `+0x12` is zero, reads start/end times at `+0x8`/`+0xC` and the `u16` at `+0x10`, then calls independently named `quadraticEaseInOut`, `lookupHmtMaterialByName`, and `composeInterpolatedNodeMatricesAlt`. Epilogue file `0x13CC98` is `0x03E00008` / `0x27BD0058`. Next start file `0x13CCA0` is `0x3C02800B` (`applyNamedEffectParameterDefaults`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13CAA8` is `0x27BDFFA8`, the caller `jal` word above is `0x0C02A996`, and the s1504 controls still read `0x3C04800B` at `0x13C944` and `0x27BDFF70` at `0x13C60C` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AA658`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x1F8`, `cinematicLoopBody` is the only ROM `jal` caller, and the
+16-slot `MEM[0x800B0BC0]` walk matches the companion comment. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x1F8`). `func_8009D978` remains the eight-byte Q15 delay-mix table
+and was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not
+reopen M5 audio de-stubbing. The next adjacent generated function is
+independently named `applyNamedEffectParameterDefaults` at
+`0x800AA850` (TOML still `func_800AA850`, size `0x438`; overlay
+`rom_size` is `0x438` at offset `0x00005720`; live body ends at
+independently named `spawnCutsceneDebrisField` / TOML `func_800AAC88`
+at `0x800AAC88`).
