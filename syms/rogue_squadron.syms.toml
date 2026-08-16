@@ -2644,7 +2644,7 @@ functions = [
     { name = "applyNamedEffectParameterDefaults", vram = 0x800AA850, size = 0x438 },
     { name = "spawnCutsceneDebrisField", vram = 0x800AAC88, size = 0x1084 },
     { name = "npcIncomingMissileUpdate", vram = 0x800ABD0C, size = 0x868 },
-    { name = "func_800AC574", vram = 0x800AC574, size = 0x1E8 },
+    { name = "buildCutsceneGradientBuffers", vram = 0x800AC574, size = 0x1E8 },
     { name = "func_800AC75C", vram = 0x800AC75C, size = 0x730 },
     { name = "func_800ACE8C", vram = 0x800ACE8C, size = 0x398 },
     { name = "func_800AD224", vram = 0x800AD224, size = 0x46C },

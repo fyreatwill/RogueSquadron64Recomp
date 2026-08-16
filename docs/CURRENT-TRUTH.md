@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1508 (2026-08-15).
+the authority for session detail. Reviewed through s1509 (2026-08-15).
 
 ## Current state
 
@@ -54,7 +54,7 @@ the authority for session detail. Reviewed through s1508 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AC574..0x800AC75C`.
+   adjacent function, `0x800AC75C..0x800ACE8C`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -115,13 +115,14 @@ the authority for session detail. Reviewed through s1508 (2026-08-15).
    synchronized `applyNamedEffectParameterDefaults` at `0x800AA850`.
    s1507 synchronized `spawnCutsceneDebrisField` at `0x800AAC88`.
    s1508 synchronized `npcIncomingMissileUpdate` at `0x800ABD0C`.
-   The generated entry at `0x800AC574` is already
-   `buildCutsceneGradientBuffers`; the companion cinematic splat list
-   maps `buildCutsceneGradientBuffers = 0x800AC574`. TOML is still
-   `func_800AC574` (size `0x1E8`, ends at independently named
-   `spawnNpcBurstAlongSegment` / TOML `func_800AC75C` at
-   `0x800AC75C`). Overlay `rom_size` is `0x1E8` at offset
-   `0x00007444`. Confirm the complete live function, matching size,
+   s1509 synchronized `buildCutsceneGradientBuffers` at
+   `0x800AC574`. The generated entry at `0x800AC75C` is already
+   `spawnNpcBurstAlongSegment`; the companion cinematic splat list
+   maps `spawnNpcBurstAlongSegment = 0x800AC75C`. TOML is still
+   `func_800AC75C` (size `0x730`, ends at independently named
+   `processCutsceneActions` / TOML `func_800ACE8C` at
+   `0x800ACE8C`). Overlay `rom_size` is `0x730` at offset
+   `0x0000762C`. Confirm the complete live function, matching size,
    and caller/semantic evidence before synchronizing the TOML name.
    Menu-overlay `updateHangarBayScene` / TOML `func_800AB658` at
    `0x800AB658` occupies overlapping VRAM and is a different overlay,
@@ -450,6 +451,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1506 | Exact companion/generated cinematic-effect census synchronized `applyNamedEffectParameterDefaults` at `0x800AA850`; no build or runtime run. |
 | s1507 | Exact companion/generated cinematic-spawn census synchronized `spawnCutsceneDebrisField` at `0x800AAC88`; no build or runtime run. |
 | s1508 | Exact companion/generated cinematic-NPC census synchronized `npcIncomingMissileUpdate` at `0x800ABD0C`; no build or runtime run. |
+| s1509 | Exact companion/generated cinematic-gradient census synchronized `buildCutsceneGradientBuffers` at `0x800AC574`; no build or runtime run. |
 
 ## Method and safety rules
 

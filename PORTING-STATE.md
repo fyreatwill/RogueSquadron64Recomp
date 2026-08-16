@@ -72975,3 +72975,41 @@ de-stubbing. The next adjacent generated function is independently named
 `func_800AC574`, size `0x1E8`; overlay `rom_size` is `0x1E8` at
 offset `0x00007444`; live body ends at independently named
 `spawnNpcBurstAlongSegment` / TOML `func_800AC75C` at `0x800AC75C`).
+
+## Session 1509 (2026-08-15) — synchronized the build-cutscene-gradient-buffers symbol
+
+Performed the bounded exact-name census over `0x800AC574..0x800AC75C`.
+
+No new soak-queue verdicts since s1508; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1496 (Rice-oracle revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AC574`, size `0x1E8`; `0x800AC574+0x1E8=0x800AC75C`. Overlay `.ovl.cinematic` entry `rom_size` is `0x1E8` at offset `0x00007444` (`0x800AC574-0x800A5130`). Live body is independently `0x1E8` and meets independently named `spawnNpcBurstAlongSegment` / TOML `func_800AC75C` at `0x800AC75C` |
+| Generated definition | `funcs_28.c` defines `buildCutsceneGradientBuffers` at `0x800AC574`; `funcs.h` and `recomp_overlays.inl` already use that name. The live cinematic body is a complete `0x1E8` function. It starts `addiu $sp, $sp, -0x28` / `sw $s0, 0x10($sp)` and ends at the sole `jr $ra` / `addiu $sp, $sp, 0x28` (`0x800AC754`/`0x800AC758`). Next generated cinematic function is independently named `spawnNpcBurstAlongSegment`. Menu-overlay `updateHangarBayScene` / TOML `func_800AB658` at `0x800AB658` occupies overlapping VRAM from `.ovl.menu` and is not a cinematic size split. Mission-overlay `tickEffectObjectMotionAndOrientation` / TOML `func_800AC330` at `0x800AC330` occupies overlapping VRAM from `.ovl.mission` and is not a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `buildCutsceneGradientBuffers = 0x800AC574` in the cinematic splat list. Menu, mission, main, libultra, and zlib lists do not remap `0x800AC574`. `undefined_funcs_auto.txt` has no leftover `func_800AC574` row. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02B15D` and zero `j` or absolute `0x800AC574` pointer words. The site is independently named `setupCutsceneLevel` at `0x800A6E24` (cinematic-file `0x139274`; delay `0x00000000` = `nop`). Same-run ROM word at that file offset is `0x0C02B15D`. The generated caller is the matching `jal 0x800AC574` site that already dispatches through the named function, in jump-table case 1 after `loadBackdropAsset`, `getCinematicStateSubObject`, and `findLookupEntryByKey`. Companion `setupCutsceneLevel` is independently the cinematic level-setup routine |
+| Semantic evidence | Retail ROM words at file `0x13E9C4` (`0x137580+(0x800AC574-0x800A5130)`) are `0x27BDFFD8` / `0xAFB00010` (`addiu $sp, $sp, -0x28` / `sw $s0, 0x10($sp)`). The body loops three times (`slti` bound `0x3` at `0x800AC730`), each iteration `rs_malloc(0x80, 0x10)` and stores the pointer in the word table at `0x800B1AE0` (`lui $v0, 0x800B` / `addiu $s4, $v0, 0x1AE0`). Each buffer is filled with 32 RGBA pixels (`slti` bound `0x20`; `sb` of R/G/B/A at +0/+1/+2/+3). Color ramps depend on buffer index 0/1/2 and even/odd row: `*7` (`sll 3; subu`), `nor` invert, and `0xAAAAAAAB` reciprocal-multiply for `/3`. Same-run immediates: `0x24040080` at `0x13E9FC`, `0x3C02800B`/`0x24541AE0` at `0x13E9D0`, `0x28420020` at `0x13EB60`, `0x28420003` at `0x13EB80`. Epilogue file `0x13EBA4` is `0x03E00008` / `0x27BD0028`. Next start file `0x13EBAC` is `0x27BDFF30` (`spawnNpcBurstAlongSegment`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13E9C4` is `0x27BDFFD8`, the caller `jal` word above is `0x0C02B15D`, and the s1508/s1507/s1506/s1505 controls still read `0x27BDFF00` at `0x13E15C`, `0x27BDFEB0` at `0x13D0D8`, `0x3C02800B` at `0x13CCA0`, and `0x27BDFFA8` at `0x13CAA8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AC574`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x1E8`, the one ROM `jal` caller is `setupCutsceneLevel` case 1
+after backdrop load, and the three 0x80-byte RGBA ramp allocations match
+the companion name. The stale address-encoded TOML entry was synchronized
+(name only; size left at `0x1E8`). `func_8009D978` remains the eight-byte
+Q15 delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This
+does not reopen M5 audio de-stubbing. The next adjacent generated
+function is independently named `spawnNpcBurstAlongSegment` at
+`0x800AC75C` (TOML still `func_800AC75C`, size `0x730`; overlay
+`rom_size` is `0x730` at offset `0x0000762C`; live body ends at
+independently named `processCutsceneActions` / TOML `func_800ACE8C`
+at `0x800ACE8C`).
