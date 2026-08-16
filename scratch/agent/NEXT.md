@@ -1,11 +1,11 @@
-# NEXT work unit (s1516)
+# NEXT work unit (s1517)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1515 synchronized `transformAndNormalizeDirectionByMatrix` at `0x800ADBF8`.
+s1516 synchronized `loadBackdropAsset` at `0x800ADF74`.
 Resume the generated-symbol renaming sweep. Perform exactly one bounded
 exact-name census over the next adjacent generated function,
-`0x800ADF74..0x800AE518`. Do not build or run. Record its address, size,
+`0x800AE518..0x800AE878`. Do not build or run. Record its address, size,
 generated definition, companion name/source, caller or semantic evidence,
 and confidence before editing. Synchronize only an exact independent name
 in `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
@@ -28,19 +28,17 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `loadBackdropAsset`; the
-companion cinematic list maps `loadBackdropAsset = 0x800ADF74`
-(comment: 5 callers, loads `"backdrop/<name>"`). TOML is still
-`func_800ADF74` (size `0x5A4`, ends at independently named
-`initCinematicSceneAssets` / TOML `func_800AE518` at `0x800AE518`).
-Overlay `rom_size` is `0x5A4` at offset `0x00008E44`. Confirm the
-complete live function, matching size, and caller/semantic evidence
-before synchronizing the TOML name. Mission-overlay
-`updateCinematicCameraStateMachine` / TOML `func_800AD418` at
-`0x800AD418` (size `0x944`, ends `0x800ADD5C`) and menu-overlay
-`hangarTickCameraOrbit` at `0x800ADB70` (overlay `rom_size` `0x518`,
-ends `0x800AE088`) occupy overlapping VRAM and are different overlays,
-not cinematic size splits.
+generated entry at this address is already `initCinematicSceneAssets`;
+the companion cinematic list maps `initCinematicSceneAssets = 0x800AE518`
+(comment: cinematic asset loader, mallocs, `registerHmtTextureInTable`;
+called by `cinematicInitializer`). TOML is still `func_800AE518`
+(size `0x360`, ends at independently named
+`dispatchCinematicFromMainLoop` / TOML `func_800AE878` at
+`0x800AE878`). Overlay `rom_size` is `0x360` at offset `0x000093E8`.
+Confirm the complete live function, matching size, and caller/semantic
+evidence before synchronizing the TOML name. Menu-overlay
+`hangarInitializeShipShadowHob` at `0x800AE088` occupies overlapping
+VRAM and is a different overlay, not a cinematic size split.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -63,7 +61,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800ADF74\|800AE518\|loadBackdropAsset' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800ADF74\|800AE518\|loadBackdropAsset' ../N64Recomp/RecompiledFuncs/funcs_28.c
-grep -n -C 3 '800ADF74\|800AE518' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AE518\|800AE878\|initCinematicSceneAssets' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AE518\|800AE878\|initCinematicSceneAssets' ../N64Recomp/RecompiledFuncs/funcs_28.c
+grep -n -C 3 '800AE518\|800AE878' syms/rogue_squadron.syms.toml
 ```

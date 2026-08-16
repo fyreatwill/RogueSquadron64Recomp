@@ -73250,3 +73250,41 @@ at `0x800ADF74` (TOML still `func_800ADF74`, size `0x5A4`; overlay
 `rom_size` is `0x5A4` at offset `0x00008E44`; live body ends at
 independently named `initCinematicSceneAssets` / TOML `func_800AE518`
 at `0x800AE518`).
+
+## Session 1516 (2026-08-15) — synchronized the load-backdrop-asset symbol
+
+Performed the bounded exact-name census over `0x800ADF74..0x800AE518`.
+
+No new soak-queue verdicts since s1515; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800ADF74`, size `0x5A4`; `0x800ADF74+0x5A4=0x800AE518`. Overlay `.ovl.cinematic` entry `rom_size` is `0x5A4` at offset `0x00008E44` (`0x800ADF74-0x800A5130`). Live body is independently `0x5A4` and meets independently named `initCinematicSceneAssets` / TOML `func_800AE518` at `0x800AE518` |
+| Generated definition | `funcs_28.c` defines `loadBackdropAsset` at `0x800ADF74`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x00008E44`, `rom_size 0x000005A4`). The live cinematic body is a complete `0x5A4` function. It starts `addiu $sp, $sp, -0xE0` and ends at the sole live `jr $ra` / `addiu $sp, $sp, 0xE0` (`0x800AE510`/`0x800AE514`) followed by `return`. Next generated cinematic function is independently named `initCinematicSceneAssets`. Menu-overlay `hangarTickCameraOrbit` at `0x800ADB70` (overlay offset `0x00008A40`, `rom_size` `0x518`, ends `0x800AE088`) and the following generated `hangarInitializeShipShadowHob` at `0x800AE088` occupy overlapping VRAM from `.ovl.menu` and are not splits of this body. Mission-overlay `updateCinematicCameraStateMachine` / TOML `func_800AD418` at `0x800AD418` (size `0x944`) ends at `0x800ADD5C` and does not reach this address |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `loadBackdropAsset = 0x800ADF74` (comment: 5 callers, loads `"backdrop/<name>"`). Menu, mission, main, libultra, and zlib lists do not remap `0x800ADF74`. `undefined_funcs_auto.txt` has no leftover `func_800ADF74` row. The only companion-tree hit is that cinematic list row. No companion C/asm body exists |
+| Caller evidence | Four retail `jal` encodings `0x0C02B7DD` and zero `j` or absolute `0x800ADF74` pointer words (companion comment says 5 callers; the ROM has exactly these four `jal` sites). All four sites are independently named `setupCutsceneLevel`: `0x800A6DF8` (cinematic-file `0x139248`; delay `0xA0400002` = `sb $zero, 0x2($v0)`), `0x800A6EB8` (file `0x139308`; delay `0xA0430002` = `sb $v1, 0x2($v0)`), `0x800A6ED4` (file `0x139324`; delay `0xAE020B04` = `sw $v0, 0xB04($s0)`), and `0x800A6EF4` (file `0x139344`; delay `0xAE220B08` = `sw $v0, 0xB08($s1)`). Same-run ROM words at those file offsets are `0x0C02B7DD`. The generated callers are the matching `funcs_27.c` `jal 0x800ADF74` sites that already dispatch through the named function. Arguments: (1) `$a0=0x800A51E8` `"big_cor"`, `$a1=0x40`, `$a2=0x20`, `$a3=0` (`lui $a0, 0x800A` / `addiu $a0, $a0, 0x51E8` / `addiu $a1, $zero, 0x40` / `addiu $a2, $zero, 0x20` / `addu $a3, $zero, $zero` at `0x800A6DD4`/`0x800A6DD8`/`0x800A6DDC`/`0x800A6DE0`/`0x800A6DE4`; file `0x139224`/`0x139228`/`0x13922C`/`0x139230`/`0x139234` = `0x3C04800A`/`0x248451E8`/`0x24050040`/`0x24060020`/`0x00003821`); (2) `$a0=0x800A5224` `"nin"`, `$a1=0x40`, `$a2=0x40`, `$a3=0` (`addiu $a0, $a0, 0x5224` / `addiu $a1, $zero, 0x40` / `addu $a2, $a1, $zero` / `addu $a3, $zero, $zero` at `0x800A6E94`/`0x800A6E98`/`0x800A6E9C`/`0x800A6EA0`; file `0x1392E4`/`0x1392E8`/`0x1392EC`/`0x1392F0` = `0x24845224`/`0x24050040`/`0x00A03021`/`0x00003821`); (3) `$a0=0x800A5228` `"f5"`, `$a1=0x40`, `$a2=0x20`, `$a3=0` (`addiu $a0, $a0, 0x5228` at `0x800A6EC4`; file `0x139314` = `0x24845228`); (4) `$a0=0x800A522C` `"factor"`, `$a1=0x80`, `$a2=0x20`, `$a3=1` (`addiu $a0, $a0, 0x522C` / `addiu $a1, $zero, 0x80` / `addiu $a2, $zero, 0x20` / `addiu $a3, $zero, 0x1` at `0x800A6EE0`/`0x800A6EE4`/`0x800A6EE8`/`0x800A6EEC`; file `0x139330`/`0x139334`/`0x139338`/`0x13933C` = `0x2484522C`/`0x24050080`/`0x24060020`/`0x24070001`). Companion `setupCutsceneLevel` is independently the cinematic level-setup routine |
+| Semantic evidence | Retail ROM words at file `0x1403C4` (`0x137580+(0x800ADF74-0x800A5130)`) are `0x27BDFF20` (`addiu $sp, $sp, -0xE0`). The body saves `$a0`/`$a1`/`$a2`/`$a3` in `$s1`/`$s2`/`$s3`/`$s5`, calls independently named `rs_malloc` (`jal 0x80001ACC` at `0x800ADFAC`; file `0x1403FC` = `0x0C0006B3`) with `(0x38, 0x10)`, then `rs_memset` of `0x38` bytes. It then `sprintf`s `sp+0x20` with the format at `0x800A5B60` and the saved name (`lui $a1, 0x800A` / `addiu $a1, $a1, 0x5B60` / `jal 0x80033CC4` / `addu $a2, $s1, $zero` at `0x800ADFD0`/`0x800ADFD4`/`0x800ADFD8`/`0x800ADFDC`; file `0x140420`/`0x140424`/`0x140428`/`0x14042C` = `0x3C05800A`/`0x24A55B60`/`0x0C00CF31`/`0x02203021`) and calls independently named `load_asset` (`jal 0x8006488C` at `0x800ADFE0`; file `0x140430` = `0x0C019223`). Same-run bytes at file `0x137FB0` (`0x800A5B60`) are `backdrop/%s`. Later `sprintf`s use `"%03ld"` at `0x800A5B7C` (file `0x137FCC`) and the body calls independently named `registerHmtTextureInTable` (`jal 0x80022B90` at `0x800AE42C`). Epilogue file `0x140960`/`0x140964` is `0x03E00008` / `0x27BD00E0`. Next start file `0x140968` is `0x27BDFF78` (`initCinematicSceneAssets` `addiu $sp, $sp, -0x88`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x1403C4` is `0x27BDFF20`, the four caller `jal` words above are `0x0C02B7DD`, and the s1515/s1514/s1513/s1511 controls still read `0x27BDFF80` at `0x140048`, `0x27BDFFB0` at `0x13FAE0`, `0x03E00008` at `0x140040`, and `0x27BDFFC0` at `0x13F674` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800ADF74`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x5A4`, the four ROM `jal` callers are independently named
+`setupCutsceneLevel` passing `"big_cor"` / `"nin"` / `"f5"` / `"factor"`,
+and `sprintf("backdrop/%s", name)` plus `load_asset` matches the companion
+name. The stale address-encoded TOML entry was synchronized (name only;
+size left at `0x5A4`). `func_8009D978` remains the eight-byte Q15
+delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and `func_8008ED6C`.
+No build or runtime run was justified for an exact-name census. This does
+not reopen M5 audio de-stubbing. The next adjacent generated function is
+independently named `initCinematicSceneAssets` at `0x800AE518` (TOML
+still `func_800AE518`, size `0x360`; overlay `rom_size` is `0x360` at
+offset `0x000093E8`; live body ends at independently named
+`dispatchCinematicFromMainLoop` / TOML `func_800AE878` at `0x800AE878`).

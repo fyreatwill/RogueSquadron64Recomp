@@ -2650,7 +2650,7 @@ functions = [
     { name = "computeCutsceneScreenScale", vram = 0x800AD224, size = 0x46C },
     { name = "tickCutsceneCameraFromTimeline", vram = 0x800AD690, size = 0x568 },
     { name = "transformAndNormalizeDirectionByMatrix", vram = 0x800ADBF8, size = 0x37C },
-    { name = "func_800ADF74", vram = 0x800ADF74, size = 0x5A4 },
+    { name = "loadBackdropAsset", vram = 0x800ADF74, size = 0x5A4 },
     { name = "func_800AE518", vram = 0x800AE518, size = 0x360 },
     { name = "func_800AE878", vram = 0x800AE878, size = 0xB0 },
     { name = "func_800AE928", vram = 0x800AE928, size = 0x64 },
