@@ -79677,3 +79677,39 @@ and section-4 row are all present. No TOML or generated-name change.
 Next census: `npcInitWithMotionParams` at `0x800D2CA0` (size `0x240`).
 Last-15 titles still include s1698's retail-entry revisit, so the next
 iteration continues the sweep.
+
+## Session 1705 (2026-08-16) — synchronized the npcInitWithMotionParams symbol
+
+Exact generated-symbol census for `0x800D2CA0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 46256; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcInitWithMotionParams = 0x800D2CA0` with comment "NPC init: setNpcHealth+initActorMotionParams+anim+detail". Previous contiguous neighbor `fake_func_800D2C98 = 0x800D2C98` (explicit 8-byte leftover trampoline); next contiguous neighbor `npcTickEffectChannelA = 0x800D2EE0`. Companion s432 deleted a colliding `func_800D2CA0` placeholder as a duplicate of this name |
+| Generated `funcs_37.c` | `RECOMP_FUNC void npcInitWithMotionParams` at VRAM `0x800D2CA0`; prologue `addiu $sp, $sp, -0x38`; returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800D2EDC`; previous mission function is `fake_func_800D2C98` at `0x800D2C98` (last insn `0x800D2C9C`); next mission function is `npcTickEffectChannelA` at `0x800D2EE0`. `funcs.h` already declares the human name |
+| Body semantics | Object at `a0`; `s1 = *(a0+4)`; template `s0 = *(s1+0x34)`. Zeros halfwords `s1+0x5C`/`s1+0x5E`. `setNpcHealth` at `0x800F2070` (`a1=s0+0x6C`, `a2=s0`). `setObjectDetailLevel` at `0x800F2830` (`a0=*(s1+0x38)`, `a1=*(template+0xBC)`). Byte `s1+0xC5` 0/1/2 selects three motion+anim paths; each calls `initActorMotionParams` (`0x800F2888`) with `*(0x80137CE4)*4+s0` template slots, then `initObjectAnimSubstruct` (`0x800F2B88`) with callback `0x800D2EE0` (`npcTickEffectChannelA`), `0x800D307C` (`npcTickEffectChannelB`), or a second `initObjectAnimSubstruct` with callback `0x800D3240` (`npcTickEffectChannelWithSlotDispatch`). The only generated call is the `fake_func_800D2C98` tail-call trampoline. Name matches NPC init with motion/anim/detail |
+| TOML (before) | `{ name = "func_800D2CA0", vram = 0x800D2CA0, size = 0x240 }` — size matches `0x800D2EE0 - 0x800D2CA0` (last insn `0x800D2EDC` + 4 = `0x240`) |
+| Overlay section 4 | `{ .func = npcInitWithMotionParams, .offset = 0x0002DB70, .rom_size = 0x00000240 }` under `section_4_ovl_mission_funcs` (`0x800D2CA0 - 0x800A5130 = 0x2DB70`; `0x2DB68 + 0x8 = 0x2DB70`; `0x2DB70 + 0x240 = 0x2DDB0` matches next `npcTickEffectChannelA`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D2CA0`. Companion menu grep is empty for this address, this name, and the entire `0x800D2xxx` window. Companion and generated greps found no other `func_800D2CA0` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated NPC-init-with-motion-params body,
+previous (`fake_func_800D2C98` / `0x800D2C98`) and next
+(`npcTickEffectChannelA` / `0x800D2EE0`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcInitWithMotionParams`, and only the TOML name was a stale `func_800D2CA0`
+placeholder. Corrected TOML to `npcInitWithMotionParams`. This refutes H1
+(TOML was not already synchronized), H3 (no fake fragment, overlay
+collision, or size/boundary disagreement), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Next census: `npcTickEffectChannelA` at `0x800D2EE0` (size `0x19C`).
+Last-15 titles still include s1698's retail-entry revisit, so the next
+iteration continues the sweep.
