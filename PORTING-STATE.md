@@ -73053,3 +73053,43 @@ function is independently named `processCutsceneActions` at
 `rom_size` is `0x398` at offset `0x00007D5C`; live body ends at
 independently named `computeCutsceneScreenScale` / TOML `func_800AD224`
 at `0x800AD224`).
+
+## Session 1511 (2026-08-15) — synchronized the process-cutscene-actions symbol
+
+Performed the bounded exact-name census over `0x800ACE8C..0x800AD224`.
+
+No new soak-queue verdicts since s1510; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1496 (Rice-oracle revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800ACE8C`, size `0x398`; `0x800ACE8C+0x398=0x800AD224`. Overlay `.ovl.cinematic` entry `rom_size` is `0x398` at offset `0x00007D5C` (`0x800ACE8C-0x800A5130`). Live body is independently `0x398` and meets independently named `computeCutsceneScreenScale` / TOML `func_800AD224` at `0x800AD224` |
+| Generated definition | `funcs_28.c` defines `processCutsceneActions` at `0x800ACE8C`; `funcs.h` and `recomp_overlays.inl` already use that name. The live cinematic body is a complete `0x398` function. It starts `lhu $v0, 0x4E($a0)` / `beq $v0, $zero, L_800AD21C` and ends at the sole `jr $ra` / `nop` (`0x800AD21C`/`0x800AD220`). Next generated cinematic function is independently named `computeCutsceneScreenScale`. Mission-overlay `playerSnowSpeederUpdate` at `0x800ACD9C` (TOML size `0x584`, ends `0x800AD320`) and `triggerPlayerVehicleSpecialSlotEffect` / TOML `func_800AD320` at `0x800AD320` (overlay offset `0x000081F0`, `rom_size` `0x58`) occupy overlapping VRAM from `.ovl.mission` and are not splits of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `processCutsceneActions = 0x800ACE8C` in the cinematic splat list. Menu, mission, main, libultra, and zlib lists do not remap `0x800ACE8C`. `undefined_funcs_auto.txt` has no leftover `func_800ACE8C` row. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02B3A3` and zero `j` or absolute `0x800ACE8C` pointer words. The site is independently named `load_cutscene` at `0x800A669C` (cinematic-file `0x138AEC`; delay `0x02602021` = `addu $a0, $s3, $zero`). Same-run ROM word at that file offset is `0x0C02B3A3`. The generated caller is the matching `jal 0x800ACE8C` site that already dispatches through the named function. Companion `load_cutscene` is independently the cutscene loader |
+| Semantic evidence | Retail ROM words at file `0x13F2DC` (`0x137580+(0x800ACE8C-0x800A5130)`) are `0x9482004E` / `0x104000E2` (`lhu $v0, 0x4E($a0)` / `beq $v0, $zero, L_800AD21C`). The body iterates `cuts_file.unk0058` entries (`lw $v1, 0x58($a3)` at `0x800ACEBC`; file `0x13F30C` = `0x8CE30058`) with active count at +0x4E, stride `0x18` (`addiu $a3, $a3, 0x18` at `0x800ACF28`; file `0x13F378` = `0x24E70018`). For `sub_type==0x15` it copies the +0x62 halfword (`addiu $v0, $zero, 0x15` / `lhu $v0, 0x62($a3)` at `0x800ACEC0`/`0x800ACECC`; file `0x13F310`/`0x13F31C` = `0x24020015`/`0x94E20062`). The per-entry gate is `MEM[0x80130B38]` then `MEM[0x800B0B1E]` (`lbu $v0, 0xB38($v0)` / `lbu $v0, 0xB1E($v0)` at `0x800ACED8`/`0x800ACEE4`; file `0x13F328`/`0x13F334` = `0x90420B38`/`0x90420B1E`). Epilogue file `0x13F66C` is `0x03E00008` / `0x00000000`. Next start file `0x13F674` is `0x27BDFFC0` (`computeCutsceneScreenScale` `addiu $sp, $sp, -0x40`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x13F2DC` is `0x9482004E`, the caller `jal` word above is `0x0C02B3A3`, and the s1510/s1509/s1508/s1507/s1506/s1505 controls still read `0x27BDFF30` at `0x13EBAC`, `0x27BDFFD8` at `0x13E9C4`, `0x27BDFF00` at `0x13E15C`, `0x27BDFEB0` at `0x13D0D8`, `0x3C02800B` at `0x13CCA0`, and `0x27BDFFA8` at `0x13CAA8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800ACE8C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x398`, the one ROM `jal` caller is independently named
+`load_cutscene` passing the cuts-file pointer in `$a0`, and the
+`+0x4E` count / `unk0058` walk / `sub_type==0x15` halfword store /
+`0x80130B38`+`0x800B0B1E` gate match the companion name. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x398`). `func_8009D978` remains the eight-byte Q15 delay-mix table
+and was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not
+reopen M5 audio de-stubbing. The next adjacent generated function is
+independently named `computeCutsceneScreenScale` at `0x800AD224`
+(TOML still `func_800AD224`, size `0x46C`; overlay `rom_size` is
+`0x46C` at offset `0x000080F4`; live body ends at independently named
+`tickCutsceneCameraFromTimeline` / TOML `func_800AD690` at
+`0x800AD690`).

@@ -2646,7 +2646,7 @@ functions = [
     { name = "npcIncomingMissileUpdate", vram = 0x800ABD0C, size = 0x868 },
     { name = "buildCutsceneGradientBuffers", vram = 0x800AC574, size = 0x1E8 },
     { name = "spawnNpcBurstAlongSegment", vram = 0x800AC75C, size = 0x730 },
-    { name = "func_800ACE8C", vram = 0x800ACE8C, size = 0x398 },
+    { name = "processCutsceneActions", vram = 0x800ACE8C, size = 0x398 },
     { name = "func_800AD224", vram = 0x800AD224, size = 0x46C },
     { name = "func_800AD690", vram = 0x800AD690, size = 0x568 },
     { name = "func_800ADBF8", vram = 0x800ADBF8, size = 0x37C },
