@@ -1,11 +1,11 @@
-# NEXT work unit (s1565)
+# NEXT work unit (s1566)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1564 synchronized `setPlayerSlotPositionVec3` at `0x800B40F0`.
+s1565 synchronized `destroySceneNpcsAndUnlink` at `0x800B4134`.
 Resume the generated-symbol renaming sweep. Perform exactly one
 bounded exact-name census over the next adjacent generated function,
-`0x800B4134..0x800B41BC`.
+`0x800B41BC..0x800B41EC`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -31,26 +31,26 @@ table, not a function), `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function), and
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler). The generated entry at this address
-is already `destroySceneNpcsAndUnlink`; the companion
-mission list maps `destroySceneNpcsAndUnlink = 0x800B4134`
-with comment "(scene) — 9 callers, scene cleanup". TOML is still
-`func_800B4134` (size `0x88`, ends at generated
-`decayWeaponCooldownTimer` / TOML `func_800B41BC` at
-`0x800B41BC`). Overlay `rom_size` is `0x88` at offset
-`0x0000F004`. Confirm the complete live function, matching size,
-and caller/semantic evidence before synchronizing the TOML name.
-Independently named `setPlayerSlotPositionVec3` at `0x800B40F0`
-(`rom_size` `0x44`) ends at this address. Last live instruction
-pair is `0x800B41B4`/`0x800B41B8` (`jr $ra` / `addiu $sp, $sp, 0x20`).
-The body starts `addiu $sp, $sp, -0x20`, saves `$s0`/`$ra`/`$s1`,
-copies `$a0` to `$s0`, and loads the NPC slot-chain head at
-`scene+0x1CC` against `0xFFFF`. Menu-overlay
-`updateTextOverlayLookupEntry` at `0x800B4048` occupies overlapping
-VRAM from `.ovl.menu` through the first `0x34` bytes of this body
-(`rom_size` `0x120`, ends `0x800B4168`). Menu-overlay
-`accumulateShipThrottleCharge` at `0x800B4168` (`rom_size` `0xBC`)
-starts mid-body. Neither is a mission size split. This naming
-census does not reopen closed M5 audio de-stubbing.
+is already `decayWeaponCooldownTimer`; the companion
+mission list maps `decayWeaponCooldownTimer = 0x800B41BC`
+with no extra comment. TOML is still `func_800B41BC` (size
+`0x30`, ends at generated `getWeaponChargeLevel` / TOML
+`func_800B41EC` at `0x800B41EC`). Overlay `rom_size` is `0x30`
+at offset `0x0000F08C`. Confirm the complete live function,
+matching size, and caller/semantic evidence before synchronizing
+the TOML name. Independently named `destroySceneNpcsAndUnlink`
+at `0x800B4134` (`rom_size` `0x88`) ends at this address. Last
+live instruction pair is `0x800B41E4`/`0x800B41E8` (`jr $ra` /
+`nop`). The body starts `lui $v0, 0x8011`, loads a float timer
+at `0x801096B0` (`lwc1 $f2, -0x6950($v0)`), compares it against
+zero, and when positive subtracts `$a1` and stores the result
+back. Menu-overlay `accumulateShipThrottleCharge` at
+`0x800B4168` occupies overlapping VRAM from `.ovl.menu` through
+this entire body (`rom_size` `0xBC`, ends `0x800B4224`).
+Menu-overlay `computeThrottleChargeFraction` at `0x800B4224`
+(`rom_size` `0x40`) starts after this body. Neither is a
+mission size split. This naming census does not reopen closed
+M5 audio de-stubbing.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -76,7 +76,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800B4134\|800B41BC\|destroySceneNpcsAndUnlink' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B4134\|800B41BC\|destroySceneNpcsAndUnlink' ../N64Recomp/RecompiledFuncs/funcs_30.c
-grep -n -C 3 '800B4134\|800B41BC' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B41BC\|800B41EC\|decayWeaponCooldownTimer' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B41BC\|800B41EC\|decayWeaponCooldownTimer' ../N64Recomp/RecompiledFuncs/funcs_30.c
+grep -n -C 3 '800B41BC\|800B41EC' syms/rogue_squadron.syms.toml
 ```

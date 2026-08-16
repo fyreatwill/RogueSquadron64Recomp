@@ -1612,7 +1612,7 @@ functions = [
     { name = "playSpeechClipOncePerLevel", vram = 0x800B3FB4, size = 0xEC },
     { name = "resetSpeechOncePerLevelFlag", vram = 0x800B40A0, size = 0x50 },
     { name = "setPlayerSlotPositionVec3", vram = 0x800B40F0, size = 0x44 },
-    { name = "func_800B4134", vram = 0x800B4134, size = 0x88 },
+    { name = "destroySceneNpcsAndUnlink", vram = 0x800B4134, size = 0x88 },
     { name = "func_800B41BC", vram = 0x800B41BC, size = 0x30 },
     { name = "func_800B41EC", vram = 0x800B41EC, size = 0x10 },
     { name = "func_800B41FC", vram = 0x800B41FC, size = 0xC0 },

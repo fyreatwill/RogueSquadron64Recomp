@@ -75401,3 +75401,51 @@ offset `0x0000F004`; live body ends at generated
 `decayWeaponCooldownTimer` / TOML `func_800B41BC` at
 `0x800B41BC`). Independently named `setPlayerSlotPositionVec3` at
 `0x800B40F0` (`rom_size` `0x44`) ends at `0x800B4134`.
+
+## Session 1565 (2026-08-16) — synchronized the destroy-scene-npcs-and-unlink symbol
+
+Performed the bounded exact-name census over `0x800B4134..0x800B41BC`.
+
+No new soak-queue verdicts since s1564; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1553 (maintenance compaction),
+so the every-15-sessions sweep-revisit rule did not fire. CURRENT-TRUTH is
+17,552 bytes at session start, so Step 0 did not trigger a maintenance
+iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B4134`, size `0x88`; `0x800B4134+0x88=0x800B41BC`. Overlay `.ovl.mission` entry `rom_size` is `0x88` at offset `0x0000F004` (`0x800B4134-0x800A5130`). Live body is independently `0x88` and meets generated `decayWeaponCooldownTimer` at `0x800B41BC` |
+| Generated definition | `funcs_30.c` defines `destroySceneNpcsAndUnlink` at `0x800B4134`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000F004`, `rom_size 0x00000088`). The live mission body is a complete `0x88` function: `addiu $sp, $sp, -0x20`, saves `$s0`/`$ra`/`$s1`, copies `$a0` to `$s0`, then `lhu $v1, 0x1CC($s0)` against `ori $v0, $zero, 0xFFFF`. If the NPC slot-chain head is not `0xFFFF`, it loops `getNextSlotNpcTypeId` / `destroyNpcSlotByIndex` until type `0xFFFF`, then `destroyNpcSlotChain` and `sh $s1, 0x1CC($s0)`. If `scene+0x24C` is nonzero it clears that byte and `jal factor5RemoveListNode` with `addiu $a0, $s0, 0x208`. Last live instruction pair is `0x800B41B4`/`0x800B41B8` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next generated mission entry is already `decayWeaponCooldownTimer` at `0x800B41BC`. Independently named `setPlayerSlotPositionVec3` at `0x800B40F0` (`rom_size` `0x44`) ends at this address. Menu-overlay `updateTextOverlayLookupEntry` at `0x800B4048` (`rom_size` `0x120`, ends `0x800B4168`) occupies overlapping VRAM from `.ovl.menu` through the first `0x34` bytes of this body; menu-overlay `accumulateShipThrottleCharge` at `0x800B4168` (`rom_size` `0xBC`) starts mid-body. Neither is a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `destroySceneNpcsAndUnlink = 0x800B4134` with comment "(scene) — 9 callers, scene cleanup" and the same `scene+0x1CC` / `getNextSlotNpcTypeId` / `destroyNpcSlotByIndex` / `destroyNpcSlotChain` / `scene+0x24C` / `factor5RemoveListNode(scene+0x208)` sequence. The same mission list independently names the adjacent functions `setPlayerSlotPositionVec3` at `0x800B40F0` and `decayWeaponCooldownTimer` at `0x800B41BC`. Companion `docs/mips_to_c/ctx.c` has no prototype and no competing independent name. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B4134`. Menu lists `updateTextOverlayLookupEntry = 0x800B4048` and `accumulateShipThrottleCharge = 0x800B4168` as the overlapping `.ovl.menu` occupants. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B4134` alias |
+| Caller evidence | 9 retail `jal` encodings `0x0C02D04D` at files `0xADD5C` (`0x800AD15C`), `0xB62D0` (`0x800B56D0`), `0xB7FFC` (`0x800B73FC`), `0xB933C` (`0x800B873C`), `0xBAE1C` (`0x800BA21C`), `0xBC6C4` (`0x800BBAC4`), `0xBD6A4` (`0x800BCAA4`), `0xBE3CC` (`0x800BD7CC`), `0xBF668` (`0x800BEA68`); zero `j` encodings and zero absolute `0x800B4134` pointer words. The generated sites are nine direct `destroySceneNpcsAndUnlink` calls (intra-overlay; zero `LOOKUP_FUNC(0x800B4134)`). Independently named owners, all mission-overlay `player*Update`: `playerSnowSpeederUpdate` at `0x800ACD9C`, `playerXwingUpdate` at `0x800B5434`, `playerAwingUpdate` at `0x800B7168`, `playerYwingUpdate` at `0x800B8488`, `playerVwingUpdate` at `0x800B9F4C`, `playerFalconUpdate` at `0x800BB830`, `playerTieInterceptorUpdate` at `0x800BC810`, `playerT16Update` at `0x800BD530`, `playerNabooStarfighterUpdate` at `0x800BE7D0`. Every delay slot is `addu $a0, $s1, $zero` (scene pointer). The tenth independently named `playerAtStUpdate` at `0x800D2208` is not among the nine `jal` sites. Overlapping menu-overlay generated wrappers occupy the same VRAM and are not extra mission callers. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B4D34` (`0x0A5D30+(0x800B4134-0x800A5130)`) are `0x27BDFFE0` (`addiu $sp, $sp, -0x20`), `0xAFB00010` (`sw $s0, 0x10($sp)`), `0x00808021` (`addu $s0, $a0, $zero`), `0xAFBF0018` (`sw $ra, 0x18($sp)`). Mid-body file `0x0B4D48`/`0x0B4D4C` is `0x960301CC`/`0x3402FFFF` (`lhu $v1, 0x1CC($s0)` / `ori $v0, $zero, 0xFFFF`). File `0x0B4D5C` is `0x0C010086` (`jal getNextSlotNpcTypeId` at `0x80040218`); `0x0B4D70` is `0x0C00FB5D` (`jal destroyNpcSlotByIndex` at `0x8003ED74`); `0x0B4D84` is `0x0C00FC32` (`jal destroyNpcSlotChain` at `0x8003F0C8`); `0x0B4D8C`/`0x0B4D90` are `0xA61101CC`/`0x9202024C` (`sh $s1, 0x1CC($s0)` / `lbu $v0, 0x24C($s0)`); `0x0B4DA0`/`0x0B4DA4` are `0x0C026378`/`0x26040208` (`jal factor5RemoveListNode` at `0x80098DE0` / `addiu $a0, $s0, 0x208`). Last pair file `0x0B4DB4`/`0x0B4DB8` is `0x03E00008`/`0x27BD0020` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next start file `0x0B4DBC` is `0x3C028011` (`lui $v0, 0x8011`, `decayWeaponCooldownTimer` prologue). Preceding epilogue file `0x0B4D2C`/`0x0B4D30` is `0x03E00008`/`0x00000000` (`setPlayerSlotPositionVec3` `jr $ra` / `nop`). Menu occupant at the same VRAM (file `0x11B2D4`) is `0x24060001` (`addiu $a2, $zero, 0x1`, interior of `updateTextOverlayLookupEntry`); that function's own start at file `0x11B1E8` is `0x00A04021` (`addu $t0, $a1, $zero`). Menu `accumulateShipThrottleCharge` start at file `0x11B308` is `0x3C02800D`. Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B4134` is past that occupant. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28`, s1556 start file `0x0B42FC` is still `0x3C078011`, s1557 start file `0x0B43C0` is still `0x27BDFFE0`, s1558 start file `0x0B4610` is still `0x3C028014`, s1559 start file `0x0B4A4C` is still `0x3C028013`, s1560 start file `0x0B4B0C` is still `0x27BDFFE0`, s1561 start file `0x0B4B50` is still `0x27BDFFE0`, s1562 start file `0x0B4BB4` is still `0x27BDFFE8`, s1563 start file `0x0B4CA0` is still `0x2402028C`, s1564 start file `0x0B4CF0` is still `0x3C038013` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B4134`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x88`, the nine ROM `jal` callers sit inside independently named
+mission-overlay `player*Update` functions and each pass the scene
+pointer in `$a0`, the body walks the independently named NPC
+slot-chain helpers and unlinks `scene+0x208`, the overlapping menu
+occupants are a different overlay, and there is neither a conflicting
+companion name nor a mission size split. H2 and H3 are ruled out for
+this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x88`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`decayWeaponCooldownTimer` at `0x800B41BC` (TOML still
+`func_800B41BC`, size `0x30`; overlay `rom_size` is `0x30` at
+offset `0x0000F08C`; live body ends at generated
+`getWeaponChargeLevel` / TOML `func_800B41EC` at
+`0x800B41EC`). Independently named `destroySceneNpcsAndUnlink` at
+`0x800B4134` (`rom_size` `0x88`) ends at `0x800B41BC`.
