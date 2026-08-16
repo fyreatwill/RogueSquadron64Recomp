@@ -76300,3 +76300,33 @@ generated function body, and caller. Updated only the TOML placeholder to
 `spawnFalconEngineParticles`; no mitigation, build, or runtime change was
 made. The next bounded candidate is `func_800BBC58`, independently named
 `integrateFalconFlightPhysics`, with size `0xD8`.
+
+## Session 1593 (2026-08-16) — synchronized the integrateFalconFlightPhysics symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only older verdicts already represented in the ledger. The
+mandatory 15-title check showed that the recent history was not entirely
+symbol-sweep work because s1585 was the required retail-entry revisit, so this
+iteration continued the bounded generated-symbol sweep. No build or runtime
+run was needed.
+
+The work unit censused `0x800BBC58..0x800BBD30` using the companion mission
+symbol list, generated definition and boundary, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `integrateFalconFlightPhysics = 0x800BBC58`; `playerTieInterceptorInit = 0x800BBD30` is the next companion boundary. |
+| Generated definition and semantics | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `integrateFalconFlightPhysics` at `0x800BBC58`; its live body performs floating-point difference/absolute-difference checks and clamps/returns the selected value at `0x800BBD28`. |
+| Span and overlay table | The TOML placeholder had size `0xD8`; `recomp_overlays.inl` records `integrateFalconFlightPhysics` at offset `0x16B28` with ROM size `0xD8`, followed by `playerTieInterceptorInit` at `0x800BBD30`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and exact next-function boundary. Updated only the
+TOML placeholder to `integrateFalconFlightPhysics`; no mitigation, build, or
+runtime change was made. The next bounded candidate is `func_800BBF6C`,
+independently named `computeTieInterceptorTransform`, with size `0x324`.

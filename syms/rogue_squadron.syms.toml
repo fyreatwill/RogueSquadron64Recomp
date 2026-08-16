@@ -1651,7 +1651,7 @@ functions = [
     { name = "playerFalconMainUpdate", vram = 0x800BADCC, size = 0x83C },
     { name = "spawnFalconEngineParticles", vram = 0x800BB608, size = 0x228 },
     { name = "playerFalconUpdate", vram = 0x800BB830, size = 0x428 },
-    { name = "func_800BBC58", vram = 0x800BBC58, size = 0xD8 },
+    { name = "integrateFalconFlightPhysics", vram = 0x800BBC58, size = 0xD8 },
     { name = "playerTieInterceptorInit", vram = 0x800BBD30, size = 0x23C },
     { name = "func_800BBF6C", vram = 0x800BBF6C, size = 0x324 },
     { name = "func_800BC290", vram = 0x800BC290, size = 0x268 },
