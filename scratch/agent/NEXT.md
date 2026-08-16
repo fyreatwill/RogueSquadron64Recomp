@@ -1,13 +1,13 @@
-# NEXT work unit (s1531)
+# NEXT work unit (s1532)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1530 synchronized `initCutsceneSlotTable` at `0x800AEFC8`. Resume the
+s1531 synchronized `insertCutsceneSlot` at `0x800AEFF0`. Resume the
 generated-symbol renaming sweep. Perform exactly one bounded 10→exact-name
-census over the next adjacent generated function, `0x800AEFF0..0x800AF03C`.
+census over the next adjacent generated function, `0x800AF03C..0x800AF08C`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence before
-10→editing. Synchronize only an exact independent name in
+10→10→editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
 ambiguous entries unchanged. Leave `func_8008ED6C` unchanged
 (s1309 H2), `func_800927B0` unchanged (s1355 H3), `func_80092A54`
@@ -28,26 +28,28 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `insertCutsceneSlot`;
-the companion cinematic list maps `insertCutsceneSlot = 0x800AEFF0`
-(finds first slot in `MEM[0x800B0D00]` whose halfword[0]==0 and
-zmemcpy's `0x30` bytes from `$a0` into it). TOML is still
-`func_800AEFF0` (size `0x4C`, ends at independently named generated
-`lookupCutsceneIdMapping` / TOML `func_800AF03C` at `0x800AF03C`).
-Overlay `rom_size` is `0x4C` at offset `0x00009EC0`. Confirm the
-complete live function, matching size, and caller/semantic evidence
-before synchronizing the TOML name. Independently named
-`initCutsceneSlotTable` at `0x800AEFC8` (`rom_size` `0x28`) ends at
+generated entry at this address is already `lookupCutsceneIdMapping`;
+the companion cinematic list maps `lookupCutsceneIdMapping = 0x800AF03C`
+(`key:u16` linear search of the 94-entry `{u16 key, u16 value}` table
+at `MEM[0x800AF7B4]`; returns the value or `0xFFFF`). Companion also
+names `gCutsceneIdMappingTable = 0x800AF7B4` (size `0x178`). TOML is
+still `func_800AF03C` (size `0x50`, ends at independently named
+generated `destroyAllNpcsInSlotChain` / TOML `func_800AF08C` at
+`0x800AF08C`). Overlay `rom_size` is `0x50` at offset `0x00009F0C`.
+Confirm the complete live function, matching size, and caller/semantic
+evidence before synchronizing the TOML name. Independently named
+`insertCutsceneSlot` at `0x800AEFF0` (`rom_size` `0x4C`) ends at
 this address. Menu-overlay `initCraftSelectScreen` / TOML
 `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends
 `0x800AF3C0`) occupies overlapping VRAM and is a different overlay,
-not a cinematic size split. Mission-overlay
-`playCutsceneObjectImpactSound` / TOML `func_800AEF58` at
-`0x800AEF58` (size `0xF4`, ends `0x800AF04C`) likewise overlaps
-from `.ovl.mission`. Generated `playCutsceneObjectImpactSound`
-appears earlier in `funcs_29.c` only because that mission function
-shares the same VRAM window; the next cinematic function is
-`lookupCutsceneIdMapping`.
+not a cinematic size split. Mission-overlay `tickCutsceneObject` at
+`0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML
+`func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`)
+and likewise overlaps from `.ovl.mission`. Generated
+`tickCutsceneObject` appears after `lookupCutsceneIdMapping` in
+`funcs_29.c` only because that mission function shares the same
+VRAM window; the next cinematic function is
+`destroyAllNpcsInSlotChain`.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -71,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AEFF0\|800AF03C\|insertCutsceneSlot' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AEFF0\|800AF03C\|insertCutsceneSlot' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AEFF0\|800AF03C' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AF03C\|800AF08C\|lookupCutsceneIdMapping' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AF03C\|800AF08C\|lookupCutsceneIdMapping' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AF03C\|800AF08C' syms/rogue_squadron.syms.toml
 ```
