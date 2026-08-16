@@ -75588,3 +75588,58 @@ adjacent generated function is already `fake_func_800B42BC` at
 `advancePitchTowardTarget` at `0x800B41FC` (`rom_size` `0xC0`)
 ends at `0x800B42BC`. Independently named `playerXwingInit` at
 `0x800B42C0` (`rom_size` `0x2C8`) starts at the next word.
+
+## Session 1569 (2026-08-16) — identified leave-hangar 640 as runModelViewerLoop
+
+Mandatory revisit: the previous 15 session titles were all generated-symbol
+sweep "synchronized" entries. M5 is closed and M3 is parked. CURRENT-TRUTH
+is 17416 bytes at session start, so Step 0 did not trigger maintenance.
+No new soak-queue verdicts; the SOAK-RESULTS tail is unchanged from
+2026-08-14.
+
+This iteration re-attempted Next step 2 (which menu-overlay function
+runs at leave-hangar 640/`0x6a2900`) with a new angle. s1544 watched
+hangar-era *entry* PCs and overlay paths; it did not watch the
+`menuOverlayInit` switch callees that run after
+`runHangarMenuFromOverlay` returns. Generated `menuOverlayInit`
+(`funcs_34.c`) dispatches on halfword `MEM_H(0x800CFF50)`: case 0 is
+hangar; a nonzero hangar return plus `getPlanetAssetForLevel != 0xFF`
+stores selector 6 at `0x800C5AC8` and the next loop iteration calls
+`runModelViewerLoop`. Three concurrent Rice arms
+(`scratch/agent/s1569_oracle_640_handler/{hold,leave,leaveStart}/run.log`)
+carried whole-RDRAM write `0x0:0x800000` (`--hit-cap 50000`), selector
+write `0xCFF50:0xCFF52` (`--detail-watch 1`), and `--watch-pc` on every
+switch callee plus hangar-inner / teardown / case-6 internals.
+`--vi-trace`, `--vi-poll`, and `--pif-trace` ran on every arm.
+
+Same-run positive controls passed on every arm: whole-RDRAM 10000 /
+removal rc=0; `menuOverlayInit` 2 (2.1s, 17.0s); `runHangarMenuFromOverlay`
+1 at 53s; `tickCraftSelectScreen` ~390 through 52.5s; VI
+320→640→1024→512 hangar `0x006ab400`/`800` at 39.4s; 11 Start
+injections with matching PIF `7C4=0x10000000`. Last `loadOverlay` /
+menu path remains 17.0s; `cinematicLoopBody` only at boot 6.8s.
+
+| Arm | Extra after hangar | Phase after 39.4s | Hangar inner | After 63.7s |
+|---|---|---|---|---|
+| `hold` | eleven-Start only | stayed 512 through 99.8s | `runHangarSelectionFrame` 937, last 100.1s | 0 case-6 PCs |
+| `leave` | A at 58, 63 (`7C4=0x80000000`) | 512→640 at 64.5s origin `0x6a2900` | 263 hits, last 63.7s | `gracefulMenuShutdown` 63.8; selector write `pc=0x800c5ac8` 63.8; `getPlanetAssetForLevel` 63.8/64.3; `runModelViewerLoop`+`initModelViewer` 64.3; `loadJfifAsset` 64.6; `selectPostCrawlCraft`+`loadModelViewerModels` 65.5; `buildModelViewerTextPage` 65.7 |
+| `leaveStart` | A 58/63 + Start 75/80/85/90 | 640/`0x6a2900` through 99.8s | same as leave | same case-6 set; extra Starts on PIF; no new switch callee |
+
+Other switch cases after 64s are 0 on every arm (`drawRadarIcon`,
+`menuControllerInput`, `runMenuRandomBackdropScreen`,
+`runResultsTextScreenLoop`, `runMenuShipSelectScreen`,
+`runMenuModelViewerScreen`, `menuSubtype02Handler`).
+`getSecondaryWeaponForCraftLevel` at 54.8 fires on hold too (second
+caller in `funcs_28.c`) and is not a `menuOverlayInit` exit.
+
+This selects H1 against H2–H5. Two independent lines: generated
+case-0→set-6→case-6 dispatch, and Rice PC watches that fire only on
+leave after the 512→640 edge. 640/`0x6a2900` is `runModelViewerLoop`
+(planet / text-crawl viewer; the product LEVEL DESCRIPTION after
+AVAILABLE CRAFT). It is not a mission, not still-hangar, and not
+another switch case. Extra Start during the crawl does not exit it.
+No mitigation.
+
+ORIGIN: observational oracle A/B plus already-named `menuOverlayInit`
+switch and companion `getPlanetAssetForLevel` / `runModelViewerLoop`;
+no guest value was skipped, rewritten, or guarded.

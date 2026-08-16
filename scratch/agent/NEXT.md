@@ -1,11 +1,11 @@
-# NEXT work unit (s1569)
+# NEXT work unit (s1570)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1568 synchronized `advancePitchTowardTarget` at `0x800B41FC`.
-Resume the generated-symbol renaming sweep. Perform exactly one
-bounded exact-name census over the next adjacent generated function,
-`0x800B42BC..0x800B42C0`.
+s1569 identified leave-hangar 640/`0x6a2900` as `runModelViewerLoop`
+(menuOverlayInit case 6). Resume the generated-symbol renaming sweep.
+Perform exactly one bounded exact-name census over the next adjacent
+generated function, `0x800B42BC..0x800B42C0`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -46,10 +46,9 @@ naming census does not reopen closed M5 audio de-stubbing.
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
 with the eleven-Start schedule (s1496). Post-hangar extra A or extra
-Start reaches 640/`0x6a2900` (s1528). Dummy video stays at 320.
-Do not re-watch `0x688:0x710` (s1512 H2). s1544: 640 is resident
-menu-overlay, not mission/cinematic/hangar-tick; post-settle Start/B
-do not advance.
+Start reaches 640/`0x6a2900` (s1528). That 640 is `runModelViewerLoop`
+(s1569); extra Start during it does not exit. Dummy video stays at 320.
+Do not re-watch `0x688:0x710` (s1512 H2).
 
 Competing hypotheses and discriminator:
 

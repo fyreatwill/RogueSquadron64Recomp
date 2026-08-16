@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1568 (2026-08-16).
+the authority for session detail. Reviewed through s1569 (2026-08-16).
 
 ## Current state
 
@@ -40,15 +40,16 @@ the authority for session detail. Reviewed through s1568 (2026-08-16).
   phase is still menu-overlay (last `loadOverlay` is menu path
   `0x80000BA8` at 16.9s; mission path `0x80000B70` and `lv0`/`lv1`
   inits stay 0) and is not a cinematic reload (`cinematicLoopBody`
-  only at boot 6.9s). Watched hangar frontend PCs
-  (`tickCraftSelectScreen`, `handleLevelSelectStartConfirm`,
-  `printLevelSelectWeaponText`) run at 512/`0x6ab400` then stop at
-  `runHangarMenuFromOverlay` (53s); they do not resume after the
-  512→640 edge. Post-settle Start and B reach PIF but do not change
-  width, origin, or overlay. The 640 handler is some other
-  menu-overlay function; do not name it a mission or LEVEL DESCRIPTION
-  without a second independent line. Do not add target watches on a
-  dummy-video arm. Glide64MK2 stayed at 320 in s707.
+  only at boot 6.9s). s1569: the 640 handler is `menuOverlayInit`
+  case 6 `runModelViewerLoop` (`0x800C9BF0`) after hangar returns
+  nonzero and `getPlanetAssetForLevel` is not `0xFF`. Hold keeps
+  `runHangarSelectionFrame` through 100s at 512; leave A stops that
+  inner loop at 63.7s, then `gracefulMenuShutdown` / selector=6 /
+  `runModelViewerLoop`+`initModelViewer`+`buildModelViewerTextPage`+
+  `loadJfifAsset`. Extra Start during 640 does not exit it. This is
+  the planet / text-crawl viewer (the product LEVEL DESCRIPTION
+  after AVAILABLE CRAFT), not a mission. Do not add target watches
+  on a dummy-video arm. Glide64MK2 stayed at 320 in s707.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI submission.
   `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -71,7 +72,7 @@ the authority for session detail. Reviewed through s1568 (2026-08-16).
    `func_0x...` names remained when counted at s1487; no other stated
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
-   and M4 threads; s1544 was that revisit). One bounded exact-name census
+   and M4 threads; s1569 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
    sizes, and caller/semantic evidence. Per-session H1 syncs through s1568
@@ -123,20 +124,17 @@ the authority for session detail. Reviewed through s1568 (2026-08-16).
      gap-filler; generated `__builtin_trap()`; companion Fake Function
      Fixing; next ROM word `0x0C03A807` is a `jal`, not a prologue)
 
-2. Future oracle work on the 640/`0x6a2900` handler, a later mission
-   watch, or a new M4 RDRAM dest (a DMEM→RDRAM transfer that is not
-   `0xD60`) must use the Rice `--video` recipe above, not dummy video.
-   s1544 closed the "is 640 a mission / cinematic / hangar tick loop?"
-   table: menu overlay stays resident, mission and cinematic paths stay
-   quiet, and the hangar tick set stops at `runHangarMenuFromOverlay`.
-   The remaining 640 question is which menu-overlay function runs after
-   that return. Extra A or extra Start after the eleven-Start hangar
-   window still selects 640/`0x6a2900`; post-settle Start and B do not
-   leave it. Physical `0x130B10:0x130B58` is written at hangar and at
-   leave (`runHangarMenuFromOverlay` `0x800c68d0`). Pass whole-RDRAM,
-   PIF, and VI positive controls in the same run. Do not re-watch
-   `0x688:0x710`, do not re-audit dummy-video 320-only schedules, and
-   do not treat 640/`0x6a2900` as an outdoor mission.
+2. Future oracle work on leaving the 640 crawl into a mission, or a
+   new M4 RDRAM dest (a DMEM→RDRAM transfer that is not `0xD60`),
+   must use the Rice `--video` recipe above, not dummy video. s1544
+   closed mission/cinematic/hangar-tick identity; s1569 named the
+   handler `runModelViewerLoop` (two lines: generated case-6
+   dispatch plus Rice PC watches). Extra Start during 640 does not
+   exit the crawl. The remaining retail-entry question is which
+   input or timeout leaves case 6 into a mission overlay. Pass
+   whole-RDRAM, PIF, and VI positive controls in the same run. Do
+   not re-watch `0x688:0x710`, do not re-audit dummy-video 320-only
+   schedules, and do not treat 640/`0x6a2900` as an outdoor mission.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation; then write a new bounded plan before changing stubs.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator;
@@ -248,6 +246,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1566 | H1: synchronized `decayWeaponCooldownTimer` at `0x800B41BC` (size `0x30`). |
 | s1567 | H1: synchronized `getWeaponChargeLevel` at `0x800B41EC` (size `0x10`). |
 | s1568 | H1: synchronized `advancePitchTowardTarget` at `0x800B41FC` (size `0xC0`). |
+| s1569 | Rice 640-handler revisit: hold stays 512 with `runHangarSelectionFrame` through 100s; leave A stops that inner loop at 63.7s and enters `runModelViewerLoop` (case 6) at 64.3s with `initModelViewer` / `buildModelViewerTextPage` / `loadJfifAsset`. Selector write `0x800C5AC8` is the generated set-6 path. Extra Start during 640 does not exit. Not a mission. |
 
 ## Method and safety rules
 
