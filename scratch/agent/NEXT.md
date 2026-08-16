@@ -1,10 +1,10 @@
-# NEXT work unit (s1539)
+# NEXT work unit (s1540)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1538 synchronized `matchKeywordWithPriority` at `0x800AF2C8`. Resume
+s1539 synchronized `cinematicComputeDt` at `0x800AF360`. Resume
 the generated-symbol renaming sweep. Perform exactly one bounded exact-name
-census over the next adjacent generated function, `0x800AF360..0x800AF408`.
+census over the next adjacent generated function, `0x800AF408..0x800AF540`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence before
 editing. Synchronize only an exact independent name in
@@ -28,24 +28,24 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `cinematicComputeDt`;
-the companion cinematic list maps `cinematicComputeDt = 0x800AF360`
-(comment: per-frame delta-time computer). TOML is still
-`func_800AF360` (size `0xA8`, ends at independently named generated
-`cinematicInitializer` / TOML `func_800AF408` at `0x800AF408`).
-Overlay `rom_size` is `0xA8` at offset `0x0000A230`. Confirm the
+generated entry at this address is already `cinematicInitializer`;
+the companion cinematic list maps `cinematicInitializer = 0x800AF408`
+(comment: sets state ptr at `0x800B0934`). TOML is still
+`func_800AF408` (size `0x138`, ends at independently named generated
+`isCinematicActive` / TOML `func_800AF540` at `0x800AF540`).
+Overlay `rom_size` is `0x138` at offset `0x0000A2D8`. Confirm the
 complete live function, matching size, and caller/semantic evidence
 before synchronizing the TOML name. Independently named
-`matchKeywordWithPriority` at `0x800AF2C8` (`rom_size` `0x98`) ends
-at this address. The generated body snapshots time into a stack
-buffer via `timeSnapshotFiller`, increments a word at
-`0x8013889C`, calls `floatModulo`, and on a positive remainder
-divides by the prior snapshot and clamps against the float at
-`0x800A5D54`. One retail `jal` encoding `0x0C02BCD8` sits at file
-`0x138474` (`0x800A6024`, generated caller inside independently
-named `cinematicLoopBody`). Menu-overlay `initCraftSelectScreen` /
-TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends
-`0x800AF3C0`) occupies overlapping VRAM and is a different overlay,
+`cinematicComputeDt` at `0x800AF360` (`rom_size` `0xA8`) ends
+at this address. The generated body loads `MEM_W(0x800B0934)`,
+early-outs if already set, scales `$a2` by the float at
+`0x800A5D5C`, zeros the byte at `0x800B0938`, calls
+`initCinematicSceneAssets`, and writes the cinematic state
+pointer. One retail `jal` encoding `0x0C02BD02` sits at file
+`0x138704` (`0x800A62B4`, generated caller inside independently
+named `cinematicLoopBody`). Menu-overlay `tickCraftSelectScreen`
+/ TOML `func_800AF3C0` at `0x800AF3C0` (`rom_size` `0x2EC`, ends
+`0x800AF6AC`) occupies overlapping VRAM and is a different overlay,
 not a cinematic size split. Mission-overlay `tickCutsceneObject` at
 `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML
 `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`)
@@ -73,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AF360\|800AF408\|cinematicComputeDt' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AF360\|800AF408\|cinematicComputeDt' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AF360\|800AF408' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AF408\|800AF540\|cinematicInitializer' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AF408\|800AF540\|cinematicInitializer' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AF408\|800AF540' syms/rogue_squadron.syms.toml
 ```

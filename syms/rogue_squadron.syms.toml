@@ -2673,7 +2673,7 @@ functions = [
     { name = "cinematicShutdownAudioAndAssets", vram = 0x800AF260, size = 0x24 },
     { name = "bytesDiffer", vram = 0x800AF284, size = 0x44 },
     { name = "matchKeywordWithPriority", vram = 0x800AF2C8, size = 0x98 },
-    { name = "func_800AF360", vram = 0x800AF360, size = 0xA8 },
+    { name = "cinematicComputeDt", vram = 0x800AF360, size = 0xA8 },
     { name = "func_800AF408", vram = 0x800AF408, size = 0x138 },
     { name = "func_800AF540", vram = 0x800AF540, size = 0x10 },
     { name = "func_800AF550", vram = 0x800AF550, size = 0xBC },
