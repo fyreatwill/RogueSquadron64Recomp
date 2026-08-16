@@ -78143,3 +78143,48 @@ boundaries and sizes. Corrected the stale TOML placeholder to
 `dispatchHudEffectUpdate`. No build or runtime behavior conclusion was
 made. The next sweep candidate is `func_800C7D60` / generated
 `delegateToLevelStageTick` (`0x800C7D60`, size `0x1C`).
+
+## Session 1661 (2026-08-16) — synchronized the delegateToLevelStageTick symbol
+
+Ran the exact generated-symbol census for `0x800C7D60` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live level-stage-tick delegate and its
+generated, TOML, and section-4 boundaries agree completely once any stale
+placeholder is corrected; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator. The last-15
+ledger titles still include s1650 (post-B retail-entry revisit), so the
+mandatory non-sweep revisit gate did not fire.
+
+The companion mission map names `delegateToLevelStageTick` at
+`0x800C7D60` as a thin wrapper around `func_800EF770` (generated:
+`triggerStageMusicForNamedDatItem`), with level-handler callers
+(`lv1_playPairedDialogueA`, `lv2_checkComplexObjectives`,
+`lv5_startMissionAndBriefing`, `lvd_checkComplexObjectives`,
+`lve_checkComplexObjectives`, `lvk_checkComplexObjectives`, plus additional
+generated call sites). A separate companion note on
+`triggerSoundCueByType` independently places the same address as a sister
+cue-subsystem entry point. The bounded companion-tree search found no
+competing C/H definition or alternate address. The generated `funcs_36.c`
+definition already carries the human name and is the live `0x1C`-byte body:
+
+- prologue `addiu $sp, $sp, -0x18` / `sw $ra, 0x10($sp)`
+- `jal 0x800EF770` → `triggerStageMusicForNamedDatItem`
+- epilogue restore/`jr $ra` with `addiu $sp, $sp, 0x18`
+
+Its preceding boundary is `dispatchHudEffectUpdate` at `0x800C7D44` with
+size `0x1C` (`0x800C7D44+0x1C = 0x800C7D60`), and its following boundary is
+`triggerNamedAssetCue` at `0x800C7D7C` with size `0x1C`
+(`0x800C7D60+0x1C = 0x800C7D7C`). The TOML entry had the correct address and
+size `0x1C` but still carried the placeholder `func_800C7D60`. The section-4
+overlay table already lists the human-named function at ROM offset
+`0x22C30` with span `0x1C` (exact after `0x22C14+0x1C`;
+`0x800C7D60-0x800A5130 = 0x22C30`). Multiple generated level-handler call
+sites already invoke the human name.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and section-4
+ownership; H3 is ruled out by the live thin-wrapper body and exact adjacent
+boundaries and sizes. Corrected the stale TOML placeholder to
+`delegateToLevelStageTick`. No build or runtime behavior conclusion was
+made. The next sweep candidate is `func_800C7D7C` / generated
+`triggerNamedAssetCue` (`0x800C7D7C`, size `0x1C`).
