@@ -75737,3 +75737,28 @@ run was justified for this exact-name census. The next bounded candidate is
 `func_800B4F54`, independently named `playXwingEngineSound`, with size
 `0x4E0`; `playerXwingUpdate` begins at `0x800B5434`. This naming change does
 not reopen M5 audio de-stubbing.
+
+## Session 1573 (2026-08-16) — synchronized the playXwingEngineSound symbol
+
+Performed the bounded exact-name census over `0x800B4F54..0x800B5434`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 18,193 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail had no newer verdict requiring
+analysis. The last-15 title check included s1569's non-sweep retail-entry
+revisit, so the sweep-revisit rule did not fire. M5 remains closed and M3
+remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B4F54` at `0x800B4F54` with size `0x4E0`; the next mission function begins at `0x800B5434`. The companion mission list independently maps `playXwingEngineSound = 0x800B4F54`. |
+| Generated definition | `funcs_31.c` defines `playXwingEngineSound` at `0x800B4F54`, beginning with `addiu $sp, $sp, -0x60`; the next generated definition is `playerXwingUpdate` at `0x800B5434`. |
+| Caller evidence | Generated `funcs_31.c` contains a direct call to `playXwingEngineSound` from `playerXwingUpdate` at `0x800B5718`. |
+| Confidence | High |
+
+The complete comparison selects H1. H2 is ruled out because the entry is not
+partial, fake, or conflicting; H3 is ruled out by the independent companion
+name and generated caller. Updated only the TOML name; no build or runtime run
+was justified for this exact-name census. The next bounded candidate is
+`func_800B585C`, independently named `isWeaponSlotReady`, with size `0x58`;
+the intervening `fake_func_800B58B4` ends at `playerAwingInit` at
+`0x800B58C0`. This naming change does not reopen M5 audio de-stubbing.
