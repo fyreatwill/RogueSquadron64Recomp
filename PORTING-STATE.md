@@ -76497,3 +76497,31 @@ generated function body, and effect/sound semantics. Updated only the TOML
 placeholder to `triggerT16Effect`; no mitigation, build, or runtime change
 was made. The next bounded candidate is `func_800BDC9C`, independently named
 `buildNabooSubmodelTransform`, with size `0x58C`.
+
+## Session 1600 (2026-08-16) — synchronized the buildNabooSubmodelTransform symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only older verdicts already represented in the ledger, so no
+soak result changed the work-unit choice. This iteration continued the
+bounded generated-symbol sweep. No build or runtime run was needed.
+
+The work unit censused `0x800BDC9C..0x800BE228` using the companion mission
+symbol list, generated definition and caller, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `buildNabooSubmodelTransform = 0x800BDC9C`; `triggerNabooEngineEffect = 0x800BE228` is the adjacent companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `buildNabooSubmodelTransform` at `0x800BDC9C`; the generated `playerNabooStarfighterUpdate` body calls it at `0x800BEAAC`. |
+| Span and overlay table | The TOML placeholder had size `0x58C`; `recomp_overlays.inl` records `buildNabooSubmodelTransform` at offset `0x18B6C` with ROM size `0x58C`, followed by `triggerNabooEngineEffect` at `0x800BE228`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and generated caller. Updated only the TOML
+placeholder to `buildNabooSubmodelTransform`; no mitigation, build, or runtime
+change was made. The next bounded candidate is `func_800BE228`, independently
+named `triggerNabooEngineEffect`, with size `0x280`.

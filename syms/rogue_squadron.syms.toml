@@ -1664,7 +1664,7 @@ functions = [
     { name = "playerT16Update", vram = 0x800BD530, size = 0x428 },
     { name = "triggerT16Effect", vram = 0x800BD958, size = 0xF8 },
     { name = "playerNabooStarfighterInit", vram = 0x800BDA50, size = 0x24C },
-    { name = "func_800BDC9C", vram = 0x800BDC9C, size = 0x58C },
+    { name = "buildNabooSubmodelTransform", vram = 0x800BDC9C, size = 0x58C },
     { name = "func_800BE228", vram = 0x800BE228, size = 0x280 },
     { name = "func_800BE4A8", vram = 0x800BE4A8, size = 0x328 },
     { name = "playerNabooStarfighterUpdate", vram = 0x800BE7D0, size = 0x42C },
