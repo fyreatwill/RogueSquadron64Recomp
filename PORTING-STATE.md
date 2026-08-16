@@ -78703,3 +78703,33 @@ already agree. No TOML or generated-name change.
 Next census: `func_800CBDA0` / `findNearestNpcWithinRange` at `0x800CBDA0`
 (size `0x29C`). Last-15 titles still include s1666, so the next iteration
 may continue the sweep.
+
+## Session 1678 (2026-08-16) — synchronized the findNearestNpcWithinRange symbol
+
+Exact generated-symbol census for `0x800CBDA0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 28000; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `findNearestNpcWithinRange = 0x800CBDA0`; next contiguous helper `initActorFromSpawnTemplate = 0x800CC03C`; prior `npcProbeDriod = 0x800CABD4`. Coarse listing then jumps to `npcAtAtUpdate = 0x800CD71C`. Two mission callers in `tickCinematicEffectObject` (`0x800AC7B4`) jal `0x800CBDA0` with range in `$f12` from `0x800A5374` / `0x800A5378` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void findNearestNpcWithinRange` at VRAM `0x800CBDA0`; prologue `addiu $sp, $sp, -0x98`; saves `$f12` into `$f20` as the range; returns through `jr $ra` / `addiu $sp, $sp, 0x98` ending at `0x800CC038`; previous mission function is `npcProbeDriod` at `0x800CABD4`; next mission function is `initActorFromSpawnTemplate` at `0x800CC03C` |
+| Body semantics | Player pos via `getPlayerField2` then `getNpcContextField8`. Walks the active NPC slot chain (`findActiveNpcInSlotChain` / `revalidateNpcSlotIterator`, terminator `0xFFFF`). Per slot: world-delta vs player, `vec3Length`, `c.lt.s $f20, $f0` rejects out-of-range; in-range slots go through `getNpcContextByIndex` + `lookupHmtTextureByName` and keep the nearest distance in `*$a1` / slot halfword at `0x60($sp)`. Returns that slot id in `$v0`. Name matches the body |
+| TOML (before) | `{ name = "func_800CBDA0", vram = 0x800CBDA0, size = 0x29C }` — size matches `0x800CC03C - 0x800CBDA0` |
+| Overlay section 4 | `{ .func = findNearestNpcWithinRange, .offset = 0x00026C70, .rom_size = 0x0000029C }` under `section_4_ovl_mission_funcs` (`0x800CBDA0 - 0x800A5130 = 0x26C70`; `0x26C70 + 0x29C = 0x26F0C` matches next `initActorFromSpawnTemplate`) |
+| Non-collision | Menu-overlay `appendNodeToListHead = 0x800CBDC4`, `tickMultiPartVoiceLine = 0x800CBE00`, `mallocVoiceLineStruct = 0x800CBF60`, `setVoiceLineLoopFlag = 0x800CC02C`, and `fake_func_800CC038 = 0x800CC038` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. They appear inside the mission VRAM span in `funcs_37.c` only because overlays share VRAM |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated nearest-NPC-in-range body,
+previous (`npcProbeDriod` / `0x800CABD4`) and next (`initActorFromSpawnTemplate`
+/ `0x800CC03C`) boundaries, TOML size, and section-4 overlay span agreed; only
+the TOML name was a stale `func_800CBDA0` placeholder. Corrected TOML to
+`findNearestNpcWithinRange`. No build or runtime run required.
+
+Next census: `func_800CC03C` / `initActorFromSpawnTemplate` at `0x800CC03C`
+(size `0x11C`). Last-15 titles still include s1666, so the next iteration
+may continue the sweep.

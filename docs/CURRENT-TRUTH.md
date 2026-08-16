@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1677 (2026-08-16).
+the authority for session detail. Reviewed through s1678 (2026-08-16).
 
 ## Current state
 
@@ -72,15 +72,15 @@ the authority for session detail. Reviewed through s1677 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep at generated
-   `func_800CBDA0` / `findNearestNpcWithinRange` at `0x800CBDA0`
-   (size `0x29C`). Compare companion mapping if any, generated body,
+   `func_800CC03C` / `initActorFromSpawnTemplate` at `0x800CC03C`
+   (size `0x11C`). Compare companion mapping if any, generated body,
    previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (generated and
    overlay already carry the companion name; TOML is still
-   `func_800CBDA0`, so this is likely an H1). s1651–s1665 and
-   s1667–s1677 synchronized or confirmed DAT-item through
-   `npcProbeDriod`; s1650 and s1666 were the mandatory retail-entry
-   revisits. The full s1590–s1649 archive is in
+   `func_800CC03C`, so this is likely an H1). s1651–s1665 and
+   s1667–s1678 synchronized or confirmed DAT-item through
+   `findNearestNpcWithinRange`; s1650 and s1666 were the mandatory
+   retail-entry revisits. The full s1590–s1649 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
@@ -216,6 +216,7 @@ ownership.
 | s1675 | Synchronized `initProbeDroidScatterLaunch` (`0x800CA560`, size `0x1C0`) after companion mission mapping, live generated scatter-launch-init body (`rand` ×4, `vec3Length`, `normalize_vector`; writes target `+0x6C/+0x70/+0x74`, speed `+0x78`, state halfword `+0xE2=1`), exact `0x800CA3A4`/`0x800CA720` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `initModelViewer` / `buildModelViewerTextPage` at `0x800CA638`/`0x800CA714` are a different overlay, not a name collision. Next candidate is `func_800CA720` / `updateProbeDroidHopState`. |
 | s1676 | Synchronized `updateProbeDroidHopState` (`0x800CA720`, size `0x4B4`) after companion mission mapping, live generated hop-state body (reads/writes state halfword `+0xE2`; state 1 walks toward scatter target `+0x6C/+0x70/+0x74` via `vec3NormalizeInto`/`vec3Length`/`normalize_vector`/`vec3Dot`/`sinfApprox`/`quatFromAxisAngle`/`rotateVec3ByQuat`/`orthonormalizeFrame`; later states `spawnNpcAnchoredEffectSlot`, `wrapAngleToCyclicRange`, `isTerrainCellBlockedAtWorldXz`, `rs_free`), exact `0x800CA560`/`0x800CABD4` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `initModelViewer` / `buildModelViewerTextPage` / `runModelViewerSoundDemo` at `0x800CA638`/`0x800CA714`/`0x800CADB8` are a different overlay, not a name collision. Next candidate is `npcProbeDriod`. |
 | s1677 | Confirmed `npcProbeDriod` (`0x800CABD4`, size `0x11CC`) was already synchronized: companion mission mapping (keep the `Driod` typo), live generated 6-way probe-droid update (`updateProbeDroidHopState` ×3, `initProbeDroidScatterLaunch`, `createAndInitObject`, `dealDamageToNpc`, `spawnDestructionEffectBurst`), exact `0x800CA720`/`0x800CBDA0` boundaries, TOML name and size, and section-4 span agreed. Menu-overlay `runModelViewerSoundDemo` / `loadModelViewerModels` / `shutdownModelViewer` at `0x800CADB8`/`0x800CB604`/`0x800CBB30` are a different overlay, not a name collision. Next candidate is `func_800CBDA0` / `findNearestNpcWithinRange`. |
+| s1678 | Synchronized `findNearestNpcWithinRange` (`0x800CBDA0`, size `0x29C`) after companion mission mapping, live generated nearest-NPC-in-range body (`getPlayerField2`, `getNpcContextField8`, `findActiveNpcInSlotChain`, `vec3Length` ×2, `c.lt.s` range reject, `getNpcContextByIndex`, `lookupHmtTextureByName`, `revalidateNpcSlotIterator`; two `tickCinematicEffectObject` callers), exact `0x800CABD4`/`0x800CC03C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `appendNodeToListHead` / `tickMultiPartVoiceLine` / `mallocVoiceLineStruct` / `setVoiceLineLoopFlag` at `0x800CBDC4`/`0x800CBE00`/`0x800CBF60`/`0x800CC02C` are a different overlay, not a name collision. Next candidate is `func_800CC03C` / `initActorFromSpawnTemplate`. |
 
 ## Method and safety rules
 
