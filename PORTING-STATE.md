@@ -74680,3 +74680,49 @@ offset `0x0000B0B4`; live body ends at generated
 `spawnNpcDestructionDebris` / TOML `func_800B0850` at `0x800B0850`).
 Independently named `loadPlayerStartPosition` at `0x800AFE4C`
 (`rom_size` `0x398`) ends at `0x800B01E4`.
+
+## Session 1549 (2026-08-15) — synchronized the spawn-scene-debris-and-effect-cluster symbol
+
+Performed the bounded exact-name census over `0x800B01E4..0x800B0850`.
+
+No new soak-queue verdicts since s1548; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit), so the every-15-sessions sweep-revisit rule did not fire.
+CURRENT-TRUTH is 59224 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B01E4`, size `0x66C`; `0x800B01E4+0x66C=0x800B0850`. Overlay `.ovl.mission` entry `rom_size` is `0x66C` at offset `0x0000B0B4` (`0x800B01E4-0x800A5130`). Live body is independently `0x66C` and meets generated `spawnNpcDestructionDebris` at `0x800B0850` |
+| Generated definition | `funcs_29.c` defines `spawnSceneDebrisAndEffectCluster` at `0x800B01E4`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000B0B4`, `rom_size 0x0000066C`). The live mission body is a complete `0x66C` function: save `$a0` as the scene/object pointer in `$s2`, treat `$a1` as a flags/skip argument in `$s3`, early-out on object flag bits `0x10`/`0x20`, then allocate NPC slots and mass-spawn randomized debris/effect NPCs via independently named `allocateNpcSlot`, `spawnRandomizedEffectBurst`, `spawnWaterSprayDebrisAndBurst`, `spawnEffectNpcWithRampedScale`, `spawnOrientedNpc`, `spawnNpcType0xAFromTemplate`, and `spawnDebris1Npc`, plus six `rand_recomp` draws. Last live instruction pair is `0x800B0848`/`0x800B084C` (`jr $ra` / `addiu $sp, $sp, 0xB0`). Next generated mission entry is already `spawnNpcDestructionDebris` at `0x800B0850`. Independently named `loadPlayerStartPosition` at `0x800AFE4C` (`rom_size` `0x398`) ends at this address. Menu-overlay TOML `func_800B0148` (`spawnOrientedEffectWithEasedSpin`, `rom_size` `0x508`, ends `0x800B0650`) plus `func_800B0650` (`handleLevelSelectStartConfirm`, `rom_size` `0x1A4`, ends `0x800B07F4`) occupy overlapping VRAM from `.ovl.menu` and are not a split of this body. Cinematic-overlay `fake_func_800AF6A8` (`rom_size` `0x1298`) is the leftover cinematic data lump covering this VRAM from `.ovl.cinematic` |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `spawnSceneDebrisAndEffectCluster = 0x800B01E4`. The same mission list independently names the adjacent functions `loadPlayerStartPosition` at `0x800AFE4C` and `spawnNpcDestructionDebris` at `0x800B0850`. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B01E4`. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` has no `800B01E4` alias |
+| Caller evidence | 5 retail `jal` encodings `0x0C02C079` and zero `j` or absolute `0x800B01E4` pointer words. Generated sites are five named `spawnSceneDebrisAndEffectCluster(...)` calls: three from independently named `updateSplineCraftTransform` at `0x800B0A88` (`0x800B0C34`, `0x800B0D9C`, `0x800B0EBC`) and two from independently named `updatePlayerCraftPhysics` at `0x800B1BE8` (`0x800B2A08`, `0x800B2EC4`). Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B0DE4` (`0x0A5D30+(0x800B01E4-0x800A5130)`) are `0x27BDFF50` (`addiu $sp, $sp, -0xB0`), `0xAFB20088` (`sw $s2, 0x88($sp)`), `0x00809021` (`addu $s2, $a0, $zero`). Last pair file `0x0B1448`/`0x0B144C` is `0x03E00008`/`0x27BD00B0` (`jr $ra` / `addiu $sp, $sp, 0xB0`). Next start file `0x0B1450` is `0x27BDFFD8` (`addiu $sp, $sp, -0x28`, `spawnNpcDestructionDebris` prologue). Preceding epilogue file `0x0B0DDC`/`0x0B0DE0` is `0x03E00008`/`0x27BD0030` (`loadPlayerStartPosition` `jr $ra` / `addiu $sp, $sp, 0x30`). Same-run generated callees include independently named `spawnRandomizedEffectBurst`, `spawnWaterSprayDebrisAndBurst`, `spawnEffectNpcWithRampedScale`, `spawnOrientedNpc`, `spawnDebris1Npc`, `allocateNpcSlot`, and six `rand_recomp` sites, matching the companion comment "mass-spawns randomized debris/effect NPCs". Menu occupant at the same VRAM (file `0x117384`) starts `0x8C680000` (`lw $t0, 0($v1)`, different overlay). Cinematic occupant (file `0x142634`) is `0x00000000` then ASCII `reb_tran`. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1547 start file `0x0B08F4` is still `0x3C038013` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B01E4`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x66C`, 5 ROM `jal` callers are independently named spline-craft
+and player-physics updates, the body independently calls the randomized
+debris/effect spawn family, the overlapping menu and cinematic occupants
+are different overlays, and there is neither a conflicting companion
+name nor a mission size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x66C`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`spawnNpcDestructionDebris` at `0x800B0850` (TOML still
+`func_800B0850`, size `0x238`; overlay `rom_size` is `0x238` at
+offset `0x0000B720`; live body ends at generated
+`updateSplineCraftTransform` / TOML `func_800B0A88` at `0x800B0A88`).
+Independently named `spawnSceneDebrisAndEffectCluster` at `0x800B01E4`
+(`rom_size` `0x66C`) ends at `0x800B0850`.

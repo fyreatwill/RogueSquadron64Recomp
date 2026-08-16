@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1548 (2026-08-15).
+the authority for session detail. Reviewed through s1549 (2026-08-15).
 
 ## Current state
 
@@ -72,7 +72,7 @@ the authority for session detail. Reviewed through s1548 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads; s1544 was that revisit) with one bounded exact-name
-   census over the next adjacent function, `0x800B01E4..0x800B0850`.
+   census over the next adjacent function, `0x800B0850..0x800B0A88`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -178,26 +178,29 @@ the authority for session detail. Reviewed through s1548 (2026-08-15).
    synchronized `cinematicInterpRatio` at `0x800AF668`.
    s1547 synchronized `findNearestSceneObjectToPoint` at
    `0x800AFCF4`. s1548 synchronized
-   `loadPlayerStartPosition` at `0x800AFE4C`. The
-   generated entry at `0x800B01E4` is already
-   `spawnSceneDebrisAndEffectCluster`; the companion
-   mission list maps
-   `spawnSceneDebrisAndEffectCluster = 0x800B01E4`
-   (mass-spawns randomized debris/effect NPCs). TOML
-   is still `func_800B01E4` (size `0x66C`, ends at
-   generated `spawnNpcDestructionDebris` / TOML
-   `func_800B0850` at `0x800B0850`). Overlay `rom_size`
-   is `0x66C` at offset `0x0000B0B4`. Confirm the
-   complete live function, matching size, and
-   caller/semantic evidence before synchronizing the
-   TOML name. Independently named
-   `loadPlayerStartPosition` at `0x800AFE4C`
-   (`rom_size` `0x398`) ends at this address. Last
-   live instruction pair is `0x800B0848`/`0x800B084C`
-   (`jr $ra` / `addiu $sp, $sp, 0xB0`). Menu-overlay
-   TOML `func_800B0148` at `0x800B0148` (`rom_size`
-   `0x508`, ends `0x800B0650`) and `func_800B0650`
-   (`rom_size` `0x1A4`, ends `0x800B07F4`) occupy
+   `loadPlayerStartPosition` at `0x800AFE4C`. s1549
+   synchronized `spawnSceneDebrisAndEffectCluster` at
+   `0x800B01E4`. The generated entry at `0x800B0850`
+   is already `spawnNpcDestructionDebris`; the
+   companion mission list maps
+   `spawnNpcDestructionDebris = 0x800B0850`
+   (destroys an NPC and spawns its debris/particles
+   + speech). TOML is still `func_800B0850` (size
+   `0x238`, ends at generated
+   `updateSplineCraftTransform` / TOML
+   `func_800B0A88` at `0x800B0A88`). Overlay
+   `rom_size` is `0x238` at offset `0x0000B720`.
+   Confirm the complete live function, matching
+   size, and caller/semantic evidence before
+   synchronizing the TOML name. Independently named
+   `spawnSceneDebrisAndEffectCluster` at
+   `0x800B01E4` (`rom_size` `0x66C`) ends at this
+   address. Last live instruction pair is
+   `0x800B0A80`/`0x800B0A84` (`jr $ra` /
+   `addiu $sp, $sp, 0x28`). Menu-overlay TOML
+   `func_800B07F4` at `0x800B07F4` (`rom_size`
+   `0x100`, ends `0x800B08F4`) and `func_800B08F4`
+   (`rom_size` `0xB3C`, ends `0x800B1430`) occupy
    overlapping VRAM from `.ovl.menu` and are not a
    mission size split.
 2. Future oracle work on the 640/`0x6a2900` handler, a later mission
@@ -583,6 +586,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1546 | Exact companion/generated cinematic-interp census synchronized `cinematicInterpRatio` at `0x800AF668`; left `fake_func_800AF6A8` unchanged (already-fake data tail); no build or runtime run. |
 | s1547 | Exact companion/generated mission-scene census synchronized `findNearestSceneObjectToPoint` at `0x800AFCF4`; no build or runtime run. |
 | s1548 | Exact companion/generated mission-start census synchronized `loadPlayerStartPosition` at `0x800AFE4C`; no build or runtime run. |
+| s1549 | Exact companion/generated mission-debris census synchronized `spawnSceneDebrisAndEffectCluster` at `0x800B01E4`; no build or runtime run. |
 
 ## Method and safety rules
 

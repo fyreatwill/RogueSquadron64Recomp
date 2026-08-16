@@ -1,11 +1,11 @@
-# NEXT work unit (s1549)
+# NEXT work unit (s1550)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1548 synchronized `loadPlayerStartPosition` at `0x800AFE4C`.
+s1549 synchronized `spawnSceneDebrisAndEffectCluster` at `0x800B01E4`.
 Resume the generated-symbol renaming sweep. Perform exactly one bounded
 exact-name census over the next adjacent generated function,
-`0x800B01E4..0x800B0850`.
+`0x800B0850..0x800B0A88`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -31,20 +31,24 @@ table, not a function), `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function), and
 `fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
 overlay data-tail gap-filler). The generated entry at this address
-is already `spawnSceneDebrisAndEffectCluster`; the companion mission
-list maps `spawnSceneDebrisAndEffectCluster = 0x800B01E4` (mass-spawns
-randomized debris/effect NPCs). TOML is still `func_800B01E4` (size
-`0x66C`, ends at generated `spawnNpcDestructionDebris` / TOML
-`func_800B0850` at `0x800B0850`). Overlay `rom_size` is `0x66C` at
-offset `0x0000B0B4`. Confirm the complete live function, matching
-size, and caller/semantic evidence before synchronizing the TOML
-name. Independently named `loadPlayerStartPosition` at `0x800AFE4C`
-(`rom_size` `0x398`) ends at this address. Last live instruction pair
-is `0x800B0848`/`0x800B084C` (`jr $ra` / `addiu $sp, $sp, 0xB0`).
-Menu-overlay TOML `func_800B0148` at `0x800B0148` (`rom_size` `0x508`,
-ends `0x800B0650`) and `func_800B0650` (`rom_size` `0x1A4`, ends
-`0x800B07F4`) occupy overlapping VRAM from `.ovl.menu` and are not a
-mission size split.
+is already `spawnNpcDestructionDebris`; the companion mission
+list maps `spawnNpcDestructionDebris = 0x800B0850` (destroys an
+NPC and spawns its debris/particles + speech). TOML is still
+`func_800B0850` (size `0x238`, ends at generated
+`updateSplineCraftTransform` / TOML `func_800B0A88` at
+`0x800B0A88`). Overlay `rom_size` is `0x238` at offset
+`0x0000B720`. Confirm the complete live function, matching
+size, and caller/semantic evidence before synchronizing the
+TOML name. Independently named `spawnSceneDebrisAndEffectCluster`
+at `0x800B01E4` (`rom_size` `0x66C`) ends at this address.
+Last live instruction pair is `0x800B0A80`/`0x800B0A84`
+(`jr $ra` / `addiu $sp, $sp, 0x28`). Menu-overlay TOML
+`func_800B07F4` at `0x800B07F4` (`rom_size` `0x100`, ends
+`0x800B08F4`) and `func_800B08F4` (`rom_size` `0xB3C`, ends
+`0x800B1430`) occupy overlapping VRAM from `.ovl.menu` and
+are not a mission size split. Generated
+`runScriptedCraftCinematicEvent` starts at menu VRAM
+`0x800B08F4` and is not this body.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -70,7 +74,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800B01E4\|800B0850\|spawnSceneDebrisAndEffectCluster' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 '800B01E4\|800B0850\|spawnSceneDebrisAndEffectCluster' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800B01E4\|800B0850' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800B0850\|800B0A88\|spawnNpcDestructionDebris' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800B0850\|800B0A88\|spawnNpcDestructionDebris' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800B0850\|800B0A88' syms/rogue_squadron.syms.toml
 ```
