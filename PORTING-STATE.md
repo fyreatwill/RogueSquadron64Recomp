@@ -76950,3 +76950,30 @@ the address-coded symbol. H3 is selected: the human label is not independently
 validated for this mission-overlay entry, so `syms/rogue_squadron.syms.toml`
 was left unchanged. This rules out treating the main-overlay label as a safe
 mission rename; it does not establish a runtime behavior conclusion.
+
+## Session 1618 (2026-08-16) — classified the 800C41B0 symbol collision
+
+The planned work unit was one bounded generated-symbol census over
+`0x800C41B0..0x800C435C`; no build or runtime run was required. The competing
+hypotheses were H1: an independently supported mission-overlay semantic name
+exists and the exact generated/TOML/overlay span supports synchronization, H2:
+no independent semantic name exists, and H3: a name belongs to another
+overlay/context or the boundaries conflict. The discriminator was the complete
+companion/generated/TOML/overlay comparison.
+
+The generated `funcs_33.c` definition is live and spans `0x1AC` bytes. Its
+body clamps a radar index against the active radar dimensions, walks a craft
+table, computes two packed blip values from table fields, and writes them to
+the radar grid before returning at `0x800C4358`; a generated caller at
+`0x800C4540` invokes it in the radar setup path. The TOML entry gives
+`0x800C41B0` size `0x1AC`, with `fake_func_800C41AC` immediately before it and
+the next entry at `0x800C435C`; the mission overlay table gives the same span.
+
+The companion `mission_overlay.txt` keeps `func_800C41B0` address-coded.
+`main_overlay.txt` independently names the same VRAM address
+`plotRadarBlipColumn`, while the mission mapping independently names the next
+entry `plotRadarBlipRow` at `0x800C435C`. H3 is selected: the live body and
+boundaries are coherent, but the main-overlay label is not independently
+validated for this mission-overlay entry, so no rename was made. This rules out
+treating `plotRadarBlipColumn` as a safe mission rename; it does not establish
+a runtime behavior conclusion.
