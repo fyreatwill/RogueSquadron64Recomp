@@ -1744,7 +1744,7 @@ functions = [
     { name = "getObjectiveGlobalFloat", vram = 0x800C7728, size = 0x10 },
     { name = "setHudEnableBit4", vram = 0x800C7738, size = 0x34 },
     { name = "setHudEnableBit8", vram = 0x800C776C, size = 0x34 },
-    { name = "func_800C77A0", vram = 0x800C77A0, size = 0x10 },
+    { name = "isLevelStateByteZero", vram = 0x800C77A0, size = 0x10 },
     { name = "setFriendliesSaved", vram = 0x800C77B0, size = 0x20 },
     { name = "func_800C77D0", vram = 0x800C77D0, size = 0x60 },
     { name = "addBooleanCountHandleWrapper", vram = 0x800C7830, size = 0x34 },
