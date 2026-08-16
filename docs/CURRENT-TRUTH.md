@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1661 (2026-08-16).
+the authority for session detail. Reviewed through s1662 (2026-08-16).
 
 ## Current state
 
@@ -65,8 +65,8 @@ the authority for session detail. Reviewed through s1661 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   generated `triggerNamedAssetCue` / TOML `func_800C7D7C` at
-   `0x800C7D7C` (size `0x1C`). Compare companion mapping if any, generated
+   generated `triggerSoundCueByType` / TOML `func_800C7D98` at
+   `0x800C7D98` (size `0x1C`). Compare companion mapping if any, generated
    body, previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (likely a stale-TOML
    correction if the generated body already carries the human name). The
@@ -76,8 +76,8 @@ the authority for session detail. Reviewed through s1661 (2026-08-16).
    synchronized `setHudFlagBit40AndStoreArg`; s1651 confirmed
    `calculateDatItemDistanceToPlayer`; s1652–s1655 synchronized DAT-item
    helpers after stale TOML corrections; s1656–s1657 confirmed health
-   getters; s1658–s1661 synchronized DAT-effect and cue wrappers
-   (`despawnEffectOnNamedDatItem` through `delegateToLevelStageTick`) after
+   getters; s1658–s1662 synchronized DAT-effect and cue wrappers
+   (`despawnEffectOnNamedDatItem` through `triggerNamedAssetCue`) after
    stale TOML corrections. s1650 was the mandatory retail-entry revisit
    (post-B A/Start/Z). The full s1590–s1649 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
@@ -197,6 +197,7 @@ ownership.
 | s1659 | Synchronized `setLevelObjectTrackingScalar` (`0x800C7CEC`, size `0xC`) after companion mission mapping (12 `lvN_initializeObjectTracking` callers; `MEM_W[0x8013973C]=f12`), live generated one-instruction float store, exact `0x800C7C88`/`0x800C7CF8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D44` / `dispatchHudEffectUpdate`. |
 | s1660 | Synchronized `dispatchHudEffectUpdate` (`0x800C7D44`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal initSpeechPlaybackState` / `0x80067938`), exact `0x800C7D1C`/`0x800C7D60` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D60` / `delegateToLevelStageTick`. |
 | s1661 | Synchronized `delegateToLevelStageTick` (`0x800C7D60`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EF770` → `triggerStageMusicForNamedDatItem`), exact `0x800C7D44`/`0x800C7D7C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D7C` / `triggerNamedAssetCue`. |
+| s1662 | Synchronized `triggerNamedAssetCue` (`0x800C7D7C`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal 0x800EF95C` → `triggerStageAmbientForNamedDatItem`), exact `0x800C7D60`/`0x800C7D98` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D98` / `triggerSoundCueByType`. |
 
 ## Method and safety rules
 

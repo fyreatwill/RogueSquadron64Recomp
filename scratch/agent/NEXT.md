@@ -1,17 +1,17 @@
-# NEXT work unit (s1662)
+# NEXT work unit (s1663)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the exact generated-symbol census. The next candidate is generated
-`triggerNamedAssetCue` at `0x800C7D7C` (size `0x1C`). Generated and
-overlays already use the human name; TOML still carries `func_800C7D7C`
-(s1661 observation) — confirm full independent agreement and correct the
+`triggerSoundCueByType` at `0x800C7D98` (size `0x1C`). Generated and
+overlays already use the human name; TOML still carries `func_800C7D98`
+(s1662 observation) — confirm full independent agreement and correct the
 stale TOML name if the body/boundaries agree, or leave unresolved and
 advance.
 
 Competing hypotheses and discriminator:
 
-- H1: the live function is the named-asset cue trigger, and generated
+- H1: the live function is the sound-cue-by-type trigger, and generated
   body, TOML size/name, previous/next boundaries, and section-4 overlay
   span agree completely — synchronize any stale placeholder (TOML name).
 - H2: the name belongs to another overlay or conflicting context — leave
@@ -23,18 +23,18 @@ Exact commands:
 
 ```sh
 # 1. Companion mapping / callers / semantics (bounded searches only)
-grep -rn 'triggerNamedAssetCue\|0x800C7D7C\|800C7D7C' \
+grep -rn 'triggerSoundCueByType\|0x800C7D98\|800C7D98' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64 \
   --include='*.c' --include='*.h' --include='*.txt' --include='*.yaml' \
   --include='*.md' --include='*.ld' | grep -v '/build/' | head -80
 
 # 2. Generated definition + adjacent boundaries
-grep -rn 'triggerNamedAssetCue\|func_800C7D7C\|0x800C7D7C\|0x800C7D60\|0x800C7D98' \
+grep -rn 'triggerSoundCueByType\|func_800C7D98\|0x800C7D98\|0x800C7D7C\|0x800C7DB4' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --include='*.c' --include='*.h' --include='*.inl' | head -80
 
 # 3. TOML + overlay span
-grep -n '800C7D7C\|triggerNamedAssetCue\|func_800C7D7C' \
+grep -n '800C7D98\|triggerSoundCueByType\|func_800C7D98' \
   syms/rogue_squadron.syms.toml | head -40
 ```
 
