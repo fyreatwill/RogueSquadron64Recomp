@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1589 (2026-08-16).
+the authority for session detail. Reviewed through s1590 (2026-08-16).
 
 ## Current state
 
@@ -165,9 +165,13 @@ the authority for session detail. Reviewed through s1589 (2026-08-16).
    s1589 synchronized `triggerFalconEngineEffect` at `0x800BAA00` (size
    `0x170`): the companion mission list, generated definition and caller from
    `spawnFalconEngineParticles`, exact `bindFalconSubmodelMaterials` boundary,
+   overlay-table span, and TOML size agree. s1590 synchronized
+   `bindFalconSubmodelMaterials` at `0x800BAB70` (size `0x25C`): the companion
+   mission list, generated definition and caller from
+   `computeFalconFlightTransform`, exact `playerFalconMainUpdate` boundary,
    overlay-table span, and TOML size agree. The next census is
-   `func_800BAB70`, independently named `bindFalconSubmodelMaterials`, with
-   size `0x25C`.
+   `func_800BADCC`, independently named `playerFalconMainUpdate`, with size
+   `0x83C`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -332,6 +336,8 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1586 | H1: synchronized `orientVwingSubmodelByQuat` at `0x800B95E0` (size `0x370`); companion mapping, generated definition and three callers, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1587 | H1: synchronized `tickVwingEngineAudio` at `0x800B9950` (size `0x5FC`); companion mapping, generated definition and `playerVwingUpdate` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1588 | H1: synchronized `computeFalconFlightTransform` at `0x800BA620` (size `0x3E0`); companion mission list, generated definition and `playerFalconMainUpdate` caller, exact `triggerFalconEngineEffect` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1589 | H1: synchronized `triggerFalconEngineEffect` at `0x800BAA00` (size `0x170`); companion mission list, generated definition and `spawnFalconEngineParticles` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1590 | H1: synchronized `bindFalconSubmodelMaterials` at `0x800BAB70` (size `0x25C`); companion mission list, generated definition and `computeFalconFlightTransform` caller, exact `playerFalconMainUpdate` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1570 | H2: parked already-fake `fake_func_800B42BC` at `0x800B42BC` (size `0x4`). |
 | s1571 | H1: confirmed `playerXwingInit` at `0x800B42C0` is already synchronized: exact `0x2C8` TOML/overlay/generated boundary, companion name, and two generated `playerXwingUpdate` calls agree; no file rename was needed. |
 | s1572 | H1: synchronized `playWeaponFireSound` at `0x800B4588` (size `0x738`); companion mapping, generated definition, TOML boundary, and a generated caller agree. No build or runtime run was needed. |
