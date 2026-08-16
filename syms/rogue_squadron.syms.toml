@@ -1655,7 +1655,7 @@ functions = [
     { name = "playerTieInterceptorInit", vram = 0x800BBD30, size = 0x23C },
     { name = "computeTieInterceptorTransform", vram = 0x800BBF6C, size = 0x324 },
     { name = "triggerTieInterceptorEffect", vram = 0x800BC290, size = 0x268 },
-    { name = "func_800BC4F8", vram = 0x800BC4F8, size = 0x318 },
+    { name = "computeTieInterceptorOrientation", vram = 0x800BC4F8, size = 0x318 },
     { name = "playerTieInterceptorUpdate", vram = 0x800BC810, size = 0x428 },
     { name = "fake_func_800BCC38", vram = 0x800BCC38, size = 0x8 },
     { name = "playerT16Init", vram = 0x800BCC40, size = 0x234 },

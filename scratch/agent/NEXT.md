@@ -1,24 +1,24 @@
-# NEXT work unit (s1596)
+# NEXT work unit (s1597)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol renaming sweep with exactly one bounded
-exact-name census over `0x800BC4F8..0x800BC810`. Do not build or run.
+exact-name census over `0x800BCE74..0x800BD254`. Do not build or run.
 Record the address, size, generated definition, companion name/source,
 caller or semantic evidence, and confidence before editing. Synchronize only
 an exact independent name in `syms/rogue_squadron.syms.toml`; leave
 address-encoded, fake, fragment, data-like, or ambiguous entries unchanged.
 
-The TOML entry is `func_800BC4F8` with size `0x318`. The companion mission
-list maps `computeTieInterceptorOrientation = 0x800BC4F8`; the adjacent known
-function is `playerTieInterceptorUpdate` at `0x800BC810`. The generated
-overlay table and `funcs_32.c` should establish the live-body boundary and
-caller or semantic evidence.
+The TOML entry is `func_800BCE74` with size `0x3E0`. The companion mission
+list maps `computeT16Transform = 0x800BCE74`; the adjacent known function is
+`playerT16MainUpdate` at `0x800BD254`. The generated overlay table and
+`funcs_32.c` should establish the live-body boundary and caller or semantic
+evidence.
 
 Competing hypotheses and discriminator:
 
 - H1: the function has an exact independent companion mapping and can be
-  synchronized to `computeTieInterceptorOrientation`.
+  synchronized to `computeT16Transform`.
 - H2: the mapping is partial or conflicting, or the generated/TOML span does
   not match, so the entry must remain unchanged.
 - H3: the region is a fragment/data-like or otherwise non-function region
@@ -33,8 +33,8 @@ one hypothesis.
 Commands:
 
 ```
-grep -n -C 5 -E '800BC4F8|800BC810|computeTieInterceptorOrientation' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 -E '800BC4F8|800BC810|computeTieInterceptorOrientation' ../N64Recomp/RecompiledFuncs/funcs_32.c
-grep -n -C 3 -E '800BC4F8|800BC810|computeTieInterceptorOrientation' syms/rogue_squadron.syms.toml
-grep -n -C 3 'computeTieInterceptorOrientation' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl ../N64Recomp/RecompiledFuncs/funcs_32.c
+grep -n -C 5 -E '800BCE74|800BD254|computeT16Transform' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 -E '800BCE74|800BD254|computeT16Transform' ../N64Recomp/RecompiledFuncs/funcs_32.c
+grep -n -C 3 -E '800BCE74|800BD254|computeT16Transform' syms/rogue_squadron.syms.toml
+grep -n -C 3 'computeT16Transform' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl ../N64Recomp/RecompiledFuncs/funcs_32.c
 ```

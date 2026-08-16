@@ -76388,3 +76388,26 @@ generated function body, and six generated callers. Updated only the TOML
 placeholder to `triggerTieInterceptorEffect`; no mitigation, build, or runtime
 change was made. The next bounded candidate is `func_800BC4F8`, independently
 named `computeTieInterceptorOrientation`, with size `0x318`.
+
+## Session 1596 (2026-08-16) — synchronized the computeTieInterceptorOrientation symbol
+
+The work unit censused `0x800BC4F8..0x800BC810` using the companion mission
+symbol list, generated definition and caller, the generated overlay table, and
+the TOML symbol span. The competing hypotheses were H1 (an exact independent
+companion mapping), H2 (a partial, conflicting, or span-mismatched mapping),
+and H3 (a fragment, data-like region, or missing independent name). The
+complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `computeTieInterceptorOrientation = 0x800BC4F8`; `playerTieInterceptorUpdate = 0x800BC810` is the next companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `computeTieInterceptorOrientation` at `0x800BC4F8`; `playerTieInterceptorUpdate` calls it at `0x800BCAF4`. |
+| Span and overlay table | The TOML placeholder had size `0x318`; `recomp_overlays.inl` records `computeTieInterceptorOrientation` at offset `0x173C8` with ROM size `0x318`, followed by `playerTieInterceptorUpdate` at `0x800BC810`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and generated caller. Updated only the TOML placeholder
+to `computeTieInterceptorOrientation`; no mitigation, build, or runtime change
+was made. The next bounded candidate is `func_800BCE74`, independently named
+`computeT16Transform`, with size `0x3E0`.

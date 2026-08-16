@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1595 (2026-08-16).
+the authority for session detail. Reviewed through s1596 (2026-08-16).
 
 ## Current state
 
@@ -193,7 +193,13 @@ the authority for session detail. Reviewed through s1595 (2026-08-16).
    generated callers from `playerTieInterceptorUpdate`, exact
    `computeTieInterceptorOrientation` boundary, overlay-table span, and TOML
    size agree. The next census is `func_800BC4F8`, independently named
-   `computeTieInterceptorOrientation`, with size `0x318`.
+   `computeTieInterceptorOrientation`, with size `0x318`. s1596 synchronized
+   `computeTieInterceptorOrientation` at `0x800BC4F8` (size `0x318`): the
+   companion mission list, generated definition and caller from
+   `playerTieInterceptorUpdate`, exact `playerTieInterceptorUpdate` boundary,
+   overlay-table span, and TOML size agree. The next census is
+   `func_800BCE74`, independently named `computeT16Transform`, with size
+   `0x3E0`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -380,6 +386,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1593 | H1: synchronized `integrateFalconFlightPhysics` at `0x800BBC58` (size `0xD8`); companion mission list, generated definition and floating-point clamp/integration body, exact `playerTieInterceptorInit` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1594 | H1: synchronized `computeTieInterceptorTransform` at `0x800BBF6C` (size `0x324`); companion mission list, generated definition, generated caller at `0x800BCAE8`, exact `triggerTieInterceptorEffect` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1595 | H1: synchronized `triggerTieInterceptorEffect` at `0x800BC290` (size `0x268`); companion mission list, generated definition and six generated callers from `playerTieInterceptorUpdate`, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1596 | H1: synchronized `computeTieInterceptorOrientation` at `0x800BC4F8` (size `0x318`); companion mission list, generated definition and `playerTieInterceptorUpdate` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
