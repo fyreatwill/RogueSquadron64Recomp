@@ -76861,3 +76861,22 @@ TOML span, overlay span, and adjacent handler boundary rule out H2's naming
 or span conflict and H3's data-like/non-independent-function explanation.
 No build or runtime run was needed; this was a bounded census only. The next
 candidate is `fake_func_800BF784` with size `0xC`.
+
+## Session 1615 (2026-08-16) — confirmed the fake 800BF784 fragment
+
+Ran the bounded generated-symbol census for `0x800BF784..0x800BF790`.
+The companion mission symbol list explicitly classifies `0x800BF784` as
+`fake_func_800BF784`. The generated definition contains only the three
+instructions `lui $at, 0x8005`, `lwc1 $f2, 0x1288($at)`, and
+`sub.s $f0, $f0, $f2`, and the generated overlay table retains the same fake
+entry. The TOML entry is also `fake_func_800BF784` with size `0xC`. The
+previous `attached3DSoundEmitterNpcHandler` span ends at `0x800BF784`; the
+next generated and overlay-table body, `func_800BF790`, begins at
+`0x800BF790` with size `0x634`.
+
+H1 selected: this is an explicitly fake three-instruction frame fragment and
+must remain unchanged. The exact companion classification, generated body,
+TOML span, overlay span, and adjacent function boundary rule out H2's naming
+or span conflict and H3's data-like/non-independent-function explanation.
+No build or runtime run was needed; this was a bounded census only. The next
+candidate is `func_800BF790` with size `0x634`.

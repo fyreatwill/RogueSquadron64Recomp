@@ -1,33 +1,37 @@
-# NEXT work unit (s1615)
+# NEXT work unit (s1616)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Run exactly one bounded census over `0x800BF784..0x800BF790`. Record the
-address, size, generated definition, companion classification, and the
-previous/next boundaries before editing. Do not rename an explicitly fake,
-fragment, or data-like entry. Do not build or run.
+Run exactly one bounded census over `0x800BF790..0x800BFDC4`. Record the
+address, size, generated definition/body, companion references, and the
+previous/next boundaries before editing. Synchronize a name only if an
+independent companion name and the generated/TOML/overlay span agree. Do not
+build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: `fake_func_800BF784` is correctly classified as an explicit 0xC-byte
-  fake fragment and must remain unchanged.
-- H2: the companion classification or generated/TOML span conflicts with the
-  fake label, so the entry needs a synchronized name or boundary correction.
-- H3: the bytes are data-like or belong to `func_800BF790`, so the entry is a
-  non-function boundary artifact and remains parked.
+- H1: `func_800BF790` has an independently supported semantic name in the
+  companion project, and its live generated body plus exact span support a
+  synchronized rename.
+- H2: the companion project has no independent semantic name for this entry,
+  so the address-encoded placeholder remains the least-assumptive label.
+- H3: the generated/TOML/overlay boundaries conflict or the bytes are
+  data-like/non-independent, so the entry remains parked pending correction.
 
-The complete comparison table is the discriminator: matching fake labels, an
-exact 0xC generated/TOML span, and `func_800BF790` beginning at `0x800BF790`
-select H1; a conflicting label or span selects H2; evidence that the entry is
-not an independent function selects H3. Each outcome selects one hypothesis.
+The complete comparison table is the discriminator: an independent companion
+name plus a live generated body, matching `0x634` TOML/overlay span, and the
+exact preceding `fake_func_800BF784` and following `func_800BFDC4` boundaries
+select H1; no independent companion name with otherwise coherent boundaries
+selects H2; any span conflict or non-function evidence selects H3. Each
+outcome selects one hypothesis.
 
 Commands:
 
 ```
-rg -n -C 5 'fake_func_800BF784|800BF784|800BF790' ../rogue_squadron64/symbol_files/mission_overlay.txt
-rg -n -C 6 '800BF784|800BF790' ../N64Recomp/RecompiledFuncs/funcs_33.c
-rg -n '800BF784|800BF790' syms/rogue_squadron.syms.toml
-rg -n -C 3 'fake_func_800BF784|func_800BF790' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+rg -n -C 8 '800BF790|func_800BF790' ../rogue_squadron64
+rg -n -C 12 '800BF790|800BFDC4' ../N64Recomp/RecompiledFuncs/funcs_33.c
+rg -n -C 3 '800BF790|800BFDC4' syms/rogue_squadron.syms.toml
+rg -n -C 3 'func_800BF790|func_800BFDC4' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
 
 Before starting the census, run `grep -n '^## Session ' PORTING-STATE.md |

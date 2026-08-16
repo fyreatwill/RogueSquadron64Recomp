@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1614 (2026-08-16).
+the authority for session detail. Reviewed through s1615 (2026-08-16).
 
 ## Current state
 
@@ -268,7 +268,9 @@ the authority for session detail. Reviewed through s1614 (2026-08-16).
    timestep-lookup body and caller, exact previous and next boundaries,
    overlay-table span, and TOML size agree. s1614 confirmed that the next
    entry, `fake_func_800BF498` (size `0x8`), is an explicitly fake fragment;
-   the next census is `fake_func_800BF784` with size `0xC`.
+   `fake_func_800BF498` (size `0x8`), is an explicitly fake fragment. s1615
+   likewise confirmed `fake_func_800BF784` (size `0xC`) as an explicit fake
+   fragment; the next census is `func_800BF790` with size `0x634`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -307,6 +309,9 @@ the authority for session detail. Reviewed through s1614 (2026-08-16).
    - `fake_func_800BF498` (s1614 H1: companion, generated C, TOML, and
      overlay table agree on the explicit 8-byte `lw`/`sw` frame fragment;
      `attached3DSoundEmitterNpcHandler` begins at `0x800BF4A0`)
+   - `fake_func_800BF784` (s1615 H1: companion, generated C, TOML, and
+     overlay table agree on the explicit 12-byte three-instruction fragment;
+     `func_800BF790` begins at the exact next boundary)
 
 2. Future oracle work on leaving the 640 crawl into a mission, or a
    new M4 RDRAM dest (a DMEM→RDRAM transfer that is not `0xD60`),
@@ -484,6 +489,8 @@ single-source and unevaluable as a retail ownership result.
 | s1611 | H1: synchronized `restoreGameSettingsAfterDemo` at `0x800BF3A4` (size `0x64`); companion mapping, generated restore-body semantics and caller, exact adjacent boundaries, overlay-table span, and TOML size agree. H2/H3 were ruled out by the exact independent name, live body, caller, and span. No build or runtime run was needed. |
 | s1612 | H1: synchronized `loadAndStartDemo` at `0x800BF408` (size `0x60`); companion mapping, generated definition and demo asset/init/flag-setting body, generated caller, exact adjacent boundaries, overlay-table span, and TOML size agree. H2/H3 were ruled out by the exact independent name, live body, caller, and span. No build or runtime run was needed. |
 | s1613 | H1: synchronized `getDemoRecordedTimestep` at `0x800BF468` (size `0x30`); companion mapping, generated timestep-lookup body and caller, exact adjacent boundaries, overlay-table span, and TOML size agree. H2/H3 were ruled out by the exact independent name, live body, caller, and span. No build or runtime run was needed. |
+
+| s1615 | H1: confirmed `fake_func_800BF784` at `0x800BF784` (size `0xC`) is an explicit three-instruction fake fragment; companion mapping, generated body, TOML size, exact `func_800BF790` boundary, and overlay-table span agree. No rename, build, or runtime run was needed. |
 
 ## Method and safety rules
 
