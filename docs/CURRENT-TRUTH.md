@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1596 (2026-08-16).
+the authority for session detail. Reviewed through s1597 (2026-08-16).
 
 ## Current state
 
@@ -197,9 +197,12 @@ the authority for session detail. Reviewed through s1596 (2026-08-16).
    `computeTieInterceptorOrientation` at `0x800BC4F8` (size `0x318`): the
    companion mission list, generated definition and caller from
    `playerTieInterceptorUpdate`, exact `playerTieInterceptorUpdate` boundary,
-   overlay-table span, and TOML size agree. The next census is
-   `func_800BCE74`, independently named `computeT16Transform`, with size
-   `0x3E0`.
+   overlay-table span, and TOML size agree. s1597 synchronized
+   `computeT16Transform` at `0x800BCE74` (size `0x3E0`): the companion mission
+   list, generated definition and `playerT16Update` caller, exact
+   `playerT16MainUpdate` boundary, overlay-table span, and TOML size agree.
+   The next census is `func_800BD254`, independently named
+   `playerT16MainUpdate`, with size `0x2DC`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -387,6 +390,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1594 | H1: synchronized `computeTieInterceptorTransform` at `0x800BBF6C` (size `0x324`); companion mission list, generated definition, generated caller at `0x800BCAE8`, exact `triggerTieInterceptorEffect` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1595 | H1: synchronized `triggerTieInterceptorEffect` at `0x800BC290` (size `0x268`); companion mission list, generated definition and six generated callers from `playerTieInterceptorUpdate`, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1596 | H1: synchronized `computeTieInterceptorOrientation` at `0x800BC4F8` (size `0x318`); companion mission list, generated definition and `playerTieInterceptorUpdate` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1597 | H1: synchronized `computeT16Transform` at `0x800BCE74` (size `0x3E0`); companion mission list, generated definition and `playerT16Update` caller, exact `playerT16MainUpdate` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
