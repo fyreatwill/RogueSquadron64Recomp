@@ -77332,6 +77332,23 @@ ownership; H3 is ruled out by the live generated body and exact adjacent
 boundaries. Updated only the stale project TOML placeholder. No build or
 runtime behavior conclusion was made.
 
+## Session 1638 (2026-08-16) — compacted current truth and archived recent sweep
+
+Maintenance was triggered before work selection because `docs/CURRENT-TRUTH.md`
+measured 60,137 bytes, over the 60,000-byte threshold. No experiment, build,
+runtime run, or source-code change was performed. The repeated s1590–s1637
+symbol-census prose and recent Rice-route results were migrated to
+`docs/PROJECT-OVERVIEW.md` §34. `docs/CURRENT-TRUTH.md` was reduced to 10,578
+bytes, retaining current state, durable boundaries, superseded conclusions,
+the evidence summary, and one monotonic five-item backlog. `scratch/agent/NEXT.md`
+was rewritten for the next exact census at `0x800C7358`.
+
+This maintenance result rules out neither the active symbol hypothesis nor the
+parked retail-entry/M4 hypotheses: it intentionally collected no new evidence.
+It does rule out stale duplicated truth-file prose as the source of the live
+state summary; the deleted detail remains in the append-only ledger and the
+project overview.
+
 ## Session 1636 (2026-08-16) — tested post-viewer unmapped controls against retail mission entry
 
 Ran the new Rice retail-oracle batch from

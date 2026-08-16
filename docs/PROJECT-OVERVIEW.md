@@ -2941,3 +2941,32 @@ placeholder `func_0x...` names remained when counted at s1487.
 iteration on the retail-entry boundary or the M4 accumulator boundary
 instead. s1569 was the last such revisit (leave-hangar 640 is
 `runModelViewerLoop`).
+
+## 34. Recent sweep and Rice-route updates (s1590–s1637)
+
+This section archives the post-§33 work that was compacted out of
+`CURRENT-TRUTH.md` during the s1638 maintenance pass. The sweep continued its
+one-adjacent-entry rule: synchronize a TOML placeholder only when the
+companion mapping, generated body, exact boundaries, overlay span, size, and
+caller or semantic evidence agree. Exact-name censuses do not require a build
+or runtime run.
+
+| Sessions | Durable result |
+|---|---|
+| s1590–s1601 | Synchronized `bindFalconSubmodelMaterials` (`0x800BAB70`), `playerFalconMainUpdate` (`0x800BADCC`), `spawnFalconEngineParticles` (`0x800BB608`), `integrateFalconFlightPhysics` (`0x800BBC58`), `computeTieInterceptorTransform` (`0x800BBF6C`), `triggerTieInterceptorEffect` (`0x800BC290`), `computeTieInterceptorOrientation` (`0x800BC4F8`), `computeT16Transform` (`0x800BCE74`), `playerT16MainUpdate` (`0x800BD254`), `triggerT16Effect` (`0x800BD958`), `buildNabooSubmodelTransform` (`0x800BDC9C`), and `triggerNabooEngineEffect` (`0x800BE228`). Each had matching companion/generated/TOML/overlay evidence and adjacent boundaries. |
+| s1602 | M4 paired revisit: four phase-6 target rows, 32 lanes, matched the local VMADH accumulator model with no VGE mutation. The port DMA control identified runtime destination `0x4B7800..0x4B7808`; the positive Rice retail run wrote it zero times. Different allocation/scene origins make that targeted retail null unevaluable. |
+| s1603–s1613 | Synchronized `tickPlayerCraftBlinkIndicator` (`0x800BE4A8`), `initDemoPlayState` (`0x800BEC00`), `applyDemoRecordedHudEvents` (`0x800BECDC`), `clearPlayerSlotHudTracking` (`0x800BEE18`), `tickPlayerHudIndicators` (`0x800BEFBC`), `loadPlayerSlotHudPreset` (`0x800BF264`), `countTrailingZeros16` (`0x800BF2F4`), `applyResModeFromSettings` (`0x800BF358`), `restoreGameSettingsAfterDemo` (`0x800BF3A4`), `loadAndStartDemo` (`0x800BF408`), and `getDemoRecordedTimestep` (`0x800BF468`). Exact companion, body, callers, spans, sizes, and boundaries agreed. |
+| s1614–s1615 | Confirmed `fake_func_800BF498` (`0x8`) and `fake_func_800BF784` (`0xC`) are explicit generated frame fragments, not renameable kernels. |
+| s1616 | Rice pre-exit B is a valid route distinct from A: B delivered `sym=224` / pad word `0x400000`, then changed VI `512→1024` at `0x00790400` and `1024→640` at `0x00696100`, with no model-viewer or mission-entry PC. A followed the known case-6 viewer route. Directional arms were invalid `sym=0`; selector watch `0x13B40:0x13B48` was quiet. |
+| s1617–s1618 | Parked `func_800BF790` (`0x800BF790`, HUD-health body) and `func_800C41B0` (`0x800C41B0`, radar-column body) as H3: each mission entry is address-coded while a conflicting main-overlay name occupies the same VRAM address. |
+| s1619, s1621–s1628 | Synchronized `plotRadarBlipRow` (`0x800C435C`), `updateCraftSelectAnimState` (`0x800C4D8C`), `findClosestRadarContactAndSetSweep` (`0x800C5580`), `renderRadarSweep` (`0x800C5918`), `renderRadarMinimap` (`0x800C5F90`), `lookupCraftValueByLevelKey` (`0x800C62C4`), `registerObjectAndResolveDatItem` (`0x800C6340`), `accumulateClampedFloatField` (`0x800C6468`), and `getDisplayItemStateByte` (`0x800C6498`). |
+| s1620 | Five valid-D-pad Rice arms passed whole-RDRAM, PIF, and VI controls through hangar 512. `dup`/`ddown` plus A reached the 640 viewer; `dleft`/`dright` plus A stayed in 512 through 110 seconds. All had zero mission-entry PC `0x80000B70` and zero selector writes. This corrects the earlier invalid-direction experiment but does not identify mission entry. |
+| s1629 | Parked `func_800C64B0` (`0x800C64B0`, hangar display-item initialization) as H2: mission overlay is address-coded while `main_overlay.txt` names the same VRAM `initHangarDisplayItemTimers`, and generated output contains both overlay contexts. |
+| s1630–s1635 | Synchronized `tickHangarDisplayItemAnimations` (`0x800C65CC`), `hangarVehicleDisplayNpcHandler` (`0x800C68A0`), `applyNpcPositionDrift` (`0x800C6FFC`), `accumulateVectorInObjectFrame` (`0x800C713C`), `getConfigFloatValue` (`0x800C722C`), and `findNamedEntryInCurrentObject` (`0x800C723C`). |
+| s1636 | Rice hold, `cup`, `cdown`, `cleft`, `cright`, `L`, and `R` all passed whole-RDRAM/PIF/VI controls and converged on `320→640→1024→512→640`; each hit viewer PC `0x800C9BF0` once, with mission PC `0x80000B70` and selector writes zero. H2 selected for these controls. |
+| s1637 | Synchronized `dispatchObjectiveSlot1` at `0x800C72E8` (size `0x38`); companion mapping, generated dispatcher/caller, exact adjacent boundaries, section-4 span, and TOML size agree. Next census: `func_800C7358`, companion name `checkComplexObjectives`, size `0x38`. |
+
+The sweep cursor after s1637 is `func_800C7358`. The parked entries and the
+every-15-session revisit rule remain those recorded in §33 and the live truth
+file. The Rice route is now the only valid later-phase oracle recipe; dummy
+video's 320-only results are not evidence about hangar or mission entry.

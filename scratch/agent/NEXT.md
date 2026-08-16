@@ -1,29 +1,27 @@
-# NEXT work unit (s1638)
+# NEXT work unit (s1639)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the bounded generated-symbol sweep with one exact-name census of
-`func_800C7358`, the `0x800C7358..0x800C7390` entry independently named
-`checkComplexObjectives`. Record the address, size, generated
-definition/body, companion references, and previous/next boundaries before
-editing. Synchronize the name only if an independent mission-overlay name and
-the generated, TOML, and overlay spans agree. Do not build or run.
+Run one bounded exact-name census for `func_800C7358`, the mission-overlay
+entry independently named `checkComplexObjectives` at `0x800C7358` (size
+`0x38`). Record the address, size, generated definition/body, companion
+references, TOML entry, overlay span, and previous/next boundaries before
+editing. Synchronize the stale name only if all independent evidence agrees.
+This is a documentation/source-map change; do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: `func_800C7358` has an independently supported mission-overlay name,
-  and its live generated body plus exact span support synchronization.
-- H2: the only matching name belongs to another overlay/context, so the
-  mission-overlay placeholder must remain address-coded despite a live body.
-- H3: no independent name is available, or the generated, TOML, or overlay
-  boundaries conflict, or the entry is data-like, so it stays parked.
+- H1: the companion mission name is owned by this entry, the generated body
+  is live, and generated/TOML/overlay boundaries and size agree; synchronize.
+- H2: the matching name belongs to another overlay or context; leave the
+  mission placeholder address-coded.
+- H3: no independent name is available, a span/size/boundary conflicts, or
+  the entry is data-like; leave it parked.
 
-The complete comparison table is the discriminator: an independent mission
-name plus a live generated body, matching TOML/overlay span, and exact
-preceding `calculateFriendliesSaved` and following `dealDamagetoDatItem`
-boundaries select H1; an ownership conflict selects H2; no independent name,
-any span conflict, or non-function evidence selects H3. Each outcome selects
-one hypothesis.
+The complete comparison table selects exactly one outcome: independent name
+plus live body and exact `calculateFriendliesSaved` / `dealDamagetoDatItem`
+boundaries selects H1; ownership conflict selects H2; no name, any conflict,
+or non-function evidence selects H3.
 
 Before the census, run:
 
