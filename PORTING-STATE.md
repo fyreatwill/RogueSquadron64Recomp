@@ -80354,3 +80354,39 @@ runtime run required.
 Next census: `getNpcWingmanStateData` / `func_800D7974` at
 `0x800D7974` (size `0xF8`). Last-15 titles still include s1714's
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1723 (2026-08-16) — synchronized the getNpcWingmanStateData symbol
+
+Exact generated-symbol census for `0x800D7974` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 57375; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `getNpcWingmanStateData = 0x800D7974` with comment "reads npc[+0x5D] state byte (0..7), clears +0x5E and +0x5F; if state < 8, switch returns per-state data ptr (0x800D7CF8/7EC0/9F90/E0064/...); else returns 0". Previous contiguous neighbor `npcWingmanResetState = 0x800D7850`; next contiguous neighbor `npcWingmanStateEffectShared = 0x800D7A6C`. Case-0 target is `npcWingmanState0 = 0x800D7CF8` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void getNpcWingmanStateData` at VRAM `0x800D7974`; prologue `addiu $sp, $sp, -0x30`; saves `$ra`; `lbu $v1, 0x5D($a0)`; `lw $a3, 0x34($a0)`; `sb $zero, 0x5E($a0)`; `sltiu`/`beq` on state `>= 8` to the return path (`$v0 = 0`); delay-slot `sb $zero, 0x5F($a0)`; 8-way `jr` through table `0x800A77C0` yielding `0x800D7CF8`/`0x800D7EC0`/`0x800D9F90`/`0x800DA064`/`0x800DA13C`/`0x800DA234`/`0x800DA360`/`0x800DA368`; packs those pointers plus `a3+0xD0..DC` into the `initObjectAnimSubstruct` (`jal 0x800F2B88`) arg block; returns through `jr $ra` / `addiu $sp, $sp, 0x30` ending at `0x800D7A68`. Previous mission function is `npcWingmanResetState` at `0x800D7850` (last insn `0x800D7970`); next is `npcWingmanStateEffectShared` at `0x800D7A6C`. `funcs.h` already declares the human name. Sole generated caller is `npcWingmanUpdate` at `0x800D95EC` |
+| Body semantics | Matches the companion state-byte switch and the listed case-0/1/2/3 pointers (`0x800D7CF8`/`7EC0`/`9F90`/`A064`). Companion comment calls the table targets "data ptrs" and says the function "returns" them; the live body passes them to `initObjectAnimSubstruct` instead. Identity is still unambiguous. State `>= 8` leaves `$v0 = 0` and returns |
+| TOML (before) | `{ name = "func_800D7974", vram = 0x800D7974, size = 0xF8 }` — size matches `0x800D7A6C - 0x800D7974` (last insn `0x800D7A68` + 4 = `0xF8`) |
+| Overlay section 4 | `{ .func = getNpcWingmanStateData, .offset = 0x00032844, .rom_size = 0x000000F8 }` under `section_4_ovl_mission_funcs` (`0x800D7974 - 0x800A5130 = 0x32844`; `0x32720 + 0x124 = 0x32844`; `0x32844 + 0xF8 = 0x3293C` matches next `npcWingmanStateEffectShared`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D7974`. Menu max VRAM is `advanceWrappingPhaseAccumulator = 0x800C6660`. No leftover `func_800D7974` in generated headers or overlay INL; no companion `D_800D7974` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated wingman state-byte switch
+body, previous (`npcWingmanResetState` / `0x800D7850`) and next
+(`npcWingmanStateEffectShared` / `0x800D7A6C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`getNpcWingmanStateData`, and only the TOML name was a stale
+`func_800D7974` placeholder. Corrected TOML to `getNpcWingmanStateData`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcWingmanStateEffectShared` / `func_800D7A6C` at
+`0x800D7A6C` (size `0x28C`). Last-15 titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate does not fire.
