@@ -1,10 +1,10 @@
-# NEXT work unit (s1553)
+# NEXT work unit (s1554)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1552 synchronized `computeOrientedTransformFromQuat` at `0x800B1024`.
-Resume the generated-symbol renaming sweep. Perform exactly one bounded
-exact-name census over the next adjacent generated function,
+s1553 was a triggered maintenance compaction (CURRENT-TRUTH 60,219 → 16,352
+bytes). Resume the generated-symbol renaming sweep. Perform exactly one
+bounded exact-name census over the next adjacent generated function,
 `0x800B13E0..0x800B1BE8`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence

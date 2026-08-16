@@ -7,8 +7,8 @@ after a break:
   and the hurdle *classes* that have cost the most time. Durable; changes slowly.
 - **`docs/CURRENT-TRUTH.md`** — what is true right now: working config, live defects, next steps,
   and the list of superseded conclusions. Read before doing any work.
-- **`PORTING-STATE.md`** — the chronological log, 43 sessions deep. Authoritative for detail,
-  but roughly two dozen of its conclusions were later overturned; never act on it without checking
+- **`PORTING-STATE.md`** — the chronological log (1500+ sessions). Authoritative for detail,
+  but dozens of its conclusions were later overturned; never act on it without checking
   `CURRENT-TRUTH.md` first.
 
 ---
@@ -219,7 +219,7 @@ silently when absent. Both are worth verifying explicitly at the start of any vi
 
 ## 5. What actually worked
 
-### 5.0 Current durable checkpoint (s1269)
+### 5.0 Current durable checkpoint (s1553)
 
 The overlay-dispatch issue is closed enough for mission entry and post-sec2
 outdoor presentation. The recurring `slotDispatcherIter+872` SIGBUS has no
@@ -227,12 +227,15 @@ statically reachable frame-overlapping writer after complete caller, context,
 store, and load-idiom audits. The active VI boot descriptor is the 320 record,
 and the independent retail oracle controls pass. Dummy video stays at width
 320/origin `0x006dd280`; Homebrew Rice with the eleven-Start schedule is the
-available hangar-entry recipe (s707, s1496). Audio de-stubbing is closed
-because prior dummy-video retail watches never reached voice initialization. These are
-boundaries, not mitigations: future guards require an `ORIGIN:` naming the
-writer and judging the value legitimate. The generated-symbol renaming sweep
-is the current low-risk workstream; exact companion/generated names are
-synchronized while fake or address-only entries remain unchanged. See
+available hangar-entry recipe (s707, s1496). After hangar, extra Start or A
+leaves to menu-overlay 640/`0x006a2900` (s1528, s1544); that is not a
+mission or cinematic. Audio de-stubbing is closed because prior dummy-video
+retail watches never reached voice initialization. These are boundaries, not
+mitigations: future guards require an `ORIGIN:` naming the writer and
+judging the value legitimate. The generated-symbol renaming sweep is the
+current low-risk workstream; exact companion/generated names are synchronized
+through `computeOrientedTransformFromQuat` at `0x800B1024` (s1552) while
+fake or address-only entries remain unchanged (see §33). See
 `CURRENT-TRUTH.md` for the live backlog and `PORTING-STATE.md` for evidence.
 
 - **Two independent sources before concluding.** Every finding that survived has two: task timing
@@ -2837,14 +2840,65 @@ overwrite families require `s7==0`, while the boot wrapper's stack-derived
 `s7` is nonzero, so index 0 is preserved.
 
 The four-record copy writes table offsets `0x00/0x50/0xA0/0xF0` and reaches
-`osViSetMode_recomp` without an intervening selector or record store. The
-remaining boundary is the exact `a0` pointer at `0x8001B720` and the host-side
-width load/commit. This detail is intentionally kept as the next live audit in
-`CURRENT-TRUTH.md`; the selector/source chain should not be reopened.
+`osViSetMode_recomp` without an intervening selector or record store.
+`osViSetMode_recomp` forwards `ctx->r4` unchanged; the host does not rewrite
+width. The VI descriptor boundary is independently established; do not reopen
+the selector/source chain.
 
 The same period closed the recurring material-writer ordering question: boot
 initialization calls the descriptor setup before the material writer, and the
 recurring path is not before the first boot consumer. The M3 slot-stack-spill
-family and M4 zero-shade investigation remain parked as described in the live
-truth file. Maintenance s1131 compressed the detailed session ledger from the
-live file into the append-only `PORTING-STATE.md` and this durable summary.
+family and M4 accumulator-origin investigation remain parked as described in
+the live truth file. Maintenance s1131 compressed the detailed session ledger
+from the live file into the append-only `PORTING-STATE.md` and this durable
+summary. Homebrew Rice later-phase results (s1496 hangar, s1512 M4 DMEM `r9`,
+s1528 leave-hangar 640, s1544 640 still menu-overlay) live in
+`CURRENT-TRUTH.md` and superseded the dummy-video 320-only parking.
+
+## 33. Generated-symbol renaming sweep (s1240–s1552)
+
+Migrated from `CURRENT-TRUTH.md` during the s1553 maintenance pass. Full
+per-session comparison tables remain in `PORTING-STATE.md`. Method: one
+adjacent generated function per session; synchronize the TOML name only
+when the companion project, generated definition, live-body size, and
+caller or semantic evidence agree (H1). Leave address-encoded, already-fake,
+or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
+justified for an exact-name census.
+
+**Cursor.** Next census is `tickCinematicObjectStateMachine` at
+`0x800B13E0` (TOML still `func_800B13E0`, size `0x808`). Last H1 sync is
+`computeOrientedTransformFromQuat` at `0x800B1024` (s1552). About 1,548
+placeholder `func_0x...` names remained when counted at s1487.
+
+**Covered ranges (H1 unless noted).**
+
+| Sessions | Region / result |
+|---|---|
+| s1240–s1268 | Early exact companion/generated map syncs; fake/address-only left unchanged. |
+| s1270–s1308 | MusyX / voice / display-mode / init-shutdown: `0x80086450` through `isMusyXActive` at `0x8008ED5C`. |
+| s1309 | H2 for truncated `func_8008ED6C`; H1 for `runAiAudioStreamPlaybackLoop` at `0x8008ED70`. |
+| s1310–s1354 | Song / stream / resample / voice-init: `buildSongTempoSchedule` through `resampleVoicePointTableSamples`. |
+| s1355, s1357, s1359 | H3 for complete inner kernels `func_800927B0`, `func_80092A54`, `func_80092CF0` (no independent name). |
+| s1356, s1358, s1360–s1368 | Remaining resample/copy/ADPCM/math primitives through `ceilDouble`. s1360 left `func_80092F10` as a TOML-only live tail of `resampleVoiceLutSamplesPacked`. |
+| s1369 | H1 `sqrtf_recomp`; left `fake_func_80093E74` unchanged. |
+| s1370–s1445 | Note-rate, pan, song sequencer, SND tables, streamed/3D voice, priority queue through `noopHandler_80099C44`. Left `fake_func_80094348`, `fake_func_8009711C`, `fake_func_80097D58` unchanged. |
+| s1446, s1451 | H2 for already-fake one-word gaps `fake_func_80099C4C` and `fake_func_80099FDC`. |
+| s1447–s1450 | Affine / vec3 / orientation-inverse at `0x80099C50..0x80099DCC`. |
+| s1452–s1470 | Voice-slot / speech / MusyX voice table / stream consume through `stopVoice` at `0x8009C2BC`. s1460 confirmed already-matching `loadSpeechFile`. |
+| s1471 | H2 for already-fake COP1 fragment `fake_func_8009C2C8`. |
+| s1472–s1485 | Voice pan/channel/decode/filter/mix through `audioCompandS16`. s1476 H2 for `fake_func_8009D7CC`; s1477/s1478 left `func_8009D8BC` and `func_8009D978` as eight-byte lookup-table pads. |
+| s1486–s1543 | Cinematic overlay: `cinematicLoopBody` at `0x800A5D80` through `cinematicDeactivator` at `0x800AF60C`. s1487 confirmed already-matching `load_cutscene`. |
+| s1545–s1546 | `getCinematicStateSubObject`, `cinematicInterpRatio`; s1546 H2 for already-fake data-tail `fake_func_800AF6A8`. |
+| s1547–s1552 | Mission overlay: `findNearestSceneObjectToPoint` through `computeOrientedTransformFromQuat` at `0x800B1024`. |
+
+**Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,
+`fake_func_80094348`, `fake_func_8009711C`, `fake_func_80097D58`,
+`fake_func_80099C4C`, `fake_func_80099FDC`, `fake_func_8009C2C8`,
+`fake_func_8009D7CC`, `func_8009D8BC`, `func_8009D978`,
+`fake_func_800AF6A8`. Reasons are in `CURRENT-TRUTH.md` Next steps #1.
+
+**Revisit rule.** Every 15 consecutive sweep-titled sessions, spend the
+iteration on the retail-entry boundary or the M4 accumulator boundary
+instead. s1544 was the last such revisit (leave-hangar 640 is still
+resident menu overlay).

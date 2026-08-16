@@ -74865,3 +74865,20 @@ offset `0x0000C2B0`; live body ends at generated
 `updatePlayerCraftPhysics` / TOML `func_800B1BE8` at
 `0x800B1BE8`). Independently named `computeOrientedTransformFromQuat` at
 `0x800B1024` (`rom_size` `0x3BC`) ends at `0x800B13E0`.
+
+## Session 1553 (2026-08-15) — compacted current truth
+
+The maintenance gate fired because `docs/CURRENT-TRUTH.md` was 60,219 bytes
+(612 lines). Compacted it to 251 lines / 16,352 bytes (361 net lines
+removed; well under the ~35 KB cap). Migrated the s1240–s1552 generated-symbol
+sweep ledger to `docs/PROJECT-OVERVIEW.md` §33, refreshed the §5.0 durable
+checkpoint from s1269 to s1553, and updated the stale VI-descriptor "next live
+audit" note to the independently established boundary. Next-steps stays one
+monotonic 1–5 sequence: the per-session H1 sync list is replaced by a pointer
+to the archive plus the parked H2/H3 set and the live `0x800B13E0` census
+cursor. Evidence-ledger rows s1270–s1552 collapse to one range. No new soak
+verdicts since s1552; the SOAK-RESULTS tail is unchanged from 2026-08-14.
+No build, runtime experiment, or soak ran. This rules out no new runtime
+hypothesis; it establishes that the compact state still points to the
+generated-symbol sweep and preserves the Rice 640, audio, M3, VI, and M4
+boundaries.
