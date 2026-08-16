@@ -1705,7 +1705,7 @@ functions = [
     { name = "findClosestRadarContactAndSetSweep", vram = 0x800C5580, size = 0x398 },
     { name = "renderRadarSweep", vram = 0x800C5918, size = 0x678 },
     { name = "renderRadarMinimap", vram = 0x800C5F90, size = 0x334 },
-    { name = "func_800C62C4", vram = 0x800C62C4, size = 0x70 },
+    { name = "lookupCraftValueByLevelKey", vram = 0x800C62C4, size = 0x70 },
     { name = "func_800C6334", vram = 0x800C6334, size = 0xC },
     { name = "func_800C6340", vram = 0x800C6340, size = 0x80 },
     { name = "func_800C63C0", vram = 0x800C63C0, size = 0xA8 },

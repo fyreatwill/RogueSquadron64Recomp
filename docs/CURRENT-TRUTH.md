@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1624 (2026-08-16).
+the authority for session detail. Reviewed through s1625 (2026-08-16).
 
 ## Current state
 
@@ -321,9 +321,14 @@ the authority for session detail. Reviewed through s1624 (2026-08-16).
    mapping, live generated radar/minimap body, exact `renderRadarSweep` and
    `lookupCraftValueByLevelKey` boundaries, section-4 overlay span, and TOML
    size agree. The generated definition and overlay table already carried the
-   human name; the project TOML placeholder was updated. The next census is
-   `func_800C62C4`, independently named `lookupCraftValueByLevelKey`, with
-   size `0x70`.
+   human name; the project TOML placeholder was updated. s1625 synchronized
+   `lookupCraftValueByLevelKey` at `0x800C62C4` (size `0x70`): the companion
+   mission mapping, live generated level-key table lookup body, exact
+   `renderRadarMinimap`/`resetCraftSelectionCounter` boundaries, section-4
+   overlay span, and TOML size agree. The generated definition and overlay
+   table already carried the human name; the project TOML placeholder was
+   updated. The next census is `func_800C6340`, independently named
+   `registerObjectAndResolveDatItem`, with size `0x80`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -564,6 +569,7 @@ single-source and unevaluable as a retail ownership result.
 | s1622 | H1: synchronized `findClosestRadarContactAndSetSweep` at `0x800C5580` (size `0x398`); the companion mission mapping, live generated body, `updateCraftSelectAnimState` caller at `0x800C6258`, exact `placeRadarDots`/`renderRadarSweep` boundaries, section-4 overlay span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
 | s1623 | H1: synchronized `renderRadarSweep` at `0x800C5918` (size `0x678`); the companion mission mapping, live generated sweep/trigonometry body, exact `findClosestRadarContactAndSetSweep`/`renderRadarMinimap` boundaries, section-4 overlay span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
 | s1624 | H1: synchronized `renderRadarMinimap` at `0x800C5F90` (size `0x334`); the companion mission mapping, live generated radar/minimap body, exact `renderRadarSweep`/`lookupCraftValueByLevelKey` boundaries, section-4 overlay span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
+| s1625 | H1: synchronized `lookupCraftValueByLevelKey` at `0x800C62C4` (size `0x70`); the companion mission mapping, live generated level-key table lookup body, exact `renderRadarMinimap`/`resetCraftSelectionCounter` boundaries, section-4 overlay span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
 
 ## Method and safety rules
 
