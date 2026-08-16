@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1590 (2026-08-16).
+the authority for session detail. Reviewed through s1591 (2026-08-16).
 
 ## Current state
 
@@ -170,8 +170,15 @@ the authority for session detail. Reviewed through s1590 (2026-08-16).
    mission list, generated definition and caller from
    `computeFalconFlightTransform`, exact `playerFalconMainUpdate` boundary,
    overlay-table span, and TOML size agree. The next census is
-   `func_800BADCC`, independently named `playerFalconMainUpdate`, with size
-   `0x83C`.
+   `func_800BB608`, independently named `spawnFalconEngineParticles`, with
+   size `0x228`.
+
+   s1591 synchronized `playerFalconMainUpdate` at `0x800BADCC` (size `0x83C`):
+   the companion mission list, generated definition and caller from
+   `spawnFalconEngineParticles`, exact `spawnFalconEngineParticles` boundary,
+   overlay-table span, and TOML size agree. The next census is
+   `func_800BB608`, independently named `spawnFalconEngineParticles`, with
+   size `0x228`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -352,6 +359,8 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1581 | H1: synchronized `orientEffectToVelocity` at `0x800B7A4C` (size `0x3B0`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1582 | H1: synchronized `spawnTexturedExplosionBurst` at `0x800B7DFC` (size `0x68C`); companion mapping, generated definition, `playerYwingUpdate` caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1583 | H1: synchronized `emitTexturedEffectCue` at `0x800B88C8` (size `0x12C`); companion mapping, generated definition, exact `fake_func_800B89F4` boundary, and TOML size agree, with matching texture/cue-dispatch semantics. No build or runtime run was needed. |
+
+| s1591 | H1: synchronized `playerFalconMainUpdate` at `0x800BADCC` (size `0x83C`); companion mission list, generated definition and caller from `spawnFalconEngineParticles`, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 

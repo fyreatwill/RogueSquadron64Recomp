@@ -1648,7 +1648,7 @@ functions = [
     { name = "computeFalconFlightTransform", vram = 0x800BA620, size = 0x3E0 },
     { name = "triggerFalconEngineEffect", vram = 0x800BAA00, size = 0x170 },
     { name = "bindFalconSubmodelMaterials", vram = 0x800BAB70, size = 0x25C },
-    { name = "func_800BADCC", vram = 0x800BADCC, size = 0x83C },
+    { name = "playerFalconMainUpdate", vram = 0x800BADCC, size = 0x83C },
     { name = "func_800BB608", vram = 0x800BB608, size = 0x228 },
     { name = "playerFalconUpdate", vram = 0x800BB830, size = 0x428 },
     { name = "func_800BBC58", vram = 0x800BBC58, size = 0xD8 },
