@@ -1,9 +1,9 @@
-# NEXT work unit (s1508)
+# NEXT work unit (s1509)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Perform exactly one bounded exact-name census over the next adjacent
-generated function, `0x800ABD0C..0x800AC574`. Do not build or run. Record
+generated function, `0x800AC574..0x800AC75C`. Do not build or run. Record
 its address, size, generated definition, companion name/source, caller or
 semantic evidence, and confidence before editing. Synchronize only an exact
 independent name in `syms/rogue_squadron.syms.toml`; leave address-encoded,
@@ -27,17 +27,18 @@ one-instruction `mtc1 $zero, $f4` fragment),
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
 generated entry at this address is already
-`npcIncomingMissileUpdate`; the companion cinematic splat
-list maps `npcIncomingMissileUpdate = 0x800ABD0C`. TOML is
-still `func_800ABD0C` (size `0x868`, ends at independently named
-`buildCutsceneGradientBuffers` / TOML `func_800AC574` at `0x800AC574`).
-Overlay `rom_size` is `0x868` at offset `0x00006BDC`. Confirm the
+`buildCutsceneGradientBuffers`; the companion cinematic splat
+list maps `buildCutsceneGradientBuffers = 0x800AC574`. TOML is
+still `func_800AC574` (size `0x1E8`, ends at independently named
+`spawnNpcBurstAlongSegment` / TOML `func_800AC75C` at `0x800AC75C`).
+Overlay `rom_size` is `0x1E8` at offset `0x00007444`. Confirm the
 complete live function, matching size, and caller/semantic evidence
-before synchronizing the TOML name. Menu-overlay `func_800AB1C8` at
-`0x800AB1C8` and `func_800AB658` at `0x800AB658` occupy overlapping
-VRAM and are a different overlay, not a cinematic size split.
-Mission-overlay `func_800AADD4` at `0x800AADD4` and `func_800AC330`
-at `0x800AC330` occupy overlapping VRAM and are a different overlay,
+before synchronizing the TOML name. Menu-overlay
+`updateHangarBayScene` / TOML `func_800AB658` at `0x800AB658`
+occupies overlapping VRAM and is a different overlay, not a
+cinematic size split. Mission-overlay
+`tickEffectObjectMotionAndOrientation` / TOML `func_800AC330` at
+`0x800AC330` occupies overlapping VRAM and is a different overlay,
 not a cinematic size split.
 
 Any future oracle/M4 watch must use Homebrew Rice
@@ -60,7 +61,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800ABD0C\|800AC574\|npcIncomingMissileUpdate' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800ABD0C\|800AC574\|npcIncomingMissileUpdate' ../N64Recomp/RecompiledFuncs/funcs_28.c
-grep -n -C 3 '800ABD0C\|800AC574' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AC574\|800AC75C\|buildCutsceneGradientBuffers' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AC574\|800AC75C\|buildCutsceneGradientBuffers' ../N64Recomp/RecompiledFuncs/funcs_28.c
+grep -n -C 3 '800AC574\|800AC75C' syms/rogue_squadron.syms.toml
 ```
