@@ -77069,3 +77069,18 @@ input is generically ignored, but it does not identify mission entry or the
 left/right hangar state. This is single-source retail-oracle execution with
 independent PIF and VI/PC measurement channels, not a second emulator
 witness. No mitigation, generated-code change, or build was made.
+
+## Session 1622 (2026-08-16) — synchronized the findClosestRadarContactAndSetSweep symbol
+
+Ran the exact generated-symbol census for `0x800C5580` without building or
+running. The companion `mission_overlay.txt` independently names the entry
+`findClosestRadarContactAndSetSweep`. The live generated definition has the
+radar-contact selection and sweep-state body, its generated caller is
+`updateCraftSelectAnimState` at `0x800C6258`, and the machine body ends at
+`0x800C5918` after the `0x800C5914` delay-slot instruction. The section-4
+overlay table and project TOML both agree on the `0x398` span, with
+`placeRadarDots` immediately before and `renderRadarSweep` immediately after.
+H1 was selected; H2/H3 were ruled out by the independent name, live body, and
+matching boundaries. The generated definition and overlay entry already used
+the human name, so only the TOML placeholder was changed. No build or runtime
+run was needed.
