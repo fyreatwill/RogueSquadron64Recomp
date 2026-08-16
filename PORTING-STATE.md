@@ -75260,3 +75260,50 @@ offset `0x0000EE84`; live body ends at generated
 `resetSpeechOncePerLevelFlag` / TOML `func_800B40A0` at
 `0x800B40A0`). Independently named `playSpeechClipOncePerChange` at
 `0x800B3F50` (`rom_size` `0x64`) ends at `0x800B3FB4`.
+
+## Session 1562 (2026-08-16) — synchronized the play-speech-clip-once-per-level symbol
+
+Performed the bounded exact-name census over `0x800B3FB4..0x800B40A0`.
+
+No new soak-queue verdicts since s1561; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1553 (maintenance compaction),
+so the every-15-sessions sweep-revisit rule did not fire. CURRENT-TRUTH is
+17,152 bytes at session start, so Step 0 did not trigger a maintenance
+iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B3FB4`, size `0xEC`; `0x800B3FB4+0xEC=0x800B40A0`. Overlay `.ovl.mission` entry `rom_size` is `0xEC` at offset `0x0000EE84` (`0x800B3FB4-0x800A5130`). Live body is independently `0xEC` and meets generated `resetSpeechOncePerLevelFlag` at `0x800B40A0` |
+| Generated definition | `funcs_30.c` defines `playSpeechClipOncePerLevel` at `0x800B3FB4`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000EE84`, `rom_size 0x000000EC`). The live mission body is a complete `0xEC` function: prologue `addiu $sp, $sp, -0x18` and the `$s0/$ra` spill. `$s0` holds the speech-clip id (`$a0`); `$a3` copies the incoming flags (`$a1`). It `j`s to the epilogue when the id is the `0x28C` sentinel. Otherwise it walks a 14-entry id ring at `0x8010B740` (`lui`/`addiu -0x48C0`) with matching flag bytes at `0x8010B780` (`-0x4880`), `slti $v1, 0xE`. A hit with a nonzero flag returns 0; a hit with a zero flag stores 1 and continues to dispatch. Dispatch `jal`s independently named `playSpeechClip` at `0x80066EE4` with `$a1` `0x73` or `0x78` (language byte `0x80130B40` compared to `0xF`, plus id `0x104`/`0x28C` specials), `$a2=0`, and `$a3` masked to 16 bits, then stores the new id to `0x801096B4` and copies the float at `0x800A580C` into `0x801096B0`. Last live instruction pair is `0x800B4098`/`0x800B409C` (`jr $ra` / `addiu $sp, $sp, 0x18`). Next generated mission entry is already `resetSpeechOncePerLevelFlag` at `0x800B40A0`. Independently named `playSpeechClipOncePerChange` at `0x800B3F50` (`rom_size` `0x64`) ends at this address. Menu-overlay TOML `func_800B3F24` (`rom_size` `0xB4`, ends `0x800B3FD8`; companion `enqueueFormatMessage`) occupies overlapping VRAM from `.ovl.menu` across the start of this body, and generated `pollServiceMessageByte` at menu VRAM `0x800B3FD8` (`rom_size` `0x48`, ends `0x800B4020`) occupies the interior; neither is a split of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `playSpeechClipOncePerLevel = 0x800B3FB4` with comment "plays a voice line once per level (14-entry ring)". The same mission list independently names the adjacent functions `playSpeechClipOncePerChange` at `0x800B3F50` and `resetSpeechOncePerLevelFlag` at `0x800B40A0`, and independently names all five generated mission callers. Companion `docs/mips_to_c/ctx.c` has no prototype and no competing independent name. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B3FB4`. Menu lists `enqueueFormatMessage = 0x800B3F24` and `pollServiceMessageByte = 0x800B3FD8` as the overlapping `.ovl.menu` occupants. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B3FB4` alias. Main-overlay `playSpeechClip = 0x80066EE4` is the in-body callee |
+| Caller evidence | 8 retail `jal` encodings `0x0C02CFED` at file `0xAD528` (`0x800AC928`), `0xB5E5C` (`0x800B525C`), `0xB9CD0` (`0x800B90D0`), `0xB9E58` (`0x800B9258`), `0xBA79C` (`0x800B9B9C`), `0xBA7B4` (`0x800B9BB4`), `0xBA854` (`0x800B9C54`), and `0xBB744` (`0x800BAB44`); zero `j` encodings and zero absolute `0x800B3FB4` pointer words. The generated sites are eight named `playSpeechClipOncePerLevel(...)` calls. Mission-side independently named owners: `tickCinematicEffectObject` at `0x800AC7B4` (`0x800AC7B4+0x5E8=0x800ACD9C`), `playXwingEngineSound` at `0x800B4F54` (`+0x4E0=0x800B5434`), `updateVwingEngineEffect` at `0x800B8C30` (`+0x9B0=0x800B95E0`; two sites), `tickVwingEngineAudio` at `0x800B9950` (`+0x5FC=0x800B9F4C`; three sites), and `triggerFalconEngineEffect` at `0x800BAA00` (`+0x170=0x800BAB70`). Delay slots pass flags `9` or `1` in `$a1`. Overlapping menu-overlay generated wrappers (`updateHangarBayScene`, `menuControllerInput`, `setupMenuData`) occupy the same VRAM and are not extra mission callers. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B4BB4` (`0x0A5D30+(0x800B3FB4-0x800A5130)`) are `0x27BDFFE8` (`addiu $sp, $sp, -0x18`), `0xAFB00010` (`sw $s0, 0x10($sp)`), `0x00808021` (`addu $s0, $a0, $zero`), `0x00A03821` (`addu $a3, $a1, $zero`). Last pair file `0x0B4C98`/`0x0B4C9C` is `0x03E00008`/`0x27BD0018` (`jr $ra` / `addiu $sp, $sp, 0x18`). Next start file `0x0B4CA0` is `0x2402028C` (`addiu $v0, $zero, 0x28C`, `resetSpeechOncePerLevelFlag` prologue). Preceding epilogue file `0x0B4BAC`/`0x0B4BB0` is `0x03E00008`/`0x27BD0020` (`playSpeechClipOncePerChange` `jr $ra` / `addiu $sp, $sp, 0x20`). In-body `jal` at file `0x0B4C6C` is `0x0C019BB9` (`jal 0x80066EE4` / `playSpeechClip`). Loop bound at `0x800B401C` is `slti $v0, $v1, 0xE` (14-entry ring). Menu occupant at the same VRAM (file `0x11B154`) is `0x8FB3001C` (`lw $s3, 0x1C($sp)`, interior of `enqueueFormatMessage`); that function's own start at file `0x11B0C4` is `0x27BDFFD8` (`addiu $sp, $sp, -0x28`). Menu `pollServiceMessageByte` start at file `0x11B178` is `0x27BDFFE8`. Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B3FB4` is past that occupant. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28`, s1556 start file `0x0B42FC` is still `0x3C078011`, s1557 start file `0x0B43C0` is still `0x27BDFFE0`, s1558 start file `0x0B4610` is still `0x3C028014`, s1559 start file `0x0B4A4C` is still `0x3C028013`, s1560 start file `0x0B4B0C` is still `0x27BDFFE0`, s1561 start file `0x0B4B50` is still `0x27BDFFE0` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B3FB4`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0xEC`, all eight ROM `jal` callers sit inside independently named
+mission functions, the body gates on a 14-entry once-per-level flag ring
+and otherwise dispatches through `playSpeechClip`, the overlapping menu
+occupants are a different overlay, and there is neither a conflicting
+companion name nor a mission size split. H2 and H3 are ruled out for
+this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0xEC`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`resetSpeechOncePerLevelFlag` at `0x800B40A0` (TOML still
+`func_800B40A0`, size `0x50`; overlay `rom_size` is `0x50` at
+offset `0x0000EF70`; live body ends at generated
+`setPlayerSlotPositionVec3` / TOML `func_800B40F0` at
+`0x800B40F0`). Independently named `playSpeechClipOncePerLevel` at
+`0x800B3FB4` (`rom_size` `0xEC`) ends at `0x800B40A0`.
