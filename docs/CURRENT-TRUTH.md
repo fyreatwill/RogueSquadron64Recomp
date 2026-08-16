@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1598 (2026-08-16).
+the authority for session detail. Reviewed through s1599 (2026-08-16).
 
 ## Current state
 
@@ -207,6 +207,12 @@ the authority for session detail. Reviewed through s1598 (2026-08-16).
    span, and TOML size agree. The next census is `func_800BD958`,
    independently named `triggerT16Effect`, with size `0xF8`.
 
+   s1599 synchronized `triggerT16Effect` at `0x800BD958` (size `0xF8`): the
+   companion mission list, generated definition and effect/sound dispatch
+   body, exact `playerNabooStarfighterInit` boundary, overlay-table span, and
+   TOML size agree. The next census is `func_800BDC9C`, independently named
+   `buildNabooSubmodelTransform`, with size `0x58C`.
+
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
    - `func_800927B0` address-encoded (s1355 H3)
@@ -343,7 +349,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
-| s1270–s1594 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `computeTieInterceptorTransform` at `0x800BBF6C`, with the s1585 retail-entry revisit interleaved. H2/H3 parks listed under Next steps #1, including s1570 `fake_func_800B42BC`. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in the census sessions. |
+| s1270–s1599 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `triggerT16Effect` at `0x800BD958`, with the s1585 retail-entry revisit interleaved. H2/H3 parks listed under Next steps #1, including s1570 `fake_func_800B42BC`. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in the census sessions. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
@@ -395,6 +401,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1596 | H1: synchronized `computeTieInterceptorOrientation` at `0x800BC4F8` (size `0x318`); companion mission list, generated definition and `playerTieInterceptorUpdate` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1597 | H1: synchronized `computeT16Transform` at `0x800BCE74` (size `0x3E0`); companion mission list, generated definition and `playerT16Update` caller, exact `playerT16MainUpdate` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1598 | H1: synchronized `playerT16MainUpdate` at `0x800BD254` (size `0x2DC`); companion mission list, generated definition and `playerT16Update` caller at `0x800BD814`, exact `playerT16Update` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1599 | H1: synchronized `triggerT16Effect` at `0x800BD958` (size `0xF8`); companion mission list, generated definition and effect/sound dispatch body, exact `playerNabooStarfighterInit` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 

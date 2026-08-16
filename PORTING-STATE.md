@@ -76469,3 +76469,31 @@ generated function body, and generated caller. Updated only the TOML
 placeholder to `playerT16MainUpdate`; no mitigation, build, or runtime change
 was made. The next bounded candidate is `func_800BD958`, independently named
 `triggerT16Effect`, with size `0xF8`.
+
+## Session 1599 (2026-08-16) — synchronized the triggerT16Effect symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only older verdicts already represented in the ledger, so no
+soak result changed the work-unit choice. This iteration continued the
+bounded generated-symbol sweep. No build or runtime run was needed.
+
+The work unit censused `0x800BD958..0x800BDA50` using the companion mission
+symbol list, generated definition and body, the generated overlay table, and
+the TOML symbol span. The competing hypotheses were H1 (an exact independent
+companion mapping), H2 (a partial, conflicting, or span-mismatched mapping),
+and H3 (a fragment, data-like region, or missing independent name). The
+complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `triggerT16Effect = 0x800BD958`; `playerNabooStarfighterInit = 0x800BDA50` is the adjacent companion boundary. |
+| Generated definition and semantics | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `triggerT16Effect` at `0x800BD958`; its body performs HMT texture lookup, cue dispatch, `slotDispatcherIter`, and 3D sound dispatch. The next definition starts at `0x800BDA50`. |
+| Span and overlay table | The TOML placeholder had size `0xF8`; `recomp_overlays.inl` records `triggerT16Effect` at offset `0x18828` with ROM size `0xF8`, followed by `playerNabooStarfighterInit` at `0x18920`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and effect/sound semantics. Updated only the TOML
+placeholder to `triggerT16Effect`; no mitigation, build, or runtime change
+was made. The next bounded candidate is `func_800BDC9C`, independently named
+`buildNabooSubmodelTransform`, with size `0x58C`.
