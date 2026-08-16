@@ -1,4 +1,4 @@
-# NEXT work unit (s1616)
+# NEXT work unit (s1617)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
@@ -25,7 +25,14 @@ select H1; no independent companion name with otherwise coherent boundaries
 selects H2; any span conflict or non-function evidence selects H3. Each
 outcome selects one hypothesis.
 
-Commands:
+Before starting the census, run:
+
+```
+grep -n '^## Session ' PORTING-STATE.md | tail -15
+```
+
+The last title is s1616's retail-entry revisit, so the mandatory every-15
+sessions rule permits this sweep census. Use these bounded commands:
 
 ```
 rg -n -C 8 '800BF790|func_800BF790' ../rogue_squadron64
@@ -33,7 +40,3 @@ rg -n -C 12 '800BF790|800BFDC4' ../N64Recomp/RecompiledFuncs/funcs_33.c
 rg -n -C 3 '800BF790|800BFDC4' syms/rogue_squadron.syms.toml
 rg -n -C 3 'func_800BF790|func_800BFDC4' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
-
-Before starting the census, run `grep -n '^## Session ' PORTING-STATE.md |
-tail -15`. If all 15 titles are sweep sessions, perform the mandatory
-retail-entry-boundary or M4-accumulator revisit instead of this census.

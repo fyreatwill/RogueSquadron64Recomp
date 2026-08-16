@@ -76880,3 +76880,48 @@ TOML span, overlay span, and adjacent function boundary rule out H2's naming
 or span conflict and H3's data-like/non-independent-function explanation.
 No build or runtime run was needed; this was a bounded census only. The next
 candidate is `func_800BF790` with size `0x634`.
+
+## Session 1616 (2026-08-16) — tested pre-exit hangar input routes at retail
+
+The mandatory 15-title check found only sweep sessions plus the s1602 M4
+revisit, so this iteration performed a new external retail-entry revisit
+instead of another generated-symbol census. Static inspection of the
+generated `runHangarSelectionFrame` body found its new-button read at
+`0x800AB0EC` and a B-specific `andi 0x4000` branch. The prior s1585 result had
+tested A/B/Z only after the 512 hangar had already become the 640 model-viewer
+phase; it did not test B while the hangar selector was active.
+
+The competing hypotheses were H1: pre-exit B selects a distinct route that
+could lead toward mission entry; H2: B is recognized but leaves the known
+hangar/model-viewer route unchanged; H3: directional navigation changes the
+route; and H4: the recipe or candidate input is unevaluable. The one
+discriminator was the phase-gated post-hangar VI lifecycle plus PC watches for
+`runHangarSelectionFrame` (`0x800AAD9C`), `runHangarMenuFromOverlay`
+(`0x800C6854`), `runModelViewerLoop` (`0x800C9BF0`), mission entry
+(`0x80000B70`), overlay loads, and writes to `0x130B10:0x130B58` and
+`0x13B40:0x13B48`.
+
+The four concurrent Rice arms used the same eleven Start presses and were:
+the known A exit control (`58:a,63:a`), pre-exit B (`55:b,58:b,63:b`), and
+Up/Down navigation followed by the A exit (`55/57:up|down,58:a,63:a`). Every
+arm passed the whole-RDRAM positive control (10,137–10,150 writes) and the
+320→640→1024→512 hangar lifecycle. A was delivered as `sym=225` with pad
+word `0x800000`; B was delivered as `sym=224` with pad word `0x400000` and
+the hangar-frame PC fired 696 times in the B arm. The Up/Down arms logged
+`sym=0`, so they were invalid input arms and cannot select H3.
+
+H1 selected for the valid B arm: it stayed at 512 until 65.4s, then changed
+to 1024 at origin `0x00790400` and to 640 at `0x00696100`, with zero
+`runModelViewerLoop` hits and zero mission-entry `0x80000B70` hits. The A
+control reached 640 at `0x006A2E00` and had one model-viewer hit; both valid
+arms had zero mission-entry hits. B therefore proves a distinct retail menu
+route but not mission entry. The selector watch was zero in all arms, and the
+target block showed the common 137 writes in A/Up/Down versus 150 in B; no
+mitigation or recomp change was made.
+
+This rules out the claim that every valid hangar exit follows case-6 model
+viewer and rules out B as a mission-entry input in the observed 110-second
+window. It does not identify the B-selected 640 route or answer which input
+leaves case 6 into a mission. The directional question remains open because
+the names were not mapped to valid SDL symbols in these fresh config dirs;
+do not treat their nulls as evidence.

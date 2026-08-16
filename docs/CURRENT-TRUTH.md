@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1615 (2026-08-16).
+the authority for session detail. Reviewed through s1616 (2026-08-16).
 
 ## Current state
 
@@ -50,6 +50,18 @@ the authority for session detail. Reviewed through s1615 (2026-08-16).
   the planet / text-crawl viewer (the product LEVEL DESCRIPTION
   after AVAILABLE CRAFT), not a mission. Do not add target watches
   on a dummy-video arm. Glide64MK2 stayed at 320 in s707.
+- s1616's Rice pre-exit B arm is a distinct valid route: B was delivered
+  (`sym=224`, pad word `0x400000`) while the hangar-frame control was live,
+  then VI changed 512→1024 at `0x00790400` and later 1024→640 at
+  `0x00696100`. It executed no `runModelViewerLoop` and no mission-entry
+  path (`0x80000B70`), so B does not solve mission entry but does refute the
+  claim that every hangar exit follows the case-6 viewer. A control and the
+  two directional arms followed the known 512→640 viewer route; the
+  directional arms logged `sym=0` rather than a valid mapped input and are
+  unevaluable for navigation. The selector watch `0x13B40:0x13B48` stayed
+  quiet in all four arms. This is retail-oracle evidence; the generated
+  B-mask branch at `0x800AB0F4` is an independent static
+  control at `0x800AB0F4`, not a second retail execution witness.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI submission.
   `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -319,8 +331,11 @@ the authority for session detail. Reviewed through s1615 (2026-08-16).
    closed mission/cinematic/hangar-tick identity; s1569 named the
    handler `runModelViewerLoop` (two lines: generated case-6
    dispatch plus Rice PC watches). Extra Start during 640 does not
-   exit the crawl. The remaining retail-entry question is which
-   input or timeout leaves case 6 into a mission overlay. Pass
+   exit the crawl. s1616 shows that pre-exit B selects a distinct
+   512→1024→640 route with no case-6 or mission PC, while A selects
+   case 6; the B route is not yet identified as a mission. The remaining
+   retail-entry question is which input or timeout leaves case 6 into a
+   mission overlay, and what the B-selected 640 route represents. Pass
    whole-RDRAM, PIF, and VI positive controls in the same run. Do
    not re-watch `0x688:0x710`, do not re-audit dummy-video 320-only
    schedules, and do not treat 640/`0x6a2900` as an outdoor mission.
@@ -491,6 +506,7 @@ single-source and unevaluable as a retail ownership result.
 | s1613 | H1: synchronized `getDemoRecordedTimestep` at `0x800BF468` (size `0x30`); companion mapping, generated timestep-lookup body and caller, exact adjacent boundaries, overlay-table span, and TOML size agree. H2/H3 were ruled out by the exact independent name, live body, caller, and span. No build or runtime run was needed. |
 
 | s1615 | H1: confirmed `fake_func_800BF784` at `0x800BF784` (size `0xC`) is an explicit three-instruction fake fragment; companion mapping, generated body, TOML size, exact `func_800BF790` boundary, and overlay-table span agree. No rename, build, or runtime run was needed. |
+| s1616 | Retail Rice input revisit: four arms passed whole-RDRAM controls and reached hangar 512. Pre-exit B was delivered and selected a distinct 512→1024→640 route (`0x00790400`→`0x00696100`) with zero model-viewer and mission-entry PCs; A followed the known case-6 512→640 viewer route. Up/Down were invalid `sym=0` injections and remain unevaluable. Selector watch `0x13B40:0x13B48` stayed quiet. Single-source retail execution, with generated B-mask branch as an independent static control. |
 
 ## Method and safety rules
 
