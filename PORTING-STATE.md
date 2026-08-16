@@ -73649,3 +73649,45 @@ adjacent generated function is independently named
 `tickCutsceneNpcSlots` / TOML `func_800AEE14` at `0x800AEE14`).
 Independently named `scheduleCutsceneActionSlot` at `0x800AEBD0`
 (`rom_size` `0x78`) ends at `0x800AEC48`.
+
+## Session 1526 (2026-08-15) — synchronized the compose-interpolated-node-matrices-alt symbol
+
+Performed the bounded exact-name census over `0x800AEC48..0x800AEE14`.
+
+No new soak-queue verdicts since s1525; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AEC48`, size `0x1CC`; `0x800AEC48+0x1CC=0x800AEE14`. Overlay `.ovl.cinematic` entry `rom_size` is `0x1CC` at offset `0x00009B18` (`0x800AEC48-0x800A5130`). Live body is independently `0x1CC` and meets independently named `tickCutsceneNpcSlots` at `0x800AEE14` |
+| Generated definition | `funcs_29.c` defines `composeInterpolatedNodeMatricesAlt` at `0x800AEC48`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x00009B18`, `rom_size 0x000001CC`). The live cinematic body is a complete `0x1CC` function: `addiu $sp, $sp, -0x40` / save `$f20` / load stack float `$f20` from `0x50($sp)` / save `$s4..$s7,$ra,$s3..$s0` / `$s4=$a0,$s5=$a1,$s6=$a2,$s7=$a3`. Null `$s4` or `$s5` jumps to the restore epilogue. Two-pass loop (`sltiu` vs `2`): pass 0 dest=`$s4+0x1C` src=`$s6`, pass 1 dest=`$s5+0x1C` src=`$s7`. Each pass `jal clearVec4QuadStruct`, then flag word at src+0x4C: bit0 negated-translate via `addVec3At0x24`, bit1 `applyScaleToMat3x4` from +0x5C/+0x60/+0x64, bit2 `composeQuatToMat3x4` from +0x68, always `composeRotationMatrixSlot2` with `+$f20` on pass 0 and `-$f20` on pass 1, then flag mix `0x9`/`0x8`/`0x1` chooses a second `addVec3At0x24` from +0x78 or +0x50. Last live instruction pair is `0x800AEE0C`/`0x800AEE10` (`jr $ra` / `addiu $sp, $sp, 0x40`). Next generated cinematic function is independently named `tickCutsceneNpcSlots`. Independently named `scheduleCutsceneActionSlot` at `0x800AEBD0` (`rom_size` `0x78`) ends at this address. Menu-overlay `hangarUpdateSecWeaponIfChanged` / TOML `func_800AEBD8` at `0x800AEBD8` (`rom_size` `0x7C`, ends `0x800AEC54`), already-fake `fake_func_800AEC54` (`rom_size` `0xC`), and generated `initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends `0x800AF3C0`) occupy overlapping VRAM from `.ovl.menu` and are not a split of this body. Mission-overlay `playRandomCutsceneVoiceLine` / TOML `func_800AE960` at `0x800AE960` (size `0x398`, ends `0x800AECF8`) occupies overlapping VRAM from `.ovl.mission` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `composeInterpolatedNodeMatricesAlt = 0x800AEC48` (no comment). Menu overlay independently names the same-size sibling `composeInterpolatedNodeMatrices` at `0x800AE814` (`0x1CC`); that is a different overlay, not a remapping of this address. Mission, main, libultra, ignored, and zlib lists do not remap `0x800AEC48`. The same cinematic list independently names the adjacent functions `scheduleCutsceneActionSlot` at `0x800AEBD0` and `tickCutsceneNpcSlots` at `0x800AEE14`. No conflicting companion name for this cinematic address |
+| Caller evidence | Two retail `jal` encodings `0x0C02BB12` and zero `j` or absolute `0x800AEC48` pointer words. Sites: independently named `applyCutsceneSlotMaterialOverrides` at `0x800AA614` (cinematic file `0x13CA64`; delay `0xE7B40010` `swc1 $f20, 0x10($sp)`) and independently named `tickCutsceneActionSlots` at `0x800AA7F8` (cinematic file `0x13CC48`; same delay). Same-run ROM words at those file offsets are both `0x0C02BB12`. The generated callers are the matching `funcs_27.c` `jal 0x800AEC48` sites. Both sites pass a looked-up HMT/node pair plus two keyframe sources and stack `$f20` as the interpolation time. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x141098` (`0x137580+(0x800AEC48-0x800A5130)`) are `0x27BDFFC0` (`addiu $sp, $sp, -0x40`), `0xF7B40038` (`sdc1 $f20, 0x38($sp)`), `0xC7B40050` (`lwc1 $f20, 0x50($sp)`), `0x0080A021` (`addu $s4, $a0, $zero`), callee `jal`s `0x0C007294` (`clearVec4QuadStruct` `0x8001CA50`), `0x0C0072A4` (`addVec3At0x24` `0x8001CA90`), `0x0C0072C1` (`applyScaleToMat3x4` `0x8001CB04`), `0x0C0076BB` (`composeQuatToMat3x4` `0x8001DAEC`), `0x0C00737F` (`composeRotationMatrixSlot2` `0x8001CDFC`), loop bound `0x2C420002` (`sltiu $v0, $v0, 2`), epilogue `0x03E00008`/`0x27BD0040` (`jr $ra` / restore `$sp`). Next start file `0x141264` is `0x27BDFF98` (`tickCutsceneNpcSlots` `addiu $sp, $sp, -0x68`). Preceding epilogue file `0x141090`/`0x141094` is `0x03E00008` / `0x00000000` (`scheduleCutsceneActionSlot` `jr $ra` / `nop`). The body is the two-keyframe node-matrix compose that the material-override and action-slot tickers call; the menu sibling at `0x800AE814` has the same live size `0x1CC`, which is why this cinematic copy is named `Alt`. Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x141098` is `0x27BDFFC0`, both caller `jal` words above are `0x0C02BB12`, and the s1525/s1524/s1523/s1522/s1521/s1520/s1519/s1518/s1517/s1516/s1515/s1514 controls still read `0x44850000` at `0x141020`, `0x27BDFFE8` at `0x140FCC`, `0x27BDFFE8` at `0x140F88`, `0x03E00008` at `0x140F80`, `0x3C02800B` at `0x140E68`, `0x308300FF` at `0x140DDC`, `0x30A700FF` at `0x140D78`, `0x27BDFFE8` at `0x140CC8`, `0x27BDFF78` at `0x140968`, `0x27BDFF20` at `0x1403C4`, `0x27BDFF80` at `0x140048`, and `0x27BDFFB0` at `0x13FAE0` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AEC48`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x1CC`, both ROM `jal` callers are independently named cinematic
+tickers on the material-override and action-slot paths, the menu sibling
+`composeInterpolatedNodeMatrices` is a different overlay at
+`0x800AE814`, and there is neither a conflicting companion name nor a
+cinematic size split. H2 and H3 are ruled out for this address. The stale
+address-encoded TOML entry was synchronized (name only; size left at
+`0x1CC`). `func_8009D978` remains the eight-byte Q15 delay-mix table and
+was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `tickCutsceneNpcSlots` at `0x800AEE14` (TOML still
+`func_800AEE14`, size `0x11C`; overlay `rom_size` is `0x11C` at offset
+`0x00009CE4`; live body ends at independently named generated
+`despawnCutsceneNpcSlot` / TOML `func_800AEF30` at `0x800AEF30`).
+Independently named `composeInterpolatedNodeMatricesAlt` at
+`0x800AEC48` (`rom_size` `0x1CC`) ends at `0x800AEE14`.
