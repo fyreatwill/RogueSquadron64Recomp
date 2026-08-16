@@ -80069,3 +80069,39 @@ Do not repeat this 133 s recipe — a later `--secs` cannot see a 31 s
 1024 dwell before Rice death. Next work resumes the generated-symbol
 sweep at `npcDebrisFieldUpdate` / `func_800D5208` at `0x800D5208`
 (size `0xDD8`).
+
+## Session 1715 (2026-08-16) — synchronized the npcDebrisFieldUpdate symbol
+
+Exact generated-symbol census for `0x800D5208` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 52739; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcDebrisFieldUpdate = 0x800D5208` with comment "large destructible/debris-spawning NPC Update (switch)". Previous contiguous neighbor `advanceNpcSpinOrientation = 0x800D5078`; next contiguous neighbor `npcInitSimpleModel = 0x800D5FE0` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcDebrisFieldUpdate` at VRAM `0x800D5208`; prologue `addiu $sp, $sp, -0x90`; `a0` saved in `s4` (object), `a1` saved in `s6` then `(a1 & 0xFFFF) - 1` range-checked with `sltiu 0x9`; returns through `jr $ra` / `addiu $sp, $sp, 0x90` ending at `0x800D5FDC`; previous mission function is `advanceNpcSpinOrientation` at `0x800D5078` (last insn `0x800D5204`); next mission function is `npcInitSimpleModel` at `0x800D5FE0`. `funcs.h` already declares the human name |
+| Body semantics | 9-way switch on `(a1 & 0xFFFF) - 1` via table `0x800A7610` (cases 0–8; 0 and 7 share the init label `L_800D527C`). Init path: `rs_malloc(0x104)`, `walkMeshdef0List`, `composeEulerRotationXYZ`, `composeRotationMatrixSlot0`/`Slot1`/`Slot2`, `createAndInitObject`, `getLevelDatItemByName`, `initActorAsType1`, `spawnRandomParticleWithParent`, `dispatchDatSubtypeByRandomIndex`. Destructible/debris path: `dispatchEffectByActorType`, `composeRandomRotationMatrix`, `scaleVec3ByRandomRange`, `spawnDebris1Npc`, `spawnOrientedEffectIfBudgetOk`, `spawnNpcType0xAFromTemplate`, `play3DSoundEvent` ×4, `dealDamageToNpc`, `unregisterAndFreeNpcSlot` ×7, `popNpcSlotFromTail` ×8, `destroyNpcSlotByIndex` ×2. Exclusive generated caller of `advanceNpcSpinOrientation` is this function at `0x800D5900` (s1713 listed `0x800D58FC`, the `jal`). Name matches a large switch-driven debris-field NPC update |
+| TOML (before) | `{ name = "func_800D5208", vram = 0x800D5208, size = 0xDD8 }` — size matches `0x800D5FE0 - 0x800D5208` (last insn `0x800D5FDC` + 4 = `0xDD8`) |
+| Overlay section 4 | `{ .func = npcDebrisFieldUpdate, .offset = 0x000300D8, .rom_size = 0x00000DD8 }` under `section_4_ovl_mission_funcs` (`0x800D5208 - 0x800A5130 = 0x300D8`; `0x2FF48 + 0x190 = 0x300D8`; `0x300D8 + 0xDD8 = 0x30EB0` matches next `npcInitSimpleModel`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D5208`. Companion `D_800D5208` in `undefined_syms_auto.txt` is a leftover splat data label at the function entry, not a second occupant. Companion and generated greps found no other `func_800D5208` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated 9-way debris-field update
+body, previous (`advanceNpcSpinOrientation` / `0x800D5078`) and next
+(`npcInitSimpleModel` / `0x800D5FE0`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcDebrisFieldUpdate`, and only the TOML name was a stale
+`func_800D5208` placeholder. Corrected TOML to `npcDebrisFieldUpdate`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcInitSimpleModel` / `func_800D5FE0` at `0x800D5FE0`
+(size `0x154`). Last-15 titles still include s1714's retail-entry
+revisit, so the mandatory REVISIT gate does not fire.

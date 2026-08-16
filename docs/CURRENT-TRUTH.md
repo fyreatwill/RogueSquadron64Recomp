@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1714 (2026-08-16).
+the authority for session detail. Reviewed through s1715 (2026-08-16).
 
 ## Current state
 
@@ -87,14 +87,14 @@ the authority for session detail. Reviewed through s1714 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcDebrisFieldUpdate`
-   (`0x800D5208`, size `0xDD8`). s1651–s1665, s1667–s1681,
-   s1683–s1697, and s1699–s1713 synchronized or confirmed DAT-item
-   through `advanceNpcSpinOrientation`; s1650, s1666, s1682, s1698,
-   and s1714 were the mandatory retail-entry revisits. The full
-   s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
-   sweep is in §33. About 1,548 placeholder `func_0x...` names
-   remained when counted at s1487.
+1. Resume the generated-symbol sweep at `npcInitSimpleModel`
+   (`0x800D5FE0`, size `0x154`). s1651–s1665, s1667–s1681,
+   s1683–s1697, s1699–s1713, and s1715 synchronized or confirmed
+   DAT-item through `npcDebrisFieldUpdate`; s1650, s1666, s1682,
+   s1698, and s1714 were the mandatory retail-entry revisits. The
+   full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
+   earlier sweep is in §33. About 1,548 placeholder `func_0x...`
+   names remained when counted at s1487.
 2. Next mandatory 15-title REVISIT (after the next all-sweep window):
    destination of the attract A/Start/C-up/L/Z title-like 1024 is
    blocked by Rice death around 135 s (~7 s after the 126.4 s WIDTH),
@@ -272,6 +272,7 @@ ownership.
 | s1712 | Synchronized `npcInitChildLinkedToParent` (`0x800D4ED0`, size `0x1A8`) after companion mission mapping, live generated child-NPC-init body (`setNpcHealth`, `setObjectDetailLevel`; flag `*(a0+0x14)&0x20` selects own template vs parent `*(a2+0xC)` for `+0x50/+0x54`; state byte `+0xC9` = 0/2; rand-scaled spin rates `+0x60/+0x64`), exact `0x800D4EC4`/`0x800D5078` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D5078` / `advanceNpcSpinOrientation`. |
 | s1713 | Synchronized `advanceNpcSpinOrientation` (`0x800D5078`, size `0x190`) after companion mission mapping, live generated spin-orientation body (`+0x58/+0x5C` accumulators advanced by `dt * +0x60` and wrapped; `+0x68` by `dt * D_800A7604` and clamped; `sinf` + `quatFromCardinalAxis` ×2, `quatMultiply`, `rotateVec3ByQuat` ×2), exact `0x800D4ED0`/`0x800D5208` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Exclusive caller is `npcDebrisFieldUpdate` at `0x800D58FC`. No menu function occupies the address. Last-15 titles are now all sweep-scoped, so s1714 is the mandatory retail-entry revisit. Next sweep candidate is `func_800D5208` / `npcDebrisFieldUpdate`. |
 | s1714 | Rice later-flush of attract-512 A/Start/C-up/L/Z (`--secs 133`). All 6 arms passed whole-RDRAM, B-pad, hangar, 640-arrival, attract-arrival, and PC-flush controls; rc=0. Hold stays attract 512 through 133.4 s. A/Start/C-up/L/Z all leave `512→1024` at 126.3–126.4 s origin `0x00790400`/`800` and stay on that title-like 1024 through 133.5 s; viewer 0; B70=1 matching hold; hangar-frame 60–61. H2 selected for A/Start/C-up/L. H3-confirm for Z (second source; s1698 stay-512 was a flush cutoff; s1666 128.3 s was the same leave after a later press). H1/H4 rejected. 1024 destination still unevaluable (Rice dies ~135 s). Next sweep candidate is `func_800D5208` / `npcDebrisFieldUpdate`. |
+| s1715 | Synchronized `npcDebrisFieldUpdate` (`0x800D5208`, size `0xDD8`) after companion mission mapping, live generated 9-way debris-field update (`rs_malloc`, `walkMeshdef0List`, `createAndInitObject`, `spawnDebris1Npc`, `spawnNpcType0xAFromTemplate`, `advanceNpcSpinOrientation`, `dealDamageToNpc`, `unregisterAndFreeNpcSlot` ×7), exact `0x800D5078`/`0x800D5FE0` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Companion `D_800D5208` is a leftover splat data label, not a second occupant. Next candidate is `func_800D5FE0` / `npcInitSimpleModel`. |
 
 ## Method and safety rules
 
