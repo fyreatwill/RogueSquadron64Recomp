@@ -79325,3 +79325,36 @@ are all present). No build or runtime run required.
 
 Next census: `playerAtStInit` at `0x800D1088` (size `0x1C0`). Last-15 titles
 still include s1682, so the next iteration may continue the sweep.
+
+## Session 1696 (2026-08-16) — confirmed the playerAtStInit symbol
+
+Exact generated-symbol census for `0x800D1088` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 40257; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playerAtStInit = 0x800D1088`. Coarse listing previous `npcAtStUpdate = 0x800CFE7C`; next coarse neighbor `playerAtStUpdate = 0x800D2208` skips helpers; next contiguous neighbor `spawnPlayerAtStCannonFire = 0x800D1248`. Companion already lists this among the 10 `playerXxxInit` callers of `initPlayerCraftMovementMode` and as a named caller of `refreshPlayerSecondaryWeaponHud`. Companion `main_overlay.txt` identifies `0x80137DBC` as `gCraftRecordTable+4` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void playerAtStInit` at VRAM `0x800D1088`; prologue `addiu $sp, $sp, -0x48`; returns through `jr $ra` / `addiu $sp, $sp, 0x48` ending at `0x800D1244`; previous mission function is `npcAtStUpdate` at `0x800CFE7C` (last insn `0x800D1084`); next mission function is `spawnPlayerAtStCannonFire` at `0x800D1248` |
+| Body semantics | `s0 = 0x80137DBC` (craft record). Stores `a1` at `+0x180`, clears `+0xB4`, then `jal initPlayerCraftMovementMode`. Copies the float table `0x800A71D4..0x800A7218` into craft-record fields, zeros several more, writes `+0x194 = 4`, masks `*(0x80130B4C)` with `0xFEFFFFFF`, then `jal refreshPlayerSecondaryWeaponHud` and stores the low 8 bits at `+0x178`. Exclusive generated callers are two `playerAtStUpdate` sites (`0x800D2368`, `0x800D2570`). Name matches player AT-ST init |
+| TOML | `{ name = "playerAtStInit", vram = 0x800D1088, size = 0x1C0 }` — already the human name; size matches `0x800D1248 - 0x800D1088` (112 decoded insns, last+4 = `0x1C0`). No leftover `func_800D1088` |
+| Overlay section 4 | `{ .func = playerAtStInit, .offset = 0x0002BF58, .rom_size = 0x000001C0 }` under `section_4_ovl_mission_funcs` (`0x800D1088 - 0x800A5130 = 0x2BF58`; `0x2AD4C + 0x120C = 0x2BF58`; `0x2BF58 + 0x1C0 = 0x2C118` matches next `spawnPlayerAtStCannonFire`) |
+| Non-collision | No menu-overlay function occupies `0x800D1088`. Nearest menu symbols are concert-hall bytes at `0x800CFE3D`/`0x800CFE3E` and later data `D_800D0120` / `D_800D03D0` / `medalInfo` in the same VRAM window on a different overlay. No menu symbol falls in `[0x800D1088, 0x800D1248)` |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated player-AT-ST-init body, previous
+(`npcAtStUpdate` / `0x800CFE7C`) and next (`spawnPlayerAtStCannonFire` /
+`0x800D1248`) boundaries, TOML name and size, and section-4 overlay span
+already agree. No TOML or generated-name change. This refutes H2 (no stale
+placeholder), H3 (no fake fragment, overlay collision, or size/boundary
+disagreement), and H4 (companion, generated body, TOML, and section-4 row
+are all present). No build or runtime run required.
+
+Next census: `func_800D1248` / `spawnPlayerAtStCannonFire` at `0x800D1248`
+(size `0x330`). Last-15 titles still include s1682, so the next iteration
+may continue the sweep.
