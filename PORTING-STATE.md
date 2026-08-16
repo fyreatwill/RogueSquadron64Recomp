@@ -73691,3 +73691,47 @@ independently named `tickCutsceneNpcSlots` at `0x800AEE14` (TOML still
 `despawnCutsceneNpcSlot` / TOML `func_800AEF30` at `0x800AEF30`).
 Independently named `composeInterpolatedNodeMatricesAlt` at
 `0x800AEC48` (`rom_size` `0x1CC`) ends at `0x800AEE14`.
+
+## Session 1527 (2026-08-15) — synchronized the tick-cutscene-npc-slots symbol
+
+Performed the bounded exact-name census over `0x800AEE14..0x800AEF30`.
+
+No new soak-queue verdicts since s1526; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire. CURRENT-TRUTH is
+52489 bytes, so Step 0 did not trigger a maintenance iteration.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AEE14`, size `0x11C`; `0x800AEE14+0x11C=0x800AEF30`. Overlay `.ovl.cinematic` entry `rom_size` is `0x11C` at offset `0x00009CE4` (`0x800AEE14-0x800A5130`). Live body is independently `0x11C` and meets independently named `despawnCutsceneNpcSlot` at `0x800AEF30` |
+| Generated definition | `funcs_29.c` defines `tickCutsceneNpcSlots` at `0x800AEE14`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x00009CE4`, `rom_size 0x0000011C`). The live cinematic body is a complete `0x11C` function: `addiu $sp, $sp, -0x68` / save `$s7,$ra,$s6..$s0` / `sdc1 $f22/$f20` / `$s7=$a0`. Count halfword at `$s7+0x4A` is the loop bound; zero count jumps to the restore epilogue. Loop base is `MEM_W(0x800B1900)` plus `$s2` stride `0x13C`. Sentinel halfword at slot+`0xB8` compared to `$s6=0xFFFF` skips the slot. Otherwise `jal getNextSlotNpcTypeId`; a non-`0xFFFF` type runs `transformVec3ByMat34` on slot+`0x88` then `setNpcForwardVectorByIndex`, while a `0xFFFF` type runs `destroyNpcSlotChain` and writes the type back to +`0xB8`. Last live instruction pair is `0x800AEF28`/`0x800AEF2C` (`jr $ra` / `addiu $sp, $sp, 0x68`). Next generated cinematic function is independently named `despawnCutsceneNpcSlot`. Independently named `composeInterpolatedNodeMatricesAlt` at `0x800AEC48` (`rom_size` `0x1CC`) ends at this address. Menu-overlay `initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `integrateCraftVelocityAndCollide` / TOML `func_800AECF8` at `0x800AECF8` (size `0x260`, ends `0x800AEF58`) and `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58` (size `0xF4`) occupy overlapping VRAM from `.ovl.mission`; the latter appears next in `funcs_29.c` only because of that shared window |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `tickCutsceneNpcSlots = 0x800AEE14` (comment: per-frame walk of `0x13C`-stride scene NPC slots, count at scene+`0x4A`, base `MEM[0x800B1900]`, skip sentinel halfword[+`0xB8`]==`0xFFFF`, call `getNextSlotNpcTypeId`; called from `cinematicLoopBody` after `tickCutsceneActionSlots`+`npcIncomingMissileUpdate`). Menu, mission, main, libultra, ignored, and zlib lists do not remap `0x800AEE14`. The same cinematic list independently names the adjacent functions `composeInterpolatedNodeMatricesAlt` at `0x800AEC48` and `despawnCutsceneNpcSlot` at `0x800AEF30`. No conflicting companion name for this cinematic address |
+| Caller evidence | One retail `jal` encoding `0x0C02BB85` and zero `j` or absolute `0x800AEE14` pointer words. Site: independently named `cinematicLoopBody` at `0x800A6374` (cinematic file `0x1387C4`; delay `0x00000000` `nop`). Same-run ROM word at that file offset is `0x0C02BB85`. The generated caller is the matching `funcs_27.c` `jal 0x800AEE14` site, immediately after `tickCutsceneActionSlots` (`jal 0x800AA658`) and `npcIncomingMissileUpdate` (`jal 0x800ABD0C`). Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x141264` (`0x137580+(0x800AEE14-0x800A5130)`) are `0x27BDFF98` (`addiu $sp, $sp, -0x68`), `0x96E2004A` (`lhu $v0, 0x4A($s7)`), `0x3C15800B` (`lui $s5, 0x800B`), `0x3416FFFF` (`ori $s6, $zero, 0xFFFF`), `0x8EA21900` (`lw $v0, 0x1900($s5)`), `0x945000B8` (`lhu $s0, 0xB8($v0)`), `0x2652013C` (`addiu $s2, $s2, 0x13C`), `0x0C010086` (`jal getNextSlotNpcTypeId` `0x80040218`), epilogue `0x03E00008`/`0x27BD0068` (`jr $ra` / restore `$sp`). Next start file `0x141380` is `0x27BDFFD8` (`despawnCutsceneNpcSlot` `addiu $sp, $sp, -0x28`). Preceding epilogue file `0x141260` is `0x27BD0040` (`composeInterpolatedNodeMatricesAlt` restore `$sp`). The body is the per-frame scene-NPC slot walk the companion comment describes. Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x141264` is `0x27BDFF98`, the caller `jal` word above is `0x0C02BB85`, and the s1526/s1525/s1524/s1523/s1522/s1521/s1520/s1519/s1518/s1517/s1516/s1515/s1514 controls still read `0x27BDFFC0` at `0x141098`, `0x44850000` at `0x141020`, `0x27BDFFE8` at `0x140FCC`, `0x27BDFFE8` at `0x140F88`, `0x03E00008` at `0x140F80`, `0x3C02800B` at `0x140E68`, `0x308300FF` at `0x140DDC`, `0x30A700FF` at `0x140D78`, `0x27BDFFE8` at `0x140CC8`, `0x27BDFF78` at `0x140968`, `0x27BDFF20` at `0x1403C4`, `0x27BDFF80` at `0x140048`, and `0x27BDFFB0` at `0x13FAE0` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AEE14`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x11C`, the single ROM `jal` caller is independently named
+`cinematicLoopBody` immediately after `tickCutsceneActionSlots` and
+`npcIncomingMissileUpdate`, the overlapping menu and mission functions
+are different overlays, and there is neither a conflicting companion
+name nor a cinematic size split. H2 and H3 are ruled out for this
+address. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0x11C`). `func_8009D978` remains the eight-byte Q15
+delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an exact-name
+census. This does not reopen M5 audio de-stubbing. The next adjacent
+generated cinematic function is independently named
+`despawnCutsceneNpcSlot` at `0x800AEF30` (TOML still `func_800AEF30`,
+size `0x98`; overlay `rom_size` is `0x98` at offset `0x00009E00`; live
+body ends at independently named generated `initCutsceneSlotTable` /
+TOML `func_800AEFC8` at `0x800AEFC8`). Independently named
+`tickCutsceneNpcSlots` at `0x800AEE14` (`rom_size` `0x11C`) ends at
+`0x800AEF30`.

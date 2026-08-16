@@ -2662,7 +2662,7 @@ functions = [
     { name = "resetCutsceneActionSlots", vram = 0x800AEB7C, size = 0x54 },
     { name = "scheduleCutsceneActionSlot", vram = 0x800AEBD0, size = 0x78 },
     { name = "composeInterpolatedNodeMatricesAlt", vram = 0x800AEC48, size = 0x1CC },
-    { name = "func_800AEE14", vram = 0x800AEE14, size = 0x11C },
+    { name = "tickCutsceneNpcSlots", vram = 0x800AEE14, size = 0x11C },
     { name = "func_800AEF30", vram = 0x800AEF30, size = 0x98 },
     { name = "func_800AEFC8", vram = 0x800AEFC8, size = 0x28 },
     { name = "func_800AEFF0", vram = 0x800AEFF0, size = 0x4C },
