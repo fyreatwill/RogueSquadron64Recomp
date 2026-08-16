@@ -79080,3 +79080,37 @@ already agree. No TOML or generated-name change.
 Next census: `fake_func_800CEF1C` at `0x800CEF1C` (size `0x4`), then
 `func_800CEF20` / `advanceAtStEffectPhaseSound`. Last-15 titles still
 include s1682, so the next iteration may continue the sweep.
+
+## Session 1689 (2026-08-16) — confirmed the fake 800CEF1C fragment
+
+Exact generated-symbol census for `0x800CEF1C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 35765; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800CEF1C = 0x800CEF1C` with the s432 note that `func_800CEF20` was deleted as a duplicate of `advanceAtStEffectPhaseSound`. Previous contiguous function `npcAtAtUpdate = 0x800CD71C`; next contiguous neighbor `advanceAtStEffectPhaseSound = 0x800CEF20` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void fake_func_800CEF1C` at VRAM `0x800CEF1C`; body is the single leftover `sw $s1, 0x44($sp)` (plus the usual `rs64_probe_submit_gate_store` wrapper). Previous `npcAtAtUpdate` returns through `jr $ra` / `addiu $sp, $sp, 0x120` ending at `0x800CEF18`; next is `advanceAtStEffectPhaseSound` at `0x800CEF20` (`addiu $sp, $sp, -0x38`) |
+| Body semantics | Not an independent function. Four-byte pad between the AT-AT updater and the AT-ST effect-phase helper; no `jr $ra`, no prologue, no callers. Companion already classifies it as fake |
+| TOML | `{ name = "fake_func_800CEF1C", vram = 0x800CEF1C, size = 0x4 }` — already the companion fake name; size matches `0x800CEF20 - 0x800CEF1C`. No leftover `func_800CEF1C` |
+| Overlay section 4 | `{ .func = fake_func_800CEF1C, .offset = 0x00029DEC, .rom_size = 0x00000004 }` under `section_4_ovl_mission_funcs` (`0x800CEF1C - 0x800A5130 = 0x29DEC`; `0x285EC + 0x1800 = 0x29DEC`; `0x29DEC + 0x4 = 0x29DF0` matches next `advanceAtStEffectPhaseSound`) |
+| Non-collision | No menu-overlay function occupies `0x800CEF1C`. Nearby menu data (`bridgeBlueLightHobs` at `0x800CDFC0` size `0x6E4` ends at `0x800CE6A4`; next menu symbol `gConcertHallDisplayIndex` is `0x800CFE3D`) lives in a different overlay, not a name collision |
+
+### Outcome
+
+H1 selected. Companion classification, live generated 4-byte leftover store,
+previous (`npcAtAtUpdate` / `0x800CD71C`) and next (`advanceAtStEffectPhaseSound`
+/ `0x800CEF20`) boundaries, TOML name and size, and section-4 overlay span
+already agree. This selects H1 and refutes H2 (generated/TOML are not a stale
+`func_800CEF1C`) and H3 (no overlay collision, size/boundary disagreement, or
+missing independent name — the fake name is the agreed classification). H4 is
+refuted: companion, generated body, TOML, and section-4 row are all present.
+No TOML or generated-name change.
+
+Next census: `func_800CEF20` / `advanceAtStEffectPhaseSound` at `0x800CEF20`
+(size `0x17C`). Last-15 titles still include s1682, so the next iteration may
+continue the sweep.
