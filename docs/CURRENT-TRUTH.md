@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1534 (2026-08-15).
+the authority for session detail. Reviewed through s1535 (2026-08-15).
 
 ## Current state
 
@@ -63,7 +63,7 @@ the authority for session detail. Reviewed through s1534 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AF164..0x800AF260`.
+   adjacent function, `0x800AF260..0x800AF284`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -149,17 +149,19 @@ the authority for session detail. Reviewed through s1534 (2026-08-15).
    synchronized `insertCutsceneSlot` at `0x800AEFF0`. s1532
    synchronized `lookupCutsceneIdMapping` at `0x800AF03C`. s1533
    synchronized `destroyAllNpcsInSlotChain` at `0x800AF08C`. s1534
-   synchronized `maybeLoadYwingCutscene` at `0x800AF0EC`. The
-   generated entry at `0x800AF164` is already
-   `buildBobbingObjectMatrix`; the companion cinematic list maps
-   `buildBobbingObjectMatrix = 0x800AF164` (no comment). TOML is
-   still `func_800AF164` (size `0xFC`, ends at independently named
-   generated `cinematicShutdownAudioAndAssets` / TOML
-   `func_800AF260` at `0x800AF260`). Overlay `rom_size` is `0xFC`
-   at offset `0x0000A034`. Confirm the complete live function,
+   synchronized `maybeLoadYwingCutscene` at `0x800AF0EC`. s1535
+   synchronized `buildBobbingObjectMatrix` at `0x800AF164`. The
+   generated entry at `0x800AF260` is already
+   `cinematicShutdownAudioAndAssets`; the companion cinematic
+   list maps `cinematicShutdownAudioAndAssets = 0x800AF260` (2-call
+   wrapper: `finalizeCurrentSpeechBuffer` then `func_80045708`).
+   TOML is still `func_800AF260` (size `0x24`, ends at
+   independently named generated `bytesDiffer` / TOML
+   `func_800AF284` at `0x800AF284`). Overlay `rom_size` is `0x24`
+   at offset `0x0000A130`. Confirm the complete live function,
    matching size, and caller/semantic evidence before
    synchronizing the TOML name. Independently named
-   `maybeLoadYwingCutscene` at `0x800AF0EC` (`rom_size` `0x78`)
+   `buildBobbingObjectMatrix` at `0x800AF164` (`rom_size` `0xFC`)
    ends at this address. Menu-overlay `initCraftSelectScreen` /
    TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends
    `0x800AF3C0`) occupies overlapping VRAM from `.ovl.menu` and
@@ -534,6 +536,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1532 | Exact companion/generated cinematic-lookup census synchronized `lookupCutsceneIdMapping` at `0x800AF03C`; no build or runtime run. |
 | s1533 | Exact companion/generated cinematic-NPC census synchronized `destroyAllNpcsInSlotChain` at `0x800AF08C`; no build or runtime run. |
 | s1534 | Exact companion/generated cinematic-load census synchronized `maybeLoadYwingCutscene` at `0x800AF0EC`; no build or runtime run. |
+| s1535 | Exact companion/generated cinematic-matrix census synchronized `buildBobbingObjectMatrix` at `0x800AF164`; no build or runtime run. |
 
 ## Method and safety rules
 
