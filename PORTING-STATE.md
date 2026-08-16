@@ -77108,3 +77108,28 @@ human name, while `syms/rogue_squadron.syms.toml` still used
 `renderRadarSweep`. H2 and H3 are ruled out by the independent mission name,
 live body, exact adjacent boundaries, matching TOML size, and matching overlay
 span. No runtime behavior conclusion was made.
+
+## Session 1624 (2026-08-16) — synchronized the renderRadarMinimap symbol
+
+Ran the exact generated-symbol census for `0x800C5F90` without building or
+running. The competing hypotheses were H1: the companion mission name
+`renderRadarMinimap` is correct and the exact generated/TOML/overlay span
+supports synchronization; H2: the name belongs to another overlay/context;
+and H3: the entry is data-like or has a conflicting span. The discriminator
+was the complete companion/generated/TOML/overlay comparison.
+
+The companion `mission_overlay.txt` independently names `0x800C5F90`
+`renderRadarMinimap` and describes a top-level radar/minimap renderer. The
+live generated definition starts at `0x800C5F90`, calls the radar blip and
+sweep/dot helpers, and ends immediately before `lookupCraftValueByLevelKey`
+at `0x800C62C4`. The preceding generated `renderRadarSweep` ends at the exact
+start boundary. The project TOML gives size `0x334`; the generated
+`recomp_overlays.inl` independently carries the same name, ROM entry, and
+`0x334` span.
+
+H1 is selected. The generated definition and overlay table already used the
+human name, while `syms/rogue_squadron.syms.toml` still used
+`func_800C5F90`; that tracked placeholder was synchronized to
+`renderRadarMinimap`. H2 and H3 are ruled out by the independent mission name,
+live body, exact adjacent boundaries, matching TOML size, and matching overlay
+span. No runtime behavior conclusion was made.
