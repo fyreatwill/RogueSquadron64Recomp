@@ -234,7 +234,7 @@ retail watches never reached voice initialization. These are boundaries, not
 mitigations: future guards require an `ORIGIN:` naming the writer and
 judging the value legitimate. The generated-symbol renaming sweep is the
 current low-risk workstream; exact companion/generated names are synchronized
-through `computeOrientedTransformFromQuat` at `0x800B1024` (s1552) while
+through `tickCinematicObjectStateMachine` at `0x800B13E0` (s1554) while
 fake or address-only entries remain unchanged (see §33). See
 `CURRENT-TRUTH.md` for the live backlog and `PORTING-STATE.md` for evidence.
 
@@ -2855,7 +2855,7 @@ summary. Homebrew Rice later-phase results (s1496 hangar, s1512 M4 DMEM `r9`,
 s1528 leave-hangar 640, s1544 640 still menu-overlay) live in
 `CURRENT-TRUTH.md` and superseded the dummy-video 320-only parking.
 
-## 33. Generated-symbol renaming sweep (s1240–s1552)
+## 33. Generated-symbol renaming sweep (s1240–s1554)
 
 Migrated from `CURRENT-TRUTH.md` during the s1553 maintenance pass. Full
 per-session comparison tables remain in `PORTING-STATE.md`. Method: one
@@ -2865,9 +2865,9 @@ caller or semantic evidence agree (H1). Leave address-encoded, already-fake,
 or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
 justified for an exact-name census.
 
-**Cursor.** Next census is `tickCinematicObjectStateMachine` at
-`0x800B13E0` (TOML still `func_800B13E0`, size `0x808`). Last H1 sync is
-`computeOrientedTransformFromQuat` at `0x800B1024` (s1552). About 1,548
+**Cursor.** Next census is `updatePlayerCraftPhysics` at
+`0x800B1BE8` (TOML still `func_800B1BE8`, size `0x1B14`). Last H1 sync is
+`tickCinematicObjectStateMachine` at `0x800B13E0` (s1554). About 1,548
 placeholder `func_0x...` names remained when counted at s1487.
 
 **Covered ranges (H1 unless noted).**
@@ -2890,6 +2890,7 @@ placeholder `func_0x...` names remained when counted at s1487.
 | s1486–s1543 | Cinematic overlay: `cinematicLoopBody` at `0x800A5D80` through `cinematicDeactivator` at `0x800AF60C`. s1487 confirmed already-matching `load_cutscene`. |
 | s1545–s1546 | `getCinematicStateSubObject`, `cinematicInterpRatio`; s1546 H2 for already-fake data-tail `fake_func_800AF6A8`. |
 | s1547–s1552 | Mission overlay: `findNearestSceneObjectToPoint` through `computeOrientedTransformFromQuat` at `0x800B1024`. |
+| s1554 | Mission overlay: `tickCinematicObjectStateMachine` at `0x800B13E0` (size `0x808`). |
 
 **Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
 `func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,

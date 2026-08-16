@@ -74882,3 +74882,50 @@ No build, runtime experiment, or soak ran. This rules out no new runtime
 hypothesis; it establishes that the compact state still points to the
 generated-symbol sweep and preserves the Rice 640, audio, M3, VI, and M4
 boundaries.
+
+## Session 1554 (2026-08-15) — synchronized the tick-cinematic-object-state-machine symbol
+
+Performed the bounded exact-name census over `0x800B13E0..0x800B1BE8`.
+
+No new soak-queue verdicts since s1553; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit) and s1553 (maintenance compaction), so the every-15-sessions
+sweep-revisit rule did not fire. CURRENT-TRUTH is 16,352 bytes at session
+start, so Step 0 did not trigger a maintenance iteration. M5 remains closed
+and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B13E0`, size `0x808`; `0x800B13E0+0x808=0x800B1BE8`. Overlay `.ovl.mission` entry `rom_size` is `0x808` at offset `0x0000C2B0` (`0x800B13E0-0x800A5130`). Live body is independently `0x808` and meets generated `updatePlayerCraftPhysics` at `0x800B1BE8` |
+| Generated definition | `funcs_30.c` defines `tickCinematicObjectStateMachine` at `0x800B13E0`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000C2B0`, `rom_size 0x00000808`). The live mission body is a complete `0x808` function: prologue `mtc1 $a1, $f6` then `addiu $sp, $sp, -0x20`, save `$a0` as the object pointer in `$s1`, decay the object+`0xC0` float by `$a1`/`$f6`, and on expiry call independently named `spawnNpcDestructionDebris` then `despawnCraftAnimationSlotNpcsAndMarkStopping` and return. Otherwise a 9-way `jr` table at `0x800A5690` dispatches on object+`0xB4` (`lhu` / `sltiu 9`) to cases that call independently named `playSpeechClip` (six sites) and `playRandomCutsceneVoiceLine`. Last live instruction pair is `0x800B1BE0`/`0x800B1BE4` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next generated mission entry is already `updatePlayerCraftPhysics` at `0x800B1BE8`. Independently named `computeOrientedTransformFromQuat` at `0x800B1024` (`rom_size` `0x3BC`) ends at this address. Menu-overlay TOML `func_800B08F4` (`runScriptedCraftCinematicEvent`, `rom_size` `0xB3C`, ends `0x800B1430`) occupies overlapping VRAM from `.ovl.menu` for the first `0x50` of this body and is not a split of this body. Generated `runScriptedCraftCinematicEvent` starts at menu VRAM `0x800B08F4` and is not this body. Generated `initMenuWidgetArray` starts at menu VRAM `0x800B1430` |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `tickCinematicObjectStateMachine = 0x800B13E0`. The same mission list independently names the adjacent functions `computeOrientedTransformFromQuat` at `0x800B1024` and `updatePlayerCraftPhysics` at `0x800B1BE8`, and independently names the callees `spawnNpcDestructionDebris` at `0x800B0850`, `playRandomCutsceneVoiceLine` at `0x800AE960`, and `despawnCraftAnimationSlotNpcsAndMarkStopping` at `0x801006A8`. Main-overlay list independently names `playSpeechClip` at `0x80066EE4`. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B13E0`. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` has no `800B13E0` alias |
+| Caller evidence | 1 retail `jal` encoding `0x0C02C4F8` at file `0xB48B4` (`0x800B3CB4`) and zero `j` or absolute `0x800B13E0` pointer words. Generated site is one named `tickCinematicObjectStateMachine(...)` call from independently named `tryPlaySpatialSoundWithGates` at `0x800B3A10` (`0x800B3CB4`), with `$a0` = object pointer (`$s1`) and `$a1` = float-converted halfword at `$s3+6`. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B1FE0` (`0x0A5D30+(0x800B13E0-0x800A5130)`) are `0x44853000` (`mtc1 $a1, $f6`), `0x27BDFFE0` (`addiu $sp, $sp, -0x20`), `0xAFB10014` (`sw $s1, 0x14($sp)`), `0x00808821` (`addu $s1, $a0, $zero`). Last pair file `0x0B27E0`/`0x0B27E4` is `0x03E00008`/`0x27BD0020` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next start file `0x0B27E8` is `0x27BDFE28` (`addiu $sp, $sp, -0x1D8`, `updatePlayerCraftPhysics` prologue). Preceding epilogue file `0x0B1FD8`/`0x0B1FDC` is `0x03E00008`/`0x27BD0090` (`computeOrientedTransformFromQuat` `jr $ra` / `addiu $sp, $sp, 0x90`). Jump table at `0x800A5690` (file `0xA6290`) is nine in-body targets `0x800B14AC`/`0x800B1660`/`0x800B1A28`/`0x800B1BC8`/`0x800B1BC8`/`0x800B1AD8`/`0x800B1BC8`/`0x800B1BC8`/`0x800B14AC`. Menu occupant at the same VRAM (file `0x118580`) starts `0x24040002` (`addiu $a0, $zero, 2`, interior of `runScriptedCraftCinematicEvent`). Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B13E0` is past that occupant; file `0x143830` is zeros. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B13E0`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x808`, 1 ROM `jal` caller is independently named, the body is a
+9-way object-state jump table that independently calls the cinematic
+speech / debris / despawn family, the overlapping menu occupant is a
+different overlay, and there is neither a conflicting companion name nor
+a mission size split. H2 and H3 are ruled out for this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x808`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`updatePlayerCraftPhysics` at `0x800B1BE8` (TOML still
+`func_800B1BE8`, size `0x1B14`; overlay `rom_size` is `0x1B14` at
+offset `0x0000CAB8`; live body ends at generated
+`applyCraftCapabilityFlags` / TOML `func_800B36FC` at
+`0x800B36FC`). Independently named `tickCinematicObjectStateMachine` at
+`0x800B13E0` (`rom_size` `0x808`) ends at `0x800B1BE8`.
