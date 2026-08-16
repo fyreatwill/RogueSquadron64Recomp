@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1689 (2026-08-16).
+the authority for session detail. Reviewed through s1690 (2026-08-16).
 
 ## Current state
 
@@ -74,14 +74,14 @@ the authority for session detail. Reviewed through s1689 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. After s1689 the last-15 titles (s1675–s1689) include the s1682
+1. After s1690 the last-15 titles (s1676–s1690) include the s1682
    retail-entry revisit, so the next iteration resumes the generated-
-   symbol census at `func_800CEF20` / `advanceAtStEffectPhaseSound`
-   at `0x800CEF20` (size `0x17C`). s1651–s1665, s1667–s1681, and
-   s1683–s1689 synchronized or confirmed DAT-item through
-   `fake_func_800CEF1C`; s1650, s1666, and s1682 were the mandatory
-   retail-entry revisits. The full s1590–s1649 archive is in
-   `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
+   symbol census at `func_800CF09C` / `tickAtStCannonFireEffect`
+   at `0x800CF09C` (size `0x170`). s1651–s1665, s1667–s1681, and
+   s1683–s1690 synchronized or confirmed DAT-item through
+   `advanceAtStEffectPhaseSound`; s1650, s1666, and s1682 were the
+   mandatory retail-entry revisits. The full s1590–s1649 archive is
+   in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
    1,548 placeholder `func_0x...` names remained when counted at
    s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
@@ -229,6 +229,7 @@ ownership.
 | s1687 | Synchronized `updateAtAtLegArticulation` (`0x800CD558`, size `0x1C4`) after companion mission mapping, live generated AT-AT leg-stride body (`lookupHmtTextureByName` on `0x800A6DCC`, `computeWalkerLimbStrideTargets`, scale by `*(0x800A6EC8)`, loop-3 of `wrapAngleToCyclicRange` + `spawnAtAtFootstepDustBurst` ×2), exact `0x800CD38C`/`0x800CD71C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Exclusive caller is `npcAtAtUpdate` at `0x800CE378`. Menu-overlay hangar data at the same VRAM window is a different overlay, not a name collision. Next candidate is `npcAtAtUpdate`. |
 | s1688 | Confirmed `npcAtAtUpdate` (`0x800CD71C`, size `0x1800`) was already synchronized: companion mission mapping, live generated 9-way AT-AT update (`tickAtAtAudioAndWeaponState`, `tickAtAtBodyTransform`, `processAtAtSubFeatureSlot`, `updateAtAtLegArticulation`, `npcAtAtHandleDestruction`), exact `0x800CD558`/`0x800CEF1C` boundaries, TOML name and size, and section-4 span agreed. Menu-overlay hangar/bridge data at the same VRAM window is a different overlay, not a name collision. Next candidate is `fake_func_800CEF1C` / `func_800CEF20` / `advanceAtStEffectPhaseSound`. |
 | s1689 | Confirmed `fake_func_800CEF1C` (`0x800CEF1C`, size `0x4`) was already classified as the explicit 4-byte leftover store (`sw $s1, 0x44($sp)`) between `npcAtAtUpdate` and `advanceAtStEffectPhaseSound`: companion mapping, live generated fragment, exact `0x800CD71C`/`0x800CEF20` boundaries, TOML name and size, and section-4 span agreed. No menu function occupies the address. Next candidate is `func_800CEF20` / `advanceAtStEffectPhaseSound`. |
+| s1690 | Synchronized `advanceAtStEffectPhaseSound` (`0x800CEF20`, size `0x17C`) after companion mission mapping, live generated AT-ST effect-phase sound body (`+0x7E` phase 0/1/2 tables, progress wrap, `play3DSoundEvent` type 5/6; callers `advanceAtStDeathAnimPhase`/`npcAtStUpdate`), exact `0x800CEF1C`/`0x800CF09C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800CF09C` / `tickAtStCannonFireEffect`. |
 
 ## Method and safety rules
 

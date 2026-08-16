@@ -79114,3 +79114,39 @@ No TOML or generated-name change.
 Next census: `func_800CEF20` / `advanceAtStEffectPhaseSound` at `0x800CEF20`
 (size `0x17C`). Last-15 titles still include s1682, so the next iteration may
 continue the sweep.
+
+## Session 1690 (2026-08-16) — synchronized the advanceAtStEffectPhaseSound symbol
+
+Exact generated-symbol census for `0x800CEF20` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 36165; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `advanceAtStEffectPhaseSound = 0x800CEF20`. Previous contiguous neighbor `fake_func_800CEF1C = 0x800CEF1C`; next contiguous function `tickAtStCannonFireEffect = 0x800CF09C`. The s432 note already deleted `func_800CEF20` as a duplicate of this name |
+| Generated `funcs_37.c` | `RECOMP_FUNC void advanceAtStEffectPhaseSound` at VRAM `0x800CEF20`; prologue `addiu $sp, $sp, -0x38`; returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800CF098`; previous mission fragment is `fake_func_800CEF1C` at `0x800CEF1C` (single `sw $s1, 0x44($sp)`); next mission function is `tickAtStCannonFireEffect` at `0x800CF09C` |
+| Body semantics | Actor at `a0`. Halfword `+0x7E` selects phase 0/1/2 and a matching pair of 0x8011xxxx sound-threshold/index tables. Accumulates `+0xAC += a1 / +0x98`; wraps against `*(0x800A7000)` by resetting `+0xAC` from `+0x94`, clearing `+0xFB`, and loading the next threshold into `+0xB0`. When `a2` is zero and `+0xAC >= +0xB0`, increments `+0xFB` and calls `play3DSoundEvent` (type 5 or 6). Callers: `advanceAtStDeathAnimPhase` at `0x800CFE60` (`a2=1`, skip fire) and `npcAtStUpdate` at `0x800D07A0` (`a2=0`, allow fire). Name matches the AT-ST effect-phase sound advance |
+| TOML (before) | `{ name = "func_800CEF20", vram = 0x800CEF20, size = 0x17C }` — size matches `0x800CF09C - 0x800CEF20` (95 decoded insns, last+4 = `0x17C`) |
+| Overlay section 4 | `{ .func = advanceAtStEffectPhaseSound, .offset = 0x00029DF0, .rom_size = 0x0000017C }` under `section_4_ovl_mission_funcs` (`0x800CEF20 - 0x800A5130 = 0x29DF0`; `0x29DEC + 0x4 = 0x29DF0`; `0x29DF0 + 0x17C = 0x29F6C` matches next `tickAtStCannonFireEffect`) |
+| Non-collision | No menu-overlay function occupies `0x800CEF20`. Menu grep for `800CEF20`/`800CF09C` is empty |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated AT-ST effect-phase sound body,
+previous (`fake_func_800CEF1C` / `0x800CEF1C`) and next
+(`tickAtStCannonFireEffect` / `0x800CF09C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`advanceAtStEffectPhaseSound`, and only the TOML name was a stale
+`func_800CEF20` placeholder. Corrected TOML to `advanceAtStEffectPhaseSound`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `func_800CF09C` / `tickAtStCannonFireEffect` at `0x800CF09C`
+(size `0x170`). Last-15 titles still include s1682, so the next iteration may
+continue the sweep.
