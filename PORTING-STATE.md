@@ -74348,3 +74348,47 @@ body ends at independently named generated `cinematicDeactivator` /
 TOML `func_800AF60C` at `0x800AF60C`). Independently named
 `isCinematicActive` at `0x800AF540` (`rom_size` `0x10`) ends at
 `0x800AF550`.
+
+## Session 1542 (2026-08-15) — synchronized the cinematic-stage-advancer symbol
+
+Performed the bounded exact-name census over `0x800AF550..0x800AF60C`.
+
+No new soak-queue verdicts since s1541; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1528 (Rice post-hangar
+leave-to-640 revisit), so the every-15-sessions sweep-revisit rule did not
+fire. CURRENT-TRUTH is 56448 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AF550`, size `0xBC`; `0x800AF550+0xBC=0x800AF60C`. Overlay `.ovl.cinematic` entry `rom_size` is `0xBC` at offset `0x0000A420` (`0x800AF550-0x800A5130`). Live body is independently `0xBC` and meets independently named `cinematicDeactivator` at `0x800AF60C` |
+| Generated definition | `funcs_29.c` defines `cinematicStageAdvancer` at `0x800AF550`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000A420`, `rom_size 0x000000BC`). The live cinematic body is a complete `0xBC` function: load `MEM_W(0x800B0934)`, early-out if that cinematic state pointer is null, scale `$a2` by the float at `0x800B1EE8`, read the stage byte at `state+0xC+0x2F`, and either saturate/increment the byte at `0x800B0938` or write the scaled stage back. Last live instruction pair is `0x800AF604`/`0x800AF608` (`jr $ra` / `addu $v0, $zero, $zero`). Next generated cinematic function is independently named `cinematicDeactivator`. Independently named `isCinematicActive` at `0x800AF540` (`rom_size` `0x10`) ends at this address. Menu-overlay `tickCraftSelectScreen` / TOML `func_800AF3C0` at `0x800AF3C0` (`rom_size` `0x2EC`, ends `0x800AF6AC`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and occupies overlapping VRAM from `.ovl.mission` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `cinematicStageAdvancer = 0x800AF550` (comment: per-frame stage counter advance). The same cinematic list independently names the adjacent functions `isCinematicActive` at `0x800AF540` and `cinematicDeactivator` at `0x800AF60C`. Menu, mission, libultra, ignored, and zlib lists do not remap `0x800AF550`. Menu maps `tickCraftSelectScreen = 0x800AF3C0` as a different-overlay occupant of the same VRAM window. No conflicting companion name for this cinematic address |
+| Caller evidence | One retail `jal` encoding `0x0C02BD54` and zero `j` or absolute `0x800AF550` pointer words. The site is independently named `cinematicLoopBody` at `0x800A6068` (file `0x1384B8`; prev `0xE4620B2C` `swc1 $f2, 0xB2C($v1)`; delay `0xE4400BA4` `swc1 $f0, 0xBA4($v0)`; next `0x304200FF` `andi $v0, $v0, 0xFF`). Same-run ROM word at that file offset is `0x0C02BD54`. The generated caller is the matching `funcs_27.c` `jal 0x800AF550` site inside `cinematicLoopBody` (`0x800A5D80`), then `andi $v0, $v0, 0xFF` / `bne $v0, $zero` to take the stage-complete path when the advancer returns nonzero. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x1419A0` (`0x137580+(0x800AF550-0x800A5130)`) are `0x3C02800B` (`lui $v0, 0x800B`), `0x8C430934` (`lw $v1, 0x934($v0)` = `MEM_W(0x800B0934)`), `0x44860000` (`mtc1 $a2, $f0`), `0x10600029` (`beq $v1, $zero` to the epilogue). Last pair file `0x141A54`/`0x141A58` is `0x03E00008`/`0x00001021` (`jr $ra` / `addu $v0, $zero, $zero`). Next start file `0x141A5C` is `0x27BDFFE8` (`cinematicDeactivator` `addiu $sp, $sp, -0x18`). Preceding epilogue file `0x141998`/`0x14199C` is `0x03E00008`/`0x0002102B` (`isCinematicActive` `jr $ra` / `sltu $v0, $zero, $v0`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x1419A0` is `0x3C02800B`, the caller `jal` word above is `0x0C02BD54`, the s1541 predicate `jal` at `0x1386CC` is still the prior census site, the s1541 function file `0x141990` is `0x3C02800B`, the s1540 initializer `jal` at `0x138704` is `0x0C02BD02`, and the s1540/s1539/s1538/s1537/s1536/s1535/s1534/s1533/s1532/s1531 controls still read `0x27BDFFD8` at `0x141858`, `0x27BDFFB8` at `0x1417B0`, `0x8C820000` at `0x141718`, `0x10C0000E` at `0x1416D4`, `0x27BDFFE8` at `0x1416B0`, `0x27BDFFD8` at `0x1415B4`, `0x27BDFFE8` at `0x14153C`, `0x27BDFFD8` at `0x1414DC`, `0x3406FFFF` at `0x14148C`, and `0x27BDFFE8` at `0x141440` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AF550`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0xBC`, the one ROM `jal` caller is independently named
+`cinematicLoopBody` on the per-frame stage-advance path, the overlapping
+menu and mission functions are different overlays, and there is neither a
+conflicting companion name nor a cinematic size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0xBC`). `func_8009D978`
+remains the eight-byte Q15 delay-mix table and was left unchanged, as
+were `func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated cinematic function is independently named
+`cinematicDeactivator` at `0x800AF60C` (TOML still `func_800AF60C`,
+size `0x50`; overlay `rom_size` is `0x50` at offset `0x0000A4DC`; live
+body ends at independently named generated `getCinematicStateSubObject`
+/ TOML `func_800AF65C` at `0x800AF65C`). Independently named
+`cinematicStageAdvancer` at `0x800AF550` (`rom_size` `0xBC`) ends at
+`0x800AF60C`.
