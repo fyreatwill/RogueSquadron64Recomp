@@ -2856,7 +2856,7 @@ summary. Homebrew Rice later-phase results (s1496 hangar, s1512 M4 DMEM `r9`,
 s1528 leave-hangar 640, s1544 640 still menu-overlay) live in
 `CURRENT-TRUTH.md` and superseded the dummy-video 320-only parking.
 
-## 33. Generated-symbol renaming sweep (s1240–s1588)
+## 33. Generated-symbol renaming sweep (s1240–s1589)
 
 Migrated from `CURRENT-TRUTH.md` during the s1553 maintenance pass. Full
 per-session comparison tables remain in `PORTING-STATE.md`. Method: one
@@ -2867,9 +2867,9 @@ or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
 justified for an exact-name census.
 
 **Cursor.** Next census is `func_800BAA00`, independently named
-`triggerFalconEngineEffect`, at `0x800BAA00` (TOML placeholder, size `0x170`;
-next entry is `bindFalconSubmodelMaterials` at `0x800BAB70`). Last H1 sync is
-`computeFalconFlightTransform` at `0x800BA620` (s1588).
+`bindFalconSubmodelMaterials`, at `0x800BAB70` (TOML placeholder, size
+`0x25C`; next entry is `playerFalconMainUpdate` at `0x800BADCC`). Last H1
+sync is `triggerFalconEngineEffect` at `0x800BAA00` (s1589).
 Last H2 park is `fake_func_800B42BC` (s1570). About 1,548
 placeholder `func_0x...` names remained when counted at s1487.
 
@@ -2927,6 +2927,7 @@ placeholder `func_0x...` names remained when counted at s1487.
 | s1586 | Mission overlay: `orientVwingSubmodelByQuat` at `0x800B95E0` (size `0x370`). |
 | s1587 | Mission overlay: `tickVwingEngineAudio` at `0x800B9950` (size `0x5FC`). |
 | s1588 | Mission overlay: `computeFalconFlightTransform` at `0x800BA620` (size `0x3E0`). |
+| s1589 | Mission overlay: `triggerFalconEngineEffect` at `0x800BAA00` (size `0x170`). |
 
 **Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
 `func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1588 (2026-08-16).
+the authority for session detail. Reviewed through s1589 (2026-08-16).
 
 ## Current state
 
@@ -75,7 +75,7 @@ the authority for session detail. Reviewed through s1588 (2026-08-16).
    and M4 threads; s1569 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
-   sizes, and caller/semantic evidence. Per-session H1 syncs through s1587
+   sizes, and caller/semantic evidence. Per-session H1 syncs through s1589
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
@@ -161,6 +161,13 @@ the authority for session detail. Reviewed through s1588 (2026-08-16).
    overlay-table span, and TOML size agree. The next census is
    `func_800BAA00`, independently named `triggerFalconEngineEffect`, with size
    `0x170`.
+
+   s1589 synchronized `triggerFalconEngineEffect` at `0x800BAA00` (size
+   `0x170`): the companion mission list, generated definition and caller from
+   `spawnFalconEngineParticles`, exact `bindFalconSubmodelMaterials` boundary,
+   overlay-table span, and TOML size agree. The next census is
+   `func_800BAB70`, independently named `bindFalconSubmodelMaterials`, with
+   size `0x25C`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
