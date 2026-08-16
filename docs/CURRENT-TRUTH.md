@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1629 (2026-08-16).
+the authority for session detail. Reviewed through s1630 (2026-08-16).
 
 ## Current state
 
@@ -350,8 +350,14 @@ the authority for session detail. Reviewed through s1629 (2026-08-16).
    independently names the same VRAM `initHangarDisplayItemTimers`. The
    generated file also contains a distinct main-overlay function beginning at
    the same address, so this is an overlay-context collision; no rename was
-   made. The next census is `func_800C65CC`, independently named
-   `tickHangarDisplayItemAnimations`.
+   made. s1630 synchronized `tickHangarDisplayItemAnimations` at
+   `0x800C65CC` (size `0x2D4`): the companion mission mapping, live generated
+   definition/body in `funcs_35.c`, exact `func_800C64B0`/
+   `hangarVehicleDisplayNpcHandler` boundaries, section-4 overlay span, and
+   TOML size agree. The generated definition and overlay table already carried
+   the human name; the project TOML placeholder was updated. The next census
+   is `func_800C68A0`, independently named `hangarVehicleDisplayNpcHandler`,
+   with size `0x75C`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -594,6 +600,7 @@ single-source and unevaluable as a retail ownership result.
 | s1624 | H1: synchronized `renderRadarMinimap` at `0x800C5F90` (size `0x334`); the companion mission mapping, live generated radar/minimap body, exact `renderRadarSweep`/`lookupCraftValueByLevelKey` boundaries, section-4 overlay span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
 | s1625 | H1: synchronized `lookupCraftValueByLevelKey` at `0x800C62C4` (size `0x70`); the companion mission mapping, live generated level-key table lookup body, exact `renderRadarMinimap`/`resetCraftSelectionCounter` boundaries, section-4 overlay span, and TOML size agree. The generated definition and overlay table already carried the human name; the project TOML placeholder was updated. No build or runtime run was needed. |
 | s1626–s1628 | H1: synchronized `registerObjectAndResolveDatItem`, `accumulateClampedFloatField`, and `getDisplayItemStateByte`; each had an independent mission mapping, live generated body, exact adjacent boundaries, matching section-4 overlay span, and matching TOML size. No build or runtime run was needed. |
+| s1630 | H1: synchronized `tickHangarDisplayItemAnimations` at `0x800C65CC` (size `0x2D4`); companion mapping, live generated definition/body, exact adjacent boundaries, section-4 overlay span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 

@@ -77261,3 +77261,26 @@ address, confirming an overlay-context collision rather than a missing mission
 name. H2 is selected; H1 and H3 are ruled out by the live body and exact spans,
 but the ownership conflict prevents a safe mission rename. No file rename or
 runtime behavior conclusion was made.
+
+## Session 1630 (2026-08-16) — synchronized the tickHangarDisplayItemAnimations symbol
+
+Ran the exact generated-symbol census for `0x800C65CC` without building or
+running. The competing hypotheses were H1: an independently supported
+mission-overlay name and exact generated/TOML/overlay span justify
+synchronization; H2: the matching name belongs to another overlay/context;
+and H3: no independent name is available, a boundary conflicts, or the entry
+is data-like. The complete companion/generated/TOML/overlay comparison was the
+discriminator.
+
+The companion mission map names `tickHangarDisplayItemAnimations` at
+`0x800C65CC`. The generated `funcs_35.c` definition already carries that name
+and implements a live `0x2D4`-byte hangar display-item animation update body,
+including per-item phase advancement and float/state updates. Its exact
+preceding boundary is `func_800C64B0` at `0x800C64B0`; its following boundary is
+`hangarVehicleDisplayNpcHandler` at `0x800C68A0`. The TOML size is `0x2D4`, and
+the section-4 overlay table carries the same human name, ROM offset, and span.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and overlay
+ownership; H3 is ruled out by the live generated body and exact adjacent
+boundaries. Updated only the stale project TOML placeholder to the synchronized
+name. No build or runtime behavior conclusion was made.

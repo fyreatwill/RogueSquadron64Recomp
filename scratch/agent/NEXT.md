@@ -1,17 +1,17 @@
-# NEXT work unit (s1630)
+# NEXT work unit (s1631)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the bounded generated-symbol sweep with one exact-name census of
-`func_800C65CC`, the `0x800C65CC..0x800C68A0` entry named
-`tickHangarDisplayItemAnimations`. Record the address, size, generated
+`func_800C68A0`, the `0x800C68A0..0x800C6FFC` entry named
+`hangarVehicleDisplayNpcHandler`. Record the address, size, generated
 definition/body, companion references, and previous/next boundaries before
 editing. Synchronize the name only if an independent mission-overlay name and
 the generated, TOML, and overlay spans agree. Do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: `func_800C65CC` has an independently supported mission-overlay name, and
+- H1: `func_800C68A0` has an independently supported mission-overlay name, and
   its live generated body plus exact span support synchronization.
 - H2: the only matching name belongs to another overlay/context, so the
   mission-overlay placeholder must remain address-coded despite a live body.
@@ -20,7 +20,8 @@ Competing hypotheses and discriminator:
 
 The complete comparison table is the discriminator: an independent mission
 name plus a live generated body, matching TOML/overlay span, and exact
-preceding `func_800C64B0` and following `func_800C68A0` boundaries select H1;
+preceding `tickHangarDisplayItemAnimations` and following `func_800C6FFC`
+boundaries select H1;
 an ownership conflict selects H2; no independent name, any span conflict, or
 non-function evidence selects H3. Each outcome selects one hypothesis.
 
@@ -33,8 +34,8 @@ grep -n '^## Session ' PORTING-STATE.md | tail -15
 Use these bounded commands:
 
 ```sh
-rg -n -C 8 '800C65CC|800C68A0|tickHangarDisplayItemAnimations' ../rogue_squadron64
-rg -n -C 12 '800C65CC|800C68A0' ../N64Recomp/RecompiledFuncs/funcs_34.c
-rg -n -C 3 '800C65CC|800C68A0' syms/rogue_squadron.syms.toml
-rg -n -C 3 '800C65CC|800C68A0|tickHangarDisplayItemAnimations' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+rg -n -C 8 '800C68A0|800C6FFC|hangarVehicleDisplayNpcHandler' ../rogue_squadron64
+rg -n -C 12 '800C68A0|800C6FFC|hangarVehicleDisplayNpcHandler' ../N64Recomp/RecompiledFuncs/funcs_35.c
+rg -n -C 3 '800C68A0|800C6FFC' syms/rogue_squadron.syms.toml
+rg -n -C 3 '800C68A0|800C6FFC|hangarVehicleDisplayNpcHandler' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
