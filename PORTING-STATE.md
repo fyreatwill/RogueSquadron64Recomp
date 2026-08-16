@@ -78675,3 +78675,31 @@ TOML to `updateProbeDroidHopState`. No build or runtime run required.
 
 Next census: `npcProbeDriod` at `0x800CABD4` (size `0x11CC`). Last-15 titles
 still include s1666, so the next iteration may continue the sweep.
+
+## Session 1677 (2026-08-16) — confirmed the npcProbeDriod symbol
+
+Exact generated-symbol census for `0x800CABD4` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcProbeDriod = 0x800CABD4`; coarse listing next `npcAtAtUpdate = 0x800CD71C` skips helpers; next contiguous helper `findNearestNpcWithinRange = 0x800CBDA0`; prior `updateProbeDroidHopState = 0x800CA720`. Companion `main_overlay.txt` already names this as a `distanceAndDopplerNpcHelper` / `extrapolateNpcPositionForCurrentMode` / `spawnDestructionEffectBurst` caller. Keep the companion typo `Driod`. |
+| Generated `funcs_36.c` | `RECOMP_FUNC void npcProbeDriod` at VRAM `0x800CABD4`; prologue `addiu $sp, $sp, -0xB0`; returns through `jr $ra` / `addiu $sp, $sp, 0xB0` ending at `0x800CBD9C`; previous mission function is `updateProbeDroidHopState` at `0x800CA720`; next mission function is `findNearestNpcWithinRange` at `0x800CBDA0` |
+| Body semantics | 6-way jump table on `(a1 - 1) < 6` via table `0x800A6C10`. Actor at `a0`; NPC context at `a0+4`. Case 0 allocates/inits (`rs_malloc`, `walkMeshdef0List`, `createAndInitObject`, `allocateAndInitCraftNpcContext`). Case 1 tears down (`factor5RemoveListNode`, `rs_free`, `clearPendingAndDestroyChildNpc`, `releaseMeshAsset`). Case 2 hops (`npcPredictedRangeCheck`, `updateProbeDroidHopState` ×3, `initProbeDroidScatterLaunch`, hop-state halfword `+0xE2`). Case 3 advances a path (`advanceNpcOnCurvedPath`, `selectMeshLodAndSubmitForRender`). Case 4 combat (`getNpcCurrentHealth`, `dealDamageToNpc`, `extrapolateNpcPositionForCurrentMode`, `spawnDestructionEffectBurst`). Case 5 frees slots (`unregisterAndFreeNpcSlot` ×4, `spawnNpcType0xAFromTemplate`) |
+| TOML | `{ name = "npcProbeDriod", vram = 0x800CABD4, size = 0x11CC }` — already the human name; size matches `0x800CBDA0 - 0x800CABD4` |
+| Overlay section 4 | `{ .func = npcProbeDriod, .offset = 0x00025AA4, .rom_size = 0x000011CC }` under `section_4_ovl_mission_funcs` (`0x800CABD4 - 0x800A5130 = 0x25AA4`; `0x25AA4 + 0x11CC = 0x26C70` matches next `findNearestNpcWithinRange`) |
+| Non-collision | Menu-overlay `runModelViewerSoundDemo = 0x800CADB8`, `updateModelViewerAudioSource = 0x800CB30C`, `loadModelViewerModels = 0x800CB604`, `shutdownModelViewer = 0x800CBB30`, and `runMusyXTaskWrapper = 0x800CBD6C` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. They appear inside the mission VRAM span in `funcs_36.c` only because overlays share VRAM |
+
+### Outcome
+
+H3 selected. Companion mapping, live generated probe-droid update body, previous
+(`updateProbeDroidHopState` / `0x800CA720`) and next (`findNearestNpcWithinRange`
+/ `0x800CBDA0`) boundaries, TOML name and size, and section-4 overlay span
+already agree. No TOML or generated-name change.
+
+Next census: `func_800CBDA0` / `findNearestNpcWithinRange` at `0x800CBDA0`
+(size `0x29C`). Last-15 titles still include s1666, so the next iteration
+may continue the sweep.
