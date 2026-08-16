@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1554 (2026-08-15).
+the authority for session detail. Reviewed through s1555 (2026-08-16).
 
 ## Current state
 
@@ -74,25 +74,25 @@ the authority for session detail. Reviewed through s1554 (2026-08-15).
    and M4 threads; s1544 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
-   sizes, and caller/semantic evidence. Per-session H1 syncs through s1554
+   sizes, and caller/semantic evidence. Per-session H1 syncs through s1555
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
-   Next census: `0x800B1BE8..0x800B36FC`. The generated entry is already
-   `updatePlayerCraftPhysics`; the companion mission list maps
-   `updatePlayerCraftPhysics = 0x800B1BE8` with comment "main
-   player-craft/boss per-frame flight physics core". TOML is still
-   `func_800B1BE8` (size `0x1B14`, ends at generated
-   `applyCraftCapabilityFlags` / TOML `func_800B36FC` at `0x800B36FC`).
-   Overlay `rom_size` is `0x1B14` at offset `0x0000CAB8`. Confirm the
-   complete live function, matching size, and caller/semantic evidence
-   before synchronizing the TOML name. Independently named
-   `tickCinematicObjectStateMachine` at `0x800B13E0` (`rom_size` `0x808`)
-   ends at this address. Last live instruction pair is `0x800B36F4` /
-   `0x800B36F8` (`jr $ra` / `addiu $sp, $sp, 0x1D8`). Menu-overlay
-   `startSlotLoopAnimWithVoiceSync` at `0x800B1B58` occupies overlapping
-   VRAM from `.ovl.menu` across this start, and generated
-   `setupPlayerCraftDisplayAnim` starts at menu VRAM `0x800B1D54`;
+   Next census: `0x800B36FC..0x800B37C0`. The generated entry is already
+   `applyCraftCapabilityFlags`; the companion mission list maps
+   `applyCraftCapabilityFlags = 0x800B36FC` with comment "ORs
+   capability bits into the per-player craft record". TOML is still
+   `func_800B36FC` (size `0xC4`, ends at generated
+   `initPlayerCraftMovementMode` / TOML `func_800B37C0` at
+   `0x800B37C0`). Overlay `rom_size` is `0xC4` at offset `0x0000E5CC`.
+   Confirm the complete live function, matching size, and caller/semantic
+   evidence before synchronizing the TOML name. Independently named
+   `updatePlayerCraftPhysics` at `0x800B1BE8` (`rom_size` `0x1B14`)
+   ends at this address. Last live instruction pair is `0x800B37B8` /
+   `0x800B37BC` (`jr $ra` / `sh $v1, 0x0($a0)`). Menu-overlay
+   `tickFormatMessageWorker` at `0x800B3650` (`rom_size` `0x1D4`, ends
+   `0x800B3824`) occupies overlapping VRAM from `.ovl.menu` across this
+   body, and generated `func_800B3824` starts at menu VRAM `0x800B3824`;
    neither is a mission size split.
 
    Leave these parked entries unchanged:
@@ -230,13 +230,14 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
-| s1270–s1552 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `computeOrientedTransformFromQuat` at `0x800B1024`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
+| s1270–s1555 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `updatePlayerCraftPhysics` at `0x800B1BE8`. H2/H3 parks listed under Next steps #1. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
 | s1544 | Rice 640-identity revisit: four arms, whole-RDRAM 10000/removal rc=0, 11 Start/PIF, 320→640→1024→512. Leave A reaches 640/`0x6a2900`; post-settle Start/B seen on PIF, no third width. Last overlay load is menu `0x80000BA8` at 16.9s; mission path and `lv0`/`lv1` inits 0. Hangar ticks run 40–52s then `runHangarMenuFromOverlay` at 53s; 0 watched PCs after the 512→640 edge. 640 is still menu-overlay, not mission/cinematic/hangar-tick. |
 | s1553 | Maintenance compaction only; no experiment or code change. |
 | s1554 | H1: synchronized `tickCinematicObjectStateMachine` at `0x800B13E0` (size `0x808`). |
+| s1555 | H1: synchronized `updatePlayerCraftPhysics` at `0x800B1BE8` (size `0x1B14`). |
 
 ## Method and safety rules
 
