@@ -1826,7 +1826,7 @@ functions = [
     { name = "npcWingmanStateEffectShared", vram = 0x800D7A6C, size = 0x28C },
     { name = "npcWingmanState0", vram = 0x800D7CF8, size = 0x1C8 },
     { name = "npcWingmanState1", vram = 0x800D7EC0, size = 0x1F4 },
-    { name = "func_800D80B4", vram = 0x800D80B4, size = 0x8D4 },
+    { name = "npcWingmanBehaviorByMode", vram = 0x800D80B4, size = 0x8D4 },
     { name = "func_800D8988", vram = 0x800D8988, size = 0x330 },
     { name = "func_800D8CB8", vram = 0x800D8CB8, size = 0x57C },
     { name = "func_800D9234", vram = 0x800D9234, size = 0x18C },

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1726 (2026-08-16).
+the authority for session detail. Reviewed through s1727 (2026-08-16).
 
 ## Current state
 
@@ -87,10 +87,10 @@ the authority for session detail. Reviewed through s1726 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcWingmanBehaviorByMode`
-   (`0x800D80B4`, size `0x8D4`). s1651–s1665, s1667–s1681,
-   s1683–s1697, s1699–s1713, and s1715–s1726 synchronized or confirmed
-   DAT-item through `npcWingmanState1`; s1650, s1666, s1682,
+1. Resume the generated-symbol sweep at `npcWingmanSpawnBurstEffects`
+   (`0x800D8988`, size `0x330`). s1651–s1665, s1667–s1681,
+   s1683–s1697, s1699–s1713, and s1715–s1727 synchronized or confirmed
+   DAT-item through `npcWingmanBehaviorByMode`; s1650, s1666, s1682,
    s1698, and s1714 were the mandatory retail-entry revisits. The
    full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
    earlier sweep is in §33. About 1,548 placeholder `func_0x...`
@@ -284,6 +284,7 @@ ownership.
 | s1724 | Synchronized `npcWingmanStateEffectShared` (`0x800D7A6C`, size `0x28C`) after companion mission mapping, live generated shared per-state effect-emitter body (`resolveNpcAttachmentPos`, `tickProgressChannel`, 6-way `jr` at `0x800A77E8` on `a3`, `triggerCueWithSlotEffect` ×4, `getObjectNpcTypeId`, `slotDispatcherIter`, `play3DSoundEvent`; callers `npcWingmanState0`..`State6`), exact `0x800D7974`/`0x800D7CF8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7CF8` / `npcWingmanState0`. |
 | s1725 | Synchronized `npcWingmanState0` (`0x800D7CF8`, size `0x1C8`) after companion mission mapping, live generated wingman state-0 handler (`+0x53`/`+0x5E` phase, `lookupHmtTextureByName` ×2, `npcWingmanStateEffectShared` ×2, `play3DSoundEvent`; `getNpcWingmanStateData` case 0), exact `0x800D7A6C`/`0x800D7EC0` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D7EC0` / `npcWingmanState1`. |
 | s1726 | Synchronized `npcWingmanState1` (`0x800D7EC0`, size `0x1F4`) after companion mission mapping, live generated wingman state-1 handler (`+0x53` 1/4/else paths, `+0x5E` xor-1 toggle, `lookupHmtTextureByName` ×3, `npcWingmanStateEffectShared` ×3, `setObjectSubstructF10IfReady`, `play3DSoundEvent`; `getNpcWingmanStateData` case 1), exact `0x800D7CF8`/`0x800D80B4` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D80B4` / `npcWingmanBehaviorByMode`. |
+| s1727 | Synchronized `npcWingmanBehaviorByMode` (`0x800D80B4`, size `0x8D4`) after companion mission mapping, live generated wingman behavior/comms-driver body (`a2` modes 0/2/3/4, 7-way `jr` tables at `0x800A7850`/`0x800A78C8`/`0x800A78F0`, `getNpcHealthPercentage` ×7, `playSpeechClip` ×2, `rand_recomp` ×7), exact `0x800D7EC0`/`0x800D8988` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Exclusive callers are four `npcWingmanUpdate` sites. No menu function occupies the address. Next candidate is `func_800D8988` / `npcWingmanSpawnBurstEffects`. |
 
 ## Method and safety rules
 

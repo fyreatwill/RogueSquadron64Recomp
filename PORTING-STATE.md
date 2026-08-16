@@ -80498,3 +80498,39 @@ runtime run required.
 Next census: `npcWingmanBehaviorByMode` / `func_800D80B4` at
 `0x800D80B4` (size `0x8D4`). Last-15 titles still include s1714's
 retail-entry revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1727 (2026-08-16) — synchronized the npcWingmanBehaviorByMode symbol
+
+Exact generated-symbol census for `0x800D80B4` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 59601; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanBehaviorByMode = 0x800D80B4` with comment "wingman behavior/comms driver (mode switch, playSpeechClip)". Previous contiguous neighbor `npcWingmanState1 = 0x800D7EC0`; next contiguous neighbor `npcWingmanSpawnBurstEffects = 0x800D8988` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanBehaviorByMode` at VRAM `0x800D80B4`; prologue `addiu $sp, $sp, -0x30`; saves `$s3`/`$ra`/`$s2`/`$s1`/`$s0`/`$f20`; `$s3 = a0`. Early-outs if `*(0x8010CA20)` is nonzero or object `*(a0+0x34)+0x90 == 7`. Mode switch on `a2`: 0 / 2 / 3 / 4 (1 and other values jump to the epilogue). Mode 0: 7-way `jr` at `0x800A7850` on field `+0x90` (cases 0–6), each case `getNpcHealthPercentage` (`jal 0x800F219C`) then `playSpeechClip` (`jal 0x80066EE4`, `a1=0x73`). Mode 2: byte `+0x14` at `a0+0x68`, `rand_recomp` (`jal 0x80003430`). Mode 3: 7-way `jr` at `0x800A78C8` plus `rand_recomp`. Mode 4: byte `+0x1C` at `a0+0x68`, `rand_recomp`, 7-way `jr` at `0x800A78F0` picking speech IDs `0x1E7`/`0x24`/`0x255`/`0x94`/`0xBB`/`0x3C`/`0x1AD`, then `playSpeechClip` (`a1=0x73`, `a3=1`). Epilogue `jr $ra` / `addiu $sp, $sp, 0x30` ends at `0x800D8984`. Previous mission function is `npcWingmanState1` at `0x800D7EC0` (last insn `0x800D80B0`); next is `npcWingmanSpawnBurstEffects` at `0x800D8988`. `funcs.h` already declares the human name. Four `jal` sites in `npcWingmanUpdate` (`0x800D99F8` `a2=4`, `0x800D9C44` `a2=0`, `0x800D9CA0`, `0x800D9D90` `a2=5`) |
+| Body semantics | Matches the companion "wingman behavior/comms driver": incoming-mode switch, per-mode jump tables, `getNpcHealthPercentage` gates, and `playSpeechClip` dispatch. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800D80B4", vram = 0x800D80B4, size = 0x8D4 }` — size matches `0x800D8988 - 0x800D80B4` (last insn `0x800D8984` + 4 = `0x8D4`) |
+| Overlay section 4 | `{ .func = npcWingmanBehaviorByMode, .offset = 0x00032F84, .rom_size = 0x000008D4 }` under `section_4_ovl_mission_funcs` (`0x800D80B4 - 0x800A5130 = 0x32F84`; `0x32D90 + 0x1F4 = 0x32F84`; `0x32F84 + 0x8D4 = 0x33858` matches next `npcWingmanSpawnBurstEffects`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D80B4`. No leftover `func_800D80B4` in generated headers or overlay INL; no companion `D_800D80B4` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated wingman behavior/comms-driver
+body, previous (`npcWingmanState1` / `0x800D7EC0`) and next
+(`npcWingmanSpawnBurstEffects` / `0x800D8988`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcWingmanBehaviorByMode`, and only the TOML name was a stale
+`func_800D80B4` placeholder. Corrected TOML to `npcWingmanBehaviorByMode`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcWingmanSpawnBurstEffects` / `func_800D8988` at
+`0x800D8988` (size `0x330`). Last-15 titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate does not fire.
