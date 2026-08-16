@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1512 (2026-08-15).
+the authority for session detail. Reviewed through s1513 (2026-08-15).
 
 ## Current state
 
@@ -59,7 +59,7 @@ the authority for session detail. Reviewed through s1512 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AD224..0x800AD690`.
+   adjacent function, `0x800AD690..0x800ADBF8`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -123,19 +123,19 @@ the authority for session detail. Reviewed through s1512 (2026-08-15).
    s1509 synchronized `buildCutsceneGradientBuffers` at
    `0x800AC574`. s1510 synchronized `spawnNpcBurstAlongSegment` at
    `0x800AC75C`. s1511 synchronized `processCutsceneActions` at
-   `0x800ACE8C`. The generated entry at `0x800AD224` is already
-   `computeCutsceneScreenScale`; the companion cinematic list maps
-   `computeCutsceneScreenScale = 0x800AD224`. TOML is still
-   `func_800AD224` (size `0x46C`, ends at independently named
-   `tickCutsceneCameraFromTimeline` / TOML `func_800AD690` at
-   `0x800AD690`). Overlay `rom_size` is `0x46C` at offset
-   `0x000080F4`. Confirm the complete live function, matching size,
+   `0x800ACE8C`. s1513 synchronized `computeCutsceneScreenScale` at
+   `0x800AD224`. The generated entry at `0x800AD690` is already
+   `tickCutsceneCameraFromTimeline`; the companion cinematic list maps
+   `tickCutsceneCameraFromTimeline = 0x800AD690`. TOML is still
+   `func_800AD690` (size `0x568`, ends at independently named
+   `transformAndNormalizeDirectionByMatrix` / TOML `func_800ADBF8`
+   at `0x800ADBF8`). Overlay `rom_size` is `0x568` at offset
+   `0x00008560`. Confirm the complete live function, matching size,
    and caller/semantic evidence before synchronizing the TOML name.
-   Mission-overlay `playerSnowSpeederUpdate` at `0x800ACD9C`,
-   `triggerPlayerVehicleSpecialSlotEffect` / TOML `func_800AD320`
-   at `0x800AD320`, and `updateCinematicCameraStateMachine` / TOML
-   `func_800AD418` at `0x800AD418` occupy overlapping VRAM and are
-   different overlays, not a cinematic size split.
+   Mission-overlay `updateCinematicCameraStateMachine` / TOML
+   `func_800AD418` at `0x800AD418` (size `0x944`, ends `0x800ADD5C`)
+   occupies overlapping VRAM and is a different overlay, not a
+   cinematic size split.
 2. Future oracle work (hangar/mission watches, or a new M4 RDRAM dest if
    one is identified from a DMEM→RDRAM transfer that is not `0xD60`) must
    use the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM,
@@ -470,6 +470,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1509 | Exact companion/generated cinematic-gradient census synchronized `buildCutsceneGradientBuffers` at `0x800AC574`; no build or runtime run. |
 | s1510 | Exact companion/generated cinematic-NPC census synchronized `spawnNpcBurstAlongSegment` at `0x800AC75C`; no build or runtime run. |
 | s1511 | Exact companion/generated cinematic-action census synchronized `processCutsceneActions` at `0x800ACE8C`; no build or runtime run. |
+| s1513 | Exact companion/generated cinematic-scale census synchronized `computeCutsceneScreenScale` at `0x800AD224`; no build or runtime run. |
 
 ## Method and safety rules
 
