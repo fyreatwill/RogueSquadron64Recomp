@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1612 (2026-08-16).
+the authority for session detail. Reviewed through s1613 (2026-08-16).
 
 ## Current state
 
@@ -263,7 +263,11 @@ the authority for session detail. Reviewed through s1612 (2026-08-16).
    asset/init/flag-setting body, generated caller, exact previous and next
    function boundaries, overlay-table span, and TOML size agree. The next
    census is `func_800BF468`, independently named `getDemoRecordedTimestep`,
-   with size `0x30`.
+   with size `0x30`. s1613 synchronized `getDemoRecordedTimestep` at
+   `0x800BF468` (size `0x30`): the companion mission mapping, generated
+   timestep-lookup body and caller, exact previous and next boundaries,
+   overlay-table span, and TOML size agree. The next census is the
+   explicitly fake `fake_func_800BF498` entry with size `0x8`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -299,6 +303,9 @@ the authority for session detail. Reviewed through s1612 (2026-08-16).
      `lw $v0, 0x2C($fp)` gap before `playerXwingInit`; companion Fake
      Function Fixing; zero jal/j/ptr; menu `destroyPlayerShipRecord`
      occupies the same VRAM from `.ovl.menu`)
+   - `fake_func_800BF498` (s1614 candidate: companion explicitly marks the
+     8-byte entry fake; generated body is only an `lw`/`sw` frame fragment
+     before `attached3DSoundEmitterNpcHandler` at `0x800BF4A0`)
 
 2. Future oracle work on leaving the 640 crawl into a mission, or a
    new M4 RDRAM dest (a DMEM→RDRAM transfer that is not `0xD60`),
@@ -475,6 +482,7 @@ single-source and unevaluable as a retail ownership result.
 | s1610 | H1: synchronized `applyResModeFromSettings` at `0x800BF358` (size `0x4C`); companion mapping, generated flag-propagation body and caller, exact `restoreGameSettingsAfterDemo` boundary, overlay-table span, and TOML size agree. H2/H3 were ruled out by the exact independent name, live body, caller, and span. No build or runtime run was needed. |
 | s1611 | H1: synchronized `restoreGameSettingsAfterDemo` at `0x800BF3A4` (size `0x64`); companion mapping, generated restore-body semantics and caller, exact adjacent boundaries, overlay-table span, and TOML size agree. H2/H3 were ruled out by the exact independent name, live body, caller, and span. No build or runtime run was needed. |
 | s1612 | H1: synchronized `loadAndStartDemo` at `0x800BF408` (size `0x60`); companion mapping, generated definition and demo asset/init/flag-setting body, generated caller, exact adjacent boundaries, overlay-table span, and TOML size agree. H2/H3 were ruled out by the exact independent name, live body, caller, and span. No build or runtime run was needed. |
+| s1613 | H1: synchronized `getDemoRecordedTimestep` at `0x800BF468` (size `0x30`); companion mapping, generated timestep-lookup body and caller, exact adjacent boundaries, overlay-table span, and TOML size agree. H2/H3 were ruled out by the exact independent name, live body, caller, and span. No build or runtime run was needed. |
 
 ## Method and safety rules
 

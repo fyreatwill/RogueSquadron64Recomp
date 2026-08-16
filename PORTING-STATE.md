@@ -76820,3 +76820,25 @@ rule out H2's conflicting/incomplete-span case and H3's fragment/data-like
 case. No build or runtime run was needed; this was a bounded symbol-map
 synchronization. The next bounded candidate is `func_800BF468`, independently
 named `getDemoRecordedTimestep`, with size `0x30`.
+
+## Session 1613 (2026-08-16) — synchronized the getDemoRecordedTimestep symbol
+
+Ran the bounded generated-symbol census specified by the previous NEXT unit
+for `0x800BF468..0x800BF498`. The companion mission symbol list independently
+names `0x800BF468` `getDemoRecordedTimestep`. The generated definition is
+already named `getDemoRecordedTimestep`; its live body reads the demo timestep
+index, returns the incoming floating-point timestep until the index reaches
+the limit, and otherwise looks up the indexed recorded timestep. A generated
+caller at `0x800FA7C4` passes the current timestep in `f12` and invokes the
+function.
+
+H1 selected: the generated overlay table records `getDemoRecordedTimestep` at
+offset `0x1A338` with ROM size `0x30`; the TOML placeholder had the same size.
+The previous `loadAndStartDemo` body ends at `0x800BF468`, and the next
+generated entry `fake_func_800BF498` begins at `0x800BF498`, matching both
+boundaries. Changed only the TOML symbol name to `getDemoRecordedTimestep`.
+The exact companion name, generated live body, caller, adjacent boundaries,
+overlay span, and size rule out H2's conflicting/incomplete-span case and
+H3's fragment/data-like case. No build or runtime run was needed; this was a
+bounded symbol-map synchronization. The next bounded candidate is the
+explicitly fake `fake_func_800BF498` entry with size `0x8`.

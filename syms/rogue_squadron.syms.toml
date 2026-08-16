@@ -1679,7 +1679,7 @@ functions = [
     { name = "applyResModeFromSettings", vram = 0x800BF358, size = 0x4C },
     { name = "restoreGameSettingsAfterDemo", vram = 0x800BF3A4, size = 0x64 },
     { name = "loadAndStartDemo", vram = 0x800BF408, size = 0x60 },
-    { name = "func_800BF468", vram = 0x800BF468, size = 0x30 },
+    { name = "getDemoRecordedTimestep", vram = 0x800BF468, size = 0x30 },
     { name = "fake_func_800BF498", vram = 0x800BF498, size = 0x8 },
     { name = "func_800BF4A0", vram = 0x800BF4A0, size = 0x2E4 },
     { name = "fake_func_800BF784", vram = 0x800BF784, size = 0xC },

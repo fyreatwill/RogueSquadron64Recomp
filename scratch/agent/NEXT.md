@@ -1,41 +1,36 @@
-# NEXT work unit (s1613)
+# NEXT work unit (s1614)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Run exactly one bounded exact-name census over
-`0x800BF468..0x800BF498`. Record the address, size, generated definition,
-companion name/source, caller or semantic evidence, and confidence before
-editing. Synchronize only an exact independent name in
-`syms/rogue_squadron.syms.toml`; leave address-encoded, fake, fragment,
-data-like, or ambiguous entries unchanged. Do not build or run.
+Run exactly one bounded census over `0x800BF498..0x800BF4A0`. Record the
+address, size, generated definition, companion classification, and the
+previous/next boundaries before editing. Do not rename an explicitly fake,
+fragment, or data-like entry. Do not build or run.
 
-The TOML entry is `func_800BF468` with size `0x30`. The companion list and
-generated overlay table are expected to identify `getDemoRecordedTimestep` at
-this address; `loadAndStartDemo` ends at `0x800BF468`, and
-`fake_func_800BF498` is the next entry. Establish those boundaries and verify
-the generated body and callers/semantics before any rename.
+The TOML entry is `fake_func_800BF498` with size `0x8`. The companion mission
+symbol list also marks `0x800BF498` as `fake_func_800BF498`; the generated body
+is an `lw`/`sw` frame fragment, and `attached3DSoundEmitterNpcHandler` begins
+at `0x800BF4A0`.
 
 Competing hypotheses and discriminator:
 
-- H1: the function has an exact independent companion mapping and can be
-  synchronized to `getDemoRecordedTimestep`.
-- H2: the mapping is partial or conflicting, or the generated/TOML span does
-  not match, so the entry must remain unchanged.
-- H3: the region is a fragment/data-like or otherwise non-function region
-  lacking an independent naming basis, so it should remain parked.
+- H1: the entry is a correctly classified fake two-instruction fragment and
+  must remain unchanged.
+- H2: the companion classification or generated span conflicts with the
+  fake label, so the TOML entry needs a different synchronized name.
+- H3: the bytes are data-like or belong to the following handler, so the
+  entry should remain parked as a non-function boundary artifact.
 
-The complete comparison table is the discriminator: an exact companion name
-with matching generated/TOML live-body size, exact previous and next
-boundaries, and caller or semantic evidence selects H1; a conflicting or
-incomplete boundary/name selects H2; and no independent name or a
-non-function region selects H3. Each outcome selects one hypothesis.
+The complete comparison table is the discriminator: matching fake labels,
+an exact 0x8 generated/TOML span, and the next handler at `0x800BF4A0` select
+H1; a conflicting label or span selects H2; and evidence that the entry is
+not an independent function selects H3. Each outcome selects one hypothesis.
 
 Commands:
 
 ```
-rg -n -C 4 'getDemoRecordedTimestep|800BF468|800BF498' ../rogue_squadron64/symbol_files/mission_overlay.txt
-rg -n -C 5 '800BF468|800BF498|getDemoRecordedTimestep' ../N64Recomp/RecompiledFuncs/funcs_33.c
-rg -n '800BF468|800BF498|getDemoRecordedTimestep' syms/rogue_squadron.syms.toml
-rg -n -C 3 'getDemoRecordedTimestep|fake_func_800BF498' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
-rg -n -C 6 'jal[[:space:]]+0x800BF468|getDemoRecordedTimestep\(rdram' ../N64Recomp/RecompiledFuncs/funcs_*.c
+rg -n -C 5 'fake_func_800BF498|800BF498|800BF4A0|attached3DSoundEmitterNpcHandler' ../rogue_squadron64/symbol_files/mission_overlay.txt
+rg -n -C 6 '800BF498|800BF4A0|attached3DSoundEmitterNpcHandler' ../N64Recomp/RecompiledFuncs/funcs_33.c
+rg -n '800BF498|800BF4A0|attached3DSoundEmitterNpcHandler' syms/rogue_squadron.syms.toml
+rg -n -C 3 'fake_func_800BF498|attached3DSoundEmitterNpcHandler' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
