@@ -235,7 +235,7 @@ de-stubbing is closed. These are boundaries, not mitigations: future guards
 require an `ORIGIN:` naming the writer and judging the value legitimate. The
 generated-symbol renaming sweep is the current low-risk workstream; exact
 companion/generated names are synchronized through
-`npcWingmanBehaviorByMode` at `0x800D80B4` (s1727). See §33–§35 for the
+`npcWingmanSpawnBurstEffects` at `0x800D8988` (s1729). See §33–§35 for the
 archived census, `CURRENT-TRUTH.md` for the live backlog, and
 `PORTING-STATE.md` for evidence.
 
@@ -3005,10 +3005,11 @@ collision.
 | s1699–s1713 | Synchronized player-AT-ST locomotion/behavior, `npcInitFromTemplate`, `spawnScaledBootVec4Effect`, `npcInitWithMotionParams`, effect channels A/B/dispatch, shuttle destruction, child-link init, and `advanceNpcSpinOrientation` (`0x800D1578`–`0x800D5078`). Confirmed `playerAtStUpdate` (`0x800D2208`, `0x954`), leftover `fake_func_800D2C98` (`0x8`), `npcShuttleUpdate` (`0x800D3894`, `0x1630`), leftover `fake_func_800D4EC4` (`0xC`). |
 | s1714 | Rice later-flush of attract-512 A/Start/C-up/L/Z (`--secs 133`). Hold stays attract 512 through 133.4 s. A/Start/C-up/L/Z all leave `512→1024` at 126.3–126.4 s origin `0x00790400`/`800` and stay on that title-like 1024 through 133.5 s. H2 for A/Start/C-up/L. H3-confirm for Z (second source; s1698 stay-512 was a flush cutoff). 1024 destination still unevaluable (Rice dies ~135 s). |
 | s1715–s1727 | Synchronized `npcDebrisFieldUpdate` through `npcWingmanBehaviorByMode` (`0x800D5208`–`0x800D80B4`): debris-field, simple-model init, shared effect-channel plus Mode0/Mode1 wrappers, tank-droid aim, wingman reset/state-data/shared-emitter/state-0/state-1/behavior-by-mode. Confirmed `npcTankDroidUpdate` (`0x800D6998`, `0xE80`). Companion `D_800D5208` is a leftover splat label, not a second occupant. |
+| s1729 | Synchronized `npcWingmanSpawnBurstEffects` (`0x800D8988`, `0x330`). Three `initNpcContextFromTransform` / `spawnRandomBurstNpcVariantWrapper` / `assignNpcTargetAndPosition` bursts. Sole caller `npcWingmanUpdate` at `0x800D9CA8`. |
 
-The sweep cursor after s1727 is `npcWingmanSpawnBurstEffects` /
-`func_800D8988` at `0x800D8988` (size `0x330`). Next contiguous neighbor is
-`npcWingmanSteerToward` at `0x800D8CB8`. Mandatory revisits in this window:
+The sweep cursor after s1729 is `npcWingmanSteerToward` /
+`func_800D8CB8` at `0x800D8CB8` (size `0x57C`). Next contiguous neighbor is
+`npcWingmanUpdateEngineAudio` at `0x800D9234`. Mandatory revisits in this window:
 s1650, s1666, s1682, s1698, s1714.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

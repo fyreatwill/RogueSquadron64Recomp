@@ -80558,3 +80558,39 @@ duplicated truth-file prose as the source of the live state summary;
 the deleted detail remains in the append-only ledger and the project
 overview.
 
+
+## Session 1729 (2026-08-16) — synchronized the npcWingmanSpawnBurstEffects symbol
+
+Exact generated-symbol census for `0x800D8988` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 6028; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanSpawnBurstEffects = 0x800D8988` with comment "spawns burst/hit effects for the wingman". Previous contiguous neighbor `npcWingmanBehaviorByMode = 0x800D80B4`; next contiguous neighbor `npcWingmanSteerToward = 0x800D8CB8` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanSpawnBurstEffects` at VRAM `0x800D8988`; prologue `addiu $sp, $sp, -0xF8`; saves `$s1`/`$ra`/`$s7`–`$s0` and `$f30`–`$f20`; `$s1 = a0`. Three identical burst sequences: `initNpcContextFromTransform` (`jal 0x80041B8C`) then `spawnRandomBurstNpcVariantWrapper` (`jal 0x80041CBC`) then `assignNpcTargetAndPosition` (`jal 0x80041D8C`). Burst 1 stores type `0x2` at `sp+0x7C`, halves `0x55`/`0x100` at `sp+0x80`/`+0x82`. Burst 2 stores type `0x6` at `sp+0x7C`, halves `0x4`/`0x4`. Burst 3 stores type `0x6`, halves `0x8`/`0x15`, and `0x14` at `sp+0x84`. Epilogue `jr $ra` / `addiu $sp, $sp, 0xF8` ends at `0x800D8CB4`. Previous mission function is `npcWingmanBehaviorByMode` at `0x800D80B4` (last insn `0x800D8984`); next is `npcWingmanSteerToward` at `0x800D8CB8`. `funcs.h` already declares the human name. One `jal` site in `npcWingmanUpdate` (`0x800D9CA8`, immediately after `npcWingmanBehaviorByMode` and before `unregisterAndFreeNpcSlot`) |
+| Body semantics | Matches the companion "spawns burst/hit effects for the wingman": three parameterized burst-NPC variant spawns from the wingman transform, invoked from the wingman update path next to slot teardown. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800D8988", vram = 0x800D8988, size = 0x330 }` — size matches `0x800D8CB8 - 0x800D8988` (last insn `0x800D8CB4` + 4 = `0x330`) |
+| Overlay section 4 | `{ .func = npcWingmanSpawnBurstEffects, .offset = 0x00033858, .rom_size = 0x00000330 }` under `section_4_ovl_mission_funcs` (`0x800D8988 - 0x800A5130 = 0x33858`; `0x32F84 + 0x8D4 = 0x33858`; `0x33858 + 0x330 = 0x33B88` matches next `npcWingmanSteerToward`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D8988`. No leftover `func_800D8988` in generated headers or overlay INL; no companion `D_800D8988` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated wingman burst-effect body,
+previous (`npcWingmanBehaviorByMode` / `0x800D80B4`) and next
+(`npcWingmanSteerToward` / `0x800D8CB8`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcWingmanSpawnBurstEffects`, and only the TOML name was a stale
+`func_800D8988` placeholder. Corrected TOML to `npcWingmanSpawnBurstEffects`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcWingmanSteerToward` / `func_800D8CB8` at
+`0x800D8CB8` (size `0x57C`). Last-15 titles still include s1714's
+retail-entry revisit, so the mandatory REVISIT gate does not fire.
