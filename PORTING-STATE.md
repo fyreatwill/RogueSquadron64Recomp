@@ -79222,3 +79222,39 @@ run required.
 Next census: `func_800CF898` / `npcAtStHandleDestruction` at `0x800CF898`
 (size `0x474`). Last-15 titles still include s1682, so the next iteration may
 continue the sweep.
+
+## Session 1693 (2026-08-16) — synchronized the npcAtStHandleDestruction symbol
+
+Exact generated-symbol census for `0x800CF898` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 38236; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcAtStHandleDestruction = 0x800CF898` (comment: 849L AT-ST walker destruction; caller `npcAtStUpdate`). Previous contiguous neighbor `updateAtStBodyKinematics = 0x800CF20C`; next contiguous function `advanceAtStDeathAnimPhase = 0x800CFD0C` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void npcAtStHandleDestruction` at VRAM `0x800CF898`; prologue `addiu $sp, $sp, -0x90`; returns through `jr $ra` / `addiu $sp, $sp, 0x90` ending at `0x800CFD08`; previous mission function is `updateAtStBodyKinematics` at `0x800CF20C` (last insn `0x800CF894`); next mission function is `advanceAtStDeathAnimPhase` at `0x800CFD0C` |
+| Body semantics | Actor at `a0` (`s1`). If `*(s1+0x80)`: `clearModelAnimChannelEntry` on `*(s1+0x90)` then `releaseModelAnimSlot` on `*(s1+0x8C)`. Then `transformMeshPartIntoWorld`, `spawnNpcType0xAFromTemplate`, `spawnByteAnimDebrisDefault`, `play3DSoundEvent`, `spawnOrientedNpc` ×2, `spawnDestructionEffectBurst`, `rand_recomp` ×4, `composeRandomRotationMatrix`, `scaleVec3ByRandomRange`, `spawnDebris1Npc`, `releaseMeshAsset`, `walkMeshdef0List`, `mat34CrossRowsAndCopyPos`, `getNpcContextByIndex`, `initActorRenderDescriptorWithNpcVelocity`, `spawnSplineWalkerCraft` (`a3=0xC`); writes state byte `+0xFA=3`. Exclusive static caller is `npcAtStUpdate` at `0x800D0DAC` (`a0=s2`) after `dealDamageToNpc` returns `<= 0`. Same spawn-debris + random-orientation + 3D-sound family as `npcAtAtHandleDestruction` |
+| TOML (before) | `{ name = "func_800CF898", vram = 0x800CF898, size = 0x474 }` — size matches `0x800CFD0C - 0x800CF898` (285 decoded insns, last+4 = `0x474`) |
+| Overlay section 4 | `{ .func = npcAtStHandleDestruction, .offset = 0x0002A768, .rom_size = 0x00000474 }` under `section_4_ovl_mission_funcs` (`0x800CF898 - 0x800A5130 = 0x2A768`; `0x2A0DC + 0x68C = 0x2A768`; `0x2A768 + 0x474 = 0x2ABDC` matches next `advanceAtStDeathAnimPhase`) |
+| Non-collision | No menu-overlay function occupies `0x800CF898`. Nearest menu symbols are concert-hall bytes at `0x800CFE3D`/`0x800CFE3E`. Menu m2c `func_800CF898` in `func_800B47C4` is hangar/controller data (`+0x1C8`/`+0x1CC`) on a different overlay, not a name collision |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated AT-ST walker-destruction body,
+previous (`updateAtStBodyKinematics` / `0x800CF20C`) and next
+(`advanceAtStDeathAnimPhase` / `0x800CFD0C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcAtStHandleDestruction`, and only the TOML name was a stale
+`func_800CF898` placeholder. Corrected TOML to `npcAtStHandleDestruction`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `func_800CFD0C` / `advanceAtStDeathAnimPhase` at `0x800CFD0C`
+(size `0x170`). Last-15 titles still include s1682, so the next iteration may
+continue the sweep.
