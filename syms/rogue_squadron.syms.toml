@@ -1761,7 +1761,7 @@ functions = [
     { name = "setLevelObjectTrackingScalar", vram = 0x800C7CEC, size = 0xC },
     { name = "playObjectiveVoiceLine1", vram = 0x800C7CF8, size = 0x24 },
     { name = "playObjectiveVoiceLine2", vram = 0x800C7D1C, size = 0x28 },
-    { name = "func_800C7D44", vram = 0x800C7D44, size = 0x1C },
+    { name = "dispatchHudEffectUpdate", vram = 0x800C7D44, size = 0x1C },
     { name = "func_800C7D60", vram = 0x800C7D60, size = 0x1C },
     { name = "func_800C7D7C", vram = 0x800C7D7C, size = 0x1C },
     { name = "func_800C7D98", vram = 0x800C7D98, size = 0x1C },

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1659 (2026-08-16).
+the authority for session detail. Reviewed through s1660 (2026-08-16).
 
 ## Current state
 
@@ -65,35 +65,24 @@ the authority for session detail. Reviewed through s1659 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   generated `dispatchHudEffectUpdate` / TOML `func_800C7D44` at
-   `0x800C7D44` (size `0x1C`). Compare companion mapping if any, generated
+   generated `delegateToLevelStageTick` / TOML `func_800C7D60` at
+   `0x800C7D60` (size `0x1C`). Compare companion mapping if any, generated
    body, previous and next boundaries, TOML size, and overlay span.
    Synchronize only on complete independent agreement (likely a stale-TOML
    correction if the generated body already carries the human name). The
    s1639 census confirmed `checkComplexObjectives` was already
-   synchronized; s1640 synchronized `getAndSetByteAtLevelStateTable`;
-   s1641 synchronized `getGlobalFloatGameState`; s1642 synchronized
-   `getObjectiveGlobalFloat`; s1643 synchronized `setHudEnableBit4`;
-   s1644 synchronized `setHudEnableBit8`; s1645 synchronized
-   `isLevelStateByteZero`; s1646 synchronized `randMod`; s1647 confirmed
-   `addBooleanCountHandleWrapper` was already synchronized; s1648 confirmed
-   `addTimerHandleWrapper` was already synchronized; s1649 synchronized
-   `setHudFlagBit40AndStoreArg` after correcting its stale TOML name;
-   s1651 confirmed `calculateDatItemDistanceToPlayer` was already
-   synchronized; s1652 synchronized `getScaledPlayerCraftSpeed` after
-   correcting its stale TOML name; s1653 synchronized
-   `spawnEffectOnNamedDatItem` after correcting its stale TOML name;
-   s1654 synchronized `initActorTowardNamedDatItem` after correcting its
-   stale TOML name; s1655 synchronized
-   `initAnchoredActorTowardNamedDatItem` after correcting its stale TOML
-   name; s1656 confirmed `getDatItemHealth` was already synchronized;
-   s1657 confirmed `getDatItemHealthPercentage` was already synchronized;
-   s1658 synchronized `despawnEffectOnNamedDatItem` after correcting its
-   stale TOML name; s1659 synchronized `setLevelObjectTrackingScalar`
-   after correcting its stale TOML name. s1650 was the mandatory
-   retail-entry revisit (post-B A/Start/Z). The full s1590–s1649 archive
-   is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
-   1,548 placeholder `func_0x...` names remained when counted at s1487.
+   synchronized; s1640–s1646 synchronized several HUD/level-state helpers;
+   s1647–s1648 confirmed wrapper symbols already synchronized; s1649
+   synchronized `setHudFlagBit40AndStoreArg`; s1651 confirmed
+   `calculateDatItemDistanceToPlayer`; s1652–s1655 synchronized DAT-item
+   helpers after stale TOML corrections; s1656–s1657 confirmed health
+   getters; s1658–s1659 synchronized `despawnEffectOnNamedDatItem` and
+   `setLevelObjectTrackingScalar`; s1660 synchronized
+   `dispatchHudEffectUpdate` after correcting its stale TOML name.
+   s1650 was the mandatory retail-entry revisit (post-B A/Start/Z). The
+   full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
+   sweep is in §33. About 1,548 placeholder `func_0x...` names remained
+   when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
    leave a 640 frontend into a mission, or for a new M4 RDRAM destination
    from a DMEM→RDRAM transfer other than `0xD60`. Known hold/A/B/Z,
@@ -207,6 +196,7 @@ ownership.
 | s1657 | Confirmed `getDatItemHealthPercentage` (`0x800C7C28`, size `0x60`) was already synchronized: companion mission mapping, live generated DAT-item health-percentage body, exact `0x800C7B60`/`0x800C7C88` boundaries, TOML size, and section-4 span agreed; next candidate is `func_800C7C88` / `despawnEffectOnNamedDatItem`. |
 | s1658 | Synchronized `despawnEffectOnNamedDatItem` (`0x800C7C88`, size `0x64`) after companion mission mapping, live generated DAT-item effect-despawn body, exact `0x800C7C28`/`0x800C7CEC` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7CEC` / `setLevelObjectTrackingScalar`. |
 | s1659 | Synchronized `setLevelObjectTrackingScalar` (`0x800C7CEC`, size `0xC`) after companion mission mapping (12 `lvN_initializeObjectTracking` callers; `MEM_W[0x8013973C]=f12`), live generated one-instruction float store, exact `0x800C7C88`/`0x800C7CF8` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D44` / `dispatchHudEffectUpdate`. |
+| s1660 | Synchronized `dispatchHudEffectUpdate` (`0x800C7D44`, size `0x1C`) after companion mission mapping, live generated thin wrapper (`jal initSpeechPlaybackState` / `0x80067938`), exact `0x800C7D1C`/`0x800C7D60` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder; next candidate is `func_800C7D60` / `delegateToLevelStageTick`. |
 
 ## Method and safety rules
 

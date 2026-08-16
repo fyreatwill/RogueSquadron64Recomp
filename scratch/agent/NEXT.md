@@ -1,20 +1,19 @@
-# NEXT work unit (s1660)
+# NEXT work unit (s1661)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the exact generated-symbol census. The next candidate is generated
-`dispatchHudEffectUpdate` at `0x800C7D44` (size `0x1C`). Generated and
-overlays already use the human name; TOML still carries `func_800C7D44`
-(s1659 observation) — confirm full independent agreement and correct the
+`delegateToLevelStageTick` at `0x800C7D60` (size `0x1C`). Generated and
+overlays already use the human name; TOML still carries `func_800C7D60`
+(s1660 observation) — confirm full independent agreement and correct the
 stale TOML name if the body/boundaries agree, or leave unresolved and
 advance.
 
 Competing hypotheses and discriminator:
 
-- H1: the live function is the HUD-effect update dispatcher, and
-  generated body, TOML size/name, previous/next boundaries, and section-4
-  overlay span agree completely — synchronize any stale placeholder (TOML
-  name).
+- H1: the live function is the level-stage-tick delegate, and generated
+  body, TOML size/name, previous/next boundaries, and section-4 overlay
+  span agree completely — synchronize any stale placeholder (TOML name).
 - H2: the name belongs to another overlay or conflicting context — leave
   the generated placeholder and record the collision.
 - H3: the name or function evidence is absent, conflicting, or data-like —
@@ -24,18 +23,18 @@ Exact commands:
 
 ```sh
 # 1. Companion mapping / callers / semantics (bounded searches only)
-grep -rn 'dispatchHudEffectUpdate\|0x800C7D44\|800C7D44' \
+grep -rn 'delegateToLevelStageTick\|0x800C7D60\|800C7D60' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64 \
   --include='*.c' --include='*.h' --include='*.txt' --include='*.yaml' \
   --include='*.md' --include='*.ld' | grep -v '/build/' | head -80
 
 # 2. Generated definition + adjacent boundaries
-grep -rn 'dispatchHudEffectUpdate\|func_800C7D44\|0x800C7D44\|0x800C7D1C\|0x800C7D60' \
+grep -rn 'delegateToLevelStageTick\|func_800C7D60\|0x800C7D60\|0x800C7D44\|0x800C7D7C' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --include='*.c' --include='*.h' --include='*.inl' | head -80
 
 # 3. TOML + overlay span
-grep -n '800C7D44\|dispatchHudEffectUpdate\|func_800C7D44' \
+grep -n '800C7D60\|delegateToLevelStageTick\|func_800C7D60' \
   syms/rogue_squadron.syms.toml | head -40
 ```
 

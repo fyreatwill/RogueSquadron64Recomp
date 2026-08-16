@@ -78103,3 +78103,43 @@ exact adjacent boundaries and sizes. Corrected the stale TOML placeholder to
 `setLevelObjectTrackingScalar`. No build or runtime behavior conclusion was
 made. The next sweep candidate is `func_800C7D44` / generated
 `dispatchHudEffectUpdate` (`0x800C7D44`, size `0x1C`).
+
+## Session 1660 (2026-08-16) — synchronized the dispatchHudEffectUpdate symbol
+
+Ran the exact generated-symbol census for `0x800C7D44` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live HUD-effect update dispatcher and its
+generated, TOML, and section-4 boundaries agree completely once any stale
+placeholder is corrected; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator. The last-15
+ledger titles still include s1650 (post-B retail-entry revisit), so the
+mandatory non-sweep revisit gate did not fire.
+
+The companion mission map names `dispatchHudEffectUpdate` at
+`0x800C7D44`. A companion note on `setHudEnableBit4` independently calls
+the callee `0x80067938` an "effect dispatcher" (main map:
+`initSpeechPlaybackState`). The bounded companion-tree search found no
+competing C/H definition or alternate address. The generated `funcs_36.c`
+definition already carries the human name and is the live `0x1C`-byte body:
+
+- prologue `addiu $sp, $sp, -0x18` / `sw $ra, 0x10($sp)`
+- `jal 0x80067938` → `initSpeechPlaybackState`
+- epilogue restore/`jr $ra` with `addiu $sp, $sp, 0x18`
+
+Its preceding boundary is `playObjectiveVoiceLine2` at `0x800C7D1C` with
+size `0x28` (`0x800C7D1C+0x28 = 0x800C7D44`), and its following boundary is
+`delegateToLevelStageTick` at `0x800C7D60` with size `0x1C`
+(`0x800C7D44+0x1C = 0x800C7D60`). The TOML entry had the correct address and
+size `0x1C` but still carried the placeholder `func_800C7D44`. The section-4
+overlay table already lists the human-named function at ROM offset
+`0x22C14` with span `0x1C` (exact after `0x22BEC+0x28`). One generated call
+site in `lvb_checkComplexObjectives` already invokes the human name in a
+HUD/flag → effect → voice-line sequence.
+
+H1 is selected. H2 is ruled out by the matching mission mapping and section-4
+ownership; H3 is ruled out by the live thin-wrapper body and exact adjacent
+boundaries and sizes. Corrected the stale TOML placeholder to
+`dispatchHudEffectUpdate`. No build or runtime behavior conclusion was
+made. The next sweep candidate is `func_800C7D60` / generated
+`delegateToLevelStageTick` (`0x800C7D60`, size `0x1C`).
