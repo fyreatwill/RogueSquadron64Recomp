@@ -76057,3 +76057,41 @@ was justified for this exact-name census. The next bounded candidate is
 `func_800B95E0`, independently named `orientVwingSubmodelByQuat`, with size
 `0x370`; the next function begins at `0x800B9950`. This naming change does not
 reopen M5 audio de-stubbing.
+
+## Session 1585 (2026-08-16) — tested model-viewer input at retail 640
+
+Mandatory revisit: the previous 15 session titles were all generated-symbol
+sweep work. M5 is closed and M3 is parked. The current-truth file was below
+the maintenance threshold, and the SOAK-RESULTS tail had no newer verdict
+requiring analysis.
+
+This iteration re-attempted the external retail-entry boundary with a new
+angle. s1569 identified the leave-hangar 640 phase as the menu overlay's case
+6 `runModelViewerLoop`, but had only tested extra Start during that phase.
+The new experiment tested controller input at 640 with four concurrent Rice
+arms using the same eleven-Start hangar recipe and A at 58/63 to leave the
+hangar: `hold` sent no post-gate input, while `a`, `b`, and `z` sent the
+candidate at 70/78/86/94. The recipe and logs are under
+`scratch/agent/s1585_oracle_model_viewer_input/`.
+
+The competing hypotheses were H1 (A exits the model viewer into a mission),
+H2 (B or Z does), H3 (none of the tested buttons exits it in the observed
+interval), and H4 (a tested button changes to another menu phase but not a
+mission). The discriminator was phase-gated VI lifecycle plus post-gate
+mission/menu/case-6 execution watches, cross-checked by the target block and
+PIF traces.
+
+All four arms passed the positive controls: the whole-RDRAM watch crossed
+10,000 and was removed with `rc=0`; the controller-edge watch fired; PIF
+showed the eleven Start presses, the two hangar-leaving A presses, and every
+candidate button. Each arm reached the same VI sequence
+320→640→1024→512 hangar→640 model-viewer phase. After the 640 gate, all four
+arms had zero `0x80000B70` mission-path executions, the same menu/cinematic
+PC counts, exactly one case-6 `runModelViewerLoop` hit, and the same
+`0x130B10:0x130B58` total with no candidate-specific post-gate write. The
+only target write after the gate was the common `0x130B50` leave-hangar
+write at the transition boundary.
+
+This selects H3 for A/B/Z and rules out H1, H2, and H4 for those arms. The
+retail-entry question remains open for a different input or state condition;
+do not repeat these candidate arms. No port build or mitigation was made.
