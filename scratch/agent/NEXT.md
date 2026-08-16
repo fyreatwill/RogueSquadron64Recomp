@@ -1,14 +1,14 @@
-# NEXT work unit (s1515)
+# NEXT work unit (s1516)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1514 synchronized `tickCutsceneCameraFromTimeline` at `0x800AD690`. Resume
-the generated-symbol renaming sweep. Perform exactly one bounded exact-name
-census over the next adjacent generated function, `0x800ADBF8..0x800ADF74`.
-Do not build or run. Record its address, size, generated definition,
-companion name/source, caller or semantic evidence, and confidence before
-editing. Synchronize only an exact independent name in
-`syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
+s1515 synchronized `transformAndNormalizeDirectionByMatrix` at `0x800ADBF8`.
+Resume the generated-symbol renaming sweep. Perform exactly one bounded
+exact-name census over the next adjacent generated function,
+`0x800ADF74..0x800AE518`. Do not build or run. Record its address, size,
+generated definition, companion name/source, caller or semantic evidence,
+and confidence before editing. Synchronize only an exact independent name
+in `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or
 ambiguous entries unchanged. Leave `func_8008ED6C` unchanged
 (s1309 H2), `func_800927B0` unchanged (s1355 H3), `func_80092A54`
 unchanged (s1357 H3), `func_80092CF0` unchanged (s1359 H3),
@@ -28,15 +28,14 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already
-`transformAndNormalizeDirectionByMatrix`; the companion cinematic list
-maps `transformAndNormalizeDirectionByMatrix = 0x800ADBF8` (relocated
-from `main_overlay.txt` in s400; no extra comment). TOML is still
-`func_800ADBF8` (size `0x37C`, ends at independently named
-`loadBackdropAsset` / TOML `func_800ADF74` at `0x800ADF74`). Overlay
-`rom_size` is `0x37C` at offset `0x00008AC8`. Confirm the complete live
-function, matching size, and caller/semantic evidence before
-synchronizing the TOML name. Mission-overlay
+generated entry at this address is already `loadBackdropAsset`; the
+companion cinematic list maps `loadBackdropAsset = 0x800ADF74`
+(comment: 5 callers, loads `"backdrop/<name>"`). TOML is still
+`func_800ADF74` (size `0x5A4`, ends at independently named
+`initCinematicSceneAssets` / TOML `func_800AE518` at `0x800AE518`).
+Overlay `rom_size` is `0x5A4` at offset `0x00008E44`. Confirm the
+complete live function, matching size, and caller/semantic evidence
+before synchronizing the TOML name. Mission-overlay
 `updateCinematicCameraStateMachine` / TOML `func_800AD418` at
 `0x800AD418` (size `0x944`, ends `0x800ADD5C`) and menu-overlay
 `hangarTickCameraOrbit` at `0x800ADB70` (overlay `rom_size` `0x518`,
@@ -64,7 +63,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800ADBF8\|800ADF74\|transformAndNormalizeDirectionByMatrix' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800ADBF8\|800ADF74\|transformAndNormalizeDirectionByMatrix' ../N64Recomp/RecompiledFuncs/funcs_28.c
-grep -n -C 3 '800ADBF8\|800ADF74' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800ADF74\|800AE518\|loadBackdropAsset' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800ADF74\|800AE518\|loadBackdropAsset' ../N64Recomp/RecompiledFuncs/funcs_28.c
+grep -n -C 3 '800ADF74\|800AE518' syms/rogue_squadron.syms.toml
 ```

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1514 (2026-08-15).
+the authority for session detail. Reviewed through s1515 (2026-08-15).
 
 ## Current state
 
@@ -59,7 +59,7 @@ the authority for session detail. Reviewed through s1514 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800ADBF8..0x800ADF74`.
+   adjacent function, `0x800ADF74..0x800AE518`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -125,19 +125,21 @@ the authority for session detail. Reviewed through s1514 (2026-08-15).
    `0x800AC75C`. s1511 synchronized `processCutsceneActions` at
    `0x800ACE8C`. s1513 synchronized `computeCutsceneScreenScale` at
    `0x800AD224`. s1514 synchronized `tickCutsceneCameraFromTimeline`
-   at `0x800AD690`. The generated entry at `0x800ADBF8` is already
-   `transformAndNormalizeDirectionByMatrix`; the companion cinematic
-   list maps `transformAndNormalizeDirectionByMatrix = 0x800ADBF8`.
-   TOML is still `func_800ADBF8` (size `0x37C`, ends at independently
-   named `loadBackdropAsset` / TOML `func_800ADF74` at `0x800ADF74`).
-   Overlay `rom_size` is `0x37C` at offset `0x00008AC8`. Confirm the
-   complete live function, matching size, and caller/semantic
-   evidence before synchronizing the TOML name. Mission-overlay
-   `updateCinematicCameraStateMachine` / TOML `func_800AD418` at
-   `0x800AD418` (size `0x944`, ends `0x800ADD5C`) and menu-overlay
-   `hangarTickCameraOrbit` at `0x800ADB70` (overlay `rom_size`
-   `0x518`, ends `0x800AE088`) occupy overlapping VRAM and are
-   different overlays, not cinematic size splits.
+   at `0x800AD690`. s1515 synchronized
+   `transformAndNormalizeDirectionByMatrix` at `0x800ADBF8`. The
+   generated entry at `0x800ADF74` is already `loadBackdropAsset`;
+   the companion cinematic list maps `loadBackdropAsset = 0x800ADF74`
+   (comment: 5 callers, loads `"backdrop/<name>"`). TOML is still
+   `func_800ADF74` (size `0x5A4`, ends at independently named
+   `initCinematicSceneAssets` / TOML `func_800AE518` at
+   `0x800AE518`). Overlay `rom_size` is `0x5A4` at offset
+   `0x00008E44`. Confirm the complete live function, matching size,
+   and caller/semantic evidence before synchronizing the TOML name.
+   Mission-overlay `updateCinematicCameraStateMachine` / TOML
+   `func_800AD418` at `0x800AD418` (size `0x944`, ends `0x800ADD5C`)
+   and menu-overlay `hangarTickCameraOrbit` at `0x800ADB70` (overlay
+   `rom_size` `0x518`, ends `0x800AE088`) occupy overlapping VRAM and
+   are different overlays, not cinematic size splits.
 2. Future oracle work (hangar/mission watches, or a new M4 RDRAM dest if
    one is identified from a DMEM→RDRAM transfer that is not `0xD60`) must
    use the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM,
@@ -474,6 +476,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1511 | Exact companion/generated cinematic-action census synchronized `processCutsceneActions` at `0x800ACE8C`; no build or runtime run. |
 | s1513 | Exact companion/generated cinematic-scale census synchronized `computeCutsceneScreenScale` at `0x800AD224`; no build or runtime run. |
 | s1514 | Exact companion/generated cinematic-camera census synchronized `tickCutsceneCameraFromTimeline` at `0x800AD690`; no build or runtime run. |
+| s1515 | Exact companion/generated cinematic-matrix census synchronized `transformAndNormalizeDirectionByMatrix` at `0x800ADBF8`; no build or runtime run. |
 
 ## Method and safety rules
 

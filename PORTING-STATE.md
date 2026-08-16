@@ -73210,3 +73210,43 @@ adjacent generated function is independently named
 `func_800ADBF8`, size `0x37C`; overlay `rom_size` is `0x37C` at offset
 `0x00008AC8`; live body ends at independently named `loadBackdropAsset`
 / TOML `func_800ADF74` at `0x800ADF74`).
+
+## Session 1515 (2026-08-15) — synchronized the transform-and-normalize-direction-by-matrix symbol
+
+Performed the bounded exact-name census over `0x800ADBF8..0x800ADF74`.
+
+No new soak-queue verdicts since s1511; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1512 (M4 Rice-hangar revisit),
+so the every-15-sessions sweep-revisit rule did not fire.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800ADBF8`, size `0x37C`; `0x800ADBF8+0x37C=0x800ADF74`. Overlay `.ovl.cinematic` entry `rom_size` is `0x37C` at offset `0x00008AC8` (`0x800ADBF8-0x800A5130`). Live body is independently `0x37C` and meets independently named `loadBackdropAsset` / TOML `func_800ADF74` at `0x800ADF74` |
+| Generated definition | `funcs_28.c` defines `transformAndNormalizeDirectionByMatrix` at `0x800ADBF8`; `funcs.h` and `recomp_overlays.inl` already use that name. The live cinematic body is a complete `0x37C` function. It starts `addiu $sp, $sp, -0x80` and ends at the sole live `jr $ra` / `addiu $sp, $sp, 0x80` (`0x800ADF6C`/`0x800ADF70`) followed by `return`. Next generated cinematic function is independently named `loadBackdropAsset`. Mission-overlay `updateCinematicCameraStateMachine` / TOML `func_800AD418` at `0x800AD418` (overlay offset `0x000082E8`, `rom_size` `0x944`, ends `0x800ADD5C`) and menu-overlay `hangarTickCameraOrbit` at `0x800ADB70` (overlay offset `0x00008A40`, `rom_size` `0x518`, ends `0x800AE088`) occupy overlapping VRAM from `.ovl.mission` / `.ovl.menu` and are not splits of this body |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `transformAndNormalizeDirectionByMatrix = 0x800ADBF8` in the cinematic splat list (s400 relocation from `main_overlay.txt`; no extra comment). Menu, mission, main, libultra, and zlib lists do not remap `0x800ADBF8`. `undefined_funcs_auto.txt` has no leftover `func_800ADBF8` row. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C02B6FE` and zero `j` or absolute `0x800ADBF8` pointer words. The site is independently named `tickCutsceneCameraFromTimeline` at `0x800ADBC0` (cinematic-file `0x140010`; delay `0x24840058` = `addiu $a0, $a0, 0x58`). Same-run ROM word at that file offset is `0x0C02B6FE`. The generated caller is `funcs_28.c` `jal 0x800ADBF8` that already dispatches through the named function. Arguments: `$a0` is `MEM[MEM[0x800B1900]+0x21A8]+0x58` (`lui $v0, 0x800B` / `lw $v0, 0x1900($v0)` / `lw $a0, 0x21A8($v0)` at `0x800ADBA0`/`0x800ADBA4`/`0x800ADBB8`; file `0x13FFF0`/`0x13FFF4`/`0x140008` = `0x3C02800B`/`0x8C421900`/`0x8C4421A8`), `$a1` is `MEM[0x800B1900]+0x21DC` (`addiu $a1, $v0, 0x21DC` at `0x800ADBBC`; file `0x14000C` = `0x244521DC`), `$a2` is `sp+0x10` (`addiu $a2, $sp, 0x10` at `0x800ADBB0`; file `0x140000` = `0x27A60010`), and `$a3` is `0x3F666666` (`lui $a3, 0x3F66` / `ori $a3, $a3, 0x6666` at `0x800ADBA8`/`0x800ADBAC`; file `0x13FFF8`/`0x13FFFC` = `0x3C073F66`/`0x34E76666`, 0.9f). Companion `tickCutsceneCameraFromTimeline` is independently the cinematic camera timeline ticker |
+| Semantic evidence | Retail ROM words at file `0x140048` (`0x137580+(0x800ADBF8-0x800A5130)`) are `0x27BDFF80` (`addiu $sp, $sp, -0x80`). The body stores `$a0`/`$a1`/`$a2` at `0x80`/`0x84`/`0x88($sp)` and moves `$a3` into `$f28`. It writes 64 halfwords of `0xFFFF` starting at `MEM[0x800B1B20]+0x7E` (`lui $v0, 0x800B` / `addiu $v0, $v0, 0x1B20` / `addiu $v0, $v0, 0x7E` / `ori $v1, $zero, 0xFFFF` / `addiu $a1, $zero, 0x3F` at `0x800ADC08`/`0x800ADC0C`/`0x800ADC18`/`0x800ADBFC`/`0x800ADC04`; file `0x140058`/`0x14005C`/`0x140068`/`0x14004C`/`0x140054` = `0x3C02800B`/`0x24421B20`/`0x2442007E`/`0x3403FFFF`/`0x2405003F`). The live path loads s16 triplets from `$a0+0x28`, converts them with `cvt.s.w`, and calls independently named `rotateVec3ByMat3x3` then `normalize_vector` (`jal 0x800194A4` / `jal 0x8001CF58` at `0x800ADD7C`/`0x800ADD84`; file `0x1401CC`/`0x1401D4` = `0x0C006529`/`0x0C0073D6`). It then loads s16 triplets from `$a0+0x24`, scales by `$f22`, and calls independently named `transformVec3ByMat34` then `normalize_vector` (`jal 0x800193E8` / `jal 0x8001CF58` at `0x800ADDE4`/`0x800ADE20`; file `0x140234`/`0x140270` = `0x0C0064FA`/`0x0C0073D6`). FP constants at `0x800A5B50`/`0x800A5B54`/`0x800A5B58`/`0x800A5B5C` (`lwc1 $f22, 0x5B50($at)` / `lwc1 $f26, 0x5B54($at)` / `lwc1 $f24, 0x5B58($at)` / `lwc1 $f20, 0x5B5C($at)`) are `0x3B800000`/`0x3F800000`/`0x45800000`/`0x4F000000` at file `0x137FA0`/`0x137FA4`/`0x137FA8`/`0x137FAC` (1/256, 1.0, 4096.0, 2^31). Epilogue file `0x1403BC`/`0x1403C0` is `0x03E00008` / `0x27BD0080`. Next start file `0x1403C4` is `0x27BDFF20` (`loadBackdropAsset` `addiu $sp, $sp, -0xE0`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x140048` is `0x27BDFF80`, the caller `jal` word above is `0x0C02B6FE`, and the s1514/s1513/s1511/s1510/s1509/s1508/s1507/s1506/s1505 controls still read `0x27BDFFB0` at `0x13FAE0`, `0x03E00008` at `0x140040`, `0x27BDFFC0` at `0x13F674`, `0x0C02B489` at `0x138880`, `0x9482004E` at `0x13F2DC`, `0x27BDFF30` at `0x13EBAC`, `0x27BDFFD8` at `0x13E9C4`, `0x27BDFF00` at `0x13E15C`, `0x27BDFEB0` at `0x13D0D8`, `0x3C02800B` at `0x13CCA0`, and `0x27BDFFA8` at `0x13CAA8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800ADBF8`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x37C`, the one ROM `jal` caller is independently named
+`tickCutsceneCameraFromTimeline` passing object+`0x58` / matrix at
+`+0x21DC` / `sp+0x10` / 0.9f, and the `rotateVec3ByMat3x3` /
+`normalize_vector` / `transformVec3ByMat34` / `normalize_vector` pair
+matches the companion name. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x37C`). `func_8009D978` remains
+the eight-byte Q15 delay-mix table and was left unchanged, as were
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named `loadBackdropAsset`
+at `0x800ADF74` (TOML still `func_800ADF74`, size `0x5A4`; overlay
+`rom_size` is `0x5A4` at offset `0x00008E44`; live body ends at
+independently named `initCinematicSceneAssets` / TOML `func_800AE518`
+at `0x800AE518`).
