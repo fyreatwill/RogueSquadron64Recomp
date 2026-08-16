@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1545 (2026-08-15).
+the authority for session detail. Reviewed through s1546 (2026-08-15).
 
 ## Current state
 
@@ -72,7 +72,7 @@ the authority for session detail. Reviewed through s1545 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads; s1544 was that revisit) with one bounded exact-name
-   census over the next adjacent function, `0x800AF668..0x800AF6A8`.
+   census over the next adjacent function, `0x800AFCF4..0x800AFE4C`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -101,7 +101,12 @@ the authority for session detail. Reviewed through s1545 (2026-08-15).
    unchanged (s1477: eight-byte PC-relative packed-nibble table
    `C7 D7 E3 E7 F1 F3 F5 F7`, not a function), and `func_8009D978`
    unchanged (s1478: eight-byte PC-relative Q15 delay-mix table
-   `0CCD 2CCD 5333 7FFF`, not a function). s1479 synchronized
+   `0CCD 2CCD 5333 7FFF`, not a function), and
+   `fake_func_800AF6A8` unchanged (s1546 H2: already-fake
+   cinematic overlay data-tail gap-filler; generated
+   `__builtin_trap()`; companion Fake Function Fixing;
+   next ROM word `0x0C03A807` is a `jal`, not a
+   prologue). s1479 synchronized
    `runVoiceLatticeFilter` at `0x8009D980`. s1480 synchronized
    `renderVoiceAudioBlock` at `0x8009DB44`. s1481 synchronized
    `audioMixStereoBlock8` at `0x8009DC98`. s1482 synchronized
@@ -169,35 +174,29 @@ the authority for session detail. Reviewed through s1545 (2026-08-15).
    `0x800AF540`. s1542 synchronized `cinematicStageAdvancer` at
    `0x800AF550`. s1543 synchronized `cinematicDeactivator`
    at `0x800AF60C`. s1545 synchronized
-   `getCinematicStateSubObject` at `0x800AF65C`.
-   The generated entry at `0x800AF668` is already
-   `cinematicInterpRatio`; the companion cinematic list
-   maps `cinematicInterpRatio = 0x800AF668` (comment:
-   computes interpolation ratio from byte counter / float
-   threshold). TOML is still `func_800AF668` (size `0x40`,
-   ends at already-fake generated `fake_func_800AF6A8` /
-   TOML `fake_func_800AF6A8` at `0x800AF6A8`). Overlay
-   `rom_size` is `0x40` at offset `0x0000A538`. Confirm the
-   complete live function, matching size, and caller/semantic
-   evidence before synchronizing the TOML name. Independently
-   named `getCinematicStateSubObject` at `0x800AF65C`
-   (`rom_size` `0xC`) ends at this address. The generated
-   body loads `MEM_W(0x800B0934)`, early-outs if that
-   cinematic state pointer is null, otherwise loads the
-   sub-object at `state+0xC`, reads the byte at `+0x2F`,
-   converts it to float, divides by a float threshold, and
-   subtracts from a second float constant. Last live
-   instruction pair is `0x800AF6A0`/`0x800AF6A4` (`jr $ra` /
-   `mov.s $f0, $f4`). Generated caller is independently
-   named `cinematicLoopBody` at `0x800A607C`. Menu-overlay
+   `getCinematicStateSubObject` at `0x800AF65C`. s1546
+   synchronized `cinematicInterpRatio` at `0x800AF668`.
+   The generated entry at `0x800AFCF4` is already
+   `findNearestSceneObjectToPoint`; the companion mission
+   list maps `findNearestSceneObjectToPoint = 0x800AFCF4`.
+   TOML is still `func_800AFCF4` (size `0x158`, ends at
+   generated `loadPlayerStartPosition` / TOML
+   `func_800AFE4C` at `0x800AFE4C`). Overlay `rom_size`
+   is `0x158` at offset `0x0000ABC4`. Confirm the complete
+   live function, matching size, and caller/semantic
+   evidence before synchronizing the TOML name.
+   Independently named `tickCutsceneObject` at
+   `0x800AF04C` (`rom_size` `0xCA8`) ends at this address.
+   Last live instruction pair is `0x800AFE44`/`0x800AFE48`
+   (`jr $ra` / `addiu $sp, $sp, 0x48`). Cinematic-overlay
+   data (`cutsceneTypeStrings` at `0x800AF6B0`,
+   `gCutsceneIdMappingTable` at `0x800AF7B4`) occupies
+   overlapping VRAM from `.ovl.cinematic` and is not a
+   mission size split. Menu-overlay
    `tickCraftSelectScreen` / TOML `func_800AF3C0` at
    `0x800AF3C0` (`rom_size` `0x2EC`, ends `0x800AF6AC`)
-   occupies overlapping VRAM from `.ovl.menu` and is not a
-   cinematic size split. Mission-overlay `tickCutsceneObject`
-   at `0x800AF04C` continues
-   `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at
-   `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and likewise
-   overlaps from `.ovl.mission`.
+   occupies a different overlay window that ends before
+   this address.
 2. Future oracle work on the 640/`0x6a2900` handler, a later mission
    watch, or a new M4 RDRAM dest (a DMEM→RDRAM transfer that is not
    `0xD60`) must use the Rice `--video` recipe above, not dummy video.
@@ -578,6 +577,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1542 | Exact companion/generated cinematic-stage census synchronized `cinematicStageAdvancer` at `0x800AF550`; no build or runtime run. |
 | s1543 | Exact companion/generated cinematic-teardown census synchronized `cinematicDeactivator` at `0x800AF60C`; no build or runtime run. |
 | s1545 | Exact companion/generated cinematic-getter census synchronized `getCinematicStateSubObject` at `0x800AF65C`; no build or runtime run. |
+| s1546 | Exact companion/generated cinematic-interp census synchronized `cinematicInterpRatio` at `0x800AF668`; left `fake_func_800AF6A8` unchanged (already-fake data tail); no build or runtime run. |
 
 ## Method and safety rules
 

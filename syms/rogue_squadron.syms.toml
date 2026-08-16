@@ -2679,6 +2679,6 @@ functions = [
     { name = "cinematicStageAdvancer", vram = 0x800AF550, size = 0xBC },
     { name = "cinematicDeactivator", vram = 0x800AF60C, size = 0x50 },
     { name = "getCinematicStateSubObject", vram = 0x800AF65C, size = 0xC },
-    { name = "func_800AF668", vram = 0x800AF668, size = 0x40 },
+    { name = "cinematicInterpRatio", vram = 0x800AF668, size = 0x40 },
     { name = "fake_func_800AF6A8", vram = 0x800AF6A8, size = 0x8 },
 ]

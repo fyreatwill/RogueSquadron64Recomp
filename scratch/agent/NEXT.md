@@ -1,11 +1,12 @@
-# NEXT work unit (s1546)
+# NEXT work unit (s1547)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1545 synchronized `getCinematicStateSubObject` at `0x800AF65C`.
-Resume the generated-symbol renaming sweep. Perform exactly one
-bounded exact-name census over the next adjacent generated function,
-`0x800AF668..0x800AF6A8`.
+s1546 synchronized `cinematicInterpRatio` at `0x800AF668` and left
+already-fake `fake_func_800AF6A8` unchanged. Resume the
+generated-symbol renaming sweep. Perform exactly one bounded
+exact-name census over the next adjacent generated function,
+`0x800AFCF4..0x800AFE4C`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -27,32 +28,26 @@ two-instruction COP1 multiply-accumulate fragment),
 `fake_func_8009D7CC` unchanged (s1476 H2: already-fake
 one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
-table, not a function), and `func_8009D978` unchanged (s1478:
-eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `cinematicInterpRatio`;
-the companion cinematic list maps `cinematicInterpRatio = 0x800AF668`
-(comment: computes interpolation ratio from byte counter / float
-threshold). TOML is still `func_800AF668` (size `0x40`, ends at
-already-fake generated `fake_func_800AF6A8` / TOML
-`fake_func_800AF6A8` at `0x800AF6A8`). Overlay `rom_size` is `0x40`
-at offset `0x0000A538`. Confirm the complete live function, matching
-size, and caller/semantic evidence before synchronizing the TOML
-name. Independently named `getCinematicStateSubObject` at
-`0x800AF65C` (`rom_size` `0xC`) ends at this address. The generated
-body loads `MEM_W(0x800B0934)`, early-outs if that cinematic state
-pointer is null, otherwise loads the sub-object at `state+0xC`,
-reads the byte at `+0x2F`, converts it to float, divides by a float
-threshold, and subtracts from a second float constant. Last live
-instruction pair is `0x800AF6A0`/`0x800AF6A4` (`jr $ra` /
-`mov.s $f0, $f4`). Generated caller is independently named
-`cinematicLoopBody` at `0x800A607C`. Menu-overlay
+table, not a function), `func_8009D978` unchanged (s1478:
+eight-byte PC-relative Q15 delay-mix table, not a function), and
+`fake_func_800AF6A8` unchanged (s1546 H2: already-fake cinematic
+overlay data-tail gap-filler). The generated entry at this address
+is already `findNearestSceneObjectToPoint`; the companion mission
+list maps `findNearestSceneObjectToPoint = 0x800AFCF4`. TOML is
+still `func_800AFCF4` (size `0x158`, ends at generated
+`loadPlayerStartPosition` / TOML `func_800AFE4C` at `0x800AFE4C`).
+Overlay `rom_size` is `0x158` at offset `0x0000ABC4`. Confirm the
+complete live function, matching size, and caller/semantic evidence
+before synchronizing the TOML name. Independently named
+`tickCutsceneObject` at `0x800AF04C` (`rom_size` `0xCA8`) ends at
+this address. Last live instruction pair is `0x800AFE44`/`0x800AFE48`
+(`jr $ra` / `addiu $sp, $sp, 0x48`). Cinematic-overlay data
+(`cutsceneTypeStrings` at `0x800AF6B0`, `gCutsceneIdMappingTable`
+at `0x800AF7B4`) occupies overlapping VRAM from `.ovl.cinematic`
+and is not a mission size split. Menu-overlay
 `tickCraftSelectScreen` / TOML `func_800AF3C0` at `0x800AF3C0`
-(`rom_size` `0x2EC`, ends `0x800AF6AC`) occupies overlapping VRAM
-and is a different overlay, not a cinematic size split.
-Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues
-`playCutsceneObjectImpactSound` / TOML `func_800AEF58` at
-`0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and likewise overlaps
-from `.ovl.mission`.
+(`rom_size` `0x2EC`, ends `0x800AF6AC`) occupies a different
+overlay window that ends before this address.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -78,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AF668\|800AF6A8\|cinematicInterpRatio' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AF668\|800AF6A8\|cinematicInterpRatio' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AF668\|800AF6A8' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AFCF4\|800AFE4C\|findNearestSceneObjectToPoint' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 '800AFCF4\|800AFE4C\|findNearestSceneObjectToPoint' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AFCF4\|800AFE4C' syms/rogue_squadron.syms.toml
 ```

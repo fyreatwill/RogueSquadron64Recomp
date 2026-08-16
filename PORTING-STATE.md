@@ -74540,3 +74540,52 @@ live body ends at already-fake generated `fake_func_800AF6A8` / TOML
 `fake_func_800AF6A8` at `0x800AF6A8`). Independently named
 `getCinematicStateSubObject` at `0x800AF65C` (`rom_size` `0xC`) ends
 at `0x800AF668`.
+
+## Session 1546 (2026-08-15) — synchronized the cinematic-interp-ratio symbol
+
+Performed the bounded exact-name census over `0x800AF668..0x800AF6A8`.
+
+No new soak-queue verdicts since s1545; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit), so the every-15-sessions sweep-revisit rule did not fire.
+CURRENT-TRUTH is 58862 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AF668`, size `0x40`; `0x800AF668+0x40=0x800AF6A8`. Overlay `.ovl.cinematic` entry `rom_size` is `0x40` at offset `0x0000A538` (`0x800AF668-0x800A5130`). Live body is independently `0x40` and meets already-fake `fake_func_800AF6A8` at `0x800AF6A8` |
+| Generated definition | `funcs_29.c` defines `cinematicInterpRatio` at `0x800AF668`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000A538`, `rom_size 0x00000040`). The live cinematic body is a complete `0x40` function: load `MEM_W(0x800B0934)`, early-out if null, else `lw` the sub-object at `state+0xC`, `lbu` the byte at `+0x2F`, `cvt.s.w`, `div.s` by the float at `0x800A5D7C`, `sub.s` from the float at `0x800A5D78`, return in `$f0`. Last live instruction pair is `0x800AF6A0`/`0x800AF6A4` (`jr $ra` / `mov.s $f0, $f4`). Next generated cinematic entry is already-fake `fake_func_800AF6A8` (`__builtin_trap()` gap-filler). Independently named `getCinematicStateSubObject` at `0x800AF65C` (`rom_size` `0xC`) ends at this address. Menu-overlay `tickCraftSelectScreen` / TOML `func_800AF3C0` at `0x800AF3C0` (`rom_size` `0x2EC`, ends `0x800AF6AC`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and occupies overlapping VRAM from `.ovl.mission` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `cinematicInterpRatio = 0x800AF668` (comment: computes interpolation ratio from byte counter / float threshold). The same cinematic list independently names the adjacent functions `getCinematicStateSubObject` at `0x800AF65C` and already-fake `fake_func_800AF6A8` at `0x800AF6A8` (Fake Function Fixing). Menu, mission, libultra, ignored, and zlib lists do not remap `0x800AF668`. Menu maps `tickCraftSelectScreen = 0x800AF3C0` as a different-overlay occupant of the same VRAM window. No conflicting companion name for this cinematic address |
+| Caller evidence | One retail `jal` encoding `0x0C02BD9A` and zero `j` or absolute `0x800AF668` pointer words. The site is independently named `cinematicLoopBody` at `0x800A607C` (file `0x1384CC`). Same-run ROM word at that file offset is `0x0C02BD9A`. Generated caller is the matching `funcs_27.c` `jal 0x800AF668` site inside `cinematicLoopBody`; the delay/next instructions compare returned `$f0` to a float constant at `0x800A515C`. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x141AB8` (`0x137580+(0x800AF668-0x800A5130)`) are `0x3C02800B` (`lui $v0, 0x800B`), `0x8C420934` (`lw $v0, 0x934($v0)`), `0x3C01800A` (`lui $at, 0x800A`), `0xC4245D78` (`lwc1 $f4, 0x5D78($at)`), `0x10400009` (`beq $v0, $zero, +9`), `0x00000000` (`nop`), `0x8C42000C` (`lw $v0, 0xC($v0)`), `0x9042002F` (`lbu $v0, 0x2F($v0)`), then convert/divide/subtract. Last pair file `0x141AF0`/`0x141AF4` is `0x03E00008`/`0x46002006` (`jr $ra` / `mov.s $f0, $f4`). Next start file `0x141AF8` is `0x0C03A807` (`jal`, not a prologue) then `0x00000000`; companion data `cutsceneTypeStrings` begins at `0x800AF6B0` file `0x141B00`. Preceding epilogue file `0x141AB0`/`0x141AB4` is `0x03E00008`/`0x00000000` (`getCinematicStateSubObject` `jr $ra` / `nop`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x141AB8` is `0x3C02800B`, the caller `jal` word above is `0x0C02BD9A`, the s1545 function file `0x141AAC` is still `0x8C82000C`, the s1543 function file `0x141A5C` is still `0x27BDFFE8`, the s1542 function file `0x1419A0` is still `0x3C02800B`, the s1541 function file `0x141990` is still `0x3C02800B`, and the s1540 initializer start `0x141858` is still `0x27BDFFD8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AF668`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x40`, the one ROM `jal` caller is independently named
+`cinematicLoopBody` and consumes the returned `$f0` ratio, the overlapping
+menu and mission functions are different overlays, and there is neither a
+conflicting companion name nor a cinematic size split. H2 and H3 are
+ruled out for this address. The stale address-encoded TOML entry was
+synchronized (name only; size left at `0x40`). The same comparison
+selects H2 for already-fake `fake_func_800AF6A8` at `0x800AF6A8`:
+generated is a `__builtin_trap()` gap-filler, companion lists it under
+Fake Function Fixing, TOML size is `0x8`, overlay `rom_size` `0x1298` is
+the leftover cinematic data lump, and the next ROM word is a `jal` into
+data (`cutsceneTypeStrings` at `0x800AF6B0`). It was left unchanged.
+`func_8009D978` remains the eight-byte Q15 delay-mix table and was left
+unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `findNearestSceneObjectToPoint` at `0x800AFCF4`
+(TOML still `func_800AFCF4`, size `0x158`; overlay `rom_size` is
+`0x158` at offset `0x0000ABC4`; live body ends at generated
+`loadPlayerStartPosition` / TOML `func_800AFE4C` at `0x800AFE4C`).
+Independently named `tickCutsceneObject` at `0x800AF04C` (`rom_size`
+`0xCA8`) ends at `0x800AFCF4`.
