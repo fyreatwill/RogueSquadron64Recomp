@@ -2855,7 +2855,7 @@ summary. Homebrew Rice later-phase results (s1496 hangar, s1512 M4 DMEM `r9`,
 s1528 leave-hangar 640, s1544 640 still menu-overlay) live in
 `CURRENT-TRUTH.md` and superseded the dummy-video 320-only parking.
 
-## 33. Generated-symbol renaming sweep (s1240–s1558)
+## 33. Generated-symbol renaming sweep (s1240–s1560)
 
 Migrated from `CURRENT-TRUTH.md` during the s1553 maintenance pass. Full
 per-session comparison tables remain in `PORTING-STATE.md`. Method: one
@@ -2865,9 +2865,9 @@ caller or semantic evidence agree (H1). Leave address-encoded, already-fake,
 or unnamed complete kernels unchanged (H2/H3). No build or runtime run is
 justified for an exact-name census.
 
-**Cursor.** Next census is `cancelSceneQueueHandle` at
-`0x800B3F0C` (TOML still `func_800B3F0C`, size `0x44`). Last H1 sync is
-`scheduleSceneFormatMessageTimed` at `0x800B3E4C` (s1559). About 1,548
+**Cursor.** Next census is `playSpeechClipOncePerChange` at
+`0x800B3F50` (TOML still `func_800B3F50`, size `0x64`). Last H1 sync is
+`cancelSceneQueueHandle` at `0x800B3F0C` (s1560). About 1,548
 placeholder `func_0x...` names remained when counted at s1487.
 
 **Covered ranges (H1 unless noted).**
@@ -2896,6 +2896,7 @@ placeholder `func_0x...` names remained when counted at s1487.
 | s1557 | Mission overlay: `initPlayerCraftMovementMode` at `0x800B37C0` (size `0x250`). |
 | s1558 | Mission overlay: `tryPlaySpatialSoundWithGates` at `0x800B3A10` (size `0x43C`). |
 | s1559 | Mission overlay: `scheduleSceneFormatMessageTimed` at `0x800B3E4C` (size `0xC0`). |
+| s1560 | Mission overlay: `cancelSceneQueueHandle` at `0x800B3F0C` (size `0x44`). |
 
 **Parked (do not re-census).** `func_8008ED6C`, `func_800927B0`,
 `func_80092A54`, `func_80092CF0`, `func_80092F10`, `fake_func_80093E74`,

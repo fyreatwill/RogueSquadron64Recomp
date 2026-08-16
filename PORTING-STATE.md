@@ -75166,3 +75166,50 @@ offset `0x0000EDDC`; live body ends at generated
 `playSpeechClipOncePerChange` / TOML `func_800B3F50` at
 `0x800B3F50`). Independently named `scheduleSceneFormatMessageTimed` at
 `0x800B3E4C` (`rom_size` `0xC0`) ends at `0x800B3F0C`.
+
+## Session 1560 (2026-08-16) — synchronized the cancel-scene-queue-handle symbol
+
+Performed the bounded exact-name census over `0x800B3F0C..0x800B3F50`.
+
+No new soak-queue verdicts since s1559; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1553 (maintenance compaction),
+so the every-15-sessions sweep-revisit rule did not fire. CURRENT-TRUTH is
+16,952 bytes at session start, so Step 0 did not trigger a maintenance
+iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800B3F0C`, size `0x44`; `0x800B3F0C+0x44=0x800B3F50`. Overlay `.ovl.mission` entry `rom_size` is `0x44` at offset `0x0000EDDC` (`0x800B3F0C-0x800A5130`). Live body is independently `0x44` and meets generated `playSpeechClipOncePerChange` at `0x800B3F50` |
+| Generated definition | `funcs_30.c` defines `cancelSceneQueueHandle` at `0x800B3F0C`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000EDDC`, `rom_size 0x00000044`). The live mission body is a complete `0x44` function: prologue `addiu $sp, $sp, -0x20` and the `$s1/$ra/$s0` spill. `$s1` holds the scene (`$a0`). It loads `scene+0x1C0` into `$a0`, sets `$s0 = -1`, and `beq`s to the epilogue when the handle is already the empty sentinel. Otherwise it `jal`s independently named `stopRumbleEffect` at `0x80002BA8` and stores `-1` back to `scene+0x1C0`. Last live instruction pair is `0x800B3F48`/`0x800B3F4C` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next generated mission entry is already `playSpeechClipOncePerChange` at `0x800B3F50`. Independently named `scheduleSceneFormatMessageTimed` at `0x800B3E4C` (`rom_size` `0xC0`) ends at this address. Menu-overlay TOML `func_800B3F00` (`rom_size` `0x24`, ends `0x800B3F24`; companion `shutdownFormatMessageWorker`) occupies overlapping VRAM from `.ovl.menu` across the start of this body and is not a split of this body. Generated `enqueueFormatMessage` starts at menu VRAM `0x800B3F24` and is not this body |
+| Independent companion source | `rogue_squadron64/symbol_files/mission_overlay.txt` maps `cancelSceneQueueHandle = 0x800B3F0C` with comment "(scene) — if scene+0x1C0 (queue handle u32, sentinel -1 = empty) is not -1: calls func_80002BA8(handle) to cancel/release the handle and resets scene+0x1C0 = -1". The same mission list independently names the adjacent functions `scheduleSceneFormatMessageTimed` at `0x800B3E4C` and `playSpeechClipOncePerChange` at `0x800B3F50`, and independently names all nine generated callers. Companion `docs/mips_to_c/ctx.c` has no prototype and no competing independent name. Menu, cinematic, libultra, ignored, and zlib lists do not remap `0x800B3F0C`. Menu lists `shutdownFormatMessageWorker = 0x800B3F00` and `enqueueFormatMessage = 0x800B3F24` as the overlapping `.ovl.menu` occupants. No conflicting companion name for this mission address. `undefined_funcs_auto.txt` and `undefined_syms_auto.txt` have no `800B3F0C` alias. The companion comment's "Companion to enqueueFormatMessage" clause is a comment inaccuracy (that name is the menu occupant; the mission writer of `scene+0x1C0` is independently named `scheduleSceneFormatMessageTimed` via `startRumbleEffect`); it is not a competing name |
+| Caller evidence | 9 retail `jal` encodings `0x0C02CFC3` at file `0xADD54` (`0x800AD154`), `0xB62C8` (`0x800B56C8`), `0xB8004` (`0x800B7404`), `0xB9334` (`0x800B8734`), `0xBAE14` (`0x800BA214`), `0xBC6CC` (`0x800BBACC`), `0xBD6AC` (`0x800BCAAC`), `0xBE3C4` (`0x800BD7C4`), and `0xBF670` (`0x800BEA70`); zero `j` encodings and zero absolute `0x800B3F0C` pointer words. The generated sites are nine named `cancelSceneQueueHandle(...)` calls from independently named `playerSnowSpeederUpdate`, `playerXwingUpdate`, `playerAwingUpdate`, `playerYwingUpdate`, `playerVwingUpdate`, `playerFalconUpdate`, `playerTieInterceptorUpdate`, `playerT16Update`, and `playerNabooStarfighterUpdate`. Each `jal` VRAM sits inside that caller's TOML size (`0x800ACD9C+0x584=0x800AD320`, `0x800B5434+0x428=0x800B585C`, `0x800B7168+0x428=0x800B7590`, `0x800B8488+0x440=0x800B88C8`, `0x800B9F4C+0x4A0=0x800BA3EC`, `0x800BB830+0x428=0x800BBC58`, `0x800BC810+0x428=0x800BCC38`, `0x800BD530+0x428=0x800BD958`, `0x800BE7D0+0x42C=0x800BEBFC`). Delay slots pass the scene pointer in `$a0`. Several sites `jal` independently named `destroySceneNpcsAndUnlink` at `0x800B4134` immediately before this cancel. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x0B4B0C` (`0x0A5D30+(0x800B3F0C-0x800A5130)`) are `0x27BDFFE0` (`addiu $sp, $sp, -0x20`), `0xAFB10014` (`sw $s1, 0x14($sp)`), `0x00808821` (`addu $s1, $a0, $zero`), `0xAFBF0018` (`sw $ra, 0x18($sp)`). Last pair file `0x0B4B48`/`0x0B4B4C` is `0x03E00008`/`0x27BD0020` (`jr $ra` / `addiu $sp, $sp, 0x20`). Next start file `0x0B4B50` is `0x27BDFFE0` (`addiu $sp, $sp, -0x20`, `playSpeechClipOncePerChange` prologue). Preceding epilogue file `0x0B4B04`/`0x0B4B08` is `0x03E00008`/`0x27BD0020` (`scheduleSceneFormatMessageTimed` `jr $ra` / `addiu $sp, $sp, 0x20`). In-body `jal` at file `0x0B4B30` is `0x0C000AEA` (`jal 0x80002BA8` / `stopRumbleEffect`). Menu occupant at the same VRAM (file `0x11B0AC`) is `0xAFBF0010` (`sw $ra, 0x10($sp)`, interior of `shutdownFormatMessageWorker`); that function's own start at file `0x11B0A0` is `0x3C02800D` (`lui $v0, 0x800D`). Menu `enqueueFormatMessage` at file `0x11B0C4` is `0x27BDFFD8` (`addiu $sp, $sp, -0x28`). Cinematic overlay ends at `0x800B0940` (`size 0xB810`), so `0x800B3F0C` is past that occupant. Same-run positive controls: cinematic overlay base `0x137580` is `0x08000000`, s1547 start file `0x0B08F4` is still `0x3C038013`, s1548 start file `0x0B0A4C` is still `0x27BDFFD0`, s1549 start file `0x0B0DE4` is still `0x27BDFF50`, s1550 start file `0x0B1450` is still `0x27BDFFD8`, s1551 start file `0x0B1688` is still `0x27BDFF60`, s1552 start file `0x0B1C24` is still `0x44853000`, s1554 start file `0x0B1FE0` is still `0x44853000`, s1555 start file `0x0B27E8` is still `0x27BDFE28`, s1556 start file `0x0B42FC` is still `0x3C078011`, s1557 start file `0x0B43C0` is still `0x27BDFFE0`, s1558 start file `0x0B4610` is still `0x3C028014`, s1559 start file `0x0B4A4C` is still `0x3C028013` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800B3F0C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x44`, all nine ROM `jal` callers are independently named player
+craft updates, the body cancels the pending `scene+0x1C0` handle via
+`stopRumbleEffect` and resets the sentinel, the overlapping menu
+occupant is a different overlay, and there is neither a conflicting
+companion name nor a mission size split. H2 and H3 are ruled out for
+this address.
+The stale address-encoded TOML entry was synchronized (name only; size
+left at `0x44`).
+`fake_func_800AF6A8` remains the already-fake cinematic data-tail
+gap-filler and was left unchanged, as were `func_8009D978`,
+`func_8009D8BC`, `fake_func_8009D7CC`, `fake_func_8009C2C8`,
+`fake_func_80099FDC`, `fake_func_80099C4C`, `fake_func_80097D58`,
+`fake_func_8009711C`, `fake_func_80094348`, `fake_func_80093E74`,
+`func_800927B0`, `func_80092A54`, `func_80092CF0`, `func_80092F10`,
+and `func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated function is independently named
+`playSpeechClipOncePerChange` at `0x800B3F50` (TOML still
+`func_800B3F50`, size `0x64`; overlay `rom_size` is `0x64` at
+offset `0x0000EE20`; live body ends at generated
+`playSpeechClipOncePerLevel` / TOML `func_800B3FB4` at
+`0x800B3FB4`). Independently named `cancelSceneQueueHandle` at
+`0x800B3F0C` (`rom_size` `0x44`) ends at `0x800B3F50`.
