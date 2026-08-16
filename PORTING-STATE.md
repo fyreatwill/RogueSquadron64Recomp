@@ -75914,3 +75914,28 @@ bounded candidate is `func_800B77D0`, independently named
 `tickCraftAbilityCooldown`, with size `0x27C`; `orientEffectToVelocity`
 begins at `0x800B7A4C`. This naming change does not reopen M5 audio
 de-stubbing.
+
+## Session 1580 (2026-08-16) — synchronized the tickCraftAbilityCooldown symbol
+
+Performed the bounded exact-name census over `0x800B77D0..0x800B7A4C`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 21,181 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail added no new discriminator. The
+last-15 title check included s1569's non-sweep retail-entry revisit, so the
+sweep-revisit rule did not fire. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B77D0` at `0x800B77D0` with size `0x27C`; the companion `../rogue_squadron64/symbol_files/mission_overlay.txt` independently maps `tickCraftAbilityCooldown = 0x800B77D0`. The next generated and companion boundary is `orientEffectToVelocity` at `0x800B7A4C`. |
+| Generated definition | `funcs_31.c` defines `tickCraftAbilityCooldown` at `0x800B77D0`; the next generated definition begins at `0x800B7A4C`, matching the exact `0x27C` span. |
+| Caller and semantic evidence | Generated `funcs_31.c` has a call site to `0x800B77D0` at `0x800B8778`. The body updates a craft ability timer through the companion-named helper path, consistent with `tickCraftAbilityCooldown`. |
+| Confidence | High |
+
+The complete comparison selects H1. H2 is ruled out because the entry is not
+partial, conflicting, or boundary-mismatched; H3 is ruled out by the
+independent companion name, generated definition, exact span, and caller
+evidence. Updated only the TOML name; no build or runtime run was justified
+for this exact-name census. The next bounded candidate is `func_800B7A4C`,
+independently named `orientEffectToVelocity`, with size `0x3B0`; the next
+function begins at `0x800B7DFC`. This naming change does not reopen M5 audio
+de-stubbing.

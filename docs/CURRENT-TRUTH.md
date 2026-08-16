@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1579 (2026-08-16).
+the authority for session detail. Reviewed through s1580 (2026-08-16).
 
 ## Current state
 
@@ -113,9 +113,12 @@ the authority for session detail. Reviewed through s1579 (2026-08-16).
    `playerAwingUpdate`, exact next-function boundary, and TOML size agree.
    s1579 synchronized `findLockOnTarget` at `0x800B7590` (size `0x34`): the
    companion mission list, generated definition and three generated callers,
-   exact next-function boundary, and TOML size agree. The next census is
-   `func_800B77D0`, independently named `tickCraftAbilityCooldown`, followed
-   by `orientEffectToVelocity` at `0x800B7A4C`.
+   exact next-function boundary, and TOML size agree. s1580 synchronized
+   `tickCraftAbilityCooldown` at `0x800B77D0` (size `0x27C`): the companion
+   mission list, generated definition and caller, exact next-function
+   boundary, and TOML size agree. The next census is `func_800B7A4C`,
+   independently named `orientEffectToVelocity`, followed by
+   `spawnTexturedExplosionBurst` at `0x800B7DFC`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -284,6 +287,8 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1576 | H1: synchronized `acquireLockOnTarget` at `0x800B63C8` (size `0x3D8`); companion mapping, generated definition/two callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1577 | H1: synchronized `emitTexturedImpactEffect` at `0x800B67A0` (size `0x1F0`); companion mapping, generated definition/three callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1578 | H1: synchronized `updateEngineThrustEffect` at `0x800B6990` (size `0x7D8`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
+| s1579 | H1: synchronized `findLockOnTarget` at `0x800B7590` (size `0x34`); companion mapping, generated definition/three callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
+| s1580 | H1: synchronized `tickCraftAbilityCooldown` at `0x800B77D0` (size `0x27C`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 

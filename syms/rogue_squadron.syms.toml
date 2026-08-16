@@ -1633,7 +1633,7 @@ functions = [
     { name = "findLockOnTarget", vram = 0x800B7590, size = 0x34 },
     { name = "fake_func_800B75C4", vram = 0x800B75C4, size = 0xC },
     { name = "playerYwingInit", vram = 0x800B75D0, size = 0x200 },
-    { name = "func_800B77D0", vram = 0x800B77D0, size = 0x27C },
+    { name = "tickCraftAbilityCooldown", vram = 0x800B77D0, size = 0x27C },
     { name = "func_800B7A4C", vram = 0x800B7A4C, size = 0x3B0 },
     { name = "func_800B7DFC", vram = 0x800B7DFC, size = 0x68C },
     { name = "playerYwingUpdate", vram = 0x800B8488, size = 0x440 },
