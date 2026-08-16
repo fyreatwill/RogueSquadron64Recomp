@@ -1,10 +1,10 @@
-# NEXT work unit (s1540)
+# NEXT work unit (s1541)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1539 synchronized `cinematicComputeDt` at `0x800AF360`. Resume
+s1540 synchronized `cinematicInitializer` at `0x800AF408`. Resume
 the generated-symbol renaming sweep. Perform exactly one bounded exact-name
-census over the next adjacent generated function, `0x800AF408..0x800AF540`.
+census over the next adjacent generated function, `0x800AF540..0x800AF550`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence before
 editing. Synchronize only an exact independent name in
@@ -28,28 +28,28 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `cinematicInitializer`;
-the companion cinematic list maps `cinematicInitializer = 0x800AF408`
-(comment: sets state ptr at `0x800B0934`). TOML is still
-`func_800AF408` (size `0x138`, ends at independently named generated
-`isCinematicActive` / TOML `func_800AF540` at `0x800AF540`).
-Overlay `rom_size` is `0x138` at offset `0x0000A2D8`. Confirm the
+generated entry at this address is already `isCinematicActive`;
+the companion cinematic list maps `isCinematicActive = 0x800AF540`
+(comment: returns 1 if `MEM_W(0x800B0934) != 0`, the cinematic
+state pointer written by `cinematicInitializer`). TOML is still
+`func_800AF540` (size `0x10`, ends at independently named generated
+`cinematicStageAdvancer` / TOML `func_800AF550` at `0x800AF550`).
+Overlay `rom_size` is `0x10` at offset `0x0000A410`. Confirm the
 complete live function, matching size, and caller/semantic evidence
 before synchronizing the TOML name. Independently named
-`cinematicComputeDt` at `0x800AF360` (`rom_size` `0xA8`) ends
-at this address. The generated body loads `MEM_W(0x800B0934)`,
-early-outs if already set, scales `$a2` by the float at
-`0x800A5D5C`, zeros the byte at `0x800B0938`, calls
-`initCinematicSceneAssets`, and writes the cinematic state
-pointer. One retail `jal` encoding `0x0C02BD02` sits at file
-`0x138704` (`0x800A62B4`, generated caller inside independently
-named `cinematicLoopBody`). Menu-overlay `tickCraftSelectScreen`
-/ TOML `func_800AF3C0` at `0x800AF3C0` (`rom_size` `0x2EC`, ends
-`0x800AF6AC`) occupies overlapping VRAM and is a different overlay,
-not a cinematic size split. Mission-overlay `tickCutsceneObject` at
-`0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML
-`func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`)
-and likewise overlaps from `.ovl.mission`.
+`cinematicInitializer` at `0x800AF408` (`rom_size` `0x138`) ends
+at this address. The generated body is four instructions:
+`lui $v0, 0x800B` / `lw $v0, 0x934($v0)` / `jr $ra` /
+`sltu $v0, $zero, $v0`. One retail `jal` encoding `0x0C02BD50`
+sits at file `0x1386CC` (`0x800A627C`, generated caller inside
+independently named `cinematicLoopBody`). Menu-overlay
+`tickCraftSelectScreen` / TOML `func_800AF3C0` at `0x800AF3C0`
+(`rom_size` `0x2EC`, ends `0x800AF6AC`) occupies overlapping VRAM
+and is a different overlay, not a cinematic size split.
+Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues
+`playCutsceneObjectImpactSound` / TOML `func_800AEF58` at
+`0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and likewise
+overlaps from `.ovl.mission`.
 
 Any future oracle/M4 watch must use Homebrew Rice
 `--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib`
@@ -73,7 +73,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AF408\|800AF540\|cinematicInitializer' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AF408\|800AF540\|cinematicInitializer' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AF408\|800AF540' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AF540\|800AF550\|isCinematicActive' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AF540\|800AF550\|isCinematicActive' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AF540\|800AF550' syms/rogue_squadron.syms.toml
 ```
