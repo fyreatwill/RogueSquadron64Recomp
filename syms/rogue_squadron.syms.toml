@@ -2626,7 +2626,7 @@ functions = [
     { name = "load_cutscene", vram = 0x800A6620, size = 0x2E4 },
     { name = "cinematicSlotUpdate", vram = 0x800A6904, size = 0x3E0 },
     { name = "setupCutsceneLevel", vram = 0x800A6CE4, size = 0x2DC },
-    { name = "func_800A6FC0", vram = 0x800A6FC0, size = 0x124 },
+    { name = "initCinematicDispatchSlots", vram = 0x800A6FC0, size = 0x124 },
     { name = "func_800A70E4", vram = 0x800A70E4, size = 0xD4 },
     { name = "func_800A71B8", vram = 0x800A71B8, size = 0x22C },
     { name = "func_800A73E4", vram = 0x800A73E4, size = 0x2D4 },

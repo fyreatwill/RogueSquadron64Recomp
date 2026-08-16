@@ -72280,3 +72280,39 @@ independently named `initCinematicDispatchSlots` at `0x800A6FC0` (TOML
 still `func_800A6FC0`, size `0x124`; overlay `rom_size` is `0x124` at
 offset `0x00001E90`; live body ends at `jr $ra` / `addiu $sp, $sp, 0x20`
 before independently named `cinematicSlotBatchDispatch`).
+
+## Session 1490 (2026-08-15) — synchronized the init-cinematic-dispatch-slots symbol
+
+Performed the bounded exact-name census over `0x800A6FC0..0x800A70E4`.
+
+No new soak-queue verdicts since s1489; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A6FC0`, size `0x124`; `0x800A6FC0+0x124=0x800A70E4`. Overlay `.ovl.cinematic` entry `rom_size` is `0x124` at offset `0x00001E90` (`0x800A6FC0-0x800A5130`). Live body is independently `0x124` and meets independently named `cinematicSlotBatchDispatch` / TOML `func_800A70E4` at `0x800A70E4` |
+| Generated definition | `funcs_27.c` defines `initCinematicDispatchSlots` at `0x800A6FC0`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x124` function. It starts `addiu $sp, $sp, -0x20` / `addu $a2, $a0, $zero` and ends at `jr $ra` / `addiu $sp, $sp, 0x20` (`0x800A70DC`/`0x800A70E0`). Next generated function is independently named `cinematicSlotBatchDispatch` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `initCinematicDispatchSlots = 0x800A6FC0` with comment "zeros 4-entry dispatcher table at MEM[0x800B09C0] and builds linked-list-by-pointer at MEM[0x800B0A00..A14]; called once per cinematic from cinematicLoopBody". Menu, mission, libultra, and zlib lists do not remap `0x800A6FC0`. `undefined_funcs_auto.txt` has no leftover `func_800A6FC0`. Independently annotated callees include `extractOrthonormalFrameFromStruct` (`0x80059D18`; main overlay lists this function as a caller), `setVec3At0x24` (`0x8001CAC4`), and `clearStructPair2C30` (`0x8000A85C`) |
+| Caller evidence | One retail `jal` encoding `0x0C029BF0` and zero `j` or absolute `0x800A6FC0` pointer words. The single site is in independently named `cinematicLoopBody` at `0x800A633C` (overlay file `0x13878C`). Same-run ROM word at that file offset is `0x0C029BF0` |
+| Semantic evidence | Retail ROM words at file `0x139410` (`0x137580+(0x800A6FC0-0x800A5130)`) are `0x27BDFFE0` / `0x00803021` / `0x00001821` / `0x3C02800B` (`addiu $sp, $sp, -0x20` / `addu $a2, $a0, $zero` / `addu $v1, $zero, $zero` / `lui $v0, 0x800B`). Table-base word at file `0x139420` is `0x244409C0` (`addiu $a0, $v0, 0x9C0` = `0x800B09C0`). Loop bound at file `0x139450` is `0x2C420004` (`sltiu $v0, $v0, 0x4`). List-base words at file `0x13945C` are `0x3C02800B` / `0x24500A00` (`lui $v0, 0x800B` / `addiu $s0, $v0, 0xA00` = `0x800B0A00`). Epilogue file `0x13952C` is `0x03E00008` / `0x27BD0020`. Next start file `0x139534` is `0x27BDFFE0` (`cinematicSlotBatchDispatch`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, `initCinematicDispatchSlots` file `0x139410` is `0x27BDFFE0`, and the caller `jal` word above is `0x0C029BF0`. The generated body has three `jal` sites to independently named `extractOrthonormalFrameFromStruct`, `setVec3At0x24`, and `clearStructPair2C30`. Matches the companion 4-entry-table-plus-pointer-list comment |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A6FC0`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x124`, `cinematicLoopBody` is the only caller, and there is neither
+a conflicting companion name nor a size split inside the live body. The
+stale address-encoded TOML entry was synchronized (name only; size left at
+`0x124`). `func_8009D978` remains the eight-byte Q15 delay-mix table
+and was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `cinematicSlotBatchDispatch` at `0x800A70E4` (TOML
+still `func_800A70E4`, size `0xD4`; overlay `rom_size` is `0xD4` at
+offset `0x00001FB4`; live body ends at independently named
+`slotEffectHandlerDispatch`).
