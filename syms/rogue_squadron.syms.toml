@@ -1838,7 +1838,7 @@ functions = [
     { name = "npcWingmanStateNoop", vram = 0x800DA360, size = 0x8 },
     { name = "npcWingmanState6", vram = 0x800DA368, size = 0xD8 },
     { name = "npcTieVariantTickEffects", vram = 0x800DA440, size = 0x398 },
-    { name = "func_800DA7D8", vram = 0x800DA7D8, size = 0x1D8 },
+    { name = "npcTieVariantSteerToward", vram = 0x800DA7D8, size = 0x1D8 },
     { name = "func_800DA9B0", vram = 0x800DA9B0, size = 0x1E8 },
     { name = "func_800DAB98", vram = 0x800DAB98, size = 0x584 },
     { name = "npcTieVariantUpdate", vram = 0x800DB11C, size = 0x110C },

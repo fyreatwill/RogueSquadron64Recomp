@@ -80956,3 +80956,39 @@ runtime run required.
 Next census: `npcTieVariantSteerToward` / `func_800DA7D8` at
 `0x800DA7D8` (size `0x1D8`). Last-15 titles after s1739 still include
 s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
+
+## Session 1740 (2026-08-16) — synchronized the npcTieVariantSteerToward symbol
+
+Exact generated-symbol census for `0x800DA7D8` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1728's
+maintenance compaction, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 6025; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTieVariantSteerToward = 0x800DA7D8` with comment "TIE-variant steering/turn solver". Previous contiguous neighbor `npcTieVariantTickEffects = 0x800DA440`; next contiguous neighbor `npcTieVariantTickAttachmentEffect = 0x800DA9B0` |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTieVariantSteerToward` at VRAM `0x800DA7D8`; prologue `addiu $sp, $sp, -0x48`; saves `$ra`/`$s1`/`$s0` and `$f20`. `s1 = a0` (object), `a1` into `$f20`. Early-out unless object byte `+0x87 == 2`. Scales velocity `+0x24/+0x28/+0x2C` by `$f20` onto position `+0x0/+0x4/+0x8`, then `spawnNpcAnchoredEffectSlot`; return 1 writes `+0x87 = 3`. `wrapAngleToCyclicRange` on XZ plus a Y bump from `0x800A7B50`; if the wrapped Y is below current `+0x4`, `isTerrainCellBlockedAtWorldXz` writes state 4 or 3. `quatFromAxisAngle` from negated `+0xA4` and axis `+0x98`, then two `rotateVec3ByQuat` writes into `+0xC` and `+0x18`. Integrates heading halfword `+0x84` from scaled `0x800A7B54`/`0x800A7B58` and clamps at `0x3FFF`. Epilogue `jr $ra` / `addiu $sp, $sp, 0x48` ends at `0x800DA9AC`. Previous mission function is `npcTieVariantTickEffects` at `0x800DA440` (last insn `0x800DA7D4`); next is `npcTieVariantTickAttachmentEffect` at `0x800DA9B0`. `funcs.h` already declares the human name. Sole generated `jal` is `npcTieVariantUpdate` at `0x800DB80C` |
+| Body semantics | Matches the companion "TIE-variant steering/turn solver": dt-scaled velocity integrate, terrain/angle wrap, quat-rotate of two object axes, heading-halfword clamp. Identity is unambiguous |
+| TOML (before) | `{ name = "func_800DA7D8", vram = 0x800DA7D8, size = 0x1D8 }` — size matches `0x800DA9B0 - 0x800DA7D8` (last insn `0x800DA9AC` + 4 = `0x1D8`) |
+| Overlay section 4 | `{ .func = npcTieVariantSteerToward, .offset = 0x000356A8, .rom_size = 0x000001D8 }` under `section_4_ovl_mission_funcs` (`0x800DA7D8 - 0x800A5130 = 0x356A8`; `0x35310 + 0x398 = 0x356A8`; `0x356A8 + 0x1D8 = 0x35880` matches next `npcTieVariantTickAttachmentEffect`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DA7D8`. No leftover `func_800DA7D8` in generated headers or overlay INL; no companion `D_800DA7D8` splat |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated TIE-variant steer body,
+previous (`npcTieVariantTickEffects` / `0x800DA440`) and next
+(`npcTieVariantTickAttachmentEffect` / `0x800DA9B0`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcTieVariantSteerToward`, and only the TOML name was a stale
+`func_800DA7D8` placeholder. Corrected TOML to `npcTieVariantSteerToward`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTieVariantTickAttachmentEffect` / `func_800DA9B0` at
+`0x800DA9B0` (size `0x1E8`). Last-15 titles after s1740 still include
+s1728's maintenance compaction, so the mandatory REVISIT gate does not fire.
