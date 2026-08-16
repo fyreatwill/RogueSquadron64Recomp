@@ -76270,3 +76270,33 @@ generated function body, and caller. Updated only the TOML placeholder to
 `playerFalconMainUpdate`; no mitigation, build, or runtime change was made.
 The next bounded candidate is `func_800BB608`, independently named
 `spawnFalconEngineParticles`, with size `0x228`.
+
+## Session 1592 (2026-08-16) — synchronized the spawnFalconEngineParticles symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only already-ledgered older verdicts. The mandatory 15-title
+check showed that the recent history was not entirely symbol-sweep work
+because s1585 was the required retail-entry revisit, so this iteration
+continued the bounded generated-symbol sweep. No build or runtime run was
+needed.
+
+The work unit censused `0x800BB608..0x800BB830` using the companion mission
+symbol list, generated definition and caller, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `spawnFalconEngineParticles = 0x800BB608`; `playerFalconUpdate = 0x800BB830` is the next companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `spawnFalconEngineParticles` at `0x800BB608`; `playerFalconUpdate` calls it at `0x800BBB14`. |
+| Span and overlay table | The TOML placeholder had size `0x228`, and `recomp_overlays.inl` records `spawnFalconEngineParticles` at offset `0x164D8` with ROM size `0x228`, followed by `playerFalconUpdate` at `0x800BB830`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and caller. Updated only the TOML placeholder to
+`spawnFalconEngineParticles`; no mitigation, build, or runtime change was
+made. The next bounded candidate is `func_800BBC58`, independently named
+`integrateFalconFlightPhysics`, with size `0xD8`.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1591 (2026-08-16).
+the authority for session detail. Reviewed through s1592 (2026-08-16).
 
 ## Current state
 
@@ -176,9 +176,12 @@ the authority for session detail. Reviewed through s1591 (2026-08-16).
    s1591 synchronized `playerFalconMainUpdate` at `0x800BADCC` (size `0x83C`):
    the companion mission list, generated definition and caller from
    `spawnFalconEngineParticles`, exact `spawnFalconEngineParticles` boundary,
-   overlay-table span, and TOML size agree. The next census is
-   `func_800BB608`, independently named `spawnFalconEngineParticles`, with
-   size `0x228`.
+   overlay-table span, and TOML size agree. s1592 synchronized
+   `spawnFalconEngineParticles` at `0x800BB608` (size `0x228`): the companion
+   mission list, generated definition, `playerFalconUpdate` caller at
+   `0x800BBB14`, exact `playerFalconUpdate` boundary, overlay-table span, and
+   TOML size agree. The next census is `func_800BBC58`, independently named
+   `integrateFalconFlightPhysics`, with size `0xD8`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -361,6 +364,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1583 | H1: synchronized `emitTexturedEffectCue` at `0x800B88C8` (size `0x12C`); companion mapping, generated definition, exact `fake_func_800B89F4` boundary, and TOML size agree, with matching texture/cue-dispatch semantics. No build or runtime run was needed. |
 
 | s1591 | H1: synchronized `playerFalconMainUpdate` at `0x800BADCC` (size `0x83C`); companion mission list, generated definition and caller from `spawnFalconEngineParticles`, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1592 | H1: synchronized `spawnFalconEngineParticles` at `0x800BB608` (size `0x228`); companion mission list, generated definition, `playerFalconUpdate` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
