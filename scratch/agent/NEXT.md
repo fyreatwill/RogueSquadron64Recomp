@@ -1,17 +1,17 @@
-# NEXT work unit (s1635)
+# NEXT work unit (s1636)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the bounded generated-symbol sweep with one exact-name census of
-`func_800C723C`, the `0x800C723C..0x800C7268` entry independently named
-`findNamedEntryInCurrentObject`. Record the address, size, generated
+`func_800C72E8`, the `0x800C72E8..0x800C7320` entry independently named
+`dispatchObjectiveSlot1`. Record the address, size, generated
 definition/body, companion references, and previous/next boundaries before
 editing. Synchronize the name only if an independent mission-overlay name and
 the generated, TOML, and overlay spans agree. Do not build or run.
 
 Competing hypotheses and discriminator:
 
-- H1: `func_800C723C` has an independently supported mission-overlay name,
+- H1: `func_800C72E8` has an independently supported mission-overlay name,
   and its live generated body plus exact span support synchronization.
 - H2: the only matching name belongs to another overlay/context, so the
   mission-overlay placeholder must remain address-coded despite a live body.
@@ -20,10 +20,10 @@ Competing hypotheses and discriminator:
 
 The complete comparison table is the discriminator: an independent mission
 name plus a live generated body, matching TOML/overlay span, and exact
-preceding `getConfigFloatValue` and following `copyCurrentObjectMatrix`
-boundaries select H1; an ownership conflict selects H2; no independent name,
-any span conflict, or non-function evidence selects H3. Each outcome selects
-one hypothesis.
+preceding `initializeObjectiveTracking` and following
+`calculateFriendliesSaved` boundaries select H1; an ownership conflict
+selects H2; no independent name, any span conflict, or non-function evidence
+selects H3. Each outcome selects one hypothesis.
 
 Before starting the census, run:
 
@@ -34,8 +34,8 @@ grep -n '^## Session ' PORTING-STATE.md | tail -15
 Use these bounded commands:
 
 ```sh
-rg -n -C 8 '800C723C|800C7268|findNamedEntryInCurrentObject' ../rogue_squadron64
-rg -n -C 12 '800C723C|800C7268' ../N64Recomp/RecompiledFuncs/funcs_35.c
-rg -n -C 3 '800C723C|800C7268' syms/rogue_squadron.syms.toml
-rg -n -C 3 '800C723C|800C7268|findNamedEntryInCurrentObject' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+rg -n -C 8 '800C72E8|800C7320|dispatchObjectiveSlot1' ../rogue_squadron64
+rg -n -C 12 '800C72E8|800C7320' ../N64Recomp/RecompiledFuncs/funcs_35.c
+rg -n -C 3 '800C72E8|800C7320' syms/rogue_squadron.syms.toml
+rg -n -C 3 '800C72E8|800C7320|dispatchObjectiveSlot1' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```

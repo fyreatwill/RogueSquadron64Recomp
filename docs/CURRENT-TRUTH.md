@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1634 (2026-08-16).
+the authority for session detail. Reviewed through s1635 (2026-08-16).
 
 ## Current state
 
@@ -378,8 +378,13 @@ the authority for session detail. Reviewed through s1634 (2026-08-16).
    `findNamedEntryInCurrentObject` boundaries, section-4 overlay span, and
    TOML size agree. The generated definition and overlay table already carried
    the human name; the project TOML placeholder was updated. The next census
-   is `func_800C723C`, independently named `findNamedEntryInCurrentObject`,
-   with size `0x2C`.
+   s1635 synchronized `findNamedEntryInCurrentObject` at `0x800C723C` (size
+   `0x2C`): the companion mission mapping, live generated lookup/update body,
+   exact `getConfigFloatValue`/`copyCurrentObjectMatrix` boundaries,
+   section-4 overlay span, and TOML size agree. The generated definition and
+   overlay table already carried the human name; the project TOML placeholder
+   was updated. The next census is `func_800C72E8`, independently named
+   `dispatchObjectiveSlot1`, with size `0x38`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
