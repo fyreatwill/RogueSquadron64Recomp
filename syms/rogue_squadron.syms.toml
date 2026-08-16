@@ -1781,7 +1781,7 @@ functions = [
     { name = "updateProbeDroidHopState", vram = 0x800CA720, size = 0x4B4 },
     { name = "npcProbeDriod", vram = 0x800CABD4, size = 0x11CC },
     { name = "findNearestNpcWithinRange", vram = 0x800CBDA0, size = 0x29C },
-    { name = "func_800CC03C", vram = 0x800CC03C, size = 0x11C },
+    { name = "initActorFromSpawnTemplate", vram = 0x800CC03C, size = 0x11C },
     { name = "func_800CC158", vram = 0x800CC158, size = 0x154 },
     { name = "func_800CC2AC", vram = 0x800CC2AC, size = 0x70C },
     { name = "func_800CC9B8", vram = 0x800CC9B8, size = 0x164 },

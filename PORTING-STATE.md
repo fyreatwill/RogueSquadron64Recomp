@@ -78733,3 +78733,34 @@ the TOML name was a stale `func_800CBDA0` placeholder. Corrected TOML to
 Next census: `func_800CC03C` / `initActorFromSpawnTemplate` at `0x800CC03C`
 (size `0x11C`). Last-15 titles still include s1666, so the next iteration
 may continue the sweep.
+
+## Session 1679 (2026-08-16) — synchronized the initActorFromSpawnTemplate symbol
+
+Exact generated-symbol census for `0x800CC03C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 28804; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `initActorFromSpawnTemplate = 0x800CC03C`; next contiguous helper `tickActorTexturedSoundEffect = 0x800CC158`; prior `findNearestNpcWithinRange = 0x800CBDA0`. Same init family as `initNpcActorVariant` (`0x800CA270`): `setNpcHealth` + `setObjectDetailLevel` + `initActorMotionParams` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void initActorFromSpawnTemplate` at VRAM `0x800CC03C`; prologue `addiu $sp, $sp, -0x38`; returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800CC154`; previous mission function is `findNearestNpcWithinRange` at `0x800CBDA0` (last insn `0x800CC038`); next mission function is `tickActorTexturedSoundEffect` at `0x800CC158` |
+| Body semantics | Loads actor from `$a0+4`. Calls `setNpcHealth` (`0x800F2070`) then `setObjectDetailLevel` (`0x800F2830`); detail-level `<= 0` writes state byte `+0xE6 = 4` and returns. Negative field `+0x4C` writes `+0xE6 = 3`. Success path: clears `+0xE6`, scales template `+0xB8` into actor `+0xF8`, then `initActorMotionParams` / `initObjectAnimSubstruct` / `setEffectIntensity`. Name matches the body |
+| TOML (before) | `{ name = "func_800CC03C", vram = 0x800CC03C, size = 0x11C }` — size matches `0x800CC158 - 0x800CC03C` |
+| Overlay section 4 | `{ .func = initActorFromSpawnTemplate, .offset = 0x00026F0C, .rom_size = 0x0000011C }` under `section_4_ovl_mission_funcs` (`0x800CC03C - 0x800A5130 = 0x26F0C`; `0x26C70 + 0x29C = 0x26F0C`; `0x26F0C + 0x11C = 0x27028` matches next `tickActorTexturedSoundEffect`) |
+| Non-collision | Menu-overlay `setVoiceLineLoopFlag = 0x800CC02C`, `fake_func_800CC038 = 0x800CC038`, `loadMedalInfo = 0x800CC040`, and `getMissionMedal = 0x800CC070` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. They appear inside the mission VRAM span in `funcs_37.c` only because overlays share VRAM |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated spawn-template actor-init body,
+previous (`findNearestNpcWithinRange` / `0x800CBDA0`) and next
+(`tickActorTexturedSoundEffect` / `0x800CC158`) boundaries, TOML size, and
+section-4 overlay span agreed; only the TOML name was a stale `func_800CC03C`
+placeholder. Corrected TOML to `initActorFromSpawnTemplate`. No build or
+runtime run required.
+
+Next census: `func_800CC158` / `tickActorTexturedSoundEffect` at `0x800CC158`
+(size `0x154`). Last-15 titles still include s1666, so the next iteration
+may continue the sweep.
