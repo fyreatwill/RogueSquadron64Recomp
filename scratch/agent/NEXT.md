@@ -1,21 +1,22 @@
-# NEXT work unit (s1658)
+# NEXT work unit (s1659)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the exact generated-symbol census. The next candidate is companion
-`despawnEffectOnNamedDatItem` at `0x800C7C88` (size `0x64`). Generated and
-overlays already use the human name; TOML still carries `func_800C7C88`
-(s1657 observation) — confirm full independent agreement and correct the
+Resume the exact generated-symbol census. The next candidate is generated
+`setLevelObjectTrackingScalar` at `0x800C7CEC` (size `0xC`). Generated and
+overlays already use the human name; TOML still carries `func_800C7CEC`
+(s1658 observation) — confirm full independent agreement and correct the
 stale TOML name if the body/boundaries agree, or leave unresolved and
 advance.
 
 Competing hypotheses and discriminator:
 
-- H1: the companion mission-overlay name is the live function, and generated
-  body, TOML size/name, previous/next boundaries, and section-4 overlay span
-  agree completely — synchronize any stale placeholder (TOML name).
-- H2: the name belongs to another overlay or conflicting context — leave the
-  generated placeholder and record the collision.
+- H1: the live function is the level-object tracking scalar store, and
+  generated body, TOML size/name, previous/next boundaries, and section-4
+  overlay span agree completely — synchronize any stale placeholder (TOML
+  name).
+- H2: the name belongs to another overlay or conflicting context — leave
+  the generated placeholder and record the collision.
 - H3: the name or function evidence is absent, conflicting, or data-like —
   leave unresolved and advance to the next ranked candidate.
 
@@ -23,18 +24,18 @@ Exact commands:
 
 ```sh
 # 1. Companion mapping / callers / semantics (bounded searches only)
-grep -rn 'despawnEffectOnNamedDatItem\|0x800C7C88\|800C7C88' \
+grep -rn 'setLevelObjectTrackingScalar\|0x800C7CEC\|800C7CEC' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64 \
   --include='*.c' --include='*.h' --include='*.txt' --include='*.yaml' \
   --include='*.md' --include='*.ld' | grep -v '/build/' | head -80
 
 # 2. Generated definition + adjacent boundaries
-grep -rn 'despawnEffectOnNamedDatItem\|func_800C7C88\|0x800C7C88\|0x800C7C28\|0x800C7CEC' \
+grep -rn 'setLevelObjectTrackingScalar\|func_800C7CEC\|0x800C7CEC\|0x800C7C88\|0x800C7CF8' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs \
   --include='*.c' --include='*.h' --include='*.inl' | head -80
 
 # 3. TOML + overlay span
-grep -n '800C7C88\|despawnEffectOnNamedDatItem\|func_800C7C88' \
+grep -n '800C7CEC\|setLevelObjectTrackingScalar\|func_800C7CEC' \
   syms/rogue_squadron.syms.toml | head -40
 ```
 

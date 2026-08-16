@@ -78025,3 +78025,41 @@ generated definition and TOML entry were already synchronized. No build or
 runtime behavior conclusion was made. The next sweep candidate is
 `func_800C7C88` / companion `despawnEffectOnNamedDatItem` (`0x800C7C88`,
 size `0x64`).
+
+## Session 1658 (2026-08-16) — synchronized the despawnEffectOnNamedDatItem symbol
+
+Ran the exact generated-symbol census for `0x800C7C88` without building or
+running. The competing hypotheses were H1: the independently named
+mission-overlay entry is the live DAT-item effect-despawn helper and its
+generated, TOML, and section-4 boundaries agree completely once any stale
+placeholder is corrected; H2: the name belongs to another overlay or
+context; and H3: the name or function evidence is absent, conflicting, or
+data-like. The complete comparison was the discriminator. The last-15
+ledger titles still include s1650 (post-B retail-entry revisit), so the
+mandatory non-sweep revisit gate did not fire.
+
+The companion mission map names `despawnEffectOnNamedDatItem` at
+`0x800C7C88`. The bounded companion-tree search found no competing C/H
+definition or alternate address; adjacent companion symbols are
+`getDatItemHealthPercentage` at `0x800C7C28` and
+`dispatchHudEffectUpdate` / `playObjectiveVoiceLine1` shortly after. The
+generated `funcs_36.c` definition already carries the human name and
+contains the live `0x64`-byte body: it saves `$s0`/`$ra`, looks up a named
+level DAT item via `getLevelDatItemByName`, rejects a null item or sentinel
+halfword index `0xFFFF`, bounds the saved effect-slot index to `[0, 2]`,
+then dispatches `slotDispatcherIter` with message type `0x8`/`0x9` and the
+item's halfword index. Its exact preceding boundary is
+`getDatItemHealthPercentage` at `0x800C7C28` with size `0x60`
+(`0x800C7C28+0x60 = 0x800C7C88`), and its following boundary is
+`setLevelObjectTrackingScalar` at `0x800C7CEC` with size `0xC`
+(`0x800C7C88+0x64 = 0x800C7CEC`). The TOML entry had the correct address and
+size `0x64` but still carried the placeholder `func_800C7C88`. The section-4
+overlay table already lists the human-named function at ROM offset
+`0x22B58` with span `0x64` (exact after `0x22AF8+0x60`).
+
+H1 is selected. H2 is ruled out by the matching mission mapping and section-4
+ownership; H3 is ruled out by the live effect-despawn body and exact
+adjacent boundaries and sizes. Corrected the stale TOML placeholder to
+`despawnEffectOnNamedDatItem`. No build or runtime behavior conclusion was
+made. The next sweep candidate is `func_800C7CEC` / generated
+`setLevelObjectTrackingScalar` (`0x800C7CEC`, size `0xC`).

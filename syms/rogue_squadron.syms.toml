@@ -1757,7 +1757,7 @@ functions = [
     { name = "initAnchoredActorTowardNamedDatItem", vram = 0x800C7AB0, size = 0xB0 },
     { name = "getDatItemHealth", vram = 0x800C7B60, size = 0xC8 },
     { name = "getDatItemHealthPercentage", vram = 0x800C7C28, size = 0x60 },
-    { name = "func_800C7C88", vram = 0x800C7C88, size = 0x64 },
+    { name = "despawnEffectOnNamedDatItem", vram = 0x800C7C88, size = 0x64 },
     { name = "func_800C7CEC", vram = 0x800C7CEC, size = 0xC },
     { name = "playObjectiveVoiceLine1", vram = 0x800C7CF8, size = 0x24 },
     { name = "playObjectiveVoiceLine2", vram = 0x800C7D1C, size = 0x28 },
