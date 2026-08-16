@@ -79019,3 +79019,34 @@ No build or runtime run required.
 Next census: `func_800CD558` / `updateAtAtLegArticulation` at `0x800CD558`
 (size `0x1C4`). Last-15 titles still include s1682, so the next iteration
 may continue the sweep.
+
+## Session 1687 (2026-08-16) — synchronized the updateAtAtLegArticulation symbol
+
+Exact generated-symbol census for `0x800CD558` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 34557; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `updateAtAtLegArticulation = 0x800CD558`. Previous contiguous helper `spawnAtAtFootstepDustBurst = 0x800CD38C`; next contiguous function `npcAtAtUpdate = 0x800CD71C`. Companion `main_overlay.txt` already describes this as the AT-AT-specific leg-stride update |
+| Generated `funcs_37.c` | `RECOMP_FUNC void updateAtAtLegArticulation` at VRAM `0x800CD558`; prologue `addiu $sp, $sp, -0xA8`; returns through `jr $ra` / `addiu $sp, $sp, 0xA8` ending at `0x800CD718`; previous mission function is `spawnAtAtFootstepDustBurst` at `0x800CD38C` (last insn `0x800CD554`); next mission function is `npcAtAtUpdate` at `0x800CD71C` |
+| Body semantics | `lookupHmtTextureByName` on `0x800A6DCC` then `computeWalkerLimbStrideTargets`; scales the three vec3 outputs by `*(0x800A6EC8)`; loop `s0 < 3` interpolates two world-XZ foot positions per iter, `wrapAngleToCyclicRange`, and `spawnAtAtFootstepDustBurst` twice. Exclusive caller is `npcAtAtUpdate` at `0x800CE378` (once per frame after incrementing `npc+0x6D` when a float test passes). Name matches the AT-AT leg-articulation update |
+| TOML (before) | `{ name = "func_800CD558", vram = 0x800CD558, size = 0x1C4 }` — size matches `0x800CD71C - 0x800CD558` (113 decoded insns, last+4 = `0x1C4`) |
+| Overlay section 4 | `{ .func = updateAtAtLegArticulation, .offset = 0x00028428, .rom_size = 0x000001C4 }` under `section_4_ovl_mission_funcs` (`0x800CD558 - 0x800A5130 = 0x28428`; `0x2825C + 0x1CC = 0x28428`; `0x28428 + 0x1C4 = 0x285EC` matches next `npcAtAtUpdate`) |
+| Non-collision | Menu-overlay data `hangarSecondaryWeaponStrings` / `hangarMilleniumFalconAvailable` / `hangarDesiredBay` live in `menu_overlay.txt` at the same VRAM window; different overlay, not a name collision |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated AT-AT leg-articulation body,
+previous (`spawnAtAtFootstepDustBurst` / `0x800CD38C`) and next
+(`npcAtAtUpdate` / `0x800CD71C`) boundaries, TOML size, and section-4 overlay
+span agreed; the generated headers/body were already
+`updateAtAtLegArticulation`, and only the TOML name was a stale
+`func_800CD558` placeholder. Corrected TOML to `updateAtAtLegArticulation`.
+No build or runtime run required.
+
+Next census: `npcAtAtUpdate` at `0x800CD71C` (size `0x1800`). Last-15 titles
+still include s1682, so the next iteration may continue the sweep.

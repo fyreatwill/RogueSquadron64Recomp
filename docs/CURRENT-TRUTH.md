@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1686 (2026-08-16).
+the authority for session detail. Reviewed through s1687 (2026-08-16).
 
 ## Current state
 
@@ -74,13 +74,13 @@ the authority for session detail. Reviewed through s1686 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. After s1686 the last-15 titles (s1672–s1686) include the s1682
+1. After s1687 the last-15 titles (s1673–s1687) include the s1682
    retail-entry revisit, so the next iteration resumes the generated-
-   symbol census at `func_800CD558` / `updateAtAtLegArticulation`
-   at `0x800CD558` (size `0x1C4`; next companion
-   `npcAtAtUpdate` at `0x800CD71C`). s1651–s1665,
-   s1667–s1681, and s1683–s1686 synchronized or confirmed DAT-item
-   through `spawnAtAtFootstepDustBurst`; s1650, s1666, and s1682 were
+   symbol census at `npcAtAtUpdate` at `0x800CD71C` (size `0x1800`;
+   next companion/TOML neighbor `fake_func_800CEF1C` at `0x800CEF1C`,
+   then `func_800CEF20` / `advanceAtStEffectPhaseSound`). s1651–s1665,
+   s1667–s1681, and s1683–s1687 synchronized or confirmed DAT-item
+   through `updateAtAtLegArticulation`; s1650, s1666, and s1682 were
    the mandatory retail-entry revisits. The full s1590–s1649 archive
    is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
    1,548 placeholder `func_0x...` names remained when counted at
@@ -227,6 +227,7 @@ ownership.
 | s1684 | Synchronized `processAtAtSubFeatureSlot` (`0x800CCB1C`, size `0x17C`) after companion mission mapping, live generated AT-AT sub-feature slot tick (`lookupHmtTextureByName` on stack name `sf`+(`'1'`+byte `+0x6E`), `findActiveNpcInSlotChain`, `getNpcContextField8`, range test vs scaled `+0x54`, `slotDispatcherIter` type 9, `revalidateNpcSlotIterator`, `+0x6E` modulo-4), exact `0x800CC9B8`/`0x800CCC98` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `fake_func_800CC3D4` at `0x800CC3D4` is a different overlay, not a name collision. Next candidate is `func_800CCC98` / `npcAtAtHandleDestruction`. |
 | s1685 | Synchronized `npcAtAtHandleDestruction` (`0x800CCC98`, size `0x6F4`) after companion mission mapping, live generated AT-AT destruction body (`spawnNpcType0xAFromTemplate` ×2, `spawnByteAnimDebrisDefault` ×2, `spawnDebris1Npc` ×2, `spawnOrientedNpc` ×4, `composeRandomRotationMatrix` ×2, `scaleVec3ByRandomRange` ×2, `rand_recomp` ×6, `play3DSoundEvent` ×2, `spawnDestructionEffectBurst`), exact `0x800CCB1C`/`0x800CD38C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay data `D_800CCCB0`/`D_800CCD10`/`D_800CD184` at the same VRAM window is a different overlay, not a name collision. Next candidate is `func_800CD38C` / `spawnAtAtFootstepDustBurst`. |
 | s1686 | Synchronized `spawnAtAtFootstepDustBurst` (`0x800CD38C`, size `0x1CC`) after companion mission mapping, live generated footstep-dust-burst body (`isTerrainCellBlockedAtWorldXz`, `spawnRandomBurstNpcVariantWrapper`), exact `0x800CCC98`/`0x800CD558` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Exclusive callers are two `updateAtAtLegArticulation` sites. Menu-overlay data at the same VRAM window is a different overlay, not a name collision. Next candidate is `func_800CD558` / `updateAtAtLegArticulation`. |
+| s1687 | Synchronized `updateAtAtLegArticulation` (`0x800CD558`, size `0x1C4`) after companion mission mapping, live generated AT-AT leg-stride body (`lookupHmtTextureByName` on `0x800A6DCC`, `computeWalkerLimbStrideTargets`, scale by `*(0x800A6EC8)`, loop-3 of `wrapAngleToCyclicRange` + `spawnAtAtFootstepDustBurst` ×2), exact `0x800CD38C`/`0x800CD71C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Exclusive caller is `npcAtAtUpdate` at `0x800CE378`. Menu-overlay hangar data at the same VRAM window is a different overlay, not a name collision. Next candidate is `npcAtAtUpdate`. |
 
 ## Method and safety rules
 
