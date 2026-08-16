@@ -79997,3 +79997,75 @@ Next census after the mandatory revisit: `npcDebrisFieldUpdate` /
 `func_800D5208` at `0x800D5208` (size `0xDD8`). Last-15 titles are now
 all sweep-scoped (s1699–s1713), so the next iteration must be the
 mandatory retail-entry or M4 revisit, not another sweep step.
+
+## Session 1714 (2026-08-16) — classified the attract-512 1024 destination window
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1713 were all sweep-scoped (s1699–s1713), so this
+iteration did not resume the generated-symbol census. Step 0 `wc -c` was
+51727; not a maintenance iteration. No new soak-queue verdicts past the
+already-folded s1029-and-earlier tail.
+
+s1698 classified attract-512 input in a `--secs 125` window: A/Start/C-up/L
+did `512→1024` at 126.4 s origin `0x00790400`/`800` but the flush cut off
+at that WIDTH change; Z stayed 512 through 125.8 s; s1666's Z-on-attract
+`512→1024` at 128.3 s (after a 126.4 s Z press) was still single-source.
+New angle: same B-route→attract carrier, `--secs 133`, so the 1024
+destination and the Z leave become evaluable before the known ~135 s
+Rice/core death.
+
+Competing hypotheses: H1 the 1024 is a new classified route (hangar-frame
+or viewer increment, or `0x80000B70` elevated vs hold); H2 it is the
+B-route/title-like 1024 and returns to hangar or stays 1024 without
+mission entry; H3 Z at 119/123 independently reproduces s1666's 128.3 s
+leave, or stays 512 through ~133 s (refutes s1666 as schedule-specific);
+H4 the later flush is unevaluable.
+
+Discriminator: six concurrent Rice arms (hold + A + Start + C-up + L + Z)
+copied from `scratch/agent/s1698_attract512_input/run_pc.sh` with
+`--secs 133`. Whole-RDRAM `--watch-write 0x0:0x800000 --hit-cap 10000`,
+PIF/`[pad]`, `--vi-trace`, `--vi-poll`, hangar-frame + viewer +
+`loadOverlay` PCs. Artifacts:
+`scratch/agent/s1714_attract512_later_flush/summary.txt` and per-arm
+`run.log`.
+
+All six arms: rc=0, whole-RDRAM 10178–10189 hits with the 10k positive
+control, B pad `0x40000000` ×3, hangar `320→640→1024→512` then B-route
+`512→1024→640` then `640→512` attract at 117.6–117.7 s, PC summaries
+flushed, ~133.3–133.5 s emulated / 134.3–134.4 s wall. Candidate pads at
+120.3–120.4 / 124.3–124.4 delivered the expected words (A `0x80000000`,
+Start `0x10000000`, C-up `0x00080000`, L `0x00200000`, Z `0x20000000`).
+Debugger `[vi]` and `[vi-poll]` agreed on every WIDTH change.
+
+Hold: last WIDTH is attract 512 at 117.7 s origin `0x00690800`; vi-poll
+still 512 at 134.3 s (origins `0x00690400`/`800` and `0x00620400`/`800`).
+Hangar-frame 60/60, viewer 0, `0x80000B70` = 1.
+
+A/Start/C-up/L: `512→1024` at 126.3–126.4 s origin `0x00790400`/`800`
+(title-like). No further WIDTH through 133.5 s; vi-poll still 1024 at
+134.3–134.4 s on the same pair. Hangar-frame 60–61, viewer 0,
+`0x80000B70` = 1 matching hold.
+
+Z: `512→1024` at 126.3 s origin `0x00790800` — same time and pair as
+A/Start/C-up/L — then stays on that 1024 through 133.5 s. Hangar-frame
+60/60, viewer 0, `0x80000B70` = 1. Pads Z at 120.4/124.4.
+
+H2 selected for A/Start/C-up/L: title-like 1024, no hangar return, no
+viewer, B70 matching hold, hangar-frame not incremented. The 1024
+destination is still unevaluable — Rice dies around 135 s, ~7 s after
+the WIDTH change. s1666's single-source `1024→640` at 159.4 s origin
+`0x00696100` (B-frontend) is past this lifetime.
+
+H3-confirm for Z: second source of Z-on-attract leave. With 119/123
+presses the leave is 126.3 s, contemporaneous with A/Start/C-up/L.
+s1698's Z-stays-512 through 125.8 s was a flush cutoff. s1666's 128.3 s
+leave was the same route after a later 126.4 s Z press.
+
+H1 rejected: no mission VI, viewer 0, B70 not elevated, hangar-frame
+60–61 vs hold 60. H4 rejected by shared lifecycle, positive-control
+thresholds, delivered pads, and flushed PC summaries.
+
+Do not repeat this 133 s recipe — a later `--secs` cannot see a 31 s
+1024 dwell before Rice death. Next work resumes the generated-symbol
+sweep at `npcDebrisFieldUpdate` / `func_800D5208` at `0x800D5208`
+(size `0xDD8`).

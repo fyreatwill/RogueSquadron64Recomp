@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1713 (2026-08-16).
+the authority for session detail. Reviewed through s1714 (2026-08-16).
 
 ## Current state
 
@@ -50,20 +50,23 @@ the authority for session detail. Reviewed through s1713 (2026-08-16).
   hold, viewer PC zero, hangar-frame 59–62, and `0x80000B70` = 1 matching
   hold so the interior hit is the post-timeout attract path, not the
   105/115 press. On the attract 512 that timeout reaches, A, Start,
-  C-up, and L at 119/123 leave `512→1024` at 126.4 s origin
+  C-up, L, and Z at 119/123 all leave `512→1024` at 126.3–126.4 s origin
   `0x00790400`/`0x00790800` (title-like; same pair as the B-route
-  intermediate). The 125 s flush cuts off at that WIDTH change, so the
-  1024 destination is unevaluable; hangar-frame PCs did not increment
-  and viewer stayed 0. Z, C-down, C-left, C-right, R, and valid D-pad
-  stay on attract 512 matching hold through 125.8 s (s1698). Z-on-attract
-  `512→1024` at 128.3 s (s1666, after a 126.4 s Z press) is still
-  single-source: this window ended at 125.8 s. `0x80000B70` = 1 on hold
-  and every candidate. The watched "mission PC" `0x80000B70` is
-  `loadOverlay+0x50` (same function, `0x80000B20` size `0x124`), not a
-  separate entry. Valid D-pad on hangar, post-viewer C/L/R, post-B
-  intermediate A/Start/Z, post-arrival A/Start/Z/C/L/R/D-pad on the
-  640 B-frontend, and attract-512 A/Start/Z/C/L/R/D-pad in the
-  119–125 s window are classified or parked; do not repeat them.
+  intermediate) and stay on that 1024 through 133.5 s (s1714). Hangar-frame
+  PCs stay 60–61 matching hold; viewer `0x800C9BF0` is 0; `0x80000B70` = 1
+  matching hold. Hold stays attract 512 through 133.4 s. The 1024
+  destination is still unevaluable: Rice dies around 135 s, and the only
+  observed `1024→640` of this pair is s1666's single-source Z continuation
+  at 159.4 s origin `0x00696100` (B-frontend). s1698's Z-stays-512 through
+  125.8 s was a flush cutoff; s1666's 128.3 s Z leave was the same leave
+  after a later 126.4 s press. C-down, C-left, C-right, R, and valid D-pad
+  stay on attract 512 through 125.8 s (s1698; not retested past 126 s).
+  `0x80000B70` is `loadOverlay+0x50` (same function, `0x80000B20` size
+  `0x124`), not a separate entry. Valid D-pad on hangar, post-viewer C/L/R,
+  post-B intermediate A/Start/Z, post-arrival A/Start/Z/C/L/R/D-pad on the
+  640 B-frontend, attract-512 C-down/C-left/C-right/R/D-pad in the 119–125 s
+  window, and attract-512 A/Start/C-up/L/Z through 133 s are classified
+  or parked; do not repeat them.
 - The port VI 640-to-1024 lifecycle is generated state plus host VI
   submission. `applyPendingViChanges` can change selector bytes
   `0x8011A862/0x8011A864/0x8011A865`; a direct `osViSetMode` edge can submit
@@ -84,30 +87,26 @@ the authority for session detail. Reviewed through s1713 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Mandatory 15-title REVISIT. After s1713 the last-15 titles are
-   all sweep-scoped (s1699–s1713), so the next iteration must not
-   resume the census. Remaining unused retail-entry lead: destination
-   of the attract-512 A/Start/C-up/L `512→1024` at 126.4 s (origin
-   `0x00790400`/`800`; s1698's 125 s flush cut off at the WIDTH
-   change). New angle: a later flush after 126.4 s and before the
-   ~135 s Rice death (about `--secs 133`) so the 1024 destination
-   and the still-single-source Z-on-attract `512→1024` at 128.3 s
-   (s1666) become evaluable. Do not repeat hangar hold/A/B/Z, valid
-   D-pad on hangar, post-viewer C/L/R, post-B intermediate A/Start/Z,
-   post-arrival A/Start/Z/C/L/R/D-pad on the 640 B-frontend, or
-   attract-512 A/Start/Z/C/L/R/D-pad in the 119–125 s window. Every
-   oracle run needs whole-RDRAM, PIF, and VI/PC positive controls.
-   Alternative: a new M4 RDRAM destination from a DMEM→RDRAM transfer
-   other than `0xD60`.
-2. Resume the generated-symbol sweep after that revisit at
-   `npcDebrisFieldUpdate` (`0x800D5208`, size `0xDD8`). s1651–s1665,
-   s1667–s1681, s1683–s1697, and s1699–s1713 synchronized or
-   confirmed DAT-item through `advanceNpcSpinOrientation`; s1650,
-   s1666, s1682, and s1698 were the mandatory retail-entry revisits.
-   The full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
-   earlier sweep is in §33.
-   About 1,548 placeholder `func_0x...` names remained when counted
-   at s1487.
+1. Resume the generated-symbol sweep at `npcDebrisFieldUpdate`
+   (`0x800D5208`, size `0xDD8`). s1651–s1665, s1667–s1681,
+   s1683–s1697, and s1699–s1713 synchronized or confirmed DAT-item
+   through `advanceNpcSpinOrientation`; s1650, s1666, s1682, s1698,
+   and s1714 were the mandatory retail-entry revisits. The full
+   s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the earlier
+   sweep is in §33. About 1,548 placeholder `func_0x...` names
+   remained when counted at s1487.
+2. Next mandatory 15-title REVISIT (after the next all-sweep window):
+   destination of the attract A/Start/C-up/L/Z title-like 1024 is
+   blocked by Rice death around 135 s (~7 s after the 126.4 s WIDTH),
+   so a later `--secs` cannot see a 31 s 1024 dwell. Do not repeat
+   hangar hold/A/B/Z, valid D-pad on hangar, post-viewer C/L/R,
+   post-B intermediate A/Start/Z, post-arrival A/Start/Z/C/L/R/D-pad
+   on the 640 B-frontend, attract-512 C-down/C-left/C-right/R/D-pad
+   in the 119–125 s window, or the s1714 133 s A/Start/C-up/L/Z
+   recipe. A genuinely new angle is required. Alternative: a new M4
+   RDRAM destination from a DMEM→RDRAM transfer other than `0xD60`.
+   Every oracle run needs whole-RDRAM, PIF, and VI/PC positive
+   controls.
 3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. If that happens, write a bounded plan
    before changing any stub or trap.
@@ -182,6 +181,10 @@ ownership.
   is rejected by s1512's Rice hangar watches and generated DMEM proof.
 - The s1086 claim that retail never accesses `0x130B10:0x130B58` on the
   eleven-Start schedule is superseded by s1528 Rice hangar/leave-hangar runs.
+- The s1698 claim that Z on attract 512 stays 512 through 125.8 s, and
+  that s1666's 128.3 s Z leave is still single-source, is superseded by
+  s1714: Z at 119/123 leaves `512→1024` at 126.3 s on the same title-like
+  pair as A/Start/C-up/L. The 125.8 s stay was a flush cutoff.
 
 ## Evidence ledger summary
 
@@ -268,6 +271,7 @@ ownership.
 | s1711 | Confirmed `fake_func_800D4EC4` (`0x800D4EC4`, size `0xC`) was already classified as the explicit 12-byte leftover instruction pad (`lw $v1, 0x20($fp)` / `lw $a0, 0x4($v1)` / `addiu $v1, $a0, 0x8`) between `npcShuttleUpdate` and `npcInitChildLinkedToParent`: companion mapping, live generated fragment, exact `0x800D3894`/`0x800D4ED0` boundaries, TOML name and size, and section-4 span agreed. No menu function occupies the address. Next candidate is `func_800D4ED0` / `npcInitChildLinkedToParent`. |
 | s1712 | Synchronized `npcInitChildLinkedToParent` (`0x800D4ED0`, size `0x1A8`) after companion mission mapping, live generated child-NPC-init body (`setNpcHealth`, `setObjectDetailLevel`; flag `*(a0+0x14)&0x20` selects own template vs parent `*(a2+0xC)` for `+0x50/+0x54`; state byte `+0xC9` = 0/2; rand-scaled spin rates `+0x60/+0x64`), exact `0x800D4EC4`/`0x800D5078` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `func_800D5078` / `advanceNpcSpinOrientation`. |
 | s1713 | Synchronized `advanceNpcSpinOrientation` (`0x800D5078`, size `0x190`) after companion mission mapping, live generated spin-orientation body (`+0x58/+0x5C` accumulators advanced by `dt * +0x60` and wrapped; `+0x68` by `dt * D_800A7604` and clamped; `sinf` + `quatFromCardinalAxis` ×2, `quatMultiply`, `rotateVec3ByQuat` ×2), exact `0x800D4ED0`/`0x800D5208` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Exclusive caller is `npcDebrisFieldUpdate` at `0x800D58FC`. No menu function occupies the address. Last-15 titles are now all sweep-scoped, so s1714 is the mandatory retail-entry revisit. Next sweep candidate is `func_800D5208` / `npcDebrisFieldUpdate`. |
+| s1714 | Rice later-flush of attract-512 A/Start/C-up/L/Z (`--secs 133`). All 6 arms passed whole-RDRAM, B-pad, hangar, 640-arrival, attract-arrival, and PC-flush controls; rc=0. Hold stays attract 512 through 133.4 s. A/Start/C-up/L/Z all leave `512→1024` at 126.3–126.4 s origin `0x00790400`/`800` and stay on that title-like 1024 through 133.5 s; viewer 0; B70=1 matching hold; hangar-frame 60–61. H2 selected for A/Start/C-up/L. H3-confirm for Z (second source; s1698 stay-512 was a flush cutoff; s1666 128.3 s was the same leave after a later press). H1/H4 rejected. 1024 destination still unevaluable (Rice dies ~135 s). Next sweep candidate is `func_800D5208` / `npcDebrisFieldUpdate`. |
 
 ## Method and safety rules
 
