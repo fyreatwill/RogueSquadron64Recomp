@@ -77844,3 +77844,28 @@ adjacent boundaries and sizes. No source-map edit was needed because the
 generated definition and TOML entry were already synchronized. No build or
 runtime behavior conclusion was made. The next sweep candidate is
 `func_800C794C`/`getScaledPlayerCraftSpeed`.
+
+## Session 1652 (2026-08-16) — synchronized the getScaledPlayerCraftSpeed symbol
+
+Exact census of `func_800C794C` / companion `getScaledPlayerCraftSpeed` at
+`0x800C794C` (size `0x2C`).
+
+Independent agreement:
+- Companion: only `mission_overlay.txt` maps the name; next symbol
+  `spawnEffectOnNamedDatItem` at `0x800C7978` implies contiguous size `0x2C`.
+  No main/menu/cinematic collision.
+- Generated: live body in `funcs_36.c` already named `getScaledPlayerCraftSpeed`;
+  prologue at `0x800C794C`, epilogue `jr` at `0x800C7970` / delay-slot stack
+  restore at `0x800C7974`; previous `calculateDatItemDistanceToPlayer` ends at
+  `0x800C7948` and next named entry `spawnEffectOnNamedDatItem` begins at
+  `0x800C7978`. Semantics: `getCraftRecordByIdx(0)` → load craft speed float at
+  `+4` → `mul.s` by global scale at `0x800A6964` → return in `$f0`. Callers at
+  `0x801088D0` and `0x80108EBC` compare the returned float (speed thresholds).
+- Overlay span: `recomp_overlays.inl` section-4 entry
+  `.func = getScaledPlayerCraftSpeed, .offset = 0x0002281C, .rom_size = 0x0000002C`
+  (VRAM base `0x800A5130` → `0x800C794C`..`0x800C7978`).
+- TOML had stale placeholder `func_800C794C` with matching size `0x2C`.
+
+H1 selected. Renamed TOML entry to `getScaledPlayerCraftSpeed`. No build or
+runtime run required. Next ranked candidate: `func_800C7978`, companion name
+`spawnEffectOnNamedDatItem`, size `0x78`.
