@@ -75839,3 +75839,28 @@ bounded candidate is `func_800B67A0`, independently named
 `emitTexturedImpactEffect`, with size `0x1F0`; `updateEngineThrustEffect`
 begins at `0x800B6990`. This naming change does not reopen M5 audio
 de-stubbing.
+
+## Session 1577 (2026-08-16) — synchronized the emitTexturedImpactEffect symbol
+
+Performed the bounded exact-name census over `0x800B67A0..0x800B6990`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 19,847 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail had no newer verdict requiring
+analysis. The last-15 title check included s1569's non-sweep retail-entry
+revisit, so the sweep-revisit rule did not fire. M5 remains closed and M3
+remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B67A0` at `0x800B67A0` with size `0x1F0`; the companion `../rogue_squadron64/symbol_files/mission_overlay.txt` independently maps `emitTexturedImpactEffect = 0x800B67A0`. The next companion function is `updateEngineThrustEffect` at `0x800B6990`. |
+| Generated definition | `funcs_31.c` already defines `emitTexturedImpactEffect` at `0x800B67A0`; its epilogue reaches `0x800B698C` and the next generated definition begins at `0x800B6990`, matching the exact `0x1F0` span. |
+| Caller and semantic evidence | Generated `funcs_31.c` calls `emitTexturedImpactEffect` from `updateEngineThrustEffect` at `0x800B6AA4`, `0x800B6B00`, and `0x800B6B54`; the body also dispatches the Factor 5 table lookup at `0x800B67A0`. |
+| Confidence | High |
+
+The complete comparison selects H1. H2 is ruled out because the entry is not
+partial, fake, or conflicting; H3 is ruled out by the independent companion
+name and generated definition/caller evidence. Updated only the TOML name; no
+build or runtime run was justified for this exact-name census. The next
+bounded candidate is `func_800B6990`, independently named
+`updateEngineThrustEffect`, with size `0x7D8`; `playerAwingUpdate` begins at
+`0x800B7168`. This naming change does not reopen M5 audio de-stubbing.

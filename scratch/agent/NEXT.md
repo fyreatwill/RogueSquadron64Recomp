@@ -1,25 +1,24 @@
-# NEXT work unit (s1577)
+# NEXT work unit (s1578)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol renaming sweep with exactly one bounded
-exact-name census over the next placeholder, `0x800B67A0..0x800B6990`.
+exact-name census over the next placeholder, `0x800B6990..0x800B7168`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence before
 editing. Synchronize only an exact independent name in
 `syms/rogue_squadron.syms.toml`; leave address-encoded, fake, or ambiguous
-entries unchanged. This naming census does not reopen closed M5 audio
-de-stubbing.
+entries unchanged. This naming census does not reopen M5 audio de-stubbing.
 
-The TOML entry is `func_800B67A0` with size `0x1F0`. The companion mission
-list maps `emitTexturedImpactEffect = 0x800B67A0`; the next named mission
-function is `updateEngineThrustEffect` at `0x800B6990`. Synchronize only if
-the complete comparison remains exact.
+The TOML entry is `func_800B6990` with size `0x7D8`. The companion mission
+list maps `updateEngineThrustEffect = 0x800B6990`; the next named mission
+function is `playerAwingUpdate` at `0x800B7168`. Synchronize only if the
+complete comparison remains exact.
 
 Competing hypotheses and discriminator:
 
 - H1: the function has an exact independent companion mapping and can be
-  synchronized to `emitTexturedImpactEffect`.
+  synchronized to `updateEngineThrustEffect`.
 - H2: the mapping is partial, already-fake, or ambiguous, so the entry must
   remain unchanged.
 - H3: no independent naming source exists and the region should be parked.
@@ -32,7 +31,7 @@ and no independent name selects H3. Each outcome selects one hypothesis.
 Commands:
 
 ```
-grep -n -C 5 -E '800B67A0|800B6990|emitTexturedImpactEffect|updateEngineThrustEffect' ../rogue_squadron64/symbol_files/mission_overlay.txt
-grep -n -C 4 -E '800B67A0|800B6990|emitTexturedImpactEffect|updateEngineThrustEffect' ../N64Recomp/RecompiledFuncs/funcs_31.c
-grep -n -C 3 -E '800B67A0|800B6990|emitTexturedImpactEffect|updateEngineThrustEffect' syms/rogue_squadron.syms.toml
+grep -n -C 5 -E '800B6990|800B7168|updateEngineThrustEffect|playerAwingUpdate' ../rogue_squadron64/symbol_files/mission_overlay.txt
+grep -n -C 4 -E '800B6990|800B7168|updateEngineThrustEffect|playerAwingUpdate' ../N64Recomp/RecompiledFuncs/funcs_31.c
+grep -n -C 3 -E '800B6990|800B7168|updateEngineThrustEffect|playerAwingUpdate' syms/rogue_squadron.syms.toml
 ```

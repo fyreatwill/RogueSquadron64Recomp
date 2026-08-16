@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1576 (2026-08-16).
+the authority for session detail. Reviewed through s1577 (2026-08-16).
 
 ## Current state
 
@@ -75,7 +75,7 @@ the authority for session detail. Reviewed through s1576 (2026-08-16).
    and M4 threads; s1569 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
-   sizes, and caller/semantic evidence. Per-session H1 syncs through s1576
+   sizes, and caller/semantic evidence. Per-session H1 syncs through s1577
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
@@ -101,6 +101,12 @@ the authority for session detail. Reviewed through s1576 (2026-08-16).
    the companion mission list, generated definition and two generated callers,
    exact next-function boundary, and TOML size agree. The next census is
    `func_800B67A0`, independently named `emitTexturedImpactEffect`.
+
+   s1577 synchronized `emitTexturedImpactEffect` at `0x800B67A0` (size
+   `0x1F0`): the companion mission list, generated definition and three
+   generated callers, exact next-function boundary, and TOML size agree. The
+   next census is `func_800B6990`, independently named
+   `updateEngineThrustEffect`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -238,7 +244,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1194–s1239 | Dummy-video M4 and retail-entry experiments passed controls but stayed at VI 320; that parking is superseded by the Rice recipe. |
 | s1240–s1268 | Exact companion/generated symbol sweeps synchronized the repository map; explicit fake/address-only entries stayed unchanged. |
 | s1269 | Maintenance compaction only; no experiment or code change. |
-| s1270–s1576 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `acquireLockOnTarget` at `0x800B63C8`. H2/H3 parks listed under Next steps #1, including s1570 `fake_func_800B42BC`. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
+| s1270–s1577 | Generated-symbol renaming sweep: exact companion/generated names from `0x80086450` through `emitTexturedImpactEffect` at `0x800B67A0`. H2/H3 parks listed under Next steps #1, including s1570 `fake_func_800B42BC`. Full per-session table in `PORTING-STATE.md`; compact archive in `PROJECT-OVERVIEW.md` §33. No build or runtime run in these census sessions. |
 | s1496 | Dummy-vs-Rice revisit: dummy stayed at 320/`0x006dd280`; Rice reached 640, 1024, and hangar 512/`0x006ab400`. |
 | s1512 | Rice hangar M4 revisit: whole-RDRAM 10000/removal rc=0, 11 Start/PIF hits, 320→640→1024→512/`0x006ab400`; `0x688:0x710` and `0x04000670:0x04000720` 0 CPU writes. Rejects RDRAM ownership of DMEM `r9`. |
 | s1528 | Rice post-hangar A/B: hold stays 512/`0x6ab400`; extra Start or A leaves to 640/`0x6a2900`; `0x130B10:0x130B58` live (s1086 dummy-320 zeros were unevaluable); leave write `0x800c68d0` in `runHangarMenuFromOverlay`. Not an outdoor mission. |
@@ -267,6 +273,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1574 | H1: synchronized `isWeaponSlotReady` at `0x800B585C` (size `0x58`); companion mapping, generated definition/callers, TOML boundary, and the adjacent fake/`playerAwingInit` boundaries agree. No build or runtime run was needed. |
 | s1575 | H1: synchronized `resetEngineTrailQuads` at `0x800B5B4C` (size `0x87C`); companion mapping, generated definition/caller, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 | s1576 | H1: synchronized `acquireLockOnTarget` at `0x800B63C8` (size `0x3D8`); companion mapping, generated definition/two callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
+| s1577 | H1: synchronized `emitTexturedImpactEffect` at `0x800B67A0` (size `0x1F0`); companion mapping, generated definition/three callers, exact next-function boundary, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
