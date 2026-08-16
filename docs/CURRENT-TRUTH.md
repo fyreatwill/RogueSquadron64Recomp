@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1600 (2026-08-16).
+the authority for session detail. Reviewed through s1601 (2026-08-16).
 
 ## Current state
 
@@ -215,7 +215,12 @@ the authority for session detail. Reviewed through s1600 (2026-08-16).
    definition and caller, exact `triggerNabooEngineEffect` boundary,
    overlay-table span, and TOML size agree. The next census is
    `func_800BE228`, independently named `triggerNabooEngineEffect`, with size
-   `0x280`.
+   `0x280`. s1601 synchronized `triggerNabooEngineEffect` at `0x800BE228`
+   (size `0x280`): the companion mission list, generated definition, three
+   generated callers, exact `tickPlayerCraftBlinkIndicator` boundary,
+   overlay-table span, and TOML size agree. The next census is
+   `func_800BE4A8`, independently named `tickPlayerCraftBlinkIndicator`,
+   with size `0x328`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -407,6 +412,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1598 | H1: synchronized `playerT16MainUpdate` at `0x800BD254` (size `0x2DC`); companion mission list, generated definition and `playerT16Update` caller at `0x800BD814`, exact `playerT16Update` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1599 | H1: synchronized `triggerT16Effect` at `0x800BD958` (size `0xF8`); companion mission list, generated definition and effect/sound dispatch body, exact `playerNabooStarfighterInit` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1600 | H1: synchronized `buildNabooSubmodelTransform` at `0x800BDC9C` (size `0x58C`); companion mission list, generated definition and caller, exact `triggerNabooEngineEffect` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1601 | H1: synchronized `triggerNabooEngineEffect` at `0x800BE228` (size `0x280`); companion mission list, generated definition and three callers, exact `tickPlayerCraftBlinkIndicator` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 

@@ -76525,3 +76525,31 @@ generated function body, and generated caller. Updated only the TOML
 placeholder to `buildNabooSubmodelTransform`; no mitigation, build, or runtime
 change was made. The next bounded candidate is `func_800BE228`, independently
 named `triggerNabooEngineEffect`, with size `0x280`.
+
+## Session 1601 (2026-08-16) — synchronized the triggerNabooEngineEffect symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only older verdicts already represented in the ledger, so no
+soak result changed the work-unit choice. This iteration continued the
+bounded generated-symbol sweep. No build or runtime run was needed.
+
+The work unit censused `0x800BE228..0x800BE4A8` using the companion mission
+symbol list, generated definition and callers, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `triggerNabooEngineEffect = 0x800BE228`; `tickPlayerCraftBlinkIndicator = 0x800BE4A8` is the adjacent companion boundary. |
+| Generated definition and callers | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `triggerNabooEngineEffect` at `0x800BE228`; the generated code calls it from `tickPlayerCraftBlinkIndicator` at `0x800BE5A8`, `0x800BE5BC`, and `0x800BE610`. |
+| Span and overlay table | The TOML placeholder had size `0x280`; `recomp_overlays.inl` records `triggerNabooEngineEffect` at offset `0x190F8` with ROM size `0x280`, followed by `tickPlayerCraftBlinkIndicator` at `0x800BE4A8`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and three generated callers. Updated only the TOML
+placeholder to `triggerNabooEngineEffect`; no mitigation, build, or runtime
+change was made. The next bounded candidate is `func_800BE4A8`, independently
+named `tickPlayerCraftBlinkIndicator`, with size `0x328`.
