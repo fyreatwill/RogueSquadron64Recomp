@@ -76797,3 +76797,26 @@ conflicting/incomplete-span case and H3's fragment/data-like case. No build
 or runtime run was needed; this was a bounded symbol-map synchronization.
 The next bounded candidate is `func_800BF408`, independently named
 `loadAndStartDemo`, with size `0x60`.
+
+## Session 1612 (2026-08-16) — synchronized the loadAndStartDemo symbol
+
+Ran the bounded generated-symbol census specified by the previous NEXT unit
+for `0x800BF408..0x800BF468`. The companion mission symbol list independently
+names `0x800BF408` `loadAndStartDemo` and describes its demo-index lookup,
+asset load, demo-state initialization, and flag update. The generated
+definition is already named `loadAndStartDemo`; its live body formats the demo
+asset name, calls `load_asset`, stores the returned asset pointer, invokes
+`initDemoPlayState`, and sets bit `0x20` in the game-settings flags. The body
+starts at `0x800BF408`, ends with the `addiu $sp, $sp, 0x38` at `0x800BF464`
+plus its delay-slot return boundary, and the next generated function
+`getDemoRecordedTimestep` starts at `0x800BF468`. A generated caller at
+`0x800FA6FC` invokes the function.
+
+H1 selected: the generated overlay table records `loadAndStartDemo` at offset
+`0x1A2D8` with ROM size `0x60`, and the TOML placeholder had the same size.
+Changed only the TOML symbol name to `loadAndStartDemo`. The exact companion
+name, generated live body, caller, adjacent boundaries, overlay span, and size
+rule out H2's conflicting/incomplete-span case and H3's fragment/data-like
+case. No build or runtime run was needed; this was a bounded symbol-map
+synchronization. The next bounded candidate is `func_800BF468`, independently
+named `getDemoRecordedTimestep`, with size `0x30`.
