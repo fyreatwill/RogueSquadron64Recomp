@@ -80668,3 +80668,38 @@ runtime run required.
 Next census: `npcWingmanUpdate` at `0x800D93C0` (size `0xBD0`). Last-15
 titles after s1731 still include s1728's maintenance compaction, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1732 (2026-08-16) — confirmed the npcWingmanUpdate symbol
+
+Exact generated-symbol census for `0x800D93C0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles after s1731 are
+s1717–s1731 and still include s1728's maintenance compaction, so the
+mandatory REVISIT gate did not fire. Step 0 `wc -c` was 6020; not a
+maintenance iteration. No new soak-queue verdicts beyond the already-folded
+s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWingmanUpdate = 0x800D93C0` (coarse listing). Previous contiguous neighbor `npcWingmanUpdateEngineAudio = 0x800D9234`; next contiguous neighbor `npcWingmanState2 = 0x800D9F90`. No menu/cinematic/main overlay occupant and no `D_800D93C0` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcWingmanUpdate` at VRAM `0x800D93C0`; prologue `addiu $sp, $sp, -0x90`; object pointer `a0` saved in `s3`, halfword mode `a1` in `s2`, `a2` in `s1`; object record `*(s3+4)` in `s0`. Returns through `jr $ra` / `addiu $sp, $sp, 0x90` ending at `0x800D9F8C`. Previous mission function last insn is `0x800D93BC`; next is `npcWingmanState2` at `0x800D9F90`. `funcs.h` already declares the human name. No leftover `func_800D93C0`. No direct `jal` site — table-dispatched like the other `npcXxxUpdate` siblings |
+| Body semantics | Halfword state in `a1`; 11-way jump table at `0x800A7A00` on `(a1-1)` for `a1 ∈ 1..11` (`sltiu` bound `0xB`; out of range falls to the epilogue at `0x800D9F68`). Case 0 is setup (`walkMeshdef0List`, Euler/slot-0/1/2 rotation, `createAndInitObject`, `getNpcWingmanStateData`, `initActorAsType1`, `spawnNpcOfType`, `allocateAndInitCraftNpcContext`). Case 1 tears down voice/list/mesh (`isAudioVoiceActive`, `factor5RemoveListNode`, `rs_free`, `clearPendingAndDestroyChildNpc`, `releaseMeshAsset`). Case 2 is the live tick (`npcPredictedRangeCheck`, `dispatchEffectByActorType`, `npcWingmanUpdateEngineAudio` at `0x800D9960`, `npcWingmanSteerToward` at `0x800D99DC`, `npcWingmanBehaviorByMode`). Case 3 is visibility/path (`addNpcToVisibilityBucket`, `advanceNpcOnCurvedPath`). Case 4 is damage/destruction (`getNpcCurrentHealth`, `dealDamageToNpc`, `npcWingmanSpawnBurstEffects` at `0x800D9CA8`, `unregisterAndFreeNpcSlot` ×4). Case 5 is range/sound (`vec3Length`, `play3DSoundEvent`). Case 6 is `dispatchSlotAction5IfActive`. Case 8 retunes actor params and frees slots. Cases 7/9/10 fall through to the epilogue. Name matches the wingman `npcXxxUpdate` sibling of `npcTankDroidUpdate` / `npcShuttleUpdate` / `npcAtStUpdate` |
+| TOML | `{ name = "npcWingmanUpdate", vram = 0x800D93C0, size = 0xBD0 }` — already the human name; size matches `0x800D9F90 - 0x800D93C0` (last insn `0x800D9F8C` + 4 = `0xBD0`). No leftover `func_800D93C0` |
+| Overlay section 4 | `{ .func = npcWingmanUpdate, .offset = 0x00034290, .rom_size = 0x00000BD0 }` under `section_4_ovl_mission_funcs` (`0x800D93C0 - 0x800A5130 = 0x34290`; `0x34104 + 0x18C = 0x34290`; `0x34290 + 0xBD0 = 0x34E60` matches next `npcWingmanState2`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D93C0`. Menu max VRAM is `0x800C6660`; cinematic has no `800D` symbols; main max is `0x800C41B0`. No leftover `func_800D93C0` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 11-way wingman-update body,
+previous (`npcWingmanUpdateEngineAudio` / `0x800D9234`) and next
+(`npcWingmanState2` / `0x800D9F90`) boundaries, TOML name and size, and
+section-4 overlay span already agree. No TOML or generated-name change.
+This refutes H2 (no stale placeholder), H3 (no fake fragment, overlay
+collision, or size/boundary disagreement), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Next census: `npcWingmanState2` at `0x800D9F90` (size `0xD4`). Last-15
+titles after s1732 still include s1728's maintenance compaction, so the
+mandatory REVISIT gate does not fire.

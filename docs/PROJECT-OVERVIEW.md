@@ -235,7 +235,7 @@ de-stubbing is closed. These are boundaries, not mitigations: future guards
 require an `ORIGIN:` naming the writer and judging the value legitimate. The
 generated-symbol renaming sweep is the current low-risk workstream; exact
 companion/generated names are synchronized through
-`npcWingmanUpdateEngineAudio` at `0x800D9234` (s1731). See §33–§35 for the
+`npcWingmanUpdate` at `0x800D93C0` (s1732). See §33–§35 for the
 archived census, `CURRENT-TRUTH.md` for the live backlog, and
 `PORTING-STATE.md` for evidence.
 
@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1731)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1732)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3008,10 +3008,11 @@ collision.
 | s1729 | Synchronized `npcWingmanSpawnBurstEffects` (`0x800D8988`, `0x330`). Three `initNpcContextFromTransform` / `spawnRandomBurstNpcVariantWrapper` / `assignNpcTargetAndPosition` bursts. Sole caller `npcWingmanUpdate` at `0x800D9CA8`. |
 | s1730 | Synchronized `npcWingmanSteerToward` (`0x800D8CB8`, `0x57C`). Vec/quat steer: `vec3Dot`/`vec3Cross`/`vec3Length`, `quatFromAxisAngle(Safe)`, `quatMultiply`, `rotateVec3ByQuat`, `wrapAngleToCyclicRange`. Sole caller `npcWingmanUpdate` at `0x800D99DC`. |
 | s1731 | Synchronized `npcWingmanUpdateEngineAudio` (`0x800D9234`, `0x18C`). Integrates engine-audio rate/accumulator at `+0xEC`/`+0xE8`, writes pitch/gain at `+0xE4`, `buildRotationMatrixSlot2` on two child slots, then `isAudioVoiceActive` / `updateActive3DAudioSource`. Sole caller `npcWingmanUpdate` at `0x800D9960`. |
+| s1732 | Confirmed `npcWingmanUpdate` (`0x800D93C0`, `0xBD0`). 11-way jump table at `0x800A7A00` on `(a1-1)` for `a1 ∈ 1..11`. Setup / teardown / live tick (`npcWingmanUpdateEngineAudio`, `npcWingmanSteerToward`, `npcWingmanBehaviorByMode`) / visibility / damage (`npcWingmanSpawnBurstEffects`) / range / slot-action. Table-dispatched; no leftover `func_800D93C0`. |
 
-The sweep cursor after s1731 is `npcWingmanUpdate` at `0x800D93C0`
-(size `0xBD0`). Next contiguous neighbor is `func_800D9F90` /
-`npcWingmanState2` at `0x800D9F90`. Mandatory revisits in this window:
+The sweep cursor after s1732 is `npcWingmanState2` at `0x800D9F90`
+(size `0xD4`). Next contiguous neighbor is `func_800DA064` /
+`npcWingmanState3` at `0x800DA064`. Mandatory revisits in this window:
 s1650, s1666, s1682, s1698, s1714. s1728 is maintenance, so the next
 all-sweep 15-title window has not opened.
 
