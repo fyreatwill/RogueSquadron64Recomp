@@ -78647,3 +78647,31 @@ TOML to `initProbeDroidScatterLaunch`. No build or runtime run required.
 Next census: `func_800CA720` / `updateProbeDroidHopState` at `0x800CA720`
 (size `0x4B4`). Last-15 titles still include s1666, so the next iteration may
 continue the sweep.
+
+## Session 1676 (2026-08-16) — synchronized the updateProbeDroidHopState symbol
+
+Exact generated-symbol census for `0x800CA720` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `updateProbeDroidHopState = 0x800CA720`; next mission listing `npcProbeDriod = 0x800CABD4`; prior `initProbeDroidScatterLaunch = 0x800CA560` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void updateProbeDroidHopState` at VRAM `0x800CA720`; prologue `addiu $sp, $sp, -0x68`; returns through `jr $ra` / `addiu $sp, $sp, 0x68` ending at `0x800CABD0`; previous generated function is `initProbeDroidScatterLaunch` at `0x800CA560`; next mission function is `npcProbeDriod` at `0x800CABD4` |
+| Body semantics | Actor at `a0`. Reads hop-state halfword `+0xE2` (set to 1 by `initProbeDroidScatterLaunch`). State 1: delta from position `+0/+4/+8` to scatter target `+0x6C/+0x70/+0x74`, then `vec3NormalizeInto` / `vec3Length`; if remaining distance exceeds `0x800A6BB8`, hop via `normalize_vector` ×2, `vec3Dot`, `sinfApprox`, `quatFromAxisAngle`, `rotateVec3ByQuat`, `orthonormalizeFrame`, and speed `+0x78`, writing the new position. On arrival: `+0xE2 = 0`, `rand`, then later states rotate `+0xC/+0x18` by `+0x7C`, `spawnNpcAnchoredEffectSlot`, `wrapAngleToCyclicRange`, `isTerrainCellBlockedAtWorldXz`, and optional `rs_free` of `+0x3C`. Writes `+0xE2` to 0 / 4 / 4-or-5 |
+| TOML (before) | `{ name = "func_800CA720", vram = 0x800CA720, size = 0x4B4 }` — size matches `0x800CABD4 - 0x800CA720` |
+| Overlay section 4 | `{ .func = updateProbeDroidHopState, .offset = 0x000255F0, .rom_size = 0x000004B4 }` under `section_4_ovl_mission_funcs` (`0x800CA720 - 0x800A5130 = 0x255F0`; `0x255F0 + 0x4B4 = 0x25AA4` matches next `npcProbeDriod`) |
+| Non-collision | Menu-overlay `initModelViewer = 0x800CA638`, `buildModelViewerTextPage = 0x800CA714`, and `runModelViewerSoundDemo = 0x800CADB8` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`initProbeDroidScatterLaunch` / `0x800CA560`) and next
+(`npcProbeDriod` / `0x800CABD4`) boundaries, and TOML size already
+agreed; only the TOML name was a stale `func_800CA720` placeholder. Corrected
+TOML to `updateProbeDroidHopState`. No build or runtime run required.
+
+Next census: `npcProbeDriod` at `0x800CABD4` (size `0x11CC`). Last-15 titles
+still include s1666, so the next iteration may continue the sweep.

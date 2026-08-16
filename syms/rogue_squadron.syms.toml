@@ -1778,7 +1778,7 @@ functions = [
     { name = "initNpcActorVariant", vram = 0x800CA270, size = 0x134 },
     { name = "spawnProbeDroidGroundImpactEffect", vram = 0x800CA3A4, size = 0x1BC },
     { name = "initProbeDroidScatterLaunch", vram = 0x800CA560, size = 0x1C0 },
-    { name = "func_800CA720", vram = 0x800CA720, size = 0x4B4 },
+    { name = "updateProbeDroidHopState", vram = 0x800CA720, size = 0x4B4 },
     { name = "npcProbeDriod", vram = 0x800CABD4, size = 0x11CC },
     { name = "func_800CBDA0", vram = 0x800CBDA0, size = 0x29C },
     { name = "func_800CC03C", vram = 0x800CC03C, size = 0x11C },

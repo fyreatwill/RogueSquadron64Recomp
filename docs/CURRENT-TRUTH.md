@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1675 (2026-08-16).
+the authority for session detail. Reviewed through s1676 (2026-08-16).
 
 ## Current state
 
@@ -72,16 +72,16 @@ the authority for session detail. Reviewed through s1675 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep at generated
-   `updateProbeDroidHopState` / `func_800CA720` at `0x800CA720`
-   (size `0x4B4`). Compare companion mapping if any, generated body,
-   previous and next boundaries, TOML size, and overlay span. Synchronize
-   only on complete independent agreement (generated and overlay already
-   carry the human name; TOML is still `func_800CA720`, so this is likely
-   an H1 rename). s1651–s1665 and s1667–s1675 synchronized or confirmed
-   DAT-item through `initProbeDroidScatterLaunch`; s1650 and s1666
-   were the mandatory retail-entry revisits. The full s1590–s1649 archive
-   is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
-   1,548 placeholder `func_0x...` names remained when counted at s1487.
+   `npcProbeDriod` at `0x800CABD4` (size `0x11CC`). Compare companion
+   mapping if any, generated body, previous and next boundaries, TOML
+   size, and overlay span. Synchronize only on complete independent
+   agreement (generated, overlay, and TOML already carry the companion
+   name `npcProbeDriod`, so this is likely an H3 confirm). s1651–s1665
+   and s1667–s1676 synchronized or confirmed DAT-item through
+   `updateProbeDroidHopState`; s1650 and s1666 were the mandatory
+   retail-entry revisits. The full s1590–s1649 archive is in
+   `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
+   placeholder `func_0x...` names remained when counted at s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
    15-title gate only: C/L/R or valid D-pad **on the arrived 640
    B-frontend**, or any input on the attract 512 it times out into
@@ -213,6 +213,7 @@ ownership.
 | s1673 | Synchronized `initNpcActorVariant` (`0x800CA270`, size `0x134`) after companion mission mapping, live generated NPC-actor-init body (`setNpcHealth`, `initActorMotionParams`, `setObjectDetailLevel`, `initObjectAnimSubstruct`, `setEffectIntensity`), exact `0x800CA26C`/`0x800CA3A4` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `runModelViewerLoop` at `0x800C9BF0` (size `0xA48`) is a different overlay, not a name collision. Next candidate is `func_800CA3A4` / `spawnProbeDroidGroundImpactEffect`. |
 | s1674 | Synchronized `spawnProbeDroidGroundImpactEffect` (`0x800CA3A4`, size `0x1BC`) after companion mission mapping, live generated ground-impact-effect body (`getObjectMeshTransformOrLocal`, `vec3Cross` ×2, `normalize_vector` ×3, `generatePerpEmitDirectionWithJitter`, `tickProgressChannel`, `triggerCueWithSlotEffect`, `play3DSoundEvent`), exact `0x800CA270`/`0x800CA560` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `runModelViewerLoop` at `0x800C9BF0` (size `0xA48`) is a different overlay, not a name collision. Next candidate is `func_800CA560` / `initProbeDroidScatterLaunch`. |
 | s1675 | Synchronized `initProbeDroidScatterLaunch` (`0x800CA560`, size `0x1C0`) after companion mission mapping, live generated scatter-launch-init body (`rand` ×4, `vec3Length`, `normalize_vector`; writes target `+0x6C/+0x70/+0x74`, speed `+0x78`, state halfword `+0xE2=1`), exact `0x800CA3A4`/`0x800CA720` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `initModelViewer` / `buildModelViewerTextPage` at `0x800CA638`/`0x800CA714` are a different overlay, not a name collision. Next candidate is `func_800CA720` / `updateProbeDroidHopState`. |
+| s1676 | Synchronized `updateProbeDroidHopState` (`0x800CA720`, size `0x4B4`) after companion mission mapping, live generated hop-state body (reads/writes state halfword `+0xE2`; state 1 walks toward scatter target `+0x6C/+0x70/+0x74` via `vec3NormalizeInto`/`vec3Length`/`normalize_vector`/`vec3Dot`/`sinfApprox`/`quatFromAxisAngle`/`rotateVec3ByQuat`/`orthonormalizeFrame`; later states `spawnNpcAnchoredEffectSlot`, `wrapAngleToCyclicRange`, `isTerrainCellBlockedAtWorldXz`, `rs_free`), exact `0x800CA560`/`0x800CABD4` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `initModelViewer` / `buildModelViewerTextPage` / `runModelViewerSoundDemo` at `0x800CA638`/`0x800CA714`/`0x800CADB8` are a different overlay, not a name collision. Next candidate is `npcProbeDriod`. |
 
 ## Method and safety rules
 
