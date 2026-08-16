@@ -78987,3 +78987,35 @@ No build or runtime run required.
 Next census: `func_800CD38C` / `spawnAtAtFootstepDustBurst` at `0x800CD38C`
 (size `0x1CC`). Last-15 titles still include s1682, so the next iteration
 may continue the sweep.
+
+## Session 1686 (2026-08-16) — synchronized the spawnAtAtFootstepDustBurst symbol
+
+Exact generated-symbol census for `0x800CD38C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 34006; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `spawnAtAtFootstepDustBurst = 0x800CD38C`. Previous contiguous helper `npcAtAtHandleDestruction = 0x800CCC98`; next contiguous helper `updateAtAtLegArticulation = 0x800CD558` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void spawnAtAtFootstepDustBurst` at VRAM `0x800CD38C`; prologue `addiu $sp, $sp, -0xA0`; returns through `jr $ra` / `addiu $sp, $sp, 0xA0` ending at `0x800CD554`; previous mission function is `npcAtAtHandleDestruction` at `0x800CCC98` (last insn `0x800CD388`); next mission function is `updateAtAtLegArticulation` at `0x800CD558` |
+| Body semantics | Builds a burst-spawn descriptor from float constants `0x800A6E94..0x800A6EC0` and the incoming `$a0` world position, then `isTerrainCellBlockedAtWorldXz` to pick one of two texture bases (`0x80139920` vs `0x801398C0`) and `spawnRandomBurstNpcVariantWrapper`. Two exclusive callers inside `updateAtAtLegArticulation` at `0x800CD684` and `0x800CD6E8`. Name matches the AT-AT footstep dust burst |
+| TOML (before) | `{ name = "func_800CD38C", vram = 0x800CD38C, size = 0x1CC }` — size matches `0x800CD558 - 0x800CD38C` (115 decoded insns, last+4 = `0x1CC`) |
+| Overlay section 4 | `{ .func = spawnAtAtFootstepDustBurst, .offset = 0x0002825C, .rom_size = 0x000001CC }` under `section_4_ovl_mission_funcs` (`0x800CD38C - 0x800A5130 = 0x2825C`; `0x27B68 + 0x6F4 = 0x2825C`; `0x2825C + 0x1CC = 0x28428` matches next `updateAtAtLegArticulation`) |
+| Non-collision | Menu-overlay data `D_800CD438` / `dLevelByDemoId` / `gIntroCrawlTextId` / `hangarSecondaryWeaponStrings` live in `menu_overlay.txt` at the same VRAM window; different overlay, not a name collision |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated footstep-dust-burst body,
+previous (`npcAtAtHandleDestruction` / `0x800CCC98`) and next
+(`updateAtAtLegArticulation` / `0x800CD558`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`spawnAtAtFootstepDustBurst`, and only the TOML name was a stale
+`func_800CD38C` placeholder. Corrected TOML to `spawnAtAtFootstepDustBurst`.
+No build or runtime run required.
+
+Next census: `func_800CD558` / `updateAtAtLegArticulation` at `0x800CD558`
+(size `0x1C4`). Last-15 titles still include s1682, so the next iteration
+may continue the sweep.
