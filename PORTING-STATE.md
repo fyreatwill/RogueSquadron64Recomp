@@ -78955,3 +78955,35 @@ runtime run required.
 Next census: `func_800CCC98` / `npcAtAtHandleDestruction` at `0x800CCC98`
 (size `0x6F4`). Last-15 titles still include s1682, so the next iteration
 may continue the sweep.
+
+## Session 1685 (2026-08-16) — synchronized the npcAtAtHandleDestruction symbol
+
+Exact generated-symbol census for `0x800CCC98` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1682's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 33284; not a maintenance iteration. No new soak-queue verdicts.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcAtAtHandleDestruction = 0x800CCC98`; comment: AT-AT destruction, debris/Type-0xA NPCs, random orientations, 3D sound; exclusively called from `npcAtAtUpdate`. Previous contiguous helper `processAtAtSubFeatureSlot = 0x800CCB1C`; next contiguous helper `spawnAtAtFootstepDustBurst = 0x800CD38C` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void npcAtAtHandleDestruction` at VRAM `0x800CCC98`; prologue `addiu $sp, $sp, -0xC0`; returns through `jr $ra` / `addiu $sp, $sp, 0xC0` ending at `0x800CD388`; previous mission function is `processAtAtSubFeatureSlot` at `0x800CCB1C` (last insn `0x800CCC94`); next mission function is `spawnAtAtFootstepDustBurst` at `0x800CD38C` |
+| Body semantics | Two-way `$a1` dispatch (`0` vs `1`; other values fall through to epilogue). Named calls: `spawnNpcType0xAFromTemplate` ×2, `spawnByteAnimDebrisDefault` ×2, `spawnDebris1Npc` ×2, `spawnOrientedNpc` ×4, `composeRandomRotationMatrix` ×2, `scaleVec3ByRandomRange` ×2, `rand_recomp` ×6, `play3DSoundEvent` ×2, `spawnSplineWalkerCraft` ×3, `lookupHmtTextureByName` ×3, `spawnEffectNpcWithRampedScale`, `spawnDestructionEffectBurst`. Four exclusive `npcAtAtUpdate` callers at `0x800CE4A0`/`0x800CE5C4`/`0x800CEBD8` (`$a1=0`) and `0x800CEC14` (`$a1=1`). Name matches the AT-AT destruction handler |
+| TOML (before) | `{ name = "func_800CCC98", vram = 0x800CCC98, size = 0x6F4 }` — size matches `0x800CD38C - 0x800CCC98` (445 decoded insns, last+4 = `0x6F4`) |
+| Overlay section 4 | `{ .func = npcAtAtHandleDestruction, .offset = 0x00027B68, .rom_size = 0x000006F4 }` under `section_4_ovl_mission_funcs` (`0x800CCC98 - 0x800A5130 = 0x27B68`; `0x279EC + 0x17C = 0x27B68`; `0x27B68 + 0x6F4 = 0x2825C` matches next `spawnAtAtFootstepDustBurst`) |
+| Non-collision | Menu-overlay data `D_800CCCB0` / `D_800CCD10` / `D_800CCD68` / `missionResultTextIds` / `D_800CCDC8` / `D_800CD184` live in `menu_overlay.txt` at the same VRAM window; different overlay, not a name collision |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated AT-AT destruction body,
+previous (`processAtAtSubFeatureSlot` / `0x800CCB1C`) and next
+(`spawnAtAtFootstepDustBurst` / `0x800CD38C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcAtAtHandleDestruction`, and only the TOML name was a stale
+`func_800CCC98` placeholder. Corrected TOML to `npcAtAtHandleDestruction`.
+No build or runtime run required.
+
+Next census: `func_800CD38C` / `spawnAtAtFootstepDustBurst` at `0x800CD38C`
+(size `0x1CC`). Last-15 titles still include s1682, so the next iteration
+may continue the sweep.

@@ -1786,7 +1786,7 @@ functions = [
     { name = "tickAtAtBodyTransform", vram = 0x800CC2AC, size = 0x70C },
     { name = "tickAtAtAudioAndWeaponState", vram = 0x800CC9B8, size = 0x164 },
     { name = "processAtAtSubFeatureSlot", vram = 0x800CCB1C, size = 0x17C },
-    { name = "func_800CCC98", vram = 0x800CCC98, size = 0x6F4 },
+    { name = "npcAtAtHandleDestruction", vram = 0x800CCC98, size = 0x6F4 },
     { name = "func_800CD38C", vram = 0x800CD38C, size = 0x1CC },
     { name = "func_800CD558", vram = 0x800CD558, size = 0x1C4 },
     { name = "npcAtAtUpdate", vram = 0x800CD71C, size = 0x1800 },

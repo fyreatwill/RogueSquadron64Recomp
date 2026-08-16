@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1684 (2026-08-16).
+the authority for session detail. Reviewed through s1685 (2026-08-16).
 
 ## Current state
 
@@ -74,13 +74,13 @@ the authority for session detail. Reviewed through s1684 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. After s1684 the last-15 titles (s1670–s1684) include the s1682
+1. After s1685 the last-15 titles (s1671–s1685) include the s1682
    retail-entry revisit, so the next iteration resumes the generated-
-   symbol census at `func_800CCC98` / `npcAtAtHandleDestruction`
-   at `0x800CCC98` (size `0x6F4`; next companion
-   `spawnAtAtFootstepDustBurst` at `0x800CD38C`). s1651–s1665,
-   s1667–s1681, and s1683–s1684 synchronized or confirmed DAT-item
-   through `processAtAtSubFeatureSlot`; s1650, s1666, and s1682 were
+   symbol census at `func_800CD38C` / `spawnAtAtFootstepDustBurst`
+   at `0x800CD38C` (size `0x1CC`; next companion
+   `updateAtAtLegArticulation` at `0x800CD558`). s1651–s1665,
+   s1667–s1681, and s1683–s1685 synchronized or confirmed DAT-item
+   through `npcAtAtHandleDestruction`; s1650, s1666, and s1682 were
    the mandatory retail-entry revisits. The full s1590–s1649 archive
    is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About
    1,548 placeholder `func_0x...` names remained when counted at
@@ -225,6 +225,7 @@ ownership.
 | s1682 | Rice C/L/R and D-pad on the arrived 640 B-frontend (`1024→640` ~96 s, origin `0x00696100`/`0x00696600`). All 11 arms passed whole-RDRAM, B-pad, hangar, and 640-arrival controls. Presses at 105/115 delivered the expected pad words. Every candidate matched hold: `640→512` attract at 117.7 s (`0x00690400`/`800`), viewer PC 0, hangar-frame 59–62. `0x80000B70` = 1 on hold and every candidate (post-timeout attract path, not the 105/115 press). H2 selected; H1/H3/H4 rejected. First 160 s batch died at the known ~135 s Rice crash before PC flush; `--secs 125` flush exited rc=0. Remaining retail-entry lead is attract-512 input. Next sweep candidate is `func_800CC9B8` / `tickAtAtAudioAndWeaponState`. |
 | s1683 | Synchronized `tickAtAtAudioAndWeaponState` (`0x800CC9B8`, size `0x164`) after companion mission mapping, live generated AT-AT audio/weapon-state tick (`clearModelAnimChannelEntry`, `releaseModelAnimSlot`, `play3DSoundEvent`, `initActorRenderDescriptorWithNpcVelocity`, `flattenAnimTreeAndAllocateSlot`, `markModelAnimChannelEntryActive`, `setModelAnimSlotCycleDuration`), exact `0x800CC2AC`/`0x800CCB1C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `fake_func_800CC3D4` at `0x800CC3D4` is a different overlay, not a name collision. Next candidate is `func_800CCB1C` / `processAtAtSubFeatureSlot`. |
 | s1684 | Synchronized `processAtAtSubFeatureSlot` (`0x800CCB1C`, size `0x17C`) after companion mission mapping, live generated AT-AT sub-feature slot tick (`lookupHmtTextureByName` on stack name `sf`+(`'1'`+byte `+0x6E`), `findActiveNpcInSlotChain`, `getNpcContextField8`, range test vs scaled `+0x54`, `slotDispatcherIter` type 9, `revalidateNpcSlotIterator`, `+0x6E` modulo-4), exact `0x800CC9B8`/`0x800CCC98` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay `fake_func_800CC3D4` at `0x800CC3D4` is a different overlay, not a name collision. Next candidate is `func_800CCC98` / `npcAtAtHandleDestruction`. |
+| s1685 | Synchronized `npcAtAtHandleDestruction` (`0x800CCC98`, size `0x6F4`) after companion mission mapping, live generated AT-AT destruction body (`spawnNpcType0xAFromTemplate` ×2, `spawnByteAnimDebrisDefault` ×2, `spawnDebris1Npc` ×2, `spawnOrientedNpc` ×4, `composeRandomRotationMatrix` ×2, `scaleVec3ByRandomRange` ×2, `rand_recomp` ×6, `play3DSoundEvent` ×2, `spawnDestructionEffectBurst`), exact `0x800CCB1C`/`0x800CD38C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. Menu-overlay data `D_800CCCB0`/`D_800CCD10`/`D_800CD184` at the same VRAM window is a different overlay, not a name collision. Next candidate is `func_800CD38C` / `spawnAtAtFootstepDustBurst`. |
 
 ## Method and safety rules
 
