@@ -73899,3 +73899,49 @@ body ends at independently named generated `destroyAllNpcsInSlotChain`
 `0x800AF03C`. Mission-overlay `tickCutsceneObject` at `0x800AF04C`
 continues `playCutsceneObjectImpactSound` and occupies overlapping
 VRAM from `.ovl.mission`.
+
+## Session 1532 (2026-08-15) — synchronized the lookup-cutscene-id-mapping symbol
+
+Performed the bounded exact-name census over `0x800AF03C..0x800AF08C`.
+
+No new soak-queue verdicts since s1531; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1528 (Rice post-hangar
+leave-to-640 revisit), so the every-15-sessions sweep-revisit rule did not
+fire. CURRENT-TRUTH is 54487 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AF03C`, size `0x50`; `0x800AF03C+0x50=0x800AF08C`. Overlay `.ovl.cinematic` entry `rom_size` is `0x50` at offset `0x00009F0C` (`0x800AF03C-0x800A5130`). Live body is independently `0x50` and meets independently named `destroyAllNpcsInSlotChain` at `0x800AF08C` |
+| Generated definition | `funcs_29.c` defines `lookupCutsceneIdMapping` at `0x800AF03C`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x00009F0C`, `rom_size 0x00000050`). The live cinematic body is a complete `0x50` function: `ori $a2, $zero, 0xFFFF` / `addu $a1, $zero, $zero` / `lui $v0, 0x800B` / `addiu $a3, $v0, -0x84C` (table `0x800AF7B4`). Loop at `0x800AF050` does `sll $v0, $v0, 2` / `addu $v1, $v0, $a3` / `lhu $v0, 0($v1)` and on key==`$a0` loads `lhu $a2, 2($v1)` then `jr $ra` / `addu $v0, $a2, $zero`. Miss path does `sltiu $v0, $a1, 0x5E` / `bne` continues while `$a1<94` and otherwise returns the `0xFFFF` default in `$a2`. Last live instruction pair is `0x800AF084`/`0x800AF088` (`jr $ra` / `nop`). Next generated cinematic function is independently named `destroyAllNpcsInSlotChain`. Independently named `insertCutsceneSlot` at `0x800AEFF0` (`rom_size` `0x4C`) ends at this address. Menu-overlay `initCraftSelectScreen` / TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends `0x800AF3C0`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and occupies overlapping VRAM from `.ovl.mission`; it appears after `lookupCutsceneIdMapping` in `funcs_29.c` only because of that shared window |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `lookupCutsceneIdMapping = 0x800AF03C` (`key:u16` linear search of the 94-entry `{u16 key, u16 value}` table at `MEM[0x800AF7B4]`; returns the value or `0xFFFF`) and independently names `gCutsceneIdMappingTable = 0x800AF7B4` (size `0x178` = `94*4`). Menu, mission, main, libultra, ignored, and zlib lists do not remap `0x800AF03C`. The same cinematic list independently names the adjacent functions `insertCutsceneSlot` at `0x800AEFF0` and `destroyAllNpcsInSlotChain` at `0x800AF08C`. No conflicting companion name for this cinematic address |
+| Caller evidence | One retail `jal` encoding `0x0C02BC0F` and zero `j` or absolute `0x800AF03C` pointer words. The site is independently named `spawnCutsceneEffectsAndCues` at `0x800A8F9C` (file `0x13B3EC`; prev `0x94510000` `lhu $s1, 0($v0)`; delay `0x02202021` `addu $a0, $s1, $zero`). Same-run ROM word at that file offset is `0x0C02BC0F`. The generated caller is the matching `funcs_27.c` `jal 0x800AF03C` site inside `spawnCutsceneEffectsAndCues` (`0x800A89B0`, size `0xBEC`). Immediately before the `jal` the caller indexes the same `0x800AF7B4` table (`addiu $v1, $v1, -0x84C`) and after it calls independently named `findAudioChannelById`. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x14148C` (`0x137580+(0x800AF03C-0x800A5130)`) are `0x3406FFFF` (`ori $a2, $zero, 0xFFFF`), `0x00002821` (`addu $a1, $zero, $zero`), `0x3C02800B` (`lui $v0, 0x800B`), `0x2447F7B4` (`addiu $a3, $v0, 0xF7B4` → `0x800AF7B4`), `0x30A2FFFF` (`andi $v0, $a1, 0xFFFF`), `0x00021080` (`sll $v0, $v0, 2`), `0x00471821` (`addu $v1, $v0, $a3`), `0x94620000` (`lhu $v0, 0($v1)`), `0x14440004` (`bne $v0, $a0, L_800AF070`), `0x24A50001` (`addiu $a1, $a1, 1`), `0x94660002` (`lhu $a2, 2($v1)`), `0x03E00008`/`0x00C01021` (`jr $ra` / `addu $v0, $a2, $zero`), `0x30A2FFFF` (`andi $v0, $a1, 0xFFFF`), `0x2C42005E` (`sltiu $v0, $v0, 0x5E`), `0x1440FFF5` (`bne $v0, $zero, L_800AF050`), `0x30A2FFFF` (`andi $v0, $a1, 0xFFFF`), `0x00C01021` (`addu $v0, $a2, $zero`), `0x03E00008`/`0x00000000` (`jr $ra` / `nop`). Next start file `0x1414DC` is `0x27BDFFD8` (`destroyAllNpcsInSlotChain` `addiu $sp, $sp, -0x28`). Preceding epilogue file `0x141488` is `0x27BD0018` (`insertCutsceneSlot` `addiu $sp, $sp, 0x18`). The body linearly searches 94 (`0x5E`) `{u16 key, u16 value}` entries at `MEM[0x800AF7B4]` and returns the matching value or `0xFFFF`. Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x14148C` is `0x3406FFFF`, the caller `jal` word above is `0x0C02BC0F`, and the s1531/s1530/s1529/s1527/s1526/s1525/s1524/s1523/s1522/s1521/s1520/s1519/s1518/s1517/s1516/s1515/s1514 controls still read `0x27BDFFE8` at `0x141440`, `0x00002021` at `0x141418`, `0x27BDFFD8` at `0x141380`, `0x27BDFF98` at `0x141264`, `0x27BDFFC0` at `0x141098`, `0x44850000` at `0x141020`, `0x27BDFFE8` at `0x140FCC`, `0x27BDFFE8` at `0x140F88`, `0x03E00008` at `0x140F80`, `0x3C02800B` at `0x140E68`, `0x308300FF` at `0x140DDC`, `0x30A700FF` at `0x140D78`, `0x27BDFFE8` at `0x140CC8`, `0x27BDFF78` at `0x140968`, `0x27BDFF20` at `0x1403C4`, `0x27BDFF80` at `0x140048`, and `0x27BDFFB0` at `0x13FAE0` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AF03C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x50`, the one ROM `jal` caller is independently named
+`spawnCutsceneEffectsAndCues`, the overlapping menu and mission functions
+are different overlays, and there is neither a conflicting companion
+name nor a cinematic size split. H2 and H3 are ruled out for this
+address. The stale address-encoded TOML entry was synchronized (name
+only; size left at `0x50`). `func_8009D978` remains the eight-byte Q15
+delay-mix table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated cinematic function is independently named
+`destroyAllNpcsInSlotChain` at `0x800AF08C` (TOML still `func_800AF08C`,
+size `0x60`; overlay `rom_size` is `0x60` at offset `0x00009F5C`; live
+body ends at independently named generated `maybeLoadYwingCutscene`
+/ TOML `func_800AF0EC` at `0x800AF0EC`). Independently named
+`lookupCutsceneIdMapping` at `0x800AF03C` (`rom_size` `0x50`) ends at
+`0x800AF08C`. Mission-overlay `tickCutsceneObject` at `0x800AF04C`
+continues `playCutsceneObjectImpactSound` and occupies overlapping
+VRAM from `.ovl.mission`.

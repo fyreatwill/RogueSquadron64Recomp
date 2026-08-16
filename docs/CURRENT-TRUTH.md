@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1531 (2026-08-15).
+the authority for session detail. Reviewed through s1532 (2026-08-15).
 
 ## Current state
 
@@ -63,7 +63,7 @@ the authority for session detail. Reviewed through s1531 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AF03C..0x800AF08C`.
+   adjacent function, `0x800AF08C..0x800AF0EC`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -146,21 +146,23 @@ the authority for session detail. Reviewed through s1531 (2026-08-15).
    synchronized `tickCutsceneNpcSlots` at `0x800AEE14`. s1529
    synchronized `despawnCutsceneNpcSlot` at `0x800AEF30`. s1530
    synchronized `initCutsceneSlotTable` at `0x800AEFC8`. s1531
-   synchronized `insertCutsceneSlot` at `0x800AEFF0`. The
-   generated entry at `0x800AF03C` is already
-   `lookupCutsceneIdMapping`; the companion cinematic list maps
-   `lookupCutsceneIdMapping = 0x800AF03C` (`key:u16` linear search
-   of the 94-entry `{u16 key, u16 value}` table at
-   `MEM[0x800AF7B4]`; returns the value or `0xFFFF`). TOML is
-   still `func_800AF03C` (size `0x50`, ends at independently
-   named generated `destroyAllNpcsInSlotChain` / TOML
-   `func_800AF08C` at `0x800AF08C`). Overlay `rom_size` is `0x50`
-   at offset `0x00009F0C`. Confirm the complete live function,
+   synchronized `insertCutsceneSlot` at `0x800AEFF0`. s1532
+   synchronized `lookupCutsceneIdMapping` at `0x800AF03C`. The
+   generated entry at `0x800AF08C` is already
+   `destroyAllNpcsInSlotChain`; the companion cinematic list maps
+   `destroyAllNpcsInSlotChain = 0x800AF08C` (`slotIdx u32` —
+   reads halfword at `gActiveSlots[slotIdx]` (`0x80139560 +
+   slotIdx*2`), calls `findActiveNpcInSlotChain` and
+   `destroyNpcSlotByIndex` until the chain returns `0xFFFF`).
+   TOML is still `func_800AF08C` (size `0x60`, ends at
+   independently named generated `maybeLoadYwingCutscene` / TOML
+   `func_800AF0EC` at `0x800AF0EC`). Overlay `rom_size` is `0x60`
+   at offset `0x00009F5C`. Confirm the complete live function,
    matching size, and caller/semantic evidence before
    synchronizing the TOML name. Independently named
-   `insertCutsceneSlot` at `0x800AEFF0` (`rom_size` `0x4C`) ends
-   at this address. Menu-overlay `initCraftSelectScreen` / TOML
-   `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends
+   `lookupCutsceneIdMapping` at `0x800AF03C` (`rom_size` `0x50`)
+   ends at this address. Menu-overlay `initCraftSelectScreen` /
+   TOML `func_800AEC60` at `0x800AEC60` (`rom_size` `0x760`, ends
    `0x800AF3C0`) occupies overlapping VRAM from `.ovl.menu` and
    is not a cinematic size split. Mission-overlay
    `tickCutsceneObject` at `0x800AF04C` continues
@@ -530,6 +532,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1529 | Exact companion/generated cinematic-NPC census synchronized `despawnCutsceneNpcSlot` at `0x800AEF30`; no build or runtime run. |
 | s1530 | Exact companion/generated cinematic-slot census synchronized `initCutsceneSlotTable` at `0x800AEFC8`; no build or runtime run. |
 | s1531 | Exact companion/generated cinematic-slot census synchronized `insertCutsceneSlot` at `0x800AEFF0`; no build or runtime run. |
+| s1532 | Exact companion/generated cinematic-lookup census synchronized `lookupCutsceneIdMapping` at `0x800AF03C`; no build or runtime run. |
 
 ## Method and safety rules
 
