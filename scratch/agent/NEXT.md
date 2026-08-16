@@ -1,12 +1,11 @@
-# NEXT work unit (s1545)
+# NEXT work unit (s1546)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1544 was the mandatory every-15-sessions revisit (Rice 640-identity:
-menu overlay stays resident; not mission/cinematic/hangar-tick;
-post-settle Start/B do not advance). Resume the generated-symbol
-renaming sweep. Perform exactly one bounded exact-name census over
-the next adjacent generated function, `0x800AF65C..0x800AF668`.
+s1545 synchronized `getCinematicStateSubObject` at `0x800AF65C`.
+Resume the generated-symbol renaming sweep. Perform exactly one
+bounded exact-name census over the next adjacent generated function,
+`0x800AF668..0x800AF6A8`.
 Do not build or run. Record its address, size, generated definition,
 companion name/source, caller or semantic evidence, and confidence
 before editing. Synchronize only an exact independent name in
@@ -30,21 +29,23 @@ one-instruction `mtc1 $zero, $f4` fragment),
 `func_8009D8BC` unchanged (s1477: eight-byte PC-relative packed-nibble
 table, not a function), and `func_8009D978` unchanged (s1478:
 eight-byte PC-relative Q15 delay-mix table, not a function). The
-generated entry at this address is already `getCinematicStateSubObject`;
-the companion cinematic list maps `getCinematicStateSubObject = 0x800AF65C`.
-TOML is still `func_800AF65C` (size `0xC`, ends at independently
-named generated `cinematicInterpRatio` / TOML `func_800AF668` at
-`0x800AF668`). Overlay `rom_size` is `0xC` at offset `0x0000A52C`.
-Confirm the complete live function, matching size, and caller/semantic
-evidence before synchronizing the TOML name. Independently named
-`cinematicDeactivator` at `0x800AF60C` (`rom_size` `0x50`) ends at
-this address. The generated body is `lw $v0, 0xC($a0)` / `jr $ra` /
-`nop`. Last live instruction pair is `0x800AF660`/`0x800AF664`
-(`jr $ra` / `nop`). Generated callers include independently named
-`setupCutsceneLevel` (`0x800A6E08`, `0x800A6F04`, `0x800A6F24`,
-`0x800A6F40`), `computeCutsceneScreenScale` (`0x800AD25C`,
-`0x800AD310`, `0x800AD3A4`), and
-`tickCutsceneCameraFromTimeline` (`0x800AD6BC`). Menu-overlay
+generated entry at this address is already `cinematicInterpRatio`;
+the companion cinematic list maps `cinematicInterpRatio = 0x800AF668`
+(comment: computes interpolation ratio from byte counter / float
+threshold). TOML is still `func_800AF668` (size `0x40`, ends at
+already-fake generated `fake_func_800AF6A8` / TOML
+`fake_func_800AF6A8` at `0x800AF6A8`). Overlay `rom_size` is `0x40`
+at offset `0x0000A538`. Confirm the complete live function, matching
+size, and caller/semantic evidence before synchronizing the TOML
+name. Independently named `getCinematicStateSubObject` at
+`0x800AF65C` (`rom_size` `0xC`) ends at this address. The generated
+body loads `MEM_W(0x800B0934)`, early-outs if that cinematic state
+pointer is null, otherwise loads the sub-object at `state+0xC`,
+reads the byte at `+0x2F`, converts it to float, divides by a float
+threshold, and subtracts from a second float constant. Last live
+instruction pair is `0x800AF6A0`/`0x800AF6A4` (`jr $ra` /
+`mov.s $f0, $f4`). Generated caller is independently named
+`cinematicLoopBody` at `0x800A607C`. Menu-overlay
 `tickCraftSelectScreen` / TOML `func_800AF3C0` at `0x800AF3C0`
 (`rom_size` `0x2EC`, ends `0x800AF6AC`) occupies overlapping VRAM
 and is a different overlay, not a cinematic size split.
@@ -77,7 +78,7 @@ selects H2; and no independent name selects H3.
 Commands:
 
 ```
-grep -n -C 5 '800AF65C\|800AF668\|getCinematicStateSubObject' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
-grep -n -C 4 '800AF65C\|800AF668\|getCinematicStateSubObject' ../N64Recomp/RecompiledFuncs/funcs_29.c
-grep -n -C 3 '800AF65C\|800AF668' syms/rogue_squadron.syms.toml
+grep -n -C 5 '800AF668\|800AF6A8\|cinematicInterpRatio' ../rogue_squadron64/symbol_files/cinematic_overlay.txt
+grep -n -C 4 '800AF668\|800AF6A8\|cinematicInterpRatio' ../N64Recomp/RecompiledFuncs/funcs_29.c
+grep -n -C 3 '800AF668\|800AF6A8' syms/rogue_squadron.syms.toml
 ```

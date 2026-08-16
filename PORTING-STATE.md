@@ -74495,3 +74495,48 @@ line. No mitigation.
 ORIGIN: observational oracle A/B plus already-named `loadOverlay`
 paths and companion frontend symbols; no guest value was skipped,
 rewritten, or guarded.
+
+## Session 1545 (2026-08-15) — synchronized the get-cinematic-state-sub-object symbol
+
+Performed the bounded exact-name census over `0x800AF65C..0x800AF668`.
+
+No new soak-queue verdicts since s1544; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it. The last 15 session titles include s1544 (Rice 640-identity
+revisit), so the every-15-sessions sweep-revisit rule did not fire.
+CURRENT-TRUTH is 58186 bytes at session start, so Step 0 did not
+trigger a maintenance iteration. M5 remains closed and M3 remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800AF65C`, size `0xC`; `0x800AF65C+0xC=0x800AF668`. Overlay `.ovl.cinematic` entry `rom_size` is `0xC` at offset `0x0000A52C` (`0x800AF65C-0x800A5130`). Live body is independently `0xC` and meets independently named `cinematicInterpRatio` at `0x800AF668` |
+| Generated definition | `funcs_29.c` defines `getCinematicStateSubObject` at `0x800AF65C`; `funcs.h` and `recomp_overlays.inl` already use that name (`offset 0x0000A52C`, `rom_size 0x0000000C`). The live cinematic body is a complete `0xC` function: `lw $v0, 0xC($a0)` / `jr $ra` / `nop` (`return MEM_W(a0+0xC)`). Last live instruction pair is `0x800AF660`/`0x800AF664` (`jr $ra` / `nop`). Next generated cinematic function is independently named `cinematicInterpRatio`. Independently named `cinematicDeactivator` at `0x800AF60C` (`rom_size` `0x50`) ends at this address. Menu-overlay `tickCraftSelectScreen` / TOML `func_800AF3C0` at `0x800AF3C0` (`rom_size` `0x2EC`, ends `0x800AF6AC`) occupies overlapping VRAM from `.ovl.menu` and is not a split of this body. Mission-overlay `tickCutsceneObject` at `0x800AF04C` continues `playCutsceneObjectImpactSound` / TOML `func_800AEF58` at `0x800AEF58` (size `0xF4`, ends `0x800AF04C`) and occupies overlapping VRAM from `.ovl.mission` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `getCinematicStateSubObject = 0x800AF65C`. The same cinematic list independently names the adjacent functions `cinematicDeactivator` at `0x800AF60C` and `cinematicInterpRatio` at `0x800AF668`. Menu, mission, libultra, ignored, and zlib lists do not remap `0x800AF65C`. Menu maps `tickCraftSelectScreen = 0x800AF3C0` as a different-overlay occupant of the same VRAM window. No conflicting companion name for this cinematic address |
+| Caller evidence | Eight retail `jal` encodings `0x0C02BD97` and zero `j` or absolute `0x800AF65C` pointer words. The sites are independently named `setupCutsceneLevel` at `0x800A6E08` / `0x800A6F04` / `0x800A6F24` / `0x800A6F40` (files `0x139258` / `0x139354` / `0x139374` / `0x139390`), `computeCutsceneScreenScale` at `0x800AD25C` / `0x800AD310` / `0x800AD3A4` (files `0x13F6AC` / `0x13F760` / `0x13F7F4`), and `tickCutsceneCameraFromTimeline` at `0x800AD6BC` (file `0x13FB0C`). Same-run ROM words at those file offsets are all `0x0C02BD97`. Generated callers are the matching `funcs_27.c` / `funcs_28.c` `jal 0x800AF65C` sites; each delay/next instruction copies `$v0` into `$a1` as the sub-object for a subsequent lookup or scale write. Zero `func_*` callers |
+| Semantic evidence | Retail ROM words at file `0x141AAC` (`0x137580+(0x800AF65C-0x800A5130)`) are `0x8C82000C` (`lw $v0, 0xC($a0)`), `0x03E00008` (`jr $ra`), `0x00000000` (`nop`). Last pair file `0x141AB0`/`0x141AB4` is `0x03E00008`/`0x00000000`. Next start file `0x141AB8` is `0x3C02800B` (`cinematicInterpRatio` `lui $v0, 0x800B`). Preceding epilogue file `0x141AA4`/`0x141AA8` is `0x03E00008`/`0x27BD0018` (`cinematicDeactivator` `jr $ra` / `addiu $sp, $sp, 0x18`). `cinematicDeactivator` independently treats `state+0xC` as the lookup-table object passed to `removeLookupTableEntry`; `cinematicInterpRatio` independently inlines `lw $v0, 0xC($v0)` after loading the cinematic state pointer at `0x800B0934`. Same-run positive controls: overlay base `0x137580` is `0x08000000`, this function file `0x141AAC` is `0x8C82000C`, the eight caller `jal` words above are `0x0C02BD97`, the s1543 function file `0x141A5C` is still `0x27BDFFE8`, the s1542 function file `0x1419A0` is still `0x3C02800B`, the s1541 function file `0x141990` is still `0x3C02800B`, and the s1540 initializer start `0x141858` is still `0x27BDFFD8` |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800AF65C`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0xC`, the eight ROM `jal` callers are independently named
+cinematic setup/scale/camera functions that consume the `+0xC`
+sub-object, the overlapping menu and mission functions are different
+overlays, and there is neither a conflicting companion name nor a
+cinematic size split. H2 and H3 are ruled out for this address. The
+stale address-encoded TOML entry was synchronized (name only; size
+left at `0xC`). `func_8009D978` remains the eight-byte Q15 delay-mix
+table and was left unchanged, as were `func_8009D8BC`,
+`fake_func_8009D7CC`, `fake_func_8009C2C8`, `fake_func_80099FDC`,
+`fake_func_80099C4C`, `fake_func_80097D58`, `fake_func_8009711C`,
+`fake_func_80094348`, `fake_func_80093E74`, `func_800927B0`,
+`func_80092A54`, `func_80092CF0`, `func_80092F10`, and
+`func_8008ED6C`. No build or runtime run was justified for an
+exact-name census. This does not reopen M5 audio de-stubbing. The next
+adjacent generated cinematic function is independently named
+`cinematicInterpRatio` at `0x800AF668` (TOML still `func_800AF668`,
+size `0x40`; overlay `rom_size` is `0x40` at offset `0x0000A538`;
+live body ends at already-fake generated `fake_func_800AF6A8` / TOML
+`fake_func_800AF6A8` at `0x800AF6A8`). Independently named
+`getCinematicStateSubObject` at `0x800AF65C` (`rom_size` `0xC`) ends
+at `0x800AF668`.

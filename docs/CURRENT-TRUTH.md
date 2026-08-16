@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1544 (2026-08-15).
+the authority for session detail. Reviewed through s1545 (2026-08-15).
 
 ## Current state
 
@@ -72,7 +72,7 @@ the authority for session detail. Reviewed through s1544 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads; s1544 was that revisit) with one bounded exact-name
-   census over the next adjacent function, `0x800AF65C..0x800AF668`.
+   census over the next adjacent function, `0x800AF668..0x800AF6A8`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -168,19 +168,28 @@ the authority for session detail. Reviewed through s1544 (2026-08-15).
    `0x800AF408`. s1541 synchronized `isCinematicActive` at
    `0x800AF540`. s1542 synchronized `cinematicStageAdvancer` at
    `0x800AF550`. s1543 synchronized `cinematicDeactivator`
-   at `0x800AF60C`.
-   The generated entry at `0x800AF65C` is already
-   `getCinematicStateSubObject`; the companion cinematic list
-   maps `getCinematicStateSubObject = 0x800AF65C`. TOML is
-   still `func_800AF65C` (size `0xC`, ends at independently
-   named generated `cinematicInterpRatio` / TOML
-   `func_800AF668` at `0x800AF668`). Overlay `rom_size` is
-   `0xC` at offset `0x0000A52C`. Confirm the complete live
-   function, matching size, and caller/semantic evidence
-   before synchronizing the TOML name. Independently named
-   `cinematicDeactivator` at `0x800AF60C` (`rom_size` `0x50`)
-   ends at this address. The generated body is
-   `lw $v0, 0xC($a0)` / `jr $ra` / `nop`. Menu-overlay
+   at `0x800AF60C`. s1545 synchronized
+   `getCinematicStateSubObject` at `0x800AF65C`.
+   The generated entry at `0x800AF668` is already
+   `cinematicInterpRatio`; the companion cinematic list
+   maps `cinematicInterpRatio = 0x800AF668` (comment:
+   computes interpolation ratio from byte counter / float
+   threshold). TOML is still `func_800AF668` (size `0x40`,
+   ends at already-fake generated `fake_func_800AF6A8` /
+   TOML `fake_func_800AF6A8` at `0x800AF6A8`). Overlay
+   `rom_size` is `0x40` at offset `0x0000A538`. Confirm the
+   complete live function, matching size, and caller/semantic
+   evidence before synchronizing the TOML name. Independently
+   named `getCinematicStateSubObject` at `0x800AF65C`
+   (`rom_size` `0xC`) ends at this address. The generated
+   body loads `MEM_W(0x800B0934)`, early-outs if that
+   cinematic state pointer is null, otherwise loads the
+   sub-object at `state+0xC`, reads the byte at `+0x2F`,
+   converts it to float, divides by a float threshold, and
+   subtracts from a second float constant. Last live
+   instruction pair is `0x800AF6A0`/`0x800AF6A4` (`jr $ra` /
+   `mov.s $f0, $f4`). Generated caller is independently
+   named `cinematicLoopBody` at `0x800A607C`. Menu-overlay
    `tickCraftSelectScreen` / TOML `func_800AF3C0` at
    `0x800AF3C0` (`rom_size` `0x2EC`, ends `0x800AF6AC`)
    occupies overlapping VRAM from `.ovl.menu` and is not a
@@ -568,6 +577,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1541 | Exact companion/generated cinematic-predicate census synchronized `isCinematicActive` at `0x800AF540`; no build or runtime run. |
 | s1542 | Exact companion/generated cinematic-stage census synchronized `cinematicStageAdvancer` at `0x800AF550`; no build or runtime run. |
 | s1543 | Exact companion/generated cinematic-teardown census synchronized `cinematicDeactivator` at `0x800AF60C`; no build or runtime run. |
+| s1545 | Exact companion/generated cinematic-getter census synchronized `getCinematicStateSubObject` at `0x800AF65C`; no build or runtime run. |
 
 ## Method and safety rules
 
