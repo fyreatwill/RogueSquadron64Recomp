@@ -75995,3 +75995,34 @@ only the TOML name; no build or runtime run was justified for this exact-name
 census. The next bounded candidate is `func_800B88C8`, independently named
 `emitTexturedEffectCue`, with size `0x12C`; `fake_func_800B89F4` begins at
 `0x800B89F4`. This naming change does not reopen M5 audio de-stubbing.
+
+## Session 1583 (2026-08-16) — synchronized the emitTexturedEffectCue symbol
+
+Performed the bounded exact-name census over `0x800B88C8..0x800B89F4`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 22,719 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail had no newer queued verdict
+requiring analysis. The last-15 title check included s1569's non-sweep
+retail-entry revisit, so the sweep-revisit rule did not fire. M5 remains
+closed and M3 remains parked.
+
+The competing hypotheses were H1 (an exact independent companion mapping), H2
+(a partial, conflicting, or span-mismatched mapping), and H3 (a fragment,
+data-like region, or missing independent name). The complete comparison
+selected H1:
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B88C8` at `0x800B88C8` with size `0x12C`; the companion `../rogue_squadron64/symbol_files/mission_overlay.txt` independently maps `emitTexturedEffectCue = 0x800B88C8`. The next fake gap begins at `0x800B89F4`, exactly `0x12C` later. |
+| Generated definition | `../N64Recomp/RecompiledFuncs/funcs_31.c` defines `emitTexturedEffectCue` at `0x800B88C8`; its existing generated name agrees with the companion mapping. |
+| Caller and semantic evidence | No generated caller reference was present in the bounded repository census. The generated body performs HMT texture lookup, optional vector accumulation, cue dispatch, and writes the resulting three-word effect record, which is consistent with the independent `emitTexturedEffectCue` semantic name. |
+| Confidence | High |
+
+H2 is ruled out because the companion mapping, generated definition, TOML
+size, and exact next-function boundary agree. H3 is ruled out by the
+independent companion name, generated definition, exact span, and semantic
+evidence. Updated only the TOML name; no build or runtime run was justified
+for this exact-name census. The next bounded candidate is `func_800B8C30`,
+independently named `updateVwingEngineEffect`, with size `0x9B0`; the next
+function begins at `0x800B95E0`. This naming change does not reopen M5 audio
+de-stubbing.

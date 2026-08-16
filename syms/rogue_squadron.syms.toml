@@ -1637,7 +1637,7 @@ functions = [
     { name = "orientEffectToVelocity", vram = 0x800B7A4C, size = 0x3B0 },
     { name = "spawnTexturedExplosionBurst", vram = 0x800B7DFC, size = 0x68C },
     { name = "playerYwingUpdate", vram = 0x800B8488, size = 0x440 },
-    { name = "func_800B88C8", vram = 0x800B88C8, size = 0x12C },
+    { name = "emitTexturedEffectCue", vram = 0x800B88C8, size = 0x12C },
     { name = "fake_func_800B89F4", vram = 0x800B89F4, size = 0xC },
     { name = "playerVwingInit", vram = 0x800B8A00, size = 0x230 },
     { name = "func_800B8C30", vram = 0x800B8C30, size = 0x9B0 },
