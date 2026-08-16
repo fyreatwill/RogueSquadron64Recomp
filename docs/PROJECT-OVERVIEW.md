@@ -2942,7 +2942,7 @@ iteration on the retail-entry boundary or the M4 accumulator boundary
 instead. s1569 was the last such revisit (leave-hangar 640 is
 `runModelViewerLoop`).
 
-## 34. Recent sweep and Rice-route updates (s1590–s1637)
+## 34. Recent sweep and Rice-route updates (s1590–s1639)
 
 This section archives the post-§33 work that was compacted out of
 `CURRENT-TRUTH.md` during the s1638 maintenance pass. The sweep continued its
@@ -2965,8 +2965,9 @@ or runtime run.
 | s1630–s1635 | Synchronized `tickHangarDisplayItemAnimations` (`0x800C65CC`), `hangarVehicleDisplayNpcHandler` (`0x800C68A0`), `applyNpcPositionDrift` (`0x800C6FFC`), `accumulateVectorInObjectFrame` (`0x800C713C`), `getConfigFloatValue` (`0x800C722C`), and `findNamedEntryInCurrentObject` (`0x800C723C`). |
 | s1636 | Rice hold, `cup`, `cdown`, `cleft`, `cright`, `L`, and `R` all passed whole-RDRAM/PIF/VI controls and converged on `320→640→1024→512→640`; each hit viewer PC `0x800C9BF0` once, with mission PC `0x80000B70` and selector writes zero. H2 selected for these controls. |
 | s1637 | Synchronized `dispatchObjectiveSlot1` at `0x800C72E8` (size `0x38`); companion mapping, generated dispatcher/caller, exact adjacent boundaries, section-4 span, and TOML size agree. Next census: `func_800C7358`, companion name `checkComplexObjectives`, size `0x38`. |
+| s1639 | Confirmed `checkComplexObjectives` at `0x800C7358` (size `0x38`) was already synchronized across companion mapping, live generated dispatcher, TOML, and section-4 span. No source-map edit was needed. Next census: `func_800C7648`, companion name `getAndSetByteAtLevelStateTable`, size `0x18`. |
 
-The sweep cursor after s1637 is `func_800C7358`. The parked entries and the
+The sweep cursor after s1639 is `func_800C7648`. The parked entries and the
 every-15-session revisit rule remain those recorded in §33 and the live truth
 file. The Rice route is now the only valid later-phase oracle recipe; dummy
 video's 320-only results are not evidence about hangar or mission entry.

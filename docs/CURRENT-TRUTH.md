@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1638 (2026-08-16).
+the authority for session detail. Reviewed through s1639 (2026-08-16).
 
 ## Current state
 
@@ -62,10 +62,12 @@ the authority for session detail. Reviewed through s1638 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep. The next exact census is
-   `func_800C7358`, independently named `checkComplexObjectives`, size
-   `0x38`. Compare companion mapping, generated body, callers/semantics,
-   previous and next boundaries, TOML size, and overlay span. Synchronize only
-   on complete independent agreement. The full s1590–s1637 archive is in
+   `func_800C7648`, independently named `getAndSetByteAtLevelStateTable`,
+   size `0x18`. Compare companion mapping/callers and semantics, generated
+   body, previous and next boundaries, TOML size, and overlay span.
+   Synchronize only on complete independent agreement. The s1639 census
+   confirmed `checkComplexObjectives` was already synchronized; no source-map
+   edit was needed. The full s1590–s1639 archive is in
    `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33. About 1,548
    placeholder `func_0x...` names remained when counted at s1487.
 2. Use the Rice `--video` oracle recipe for one genuinely new route that may
@@ -159,6 +161,7 @@ ownership.
 | s1240–s1589 | Exact companion/generated symbol sweep through `triggerFalconEngineEffect`; s1585 was the required retail-entry revisit. Full archive: `PROJECT-OVERVIEW.md` §33. |
 | s1590–s1637 | Continued exact sweep through `dispatchObjectiveSlot1`, with M4 revisit s1602 and Rice route/input revisits s1616, s1620, and s1636. Full archive: `PROJECT-OVERVIEW.md` §34. |
 | s1638 | Maintenance compaction only; no experiment or code change. |
+| s1639 | Confirmed `checkComplexObjectives` (`0x800C7358`, size `0x38`) already agrees across companion mapping, generated body, TOML, and section-4 overlay span; next candidate is `func_800C7648`. |
 
 ## Method and safety rules
 

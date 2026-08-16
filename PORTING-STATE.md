@@ -77469,3 +77469,31 @@ H1 is selected. H2 is ruled out by the matching mission mapping and overlay
 ownership; H3 is ruled out by the live generated body and exact adjacent
 boundaries. Updated only the stale project TOML placeholder. No build or
 runtime behavior conclusion was made.
+
+## Session 1639 (2026-08-16) — confirmed the checkComplexObjectives symbol
+
+Ran the exact generated-symbol census for `0x800C7358` without building or
+running. The competing hypotheses were H1: an independently supported
+mission-overlay name and exact generated/TOML/overlay span justify
+synchronization; H2: the matching name belongs to another overlay/context;
+and H3: no independent name is available, a boundary conflicts, or the entry
+is data-like. The complete companion/generated/TOML/overlay comparison was
+the discriminator.
+
+The companion mission map names `checkComplexObjectives` at `0x800C7358` and
+identifies it as the current-level objective-vtable slot-3 dispatcher. The
+companion objective layout independently assigns that operation to field
+`0xC`. The generated `funcs_35.c` definition already carries the human name
+and implements the live `0x38`-byte dispatcher: it loads the current level,
+indexes `D_8010A450`, loads slot `0xC`, and calls it. Its exact preceding
+boundary is `calculateFriendliesSaved` at `0x800C7320`; its following boundary
+is `dealDamagetoDatItem` at `0x800C7390`. The TOML entry is already named with
+size `0x38`, and the section-4 overlay table carries the same name, ROM
+offset `0x22228`, and span `0x38`.
+
+H1 is selected as an already-complete synchronization. H2 is ruled out by
+the matching mission mapping and overlay ownership; H3 is ruled out by the
+independent operation mapping, live generated body, and exact adjacent
+boundaries. No source-map edit was necessary, and no build or runtime
+behavior conclusion was made. The next sweep candidate is
+`func_800C7648`/`getAndSetByteAtLevelStateTable`.
