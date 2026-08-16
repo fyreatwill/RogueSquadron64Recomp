@@ -78412,3 +78412,33 @@ required.
 Next census: `func_800C8504` / `spawnNpcImpactEffectVariant` at
 `0x800C8504` (size `0x474`). Last-15 titles still include s1666, so the
 next iteration may continue the sweep.
+
+## Session 1668 (2026-08-16) — synchronized the spawnNpcImpactEffectVariant symbol
+
+Exact generated-symbol census for `0x800C8504` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `spawnNpcImpactEffectVariant = 0x800C8504`; next `updateNpcOrientationFromMotion = 0x800C8978`; prior `spawnNpcDestructionEffect = 0x800C8178` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void spawnNpcImpactEffectVariant` at VRAM `0x800C8504`; returns through `jr $ra` / `addiu $sp, $sp, 0x108` ending at `0x800C8974`; next mission function `updateNpcOrientationFromMotion` at `0x800C8978` |
+| Body semantics | Loads actor from `a0+4`, two paired `lookupHmtTextureByName` at `0x800A6994` with `generatePerpEmitDirectionWithJitter` and `tickProgressChannel`, five `triggerCueWithSlotEffect`, `getObjectMeshTransformOrLocal`, `getObjectNpcTypeId`, two `slotDispatcherIter`, and `play3DSoundEvent` — NPC impact-effect variant of the adjacent destruction-effect helper |
+| TOML (before) | `{ name = "func_800C8504", vram = 0x800C8504, size = 0x474 }` — size matches `0x800C8978 - 0x800C8504` |
+| Overlay section 4 | `{ .func = spawnNpcImpactEffectVariant, .offset = 0x000233D4, .rom_size = 0x00000474 }` under `section_4_ovl_mission_funcs` (`0x800C8504 - 0x800A5130 = 0x233D4`) |
+| Non-collision | Menu-overlay `allocDebrisCellTable = 0x800C8520` lives in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay. Generated source interleaves it after this function by VRAM, not as a sibling |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`spawnNpcDestructionEffect` / `0x800C8178`) and next
+(`updateNpcOrientationFromMotion` / `0x800C8978`) boundaries, and TOML size
+already agreed; only the TOML name was a stale `func_800C8504` placeholder.
+Corrected TOML to `spawnNpcImpactEffectVariant`. No build or runtime run
+required.
+
+Next census: `func_800C8978` / `updateNpcOrientationFromMotion` at
+`0x800C8978` (size `0x518`). Last-15 titles still include s1666, so the
+next iteration may continue the sweep.

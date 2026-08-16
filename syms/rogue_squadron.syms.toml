@@ -1769,7 +1769,7 @@ functions = [
     { name = "initNpcActorFromSpawnMessage", vram = 0x800C7DC0, size = 0x238 },
     { name = "playNpcStateChangeEffect", vram = 0x800C7FF8, size = 0x180 },
     { name = "spawnNpcDestructionEffect", vram = 0x800C8178, size = 0x38C },
-    { name = "func_800C8504", vram = 0x800C8504, size = 0x474 },
+    { name = "spawnNpcImpactEffectVariant", vram = 0x800C8504, size = 0x474 },
     { name = "func_800C8978", vram = 0x800C8978, size = 0x518 },
     { name = "func_800C8E90", vram = 0x800C8E90, size = 0x100 },
     { name = "npcTurretUpdate", vram = 0x800C8F90, size = 0x11FC },
