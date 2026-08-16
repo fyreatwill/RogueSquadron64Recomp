@@ -76774,3 +76774,26 @@ span case and H3's fragment/data-like case. Updated only the TOML symbol name;
 no build or runtime run was needed. The next bounded candidate is
 `func_800BF3A4`, independently named `restoreGameSettingsAfterDemo`, with
 size `0x64`.
+
+## Session 1611 (2026-08-16) — synchronized the restoreGameSettingsAfterDemo symbol
+
+Ran the bounded generated-symbol census specified by the previous NEXT unit
+for `0x800BF3A4..0x800BF408`. The companion mission symbol list independently
+names `0x800BF3A4` `restoreGameSettingsAfterDemo` and describes it as the
+post-demo settings restore. The generated definition is already named
+`restoreGameSettingsAfterDemo`; its live body restores the saved game-setting
+fields and invokes `applyVolumeSettingsToMixer` at `0x8006E468`. The body
+starts at `0x800BF3A4`, ends with the `addiu $sp, $sp, 0x18` at `0x800BF404`
+plus its delay-slot `nop`, and the next generated function
+`loadAndStartDemo` starts at `0x800BF408`. A generated caller at
+`0x8003E544` invokes the address after the overlay/menu transition.
+
+H1 selected: the generated overlay table records
+`restoreGameSettingsAfterDemo` at offset `0x1A274` with ROM size `0x64`, and
+the TOML placeholder had the same size. Changed only the TOML symbol name to
+`restoreGameSettingsAfterDemo`. The exact companion name, generated live
+body, caller, adjacent boundaries, overlay span, and size rule out H2's
+conflicting/incomplete-span case and H3's fragment/data-like case. No build
+or runtime run was needed; this was a bounded symbol-map synchronization.
+The next bounded candidate is `func_800BF408`, independently named
+`loadAndStartDemo`, with size `0x60`.
