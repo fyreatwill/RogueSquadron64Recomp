@@ -78618,3 +78618,32 @@ was a stale `func_800CA3A4` placeholder. Corrected TOML to
 Next census: `func_800CA560` / `initProbeDroidScatterLaunch` at `0x800CA560`
 (size `0x1C0`). Last-15 titles still include s1666, so the next iteration may
 continue the sweep.
+
+## Session 1675 (2026-08-16) — synchronized the initProbeDroidScatterLaunch symbol
+
+Exact generated-symbol census for `0x800CA560` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1666's
+retail-entry revisit, so the mandatory REVISIT gate did not fire.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `initProbeDroidScatterLaunch = 0x800CA560`; next mission listing `updateProbeDroidHopState = 0x800CA720`; prior `spawnProbeDroidGroundImpactEffect = 0x800CA3A4` |
+| Generated `funcs_36.c` | `RECOMP_FUNC void initProbeDroidScatterLaunch` at VRAM `0x800CA560`; prologue `addiu $sp, $sp, -0x30`; returns through `jr $ra` / `addiu $sp, $sp, 0x30` ending at `0x800CA71C`; previous generated function is `spawnProbeDroidGroundImpactEffect` at `0x800CA3A4`; next mission function is `updateProbeDroidHopState` at `0x800CA720` |
+| Body semantics | Actor at `a0`. If `+0x68 > 0`, three `rand & 0x7F` components scaled by `1/+0x68` (constant `0x800A6BA8`) form a scatter vector; `vec3Length` then optionally `normalize_vector` when remaining budget `+0x68 - +0x44` is shorter; adds that to position `+0x5C/+0x60/+0x64` into target `+0x6C/+0x70/+0x74`. Else copies `+0/+4/+8` to the target. A fourth `rand` scaled by `0x800A6BAC/0x6BB0/0x6BB4` writes speed at `+0x78` and sets state halfword `+0xE2 = 1` |
+| TOML (before) | `{ name = "func_800CA560", vram = 0x800CA560, size = 0x1C0 }` — size matches `0x800CA720 - 0x800CA560` |
+| Overlay section 4 | `{ .func = initProbeDroidScatterLaunch, .offset = 0x00025430, .rom_size = 0x000001C0 }` under `section_4_ovl_mission_funcs` (`0x800CA560 - 0x800A5130 = 0x25430`; `0x25430 + 0x1C0 = 0x255F0` matches next `updateProbeDroidHopState`) |
+| Non-collision | Menu-overlay `initModelViewer = 0x800CA638` and `buildModelViewerTextPage = 0x800CA714` live in `section_5_ovl_menu_funcs` / `menu_overlay.txt`; same RAM window, different overlay |
+
+### Outcome
+
+H1 selected. Generated body, overlay span, companion mapping, previous
+(`spawnProbeDroidGroundImpactEffect` / `0x800CA3A4`) and next
+(`updateProbeDroidHopState` / `0x800CA720`) boundaries, and TOML size already
+agreed; only the TOML name was a stale `func_800CA560` placeholder. Corrected
+TOML to `initProbeDroidScatterLaunch`. No build or runtime run required.
+
+Next census: `func_800CA720` / `updateProbeDroidHopState` at `0x800CA720`
+(size `0x4B4`). Last-15 titles still include s1666, so the next iteration may
+continue the sweep.
