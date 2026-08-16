@@ -1703,7 +1703,7 @@ functions = [
     { name = "updateCraftSelectAnimState", vram = 0x800C4D8C, size = 0x454 },
     { name = "placeRadarDots", vram = 0x800C51E0, size = 0x3A0 },
     { name = "findClosestRadarContactAndSetSweep", vram = 0x800C5580, size = 0x398 },
-    { name = "func_800C5918", vram = 0x800C5918, size = 0x678 },
+    { name = "renderRadarSweep", vram = 0x800C5918, size = 0x678 },
     { name = "func_800C5F90", vram = 0x800C5F90, size = 0x334 },
     { name = "func_800C62C4", vram = 0x800C62C4, size = 0x70 },
     { name = "func_800C6334", vram = 0x800C6334, size = 0xC },

@@ -77084,3 +77084,27 @@ H1 was selected; H2/H3 were ruled out by the independent name, live body, and
 matching boundaries. The generated definition and overlay entry already used
 the human name, so only the TOML placeholder was changed. No build or runtime
 run was needed.
+
+## Session 1623 (2026-08-16) — synchronized the renderRadarSweep symbol
+
+Ran the exact generated-symbol census for `0x800C5918` without building or
+running. The competing hypotheses were H1: the companion mission name
+`renderRadarSweep` is correct and the exact generated/TOML/overlay span
+supports synchronization; H2: the name belongs to another overlay/context;
+and H3: the entry is data-like or has a conflicting span. The discriminator
+was the complete companion/generated/TOML/overlay comparison.
+
+The companion `mission_overlay.txt` independently names `0x800C5918`
+`renderRadarSweep` and describes a radar sweep/rotation renderer. The live
+generated definition has the sweep/trigonometry body, starts immediately after
+`findClosestRadarContactAndSetSweep` at `0x800C5918`, and ends immediately
+before `renderRadarMinimap` at `0x800C5F90`. The project TOML gives size
+`0x678`; the generated `recomp_overlays.inl` independently carries the same
+name, ROM entry, and `0x678` span.
+
+H1 is selected. The generated definition and overlay table already used the
+human name, while `syms/rogue_squadron.syms.toml` still used
+`func_800C5918`; that tracked placeholder was synchronized to
+`renderRadarSweep`. H2 and H3 are ruled out by the independent mission name,
+live body, exact adjacent boundaries, matching TOML size, and matching overlay
+span. No runtime behavior conclusion was made.

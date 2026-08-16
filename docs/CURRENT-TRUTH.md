@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1622 (2026-08-16).
+the authority for session detail. Reviewed through s1623 (2026-08-16).
 
 ## Current state
 
@@ -310,8 +310,13 @@ the authority for session detail. Reviewed through s1622 (2026-08-16).
    `placeRadarDots`/`renderRadarSweep` boundaries, section-4 overlay span,
    and TOML size agree. The generated definition and overlay table already
    carried the human name; the project TOML placeholder was updated. The
-   next census is `func_800C5918`, independently named `renderRadarSweep`,
-   with size `0x678`.
+   next census is `func_800C5F90`, independently named `renderRadarMinimap`,
+   with size `0x334`. s1623 synchronized `renderRadarSweep` at `0x800C5918`
+   (size `0x678`): the companion mission mapping, live generated
+   sweep/trigonometry body, exact `findClosestRadarContactAndSetSweep` and
+   `renderRadarMinimap` boundaries, section-4 overlay span, and TOML size
+   agree. The generated definition and overlay table already carried the
+   human name; the project TOML placeholder was updated.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
