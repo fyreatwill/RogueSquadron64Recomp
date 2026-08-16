@@ -2942,7 +2942,7 @@ iteration on the retail-entry boundary or the M4 accumulator boundary
 instead. s1569 was the last such revisit (leave-hangar 640 is
 `runModelViewerLoop`).
 
-## 34. Recent sweep and Rice-route updates (s1590–s1639)
+## 34. Recent sweep and Rice-route updates (s1590–s1641)
 
 This section archives the post-§33 work that was compacted out of
 `CURRENT-TRUTH.md` during the s1638 maintenance pass. The sweep continued its
@@ -2967,8 +2967,9 @@ or runtime run.
 | s1637 | Synchronized `dispatchObjectiveSlot1` at `0x800C72E8` (size `0x38`); companion mapping, generated dispatcher/caller, exact adjacent boundaries, section-4 span, and TOML size agree. Next census: `func_800C7358`, companion name `checkComplexObjectives`, size `0x38`. |
 | s1639 | Confirmed `checkComplexObjectives` at `0x800C7358` (size `0x38`) was already synchronized across companion mapping, live generated dispatcher, TOML, and section-4 span. No source-map edit was needed. Next census: `func_800C7648`, companion name `getAndSetByteAtLevelStateTable`, size `0x18`. |
 | s1640 | Synchronized `getAndSetByteAtLevelStateTable` at `0x800C7648` (size `0x18`): four companion callers and byte getter/setter semantics matched the live generated body, exact TOML size, and section-4 overlay span. Next census: `func_800C7718`, companion name `getGlobalFloatGameState`, size `0x10`. |
+| s1641 | Synchronized `getGlobalFloatGameState` at `0x800C7718` (size `0x10`): companion mapping, live generated global-float getter, exact TOML size, section-4 span, and adjacent boundaries agreed. Next census: `func_800C7728`, companion name `getObjectiveGlobalFloat`, size `0x10`. |
 
-The sweep cursor after s1640 is `func_800C7718`. The parked entries and the
+The sweep cursor after s1641 is `func_800C7728`. The parked entries and the
 every-15-session revisit rule remain those recorded in §33 and the live truth
 file. The Rice route is now the only valid later-phase oracle recipe; dummy
 video's 320-only results are not evidence about hangar or mission entry.
