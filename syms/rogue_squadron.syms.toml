@@ -1660,7 +1660,7 @@ functions = [
     { name = "fake_func_800BCC38", vram = 0x800BCC38, size = 0x8 },
     { name = "playerT16Init", vram = 0x800BCC40, size = 0x234 },
     { name = "computeT16Transform", vram = 0x800BCE74, size = 0x3E0 },
-    { name = "func_800BD254", vram = 0x800BD254, size = 0x2DC },
+    { name = "playerT16MainUpdate", vram = 0x800BD254, size = 0x2DC },
     { name = "playerT16Update", vram = 0x800BD530, size = 0x428 },
     { name = "func_800BD958", vram = 0x800BD958, size = 0xF8 },
     { name = "playerNabooStarfighterInit", vram = 0x800BDA50, size = 0x24C },

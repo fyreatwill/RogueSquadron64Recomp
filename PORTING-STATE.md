@@ -76441,3 +76441,31 @@ generated function body, and generated caller. Updated only the TOML placeholder
 to `computeT16Transform`; no mitigation, build, or runtime change was made.
 The next bounded candidate is `func_800BD254`, independently named
 `playerT16MainUpdate`, with size `0x2DC`.
+
+## Session 1598 (2026-08-16) — synchronized the playerT16MainUpdate symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only older verdicts already represented in the ledger, so no
+soak result changed the work-unit choice. This iteration continued the
+bounded generated-symbol sweep. No build or runtime run was needed.
+
+The work unit censused `0x800BD254..0x800BD530` using the companion mission
+symbol list, generated definition and caller, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `playerT16MainUpdate = 0x800BD254`; `playerT16Update = 0x800BD530` is the next companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `playerT16MainUpdate` at `0x800BD254`; `playerT16Update` calls it at `0x800BD814`. |
+| Span and overlay table | The TOML placeholder had size `0x2DC`; `recomp_overlays.inl` records `playerT16MainUpdate` at offset `0x18124` with ROM size `0x2DC`, followed by `playerT16Update`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and generated caller. Updated only the TOML
+placeholder to `playerT16MainUpdate`; no mitigation, build, or runtime change
+was made. The next bounded candidate is `func_800BD958`, independently named
+`triggerT16Effect`, with size `0xF8`.
