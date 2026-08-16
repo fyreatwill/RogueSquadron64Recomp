@@ -79643,3 +79643,37 @@ required.
 Next census: `fake_func_800D2C98` at `0x800D2C98` (size `0x8`).
 Last-15 titles still include s1698's retail-entry revisit, so the next
 iteration continues the sweep.
+
+## Session 1704 (2026-08-16) — confirmed the fake 800D2C98 fragment
+
+Exact generated-symbol census for `0x800D2C98` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 45778; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800D2C98 = 0x800D2C98` with the s432 note that `func_800D2CA0` was deleted as a duplicate of `npcInitWithMotionParams`. Previous contiguous function `spawnScaledBootVec4Effect = 0x800D2C58`; next contiguous neighbor `npcInitWithMotionParams = 0x800D2CA0` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void fake_func_800D2C98` at VRAM `0x800D2C98`; body is the 8-byte tail-call trampoline `j L_800D2CA0` / `nop` (N64Recomp logs it as "Tail call in fake_func_800D2C98 to 0x800D2CA0") which becomes `npcInitWithMotionParams(rdram, ctx); return;`. Previous `spawnScaledBootVec4Effect` returns through `jr $ra` / `addiu $sp, $sp, 0x20` ending at `0x800D2C94`; next is `npcInitWithMotionParams` at `0x800D2CA0` (`addiu $sp, $sp, -0x38`). `funcs.h` already declares the fake name |
+| Body semantics | Not an independent function. Eight-byte jump+nop pad between the boot-config vec4 wrapper and the NPC-init helper; no prologue, no `$ra` save, no generated `jal` callers. Companion already classifies it as fake. Same leftover class as `fake_func_800CEF1C` (s1689), just two instructions instead of one leftover store |
+| TOML | `{ name = "fake_func_800D2C98", vram = 0x800D2C98, size = 0x8 }` — already the companion fake name; size matches `0x800D2CA0 - 0x800D2C98`. No leftover `func_800D2C98` |
+| Overlay section 4 | `{ .func = fake_func_800D2C98, .offset = 0x0002DB68, .rom_size = 0x00000008 }` under `section_4_ovl_mission_funcs` (`0x800D2C98 - 0x800A5130 = 0x2DB68`; `0x2DB28 + 0x40 = 0x2DB68`; `0x2DB68 + 0x8 = 0x2DB70` matches next `npcInitWithMotionParams`) |
+| Non-collision | No menu-overlay function occupies `0x800D2C98`. Companion menu grep is empty for this address, this name, and the neighboring `0x800D2C58`/`0x800D2CA0` window. Companion and generated greps found no other `func_800D2C98` occupant |
+
+### Outcome
+
+H1 selected. Companion classification, live generated 8-byte leftover
+trampoline, previous (`spawnScaledBootVec4Effect` / `0x800D2C58`) and next
+(`npcInitWithMotionParams` / `0x800D2CA0`) boundaries, TOML name and size, and
+section-4 overlay span already agree. This selects H1 and refutes H2
+(generated/TOML are not a stale `func_800D2C98`) and H3 (no overlay collision,
+size/boundary disagreement, or missing independent name — the fake name is
+the agreed classification). H4 is refuted: companion, generated body, TOML,
+and section-4 row are all present. No TOML or generated-name change.
+
+Next census: `npcInitWithMotionParams` at `0x800D2CA0` (size `0x240`).
+Last-15 titles still include s1698's retail-entry revisit, so the next
+iteration continues the sweep.
