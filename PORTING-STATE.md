@@ -72171,3 +72171,39 @@ independently named `load_cutscene` at `0x800A6620` (TOML already
 `load_cutscene`, size `0x2E4`; overlay `rom_size` is `0x2E4`; live body
 ends at `jr $ra` / `addiu $sp, $sp, 0x60` before independently named
 `cinematicSlotUpdate`).
+
+## Session 1487 (2026-08-15) — confirmed the load-cutscene symbol
+
+Performed the bounded exact-name census over `0x800A6620..0x800A6904`.
+
+No new soak-queue verdicts since s1486; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry is already `load_cutscene`, size `0x2E4`; `0x800A6620+0x2E4=0x800A6904`. Overlay `.ovl.cinematic` entry `rom_size` is `0x2E4` at offset `0x000014F0` (`0x800A6620-0x800A5130`). Live body is independently `0x2E4` and meets independently named `cinematicSlotUpdate` / TOML `func_800A6904` at `0x800A6904` |
+| Generated definition | `funcs_27.c` defines `load_cutscene` at `0x800A6620`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x2E4` function. It starts `addiu $sp, $sp, -0x60` / `sb $a0, 0x30($sp)` and ends at `jr $ra` / `addiu $sp, $sp, 0x60` (`0x800A68FC`/`0x800A6900`). Next generated function is independently named `cinematicSlotUpdate` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `load_cutscene = 0x800A6620`. Menu, mission, libultra, and zlib lists do not remap `0x800A6620`. `undefined_funcs_auto.txt` has no leftover `func_800A6620`. `processCutsceneActions` is independently annotated as called from `load_cutscene`. No companion C/asm body exists |
+| Caller evidence | One retail `jal` encoding `0x0C029988` and zero `j` / absolute pointer words. The site is a direct `load_cutscene` call from independently named `cinematicLoopBody` at `0x800A5F2C` (overlay file `0x13837C`) after `addu $a0, $s0, $zero` / delay-slot `addu $a1, $s1, $zero`. Same-run ROM word at that file offset is `0x0C029988` |
+| Semantic evidence | Retail ROM words at file `0x138A70` (`0x137580+(0x800A6620-0x800A5130)`) are `0x27BDFFA0` / `0xA3A40030` (`addiu $sp, $sp, -0x60` / `sb $a0, 0x30($sp)`). Epilogue file `0x138D4C` is `0x03E00008` / `0x27BD0060`. Next start file `0x138D54` is `0x3C02800B` (`cinematicSlotUpdate`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, `setupCutsceneLevel` file `0x139134` is `0x27BDFFE0`, and the caller `jal` word above is `0x0C029988`. The generated body has 14 `jal` sites including independently named `sprintf_recomp` (format at `0x800A516C` is retail `cuts/id%d_%s`), `load_asset_with_malloc_flags`, `processCutsceneActions`, `cuts_0058_bubble_sort`, `spawnCutsceneObjectsFromList` (twice), `loadLevelTextureCache`, and `initCutsceneAudioChannels`. Matches the documented cutscene-file load (`0x25AC` fixed header plus variable Vec3f list) |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A6620`: the companion and
+generated names already agree, the body is a complete function of matching
+live size `0x2E4`, `cinematicLoopBody` calls it, and there is neither a
+conflicting companion name nor a size split inside the live body. The TOML
+entry was already `load_cutscene` and was left unchanged.
+`func_8009D978` remains the eight-byte Q15 delay-mix table and was left
+unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `cinematicSlotUpdate` at `0x800A6904` (TOML still
+`func_800A6904`, size `0x3E0`; overlay `rom_size` is `0x3E0` at offset
+`0x000017D4`; live body ends at `jr $ra` / `addiu $sp, $sp, 0x60`
+before independently named `setupCutsceneLevel`).

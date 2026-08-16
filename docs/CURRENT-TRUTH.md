@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1486 (2026-08-15).
+the authority for session detail. Reviewed through s1487 (2026-08-15).
 
 ## Current state
 
@@ -47,7 +47,7 @@ the authority for session detail. Reviewed through s1486 (2026-08-15).
 ## Active investigation and ranked next steps
 
 1. Continue the generated-symbol renaming sweep with one bounded exact-name
-   census over the next adjacent function, `0x800A6620..0x800A6904`.
+   census over the next adjacent function, `0x800A6904..0x800A6CE4`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -84,15 +84,17 @@ the authority for session detail. Reviewed through s1486 (2026-08-15).
    `audioMixSampleS16_1_1` at `0x8009DD54`. s1484 synchronized
    `audioMixSampleS16_3_1` at `0x8009DD64`. s1485 synchronized
    `audioCompandS16` at `0x8009DD7C`. s1486 synchronized
-   `cinematicLoopBody` at `0x800A5D80` (H1; generated already named;
-   TOML was `func_800A5D80`; overlay `rom_size` `0x8A0` matches the
-   live body). The generated entry at `0x800A6620` is already
-   `load_cutscene`; companion and TOML already use that name (size
-   `0x2E4`, meets independently named `cinematicSlotUpdate` /
-   TOML `func_800A6904` at `0x800A6904`). Overlay `rom_size` is
-   `0x2E4` at offset `0x000014F0`. Confirm the complete live
+   `cinematicLoopBody` at `0x800A5D80`. s1487 confirmed already-
+   matching `load_cutscene` at `0x800A6620` (H1; generated, companion,
+   and TOML already agree; overlay `rom_size` `0x2E4` matches the live
+   body). The generated entry at `0x800A6904` is already
+   `cinematicSlotUpdate`; the companion cinematic splat list maps
+   `cinematicSlotUpdate = 0x800A6904`. TOML is still `func_800A6904`
+   (size `0x3E0`, ends at independently named `setupCutsceneLevel` /
+   TOML `func_800A6CE4` at `0x800A6CE4`). Overlay `rom_size` is
+   `0x3E0` at offset `0x000017D4`. Confirm the complete live
    function, matching size, and caller/semantic evidence before
-   treating it as already synchronized.
+   synchronizing the TOML name.
 2. Keep the external retail-entry boundary parked until a new independent
    artifact or state-changing handoff is available. Any future oracle work
    must pass whole-RDRAM, PIF, and VI positive controls in the same run.
@@ -385,6 +387,7 @@ origin before `vmadh v6,v4,v0`, not RT64 lane order.
 | s1484 | Exact companion/generated s16-mix census synchronized `audioMixSampleS16_3_1` at `0x8009DD64`; no build or runtime run. |
 | s1485 | Exact companion/generated s16-compand census synchronized `audioCompandS16` at `0x8009DD7C`; no build or runtime run. |
 | s1486 | Exact companion/generated cinematic-loop census synchronized `cinematicLoopBody` at `0x800A5D80`; no build or runtime run. |
+| s1487 | Exact companion/generated cinematic-load census confirmed already-matching `load_cutscene` at `0x800A6620` (H1; TOML left unchanged); no build or runtime run. |
 
 ## Method and safety rules
 
