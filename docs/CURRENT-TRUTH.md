@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1573 (2026-08-16).
+the authority for session detail. Reviewed through s1574 (2026-08-16).
 
 ## Current state
 
@@ -84,13 +84,13 @@ the authority for session detail. Reviewed through s1573 (2026-08-16).
    boundary, and a generated caller agree. s1573 synchronized
    `playXwingEngineSound` at `0x800B4F54` (size `0x4E0`): the companion
    mission list, generated definition and caller, and TOML boundary agree.
-   The next census is `0x800B585C..0x800B58B4`: TOML still has
-   `func_800B585C` with size `0x58`, while the companion mission list and
-   generated `funcs_31.c` independently name it `isWeaponSlotReady`; the
-   next named mission function after the intervening fake gap is
-   `playerAwingInit` at `0x800B58C0`. Synchronize only if the complete
-   comparison remains exact. This naming census does not reopen closed M5
-   audio de-stubbing.
+   s1574 synchronized `isWeaponSlotReady` at `0x800B585C` (size `0x58`):
+   the companion mission list, generated definition and callers, and TOML
+   boundary agree; the intervening `fake_func_800B58B4` and
+   `playerAwingInit` boundary also match. The next census is
+   `func_800B5B4C`, independently named `resetEngineTrailQuads`.
+   Synchronize only if the complete comparison remains exact. This naming
+   census does not reopen closed M5 audio de-stubbing.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -254,6 +254,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1571 | H1: confirmed `playerXwingInit` at `0x800B42C0` is already synchronized: exact `0x2C8` TOML/overlay/generated boundary, companion name, and two generated `playerXwingUpdate` calls agree; no file rename was needed. |
 | s1572 | H1: synchronized `playWeaponFireSound` at `0x800B4588` (size `0x738`); companion mapping, generated definition, TOML boundary, and a generated caller agree. No build or runtime run was needed. |
 | s1573 | H1: synchronized `playXwingEngineSound` at `0x800B4F54` (size `0x4E0`); companion mapping, generated definition/caller, and TOML boundary agree. No build or runtime run was needed. |
+| s1574 | H1: synchronized `isWeaponSlotReady` at `0x800B585C` (size `0x58`); companion mapping, generated definition/callers, TOML boundary, and the adjacent fake/`playerAwingInit` boundaries agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 

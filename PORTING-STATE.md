@@ -75762,3 +75762,29 @@ was justified for this exact-name census. The next bounded candidate is
 `func_800B585C`, independently named `isWeaponSlotReady`, with size `0x58`;
 the intervening `fake_func_800B58B4` ends at `playerAwingInit` at
 `0x800B58C0`. This naming change does not reopen M5 audio de-stubbing.
+
+## Session 1574 (2026-08-16) — synchronized the isWeaponSlotReady symbol
+
+Performed the bounded exact-name census over `0x800B585C..0x800B58B4`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 18,580 bytes, so this was not a
+maintenance iteration. The SOAK-RESULTS tail had no newer verdict requiring
+analysis. The last-15 title check included s1569's non-sweep retail-entry
+revisit, so the sweep-revisit rule did not fire. M5 remains closed and M3
+remains parked.
+
+| Evidence | Result |
+|---|---|
+| Address and size | `syms/rogue_squadron.syms.toml` had `func_800B585C` at `0x800B585C` with size `0x58`; the companion mission list independently maps `isWeaponSlotReady = 0x800B585C`. The next mission function is `playerAwingInit` at `0x800B58C0`, with the intervening `fake_func_800B58B4` gap. |
+| Generated definition | `funcs_31.c` defines `isWeaponSlotReady` at `0x800B585C`; its live body reaches `0x800B58B0`, matching the TOML size before the fake gap at `0x800B58B4`. |
+| Caller evidence | Generated `funcs_31.c` dispatches to `0x800B585C` from a switch case and contains the named function's direct use in the adjacent mission-overlay path; the generated `playerAwingInit` definition begins at `0x800B58C0`. |
+| Boundary evidence | The companion and generated files both mark `0x800B58B4` as a fake gap and `0x800B58C0` as `playerAwingInit`, so the candidate does not absorb either adjacent region. |
+| Confidence | High |
+
+The complete comparison selects H1. H2 is ruled out because the entry is not
+partial, fake, or conflicting; H3 is ruled out by the independent companion
+name and generated definition/call evidence. Updated only the TOML name; no
+build or runtime run was justified for this exact-name census. The next
+bounded candidate is `func_800B5B4C`, independently named
+`resetEngineTrailQuads`, with size `0x87C`; `acquireLockOnTarget` begins at
+`0x800B63C8`. This naming change does not reopen M5 audio de-stubbing.

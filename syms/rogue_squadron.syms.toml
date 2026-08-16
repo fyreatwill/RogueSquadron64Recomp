@@ -1622,7 +1622,7 @@ functions = [
     { name = "playerXwingFireBlaster", vram = 0x800B4CC0, size = 0x294 },
     { name = "playXwingEngineSound", vram = 0x800B4F54, size = 0x4E0 },
     { name = "playerXwingUpdate", vram = 0x800B5434, size = 0x428 },
-    { name = "func_800B585C", vram = 0x800B585C, size = 0x58 },
+    { name = "isWeaponSlotReady", vram = 0x800B585C, size = 0x58 },
     { name = "fake_func_800B58B4", vram = 0x800B58B4, size = 0xC },
     { name = "playerAwingInit", vram = 0x800B58C0, size = 0x28C },
     { name = "func_800B5B4C", vram = 0x800B5B4C, size = 0x87C },
