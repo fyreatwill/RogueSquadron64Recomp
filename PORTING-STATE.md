@@ -76330,3 +76330,31 @@ generated function body, and exact next-function boundary. Updated only the
 TOML placeholder to `integrateFalconFlightPhysics`; no mitigation, build, or
 runtime change was made. The next bounded candidate is `func_800BBF6C`,
 independently named `computeTieInterceptorTransform`, with size `0x324`.
+
+## Session 1594 (2026-08-16) — synchronized the computeTieInterceptorTransform symbol
+
+The current-truth file was below the maintenance threshold. The SOAK-RESULTS
+tail contained only older verdicts already represented in the ledger. This
+iteration continued the bounded generated-symbol sweep. No build or runtime
+run was needed.
+
+The work unit censused `0x800BBF6C..0x800BC290` using the companion mission
+symbol list, generated definition and caller, the generated overlay table,
+and the TOML symbol span. The competing hypotheses were H1 (an exact
+independent companion mapping), H2 (a partial, conflicting, or span-mismatched
+mapping), and H3 (a fragment, data-like region, or missing independent name).
+The complete comparison selected H1:
+
+| Evidence | Result |
+|---|---|
+| Companion mapping | `../rogue_squadron64/symbol_files/mission_overlay.txt` maps `computeTieInterceptorTransform = 0x800BBF6C`; `triggerTieInterceptorEffect = 0x800BC290` is the next companion boundary. |
+| Generated definition and caller | `../N64Recomp/RecompiledFuncs/funcs_32.c` defines `computeTieInterceptorTransform` at `0x800BBF6C`; `playerTieInterceptorUpdate` calls it at `0x800BCAE8`. |
+| Span and overlay table | The TOML placeholder had size `0x324`; `recomp_overlays.inl` records `computeTieInterceptorTransform` at offset `0x16E3C` with ROM size `0x324`, followed by `triggerTieInterceptorEffect` at `0x800BC290`. |
+| Confidence | High |
+
+H2 is ruled out because the independent name, generated boundary, TOML size,
+and overlay-table span agree. H3 is ruled out by the companion mapping,
+generated function body, and caller. Updated only the TOML placeholder to
+`computeTieInterceptorTransform`; no mitigation, build, or runtime change was
+made. The next bounded candidate is `func_800BC290`, independently named
+`triggerTieInterceptorEffect`, with size `0x268`.

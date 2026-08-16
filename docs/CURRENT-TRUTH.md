@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1593 (2026-08-16).
+the authority for session detail. Reviewed through s1594 (2026-08-16).
 
 ## Current state
 
@@ -75,7 +75,7 @@ the authority for session detail. Reviewed through s1593 (2026-08-16).
    and M4 threads; s1569 was that revisit). One bounded exact-name census
    per session over the next adjacent function. Synchronize only names
    independently supported by the companion project, generated definitions,
-   sizes, and caller/semantic evidence. Per-session H1 syncs through s1589
+   sizes, and caller/semantic evidence. Per-session H1 syncs through s1594
    live in `PORTING-STATE.md` and are archived in
    `PROJECT-OVERVIEW.md` §33; do not re-list them here.
 
@@ -184,8 +184,12 @@ the authority for session detail. Reviewed through s1593 (2026-08-16).
    `0x800BBC58` (size `0xD8`): the companion mission list, generated
    definition and floating-point clamp/integration body, exact
    `playerTieInterceptorInit` boundary, overlay-table span, and TOML size
-   agree. The next census is `func_800BBF6C`, independently named
-   `computeTieInterceptorTransform`, with size `0x324`.
+   agree. s1594 synchronized `computeTieInterceptorTransform` at
+   `0x800BBF6C` (size `0x324`): the companion mission list, generated
+   definition, generated caller at `0x800BCAE8`, exact
+   `triggerTieInterceptorEffect` boundary, overlay-table span, and TOML size
+   agree. The next census is `func_800BC290`, independently named
+   `triggerTieInterceptorEffect`, with size `0x268`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
@@ -370,6 +374,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1591 | H1: synchronized `playerFalconMainUpdate` at `0x800BADCC` (size `0x83C`); companion mission list, generated definition and caller from `spawnFalconEngineParticles`, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1592 | H1: synchronized `spawnFalconEngineParticles` at `0x800BB608` (size `0x228`); companion mission list, generated definition, `playerFalconUpdate` caller, exact next-function boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 | s1593 | H1: synchronized `integrateFalconFlightPhysics` at `0x800BBC58` (size `0xD8`); companion mission list, generated definition and floating-point clamp/integration body, exact `playerTieInterceptorInit` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
+| s1594 | H1: synchronized `computeTieInterceptorTransform` at `0x800BBF6C` (size `0x324`); companion mission list, generated definition, generated caller at `0x800BCAE8`, exact `triggerTieInterceptorEffect` boundary, overlay-table span, and TOML size agree. No build or runtime run was needed. |
 
 ## Method and safety rules
 
