@@ -76732,3 +76732,23 @@ mapping, real generated body, and HUD-preset copy semantics. Updated only the
 TOML placeholder to `loadPlayerSlotHudPreset`; no mitigation, build, or
 runtime change was made. The next bounded candidate is `func_800BF2F4`,
 independently named `countTrailingZeros16`, with size `0x64`.
+
+## Session 1609 (2026-08-16) — synchronized the countTrailingZeros16 symbol
+
+Ran the bounded generated-symbol census specified by the previous NEXT unit
+for `0x800BF2F4..0x800BF358`. The companion mission symbol list independently
+names `0x800BF2F4` `countTrailingZeros16` and describes it as a bit-to-index
+converter with five callers. The generated definition is already named
+`countTrailingZeros16`; its live body starts at `0x800BF2F4`, ends at the
+`addiu $sp, $sp, 0x20` at `0x800BF350` plus the `nop` at `0x800BF354`, and the
+next generated function `applyResModeFromSettings` starts at `0x800BF358`.
+The generated overlay table gives the same `0x64` span, while the TOML entry
+had the placeholder name and size `0x64`. Fifteen generated call sites across
+`funcs_31.c` and `funcs_32.c` pass halfword values into the helper, providing
+caller/semantic support for the trailing-zero bit index operation.
+
+H1 selected: changed only the TOML symbol name to `countTrailingZeros16`.
+The exact companion name, generated body, 15 call sites, next-function
+boundary, overlay span, and size rule out H2's conflicting/incomplete-span
+case and H3's fragment/data-like case. No build or runtime run was needed;
+this was a bounded symbol-map synchronization.
