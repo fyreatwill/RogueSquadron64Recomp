@@ -72352,3 +72352,39 @@ independently named `slotEffectHandlerDispatch` at `0x800A71B8` (TOML
 still `func_800A71B8`, size `0x22C`; overlay `rom_size` is `0x22C` at
 offset `0x00002088`; live body ends at independently named
 `cutscenePopulateSlotsFromLevelLists`).
+
+## Session 1492 (2026-08-15) — synchronized the slot-effect-handler-dispatch symbol
+
+Performed the bounded exact-name census over `0x800A71B8..0x800A73E4`.
+
+No new soak-queue verdicts since s1491; the SOAK-RESULTS tail is unchanged
+from 2026-08-14. The queued `slot_sp_guard` / `s1028` / `s1029` lines remain
+pre-1024 or otherwise unevaluable for the parked M3 spill class and do not
+reopen it.
+
+| Evidence | Result |
+|---|---|
+| Address and size | TOML entry was `func_800A71B8`, size `0x22C`; `0x800A71B8+0x22C=0x800A73E4`. Overlay `.ovl.cinematic` entry `rom_size` is `0x22C` at offset `0x00002088` (`0x800A71B8-0x800A5130`). Live body is independently `0x22C` and meets independently named `cutscenePopulateSlotsFromLevelLists` / TOML `func_800A73E4` at `0x800A73E4` |
+| Generated definition | `funcs_27.c` defines `slotEffectHandlerDispatch` at `0x800A71B8`; `funcs.h` and `recomp_overlays.inl` already use that name. The live body is a complete `0x22C` function. It starts `addiu $sp, $sp, -0x30` / `sw $s0, 0x10($sp)` / `lui $s0, 0x800B` and ends at `jr $ra` / `addiu $sp, $sp, 0x30` (`0x800A73DC`/`0x800A73E0`). Next generated function is independently named `cutscenePopulateSlotsFromLevelLists` |
+| Independent companion source | `rogue_squadron64/symbol_files/cinematic_overlay.txt` maps `slotEffectHandlerDispatch = 0x800A71B8` with comment "dispatches effect handlers from cinematic loop". Menu, mission, libultra, and zlib lists do not remap `0x800A71B8`. No leftover `func_800A71B8` exists in the companion tree. Independently named callees include `setFrameLevelStateBytes` (`0x80017A90`), `setActiveRenderListPtr` (`0x80009B48`), `setRenderStateFlagByteOne` (`0x80017AB0`), `setupCameraMatrices` (`0x80016C44`), `linkHudNodeAndComputeScreenPos` (`0x80055B8C`), `rebuildActiveDisplayObjectList` (`0x80064488`), and `initRenderStateArrays` (`0x8000B654`). The main-overlay list independently names this function as one of four `setFrameLevelStateBytes` callers |
+| Caller evidence | One retail `jal` encoding `0x0C029C6E` and zero `j` or absolute `0x800A71B8` pointer words. The single site is in independently named `cinematicLoopBody` at `0x800A649C` (overlay file `0x1388EC`). Same-run ROM word at that file offset is `0x0C029C6E` |
+| Semantic evidence | Retail ROM words at file `0x139608` (`0x137580+(0x800A71B8-0x800A5130)`) are `0x27BDFFD0` / `0xAFB00010` / `0x3C10800B` / `0x920209B0` (`addiu $sp, $sp, -0x30` / `sw $s0, 0x10($sp)` / `lui $s0, 0x800B` / `lbu $v0, 0x9B0($s0)` = byte at `0x800B09B0`). First `jal` at file `0x13963C` is `0x0C005EA4` (`jal 0x80017A90` = `setFrameLevelStateBytes`); following words are `0x0C0026D2` (`jal 0x80009B48` = `setActiveRenderListPtr`) and `0x0C005EAC` (`jal 0x80017AB0` = `setRenderStateFlagByteOne`). The generated body is gated on `MEM_B(0x800B09B0)`: the nonzero path zeros the incoming stack object at `+0/+8/+C`, links HUD, sets camera matrices, and decrements that gate byte. The zero path branches on `a1` (`0x13`/`0xA`), then rebuilds the active display-object list from `0x800B09C0`/`0x800B0B00`, copies `0x80136E18` triplet state, and optionally swaps camera floats from `0x800A52A0`/`0x800A52A4` when `0x800B0B18` and `0x800B0B14` are set. Epilogue file `0x13982C` is `0x03E00008` / `0x27BD0030`. Next start file `0x139834` is `0x27BDFF90` (`cutscenePopulateSlotsFromLevelLists`). Same-run positive controls: overlay base `0x137580` is `0x08000000`, `slotEffectHandlerDispatch` file `0x139608` is `0x27BDFFD0`, and the caller `jal` word above is `0x0C029C6E`. Matches the companion cinematic-loop dispatch comment and the independent `setFrameLevelStateBytes` caller list |
+| Confidence | High |
+
+The complete comparison selects H1 for `0x800A71B8`: the companion and
+generated names agree, the body is a complete function of matching live
+size `0x22C`, `cinematicLoopBody` is the only caller, and there is neither
+a conflicting companion name nor a size split inside the live body. The
+stale address-encoded TOML entry was synchronized (name only; size left at
+`0x22C`). `func_8009D978` remains the eight-byte Q15 delay-mix table
+and was left unchanged, as were `func_8009D8BC`, `fake_func_8009D7CC`,
+`fake_func_8009C2C8`, `fake_func_80099FDC`, `fake_func_80099C4C`,
+`fake_func_80097D58`, `fake_func_8009711C`, `fake_func_80094348`,
+`fake_func_80093E74`, `func_800927B0`, `func_80092A54`,
+`func_80092CF0`, `func_80092F10`, and `func_8008ED6C`. No build or
+runtime run was justified for an exact-name census. This does not reopen
+M5 audio de-stubbing. The next adjacent generated function is
+independently named `cutscenePopulateSlotsFromLevelLists` at `0x800A73E4`
+(TOML still `func_800A73E4`, size `0x2D4`; overlay `rom_size` is `0x2D4`
+at offset `0x000022B4`; live body ends at independently named
+`cinematicSlotDispatcher`).
