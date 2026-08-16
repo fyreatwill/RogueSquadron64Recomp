@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1523 (2026-08-15).
+the authority for session detail. Reviewed through s1524 (2026-08-15).
 
 ## Current state
 
@@ -59,7 +59,7 @@ the authority for session detail. Reviewed through s1523 (2026-08-15).
    finish line — see `tools/agent/ITERATION.md` strategic-priority item 4
    for the mandatory every-15-sessions revisit of the retail-entry-boundary
    and M4 threads) with one bounded exact-name census over the next
-   adjacent function, `0x800AEB7C..0x800AEBD0`.
+   adjacent function, `0x800AEBD0..0x800AEC48`.
    Synchronize only names independently supported by the companion project,
    generated definitions, sizes, and caller/semantic evidence. Leave
    `func_8008ED6C` address-encoded (s1309 H2), `func_800927B0`
@@ -135,24 +135,23 @@ the authority for session detail. Reviewed through s1523 (2026-08-15).
    `0x800AE98C`. s1521 synchronized `getCutsceneRuntimeContext` at
    `0x800AEA18`. s1522 synchronized `noopHandler_800AEB30` at
    `0x800AEB30`. s1523 synchronized `freeCutsceneResources` at
-   `0x800AEB38`. The generated entry at `0x800AEB7C` is already
-   `resetCutsceneActionSlots`; the companion cinematic list maps
-   `resetCutsceneActionSlots = 0x800AEB7C` (comment: zeros
-   byte[+0x12] + word[0] of each of 16 entries (0x14B stride) at
-   MEM[0x800B0BC0], then calls `func_800AA4F4` / independently
-   named `applyCutsceneSlotMaterialOverrides`). TOML is still
-   `func_800AEB7C` (size `0x54`, ends at independently named
-   generated `scheduleCutsceneActionSlot` / TOML `func_800AEBD0`
-   at `0x800AEBD0`). Overlay `rom_size` is `0x54` at offset
-   `0x00009A4C`. Confirm the complete live function, matching size,
-   and caller/semantic evidence before synchronizing the TOML name.
-   Independently named `freeCutsceneResources` at `0x800AEB38`
-   (`rom_size` `0x44`) ends at this address. Menu-overlay
-   `hangarSetSecondaryWeaponDisplay` at `0x800AEB48` (`rom_size`
-   `0x90`, ends `0x800AEBD8`) occupies overlapping VRAM from
-   `.ovl.menu` and is not a cinematic size split. Mission-overlay
-   `playRandomCutsceneVoiceLine` / TOML `func_800AE960` at
-   `0x800AE960` (size `0x398`) likewise overlaps from `.ovl.mission`.
+   `0x800AEB38`. s1524 synchronized `resetCutsceneActionSlots` at
+   `0x800AEB7C`. The generated entry at `0x800AEBD0` is already
+   `scheduleCutsceneActionSlot`; the companion cinematic list maps
+   `scheduleCutsceneActionSlot = 0x800AEBD0` (no comment). TOML is
+   still `func_800AEBD0` (size `0x78`, ends at independently named
+   generated `composeInterpolatedNodeMatricesAlt` / TOML
+   `func_800AEC48` at `0x800AEC48`). Overlay `rom_size` is `0x78`
+   at offset `0x00009AA0`. Confirm the complete live function,
+   matching size, and caller/semantic evidence before synchronizing
+   the TOML name. Independently named `resetCutsceneActionSlots`
+   at `0x800AEB7C` (`rom_size` `0x54`) ends at this address.
+   Menu-overlay `hangarUpdateSecWeaponIfChanged` / TOML
+   `func_800AEBD8` at `0x800AEBD8` (`rom_size` `0x7C`) occupies
+   overlapping VRAM from `.ovl.menu` and is not a cinematic size
+   split. Mission-overlay `playRandomCutsceneVoiceLine` / TOML
+   `func_800AE960` at `0x800AE960` (size `0x398`) likewise overlaps
+   from `.ovl.mission`.
 2. Future oracle work (hangar/mission watches, or a new M4 RDRAM dest if
    one is identified from a DMEM→RDRAM transfer that is not `0xD60`) must
    use the Rice `--video` recipe above, not dummy video. Pass whole-RDRAM,
@@ -498,6 +497,7 @@ DMEM `r9`). The unresolved issue is the RSP-internal numeric origin before
 | s1521 | Exact companion/generated cinematic-getter census synchronized `getCutsceneRuntimeContext` at `0x800AEA18`; no build or runtime run. |
 | s1522 | Exact companion/generated cinematic-noop census synchronized `noopHandler_800AEB30` at `0x800AEB30`; no build or runtime run. |
 | s1523 | Exact companion/generated cinematic-teardown census synchronized `freeCutsceneResources` at `0x800AEB38`; no build or runtime run. |
+| s1524 | Exact companion/generated cinematic-slot census synchronized `resetCutsceneActionSlots` at `0x800AEB7C`; no build or runtime run. |
 
 ## Method and safety rules
 

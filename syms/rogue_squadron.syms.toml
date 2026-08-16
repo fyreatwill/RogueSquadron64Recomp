@@ -2659,7 +2659,7 @@ functions = [
     { name = "cuts_0058_bubble_sort", vram = 0x800AEA28, size = 0x108 },
     { name = "noopHandler_800AEB30", vram = 0x800AEB30, size = 0x8 },
     { name = "freeCutsceneResources", vram = 0x800AEB38, size = 0x44 },
-    { name = "func_800AEB7C", vram = 0x800AEB7C, size = 0x54 },
+    { name = "resetCutsceneActionSlots", vram = 0x800AEB7C, size = 0x54 },
     { name = "func_800AEBD0", vram = 0x800AEBD0, size = 0x78 },
     { name = "func_800AEC48", vram = 0x800AEC48, size = 0x1CC },
     { name = "func_800AEE14", vram = 0x800AEE14, size = 0x11C },
