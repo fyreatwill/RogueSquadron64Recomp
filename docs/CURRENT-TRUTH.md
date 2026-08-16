@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1706 (2026-08-16).
+the authority for session detail. Reviewed through s1707 (2026-08-16).
 
 ## Current state
 
@@ -84,16 +84,16 @@ the authority for session detail. Reviewed through s1706 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcTickEffectChannelB`
-   (`0x800D307C`, size `0x1C4`). After s1706 the last-15 titles
-   include the s1698 retail-entry revisit, so the 15-title gate does
-   not fire. s1651–s1665, s1667–s1681, s1683–s1697, and s1699–s1706
-   synchronized or confirmed DAT-item through
-   `npcTickEffectChannelA`; s1650, s1666, s1682, and s1698 were
-   the mandatory retail-entry revisits. The full s1590–s1649 archive
-   is in `PROJECT-OVERVIEW.md` §34; the earlier sweep is in §33.
-   About 1,548 placeholder `func_0x...` names remained when counted
-   at s1487.
+1. Resume the generated-symbol sweep at
+   `npcTickEffectChannelWithSlotDispatch` (`0x800D3240`, size `0x18C`).
+   After s1707 the last-15 titles include the s1698 retail-entry
+   revisit, so the 15-title gate does not fire. s1651–s1665,
+   s1667–s1681, s1683–s1697, and s1699–s1707 synchronized or
+   confirmed DAT-item through `npcTickEffectChannelB`; s1650, s1666,
+   s1682, and s1698 were the mandatory retail-entry revisits. The
+   full s1590–s1649 archive is in `PROJECT-OVERVIEW.md` §34; the
+   earlier sweep is in §33. About 1,548 placeholder `func_0x...`
+   names remained when counted at s1487.
 2. Remaining external retail-entry / M4 revisit leads, for the next
    15-title gate only: destination of the attract-512 A/Start/C-up/L
    `512→1024` at 126.4 s (origin `0x00790400`/`800`; 125 s flush cut
@@ -259,6 +259,7 @@ ownership.
 | s1704 | Confirmed `fake_func_800D2C98` (`0x800D2C98`, size `0x8`) was already classified as the explicit 8-byte leftover trampoline (`j L_800D2CA0` / `nop` into `npcInitWithMotionParams`) between `spawnScaledBootVec4Effect` and `npcInitWithMotionParams`: companion mapping, live generated fragment, exact `0x800D2C58`/`0x800D2CA0` boundaries, TOML name and size, and section-4 span agreed. No menu function occupies the address. Next candidate is `npcInitWithMotionParams`. |
 | s1705 | Synchronized `npcInitWithMotionParams` (`0x800D2CA0`, size `0x240`) after companion mission mapping, live generated NPC-init-with-motion-params body (`setNpcHealth`, `setObjectDetailLevel`, `initActorMotionParams` ×3, `initObjectAnimSubstruct` ×2; byte `+0xC5` 0/1/2 picks callbacks `npcTickEffectChannelA`/`B`/`WithSlotDispatch`), exact `0x800D2C98`/`0x800D2EE0` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `npcTickEffectChannelA`. |
 | s1706 | Synchronized `npcTickEffectChannelA` (`0x800D2EE0`, size `0x19C`) after companion mission mapping, live generated per-frame visual/SFX-channel body (`lookupHmtTextureByName` on `0x800A73E0`/`0x800A73E4`, `setObjectSubstructF10IfReady`, `resolveNpcAttachmentPos`, `tickProgressChannel`, `triggerCueWithSlotEffect` type 2, `play3DSoundEvent` type `0x48`), exact `0x800D2CA0`/`0x800D307C` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `npcTickEffectChannelB`. |
+| s1707 | Synchronized `npcTickEffectChannelB` (`0x800D307C`, size `0x1C4`) after companion mission mapping, live generated effect-channel-B body (`lookupHmtTextureByName` on `0x800A73F4`/`0x800A73F8`, `setObjectSubstructF10IfReady`, `resolveNpcAttachmentPos`, `tickProgressChannel`, `triggerCueWithSlotEffect` type 2, `play3DSoundEvent` type `0x48`), exact `0x800D2EE0`/`0x800D3240` boundaries, TOML size, and section-4 span agreed; corrected the stale TOML placeholder. No menu function occupies the address. Next candidate is `npcTickEffectChannelWithSlotDispatch`. |
 
 ## Method and safety rules
 

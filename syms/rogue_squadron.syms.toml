@@ -1807,7 +1807,7 @@ functions = [
     { name = "fake_func_800D2C98", vram = 0x800D2C98, size = 0x8 },
     { name = "npcInitWithMotionParams", vram = 0x800D2CA0, size = 0x240 },
     { name = "npcTickEffectChannelA", vram = 0x800D2EE0, size = 0x19C },
-    { name = "func_800D307C", vram = 0x800D307C, size = 0x1C4 },
+    { name = "npcTickEffectChannelB", vram = 0x800D307C, size = 0x1C4 },
     { name = "func_800D3240", vram = 0x800D3240, size = 0x18C },
     { name = "func_800D33CC", vram = 0x800D33CC, size = 0x4C8 },
     { name = "npcShuttleUpdate", vram = 0x800D3894, size = 0x1630 },

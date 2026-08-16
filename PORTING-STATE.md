@@ -79749,3 +79749,39 @@ required.
 Next census: `npcTickEffectChannelB` at `0x800D307C` (size `0x1C4`).
 Last-15 titles still include s1698's retail-entry revisit, so the next
 iteration continues the sweep.
+
+## Session 1707 (2026-08-16) — synchronized the npcTickEffectChannelB symbol
+
+Exact generated-symbol census for `0x800D307C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles still include s1698's
+retail-entry revisit, so the mandatory REVISIT gate did not fire. Step 0
+`wc -c` was 47373; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTickEffectChannelB = 0x800D307C` with comment "effect-channel tick variant (HMT tex + cue + 3D sound)". Previous contiguous neighbor `npcTickEffectChannelA = 0x800D2EE0`; next contiguous neighbor `npcTickEffectChannelWithSlotDispatch = 0x800D3240` |
+| Generated `funcs_37.c` | `RECOMP_FUNC void npcTickEffectChannelB` at VRAM `0x800D307C`; prologue `addiu $sp, $sp, -0x68`; returns through `jr $ra` / `addiu $sp, $sp, 0x68` ending at `0x800D323C`; previous mission function is `npcTickEffectChannelA` at `0x800D2EE0` (last insn `0x800D3078`); next mission function is `npcTickEffectChannelWithSlotDispatch` at `0x800D3240`. `funcs.h` already declares the human name |
+| Body semantics | Object at `a0`; `s0 = *(a0+4)`. Early-out if float `s0+0x60` `< D_800A73FC`. Halfword `s0+0x5C` plus `a1` pick HMT names `0x800A73F4` / `0x800A73F8` for `lookupHmtTextureByName` (`0x80058360`) on `*(s0+0x30)`. The first-lookup arm also calls `setObjectSubstructF10IfReady` (`0x800F2D74`); the toggle arm xors `s0+0x5C` with 1. Template float at `*(0x80137CE4)*4 + *(s0+0x34)` uses `+0xE0` when byte `s0+0xC5==1` else `+0x100` and gates `resolveNpcAttachmentPos` (`0x800F0F94`). Then `tickProgressChannel` (`0x800F1870`); if it returns 1, `triggerCueWithSlotEffect` (`0x800F2FCC`) type 2 and `play3DSoundEvent` (`0x800989D8`) type `0x48`. Exclusive installer is `npcInitWithMotionParams`: `+0xC5==1` installs this as the sole anim callback; `+0xC5==2` installs this then a second `initObjectAnimSubstruct` with `npcTickEffectChannelWithSlotDispatch`. Name matches the Channel-A sibling with different HMT names |
+| TOML (before) | `{ name = "func_800D307C", vram = 0x800D307C, size = 0x1C4 }` — size matches `0x800D3240 - 0x800D307C` (last insn `0x800D323C` + 4 = `0x1C4`) |
+| Overlay section 4 | `{ .func = npcTickEffectChannelB, .offset = 0x0002DF4C, .rom_size = 0x000001C4 }` under `section_4_ovl_mission_funcs` (`0x800D307C - 0x800A5130 = 0x2DF4C`; `0x2DDB0 + 0x19C = 0x2DF4C`; `0x2DF4C + 0x1C4 = 0x2E110` matches next `npcTickEffectChannelWithSlotDispatch`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800D307C`. Companion menu/cinematic greps are empty for this address, this name, and the entire `0x800D2xxx`/`0x800D3xxx` window (menu max VRAM `0x800D03DC`; cinematic max `0x800B072C`). Companion and generated greps found no other `func_800D307C` occupant |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated effect-channel-B body,
+previous (`npcTickEffectChannelA` / `0x800D2EE0`) and next
+(`npcTickEffectChannelWithSlotDispatch` / `0x800D3240`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `npcTickEffectChannelB`, and only the TOML name was a stale
+`func_800D307C` placeholder. Corrected TOML to `npcTickEffectChannelB`.
+This refutes H1 (TOML was not already synchronized), H3 (no fake fragment,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTickEffectChannelWithSlotDispatch` at `0x800D3240`
+(size `0x18C`). Last-15 titles still include s1698's retail-entry
+revisit, so the next iteration continues the sweep.
