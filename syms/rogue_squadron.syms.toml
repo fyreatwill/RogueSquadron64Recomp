@@ -2664,7 +2664,7 @@ functions = [
     { name = "composeInterpolatedNodeMatricesAlt", vram = 0x800AEC48, size = 0x1CC },
     { name = "tickCutsceneNpcSlots", vram = 0x800AEE14, size = 0x11C },
     { name = "despawnCutsceneNpcSlot", vram = 0x800AEF30, size = 0x98 },
-    { name = "func_800AEFC8", vram = 0x800AEFC8, size = 0x28 },
+    { name = "initCutsceneSlotTable", vram = 0x800AEFC8, size = 0x28 },
     { name = "func_800AEFF0", vram = 0x800AEFF0, size = 0x4C },
     { name = "func_800AF03C", vram = 0x800AF03C, size = 0x50 },
     { name = "func_800AF08C", vram = 0x800AF08C, size = 0x60 },
