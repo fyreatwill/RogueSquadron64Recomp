@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable project
 history belongs in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is
-the authority for session detail. Reviewed through s1631 (2026-08-16).
+the authority for session detail. Reviewed through s1632 (2026-08-16).
 
 ## Current state
 
@@ -362,9 +362,12 @@ the authority for session detail. Reviewed through s1631 (2026-08-16).
    NPC/craft display body, exact `tickHangarDisplayItemAnimations`/
    `applyNpcPositionDrift` boundaries, section-4 overlay span, and TOML size
    agree. The generated definition and overlay table already carried the
-   human name; the project TOML placeholder was updated. The next census is
-   `func_800C6FFC`, independently named `applyNpcPositionDrift`, with size
-   `0x124`.
+   human name; the project TOML placeholder was updated. s1632 synchronized
+   `applyNpcPositionDrift` at `0x800C6FFC` (size `0x124`): the companion
+   mission mapping, live generated body, exact
+   `hangarVehicleDisplayNpcHandler`/`func_800C7120` boundaries, section-4
+   overlay span, and TOML size agree. The next census is `func_800C713C`,
+   independently named `accumulateVectorInObjectFrame`, with size `0xF0`.
 
    Leave these parked entries unchanged:
    - `func_8008ED6C` address-encoded (s1309 H2)
