@@ -83450,3 +83450,44 @@ Next census: leftover `fake_func_800E9AD8` at `0x800E9AD8` (size `0x8`).
 Neighbor peek: TOML, generated headers/body, overlay INL, and companion
 leftover already `fake_func_800E9AD8`. Last-15 titles after s1801 still
 include s1792's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1802 (2026-08-16) — confirmed the leftover fake_func_800E9AD8 symbol
+
+Exact generated-symbol census for leftover `0x800E9AD8` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7740; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800E9AD8 = 0x800E9AD8` leftover splat (comment is only `segment:mission_overlay`; no deleted-duplicate comment). Previous named kernel `initNpcHealthAndDetailFromChild = 0x800E9A84`. Next leftover `func_800E9AE0 = 0x800E9AE0`. No leftover `func_800E9AD8` splat, no `D_800E9AD8`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void fake_func_800E9AD8` at VRAM `0x800E9AD8`. Two-instruction body: `lw $v1, 0x34($v0)` then `addiu $v0, $zero, -1` (no `jr $ra`). Previous `initNpcHealthAndDetailFromChild` last insn is the delay-slot `addiu $sp, $sp, 0x18` at `0x800E9AD4`; next is leftover `func_800E9AE0` at `0x800E9AE0` (`addiu $sp, $sp, -0x40` — a prologue, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800E9AD8`. No generated `jal 0x800E9AD8` site |
+| Body semantics | 8-byte orphan `lw $v1, 0x34($v0)` / `addiu $v0, $zero, -1` fragment sitting between the NPC health/detail init's `jr $ra` epilogue and the real next-kernel prologue. Same leftover-splat family as `fake_func_800DFB8C` / `fake_func_800E406C` / `fake_func_800E447C` / `fake_func_800E71C8` / `fake_func_800E8A34` (unreachable words immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800E9AD8", vram = 0x800E9AD8, size = 0x8 }` — already the leftover name; size matches `0x800E9AE0 - 0x800E9AD8` |
+| Overlay section 4 | `{ .func = fake_func_800E9AD8, .offset = 0x000449A8, .rom_size = 0x00000008 }` under `section_4_ovl_mission_funcs` (`0x800E9AD8 - 0x800A5130 = 0x449A8`; previous `0x44954 + 0x54 = 0x449A8`; `0x449A8 + 0x8 = 0x449B0` matches next leftover `func_800E9AE0`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E9AD8`. No leftover `func_800E9AD8` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated two-instruction
+`lw`/`addiu` body, previous (`initNpcHealthAndDetailFromChild` /
+`0x800E9A84`) and next leftover (`func_800E9AE0` / `0x800E9AE0`)
+boundaries, TOML name and size, and section-4 overlay span already agree.
+No TOML or generated-name change. This refutes H2 (no stale
+`func_800E9AD8` placeholder), H3 (no overlay collision, leftover splat
+at this address, or size/boundary disagreement; size is `0x8` as
+expected; the leftover is the two-word gap, not a split prologue),
+and H4 (companion, generated body, TOML, and section-4 row are all
+present). No build or runtime run required.
+
+Next census: leftover `func_800E9AE0` at `0x800E9AE0`. Neighbor peek:
+TOML size `0x30` plus a following `func_800E9B10` (`0xE4`); generated
+headers/body and overlay INL treat this as one `0x114` function ending
+at `playStateGatedDestroySound` (`0x800E9BF4`); companion leftover
+notes `func_800E9B10` is not real and splits this function. Last-15
+titles after s1802 still include s1792's revisit, so the mandatory
+REVISIT gate does not fire.
