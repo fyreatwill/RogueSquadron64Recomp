@@ -1,37 +1,37 @@
-# NEXT work unit (s1829)
+# NEXT work unit (s1830)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol sweep. s1824 was the mandatory 15-title
-M4 REVISIT (H-rdp-consumer selected); last-15 after s1828 still include
+M4 REVISIT (H-rdp-consumer selected); last-15 after s1829 still include
 that revisit, so they are not all sweep. Do not start another M4
 instrument this iteration. Do not repeat any `submitGfxFrame`
 entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EDBB0`
-(`0x800EDBB0`, size `0xE0`). Companion `mission_overlay.txt` already
-names `shouldSwitchToPendingSong`; generated headers/body/INL already
+Exact generated-symbol census for leftover `func_800EDC90`
+(`0x800EDC90`, size `0xFC`). Companion `mission_overlay.txt` already
+names `selectAndStageNextSong`; generated headers/body/INL already
 use that name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `shouldSwitchToPendingSong` and
-  the `0xE0` span.
+  TOML, and section-4 already agree on `selectAndStageNextSong` and
+  the `0xFC` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EDBB0` while companion uses `shouldSwitchToPendingSong`.
+  `func_800EDC90` while companion uses `selectAndStageNextSong`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EDBB0`, or the TOML size is not `0xE0`, or
+  overlay occupies `0x800EDC90`, or the TOML size is not `0xFC`, or
   the generated body is not this function (first insn is not
-  `lui $v0, 0x8011` / last is not `jr $ra` / `nop` at `0x800EDC88` /
-  `0x800EDC8C`).
+  `addiu $sp, $sp, -0x18` / last is not `jr $ra` / `addiu $sp, $sp,
+  0x18` at `0x800EDD84` / `0x800EDD88`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EDBB0\|func_800EDBB0\|shouldSwitchToPendingSong' \
+grep -n '800EDC90\|func_800EDC90\|selectAndStageNextSong' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -41,7 +41,7 @@ grep -n '800EDBB0\|func_800EDBB0\|shouldSwitchToPendingSong' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EDBB0\|shouldSwitchToPendingSong\|0x800EDBB0\|0x800EDC88\|0x800EDC90' \
+grep -n 'func_800EDC90\|selectAndStageNextSong\|0x800EDC90\|0x800EDD84\|0x800EDD8C' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -52,12 +52,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `shouldSwitchToPendingSong` / `0xE0`.
-  No edit. Next leftover `func_800EDC90` (`0x800EDC90`, `0xFC`;
-  generated headers/INL already `selectAndStageNextSong`; TOML
-  still leftover).
-- H2: TOML (and/or generated) still `func_800EDBB0`. Rename to
-  `shouldSwitchToPendingSong`. Next leftover `func_800EDC90`.
+- H1: all four sources already `selectAndStageNextSong` / `0xFC`.
+  No edit. Next leftover `func_800EDD8C` (`0x800EDD8C`, `0x1DC`;
+  generated headers/INL already `stopSongAndRebuildActiveCueList`;
+  TOML still leftover).
+- H2: TOML (and/or generated) still `func_800EDC90`. Rename to
+  `selectAndStageNextSong`. Next leftover `func_800EDD8C`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 

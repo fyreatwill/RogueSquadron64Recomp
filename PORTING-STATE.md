@@ -84759,3 +84759,53 @@ leftover `func_800EDC90` (`0x800EDC90`, `0xFC`; generated already
 `selectAndStageNextSong`; TOML still leftover). Last-15 titles after
 s1828 still include s1824's M4 revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1829 (2026-08-17) — synchronized the shouldSwitchToPendingSong symbol
+
+Exact generated-symbol census for leftover `func_800EDBB0` at
+`0x800EDBB0` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1824's mandatory REVISIT (`selected H-rdp-consumer
+on the ovl20 0x670 record`), so the 15-title all-sweep REVISIT gate did
+not fire. Step 0 `wc -c` was 10853; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `shouldSwitchToPendingSong = 0x800EDBB0`. Next named kernel `selectAndStageNextSong = 0x800EDC90`. No leftover `func_800EDBB0` splat. No `D_800EDBB0` |
+| Companion `main_overlay.txt` | No occupant at `0x800EDBB0` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void shouldSwitchToPendingSong` at VRAM `0x800EDBB0`. First insn `lui $v0, 0x8011`; last live insn `jr $ra` / `nop` at `0x800EDC88` / `0x800EDC8C`. Previous is `tickActiveSongSlots` (`0x800ED200`, ends `0x800EDBAC`); next is already `selectAndStageNextSong` at `0x800EDC90`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Leaf predicate (no jal, no stack frame). Gate byte `0x8010C2F1` (`0x80110000-0x3D0F`) must be 1, else return 0. Then `0x8010C2F5`: if nonzero, compare a `0x801388A0` table byte against `0x8010C2F6` and mismatch-return 0; if zero, require `0x8010C2F7` nonzero else return 0. Remaining path compares signed word `0x8010C2F8` against table `0x80138060[(0x8010C2F7)-1]` and returns 1 (switch) or 0. Name matches: should we switch to the pending song |
+| Callers | Two generated `jal 0x800EDBB0` sites already dispatch the human name: `selectAndStageNextSong` at `0x800EDC98`, `tickSongFadeTimer` at `0x800EE880` |
+| TOML | Was `{ name = "func_800EDBB0", vram = 0x800EDBB0, size = 0xE0 }` — stale leftover. Size already matched `0x800EDC90 - 0x800EDBB0`. Renamed to `shouldSwitchToPendingSong` |
+| Overlay section 4 | `{ .func = shouldSwitchToPendingSong, .offset = 0x00048A80, .rom_size = 0x000000E0 }` under `section_4_ovl_mission_funcs` (`0x800EDBB0 - 0x800A5130 = 0x48A80`; previous `0x480D0 + 0x9B0 = 0x48A80`; `0x48A80 + 0xE0 = 0x48B60` matches next `selectAndStageNextSong`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EDBB0`. No leftover `func_800EDBB0` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated pending-song
+predicate (`lui $v0, 0x8011` prologue, `jr $ra` / `nop` at
+`0x800EDC88` / `0x800EDC8C`, gate `0x8010C2F1==1`, table compare
+against `0x80138060`), previous (`tickActiveSongSlots` / `0x800ED200`)
+and next (`selectAndStageNextSong` / `0x800EDC90`) boundaries, overlay
+span, and size already agreed on `shouldSwitchToPendingSong` / `0xE0`.
+TOML still carried leftover `func_800EDBB0`; renamed it to match.
+Generated headers/body/INL and the two jal sites were already the
+human name. This refutes H1 (TOML was not already synchronized), H3
+(no overlay collision, no size/boundary disagreement; previous ends
+exactly here and next starts at `0x800EDC90`), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No invented
+name. No build or runtime run required.
+
+Next census: leftover `func_800EDC90` at `0x800EDC90` (size `0xFC`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `selectAndStageNextSong`; TOML still
+says `func_800EDC90`. First insn `addiu $sp, $sp, -0x18`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EDD84` / `0x800EDD88`.
+Two generated `jal 0x800EDC90` sites already dispatch the human
+name. Next occupant is leftover `func_800EDD8C` (`0x800EDD8C`,
+`0x1DC`; generated already `stopSongAndRebuildActiveCueList`; TOML
+still leftover). Last-15 titles after s1829 still include s1824's
+M4 revisit, so the mandatory REVISIT gate does not fire.
