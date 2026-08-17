@@ -84505,3 +84505,65 @@ after this entry the last-15 titles are s1809–s1823, all sweep.
 Sweep cursor parked at leftover `func_800ECE10` (`0x800ECE10`,
 `0x338`; companion/generated `datItemActorNpcHandler`; TOML still
 leftover). Do not invent a name for the confirmed leftover.
+
+## Session 1824 (2026-08-17) — selected H-rdp-consumer on the ovl20 0x670 record
+
+Mandatory 15-title M4 REVISIT (HYPOTHESIS-ID: m4-accumulator-boundary-revisit).
+Last-15 ledger titles after s1823 were s1809–s1823, all sweep. Step 0
+`wc -c` was 9666; not a maintenance iteration. No new soak-queue
+verdicts beyond the already-folded s1029-and-earlier tail. Soak queue
+empty. Ground-truth docs read first (`M4-ACCUMULATOR-GROUND-TRUTH.md`,
+`M4-V6-PRODUCER-AUDIT.md`, `F5-UCODE-REFERENCE.md`, GLideN64
+`F5Rogue.cpp`). No game run and no new runtime field.
+
+### Competing hypotheses
+
+- H-rdp-consumer: after `L_1740`, ovl20 copies or restages the
+  `0x670+0x18`/`+0x40` bytes into the `0xD60` staging buffer before
+  `SP_WR_LEN`.
+- H-later-dma-raw: some live `SP_WR_LEN` sources DMEM `0x670`.
+- H-source-state: store exists, `SP_WR_LEN` is only from `0xD60`, and
+  no generated path copies the stored bytes into that buffer.
+- H-dead-store: no post-`L_1740` load, copy, or DMA of `+0x18`/`+0x40`.
+
+### Evidence
+
+| Site | Classification |
+|---|---|
+| `ori $9, $zero, 0x670` ovl20:1078 | producer base for `L_162C`/`L_1740` `sdv v6` to `0x18($9)` / `0x40($9)` |
+| `addiu $11/$15, …, 0x670` :619/630/803/806 | index addend; writes color at `+0x10`/`+0x14` only |
+| `L_17F0` `llv`/`lh`/`lsv` `0x18($11/$12/$13)` :1386–1579 | post-store reader of stored `v6` XY |
+| `L_17F0` `lsv` `0x1C($11/$12/$13)` :1826–1834 | remaining `v6` halfword 2 |
+| `L_17F0` `luv` `0x10($…)` | color, not `v6` |
+| no `0x40($11/$12/$13)` load | `+0x40` is `0x18` of vertex at `base+0x28` (0x28-byte records; GLideN64 `F3DSWRS_Tri` indexes `/ 40`) |
+| `jal 0x11FC; ori $2, $zero, 0xD60` :224–228 | only `SP_WR_LEN`; `SET_DMA_MEM(r2)` with `r2=0xD60` |
+| `SP_RD_LEN` :281, :378 | DMEM `0x170` / generic `r3`; not `0x670` |
+| sibling ovl4/10/12/14/18/1c/24 | same single `jal 0x11FC; ori $2, 0xD60` |
+
+`L_17F0` restages, it does not memcpy: `sb $10, 0x0($16)` stores
+`*(u8*)(state+0x37) | 0xC8` (RDP triangle) at the `r16` cursor
+(initialized to `0xD60`); `ssv` of the loaded `+0x18` Y to
+`0x2/0x4/0x6($16)` and scaled X to `0x8/0xA($16)`. `L_112C` flushes
+when `r16 - 0xD60 != 0`. Full table:
+`docs/M4-ACCUMULATOR-GROUND-TRUTH.md` (s1824 section).
+
+Two sources for field identity: generated `L_17F0` (every overlay)
+treats `+0x18` as triangle XY; GLideN64 `F3DSWRS_PrepareVertices`
+sources color from `gSP.vertexColorBase + index`, matching the
+generated `luv` at `+0x10`.
+
+### Outcome
+
+H-rdp-consumer selected. H-later-dma-raw is refuted (live `SP_WR_LEN`
+source is only `0xD60`, same as s1512). H-dead-store is refuted.
+H-source-state as "no generated path copies the stored bytes into
+`0xD60`" is refuted by the XY restage. The observed `0xFFFF8000`/
+`0x00008000` sentinel at `+0x18` is the RDP triangle X/Y payload,
+not a separate shade DMA record. No mitigation. Do not re-watch
+`0x688:0x710`, recapture VMADH/VGE, or watch `0x4B7800`.
+
+Next work unit: resume the generated-symbol sweep at leftover
+`func_800ECE10` (`0x800ECE10`, `0x338`; companion/generated
+`datItemActorNpcHandler`; TOML still leftover). Parked M4 remainder
+is the restaged RDP command shape in `0xD60`, not another consumer
+walk.

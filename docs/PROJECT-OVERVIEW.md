@@ -3103,8 +3103,9 @@ collision.
 | s1821 | Synchronized `craftMountedAnimationNpcHandler` (`0x800ECC28`, `0x1B4`). Action-1 spawn copies msg `+0x10/+0x14/+0x18` into child `+0x8/+0xC/+0x10`, clears child `+0x48/+0x4C/+0x4D`, and indexes the craft spatial grid at `0x801375D8+0x34`. Action-3 tick jals `tickCraftMountedAnimationEffect` at `0x800ECD90`, then `destroyNpcSlotByIndex` at `0x800ECDAC` when that tick returns 1. No generated `jal 0x800ECC28` (NPC-handler table dispatch). TOML was stale `func_800ECC28`; companion, generated headers/body, and section-4 already used the human name. |
 | s1822 | Synchronized `dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`). Thin wrapper: `lhu` global id from `0x8013959C`, `a1 = 0xC`, `jal slotDispatcherIter` at `0x800ECDF0`. Sole generated `jal 0x800ECDDC` inside `tickMissionObjectives` at `0x800FBD18` already dispatches the human name. TOML was stale `func_800ECDDC`; companion, generated headers/body, and section-4 already used the human name. |
 | s1823 | Confirmed leftover `fake_func_800ECE04` (`0x800ECE04`, `0xC`). Three-instruction `srl $v0, $t1, 4` / `addiu $v0, $v0, 0x9F` / `multu $v0, $v1` orphan between `dispatchSlotActionTwelveByGlobalId`'s epilogue and `datItemActorNpcHandler` (whose prologue is `addiu $sp, $sp, -0x140`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment (next occupant `func_800ECE10` deleted s432 as a duplicate of `datItemActorNpcHandler`). No leftover `func_800ECE04`; TOML, generated headers/body, and section-4 already use the leftover name. |
+| s1824 | Mandatory M4 REVISIT. Selected H-rdp-consumer: ovl20 `L_17F0` loads `0x670+0x18`/`+0x1C` after `L_1740` and restages those halfwords as RDP triangle X/Y into the `0xD60` command buffer (`*(u8*)(state+0x37)|0xC8`); the only `SP_WR_LEN` still sources `0xD60`. H-later-dma-raw, H-dead-store, and "no copy into `0xD60`" H-source-state refuted. Color is the separate `+0x10` `luv` field. Table: `docs/M4-ACCUMULATOR-GROUND-TRUTH.md`. |
 
-The sweep cursor after s1823 is leftover `func_800ECE10`
+The sweep cursor after s1824 is leftover `func_800ECE10`
 (`0x800ECE10`, size `0x338`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
 `datItemActorNpcHandler`; TOML still leftover `func_800ECE10`.
@@ -3113,10 +3114,9 @@ First insn `addiu $sp, $sp, -0x140`; last live `jr $ra` /
 generated `jal 0x800ECE10` (NPC-handler table dispatch). Next
 occupant is leftover `fake_func_800ED148` (`0x800ED148`, `0x8`).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776, s1792, s1808. After s1823 the last-15
-titles are s1809–s1823, all sweep, so the next iteration is the
-mandatory M4 accumulator-boundary REVISIT (source state vs later
-DMA/consumer), not another sweep step.
+s1714, s1744, s1760, s1776, s1792, s1808, s1824. After s1824 the
+last-15 titles include the M4 consumer revisit, so the next
+iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

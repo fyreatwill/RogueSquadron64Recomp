@@ -56,5 +56,7 @@ threshold, with no lighting/color load. The remaining result is
 `H-v6-clip-predicate` in the narrow sense that the final `vge` is a
 predicate-like compare, while its input is transformed-vector arithmetic
 rather than a standalone clip mask. This refines, but does not yet explain,
-why the compare produces the observed `-0.5/+0.5` sentinel. No mitigation or
-runtime change is authorized.
+why the compare produces the observed `-0.5/+0.5` sentinel. s1824's
+consumer table (`docs/M4-ACCUMULATOR-GROUND-TRUTH.md`) shows those
+stored bytes are restaged as RDP triangle X/Y, not as shade. No
+mitigation or runtime change is authorized.
