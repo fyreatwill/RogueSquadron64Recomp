@@ -3075,15 +3075,16 @@ collision.
 | s1794 | Synchronized `tickFighterSquadronWithSplinePaths` (`0x800E7390`, `0x4D0`). Two-pass spline orientation, no audio: pending-child + LOS (`isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` on `+0x38`), mesh T&L (`getObjectMeshTransformOrLocal` / `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto`) or fallback at `L_800E7634`, then rotation/quat/vec3 (`buildRotationMatrixSlot0`/`Slot1` / `composeRotationMatrixSlot1` / `quatFromAxisAngle` / `rotateVec3ByQuat` / `transformVec3ByMat34` / `vec3Cross`/`Dot`/`Length`). Writes `+0x48`/`+0x4C`. Companion comment overstates (zero `play3DSound*` / objective / teardown; no per-member walk). One generated `jal 0x800E7390` inside `npcGroundTroopUpdate` already dispatched the human name. TOML was stale `func_800E7390`; generated headers/body and section-4 already used the human name. |
 | s1795 | Confirmed `npcGroundTroopUpdate` (`0x800E7860`, `0xFC8`). 9-way `jr` table on `(a1-1)<9` at `0x800A8520`. Setup type halfword `*(s3+0)` is `0x3B`/`0x3C`/`0x3D`/`0x50` (slti `0x3E`). Case 2 live tick has an inner 5-way table on `lh +0x64` at `0x800A8578` and calls `tickFighterSquadronWithSplinePaths` + `transformCraftAnchorsApplySubFx3`. 96 `jal`s / 58 unique targets. No generated `jal 0x800E7860` — table-dispatched `npcXxxUpdate` sibling of `npcTrainCarUpdate` / `npcWaterCraftUpdate`. Companion, generated headers/body, TOML, and section-4 already used the human name. |
 | s1796 | Synchronized `playAttachmentCueNoTexture` (`0x800E8828`, `0x120`). Attachment cue + 3D sound without an HMT lookup: copy `0x30` bytes from `*(a0+4)` onto `sp+0x28`, scale `+0x44` by float `0x800A85A8` into Y, `resolveNpcAttachmentPos`, `tickProgressChannel`, then on return-1 `triggerCueWithSlotEffect` `a1=0x6` plus `play3DSoundEvent` `0x1D`/`0x6E`/`0x28` with float `0x800A85B0`. No generated `jal 0x800E8828`. TOML was stale `func_800E8828`; generated headers/body and section-4 already used the human name. |
+| s1797 | Synchronized `applyCraftAnimDetailParamsB` (`0x800E8948`, `0xEC`). Short sibling of `applyCraftAnimAndDetailParams`: zero `+0x64`, copy float `0x800A85B4` to `+0x5C` and `*(s0+0x34)+0x90` to `+0x58`, then `setNpcHealth` / `setObjectDetailLevel`; when `lh +0x60` is 0, one `initActorMotionParams` from the `*(0x80137CE4)`-indexed row and one `initObjectAnimSubstruct` (floats `0x800A85B8`/`0x800A85BC`, pointer `0x800E8828`). Zero extra `initObjectAnimSubstruct` / `initAnimSubstructFromParams`. No generated `jal 0x800E8948`. TOML was stale `func_800E8948`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1796 is leftover `func_800E8948` /
-`applyCraftAnimDetailParamsB` (`0x800E8948`, size `0xEC`). Neighbor
-peek: TOML still carries `func_800E8948`; generated headers/body,
-overlay INL, and `mission_overlay.txt` already use the human name.
-Next leftover after it is `fake_func_800E8A34`. Mandatory revisits in
-this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776,
-s1792. After s1796 the last-15 titles still include that revisit, so
-the next iteration resumes the `applyCraftAnimDetailParamsB` census.
+The sweep cursor after s1797 is leftover `fake_func_800E8A34`
+(`0x800E8A34`, size `0xC`). Neighbor peek: TOML, generated
+headers/body, overlay INL, and `mission_overlay.txt` already use the
+leftover name. Next leftover after it is `func_800E8A40` /
+`runDestructionPhaseSequence`. Mandatory revisits in this window:
+s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792. After
+s1797 the last-15 titles still include that revisit, so the next
+iteration resumes the `fake_func_800E8A34` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

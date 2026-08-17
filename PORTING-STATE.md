@@ -83257,3 +83257,44 @@ peek already shows generated headers/body, overlay INL, and
 `mission_overlay.txt` using the human name while TOML is still
 `func_800E8948`. Last-15 titles after s1796 still include s1792's
 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1797 (2026-08-16) — synchronized the applyCraftAnimDetailParamsB symbol
+
+Exact generated-symbol census for leftover `0x800E8948` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7634; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `applyCraftAnimDetailParamsB = 0x800E8948` with comment "per-instance anim/detail setup (sibling of applyCraftAnimAndDetailParams)". No leftover `func_800E8948` splat and no `D_800E8948`. No menu/cinematic/main occupant. Previous named kernel in VRAM order is `playAttachmentCueNoTexture = 0x800E8828`; next named leftover is `fake_func_800E8A34 = 0x800E8A34` |
+| Companion `main_overlay.txt` | No occupant at `0x800E8948` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void applyCraftAnimDetailParamsB` at VRAM `0x800E8948`. First insn `addiu $sp, $sp, -0x38`; last insn `jr $ra` / `addiu $sp, $sp, 0x38` at `0x800E8A2C` / `0x800E8A30`. Previous `playAttachmentCueNoTexture` ends at `0x800E8940` / `0x800E8944`; next is `fake_func_800E8A34` at `0x800E8A34`. `funcs.h` already declares the human name. No leftover `func_800E8948`. No generated `jal 0x800E8948` site |
+| Body semantics | Four jal / four unique. Zeroes `sh +0x64` of `*(a0+4)`, copies float `0x800A85B4` to `+0x5C` and `*(s0+0x34)+0x90` to `+0x58`. `setNpcHealth` (`0x800F2070`) of `*(s0+0x38)` with `a2=*(s0+0x34)` / `a1=a2+0x6C`. `setObjectDetailLevel` (`0x800F2830`) `a1=*(s0+0x34)+0xA0`. When `lh +0x60` is 0: index `*(0x80137CE4)<<2 + *(s0+0x34)` then `initActorMotionParams` (`0x800F2888`) from `+0xAC/+0xB0/+0xB4/+0xB8`, then `initObjectAnimSubstruct` (`0x800F2B88`) with floats `0x800A85B8`/`0x800A85BC` and pointer `0x800E8828`. Zero extra `initObjectAnimSubstruct` / `initAnimSubstructFromParams` — the short sibling of `applyCraftAnimAndDetailParams` (10 jal: those four plus 3 more `initObjectAnimSubstruct` + 2 `initAnimSubstructFromParams`) |
+| TOML (before) | `{ name = "func_800E8948", vram = 0x800E8948, size = 0xEC }` — size matches `0x800E8A34 - 0x800E8948` |
+| Overlay section 4 (already named) | `{ .func = applyCraftAnimDetailParamsB, .offset = 0x00043818, .rom_size = 0x000000EC }` under `section_4_ovl_mission_funcs` (`0x800E8948 - 0x800A5130 = 0x43818`; previous `0x436F8 + 0x120 = 0x43818`; `0x43818 + 0xEC = 0x43904` matches next `fake_func_800E8A34`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E8948` |
+
+### Outcome
+
+H2 selected (stale TOML placeholder; generated headers/body and section-4
+already used the human name). Companion `mission_overlay.txt` already had
+`applyCraftAnimDetailParamsB`; the live generated short sibling body
+(`setNpcHealth` / `setObjectDetailLevel` plus gated one-shot motion/anim
+init), previous (`playAttachmentCueNoTexture` / `0x800E8828 + 0x120`)
+and next (`fake_func_800E8A34` / `0x800E8A34`) boundaries, TOML size,
+and section-4 overlay span agreed. Corrected TOML only. This refutes H1
+(TOML was not already synchronized), H3 (no leftover orphan, overlay
+collision, or size/boundary disagreement; size is `0xEC` as expected),
+and H4 (companion, generated body, TOML, and section-4 row are all
+present). No build or runtime run required.
+
+Next census: leftover `fake_func_800E8A34` at `0x800E8A34` (size `0xC`).
+Neighbor peek already shows TOML, generated headers/body, overlay INL,
+and `mission_overlay.txt` using the leftover name. Last-15 titles after
+s1797 still include s1792's revisit, so the mandatory REVISIT gate does
+not fire.

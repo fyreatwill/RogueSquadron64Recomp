@@ -1892,7 +1892,7 @@ functions = [
     { name = "tickFighterSquadronWithSplinePaths", vram = 0x800E7390, size = 0x4D0 },
     { name = "npcGroundTroopUpdate", vram = 0x800E7860, size = 0xFC8 },
     { name = "playAttachmentCueNoTexture", vram = 0x800E8828, size = 0x120 },
-    { name = "func_800E8948", vram = 0x800E8948, size = 0xEC },
+    { name = "applyCraftAnimDetailParamsB", vram = 0x800E8948, size = 0xEC },
     { name = "fake_func_800E8A34", vram = 0x800E8A34, size = 0xC },
     { name = "func_800E8A40", vram = 0x800E8A40, size = 0x49C },
     { name = "func_800E8EDC", vram = 0x800E8EDC, size = 0xBA8 },
