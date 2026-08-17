@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1867 (2026-08-17).
+detail. Reviewed through s1868 (2026-08-17).
 
 ## Current state
 
@@ -66,18 +66,18 @@ detail. Reviewed through s1867 (2026-08-17).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at leftover
-   `func_800F1870` (`0x800F1870`, size `0x2D0`). Companion
+   `func_800F1B40` (`0x800F1B40`, size `0x33C`). Companion
    `mission_overlay.txt` and generated headers/body/INL already name
-   `tickProgressChannel`; TOML still leftover `func_800F1870`.
-   Next leftover after that is `func_800F1B40` (`0x800F1B40`,
-   `0x33C`; companion/generated already `raycastTerrainAndNpcs`;
-   TOML still leftover). s1867 synchronized leftover
-   `func_800F15B8` to `acquireNpcTargetsInAimCone` (`0x800F15B8`,
-   `0x2B8`). s1856 selected H-never-live for the parked M4
-   `0x8000` Y on VI 640 attribution LLE (single-source). Archive:
-   `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1867). About 1,548 placeholder `func_0x...` names
-   remained at s1487.
+   `raycastTerrainAndNpcs`; TOML still leftover `func_800F1B40`.
+   Next leftover after that is `func_800F1E7C` (`0x800F1E7C`,
+   `0x178`; companion/generated already
+   `initActorRenderDescriptorIfUninit`; TOML still leftover).
+   s1868 synchronized leftover `func_800F1870` to
+   `tickProgressChannel` (`0x800F1870`, `0x2D0`). s1856 selected
+   H-never-live for the parked M4 `0x8000` Y on VI 640 attribution
+   LLE (single-source). Archive: `PROJECT-OVERVIEW.md` §33
+   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1868). About
+   1,548 placeholder `func_0x...` names remained at s1487.
 2. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 3. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -136,7 +136,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1867 through leftover `func_800F15B8` became
+s1648–s1868 through leftover `func_800F1870` became
+`tickProgressChannel` (`0x800F1870`, `0x2D0`) after leftover
+`func_800F15B8` became
 `acquireNpcTargetsInAimCone` (`0x800F15B8`, `0x2B8`) after leftover
 `func_800F1310` became
 `gatherAndSortNearbyNpcViewPoints` (`0x800F1310`, `0x2A8`) after leftover
@@ -266,6 +268,8 @@ and leftover `func_800F1310` became
 `gatherAndSortNearbyNpcViewPoints` (`0x800F1310`, `0x2A8`)
 and leftover `func_800F15B8` became
 `acquireNpcTargetsInAimCone` (`0x800F15B8`, `0x2B8`)
+and leftover `func_800F1870` became
+`tickProgressChannel` (`0x800F1870`, `0x2D0`)
 (§35). s1728 is maintenance only.
 
 ## Method and safety rules
