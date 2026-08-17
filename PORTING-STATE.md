@@ -87459,3 +87459,52 @@ already-named occupant is `initActorMotionParams` at `0x800F2888`.
 Last-15 titles after s1880 still include s1872's hangar/512
 revisit, so the next iteration is another leftover census rather
 than a mandatory REVISIT.
+
+## Session 1881 (2026-08-17) — synchronized the getObjectDetailLevel symbol
+
+Exact generated-symbol census for leftover `func_800F287C` at
+`0x800F287C` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1872's hangar/512 revisit (`hangar/512 0x8000 Y
+is unevaluable`), so the 15-title all-sweep REVISIT gate did not fire.
+Step 0 `wc -c` was 18246; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `getObjectDetailLevel = 0x800F287C` at line 1025 (`14 callers: returns *(s16*)(a0 + 0x19A) — counterpart getter`). Sequential neighbor `setObjectDetailLevel = 0x800F2830` at line 1024; next occupant `initActorMotionParams = 0x800F2888` at line 742 |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F287C`. Menu overlay listed-symbol max around `0x800C6660`; cinematic max `0x800B072C` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void getObjectDetailLevel` at VRAM `0x800F287C`. First insn `lh $v0, 0x19A($a0)` at `0x800F287C`; last live `jr $ra` / `nop` at `0x800F2880` / `0x800F2884`. Previous is already `setObjectDetailLevel` (`0x800F2830`, last `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2874` / `0x800F2878`); next is already `initActorMotionParams` at `0x800F2888` (`addiu $sp, $sp, -0x40`). `funcs.h` and overlay INL already the human name. No leftover `func_800F287C` in generated headers/body/INL |
+| Body semantics | `$a0` object pointer. Single halfword load `lh $v0, 0x19A($a0)` into `$v0`/`ctx->r2` via `MEM_H(ctx->r4, 0X19A)`. Immediate return. Counterpart getter to `setObjectDetailLevel`, which stores the level at the same object `+0x19A` |
+| Callers | 14 generated `getObjectDetailLevel(rdram, ctx)` call sites across `funcs_37.c`..`funcs_39.c` (companion comment said 14; matches). No leftover `LOOKUP_FUNC` / `func_800F287C` sites |
+| TOML | Was `{ name = "func_800F287C", vram = 0x800F287C, size = 0xC }` — stale leftover. Size already matched `0x800F2888 - 0x800F287C`. Renamed to `getObjectDetailLevel`. The human name was not already a TOML symbol |
+| Overlay section 4 | `{ .func = getObjectDetailLevel, .offset = 0x0004D74C, .rom_size = 0x0000000C }` under `section_4_ovl_mission_funcs` (`0x800F287C - 0x800A5130 = 0x4D74C`; previous `0x4D700 + 0x4C = 0x4D74C`; `0x4D74C + 0xC = 0x4D758` matches next `initActorMotionParams`) |
+| Non-collision | No leftover `func_800F287C` in generated headers, body, overlay INL, or TOML after the rename. Other overlay files have no occupant at `0x800F287C` |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`lh $v0, 0x19A($a0)` / `jr $ra` / `nop` at `0x800F287C` /
+`0x800F2880` / `0x800F2884`), previous (`setObjectDetailLevel` /
+`0x800F2830`) and next (`initActorMotionParams` / `0x800F2888`)
+boundaries, overlay span, and size already agreed on
+`getObjectDetailLevel` / `0xC`. TOML still carried leftover
+`func_800F287C`; renamed it to match. Generated headers/body/INL
+were already the human name. This refutes H1 (TOML was not already
+synchronized), H3 (no overlay collision, no size/boundary
+disagreement; previous ends exactly here and next starts at
+`0x800F2888`; first insn is `lh $v0, 0x19A($a0)` and last is
+`jr $ra` / `nop`; body is the single halfword getter of object
+`+0x19A`, not an unnameable span). No invented name. No build or
+runtime run required.
+
+Next census: leftover `func_800F2888` at `0x800F2888` (size `0x100`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `initActorMotionParams`; TOML still
+leftover `func_800F2888`. First insn `addiu $sp, $sp, -0x40`; last
+live `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F2980` /
+`0x800F2984`. Next already-named occupant is
+`getObjectMeshTransformOrLocal` at `0x800F2988`. Last-15 titles
+after s1881 still include s1872's hangar/512 revisit, so the next
+iteration is another leftover census rather than a mandatory REVISIT.

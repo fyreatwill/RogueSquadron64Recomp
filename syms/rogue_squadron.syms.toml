@@ -1977,7 +1977,7 @@ functions = [
     { name = "isPointInsideTriggerVolume", vram = 0x800F2760, size = 0x90 },
     { name = "getNpcDetailLevelByIndex", vram = 0x800F27F0, size = 0x40 },
     { name = "setObjectDetailLevel", vram = 0x800F2830, size = 0x4C },
-    { name = "func_800F287C", vram = 0x800F287C, size = 0xC },
+    { name = "getObjectDetailLevel", vram = 0x800F287C, size = 0xC },
     { name = "func_800F2888", vram = 0x800F2888, size = 0x100 },
     { name = "func_800F2988", vram = 0x800F2988, size = 0x78 },
     { name = "func_800F2A00", vram = 0x800F2A00, size = 0x24 },
