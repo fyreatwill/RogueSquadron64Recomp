@@ -82759,3 +82759,44 @@ at `0x800E4BB0` (size `0x210`). Neighbor peek already shows companion,
 generated, and section-4 using the human name while TOML is still
 `func_800E4BB0`. Last-15 titles after s1785 still include s1776's
 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1786 (2026-08-16) — synchronized the transformCraftAnchorsApplySubFx2 symbol
+
+Exact generated-symbol census for `0x800E4BB0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6922; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `transformCraftAnchorsApplySubFx2 = 0x800E4BB0` with comment "build rotation matrices + transform anchors + apply sub-effects (sibling)". Previous named kernel `playDualTextureAttachmentCueC = 0x800E49B4`. Next named kernel `tickCraftSplineOrientationVariant = 0x800E4DC0`. Siblings `transformCraftAnchorsAndApplySubFx = 0x800E08F8` and `transformCraftAnchorsApplySubFx3 = 0x800E71D0`. No leftover `func_800E4BB0` splat, no `D_800E4BB0`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void transformCraftAnchorsApplySubFx2` at VRAM `0x800E4BB0`. First insn `addiu $sp, $sp, -0x98`; last insn `jr $ra` / `addiu $sp, $sp, 0x98` at `0x800E4DB8` / `0x800E4DBC`. Previous `playDualTextureAttachmentCueC` ends at `0x800E4BA8` / `0x800E4BAC`; next is `tickCraftSplineOrientationVariant` at `0x800E4DC0`. `funcs.h` already declares the human name. No leftover `func_800E4BB0`. Two generated `jal 0x800E4BB0` sites at `0x800E6A0C` and `0x800E6B2C` (inside `npcWaterCraftUpdate`) already dispatch the human name |
+| Body semantics | Seven jal: `isPendingChildNpcActive` (`0x800F06BC`), `buildRotationMatrixSlot0` (`0x8001CC3C`), `composeRotationMatrixSlot1` (`0x8001CCCC`), paired `transformVec3ByMat34` (`0x800193E8`), `validateActorTargetLOS` (`0x800F07AC`), `applyToObjectSubstructByFlag` (`0x800F2D38`). Matches the companion rotation-matrix + transform-anchors + apply-sub-effects sibling (LOS check is also present, as on `transformCraftAnchorsApplySubFx3`) |
+| TOML (before) | `{ name = "func_800E4BB0", vram = 0x800E4BB0, size = 0x210 }` — size matches `0x800E4DC0 - 0x800E4BB0` |
+| Overlay section 4 | `{ .func = transformCraftAnchorsApplySubFx2, .offset = 0x0003FA80, .rom_size = 0x00000210 }` under `section_4_ovl_mission_funcs` (`0x800E4BB0 - 0x800A5130 = 0x3FA80`; previous `0x3F884 + 0x1FC = 0x3FA80`; `0x3FA80 + 0x210 = 0x3FC90` matches next `tickCraftSplineOrientationVariant`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E4BB0`. No leftover `func_800E4BB0` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated rotation-matrix / dual-anchor
+transform / sub-effect body, previous (`playDualTextureAttachmentCueC` /
+`0x800E49B4`) and next (`tickCraftSplineOrientationVariant` / leftover
+`func_800E4DC0` / `0x800E4DC0`) boundaries, TOML size, and section-4 overlay
+span agreed; the generated headers/body were already
+`transformCraftAnchorsApplySubFx2`, and only the TOML name was a stale
+`func_800E4BB0` placeholder. Corrected TOML to
+`transformCraftAnchorsApplySubFx2`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision, or
+size/boundary disagreement; size is `0x210` as expected), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `tickCraftSplineOrientationVariant` / leftover `func_800E4DC0`
+at `0x800E4DC0` (size `0x8EC`). Neighbor peek already shows companion,
+generated, and section-4 using the human name while TOML is still
+`func_800E4DC0`. Last-15 titles after s1786 still include s1776's
+revisit, so the mandatory REVISIT gate does not fire.
