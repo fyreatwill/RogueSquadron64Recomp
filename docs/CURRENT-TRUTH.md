@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1777 (2026-08-16).
+detail. Reviewed through s1778 (2026-08-16).
 
 ## Current state
 
@@ -50,12 +50,12 @@ detail. Reviewed through s1777 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at
-   `playDualTextureAttachmentCueMode1` (`0x800E4050`, size `0x1C`).
-   Neighbor peek: TOML still `func_800E4050` while generated/overlay
-   already use the human name. Archive: `PROJECT-OVERVIEW.md` §33
-   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1777). About 1,548
-   placeholder `func_0x...` names remained at s1487.
+1. Resume the generated-symbol sweep at leftover
+   `fake_func_800E406C` (`0x800E406C`, size `0x4`). Neighbor peek:
+   companion, generated, TOML, and section-4 already use the leftover
+   name. Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34
+   (s1590–s1647), §35 (s1648–s1778). About 1,548 placeholder
+   `func_0x...` names remained at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): watch
    `submitGfxFrame`'s callers to name the extra +105 path on the
    126.3 s 1024. Do not re-arm the s1776 11-PC set as the discriminator.
@@ -93,11 +93,11 @@ never-access) live in `PROJECT-OVERVIEW.md` §26 and §35. Most recent: s1698
 `512→1024` at 126.3 s; the stay was a flush cutoff.
 
 ## Evidence ledger summary
-Per-session rows through s1777 live in `PROJECT-OVERVIEW.md` §33–§35.
+Per-session rows through s1778 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1777 through `playDualTextureAttachmentCueMode0` plus the s1744 overlay-PC, s1760
+s1648–s1778 through `playDualTextureAttachmentCueMode1` plus the s1744 overlay-PC, s1760
 jump-table, and s1776 main-text-handler revisits that selected H3-stop-tick
 for overlay ticks and H1-submitGfx for the attract 1024 (§35). s1728 is
 maintenance only.

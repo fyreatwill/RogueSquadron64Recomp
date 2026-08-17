@@ -1874,7 +1874,7 @@ functions = [
     { name = "tickWalkerCraftWithLimbsAndDestruction", vram = 0x800E2674, size = 0x1A4 },
     { name = "npcTrainCarUpdate", vram = 0x800E2818, size = 0x181C },
     { name = "playDualTextureAttachmentCueMode0", vram = 0x800E4034, size = 0x1C },
-    { name = "func_800E4050", vram = 0x800E4050, size = 0x1C },
+    { name = "playDualTextureAttachmentCueMode1", vram = 0x800E4050, size = 0x1C },
     { name = "fake_func_800E406C", vram = 0x800E406C, size = 0x4 },
     { name = "func_800E4070", vram = 0x800E4070, size = 0x40C },
     { name = "fake_func_800E447C", vram = 0x800E447C, size = 0x4 },
