@@ -81591,3 +81591,39 @@ are all present). No build or runtime run required.
 Next census: `resetCraftSubsystemGlobal` / `func_800DFB78` at `0x800DFB78`
 (size `0xC`). Last-15 titles after s1757 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1758 (2026-08-16) — synchronized the resetCraftSubsystemGlobal symbol
+
+Exact generated-symbol census for `0x800DFB78` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6425; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `resetCraftSubsystemGlobal = 0x800DFB78` with comment "clears a craft-subsystem global counter". Previous contiguous named neighbor `npcGroundTransportUpdate = 0x800DE80C`. Next contiguous named neighbor `applyCraftAnimAndDetailParams = 0x800DFB90` in the coarse listing; the generated/TOML neighbors in between are `noopHandler_800DFB84 = 0x800DFB84` ("pure jr-ra stub") and leftover `fake_func_800DFB8C = 0x800DFB8C`. No leftover `func_800DFB78` splat, no `D_800DFB78`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_38.c` | `RECOMP_FUNC void resetCraftSubsystemGlobal` at VRAM `0x800DFB78`. Three-instruction body: `lui $v0, 0x8011` / `jr $ra` / delay-slot `sw $zero, -0x3F60($v0)` stores 0 at `0x8010C0A0` (`0x80110000 - 0x3F60`). Previous `npcGroundTransportUpdate` last insn is `0x800DFB74`; next is `noopHandler_800DFB84` at `0x800DFB84`. `funcs.h` already declares the human name. No leftover `func_800DFB78`. Sole generated caller `resetObjectContextPool` at `0x800EC4F0` (`funcs_40.c`) |
+| Body semantics | Leaf store-zero of the craft-subsystem global at `0x8010C0A0`. That is the same word case 4 of `npcGroundTransportUpdate` compares (`c.lt.s` vs `0x80130BA4`) before `playSpeechClip` voiceId `0x217`. The pool-reset caller zeros sibling words at `0x8010C0D0` / `0x8010C0D4` (`-0x3F30` / `-0x3F2C` of `0x80110000`) then jal's this helper. Name matches the companion comment |
+| TOML (before) | `{ name = "func_800DFB78", vram = 0x800DFB78, size = 0xC }` — size matches `0x800DFB84 - 0x800DFB78` (last insn `0x800DFB80` + 4 = `0xC`) |
+| Overlay section 4 | `{ .func = resetCraftSubsystemGlobal, .offset = 0x0003AA48, .rom_size = 0x0000000C }` under `section_4_ovl_mission_funcs` (`0x800DFB78 - 0x800A5130 = 0x3AA48`; `0x396DC + 0x136C = 0x3AA48`; `0x3AA48 + 0xC = 0x3AA54` matches next `noopHandler_800DFB84`) |
+| Non-collision | Cinematic overlay max named VRAM is `0x800B072C`; menu overlay max is `0x800D03DC`; main `.text` ends at `0x800A5130`. None occupy `0x800DFB78`. No leftover `func_800DFB78` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated store-zero body, previous
+(`npcGroundTransportUpdate` / `0x800DE80C`) and next (`noopHandler_800DFB84`
+/ `0x800DFB84`) boundaries, TOML size, and section-4 overlay span agreed;
+the generated headers/body were already `resetCraftSubsystemGlobal`, and
+only the TOML name was a stale `func_800DFB78` placeholder. Corrected TOML
+to `resetCraftSubsystemGlobal`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision, or
+size/boundary disagreement), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No build or runtime run required.
+
+Next census: `noopHandler_800DFB84` / `func_800DFB84` at `0x800DFB84`
+(size `0x8`). Last-15 titles after s1758 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.
