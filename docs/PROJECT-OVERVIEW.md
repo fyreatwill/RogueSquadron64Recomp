@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1820)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1821)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3100,20 +3100,21 @@ collision.
 | s1818 | Synchronized `clearPendingAndDestroyChildNpc` (`0x800EC684`, `0x3C`). `jal clearPendingChildNpc` at `0x800EC698` on `MEM_W[a0+0]`, then `jal unlinkAndFreeChildNpcNode` at `0x800EC6A4`; always returns 1. 16 overlay jal sites already dispatch the human name; 4 main-text sites stay `LOOKUP_FUNC`. TOML was stale `func_800EC684`; companion, generated headers/body, and section-4 already used the human name. |
 | s1819 | Synchronized `destroyObjectOwnedNpcSlot` (`0x800EC6C0`, `0x2C`). `lbu +0x1A4`; if nonzero `lhu +0x198` then `jal destroyNpcSlotByIndex` at `0x800EC6D8`. 17 overlay jal sites already dispatch the human name; 4 main-text sites stay `LOOKUP_FUNC`. TOML was stale `func_800EC6C0`; companion, generated headers/body, and section-4 already used the human name. |
 | s1820 | Synchronized `tickCraftMountedAnimationEffect` (`0x800EC6F0`, `0x538`). `lbu +0x4C` / `lwc1 +0x48` dt-accumulate against `*(s0+4)+0x70`; then `findActiveNpcInSlotChain` / `getNpcContextField8` / `tickObjectSoundCueState`. Sole generated `jal 0x800EC6F0` inside `craftMountedAnimationNpcHandler` at `0x800ECD90`. Companion `main_overlay.txt` already had the name (s415 revert from mission); mission leftover stays `func_800EC6F0` (overlay-alias; naming it would collide with main). TOML, generated headers/body/INL, and the jal site were stale `func_800EC6F0`. |
+| s1821 | Synchronized `craftMountedAnimationNpcHandler` (`0x800ECC28`, `0x1B4`). Action-1 spawn copies msg `+0x10/+0x14/+0x18` into child `+0x8/+0xC/+0x10`, clears child `+0x48/+0x4C/+0x4D`, and indexes the craft spatial grid at `0x801375D8+0x34`. Action-3 tick jals `tickCraftMountedAnimationEffect` at `0x800ECD90`, then `destroyNpcSlotByIndex` at `0x800ECDAC` when that tick returns 1. No generated `jal 0x800ECC28` (NPC-handler table dispatch). TOML was stale `func_800ECC28`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1820 is leftover `func_800ECC28`
-(`0x800ECC28`, size `0x1B4`). Neighbor peek: companion
+The sweep cursor after s1821 is leftover `func_800ECDDC`
+(`0x800ECDDC`, size `0x28`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already map
-`craftMountedAnimationNpcHandler`; TOML still leftover
-`func_800ECC28`. First insn `addiu $sp, $sp, -0x18`; last live
-`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDD4` / `0x800ECDD8`.
-No generated `jal 0x800ECC28` (NPC-handler table dispatch). Next
-occupant is leftover `func_800ECDDC` / generated
-`dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`).
-Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776, s1792, s1808. After s1820 the last-15
-titles still include s1808's revisit, so the next iteration
-resumes the leftover `func_800ECC28` census.
+`dispatchSlotActionTwelveByGlobalId`; TOML still leftover
+`func_800ECDDC`. First insn `addiu $sp, $sp, -0x18`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDFC` / `0x800ECE00`.
+One generated `jal 0x800ECDDC` in `funcs_42.c` at `0x800FBD18`
+already dispatches the human name. Next occupant is leftover
+`fake_func_800ECE04` (`0x800ECE04`, `0xC`). Mandatory revisits in
+this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
+s1776, s1792, s1808. After s1821 the last-15 titles still include
+s1808's revisit, so the next iteration resumes the leftover
+`func_800ECDDC` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

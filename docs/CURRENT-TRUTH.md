@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1820 (2026-08-16).
+detail. Reviewed through s1821 (2026-08-16).
 
 ## Current state
 
@@ -54,14 +54,14 @@ detail. Reviewed through s1820 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800ECC28`
-   (`0x800ECC28`, size `0x1B4`). Companion `mission_overlay.txt` and
+1. Resume the generated-symbol sweep at leftover `func_800ECDDC`
+   (`0x800ECDDC`, size `0x28`). Companion `mission_overlay.txt` and
    generated headers/body/INL already map
-   `craftMountedAnimationNpcHandler`; TOML still leftover
-   `func_800ECC28`. s1820 synchronized leftover `func_800EC6F0` to
-   `tickCraftMountedAnimationEffect` (`0x800EC6F0`, `0x538`). Archive:
+   `dispatchSlotActionTwelveByGlobalId`; TOML still leftover
+   `func_800ECDDC`. s1821 synchronized leftover `func_800ECC28` to
+   `craftMountedAnimationNpcHandler` (`0x800ECC28`, `0x1B4`). Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647), §35
-   (s1648–s1820). About 1,548 placeholder `func_0x...` names remained
+   (s1648–s1821). About 1,548 placeholder `func_0x...` names remained
    at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): M4
    accumulator boundary (source state vs later DMA/consumer), not another
@@ -112,10 +112,12 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1820 through leftover `func_800EC6F0` renamed to
-`tickCraftMountedAnimationEffect` (`0x800EC6F0`, `0x538`) after leftover
-`func_800EC6C0` became `destroyObjectOwnedNpcSlot` (`0x800EC6C0`,
-`0x2C`), leftover `func_800EC684` became `clearPendingAndDestroyChildNpc`
+s1648–s1821 through leftover `func_800ECC28` renamed to
+`craftMountedAnimationNpcHandler` (`0x800ECC28`, `0x1B4`) after leftover
+`func_800EC6F0` became `tickCraftMountedAnimationEffect`
+(`0x800EC6F0`, `0x538`), leftover `func_800EC6C0` became
+`destroyObjectOwnedNpcSlot` (`0x800EC6C0`, `0x2C`), leftover
+`func_800EC684` became `clearPendingAndDestroyChildNpc`
 (`0x800EC684`, `0x3C`), leftover `func_800EC588` became
 `createAndInitObject` (`0x800EC588`, `0xFC`), leftover
 `func_800EC514` became `freeAllObjectContextPoolNodes`

@@ -84365,3 +84365,54 @@ dispatch). Next occupant is leftover `func_800ECDDC` / generated
 `dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`). Last-15
 titles after s1820 still include s1808's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1821 (2026-08-16) — synchronized the craftMountedAnimationNpcHandler symbol
+
+Exact generated-symbol census for leftover `func_800ECC28` at
+`0x800ECC28` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1808's mandatory REVISIT (`selected H2
+menuIn/mission jal-sites on the attract 1024`), so the 15-title
+all-sweep REVISIT gate did not fire. Step 0 `wc -c` was 9156; not a
+maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `main_overlay.txt` | No occupant at `0x800ECC28`. No leftover `func_800ECC28` splat |
+| Companion `mission_overlay.txt` | `craftMountedAnimationNpcHandler = 0x800ECC28`. Comment: NPC slot handler; action 1 spawn stores msg, copies vec3 `msg+0x10/+0x14/+0x18` into child `+0x8/+0xC/+0x10`, clears child `+0x48/+0x4C/+0x4D`, then indexes the active-craft spatial grid at `MEM[0x801375D8]+0x34`. No leftover `func_800ECC28` splat in this file |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void craftMountedAnimationNpcHandler` at VRAM `0x800ECC28`. First insn `addiu $sp, $sp, -0x18`; last live insn `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDD4` / `0x800ECDD8`. Previous occupant is `tickCraftMountedAnimationEffect` at `0x800EC6F0` (ends exactly here); next is already `dispatchSlotActionTwelveByGlobalId` at `0x800ECDDC`. No generated `jal 0x800ECC28` (NPC-handler table dispatch). `funcs.h` and overlay INL already used the human name |
+| Body semantics | `a0` = slot (`$s0`); `a1` = action (`andi 0xFFFF`). Action 1 (`L_800ECC80`): `sw $a2, 0x4($a0)` then `lwc1`/`swc1` of `msg+0x10/+0x14/+0x18` into child `+0x8/+0xC/+0x10`; `sb`/`sw`/`sb` zero at child `+0x4D/+0x48/+0x4C`; `lw 0xA4($a2)` mesh-part, `lhu` at `MEM[a2+0xA8]+0xA6`, index `MEM[0x801375D8]+0x34`. Action 3 (`L_800ECD30`): `mfc1 $a1, $f0` then `jal tickCraftMountedAnimationEffect` at `0x800ECD90`; if that tick returns 1, `lhu +0x16` then `jal destroyNpcSlotByIndex` at `0x800ECDAC`. Action 2 returns 1. Action `0xC` clears child `+0x4D/+0x48/+0x4C`. Name matches: this is the craft-mounted animation NPC handler that owns the tick s1820 just named |
+| TOML | Was `{ name = "func_800ECC28", vram = 0x800ECC28, size = 0x1B4 }` — stale leftover. Size already matched `0x800ECDDC - 0x800ECC28`. Renamed to `craftMountedAnimationNpcHandler` |
+| Overlay section 4 | `{ .func = craftMountedAnimationNpcHandler, .offset = 0x00047AF8, .rom_size = 0x000001B4 }` under `section_4_ovl_mission_funcs` (`0x800ECC28 - 0x800A5130 = 0x47AF8`; previous `0x475C0 + 0x538 = 0x47AF8`; `0x47AF8 + 0x1B4 = 0x47CAC` matches next `dispatchSlotActionTwelveByGlobalId`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800ECC28`. No leftover `func_800ECC28` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(action-1 spawn clears child `+0x48/+0x4C/+0x4D` and indexes
+`0x801375D8+0x34`; action-3 tick jals `tickCraftMountedAnimationEffect`
+then `destroyNpcSlotByIndex`), previous (`tickCraftMountedAnimationEffect`
+/ `0x800EC6F0` ends at `0x800ECC28`) and next
+(`dispatchSlotActionTwelveByGlobalId` / `0x800ECDDC`) boundaries,
+overlay span, and size already agreed on
+`craftMountedAnimationNpcHandler` / `0x1B4`. TOML still carried
+leftover `func_800ECC28`; renamed it to match. This refutes H1
+(sources were not already synchronized), H3 (no leftover splat at
+this address in generated/TOML after the rename, no overlay
+collision, and no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800ECDDC`), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No invented name.
+No build or runtime run required.
+
+Next census: leftover `func_800ECDDC` at `0x800ECDDC` (size `0x28`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `dispatchSlotActionTwelveByGlobalId`;
+TOML still says `func_800ECDDC`. First insn `addiu $sp, $sp, -0x18`;
+last live `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDFC` /
+`0x800ECE00`. One generated `jal 0x800ECDDC` inside
+`tickMissionObjectives` at `0x800FBD18` already dispatches the
+human name. Next occupant is leftover `fake_func_800ECE04`
+(`0x800ECE04`, `0xC`). Last-15 titles after s1821 still include
+s1808's revisit, so the mandatory REVISIT gate does not fire.
