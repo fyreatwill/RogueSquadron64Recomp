@@ -1,37 +1,37 @@
-# NEXT work unit (s1834)
+# NEXT work unit (s1835)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol sweep. s1824 was the mandatory 15-title
-M4 REVISIT (H-rdp-consumer selected); last-15 after s1833 still include
+M4 REVISIT (H-rdp-consumer selected); last-15 after s1834 still include
 that revisit, so they are not all sweep. Do not start another M4
 instrument this iteration. Do not repeat any `submitGfxFrame`
 entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EE984`
-(`0x800EE984`, size `0x70`). Companion `mission_overlay.txt` already
-names `pushActiveSoundDescriptor`; generated headers/body/INL already
+Exact generated-symbol census for leftover `func_800EE9F4`
+(`0x800EE9F4`, size `0x60`). Companion `mission_overlay.txt` already
+names `popActiveSoundDescriptor`; generated headers/body/INL already
 use that name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `pushActiveSoundDescriptor` and
-  the `0x70` span.
+  TOML, and section-4 already agree on `popActiveSoundDescriptor` and
+  the `0x60` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EE984` while companion uses `pushActiveSoundDescriptor`.
+  `func_800EE9F4` while companion uses `popActiveSoundDescriptor`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EE984`, or the TOML size is not `0x70`, or
+  overlay occupies `0x800EE9F4`, or the TOML size is not `0x60`, or
   the generated body is not this function (first insn is not
-  `lui $a1, 0x8011` / last is not `jr $ra` / `sb $v1, -0x3CF0($a2)`
-  at `0x800EE9EC` / `0x800EE9F0`).
+  `lui $v1, 0x8011` / last is not `jr $ra` / `sh $v0, 0xA($v1)`
+  at `0x800EEA4C` / `0x800EEA50`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EE984\|func_800EE984\|pushActiveSoundDescriptor' \
+grep -n '800EE9F4\|func_800EE9F4\|popActiveSoundDescriptor' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -41,7 +41,7 @@ grep -n '800EE984\|func_800EE984\|pushActiveSoundDescriptor' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EE984\|pushActiveSoundDescriptor\|0x800EE984\|0x800EE9EC\|0x800EE9F4' \
+grep -n 'func_800EE9F4\|popActiveSoundDescriptor\|0x800EE9F4\|0x800EEA4C\|0x800EEA54' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -52,12 +52,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `pushActiveSoundDescriptor` / `0x70`.
-  No edit. Next leftover `func_800EE9F4` (`0x800EE9F4`, `0x60`;
-  generated headers/INL already `popActiveSoundDescriptor`; TOML
+- H1: all four sources already `popActiveSoundDescriptor` / `0x60`.
+  No edit. Next leftover `func_800EEA54` (`0x800EEA54`, `0x328`;
+  generated headers/INL already `preloadSceneReferencedSongs`; TOML
   still leftover).
-- H2: TOML (and/or generated) still `func_800EE984`. Rename to
-  `pushActiveSoundDescriptor`. Next leftover `func_800EE9F4`.
+- H2: TOML (and/or generated) still `func_800EE9F4`. Rename to
+  `popActiveSoundDescriptor`. Next leftover `func_800EEA54`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 
