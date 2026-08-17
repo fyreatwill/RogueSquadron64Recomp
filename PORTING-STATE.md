@@ -81555,3 +81555,39 @@ H2 selected. Companion mapping, live generated dual-slot transform-compose body,
 Next census: `npcGroundTransportUpdate` / `0x800DE80C` at `0x800DE80C`
 (size `0x136C`). Last-15 titles after s1756 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1757 (2026-08-16) — confirmed the npcGroundTransportUpdate symbol
+
+Exact generated-symbol census for `0x800DE80C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6441; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcGroundTransportUpdate = 0x800DE80C` (coarse listing). Previous contiguous named neighbor `npcGroundTransportPlayFriendlyFireWarn = 0x800DE4EC`. Next contiguous generated neighbor `resetCraftSubsystemGlobal = 0x800DFB78` (coarse listing comment: "clears a craft-subsystem global counter"). The annotated listing jumps from this name to `handleRayShieldedNpcDestroy = 0x800E4070` and omits the small `0x800DFB78`/`84`/`8C` stubs. Companion comment on the previous function attributes voiceId `0x217` to that helper, but the immediate lives here. No menu/cinematic/main overlay occupant and no `D_800DE80C` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcGroundTransportUpdate` at VRAM `0x800DE80C`; prologue `addiu $sp, $sp, -0xD0`. Object pointer `a0` parked in `$fp`, halfword mode `a1` (`andi 0xFFFF`), `a2` in `s2`; object record `*(fp+4)` in `s1`. Returns through `jr $ra` / `addiu $sp, $sp, 0xD0` ending at `0x800DFB74`. Previous `npcGroundTransportPlayFriendlyFireWarn` last insn is `0x800DE808`; next is `resetCraftSubsystemGlobal` at `0x800DFB78`. `funcs.h` already declares the human name. No leftover `func_800DE80C`. No direct `jal 0x800DE80C` site — table-dispatched like the other `npcXxxUpdate` siblings |
+| Body semantics | Halfword state in `a1`; 9-way jump table at `0x800A7E88` on `(a1-1)` for `a1 ∈ 1..9` (`sltiu` bound `0x9`; out of range falls to the epilogue at `0x800DFB2C`). Case 0 is setup (`walkMeshdef0List`, `composeEulerRotationXYZ`, `composeRotationMatrixSlot0`/`1`/`2`, `addVec3At0x24`, `lookupHmtMaterialByName`, `createAndInitObject`, `initActorAsType1`, `getLevelDatItemByName`, `dispatchDatSubtypeByRandomIndex`, `play3DSoundEventVariant`; type halfword at `*(a2+0)` branches 0x2B / 0x2D / 0x2E). Case 1 tears down (`factor5RemoveListNode` on child `+0x1A8` when `+0x46==1` and on `+0x88` when `+0xCE==1`, `walkDatTreeAndCollectSubtypes`, `rs_free`, `getNpcCurrentHealth`, `clearPendingAndDestroyChildNpc`). Case 2 is the live tick: `npcGroundTransportPlayFriendlyFireWarn` at `0x800DF078` and `0x800DF0C0`, `updateNpcEventTimer`, `tickEnemyCraftWithDestruction` at `0x800DF0A0`, `transformCraftDualAnchorsAndApplyMotion` at `0x800DF0AC`, debris cluster (`composeRandomRotationMatrix` / `scaleVec3ByRandomRange` / `spawnDebris1Npc` / `spawnDestructionEffectBurst`), `play3DSoundEvent`, `addNpcToVisibilityBucket`. Case 3 is 3D-audio (`updateActive3DAudioSource` on child `+0x1A8` when `+0x46` live, `walkDatTreeAndVisitChildren`). Case 4 is damage/destruction (`getNpcCurrentHealth`, `extrapolateNpcPositionForCurrentMode`, `dealDamageToNpc`, `unregisterAndFreeNpcSlot` at `jal 0x8003E7D0`, `popNpcSlotFromTail` at `jal 0x8003E684`, `datItemSetObjectiveBooleanCount`). VoiceId `0x217` is loaded at `0x800DF988` inside case 4 and passed to `jal 0x80066EE4` (`playSpeechClip`) after a `c.lt.s` of `0x8010C0A0` vs `0x80130BA4`; this is the companion "Check your fire!" site, not the `0x800DE4EC` helper. Case 5 and case 7 are the epilogue (return 1). Case 6 is a single `dispatchSlotAction5IfActive`. Case 8 is health/slot teardown (`getNpcCurrentHealth`, `unregisterAndFreeNpcSlot`, `popNpcSlotFromTail`). Name matches the ground-transport `npcXxxUpdate` sibling of `npcTieVariantUpdate` / `npcRadarDishUpdate` / `npcWingmanUpdate` |
+| TOML | `{ name = "npcGroundTransportUpdate", vram = 0x800DE80C, size = 0x136C }` — already the human name; size matches `0x800DFB78 - 0x800DE80C` (last insn `0x800DFB74` + 4 = `0x136C`). No leftover `func_800DE80C` |
+| Overlay section 4 | `{ .func = npcGroundTransportUpdate, .offset = 0x000396DC, .rom_size = 0x0000136C }` under `section_4_ovl_mission_funcs` (`0x800DE80C - 0x800A5130 = 0x396DC`; `0x393BC + 0x320 = 0x396DC`; `0x396DC + 0x136C = 0x3AA48` matches next `resetCraftSubsystemGlobal`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DE80C`. Menu max VRAM is `0x800D03DC`; cinematic max is `0x800B072C`; neither reaches this address. Main `.text` ends at `0x800A5130`. No leftover `func_800DE80C` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 9-way ground-transport-update
+body, previous (`npcGroundTransportPlayFriendlyFireWarn` / `0x800DE4EC`) and
+next (`resetCraftSubsystemGlobal` / `0x800DFB78`) boundaries, TOML name and
+size, and section-4 overlay span already agree. No TOML or generated-name
+change. VoiceId `0x217` is confirmed on this live body at `0x800DF988`
+(`playSpeechClip`), not in `0x800DE4EC`. This refutes H2 (no stale
+placeholder), H3 (no leftover splat, overlay collision, or size/boundary
+disagreement), and H4 (companion, generated body, TOML, and section-4 row
+are all present). No build or runtime run required.
+
+Next census: `resetCraftSubsystemGlobal` / `func_800DFB78` at `0x800DFB78`
+(size `0xC`). Last-15 titles after s1757 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.
