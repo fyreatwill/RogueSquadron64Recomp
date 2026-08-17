@@ -82559,3 +82559,43 @@ Next census: leftover `fake_func_800E447C` at `0x800E447C` (size `0x4`).
 Neighbor peek already shows companion, generated, TOML, and section-4
 using the leftover name. Last-15 titles after s1780 still include
 s1776's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1781 (2026-08-16) — confirmed the leftover fake_func_800E447C symbol
+
+Exact generated-symbol census for leftover `0x800E447C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6959; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800E447C = 0x800E447C` leftover splat. Comment on the next row: `func_800E4480 deleted s432: duplicate-symbol collision with resetCraftInstanceMotionState` (same class as the `func_800DFB90` / `fake_func_800DFB8C` pair). Previous named kernel `handleRayShieldedNpcDestroy = 0x800E4070`. Next named kernel `resetCraftInstanceMotionState = 0x800E4480`. No leftover `func_800E447C` splat, no `D_800E447C`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void fake_func_800E447C` at VRAM `0x800E447C`. One-instruction body: `lw $v1, 0x14($v1)` then the function ends (no `jr $ra`). Previous `handleRayShieldedNpcDestroy` last insn is the delay-slot `addiu $sp, $sp, 0x40` at `0x800E4478`; next is `resetCraftInstanceMotionState` at `0x800E4480` (`addiu $sp, $sp, -0x40` — a prologue, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800E447C`. No generated `jal 0x800E447C` site |
+| Body semantics | 4-byte orphan `lw $v1, 0x14($v1)` fragment sitting between the ray-shielded destroyer's `jr $ra` epilogue and the real `resetCraftInstanceMotionState` prologue. Same leftover-splat family as `fake_func_800DFB8C` / `fake_func_800E406C` (one unreachable word immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800E447C", vram = 0x800E447C, size = 0x4 }` — already the leftover name; size matches `0x800E4480 - 0x800E447C` |
+| Overlay section 4 | `{ .func = fake_func_800E447C, .offset = 0x0003F34C, .rom_size = 0x00000004 }` under `section_4_ovl_mission_funcs` (`0x800E447C - 0x800A5130 = 0x3F34C`; previous `0x3EF40 + 0x40C = 0x3F34C`; `0x3F34C + 0x4 = 0x3F350` matches next `resetCraftInstanceMotionState`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E447C`. No leftover `func_800E447C` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated one-instruction
+`lw $v1, 0x14($v1)` body, previous (`handleRayShieldedNpcDestroy` /
+`0x800E4070`) and next (`resetCraftInstanceMotionState` / leftover
+`func_800E4480` / `0x800E4480`) boundaries, TOML name and size, and
+section-4 overlay span already agree. No TOML or generated-name change.
+This refutes H2 (no stale `func_800E447C` placeholder), H3 (no overlay
+collision, second occupant, or size/boundary disagreement; size is `0x4`
+as expected; the leftover is the one-word `lw $v1` gap, not a split
+prologue), and H4 (companion, generated body, TOML, and section-4 row
+are all present). No build or runtime run required.
+
+Next census: `resetCraftInstanceMotionState` / leftover `func_800E4480`
+at `0x800E4480` (size `0x1F4`). Neighbor peek already shows TOML still
+`func_800E4480` while generated/overlay use the human name — that is
+the next session's discriminator, not this one. Last-15 titles after
+s1781 still include s1776's revisit, so the mandatory REVISIT gate
+does not fire.

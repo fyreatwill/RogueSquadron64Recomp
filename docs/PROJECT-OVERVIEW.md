@@ -3058,15 +3058,15 @@ collision.
 | s1778 | Synchronized `playDualTextureAttachmentCueMode1` (`0x800E4050`, `0x1C`). Thin wrapper: `jal 0x800E03F8` `playDualTextureAttachmentCue` with delay-slot `addiu $a2, $zero, 0x1`. Sibling of Mode0 (`a2=0`). No generated `jal 0x800E4050`. TOML was stale `func_800E4050`; generated headers/body and section-4 already used the human name. |
 | s1779 | Confirmed leftover `fake_func_800E406C` (`0x800E406C`, `0x4`). One-instruction `sw $a0, 0x20($sp)` orphan between `playDualTextureAttachmentCueMode1`'s epilogue and `handleRayShieldedNpcDestroy` (whose prologue is `addiu $sp, $sp, -0x40`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment (next occupant is already the human name). No leftover `func_800E406C`; TOML, generated headers/body, and section-4 already use the leftover name. |
 | s1780 | Synchronized `handleRayShieldedNpcDestroy` (`0x800E4070`, `0x40C`). 5-way `jr` table on `(a1-1)<5` at `0x800A8270`. Terminal path `playSpeechClip` `a0=0x15B` / `a1=0x73` / `a3=0x8` then `destroyNpcSlotByIndex` unless slot id is `0xFFFF`. No generated `jal 0x800E4070`. TOML was stale `func_800E4070`; generated headers/body and section-4 already used the human name. |
+| s1781 | Confirmed leftover `fake_func_800E447C` (`0x800E447C`, `0x4`). One-instruction `lw $v1, 0x14($v1)` orphan between `handleRayShieldedNpcDestroy`'s epilogue and `resetCraftInstanceMotionState` (whose prologue is `addiu $sp, $sp, -0x40`, so this is not a split first instruction). Companion leftover splat; `func_800E4480` deleted s432 as a duplicate of the next function. No leftover `func_800E447C`; TOML, generated headers/body, and section-4 already use the leftover name. |
 
-The sweep cursor after s1780 is leftover `fake_func_800E447C` /
-`0x800E447C` (size `0x4`). Neighbor peek: companion, generated
-headers/body, TOML, and section-4 already use the leftover name;
-next occupant `resetCraftInstanceMotionState` is already the human
-name in generated/overlay while TOML is still `func_800E4480`.
-Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776. After s1780 the last-15 titles include
-the s1776 revisit, so the next iteration resumes the sweep.
+The sweep cursor after s1781 is `resetCraftInstanceMotionState` /
+leftover `func_800E4480` / `0x800E4480` (size `0x1F4`). Neighbor
+peek: companion, generated headers/body, and section-4 already use
+the human name; TOML is still `func_800E4480`. Mandatory revisits
+in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
+s1776. After s1781 the last-15 titles include the s1776 revisit, so
+the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
