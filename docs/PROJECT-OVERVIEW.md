@@ -3096,20 +3096,22 @@ collision.
 | s1814 | Synchronized `unlinkAndFreeChildNpcNode` (`0x800EC388`, `0x150`). Node = `MEM_W[a0+0]`, extra = `MEM_BU[a0+4]`; `(node_byte0 + extra) == 4` unlinks from `0x8010C0D0`/`0x8010C0D4` (`+0x8`/`+0xC`) then `rs_free`. Sole generated `jal 0x800EC388` inside `clearPendingAndDestroyChildNpc` at `0x800EC6A4`. TOML was stale `func_800EC388`; companion, generated headers/body, and section-4 already used the human name. |
 | s1815 | Synchronized `resetObjectContextPool` (`0x800EC4D8`, `0x3C`). Zeros `0x8010C0D0`/`0x8010C0D4`, then `resetCraftSubsystemGlobal` / `resetObjectPoolListHead` / `clearObjectPoolStateFlag`. Sole generated `jal 0x800EC4D8` inside `initMission` at `0x800FA2D4`. TOML was stale `func_800EC4D8`; companion, generated headers/body, and section-4 already used the human name. |
 | s1816 | Synchronized `freeAllObjectContextPoolNodes` (`0x800EC514`, `0x74`). Walks `0x8010C0D0` then `0x8010C0D4`, `rs_free` each via `+0xC` next. Sole generated `jal 0x800EC514` inside `endMissionCleanup` at `0x800FBAD4`. TOML was stale `func_800EC514`; companion, generated headers/body, and section-4 already used the human name. |
+| s1817 | Synchronized `createAndInitObject` (`0x800EC588`, `0xFC`). `jal allocObjectPoolNode` at `0x800EC5B4` with `a1+0x1AC`, then field init and optional callback; 20 generated `jal 0x800EC588` sites already dispatch the human name. TOML was stale `func_800EC588`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1816 is leftover `func_800EC588`
-(`0x800EC588`, size `0xFC`). Neighbor peek: companion
+The sweep cursor after s1817 is leftover `func_800EC684`
+(`0x800EC684`, size `0x3C`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already map
-`createAndInitObject = 0x800EC588`; TOML still says
-`func_800EC588`. First insn `addiu $sp, $sp, -0x28`; last live
-`jr $ra` / `addiu $sp, $sp, 0x28` at `0x800EC67C` / `0x800EC680`.
-`jal allocObjectPoolNode` at `0x800EC5B4` with `a1+0x1AC`. Next
-occupant is `clearPendingAndDestroyChildNpc` (`0x800EC684`, `0x3C`;
-generated already named; TOML still `func_800EC684`).
+`clearPendingAndDestroyChildNpc = 0x800EC684`; TOML still says
+`func_800EC684`. First insn `addiu $sp, $sp, -0x18`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EC6B8` / `0x800EC6BC`.
+`jal clearPendingChildNpc` at `0x800EC698`; `jal
+unlinkAndFreeChildNpcNode` at `0x800EC6A4`; always returns 1. Next
+occupant is `destroyObjectOwnedNpcSlot` (`0x800EC6C0`, `0x2C`;
+generated already named; TOML still `func_800EC6C0`).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776, s1792, s1808. After s1816 the last-15
+s1714, s1744, s1760, s1776, s1792, s1808. After s1817 the last-15
 titles still include s1808's revisit, so the next iteration resumes
-the leftover `func_800EC588` census.
+the leftover `func_800EC684` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
