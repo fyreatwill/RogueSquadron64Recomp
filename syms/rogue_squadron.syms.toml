@@ -1868,7 +1868,7 @@ functions = [
     { name = "transformCraftAnchorsAndApplySubFx", vram = 0x800E08F8, size = 0x3EC },
     { name = "tickCraftSplineOrientation", vram = 0x800E0CE4, size = 0x6C8 },
     { name = "tickCraftSplineOrientationDual", vram = 0x800E13AC, size = 0xA70 },
-    { name = "func_800E1E1C", vram = 0x800E1E1C, size = 0x140 },
+    { name = "tickTrainCarStateMachine", vram = 0x800E1E1C, size = 0x140 },
     { name = "func_800E1F5C", vram = 0x800E1F5C, size = 0x4A0 },
     { name = "func_800E23FC", vram = 0x800E23FC, size = 0x278 },
     { name = "func_800E2674", vram = 0x800E2674, size = 0x1A4 },

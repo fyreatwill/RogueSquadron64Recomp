@@ -82127,3 +82127,42 @@ Next census: `tickTrainCarStateMachine` / `func_800E1E1C` at
 `func_800E1E1C` while generated/overlay use the human name. Last-15
 titles after s1770 still include s1760's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1771 (2026-08-16) — synchronized the tickTrainCarStateMachine symbol
+
+Exact generated-symbol census for `0x800E1E1C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6613; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickTrainCarStateMachine = 0x800E1E1C` with comment "per-tick train car state machine: decrements byte +0xFC counter, when expired clears advance-flag at +0xFD and advances state from per-NPC table at npc+0x34. State table format selected by byte +0xB2: if 0 uses fields +0x134/+0x138, if non-zero uses +0xD4/+0xD8 offsets. Returns early if +0xFD already set or counter still > 0. Called by npcTrainCarUpdate". Previous contiguous named neighbor `tickCraftSplineOrientationDual = 0x800E13AC`. Next contiguous named neighbor `buildDebrisTransformStack = 0x800E1F5C`. No leftover `func_800E1E1C` splat, no `D_800E1E1C`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void tickTrainCarStateMachine` at VRAM `0x800E1E1C`. First insn `lbu $v0, 0xFD($a0)`; last insn `jr $ra` / `nop` at `0x800E1F54` / `0x800E1F58`. Previous `tickCraftSplineOrientationDual` ends at `0x800E1E18`; next is `buildDebrisTransformStack` at `0x800E1F5C`. `funcs.h` already declares the human name. No leftover `func_800E1E1C`. Generated caller `npcTrainCarUpdate` `jal 0x800E1E1C` at `0x800E303C` and `0x800E30D8` |
+| Body semantics | Matches the companion: early return if `+0xFD` is set; decrement `+0xFC` and return while the sign-extended counter is still `> 0`; then set `+0xFD = 1`. Table at `npc+0x34` selected by `+0xB2`: zero uses `+0x134`/`+0x138` (plus `+0x134` addend), non-zero uses `+0xD4`/`+0xD8` (plus `+0xD4` addend); a null table pointer stores `0` at `+0xFA` and returns. Live walk is a 16-iter slot loop (`t0 < 0x10`) writing `+0xCA` and `+0xEA` and advancing via a 7-way `jr` table at `0x800A8040` for type ids `0x2F..0x35` (offsets `+0x134`/`+0x11C`/`+0xD4`/`+0xC8`). Terminal store is `sh $t0, 0xFA($a0)` |
+| TOML (before) | `{ name = "func_800E1E1C", vram = 0x800E1E1C, size = 0x140 }` — size matches `0x800E1F5C - 0x800E1E1C` |
+| Overlay section 4 | `{ .func = tickTrainCarStateMachine, .offset = 0x0003CCEC, .rom_size = 0x00000140 }` under `section_4_ovl_mission_funcs` (`0x800E1E1C - 0x800A5130 = 0x3CCEC`; previous `0x3C27C + 0xA70 = 0x3CCEC`; `0x3CCEC + 0x140 = 0x3CE2C` matches next `buildDebrisTransformStack`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E1E1C`. No leftover `func_800E1E1C` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`tickCraftSplineOrientationDual` / `0x800E13AC`) and next
+(`buildDebrisTransformStack` / `0x800E1F5C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`tickTrainCarStateMachine`, and only the TOML name was a stale
+`func_800E1E1C` placeholder. Corrected TOML to
+`tickTrainCarStateMachine`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `buildDebrisTransformStack` / `func_800E1F5C` at
+`0x800E1F5C` (size `0x4A0`). Neighbor peek already shows TOML still
+`func_800E1F5C` while generated/overlay use the human name. Last-15
+titles after s1771 still include s1760's revisit, so the mandatory
+REVISIT gate does not fire.
