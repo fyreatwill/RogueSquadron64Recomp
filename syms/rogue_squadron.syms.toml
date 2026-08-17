@@ -1848,7 +1848,7 @@ functions = [
     { name = "npcInitMinimalNoAnim", vram = 0x800DD248, size = 0x7C },
     { name = "fake_func_800DD2C4", vram = 0x800DD2C4, size = 0xC },
     { name = "npcInitFullModel", vram = 0x800DD2D0, size = 0x23C },
-    { name = "func_800DD50C", vram = 0x800DD50C, size = 0x140 },
+    { name = "npcTickEffectChannelC", vram = 0x800DD50C, size = 0x140 },
     { name = "func_800DD64C", vram = 0x800DD64C, size = 0x140 },
     { name = "func_800DD78C", vram = 0x800DD78C, size = 0x1A4 },
     { name = "func_800DD930", vram = 0x800DD930, size = 0x140 },
