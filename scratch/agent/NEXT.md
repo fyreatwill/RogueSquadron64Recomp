@@ -1,38 +1,38 @@
-# NEXT work unit (s1845)
+# NEXT work unit (s1846)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol sweep. s1844 synchronized leftover
-`func_800EF770` to `triggerStageMusicForNamedDatItem`; last-15 after
-s1844 include s1840's M4 REVISIT, so they are not all sweep. Do not
+Resume the generated-symbol sweep. s1845 synchronized leftover
+`func_800EF95C` to `triggerStageAmbientForNamedDatItem`; last-15 after
+s1845 include s1840's M4 REVISIT, so they are not all sweep. Do not
 start another M4 instrument this iteration. Do not repeat any
 `submitGfxFrame` entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EF95C`
-(`0x800EF95C`, size `0x1E4`). Companion `mission_overlay.txt` already
-names `triggerStageAmbientForNamedDatItem`; generated headers/body/INL
-already use that name; TOML still uses the leftover splat name.
+Exact generated-symbol census for leftover `func_800EFB40`
+(`0x800EFB40`, size `0x54`). Companion `mission_overlay.txt` already
+names `stopMusicAndResetAudio`; generated headers/body/INL already
+use that name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `triggerStageAmbientForNamedDatItem`
-  and the `0x1E4` span.
+  TOML, and section-4 already agree on `stopMusicAndResetAudio` and
+  the `0x54` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EF95C` while companion uses `triggerStageAmbientForNamedDatItem`.
+  `func_800EFB40` while companion uses `stopMusicAndResetAudio`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EF95C`, or the TOML size is not `0x1E4`, or
+  overlay occupies `0x800EFB40`, or the TOML size is not `0x54`, or
   the generated body is not this function (first insn is not
-  `addiu $sp, $sp, -0x18` then `jal getLevelDatItemByName` /
-  delay `addu $s0, $a1, $zero`; last is not `jr $ra` /
-  `addiu $sp, $sp, 0x18` at `0x800EFB38` / `0x800EFB3C`).
+  `lui $v0, 0x8011` then `lbu $v0, -0x3DA0($v0)` / `addiu $sp, $sp, -0x18`;
+  last is not `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EFB8C` /
+  `0x800EFB90`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EF95C\|func_800EF95C\|triggerStageAmbientForNamedDatItem' \
+grep -n '800EFB40\|func_800EFB40\|stopMusicAndResetAudio' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -42,7 +42,7 @@ grep -n '800EF95C\|func_800EF95C\|triggerStageAmbientForNamedDatItem' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EF95C\|triggerStageAmbientForNamedDatItem\|0x800EF95C\|0x800EFB38\|0x800EFB40' \
+grep -n 'func_800EFB40\|stopMusicAndResetAudio\|0x800EFB40\|0x800EFB8C\|0x800EFB94' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -53,12 +53,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `triggerStageAmbientForNamedDatItem` /
-  `0x1E4`. No edit. Next leftover `func_800EFB40` (`0x800EFB40`,
-  `0x54`; generated headers/INL already `stopMusicAndResetAudio`;
-  TOML still leftover).
-- H2: TOML (and/or generated) still `func_800EF95C`. Rename to
-  `triggerStageAmbientForNamedDatItem`. Next leftover `func_800EFB40`.
+- H1: all four sources already `stopMusicAndResetAudio` / `0x54`.
+  No edit. Next leftover `func_800EFB94` (`0x800EFB94`, `0x20`;
+  generated headers/INL already `preloadSceneSongsWrapper`; TOML
+  still leftover).
+- H2: TOML (and/or generated) still `func_800EFB40`. Rename to
+  `stopMusicAndResetAudio`. Next leftover `func_800EFB94`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 
