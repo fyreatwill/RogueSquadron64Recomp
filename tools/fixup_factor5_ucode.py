@@ -3112,6 +3112,46 @@ if is_main_ucode and TRIGEN_RETURN_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 20: phase-gated 0x8000-Y emit vs clip-reject (s1856).
+# L_17F0 entry classifies vertex +0x1A == 0x8000 against +0x24 clip codes.
+# L_112C walks the 0xD60..r16 command buffer for 0xC8|flags YL/YM/YH.
+# ---------------------------------------------------------------------------
+M4_Y8000_MARKER = "/* fixup: M4 y8000 */"
+if is_main_ucode and M4_Y8000_MARKER not in text:
+    decl_anchor = re.compile(
+        r'(extern "C" void rs64_m4_accum_probe\(void \*rsp, uint32_t stage, uint32_t r9, const uint8_t \*rdram\);  /\* fixup: M4 accumulator probe v2 \*/\n)'
+    )
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13, '
+        'uint32_t c13, uint32_t c12, uint32_t c11);\n'
+        'extern "C" void rs64_m4_y8000_flush(uint32_t r16);  ' + M4_Y8000_MARKER + "\n",
+        text, count=1)
+    entry_anchor = re.compile(
+        r"(    r3 = RSP_MEM_HU_LOAD\(0X24, r11\);\n)"
+        r"(    // and         \$7, \$6, \$2\n)"
+    )
+    text, n_entry = entry_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_m4_y8000_entry((uint32_t)RSP_MEM_HU_LOAD(0X1A, r11), "
+        "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r12), "
+        "(uint32_t)RSP_MEM_HU_LOAD(0X1A, r13), r6, r2, r3);  " +
+        M4_Y8000_MARKER + "\n" + m.group(2),
+        text, count=1)
+    flush_anchor = re.compile(
+        r"(    r10 = RSP_ADD32\(r16, -0XD60\);\n)"
+        r"(    // beq         \$10, \$zero, L_11A0\n)"
+    )
+    text, n_flush = flush_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_m4_y8000_flush(r16);  " + M4_Y8000_MARKER + "\n" + m.group(2),
+        text, count=1)
+    if (n_decl, n_entry, n_flush) != (1, 1, 1):
+        print(f"fixup_factor5_ucode: FIXUP 20 ANCHOR FAILED "
+              f"(decl={n_decl} entry={n_entry} flush={n_flush}).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:
@@ -3181,5 +3221,7 @@ if TRIGEN_CONTINUATION_MARKER in text and TRIGEN_CONTINUATION_MARKER not in orig
     notes.append("TriGen resident continuation audit (s717)")
 if TRIGEN_SOURCE_MARKER in text and TRIGEN_SOURCE_MARKER not in original:
     notes.append("TriGen physical source audit (s719)")
+if M4_Y8000_MARKER in text and M4_Y8000_MARKER not in original:
+    notes.append("M4 0x8000-Y emit vs clip-reject census (s1856)")
 
 print(f"fixup_factor5_ucode: {path} — " + ("; ".join(notes) if notes else "updated"), file=sys.stderr)

@@ -86154,3 +86154,63 @@ leftover). Last-15 titles after s1855 are s1841–s1855, all sweep,
 so the next iteration is a mandatory REVISIT (parked M4 live
 `0x8000` Y emit vs clip; not another leftover and not another
 static `L_17F0` shape walk).
+
+## Session 1856 (2026-08-17) — selected H-never-live for the 0x8000 Y sentinel
+
+Mandatory 15-title M4 REVISIT (HYPOTHESIS-ID: m4-accumulator-boundary-revisit).
+Last-15 ledger titles after s1855 were s1841–s1855, all sweep
+("synchronized" / "confirmed the leftover … symbol"). Step 0 `wc -c`
+was 14269; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail. Soak queue empty.
+
+First arm (HLE default) was a failed positive control: `L_17F0` is
+LLE-only, so `[m4-y8000]` printed zero lines
+(`scratch/agent/s1856_m4_y8000/run.log`). Re-ran the same binary with
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1` (attribution-page LLE; no
+`UNGATED`) gated on first VI 640. Log:
+`scratch/agent/s1856_m4_y8000_lle/run.log`.
+
+### Competing hypotheses
+
+- H-clip-reject: a live `+0x1A == 0x8000` reaches `L_17F0` but every
+  such triangle takes `L_1DA8` (`+0x24 & 0x7070`) or `L_1268`
+  (`+0x24 & 0x4343`), so no flushed `0xD60` command has YL/YM/YH
+  `0x8000`.
+- H-zero-height-emit: at least one flushed `0xC8|flags` has
+  YL = YM = YH = `0x8000`.
+- H-on-screen-emit: at least one flushed command has one or two Ys
+  equal to `0x8000` and the three Ys are not equal.
+- H-never-live: `n_flush > 0` and no `L_17F0` entry in the gated
+  window sees `+0x1A == 0x8000`.
+
+### Evidence
+
+Fixup 20 in `tools/fixup_factor5_ucode.py` plus host
+`rs64_m4_y8000_entry` / `rs64_m4_y8000_flush` in
+`src/rsp/dpc_bridge.cpp`. Same-run controls:
+
+- `[lle-force]` and `[lle send_dl #1..#256] gate=attr exit=1`
+- `[m4-y8000] mark flush-site phase=2 viw=320 r16=0xD68`
+- `[m4-y8000] mark entry phase=4 viw=640 y=05C6/05CA/05C4 clip=0000`
+- last summary: `entry=15921 flush=542336 empty=6692 hdr=9229`
+
+VI 640 discriminator: `n_y8000_entry=0`, `n_entry_allout/partial/fall=0`,
+`n_y8000_any=n_y8000_equal=n_y8000_mixed=0`. Zero `[m4-y8000] entry`
+or `cmd` dumps (those only print on a `0x8000` hit). 128
+non-attribution DLs were HLE-bypassed (`[lle send_dl skip]`). No
+`[CRASH]` / Unhandled jump. Table:
+`docs/M4-ACCUMULATOR-GROUND-TRUTH.md` (s1856 section).
+
+### Outcome
+
+This selects H-never-live for the VI 640 attribution LLE window
+and refutes H-clip-reject, H-zero-height-emit, and H-on-screen-emit
+there. Single-source (one port LLE capture; the two sites corroborate
+but are not an oracle line). The s1602 `0xFFFF8000` sentinel was
+hangar-shaped; hangar/512 is still unchecked. Do not re-watch
+`0x688:0x710`, recapture VMADH/VGE, watch `0x4B7800`, re-walk the
+ovl20 consumer table, or re-map the 32-byte `0xD60` stores.
+
+Next work unit: resume the generated-symbol sweep at leftover
+`fake_func_800EFDDC` (`0x800EFDDC`, `0x4`). After s1856 the last-15
+titles include this revisit, so the sweep REVISIT gate does not fire.

@@ -455,6 +455,180 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage,
     fflush(stderr);
 }
 
+extern "C" uint32_t rs64_vi_committed_width();
+
+static bool rs64_m4_y8000_enabled() {
+    static const int v = [] {
+        const char *all = std::getenv("ROGUESQ_LOG_ALL");
+        if (all && *all && *all != '0') return 1;
+        const char *e = std::getenv("ROGUESQ_LOG_M4_Y8000");
+        if (!e) return 1;
+        return (*e && *e != '0') ? 1 : 0;
+    }();
+    return v == 1;
+}
+
+static uint32_t rs64_m4_y8000_gate_width() {
+    static const uint32_t w = [] {
+        const char *e = std::getenv("ROGUESQ_M4_Y8000_WIDTH");
+        return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 640u;
+    }();
+    return w;
+}
+
+struct Rs64M4Y8000 {
+    uint32_t n_entry_all = 0;
+    uint32_t n_flush_site_all = 0;
+    uint32_t n_entry = 0;
+    uint32_t n_y8000_entry = 0;
+    uint32_t n_entry_allout = 0;
+    uint32_t n_entry_partial = 0;
+    uint32_t n_entry_fall = 0;
+    uint32_t n_flush = 0;
+    uint32_t n_empty = 0;
+    uint32_t n_hdr = 0;
+    uint32_t n_y8000_any = 0;
+    uint32_t n_y8000_equal = 0;
+    uint32_t n_y8000_mixed = 0;
+    uint32_t n_dump = 0;
+    uint32_t n_entry_dump = 0;
+    uint32_t last_width = 0xFFFFFFFFu;
+    bool marked_entry = false;
+    bool marked_flush = false;
+};
+
+static Rs64M4Y8000 g_m4_y8000;
+
+static void rs64_m4_y8000_summary(const char *why) {
+    fprintf(stderr,
+        "[m4-y8000] summary why=%s phase=%u viw=%u "
+        "entry_all=%u flush_site_all=%u "
+        "entry=%u y8000_entry=%u allout=%u partial=%u fall=%u "
+        "flush=%u empty=%u hdr=%u y8000_any=%u y8000_equal=%u y8000_mixed=%u dump=%u\n",
+        why, rs64_phase_ord(), rs64_vi_committed_width(),
+        g_m4_y8000.n_entry_all, g_m4_y8000.n_flush_site_all,
+        g_m4_y8000.n_entry, g_m4_y8000.n_y8000_entry,
+        g_m4_y8000.n_entry_allout, g_m4_y8000.n_entry_partial, g_m4_y8000.n_entry_fall,
+        g_m4_y8000.n_flush, g_m4_y8000.n_empty, g_m4_y8000.n_hdr,
+        g_m4_y8000.n_y8000_any, g_m4_y8000.n_y8000_equal, g_m4_y8000.n_y8000_mixed,
+        g_m4_y8000.n_dump);
+    fflush(stderr);
+}
+
+static bool rs64_m4_y8000_in_gate() {
+    const uint32_t w = rs64_vi_committed_width();
+    if (w != g_m4_y8000.last_width) {
+        if (g_m4_y8000.last_width != 0xFFFFFFFFu &&
+            (g_m4_y8000.n_entry_all || g_m4_y8000.n_flush_site_all)) {
+            rs64_m4_y8000_summary("width-change");
+        }
+        g_m4_y8000.last_width = w;
+    }
+    return w == rs64_m4_y8000_gate_width();
+}
+
+extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13,
+                                     uint32_t c13, uint32_t c12, uint32_t c11) {
+    if (!rs64_m4_y8000_enabled()) return;
+    g_m4_y8000.n_entry_all++;
+    if (!g_m4_y8000.marked_entry) {
+        g_m4_y8000.marked_entry = true;
+        fprintf(stderr,
+            "[m4-y8000] mark entry phase=%u viw=%u y=%04X/%04X/%04X clip=%04X/%04X/%04X\n",
+            rs64_phase_ord(), rs64_vi_committed_width(),
+            y11 & 0xFFFF, y12 & 0xFFFF, y13 & 0xFFFF,
+            c11 & 0xFFFF, c12 & 0xFFFF, c13 & 0xFFFF);
+        fflush(stderr);
+    }
+    if (!rs64_m4_y8000_in_gate()) return;
+    g_m4_y8000.n_entry++;
+    const uint32_t ya = y11 & 0xFFFF;
+    const uint32_t yb = y12 & 0xFFFF;
+    const uint32_t yc = y13 & 0xFFFF;
+    if (ya != 0x8000 && yb != 0x8000 && yc != 0x8000) {
+        if ((g_m4_y8000.n_entry & 255u) == 0) rs64_m4_y8000_summary("entry-hb");
+        return;
+    }
+    g_m4_y8000.n_y8000_entry++;
+    const uint32_t clip_and = (c11 & c12 & c13) & 0xFFFF;
+    const uint32_t clip_or = (c11 | c12 | c13) & 0xFFFF;
+    const char *cls;
+    if (clip_and & 0x7070) {
+        g_m4_y8000.n_entry_allout++;
+        cls = "allout";
+    } else if (clip_or & 0x4343) {
+        g_m4_y8000.n_entry_partial++;
+        cls = "partial";
+    } else {
+        g_m4_y8000.n_entry_fall++;
+        cls = "fall";
+    }
+    if (g_m4_y8000.n_entry_dump < 8) {
+        g_m4_y8000.n_entry_dump++;
+        fprintf(stderr,
+            "[m4-y8000] entry n=%u cls=%s y=%04X/%04X/%04X clip=%04X/%04X/%04X and=%04X or=%04X\n",
+            g_m4_y8000.n_y8000_entry, cls, ya, yb, yc,
+            c11 & 0xFFFF, c12 & 0xFFFF, c13 & 0xFFFF, clip_and, clip_or);
+        fflush(stderr);
+    }
+}
+
+extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
+    if (!rs64_m4_y8000_enabled()) return;
+    g_m4_y8000.n_flush_site_all++;
+    if (!g_m4_y8000.marked_flush) {
+        g_m4_y8000.marked_flush = true;
+        fprintf(stderr,
+            "[m4-y8000] mark flush-site phase=%u viw=%u r16=0x%X\n",
+            rs64_phase_ord(), rs64_vi_committed_width(), r16);
+        fflush(stderr);
+    }
+    if (!rs64_m4_y8000_in_gate()) return;
+    const uint32_t end = r16 & 0xFFFu;
+    if (end <= 0xD60) {
+        g_m4_y8000.n_empty++;
+        return;
+    }
+    g_m4_y8000.n_flush++;
+    uint32_t off = 0xD60;
+    while (off + 8 <= end) {
+        const uint8_t hdr = RSP_MEM_BU(off, 0);
+        if ((hdr & 0xF8) != 0xC8) {
+            off += 8;
+            continue;
+        }
+        g_m4_y8000.n_hdr++;
+        const uint16_t yl = static_cast<uint16_t>(RSP_MEM_HU_LOAD(off + 2, 0));
+        const uint16_t ym = static_cast<uint16_t>(RSP_MEM_HU_LOAD(off + 4, 0));
+        const uint16_t yh = static_cast<uint16_t>(RSP_MEM_HU_LOAD(off + 6, 0));
+        const int any = (yl == 0x8000) || (ym == 0x8000) || (yh == 0x8000);
+        if (any) {
+            g_m4_y8000.n_y8000_any++;
+            if (yl == ym && ym == yh) g_m4_y8000.n_y8000_equal++;
+            else g_m4_y8000.n_y8000_mixed++;
+            if (g_m4_y8000.n_dump < 8) {
+                g_m4_y8000.n_dump++;
+                fprintf(stderr,
+                    "[m4-y8000] cmd n=%u off=0x%03X hdr=%02X %02X YL=%04X YM=%04X YH=%04X",
+                    g_m4_y8000.n_y8000_any, off, hdr, (unsigned)RSP_MEM_BU(off + 1, 0),
+                    yl, ym, yh);
+                for (uint32_t i = 0; i < 8; ++i) {
+                    fprintf(stderr, "%s%02X", i == 0 ? " bytes=" : "",
+                            (unsigned)RSP_MEM_BU(off + i, 0));
+                }
+                fputc('\n', stderr);
+                fflush(stderr);
+            }
+        }
+        uint32_t size = 32;
+        if (hdr & 0x4) size += 64;
+        if (hdr & 0x2) size += 64;
+        if (hdr & 0x1) size += 64;
+        off += size;
+    }
+    if ((g_m4_y8000.n_flush & 63u) == 0) rs64_m4_y8000_summary("flush-hb");
+}
+
 struct Rs64F5VtxColorState {
     uint32_t task = 0xFFFFFFFFu;
     uint32_t ordinal = 0;

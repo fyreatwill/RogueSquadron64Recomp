@@ -202,3 +202,42 @@ live `0x8000` Y is clip-rejected, emitted as a zero-height command, or
 emitted with an on-screen Y — that needs a phase-gated dump of a
 `0xD60` command whose YL/YM/YH halfwords are `0x8000`, not another
 static walk.
+
+## s1856 live `0x8000` Y at L_17F0 / L_112C
+
+Mandatory 15-title M4 REVISIT. One build, one LLE-solo run, counters
+in `tools/fixup_factor5_ucode.py` fixup 20 plus host
+`rs64_m4_y8000_*` in `src/rsp/dpc_bridge.cpp`. Phase-gated to VI 640
+(`ROGUESQ_M4_Y8000_WIDTH=640`). Attribution-page LLE only
+(`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1`, no `UNGATED`). Log:
+`scratch/agent/s1856_m4_y8000_lle/run.log`. A prior HLE-only arm
+(`scratch/agent/s1856_m4_y8000/run.log`) printed zero `[m4-y8000]`
+lines — L_17F0 is LLE-only; that arm is the same-run reminder that
+HLE is not a witness.
+
+Same-run positive controls:
+
+- `[lle-force]` plus `[lle send_dl #1..#256]` `gate=attr exit=1`
+- `[m4-y8000] mark flush-site phase=2 viw=320 r16=0xD68`
+- `[m4-y8000] mark entry phase=4 viw=640 y=05C6/05CA/05C4 clip=0000/0000/0000`
+- last summary: `entry=15921 flush=542336 hdr=9229`
+
+| Counter (VI 640) | Value |
+|---|---|
+| `n_entry` | 15921 |
+| `n_y8000_entry` | 0 |
+| `n_entry_allout` / `partial` / `fall` | 0 / 0 / 0 |
+| `n_flush` / `n_empty` / `n_hdr` | 542336 / 6692 / 9229 |
+| `n_y8000_any` / `equal` / `mixed` | 0 / 0 / 0 |
+
+H-clip-reject needs `n_y8000_entry > 0`. H-zero-height-emit needs
+`n_y8000_equal > 0`. H-on-screen-emit needs `n_y8000_mixed > 0`.
+All three stay at zero. H-never-live (`n_flush > 0` and
+`n_y8000_entry == 0`) is selected for this window.
+
+Single-source: one port LLE attribution-640 capture. The two sites
+(L_17F0 Y load vs flushed YL/YM/YH) corroborate each other but are
+not an oracle line. 128 non-attribution DLs were HLE-bypassed
+(`[lle send_dl skip]`). The s1602 sentinel was hangar-shaped; this
+window does not close a hangar/512 check. Do not re-walk the command
+shape or the ovl20 consumer table.

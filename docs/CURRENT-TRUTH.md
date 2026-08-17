@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1855 (2026-08-17).
+detail. Reviewed through s1856 (2026-08-17).
 
 ## Current state
 
@@ -58,38 +58,29 @@ detail. Reviewed through s1855 (2026-08-17).
   record (color is `+0x10` via `luv`). s1840 selected H-standard-edge:
   `L_17F0` writes a spec-accurate 32-byte Fill Triangle (`0xC8|flags`,
   YL/YM/YH at `+2/+4/+6`, XL scaled from the 16-bit `+0x18` X, then
-  DxLDy/XH/DxHDy/XM/DxMDy) plus optional shade/tex suffixes. Unresolved:
-  whether a live `0x8000` Y is clip-rejected or emitted.
+  DxLDy/XH/DxHDy/XM/DxMDy) plus optional shade/tex suffixes. s1856
+  selected H-never-live on VI 640 attribution LLE (single-source):
+  15921 `L_17F0` entries and 9229 flushed `0xC8` headers, zero
+  `+0x1A` / YL/YM/YH `== 0x8000`. Hangar/512 still unchecked.
 
 ## Active investigation and ranked next steps
 
-1. Mandatory 15-title REVISIT (s1856): last-15 after s1855 are
-   s1841–s1855, all sweep. Spend it on the parked M4 remainder —
-   whether a live `0x8000` Y is clip-rejected at `L_17F0` entry,
-   emitted as a zero-height command, or emitted on-screen. Ground
-   truth already closed the command *shape* (s1840 H-standard-edge)
-   and forbids another static walk: dump a phase-gated `0xD60`
-   command whose YL/YM/YH halfwords are `0x8000`. Do not re-watch
-   `0x688:0x710`, re-capture VMADH lanes, watch `0x4B7800`,
-   re-enumerate the ovl20 consumer table, or re-map the 32-byte
-   `0xD60` stores. Not another `submitGfxFrame` entry/jal/`prev_pc`
-   recipe. Every oracle run still needs whole-RDRAM, PIF, and VI/PC
-   controls. Do not repeat §35 classified routes.
-2. Then resume the generated-symbol sweep at leftover
+1. Resume the generated-symbol sweep at leftover
    `fake_func_800EFDDC` (`0x800EFDDC`, size `0x4`). Companion
    `mission_overlay.txt` and generated headers/body/INL already name
    `fake_func_800EFDDC`; TOML already that leftover. Next leftover
    after that is `func_800EFDE0` (`0x800EFDE0`, `0x8DC`; companion
    and generated already `updateNpcEventTimer`; TOML still leftover).
-   s1855 synchronized leftover `func_800EFD80` to
-   `dispatchSlotAction5IfActive` (`0x800EFD80`, `0x5C`).
-   Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1855). About 1,548 placeholder `func_0x...` names
-   remained at s1487.
-3. Keep audio closed unless a new independent lead reaches audio initialization
+   s1856 selected H-never-live for the parked M4 `0x8000` Y on VI 640
+   attribution LLE (single-source). s1855 synchronized leftover
+   `func_800EFD80` to `dispatchSlotAction5IfActive` (`0x800EFD80`,
+   `0x5C`). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589),
+   §34 (s1590–s1647), §35 (s1648–s1856). About 1,548 placeholder
+   `func_0x...` names remained at s1487.
+2. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
-4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
-5. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`; batch
+3. Revisit M3 only as a complete idiom-class audit with a named discriminator.
+4. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`; batch
    arms; phase-gate; SIGKILL; queue soaks.
 
 ## Durable boundaries
@@ -113,7 +104,9 @@ is the separate `+0x10` `luv` field. The observed `0xFFFF8000`/`0x00008000`
 sentinel is that XY payload. s1840: the restage is a spec-accurate
 32-byte Fill Triangle (YL/YM/YH, then XL/DxLDy/XH/DxHDy/XM/DxMDy);
 `0xFFFF8000` splits into X=`0xFFFF` (scaled to XL) and Y=`0x8000`
-(raw s11.2). Unresolved: live emit vs clip-reject of that Y.
+(raw s11.2). s1856: that Y is not live at `L_17F0` or in flushed
+`0xD60` YL/YM/YH during VI 640 attribution LLE (H-never-live,
+single-source; hangar/512 unchecked).
 
 **Attract 1024 presenter.** Leave adds `submitGfxFrame` +104/+102 without a new
 screen-handler entry. Callee-side `prev_pc` attributes every present: eight
@@ -142,7 +135,7 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1855 through leftover `func_800EFD80` became
+s1648–s1856 through leftover `func_800EFD80` became
 `dispatchSlotAction5IfActive` (`0x800EFD80`, `0x5C`) after leftover
 `fake_func_800EFD74` confirmed
 at `0x800EFD74` size `0xC` (H1) after leftover
@@ -234,8 +227,9 @@ H3-no-unwatched-entry-rise, and H2-menuIn/mission-jal for the extra
 presenter, plus the s1824 M4 consumer table that selected
 H-rdp-consumer for the `0x670+0x18` record and the s1840
 command-shape table that selected H-standard-edge for the
-restaged `0xD60` Fill Triangle (§35). s1728 is
-maintenance only.
+restaged `0xD60` Fill Triangle and the s1856 live-Y table that
+selected H-never-live for `0x8000` at VI 640 attribution LLE
+(§35). s1728 is maintenance only.
 
 ## Method and safety rules
 - A null result is worthless without a same-run positive control. Batch all A/B
