@@ -1,0 +1,45 @@
+s1760 three-arm Rice: menuOverlayInit jump-table on title-like 1024
+HYPOTHESIS-ID: external-retail-entry-boundary
+secs=133  B_ROUTE=eleven-start+55/58/63:b  candidates at 119/123 only
+controls: whole-RDRAM 10k, B pad 0x40000000, hangar then B 640, 640->512 attract before 119s, ship-select PC nonzero, 13 PCs armed
+H1 extra 0x800C28F0; H2 extra 0x800C5D9C/BF830/5EF8/30C8; H3 unwatched cases match hold; H4 extra menuInit and all cases match
+
+WIDTH (debugger [vi] only)
+hold    rc=0 rdram=10178 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=0 armed=13/13 ship=257 ok=1
+  all:  0.5 0->320 0x00000280; 2.1 320->640 0x0066a500; 17.3 640->1024 0x00790800 title-like; 38.4 1024->512 0x006ab400 hangar; 65.3 512->1024 0x00790400 title-like; 96.4 1024->640 0x00696600 B-frontend; 117.6 640->512 0x00690400 attract
+  post119: (no WIDTH)
+  post126: (no WIDTH)
+  last: 117.6 640->512 0x00690400 attract
+  pads t>=118: 120.2=0x80010000
+  [oracle] done: 11575 hit(s) in 134.3s wall, 8024 VI (~133.7s emulated)
+a       rc=0 rdram=10188 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=13/13 ship=79 ok=1
+  all:  0.5 0->320 0x00000280; 2.1 320->640 0x0066a500; 17.3 640->1024 0x00790800 title-like; 38.4 1024->512 0x006ab800 hangar; 65.3 512->1024 0x00790400 title-like; 96.3 1024->640 0x00696600 B-frontend; 117.6 640->512 0x00690800 attract; 126.3 512->1024 0x00790400 title-like
+  post119: 126.3 512->1024 0x00790400 title-like
+  post126: 126.3 512->1024 0x00790400 title-like
+  last: 126.3 512->1024 0x00790400 title-like
+  pads t>=118: 120.1=0x80010000, 120.3=0x80000000, 124.3=0x80000000
+  [oracle] done: 10679 hit(s) in 134.3s wall, 8028 VI (~133.8s emulated)
+start   rc=0 rdram=10188 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=13/13 ship=79 ok=1
+  all:  0.5 0->320 0x00000280; 2.1 320->640 0x0066a500; 17.3 640->1024 0x00790400 title-like; 38.4 1024->512 0x006ab400 hangar; 65.3 512->1024 0x00790800 title-like; 96.3 1024->640 0x00696100 B-frontend; 117.6 640->512 0x00690400 attract; 126.3 512->1024 0x00790400 title-like
+  post119: 126.3 512->1024 0x00790400 title-like
+  post126: 126.3 512->1024 0x00790400 title-like
+  last: 126.3 512->1024 0x00790400 title-like
+  pads t>=118: 120.1=0x80010000, 120.3=0x10000000, 124.3=0x10000000
+  [oracle] done: 10678 hit(s) in 134.3s wall, 8028 VI (~133.8s emulated)
+
+PC watches (lifetime)
+arm      hangarFrm     loadOvl    menuDest    menuInit   c0_hangar    c1_radar    c2_input   c3_backdr   c457_text   c6_viewer     c8_ship    c9_mvscr   c10_sub02
+hold            60           6           2         179           1         484         230           0         177           0         257           1           0
+a               61           8           3          82           1         124          53           0          79           0          79           1           0
+start           60           8           3          82           1         124          53           0          79           0          79           1           0
+
+Delta vs hold (leave-hold; prefix-identical through 119s)
+arm      hangarFrm     loadOvl    menuDest    menuInit   c0_hangar    c1_radar    c2_input   c3_backdr   c457_text   c6_viewer     c8_ship    c9_mvscr   c10_sub02
+hold             0           0           0           0           0           0           0           0           0           0           0           0           0
+a                1           2           1         -97           0        -360        -177           0         -98           0        -178           0           0
+start            0           2           1         -97           0        -360        -177           0         -98           0        -178           0           0
+
+Classification
+  hold    H3-hold
+  a       H3-stop-tick
+  start   H3-stop-tick

@@ -1,11 +1,11 @@
-# NEXT work unit (s1760)
+# NEXT work unit (s1761)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol census at leftover `fake_func_800DFB8C`
 / `0x800DFB8C` (size `0x4`). s1759 synchronized
-`noopHandler_800DFB84`. Last-15 after this commit still
-include s1744's revisit, so the mandatory REVISIT gate does not fire.
+`noopHandler_800DFB84`. s1760 was the mandatory REVISIT, so the
+last-15 titles include that revisit and the gate does not fire.
 
 Competing hypotheses:
 
@@ -48,8 +48,8 @@ Expected splits:
 - H3: menu/cinematic occupant, a second occupant, or size != `0x4`.
 - H4: a required source is absent.
 
-Do not reopen the attract-1024 six-entry recipe. Next cursor after this
-address is `applyCraftAnimAndDetailParams` / `func_800DFB90`
-(`0x800DFB90`, size `0x3C4`). Companion note: leftover splat;
-`func_800DFB90` was deleted s432 as a duplicate-symbol collision with
-`applyCraftAnimAndDetailParams`.
+Do not reopen the attract-1024 six-entry or jump-table recipes. Next
+cursor after this address is `applyCraftAnimAndDetailParams` /
+`func_800DFB90` (`0x800DFB90`, size `0x3C4`). Companion note: leftover
+splat; `func_800DFB90` was deleted s432 as a duplicate-symbol collision
+with `applyCraftAnimAndDetailParams`.

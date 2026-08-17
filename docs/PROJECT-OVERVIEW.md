@@ -230,8 +230,8 @@ and the independent retail oracle controls pass. Dummy video stays at width
 available hangar-entry recipe (s707, s1496). After hangar, Start/A leave via
 case-6 `runModelViewerLoop`; pre-exit B is a distinct frontend route that
 times out to attract 512, whose A/Start/C-up/L/Z leave to a title-like 1024
-that is not a new cinematic, menu-SM, or mission-frame session (s1744
-H3-stop-tick; Rice still dies ~135 s). Audio de-stubbing is closed. These
+that is not a new cinematic, menu-SM, mission-frame, or `menuOverlayInit`
+jump-table-case session (s1744/s1760 H3-stop-tick; Rice still dies ~135 s). Audio de-stubbing is closed. These
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1759)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1760)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3036,11 +3036,12 @@ collision.
 | s1757 | Confirmed `npcGroundTransportUpdate` (`0x800DE80C`, `0x136C`). 9-way jump table at `0x800A7E88` on `(a1-1)` for `a1 ∈ 1..9`. Setup / teardown / live tick (`npcGroundTransportPlayFriendlyFireWarn` twice, `tickEnemyCraftWithDestruction`, `transformCraftDualAnchorsAndApplyMotion`) / 3D-audio / damage (`playSpeechClip` voiceId `0x217` at `0x800DF988`) / slot-action. Table-dispatched; no leftover `func_800DE80C`. |
 | s1758 | Synchronized `resetCraftSubsystemGlobal` (`0x800DFB78`, `0xC`). Delay-slot `sw $zero, -0x3F60($v0)` with `$v0 = 0x80110000` stores 0 at `0x8010C0A0` — the same word `npcGroundTransportUpdate` case 4 compares before `playSpeechClip` `0x217`. Sole generated caller `resetObjectContextPool` at `0x800EC4F0`. TOML was stale `func_800DFB78`; generated headers/body and section-4 already used the human name. |
 | s1759 | Synchronized `noopHandler_800DFB84` (`0x800DFB84`, `0x8`). Pure `jr $ra` / `nop` stub; no generated `jal 0x800DFB84` site. TOML was stale `func_800DFB84`; generated headers/body and section-4 already used the human name. |
+| s1760 | Mandatory REVISIT. Three-arm Rice watch of the complete `menuOverlayInit` 11-way jump table on the attract A/Start title-like 1024. All arms passed controls. No case increases vs hold: case 9 `0x800C28F0` stays 1; cases 3/6/10 stay 0; cases 1/2/4-5-7/8 and the dispatcher drop. Extra menu dest +1 reproduced. H3-stop-tick selected; H1/H2/H4 rejected. Overlay-alias: hold's high counts at those PCs are cinematic-resident. |
 
-The sweep cursor after s1759 is leftover `fake_func_800DFB8C` / `0x800DFB8C`
+The sweep cursor after s1760 is leftover `fake_func_800DFB8C` / `0x800DFB8C`
 (size `0x4`), then `applyCraftAnimAndDetailParams` / `0x800DFB90`. Mandatory
-revisits in this window: s1650, s1666, s1682, s1698, s1714, s1744. After
-s1759 the last-15 titles still include s1744, so the next iteration
+revisits in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760.
+After s1760 the last-15 titles include this revisit, so the next iteration
 resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
@@ -3068,14 +3069,16 @@ C-down, C-left, C-right, R, and valid D-pad stay attract 512 through
 1024 match hold (`cinematicLoopBody` 2, `load_cutscene` 2,
 `runMenuContentStateMachine` 0, `runInMissionFrame` 1) and drop the
 `0x800AA658` / `0x800C131C` tick that hold's attract continues (s1744
-H3-stop-tick). The 1024 is not a new cinematic, menu-SM, or mission-frame
-session. Rice dies around 135 s; the only observed `1024→640` of this pair
+H3-stop-tick). The complete `menuOverlayInit` jump table also adds no
+new case (s1760): case 9 stays 1, cases 3/6/10 stay 0, cases 1/2/4-5-7/8
+and the dispatcher drop. Extra menu dest +1 is reproduced. The 1024 is
+not a new cinematic, menu-SM, mission-frame, or jump-table-case session. Rice dies around 135 s; the only observed `1024→640` of this pair
 is s1666's single-source Z continuation at 159.4 s origin `0x00696100`
 (B-frontend). s1698's Z-stays-512 through 125.8 s was a flush cutoff;
 s1666's 128.3 s Z leave was the same leave after a later 126.4 s press.
 `0x80000B70` is `loadOverlay+0x50` (`0x80000B20`, size `0x124`).
-Still-open questions (which function runs the 1024; M4 DMEM→RDRAM other
-than `0xD60`) live in `CURRENT-TRUTH.md`.
+Still-open questions (which function runs the 1024 — not the 11-way
+table; M4 DMEM→RDRAM other than `0xD60`) live in `CURRENT-TRUTH.md`.
 
 **Superseded claims compacted out of CURRENT-TRUTH in s1728.** Stale/unseen
 writer (physical-byte samples saw nonzero `0x8011A8A0`). `setViModeType`

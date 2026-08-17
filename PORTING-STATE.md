@@ -81664,3 +81664,84 @@ Next census: leftover `fake_func_800DFB8C` at `0x800DFB8C` (size `0x4`),
 then `applyCraftAnimAndDetailParams` / `func_800DFB90` at `0x800DFB90`.
 Last-15 titles after s1759 still include s1744's revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1760 (2026-08-16) — rejected menuOverlayInit cases for the attract 1024
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1759 were s1745–s1759, all sweep-scoped. Step 0
+`wc -c` was 6479; not a maintenance iteration. No new soak-queue verdicts
+past the already-folded s1029-and-earlier tail.
+
+s1744 left the attract A/Start/C-up/L/Z title-like 1024
+(`0x00790400`/`800` at 126.4 s) as H3-stop-tick: not a new
+`cinematicLoopBody`, `runMenuContentStateMachine`, or `runInMissionFrame`
+session. Extra `loadOverlay` +2 took the menu dest branch (`0x80000BA8`
++1) plus one already-loaded skip. New angle: `menuOverlayInit`
+(`0x800C58A0`) is the only `mainGameLoop` overlay callee and dispatches
+an 11-way jump table at `0x800A75C0` on stored type `a1`. s1744 watched
+cases 0/2/6/8; this run watches the complete table.
+
+Competing hypotheses: H1 extra `runMenuModelViewerScreen` `0x800C28F0`
+(case 9, `mainGameLoop`'s first `menuOverlayInit(..., 9, 0)`); H2 extra
+`drawRadarIcon` `0x800C5D9C` / `runMenuRandomBackdropScreen` `0x800BF830`
+/ `runResultsTextScreenLoop` `0x800C5EF8` / `menuSubtype02Handler`
+`0x800C30C8`; H3 no new jump-table case; H4 extra `menuOverlayInit`
+without an extra case callee.
+
+Discriminator: three concurrent Rice arms copied from
+`scratch/agent/s1744_1024_overlay_pcs/run_pc.sh` (`--secs 133`,
+whole-RDRAM 10k, PIF/`[pad]`, `--vi-trace`, `--vi-poll`) with hangar
+frame, `loadOverlay` entry/menu dest, dispatcher, and all eleven case
+callees. A and Start are the two leave sources; s1744 already showed
+C-up/L/Z take the same leave. Artifacts:
+`scratch/agent/s1760_menu_jtbl/summary.txt` and per-arm `run.log`.
+
+All three arms: rc=0, whole-RDRAM 10178–10188 with the 10k positive
+control, 13/13 PCs armed, B pad `0x40000000` ×3, hangar then B-route
+then `640→512` attract at 117.6 s, ~133.7–133.8 s emulated / 134.3 s
+wall. Leave pads at 120.3/124.3 delivered A=`0x80000000` and
+Start=`0x10000000`. Debugger `[vi]` WIDTH matches s1714/s1744: hold
+stays attract 512; A/Start `512→1024` at 126.3 s origin
+`0x00790400`. Same-run PC-watch control: `0x800C131C` is 257 hold / 79
+leave (nonzero). Extra menu dest `0x80000BA8` is 3 vs hold 2,
+reproducing s1744.
+
+Lifetime / leave-hold delta:
+
+| PC | hold | leave | delta |
+|---|---:|---:|---:|
+| hangar frame `0x800AAD9C` | 60 | 60–61 | 0/+1 |
+| `loadOverlay` `0x80000B20` | 6 | 8 | +2 |
+| menu dest `0x80000BA8` | 2 | 3 | +1 |
+| `menuOverlayInit` `0x800C58A0` | 179 | 82 | −97 |
+| case 0 `0x800C6854` | 1 | 1 | 0 |
+| case 1 `0x800C5D9C` | 484 | 124 | −360 |
+| case 2 `0x800B47D0` | 230 | 53 | −177 |
+| case 3 `0x800BF830` | 0 | 0 | 0 |
+| case 4/5/7 `0x800C5EF8` | 177 | 79 | −98 |
+| case 6 `0x800C9BF0` | 0 | 0 | 0 |
+| case 8 `0x800C131C` | 257 | 79 | −178 |
+| case 9 `0x800C28F0` | 1 | 1 | 0 |
+| case 10 `0x800C30C8` | 0 | 0 | 0 |
+
+Case 9 = 1 on every arm, including hold that never took the 126.3 s
+leave, is the same-run positive control that this watch fires. The
+126.3 s 1024 does not add a second case-9 entry.
+
+H1 rejected: `0x800C28F0` does not increase. H2 rejected: none of the
+four previously unwatched cases increase (1 and 4/5/7 drop; 3 and 10
+stay 0). H4 rejected: `menuOverlayInit` drops, not extra. H3-stop-tick
+selected: no new jump-table case; leave stops the high-frequency
+`0x800C5D9C` / `0x800B47D0` / `0x800C5EF8` / `0x800C131C` /
+`0x800C58A0` activity that hold's attract continues.
+
+Overlay-alias note (same caveat as s1744): those high-frequency PCs
+are the named menu callees only while menu is mapped. Attract is
+cinematic-resident, so hold's large counts are the cinematic functions
+at those addresses. The discriminating fact is leave did not add any
+jump-table case after the extra menu DMA.
+
+The 1024 is still not a classified screen (not hangar, not viewer, not
+a new `menuOverlayInit` case, not the s1744 three inner loops). Do not
+repeat this jump-table recipe. Next work resumes the generated-symbol
+sweep at leftover `fake_func_800DFB8C` / `0x800DFB8C` (size `0x4`).

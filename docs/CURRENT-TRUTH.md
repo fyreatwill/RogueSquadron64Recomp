@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1759 (2026-08-16).
+detail. Reviewed through s1760 (2026-08-16).
 
 ## Current state
 
@@ -27,13 +27,12 @@ detail. Reviewed through s1759 (2026-08-16).
   video stays 320 / `0x006dd280`. Homebrew Rice with the eleven-Start schedule
   is the hangar-entry recipe (s707, s1496). Classified frontend routes live in
   `PROJECT-OVERVIEW.md` §35 — do not repeat them.
-- Attract A/Start/C-up/L/Z title-like 1024 (`0x00790400`/`800` at 126.4 s) is
-  not a new `cinematicLoopBody`, `runMenuContentStateMachine`, or
-  `runInMissionFrame` session (s1744). Those entries match hold (2 / 0 / 1);
-  the 17.3 s and 65.4 s title-like 1024s already account for the two
-  `cinematicLoopBody` hits. Leave stops the `0x800AA658` / `0x800C131C`
-  activity that hold's attract 512 continues. Extra `loadOverlay` +2 does not
-  enter those four functions. Rice still dies ~135 s.
+- Attract A/Start/C-up/L/Z title-like 1024 (`0x00790400`/`800` at 126.3–126.4 s)
+  is not a new `cinematicLoopBody`, `runMenuContentStateMachine`,
+  `runInMissionFrame` (s1744), or `menuOverlayInit` jump-table case (s1760).
+  Extra `loadOverlay` +2 is menu dest +1 plus a skip. Leave stops the
+  high-frequency overlay-aliased ticks hold's attract continues. Case 9
+  `0x800C28F0` stays 1. Rice still dies ~135 s.
 - Port VI 640-to-1024 is generated state plus host VI submission.
   `applyPendingViChanges` can change `0x8011A862/64/65`; a direct `osViSetMode`
   edge can submit `0x80128DF0` without the selector consumer. Active boot
@@ -50,14 +49,16 @@ detail. Reviewed through s1759 (2026-08-16).
 1. Resume the generated-symbol sweep at leftover `fake_func_800DFB8C`
    (`0x800DFB8C`, size `0x4`), then `applyCraftAnimAndDetailParams`
    (`0x800DFB90`). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589),
-   §34 (s1590–s1647), §35 (s1648–s1759). About 1,548 placeholder
+   §34 (s1590–s1647), §35 (s1648–s1760). About 1,548 placeholder
    `func_0x...` names remained at s1487.
-2. Parked retail-entry: the 126.4 s title-like 1024 is H3-stop-tick, not
-   those three inner loops. A later angle needs a different PC set (other
-   menu entries, or `loadOverlay` dest/size) or an M4 DMEM→RDRAM transfer
-   other than `0xD60`. Do not repeat the s1744 six-entry recipe or extend
-   `--secs 133`. Every oracle run needs whole-RDRAM, PIF, and VI/PC controls.
-   Do not repeat §35 classified routes.
+2. Parked retail-entry: the 126.3 s title-like 1024 is H3-stop-tick, not
+   those three inner loops and not a new `menuOverlayInit` jump-table
+   case. Extra menu dest +1 is reproduced. A later angle needs a
+   different PC set (main-text screen handlers, or menu functions
+   outside the 11-way table) or an M4 DMEM→RDRAM transfer other than
+   `0xD60`. Do not repeat the s1744 six-entry or s1760 jump-table
+   recipes or extend `--secs 133`. Every oracle run needs whole-RDRAM,
+   PIF, and VI/PC controls. Do not repeat §35 classified routes.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -89,13 +90,13 @@ never-access) live in `PROJECT-OVERVIEW.md` §26 and §35. Most recent: s1698
 `512→1024` at 126.3 s; the stay was a flush cutoff.
 
 ## Evidence ledger summary
-Per-session rows through s1759 live in `PROJECT-OVERVIEW.md` §33–§35.
+Per-session rows through s1760 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1759 through `noopHandler_800DFB84` plus the s1744 overlay-PC
-revisit that selected H3-stop-tick for the attract 1024 (§35).
-s1728 is maintenance only.
+s1648–s1760 through `noopHandler_800DFB84` plus the s1744 overlay-PC
+and s1760 jump-table revisits that selected H3-stop-tick for the
+attract 1024 (§35). s1728 is maintenance only.
 
 ## Method and safety rules
 - A null result is worthless without a same-run positive control. Batch all A/B
