@@ -3128,16 +3128,17 @@ collision.
 | s1846 | Synchronized `stopMusicAndResetAudio` (`0x800EFB40`, `0x54`). Gate `*(u8*)0x8010C260`; if set, `tickSongSequenceLocked` on handle `0x8010C140`. Always `tickSongSequenceLocked` on `0x8010C0E0`, then `freeAudioCacheEntry(a0=-1)` and `resetMusicSubsystemState(a0=1)`, return 1. Sole generated `jal 0x800EFB40` in `endMissionCleanup` at `0x800FBABC` already dispatches the human name. TOML was stale `func_800EFB40`; companion, generated headers/body, and section-4 already used the human name. |
 | s1847 | Synchronized `preloadSceneSongsWrapper` (`0x800EFB94`, `0x20`). Thin wrapper: `jal preloadSceneReferencedSongs` / `0x800EEA54`, return 1. Sole generated `jal 0x800EFB94` in `initMission` at `0x800FA5E4` (after `initLevelMusicBank`) already dispatches the human name. TOML was stale `func_800EFB94`; companion, generated headers/body, and section-4 already used the human name. |
 | s1848 | Synchronized `commitStagedSongAndPlay` (`0x800EFBB4`, `0xD0`). Gate `0x8010C424`; copies staged `0x8010C1A0` (0x24 bytes) onto `0x8010C140` and `0x8010C400`, `jal tickActiveSongSlots`, then copies handle `0x8010C0E0` back onto staging. Sole generated `jal 0x800EFBB4` in `tickMissionObjectives` at `0x800FBD10` already dispatches the human name. TOML was stale `func_800EFBB4`; companion, generated headers/body, and section-4 already used the human name. |
+| s1849 | Synchronized `stageSoundCueRequestByIdAndParam` (`0x800EFC84`, `0x50`). Writes pending cue `0x8010C200` from `a0`/`a1` (id/param), volume `0x7F`, request flag 1, pan `0x64`/`0x64`, then raises `0x8010C268`/`0x8010C262`. Sole generated `jal 0x800EFC84` in `requestMissionTransitionMode` at `0x800FB2BC` already dispatches the human name. TOML was stale `func_800EFC84`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1848 is leftover `func_800EFC84`
-(`0x800EFC84`, size `0x50`). Neighbor peek: companion
+The sweep cursor after s1849 is leftover `func_800EFCD4`
+(`0x800EFCD4`, size `0x80`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`stageSoundCueRequestByIdAndParam`; TOML still leftover `func_800EFC84`.
-Next occupant is leftover `func_800EFCD4` (`0x800EFCD4`, `0x80`;
-companion `initSoundCueRequest`; generated already that name; TOML
-still leftover). Mandatory revisits in this window: s1650, s1666,
+`initSoundCueRequest`; TOML still leftover `func_800EFCD4`.
+Next occupant is leftover `func_800EFD54` (`0x800EFD54`, `0x10`;
+companion `getSoundCueSubsystemFlag`; generated already that name;
+TOML still leftover). Mandatory revisits in this window: s1650, s1666,
 s1682, s1698, s1714, s1744, s1760, s1776, s1792, s1808, s1824,
-s1840. After s1848 the last-15 titles still include the M4 shape
+s1840. After s1849 the last-15 titles still include the M4 shape
 revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

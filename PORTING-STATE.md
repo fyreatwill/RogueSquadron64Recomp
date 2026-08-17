@@ -85801,3 +85801,55 @@ is `initSoundCueRequest` (`0x800EFCD4`, `0x80`; generated already
 that name; TOML still leftover `func_800EFCD4`). Last-15 titles after
 s1848 still include s1840's M4 revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1849 (2026-08-17) — synchronized the stageSoundCueRequestByIdAndParam symbol
+
+Exact generated-symbol census for leftover `func_800EFC84` at
+`0x800EFC84` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1840's mandatory REVISIT (`selected H-standard-edge
+on the restaged RDP triangle`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 13255; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `stageSoundCueRequestByIdAndParam = 0x800EFC84`. Next named kernel `initSoundCueRequest = 0x800EFCD4` |
+| Companion `main_overlay.txt` | No occupant at `0x800EFC84`. Cinematic and menu overlays also empty at this VRAM |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void stageSoundCueRequestByIdAndParam` at VRAM `0x800EFC84`. First insn `lui $v0, 0x8011` then `addiu $v0, $v0, -0x3E00`; last live insn `jr $ra` / `sb $a2, -0x3D9E($v0)` at `0x800EFCCC` / `0x800EFCD0`. Previous is `commitStagedSongAndPlay` (`0x800EFBB4`, ends `0x800EFC80`); next is already `initSoundCueRequest` at `0x800EFCD4`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Base `0x80110000-0x3E00` = `0x8010C200`. Writes `+0x8=0x7F` (volume), `+0xA=1` (request flag), `+0x4=$a0` (id), `+0x6=$a1` (param), `+0xF=0`, `+0x10/+0x12=0x64` (pan center), `+0xC/+0xD/+0xE=0`; then `sb 1` at `0x8010C268` and delay-slot `sb 1` at `0x8010C262`. Name matches: stage a pending sound-cue request by id and param |
+| Callers | Sole generated `jal 0x800EFC84` site already dispatches the human name: `requestMissionTransitionMode` at `0x800FB2BC` (`$a1=0x37`, `$a2=0`) |
+| TOML | Was `{ name = "func_800EFC84", vram = 0x800EFC84, size = 0x50 }` — stale leftover. Size already matched `0x800EFCD4 - 0x800EFC84`. Renamed to `stageSoundCueRequestByIdAndParam` |
+| Overlay section 4 | `{ .func = stageSoundCueRequestByIdAndParam, .offset = 0x0004AB54, .rom_size = 0x00000050 }` under `section_4_ovl_mission_funcs` (`0x800EFC84 - 0x800A5130 = 0x4AB54`; previous `0x4AA84 + 0xD0 = 0x4AB54`; `0x4AB54 + 0x50 = 0x4ABA4` matches next `initSoundCueRequest`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940` (`0x800A5130 + 0xB810`); menu overlay ends at `0x800CD520` (`0x800A5130 + 0x283F0`); main `.text` ends before `0x800A5130`. None occupy `0x800EFC84`. No leftover `func_800EFC84` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`lui $v0, 0x8011` / `addiu $v0, $v0, -0x3E00` base `0x8010C200`,
+id/param stores, volume `0x7F`, request flag 1, pan `0x64`/`0x64`,
+pending flags `0x8010C268`/`0x8010C262`, `jr $ra` / `sb $a2,
+-0x3D9E($v0)` at `0x800EFCCC` / `0x800EFCD0`), previous
+(`commitStagedSongAndPlay` / `0x800EFBB4`) and next
+(`initSoundCueRequest` / `0x800EFCD4`) boundaries, overlay span,
+and size already agreed on `stageSoundCueRequestByIdAndParam` /
+`0x50`. TOML still carried leftover `func_800EFC84`; renamed it
+to match. Generated headers/body/INL and the
+`requestMissionTransitionMode` jal were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800EFCD4`), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No
+invented name. No build or runtime run required.
+
+Next census: leftover `func_800EFCD4` at `0x800EFCD4` (size `0x80`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `initSoundCueRequest`; TOML still says
+`func_800EFCD4`. First insn `sltiu $v0, $a0, 0x8`; last live `jr $ra`
+/ `nop` at `0x800EFD4C` / `0x800EFD50`. Next occupant is
+`getSoundCueSubsystemFlag` (`0x800EFD54`, `0x10`; generated already
+that name; TOML still leftover `func_800EFD54`). Last-15 titles after
+s1849 still include s1840's M4 revisit, so the mandatory REVISIT gate
+does not fire.
