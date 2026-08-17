@@ -1922,7 +1922,7 @@ functions = [
     { name = "datItemActorNpcHandler", vram = 0x800ECE10, size = 0x338 },
     { name = "fake_func_800ED148", vram = 0x800ED148, size = 0x8 },
     { name = "claimSongSlotForCurrentHandle", vram = 0x800ED150, size = 0xB0 },
-    { name = "func_800ED200", vram = 0x800ED200, size = 0x9B0 },
+    { name = "tickActiveSongSlots", vram = 0x800ED200, size = 0x9B0 },
     { name = "func_800EDBB0", vram = 0x800EDBB0, size = 0xE0 },
     { name = "func_800EDC90", vram = 0x800EDC90, size = 0xFC },
     { name = "func_800EDD8C", vram = 0x800EDD8C, size = 0x1DC },

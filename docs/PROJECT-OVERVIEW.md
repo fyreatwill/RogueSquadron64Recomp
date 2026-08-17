@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1827)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1828)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3107,18 +3107,18 @@ collision.
 | s1825 | Synchronized `datItemActorNpcHandler` (`0x800ECE10`, `0x338`). Action 1/2/3/7 NPC handler; frame `-0x140`. Companion leftover `func_800ECE10` deleted s432 as a duplicate. TOML was stale `func_800ECE10`; generated headers/body and section-4 already used the human name. |
 | s1826 | Confirmed leftover `fake_func_800ED148` (`0x800ED148`, `0x8`). Two-instruction `lui $at, 0x801F` / `addu $at, $at, $v1` orphan between `datItemActorNpcHandler`'s epilogue and leftover `func_800ED150` (whose prologue is `addu $a3, $zero, $zero`, so this is not a split first instruction). Companion leftover splat. No leftover `func_800ED148`; TOML, generated headers/body, and section-4 already use the leftover name. |
 | s1827 | Synchronized `claimSongSlotForCurrentHandle` (`0x800ED150`, `0xB0`). Eight-slot walk (`slti $a3, 0x8`) of table `0x8010C270` stride `0x10`: match packed handle from `0x8010C0E0+4/+6`, else claim a `-1` free slot; store `a0` at `+0xC`. Sole generated `jal 0x800ED150` inside `tickActiveSongSlots` at `0x800ED844`. Companion `main_overlay.txt` already had the name; mission leftover stays `func_800ED150` (overlay-alias; naming it would collide with main). TOML, generated headers/body/INL, and the jal site were stale `func_800ED150`. |
+| s1828 | Synchronized `tickActiveSongSlots` (`0x800ED200`, `0x9B0`). Eight-slot walk of table `0x8010C270` stride `0x10` increments live `+0x8`; then pending-descriptor / handle match, `claimSongSlotForCurrentHandle`, and locked song cmds (`isSongHandleActive`, `tickSongSequenceLocked`, `playSongIfMusyXActive`, `playSongById`). Three generated `jal 0x800ED200` sites in `tickSongFadeTimer` / `stageSongFromRequestDescriptor` / `commitStagedSongAndPlay` already dispatch the human name. TOML was stale `func_800ED200`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1827 is leftover `func_800ED200`
-(`0x800ED200`, size `0x9B0`). Neighbor peek: companion
+The sweep cursor after s1828 is leftover `func_800EDBB0`
+(`0x800EDBB0`, size `0xE0`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`tickActiveSongSlots`; TOML still leftover `func_800ED200`.
-First insn `addiu $sp, $sp, -0x50`; last live `jr $ra` /
-`addiu $sp, $sp, 0x50` at `0x800EDBA8` / `0x800EDBAC`. Three
-generated `jal 0x800ED200` sites already dispatch the human name.
-Next occupant is leftover `func_800EDBB0` (`0x800EDBB0`, `0xE0`;
-generated already `shouldSwitchToPendingSong`; TOML still leftover).
+`shouldSwitchToPendingSong`; TOML still leftover `func_800EDBB0`.
+First insn `lui $v0, 0x8011`; last live `jr $ra` / `nop` at
+`0x800EDC88` / `0x800EDC8C`. Next occupant is leftover
+`func_800EDC90` (`0x800EDC90`, `0xFC`; generated already
+`selectAndStageNextSong`; TOML still leftover).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776, s1792, s1808, s1824. After s1827 the
+s1714, s1744, s1760, s1776, s1792, s1808, s1824. After s1828 the
 last-15 titles still include the M4 consumer revisit, so the next
 iteration resumes the sweep.
 
