@@ -82088,3 +82088,42 @@ Next census: `tickCraftSplineOrientationDual` / `func_800E13AC` at
 `func_800E13AC` while generated/overlay use the human name. Last-15
 titles after s1769 still include s1760's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1770 (2026-08-16) — synchronized the tickCraftSplineOrientationDual symbol
+
+Exact generated-symbol census for `0x800E13AC` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6615; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickCraftSplineOrientationDual = 0x800E13AC` with comment "two-segment craft: tickCraftSplineOrientation then a second orientation pass". Previous contiguous named neighbor `tickCraftSplineOrientation = 0x800E0CE4`. Next contiguous named neighbor `tickTrainCarStateMachine = 0x800E1E1C`. No leftover `func_800E13AC` splat, no `D_800E13AC`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void tickCraftSplineOrientationDual` at VRAM `0x800E13AC`. First insn `addiu $sp, $sp, -0x1E8`; last insn `addiu $sp, $sp, 0x1E8` at `0x800E1E18`. Previous `tickCraftSplineOrientation` ends at `0x800E13A8`; next is `tickTrainCarStateMachine` at `0x800E1E1C`. `funcs.h` already declares the human name. No leftover `func_800E13AC`. Generated caller `npcTrainCarUpdate` `jal 0x800E13AC` at `0x800E319C` |
+| Body semantics | Two-segment craft: first `jal 0x800E0CE4` `tickCraftSplineOrientation` at `0x800E1428`, then a second orientation pass. `jal 0x80059B50` `mat34CrossRowsAndCopyPos` then `jal 0x8001C774` `mat3x3InverseInto`. Pending-child / LOS / mesh: `isPendingChildNpcActive` (`0x800F06BC`, twice), `computeActorAnchorDeltaAfterLOS` (`0x800F09A8`), `evaluateTargetTrackingVisibility` (`0x800F0BA4`), `getObjectMeshTransformOrLocal` (`0x800F2988`). Orientation stack: `buildRotationMatrixSlot0` / `composeRotationMatrixSlot1` / `buildRotationMatrixSlot1`, `transformVec3ByMat34`, `vec3NormalizeInto` / `normalize_vector` / `vec3Dot` / `vec3Cross` / `vec3Length`, `quatFromAxisAngle` / `rotateVec3ByQuat`, `constMinusSinfApprox`. Two `play3DSoundEventVariant` (`0x80098BDC`) and terminal `factor5RemoveListNode` (`0x80098DE0`) |
+| TOML (before) | `{ name = "func_800E13AC", vram = 0x800E13AC, size = 0xA70 }` — size matches `0x800E1E1C - 0x800E13AC` |
+| Overlay section 4 | `{ .func = tickCraftSplineOrientationDual, .offset = 0x0003C27C, .rom_size = 0x00000A70 }` under `section_4_ovl_mission_funcs` (`0x800E13AC - 0x800A5130 = 0x3C27C`; previous `0x3BBB4 + 0x6C8 = 0x3C27C`; `0x3C27C + 0xA70 = 0x3CCEC` matches next `tickTrainCarStateMachine`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E13AC`. No leftover `func_800E13AC` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`tickCraftSplineOrientation` / `0x800E0CE4`) and next
+(`tickTrainCarStateMachine` / `0x800E1E1C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`tickCraftSplineOrientationDual`, and only the TOML name was a stale
+`func_800E13AC` placeholder. Corrected TOML to
+`tickCraftSplineOrientationDual`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `tickTrainCarStateMachine` / `func_800E1E1C` at
+`0x800E1E1C` (size `0x140`). Neighbor peek already shows TOML still
+`func_800E1E1C` while generated/overlay use the human name. Last-15
+titles after s1770 still include s1760's revisit, so the mandatory
+REVISIT gate does not fire.
