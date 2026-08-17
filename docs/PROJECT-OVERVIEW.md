@@ -3054,12 +3054,13 @@ collision.
 | s1774 | Synchronized `tickWalkerCraftWithLimbsAndDestruction` (`0x800E2674`, `0x1A4`). One `initNpcContextFromTransform` then three `spawnRandomBurstNpcVariantWrapper` / `assignNpcTargetAndPosition` bursts. Sole generated caller `npcTrainCarUpdate` `jal 0x800E2674` at `0x800E3260` (`a0` = npc). TOML was stale `func_800E2674`; generated headers/body and section-4 already used the human name. |
 | s1775 | Confirmed `npcTrainCarUpdate` (`0x800E2818`, `0x181C`). 9-way jump table at `0x800A8128` on `(a1-1)` for `a1 ∈ 1..9`. Setup (inner type table `0x800A8150` writes `+0xB2`, `loadAssetIntoNewSlot`) / teardown / live tick (`tickTrainCarStateMachine` twice, `tickCraftSplineOrientationDual`, `transformCraftAnchorsAndApplySubFx`, `tickWalkerCraftWithLimbsAndDestruction`, `buildDebrisTransformStack`) / 3D-audio / damage (`playSpeechClip`, `dealDamageToNpc`) / slot-action. Table-dispatched; no leftover `func_800E2818`. |
 | s1776 | Mandatory REVISIT. Three-arm Rice watch of main-text screen/frame handlers on the attract A/Start title-like 1024. All arms passed controls. Leave adds `submitGfxFrame` +105/+103 (H1); `runVideoFrameTick`/`swapBufferWithViMode` +1 matches the extra WIDTH; `applyPendingViChanges` +2/+3 tracks VI count. `mainGameLoop` and `applyLevelScreenAndCameraSettings` stay 1 (H2 closed). `emitFrameRdpInitDl` drops −180/−176 with `0x800C131C` (H4 closed; H3-stop-tick still holds for overlay-aliased ticks). Extra `loadOverlay` +2 / menu dest +1 reproduced. |
+| s1777 | Synchronized `playDualTextureAttachmentCueMode0` (`0x800E4034`, `0x1C`). Thin wrapper: `jal 0x800E03F8` `playDualTextureAttachmentCue` with delay-slot `addu $a2, $zero, $zero`. Sibling of Mode1 (`a2=1`). No generated `jal 0x800E4034`. TOML was stale `func_800E4034`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1776 is `playDualTextureAttachmentCueMode0` /
-`0x800E4034` (size `0x1C`). Neighbor peek: TOML still `func_800E4034`
+The sweep cursor after s1777 is `playDualTextureAttachmentCueMode1` /
+`0x800E4050` (size `0x1C`). Neighbor peek: TOML still `func_800E4050`
 while generated/overlay already use the human name. Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776.
-After s1776 the last-15 titles include the s1776 revisit, so the next
+After s1777 the last-15 titles include the s1776 revisit, so the next
 iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

@@ -82403,3 +82403,42 @@ sweep at `playDualTextureAttachmentCueMode0` / `func_800E4034` at
 `0x800E4034` (size `0x1C`; TOML still `func_800E4034` while
 generated/overlay already use the human name). Next retail-entry
 revisit watches `submitGfxFrame` callers for the extra +105.
+
+## Session 1777 (2026-08-16) — synchronized the playDualTextureAttachmentCueMode0 symbol
+
+Exact generated-symbol census for `0x800E4034` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6810; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playDualTextureAttachmentCueMode0 = 0x800E4034` with comment "thin wrapper: playDualTextureAttachmentCue mode 0". Previous contiguous named neighbor `npcTrainCarUpdate = 0x800E2818`. Next contiguous named neighbor `playDualTextureAttachmentCueMode1 = 0x800E4050`. No leftover `func_800E4034` splat, no `D_800E4034`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void playDualTextureAttachmentCueMode0` at VRAM `0x800E4034`. First insn `addiu $sp, $sp, -0x18`; last insn `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800E4048` / `0x800E404C`. Previous `npcTrainCarUpdate` ends at `0x800E4030` / `0x800E4034`; next is `playDualTextureAttachmentCueMode1` at `0x800E4050`. `funcs.h` already declares the human name. No leftover `func_800E4034`. No generated `jal 0x800E4034` site |
+| Body semantics | Thin wrapper: prologue, then `jal 0x800E03F8` `playDualTextureAttachmentCue` with delay-slot `addu $a2, $zero, $zero` (`ctx->r6 = 0`), then epilogue. Sibling `playDualTextureAttachmentCueMode1` is the same wrapper with delay-slot `addiu $a2, $zero, 0x1`. Name matches the companion comment and the s1766 parent (`a2` mode flag: `0` selects HMT `0x800A7FB0`) |
+| TOML (before) | `{ name = "func_800E4034", vram = 0x800E4034, size = 0x1C }` — size matches `0x800E4050 - 0x800E4034` |
+| Overlay section 4 | `{ .func = playDualTextureAttachmentCueMode0, .offset = 0x0003EF04, .rom_size = 0x0000001C }` under `section_4_ovl_mission_funcs` (`0x800E4034 - 0x800A5130 = 0x3EF04`; previous `0x3D6E8 + 0x181C = 0x3EF04`; `0x3EF04 + 0x1C = 0x3EF20` matches next `playDualTextureAttachmentCueMode1`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E4034`. No leftover `func_800E4034` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated thin-wrapper body, previous
+(`npcTrainCarUpdate` / `0x800E2818`) and next
+(`playDualTextureAttachmentCueMode1` / `0x800E4050`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `playDualTextureAttachmentCueMode0`, and only the TOML name was a
+stale `func_800E4034` placeholder. Corrected TOML to
+`playDualTextureAttachmentCueMode0`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `playDualTextureAttachmentCueMode1` / `func_800E4050` at
+`0x800E4050` (size `0x1C`). Neighbor peek already shows TOML still
+`func_800E4050` while generated/overlay use the human name. Last-15
+titles after s1777 still include s1776's revisit, so the mandatory
+REVISIT gate does not fire.
