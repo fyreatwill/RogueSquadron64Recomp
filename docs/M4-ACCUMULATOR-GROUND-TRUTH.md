@@ -241,3 +241,22 @@ not an oracle line. 128 non-attribution DLs were HLE-bypassed
 (`[lle send_dl skip]`). The s1602 sentinel was hangar-shaped; this
 window does not close a hangar/512 check. Do not re-walk the command
 shape or the ovl20 consumer table.
+
+## s1872 hangar/512 live `0x8000` Y — UNEVALUABLE
+
+Mandatory 15-title M4 REVISIT. Hangar-origin gate on the s1856
+counters (`ROGUESQ_M4_Y8000_WIDTH=512` plus `rs64_is_hangar_vi`
+for origins `0x006ab400` / `0x006ab800`). Four port arms, all
+stuck in the `640→2→640` lifecycle at origin `0x00696100`:
+
+| Arm | Log | Result |
+|---|---|---|
+| Attribution LLE + boot Starts | `scratch/agent/s1872_m4_y8000_hangar512/run_attr_lle.log` | Controls fired (gate=attr, mark flush-site/entry, hangar=0). Gated `n_flush=0`. No 512/1024. |
+| Hangar-only LLE + boot Starts | `scratch/agent/s1872_m4_y8000_hangar512/hangar_only/run.log` | `[lle-force]` only. Still 640 at 136s. |
+| Hangar-only LLE, wait 1024 | `scratch/agent/s1872_m4_y8000_hangar512/from1024/run.log` | Same 640 lifecycle. |
+| HLE, wait 180s for 1024 | `scratch/agent/s1872_m4_y8000_hangar512/hle_to_hangar/run.log` | probe exit 5; last width 640. |
+
+Zero hangar-origin marks, zero `gate=hangar`, zero attract 512.
+This selects UNEVALUABLE and does not select any H-*. Re-open
+only after a port `[phase] vi_width=512 origin=0x006AB400`.
+Do not treat 640 gated zeros as hangar.

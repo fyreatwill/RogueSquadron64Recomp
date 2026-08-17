@@ -456,6 +456,8 @@ extern "C" void rs64_m4_accum_probe(void *opaque, uint32_t stage,
 }
 
 extern "C" uint32_t rs64_vi_committed_width();
+extern "C" uint32_t rs64_vi_committed_origin();
+extern "C" int rs64_is_hangar_vi(void);
 
 static bool rs64_m4_y8000_enabled() {
     static const int v = [] {
@@ -493,19 +495,40 @@ struct Rs64M4Y8000 {
     uint32_t n_dump = 0;
     uint32_t n_entry_dump = 0;
     uint32_t last_width = 0xFFFFFFFFu;
+    uint32_t last_origin = 0xFFFFFFFFu;
+    bool last_in_gate = false;
     bool marked_entry = false;
     bool marked_flush = false;
+    bool marked_hangar = false;
+    bool atexit_armed = false;
 };
 
 static Rs64M4Y8000 g_m4_y8000;
 
+static void rs64_m4_y8000_reset_gated() {
+    g_m4_y8000.n_entry = 0;
+    g_m4_y8000.n_y8000_entry = 0;
+    g_m4_y8000.n_entry_allout = 0;
+    g_m4_y8000.n_entry_partial = 0;
+    g_m4_y8000.n_entry_fall = 0;
+    g_m4_y8000.n_flush = 0;
+    g_m4_y8000.n_empty = 0;
+    g_m4_y8000.n_hdr = 0;
+    g_m4_y8000.n_y8000_any = 0;
+    g_m4_y8000.n_y8000_equal = 0;
+    g_m4_y8000.n_y8000_mixed = 0;
+    g_m4_y8000.n_dump = 0;
+    g_m4_y8000.n_entry_dump = 0;
+}
+
 static void rs64_m4_y8000_summary(const char *why) {
     fprintf(stderr,
-        "[m4-y8000] summary why=%s phase=%u viw=%u "
+        "[m4-y8000] summary why=%s phase=%u viw=%u origin=0x%08X hangar=%d "
         "entry_all=%u flush_site_all=%u "
         "entry=%u y8000_entry=%u allout=%u partial=%u fall=%u "
         "flush=%u empty=%u hdr=%u y8000_any=%u y8000_equal=%u y8000_mixed=%u dump=%u\n",
         why, rs64_phase_ord(), rs64_vi_committed_width(),
+        rs64_vi_committed_origin(), rs64_is_hangar_vi(),
         g_m4_y8000.n_entry_all, g_m4_y8000.n_flush_site_all,
         g_m4_y8000.n_entry, g_m4_y8000.n_y8000_entry,
         g_m4_y8000.n_entry_allout, g_m4_y8000.n_entry_partial, g_m4_y8000.n_entry_fall,
@@ -515,16 +538,39 @@ static void rs64_m4_y8000_summary(const char *why) {
     fflush(stderr);
 }
 
+static void rs64_m4_y8000_atexit() {
+    rs64_m4_y8000_summary("atexit");
+}
+
 static bool rs64_m4_y8000_in_gate() {
+    if (!g_m4_y8000.atexit_armed) {
+        g_m4_y8000.atexit_armed = true;
+        std::atexit(rs64_m4_y8000_atexit);
+    }
     const uint32_t w = rs64_vi_committed_width();
-    if (w != g_m4_y8000.last_width) {
+    const uint32_t origin = rs64_vi_committed_origin();
+    const uint32_t gate_w = rs64_m4_y8000_gate_width();
+    const bool now_in = (w == gate_w) && (gate_w != 512u || rs64_is_hangar_vi());
+    if (w != g_m4_y8000.last_width || origin != g_m4_y8000.last_origin) {
         if (g_m4_y8000.last_width != 0xFFFFFFFFu &&
             (g_m4_y8000.n_entry_all || g_m4_y8000.n_flush_site_all)) {
-            rs64_m4_y8000_summary("width-change");
+            rs64_m4_y8000_summary(w != g_m4_y8000.last_width ? "width-change" : "origin-change");
+        }
+        if (g_m4_y8000.last_in_gate && !now_in) {
+            rs64_m4_y8000_reset_gated();
         }
         g_m4_y8000.last_width = w;
+        g_m4_y8000.last_origin = origin;
     }
-    return w == rs64_m4_y8000_gate_width();
+    if (now_in && !g_m4_y8000.marked_hangar && rs64_is_hangar_vi()) {
+        g_m4_y8000.marked_hangar = true;
+        fprintf(stderr,
+            "[m4-y8000] mark hangar-origin phase=%u viw=%u origin=0x%08X\n",
+            rs64_phase_ord(), w, origin);
+        fflush(stderr);
+    }
+    g_m4_y8000.last_in_gate = now_in;
+    return now_in;
 }
 
 extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13,
@@ -534,8 +580,9 @@ extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13,
     if (!g_m4_y8000.marked_entry) {
         g_m4_y8000.marked_entry = true;
         fprintf(stderr,
-            "[m4-y8000] mark entry phase=%u viw=%u y=%04X/%04X/%04X clip=%04X/%04X/%04X\n",
+            "[m4-y8000] mark entry phase=%u viw=%u origin=0x%08X hangar=%d y=%04X/%04X/%04X clip=%04X/%04X/%04X\n",
             rs64_phase_ord(), rs64_vi_committed_width(),
+            rs64_vi_committed_origin(), rs64_is_hangar_vi(),
             y11 & 0xFFFF, y12 & 0xFFFF, y13 & 0xFFFF,
             c11 & 0xFFFF, c12 & 0xFFFF, c13 & 0xFFFF);
         fflush(stderr);
@@ -579,8 +626,9 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
     if (!g_m4_y8000.marked_flush) {
         g_m4_y8000.marked_flush = true;
         fprintf(stderr,
-            "[m4-y8000] mark flush-site phase=%u viw=%u r16=0x%X\n",
-            rs64_phase_ord(), rs64_vi_committed_width(), r16);
+            "[m4-y8000] mark flush-site phase=%u viw=%u origin=0x%08X hangar=%d r16=0x%X\n",
+            rs64_phase_ord(), rs64_vi_committed_width(),
+            rs64_vi_committed_origin(), rs64_is_hangar_vi(), r16);
         fflush(stderr);
     }
     if (!rs64_m4_y8000_in_gate()) return;
@@ -590,6 +638,7 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
         return;
     }
     g_m4_y8000.n_flush++;
+    if (g_m4_y8000.n_flush == 1) rs64_m4_y8000_summary("first-gated-flush");
     uint32_t off = 0xD60;
     while (off + 8 <= end) {
         const uint8_t hdr = RSP_MEM_BU(off, 0);

@@ -237,6 +237,17 @@ extern "C" uint32_t rs64_vi_committed_width() {
     return ultramodern::renderer::get_vi_regs()->VI_WIDTH_REG;
 }
 
+extern "C" uint32_t rs64_vi_committed_origin() {
+    return ultramodern::renderer::get_vi_regs()->VI_ORIGIN_REG;
+}
+
+extern "C" int rs64_is_hangar_vi(void) {
+    ultramodern::renderer::ViRegs *vi = ultramodern::renderer::get_vi_regs();
+    if (vi->VI_WIDTH_REG != 512u) return 0;
+    const uint32_t o = vi->VI_ORIGIN_REG & 0x00FFFFFFu;
+    return (o == 0x006ab400u || o == 0x006ab800u) ? 1 : 0;
+}
+
 extern "C" void osViSetXScale_recomp(uint8_t* rdram, recomp_context* ctx) {
     static int s_count = 0;
     int n = ++s_count;

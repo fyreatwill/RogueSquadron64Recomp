@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1871 (2026-08-17).
+detail. Reviewed through s1872 (2026-08-17).
 
 ## Current state
 
@@ -61,36 +61,30 @@ detail. Reviewed through s1871 (2026-08-17).
   DxLDy/XH/DxHDy/XM/DxMDy) plus optional shade/tex suffixes. s1856
   selected H-never-live on VI 640 attribution LLE (single-source):
   15921 `L_17F0` entries and 9229 flushed `0xC8` headers, zero
-  `+0x1A` / YL/YM/YH `== 0x8000`. Hangar/512 still unchecked.
+  `+0x1A` / YL/YM/YH `== 0x8000`. s1872 selected UNEVALUABLE for
+  hangar/512: four port arms never published origin `0x006ab400` /
+  `0x006ab800` or VI 512/1024 (all `640→2→640` at `0x00696100`).
 
 ## Active investigation and ranked next steps
 
-1. Mandatory 15-title REVISIT: hangar/512 live `0x8000` Y. After
-   s1871 the last-15 titles are s1857–s1871, all sweep
-   (`confirmed the leftover … symbol` / `synchronized`). Do not
-   start another leftover census. Reuse the s1856
-   `ROGUESQ_M4_Y8000_*` instrument with
-   `ROGUESQ_M4_Y8000_WIDTH=512` on attribution LLE
-   (`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1`). s1856 selected
-   H-never-live on VI 640 only (single-source). Same four
-   hypotheses as s1856, now gated on hangar 512. Same-run
-   control: `n_flush > 0` at VI 512 plus the flush-site /
-   `L_17F0` mark lines. If the default port run never reaches
-   hangar 512, that is UNEVALUABLE — do not treat attract 512
-   as hangar.
-2. After the revisit, resume the generated-symbol sweep at leftover
-   `func_800F2208` (`0x800F2208`, size `0x108`). Companion
-   `mission_overlay.txt` and generated headers/body/INL already
-   name `isVectorWithinConeAndRange`; TOML still leftover
+1. Resume the generated-symbol sweep at leftover `func_800F2208`
+   (`0x800F2208`, size `0x108`). Companion `mission_overlay.txt`
+   and generated headers/body/INL already name
+   `isVectorWithinConeAndRange`; TOML still leftover
    `func_800F2208`. First insn `addiu $sp, $sp, -0x48`; last
    `jr $ra` / `addiu $sp, $sp, 0x48` at `0x800F2308` /
    `0x800F230C`. Next already-named occupant is
-   `isVectorInConeWriteDistance` at `0x800F2310`. s1871
-   synchronized leftover `func_800F1FF4` to
-   `initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`,
-   `0x7C`). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589),
-   §34 (s1590–s1647), §35 (s1648–s1871). About 1,548
-   placeholder `func_0x...` names remained at s1487.
+   `isVectorInConeWriteDistance` at `0x800F2310`. After s1872
+   the last-15 titles include the hangar/512 revisit, so the
+   sweep REVISIT gate does not fire. Archive:
+   `PROJECT-OVERVIEW.md` §33–§35. About 1,548 placeholder
+   `func_0x...` names remained at s1487.
+2. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872). The
+   hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
+   plus `rs64_is_hangar_vi`). Re-open only when a port run logs
+   `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`).
+   Do not treat 640 or attract 512 as hangar. Do not re-walk
+   VMADH/VGE, `0xD60` shape, or the ovl20 consumer table.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -120,7 +114,8 @@ sentinel is that XY payload. s1840: the restage is a spec-accurate
 `0xFFFF8000` splits into X=`0xFFFF` (scaled to XL) and Y=`0x8000`
 (raw s11.2). s1856: that Y is not live at `L_17F0` or in flushed
 `0xD60` YL/YM/YH during VI 640 attribution LLE (H-never-live,
-single-source; hangar/512 unchecked).
+single-source). s1872 hangar/512 UNEVALUABLE: four port arms
+never reached hangar origin or VI 512/1024.
 
 **Attract 1024 presenter.** Leave adds `submitGfxFrame` +104/+102 without a new
 screen-handler entry. Callee-side `prev_pc` attributes every present: eight
@@ -295,6 +290,7 @@ and leftover `func_800F1E7C` became
 `initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`)
 and leftover `func_800F1FF4` became
 `initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`, `0x7C`)
+and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 (§35). s1728 is maintenance only.
 
 ## Method and safety rules

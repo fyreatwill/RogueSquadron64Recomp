@@ -21,6 +21,7 @@ extern "C" uint64_t rs64_dpc_get_last_submit_serial();
 extern "C" bool rs64_dpc_take_synthetic_consumer(uint64_t *serial);
 extern "C" uint32_t rs64_e9prov_current_task();
 extern "C" uint32_t rs64_e9prov_current_scope();
+extern "C" int rs64_is_hangar_vi(void);
 
 // Interval-scoped diagnostics (session 25).
 //
@@ -298,7 +299,12 @@ public:
                 fflush(stderr);
             }
         }
-        if (s_lle_force && app) {
+        const bool in_hangar = rs64_is_hangar_vi() != 0;
+        // Hangar LLE does not require LLE_FORCE. Attribution LLE never
+        // leaves VI 640 (s1856, s1872), so the hangar census uses HLE
+        // through the frontend and switches to LLE-solo only at hangar
+        // origins 0x006ab400 / 0x006ab800.
+        if (app && (s_lle_force || in_hangar)) {
             // Gate LLE to attribution-shape DLs only. Cinematic-phase tasks
             // hit Unhandled jump target in factor5_ucode_recompiled and
             // corrupt RT64's deferred state (which then asserts 4-bit
@@ -315,13 +321,23 @@ public:
                 s_lle_ungated = (v && *v && v[0] != '0') ? 1 : 0;
             }
             const bool in_attribution_page = ((dlp & 0xFFFF0000u) == 0x80720000u);
-            if (s_lle_ungated || in_attribution_page) {
+            static int s_lle_hangar_only = -1;
+            if (s_lle_hangar_only < 0) {
+                const char* v = std::getenv("ROGUESQ_LLE_HANGAR_ONLY");
+                s_lle_hangar_only = (v && *v && v[0] != '0') ? 1 : 0;
+            }
+            const bool lle_this = s_lle_ungated
+                || in_hangar
+                || (s_lle_force && in_attribution_page && !s_lle_hangar_only);
+            if (lle_this) {
                 static int s_n = 0;
                 int n = ++s_n;
                 int r = rs64_run_lle_gfx(app->core.RDRAM, task);
                 if (n <= 8 || (n & 31) == 0) {
+                    const char *gate = in_attribution_page ? "attr"
+                        : (in_hangar ? "hangar" : "ungated");
                     fprintf(stderr, "[lle send_dl #%d] gate=%s exit=%d task->ucode=0x%08X dl=0x%08X\n",
-                            n, in_attribution_page ? "attr" : "ungated",
+                            n, gate,
                             r, (unsigned)task->t.ucode, dlp);
                     fflush(stderr);
                 }
@@ -333,7 +349,7 @@ public:
                     const char* v = std::getenv("ROGUESQ_LLE_SOLO");
                     s_lle_solo = (v && *v && v[0] != '0') ? 1 : 0;
                 }
-                if (s_lle_solo) {
+                if (s_lle_solo || in_hangar) {
                     return;
                 }
                 // Fall through to HLE below.

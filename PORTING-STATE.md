@@ -86971,3 +86971,85 @@ already-named occupant is `isVectorInConeWriteDistance` at
 `0x800F2310`. Last-15 titles after s1871 are s1857–s1871, all
 sweep, so the next iteration is a mandatory M4 hangar/512 REVISIT
 rather than another leftover census.
+
+## Session 1872 (2026-08-17) — hangar/512 0x8000 Y is unevaluable
+
+Mandatory 15-title M4 REVISIT (HYPOTHESIS-ID: m4-accumulator-boundary-revisit).
+Last-15 ledger titles after s1871 were s1857–s1871, all sweep
+("synchronized" / "confirmed the leftover … symbol"). Step 0 `wc -c`
+was 16974; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail. Soak queue empty.
+
+s1856 selected H-never-live on VI 640 attribution LLE only. This
+session gated the existing `rs64_m4_y8000_*` counters on hangar 512
+origins `0x006ab400` / `0x006ab800` (attract 512 is not hangar) and
+tried to reach that window. Same four hypotheses as s1856.
+
+### Competing hypotheses
+
+- H-clip-reject: a live `+0x1A == 0x8000` reaches `L_17F0` at hangar
+  512 but every such triangle is clip-rejected; no flushed `0xD60`
+  command has YL/YM/YH `0x8000`.
+- H-zero-height-emit: at least one flushed `0xC8|flags` at hangar 512
+  has YL = YM = YH = `0x8000`.
+- H-on-screen-emit: at least one flushed command at hangar 512 has one
+  or two Ys equal to `0x8000` and the three Ys are not equal.
+- H-never-live: `n_flush > 0` at hangar 512 and no `L_17F0` entry in
+  that window sees `+0x1A == 0x8000`.
+
+### Evidence
+
+Host gate: `rs64_is_hangar_vi` + `ROGUESQ_M4_Y8000_WIDTH=512` in
+`src/rsp/dpc_bridge.cpp` / `src/main/upstream_compat.cpp`. LLE also
+gains a hangar-origin clause (`src/main/rt64_render_context.cpp`)
+because attribution-page LLE never submits hangar DLs. Four arms, one
+game at a time, SIGKILL:
+
+1. Attribution LLE + boot Starts
+   (`scratch/agent/s1872_m4_y8000_hangar512/run_attr_lle.log`).
+   Same-run controls fired: `[lle-force]`, `[lle send_dl #1] gate=attr
+   exit=1`, `[m4-y8000] mark flush-site` viw=320 origin=`0x006DD280`
+   hangar=0 r16=`0xD68`, `[m4-y8000] mark entry` viw=640
+   origin=`0x005D4500` hangar=0 y=`05C6/05CA/05C4`. Gated
+   `entry=flush=0` (correct: not hangar). Phases: `320→2→640` then
+   `640→2→640` at 7.0s origin `0x00696100`. No VI 512/1024. Last
+   summary `entry_all=16530 flush_site_all=567313 hangar=0`.
+2. `ROGUESQ_LLE_HANGAR_ONLY=1` + boot Starts
+   (`scratch/agent/s1872_m4_y8000_hangar512/hangar_only/run.log`).
+   `[lle-force]` fired; no `[m4-y8000]` marks (LLE idle until hangar).
+   Same `640→2→640` at 6.6s origin `0x00696100`. Killed at 136s still
+   640. Screenshot at 0.0s is garbled attribution; 37s+ is letterboxed
+   white.
+3. Hangar-only LLE, wait for 1024, then A/Start
+   (`scratch/agent/s1872_m4_y8000_hangar512/from1024/run.log`). Same
+   640 lifecycle; killed while still waiting for 1024.
+4. HLE frontend (no `LLE_FORCE`), wait 180s for 1024
+   (`scratch/agent/s1872_m4_y8000_hangar512/hle_to_hangar/run.log`).
+   probe.sh exit 5: `width 1024 never reached in 180s (last width:
+   640)`. Last `[vi]` `#640 origin=0x00696100 width=640 nonzero=1`.
+
+Zero `mark hangar-origin`, zero `gate=hangar`, zero `vi_width=512` /
+`vi_width=1024`, zero origin `0x006ab400`/`0x006ab800` across all
+four logs. Attract 512 (`0x00690400`) also never appeared.
+
+### Outcome
+
+This selects UNEVALUABLE for the hangar/512 live-`0x8000` Y table and
+refutes treating the 640 attribution window, or a missing 512, as
+hangar. It does not select H-clip-reject, H-zero-height-emit,
+H-on-screen-emit, or H-never-live. The instrument's same-run positive
+controls fired on arm 1; the hangar gate itself never opened. The
+default port path and the wait-for-1024 recipe (s851's ~79s 1024 did
+not recur; this is the s1111 `640→2→640` lifecycle) did not publish
+hangar origin. Rice eleven-Start cannot run `L_17F0`. Do not promote
+640 gated zeros. Next discriminator: a port run that actually logs
+`[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`) before
+the H-* counters are evaluable. Hangar/512 stays parked.
+
+The hangar-origin counter gate and hangar-only / auto-hangar LLE
+clauses stay; they are how the next reachable hangar run will split
+the four H-*. No mitigation.
+
+Next work unit: resume the generated-symbol sweep at leftover
+`func_800F2208` (`0x800F2208`, `0x108`). After s1872 the last-15
+titles include this revisit, so the sweep REVISIT gate does not fire.
