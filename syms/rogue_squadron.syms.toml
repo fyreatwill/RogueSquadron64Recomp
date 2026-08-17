@@ -1945,7 +1945,7 @@ functions = [
     { name = "stageSoundCueRequestByIdAndParam", vram = 0x800EFC84, size = 0x50 },
     { name = "initSoundCueRequest", vram = 0x800EFCD4, size = 0x80 },
     { name = "getSoundCueSubsystemFlag", vram = 0x800EFD54, size = 0x10 },
-    { name = "func_800EFD64", vram = 0x800EFD64, size = 0x8 },
+    { name = "noopHandler_800EFD64", vram = 0x800EFD64, size = 0x8 },
     { name = "func_800EFD6C", vram = 0x800EFD6C, size = 0x8 },
     { name = "fake_func_800EFD74", vram = 0x800EFD74, size = 0xC },
     { name = "func_800EFD80", vram = 0x800EFD80, size = 0x5C },

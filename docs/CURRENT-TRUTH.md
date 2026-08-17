@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1851 (2026-08-17).
+detail. Reviewed through s1852 (2026-08-17).
 
 ## Current state
 
@@ -63,13 +63,13 @@ detail. Reviewed through s1851 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800EFD64`
-   (`0x800EFD64`, size `0x8`). Companion `mission_overlay.txt` and
-   generated headers/body/INL already name `noopHandler_800EFD64`;
-   TOML still leftover. s1851 synchronized leftover `func_800EFD54` to
-   `getSoundCueSubsystemFlag` (`0x800EFD54`, `0x10`).
+1. Resume the generated-symbol sweep at leftover `func_800EFD6C`
+   (`0x800EFD6C`, size `0x8`). Companion `mission_overlay.txt` and
+   generated headers/body/INL already name `noopHandler`;
+   TOML still leftover. s1852 synchronized leftover `func_800EFD64` to
+   `noopHandler_800EFD64` (`0x800EFD64`, `0x8`).
    Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1851). About 1,548 placeholder `func_0x...` names
+   §35 (s1648–s1852). About 1,548 placeholder `func_0x...` names
    remained at s1487.
 2. Parked M4 remainder: whether a live `0x8000` Y is clip-rejected at
    `L_17F0` entry, emitted as a zero-height command, or emitted
@@ -135,7 +135,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1851 through leftover `func_800EFD54` became
+s1648–s1852 through leftover `func_800EFD64` became
+`noopHandler_800EFD64` (`0x800EFD64`, `0x8`) after leftover
+`func_800EFD54` became
 `getSoundCueSubsystemFlag` (`0x800EFD54`, `0x10`) after leftover
 `func_800EFCD4` became
 `initSoundCueRequest` (`0x800EFCD4`, `0x80`) after leftover

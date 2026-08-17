@@ -85953,3 +85953,54 @@ says `func_800EFD64`. First insn `jr $ra` / `nop` at `0x800EFD64` /
 generated already that name; TOML still leftover `func_800EFD6C`).
 Last-15 titles after s1851 still include s1840's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1852 (2026-08-17) — synchronized the noopHandler_800EFD64 symbol
+
+Exact generated-symbol census for leftover `func_800EFD64` at
+`0x800EFD64` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1840's mandatory REVISIT (`selected H-standard-edge
+on the restaged RDP triangle`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 13510; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `noopHandler_800EFD64 = 0x800EFD64`. Comment: pure `jr ra` stub, adjacent to `noopHandler` at `0x800EFD6C` |
+| Companion `main_overlay.txt` | No occupant at `0x800EFD64`. Cinematic and menu overlays also empty at this VRAM |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void noopHandler_800EFD64` at VRAM `0x800EFD64`. First insn `jr $ra` at `0x800EFD64`; last insn `nop` at `0x800EFD68`. Previous is `getSoundCueSubsystemFlag` (`0x800EFD54`, ends `0x800EFD64`); next is already `noopHandler` at `0x800EFD6C`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Pure `jr $ra` / delay-slot `nop`. Empty callback / default handler. Name matches: a no-op at this VRAM, distinguished from the adjacent unnamed `noopHandler` at `0x800EFD6C` |
+| Callers | Sole generated `jal 0x800EFD64` in `tryPlaySpatialSoundWithGates` at `0x800B3E08` already dispatches `noopHandler_800EFD64(rdram, ctx)` by the human name (`a0=0`, `a1=a0`) |
+| TOML | Was `{ name = "func_800EFD64", vram = 0x800EFD64, size = 0x8 }` — stale leftover. Size already matched `0x800EFD6C - 0x800EFD64`. Renamed to `noopHandler_800EFD64` |
+| Overlay section 4 | `{ .func = noopHandler_800EFD64, .offset = 0x0004AC34, .rom_size = 0x00000008 }` under `section_4_ovl_mission_funcs` (`0x800EFD64 - 0x800A5130 = 0x4AC34`; previous `0x4AC24 + 0x10 = 0x4AC34`; `0x4AC34 + 0x8 = 0x4AC3C` matches next `noopHandler`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940` (`0x800A5130 + 0xB810`); menu overlay ends at `0x800CD520` (`0x800A5130 + 0x283F0`); main `.text` ends before `0x800A5130`. None occupy `0x800EFD64`. No leftover `func_800EFD64` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`jr $ra` / `nop` at `0x800EFD64` / `0x800EFD68`), previous
+(`getSoundCueSubsystemFlag` / `0x800EFD54`) and next
+(`noopHandler` / `0x800EFD6C`) boundaries, overlay span,
+and size already agreed on `noopHandler_800EFD64` / `0x8`.
+TOML still carried leftover `func_800EFD64`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800EFD6C`; first insn is `jr $ra` and
+last is `nop` at `0x800EFD68`), and H4 (companion, generated body,
+TOML, and section-4 row are all present). No invented name. No
+build or runtime run required.
+
+Next census: leftover `func_800EFD6C` at `0x800EFD6C` (size `0x8`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `noopHandler`; TOML still says
+`func_800EFD6C`. First insn `jr $ra` / `nop` at `0x800EFD6C` /
+`0x800EFD70`. Next occupant is `fake_func_800EFD74` (`0x800EFD74`,
+`0xC`; companion and generated already that name; TOML already
+`fake_func_800EFD74`) then leftover `func_800EFD80` (`0x800EFD80`,
+`0x5C`; companion `dispatchSlotAction5IfActive`; generated already
+that name; TOML still leftover). Last-15 titles after s1852 still
+include s1840's M4 revisit, so the mandatory REVISIT gate does not
+fire.
