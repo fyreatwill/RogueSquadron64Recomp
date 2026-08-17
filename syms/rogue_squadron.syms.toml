@@ -1894,7 +1894,7 @@ functions = [
     { name = "playAttachmentCueNoTexture", vram = 0x800E8828, size = 0x120 },
     { name = "applyCraftAnimDetailParamsB", vram = 0x800E8948, size = 0xEC },
     { name = "fake_func_800E8A34", vram = 0x800E8A34, size = 0xC },
-    { name = "func_800E8A40", vram = 0x800E8A40, size = 0x49C },
+    { name = "runDestructionPhaseSequence", vram = 0x800E8A40, size = 0x49C },
     { name = "func_800E8EDC", vram = 0x800E8EDC, size = 0xBA8 },
     { name = "func_800E9A84", vram = 0x800E9A84, size = 0x54 },
     { name = "fake_func_800E9AD8", vram = 0x800E9AD8, size = 0x8 },

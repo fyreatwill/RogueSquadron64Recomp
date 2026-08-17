@@ -83338,3 +83338,41 @@ peek: TOML still `func_800E8A40`; generated headers/body, overlay INL,
 and `mission_overlay.txt` already use the human name (companion leftover
 deleted s432 as a duplicate). Last-15 titles after s1798 still include
 s1792's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1799 (2026-08-16) — synchronized the runDestructionPhaseSequence symbol
+
+Exact generated-symbol census for leftover `0x800E8A40` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7685; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `runDestructionPhaseSequence = 0x800E8A40` ("multi-phase destruction state machine (jump-table on phase: debris/child spawns)"). Leftover `func_800E8A40` deleted s432 as a duplicate-symbol collision (same class as items -262/-264). Previous leftover `fake_func_800E8A34 = 0x800E8A34`. Next named kernel `tickCraftWithPhasedDestruction = 0x800E8EDC`. No leftover `func_800E8A40` splat remains, no `D_800E8A40`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void runDestructionPhaseSequence` at VRAM `0x800E8A40`. Prologue `addiu $sp, $sp, -0xB8`; last live insn `jr $ra` at `0x800E8ED4` with delay `addiu $sp, $sp, 0xB8` at `0x800E8ED8`. Next `tickCraftWithPhasedDestruction` prologue is `addiu $sp, $sp, -0xA0` at `0x800E8EDC`. `funcs.h` already declares the human name. No leftover `func_800E8A40`. One generated `jal 0x800E8A40` at `0x800E9598` inside `tickCraftWithPhasedDestruction` already calls the human name |
+| Body semantics | 5-way `jr $v0` table on `lh +0x3C($s0)` (`sltiu 0x5`) at `0x800A85C0`. Case 0 (`L_800E8AB4`): `spawnByteAnimDebrisDefault`, `spawnNpcType0xAFromTemplate`, `rand` / `composeRandomRotationMatrix` / `scaleVec3ByRandomRange` / `spawnDebris1Npc`, then shared `spawnSplineWalkerCraft`. Case 1 (`L_800E8C70`): `gameStateByteGatedNpcHelper` plus the same debris/child path, then the same walker spawn. Cases 2/3/4 (`L_800E8E94`): only `spawnNpcType0xAFromTemplate` scaled from `+0x40`. Shared setup is `transformLimbStrideAnchorsLocal` + `transformMeshPartIntoWorld`. Companion comment matches the body |
+| TOML | Was `{ name = "func_800E8A40", vram = 0x800E8A40, size = 0x49C }` — stale placeholder; size matches `0x800E8EDC - 0x800E8A40`. Renamed to `runDestructionPhaseSequence` |
+| Overlay section 4 | `{ .func = runDestructionPhaseSequence, .offset = 0x00043910, .rom_size = 0x0000049C }` under `section_4_ovl_mission_funcs` (`0x800E8A40 - 0x800A5130 = 0x43910`; previous leftover `0x43904 + 0xC = 0x43910`; `0x43910 + 0x49C = 0x43DAC` matches next `tickCraftWithPhasedDestruction`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E8A40`. No leftover `func_800E8A40` in generated headers or overlay INL after the TOML rename |
+
+### Outcome
+
+H2 selected. Companion, generated headers/body, and section-4 already
+used `runDestructionPhaseSequence`; only TOML still carried
+`func_800E8A40`. Renamed the TOML row. This refutes H1 (sources were
+not already synchronized), H3 (no overlay collision, leftover splat, or
+size/boundary miss: `0x800E8A40 + 0x49C = 0x800E8EDC`, and the previous
+leftover ends exactly at this prologue), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Next census: leftover `func_800E8EDC` / companion
+`tickCraftWithPhasedDestruction` at `0x800E8EDC` (size `0xBA8`). Neighbor
+peek: TOML still `func_800E8EDC`; generated headers/body, overlay INL,
+and `mission_overlay.txt` already use the human name. Last-15 titles
+after s1799 still include s1792's revisit, so the mandatory REVISIT
+gate does not fire.
