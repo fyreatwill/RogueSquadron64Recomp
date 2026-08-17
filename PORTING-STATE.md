@@ -84659,3 +84659,54 @@ First insn `addu $a3, $zero, $zero`; last live `jr $ra` / `nop` at
 `tickActiveSongSlots` at `0x800ED200` (`0x9B0`; TOML still leftover
 `func_800ED200`). Last-15 titles after s1826 still include s1824's
 M4 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1827 (2026-08-17) — synchronized the claimSongSlotForCurrentHandle symbol
+
+Exact generated-symbol census for leftover `func_800ED150` at
+`0x800ED150` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1824's mandatory REVISIT (`selected H-rdp-consumer
+on the ovl20 0x670 record`), so the 15-title all-sweep REVISIT gate did
+not fire. Step 0 `wc -c` was 10672; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `main_overlay.txt` | `claimSongSlotForCurrentHandle = 0x800ED150` (batch4 2026-06-01: funcs_40 music-mgr). No leftover `func_800ED150` splat in this file |
+| Companion `mission_overlay.txt` | Leftover `func_800ED150 = 0x800ED150` (`segment:mission_overlay` only). Previous leftover `fake_func_800ED148 = 0x800ED148` (s1826 confirmed). Later named kernel `tickActiveSongSlots = 0x800ED200`. Left the leftover placeholder: promoting it to `claimSongSlotForCurrentHandle` would duplicate the main-overlay symbol at the same VRAM. No `D_800ED150`, and no menu/cinematic occupant |
+| Generated `funcs_40.c` | Was `RECOMP_FUNC void func_800ED150` at VRAM `0x800ED150`. First insn `addu $a3, $zero, $zero`; last live insn `jr $ra` / `nop` at `0x800ED1F8` / `0x800ED1FC`. Previous leftover `fake_func_800ED148` is the two-insn `lui`/`addu` at `0x800ED148`; next is already `tickActiveSongSlots` at `0x800ED200`. Sole generated `jal 0x800ED150` is inside `tickActiveSongSlots` at `0x800ED844` (`lbu $a0, -0x3EB3($v0)` then the jal). `funcs.h` and overlay INL were also the leftover name |
+| Body semantics | Two eight-slot walks (`slti $a3, 0x8`) of table `0x8010C270` (`0x80110000-0x3D90`) stride `0x10`. First walk matches the packed handle from `lhu 0x8010C0E0+4/+6`; on hit stores `a0` at slot `+0xC`, zeros `+0x8`, copies the current word to `+0x4`, and returns. Miss falls into a second walk that claims the first `-1` free slot the same way. Name matches: claim a song slot for the current handle |
+| TOML | Was `{ name = "func_800ED150", vram = 0x800ED150, size = 0xB0 }` — stale leftover. Size already matched `0x800ED200 - 0x800ED150`. Renamed to `claimSongSlotForCurrentHandle` |
+| Overlay section 4 | `{ .func = claimSongSlotForCurrentHandle, .offset = 0x00048020, .rom_size = 0x000000B0 }` under `section_4_ovl_mission_funcs` (`0x800ED150 - 0x800A5130 = 0x48020`; previous `0x48018 + 0x8 = 0x48020`; `0x48020 + 0xB0 = 0x480D0` matches next `tickActiveSongSlots`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800ED150`. No leftover `func_800ED150` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion main mapping, live generated eight-slot song-slot
+claim body (`slti $a3, 0x8`, handle `0x8010C0E0`, table `0x8010C270`
+stride `0x10`), previous leftover (`fake_func_800ED148` / `0x800ED148`)
+and next (`tickActiveSongSlots` / `0x800ED200`) boundaries, overlay span,
+and size already agreed on `claimSongSlotForCurrentHandle` / `0xB0`.
+TOML, generated headers/body/INL, and the `tickActiveSongSlots` jal site
+still carried leftover `func_800ED150`; renamed all of them to match.
+This refutes H1 (sources were not already synchronized), H3 (no leftover
+splat at this address in generated/TOML after the rename, no overlay
+collision, and no size/boundary disagreement; previous ends exactly here
+and next starts at `0x800ED200`; the mission `func_800ED150` leftover
+is the expected overlay-alias placeholder and must stay, because
+promoting it would collide with main), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No invented name. No
+build or runtime run required.
+
+Next census: leftover `func_800ED200` at `0x800ED200` (size `0x9B0`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `tickActiveSongSlots`; TOML still says
+`func_800ED200`. First insn `addiu $sp, $sp, -0x50`; last live
+`jr $ra` / `addiu $sp, $sp, 0x50` at `0x800EDBA8` / `0x800EDBAC`.
+Three generated `jal 0x800ED200` sites already dispatch the human
+name. Next occupant is leftover `func_800EDBB0` (`0x800EDBB0`, `0xE0`;
+generated already `shouldSwitchToPendingSong`; TOML still leftover).
+Last-15 titles after s1827 still include s1824's M4 revisit, so the
+mandatory REVISIT gate does not fire.

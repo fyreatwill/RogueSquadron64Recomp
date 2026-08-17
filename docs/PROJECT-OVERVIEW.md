@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1823)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1827)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3104,18 +3104,22 @@ collision.
 | s1822 | Synchronized `dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`). Thin wrapper: `lhu` global id from `0x8013959C`, `a1 = 0xC`, `jal slotDispatcherIter` at `0x800ECDF0`. Sole generated `jal 0x800ECDDC` inside `tickMissionObjectives` at `0x800FBD18` already dispatches the human name. TOML was stale `func_800ECDDC`; companion, generated headers/body, and section-4 already used the human name. |
 | s1823 | Confirmed leftover `fake_func_800ECE04` (`0x800ECE04`, `0xC`). Three-instruction `srl $v0, $t1, 4` / `addiu $v0, $v0, 0x9F` / `multu $v0, $v1` orphan between `dispatchSlotActionTwelveByGlobalId`'s epilogue and `datItemActorNpcHandler` (whose prologue is `addiu $sp, $sp, -0x140`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment (next occupant `func_800ECE10` deleted s432 as a duplicate of `datItemActorNpcHandler`). No leftover `func_800ECE04`; TOML, generated headers/body, and section-4 already use the leftover name. |
 | s1824 | Mandatory M4 REVISIT. Selected H-rdp-consumer: ovl20 `L_17F0` loads `0x670+0x18`/`+0x1C` after `L_1740` and restages those halfwords as RDP triangle X/Y into the `0xD60` command buffer (`*(u8*)(state+0x37)|0xC8`); the only `SP_WR_LEN` still sources `0xD60`. H-later-dma-raw, H-dead-store, and "no copy into `0xD60`" H-source-state refuted. Color is the separate `+0x10` `luv` field. Table: `docs/M4-ACCUMULATOR-GROUND-TRUTH.md`. |
+| s1825 | Synchronized `datItemActorNpcHandler` (`0x800ECE10`, `0x338`). Action 1/2/3/7 NPC handler; frame `-0x140`. Companion leftover `func_800ECE10` deleted s432 as a duplicate. TOML was stale `func_800ECE10`; generated headers/body and section-4 already used the human name. |
+| s1826 | Confirmed leftover `fake_func_800ED148` (`0x800ED148`, `0x8`). Two-instruction `lui $at, 0x801F` / `addu $at, $at, $v1` orphan between `datItemActorNpcHandler`'s epilogue and leftover `func_800ED150` (whose prologue is `addu $a3, $zero, $zero`, so this is not a split first instruction). Companion leftover splat. No leftover `func_800ED148`; TOML, generated headers/body, and section-4 already use the leftover name. |
+| s1827 | Synchronized `claimSongSlotForCurrentHandle` (`0x800ED150`, `0xB0`). Eight-slot walk (`slti $a3, 0x8`) of table `0x8010C270` stride `0x10`: match packed handle from `0x8010C0E0+4/+6`, else claim a `-1` free slot; store `a0` at `+0xC`. Sole generated `jal 0x800ED150` inside `tickActiveSongSlots` at `0x800ED844`. Companion `main_overlay.txt` already had the name; mission leftover stays `func_800ED150` (overlay-alias; naming it would collide with main). TOML, generated headers/body/INL, and the jal site were stale `func_800ED150`. |
 
-The sweep cursor after s1824 is leftover `func_800ECE10`
-(`0x800ECE10`, size `0x338`). Neighbor peek: companion
+The sweep cursor after s1827 is leftover `func_800ED200`
+(`0x800ED200`, size `0x9B0`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`datItemActorNpcHandler`; TOML still leftover `func_800ECE10`.
-First insn `addiu $sp, $sp, -0x140`; last live `jr $ra` /
-`addiu $sp, $sp, 0x140` at `0x800ED140` / `0x800ED144`. No
-generated `jal 0x800ECE10` (NPC-handler table dispatch). Next
-occupant is leftover `fake_func_800ED148` (`0x800ED148`, `0x8`).
+`tickActiveSongSlots`; TOML still leftover `func_800ED200`.
+First insn `addiu $sp, $sp, -0x50`; last live `jr $ra` /
+`addiu $sp, $sp, 0x50` at `0x800EDBA8` / `0x800EDBAC`. Three
+generated `jal 0x800ED200` sites already dispatch the human name.
+Next occupant is leftover `func_800EDBB0` (`0x800EDBB0`, `0xE0`;
+generated already `shouldSwitchToPendingSong`; TOML still leftover).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776, s1792, s1808, s1824. After s1824 the
-last-15 titles include the M4 consumer revisit, so the next
+s1714, s1744, s1760, s1776, s1792, s1808, s1824. After s1827 the
+last-15 titles still include the M4 consumer revisit, so the next
 iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
