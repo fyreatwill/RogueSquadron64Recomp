@@ -3056,13 +3056,15 @@ collision.
 | s1776 | Mandatory REVISIT. Three-arm Rice watch of main-text screen/frame handlers on the attract A/Start title-like 1024. All arms passed controls. Leave adds `submitGfxFrame` +105/+103 (H1); `runVideoFrameTick`/`swapBufferWithViMode` +1 matches the extra WIDTH; `applyPendingViChanges` +2/+3 tracks VI count. `mainGameLoop` and `applyLevelScreenAndCameraSettings` stay 1 (H2 closed). `emitFrameRdpInitDl` drops −180/−176 with `0x800C131C` (H4 closed; H3-stop-tick still holds for overlay-aliased ticks). Extra `loadOverlay` +2 / menu dest +1 reproduced. |
 | s1777 | Synchronized `playDualTextureAttachmentCueMode0` (`0x800E4034`, `0x1C`). Thin wrapper: `jal 0x800E03F8` `playDualTextureAttachmentCue` with delay-slot `addu $a2, $zero, $zero`. Sibling of Mode1 (`a2=1`). No generated `jal 0x800E4034`. TOML was stale `func_800E4034`; generated headers/body and section-4 already used the human name. |
 | s1778 | Synchronized `playDualTextureAttachmentCueMode1` (`0x800E4050`, `0x1C`). Thin wrapper: `jal 0x800E03F8` `playDualTextureAttachmentCue` with delay-slot `addiu $a2, $zero, 0x1`. Sibling of Mode0 (`a2=0`). No generated `jal 0x800E4050`. TOML was stale `func_800E4050`; generated headers/body and section-4 already used the human name. |
+| s1779 | Confirmed leftover `fake_func_800E406C` (`0x800E406C`, `0x4`). One-instruction `sw $a0, 0x20($sp)` orphan between `playDualTextureAttachmentCueMode1`'s epilogue and `handleRayShieldedNpcDestroy` (whose prologue is `addiu $sp, $sp, -0x40`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment (next occupant is already the human name). No leftover `func_800E406C`; TOML, generated headers/body, and section-4 already use the leftover name. |
 
-The sweep cursor after s1778 is leftover `fake_func_800E406C` /
-`0x800E406C` (size `0x4`). Neighbor peek: companion, generated, TOML,
-and section-4 already use the leftover name. Mandatory revisits
-in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776.
-After s1778 the last-15 titles include the s1776 revisit, so the next
-iteration resumes the sweep.
+The sweep cursor after s1779 is `handleRayShieldedNpcDestroy` /
+`0x800E4070` (size `0x40C`). Neighbor peek: TOML is still
+`func_800E4070` while generated headers/body and section-4 already
+use the human name. Mandatory revisits in this window: s1650, s1666,
+s1682, s1698, s1714, s1744, s1760, s1776. After s1779 the last-15
+titles include the s1776 revisit, so the next iteration resumes the
+sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

@@ -82481,3 +82481,43 @@ Next census: leftover `fake_func_800E406C` at `0x800E406C` (size `0x4`).
 Neighbor peek already shows companion, generated, TOML, and section-4
 using the leftover name. Last-15 titles after s1778 still include
 s1776's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1779 (2026-08-16) — confirmed the leftover fake_func_800E406C symbol
+
+Exact generated-symbol census for leftover `0x800E406C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6813; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800E406C = 0x800E406C` leftover splat. Unlike sibling leftovers (`fake_func_800DFB8C`, `fake_func_800E447C`) this row has no "deleted s432 duplicate" comment — the next occupant is already named `handleRayShieldedNpcDestroy`, not an address-encoded `func_800E4070`. Previous contiguous generated neighbor `playDualTextureAttachmentCueMode1 = 0x800E4050`. Next named kernel `handleRayShieldedNpcDestroy = 0x800E4070`. No leftover `func_800E406C` splat, no `D_800E406C`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void fake_func_800E406C` at VRAM `0x800E406C`. One-instruction body: `sw $a0, 0x20($sp)` then the function ends (no `jr $ra`). Previous `playDualTextureAttachmentCueMode1` last insn is the delay-slot `addiu $sp, $sp, 0x18` at `0x800E4068`; next is `handleRayShieldedNpcDestroy` at `0x800E4070` (`addiu $sp, $sp, -0x40` — a prologue, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800E406C`. No generated `jal 0x800E406C` site |
+| Body semantics | 4-byte orphan `sw $a0, 0x20($sp)` fragment sitting between Mode1's `jr $ra` epilogue and the real `handleRayShieldedNpcDestroy` prologue. Same leftover-splat family as `fake_func_800DFB8C` / `fake_func_800E447C` (one unreachable word immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800E406C", vram = 0x800E406C, size = 0x4 }` — already the leftover name; size matches `0x800E4070 - 0x800E406C` |
+| Overlay section 4 | `{ .func = fake_func_800E406C, .offset = 0x0003EF3C, .rom_size = 0x00000004 }` under `section_4_ovl_mission_funcs` (`0x800E406C - 0x800A5130 = 0x3EF3C`; previous `0x3EF20 + 0x1C = 0x3EF3C`; `0x3EF3C + 0x4 = 0x3EF40` matches next `handleRayShieldedNpcDestroy`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E406C`. No leftover `func_800E406C` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated one-instruction
+`sw $a0, 0x20($sp)` body, previous (`playDualTextureAttachmentCueMode1` /
+`0x800E4050`) and next (`handleRayShieldedNpcDestroy` / `0x800E4070`)
+boundaries, TOML name and size, and section-4 overlay span already
+agree. No TOML or generated-name change. This refutes H2 (no stale
+`func_800E406C` placeholder), H3 (no overlay collision, second occupant,
+or size/boundary disagreement; size is `0x4` as expected; the leftover
+is the one-word `sw $a0` gap, not a split prologue), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `handleRayShieldedNpcDestroy` / `func_800E4070` at
+`0x800E4070` (size `0x40C`). Neighbor peek already shows TOML still
+`func_800E4070` while generated/overlay use the human name — that is
+the next session's discriminator, not this one. Last-15 titles after
+s1779 still include s1776's revisit, so the mandatory REVISIT gate
+does not fire.
