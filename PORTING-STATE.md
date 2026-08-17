@@ -83414,3 +83414,39 @@ peek: TOML still `func_800E9A84`; generated headers/body, overlay INL,
 and `mission_overlay.txt` already use the human name. Last-15 titles
 after s1800 still include s1792's revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1801 (2026-08-16) — synchronized the initNpcHealthAndDetailFromChild symbol
+
+Exact generated-symbol census for leftover `0x800E9A84` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7697; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `initNpcHealthAndDetailFromChild = 0x800E9A84` ("NPC spawn/init: copies HP from child template, sets health + detail level"). No leftover `func_800E9A84` splat, no deleted-s432 duplicate comment, no `D_800E9A84`, and no menu/cinematic/main overlay occupant. Previous named kernel `tickCraftWithPhasedDestruction = 0x800E8EDC`. Next leftover `fake_func_800E9AD8 = 0x800E9AD8` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void initNpcHealthAndDetailFromChild` at VRAM `0x800E9A84`. Prologue `addiu $sp, $sp, -0x18`; last live insn `jr $ra` at `0x800E9AD0` with delay `addiu $sp, $sp, 0x18` at `0x800E9AD4`. Previous `tickCraftWithPhasedDestruction` delay ends at `0x800E9A80`; next leftover `fake_func_800E9AD8` is `lw $v1, 0x34($v0)` at `0x800E9AD8`. `funcs.h` already declares the human name. No leftover `func_800E9A84`. No generated `jal 0x800E9A84` |
+| Body semantics | `s0 = *(a0+4)` object. Child/template at `*(s0+0x34)`; callee `a0` is `*(s0+0x38)`. Clears halfword `+0x3E`. Copies float `*(template+0x94)` to `s0+0x50` (HP). `jal 0x800F2070` `setNpcHealth` with `a1 = template+0x6C`, `a2 = template`. Then `jal 0x800F2830` `setObjectDetailLevel` (generated name; TOML still `func_800F2830`) with `a1 = *(template+0xAC)`. Companion comment matches the body |
+| TOML | Was `{ name = "func_800E9A84", vram = 0x800E9A84, size = 0x54 }` — stale placeholder; size matches `0x800E9AD8 - 0x800E9A84`. Renamed to `initNpcHealthAndDetailFromChild` |
+| Overlay section 4 | `{ .func = initNpcHealthAndDetailFromChild, .offset = 0x00044954, .rom_size = 0x00000054 }` under `section_4_ovl_mission_funcs` (`0x800E9A84 - 0x800A5130 = 0x44954`; previous `0x43DAC + 0xBA8 = 0x44954`; `0x44954 + 0x54 = 0x449A8` matches next leftover `fake_func_800E9AD8`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E9A84`. No leftover `func_800E9A84` in generated headers or overlay INL after the TOML rename |
+
+### Outcome
+
+H2 selected. Companion, generated headers/body, and section-4 already
+used `initNpcHealthAndDetailFromChild`; only TOML still carried
+`func_800E9A84`. Renamed the TOML row. This refutes H1 (sources were
+not already synchronized), H3 (no overlay collision, leftover splat, or
+size/boundary miss: `0x800E9A84 + 0x54 = 0x800E9AD8`, and the previous
+`tickCraftWithPhasedDestruction` ends exactly at this prologue), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: leftover `fake_func_800E9AD8` at `0x800E9AD8` (size `0x8`).
+Neighbor peek: TOML, generated headers/body, overlay INL, and companion
+leftover already `fake_func_800E9AD8`. Last-15 titles after s1801 still
+include s1792's revisit, so the mandatory REVISIT gate does not fire.
