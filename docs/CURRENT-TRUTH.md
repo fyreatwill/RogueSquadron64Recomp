@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1817 (2026-08-16).
+detail. Reviewed through s1818 (2026-08-16).
 
 ## Current state
 
@@ -54,14 +54,15 @@ detail. Reviewed through s1817 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800EC684`
-   (`0x800EC684`, size `0x3C`). Companion `mission_overlay.txt` and
+1. Resume the generated-symbol sweep at leftover `func_800EC6C0`
+   (`0x800EC6C0`, size `0x2C`). Companion `mission_overlay.txt` and
    generated headers/body/INL already map
-   `clearPendingAndDestroyChildNpc`; TOML still says `func_800EC684`.
-   s1817 synchronized leftover `func_800EC588` to `createAndInitObject`
-   (`0x800EC588`, `0xFC`). Archive: `PROJECT-OVERVIEW.md` §33
-   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1817). About 1,548
-   placeholder `func_0x...` names remained at s1487.
+   `destroyObjectOwnedNpcSlot`; TOML still says `func_800EC6C0`.
+   s1818 synchronized leftover `func_800EC684` to
+   `clearPendingAndDestroyChildNpc` (`0x800EC684`, `0x3C`). Archive:
+   `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647), §35
+   (s1648–s1818). About 1,548 placeholder `func_0x...` names remained
+   at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): M4
    accumulator boundary (source state vs later DMA/consumer), not another
    `submitGfxFrame` entry/jal/`prev_pc` recipe. The extra +104 is closed
@@ -111,9 +112,10 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1817 through leftover `func_800EC588` renamed to
-`createAndInitObject` (`0x800EC588`, `0xFC`) after leftover
-`func_800EC514` became `freeAllObjectContextPoolNodes`
+s1648–s1818 through leftover `func_800EC684` renamed to
+`clearPendingAndDestroyChildNpc` (`0x800EC684`, `0x3C`) after leftover
+`func_800EC588` became `createAndInitObject` (`0x800EC588`, `0xFC`),
+leftover `func_800EC514` became `freeAllObjectContextPoolNodes`
 (`0x800EC514`, `0x74`), leftover `func_800EC4D8` became
 `resetObjectContextPool` (`0x800EC4D8`, `0x3C`), leftover
 `func_800EC388` became `unlinkAndFreeChildNpcNode` (`0x800EC388`,

@@ -1912,7 +1912,7 @@ functions = [
     { name = "resetObjectContextPool", vram = 0x800EC4D8, size = 0x3C },
     { name = "freeAllObjectContextPoolNodes", vram = 0x800EC514, size = 0x74 },
     { name = "createAndInitObject", vram = 0x800EC588, size = 0xFC },
-    { name = "func_800EC684", vram = 0x800EC684, size = 0x3C },
+    { name = "clearPendingAndDestroyChildNpc", vram = 0x800EC684, size = 0x3C },
     { name = "func_800EC6C0", vram = 0x800EC6C0, size = 0x2C },
     { name = "fake_func_800EC6EC", vram = 0x800EC6EC, size = 0x4 },
     { name = "func_800EC6F0", vram = 0x800EC6F0, size = 0x538 },

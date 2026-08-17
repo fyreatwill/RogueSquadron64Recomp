@@ -84202,3 +84202,55 @@ occupant is `destroyObjectOwnedNpcSlot` (`0x800EC6C0`, `0x2C`;
 generated already named; TOML still `func_800EC6C0`). Last-15 titles
 after s1817 still include s1808's revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1818 (2026-08-16) — synchronized the clearPendingAndDestroyChildNpc symbol
+
+Exact generated-symbol census for leftover `func_800EC684` at
+`0x800EC684` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1808's mandatory REVISIT (`selected H2
+menuIn/mission jal-sites on the attract 1024`), so the 15-title
+all-sweep REVISIT gate did not fire. Step 0 `wc -c` was 8870; not a
+maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `clearPendingAndDestroyChildNpc = 0x800EC684`. 17 named callers (AT-AT, AT-PT, AT-ST, GroundTransport, ProbeDroid, PowerGenerator, RadarDish, etc.). Thin 2-step destroyer: `clearPendingChildNpc(MEM_W[a0+0])` then `unlinkAndFreeChildNpcNode(a0)`; always returns 1. No leftover `func_800EC684` splat, no `D_800EC684` |
+| Companion `main_overlay.txt` | No occupant at `0x800EC684` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void clearPendingAndDestroyChildNpc` at VRAM `0x800EC684`. First insn `addiu $sp, $sp, -0x18`; last live insn `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EC6B8` / `0x800EC6BC`. Previous occupant is `createAndInitObject` (s1817; ends at `0x800EC684`); next is already `destroyObjectOwnedNpcSlot` at `0x800EC6C0`. 20 generated `jal 0x800EC684` sites (16 in `funcs_36.c`–`funcs_39.c` dispatch the human name; 4 in main `.text` `funcs_18.c`/`funcs_19.c` stay `LOOKUP_FUNC`). `funcs.h` and overlay INL already use it |
+| Body semantics | `a0` = node-pair-struct. `lw $a0, 0x0($s0)` then `jal clearPendingChildNpc` (`0x800F2A24`) at `0x800EC698`; reload `lw $a0, 0x0($s0)` then `jal unlinkAndFreeChildNpcNode` (`0x800EC388`) at `0x800EC6A4`; `addiu $v0, $zero, 0x1`; return. Name matches |
+| TOML | Was `{ name = "func_800EC684", vram = 0x800EC684, size = 0x3C }` — stale leftover. Size already matched `0x800EC6C0 - 0x800EC684`. Renamed to `clearPendingAndDestroyChildNpc` |
+| Overlay section 4 | `{ .func = clearPendingAndDestroyChildNpc, .offset = 0x00047554, .rom_size = 0x0000003C }` under `section_4_ovl_mission_funcs` (`0x800EC684 - 0x800A5130 = 0x47554`; previous `0x47458 + 0xFC = 0x47554`; `0x47554 + 0x3C = 0x47590` matches next `destroyObjectOwnedNpcSlot`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EC684`. No leftover `func_800EC684` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated 2-step body
+(`clearPendingChildNpc` at `0x800EC698` on `MEM_W[a0+0]`, then
+`unlinkAndFreeChildNpcNode` at `0x800EC6A4`, always returns 1),
+previous occupant (`createAndInitObject` / `0x800EC588` ends at
+`0x800EC684`) and next (`destroyObjectOwnedNpcSlot` / `0x800EC6C0`)
+boundaries, overlay span, and size already agreed on
+`clearPendingAndDestroyChildNpc` / `0x3C`. TOML still carried leftover
+`func_800EC684`; renamed it to match. Generated headers/body/INL and
+the 16 overlay jal sites were already the human name. This refutes H1
+(sources were not already synchronized), H3 (no leftover splat at this
+address in generated/TOML after the rename, no overlay collision, and
+no size/boundary disagreement; previous ends exactly here and next
+starts at `0x800EC6C0`), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No invented name. No build or runtime
+run required.
+
+Next census: leftover `func_800EC6C0` at `0x800EC6C0` (size `0x2C`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `destroyObjectOwnedNpcSlot`; TOML still
+says `func_800EC6C0`. First insn `addiu $sp, $sp, -0x18`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EC6E4` / `0x800EC6E8`.
+`lbu +0x1A4`; if nonzero `lhu +0x198` then `jal destroyNpcSlotByIndex`
+(`0x8003ED74`) at `0x800EC6D8`. Companion lists 22 callers; generated
+has 21 `jal 0x800EC6C0` sites (17 in `funcs_36.c`–`funcs_39.c` plus 4
+in `funcs_18.c`/`funcs_19.c`). Next occupant is `fake_func_800EC6EC`
+(`0x800EC6EC`, `0x4`; already named). Last-15 titles after s1818 still
+include s1808's revisit, so the mandatory REVISIT gate does not fire.
