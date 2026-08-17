@@ -138,6 +138,67 @@ Verdict: **H-rdp-consumer selected.** H-later-dma-raw is refuted (live
 reads `+0x18`/`+0x1C`). H-source-state as "no generated path copies the
 stored bytes into `0xD60`" is refuted by the XY restage. The stored
 `0xFFFF8000`/`0x00008000` sentinel, if still present at `+0x18` after
-`L_1740`, is the RDP triangle X/Y payload. Next M4 measurement is that
-command's shape in the `0xD60` buffer (header `0xC8`, YH/YM/YL/XL), not
-another DMEM or runtime-allocated RDRAM watch.
+`L_1740`, is the RDP triangle X/Y payload. Command *shape* is closed
+by s1840 below; do not re-walk this consumer table.
+
+## s1840 restaged RDP command shape
+
+Mandatory 15-title M4 REVISIT. No new runtime field. Discriminator is
+whether every `L_17F0` store into the `r16` / `0xD60` cursor matches
+the official RDP Fill Triangle base (n64brew `0x08`–`0x0F`; first
+stored byte `0xC8 | flags`) or some other layout.
+
+Two independent sources: generated ovl20 `L_17F0` (sibling overlays
+share the same restage) and the n64brew triangle command plus RT64's
+decoder at `lib/rt64/src/gbi/rt64_gbi_rdp.cpp:376-400`. GLideN64
+`F5Rogue.cpp` is HLE (`gSP1Triangle`) and does not emit this RDP
+command, so it is not a second source for the on-the-wire shape.
+
+Y-sort before the stores: `lh` of `+0x1A` on the three vertices,
+3-bit compare index, permute via DMEM `0xAA`/`0xB1`/`0xB8`, then
+`llv` XY from the permuted pointers into `v15`/`v14`/`v13`. `lmajor`
+is `mfc2 v29[5] & 0x80` ORed with `*(u8*)(state+0x3A)` (level/tile).
+
+| Cursor off | Store | Official field (n64brew / RT64) |
+|---|---|---|
+| `+0x00` | `sb r10`; `r10 = *(s8*)(state+0x37) \| 0xC8` | bits 63:56 command. `0xC8` is `G_RDP_TRI_FILL`; bit2 shade, bit1 texture, bit0 z |
+| `+0x01` | `sb r14`; `r14 = (r14 & 0x80) \| *(u8*)(state+0x3A)` | bit55 `lmajor`, bits 53:48 level/tile |
+| `+0x02` | `ssv v15[2]` (Y of sorted `$13`, vertex `+0x1A`) | bits 47:32 **YL** (s11.2). s1824's "YH at +2" was store-order, not the spec name |
+| `+0x04` | `ssv v14[2]` (Y of sorted `$12`) | bits 31:16 **YM** |
+| `+0x06` | `ssv v13[2]` (Y of sorted `$11`) | bits 15:0 **YH** |
+| `+0x08` / `+0x0A` | `ssv v12[0]` / `ssv v13[0]` after `lsv 0x18($12)` + `vmudm v30[4]` | word1 **XL** s16.16. Source is the 16-bit X at vertex `+0x18`, not a 32-bit memcpy of `0xFFFF8000` |
+| `+0x0C` / `+0x0E` | `ssv v0[2]` / `ssv v1[2]` (reciprocal of Y-delta) | word1 **DxLDy** |
+| `+0x10` / `+0x12` | `ssv v9[8]` / `ssv v3[8]` | word2 **XH** |
+| `+0x14` / `+0x16` | `ssv v0[10]` / `ssv v1[10]` | word2 **DxHDy** |
+| `+0x18` / `+0x1A` | `ssv v9[4]` / `ssv v3[4]` | word3 **XM** |
+| `+0x1C` / `+0x1E` | `ssv v0[6]` / `ssv v1[6]` | word3 **DxMDy** |
+
+Then `addi $16, $16, 0x20`. If header bit1 (texture) is set, a 64-byte
+tex suffix is written (`sdv` at `+0x08/+0x18/+0x28/+0x38/+0x20/+0x30`
+relative to the advanced cursor). If bit2 (shade) is set, `addi $16,
+$16, 0x40` and the shade coefficient block is stored. `L_112C` flushes
+when `r16 - 0xD60 != 0` via the only `jal 0x11FC; ori $2, 0xD60`
+`SP_WR_LEN`.
+
+Sentinel split (static): `sdv v6[0], 0x18($9)` of `0xFFFF8000` /
+`0x00008000` is two 16-bit fields, not one s15.16 X. `+0x18 = 0xFFFF`
+is the X halfword that is scaled into XL; `+0x1A = 0x8000` is the Y
+halfword written raw into YL/YM/YH. RDP Y uses bits 13:0 as s11.2, so
+`0x8000` is `0.00` on the hardware field (RT64's `<<2>>2` on the full
+16-bit value sign-extends to −8192). Three equal Ys are a zero-height
+command. Clip flags at vertex `+0x24` (written just before `L_16B8`)
+can reject the triangle at `L_17F0` entry (`0x7070` all-out →
+`L_1DA8`; `0x4343` partial → `L_1268`) before any `0xD60` store.
+
+Verdict: **H-standard-edge selected.** H-y-swapped is refuted (offset
+`+2` is official YL, matching RT64 `w0 & 0xFFFF`). H-s1516-passthrough
+is refuted (`lsv` of two bytes at `+0x18`, then `vmudm`). H-not-triangle
+is refuted (`0xC8` plus the 32-byte edge block plus optional shade/tex
+suffixes). No mitigation. Do not re-watch `0x688:0x710`, recapture
+VMADH/VGE, watch `0x4B7800`, or re-enumerate the ovl20 consumer table.
+
+Parked M4 remainder is no longer the command *shape*. It is whether a
+live `0x8000` Y is clip-rejected, emitted as a zero-height command, or
+emitted with an on-screen Y — that needs a phase-gated dump of a
+`0xD60` command whose YL/YM/YH halfwords are `0x8000`, not another
+static walk.

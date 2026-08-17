@@ -85312,3 +85312,74 @@ Next occupant is leftover `func_800EF2F8` (`0x800EF2F8`, `0x218`;
 generated already `startLevelBackgroundMusic`; TOML still leftover).
 Last-15 titles after s1839 still include s1824's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1840 (2026-08-17) — selected H-standard-edge on the restaged RDP triangle
+
+Mandatory 15-title M4 REVISIT (HYPOTHESIS-ID: m4-accumulator-boundary-revisit).
+Last-15 ledger titles after s1839 were s1825–s1839, all sweep
+("synchronized" / "confirmed the leftover … symbol"). s1839's claim
+that those fifteen still included s1824 was a fencepost: s1824 is the
+16th. Step 0 `wc -c` was 11827; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty. Ground-truth docs read first
+(`M4-ACCUMULATOR-GROUND-TRUTH.md`, `M4-V6-PRODUCER-AUDIT.md`,
+`F5-UCODE-REFERENCE.md`, n64brew RDP triangle, RT64
+`rt64_gbi_rdp.cpp:376-400`, generated ovl20 `L_17F0`). No game run
+and no new runtime field.
+
+### Competing hypotheses
+
+- H-standard-edge: `L_17F0` writes a spec-accurate 32-byte RDP Fill
+  Triangle (`0xC8|flags`, YL/YM/YH, XL/DxLDy/XH/DxHDy/XM/DxMDy) at
+  the `r16` / `0xD60` cursor, with optional shade/tex suffixes.
+- H-y-swapped: store order `+2/+4/+6` is YH/YM/YL (s1824's informal
+  label taken as the spec names), so every hardware triangle is inverted.
+- H-s1516-passthrough: `0xFFFF8000` is dumped as a 32-bit s15.16 XL.
+- H-not-triangle: header `0xC8` is not `G_RDP_TRI_FILL`, or the 32
+  bytes are not the official edge-coefficient block.
+
+### Evidence
+
+| Cursor | Store | Official field |
+|---|---|---|
+| `+0x00` | `*(s8*)(state+0x37) \| 0xC8` | command. `0xC8` = fill; bit2 shade, bit1 tex, bit0 z |
+| `+0x01` | `(mfc2 v29[5] & 0x80) \| *(u8*)(state+0x3A)` | `lmajor` + level/tile |
+| `+0x02` | `ssv v15[2]` from vertex `+0x1A` after Y-sort | **YL** (n64brew bits 47:32; RT64 `w0 & 0xFFFF`) |
+| `+0x04` | `ssv v14[2]` | **YM** |
+| `+0x06` | `ssv v13[2]` | **YH** |
+| `+0x08/+0x0A` | `lsv 0x18($12)` then `vmudm v30[4]` | **XL** s16.16 from the 16-bit X, not a 32-bit memcpy |
+| `+0x0C` … `+0x1E` | reciprocal / edge-walk `ssv`s | DxLDy, XH, DxHDy, XM, DxMDy |
+| then | `addi $16, $16, 0x20` | end of the 32-byte base |
+| bit1 / bit2 | 64-byte tex and/or shade `sdv` suffixes | matches n64brew optional words |
+
+Y-sort: `lh +0x1A`, 3-bit compare, DMEM `0xAA`/`0xB1`/`0xB8` permute,
+then `llv` XY into `v15`/`v14`/`v13`. XL is taken from sorted `$12`
+(the YM vertex), which is the official "X on the L edge at YM".
+`L_112C` still flushes only when `r16 - 0xD60 != 0` via the only
+`SP_WR_LEN` from `0xD60`.
+
+Sentinel split: `0xFFFF8000` at `+0x18` is X=`0xFFFF` (scaled into
+XL) and Y=`0x8000` (raw into YL/YM/YH). RDP Y is s11.2 in bits 13:0,
+so `0x8000` is `0.00` on the hardware field (RT64 `<<2>>2` on the
+16-bit value sign-extends to −8192). Three equal Ys are zero-height.
+Clip flags at vertex `+0x24` can reject at `L_17F0` entry before any
+`0xD60` store. Full table: `docs/M4-ACCUMULATOR-GROUND-TRUTH.md`
+(s1840 section).
+
+Two sources: generated `L_17F0` (every overlay) and n64brew + RT64's
+decoder. GLideN64 `F5Rogue` is HLE and does not emit this command.
+
+### Outcome
+
+H-standard-edge selected. H-y-swapped is refuted (`+2` is official
+YL). H-s1516-passthrough is refuted (`lsv` of two bytes then
+`vmudm`). H-not-triangle is refuted. No mitigation. Do not re-watch
+`0x688:0x710`, recapture VMADH/VGE, watch `0x4B7800`, re-enumerate
+the ovl20 consumer table, or re-map the 32-byte stores.
+
+Next work unit: resume the generated-symbol sweep at leftover
+`func_800EF1B0` (`0x800EF1B0`, `0x148`; companion/generated
+`stopAllMusicWithFade`; TOML still leftover). Parked M4 remainder
+is whether a live `0x8000` Y is clip-rejected or emitted, not the
+command shape. After s1840 the last-15 titles include this revisit,
+so the sweep REVISIT gate does not fire.

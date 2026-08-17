@@ -1,9 +1,9 @@
-# NEXT work unit (s1840)
+# NEXT work unit (s1841)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol sweep. s1824 was the mandatory 15-title
-M4 REVISIT (H-rdp-consumer selected); last-15 after s1839 still include
+Resume the generated-symbol sweep. s1840 was the mandatory 15-title
+M4 REVISIT (H-standard-edge selected); last-15 after s1840 include
 that revisit, so they are not all sweep. Do not start another M4
 instrument this iteration. Do not repeat any `submitGfxFrame`
 entry/jal/`prev_pc` recipe.
@@ -61,7 +61,9 @@ Expected splits:
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 
-Parked M4 (not this iteration): RDP command shape of the restaged
-`0x670+0x18` XY in the `0xD60` buffer. Do not re-watch `0x688:0x710`,
-re-capture VMADH, watch `0x4B7800`, or re-walk the ovl20 consumer
-table.
+Parked M4 (not this iteration): whether a live `0x8000` Y is
+clip-rejected at `L_17F0` entry, emitted as a zero-height command,
+or emitted on-screen. Command *shape* is closed (s1840
+H-standard-edge). Do not re-watch `0x688:0x710`, recapture VMADH,
+watch `0x4B7800`, re-walk the ovl20 consumer table, or re-map the
+32-byte `0xD60` stores.
