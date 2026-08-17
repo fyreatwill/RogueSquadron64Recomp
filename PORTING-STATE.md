@@ -82205,3 +82205,42 @@ Next census: `slerpFrameTowardTargetAxis` / `func_800E23FC` at
 `func_800E23FC` while generated/overlay use the human name. Last-15
 titles after s1772 still include s1760's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1773 (2026-08-16) — synchronized the slerpFrameTowardTargetAxis symbol
+
+Exact generated-symbol census for `0x800E23FC` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6610; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `slerpFrameTowardTargetAxis = 0x800E23FC` with comment "incrementally rotates a frame toward a target axis (quat slerp-like)". Previous contiguous named neighbor `buildDebrisTransformStack = 0x800E1F5C`. Next contiguous named neighbor `tickWalkerCraftWithLimbsAndDestruction = 0x800E2674`. No leftover `func_800E23FC` splat, no `D_800E23FC`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void slerpFrameTowardTargetAxis` at VRAM `0x800E23FC`. First insn `addiu $sp, $sp, -0x88`; last insn `jr $ra` / `addiu $sp, $sp, 0x88` at `0x800E266C` / `0x800E2670`. Previous `buildDebrisTransformStack` ends at `0x800E23F8`; next is `tickWalkerCraftWithLimbsAndDestruction` at `0x800E2674`. `funcs.h` already declares the human name. No leftover `func_800E23FC`. Generated caller `npcTrainCarUpdate` `jal 0x800E23FC` at `0x800E34EC` (`a0` = npc, `a1` = `mfc1` of `$f20`) |
+| Body semantics | Matches the companion: copies the const vec3 at `0x800A805C` onto `sp+0x10`, `vec3Dot` against `a0+0xC`, `constMinusSinfApprox`, then if `abs(result * 0x800A8068)` exceeds `0x800A806C`, `vec3Cross`/`vec3Length` of the frame vs that axis, `quatFromAxisAngle` (angle clamped against `0x800A8074`/`0x800A8078`), `quatFromCardinalAxis` from `lbu +0xC4` / `lw +0xBC`, `quatMultiply`, two `rotateVec3ByQuat` writebacks of `+0xC` and `+0x18`, then `orthonormalizeFrame`. Shared tail `wrapAngleToCyclicRange` of the scaled `a1` increment writes `+0x4`/`+0x8`/`+0xB8`/`+0x24`; returns 1 if the `+0x4` clamp fired, else 0 |
+| TOML (before) | `{ name = "func_800E23FC", vram = 0x800E23FC, size = 0x278 }` — size matches `0x800E2674 - 0x800E23FC` |
+| Overlay section 4 | `{ .func = slerpFrameTowardTargetAxis, .offset = 0x0003D2CC, .rom_size = 0x00000278 }` under `section_4_ovl_mission_funcs` (`0x800E23FC - 0x800A5130 = 0x3D2CC`; previous `0x3CE2C + 0x4A0 = 0x3D2CC`; `0x3D2CC + 0x278 = 0x3D544` matches next `tickWalkerCraftWithLimbsAndDestruction`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E23FC`. No leftover `func_800E23FC` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`buildDebrisTransformStack` / `0x800E1F5C`) and next
+(`tickWalkerCraftWithLimbsAndDestruction` / `0x800E2674`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `slerpFrameTowardTargetAxis`, and only the TOML name was a stale
+`func_800E23FC` placeholder. Corrected TOML to
+`slerpFrameTowardTargetAxis`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `tickWalkerCraftWithLimbsAndDestruction` / `func_800E2674` at
+`0x800E2674` (size `0x1A4`). Neighbor peek already shows TOML still
+`func_800E2674` while generated/overlay use the human name. Last-15
+titles after s1773 still include s1760's revisit, so the mandatory
+REVISIT gate does not fire.
