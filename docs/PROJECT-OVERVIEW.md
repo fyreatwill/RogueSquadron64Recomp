@@ -3066,14 +3066,14 @@ collision.
 | s1786 | Synchronized `transformCraftAnchorsApplySubFx2` (`0x800E4BB0`, `0x210`). Rotation-matrix pair (`buildRotationMatrixSlot0` / `composeRotationMatrixSlot1`), dual `transformVec3ByMat34` anchors, `validateActorTargetLOS`, `applyToObjectSubstructByFlag`. Two generated `jal 0x800E4BB0` sites inside `npcWaterCraftUpdate` already dispatch the human name. TOML was stale `func_800E4BB0`; generated headers/body and section-4 already used the human name. |
 | s1787 | Synchronized `tickCraftSplineOrientationVariant` (`0x800E4DC0`, `0x8EC`). Two-pass spline orientation, no audio: `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto`, pending-child + LOS (`isPendingChildNpcActive` ×3 / `computeActorAnchorDeltaAfterLOS` ×2 / `getObjectMeshTransformOrLocal` / `computeAnchorRelativePositionByDistanceRatio`), then two copies of the rotation/quat/vec3 stack (`buildRotationMatrixSlot0` / `composeRotationMatrixSlot1` / `quatFromAxisAngle` / `rotateVec3ByQuat` / `transformVec3ByMat34`). Zero `play3DSound*` / `factor5RemoveListNode`. Two generated `jal 0x800E4DC0` sites inside `npcWaterCraftUpdate` already dispatch the human name. TOML was stale `func_800E4DC0`; generated headers/body and section-4 already used the human name. |
 | s1788 | Synchronized `tickStructureWithDestructionAndChildren` (`0x800E56AC`, `0x48C`). Health-gated 2-iter debris-transform sibling of `buildDebrisTransformStack`: prefix `mat34CrossRowsAndCopyPos` on `*(npc+0x30)+0x28`, `getNpcCurrentHealth(*(npc+0x38))` early-out when `<=0`, then `s2` from npc while `< npc+0x8` composing three slots (`s2+0x3C/+0x44/+0x4C` dests `+0x1C`, params `s2+0x54/+0x5C/+0x64`) via `clearVec4QuadStruct` / flag `+0x4C` bits 0–2 (`addVec3At0x24` / `applyScaleToMat3x4` / `composeQuatToMat3x4`) plus `composeRotationMatrixSlot1`/`Slot0`. No spawn / recurse / teardown calls. One generated `jal 0x800E56AC` inside `npcWaterCraftUpdate` already dispatches the human name. TOML was stale `func_800E56AC`; generated headers/body and section-4 already used the human name. |
+| s1789 | Synchronized `npcWaterCraftHandleDestruction` (`0x800E5B38`, `0x614`). Two-phase water-craft destroy on `lbu +0x99` (0 / 1; else epilogue): each live path `transformMeshPartIntoWorld`, `spawnNpcType0xAFromTemplate`, `spawnByteAnimDebrisDefault`, `play3DSoundEvent` `a0=0` stack `0x21`/`0x7D`/`0x50` (`a3=24.0f`), then `rand` / `composeRandomRotationMatrix` / `scaleVec3ByRandomRange` / `spawnDebris1Npc` / `spawnOrientedNpc`, plus a shared `spawnWaterSprayDebrisAndBurst`. Sole generated `jal 0x800E5B38` inside `npcWaterCraftUpdate` already dispatches the human name. TOML was stale `func_800E5B38`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1788 is `npcWaterCraftHandleDestruction` /
-leftover `func_800E5B38` / `0x800E5B38` (size `0x614`). Neighbor
-peek: companion, generated headers/body, and section-4 already use
-the human name; TOML is still `func_800E5B38`. Mandatory revisits
-in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776. After s1788 the last-15 titles include the s1776 revisit, so
-the next iteration resumes the sweep.
+The sweep cursor after s1789 is `npcWaterCraftUpdate` /
+`0x800E614C` (size `0x107C`). Neighbor peek: companion, generated
+headers/body, TOML, and section-4 already use the human name.
+Mandatory revisits in this window: s1650, s1666, s1682, s1698,
+s1714, s1744, s1760, s1776. After s1789 the last-15 titles include
+the s1776 revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

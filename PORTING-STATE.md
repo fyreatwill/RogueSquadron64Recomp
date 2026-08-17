@@ -82882,3 +82882,42 @@ Next census: `npcWaterCraftHandleDestruction` / leftover
 shows companion, generated, and section-4 using the human name while
 TOML is still `func_800E5B38`. Last-15 titles after s1788 still include
 s1776's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1789 (2026-08-16) — synchronized the npcWaterCraftHandleDestruction symbol
+
+Exact generated-symbol census for `0x800E5B38` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6930; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWaterCraftHandleDestruction = 0x800E5B38` with comment "Water craft destruction handler: same spawn-debris + random + sound pattern as npcAtAtHandleDestruction. Exclusively called from npcWaterCraftUpdate." Previous named kernel in VRAM order is `tickStructureWithDestructionAndChildren = 0x800E56AC`. Next named kernel is `npcWaterCraftUpdate = 0x800E614C`. No leftover `func_800E5B38` splat, no `D_800E5B38`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void npcWaterCraftHandleDestruction` at VRAM `0x800E5B38`. First insn `addiu $sp, $sp, -0x98`; last insn `jr $ra` / `addiu $sp, $sp, 0x98` at `0x800E6144` / `0x800E6148`. Previous `tickStructureWithDestructionAndChildren` ends at `0x800E5B30` / `0x800E5B34`; next is `npcWaterCraftUpdate` at `0x800E614C`. `funcs.h` already declares the human name. No leftover `func_800E5B38`. One generated `jal 0x800E5B38` site at `0x800E6D3C` (inside `npcWaterCraftUpdate`) already dispatches the human name |
+| Body semantics | Two-phase destroy on `lbu npc+0x99`: 0 → `L_800E5B98`, 1 → `L_800E5E0C`, else epilogue at `L_800E6120`. Each live path: `transformMeshPartIntoWorld` on `*(npc+0x30)`, `spawnNpcType0xAFromTemplate`, `spawnByteAnimDebrisDefault`, `play3DSoundEvent` (`a0=0`, `a1=npc`, `a2=npc+0x24`, `a3=24.0f`, stack `0x21`/`0x7D`/`0x50`), then `rand` (8 calls across both paths) / `composeRandomRotationMatrix` / `scaleVec3ByRandomRange` / `spawnDebris1Npc` / `spawnOrientedNpc`. Shared tail `spawnWaterSprayDebrisAndBurst` at `0x800E6118` before the epilogue. Matches the companion spawn-debris + random + sound claim; exclusive generated caller is `npcWaterCraftUpdate` |
+| TOML (before) | `{ name = "func_800E5B38", vram = 0x800E5B38, size = 0x614 }` — size matches `0x800E614C - 0x800E5B38` |
+| Overlay section 4 | `{ .func = npcWaterCraftHandleDestruction, .offset = 0x00040A08, .rom_size = 0x00000614 }` under `section_4_ovl_mission_funcs` (`0x800E5B38 - 0x800A5130 = 0x40A08`; previous `0x4057C + 0x48C = 0x40A08`; `0x40A08 + 0x614 = 0x4101C` matches next `npcWaterCraftUpdate`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E5B38`. No leftover `func_800E5B38` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated two-phase water-craft
+destruction body, previous (`tickStructureWithDestructionAndChildren` /
+`0x800E56AC`) and next (`npcWaterCraftUpdate` / `0x800E614C`)
+boundaries, TOML size, and section-4 overlay span agreed; the generated
+headers/body were already `npcWaterCraftHandleDestruction`, and only the
+TOML name was a stale `func_800E5B38` placeholder. Corrected TOML to
+`npcWaterCraftHandleDestruction`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision, or
+size/boundary disagreement; size is `0x614` as expected), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `npcWaterCraftUpdate` at `0x800E614C` (size `0x107C`).
+Neighbor peek already shows companion, generated, TOML, and section-4
+using the human name. Last-15 titles after s1789 still include s1776's
+revisit, so the mandatory REVISIT gate does not fire.
