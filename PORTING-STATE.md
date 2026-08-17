@@ -83942,3 +83942,55 @@ generated `jal 0x800EC110` is inside `createAndInitObject` at
 (`0x800EC388`, `0x150`; companion `unlinkAndFreeChildNpcNode`).
 Last-15 titles after s1812 still include s1808's revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1813 (2026-08-16) — synchronized the allocObjectPoolNode symbol
+
+Exact generated-symbol census for leftover `func_800EC110` at
+`0x800EC110` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1808's mandatory REVISIT (`selected H2
+menuIn/mission jal-sites on the attract 1024`), so the 15-title
+all-sweep REVISIT gate did not fire. Step 0 `wc -c` was 8469; not a
+maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `main_overlay.txt` | `allocObjectPoolNode = 0x800EC110`. Comment on `createAndInitObject` still calls it "the lower-level allocator func_800EC110". No leftover `func_800EC110` splat in this file |
+| Companion `mission_overlay.txt` | Leftover `func_800EC110 = 0x800EC110` (`segment:mission_overlay` only). Previous leftover `fake_func_800EC10C = 0x800EC10C` (s1812 confirmed). Later named kernels `unlinkAndFreeChildNpcNode = 0x800EC388`, `resetObjectContextPool = 0x800EC4D8`, `createAndInitObject = 0x800EC588`. Left the leftover placeholder: promoting it to `allocObjectPoolNode` would duplicate the main-overlay symbol at the same VRAM. No `D_800EC110`, and no menu/cinematic occupant |
+| Generated `funcs_39.c` / `funcs_40.c` | Was `RECOMP_FUNC void func_800EC110` at VRAM `0x800EC110`. First insn `addiu $sp, $sp, -0x20`; last live insn `jr $ra` / `addiu $sp, $sp, 0x20` at `0x800EC380` / `0x800EC384`. Previous leftover `fake_func_800EC10C` is the one-word INVALID COP2 at `0x800EC10C`; next is already `unlinkAndFreeChildNpcNode` at `0x800EC388`. Sole generated `jal 0x800EC110` is inside `createAndInitObject` at `0x800EC5B4` (`addiu $a0, $a1, 0x1AC` then the jal). `funcs.h` and overlay INL were also the leftover name |
+| Body semantics | Loads freelist head `lw -0x3F30($s1)` with `$s1 = 0x80110000` → `0x8010C0D0`. Empty-pool path `rs_malloc(0x6C0)` (`jal 0x80001ACC`), stores the block at the head, `sb 4` at `+0` and a 4-byte free-slot walk `sb 1` at `+1`. Size-class from `(a0+0x1AB)>>2` times magic `0x4C8F8D29`. Walks the `+0xC` next-link looking for consecutive free slots, else mallocs another `0x6C0` and links it. Slot pointer is `block + t0*0x1AC + 0x10` (`sll/subu` chain; 0x10 header + 4×0x1AC = 0x6C0). Exhausted blocks move onto used-list `-0x3F2C` (`0x8010C0D4`). Name matches: this is the object-pool node allocator `createAndInitObject` calls |
+| TOML | Was `{ name = "func_800EC110", vram = 0x800EC110, size = 0x278 }` — stale leftover. Size already matched `0x800EC388 - 0x800EC110`. Renamed to `allocObjectPoolNode` |
+| Overlay section 4 | `{ .func = allocObjectPoolNode, .offset = 0x00046FE0, .rom_size = 0x00000278 }` under `section_4_ovl_mission_funcs` (`0x800EC110 - 0x800A5130 = 0x46FE0`; previous `0x46FDC + 0x4 = 0x46FE0`; `0x46FE0 + 0x278 = 0x47258` matches next `unlinkAndFreeChildNpcNode`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EC110`. No leftover `func_800EC110` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion main mapping, live generated 4-slot object-pool
+allocator body (`rs_malloc(0x6C0)`, freelist `0x8010C0D0`, used-list
+`0x8010C0D4`, slot `t0*0x1AC+0x10`), previous leftover
+(`fake_func_800EC10C` / `0x800EC10C`) and next
+(`unlinkAndFreeChildNpcNode` / `0x800EC388`) boundaries, overlay span,
+and size already agreed on `allocObjectPoolNode` / `0x278`. TOML,
+generated headers/body/INL, and the `createAndInitObject` jal site
+still carried leftover `func_800EC110`; renamed all of them to match.
+This refutes H1 (sources were not already synchronized), H3 (no leftover
+splat at this address in generated/TOML after the rename, no overlay
+collision, and no size/boundary disagreement; previous ends exactly here
+and next starts at `0x800EC388`; the mission `func_800EC110` leftover
+is the expected overlay-alias placeholder and must stay, because
+promoting it would collide with main), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No invented name. No
+build or runtime run required.
+
+Next census: leftover `func_800EC388` at `0x800EC388` (size `0x150`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `unlinkAndFreeChildNpcNode`; TOML still
+says `func_800EC388`. First insn `addiu $sp, $sp, -0x18`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EC4D0` / `0x800EC4D4`.
+Sole generated `jal 0x800EC388` is inside
+`clearPendingAndDestroyChildNpc` at `0x800EC6A4`. Next occupant is
+`resetObjectContextPool` (`0x800EC4D8`, `0x3C`; generated already
+named; TOML still `func_800EC4D8`). Last-15 titles after s1813 still
+include s1808's revisit, so the mandatory REVISIT gate does not fire.

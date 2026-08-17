@@ -3092,17 +3092,18 @@ collision.
 | s1810 | Synchronized `resetObjectPoolListHead` (`0x800EB984`, `0xC`). Delay-slot `sw $zero, -0x3F40($v0)` with `$v0 = 0x80110000` stores 0 at `0x8010C0C0`. Sole generated caller `resetObjectContextPool` at `0x800EC4F8`, between `resetCraftSubsystemGlobal` and `clearObjectPoolStateFlag`. Same 3-insn store-zero idiom as s1758 `resetCraftSubsystemGlobal`. TOML was stale `func_800EB984`; generated headers/body and section-4 already used the human name. |
 | s1811 | Confirmed `npcPowerUpUpdate` (`0x800EB990`, `0x77C`). 4-way `a1` compare (setup / teardown / live tick / visibility) plus an 8-way `jr` table at `0x800A88C8` on pickup type that ORs bits onto `*(0x80130B4C)`. 25 `jal`s / 21 unique targets including `getCraftRecordByIdx` and `play3DSoundEvent`. No generated `jal 0x800EB990` — table-dispatched power-up `npcXxxUpdate` sibling. Companion, generated headers/body, TOML, and section-4 already used the human name. |
 | s1812 | Confirmed leftover `fake_func_800EC10C` (`0x800EC10C`, `0x4`). One-instruction INVALID COP2 word `0x4A652950` / `do_break(0x800EC10C)` orphan between `npcPowerUpUpdate`'s epilogue and leftover `func_800EC110` (whose prologue is `addiu $sp, $sp, -0x20`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment. No leftover `func_800EC10C`; TOML, generated headers/body, and section-4 already use the leftover name. |
+| s1813 | Synchronized `allocObjectPoolNode` (`0x800EC110`, `0x278`). Freelist head `0x8010C0D0` / used-list `0x8010C0D4`; empty-pool `rs_malloc(0x6C0)` 4-slot header; slot `block + t0*0x1AC + 0x10`. Sole generated `jal 0x800EC110` inside `createAndInitObject` at `0x800EC5B4` (`a1+0x1AC`). Companion `main_overlay.txt` already had the name; mission leftover stays `func_800EC110` (overlay-alias; naming it would collide with main). TOML, generated headers/body/INL, and the jal site were stale `func_800EC110`. |
 
-The sweep cursor after s1812 is leftover `func_800EC110`
-(`0x800EC110`, size `0x278`). Neighbor peek: companion
-`main_overlay.txt` already maps `allocObjectPoolNode = 0x800EC110`;
-mission leftover, TOML, generated headers/body, and overlay INL
-still say `func_800EC110`. Next occupant is leftover `func_800EC388`
-/ companion `unlinkAndFreeChildNpcNode`. Mandatory revisits in this
-window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776,
-s1792, s1808. After s1812 the last-15 titles still include s1808's
-revisit, so the next iteration resumes the leftover
-`func_800EC110` census.
+The sweep cursor after s1813 is leftover `func_800EC388`
+(`0x800EC388`, size `0x150`). Neighbor peek: companion
+`mission_overlay.txt` and generated headers/body/INL already map
+`unlinkAndFreeChildNpcNode = 0x800EC388`; TOML still says
+`func_800EC388`. Next occupant is `resetObjectContextPool`
+(`0x800EC4D8`; generated already named; TOML still `func_800EC4D8`).
+Mandatory revisits in this window: s1650, s1666, s1682, s1698,
+s1714, s1744, s1760, s1776, s1792, s1808. After s1813 the last-15
+titles still include s1808's revisit, so the next iteration resumes
+the leftover `func_800EC388` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
