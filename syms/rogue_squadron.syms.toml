@@ -1930,7 +1930,7 @@ functions = [
     { name = "tickSongFadeTimer", vram = 0x800EE730, size = 0x254 },
     { name = "pushActiveSoundDescriptor", vram = 0x800EE984, size = 0x70 },
     { name = "popActiveSoundDescriptor", vram = 0x800EE9F4, size = 0x60 },
-    { name = "func_800EEA54", vram = 0x800EEA54, size = 0x328 },
+    { name = "preloadSceneReferencedSongs", vram = 0x800EEA54, size = 0x328 },
     { name = "func_800EED7C", vram = 0x800EED7C, size = 0x1B8 },
     { name = "func_800EEF34", vram = 0x800EEF34, size = 0x114 },
     { name = "func_800EF048", vram = 0x800EF048, size = 0x168 },

@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1835)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1836)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3115,17 +3115,18 @@ collision.
 | s1833 | Synchronized `tickSongFadeTimer` (`0x800EE730`, `0x254`). Gate `0x8010C2FC==1` adds caller `f12` into `0x8010C300` until `c.le.s` vs `0x8010C304`, then sets `0x8010C262=1` and clears the fade flag; also ticks pending-song / cue / slot paths (`shouldSwitchToPendingSong`, `processPendingSoundCueRequest`, `tickActiveSongSlots`, `stopSongAndRebuildActiveCueList a0=1`). Sole generated `jal 0x800EE730` in `startLevelBackgroundMusic` at `0x800EF4EC` already dispatches the human name. TOML was stale `func_800EE730`; companion, generated headers/body, and section-4 already used the human name. |
 | s1834 | Synchronized `pushActiveSoundDescriptor` (`0x800EE984`, `0x70`). Leaf copies the current descriptor at `0x8010C400` onto stack `0x8010C320[depth]` stride `0x1C` and increments depth byte `0x8010C310`. Sole generated `jal 0x800EE984` in `tickObjectSoundCueState` at `0x800EF548` already dispatches the human name. TOML was stale `func_800EE984`; companion, generated headers/body, and section-4 already used the human name. |
 | s1835 | Synchronized `popActiveSoundDescriptor` (`0x800EE9F4`, `0x60`). Leaf decrements depth byte `0x8010C310` and copies stack `0x8010C320[depth]` stride `0x1C` onto the current descriptor at `0x8010C170` (word `+0`, halves `+4/+6`, byte `+0xA`→dest `+8`, half `+8`→dest `+0xA` — inverse of the s1834 push). Sole generated `jal 0x800EE9F4` in `tickObjectSoundCueState` at `0x800EF594` already dispatches the human name. TOML was stale `func_800EE9F4`; companion, generated headers/body, and section-4 already used the human name. |
+| s1836 | Synchronized `preloadSceneReferencedSongs` (`0x800EEA54`, `0x328`). Counts the 6-byte song-name table at `0x8010B1C0` until `0xFFFF`, marks scene-referenced rows off `0x801375D8`, `parseLoadedSndSection`, then `loadSongAssetByName` on each marked `+2` name. Sole generated `jal 0x800EEA54` in `preloadSceneSongsWrapper` at `0x800EFB9C` already dispatches the human name. TOML was stale `func_800EEA54`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1835 is leftover `func_800EEA54`
-(`0x800EEA54`, size `0x328`). Neighbor peek: companion
+The sweep cursor after s1836 is leftover `func_800EED7C`
+(`0x800EED7C`, size `0x1B8`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`preloadSceneReferencedSongs`; TOML still leftover `func_800EEA54`. First
-insn `addiu $sp, $sp, -0x30`; last live `jr $ra` / `addiu $sp, $sp, 0x30`
-at `0x800EED74` / `0x800EED78`. Next occupant is leftover `func_800EED7C`
-(`0x800EED7C`, `0x1B8`; generated already `stageSongFromRequestDescriptor`;
+`stageSongFromRequestDescriptor`; TOML still leftover `func_800EED7C`. First
+insn `addiu $sp, $sp, -0x18`; last live `jr $ra` / `addiu $sp, $sp, 0x18`
+at `0x800EEF2C` / `0x800EEF30`. Next occupant is leftover `func_800EEF34`
+(`0x800EEF34`, `0x114`; generated already `resetMusicSubsystemState`;
 TOML still leftover). Mandatory revisits in this window: s1650, s1666,
 s1682, s1698, s1714, s1744, s1760, s1776, s1792, s1808, s1824. After
-s1835 the last-15 titles still include the M4 consumer revisit, so the
+s1836 the last-15 titles still include the M4 consumer revisit, so the
 next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

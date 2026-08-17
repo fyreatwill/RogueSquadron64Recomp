@@ -85111,3 +85111,53 @@ Next occupant is leftover `func_800EED7C` (`0x800EED7C`, `0x1B8`;
 generated already `stageSongFromRequestDescriptor`; TOML still leftover).
 Last-15 titles after s1835 still include s1824's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1836 (2026-08-17) — synchronized the preloadSceneReferencedSongs symbol
+
+Exact generated-symbol census for leftover `func_800EEA54` at
+`0x800EEA54` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1824's mandatory REVISIT (`selected H-rdp-consumer
+on the ovl20 0x670 record`), so the 15-title all-sweep REVISIT gate did
+not fire. Step 0 `wc -c` was 11477; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `preloadSceneReferencedSongs = 0x800EEA54`. Next named kernel `stageSongFromRequestDescriptor = 0x800EED7C`. No leftover `func_800EEA54` splat. No `D_800EEA54` |
+| Companion `main_overlay.txt` | No occupant at `0x800EEA54`. Cinematic and menu overlays also empty at this VRAM |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void preloadSceneReferencedSongs` at VRAM `0x800EEA54`. First insn `addiu $sp, $sp, -0x30`; last live insn `jr $ra` / `addiu $sp, $sp, 0x30` at `0x800EED74` / `0x800EED78`. Previous is `popActiveSoundDescriptor` (`0x800EE9F4`, ends `0x800EEA50`); next is already `stageSongFromRequestDescriptor` at `0x800EED7C`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Count 6-byte song-name rows at `0x8010B1C0` (`lhu -0x4E40($a1)`) until `0xFFFF`. `rs_malloc`/`rs_memset` a mark buffer of that count. Walk the scene object at `0x801375D8` to mark referenced rows, `parseLoadedSndSection`, then for each marked index `loadSongAssetByName` on the row's `+2` halfword name (`lw -0x76E0($s5)` bank, `lhu 0x2($s0)`). Free both buffers. Name matches: preload the songs the current scene references |
+| Callers | One generated `jal 0x800EEA54` site already dispatches the human name: `preloadSceneSongsWrapper` at `0x800EFB9C` |
+| TOML | Was `{ name = "func_800EEA54", vram = 0x800EEA54, size = 0x328 }` — stale leftover. Size already matched `0x800EED7C - 0x800EEA54`. Renamed to `preloadSceneReferencedSongs` |
+| Overlay section 4 | `{ .func = preloadSceneReferencedSongs, .offset = 0x00049924, .rom_size = 0x00000328 }` under `section_4_ovl_mission_funcs` (`0x800EEA54 - 0x800A5130 = 0x49924`; previous `0x498C4 + 0x60 = 0x49924`; `0x49924 + 0x328 = 0x49C4C` matches next `stageSongFromRequestDescriptor`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EEA54`. No leftover `func_800EEA54` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated preload
+(`addiu $sp, $sp, -0x30` prologue, `jr $ra` / `addiu $sp, $sp, 0x30` at
+`0x800EED74` / `0x800EED78`, mark-and-`loadSongAssetByName` walk of
+table `0x8010B1C0` stride `0x6` from scene `0x801375D8`), previous
+(`popActiveSoundDescriptor` / `0x800EE9F4`) and next
+(`stageSongFromRequestDescriptor` / `0x800EED7C`) boundaries, overlay
+span, and size already agreed on `preloadSceneReferencedSongs` / `0x328`.
+TOML still carried leftover `func_800EEA54`; renamed it to match.
+Generated headers/body/INL and the one jal site were already the human
+name. This refutes H1 (TOML was not already synchronized), H3 (no
+overlay collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800EED7C`), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No invented name. No
+build or runtime run required.
+
+Next census: leftover `func_800EED7C` at `0x800EED7C` (size `0x1B8`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `stageSongFromRequestDescriptor`; TOML still
+says `func_800EED7C`. First insn `addiu $sp, $sp, -0x18`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EEF2C` / `0x800EEF30`.
+Next occupant is leftover `func_800EEF34` (`0x800EEF34`, `0x114`;
+generated already `resetMusicSubsystemState`; TOML still leftover).
+Last-15 titles after s1836 still include s1824's M4 revisit, so the
+mandatory REVISIT gate does not fire.
