@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1864 (2026-08-17).
+detail. Reviewed through s1865 (2026-08-17).
 
 ## Current state
 
@@ -66,17 +66,17 @@ detail. Reviewed through s1864 (2026-08-17).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at leftover
-   `func_800F1198` (`0x800F1198`, size `0x178`). Companion
+   `func_800F1310` (`0x800F1310`, size `0x2A8`). Companion
    `mission_overlay.txt` and generated headers/body/INL already name
-   `quicksortFloatKeysWithValues`; TOML still leftover `func_800F1198`.
-   Next leftover after that is `func_800F1310` (`0x800F1310`,
-   `0x2A8`; companion/generated already `gatherAndSortNearbyNpcViewPoints`;
-   TOML still leftover). s1864 synchronized leftover
-   `func_800F0F94` to `resolveNpcAttachmentPos` (`0x800F0F94`,
-   `0x204`). s1856 selected H-never-live for the parked M4
+   `gatherAndSortNearbyNpcViewPoints`; TOML still leftover `func_800F1310`.
+   Next leftover after that is `func_800F15B8` (`0x800F15B8`,
+   `0x2B8`; companion/generated already `acquireNpcTargetsInAimCone`;
+   TOML still leftover). s1865 synchronized leftover
+   `func_800F1198` to `quicksortFloatKeysWithValues` (`0x800F1198`,
+   `0x178`). s1856 selected H-never-live for the parked M4
    `0x8000` Y on VI 640 attribution LLE (single-source). Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1864). About 1,548 placeholder `func_0x...` names
+   §35 (s1648–s1865). About 1,548 placeholder `func_0x...` names
    remained at s1487.
 2. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
@@ -136,7 +136,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1864 through leftover `func_800F0F94` became
+s1648–s1865 through leftover `func_800F1198` became
+`quicksortFloatKeysWithValues` (`0x800F1198`, `0x178`) after leftover
+`func_800F0F94` became
 `resolveNpcAttachmentPos` (`0x800F0F94`, `0x204`) after leftover
 `func_800F0DC4` became
 `tickObjectAnimSubstruct` (`0x800F0DC4`, `0x1D0`) after leftover
@@ -254,6 +256,8 @@ and leftover `func_800F0DC4` became
 `tickObjectAnimSubstruct` (`0x800F0DC4`, `0x1D0`)
 and leftover `func_800F0F94` became
 `resolveNpcAttachmentPos` (`0x800F0F94`, `0x204`)
+and leftover `func_800F1198` became
+`quicksortFloatKeysWithValues` (`0x800F1198`, `0x178`)
 (§35). s1728 is maintenance only.
 
 ## Method and safety rules

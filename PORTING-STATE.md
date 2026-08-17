@@ -86614,3 +86614,55 @@ Next leftover is `func_800F1310` (`0x800F1310`, `0x2A8`;
 companion/generated `gatherAndSortNearbyNpcViewPoints`). Last-15 titles after
 s1864 still include s1856's M4 revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1865 (2026-08-17) — synchronized the quicksortFloatKeysWithValues symbol
+
+Exact generated-symbol census for leftover `func_800F1198` at
+`0x800F1198` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 15013; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `quicksortFloatKeysWithValues = 0x800F1198` (sequential listing at line 1274). Sequential dump jumps from `resolveNpcAttachmentPos = 0x800F0F94` (s1864 H2) to this, then `gatherAndSortNearbyNpcViewPoints = 0x800F1310`. No inline comment on the listing line |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F1198`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`. `undefined_funcs_auto.txt` has no leftover `func_800F1198` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void quicksortFloatKeysWithValues` at VRAM `0x800F1198`. First insn `addiu $sp, $sp, -0x28` at `0x800F1198`; last live `jr $ra` / `addiu $sp, $sp, 0x28` at `0x800F1308` / `0x800F130C`. Previous is already `resolveNpcAttachmentPos` (`0x800F0F94`, last `jr $ra` / `addiu $sp, $sp, 0x98` at `0x800F1190` / `0x800F1194`); next is already `gatherAndSortNearbyNpcViewPoints` at `0x800F1310` (`addiu $sp, $sp, -0x50`). `funcs.h` and overlay INL already the human name. No leftover `func_800F1198` in generated headers/body/INL |
+| Body semantics | `$s1=$a0` float-key array (4-byte stride); `$s2=$a1` parallel `u16` value array (2-byte stride); `$a2` lo, `$s3=$a3` hi. Early-out if `lo >= hi`. Mid = `(lo+hi)` signed-halved; swap `keys[lo]` with `keys[mid]` (`lwc1`/`swc1`) and `values[lo]` with `values[mid]` (`lhu`/`sh`). Partition `j=lo+1..hi`: `c.lt.s` of `keys[j]` vs pivot `keys[lo]`, and when true swap both arrays and advance store cursor `$s0`. Then swap pivot into place and `jal 0x800F1198` twice: `[lo, pivot-1]` and `[pivot+1, hi]` |
+| Callers | 4 generated `jal 0x800F1198` sites, all already `quicksortFloatKeysWithValues(rdram, ctx)`: two self-recurses, one in `gatherAndSortNearbyNpcViewPoints` (`0x800F1540`; keys `state+0x20`, values `state+0x2`, `lo=0`, `hi=count-1`), one in `acquireNpcTargetsInAimCone` (`0x800F17EC`; keys `sp+0x28`, values `s1+0x2C`, `lo=0`, `hi=s2-1`). No `LOOKUP_FUNC(0x800F1198)` |
+| TOML | Was `{ name = "func_800F1198", vram = 0x800F1198, size = 0x178 }` — stale leftover. Size already matched `0x800F1310 - 0x800F1198`. Renamed to `quicksortFloatKeysWithValues` |
+| Overlay section 4 | `{ .func = quicksortFloatKeysWithValues, .offset = 0x0004C068, .rom_size = 0x00000178 }` under `section_4_ovl_mission_funcs` (`0x800F1198 - 0x800A5130 = 0x4C068`; previous `0x4BE64 + 0x204 = 0x4C068`; `0x4C068 + 0x178 = 0x4C1E0` matches next `gatherAndSortNearbyNpcViewPoints`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F1198`. No leftover `func_800F1198` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x28` / `jr $ra` / `addiu $sp, $sp, 0x28` at
+`0x800F1198` / `0x800F1308` / `0x800F130C`), previous
+(`resolveNpcAttachmentPos` / `0x800F0F94`) and next
+(`gatherAndSortNearbyNpcViewPoints` / `0x800F1310`) boundaries, overlay
+span, and size already agreed on `quicksortFloatKeysWithValues` /
+`0x178`. TOML still carried leftover `func_800F1198`; renamed it to
+match. Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F1310`; first insn is
+`addiu $sp, $sp, -0x28` and last is `jr $ra` / `addiu $sp, $sp, 0x28`
+at `0x800F1308` / `0x800F130C`; body is the paired float-key /
+u16-value in-place quicksort, not an unnameable span). No
+invented name. No build or runtime run required.
+
+Next census: leftover `func_800F1310` at `0x800F1310` (size `0x2A8`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `gatherAndSortNearbyNpcViewPoints`; TOML still leftover
+`func_800F1310`. First insn `addiu $sp, $sp, -0x50`; last live
+`jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F15B0` / `0x800F15B4`.
+Next leftover is `func_800F15B8` (`0x800F15B8`, `0x2B8`;
+companion/generated `acquireNpcTargetsInAimCone`). The
+`tickProgressChannel` comment still calls `func_800F1310` a
+"heavy actor-state updater"; trust the sequential listing and the
+generated body. Last-15 titles after s1865 still include s1856's
+M4 revisit, so the mandatory REVISIT gate does not fire.

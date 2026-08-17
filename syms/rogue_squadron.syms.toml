@@ -1957,7 +1957,7 @@ functions = [
     { name = "evaluateTargetTrackingVisibility", vram = 0x800F0BA4, size = 0x220 },
     { name = "tickObjectAnimSubstruct", vram = 0x800F0DC4, size = 0x1D0 },
     { name = "resolveNpcAttachmentPos", vram = 0x800F0F94, size = 0x204 },
-    { name = "func_800F1198", vram = 0x800F1198, size = 0x178 },
+    { name = "quicksortFloatKeysWithValues", vram = 0x800F1198, size = 0x178 },
     { name = "func_800F1310", vram = 0x800F1310, size = 0x2A8 },
     { name = "func_800F15B8", vram = 0x800F15B8, size = 0x2B8 },
     { name = "func_800F1870", vram = 0x800F1870, size = 0x2D0 },
