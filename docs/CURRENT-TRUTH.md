@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1762 (2026-08-16).
+detail. Reviewed through s1763 (2026-08-16).
 
 ## Current state
 
@@ -46,11 +46,11 @@ detail. Reviewed through s1762 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `playAttachmentMaterialSoundVariantA`
-   (`0x800DFF54`, size `0x190`). Neighbor peek already shows TOML still
-   `func_800DFF54` while generated/overlay use the human name. Archive:
+1. Resume the generated-symbol sweep at `playAttachmentMaterialSoundVariantB`
+   (`0x800E00E4`, size `0x188`). Neighbor peek already shows TOML still
+   `func_800E00E4` while generated/overlay use the human name. Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647), §35
-   (s1648–s1762). About 1,548 placeholder `func_0x...` names remained
+   (s1648–s1763). About 1,548 placeholder `func_0x...` names remained
    at s1487.
 2. Parked retail-entry: the 126.3 s title-like 1024 is H3-stop-tick, not
    those three inner loops and not a new `menuOverlayInit` jump-table
@@ -91,11 +91,11 @@ never-access) live in `PROJECT-OVERVIEW.md` §26 and §35. Most recent: s1698
 `512→1024` at 126.3 s; the stay was a flush cutoff.
 
 ## Evidence ledger summary
-Per-session rows through s1762 live in `PROJECT-OVERVIEW.md` §33–§35.
+Per-session rows through s1763 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1762 through `applyCraftAnimAndDetailParams` plus the s1744 overlay-PC
+s1648–s1763 through `playAttachmentMaterialSoundVariantA` plus the s1744 overlay-PC
 and s1760 jump-table revisits that selected H3-stop-tick for the
 attract 1024 (§35). s1728 is maintenance only.
 

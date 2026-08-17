@@ -81821,3 +81821,40 @@ and section-4 row are all present). No build or runtime run required.
 Next census: `playAttachmentMaterialSoundVariantA` / `func_800DFF54` at
 `0x800DFF54` (size `0x190`). Last-15 titles after s1762 still include
 s1760's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1763 (2026-08-16) — synchronized the playAttachmentMaterialSoundVariantA symbol
+
+Exact generated-symbol census for `0x800DFF54` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6623; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playAttachmentMaterialSoundVariantA = 0x800DFF54` with comment "attachment material cue + 3D sound (with setObjectSubstructF10IfReady prefix)". Previous contiguous named neighbor `applyCraftAnimAndDetailParams = 0x800DFB90`. Next contiguous named neighbor `playAttachmentMaterialSoundVariantB = 0x800E00E4`. No leftover `func_800DFF54` splat, no `D_800DFF54`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void playAttachmentMaterialSoundVariantA` at VRAM `0x800DFF54`. First insn `addiu $sp, $sp, -0x70`; last insn `addiu $sp, $sp, 0x70` at `0x800E00E0`. Previous `applyCraftAnimAndDetailParams` ends at `0x800DFF50`; next is `playAttachmentMaterialSoundVariantB` at `0x800E00E4`. `funcs.h` already declares the human name. No leftover `func_800DFF54`. No generated `jal 0x800DFF54` site |
+| Body semantics | Attachment material cue + 3D sound matching the companion comment: `jal 0x80058360` `lookupHmtTextureByName` (name `0x800A7FB0`, dest `sp+0x28`), prefix `jal 0x800F2D74` `setObjectSubstructF10IfReady` (skipped when `a1==3`) with `0x3D088889`, optional `jal 0x800F0F94` `resolveNpcAttachmentPos` via table `0x8010ABA0` (`0x80110000-0x5460`) when LOD float `+0xF4 != 0`, `jal 0x800F1870` `tickProgressChannel`, then on return-1 `jal 0x800F2FCC` `triggerCueWithSlotEffect` plus `jal 0x800989D8` `play3DSoundEvent` `0x1D`/`0x6E`/`0x28` with float `0x800A7FB4` and `a3=0x41700000` (15.0f). Same helper family as `playAttachmentMaterialFadeSound` / `npcTickEffectChannelC` |
+| TOML (before) | `{ name = "func_800DFF54", vram = 0x800DFF54, size = 0x190 }` — size matches `0x800E00E4 - 0x800DFF54` |
+| Overlay section 4 | `{ .func = playAttachmentMaterialSoundVariantA, .offset = 0x0003AE24, .rom_size = 0x00000190 }` under `section_4_ovl_mission_funcs` (`0x800DFF54 - 0x800A5130 = 0x3AE24`; previous `0x3AA60 + 0x3C4 = 0x3AE24`; `0x3AE24 + 0x190 = 0x3AFB4` matches next `playAttachmentMaterialSoundVariantB`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800DFF54`. No leftover `func_800DFF54` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`applyCraftAnimAndDetailParams` / `0x800DFB90`) and next
+(`playAttachmentMaterialSoundVariantB` / `0x800E00E4`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `playAttachmentMaterialSoundVariantA`, and only the TOML name was a
+stale `func_800DFF54` placeholder. Corrected TOML to
+`playAttachmentMaterialSoundVariantA`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `playAttachmentMaterialSoundVariantB` / `func_800E00E4` at
+`0x800E00E4` (size `0x188`). Last-15 titles after s1763 still include
+s1760's revisit, so the mandatory REVISIT gate does not fire.

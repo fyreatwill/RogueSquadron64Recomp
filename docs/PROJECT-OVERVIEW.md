@@ -235,7 +235,7 @@ jump-table-case session (s1744/s1760 H3-stop-tick; Rice still dies ~135 s). Audi
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
-are synchronized through `applyCraftAnimAndDetailParams` at `0x800DFB90` (s1762).
+are synchronized through `playAttachmentMaterialSoundVariantA` at `0x800DFF54` (s1763).
 See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
 backlog, and `PORTING-STATE.md` for evidence.
 
@@ -3039,12 +3039,13 @@ collision.
 | s1760 | Mandatory REVISIT. Three-arm Rice watch of the complete `menuOverlayInit` 11-way jump table on the attract A/Start title-like 1024. All arms passed controls. No case increases vs hold: case 9 `0x800C28F0` stays 1; cases 3/6/10 stay 0; cases 1/2/4-5-7/8 and the dispatcher drop. Extra menu dest +1 reproduced. H3-stop-tick selected; H1/H2/H4 rejected. Overlay-alias: hold's high counts at those PCs are cinematic-resident. |
 | s1761 | Confirmed leftover `fake_func_800DFB8C` (`0x800DFB8C`, `0x4`). One-instruction `addiu $sp, $sp, -0x18` orphan between `noopHandler_800DFB84` and `applyCraftAnimAndDetailParams` (whose prologue is `addiu $sp, $sp, -0x50`, so this is not a split first instruction). Companion leftover splat; `func_800DFB90` deleted s432 as a duplicate of the next function. No leftover `func_800DFB8C`; TOML, generated headers/body, and section-4 already use the leftover name. |
 | s1762 | Synchronized `applyCraftAnimAndDetailParams` (`0x800DFB90`, `0x3C4`). Per-instance anim/detail setup: `setNpcHealth` / `setObjectDetailLevel` / `initActorMotionParams` (twice) plus `initObjectAnimSubstruct` (four) and `initAnimSubstructFromParams` (twice). No generated `jal 0x800DFB90`. TOML was stale `func_800DFB90`; generated headers/body and section-4 already used the human name. Companion deleted leftover `func_800DFB90` at s432 as a duplicate of this name. |
+| s1763 | Synchronized `playAttachmentMaterialSoundVariantA` (`0x800DFF54`, `0x190`). Attachment material cue + 3D sound: HMT `0x800A7FB0` dest `sp+0x28`, prefix `setObjectSubstructF10IfReady` (skipped when `a1==3`) with `0x3D088889`, optional `resolveNpcAttachmentPos` via table `0x8010ABA0` when LOD `+0xF4 != 0`, `tickProgressChannel`, then on return-1 `triggerCueWithSlotEffect` plus `play3DSoundEvent` `0x1D`/`0x6E`/`0x28` with float `0x800A7FB4`. No generated `jal 0x800DFF54`. TOML was stale `func_800DFF54`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1762 is `playAttachmentMaterialSoundVariantA` /
-`func_800DFF54` / `0x800DFF54` (size `0x190`). Neighbor peek already
-shows TOML still `func_800DFF54` while generated/overlay use the human
+The sweep cursor after s1763 is `playAttachmentMaterialSoundVariantB` /
+`func_800E00E4` / `0x800E00E4` (size `0x188`). Neighbor peek already
+shows TOML still `func_800E00E4` while generated/overlay use the human
 name. Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760. After s1762 the last-15 titles still include
+s1714, s1744, s1760. After s1763 the last-15 titles still include
 s1760's revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
