@@ -3073,15 +3073,17 @@ collision.
 | s1792 | Mandatory REVISIT. Three-arm Rice watch of the seven unwatched `submitGfxFrame` callers on the attract A/Start title-like 1024. All arms passed controls. Leave still adds `submitGfxFrame` +104/+102 (s1776 H1 reproduced). No unwatched entry rises: `runIdleFramesAndLoadSaveData` stays 1; `tickCraftSelectScreen` stays ~1028; `menuControllerInput` −179/−177 and `runResultsTextScreenLoop` −99/−97 drop with ship-select; `runMenuRandomBackdropScreen`/`menuSubtype02Handler`/`runModelViewerLoop` stay 0. Hangar frame flat 59. Extra `loadOverlay` +2 reproduced. H3-no-unwatched-rise selected. Next revisit needs jal-site / `$ra` watches, not another entry-PC set. |
 | s1793 | Synchronized `transformCraftAnchorsApplySubFx3` (`0x800E71D0`, `0x1C0`). Rotation-matrix pair, dual `transformVec3ByMat34` anchors, two pending-child / LOS passes, `initObjectAnimSubstruct`, `applyToObjectSubstructByFlag`. One generated `jal 0x800E71D0` inside `tickFighterSquadronWithSplinePaths`. TOML, generated headers/body, and section-4 were stale `func_800E71D0`; companion `main_overlay.txt` already had the human name. Did not relocate the parked `mission_overlay.txt` leftover (s413 `m4_known_bad.txt`). |
 | s1794 | Synchronized `tickFighterSquadronWithSplinePaths` (`0x800E7390`, `0x4D0`). Two-pass spline orientation, no audio: pending-child + LOS (`isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` on `+0x38`), mesh T&L (`getObjectMeshTransformOrLocal` / `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto`) or fallback at `L_800E7634`, then rotation/quat/vec3 (`buildRotationMatrixSlot0`/`Slot1` / `composeRotationMatrixSlot1` / `quatFromAxisAngle` / `rotateVec3ByQuat` / `transformVec3ByMat34` / `vec3Cross`/`Dot`/`Length`). Writes `+0x48`/`+0x4C`. Companion comment overstates (zero `play3DSound*` / objective / teardown; no per-member walk). One generated `jal 0x800E7390` inside `npcGroundTroopUpdate` already dispatched the human name. TOML was stale `func_800E7390`; generated headers/body and section-4 already used the human name. |
+| s1795 | Confirmed `npcGroundTroopUpdate` (`0x800E7860`, `0xFC8`). 9-way `jr` table on `(a1-1)<9` at `0x800A8520`. Setup type halfword `*(s3+0)` is `0x3B`/`0x3C`/`0x3D`/`0x50` (slti `0x3E`). Case 2 live tick has an inner 5-way table on `lh +0x64` at `0x800A8578` and calls `tickFighterSquadronWithSplinePaths` + `transformCraftAnchorsApplySubFx3`. 96 `jal`s / 58 unique targets. No generated `jal 0x800E7860` — table-dispatched `npcXxxUpdate` sibling of `npcTrainCarUpdate` / `npcWaterCraftUpdate`. Companion, generated headers/body, TOML, and section-4 already used the human name. |
 
-The sweep cursor after s1794 is `npcGroundTroopUpdate` /
-`0x800E7860` (size `0xFC8`). Neighbor peek: TOML, generated
-headers/body, overlay INL, and `mission_overlay.txt` already use the
-human name. Next leftover after it is `func_800E8828` / companion
-`playAttachmentCueNoTexture`. Mandatory revisits in this window: s1650,
-s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792. After s1794 the
+The sweep cursor after s1795 is leftover `func_800E8828` /
+`playAttachmentCueNoTexture` (`0x800E8828`, size `0x120`). Neighbor
+peek: TOML still carries `func_800E8828`; generated headers/body,
+overlay INL, and `mission_overlay.txt` already use the human name.
+Next leftover after it is `func_800E8948` / companion
+`applyCraftAnimDetailParamsB`. Mandatory revisits in this window: s1650,
+s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792. After s1795 the
 last-15 titles still include that revisit, so the next iteration resumes
-the `npcGroundTroopUpdate` census.
+the `playAttachmentCueNoTexture` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

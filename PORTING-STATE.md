@@ -83176,3 +83176,43 @@ Neighbor peek already shows TOML, generated headers/body, overlay INL, and
 `func_800E8828` / companion `playAttachmentCueNoTexture`. Last-15 titles
 after s1794 still include s1792's revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1795 (2026-08-16) — confirmed the npcGroundTroopUpdate symbol
+
+Exact generated-symbol census for `0x800E7860` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7663; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcGroundTroopUpdate = 0x800E7860` (coarse listing, `segment:mission_overlay`). Previous named kernel in VRAM order is `tickFighterSquadronWithSplinePaths = 0x800E7390`; next named kernel is `playAttachmentCueNoTexture = 0x800E8828`. No leftover `func_800E7860` splat, no `D_800E7860`, and no menu/cinematic/main overlay occupant |
+| Companion `main_overlay.txt` | No occupant at `0x800E7860` (nearest is the already-synchronized `transformCraftAnchorsApplySubFx3 = 0x800E71D0`) |
+| Generated `funcs_39.c` | `RECOMP_FUNC void npcGroundTroopUpdate` at VRAM `0x800E7860`. First insn `addiu $sp, $sp, -0x70`; last insn `jr $ra` / `addiu $sp, $sp, 0x70` at `0x800E8820` / `0x800E8824`. Previous `tickFighterSquadronWithSplinePaths` ends at `0x800E7858` / `0x800E785C`; next is `playAttachmentCueNoTexture` at `0x800E8828`. `funcs.h` already declares the human name. No leftover `func_800E7860`. No generated `jal 0x800E7860` site — table-dispatched like the other `npcXxxUpdate` siblings. The exclusive generated `jal 0x800E7390` site is inside this function |
+| Body semantics | Halfword state in `a1`; 9-way jump table at `0x800A8520` on `(a1-1)` for `a1 ∈ 1..9` (`sltiu` bound `0x9`; out of range falls to the epilogue at `L_800E87F0`). Object pointer `a0` in `$s4`, record `*(a0+4)` in `$s1`, `a2` in `$s0`. Case 0/7 is setup: sets flag bit `0x100` on `*(s4+0x14)`, type halfword `*(s3+0)` compared to `0x3B` / `0x3C` / `0x3D` / `0x50` (`slti 0x3E`), then `setPoolEntryPhase` ×2, `walkMeshdef0List`, `composeEulerRotationXYZ`, `initVec4TripletFromArgs`, `composeRotationMatrixSlot0`/`1`/`2`, `addVec3At0x24`, `popNpcSlotFromTail` ×5, `createAndInitObject`, `getLevelDatItemByName`, `initActorAsType1` / `initActorAsType2` / `setType2ActorVelocity`, `initActorAsType3` / `setType3ActorParams`, `rand` ×6, `wrapAngleToCyclicRange`, `normalize_vector`, `updateObjectFlags110` ×2, `allocateAndInitCraftNpcContext`. Case 1 tears down (`rs_free`, `getNpcCurrentHealth`, `initActorRenderDescriptorIfUninit`, `clearPendingAndDestroyChildNpc`, `releaseMeshAsset`). Case 2 is the live tick: early `destroyNpcSlotByIndex` when `*(0x80130000+0xB70)==0x14` and the `*(s1+0x34)` slot check fires, else a 5-way inner table at `0x800A8578` on `lh *(s1+0x64)` (`sltiu` bound `0x5`). Inner case 1 is the spline/anchor pass (`getPoolEntryFrameIndex`, `npcPredictedRangeCheck`, `dispatchEffectByActorType`, `updateNpcEventTimer`, exclusive `tickFighterSquadronWithSplinePaths` + `transformCraftAnchorsApplySubFx3`). Inner cases 3/4 walk mesh + `getNpcContextByIndex` + `mat34CrossRowsAndCopyPos` + range/effect, with case 4 adding `isPendingChildNpcActive` / `validateActorTargetLOS` / `initObjectAnimSubstruct` / `applyToObjectSubstructByFlag`. Inner case 2 spawns (`spawnNpcType0xAFromTemplate`, `play3DSoundEvent`, `isNpcWithinActiveReferenceRange`, `destroyObjectOwnedNpcSlot`). Case 3 is visibility / path (`mat34CrossRowsAndCopyPos`, `addNpcToVisibilityBucket`, `advanceNpcOnCurvedPath`). Case 4 is damage (`getNpcCurrentHealth`, `play3DSoundEvent`, `getObjectDetailLevel`, `noopHandler`, `dealDamageToNpc`, `unregisterAndFreeNpcSlot` ×4, `popNpcSlotFromTail`, `datItemSetObjectiveBooleanCount`, `tallyMidDetailObject`, `clearPendingChildNpc`, `setObjectFlagBit4`, `destroyNpcSlotByIndex`). Case 5 is the epilogue. Case 6 is a single `dispatchSlotAction5IfActive`. Case 8 is type-1 / health / slot teardown (`setType1ActorParams`, `getNpcCurrentHealth`, `unregisterAndFreeNpcSlot` ×3, `popNpcSlotFromTail` ×3, `setObjectDetailLevel`, `play3DSoundEvent`, `datItemSetObjectiveBooleanCount`, `spawnSplineWalkerCraft`). 96 `jal`s / 58 unique targets. Name matches the ground-troop `npcXxxUpdate` sibling of `npcTrainCarUpdate` / `npcWaterCraftUpdate` |
+| TOML | `{ name = "npcGroundTroopUpdate", vram = 0x800E7860, size = 0xFC8 }` — already the human name; size matches `0x800E8828 - 0x800E7860` (last insn `0x800E8824` + 4 = `0xFC8`). No leftover `func_800E7860` |
+| Overlay section 4 | `{ .func = npcGroundTroopUpdate, .offset = 0x00042730, .rom_size = 0x00000FC8 }` under `section_4_ovl_mission_funcs` (`0x800E7860 - 0x800A5130 = 0x42730`; previous `0x42260 + 0x4D0 = 0x42730`; `0x42730 + 0xFC8 = 0x436F8` matches next `playAttachmentCueNoTexture`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E7860`. No leftover `func_800E7860` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 9-way ground-troop-update
+body, previous (`tickFighterSquadronWithSplinePaths` / `0x800E7390`) and
+next (`playAttachmentCueNoTexture` / `0x800E8828`) boundaries, TOML name
+and size, and section-4 overlay span already agree. No TOML or
+generated-name change. This refutes H2 (no stale `func_800E7860`
+placeholder), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement; size is `0xFC8` as expected), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: leftover `func_800E8828` / companion
+`playAttachmentCueNoTexture` at `0x800E8828` (size `0x120`). Neighbor
+peek already shows TOML still carrying `func_800E8828` while generated
+headers/body, overlay INL, and `mission_overlay.txt` use the human name.
+Last-15 titles after s1795 still include s1792's revisit, so the
+mandatory REVISIT gate does not fire.

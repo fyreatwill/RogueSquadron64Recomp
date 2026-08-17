@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1794 (2026-08-16).
+detail. Reviewed through s1795 (2026-08-16).
 
 ## Current state
 
@@ -56,13 +56,14 @@ detail. Reviewed through s1794 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcGroundTroopUpdate`
-   (`0x800E7860`, size `0xFC8`). Neighbor peek: TOML, generated
+1. Resume the generated-symbol sweep at leftover `func_800E8828` /
+   companion `playAttachmentCueNoTexture` (`0x800E8828`, size `0x120`).
+   Neighbor peek: TOML still carries `func_800E8828`; generated
    headers/body, overlay INL, and `mission_overlay.txt` already use the
-   human name (likely H1 confirm). Next leftover after it is
-   `func_800E8828` / companion `playAttachmentCueNoTexture`. Archive:
+   human name (likely H2 TOML-only). Next leftover after it is
+   `func_800E8948` / companion `applyCraftAnimDetailParamsB`. Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647), §35
-   (s1648–s1794). About 1,548 placeholder `func_0x...` names remained
+   (s1648–s1795). About 1,548 placeholder `func_0x...` names remained
    at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): watch
    `submitGfxFrame` jal-sites / `$ra`, not another function-entry PC set.
@@ -107,13 +108,14 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1794 through leftover `func_800E7390` synchronized to
+s1648–s1795 through leftover `func_800E7390` synchronized to
 `tickFighterSquadronWithSplinePaths` after `transformCraftAnchorsApplySubFx3`,
-leftover `fake_func_800E71C8`, and `npcWaterCraftUpdate`, plus the s1744
-overlay-PC, s1760 jump-table, s1776 main-text-handler, and s1792
-unwatched-caller revisits that selected H3-stop-tick for overlay ticks,
-H1-submitGfx for the attract 1024, and H3-no-unwatched-rise for the
-extra presenter's function entry (§35). s1728 is maintenance only.
+leftover `fake_func_800E71C8`, `npcWaterCraftUpdate`, and confirmed
+`npcGroundTroopUpdate`, plus the s1744 overlay-PC, s1760 jump-table,
+s1776 main-text-handler, and s1792 unwatched-caller revisits that
+selected H3-stop-tick for overlay ticks, H1-submitGfx for the attract
+1024, and H3-no-unwatched-rise for the extra presenter's function entry
+(§35). s1728 is maintenance only.
 
 ## Method and safety rules
 - A null result is worthless without a same-run positive control. Batch all A/B
