@@ -3145,19 +3145,18 @@ collision.
 | s1863 | Synchronized `tickObjectAnimSubstruct` (`0x800F0DC4`, `0x1D0`). `$s0=$a1` anim substruct; `$a2` is dt. Early-out if callback `+0x18` is null; decrements timer `+0xC` and delay `+0x10`; on delay expire with flag `+0x2B`, increments `+0x28` and `jalr`s the callback via `getNpcContextByIndex` on object `+0x198`. Start/wrap path zeros delay, `jalr`s callback with `a1=0`, advances frame `+0x1E` vs count `+0x1C`, recomputes duration `+0x0/+0x1C` plus optional `rand` jitter from `+0x8`. 3 generated `jal 0x800F0DC4` sites (two in `transformCraftAnchorsAndApplySubFx`, one in `applyToObjectSubstructByFlag`) already dispatch the human name. TOML was stale `func_800F0DC4`; companion, generated headers/body, and section-4 already used the human name. |
 | s1864 | Synchronized `resolveNpcAttachmentPos` (`0x800F0F94`, `0x204`). Reads `lhu state+0x130`, `findActiveNpcInSlotChain` + `getNpcContextByIndex`; optional `zmemcpy`/`transformMeshPartIntoWorld` when `ctx+0xC` is set, else `ctx+0x8`; `computeAnchorRelativePositionByDistanceRatio` dest `sp+0x40`; deltas vs `positionPtr`; then `vec3Dot`/`vec3Length`/`constMinusSinfApprox`/`vec3Cross` plus optional normalize, clamp vs scaleB, `quatFromAxisAngleSafe` and two `rotateVec3ByQuat` of `+0xC`/`+0x18`. 22 generated `jal 0x800F0F94` sites already dispatch the human name. TOML was stale `func_800F0F94`; companion, generated headers/body, and section-4 already used the human name. |
 | s1865 | Synchronized `quicksortFloatKeysWithValues` (`0x800F1198`, `0x178`). In-place Hoare-style partition: float keys at `$a0` (4-byte stride) and parallel `u16` values at `$a1` (2-byte stride), range `$a2..$a3`; mid-swap, `c.lt.s` partition, recurse both sides. 4 generated `jal 0x800F1198` sites (2 self-recurses + `gatherAndSortNearbyNpcViewPoints` + `acquireNpcTargetsInAimCone`) already dispatch the human name. TOML was stale `func_800F1198`; companion, generated headers/body, and section-4 already used the human name. |
+| s1866 | Synchronized `gatherAndSortNearbyNpcViewPoints` (`0x800F1310`, `0x2A8`). Copies viewpoint origin/`*scale` extents, optional `sampleTerrainAtNpcPosition`, walks the NPC slot chain with `findSegmentObjectSphereHit`, collects up to 8 `(distance, slot)` pairs, then `quicksortFloatKeysWithValues` (or a 2-element swap). 1 generated `jal 0x800F1310` in `tickProgressChannel` already dispatches the human name. TOML was stale `func_800F1310`; companion, generated headers/body, and section-4 already used the human name. The `tickProgressChannel` comment's "heavy actor-state updater" gloss is stale. |
 
-The sweep cursor after s1865 is leftover `func_800F1310`
-(`0x800F1310`, size `0x2A8`). Neighbor peek: companion
+The sweep cursor after s1866 is leftover `func_800F15B8`
+(`0x800F15B8`, size `0x2B8`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`gatherAndSortNearbyNpcViewPoints`; TOML still leftover `func_800F1310`. First
-insn `addiu $sp, $sp, -0x50`; last live `jr $ra` / `addiu $sp, $sp, 0x50`
-at `0x800F15B0` / `0x800F15B4`. Next leftover is `func_800F15B8`
-(`0x800F15B8`, `0x2B8`; companion/generated `acquireNpcTargetsInAimCone`;
-TOML still leftover). The `tickProgressChannel` comment still calls
-`func_800F1310` a "heavy actor-state updater"; trust the sequential listing
-and the generated body, not that stale comment. Mandatory revisits
+`acquireNpcTargetsInAimCone`; TOML still leftover `func_800F15B8`. First
+insn `addiu $sp, $sp, -0xE8`; last live `jr $ra` / `addiu $sp, $sp, 0xE8`
+at `0x800F1868` / `0x800F186C`. Next leftover is `func_800F1870`
+(`0x800F1870`, `0x2D0`; companion/generated `tickProgressChannel`;
+TOML still leftover). Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776, s1792, s1808, s1824, s1840, s1856. After s1865 the last-15
+s1776, s1792, s1808, s1824, s1840, s1856. After s1866 the last-15
 titles still include s1856's M4 revisit, so the next iteration
 resumes the leftover sweep.
 

@@ -86666,3 +86666,53 @@ companion/generated `acquireNpcTargetsInAimCone`). The
 "heavy actor-state updater"; trust the sequential listing and the
 generated body. Last-15 titles after s1865 still include s1856's
 M4 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1866 (2026-08-17) — synchronized the gatherAndSortNearbyNpcViewPoints symbol
+
+Exact generated-symbol census for leftover `func_800F1310` at
+`0x800F1310` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 15200; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `gatherAndSortNearbyNpcViewPoints = 0x800F1310` (sequential listing at line 1275). Sequential dump goes `quicksortFloatKeysWithValues = 0x800F1198` (s1865 H2) then this, then `acquireNpcTargetsInAimCone = 0x800F15B8`. No inline comment on the listing line. The `tickProgressChannel` comment at line 734 still calls sister `func_800F1310` a "heavy actor-state updater"; that gloss is stale |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F1310`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`. `undefined_funcs_auto.txt` has no leftover `func_800F1310` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void gatherAndSortNearbyNpcViewPoints` at VRAM `0x800F1310`. First insn `addiu $sp, $sp, -0x50` at `0x800F1310`; last live `jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F15B0` / `0x800F15B4`. Previous is already `quicksortFloatKeysWithValues` (`0x800F1198`, last `jr $ra` / `addiu $sp, $sp, 0x28` at `0x800F1308` / `0x800F130C`); next is already `acquireNpcTargetsInAimCone` at `0x800F15B8` (`addiu $sp, $sp, -0xE8`). `funcs.h` and overlay INL already the human name. No leftover `func_800F1310` in generated headers/body/INL |
+| Body semantics | `$a0` viewpoint descriptor (vec3 at `+0`, extents at `+0xC/+0x10/+0x14`); `$a1` slot/type halfword; `$s1=$a2` dest. Zeros dest `+0x18` / `+0x1C` / `+0x0`; copies origin to dest `+0x54`; scales extents by dest `+0x14` into dest `+0x48`. `sampleTerrainAtNpcPosition` may replace the scaled extents with (sample − origin). Walks `findActiveNpcInSlotChain` / `getNpcContextByIndex` / `findSegmentObjectSphereHit`. Collects up to 8 pairs: distance float at dest `+0x20[i]`, slot id at dest `+0x2[i]`. If count ≥ 3, `quicksortFloatKeysWithValues(dest+0x20, dest+0x2, 0, count-1)`; if count == 2, swaps when `c.lt.s` says they are out of order |
+| Callers | 1 generated `jal 0x800F1310` site, already `gatherAndSortNearbyNpcViewPoints(rdram, ctx)`: `tickProgressChannel` at `0x800F18F4`. No `LOOKUP_FUNC(0x800F1310)` |
+| TOML | Was `{ name = "func_800F1310", vram = 0x800F1310, size = 0x2A8 }` — stale leftover. Size already matched `0x800F15B8 - 0x800F1310`. Renamed to `gatherAndSortNearbyNpcViewPoints` |
+| Overlay section 4 | `{ .func = gatherAndSortNearbyNpcViewPoints, .offset = 0x0004C1E0, .rom_size = 0x000002A8 }` under `section_4_ovl_mission_funcs` (`0x800F1310 - 0x800A5130 = 0x4C1E0`; previous `0x4C068 + 0x178 = 0x4C1E0`; `0x4C1E0 + 0x2A8 = 0x4C488` matches next `acquireNpcTargetsInAimCone`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F1310`. No leftover `func_800F1310` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x50` / `jr $ra` / `addiu $sp, $sp, 0x50` at
+`0x800F1310` / `0x800F15B0` / `0x800F15B4`), previous
+(`quicksortFloatKeysWithValues` / `0x800F1198`) and next
+(`acquireNpcTargetsInAimCone` / `0x800F15B8`) boundaries, overlay
+span, and size already agreed on `gatherAndSortNearbyNpcViewPoints`
+/ `0x2A8`. TOML still carried leftover `func_800F1310`; renamed it to
+match. Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F15B8`; first insn is
+`addiu $sp, $sp, -0x50` and last is `jr $ra` / `addiu $sp, $sp, 0x50`
+at `0x800F15B0` / `0x800F15B4`; body gathers and sorts nearby NPC
+sphere-hit distances, not an unnameable span). No invented name. No
+build or runtime run required.
+
+Next census: leftover `func_800F15B8` at `0x800F15B8` (size `0x2B8`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `acquireNpcTargetsInAimCone`; TOML still leftover
+`func_800F15B8`. First insn `addiu $sp, $sp, -0xE8`; last live
+`jr $ra` / `addiu $sp, $sp, 0xE8` at `0x800F1868` / `0x800F186C`.
+Next leftover is `func_800F1870` (`0x800F1870`, `0x2D0`;
+companion/generated `tickProgressChannel`). Last-15 titles after
+s1866 still include s1856's M4 revisit, so the mandatory REVISIT
+gate does not fire.
