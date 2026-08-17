@@ -1,29 +1,29 @@
-# NEXT work unit (s1875)
+# NEXT work unit (s1876)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the leftover census at `func_800F23F8` (`0x800F23F8`,
-size `0x148`). After s1874 the last-15 titles still include
+Resume the leftover census at `func_800F2540` (`0x800F2540`,
+size `0x108`). After s1875 the last-15 titles still include
 s1872's hangar/512 revisit, so this is not a mandatory REVISIT.
 
 s1872 parked hangar/512 as UNEVALUABLE (no port arm published
-10→origin `0x006ab400` / `0x006ab800`). Do not reopen that window
+origin `0x006ab400` / `0x006ab800`). Do not reopen that window
 without a `[phase] vi_width=512 origin=0x006AB400` log.
 
 Companion `mission_overlay.txt` and generated headers/body/INL
-already name `computeTurnAxisTowardTarget`; TOML still leftover
-`func_800F23F8`. First insn `addiu $sp, $sp, -0x58`; last
-`jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F2538` /
-`0x800F253C`. Next already-named occupant is
-`computeTurnVectorTowardTarget` at `0x800F2540`.
+already name `computeTurnVectorTowardTarget`; TOML still leftover
+`func_800F2540`. First insn `addiu $sp, $sp, -0x50`; last
+`jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F2640` /
+`0x800F2644`. Next already-named occupant is
+`computeTurnVectorAndDistanceToTarget` at `0x800F2648`.
 
 Competing hypotheses:
 
 - H1 already-named: companion, generated headers/body/INL, and
   TOML already agree on one human name — confirm only.
 - H2 TOML leftover: generated side already uses
-  `computeTurnAxisTowardTarget`; TOML still `func_800F23F8` —
-  synchronize TOML (and any remaining generated leftover).
+  `computeTurnVectorTowardTarget`; TOML still `func_800F2540`
+  — synchronize TOML (and any remaining generated leftover).
 - H3 invent: no trustworthy human name; leave `func_*`.
 
 Exact commands:
