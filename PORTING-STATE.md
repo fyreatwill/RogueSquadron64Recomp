@@ -84416,3 +84416,52 @@ last live `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDFC` /
 human name. Next occupant is leftover `fake_func_800ECE04`
 (`0x800ECE04`, `0xC`). Last-15 titles after s1821 still include
 s1808's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1822 (2026-08-16) — synchronized the dispatchSlotActionTwelveByGlobalId symbol
+
+Exact generated-symbol census for leftover `func_800ECDDC` at
+`0x800ECDDC` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1808's mandatory REVISIT (`selected H2
+menuIn/mission jal-sites on the attract 1024`), so the 15-title
+all-sweep REVISIT gate did not fire. Step 0 `wc -c` was 9249; not a
+maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `main_overlay.txt` | No occupant at `0x800ECDDC`. No leftover `func_800ECDDC` splat |
+| Companion `mission_overlay.txt` | `dispatchSlotActionTwelveByGlobalId = 0x800ECDDC`. No leftover `func_800ECDDC` splat in this file. Sibling leftover `dispatchSlotAction5IfActive = 0x800EFD80` is a different wrapper |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void dispatchSlotActionTwelveByGlobalId` at VRAM `0x800ECDDC`. First insn `addiu $sp, $sp, -0x18`; last live insn `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDFC` / `0x800ECE00`. Previous occupant is `craftMountedAnimationNpcHandler` at `0x800ECC28` (ends exactly here); next is leftover `fake_func_800ECE04` at `0x800ECE04`. One generated `jal 0x800ECDDC` inside `tickMissionObjectives` at `0x800FBD18` already dispatches the human name. `funcs.h` and overlay INL already used the human name |
+| Body semantics | Frame `-0x18`. `lui $v0, 0x8014` / `lhu $a0, -0x6A64($v0)` loads the global id from `0x8013959C`. Delay-slot `addiu $a1, $zero, 0xC` then `jal slotDispatcherIter` (`0x8003E8DC`) at `0x800ECDF0` with `addu $a2, $zero, $zero`. Restores `$ra` and returns. Name matches: this is the action-0xC dispatcher wrapper keyed by the global id |
+| TOML | Was `{ name = "func_800ECDDC", vram = 0x800ECDDC, size = 0x28 }` — stale leftover. Size already matched `0x800ECE04 - 0x800ECDDC`. Renamed to `dispatchSlotActionTwelveByGlobalId` |
+| Overlay section 4 | `{ .func = dispatchSlotActionTwelveByGlobalId, .offset = 0x00047CAC, .rom_size = 0x00000028 }` under `section_4_ovl_mission_funcs` (`0x800ECDDC - 0x800A5130 = 0x47CAC`; previous `0x47AF8 + 0x1B4 = 0x47CAC`; `0x47CAC + 0x28 = 0x47CD4` matches next `fake_func_800ECE04`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800ECDDC`. No leftover `func_800ECDDC` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`lhu` global id from `0x8013959C`, `a1 = 0xC`, `jal
+slotDispatcherIter`), previous (`craftMountedAnimationNpcHandler` /
+`0x800ECC28` ends at `0x800ECDDC`) and next (`fake_func_800ECE04` /
+`0x800ECE04`) boundaries, overlay span, and size already agreed on
+`dispatchSlotActionTwelveByGlobalId` / `0x28`. TOML still carried
+leftover `func_800ECDDC`; renamed it to match. This refutes H1
+(sources were not already synchronized), H3 (no leftover splat at
+this address in generated/TOML after the rename, no overlay
+collision, and no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800ECE04`), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No invented name.
+No build or runtime run required.
+
+Next census: leftover `fake_func_800ECE04` at `0x800ECE04` (size
+`0xC`). Neighbor peek already: companion `mission_overlay.txt`,
+generated headers/body/INL, and TOML already use the leftover splat
+name. First insn `srl $v0, $t1, 4`; last `multu $v0, $v1` at
+`0x800ECE0C`. No generated `jal 0x800ECE04`. Next generated occupant
+is `datItemActorNpcHandler` (`0x800ECE10`, `0x338`; TOML still
+leftover `func_800ECE10`). Companion comment says `func_800ECE10`
+was deleted s432 as a duplicate of that name. Last-15 titles after
+s1822 still include s1808's revisit, so the mandatory REVISIT gate
+does not fire.

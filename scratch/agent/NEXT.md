@@ -1,75 +1,71 @@
-# NEXT work unit (s1822)
+# NEXT work unit (s1823)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume leftover `func_800ECDDC`. Last-15 ledger titles after
-s1821 still include the s1808 revisit (`selected H2 menuIn/mission
+Resume leftover `fake_func_800ECE04`. Last-15 ledger titles after
+s1822 still include the s1808 revisit (`selected H2 menuIn/mission
 jal-sites`), so the 15-title all-sweep REVISIT gate does not fire.
 
-Census leftover `func_800ECDDC` (`0x800ECDDC`, size `0x28`).
-Neighbor peek already: companion `mission_overlay.txt` maps
-`dispatchSlotActionTwelveByGlobalId = 0x800ECDDC`; no
-`main_overlay.txt` occupant. Generated `funcs.h` / `funcs_40.c` /
-overlay INL already `dispatchSlotActionTwelveByGlobalId`. TOML still
-`{ name = "func_800ECDDC", vram = 0x800ECDDC, size = 0x28 }`.
-Previous occupant is now `craftMountedAnimationNpcHandler`
-(`0x800ECC28`, `0x1B4`; s1821 synchronized) then this wrapper.
-First insn `addiu $sp, $sp, -0x18`; last live `jr $ra` /
-`addiu $sp, $sp, 0x18` at `0x800ECDFC` / `0x800ECE00`. One
-generated `jal 0x800ECDDC` inside `tickMissionObjectives` at
-`0x800FBD18` already dispatches the human name. The body loads
-the global id from `lhu 0x8013959C` (`lui 0x8014` /
-`-0x6A64`), sets `a1 = 0xC`, and jals `slotDispatcherIter` at
-`0x800ECDF0`. Next occupant is leftover `fake_func_800ECE04`
-(`0x800ECE04`, `0xC`).
+Census leftover `fake_func_800ECE04` (`0x800ECE04`, size `0xC`).
+Neighbor peek already: companion `mission_overlay.txt`, generated
+`funcs.h` / `funcs_40.c` / overlay INL, and TOML already use
+`fake_func_800ECE04`. Previous occupant is now
+`dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`; s1822
+synchronized) then this leftover. First insn `srl $v0, $t1, 4`;
+then `addiu $v0, $v0, 0x9F`; last `multu $v0, $v1` at
+`0x800ECE0C`. No generated `jal 0x800ECE04`. Next generated
+occupant is `datItemActorNpcHandler` (`0x800ECE10`, `0x338`; first
+insn `addiu $sp, $sp, -0x140`). TOML still leftover
+`{ name = "func_800ECE10", vram = 0x800ECE10, size = 0x338 }`.
+Companion comment: `func_800ECE10` deleted s432 as a
+duplicate-symbol collision with `datItemActorNpcHandler`.
 
 Competing hypotheses:
 
 - H1: already synchronized — TOML, generated headers/body, overlay
-  INL, and companion already agree on one human name with matching
-  size (confirm only; no rename).
-- H2: one or more sources still carry stale `func_800ECDDC`.
-  Companion `mission_overlay.txt` already has
-  `dispatchSlotActionTwelveByGlobalId`. Rename the stale sources to
-  that companion name (do not invent a name) only if the live body
-  is the action-0xC dispatcher wrapper. If the live body does
-  not match that role, leave the leftover and do not steal the name.
+  INL, and companion already agree on the leftover splat name with
+  matching size (confirm only; no rename).
+- H2: one or more sources still carry stale `func_800ECE04`.
+  Companion already has `fake_func_800ECE04`. Do not invent a name
+  and do not steal `datItemActorNpcHandler` for this 0xC span.
 - H3: leftover splat, overlay collision, or size/boundary
-  disagreement (`craftMountedAnimationNpcHandler` ends at
-  `0x800ECDDC`; generated next occupant is
-  `fake_func_800ECE04` at `0x800ECE04`). Do not invent a name.
+  disagreement (`dispatchSlotActionTwelveByGlobalId` ends at
+  `0x800ECE04`; generated next occupant is
+  `datItemActorNpcHandler` at `0x800ECE10`). Leave the leftover
+  name if this is a mid-function orphan (no prologue; next
+  occupant has its own `addiu $sp`).
 - H4: companion, generated body, TOML, or section-4 row is missing.
 
 Exact commands (no game run):
 
 ```
 # TOML + generated + overlay INL
-grep -n '800ECDDC\|func_800ECDDC\|dispatchSlotActionTwelveByGlobalId\|800ECE04\|fake_func_800ECE04' \
+grep -n '800ECE04\|fake_func_800ECE04\|func_800ECE04\|800ECE10\|func_800ECE10\|datItemActorNpcHandler' \
   syms/rogue_squadron.syms.toml \
   ../N64Recomp/RecompiledFuncs/funcs.h \
   ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
 # generated body + callers
-grep -n 'func_800ECDDC\|dispatchSlotActionTwelveByGlobalId\|jal         0x800ECDDC' \
+grep -n 'fake_func_800ECE04\|func_800ECE04\|jal         0x800ECE04' \
   ../N64Recomp/RecompiledFuncs/funcs_4*.c
 # companion overlays
-grep -n '800ECDDC\|func_800ECDDC\|dispatchSlotActionTwelveByGlobalId\|800ECE04\|fake_func_800ECE04' \
+grep -n '800ECE04\|fake_func_800ECE04\|func_800ECE04\|800ECE10\|func_800ECE10\|datItemActorNpcHandler' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/*.txt
 ```
 
-Then read the generated body: `addiu $sp, $sp, -0x18` at
-`0x800ECDDC`; `lhu` global id from `0x8013959C`; `a1 = 0xC`;
-`jal slotDispatcherIter` at `0x800ECDF0`. Classify against the
-companion name; do not invent a name.
+Then read the generated body: `srl $v0, $t1, 4` at `0x800ECE04`;
+`addiu $v0, $v0, 0x9F`; `multu $v0, $v1` at `0x800ECE0C`. Classify
+as leftover splat vs split first instruction of the next occupant.
+Do not invent a name.
 
 Expected splits:
 
-- H1: all four sources already `dispatchSlotActionTwelveByGlobalId`
-  (or another agreed human name) at size `0x28`. Confirm.
-- H2: rename the stale `func_800ECDDC` placeholder(s) to
-  `dispatchSlotActionTwelveByGlobalId` (TOML and/or generated
-  headers/body/INL and/or jal sites) if the body matches.
+- H1: all four sources already `fake_func_800ECE04` at size `0xC`.
+  Confirm.
+- H2: rename the stale `func_800ECE04` placeholder(s) only if a
+  companion human name exists for this exact 0xC span (it does
+  not — companion leftover is `fake_func_800ECE04`).
 - H3: document the leftover/collision/size miss; leave the name.
-- H4: fill the missing source or leave as `func_*`.
+- H4: fill the missing source or leave as `fake_func_*`.
 
 Do not reopen the s1744 six-entry, s1760 jump-table, s1776
 main-text, s1792 unwatched-caller, or s1808 jal/`prev_pc` Rice

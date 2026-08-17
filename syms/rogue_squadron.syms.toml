@@ -1917,7 +1917,7 @@ functions = [
     { name = "fake_func_800EC6EC", vram = 0x800EC6EC, size = 0x4 },
     { name = "tickCraftMountedAnimationEffect", vram = 0x800EC6F0, size = 0x538 },
     { name = "craftMountedAnimationNpcHandler", vram = 0x800ECC28, size = 0x1B4 },
-    { name = "func_800ECDDC", vram = 0x800ECDDC, size = 0x28 },
+    { name = "dispatchSlotActionTwelveByGlobalId", vram = 0x800ECDDC, size = 0x28 },
     { name = "fake_func_800ECE04", vram = 0x800ECE04, size = 0xC },
     { name = "func_800ECE10", vram = 0x800ECE10, size = 0x338 },
     { name = "fake_func_800ED148", vram = 0x800ED148, size = 0x8 },
