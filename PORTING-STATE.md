@@ -81784,3 +81784,40 @@ Next census: `applyCraftAnimAndDetailParams` / `func_800DFB90` at
 the next session's discriminator, not this one. Last-15 titles after
 s1761 still include s1760's revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1762 (2026-08-16) — synchronized the applyCraftAnimAndDetailParams symbol
+
+Exact generated-symbol census for `0x800DFB90` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6615; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `applyCraftAnimAndDetailParams = 0x800DFB90` with comment "per-instance anim/detail setup (setNpcHealth + setObjectDetailLevel + initActorMotionParams)". Previous leftover splat `fake_func_800DFB8C = 0x800DFB8C`. Next contiguous named neighbor `playAttachmentMaterialSoundVariantA = 0x800DFF54`. `func_800DFB90` was deleted at companion s432 as a duplicate-symbol collision with this name (same leftover-splat class as `fake_func_800DFB8C`). No leftover `func_800DFB90` splat remains, no `D_800DFB90`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void applyCraftAnimAndDetailParams` at VRAM `0x800DFB90`. First insn `addiu $sp, $sp, -0x50`; last insn `addiu $sp, $sp, 0x50` at `0x800DFF50`. Previous leftover `fake_func_800DFB8C` is the one-instruction `addiu $sp, $sp, -0x18` at `0x800DFB8C`; next is `playAttachmentMaterialSoundVariantA` at `0x800DFF54`. `funcs.h` already declares the human name. No leftover `func_800DFB90`. No generated `jal 0x800DFB90` site |
+| Body semantics | Per-instance anim/detail setup matching the companion comment: `jal 0x800F2070` `setNpcHealth`, `jal 0x800F2830` `setObjectDetailLevel`, `jal 0x800F2888` `initActorMotionParams` twice, plus `jal 0x800F2B88` `initObjectAnimSubstruct` four times and `jal 0x800F2C6C` `initAnimSubstructFromParams` twice. Same helper family as `npcRadarDishInit` / `npcInitMinimalNoAnim` |
+| TOML (before) | `{ name = "func_800DFB90", vram = 0x800DFB90, size = 0x3C4 }` — size matches `0x800DFF54 - 0x800DFB90` |
+| Overlay section 4 | `{ .func = applyCraftAnimAndDetailParams, .offset = 0x0003AA60, .rom_size = 0x000003C4 }` under `section_4_ovl_mission_funcs` (`0x800DFB90 - 0x800A5130 = 0x3AA60`; leftover `0x3AA5C + 0x4 = 0x3AA60`; `0x3AA60 + 0x3C4 = 0x3AE24` matches next `playAttachmentMaterialSoundVariantA`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800DFB90`. No leftover `func_800DFB90` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`fake_func_800DFB8C` / `0x800DFB8C`) and next
+(`playAttachmentMaterialSoundVariantA` / `0x800DFF54`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `applyCraftAnimAndDetailParams`, and only the TOML name was a
+stale `func_800DFB90` placeholder. Corrected TOML to
+`applyCraftAnimAndDetailParams`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `playAttachmentMaterialSoundVariantA` / `func_800DFF54` at
+`0x800DFF54` (size `0x190`). Last-15 titles after s1762 still include
+s1760's revisit, so the mandatory REVISIT gate does not fire.
