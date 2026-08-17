@@ -235,7 +235,7 @@ jump-table-case session (s1744/s1760 H3-stop-tick; Rice still dies ~135 s). Audi
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
-are synchronized through `noopHandler_800DFB84` at `0x800DFB84` (s1759).
+are synchronized through leftover `fake_func_800DFB8C` at `0x800DFB8C` (s1761).
 See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
 backlog, and `PORTING-STATE.md` for evidence.
 
@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1760)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1761)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3037,12 +3037,14 @@ collision.
 | s1758 | Synchronized `resetCraftSubsystemGlobal` (`0x800DFB78`, `0xC`). Delay-slot `sw $zero, -0x3F60($v0)` with `$v0 = 0x80110000` stores 0 at `0x8010C0A0` — the same word `npcGroundTransportUpdate` case 4 compares before `playSpeechClip` `0x217`. Sole generated caller `resetObjectContextPool` at `0x800EC4F0`. TOML was stale `func_800DFB78`; generated headers/body and section-4 already used the human name. |
 | s1759 | Synchronized `noopHandler_800DFB84` (`0x800DFB84`, `0x8`). Pure `jr $ra` / `nop` stub; no generated `jal 0x800DFB84` site. TOML was stale `func_800DFB84`; generated headers/body and section-4 already used the human name. |
 | s1760 | Mandatory REVISIT. Three-arm Rice watch of the complete `menuOverlayInit` 11-way jump table on the attract A/Start title-like 1024. All arms passed controls. No case increases vs hold: case 9 `0x800C28F0` stays 1; cases 3/6/10 stay 0; cases 1/2/4-5-7/8 and the dispatcher drop. Extra menu dest +1 reproduced. H3-stop-tick selected; H1/H2/H4 rejected. Overlay-alias: hold's high counts at those PCs are cinematic-resident. |
+| s1761 | Confirmed leftover `fake_func_800DFB8C` (`0x800DFB8C`, `0x4`). One-instruction `addiu $sp, $sp, -0x18` orphan between `noopHandler_800DFB84` and `applyCraftAnimAndDetailParams` (whose prologue is `addiu $sp, $sp, -0x50`, so this is not a split first instruction). Companion leftover splat; `func_800DFB90` deleted s432 as a duplicate of the next function. No leftover `func_800DFB8C`; TOML, generated headers/body, and section-4 already use the leftover name. |
 
-The sweep cursor after s1760 is leftover `fake_func_800DFB8C` / `0x800DFB8C`
-(size `0x4`), then `applyCraftAnimAndDetailParams` / `0x800DFB90`. Mandatory
-revisits in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760.
-After s1760 the last-15 titles include this revisit, so the next iteration
-resumes the sweep.
+The sweep cursor after s1761 is `applyCraftAnimAndDetailParams` /
+`func_800DFB90` / `0x800DFB90` (size `0x3C4`). Neighbor peek already
+shows TOML still `func_800DFB90` while generated/overlay use the human
+name. Mandatory revisits in this window: s1650, s1666, s1682, s1698,
+s1714, s1744, s1760. After s1761 the last-15 titles still include
+s1760's revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

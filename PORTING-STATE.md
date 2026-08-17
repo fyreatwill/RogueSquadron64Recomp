@@ -81745,3 +81745,42 @@ The 1024 is still not a classified screen (not hangar, not viewer, not
 a new `menuOverlayInit` case, not the s1744 three inner loops). Do not
 repeat this jump-table recipe. Next work resumes the generated-symbol
 sweep at leftover `fake_func_800DFB8C` / `0x800DFB8C` (size `0x4`).
+
+## Session 1761 (2026-08-16) — confirmed the leftover fake_func_800DFB8C symbol
+
+Exact generated-symbol census for leftover `0x800DFB8C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6555; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800DFB8C = 0x800DFB8C` leftover splat. Comment: `func_800DFB90` deleted s432 as a duplicate-symbol collision with `applyCraftAnimAndDetailParams`, same leftover class as `fake_func_800D2C98` / `fake_func_800D4EC4` / `fake_func_800DD2C4`. Previous contiguous generated neighbor `noopHandler_800DFB84 = 0x800DFB84`. Next named neighbor `applyCraftAnimAndDetailParams = 0x800DFB90`. No leftover `func_800DFB8C` splat, no `D_800DFB8C`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_38.c` | `RECOMP_FUNC void fake_func_800DFB8C` at VRAM `0x800DFB8C`. One-instruction body: `addiu $sp, $sp, -0x18` then the function ends (no `jr $ra`). Previous `noopHandler_800DFB84` last insn is the delay-slot `nop` at `0x800DFB88`; next is `applyCraftAnimAndDetailParams` at `0x800DFB90` in `funcs_39.c` (`addiu $sp, $sp, -0x50` — a different frame size, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800DFB8C`. No generated `jal 0x800DFB8C` site |
+| Body semantics | 4-byte orphan `addiu $sp, $sp, -0x18` fragment sitting between the `jr $ra` stub and the real `applyCraftAnimAndDetailParams` prologue. Matches the leftover-splat family that splat emits immediately before a deleted duplicate symbol |
+| TOML | `{ name = "fake_func_800DFB8C", vram = 0x800DFB8C, size = 0x4 }` — already the leftover name; size matches `0x800DFB90 - 0x800DFB8C` |
+| Overlay section 4 | `{ .func = fake_func_800DFB8C, .offset = 0x0003AA5C, .rom_size = 0x00000004 }` under `section_4_ovl_mission_funcs` (`0x800DFB8C - 0x800A5130 = 0x3AA5C`; `0x3AA54 + 0x8 = 0x3AA5C`; `0x3AA5C + 0x4 = 0x3AA60` matches next `applyCraftAnimAndDetailParams`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800DFB8C`. No leftover `func_800DFB8C` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated one-instruction
+`addiu $sp, $sp, -0x18` body, previous (`noopHandler_800DFB84` /
+`0x800DFB84`) and next (`applyCraftAnimAndDetailParams` / `0x800DFB90`)
+boundaries, TOML name and size, and section-4 overlay span already
+agree. No TOML or generated-name change. This refutes H2 (no stale
+`func_800DFB8C` placeholder), H3 (no overlay collision, second occupant,
+or size/boundary disagreement; size is `0x4` as expected), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: `applyCraftAnimAndDetailParams` / `func_800DFB90` at
+`0x800DFB90` (size `0x3C4`). Neighbor peek already shows TOML still
+`func_800DFB90` while generated/overlay use the human name — that is
+the next session's discriminator, not this one. Last-15 titles after
+s1761 still include s1760's revisit, so the mandatory REVISIT gate
+does not fire.
