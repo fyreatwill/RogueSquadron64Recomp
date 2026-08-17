@@ -1936,7 +1936,7 @@ functions = [
     { name = "initLevelMusicBank", vram = 0x800EF048, size = 0x168 },
     { name = "stopAllMusicWithFade", vram = 0x800EF1B0, size = 0x148 },
     { name = "startLevelBackgroundMusic", vram = 0x800EF2F8, size = 0x218 },
-    { name = "func_800EF510", vram = 0x800EF510, size = 0x260 },
+    { name = "tickObjectSoundCueState", vram = 0x800EF510, size = 0x260 },
     { name = "func_800EF770", vram = 0x800EF770, size = 0x1EC },
     { name = "func_800EF95C", vram = 0x800EF95C, size = 0x1E4 },
     { name = "func_800EFB40", vram = 0x800EFB40, size = 0x54 },

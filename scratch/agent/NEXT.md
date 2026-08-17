@@ -1,38 +1,38 @@
-# NEXT work unit (s1843)
+# NEXT work unit (s1844)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol sweep. s1842 synchronized leftover
-`func_800EF2F8` to `startLevelBackgroundMusic`; last-15 after s1842
+Resume the generated-symbol sweep. s1843 synchronized leftover
+`func_800EF510` to `tickObjectSoundCueState`; last-15 after s1843
 include s1840's M4 REVISIT, so they are not all sweep. Do not start
 another M4 instrument this iteration. Do not repeat any
 `submitGfxFrame` entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EF510`
-(`0x800EF510`, size `0x260`). Companion `mission_overlay.txt` already
-names `tickObjectSoundCueState`; generated headers/body/INL already
-use that name; TOML still uses the leftover splat name.
+Exact generated-symbol census for leftover `func_800EF770`
+(`0x800EF770`, size `0x1EC`). Companion `mission_overlay.txt` already
+names `triggerStageMusicForNamedDatItem`; generated headers/body/INL
+already use that name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `tickObjectSoundCueState` and
-  the `0x260` span.
+  TOML, and section-4 already agree on `triggerStageMusicForNamedDatItem`
+  and the `0x1EC` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EF510` while companion uses `tickObjectSoundCueState`.
+  `func_800EF770` while companion uses `triggerStageMusicForNamedDatItem`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EF510`, or the TOML size is not `0x260`, or
+  overlay occupies `0x800EF770`, or the TOML size is not `0x1EC`, or
   the generated body is not this function (first insn is not
-  `lui $v0, 0x8011` then `lw $v0, -0x35E0($v0)` / `addiu $sp, $sp, -0x20`
-  / last is not `jr $ra` / `addiu $sp, $sp, 0x20` at `0x800EF768` /
-  `0x800EF76C`).
+  `lui $v0, 0x8011` then `lw $v0, -0x35E0($v0)` / `addiu $sp, $sp, -0x18`
+  / last is not `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EF954` /
+  `0x800EF958`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EF510\|func_800EF510\|tickObjectSoundCueState' \
+grep -n '800EF770\|func_800EF770\|triggerStageMusicForNamedDatItem' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -42,7 +42,7 @@ grep -n '800EF510\|func_800EF510\|tickObjectSoundCueState' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EF510\|tickObjectSoundCueState\|0x800EF510\|0x800EF768\|0x800EF770' \
+grep -n 'func_800EF770\|triggerStageMusicForNamedDatItem\|0x800EF770\|0x800EF954\|0x800EF95C' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -53,12 +53,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `tickObjectSoundCueState` / `0x260`.
-  No edit. Next leftover `func_800EF770` (`0x800EF770`, `0x1EC`;
-  generated headers/INL already `triggerStageMusicForNamedDatItem`;
-  TOML still leftover).
-- H2: TOML (and/or generated) still `func_800EF510`. Rename to
-  `tickObjectSoundCueState`. Next leftover `func_800EF770`.
+- H1: all four sources already `triggerStageMusicForNamedDatItem` /
+  `0x1EC`. No edit. Next leftover `func_800EF95C` (`0x800EF95C`,
+  `0x1E4`; generated headers/INL already
+  `triggerStageAmbientForNamedDatItem`; TOML still leftover).
+- H2: TOML (and/or generated) still `func_800EF770`. Rename to
+  `triggerStageMusicForNamedDatItem`. Next leftover `func_800EF95C`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 
