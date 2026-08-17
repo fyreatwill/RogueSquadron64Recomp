@@ -82639,3 +82639,43 @@ at `0x800E4674` (size `0x200`). Neighbor peek already shows companion,
 generated, and section-4 using the human name while TOML is still
 `func_800E4674`. Last-15 titles after s1782 still include s1776's
 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1783 (2026-08-16) — synchronized the playDualTextureAttachmentCueB symbol
+
+Exact generated-symbol census for `0x800E4674` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6919; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playDualTextureAttachmentCueB = 0x800E4674` with comment "two-texture attachment cue + 3D sound (sibling)". Previous named kernel `resetCraftInstanceMotionState = 0x800E4480`. Next named kernel `playAttachmentMaterialSoundSimpleB = 0x800E4874`. No leftover `func_800E4674` splat, no `D_800E4674`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void playDualTextureAttachmentCueB` at VRAM `0x800E4674`. First insn `addiu $sp, $sp, -0xE8`; last insn `jr $ra` / `addiu $sp, $sp, 0xE8` at `0x800E486C` / `0x800E4870`. Previous `resetCraftInstanceMotionState` ends at `0x800E466C` / `0x800E4670`; next is `playAttachmentMaterialSoundSimpleB` at `0x800E4874`. `funcs.h` already declares the human name. No leftover `func_800E4674`. No generated `jal 0x800E4674` site |
+| Body semantics | Craft `s2 = *(a0+4)`. Two `lookupHmtTextureByName` (`0x80058360`) against HMT name `0x800A82CC` with `a2=0` then `a2=1`. If the indexed `+0xDC` float is nonzero, paired `resolveNpcAttachmentPos` (`0x800F0F94`). Then paired `tickProgressChannel` (`0x800F1870`) and, when both return 1, paired `triggerCueWithSlotEffect` (`0x800F2FCC`) plus `play3DSoundEvent` (`0x800989D8`). Name matches the companion two-texture + 3D-sound sibling |
+| TOML (before) | `{ name = "func_800E4674", vram = 0x800E4674, size = 0x200 }` — size matches `0x800E4874 - 0x800E4674` |
+| Overlay section 4 | `{ .func = playDualTextureAttachmentCueB, .offset = 0x0003F544, .rom_size = 0x00000200 }` under `section_4_ovl_mission_funcs` (`0x800E4674 - 0x800A5130 = 0x3F544`; previous `0x3F350 + 0x1F4 = 0x3F544`; `0x3F544 + 0x200 = 0x3F744` matches next `playAttachmentMaterialSoundSimpleB`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E4674`. No leftover `func_800E4674` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated two-texture attachment-cue
+body, previous (`resetCraftInstanceMotionState` / `0x800E4480`) and next
+(`playAttachmentMaterialSoundSimpleB` / leftover `func_800E4874` /
+`0x800E4874`) boundaries, TOML size, and section-4 overlay span agreed;
+the generated headers/body were already `playDualTextureAttachmentCueB`,
+and only the TOML name was a stale `func_800E4674` placeholder.
+Corrected TOML to `playDualTextureAttachmentCueB`. This refutes H1 (TOML
+was not already synchronized), H3 (no leftover splat at this address,
+overlay collision, or size/boundary disagreement; size is `0x200` as
+expected), and H4 (companion, generated body, TOML, and section-4 row
+are all present). No build or runtime run required.
+
+Next census: `playAttachmentMaterialSoundSimpleB` / leftover `func_800E4874`
+at `0x800E4874` (size `0x140`). Neighbor peek already shows companion,
+generated, and section-4 using the human name while TOML is still
+`func_800E4874`. Last-15 titles after s1783 still include s1776's
+revisit, so the mandatory REVISIT gate does not fire.
