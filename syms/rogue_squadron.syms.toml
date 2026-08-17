@@ -1970,7 +1970,7 @@ functions = [
     { name = "getNpcMissingHealth", vram = 0x800F215C, size = 0x40 },
     { name = "getNpcHealthPercentage", vram = 0x800F219C, size = 0x6C },
     { name = "isVectorWithinConeAndRange", vram = 0x800F2208, size = 0x108 },
-    { name = "func_800F2310", vram = 0x800F2310, size = 0xE8 },
+    { name = "isVectorInConeWriteDistance", vram = 0x800F2310, size = 0xE8 },
     { name = "func_800F23F8", vram = 0x800F23F8, size = 0x148 },
     { name = "func_800F2540", vram = 0x800F2540, size = 0x108 },
     { name = "func_800F2648", vram = 0x800F2648, size = 0x118 },

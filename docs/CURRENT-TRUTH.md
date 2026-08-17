@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1873 (2026-08-17).
+detail. Reviewed through s1874 (2026-08-17).
 
 ## Current state
 
@@ -67,14 +67,14 @@ detail. Reviewed through s1873 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800F2310`
-   (`0x800F2310`, size `0xE8`). Companion `mission_overlay.txt`
+1. Resume the generated-symbol sweep at leftover `func_800F23F8`
+   (`0x800F23F8`, size `0x148`). Companion `mission_overlay.txt`
    and generated headers/body/INL already name
-   `isVectorInConeWriteDistance`; TOML still leftover
-   `func_800F2310`. First insn `addiu $sp, $sp, -0x40`; last
-   `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F23F0` /
-   `0x800F23F4`. Next already-named occupant is
-   `computeTurnAxisTowardTarget` at `0x800F23F8`. After s1873
+   `computeTurnAxisTowardTarget`; TOML still leftover
+   `func_800F23F8`. First insn `addiu $sp, $sp, -0x58`; last
+   `jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F2538` /
+   `0x800F253C`. Next already-named occupant is
+   `computeTurnVectorTowardTarget` at `0x800F2540`. After s1874
    the last-15 titles still include s1872's hangar/512 revisit,
    so the sweep REVISIT gate does not fire. Archive:
    `PROJECT-OVERVIEW.md` §33–§35. About 1,548 placeholder
@@ -144,7 +144,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1873 through leftover `func_800F2208` became
+s1648–s1874 through leftover `func_800F2310` became
+`isVectorInConeWriteDistance` (`0x800F2310`, `0xE8`) after leftover
+`func_800F2208` became
 `isVectorWithinConeAndRange` (`0x800F2208`, `0x108`) after leftover
 `func_800F1FF4` became
 `initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`, `0x7C`) after leftover
@@ -294,6 +296,8 @@ and leftover `func_800F1FF4` became
 `initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`, `0x7C`)
 and leftover `func_800F2208` became
 `isVectorWithinConeAndRange` (`0x800F2208`, `0x108`)
+and leftover `func_800F2310` became
+`isVectorInConeWriteDistance` (`0x800F2310`, `0xE8`)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 (§35). s1728 is maintenance only.
 

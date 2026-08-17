@@ -3153,17 +3153,18 @@ collision.
 | s1871 | Synchronized `initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`, `0x7C`). Gate `*(actor+0x1A7)`; uninit path `getNpcContextField8(actor+0x198)`, `computeBillboardFacingVector` into `sp+0x10`, copies the NPC field_8 vec3 to dest+0x10/+0x14/+0x18 and the facing vector to dest+0x1C/+0x20/+0x24. 4 generated `jal 0x800F1FF4` sites (`tickAtAtAudioAndWeaponState`, `npcAtStHandleDestruction`, `npcDebrisFieldUpdate`, `npcWingmanSteerToward`) already dispatch the human name. TOML was stale `func_800F1FF4`; companion, generated headers/body, and section-4 already used the human name. |
 | s1872 | Mandatory M4 REVISIT. Selected UNEVALUABLE for hangar/512 live `0x8000` Y: four port arms never published origin `0x006ab400`/`0x006ab800` or VI 512/1024 (all `640→2→640` at `0x00696100`). Arm 1 attribution-LLE controls fired (gate=attr, mark flush/entry, hangar=0, gated `n_flush=0`). HLE wait-for-1024 timed out at 180s last width 640. Hangar-origin gate landed; H-* table still unchecked. Logs under `scratch/agent/s1872_m4_y8000_hangar512/`. |
 | s1873 | Synchronized `isVectorWithinConeAndRange` (`0x800F2208`, `0x108`). Origin+axis at `$a0`/`+0xC`, range `$a1` (xz `dx^2+dz^2` vs `range^2`), cosine `$a2`, target `$a3`; `vec3Dot`/`vec3Length` then compare cosine to the threshold. 0 generated `jal 0x800F2208` / `LOOKUP_FUNC` sites. TOML was stale `func_800F2208`; companion, generated headers/body, and section-4 already used the human name. |
+| s1874 | Synchronized `isVectorInConeWriteDistance` (`0x800F2310`, `0xE8`). Same cone args as the sister helper, plus stack out-pointer at `0x50($sp)`: on pass, writes `vec3Length(delta)` and returns 1. 0 generated `jal 0x800F2310` / `LOOKUP_FUNC` sites. TOML was stale `func_800F2310`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1873 is leftover `func_800F2310`
-(`0x800F2310`, size `0xE8`). Neighbor peek: companion
+The sweep cursor after s1874 is leftover `func_800F23F8`
+(`0x800F23F8`, size `0x148`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`isVectorInConeWriteDistance`; TOML still leftover
-`func_800F2310`. First insn `addiu $sp, $sp, -0x40`; last live
-`jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F23F0` / `0x800F23F4`.
-Next already-named occupant is `computeTurnAxisTowardTarget`
-at `0x800F23F8`. Mandatory revisits in this window: s1650,
+`computeTurnAxisTowardTarget`; TOML still leftover
+`func_800F23F8`. First insn `addiu $sp, $sp, -0x58`; last live
+`jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F2538` / `0x800F253C`.
+Next already-named occupant is `computeTurnVectorTowardTarget`
+at `0x800F2540`. Mandatory revisits in this window: s1650,
 s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792,
-s1808, s1824, s1840, s1856, s1872. After s1873 the last-15
+s1808, s1824, s1840, s1856, s1872. After s1874 the last-15
 titles still include that hangar/512 revisit, so the next
 iteration resumes the leftover census rather than another M4 walk.
 
