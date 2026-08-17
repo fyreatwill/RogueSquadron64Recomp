@@ -86314,3 +86314,53 @@ Next leftover is `func_800F07AC` (`0x800F07AC`, `0x1FC`;
 companion/generated `validateActorTargetLOS`). Last-15 titles after
 s1858 still include s1856's M4 revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1859 (2026-08-17) — synchronized the isPendingChildNpcActive symbol
+
+Exact generated-symbol census for leftover `func_800F06BC` at
+`0x800F06BC` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 14089; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `isPendingChildNpcActive = 0x800F06BC`. Comment: 27 callers — `(obj_ptr)` true iff obj's queued child NPC slot is live and flagged active. Previous leftover `updateNpcEventTimer = 0x800EFDE0` (s1858 H2). Next named kernel `validateActorTargetLOS = 0x800F07AC` |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F06BC`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`. `main_overlay.txt` only mentions the name in a comment |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void isPendingChildNpcActive` at VRAM `0x800F06BC`. First insn `addiu $sp, $sp, -0x20` at `0x800F06BC`; last live `jr $ra` / `addiu $sp, $sp, 0x20` at `0x800F07A4` / `0x800F07A8`. Previous is already `updateNpcEventTimer` (`0x800EFDE0`, last `jr $ra` / `addiu $sp, $sp, 0x90` at `0x800F06B4` / `0x800F06B8`); next is already `validateActorTargetLOS` at `0x800F07AC` (`addiu $sp, $sp, -0x58`). `funcs.h` and overlay INL already the human name. No leftover `func_800F06BC` in generated headers/body/INL |
+| Body semantics | `$s0 = $a0+0x114`. Early-out 0 if `lbu 0x21($s0)` (`npc+0x135`) is zero or `lbu 0x20($s0)` (`npc+0x134`) is zero. Early-out 0 if any of `lhu 0x1C` / `0x1E` / `0x1A` (`npc+0x130` / `+0x132` / `+0x12E`) is `0xFFFF`. Then `jal findActiveNpcInSlotChain` (`0x8003FC28`) on `lhu 0x1C`; if the result is not `0xFFFF`, `jal getNpcContextByIndex` (`0x8004013C`) and if `*(u16*)(ctx+0x14) & 0x10` is clear, return 1. Else if `lbu 0x20 != 1` return 0; second `findActiveNpcInSlotChain` either stores `0xFFFF` at `0x1A` or `getNpcContextByIndex` + `unregisterAndFreeNpcSlot` (`0x8003E7D0`), then stores `0xFFFF` at `0x1E` and 0 at `0x20` and returns 0. Matches the companion predicate (with a reap side-effect when child flag bit `0x10` is set) |
+| Callers | 26 generated `jal 0x800F06BC` sites (companion comment says 27): two `LOOKUP_FUNC(0x800F06BC)` in main `.text` (`aimOrientNpcTowardTarget`, `attachedAudioVisualEmitterNpcHandler`); twenty-four direct `isPendingChildNpcActive(rdram, ctx)` in `updateNpcOrientationFromMotion`, `tickAtAtBodyTransform`, `npcAtAtUpdate`, `updateAtStBodyKinematics`, `npcAtStUpdate`, `npcTankDroidComputeAimMotion`, `npcTankDroidUpdate`, `npcRadarDishComputeAimMotion`, `transformCraftDualAnchorsAndApplyMotion`, `tickEnemyCraftWithDestruction`, `transformCraftAnchorsAndApplySubFx`, `tickCraftSplineOrientation`, `tickCraftSplineOrientationDual` (2), `transformCraftAnchorsApplySubFx2`, `tickCraftSplineOrientationVariant` (3), `transformCraftAnchorsApplySubFx3` (2), `tickFighterSquadronWithSplinePaths`, `npcGroundTroopUpdate`, `computeNpcOrientationFromAimVectors`, `npcAtPtUpdate` |
+| TOML | Was `{ name = "func_800F06BC", vram = 0x800F06BC, size = 0xF0 }` — stale leftover. Size already matched `0x800F07AC - 0x800F06BC`. Renamed to `isPendingChildNpcActive` |
+| Overlay section 4 | `{ .func = isPendingChildNpcActive, .offset = 0x0004B58C, .rom_size = 0x000000F0 }` under `section_4_ovl_mission_funcs` (`0x800F06BC - 0x800A5130 = 0x4B58C`; previous `0x4ACB0 + 0x8DC = 0x4B58C`; `0x4B58C + 0xF0 = 0x4B67C` matches next `validateActorTargetLOS`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F06BC`. No leftover `func_800F06BC` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x20` / `jr $ra` / `addiu $sp, $sp, 0x20` at
+`0x800F06BC` / `0x800F07A4` / `0x800F07A8`), previous
+(`updateNpcEventTimer` / `0x800EFDE0`) and next
+(`validateActorTargetLOS` / `0x800F07AC`) boundaries, overlay span,
+and size already agreed on `isPendingChildNpcActive` / `0xF0`.
+TOML still carried leftover `func_800F06BC`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F07AC`; first insn is
+`addiu $sp, $sp, -0x20` and last is `jr $ra` / `addiu $sp, $sp, 0x20`
+at `0x800F07A4` / `0x800F07A8`), and H4 (companion, generated body,
+TOML, and section-4 row are all present). No invented name. No
+build or runtime run required.
+
+Next census: leftover `func_800F07AC` at `0x800F07AC` (size `0x1FC`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `validateActorTargetLOS`; TOML still leftover
+`func_800F07AC`. First insn `addiu $sp, $sp, -0x58`; last live
+`jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F09A0` / `0x800F09A4`.
+Next leftover is `func_800F09A8` (`0x800F09A8`, `0x1FC`;
+companion/generated `computeActorAnchorDeltaAfterLOS`). Last-15 titles after
+s1859 still include s1856's M4 revisit, so the mandatory REVISIT
+gate does not fire.

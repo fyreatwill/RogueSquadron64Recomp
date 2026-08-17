@@ -1951,7 +1951,7 @@ functions = [
     { name = "dispatchSlotAction5IfActive", vram = 0x800EFD80, size = 0x5C },
     { name = "fake_func_800EFDDC", vram = 0x800EFDDC, size = 0x4 },
     { name = "updateNpcEventTimer", vram = 0x800EFDE0, size = 0x8DC },
-    { name = "func_800F06BC", vram = 0x800F06BC, size = 0xF0 },
+    { name = "isPendingChildNpcActive", vram = 0x800F06BC, size = 0xF0 },
     { name = "func_800F07AC", vram = 0x800F07AC, size = 0x1FC },
     { name = "func_800F09A8", vram = 0x800F09A8, size = 0x1FC },
     { name = "func_800F0BA4", vram = 0x800F0BA4, size = 0x220 },

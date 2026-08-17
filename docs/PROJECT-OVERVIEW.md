@@ -3138,17 +3138,18 @@ collision.
 | s1856 | Mandatory M4 REVISIT. Selected H-never-live: VI 640 attribution LLE (`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1`) had `n_entry=15921` / `n_flush=542336` / `n_hdr=9229` and `n_y8000_entry=n_y8000_any=0`. Same-run marks at flush-site (viw=320, `r16=0xD68`) and `L_17F0` entry (viw=640, Y=`05C6/05CA/05C4`). HLE-only arm printed zero `[m4-y8000]` lines. Single-source; hangar/512 unchecked. Table: `docs/M4-ACCUMULATOR-GROUND-TRUTH.md`. |
 | s1857 | Confirmed leftover `fake_func_800EFDDC` (`0x800EFDDC`, `0x4`, H1). Single-insn orphan `lw $v1, 0xCC($fp)` between `dispatchSlotAction5IfActive` and `updateNpcEventTimer`. Companion, generated headers/body/INL, TOML, and section-4 already agreed; no leftover `func_800EFDDC`; no generated `jal 0x800EFDDC`. |
 | s1858 | Synchronized `updateNpcEventTimer` (`0x800EFDE0`, `0x8DC`). Gate `*(npc+0x135)`; decrements float timer at `npc+0x124` by dt; on expire calls `getLevelDatItemByName` and the slot-action / detail-level family. 19 generated `jal 0x800EFDE0` sites (1 `LOOKUP_FUNC` in `attachedAudioVisualEmitterNpcHandler` + 18 direct NPC updates) already dispatch the human name. TOML was stale `func_800EFDE0`; companion, generated headers/body, and section-4 already used the human name. |
+| s1859 | Synchronized `isPendingChildNpcActive` (`0x800F06BC`, `0xF0`). Gate `*(npc+0x135)` / `*(npc+0x134)` and three `0xFFFF` slot halfwords; `findActiveNpcInSlotChain` + `getNpcContextByIndex` returns 1 when child flag `+0x14` bit `0x10` is clear, else reaps via `unregisterAndFreeNpcSlot`. 26 generated `jal 0x800F06BC` sites (2 `LOOKUP_FUNC` in main `.text` + 24 direct overlay) already dispatch the human name. TOML was stale `func_800F06BC`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1858 is leftover `func_800F06BC`
-(`0x800F06BC`, size `0xF0`). Neighbor peek: companion
+The sweep cursor after s1859 is leftover `func_800F07AC`
+(`0x800F07AC`, size `0x1FC`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`isPendingChildNpcActive`; TOML still leftover `func_800F06BC`. First
-insn `addiu $sp, $sp, -0x20`; last live `jr $ra` / `addiu $sp, $sp, 0x20`
-at `0x800F07A4` / `0x800F07A8`. Next leftover is `func_800F07AC`
-(`0x800F07AC`, `0x1FC`; companion/generated `validateActorTargetLOS`;
+`validateActorTargetLOS`; TOML still leftover `func_800F07AC`. First
+insn `addiu $sp, $sp, -0x58`; last live `jr $ra` / `addiu $sp, $sp, 0x58`
+at `0x800F09A0` / `0x800F09A4`. Next leftover is `func_800F09A8`
+(`0x800F09A8`, `0x1FC`; companion/generated `computeActorAnchorDeltaAfterLOS`;
 TOML still leftover). Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776, s1792, s1808, s1824, s1840, s1856. After s1858 the last-15
+s1776, s1792, s1808, s1824, s1840, s1856. After s1859 the last-15
 titles still include s1856's M4 revisit, so the next iteration
 resumes the leftover sweep.
 
