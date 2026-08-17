@@ -3150,19 +3150,20 @@ collision.
 | s1868 | Synchronized `tickProgressChannel` (`0x800F1870`, `0x2D0`). Mode `a2` 0/1/else selects raw i16 / norm float / advanced-flag triplets at `state+0x15C/+0x158/+0x161`, `+0x188/+0x184/+0x18D`, or `a2+0x24/+0x20/+0x29`; normalizes via `div.s` by float `0x800A89D4`, then `gatherAndSortNearbyNpcViewPoints` on viewpoint `a1`. 45 generated `jal 0x800F1870` sites already dispatch the human name. TOML was stale `func_800F1870`; companion, generated headers/body, and section-4 already used the human name. Companion `(state, mode, altState, outFloatPtr)` arg order is stale: callers pass viewpoint in `a1` and mode-or-alt in `a2`. |
 | s1869 | Synchronized `raycastTerrainAndNpcs` (`0x800F1B40`, `0x33C`). Origin `$a0`, direction `$a1` scaled by max-range stack `$f20`; flag bit0 `sampleTerrainAtNpcPosition`/`sampleTerrainSurfaceAtWorldXz`; flag bit1 walks `0x8010B340` pairs via `findActiveNpcInSlotChain` / `getNpcContextByIndex` then `findSegmentObjectSphereHit` or `projectPointOntoObjectSphereHit`. 11 generated `jal 0x800F1B40` sites in `renderNpcAnchoredProceduralEffect` already dispatch the human name. TOML was stale `func_800F1B40`; companion, generated headers/body, and section-4 already used the human name. |
 | s1870 | Synchronized `initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`). Gate `*(actor+0x1A7)`; uninit path writes `0xFFFF` to out+0x6, early-exits on `a1` or flags at `actor+0x1A4` mask `0xFF00FF00`, optional `getNpcContextField8` vec3 copy when `a3==1`, then `parseDatItemCommon`. Already-init path may invalidate out+0x6 vs `actor+0x198` and adjust refcounts at `+0x19C`/`+0x1A0`. 18 generated `jal 0x800F1E7C` sites (16 overlay already human-named; 2 `LOOKUP_FUNC` in `npcPowerGeneratorUpdate` / `npcWordDevastatorUpdate`). TOML was stale `func_800F1E7C`; companion, generated headers/body, and section-4 already used the human name. |
+| s1871 | Synchronized `initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`, `0x7C`). Gate `*(actor+0x1A7)`; uninit path `getNpcContextField8(actor+0x198)`, `computeBillboardFacingVector` into `sp+0x10`, copies the NPC field_8 vec3 to dest+0x10/+0x14/+0x18 and the facing vector to dest+0x1C/+0x20/+0x24. 4 generated `jal 0x800F1FF4` sites (`tickAtAtAudioAndWeaponState`, `npcAtStHandleDestruction`, `npcDebrisFieldUpdate`, `npcWingmanSteerToward`) already dispatch the human name. TOML was stale `func_800F1FF4`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1870 is leftover `func_800F1FF4`
-(`0x800F1FF4`, size `0x7C`). Neighbor peek: companion
+The sweep cursor after s1871 is leftover `func_800F2208`
+(`0x800F2208`, size `0x108`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`initActorRenderDescriptorWithNpcVelocity`; TOML still leftover
-`func_800F1FF4`. First insn `addiu $sp, $sp, -0x30`; last live
-`jr $ra` / `addiu $sp, $sp, 0x30` at `0x800F2068` / `0x800F206C`.
-Next leftover after the already-named health family is
-`func_800F2208` (`0x800F2208`, `0x108`). Mandatory revisits in
-this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776, s1792, s1808, s1824, s1840, s1856. After s1870 the
-last-15 titles still include s1856's M4 revisit, so the next
-iteration resumes the leftover sweep.
+`isVectorWithinConeAndRange`; TOML still leftover
+`func_800F2208`. First insn `addiu $sp, $sp, -0x48`; last live
+`jr $ra` / `addiu $sp, $sp, 0x48` at `0x800F2308` / `0x800F230C`.
+Next already-named occupant is `isVectorInConeWriteDistance`
+at `0x800F2310`. Mandatory revisits in this window: s1650,
+s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792,
+s1808, s1824, s1840, s1856. After s1871 the last-15 titles
+are s1857–s1871, all sweep, so the next iteration is a
+mandatory M4 hangar/512 REVISIT, not another leftover census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

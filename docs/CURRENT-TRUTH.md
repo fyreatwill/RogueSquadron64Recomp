@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1870 (2026-08-17).
+detail. Reviewed through s1871 (2026-08-17).
 
 ## Current state
 
@@ -65,23 +65,36 @@ detail. Reviewed through s1870 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover
-   `func_800F1FF4` (`0x800F1FF4`, size `0x7C`). Companion
-   `mission_overlay.txt` and generated headers/body/INL already name
-   `initActorRenderDescriptorWithNpcVelocity`; TOML still leftover
-   `func_800F1FF4`. Next leftover after the already-named health
-   family is `func_800F2208` (`0x800F2208`, `0x108`). s1870
-   synchronized leftover `func_800F1E7C` to
-   `initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`).
-   s1856 selected H-never-live for the parked M4 `0x8000` Y on VI
-   640 attribution LLE (single-source). Archive:
-   `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1870). About 1,548 placeholder `func_0x...` names
-   remained at s1487.
-2. Keep audio closed unless a new independent lead reaches audio initialization
+1. Mandatory 15-title REVISIT: hangar/512 live `0x8000` Y. After
+   s1871 the last-15 titles are s1857–s1871, all sweep
+   (`confirmed the leftover … symbol` / `synchronized`). Do not
+   start another leftover census. Reuse the s1856
+   `ROGUESQ_M4_Y8000_*` instrument with
+   `ROGUESQ_M4_Y8000_WIDTH=512` on attribution LLE
+   (`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1`). s1856 selected
+   H-never-live on VI 640 only (single-source). Same four
+   hypotheses as s1856, now gated on hangar 512. Same-run
+   control: `n_flush > 0` at VI 512 plus the flush-site /
+   `L_17F0` mark lines. If the default port run never reaches
+   hangar 512, that is UNEVALUABLE — do not treat attract 512
+   as hangar.
+2. After the revisit, resume the generated-symbol sweep at leftover
+   `func_800F2208` (`0x800F2208`, size `0x108`). Companion
+   `mission_overlay.txt` and generated headers/body/INL already
+   name `isVectorWithinConeAndRange`; TOML still leftover
+   `func_800F2208`. First insn `addiu $sp, $sp, -0x48`; last
+   `jr $ra` / `addiu $sp, $sp, 0x48` at `0x800F2308` /
+   `0x800F230C`. Next already-named occupant is
+   `isVectorInConeWriteDistance` at `0x800F2310`. s1871
+   synchronized leftover `func_800F1FF4` to
+   `initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`,
+   `0x7C`). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589),
+   §34 (s1590–s1647), §35 (s1648–s1871). About 1,548
+   placeholder `func_0x...` names remained at s1487.
+3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
-3. Revisit M3 only as a complete idiom-class audit with a named discriminator.
-4. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`; batch
+4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
+5. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`; batch
    arms; phase-gate; SIGKILL; queue soaks.
 
 ## Durable boundaries
@@ -136,7 +149,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1870 through leftover `func_800F1E7C` became
+s1648–s1871 through leftover `func_800F1FF4` became
+`initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`, `0x7C`) after leftover
+`func_800F1E7C` became
 `initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`) after leftover
 `func_800F1B40` became
 `raycastTerrainAndNpcs` (`0x800F1B40`, `0x33C`) after leftover
@@ -278,6 +293,8 @@ and leftover `func_800F1B40` became
 `raycastTerrainAndNpcs` (`0x800F1B40`, `0x33C`)
 and leftover `func_800F1E7C` became
 `initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`)
+and leftover `func_800F1FF4` became
+`initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`, `0x7C`)
 (§35). s1728 is maintenance only.
 
 ## Method and safety rules

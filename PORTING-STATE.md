@@ -86918,3 +86918,56 @@ at `0x800F2068` / `0x800F206C`. Next leftover after the already-named
 health family is `func_800F2208` (`0x800F2208`, `0x108`). Last-15
 titles after s1870 still include s1856's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1871 (2026-08-17) — synchronized the initActorRenderDescriptorWithNpcVelocity symbol
+
+Exact generated-symbol census for leftover `func_800F1FF4` at
+`0x800F1FF4` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 16062; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | Sequential listing `initActorRenderDescriptorWithNpcVelocity = 0x800F1FF4` at line 1278, after `raycastTerrainAndNpcs = 0x800F1B40` and before `isVectorWithinConeAndRange = 0x800F2208`. No comment on this occupant (the sister `initActorRenderDescriptorIfUninit` at line 1064 is the commented listing). Health family (`setNpcHealth` at `0x800F2070`) sits between them in generated/TOML and is already named |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F1FF4`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`; main `.text` ends at `0x800A5130` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void initActorRenderDescriptorWithNpcVelocity` at VRAM `0x800F1FF4`. First insn `addiu $sp, $sp, -0x30` at `0x800F1FF4`; last live `jr $ra` / `addiu $sp, $sp, 0x30` at `0x800F2068` / `0x800F206C`. Previous is already `initActorRenderDescriptorIfUninit` (`0x800F1E7C`, last `jr $ra` / `addiu $sp, $sp, 0x30` at `0x800F1FEC` / `0x800F1FF0`); next is already `setNpcHealth` at `0x800F2070` (`lbu $v0, 0x1A7($a0)`). `funcs.h` and overlay INL already the human name. No leftover `func_800F1FF4` in generated headers/body/INL |
+| Body semantics | `$a0` actor, `$a1` dest descriptor (`$s1`). Gate `lbu actor+0x1A7`; if set, skip to the epilogue. Uninit: `getNpcContextField8(lhu actor+0x198)` into `$s0`, `computeBillboardFacingVector($s0, sp+0x10)`, copy `lw $s0+0/+4/+8` to dest+0x10/+0x14/+0x18, then copy the stack facing vector to dest+0x1C/+0x20/+0x24. Companion name is already in generated/companion; the body copies the NPC field_8 vec3 plus a billboard facing, not a separately labelled velocity store |
+| Callers | 4 generated `jal 0x800F1FF4` sites, all already `initActorRenderDescriptorWithNpcVelocity(rdram, ctx)`: `tickAtAtAudioAndWeaponState` at `0x800CCA5C`, `npcAtStHandleDestruction` at `0x800CFC9C`, `npcDebrisFieldUpdate` at `0x800D5BA4`, `npcWingmanSteerToward` at `0x800D91A4`. Each passes `a0=*(obj+0x38)` / `a1=*(obj+0x34)`. No `LOOKUP_FUNC(0x800F1FF4)` site |
+| TOML | Was `{ name = "func_800F1FF4", vram = 0x800F1FF4, size = 0x7C }` — stale leftover. Size already matched `0x800F2070 - 0x800F1FF4`. Renamed to `initActorRenderDescriptorWithNpcVelocity` |
+| Overlay section 4 | `{ .func = initActorRenderDescriptorWithNpcVelocity, .offset = 0x0004CEC4, .rom_size = 0x0000007C }` under `section_4_ovl_mission_funcs` (`0x800F1FF4 - 0x800A5130 = 0x4CEC4`; previous `0x4CD4C + 0x178 = 0x4CEC4`; `0x4CEC4 + 0x7C = 0x4CF40` matches next `setNpcHealth`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F1FF4`. No leftover `func_800F1FF4` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x30` / `jr $ra` / `addiu $sp, $sp, 0x30` at
+`0x800F1FF4` / `0x800F2068` / `0x800F206C`), previous
+(`initActorRenderDescriptorIfUninit` / `0x800F1E7C`) and next
+(`setNpcHealth` / `0x800F2070`) boundaries, overlay span, and
+size already agreed on
+`initActorRenderDescriptorWithNpcVelocity` / `0x7C`. TOML still
+carried leftover `func_800F1FF4`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F2070`; first insn is
+`addiu $sp, $sp, -0x30` and last is `jr $ra` / `addiu $sp, $sp, 0x30`
+at `0x800F2068` / `0x800F206C`; body fills an actor render
+descriptor from the NPC field_8 vec3 plus a billboard facing when
+the `+0x1A7` init flag is clear, not an unnameable span). No
+invented name. No build or runtime run required.
+
+Next census after the forced revisit: leftover `func_800F2208` at
+`0x800F2208` (size `0x108`). Neighbor peek already: companion
+`mission_overlay.txt` and generated headers/body/INL already
+`isVectorWithinConeAndRange`; TOML still leftover `func_800F2208`.
+First insn `addiu $sp, $sp, -0x48`; last live `jr $ra` /
+`addiu $sp, $sp, 0x48` at `0x800F2308` / `0x800F230C`. Next
+already-named occupant is `isVectorInConeWriteDistance` at
+`0x800F2310`. Last-15 titles after s1871 are s1857–s1871, all
+sweep, so the next iteration is a mandatory M4 hangar/512 REVISIT
+rather than another leftover census.
