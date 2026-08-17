@@ -83533,3 +83533,41 @@ INL, and companion already use the human name; next occupant is
 `spawnObjectImpactEffectWithSound` (`0x800E9D74`). Last-15 titles after
 s1803 still include s1792's revisit, so the mandatory REVISIT gate does
 not fire.
+
+## Session 1804 (2026-08-16) — synchronized the playStateGatedDestroySound symbol
+
+Exact generated-symbol census for leftover `0x800E9BF4` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7639; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playStateGatedDestroySound = 0x800E9BF4` ("selects a destruction sound by object state and plays it (3D)"). Next named kernel `spawnObjectImpactEffectWithSound = 0x800E9D74`. No leftover `func_800E9BF4` splat, no `D_800E9BF4`, and no menu/cinematic/main overlay occupant. Previous leftover `func_800E9AE0 = 0x800E9AE0` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void playStateGatedDestroySound` at VRAM `0x800E9BF4`. Prologue `addiu $sp, $sp, -0x38`; last live insn `jr $ra` at `0x800E9D6C` with delay `addiu $sp, $sp, 0x38` at `0x800E9D70`. Previous leftover `func_800E9AE0` delay ends at `0x800E9BF0`; next is `spawnObjectImpactEffectWithSound` at `0x800E9D74`. `funcs.h` already declares the human name. No leftover `func_800E9BF4`. Two generated `jal 0x800E9BF4` sites: `0x800EA5C4` in `npcAtPtPlaySkywalkerErrorCallout` (`a2=1`) and `0x800EAD98` in `npcAtPtUpdate` (`a2=0`) |
+| Body semantics | `s0 = a0` object. `lh` state at `+0x84`; switch 0/1/2 picks paired tables at `0x8011B184`/`0x8011B198`, `0x8011B19C`/`0x8011B1AC`, `0x8011B1B0`/`0x8011B1B8`. Adds `a1 / *(s0+0xA0)` into float `+0x70`; on threshold reset writes `+0x9C` back to `+0x70` and early-returns. If `a2` byte is 0 and `+0x70 >= +0x74`, increments halfword `+0x78`, indexes the byte table, and `jal 0x800989D8` `play3DSoundEvent` with sound id `0x62` or `0x63`. Companion comment matches the body |
+| TOML | Was `{ name = "func_800E9BF4", vram = 0x800E9BF4, size = 0x180 }` — stale placeholder; size matches `0x800E9D74 - 0x800E9BF4`. Renamed to `playStateGatedDestroySound` |
+| Overlay section 4 | `{ .func = playStateGatedDestroySound, .offset = 0x00044AC4, .rom_size = 0x00000180 }` under `section_4_ovl_mission_funcs` (`0x800E9BF4 - 0x800A5130 = 0x44AC4`; previous `0x449B0 + 0x114 = 0x44AC4`; `0x44AC4 + 0x180 = 0x44C44` matches next `spawnObjectImpactEffectWithSound`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E9BF4`. No leftover `func_800E9BF4` in generated headers or overlay INL after the TOML rename |
+
+### Outcome
+
+H2 selected. Companion, generated headers/body, and section-4 already
+used `playStateGatedDestroySound`; only TOML still carried
+`func_800E9BF4`. Renamed the TOML row. This refutes H1 (sources were
+not already synchronized), H3 (no overlay collision, leftover splat, or
+size/boundary miss: previous leftover `func_800E9AE0` ends at
+`0x800E9BF4`, and `0x800E9BF4 + 0x180 = 0x800E9D74`), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: `spawnObjectImpactEffectWithSound` at `0x800E9D74` (size
+`0x150`). Neighbor peek: TOML still `func_800E9D74`; generated
+headers/body, overlay INL, and companion already use the human name;
+next occupant is `computeNpcOrientationFromAimVectors` (`0x800E9EC4`).
+Last-15 titles after s1804 still include s1792's revisit, so the
+mandatory REVISIT gate does not fire.
