@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1862 (2026-08-17).
+detail. Reviewed through s1863 (2026-08-17).
 
 ## Current state
 
@@ -66,17 +66,17 @@ detail. Reviewed through s1862 (2026-08-17).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at leftover
-   `func_800F0DC4` (`0x800F0DC4`, size `0x1D0`). Companion
+   `func_800F0F94` (`0x800F0F94`, size `0x204`). Companion
    `mission_overlay.txt` and generated headers/body/INL already name
-   `tickObjectAnimSubstruct`; TOML still leftover `func_800F0DC4`.
-   Next leftover after that is `func_800F0F94` (`0x800F0F94`,
-   `0x204`; companion/generated already `resolveNpcAttachmentPos`;
-   TOML still leftover). s1862 synchronized leftover
-   `func_800F0BA4` to `evaluateTargetTrackingVisibility` (`0x800F0BA4`,
-   `0x220`). s1856 selected H-never-live for the parked M4
+   `resolveNpcAttachmentPos`; TOML still leftover `func_800F0F94`.
+   Next leftover after that is `func_800F1198` (`0x800F1198`,
+   `0x178`; companion/generated already `quicksortFloatKeysWithValues`;
+   TOML still leftover). s1863 synchronized leftover
+   `func_800F0DC4` to `tickObjectAnimSubstruct` (`0x800F0DC4`,
+   `0x1D0`). s1856 selected H-never-live for the parked M4
    `0x8000` Y on VI 640 attribution LLE (single-source). Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1862). About 1,548 placeholder `func_0x...` names
+   §35 (s1648–s1863). About 1,548 placeholder `func_0x...` names
    remained at s1487.
 2. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
@@ -136,7 +136,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1862 through leftover `func_800F0BA4` became
+s1648–s1863 through leftover `func_800F0DC4` became
+`tickObjectAnimSubstruct` (`0x800F0DC4`, `0x1D0`) after leftover
+`func_800F0BA4` became
 `evaluateTargetTrackingVisibility` (`0x800F0BA4`, `0x220`) after leftover
 `func_800F09A8` became
 `computeActorAnchorDeltaAfterLOS` (`0x800F09A8`, `0x1FC`) after leftover
@@ -246,6 +248,8 @@ and leftover `func_800F09A8` became
 `computeActorAnchorDeltaAfterLOS` (`0x800F09A8`, `0x1FC`)
 and leftover `func_800F0BA4` became
 `evaluateTargetTrackingVisibility` (`0x800F0BA4`, `0x220`)
+and leftover `func_800F0DC4` became
+`tickObjectAnimSubstruct` (`0x800F0DC4`, `0x1D0`)
 (§35). s1728 is maintenance only.
 
 ## Method and safety rules

@@ -86514,3 +86514,53 @@ Next leftover is `func_800F0F94` (`0x800F0F94`, `0x204`;
 companion/generated `resolveNpcAttachmentPos`). Last-15 titles after
 s1862 still include s1856's M4 revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1863 (2026-08-17) — synchronized the tickObjectAnimSubstruct symbol
+
+Exact generated-symbol census for leftover `func_800F0DC4` at
+`0x800F0DC4` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 14660; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickObjectAnimSubstruct = 0x800F0DC4` (uncommented listing at line 1273). Previous leftover `evaluateTargetTrackingVisibility = 0x800F0BA4` (s1862 H2). Next named kernel `quicksortFloatKeysWithValues = 0x800F1198` in the sequential listing; `resolveNpcAttachmentPos = 0x800F0F94` is the next leftover (commented earlier at line 740). `applyToObjectSubstructByFlag = 0x800F2D38` comment: 20 callers, `(obj, f1, f2, flag)` — call `func_800F0DC4` with `obj+0x138` or `obj+0x164` |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F0DC4`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`. `main_overlay.txt` only comments the dispatcher that routes to `func_800F0DC4`. `undefined_funcs_auto.txt` has no leftover `func_800F0DC4` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void tickObjectAnimSubstruct` at VRAM `0x800F0DC4`. First insn `addiu $sp, $sp, -0x20` at `0x800F0DC4`; last live `jr $ra` / `addiu $sp, $sp, 0x20` at `0x800F0F8C` / `0x800F0F90`. Previous is already `evaluateTargetTrackingVisibility` (`0x800F0BA4`, last `jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F0DBC` / `0x800F0DC0`); next is already `resolveNpcAttachmentPos` at `0x800F0F94` (`addiu $sp, $sp, -0x98`). `funcs.h` and overlay INL already the human name. No leftover `func_800F0DC4` in generated headers/body/INL |
+| Body semantics | `$s0 = $a1` (anim substruct); `$f2 = $a2` (dt). Early-out if `lw +0x18($s0)` (callback) is zero. Decrements float timer at `+0xC` by dt. If that timer is still `> 0` and delay `+0x10` is `<= 0`, exit. If delay `+0x10` is `> 0`, decrement it by dt; when it expires and flag `lbu +0x2B` is set, increment byte `+0x28`, `jal getNpcContextByIndex` (`0x8004013C`) on `lhu object+0x198`, then `jalr` the callback with `(ctx, +0x28)`; a nonzero return stores 0 at `+0x18`. When delay is already `<= 0`: if `+0x2B==0`, initialize (`+0x2B=1`, zero `+0xC` / `+0x10` / `+0x1E` / `+0x28`). If `+0x2B` is set, zero delay/`+0x28`, `jalr` callback with `a1=0`, increment frame `+0x1E` vs count `lh +0x1C`; on wrap, either reset the frame (if float `+0x4==0`) or clear `+0x2B` and copy `+0x4` into timer `+0xC`; else recompute duration `+0xC = +0x0 / +0x1C` and optionally add abs-jitter from `rand & 0x7F` vs `+0x8` and constant `0x800A89BC` |
+| Callers | 3 generated `jal 0x800F0DC4` sites, all already `tickObjectAnimSubstruct(rdram, ctx)`: two inside `transformCraftAnchorsAndApplySubFx` (`0x800E0B60`, `0x800E0CB4`) and one inside `applyToObjectSubstructByFlag` (`0x800F2D60`). The wrapper selects `obj+0x138` when `$a3==0` else `obj+0x164`, then tails into this function. No `LOOKUP_FUNC(0x800F0DC4)` |
+| TOML | Was `{ name = "func_800F0DC4", vram = 0x800F0DC4, size = 0x1D0 }` — stale leftover. Size already matched `0x800F0F94 - 0x800F0DC4`. Renamed to `tickObjectAnimSubstruct` |
+| Overlay section 4 | `{ .func = tickObjectAnimSubstruct, .offset = 0x0004BC94, .rom_size = 0x000001D0 }` under `section_4_ovl_mission_funcs` (`0x800F0DC4 - 0x800A5130 = 0x4BC94`; previous `0x4BA74 + 0x220 = 0x4BC94`; `0x4BC94 + 0x1D0 = 0x4BE64` matches next `resolveNpcAttachmentPos`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F0DC4`. No leftover `func_800F0DC4` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x20` / `jr $ra` / `addiu $sp, $sp, 0x20` at
+`0x800F0DC4` / `0x800F0F8C` / `0x800F0F90`), previous
+(`evaluateTargetTrackingVisibility` / `0x800F0BA4`) and next
+(`resolveNpcAttachmentPos` / `0x800F0F94`) boundaries, overlay span,
+and size already agreed on `tickObjectAnimSubstruct` / `0x1D0`.
+TOML still carried leftover `func_800F0DC4`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F0F94`; first insn is
+`addiu $sp, $sp, -0x20` and last is `jr $ra` / `addiu $sp, $sp, 0x20`
+at `0x800F0F8C` / `0x800F0F90`; body is the anim-substruct timer /
+frame / `jalr`-callback tick, not an unnameable span). No invented
+name. No build or runtime run required.
+
+Next census: leftover `func_800F0F94` at `0x800F0F94` (size `0x204`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `resolveNpcAttachmentPos`; TOML still leftover
+`func_800F0F94`. First insn `addiu $sp, $sp, -0x98`; last live
+`jr $ra` / `addiu $sp, $sp, 0x98` at `0x800F1190` / `0x800F1194`.
+Next leftover is `func_800F1198` (`0x800F1198`, `0x178`;
+companion/generated `quicksortFloatKeysWithValues`). Last-15 titles after
+s1863 still include s1856's M4 revisit, so the mandatory REVISIT
+gate does not fire.
