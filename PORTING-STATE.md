@@ -86004,3 +86004,52 @@ headers/body/INL already use `noopHandler`; TOML still says
 that name; TOML still leftover). Last-15 titles after s1852 still
 include s1840's M4 revisit, so the mandatory REVISIT gate does not
 fire.
+
+## Session 1853 (2026-08-17) — synchronized the noopHandler symbol
+
+Exact generated-symbol census for leftover `func_800EFD6C` at
+`0x800EFD6C` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1840's mandatory REVISIT (`selected H-standard-edge
+on the restaged RDP triangle`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 13579; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `noopHandler = 0x800EFD6C`. Comment: empty `jr ra` — default/stub callback, 17 callers. Adjacent `noopHandler_800EFD64` at `0x800EFD64` is the address-suffixed sibling |
+| Companion `main_overlay.txt` | No occupant at `0x800EFD6C`. Cinematic and menu overlays also empty at this VRAM |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void noopHandler` at VRAM `0x800EFD6C`. First insn `jr $ra` at `0x800EFD6C`; last insn `nop` at `0x800EFD70`. Previous is `noopHandler_800EFD64` (`0x800EFD64`, ends `0x800EFD6C`); next is already `fake_func_800EFD74` at `0x800EFD74`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Pure `jr $ra` / delay-slot `nop`. Empty callback / default handler. Companion uses the unsuffixed `noopHandler` here (not `noopHandler_800EFD6C`) because this is the named default |
+| Callers | 16 generated `jal 0x800EFD6C` sites in 11 functions: four `LOOKUP_FUNC(0x800EFD6C)` in `dispatchCueByCategory`; twelve direct `noopHandler(rdram, ctx)` in `npcAtStUpdate`, `npcShuttleUpdate`, `npcDebrisFieldUpdate` (2), `npcTankDroidUpdate`, `npcTieVariantUpdate`, `npcRadarDishUpdate`, `npcGroundTransportUpdate`, `npcTrainCarUpdate` (2), `npcWaterCraftUpdate`, `npcGroundTroopUpdate` |
+| TOML | Was `{ name = "func_800EFD6C", vram = 0x800EFD6C, size = 0x8 }` — stale leftover. Size already matched `0x800EFD74 - 0x800EFD6C`. Renamed to `noopHandler` |
+| Overlay section 4 | `{ .func = noopHandler, .offset = 0x0004AC3C, .rom_size = 0x00000008 }` under `section_4_ovl_mission_funcs` (`0x800EFD6C - 0x800A5130 = 0x4AC3C`; previous `0x4AC34 + 0x8 = 0x4AC3C`; `0x4AC3C + 0x8 = 0x4AC44` matches next `fake_func_800EFD74`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940` (`0x800A5130 + 0xB810`); menu overlay ends at `0x800CD520` (`0x800A5130 + 0x283F0`); main `.text` ends before `0x800A5130`. None occupy `0x800EFD6C`. No leftover `func_800EFD6C` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`jr $ra` / `nop` at `0x800EFD6C` / `0x800EFD70`), previous
+(`noopHandler_800EFD64` / `0x800EFD64`) and next
+(`fake_func_800EFD74` / `0x800EFD74`) boundaries, overlay span,
+and size already agreed on `noopHandler` / `0x8`.
+TOML still carried leftover `func_800EFD6C`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800EFD74`; first insn is `jr $ra` and
+last is `nop` at `0x800EFD70`), and H4 (companion, generated body,
+TOML, and section-4 row are all present). No invented name. No
+build or runtime run required.
+
+Next census: leftover `fake_func_800EFD74` at `0x800EFD74` (size `0xC`).
+Neighbor peek already: companion `mission_overlay.txt`, generated
+headers/body/INL, and TOML already use `fake_func_800EFD74`. First
+insn `srl $v1, $v0, 2` / last `lw $v0, 0xBC($fp)` at `0x800EFD74` /
+`0x800EFD7C`. Next leftover is `func_800EFD80` (`0x800EFD80`,
+`0x5C`; companion `dispatchSlotAction5IfActive`; generated already
+that name; TOML still leftover). Last-15 titles after s1853 still
+include s1840's M4 revisit, so the mandatory REVISIT gate does not
+fire.
