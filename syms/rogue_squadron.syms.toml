@@ -1939,7 +1939,7 @@ functions = [
     { name = "tickObjectSoundCueState", vram = 0x800EF510, size = 0x260 },
     { name = "triggerStageMusicForNamedDatItem", vram = 0x800EF770, size = 0x1EC },
     { name = "triggerStageAmbientForNamedDatItem", vram = 0x800EF95C, size = 0x1E4 },
-    { name = "func_800EFB40", vram = 0x800EFB40, size = 0x54 },
+    { name = "stopMusicAndResetAudio", vram = 0x800EFB40, size = 0x54 },
     { name = "func_800EFB94", vram = 0x800EFB94, size = 0x20 },
     { name = "func_800EFBB4", vram = 0x800EFBB4, size = 0xD0 },
     { name = "func_800EFC84", vram = 0x800EFC84, size = 0x50 },
