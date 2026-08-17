@@ -1865,7 +1865,7 @@ functions = [
     { name = "playAttachmentCueWithSlotIter", vram = 0x800E026C, size = 0x18C },
     { name = "playDualTextureAttachmentCue", vram = 0x800E03F8, size = 0x350 },
     { name = "playAttachmentMaterialSoundSimple", vram = 0x800E0748, size = 0x1B0 },
-    { name = "func_800E08F8", vram = 0x800E08F8, size = 0x3EC },
+    { name = "transformCraftAnchorsAndApplySubFx", vram = 0x800E08F8, size = 0x3EC },
     { name = "func_800E0CE4", vram = 0x800E0CE4, size = 0x6C8 },
     { name = "func_800E13AC", vram = 0x800E13AC, size = 0xA70 },
     { name = "func_800E1E1C", vram = 0x800E1E1C, size = 0x140 },

@@ -82010,3 +82010,42 @@ Next census: `transformCraftAnchorsAndApplySubFx` / `func_800E08F8` at
 `func_800E08F8` while generated/overlay use the human name. Last-15
 titles after s1767 still include s1760's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1768 (2026-08-16) — synchronized the transformCraftAnchorsAndApplySubFx symbol
+
+Exact generated-symbol census for `0x800E08F8` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6626; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `transformCraftAnchorsAndApplySubFx = 0x800E08F8` with comment "build rotation matrices + transform two anchors + apply sub-effects". Previous contiguous named neighbor `playAttachmentMaterialSoundSimple = 0x800E0748`. Next contiguous named neighbor `tickCraftSplineOrientation = 0x800E0CE4`. No leftover `func_800E08F8` splat, no `D_800E08F8`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void transformCraftAnchorsAndApplySubFx` at VRAM `0x800E08F8`. First insn `addiu $sp, $sp, -0xB0`; last insn `addiu $sp, $sp, 0xB0` at `0x800E0CE0`. Previous `playAttachmentMaterialSoundSimple` ends at `0x800E08F4`; next is `tickCraftSplineOrientation` at `0x800E0CE4`. `funcs.h` already declares the human name. No leftover `func_800E08F8`. Generated caller `npcTrainCarUpdate` `jal 0x800E08F8` at `0x800E31A8` |
+| Body semantics | Build rotation matrices + transform two anchors + apply sub-effects. Early `lbu +0xB2` slti `<5` / `<2` gate, then `jal 0x800F06BC` `isPendingChildNpcActive`. `jal 0x8001CC3C` `buildRotationMatrixSlot0` and `jal 0x8001CCCC` `composeRotationMatrixSlot1` dest `sp+0x48`. Two `jal 0x800193E8` `transformVec3ByMat34` of `s2+0xC` dest `sp+0x24` and `s2+0x18` dest `sp+0x30`. Visibility/LOS via `evaluateTargetTrackingVisibility` and `validateActorTargetLOS`. Sub-effects: `applyToObjectSubstructByFlag` `a3=0` then `a3=1`, plus `tickObjectAnimSubstruct`. Also `initActorMotionParams`, `setPoolEntryPhaseAndMarkActive`, `setPoolEntryPhase`. Same family as later siblings `transformCraftAnchorsApplySubFx2` / `transformCraftAnchorsApplySubFx3` |
+| TOML (before) | `{ name = "func_800E08F8", vram = 0x800E08F8, size = 0x3EC }` — size matches `0x800E0CE4 - 0x800E08F8` |
+| Overlay section 4 | `{ .func = transformCraftAnchorsAndApplySubFx, .offset = 0x0003B7C8, .rom_size = 0x000003EC }` under `section_4_ovl_mission_funcs` (`0x800E08F8 - 0x800A5130 = 0x3B7C8`; previous `0x3B618 + 0x1B0 = 0x3B7C8`; `0x3B7C8 + 0x3EC = 0x3BBB4` matches next `tickCraftSplineOrientation`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E08F8`. No leftover `func_800E08F8` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`playAttachmentMaterialSoundSimple` / `0x800E0748`) and next
+(`tickCraftSplineOrientation` / `0x800E0CE4`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `transformCraftAnchorsAndApplySubFx`, and only the TOML name was a
+stale `func_800E08F8` placeholder. Corrected TOML to
+`transformCraftAnchorsAndApplySubFx`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `tickCraftSplineOrientation` / `func_800E0CE4` at
+`0x800E0CE4` (size `0x6C8`). Neighbor peek already shows TOML still
+`func_800E0CE4` while generated/overlay use the human name. Last-15
+titles after s1768 still include s1760's revisit, so the mandatory
+REVISIT gate does not fire.
