@@ -3072,15 +3072,16 @@ collision.
 | s1791 | Confirmed leftover `fake_func_800E71C8` (`0x800E71C8`, `0x8`). Two-instruction `lhu $v0, 0x14($v1)` / `lw $a0, 0x58($fp)` orphan between `npcWaterCraftUpdate`'s epilogue and leftover `func_800E71D0` (whose prologue is `addiu $sp, $sp, -0xA0`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment. No leftover `func_800E71C8`; TOML, generated headers/body, and section-4 already use the leftover name. |
 | s1792 | Mandatory REVISIT. Three-arm Rice watch of the seven unwatched `submitGfxFrame` callers on the attract A/Start title-like 1024. All arms passed controls. Leave still adds `submitGfxFrame` +104/+102 (s1776 H1 reproduced). No unwatched entry rises: `runIdleFramesAndLoadSaveData` stays 1; `tickCraftSelectScreen` stays ~1028; `menuControllerInput` −179/−177 and `runResultsTextScreenLoop` −99/−97 drop with ship-select; `runMenuRandomBackdropScreen`/`menuSubtype02Handler`/`runModelViewerLoop` stay 0. Hangar frame flat 59. Extra `loadOverlay` +2 reproduced. H3-no-unwatched-rise selected. Next revisit needs jal-site / `$ra` watches, not another entry-PC set. |
 | s1793 | Synchronized `transformCraftAnchorsApplySubFx3` (`0x800E71D0`, `0x1C0`). Rotation-matrix pair, dual `transformVec3ByMat34` anchors, two pending-child / LOS passes, `initObjectAnimSubstruct`, `applyToObjectSubstructByFlag`. One generated `jal 0x800E71D0` inside `tickFighterSquadronWithSplinePaths`. TOML, generated headers/body, and section-4 were stale `func_800E71D0`; companion `main_overlay.txt` already had the human name. Did not relocate the parked `mission_overlay.txt` leftover (s413 `m4_known_bad.txt`). |
+| s1794 | Synchronized `tickFighterSquadronWithSplinePaths` (`0x800E7390`, `0x4D0`). Two-pass spline orientation, no audio: pending-child + LOS (`isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` on `+0x38`), mesh T&L (`getObjectMeshTransformOrLocal` / `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto`) or fallback at `L_800E7634`, then rotation/quat/vec3 (`buildRotationMatrixSlot0`/`Slot1` / `composeRotationMatrixSlot1` / `quatFromAxisAngle` / `rotateVec3ByQuat` / `transformVec3ByMat34` / `vec3Cross`/`Dot`/`Length`). Writes `+0x48`/`+0x4C`. Companion comment overstates (zero `play3DSound*` / objective / teardown; no per-member walk). One generated `jal 0x800E7390` inside `npcGroundTroopUpdate` already dispatched the human name. TOML was stale `func_800E7390`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1793 is leftover `func_800E7390` /
-`0x800E7390` (size `0x4D0`). Neighbor peek: TOML still says
-`func_800E7390`; generated headers/body, overlay INL, and
-`mission_overlay.txt` already name it `tickFighterSquadronWithSplinePaths`.
-Mandatory revisits in this window: s1650, s1666, s1682, s1698, s1714,
-s1744, s1760, s1776, s1792. After s1793 the last-15 titles still include
-that revisit, so the next iteration resumes the leftover-`func_800E7390`
-census.
+The sweep cursor after s1794 is `npcGroundTroopUpdate` /
+`0x800E7860` (size `0xFC8`). Neighbor peek: TOML, generated
+headers/body, overlay INL, and `mission_overlay.txt` already use the
+human name. Next leftover after it is `func_800E8828` / companion
+`playAttachmentCueNoTexture`. Mandatory revisits in this window: s1650,
+s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792. After s1794 the
+last-15 titles still include that revisit, so the next iteration resumes
+the `npcGroundTroopUpdate` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

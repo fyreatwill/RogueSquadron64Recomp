@@ -83135,3 +83135,44 @@ Neighbor peek already shows generated headers/body, overlay INL, and
 `mission_overlay.txt` using the human name while TOML is still
 `func_800E7390`. Last-15 titles after s1793 still include s1792's
 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1794 (2026-08-16) — synchronized the tickFighterSquadronWithSplinePaths symbol
+
+Exact generated-symbol census for leftover `0x800E7390` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7595; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickFighterSquadronWithSplinePaths = 0x800E7390` with comment "multi-craft squadron: per-member spline paths + 3D audio + objective counters + teardown". No leftover `func_800E7390` splat and no `D_800E7390`. No menu/cinematic/main occupant. Previous named kernel in VRAM order is `transformCraftAnchorsApplySubFx3 = 0x800E71D0`; next named kernel is `npcGroundTroopUpdate = 0x800E7860` |
+| Companion `main_overlay.txt` | No occupant at `0x800E7390` (the parked s413 leftover is `func_800E71D0` only) |
+| Generated `funcs_39.c` | `RECOMP_FUNC void tickFighterSquadronWithSplinePaths` at VRAM `0x800E7390`. First insn `addiu $sp, $sp, -0x1A0`; last insn `jr $ra` / `addiu $sp, $sp, 0x1A0` at `0x800E7858` / `0x800E785C`. Previous `transformCraftAnchorsApplySubFx3` ends at `0x800E7390`; next is `npcGroundTroopUpdate` at `0x800E7860`. One generated `jal 0x800E7390` site at `0x800E81D0` (inside `npcGroundTroopUpdate`) already dispatched the human name |
+| Body semantics | 47 jal / 17 unique. Gate: `isPendingChildNpcActive` (`0x800F06BC`) then `computeActorAnchorDeltaAfterLOS` (`0x800F09A8`) on `+0x38`; both must return 1 else fallback `L_800E7634`. Live path: `getObjectMeshTransformOrLocal` (`0x800F2988`), `mat34CrossRowsAndCopyPos` (`0x80059B50`), `mat3x3InverseInto` (`0x8001C774`), `vec3NormalizeInto` (`0x8001CFA0`), then the rotation/quat/vec3 stack (`buildRotationMatrixSlot0`/`Slot1`, `composeRotationMatrixSlot1`, `quatFromAxisAngle`, `rotateVec3ByQuat`, `transformVec3ByMat34`, `vec3Cross`/`Dot`/`Length`, `constMinusSinfApprox`). Fallback repeats that stack without the mesh T&L prefix. Reads `+0x38`/`+0x4C`/`+0x48`/`+0x5C`; writes `+0x48` (per pass) and `+0x4C`. Dots/lengths against global `0x8010B0B0` (`lui $s6, 0x8011` / `addiu $s4, $s6, -0x4F50`); float thresholds at `0x800A84CC`/`0x800A84D0`. Companion comment overstates: zero `play3DSound*` / `factor5RemoveListNode` / `destroyNpc*` / objective / teardown, and no per-member walk — single-npc two-pass spline-orientation sibling of `tickCraftSplineOrientationVariant` |
+| TOML (before) | `{ name = "func_800E7390", vram = 0x800E7390, size = 0x4D0 }` — size matches `0x800E7860 - 0x800E7390` |
+| Overlay section 4 (already named) | `{ .func = tickFighterSquadronWithSplinePaths, .offset = 0x00042260, .rom_size = 0x000004D0 }` under `section_4_ovl_mission_funcs` (`0x800E7390 - 0x800A5130 = 0x42260`; previous `0x420A0 + 0x1C0 = 0x42260`; `0x42260 + 0x4D0 = 0x42730` matches next `npcGroundTroopUpdate`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E7390` |
+
+### Outcome
+
+H2 selected (stale TOML placeholder; generated headers/body and section-4
+already used the human name). Companion `mission_overlay.txt` already had
+`tickFighterSquadronWithSplinePaths`; the live generated two-pass
+spline-orientation body, previous (`transformCraftAnchorsApplySubFx3` /
+`0x800E71D0 + 0x1C0`) and next (`npcGroundTroopUpdate` / `0x800E7860`)
+boundaries, TOML size, and section-4 overlay span agreed. Corrected TOML
+only. This refutes H1 (TOML was not already synchronized), H3 (no leftover
+orphan, overlay collision, or size/boundary disagreement; size is `0x4D0`
+as expected), and H4 (companion, generated body, TOML, and section-4 row
+are all present). No build or runtime run required.
+
+Next census: `npcGroundTroopUpdate` at `0x800E7860` (size `0xFC8`).
+Neighbor peek already shows TOML, generated headers/body, overlay INL, and
+`mission_overlay.txt` using the human name. Next leftover after it is
+`func_800E8828` / companion `playAttachmentCueNoTexture`. Last-15 titles
+after s1794 still include s1792's revisit, so the mandatory REVISIT gate
+does not fire.
