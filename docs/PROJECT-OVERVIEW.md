@@ -2983,7 +2983,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1776)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1782)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3059,13 +3059,14 @@ collision.
 | s1779 | Confirmed leftover `fake_func_800E406C` (`0x800E406C`, `0x4`). One-instruction `sw $a0, 0x20($sp)` orphan between `playDualTextureAttachmentCueMode1`'s epilogue and `handleRayShieldedNpcDestroy` (whose prologue is `addiu $sp, $sp, -0x40`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment (next occupant is already the human name). No leftover `func_800E406C`; TOML, generated headers/body, and section-4 already use the leftover name. |
 | s1780 | Synchronized `handleRayShieldedNpcDestroy` (`0x800E4070`, `0x40C`). 5-way `jr` table on `(a1-1)<5` at `0x800A8270`. Terminal path `playSpeechClip` `a0=0x15B` / `a1=0x73` / `a3=0x8` then `destroyNpcSlotByIndex` unless slot id is `0xFFFF`. No generated `jal 0x800E4070`. TOML was stale `func_800E4070`; generated headers/body and section-4 already used the human name. |
 | s1781 | Confirmed leftover `fake_func_800E447C` (`0x800E447C`, `0x4`). One-instruction `lw $v1, 0x14($v1)` orphan between `handleRayShieldedNpcDestroy`'s epilogue and `resetCraftInstanceMotionState` (whose prologue is `addiu $sp, $sp, -0x40`, so this is not a split first instruction). Companion leftover splat; `func_800E4480` deleted s432 as a duplicate of the next function. No leftover `func_800E447C`; TOML, generated headers/body, and section-4 already use the leftover name. |
+| s1782 | Synchronized `resetCraftInstanceMotionState` (`0x800E4480`, `0x1F4`). Per-row motion reset of `*(a0+4)`: 2-iter zero of `+0x74/+0x7C/+0xA4/+0xAC`, clear `+0x9A/+0x9B`, then `setNpcHealth`, `setObjectDetailLevel`, `initActorMotionParams`, and two `initObjectAnimSubstruct`. Companion deleted leftover `func_800E4480` at s432 as a duplicate. No generated `jal 0x800E4480`. TOML was stale `func_800E4480`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1781 is `resetCraftInstanceMotionState` /
-leftover `func_800E4480` / `0x800E4480` (size `0x1F4`). Neighbor
+The sweep cursor after s1782 is `playDualTextureAttachmentCueB` /
+leftover `func_800E4674` / `0x800E4674` (size `0x200`). Neighbor
 peek: companion, generated headers/body, and section-4 already use
-the human name; TOML is still `func_800E4480`. Mandatory revisits
+the human name; TOML is still `func_800E4674`. Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776. After s1781 the last-15 titles include the s1776 revisit, so
+s1776. After s1782 the last-15 titles include the s1776 revisit, so
 the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

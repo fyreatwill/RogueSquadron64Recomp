@@ -82599,3 +82599,43 @@ at `0x800E4480` (size `0x1F4`). Neighbor peek already shows TOML still
 the next session's discriminator, not this one. Last-15 titles after
 s1781 still include s1776's revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1782 (2026-08-16) — synchronized the resetCraftInstanceMotionState symbol
+
+Exact generated-symbol census for `0x800E4480` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6876; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `resetCraftInstanceMotionState = 0x800E4480` with comment "resets/inits a craft instance's per-row motion state". Leftover `func_800E4480` deleted s432 as a duplicate-symbol collision with this name. Previous leftover `fake_func_800E447C = 0x800E447C`. Next named kernel `playDualTextureAttachmentCueB = 0x800E4674`. No leftover `func_800E4480` splat, no `D_800E4480`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void resetCraftInstanceMotionState` at VRAM `0x800E4480`. First insn `addiu $sp, $sp, -0x40`; last insn `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800E466C` / `0x800E4670`. Previous leftover `fake_func_800E447C` is the one-word `lw $v1, 0x14($v1)` at `0x800E447C`; next is `playDualTextureAttachmentCueB` at `0x800E4674`. `funcs.h` already declares the human name. No leftover `func_800E4480`. No generated `jal 0x800E4480` site |
+| Body semantics | Loads craft `s1 = *(a0+4)`. 2-iter walk zeros per-row `+0x74/+0x7C/+0xAC` and writes a const float into `+0xA4`, then clears `+0x9A/+0x9B`. Calls `setNpcHealth` (`0x800F2070`), `setObjectDetailLevel` (`0x800F2830`), `initActorMotionParams` (`0x800F2888`), and `initObjectAnimSubstruct` (`0x800F2B88`) twice. Name matches the companion per-row motion reset |
+| TOML (before) | `{ name = "func_800E4480", vram = 0x800E4480, size = 0x1F4 }` — size matches `0x800E4674 - 0x800E4480` |
+| Overlay section 4 | `{ .func = resetCraftInstanceMotionState, .offset = 0x0003F350, .rom_size = 0x000001F4 }` under `section_4_ovl_mission_funcs` (`0x800E4480 - 0x800A5130 = 0x3F350`; previous `0x3F34C + 0x4 = 0x3F350`; `0x3F350 + 0x1F4 = 0x3F544` matches next `playDualTextureAttachmentCueB`) |
+| Non-collision | Cinematic overlay `0x800A5130 + 0xB810 = 0x800B0940`; menu overlay `0x800A5130 + 0x283F0 = 0x800CD520`; main `.text` ends at overlay start `0x800A5130`. None occupy `0x800E4480`. No leftover `func_800E4480` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated per-row motion-reset body,
+previous (`fake_func_800E447C` / `0x800E447C`) and next
+(`playDualTextureAttachmentCueB` / leftover `func_800E4674` /
+`0x800E4674`) boundaries, TOML size, and section-4 overlay span agreed;
+the generated headers/body were already `resetCraftInstanceMotionState`,
+and only the TOML name was a stale `func_800E4480` placeholder.
+Corrected TOML to `resetCraftInstanceMotionState`. This refutes H1 (TOML
+was not already synchronized), H3 (no leftover splat at this address,
+overlay collision, or size/boundary disagreement; size is `0x1F4` as
+expected), and H4 (companion, generated body, TOML, and section-4 row
+are all present). No build or runtime run required.
+
+Next census: `playDualTextureAttachmentCueB` / leftover `func_800E4674`
+at `0x800E4674` (size `0x200`). Neighbor peek already shows companion,
+generated, and section-4 using the human name while TOML is still
+`func_800E4674`. Last-15 titles after s1782 still include s1776's
+revisit, so the mandatory REVISIT gate does not fire.
