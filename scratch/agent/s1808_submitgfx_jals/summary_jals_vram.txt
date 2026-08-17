@@ -1,0 +1,45 @@
+s1808 three-arm Rice: submitGfxFrame jal-sites on title-like 1024
+HYPOTHESIS-ID: external-retail-entry-boundary
+secs=133  B_ROUTE=eleven-start+55/58/63:b  candidates at 119/123 only
+controls: whole-RDRAM 10k, B pad 0x40000000, hangar then B 640, 640->512 attract before 119s, hangarJal>=40, shipJal nonzero, 14 PCs armed
+H1 one jal +~104 matching submitGfx; H2 two+ jals rise and sum ~+104; H3 all 13 jals flat/down with submitGfx still +104; H4 submitGfx does not reproduce +104
+
+WIDTH (debugger [vi] only)
+hold    rc=0 rdram=10178 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=0 armed=14/14 shipJal=0 hangarJal=61 left1024=0 ok=0
+  all:  0.5 0->320 0x00000280; 2.4 320->640 0x0066a500; 17.3 640->1024 0x00790800 title-like; 38.4 1024->512 0x006ab400 hangar; 65.3 512->1024 0x00790800 title-like; 96.4 1024->640 0x00696100 B-frontend; 117.6 640->512 0x00690800 attract
+  post119: (no WIDTH)
+  post126: (no WIDTH)
+  last: 117.6 640->512 0x00690800 attract
+  pads t>=118: 120.1=0x80010000
+  [oracle] done: 18929 hit(s) in 134.3s wall, 8015 VI (~133.6s emulated)
+a       rc=0 rdram=10189 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=14/14 shipJal=0 hangarJal=60 left1024=1 ok=0
+  all:  0.5 0->320 0x00000280; 2.4 320->640 0x0066a500; 17.3 640->1024 0x00790800 title-like; 38.4 1024->512 0x006ab800 hangar; 65.3 512->1024 0x00790400 title-like; 96.4 1024->640 0x00696600 B-frontend; 117.6 640->512 0x00690800 attract; 126.3 512->1024 0x00790400 title-like
+  post119: 126.3 512->1024 0x00790400 title-like
+  post126: 126.3 512->1024 0x00790400 title-like
+  last: 126.3 512->1024 0x00790400 title-like
+  pads t>=118: 120.1=0x80010000, 120.3=0x80000000, 124.3=0x80000000
+  [oracle] done: 19096 hit(s) in 134.3s wall, 8014 VI (~133.6s emulated)
+start   rc=0 rdram=10188 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=14/14 shipJal=0 hangarJal=59 left1024=1 ok=0
+  all:  0.5 0->320 0x00000280; 2.4 320->640 0x0066a500; 17.3 640->1024 0x00790800 title-like; 38.4 1024->512 0x006ab400 hangar; 65.3 512->1024 0x00790800 title-like; 96.4 1024->640 0x00696100 B-frontend; 117.6 640->512 0x00690400 attract; 126.4 512->1024 0x00790400 title-like
+  post119: 126.4 512->1024 0x00790400 title-like
+  post126: 126.4 512->1024 0x00790400 title-like
+  last: 126.4 512->1024 0x00790400 title-like
+  pads t>=118: 120.1=0x80010000, 120.3=0x10000000, 124.3=0x10000000
+  [oracle] done: 19095 hit(s) in 134.4s wall, 8016 VI (~133.6s emulated)
+
+PC watches (lifetime)
+arm       idleJalA    idleJalB     cineJal   hangarJal    craftJal   menuInJal  rndBackJal     shipJal    mViewJal    sub02Jal  resultsJal    modelJal  missionJal   submitGfx
+hold            32           8         702          61         324        2699          39           0         242           0           0          62         258        4324
+a               32           8         702          60         324        2982          39           0         242           0           0          12          79        4427
+start           32           8         702          59         325        2980          39           0         242           0           0          12          81        4427
+
+Delta vs hold (leave-hold; prefix-identical through 119s)
+arm       idleJalA    idleJalB     cineJal   hangarJal    craftJal   menuInJal  rndBackJal     shipJal    mViewJal    sub02Jal  resultsJal    modelJal  missionJal   submitGfx
+hold             0           0           0           0           0           0           0           0           0           0           0           0           0           0
+a                0           0           0          -1           0         283           0           0           0           0           0         -50        -179         103
+start            0           0           0          -2           1         281           0           0           0           0           0         -50        -177         103
+
+Classification
+  hold    INVALID
+  a       INVALID
+  start   INVALID

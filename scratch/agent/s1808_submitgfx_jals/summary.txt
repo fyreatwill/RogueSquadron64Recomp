@@ -1,0 +1,56 @@
+s1808 three-arm Rice: submitGfxFrame jal-sites on title-like 1024
+HYPOTHESIS-ID: external-retail-entry-boundary
+secs=133  B_ROUTE=eleven-start+55/58/63:b  candidates at 119/123 only
+controls: whole-RDRAM 10k, B pad 0x40000000, hangar then B 640, 640->512 attract before 119s, hangarJal/prev>=40, 14 PCs armed
+H1 one submitGfx prev_pc +~104 matching submitGfx; H2 two+ prevs rise and sum ~+104; H3 no prev rise with submitGfx still +104; H4 submitGfx does not reproduce +104
+
+WIDTH (debugger [vi] only)
+hold    rc=0 rdram=10178 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=0 armed=14/14 shipJal=0 hangarJal=59 left1024=0 ok=1
+  all:  0.4 0->320 0x00000280; 2.3 320->640 0x0066a500; 17.3 640->1024 0x00790400 title-like; 38.4 1024->512 0x006ab800 hangar; 65.4 512->1024 0x00790400 title-like; 96.4 1024->640 0x00696100 B-frontend; 117.6 640->512 0x00690800 attract
+  post119: (no WIDTH)
+  post126: (no WIDTH)
+  last: 117.6 640->512 0x00690800 attract
+  pads t>=118: 120.2=0x80010000
+  [oracle] done: 18929 hit(s) in 134.3s wall, 8023 VI (~133.7s emulated)
+a       rc=0 rdram=10188 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=14/14 shipJal=0 hangarJal=60 left1024=1 ok=1
+  all:  0.6 0->320 0x00000280; 2.3 320->640 0x0066a500; 17.3 640->1024 0x00790800 title-like; 38.4 1024->512 0x006ab400 hangar; 65.3 512->1024 0x00790400 title-like; 96.4 1024->640 0x00696600 B-frontend; 117.6 640->512 0x00690400 attract; 126.4 512->1024 0x00790800 title-like
+  post119: 126.4 512->1024 0x00790800 title-like
+  post126: 126.4 512->1024 0x00790800 title-like
+  last: 126.4 512->1024 0x00790800 title-like
+  pads t>=118: 120.1=0x80010000, 120.3=0x80000000, 124.3=0x80000000
+  [oracle] done: 19085 hit(s) in 134.4s wall, 8017 VI (~133.6s emulated)
+start   rc=0 rdram=10188 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=14/14 shipJal=0 hangarJal=60 left1024=1 ok=1
+  all:  0.4 0->320 0x00000280; 2.3 320->640 0x0066a500; 17.3 640->1024 0x00790400 title-like; 38.4 1024->512 0x006ab400 hangar; 65.4 512->1024 0x00790400 title-like; 96.4 1024->640 0x00696600 B-frontend; 117.7 640->512 0x00690400 attract; 126.3 512->1024 0x00790800 title-like
+  post119: 126.3 512->1024 0x00790800 title-like
+  post126: 126.3 512->1024 0x00790800 title-like
+  last: 126.3 512->1024 0x00790800 title-like
+  pads t>=118: 120.2=0x80010000, 120.3=0x10000000, 124.3=0x10000000
+  [oracle] done: 19103 hit(s) in 134.3s wall, 8022 VI (~133.7s emulated)
+
+PC watches (lifetime)
+arm       idleJalA    idleJalB     cineJal   hangarJal    craftJal   menuInJal  rndBackJal     shipJal    mViewJal    sub02Jal  resultsJal    modelJal  missionJal   submitGfx
+hold            32           8         703          59         326        2700          39           0         242           0           0          62         256        4324
+a               32           8         703          60         322        2976          39           0         242           0           0          12          81        4422
+start           32           8         705          60         326        2981          39           0         242           0           0          12          79        4431
+
+Delta vs hold (leave-hold; prefix-identical through 119s)
+arm       idleJalA    idleJalB     cineJal   hangarJal    craftJal   menuInJal  rndBackJal     shipJal    mViewJal    sub02Jal  resultsJal    modelJal  missionJal   submitGfx
+hold             0           0           0           0           0           0           0           0           0           0           0           0           0           0
+a                0           0           0           1          -4         276           0           0           0           0           0         -50        -175          98
+start            0           0           2           1           0         281           0           0           0           0           0         -50        -177         107
+
+submitGfx prev_pc histogram (mupen PREVIOUS_PC = jal site; $ra = prev+8)
+arm           idleJalA        idleJalB         cineJal       hangarJal        craftJal       menuInJal        mViewJal      missionJal
+hold                32               8             703              59             324            2700             242             256
+a                   32               8             703              60             320            2976             242              81
+start               32               8             705              60             324            2981             242              79
+Delta vs hold
+arm           idleJalA        idleJalB         cineJal       hangarJal        craftJal       menuInJal        mViewJal      missionJal
+hold                 0               0               0               0               0               0               0               0
+a                    0               0               0               1              -4             276               0            -175
+start                0               0               2               1               0             281               0            -177
+
+Classification
+  hold    H4-hold
+  a       submitGfx+98+H2-menuInJal+276,missionJal-175=sum101
+  start   submitGfx+107+H2-menuInJal+281,missionJal-177=sum104

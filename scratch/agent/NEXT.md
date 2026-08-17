@@ -1,9 +1,9 @@
-# NEXT work unit (s1808)
+# NEXT work unit (s1809)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume `npcAtPtUpdate`. Last-15 ledger titles after s1807 include the
-s1792 revisit (`selected H3 unwatched submitGfx callers`), so the
+Resume `npcAtPtUpdate`. Last-15 ledger titles after s1808 include the
+s1808 revisit (`selected H2 menuIn/mission jal-sites`), so the
 15-title all-sweep REVISIT gate does not fire.
 
 Census `npcAtPtUpdate` (`0x800EA5E0`). Neighbor peek already:
@@ -61,6 +61,6 @@ Expected splits:
 - H4: fill the missing source or leave as `func_*`.
 
 Do not reopen the s1744 six-entry, s1760 jump-table, s1776 main-text,
-or s1792 unwatched-caller Rice recipes. The next 15-title REVISIT
-(after this sweep resumes) watches `submitGfxFrame` jal-sites / `$ra`,
-not another function-entry PC set.
+s1792 unwatched-caller, or s1808 jal/`prev_pc` Rice recipes. The next
+15-title REVISIT is the M4 accumulator boundary, not another
+`submitGfxFrame` PC set.

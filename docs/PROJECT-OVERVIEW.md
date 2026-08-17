@@ -233,7 +233,8 @@ times out to attract 512, whose A/Start/C-up/L/Z leave to a title-like 1024
 that is not a new cinematic, menu-SM, mission-frame, or `menuOverlayInit`
 jump-table-case session (s1744/s1760 H3-stop-tick) but does add
 `submitGfxFrame` +104/+102 vs hold (s1776 H1; s1792 H3 no unwatched
-caller entry; Rice still dies ~135 s). Audio de-stubbing is closed. These
+entry; s1808 H2 `menuControllerInput` jal +276 offset by
+`runInMissionFrame` jal −175; Rice still dies ~135 s). Audio de-stubbing is closed. These
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
@@ -3086,14 +3087,15 @@ collision.
 | s1805 | Synchronized `spawnObjectImpactEffectWithSound` (`0x800E9D74`, `0x150`). HMT `0x800A86E8`, optional `setObjectSubstructF10IfReady` `0x3D888889`, `tickProgressChannel`, then on return-1 `getObjectNpcTypeId` / `triggerCueWithSlotEffect` / `slotDispatcherIter` `a1=0xA` / `play3DSoundEvent` `0xD`/`0x78`/`0x28` with float `0x800A86F8`. No generated `jal 0x800E9D74`. TOML was stale `func_800E9D74`; generated headers/body and section-4 already used the human name. |
 | s1806 | Synchronized `computeNpcOrientationFromAimVectors` (`0x800E9EC4`, `0x5AC`). Pending-child + LOS (`isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` on `+0x38`), mesh T&L (`getObjectMeshTransformOrLocal` / `computeAnchorRelativePositionByDistanceRatio` `0x41200000` / `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto` / `transformVec3ByMat34`), then rotation/quat/vec3 (`buildRotationMatrixSlot0`/`composeRotationMatrixSlot1` from `+0x68`/`+0x64`, `vec3NormalizeInto` / `vec3Dot` / `constMinusSinfApprox` / `vec3Cross` / `normalize_vector` / `quatFromAxisAngle` / `rotateVec3ByQuat`). One generated `jal 0x800E9EC4` inside `npcAtPtUpdate` already dispatched the human name. TOML was stale `func_800E9EC4`; generated headers/body and section-4 already used the human name. |
 | s1807 | Synchronized `npcAtPtPlaySkywalkerErrorCallout` (`0x800EA470`, `0x170`). Anim-slot teardown/rebuild on `lbu +0xB3` (1/2/3) then `playStateGatedDestroySound`; body does not emit voiceId `0xC4`. Three generated `jal 0x800EA470` sites inside `npcAtPtUpdate`. TOML was stale `func_800EA470`; generated headers/body and section-4 already used the human name. |
+| s1808 | Mandatory REVISIT. Three-arm Rice watch of the 13 ROM `jal 0x8000C07C` sites plus callee `prev_pc` on `submitGfxFrame`. All arms passed controls; histogram sums equal the entry count. Leave still adds `submitGfxFrame` +98/+107. H2 selected: `menuControllerInput` jal `0x800B8014` +276/+281 and `runInMissionFrame` jal `0x800FAD90` −175/−177 net +101/+104. Five other ROM jals never appear as prevs (VRAM counts are overlay aliases). s1792 menu-input *entry* drop was overlay-aliased. Do not repeat this recipe. |
 
-The sweep cursor after s1807 is `npcAtPtUpdate` (`0x800EA5E0`).
+The sweep cursor after s1808 is `npcAtPtUpdate` (`0x800EA5E0`).
 Neighbor peek: TOML, generated headers/body, overlay INL, and companion
 already use the human name (size `0x13A4`); next leftover is
 `func_800EB984` (`0xC`; generated/companion already
 `resetObjectPoolListHead`). Mandatory revisits in this window: s1650,
-s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792. After s1807
-the last-15 titles still include that revisit, so the next iteration
+s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792, s1808. After
+s1808 the last-15 titles include that revisit, so the next iteration
 resumes the `npcAtPtUpdate` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
@@ -3130,13 +3132,17 @@ Leave does add `submitGfxFrame` +104/+102 vs hold without a new
 drops with the ship-select ticks (s1776). The extra +104 is not an
 entry of the seven unwatched callers either (s1792 H3): idle-save stays
 1, craft-select stays ~1028, menu-input and results-text drop, and
-random-backdrop / subtype-02 / model-viewer stay 0. Rice dies around 135 s; the only observed `1024→640` of this pair
+random-backdrop / subtype-02 / model-viewer stay 0. Callee-side
+`prev_pc` names the extra as `menuControllerInput` jal `0x800B8014`
++276/+281 offset by `runInMissionFrame` jal `0x800FAD90` −175/−177
+(s1808 H2; histogram sums match the entry count). The s1792
+menu-input entry drop is overlay-aliased. Rice dies around 135 s; the only observed `1024→640` of this pair
 is s1666's single-source Z continuation at 159.4 s origin `0x00696100`
 (B-frontend). s1698's Z-stays-512 through 125.8 s was a flush cutoff;
 s1666's 128.3 s Z leave was the same leave after a later 126.4 s press.
 `0x80000B70` is `loadOverlay+0x50` (`0x80000B20`, size `0x124`).
-Still-open questions (which `submitGfxFrame` jal-site / `$ra` produces
-the extra +104; M4 DMEM→RDRAM other than `0xD60`) live in `CURRENT-TRUTH.md`.
+Still-open questions (M4 DMEM→RDRAM other than `0xD60`) live in
+`CURRENT-TRUTH.md`.
 
 **Superseded claims compacted out of CURRENT-TRUTH in s1728.** Stale/unseen
 writer (physical-byte samples saw nonzero `0x8011A8A0`). `setViModeType`

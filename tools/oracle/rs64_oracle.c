@@ -87,6 +87,33 @@ static int g_verbose;
 static int g_watches_armed;
 static int g_positive_watch_removed;
 static long g_pc_hits;
+#define MAX_EXEC_PREV 128
+struct exec_prev {
+    uint32_t pc;
+    uint32_t prev;
+    long n;
+};
+static struct exec_prev g_exec_prev[MAX_EXEC_PREV];
+static int g_n_exec_prev;
+static long g_exec_prev_overflow;
+static void count_exec_prev(uint32_t pc, uint32_t prev)
+{
+    int i;
+    for (i = 0; i < g_n_exec_prev; i++) {
+        if (g_exec_prev[i].pc == pc && g_exec_prev[i].prev == prev) {
+            g_exec_prev[i].n++;
+            return;
+        }
+    }
+    if (g_n_exec_prev < MAX_EXEC_PREV) {
+        g_exec_prev[g_n_exec_prev].pc = pc;
+        g_exec_prev[g_n_exec_prev].prev = prev;
+        g_exec_prev[g_n_exec_prev].n = 1;
+        g_n_exec_prev++;
+        return;
+    }
+    g_exec_prev_overflow++;
+}
 static int g_voice_base_write_seen;
 static int g_voice_base_read_after_write_seen;
 static int g_voice_base_post_step_pending;
@@ -200,6 +227,7 @@ static void dbg_update(unsigned int pc)
             pc >= g_watch[i].start && pc < g_watch[i].end) {
             g_watch[i].hits++;
             g_pc_hits++;
+            count_exec_prev(pc, (uint32_t)pDebugGetState(M64P_DBG_PREVIOUS_PC));
         }
         if (accessed >= g_watch[i].start && accessed < g_watch[i].end &&
             (access_flags & g_watch[i].flags &
@@ -799,6 +827,12 @@ int main(int argc, char **argv)
                g_watch[i].label, g_watch[i].start, g_watch[i].end,
                g_watch[i].hits, g_watch[i].read_hits, g_watch[i].write_hits);
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
+    for (int i = 0; i < g_n_exec_prev; i++)
+        printf("[oracle] exec-prev pc=0x%08x prev=0x%08x n=%ld\n",
+               g_exec_prev[i].pc, g_exec_prev[i].prev, g_exec_prev[i].n);
+    if (g_exec_prev_overflow)
+        printf("[oracle] exec-prev overflow=%ld (unique pairs truncated at %d)\n",
+               g_exec_prev_overflow, MAX_EXEC_PREV);
     /* Materialise the config so the input mapping is inspectable. Without
      * this nothing is ever written and the key->button mapping the presses
      * rely on is invisible in-memory defaults - i.e. an unverifiable

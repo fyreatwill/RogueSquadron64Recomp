@@ -83685,3 +83685,83 @@ use the human name; next leftover is `func_800EB984` (`0xC`; generated
 and companion already `resetObjectPoolListHead`). Last-15 titles after
 s1807 still include s1792's revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1808 (2026-08-16) — selected H2 menuIn/mission jal-sites on the attract 1024
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1807 were s1793–s1807, all sweep-scoped
+(`synchronized` / `confirmed`). s1807's claim that those titles still
+included s1792 was stale: s1792 had already aged out. Step 0 `wc -c`
+was 7884; not a maintenance iteration. No new soak-queue verdicts past
+the already-folded s1029-and-earlier tail.
+
+s1776 selected H1-submitGfx (+104/+102). s1792 selected H3-no-unwatched
+function-entry rise. New angle: the 13 ROM `jal 0x8000C07C` sites
+(ROM and generated C agree on exactly 13) plus `submitGfxFrame` entry,
+then a same-iteration `prev_pc` histogram on that entry (mupen
+`PREVIOUS_PC` is the jal site; `$ra` = prev+8). Function-entry counts
+can stay flat while an inner-loop jal rises; VRAM jal watches are
+overlay-aliased.
+
+Competing hypotheses: H1 one jal/prev +~104 matching `submitGfxFrame`;
+H2 two or more movers and their deltas sum to ~+104; H3 all 13 jals /
+prevs flat or drop while `submitGfxFrame` still +104 (jalr / missed);
+H4 `submitGfxFrame` does not reproduce +104.
+
+Discriminator: three concurrent Rice arms cloned from
+`scratch/agent/s1792_submitgfx_callers/run_pc.sh` (`--secs 133`,
+whole-RDRAM 10k, PIF/`[pad]`, `--vi-trace`, `--vi-poll`) with the 13
+jal PCs + `submitGfxFrame`. First pass was jal-VRAM counts only;
+second pass rebuilt `tools/oracle/rs64_oracle.c` to emit
+`[oracle] exec-prev` and re-ran the same three arms. Do not re-arm
+the s1744 six-entry, s1760 jump-table, s1776 main-text, or s1792
+unwatched function entries. Artifacts:
+`scratch/agent/s1808_submitgfx_jals/summary.txt` and
+`summary_jals_vram.txt`.
+
+All three arms (second pass): rc=0, whole-RDRAM 10178–10188 with the
+10k positive control, 14/14 PCs armed, B pad `0x40000000` ×3, hangar
+then B-route then `640→512` attract at 117.6–117.7 s, ~133.6–133.7 s
+emulated / 134.3–134.4 s wall. Leave pads at 120.3 / 124.3 delivered
+A=`0x80000000` and Start=`0x10000000`. Debugger `[vi]` WIDTH matches
+s1714/s1744/s1760/s1776/s1792: hold stays attract 512; A/Start
+`512→1024` at 126.3–126.4 s origin `0x00790800`. Hangar jal 59–60
+(positive control that jal watches fire). `submitGfxFrame` 4324 / 4422
+/ 4431 = +98 / +107 (s1776 H1 reproduced; H4 rejected).
+
+`submitGfxFrame` `prev_pc` histogram sums exactly to the entry count
+on every arm (4324=4324, 4422=4422, 4431=4431) — same-run positive
+control that every present is attributed. Eight of the 13 ROM jals
+actually call `submitGfxFrame` on this route:
+
+| prev (jal) | owner | hold | a | start | delta a/start |
+|---|---|---:|---:|---:|---:|
+| `0x8006D9A8` | `runIdleFramesAndLoadSaveData` A | 32 | 32 | 32 | 0 / 0 |
+| `0x8006DAE8` | `runIdleFramesAndLoadSaveData` B | 8 | 8 | 8 | 0 / 0 |
+| `0x800A64AC` | `cinematicLoopBody` | 703 | 703 | 705 | 0 / +2 |
+| `0x800AB0DC` | `runHangarSelectionFrame` | 59 | 60 | 60 | +1 / +1 |
+| `0x800AF644` | `tickCraftSelectScreen` | 324 | 320 | 324 | −4 / 0 |
+| `0x800B8014` | `menuControllerInput` | 2700 | 2976 | 2981 | +276 / +281 |
+| `0x800C2D90` | `runMenuModelViewerScreen` | 242 | 242 | 242 | 0 / 0 |
+| `0x800FAD90` | `runInMissionFrame` | 256 | 81 | 79 | −175 / −177 |
+
+No other prev. Ship / random-backdrop / subtype-02 / results /
+`runModelViewerLoop` jals never appear as `submitGfxFrame` prevs;
+their VRAM exec counts (rndBack 39, model 62→12, ship 0) are
+overlay aliases.
+
+This selects H2: `menuControllerInput` jal `0x800B8014` +276/+281
+and `runInMissionFrame` jal `0x800FAD90` −175/−177 net +101/+104,
+matching `submitGfxFrame` +98/+107 (within 15). H1 rejected (the
+menuIn rise alone overshoots). H3 rejected (prevs are not flat).
+s1792's `menuControllerInput` *entry* drop (−179/−177 at
+`0x800B47D0`) does not mean the jal dropped — that entry PC is
+overlay-aliased; the callee-side prev is the real caller.
+
+The extra +104 is not a new screen-handler entry. It is more
+presents from `menuControllerInput`'s inner jal, offset by the
+attract's `runInMissionFrame` jal stopping (H3-stop-tick for that
+jal). Do not repeat this jal/prev recipe. Next 15-title REVISIT is
+the M4 accumulator boundary, not another `submitGfxFrame` PC set.
+Sweep resumes at `npcAtPtUpdate`.
+

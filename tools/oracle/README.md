@@ -24,6 +24,12 @@ and the oracle refuses to run against it.
     [watch] write [0x001f3cc0,0x001f3cd0] flags=0x5 idx=0
     [hit] w addr=0x001f3cc0 pc=0x800b1234 prev_pc=0x800b1230 t=41.2s n=1
     [oracle] done: 3 hit(s) in 180.0s wall, 10794 VI (~179.9s emulated)
+    [oracle] exec-prev pc=0x8000c07c prev=0x800ab0dc n=59
+
+`--watch-pc` also prints a lifetime `exec-prev` histogram: for each
+exec hit, mupen's `PREVIOUS_PC` (the jal site that transferred here;
+`$ra` is prev+8). Use that instead of overlay-aliased VRAM watches
+when attributing a callee.
 
 Exit status: 0 = hits, 3 = clean run with zero hits, 1/2 = setup error. The
 VI count is emulated frames, so a run always reports how far the *game* got,
