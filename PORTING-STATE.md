@@ -83216,3 +83216,44 @@ peek already shows TOML still carrying `func_800E8828` while generated
 headers/body, overlay INL, and `mission_overlay.txt` use the human name.
 Last-15 titles after s1795 still include s1792's revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1796 (2026-08-16) — synchronized the playAttachmentCueNoTexture symbol
+
+Exact generated-symbol census for leftover `0x800E8828` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7776; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playAttachmentCueNoTexture = 0x800E8828` with comment "attachment cue + 3D sound without an HMT texture lookup". No leftover `func_800E8828` splat and no `D_800E8828`. No menu/cinematic/main occupant. Previous named kernel in VRAM order is `npcGroundTroopUpdate = 0x800E7860`; next named kernel is `applyCraftAnimDetailParamsB = 0x800E8948` |
+| Companion `main_overlay.txt` | No occupant at `0x800E8828` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void playAttachmentCueNoTexture` at VRAM `0x800E8828`. First insn `addiu $sp, $sp, -0x70`; last insn `jr $ra` / `addiu $sp, $sp, 0x70` at `0x800E8940` / `0x800E8944`. Previous `npcGroundTroopUpdate` ends at `0x800E8820` / `0x800E8824`; next is `applyCraftAnimDetailParamsB` at `0x800E8948`. `funcs.h` already declares the human name. No leftover `func_800E8828`. No generated `jal 0x800E8828` site |
+| Body semantics | Four jal / four unique. Copies `0x30` bytes from `*(a0+4)` onto `sp+0x28`, scales `+0x44` by float `0x800A85A8` into the copied Y, then `resolveNpcAttachmentPos` (`0x800F0F94`) of `*(s0+0x38)` dest `sp+0x28` with `a2` from float `0x800A85AC`. `tickProgressChannel` (`0x800F1870`) `a2=0` dest `sp+0x58`; on return-1, `triggerCueWithSlotEffect` (`0x800F2FCC`) `a1=0x6` / `a2=sp+0x28` / `a3=0x8010B0BC` plus `play3DSoundEvent` (`0x800989D8`) `a0=0` / `a1=s0` / `a2=s0+0x24` / `a3=12.0f` stack `0x1D`/`0x6E`/`0x28` with float `0x800A85B0`. Zero `lookupHmtTextureByName` / `setObjectSubstructF10IfReady` — the no-texture sibling of `playAttachmentMaterialSoundSimple` / `playAttachmentMaterialSoundSimpleB` |
+| TOML (before) | `{ name = "func_800E8828", vram = 0x800E8828, size = 0x120 }` — size matches `0x800E8948 - 0x800E8828` |
+| Overlay section 4 (already named) | `{ .func = playAttachmentCueNoTexture, .offset = 0x000436F8, .rom_size = 0x00000120 }` under `section_4_ovl_mission_funcs` (`0x800E8828 - 0x800A5130 = 0x436F8`; previous `0x42730 + 0xFC8 = 0x436F8`; `0x436F8 + 0x120 = 0x43818` matches next `applyCraftAnimDetailParamsB`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E8828` |
+
+### Outcome
+
+H2 selected (stale TOML placeholder; generated headers/body and section-4
+already used the human name). Companion `mission_overlay.txt` already had
+`playAttachmentCueNoTexture`; the live generated no-HMT attachment-cue +
+3D-sound body, previous (`npcGroundTroopUpdate` / `0x800E7860 + 0xFC8`)
+and next (`applyCraftAnimDetailParamsB` / `0x800E8948`) boundaries, TOML
+size, and section-4 overlay span agreed. Corrected TOML only. This
+refutes H1 (TOML was not already synchronized), H3 (no leftover orphan,
+overlay collision, or size/boundary disagreement; size is `0x120` as
+expected), and H4 (companion, generated body, TOML, and section-4 row
+are all present). No build or runtime run required.
+
+Next census: leftover `func_800E8948` / companion
+`applyCraftAnimDetailParamsB` at `0x800E8948` (size `0xEC`). Neighbor
+peek already shows generated headers/body, overlay INL, and
+`mission_overlay.txt` using the human name while TOML is still
+`func_800E8948`. Last-15 titles after s1796 still include s1792's
+revisit, so the mandatory REVISIT gate does not fire.
