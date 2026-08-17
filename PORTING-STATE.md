@@ -83805,3 +83805,48 @@ peek already shows TOML still carrying `func_800EB984` while generated
 headers/body, overlay INL, and `mission_overlay.txt` use the human name.
 Last-15 titles after s1809 still include s1808's revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1810 (2026-08-16) — synchronized the resetObjectPoolListHead symbol
+
+Exact generated-symbol census for leftover `func_800EB984` at
+`0x800EB984` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1808's mandatory REVISIT (`selected H2
+menuIn/mission jal-sites on the attract 1024`), so the 15-title
+all-sweep REVISIT gate did not fire. Step 0 `wc -c` was 8201; not a
+maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `resetObjectPoolListHead = 0x800EB984`. Adjacent named kernels: previous `npcAtPtUpdate = 0x800EA5E0` (s1809 confirmed, size `0x13A4` ends here); next coarse `npcPowerUpUpdate = 0x800EB990`; later `resetObjectContextPool = 0x800EC4D8` (the sole generated caller). No leftover `func_800EB984` splat, no `D_800EB984`, and no menu/cinematic/main overlay occupant |
+| Companion `main_overlay.txt` | No occupant at `0x800EB984` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void resetObjectPoolListHead` at VRAM `0x800EB984`. First insn `lui $v0, 0x8011`; last live insn `jr $ra` / `sw $zero, -0x3F40($v0)` at `0x800EB988` / `0x800EB98C` writing `0x8010C0C0`. Previous `npcAtPtUpdate` ends at `0x800EB97C` / `0x800EB980`; next is `npcPowerUpUpdate` at `0x800EB990`. `funcs.h` already declares the human name. No leftover `func_800EB984` body |
+| Body semantics | Three-instruction store-zero, same idiom as s1758 `resetCraftSubsystemGlobal` (`0x800DFB78`, `0xC`, `sw $zero, -0x3F60($v0)` → `0x8010C0A0`). Sole generated `jal 0x800EB984` is inside `resetObjectContextPool` at `0x800EC4F8`, between `resetCraftSubsystemGlobal` and `clearObjectPoolStateFlag`. Name matches: zeros the object-pool list head at `0x8010C0C0` |
+| TOML | Was `{ name = "func_800EB984", vram = 0x800EB984, size = 0xC }` — stale leftover. Size already matched `0x800EB990 - 0x800EB984`. Renamed to `resetObjectPoolListHead` |
+| Overlay section 4 | `{ .func = resetObjectPoolListHead, .offset = 0x00046854, .rom_size = 0x0000000C }` under `section_4_ovl_mission_funcs` (`0x800EB984 - 0x800A5130 = 0x46854`; previous `0x454B0 + 0x13A4 = 0x46854`; `0x46854 + 0xC = 0x46860` matches next `npcPowerUpUpdate`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EB984`. No leftover `func_800EB984` in generated headers or overlay INL after the TOML rename |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated store-zero body,
+previous (`npcAtPtUpdate` / `0x800EA5E0`) and next (`npcPowerUpUpdate`
+/ `0x800EB990`) boundaries, overlay span, and size already agreed on
+`resetObjectPoolListHead` / `0xC`. Only TOML still carried leftover
+`func_800EB984`; renamed to match. This refutes H1 (TOML was stale),
+H3 (no leftover splat, overlay collision, or size/boundary
+disagreement; previous ends exactly here and next starts at
+`0x800EB990`), and H4 (companion, generated body, and section-4 row
+were all present). No invented name. No build or runtime run required.
+
+Next census: `npcPowerUpUpdate` at `0x800EB990` (size `0x77C`).
+Neighbor peek: TOML, generated headers/body, overlay INL, and
+companion already use the human name. First insn `addiu $sp, $sp,
+-0x68`; last live `jr $ra` / `addiu $sp, $sp, 0x68` at `0x800EC104` /
+`0x800EC108`. Next occupant is leftover `fake_func_800EC10C` (`0x4`
+INVALID COP2 word) then leftover `func_800EC110` (companion
+`main_overlay.txt` already maps `allocObjectPoolNode = 0x800EC110`;
+mission leftover and generated body still say `func_800EC110`).
+Last-15 titles after s1810 still include s1808's revisit, so the
+mandatory REVISIT gate does not fire.

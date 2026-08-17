@@ -1904,7 +1904,7 @@ functions = [
     { name = "computeNpcOrientationFromAimVectors", vram = 0x800E9EC4, size = 0x5AC },
     { name = "npcAtPtPlaySkywalkerErrorCallout", vram = 0x800EA470, size = 0x170 },
     { name = "npcAtPtUpdate", vram = 0x800EA5E0, size = 0x13A4 },
-    { name = "func_800EB984", vram = 0x800EB984, size = 0xC },
+    { name = "resetObjectPoolListHead", vram = 0x800EB984, size = 0xC },
     { name = "npcPowerUpUpdate", vram = 0x800EB990, size = 0x77C },
     { name = "fake_func_800EC10C", vram = 0x800EC10C, size = 0x4 },
     { name = "func_800EC110", vram = 0x800EC110, size = 0x278 },
