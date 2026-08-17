@@ -81247,3 +81247,38 @@ row are all present). No build or runtime run required.
 Next census: `npcRadarDishUpdate` at `0x800DC6F0` (size `0xB58`).
 Last-15 titles after s1746 still include s1744's revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1747 (2026-08-16) — confirmed the npcRadarDishUpdate symbol
+
+Exact generated-symbol census for `0x800DC6F0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6424; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcRadarDishUpdate = 0x800DC6F0` (coarse listing). Previous contiguous neighbor `npcRadarDishComputeAimMotion = 0x800DC300`; next contiguous neighbor `npcInitMinimalNoAnim = 0x800DD248`. The annotated listing jumps from `npcRadarDishComputeAimMotion` to `npcInitMinimalNoAnim` and omits this name, but the coarse listing and VRAM gap (`0x800DD248 - 0x800DC300 = 0xF48 = 0x3F0 + 0xB58`) place it between them. No menu/cinematic/main overlay occupant and no `D_800DC6F0` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcRadarDishUpdate` at VRAM `0x800DC6F0`; prologue `addiu $sp, $sp, -0x98`; object pointer `a0` saved in `s5`, halfword mode `a1`, `a2` in `s3`; object record `*(s5+4)` in `s1`. Returns through `jr $ra` / `addiu $sp, $sp, 0x98` ending at `0x800DD244`. Previous mission function last insn is `0x800DC6EC`; next is `npcInitMinimalNoAnim` at `0x800DD248`. `funcs.h` already declares the human name. No leftover `func_800DC6F0`. No direct `jal` site — table-dispatched like the other `npcXxxUpdate` siblings |
+| Body semantics | Halfword state in `a1`; 7-way jump table at `0x800A7D58` on `(a1-1)` for `a1 ∈ 1..7` (`sltiu` bound `0x7`; out of range falls to the epilogue at `0x800DD210`). Case 0 is setup (`walkMeshdef0List`, `composeEulerRotationXYZ`, `composeRotationMatrixSlot0`/`1`/`2`, `addVec3At0x24`, `lookupHmtMaterialByName`, `createAndInitObject`, `dispatchDatSubtypeByRandomIndex`). Case 1 tears down (`factor5RemoveListNode` on `+0x6C` when `+0xB0 == 1`, `getNpcCurrentHealth`, `initActorRenderDescriptorIfUninit`, `clearPendingAndDestroyChildNpc`, `releaseMeshAsset`). Case 2 is the live tick (`npcRadarDishComputeAimMotion` at `0x800DCAC8`, `updateNpcEventTimer`, `transformMeshPartIntoWorld`, spawn/debris cluster, `play3DSoundEvent`, `isNpcWithinActiveReferenceRange`). Case 3 is visibility/audio (`clearVec4QuadStruct`, `applyScaleToMat3x4`, `composeQuatToMat3x4`, `addNpcToVisibilityBucket`, `updateActive3DAudioSource`). Case 4 is damage/destruction (`getNpcCurrentHealth`, `extrapolateNpcPositionForCurrentMode`, `dealDamageToNpc`, `unregisterAndFreeNpcSlot` at `jal 0x8003E7D0`, `popNpcSlotFromTail` at `jal 0x8003E684`, `datItemSetObjectiveBooleanCount`). Case 5 is the epilogue (return 1). Case 6 is a single `dispatchSlotAction5IfActive`. Name matches the radar-dish `npcXxxUpdate` sibling of `npcTieVariantUpdate` / `npcWingmanUpdate` |
+| TOML | `{ name = "npcRadarDishUpdate", vram = 0x800DC6F0, size = 0xB58 }` — already the human name; size matches `0x800DD248 - 0x800DC6F0` (last insn `0x800DD244` + 4 = `0xB58`). No leftover `func_800DC6F0` |
+| Overlay section 4 | `{ .func = npcRadarDishUpdate, .offset = 0x000375C0, .rom_size = 0x00000B58 }` under `section_4_ovl_mission_funcs` (`0x800DC6F0 - 0x800A5130 = 0x375C0`; `0x371D0 + 0x3F0 = 0x375C0`; `0x375C0 + 0xB58 = 0x38118` matches next `npcInitMinimalNoAnim`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DC6F0`. Menu max VRAM is `0x800D03DC`; cinematic max is `0x800B072C`; neither reaches this address. Overlay last menu function ends at `0x800CD520`; last cinematic function ends at `0x800B0940`. No leftover `func_800DC6F0` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 7-way radar-dish-update body,
+previous (`npcRadarDishComputeAimMotion` / `0x800DC300`) and next
+(`npcInitMinimalNoAnim` / `0x800DD248`) boundaries, TOML name and size, and
+section-4 overlay span already agree. No TOML or generated-name change.
+This refutes H2 (no stale placeholder), H3 (no fake fragment, overlay
+collision, or size/boundary disagreement), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Next census: `npcInitMinimalNoAnim` / `func_800DD248` at `0x800DD248`
+(size `0x7C`). Last-15 titles after s1747 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.
