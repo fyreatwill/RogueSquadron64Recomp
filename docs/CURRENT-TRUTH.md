@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1859 (2026-08-17).
+detail. Reviewed through s1860 (2026-08-17).
 
 ## Current state
 
@@ -66,17 +66,17 @@ detail. Reviewed through s1859 (2026-08-17).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at leftover
-   `func_800F07AC` (`0x800F07AC`, size `0x1FC`). Companion
+   `func_800F09A8` (`0x800F09A8`, size `0x1FC`). Companion
    `mission_overlay.txt` and generated headers/body/INL already name
-   `validateActorTargetLOS`; TOML still leftover `func_800F07AC`.
-   Next leftover after that is `func_800F09A8` (`0x800F09A8`,
-   `0x1FC`; companion/generated already `computeActorAnchorDeltaAfterLOS`;
-   TOML still leftover). s1859 synchronized leftover
-   `func_800F06BC` to `isPendingChildNpcActive` (`0x800F06BC`,
-   `0xF0`). s1856 selected H-never-live for the parked M4
+   `computeActorAnchorDeltaAfterLOS`; TOML still leftover `func_800F09A8`.
+   Next leftover after that is `func_800F0BA4` (`0x800F0BA4`,
+   `0x220`; companion/generated already `evaluateTargetTrackingVisibility`;
+   TOML still leftover). s1860 synchronized leftover
+   `func_800F07AC` to `validateActorTargetLOS` (`0x800F07AC`,
+   `0x1FC`). s1856 selected H-never-live for the parked M4
    `0x8000` Y on VI 640 attribution LLE (single-source). Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1859). About 1,548 placeholder `func_0x...` names
+   §35 (s1648–s1860). About 1,548 placeholder `func_0x...` names
    remained at s1487.
 2. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
@@ -136,7 +136,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1859 through leftover `func_800F06BC` became
+s1648–s1860 through leftover `func_800F07AC` became
+`validateActorTargetLOS` (`0x800F07AC`, `0x1FC`) after leftover
+`func_800F06BC` became
 `isPendingChildNpcActive` (`0x800F06BC`, `0xF0`) after leftover
 `func_800EFDE0` became
 `updateNpcEventTimer` (`0x800EFDE0`, `0x8DC`) after leftover
