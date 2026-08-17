@@ -84567,3 +84567,51 @@ Next work unit: resume the generated-symbol sweep at leftover
 `datItemActorNpcHandler`; TOML still leftover). Parked M4 remainder
 is the restaged RDP command shape in `0xD60`, not another consumer
 walk.
+
+## Session 1825 (2026-08-17) — synchronized the datItemActorNpcHandler symbol
+
+Exact generated-symbol census for leftover `func_800ECE10` at
+`0x800ECE10` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1824's mandatory REVISIT (`selected H-rdp-consumer
+on the ovl20 0x670 record`), so the 15-title all-sweep REVISIT gate did
+not fire. Step 0 `wc -c` was 10377; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `datItemActorNpcHandler = 0x800ECE10`. Leftover splat `func_800ECE10` was deleted s432 as a duplicate-symbol collision with that name (same class as items -262/-264). Previous leftover `fake_func_800ECE04 = 0x800ECE04` (s1823 confirmed H1). Next leftover `fake_func_800ED148 = 0x800ED148` |
+| Companion `main_overlay.txt` | No occupant at `0x800ECE10`. Maps the later neighbor as `claimSongSlotForCurrentHandle = 0x800ED150` only |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void datItemActorNpcHandler` at VRAM `0x800ECE10`. First insn `addiu $sp, $sp, -0x140`; last live insn `jr $ra` / `addiu $sp, $sp, 0x140` at `0x800ED140` / `0x800ED144`. Previous occupant is leftover `fake_func_800ECE04` at `0x800ECE04` (three-insn `srl`/`addiu`/`multu` ending at `0x800ECE0C`); next is leftover `fake_func_800ED148` at `0x800ED148`. `funcs.h` and overlay INL already used the human name. No generated `jal 0x800ECE10` site (handler is table-dispatched) |
+| Body semantics | Frame `-0x140` (320-byte stack). Action dispatch on `$a1` with cases 1/2/3/7: action 1 (spawn) copies a vec3 from the message into the slot and calls `popNpcSlotFromTail`; action 2 (destroy) stamps `0xFFFF` inactive and walks entries calling `parseDatItemCommon`; action 3 is the tick. Matches the companion comment and the sister handler `craftMountedAnimationNpcHandler` |
+| TOML | Was `{ name = "func_800ECE10", vram = 0x800ECE10, size = 0x338 }` — stale leftover. Size already matched `0x800ED148 - 0x800ECE10`. Renamed to `datItemActorNpcHandler` |
+| Overlay section 4 | `{ .func = datItemActorNpcHandler, .offset = 0x00047CE0, .rom_size = 0x00000338 }` under `section_4_ovl_mission_funcs` (`0x800ECE10 - 0x800A5130 = 0x47CE0`; previous `0x47CD4 + 0xC = 0x47CE0`; `0x47CE0 + 0x338 = 0x48018` matches next `fake_func_800ED148`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800ECE10`. No leftover `func_800ECE10` in generated headers, body, overlay INL, or TOML after the rename (companion comment only) |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x140` prologue, `jr $ra` / `addiu $sp, $sp, 0x140`
+at `0x800ED140` / `0x800ED144`, action 1/2/3/7 NPC handler), previous
+(`fake_func_800ECE04` / `0x800ECE04`) and next (`fake_func_800ED148` /
+`0x800ED148`) boundaries, overlay span, and size already agreed on
+`datItemActorNpcHandler` / `0x338`. TOML still carried leftover
+`func_800ECE10`; renamed it to match. This refutes H1 (sources were
+not already synchronized), H3 (no leftover splat at this address in
+generated/TOML after the rename, no overlay collision, and no
+size/boundary disagreement; previous ends at `0x800ECE0C` and next
+starts at `0x800ED148`), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No invented name. No build or runtime
+run required.
+
+Next census: leftover `fake_func_800ED148` at `0x800ED148` (size
+`0x8`). Neighbor peek already: companion `mission_overlay.txt`,
+generated headers/body/INL, and TOML already use the leftover splat
+name. First insn `lui $at, 0x801F`; last `addu $at, $at, $v1` at
+`0x800ED14C`. No `jr $ra`. Next generated occupant is leftover
+`func_800ED150` (`0x800ED150`, `0xB0`; companion `main_overlay.txt`
+already names `claimSongSlotForCurrentHandle`; mission overlay and
+generated still leftover). Last-15 titles after s1825 still include
+s1824's M4 revisit, so the mandatory REVISIT gate does not fire.

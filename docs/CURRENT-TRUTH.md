@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1824 (2026-08-17).
+detail. Reviewed through s1825 (2026-08-17).
 
 ## Current state
 
@@ -60,13 +60,13 @@ detail. Reviewed through s1824 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800ECE10`
-   (`0x800ECE10`, size `0x338`). Companion `mission_overlay.txt` and
-   generated headers/body/INL already use `datItemActorNpcHandler`;
-   TOML is still leftover. s1823 confirmed leftover `fake_func_800ECE04`
-   (`0x800ECE04`, `0xC`) H1. s1824 was the mandatory M4 REVISIT (not
+1. Resume the generated-symbol sweep at leftover `fake_func_800ED148`
+   (`0x800ED148`, size `0x8`). Companion `mission_overlay.txt`, generated
+   headers/body/INL, and TOML already use the leftover splat name. s1825
+   synchronized leftover `func_800ECE10` to `datItemActorNpcHandler`
+   (`0x800ECE10`, `0x338`). s1824 was the mandatory M4 REVISIT (not
    sweep). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34
-   (s1590–s1647), §35 (s1648–s1824). About 1,548 placeholder
+   (s1590–s1647), §35 (s1648–s1825). About 1,548 placeholder
    `func_0x...` names remained at s1487.
 2. Parked M4 remainder: RDP command shape of the restaged `0x670+0x18`
    XY in the `0xD60` buffer (s1824 H-rdp-consumer). Do not re-watch
@@ -124,8 +124,10 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1824 through leftover `fake_func_800ECE04` confirmed at
-`0x800ECE04` size `0xC` (H1) after leftover `func_800ECDDC` became
+s1648–s1825 through leftover `func_800ECE10` became
+`datItemActorNpcHandler` (`0x800ECE10`, `0x338`) after leftover
+`fake_func_800ECE04` confirmed at `0x800ECE04` size `0xC` (H1) after leftover
+`func_800ECDDC` became
 `dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`), leftover
 `func_800ECC28` became `craftMountedAnimationNpcHandler`
 (`0x800ECC28`, `0x1B4`), leftover
