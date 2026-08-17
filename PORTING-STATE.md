@@ -81895,3 +81895,40 @@ and section-4 row are all present). No build or runtime run required.
 Next census: `playAttachmentCueWithSlotIter` / `func_800E026C` at
 `0x800E026C` (size `0x18C`). Last-15 titles after s1764 still include
 s1760's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1765 (2026-08-16) — synchronized the playAttachmentCueWithSlotIter symbol
+
+Exact generated-symbol census for `0x800E026C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6623; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playAttachmentCueWithSlotIter = 0x800E026C` with comment "attachment cue + 3D sound via slot-dispatcher iteration". Previous contiguous named neighbor `playAttachmentMaterialSoundVariantB = 0x800E00E4`. Next contiguous named neighbor `playDualTextureAttachmentCue = 0x800E03F8`. No leftover `func_800E026C` splat, no `D_800E026C`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void playAttachmentCueWithSlotIter` at VRAM `0x800E026C`. First insn `addiu $sp, $sp, -0x90`; last insn `addiu $sp, $sp, 0x90` at `0x800E03F4`. Previous `playAttachmentMaterialSoundVariantB` ends at `0x800E0268`; next is `playDualTextureAttachmentCue` at `0x800E03F8`. `funcs.h` already declares the human name. No leftover `func_800E026C`. No generated `jal 0x800E026C` site |
+| Body semantics | Attachment cue + 3D sound via slot-dispatcher iteration: `jal 0x80058360` `lookupHmtTextureByName` (name `0x800A7FC0`, dest `sp+0x28`), modulo-5 of `lh +0xB6 + 1` (`mult` by `0x66666667`), `jal 0x800F1870` `tickProgressChannel`, then on return-1 `jal 0x800F2A00` `getObjectNpcTypeId`, floats `0x800A7FC4`/`0x800A7FC8`/`0x800A7FCC`/`0x800A7FD0`, table `0x8010ABA0` (`0x80110000-0x5460`) via `lbu +0xB2`, `jal 0x800F2FCC` `triggerCueWithSlotEffect` `a1=0xB`, optional `jal 0x8003E8DC` `slotDispatcherIter` `a1=0xA` `a2=sp+0x58` when cue id != `0xFFFF`, plus `jal 0x800989D8` `play3DSoundEvent` `0x30`/`0x6E`/`0x28` with float `0x800A7FD4` and `a3=0x41700000` (15.0f). Same helper family as the two material-sound siblings; the slot-dispatcher walk is the distinguishing step |
+| TOML (before) | `{ name = "func_800E026C", vram = 0x800E026C, size = 0x18C }` — size matches `0x800E03F8 - 0x800E026C` |
+| Overlay section 4 | `{ .func = playAttachmentCueWithSlotIter, .offset = 0x0003B13C, .rom_size = 0x0000018C }` under `section_4_ovl_mission_funcs` (`0x800E026C - 0x800A5130 = 0x3B13C`; previous `0x3AFB4 + 0x188 = 0x3B13C`; `0x3B13C + 0x18C = 0x3B2C8` matches next `playDualTextureAttachmentCue`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E026C`. No leftover `func_800E026C` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`playAttachmentMaterialSoundVariantB` / `0x800E00E4`) and next
+(`playDualTextureAttachmentCue` / `0x800E03F8`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `playAttachmentCueWithSlotIter`, and only the TOML name was a
+stale `func_800E026C` placeholder. Corrected TOML to
+`playAttachmentCueWithSlotIter`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `playDualTextureAttachmentCue` / `func_800E03F8` at
+`0x800E03F8` (size `0x350`). Last-15 titles after s1765 still include
+s1760's revisit, so the mandatory REVISIT gate does not fire.

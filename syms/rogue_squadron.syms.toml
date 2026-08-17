@@ -1862,7 +1862,7 @@ functions = [
     { name = "applyCraftAnimAndDetailParams", vram = 0x800DFB90, size = 0x3C4 },
     { name = "playAttachmentMaterialSoundVariantA", vram = 0x800DFF54, size = 0x190 },
     { name = "playAttachmentMaterialSoundVariantB", vram = 0x800E00E4, size = 0x188 },
-    { name = "func_800E026C", vram = 0x800E026C, size = 0x18C },
+    { name = "playAttachmentCueWithSlotIter", vram = 0x800E026C, size = 0x18C },
     { name = "func_800E03F8", vram = 0x800E03F8, size = 0x350 },
     { name = "func_800E0748", vram = 0x800E0748, size = 0x1B0 },
     { name = "func_800E08F8", vram = 0x800E08F8, size = 0x3EC },
