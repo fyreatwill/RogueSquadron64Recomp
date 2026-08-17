@@ -3152,19 +3152,20 @@ collision.
 | s1870 | Synchronized `initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`). Gate `*(actor+0x1A7)`; uninit path writes `0xFFFF` to out+0x6, early-exits on `a1` or flags at `actor+0x1A4` mask `0xFF00FF00`, optional `getNpcContextField8` vec3 copy when `a3==1`, then `parseDatItemCommon`. Already-init path may invalidate out+0x6 vs `actor+0x198` and adjust refcounts at `+0x19C`/`+0x1A0`. 18 generated `jal 0x800F1E7C` sites (16 overlay already human-named; 2 `LOOKUP_FUNC` in `npcPowerGeneratorUpdate` / `npcWordDevastatorUpdate`). TOML was stale `func_800F1E7C`; companion, generated headers/body, and section-4 already used the human name. |
 | s1871 | Synchronized `initActorRenderDescriptorWithNpcVelocity` (`0x800F1FF4`, `0x7C`). Gate `*(actor+0x1A7)`; uninit path `getNpcContextField8(actor+0x198)`, `computeBillboardFacingVector` into `sp+0x10`, copies the NPC field_8 vec3 to dest+0x10/+0x14/+0x18 and the facing vector to dest+0x1C/+0x20/+0x24. 4 generated `jal 0x800F1FF4` sites (`tickAtAtAudioAndWeaponState`, `npcAtStHandleDestruction`, `npcDebrisFieldUpdate`, `npcWingmanSteerToward`) already dispatch the human name. TOML was stale `func_800F1FF4`; companion, generated headers/body, and section-4 already used the human name. |
 | s1872 | Mandatory M4 REVISIT. Selected UNEVALUABLE for hangar/512 live `0x8000` Y: four port arms never published origin `0x006ab400`/`0x006ab800` or VI 512/1024 (all `640→2→640` at `0x00696100`). Arm 1 attribution-LLE controls fired (gate=attr, mark flush/entry, hangar=0, gated `n_flush=0`). HLE wait-for-1024 timed out at 180s last width 640. Hangar-origin gate landed; H-* table still unchecked. Logs under `scratch/agent/s1872_m4_y8000_hangar512/`. |
+| s1873 | Synchronized `isVectorWithinConeAndRange` (`0x800F2208`, `0x108`). Origin+axis at `$a0`/`+0xC`, range `$a1` (xz `dx^2+dz^2` vs `range^2`), cosine `$a2`, target `$a3`; `vec3Dot`/`vec3Length` then compare cosine to the threshold. 0 generated `jal 0x800F2208` / `LOOKUP_FUNC` sites. TOML was stale `func_800F2208`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1872 is leftover `func_800F2208`
-(`0x800F2208`, size `0x108`). Neighbor peek: companion
+The sweep cursor after s1873 is leftover `func_800F2310`
+(`0x800F2310`, size `0xE8`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`isVectorWithinConeAndRange`; TOML still leftover
-`func_800F2208`. First insn `addiu $sp, $sp, -0x48`; last live
-`jr $ra` / `addiu $sp, $sp, 0x48` at `0x800F2308` / `0x800F230C`.
-Next already-named occupant is `isVectorInConeWriteDistance`
-at `0x800F2310`. Mandatory revisits in this window: s1650,
+`isVectorInConeWriteDistance`; TOML still leftover
+`func_800F2310`. First insn `addiu $sp, $sp, -0x40`; last live
+`jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F23F0` / `0x800F23F4`.
+Next already-named occupant is `computeTurnAxisTowardTarget`
+at `0x800F23F8`. Mandatory revisits in this window: s1650,
 s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792,
-s1808, s1824, s1840, s1856, s1872. After s1872 the last-15
-titles include that hangar/512 revisit, so the next iteration
-resumes the leftover census rather than another M4 walk.
+s1808, s1824, s1840, s1856, s1872. After s1873 the last-15
+titles still include that hangar/512 revisit, so the next
+iteration resumes the leftover census rather than another M4 walk.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

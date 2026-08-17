@@ -87053,3 +87053,53 @@ the four H-*. No mitigation.
 Next work unit: resume the generated-symbol sweep at leftover
 `func_800F2208` (`0x800F2208`, `0x108`). After s1872 the last-15
 titles include this revisit, so the sweep REVISIT gate does not fire.
+
+## Session 1873 (2026-08-17) — synchronized the isVectorWithinConeAndRange symbol
+
+Exact generated-symbol census for leftover `func_800F2208` at
+`0x800F2208` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1872's hangar/512 revisit (`hangar/512 0x8000 Y
+is unevaluable`), so the 15-title all-sweep REVISIT gate did not fire.
+Step 0 `wc -c` was 16827; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | Sequential listing `isVectorWithinConeAndRange = 0x800F2208` at line 1279, after `initActorRenderDescriptorWithNpcVelocity = 0x800F1FF4` and before `isVectorInConeWriteDistance = 0x800F2310`. No comment on this occupant. Health family (`getNpcHealthPercentage` at `0x800F219C`) sits between them in generated/TOML and is already named |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F2208`. Menu overlay listed-symbol max `0x800D03DC`; cinematic max `0x800B072C`; main `.text` ends at `0x800A5130` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void isVectorWithinConeAndRange` at VRAM `0x800F2208`. First insn `addiu $sp, $sp, -0x48` at `0x800F2208`; last live `jr $ra` / `addiu $sp, $sp, 0x48` at `0x800F2308` / `0x800F230C`. Previous is already `getNpcHealthPercentage` (`0x800F219C`, last `jr $ra` / `nop` at `0x800F2200` / `0x800F2204`); next is already `isVectorInConeWriteDistance` at `0x800F2310` (`addiu $sp, $sp, -0x40`). `funcs.h` and overlay INL already the human name. No leftover `func_800F2208` in generated headers/body/INL |
+| Body semantics | `$a0` cone origin vec3 (`+0/+4/+8`) with axis at `+0xC`; `$a1` range (float, compared as `range^2`); `$a2` cosine threshold; `$a3` target point. Stores `target-origin` at `sp+0x10`; early-returns 0 when `dx^2+dz^2 > range^2`. Otherwise `vec3Dot(axis, delta)` / (`vec3Length(axis)` * `vec3Length(delta)`) and compares that cosine to `$a2` (degenerate near-zero xz-distance with non-negative cosine returns 1). Companion name is already in generated/companion |
+| Callers | 0 generated `jal 0x800F2208` sites and no `LOOKUP_FUNC(0x800F2208)`. Sister `acquireNpcTargetsInAimCone` implements its own cone walk rather than jal'ing this helper |
+| TOML | Was `{ name = "func_800F2208", vram = 0x800F2208, size = 0x108 }` — stale leftover. Size already matched `0x800F2310 - 0x800F2208`. Renamed to `isVectorWithinConeAndRange` |
+| Overlay section 4 | `{ .func = isVectorWithinConeAndRange, .offset = 0x0004D0D8, .rom_size = 0x00000108 }` under `section_4_ovl_mission_funcs` (`0x800F2208 - 0x800A5130 = 0x4D0D8`; previous `0x4D06C + 0x6C = 0x4D0D8`; `0x4D0D8 + 0x108 = 0x4D1E0` matches next `isVectorInConeWriteDistance`) |
+| Non-collision | No leftover `func_800F2208` in generated headers, body, overlay INL, or TOML after the rename. Other overlay files have no occupant at `0x800F2208` |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x48` / `jr $ra` / `addiu $sp, $sp, 0x48` at
+`0x800F2208` / `0x800F2308` / `0x800F230C`), previous
+(`getNpcHealthPercentage` / `0x800F219C`) and next
+(`isVectorInConeWriteDistance` / `0x800F2310`) boundaries, overlay
+span, and size already agreed on
+`isVectorWithinConeAndRange` / `0x108`. TOML still carried leftover
+`func_800F2208`; renamed it to match. Generated headers/body/INL
+were already the human name. This refutes H1 (TOML was not already
+synchronized), H3 (no overlay collision, no size/boundary
+disagreement; previous ends exactly here and next starts at
+`0x800F2310`; first insn is `addiu $sp, $sp, -0x48` and last is
+`jr $ra` / `addiu $sp, $sp, 0x48` at `0x800F2308` / `0x800F230C`;
+body is a cone-and-range predicate, not an unnameable span). No
+invented name. No build or runtime run required.
+
+Next census: leftover `func_800F2310` at `0x800F2310` (size `0xE8`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `isVectorInConeWriteDistance`; TOML still
+leftover `func_800F2310`. First insn `addiu $sp, $sp, -0x40`; last
+live `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F23F0` /
+`0x800F23F4`. Next already-named occupant is
+`computeTurnAxisTowardTarget` at `0x800F23F8`. Last-15 titles after
+s1873 still include s1872's hangar/512 revisit, so the next
+iteration is another leftover census rather than a mandatory REVISIT.
