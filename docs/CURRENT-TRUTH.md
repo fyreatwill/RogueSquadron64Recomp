@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1838 (2026-08-17).
+detail. Reviewed through s1839 (2026-08-17).
 
 ## Current state
 
@@ -60,16 +60,16 @@ detail. Reviewed through s1838 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800EF048`
-   (`0x800EF048`, size `0x168`). Companion `mission_overlay.txt` and
-   generated headers/body/INL already name `initLevelMusicBank`; TOML
-   still leftover. s1838 synchronized leftover `func_800EEF34` to
-   `resetMusicSubsystemState` (`0x800EEF34`, `0x114`). s1837
-   synchronized leftover `func_800EED7C` to
-   `stageSongFromRequestDescriptor` (`0x800EED7C`, `0x1B8`). s1824 was
+1. Resume the generated-symbol sweep at leftover `func_800EF1B0`
+   (`0x800EF1B0`, size `0x148`). Companion `mission_overlay.txt` and
+   generated headers/body/INL already name `stopAllMusicWithFade`; TOML
+   still leftover. s1839 synchronized leftover `func_800EF048` to
+   `initLevelMusicBank` (`0x800EF048`, `0x168`). s1838
+   synchronized leftover `func_800EEF34` to
+   `resetMusicSubsystemState` (`0x800EEF34`, `0x114`). s1824 was
    the mandatory M4 REVISIT (not sweep). Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647), §35
-   (s1648–s1838). About 1,548 placeholder `func_0x...` names remained
+   (s1648–s1839). About 1,548 placeholder `func_0x...` names remained
    at s1487.
 2. Parked M4 remainder: RDP command shape of the restaged `0x670+0x18`
    XY in the `0xD60` buffer (s1824 H-rdp-consumer). Do not re-watch
@@ -127,7 +127,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1838 through leftover `func_800EEF34` became
+s1648–s1839 through leftover `func_800EF048` became
+`initLevelMusicBank` (`0x800EF048`, `0x168`) after leftover
+`func_800EEF34` became
 `resetMusicSubsystemState` (`0x800EEF34`, `0x114`) after leftover
 `func_800EED7C` became
 `stageSongFromRequestDescriptor` (`0x800EED7C`, `0x1B8`) after leftover
