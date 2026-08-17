@@ -1871,7 +1871,7 @@ functions = [
     { name = "tickTrainCarStateMachine", vram = 0x800E1E1C, size = 0x140 },
     { name = "buildDebrisTransformStack", vram = 0x800E1F5C, size = 0x4A0 },
     { name = "slerpFrameTowardTargetAxis", vram = 0x800E23FC, size = 0x278 },
-    { name = "func_800E2674", vram = 0x800E2674, size = 0x1A4 },
+    { name = "tickWalkerCraftWithLimbsAndDestruction", vram = 0x800E2674, size = 0x1A4 },
     { name = "npcTrainCarUpdate", vram = 0x800E2818, size = 0x181C },
     { name = "func_800E4034", vram = 0x800E4034, size = 0x1C },
     { name = "func_800E4050", vram = 0x800E4050, size = 0x1C },

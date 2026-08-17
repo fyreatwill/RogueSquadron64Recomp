@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1773 (2026-08-16).
+detail. Reviewed through s1774 (2026-08-16).
 
 ## Current state
 
@@ -46,11 +46,11 @@ detail. Reviewed through s1773 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `tickWalkerCraftWithLimbsAndDestruction`
-   (`0x800E2674`, size `0x1A4`). Neighbor peek already shows TOML still
-   `func_800E2674` while generated/overlay use the human name. Archive:
+1. Resume the generated-symbol sweep at `npcTrainCarUpdate`
+   (`0x800E2818`, size `0x181C`). Neighbor peek already shows companion,
+   generated, TOML, and overlay agreeing on the human name. Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647), §35
-   (s1648–s1773). About 1,548 placeholder `func_0x...` names remained
+   (s1648–s1774). About 1,548 placeholder `func_0x...` names remained
    at s1487.
 2. Parked retail-entry: the 126.3 s title-like 1024 is H3-stop-tick, not
    those three inner loops and not a new `menuOverlayInit` jump-table
@@ -95,9 +95,9 @@ Per-session rows through s1772 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1773 through `slerpFrameTowardTargetAxis` plus the s1744 overlay-PC
-and s1760 jump-table revisits that selected H3-stop-tick for the
-attract 1024 (§35). s1728 is maintenance only.
+s1648–s1774 through `tickWalkerCraftWithLimbsAndDestruction` plus the
+s1744 overlay-PC and s1760 jump-table revisits that selected H3-stop-tick
+for the attract 1024 (§35). s1728 is maintenance only.
 
 ## Method and safety rules
 - A null result is worthless without a same-run positive control. Batch all A/B

@@ -82244,3 +82244,42 @@ Next census: `tickWalkerCraftWithLimbsAndDestruction` / `func_800E2674` at
 `func_800E2674` while generated/overlay use the human name. Last-15
 titles after s1773 still include s1760's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1774 (2026-08-16) — synchronized the tickWalkerCraftWithLimbsAndDestruction symbol
+
+Exact generated-symbol census for `0x800E2674` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6623; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickWalkerCraftWithLimbsAndDestruction = 0x800E2674` with comment "walker-class unit: limb-stride T&L + spline + multi-phase debris + speech + teardown". Previous contiguous named neighbor `slerpFrameTowardTargetAxis = 0x800E23FC`. Next contiguous named neighbor `npcTrainCarUpdate = 0x800E2818`. No leftover `func_800E2674` splat, no `D_800E2674`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void tickWalkerCraftWithLimbsAndDestruction` at VRAM `0x800E2674`. First insn `addiu $sp, $sp, -0xC8`; last insn `jr $ra` / `addiu $sp, $sp, 0xC8` at `0x800E2810` / `0x800E2814`. Previous `slerpFrameTowardTargetAxis` ends at `0x800E2670`; next is `npcTrainCarUpdate` at `0x800E2818`. `funcs.h` already declares the human name. No leftover `func_800E2674`. Sole generated caller `npcTrainCarUpdate` `jal 0x800E2674` at `0x800E3260` (`a0` = npc) |
+| Body semantics | One `initNpcContextFromTransform` (`0x80041B8C`) then three `spawnRandomBurstNpcVariantWrapper` (`0x80041CBC`) / `assignNpcTargetAndPosition` (`0x80041D8C`) bursts. Stack setup writes format bytes `0x2`/`0x10`/`0x80`/`0x400` and ORs `0x09000000` before the bursts. Matches the companion's multi-phase debris/teardown reading of this walker-class helper |
+| TOML (before) | `{ name = "func_800E2674", vram = 0x800E2674, size = 0x1A4 }` — size matches `0x800E2818 - 0x800E2674` |
+| Overlay section 4 | `{ .func = tickWalkerCraftWithLimbsAndDestruction, .offset = 0x0003D544, .rom_size = 0x000001A4 }` under `section_4_ovl_mission_funcs` (`0x800E2674 - 0x800A5130 = 0x3D544`; previous `0x3D2CC + 0x278 = 0x3D544`; `0x3D544 + 0x1A4 = 0x3D6E8` matches next `npcTrainCarUpdate`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E2674`. No leftover `func_800E2674` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`slerpFrameTowardTargetAxis` / `0x800E23FC`) and next
+(`npcTrainCarUpdate` / `0x800E2818`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were
+already `tickWalkerCraftWithLimbsAndDestruction`, and only the TOML
+name was a stale `func_800E2674` placeholder. Corrected TOML to
+`tickWalkerCraftWithLimbsAndDestruction`. This refutes H1 (TOML was
+not already synchronized), H3 (no leftover splat at this address,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTrainCarUpdate` / `0x800E2818` (size `0x181C`).
+Neighbor peek already shows companion, generated, TOML, and overlay
+agreeing on the human name. Last-15 titles after s1774 still include
+s1760's revisit, so the mandatory REVISIT gate does not fire.
