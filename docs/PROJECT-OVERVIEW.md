@@ -3143,17 +3143,18 @@ collision.
 | s1861 | Synchronized `computeActorAnchorDeltaAfterLOS` (`0x800F09A8`, `0x1FC`). Sister of `validateActorTargetLOS` with the same child-NPC gates and reap path, then `getNpcContextField8` on actor `+0x198` and the resolved slot; delta = target pos − actor pos into `sp+0x10`; range-check vs `(actor+0x118)^2`; cosine cone via `vec3Dot`/`vec3Length` vs `actor+0x114`. 13 generated `jal 0x800F09A8` sites (1 `LOOKUP_FUNC` in `aimOrientNpcTowardTarget` + 12 direct orientation/aim/spline helpers) already dispatch the human name. Companion comment overstates (one halfword at `+0x130`; "same `npc*Update` after LOS") — body checks three halfwords and the callers are the orientation family. TOML was stale `func_800F09A8`; companion, generated headers/body, and section-4 already used the human name. |
 | s1862 | Synchronized `evaluateTargetTrackingVisibility` (`0x800F0BA4`, `0x220`). Same child-NPC gates and reap path as the LOS sisters, then `getNpcContextField8` on actor `+0x198` and the resolved slot; delta = target pos − actor pos; range vs `(a1 * 0x800A89B4)^2` and cone vs `cosf(a2 * 0x800A89B0)` (close-enough shortcut at `0x800A89B8` returns 1 when cosine ≥ 0). 5 generated `jal 0x800F0BA4` sites (`npcShuttleUpdate`, `npcTankDroidUpdate`, two in `transformCraftAnchorsAndApplySubFx`, `tickCraftSplineOrientationDual`) already dispatch the human name. TOML was stale `func_800F0BA4`; companion, generated headers/body, and section-4 already used the human name. |
 | s1863 | Synchronized `tickObjectAnimSubstruct` (`0x800F0DC4`, `0x1D0`). `$s0=$a1` anim substruct; `$a2` is dt. Early-out if callback `+0x18` is null; decrements timer `+0xC` and delay `+0x10`; on delay expire with flag `+0x2B`, increments `+0x28` and `jalr`s the callback via `getNpcContextByIndex` on object `+0x198`. Start/wrap path zeros delay, `jalr`s callback with `a1=0`, advances frame `+0x1E` vs count `+0x1C`, recomputes duration `+0x0/+0x1C` plus optional `rand` jitter from `+0x8`. 3 generated `jal 0x800F0DC4` sites (two in `transformCraftAnchorsAndApplySubFx`, one in `applyToObjectSubstructByFlag`) already dispatch the human name. TOML was stale `func_800F0DC4`; companion, generated headers/body, and section-4 already used the human name. |
+| s1864 | Synchronized `resolveNpcAttachmentPos` (`0x800F0F94`, `0x204`). Reads `lhu state+0x130`, `findActiveNpcInSlotChain` + `getNpcContextByIndex`; optional `zmemcpy`/`transformMeshPartIntoWorld` when `ctx+0xC` is set, else `ctx+0x8`; `computeAnchorRelativePositionByDistanceRatio` dest `sp+0x40`; deltas vs `positionPtr`; then `vec3Dot`/`vec3Length`/`constMinusSinfApprox`/`vec3Cross` plus optional normalize, clamp vs scaleB, `quatFromAxisAngleSafe` and two `rotateVec3ByQuat` of `+0xC`/`+0x18`. 22 generated `jal 0x800F0F94` sites already dispatch the human name. TOML was stale `func_800F0F94`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1863 is leftover `func_800F0F94`
-(`0x800F0F94`, size `0x204`). Neighbor peek: companion
+The sweep cursor after s1864 is leftover `func_800F1198`
+(`0x800F1198`, size `0x178`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`resolveNpcAttachmentPos`; TOML still leftover `func_800F0F94`. First
-insn `addiu $sp, $sp, -0x98`; last live `jr $ra` / `addiu $sp, $sp, 0x98`
-at `0x800F1190` / `0x800F1194`. Next leftover is `func_800F1198`
-(`0x800F1198`, `0x178`; companion/generated `quicksortFloatKeysWithValues`;
+`quicksortFloatKeysWithValues`; TOML still leftover `func_800F1198`. First
+insn `addiu $sp, $sp, -0x28`; last live `jr $ra` / `addiu $sp, $sp, 0x28`
+at `0x800F1308` / `0x800F130C`. Next leftover is `func_800F1310`
+(`0x800F1310`, `0x2A8`; companion/generated `gatherAndSortNearbyNpcViewPoints`;
 TOML still leftover). Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776, s1792, s1808, s1824, s1840, s1856. After s1863 the last-15
+s1776, s1792, s1808, s1824, s1840, s1856. After s1864 the last-15
 titles still include s1856's M4 revisit, so the next iteration
 resumes the leftover sweep.
 
