@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1837)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1838)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3117,18 +3117,19 @@ collision.
 | s1835 | Synchronized `popActiveSoundDescriptor` (`0x800EE9F4`, `0x60`). Leaf decrements depth byte `0x8010C310` and copies stack `0x8010C320[depth]` stride `0x1C` onto the current descriptor at `0x8010C170` (word `+0`, halves `+4/+6`, byte `+0xA`→dest `+8`, half `+8`→dest `+0xA` — inverse of the s1834 push). Sole generated `jal 0x800EE9F4` in `tickObjectSoundCueState` at `0x800EF594` already dispatches the human name. TOML was stale `func_800EE9F4`; companion, generated headers/body, and section-4 already used the human name. |
 | s1836 | Synchronized `preloadSceneReferencedSongs` (`0x800EEA54`, `0x328`). Counts the 6-byte song-name table at `0x8010B1C0` until `0xFFFF`, marks scene-referenced rows off `0x801375D8`, `parseLoadedSndSection`, then `loadSongAssetByName` on each marked `+2` name. Sole generated `jal 0x800EEA54` in `preloadSceneSongsWrapper` at `0x800EFB9C` already dispatches the human name. TOML was stale `func_800EEA54`; companion, generated headers/body, and section-4 already used the human name. |
 | s1837 | Synchronized `stageSongFromRequestDescriptor` (`0x800EED7C`, `0x1B8`). Copies request `+0x20` into staging `0x8010C1A0`; if that index is `>=2` looks up the 6-byte song-name row at `0x8010B1C0[(id-2)]`, else writes `0xFFFF`/`0`. Copies request floats/words into `0x8010C430`, memcpy 0x24 bytes to `0x8010C140`, `tickActiveSongSlots`, then copies staging onto current descriptor `0x8010C400` with handle from `0x8010C0E0`. Sole generated `jal 0x800EED7C` in `startLevelBackgroundMusic` at `0x800EF3B0` already dispatches the human name. TOML was stale `func_800EED7C`; companion, generated headers/body, and section-4 already used the human name. |
+| s1838 | Synchronized `resetMusicSubsystemState` (`0x800EEF34`, `0x114`). Zeros music flags at `0x8010C460..462` and the fade/pending/depth cluster (`0x8010C262..269`, `0x8010C2F0..C310`); if `a0!=0` writes `-1` into descriptors `0x8010C110`/`0x8010C0E0`. Walks the 8-slot table at `0x8010C270` writing `-1`/`0` at `+0`/`+8`. Three generated `jal 0x800EEF34` sites in `initLevelMusicBank` / `stopAllMusicWithFade` / `stopMusicAndResetAudio` already dispatch the human name. TOML was stale `func_800EEF34`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1837 is leftover `func_800EEF34`
-(`0x800EEF34`, size `0x114`). Neighbor peek: companion
+The sweep cursor after s1838 is leftover `func_800EF048`
+(`0x800EF048`, size `0x168`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`resetMusicSubsystemState`; TOML still leftover `func_800EEF34`. First
-insn `lui $v0, 0x8011`; last live `jr $ra` / `sw $v0, -0x3CF4($v1)` at
-`0x800EF040` / `0x800EF044`. Next occupant is leftover `func_800EF048`
-(`0x800EF048`, `0x168`; generated already `initLevelMusicBank`;
-TOML still leftover). Mandatory revisits in this window: s1650, s1666,
-s1682, s1698, s1714, s1744, s1760, s1776, s1792, s1808, s1824. After
-s1837 the last-15 titles still include the M4 consumer revisit, so the
-next iteration resumes the sweep.
+`initLevelMusicBank`; TOML still leftover `func_800EF048`. First
+insn `addiu $sp, $sp, -0x20`; last live `jr $ra` / `addiu $sp, $sp, 0x20`
+at `0x800EF1A8` / `0x800EF1AC`. Next occupant is leftover
+`func_800EF1B0` (`0x800EF1B0`, `0x148`; generated already
+`stopAllMusicWithFade`; TOML still leftover). Mandatory revisits in
+this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776,
+s1792, s1808, s1824. After s1838 the last-15 titles still include
+the M4 consumer revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

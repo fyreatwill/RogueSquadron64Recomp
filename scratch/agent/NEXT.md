@@ -1,37 +1,37 @@
-# NEXT work unit (s1838)
+# NEXT work unit (s1839)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol sweep. s1824 was the mandatory 15-title
-M4 REVISIT (H-rdp-consumer selected); last-15 after s1837 still include
+M4 REVISIT (H-rdp-consumer selected); last-15 after s1838 still include
 that revisit, so they are not all sweep. Do not start another M4
 instrument this iteration. Do not repeat any `submitGfxFrame`
 entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EEF34`
-(`0x800EEF34`, size `0x114`). Companion `mission_overlay.txt` already
-names `resetMusicSubsystemState`; generated headers/body/INL already
+Exact generated-symbol census for leftover `func_800EF048`
+(`0x800EF048`, size `0x168`). Companion `mission_overlay.txt` already
+names `initLevelMusicBank`; generated headers/body/INL already
 use that name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `resetMusicSubsystemState` and
-  the `0x114` span.
+  TOML, and section-4 already agree on `initLevelMusicBank` and
+  the `0x168` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EEF34` while companion uses `resetMusicSubsystemState`.
+  `func_800EF048` while companion uses `initLevelMusicBank`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EEF34`, or the TOML size is not `0x114`, or
+  overlay occupies `0x800EF048`, or the TOML size is not `0x168`, or
   the generated body is not this function (first insn is not
-  `lui $v0, 0x8011` / last is not `jr $ra` / `sw $v0, -0x3CF4($v1)`
-  at `0x800EF040` / `0x800EF044`).
+  `addiu $sp, $sp, -0x20` / last is not `jr $ra` /
+  `addiu $sp, $sp, 0x20` at `0x800EF1A8` / `0x800EF1AC`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EEF34\|func_800EEF34\|resetMusicSubsystemState' \
+grep -n '800EF048\|func_800EF048\|initLevelMusicBank' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -41,7 +41,7 @@ grep -n '800EEF34\|func_800EEF34\|resetMusicSubsystemState' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EEF34\|resetMusicSubsystemState\|0x800EEF34\|0x800EF040\|0x800EF048' \
+grep -n 'func_800EF048\|initLevelMusicBank\|0x800EF048\|0x800EF1A8\|0x800EF1B0' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -52,12 +52,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `resetMusicSubsystemState` / `0x114`.
-  No edit. Next leftover `func_800EF048` (`0x800EF048`, `0x168`;
-  generated headers/INL already `initLevelMusicBank`; TOML
+- H1: all four sources already `initLevelMusicBank` / `0x168`.
+  No edit. Next leftover `func_800EF1B0` (`0x800EF1B0`, `0x148`;
+  generated headers/INL already `stopAllMusicWithFade`; TOML
   still leftover).
-- H2: TOML (and/or generated) still `func_800EEF34`. Rename to
-  `resetMusicSubsystemState`. Next leftover `func_800EF048`.
+- H2: TOML (and/or generated) still `func_800EF048`. Rename to
+  `initLevelMusicBank`. Next leftover `func_800EF1B0`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 

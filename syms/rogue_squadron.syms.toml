@@ -1932,7 +1932,7 @@ functions = [
     { name = "popActiveSoundDescriptor", vram = 0x800EE9F4, size = 0x60 },
     { name = "preloadSceneReferencedSongs", vram = 0x800EEA54, size = 0x328 },
     { name = "stageSongFromRequestDescriptor", vram = 0x800EED7C, size = 0x1B8 },
-    { name = "func_800EEF34", vram = 0x800EEF34, size = 0x114 },
+    { name = "resetMusicSubsystemState", vram = 0x800EEF34, size = 0x114 },
     { name = "func_800EF048", vram = 0x800EF048, size = 0x168 },
     { name = "func_800EF1B0", vram = 0x800EF1B0, size = 0x148 },
     { name = "func_800EF2F8", vram = 0x800EF2F8, size = 0x218 },

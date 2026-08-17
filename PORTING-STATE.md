@@ -85211,3 +85211,54 @@ Next occupant is leftover `func_800EF048` (`0x800EF048`, `0x168`;
 generated already `initLevelMusicBank`; TOML still leftover).
 Last-15 titles after s1837 still include s1824's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1838 (2026-08-17) — synchronized the resetMusicSubsystemState symbol
+
+Exact generated-symbol census for leftover `func_800EEF34` at
+`0x800EEF34` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1824's mandatory REVISIT (`selected H-rdp-consumer
+on the ovl20 0x670 record`), so the 15-title all-sweep REVISIT gate did
+not fire. Step 0 `wc -c` was 11674; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `resetMusicSubsystemState = 0x800EEF34`. Next named kernel `initLevelMusicBank = 0x800EF048`. No leftover `func_800EEF34` splat. No `D_800EEF34` |
+| Companion `main_overlay.txt` | No occupant at `0x800EEF34`. Cinematic and menu overlays also empty at this VRAM |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void resetMusicSubsystemState` at VRAM `0x800EEF34`. First insn `lui $v0, 0x8011`; last live insn `jr $ra` / `sw $v0, -0x3CF4($v1)` at `0x800EF040` / `0x800EF044`. Previous is `stageSongFromRequestDescriptor` (`0x800EED7C`, ends `0x800EEF30`); next is already `initLevelMusicBank` at `0x800EF048`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Leaf reset of the music-subsystem globals. Zeros flag bytes at `0x8010C460`/`0x8010C461`/`0x8010C462` and writes float `0x800A8930` into `0x80109FE0`. If `a0 != 0`, writes `-1` into descriptors `0x8010C110`/`0x8010C0E0` and zeros `0x8010C260`. Then zeros the fade/pending/depth cluster (`0x8010C262..269`, `0x8010C2F0`/`0x8010C2F1`/`0x8010C2F2`/`0x8010C2F3`/`0x8010C2F4`/`0x8010C2FC`/`0x8010C2FD`, words `0x8010C300`/`0x8010C308`) and walks the 8-slot table at `0x8010C270` stride `0x10` writing `-1` at `+0` and `0` at `+8`. Finishes by zeroing depth `0x8010C310` and writing `-1` at `0x8010C30C`. Name matches: reset music subsystem state |
+| Callers | Three generated `jal 0x800EEF34` sites already dispatch the human name: `initLevelMusicBank` at `0x800EF054`, `stopAllMusicWithFade` at `0x800EF2D4`, `stopMusicAndResetAudio` at `0x800EFB7C` |
+| TOML | Was `{ name = "func_800EEF34", vram = 0x800EEF34, size = 0x114 }` — stale leftover. Size already matched `0x800EF048 - 0x800EEF34`. Renamed to `resetMusicSubsystemState` |
+| Overlay section 4 | `{ .func = resetMusicSubsystemState, .offset = 0x00049E04, .rom_size = 0x00000114 }` under `section_4_ovl_mission_funcs` (`0x800EEF34 - 0x800A5130 = 0x49E04`; previous `0x49C4C + 0x1B8 = 0x49E04`; `0x49E04 + 0x114 = 0x49F18` matches next `initLevelMusicBank`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EEF34`. No leftover `func_800EEF34` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated stage
+(`lui $v0, 0x8011` prologue, `jr $ra` / `sw $v0, -0x3CF4($v1)` at
+`0x800EF040` / `0x800EF044`, zero/sentinel write of the
+`0x8010C260`–`0x8010C310` music cluster plus the 8-slot table at
+`0x8010C270`), previous (`stageSongFromRequestDescriptor` /
+`0x800EED7C`) and next (`initLevelMusicBank` / `0x800EF048`)
+boundaries, overlay span, and size already agreed on
+`resetMusicSubsystemState` / `0x114`. TOML still carried leftover
+`func_800EEF34`; renamed it to match. Generated headers/body/INL and
+the three jal sites were already the human name. This refutes H1
+(TOML was not already synchronized), H3 (no overlay collision, no
+size/boundary disagreement; previous ends exactly here and next
+starts at `0x800EF048`), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No invented name. No build or runtime
+run required.
+
+Next census: leftover `func_800EF048` at `0x800EF048` (size `0x168`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `initLevelMusicBank`; TOML still
+says `func_800EF048`. First insn `addiu $sp, $sp, -0x20`; last live
+`jr $ra` / `addiu $sp, $sp, 0x20` at `0x800EF1A8` / `0x800EF1AC`.
+Next occupant is leftover `func_800EF1B0` (`0x800EF1B0`, `0x148`;
+generated already `stopAllMusicWithFade`; TOML still leftover).
+Last-15 titles after s1838 still include s1824's M4 revisit, so the
+mandatory REVISIT gate does not fire.
