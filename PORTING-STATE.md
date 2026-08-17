@@ -81210,3 +81210,40 @@ section-4 row are all present). No build or runtime run required.
 Next census: `npcRadarDishComputeAimMotion` / `func_800DC300` at
 `0x800DC300` (size `0x3F0`). Last-15 titles after s1745 still include
 s1744's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1746 (2026-08-16) — synchronized the npcRadarDishComputeAimMotion symbol
+
+Exact generated-symbol census for `0x800DC300` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6443; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcRadarDishComputeAimMotion = 0x800DC300` with comment "radar-dish aim/track solver". Previous contiguous neighbor `npcRadarDishInit = 0x800DC228`; next contiguous neighbor `npcRadarDishUpdate = 0x800DC6F0`. No menu/cinematic/main overlay occupant and no `D_800DC300` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcRadarDishComputeAimMotion` at VRAM `0x800DC300`; prologue `addiu $sp, $sp, -0x130`; saves `$s3`/`$ra`/`$s4`/`$s2`/`$s1`/`$s0` and `$f26`/`$f24`/`$f22`/`$f20`. Object record in `s3` (`a0`). Returns through `jr $ra` / `addiu $sp, $sp, 0x130` ending at `0x800DC6EC`. Previous mission function last insn is `0x800DC2FC`; next is `npcRadarDishUpdate` at `0x800DC6F0`. `funcs.h` already declares the human name. No leftover `func_800DC300`. Sole generated caller is `npcRadarDishUpdate` at `0x800DCAC8` (`jal 0x800DC300`) |
+| Body semantics | Early-out unless `isPendingChildNpcActive` and `computeActorAnchorDeltaAfterLOS` both return 1. Then mesh/local transform (`getObjectMeshTransformOrLocal`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, `transformVec3ByMat34`, `vec3NormalizeInto`) plus current orientation (`buildRotationMatrixSlot0`, `composeRotationMatrixSlot1`). Angle vs look-at uses `vec3Dot` / `constMinusSinfApprox` against constants at `0x800A7D10`/`14`/`18`. Large-angle first lock (object `+0xB0 == 0`) fires `play3DSoundEventVariant` (`0x7`/`0x4B`/`0x64`/`0x28`) and sets `+0xB0`. Two-axis steer: `vec3Cross` / `normalize_vector` / `quatFromAxisAngle` / `rotateVec3ByQuat`, then a second `vec3Cross` / `buildRotationMatrixSlot1` pair. Off-target path clears `+0xB0` and `factor5RemoveListNode` on `+0x6C`; inactive-child path wraps heading `+0x54` through `floatModulo`. Matches the companion "radar-dish aim/track solver" label |
+| TOML (before) | `{ name = "func_800DC300", vram = 0x800DC300, size = 0x3F0 }` — size matches `0x800DC6F0 - 0x800DC300` (last insn `0x800DC6EC` + 4 = `0x3F0`) |
+| Overlay section 4 | `{ .func = npcRadarDishComputeAimMotion, .offset = 0x000371D0, .rom_size = 0x000003F0 }` under `section_4_ovl_mission_funcs` (`0x800DC300 - 0x800A5130 = 0x371D0`; `0x370F8 + 0xD8 = 0x371D0`; `0x371D0 + 0x3F0 = 0x375C0` matches next `npcRadarDishUpdate`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DC300`. Menu max VRAM is `0x800C6660`; cinematic max is `0x800AA1BC`; neither reaches this address. No leftover `func_800DC300` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated radar-dish aim/track body,
+previous (`npcRadarDishInit` / `0x800DC228`) and next
+(`npcRadarDishUpdate` / `0x800DC6F0`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcRadarDishComputeAimMotion`, and only the TOML name was a stale
+`func_800DC300` placeholder. Corrected TOML to
+`npcRadarDishComputeAimMotion`. This refutes H1 (TOML was not already
+synchronized), H3 (no fake fragment, overlay collision, or size/boundary
+disagreement), and H4 (companion, generated body, TOML, and section-4
+row are all present). No build or runtime run required.
+
+Next census: `npcRadarDishUpdate` at `0x800DC6F0` (size `0xB58`).
+Last-15 titles after s1746 still include s1744's revisit, so the
+mandatory REVISIT gate does not fire.
