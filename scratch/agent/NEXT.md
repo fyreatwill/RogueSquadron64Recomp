@@ -1,37 +1,37 @@
-# NEXT work unit (s1841)
+# NEXT work unit (s1842)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol sweep. s1840 was the mandatory 15-title
-M4 REVISIT (H-standard-edge selected); last-15 after s1840 include
-that revisit, so they are not all sweep. Do not start another M4
-instrument this iteration. Do not repeat any `submitGfxFrame`
-entry/jal/`prev_pc` recipe.
+Resume the generated-symbol sweep. s1841 synchronized leftover
+`func_800EF1B0` to `stopAllMusicWithFade`; last-15 after s1841
+include s1840's M4 REVISIT, so they are not all sweep. Do not start
+another M4 instrument this iteration. Do not repeat any
+`submitGfxFrame` entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EF1B0`
-(`0x800EF1B0`, size `0x148`). Companion `mission_overlay.txt` already
-names `stopAllMusicWithFade`; generated headers/body/INL already
+Exact generated-symbol census for leftover `func_800EF2F8`
+(`0x800EF2F8`, size `0x218`). Companion `mission_overlay.txt` already
+names `startLevelBackgroundMusic`; generated headers/body/INL already
 use that name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `stopAllMusicWithFade` and
-  the `0x148` span.
+  TOML, and section-4 already agree on `startLevelBackgroundMusic` and
+  the `0x218` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EF1B0` while companion uses `stopAllMusicWithFade`.
+  `func_800EF2F8` while companion uses `startLevelBackgroundMusic`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EF1B0`, or the TOML size is not `0x148`, or
+  overlay occupies `0x800EF2F8`, or the TOML size is not `0x218`, or
   the generated body is not this function (first insn is not
-  `addiu $sp, $sp, -0x28` / last is not `jr $ra` /
-  `addiu $sp, $sp, 0x28` at `0x800EF2F0` / `0x800EF2F4`).
+  `lui $v0, 0x8011` then `addiu $sp, $sp, -0x68` / last is not
+  `jr $ra` / `addiu $sp, $sp, 0x68` at `0x800EF508` / `0x800EF50C`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EF1B0\|func_800EF1B0\|stopAllMusicWithFade' \
+grep -n '800EF2F8\|func_800EF2F8\|startLevelBackgroundMusic' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -41,7 +41,7 @@ grep -n '800EF1B0\|func_800EF1B0\|stopAllMusicWithFade' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EF1B0\|stopAllMusicWithFade\|0x800EF1B0\|0x800EF2F0\|0x800EF2F8' \
+grep -n 'func_800EF2F8\|startLevelBackgroundMusic\|0x800EF2F8\|0x800EF508\|0x800EF510' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -52,12 +52,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `stopAllMusicWithFade` / `0x148`.
-  No edit. Next leftover `func_800EF2F8` (`0x800EF2F8`, `0x218`;
-  generated headers/INL already `startLevelBackgroundMusic`; TOML
+- H1: all four sources already `startLevelBackgroundMusic` / `0x218`.
+  No edit. Next leftover `func_800EF510` (`0x800EF510`, `0x260`;
+  generated headers/INL already `tickObjectSoundCueState`; TOML
   still leftover).
-- H2: TOML (and/or generated) still `func_800EF1B0`. Rename to
-  `stopAllMusicWithFade`. Next leftover `func_800EF2F8`.
+- H2: TOML (and/or generated) still `func_800EF2F8`. Rename to
+  `startLevelBackgroundMusic`. Next leftover `func_800EF510`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 

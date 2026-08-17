@@ -85383,3 +85383,54 @@ Next work unit: resume the generated-symbol sweep at leftover
 is whether a live `0x8000` Y is clip-rejected or emitted, not the
 command shape. After s1840 the last-15 titles include this revisit,
 so the sweep REVISIT gate does not fire.
+
+## Session 1841 (2026-08-17) — synchronized the stopAllMusicWithFade symbol
+
+Exact generated-symbol census for leftover `func_800EF1B0` at
+`0x800EF1B0` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1840's mandatory REVISIT (`selected H-standard-edge
+on the restaged RDP triangle`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 12577; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `stopAllMusicWithFade = 0x800EF1B0`. Next named kernel `startLevelBackgroundMusic = 0x800EF2F8`. No leftover `func_800EF1B0` splat. No `D_800EF1B0` |
+| Companion `main_overlay.txt` | No occupant at `0x800EF1B0`. Cinematic and menu overlays also empty at this VRAM |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void stopAllMusicWithFade` at VRAM `0x800EF1B0`. First insn `addiu $sp, $sp, -0x28`; last live insn `jr $ra` / `addiu $sp, $sp, 0x28` at `0x800EF2F0` / `0x800EF2F4`. Previous is `initLevelMusicBank` (`0x800EF048`, ends `0x800EF1AC`); next is already `startLevelBackgroundMusic` at `0x800EF2F8`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Stop-all-music with fade. Walks the 8-slot table at `0x8010C270` stride `0x10`; for each live handle (`+0 != -1`) `jal tickSongSequenceLocked` on `+4` then writes `-1` into `+0`. If flag `0x8010C260 != 0`, fade via `queueAudioVoiceCmd` (`a0=0`, `a3=1`) with `a2` from `0x8010C140` and `a1` from caller `f12` scaled by the `0x800A8934`/`0x800A8938` pair; else the `0x800A893C`/`0x800A8940` pair and `a2` from `0x8010C0E0`. Then `resetMusicSubsystemState(a0=1)`. Name matches: stop every live slot and fade the current song |
+| Callers | Two generated `jal 0x800EF1B0` sites already dispatch the human name: `endMissionCleanup` at `0x800FBA3C` (fade duration from a float const) and `advanceMissionObjectiveStageWhenModeOne` at `0x800FBDEC` (mode-1 gate then fade) |
+| TOML | Was `{ name = "func_800EF1B0", vram = 0x800EF1B0, size = 0x148 }` — stale leftover. Size already matched `0x800EF2F8 - 0x800EF1B0`. Renamed to `stopAllMusicWithFade` |
+| Overlay section 4 | `{ .func = stopAllMusicWithFade, .offset = 0x0004A080, .rom_size = 0x00000148 }` under `section_4_ovl_mission_funcs` (`0x800EF1B0 - 0x800A5130 = 0x4A080`; previous `0x49F18 + 0x168 = 0x4A080`; `0x4A080 + 0x148 = 0x4A1C8` matches next `startLevelBackgroundMusic`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EF1B0`. No leftover `func_800EF1B0` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated stage
+(`addiu $sp, $sp, -0x28` prologue, `jr $ra` / `addiu $sp, $sp, 0x28`
+at `0x800EF2F0` / `0x800EF2F4`, 8-slot stop then fade then
+`resetMusicSubsystemState`), previous (`initLevelMusicBank` /
+`0x800EF048`) and next (`startLevelBackgroundMusic` / `0x800EF2F8`)
+boundaries, overlay span, and size already agreed on
+`stopAllMusicWithFade` / `0x148`. TOML still carried leftover
+`func_800EF1B0`; renamed it to match. Generated headers/body/INL and
+the two jal sites were already the human name. This refutes H1
+(TOML was not already synchronized), H3 (no overlay collision, no
+size/boundary disagreement; previous ends exactly here and next
+starts at `0x800EF2F8`), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No invented name. No build or
+runtime run required.
+
+Next census: leftover `func_800EF2F8` at `0x800EF2F8` (size `0x218`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `startLevelBackgroundMusic`; TOML still
+says `func_800EF2F8`. First insn `lui $v0, 0x8011` then
+`addiu $sp, $sp, -0x68`; last live `jr $ra` / `addiu $sp, $sp, 0x68`
+at `0x800EF508` / `0x800EF50C`. Next occupant is leftover
+`func_800EF510` (`0x800EF510`, `0x260`; generated already
+`tickObjectSoundCueState`; TOML still leftover). Last-15 titles after
+s1841 still include s1840's M4 revisit, so the mandatory REVISIT gate
+does not fire.

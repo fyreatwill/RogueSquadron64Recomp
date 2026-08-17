@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1838)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1841)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3120,18 +3120,18 @@ collision.
 | s1838 | Synchronized `resetMusicSubsystemState` (`0x800EEF34`, `0x114`). Zeros music flags at `0x8010C460..462` and the fade/pending/depth cluster (`0x8010C262..269`, `0x8010C2F0..C310`); if `a0!=0` writes `-1` into descriptors `0x8010C110`/`0x8010C0E0`. Walks the 8-slot table at `0x8010C270` writing `-1`/`0` at `+0`/`+8`. Three generated `jal 0x800EEF34` sites in `initLevelMusicBank` / `stopAllMusicWithFade` / `stopMusicAndResetAudio` already dispatch the human name. TOML was stale `func_800EEF34`; companion, generated headers/body, and section-4 already used the human name. |
 | s1839 | Synchronized `initLevelMusicBank` (`0x800EF048`, `0x168`). TOML was stale `func_800EF048`; companion, generated headers/body/INL, and the `initMission` jal already used the human name. |
 | s1840 | Mandatory M4 REVISIT. Selected H-standard-edge: ovl20 `L_17F0` writes a spec-accurate 32-byte RDP Fill Triangle at the `0xD60` cursor (`0xC8\|flags`, YL/YM/YH at `+2/+4/+6`, XL scaled from the 16-bit vertex `+0x18` X, then DxLDy/XH/DxHDy/XM/DxMDy) plus optional shade/tex suffixes. H-y-swapped, H-s1516-passthrough, and H-not-triangle refuted. `0xFFFF8000` splits into X=`0xFFFF` and Y=`0x8000` (raw s11.2). Table: `docs/M4-ACCUMULATOR-GROUND-TRUTH.md`. |
+| s1841 | Synchronized `stopAllMusicWithFade` (`0x800EF1B0`, `0x148`). Walks the 8-slot table at `0x8010C270` stride `0x10`, `jal tickSongSequenceLocked` on live handles then writes `-1`; fade via `queueAudioVoiceCmd` (`a0=0`, `a3=1`) using caller `f12` and either `0x8010C140` or `0x8010C0E0`; then `resetMusicSubsystemState(a0=1)`. Two generated `jal 0x800EF1B0` sites in `endMissionCleanup` / `advanceMissionObjectiveStageWhenModeOne` already dispatch the human name. TOML was stale `func_800EF1B0`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1840 is leftover `func_800EF1B0`
-(`0x800EF1B0`, size `0x148`). Neighbor peek: companion
+The sweep cursor after s1841 is leftover `func_800EF2F8`
+(`0x800EF2F8`, size `0x218`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`stopAllMusicWithFade`; TOML still leftover `func_800EF1B0`. First
-insn `addiu $sp, $sp, -0x28`; last live `jr $ra` / `addiu $sp, $sp, 0x28`
-at `0x800EF2F0` / `0x800EF2F4`. Next occupant is leftover
-`func_800EF2F8` (`0x800EF2F8`, `0x218`; generated already
-`startLevelBackgroundMusic`; TOML still leftover). Mandatory revisits in
-this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776,
-s1792, s1808, s1824, s1840. After s1840 the last-15 titles include
-the M4 shape revisit, so the next iteration resumes the sweep.
+`startLevelBackgroundMusic`; TOML still leftover `func_800EF2F8`.
+Next occupant is leftover `func_800EF510` (`0x800EF510`, `0x260`;
+generated already `tickObjectSoundCueState`; TOML still leftover).
+Mandatory revisits in this window: s1650, s1666, s1682, s1698,
+s1714, s1744, s1760, s1776, s1792, s1808, s1824, s1840. After
+s1841 the last-15 titles include the M4 shape revisit, so the next
+iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
