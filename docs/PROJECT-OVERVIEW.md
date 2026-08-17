@@ -3121,16 +3121,17 @@ collision.
 | s1839 | Synchronized `initLevelMusicBank` (`0x800EF048`, `0x168`). TOML was stale `func_800EF048`; companion, generated headers/body/INL, and the `initMission` jal already used the human name. |
 | s1840 | Mandatory M4 REVISIT. Selected H-standard-edge: ovl20 `L_17F0` writes a spec-accurate 32-byte RDP Fill Triangle at the `0xD60` cursor (`0xC8\|flags`, YL/YM/YH at `+2/+4/+6`, XL scaled from the 16-bit vertex `+0x18` X, then DxLDy/XH/DxHDy/XM/DxMDy) plus optional shade/tex suffixes. H-y-swapped, H-s1516-passthrough, and H-not-triangle refuted. `0xFFFF8000` splits into X=`0xFFFF` and Y=`0x8000` (raw s11.2). Table: `docs/M4-ACCUMULATOR-GROUND-TRUTH.md`. |
 | s1841 | Synchronized `stopAllMusicWithFade` (`0x800EF1B0`, `0x148`). Walks the 8-slot table at `0x8010C270` stride `0x10`, `jal tickSongSequenceLocked` on live handles then writes `-1`; fade via `queueAudioVoiceCmd` (`a0=0`, `a3=1`) using caller `f12` and either `0x8010C140` or `0x8010C0E0`; then `resetMusicSubsystemState(a0=1)`. Two generated `jal 0x800EF1B0` sites in `endMissionCleanup` / `advanceMissionObjectiveStageWhenModeOne` already dispatch the human name. TOML was stale `func_800EF1B0`; companion, generated headers/body, and section-4 already used the human name. |
+| s1842 | Synchronized `startLevelBackgroundMusic` (`0x800EF2F8`, `0x218`). First-start gate `0x8010C424==0` looks up the 6-byte song-name table at `0x8010B1C0` and `jal stageSongFromRequestDescriptor`; then either copies `0x8010C140`↔`0x8010C0E0` under `0x8010C260`/`0x8010C261` (`isSongHandleActive` / `isSongHandleFree` / optional `setSongPauseStateByHandle`) or `jal tickSongFadeTimer`. Sole generated `jal 0x800EF2F8` in `runInMissionFrame` at `0x800FAA90` already dispatches the human name. TOML was stale `func_800EF2F8`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1841 is leftover `func_800EF2F8`
-(`0x800EF2F8`, size `0x218`). Neighbor peek: companion
+The sweep cursor after s1842 is leftover `func_800EF510`
+(`0x800EF510`, size `0x260`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`startLevelBackgroundMusic`; TOML still leftover `func_800EF2F8`.
-Next occupant is leftover `func_800EF510` (`0x800EF510`, `0x260`;
-generated already `tickObjectSoundCueState`; TOML still leftover).
+`tickObjectSoundCueState`; TOML still leftover `func_800EF510`.
+Next occupant is leftover `func_800EF770` (`0x800EF770`, `0x1EC`;
+generated already `triggerStageMusicForNamedDatItem`; TOML still leftover).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698,
 s1714, s1744, s1760, s1776, s1792, s1808, s1824, s1840. After
-s1841 the last-15 titles include the M4 shape revisit, so the next
+s1842 the last-15 titles still include the M4 shape revisit, so the next
 iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

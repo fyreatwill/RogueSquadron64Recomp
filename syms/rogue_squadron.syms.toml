@@ -1935,7 +1935,7 @@ functions = [
     { name = "resetMusicSubsystemState", vram = 0x800EEF34, size = 0x114 },
     { name = "initLevelMusicBank", vram = 0x800EF048, size = 0x168 },
     { name = "stopAllMusicWithFade", vram = 0x800EF1B0, size = 0x148 },
-    { name = "func_800EF2F8", vram = 0x800EF2F8, size = 0x218 },
+    { name = "startLevelBackgroundMusic", vram = 0x800EF2F8, size = 0x218 },
     { name = "func_800EF510", vram = 0x800EF510, size = 0x260 },
     { name = "func_800EF770", vram = 0x800EF770, size = 0x1EC },
     { name = "func_800EF95C", vram = 0x800EF95C, size = 0x1E4 },
