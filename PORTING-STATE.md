@@ -84309,3 +84309,59 @@ generated caller is `craftMountedAnimationNpcHandler` at
 `craftMountedAnimationNpcHandler` (`0x800ECC28`, `0x1B4`). Last-15
 titles after s1819 still include s1808's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1820 (2026-08-16) — synchronized the tickCraftMountedAnimationEffect symbol
+
+Exact generated-symbol census for leftover `func_800EC6F0` at
+`0x800EC6F0` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1808's mandatory REVISIT (`selected H2
+menuIn/mission jal-sites on the attract 1024`), so the 15-title
+all-sweep REVISIT gate did not fire. Step 0 `wc -c` was 9126; not a
+maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `main_overlay.txt` | `tickCraftMountedAnimationEffect = 0x800EC6F0`. Comment: s415 revert from `mission_overlay.txt` (bisection split tested in isolation). No leftover `func_800EC6F0` splat in this file |
+| Companion `mission_overlay.txt` | Leftover `func_800EC6F0 = 0x800EC6F0` (`segment:mission_overlay` only). Previous leftover `fake_func_800EC6EC = 0x800EC6EC` (4-byte gap). Next named kernel `craftMountedAnimationNpcHandler = 0x800ECC28`. Left the leftover placeholder: promoting it to `tickCraftMountedAnimationEffect` would duplicate the main-overlay symbol at the same VRAM. No `D_800EC6F0`, and no menu/cinematic occupant |
+| Generated `funcs_40.c` | Was `RECOMP_FUNC void func_800EC6F0` at VRAM `0x800EC6F0`. First insn `addiu $sp, $sp, -0xA0`; last live insn `jr $ra` / `addiu $sp, $sp, 0xA0` at `0x800ECC20` / `0x800ECC24`. Previous leftover `fake_func_800EC6EC` is the one-word gap at `0x800EC6EC`; next is already `craftMountedAnimationNpcHandler` at `0x800ECC28`. Sole generated `jal 0x800EC6F0` is inside `craftMountedAnimationNpcHandler` at `0x800ECD90` (`mfc1 $a1, $f0` then the jal). `funcs.h` and overlay INL were also the leftover name |
+| Body semantics | `a0` = child slot (`$s0`); `a1` = dt (`mtc1` → `$f20`). `lbu +0x4C` at `0x800EC70C` is the active flag the handler spawn clears; if set, `lwc1 +0x48` then `add.s` dt and clamp against `*(s0+4)+0x70`, else clear `+0x48` / `+0x4C`. Parent-follow adds `*(s0+4)+0x28/+0x30` into the slot vec. Then `jal findActiveNpcInSlotChain` (`0x8003FC28`) at `0x800EC780`, `jal getNpcContextField8` (`0x8004015C`) at `0x800EC798` (integrate context `+0x24/+0x28/+0x2C` × dt into `+0/+4/+8`), and `jal tickObjectSoundCueState` (`0x800EF510`) at `0x800ECBF0`. Name matches: this is the per-frame tick the craft-mounted animation handler calls |
+| TOML | Was `{ name = "func_800EC6F0", vram = 0x800EC6F0, size = 0x538 }` — stale leftover. Size already matched `0x800ECC28 - 0x800EC6F0`. Renamed to `tickCraftMountedAnimationEffect` |
+| Overlay section 4 | `{ .func = tickCraftMountedAnimationEffect, .offset = 0x000475C0, .rom_size = 0x00000538 }` under `section_4_ovl_mission_funcs` (`0x800EC6F0 - 0x800A5130 = 0x475C0`; previous `0x475BC + 0x4 = 0x475C0`; `0x475C0 + 0x538 = 0x47AF8` matches next `craftMountedAnimationNpcHandler`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EC6F0`. No leftover `func_800EC6F0` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion main mapping, live generated body
+(`lbu +0x4C` at `0x800EC70C`, `lwc1 +0x48` dt-accumulate, then
+`findActiveNpcInSlotChain` / `getNpcContextField8` /
+`tickObjectSoundCueState`), previous leftover (`fake_func_800EC6EC`
+/ `0x800EC6EC` ends at `0x800EC6F0`) and next
+(`craftMountedAnimationNpcHandler` / `0x800ECC28`) boundaries,
+overlay span, and size already agreed on
+`tickCraftMountedAnimationEffect` / `0x538`. TOML, generated
+headers/body/INL, and the `craftMountedAnimationNpcHandler` jal
+site still carried leftover `func_800EC6F0`; renamed all of them
+to match. This refutes H1 (sources were not already synchronized),
+H3 (no leftover splat at this address in generated/TOML after the
+rename, no overlay collision, and no size/boundary disagreement;
+previous ends exactly here and next starts at `0x800ECC28`; the
+mission `func_800EC6F0` leftover is the expected overlay-alias
+placeholder and must stay, because promoting it would collide with
+main; the s415 revert moved the name out of mission after a bulk
+relocation crash, the same class as s1813's `allocObjectPoolNode`),
+and H4 (companion, generated body, TOML, and section-4 row are all
+present). No invented name. No build or runtime run required.
+
+Next census: leftover `func_800ECC28` at `0x800ECC28` (size `0x1B4`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `craftMountedAnimationNpcHandler`; TOML
+still says `func_800ECC28`. First insn `addiu $sp, $sp, -0x18`; last
+live `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDD4` /
+`0x800ECDD8`. No generated `jal 0x800ECC28` (NPC-handler table
+dispatch). Next occupant is leftover `func_800ECDDC` / generated
+`dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`). Last-15
+titles after s1820 still include s1808's revisit, so the mandatory
+REVISIT gate does not fire.

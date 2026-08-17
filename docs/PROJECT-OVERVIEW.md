@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1812)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1820)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3099,24 +3099,21 @@ collision.
 | s1817 | Synchronized `createAndInitObject` (`0x800EC588`, `0xFC`). `jal allocObjectPoolNode` at `0x800EC5B4` with `a1+0x1AC`, then field init and optional callback; 20 generated `jal 0x800EC588` sites already dispatch the human name. TOML was stale `func_800EC588`; companion, generated headers/body, and section-4 already used the human name. |
 | s1818 | Synchronized `clearPendingAndDestroyChildNpc` (`0x800EC684`, `0x3C`). `jal clearPendingChildNpc` at `0x800EC698` on `MEM_W[a0+0]`, then `jal unlinkAndFreeChildNpcNode` at `0x800EC6A4`; always returns 1. 16 overlay jal sites already dispatch the human name; 4 main-text sites stay `LOOKUP_FUNC`. TOML was stale `func_800EC684`; companion, generated headers/body, and section-4 already used the human name. |
 | s1819 | Synchronized `destroyObjectOwnedNpcSlot` (`0x800EC6C0`, `0x2C`). `lbu +0x1A4`; if nonzero `lhu +0x198` then `jal destroyNpcSlotByIndex` at `0x800EC6D8`. 17 overlay jal sites already dispatch the human name; 4 main-text sites stay `LOOKUP_FUNC`. TOML was stale `func_800EC6C0`; companion, generated headers/body, and section-4 already used the human name. |
+| s1820 | Synchronized `tickCraftMountedAnimationEffect` (`0x800EC6F0`, `0x538`). `lbu +0x4C` / `lwc1 +0x48` dt-accumulate against `*(s0+4)+0x70`; then `findActiveNpcInSlotChain` / `getNpcContextField8` / `tickObjectSoundCueState`. Sole generated `jal 0x800EC6F0` inside `craftMountedAnimationNpcHandler` at `0x800ECD90`. Companion `main_overlay.txt` already had the name (s415 revert from mission); mission leftover stays `func_800EC6F0` (overlay-alias; naming it would collide with main). TOML, generated headers/body/INL, and the jal site were stale `func_800EC6F0`. |
 
-The sweep cursor after s1819 is leftover `func_800EC6F0`
-(`0x800EC6F0`, size `0x538`). Neighbor peek: companion
-`mission_overlay.txt` still leftover `func_800EC6F0`;
-`main_overlay.txt` maps `tickCraftMountedAnimationEffect`
-(s415 revert from mission). Generated headers/body/INL still
-`func_800EC6F0`. First insn `addiu $sp, $sp, -0xA0`; last live
-`jr $ra` / `addiu $sp, $sp, 0xA0` at `0x800ECC20` / `0x800ECC24`.
-Three jals: `findActiveNpcInSlotChain` (`0x8003FC28`),
-`getNpcContextField8` (`0x8004015C`), `tickObjectSoundCueState`
-(`0x800EF510`). Sole generated caller is
-`craftMountedAnimationNpcHandler` at `0x800ECD90`. Next occupant
-is leftover `func_800ECC28` / generated
-`craftMountedAnimationNpcHandler` (`0x800ECC28`, `0x1B4`).
+The sweep cursor after s1820 is leftover `func_800ECC28`
+(`0x800ECC28`, size `0x1B4`). Neighbor peek: companion
+`mission_overlay.txt` and generated headers/body/INL already map
+`craftMountedAnimationNpcHandler`; TOML still leftover
+`func_800ECC28`. First insn `addiu $sp, $sp, -0x18`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDD4` / `0x800ECDD8`.
+No generated `jal 0x800ECC28` (NPC-handler table dispatch). Next
+occupant is leftover `func_800ECDDC` / generated
+`dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776, s1792, s1808. After s1819 the last-15
+s1714, s1744, s1760, s1776, s1792, s1808. After s1820 the last-15
 titles still include s1808's revisit, so the next iteration
-resumes the leftover `func_800EC6F0` census.
+resumes the leftover `func_800ECC28` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

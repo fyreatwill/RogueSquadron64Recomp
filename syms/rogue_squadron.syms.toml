@@ -1915,7 +1915,7 @@ functions = [
     { name = "clearPendingAndDestroyChildNpc", vram = 0x800EC684, size = 0x3C },
     { name = "destroyObjectOwnedNpcSlot", vram = 0x800EC6C0, size = 0x2C },
     { name = "fake_func_800EC6EC", vram = 0x800EC6EC, size = 0x4 },
-    { name = "func_800EC6F0", vram = 0x800EC6F0, size = 0x538 },
+    { name = "tickCraftMountedAnimationEffect", vram = 0x800EC6F0, size = 0x538 },
     { name = "func_800ECC28", vram = 0x800ECC28, size = 0x1B4 },
     { name = "func_800ECDDC", vram = 0x800ECDDC, size = 0x28 },
     { name = "fake_func_800ECE04", vram = 0x800ECE04, size = 0xC },
