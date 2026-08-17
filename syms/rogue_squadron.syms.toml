@@ -1953,7 +1953,7 @@ functions = [
     { name = "updateNpcEventTimer", vram = 0x800EFDE0, size = 0x8DC },
     { name = "isPendingChildNpcActive", vram = 0x800F06BC, size = 0xF0 },
     { name = "validateActorTargetLOS", vram = 0x800F07AC, size = 0x1FC },
-    { name = "func_800F09A8", vram = 0x800F09A8, size = 0x1FC },
+    { name = "computeActorAnchorDeltaAfterLOS", vram = 0x800F09A8, size = 0x1FC },
     { name = "func_800F0BA4", vram = 0x800F0BA4, size = 0x220 },
     { name = "func_800F0DC4", vram = 0x800F0DC4, size = 0x1D0 },
     { name = "func_800F0F94", vram = 0x800F0F94, size = 0x204 },

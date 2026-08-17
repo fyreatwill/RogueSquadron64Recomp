@@ -86414,3 +86414,53 @@ Next leftover is `func_800F0BA4` (`0x800F0BA4`, `0x220`;
 companion/generated `evaluateTargetTrackingVisibility`). Last-15 titles after
 s1860 still include s1856's M4 revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1861 (2026-08-17) — synchronized the computeActorAnchorDeltaAfterLOS symbol
+
+Exact generated-symbol census for leftover `func_800F09A8` at
+`0x800F09A8` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 14285; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `computeActorAnchorDeltaAfterLOS = 0x800F09A8`. Comment: 13 callers, sister of `validateActorTargetLOS` — identical prologue `$s0=actor+0x114`, gates `+0x135`/`+0x134`, one halfword at `+0x130` vs `0xFFFF`, then "computes the delta vector from anchor NPC's world position to actor's local frame". Previous leftover `validateActorTargetLOS = 0x800F07AC` (s1860 H2). Next named kernel `evaluateTargetTrackingVisibility = 0x800F0BA4` |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F09A8`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`. `undefined_funcs_auto.txt` still lists leftover `func_800F09A8` (companion auto-list, not our source) |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void computeActorAnchorDeltaAfterLOS` at VRAM `0x800F09A8`. First insn `addiu $sp, $sp, -0x58` at `0x800F09A8`; last live `jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F0B9C` / `0x800F0BA0`. Previous is already `validateActorTargetLOS` (`0x800F07AC`, last `jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F09A0` / `0x800F09A4`); next is already `evaluateTargetTrackingVisibility` at `0x800F0BA4` (`addiu $sp, $sp, -0x58`). `funcs.h` and overlay INL already the human name. No leftover `func_800F09A8` in generated headers/body/INL |
+| Body semantics | `$s3 = $a0`, `$s0 = $a0+0x114`. Early-out 0 if `lbu 0x21($s0)` (`actor+0x135`) is zero or `lbu 0x20($s0)` (`actor+0x134`) is zero. Early-out 0 if any of `lhu 0x1C` / `0x1E` / `0x1A` (`actor+0x130` / `+0x132` / `+0x12E`) is `0xFFFF`. Then `jal findActiveNpcInSlotChain` (`0x8003FC28`) on `lhu 0x1C`; if the result is not `0xFFFF`, `jal getNpcContextByIndex` (`0x8004013C`) and if `*(u16*)(ctx+0x14) & 0x10` is set (or the slot was `0xFFFF`), same reap path as the LOS sister (`unregisterAndFreeNpcSlot`, store `0xFFFF` / 0) and return 0. Else `getNpcContextField8` (`0x8004015C`) on `lhu actor+0x198` and on the resolved slot; delta = target pos − actor pos into `sp+0x10/+0x14/+0x18`; fail if `dx^2+dz^2 > (lwc 0x4($s0))^2` (`actor+0x118` range). Else `vec3Dot` of actor facing (`ctx+0xC`) with the delta, two `vec3Length`s, cosine `dot/(lenA*lenB)` vs threshold `lwc 0x114($s3)` (`actor+0x114`); return 1 if in cone / close enough (`c.lt.s $f24, $f0` then `c.le.s 0, cosine`, else `c.lt.s cosine, threshold`). Companion comment's single halfword at `+0x130` is stale (generated uses three, same as the sister). The delta is stack-local; no writeback. Threshold pair is `+0x118`/`+0x114` vs the sister's `+0x120`/`+0x11C` |
+| Callers | 13 generated `jal 0x800F09A8` sites (companion count matches sites, not distinct functions): one `LOOKUP_FUNC(0x800F09A8)` in main `.text` (`aimOrientNpcTowardTarget`); twelve direct `computeActorAnchorDeltaAfterLOS(rdram, ctx)` in `updateNpcOrientationFromMotion`, `tickAtAtBodyTransform`, `updateAtStBodyKinematics`, `npcTankDroidComputeAimMotion`, `npcRadarDishComputeAimMotion`, `tickEnemyCraftWithDestruction`, `tickCraftSplineOrientation`, `tickCraftSplineOrientationDual`, `tickCraftSplineOrientationVariant` (2), `tickFighterSquadronWithSplinePaths`, `computeNpcOrientationFromAimVectors`. Companion "same Actor family npc*Update after validateActorTargetLOS" overstates — these are the orientation/aim/spline helpers already documented as the pending-child + this-delta pair |
+| TOML | Was `{ name = "func_800F09A8", vram = 0x800F09A8, size = 0x1FC }` — stale leftover. Size already matched `0x800F0BA4 - 0x800F09A8`. Renamed to `computeActorAnchorDeltaAfterLOS` |
+| Overlay section 4 | `{ .func = computeActorAnchorDeltaAfterLOS, .offset = 0x0004B878, .rom_size = 0x000001FC }` under `section_4_ovl_mission_funcs` (`0x800F09A8 - 0x800A5130 = 0x4B878`; previous `0x4B67C + 0x1FC = 0x4B878`; `0x4B878 + 0x1FC = 0x4BA74` matches next `evaluateTargetTrackingVisibility`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F09A8`. No leftover `func_800F09A8` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x58` / `jr $ra` / `addiu $sp, $sp, 0x58` at
+`0x800F09A8` / `0x800F0B9C` / `0x800F0BA0`), previous
+(`validateActorTargetLOS` / `0x800F07AC`) and next
+(`evaluateTargetTrackingVisibility` / `0x800F0BA4`) boundaries, overlay span,
+and size already agreed on `computeActorAnchorDeltaAfterLOS` / `0x1FC`.
+TOML still carried leftover `func_800F09A8`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F0BA4`; first insn is
+`addiu $sp, $sp, -0x58` and last is `jr $ra` / `addiu $sp, $sp, 0x58`
+at `0x800F0B9C` / `0x800F0BA0`; body is the sister LOS range/cone
+test with the `+0x118`/`+0x114` thresholds, not an unnameable
+span). No invented name. No build or runtime run required.
+
+Next census: leftover `func_800F0BA4` at `0x800F0BA4` (size `0x220`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `evaluateTargetTrackingVisibility`; TOML still leftover
+`func_800F0BA4`. First insn `addiu $sp, $sp, -0x58`; last live
+`jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F0DBC` / `0x800F0DC0`.
+Next leftover is `func_800F0DC4` (`0x800F0DC4`, `0x1D0`;
+companion/generated `tickObjectAnimSubstruct`). Last-15 titles after
+s1861 still include s1856's M4 revisit, so the mandatory REVISIT
+gate does not fire.
