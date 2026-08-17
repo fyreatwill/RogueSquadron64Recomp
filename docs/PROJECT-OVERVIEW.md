@@ -3062,13 +3062,14 @@ collision.
 | s1782 | Synchronized `resetCraftInstanceMotionState` (`0x800E4480`, `0x1F4`). Per-row motion reset of `*(a0+4)`: 2-iter zero of `+0x74/+0x7C/+0xA4/+0xAC`, clear `+0x9A/+0x9B`, then `setNpcHealth`, `setObjectDetailLevel`, `initActorMotionParams`, and two `initObjectAnimSubstruct`. Companion deleted leftover `func_800E4480` at s432 as a duplicate. No generated `jal 0x800E4480`. TOML was stale `func_800E4480`; generated headers/body and section-4 already used the human name. |
 | s1783 | Synchronized `playDualTextureAttachmentCueB` (`0x800E4674`, `0x200`). Two `lookupHmtTextureByName` (`a2=0` then `a2=1` on HMT `0x800A82CC`), paired `resolveNpcAttachmentPos` / `tickProgressChannel` / `triggerCueWithSlotEffect`, then `play3DSoundEvent`. No generated `jal 0x800E4674`. TOML was stale `func_800E4674`; generated headers/body and section-4 already used the human name. |
 | s1784 | Synchronized `playAttachmentMaterialSoundSimpleB` (`0x800E4874`, `0x140`). Single `lookupHmtTextureByName` (`a2=0` on HMT `0x800A82D4` dest `sp+0x28`), optional `resolveNpcAttachmentPos` when indexed `+0xDC` float is nonzero, one `tickProgressChannel`, then on return-1 `triggerCueWithSlotEffect` `a1=0x2` plus `play3DSoundEvent` `0x1D`/`0x78`/`0x28` with float `0x800A82D8`. No generated `jal 0x800E4874`. TOML was stale `func_800E4874`; generated headers/body and section-4 already used the human name. |
+| s1785 | Synchronized `playDualTextureAttachmentCueC` (`0x800E49B4`, `0x1FC`). Two `lookupHmtTextureByName` (`a2=0` on HMT `0x800A82D4` dest `sp+0x28` and `0x800A82DC` dest `sp+0x58`), optional paired `resolveNpcAttachmentPos` when indexed `+0xDC` float is nonzero, paired `tickProgressChannel`, then on both return-1 paired `triggerCueWithSlotEffect` `a1=0x2` plus `play3DSoundEvent` `0x1D`/`0x6E`/`0x28` with float `0x800A82E0`. No generated `jal 0x800E49B4`. TOML was stale `func_800E49B4`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1784 is `playDualTextureAttachmentCueC` /
-leftover `func_800E49B4` / `0x800E49B4` (size `0x1FC`). Neighbor
+The sweep cursor after s1785 is `transformCraftAnchorsApplySubFx2` /
+leftover `func_800E4BB0` / `0x800E4BB0` (size `0x210`). Neighbor
 peek: companion, generated headers/body, and section-4 already use
-the human name; TOML is still `func_800E49B4`. Mandatory revisits
+the human name; TOML is still `func_800E4BB0`. Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776. After s1784 the last-15 titles include the s1776 revisit, so
+s1776. After s1785 the last-15 titles include the s1776 revisit, so
 the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
