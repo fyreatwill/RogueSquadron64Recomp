@@ -82921,3 +82921,40 @@ Next census: `npcWaterCraftUpdate` at `0x800E614C` (size `0x107C`).
 Neighbor peek already shows companion, generated, TOML, and section-4
 using the human name. Last-15 titles after s1789 still include s1776's
 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1790 (2026-08-16) — confirmed the npcWaterCraftUpdate symbol
+
+Exact generated-symbol census for `0x800E614C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6856; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcWaterCraftUpdate = 0x800E614C` (coarse listing, `segment:mission_overlay`). Previous named kernel in VRAM order is `npcWaterCraftHandleDestruction = 0x800E5B38` (annotated: exclusively called from this update). Next named kernel in the coarse listing is `npcGroundTroopUpdate = 0x800E7860`; the next generated occupant is leftover `fake_func_800E71C8 = 0x800E71C8`. No leftover `func_800E614C` splat, no `D_800E614C`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void npcWaterCraftUpdate` at VRAM `0x800E614C`. First insn `addiu $sp, $sp, -0x140`; last insn `jr $ra` / `addiu $sp, $sp, 0x140` at `0x800E71C0` / `0x800E71C4`. Previous `npcWaterCraftHandleDestruction` ends at `0x800E6144` / `0x800E6148`; next is leftover `fake_func_800E71C8` at `0x800E71C8`. `funcs.h` already declares the human name. No leftover `func_800E614C`. No generated `jal 0x800E614C` site — table-dispatched like the other `npcXxxUpdate` siblings. The exclusive generated `jal 0x800E5B38` site is inside this function |
+| Body semantics | Halfword state in `a1`; 9-way jump table at `0x800A83D0` on `(a1-1)` for `a1 ∈ 1..9` (`sltiu` bound `0x9`; out of range falls to the epilogue at `L_800E717C`). Object pointer `a0`, record `*(a0+4)` in `$s3`, `a2` in `$s5`. Case 0 is setup: type halfword `*(s5+0)` compared to `0x3E` / `0x40`, then `rs_malloc` (`0x138`), `walkMeshdef0List`, `composeEulerRotationXYZ`, `composeRotationMatrixSlot0`/`1`/`2`, `addVec3At0x24`, `lookupHmtMaterialByName` ×3, `popNpcSlotFromTail`, `createAndInitObject`, `getLevelDatItemByName`, `initActorAsType1`, `play3DSoundEventVariant`, `allocateAndInitCraftNpcContext`, `dispatchDatSubtypeByRandomIndex`. Case 1 tears down (`factor5RemoveListNode` twice, `rs_free`, `getNpcCurrentHealth`, `clearPendingAndDestroyChildNpc`, `releaseMeshAsset`). Case 2 is the live tick: `npcPredictedRangeCheck`, `tickStructureWithDestructionAndChildren`, `tickCraftSplineOrientationVariant` ×2, `transformCraftAnchorsApplySubFx2` ×2, `spawnSpeedGatedTrailEffect` ×2, and the exclusive `npcWaterCraftHandleDestruction` at `0x800E6D3C`, plus `destroyNpcSlotByIndex` / `destroyObjectOwnedNpcSlot`. Case 3 is 3D-audio / visibility (`updateActive3DAudioSource`, `addNpcToVisibilityBucket`, `advanceNpcOnCurvedPath`). Case 4 is damage (`play3DSoundEvent`, `dealDamageToNpc`, `unregisterAndFreeNpcSlot`, `datItemSetObjectiveBooleanCount`, `extrapolateNpcPositionForCurrentMode`). Case 5 and case 7 are the epilogue. Case 6 is a single `dispatchSlotAction5IfActive`. Case 8 is type-1 / health / slot teardown (`setType1ActorParams`, `updateType1AnimRamp`, `getNpcCurrentHealth`, `unregisterAndFreeNpcSlot`, `popNpcSlotFromTail`, `setObjectDetailLevel`) with an inner 8-way table at `L_800E7024`. 82 `jal`s / 60 unique targets. Name matches the water-craft `npcXxxUpdate` sibling of `npcTrainCarUpdate` / `npcGroundTroopUpdate` |
+| TOML | `{ name = "npcWaterCraftUpdate", vram = 0x800E614C, size = 0x107C }` — already the human name; size matches `0x800E71C8 - 0x800E614C` (last insn `0x800E71C4` + 4 = `0x107C`). No leftover `func_800E614C` |
+| Overlay section 4 | `{ .func = npcWaterCraftUpdate, .offset = 0x0004101C, .rom_size = 0x0000107C }` under `section_4_ovl_mission_funcs` (`0x800E614C - 0x800A5130 = 0x4101C`; previous `0x40A08 + 0x614 = 0x4101C`; `0x4101C + 0x107C = 0x42098` matches next leftover `fake_func_800E71C8`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E614C`. No leftover `func_800E614C` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 9-way water-craft-update
+body, previous (`npcWaterCraftHandleDestruction` / `0x800E5B38`) and
+next leftover (`fake_func_800E71C8` / `0x800E71C8`) boundaries, TOML
+name and size, and section-4 overlay span already agree. No TOML or
+generated-name change. This refutes H2 (no stale `func_800E614C`
+placeholder), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement; size is `0x107C` as expected), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: leftover `fake_func_800E71C8` at `0x800E71C8` (size `0x8`).
+Neighbor peek already shows companion, generated, TOML, and section-4
+using the leftover name. Last-15 titles after s1790 still include
+s1776's revisit, so the mandatory REVISIT gate does not fire.
