@@ -1959,7 +1959,7 @@ functions = [
     { name = "resolveNpcAttachmentPos", vram = 0x800F0F94, size = 0x204 },
     { name = "quicksortFloatKeysWithValues", vram = 0x800F1198, size = 0x178 },
     { name = "gatherAndSortNearbyNpcViewPoints", vram = 0x800F1310, size = 0x2A8 },
-    { name = "func_800F15B8", vram = 0x800F15B8, size = 0x2B8 },
+    { name = "acquireNpcTargetsInAimCone", vram = 0x800F15B8, size = 0x2B8 },
     { name = "func_800F1870", vram = 0x800F1870, size = 0x2D0 },
     { name = "func_800F1B40", vram = 0x800F1B40, size = 0x33C },
     { name = "func_800F1E7C", vram = 0x800F1E7C, size = 0x178 },

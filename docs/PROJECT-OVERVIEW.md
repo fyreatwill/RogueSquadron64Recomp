@@ -3146,17 +3146,18 @@ collision.
 | s1864 | Synchronized `resolveNpcAttachmentPos` (`0x800F0F94`, `0x204`). Reads `lhu state+0x130`, `findActiveNpcInSlotChain` + `getNpcContextByIndex`; optional `zmemcpy`/`transformMeshPartIntoWorld` when `ctx+0xC` is set, else `ctx+0x8`; `computeAnchorRelativePositionByDistanceRatio` dest `sp+0x40`; deltas vs `positionPtr`; then `vec3Dot`/`vec3Length`/`constMinusSinfApprox`/`vec3Cross` plus optional normalize, clamp vs scaleB, `quatFromAxisAngleSafe` and two `rotateVec3ByQuat` of `+0xC`/`+0x18`. 22 generated `jal 0x800F0F94` sites already dispatch the human name. TOML was stale `func_800F0F94`; companion, generated headers/body, and section-4 already used the human name. |
 | s1865 | Synchronized `quicksortFloatKeysWithValues` (`0x800F1198`, `0x178`). In-place Hoare-style partition: float keys at `$a0` (4-byte stride) and parallel `u16` values at `$a1` (2-byte stride), range `$a2..$a3`; mid-swap, `c.lt.s` partition, recurse both sides. 4 generated `jal 0x800F1198` sites (2 self-recurses + `gatherAndSortNearbyNpcViewPoints` + `acquireNpcTargetsInAimCone`) already dispatch the human name. TOML was stale `func_800F1198`; companion, generated headers/body, and section-4 already used the human name. |
 | s1866 | Synchronized `gatherAndSortNearbyNpcViewPoints` (`0x800F1310`, `0x2A8`). Copies viewpoint origin/`*scale` extents, optional `sampleTerrainAtNpcPosition`, walks the NPC slot chain with `findSegmentObjectSphereHit`, collects up to 8 `(distance, slot)` pairs, then `quicksortFloatKeysWithValues` (or a 2-element swap). 1 generated `jal 0x800F1310` in `tickProgressChannel` already dispatches the human name. TOML was stale `func_800F1310`; companion, generated headers/body, and section-4 already used the human name. The `tickProgressChannel` comment's "heavy actor-state updater" gloss is stale. |
+| s1867 | Synchronized `acquireNpcTargetsInAimCone` (`0x800F15B8`, `0x2B8`). Cone-and-range NPC collector: `cosf` of scaled `+0x18`, walks a `0xFF`-terminated type-id list at `+0x24` through `findActiveNpcInSlotChain` / `getNpcContextByIndex`, optional `transformMeshPartIntoWorld`, keeps targets whose distance is between `+0x20` and `+0x1C` and whose aim-axis cosine (`vec3Dot`/`vec3Length` of `+0xC`) is at least the stored cosine. Collects up to 32 `(score, slot)` pairs then `quicksortFloatKeysWithValues` (or a 2-element swap). 2 generated `jal 0x800F15B8` sites (`spawnPlayerAtStCannonFire` already the human name; `emitTrailPuffAndCue` still `LOOKUP_FUNC`). TOML was stale `func_800F15B8`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1866 is leftover `func_800F15B8`
-(`0x800F15B8`, size `0x2B8`). Neighbor peek: companion
+The sweep cursor after s1867 is leftover `func_800F1870`
+(`0x800F1870`, size `0x2D0`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`acquireNpcTargetsInAimCone`; TOML still leftover `func_800F15B8`. First
-insn `addiu $sp, $sp, -0xE8`; last live `jr $ra` / `addiu $sp, $sp, 0xE8`
-at `0x800F1868` / `0x800F186C`. Next leftover is `func_800F1870`
-(`0x800F1870`, `0x2D0`; companion/generated `tickProgressChannel`;
+`tickProgressChannel`; TOML still leftover `func_800F1870`. First
+insn `addiu $sp, $sp, -0x90`; last live `jr $ra` / `addiu $sp, $sp, 0x90`
+at `0x800F1B38` / `0x800F1B3C`. Next leftover is `func_800F1B40`
+(`0x800F1B40`, `0x33C`; companion/generated `raycastTerrainAndNpcs`;
 TOML still leftover). Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776, s1792, s1808, s1824, s1840, s1856. After s1866 the last-15
+s1776, s1792, s1808, s1824, s1840, s1856. After s1867 the last-15
 titles still include s1856's M4 revisit, so the next iteration
 resumes the leftover sweep.
 
