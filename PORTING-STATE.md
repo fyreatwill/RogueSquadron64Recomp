@@ -87357,3 +87357,54 @@ live `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2828` /
 `setObjectDetailLevel` at `0x800F2830`. Last-15 titles
 after s1878 still include s1872's hangar/512 revisit, so the next
 iteration is another leftover census rather than a mandatory REVISIT.
+
+## Session 1879 (2026-08-17) — synchronized the getNpcDetailLevelByIndex symbol
+
+Exact generated-symbol census for leftover `func_800F27F0` at
+`0x800F27F0` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1872's hangar/512 revisit (`hangar/512 0x8000 Y
+is unevaluable`), so the 15-title all-sweep REVISIT gate did not fire.
+Step 0 `wc -c` was 17933; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `getNpcDetailLevelByIndex = 0x800F27F0` at line 1029 (`2 callers: (slot_idx u16) — returns effective detail-level 0..3`). Sequential neighbor `isPointInsideTriggerVolume = 0x800F2760` at line 1284; next occupant `setObjectDetailLevel = 0x800F2830` at line 1024 |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F27F0`. Menu overlay listed-symbol max `0x800D03DC`; cinematic max `0x800B1900` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void getNpcDetailLevelByIndex` at VRAM `0x800F27F0`. First insn `addiu $sp, $sp, -0x18` at `0x800F27F0`; last live `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2828` / `0x800F282C`. Previous is already `isPointInsideTriggerVolume` (`0x800F2760`, last `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F27E8` / `0x800F27EC`); next is already `setObjectDetailLevel` at `0x800F2830` (`addiu $sp, $sp, -0x18`). `funcs.h` and overlay INL already the human name. No leftover `func_800F27F0` in generated headers/body/INL |
+| Body semantics | `$a0` slot index (`andi $a0, $a0, 0xFFFF`). `jal getNpcContextByIndex` (`0x8004013C`). If `lw +0x10` of that context is nonzero, return `lh +0x19A` of that pointer (the object detail stored by `setObjectDetailLevel`). Else `lbu +0x15`, `srl 6`, return `3 - that` (effective 0..3) |
+| Callers | 1 generated `jal 0x800F27F0` at `0x800F0188` in `updateNpcEventTimer` (`funcs_40.c`), already dispatching `getNpcDetailLevelByIndex`. Companion comment said 2 callers; only one jal / `LOOKUP_FUNC` site is in the generated tree |
+| TOML | Was `{ name = "func_800F27F0", vram = 0x800F27F0, size = 0x40 }` — stale leftover. Size already matched `0x800F2830 - 0x800F27F0`. Renamed to `getNpcDetailLevelByIndex`. The human name was not already a TOML symbol |
+| Overlay section 4 | `{ .func = getNpcDetailLevelByIndex, .offset = 0x0004D6C0, .rom_size = 0x00000040 }` under `section_4_ovl_mission_funcs` (`0x800F27F0 - 0x800A5130 = 0x4D6C0`; previous `0x4D630 + 0x90 = 0x4D6C0`; `0x4D6C0 + 0x40 = 0x4D700` matches next `setObjectDetailLevel`) |
+| Non-collision | No leftover `func_800F27F0` in generated headers, body, overlay INL, or TOML after the rename. Other overlay files have no occupant at `0x800F27F0` |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x18` / `jr $ra` / `addiu $sp, $sp, 0x18` at
+`0x800F27F0` / `0x800F2828` / `0x800F282C`), previous
+(`isPointInsideTriggerVolume` / `0x800F2760`) and next
+(`setObjectDetailLevel` / `0x800F2830`) boundaries,
+overlay span, and size already agreed on
+`getNpcDetailLevelByIndex` / `0x40`. TOML still carried leftover
+`func_800F27F0`; renamed it to match. Generated headers/body/INL
+were already the human name. This refutes H1 (TOML was not already
+synchronized), H3 (no overlay collision, no size/boundary
+disagreement; previous ends exactly here and next starts at
+`0x800F2830`; first insn is `addiu $sp, $sp, -0x18` and last is
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2828` / `0x800F282C`;
+body is the slot-index detail lookup via `getNpcContextByIndex`,
+not an unnameable span). No invented name. No build or runtime
+run required.
+
+Next census: leftover `func_800F2830` at `0x800F2830` (size `0x4C`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `setObjectDetailLevel`; TOML still
+leftover `func_800F2830`. First insn `addiu $sp, $sp, -0x18`; last
+live `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2874` /
+`0x800F2878`. Next already-named occupant is
+`getObjectDetailLevel` at `0x800F287C`. Last-15 titles
+after s1879 still include s1872's hangar/512 revisit, so the next
+iteration is another leftover census rather than a mandatory REVISIT.

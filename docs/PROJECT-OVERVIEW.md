@@ -3158,17 +3158,18 @@ collision.
 | s1876 | Synchronized `computeTurnVectorTowardTarget` (`0x800F2540`, `0x108`). `$a0` origin+axis at `+0xC`, `$a1` target, `$a2` out vec3. Delta = target−origin; `vec3Dot`/`vec3Length` cosine; `constMinusSinfApprox` scaled by `0x800A89E4`; `vec3Cross(axis, delta)` optional normalize written through `$a2`; returns the scaled angle in `$f0`. 1 generated `jal 0x800F2540` in `spawnPlayerAtStCannonFire` already dispatches the human name. TOML was stale `func_800F2540`; companion, generated headers/body, and section-4 already used the human name. |
 | s1877 | Synchronized `computeTurnVectorAndDistanceToTarget` (`0x800F2648`, `0x118`). Same args as the sister turn-vector helper plus `$a3` out-distance: delta = target−origin, `vec3Length(delta)` stored through `$a3`, then `vec3Dot`/`vec3Length` cosine, `constMinusSinfApprox` scaled by `0x800A89E8`, `vec3Cross(axis, delta)` optional normalize written through `$a2`; returns the scaled angle in `$f0`. 0 generated `jal 0x800F2648` / `LOOKUP_FUNC` sites. TOML was stale `func_800F2648`; companion, generated headers/body, and section-4 already used the human name. |
 | s1878 | Synchronized `isPointInsideTriggerVolume` (`0x800F2760`, `0x90`). `$a0` point, `$a1` scale (`0x40000000` / 2.0f at the one generated jal). Walks the trigger-volume slot at `0x80138D18` (flag at `+0`, descriptor at `+8`, stride `0x144`); `transformVec3ToNpcLocalWithScale(slot+8, 0, point, scale, scratch)` and returns 1 when that jal's `$v0` is nonzero. Loop counter starts at 0 and `blez` after increment, so one slot. 1 generated `jal 0x800F2760` already dispatches the human name. TOML was stale `func_800F2760`; companion, generated headers/body, and section-4 already used the human name. |
+| s1879 | Synchronized `getNpcDetailLevelByIndex` (`0x800F27F0`, `0x40`). `$a0` slot index (`andi 0xFFFF`); `getNpcContextByIndex`, then if `*(ctx+0x10)` is set return `lh +0x19A` of that object, else `3 - (lbu +0x15 >> 6)` (effective 0..3). 1 generated `jal 0x800F27F0` in `updateNpcEventTimer` already dispatches the human name (companion comment said 2). TOML was stale `func_800F27F0`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1878 is leftover `func_800F27F0`
-(`0x800F27F0`, size `0x40`). Neighbor peek: companion
+The sweep cursor after s1879 is leftover `func_800F2830`
+(`0x800F2830`, size `0x4C`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`getNpcDetailLevelByIndex`; TOML still leftover
-`func_800F27F0`. First insn `addiu $sp, $sp, -0x18`; last live
-`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2828` / `0x800F282C`.
-Next already-named occupant is `setObjectDetailLevel`
-at `0x800F2830`. Mandatory revisits in this window: s1650,
+`setObjectDetailLevel`; TOML still leftover
+`func_800F2830`. First insn `addiu $sp, $sp, -0x18`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2874` / `0x800F2878`.
+Next already-named occupant is `getObjectDetailLevel`
+at `0x800F287C`. Mandatory revisits in this window: s1650,
 s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792,
-s1808, s1824, s1840, s1856, s1872. After s1878 the last-15
+s1808, s1824, s1840, s1856, s1872. After s1879 the last-15
 titles still include that hangar/512 revisit, so the next
 iteration resumes the leftover census rather than another M4 walk.
 

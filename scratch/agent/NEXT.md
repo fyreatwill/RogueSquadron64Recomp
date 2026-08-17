@@ -1,28 +1,28 @@
-# NEXT work unit (s1879)
+# NEXT work unit (s1880)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the leftover census at `func_800F27F0` (`0x800F27F0`,
-size `0x40`). After s1878 the last-15 titles still include
+Resume the leftover census at `func_800F2830` (`0x800F2830`,
+size `0x4C`). After s1879 the last-15 titles still include
 s1872's hangar/512 revisit, so this is not a mandatory REVISIT.
 
 s1872 parked hangar/512 as UNEVALUABLE (no port arm published
-10→origin `0x006ab400` / `0x006ab800`). Do not reopen that window
+origin `0x006ab400` / `0x006ab800`). Do not reopen that window
 without a `[phase] vi_width=512 origin=0x006AB400` log.
 
 Companion `mission_overlay.txt` and generated headers/body/INL
-already name `getNpcDetailLevelByIndex`; TOML still leftover
-`func_800F27F0`. First insn `addiu $sp, $sp, -0x18`; last
-`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2828` /
-`0x800F282C`. Next already-named occupant is
-`setObjectDetailLevel` at `0x800F2830`.
+already name `setObjectDetailLevel`; TOML still leftover
+`func_800F2830`. First insn `addiu $sp, $sp, -0x18`; last
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2874` /
+`0x800F2878`. Next already-named occupant is
+`getObjectDetailLevel` at `0x800F287C`.
 
 Competing hypotheses:
 
 - H1 already-named: companion, generated headers/body/INL, and
   TOML already agree on one human name — confirm only.
 - H2 TOML leftover: generated side already uses
-  `getNpcDetailLevelByIndex`; TOML still `func_800F27F0`
+  `setObjectDetailLevel`; TOML still `func_800F2830`
   — synchronize TOML (and any remaining generated leftover).
 - H3 invent: no trustworthy human name; leave `func_*`.
 
