@@ -235,7 +235,7 @@ jump-table-case session (s1744/s1760 H3-stop-tick; Rice still dies ~135 s). Audi
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
-are synchronized through `transformCraftAnchorsAndApplySubFx` at `0x800E08F8` (s1768).
+are synchronized through `tickCraftSplineOrientation` at `0x800E0CE4` (s1769).
 See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
 backlog, and `PORTING-STATE.md` for evidence.
 
@@ -3045,12 +3045,13 @@ collision.
 | s1766 | Synchronized `playDualTextureAttachmentCue` (`0x800E03F8`, `0x350`). Two-texture attachment cue + 3D sound (`a2` mode flag): HMT `0x800A7FB0` when `a2==0` else `0x800A7FB8`, dual `lookupHmtTextureByName` dests `sp+0x28`/`sp+0x58` (`a2=0/1`), dual `resolveNpcAttachmentPos` when LOD `+0xF4 != 0`, four `tickProgressChannel`, dual `triggerCueWithSlotEffect` `a1=0x2` via table `0x8010ABA0` and `lbu +0xB2`, plus `play3DSoundEvent` `0xD`/`0x6E`/`0x28` with float `0x800A7FD8`. Generated callers `playDualTextureAttachmentCueMode0`/`Mode1`. TOML was stale `func_800E03F8`; generated headers/body and section-4 already used the human name. |
 | s1767 | Synchronized `playAttachmentMaterialSoundSimple` (`0x800E0748`, `0x1B0`). Minimal single-texture attachment cue + 3D sound: HMT `0x800A7FC0` dest `sp+0x28`, optional `resolveNpcAttachmentPos` via table `0x8010ABA0` when LOD `+0xF4 != 0`, one `tickProgressChannel`, XOR-toggle `+0xB6` bit 0, then on return-1 `triggerCueWithSlotEffect` `a1=0xB` plus `play3DSoundEvent` `0x30`/`0x6E`/`0x28` with float `0x800A7FDC`. No `slotDispatcherIter` and no generated `jal 0x800E0748`. TOML was stale `func_800E0748`; generated headers/body and section-4 already used the human name. |
 | s1768 | Synchronized `transformCraftAnchorsAndApplySubFx` (`0x800E08F8`, `0x3EC`). Build rotation matrices + transform two anchors + apply sub-effects: `buildRotationMatrixSlot0` / `composeRotationMatrixSlot1`, two `transformVec3ByMat34` of `s2+0xC` / `s2+0x18` dests `sp+0x24` / `sp+0x30`, then `applyToObjectSubstructByFlag` (`a3=0/1`) and `tickObjectAnimSubstruct`. Generated caller `npcTrainCarUpdate` `jal 0x800E08F8`. TOML was stale `func_800E08F8`; generated headers/body and section-4 already used the human name. |
+| s1769 | Synchronized `tickCraftSplineOrientation` (`0x800E0CE4`, `0x6C8`). Canonical spline-walker orientation: 3-iter `fp<3` loop, `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto`, pending-child + LOS (`isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` / `getObjectMeshTransformOrLocal`), rotation/quat/vec3 stack (`buildRotationMatrixSlot0` / `composeRotationMatrixSlot1` / `quatFromAxisAngle` / `rotateVec3ByQuat` / `transformVec3ByMat34`), two `play3DSoundEventVariant`, then `factor5RemoveListNode`. Generated caller `tickCraftSplineOrientationDual` `jal 0x800E0CE4`. TOML was stale `func_800E0CE4`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1768 is `tickCraftSplineOrientation` /
-`func_800E0CE4` / `0x800E0CE4` (size `0x6C8`). Neighbor peek already
-shows TOML still `func_800E0CE4` while generated/overlay use the human
+The sweep cursor after s1769 is `tickCraftSplineOrientationDual` /
+`func_800E13AC` / `0x800E13AC` (size `0xA70`). Neighbor peek already
+shows TOML still `func_800E13AC` while generated/overlay use the human
 name. Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760. After s1768 the last-15 titles still include
+s1714, s1744, s1760. After s1769 the last-15 titles still include
 s1760's revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

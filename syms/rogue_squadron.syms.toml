@@ -1866,7 +1866,7 @@ functions = [
     { name = "playDualTextureAttachmentCue", vram = 0x800E03F8, size = 0x350 },
     { name = "playAttachmentMaterialSoundSimple", vram = 0x800E0748, size = 0x1B0 },
     { name = "transformCraftAnchorsAndApplySubFx", vram = 0x800E08F8, size = 0x3EC },
-    { name = "func_800E0CE4", vram = 0x800E0CE4, size = 0x6C8 },
+    { name = "tickCraftSplineOrientation", vram = 0x800E0CE4, size = 0x6C8 },
     { name = "func_800E13AC", vram = 0x800E13AC, size = 0xA70 },
     { name = "func_800E1E1C", vram = 0x800E1E1C, size = 0x140 },
     { name = "func_800E1F5C", vram = 0x800E1F5C, size = 0x4A0 },

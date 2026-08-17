@@ -82049,3 +82049,42 @@ Next census: `tickCraftSplineOrientation` / `func_800E0CE4` at
 `func_800E0CE4` while generated/overlay use the human name. Last-15
 titles after s1768 still include s1760's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1769 (2026-08-16) — synchronized the tickCraftSplineOrientation symbol
+
+Exact generated-symbol census for `0x800E0CE4` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6619; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickCraftSplineOrientation = 0x800E0CE4` with comment "canonical spline-walker orientation math + 3D audio + list-node removal". Previous contiguous named neighbor `transformCraftAnchorsAndApplySubFx = 0x800E08F8`. Next contiguous named neighbor `tickCraftSplineOrientationDual = 0x800E13AC`. No leftover `func_800E0CE4` splat, no `D_800E0CE4`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void tickCraftSplineOrientation` at VRAM `0x800E0CE4`. First insn `addiu $sp, $sp, -0x1D0`; last insn `addiu $sp, $sp, 0x1D0` at `0x800E13A8`. Previous `transformCraftAnchorsAndApplySubFx` ends at `0x800E0CE0`; next is `tickCraftSplineOrientationDual` at `0x800E13AC`. `funcs.h` already declares the human name. No leftover `func_800E0CE4`. Generated caller `tickCraftSplineOrientationDual` `jal 0x800E0CE4` at `0x800E1428` |
+| Body semantics | Canonical spline-walker orientation math + 3D audio + list-node removal. Early `lbu +0xB2` plus a 3-iter `slti $fp, 3` walk. `jal 0x80059B50` `mat34CrossRowsAndCopyPos` dest `sp+0x28` then `jal 0x8001C774` `mat3x3InverseInto` dest `sp+0x58`. Pending-child / LOS / mesh: `isPendingChildNpcActive` (`0x800F06BC`), `computeActorAnchorDeltaAfterLOS` (`0x800F09A8`), `getObjectMeshTransformOrLocal` (`0x800F2988`) dest `sp+0xA8`. Orientation stack: `buildRotationMatrixSlot0` / `composeRotationMatrixSlot1` / `buildRotationMatrixSlot1`, `transformVec3ByMat34` (four), `vec3NormalizeInto` / `normalize_vector` / `vec3Dot` / `vec3Cross` / `vec3Length`, `quatFromAxisAngle` / `rotateVec3ByQuat`, `constMinusSinfApprox`. Two `play3DSoundEventVariant` (`0x80098BDC`) and terminal `factor5RemoveListNode` (`0x80098DE0`) |
+| TOML (before) | `{ name = "func_800E0CE4", vram = 0x800E0CE4, size = 0x6C8 }` — size matches `0x800E13AC - 0x800E0CE4` |
+| Overlay section 4 | `{ .func = tickCraftSplineOrientation, .offset = 0x0003BBB4, .rom_size = 0x000006C8 }` under `section_4_ovl_mission_funcs` (`0x800E0CE4 - 0x800A5130 = 0x3BBB4`; previous `0x3B7C8 + 0x3EC = 0x3BBB4`; `0x3BBB4 + 0x6C8 = 0x3C27C` matches next `tickCraftSplineOrientationDual`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E0CE4`. No leftover `func_800E0CE4` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`transformCraftAnchorsAndApplySubFx` / `0x800E08F8`) and next
+(`tickCraftSplineOrientationDual` / `0x800E13AC`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `tickCraftSplineOrientation`, and only the TOML name was a
+stale `func_800E0CE4` placeholder. Corrected TOML to
+`tickCraftSplineOrientation`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `tickCraftSplineOrientationDual` / `func_800E13AC` at
+`0x800E13AC` (size `0xA70`). Neighbor peek already shows TOML still
+`func_800E13AC` while generated/overlay use the human name. Last-15
+titles after s1769 still include s1760's revisit, so the mandatory
+REVISIT gate does not fire.
