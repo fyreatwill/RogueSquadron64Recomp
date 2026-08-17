@@ -81385,3 +81385,32 @@ H2 selected. Companion mapping, live generated HMT / attach-pos / progress-chann
 Next census: `npcTickEffectChannelD` / `func_800DD64C` at `0x800DD64C`
 (size `0x140`). Last-15 titles after s1750 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1751 (2026-08-16) — synchronized the npcTickEffectChannelD symbol
+
+Exact generated-symbol census for `0x800DD64C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6420; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTickEffectChannelD = 0x800DD64C` with comment "effect-channel tick (sibling)". Previous contiguous named neighbor `npcTickEffectChannelC = 0x800DD50C`; next contiguous named neighbor `npcTickEffectChannelE = 0x800DD78C`. No leftover `func_800DD64C` splat, no `D_800DD64C`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcTickEffectChannelD` at VRAM `0x800DD64C`; prologue `addiu $sp, $sp, -0x70`. Object pointer `a0` loads record `*(a0+4)` into `s0`. Returns through `jr $ra` / `addiu $sp, $sp, 0x70` ending at `0x800DD788`. Previous `npcTickEffectChannelC` last insn is `0x800DD648`; next is `npcTickEffectChannelE` at `0x800DD78C`. `funcs.h` already declares the human name. No leftover `func_800DD64C`. No direct `jal 0x800DD64C` site — same table/indirect dispatch as the earlier `npcTickEffectChannelA`/`B`/`C` siblings |
+| Body semantics | `lookupHmtTextureByName` (`jal 0x80058360`) on name `0x800A7E28` with dest `sp+0x28`. If the LOD-indexed float at `*(motion+0xDC)` (via `*(0x80137CE4)<<2 + *(s0+0x34)`) is nonzero, `resolveNpcAttachmentPos` (`jal 0x800F0F94`) using table `0x8010A9C4` indexed by `+0xCF`. Then `tickProgressChannel` (`jal 0x800F1870`). When that returns 1: zero `+0xDC` on the object record, `triggerCueWithSlotEffect` (`jal 0x800F2FCC`), then `play3DSoundEvent` (`jal 0x800989D8`) with ids `0x48`/`0x6E`/`0x28`. Returns 0. Matches the companion sibling label and the C-channel body |
+| TOML (before) | `{ name = "func_800DD64C", vram = 0x800DD64C, size = 0x140 }` — size matches `0x800DD78C - 0x800DD64C` (last insn `0x800DD788` + 4 = `0x140`) |
+| Overlay section 4 | `{ .func = npcTickEffectChannelD, .offset = 0x0003851C, .rom_size = 0x00000140 }` under `section_4_ovl_mission_funcs` (`0x800DD64C - 0x800A5130 = 0x3851C`; `0x383DC + 0x140 = 0x3851C`; `0x3851C + 0x140 = 0x3865C` matches next `npcTickEffectChannelE`) |
+| Non-collision | Cinematic overlay max named VRAM is `0x800B072C`; menu overlay max is `0x800D03DC`; main `.text` ends at `0x800A5130`. None occupy `0x800DD64C`. No leftover `func_800DD64C` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated HMT / attach-pos / progress-channel / cue / 3D-sound body, previous (`npcTickEffectChannelC` / `0x800DD50C`) and next (`npcTickEffectChannelE` / `0x800DD78C`) boundaries, TOML size, and section-4 overlay span agreed; the generated headers/body were already `npcTickEffectChannelD`, and only the TOML name was a stale `func_800DD64C` placeholder. Corrected TOML to `npcTickEffectChannelD`. This refutes H1 (TOML was not already synchronized), H3 (no leftover splat at this address, overlay collision, or size/boundary disagreement), and H4 (companion, generated body, TOML, and section-4 row are all present). No build or runtime run required.
+
+Next census: `npcTickEffectChannelE` / `func_800DD78C` at `0x800DD78C`
+(size `0x1A4`). Last-15 titles after s1751 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.
+

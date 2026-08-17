@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1750)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1751)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3027,10 +3027,11 @@ collision.
 | s1748 | Synchronized `npcInitMinimalNoAnim` (`0x800DD248`, `0x7C`). Health/motion/detail init only (`setNpcHealth` / `initActorMotionParams` / `setObjectDetailLevel`); no `initObjectAnimSubstruct`. TOML was stale `func_800DD248`; generated headers/body and section-4 already used the human name. |
 | s1749 | Synchronized `npcInitFullModel` (`0x800DD2D0`, `0x23C`). Same health/detail/motion init as the minimal sibling, then a `+0xCF` three-way dispatch that calls `initObjectAnimSubstruct`. TOML was stale `func_800DD2D0`; generated headers/body and section-4 already used the human name. |
 | s1750 | Synchronized `npcTickEffectChannelC` (`0x800DD50C`, `0x140`). HMT lookup at `0x800A7E28`, optional `resolveNpcAttachmentPos` when `+0xDC != 0`, `tickProgressChannel`, then on return-1 `triggerCueWithSlotEffect` plus `play3DSoundEvent` `0x48`/`0x6E`/`0x28`. TOML was stale `func_800DD50C`; generated headers/body and section-4 already used the human name. |
+| s1751 | Synchronized `npcTickEffectChannelD` (`0x800DD64C`, `0x140`). Same HMT / attach-pos / progress-channel / cue / 3D-sound body as C (`0x800A7E28`, `0x48`/`0x6E`/`0x28`). TOML was stale `func_800DD64C`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1750 is `npcTickEffectChannelD` / `func_800DD64C` at
-`0x800DD64C` (size `0x140`). Mandatory revisits in this window: s1650, s1666,
-s1682, s1698, s1714, s1744. After s1750 the last-15 titles still include
+The sweep cursor after s1751 is `npcTickEffectChannelE` / `func_800DD78C` at
+`0x800DD78C` (size `0x1A4`). Mandatory revisits in this window: s1650, s1666,
+s1682, s1698, s1714, s1744. After s1751 the last-15 titles still include
 s1744, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

@@ -1,17 +1,17 @@
-# NEXT work unit (s1751)
+# NEXT work unit (s1752)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol census at `npcTickEffectChannelD` /
-`func_800DD64C` / `0x800DD64C` (size `0x140`). s1750 synchronized
-`npcTickEffectChannelC`. Last-15 after this commit still include
+Resume the generated-symbol census at `npcTickEffectChannelE` /
+`func_800DD78C` / `0x800DD78C` (size `0x1A4`). s1751 synchronized
+`npcTickEffectChannelD`. Last-15 after this commit still include
 s1744's revisit, so the mandatory REVISIT gate does not fire.
 
 Competing hypotheses:
 
-- H1: companion `npcTickEffectChannelD`, generated body, TOML name/size,
+- H1: companion `npcTickEffectChannelE`, generated body, TOML name/size,
   and overlay span already agree — confirm only.
-- H2: generated code still carries placeholder `func_800DD64C` (or a
+- H2: generated code still carries placeholder `func_800DD78C` (or a
   stale alias) and needs a TOML + fixup rename.
 - H3: overlay collision, leftover `fake_func_*`, or size/boundary
   disagreement with the companion listing.
@@ -21,27 +21,27 @@ Exact commands (read-only census; no game run):
 
 ```
 # companion
-grep -n 'npcTickEffectChannelD\|800DD64C\|DD64C' \
+grep -n 'npcTickEffectChannelE\|800DD78C\|DD78C' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/*.txt
 # generated
-grep -n 'npcTickEffectChannelD\|func_800DD64C\|0x800DD64C' \
+grep -n 'npcTickEffectChannelE\|func_800DD78C\|0x800DD78C' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c
 # toml + overlay inl
-grep -n '800DD64C\|npcTickEffectChannelD' \
+grep -n '800DD78C\|npcTickEffectChannelE' \
   syms/rogue_squadron.syms.toml \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
 
 Expected splits:
 
-- H1: all four sources already say `npcTickEffectChannelD`, size `0x140`,
-  previous `npcTickEffectChannelC` / `0x800DD50C`, next
-  `npcTickEffectChannelE` / `0x800DD78C`, no leftover placeholder.
-- H2: generated still `func_800DD64C`, or TOML still `func_800DD64C`
+- H1: all four sources already say `npcTickEffectChannelE`, size `0x1A4`,
+  previous `npcTickEffectChannelD` / `0x800DD64C`, next
+  `playAttachmentMaterialFadeSound` / `0x800DD930`, no leftover placeholder.
+- H2: generated still `func_800DD78C`, or TOML still `func_800DD78C`
   while generated/overlay already use the human name — rename in TOML
   and the fixup path.
-- H3: menu/cinematic occupant, leftover splat, or size != `0x140`.
+- H3: menu/cinematic occupant, leftover splat, or size != `0x1A4`.
 - H4: a required source is absent.
 
 Do not reopen the attract-1024 six-entry recipe. Next cursor after this
