@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1807)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1809)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3088,15 +3088,16 @@ collision.
 | s1806 | Synchronized `computeNpcOrientationFromAimVectors` (`0x800E9EC4`, `0x5AC`). Pending-child + LOS (`isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` on `+0x38`), mesh T&L (`getObjectMeshTransformOrLocal` / `computeAnchorRelativePositionByDistanceRatio` `0x41200000` / `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto` / `transformVec3ByMat34`), then rotation/quat/vec3 (`buildRotationMatrixSlot0`/`composeRotationMatrixSlot1` from `+0x68`/`+0x64`, `vec3NormalizeInto` / `vec3Dot` / `constMinusSinfApprox` / `vec3Cross` / `normalize_vector` / `quatFromAxisAngle` / `rotateVec3ByQuat`). One generated `jal 0x800E9EC4` inside `npcAtPtUpdate` already dispatched the human name. TOML was stale `func_800E9EC4`; generated headers/body and section-4 already used the human name. |
 | s1807 | Synchronized `npcAtPtPlaySkywalkerErrorCallout` (`0x800EA470`, `0x170`). Anim-slot teardown/rebuild on `lbu +0xB3` (1/2/3) then `playStateGatedDestroySound`; body does not emit voiceId `0xC4`. Three generated `jal 0x800EA470` sites inside `npcAtPtUpdate`. TOML was stale `func_800EA470`; generated headers/body and section-4 already used the human name. |
 | s1808 | Mandatory REVISIT. Three-arm Rice watch of the 13 ROM `jal 0x8000C07C` sites plus callee `prev_pc` on `submitGfxFrame`. All arms passed controls; histogram sums equal the entry count. Leave still adds `submitGfxFrame` +98/+107. H2 selected: `menuControllerInput` jal `0x800B8014` +276/+281 and `runInMissionFrame` jal `0x800FAD90` −175/−177 net +101/+104. Five other ROM jals never appear as prevs (VRAM counts are overlay aliases). s1792 menu-input *entry* drop was overlay-aliased. Do not repeat this recipe. |
+| s1809 | Confirmed `npcAtPtUpdate` (`0x800EA5E0`, `0x13A4`). 9-way `jr` table on `(a1-1)<9` at `0x800A87B8`. Case 2 live tick calls exclusive `npcAtPtPlaySkywalkerErrorCallout` ×3 plus `computeNpcOrientationFromAimVectors`. 119 `jal`s / 74 unique targets. No generated `jal 0x800EA5E0` — table-dispatched AT-PT `npcXxxUpdate` sibling of `npcAtAtUpdate` / `npcAtStUpdate` / `npcGroundTroopUpdate`. Companion, generated headers/body, TOML, and section-4 already used the human name. |
 
-The sweep cursor after s1808 is `npcAtPtUpdate` (`0x800EA5E0`).
-Neighbor peek: TOML, generated headers/body, overlay INL, and companion
-already use the human name (size `0x13A4`); next leftover is
-`func_800EB984` (`0xC`; generated/companion already
-`resetObjectPoolListHead`). Mandatory revisits in this window: s1650,
-s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792, s1808. After
-s1808 the last-15 titles include that revisit, so the next iteration
-resumes the `npcAtPtUpdate` census.
+The sweep cursor after s1809 is leftover `func_800EB984` (`0x800EB984`,
+size `0xC`). Neighbor peek: TOML still carries the placeholder;
+generated headers/body, overlay INL, and companion already use
+`resetObjectPoolListHead`. Next occupant is `npcPowerUpUpdate`
+(`0x800EB990`). Mandatory revisits in this window: s1650, s1666,
+s1682, s1698, s1714, s1744, s1760, s1776, s1792, s1808. After s1809
+the last-15 titles still include s1808's revisit, so the next
+iteration resumes the leftover `func_800EB984` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

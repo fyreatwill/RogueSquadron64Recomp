@@ -83765,3 +83765,43 @@ jal). Do not repeat this jal/prev recipe. Next 15-title REVISIT is
 the M4 accumulator boundary, not another `submitGfxFrame` PC set.
 Sweep resumes at `npcAtPtUpdate`.
 
+
+## Session 1809 (2026-08-16) — confirmed the npcAtPtUpdate symbol
+
+Exact generated-symbol census for `0x800EA5E0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1808's
+mandatory REVISIT (`selected H2 menuIn/mission jal-sites on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 8209; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcAtPtUpdate = 0x800EA5E0` (coarse listing, `segment:mission_overlay`). Previous named kernel is `npcAtPtPlaySkywalkerErrorCallout = 0x800EA470` (comment: called 3× from this function; voiceId `0xC4`). Next named kernel in the coarse listing is `npcPowerUpUpdate = 0x800EB990`; the VRAM-order occupant between them is `resetObjectPoolListHead = 0x800EB984` in the later listing. No leftover `func_800EA5E0` splat, no `D_800EA5E0`, and no menu/cinematic/main overlay occupant |
+| Companion `main_overlay.txt` | No occupant at `0x800EA5E0`. Mentions this name only as a caller of `flattenAnimTreeAndAllocateSlot` / `checkAndReturnByteFlagAsU8` (AT-AT family with `npcAtAtUpdate` / `npcAtStUpdate`) |
+| Generated `funcs_39.c` | `RECOMP_FUNC void npcAtPtUpdate` at VRAM `0x800EA5E0`. First insn `addiu $sp, $sp, -0xC8`; last live insn `jr $ra` / `addiu $sp, $sp, 0xC8` at `0x800EB97C` / `0x800EB980`. Previous `npcAtPtPlaySkywalkerErrorCallout` ends at `0x800EA5D8` / `0x800EA5DC`; next is `resetObjectPoolListHead` at `0x800EB984`. `funcs.h` already declares the human name. No leftover `func_800EA5E0`. No generated `jal 0x800EA5E0` site — table-dispatched like the other `npcXxxUpdate` siblings. Three exclusive generated `jal 0x800EA470` sites already dispatch `npcAtPtPlaySkywalkerErrorCallout` |
+| Body semantics | Halfword state in `a1`; 9-way jump table at `0x800A87B8` on `(a1-1)` for `a1 ∈ 1..9` (`sltiu` bound `0x9`; out of range falls to the epilogue at `L_800EB948`). Object pointer `a0` in `$s4`, `a1` in `$s6`, record `*(a0+4)` in `$s1`. Case 0/7 is setup: flag bit `0x20` on `lhu *(s4+0x14)` chooses pos copy from `s0+0x10/14/18` versus `*(s0+0xC)` plus type-byte `lbu *(*(s0+4)+2)==3`, then `walkMeshdef0List`, `composeEulerRotationXYZ`, `initVec4TripletFromArgs`, `composeRotationMatrixSlot0`/`1`/`2`, `addVec3At0x24`, `popNpcSlotFromTail`, `lookupHmtMaterialByName`, `allocateAndInitCraftNpcContext`, `createAndInitObject`, `getLevelDatItemByName`, `initActorAsType1`, `updateObjectFlags110`, `load_model_animation`, `flattenAnimTreeAndAllocateSlot`, `markModelAnimChannelEntryActive`, `rand` ×, `setModelAnimSlotCycleDuration`, `seekAllModelAnimChannelsInSlotToTime`. Case 1 tears down (`clearModelAnimChannelEntry`, `releaseModelAnimSlot`, `rs_free`, `getNpcCurrentHealth`, `initActorRenderDescriptorIfUninit`, `clearPendingAndDestroyChildNpc`, `releaseMeshAsset`). Case 2 is the live tick: `npcPredictedRangeCheck`, `dispatchEffectByActorType`, exclusive `npcAtPtPlaySkywalkerErrorCallout` ×3, `setType1ActorParams`, `playStateGatedDestroySound`, `updateNpcEventTimer`, `computeNpcOrientationFromAimVectors`, pending-child + LOS (`isPendingChildNpcActive` / `validateActorTargetLOS` / `applyToObjectSubstructByFlag`), `transformMeshPartIntoWorld`, `spawnNpcType0xAFromTemplate`, `spawnByteAnimDebrisDefault`, `play3DSoundEvent`, `spawnOrientedNpc`, `spawnDestructionEffectBurst`. Case 3 is visibility / path (`checkAndReturnByteFlagAsU8`, `sampleTerrainAtNpcPosition`, `parseModelAnimType2Entry`, `mat34CrossRowsAndCopyPos`, `addNpcToVisibilityBucket`, `enqueueMeshTypeForCleanup`, `advanceNpcOnCurvedPath`). Case 4 is damage (`getNpcCurrentHealth`, `extrapolateNpcPositionForCurrentMode`, `play3DSoundEvent`, `dealDamageToNpc`, `unregisterAndFreeNpcSlot`, `popNpcSlotFromTail`, `datItemSetObjectiveBooleanCount`, `tallyMidDetailObject`, `clearPendingChildNpc`, `setObjectFlagBit4`, `getObjectDetailLevel`, `getPlayerField2`, `playSpeechClip`, `destroyNpcSlotByIndex`). Case 5 is the epilogue. Case 6 is a single `dispatchSlotAction5IfActive`. Case 8 is anim-duration / health / slot teardown (`setModelAnimSlotCycleDuration`, `getNpcCurrentHealth`, `unregisterAndFreeNpcSlot`, `popNpcSlotFromTail`, `setObjectDetailLevel`). 119 `jal`s / 74 unique targets. Name matches the AT-PT `npcXxxUpdate` sibling of `npcAtAtUpdate` / `npcAtStUpdate` / `npcGroundTroopUpdate` |
+| TOML | `{ name = "npcAtPtUpdate", vram = 0x800EA5E0, size = 0x13A4 }` — already the human name; size matches `0x800EB984 - 0x800EA5E0` (last insn `0x800EB980` + 4 = `0x13A4`). No leftover `func_800EA5E0` |
+| Overlay section 4 | `{ .func = npcAtPtUpdate, .offset = 0x000454B0, .rom_size = 0x000013A4 }` under `section_4_ovl_mission_funcs` (`0x800EA5E0 - 0x800A5130 = 0x454B0`; previous `0x45340 + 0x170 = 0x454B0`; `0x454B0 + 0x13A4 = 0x46854` matches next `resetObjectPoolListHead`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EA5E0`. No leftover `func_800EA5E0` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 9-way AT-PT-update
+body, previous (`npcAtPtPlaySkywalkerErrorCallout` / `0x800EA470`) and
+next (`resetObjectPoolListHead` / `0x800EB984`) boundaries, TOML name
+and size, and section-4 overlay span already agree. No TOML or
+generated-name change. This refutes H2 (no stale `func_800EA5E0`
+placeholder), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement; size is `0x13A4` as expected), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: leftover `func_800EB984` / companion
+`resetObjectPoolListHead` at `0x800EB984` (size `0xC`). Neighbor
+peek already shows TOML still carrying `func_800EB984` while generated
+headers/body, overlay INL, and `mission_overlay.txt` use the human name.
+Last-15 titles after s1809 still include s1808's revisit, so the
+mandatory REVISIT gate does not fire.
