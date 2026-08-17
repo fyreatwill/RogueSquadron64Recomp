@@ -82283,3 +82283,42 @@ Next census: `npcTrainCarUpdate` / `0x800E2818` (size `0x181C`).
 Neighbor peek already shows companion, generated, TOML, and overlay
 agreeing on the human name. Last-15 titles after s1774 still include
 s1760's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1775 (2026-08-16) — confirmed the npcTrainCarUpdate symbol
+
+Exact generated-symbol census for `0x800E2818` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6612; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcTrainCarUpdate = 0x800E2818` (coarse listing, `segment:mission_overlay`). Annotated neighbors: previous `tickWalkerCraftWithLimbsAndDestruction = 0x800E2674`, next `playDualTextureAttachmentCueMode0 = 0x800E4034`. Cross-refs: `tickTrainCarStateMachine` and `loadAssetIntoNewSlot` name this as caller. No leftover `func_800E2818` splat, no `D_800E2818`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void npcTrainCarUpdate` at VRAM `0x800E2818`. First insn `addiu $sp, $sp, -0xB8`; last insn `jr $ra` / `addiu $sp, $sp, 0xB8` at `0x800E402C` / `0x800E4030`. Previous `tickWalkerCraftWithLimbsAndDestruction` ends at `0x800E2810` / `0x800E2814`; next is `playDualTextureAttachmentCueMode0` at `0x800E4034`. `funcs.h` already declares the human name. No leftover `func_800E2818`. No generated `jal 0x800E2818` site — table-dispatched like the other `npcXxxUpdate` siblings |
+| Body semantics | Halfword state in `a1`; 9-way jump table at `0x800A8128` on `(a1-1)` for `a1 ∈ 1..9` (`sltiu` bound `0x9`; out of range falls to the epilogue at `0x800E3FF4`). Object pointer `a0`, record `*(a0+4)` in `$s2`, `a2` in `$s1`. Case 0 is setup: inner 7-way table at `0x800A8150` on type halfword `*(s1+0)-0x2F` writes `+0xB2` (0..4) then `walkMeshdef0List`, `loadAssetIntoNewSlot`, `composeEulerRotationXYZ`, `composeRotationMatrixSlot0`/`1`/`2`, `addVec3At0x24`, three `lookupHmtMaterialByName`, four `popNpcSlotFromTail`, `createAndInitObject`, `getLevelDatItemByName`, `initActorAsType1`. Case 1 tears down (`factor5RemoveListNode` twice, `rs_free`, `getNpcCurrentHealth`, `clearPendingAndDestroyChildNpc`, `releaseMeshAsset`). Case 2 is the live tick: `tickTrainCarStateMachine` at `0x800E303C` and `0x800E30D8`, `buildDebrisTransformStack`, `tickCraftSplineOrientationDual`, `transformCraftAnchorsAndApplySubFx`, `tickWalkerCraftWithLimbsAndDestruction` at `0x800E3260`, `slotDispatcherIter`, debris (`composeRandomRotationMatrix` / `scaleVec3ByRandomRange` / `spawnDebris1Npc` / `spawnDestructionEffectBurst` / `transformLimbStrideAnchorsLocal`). Case 3 is 3D-audio / visibility (`updateActive3DAudioSource` twice, `addNpcToVisibilityBucket`, `advanceNpcOnCurvedPath`). Case 4 is damage (`playSpeechClip`, `dealDamageToNpc`, `unregisterAndFreeNpcSlot`, `datItemSetObjectiveBooleanCount`, `spawnRandomParticleWithParent`, `extrapolateNpcPositionForCurrentMode`). Case 5 and case 7 are the epilogue. Case 6 is a single `dispatchSlotAction5IfActive`. Case 8 is health/slot teardown (`getNpcCurrentHealth`, `unregisterAndFreeNpcSlot`, `popNpcSlotFromTail`, `setObjectDetailLevel`). 125 `jal`s / 69 unique targets. Name matches the train-car `npcXxxUpdate` sibling of `npcGroundTransportUpdate` |
+| TOML | `{ name = "npcTrainCarUpdate", vram = 0x800E2818, size = 0x181C }` — already the human name; size matches `0x800E4034 - 0x800E2818` (last insn `0x800E4030` + 4 = `0x181C`). No leftover `func_800E2818` |
+| Overlay section 4 | `{ .func = npcTrainCarUpdate, .offset = 0x0003D6E8, .rom_size = 0x0000181C }` under `section_4_ovl_mission_funcs` (`0x800E2818 - 0x800A5130 = 0x3D6E8`; previous `0x3D544 + 0x1A4 = 0x3D6E8`; `0x3D6E8 + 0x181C = 0x3EF04` matches next `playDualTextureAttachmentCueMode0`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E2818`. No leftover `func_800E2818` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 9-way train-car-update
+body, previous (`tickWalkerCraftWithLimbsAndDestruction` / `0x800E2674`)
+and next (`playDualTextureAttachmentCueMode0` / `0x800E4034`)
+boundaries, TOML name and size, and section-4 overlay span already
+agree. No TOML or generated-name change. This refutes H2 (no stale
+placeholder), H3 (no leftover splat, overlay collision, or
+size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next: last-15 titles after s1775 are s1761–s1775, all sweep-scoped
+(`confirmed` / `synchronized`), so the next iteration is a mandatory
+REVISIT of the attract-1024 retail-entry boundary (main-text screen
+handlers, not the s1744 six-entry or s1760 jump-table recipes). Sweep
+cursor after the revisit: `playDualTextureAttachmentCueMode0` /
+`func_800E4034` at `0x800E4034` (size `0x1C`; TOML still
+`func_800E4034` while generated/overlay already use the human name).

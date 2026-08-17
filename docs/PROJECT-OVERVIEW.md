@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1774)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1775)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3051,13 +3051,14 @@ collision.
 | s1772 | Synchronized `buildDebrisTransformStack` (`0x800E1F5C`, `0x4A0`). Health-gated 3-iter walk (`s2` from npc while `< npc+0xC`): each slot dest `ptr+0x1C` composes pos (`addVec3At0x24`), scale (`applyScaleToMat3x4` from `+0x5C/+0x60/+0x64` when flag `+0x4C` bit 1), quat (`composeQuatToMat3x4` from `+0x68` when bit 2), then `composeRotationMatrixSlot1`/`Slot0`. Three slot pointers per iter at `s2+0x3C/+0x48/+0x54` with params at `+0x60/+0x6C/+0x78`. Terminal `mat34CrossRowsAndCopyPos` on `npc+0x30` dest `+0x28`. Generated caller `npcTrainCarUpdate` `jal 0x800E1F5C` at `0x800E3008`/`0x800E3248`/`0x800E34FC`/`0x800E3858`. TOML was stale `func_800E1F5C`; generated headers/body and section-4 already used the human name. |
 | s1773 | Synchronized `slerpFrameTowardTargetAxis` (`0x800E23FC`, `0x278`). Incremental frame slerp toward a world axis: copies const vec3 at `0x800A805C` onto the stack, `vec3Dot` against `a0+0xC`, `constMinusSinfApprox`, then if the abs-scaled result exceeds the `0x800A806C` threshold, `vec3Cross`/`vec3Length` + `quatFromAxisAngle` (clamped angle) + `quatFromCardinalAxis` (`lbu +0xC4`, `lw +0xBC`) + `quatMultiply`, rotates `+0xC` and `+0x18` via `rotateVec3ByQuat`, `orthonormalizeFrame`, then `wrapAngleToCyclicRange` of the scaled `a1` increment into `+0x4/+0x8/+0xB8/+0x24`. Returns 1 if the `+0x4` clamp fired, else 0. Generated caller `npcTrainCarUpdate` `jal 0x800E23FC` at `0x800E34EC`. TOML was stale `func_800E23FC`; generated headers/body and section-4 already used the human name. |
 | s1774 | Synchronized `tickWalkerCraftWithLimbsAndDestruction` (`0x800E2674`, `0x1A4`). One `initNpcContextFromTransform` then three `spawnRandomBurstNpcVariantWrapper` / `assignNpcTargetAndPosition` bursts. Sole generated caller `npcTrainCarUpdate` `jal 0x800E2674` at `0x800E3260` (`a0` = npc). TOML was stale `func_800E2674`; generated headers/body and section-4 already used the human name. |
+| s1775 | Confirmed `npcTrainCarUpdate` (`0x800E2818`, `0x181C`). 9-way jump table at `0x800A8128` on `(a1-1)` for `a1 ∈ 1..9`. Setup (inner type table `0x800A8150` writes `+0xB2`, `loadAssetIntoNewSlot`) / teardown / live tick (`tickTrainCarStateMachine` twice, `tickCraftSplineOrientationDual`, `transformCraftAnchorsAndApplySubFx`, `tickWalkerCraftWithLimbsAndDestruction`, `buildDebrisTransformStack`) / 3D-audio / damage (`playSpeechClip`, `dealDamageToNpc`) / slot-action. Table-dispatched; no leftover `func_800E2818`. |
 
-The sweep cursor after s1774 is `npcTrainCarUpdate` /
-`0x800E2818` (size `0x181C`). Neighbor peek already shows companion,
-generated, TOML, and overlay agreeing on the human name. Mandatory
-revisits in this window: s1650, s1666, s1682, s1698, s1714, s1744,
-s1760. After s1774 the last-15 titles still include s1760's revisit,
-so the next iteration resumes the sweep.
+The sweep cursor after s1775 is `playDualTextureAttachmentCueMode0` /
+`0x800E4034` (size `0x1C`). Neighbor peek: TOML still `func_800E4034`
+while generated/overlay already use the human name. Mandatory revisits
+in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760. After
+s1775 the last-15 titles are s1761–s1775, all sweep-scoped, so the
+next iteration is a mandatory REVISIT.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
