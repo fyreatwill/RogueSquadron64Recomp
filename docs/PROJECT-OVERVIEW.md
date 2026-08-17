@@ -3156,17 +3156,18 @@ collision.
 | s1874 | Synchronized `isVectorInConeWriteDistance` (`0x800F2310`, `0xE8`). Same cone args as the sister helper, plus stack out-pointer at `0x50($sp)`: on pass, writes `vec3Length(delta)` and returns 1. 0 generated `jal 0x800F2310` / `LOOKUP_FUNC` sites. TOML was stale `func_800F2310`; companion, generated headers/body, and section-4 already used the human name. |
 | s1875 | Synchronized `computeTurnAxisTowardTarget` (`0x800F23F8`, `0x148`). Same cone args as the sister helpers (`$a0` origin+axis at `+0xC`, `$a1` range as xz `dx^2+dz^2` vs `range^2`, `$a2` cosine, `$a3` target). On pass, `vec3Cross(axis, delta)`, optional normalize, writes the axis through the stack out-pointer at `0x6C($sp)` and returns 1. 0 generated `jal 0x800F23F8` / `LOOKUP_FUNC` sites. TOML was stale `func_800F23F8`; companion, generated headers/body, and section-4 already used the human name. |
 | s1876 | Synchronized `computeTurnVectorTowardTarget` (`0x800F2540`, `0x108`). `$a0` origin+axis at `+0xC`, `$a1` target, `$a2` out vec3. Delta = target−origin; `vec3Dot`/`vec3Length` cosine; `constMinusSinfApprox` scaled by `0x800A89E4`; `vec3Cross(axis, delta)` optional normalize written through `$a2`; returns the scaled angle in `$f0`. 1 generated `jal 0x800F2540` in `spawnPlayerAtStCannonFire` already dispatches the human name. TOML was stale `func_800F2540`; companion, generated headers/body, and section-4 already used the human name. |
+| s1877 | Synchronized `computeTurnVectorAndDistanceToTarget` (`0x800F2648`, `0x118`). Same args as the sister turn-vector helper plus `$a3` out-distance: delta = target−origin, `vec3Length(delta)` stored through `$a3`, then `vec3Dot`/`vec3Length` cosine, `constMinusSinfApprox` scaled by `0x800A89E8`, `vec3Cross(axis, delta)` optional normalize written through `$a2`; returns the scaled angle in `$f0`. 0 generated `jal 0x800F2648` / `LOOKUP_FUNC` sites. TOML was stale `func_800F2648`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1876 is leftover `func_800F2648`
-(`0x800F2648`, size `0x118`). Neighbor peek: companion
+The sweep cursor after s1877 is leftover `func_800F2760`
+(`0x800F2760`, size `0x90`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`computeTurnVectorAndDistanceToTarget`; TOML still leftover
-`func_800F2648`. First insn `addiu $sp, $sp, -0x50`; last live
-`jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F2758` / `0x800F275C`.
-Next already-named occupant is `isPointInsideTriggerVolume`
-at `0x800F2760`. Mandatory revisits in this window: s1650,
+`isPointInsideTriggerVolume`; TOML still leftover
+`func_800F2760`. First insn `addiu $sp, $sp, -0x40`; last live
+`jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F27E8` / `0x800F27EC`.
+Next already-named occupant is `getNpcDetailLevelByIndex`
+at `0x800F27F0`. Mandatory revisits in this window: s1650,
 s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792,
-s1808, s1824, s1840, s1856, s1872. After s1876 the last-15
+s1808, s1824, s1840, s1856, s1872. After s1877 the last-15
 titles still include that hangar/512 revisit, so the next
 iteration resumes the leftover census rather than another M4 walk.
 

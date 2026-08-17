@@ -87255,3 +87255,54 @@ live `jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F2758` /
 `isPointInsideTriggerVolume` at `0x800F2760`. Last-15 titles
 after s1876 still include s1872's hangar/512 revisit, so the next
 iteration is another leftover census rather than a mandatory REVISIT.
+
+## Session 1877 (2026-08-17) — synchronized the computeTurnVectorAndDistanceToTarget symbol
+
+Exact generated-symbol census for leftover `func_800F2648` at
+`0x800F2648` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1872's hangar/512 revisit (`hangar/512 0x8000 Y
+is unevaluable`), so the 15-title all-sweep REVISIT gate did not fire.
+Step 0 `wc -c` was 17574; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | Sequential listing `computeTurnVectorAndDistanceToTarget = 0x800F2648` at line 1283, after `computeTurnVectorTowardTarget = 0x800F2540` and before `isPointInsideTriggerVolume = 0x800F2760`. No comment on this occupant |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F2648`. Menu overlay listed-symbol max `0x800D03DC`; cinematic max `0x800B1900`. Main `.text` ends at `0x800A5130` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void computeTurnVectorAndDistanceToTarget` at VRAM `0x800F2648`. First insn `addiu $sp, $sp, -0x50` at `0x800F2648`; last live `jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F2758` / `0x800F275C`. Previous is already `computeTurnVectorTowardTarget` (`0x800F2540`, last `jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F2640` / `0x800F2644`); next is already `isPointInsideTriggerVolume` at `0x800F2760` (`addiu $sp, $sp, -0x40`). `funcs.h` and overlay INL already the human name. No leftover `func_800F2648` in generated headers/body/INL |
+| Body semantics | `$a0` origin vec3 with axis at `+0xC`; `$a1` target point; `$a2` out vec3 (`$s2`); `$a3` out-distance float (`$s1`). Stores `target-origin` at `sp+0x10`. `vec3Length(delta)` written through `$a3`. Then `vec3Dot(axis, delta)` / (`vec3Length(axis) * vec3Length(delta)`), then `constMinusSinfApprox` of that cosine scaled by the float at `0x800A89E8`. `vec3Cross(axis, delta)` into `sp+0x20`; optional `normalize_vector` when the cross length is nonzero; writes the three floats through `$a2`. Returns the scaled angle in `$f0`. Companion name is already in generated/companion |
+| Callers | 0 generated `jal 0x800F2648` / `LOOKUP_FUNC(0x800F2648)` sites |
+| TOML | Was `{ name = "func_800F2648", vram = 0x800F2648, size = 0x118 }` — stale leftover. Size already matched `0x800F2760 - 0x800F2648`. Renamed to `computeTurnVectorAndDistanceToTarget` |
+| Overlay section 4 | `{ .func = computeTurnVectorAndDistanceToTarget, .offset = 0x0004D518, .rom_size = 0x00000118 }` under `section_4_ovl_mission_funcs` (`0x800F2648 - 0x800A5130 = 0x4D518`; previous `0x4D410 + 0x108 = 0x4D518`; `0x4D518 + 0x118 = 0x4D630` matches next `isPointInsideTriggerVolume`) |
+| Non-collision | No leftover `func_800F2648` in generated headers, body, overlay INL, or TOML after the rename. Other overlay files have no occupant at `0x800F2648` |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x50` / `jr $ra` / `addiu $sp, $sp, 0x50` at
+`0x800F2648` / `0x800F2758` / `0x800F275C`), previous
+(`computeTurnVectorTowardTarget` / `0x800F2540`) and next
+(`isPointInsideTriggerVolume` / `0x800F2760`) boundaries,
+overlay span, and size already agreed on
+`computeTurnVectorAndDistanceToTarget` / `0x118`. TOML still carried leftover
+`func_800F2648`; renamed it to match. Generated headers/body/INL
+were already the human name. This refutes H1 (TOML was not already
+synchronized), H3 (no overlay collision, no size/boundary
+disagreement; previous ends exactly here and next starts at
+`0x800F2760`; first insn is `addiu $sp, $sp, -0x50` and last is
+`jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F2758` / `0x800F275C`;
+body is the sister turn-vector write-out plus the `$a3` distance
+store, not an unnameable span).
+No invented name. No build or runtime run required.
+
+Next census: leftover `func_800F2760` at `0x800F2760` (size `0x90`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `isPointInsideTriggerVolume`; TOML still
+leftover `func_800F2760`. First insn `addiu $sp, $sp, -0x40`; last
+live `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F27E8` /
+`0x800F27EC`. Next already-named occupant is
+`getNpcDetailLevelByIndex` at `0x800F27F0`. Last-15 titles
+after s1877 still include s1872's hangar/512 revisit, so the next
+iteration is another leftover census rather than a mandatory REVISIT.

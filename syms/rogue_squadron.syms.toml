@@ -1973,7 +1973,7 @@ functions = [
     { name = "isVectorInConeWriteDistance", vram = 0x800F2310, size = 0xE8 },
     { name = "computeTurnAxisTowardTarget", vram = 0x800F23F8, size = 0x148 },
     { name = "computeTurnVectorTowardTarget", vram = 0x800F2540, size = 0x108 },
-    { name = "func_800F2648", vram = 0x800F2648, size = 0x118 },
+    { name = "computeTurnVectorAndDistanceToTarget", vram = 0x800F2648, size = 0x118 },
     { name = "func_800F2760", vram = 0x800F2760, size = 0x90 },
     { name = "func_800F27F0", vram = 0x800F27F0, size = 0x40 },
     { name = "func_800F2830", vram = 0x800F2830, size = 0x4C },
