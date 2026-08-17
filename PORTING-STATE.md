@@ -86816,3 +86816,53 @@ Next leftover is `func_800F1E7C` (`0x800F1E7C`, `0x178`;
 companion/generated `initActorRenderDescriptorIfUninit`). Last-15
 titles after s1868 still include s1856's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1869 (2026-08-17) — synchronized the raycastTerrainAndNpcs symbol
+
+Exact generated-symbol census for leftover `func_800F1B40` at
+`0x800F1B40` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 15725; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `raycastTerrainAndNpcs = 0x800F1B40` (sequential listing at line 1277, after `acquireNpcTargetsInAimCone = 0x800F15B8`; the listing skips `tickProgressChannel` between them). Next sequential occupant is `initActorRenderDescriptorWithNpcVelocity = 0x800F1FF4` at line 1278; `initActorRenderDescriptorIfUninit = 0x800F1E7C` is the commented listing at line 1064 |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F1B40`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`. `undefined_funcs_auto.txt` has no leftover `func_800F1B40` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void raycastTerrainAndNpcs` at VRAM `0x800F1B40`. First insn `addiu $sp, $sp, -0x90` at `0x800F1B40`; last live `jr $ra` / `addiu $sp, $sp, 0x90` at `0x800F1E74` / `0x800F1E78`. Previous is already `tickProgressChannel` (`0x800F1870`, last `jr $ra` / `addiu $sp, $sp, 0x90` at `0x800F1B38` / `0x800F1B3C`); next is already `initActorRenderDescriptorIfUninit` at `0x800F1E7C` (`addiu $sp, $sp, -0x30`). `funcs.h` and overlay INL already the human name. No leftover `func_800F1B40` in generated headers/body/INL |
+| Body semantics | `$s5=$a0` origin vec3. `$a1` is a direction vec3 scaled by stack `$f20` (max range at `0xA0($sp)`) into `sp+0x40/+0x44/+0x48`. `$s3=$a2` is a skip-slot id also stored as the initial halfword at `*$s6` (`$a3` is the out-slot). Stack `0xA4` is early-exit threshold `$f22`; `0xA8` is optional out-float `$s4`; `0xAC` is a dest for the terrain-surface sample; `0xB0` is flags (`bit0` terrain, `bit1` NPC walk); `0xB4` is out-flags `$s2`. If `$f20==0`, write 0 to `*$s2` and return 0. Terrain arm: `sampleTerrainAtNpcPosition($s5, scaled-dir, dest=0x80138058, out=sp+0x10)`; on hit replace the scaled dir with `(hit - origin)`, write `0xFFFF` to `*$s6`, `sampleTerrainSurfaceAtWorldXz`, copy 3 words to dest `0xAC`, `*$s2 \|= 1`, optionally publish distance to `*$s4`, and return if distance `<= $f22`. NPC arm: walk `0xFF`-terminated byte pairs at `0x8010B340` via `findActiveNpcInSlotChain` / `getNpcContextByIndex`, skip slot `$s3`, then `findSegmentObjectSphereHit` (byte+1==0) or `projectPointOntoObjectSphereHit` (else). Keep the closest hit, write the slot to `*$s6`, `*$s2 \|= 2`, early-out if distance `<= $f22`. Returns closest distance in `$f0` |
+| Callers | 11 generated `jal 0x800F1B40` sites, all in `funcs_41.c` inside `renderNpcAnchoredProceduralEffect` (`0x800F7130`). All already `raycastTerrainAndNpcs(rdram, ctx)`. No `LOOKUP_FUNC(0x800F1B40)` |
+| TOML | Was `{ name = "func_800F1B40", vram = 0x800F1B40, size = 0x33C }` — stale leftover. Size already matched `0x800F1E7C - 0x800F1B40`. Renamed to `raycastTerrainAndNpcs` |
+| Overlay section 4 | `{ .func = raycastTerrainAndNpcs, .offset = 0x0004CA10, .rom_size = 0x0000033C }` under `section_4_ovl_mission_funcs` (`0x800F1B40 - 0x800A5130 = 0x4CA10`; previous `0x4C740 + 0x2D0 = 0x4CA10`; `0x4CA10 + 0x33C = 0x4CD4C` matches next `initActorRenderDescriptorIfUninit`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F1B40`. No leftover `func_800F1B40` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x90` / `jr $ra` / `addiu $sp, $sp, 0x90` at
+`0x800F1B40` / `0x800F1E74` / `0x800F1E78`), previous
+(`tickProgressChannel` / `0x800F1870`) and next
+(`initActorRenderDescriptorIfUninit` / `0x800F1E7C`) boundaries, overlay
+span, and size already agreed on `raycastTerrainAndNpcs`
+/ `0x33C`. TOML still carried leftover `func_800F1B40`; renamed it to
+match. Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F1E7C`; first insn is
+`addiu $sp, $sp, -0x90` and last is `jr $ra` / `addiu $sp, $sp, 0x90`
+at `0x800F1E74` / `0x800F1E78`; body raycasts a scaled direction
+against terrain then walks NPC slots, not an unnameable span).
+No invented name. No build or runtime run required.
+
+Next census: leftover `func_800F1E7C` at `0x800F1E7C` (size `0x178`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `initActorRenderDescriptorIfUninit`; TOML still leftover
+`func_800F1E7C`. First insn `addiu $sp, $sp, -0x30`; last live
+`jr $ra` / `addiu $sp, $sp, 0x30` at `0x800F1FEC` / `0x800F1FF0`.
+Next leftover is `func_800F1FF4` (`0x800F1FF4`, `0x7C`;
+companion/generated `initActorRenderDescriptorWithNpcVelocity`). Last-15
+titles after s1869 still include s1856's M4 revisit, so the
+mandatory REVISIT gate does not fire.
