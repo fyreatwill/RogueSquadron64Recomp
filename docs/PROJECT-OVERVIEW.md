@@ -235,7 +235,7 @@ jump-table-case session (s1744/s1760 H3-stop-tick; Rice still dies ~135 s). Audi
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
-are synchronized through `playDualTextureAttachmentCue` at `0x800E03F8` (s1766).
+are synchronized through `playAttachmentMaterialSoundSimple` at `0x800E0748` (s1767).
 See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
 backlog, and `PORTING-STATE.md` for evidence.
 
@@ -3043,12 +3043,13 @@ collision.
 | s1764 | Synchronized `playAttachmentMaterialSoundVariantB` (`0x800E00E4`, `0x188`). Sibling of variant A: HMT `0x800A7FB8` dest `sp+0x28`, prefix `setObjectSubstructF10IfReady` (skipped when `a1!=0`) with `0x3D088889`, optional `resolveNpcAttachmentPos` via table `0x8010ABA0` when LOD `+0xF4 != 0`, `tickProgressChannel`, then on return-1 `triggerCueWithSlotEffect` plus `play3DSoundEvent` `0xD`/`0x6E`/`0x28` with float `0x800A7FBC`. No generated `jal 0x800E00E4`. TOML was stale `func_800E00E4`; generated headers/body and section-4 already used the human name. |
 | s1765 | Synchronized `playAttachmentCueWithSlotIter` (`0x800E026C`, `0x18C`). Attachment cue + 3D sound via slot-dispatcher iteration: HMT `0x800A7FC0` dest `sp+0x28`, modulo-5 of `lh +0xB6 + 1`, `tickProgressChannel`, then on return-1 `getObjectNpcTypeId`, table `0x8010ABA0` via `lbu +0xB2`, `triggerCueWithSlotEffect` `a1=0xB`, optional `slotDispatcherIter` `a1=0xA` when cue id != `0xFFFF`, plus `play3DSoundEvent` `0x30`/`0x6E`/`0x28` with float `0x800A7FD4`. No generated `jal 0x800E026C`. TOML was stale `func_800E026C`; generated headers/body and section-4 already used the human name. |
 | s1766 | Synchronized `playDualTextureAttachmentCue` (`0x800E03F8`, `0x350`). Two-texture attachment cue + 3D sound (`a2` mode flag): HMT `0x800A7FB0` when `a2==0` else `0x800A7FB8`, dual `lookupHmtTextureByName` dests `sp+0x28`/`sp+0x58` (`a2=0/1`), dual `resolveNpcAttachmentPos` when LOD `+0xF4 != 0`, four `tickProgressChannel`, dual `triggerCueWithSlotEffect` `a1=0x2` via table `0x8010ABA0` and `lbu +0xB2`, plus `play3DSoundEvent` `0xD`/`0x6E`/`0x28` with float `0x800A7FD8`. Generated callers `playDualTextureAttachmentCueMode0`/`Mode1`. TOML was stale `func_800E03F8`; generated headers/body and section-4 already used the human name. |
+| s1767 | Synchronized `playAttachmentMaterialSoundSimple` (`0x800E0748`, `0x1B0`). Minimal single-texture attachment cue + 3D sound: HMT `0x800A7FC0` dest `sp+0x28`, optional `resolveNpcAttachmentPos` via table `0x8010ABA0` when LOD `+0xF4 != 0`, one `tickProgressChannel`, XOR-toggle `+0xB6` bit 0, then on return-1 `triggerCueWithSlotEffect` `a1=0xB` plus `play3DSoundEvent` `0x30`/`0x6E`/`0x28` with float `0x800A7FDC`. No `slotDispatcherIter` and no generated `jal 0x800E0748`. TOML was stale `func_800E0748`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1766 is `playAttachmentMaterialSoundSimple` /
-`func_800E0748` / `0x800E0748` (size `0x1B0`). Neighbor peek already
-shows TOML still `func_800E0748` while generated/overlay use the human
+The sweep cursor after s1767 is `transformCraftAnchorsAndApplySubFx` /
+`func_800E08F8` / `0x800E08F8` (size `0x3EC`). Neighbor peek already
+shows TOML still `func_800E08F8` while generated/overlay use the human
 name. Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760. After s1766 the last-15 titles still include
+s1714, s1744, s1760. After s1767 the last-15 titles still include
 s1760's revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

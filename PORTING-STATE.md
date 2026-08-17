@@ -81971,3 +81971,42 @@ Next census: `playAttachmentMaterialSoundSimple` / `func_800E0748` at
 `func_800E0748` while generated/overlay use the human name. Last-15
 titles after s1766 still include s1760's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1767 (2026-08-16) — synchronized the playAttachmentMaterialSoundSimple symbol
+
+Exact generated-symbol census for `0x800E0748` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6620; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playAttachmentMaterialSoundSimple = 0x800E0748` with comment "minimal single-texture attachment cue + 3D sound". Previous contiguous named neighbor `playDualTextureAttachmentCue = 0x800E03F8`. Next contiguous named neighbor `transformCraftAnchorsAndApplySubFx = 0x800E08F8`. No leftover `func_800E0748` splat, no `D_800E0748`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void playAttachmentMaterialSoundSimple` at VRAM `0x800E0748`. First insn `addiu $sp, $sp, -0x80`; last insn `addiu $sp, $sp, 0x80` at `0x800E08F4`. Previous `playDualTextureAttachmentCue` ends at `0x800E0744`; next is `transformCraftAnchorsAndApplySubFx` at `0x800E08F8`. `funcs.h` already declares the human name. No leftover `func_800E0748`. No generated `jal 0x800E0748` site |
+| Body semantics | Minimal single-texture attachment cue + 3D sound. Name `0x800A7FC0` into one `jal 0x80058360` `lookupHmtTextureByName` dest `sp+0x28` (XYZ at `+0xC/+0x10/+0x14` negated around the lookup then restored). Optional `jal 0x800F0F94` `resolveNpcAttachmentPos` when LOD `+0xF4 != 0` via table `0x8010ABA0` (`0x80110000-0x5460`) and `lbu +0xB2`. One `jal 0x800F1870` `tickProgressChannel`. XOR-toggle of `lh +0xB6` bit 0. On return-1: `jal 0x800F2FCC` `triggerCueWithSlotEffect` `a1=0xB` dest `sp+0x28`, then `jal 0x800989D8` `play3DSoundEvent` `0x30`/`0x6E`/`0x28` with float `0x800A7FDC` and `a3=0x41700000` (15.0f). Same helper family as the material-sound siblings; single HMT + no `slotDispatcherIter` is the distinguishing step versus `playAttachmentCueWithSlotIter` / `playDualTextureAttachmentCue` |
+| TOML (before) | `{ name = "func_800E0748", vram = 0x800E0748, size = 0x1B0 }` — size matches `0x800E08F8 - 0x800E0748` |
+| Overlay section 4 | `{ .func = playAttachmentMaterialSoundSimple, .offset = 0x0003B618, .rom_size = 0x000001B0 }` under `section_4_ovl_mission_funcs` (`0x800E0748 - 0x800A5130 = 0x3B618`; previous `0x3B2C8 + 0x350 = 0x3B618`; `0x3B618 + 0x1B0 = 0x3B7C8` matches next `transformCraftAnchorsAndApplySubFx`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E0748`. No leftover `func_800E0748` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`playDualTextureAttachmentCue` / `0x800E03F8`) and next
+(`transformCraftAnchorsAndApplySubFx` / `0x800E08F8`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `playAttachmentMaterialSoundSimple`, and only the TOML name was a
+stale `func_800E0748` placeholder. Corrected TOML to
+`playAttachmentMaterialSoundSimple`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `transformCraftAnchorsAndApplySubFx` / `func_800E08F8` at
+`0x800E08F8` (size `0x3EC`). Neighbor peek already shows TOML still
+`func_800E08F8` while generated/overlay use the human name. Last-15
+titles after s1767 still include s1760's revisit, so the mandatory
+REVISIT gate does not fire.
