@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1856 (2026-08-17).
+detail. Reviewed through s1857 (2026-08-17).
 
 ## Current state
 
@@ -66,17 +66,18 @@ detail. Reviewed through s1856 (2026-08-17).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at leftover
-   `fake_func_800EFDDC` (`0x800EFDDC`, size `0x4`). Companion
+   `func_800EFDE0` (`0x800EFDE0`, size `0x8DC`). Companion
    `mission_overlay.txt` and generated headers/body/INL already name
-   `fake_func_800EFDDC`; TOML already that leftover. Next leftover
-   after that is `func_800EFDE0` (`0x800EFDE0`, `0x8DC`; companion
-   and generated already `updateNpcEventTimer`; TOML still leftover).
-   s1856 selected H-never-live for the parked M4 `0x8000` Y on VI 640
-   attribution LLE (single-source). s1855 synchronized leftover
-   `func_800EFD80` to `dispatchSlotAction5IfActive` (`0x800EFD80`,
-   `0x5C`). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589),
-   §34 (s1590–s1647), §35 (s1648–s1856). About 1,548 placeholder
-   `func_0x...` names remained at s1487.
+   `updateNpcEventTimer`; TOML still leftover `func_800EFDE0`.
+   Next leftover after that is `func_800F06BC` (`0x800F06BC`,
+   `0xF0`; companion/generated already `isPendingChildNpcActive`;
+   TOML still leftover). s1857 confirmed leftover
+   `fake_func_800EFDDC` at `0x800EFDDC` size `0x4` (H1). s1856
+   selected H-never-live for the parked M4 `0x8000` Y on VI 640
+   attribution LLE (single-source). Archive:
+   `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
+   §35 (s1648–s1857). About 1,548 placeholder `func_0x...` names
+   remained at s1487.
 2. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 3. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -135,7 +136,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1856 through leftover `func_800EFD80` became
+s1648–s1857 through leftover `fake_func_800EFDDC` confirmed
+at `0x800EFDDC` size `0x4` (H1) after leftover
+`func_800EFD80` became
 `dispatchSlotAction5IfActive` (`0x800EFD80`, `0x5C`) after leftover
 `fake_func_800EFD74` confirmed
 at `0x800EFD74` size `0xC` (H1) after leftover
