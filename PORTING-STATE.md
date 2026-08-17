@@ -83896,3 +83896,49 @@ word `0x4A652950` / `do_break`). Next occupant is leftover
 `allocObjectPoolNode = 0x800EC110`; mission leftover and generated
 body still say `func_800EC110`. Last-15 titles after s1811 still
 include s1808's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1812 (2026-08-16) — confirmed the leftover fake_func_800EC10C symbol
+
+Exact generated-symbol census for leftover `0x800EC10C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1808's
+mandatory REVISIT (`selected H2 menuIn/mission jal-sites on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 8452; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800EC10C = 0x800EC10C` leftover splat (comment is only `segment:mission_overlay`; no deleted-duplicate comment). Previous named kernel `npcPowerUpUpdate = 0x800EB990` (s1811 confirmed). Next leftover `func_800EC110 = 0x800EC110`. No leftover `func_800EC10C` splat, no `D_800EC10C`, and no menu/cinematic/main overlay occupant |
+| Companion `main_overlay.txt` | No occupant at `0x800EC10C`. Maps the next function as `allocObjectPoolNode = 0x800EC110` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void fake_func_800EC10C` at VRAM `0x800EC10C`. One-instruction body: `.word 0x4A652950` (INVALID COP2 `$s3, $a1, 0x2950`) compiled as `do_break(2148450572)` (`0x800EC10C`). Previous `npcPowerUpUpdate` last live insn is `jr $ra` / `addiu $sp, $sp, 0x68` at `0x800EC104` / `0x800EC108`; next is leftover `func_800EC110` at `0x800EC110` (`addiu $sp, $sp, -0x20` — a prologue, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800EC10C`. No generated `jal 0x800EC10C` site |
+| Body semantics | 4-byte orphan INVALID COP2 word sitting between the power-up update's `jr $ra` epilogue and the real next-kernel prologue. Same leftover-splat family as `fake_func_800E8A34` / `fake_func_800E9AD8` and the later 4-byte `fake_func_800EC6EC` (unreachable word immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800EC10C", vram = 0x800EC10C, size = 0x4 }` — already the leftover name; size matches `0x800EC110 - 0x800EC10C` |
+| Overlay section 4 | `{ .func = fake_func_800EC10C, .offset = 0x00046FDC, .rom_size = 0x00000004 }` under `section_4_ovl_mission_funcs` (`0x800EC10C - 0x800A5130 = 0x46FDC`; previous `0x46860 + 0x77C = 0x46FDC`; `0x46FDC + 0x4 = 0x46FE0` matches next leftover `func_800EC110`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EC10C`. No leftover `func_800EC10C` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated one-word
+INVALID COP2 / `do_break` body, previous (`npcPowerUpUpdate` /
+`0x800EB990`) and next leftover (`func_800EC110` / `0x800EC110`)
+boundaries, TOML name and size, and section-4 overlay span already agree.
+No TOML or generated-name change. This refutes H2 (no stale
+`func_800EC10C` placeholder), H3 (no overlay collision or
+size/boundary disagreement; size is `0x4` as expected; the leftover
+is the one-word gap, not a split prologue), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: leftover `func_800EC110` at `0x800EC110` (size `0x278`).
+Neighbor peek: companion `main_overlay.txt` already maps
+`allocObjectPoolNode = 0x800EC110`; mission leftover, TOML,
+generated headers/body, and overlay INL still say `func_800EC110`.
+First insn `addiu $sp, $sp, -0x20`; last live `jr $ra` /
+`addiu $sp, $sp, 0x20` at `0x800EC380` / `0x800EC384`. Sole
+generated `jal 0x800EC110` is inside `createAndInitObject` at
+`0x800EC5B4`. Next occupant is leftover `func_800EC388`
+(`0x800EC388`, `0x150`; companion `unlinkAndFreeChildNpcNode`).
+Last-15 titles after s1812 still include s1808's revisit, so the
+mandatory REVISIT gate does not fire.
