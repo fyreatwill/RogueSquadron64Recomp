@@ -84254,3 +84254,58 @@ has 21 `jal 0x800EC6C0` sites (17 in `funcs_36.c`–`funcs_39.c` plus 4
 in `funcs_18.c`/`funcs_19.c`). Next occupant is `fake_func_800EC6EC`
 (`0x800EC6EC`, `0x4`; already named). Last-15 titles after s1818 still
 include s1808's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1819 (2026-08-16) — synchronized the destroyObjectOwnedNpcSlot symbol
+
+Exact generated-symbol census for leftover `func_800EC6C0` at
+`0x800EC6C0` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1808's mandatory REVISIT (`selected H2
+menuIn/mission jal-sites on the attract 1024`), so the 15-title
+all-sweep REVISIT gate did not fire. Step 0 `wc -c` was 8968; not a
+maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `destroyObjectOwnedNpcSlot = 0x800EC6C0`. 22 callers: `(obj_ptr)` — if `obj+0x1A4 != 0` then `destroyNpcSlotByIndex(obj+0x198)`. No leftover `func_800EC6C0` splat, no `D_800EC6C0` |
+| Companion `main_overlay.txt` | No occupant at `0x800EC6C0` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void destroyObjectOwnedNpcSlot` at VRAM `0x800EC6C0`. First insn `addiu $sp, $sp, -0x18`; last live insn `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EC6E4` / `0x800EC6E8`. Previous occupant is `clearPendingAndDestroyChildNpc` (s1818; ends at `0x800EC6C0`); next is already `fake_func_800EC6EC` at `0x800EC6EC`. 21 generated `jal 0x800EC6C0` sites (17 in `funcs_36.c`–`funcs_39.c` dispatch the human name; 4 in main `.text` `funcs_18.c`/`funcs_19.c` stay `LOOKUP_FUNC`). `funcs.h` and overlay INL already use it |
+| Body semantics | `a0` = object. `lbu $v0, 0x1A4($a0)` at `0x800EC6C8`; `beq` skip; `lhu $a0, 0x198($a0)` then `jal destroyNpcSlotByIndex` (`0x8003ED74`) at `0x800EC6D8`. Name matches |
+| TOML | Was `{ name = "func_800EC6C0", vram = 0x800EC6C0, size = 0x2C }` — stale leftover. Size already matched `0x800EC6EC - 0x800EC6C0`. Renamed to `destroyObjectOwnedNpcSlot` |
+| Overlay section 4 | `{ .func = destroyObjectOwnedNpcSlot, .offset = 0x00047590, .rom_size = 0x0000002C }` under `section_4_ovl_mission_funcs` (`0x800EC6C0 - 0x800A5130 = 0x47590`; previous `0x47554 + 0x3C = 0x47590`; `0x47590 + 0x2C = 0x475BC` matches next `fake_func_800EC6EC`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EC6C0`. No leftover `func_800EC6C0` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`lbu +0x1A4` at `0x800EC6C8`, then `lhu +0x198` and
+`destroyNpcSlotByIndex` at `0x800EC6D8`), previous occupant
+(`clearPendingAndDestroyChildNpc` / `0x800EC684` ends at
+`0x800EC6C0`) and next (`fake_func_800EC6EC` / `0x800EC6EC`)
+boundaries, overlay span, and size already agreed on
+`destroyObjectOwnedNpcSlot` / `0x2C`. TOML still carried leftover
+`func_800EC6C0`; renamed it to match. Generated headers/body/INL and
+the 17 overlay jal sites were already the human name. This refutes H1
+(sources were not already synchronized), H3 (no leftover splat at this
+address in generated/TOML after the rename, no overlay collision, and
+no size/boundary disagreement; previous ends exactly here and next
+starts at `0x800EC6EC`), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No invented name. No build or runtime
+run required.
+
+Next census: leftover `func_800EC6F0` at `0x800EC6F0` (size `0x538`).
+Neighbor peek already: companion `mission_overlay.txt` still leftover
+`func_800EC6F0`; `main_overlay.txt` maps
+`tickCraftMountedAnimationEffect` (s415 revert from mission).
+Generated headers/body/INL and TOML still say `func_800EC6F0`. First
+insn `addiu $sp, $sp, -0xA0`; last live `jr $ra` /
+`addiu $sp, $sp, 0xA0` at `0x800ECC20` / `0x800ECC24`. Three jals:
+`findActiveNpcInSlotChain` at `0x800EC780`, `getNpcContextField8` at
+`0x800EC798`, `tickObjectSoundCueState` at `0x800ECBF0`. Sole
+generated caller is `craftMountedAnimationNpcHandler` at
+`0x800ECD90`. Next occupant is leftover `func_800ECC28` / generated
+`craftMountedAnimationNpcHandler` (`0x800ECC28`, `0x1B4`). Last-15
+titles after s1819 still include s1808's revisit, so the mandatory
+REVISIT gate does not fire.
