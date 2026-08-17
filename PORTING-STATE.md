@@ -83376,3 +83376,41 @@ peek: TOML still `func_800E8EDC`; generated headers/body, overlay INL,
 and `mission_overlay.txt` already use the human name. Last-15 titles
 after s1799 still include s1792's revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1800 (2026-08-16) — synchronized the tickCraftWithPhasedDestruction symbol
+
+Exact generated-symbol census for leftover `0x800E8EDC` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7672; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickCraftWithPhasedDestruction = 0x800E8EDC` ("craft from DAT template, per-frame tick, phased destruction, objective counters, teardown"). No leftover `func_800E8EDC` splat, no deleted-s432 duplicate comment, no `D_800E8EDC`, and no menu/cinematic/main overlay occupant. Previous named kernel `runDestructionPhaseSequence = 0x800E8A40`. Next named kernel `initNpcHealthAndDetailFromChild = 0x800E9A84` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void tickCraftWithPhasedDestruction` at VRAM `0x800E8EDC`. Prologue `addiu $sp, $sp, -0xA0`; last live insn `jr $ra` at `0x800E9A7C` with delay `addiu $sp, $sp, 0xA0` at `0x800E9A80`. Previous `runDestructionPhaseSequence` delay ends at `0x800E8ED8`; next `initNpcHealthAndDetailFromChild` prologue is `addiu $sp, $sp, -0x18` at `0x800E9A84`. `funcs.h` already declares the human name. No leftover `func_800E8EDC`. No generated `jal 0x800E8EDC` — table-dispatched `npcXxxUpdate` sibling |
+| Body semantics | 9-way `jr $v0` table on `(a1-1)<9` at `0x800A8638`. Case 0 (`L_800E8F38`): DAT/setup — `walkMeshdef0List`, `composeEulerRotationXYZ` plus slot-0/1/2 rotation matrices, `getLevelDatItemByName`, `createAndInitObject`, `allocateAndInitCraftNpcContext`, four `popNpcSlotFromTail`, `play3DSoundEventVariant`. Case 1 (`L_800E93D8`): teardown — `factor5RemoveListNode`, `rs_free`, `clearPendingAndDestroyChildNpc`, `releaseMeshAsset`. Case 2 (`L_800E9450`): live tick — `npcPredictedRangeCheck`, `dispatchEffectByActorType`, dual `mat34CrossRowsAndCopyPos` / `transformVec3ByMat34`, `runDestructionPhaseSequence`, `play3DSoundEvent`, `destroyNpcSlotByIndex`, `isNpcWithinActiveReferenceRange`. Case 3 (`L_800E96F4`): visibility/audio/path — `updateActive3DAudioSource`, `addNpcToVisibilityBucket`, `advanceNpcOnCurvedPath`. Case 4 (`L_800E9748`): damage — `getNpcCurrentHealth`, `extrapolateNpcPositionForCurrentMode`, inner 5-way table on `lh +0x3C` at `0x800A86B0`, `dealDamageToNpc`, `datItemSetObjectiveBooleanCount`, two `unregisterAndFreeNpcSlot`. Case 6 (`L_800E9A4C`): `dispatchSlotAction5IfActive`. Case 8 (`L_800E98D0`): extra teardown/anim — `setType1ActorParams`, `updateType1AnimRamp`, `setObjectDetailLevel`. Cases 5/7 return 1. Companion comment matches the body |
+| TOML | Was `{ name = "func_800E8EDC", vram = 0x800E8EDC, size = 0xBA8 }` — stale placeholder; size matches `0x800E9A84 - 0x800E8EDC`. Renamed to `tickCraftWithPhasedDestruction` |
+| Overlay section 4 | `{ .func = tickCraftWithPhasedDestruction, .offset = 0x00043DAC, .rom_size = 0x00000BA8 }` under `section_4_ovl_mission_funcs` (`0x800E8EDC - 0x800A5130 = 0x43DAC`; previous `0x43910 + 0x49C = 0x43DAC`; `0x43DAC + 0xBA8 = 0x44954` matches next `initNpcHealthAndDetailFromChild`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E8EDC`. No leftover `func_800E8EDC` in generated headers or overlay INL after the TOML rename |
+
+### Outcome
+
+H2 selected. Companion, generated headers/body, and section-4 already
+used `tickCraftWithPhasedDestruction`; only TOML still carried
+`func_800E8EDC`. Renamed the TOML row. This refutes H1 (sources were
+not already synchronized), H3 (no overlay collision, leftover splat, or
+size/boundary miss: `0x800E8EDC + 0xBA8 = 0x800E9A84`, and the previous
+`runDestructionPhaseSequence` ends exactly at this prologue), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: leftover `func_800E9A84` / companion
+`initNpcHealthAndDetailFromChild` at `0x800E9A84` (size `0x54`). Neighbor
+peek: TOML still `func_800E9A84`; generated headers/body, overlay INL,
+and `mission_overlay.txt` already use the human name. Last-15 titles
+after s1800 still include s1792's revisit, so the mandatory REVISIT
+gate does not fire.

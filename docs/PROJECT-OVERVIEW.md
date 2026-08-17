@@ -3078,15 +3078,16 @@ collision.
 | s1797 | Synchronized `applyCraftAnimDetailParamsB` (`0x800E8948`, `0xEC`). Short sibling of `applyCraftAnimAndDetailParams`: zero `+0x64`, copy float `0x800A85B4` to `+0x5C` and `*(s0+0x34)+0x90` to `+0x58`, then `setNpcHealth` / `setObjectDetailLevel`; when `lh +0x60` is 0, one `initActorMotionParams` from the `*(0x80137CE4)`-indexed row and one `initObjectAnimSubstruct` (floats `0x800A85B8`/`0x800A85BC`, pointer `0x800E8828`). Zero extra `initObjectAnimSubstruct` / `initAnimSubstructFromParams`. No generated `jal 0x800E8948`. TOML was stale `func_800E8948`; generated headers/body and section-4 already used the human name. |
 | s1798 | Confirmed leftover `fake_func_800E8A34` (`0x800E8A34`, `0xC`). Three-instruction `lw $a0, 0x18($fp)` / `addu $a2, $a0, $zero` / `sll $a1, $a2, 1` orphan between `applyCraftAnimDetailParamsB`'s epilogue and `runDestructionPhaseSequence` (whose prologue is `addiu $sp, $sp, -0xB8`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment (next occupant `func_800E8A40` deleted s432 as a duplicate of the next function). No leftover `func_800E8A34`; TOML, generated headers/body, and section-4 already use the leftover name. |
 | s1799 | Synchronized `runDestructionPhaseSequence` (`0x800E8A40`, `0x49C`). 5-way `jr` table on `lh +0x3C` at `0x800A85C0`: case 0 debris+child+rand/`composeRandomRotationMatrix`/`scaleVec3ByRandomRange`/`spawnDebris1Npc` then `spawnSplineWalkerCraft`; case 1 `gameStateByteGatedNpcHelper` plus the same debris/child path; cases 2/3/4 only `spawnNpcType0xAFromTemplate`. One generated `jal 0x800E8A40` inside `tickCraftWithPhasedDestruction` already dispatches the human name. TOML was stale `func_800E8A40`; generated headers/body and section-4 already used the human name. Companion leftover deleted s432 as a duplicate. |
+| s1800 | Synchronized `tickCraftWithPhasedDestruction` (`0x800E8EDC`, `0xBA8`). 9-way `jr` table on `(a1-1)<9` at `0x800A8638`. Setup / teardown / live tick (`runDestructionPhaseSequence`) / visibility+path / damage (`dealDamageToNpc`, `datItemSetObjectiveBooleanCount`, inner 5-way on `lh +0x3C` at `0x800A86B0`) / slot-action. Table-dispatched; no generated `jal 0x800E8EDC`. TOML was stale `func_800E8EDC`; generated headers/body and section-4 already used the human name. No leftover splat. |
 
-The sweep cursor after s1799 is leftover `func_800E8EDC` / companion
-`tickCraftWithPhasedDestruction` (`0x800E8EDC`, size `0xBA8`). Neighbor
-peek: TOML still `func_800E8EDC`; generated headers/body, overlay INL,
+The sweep cursor after s1800 is leftover `func_800E9A84` / companion
+`initNpcHealthAndDetailFromChild` (`0x800E9A84`, size `0x54`). Neighbor
+peek: TOML still `func_800E9A84`; generated headers/body, overlay INL,
 and `mission_overlay.txt` already use the human name. Next leftover
-after it is `func_800E9A84` / `initNpcHealthAndDetailFromChild`.
+after it is leftover `fake_func_800E9AD8` (`0x800E9AD8`, size `0x8`).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698, s1714,
-s1744, s1760, s1776, s1792. After s1799 the last-15 titles still
-include that revisit, so the next iteration resumes the `func_800E8EDC`
+s1744, s1760, s1776, s1792. After s1800 the last-15 titles still
+include that revisit, so the next iteration resumes the `func_800E9A84`
 census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
