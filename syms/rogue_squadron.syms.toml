@@ -1927,7 +1927,7 @@ functions = [
     { name = "selectAndStageNextSong", vram = 0x800EDC90, size = 0xFC },
     { name = "stopSongAndRebuildActiveCueList", vram = 0x800EDD8C, size = 0x1DC },
     { name = "processPendingSoundCueRequest", vram = 0x800EDF68, size = 0x7C8 },
-    { name = "func_800EE730", vram = 0x800EE730, size = 0x254 },
+    { name = "tickSongFadeTimer", vram = 0x800EE730, size = 0x254 },
     { name = "func_800EE984", vram = 0x800EE984, size = 0x70 },
     { name = "func_800EE9F4", vram = 0x800EE9F4, size = 0x60 },
     { name = "func_800EEA54", vram = 0x800EEA54, size = 0x328 },

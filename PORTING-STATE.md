@@ -84959,3 +84959,55 @@ Next occupant is leftover `func_800EE984` (`0x800EE984`, `0x70`;
 generated already `pushActiveSoundDescriptor`; TOML still leftover).
 Last-15 titles after s1832 still include s1824's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1833 (2026-08-17) — synchronized the tickSongFadeTimer symbol
+
+Exact generated-symbol census for leftover `func_800EE730` at
+`0x800EE730` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1824's mandatory REVISIT (`selected H-rdp-consumer
+on the ovl20 0x670 record`), so the 15-title all-sweep REVISIT gate did
+not fire. Step 0 `wc -c` was 11224; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickSongFadeTimer = 0x800EE730`. Next named kernel `pushActiveSoundDescriptor = 0x800EE984`. No leftover `func_800EE730` splat. No `D_800EE730` |
+| Companion `main_overlay.txt` | No occupant at `0x800EE730` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void tickSongFadeTimer` at VRAM `0x800EE730`. First insn `addiu $sp, $sp, -0x20`; last live insn `jr $ra` / `addiu $sp, $sp, 0x20` at `0x800EE97C` / `0x800EE980`. Previous is `processPendingSoundCueRequest` (`0x800EDF68`, ends `0x800EE72C`); next is already `pushActiveSoundDescriptor` at `0x800EE984`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Frame `-0x20`. Gate on `lbu 0x8010C2FC==1`: `add.s` caller `f12` into `0x8010C300`, `c.le.s` vs threshold `0x8010C304`; if not yet reached, store the updated timer; if reached, set `0x8010C262=1` and clear the fade flag. Then per-frame music tick: `0x8010C2FD` path `jal getSongParamByHandle` (`0x80095700`) twice; `jal isSongHandleActive` (`0x800957AC`); `jal shouldSwitchToPendingSong` (`0x800EDBB0`); if `0x8010C262==1`, `jal processPendingSoundCueRequest` (`0x800EDF68`); copy `0x8010C110` → `0x8010C140` then `jal tickActiveSongSlots` (`0x800ED200`); if `0x8010C269==1` and handle `0x8010C0E4==0x8010C1A4`, `jal stopSongAndRebuildActiveCueList` (`0x800EDD8C`) with `a0=1`. Name matches: tick the song fade timer, then the rest of the per-frame music state |
+| Callers | One generated `jal 0x800EE730` site already dispatches the human name: `startLevelBackgroundMusic` at `0x800EF4EC` (`mov.s $f12, $f20`) |
+| TOML | Was `{ name = "func_800EE730", vram = 0x800EE730, size = 0x254 }` — stale leftover. Size already matched `0x800EE984 - 0x800EE730`. Renamed to `tickSongFadeTimer` |
+| Overlay section 4 | `{ .func = tickSongFadeTimer, .offset = 0x00049600, .rom_size = 0x00000254 }` under `section_4_ovl_mission_funcs` (`0x800EE730 - 0x800A5130 = 0x49600`; previous `0x48E38 + 0x7C8 = 0x49600`; `0x49600 + 0x254 = 0x49854` matches next `pushActiveSoundDescriptor`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EE730`. No leftover `func_800EE730` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated fade-timer plus
+per-frame music tick (`addiu $sp, $sp, -0x20` prologue, `jr $ra` /
+`addiu $sp, $sp, 0x20` at `0x800EE97C` / `0x800EE980`, fade-flag
+`0x8010C2FC` plus `shouldSwitchToPendingSong` /
+`processPendingSoundCueRequest` / `tickActiveSongSlots` / optional
+`stopSongAndRebuildActiveCueList a0=1`), previous
+(`processPendingSoundCueRequest` / `0x800EDF68`) and next
+(`pushActiveSoundDescriptor` / `0x800EE984`) boundaries, overlay span,
+and size already agreed on `tickSongFadeTimer` / `0x254`. TOML still
+carried leftover `func_800EE730`; renamed it to match. Generated
+headers/body/INL and the one jal site were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly here
+and next starts at `0x800EE984`), and H4 (companion, generated body,
+TOML, and section-4 row are all present). No invented name. No build
+or runtime run required.
+
+Next census: leftover `func_800EE984` at `0x800EE984` (size `0x70`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `pushActiveSoundDescriptor`; TOML still
+says `func_800EE984`. First insn `lui $a1, 0x8011`; last live
+`jr $ra` / `sb $v1, -0x3CF0($a2)` at `0x800EE9EC` / `0x800EE9F0`.
+Next occupant is leftover `func_800EE9F4` (`0x800EE9F4`, `0x60`;
+generated already `popActiveSoundDescriptor`; TOML still leftover).
+Last-15 titles after s1833 still include s1824's M4 revisit, so the
+mandatory REVISIT gate does not fire.

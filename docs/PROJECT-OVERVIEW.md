@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1831)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1833)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3112,19 +3112,19 @@ collision.
 | s1830 | Synchronized `selectAndStageNextSong` (`0x800EDC90`, `0xFC`). After `shouldSwitchToPendingSong` returns 1, writes flags at `0x8010C2F2`/`0x8010C2F3`, then either copies pending descriptor `0x8010C0E0` → `0x8010C170` or stages a 6-byte song row from `0x8010B1C0[(id-2)]`. Two generated `jal 0x800EDC90` sites in `processPendingSoundCueRequest` already dispatch the human name. TOML was stale `func_800EDC90`; companion, generated headers/body, and section-4 already used the human name. |
 | s1831 | Synchronized `stopSongAndRebuildActiveCueList` (`0x800EDD8C`, `0x1DC`). Walks the 8-slot table at `0x8010C270` for the packed handle at `0x8010C1A0+4/+6`, `jal tickSongSequenceLocked` then writes `-1` into the matching slot, rebuilds the 8-entry cue list at `0x8010C320`, promotes `0x8010C1D0` → `0x8010C110` / `0x8010C400` / `0x8010C1A0`, and stores `a0` at `0x8010C262`. Three generated `jal 0x800EDD8C` sites already dispatch the human name. TOML was stale `func_800EDD8C`; companion, generated headers/body, and section-4 already used the human name. |
 | s1832 | Synchronized `processPendingSoundCueRequest` (`0x800EDF68`, `0x7C8`). Gate `0x8010C268==1` then, if `0x8010C264`/`0x8010C265` are clear, copy `0x24` bytes `0x8010C200` → `0x8010C110`; main path stages the `0x8010C230` descriptor via `selectAndStageNextSong` (twice) and optionally `stopSongAndRebuildActiveCueList a0=0` when `0x8010C269==1` and `0x8010C114==0x8010C1A4`. Sole generated `jal 0x800EDF68` in `tickSongFadeTimer` at `0x800EE8C4` already dispatches the human name. TOML was stale `func_800EDF68`; companion, generated headers/body, and section-4 already used the human name. |
+| s1833 | Synchronized `tickSongFadeTimer` (`0x800EE730`, `0x254`). Gate `0x8010C2FC==1` adds caller `f12` into `0x8010C300` until `c.le.s` vs `0x8010C304`, then sets `0x8010C262=1` and clears the fade flag; also ticks pending-song / cue / slot paths (`shouldSwitchToPendingSong`, `processPendingSoundCueRequest`, `tickActiveSongSlots`, `stopSongAndRebuildActiveCueList a0=1`). Sole generated `jal 0x800EE730` in `startLevelBackgroundMusic` at `0x800EF4EC` already dispatches the human name. TOML was stale `func_800EE730`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1832 is leftover `func_800EE730`
-(`0x800EE730`, size `0x254`). Neighbor peek: companion
+The sweep cursor after s1833 is leftover `func_800EE984`
+(`0x800EE984`, size `0x70`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`tickSongFadeTimer`; TOML still leftover `func_800EE730`. First
-insn `addiu $sp, $sp, -0x20`; last live `jr $ra` / `addiu $sp,
-$sp, 0x20` at `0x800EE97C` / `0x800EE980`. Next occupant is leftover
-`func_800EE984` (`0x800EE984`, `0x70`; generated already
-`pushActiveSoundDescriptor`; TOML still leftover). Mandatory
-revisits in this window: s1650, s1666, s1682, s1698, s1714, s1744,
-s1760, s1776, s1792, s1808, s1824. After s1832 the last-15 titles
-still include the M4 consumer revisit, so the next iteration
-resumes the sweep.
+`pushActiveSoundDescriptor`; TOML still leftover `func_800EE984`. First
+insn `lui $a1, 0x8011`; last live `jr $ra` / `sb $v1, -0x3CF0($a2)` at
+`0x800EE9EC` / `0x800EE9F0`. Next occupant is leftover `func_800EE9F4`
+(`0x800EE9F4`, `0x60`; generated already `popActiveSoundDescriptor`;
+TOML still leftover). Mandatory revisits in this window: s1650, s1666,
+s1682, s1698, s1714, s1744, s1760, s1776, s1792, s1808, s1824. After
+s1833 the last-15 titles still include the M4 consumer revisit, so the
+next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
