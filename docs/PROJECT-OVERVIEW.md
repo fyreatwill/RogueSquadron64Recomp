@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1752)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1753)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3029,10 +3029,11 @@ collision.
 | s1750 | Synchronized `npcTickEffectChannelC` (`0x800DD50C`, `0x140`). HMT lookup at `0x800A7E28`, optional `resolveNpcAttachmentPos` when `+0xDC != 0`, `tickProgressChannel`, then on return-1 `triggerCueWithSlotEffect` plus `play3DSoundEvent` `0x48`/`0x6E`/`0x28`. TOML was stale `func_800DD50C`; generated headers/body and section-4 already used the human name. |
 | s1751 | Synchronized `npcTickEffectChannelD` (`0x800DD64C`, `0x140`). Same HMT / attach-pos / progress-channel / cue / 3D-sound body as C (`0x800A7E28`, `0x48`/`0x6E`/`0x28`). TOML was stale `func_800DD64C`; generated headers/body and section-4 already used the human name. |
 | s1752 | Synchronized `npcTickEffectChannelE` (`0x800DD78C`, `0x1A4`). Dual-HMT sibling of C/D: name `0x800A7E34` with dests `sp+0x28`/`sp+0x58` (`a2=0/1`), dual `resolveNpcAttachmentPos` via table `0x8010A9F4`, dual `triggerCueWithSlotEffect`, then `play3DSoundEvent` `0x1D`/`0x78`/`0x28` with float `0x800A7E38`. TOML was stale `func_800DD78C`; generated headers/body and section-4 already used the human name. |
+| s1753 | Synchronized `playAttachmentMaterialFadeSound` (`0x800DD930`, `0x140`). Single-HMT sibling of C/D: name `0x800A7E28`, dest `sp+0x28`, optional `resolveNpcAttachmentPos` via table `0x8010A9C4` when LOD `+0xDC != 0`, `tickProgressChannel`, then on return-1 zero `+0xDC`, `triggerCueWithSlotEffect`, `play3DSoundEvent` `0x48`/`0x78`/`0x28` with float `0x800A7E3C`. TOML was stale `func_800DD930`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1752 is `playAttachmentMaterialFadeSound` / `func_800DD930` at
-`0x800DD930` (size `0x140`). Mandatory revisits in this window: s1650, s1666,
-s1682, s1698, s1714, s1744. After s1752 the last-15 titles still include
+The sweep cursor after s1753 is `transformCraftDualAnchorsAndApplyMotion` / `func_800DDA70` at
+`0x800DDA70` (size `0x180`). Mandatory revisits in this window: s1650, s1666,
+s1682, s1698, s1714, s1744. After s1753 the last-15 titles still include
 s1744, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

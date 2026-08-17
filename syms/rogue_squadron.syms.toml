@@ -1851,7 +1851,7 @@ functions = [
     { name = "npcTickEffectChannelC", vram = 0x800DD50C, size = 0x140 },
     { name = "npcTickEffectChannelD", vram = 0x800DD64C, size = 0x140 },
     { name = "npcTickEffectChannelE", vram = 0x800DD78C, size = 0x1A4 },
-    { name = "func_800DD930", vram = 0x800DD930, size = 0x140 },
+    { name = "playAttachmentMaterialFadeSound", vram = 0x800DD930, size = 0x140 },
     { name = "func_800DDA70", vram = 0x800DDA70, size = 0x180 },
     { name = "func_800DDBF0", vram = 0x800DDBF0, size = 0x8FC },
     { name = "func_800DE4EC", vram = 0x800DE4EC, size = 0x320 },
