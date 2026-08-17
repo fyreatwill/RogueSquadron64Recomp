@@ -82800,3 +82800,44 @@ at `0x800E4DC0` (size `0x8EC`). Neighbor peek already shows companion,
 generated, and section-4 using the human name while TOML is still
 `func_800E4DC0`. Last-15 titles after s1786 still include s1776's
 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1787 (2026-08-16) — synchronized the tickCraftSplineOrientationVariant symbol
+
+Exact generated-symbol census for `0x800E4DC0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6926; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickCraftSplineOrientationVariant = 0x800E4DC0` with comment "two-pass spline-orientation, orientation-only (no audio)". Previous named kernel `transformCraftAnchorsApplySubFx2 = 0x800E4BB0`. Next named kernel `tickStructureWithDestructionAndChildren = 0x800E56AC`. Sibling of `tickCraftSplineOrientation` (`0x800E0CE4`) / `tickCraftSplineOrientationDual` (`0x800E13AC`). No leftover `func_800E4DC0` splat, no `D_800E4DC0`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void tickCraftSplineOrientationVariant` at VRAM `0x800E4DC0`. First insn `addiu $sp, $sp, -0x1D8`; last insn `jr $ra` / `addiu $sp, $sp, 0x1D8` at `0x800E56A4` / `0x800E56A8`. Previous `transformCraftAnchorsApplySubFx2` ends at `0x800E4DB8` / `0x800E4DBC`; next is `tickStructureWithDestructionAndChildren` at `0x800E56AC`. `funcs.h` already declares the human name. No leftover `func_800E4DC0`. Two generated `jal 0x800E4DC0` sites at `0x800E6A00` and `0x800E6B20` (inside `npcWaterCraftUpdate`) already dispatch the human name |
+| Body semantics | Two-pass orientation, no audio: `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto`, pending-child + LOS (`isPendingChildNpcActive` ×3, `computeActorAnchorDeltaAfterLOS` ×2, `getObjectMeshTransformOrLocal`, `computeAnchorRelativePositionByDistanceRatio`), then two copies of the rotation/quat/vec3 stack (`buildRotationMatrixSlot0` / `composeRotationMatrixSlot1` / `quatFromAxisAngle` / `rotateVec3ByQuat` / `transformVec3ByMat34`, plus `vec3Dot` / `constMinusSinfApprox` / `vec3Cross` / `vec3Length`). Zero `play3DSound*` / `playSpeech*` / `factor5RemoveListNode` — matches the companion "orientation-only (no audio)" vs the audio-bearing `tickCraftSplineOrientation` sibling |
+| TOML (before) | `{ name = "func_800E4DC0", vram = 0x800E4DC0, size = 0x8EC }` — size matches `0x800E56AC - 0x800E4DC0` |
+| Overlay section 4 | `{ .func = tickCraftSplineOrientationVariant, .offset = 0x0003FC90, .rom_size = 0x000008EC }` under `section_4_ovl_mission_funcs` (`0x800E4DC0 - 0x800A5130 = 0x3FC90`; previous `0x3FA80 + 0x210 = 0x3FC90`; `0x3FC90 + 0x8EC = 0x4057C` matches next `tickStructureWithDestructionAndChildren`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E4DC0`. No leftover `func_800E4DC0` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated two-pass orientation body
+(no audio), previous (`transformCraftAnchorsApplySubFx2` / `0x800E4BB0`)
+and next (`tickStructureWithDestructionAndChildren` / leftover
+`func_800E56AC` / `0x800E56AC`) boundaries, TOML size, and section-4 overlay
+span agreed; the generated headers/body were already
+`tickCraftSplineOrientationVariant`, and only the TOML name was a stale
+`func_800E4DC0` placeholder. Corrected TOML to
+`tickCraftSplineOrientationVariant`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision, or
+size/boundary disagreement; size is `0x8EC` as expected), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `tickStructureWithDestructionAndChildren` / leftover
+`func_800E56AC` at `0x800E56AC` (size `0x48C`). Neighbor peek already
+shows companion, generated, and section-4 using the human name while
+TOML is still `func_800E56AC`. Last-15 titles after s1787 still include
+s1776's revisit, so the mandatory REVISIT gate does not fire.
