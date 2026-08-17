@@ -1,38 +1,38 @@
-# NEXT work unit (s1847)
+# NEXT work unit (s1848)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol sweep. s1846 synchronized leftover
-`func_800EFB40` to `stopMusicAndResetAudio`; last-15 after
-s1846 include s1840's M4 REVISIT, so they are not all sweep. Do not
+Resume the generated-symbol sweep. s1847 synchronized leftover
+`func_800EFB94` to `preloadSceneSongsWrapper`; last-15 after
+s1847 include s1840's M4 REVISIT, so they are not all sweep. Do not
 start another M4 instrument this iteration. Do not repeat any
 `submitGfxFrame` entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EFB94`
-(`0x800EFB94`, size `0x20`). Companion `mission_overlay.txt` already
-names `preloadSceneSongsWrapper`; generated headers/body/INL already
+Exact generated-symbol census for leftover `func_800EFBB4`
+(`0x800EFBB4`, size `0xD0`). Companion `mission_overlay.txt` already
+names `commitStagedSongAndPlay`; generated headers/body/INL already
 use that name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `preloadSceneSongsWrapper` and
-  the `0x20` span.
+  TOML, and section-4 already agree on `commitStagedSongAndPlay` and
+  the `0xD0` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EFB94` while companion uses `preloadSceneSongsWrapper`.
+  `func_800EFBB4` while companion uses `commitStagedSongAndPlay`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EFB94`, or the TOML size is not `0x20`, or
+  overlay occupies `0x800EFBB4`, or the TOML size is not `0xD0`, or
   the generated body is not this function (first insn is not
-  `addiu $sp, $sp, -0x18` then `jal preloadSceneReferencedSongs` /
-  `0x800EEA54`; last is not `jr $ra` / `addiu $sp, $sp, 0x18` at
-  `0x800EFBAC` / `0x800EFBB0`).
+  `lui $v0, 0x8011` then `lbu $v0, -0x3BDC($v0)` / `addiu $sp, $sp,
+  -0x18`; last is not `jr $ra` / `addiu $sp, $sp, 0x18` at
+  `0x800EFC7C` / `0x800EFC80`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EFB94\|func_800EFB94\|preloadSceneSongsWrapper' \
+grep -n '800EFBB4\|func_800EFBB4\|commitStagedSongAndPlay' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -42,7 +42,7 @@ grep -n '800EFB94\|func_800EFB94\|preloadSceneSongsWrapper' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EFB94\|preloadSceneSongsWrapper\|0x800EFB94\|0x800EFBAC\|0x800EFBB4' \
+grep -n 'func_800EFBB4\|commitStagedSongAndPlay\|0x800EFBB4\|0x800EFC7C\|0x800EFC84' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -53,12 +53,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `preloadSceneSongsWrapper` / `0x20`.
-  No edit. Next leftover `func_800EFBB4` (`0x800EFBB4`, `0xD0`;
-  generated headers/INL already `commitStagedSongAndPlay`; TOML
-  still leftover).
-- H2: TOML (and/or generated) still `func_800EFB94`. Rename to
-  `preloadSceneSongsWrapper`. Next leftover `func_800EFBB4`.
+- H1: all four sources already `commitStagedSongAndPlay` / `0xD0`.
+  No edit. Next leftover `func_800EFC84` (`0x800EFC84`, `0x50`;
+  companion `stageSoundCueRequestByIdAndParam`; generated
+  headers/INL already that name; TOML still leftover).
+- H2: TOML (and/or generated) still `func_800EFBB4`. Rename to
+  `commitStagedSongAndPlay`. Next leftover `func_800EFC84`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 

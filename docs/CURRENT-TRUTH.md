@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1846 (2026-08-17).
+detail. Reviewed through s1847 (2026-08-17).
 
 ## Current state
 
@@ -63,13 +63,13 @@ detail. Reviewed through s1846 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800EFB94`
-   (`0x800EFB94`, size `0x20`). Companion `mission_overlay.txt` and
-   generated headers/body/INL already name `preloadSceneSongsWrapper`;
-   TOML still leftover. s1846 synchronized leftover `func_800EFB40` to
-   `stopMusicAndResetAudio` (`0x800EFB40`, `0x54`).
+1. Resume the generated-symbol sweep at leftover `func_800EFBB4`
+   (`0x800EFBB4`, size `0xD0`). Companion `mission_overlay.txt` and
+   generated headers/body/INL already name `commitStagedSongAndPlay`;
+   TOML still leftover. s1847 synchronized leftover `func_800EFB94` to
+   `preloadSceneSongsWrapper` (`0x800EFB94`, `0x20`).
    Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1846). About 1,548 placeholder `func_0x...` names
+   §35 (s1648–s1847). About 1,548 placeholder `func_0x...` names
    remained at s1487.
 2. Parked M4 remainder: whether a live `0x8000` Y is clip-rejected at
    `L_17F0` entry, emitted as a zero-height command, or emitted
@@ -135,7 +135,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1846 through leftover `func_800EFB40` became
+s1648–s1847 through leftover `func_800EFB94` became
+`preloadSceneSongsWrapper` (`0x800EFB94`, `0x20`) after leftover
+`func_800EFB40` became
 `stopMusicAndResetAudio` (`0x800EFB40`, `0x54`) after leftover
 `func_800EF95C` became
 `triggerStageAmbientForNamedDatItem` (`0x800EF95C`, `0x1E4`) after leftover
