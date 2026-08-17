@@ -81932,3 +81932,42 @@ and section-4 row are all present). No build or runtime run required.
 Next census: `playDualTextureAttachmentCue` / `func_800E03F8` at
 `0x800E03F8` (size `0x350`). Last-15 titles after s1765 still include
 s1760's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1766 (2026-08-16) — synchronized the playDualTextureAttachmentCue symbol
+
+Exact generated-symbol census for `0x800E03F8` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6616; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `playDualTextureAttachmentCue = 0x800E03F8` with comment "two-texture attachment cue + 3D sound (a2 mode flag)". Previous contiguous named neighbor `playAttachmentCueWithSlotIter = 0x800E026C`. Next contiguous named neighbor `playAttachmentMaterialSoundSimple = 0x800E0748`. No leftover `func_800E03F8` splat, no `D_800E03F8`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void playDualTextureAttachmentCue` at VRAM `0x800E03F8`. First insn `addiu $sp, $sp, -0xF8`; last insn `addiu $sp, $sp, 0xF8` at `0x800E0744`. Previous `playAttachmentCueWithSlotIter` ends at `0x800E03F4`; next is `playAttachmentMaterialSoundSimple` at `0x800E0748`. `funcs.h` already declares the human name. No leftover `func_800E03F8`. Two generated `jal 0x800E03F8` sites: `playDualTextureAttachmentCueMode0` at `0x800E403C` and `playDualTextureAttachmentCueMode1` at `0x800E4058` |
+| Body semantics | Two-texture attachment cue + 3D sound with `a2` mode flag saved to `$s4`: name `0x800A7FB0` when `a2==0` else `0x800A7FB8`. Dual `jal 0x80058360` `lookupHmtTextureByName` (`a2=0` dest `sp+0x28`, then `a2=1` dest `sp+0x58`). Dual `jal 0x800F0F94` `resolveNpcAttachmentPos` when LOD `+0xF4 != 0`. Four `jal 0x800F1870` `tickProgressChannel`. Dual `jal 0x800F2FCC` `triggerCueWithSlotEffect` `a1=0x2` (dests `sp+0x28` then `sp+0x58`) via table `0x8010ABA0` (`0x80110000-0x5460`) and `lbu +0xB2`. Then `jal 0x800989D8` `play3DSoundEvent` `0xD`/`0x6E`/`0x28` with float `0x800A7FD8` and `a3=0x41700000` (15.0f). Same helper family as the material-sound siblings; dual HMT + dual cue (no `slotDispatcherIter`) is the distinguishing step |
+| TOML (before) | `{ name = "func_800E03F8", vram = 0x800E03F8, size = 0x350 }` — size matches `0x800E0748 - 0x800E03F8` |
+| Overlay section 4 | `{ .func = playDualTextureAttachmentCue, .offset = 0x0003B2C8, .rom_size = 0x00000350 }` under `section_4_ovl_mission_funcs` (`0x800E03F8 - 0x800A5130 = 0x3B2C8`; previous `0x3B13C + 0x18C = 0x3B2C8`; `0x3B2C8 + 0x350 = 0x3B618` matches next `playAttachmentMaterialSoundSimple`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E03F8`. No leftover `func_800E03F8` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`playAttachmentCueWithSlotIter` / `0x800E026C`) and next
+(`playAttachmentMaterialSoundSimple` / `0x800E0748`) boundaries, TOML
+size, and section-4 overlay span agreed; the generated headers/body were
+already `playDualTextureAttachmentCue`, and only the TOML name was a
+stale `func_800E03F8` placeholder. Corrected TOML to
+`playDualTextureAttachmentCue`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `playAttachmentMaterialSoundSimple` / `func_800E0748` at
+`0x800E0748` (size `0x1B0`). Neighbor peek already shows TOML still
+`func_800E0748` while generated/overlay use the human name. Last-15
+titles after s1766 still include s1760's revisit, so the mandatory
+REVISIT gate does not fire.
