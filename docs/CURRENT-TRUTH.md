@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1806 (2026-08-16).
+detail. Reviewed through s1807 (2026-08-16).
 
 ## Current state
 
@@ -56,14 +56,14 @@ detail. Reviewed through s1806 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcAtPtPlaySkywalkerErrorCallout`
-   (`0x800EA470`). Neighbor peek: TOML still `func_800EA470` (`0x170`);
-   generated headers/body, overlay INL, and companion already use the
-   human name; next occupant is `npcAtPtUpdate` (`0x800EA5E0`). s1806
-   renamed leftover `func_800E9EC4` to `computeNpcOrientationFromAimVectors`.
-   Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1806). About 1,548 placeholder `func_0x...` names remained
-   at s1487.
+1. Resume the generated-symbol sweep at `npcAtPtUpdate` (`0x800EA5E0`).
+   Neighbor peek: TOML, generated headers/body, overlay INL, and companion
+   already use the human name (size `0x13A4`); next leftover is
+   `func_800EB984` (`0xC`; generated/companion already
+   `resetObjectPoolListHead`). s1807 renamed leftover `func_800EA470` to
+   `npcAtPtPlaySkywalkerErrorCallout`. Archive: `PROJECT-OVERVIEW.md` §33
+   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1807). About 1,548
+   placeholder `func_0x...` names remained at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): watch
    `submitGfxFrame` jal-sites / `$ra`, not another function-entry PC set.
    The extra +104/+102 is still real (s1776 H1, s1792 reproduced) and is
@@ -107,8 +107,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1806 through leftover `func_800E9EC4` renamed to
-`computeNpcOrientationFromAimVectors` after leftover `func_800E9D74`
+s1648–s1807 through leftover `func_800EA470` renamed to
+`npcAtPtPlaySkywalkerErrorCallout` after leftover `func_800E9EC4`
+became `computeNpcOrientationFromAimVectors`, leftover `func_800E9D74`
 became `spawnObjectImpactEffectWithSound`, leftover `func_800E9BF4`
 became `playStateGatedDestroySound`, and leftover `func_800E9AE0`
 merged to a single `0x114` TOML span,

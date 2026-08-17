@@ -1902,7 +1902,7 @@ functions = [
     { name = "playStateGatedDestroySound", vram = 0x800E9BF4, size = 0x180 },
     { name = "spawnObjectImpactEffectWithSound", vram = 0x800E9D74, size = 0x150 },
     { name = "computeNpcOrientationFromAimVectors", vram = 0x800E9EC4, size = 0x5AC },
-    { name = "func_800EA470", vram = 0x800EA470, size = 0x170 },
+    { name = "npcAtPtPlaySkywalkerErrorCallout", vram = 0x800EA470, size = 0x170 },
     { name = "npcAtPtUpdate", vram = 0x800EA5E0, size = 0x13A4 },
     { name = "func_800EB984", vram = 0x800EB984, size = 0xC },
     { name = "npcPowerUpUpdate", vram = 0x800EB990, size = 0x77C },

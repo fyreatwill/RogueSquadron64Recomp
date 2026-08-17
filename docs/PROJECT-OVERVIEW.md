@@ -2984,7 +2984,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1806)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1807)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3085,15 +3085,16 @@ collision.
 | s1804 | Synchronized `playStateGatedDestroySound` (`0x800E9BF4`, `0x180`). State 0/1/2 picks paired tables, then optional `play3DSoundEvent` `0x62`/`0x63`. Two generated `jal 0x800E9BF4` sites in `npcAtPtPlaySkywalkerErrorCallout` and `npcAtPtUpdate`. TOML was stale `func_800E9BF4`; generated headers/body and section-4 already used the human name. |
 | s1805 | Synchronized `spawnObjectImpactEffectWithSound` (`0x800E9D74`, `0x150`). HMT `0x800A86E8`, optional `setObjectSubstructF10IfReady` `0x3D888889`, `tickProgressChannel`, then on return-1 `getObjectNpcTypeId` / `triggerCueWithSlotEffect` / `slotDispatcherIter` `a1=0xA` / `play3DSoundEvent` `0xD`/`0x78`/`0x28` with float `0x800A86F8`. No generated `jal 0x800E9D74`. TOML was stale `func_800E9D74`; generated headers/body and section-4 already used the human name. |
 | s1806 | Synchronized `computeNpcOrientationFromAimVectors` (`0x800E9EC4`, `0x5AC`). Pending-child + LOS (`isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` on `+0x38`), mesh T&L (`getObjectMeshTransformOrLocal` / `computeAnchorRelativePositionByDistanceRatio` `0x41200000` / `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto` / `transformVec3ByMat34`), then rotation/quat/vec3 (`buildRotationMatrixSlot0`/`composeRotationMatrixSlot1` from `+0x68`/`+0x64`, `vec3NormalizeInto` / `vec3Dot` / `constMinusSinfApprox` / `vec3Cross` / `normalize_vector` / `quatFromAxisAngle` / `rotateVec3ByQuat`). One generated `jal 0x800E9EC4` inside `npcAtPtUpdate` already dispatched the human name. TOML was stale `func_800E9EC4`; generated headers/body and section-4 already used the human name. |
+| s1807 | Synchronized `npcAtPtPlaySkywalkerErrorCallout` (`0x800EA470`, `0x170`). Anim-slot teardown/rebuild on `lbu +0xB3` (1/2/3) then `playStateGatedDestroySound`; body does not emit voiceId `0xC4`. Three generated `jal 0x800EA470` sites inside `npcAtPtUpdate`. TOML was stale `func_800EA470`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1806 is `npcAtPtPlaySkywalkerErrorCallout`
-(`0x800EA470`). Neighbor peek: TOML still `func_800EA470` (`0x170`);
-generated headers/body, overlay INL, and companion already use the
-human name; next occupant is `npcAtPtUpdate` (`0x800EA5E0`).
-Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776, s1792. After s1806 the last-15 titles
-still include that revisit, so the next iteration resumes the
-`npcAtPtPlaySkywalkerErrorCallout` census.
+The sweep cursor after s1807 is `npcAtPtUpdate` (`0x800EA5E0`).
+Neighbor peek: TOML, generated headers/body, overlay INL, and companion
+already use the human name (size `0x13A4`); next leftover is
+`func_800EB984` (`0xC`; generated/companion already
+`resetObjectPoolListHead`). Mandatory revisits in this window: s1650,
+s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792. After s1807
+the last-15 titles still include that revisit, so the next iteration
+resumes the `npcAtPtUpdate` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

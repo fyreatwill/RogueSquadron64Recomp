@@ -83647,3 +83647,41 @@ headers/body, overlay INL, and companion already use the human name;
 next occupant is `npcAtPtUpdate` (`0x800EA5E0`). Last-15 titles after
 s1806 still include s1792's revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1807 (2026-08-16) — synchronized the npcAtPtPlaySkywalkerErrorCallout symbol
+
+Exact generated-symbol census for leftover `0x800EA470` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7806; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcAtPtPlaySkywalkerErrorCallout = 0x800EA470` (comment: called 3× from `npcAtPtUpdate`; voiceId `0xC4` = "Skywalker!  What are you doing?!!"). Next named kernel `npcAtPtUpdate = 0x800EA5E0`. No leftover `func_800EA470` splat, no `D_800EA470`, and no menu/cinematic/main overlay occupant. Previous `computeNpcOrientationFromAimVectors = 0x800E9EC4` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void npcAtPtPlaySkywalkerErrorCallout` at VRAM `0x800EA470`. Prologue `addiu $sp, $sp, -0x18`; last live insn `jr $ra` at `0x800EA5D8` with delay `addiu $sp, $sp, 0x18` at `0x800EA5DC`. Previous `computeNpcOrientationFromAimVectors` delay ends at `0x800EA46C`; next is `npcAtPtUpdate` at `0x800EA5E0`. `funcs.h` already declares the human name. No leftover `func_800EA470`. Three generated `jal 0x800EA470` sites inside `npcAtPtUpdate` (`0x800EAC84`, `0x800EACF0`, `0x800EADC4`) already dispatch the human name |
+| Body semantics | `s0 = a0`. `clearModelAnimChannelEntry(*(s0+0x98))` / `releaseModelAnimSlot(*(s0+0x94))`, then 3-way on `lbu +0xB3` (1 / 2 / 3; else epilogue). Each live case scales `+0xA0`/`+0xA4` against `+0x54` and writes `+0x84`, then `flattenAnimTreeAndAllocateSlot` / `markModelAnimChannelEntryActive` / `setModelAnimSlotCycleDuration` / `playStateGatedDestroySound(s0, 0x41200000, 1)` and clears `+0xB3`. The body does not emit voiceId `0xC4`; the companion comment is not visible in this function. Adopted the existing generated/companion name; did not invent a replacement |
+| TOML | Was `{ name = "func_800EA470", vram = 0x800EA470, size = 0x170 }` — stale placeholder; size matches `0x800EA5E0 - 0x800EA470`. Renamed to `npcAtPtPlaySkywalkerErrorCallout` |
+| Overlay section 4 | `{ .func = npcAtPtPlaySkywalkerErrorCallout, .offset = 0x00045340, .rom_size = 0x00000170 }` under `section_4_ovl_mission_funcs` (`0x800EA470 - 0x800A5130 = 0x45340`; previous `0x44D94 + 0x5AC = 0x45340`; `0x45340 + 0x170 = 0x454B0` matches next `npcAtPtUpdate`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EA470`. No leftover `func_800EA470` in generated headers or overlay INL after the TOML rename |
+
+### Outcome
+
+H2 selected. Companion, generated headers/body, and section-4 already
+used `npcAtPtPlaySkywalkerErrorCallout`; only TOML still carried
+`func_800EA470`. Renamed the TOML row. This refutes H1 (sources were
+not already synchronized), H3 (no overlay collision, leftover splat, or
+size/boundary miss: previous `computeNpcOrientationFromAimVectors` ends
+at `0x800EA470`, and `0x800EA470 + 0x170 = 0x800EA5E0`), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: `npcAtPtUpdate` at `0x800EA5E0` (size `0x13A4`). Neighbor
+peek: TOML, generated headers/body, overlay INL, and companion already
+use the human name; next leftover is `func_800EB984` (`0xC`; generated
+and companion already `resetObjectPoolListHead`). Last-15 titles after
+s1807 still include s1792's revisit, so the mandatory REVISIT gate
+does not fire.
