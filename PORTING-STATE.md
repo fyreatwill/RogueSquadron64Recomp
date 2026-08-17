@@ -81282,3 +81282,40 @@ required.
 Next census: `npcInitMinimalNoAnim` / `func_800DD248` at `0x800DD248`
 (size `0x7C`). Last-15 titles after s1747 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1748 (2026-08-16) — synchronized the npcInitMinimalNoAnim symbol
+
+Exact generated-symbol census for `0x800DD248` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6415; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcInitMinimalNoAnim = 0x800DD248` with comment "NPC init: health/motion/detail only (no anim substruct)". Previous contiguous neighbor `npcRadarDishUpdate = 0x800DC6F0`; next contiguous named neighbor `npcInitFullModel = 0x800DD2D0`. The annotated listing also keeps leftover `fake_func_800DD2C4 = 0x800DD2C4` between them. No menu/cinematic/main overlay occupant and no `D_800DD248` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcInitMinimalNoAnim` at VRAM `0x800DD248`; prologue `addiu $sp, $sp, -0x20`; object pointer `a0` loads record `*(a0+4)` into `s0`. Returns through `jr $ra` / `addiu $sp, $sp, 0x20` ending at `0x800DD2C0`. Previous mission function last insn is `0x800DD244`; next is leftover `fake_func_800DD2C4` at `0x800DD2C4` then `npcInitFullModel` at `0x800DD2D0`. `funcs.h` already declares the human name. No leftover `func_800DD248`. No direct `jal 0x800DD248` site — same table/indirect dispatch as the other `npcInit*` siblings |
+| Body semantics | Loads object record `*(a0+4)` into `s0`. Writes `1` at `+0xB1`, copies float `*(motion+0x94)` to `+0x60`, then `setNpcHealth` (`jal 0x800F2070`) with `a0=*(s0+0x38)` and `a2=*(s0+0x34)`. Then `initActorMotionParams` (`jal 0x800F2888`) with motion `+0xA0`/`+0xA4` and a zeroed stack float. Then `setObjectDetailLevel` (`jal 0x800F2830`) with `a1=*(motion+0x8C)`. No `initObjectAnimSubstruct`. Matches the companion "health/motion/detail only (no anim substruct)" label; sibling of `npcRadarDishInit` minus the anim-substruct call |
+| TOML (before) | `{ name = "func_800DD248", vram = 0x800DD248, size = 0x7C }` — size matches `0x800DD2C4 - 0x800DD248` (last insn `0x800DD2C0` + 4 = `0x7C`) |
+| Overlay section 4 | `{ .func = npcInitMinimalNoAnim, .offset = 0x00038118, .rom_size = 0x0000007C }` under `section_4_ovl_mission_funcs` (`0x800DD248 - 0x800A5130 = 0x38118`; `0x375C0 + 0xB58 = 0x38118`; `0x38118 + 0x7C = 0x38194` matches next `fake_func_800DD2C4`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DD248`. Menu overlay ends at `0x800CD520`; cinematic overlay ends at `0x800B0940`; main `.text` ends at `0x800A5130`. None reach this address. No leftover `func_800DD248` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated health/motion/detail init
+body, previous (`npcRadarDishUpdate` / `0x800DC6F0`) and next
+(`fake_func_800DD2C4` / `0x800DD2C4` then `npcInitFullModel` /
+`0x800DD2D0`) boundaries, TOML size, and section-4 overlay span agreed;
+the generated headers/body were already `npcInitMinimalNoAnim`, and only
+the TOML name was a stale `func_800DD248` placeholder. Corrected TOML to
+`npcInitMinimalNoAnim`. This refutes H1 (TOML was not already
+synchronized), H3 (no fake fragment at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `npcInitFullModel` / `func_800DD2D0` at `0x800DD2D0`
+(size `0x23C`). Last-15 titles after s1748 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.
