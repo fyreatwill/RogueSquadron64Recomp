@@ -81499,3 +81499,31 @@ H2 selected. Companion mapping, live generated pending-child / rotation-matrix /
 Next census: `tickEnemyCraftWithDestruction` / `func_800DDBF0` at `0x800DDBF0`
 (size `0x8FC`). Last-15 titles after s1754 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1755 (2026-08-16) — synchronized the tickEnemyCraftWithDestruction symbol
+
+Exact generated-symbol census for `0x800DDBF0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6446; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickEnemyCraftWithDestruction = 0x800DDBF0` with comment "full enemy-craft lifecycle: spline T&L + 3D audio + debris/child spawns + objective counters + teardown". Previous contiguous named neighbor `transformCraftDualAnchorsAndApplyMotion = 0x800DDA70`; next contiguous generated neighbor `npcGroundTransportPlayFriendlyFireWarn = 0x800DE4EC` (companion lists that name earlier in the same file). No leftover `func_800DDBF0` splat, no `D_800DDBF0`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_38.c` | `RECOMP_FUNC void tickEnemyCraftWithDestruction` at VRAM `0x800DDBF0`; prologue `addiu $sp, $sp, -0x1E8`. Object pointer `a0` in `s2`; scalar `a1` parked in `$f30`. Returns through `jr $ra` / `addiu $sp, $sp, 0x1E8` ending at `0x800DE4E8`. Previous `transformCraftDualAnchorsAndApplyMotion` last insn is `0x800DDBEC`; next is `npcGroundTransportPlayFriendlyFireWarn` at `0x800DE4EC`. `funcs.h` already declares the human name. No leftover `func_800DDBF0`. Sole direct `jal 0x800DDBF0` site is inside `npcGroundTransportUpdate` at `0x800DF0A0` |
+| Body semantics | Two-pass loop (`sp+0x178` 0 then 1; `s3` advances +4). Gate: `isPendingChildNpcActive` (`jal 0x800F06BC`) then `computeActorAnchorDeltaAfterLOS` (`jal 0x800F09A8`) on `*(s2+0x38)`; either 8-bit return != 1 skips to the fallback at `L_800DE16C`. Live path: `getObjectMeshTransformOrLocal` dest `sp+0xA8`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, `transformVec3ByMat34`, then quat/vec T&L (`quatFromAxisAngle`, `rotateVec3ByQuat`, `vec3Cross`/`vec3Dot`/`vec3Length`, `constMinusSinfApprox`). Three live-path plus one fallback `play3DSoundEventVariant` (`jal 0x80098BDC`) at pos `s2+0x24` with args `0x7`/`0x4B`/`0x7F`/`0x28` and `a3=0x41000000`. Fallback rebuilds `buildRotationMatrixSlot0`/`composeRotationMatrixSlot1` from `*(s3+0x6C)`/`+0x64` and `transformVec3ByMat34`. If child `+0x46==1`, clear that byte and `factor5RemoveListNode` (`jal 0x80098DE0`). Generated body has no spawn/debris/objective-counter helpers; those companion-comment clauses are not present as named calls |
+| TOML (before) | `{ name = "func_800DDBF0", vram = 0x800DDBF0, size = 0x8FC }` — size matches `0x800DE4EC - 0x800DDBF0` (last insn `0x800DE4E8` + 4 = `0x8FC`) |
+| Overlay section 4 | `{ .func = tickEnemyCraftWithDestruction, .offset = 0x00038AC0, .rom_size = 0x000008FC }` under `section_4_ovl_mission_funcs` (`0x800DDBF0 - 0x800A5130 = 0x38AC0`; `0x38940 + 0x180 = 0x38AC0`; `0x38AC0 + 0x8FC = 0x393BC` matches next `npcGroundTransportPlayFriendlyFireWarn`) |
+| Non-collision | Cinematic overlay max named VRAM is `0x800B072C`; menu overlay max is `0x800D03DC`; main `.text` ends at `0x800A5130`. None occupy `0x800DDBF0`. No leftover `func_800DDBF0` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated pending-child / LOS / mesh-T&L / 3D-audio / list-node-teardown body, previous (`transformCraftDualAnchorsAndApplyMotion` / `0x800DDA70`) and next (`npcGroundTransportPlayFriendlyFireWarn` / `0x800DE4EC`) boundaries, TOML size, and section-4 overlay span agreed; the generated headers/body were already `tickEnemyCraftWithDestruction`, and only the TOML name was a stale `func_800DDBF0` placeholder. Corrected TOML to `tickEnemyCraftWithDestruction`. This refutes H1 (TOML was not already synchronized), H3 (no leftover splat at this address, overlay collision, or size/boundary disagreement), and H4 (companion, generated body, TOML, and section-4 row are all present). No build or runtime run required.
+
+Next census: `npcGroundTransportPlayFriendlyFireWarn` / `func_800DE4EC` at `0x800DE4EC`
+(size `0x320`). Last-15 titles after s1755 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.

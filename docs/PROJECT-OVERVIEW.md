@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1754)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1755)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3031,10 +3031,11 @@ collision.
 | s1752 | Synchronized `npcTickEffectChannelE` (`0x800DD78C`, `0x1A4`). Dual-HMT sibling of C/D: name `0x800A7E34` with dests `sp+0x28`/`sp+0x58` (`a2=0/1`), dual `resolveNpcAttachmentPos` via table `0x8010A9F4`, dual `triggerCueWithSlotEffect`, then `play3DSoundEvent` `0x1D`/`0x78`/`0x28` with float `0x800A7E38`. TOML was stale `func_800DD78C`; generated headers/body and section-4 already used the human name. |
 | s1753 | Synchronized `playAttachmentMaterialFadeSound` (`0x800DD930`, `0x140`). Single-HMT sibling of C/D: name `0x800A7E28`, dest `sp+0x28`, optional `resolveNpcAttachmentPos` via table `0x8010A9C4` when LOD `+0xDC != 0`, `tickProgressChannel`, then on return-1 zero `+0xDC`, `triggerCueWithSlotEffect`, `play3DSoundEvent` `0x48`/`0x78`/`0x28` with float `0x800A7E3C`. TOML was stale `func_800DD930`; generated headers/body and section-4 already used the human name. |
 | s1754 | Synchronized `transformCraftDualAnchorsAndApplyMotion` (`0x800DDA70`, `0x180`). Two-pass pending-child gate: `isPendingChildNpcActive` on `+0x38`, copy `0x30` local, `buildRotationMatrixSlot0`/`composeRotationMatrixSlot1` from `+0x6C`/`+0x64` (then `+0x70`/`+0x68`), `transformVec3ByMat34` on anchors `+0xC`/`+0x18`, optional `validateActorTargetLOS` + `applyToObjectSubstructByFlag`, writeback. Sole generated caller `tickEnemyCraftWithDestruction` at `0x800DF0AC`. TOML was stale `func_800DDA70`; generated headers/body and section-4 already used the human name. |
+| s1755 | Synchronized `tickEnemyCraftWithDestruction` (`0x800DDBF0`, `0x8FC`). Two-pass pending-child + LOS gate: `isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` on `+0x38`; mesh T&L (`getObjectMeshTransformOrLocal`, `mat34CrossRowsAndCopyPos`, `mat3x3InverseInto`, quat/vec helpers) or fallback `buildRotationMatrixSlot0`/`composeRotationMatrixSlot1` from `+0x6C`/`+0x64`; four `play3DSoundEventVariant` `0x7`/`0x4B`/`0x7F`/`0x28`; optional `factor5RemoveListNode` when child `+0x46==1`. Sole generated caller `npcGroundTransportUpdate` at `0x800DF0A0`. TOML was stale `func_800DDBF0`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1754 is `tickEnemyCraftWithDestruction` / `func_800DDBF0` at
-`0x800DDBF0` (size `0x8FC`). Mandatory revisits in this window: s1650, s1666,
-s1682, s1698, s1714, s1744. After s1754 the last-15 titles still include
+The sweep cursor after s1755 is `npcGroundTransportPlayFriendlyFireWarn` / `func_800DE4EC` at
+`0x800DE4EC` (size `0x320`). Mandatory revisits in this window: s1650, s1666,
+s1682, s1698, s1714, s1744. After s1755 the last-15 titles still include
 s1744, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
