@@ -82958,3 +82958,46 @@ Next census: leftover `fake_func_800E71C8` at `0x800E71C8` (size `0x8`).
 Neighbor peek already shows companion, generated, TOML, and section-4
 using the leftover name. Last-15 titles after s1790 still include
 s1776's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1791 (2026-08-16) — confirmed the leftover fake_func_800E71C8 symbol
+
+Exact generated-symbol census for leftover `0x800E71C8` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6901; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800E71C8 = 0x800E71C8` leftover splat (no deleted-duplicate comment). Previous named kernel `npcWaterCraftUpdate = 0x800E614C`. Next leftover `func_800E71D0 = 0x800E71D0` (companion `main_overlay.txt` already names that occupant `transformCraftAnchorsApplySubFx3`). No leftover `func_800E71C8` splat, no `D_800E71C8`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void fake_func_800E71C8` at VRAM `0x800E71C8`. Two-instruction body: `lhu $v0, 0x14($v1)` then `lw $a0, 0x58($fp)` (no `jr $ra`). Previous `npcWaterCraftUpdate` last insn is the delay-slot `addiu $sp, $sp, 0x140` at `0x800E71C4`; next is leftover `func_800E71D0` at `0x800E71D0` (`addiu $sp, $sp, -0xA0` — a prologue, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800E71C8`. No generated `jal 0x800E71C8` site |
+| Body semantics | 8-byte orphan `lhu $v0, 0x14($v1)` / `lw $a0, 0x58($fp)` fragment sitting between the water-craft update's `jr $ra` epilogue and the real next-kernel prologue. Same leftover-splat family as `fake_func_800DFB8C` / `fake_func_800E406C` / `fake_func_800E447C` (unreachable words immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800E71C8", vram = 0x800E71C8, size = 0x8 }` — already the leftover name; size matches `0x800E71D0 - 0x800E71C8` |
+| Overlay section 4 | `{ .func = fake_func_800E71C8, .offset = 0x00042098, .rom_size = 0x00000008 }` under `section_4_ovl_mission_funcs` (`0x800E71C8 - 0x800A5130 = 0x42098`; previous `0x4101C + 0x107C = 0x42098`; `0x42098 + 0x8 = 0x420A0` matches next leftover `func_800E71D0`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E71C8`. No leftover `func_800E71C8` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated two-instruction
+`lhu`/`lw` body, previous (`npcWaterCraftUpdate` / `0x800E614C`) and
+next leftover (`func_800E71D0` / `0x800E71D0`) boundaries, TOML name
+and size, and section-4 overlay span already agree. No TOML or
+generated-name change. This refutes H2 (no stale `func_800E71C8`
+placeholder), H3 (no overlay collision, leftover splat at this address,
+or size/boundary disagreement; size is `0x8` as expected; the leftover
+is the two-word gap, not a split prologue), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Last-15 titles after s1791 are s1777–s1791, all sweep-scoped
+(`confirmed` / `synchronized`). The next iteration is therefore the
+mandatory REVISIT: watch `submitGfxFrame` callers for the extra +105
+on the attract A/Start 1024. Do not re-arm the s1776 11-PC set as the
+discriminator. Sweep resume after that revisit is leftover
+`func_800E71D0` / companion `transformCraftAnchorsApplySubFx3` at
+`0x800E71D0` (size `0x1C0`): TOML, generated headers/body, overlay INL,
+and `mission_overlay.txt` still say `func_800E71D0`; `main_overlay.txt`
+already has the human name.

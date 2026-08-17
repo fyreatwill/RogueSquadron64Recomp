@@ -3068,13 +3068,16 @@ collision.
 | s1788 | Synchronized `tickStructureWithDestructionAndChildren` (`0x800E56AC`, `0x48C`). Health-gated 2-iter debris-transform sibling of `buildDebrisTransformStack`: prefix `mat34CrossRowsAndCopyPos` on `*(npc+0x30)+0x28`, `getNpcCurrentHealth(*(npc+0x38))` early-out when `<=0`, then `s2` from npc while `< npc+0x8` composing three slots (`s2+0x3C/+0x44/+0x4C` dests `+0x1C`, params `s2+0x54/+0x5C/+0x64`) via `clearVec4QuadStruct` / flag `+0x4C` bits 0–2 (`addVec3At0x24` / `applyScaleToMat3x4` / `composeQuatToMat3x4`) plus `composeRotationMatrixSlot1`/`Slot0`. No spawn / recurse / teardown calls. One generated `jal 0x800E56AC` inside `npcWaterCraftUpdate` already dispatches the human name. TOML was stale `func_800E56AC`; generated headers/body and section-4 already used the human name. |
 | s1789 | Synchronized `npcWaterCraftHandleDestruction` (`0x800E5B38`, `0x614`). Two-phase water-craft destroy on `lbu +0x99` (0 / 1; else epilogue): each live path `transformMeshPartIntoWorld`, `spawnNpcType0xAFromTemplate`, `spawnByteAnimDebrisDefault`, `play3DSoundEvent` `a0=0` stack `0x21`/`0x7D`/`0x50` (`a3=24.0f`), then `rand` / `composeRandomRotationMatrix` / `scaleVec3ByRandomRange` / `spawnDebris1Npc` / `spawnOrientedNpc`, plus a shared `spawnWaterSprayDebrisAndBurst`. Sole generated `jal 0x800E5B38` inside `npcWaterCraftUpdate` already dispatches the human name. TOML was stale `func_800E5B38`; generated headers/body and section-4 already used the human name. |
 | s1790 | Confirmed `npcWaterCraftUpdate` (`0x800E614C`, `0x107C`). 9-way `jr` table on `(a1-1)<9` at `0x800A83D0`. Case 2 live tick calls `tickStructureWithDestructionAndChildren`, `tickCraftSplineOrientationVariant` ×2, `transformCraftAnchorsApplySubFx2` ×2, and the exclusive `npcWaterCraftHandleDestruction`. 82 `jal`s / 60 unique targets. No generated `jal 0x800E614C` — table-dispatched `npcXxxUpdate` sibling. Companion, generated headers/body, TOML, and section-4 already used the human name. |
+| s1791 | Confirmed leftover `fake_func_800E71C8` (`0x800E71C8`, `0x8`). Two-instruction `lhu $v0, 0x14($v1)` / `lw $a0, 0x58($fp)` orphan between `npcWaterCraftUpdate`'s epilogue and leftover `func_800E71D0` (whose prologue is `addiu $sp, $sp, -0xA0`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment. No leftover `func_800E71C8`; TOML, generated headers/body, and section-4 already use the leftover name. |
 
-The sweep cursor after s1790 is leftover `fake_func_800E71C8` /
-`0x800E71C8` (size `0x8`). Neighbor peek: companion, generated
-headers/body, TOML, and section-4 already use the leftover name.
-Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776. After s1790 the last-15 titles include
-the s1776 revisit, so the next iteration resumes the sweep.
+The sweep cursor after s1791 is leftover `func_800E71D0` /
+`0x800E71D0` (size `0x1C0`). Neighbor peek: TOML, generated
+headers/body, overlay INL, and `mission_overlay.txt` still say
+`func_800E71D0`; companion `main_overlay.txt` already names it
+`transformCraftAnchorsApplySubFx3`. Mandatory revisits in this
+window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776.
+After s1791 the last-15 titles are s1777–s1791, all sweep, so the
+next iteration is the `submitGfxFrame`-caller REVISIT.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
