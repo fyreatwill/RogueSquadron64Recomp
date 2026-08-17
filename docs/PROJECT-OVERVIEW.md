@@ -235,7 +235,7 @@ jump-table-case session (s1744/s1760 H3-stop-tick; Rice still dies ~135 s). Audi
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
-are synchronized through `tickTrainCarStateMachine` at `0x800E1E1C` (s1771).
+are synchronized through `buildDebrisTransformStack` at `0x800E1F5C` (s1772).
 See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
 backlog, and `PORTING-STATE.md` for evidence.
 
@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1771)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1772)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3048,12 +3048,13 @@ collision.
 | s1769 | Synchronized `tickCraftSplineOrientation` (`0x800E0CE4`, `0x6C8`). Canonical spline-walker orientation: 3-iter `fp<3` loop, `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto`, pending-child + LOS (`isPendingChildNpcActive` / `computeActorAnchorDeltaAfterLOS` / `getObjectMeshTransformOrLocal`), rotation/quat/vec3 stack (`buildRotationMatrixSlot0` / `composeRotationMatrixSlot1` / `quatFromAxisAngle` / `rotateVec3ByQuat` / `transformVec3ByMat34`), two `play3DSoundEventVariant`, then `factor5RemoveListNode`. Generated caller `tickCraftSplineOrientationDual` `jal 0x800E0CE4`. TOML was stale `func_800E0CE4`; generated headers/body and section-4 already used the human name. |
 | s1770 | Synchronized `tickCraftSplineOrientationDual` (`0x800E13AC`, `0xA70`). Two-segment craft: `tickCraftSplineOrientation` then a second orientation pass (`mat34CrossRowsAndCopyPos` / `mat3x3InverseInto`, pending-child + LOS + `evaluateTargetTrackingVisibility` / `getObjectMeshTransformOrLocal`, the same rotation/quat/vec3 stack, two `play3DSoundEventVariant`, then `factor5RemoveListNode`). Generated caller `npcTrainCarUpdate` `jal 0x800E13AC`. TOML was stale `func_800E13AC`; generated headers/body and section-4 already used the human name. |
 | s1771 | Synchronized `tickTrainCarStateMachine` (`0x800E1E1C`, `0x140`). Per-tick train-car SM: early-out on `+0xFD`, decrement `+0xFC`, then set `+0xFD=1` and advance from the `npc+0x34` table (`+0xB2==0` uses `+0x134`/`+0x138`, else `+0xD4`/`+0xD8`). 16-slot walk writes `+0xCA`/`+0xEA`/`+0xFA` via a 7-way `jr` table at `0x800A8040` for type ids `0x2F..0x35`. Generated caller `npcTrainCarUpdate` `jal 0x800E1E1C` at `0x800E303C` and `0x800E30D8`. TOML was stale `func_800E1E1C`; generated headers/body and section-4 already used the human name. |
+| s1772 | Synchronized `buildDebrisTransformStack` (`0x800E1F5C`, `0x4A0`). Health-gated 3-iter walk (`s2` from npc while `< npc+0xC`): each slot dest `ptr+0x1C` composes pos (`addVec3At0x24`), scale (`applyScaleToMat3x4` from `+0x5C/+0x60/+0x64` when flag `+0x4C` bit 1), quat (`composeQuatToMat3x4` from `+0x68` when bit 2), then `composeRotationMatrixSlot1`/`Slot0`. Three slot pointers per iter at `s2+0x3C/+0x48/+0x54` with params at `+0x60/+0x6C/+0x78`. Terminal `mat34CrossRowsAndCopyPos` on `npc+0x30` dest `+0x28`. Generated caller `npcTrainCarUpdate` `jal 0x800E1F5C` at `0x800E3008`/`0x800E3248`/`0x800E34FC`/`0x800E3858`. TOML was stale `func_800E1F5C`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1771 is `buildDebrisTransformStack` /
-`func_800E1F5C` / `0x800E1F5C` (size `0x4A0`). Neighbor peek already
-shows TOML still `func_800E1F5C` while generated/overlay use the human
+The sweep cursor after s1772 is `slerpFrameTowardTargetAxis` /
+`func_800E23FC` / `0x800E23FC` (size `0x278`). Neighbor peek already
+shows TOML still `func_800E23FC` while generated/overlay use the human
 name. Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760. After s1771 the last-15 titles still include
+s1714, s1744, s1760. After s1772 the last-15 titles still include
 s1760's revisit, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at

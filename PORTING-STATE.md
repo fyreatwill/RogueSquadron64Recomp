@@ -82166,3 +82166,42 @@ Next census: `buildDebrisTransformStack` / `func_800E1F5C` at
 `func_800E1F5C` while generated/overlay use the human name. Last-15
 titles after s1771 still include s1760's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1772 (2026-08-16) — synchronized the buildDebrisTransformStack symbol
+
+Exact generated-symbol census for `0x800E1F5C` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1760's
+mandatory REVISIT (`rejected menuOverlayInit cases for the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6608; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `buildDebrisTransformStack = 0x800E1F5C` with comment "assembles 3 oriented debris transforms (scale/quat/pos compose)". Previous contiguous named neighbor `tickTrainCarStateMachine = 0x800E1E1C`. Next contiguous named neighbor `slerpFrameTowardTargetAxis = 0x800E23FC`. No leftover `func_800E1F5C` splat, no `D_800E1F5C`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void buildDebrisTransformStack` at VRAM `0x800E1F5C`. First insn `addiu $sp, $sp, -0x40`; last insn `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800E23F4` / `0x800E23F8`. Previous `tickTrainCarStateMachine` ends at `0x800E1F58`; next is `slerpFrameTowardTargetAxis` at `0x800E23FC`. `funcs.h` already declares the human name. No leftover `func_800E1F5C`. Generated caller `npcTrainCarUpdate` `jal 0x800E1F5C` at `0x800E3008`, `0x800E3248`, `0x800E34FC`, and `0x800E3858` |
+| Body semantics | Matches the companion: `getNpcCurrentHealth` early-out when `<= 0` jumps to the terminal `mat34CrossRowsAndCopyPos`. Otherwise a 3-iter walk (`s2` starts at the npc, bound `s2 < npc+0xC`, stride 4). Each iteration composes up to three dests at `ptr+0x1C` from slot pointers `s2+0x3C` / `+0x48` / `+0x54` with param blocks `+0x60` / `+0x6C` / `+0x78`: `clearVec4QuadStruct`, flag `+0x4C` bit 0 adds a (possibly negated) `addVec3At0x24`, bit 1 `applyScaleToMat3x4` from `+0x5C/+0x60/+0x64`, bit 2 `composeQuatToMat3x4` from `+0x68`, then `composeRotationMatrixSlot1` (first slot, angle `s2+0x8C`) or `composeRotationMatrixSlot0` (second slot). Flag `& 0x9 == 9` / `& 0x8` (s7=9, s6=8) select the trailing pos-add path. Terminal `mat34CrossRowsAndCopyPos` on `npc+0x30` dest `+0x28` with scalar `npc+0x88` |
+| TOML (before) | `{ name = "func_800E1F5C", vram = 0x800E1F5C, size = 0x4A0 }` — size matches `0x800E23FC - 0x800E1F5C` |
+| Overlay section 4 | `{ .func = buildDebrisTransformStack, .offset = 0x0003CE2C, .rom_size = 0x000004A0 }` under `section_4_ovl_mission_funcs` (`0x800E1F5C - 0x800A5130 = 0x3CE2C`; previous `0x3CCEC + 0x140 = 0x3CE2C`; `0x3CE2C + 0x4A0 = 0x3D2CC` matches next `slerpFrameTowardTargetAxis`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E1F5C`. No leftover `func_800E1F5C` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, previous
+(`tickTrainCarStateMachine` / `0x800E1E1C`) and next
+(`slerpFrameTowardTargetAxis` / `0x800E23FC`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`buildDebrisTransformStack`, and only the TOML name was a stale
+`func_800E1F5C` placeholder. Corrected TOML to
+`buildDebrisTransformStack`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision,
+or size/boundary disagreement), and H4 (companion, generated body, TOML,
+and section-4 row are all present). No build or runtime run required.
+
+Next census: `slerpFrameTowardTargetAxis` / `func_800E23FC` at
+`0x800E23FC` (size `0x278`). Neighbor peek already shows TOML still
+`func_800E23FC` while generated/overlay use the human name. Last-15
+titles after s1772 still include s1760's revisit, so the mandatory
+REVISIT gate does not fire.
