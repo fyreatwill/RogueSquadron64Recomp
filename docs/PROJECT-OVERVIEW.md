@@ -3134,17 +3134,18 @@ collision.
 | s1852 | Synchronized `noopHandler_800EFD64` (`0x800EFD64`, `0x8`). Pure `jr $ra` / `nop` stub. Sole generated `jal 0x800EFD64` in `tryPlaySpatialSoundWithGates` at `0x800B3E08` already dispatches the human name. TOML was stale `func_800EFD64`; companion, generated headers/body, and section-4 already used the human name. |
 | s1853 | Synchronized `noopHandler` (`0x800EFD6C`, `0x8`). Pure `jr $ra` / `nop` stub (17 companion callers; 16 generated `jal 0x800EFD6C` sites already dispatch `noopHandler` or `LOOKUP_FUNC(0x800EFD6C)`). TOML was stale `func_800EFD6C`; companion, generated headers/body, and section-4 already used the human name. |
 | s1854 | Confirmed leftover `fake_func_800EFD74` (`0x800EFD74`, `0xC`, H1). Three-insn orphan `srl`/`sw $fp+0xC0`/`lw $fp+0xBC` between `noopHandler` and `dispatchSlotAction5IfActive`. Companion, generated headers/body/INL, TOML, and section-4 already agreed; no leftover `func_800EFD74`. |
+| s1855 | Synchronized `dispatchSlotAction5IfActive` (`0x800EFD80`, `0x5C`). Gate `*(action+4)==1`; if set, builds a 0xC-byte request (`0xFFFF`, action 7, `lhu *(*(action+8))`, `lhu action+2`) and `jal slotDispatcherIter` with `a1=5`. 20 generated `jal 0x800EFD80` sites (4 `LOOKUP_FUNC` + 16 direct) already dispatch the human name. TOML was stale `func_800EFD80`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1854 is leftover `func_800EFD80`
-(`0x800EFD80`, size `0x5C`). Neighbor peek: companion
-`mission_overlay.txt` and generated headers/body/INL already
-use `dispatchSlotAction5IfActive`; TOML still leftover
-`func_800EFD80`. Next leftover is `fake_func_800EFDDC`
-(`0x800EFDDC`, `0x4`). Mandatory revisits
+The sweep cursor after s1855 is leftover `fake_func_800EFDDC`
+(`0x800EFDDC`, size `0x4`). Neighbor peek: companion
+`mission_overlay.txt`, generated headers/body/INL, and TOML already
+use `fake_func_800EFDDC`. Next leftover is `func_800EFDE0`
+(`0x800EFDE0`, `0x8DC`; companion/generated `updateNpcEventTimer`;
+TOML still leftover). Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776, s1792, s1808, s1824, s1840. After s1854 the last-15 titles
-still include the M4 shape revisit, so the next iteration resumes
-the sweep.
+s1776, s1792, s1808, s1824, s1840. After s1855 the last-15 titles
+are s1841–s1855, all sweep, so the next iteration is a mandatory
+REVISIT (M4 live `0x8000` Y emit vs clip), not another leftover.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

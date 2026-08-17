@@ -86102,3 +86102,55 @@ generated headers/body/INL already that name; TOML still leftover
 `fake_func_800EFDDC` (`0x800EFDDC`, `0x4`). Last-15 titles after
 s1854 still include s1840's M4 revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1855 (2026-08-17) — synchronized the dispatchSlotAction5IfActive symbol
+
+Exact generated-symbol census for leftover `func_800EFD80` at
+`0x800EFD80` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1840's mandatory REVISIT (`selected H-standard-edge
+on the restaged RDP triangle`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 13828; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `dispatchSlotAction5IfActive = 0x800EFD80`. Comment: 21 callers (unused, action_struct) — invoke slot dispatcher action 5 when struct active. Previous leftover splat `fake_func_800EFD74 = 0x800EFD74` (s1854 H1). Next leftover splat `fake_func_800EFDDC = 0x800EFDDC`; next named kernel `updateNpcEventTimer = 0x800EFDE0` |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800EFD80`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void dispatchSlotAction5IfActive` at VRAM `0x800EFD80`. First insn `addiu $sp, $sp, -0x28` at `0x800EFD80`; last live `jr $ra` / `addiu $sp, $sp, 0x28` at `0x800EFDD4` / `0x800EFDD8`. Previous is already `fake_func_800EFD74` (`0x800EFD74`, three-insn orphan ending `0x800EFD7C`); next is already `fake_func_800EFDDC` at `0x800EFDDC` (`lw $v1, 0xCC($fp)`). `funcs.h` and overlay INL already the human name. No leftover `func_800EFD80` in generated headers/body/INL |
+| Body semantics | Copies `$a1` to `$a0`. If `*(action+4) != 1`, returns 0. Else builds a 0xC-byte request on the stack (`sh 0xFFFF` at `+0x10`, `sh 7` at `+0x14`, `sw 0` at `+0x18`, `sh lhu(*(action+8))` at `+0x16`), sets `$a1 = 5`, `$a0 = lhu action+2`, `$a2 = sp+0x10`, `jal slotDispatcherIter` (`0x8003E8DC`), returns 1. Matches the companion name |
+| Callers | 20 generated `jal 0x800EFD80` sites (companion comment says 21): four `LOOKUP_FUNC(0x800EFD80)` in `npcPowerGeneratorUpdate`, `npcWordDevastatorUpdate`, `attachedAudioVisualEmitterNpcHandler`, `npcShieldGeneratorUpdate`; sixteen direct `dispatchSlotAction5IfActive(rdram, ctx)` in `npcTurretUpdate`, `npcAtAtUpdate`, `npcAtStUpdate`, `npcShuttleUpdate`, `npcDebrisFieldUpdate`, `npcTankDroidUpdate`, `npcWingmanUpdate`, `npcTieVariantUpdate`, `npcRadarDishUpdate`, `npcGroundTransportUpdate`, `npcTrainCarUpdate`, `npcWaterCraftUpdate`, `npcGroundTroopUpdate`, `tickCraftWithPhasedDestruction`, `npcAtPtUpdate`, `datItemActorNpcHandler` |
+| TOML | Was `{ name = "func_800EFD80", vram = 0x800EFD80, size = 0x5C }` — stale leftover. Size already matched `0x800EFDDC - 0x800EFD80`. Renamed to `dispatchSlotAction5IfActive` |
+| Overlay section 4 | `{ .func = dispatchSlotAction5IfActive, .offset = 0x0004AC50, .rom_size = 0x0000005C }` under `section_4_ovl_mission_funcs` (`0x800EFD80 - 0x800A5130 = 0x4AC50`; previous `0x4AC44 + 0xC = 0x4AC50`; `0x4AC50 + 0x5C = 0x4ACAC` matches next `fake_func_800EFDDC`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EFD80`. No leftover `func_800EFD80` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x28` / `jr $ra` / `addiu $sp, $sp, 0x28` at
+`0x800EFD80` / `0x800EFDD4` / `0x800EFDD8`), previous
+(`fake_func_800EFD74` / `0x800EFD74`) and next
+(`fake_func_800EFDDC` / `0x800EFDDC`) boundaries, overlay span,
+and size already agreed on `dispatchSlotAction5IfActive` / `0x5C`.
+TOML still carried leftover `func_800EFD80`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800EFDDC`; first insn is
+`addiu $sp, $sp, -0x28` and last is `jr $ra` / `addiu $sp, $sp, 0x28`
+at `0x800EFDD4` / `0x800EFDD8`), and H4 (companion, generated body,
+TOML, and section-4 row are all present). No invented name. No
+build or runtime run required.
+
+Next census: leftover `fake_func_800EFDDC` at `0x800EFDDC` (size `0x4`).
+Neighbor peek already: companion `mission_overlay.txt`, generated
+headers/body/INL, and TOML already use `fake_func_800EFDDC`. First
+insn `lw $v1, 0xCC($fp)` at `0x800EFDDC` (single-word leftover;
+no `jr $ra`). Next leftover is `func_800EFDE0` (`0x800EFDE0`,
+`0x8DC`; companion/generated `updateNpcEventTimer`; TOML still
+leftover). Last-15 titles after s1855 are s1841–s1855, all sweep,
+so the next iteration is a mandatory REVISIT (parked M4 live
+`0x8000` Y emit vs clip; not another leftover and not another
+static `L_17F0` shape walk).
