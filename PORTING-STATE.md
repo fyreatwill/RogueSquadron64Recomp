@@ -87306,3 +87306,54 @@ live `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F27E8` /
 `getNpcDetailLevelByIndex` at `0x800F27F0`. Last-15 titles
 after s1877 still include s1872's hangar/512 revisit, so the next
 iteration is another leftover census rather than a mandatory REVISIT.
+
+## Session 1878 (2026-08-17) — synchronized the isPointInsideTriggerVolume symbol
+
+Exact generated-symbol census for leftover `func_800F2760` at
+`0x800F2760` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1872's hangar/512 revisit (`hangar/512 0x8000 Y
+is unevaluable`), so the 15-title all-sweep REVISIT gate did not fire.
+Step 0 `wc -c` was 17761; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | Sequential listing `isPointInsideTriggerVolume = 0x800F2760` at line 1284, after `computeTurnVectorAndDistanceToTarget = 0x800F2648`. No comment on this occupant. `getNpcDetailLevelByIndex = 0x800F27F0` is listed earlier at line 1029 |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F2760`. Menu overlay listed-symbol max `0x800C6660`; cinematic max `0x800AA1BC`. Main `.text` ends at `0x800A5130` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void isPointInsideTriggerVolume` at VRAM `0x800F2760`. First insn `addiu $sp, $sp, -0x40` at `0x800F2760`; last live `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F27E8` / `0x800F27EC`. Previous is already `computeTurnVectorAndDistanceToTarget` (`0x800F2648`, last `jr $ra` / `addiu $sp, $sp, 0x50` at `0x800F2758` / `0x800F275C`); next is already `getNpcDetailLevelByIndex` at `0x800F27F0` (`addiu $sp, $sp, -0x18`). `funcs.h` and overlay INL already the human name. No leftover `func_800F2760` in generated headers/body/INL |
+| Body semantics | `$a0` point (`$s3`); `$a1` scale float (`$f20`; the one generated caller passes `0x40000000` / 2.0f). Slot table at `0x80138D18` (`lui 0x8014` / `addiu -0x72E8`). If byte `+0` is set, `transformVec3ToNpcLocalWithScale(slot+8, 0, point, scale, scratch at sp+0x18)` and return 1 when `$v0 & 0xFF` is nonzero. Counter `$s1` starts at 0; `addiu` then `blez` plus stride `0x144` is a one-slot walk. Returns 0 when the flag is clear or the jal fails |
+| Callers | 1 generated `jal 0x800F2760` at `0x800ED078` in `funcs_40.c`, already dispatching `isPointInsideTriggerVolume` |
+| TOML | Was `{ name = "func_800F2760", vram = 0x800F2760, size = 0x90 }` — stale leftover. Size already matched `0x800F27F0 - 0x800F2760`. Renamed to `isPointInsideTriggerVolume` |
+| Overlay section 4 | `{ .func = isPointInsideTriggerVolume, .offset = 0x0004D630, .rom_size = 0x00000090 }` under `section_4_ovl_mission_funcs` (`0x800F2760 - 0x800A5130 = 0x4D630`; previous `0x4D518 + 0x118 = 0x4D630`; `0x4D630 + 0x90 = 0x4D6C0` matches next `getNpcDetailLevelByIndex`) |
+| Non-collision | No leftover `func_800F2760` in generated headers, body, overlay INL, or TOML after the rename. Other overlay files have no occupant at `0x800F2760`. The human name was not already a TOML symbol |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x40` / `jr $ra` / `addiu $sp, $sp, 0x40` at
+`0x800F2760` / `0x800F27E8` / `0x800F27EC`), previous
+(`computeTurnVectorAndDistanceToTarget` / `0x800F2648`) and next
+(`getNpcDetailLevelByIndex` / `0x800F27F0`) boundaries,
+overlay span, and size already agreed on
+`isPointInsideTriggerVolume` / `0x90`. TOML still carried leftover
+`func_800F2760`; renamed it to match. Generated headers/body/INL
+were already the human name. This refutes H1 (TOML was not already
+synchronized), H3 (no overlay collision, no size/boundary
+disagreement; previous ends exactly here and next starts at
+`0x800F27F0`; first insn is `addiu $sp, $sp, -0x40` and last is
+`jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F27E8` / `0x800F27EC`;
+body is the one-slot trigger-volume test via
+`transformVec3ToNpcLocalWithScale`, not an unnameable span).
+No invented name. No build or runtime run required.
+
+Next census: leftover `func_800F27F0` at `0x800F27F0` (size `0x40`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `getNpcDetailLevelByIndex`; TOML still
+leftover `func_800F27F0`. First insn `addiu $sp, $sp, -0x18`; last
+live `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2828` /
+`0x800F282C`. Next already-named occupant is
+`setObjectDetailLevel` at `0x800F2830`. Last-15 titles
+after s1878 still include s1872's hangar/512 revisit, so the next
+iteration is another leftover census rather than a mandatory REVISIT.

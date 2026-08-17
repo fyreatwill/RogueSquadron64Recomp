@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1877 (2026-08-17).
+detail. Reviewed through s1878 (2026-08-17).
 
 ## Current state
 
@@ -67,14 +67,14 @@ detail. Reviewed through s1877 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800F2760`
-   (`0x800F2760`, size `0x90`). Companion `mission_overlay.txt`
+1. Resume the generated-symbol sweep at leftover `func_800F27F0`
+   (`0x800F27F0`, size `0x40`). Companion `mission_overlay.txt`
    and generated headers/body/INL already name
-   `isPointInsideTriggerVolume`; TOML still leftover
-   `func_800F2760`. First insn `addiu $sp, $sp, -0x40`; last
-   `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F27E8` /
-   `0x800F27EC`. Next already-named occupant is
-   `getNpcDetailLevelByIndex` at `0x800F27F0`. After s1877
+   `getNpcDetailLevelByIndex`; TOML still leftover
+   `func_800F27F0`. First insn `addiu $sp, $sp, -0x18`; last
+   `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2828` /
+   `0x800F282C`. Next already-named occupant is
+   `setObjectDetailLevel` at `0x800F2830`. After s1878
    the last-15 titles still include s1872's hangar/512 revisit,
    so the sweep REVISIT gate does not fire. Archive:
    `PROJECT-OVERVIEW.md` §33–§35. About 1,548 placeholder
@@ -144,7 +144,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1877 through leftover `func_800F2648` became
+s1648–s1878 through leftover `func_800F2760` became
+`isPointInsideTriggerVolume` (`0x800F2760`, `0x90`) after leftover
+`func_800F2648` became
 `computeTurnVectorAndDistanceToTarget` (`0x800F2648`, `0x118`) after leftover
 `func_800F2540` became
 `computeTurnVectorTowardTarget` (`0x800F2540`, `0x108`) after leftover
@@ -310,6 +312,8 @@ and leftover `func_800F2540` became
 `computeTurnVectorTowardTarget` (`0x800F2540`, `0x108`)
 and leftover `func_800F2648` became
 `computeTurnVectorAndDistanceToTarget` (`0x800F2648`, `0x118`)
+and leftover `func_800F2760` became
+`isPointInsideTriggerVolume` (`0x800F2760`, `0x90`)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 (§35). s1728 is maintenance only.
 
