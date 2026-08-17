@@ -1842,7 +1842,7 @@ functions = [
     { name = "npcTieVariantTickAttachmentEffect", vram = 0x800DA9B0, size = 0x1E8 },
     { name = "npcTieVariantHandleDestruction", vram = 0x800DAB98, size = 0x584 },
     { name = "npcTieVariantUpdate", vram = 0x800DB11C, size = 0x110C },
-    { name = "func_800DC228", vram = 0x800DC228, size = 0xD8 },
+    { name = "npcRadarDishInit", vram = 0x800DC228, size = 0xD8 },
     { name = "func_800DC300", vram = 0x800DC300, size = 0x3F0 },
     { name = "npcRadarDishUpdate", vram = 0x800DC6F0, size = 0xB58 },
     { name = "func_800DD248", vram = 0x800DD248, size = 0x7C },

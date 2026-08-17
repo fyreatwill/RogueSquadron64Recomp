@@ -235,7 +235,7 @@ H3-stop-tick; Rice still dies ~135 s). Audio de-stubbing is closed. These
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
-are synchronized through `npcTieVariantUpdate` at `0x800DB11C` (s1743).
+are synchronized through `npcRadarDishInit` at `0x800DC228` (s1745).
 See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
 backlog, and `PORTING-STATE.md` for evidence.
 
@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1743)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1745)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3021,11 +3021,13 @@ collision.
 | s1742 | Synchronized `npcTieVariantHandleDestruction` (`0x800DAB98`, `0x584`). Debris+rand+3D-sound destruction: `spawnDestructionDebris` / `spawnDestructionEffectBurst` / `spawnDirectionalDebrisBurst` / `spawnDebris1Npc` / `play3DSoundEvent`. Sole generated caller `npcTieVariantUpdate` at `0x800DBF38`, after `unregisterAndFreeNpcSlot` + `popNpcSlotFromTail`. |
 | s1743 | Confirmed `npcTieVariantUpdate` (`0x800DB11C`, `0x110C`). 9-way jump table at `0x800A7C10` on `(a1-1)` for `a1 ∈ 1..9`. Setup / teardown / live tick (`npcTieVariantTickAttachmentEffect`, `npcTieVariantSteerToward`) / 3D-audio / damage (`npcTieVariantHandleDestruction`) / slot-dispatch. Table-dispatched; no leftover `func_800DB11C`. |
 | s1744 | Mandatory REVISIT. Six-arm Rice overlay-PC watch on the attract A/Start/C-up/L/Z title-like 1024. All arms passed controls. `cinematicLoopBody`/`load_cutscene` stay 2 (the 17.3 s and 65.4 s title-like 1024s); `runMenuContentStateMachine` stays 0; `runInMissionFrame` stays 1. Leave drops `0x800AA658` (−350) and `0x800C131C` (−180) vs hold attract. H3-stop-tick selected; H1/H2/H4 rejected. Extra `loadOverlay` +2 does not enter those four entries. |
+| s1745 | Synchronized `npcRadarDishInit` (`0x800DC228`, `0xD8`). Object-record spawn/init: zero flags at `+0x87`/`+0xBA`/`+0x88`, then `setNpcHealth` / `initActorMotionParams` / `setObjectDetailLevel` / `initObjectAnimSubstruct`. TOML was stale `func_800DC228`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1744 is `npcRadarDishInit` / `func_800DC228` at
-`0x800DC228` (size `0xD8`). Mandatory revisits in this window: s1650,
-s1666, s1682, s1698, s1714, s1744. After s1744 the last-15 titles include
-the revisit, so the next iteration resumes the sweep.
+The sweep cursor after s1745 is `npcRadarDishComputeAimMotion` /
+`func_800DC300` at `0x800DC300` (size `0x3F0`). Mandatory revisits in
+this window: s1650, s1666, s1682, s1698, s1714, s1744. After s1745 the
+last-15 titles still include s1744, so the next iteration resumes the
+sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

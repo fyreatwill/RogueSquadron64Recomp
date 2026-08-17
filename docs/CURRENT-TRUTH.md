@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1744 (2026-08-16).
+detail. Reviewed through s1745 (2026-08-16).
 
 ## Current state
 
@@ -47,10 +47,10 @@ detail. Reviewed through s1744 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcRadarDishInit` /
-   `func_800DC228` (`0x800DC228`, size `0xD8`). Archive:
+1. Resume the generated-symbol sweep at `npcRadarDishComputeAimMotion` /
+   `func_800DC300` (`0x800DC300`, size `0x3F0`). Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1744). About 1,548 placeholder `func_0x...` names remained
+   §35 (s1648–s1745). About 1,548 placeholder `func_0x...` names remained
    at s1487.
 2. Parked retail-entry: the 126.4 s title-like 1024 is H3-stop-tick, not
    those three inner loops. A later angle needs a different PC set (other
@@ -89,11 +89,11 @@ never-access) live in `PROJECT-OVERVIEW.md` §26 and §35. Most recent: s1698
 `512→1024` at 126.3 s; the stay was a flush cutoff.
 
 ## Evidence ledger summary
-Per-session rows through s1744 live in `PROJECT-OVERVIEW.md` §33–§35.
+Per-session rows through s1745 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1744 through `npcTieVariantUpdate` plus the s1744 overlay-PC revisit
+s1648–s1745 through `npcRadarDishInit` plus the s1744 overlay-PC revisit
 that selected H3-stop-tick for the attract 1024 (§35). s1728 is maintenance only.
 
 ## Method and safety rules

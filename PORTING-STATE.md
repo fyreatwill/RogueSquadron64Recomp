@@ -81174,3 +81174,39 @@ The 1024 is still not a classified screen (not hangar, not viewer, not
 those three inner loops). Do not repeat this six-entry recipe. Next
 work resumes the generated-symbol sweep at `npcRadarDishInit` /
 `func_800DC228` at `0x800DC228` (size `0xD8`).
+
+## Session 1745 (2026-08-16) — synchronized the npcRadarDishInit symbol
+
+Exact generated-symbol census for `0x800DC228` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6433; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcRadarDishInit = 0x800DC228` with comment "radar-dish spawn/init". Previous contiguous neighbor `npcTieVariantUpdate = 0x800DB11C`; next contiguous neighbor `npcRadarDishComputeAimMotion = 0x800DC300`. Coarse listing also has sibling `npcRadarDishUpdate = 0x800DC6F0`. No menu/cinematic/main overlay occupant and no `D_800DC228` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcRadarDishInit` at VRAM `0x800DC228`; prologue `addiu $sp, $sp, -0x38`; saves `$ra`/`$s1`/`$s0`. Object record `*(a0+4)` in `s0`; template pointer `*(s0+0x34)` in `s1`/`a2`; actor `*(s0+0x38)`. Returns through `jr $ra` / `addiu $sp, $sp, 0x38` ending at `0x800DC2FC`. Previous mission function last insn is `0x800DC224`; next is `npcRadarDishComputeAimMotion` at `0x800DC300`. `funcs.h` already declares the human name. No leftover `func_800DC228`. No direct `jal 0x800DC228` site — table-dispatched spawn like the other `npcXxxInit` siblings |
+| Body semantics | Zeros object flags at `+0x87`/`+0xBA`/`+0x88`, then the full-model spawn cluster: `setNpcHealth` (`jal 0x800F2070`), `initActorMotionParams` (`jal 0x800F2888` from the `*0x80137CE4`-indexed table at `s1+0xC0..0xCC`), `setObjectDetailLevel` (`jal 0x800F2830` from `*(s1+0xB4)`), `initObjectAnimSubstruct` (`jal 0x800F2B88` from `s1+0xD0..0xDC` plus constants `0x800A7CFC`/`0x800A7D00` and callback `0x800DA440`). Matches the companion "radar-dish spawn/init" label and the `npcInitFullModel` health/motion/detail/anim cluster |
+| TOML (before) | `{ name = "func_800DC228", vram = 0x800DC228, size = 0xD8 }` — size matches `0x800DC300 - 0x800DC228` (last insn `0x800DC2FC` + 4 = `0xD8`) |
+| Overlay section 4 | `{ .func = npcRadarDishInit, .offset = 0x000370F8, .rom_size = 0x000000D8 }` under `section_4_ovl_mission_funcs` (`0x800DC228 - 0x800A5130 = 0x370F8`; `0x35FEC + 0x110C = 0x370F8`; `0x370F8 + 0xD8 = 0x371D0` matches next `npcRadarDishComputeAimMotion`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DC228`. Menu max VRAM is `0x800C6660`; cinematic max is `0x800AA1BC`; neither reaches this address. No leftover `func_800DC228` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated radar-dish spawn/init body,
+previous (`npcTieVariantUpdate` / `0x800DB11C`) and next
+(`npcRadarDishComputeAimMotion` / `0x800DC300`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcRadarDishInit`, and only the TOML name was a stale `func_800DC228`
+placeholder. Corrected TOML to `npcRadarDishInit`. This refutes H1 (TOML
+was not already synchronized), H3 (no fake fragment, overlay collision, or
+size/boundary disagreement), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No build or runtime run required.
+
+Next census: `npcRadarDishComputeAimMotion` / `func_800DC300` at
+`0x800DC300` (size `0x3F0`). Last-15 titles after s1745 still include
+s1744's revisit, so the mandatory REVISIT gate does not fire.
