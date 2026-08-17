@@ -1929,7 +1929,7 @@ functions = [
     { name = "processPendingSoundCueRequest", vram = 0x800EDF68, size = 0x7C8 },
     { name = "tickSongFadeTimer", vram = 0x800EE730, size = 0x254 },
     { name = "pushActiveSoundDescriptor", vram = 0x800EE984, size = 0x70 },
-    { name = "func_800EE9F4", vram = 0x800EE9F4, size = 0x60 },
+    { name = "popActiveSoundDescriptor", vram = 0x800EE9F4, size = 0x60 },
     { name = "func_800EEA54", vram = 0x800EEA54, size = 0x328 },
     { name = "func_800EED7C", vram = 0x800EED7C, size = 0x1B8 },
     { name = "func_800EEF34", vram = 0x800EEF34, size = 0x114 },
