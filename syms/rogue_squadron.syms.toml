@@ -1962,7 +1962,7 @@ functions = [
     { name = "acquireNpcTargetsInAimCone", vram = 0x800F15B8, size = 0x2B8 },
     { name = "tickProgressChannel", vram = 0x800F1870, size = 0x2D0 },
     { name = "raycastTerrainAndNpcs", vram = 0x800F1B40, size = 0x33C },
-    { name = "func_800F1E7C", vram = 0x800F1E7C, size = 0x178 },
+    { name = "initActorRenderDescriptorIfUninit", vram = 0x800F1E7C, size = 0x178 },
     { name = "func_800F1FF4", vram = 0x800F1FF4, size = 0x7C },
     { name = "setNpcHealth", vram = 0x800F2070, size = 0x7C },
     { name = "getNpcCurrentHealth", vram = 0x800F20EC, size = 0x34 },

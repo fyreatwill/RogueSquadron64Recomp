@@ -86866,3 +86866,55 @@ Next leftover is `func_800F1FF4` (`0x800F1FF4`, `0x7C`;
 companion/generated `initActorRenderDescriptorWithNpcVelocity`). Last-15
 titles after s1869 still include s1856's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1870 (2026-08-17) — synchronized the initActorRenderDescriptorIfUninit symbol
+
+Exact generated-symbol census for leftover `func_800F1E7C` at
+`0x800F1E7C` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 15915; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `initActorRenderDescriptorIfUninit = 0x800F1E7C` (commented listing at line 1064, after `resetCraftAnimationStateForSlot`). Sequential listing at 1277–1278 jumps from `raycastTerrainAndNpcs = 0x800F1B40` to `initActorRenderDescriptorWithNpcVelocity = 0x800F1FF4` and skips this occupant |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F1E7C`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`. `undefined_funcs_auto.txt` still lists leftover `func_800F1E7C` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void initActorRenderDescriptorIfUninit` at VRAM `0x800F1E7C`. First insn `addiu $sp, $sp, -0x30` at `0x800F1E7C`; last live `jr $ra` / `addiu $sp, $sp, 0x30` at `0x800F1FEC` / `0x800F1FF0`. Previous is already `raycastTerrainAndNpcs` (`0x800F1B40`, last `jr $ra` / `addiu $sp, $sp, 0x90` at `0x800F1E74` / `0x800F1E78`); next is already `initActorRenderDescriptorWithNpcVelocity` at `0x800F1FF4` (`addiu $sp, $sp, -0x30`). `funcs.h` and overlay INL already the human name. No leftover `func_800F1E7C` in generated headers/body/INL |
+| Body semantics | `$s0=$a0` actor. `$s2=$a2` out descriptor. `$s3` is the 5th arg from `0x40($sp)`. Gate `lbu actor+0x1A7`. Uninit (`==0`): write `0xFFFF` to out+0x6; early-exit to the late path if `(a1&0xFF)!=0` or `(lw actor+0x1A4) & 0xFF00FF00`; if `(a3&0xFF)==1` then `getNpcContextField8(actor+0x198)` and copy the returned vec3 to out+0x10/+0x14/+0x18; then `parseDatItemCommon(out, out+0x10)`. Already-init: if out+0x6 equals `actor+0x198`, write `0xFFFF` to out+0x6; if `a1` or the `+0x1A4` mask is set, decrement `*actor+0x19C` and increment `*actor+0x1A0` when those pointers are non-null; else decrement only `*actor+0x19C`. Late path (every return): if `actor+0x1A5` and the 5th arg are non-null, `datItemSetObjectiveBooleanCount` on that arg. Returns 1. Companion comment is incomplete: it treats the already-init arm as a skip and omits `parseDatItemCommon` plus the late `datItemSetObjectiveBooleanCount` |
+| Callers | 18 generated `jal 0x800F1E7C` sites. 16 overlay sites already `initActorRenderDescriptorIfUninit(rdram, ctx)` (`npcTurretUpdate`, `npcProbeDriod`, `npcAtAtUpdate`, `npcAtStUpdate`, `npcShuttleUpdate`, `npcDebrisFieldUpdate`, `npcTankDroidUpdate`, `npcWingmanUpdate`, `npcTieVariantUpdate`, `npcRadarDishUpdate`, `npcGroundTransportUpdate`, `npcTrainCarUpdate`, `npcWaterCraftUpdate`, `npcGroundTroopUpdate`, `tickCraftWithPhasedDestruction`, `npcAtPtUpdate`). 2 main-`.text` sites still `LOOKUP_FUNC(0x800F1E7C)` (`npcPowerGeneratorUpdate`, `npcWordDevastatorUpdate`) |
+| TOML | Was `{ name = "func_800F1E7C", vram = 0x800F1E7C, size = 0x178 }` — stale leftover. Size already matched `0x800F1FF4 - 0x800F1E7C`. Renamed to `initActorRenderDescriptorIfUninit` |
+| Overlay section 4 | `{ .func = initActorRenderDescriptorIfUninit, .offset = 0x0004CD4C, .rom_size = 0x00000178 }` under `section_4_ovl_mission_funcs` (`0x800F1E7C - 0x800A5130 = 0x4CD4C`; previous `0x4CA10 + 0x33C = 0x4CD4C`; `0x4CD4C + 0x178 = 0x4CEC4` matches next `initActorRenderDescriptorWithNpcVelocity`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F1E7C`. No leftover `func_800F1E7C` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x30` / `jr $ra` / `addiu $sp, $sp, 0x30` at
+`0x800F1E7C` / `0x800F1FEC` / `0x800F1FF0`), previous
+(`raycastTerrainAndNpcs` / `0x800F1B40`) and next
+(`initActorRenderDescriptorWithNpcVelocity` / `0x800F1FF4`)
+boundaries, overlay span, and size already agreed on
+`initActorRenderDescriptorIfUninit` / `0x178`. TOML still
+carried leftover `func_800F1E7C`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F1FF4`; first insn is
+`addiu $sp, $sp, -0x30` and last is `jr $ra` / `addiu $sp, $sp, 0x30`
+at `0x800F1FEC` / `0x800F1FF0`; body prepares an actor render
+descriptor when the `+0x1A7` init flag is clear, not an
+unnameable span). No invented name. No build or runtime run
+required.
+
+Next census: leftover `func_800F1FF4` at `0x800F1FF4` (size `0x7C`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `initActorRenderDescriptorWithNpcVelocity`;
+TOML still leftover `func_800F1FF4`. First insn
+`addiu $sp, $sp, -0x30`; last live `jr $ra` / `addiu $sp, $sp, 0x30`
+at `0x800F2068` / `0x800F206C`. Next leftover after the already-named
+health family is `func_800F2208` (`0x800F2208`, `0x108`). Last-15
+titles after s1870 still include s1856's M4 revisit, so the
+mandatory REVISIT gate does not fire.

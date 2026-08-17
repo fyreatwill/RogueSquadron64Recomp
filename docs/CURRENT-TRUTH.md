@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1869 (2026-08-17).
+detail. Reviewed through s1870 (2026-08-17).
 
 ## Current state
 
@@ -66,18 +66,18 @@ detail. Reviewed through s1869 (2026-08-17).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at leftover
-   `func_800F1E7C` (`0x800F1E7C`, size `0x178`). Companion
+   `func_800F1FF4` (`0x800F1FF4`, size `0x7C`). Companion
    `mission_overlay.txt` and generated headers/body/INL already name
-   `initActorRenderDescriptorIfUninit`; TOML still leftover
-   `func_800F1E7C`. Next leftover after that is `func_800F1FF4`
-   (`0x800F1FF4`, `0x7C`; companion/generated already
-   `initActorRenderDescriptorWithNpcVelocity`; TOML still leftover).
-   s1869 synchronized leftover `func_800F1B40` to
-   `raycastTerrainAndNpcs` (`0x800F1B40`, `0x33C`). s1856 selected
-   H-never-live for the parked M4 `0x8000` Y on VI 640 attribution
-   LLE (single-source). Archive: `PROJECT-OVERVIEW.md` §33
-   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1869). About
-   1,548 placeholder `func_0x...` names remained at s1487.
+   `initActorRenderDescriptorWithNpcVelocity`; TOML still leftover
+   `func_800F1FF4`. Next leftover after the already-named health
+   family is `func_800F2208` (`0x800F2208`, `0x108`). s1870
+   synchronized leftover `func_800F1E7C` to
+   `initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`).
+   s1856 selected H-never-live for the parked M4 `0x8000` Y on VI
+   640 attribution LLE (single-source). Archive:
+   `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
+   §35 (s1648–s1870). About 1,548 placeholder `func_0x...` names
+   remained at s1487.
 2. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 3. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -136,7 +136,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1869 through leftover `func_800F1B40` became
+s1648–s1870 through leftover `func_800F1E7C` became
+`initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`) after leftover
+`func_800F1B40` became
 `raycastTerrainAndNpcs` (`0x800F1B40`, `0x33C`) after leftover
 `func_800F1870` became
 `tickProgressChannel` (`0x800F1870`, `0x2D0`) after leftover
@@ -274,6 +276,8 @@ and leftover `func_800F1870` became
 `tickProgressChannel` (`0x800F1870`, `0x2D0`)
 and leftover `func_800F1B40` became
 `raycastTerrainAndNpcs` (`0x800F1B40`, `0x33C`)
+and leftover `func_800F1E7C` became
+`initActorRenderDescriptorIfUninit` (`0x800F1E7C`, `0x178`)
 (§35). s1728 is maintenance only.
 
 ## Method and safety rules
