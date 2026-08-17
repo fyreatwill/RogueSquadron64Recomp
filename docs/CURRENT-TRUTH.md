@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1853 (2026-08-17).
+detail. Reviewed through s1854 (2026-08-17).
 
 ## Current state
 
@@ -63,16 +63,15 @@ detail. Reviewed through s1853 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `fake_func_800EFD74`
-   (`0x800EFD74`, size `0xC`). Companion `mission_overlay.txt`,
-   generated headers/body/INL, and TOML already name
-   `fake_func_800EFD74`. s1853 synchronized leftover `func_800EFD6C`
-   to `noopHandler` (`0x800EFD6C`, `0x8`). Next leftover after that
-   is `func_800EFD80` (`0x800EFD80`, `0x5C`; companion
-   `dispatchSlotAction5IfActive`; generated already that name; TOML
-   still leftover).
+1. Resume the generated-symbol sweep at leftover `func_800EFD80`
+   (`0x800EFD80`, size `0x5C`). Companion `mission_overlay.txt` and
+   generated headers/body/INL already name
+   `dispatchSlotAction5IfActive`; TOML still leftover
+   `func_800EFD80`. s1854 confirmed leftover `fake_func_800EFD74`
+   at `0x800EFD74` size `0xC` (H1). Next leftover after that is
+   `fake_func_800EFDDC` (`0x800EFDDC`, `0x4`).
    Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1853). About 1,548 placeholder `func_0x...` names
+   §35 (s1648–s1854). About 1,548 placeholder `func_0x...` names
    remained at s1487.
 2. Parked M4 remainder: whether a live `0x8000` Y is clip-rejected at
    `L_17F0` entry, emitted as a zero-height command, or emitted
@@ -138,7 +137,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1853 through leftover `func_800EFD6C` became
+s1648–s1854 through leftover `fake_func_800EFD74` confirmed
+at `0x800EFD74` size `0xC` (H1) after leftover
+`func_800EFD6C` became
 `noopHandler` (`0x800EFD6C`, `0x8`) after leftover
 `func_800EFD64` became
 `noopHandler_800EFD64` (`0x800EFD64`, `0x8`) after leftover

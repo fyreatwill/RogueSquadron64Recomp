@@ -3133,15 +3133,16 @@ collision.
 | s1851 | Synchronized `getSoundCueSubsystemFlag` (`0x800EFD54`, `0x10`). Leaf getter: `lbu` of `0x8010C0E8` (`0x80110000-0x3F18`) into `$v0`. No generated `jal 0x800EFD54` site. TOML was stale `func_800EFD54`; companion, generated headers/body, and section-4 already used the human name. |
 | s1852 | Synchronized `noopHandler_800EFD64` (`0x800EFD64`, `0x8`). Pure `jr $ra` / `nop` stub. Sole generated `jal 0x800EFD64` in `tryPlaySpatialSoundWithGates` at `0x800B3E08` already dispatches the human name. TOML was stale `func_800EFD64`; companion, generated headers/body, and section-4 already used the human name. |
 | s1853 | Synchronized `noopHandler` (`0x800EFD6C`, `0x8`). Pure `jr $ra` / `nop` stub (17 companion callers; 16 generated `jal 0x800EFD6C` sites already dispatch `noopHandler` or `LOOKUP_FUNC(0x800EFD6C)`). TOML was stale `func_800EFD6C`; companion, generated headers/body, and section-4 already used the human name. |
+| s1854 | Confirmed leftover `fake_func_800EFD74` (`0x800EFD74`, `0xC`, H1). Three-insn orphan `srl`/`sw $fp+0xC0`/`lw $fp+0xBC` between `noopHandler` and `dispatchSlotAction5IfActive`. Companion, generated headers/body/INL, TOML, and section-4 already agreed; no leftover `func_800EFD74`. |
 
-The sweep cursor after s1853 is leftover `fake_func_800EFD74`
-(`0x800EFD74`, size `0xC`). Neighbor peek: companion
-`mission_overlay.txt`, generated headers/body/INL, and TOML already
-use `fake_func_800EFD74`. Next leftover is `func_800EFD80`
-(`0x800EFD80`, `0x5C`; companion `dispatchSlotAction5IfActive`;
-generated already that name; TOML still leftover). Mandatory revisits
+The sweep cursor after s1854 is leftover `func_800EFD80`
+(`0x800EFD80`, size `0x5C`). Neighbor peek: companion
+`mission_overlay.txt` and generated headers/body/INL already
+use `dispatchSlotAction5IfActive`; TOML still leftover
+`func_800EFD80`. Next leftover is `fake_func_800EFDDC`
+(`0x800EFDDC`, `0x4`). Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776, s1792, s1808, s1824, s1840. After s1853 the last-15 titles
+s1776, s1792, s1808, s1824, s1840. After s1854 the last-15 titles
 still include the M4 shape revisit, so the next iteration resumes
 the sweep.
 

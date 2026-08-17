@@ -86053,3 +86053,52 @@ insn `srl $v1, $v0, 2` / last `lw $v0, 0xBC($fp)` at `0x800EFD74` /
 that name; TOML still leftover). Last-15 titles after s1853 still
 include s1840's M4 revisit, so the mandatory REVISIT gate does not
 fire.
+
+## Session 1854 (2026-08-17) — confirmed the leftover fake_func_800EFD74 symbol
+
+Exact generated-symbol census for leftover `fake_func_800EFD74` at
+`0x800EFD74` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1840's mandatory REVISIT (`selected H-standard-edge
+on the restaged RDP triangle`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 13810; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800EFD74 = 0x800EFD74` leftover splat (comment is only `segment:mission_overlay`). Previous named kernel `noopHandler = 0x800EFD6C` (s1853 synchronized). Next leftover splat `fake_func_800EFDDC = 0x800EFDDC`; the next named kernel is `dispatchSlotAction5IfActive = 0x800EFD80` (21 callers). No leftover `func_800EFD74` splat, no `D_800EFD74` |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800EFD74`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void fake_func_800EFD74` at VRAM `0x800EFD74`. Three-instruction body: `srl $v1, $v0, 2` / `sw $v1, 0xC0($fp)` / `lw $v0, 0xBC($fp)` at `0x800EFD74` / `0x800EFD78` / `0x800EFD7C`. No `jr $ra` and no stack prologue. Previous `noopHandler` last live insn is `jr $ra` / `nop` at `0x800EFD6C` / `0x800EFD70`; next is already `dispatchSlotAction5IfActive` at `0x800EFD80` (`addiu $sp, $sp, -0x28`). `funcs.h` and overlay INL already the leftover name. No leftover `func_800EFD74`. No generated `jal 0x800EFD74` site |
+| Body semantics | 12-byte orphan `srl`/`sw`/`lw` sitting between the unsuffixed `noopHandler` `jr $ra` epilogue and the next named kernel (`dispatchSlotAction5IfActive`). Uses `$fp+0xC0`/`$fp+0xBC`, so it is mid-frame debris, not a function entry. Same leftover-splat family as `fake_func_800EC10C` / `fake_func_800ECE04` / `fake_func_800ED148` (unreachable words immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800EFD74", vram = 0x800EFD74, size = 0xC }` — already the leftover name; size matches `0x800EFD80 - 0x800EFD74` |
+| Overlay section 4 | `{ .func = fake_func_800EFD74, .offset = 0x0004AC44, .rom_size = 0x0000000C }` under `section_4_ovl_mission_funcs` (`0x800EFD74 - 0x800A5130 = 0x4AC44`; previous `0x4AC3C + 0x8 = 0x4AC44`; `0x4AC44 + 0xC = 0x4AC50` matches next `dispatchSlotAction5IfActive`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EFD74`. No leftover `func_800EFD74` in generated headers, body, overlay INL, or TOML |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated three-instruction
+`srl`/`sw`/`lw` body, previous (`noopHandler` / `0x800EFD6C`) and next
+(`dispatchSlotAction5IfActive` / `0x800EFD80`) boundaries, TOML name and
+size, and section-4 overlay span already agree. No TOML or generated-name
+change. This refutes H2 (no stale `func_800EFD74` placeholder and no
+unused companion human name at this address), H3 (no overlay collision
+or size/boundary disagreement; size is `0xC` as expected; first insn is
+`srl $v1, $v0, 2` and last is `lw $v0, 0xBC($fp)` at `0x800EFD7C`; the
+leftover is the three-insn gap, not a split prologue), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No invented
+name. No build or runtime run required.
+
+Next census: leftover `func_800EFD80` at `0x800EFD80` (size `0x5C`).
+Neighbor peek: companion `mission_overlay.txt` already maps
+`dispatchSlotAction5IfActive = 0x800EFD80` (21 callers: unused,
+action_struct — invoke slot dispatcher action 5 when struct active);
+generated headers/body/INL already that name; TOML still leftover
+`func_800EFD80`. First insn `addiu $sp, $sp, -0x28`; last live
+`jr $ra` / `addiu $sp, $sp, 0x28` at `0x800EFDD4` / `0x800EFDD8`.
+21 generated `jal 0x800EFD80` sites (4 `LOOKUP_FUNC` + 17 direct
+`dispatchSlotAction5IfActive`). Next occupant is leftover
+`fake_func_800EFDDC` (`0x800EFDDC`, `0x4`). Last-15 titles after
+s1854 still include s1840's M4 revisit, so the mandatory REVISIT
+gate does not fire.

@@ -1,37 +1,38 @@
-# NEXT work unit (s1854)
+# NEXT work unit (s1855)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol sweep. s1853 synchronized leftover
-`func_800EFD6C` to `noopHandler`; last-15 after s1853 include
-s1840's M4 REVISIT, so they are not all sweep. Do not start
-another M4 instrument this iteration. Do not repeat any
-`submitGfxFrame` entry/jal/`prev_pc` recipe.
+Resume the generated-symbol sweep. s1854 confirmed leftover
+`fake_func_800EFD74` (H1); last-15 after s1854 include s1840's
+M4 REVISIT, so they are not all sweep. Do not start another M4
+instrument this iteration. Do not repeat any `submitGfxFrame`
+entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `fake_func_800EFD74`
-(`0x800EFD74`, size `0xC`). Companion `mission_overlay.txt`
-already names `fake_func_800EFD74`; generated headers/body/INL
-and TOML already use that name.
+Exact generated-symbol census for leftover `func_800EFD80`
+(`0x800EFD80`, size `0x5C`). Companion `mission_overlay.txt`
+already names `dispatchSlotAction5IfActive`; generated
+headers/body/INL already use that name; TOML still leftover
+`func_800EFD80`.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `fake_func_800EFD74`
-  and the `0xC` span.
+  TOML, and section-4 already agree on `dispatchSlotAction5IfActive`
+  and the `0x5C` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EFD74` while companion uses `fake_func_800EFD74`.
+  `func_800EFD80` while companion uses `dispatchSlotAction5IfActive`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EFD74`, or the TOML size is not `0xC`, or
+  overlay occupies `0x800EFD80`, or the TOML size is not `0x5C`, or
   the generated body is not this function (first insn is not
-  `srl $v1, $v0, 2`; last is not `lw $v0, 0xBC($fp)` at
-  `0x800EFD7C`).
+  `addiu $sp, $sp, -0x28`; last is not `jr $ra` / `addiu $sp, $sp, 0x28`
+  at `0x800EFDD4` / `0x800EFDD8`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EFD74\|func_800EFD74\|fake_func_800EFD74' \
+grep -n '800EFD80\|func_800EFD80\|dispatchSlotAction5IfActive' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -41,7 +42,7 @@ grep -n '800EFD74\|func_800EFD74\|fake_func_800EFD74' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EFD74\|fake_func_800EFD74\|0x800EFD74\|0x800EFD78\|0x800EFD7C\|0x800EFD80' \
+grep -n 'func_800EFD80\|dispatchSlotAction5IfActive\|0x800EFD80\|0x800EFDD4\|0x800EFDD8\|0x800EFDDC' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -49,16 +50,15 @@ Then read the generated function (first/last insns are enough) and
 the TOML / section-4 rows. Classify H1–H4 from that table. If H2,
 apply the rename in TOML (and generated name only if it is still
 stale). Do not invent a new name. Companion name is
-`fake_func_800EFD74`.
+`dispatchSlotAction5IfActive`.
 
 Expected splits:
 
-- H1: all four sources already `fake_func_800EFD74` / `0xC`.
-  No edit. Next leftover `func_800EFD80` (`0x800EFD80`, `0x5C`;
-  companion `dispatchSlotAction5IfActive`; generated
-  headers/INL already that name; TOML still leftover).
-- H2: TOML (and/or generated) still `func_800EFD74`. Rename to
-  `fake_func_800EFD74`. Next leftover `func_800EFD80` as above.
+- H1: all four sources already `dispatchSlotAction5IfActive` / `0x5C`.
+  No edit. Next leftover `fake_func_800EFDDC` (`0x800EFDDC`, `0x4`).
+- H2: TOML (and/or generated) still `func_800EFD80`. Rename to
+  `dispatchSlotAction5IfActive`. Next leftover `fake_func_800EFDDC`
+  as above.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 
