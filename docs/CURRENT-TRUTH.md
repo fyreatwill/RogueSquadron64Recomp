@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1822 (2026-08-16).
+detail. Reviewed through s1823 (2026-08-17).
 
 ## Current state
 
@@ -54,21 +54,23 @@ detail. Reviewed through s1822 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `fake_func_800ECE04`
-   (`0x800ECE04`, size `0xC`). Companion `mission_overlay.txt`,
-   generated headers/body/INL, and TOML already use the leftover
-   splat name. Next generated occupant is `datItemActorNpcHandler`
-   (`0x800ECE10`); TOML still leftover `func_800ECE10`. s1822
-   synchronized leftover `func_800ECDDC` to
-   `dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`).
-   Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34
-   (s1590–s1647), §35 (s1648–s1822). About 1,548 placeholder
-   `func_0x...` names remained at s1487.
-2. Next mandatory REVISIT (when last-15 titles are all sweep): M4
-   accumulator boundary (source state vs later DMA/consumer), not another
-   `submitGfxFrame` entry/jal/`prev_pc` recipe. The extra +104 is closed
-   (s1808 H2). Every oracle run needs whole-RDRAM, PIF, and VI/PC controls.
-   Do not repeat §35 classified routes.
+1. Mandatory REVISIT: M4 accumulator boundary (source state vs later
+   DMA/consumer identity). Last-15 titles after s1823 are s1809–s1823,
+   all sweep. New angle: statically enumerate every overlay-0x20
+   consumer of DMEM `0x670` after the `L_1740` store, and whether those
+   bytes reach the only `SP_WR_LEN` DMA (source `0xD60`, not `0x670`).
+   Do not re-watch `0x688:0x710`, re-capture VMADH lanes, or watch the
+   runtime-allocated `0x4B7800` dest. Not another `submitGfxFrame`
+   entry/jal/`prev_pc` recipe. Every oracle run still needs whole-RDRAM,
+   PIF, and VI/PC controls. Do not repeat §35 classified routes.
+2. After the revisit, resume the generated-symbol sweep at leftover
+   `func_800ECE10` (`0x800ECE10`, size `0x338`). Companion
+   `mission_overlay.txt` and generated headers/body/INL already use
+   `datItemActorNpcHandler`; TOML is still leftover. s1823 confirmed
+   leftover `fake_func_800ECE04` (`0x800ECE04`, `0xC`) H1. Archive:
+   `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647), §35
+   (s1648–s1823). About 1,548 placeholder `func_0x...` names remained
+   at s1487.
 3. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -113,8 +115,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1822 through leftover `func_800ECDDC` renamed to
-`dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`) after leftover
+s1648–s1823 through leftover `fake_func_800ECE04` confirmed at
+`0x800ECE04` size `0xC` (H1) after leftover `func_800ECDDC` became
+`dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`), leftover
 `func_800ECC28` became `craftMountedAnimationNpcHandler`
 (`0x800ECC28`, `0x1B4`), leftover
 `func_800EC6F0` became `tickCraftMountedAnimationEffect`

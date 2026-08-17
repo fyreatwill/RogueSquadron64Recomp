@@ -1,73 +1,89 @@
-# NEXT work unit (s1823)
+# NEXT work unit (s1824)
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: m4-accumulator-boundary-revisit
 
-Resume leftover `fake_func_800ECE04`. Last-15 ledger titles after
-s1822 still include the s1808 revisit (`selected H2 menuIn/mission
-jal-sites`), so the 15-title all-sweep REVISIT gate does not fire.
+Mandatory 15-title REVISIT. Last-15 ledger titles after s1823 are
+s1809–s1823, all sweep (`confirmed` / `synchronized` leftover
+symbols). Do not resume the generated-symbol sweep this iteration.
+Do not repeat any `submitGfxFrame` entry/jal/`prev_pc` recipe
+(s1744 / s1760 / s1776 / s1792 / s1808). The extra +104 presenter
+is closed (s1808 H2).
 
-Census leftover `fake_func_800ECE04` (`0x800ECE04`, size `0xC`).
-Neighbor peek already: companion `mission_overlay.txt`, generated
-`funcs.h` / `funcs_40.c` / overlay INL, and TOML already use
-`fake_func_800ECE04`. Previous occupant is now
-`dispatchSlotActionTwelveByGlobalId` (`0x800ECDDC`, `0x28`; s1822
-synchronized) then this leftover. First insn `srl $v0, $t1, 4`;
-then `addiu $v0, $v0, 0x9F`; last `multu $v0, $v1` at
-`0x800ECE0C`. No generated `jal 0x800ECE04`. Next generated
-occupant is `datItemActorNpcHandler` (`0x800ECE10`, `0x338`; first
-insn `addiu $sp, $sp, -0x140`). TOML still leftover
-`{ name = "func_800ECE10", vram = 0x800ECE10, size = 0x338 }`.
-Companion comment: `func_800ECE10` deleted s432 as a
-duplicate-symbol collision with `datItemActorNpcHandler`.
+Parked M4 remainder: source state vs later DMA/consumer identity.
+Closed already and must not be re-run as the work unit:
+- Local VMADH matched 128/128 then 32/32 lanes; VGE mutated 0
+  (s1135, s1602). Do not recapture those lanes.
+- `0x688:0x710` is not a retail CPU-written shade record; SP-DMEM
+  `0x04000670:0x04000720` had zero CPU writes (s1512). Do not
+  re-watch either range.
+- Port DMA dest `0x4B7800..0x4B7808` is runtime-allocated; the
+  Rice hangar watch of that exact range was unevaluable (s1602).
+  Do not re-watch `0x4B7800`.
+
+New angle (ground truth first, no new instrument until the table
+exists): statically enumerate every overlay-0x20 consumer of the
+DMEM `0x670` shade record after `L_1740` (`sdv v6` to `0x18($9)` /
+`0x40($9)`), and whether those stored bytes can reach the only
+`SP_WR_LEN` DMA. Generated overlay 0x20 already has `ori $9,
+$zero, 0x670` at line 1078 and `mtc0 $4, SP_WR_LEN` at line 337
+with `ori $16, $zero, 0xD60` staging. s1512 says that DMA sources
+DMEM `0xD60`, not `0x670`. The open split is whether `0x670`
+bytes are copied into `0xD60` (RDP consumer / later DMA) or never
+leave `0x670` (source-state / dead record).
+
+Read first: `docs/M4-ACCUMULATOR-GROUND-TRUTH.md`,
+`docs/M4-V6-PRODUCER-AUDIT.md`, `docs/F5-UCODE-REFERENCE.md`
+(inline-data pointer advances and what the ucode can emit).
 
 Competing hypotheses:
 
-- H1: already synchronized — TOML, generated headers/body, overlay
-  INL, and companion already agree on the leftover splat name with
-  matching size (confirm only; no rename).
-- H2: one or more sources still carry stale `func_800ECE04`.
-  Companion already has `fake_func_800ECE04`. Do not invent a name
-  and do not steal `datItemActorNpcHandler` for this 0xC span.
-- H3: leftover splat, overlay collision, or size/boundary
-  disagreement (`dispatchSlotActionTwelveByGlobalId` ends at
-  `0x800ECE04`; generated next occupant is
-  `datItemActorNpcHandler` at `0x800ECE10`). Leave the leftover
-  name if this is a mid-function orphan (no prologue; next
-  occupant has its own `addiu $sp`).
-- H4: companion, generated body, TOML, or section-4 row is missing.
+- H-rdp-consumer: after `L_1740`, overlay 0x20 copies or
+  restages the `0x670+0x18`/`+0x40` bytes into the `0xD60`
+  staging buffer before `SP_WR_LEN`. Later consumer is the RDP
+  command stream.
+- H-later-dma-raw: some `SP_WR_LEN` / `SP_RD_LEN` sources DMEM
+  `0x670` directly (would contradict s1512's "only DMA is from
+  `0xD60`"; confirm or refute against the live generated file).
+- H-source-state: `L_1740` stores the sentinel, `SP_WR_LEN`
+  fires from `0xD60`, and no generated path copies `0x670+0x18`
+  / `+0x40` into that staging buffer. The RDP never sees this
+  record; the defect is upstream of the store.
+- H-dead-store: no post-`L_1740` load, copy, or DMA of
+  `0x670+0x18` / `+0x40` exists at all (record unused).
 
-Exact commands (no game run):
+Exact commands (static; no game run unless the table names one
+register-backed dest that is not `0x4B7800` / `0x688`):
 
 ```
-# TOML + generated + overlay INL
-grep -n '800ECE04\|fake_func_800ECE04\|func_800ECE04\|800ECE10\|func_800ECE10\|datItemActorNpcHandler' \
-  syms/rogue_squadron.syms.toml \
-  ../N64Recomp/RecompiledFuncs/funcs.h \
-  ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
-# generated body + callers
-grep -n 'fake_func_800ECE04\|func_800ECE04\|jal         0x800ECE04' \
-  ../N64Recomp/RecompiledFuncs/funcs_4*.c
-# companion overlays
-grep -n '800ECE04\|fake_func_800ECE04\|func_800ECE04\|800ECE10\|func_800ECE10\|datItemActorNpcHandler' \
-  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/*.txt
+# every 0x670 / 0xD60 / SP_* site in the live overlay
+grep -n '0x670\|0xD60\|SP_WR_LEN\|SP_RD_LEN\|SP_DRAM_ADDR\|L_1740\|sdv' \
+  build/factor5_ucode/factor5_ucode_ovl20_recompiled.c
+# confirm the only-WR_LEN claim across sibling overlays
+grep -n 'SP_WR_LEN' build/factor5_ucode/factor5_ucode_ovl*.c
 ```
 
-Then read the generated body: `srl $v0, $t1, 4` at `0x800ECE04`;
-`addiu $v0, $v0, 0x9F`; `multu $v0, $v1` at `0x800ECE0C`. Classify
-as leftover splat vs split first instruction of the next occupant.
-Do not invent a name.
+Then read each hit's surrounding block (at most 40 lines) and
+classify it as: store of `v6` to `r9`, copy `0x670`→`0xD60`,
+DMA source `0xD60`, DMA source `0x670`, or unrelated addend.
+Build the complete consumer table in one pass. Do not add a
+runtime field until that table selects one hypothesis.
 
 Expected splits:
 
-- H1: all four sources already `fake_func_800ECE04` at size `0xC`.
-  Confirm.
-- H2: rename the stale `func_800ECE04` placeholder(s) only if a
-  companion human name exists for this exact 0xC span (it does
-  not — companion leftover is `fake_func_800ECE04`).
-- H3: document the leftover/collision/size miss; leave the name.
-- H4: fill the missing source or leave as `fake_func_*`.
+- H-rdp-consumer: at least one generated copy/restage of the
+  stored `0x670` bytes into `0xD60` before `SP_WR_LEN`. Next
+  measurement is the RDP command shape in that payload, not an
+  absolute port address.
+- H-later-dma-raw: a live `SP_WR_LEN` source is `0x670`. Document
+  the site; only then may a port DMA-src capture be added.
+- H-source-state: store exists, `SP_WR_LEN` is only from `0xD60`,
+  and no copy of the stored bytes into `0xD60` exists.
+- H-dead-store: no post-store reader of `0x670+0x18` / `+0x40`.
 
-Do not reopen the s1744 six-entry, s1760 jump-table, s1776
-main-text, s1792 unwatched-caller, or s1808 jal/`prev_pc` Rice
-recipes. The next 15-title REVISIT is the M4 accumulator
-boundary, not another `submitGfxFrame` PC set.
+Sweep cursor (parked until after this revisit): leftover
+`func_800ECE10` (`0x800ECE10`, `0x338`). Companion and generated
+headers/body/INL already `datItemActorNpcHandler`; TOML still
+leftover. First insn `addiu $sp, $sp, -0x140`; last `jr $ra` /
+`addiu $sp, $sp, 0x140` at `0x800ED140` / `0x800ED144`. No
+generated `jal 0x800ECE10`. Next leftover `fake_func_800ED148`
+(`0x800ED148`, `0x8`).

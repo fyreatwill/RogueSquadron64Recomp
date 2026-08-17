@@ -84465,3 +84465,43 @@ leftover `func_800ECE10`). Companion comment says `func_800ECE10`
 was deleted s432 as a duplicate of that name. Last-15 titles after
 s1822 still include s1808's revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1823 (2026-08-17) — confirmed the leftover fake_func_800ECE04 symbol
+
+Exact generated-symbol census for leftover `0x800ECE04` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1808's
+mandatory REVISIT (`selected H2 menuIn/mission jal-sites on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 9413; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800ECE04 = 0x800ECE04` leftover splat (comment is only `segment:mission_overlay`; no deleted-duplicate comment). Previous named kernel `dispatchSlotActionTwelveByGlobalId = 0x800ECDDC` (s1822 synchronized). Next leftover comment deletes `func_800ECE10` as a s432 duplicate of `datItemActorNpcHandler`. No leftover `func_800ECE04` splat, no `D_800ECE04`, and no menu/cinematic/main overlay occupant |
+| Companion `main_overlay.txt` | No occupant at `0x800ECE04`. Maps the next function as `datItemActorNpcHandler = 0x800ECE10` only in `mission_overlay.txt` |
+| Generated `funcs_40.c` | `RECOMP_FUNC void fake_func_800ECE04` at VRAM `0x800ECE04`. Three-instruction body: `srl $v0, $t1, 4` / `addiu $v0, $v0, 0x9F` / `multu $v0, $v1` at `0x800ECE04` / `0x800ECE08` / `0x800ECE0C`. No `jr $ra` and no stack prologue. Previous `dispatchSlotActionTwelveByGlobalId` last live insn is `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800ECDFC` / `0x800ECE00`; next is `datItemActorNpcHandler` at `0x800ECE10` (`addiu $sp, $sp, -0x140` — a prologue, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800ECE04`. No generated `jal 0x800ECE04` site |
+| Body semantics | 12-byte orphan `srl`/`addiu`/`multu` sitting between the action-0xC dispatcher's `jr $ra` epilogue and the real next-kernel prologue. Same leftover-splat family as `fake_func_800E8A34` / `fake_func_800E9AD8` / `fake_func_800EC10C` / `fake_func_800EC6EC` (unreachable word immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800ECE04", vram = 0x800ECE04, size = 0xC }` — already the leftover name; size matches `0x800ECE10 - 0x800ECE04` |
+| Overlay section 4 | `{ .func = fake_func_800ECE04, .offset = 0x00047CD4, .rom_size = 0x0000000C }` under `section_4_ovl_mission_funcs` (`0x800ECE04 - 0x800A5130 = 0x47CD4`; previous `0x47CAC + 0x28 = 0x47CD4`; `0x47CD4 + 0xC = 0x47CE0` matches next `datItemActorNpcHandler`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800ECE04`. No leftover `func_800ECE04` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated three-instruction
+`srl`/`addiu`/`multu` body, previous (`dispatchSlotActionTwelveByGlobalId`
+/ `0x800ECDDC`) and next (`datItemActorNpcHandler` / `0x800ECE10`)
+boundaries, TOML name and size, and section-4 overlay span already agree.
+No TOML or generated-name change. This refutes H2 (no stale
+`func_800ECE04` placeholder), H3 (no overlay collision or
+size/boundary disagreement; size is `0xC` as expected; the leftover
+is the three-insn gap, not a split prologue), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next work unit is the mandatory M4 accumulator-boundary REVISIT:
+after this entry the last-15 titles are s1809–s1823, all sweep.
+Sweep cursor parked at leftover `func_800ECE10` (`0x800ECE10`,
+`0x338`; companion/generated `datItemActorNpcHandler`; TOML still
+leftover). Do not invent a name for the confirmed leftover.
