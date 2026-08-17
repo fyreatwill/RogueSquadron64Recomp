@@ -86464,3 +86464,53 @@ Next leftover is `func_800F0DC4` (`0x800F0DC4`, `0x1D0`;
 companion/generated `tickObjectAnimSubstruct`). Last-15 titles after
 s1861 still include s1856's M4 revisit, so the mandatory REVISIT
 gate does not fire.
+
+## Session 1862 (2026-08-17) — synchronized the evaluateTargetTrackingVisibility symbol
+
+Exact generated-symbol census for leftover `func_800F0BA4` at
+`0x800F0BA4` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1856's mandatory REVISIT (`selected H-never-live
+for the 0x8000 Y sentinel`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 14476; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `evaluateTargetTrackingVisibility = 0x800F0BA4` (uncommented second listing at line 1272). Previous leftover `computeActorAnchorDeltaAfterLOS = 0x800F09A8` (s1861 H2). Next named kernel `tickObjectAnimSubstruct = 0x800F0DC4` |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F0BA4`. Menu overlay ends at `0x800CD520`; cinematic ends at `0x800B0940`. `undefined_funcs_auto.txt` has no leftover `func_800F0BA4` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void evaluateTargetTrackingVisibility` at VRAM `0x800F0BA4`. First insn `addiu $sp, $sp, -0x58` at `0x800F0BA4`; last live `jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F0DBC` / `0x800F0DC0`. Previous is already `computeActorAnchorDeltaAfterLOS` (`0x800F09A8`, last `jr $ra` / `addiu $sp, $sp, 0x58` at `0x800F0B9C` / `0x800F0BA0`); next is already `tickObjectAnimSubstruct` at `0x800F0DC4` (`addiu $sp, $sp, -0x20`). `funcs.h` and overlay INL already the human name. No leftover `func_800F0BA4` in generated headers/body/INL |
+| Body semantics | `$s3 = $a0`, `$s0 = $a0+0x114`; `$a1` → `$f22`, `$a2` → `$f20`. Early-out 0 if `lbu 0x21($s0)` (`actor+0x135`) is zero or `lbu 0x20($s0)` (`actor+0x134`) is zero. Early-out 0 if any of `lhu 0x1C` / `0x1E` / `0x1A` (`actor+0x130` / `+0x132` / `+0x12E`) is `0xFFFF`. Then `jal findActiveNpcInSlotChain` (`0x8003FC28`) on `lhu 0x1C`; if the result is not `0xFFFF`, `jal getNpcContextByIndex` (`0x8004013C`) and if `*(u16*)(ctx+0x14) & 0x10` is set (or the slot was `0xFFFF`), same reap path as the LOS sisters (`unregisterAndFreeNpcSlot`, store `0xFFFF` / 0) and return 0. Else `getNpcContextField8` (`0x8004015C`) on `lhu actor+0x198` and on the resolved slot; scale `$a2` by `0x800A89B0` and `cosf` that into the cone threshold; scale `$a1` by `0x800A89B4` and square it as range; delta = target pos − actor pos into `sp+0x10/+0x14/+0x18`; fail if `dx^2+dz^2 > range^2`. Else `vec3Dot` of actor facing (`ctx+0xC`) with the delta, two `vec3Length`s, cosine `dot/(lenA*lenB)`: if `dx^2+dz^2 < MEM[0x800A89B8]` return 1 when cosine ≥ 0, else return 1 when cosine ≥ the `cosf` threshold. Unlike the sisters, range/cone come from `$a1`/`$a2`, not actor `+0x118`/`+0x114` |
+| Callers | 5 generated `jal 0x800F0BA4` sites, all already `evaluateTargetTrackingVisibility(rdram, ctx)`: `npcShuttleUpdate` (`0x800D419C`), `npcTankDroidUpdate` (`0x800D6F60`), two inside `transformCraftAnchorsAndApplySubFx` (`0x800E0A3C`, `0x800E0AC0`), `tickCraftSplineOrientationDual` (`0x800E1588`). No `LOOKUP_FUNC(0x800F0BA4)` |
+| TOML | Was `{ name = "func_800F0BA4", vram = 0x800F0BA4, size = 0x220 }` — stale leftover. Size already matched `0x800F0DC4 - 0x800F0BA4`. Renamed to `evaluateTargetTrackingVisibility` |
+| Overlay section 4 | `{ .func = evaluateTargetTrackingVisibility, .offset = 0x0004BA74, .rom_size = 0x00000220 }` under `section_4_ovl_mission_funcs` (`0x800F0BA4 - 0x800A5130 = 0x4BA74`; previous `0x4B878 + 0x1FC = 0x4BA74`; `0x4BA74 + 0x220 = 0x4BC94` matches next `tickObjectAnimSubstruct`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800F0BA4`. No leftover `func_800F0BA4` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x58` / `jr $ra` / `addiu $sp, $sp, 0x58` at
+`0x800F0BA4` / `0x800F0DBC` / `0x800F0DC0`), previous
+(`computeActorAnchorDeltaAfterLOS` / `0x800F09A8`) and next
+(`tickObjectAnimSubstruct` / `0x800F0DC4`) boundaries, overlay span,
+and size already agreed on `evaluateTargetTrackingVisibility` / `0x220`.
+TOML still carried leftover `func_800F0BA4`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800F0DC4`; first insn is
+`addiu $sp, $sp, -0x58` and last is `jr $ra` / `addiu $sp, $sp, 0x58`
+at `0x800F0DBC` / `0x800F0DC0`; body is the LOS-sister range/cone
+test with `$a1`/`$a2` thresholds plus `cosf`, not an unnameable
+span). No invented name. No build or runtime run required.
+
+Next census: leftover `func_800F0DC4` at `0x800F0DC4` (size `0x1D0`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `tickObjectAnimSubstruct`; TOML still leftover
+`func_800F0DC4`. First insn `addiu $sp, $sp, -0x20`; last live
+`jr $ra` / `addiu $sp, $sp, 0x20` at `0x800F0F8C` / `0x800F0F90`.
+Next leftover is `func_800F0F94` (`0x800F0F94`, `0x204`;
+companion/generated `resolveNpcAttachmentPos`). Last-15 titles after
+s1862 still include s1856's M4 revisit, so the mandatory REVISIT
+gate does not fire.

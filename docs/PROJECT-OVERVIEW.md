@@ -3141,17 +3141,18 @@ collision.
 | s1859 | Synchronized `isPendingChildNpcActive` (`0x800F06BC`, `0xF0`). Gate `*(npc+0x135)` / `*(npc+0x134)` and three `0xFFFF` slot halfwords; `findActiveNpcInSlotChain` + `getNpcContextByIndex` returns 1 when child flag `+0x14` bit `0x10` is clear, else reaps via `unregisterAndFreeNpcSlot`. 26 generated `jal 0x800F06BC` sites (2 `LOOKUP_FUNC` in main `.text` + 24 direct overlay) already dispatch the human name. TOML was stale `func_800F06BC`; companion, generated headers/body, and section-4 already used the human name. |
 | s1860 | Synchronized `validateActorTargetLOS` (`0x800F07AC`, `0x1FC`). Same child-NPC gates as `isPendingChildNpcActive`, then `getNpcContextField8` on actor `+0x198` and the resolved slot, range-check vs `(actor+0x120)^2`, cosine cone via `vec3Dot`/`vec3Length` vs `actor+0x11C`. 16 generated `jal 0x800F07AC` sites (1 `LOOKUP_FUNC` in `attachedAudioVisualEmitterNpcHandler` + 15 direct Actor-family updates) already dispatch the human name. TOML was stale `func_800F07AC`; companion, generated headers/body, and section-4 already used the human name. |
 | s1861 | Synchronized `computeActorAnchorDeltaAfterLOS` (`0x800F09A8`, `0x1FC`). Sister of `validateActorTargetLOS` with the same child-NPC gates and reap path, then `getNpcContextField8` on actor `+0x198` and the resolved slot; delta = target pos − actor pos into `sp+0x10`; range-check vs `(actor+0x118)^2`; cosine cone via `vec3Dot`/`vec3Length` vs `actor+0x114`. 13 generated `jal 0x800F09A8` sites (1 `LOOKUP_FUNC` in `aimOrientNpcTowardTarget` + 12 direct orientation/aim/spline helpers) already dispatch the human name. Companion comment overstates (one halfword at `+0x130`; "same `npc*Update` after LOS") — body checks three halfwords and the callers are the orientation family. TOML was stale `func_800F09A8`; companion, generated headers/body, and section-4 already used the human name. |
+| s1862 | Synchronized `evaluateTargetTrackingVisibility` (`0x800F0BA4`, `0x220`). Same child-NPC gates and reap path as the LOS sisters, then `getNpcContextField8` on actor `+0x198` and the resolved slot; delta = target pos − actor pos; range vs `(a1 * 0x800A89B4)^2` and cone vs `cosf(a2 * 0x800A89B0)` (close-enough shortcut at `0x800A89B8` returns 1 when cosine ≥ 0). 5 generated `jal 0x800F0BA4` sites (`npcShuttleUpdate`, `npcTankDroidUpdate`, two in `transformCraftAnchorsAndApplySubFx`, `tickCraftSplineOrientationDual`) already dispatch the human name. TOML was stale `func_800F0BA4`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1861 is leftover `func_800F0BA4`
-(`0x800F0BA4`, size `0x220`). Neighbor peek: companion
+The sweep cursor after s1862 is leftover `func_800F0DC4`
+(`0x800F0DC4`, size `0x1D0`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already
-`evaluateTargetTrackingVisibility`; TOML still leftover `func_800F0BA4`. First
-insn `addiu $sp, $sp, -0x58`; last live `jr $ra` / `addiu $sp, $sp, 0x58`
-at `0x800F0DBC` / `0x800F0DC0`. Next leftover is `func_800F0DC4`
-(`0x800F0DC4`, `0x1D0`; companion/generated `tickObjectAnimSubstruct`;
+`tickObjectAnimSubstruct`; TOML still leftover `func_800F0DC4`. First
+insn `addiu $sp, $sp, -0x20`; last live `jr $ra` / `addiu $sp, $sp, 0x20`
+at `0x800F0F8C` / `0x800F0F90`. Next leftover is `func_800F0F94`
+(`0x800F0F94`, `0x204`; companion/generated `resolveNpcAttachmentPos`;
 TOML still leftover). Mandatory revisits
 in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760,
-s1776, s1792, s1808, s1824, s1840, s1856. After s1861 the last-15
+s1776, s1792, s1808, s1824, s1840, s1856. After s1862 the last-15
 titles still include s1856's M4 revisit, so the next iteration
 resumes the leftover sweep.
 
