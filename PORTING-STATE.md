@@ -83001,3 +83001,87 @@ discriminator. Sweep resume after that revisit is leftover
 `0x800E71D0` (size `0x1C0`): TOML, generated headers/body, overlay INL,
 and `mission_overlay.txt` still say `func_800E71D0`; `main_overlay.txt`
 already has the human name.
+
+## Session 1792 (2026-08-16) — selected H3 unwatched submitGfx callers on the attract 1024
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1791 were s1777–s1791, all sweep-scoped
+(`confirmed` / `synchronized`). Step 0 `wc -c` was 7012; not a
+maintenance iteration. No new soak-queue verdicts past the already-folded
+s1029-and-earlier tail.
+
+s1776 selected H1-submitGfx: leave adds `submitGfxFrame` +105/+103 on
+the attract A/Start title-like 1024 (`0x00790400`/`800` at 126.3–126.4 s).
+The extra presenter's caller was still unnamed. New angle: watch the
+seven generated `submitGfxFrame` callers s1776 did not arm, plus hangar /
+`loadOverlay` / ship-select / `submitGfxFrame` as controls.
+
+Competing hypotheses: H1 one unwatched overlay screen loop
+(`tickCraftSelectScreen` `0x800AF3C0` / `menuControllerInput`
+`0x800B47D0` / `runMenuRandomBackdropScreen` `0x800BF830` /
+`menuSubtype02Handler` `0x800C30C8` / `runResultsTextScreenLoop`
+`0x800C5EF8` / `runModelViewerLoop` `0x800C9BF0`) rises ~+105 and
+matches `submitGfxFrame`; H2 main-text `runIdleFramesAndLoadSaveData`
+`0x8006D900` is the extra presenter; H3 no unwatched caller rises
+while `submitGfxFrame` still +105 (indirect / already-classified
+caller, or a PC this set missed); H4 two or more unwatched callers
+rise and their deltas sum to ~+105.
+
+Discriminator: three concurrent Rice arms cloned from
+`scratch/agent/s1776_maintext_pcs/run_pc.sh` (`--secs 133`,
+whole-RDRAM 10k, PIF/`[pad]`, `--vi-trace`, `--vi-poll`) with the
+seven unwatched entries plus hangar frame, `loadOverlay` entry,
+`0x800C131C`, and `submitGfxFrame`. Do not re-arm the s1744
+six-entry, s1760 jump-table, or the rest of s1776's 11-PC set.
+A and Start are the two leave sources. Artifacts:
+`scratch/agent/s1792_submitgfx_callers/summary.txt` and per-arm
+`run.log`.
+
+All three arms: rc=0, whole-RDRAM 10178–10189 with the 10k positive
+control, 11/11 PCs armed, B pad `0x40000000` ×3, hangar then B-route
+then `640→512` attract at 117.6–117.7 s, ~133.7–133.8 s emulated /
+134.4 s wall. Leave pads at 120.3–120.4 / 124.4 delivered
+A=`0x80000000` and Start=`0x10000000`. Debugger `[vi]` WIDTH matches
+s1714/s1744/s1760/s1776: hold stays attract 512; A/Start `512→1024`
+at 126.4 s origin `0x00790800`. Same-run PC-watch controls: hangar
+frame 59/59/59; `0x800C131C` is 259 hold / 79–81 leave (nonzero).
+Extra `loadOverlay` 8 vs hold 6, reproducing s1744/s1760/s1776.
+
+Lifetime / leave-hold delta:
+
+| PC | hold | a | start | delta a/start |
+|---|---:|---:|---:|---|
+| idle-save `0x8006D900` | 1 | 1 | 1 | 0 / 0 |
+| craft-select `0x800AF3C0` | 1028 | 1029 | 1026 | +1 / −2 |
+| menu-input `0x800B47D0` | 232 | 53 | 55 | −179 / −177 |
+| random-backdrop `0x800BF830` | 0 | 0 | 0 | 0 / 0 |
+| subtype-02 `0x800C30C8` | 0 | 0 | 0 | 0 / 0 |
+| results-text `0x800C5EF8` | 178 | 79 | 81 | −99 / −97 |
+| model-viewer `0x800C9BF0` | 0 | 0 | 0 | 0 / 0 |
+| hangar frame `0x800AAD9C` | 59 | 59 | 59 | 0 / 0 |
+| `loadOverlay` `0x80000B20` | 6 | 8 | 8 | +2 / +2 |
+| ship-select `0x800C131C` | 259 | 79 | 81 | −180 / −178 |
+| `submitGfxFrame` `0x8000C07C` | 4328 | 4432 | 4430 | +104 / +102 |
+
+This selects H3-no-unwatched-rise: both leave sources still add ~103
+`submitGfxFrame` calls (s1776 H1 reproduced; not VI-count noise —
+hold 8023 VI, leave 8025–8029), and no unwatched function entry
+rises by more than the +1 craft-select noise already seen on hangar
+in s1776. This refutes H1 (no overlay caller +~105), H2 (idle-save
+stays 1), and H4 (no two unwatched callers rise). Menu-input −179
+and results-text −99 are the same stop-tick family as ship-select
+−180; random-backdrop / subtype-02 / model-viewer stay 0;
+craft-select stays high (~1028) and is not the extra presenter.
+
+The extra +104 is therefore not an entry of any of the 12 generated
+callers now watched (five already classified in s1744/s1760/s1776,
+seven in this set). Idle-save staying at 1 also cannot see intra-
+function jals of a long-running body, which is why the next revisit
+must watch jal-sites / `$ra`, not another entry-PC set. Do not
+repeat this 11-PC unwatched-caller recipe.
+
+Next work resumes the generated-symbol sweep at leftover
+`func_800E71D0` / companion `transformCraftAnchorsApplySubFx3` at
+`0x800E71D0` (size `0x1C0`): TOML, generated headers/body, overlay INL,
+and `mission_overlay.txt` still say `func_800E71D0`; `main_overlay.txt`
+already has the human name.

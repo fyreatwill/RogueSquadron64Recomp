@@ -1,0 +1,45 @@
+s1792 three-arm Rice: unwatched submitGfxFrame callers on title-like 1024
+HYPOTHESIS-ID: external-retail-entry-boundary
+secs=133  B_ROUTE=eleven-start+55/58/63:b  candidates at 119/123 only
+controls: whole-RDRAM 10k, B pad 0x40000000, hangar then B 640, 640->512 attract before 119s, hangarFrm>=40, ship-select PC nonzero, 11 PCs armed
+H1 one overlay caller +~105 matching submitGfx; H2 idleSave +~105; H3 all seven unwatched flat/down with submitGfx still +105; H4 two+ unwatched rise and deltas sum ~+105
+
+WIDTH (debugger [vi] only)
+hold    rc=0 rdram=10178 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=0 armed=11/11 ship=259 hangarFrm=59 left1024=0 ok=1
+  all:  0.4 0->320 0x00000280; 2.2 320->640 0x0066a500; 17.3 640->1024 0x00790400 title-like; 38.4 1024->512 0x006ab800 hangar; 65.4 512->1024 0x00790800 title-like; 96.5 1024->640 0x00696100 B-frontend; 117.7 640->512 0x00690800 attract
+  post119: (no WIDTH)
+  post126: (no WIDTH)
+  last: 117.7 640->512 0x00690800 attract
+  pads t>=118: 120.2=0x80010000
+  [oracle] done: 16269 hit(s) in 134.4s wall, 8023 VI (~133.7s emulated)
+a       rc=0 rdram=10189 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=11/11 ship=79 hangarFrm=59 left1024=1 ok=1
+  all:  0.4 0->320 0x00000280; 2.2 320->640 0x0066a500; 17.4 640->1024 0x00790800 title-like; 38.4 1024->512 0x006ab800 hangar; 65.4 512->1024 0x00790400 title-like; 96.5 1024->640 0x00696600 B-frontend; 117.7 640->512 0x00690400 attract; 126.4 512->1024 0x00790800 title-like
+  post119: 126.4 512->1024 0x00790800 title-like
+  post126: 126.4 512->1024 0x00790800 title-like
+  last: 126.4 512->1024 0x00790800 title-like
+  pads t>=118: 120.2=0x80010000, 120.4=0x80000000, 124.4=0x80000000
+  [oracle] done: 15929 hit(s) in 134.4s wall, 8025 VI (~133.8s emulated)
+start   rc=0 rdram=10189 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=11/11 ship=81 hangarFrm=59 left1024=1 ok=1
+  all:  0.5 0->320 0x00000280; 2.2 320->640 0x0066a500; 17.4 640->1024 0x00790400 title-like; 38.4 1024->512 0x006ab800 hangar; 65.4 512->1024 0x00790400 title-like; 96.4 1024->640 0x00696600 B-frontend; 117.6 640->512 0x00690800 attract; 126.4 512->1024 0x00790800 title-like
+  post119: 126.4 512->1024 0x00790800 title-like
+  post126: 126.4 512->1024 0x00790800 title-like
+  last: 126.4 512->1024 0x00790800 title-like
+  pads t>=118: 120.2=0x80010000, 120.4=0x10000000, 124.4=0x10000000
+  [oracle] done: 15930 hit(s) in 134.4s wall, 8029 VI (~133.8s emulated)
+
+PC watches (lifetime)
+arm       idleSave    craftSel      menuIn     rndBack       sub02     results     modelVw   hangarFrm     loadOvl     c8_ship   submitGfx
+hold             1        1028         232           0           0         178           0          59           6         259        4328
+a                1        1029          53           0           0          79           0          59           8          79        4432
+start            1        1026          55           0           0          81           0          59           8          81        4430
+
+Delta vs hold (leave-hold; prefix-identical through 119s)
+arm       idleSave    craftSel      menuIn     rndBack       sub02     results     modelVw   hangarFrm     loadOvl     c8_ship   submitGfx
+hold             0           0           0           0           0           0           0           0           0           0           0
+a                0           1        -179           0           0         -99           0           0           2        -180         104
+start            0          -2        -177           0           0         -97           0           0           2        -178         102
+
+Classification
+  hold    H3-hold
+  a       submitGfx+104+UNSPLIT+ship-drop
+  start   submitGfx+102+H3-no-unwatched-rise+ship-drop

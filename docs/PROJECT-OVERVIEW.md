@@ -232,7 +232,8 @@ case-6 `runModelViewerLoop`; pre-exit B is a distinct frontend route that
 times out to attract 512, whose A/Start/C-up/L/Z leave to a title-like 1024
 that is not a new cinematic, menu-SM, mission-frame, or `menuOverlayInit`
 jump-table-case session (s1744/s1760 H3-stop-tick) but does add
-`submitGfxFrame` +105/+103 vs hold (s1776 H1; Rice still dies ~135 s). Audio de-stubbing is closed. These
+`submitGfxFrame` +104/+102 vs hold (s1776 H1; s1792 H3 no unwatched
+caller entry; Rice still dies ~135 s). Audio de-stubbing is closed. These
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
@@ -3069,15 +3070,16 @@ collision.
 | s1789 | Synchronized `npcWaterCraftHandleDestruction` (`0x800E5B38`, `0x614`). Two-phase water-craft destroy on `lbu +0x99` (0 / 1; else epilogue): each live path `transformMeshPartIntoWorld`, `spawnNpcType0xAFromTemplate`, `spawnByteAnimDebrisDefault`, `play3DSoundEvent` `a0=0` stack `0x21`/`0x7D`/`0x50` (`a3=24.0f`), then `rand` / `composeRandomRotationMatrix` / `scaleVec3ByRandomRange` / `spawnDebris1Npc` / `spawnOrientedNpc`, plus a shared `spawnWaterSprayDebrisAndBurst`. Sole generated `jal 0x800E5B38` inside `npcWaterCraftUpdate` already dispatches the human name. TOML was stale `func_800E5B38`; generated headers/body and section-4 already used the human name. |
 | s1790 | Confirmed `npcWaterCraftUpdate` (`0x800E614C`, `0x107C`). 9-way `jr` table on `(a1-1)<9` at `0x800A83D0`. Case 2 live tick calls `tickStructureWithDestructionAndChildren`, `tickCraftSplineOrientationVariant` ×2, `transformCraftAnchorsApplySubFx2` ×2, and the exclusive `npcWaterCraftHandleDestruction`. 82 `jal`s / 60 unique targets. No generated `jal 0x800E614C` — table-dispatched `npcXxxUpdate` sibling. Companion, generated headers/body, TOML, and section-4 already used the human name. |
 | s1791 | Confirmed leftover `fake_func_800E71C8` (`0x800E71C8`, `0x8`). Two-instruction `lhu $v0, 0x14($v1)` / `lw $a0, 0x58($fp)` orphan between `npcWaterCraftUpdate`'s epilogue and leftover `func_800E71D0` (whose prologue is `addiu $sp, $sp, -0xA0`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment. No leftover `func_800E71C8`; TOML, generated headers/body, and section-4 already use the leftover name. |
+| s1792 | Mandatory REVISIT. Three-arm Rice watch of the seven unwatched `submitGfxFrame` callers on the attract A/Start title-like 1024. All arms passed controls. Leave still adds `submitGfxFrame` +104/+102 (s1776 H1 reproduced). No unwatched entry rises: `runIdleFramesAndLoadSaveData` stays 1; `tickCraftSelectScreen` stays ~1028; `menuControllerInput` −179/−177 and `runResultsTextScreenLoop` −99/−97 drop with ship-select; `runMenuRandomBackdropScreen`/`menuSubtype02Handler`/`runModelViewerLoop` stay 0. Hangar frame flat 59. Extra `loadOverlay` +2 reproduced. H3-no-unwatched-rise selected. Next revisit needs jal-site / `$ra` watches, not another entry-PC set. |
 
-The sweep cursor after s1791 is leftover `func_800E71D0` /
+The sweep cursor after s1792 is leftover `func_800E71D0` /
 `0x800E71D0` (size `0x1C0`). Neighbor peek: TOML, generated
 headers/body, overlay INL, and `mission_overlay.txt` still say
 `func_800E71D0`; companion `main_overlay.txt` already names it
 `transformCraftAnchorsApplySubFx3`. Mandatory revisits in this
-window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776.
-After s1791 the last-15 titles are s1777–s1791, all sweep, so the
-next iteration is the `submitGfxFrame`-caller REVISIT.
+window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776,
+s1792. After s1792 the last-15 titles include that revisit, so the
+next iteration resumes the leftover-`func_800E71D0` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
@@ -3108,15 +3110,18 @@ H3-stop-tick). The complete `menuOverlayInit` jump table also adds no
 new case (s1760): case 9 stays 1, cases 3/6/10 stay 0, cases 1/2/4-5-7/8
 and the dispatcher drop. Extra menu dest +1 is reproduced. The 1024 is
 not a new cinematic, menu-SM, mission-frame, or jump-table-case session.
-Leave does add `submitGfxFrame` +105/+103 vs hold without a new
+Leave does add `submitGfxFrame` +104/+102 vs hold without a new
 `mainGameLoop` or `applyLevelScreenAndCameraSettings` entry; `emitFrameRdpInitDl`
-drops with the ship-select ticks (s1776). Rice dies around 135 s; the only observed `1024→640` of this pair
+drops with the ship-select ticks (s1776). The extra +104 is not an
+entry of the seven unwatched callers either (s1792 H3): idle-save stays
+1, craft-select stays ~1028, menu-input and results-text drop, and
+random-backdrop / subtype-02 / model-viewer stay 0. Rice dies around 135 s; the only observed `1024→640` of this pair
 is s1666's single-source Z continuation at 159.4 s origin `0x00696100`
 (B-frontend). s1698's Z-stays-512 through 125.8 s was a flush cutoff;
 s1666's 128.3 s Z leave was the same leave after a later 126.4 s press.
 `0x80000B70` is `loadOverlay+0x50` (`0x80000B20`, size `0x124`).
-Still-open questions (which `submitGfxFrame` caller produces the extra
-+105; M4 DMEM→RDRAM other than `0xD60`) live in `CURRENT-TRUTH.md`.
+Still-open questions (which `submitGfxFrame` jal-site / `$ra` produces
+the extra +104; M4 DMEM→RDRAM other than `0xD60`) live in `CURRENT-TRUTH.md`.
 
 **Superseded claims compacted out of CURRENT-TRUTH in s1728.** Stale/unseen
 writer (physical-byte samples saw nonzero `0x8011A8A0`). `setViModeType`
