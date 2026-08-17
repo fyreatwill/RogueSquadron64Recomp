@@ -83298,3 +83298,43 @@ Neighbor peek already shows TOML, generated headers/body, overlay INL,
 and `mission_overlay.txt` using the leftover name. Last-15 titles after
 s1797 still include s1792's revisit, so the mandatory REVISIT gate does
 not fire.
+
+## Session 1798 (2026-08-16) — confirmed the leftover fake_func_800E8A34 symbol
+
+Exact generated-symbol census for leftover `0x800E8A34` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7638; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800E8A34 = 0x800E8A34` leftover splat (no deleted-duplicate comment). Previous named kernel `applyCraftAnimDetailParamsB = 0x800E8948`. Next leftover `func_800E8A40` deleted s432 as a duplicate of `runDestructionPhaseSequence = 0x800E8A40`. No leftover `func_800E8A34` splat, no `D_800E8A34`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void fake_func_800E8A34` at VRAM `0x800E8A34`. Three-instruction body: `lw $a0, 0x18($fp)` then `addu $a2, $a0, $zero` then `sll $a1, $a2, 1` (no `jr $ra`). Previous `applyCraftAnimDetailParamsB` last insn is the delay-slot `addiu $sp, $sp, 0x38` at `0x800E8A30`; next is `runDestructionPhaseSequence` at `0x800E8A40` (`addiu $sp, $sp, -0xB8` — a prologue, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800E8A34`. No generated `jal 0x800E8A34` site |
+| Body semantics | 12-byte orphan `lw $a0, 0x18($fp)` / `addu $a2, $a0, $zero` / `sll $a1, $a2, 1` fragment sitting between the short anim-detail sibling's `jr $ra` epilogue and the real next-kernel prologue. Same leftover-splat family as `fake_func_800DFB8C` / `fake_func_800E406C` / `fake_func_800E447C` / `fake_func_800E71C8` (unreachable words immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800E8A34", vram = 0x800E8A34, size = 0xC }` — already the leftover name; size matches `0x800E8A40 - 0x800E8A34` |
+| Overlay section 4 | `{ .func = fake_func_800E8A34, .offset = 0x00043904, .rom_size = 0x0000000C }` under `section_4_ovl_mission_funcs` (`0x800E8A34 - 0x800A5130 = 0x43904`; previous `0x43818 + 0xEC = 0x43904`; `0x43904 + 0xC = 0x43910` matches next `runDestructionPhaseSequence`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E8A34`. No leftover `func_800E8A34` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated three-instruction
+`lw`/`addu`/`sll` body, previous (`applyCraftAnimDetailParamsB` /
+`0x800E8948`) and next (`runDestructionPhaseSequence` / `0x800E8A40`)
+boundaries, TOML name and size, and section-4 overlay span already agree.
+No TOML or generated-name change. This refutes H2 (no stale
+`func_800E8A34` placeholder), H3 (no overlay collision, leftover splat
+at this address, or size/boundary disagreement; size is `0xC` as
+expected; the leftover is the three-word gap, not a split prologue),
+and H4 (companion, generated body, TOML, and section-4 row are all
+present). No build or runtime run required.
+
+Next census: leftover `func_800E8A40` / companion
+`runDestructionPhaseSequence` at `0x800E8A40` (size `0x49C`). Neighbor
+peek: TOML still `func_800E8A40`; generated headers/body, overlay INL,
+and `mission_overlay.txt` already use the human name (companion leftover
+deleted s432 as a duplicate). Last-15 titles after s1798 still include
+s1792's revisit, so the mandatory REVISIT gate does not fire.
