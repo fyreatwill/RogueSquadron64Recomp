@@ -231,11 +231,12 @@ available hangar-entry recipe (s707, s1496). After hangar, Start/A leave via
 case-6 `runModelViewerLoop`; pre-exit B is a distinct frontend route that
 times out to attract 512, whose A/Start/C-up/L/Z leave to a title-like 1024
 that is not a new cinematic, menu-SM, mission-frame, or `menuOverlayInit`
-jump-table-case session (s1744/s1760 H3-stop-tick; Rice still dies ~135 s). Audio de-stubbing is closed. These
+jump-table-case session (s1744/s1760 H3-stop-tick) but does add
+`submitGfxFrame` +105/+103 vs hold (s1776 H1; Rice still dies ~135 s). Audio de-stubbing is closed. These
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
-are synchronized through `buildDebrisTransformStack` at `0x800E1F5C` (s1772).
+are synchronized through `npcTrainCarUpdate` at `0x800E2818` (s1775).
 See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
 backlog, and `PORTING-STATE.md` for evidence.
 
@@ -2982,7 +2983,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1775)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1776)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3052,13 +3053,14 @@ collision.
 | s1773 | Synchronized `slerpFrameTowardTargetAxis` (`0x800E23FC`, `0x278`). Incremental frame slerp toward a world axis: copies const vec3 at `0x800A805C` onto the stack, `vec3Dot` against `a0+0xC`, `constMinusSinfApprox`, then if the abs-scaled result exceeds the `0x800A806C` threshold, `vec3Cross`/`vec3Length` + `quatFromAxisAngle` (clamped angle) + `quatFromCardinalAxis` (`lbu +0xC4`, `lw +0xBC`) + `quatMultiply`, rotates `+0xC` and `+0x18` via `rotateVec3ByQuat`, `orthonormalizeFrame`, then `wrapAngleToCyclicRange` of the scaled `a1` increment into `+0x4/+0x8/+0xB8/+0x24`. Returns 1 if the `+0x4` clamp fired, else 0. Generated caller `npcTrainCarUpdate` `jal 0x800E23FC` at `0x800E34EC`. TOML was stale `func_800E23FC`; generated headers/body and section-4 already used the human name. |
 | s1774 | Synchronized `tickWalkerCraftWithLimbsAndDestruction` (`0x800E2674`, `0x1A4`). One `initNpcContextFromTransform` then three `spawnRandomBurstNpcVariantWrapper` / `assignNpcTargetAndPosition` bursts. Sole generated caller `npcTrainCarUpdate` `jal 0x800E2674` at `0x800E3260` (`a0` = npc). TOML was stale `func_800E2674`; generated headers/body and section-4 already used the human name. |
 | s1775 | Confirmed `npcTrainCarUpdate` (`0x800E2818`, `0x181C`). 9-way jump table at `0x800A8128` on `(a1-1)` for `a1 ∈ 1..9`. Setup (inner type table `0x800A8150` writes `+0xB2`, `loadAssetIntoNewSlot`) / teardown / live tick (`tickTrainCarStateMachine` twice, `tickCraftSplineOrientationDual`, `transformCraftAnchorsAndApplySubFx`, `tickWalkerCraftWithLimbsAndDestruction`, `buildDebrisTransformStack`) / 3D-audio / damage (`playSpeechClip`, `dealDamageToNpc`) / slot-action. Table-dispatched; no leftover `func_800E2818`. |
+| s1776 | Mandatory REVISIT. Three-arm Rice watch of main-text screen/frame handlers on the attract A/Start title-like 1024. All arms passed controls. Leave adds `submitGfxFrame` +105/+103 (H1); `runVideoFrameTick`/`swapBufferWithViMode` +1 matches the extra WIDTH; `applyPendingViChanges` +2/+3 tracks VI count. `mainGameLoop` and `applyLevelScreenAndCameraSettings` stay 1 (H2 closed). `emitFrameRdpInitDl` drops −180/−176 with `0x800C131C` (H4 closed; H3-stop-tick still holds for overlay-aliased ticks). Extra `loadOverlay` +2 / menu dest +1 reproduced. |
 
-The sweep cursor after s1775 is `playDualTextureAttachmentCueMode0` /
+The sweep cursor after s1776 is `playDualTextureAttachmentCueMode0` /
 `0x800E4034` (size `0x1C`). Neighbor peek: TOML still `func_800E4034`
 while generated/overlay already use the human name. Mandatory revisits
-in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760. After
-s1775 the last-15 titles are s1761–s1775, all sweep-scoped, so the
-next iteration is a mandatory REVISIT.
+in this window: s1650, s1666, s1682, s1698, s1714, s1744, s1760, s1776.
+After s1776 the last-15 titles include the s1776 revisit, so the next
+iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
@@ -3088,13 +3090,16 @@ C-down, C-left, C-right, R, and valid D-pad stay attract 512 through
 H3-stop-tick). The complete `menuOverlayInit` jump table also adds no
 new case (s1760): case 9 stays 1, cases 3/6/10 stay 0, cases 1/2/4-5-7/8
 and the dispatcher drop. Extra menu dest +1 is reproduced. The 1024 is
-not a new cinematic, menu-SM, mission-frame, or jump-table-case session. Rice dies around 135 s; the only observed `1024→640` of this pair
+not a new cinematic, menu-SM, mission-frame, or jump-table-case session.
+Leave does add `submitGfxFrame` +105/+103 vs hold without a new
+`mainGameLoop` or `applyLevelScreenAndCameraSettings` entry; `emitFrameRdpInitDl`
+drops with the ship-select ticks (s1776). Rice dies around 135 s; the only observed `1024→640` of this pair
 is s1666's single-source Z continuation at 159.4 s origin `0x00696100`
 (B-frontend). s1698's Z-stays-512 through 125.8 s was a flush cutoff;
 s1666's 128.3 s Z leave was the same leave after a later 126.4 s press.
 `0x80000B70` is `loadOverlay+0x50` (`0x80000B20`, size `0x124`).
-Still-open questions (which function runs the 1024 — not the 11-way
-table; M4 DMEM→RDRAM other than `0xD60`) live in `CURRENT-TRUTH.md`.
+Still-open questions (which `submitGfxFrame` caller produces the extra
++105; M4 DMEM→RDRAM other than `0xD60`) live in `CURRENT-TRUTH.md`.
 
 **Superseded claims compacted out of CURRENT-TRUTH in s1728.** Stale/unseen
 writer (physical-byte samples saw nonzero `0x8011A8A0`). `setViModeType`

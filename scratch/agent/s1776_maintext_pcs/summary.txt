@@ -1,0 +1,45 @@
+s1776 three-arm Rice: main-text handlers on title-like 1024
+HYPOTHESIS-ID: external-retail-entry-boundary
+secs=133  B_ROUTE=eleven-start+55/58/63:b  candidates at 119/123 only
+controls: whole-RDRAM 10k, B pad 0x40000000, hangar then B 640, 640->512 attract before 119s, hangarFrm>=40, ship-select PC nonzero, 11 PCs armed
+H1 extra submitGfx/vidTick/swapVi/pendVi; H2 extra mainLoop/lvlScreen; H3 all new main-text PCs flat or down; H4 extra rdpInit without H1/H2
+
+WIDTH (debugger [vi] only)
+hold    rc=0 rdram=10178 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=0 armed=11/11 ship=259 hangarFrm=60 left1024=0 ok=1
+  all:  0.5 0->320 0x00000280; 2.1 320->640 0x0066a500; 17.3 640->1024 0x00790400 title-like; 38.4 1024->512 0x006ab800 hangar; 65.3 512->1024 0x00790800 title-like; 96.4 1024->640 0x00696100 B-frontend; 117.6 640->512 0x00690800 attract
+  post119: (no WIDTH)
+  post126: (no WIDTH)
+  last: 117.6 640->512 0x00690800 attract
+  pads t>=118: 120.1=0x80010000
+  [oracle] done: 24446 hit(s) in 134.3s wall, 8027 VI (~133.8s emulated)
+a       rc=0 rdram=10188 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=11/11 ship=79 hangarFrm=61 left1024=1 ok=1
+  all:  0.5 0->320 0x00000280; 2.1 320->640 0x0066a500; 17.3 640->1024 0x00790400 title-like; 38.4 1024->512 0x006ab800 hangar; 65.4 512->1024 0x00790800 title-like; 96.5 1024->640 0x00696100 B-frontend; 117.7 640->512 0x00690800 attract; 126.4 512->1024 0x00790800 title-like
+  post119: 126.4 512->1024 0x00790800 title-like
+  post126: 126.4 512->1024 0x00790800 title-like
+  last: 126.4 512->1024 0x00790800 title-like
+  pads t>=118: 120.2=0x80010000, 120.3=0x80000000, 124.4=0x80000000
+  [oracle] done: 24210 hit(s) in 134.4s wall, 8030 VI (~133.8s emulated)
+start   rc=0 rdram=10188 pos=1 Bpads=3 hangar=1 broute=1 arrived640=1 attract=1 late_expect=2 armed=11/11 ship=82 hangarFrm=60 left1024=1 ok=1
+  all:  0.5 0->320 0x00000280; 2.1 320->640 0x0066a500; 17.3 640->1024 0x00790400 title-like; 38.4 1024->512 0x006ab800 hangar; 65.3 512->1024 0x00790800 title-like; 96.4 1024->640 0x00696100 B-frontend; 117.6 640->512 0x00690400 attract; 126.4 512->1024 0x00790800 title-like
+  post119: 126.4 512->1024 0x00790800 title-like
+  post126: 126.4 512->1024 0x00790800 title-like
+  last: 126.4 512->1024 0x00790800 title-like
+  pads t>=118: 120.1=0x80010000, 120.3=0x10000000, 124.4=0x10000000
+  [oracle] done: 24213 hit(s) in 134.4s wall, 8029 VI (~133.8s emulated)
+
+PC watches (lifetime)
+arm      hangarFrm     loadOvl    menuDest     c8_ship    mainLoop   submitGfx     vidTick   lvlScreen      pendVi      swapVi     rdpInit
+hold            60           6           2         259           1        4325           9           1        8026           9        1570
+a               61           8           3          79           1        4430          10           1        8029          10        1390
+start           60           8           3          82           1        4428          10           1        8028          10        1394
+
+Delta vs hold (leave-hold; prefix-identical through 119s)
+arm      hangarFrm     loadOvl    menuDest     c8_ship    mainLoop   submitGfx     vidTick   lvlScreen      pendVi      swapVi     rdpInit
+hold             0           0           0           0           0           0           0           0           0           0           0
+a                1           2           1        -180           0         105           1           0           3           1        -180
+start            0           2           1        -177           0         103           1           0           2           1        -176
+
+Classification
+  hold    H3-hold
+  a       H1-submitGfx+H1-modechange+H3-stop-tick-rdp+pendVi-vi-coupled
+  start   H1-submitGfx+H1-modechange+H3-stop-tick-rdp+pendVi-vi-coupled

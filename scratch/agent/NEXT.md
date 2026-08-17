@@ -1,62 +1,55 @@
-# NEXT work unit (s1776)
+# NEXT work unit (s1777)
 
-HYPOTHESIS-ID: external-retail-entry-boundary
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Mandatory 15-title REVISIT. Last-15 after s1775 are s1761–s1775, all
-sweep-scoped (`confirmed` / `synchronized`). Do not continue the
-generated-symbol sweep this iteration.
-
-The 126.3 s attract A/Start title-like 1024 (`0x00790400`/`800`) is
-H3-stop-tick: not a new `cinematicLoopBody`, `runMenuContentStateMachine`,
-`runInMissionFrame` (s1744), or `menuOverlayInit` jump-table case
-(s1760). Extra menu dest +1 is reproduced. New angle: main-text
-screen/frame handlers that `mainGameLoop` uses outside those overlay
-tables.
+Resume the generated-symbol census at `playDualTextureAttachmentCueMode0`
+/ `func_800E4034` (`0x800E4034`, size `0x1C`). s1776 was the mandatory
+REVISIT (`selected H1 submitGfxFrame on the attract 1024`); last-15
+titles after s1776 include that revisit, so the all-sweep 15→REVISIT
+gate does not fire. Neighbor peek: TOML still `func_800E4034` while
+generated/overlay already use the human name.
 
 Competing hypotheses:
 
-- H1: leave adds a main-text presenter (`submitGfxFrame` `0x8000C07C`
-  and/or `runVideoFrameTick` `0x80001354` and/or
-  `swapBufferWithViMode` `0x8001BA9C` / `applyPendingViChanges`
-  `0x8001B7F0`) after 126.3 s.
-- H2: leave adds an extra `mainGameLoop` `0x8003DFA0` or
-  `applyLevelScreenAndCameraSettings` `0x8006B000` entry (new outer
-  iteration / screen-settings apply).
-- H3: no main-text handler increases; leave only stops the
-  overlay-aliased ticks (H3-stop-tick extends to main text).
-- H4: leave adds `emitFrameRdpInitDl` `0x80008D20` (new camera/viewport
-  bake for the 1024) without H1/H2.
+- H1: companion, generated body, TOML name/size, and overlay span already
+  agree on `playDualTextureAttachmentCueMode0` — confirm only.
+- H2: generated code still carries placeholder `func_800E4034` (or a
+  stale alias) and needs a TOML + fixup rename, or TOML is still
+  `func_800E4034` while generated/overlay already use the human name.
+  Neighbor peek from s1775 already saw the TOML placeholder — confirm
+  it on the live body before treating this as H2.
+- H3: overlay collision, a leftover splat, or size/boundary disagreement
+  with the companion listing.
+- H4: companion, generated body, TOML, or section-4 row is missing.
 
-Discriminator: three concurrent Rice arms copied from
-`scratch/agent/s1744_1024_overlay_pcs/run_pc.sh` (`--secs 133`,
-whole-RDRAM 10k, PIF/`[pad]`, `--vi-trace`, `--vi-poll`). Hangar
-frame, `loadOverlay` entry/menu dest, and `0x800C131C` stay as
-same-run controls (s1760: `0x800C131C` is 257 hold / 79 leave,
-nonzero). New PCs only — do not re-arm the s1744 six-entry set or
-the s1760 11-way table. A and Start are the two leave sources.
+Exact commands (read-only census; no game run):
 
 ```
-PCS="0x800AAD9C,0x80000B20,0x80000BA8,0x800C131C,0x8003DFA0,0x8000C07C,0x80001354,0x8006B000,0x8001B7F0,0x8001BA9C,0x80008D20"
-# hold:  $B_ROUTE
-# a:     $B_ROUTE,119:a,123:a
-# start: $B_ROUTE,119:start,123:start
-# copy the rest of s1744 run_pc.sh (core/rom/video/watches/vi/pif)
-# write artifacts under scratch/agent/s1776_maintext_pcs/
+# companion
+grep -n 'playDualTextureAttachmentCueMode0\|func_800E4034\|800E4034\|E4034' \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/*.txt
+# generated
+grep -n 'playDualTextureAttachmentCueMode0\|func_800E4034\|0x800E4034' \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_39.c
+# toml + overlay inl
+grep -n '800E4034\|playDualTextureAttachmentCueMode0\|func_800E4034' \
+  syms/rogue_squadron.syms.toml \
+  /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
 
 Expected splits:
 
-- H1: a presenter PC's leave count exceeds hold after the 126.3 s
-  WIDTH change; controls still fire (`0x800C131C` nonzero, whole-RDRAM
-  ≥10k, PIF B-pad, hangar frame ~60).
-- H2: `0x8003DFA0` or `0x8006B000` leave > hold; presenters do not
-  uniquely increase.
-- H3: every new main-text PC is flat or down; only the known
-  overlay-aliased ticks drop.
-- H4: `0x80008D20` leave > hold and H1/H2 presenters/`mainGameLoop`
-  do not.
+- H1: all four sources already say `playDualTextureAttachmentCueMode0`,
+  size `0x1C`, previous `npcTrainCarUpdate` / `0x800E2818`, no leftover
+  `func_800E4034` placeholder.
+- H2: generated still `func_800E4034`, or TOML still `func_800E4034`
+  while generated/overlay already use the human name — rename in TOML
+  and the fixup path.
+- H3: menu/cinematic occupant, a leftover splat at this address, or
+  size != `0x1C`.
+- H4: a required source is absent.
 
-Do not extend `--secs 133`. Do not repeat §35 classified routes.
-After this revisit, resume the sweep at
-`playDualTextureAttachmentCueMode0` / `func_800E4034` (`0x800E4034`,
-size `0x1C`).
+Do not reopen the attract-1024 six-entry, jump-table, or s1776
+main-text 11-PC recipes. Next retail-entry revisit (when last-15 are
+all sweep again) watches `submitGfxFrame` callers for the extra +105.

@@ -82322,3 +82322,84 @@ handlers, not the s1744 six-entry or s1760 jump-table recipes). Sweep
 cursor after the revisit: `playDualTextureAttachmentCueMode0` /
 `func_800E4034` at `0x800E4034` (size `0x1C`; TOML still
 `func_800E4034` while generated/overlay already use the human name).
+
+## Session 1776 (2026-08-16) — selected H1 submitGfxFrame on the attract 1024
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: external-retail-entry-boundary).
+Last-15 titles after s1775 were s1761–s1775, all sweep-scoped
+(`confirmed` / `synchronized`). Step 0 `wc -c` was 6798; not a
+maintenance iteration. No new soak-queue verdicts past the already-folded
+s1029-and-earlier tail.
+
+s1744/s1760 left the attract A/Start title-like 1024
+(`0x00790400`/`800` at 126.3–126.4 s) as H3-stop-tick: not a new
+`cinematicLoopBody`, `runMenuContentStateMachine`, `runInMissionFrame`,
+or `menuOverlayInit` jump-table case. Extra `loadOverlay` +2 / menu dest
++1 is reproduced. New angle: main-text screen/frame handlers that
+`mainGameLoop` uses outside those overlay tables.
+
+Competing hypotheses: H1 leave adds a presenter (`submitGfxFrame`
+`0x8000C07C` and/or `runVideoFrameTick` `0x80001354` and/or
+`swapBufferWithViMode` `0x8001BA9C` / `applyPendingViChanges`
+`0x8001B7F0`) after the 126.3 s WIDTH; H2 leave adds an extra
+`mainGameLoop` `0x8003DFA0` or `applyLevelScreenAndCameraSettings`
+`0x8006B000` entry; H3 every new main-text PC is flat or down (H3-stop-tick
+extends to main text); H4 leave adds `emitFrameRdpInitDl` `0x80008D20`
+without H1/H2.
+
+Discriminator: three concurrent Rice arms copied from
+`scratch/agent/s1744_1024_overlay_pcs/run_pc.sh` (`--secs 133`,
+whole-RDRAM 10k, PIF/`[pad]`, `--vi-trace`, `--vi-poll`) with hangar
+frame, `loadOverlay` entry/menu dest, `0x800C131C`, and the seven new
+main-text PCs only. Do not re-arm the s1744 six-entry set or the s1760
+11-way table. A and Start are the two leave sources. Artifacts:
+`scratch/agent/s1776_maintext_pcs/summary.txt` and per-arm `run.log`.
+
+All three arms: rc=0, whole-RDRAM 10178–10188 with the 10k positive
+control, 11/11 PCs armed, B pad `0x40000000` ×3, hangar then B-route
+then `640→512` attract at 117.6–117.7 s, ~133.8 s emulated / 134.3–134.4 s
+wall. Leave pads at 120.3/124.3–124.4 delivered A=`0x80000000` and
+Start=`0x10000000`. Debugger `[vi]` WIDTH matches s1714/s1744/s1760:
+hold stays attract 512; A/Start `512→1024` at 126.4 s origin
+`0x00790800`. Same-run PC-watch controls: hangar frame 60–61; `0x800C131C`
+is 259 hold / 79–82 leave (nonzero). Extra `loadOverlay` 8 vs hold 6 and
+menu dest 3 vs hold 2, reproducing s1744/s1760.
+
+Lifetime / leave-hold delta:
+
+| PC | hold | a | start | delta a/start |
+|---|---:|---:|---:|---|
+| hangar frame `0x800AAD9C` | 60 | 61 | 60 | +1 / 0 |
+| `loadOverlay` `0x80000B20` | 6 | 8 | 8 | +2 / +2 |
+| menu dest `0x80000BA8` | 2 | 3 | 3 | +1 / +1 |
+| ship-select `0x800C131C` | 259 | 79 | 82 | −180 / −177 |
+| `mainGameLoop` `0x8003DFA0` | 1 | 1 | 1 | 0 / 0 |
+| `submitGfxFrame` `0x8000C07C` | 4325 | 4430 | 4428 | +105 / +103 |
+| `runVideoFrameTick` `0x80001354` | 9 | 10 | 10 | +1 / +1 |
+| `applyLevelScreenAndCameraSettings` `0x8006B000` | 1 | 1 | 1 | 0 / 0 |
+| `applyPendingViChanges` `0x8001B7F0` | 8026 | 8029 | 8028 | +3 / +2 |
+| `swapBufferWithViMode` `0x8001BA9C` | 9 | 10 | 10 | +1 / +1 |
+| `emitFrameRdpInitDl` `0x80008D20` | 1570 | 1390 | 1394 | −180 / −176 |
+
+This selects H1-submitGfx: both leave sources add ~104 `submitGfxFrame`
+calls. That is not VI-count noise (hold 8027 VI, leave 8029–8030).
+`runVideoFrameTick` / `swapBufferWithViMode` +1 matches the extra WIDTH
+change itself (hold 9 transitions, leave 10). `applyPendingViChanges`
++2/+3 tracks the extra 2–3 VIs (8026 vs 8027 VI on hold), not a new
+presenter.
+
+This refutes H2: `mainGameLoop` and `applyLevelScreenAndCameraSettings`
+stay 1 on every arm. This refutes H4: `emitFrameRdpInitDl` drops
+−180/−176, the same magnitude as the `0x800C131C` tick drop, so rdpInit
+is on the overlay-aliased attract-tick path that leave stops. H3-stop-tick
+still holds for those overlay-aliased ticks and their rdpInit; it does
+not extend to every new main-text PC because `submitGfxFrame` increases.
+
+The 1024 is still not a classified screen (not hangar, not viewer, not
+a new overlay inner loop or jump-table case). It is a
+`submitGfxFrame`-hotter phase whose caller is unnamed. Do not repeat
+this 11-PC main-text recipe. Next work resumes the generated-symbol
+sweep at `playDualTextureAttachmentCueMode0` / `func_800E4034` at
+`0x800E4034` (size `0x1C`; TOML still `func_800E4034` while
+generated/overlay already use the human name). Next retail-entry
+revisit watches `submitGfxFrame` callers for the extra +105.
