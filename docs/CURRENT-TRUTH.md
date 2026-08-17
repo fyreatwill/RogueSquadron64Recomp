@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1814 (2026-08-16).
+detail. Reviewed through s1815 (2026-08-16).
 
 ## Current state
 
@@ -54,13 +54,13 @@ detail. Reviewed through s1814 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800EC4D8`
-   (`0x800EC4D8`, size `0x3C`). Companion `mission_overlay.txt` and
-   generated headers/body/INL already map `resetObjectContextPool`;
-   TOML still says `func_800EC4D8`. s1814 synchronized leftover
-   `func_800EC388` to `unlinkAndFreeChildNpcNode` (`0x800EC388`,
-   `0x150`). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34
-   (s1590–s1647), §35 (s1648–s1814). About 1,548 placeholder
+1. Resume the generated-symbol sweep at leftover `func_800EC514`
+   (`0x800EC514`, size `0x74`). Companion `mission_overlay.txt` and
+   generated headers/body/INL already map `freeAllObjectContextPoolNodes`;
+   TOML still says `func_800EC514`. s1815 synchronized leftover
+   `func_800EC4D8` to `resetObjectContextPool` (`0x800EC4D8`,
+   `0x3C`). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34
+   (s1590–s1647), §35 (s1648–s1815). About 1,548 placeholder
    `func_0x...` names remained at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): M4
    accumulator boundary (source state vs later DMA/consumer), not another
@@ -111,10 +111,12 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1814 through leftover `func_800EC388` renamed to
-`unlinkAndFreeChildNpcNode` (`0x800EC388`, `0x150`) after leftover
-`func_800EC110` became `allocObjectPoolNode` (`0x800EC110`, `0x278`),
-leftover `fake_func_800EC10C` confirmed at `0x800EC10C` size `0x4`
+s1648–s1815 through leftover `func_800EC4D8` renamed to
+`resetObjectContextPool` (`0x800EC4D8`, `0x3C`) after leftover
+`func_800EC388` became `unlinkAndFreeChildNpcNode` (`0x800EC388`,
+`0x150`), leftover `func_800EC110` became `allocObjectPoolNode`
+(`0x800EC110`, `0x278`), leftover `fake_func_800EC10C` confirmed
+at `0x800EC10C` size `0x4`
 (H1), `npcPowerUpUpdate` confirmed at `0x800EB990` size `0x77C`
 (H1), leftover `func_800EB984` renamed to `resetObjectPoolListHead`
 (`0x800EB984`, `0xC`), `npcAtPtUpdate` confirmed at `0x800EA5E0`

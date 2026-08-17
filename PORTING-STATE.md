@@ -84047,3 +84047,54 @@ Zeros `0x8010C0D0`/`0x8010C0D4`, then `resetCraftSubsystemGlobal`,
 already named; TOML still `func_800EC514`). Last-15 titles after
 s1814 still include s1808's revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1815 (2026-08-16) — synchronized the resetObjectContextPool symbol
+
+Exact generated-symbol census for leftover `func_800EC4D8` at
+`0x800EC4D8` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1808's mandatory REVISIT (`selected H2
+menuIn/mission jal-sites on the attract 1024`), so the 15-title
+all-sweep REVISIT gate did not fire. Step 0 `wc -c` was 8622; not a
+maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `resetObjectContextPool = 0x800EC4D8`. Next row is `freeAllObjectContextPoolNodes = 0x800EC514`. No leftover `func_800EC4D8` splat, no `D_800EC4D8`, and no menu/cinematic/main occupant |
+| Companion `main_overlay.txt` | No occupant at `0x800EC4D8` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void resetObjectContextPool` at VRAM `0x800EC4D8`. First insn `addiu $sp, $sp, -0x18`; last live insn `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EC50C` / `0x800EC510`. Previous occupant is `unlinkAndFreeChildNpcNode` (s1814; ends at `0x800EC4D8`); next is already `freeAllObjectContextPoolNodes` at `0x800EC514`. Sole generated `jal 0x800EC4D8` is inside `initMission` at `0x800FA2D4` (after `reset_model_animations`, before `initializeObjectiveHandles`). `funcs.h` and overlay INL already use the human name |
+| Body semantics | Zeros `0x80110000-0x3F30` (`0x8010C0D0`) and `0x80110000-0x3F2C` (`0x8010C0D4`), then `resetCraftSubsystemGlobal` (`jal 0x800DFB78`), `resetObjectPoolListHead` (`jal 0x800EB984`), `clearObjectPoolStateFlag` (`jal 0x800820E4`). Name matches: this is the mission-init context-pool reset that `initMission` calls. Same two heads `unlinkAndFreeChildNpcNode` / `allocObjectPoolNode` walk |
+| TOML | Was `{ name = "func_800EC4D8", vram = 0x800EC4D8, size = 0x3C }` — stale leftover. Size already matched `0x800EC514 - 0x800EC4D8`. Renamed to `resetObjectContextPool` |
+| Overlay section 4 | `{ .func = resetObjectContextPool, .offset = 0x000473A8, .rom_size = 0x0000003C }` under `section_4_ovl_mission_funcs` (`0x800EC4D8 - 0x800A5130 = 0x473A8`; previous `0x47258 + 0x150 = 0x473A8`; `0x473A8 + 0x3C = 0x473E4` matches next `freeAllObjectContextPoolNodes`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EC4D8`. No leftover `func_800EC4D8` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated reset body
+(zero `0x8010C0D0`/`0x8010C0D4` then the three reset helpers),
+previous occupant (`unlinkAndFreeChildNpcNode` / `0x800EC388` ends
+at `0x800EC4D8`) and next (`freeAllObjectContextPoolNodes` /
+`0x800EC514`) boundaries, overlay span, and size already agreed on
+`resetObjectContextPool` / `0x3C`. TOML still carried leftover
+`func_800EC4D8`; renamed it to match. Generated headers/body/INL
+and the `initMission` jal site were already the human name. This
+refutes H1 (sources were not already synchronized), H3 (no leftover
+splat at this address in generated/TOML after the rename, no overlay
+collision, and no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800EC514`), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No invented name. No
+build or runtime run required.
+
+Next census: leftover `func_800EC514` at `0x800EC514` (size `0x74`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `freeAllObjectContextPoolNodes`; TOML
+still says `func_800EC514`. First insn `lui $v1, 0x8011`; last live
+`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EC580` / `0x800EC584`.
+Walks list `0x8010C0D0` then `0x8010C0D4`, `rs_free` each via `+0xC`
+next. Sole generated `jal 0x800EC514` is at `0x800FBAD4` in
+`endMissionCleanup`. Next occupant is `createAndInitObject`
+(`0x800EC588`, `0xFC`; generated already named; TOML still
+`func_800EC588`). Last-15 titles after s1815 still include s1808's
+revisit, so the mandatory REVISIT gate does not fire.

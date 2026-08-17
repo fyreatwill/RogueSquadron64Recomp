@@ -1909,7 +1909,7 @@ functions = [
     { name = "fake_func_800EC10C", vram = 0x800EC10C, size = 0x4 },
     { name = "allocObjectPoolNode", vram = 0x800EC110, size = 0x278 },
     { name = "unlinkAndFreeChildNpcNode", vram = 0x800EC388, size = 0x150 },
-    { name = "func_800EC4D8", vram = 0x800EC4D8, size = 0x3C },
+    { name = "resetObjectContextPool", vram = 0x800EC4D8, size = 0x3C },
     { name = "func_800EC514", vram = 0x800EC514, size = 0x74 },
     { name = "func_800EC588", vram = 0x800EC588, size = 0xFC },
     { name = "func_800EC684", vram = 0x800EC684, size = 0x3C },
