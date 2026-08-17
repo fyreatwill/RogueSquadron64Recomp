@@ -1888,7 +1888,7 @@ functions = [
     { name = "npcWaterCraftHandleDestruction", vram = 0x800E5B38, size = 0x614 },
     { name = "npcWaterCraftUpdate", vram = 0x800E614C, size = 0x107C },
     { name = "fake_func_800E71C8", vram = 0x800E71C8, size = 0x8 },
-    { name = "func_800E71D0", vram = 0x800E71D0, size = 0x1C0 },
+    { name = "transformCraftAnchorsApplySubFx3", vram = 0x800E71D0, size = 0x1C0 },
     { name = "func_800E7390", vram = 0x800E7390, size = 0x4D0 },
     { name = "npcGroundTroopUpdate", vram = 0x800E7860, size = 0xFC8 },
     { name = "func_800E8828", vram = 0x800E8828, size = 0x120 },

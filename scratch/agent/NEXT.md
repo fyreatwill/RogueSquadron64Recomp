@@ -1,72 +1,61 @@
-# NEXT work unit (s1792)
+# NEXT work unit (s1794)
 
-HYPOTHESIS-ID: external-retail-entry-boundary
+HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Mandatory 15-title REVISIT. Last-15 ledger titles after s1791 are
-s1777–s1791, all sweep-scoped (`confirmed` / `synchronized`).
-s1776 selected H1-submitGfx: leave adds `submitGfxFrame` +105/+103
-on the attract A/Start title-like 1024 (`0x00790400`/`800` at
-126.3–126.4 s). The extra presenter's caller is still unnamed.
-New angle: watch the generated `submitGfxFrame` *callers* that
-s1776 did not arm.
+Resume the leftover-`func_800E7390` census. Last-15 ledger titles after
+s1793 include the s1792 revisit (`selected H3 unwatched submitGfx
+callers`), so the 15-title all-sweep REVISIT gate does not fire.
 
-Generated call sites (13 / 12 functions). Already classified or
-already in the s1776 set — do not re-arm as the discriminator:
-
-- `cinematicLoopBody` `0x800A5D80` (s1744)
-- `runInMissionFrame` `0x800FA6A4` (s1744)
-- `runHangarSelectionFrame` `0x800AAD9C` (s1776 hangar; keep as control)
-- `runMenuShipSelectScreen` `0x800C131C` (s1776 ship-select drop; keep as control)
-- `runMenuModelViewerScreen` `0x800C28F0` (s1760 case 9 stays 1)
-
-Unwatched callers (the discriminator):
-
-- `runIdleFramesAndLoadSaveData` `0x8006D900` (main `.text`; two jals)
-- `tickCraftSelectScreen` `0x800AF3C0`
-- `menuControllerInput` `0x800B47D0`
-- `runMenuRandomBackdropScreen` `0x800BF830`
-- `menuSubtype02Handler` `0x800C30C8`
-- `runResultsTextScreenLoop` `0x800C5EF8`
-- `runModelViewerLoop` `0x800C9BF0`
+Census leftover `func_800E7390` / companion
+`tickFighterSquadronWithSplinePaths` (`0x800E7390`, size `0x4D0`).
+Neighbor peek already: TOML still says `func_800E7390`; generated
+headers/body, overlay INL, and `mission_overlay.txt` already use the
+human name.
 
 Competing hypotheses:
 
-- H1: one unwatched overlay screen loop (`0x800AF3C0` /
-  `0x800B47D0` / `0x800BF830` / `0x800C30C8` / `0x800C5EF8` /
-  `0x800C9BF0`) rises ~+105 and matches `submitGfxFrame`.
-- H2: main-text `runIdleFramesAndLoadSaveData` `0x8006D900` is
-  the extra presenter.
-- H3: no unwatched caller rises; `submitGfxFrame` still +105
-  (indirect / already-classified caller, or a PC this set missed).
-- H4: the extra +105 is split across two or more unwatched
-  callers (no single source).
+- H1: already synchronized — TOML, generated headers/body, overlay INL,
+  and companion all agree on one name (confirm only; no rename).
+- H2: TOML still `func_800E7390` while generated headers/body and
+  section-4 already use `tickFighterSquadronWithSplinePaths`. Fix the
+  stale placeholder.
+- H3: leftover splat, overlay collision, or size/boundary disagreement
+  (previous `transformCraftAnchorsApplySubFx3` ends at `0x800E7390`;
+  next occupant must match `0x800E7390 + 0x4D0`). Do not invent a name.
+- H4: companion, generated body, TOML, or section-4 row is missing.
 
-Exact commands (clone `scratch/agent/s1776_maintext_pcs/run_pc.sh`;
-do not extend `--secs 133`):
+Exact commands (no game run):
 
 ```
-# three concurrent Rice arms; whole-RDRAM / PIF / VI controls
-# PCS = 7 unwatched callers + hangar + loadOverlay + ship-select
-#       + submitGfxFrame (must still show +105)
-PCS="0x8006D900,0x800AF3C0,0x800B47D0,0x800BF830,0x800C30C8,0x800C5EF8,0x800C9BF0,0x800AAD9C,0x80000B20,0x800C131C,0x8000C07C"
-# hold:  B_ROUTE
-# a:     B_ROUTE,119:a,123:a
-# start: B_ROUTE,119:start,123:start
-# artifacts: scratch/agent/s1792_submitgfx_callers/
+# TOML + generated + overlay INL
+grep -n '800E7390\|tickFighterSquadronWithSplinePaths\|func_800E7390' \
+  syms/rogue_squadron.syms.toml \
+  ../N64Recomp/RecompiledFuncs/funcs.h \
+  ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+# generated body (funcs_39.c family)
+grep -n 'func_800E7390\|tickFighterSquadronWithSplinePaths' \
+  ../N64Recomp/RecompiledFuncs/funcs_3*.c
+# companion overlays
+grep -n '800E7390\|tickFighterSquadronWithSplinePaths\|func_800E7390' \
+  /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/*.txt
 ```
+
+Then read the generated body: first/last insn, previous
+`transformCraftAnchorsApplySubFx3` / next occupant, jal targets, and
+the section-4 `ovl_mission` row (base `0x800A5130`). Compare against
+the companion comment (per-member spline paths + 3D audio + objective
+counters + teardown).
 
 Expected splits:
 
-- H1: exactly one overlay caller +~105; `submitGfxFrame` +~105;
-  hangar ~flat; ship-select still drops.
-- H2: `0x8006D900` +~105; overlay callers flat or down.
-- H3: all seven unwatched callers flat or down; `submitGfxFrame`
-  still +105. Then the next revisit needs `$ra` / jal-site
-  watches, not another entry-PC set.
-- H4: two or more unwatched callers rise and their deltas sum
-  to ~+105.
+- H1: all four sources already `tickFighterSquadronWithSplinePaths` (or
+  all already leftover `func_800E7390` with a documented reason). Confirm.
+- H2: rename the stale TOML placeholder to the human name already used
+  by generated/section-4.
+- H3: document the leftover/collision/size miss; leave the name.
+- H4: fill the missing source or leave as `func_*`.
 
-Do not reopen the s1744 six-entry, s1760 jump-table, or s1776
-main-text 11-PC recipes. After this revisit the sweep resumes at
-leftover `func_800E71D0` / `transformCraftAnchorsApplySubFx3`
-(`0x800E71D0`, size `0x1C0`).
+Do not reopen the s1744 six-entry, s1760 jump-table, s1776 main-text,
+or s1792 unwatched-caller Rice recipes. The next 15-title REVISIT
+(after this sweep resumes) watches `submitGfxFrame` jal-sites / `$ra`,
+not another function-entry PC set.

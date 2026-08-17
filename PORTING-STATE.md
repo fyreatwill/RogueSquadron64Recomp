@@ -83085,3 +83085,53 @@ Next work resumes the generated-symbol sweep at leftover
 `0x800E71D0` (size `0x1C0`): TOML, generated headers/body, overlay INL,
 and `mission_overlay.txt` still say `func_800E71D0`; `main_overlay.txt`
 already has the human name.
+
+## Session 1793 (2026-08-16) — synchronized the transformCraftAnchorsApplySubFx3 symbol
+
+Exact generated-symbol census for leftover `0x800E71D0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7577; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `main_overlay.txt` | `transformCraftAnchorsApplySubFx3 = 0x800E71D0` with comment "build rotation matrices + transform anchors + LOS check + apply sub-effects". s412 revert comments sit around the row (the name was parked in `m4_known_bad.txt` after relocating it into `mission_overlay.txt` crashed live-verify). No `D_800E71D0` and no menu/cinematic occupant |
+| Companion `mission_overlay.txt` | Leftover splat `func_800E71D0 = 0x800E71D0` still present (s413 known-bad parking: do not relocate the human name here). Previous leftover `fake_func_800E71C8 = 0x800E71C8`. Next named kernel in VRAM order is `tickFighterSquadronWithSplinePaths = 0x800E7390`. Siblings `transformCraftAnchorsAndApplySubFx = 0x800E08F8` and `transformCraftAnchorsApplySubFx2 = 0x800E4BB0` already live in the named section |
+| Generated `funcs_39.c` (before) | `RECOMP_FUNC void func_800E71D0` at VRAM `0x800E71D0`. First insn `addiu $sp, $sp, -0xA0`; last insn `jr $ra` / `addiu $sp, $sp, 0xA0` at `0x800E7388` / `0x800E738C`. Previous leftover `fake_func_800E71C8` ends at `0x800E71CC`; next is `tickFighterSquadronWithSplinePaths` at `0x800E7390`. One generated `jal 0x800E71D0` site at `0x800E81DC` (inside `tickFighterSquadronWithSplinePaths`) dispatched the leftover name |
+| Body semantics | Ten jal / seven unique: `isPendingChildNpcActive` (`0x800F06BC`) ×2, `buildRotationMatrixSlot0` (`0x8001CC3C`), `composeRotationMatrixSlot1` (`0x8001CCCC`), paired `transformVec3ByMat34` (`0x800193E8`) of `s1+0xC` / `s1+0x18`, `validateActorTargetLOS` (`0x800F07AC`) ×2, `initObjectAnimSubstruct` (`0x800F2B88`), `applyToObjectSubstructByFlag` (`0x800F2D38`). Matches the companion rotation-matrix + transform-anchors + LOS + apply-sub-effects sibling; the extra `initObjectAnimSubstruct` plus second pending-child / LOS pass distinguish it from `transformCraftAnchorsApplySubFx2` |
+| TOML (before) | `{ name = "func_800E71D0", vram = 0x800E71D0, size = 0x1C0 }` — size matches `0x800E7390 - 0x800E71D0` |
+| Overlay section 4 (before) | `{ .func = func_800E71D0, .offset = 0x000420A0, .rom_size = 0x000001C0 }` under `section_4_ovl_mission_funcs` (`0x800E71D0 - 0x800A5130 = 0x420A0`; previous `0x42098 + 0x8 = 0x420A0`; `0x420A0 + 0x1C0 = 0x42260` matches next `tickFighterSquadronWithSplinePaths`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E71D0` |
+
+### Outcome
+
+H2 selected (stale-placeholder side, inverted from the last 50 H2s).
+Companion `main_overlay.txt` already had the human name; the live generated
+rotation-matrix / dual-anchor / LOS / sub-effect body, previous leftover
+(`fake_func_800E71C8` / `0x800E71C8`) and next (`tickFighterSquadronWithSplinePaths`
+/ leftover `func_800E7390` / `0x800E7390`) boundaries, TOML size, and
+section-4 overlay span agreed. Unlike s1745–s1790, generated headers/body
+and section-4 were still leftover `func_800E71D0` because the s413 known-bad
+parking left the companion mission splat unrelocated — the leftover already
+emitted the real body, so this was a name-only sync of already-live code,
+not an un-stub. Corrected TOML, `funcs.h`, `funcs_39.c` (definition + the
+`0x800E81DC` jal), and `recomp_overlays.inl` to
+`transformCraftAnchorsApplySubFx3`. Did **not** relocate the companion
+mission leftover (s413 `m4_known_bad.txt` parking still stands). This
+refutes H1 (TOML / generated / section-4 were not already synchronized),
+H3 (no leftover-orphan, overlay collision, or size/boundary disagreement;
+size is `0x1C0` as expected; previous leftover ends at `0x800E71D0` and
+next occupant starts at `0x800E71D0 + 0x1C0`), and H4 (companion, generated
+body, TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Next census: leftover `func_800E7390` / companion
+`tickFighterSquadronWithSplinePaths` at `0x800E7390` (size `0x4D0`).
+Neighbor peek already shows generated headers/body, overlay INL, and
+`mission_overlay.txt` using the human name while TOML is still
+`func_800E7390`. Last-15 titles after s1793 still include s1792's
+revisit, so the mandatory REVISIT gate does not fire.
