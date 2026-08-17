@@ -81527,3 +81527,31 @@ H2 selected. Companion mapping, live generated pending-child / LOS / mesh-T&L / 
 Next census: `npcGroundTransportPlayFriendlyFireWarn` / `func_800DE4EC` at `0x800DE4EC`
 (size `0x320`). Last-15 titles after s1755 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1756 (2026-08-16) — synchronized the npcGroundTransportPlayFriendlyFireWarn symbol
+
+Exact generated-symbol census for `0x800DE4EC` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6445; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcGroundTransportPlayFriendlyFireWarn = 0x800DE4EC` with comment "called twice from npcGroundTransportUpdate. Plays voiceId 0x217 = Check your fire!". Next contiguous named neighbor `npcGroundTransportUpdate = 0x800DE80C`. Previous contiguous generated neighbor `tickEnemyCraftWithDestruction = 0x800DDBF0`. No leftover `func_800DE4EC` splat, no `D_800DE4EC`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcGroundTransportPlayFriendlyFireWarn` at VRAM `0x800DE4EC`; prologue `addiu $sp, $sp, -0x40`. Object pointer `a0` parked in `s4`. Returns through `jr $ra` / `addiu $sp, $sp, 0x40` ending at `0x800DE808`. Previous `tickEnemyCraftWithDestruction` last insn is `0x800DE4E8`; next is `npcGroundTransportUpdate` at `0x800DE80C`. `funcs.h` already declares the human name. No leftover `func_800DE4EC`. Two direct `jal 0x800DE4EC` sites inside `npcGroundTransportUpdate` at `0x800DF078` and `0x800DF0C0` |
+| Body semantics | Two-slot walk: `s2` starts at `a0` and advances +4 while `s2 < a0+8`. Per slot, if `*(s2+0x3C)` is live, `clearVec4QuadStruct` dest `obj+0x1C` then flag-gated compose from `*(s2+0x4C)`: bit0 `addVec3At0x24` of negated `+0x50/+0x54/+0x58`, bit1 `applyScaleToMat3x4` from `+0x5C/+0x60/+0x64`, bit2 `composeQuatToMat3x4` from `+0x68`, then `composeRotationMatrixSlot1` from `*(s2+0x64)` and a second `addVec3At0x24` selected by `(flags & 9)` vs constants 9/8. Mirror pass on `*(s2+0x44)` / `*(s2+0x54)` with `composeRotationMatrixSlot0`. After the walk, `mat34CrossRowsAndCopyPos` on `*(a0+0x30)+0x28` with `a0+0x60`. No `0x217` immediate and no voice helper. Companion voiceId `0x217` is loaded at `0x800DF988` inside `npcGroundTransportUpdate` and passed to `jal 0x80066EE4` (`func_80066EE4`) |
+| TOML (before) | `{ name = "func_800DE4EC", vram = 0x800DE4EC, size = 0x320 }` — size matches `0x800DE80C - 0x800DE4EC` (last insn `0x800DE808` + 4 = `0x320`) |
+| Overlay section 4 | `{ .func = npcGroundTransportPlayFriendlyFireWarn, .offset = 0x000393BC, .rom_size = 0x00000320 }` under `section_4_ovl_mission_funcs` (`0x800DE4EC - 0x800A5130 = 0x393BC`; `0x38AC0 + 0x8FC = 0x393BC`; `0x393BC + 0x320 = 0x396DC` matches next `npcGroundTransportUpdate`) |
+| Non-collision | Cinematic overlay max named VRAM is `0x800B072C`; menu overlay max is `0x800D03DC`; main `.text` ends at `0x800A5130`. None occupy `0x800DE4EC`. No leftover `func_800DE4EC` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated dual-slot transform-compose body, previous (`tickEnemyCraftWithDestruction` / `0x800DDBF0`) and next (`npcGroundTransportUpdate` / `0x800DE80C`) boundaries, TOML size, and section-4 overlay span agreed; the generated headers/body were already `npcGroundTransportPlayFriendlyFireWarn`, and only the TOML name was a stale `func_800DE4EC` placeholder. Corrected TOML to `npcGroundTransportPlayFriendlyFireWarn`. The companion comment's voiceId-0x217 clause is not present in this body — that immediate lives in the caller. This refutes H1 (TOML was not already synchronized), H3 (no leftover splat at this address, overlay collision, or size/boundary disagreement), and H4 (companion, generated body, TOML, and section-4 row are all present). No build or runtime run required.
+
+Next census: `npcGroundTransportUpdate` / `0x800DE80C` at `0x800DE80C`
+(size `0x136C`). Last-15 titles after s1756 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.

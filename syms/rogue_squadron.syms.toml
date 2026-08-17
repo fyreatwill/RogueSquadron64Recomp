@@ -1854,7 +1854,7 @@ functions = [
     { name = "playAttachmentMaterialFadeSound", vram = 0x800DD930, size = 0x140 },
     { name = "transformCraftDualAnchorsAndApplyMotion", vram = 0x800DDA70, size = 0x180 },
     { name = "tickEnemyCraftWithDestruction", vram = 0x800DDBF0, size = 0x8FC },
-    { name = "func_800DE4EC", vram = 0x800DE4EC, size = 0x320 },
+    { name = "npcGroundTransportPlayFriendlyFireWarn", vram = 0x800DE4EC, size = 0x320 },
     { name = "npcGroundTransportUpdate", vram = 0x800DE80C, size = 0x136C },
     { name = "func_800DFB78", vram = 0x800DFB78, size = 0xC },
     { name = "func_800DFB84", vram = 0x800DFB84, size = 0x8 },
