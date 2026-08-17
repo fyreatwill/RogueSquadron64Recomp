@@ -1,37 +1,37 @@
-# NEXT work unit (s1832)
+# NEXT work unit (s1833)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
 Resume the generated-symbol sweep. s1824 was the mandatory 15-title
-M4 REVISIT (H-rdp-consumer selected); last-15 after s1831 still include
+M4 REVISIT (H-rdp-consumer selected); last-15 after s1832 still include
 that revisit, so they are not all sweep. Do not start another M4
 instrument this iteration. Do not repeat any `submitGfxFrame`
 entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EDF68`
-(`0x800EDF68`, size `0x7C8`). Companion `mission_overlay.txt` already
-names `processPendingSoundCueRequest`; generated headers/body/INL
-already use that name; TOML still uses the leftover splat name.
+Exact generated-symbol census for leftover `func_800EE730`
+(`0x800EE730`, size `0x254`). Companion `mission_overlay.txt` already
+names `tickSongFadeTimer`; generated headers/body/INL already use that
+name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `processPendingSoundCueRequest`
-  and the `0x7C8` span.
+  TOML, and section-4 already agree on `tickSongFadeTimer` and the
+  `0x254` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EDF68` while companion uses `processPendingSoundCueRequest`.
+  `func_800EE730` while companion uses `tickSongFadeTimer`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EDF68`, or the TOML size is not `0x7C8`, or
+  overlay occupies `0x800EE730`, or the TOML size is not `0x254`, or
   the generated body is not this function (first insn is not
-  `lui $v0, 0x8011` / last is not `jr $ra` / `addiu $sp, $sp, 0x50`
-  at `0x800EE728` / `0x800EE72C`).
+  `addiu $sp, $sp, -0x20` / last is not `jr $ra` / `addiu $sp, $sp, 0x20`
+  at `0x800EE97C` / `0x800EE980`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EDF68\|func_800EDF68\|processPendingSoundCueRequest' \
+grep -n '800EE730\|func_800EE730\|tickSongFadeTimer' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -41,7 +41,7 @@ grep -n '800EDF68\|func_800EDF68\|processPendingSoundCueRequest' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EDF68\|processPendingSoundCueRequest\|0x800EDF68\|0x800EE728\|0x800EE730' \
+grep -n 'func_800EE730\|tickSongFadeTimer\|0x800EE730\|0x800EE97C\|0x800EE984' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -52,12 +52,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `processPendingSoundCueRequest` /
-  `0x7C8`. No edit. Next leftover `func_800EE730` (`0x800EE730`,
-  `0x254`; generated headers/INL already `tickSongFadeTimer`; TOML
+- H1: all four sources already `tickSongFadeTimer` / `0x254`. No
+  edit. Next leftover `func_800EE984` (`0x800EE984`, `0x70`;
+  generated headers/INL already `pushActiveSoundDescriptor`; TOML
   still leftover).
-- H2: TOML (and/or generated) still `func_800EDF68`. Rename to
-  `processPendingSoundCueRequest`. Next leftover `func_800EE730`.
+- H2: TOML (and/or generated) still `func_800EE730`. Rename to
+  `tickSongFadeTimer`. Next leftover `func_800EE984`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 

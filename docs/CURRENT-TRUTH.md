@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1831 (2026-08-17).
+detail. Reviewed through s1832 (2026-08-17).
 
 ## Current state
 
@@ -60,17 +60,17 @@ detail. Reviewed through s1831 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800EDF68`
-   (`0x800EDF68`, size `0x7C8`). Companion `mission_overlay.txt` and
-   generated headers/body/INL already name
-   `processPendingSoundCueRequest`; TOML still leftover. s1831
+1. Resume the generated-symbol sweep at leftover `func_800EE730`
+   (`0x800EE730`, size `0x254`). Companion `mission_overlay.txt` and
+   generated headers/body/INL already name `tickSongFadeTimer`; TOML
+   still leftover. s1832 synchronized leftover `func_800EDF68` to
+   `processPendingSoundCueRequest` (`0x800EDF68`, `0x7C8`). s1831
    synchronized leftover `func_800EDD8C` to
-   `stopSongAndRebuildActiveCueList` (`0x800EDD8C`, `0x1DC`). s1830
-   synchronized leftover `func_800EDC90` to `selectAndStageNextSong`
-   (`0x800EDC90`, `0xFC`). s1824 was the mandatory M4 REVISIT (not
-   sweep). Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34
-   (s1590–s1647), §35 (s1648–s1831). About 1,548 placeholder
-   `func_0x...` names remained at s1487.
+   `stopSongAndRebuildActiveCueList` (`0x800EDD8C`, `0x1DC`). s1824
+   was the mandatory M4 REVISIT (not sweep). Archive:
+   `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647), §35
+   (s1648–s1832). About 1,548 placeholder `func_0x...` names remained
+   at s1487.
 2. Parked M4 remainder: RDP command shape of the restaged `0x670+0x18`
    XY in the `0xD60` buffer (s1824 H-rdp-consumer). Do not re-watch
    `0x688:0x710`, re-capture VMADH lanes, watch `0x4B7800`, or
@@ -127,7 +127,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1831 through leftover `func_800EDD8C` became
+s1648–s1832 through leftover `func_800EDF68` became
+`processPendingSoundCueRequest` (`0x800EDF68`, `0x7C8`) after leftover
+`func_800EDD8C` became
 `stopSongAndRebuildActiveCueList` (`0x800EDD8C`, `0x1DC`) after leftover
 `func_800EDC90` became
 `selectAndStageNextSong` (`0x800EDC90`, `0xFC`) after leftover
