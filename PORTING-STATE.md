@@ -84859,3 +84859,53 @@ Next occupant is leftover `func_800EDF68` (`0x800EDF68`, `0x7C8`;
 generated already `processPendingSoundCueRequest`; TOML still leftover).
 Last-15 titles after s1830 still include s1824's M4 revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1831 (2026-08-17) — synchronized the stopSongAndRebuildActiveCueList symbol
+
+Exact generated-symbol census for leftover `func_800EDD8C` at
+`0x800EDD8C` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1824's mandatory REVISIT (`selected H-rdp-consumer
+on the ovl20 0x670 record`), so the 15-title all-sweep REVISIT gate did
+not fire. Step 0 `wc -c` was 11033; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `stopSongAndRebuildActiveCueList = 0x800EDD8C`. Next named kernel `processPendingSoundCueRequest = 0x800EDF68`. No leftover `func_800EDD8C` splat. No `D_800EDD8C` |
+| Companion `main_overlay.txt` | No occupant at `0x800EDD8C` |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void stopSongAndRebuildActiveCueList` at VRAM `0x800EDD8C`. First insn `addiu $sp, $sp, -0x20`; last live insn `jr $ra` / `addiu $sp, $sp, 0x20` at `0x800EDF60` / `0x800EDF64`. Previous is `selectAndStageNextSong` (`0x800EDC90`, ends `0x800EDD88`); next is already `processPendingSoundCueRequest` at `0x800EDF68`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Frame `-0x20`. Save `a0` in `$s1`. Walk the 8-slot table at `0x8010C270` (stride `0x10`) matching packed handle `lhu 0x8010C1A0+4/+6`. On hit: `jal tickSongSequenceLocked` (`0x80095D58`) with `slot+4`, then write `-1` to `slot+0`. Rebuild eight `0x1C` cue records at `0x8010C320` from `0x8010C1A0` / `0x8010C1D0`. Clear `0x8010C269`. Copy `0x24` bytes `0x8010C1D0` → `0x8010C110`, `0x8010C400`, and `0x8010C1A0` (promote next descriptor). Store original `a0` at `0x8010C262`. Name matches: stop the matching song slot and rebuild the active cue list |
+| Callers | Three generated `jal 0x800EDD8C` sites already dispatch the human name: two in `processPendingSoundCueRequest` at `0x800EE70C` (`a0=0`) and `0x800EE964`, plus `triggerStageAmbientForNamedDatItem` at `0x800EFB28` (`a0=1`) |
+| TOML | Was `{ name = "func_800EDD8C", vram = 0x800EDD8C, size = 0x1DC }` — stale leftover. Size already matched `0x800EDF68 - 0x800EDD8C`. Renamed to `stopSongAndRebuildActiveCueList` |
+| Overlay section 4 | `{ .func = stopSongAndRebuildActiveCueList, .offset = 0x00048C5C, .rom_size = 0x000001DC }` under `section_4_ovl_mission_funcs` (`0x800EDD8C - 0x800A5130 = 0x48C5C`; previous `0x48B60 + 0xFC = 0x48C5C`; `0x48C5C + 0x1DC = 0x48E38` matches next `processPendingSoundCueRequest`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EDD8C`. No leftover `func_800EDD8C` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated stop-and-rebuild
+wrapper (`addiu $sp, $sp, -0x20` prologue, `jr $ra` / `addiu $sp,
+$sp, 0x20` at `0x800EDF60` / `0x800EDF64`, slot walk +
+`tickSongSequenceLocked` then 8-entry cue rebuild and `0x8010C1D0`
+promote), previous (`selectAndStageNextSong` / `0x800EDC90`) and next
+(`processPendingSoundCueRequest` / `0x800EDF68`) boundaries, overlay
+span, and size already agreed on `stopSongAndRebuildActiveCueList` /
+`0x1DC`. TOML still carried leftover `func_800EDD8C`; renamed it to
+match. Generated headers/body/INL and the three jal sites were already
+the human name. This refutes H1 (TOML was not already synchronized),
+H3 (no overlay collision, no size/boundary disagreement; previous ends
+exactly here and next starts at `0x800EDF68`), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No invented
+name. No build or runtime run required.
+
+Next census: leftover `func_800EDF68` at `0x800EDF68` (size `0x7C8`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `processPendingSoundCueRequest`; TOML
+still says `func_800EDF68`. First insn `lui $v0, 0x8011`; last live
+`jr $ra` / `addiu $sp, $sp, 0x50` at `0x800EE728` / `0x800EE72C`.
+Next occupant is leftover `func_800EE730` (`0x800EE730`, `0x254`;
+generated already `tickSongFadeTimer`; TOML still leftover).
+Last-15 titles after s1831 still include s1824's M4 revisit, so the
+mandatory REVISIT gate does not fire.
