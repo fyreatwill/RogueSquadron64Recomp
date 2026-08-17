@@ -2985,7 +2985,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1829)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1830)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3109,18 +3109,19 @@ collision.
 | s1827 | Synchronized `claimSongSlotForCurrentHandle` (`0x800ED150`, `0xB0`). Eight-slot walk (`slti $a3, 0x8`) of table `0x8010C270` stride `0x10`: match packed handle from `0x8010C0E0+4/+6`, else claim a `-1` free slot; store `a0` at `+0xC`. Sole generated `jal 0x800ED150` inside `tickActiveSongSlots` at `0x800ED844`. Companion `main_overlay.txt` already had the name; mission leftover stays `func_800ED150` (overlay-alias; naming it would collide with main). TOML, generated headers/body/INL, and the jal site were stale `func_800ED150`. |
 | s1828 | Synchronized `tickActiveSongSlots` (`0x800ED200`, `0x9B0`). Eight-slot walk of table `0x8010C270` stride `0x10` increments live `+0x8`; then pending-descriptor / handle match, `claimSongSlotForCurrentHandle`, and locked song cmds (`isSongHandleActive`, `tickSongSequenceLocked`, `playSongIfMusyXActive`, `playSongById`). Three generated `jal 0x800ED200` sites in `tickSongFadeTimer` / `stageSongFromRequestDescriptor` / `commitStagedSongAndPlay` already dispatch the human name. TOML was stale `func_800ED200`; companion, generated headers/body, and section-4 already used the human name. |
 | s1829 | Synchronized `shouldSwitchToPendingSong` (`0x800EDBB0`, `0xE0`). Leaf predicate: gate `0x8010C2F1==1`, then compare pending-song state against tables `0x801388A0` / `0x80138060` and return 1 (switch) or 0. Two generated `jal 0x800EDBB0` sites in `selectAndStageNextSong` / `tickSongFadeTimer` already dispatch the human name. TOML was stale `func_800EDBB0`; companion, generated headers/body, and section-4 already used the human name. |
+| s1830 | Synchronized `selectAndStageNextSong` (`0x800EDC90`, `0xFC`). After `shouldSwitchToPendingSong` returns 1, writes flags at `0x8010C2F2`/`0x8010C2F3`, then either copies pending descriptor `0x8010C0E0` → `0x8010C170` or stages a 6-byte song row from `0x8010B1C0[(id-2)]`. Two generated `jal 0x800EDC90` sites in `processPendingSoundCueRequest` already dispatch the human name. TOML was stale `func_800EDC90`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1829 is leftover `func_800EDC90`
-(`0x800EDC90`, size `0xFC`). Neighbor peek: companion
+The sweep cursor after s1830 is leftover `func_800EDD8C`
+(`0x800EDD8C`, size `0x1DC`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`selectAndStageNextSong`; TOML still leftover `func_800EDC90`.
-First insn `addiu $sp, $sp, -0x18`; last live `jr $ra` /
-`addiu $sp, $sp, 0x18` at `0x800EDD84` / `0x800EDD88`. Next
-occupant is leftover `func_800EDD8C` (`0x800EDD8C`, `0x1DC`;
-generated already `stopSongAndRebuildActiveCueList`; TOML still
+`stopSongAndRebuildActiveCueList`; TOML still leftover
+`func_800EDD8C`. First insn `addiu $sp, $sp, -0x20`; last live
+`jr $ra` / `addiu $sp, $sp, 0x20` at `0x800EDF60` / `0x800EDF64`.
+Next occupant is leftover `func_800EDF68` (`0x800EDF68`, `0x7C8`;
+generated already `processPendingSoundCueRequest`; TOML still
 leftover).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698,
-s1714, s1744, s1760, s1776, s1792, s1808, s1824. After s1829 the
+s1714, s1744, s1760, s1776, s1792, s1808, s1824. After s1830 the
 last-15 titles still include the M4 consumer revisit, so the next
 iteration resumes the sweep.
 
