@@ -84615,3 +84615,47 @@ name. First insn `lui $at, 0x801F`; last `addu $at, $at, $v1` at
 already names `claimSongSlotForCurrentHandle`; mission overlay and
 generated still leftover). Last-15 titles after s1825 still include
 s1824's M4 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1826 (2026-08-17) — confirmed the leftover fake_func_800ED148 symbol
+
+Exact generated-symbol census for leftover `0x800ED148` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1824's
+mandatory REVISIT (`selected H-rdp-consumer on the ovl20 0x670 record`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+10474; not a maintenance iteration. No new soak-queue verdicts beyond
+the already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `fake_func_800ED148 = 0x800ED148` leftover splat (comment is only `segment:mission_overlay`; no deleted-duplicate comment). Previous named kernel `datItemActorNpcHandler = 0x800ECE10` (s1825 synchronized). Next leftover `func_800ED150 = 0x800ED150`. No leftover `func_800ED148` splat, no `D_800ED148`, and no menu/cinematic/main overlay occupant |
+| Companion `main_overlay.txt` | No occupant at `0x800ED148`. Maps the next function as `claimSongSlotForCurrentHandle = 0x800ED150` only |
+| Generated `funcs_40.c` | `RECOMP_FUNC void fake_func_800ED148` at VRAM `0x800ED148`. Two-instruction body: `lui $at, 0x801F` / `addu $at, $at, $v1` at `0x800ED148` / `0x800ED14C`. No `jr $ra` and no stack prologue. Previous `datItemActorNpcHandler` last live insn is `jr $ra` / `addiu $sp, $sp, 0x140` at `0x800ED140` / `0x800ED144`; next is leftover `func_800ED150` at `0x800ED150` (`addu $a3, $zero, $zero` — a complete first insn that zeros the slot index, so this leftover is not a split first instruction of the next function). `funcs.h` already declares the leftover name. No leftover `func_800ED148`. No generated `jal 0x800ED148` site |
+| Body semantics | 8-byte orphan `lui`/`addu` sitting between the dat-item actor handler's `jr $ra` epilogue and the next leftover (`func_800ED150` / companion `claimSongSlotForCurrentHandle`). Same leftover-splat family as `fake_func_800E8A34` / `fake_func_800E9AD8` / `fake_func_800EC10C` / `fake_func_800EC6EC` / `fake_func_800ECE04` (unreachable word immediately before a named kernel) |
+| TOML | `{ name = "fake_func_800ED148", vram = 0x800ED148, size = 0x8 }` — already the leftover name; size matches `0x800ED150 - 0x800ED148` |
+| Overlay section 4 | `{ .func = fake_func_800ED148, .offset = 0x00048018, .rom_size = 0x00000008 }` under `section_4_ovl_mission_funcs` (`0x800ED148 - 0x800A5130 = 0x48018`; previous `0x47CE0 + 0x338 = 0x48018`; `0x48018 + 0x8 = 0x48020` matches next leftover `func_800ED150`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800ED148`. No leftover `func_800ED148` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion leftover mapping, live generated two-instruction
+`lui`/`addu` body, previous (`datItemActorNpcHandler` / `0x800ECE10`)
+and next leftover (`func_800ED150` / `0x800ED150`) boundaries, TOML
+name and size, and section-4 overlay span already agree. No TOML or
+generated-name change. This refutes H2 (no stale `func_800ED148`
+placeholder and no unused companion human name at this address), H3
+(no overlay collision or size/boundary disagreement; size is `0x8` as
+expected; the leftover is the two-insn gap, not a split prologue), and
+H4 (companion, generated body, TOML, and section-4 row are all
+present). No invented name. No build or runtime run required.
+
+Next census: leftover `func_800ED150` at `0x800ED150` (size `0xB0`).
+Neighbor peek: companion `main_overlay.txt` already maps
+`claimSongSlotForCurrentHandle = 0x800ED150`; mission leftover, TOML,
+generated headers/body, and overlay INL still say `func_800ED150`.
+First insn `addu $a3, $zero, $zero`; last live `jr $ra` / `nop` at
+`0x800ED1F8` / `0x800ED1FC`. Next generated occupant is already
+`tickActiveSongSlots` at `0x800ED200` (`0x9B0`; TOML still leftover
+`func_800ED200`). Last-15 titles after s1826 still include s1824's
+M4 revisit, so the mandatory REVISIT gate does not fire.
