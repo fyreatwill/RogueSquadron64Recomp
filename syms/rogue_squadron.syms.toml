@@ -1876,7 +1876,7 @@ functions = [
     { name = "playDualTextureAttachmentCueMode0", vram = 0x800E4034, size = 0x1C },
     { name = "playDualTextureAttachmentCueMode1", vram = 0x800E4050, size = 0x1C },
     { name = "fake_func_800E406C", vram = 0x800E406C, size = 0x4 },
-    { name = "func_800E4070", vram = 0x800E4070, size = 0x40C },
+    { name = "handleRayShieldedNpcDestroy", vram = 0x800E4070, size = 0x40C },
     { name = "fake_func_800E447C", vram = 0x800E447C, size = 0x4 },
     { name = "func_800E4480", vram = 0x800E4480, size = 0x1F4 },
     { name = "func_800E4674", vram = 0x800E4674, size = 0x200 },

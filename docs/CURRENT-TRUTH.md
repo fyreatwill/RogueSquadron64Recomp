@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1779 (2026-08-16).
+detail. Reviewed through s1780 (2026-08-16).
 
 ## Current state
 
@@ -50,12 +50,14 @@ detail. Reviewed through s1779 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at
-   `handleRayShieldedNpcDestroy` (`0x800E4070`, size `0x40C`).
-   Neighbor peek: TOML is still `func_800E4070` while generated
-   headers/body and section-4 already use the human name. Archive:
+1. Resume the generated-symbol sweep at leftover
+   `fake_func_800E447C` (`0x800E447C`, size `0x4`).
+   Neighbor peek: companion, generated headers/body, TOML, and
+   section-4 already use the leftover name; next occupant
+   `resetCraftInstanceMotionState` is already the human name in
+   generated/overlay while TOML is still `func_800E4480`. Archive:
    `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1779). About 1,548 placeholder `func_0x...` names
+   §35 (s1648–s1780). About 1,548 placeholder `func_0x...` names
    remained at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): watch
    `submitGfxFrame`'s callers to name the extra +105 path on the
@@ -94,11 +96,11 @@ never-access) live in `PROJECT-OVERVIEW.md` §26 and §35. Most recent: s1698
 `512→1024` at 126.3 s; the stay was a flush cutoff.
 
 ## Evidence ledger summary
-Per-session rows through s1779 live in `PROJECT-OVERVIEW.md` §33–§35.
+Per-session rows through s1780 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1779 through leftover `fake_func_800E406C` plus the s1744 overlay-PC, s1760
+s1648–s1780 through `handleRayShieldedNpcDestroy` plus the s1744 overlay-PC, s1760
 jump-table, and s1776 main-text-handler revisits that selected H3-stop-tick
 for overlay ticks and H1-submitGfx for the attract 1024 (§35). s1728 is
 maintenance only.

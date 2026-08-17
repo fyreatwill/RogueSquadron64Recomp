@@ -82521,3 +82521,41 @@ Next census: `handleRayShieldedNpcDestroy` / `func_800E4070` at
 the next session's discriminator, not this one. Last-15 titles after
 s1779 still include s1776's revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1780 (2026-08-16) — synchronized the handleRayShieldedNpcDestroy symbol
+
+Exact generated-symbol census for `0x800E4070` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6840; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `handleRayShieldedNpcDestroy = 0x800E4070` with comment "table-registered NPC handler. Plays voiceId 0x15B = \"It must be ray-shielded.  Concentrate on the train.\" then calls destroyNpcSlotByIndex". Previous contiguous leftover `fake_func_800E406C = 0x800E406C`. Next leftover `fake_func_800E447C = 0x800E447C`. No leftover `func_800E4070` splat, no `D_800E4070`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void handleRayShieldedNpcDestroy` at VRAM `0x800E4070`. First insn `addiu $sp, $sp, -0x40`; last insn `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800E4474` / `0x800E4478`. Previous leftover `fake_func_800E406C` is the one-word `sw $a0, 0x20($sp)` at `0x800E406C`; next is leftover `fake_func_800E447C` at `0x800E447C`. `funcs.h` already declares the human name. No leftover `func_800E4070`. No generated `jal 0x800E4070` site |
+| Body semantics | 5-way `jr` table on `(a1-1)<5` at `0x800A8270` (`lui 0x800B` / `addiu -0x7D90`). Terminal path: `sb 1, +0x3D($s1)`, then `playSpeechClip` `a0=0x15B` / `a1=0x73` / `a2=0` / `a3=0x8`, then `destroyNpcSlotByIndex` unless `lhu ($s0) == 0xFFFF`. Name matches the companion table-registered voice-then-destroy handler |
+| TOML (before) | `{ name = "func_800E4070", vram = 0x800E4070, size = 0x40C }` — size matches `0x800E447C - 0x800E4070` |
+| Overlay section 4 | `{ .func = handleRayShieldedNpcDestroy, .offset = 0x0003EF40, .rom_size = 0x0000040C }` under `section_4_ovl_mission_funcs` (`0x800E4070 - 0x800A5130 = 0x3EF40`; previous `0x3EF3C + 0x4 = 0x3EF40`; `0x3EF40 + 0x40C = 0x3F34C` matches next `fake_func_800E447C`) |
+| Non-collision | Cinematic overlay `0x800A5130 + 0xB810 = 0x800B0940`; menu overlay `0x800A5130 + 0x283F0 = 0x800CD520`; main `.text` ends at overlay start `0x800A5130`. None occupy `0x800E4070`. No leftover `func_800E4070` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated 5-way table body, previous
+(`fake_func_800E406C` / `0x800E406C`) and next (`fake_func_800E447C` /
+`0x800E447C`) boundaries, TOML size, and section-4 overlay span agreed;
+the generated headers/body were already `handleRayShieldedNpcDestroy`,
+and only the TOML name was a stale `func_800E4070` placeholder.
+Corrected TOML to `handleRayShieldedNpcDestroy`. This refutes H1 (TOML
+was not already synchronized), H3 (no leftover splat at this address,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: leftover `fake_func_800E447C` at `0x800E447C` (size `0x4`).
+Neighbor peek already shows companion, generated, TOML, and section-4
+using the leftover name. Last-15 titles after s1780 still include
+s1776's revisit, so the mandatory REVISIT gate does not fire.
