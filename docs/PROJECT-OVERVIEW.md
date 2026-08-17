@@ -3081,16 +3081,16 @@ collision.
 | s1800 | Synchronized `tickCraftWithPhasedDestruction` (`0x800E8EDC`, `0xBA8`). 9-way `jr` table on `(a1-1)<9` at `0x800A8638`. Setup / teardown / live tick (`runDestructionPhaseSequence`) / visibility+path / damage (`dealDamageToNpc`, `datItemSetObjectiveBooleanCount`, inner 5-way on `lh +0x3C` at `0x800A86B0`) / slot-action. Table-dispatched; no generated `jal 0x800E8EDC`. TOML was stale `func_800E8EDC`; generated headers/body and section-4 already used the human name. No leftover splat. |
 | s1801 | Synchronized `initNpcHealthAndDetailFromChild` (`0x800E9A84`, `0x54`). Copies child-template HP (`*(s0+0x34)+0x94` → `s0+0x50`), clears `+0x3E`, then `setNpcHealth` (`0x800F2070`) and `setObjectDetailLevel` (`0x800F2830`). No generated `jal 0x800E9A84`. TOML was stale `func_800E9A84`; generated headers/body and section-4 already used the human name. No leftover splat. |
 | s1802 | Confirmed leftover `fake_func_800E9AD8` (`0x800E9AD8`, `0x8`). Two-instruction `lw $v1, 0x34($v0)` / `addiu $v0, $zero, -1` orphan between `initNpcHealthAndDetailFromChild`'s epilogue and leftover `func_800E9AE0` (whose prologue is `addiu $sp, $sp, -0x40`, so this is not a split first instruction). Companion leftover splat with no deleted-duplicate comment. No leftover `func_800E9AD8`; TOML, generated headers/body, and section-4 already use the leftover name. |
+| s1803 | Synchronized leftover `func_800E9AE0` (`0x800E9AE0`) to size `0x114`. Generated headers/body and section-4 were already one function (`addiu $sp, $sp, -0x40` … `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800E9BEC`/`0x800E9BF0`). `0x800E9B10` is mid-function `lui $at, 0x800B`, not a prologue. Companion leftover plus `fake_func_800B58B4` comment already said `func_800E9B10` is not real and splits this function. TOML was the stale `0x30`+`0xE4` split; merged to one leftover row. Did not steal main-overlay `initObjectAnimAndDetail` at the same VRAM. |
 
-The sweep cursor after s1802 is leftover `func_800E9AE0` (`0x800E9AE0`).
-Neighbor peek: TOML size `0x30` plus a following `func_800E9B10`
-(`0xE4`); generated headers/body and overlay INL treat this as one
-`0x114` function ending at `playStateGatedDestroySound` (`0x800E9BF4`);
-companion leftover notes `func_800E9B10` is not real and splits this
-function. Mandatory revisits in this window: s1650, s1666, s1682,
-s1698, s1714, s1744, s1760, s1776, s1792. After s1802 the last-15
-titles still include that revisit, so the next iteration resumes the
-`func_800E9AE0` leftover census.
+The sweep cursor after s1803 is `playStateGatedDestroySound`
+(`0x800E9BF4`). Neighbor peek: TOML still `func_800E9BF4` (`0x180`);
+generated headers/body, overlay INL, and companion already use the
+human name; next occupant is `spawnObjectImpactEffectWithSound`
+(`0x800E9D74`). Mandatory revisits in this window: s1650, s1666,
+s1682, s1698, s1714, s1744, s1760, s1776, s1792. After s1803 the
+last-15 titles still include that revisit, so the next iteration
+resumes the `playStateGatedDestroySound` census.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

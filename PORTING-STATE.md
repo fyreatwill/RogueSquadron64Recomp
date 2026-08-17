@@ -83491,3 +83491,45 @@ at `playStateGatedDestroySound` (`0x800E9BF4`); companion leftover
 notes `func_800E9B10` is not real and splits this function. Last-15
 titles after s1802 still include s1792's revisit, so the mandatory
 REVISIT gate does not fire.
+
+## Session 1803 (2026-08-16) — synchronized leftover func_800E9AE0 to size 0x114
+
+Exact generated-symbol census for leftover `0x800E9AE0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7715; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `func_800E9AE0 = 0x800E9AE0` leftover splat (comment is only `segment:mission_overlay`). `fake_func_800B58B4` comment: a fake-function jal to `func_800E9B10` "which isn't real" splits this real function in two. `ignored_symbols.txt` has `func_800E9B10` `ignore:true`. Previous leftover `fake_func_800E9AD8 = 0x800E9AD8`. Next named kernel `playStateGatedDestroySound = 0x800E9BF4`. No leftover `func_800E9B10` splat. `main_overlay.txt` `initObjectAnimAndDetail = 0x800E9B10` is a different overlay occupant at the same VRAM, not this function |
+| Generated `funcs_39.c` | `RECOMP_FUNC void func_800E9AE0` at VRAM `0x800E9AE0`. Prologue `addiu $sp, $sp, -0x40`; last live insn `jr $ra` at `0x800E9BEC` with delay `addiu $sp, $sp, 0x40` at `0x800E9BF0`. Mid-function `0x800E9B10` is `lui $at, 0x800B` (not a prologue). Previous leftover `fake_func_800E9AD8` ends at `0x800E9AE0`; next is `playStateGatedDestroySound` at `0x800E9BF4`. `funcs.h` already declares leftover `func_800E9AE0` and has no `func_800E9B10`. No generated `jal 0x800E9AE0`. The only `jal 0x800E9B10` is inside leftover `fake_func_800B58B4` and dispatches generated stub `static_4_800E9B10`, whose body is this function's tail starting at that `lui` |
+| Body semantics | `s1 = *(a0+4)`. `jal 0x800F2070` `setNpcHealth` (`a2=*(s1+0x34)`, `a0=*(s1+0x38)`, `a1=a2+0x6C`). On `v0<=0`, `sh 3` at `s1+0x6C` and epilogue. Else zero `+0x6C`/`+0x60`/`+0x6E`, copy float `0x800A86D0` to `+0x5C`, scale `*(row+0xBC)` by `0x800A86D4` into `+0x58`, then `initActorMotionParams` / `initObjectAnimSubstruct` (callback `0x800E9D74`) / `setObjectDetailLevel`. Sibling-shaped with `applyCraftAnimDetailParamsB`, but companion leftover has no human name — do not invent one, and do not steal the main-overlay `initObjectAnimAndDetail` name |
+| TOML | Was `{ name = "func_800E9AE0", vram = 0x800E9AE0, size = 0x30 }` plus `{ name = "func_800E9B10", vram = 0x800E9B10, size = 0xE4 }` (`0x30+0xE4=0x114`). Merged to `{ name = "func_800E9AE0", vram = 0x800E9AE0, size = 0x114 }` |
+| Overlay section 4 | `{ .func = func_800E9AE0, .offset = 0x000449B0, .rom_size = 0x00000114 }` under `section_4_ovl_mission_funcs` (`0x800E9AE0 - 0x800A5130 = 0x449B0`; previous `0x449A8 + 0x8 = 0x449B0`; `0x449B0 + 0x114 = 0x44AC4` matches next `playStateGatedDestroySound`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E9AE0`. Main-overlay `initObjectAnimAndDetail` is a different overlay at aliased VRAM `0x800E9B10`, not a mission-table occupant |
+
+### Outcome
+
+H2 selected. Companion leftover mapping, live generated single `0x114`
+body (`addiu $sp, $sp, -0x40` … `jr $ra` / `addiu $sp, $sp, 0x40`),
+previous leftover (`fake_func_800E9AD8` / `0x800E9AD8`) and next
+(`playStateGatedDestroySound` / `0x800E9BF4`) boundaries, and section-4
+overlay span already agreed on one leftover `func_800E9AE0`; only TOML
+still split the function at mid-body `0x800E9B10` (`lui $at, 0x800B`).
+Merged the TOML rows to size `0x114`. This refutes H1 (TOML was not
+already synchronized), H3 (no overlay collision or leftover splat at
+this address; the `func_800E9B10` split is the documented
+`fake_func_800B58B4` jal artifact, not a real second function; size is
+now `0x114` as generated), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No build or runtime run required.
+
+Next census: `playStateGatedDestroySound` at `0x800E9BF4`. Neighbor peek:
+TOML still `func_800E9BF4` (`0x180`); generated headers/body, overlay
+INL, and companion already use the human name; next occupant is
+`spawnObjectImpactEffectWithSound` (`0x800E9D74`). Last-15 titles after
+s1803 still include s1792's revisit, so the mandatory REVISIT gate does
+not fire.
