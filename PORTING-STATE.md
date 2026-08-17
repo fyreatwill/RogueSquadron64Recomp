@@ -85905,3 +85905,51 @@ at `0x800EFD5C` / `0x800EFD60`. Next occupant is
 name; TOML still leftover `func_800EFD64`). Last-15 titles after
 s1850 still include s1840's M4 revisit, so the mandatory REVISIT gate
 does not fire.
+
+## Session 1851 (2026-08-17) — synchronized the getSoundCueSubsystemFlag symbol
+
+Exact generated-symbol census for leftover `func_800EFD54` at
+`0x800EFD54` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1840's mandatory REVISIT (`selected H-standard-edge
+on the restaged RDP triangle`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 13422; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `getSoundCueSubsystemFlag = 0x800EFD54`. Next named kernel `noopHandler_800EFD64 = 0x800EFD64` (pure `jr ra` stub). Adjacent `noopHandler = 0x800EFD6C` |
+| Companion `main_overlay.txt` | No occupant at `0x800EFD54`. Cinematic and menu overlays also empty at this VRAM |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void getSoundCueSubsystemFlag` at VRAM `0x800EFD54`. First insn `lui $v0, 0x8011`; then `lbu $v0, -0x3F18($v0)` (physical `0x8010C0E8`); last live insn `jr $ra` / `nop` at `0x800EFD5C` / `0x800EFD60`. Previous is `initSoundCueRequest` (`0x800EFCD4`, ends `0x800EFD54`); next is already `noopHandler_800EFD64` at `0x800EFD64`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Leaf getter: `MEM_BU(0x8010C0E8)` into `$v0`, return. Address sits in the music/cue descriptor cluster (`0x8010C0E0` + 8). Name matches: read the sound-cue subsystem flag byte |
+| Callers | No generated `jal 0x800EFD54` site. Leaf is likely a function-pointer / callback occupant rather than a direct jal target |
+| TOML | Was `{ name = "func_800EFD54", vram = 0x800EFD54, size = 0x10 }` — stale leftover. Size already matched `0x800EFD64 - 0x800EFD54`. Renamed to `getSoundCueSubsystemFlag` |
+| Overlay section 4 | `{ .func = getSoundCueSubsystemFlag, .offset = 0x0004AC24, .rom_size = 0x00000010 }` under `section_4_ovl_mission_funcs` (`0x800EFD54 - 0x800A5130 = 0x4AC24`; previous `0x4ABA4 + 0x80 = 0x4AC24`; `0x4AC24 + 0x10 = 0x4AC34` matches next `noopHandler_800EFD64`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940` (`0x800A5130 + 0xB810`); menu overlay ends at `0x800CD520` (`0x800A5130 + 0x283F0`); main `.text` ends before `0x800A5130`. None occupy `0x800EFD54`. No leftover `func_800EFD54` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`lui $v0, 0x8011` / `lbu $v0, -0x3F18($v0)` at `0x8010C0E8`,
+`jr $ra` / `nop` at `0x800EFD5C` / `0x800EFD60`), previous
+(`initSoundCueRequest` / `0x800EFCD4`) and next
+(`noopHandler_800EFD64` / `0x800EFD64`) boundaries, overlay span,
+and size already agreed on `getSoundCueSubsystemFlag` / `0x10`.
+TOML still carried leftover `func_800EFD54`; renamed it to match.
+Generated headers/body/INL were already the human name. This
+refutes H1 (TOML was not already synchronized), H3 (no overlay
+collision, no size/boundary disagreement; previous ends exactly
+here and next starts at `0x800EFD64`), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No
+invented name. No build or runtime run required.
+
+Next census: leftover `func_800EFD64` at `0x800EFD64` (size `0x8`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `noopHandler_800EFD64`; TOML still
+says `func_800EFD64`. First insn `jr $ra` / `nop` at `0x800EFD64` /
+`0x800EFD68`. Next occupant is `noopHandler` (`0x800EFD6C`, `0x8`;
+generated already that name; TOML still leftover `func_800EFD6C`).
+Last-15 titles after s1851 still include s1840's M4 revisit, so the
+mandatory REVISIT gate does not fire.
