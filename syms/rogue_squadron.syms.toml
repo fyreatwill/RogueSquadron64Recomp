@@ -1847,7 +1847,7 @@ functions = [
     { name = "npcRadarDishUpdate", vram = 0x800DC6F0, size = 0xB58 },
     { name = "npcInitMinimalNoAnim", vram = 0x800DD248, size = 0x7C },
     { name = "fake_func_800DD2C4", vram = 0x800DD2C4, size = 0xC },
-    { name = "func_800DD2D0", vram = 0x800DD2D0, size = 0x23C },
+    { name = "npcInitFullModel", vram = 0x800DD2D0, size = 0x23C },
     { name = "func_800DD50C", vram = 0x800DD50C, size = 0x140 },
     { name = "func_800DD64C", vram = 0x800DD64C, size = 0x140 },
     { name = "func_800DD78C", vram = 0x800DD78C, size = 0x1A4 },

@@ -81319,3 +81319,41 @@ and section-4 row are all present). No build or runtime run required.
 Next census: `npcInitFullModel` / `func_800DD2D0` at `0x800DD2D0`
 (size `0x23C`). Last-15 titles after s1748 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1749 (2026-08-16) — synchronized the npcInitFullModel symbol
+
+Exact generated-symbol census for `0x800DD2D0` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6414; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcInitFullModel = 0x800DD2D0` with comment "NPC init incl. anim substruct". Previous contiguous named neighbor `npcInitMinimalNoAnim = 0x800DD248`; leftover `fake_func_800DD2C4 = 0x800DD2C4` sits between them. Next contiguous named neighbor `npcTickEffectChannelC = 0x800DD50C`. Annotated listing keeps a deleted-s432 note that a leftover `func_800DD2D0` splat collided with this name; that placeholder is gone. No menu/cinematic/main overlay occupant and no `D_800DD2D0` splat |
+| Generated `funcs_38.c` | `RECOMP_FUNC void npcInitFullModel` at VRAM `0x800DD2D0`; prologue `addiu $sp, $sp, -0x40`. Object pointer `a0` loads record `*(a0+4)` into `s0` and motion `*(s0+0x34)` into `s1`. Returns through `jr $ra` / `addiu $sp, $sp, 0x40` ending at `0x800DD508`. Previous leftover `fake_func_800DD2C4` last insn is `0x800DD2CC`; next is `npcTickEffectChannelC` at `0x800DD50C`. `funcs.h` already declares the human name. No leftover `func_800DD2D0`. No direct `jal 0x800DD2D0` site — same table/indirect dispatch as the other `npcInit*` siblings |
+| Body semantics | Zeros `+0xD1` and two stride-4 slots at `+0x64`/`+0x6C`/`+0xDC`/`+0xE4`. Then `setNpcHealth` (`jal 0x800F2070`) with `a0=*(s0+0x38)` and `a2=*(s0+0x34)`, copies float `*(motion+0x90)` to `+0xD8`. Then `setObjectDetailLevel` (`jal 0x800F2830`) with `a1=*(motion+0xA8)`. Then `initActorMotionParams` (`jal 0x800F2888`) with `a1`/`a2`/`a3` from motion `+0xB8`/`+0xBC`/`+0xC4`. Three-way dispatch on byte `+0xCF` (0 / 1 / 2) each calls `initObjectAnimSubstruct` (`jal 0x800F2B88`) with motion `+0xCC`/`+0xD0`/`+0xD4`; other `+0xCF` values skip the anim-substruct call and return. Matches the companion "NPC init incl. anim substruct" label; sibling of `npcInitMinimalNoAnim` plus the `+0xCF` anim-substruct path |
+| TOML (before) | `{ name = "func_800DD2D0", vram = 0x800DD2D0, size = 0x23C }` — size matches `0x800DD50C - 0x800DD2D0` (last insn `0x800DD508` + 4 = `0x23C`) |
+| Overlay section 4 | `{ .func = npcInitFullModel, .offset = 0x000381A0, .rom_size = 0x0000023C }` under `section_4_ovl_mission_funcs` (`0x800DD2D0 - 0x800A5130 = 0x381A0`; `0x38194 + 0xC = 0x381A0`; `0x381A0 + 0x23C = 0x383DC` matches next `npcTickEffectChannelC`) |
+| Non-collision | No menu-overlay, cinematic-overlay, or main-overlay function occupies `0x800DD2D0`. Menu overlay ends at `0x800CD520`; cinematic overlay ends at `0x800B0940`; main `.text` ends at `0x800A5130`. None reach this address. No leftover `func_800DD2D0` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated health/detail/motion plus
+`+0xCF` `initObjectAnimSubstruct` body, previous (`fake_func_800DD2C4` /
+`0x800DD2C4` after `npcInitMinimalNoAnim` / `0x800DD248`) and next
+(`npcTickEffectChannelC` / `0x800DD50C`) boundaries, TOML size, and
+section-4 overlay span agreed; the generated headers/body were already
+`npcInitFullModel`, and only the TOML name was a stale `func_800DD2D0`
+placeholder. Corrected TOML to `npcInitFullModel`. This refutes H1 (TOML
+was not already synchronized), H3 (no leftover splat at this address,
+overlay collision, or size/boundary disagreement), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or
+runtime run required.
+
+Next census: `npcTickEffectChannelC` / `func_800DD50C` at `0x800DD50C`
+(size `0x140`). Last-15 titles after s1749 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.

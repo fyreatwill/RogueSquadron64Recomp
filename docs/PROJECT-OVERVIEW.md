@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1746)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1749)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3025,10 +3025,11 @@ collision.
 | s1746 | Synchronized `npcRadarDishComputeAimMotion` (`0x800DC300`, `0x3F0`). Radar-dish aim/track solver: child-active + LOS gate, mesh/local transform, two-axis quat steer, optional `play3DSoundEventVariant` `0x7`/`0x4B`/`0x64`/`0x28`, then `factor5RemoveListNode` or `floatModulo` wrap of `+0x54`. TOML was stale `func_800DC300`; generated headers/body and section-4 already used the human name. |
 | s1747 | Confirmed `npcRadarDishUpdate` (`0x800DC6F0`, `0xB58`). 7-way jump table at `0x800A7D58` on `(a1-1)` for `a1 ∈ 1..7`. Setup / teardown / live tick (`npcRadarDishComputeAimMotion`) / visibility / damage / slot-action. Table-dispatched; no leftover `func_800DC6F0`. |
 | s1748 | Synchronized `npcInitMinimalNoAnim` (`0x800DD248`, `0x7C`). Health/motion/detail init only (`setNpcHealth` / `initActorMotionParams` / `setObjectDetailLevel`); no `initObjectAnimSubstruct`. TOML was stale `func_800DD248`; generated headers/body and section-4 already used the human name. |
+| s1749 | Synchronized `npcInitFullModel` (`0x800DD2D0`, `0x23C`). Same health/detail/motion init as the minimal sibling, then a `+0xCF` three-way dispatch that calls `initObjectAnimSubstruct`. TOML was stale `func_800DD2D0`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1748 is `npcInitFullModel` / `func_800DD2D0` at
-`0x800DD2D0` (size `0x23C`). Mandatory revisits in this window: s1650, s1666,
-s1682, s1698, s1714, s1744. After s1748 the last-15 titles still include
+The sweep cursor after s1749 is `npcTickEffectChannelC` / `func_800DD50C` at
+`0x800DD50C` (size `0x140`). Mandatory revisits in this window: s1650, s1666,
+s1682, s1698, s1714, s1744. After s1749 the last-15 titles still include
 s1744, so the next iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
