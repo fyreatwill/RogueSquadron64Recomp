@@ -85537,3 +85537,56 @@ occupant is leftover `func_800EF95C` (`0x800EF95C`, `0x1E4`;
 generated already `triggerStageAmbientForNamedDatItem`; TOML still
 leftover). Last-15 titles after s1843 still include s1840's M4
 revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1844 (2026-08-17) — synchronized the triggerStageMusicForNamedDatItem symbol
+
+Exact generated-symbol census for leftover `func_800EF770` at
+`0x800EF770` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1840's mandatory REVISIT (`selected H-standard-edge
+on the restaged RDP triangle`), so the 15-title all-sweep REVISIT gate
+did not fire. Step 0 `wc -c` was 12800; not a maintenance iteration. No
+new soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+Soak queue empty (only `cancelled/`, `done/`, `running/`).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `triggerStageMusicForNamedDatItem = 0x800EF770`. Next named kernel `triggerStageAmbientForNamedDatItem = 0x800EF95C`. No leftover `func_800EF770` splat. Comments at the `0x800C7D60` wrapper still mention `func_800EF770` as the unnamed target of `delegateToLevelStageTick` |
+| Companion `main_overlay.txt` | No occupant at `0x800EF770`. Cinematic and menu overlays also empty at this VRAM |
+| Generated `funcs_40.c` | Already `RECOMP_FUNC void triggerStageMusicForNamedDatItem` at VRAM `0x800EF770`. First insn `lui $v0, 0x8011` then `lw $v0, -0x35E0($v0)` / `addiu $sp, $sp, -0x18`; last live insn `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EF954` / `0x800EF958`. Previous is `tickObjectSoundCueState` (`0x800EF510`, ends `0x800EF76C`); next is already `triggerStageAmbientForNamedDatItem` at `0x800EF95C`. `funcs.h` and overlay INL already the human name |
+| Body semantics | Named-DAT stage-music trigger. Gate `*(0x8010CA20)!=0` early-outs. Else `jal getLevelDatItemByName`; null returns `v0=1`. Saved `a1` (`s0`) selects DAT word `+0x3C`/`+0x40`/`+0x44`/`+0x48` (cases 0/1/2/3), subtracts 2; negative index early-outs. Writes `-1` into request `0x8010C1D0`, copies the 6-byte song-name row at `0x8010B1C0[id]` into request `+0x4/+0x6/+0x8`, raises `0x8010C269`, walks the table to store match-index+2 at `+0xA`, zeros `+0xC..+0xF`, then fills remaining request floats from DAT `+0x54`. Name matches: look up a named DAT item and stage its music request |
+| Callers | Sole generated `jal 0x800EF770` site already dispatches the human name: `delegateToLevelStageTick` at `0x800C7D68` (thin wrapper; companion lists six level-handler callers) |
+| TOML | Was `{ name = "func_800EF770", vram = 0x800EF770, size = 0x1EC }` — stale leftover. Size already matched `0x800EF95C - 0x800EF770`. Renamed to `triggerStageMusicForNamedDatItem` |
+| Overlay section 4 | `{ .func = triggerStageMusicForNamedDatItem, .offset = 0x0004A640, .rom_size = 0x000001EC }` under `section_4_ovl_mission_funcs` (`0x800EF770 - 0x800A5130 = 0x4A640`; previous `0x4A3E0 + 0x260 = 0x4A640`; `0x4A640 + 0x1EC = 0x4A82C` matches next `triggerStageAmbientForNamedDatItem`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940` (`0x800A5130 + 0xB810`); menu overlay ends at `0x800CD520` (`0x800A5130 + 0x283F0`); main `.text` ends before `0x800A5130`. None occupy `0x800EF770`. No leftover `func_800EF770` in generated headers, body, overlay INL, or TOML after the rename |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated stage
+(`lui $v0, 0x8011` prologue, `jr $ra` / `addiu $sp, $sp, 0x18`
+at `0x800EF954` / `0x800EF958`, gate then `getLevelDatItemByName`
+plus DAT `+0x3C..+0x48` song-index and `0x8010B1C0` name-row fill
+onto request `0x8010C1D0`), previous
+(`tickObjectSoundCueState` / `0x800EF510`) and next
+(`triggerStageAmbientForNamedDatItem` / `0x800EF95C`) boundaries,
+overlay span, and size already agreed on
+`triggerStageMusicForNamedDatItem` / `0x1EC`. TOML still carried leftover
+`func_800EF770`; renamed it to match. Generated headers/body/INL and
+the `delegateToLevelStageTick` jal were already the human
+name. This refutes H1 (TOML was not already synchronized), H3 (no
+overlay collision, no size/boundary disagreement; previous ends
+exactly here and next starts at `0x800EF95C`), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No
+invented name. No build or runtime run required.
+
+Next census: leftover `func_800EF95C` at `0x800EF95C` (size `0x1E4`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already use `triggerStageAmbientForNamedDatItem`;
+TOML still says `func_800EF95C`. First insn `addiu $sp, $sp, -0x18`
+then `jal getLevelDatItemByName` (delay `addu $s0, $a1, $zero`);
+last live `jr $ra` / `addiu $sp, $sp, 0x18` at `0x800EFB38` /
+`0x800EFB3C`. Next occupant is `stopMusicAndResetAudio`
+(`0x800EFB40`, `0x54`; generated already that name; TOML still
+leftover `func_800EFB40`). Last-15 titles after s1844 still include
+s1840's M4 revisit, so the mandatory REVISIT gate does not fire.

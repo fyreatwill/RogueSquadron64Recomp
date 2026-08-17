@@ -3123,16 +3123,17 @@ collision.
 | s1841 | Synchronized `stopAllMusicWithFade` (`0x800EF1B0`, `0x148`). Walks the 8-slot table at `0x8010C270` stride `0x10`, `jal tickSongSequenceLocked` on live handles then writes `-1`; fade via `queueAudioVoiceCmd` (`a0=0`, `a3=1`) using caller `f12` and either `0x8010C140` or `0x8010C0E0`; then `resetMusicSubsystemState(a0=1)`. Two generated `jal 0x800EF1B0` sites in `endMissionCleanup` / `advanceMissionObjectiveStageWhenModeOne` already dispatch the human name. TOML was stale `func_800EF1B0`; companion, generated headers/body, and section-4 already used the human name. |
 | s1842 | Synchronized `startLevelBackgroundMusic` (`0x800EF2F8`, `0x218`). First-start gate `0x8010C424==0` looks up the 6-byte song-name table at `0x8010B1C0` and `jal stageSongFromRequestDescriptor`; then either copies `0x8010C140`↔`0x8010C0E0` under `0x8010C260`/`0x8010C261` (`isSongHandleActive` / `isSongHandleFree` / optional `setSongPauseStateByHandle`) or `jal tickSongFadeTimer`. Sole generated `jal 0x800EF2F8` in `runInMissionFrame` at `0x800FAA90` already dispatches the human name. TOML was stale `func_800EF2F8`; companion, generated headers/body, and section-4 already used the human name. |
 | s1843 | Synchronized `tickObjectSoundCueState` (`0x800EF510`, `0x260`). Gate `*(0x8010CA20)!=0` early-outs; else push/pop the active descriptor from object `+0x2E`, fill request `0x8010C170` from object `+0x20` (0 clears, 1 copies `0x8010C400`, else 6-byte `0x8010B1C0[(id-2)]` row), memcpy 0x24 bytes onto `0x8010C400`, copy world/audio fields to `0x8010C230`, raise `0x8010C262`/`0x8010C267`. Sole generated `jal 0x800EF510` in `tickCraftMountedAnimationEffect` at `0x800ECBF0` already dispatches the human name. TOML was stale `func_800EF510`; companion, generated headers/body, and section-4 already used the human name. |
+| s1844 | Synchronized `triggerStageMusicForNamedDatItem` (`0x800EF770`, `0x1EC`). Gate `*(0x8010CA20)!=0` early-outs; else `getLevelDatItemByName`, pick DAT `+0x3C/+0x40/+0x44/+0x48` by `a1` 0/1/2/3, copy 6-byte `0x8010B1C0[id]` into request `0x8010C1D0`, raise `0x8010C269`. Sole generated `jal 0x800EF770` in `delegateToLevelStageTick` at `0x800C7D68` already dispatches the human name. TOML was stale `func_800EF770`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1843 is leftover `func_800EF770`
-(`0x800EF770`, size `0x1EC`). Neighbor peek: companion
+The sweep cursor after s1844 is leftover `func_800EF95C`
+(`0x800EF95C`, size `0x1E4`). Neighbor peek: companion
 `mission_overlay.txt` and generated headers/body/INL already use
-`triggerStageMusicForNamedDatItem`; TOML still leftover `func_800EF770`.
-Next occupant is leftover `func_800EF95C` (`0x800EF95C`, `0x1E4`;
-generated already `triggerStageAmbientForNamedDatItem`; TOML still leftover).
+`triggerStageAmbientForNamedDatItem`; TOML still leftover `func_800EF95C`.
+Next occupant is leftover `func_800EFB40` (`0x800EFB40`, `0x54`;
+generated already `stopMusicAndResetAudio`; TOML still leftover).
 Mandatory revisits in this window: s1650, s1666, s1682, s1698,
 s1714, s1744, s1760, s1776, s1792, s1808, s1824, s1840. After
-s1843 the last-15 titles still include the M4 shape revisit, so the next
+s1844 the last-15 titles still include the M4 shape revisit, so the next
 iteration resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
