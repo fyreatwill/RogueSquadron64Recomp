@@ -82841,3 +82841,44 @@ Next census: `tickStructureWithDestructionAndChildren` / leftover
 shows companion, generated, and section-4 using the human name while
 TOML is still `func_800E56AC`. Last-15 titles after s1787 still include
 s1776's revisit, so the mandatory REVISIT gate does not fire.
+
+## Session 1788 (2026-08-16) — synchronized the tickStructureWithDestructionAndChildren symbol
+
+Exact generated-symbol census for `0x800E56AC` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1776's
+mandatory REVISIT (`selected H1 submitGfxFrame on the attract 1024`),
+so the 15-title all-sweep REVISIT gate did not fire. Step 0 `wc -c` was
+6933; not a maintenance iteration. No new soak-queue verdicts beyond the
+already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `tickStructureWithDestructionAndChildren = 0x800E56AC` with comment "destructible structure: debris stack + oriented-NPC spawns + child-craft recursion + teardown". Previous named kernel `tickCraftSplineOrientationVariant = 0x800E4DC0`. Next named kernel in the sequential overlay listing is `tickFighterSquadronWithSplinePaths = 0x800E7390`; the next VRAM occupant is `npcWaterCraftHandleDestruction = 0x800E5B38`. No leftover `func_800E56AC` splat, no `D_800E56AC`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_39.c` | `RECOMP_FUNC void tickStructureWithDestructionAndChildren` at VRAM `0x800E56AC`. First insn `addiu $sp, $sp, -0x40`; last insn `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800E5B30` / `0x800E5B34`. Previous `tickCraftSplineOrientationVariant` ends at `0x800E56A4` / `0x800E56A8`; next is `npcWaterCraftHandleDestruction` at `0x800E5B38`. `funcs.h` already declares the human name. No leftover `func_800E56AC`. One generated `jal 0x800E56AC` site at `0x800E69BC` (inside `npcWaterCraftUpdate`) already dispatches the human name |
+| Body semantics | Health-gated 2-iter debris-transform sibling of `buildDebrisTransformStack`: prefix `mat34CrossRowsAndCopyPos` on `*(npc+0x30)+0x28` with scalar `*(npc+0x70)`, then `getNpcCurrentHealth(*(npc+0x38))` and skip the walk when `<=0`. Walk is `s2` from npc while `< npc+0x8` (increment `+4`). Three slots per iter at `s2+0x3C` / `+0x44` / `+0x4C` dest `ptr+0x1C` with params at `s2+0x54` / `+0x5C` / `+0x64`: `clearVec4QuadStruct`, then flag `+0x4C` bit 0 `addVec3At0x24` (negated `+0x50/+0x54/+0x58` on slot 0), bit 1 `applyScaleToMat3x4` from `+0x5C/+0x60/+0x64`, bit 2 `composeQuatToMat3x4` from `+0x68`, plus `composeRotationMatrixSlot1` (slot 0) / `composeRotationMatrixSlot0` (slot 1) and a type-id dispatch on constants `9`/`8` for extra `addVec3At0x24`. Zero `spawn*` / recurse / `play3DSound*` / `factor5RemoveListNode` — the companion comment's spawn/recursion/teardown clauses are richer than the live body |
+| TOML (before) | `{ name = "func_800E56AC", vram = 0x800E56AC, size = 0x48C }` — size matches `0x800E5B38 - 0x800E56AC` |
+| Overlay section 4 | `{ .func = tickStructureWithDestructionAndChildren, .offset = 0x0004057C, .rom_size = 0x0000048C }` under `section_4_ovl_mission_funcs` (`0x800E56AC - 0x800A5130 = 0x4057C`; previous `0x3FC90 + 0x8EC = 0x4057C`; `0x4057C + 0x48C = 0x40A08` matches next `npcWaterCraftHandleDestruction`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E56AC`. No leftover `func_800E56AC` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated health-gated 2-iter
+debris-transform body, previous (`tickCraftSplineOrientationVariant` /
+`0x800E4DC0`) and next (`npcWaterCraftHandleDestruction` / leftover
+`func_800E5B38` / `0x800E5B38`) boundaries, TOML size, and section-4 overlay
+span agreed; the generated headers/body were already
+`tickStructureWithDestructionAndChildren`, and only the TOML name was a stale
+`func_800E56AC` placeholder. Corrected TOML to
+`tickStructureWithDestructionAndChildren`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision, or
+size/boundary disagreement; size is `0x48C` as expected), and H4 (companion,
+generated body, TOML, and section-4 row are all present). No build or runtime
+run required.
+
+Next census: `npcWaterCraftHandleDestruction` / leftover
+`func_800E5B38` at `0x800E5B38` (size `0x614`). Neighbor peek already
+shows companion, generated, and section-4 using the human name while
+TOML is still `func_800E5B38`. Last-15 titles after s1788 still include
+s1776's revisit, so the mandatory REVISIT gate does not fire.

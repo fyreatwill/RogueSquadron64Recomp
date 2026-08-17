@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1787 (2026-08-16).
+detail. Reviewed through s1788 (2026-08-16).
 
 ## Current state
 
@@ -51,11 +51,11 @@ detail. Reviewed through s1787 (2026-08-16).
 ## Active investigation and ranked next steps
 
 1. Resume the generated-symbol sweep at
-   `tickStructureWithDestructionAndChildren` / leftover `func_800E56AC`
-   (`0x800E56AC`, size `0x48C`). Neighbor peek: companion, generated
+   `npcWaterCraftHandleDestruction` / leftover `func_800E5B38`
+   (`0x800E5B38`, size `0x614`). Neighbor peek: companion, generated
    headers/body, and section-4 already use the human name; TOML is
-   still `func_800E56AC`. Archive: `PROJECT-OVERVIEW.md` §33
-   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1787). About 1,548
+   still `func_800E5B38`. Archive: `PROJECT-OVERVIEW.md` §33
+   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1788). About 1,548
    placeholder `func_0x...` names remained at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): watch
    `submitGfxFrame`'s callers to name the extra +105 path on the
@@ -98,8 +98,8 @@ Per-session rows through s1786 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1787 through leftover `func_800E4DC0` synchronized as
-`tickCraftSplineOrientationVariant` plus the s1744 overlay-PC, s1760
+s1648–s1788 through leftover `func_800E56AC` synchronized as
+`tickStructureWithDestructionAndChildren` plus the s1744 overlay-PC, s1760
 jump-table, and s1776 main-text-handler revisits that selected H3-stop-tick
 for overlay ticks and H1-submitGfx for the attract 1024 (§35). s1728 is
 maintenance only.

@@ -1884,7 +1884,7 @@ functions = [
     { name = "playDualTextureAttachmentCueC", vram = 0x800E49B4, size = 0x1FC },
     { name = "transformCraftAnchorsApplySubFx2", vram = 0x800E4BB0, size = 0x210 },
     { name = "tickCraftSplineOrientationVariant", vram = 0x800E4DC0, size = 0x8EC },
-    { name = "func_800E56AC", vram = 0x800E56AC, size = 0x48C },
+    { name = "tickStructureWithDestructionAndChildren", vram = 0x800E56AC, size = 0x48C },
     { name = "func_800E5B38", vram = 0x800E5B38, size = 0x614 },
     { name = "npcWaterCraftUpdate", vram = 0x800E614C, size = 0x107C },
     { name = "fake_func_800E71C8", vram = 0x800E71C8, size = 0x8 },
