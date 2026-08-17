@@ -1,17 +1,17 @@
-# NEXT work unit (s1754)
+# NEXT work unit (s1755)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol census at `transformCraftDualAnchorsAndApplyMotion`
-/ `func_800DDA70` / `0x800DDA70` (size `0x180`). s1753 synchronized
-`playAttachmentMaterialFadeSound`. Last-15 after this commit still include
-s1744's revisit, so the mandatory REVISIT gate does not fire.
+Resume the generated-symbol census at `tickEnemyCraftWithDestruction`
+/ `func_800DDBF0` / `0x800DDBF0` (size `0x8FC`). s1754 synchronized
+`transformCraftDualAnchorsAndApplyMotion`. Last-15 after this commit still
+include s1744's revisit, so the mandatory REVISIT gate does not fire.
 
 Competing hypotheses:
 
-- H1: companion `transformCraftDualAnchorsAndApplyMotion`, generated body, TOML
+- H1: companion `tickEnemyCraftWithDestruction`, generated body, TOML
   name/size, and overlay span already agree — confirm only.
-- H2: generated code still carries placeholder `func_800DDA70` (or a
+- H2: generated code still carries placeholder `func_800DDBF0` (or a
   stale alias) and needs a TOML + fixup rename.
 - H3: overlay collision, leftover `fake_func_*`, or size/boundary
   disagreement with the companion listing.
@@ -21,27 +21,28 @@ Exact commands (read-only census; no game run):
 
 ```
 # companion
-grep -n 'transformCraftDualAnchorsAndApplyMotion\|800DDA70\|DDA70' \
+grep -n 'tickEnemyCraftWithDestruction\|800DDBF0\|DDBF0' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/*.txt
 # generated
-grep -n 'transformCraftDualAnchorsAndApplyMotion\|func_800DDA70\|0x800DDA70' \
+grep -n 'tickEnemyCraftWithDestruction\|func_800DDBF0\|0x800DDBF0' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c
 # toml + overlay inl
-grep -n '800DDA70\|transformCraftDualAnchorsAndApplyMotion' \
+grep -n '800DDBF0\|tickEnemyCraftWithDestruction' \
   syms/rogue_squadron.syms.toml \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
 
 Expected splits:
 
-- H1: all four sources already say `transformCraftDualAnchorsAndApplyMotion`,
-  size `0x180`, previous `playAttachmentMaterialFadeSound` / `0x800DD930`, next
-  `tickEnemyCraftWithDestruction` / `0x800DDBF0`, no leftover placeholder.
-- H2: generated still `func_800DDA70`, or TOML still `func_800DDA70`
+- H1: all four sources already say `tickEnemyCraftWithDestruction`,
+  size `0x8FC`, previous `transformCraftDualAnchorsAndApplyMotion` /
+  `0x800DDA70`, next `npcGroundTransportPlayFriendlyFireWarn` / `0x800DE4EC`,
+  no leftover placeholder.
+- H2: generated still `func_800DDBF0`, or TOML still `func_800DDBF0`
   while generated/overlay already use the human name — rename in TOML
   and the fixup path.
-- H3: menu/cinematic occupant, leftover splat, or size != `0x180`.
+- H3: menu/cinematic occupant, leftover splat, or size != `0x8FC`.
 - H4: a required source is absent.
 
 Do not reopen the attract-1024 six-entry recipe. Next cursor after this

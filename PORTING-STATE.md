@@ -81471,3 +81471,31 @@ H2 selected. Companion mapping, live generated HMT / attach-pos / progress-chann
 Next census: `transformCraftDualAnchorsAndApplyMotion` / `func_800DDA70` at `0x800DDA70`
 (size `0x180`). Last-15 titles after s1753 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1754 (2026-08-16) — synchronized the transformCraftDualAnchorsAndApplyMotion symbol
+
+Exact generated-symbol census for `0x800DDA70` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6448; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `transformCraftDualAnchorsAndApplyMotion = 0x800DDA70` with comment "builds rotation matrices, transforms two anchor vec3s, applies motion (gated on pending-child)". Previous contiguous named neighbor `playAttachmentMaterialFadeSound = 0x800DD930`; next contiguous named neighbor `tickEnemyCraftWithDestruction = 0x800DDBF0`. No leftover `func_800DDA70` splat, no `D_800DDA70`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_38.c` | `RECOMP_FUNC void transformCraftDualAnchorsAndApplyMotion` at VRAM `0x800DDA70`; prologue `addiu $sp, $sp, -0x98`. Object pointer `a0` in `s0`; scalar `a1` parked in `$f20`. Returns through `jr $ra` / `addiu $sp, $sp, 0x98` ending at `0x800DDBEC`. Previous `playAttachmentMaterialFadeSound` last insn is `0x800DDA6C`; next is `tickEnemyCraftWithDestruction` at `0x800DDBF0`. `funcs.h` already declares the human name. No leftover `func_800DDA70`. Sole direct `jal 0x800DDA70` site is inside `tickEnemyCraftWithDestruction` at `0x800DF0AC` |
+| Body semantics | Two-pass loop (`s2` 0 then 1; `s3` advances +4 so second pass reads `+0x70`/`+0x68`). Gate: `isPendingChildNpcActive` (`jal 0x800F06BC`) on `*(s0+0x38)`; skip if the 8-bit return != 1. Copy 0x30 bytes from the object to `sp+0x10`. `buildRotationMatrixSlot0` (`jal 0x8001CC3C`) dest `sp+0x40` from `*(s3+0x6C)`; `composeRotationMatrixSlot1` (`jal 0x8001CCCC`) dest `sp+0x40` from `*(s3+0x64)`. Two `transformVec3ByMat34` (`jal 0x800193E8`) calls: dest `sp+0x1C` from `s0+0xC`, dest `sp+0x28` from `s0+0x18`. Then `validateActorTargetLOS` (`jal 0x800F07AC`) on `*(s0+0x38)`; if that returns 1, `applyToObjectSubstructByFlag` (`jal 0x800F2D38`) with the original `a1` and flags from the pass index. Write the 0x30-byte local back onto the object |
+| TOML (before) | `{ name = "func_800DDA70", vram = 0x800DDA70, size = 0x180 }` — size matches `0x800DDBF0 - 0x800DDA70` (last insn `0x800DDBEC` + 4 = `0x180`) |
+| Overlay section 4 | `{ .func = transformCraftDualAnchorsAndApplyMotion, .offset = 0x00038940, .rom_size = 0x00000180 }` under `section_4_ovl_mission_funcs` (`0x800DDA70 - 0x800A5130 = 0x38940`; `0x38800 + 0x140 = 0x38940`; `0x38940 + 0x180 = 0x38AC0` matches next `tickEnemyCraftWithDestruction`) |
+| Non-collision | Cinematic overlay max named VRAM is `0x800B072C`; menu overlay max is `0x800D03DC`; main `.text` ends at `0x800A5130`. None occupy `0x800DDA70`. No leftover `func_800DDA70` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated pending-child / rotation-matrix / dual-anchor / LOS / apply-motion body, previous (`playAttachmentMaterialFadeSound` / `0x800DD930`) and next (`tickEnemyCraftWithDestruction` / `0x800DDBF0`) boundaries, TOML size, and section-4 overlay span agreed; the generated headers/body were already `transformCraftDualAnchorsAndApplyMotion`, and only the TOML name was a stale `func_800DDA70` placeholder. Corrected TOML to `transformCraftDualAnchorsAndApplyMotion`. This refutes H1 (TOML was not already synchronized), H3 (no leftover splat at this address, overlay collision, or size/boundary disagreement), and H4 (companion, generated body, TOML, and section-4 row are all present). No build or runtime run required.
+
+Next census: `tickEnemyCraftWithDestruction` / `func_800DDBF0` at `0x800DDBF0`
+(size `0x8FC`). Last-15 titles after s1754 still include s1744's revisit,
+so the mandatory REVISIT gate does not fire.
