@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1849 (2026-08-17).
+detail. Reviewed through s1850 (2026-08-17).
 
 ## Current state
 
@@ -63,13 +63,13 @@ detail. Reviewed through s1849 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800EFCD4`
-   (`0x800EFCD4`, size `0x80`). Companion `mission_overlay.txt` and
-   generated headers/body/INL already name `initSoundCueRequest`;
-   TOML still leftover. s1849 synchronized leftover `func_800EFC84` to
-   `stageSoundCueRequestByIdAndParam` (`0x800EFC84`, `0x50`).
+1. Resume the generated-symbol sweep at leftover `func_800EFD54`
+   (`0x800EFD54`, size `0x10`). Companion `mission_overlay.txt` and
+   generated headers/body/INL already name `getSoundCueSubsystemFlag`;
+   TOML still leftover. s1850 synchronized leftover `func_800EFCD4` to
+   `initSoundCueRequest` (`0x800EFCD4`, `0x80`).
    Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
-   §35 (s1648–s1849). About 1,548 placeholder `func_0x...` names
+   §35 (s1648–s1850). About 1,548 placeholder `func_0x...` names
    remained at s1487.
 2. Parked M4 remainder: whether a live `0x8000` Y is clip-rejected at
    `L_17F0` entry, emitted as a zero-height command, or emitted
@@ -135,7 +135,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1849 through leftover `func_800EFC84` became
+s1648–s1850 through leftover `func_800EFCD4` became
+`initSoundCueRequest` (`0x800EFCD4`, `0x80`) after leftover
+`func_800EFC84` became
 `stageSoundCueRequestByIdAndParam` (`0x800EFC84`, `0x50`) after leftover
 `func_800EFBB4` became
 `commitStagedSongAndPlay` (`0x800EFBB4`, `0xD0`) after leftover

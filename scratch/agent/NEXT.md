@@ -1,37 +1,37 @@
-# NEXT work unit (s1850)
+# NEXT work unit (s1851)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol sweep. s1849 synchronized leftover
-`func_800EFC84` to `stageSoundCueRequestByIdAndParam`; last-15 after
-s1849 include s1840's M4 REVISIT, so they are not all sweep. Do not
+Resume the generated-symbol sweep. s1850 synchronized leftover
+`func_800EFCD4` to `initSoundCueRequest`; last-15 after
+s1850 include s1840's M4 REVISIT, so they are not all sweep. Do not
 start another M4 instrument this iteration. Do not repeat any
 `submitGfxFrame` entry/jal/`prev_pc` recipe.
 
-Exact generated-symbol census for leftover `func_800EFCD4`
-(`0x800EFCD4`, size `0x80`). Companion `mission_overlay.txt` already
-names `initSoundCueRequest`; generated headers/body/INL
+Exact generated-symbol census for leftover `func_800EFD54`
+(`0x800EFD54`, size `0x10`). Companion `mission_overlay.txt` already
+names `getSoundCueSubsystemFlag`; generated headers/body/INL
 already use that name; TOML still uses the leftover splat name.
 
 Competing hypotheses:
 
 - H1: already synchronized — companion, generated headers/body/INL,
-  TOML, and section-4 already agree on `initSoundCueRequest`
-  and the `0x80` span.
+  TOML, and section-4 already agree on `getSoundCueSubsystemFlag`
+  and the `0x10` span.
 - H2: leftover placeholder — TOML (and/or generated name) is still
-  `func_800EFCD4` while companion uses `initSoundCueRequest`.
+  `func_800EFD54` while companion uses `getSoundCueSubsystemFlag`.
 - H3: overlay collision or size/boundary disagreement — another
-  overlay occupies `0x800EFCD4`, or the TOML size is not `0x80`, or
+  overlay occupies `0x800EFD54`, or the TOML size is not `0x10`, or
   the generated body is not this function (first insn is not
-  `sltiu $v0, $a0, 0x8`; last is not `jr $ra` / `nop` at
-  `0x800EFD4C` / `0x800EFD50`).
+  `lui $v0, 0x8011`; last is not `jr $ra` / `nop` at
+  `0x800EFD5C` / `0x800EFD60`).
 - H4: missing companion or generated occupant — no body to rename.
 
 Exact commands:
 
 ```
 # companion + generated name occupancy
-grep -n '800EFCD4\|func_800EFCD4\|initSoundCueRequest' \
+grep -n '800EFD54\|func_800EFD54\|getSoundCueSubsystemFlag' \
   ../rogue_squadron64/symbol_files/mission_overlay.txt \
   ../rogue_squadron64/symbol_files/main_overlay.txt \
   ../rogue_squadron64/symbol_files/*overlay*.txt \
@@ -41,7 +41,7 @@ grep -n '800EFCD4\|func_800EFCD4\|initSoundCueRequest' \
   2>/dev/null | head -80
 
 # live body first/last insns
-grep -n 'func_800EFCD4\|initSoundCueRequest\|0x800EFCD4\|0x800EFD4C\|0x800EFD54' \
+grep -n 'func_800EFD54\|getSoundCueSubsystemFlag\|0x800EFD54\|0x800EFD5C\|0x800EFD64' \
   ../N64Recomp/RecompiledFuncs/funcs_*.c | head -40
 ```
 
@@ -52,12 +52,12 @@ stale). Do not invent a new name.
 
 Expected splits:
 
-- H1: all four sources already `initSoundCueRequest` / `0x80`.
-  No edit. Next leftover `func_800EFD54` (`0x800EFD54`, `0x10`;
-  companion `getSoundCueSubsystemFlag`; generated headers/INL already that
+- H1: all four sources already `getSoundCueSubsystemFlag` / `0x10`.
+  No edit. Next leftover `func_800EFD64` (`0x800EFD64`, `0x8`;
+  companion `noopHandler_800EFD64`; generated headers/INL already that
   name; TOML still leftover).
-- H2: TOML (and/or generated) still `func_800EFCD4`. Rename to
-  `initSoundCueRequest`. Next leftover `func_800EFD54`.
+- H2: TOML (and/or generated) still `func_800EFD54`. Rename to
+  `getSoundCueSubsystemFlag`. Next leftover `func_800EFD64`.
 - H3: document the collision or size mismatch; do not rename.
 - H4: document the missing occupant; do not invent a name.
 

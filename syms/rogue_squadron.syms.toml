@@ -1943,7 +1943,7 @@ functions = [
     { name = "preloadSceneSongsWrapper", vram = 0x800EFB94, size = 0x20 },
     { name = "commitStagedSongAndPlay", vram = 0x800EFBB4, size = 0xD0 },
     { name = "stageSoundCueRequestByIdAndParam", vram = 0x800EFC84, size = 0x50 },
-    { name = "func_800EFCD4", vram = 0x800EFCD4, size = 0x80 },
+    { name = "initSoundCueRequest", vram = 0x800EFCD4, size = 0x80 },
     { name = "func_800EFD54", vram = 0x800EFD54, size = 0x10 },
     { name = "func_800EFD64", vram = 0x800EFD64, size = 0x8 },
     { name = "func_800EFD6C", vram = 0x800EFD6C, size = 0x8 },
