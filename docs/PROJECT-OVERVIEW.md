@@ -235,7 +235,7 @@ H3-stop-tick; Rice still dies ~135 s). Audio de-stubbing is closed. These
 are boundaries, not mitigations: future guards require an `ORIGIN:` naming
 the writer and judging the value legitimate. The generated-symbol renaming
 sweep is the current low-risk workstream; exact companion/generated names
-are synchronized through `npcInitMinimalNoAnim` at `0x800DD248` (s1748).
+are synchronized through `noopHandler_800DFB84` at `0x800DFB84` (s1759).
 See §33–§35 for the archived census, `CURRENT-TRUTH.md` for the live
 backlog, and `PORTING-STATE.md` for evidence.
 
@@ -2982,7 +2982,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1758)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1759)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3035,11 +3035,13 @@ collision.
 | s1756 | Synchronized `npcGroundTransportPlayFriendlyFireWarn` (`0x800DE4EC`, `0x320`). Dual-slot transform composer (not a voice player): two-iteration walk of `a0`/`a0+4` composing `clearVec4QuadStruct` / flag-gated `addVec3At0x24` / `applyScaleToMat3x4` / `composeQuatToMat3x4` / `composeRotationMatrixSlot0`/`Slot1` into child `+0x1C`, then `mat34CrossRowsAndCopyPos` on `*(a0+0x30)+0x28`. Companion voiceId `0x217` lives in `npcGroundTransportUpdate` at `0x800DF988` (`jal 0x80066EE4`), not here. Two generated callers in that update at `0x800DF078` and `0x800DF0C0`. TOML was stale `func_800DE4EC`; generated headers/body and section-4 already used the human name. |
 | s1757 | Confirmed `npcGroundTransportUpdate` (`0x800DE80C`, `0x136C`). 9-way jump table at `0x800A7E88` on `(a1-1)` for `a1 ∈ 1..9`. Setup / teardown / live tick (`npcGroundTransportPlayFriendlyFireWarn` twice, `tickEnemyCraftWithDestruction`, `transformCraftDualAnchorsAndApplyMotion`) / 3D-audio / damage (`playSpeechClip` voiceId `0x217` at `0x800DF988`) / slot-action. Table-dispatched; no leftover `func_800DE80C`. |
 | s1758 | Synchronized `resetCraftSubsystemGlobal` (`0x800DFB78`, `0xC`). Delay-slot `sw $zero, -0x3F60($v0)` with `$v0 = 0x80110000` stores 0 at `0x8010C0A0` — the same word `npcGroundTransportUpdate` case 4 compares before `playSpeechClip` `0x217`. Sole generated caller `resetObjectContextPool` at `0x800EC4F0`. TOML was stale `func_800DFB78`; generated headers/body and section-4 already used the human name. |
+| s1759 | Synchronized `noopHandler_800DFB84` (`0x800DFB84`, `0x8`). Pure `jr $ra` / `nop` stub; no generated `jal 0x800DFB84` site. TOML was stale `func_800DFB84`; generated headers/body and section-4 already used the human name. |
 
-The sweep cursor after s1758 is `noopHandler_800DFB84` / `0x800DFB84`
-(size `0x8`). Mandatory revisits in this window: s1650, s1666,
-s1682, s1698, s1714, s1744. After s1758 the last-15 titles still include
-s1744, so the next iteration resumes the sweep.
+The sweep cursor after s1759 is leftover `fake_func_800DFB8C` / `0x800DFB8C`
+(size `0x4`), then `applyCraftAnimAndDetailParams` / `0x800DFB90`. Mandatory
+revisits in this window: s1650, s1666, s1682, s1698, s1714, s1744. After
+s1759 the last-15 titles still include s1744, so the next iteration
+resumes the sweep.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with

@@ -1857,7 +1857,7 @@ functions = [
     { name = "npcGroundTransportPlayFriendlyFireWarn", vram = 0x800DE4EC, size = 0x320 },
     { name = "npcGroundTransportUpdate", vram = 0x800DE80C, size = 0x136C },
     { name = "resetCraftSubsystemGlobal", vram = 0x800DFB78, size = 0xC },
-    { name = "func_800DFB84", vram = 0x800DFB84, size = 0x8 },
+    { name = "noopHandler_800DFB84", vram = 0x800DFB84, size = 0x8 },
     { name = "fake_func_800DFB8C", vram = 0x800DFB8C, size = 0x4 },
     { name = "func_800DFB90", vram = 0x800DFB90, size = 0x3C4 },
     { name = "func_800DFF54", vram = 0x800DFF54, size = 0x190 },

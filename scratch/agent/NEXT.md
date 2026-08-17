@@ -1,52 +1,55 @@
-# NEXT work unit (s1759)
+# NEXT work unit (s1760)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-Resume the generated-symbol census at `noopHandler_800DFB84`
-/ `0x800DFB84` (size `0x8`). s1758 synchronized
-`resetCraftSubsystemGlobal`. Last-15 after this commit still
+Resume the generated-symbol census at leftover `fake_func_800DFB8C`
+/ `0x800DFB8C` (size `0x4`). s1759 synchronized
+`noopHandler_800DFB84`. Last-15 after this commit still
 include s1744's revisit, so the mandatory REVISIT gate does not fire.
 
 Competing hypotheses:
 
-- H1: companion `noopHandler_800DFB84`, generated body, TOML
-  name/size, and overlay span already agree — confirm only.
-- H2: generated code still carries placeholder `func_800DFB84` (or a
+- H1: companion leftover `fake_func_800DFB8C`, generated body, TOML
+  name/size, and overlay span already agree — confirm leftover only.
+- H2: generated code still carries placeholder `func_800DFB8C` (or a
   stale alias) and needs a TOML + fixup rename, or TOML is still
-  `func_800DFB84` while generated/overlay already use the human name.
-- H3: overlay collision, leftover `fake_func_*`, or size/boundary
-  disagreement with the companion listing.
+  `func_800DFB8C` while generated/overlay already use the leftover name.
+- H3: overlay collision, a second occupant, or size/boundary
+  disagreement with the companion leftover listing (expected: the
+  4-byte `addiu $sp, $sp, -0x18` fragment immediately before
+  `applyCraftAnimAndDetailParams`).
 - H4: companion, generated body, TOML, or section-4 row is missing.
 
 Exact commands (read-only census; no game run):
 
 ```
 # companion
-grep -n 'noopHandler_800DFB84\|800DFB84\|DFB84' \
+grep -n 'fake_func_800DFB8C\|800DFB8C\|DFB8C' \
   /Users/williambuckley/Documents/Tools/rogue_squadron64/symbol_files/*.txt
 # generated
-grep -n 'noopHandler_800DFB84\|func_800DFB84\|0x800DFB84' \
+grep -n 'fake_func_800DFB8C\|func_800DFB8C\|0x800DFB8C' \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_38.c
 # toml + overlay inl
-grep -n '800DFB84\|noopHandler_800DFB84' \
+grep -n '800DFB8C\|fake_func_800DFB8C' \
   syms/rogue_squadron.syms.toml \
   /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl
 ```
 
 Expected splits:
 
-- H1: all four sources already say `noopHandler_800DFB84`,
-  size `0x8`, previous `resetCraftSubsystemGlobal` / `0x800DFB78`,
-  next `fake_func_800DFB8C` / `0x800DFB8C`,
-  no leftover placeholder.
-- H2: generated still `func_800DFB84`, or TOML still `func_800DFB84`
-  while generated/overlay already use the human name — rename in TOML
+- H1: all four sources already say `fake_func_800DFB8C`,
+  size `0x4`, previous `noopHandler_800DFB84` / `0x800DFB84`,
+  next `applyCraftAnimAndDetailParams` / `0x800DFB90`,
+  no leftover `func_800DFB8C` placeholder.
+- H2: generated still `func_800DFB8C`, or TOML still `func_800DFB8C`
+  while generated/overlay already use the leftover name — rename in TOML
   and the fixup path.
-- H3: menu/cinematic occupant, leftover splat, or size != `0x8`.
+- H3: menu/cinematic occupant, a second occupant, or size != `0x4`.
 - H4: a required source is absent.
 
 Do not reopen the attract-1024 six-entry recipe. Next cursor after this
-address is whatever the census names as the following mission function
-(`fake_func_800DFB8C` / `applyCraftAnimAndDetailParams`).
-Companion comment: "pure jr-ra stub".
+address is `applyCraftAnimAndDetailParams` / `func_800DFB90`
+(`0x800DFB90`, size `0x3C4`). Companion note: leftover splat;
+`func_800DFB90` was deleted s432 as a duplicate-symbol collision with
+`applyCraftAnimAndDetailParams`.

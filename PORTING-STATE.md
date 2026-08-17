@@ -81627,3 +81627,40 @@ section-4 row are all present). No build or runtime run required.
 Next census: `noopHandler_800DFB84` / `func_800DFB84` at `0x800DFB84`
 (size `0x8`). Last-15 titles after s1758 still include s1744's revisit,
 so the mandatory REVISIT gate does not fire.
+
+## Session 1759 (2026-08-16) — synchronized the noopHandler_800DFB84 symbol
+
+Exact generated-symbol census for `0x800DFB84` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1744's
+mandatory REVISIT (`rejected menu/cinematic/mission loops for the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 6421; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `noopHandler_800DFB84 = 0x800DFB84` with comment "pure jr-ra stub". Previous contiguous neighbor `resetCraftSubsystemGlobal = 0x800DFB78`. Next generated/TOML neighbor is leftover `fake_func_800DFB8C = 0x800DFB8C`; next coarse named neighbor is `applyCraftAnimAndDetailParams = 0x800DFB90`. No leftover `func_800DFB84` splat, no `D_800DFB84`, and no menu/cinematic/main overlay occupant |
+| Generated `funcs_38.c` | `RECOMP_FUNC void noopHandler_800DFB84` at VRAM `0x800DFB84`. Two-instruction body: `jr $ra` / delay-slot `nop`, then `return`. Previous `resetCraftSubsystemGlobal` last insn is `0x800DFB80`; next is leftover `fake_func_800DFB8C` at `0x800DFB8C`. `funcs.h` already declares the human name. No leftover `func_800DFB84`. No generated `jal 0x800DFB84` site |
+| Body semantics | Leaf no-op. Companion comment matches the live body. Same stub family as `noopHandler_800EFD64` and `noopHandler_800FBBA0` |
+| TOML (before) | `{ name = "func_800DFB84", vram = 0x800DFB84, size = 0x8 }` — size matches `0x800DFB8C - 0x800DFB84` |
+| Overlay section 4 | `{ .func = noopHandler_800DFB84, .offset = 0x0003AA54, .rom_size = 0x00000008 }` under `section_4_ovl_mission_funcs` (`0x800DFB84 - 0x800A5130 = 0x3AA54`; `0x3AA48 + 0xC = 0x3AA54`; `0x3AA54 + 0x8 = 0x3AA5C` matches next `fake_func_800DFB8C`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800DFB84`. No leftover `func_800DFB84` in generated headers or overlay INL |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated jr-ra/nop body, previous
+(`resetCraftSubsystemGlobal` / `0x800DFB78`) and next (`fake_func_800DFB8C`
+/ `0x800DFB8C`) boundaries, TOML size, and section-4 overlay span agreed;
+the generated headers/body were already `noopHandler_800DFB84`, and
+only the TOML name was a stale `func_800DFB84` placeholder. Corrected TOML
+to `noopHandler_800DFB84`. This refutes H1 (TOML was not already
+synchronized), H3 (no leftover splat at this address, overlay collision, or
+size/boundary disagreement), and H4 (companion, generated body, TOML, and
+section-4 row are all present). No build or runtime run required.
+
+Next census: leftover `fake_func_800DFB8C` at `0x800DFB8C` (size `0x4`),
+then `applyCraftAnimAndDetailParams` / `func_800DFB90` at `0x800DFB90`.
+Last-15 titles after s1759 still include s1744's revisit, so the
+mandatory REVISIT gate does not fire.
