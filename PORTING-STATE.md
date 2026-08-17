@@ -83850,3 +83850,49 @@ INVALID COP2 word) then leftover `func_800EC110` (companion
 mission leftover and generated body still say `func_800EC110`).
 Last-15 titles after s1810 still include s1808's revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1811 (2026-08-16) — confirmed the npcPowerUpUpdate symbol
+
+Exact generated-symbol census for `0x800EB990` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1808's
+mandatory REVISIT (`selected H2 menuIn/mission jal-sites on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 8276; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail. Soak queue empty.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `npcPowerUpUpdate = 0x800EB990` (coarse listing, `segment:mission_overlay`). Previous named kernel is `npcAtPtUpdate = 0x800EA5E0` (s1809 confirmed); the VRAM-order occupant between them is `resetObjectPoolListHead = 0x800EB984` (s1810 synchronized). Next leftover splat is `fake_func_800EC10C = 0x800EC10C`, then leftover `func_800EC110 = 0x800EC110`. No leftover `func_800EB990` splat, no `D_800EB990`, and no menu/cinematic/main overlay occupant |
+| Companion `main_overlay.txt` | No occupant at `0x800EB990`. Mentions this name only as a caller of `getCraftRecordByIdx` (`0x8006C8F0`) alongside `executeActorType4Effect` and `parseDatItemSubtypes1To5` case 2 |
+| Generated `funcs_39.c` | `RECOMP_FUNC void npcPowerUpUpdate` at VRAM `0x800EB990`. First insn `addiu $sp, $sp, -0x68`; last live insn `jr $ra` / `addiu $sp, $sp, 0x68` at `0x800EC104` / `0x800EC108`. Previous `resetObjectPoolListHead` ends at `0x800EB988` / `0x800EB98C`; next is leftover `fake_func_800EC10C` at `0x800EC10C` (INVALID COP2 word `0x4A652950`). `funcs.h` already declares the human name. No leftover `func_800EB990`. No generated `jal 0x800EB990` site — table-dispatched like the other `npcXxxUpdate` siblings |
+| Body semantics | Halfword state in `a1`; 4-way compare (not a 9-way `jr` table): `a1==1` setup at `L_800EBA04`, `a1==2` teardown at `L_800EBB80`, `a1==3` live tick at `L_800EBBB8`, `a1==4` visibility/transform at `L_800EBF58`; other values fall to the epilogue at `L_800EC0E4`. Object pointer `a0` in `$s2`, record `*(a0+4)` in `$s1`, third arg in `$s3`. Case 1 is setup: `ori` flags `0x110` on `lhu *(s2+0x14)`, `composeEulerRotationXYZ` from `s3+0x1C/20/24`, copy pos `s3+0x10/14/18` into `s1+0x8/C/10`, zero `s1+0x2C/30/34` and `sb $zero` type-byte `s1+0x6C`, `walkMeshdef0List`, scale/bob fields `s1+0x44/48/50`, `mat34CrossRowsAndCopyPos`, `popNpcSlotFromTail`, `lookupHmtMaterialByName`. Case 2 tears down (`sh 0xFFFF` at `*(s1+4)+6`, optional `parseDatItemCommon`, `releaseMeshAsset`). Case 3 is the live tick: when `lbu s1+0x6D==0`, bob/spin via `sinf`/`cosf`/`getCraftRecordByIdx`, `play3DSoundEvent`, then an 8-way `jr` table at `0x800A88C8` on `*( *(s1+4)+0x6C ) < 8` that ORs pickup bits onto `*(0x80130B4C)` (`0x200`/`0x800`/`0x2000`/`0x4000`/`0x10000`/`0x400`/`0x1000`/`0x8000`), `datItemSetObjectiveBooleanCount`, and `sb 1` at `s1+0x6D`; lifetime countdown on `s1+0x44` then `destroyNpcSlotByIndex`; `floatModulo` spin; `isNpcWithinActiveReferenceRange`; byte `s1+0x6C` increments and destroys at `>= 0x15`. Case 4 is presentation (`clearVec4QuadStruct`, `applyScaleToMat3x4`, `composeQuatToMat3x4`, `composeRotationMatrixSlot1`, `addVec3At0x24` ×3, `addNpcToVisibilityBucket`, `mat34CrossRowsAndCopyPos`). 25 `jal`s / 21 unique targets. Name matches the power-up `npcXxxUpdate` sibling of `npcAtAtUpdate` / `npcAtStUpdate` / `npcAtPtUpdate` / `npcGroundTroopUpdate` |
+| TOML | `{ name = "npcPowerUpUpdate", vram = 0x800EB990, size = 0x77C }` — already the human name; size matches `0x800EC10C - 0x800EB990` (last insn `0x800EC108` + 4 = `0x77C`). No leftover `func_800EB990` |
+| Overlay section 4 | `{ .func = npcPowerUpUpdate, .offset = 0x00046860, .rom_size = 0x0000077C }` under `section_4_ovl_mission_funcs` (`0x800EB990 - 0x800A5130 = 0x46860`; previous `0x46854 + 0xC = 0x46860`; `0x46860 + 0x77C = 0x46FDC` matches next leftover `fake_func_800EC10C`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800EB990`. No leftover `func_800EB990` in generated headers, TOML, or overlay INL |
+
+### Outcome
+
+H1 selected. Companion mapping, live generated 4-way power-up-update
+body with the 8-way pickup-bit table, previous
+(`resetObjectPoolListHead` / `0x800EB984`) and next leftover
+(`fake_func_800EC10C` / `0x800EC10C`) boundaries, TOML name and size,
+and section-4 overlay span already agree. No TOML or generated-name
+change. This refutes H2 (no stale `func_800EB990` placeholder), H3 (no
+leftover splat at this address, overlay collision, or size/boundary
+disagreement; size is `0x77C` as expected; previous ends exactly here
+and next starts at `0x800EC10C`), and H4 (companion, generated body,
+TOML, and section-4 row are all present). No build or runtime run
+required.
+
+Next census: leftover `fake_func_800EC10C` at `0x800EC10C` (size
+`0x4`). Neighbor peek already: TOML, generated headers/body, overlay
+INL, and companion leftover all use `fake_func_800EC10C` (INVALID COP2
+word `0x4A652950` / `do_break`). Next occupant is leftover
+`func_800EC110` (`0x800EC110`, `0x278`; first insn `addiu $sp, $sp,
+-0x20`; last live `jr $ra` / `addiu $sp, $sp, 0x20` at `0x800EC380` /
+`0x800EC384`). Companion `main_overlay.txt` already maps
+`allocObjectPoolNode = 0x800EC110`; mission leftover and generated
+body still say `func_800EC110`. Last-15 titles after s1811 still
+include s1808's revisit, so the mandatory REVISIT gate does not fire.

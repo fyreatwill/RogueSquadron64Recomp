@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1810 (2026-08-16).
+detail. Reviewed through s1811 (2026-08-16).
 
 ## Current state
 
@@ -54,13 +54,15 @@ detail. Reviewed through s1810 (2026-08-16).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at `npcPowerUpUpdate`
-   (`0x800EB990`, size `0x77C`). Neighbor peek: TOML, generated
-   headers/body, overlay INL, and companion already use the human name.
-   s1810 synchronized leftover `func_800EB984` → `resetObjectPoolListHead`
-   (`0x800EB984`, `0xC`). Archive: `PROJECT-OVERVIEW.md` §33
-   (s1240–s1589), §34 (s1590–s1647), §35 (s1648–s1810). About 1,548
-   placeholder `func_0x...` names remained at s1487.
+1. Resume the generated-symbol sweep at leftover `fake_func_800EC10C`
+   (`0x800EC10C`, size `0x4`, INVALID COP2 word). Neighbor peek: TOML,
+   generated headers/body, overlay INL, and companion leftover already
+   use that name. Next occupant is leftover `func_800EC110` /
+   companion `allocObjectPoolNode` (`0x800EC110`, `0x278`). s1811
+   confirmed `npcPowerUpUpdate` at `0x800EB990` size `0x77C` (H1).
+   Archive: `PROJECT-OVERVIEW.md` §33 (s1240–s1589), §34 (s1590–s1647),
+   §35 (s1648–s1811). About 1,548 placeholder `func_0x...` names
+   remained at s1487.
 2. Next mandatory REVISIT (when last-15 titles are all sweep): M4
    accumulator boundary (source state vs later DMA/consumer), not another
    `submitGfxFrame` entry/jal/`prev_pc` recipe. The extra +104 is closed
@@ -110,9 +112,10 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1810 through leftover `func_800EB984` renamed to
-`resetObjectPoolListHead` (`0x800EB984`, `0xC`) and `npcAtPtUpdate`
-confirmed at `0x800EA5E0` size `0x13A4` (H1), after leftover
+s1648–s1811 through leftover `func_800EB984` renamed to
+`resetObjectPoolListHead` (`0x800EB984`, `0xC`) and `npcPowerUpUpdate`
+confirmed at `0x800EB990` size `0x77C` (H1), after `npcAtPtUpdate`
+confirmed at `0x800EA5E0` size `0x13A4` (H1), leftover
 `func_800EA470` became `npcAtPtPlaySkywalkerErrorCallout`, leftover
 `func_800E9EC4` became `computeNpcOrientationFromAimVectors`, leftover
 `func_800E9D74` became `spawnObjectImpactEffectWithSound`, leftover
