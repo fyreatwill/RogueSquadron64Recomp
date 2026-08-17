@@ -83609,3 +83609,41 @@ headers/body, overlay INL, and companion already use the human name;
 next occupant is `npcAtPtPlaySkywalkerErrorCallout` (`0x800EA470`).
 Last-15 titles after s1805 still include s1792's revisit, so the
 mandatory REVISIT gate does not fire.
+
+## Session 1806 (2026-08-16) — synchronized the computeNpcOrientationFromAimVectors symbol
+
+Exact generated-symbol census for leftover `0x800E9EC4` (HYPOTHESIS-ID:
+generated-symbol-renaming-sweep). Last-15 ledger titles include s1792's
+mandatory REVISIT (`selected H3 unwatched submitGfx callers on the attract
+1024`), so the 15-title all-sweep REVISIT gate did not fire. Step 0
+`wc -c` was 7753; not a maintenance iteration. No new soak-queue verdicts
+beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `computeNpcOrientationFromAimVectors = 0x800E9EC4` (no comment). Next named kernel `npcAtPtPlaySkywalkerErrorCallout = 0x800EA470`. No leftover `func_800E9EC4` splat, no `D_800E9EC4`, and no menu/cinematic/main overlay occupant. Previous `spawnObjectImpactEffectWithSound = 0x800E9D74` |
+| Generated `funcs_39.c` | `RECOMP_FUNC void computeNpcOrientationFromAimVectors` at VRAM `0x800E9EC4`. Prologue `addiu $sp, $sp, -0x1B0`; last live insn `jr $ra` at `0x800EA468` with delay `addiu $sp, $sp, 0x1B0` at `0x800EA46C`. Previous `spawnObjectImpactEffectWithSound` delay ends at `0x800E9EC0`; next is `npcAtPtPlaySkywalkerErrorCallout` at `0x800EA470`. `funcs.h` already declares the human name. No leftover `func_800E9EC4`. One generated `jal 0x800E9EC4` inside `npcAtPtUpdate` already dispatches the human name |
+| Body semantics | `s3 = a0`, `f22 = a1`. `isPendingChildNpcActive(*(s3+0x38))` then `computeActorAnchorDeltaAfterLOS`; on fail skip to `L_800EA244`. Else `getObjectMeshTransformOrLocal` dest `sp+0xA0`, `computeAnchorRelativePositionByDistanceRatio` `a2=0x41200000` dest `sp+0x90`, `mat34CrossRowsAndCopyPos` / `mat3x3InverseInto` / `transformVec3ByMat34`, add `*(s3+0x54)` scaled by `0x800A86FC`/`0x800A8700`/`0x800A8704`, `vec3NormalizeInto`. Then `buildRotationMatrixSlot0(*(s3+0x68))` / `composeRotationMatrixSlot1(*(s3+0x64))` / `transformVec3ByMat34` / `vec3Dot` / `constMinusSinfApprox` / `vec3Cross` / `normalize_vector` / `quatFromAxisAngle` / `rotateVec3ByQuat`. Generated/companion name matches the body |
+| TOML | Was `{ name = "func_800E9EC4", vram = 0x800E9EC4, size = 0x5AC }` — stale placeholder; size matches `0x800EA470 - 0x800E9EC4`. Renamed to `computeNpcOrientationFromAimVectors` |
+| Overlay section 4 | `{ .func = computeNpcOrientationFromAimVectors, .offset = 0x00044D94, .rom_size = 0x000005AC }` under `section_4_ovl_mission_funcs` (`0x800E9EC4 - 0x800A5130 = 0x44D94`; previous `0x44C44 + 0x150 = 0x44D94`; `0x44D94 + 0x5AC = 0x45340` matches next `npcAtPtPlaySkywalkerErrorCallout`) |
+| Non-collision | Cinematic overlay ends at `0x800B0940`; menu overlay ends at `0x800CD520`; main `.text` ends at `0x800A5130`. None occupy `0x800E9EC4`. No leftover `func_800E9EC4` in generated headers or overlay INL after the TOML rename |
+
+### Outcome
+
+H2 selected. Companion, generated headers/body, and section-4 already
+used `computeNpcOrientationFromAimVectors`; only TOML still carried
+`func_800E9EC4`. Renamed the TOML row. This refutes H1 (sources were
+not already synchronized), H3 (no overlay collision, leftover splat, or
+size/boundary miss: previous `spawnObjectImpactEffectWithSound` ends at
+`0x800E9EC4`, and `0x800E9EC4 + 0x5AC = 0x800EA470`), and H4
+(companion, generated body, TOML, and section-4 row are all present).
+No build or runtime run required.
+
+Next census: `npcAtPtPlaySkywalkerErrorCallout` at `0x800EA470` (size
+`0x170`). Neighbor peek: TOML still `func_800EA470`; generated
+headers/body, overlay INL, and companion already use the human name;
+next occupant is `npcAtPtUpdate` (`0x800EA5E0`). Last-15 titles after
+s1806 still include s1792's revisit, so the mandatory REVISIT gate
+does not fire.
