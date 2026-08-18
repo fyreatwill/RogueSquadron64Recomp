@@ -88747,3 +88747,70 @@ REVISIT trigger. Check again next iteration.
 The s1902 soak-queue line (`s790_postsec2_reachability ADVANCED`,
 LPM-off A/B, H3a-lowpower REFUTED) was already folded in s1902; no new
 queued soaks landed between iterations.
+
+## Session 1904 (2026-08-17) — synchronized the triggerCueWithSlotEffect symbol
+
+Resumed the generated-symbol renaming sweep. Before starting, re-checked
+the 15-title REVISIT gate: `grep -n '^## Session ' PORTING-STATE.md |
+tail -15` shows s1889-s1892 plus s1902 in the window (5 of 15 titles
+non-sweep), so the sweep continues; not a REVISIT. H3a-lowpower is
+closed (s1902); did not re-run `s790_postsec2_reachability.sh`. No new
+soak-queue verdicts landed between s1903 and this iteration.
+
+Renamed leftover `func_800F2FCC` (`0x800F2FCC`, size `0xE0`,
+`syms/rogue_squadron.syms.toml:1997`) to `triggerCueWithSlotEffect`. The
+four-step confirmation was already complete in s1903 and was
+re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:5490` (`setEffectIntensity`) and `:5503`
+   (`triggerCueWithSlotEffect`) are the only two `RECOMP_FUNC` lines
+   matched by name in that span — true adjacency, not a stray substring
+   match.
+2. `funcs.h:2155-2156` declares `setEffectIntensity` then
+   `triggerCueWithSlotEffect` in that exact order.
+3. `recomp_overlays.inl:1883-1884`: `triggerCueWithSlotEffect` offset is
+   `0x0004DE9C` = `setEffectIntensity`'s `0x0004DE90 + 0xC` (its TOML
+   size); `rom_size = 0x000000E0` matches the TOML's `size = 0xE0` for
+   `func_800F2FCC` exactly.
+4. `grep -rln 'func_800F2FCC\b'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+Generated body matches the name: jal `getEffectIntensity`
+(`0x800F2FB4`), jal `dispatchCueByCategory` (`0x8005E3B0`), then
+`slotDispatcherIter` (`0x8003E8DC`) when the duration float is live.
+No existing TOML entry already used `triggerCueWithSlotEffect`.
+
+All four agreed, so renamed the TOML entry only (metadata-only sync, no
+build/regen needed).
+
+Previewed the next leftover for continuity: `func_800F30AC` (size
+`0x98`, `syms/rogue_squadron.syms.toml:1998`) lines up with
+`recomp_overlays.inl:1885` (`copyPipeDelimitedField`, offset
+`0x0004DF7C` = `0x0004DE9C + 0xE0`, `rom_size = 0x00000098`) —
+confirmed adjacency (`funcs_41.c:5503,5668`) and declaration order
+(`funcs.h:2156-2157`) and non-collision (`grep -rln 'func_800F30AC\b'`
+zero hits) this session too, so the next iteration can rename directly
+without re-deriving these. Generated body walks `$a0` until NUL
+comparing each byte to `0x7C` (`'|'`), then copies the selected field
+into `$a2`.
+
+Also previewed the leftover after that: `func_800F3144` (size `0x114`,
+`syms/rogue_squadron.syms.toml:1999`) lines up with
+`recomp_overlays.inl:1886` (`copyRandomPipeDelimitedField`, offset
+`0x0004E014` = `0x0004DF7C + 0x98`, `rom_size = 0x00000114`) —
+adjacency (`funcs_41.c:5668,5811`), declaration order
+(`funcs.h:2157-2158`), and non-collision (`grep -rln 'func_800F3144\b'`
+zero hits). Generated body jal's `rand_recomp` (`0x80003430`) then
+walks the same `|`-delimited field. The generated tree still runs
+ahead of our TOML here, so the next few sessions should stay fast
+metadata-only syncs.
+
+Noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per
+CLAUDE.md) — untouched this session, no new edits under `lib/`, so no
+patch-export needed.
+
+Next-15-title window after s1904 drops s1889 (a non-sweep entry) and
+keeps s1890-s1892 plus s1902 (4 of 15 slots non-sweep); still not a
+REVISIT trigger. Check again next iteration.
+

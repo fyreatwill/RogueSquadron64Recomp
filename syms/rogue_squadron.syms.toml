@@ -1994,7 +1994,7 @@ functions = [
     { name = "stepAndTickProgressChannel", vram = 0x800F2F10, size = 0xA4 },
     { name = "getEffectIntensity", vram = 0x800F2FB4, size = 0xC },
     { name = "setEffectIntensity", vram = 0x800F2FC0, size = 0xC },
-    { name = "func_800F2FCC", vram = 0x800F2FCC, size = 0xE0 },
+    { name = "triggerCueWithSlotEffect", vram = 0x800F2FCC, size = 0xE0 },
     { name = "func_800F30AC", vram = 0x800F30AC, size = 0x98 },
     { name = "func_800F3144", vram = 0x800F3144, size = 0x114 },
     { name = "func_800F3258", vram = 0x800F3258, size = 0x8 },

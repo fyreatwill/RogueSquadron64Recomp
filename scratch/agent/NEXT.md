@@ -1,43 +1,43 @@
-# NEXT work unit (s1904)
+# NEXT work unit (s1905)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-**Primary path — resume the sweep.** s1903 synchronized
-`func_800F2FC0` → `setEffectIntensity`. Do not re-run
+**Primary path — resume the sweep.** s1904 synchronized
+`func_800F2FCC` → `triggerCueWithSlotEffect`. Do not re-run
 `s790_postsec2_reachability.sh` without a new measurement axis. Ask (b)
 (disposable clone + `git submodule update` bisect) is still human-only.
 
-Next leftover: `func_800F2FCC` at `0x800F2FCC` (size `0xE0`,
-`syms/rogue_squadron.syms.toml:1997`). Already confirmed in s1903 via
-the full four-step procedure:
-1. Adjacency: `funcs_41.c:5490` (`setEffectIntensity`) and `:5503`
-   (`triggerCueWithSlotEffect`) are the only two `RECOMP_FUNC` lines
+Next leftover: `func_800F30AC` at `0x800F30AC` (size `0x98`,
+`syms/rogue_squadron.syms.toml:1998`). Already confirmed in s1903 and
+re-checked in s1904 via the full four-step procedure:
+1. Adjacency: `funcs_41.c:5503` (`triggerCueWithSlotEffect`) and `:5668`
+   (`copyPipeDelimitedField`) are the only two `RECOMP_FUNC` lines
    matched — true adjacency.
-2. `funcs.h:2155-2156` declares `setEffectIntensity` then
-   `triggerCueWithSlotEffect` in that exact order.
-3. `recomp_overlays.inl:1884`: `triggerCueWithSlotEffect` offset is
-   `0x0004DE9C` = `setEffectIntensity`'s `0x0004DE90 + 0xC` (its TOML
-   size); `rom_size = 0x000000E0` matches the TOML's `size = 0xE0` for
-   `func_800F2FCC` exactly.
-4. `grep -rln 'func_800F2FCC\b'` across N64Recomp's `RecompiledFuncs/`
+2. `funcs.h:2156-2157` declares `triggerCueWithSlotEffect` then
+   `copyPipeDelimitedField` in that exact order.
+3. `recomp_overlays.inl:1885`: `copyPipeDelimitedField` offset is
+   `0x0004DF7C` = `triggerCueWithSlotEffect`'s `0x0004DE9C + 0xE0` (its
+   TOML size); `rom_size = 0x00000098` matches the TOML's
+   `size = 0x98` for `func_800F30AC` exactly.
+4. `grep -rln 'func_800F30AC\b'` across N64Recomp's `RecompiledFuncs/`
    tree: zero hits — non-collision.
 
-Generated body also matches the name: jal `getEffectIntensity`
-(`0x800F2FB4`), jal `dispatchCueByCategory` (`0x8005E3B0`), then
-`slotDispatcherIter` (`0x8003E8DC`) when the duration float is live.
+Generated body also matches the name: walks `$a0` until NUL, comparing
+each byte to `0x7C` (`'|'`), copies the selected field into `$a2`.
 
-All four already agree — this iteration can rename `func_800F2FCC` to
-`triggerCueWithSlotEffect` directly (TOML metadata-only sync, no
+All four already agree — this iteration can rename `func_800F30AC` to
+`copyPipeDelimitedField` directly (TOML metadata-only sync, no
 build/regen needed), then re-verify + preview the one after it the
-same way before stopping (matching the s1887-s1903 pattern).
+same way before stopping (matching the s1887-s1904 pattern).
 
 **Bonus — the generated tree still runs ahead here.** After
-`triggerCueWithSlotEffect`, `recomp_overlays.inl:1885` already shows
-`copyPipeDelimitedField` (offset `0x0004DF7C`, size `0x98`). s1903
-already ran its four-step confirmation (`funcs_41.c:5503,5668`,
-`funcs.h:2156-2157`, `.inl` offset/size math, non-collision on
-`func_800F30AC`) — still re-check before renaming, but expect another
-fast metadata-only sync.
+`copyPipeDelimitedField`, `recomp_overlays.inl:1886` already shows
+`copyRandomPipeDelimitedField` (offset `0x0004E014`, size `0x114`).
+s1904 already ran its four-step confirmation (`funcs_41.c:5668,5811`,
+`funcs.h:2157-2158`, `.inl` offset/size math, non-collision on
+`func_800F3144`) — still re-check before renaming, but expect another
+fast metadata-only sync. Generated body jal's `rand_recomp` then
+walks the same `|`-delimited field.
 
 **Where the generated tree actually lives:** it is gitignored
 (`RecompiledFuncs/` in `.gitignore`) and does NOT exist under this
@@ -52,9 +52,9 @@ the whole filesystem.
 belong to the sweep (contain "synchronized" or "confirmed ... symbol"),
 this iteration is a REVISIT instead — spend it re-attempting the
 external retail-entry boundary or M4 accumulator-origin threads with a
-genuinely new angle. As of s1903 this gate does NOT fire (s1889-s1892
-plus s1902 are in the window — 5 of 15 slots non-sweep). The window
-starts dropping s1889 only after s1904.
+genuinely new angle. As of s1904 this gate does NOT fire (s1890-s1892
+plus s1902 are in the window — 4 of 15 slots non-sweep). The window
+starts dropping s1890 only after s1905.
 
 H3a-lowpower is closed. Do **not** re-check `thermal_probe.py` as a
 reason to re-run the reachability recipe — that A/B is done.
