@@ -91925,3 +91925,95 @@ Do not pump dequeue from
 the menu spin. Do not
 force-zero. Ask (b) remains
 human-only.
+
+## Session 1940 (2026-08-18) — landed [vi-deq]/[vi-wait]; both soaks UNEVALUABLE
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: one Debug rebuild
+adding always-on `[vi-deq]` on
+`dequeue_external_messages`
+for `mq=0x80114388`
+(`site=ok` if `do_send`
+succeeds, `site=full` if
+not; pre-send `validCount` /
+`msgCount`) and `[vi-wait]`
+enter/exit on
+`wait_for_external_message`
+(and timed), then one
+`#7/#8` soak. After
+recv1-enter n=N+1 with
+continuing `[vi-enq]`:
+zero `[vi-deq]` (and zero
+`[vi-wait]`) →
+H-never-dequeued;
+`[vi-deq]` site=full only →
+H-deq-dropped; `[vi-deq]`
+site=ok and no recv1-exit →
+H-deq-not-woken.
+
+Sites live in
+`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`
+(exported via
+`submodule-patches/export.sh`).
+
+First soak
+`scratch/agent/soak_results/s1940_vi_deq_wait_20260818-002740/run.log`
+(probe_rc=4, ~26s): catalogued
+`fillSampleStreamRange+336`
+SIGBUS last-guest-pc=`0x8000b650`
+before `menu-entry` siten=2;
+`osViSetMode` ends `#6`.
+This refutes using that
+crash flavor as the post-`#8`
+three-way answer.
+
+Second soak
+`scratch/agent/soak_results/s1940_vi_deq_wait_b_20260818-002839/run.log`
+(probe_rc=4, ~25s): catalogued
+`fillSampleStreamRange+6464`
+SIGBUS last-guest-pc=`0x8000b650`;
+same `#6-dead` / no entry 2.
+This also refutes using the
+crash flavor as the
+three-way answer.
+
+Same-run positive control
+passed on both copies:
+tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice (swap
+n=2 and n=3); `slot-alloc`
+x3 ending
+`new=0x8018D4A0 count=16`;
+`[vi-set-event]` n=0
+`mq=0x80114388`; `[vi-enq]`
+n=0 `mq=0x80114388`;
+`[vi-deq]` n=0 `site=ok`
+`validCount=0 msgCount=1`;
+`[vi-wait]` n=0 enter and
+n=1 exit `mq=0x80114388
+sent=1`; `[vi-cb-recv1]`
+enter/exit n=0. First-run
+lifetime: 13 deq ok / 27
+deq full; 1330 wait
+deliveries of
+`0x80114388`. Boot
+recv1-exit n=0 is via
+wait, not deq — the
+idle-wait path can wake
+this mq.
+
+The post-`#8` three-way
+does not select
+H-never-dequeued /
+H-deq-dropped /
+H-deq-not-woken this
+session. Queued
+`scratch/agent/soak_queue/s1940_vi_deq_wait_c.sh`
+(no rebuild). Crash /
+#6-dead = enqueue another
+copy, do not babysit.
+
+Do not pump dequeue from
+the menu spin. Do not
+force-zero. Ask (b) remains
+human-only.

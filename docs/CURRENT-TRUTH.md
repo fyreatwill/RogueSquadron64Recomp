@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1939 (2026-08-18).
+detail. Reviewed through s1940 (2026-08-18).
 
 ## Current state
 
@@ -628,6 +628,40 @@ detail. Reviewed through s1939 (2026-08-18).
   messages stay targeted at
   the blocked queue and
   never wake it.
+  **s1940**: landed always-on
+  `[vi-deq]`
+  (`dequeue_external_messages`,
+  `mq=0x80114388`,
+  `site=ok|full`, pre-send
+  `validCount`/`msgCount`)
+  and `[vi-wait]`
+  enter/exit/timeout on
+  `wait_for_external_message`
+  (and timed). Same-run
+  control passed on both
+  copies: tick 2/2/2;
+  `took_swap=1` twice;
+  `slot-alloc` ends
+  `0x8018D4A0/16`;
+  `[vi-set-event]` n=0
+  `mq=0x80114388`;
+  `[vi-enq]` n=0 to that mq;
+  `[vi-deq]` n=0 `site=ok`
+  `validCount=0 msgCount=1`;
+  `[vi-wait]` n=0 enter and
+  n=1 exit `mq=0x80114388
+  sent=1`; recv1 enter/exit
+  n=0. Both soaks were the
+  catalogued
+  `fillSampleStreamRange`
+  SIGBUS (`+336` / `+6464`,
+  last-guest-pc=`0x8000b650`)
+  before `menu-entry`
+  siten=2 / `#7/#8` —
+  **UNEVALUABLE** for the
+  post-`#8` three-way.
+  This refutes a silent
+  instrument. Queued C.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -684,38 +718,35 @@ detail. Reviewed through s1939 (2026-08-18).
 1. **Host VI enqueues never
    unblock recv1 after `#8`
    (s1939). H-host-stuck
-   SELECTED: last
-   `osViSetEvent` is still
-   `mq=0x80114388`; 7987
-   `[vi-enq]` to that mq
-   after recv1-enter n=2351
-   with no recv1-exit; zero
-   extra `[vi-mq]`
-   recv/send/jam. H-vi-unhooked
-   / H-vi-stopped / H-stolen
-   REFUTED.** Next: one
-   Debug rebuild adding
-   always-on `[vi-deq]` on
-   `dequeue_external_messages`
-   for `mq=0x80114388`
-   (site=`ok`|`full`) and
-   `[vi-wait]` on
-   `wait_for_external_message`,
-   then one `#7/#8` soak.
-   After recv1-enter n=N+1
-   with continuing vi-enq:
-   zero vi-deq (and zero
-   vi-wait) →
-   H-never-dequeued; vi-deq
-   site=full only →
+   SELECTED.** s1940 landed
+   `[vi-deq]` / `[vi-wait]`;
+   both same-session soaks
+   were crash-flavor
+   UNEVALUABLE (instruments
+   live: deq n=0 `site=ok`,
+   wait n=1 exit delivered
+   `0x80114388`). Next:
+   consume queued
+   `s1940_vi_deq_wait_c.sh`
+   — no rebuild. After
+   recv1-enter n=N+1 with
+   continuing vi-enq: zero
+   vi-deq (and zero vi-wait)
+   → H-never-dequeued;
+   vi-deq site=full only →
    H-deq-dropped; vi-deq
    site=ok and no recv1-exit
-   → H-deq-not-woken. `lib/`
-   edit needs `export.sh` +
-   commit. Do not pump
-   dequeue from `menu-spin`.
-   Do not force-zero. Ask
-   (b) remains human-only.
+   → H-deq-not-woken;
+   vi-wait enter after enter
+   (no matching deq ok) →
+   still H-never-dequeued,
+   idle-wait ran. Crash /
+   #6-dead = enqueue another
+   copy, do not babysit. Do
+   not pump dequeue from
+   `menu-spin`. Do not
+   force-zero. Ask (b)
+   remains human-only.
    Still blocks item 3
    (hangar/512) until a port
    run publishes

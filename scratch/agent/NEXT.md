@@ -1,54 +1,42 @@
-# NEXT work unit (s1940) — why VI enqueues never unblock recv1
+# NEXT work unit (s1941) — consume C: why VI enqueues never unblock recv1
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1939 selected H-host-stuck
-on the `#7/#8` / `menu-entry`
-siten=2 staller
-`s1939_vi_register_producer_b_20260818-001837`.
-After `#8` the walk completes
-(after n=2350), then loop
-n=2351 and `[vi-cb-recv1]`
-enter n=2351 `mq=0x80114388`
-with no matching exit. Host
-`[vi-enq]` keeps targeting
-`0x80114388` (7987 after
-enter). The guest queue never
-unblocks.
+s1940 landed `[vi-deq]` /
+`[vi-wait]`. Both same-
+session soaks were
+catalogued
+`fillSampleStreamRange`
+SIGBUS before `menu-entry`
+siten=2 / `#7/#8`
+(UNEVALUABLE). Instruments
+passed same-run control
+(deq n=0 `site=ok`; wait
+n=1 exit delivered
+`0x80114388`). Queued
+`scratch/agent/soak_queue/s1940_vi_deq_wait_c.sh`.
 
-## Work unit — dequeue vs drop vs wake
+## Work unit — consume C, no rebuild
 
-One Debug rebuild, one `#7/#8`
-soak. Do **not** re-probe
+Do **not** rebuild. The
+Debug binary already has
+the probes. If the loop
+has already run C, read
+`scratch/agent/SOAK-RESULTS.md`
+and the cited `run.log`
+and apply the three-way
+below. If C has not run,
+run it:
+
+```
+zsh scratch/agent/soak_queue/s1940_vi_deq_wait_c.sh
+```
+
+Do **not** re-probe
 `osViSetEvent` / vi-enq
 identity. Do **not** pump
 `dequeue_external_messages`
-from the menu spin (that is a
-mitigation).
-
-This is a `lib/` edit:
-`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`.
-Must run `./submodule-patches/export.sh`
-and commit the refreshed patches
-in the same iteration.
-
-1. Always-on `[vi-deq]` in
-   `dequeue_external_messages`
-   when `to_send.mq==0x80114388`
-   (site=`ok` if `do_send`
-   returns true, `full` if
-   false; log n, validCount,
-   msgCount). Gate on
-   `ROGUESQ_LOG_AUDIOTICK_TRACE`.
-2. Always-on `[vi-wait]`
-   enter/exit on
-   `wait_for_external_message`
-   (and the timed variant).
-   Same gate.
-3. Leave `[vi-set-event]` /
-   `[vi-enq]` / `[vi-mq]` /
-   `[vi-cb-recv1]` as they
-   are.
+from the menu spin.
 
 Same-run positive control
 (must fire **before** `#8`):
@@ -63,9 +51,10 @@ Same-run positive control
   `0x80114388` from n=0
 - `[vi-deq]` site=ok fires
   from n=0 for
-  `mq=0x80114388` (early
-  recv1-exit proves delivery
-  works)
+  `mq=0x80114388`
+- `[vi-wait]` enter n=0
+  and an early exit
+  delivering `0x80114388`
 - `[vi-cb-recv1]` enter/exit
   fire from n=0
 - `menu-entry` siten=2 AND
@@ -92,8 +81,8 @@ to `0x80114388`:
   ran and did not deliver
 
 Crash / #6-dead (no entry 2)
-= UNEVALUABLE — enqueue a
-second copy of the same
+= UNEVALUABLE — enqueue
+another copy of the same
 recipe, do not babysit.
 
 Join key is log order:
@@ -103,8 +92,6 @@ vi-enq / vi-deq / vi-wait /
 recv1-exit / menu-entry
 siten=2.
 
-Build from `build/` with
-`DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer`.
 Run from `build/` with the
 ROM present. SIGKILL.
 
@@ -116,11 +103,11 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- The s1940 rebuild (probes
+  are live).
 - The s1939 four-way
   (closed: H-host-stuck
-  SELECTED; H-vi-unhooked /
-  H-vi-stopped / H-stolen
-  REFUTED).
+  SELECTED).
 - The s1938 recv1 three-way.
 - The s1937 walk-interior
   three-way.
