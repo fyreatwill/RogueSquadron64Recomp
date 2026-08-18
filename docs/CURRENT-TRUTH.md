@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1940 (2026-08-18).
+detail. Reviewed through s1941 (2026-08-18).
 
 ## Current state
 
@@ -651,17 +651,75 @@ detail. Reviewed through s1940 (2026-08-18).
   `[vi-wait]` n=0 enter and
   n=1 exit `mq=0x80114388
   sent=1`; recv1 enter/exit
-  n=0. Both soaks were the
-  catalogued
+  n=0. Both same-session
+  soaks were catalogued
   `fillSampleStreamRange`
-  SIGBUS (`+336` / `+6464`,
-  last-guest-pc=`0x8000b650`)
-  before `menu-entry`
+  SIGBUS before `menu-entry`
   siten=2 / `#7/#8` —
   **UNEVALUABLE** for the
   post-`#8` three-way.
-  This refutes a silent
-  instrument. Queued C.
+  Instruments were live.
+  Queued C.
+  **s1941**: consumed C
+  (`s1940_vi_deq_wait_c_20260818-003252/run.log`,
+  probe_rc=5, 182s, 0
+  crash, `#7/#8`,
+  `menu-entry` siten=2,
+  `menu-spin` 653000000,
+  `#10816` origin
+  `0x00696100`, 0
+  width=1024). Same-run
+  control passed: tick
+  2/2/2; `took_swap=1`
+  twice; `slot-alloc` ends
+  `0x8018D4A0/16`;
+  `[vi-set-event]` n=0
+  `mq=0x80114388`;
+  `[vi-enq]` / `[vi-deq]`
+  n=0 `site=ok` /
+  `[vi-wait]` n=1 exit
+  `sent=1` / recv1
+  enter/exit n=0. Join:
+  `#8` L449199 → after
+  n=2342 → loop n=2343 →
+  recv1-enter n=2343
+  L449256 → `[vi-mq]` recv
+  n=2343 flags=1 →
+  `.ovl.menu` + `menu-entry`
+  siten=2. After enter:
+  8038 `[vi-enq]` all
+  `mq=0x80114388`; zero
+  `[vi-deq]`; zero
+  `[vi-wait]`; zero
+  recv1-exit n=2343.
+  **H-never-dequeued
+  SELECTED.** H-deq-dropped
+  / H-deq-not-woken
+  REFUTED. Static second
+  line: `osRecvMesg` logs
+  `[vi-mq]` recv then
+  unconditionally
+  `dequeue_external_messages`
+  then `do_recv`; recv
+  fired so dequeue ran
+  empty for this mq
+  (`requeue_vi` defaults
+  false — deq n=50-54
+  `site=full` were
+  dropped). `do_recv` then
+  blocks via
+  `run_next_thread_and_wait`.
+  `wait_for_external_message`
+  is only
+  `pause_self`/`yield_self`.
+  The `anyAudioSlotActive`
+  spin is runnable
+  (`beq v0==0`, v0 is
+  `sltiu(s1,1)` so 0 means
+  a slot is live) so
+  idle-wait never runs and
+  the spin never calls
+  `os*Mesg`.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -716,37 +774,55 @@ detail. Reviewed through s1940 (2026-08-18).
 ## Active investigation and ranked next steps
 
 1. **Host VI enqueues never
-   unblock recv1 after `#8`
-   (s1939). H-host-stuck
-   SELECTED.** s1940 landed
-   `[vi-deq]` / `[vi-wait]`;
-   both same-session soaks
-   were crash-flavor
-   UNEVALUABLE (instruments
-   live: deq n=0 `site=ok`,
-   wait n=1 exit delivered
-   `0x80114388`). Next:
-   consume queued
-   `s1940_vi_deq_wait_c.sh`
-   — no rebuild. After
-   recv1-enter n=N+1 with
-   continuing vi-enq: zero
-   vi-deq (and zero vi-wait)
-   → H-never-dequeued;
-   vi-deq site=full only →
-   H-deq-dropped; vi-deq
-   site=ok and no recv1-exit
-   → H-deq-not-woken;
-   vi-wait enter after enter
-   (no matching deq ok) →
-   still H-never-dequeued,
-   idle-wait ran. Crash /
-   #6-dead = enqueue another
-   copy, do not babysit. Do
-   not pump dequeue from
-   `menu-spin`. Do not
-   force-zero. Ask (b)
-   remains human-only.
+   drain after recv1-enter
+   n=N+1 (s1941).
+   H-never-dequeued
+   SELECTED.** 8038
+   `[vi-enq]` after enter,
+   zero `[vi-deq]`, zero
+   `[vi-wait]`. Next: one
+   Debug rebuild with
+   (a) `[vi-recv-path]` on
+   `osRecvMesg(0x80114388)`
+   (`pre_vc`/`deq_any`/
+   `deq_vi`/`post_vc`/
+   `blocked`) as the
+   same-run control that
+   enter took empty-then-
+   block, and (b)
+   env-gated
+   `yield_self_1ms` every
+   100000 `menu-spin`
+   iterations
+   (`ROGUESQ_SPIN_YIELD`).
+   ORIGIN: host VI retrace
+   (legitimate) sits in
+   `external_messages`;
+   the spin is a runnable
+   game thread so idle-wait
+   never runs; hardware
+   would preempt it.
+   Two soaks of the same
+   binary (yield off / on).
+   Off must reproduce
+   H-never-dequeued. On:
+   recv1-exit n=N+1 +
+   later `[vi-deq]` site=ok
+   + synth/cursor after
+   entry 2 →
+   H-spin-starves-idle
+   SELECTED. If recv1
+   continues but `#9/#10`
+   still miss and
+   `menu-spin` still climbs
+   → H-slots-stay-live
+   (mix resumed, song
+   still holds 0x02). If
+   yield on still has
+   zero deq after enter →
+   H-yield-never-reached.
+   Do not force-zero. Ask
+   (b) remains human-only.
    Still blocks item 3
    (hangar/512) until a port
    run publishes
@@ -1003,6 +1079,19 @@ one lifetime
 after enter, and zero
 extra `[vi-mq]`
 recv/send/jam.
+Treating those post-enter
+enqueues as maybe
+dequeued-and-dropped
+(H-deq-dropped: dest full)
+or dequeued-ok but not
+waking the waiter
+(H-deq-not-woken) is
+superseded by s1941 —
+zero `[vi-deq]` and zero
+`[vi-wait]` after
+recv1-enter n=2343 while
+8038 `[vi-enq]` continued
+to `0x80114388`.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -1063,7 +1152,14 @@ recv1-enter n=2351; last
 mq; zero extra `[vi-mq]`;
 H-vi-unhooked /
 H-vi-stopped / H-stolen
-REFUTED)
+REFUTED) and s1941 selecting
+H-never-dequeued (8038
+`[vi-enq]` after
+recv1-enter n=2343; zero
+`[vi-deq]`; zero
+`[vi-wait]`; no recv1-exit
+n=2343; H-deq-dropped and
+H-deq-not-woken REFUTED)
 and s1926 selecting H-all-idx +
 H-base-moved (idle `0x80169460`/ch=20 all
 zero; stuck `0x8018D4A0`/ch=16 `nzn/n →

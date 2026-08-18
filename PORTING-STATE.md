@@ -92017,3 +92017,113 @@ Do not pump dequeue from
 the menu spin. Do not
 force-zero. Ask (b) remains
 human-only.
+
+## Session 1941 (2026-08-18) — selected H-never-dequeued; VI enqueues never drain after recv1
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: consume queued
+`s1940_vi_deq_wait_c.sh`
+(no rebuild) and apply the
+s1940 three-way. The loop
+had already run C
+(probe_rc=5, 182s).
+
+Artifact
+`s1941_h_never_dequeued.txt`
+holds the extracted join.
+Source log:
+`scratch/agent/soak_results/s1940_vi_deq_wait_c_20260818-003252/run.log`.
+
+Same-run positive control
+passed before `#8`:
+tick-entry/jal/exit 2/2/2
+with `took_swap=1` at loop
+n=2 and n=3; `slot-alloc`
+x3 ending
+`0x8018D4A0 count=16`;
+`[vi-set-event]` n=0
+`mq=0x80114388`;
+`[vi-enq]` n=0 to that mq;
+`[vi-deq]` n=0 `site=ok`
+`validCount=0 msgCount=1`;
+`[vi-wait]` n=1 exit
+`mq=0x80114388 sent=1`;
+recv1 enter/exit n=0;
+`osViSetMode` `#7` L446586
+and `#8` L449199 both
+`applyPendingViChanges`;
+`menu-entry` siten=2
+L449260 and `menu-spin`
+to siten=653000000.
+
+Join after `#8`:
+`[vi-deq]` n=49 `site=ok`
+then n=50-54 `site=full`
+(L449191-196) → recv1-exit
+n=2342 → `#8` → recv2/walk
+n=2342 → after n=2342 →
+loop n=2343 → recv1-enter
+n=2343 L449256 →
+`[vi-mq]` recv n=2343
+flags=1 → `.ovl.menu` +
+`menu-entry` siten=2.
+After enter: 8038
+`[vi-enq]` all
+`mq=0x80114388`; zero
+`[vi-deq]`; zero
+`[vi-wait]`; zero
+recv1-exit n=2343.
+Last `update_screen`
+`#10816` origin
+`0x00696100`. 0 crash. 0
+width=1024.
+
+This selects
+H-never-dequeued. This
+refutes H-deq-dropped
+(no `site=full` after
+enter) and H-deq-not-woken
+(no `site=ok` after
+enter). Idle-wait also
+did not run after enter.
+
+Static second line:
+`osRecvMesg` logs
+`[vi-mq]` recv then
+unconditionally calls
+`dequeue_external_messages`
+then `do_recv`. Recv
+fired, so dequeue ran
+and `try_dequeue` found
+no `0x80114388`.
+`requeue_vi` defaults
+false (`ultramodern.hpp`,
+`main.cpp` uses `{}`),
+so the n=50-54 full rows
+were dropped. `do_recv`
+then blocks via
+`run_next_thread_and_wait`.
+`wait_for_external_message`
+is only
+`pause_self`/`yield_self`.
+`menuOverlayInit`
+`L_800C5930` spins on
+`anyAudioSlotActive`
+(`beq v0==0`; v0 is
+`sltiu(s1,1)` so 0 means
+a live slot) and never
+calls `os*Mesg`, so a
+runnable game thread
+starves the only two
+drain paths.
+
+Next discriminator is
+whether a periodic
+`yield_self_1ms` from
+that spin lets dequeue
+run again (H-spin-starves-idle)
+or mix resumes and slots
+stay `0x02`
+(H-slots-stay-live).
+Do not force-zero. Ask
+(b) remains human-only.
