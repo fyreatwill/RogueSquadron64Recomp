@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1930 (2026-08-17).
+detail. Reviewed through s1931 (2026-08-17).
 
 ## Current state
 
@@ -328,6 +328,43 @@ detail. Reviewed through s1930 (2026-08-17).
   `tickMusyXIfActive` once then
   `anyAudioSlotActive`-only
   spin.
+  **s1931**: same 180s `#7/#8`
+  staller with
+  `ROGUESQ_LOG_AUDIOTICK_TRACE`
+  (`s1931_viretrace_during_spin_20260817-224233`,
+  probe_rc=5, 0 crash, `#10816`,
+  no width=1024). Same-run
+  control: tick 2/2/2;
+  `took_swap=1` twice;
+  `slot-alloc` x3 ending
+  `0x8018D4A0/16`; `cursor` n
+  last=16361; `menu-entry`
+  siten=2 at L393887;
+  `menu-spin` siten=937000000;
+  `[vi-cb-loop]` n last=2432
+  at L393528 **before** entry 2
+  (59 rows from n=0). After
+  entry 2: `vi-cb-loop` /
+  `vi-cb-slot` / `synth-entry`
+  after = 0. Last synth is
+  `[synth-entry]` n=2560 at
+  L393839 (loop n+128 from two
+  64-pump waits), then 45
+  `slot-sb` render writebacks,
+  then `.ovl.menu` DMA +
+  entry 2. Host
+  `update_screen` still climbed
+  `#2880→#10816`.
+  **H-viretrace-blocked
+  SELECTED.** H-cb-unhooked /
+  H-synth-early-return REFUTED
+  (both need the loop to keep
+  climbing; synth was still
+  entered on the last pre-spin
+  iteration). Slot 0 of the
+  last logged walk is
+  `wakeSerialThreadOnSi`
+  `0x80003250`.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -381,38 +418,47 @@ detail. Reviewed through s1930 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **Mix dies at menu-entry 2
-   (s1930). The 15/16 `0x02`
-   freeze is a dead mixer, not a
-   stuck cursor or a song loop.**
-   On the 180s `#7/#8` staller,
-   `cursor` n=16198 /
-   `render-end` n=27 /
-   `attack-jal` n=605 all freeze
-   at the `.ovl.menu` DMA +
+1. **VI-retrace handler stops
+   at menu-entry 2 (s1931).
+   The mixer dies because
+   `viRetraceHandlerThread`
+   stops iterating, not because
+   synth was unhooked or
+   returns early.** On the 180s
+   `#7/#8` staller, `[vi-cb-loop]`
+   n=2432 / `[synth-entry]`
+   n=2560 freeze at the
+   `.ovl.menu` DMA +
    `menu-entry` siten=2;
    `menu-spin` then climbs past
-   9e8. Next axis, existing
-   `[vi-cb-loop]` /
-   `[vi-cb-slot]`
-   (`ROGUESQ_LOG_AUDIOTICK_TRACE`)
-   on the same 180s recipe:
-   after entry 2, does the
+   9e8 while host
+   `update_screen` goes
+   `#2880→#10816`. Next axis
+   needs two new sites in one
+   fixup / one build (not in
+   this binary): `[synth-exit]`
+   on `musyxSynthFrame`'s
+   return (`funcs_24.c` ~5649)
+   and `[vi-cb-after]` on
    `viRetraceHandlerThread`
-   loop keep ticking and still
-   `jalr` `musyxSynthFrame`
-   (`0x8009123C`)? Loop frozen
-   while `update_screen` climbs
-   → H-viretrace-blocked; loop
-   climbing + synth ptr gone →
-   H-cb-unhooked; loop climbing
-   + synth still slotted +
-   cursor frozen →
-   H-synth-early-return. Crash
-   family (no entry 2) is
-   UNEVALUABLE. Ask (b) remains
-   human-only. Do not re-run a
+   just before `goto L_800198E8`
+   (`funcs_4.c` ~34870). After
+   entry 2: no `synth-exit` for
+   n=2560 → H-synth-never-returned;
+   `synth-exit` and no
+   `vi-cb-after` →
+   H-stuck-later-slot;
+   both fire and loop stays
+   frozen → H-recv-starved
+   (completed the iteration,
+   blocked on `osRecvMesg`
+   `0x80114388`). Crash family
+   (no entry 2) is UNEVALUABLE.
+   Ask (b) remains human-only.
+   Do not re-run a
    reachability-only `s790`.
+   Do not re-run s1931's
+   existing-instrument recipe.
    Do not force-zero a slot
    byte or the gate without an
    `ORIGIN:`. Still blocks
@@ -570,7 +616,18 @@ re-attacks forever after entry
 `attack-jal` all freeze at the
 `.ovl.menu` DMA + `menu-entry`
 siten=2 while `menu-spin`
-climbs.
+climbs. Treating that mix
+death as maybe an unhooked
+`musyxSynthFrame` slot or as
+synth being called and
+returning early after entry 2
+is superseded by s1931 —
+`[vi-cb-loop]` n and
+`[synth-entry]` n both freeze
+at the same overlay/entry-2
+cut; last synth n=2560 still
+ran (45 `slot-sb`) and the
+loop never reached n=2560.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -876,6 +933,13 @@ n last=16198 then 0 after
 H-song-loop-forever /
 H-pos-freeze-during-spin
 REFUTED)
+and s1931 selected
+H-viretrace-blocked
+(`[vi-cb-loop]` n=2432 and
+`[synth-entry]` n=2560 freeze
+at entry 2; `update_screen`
+`#2880→#10816`; H-cb-unhooked /
+H-synth-early-return REFUTED)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs
 failed across 4 crash/stall signatures, H1-flake refuted) —

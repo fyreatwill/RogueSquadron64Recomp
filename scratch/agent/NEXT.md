@@ -1,74 +1,113 @@
-# NEXT work unit (s1931) — VI-retrace mix producer after entry 2
+# NEXT work unit (s1932) — synth-exit vs after-slots after entry 2
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1930 selected H-mix-dead-during-spin:
-`cursor` / `render-end` /
-`attack-jal` all freeze at the
-`.ovl.menu` DMA + `menu-entry`
-siten=2; `menu-spin` climbs.
-The 15/16 `0x02` freeze is a
-dead mixer. Why the producer
-dies is now three hypotheses
-on an already-landed
-instrument (`[vi-cb-loop]` /
-`[vi-cb-slot]`, s310).
+s1931 selected H-viretrace-blocked:
+`[vi-cb-loop]` n=2432 and
+`[synth-entry]` n=2560 freeze
+at the `.ovl.menu` DMA +
+`menu-entry` siten=2;
+`menu-spin` climbs; host
+`update_screen` `#2880→#10816`.
+H-cb-unhooked and
+H-synth-early-return are
+closed. Why the handler stops
+after that last synth entry
+is three hypotheses. The
+existing s310 sites cannot
+split them (no synth-exit,
+no after-slots probe).
 
+Do **not** re-run s1931's
+existing-instrument recipe.
 Do **not** re-run a
-reachability-only `s790`. Do
-**not** force-zero a slot byte.
-No rebuild: the s310 sites are
-already in the live `.c`.
+reachability-only `s790`.
+No force-zero.
 
-## Work unit — VI-cb during the spin
+## Work unit — two new sites, one build, one 180s soak
 
-Same `[avf-gate]` sites. Same
-`ROGUESQ_LOG_VI_CALLERS` gate.
-Add `ROGUESQ_LOG_AUDIOTICK_TRACE=1`
-so `[vi-cb-loop]` / `[vi-cb-slot]`
-fire. One s790-shaped 180s run
-(copy `s1930_mix_during_spin.sh`).
-A queued copy is
-`scratch/agent/soak_queue/s1931_viretrace_during_spin.sh`
-— consume `SOAK-RESULTS.md` first;
-if that line is already a 180s
-`#7/#8` staller with `vi-cb-loop`
-rows, do not re-run.
+Land both in `fixup_game_funcs.py`
+(they die at the next regen
+otherwise), then one cmake
+Debug rebuild, then one
+s1931-shaped 180s run.
+
+1. `[synth-exit]` in
+   `musyxSynthFrame`
+   (`RecompiledFuncs/funcs_24.c`
+   ~5649, the function's
+   `return;`). Same
+   `ROGUESQ_LOG_AUDIOTICK_TRACE`
+   gate and `n<40||n%128==0`
+   stride as `[synth-entry]`.
+   Log `n=` from the same
+   counter if possible, else a
+   sibling `s_synthexit_n`.
+2. `[vi-cb-after]` in
+   `viRetraceHandlerThread`
+   immediately before
+   `goto L_800198E8`
+   (`funcs_4.c` ~34870, after
+   the 4-slot walk). Same env
+   gate, `n<40||n%128==0`.
+
+Copy
+`scratch/agent/soak_queue/done/s1931_viretrace_during_spin_20260817-224233.sh`
+(same env, including
+`ROGUESQ_LOG_AUDIOTICK_TRACE=1`
+and `ROGUESQ_LOG_VI_CALLERS=1`).
+Do not enqueue until the new
+tags exist in the live `.c`.
+Crash-family (no entry 2) =
+UNEVALUABLE — enqueue, do not
+babysit.
 
 Same-run positive control:
 `site=tick-entry` / `tick-jal` /
 `tick-exit` 2/2/2 with
-`took_swap=1` twice; `slot-alloc`
-ends at `0x8018D4A0 count=16`;
-`site=cursor` n last > 0;
+`took_swap=1` twice;
+`slot-alloc` ends at
+`0x8018D4A0 count=16`;
 `menu-entry` siten=2 AND
-`menu-spin` climbs; `[vi-cb-loop]`
-n last > 0 **before** entry 2
-(the mark-everything control —
-if this is 0 the env was not
-armed). Crash-family (no entry
-2) = UNEVALUABLE — enqueue, do
-not babysit.
+`menu-spin` climbs;
+`[vi-cb-loop]` n last > 0
+**and** `[synth-exit]` n last
+> 0 **before** entry 2 (if
+`synth-exit` is 0 the new
+site missed); `[vi-cb-after]`
+n last > 0 before entry 2
+(same).
 
-Then, after `menu-entry` siten=2:
+Then, after `menu-entry`
+siten=2:
 
-- `vi-cb-loop` n frozen while
-  `update_screen` climbs →
-  H-viretrace-blocked
-- `vi-cb-loop` n climbing AND
-  `vi-cb-slot` `ptr=` no longer
-  includes `0x8009123C`
-  (`musyxSynthFrame`) →
-  H-cb-unhooked
-- `vi-cb-loop` n climbing AND
-  synth still slotted AND
-  `cursor` n frozen →
-  H-synth-early-return
+- last is `[synth-entry]`
+  n=2560 (or later) with no
+  matching `[synth-exit]` →
+  H-synth-never-returned
+- `[synth-exit]` fires for
+  that n AND `[vi-cb-after]`
+  does not increment past the
+  last pre-spin value →
+  H-stuck-later-slot
+  (returned from synth, never
+  finished the 4-slot walk)
+- `[synth-exit]` AND
+  `[vi-cb-after]` both fire
+  for that iteration AND
+  `[vi-cb-loop]` stays frozen
+  while `update_screen`
+  climbs → H-recv-starved
+  (back at `osRecvMesg`
+  `0x80114388`, no further
+  VI message)
 
 Join key is log order: first
 `menu-entry` siten=2 vs last
-`[vi-cb-loop]` / `[vi-cb-slot]`
-and last `site=cursor`.
+`[synth-entry]` /
+`[synth-exit]` /
+`[vi-cb-after]` /
+`[vi-cb-loop]`.
 
 ## Sweep leftover (parked, not this unit)
 
@@ -78,6 +117,8 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- VI-cb during the spin (s1931)
+  — closed (H-viretrace-blocked).
 - Mix-alive vs mix-dead vs
   song-loop after entry 2
   (s1930) — closed

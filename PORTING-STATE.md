@@ -90930,3 +90930,118 @@ dies at entry 2 (existing
 `[vi-cb-loop]` /
 `[vi-cb-slot]` under
 `ROGUESQ_LOG_AUDIOTICK_TRACE`).
+
+## Session 1931 (2026-08-17) — selected H-viretrace-blocked after menu-entry 2
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: after `menu-entry`
+siten=2 on a 180s `#7/#8`
+staller, does
+`viRetraceHandlerThread` keep
+ticking and still `jalr`
+`musyxSynthFrame` (`0x8009123C`)?
+
+Consumed the already-queued soak
+`scratch/agent/soak_results/s1931_viretrace_during_spin_20260817-224233/run.log`
+(probe_rc=5, 181s, last width
+640, 0 crash). Did not re-run.
+Env included
+`ROGUESQ_LOG_AUDIOTICK_TRACE=1`
+and `ROGUESQ_LOG_VI_CALLERS=1`.
+
+Same-run positive control
+passed: tick-entry/jal/exit
+2/2/2; `took_swap=1` twice
+(swap n=2 and n=3);
+`slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`cursor` n last=16361;
+`menu-entry` siten=2 at L393887
+AND `menu-spin` to siten=937000000;
+`[vi-cb-loop]` n last=2432 at
+L393528 **before** entry 2
+(the mark-everything control —
+59 rows from n=0). `#7/#8` are
+`applyPendingViChanges` (640
+`0x80128DA0` then `0x80128E40`);
+zero `osViSetMode width=1024`;
+`update_screen` ends `#10816`
+origin `0x00696100`.
+
+Join key (log order):
+
+- last `[vi-cb-loop]` n=2432
+  L393528 (cadence n<40 then
+  every 128; next log would be
+  n=2560)
+- last `[vi-cb-slot]` n=9728
+  L393529 `base=0x8011A8A4`
+  `ptr=0x80003250`
+  (`wakeSerialThreadOnSi`;
+  late slot logs are slot 0
+  only because n%512==0)
+- last `[synth-entry]` n=2560
+  L393839 (lockstep with loop
+  n+128 from the two 64-pump
+  `audio-wait-pump-stall`s)
+- then 45 `slot-sb`
+  `musyxRenderVoiceSamples`
+  (3 passes of idx 0-10,12-15,
+  skip ended idx=11) ending
+  n=32637 L393884
+- then `[overlay] start-match:
+  section 3 rom=0x0010C2D0`
+  L393885 and `menu-entry`
+  siten=2 L393887
+- after entry 2: `vi-cb-loop`
+  after=0, `vi-cb-slot`
+  after=0, `synth-entry`
+  after=0, `cursor` after=0;
+  `update_screen` `#2880→#10816`
+  (124 more `[vi]` rows);
+  `menu-spin` climbs
+
+**H-viretrace-blocked
+SELECTED.** Host keeps
+presenting (`threadPresent`
+through `#9360`) while the
+guest VI-retrace handler loop
+never reaches the next logged
+stride. **H-cb-unhooked
+REFUTED** — requires the loop
+to keep climbing; also
+`[synth-entry]` n=2560 still
+fired on the last pre-spin
+iteration, 48 lines before
+entry 2. **H-synth-early-return
+REFUTED** — requires the loop
+to keep climbing with synth
+still slotted; `synth-entry`
+itself stopped (not "called
+but returned early"), and the
+45 post-entry `slot-sb` rows
+show that last call did mix
+work.
+
+`0x8009123C` last appears in
+`[vi-cb-slot]` at n=157
+(L1594) only because the slot
+probe's late stride is 512 and
+always lands on slot 0
+(`wakeSerialThreadOnSi`). That
+is not an unhook.
+
+No mitigation. Ask (b) remains
+human-only. Next axis: why the
+handler stops after
+`synth-entry` n=2560 — stuck
+inside that `musyxSynthFrame`,
+stuck in a later slot, or
+back at `osRecvMesg` with no
+further VI message
+(`H-synth-never-returned` /
+`H-stuck-later-slot` /
+`H-recv-starved`). Needs
+`[synth-exit]` +
+`[vi-cb-after]` (not in this
+binary).
