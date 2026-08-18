@@ -92995,3 +92995,75 @@ directly.
 
 Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
 hangar SIGBUS. Did not rebuild.
+
+
+## Session 1952 (2026-08-18) — synchronized the executeActorType4Effect symbol
+
+`HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+
+CURRENT-TRUTH is 13414 bytes — under the 60 KB maintenance
+trigger. M5 closed; M3 parked. 15-title REVISIT gate: last 15
+headings are s1937–s1951 (VI-recv / spin-yield / title-SI /
+hangar / s1948 maintenance / two leftover remaps) — not all
+sweep-titled, so this iteration resumes the leftover rename.
+
+No new soak since s1950. The s1949–s1950 hangar-yield soaks
+were already folded: hangar `0x006AB400` publishes, then the
+~4s `filterVoiceSampleBlock+220` SIGBUS
+(`last-guest-pc=0x8000834c`). Do not chase as a single crash.
+
+Renamed leftover `func_800F8398` (`0x800F8398`, TOML size
+`0x10DC`, `syms/rogue_squadron.syms.toml:2013`) to
+`executeActorType4Effect`. Four-step already complete in
+the s1951 preview; re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_42.c:1481` (`executeActorType4Effect`) then
+   `:5177` (`clearObjectField112`) are adjacent
+   `RECOMP_FUNC` lines; previous is `funcs_42.c:35`
+   (`spawnAndUpdateEffectActors`).
+2. `funcs.h:2171-2173` declares
+   `spawnAndUpdateEffectActors`, then
+   `executeActorType4Effect`, then
+   `clearObjectField112` in that order.
+3. `recomp_overlays.inl:1899-1901`: this function's offset is
+   `0x00053268` = previous `0x00052B44 + 0x724`; `rom_size =
+   0x000010DC` matches the TOML `size = 0x10DC`. Next overlay
+   `clearObjectField112` is `0x00054344` =
+   `0x00053268 + 0x10DC`. Generated body ends at `0x800F946C`
+   (`jr $ra` / `addiu $sp, $sp, 0x118`); next starts at
+   `0x800F9474`.
+4. `grep` of `func_800F8398` across the generated tree: zero
+   hits — non-collision.
+
+Generated body matches the name: stack `-0x118`, `s7=actor`,
+`s4=actor+0x8`, `lhu $a0, 0x198($s7)` then `jal 0x8004015C`
+(`getNpcContextField8`), then jals
+`renderNpcAnchoredProceduralEffect` (`0x800F7130`) and
+`spawnAndUpdateEffectActors` (`0x800F7C74`).
+`dispatchEffectByActorType` type-4 arm `jal 0x800F8398` already
+dispatches this human name. Companion
+`rogue_squadron64/symbol_files/mission_overlay.txt` already
+names `executeActorType4Effect = 0x800F8398`. No existing TOML
+entry already used that name. Sizes already agreed — no bump.
+Metadata-only TOML rename; no build/regen.
+
+Post-rename leftover `func_800*` count is 979 (was 980). Zero
+leftover `func_800F8398` remains in repo sources outside the
+ledger.
+
+Previewed the next leftover: `func_800F9474` (TOML size `0x8`,
+toml:2014) lines up with `recomp_overlays.inl:1901`
+(`clearObjectField112`, offset `0x00054344` =
+`0x00053268 + 0x10DC`, `rom_size = 0x00000008`) — adjacency
+(`funcs_42.c:5177` then `:5189` `initActorAsType1`) and
+declaration order (`funcs.h:2173-2174`) and non-collision
+(`grep` of `func_800F9474` in the generated tree: zero hits).
+Generated body is `jr $ra` / `sb $zero, 0x112($a0)` — the
+two-instruction type-byte clear companion already names
+`clearObjectField112 = 0x800F9474`. Function starts at
+`0x800F9474`; next starts at `0x800F947C`
+(`0x800F9474 + 0x8`). Sizes already agree — no bump. Next
+sweep iteration can rename directly.
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
+hangar SIGBUS. Did not rebuild.
