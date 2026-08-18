@@ -92773,3 +92773,32 @@ as a hangar recipe without
 yielding this spin. Yield
 stays default-off. Ask (b)
 remains human-only.
+
+
+## Session 1948 (2026-08-18) — MAINTENANCE: compacted CURRENT-TRUTH 60,464→13,282 bytes
+
+Maintenance was triggered before work selection because
+`docs/CURRENT-TRUTH.md` measured 60,464 bytes, over the 60,000-byte
+threshold. No experiment, build, runtime run, or source-code change
+was performed. New soak-queue verdicts through s1947 were already
+folded; the tail added no unread result.
+
+The s1888–s1947 session-by-session current-state blow-by-blow, the
+duplicated leftover-remap run-on, and the intermediate s1919–s1941
+supersessions were migrated to `docs/PROJECT-OVERVIEW.md` §36 (plus
+a corrected leftover table for s1880–s1917). `docs/CURRENT-TRUTH.md`
+was reduced from 1,700 lines / 60,464 bytes to 214 lines / 13,282
+bytes (git numstat shrink 1,581 − 95 = 1,486 net lines). It retains
+the live title-1024 / H-menu-input snapshot, one monotonic six-item
+backlog, durable M3/VI/M4/attract-1024 boundaries, a short
+load-bearing superseded list, the evidence pointer, and method
+rules. §35's heading and stale "Where it stands" paragraph were
+refreshed. `scratch/agent/NEXT.md` was rewritten for the deferred
+`L_800B8050` spin-yield unit (now s1949).
+
+This maintenance result rules out neither H-same-starve nor
+H-title-real / H-yield-miss / H-hangar-reachable: it intentionally
+collected no new evidence. It does rule out stale duplicated
+truth-file prose as the source of the live state summary; the
+deleted detail remains in the append-only ledger and §36.
+

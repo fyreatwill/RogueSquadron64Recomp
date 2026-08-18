@@ -1,13 +1,16 @@
-# NEXT work unit (s1948) — yield the menuControllerInput audio-slot spin
+# NEXT work unit (s1949) — yield the menuControllerInput audio-slot spin
 
 HYPOTHESIS-ID: hangar-after-title-1024
+
+s1948 was maintenance (CURRENT-TRUTH 60,464 → 13,282 bytes).
+The planned s1948 unit was not run; execute it now.
 
 s1947 selected H-menu-input:
 after title 1024 the only
 live `jal 0x8008E57C` site
 is `menuControllerInput`
 `0x800B8050` (n=773e6,
-`after1024=8`, all
+10→`after1024=8`, all
 `1024`/`0x00790400`).
 `menuOverlayInit` /
 `waitForAnyAudioSlot` /
@@ -81,7 +84,7 @@ instruments as s1947.
 
 ```
 # after the rebuild:
-zsh scratch/agent/soak_queue/s1948_menu_input_yield.sh
+zsh scratch/agent/soak_queue/s1949_menu_input_yield.sh
 ```
 
 Write that script this
@@ -160,3 +163,6 @@ Four-step already complete in s1906–s1917.
 - Force-zero slots.
 - `requeue_vi=true` as the only arm.
 - Ask (b) from s1891 — still human-only.
+- Maintenance: CURRENT-TRUTH was compacted in s1948
+  (60,464 → 13,282 bytes). Do not re-compact unless
+  Step 0 triggers again.

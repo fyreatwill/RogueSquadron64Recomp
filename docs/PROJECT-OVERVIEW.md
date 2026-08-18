@@ -19,17 +19,16 @@ A static recompilation of *Star Wars: Rogue Squadron* (N64, US 1.0) into a nativ
 built on `MikeSemicolonD/RogueSquadron64Recomp` with local forks of N64Recomp, N64ModernRuntime and
 RT64. The goal was to get the game building and rendering correctly on Apple Silicon.
 
-**Where it stands:** the game boots and renders through the full menu chain — attribution screen,
-N64 logo, intro cinematic, star flare, Factor 5 logo, title screen, SELECT GAME, the level-select
-war room, and AVAILABLE CRAFT (craft select) — plus a separate outdoor scene, all rendering
-correctly with working synthetic input to drive the menus. The war-room floor band defect (s12–s48,
-formerly described as a "main-menu hangar") is fixed and root-caused. Runs are stable — no
-`UnhandledJumpTarget`, no dropped tasks, no missing overlay symbols, no renderer asserts — across
-every phase soaked to date.
+**Where it stands:** the game boots and renders through attribution, N64 logo, intro cinematic,
+star flare, Factor 5 logo, and a title-like 1024 (`0x00790400`) once
+`ROGUESQ_SPIN_YIELD=1` breaks the `menuOverlayInit` audio-slot spin (s1942). Overlay
+dispatch is fixed enough for mission entry and post-sec2 outdoor presentation. The
+war-room floor band defect (s12–s48) is fixed. Audio is stubbed.
 
-**What is not done:** the LEVEL DESCRIPTION prompt, one press past AVAILABLE CRAFT, black-screens
-and silently kills the process — under active investigation, see `CURRENT-TRUTH.md`. Audio is
-stubbed entirely, and gameplay past the menus is unverified.
+**What is not done:** hangar origin `0x006AB400`/`800` has not been published on the
+port (s1943–s1947). After title 1024 a second `anyAudioSlotActive` spin in
+`menuControllerInput` re-starves SI/poll, so later Starts never reach the pad word.
+M5 remains closed; M3 and M4 hangar/512 are parked. See `CURRENT-TRUTH.md`.
 
 ## 2. How the pipeline fits together
 
@@ -2985,7 +2984,7 @@ revisit rule remain those recorded in §33 and the live truth file. The Rice
 route is now the only valid later-phase oracle recipe; dummy video's 320-only
 results are not evidence about hangar or mission entry.
 
-## 35. Sweep continuation and Rice frontend close-out (s1648–s1846)
+## 35. Sweep continuation and Rice frontend close-out (s1648–s1879)
 
 Migrated from `CURRENT-TRUTH.md` during the s1728 maintenance pass. Method
 unchanged from §33–§34: one adjacent generated function per session;
@@ -3160,18 +3159,12 @@ collision.
 | s1878 | Synchronized `isPointInsideTriggerVolume` (`0x800F2760`, `0x90`). `$a0` point, `$a1` scale (`0x40000000` / 2.0f at the one generated jal). Walks the trigger-volume slot at `0x80138D18` (flag at `+0`, descriptor at `+8`, stride `0x144`); `transformVec3ToNpcLocalWithScale(slot+8, 0, point, scale, scratch)` and returns 1 when that jal's `$v0` is nonzero. Loop counter starts at 0 and `blez` after increment, so one slot. 1 generated `jal 0x800F2760` already dispatches the human name. TOML was stale `func_800F2760`; companion, generated headers/body, and section-4 already used the human name. |
 | s1879 | Synchronized `getNpcDetailLevelByIndex` (`0x800F27F0`, `0x40`). `$a0` slot index (`andi 0xFFFF`); `getNpcContextByIndex`, then if `*(ctx+0x10)` is set return `lh +0x19A` of that object, else `3 - (lbu +0x15 >> 6)` (effective 0..3). 1 generated `jal 0x800F27F0` in `updateNpcEventTimer` already dispatches the human name (companion comment said 2). TOML was stale `func_800F27F0`; companion, generated headers/body, and section-4 already used the human name. |
 
-The sweep cursor after s1879 is leftover `func_800F2830`
-(`0x800F2830`, size `0x4C`). Neighbor peek: companion
-`mission_overlay.txt` and generated headers/body/INL already
-`setObjectDetailLevel`; TOML still leftover
-`func_800F2830`. First insn `addiu $sp, $sp, -0x18`; last live
-`jr $ra` / `addiu $sp, $sp, 0x18` at `0x800F2874` / `0x800F2878`.
-Next already-named occupant is `getObjectDetailLevel`
-at `0x800F287C`. Mandatory revisits in this window: s1650,
-s1666, s1682, s1698, s1714, s1744, s1760, s1776, s1792,
-s1808, s1824, s1840, s1856, s1872. After s1879 the last-15
-titles still include that hangar/512 revisit, so the next
-iteration resumes the leftover census rather than another M4 walk.
+The sweep cursor after s1879 was leftover `func_800F2830`.
+s1880–s1917 continued that census through
+`renderNpcAnchoredProceduralEffect` (`0x800F7130`); see §36.
+Mandatory revisits in this window: s1650, s1666, s1682, s1698,
+s1714, s1744, s1760, s1776, s1792, s1808, s1824, s1840, s1856,
+s1872. s1918 was the next mandatory 15-title REVISIT.
 
 **Classified Rice frontend routes (do not repeat).** Dummy video stays at
 width 320 / origin `0x006dd280`. Homebrew Rice with
@@ -3231,3 +3224,110 @@ stays 320" used dummy video; Rice supplies the later phase. s1135
 "`0x688..0x710` is the retail shade record" rejected by s1512. s1086
 "retail never accesses `0x130B10:0x130B58`" superseded by s1528. s1698
 "Z on attract 512 stays 512 through 125.8 s" superseded by s1714.
+
+## 36. Sweep leftover s1880–s1917 and the VI-1024 spin-yield chain (s1888–s1947)
+
+Migrated from `CURRENT-TRUTH.md` during the s1948 maintenance pass.
+
+### Leftover remaps s1880–s1917
+
+Same four-step as §33–§35: companion mapping, generated body, adjacent
+boundaries, overlay span + size. TOML leftover `func_800*` count is 982
+after s1917. Next leftover is `func_800F7130` →
+`renderNpcAnchoredProceduralEffect` (four-step already complete; TOML
+metadata-only rename). Then `func_800F7C74` → `spawnAndUpdateEffectActors`,
+`func_800F8398` → `executeActorType4Effect`, `func_800F9474` →
+`clearObjectField112`.
+
+| Sessions | Durable result |
+|---|---|
+| s1880 | Synchronized `setObjectDetailLevel` (`0x800F2830`, `0x4C`). |
+| s1881 | Synchronized `getObjectDetailLevel` (`0x800F287C`, `0xC`). |
+| s1882 | Synchronized `initActorMotionParams` (`0x800F2888`, `0x100`). |
+| s1883 | Synchronized `getObjectMeshTransformOrLocal` (`0x800F2988`, `0x78`). |
+| s1884 | Synchronized `getObjectNpcTypeId` (`0x800F2A00`, `0x24`). |
+| s1885 | Synchronized `clearPendingChildNpc` (`0x800F2A24`, `0x80`). |
+| s1886 | Synchronized `setObjectFlagBit4` (`0x800F2AA4`, `0x10`). |
+| s1887 | Synchronized `clearObjectFlagBit4` (`0x800F2AB4`, `0x10`). |
+| s1888–s1892 | VI-1024 reachability regression opened (see chain table). Sweep paused. |
+| s1893 | Synchronized `computeAnchorRelativePositionByDistanceRatio` (`0x800F2AC4`, `0xC4`). |
+| s1894 | Synchronized `initObjectAnimSubstruct` (`0x800F2B88`, `0xE4`). |
+| s1895 | Synchronized `initAnimSubstructFromParams` (`0x800F2C6C`, `0xCC`). |
+| s1896 | Synchronized `applyToObjectSubstructByFlag` (`0x800F2D38`, `0x3C`). |
+| s1897 | Synchronized `setObjectSubstructF10IfReady` (`0x800F2D74`, `0x30`). |
+| s1898 | Synchronized `setAnimSubstructValueIfActive` (`0x800F2DA4`, `0x24`). |
+| s1899 | Synchronized `generatePerpEmitDirectionWithJitter` (`0x800F2DC8`, `0x148`). |
+| s1900 | Synchronized `stepAndTickProgressChannel` (`0x800F2F10`, `0xA4`). |
+| s1901 | Synchronized `getEffectIntensity` (`0x800F2FB4`, `0xC`). |
+| s1902 | H3a-lowpower REFUTED (LPM-off still 640). Not a sweep session. |
+| s1903 | Synchronized `setEffectIntensity` (`0x800F2FC0`, `0xC`). |
+| s1904 | Synchronized `triggerCueWithSlotEffect` (`0x800F2FCC`, `0xE0`). |
+| s1905 | Synchronized `copyPipeDelimitedField` (`0x800F30AC`, `0x98`). |
+| s1906 | Synchronized `copyRandomPipeDelimitedField` (`0x800F3144`, `0x114`). Four-step of leftover `func_800F7130` completed this window. |
+| s1907 | Synchronized `returnZero_800F3258` (`0x800F3258`, `0x8`). |
+| s1908 | Synchronized `tallyMidDetailObject` (`0x800F3260`, `0x30`). |
+| s1909 | Synchronized `resolveScriptedNameTokenList` (`0x800F3290`, `0x24C`). |
+| s1910 | Synchronized `computeRandomizedOrientationFrame` (`0x800F34DC`, `0x7D4`). |
+| s1911 | Synchronized `updateNpcEffectIntensity` (`0x800F3CB0`, `0x45C`). |
+| s1912 | Synchronized `executeActorType1Effect` (`0x800F410C`, `0xD68`). |
+| s1913 | Synchronized `executeActorType2Effect` (`0x800F4E74`, `0x518`). |
+| s1914 | Synchronized `executeActorType3Effect` (`0x800F538C`, `0x6A4`). |
+| s1915 | Synchronized `initActorAsType4` (`0x800F5A30`, `0x304`). |
+| s1916 | Synchronized `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`). |
+| s1917 | Synchronized `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`). |
+
+s1903–s1917 (except the s1902 LPM A/B) were sweep-titled. s1918 was the
+mandatory 15-title REVISIT and opened the true-stall chain below.
+
+### VI-1024 / spin-yield / title-SI chain (s1888–s1947)
+
+Post-s844 recipes stalled at 640 `0x00696100`. Crash families
+(`fillSampleStreamRange` SIGBUS, AGX `clearDepthTarget`, `findTileCopyId`)
+kill some runs; they are not why 1024 is missing. Ask (b) (clone +
+`git submodule update` bisect at `ef7a0fb9`) is still human-only.
+
+| Sessions | Selected | Durable result |
+|---|---|---|
+| s1888–s1917 | H1-flake / H3a-lowpower / hangar-probe REFUTED | No source change in the s844→HEAD window explains the 640 stall. |
+| s1918 | H3 true-stall | 2/8 `s790` logs live 180s with zero `osViSetMode width=1024`. |
+| s1919 | H-never-entered | `#10` issuer is `advanceVideoFrame` `0x80018378` → `initVideoSubsystem`. `#8` is `applyPendingViChanges` (`0x80128E40`), a different function. `selectAndApplyViMode` never entered. H-host-drop REFUTED. |
+| s1920 | H-advance-dead | `L_80018264` loop `n` froze at 3 after `#6`. Sole caller `runVideoFrameTick`. |
+| s1921 | H-not-called | `advanceVideoFrame` entryn=2 exitn=2. H-stuck-post-swap / H-stuck-prologue REFUTED. |
+| s1922 | H-tick-not-called | `runVideoFrameTick` tickn=2 jaln=2 exitn=2. Both ticks returned. Static `jal 0x80001354` sites: `mainGameLoop` ×2, `initSceneForMission`, `menuOverlayInit`. |
+| s1923 | H-caller-mixed | Tick 1 = `menuOverlayInit`; tick 2 = `initSceneForMission`. `menu-entry` siten=2 after `#8` with no jal. |
+| s1924 | H-menu2-audio-spin | Entry 2 sits in `L_800C5930` `anyAudioSlotActive` (`menu-spin` to 9e8). `#9/#10` cannot fire. |
+| s1925 | H-slot-stuck | 969/969 `path=walk`; n=1..3 `v0=1 s1=0x00`, then `v0=0 s1=0x01`; gate `0x65` both sides. |
+| s1926 | H-all-idx + H-base-moved | Idle table `0x80169460`/ch=20 all zero; stuck table `0x8018D4A0`/ch=16, 15/16 bytes `0x02`. Writer of `0x801496F8` is `allocateSongChannelArray`. |
+| s1927 | H-keyon | Sequence: alloc init `0`, `musyxTriggerVoiceAttack` `0x01`, `musyxRenderVoiceSamples` `0x02` at `0x800909F4`. `deactivateVoice` never ran. |
+| s1928 | H-fresh-attack-after-end | `render-end` n=9; `rekey` n=0; next same-idx render `old=0x01`. |
+| s1929 | H-not-yet-ended + H-tick-retrigger | Cursor sane; 8/8 crosses match ends; 183/183 `attack-jal` are `caller=tick`. |
+| s1930 | H-mix-dead-during-spin | After `menu-entry` siten=2: cursor / render-end / attack-jal = 0. |
+| s1931 | H-viretrace-blocked | `[vi-cb-loop]` and `[synth-entry]` freeze at the same overlay/entry-2 cut. Last slot 0 of the last walk is `wakeSerialThreadOnSi` `0x80003250`. |
+| s1932–s1934 | last-logged n completed; entry-2 UNEVALUABLE | Crash / `#6-dead` flavors. Instruments live. |
+| s1935 | H-recv-starved | `synth-exit` n=2560 and `vi-cb-after` n=2432 fire before entry 2. `#8` means recv1 of that iteration unblocked; stall is later. |
+| s1936 | H-unlogged-walk-stuck | `#8` then recv2 enter/exit/walk n=2354. H-recv2-starved / H-post-recv2-stuck REFUTED. |
+| s1937 | post-`#8` walk completes | synth-exit, null later slots, and after all fire. Stall is the next loop-top recv1. |
+| s1938 | H-recv1-starved | loop n=2410 and recv1-enter n=2410 `mq=0x80114388`; no recv1-exit n=2410. |
+| s1939 | H-host-stuck | One lifetime `osViSetEvent` still `mq=0x80114388`; 7987 `[vi-enq]` after enter; zero extra `[vi-mq]`. |
+| s1940–s1941 | H-never-dequeued | After recv1-enter: thousands of `[vi-enq]`, zero `[vi-deq]`, zero `[vi-wait]`. `requeue_vi` defaults false. The spin never calls `os*Mesg`, so idle-wait never drains `external_messages`. |
+| s1942 | H-spin-starves-idle | `ROGUESQ_SPIN_YIELD=1` (`yield_self_1ms` every 100000 `L_800C5930` iters) unblocks recv1-exit, `#9`/`#10`, `[phase] 1024 origin=0x00790400` at 50.3s. Off arm stays the 180s `#7/#8` staller. Default-off. ORIGIN: host VI retrace (legitimate) sits in `external_messages`; hardware would preempt the spin. Attract 1024, not hangar. |
+| s1943 | H-wrong-recipe | Same yield + eleven-Start from boot: 1024 `0x00790400` at 14.2s, stays through `#10816`. 0 hangar origin. Probe `[keys]` printed all 11 Sends; that is not host consumption. |
+| s1944 | H-title-ignores-start | `[pad-host]` Start n=1,2 before 1024 and n=3,4 after (title 1024). A=0. Only 4/11 Starts reached `get_n64_input`. |
+| s1945 | H-poll-stopped | `[pad-sdl] site=poll` last n=1408 at `#1408`; pad-sdl and pad-host die together after Start #4. Unique `osContStartReadData` caller is `siServiceThread` `0x80002E10`. |
+| s1946 | H-si-loop-recv | Last `[si-thr]` is a complete iter `loop/start-read/after-read-recv/get-read/send` all n=1419; zero `loop` n=1420; `site=exit`=0. Unique sender to loop-top mq `0x8010FF50` is `wakeSerialThreadOnSi`. Then `[vi-cb-recv1] enter n=1420` `blocked=1`. `menu-spin` after 1024 = 0 (init returned). `[slot-ret]` after 1024 still climbs. |
+| s1947 | H-menu-input | After 1024 the only live `jal 0x8008E57C` is `menuControllerInput` `L_800B8050` (n=773e6, after1024=8, all `1024`/`0x00790400`). Zero post-1024 `menuOverlayInit` / `waitForAnyAudioSlot` / the other seven. Same `beq v0==0` spin; s1942 yield does not cover it. |
+
+**Do not repeat.** s1942 yield off/on A/B (closed). s1942 from-phase-1024
+Start/A as a hangar recipe. s1943–s1947 eleven-Start-from-boot as a hangar
+recipe without yielding `L_800B8050`. Force-zero slots. `requeue_vi=true` as
+the only arm. Ask (b).
+
+**Superseded claims compacted out of CURRENT-TRUTH in s1948.** s1888–s1917
+"stall at 640 then crash". H-slots-stay-live (s1942). Eleven-Start as a
+hangar recipe once 1024 is reachable (s1943). s1943 "all 11 Starts printed"
+as host consumption (s1944). Missing 7 Starts as SDL drop / poll-only /
+56s live window (s1945). SI stop as post-`StartReadData` Recv, thread exit,
+or skip of `StartReadData` (s1946). Continuing post-1024 spin as
+`waitForAnyAudioSlot` / `menuOverlayInit` / another of the ten
+`jal 0x8008E57C` sites (s1947). Intermediate caller / slot / mix / VI-recv
+supersessions (s1919–s1941) are the selected column above.
