@@ -1,9 +1,12 @@
-# NEXT work unit (s1960) — leftover rename `func_800F9918`
+# NEXT work unit (s1961) — leftover rename `func_800F9918`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1959 synchronized `setType2ActorVelocity`
-(`0x800F98CC`). No new soak to consume.
+s1960 was an unblock iteration (grok balance exhaustion; refuted as a
+loop-stopper, loop continues under RUNNER=claude — see PORTING-STATE.md
+s1960 and scratch/agent/UNBLOCK.md). No porting work changed. s1959
+synchronized `setType2ActorVelocity` (`0x800F98CC`). No new soak to
+consume.
 
 M5 closed. M3 only as idiom-class. Hangar/512 Y=0x8000 is not
 live on the first hangar window. Sweep leftover is the next

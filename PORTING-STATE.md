@@ -93618,3 +93618,29 @@ sweep iteration can rename directly.
 
 Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
 hangar SIGBUS. Did not rebuild.
+
+## Session 1960 (2026-08-18) — unblock: grok balance exhaustion, refuted as a loop blocker
+
+`scratch/agent/BLOCKED.md` recorded iteration 60 failing 4x with
+`API error (status 402 Payment Required): Grok Build usage balance
+exhausted`, after `loop.log` shows the run switched to `runner=grok
+model=grok-4.6` at 18:51 PDT Aug 17 (iterations 58-59 completed fine
+under it — s1958, s1959). The 402 itself is a real, correctly-reported
+fact about the grok account: its build-usage balance ran out. That part
+of the block was not a misdiagnosis.
+
+Refuted as a loop-stopping condition: `loop.log` shows the loop was
+already restarted at 08:06 PDT Aug 18 with `runner=claude model=sonnet
+cap=80`, and `ps aux` at the start of this unblock iteration confirmed
+that is the live process (pid 42089, `tools/agent/loop.sh runner=claude`)
+— this very iteration ran under it. RUNNER=claude has no dependency on
+the grok account, so the block does not stop further work; it only rules
+out `RUNNER=grok` until the account is topped up, which is a human
+billing decision (out of scope for any iteration, including this one —
+no top-up, no billing/quota change was made).
+
+Did not touch the grok account or billing. Did not change `NEXT.md`'s
+queued work unit (`func_800F9918` → `initActorAsType3`, preview already
+done in s1959) — it has no grok dependency and remains the next unit.
+Deleted `scratch/agent/BLOCKED.md`; see `scratch/agent/UNBLOCK.md` for
+the full route-taken writeup.
