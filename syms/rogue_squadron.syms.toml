@@ -1985,7 +1985,7 @@ functions = [
     { name = "setObjectFlagBit4", vram = 0x800F2AA4, size = 0x10 },
     { name = "clearObjectFlagBit4", vram = 0x800F2AB4, size = 0x10 },
     { name = "computeAnchorRelativePositionByDistanceRatio", vram = 0x800F2AC4, size = 0xC4 },
-    { name = "func_800F2B88", vram = 0x800F2B88, size = 0xE4 },
+    { name = "initObjectAnimSubstruct", vram = 0x800F2B88, size = 0xE4 },
     { name = "func_800F2C6C", vram = 0x800F2C6C, size = 0xCC },
     { name = "func_800F2D38", vram = 0x800F2D38, size = 0x3C },
     { name = "func_800F2D74", vram = 0x800F2D74, size = 0x30 },
