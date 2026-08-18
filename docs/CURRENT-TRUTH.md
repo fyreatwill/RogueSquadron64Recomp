@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1920 (2026-08-17).
+detail. Reviewed through s1921 (2026-08-17).
 
 ## Current state
 
@@ -104,8 +104,20 @@ detail. Reviewed through s1920 (2026-08-17).
   This staller never issued `#7/#8` (s1919 B / 173130 /
   180331 did); the swap loop is already dead at `#6`, so
   `#8` is not the swap-path stall point. Sole caller is
-  `runVideoFrameTick` `jal 0x8001818C`. Next axis: entry
-  vs exit vs prologue of that third call.
+  `runVideoFrameTick` `jal 0x8001818C`.
+  **s1921**: `[avf-gate]` `site=entry`/`site=exit` on the
+  same 180s staller
+  (`s1921_avf_entry_exit_20260817-204334`, probe_rc=5,
+  `#10816`, no crash, no `#7/#8`). Same-run control:
+  entry and exit both fired on both calls; `took_swap=1`
+  at loop `n=2` and `n=3`. Final counts: entryn=2,
+  exitn=2, loop n=3. Call 1 did loop n=1 (no swap) then
+  n=2 (swap) and returned; call 2 did loop n=3 (swap)
+  and returned. **H-not-called SELECTED.**
+  H-stuck-post-swap / H-stuck-prologue REFUTED.
+  s1920's `n=3` was the inner-loop counter, not a third
+  call. Next axis: `runVideoFrameTick` entry vs jal vs
+  exit after that second return.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -159,19 +171,26 @@ detail. Reviewed through s1920 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **`advanceVideoFrame` `L_80018264` dies after the second
-   swap (`#6`); H-advance-dead (s1920).** s1919 named s844
-   `#10` as `initVideoSubsystem` via `0x80018378`. s1920's
-   same-run control (`took_swap=1` at `n=2` and `n=3`) then
-   `n` frozen at 3 for the rest of a 180s / `#10816`
-   staller REFUTES the table-walk / `$s0!=byte` gates.
-   The third swap never fails — it is never attempted.
+1. **`runVideoFrameTick` never jals `advanceVideoFrame` a
+   third time; H-not-called (s1921).** s1919 named s844
+   `#10` as `initVideoSubsystem` via `0x80018378`. s1920
+   selected H-advance-dead (`L_80018264` `n` frozen at 3
+   after `#6`; table-walk / `$s0!=byte` REFUTED). s1921's
+   same-run control (entry+exit on both calls;
+   `took_swap=1` at loop `n=2` and `n=3`) then entryn=2
+   / exitn=2 for the rest of a 180s / `#10816` staller
+   SELECTS H-not-called and REFUTES H-stuck-post-swap
+   and H-stuck-prologue. s1920's `n=3` was the inner-loop
+   counter across two calls, not a third invocation.
    This run also lacked `#7/#8` (other 180s stallers have
-   them as `applyPendingViChanges`); that is independent of
-   the swap loop. Next axis: after `#6`, does the `n=3`
-   call return, or does `runVideoFrameTick` stop jalling
-   `0x8001818C`, or is a 4th call stuck before
-   `L_80018264`? Ask (b) remains human-only. Do not re-run
+   them as `applyPendingViChanges`); that is independent
+   of the swap loop. Next axis: after the second
+   `advanceVideoFrame` return, does `runVideoFrameTick`
+   itself return, or does its caller stop entering it, or
+   is a later tick stuck before the jal? Static callers:
+   `funcs_8.c` (two `jal 0x80001354` sites),
+   `funcs_27.c`, `funcs_34.c`. Ask (b) remains
+   human-only. Do not re-run
    `s790_postsec2_reachability.sh` as a reachability
    re-confirm. Still blocks item 3 (hangar/512) until a
    port run publishes
@@ -267,14 +286,17 @@ is superseded by s1919 — `#8` is `0x80128E40`; `#10` is
 `initVideoSubsystem` submitting `0x80128DA0`. Treating
 `#8` as the swap-path stall point is superseded by s1920
 — `L_80018264` already stops after `#6`; the table at
-`0x80128EAD` is not the gate.
+`0x80128EAD` is not the gate. Treating s1920's loop
+`n=3` as a third `advanceVideoFrame` call is superseded
+by s1921 — two calls produced loop n=1,2,3; both
+returned; the caller never jals again.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1920 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1921 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
@@ -286,7 +308,9 @@ universal; guest never issues `osViSetMode width=1024` even in the
 (H-never-entered SELECTED in the 180s staller; H-host-drop
 and applyPending-as-1024-issuer REFUTED) and s1920 selecting
 H-advance-dead (`L_80018264` `n` frozen at 3 after `#6`;
-table-walk / `$s0!=byte` REFUTED) and leftover `func_800F6954` became
+table-walk / `$s0!=byte` REFUTED) and s1921 selecting
+H-not-called (`advanceVideoFrame` entryn=2 exitn=2; the
+caller never jals a third time) and leftover `func_800F6954` became
 `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
 `func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover

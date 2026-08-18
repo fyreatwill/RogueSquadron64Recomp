@@ -90170,3 +90170,48 @@ Sole static caller: `runVideoFrameTick` `jal 0x8001818C`.
 No mitigation. Next: entry vs exit vs prologue of the
 third call.
 
+
+## Session 1921 (2026-08-17) — selected H-not-called after the second swap returns
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit:
+after `#6`, does the last `advanceVideoFrame` return, or
+does `runVideoFrameTick` stop jalling `0x8001818C`, or is
+a later call stuck before `L_80018264`? Three hypotheses:
+H-not-called / H-stuck-post-swap / H-stuck-prologue.
+
+Added `[avf-gate]` `site=entry` at function start and
+`site=exit` at `L_80018434` (`N64Recomp/fixup_game_funcs.py`
++ `funcs_4.c`). Same tag, `ROGUESQ_LOG_VI_CALLERS` gate,
+and loop `n`. Fields: `entryn`, `exitn`.
+
+One s790-shaped 180s run
+(`scratch/agent/s1921_avf_entry_exit.sh`,
+`scratch/agent/soak_results/s1921_avf_entry_exit_20260817-204334/run.log`):
+probe_rc=5, last width 640, `update_screen #10816`,
+origin stayed on `0x00696100` after 7.0s, 0 `[CRASH]` /
+`[ABORT]`. No `#7/#8`.
+
+Same-run positive control: `site=entry` and `site=exit`
+both fired on both calls; `took_swap=1` at loop `n=2`
+(`#2+#3`) and `n=3` (`#5+#6`).
+
+Final counts: entryn=2, exitn=2, loop n=3.
+Call 1: entry → loop n=1 (B0 `$s0=0`, no swap) →
+loop n=2 (B0 `$s0=2`, swap) → exit.
+Call 2: entry → loop n=3 (B0 `$s0=2`, swap) → exit.
+Zero further entries for the remaining ~170s / ~10000
+`update_screen` ticks.
+
+H-not-called SELECTED. `runVideoFrameTick` never jals
+`0x8001818C` a third time.
+H-stuck-post-swap REFUTED (the swap-`n=3` call returned;
+exitn=2).
+H-stuck-prologue REFUTED (no 3rd entry).
+
+s1920's `n=3` was the inner-loop counter, not a third
+call. Two calls produced loop n=1,2,3. Treating `n=3`
+as a third `advanceVideoFrame` invocation is withdrawn.
+
+No mitigation. Next: `runVideoFrameTick` entry vs jal
+vs exit after the second return. Ask (b) remains
+human-only.
