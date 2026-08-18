@@ -91691,3 +91691,96 @@ the loop stride.
 Do not re-probe the walk
 interior. Do not force-zero.
 Ask (b) remains human-only.
+
+## Session 1938 (2026-08-18) — selected H-recv1-starved after #8
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: one Debug rebuild
+making `[vi-cb-loop]` always-on
+and adding always-on
+`[vi-cb-recv1]` enter/exit around
+`osRecvMesg(0x80114388)` at
+`0x800198F4`, then one `#7/#8`
+soak. After the post-`#8`
+`[vi-cb-after]` n=N: loop n=N+1
+and recv1-enter with no
+recv1-exit → H-recv1-starved;
+recv1-exit and no recv2 n=N+1 →
+H-post-recv1-stuck; no loop
+n=N+1 → H-loop-missed.
+
+Sites live in
+`N64Recomp/RecompiledFuncs/funcs_4.c`
+and `N64Recomp/fixup_game_funcs.py`
+(recv1 plus loop `always=True`;
+fixup not re-run — sentinel
+refuses a second pass).
+
+`scratch/agent/soak_results/s1938_loop_recv1_20260818-000228/run.log`
+(probe_rc=5, 184s, 0 crash): the
+`#7/#8` / `menu-entry` siten=2
+flavor. `#7` L436524 and `#8`
+L438914 are `applyPendingViChanges`
+(`#8` `0x80128E40` yScale
+`0x02000612`). `menu-entry`
+siten=2 L438974 after `.ovl.menu`
+start-match L438972. `menu-spin`
+climbs to siten=650000000. Zero
+`menu-jal` / `menu-exit` siten=2.
+Zero width=1024. `update_screen`
+`#10816` origin `0x00696100`.
+
+Same-run positive control passed:
+tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice (swap n=2 and
+n=3); `slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`[vi-cb-loop]` n=0; `[vi-cb-recv1]`
+enter n=0 `mq=0x80114388` and
+exit n=0; `[vi-cb-after]` n=0;
+`#7` and `#8` fire.
+
+Join key (log order):
+
+- recv1-exit n=2409 L438912
+- `#8` L438914
+- recv2 enter/exit n=2409
+  L438915/438916 `mq=0x80128D10`
+- walk n=2409 L438917
+- slot 9636 `ptr=0x80003250`,
+  9637 `ptr=0x8009123C`
+- synth-entry=exit n=2524
+- slot 9638/9639 `ptr=0`
+- after n=2409 L438969
+- loop n=2410 L438970
+- recv1-enter n=2410 L438971
+  `mq=0x80114388`
+- `.ovl.menu` L438972
+- `menu-entry` siten=2 L438974
+
+Zero recv1-exit n=2410. Zero
+recv2 / walk / after n=2410.
+Zero `#9/#10`.
+
+**H-recv1-starved SELECTED.**
+**H-post-recv1-stuck REFUTED**
+(no recv1-exit n=2410).
+**H-loop-missed REFUTED** (loop
+n=2410 fires). The VI retrace
+handler completes the post-`#8`
+walk, re-enters `L_800198E8`,
+and blocks in
+`osRecvMesg(0x80114388)`. That
+is why `musyxSynthFrame` and
+`applyPending` / `#9/#10` never
+run again while `menu-spin`
+climbs.
+
+Do not re-probe the walk
+interior or recv1 enter/exit.
+Do not force-zero. Ask (b)
+remains human-only. Next
+discriminator is why that
+queue never unblocks (VI
+producer vs retarget vs steal
+vs host-stuck recv).

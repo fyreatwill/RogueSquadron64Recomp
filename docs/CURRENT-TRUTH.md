@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1937 (2026-08-17).
+detail. Reviewed through s1938 (2026-08-18).
 
 ## Current state
 
@@ -557,6 +557,33 @@ detail. Reviewed through s1937 (2026-08-17).
   completes. Stall is the
   next `L_800198E8` / recv1
   (`0x80114388`) iteration.
+  **s1938**: always-on
+  `[vi-cb-loop]` plus
+  `[vi-cb-recv1]` enter/exit
+  on
+  `s1938_loop_recv1_20260818-000228`
+  (probe_rc=5, 184s, 0
+  crash, `#7/#8`,
+  `menu-entry` siten=2,
+  `menu-spin` 650000000,
+  `#10816`, 0 width=1024).
+  Same-run control passed:
+  tick 2/2/2; `took_swap=1`
+  twice; `slot-alloc` ends
+  `0x8018D4A0/16`; loop /
+  recv1 enter (`mq=0x80114388`)
+  / recv1 exit / after fire
+  from n=0. Join: recv1-exit
+  n=2409 → `#8` L438914 →
+  recv2/walk n=2409 → after
+  n=2409 L438969 → loop
+  n=2410 L438970 → recv1-enter
+  n=2410 L438971 → `.ovl.menu`
+  + `menu-entry` siten=2.
+  Zero recv1-exit n=2410.
+  **H-recv1-starved SELECTED.**
+  H-post-recv1-stuck /
+  H-loop-missed REFUTED.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -610,34 +637,46 @@ detail. Reviewed through s1937 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **VI-cb walk after `#8`
-   completes (s1937).
-   H-synth-in-walk /
-   H-later-slot /
-   H-after-missed REFUTED:
-   after n=2310 fires, then
-   `.ovl.menu` + `menu-entry`
-   siten=2.** Next: one
-   Debug rebuild making
-   `[vi-cb-loop]` always-on
-   and adding always-on
-   `[vi-cb-recv1]` enter/exit
-   around `osRecvMesg(0x80114388)`
-   at `0x800198F4`, then one
-   `#7/#8` soak. After the
-   post-`#8` `after` n=N:
-   loop n=N+1 and recv1-enter
+1. **VI handler blocks on
+   recv1 after `#8` (s1938).
+   H-recv1-starved SELECTED:
+   after n=2409 then loop
+   n=2410 and recv1-enter
+   n=2410 `mq=0x80114388`
+   with no matching exit;
+   H-post-recv1-stuck /
+   H-loop-missed REFUTED.**
+   Next: one Debug rebuild
+   adding always-on
+   `[vi-set-event]` on
+   `osViSetEvent` (mq/msg/
+   retrace) and `[vi-enq]`
+   on the host VI producer
+   (`events.cpp` `vi_thread_func`
+   enqueue, src=Vi), then
+   one `#7/#8` soak. After
+   recv1-enter n=N+1: later
+   `osViSetEvent` mq≠`0x80114388`
+   (or 0) and vi-enq to that
+   other mq → H-vi-unhooked;
+   last `osViSetEvent` still
+   `0x80114388` and zero
+   vi-enq after enter →
+   H-vi-stopped; vi-enq to
+   `0x80114388` after enter
    with no recv1-exit →
-   H-recv1-starved; recv1-exit
-   and no recv2 n=N+1 →
-   H-post-recv1-stuck; no
-   loop n=N+1 → H-loop-missed.
-   Do not re-probe the walk
-   interior. Do not
-   force-zero. Ask (b)
-   remains human-only. Still
-   blocks item 3 (hangar/512)
-   until a port run publishes
+   H-host-stuck; another
+   thread recv on
+   `0x80114388` → H-stolen.
+   `lib/` edit needs
+   `export.sh` + commit.
+   Do not re-probe recv1
+   enter/exit or the walk.
+   Do not force-zero. Ask
+   (b) remains human-only.
+   Still blocks item 3
+   (hangar/512) until a port
+   run publishes
    `[phase] vi_width=512
    origin=0x006AB400` (or
    `0x006AB800`).
@@ -866,6 +905,16 @@ synth-exit n=2425, slots
 after n=2310 all fire
 before `.ovl.menu` /
 `menu-entry` siten=2.
+Treating the post-`#8`
+stall as maybe missing
+the next `L_800198E8`
+(H-loop-missed) or as
+stuck after recv1 returns
+(H-post-recv1-stuck) is
+superseded by s1938 —
+loop n=2410 and recv1-enter
+n=2410 fire; recv1-exit
+stays 2409.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -910,7 +959,14 @@ refuting H-synth-in-walk /
 H-later-slot / H-after-missed
 (after n=2310 completes the
 post-`#8` walk; stall is the
-next loop-top / recv1) and s1926 selecting H-all-idx +
+next loop-top / recv1) and s1938 selecting
+H-recv1-starved (loop n=2410
+and recv1-enter n=2410
+`mq=0x80114388` after after
+n=2409 / `#8`; no recv1-exit
+n=2410; H-post-recv1-stuck
+and H-loop-missed REFUTED)
+and s1926 selecting H-all-idx +
 H-base-moved (idle `0x80169460`/ch=20 all
 zero; stuck `0x8018D4A0`/ch=16 `nzn/n →
 15/16` `byte=0x02`; H-one-idx and

@@ -1,48 +1,49 @@
-# NEXT work unit (s1938) — loop-top / recv1 after completed walk
+# NEXT work unit (s1939) — why recv1 never unblocks
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1937 refuted H-synth-in-walk /
-H-later-slot / H-after-missed
+s1938 selected H-recv1-starved
 on the `#7/#8` / `menu-entry`
 siten=2 staller
-`s1937_walk_interior_20260817-234929`.
-After `#8` the walk completes:
-recv2/walk n=2310, slot 9240
-`ptr=0x80003250`, slot 9241
-`ptr=0x8009123C`, synth-entry=
-exit n=2425, slot 9242/9243
-null, `[vi-cb-after]` n=2310,
-then `.ovl.menu` + `menu-entry`
-siten=2. Stall is the next
-`L_800198E8` / recv1 iteration.
+`s1938_loop_recv1_20260818-000228`.
+After `#8` the walk completes
+(after n=2409), then loop
+n=2410 and `[vi-cb-recv1]`
+enter n=2410 `mq=0x80114388`
+with no matching exit. Stall
+is `osRecvMesg(0x80114388)`
+never returning.
 
-## Work unit — always-on loop + recv1
+## Work unit — VI register vs producer
 
 One Debug rebuild, one `#7/#8`
-soak. Do **not** re-probe the
-walk interior. Do **not**
-force-zero.
+soak. Do **not** re-probe
+recv1 enter/exit or the walk.
+Do **not** force-zero.
 
-In `N64Recomp/fixup_game_funcs.py`
-and the live generated files:
+This is a `lib/` edit:
+`lib/N64ModernRuntime/ultramodern/src/events.cpp`.
+Must run `./submodule-patches/export.sh`
+and commit the refreshed patches
+in the same iteration.
 
-1. Make `[vi-cb-loop]` at
-   `L_800198E8` (`funcs_4.c`)
-   **always-on** (drop the
-   `n<40 || n%128==0` stride).
-2. Add always-on `[vi-cb-recv1]`
-   enter immediately before
-   `osRecvMesg_recomp` at
-   `0x800198F4` (mq already in
-   `$a0` = `0x80114388`) and
-   exit at `after_3`.
-
-Leave `[vi-cb-slot]` /
-`[synth-entry]` / `[synth-exit]` /
-`[vi-cb-after]` / `[vi-cb-recv2]`
-/ `[vi-cb-walk]` as they are
-(already always-on).
+1. Always-on `[vi-set-event]`
+   in `osViSetEvent` (mq, msg,
+   retrace_count). Gate on
+   `ROGUESQ_LOG_AUDIOTICK_TRACE`
+   (already armed).
+2. Always-on `[vi-enq]` at the
+   existing `enqueue_external_message_src`
+   in `vi_thread_func` when
+   `cur_state->mq != NULLPTR`
+   (log mq, msg, retrace,
+   `total_vis`). Same gate.
+3. Leave `[vi-cb-loop]` /
+   `[vi-cb-recv1]` /
+   `[vi-cb-recv2]` /
+   `[vi-cb-walk]` /
+   `[vi-cb-after]` as they
+   are (already always-on).
 
 Same-run positive control
 (must fire **before** `#8`):
@@ -51,29 +52,37 @@ Same-run positive control
   with `took_swap=1` twice
 - `slot-alloc` ends
   `0x8018D4A0 count=16`
-- `[vi-cb-loop]` fires from n=0
+- `[vi-set-event]` fires with
+  `mq=0x80114388` at least once
+- `[vi-enq]` fires to
+  `mq=0x80114388` from n=0
 - `[vi-cb-recv1]` enter/exit
-  fire from n=0 with
+  fire from n=0
   `mq=0x80114388`
-- `[vi-cb-after]` fires from n=0
-  and a post-`#8` after n=N
-  fires (s1937: N=2310)
+- `[vi-cb-after]` fires from
+  n=0 and a post-`#8` after
+  n=N fires (s1938: N=2409)
 - `menu-entry` siten=2 AND
   `menu-spin` climbs
 - `#7` and `#8` fire
 
-Then, after that post-`#8`
-`[vi-cb-after]` n=N:
+Then, after recv1-enter n=N+1:
 
-- `[vi-cb-loop]` n=N+1 AND
-  `[vi-cb-recv1]` enter n=N+1
-  AND no matching recv1-exit →
-  **H-recv1-starved**
-- recv1-exit n=N+1 AND no
-  `[vi-cb-recv2]` n=N+1 →
-  **H-post-recv1-stuck**
-- no `[vi-cb-loop]` n=N+1 →
-  **H-loop-missed**
+- later `[vi-set-event]`
+  mq≠`0x80114388` (or 0)
+  and `[vi-enq]` to that
+  other mq → **H-vi-unhooked**
+- last `[vi-set-event]` still
+  `mq=0x80114388` and zero
+  `[vi-enq]` after enter →
+  **H-vi-stopped**
+- `[vi-enq]` to `0x80114388`
+  after enter and no
+  recv1-exit → **H-host-stuck**
+- another thread's recv on
+  `0x80114388` (or guest
+  `osSendMesg` drain) →
+  **H-stolen**
 
 Crash / #6-dead (no entry 2)
 = UNEVALUABLE — enqueue a
@@ -81,9 +90,10 @@ second copy of the same
 recipe, do not babysit.
 
 Join key is log order:
-`#8` vs last after n=N /
-vi-cb-loop n=N+1 / recv1
-enter/exit / recv2 / menu-entry
+`#8` vs after n=N / loop
+n=N+1 / recv1 enter n=N+1 /
+vi-set-event / vi-enq /
+recv1-exit / menu-entry
 siten=2.
 
 Build from `build/` with
@@ -99,6 +109,10 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- The s1938 recv1 three-way
+  (closed: H-recv1-starved
+  SELECTED; H-post-recv1-stuck
+  / H-loop-missed REFUTED).
 - The s1937 walk-interior
   three-way (closed:
   H-synth-in-walk /
