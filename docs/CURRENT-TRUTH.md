@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1919 (2026-08-17).
+detail. Reviewed through s1920 (2026-08-17).
 
 ## Current state
 
@@ -91,8 +91,21 @@ detail. Reviewed through s1919 (2026-08-17).
   — `#8` is `0x80128E40`; `#10` is `0x80128DA0` from a
   different function. `selectAndApplyViMode` never entered
   (`[vi-selector-control]` = 0; it would submit
-  `0x80128C90`). Next axis: why `advanceVideoFrame` never
-  reaches the swap→init pair after `#8`.
+  `0x80128C90`).
+  **s1920**: instrumented `advanceVideoFrame`'s swap gate
+  (`[avf-gate]` site=loop/B0/swap, `ROGUESQ_LOG_VI_CALLERS`).
+  180s staller
+  `s1920_avf_gate_20260817-203203` (probe_rc=5, `#10816`,
+  origin `0x0062BD00`, 0 crash): same-run control passed
+  (`n=1,2,3` before `#6`; `took_swap=1` at `n=2`=`#2+#3`
+  and `n=3`=`#5+#6`). Then `n` froze at 3 — zero further
+  `L_80018264` entries. **H-advance-dead SELECTED.**
+  H-loop-no-B0 / H-B0-mismatch / H-swap-ran REFUTED.
+  This staller never issued `#7/#8` (s1919 B / 173130 /
+  180331 did); the swap loop is already dead at `#6`, so
+  `#8` is not the swap-path stall point. Sole caller is
+  `runVideoFrameTick` `jal 0x8001818C`. Next axis: entry
+  vs exit vs prologue of that third call.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -146,27 +159,22 @@ detail. Reviewed through s1919 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **VI-1024 submitter is `initVideoSubsystem` via
-   `advanceVideoFrame` `0x80018378`; stallers never reach it
-   after `#8` (s1919 H-never-entered).** s1918 closed
-   early-crash-not-stall. s1919 named the caller: s844 `#10`
-   (`0x80128DA0` width=1024 at 79.6s / `#4715`) is
-   `initVideoSubsystem` from `advanceVideoFrame` (s844
-   `[vi-arg] 0x80018378` between `#9` width-2 and `#10`;
-   runtime `site=` table; exclusive remaining site that can
-   submit `0x80128DA0` after `swapBufferWithViMode`). 180s
-   staller
-   `s1919_osvisetmode_caller_b_20260817-201636` fires `#7/#8`
-   as `applyPendingViChanges` at `#2816/#2880` and then
-   never swap/`initVideo`. H-host-drop REFUTED. H-entered-640
-   REFUTED for applyPending-as-1024-issuer. Next axis: why
-   `advanceVideoFrame` does not reach the
-   `swapBufferWithViMode` → `initVideoSubsystem` pair after
-   `#8` (gate at `*(u8*)0x80128EAD` / `$s0` vs loop
-   `L_80018264`, or the thread itself stops). Ask (b) remains
-   human-only. Do not re-run `s790_postsec2_reachability.sh`
-   as a reachability re-confirm. Still blocks item 3
-   (hangar/512) until a port run publishes
+1. **`advanceVideoFrame` `L_80018264` dies after the second
+   swap (`#6`); H-advance-dead (s1920).** s1919 named s844
+   `#10` as `initVideoSubsystem` via `0x80018378`. s1920's
+   same-run control (`took_swap=1` at `n=2` and `n=3`) then
+   `n` frozen at 3 for the rest of a 180s / `#10816`
+   staller REFUTES the table-walk / `$s0!=byte` gates.
+   The third swap never fails — it is never attempted.
+   This run also lacked `#7/#8` (other 180s stallers have
+   them as `applyPendingViChanges`); that is independent of
+   the swap loop. Next axis: after `#6`, does the `n=3`
+   call return, or does `runVideoFrameTick` stop jalling
+   `0x8001818C`, or is a 4th call stuck before
+   `L_80018264`? Ask (b) remains human-only. Do not re-run
+   `s790_postsec2_reachability.sh` as a reachability
+   re-confirm. Still blocks item 3 (hangar/512) until a
+   port run publishes
    `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
@@ -256,14 +264,17 @@ the 1024 miss" framing is superseded by s1918 — 2/8 logs live
 never requests the transition. Treating s844 `#8`
 `applyPendingViChanges` as the 1024 function submitting 640
 is superseded by s1919 — `#8` is `0x80128E40`; `#10` is
-`initVideoSubsystem` submitting `0x80128DA0`.
+`initVideoSubsystem` submitting `0x80128DA0`. Treating
+`#8` as the swap-path stall point is superseded by s1920
+— `L_80018264` already stops after `#6`; the table at
+`0x80128EAD` is not the gate.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1919 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1920 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
@@ -273,7 +284,9 @@ universal; guest never issues `osViSetMode width=1024` even in the
 2/8 180s survivors) and s1919 naming s844 `#10` as
 `advanceVideoFrame` `0x80018378` → `initVideoSubsystem`
 (H-never-entered SELECTED in the 180s staller; H-host-drop
-and applyPending-as-1024-issuer REFUTED) and leftover `func_800F6954` became
+and applyPending-as-1024-issuer REFUTED) and s1920 selecting
+H-advance-dead (`L_80018264` `n` frozen at 3 after `#6`;
+table-walk / `$s0!=byte` REFUTED) and leftover `func_800F6954` became
 `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
 `func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover

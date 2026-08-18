@@ -1,77 +1,56 @@
-# NEXT work unit (s1920) — why advanceVideoFrame skips swap→init after #8
+# NEXT work unit (s1921) — why L_80018264 never runs a 4th time
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1919 named s844 `#10` as `advanceVideoFrame` `0x80018378` →
-`initVideoSubsystem` and selected H-never-entered: the 180s
-staller fires `#7/#8` as `applyPendingViChanges` and never
-reaches the swap→init pair. Do **not** re-run
-`s790_postsec2_reachability.sh` as a reachability re-confirm.
-Do **not** rename `func_800F7130` this iteration — item 1
-still has a live discriminator. Ask (b) is still human-only.
+s1920 selected H-advance-dead: after the second
+`took_swap=1` (`#5+#6`), `advanceVideoFrame` never
+re-enters `L_80018264`. The `0x80128EAD` / `$s0` table
+is not the gate. Do **not** re-run a reachability-only
+`s790`. Do **not** rename `func_800F7130` — item 1 still
+has a live discriminator. Ask (b) is still human-only.
 
-## Work unit — why the post-#8 swap→init pair never runs
+## Work unit — entry vs exit vs prologue after #6
 
-s844 `#9` (width 2, only `swapBufferWithViMode`) then
-`[vi-arg] 0x80018378` then `#10` (1024, `initVideoSubsystem`)
-is one `advanceVideoFrame` path:
+Sole caller is `runVideoFrameTick` `jal 0x8001818C`
+(`funcs_0.c`). After swap the same call still runs
+`initVideoSubsystem`, `buildAndRegisterDefaultMaterial`,
+optional `buildMaterialFreeList` / `loadDebugAssets`,
+then returns. Three hypotheses, one instrument:
 
-```
-L_80018264: waitOnVideoQueue; $s0=0; awaitFrameSync
-            *(u8*)0x80128EAD == 0  → L_800182B0
-            else walk *(u8*)(0x80128EAA+$s0)
-L_800182B0: signalFrameSync; bne $s0, byte, L_80018264
-            jal swapBufferWithViMode          // #9
-            waitOnVideoQueue; clearPending; clearPostSwap
-            jal initVideoSubsystem            // #10
-```
-
-The staller already did this pair twice (`#2+#3`, `#5+#6`)
-and never a third time after `#8`.
-
-Competing hypotheses (one instrument, one 180s-capable run):
-
-- H-advance-dead: `advanceVideoFrame` stops entering
-  `L_80018264` after `#8`. SELECTS: the stall is upstream
-  of the swap gate (thread parked / not scheduled).
-- H-loop-no-B0: the loop keeps running but never reaches
-  `L_800182B0` (table walk never takes the B0 exits).
-  SELECTS: the 0x80128EAA table / `$s2=3` / `$s1=4`
-  comparison is the gate.
-- H-B0-mismatch: `L_800182B0` is reached but
-  `$s0 != *(u8*)0x80128EAD`, so it branches back to
-  `L_80018264` and skips swap. SELECTS: the byte (or `$s0`)
-  is the gate.
-- H-swap-ran: swap is entered after `#8` but
-  `[osViSetMode]` missed `#9`. REFUTE if the new site
-  field (unconditional) stays silent — already weak.
+- H-not-called: the `n=3` call returns; `runVideoFrameTick`
+  never jals again. SELECTS: stall is in the caller
+  (or its scheduler) after `#6`.
+- H-stuck-post-swap: the `n=3` call never returns
+  (blocked after `#6` in the init/material tail).
+  SELECTS: stall is inside that third `advanceVideoFrame`.
+- H-stuck-prologue: a 4th call enters but never reaches
+  `L_80018264` (blocked on the opening `osRecvMesg` /
+  `waitOnVideoQueue` / arbiter). SELECTS: stall is the
+  pre-loop waits.
 
 **Discriminating measurement**
 
-One fprintf in `advanceVideoFrame` at `L_800182B0` *and*
-at the `bne $s0, $v0` fallthrough, plus a loop-head
-counter at `L_80018264`. Fields on one line: `n`,
-`byte_0x80128EAD`, `$s0`, `took_B0`, `took_swap`.
-Put it in `tools/fixup_game_funcs.py` (generated
-`funcs_4.c`). Gate on `ROGUESQ_LOG_VI_CALLERS` (already
-wired). One build, one s790-shaped run with
-`PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180`.
+Keep the existing `[avf-gate]` loop/B0/swap rows. Add
+`site=entry` at function start and `site=exit` at the
+`jr $ra` (`L_80018434` / `return`). Same tag, same
+`ROGUESQ_LOG_VI_CALLERS` gate, same `n` counter.
+Put both in `N64Recomp/fixup_game_funcs.py` (generated
+`funcs_4.c`). One build, one s790-shaped run with
+`PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180`
+(`scratch/agent/s1920_avf_gate.sh` recipe).
 
-Same-run positive control: the loop-head counter must
-be nonzero before `#6` (the second swap+init already
-proved the path is live at 6.9s) **and** the `#5+#6`
-pair must show `took_swap=1`. Then read the post-`#8`
-rows:
+Same-run positive control: `site=entry` and `site=exit`
+must both fire on the first two calls (`#2+#3` / `#5+#6`
+already proved those return), and `site=swap took_swap=1`
+must appear twice. Then read the post-`#6` counts:
 
-- counter freezes at `#8` → H-advance-dead
-- counter climbs, `took_B0=0` → H-loop-no-B0
-- `took_B0=1` and `took_swap=0` → H-B0-mismatch
-  (dump byte and `$s0`)
-- `took_swap=1` after `#8` → H-swap-ran; inspect
-  why `#9`/`#10` are missing
+- entry=3, exit=3, loop=3 → H-not-called
+- entry=3, exit=2, loop=3 → H-stuck-post-swap
+- entry>=4, loop=3 → H-stuck-prologue
 
-Do not add a second counter family. The gate table is
-the whole unit.
+Do not add a second counter family. This run may or may
+not issue `#7/#8` (s1920 lacked them; s1919 B had them);
+either is evaluable for this table.
 
 ## Sweep leftover (parked, not this unit)
 
@@ -82,6 +61,7 @@ Four-step already complete in s1906–s1917.
 ## Do not repeat
 
 - Naming the `#10` osViSetMode site (s1919) — closed.
+- The `0x80128EAD` / `$s0` swap-gate table (s1920) — closed.
 - The s844-HEAD full code-content audit (s1890) — closed.
 - The `ROGUESQ_SKIP_HANGAR_PROBE` A/B (s1890) — closed.
 - H3a-lowpower (s1902) — closed.

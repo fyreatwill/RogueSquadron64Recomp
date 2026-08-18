@@ -90121,3 +90121,52 @@ after `#8`.
 
 No mitigation. Next: why `advanceVideoFrame` does not reach
 the swap→init pair after `#8`.
+
+## Session 1920 (2026-08-17) — selected H-advance-dead after the second swap
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit:
+why `advanceVideoFrame` never takes the swap→init pair
+after s844 `#8`. Four hypotheses on one gate table:
+H-advance-dead / H-loop-no-B0 / H-B0-mismatch / H-swap-ran.
+
+Added `[avf-gate]` in generated `advanceVideoFrame`
+(`N64Recomp/fixup_game_funcs.py` + `funcs_4.c`):
+`site=loop` at `L_80018264`, `site=B0` at `L_800182B0`,
+`site=swap` on the `bne $s0,$v0` fallthrough. Fields:
+`n`, `b0n`, `swapn`, `byte` (`*(u8*)0x80128EAD`), `$s0`,
+`took_B0`, `took_swap`. Gated on `ROGUESQ_LOG_VI_CALLERS`
+(also `ROGUESQ_LOG_ALL`).
+
+One s790-shaped 180s run
+(`scratch/agent/s1920_avf_gate.sh`,
+`scratch/agent/soak_results/s1920_avf_gate_20260817-203203/run.log`):
+probe_rc=5, last width 640, `update_screen #10816`,
+origin frozen on `0x0062BD00`, 0 `[CRASH]` / `[ABORT]`.
+
+Same-run positive control: `n=1,2,3` all logged before
+`#6`; `took_swap=1` at `n=2` (`#2+#3`) and `n=3`
+(`#5+#6`). `[osViSetMode]` / `[vi-gate]` pair 1:1 with
+those two swaps.
+
+Then `n` froze at 3. Zero further `L_80018264` entries
+for the remaining ~170s / ~10000 `update_screen` ticks.
+
+H-advance-dead SELECTED. The third swap is never
+attempted.
+H-loop-no-B0 REFUTED (loop does not keep running).
+H-B0-mismatch REFUTED (no post-`#6` B0 with
+`took_swap=0`; last B0 had `byte=0x02` `$s0=0x2` and
+did swap).
+H-swap-ran REFUTED (no third `took_swap=1`; no `#9/#10`).
+
+This 180s staller issued only `#1–#6` (no `#7/#8`
+`applyPendingViChanges`). s1919 B / 173130 / 180331
+issued `#7/#8` then silence. Independent of the swap
+loop: `#7/#8` are a different function, and the loop is
+already dead at `#6`. Treating `#8` as the swap-path
+stall point is withdrawn.
+
+Sole static caller: `runVideoFrameTick` `jal 0x8001818C`.
+No mitigation. Next: entry vs exit vs prologue of the
+third call.
+
