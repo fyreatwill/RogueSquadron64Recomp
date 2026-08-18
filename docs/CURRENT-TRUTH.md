@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1905 (2026-08-17).
+detail. Reviewed through s1906 (2026-08-17).
 
 ## Current state
 
@@ -145,25 +145,26 @@ detail. Reviewed through s1905 (2026-08-17).
    This still blocks the entire soak family and item 3 below until
    reachability itself is restored or explained. Productive work until then
    is item 2.
-2. Resume the generated-symbol sweep at leftover `func_800F3144`
-   (`0x800F3144`, size `0x114`). Already confirmed via the full four-step
-   procedure (s1904 + re-checked s1905): `funcs_41.c:5668,5811`
-   adjacency, `funcs.h:2157-2158` order, `recomp_overlays.inl:1886`
-   offset `0x0004E014 = 0x0004DF7C + 0x98` / `rom_size 0x114`,
+2. Resume the generated-symbol sweep at leftover `func_800F3258`
+   (`0x800F3258`, size `0x8`). Already confirmed via the full four-step
+   procedure (s1905 + re-checked s1906): `funcs_41.c:5811,6046`
+   adjacency, `funcs.h:2158-2159` order, `recomp_overlays.inl:1887`
+   offset `0x0004E128 = 0x0004E014 + 0x114` / `rom_size 0x8`,
    zero-hit non-collision grep — next iteration can rename directly to
-   `copyRandomPipeDelimitedField`. The leftover after that is also
-   already resolved by name: `returnZero_800F3258` (s1905 preview:
-   `funcs_41.c:5811,6046`, `funcs.h:2158-2159`, `.inl:1887` offset
-   `0x0004E128 = 0x0004E014 + 0x114` / `rom_size 0x8`, zero-hit
-   `func_800F3258`). Flag for a later leftover, not the next rename:
-   `func_800F3260` TOML size `0x2C` vs generated `tallyMidDetailObject`
-   `rom_size 0x30` (alignment nop at `0x800F328C`). Note (s1897): the
-   generated tree (`funcs_41.c`, `funcs.h`, `recomp_overlays.inl`) is
-   gitignored and absent from this repo's `build/`; it currently lives
-   at `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
+   `returnZero_800F3258`. Flag for a later leftover, not the next
+   rename: `func_800F3260` TOML size `0x2C` vs generated
+   `tallyMidDetailObject` `rom_size 0x30` (alignment nop at
+   `0x800F328C`). After that leftover: `func_800F3290` already lines
+   up with `resolveScriptedNameTokenList` (s1906 preview:
+   `funcs_41.c:6056,6092`, `funcs.h:2160-2161`, `.inl:1889` offset
+   `0x0004E160 = 0x0004E130 + 0x30` / `rom_size 0x24C`, zero-hit
+   `func_800F3290`). Note (s1897): the generated tree (`funcs_41.c`,
+   `funcs.h`, `recomp_overlays.inl`) is gitignored and absent from this
+   repo's `build/`; it currently lives at
+   `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
    — look there first. Archive: `PROJECT-OVERVIEW.md` §33–§35. About
    1,548 placeholder `func_0x...` names remained at s1487; TOML leftover
-   `func_800*` count is 994 after s1905.
+   `func_800*` count is 993 after s1906.
 3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
    s1888 attempt was blocked upstream by item 1, not by a bad input
    schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
@@ -230,11 +231,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1905 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1906 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
-the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F30AC` became
+the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F3144` became
+`copyRandomPipeDelimitedField` (`0x800F3144`, `0x114`) after leftover
+`func_800F30AC` became
 `copyPipeDelimitedField` (`0x800F30AC`, `0x98`) after leftover
 `func_800F2FCC` became
 `triggerCueWithSlotEffect` (`0x800F2FCC`, `0xE0`) after leftover
