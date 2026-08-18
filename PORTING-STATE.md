@@ -87595,3 +87595,44 @@ generated `funcs.h`/`recomp_overlays.inl` already
 non-collision the same way, then rename the TOML entry. Last-15 titles
 after s1883 still include s1872's hangar/512 revisit, so the next
 iteration remains a leftover census, not a mandatory REVISIT.
+
+## Session 1884 (2026-08-17) — synchronized the getObjectNpcTypeId symbol
+
+Exact generated-symbol census for leftover `func_800F2A00` at
+`0x800F2A00` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles after s1883 still include s1872's hangar/512 revisit
+(`hangar/512 0x8000 Y is unevaluable`), so the 15-title all-sweep
+REVISIT gate did not fire. Step 0 `wc -c` was 18522; not a maintenance
+iteration. `tail -20` of `scratch/agent/SOAK-RESULTS.md` showed no
+verdicts newer than the already-folded s1029-era tail (file mtime
+2026-08-14, no queued soaks ran since).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void getObjectNpcTypeId` at VRAM `0x800F2A00`, line 4271. Body: `lhu $a0, 0x130($a0)` then `jal 0x8003FC28` (`findActiveNpcInSlotChain`) with `a1=0`, mask result to `0xFFFF` — exactly the companion's "convenience accessor returning `findActiveNpcInSlotChain(obj+0x130, NULL)`" shape |
+| `funcs.h` / `recomp_overlays.inl` | Already declare/register `getObjectNpcTypeId` (`funcs.h:2142`; INL `recomp_overlays.inl:1870`, `.offset = 0x0004D8D0, .rom_size = 0x00000024`) |
+| Non-collision | `grep -rn 'func_800F2A00\b'` across generated `*.c`/`*.h`/`*.inl` returned zero hits — no leftover call sites anywhere in the generated tree |
+| TOML | Was `{ name = "func_800F2A00", vram = 0x800F2A00, size = 0x24 }` — stale leftover; size matches INL `rom_size`. Renamed to `getObjectNpcTypeId` at `syms/rogue_squadron.syms.toml:1983` |
+| Boundary check | INL offset `0x0004D8D0` = prior `getObjectMeshTransformOrLocal`'s `0x0004D858 + 0x78` (s1883), confirming contiguous placement |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, `funcs.h`
+declaration, and overlay INL entry all already agreed on
+`getObjectNpcTypeId` / `0x24`; only the TOML still carried
+`func_800F2A00`. Renamed it to match — no invented name, no build or
+runtime run required. This refutes H1 (TOML was not already
+synchronized) and H3 (no size/boundary disagreement; body matches the
+companion's NPC-type-lookup semantics).
+
+Next census: leftover `func_800F2A24` at `0x800F2A24` (size `0x80`,
+`syms/rogue_squadron.syms.toml:1984`). Preliminary peek: the generated
+body immediately after `getObjectNpcTypeId` in `funcs_41.c` is already
+`RECOMP_FUNC void clearPendingChildNpc` — confirm this is the actual
+occupant of `0x800F2A24` (not a stray substring match from an
+unrelated jal-target comment) and check the companion/`funcs.h`/INL
+agree before renaming. Last-15 titles after s1884 still include
+s1872's hangar/512 revisit, so the next iteration remains a leftover
+census, not a mandatory REVISIT.
