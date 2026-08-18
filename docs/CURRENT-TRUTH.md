@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1966 (2026-08-18).
+detail. Reviewed through s1967 (2026-08-18).
 
 ## Current state
 
@@ -54,6 +54,24 @@ detail. Reviewed through s1966 (2026-08-18).
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
   VMADH/VGE / `0xD60` / the ovl20 table. Late-hangar Y is unsampled
   (crash cut the window).
+- **Hangar hologram-beam artifact: a recurring malformed triangle
+  command exists, origin unresolved (s1967).** Extended the M4
+  `0xD60`-restage walker to check every flushed Fill-Triangle command's
+  `YH<=YM<=YL` ordering, not just the Y=`0x8000` subset. Zero degenerate
+  (zero-height) triangles, but one specific command per flush window
+  (offset `0xE80-0xEA8`, ~9 command-slots past the flush region start)
+  recurs with grossly out-of-screen Y/X values and a Y-ordering
+  violation across ~700 sampled heartbeats in the ~4s hangar capture.
+  Does NOT select H2 outright: could be a genuinely malformed command
+  reaching the RDP queue, or `r16`'s write-pointer overcounting past
+  what was actually freshly written this flush (stale ring-buffer
+  bytes misread as a command) — this instrument cannot split those.
+  The oracle cannot help here either: it has no screenshot capability
+  and its RSP-HLE plugin never executes guest `L_17F0`, so there is no
+  oracle-side equivalent of the `0xD60` capture to compare against
+  (confirmed this session, not assumed). ORIGIN not named — ambiguous
+  between writer and stale-read, so no mitigation attempted (iron rule
+  11). Full detail: `PORTING-STATE.md` s1967.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -128,9 +146,13 @@ REVISIT (external retail-entry boundary or M4 accumulator boundary) with
 a genuinely new angle rather than defaulting to sweep busywork.
 
 1. Hangar visual artifacts on the first live hangar frame (geometry
-   cracks, blue tris, hologram layering). New discriminator required;
-   do not treat them as the parked M4 Y=0x8000. s1950 did not
-   lengthen the hangar window (still ~4s / 1 frame).
+   cracks, blue tris, hologram layering). s1967 found a recurring
+   malformed triangle command in the flushed `0xD60` stream but could
+   not tell a real writer from a stale-buffer misread — next step is a
+   sentinel-tagged DMEM scratch region to split those (see NEXT.md).
+   Do not treat this as the parked M4 Y=0x8000 (different mechanism,
+   `y8000_any` stayed 0 in s1967 too). s1950 did not lengthen the
+   hangar window (still ~4s / 1 frame).
 2. Hangar SIGBUS `filterVoiceSampleBlock+220` / `0x8000834c` is a
    known family. Revisit only as a complete idiom-class audit.
 3. Keep audio closed unless a new independent lead reaches audio

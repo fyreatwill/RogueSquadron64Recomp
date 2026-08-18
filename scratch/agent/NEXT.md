@@ -1,106 +1,96 @@
-# NEXT work unit (s1967) — hangar hologram-beam visual artifact, first discriminator
+# NEXT work unit (s1968) — hangar hologram-beam artifact: writer vs stale-read
 
 HYPOTHESIS-ID: hangar-hologram-beam-artifact
 
-s1966 closed the generated-symbol renaming sweep to 57 genuine holdouts (RE
-required or deliberate holds — see `docs/CURRENT-TRUTH.md` "Current state"
-and `PORTING-STATE.md` s1966). It is no longer a metadata-sync target; do
-not resume `tools/sweep_scan_candidates.py` expecting more free wins.
+## What s1967 found
 
-Per `tools/agent/ITERATION.md`'s strategic priority: M5 is closed, M3 is
-parked pending a new idiom-class discriminator, and the sweep is now
-closed too — so this session's work unit comes from
-`docs/CURRENT-TRUTH.md` "Active investigation and ranked next steps" #1,
-the hangar visual artifacts, since it needs the least new tooling (a
-capture already exists) among the remaining items.
+Extended `rs64_m4_y8000_flush` (`src/rsp/dpc_bridge.cpp`) to check
+`YH<=YM<=YL` ordering and degeneracy on EVERY flushed `0xC8`-class Fill
+Triangle in the hangar/512 gate, not just the (closed) M4 Y=`0x8000`
+subset. Result, captured in
+`scratch/agent/soak_results/s1968_hangar_tri_dump_20260818-085342/run.log`:
 
-## What's already captured
+- `tri_degenerate` stayed 0 throughout — no zero-height triangles.
+- `tri_order_bad` reaches exactly 1 per gate-window across most of ~700
+  sampled heartbeats in the ~4s hangar capture. Always the SAME
+  pattern: one command at a variable offset in `0xE80-0xEA8` (about
+  nine 32-byte slots past the flush region's start at `0xD60`), header
+  byte varying frame to frame but always validly `0xC8-0xCF`, with
+  `YL`/`YM`/`YH`/edge fields at implausible magnitudes (thousands of
+  pixels as signed s10.2) and a real ordering violation.
 
-`scratch/agent/soak_results/s1949_menu_input_yield_20260818-021858/f_001_000.0.png`
-(same frame reproduced in `s1950_hangar_yield_repro_20260818-022703/`) is
-the SELECT LEVEL / AMBUSH AT MOS EISLEY hangar screen — the first live
-hangar frame this campaign has ever captured (s1949, `ROGUESQ_SPIN_YIELD=1`
-+ eleven-Start recipe). Looking at it directly: the holographic light-cone
-beneath the floating X-wing hologram has two jagged blue triangle spikes
-poking up through the cone surface, breaking its silhouette — plus the
-cone's own edge looks faceted/torn rather than a clean gradient wedge.
-This matches CURRENT-TRUTH's prior description ("geometry cracks, blue
-tris, hologram layering") well enough to treat as the same artifact
-family, though no prior session had actually looked at the pixels before
-now — s1950 only confirmed the window didn't lengthen, it didn't examine
-the frame.
+This did NOT select H2. Two explanations survive and the current
+instrument can't split them:
+- (a) a genuinely malformed/corrupted triangle command reaches the RDP
+  queue for this draw (real H2, and plausibly the visual spike defect).
+- (b) the scanned range `[0xD60, end)` — `end` derived from the `r16`
+  write-pointer at flush time — includes bytes past what this frame
+  actually wrote. If `r16` ever advances further than real stores (a
+  narrower, previously-untested claim; `docs/M4-ACCUMULATOR-GROUND-
+  TRUTH.md`'s H-dead-store refutation covered the 640-attribution case,
+  not this later multi-triangle-per-flush hangar case), the walker
+  would read stale leftover bytes from a differently-shaped earlier
+  command and misinterpret them as a new triangle header purely by
+  chance landing in `0xC8-0xCF`.
 
-**Window is short: ~4s / 1 frame before the `filterVoiceSampleBlock+220`
-SIGBUS (known family, do not chase as a single crash — CURRENT-TRUTH #2).**
-Any new capture needs the same yield recipe and will hit the same wall;
-budget for exactly one frame per run.
+ORIGIN not named (ambiguous between writer and stale-read) — iron rule
+11 blocks any mitigation until this is settled. Do not add a skip/guard
+for this offset without first doing the check below.
 
-## Competing hypotheses (need refinement before instrumenting)
+## Discriminating measurement to build next
 
-1. **Depth/blend ordering.** The hologram beam is alpha-blended geometry;
-   if RT64's HLE gets the RDP blend-mode or z-compare setup wrong for
-   this specific draw (or the port omits a `G_RENDERMODE` edge the
-   original hardware/LLE handles), the spike shapes could be triangles
-   from the beam cone rendering front-to-back instead of correctly
-   blended/culled.
-2. **Vertex/triangle-winding corruption**, same family as the already-
-   audited M4 shade-lane and `L_17F0` restage work (`docs/CURRENT-TRUTH.md`
-   "Durable boundaries" M4 accumulator) — but that thread's evidence was
-   VI-640-attribution-LLE and explicitly `y8000_any=0` on the hangar
-   window; this would be a NEW instance in a screen that thread never
-   evaluated. Do not assume it's the same bug without independent evidence
-   from this specific draw call.
-3. **Legitimate retail behavior misread as an artifact.** The N64 original
-   may render this cone as a faceted, non-smooth shape by design (holo-
-   projector aesthetic) and what looks like "cracks" is just N64-era low
-   triangle count at emulator upscale. Rule this out FIRST — it is the
-   boring explanation and costs nothing: check `tools/oracle/README.md`
-   for whether the retail ROM under mupen64plus can reach this exact
-   hangar screen (oracle currently reaches "boot and attract only" per
-   CURRENT-TRUTH — if the hangar menu is out of reach there, this
-   hypothesis can't be checked directly and should be labeled unresorlvable
-   pending oracle extension, not silently assumed false — do not treat it
-  as unresolvable without checking).
+Tag the DMEM scratch region so a stale read is directly distinguishable
+from a fresh write:
+1. Immediately after each `SP_WR_LEN` DMA that drains `[0xD60, r16)`
+   (the same site `rs64_m4_y8000_flush` is called from), memset the
+   drained range to a fixed sentinel byte (e.g. `0xEE`) BEFORE the next
+   frame's restage writes begin. This requires finding the actual
+   drain/reset point in the generated ovl20 `L_112C`-equivalent flush
+   path (see `docs/M4-ACCUMULATOR-GROUND-TRUTH.md` for the site names)
+   or, more simply, sentinel-fill the buffer once at hangar-gate entry
+   and re-fill everything up to the PREVIOUS frame's `end` right after
+   each flush is processed — either gives the same discriminating
+   signal.
+2. In `rs64_m4_y8000_flush`, when a `tri_order_bad` hit is found, check
+   whether the bytes at that offset still carry any sentinel byte in a
+   position `L_17F0` would have overwritten if a real store happened
+   this frame (e.g. the unused padding byte at `off+1`, which `L_17F0`
+   per s1840 does not write). Sentinel present == (b) stale-read
+   confirmed, no writer bug. Sentinel absent == real bytes were stored
+   here this frame == (a) selected, promote to a "who wrote this
+   specific offset" hunt (watch DMEM `0xE80-0xEA8` writes directly with
+   an `RSP_MEM` write-side hook, restricted to the hangar gate).
+3. Same-run positive control: a deliberately UN-drained slot (or the
+   known-good `0xD60` triangle in the same flush) must show sentinel
+   absent, proving the tagging mechanism actually marks fresh writes.
 
-## Discriminating measurement to design before instrumenting
+Run with the existing hangar recipe (`scratch/agent/soak_queue/done/
+s1950_hangar_yield_repro_*.sh` as template, add
+`ROGUESQ_LOG_M4_TRI_DUMP=1`). Same ~4s window budget; do not expect the
+crash timing to change.
 
-Before writing any capture code: name what result would select which
-hypothesis. Candidates:
-- If the oracle CAN reach this screen (check first, cheaply): a
-  side-by-side RDP command dump of the beam-cone draw call, retail vs
-  port, discriminates H1 vs H3 directly (same triangles == H3 legitimate;
-  different blend/z state == H1).
-- If the oracle cannot reach it: dump the RDP triangle stream for this
-  specific draw (reuse the `L_17F0` / `0xD60` command-buffer
-  instrumentation pattern from the M4 accumulator work, `docs/CURRENT-
-  TRUTH.md` Durable boundaries) restricted to the hangar-menu overlay
-  entry, single frame, and check triangle winding/vertex Z against what
-  `docs/F5-UCODE-REFERENCE.md` says this ucode can legitimately emit for
-  a translucent fan/cone primitive. A malformed or degenerate triangle
-  (duplicate vertices, inverted winding) selects H2; a spec-valid triangle
-  stream with a blend-mode mismatch selects H1.
+## If this doesn't discriminate cleanly in one session
 
-This is genuinely a **new discriminator design task**, not a "run the
-existing recipe" task — per the iteration contract, do not build an
-instrument until you can name what each outcome would prove.
+Per iteration budget rule 8: this is the SAME hypothesis thread as
+s1967 (not yet a 3rd stalled iteration on it — s1967 was the first). If
+s1968 also comes back ambiguous, write the hypothesis/evidence table
+explicitly into this file and consider the fallback: an H1 probe
+(census every `SETOTHERMODE_L/H_EX` in the hangar window's flushed
+stream — different instrument, same buffer) since H2's own instrument
+has now been tried once without a clean answer.
 
 ## Do not repeat
 
-- Chasing hangar SIGBUS `filterVoiceSampleBlock+220` (`0x8000834c`) as a
-  single crash — known family, only revisit as a complete idiom-class
-  audit (CURRENT-TRUTH #2).
-- Re-walking VMADH/VGE / `0xD60` / ovl20 for Y=`0x8000` — that thread is
-  closed (H-never-live, `docs/CURRENT-TRUTH.md` Durable boundaries M4
-  accumulator). This is a DIFFERENT symptom (visual, not the Y=0x8000
-  accumulator question) even though it may share instrumentation.
-- Defaulting `ROGUESQ_SPIN_YIELD` on.
-- Resuming the generated-symbol sweep as if it still had a large
-  resolvable backlog — it doesn't (57 left, all RE/hold).
-- Cross-run A/B on this scene without phase-gating — the hangar window is
-  ~4s of animating content, exactly the case iron rule 2 forbids comparing
-  by stopwatch.
-- If this hypothesis doesn't pan out or can't be instrumented in one
-  session, the fallback per `tools/agent/ITERATION.md` strategic priority
-  is the REVISIT: re-attempt the external retail-entry boundary or M4
-  accumulator boundary (`docs/CURRENT-TRUTH.md` Next steps / Durable
-  boundaries) with a genuinely new angle — not another sweep session.
+- Do not conflate this with the closed M4 Y=`0x8000` accumulator
+  question (`y8000_any=0` again this session) — different mechanism,
+  different offset, do not re-walk VMADH/VGE.
+- Do not point the oracle at DMEM `0xD60` — confirmed s1967 the
+  RSP-HLE plugin never executes guest `L_17F0`, so there is nothing
+  comparable to watch there.
+- Do not land a skip/guard for the `0xE80-0xEA8` offset without first
+  running the sentinel check above — that would be exactly the
+  mitigation-without-explanation trap iron rule 11 exists to block.
+- Do not resume the generated-symbol sweep (closed, 57 RE/hold left,
+  s1966).
+- Cross-run A/B on this scene without phase-gating still forbidden —
+  the hangar window is ~4s of animating content.

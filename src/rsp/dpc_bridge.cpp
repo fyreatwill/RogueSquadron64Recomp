@@ -478,6 +478,30 @@ static uint32_t rs64_m4_y8000_gate_width() {
     return w;
 }
 
+// s1967 hangar hologram-beam artifact discriminator: unconditional (not
+// Y=0x8000-gated) dump of every 0xC8-class Fill Triangle command's full
+// geometry, restricted to the same hangar/512 gate as the y8000 probe.
+// Checks the hardware-required YH<=YM<=YL scanline ordering and flags
+// degenerate (zero-height) triangles -- a hit here selects H2 (vertex/
+// winding corruption) over H1 (blend/z state) or H3 (legitimate design).
+static bool rs64_m4_tri_dump_enabled() {
+    static const bool v = [] {
+        const char *all = std::getenv("ROGUESQ_LOG_ALL");
+        if (all && *all && *all != '0') return true;
+        const char *e = std::getenv("ROGUESQ_LOG_M4_TRI_DUMP");
+        return e && *e && *e != '0';
+    }();
+    return v;
+}
+
+static uint32_t rs64_m4_tri_dump_cap() {
+    static const uint32_t cap = [] {
+        const char *e = std::getenv("ROGUESQ_M4_TRI_DUMP_CAP");
+        return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 500u;
+    }();
+    return cap;
+}
+
 struct Rs64M4Y8000 {
     uint32_t n_entry_all = 0;
     uint32_t n_flush_site_all = 0;
@@ -494,6 +518,10 @@ struct Rs64M4Y8000 {
     uint32_t n_y8000_mixed = 0;
     uint32_t n_dump = 0;
     uint32_t n_entry_dump = 0;
+    uint32_t n_tri_total = 0;
+    uint32_t n_tri_order_bad = 0;
+    uint32_t n_tri_degenerate = 0;
+    uint32_t n_tri_dump = 0;
     uint32_t last_width = 0xFFFFFFFFu;
     uint32_t last_origin = 0xFFFFFFFFu;
     bool last_in_gate = false;
@@ -519,6 +547,10 @@ static void rs64_m4_y8000_reset_gated() {
     g_m4_y8000.n_y8000_mixed = 0;
     g_m4_y8000.n_dump = 0;
     g_m4_y8000.n_entry_dump = 0;
+    g_m4_y8000.n_tri_total = 0;
+    g_m4_y8000.n_tri_order_bad = 0;
+    g_m4_y8000.n_tri_degenerate = 0;
+    g_m4_y8000.n_tri_dump = 0;
 }
 
 static void rs64_m4_y8000_summary(const char *why) {
@@ -526,7 +558,8 @@ static void rs64_m4_y8000_summary(const char *why) {
         "[m4-y8000] summary why=%s phase=%u viw=%u origin=0x%08X hangar=%d "
         "entry_all=%u flush_site_all=%u "
         "entry=%u y8000_entry=%u allout=%u partial=%u fall=%u "
-        "flush=%u empty=%u hdr=%u y8000_any=%u y8000_equal=%u y8000_mixed=%u dump=%u\n",
+        "flush=%u empty=%u hdr=%u y8000_any=%u y8000_equal=%u y8000_mixed=%u dump=%u "
+        "tri_total=%u tri_order_bad=%u tri_degenerate=%u\n",
         why, rs64_phase_ord(), rs64_vi_committed_width(),
         rs64_vi_committed_origin(), rs64_is_hangar_vi(),
         g_m4_y8000.n_entry_all, g_m4_y8000.n_flush_site_all,
@@ -534,7 +567,8 @@ static void rs64_m4_y8000_summary(const char *why) {
         g_m4_y8000.n_entry_allout, g_m4_y8000.n_entry_partial, g_m4_y8000.n_entry_fall,
         g_m4_y8000.n_flush, g_m4_y8000.n_empty, g_m4_y8000.n_hdr,
         g_m4_y8000.n_y8000_any, g_m4_y8000.n_y8000_equal, g_m4_y8000.n_y8000_mixed,
-        g_m4_y8000.n_dump);
+        g_m4_y8000.n_dump,
+        g_m4_y8000.n_tri_total, g_m4_y8000.n_tri_order_bad, g_m4_y8000.n_tri_degenerate);
     fflush(stderr);
 }
 
@@ -650,6 +684,38 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
         const uint16_t yl = static_cast<uint16_t>(RSP_MEM_HU_LOAD(off + 2, 0));
         const uint16_t ym = static_cast<uint16_t>(RSP_MEM_HU_LOAD(off + 4, 0));
         const uint16_t yh = static_cast<uint16_t>(RSP_MEM_HU_LOAD(off + 6, 0));
+
+        // Unconditional geometry dump/check (not gated on Y=0x8000): hardware
+        // requires YH <= YM <= YL (screen-space top-to-bottom scanline order,
+        // s11.2 signed fixed-point). A violation or an all-equal (zero-height)
+        // triangle here is a malformed-command signal independent of the
+        // parked M4 accumulator question.
+        g_m4_y8000.n_tri_total++;
+        const int16_t syl = static_cast<int16_t>(yl);
+        const int16_t sym = static_cast<int16_t>(ym);
+        const int16_t syh = static_cast<int16_t>(yh);
+        const bool order_bad = !(syh <= sym && sym <= syl);
+        const bool degenerate = (yl == ym && ym == yh);
+        if (order_bad) g_m4_y8000.n_tri_order_bad++;
+        if (degenerate) g_m4_y8000.n_tri_degenerate++;
+        if (rs64_m4_tri_dump_enabled() && g_m4_y8000.n_tri_dump < rs64_m4_tri_dump_cap()) {
+            g_m4_y8000.n_tri_dump++;
+            const uint32_t xl = RSP_MEM_W_LOAD(off + 8, 0);
+            const uint32_t dxldy = RSP_MEM_W_LOAD(off + 12, 0);
+            const uint32_t xh = RSP_MEM_W_LOAD(off + 16, 0);
+            const uint32_t dxhdy = RSP_MEM_W_LOAD(off + 20, 0);
+            const uint32_t xm = RSP_MEM_W_LOAD(off + 24, 0);
+            const uint32_t dxmdy = RSP_MEM_W_LOAD(off + 28, 0);
+            fprintf(stderr,
+                "[m4-tri] n=%u off=0x%03X hdr=%02X YL=%04X YM=%04X YH=%04X "
+                "XL=%08X DxLDy=%08X XH=%08X DxHDy=%08X XM=%08X DxMDy=%08X "
+                "order_bad=%d degenerate=%d\n",
+                g_m4_y8000.n_tri_dump, off, hdr, yl, ym, yh,
+                xl, dxldy, xh, dxhdy, xm, dxmdy,
+                order_bad ? 1 : 0, degenerate ? 1 : 0);
+            fflush(stderr);
+        }
+
         const int any = (yl == 0x8000) || (ym == 0x8000) || (yh == 0x8000);
         if (any) {
             g_m4_y8000.n_y8000_any++;

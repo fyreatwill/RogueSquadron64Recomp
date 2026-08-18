@@ -94002,3 +94002,100 @@ Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the hangar SIGBUS.
 Did not rebuild — every renamed target name pre-existed in the generated
 tree; this is a metadata-only TOML sync. ORIGIN: not applicable — no
 mitigation landed, this is a symbol-name sync.
+
+## Session 1967 (2026-08-18) — hangar hologram-beam artifact: built a triangle-geometry sanity check, found a recurring malformed command
+
+Work unit per CURRENT-TRUTH's re-ranked #1 (s1966): design the
+discriminator for the hangar hologram-beam visual artifact (jagged blue
+triangle spikes breaking the light-cone silhouette, first seen s1949) that
+`scratch/agent/NEXT.md` handed off. Looked directly at
+`f_001_000.0.png` from s1949 first: the beam cone itself is a clean,
+correctly gradiented translucent wedge; the anomaly is two solid,
+saturated-blue, sharply faceted spikes poking through its middle,
+visually distinct in both color and opacity from the rest of the
+hologram.
+
+Checked the oracle angle from `docs/NEXT.md`'s first bullet before
+building anything: `tools/oracle/README.md` already documents that Rice
++ the eleven-Start schedule reaches the hangar (38.4s, `0x6ab400/800`)
+under the retail ROM, but the oracle binary (`tools/oracle/rs64_oracle.c`)
+has no screenshot capability at all, and `mupen64plus-rsp-hle` does not
+execute guest RSP microcode — it decodes the retail display list
+natively in C++. That means the port's `L_17F0`/`0xD60` DMEM-restage
+instrument (the M4 accumulator work's proven capture method) has no
+oracle-side equivalent to compare against: there is nothing at physical
+DMEM `0xD60` to watch under HLE. H3 (legitimate faceted-hologram design)
+therefore stays unresolvable by instrumentation this session, oracle or
+port; recorded as a genuine limitation, not assumed either way.
+
+Built the second-bullet plan instead: extended
+`rs64_m4_y8000_flush` in `src/rsp/dpc_bridge.cpp` (the exact walker
+already validated across s1824-s1949 for the M4 `0xD60` restaged
+Fill-Triangle stream) to run an UNCONDITIONAL check on every parsed
+`0xC8`-class command in the hangar/512 gate, not just the Y=`0x8000`
+subset: does it violate the hardware-required `YH<=YM<=YL` scanline
+ordering, or is it degenerate (all three Y equal)? New counters
+`tri_total`/`tri_order_bad`/`tri_degenerate` land in the existing
+`[m4-y8000] summary` line unconditionally (cheap); a new
+`ROGUESQ_LOG_M4_TRI_DUMP=1` (cap `ROGUESQ_M4_TRI_DUMP_CAP`, default 500)
+additionally dumps full geometry (`YL/YM/YH` + all six edge fields) per
+command as `[m4-tri]` lines.
+
+Rebuilt (native runtime file, no regen pipeline needed) and ran the
+s1950 hangar recipe (`ROGUESQ_SPIN_YIELD=1` + eleven-Start,
+`ROGUESQ_M4_Y8000_WIDTH=512`) with the new dump armed
+(`scratch/agent/soak_results/s1968_hangar_tri_dump_20260818-085342/`).
+Reproduced the known window exactly: 512 at 24.4s, SIGBUS
+`filterVoiceSampleBlock+220` ~3.2s later, one hangar frame captured
+(same SELECT LEVEL / AMBUSH AT MOS EISLEY scene). Positive control: the
+dump fired 34,400 `[m4-tri]` lines (cap resets each time the double-
+buffered origin flips between `0x6ab400`/`0x6ab800`, which happens every
+VI as expected) — the instrument is live, not silently no-opping.
+
+**Result: `tri_degenerate=0` in every sampled window (no zero-height
+triangles). `tri_order_bad` is NOT always zero** — of ~700 periodic
+summary heartbeats across the hangar capture, most eventually show
+`tri_order_bad=1`, traced via the `[m4-tri]` dump to a single recurring
+command per flush window at a variable offset in `0xE80-0xEA8` (roughly
+nine 32-byte command-slots past the start of the flush region at
+`0xD60`), header bytes varying frame to frame (`CD`/`CA`/`C9`/`CE`/`CB`/
+`CF` — all validly in the `0xC8-0xCF` class) but `YL`/`YM`/`YH`/edge
+values wildly out of any plausible on-screen range (e.g.
+`YL=A407 YM=F64D YH=5A5E`, thousands of pixels as signed s10.2) and
+violating the Y-ordering hardware requires. `tri_order_bad` never
+exceeds 1 per window — this is one specific recurring bad command, not
+general stream corruption.
+
+**This does not cleanly select H2.** Two explanations remain live and
+this instrument cannot split them: (a) a genuinely malformed/corrupted
+triangle command reaches the RDP queue during the hangar scene (real
+H2), or (b) the scanned `[0xD60, end)` region (`end` from the `r16`
+write-pointer at flush time) includes bytes past what was actually
+freshly written this frame — stale ring-buffer leftovers from a
+differently-shaped previous command, included only because `r16`
+advanced further than real data was stored. `docs/M4-ACCUMULATOR-
+GROUND-TRUTH.md` already refuted a dead-store hypothesis for `L_17F0`
+in the width-640 attribution case (H-dead-store refuted, `0xD60` is the
+only `SP_WR_LEN` source) but never checked whether `r16` can overcount
+past genuinely-written bytes specifically in this later, multi-triangle-
+per-flush hangar case — that is a narrower, previously untested claim.
+
+ORIGIN: not yet named. This session found the symptom (a malformed
+triangle-shaped byte pattern at a stable buffer position) but did not
+establish whether the WRITER put it there or whether it is unwritten
+memory being misread — exactly the "mitigation is not an explanation"
+trap iron rule 11 warns about, so no mitigation was attempted and none
+should land until the writer question is settled.
+
+Single-source (one run). Does not settle H1 (blend/z — not visible in
+this command's fields at all, needs a separate `SETOTHERMODE` census)
+or H3 (needs pixel ground truth neither the port nor the oracle can
+supply). Rules out `tri_degenerate` (zero-height triangles) as a
+contributor. Next step (written to `scratch/agent/NEXT.md`): tag the
+DMEM scratch region with a sentinel after each flush drains so a stale-
+data hit can be told apart from a freshly-written malformed command,
+splitting (a) from (b) directly.
+
+Code change: `src/rsp/dpc_bridge.cpp` (new counters + `[m4-tri]` dump,
+env-gated, default off — no behavior change when unset). No `lib/`
+edits this session.
