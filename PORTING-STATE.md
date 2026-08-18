@@ -88306,3 +88306,53 @@ after s1895 will drop s1880 and keep s1888-s1892's reachability
 investigation, so the next iteration remains a leftover census, not a
 mandatory REVISIT, unless VI-1024 reachability has been unblocked by then
 (check `scratch/agent/thermal_probe.py`'s `isLowPowerModeEnabled` first).
+
+## Session 1896 (2026-08-17) — synchronized the applyToObjectSubstructByFlag symbol
+
+HYPOTHESIS-ID: generated-symbol-renaming-sweep. Before starting, checked
+`thermal_probe.py`'s `isLowPowerModeEnabled`: still `True` (unchanged since
+s1892/s1895), so H3a-lowpower remains untestable and the sweep continues
+rather than a reachability re-run. Checked the 15-title REVISIT gate
+(`grep -n '^## Session ' PORTING-STATE.md | tail -15`): s1888-s1892 (the
+reachability investigation) are in the window alongside 10 sweep entries, so
+the gate does not fire — this is a normal census, not a mandatory REVISIT.
+
+Repeated the s1887/s1893/s1894/s1895 procedure on leftover `func_800F2D38`
+(`syms/rogue_squadron.syms.toml:1990`, size `0x3C`):
+1. `funcs_41.c`: `RECOMP_FUNC void applyToObjectSubstructByFlag` at line 4955
+   immediately follows `RECOMP_FUNC void initAnimSubstructFromParams` at line
+   4793 — true adjacency, not a substring match.
+2. `funcs.h:2148-2150` declares `initAnimSubstructFromParams`,
+   `applyToObjectSubstructByFlag`, `setObjectSubstructF10IfReady` in that
+   exact order.
+3. `recomp_overlays.inl:1876-1877`: `applyToObjectSubstructByFlag` offset is
+   `0x0004DC08` = `initAnimSubstructFromParams`'s `0x0004DB3C + 0xCC`
+   (TOML size of the entry it follows); `rom_size = 0x0000003C` matches the
+   TOML's `size = 0x3C` for `func_800F2D38` exactly.
+4. `grep -rln 'func_800F2D38\b'` across N64Recomp's `RecompiledFuncs/` tree:
+   zero hits — non-collision.
+
+All four agreed, so renamed the TOML entry only (metadata-only sync, no
+build/regen needed — the generated tree already has the correct name from
+N64Recomp's own matching). Confirmed no other code reference to
+`func_800F2D38` exists in this repo (grep hit only PORTING-STATE.md,
+CURRENT-TRUTH.md, NEXT.md — historical/preview prose, left as-is; the
+append-only ledger rows above are not rewritten).
+
+Previewed the next leftover for continuity: `func_800F2D74` (size `0x30`,
+`syms/rogue_squadron.syms.toml:1991`) — `recomp_overlays.inl:1878` already
+shows `setObjectSubstructF10IfReady` at that same offset/size, immediately
+following `applyToObjectSubstructByFlag`. The two after that
+(`func_800F2DA4`/`0x24` and `func_800F2DC8`/`0x148`) line up with
+`setAnimSubstructValueIfActive` and `generatePerpEmitDirectionWithJitter`
+respectively per the same `.inl` block — not yet verified via the full
+four-step procedure, just a preview for the next session.
+
+Also noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per CLAUDE.md) —
+untouched this session, no new edits under `lib/`, so no patch-export
+needed.
+
+Next-15-title window after s1896 drops s1881 and keeps s1888-s1892; still
+not a REVISIT trigger unless VI-1024 reachability unblocks first (check
+`isLowPowerModeEnabled` again next iteration).
