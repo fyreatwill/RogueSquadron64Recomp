@@ -1,9 +1,9 @@
-# NEXT work unit (s1954) — leftover rename `func_800F947C`
+# NEXT work unit (s1955) — leftover rename `func_800F9674`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1953 synchronized `clearObjectField112`
-(`0x800F9474`). No new soak to consume.
+s1954 synchronized `initActorAsType1`
+(`0x800F947C`). No new soak to consume.
 
 M5 closed. M3 only as idiom-class. Hangar/512 Y=0x8000 is not
 live on the first hangar window. Sweep leftover is the next
@@ -11,12 +11,12 @@ bounded unit (strategic priority 4).
 
 ## Work unit — TOML metadata-only rename
 
-`func_800F947C` → `initActorAsType1`
-(TOML `0x1F8` already matches generated `rom_size 0x1F8`).
-Four-step already complete (s1953 preview). Rename directly.
+`func_800F9674` → `initActorAsType1WithAnchor`
+(TOML `0x140` already matches generated `rom_size 0x140`).
+Four-step already complete (s1954 preview). Rename directly.
 
 After that, parked for a later sweep session:
-`func_800F9674` → `initActorAsType1WithAnchor`
+`func_800F97B4` → `setType1ActorVelocity`
 
 Generated tree:
 `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
