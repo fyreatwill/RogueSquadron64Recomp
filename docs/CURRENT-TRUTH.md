@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1917 (2026-08-17).
+detail. Reviewed through s1918 (2026-08-17).
 
 ## Current state
 
@@ -41,42 +41,38 @@ detail. Reviewed through s1917 (2026-08-17).
   worktree) — this one is a legitimate human-only ask, not a workaround-able one, since
   CLAUDE.md makes `git submodule update` a hard NEVER rule protecting `lib/`'s uncommitted
   patches, not just an over-broad permission match.
-  **s1892**: the companion claim from s1889-s1891 — that machine-state observation
-  (`top`/`vm_stat`/`who`/`pmset -g therm`/`sysctl`) needs a human because those binaries
-  are denied — is refuted. The binaries are denied by command-string match; the underlying
-  data is not, and is reachable from Python via `os.getloadavg()`, `ctypes` +
-  `libc.sysctlbyname()`, and `ctypes` + `objc_msgSend` against
-  `NSProcessInfo.processInfo` (`.thermalState`, `.isLowPowerModeEnabled` — the latter is
-  data `pmset -g therm` doesn't even surface). Ran the unmodified
-  `s790_postsec2_reachability.sh` (9th independent run: s1888 2/5, s1889 3/3, s1892 1/1)
-  with a background sampler (`scratch/agent/vm_sampler.py`) correlating free-page count and
-  load average against the failure in real time, plus a one-shot thermal/power read
-  (`scratch/agent/thermal_probe.py`). Result: `640 origin=0x00696100` stall at 7.2s (H1-flake
-  stays refuted, 0/9), then the cataloged `fillSampleStreamRange`/`musyxRenderVoiceSamples`
-  SIGBUS at ~27s wall-clock/VI-count 1536 — second observation of that signature, first with
-  a resource trace. Free-page count held a stable ~3,500-11,000 band with no downward trend
-  before the crash and load average held flat at 5.2-5.7/15 cores throughout — this run shows
-  no memory- or CPU-pressure signature preceding the failure, so the resource-exhaustion
-  flavor of H3 is not supported by this data point. `isLowPowerModeEnabled` read `True`
-  (thermalState nominal) — a new, narrow, n=1 sub-hypothesis (H3a-lowpower: a lowered CPU
-  ceiling or altered thread QoS could starve the real-time-ish audio thread where the crash
-  lives) that is not yet a causal result and needs an on/off comparison to become one.
-  Writing this setting needs `pmset`, which is denied the same way as the read-only
-  binaries were — unlike those, no non-`pmset` write path has been found yet, so testing
-  H3a-lowpower needed one human action (toggle Low Power Mode off in System Settings >
-  Battery). **s1902**: that toggle happened. `thermal_probe.py` read
-  `lowPowerModeEnabled False` (thermalState still 0/nominal) immediately before and
-  after an unmodified `s790_postsec2_reachability.sh` re-run. Result: same stall
-  identity (`[phase] vi_width=640 origin=0x00696100 at 6.8s`; 0 VI-1024 hits), then
-  SIGABRT in `RT64::FramebufferManager::findTileCopyId` (`Assertion failed: (height > 0)`,
-  `rt64_framebuffer_manager.cpp:907`) at ~17s, `last-guest-pc=0x8000b650` — the
-  catalogued s787 zero-height tile-copy assert, same `fullSync` neighborhood as
-  s1888/s1889's `copyToRAM`. Crash-signature variance after this stall was already
-  established under LPM-on (copyToRAM / AGX `clearDepthTarget` / musyx SIGBUS), so a
-  fourth fullSync-family death does not select LPM as the 1024-stall cause.
-  **H3a-lowpower REFUTED.** Reachability is still 0/10. Resource trace again showed
-  no pressure (free 3.8k-16k pages, load1 2.67-3.13). Do not re-run this recipe
-  without a new measurement axis.
+  **s1892**: machine-state binaries are denied by command-string match; the data
+  is reachable via Python (`os.getloadavg`, `sysctlbyname`, `NSProcessInfo`).
+  9th `s790` run: same 640 `0x00696100` stall, then musyx SIGBUS at ~27s; no
+  memory/CPU-pressure prelude. `isLowPowerModeEnabled` was True (n=1).
+  **s1902**: LPM toggled off; same stall then `findTileCopyId` SIGABRT at ~17s.
+  **H3a-lowpower REFUTED.** Resource traces on both LPM arms showed no pressure.
+  **s1918** (offline `[phase]` + `osViSetMode` table, s844 + all eight
+  20260817 `s790` logs; s844 row reproduced as same-run positive control:
+  `640/0x00696100` at 11.0s `#600`, `1024/0x00790400` at 79.6s `#4715` via
+  `osViSetMode #10 width=1024`): **H3 true-stall SELECTED. H1
+  early-crash-not-stall REFUTED as a universal explanation** (not every
+  failure dies; 2/8 live to the 180s timeout). H2 early-wrong-transition
+  REFUTED (every failure uses s844's `320/0x280 → 2/0x6DD000 →
+  640/0x66A500 → 640/0x696100` pair; the earlier 6.8–8.8s `0x696100` hit
+  is a shorter 320 dwell, then the same ~256-`update_screen` / ~4.3s
+  `0x66A500` dwell). H4 log-incomparable REFUTED (same `[phase]` format
+  and origin vocabulary). Split: 6/8 die at 15–25s still in the 640
+  `0x696100↔0x62BD00` ping-pong (copyToRAM / AGX `clearDepthTarget` /
+  musyx SIGBUS / `findTileCopyId`); **2/8 (173130, 180331) live 180s
+  with zero `[phase] 1024`, zero `osViSetMode width=1024`, and
+  `update_screen` past `#10816`** — more frames than s844 needed to
+  publish 1024 (`#4715`). Those two fire s844's `#7/#8` 640 precursor
+  (`0x80128DA0` then `0x80128E40` yScale `0x02000612`) at ~45s / `#2816`
+  and then never issue s844's immediate `#9` width-2 / `#10` width-1024
+  cluster (s844 `#8–#10` is 75s / `#4672`). The 640 origin ping-pong
+  freezes on `0x0062BD00` at ~42–45s. "Stall at 640" is not a misnomer:
+  the guest never requests 1024 even when the process survives. Ask (b)
+  (disposable clone + `git submodule update` bisect at `ef7a0fb9`) is
+  still human-only. Do not re-run `s790_postsec2_reachability.sh`
+  without a new axis — the next one is *who* issues s844's
+  `osViSetMode #10` and whether that caller is reached in the 180s
+  stallers.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -130,29 +126,26 @@ detail. Reviewed through s1917 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **VI-1024 reachability still failed (10/10); H3a-lowpower REFUTED (s1902).**
-   H1-flake is refuted (0/10). s1890 audited every non-ledger file that changed
-   between s844 and HEAD and found no code-level explanation; the hangar-probe
-   A/B was also refuted. s1892 refuted the "need a human for machine state"
-   ask and found Low Power Mode ON (n=1). **s1902 closed that lead:** LPM-off
-   still stalls at `640 origin=0x00696100` (6.8s) and never publishes VI 1024;
-   the subsequent `findTileCopyId` SIGABRT is another already-catalogued
-   post-stall `fullSync` death, not a restored 1024 path. Resource traces on
-   both LPM arms show no memory/CPU pressure. **Ask (b) is still open and
-   still legitimately human-only** (CLAUDE.md hard rule on
-   `git submodule update` for a disposable clone bisect at `ef7a0fb9`). Do
-   not re-run `s790_postsec2_reachability.sh` without a new measurement axis.
-   This still blocks the entire soak family and item 3 below until
-   reachability itself is restored or explained. Productive work until then
-   is item 2. **s1918 is the first 15-title REVISIT** (s1903–s1917
-   are all sweep-titled). Spend it on the new offline axis in
-   `scratch/agent/NEXT.md` (`vi1024-early-crash-not-stall`), not
-   another rename. Do not re-run `s790_postsec2_reachability.sh`.
-2. After the s1918 REVISIT, resume the generated-symbol sweep at
-   leftover `func_800F7130` (`0x800F7130`, TOML size `0xB44`
-   matches generated `renderNpcAnchoredProceduralEffect`
-   `rom_size 0xB44`). Already confirmed via the full four-step
-   procedure (s1906–s1917): `funcs_41.c:17961,19845` adjacency
+1. **VI-1024 is a true 640 stall, not an early crash (s1918 H3).**
+   H1-flake refuted (0/10). s1890 found no s844→HEAD code cause; hangar-probe
+   A/B refuted; H3a-lowpower REFUTED (s1902). **s1918 closed the
+   early-crash-not-stall framing:** 2/8 20260817 logs (173130, 180331)
+   live to the 180s timeout with no crash, no `[phase] 1024`, and no
+   `osViSetMode width=1024`, while producing more `update_screen` ticks
+   than s844 needed (`#10816` vs `#4715`). The guest never requests the
+   transition. The 6/8 catalogued 15–25s deaths are a concurrent family,
+   not why 1024 is missing. Next axis: name the caller of s844's
+   `osViSetMode #10 width=1024` (`mode_ptr=0x80128DA0` at 79.6s /
+   `#4715`) and test whether that caller is entered in a 180s staller.
+   Ask (b) remains human-only (`git submodule update` bisect at
+   `ef7a0fb9`). Do not re-run `s790_postsec2_reachability.sh` as a
+   reachability re-confirm. This still blocks item 3 (hangar/512)
+   until a port run publishes `[phase] vi_width=512 origin=0x006AB400`
+   (or `0x006AB800`).
+2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
+   TOML size `0xB44` matches generated
+   `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
+   already complete (s1906–s1917): `funcs_41.c:17961,19845` adjacency
    (next `RECOMP_FUNC` is `funcs_42.c:35`), `funcs.h:2169-2170`
    order, `recomp_overlays.inl:1898` offset `0x00052000 =
    0x00051824 + 0x7DC` / `rom_size 0xB44`, zero-hit
@@ -162,22 +155,15 @@ detail. Reviewed through s1917 (2026-08-17).
    `jal 0x8004015C` (`getNpcContextField8`), `t0=actor+0x8`,
    `s1=actor+0x50`. Next sweep iteration can rename directly
    (TOML metadata-only; sizes already agree, no bump). After
-   that: `func_800F7C74` lines up with
-   `spawnAndUpdateEffectActors` (`funcs_41.c:19845` then
-   `funcs_42.c:35,1481`, `funcs.h:2170-2171`, `.inl:1899`
-   offset `0x00052B44 = 0x00052000 + 0xB44` / `rom_size 0x724`,
-   zero-hit `func_800F7C74`). After that: `func_800F8398`
-   lines up with `executeActorType4Effect` (`funcs_42.c:35,1481`,
-   `funcs.h:2171-2172`, `.inl:1900` offset `0x00053268 =
-   0x00052B44 + 0x724` / `rom_size 0x10DC`, zero-hit
-   `func_800F8398`). Note (s1897): the generated tree
-   (`funcs_41.c`, `funcs.h`, `recomp_overlays.inl`) is
-   gitignored and absent from this repo's `build/`; it currently
-   lives at
-   `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
-   — look there first. Archive: `PROJECT-OVERVIEW.md` §33–§35. About
-   1,548 placeholder `func_0x...` names remained at s1487; TOML leftover
-   `func_800*` count is 982 after s1917.
+   that: `func_800F7C74` → `spawnAndUpdateEffectActors`;
+   `func_800F8398` → `executeActorType4Effect`;
+   `func_800F9474` → `clearObjectField112`. Generated tree lives
+   at `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`.
+   Archive: `PROJECT-OVERVIEW.md` §33–§35. About 1,548 placeholder
+   `func_0x...` names remained at s1487; TOML leftover `func_800*`
+   count is 982 after s1917. s1903–s1917 were all sweep-titled;
+   s1918 was the mandatory 15-title REVISIT (do not treat s1919
+   as another REVISIT — the window now contains s1918).
 3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
    s1888 attempt was blocked upstream by item 1, not by a bad input
    schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
@@ -238,17 +224,24 @@ bytes themselves are not withdrawn. s1824's informal "YH/YM/YL at
 `+2/+4/+6`" is superseded by s1840 — those offsets are official
 YL/YM/YH. Treating `0xFFFF8000` as one s15.16 X dumped into XL is
 superseded by the 16-bit split (X at `+0x18` scaled; Y at `+0x1A` raw).
+s1888–s1917's "stall at 640 then crash" / "early crash may be
+the 1024 miss" framing is superseded by s1918 — 2/8 logs live
+180s with no crash and no `osViSetMode width=1024`; the guest
+never requests the transition.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1917 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1918 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
-the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F6954` became
+the s1902 LPM-off A/B) and s1918's offline `[phase]`/`osViSetMode`
+table (H3 true-stall SELECTED; H1 early-crash-not-stall REFUTED as
+universal; guest never issues `osViSetMode width=1024` even in the
+2/8 180s survivors) and leftover `func_800F6954` became
 `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
 `func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover

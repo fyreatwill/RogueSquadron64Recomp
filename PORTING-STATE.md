@@ -89970,3 +89970,89 @@ sweep-titled. s1918 is the first mandatory REVISIT. Do not
 rename `func_800F7130` next; run the offline `[phase]`
 timeline table in `scratch/agent/NEXT.md`
 (`HYPOTHESIS-ID: vi1024-early-crash-not-stall`).
+
+## Session 1918 (2026-08-17) — classified missing VI 1024 as a true 640 stall
+
+Mandatory 15-title REVISIT (`HYPOTHESIS-ID: vi1024-early-crash-not-stall`).
+Last 15 headings were s1903–s1917, every one a "synchronized the … symbol"
+sweep title. Did not rename `func_800F7130`. Did not re-run
+`s790_postsec2_reachability.sh`. No new soak-queue verdicts landed
+between s1917 and this iteration (tail of `scratch/agent/SOAK-RESULTS.md`
+still ends on the s1902 LPM-off A/B). CURRENT-TRUTH was 29663 bytes —
+under the 60 KB maintenance trigger. Work unit was one offline table
+over existing logs, no build, no new game run.
+
+Positive control (s844,
+`scratch/agent/soak_results/s790_postsec2_reachability_20260813-061248/run.log`)
+reproduced from the file: first `320 origin=0x00000280` at 1.1s `#2`;
+first `640 origin=0x0066A500` at 6.8s `#344`; first `640 origin=0x00696100`
+at 11.0s `#600`; first `1024 origin=0x00790400` at 79.6s `#4715` via
+`osViSetMode #10 width=1024 mode_ptr=0x80128DA0`; later SIGBUS
+`slotDispatcherIter+872` (guest `0x80022160`) after 275s. If that row
+had failed to reproduce, the table would be invalid.
+
+Failure corpus: the eight 20260817 `s790_postsec2_reachability_*`
+dirs under `scratch/agent/soak_results/` (confirmed with
+`ls | grep 20260817`; no siblings). `[phase]` fires on width change
+only — origin can ping-pong at the same width without a new `[phase]`
+line. `update_screen` / `osViSetMode` fill that gap.
+
+| log | 320 | 640/66A500 | 640/696100 | last [phase] | last wall | 1024 | end |
+|---|---|---|---|---|---|---|---|
+| s844 | 1.1s #2 0x280 | 6.8s #344 | 11.0s #600 | 512 0x690400 @ 265.2s | 275s | 1 @ 79.6s #4715 | slotDispatcherIter+872 SIGBUS |
+| 173130 | 1.0s #2 0x280 | 2.7s #104 | 7.2s #375 | 640 0x696100 @ 7.2s | 180s #10816 | 0 | timeout, no crash |
+| 174630 | 1.2s #2 0x280 | 4.3s #191 | 8.8s #461 | 640 0x696100 @ 8.8s | 15s #960 | 0 | copyToRAM SIGSEGV pc=0x8000b650 |
+| 174727 | 1.2s #2 0x280 | 2.9s #106 | 7.6s #383 | 640 0x696100 @ 7.6s | 17.6s #1088 | 0 | AGX clearDepthTarget SIGSEGV pc=0x8000b650 |
+| 174818 | 1.2s #2 0x280 | 2.9s #107 | 7.4s #374 | 640 0x696100 @ 7.4s | 25s #1600 | 0 | fillSampleStreamRange+336 SIGBUS pc=0x8000b650 |
+| 180331 | 1.2s #2 0x280 | 2.8s #103 | 7.3s #369 | 640 0x696100 @ 7.3s | 180s #10816 | 0 | timeout, no crash |
+| 180706 | 1.1s #2 0x280 | 2.8s #104 | 7.4s #383 | 640 0x696100 @ 7.4s | 25s #1600 | 0 | fillSampleStreamRange+336 SIGBUS pc=0x8000b650 |
+| 181917 | 1.2s #2 0x280 | 2.9s #105 | 7.2s #364 | 640 0x696100 @ 7.2s | 25s #1536 | 0 | fillSampleStreamRange+6464 SIGBUS pc=0x8000834c |
+| 185603 | 0.9s #2 0x280 | 2.5s #103 | 6.8s #359 | 640 0x696100 @ 6.8s | 15s #960 | 0 | findTileCopyId height>0 SIGABRT pc=0x8000b650 |
+
+Every failure shares s844's preceding pair
+`320/0x280 → 2/0x6DD000 → 640/0x66A500 → (width-2 flicker) → 640/0x696100`.
+The 6.8–8.8s `0x696100` hit is a shorter 320 dwell (first 640 at
+`#103–#191` / 2.5–4.3s vs s844 `#344` / 6.8s); the subsequent
+`0x66A500 → 0x696100` gap is the same ~256 `update_screen` / ~4.3s
+in both. After `0x696100`, width-640 origin ping-pongs
+`0x00696100 ↔ 0x0062BD00` in s844 *and* in every failure — that
+is the healthy 640 dwell, not a new VI mode. `[phase]` does not
+log those flips.
+
+H1 (every failure dies 10–70s into a healthy 640 dwell, so the
+"stall" is just an earlier crash): REFUTED. Quantifier fails:
+2/8 (173130, 180331) live to the 180s recipe timeout with no
+`[CRASH]`, no SIG*, last `t_ms=180006`, last `update_screen #10816`
+still width 640 — more frames than s844 needed to publish 1024
+(`#4715`). The 6/8 catalogued 15–25s deaths are real but they are
+not why 1024 is missing.
+
+H2 (wrong preceding origin / wildly different `#` for first
+`0x696100`): REFUTED. Same pair, same ~256-tick 66A500 dwell.
+Flicker-origin `0x5D4000` (s844, 173130) vs `0x66A000` (the other
+seven) does not predict stall vs crash (173130 is a 180s survivor
+and matches s844's flicker origin).
+
+H3 (at least one log lives ≥80s in the 640 dwell with no 1024 and
+no crash): SELECTED. Two logs. Those two also freeze the
+`0x696100↔0x62BD00` ping-pong on `0x0062BD00` at ~42–45s /
+`#2496–#2880` (s844 was still flipping at `#4544` / 75s, then
+jumped to 1024).
+
+H4 (logs incomparable): REFUTED. Same `[phase]` format, same
+origin vocabulary, s844 control row reproduced.
+
+`osViSetMode` (already in every log) is the second line of
+evidence. s844 `#10` is the 1024 request (`0x80128DA0`
+type `0x08000000` ctrl `0x0000324E` width 1024), immediately
+after `#8` (`0x80128E40` width 640 yScale `0x02000612` at 75s /
+`#4672`) and `#9` (width 2). The two 180s stallers fire that
+same `#8` descriptor at ~45s / `#2816` and then never issue
+`#9`/`#10`. Crashers die after `#6` (the 640/`0x80128DA0`
+`0x696100` entry) and never reach `#7`/`#8`. No failure log
+contains `osViSetMode width=1024`. The guest never requests
+the transition; the host is not dropping a 1024 submit.
+
+"Stall at 640" is not a misnomer. Next axis: name the caller of
+s844 `#10` and test whether that caller is entered in a 180s
+staller (`HYPOTHESIS-ID: vi1024-guest-never-requests`).
