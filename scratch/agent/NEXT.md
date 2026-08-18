@@ -1,104 +1,64 @@
-# NEXT work unit (s1929) — cursor compare + who re-attacks
+# NEXT work unit (s1930) — mix-alive during menu-entry 2
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1928 selected H-fresh-attack-after-end:
-`render-end` at `0x80090174` fired 9
-times; `rekey` (`old!=0`) never fired;
-after every end the next same-idx
-render writeback is `old=0x01 new=0x02`.
-H-sample-never-ends is REFUTED as a
-universal (9/13646). H-rekey-forever
-is REFUTED. Two leftover axes, batched
-into one instrument: why the
-`L_80090150` compare almost never
-crosses, and which of the two
-`jal 0x8009231C` sites issues the
-post-end fresh attack.
+s1929 selected H-not-yet-ended +
+H-tick-retrigger in the 27s mix
+window: `L_80090150` `cur` is a
+sane sample-end, `pos` advances,
+8/8 `cross=1` match `render-end`,
+and every `jal 0x8009231C` is
+`tickAllAudioChannels` (0 stream).
+The 180s 15/16 `0x02` freeze is
+now three hypotheses on one
+already-landed instrument.
+
 Do **not** re-run a reachability-only
 `s790`. Do **not** force-zero a slot
-byte.
+byte. Rebuild first if this binary
+is older than the s1929 MEM_BU
+fix (only needed for `old=`; the
+mix-alive table does not use it).
 
-## Work unit — cursor vs attacker
+## Work unit — mix during the spin
 
-Keep every existing `[avf-gate]` site.
-Add, same tag, same `ROGUESQ_LOG_VI_CALLERS`
-gate, in `N64Recomp/fixup_game_funcs.py`
-plus the live `.c`:
-
-- `site=cursor` on the
-  `sltu` at `0x80090158` in
-  `musyxRenderVoiceSamples`
-  (`L_80090150`: `$v1 = 0x38($s1)`,
-  `$v0 = $a0+$s4`, cross =
-  `($a0+$s4) >= $v1`). Print
-  `tickn`/`jaln`/`n`/`idx=` /
-  `cur=` / `pos=` (`$a0`) /
-  `step=` (`$s4`) / `cross=`.
-  First 8 then every 1000000,
-  plus every `cross=1`.
-- `site=attack-jal` on both
-  generated `jal 0x8009231C`
-  sites, before the call:
-  `tickAllAudioChannels`
-  `0x8008CE7C` (`funcs_23.c`,
-  idx=`$s6`) and
-  `startStreamedSampleVoice`
-  `0x80098194` (`funcs_26.c`,
-  idx=`$s0`). Print
-  `tickn`/`jaln`/`n`/`idx=` /
-  `caller=` / `old=` (slot+0
-  via `0x801496F8` + idx*136).
-  First 32, every 1000, and
-  every `old==0` after
-  `render-end` has fired at
-  least once (or simply every
-  `old==0` — ~349 is cheap).
-
-Do not add a second counter family.
-Do not change any store.
-
-One build, one s790-shaped 180s run
-(copy `s1928_render_end.sh` to
-`s1929_cursor_attack.sh`).
+Same `[avf-gate]` sites. Same
+`ROGUESQ_LOG_VI_CALLERS` gate.
+One s790-shaped 180s run
+(copy `s1929_cursor_attack.sh`).
+A queued copy is
+`scratch/agent/soak_queue/s1930_mix_during_spin.sh`
+— consume `SOAK-RESULTS.md` first;
+if that line is already a 180s
+`#7/#8` staller, do not re-run.
 
 Same-run positive control:
 `site=tick-entry` / `tick-jal` /
-`tick-exit` still 2/2/2 with
+`tick-exit` 2/2/2 with
 `took_swap=1` twice; `slot-alloc`
-still ends at `0x8018D4A0 count=16`;
-`render-stage` still logs n2>0 n0=0;
-`render-end` still fires (the s1928
-skip reproduced) OR `attack-jal`
-fires (new instrument live). Then:
+ends at `0x8018D4A0 count=16`;
+`site=cursor` logs (n last > 0);
+`menu-entry` siten=2 AND
+`menu-spin` climbs. Crash-family
+(no entry 2) = UNEVALUABLE for
+this axis — enqueue, do not
+babysit.
 
-Cursor rarity (the 15/16 bulk):
+Then, after `menu-entry` siten=2:
 
-- `cur` sane and stable, `pos`
-  never approaches it →
-  H-cursor-stuck (stubbed
-  fillSample / decoder is the
-  lead)
-- `cur` is 0 / non-KSEG /
-  huge → H-end-wild
-- `pos` advances then resets
-  before `cross=1` →
-  H-pos-rewinds
-- `cursor` never logs →
-  UNEVALUABLE
+- `cursor` n keeps climbing AND
+  new `render-end` / `attack-jal`
+  fire → H-song-loop-forever
+- `cursor` n keeps climbing AND
+  `cross=1` / `render-end` freeze
+  → H-pos-freeze-during-spin
+- `cursor` n frozen while
+  `menu-spin` siten climbs →
+  H-mix-dead-during-spin
 
-Post-end attacker (the 9):
-
-- after `render-end` idx=X the
-  next `attack-jal` for X is
-  `caller=tick` → H-tick-retrigger
-- next is `caller=stream` →
-  H-stream-retrigger
-- both appear after ends →
-  H-mixed
-- `render-end` fires but no
-  subsequent `attack-jal` for
-  that idx → H-no-join (widen)
+Join key is wall-clock / log
+order: first `menu-entry` siten=2
+line vs last `site=cursor` n.
 
 ## Sweep leftover (parked, not this unit)
 
@@ -108,10 +68,12 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- Cursor rarity / which jal
+  re-attacks (s1929) — closed
+  (H-not-yet-ended +
+  H-tick-retrigger).
 - Why playing-state never ends
-  (s1928) — closed (H-fresh-attack-
-  after-end; not never-end, not
-  rekey-old!=0).
+  (s1928) — closed.
 - Who writes slot+0 = 0x02 (s1927)
   — closed (H-keyon).
 - Which slot index stays nonzero

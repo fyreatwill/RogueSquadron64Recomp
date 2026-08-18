@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1928 (2026-08-17).
+detail. Reviewed through s1929 (2026-08-17).
 
 ## Current state
 
@@ -257,6 +257,45 @@ detail. Reviewed through s1928 (2026-08-17).
   `0x8008CE7C` and
   `startStreamedSampleVoice`
   `0x80098194`.
+  **s1929**: `[avf-gate]` `site=cursor` on
+  the `L_80090150` `sltu` and
+  `site=attack-jal` on both
+  `jal 0x8009231C` sites
+  (`s1929_cursor_attack_20260817-222315`,
+  probe_rc=4 ~24s catalogued
+  `fillSampleStreamRange+6464`
+  SIGBUS last-guest-pc=`0x8000834c`,
+  `#1216`, no `#7/#8`). Same-run
+  control: tick 2/2/2;
+  `took_swap=1` twice;
+  `slot-alloc` x3 ending
+  `0x8018D4A0/16`; `render-end`
+  n=8 (idx {15,4,0,1,15,10,9,7});
+  `cursor` n last=4796 (16 logged:
+  first 8 + 8 `cross=1`);
+  `attack-jal` n last=183, all
+  `caller=tick`, 0 `caller=stream`.
+  First 8 cursor: idx=0 `cur=0xAD01`
+  stable, `pos` 0→0x10A,
+  `step=0x2D`, `cross=0`. All 8
+  crosses are sane (`cur` in
+  {0x5242,0x6041,0xF681,0x10201},
+  `pos` just below `cur`,
+  `pos+step>=cur`) and 1:1 with
+  the 8 ends. **H-not-yet-ended
+  SELECTED** for the 27s mix
+  window. H-cursor-stuck /
+  H-end-wild REFUTED. **H-tick-
+  retrigger SELECTED** (only live
+  jal). H-stream-retrigger /
+  H-mixed REFUTED. `attack-jal`
+  `old=` is UNEVALUABLE this run
+  (unsigned `MEM_BU` of a KSEG0
+  address; fixed in the fixup for
+  the next soak). 180s
+  mix-during-spin is still open:
+  this crash died before
+  `menu-entry` siten=2.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -310,34 +349,33 @@ detail. Reviewed through s1928 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **Playing-state rarely ends, and
-   when it does a fresh attack
-   restarts the voice (s1928
-   H-fresh-attack-after-end).**
-   `render-end` at `0x80090174`
-   fired 9 times on the
-   `0x8018D4A0` table; `rekey`
-   (`TriggerVoiceAttack` `old!=0`)
-   never fired; after every end the
-   next same-idx render sees
-   `old=0x01`. Bulk of the 15/16
-   stuck `0x02` is the other
-   13637/13646 mix calls, which
-   restage 2 because the
-   `0x38($s1)` compare does not
-   take sample-end. Next axis
-   (one instrument): (a) why that
-   compare almost never crosses
-   (`cur` / `pos+$s4` at
-   `L_80090150`) and (b) which of
-   the two `jal 0x8009231C` sites
-   (`tickAllAudioChannels`
-   `0x8008CE7C` vs
-   `startStreamedSampleVoice`
-   `0x80098194`) issues the
-   post-end fresh attack. Ask (b)
-   remains human-only. Do not
-   re-run a reachability-only
+1. **Mix compare is healthy in the
+   27s window; the 180s 15/16
+   `0x02` freeze is now
+   mix-alive vs mix-dead vs
+   song-loop (s1929).**
+   `L_80090150` `cur` is a sane
+   sample-end; `pos` advances;
+   the 8 crosses are real ends.
+   Post-end re-attack is only
+   `tickAllAudioChannels`
+   `0x8008CE7C` (`startStreamed
+   SampleVoice` never jals). Next
+   axis, one existing instrument
+   on a 180s `#7/#8` staller:
+   after `menu-entry` siten=2,
+   does `site=cursor` `n` keep
+   climbing? Climbing + new ends
+   + new tick attacks →
+   H-song-loop-forever; climbing
+   + no more ends →
+   H-pos-freeze-during-spin;
+   frozen `n` while `menu-spin`
+   climbs → H-mix-dead-during-spin.
+   Crash-family runs (no entry 2)
+   are UNEVALUABLE for this axis.
+   Ask (b) remains human-only. Do
+   not re-run a reachability-only
    `s790`. Do not force-zero a
    slot byte or the gate without
    an `ORIGIN:`. Still blocks
@@ -478,6 +516,14 @@ restore as a re-key of a live
 slot) is superseded by s1928 —
 `render-end` n=9, `rekey` n=0,
 next same-idx render `old=0x01`.
+Treating the rare end as a
+stuck/wild cursor (or as
+`startStreamedSampleVoice`
+re-keying) is superseded by
+s1929 — `cur` sane, `pos`
+advances, 8/8 crosses match
+ends, 183/183 `attack-jal` are
+`caller=tick`.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -768,6 +814,13 @@ and s1928 selected H-fresh-attack-after-end
 (`render-end` n=9; `rekey` n=0;
 H-sample-never-ends REFUTED as a
 universal; H-rekey-forever REFUTED)
+and s1929 selected H-not-yet-ended
++ H-tick-retrigger (`cur` sane,
+`pos` advances, 8 crosses = 8
+ends; 183/183 `attack-jal`
+`caller=tick`; H-cursor-stuck /
+H-end-wild / H-stream-retrigger
+REFUTED)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs
 failed across 4 crash/stall signatures, H1-flake refuted) —

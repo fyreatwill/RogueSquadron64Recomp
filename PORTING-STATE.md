@@ -90735,3 +90735,112 @@ generated `jal 0x8009231C` sites
 
 No mitigation. Ask (b) remains
 human-only.
+
+## Session 1929 (2026-08-17) — selected H-not-yet-ended + H-tick-retrigger
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: why `L_80090150`
+almost never crosses, and which
+`jal 0x8009231C` re-attacks after
+a rare end.
+
+Kept every existing `[avf-gate]`
+site. Added, same tag /
+`ROGUESQ_LOG_VI_CALLERS` gate, in
+`N64Recomp/fixup_game_funcs.py`
+plus live `.c`:
+
+- `site=cursor` after the `sltu`
+  at `0x80090158` (`cur`=`0x38($s1)`,
+  `pos`=`$a0`, `step`=`$s4`,
+  `cross`=`pos+step>=cur`; first 8
+  then every 1000000 plus every
+  `cross=1`)
+- `site=attack-jal` before both
+  `jal 0x8009231C` sites
+  (`tickAllAudioChannels`
+  `0x8008CE7C` idx=`$s6`;
+  `startStreamedSampleVoice`
+  `0x80098194` idx=`$s0`;
+  first 32, every 1000, every
+  `old==0`)
+
+Did not add a second counter
+family. Did not change any store.
+
+One run, s790-shaped recipe
+(`scratch/agent/s1929_cursor_attack.sh`):
+`s1929_cursor_attack_20260817-222315`
+probe_rc=4, ~24s, last width 640
+`origin=0x00696100` at 7.5s `#408`,
+last `update_screen` `#1216`.
+Catalogued `fillSampleStreamRange+6464`
+SIGBUS `si_addr=0x380000000`
+last-guest-pc=`0x8000834c`. Died
+before `menu-entry` siten=2
+(UNEVALUABLE for the skip). Cursor
+and attacker axes are evaluable.
+
+Same-run positive control passed:
+tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice; `slot-alloc`
+x3 ending `new=0x8018D4A0 count=16`;
+`render-end` n=8; `cursor` logged
+(n last=4796); `attack-jal` logged
+(n last=183).
+
+Cursor rarity (15/16 bulk):
+
+- First 8: idx=0 `cur=0xAD01`
+  stable, `pos` 0,0x26,…,0x10A,
+  `step=0x2D`, `cross=0`.
+- 8 `cross=1` rows, n=
+  1746/2118/4314/4420/4552/4626/4731/4796,
+  idx {15,4,0,1,15,10,9,7},
+  `cur` in {0x5242,0x6041,0xF681,0x10201},
+  each `pos` just below `cur`.
+- 8/8 crosses match the 8
+  `render-end` idxs in order.
+
+**H-not-yet-ended SELECTED** for
+this 27s mix window. H-cursor-stuck
+REFUTED (`pos` advances; stubbed
+fillSample is not a frozen
+cursor). H-end-wild REFUTED (`cur`
+is a sane sample-end, not 0 /
+non-KSEG / huge). H-pos-rewinds
+not seen in the logged window
+(first 8 monotonic; later rows
+are only crosses).
+
+Post-end attacker (the 8):
+
+- 183/183 `attack-jal` are
+  `caller=tick`. 0 `caller=stream`.
+- 5/8 ends have a later logged
+  same-idx `attack-jal`
+  `caller=tick`. 3/8 (idx 4/10/7)
+  do not — those still have a
+  next render `old=0x01`, and
+  `attack-jal` `old=` was
+  UNEVALUABLE (unsigned `MEM_BU`
+  of a KSEG0 address read the
+  wrong host byte; under-logged
+  after n=32). Fixed in the
+  fixup / live `.c` for the next
+  soak; not re-run (caller axis
+  already split).
+
+**H-tick-retrigger SELECTED.**
+H-stream-retrigger REFUTED.
+H-mixed REFUTED. H-no-join not
+selected (the 0x01 writeback
+still happens; missing jal rows
+are the broken `old=` rate-limit).
+
+No mitigation. Ask (b) remains
+human-only. Next axis is
+mix-alive vs mix-dead vs
+song-loop on a 180s `#7/#8`
+staller (queued
+`s1930_mix_during_spin.sh`).
