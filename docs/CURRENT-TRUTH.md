@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1900 (2026-08-17).
+detail. Reviewed through s1901 (2026-08-17).
 
 ## Current state
 
@@ -140,13 +140,13 @@ detail. Reviewed through s1900 (2026-08-17).
    supplies the disposable clone for the literal bisect. This still blocks
    the entire `s790_postsec2_reachability` soak family and item 3 below until
    reachability itself is restored or explained.
-2. Resume the generated-symbol sweep at leftover `func_800F2FB4`
-   (`0x800F2FB4`, size `0xC`). Already confirmed via the full four-step
-   procedure (s1900): `funcs_41.c` adjacency, `funcs.h:2153-2154` order,
-   `recomp_overlays.inl:1882` offset `0x0004DE84 = 0x0004DDE0 + 0xA4`/
+2. Resume the generated-symbol sweep at leftover `func_800F2FC0`
+   (`0x800F2FC0`, size `0xC`). Already confirmed via the full four-step
+   procedure (s1901): `funcs_41.c` adjacency, `funcs.h:2154-2155` order,
+   `recomp_overlays.inl:1883` offset `0x0004DE90 = 0x0004DE84 + 0xC`/
    `rom_size 0xC`, zero-hit non-collision grep — next iteration can rename
-   directly. The generated tree runs ahead of our TOML for a short run
-   here: `setEffectIntensity`, `triggerCueWithSlotEffect`, and
+   directly to `setEffectIntensity`. The generated tree still runs ahead
+   of our TOML for a short run here: `triggerCueWithSlotEffect` and
    `copyPipeDelimitedField` are also already resolved by name in
    `recomp_overlays.inl`, so the next few sessions should be fast
    metadata-only syncs. Note (s1897): the generated tree (`funcs_41.c`,
@@ -221,11 +221,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1900 through s1888-s1892's VI-1024 reachability-regression
+s1648–s1901 through s1888-s1892's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, new n=1 H3a-lowpower lead
-found) and leftover `func_800F2F10` became
+found) and leftover `func_800F2FB4` became
+`getEffectIntensity` (`0x800F2FB4`, `0xC`) after leftover
+`func_800F2F10` became
 `stepAndTickProgressChannel` (`0x800F2F10`, `0xA4`) after leftover
 `func_800F2DC8` became
 `generatePerpEmitDirectionWithJitter` (`0x800F2DC8`, `0x148`) after leftover

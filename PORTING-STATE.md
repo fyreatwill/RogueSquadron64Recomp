@@ -88558,3 +88558,58 @@ Next-15-title window after s1900 drops s1885 (a sweep entry) and keeps all
 of s1888-s1892 (still 5 of 15 slots non-sweep — unchanged); still not a
 REVISIT trigger. The window won't start dropping s1888-s1892 until the
 sweep passes s1903; check again next iteration.
+
+## Session 1901 (2026-08-17) — synchronized the getEffectIntensity symbol
+
+Resumed the generated-symbol renaming sweep. Before starting, re-checked
+`vi1024-reachability-regression`: `python3 scratch/agent/thermal_probe.py`
+still reads `lowPowerModeEnabled True` — unchanged since s1892/s1895-s1900.
+Also re-checked the 15-title REVISIT gate: `grep -n '^## Session '
+PORTING-STATE.md | tail -15` still shows 5 of 15 titles non-sweep
+(s1888-s1892), so the sweep continues; not a REVISIT.
+
+Confirmed leftover `func_800F2FB4` (`0x800F2FB4`, size `0xC`,
+`syms/rogue_squadron.syms.toml:1995`) via the full four-step procedure
+against `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:5348` (`stepAndTickProgressChannel`) and `:5478`
+   (`getEffectIntensity`) are the only two `RECOMP_FUNC` lines
+   matched by name in that span — true adjacency, not a stray substring
+   match.
+2. `funcs.h:2153-2154` declares `stepAndTickProgressChannel` then
+   `getEffectIntensity` in that exact order.
+3. `recomp_overlays.inl:1881-1882`: `getEffectIntensity` offset is
+   `0x0004DE84` = `stepAndTickProgressChannel`'s `0x0004DDE0 +
+   0xA4` (its TOML size); `rom_size = 0x0000000C` matches the TOML's
+   `size = 0xC` for `func_800F2FB4` exactly.
+4. `grep -rln 'func_800F2FB4\b'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+Generated body matches the name: `0x800F2FB4` is `lwc1 $f0, 0x14C($a0)`
+then `jr $ra` — a 12-byte float getter of object field `+0x14C`.
+
+All four agreed, so renamed the TOML entry only (metadata-only sync, no
+build/regen needed).
+
+Previewed the next leftover for continuity: `func_800F2FC0` (size `0xC`,
+`syms/rogue_squadron.syms.toml:1996`) lines up with
+`recomp_overlays.inl:1883` (`setEffectIntensity`, offset `0x0004DE90` =
+`0x0004DE84 + 0xC`, `rom_size = 0x0000000C`) — confirmed adjacency
+(`funcs_41.c:5478,5490`) and declaration order (`funcs.h:2154-2155`) and
+non-collision (`grep -rln 'func_800F2FC0\b'` zero hits) this session too,
+so the next iteration can rename directly without re-deriving these.
+Generated body is the matching setter: `sw $a1, 0x14C($a0)` then return 1.
+Note: the two entries after it (`triggerCueWithSlotEffect`,
+`copyPipeDelimitedField`) are also already resolved by name in
+`recomp_overlays.inl` — the generated tree still runs ahead of our TOML
+for a short run here, so the next few sessions should be fast
+metadata-only syncs.
+
+Noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per CLAUDE.md) —
+untouched this session, no new edits under `lib/`, so no patch-export
+needed.
+
+Next-15-title window after s1901 drops s1886 (a sweep entry) and keeps all
+of s1888-s1892 (still 5 of 15 slots non-sweep — unchanged); still not a
+REVISIT trigger. The window won't start dropping s1888-s1892 until the
+sweep passes s1903; check again next iteration.
