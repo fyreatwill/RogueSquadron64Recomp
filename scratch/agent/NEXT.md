@@ -1,63 +1,66 @@
-# NEXT work unit (s1913)
+# NEXT work unit (s1914)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-**Primary path — resume the sweep.** s1912 synchronized
-`func_800F410C` → `executeActorType1Effect` (TOML size
-`0xD68` already matched generated `rom_size`; no bump). Do not
+**Primary path — resume the sweep.** s1913 synchronized
+`func_800F4E74` → `executeActorType2Effect` (TOML size
+`0x518` already matched generated `rom_size`; no bump). Do not
 re-run `s790_postsec2_reachability.sh` without a new measurement
 axis. Ask (b) (disposable clone + `git submodule update` bisect)
 is still human-only.
 
-Next leftover: `func_800F4E74` at `0x800F4E74` (TOML size `0x518`,
-`syms/rogue_squadron.syms.toml:2006`). Already confirmed in
-s1906–s1912 via the full four-step procedure:
-1. Adjacency: `funcs_41.c:9212` (`executeActorType1Effect`)
-   and `:11890` (`executeActorType2Effect`) are the only two
+Next leftover: `func_800F538C` at `0x800F538C` (TOML size `0x6A4`,
+`syms/rogue_squadron.syms.toml:2007`). Already confirmed in
+s1906–s1913 via the full four-step procedure:
+1. Adjacency: `funcs_41.c:11890` (`executeActorType2Effect`)
+   and `:12993` (`executeActorType3Effect`) are the only two
    `RECOMP_FUNC` lines matched — true adjacency.
-2. `funcs.h:2164-2165` declares `executeActorType1Effect`
-   then `executeActorType2Effect` in that exact order.
-3. `recomp_overlays.inl:1893`: `executeActorType2Effect`
-   offset is `0x0004FD44` = `executeActorType1Effect`'s
-   `0x0004EFDC + 0xD68` (its TOML size); `rom_size = 0x00000518`
-   matches the TOML's `size = 0x518` exactly.
-4. `grep -rln 'func_800F4E74'` across N64Recomp's `RecompiledFuncs/`
+2. `funcs.h:2165-2166` declares `executeActorType2Effect`
+   then `executeActorType3Effect` in that exact order.
+3. `recomp_overlays.inl:1894`: `executeActorType3Effect`
+   offset is `0x0005025C` = `executeActorType2Effect`'s
+   `0x0004FD44 + 0x518` (its TOML size); `rom_size = 0x000006A4`
+   matches the TOML's `size = 0x6A4` exactly.
+4. `grep -rln 'func_800F538C'` across N64Recomp's `RecompiledFuncs/`
    tree: zero hits — non-collision.
 
-Generated body matches the name: stack `-0x88`, reads
-actor+0x198 (`lhu $a0, 0x198($s6)`), then
-`getNpcContextField8` (`jal 0x8004015C`), `s2=actor+0x8`,
+Generated body matches the name: stack `-0x98`, reads
+actor+0x198 (`lhu $a0, 0x198($s5)`), then
+`getNpcContextField8` (`jal 0x8004015C`), `s3=actor+0x8`,
 then ctx+0x24 / ctx+0x0. Companion `mission_overlay.txt`
-already names `executeActorType2Effect = 0x800F4E74`.
-No existing TOML entry already uses `executeActorType2Effect`.
+already names `executeActorType3Effect = 0x800F538C`.
+No existing TOML entry already uses `executeActorType3Effect`.
 Sizes already agree — no bump.
 
-All four already agree — this iteration can rename `func_800F4E74`
-to `executeActorType2Effect` directly (TOML metadata-only
+All four already agree — this iteration can rename `func_800F538C`
+to `executeActorType3Effect` directly (TOML metadata-only
 sync, no build/regen needed), then re-verify + preview the one
-after it the same way before stopping (matching the s1887-s1912
+after it the same way before stopping (matching the s1887-s1913
 pattern).
 
-**After that leftover:** `func_800F538C` already lines up with
-`executeActorType3Effect` (s1906–s1912 preview:
-`funcs_41.c:11890,12993`, `funcs.h:2165-2166`, `.inl:1894` offset
-`0x0005025C = 0x0004FD44 + 0x518` / `rom_size 0x6A4`, zero-hit
-`func_800F538C`; body stack `-0x98`, same +0x198 NPC-context
-prologue `lhu $a0, 0x198($s5)` then `getNpcContextField8`).
-Companion already names `executeActorType3Effect = 0x800F538C`.
-After that: `func_800F5A30` lines up with `initActorAsType4`
-(`funcs_41.c:12993,14424`, `funcs.h:2166-2167`, `.inl:1895`
+**After that leftover:** `func_800F5A30` already lines up with
+`initActorAsType4` (s1906–s1913 preview:
+`funcs_41.c:12993,14424`, `funcs.h:2166-2167`, `.inl:1895`
 offset `0x00050900 = 0x0005025C + 0x6A4` / `rom_size 0x304`,
-zero-hit `func_800F5A30`). Companion already names
-`initActorAsType4 = 0x800F5A30`. Body matches: stack `-0x30`,
+zero-hit `func_800F5A30`; body stack `-0x30`,
 `sb $v0, 0x112($s1)` with `$v0=4`, then if assetName+0x0
 non-null `jal 0x80047B48` (`getLevelDatItemByName`),
-`s2=actor+0x50`. After that: `func_800F5D34` lines up with
-`buildSineWaveEffectGeometryA` (`funcs_41.c:14424,15028`,
-`funcs.h:2167-2168`, `.inl:1896` offset `0x00050C04 =
-0x00050900 + 0x304` / `rom_size 0xC20`, zero-hit
-`func_800F5D34`). Companion already names
-`buildSineWaveEffectGeometryA = 0x800F5D34`.
+`s2=actor+0x50`). Companion already names
+`initActorAsType4 = 0x800F5A30`. After that:
+`func_800F5D34` lines up with `buildSineWaveEffectGeometryA`
+(`funcs_41.c:14424,15028`, `funcs.h:2167-2168`, `.inl:1896`
+offset `0x00050C04 = 0x00050900 + 0x304` / `rom_size 0xC20`,
+zero-hit `func_800F5D34`). Companion already names
+`buildSineWaveEffectGeometryA = 0x800F5D34`. Body matches:
+stack `-0x60`, `s1=$a0`, `s2=$a1`, `s0=$a3`, `f24=$a2`,
+reads `+0x8($s0)`. After that: `func_800F6954` lines up
+with `buildSineWaveEffectGeometryB` (`funcs_41.c:15028,17961`,
+`funcs.h:2168-2169`, `.inl:1897` offset `0x00051824 =
+0x00050C04 + 0xC20` / `rom_size 0x7DC`, zero-hit
+`func_800F6954`). Companion already names
+`buildSineWaveEffectGeometryB = 0x800F6954`. Body matches:
+stack `-0x60`, same `s1=$a0` / `s2=$a1` / `s0=$a3` /
+`f24=$a2` prologue as A.
 
 **Where the generated tree actually lives:** it is gitignored
 (`RecompiledFuncs/` in `.gitignore`) and does NOT exist under this
@@ -72,7 +75,7 @@ the whole filesystem.
 belong to the sweep (contain "synchronized" or "confirmed ... symbol"),
 this iteration is a REVISIT instead — spend it re-attempting the
 external retail-entry boundary or M4 accumulator-origin threads with a
-genuinely new angle. As of s1912 this gate does NOT fire (s1902 is
+genuinely new angle. As of s1913 this gate does NOT fire (s1902 is
 still in the window — 1 of 15 slots non-sweep). The window starts
 dropping s1902 only after s1917.
 
