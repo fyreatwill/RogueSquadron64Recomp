@@ -3228,18 +3228,18 @@ stays 320" used dummy video; Rice supplies the later phase. s1135
 "retail never accesses `0x130B10:0x130B58`" superseded by s1528. s1698
 "Z on attract 512 stays 512 through 125.8 s" superseded by s1714.
 
-## 36. Sweep leftover s1880–s1917 / s1950–s1957 and the VI-1024 spin-yield chain (s1888–s1949)
+## 36. Sweep leftover s1880–s1917 / s1950–s1958 and the VI-1024 spin-yield chain (s1888–s1949)
 
 Migrated from `CURRENT-TRUTH.md` during the s1948 maintenance pass.
 
-### Leftover remaps s1880–s1917 and s1950–s1957
+### Leftover remaps s1880–s1917 and s1950–s1958
 
 Same four-step as §33–§35: companion mapping, generated body, adjacent
-boundaries, overlay span + size. TOML leftover `func_800*` count is 974
-after s1957. Next leftover is `func_800F981C` →
-`initActorAsType2` (four-step already complete; TOML
-metadata-only rename). Then `func_800F98CC` →
-`setType2ActorVelocity`.
+boundaries, overlay span + size. TOML leftover `func_800*` count is 973
+after s1958. Next leftover is `func_800F98CC` →
+`setType2ActorVelocity` (four-step already complete; TOML
+metadata-only rename). Then `func_800F9918` →
+`initActorAsType3`.
 
 | Sessions | Durable result |
 |---|---|
@@ -3286,6 +3286,7 @@ metadata-only rename). Then `func_800F98CC` →
 | s1955 | Synchronized `initActorAsType1WithAnchor` (`0x800F9674`, `0x140`). |
 | s1956 | Synchronized `setType1ActorVelocity` (`0x800F97B4`, `0x40`). |
 | s1957 | Synchronized `setType1ActorField40` (`0x800F97F4`, `0x28`). |
+| s1958 | Synchronized `initActorAsType2` (`0x800F981C`, `0xB0`). |
 
 s1903–s1917 (except the s1902 LPM A/B) were sweep-titled. s1918 was the
 mandatory 15-title REVISIT and opened the true-stall chain below.

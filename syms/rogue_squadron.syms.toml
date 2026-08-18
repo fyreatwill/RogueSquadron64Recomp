@@ -2016,7 +2016,7 @@ functions = [
     { name = "initActorAsType1WithAnchor", vram = 0x800F9674, size = 0x140 },
     { name = "setType1ActorVelocity", vram = 0x800F97B4, size = 0x40 },
     { name = "setType1ActorField40", vram = 0x800F97F4, size = 0x28 },
-    { name = "func_800F981C", vram = 0x800F981C, size = 0xB0 },
+    { name = "initActorAsType2", vram = 0x800F981C, size = 0xB0 },
     { name = "func_800F98CC", vram = 0x800F98CC, size = 0x4C },
     { name = "func_800F9918", vram = 0x800F9918, size = 0xB0 },
     { name = "func_800F99C8", vram = 0x800F99C8, size = 0x4C },
