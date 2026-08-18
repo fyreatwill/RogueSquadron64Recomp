@@ -481,3 +481,4 @@
 20260814-041217 | s1028_slot_sp_guard | rc=3 | 297s | scratch/agent/soak_results/s1028_slot_sp_guard_20260814-041217.log
 20260814-042134 | s1029_slot_sp_guard_late_a | rc=0 | 441s | scratch/agent/soak_results/s1029_slot_sp_guard_late_a_20260814-042134.log
 20260817-s1902 | s790_postsec2_reachability ADVANCED | LPM-off A/B; 640 origin=0x00696100 @ 6.8s; 0x VI 1024; SIGABRT findTileCopyId height>0 @ ~17s last-guest-pc=0x8000b650; H3a-lowpower REFUTED. scratch/agent/soak_results/s790_postsec2_reachability_20260817-185603/run.log
+20260817-s1924 | s1924_menu_spin ADVANCED | H-menu2-audio-spin SELECTED: 180s #7/#8 staller; entry 1 entry/spin/jal/exit siten=1; entry 2 menu-spin siten=907285100 tickn=jaln=2; 0 menu-jal/menu-exit siten=2; 0 crash; 0 width=1024. scratch/agent/soak_results/s1924_menu_spin_20260817-212059/run.log

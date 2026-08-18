@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1923 (2026-08-17).
+detail. Reviewed through s1924 (2026-08-17).
 
 ## Current state
 
@@ -150,6 +150,25 @@ detail. Reviewed through s1923 (2026-08-17).
   `menuOverlayInit` `0x800C5A18` is behind the
   `L_800C5930` `anyAudioSlotActive` spin
   (single-source CFG).
+  **s1924**: `[avf-gate]` `site=menu-spin` /
+  `menu-exit` on the 180s `#7/#8` staller
+  (`s1924_menu_spin_20260817-212059`,
+  probe_rc=5, 0 crash, no `#9/#10`). Same-run
+  control: tick-entry/jal/exit 2/2/2;
+  `took_swap=1` at loop `n=2` and `n=3`; entry 1
+  was `menu-entry` → `menu-spin` siten=1 →
+  `menu-jal` siten=1 → `menu-exit` siten=1
+  (new sites sit on the path that can reach the
+  jal). Then `menu-entry` siten=2 and
+  `menu-spin` climbed to siten=907285100 with
+  tickn/jaln frozen at 2; zero `menu-jal` /
+  `menu-exit` siten=2. First 23s Metal
+  `setDescriptor` crash was UNEVALUABLE (no
+  entry 2) and was retried. **H-menu2-audio-spin
+  SELECTED.** H-menu2-stuck-pre-spin /
+  H-menu2-returned REFUTED. The 1024 miss is
+  this spin: `#9/#10` cannot fire while entry 2
+  never reaches `0x800C5A18`.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -203,29 +222,31 @@ detail. Reviewed through s1923 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **The two ticks are boot inits; `menuOverlayInit`
-   entry 2 never jals (s1923 H-caller-mixed).** s1919
-   named s844 `#10` as `initVideoSubsystem` via
-   `0x80018378`. s1920–s1922 selected H-advance-dead
-   / H-not-called / H-tick-not-called. s1923's
-   same-run control (tick-entry/jal/exit 2/2/2;
-   `took_swap=1` at loop `n=2` and `n=3`) then the
-   caller table SELECTS H-caller-mixed: tick 1 =
-   `menuOverlayInit` `0x800C5A18`, tick 2 =
-   `initSceneForMission` `0x800A9C70`. `mainGameLoop`
-   entered once (`mgl-entry=1` at `#4`) and never
-   took `0x8003E29C` / `0x8003E360`. After tick 2
-   the 180s `#7/#8` subtype fires
-   `applyPendingViChanges`, then `menu-entry` siten=2
-   at `#2880` with no `menu-jal`. The jal sits after
-   `L_800C5930` (`anyAudioSlotActive` spin). Next
-   axis: on entry 2, is that spin live, is the
-   function stuck earlier, or does it return before
-   the jal? Ask (b) remains human-only. Do not
-   re-run `s790_postsec2_reachability.sh` as a
-   reachability re-confirm. Still blocks item 3
-   (hangar/512) until a port run publishes
-   `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`).
+1. **`menuOverlayInit` entry 2 is stuck in the
+   `anyAudioSlotActive` spin (s1924
+   H-menu2-audio-spin).** s1919–s1923 named `#10`
+   as `initVideoSubsystem` via `advanceVideoFrame`
+   and showed the two ticks are boot inits
+   (`menuOverlayInit` then `initSceneForMission`);
+   `mainGameLoop` never jals. s1924's same-run
+   control (tick 2/2/2; entry 1
+   entry/spin/jal/exit siten=1) then SELECTS the
+   spin: entry 2 `menu-spin` siten climbed to
+   907285100, no `menu-jal`/`menu-exit` siten=2.
+   `anyAudioSlotActive` returns `sltiu(s1,1)` after
+   reading gate `0x800A0F50`; a continuing spin
+   means that return is 0 (s1!=0), which CFG
+   requires gate nonzero plus a stub/slot reporting
+   active (single-source). Next axis: on entry 2,
+   is the gate on and `audioStubReturnZero`
+   returning 1, or is a slot byte stuck, or is
+   s1/v0 something the CFG does not allow? Ask (b)
+   remains human-only. Do not re-run a
+   reachability-only `s790`. Do not add more
+   gate-byte force-zeros without an `ORIGIN:`.
+   Still blocks item 3 (hangar/512) until a port
+   run publishes `[phase] vi_width=512
+   origin=0x006AB400` (or `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -330,6 +351,11 @@ Treating the two ticks as possibly
 of a once-entered `mainGameLoop`) is superseded by
 s1923 — tick 1 is `menuOverlayInit`, tick 2 is
 `initSceneForMission`; `mgl-jal-*` never fire.
+Treating `menuOverlayInit` entry 2 as maybe
+stuck in `zmemcpy`/`tickMusyXIfActive` or as
+returning before the jal is superseded by
+s1924 — `menu-spin` climbs through the 180s
+timeout and `menu-exit` siten=2 never fires.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -356,7 +382,10 @@ exitn=2; both ticks returned; no 3rd entry) and
 s1923 selecting H-caller-mixed (tick 1
 `menuOverlayInit`, tick 2 `initSceneForMission`;
 `mgl-jal-*=0`; `menu-entry` siten=2 after `#8`
-with no jal) and leftover `func_800F6954` became
+with no jal) and s1924 selecting
+H-menu2-audio-spin (`menu-spin` siten to
+907285100 on entry 2; no `menu-jal`/`menu-exit`
+siten=2; the 1024 miss is this spin) and leftover `func_800F6954` became
 `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
 `func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover

@@ -90335,3 +90335,80 @@ therefore either that spin or an earlier stall
 CFG; next unit is the runtime split.
 
 No mitigation. Ask (b) remains human-only.
+
+## Session 1924 (2026-08-17) — selected H-menu2-audio-spin: entry 2 stuck in anyAudioSlotActive
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit:
+on `menuOverlayInit` entry 2, is `L_800C5930`
+(`anyAudioSlotActive` spin) live, is the function
+stuck earlier, or does it return before the jal?
+
+Added `[avf-gate]` `site=menu-spin` (before
+`anyAudioSlotActive` at `L_800C5930`) and
+`site=menu-exit` (epilogue `lw $ra` at
+`0x800C5D64`) in `N64Recomp/fixup_game_funcs.py`
+plus the generated `funcs_34.c`. Same tag and
+`ROGUESQ_LOG_VI_CALLERS` gate. Fields still
+`tickn`/`jaln`/`siten`. Spin rate-limit: first 32,
+every 50, and every 256. Did not add a second
+counter family.
+
+Two s790-shaped runs of
+`scratch/agent/s1924_menu_spin.sh`:
+
+1. `s1924_menu_spin_20260817-211938` probe_rc=4,
+   ~23s Metal `MetalDescriptorSet::setDescriptor`
+   SIGSEGV during `fullSync`, last-guest-pc=`0x8000b650`,
+   `#1–#6` only. Same-run control passed
+   (tick-entry/jal/exit 2/2/2; `took_swap=1` at
+   `n=2` and `n=3`; entry 1 was
+   `menu-entry` → `menu-spin` siten=1 → `menu-jal`
+   siten=1 → `menu-exit` siten=1). No entry 2.
+   UNEVALUABLE for the skip. Retried.
+
+2. `s1924_menu_spin_20260817-212059` probe_rc=5,
+   180s, last width 640, 0 crash, 0 `width=1024`.
+   The 180s `#7/#8` subtype: `#7/#8`
+   `applyPendingViChanges`, no `#9/#10`. Same-run
+   control passed again (tick 2/2/2; `took_swap=1`
+   twice; entry 1
+   `menu-entry`/`menu-spin`/`menu-jal`/`menu-exit`
+   all siten=1, then `mission-jal` tick 2, then
+   `menu-exit` siten=1 already fired — entry 1
+   returned). Then `menu-entry` siten=2 (tickn=2
+   jaln=2). `menu-spin` climbed from siten=2 to
+   siten=907285100 with tickn/jaln frozen at 2.
+   Zero `menu-jal` siten=2. Zero `menu-exit`
+   siten=2.
+
+This selects H-menu2-audio-spin: entry 2 is
+blocked in the `L_800C5930` `anyAudioSlotActive`
+spin. That is the 1024 miss — the jal at
+`0x800C5A18` never runs, so
+`runVideoFrameTick` / `advanceVideoFrame` /
+`initVideoSubsystem` never issue `#9/#10`.
+This refutes H-menu2-stuck-pre-spin (`menu-spin`
+would have frozen at the entry-1 count).
+This refutes H-menu2-returned (`menu-exit`
+siten=2 would have fired).
+
+`anyAudioSlotActive` (`0x8008E57C`) reads gate
+`0x800A0F50`, optionally walks slots, then
+returns `sltiu(s1, 1)` — 1 iff s1==0. The spin
+is `beq $v0, $zero, L_800C5930`, so a continuing
+spin means the function is returning 0, i.e.
+s1!=0, which (CFG, single-source) requires the
+gate byte nonzero and a stub/slot reporting
+active. Force-zero in the fixup is only
+`0x8008EC88` (`reapplyDisplayMode`); live
+`MEM_B(0xF50)=ctx->r2` stores remain (e.g.
+`0x8008E9F8` writes 1). Do not add more
+force-zeros without an `ORIGIN:`.
+
+Spin every-50 logging produced a 1.2 GB
+`run.log` (~21M lines). Next instrument on this
+site must rate-limit far harder (first 8, then
+every 1e6).
+
+No mitigation. Ask (b) remains human-only.
+
