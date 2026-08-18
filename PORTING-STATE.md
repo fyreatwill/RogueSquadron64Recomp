@@ -91266,3 +91266,114 @@ and
 not rebuild. Do not change
 the stride. Do not re-run a
 reachability-only `s790`.
+
+## Session 1934 (2026-08-17) — both queued hunts UNEVALUABLE for entry-2 synth-exit split
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: consume the queued
+`s1933_entry2_synth_exit` and
+`s1933_entry2_synth_exit_b` soaks
+(no rebuild, no stride change).
+After `menu-entry` siten=2 on a
+`#7/#8` staller: no matching
+`synth-exit` →
+H-synth-never-returned;
+`synth-exit` and no
+`vi-cb-after` →
+H-stuck-later-slot; both fire
+and `[vi-cb-loop]` stays frozen
+→ H-recv-starved.
+
+Consumed both. Same-run
+positive control passed on each:
+tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice (swap n=2
+and n=3); `slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`[synth-entry]` and
+`[synth-exit]` both fire from
+n=0 and last-match at n=1280;
+`[vi-cb-loop]` and
+`[vi-cb-after]` last-match at
+n=1152 (sites not missed).
+Zero `menu-entry` siten=2 (only
+siten=1 → `menu-spin` siten=1 →
+`menu-jal` siten=1 →
+`menu-exit` siten=1).
+`osViSetMode` ends at `#6`
+(`initVideoSubsystem`
+`0x80128DA0`). Zero `#7/#8`,
+zero width=1024. Overlay
+section 4 `.ovl.cinematic` at
+tick 2; no second `.ovl.menu`
+DMA.
+
+`scratch/agent/soak_results/s1933_entry2_synth_exit_20260817-231343/run.log`
+(probe_rc=4, ~27s):
+`Assertion failed: (height > 0)`
+in `findTileCopyId`
+(`rt64_framebuffer_manager.cpp:907`)
+then SIGABRT. last-guest-pc
+`0x8000b650`. After
+`synth-exit` n=1280: 16
+`slot-sb` then the assert.
+Last `update_screen` `#1536`
+origin `0x0062BD00`.
+
+`scratch/agent/soak_results/s1933_entry2_synth_exit_b_20260817-231314/run.log`
+(probe_rc=4, ~29s): catalogued
+`fillSampleStreamRange+6464`
+SIGBUS last-guest-pc
+`0x8000b650`. Crash stack:
+`viRetraceHandlerThread` →
+`musyxSynthFrame` →
+`musyxMixActiveVoices` →
+`musyxRenderVoiceSamples` →
+`fillSampleStreamRange`. After
+`synth-exit` n=1280: 609
+`slot-sb` then the SIGBUS.
+Last `update_screen` `#1600`
+origin `0x0062BD00`.
+
+This refutes
+H-synth-never-returned for the
+last logged synth (n=1280 has
+a matching `synth-exit`) and
+refutes H-stuck-later-slot for
+the last logged walk
+(`vi-cb-after` n=1152 fired)
+on both crash signatures.
+s1933 already closed last-
+logged completion on the
+musyx-SIGBUS crash flavor at
+n=1152; this extends that
+through n=1280 and adds the
+`findTileCopyId` SIGABRT
+signature. The entry-2
+three-way split is
+**UNEVALUABLE** this run —
+no `menu-entry` siten=2 on
+either arm. Do not treat the
+crash-flavor last-logged
+completion as the s1931
+entry-2 answer.
+
+Next discriminator is
+unchanged and still live in
+the binary: the same two
+sites on the `#7/#8` /
+`menu-entry` siten=2 flavor
+(s1931 last synth n=2560 is
+on-stride). Enqueued
+`scratch/agent/soak_queue/s1934_entry2_synth_exit.sh`
+and
+`scratch/agent/soak_queue/s1934_entry2_synth_exit_b.sh`
+(loop runs up to two). Five
+hunts since s1931 have missed
+that flavor; if both of these
+also miss, the next iteration
+should pivot off flavor-
+hunting. Do not rebuild. Do
+not change the stride. Do not
+re-run a reachability-only
+`s790`.

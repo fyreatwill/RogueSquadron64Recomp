@@ -1,32 +1,38 @@
-# NEXT work unit (s1934) — consume entry-2 soak
+# NEXT work unit (s1935) — consume entry-2 soak
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1933 consumed queued
-`s1932_entry2_synth_exit`.
-It was the catalogued
-`fillSampleStreamRange+336`
-SIGBUS crash family
-(probe_rc=4, ~24s, last-guest-pc
-`0x8000b650`). Same-run
-control passed (tick 2/2/2,
+s1934 consumed both queued
+`s1933_entry2_synth_exit` and
+`s1933_entry2_synth_exit_b`.
+Both died before `menu-entry`
+siten=2. Same-run control
+passed (tick 2/2/2,
 `took_swap=1` twice,
 `slot-alloc` ends
 `0x8018D4A0/16`,
-`[synth-exit]` n last=1152,
-`[vi-cb-after]` n last=1024).
+`[synth-exit]` n last=1280,
+`[vi-cb-after]` n last=1152).
 Zero `menu-entry` siten=2;
 `osViSetMode` ends at `#6`.
-Last logged synth completed;
-crash is inside a later
-unlogged `musyxSynthFrame`.
-**UNEVALUABLE** for the
-entry-2 three-way split.
-s1932 already closed last-logged
-completion on the #6-dead
-flavor; this closes it on the
-crash flavor too. Still not
-the s1931 entry-2 answer.
+Arm A is `findTileCopyId`
+`height>0` SIGABRT (~27s,
+last-guest-pc `0x8000b650`).
+Arm B is catalogued
+`fillSampleStreamRange+6464`
+SIGBUS (~29s, last-guest-pc
+`0x8000b650`). Last logged
+synth completed; crash is
+inside a later unlogged
+window. **UNEVALUABLE** for
+the entry-2 three-way split.
+s1933 already closed last-
+logged completion on the
+crash flavor; this extends
+it through n=1280 and adds
+the `findTileCopyId`
+signature. Still not the
+s1931 entry-2 answer.
 
 Do **not** rebuild.
 Do **not** change the stride.
@@ -39,15 +45,15 @@ No force-zero.
 Read the new
 `scratch/agent/SOAK-RESULTS.md`
 lines for
-`s1933_entry2_synth_exit`
+`s1934_entry2_synth_exit`
 and/or
-`s1933_entry2_synth_exit_b`
+`s1934_entry2_synth_exit_b`
 (enqueued this session; loop
 runs up to two between
 iterations). Logs:
-`scratch/agent/soak_results/s1933_entry2_synth_exit_*/run.log`
+`scratch/agent/soak_results/s1934_entry2_synth_exit_*/run.log`
 and
-`scratch/agent/soak_results/s1933_entry2_synth_exit_b_*/run.log`.
+`scratch/agent/soak_results/s1934_entry2_synth_exit_b_*/run.log`.
 
 If both queue lines are
 missing, the soaks did not
@@ -94,13 +100,33 @@ siten=2:
 
 Crash-family (no entry 2) =
 UNEVALUABLE — enqueue, do not
-babysit. #6-dead (no `#7/#8`,
-no entry 2) = UNEVALUABLE for
+babysit. `findTileCopyId`
+SIGABRT (no entry 2) =
+UNEVALUABLE — same, enqueue.
+#6-dead (no `#7/#8`, no
+entry 2) = UNEVALUABLE for
 this split — same, enqueue.
 s1932 last-logged n=1024
-(#6-dead) and s1933
-last-logged n=1152 (crash)
-are closed for those flavors.
+(#6-dead), s1933 last-logged
+n=1152 (crash), and s1934
+last-logged n=1280 (crash +
+`findTileCopyId`) are closed
+for those flavors.
+
+**If both s1934 soaks miss
+`menu-entry` siten=2 again,
+do not enqueue a sixth
+identical hunt.** Pivot: the
+discriminator is the recv
+after the VI-cb slot walk
+(static CFG of
+`viRetraceHandlerThread`
+after `musyxSynthFrame`, or
+a host-side hook that does
+not need 180s `#7/#8`
+survival). Five hunts since
+s1931 have missed that
+flavor.
 
 Join key is log order: first
 `menu-entry` siten=2 vs last
@@ -117,6 +143,11 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- Last-logged n=1280 completion
+  on the crash / findTileCopyId
+  flavors (s1934) — closed for
+  those flavors; not the
+  entry-2 answer.
 - Last-logged n=1152 completion
   on the crash flavor (s1933)
   — closed for that flavor;

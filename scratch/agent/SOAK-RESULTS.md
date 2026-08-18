@@ -499,3 +499,7 @@
 20260817-230707 | s1932_entry2_synth_exit | rc=4 | 24s | scratch/agent/soak_results/s1932_entry2_synth_exit_20260817-230707.log
 
 20260817-s1933 | s1932_entry2_synth_exit UNEVALUABLE | catalogued fillSampleStreamRange+336 SIGBUS last-guest-pc=0x8000b650 before menu-entry siten=2; synth-entry=exit n last=1152; vi-cb-loop=after n last=1024; tick 2/2/2 slot-alloc 0x8018D4A0/16; 0 #7/#8; 128 slot-sb after exit-1152 then crash in later unlogged synth. scratch/agent/soak_results/s1932_entry2_synth_exit_20260817-230707/run.log
+20260817-231314 | s1933_entry2_synth_exit_b | rc=4 | 29s | scratch/agent/soak_results/s1933_entry2_synth_exit_b_20260817-231314.log
+20260817-231343 | s1933_entry2_synth_exit | rc=4 | 27s | scratch/agent/soak_results/s1933_entry2_synth_exit_20260817-231343.log
+20260817-s1934a | s1933_entry2_synth_exit UNEVALUABLE | findTileCopyId height>0 SIGABRT ~27s last-guest-pc=0x8000b650 before menu-entry siten=2; synth-entry=exit n last=1280; vi-cb-loop=after n last=1152; tick 2/2/2 slot-alloc 0x8018D4A0/16; 0 #7/#8; 16 slot-sb after exit-1280 then assert. scratch/agent/soak_results/s1933_entry2_synth_exit_20260817-231343/run.log
+20260817-s1934b | s1933_entry2_synth_exit_b UNEVALUABLE | catalogued fillSampleStreamRange+6464 SIGBUS ~29s last-guest-pc=0x8000b650 before menu-entry siten=2; synth-entry=exit n last=1280; vi-cb-loop=after n last=1152; tick 2/2/2 slot-alloc 0x8018D4A0/16; 0 #7/#8; 609 slot-sb after exit-1280 then crash in later unlogged synth. scratch/agent/soak_results/s1933_entry2_synth_exit_b_20260817-231314/run.log

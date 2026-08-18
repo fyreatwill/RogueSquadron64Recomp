@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1933 (2026-08-17).
+detail. Reviewed through s1934 (2026-08-17).
 
 ## Current state
 
@@ -429,6 +429,43 @@ detail. Reviewed through s1933 (2026-08-17).
   completion also holds on
   this crash flavor. Queued
   two more `#7/#8` hunts.
+  **s1934**: consumed both
+  queued hunts. Both died
+  before `menu-entry`
+  siten=2; `osViSetMode`
+  ends at `#6`; last
+  `[synth-entry]`=`[synth-exit]`
+  n=1280 and last
+  `[vi-cb-loop]`=`[vi-cb-after]`
+  n=1152 (sites not missed;
+  last-logged iteration
+  completed on a later
+  stride than s1933). Same-
+  run control passed on
+  both (tick 2/2/2,
+  `took_swap=1` twice,
+  `slot-alloc` ends
+  `0x8018D4A0/16`).
+  `s1933_entry2_synth_exit_20260817-231343`
+  (probe_rc=4, ~27s) is
+  `findTileCopyId` `height>0`
+  SIGABRT last-guest-pc
+  `0x8000b650`.
+  `s1933_entry2_synth_exit_b_20260817-231314`
+  (probe_rc=4, ~29s) is
+  catalogued
+  `fillSampleStreamRange+6464`
+  SIGBUS last-guest-pc
+  `0x8000b650`. Neither is
+  the `#7/#8` / entry-2
+  flavor. **UNEVALUABLE**
+  for the three-way split.
+  Last-logged completion on
+  the crash flavor is
+  closed through n=1280;
+  still not the s1931
+  entry-2 answer. Queued
+  two more hunts.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -488,7 +525,7 @@ detail. Reviewed through s1933 (2026-08-17).
    `[vi-cb-after]` are live
    (s1932).** Consume the
    queued
-   `s1933_entry2_synth_exit`
+   `s1934_entry2_synth_exit`
    / `_b` soaks — do not
    rebuild, do not change
    the stride. After
@@ -505,19 +542,27 @@ detail. Reviewed through s1933 (2026-08-17).
    fire and `[vi-cb-loop]`
    stays frozen →
    H-recv-starved. Crash
-   family (s1933: last
-   logged n=1152 completed,
-   then SIGBUS inside a
-   later unlogged synth; no
-   entry 2) and the #6-dead
-   flavor (s1932 180s: last
-   logged n=1024 completed,
-   no `#7/#8`) are
-   UNEVALUABLE for this
+   family (s1933 n=1152;
+   s1934 n=1280 completed
+   then `findTileCopyId`
+   SIGABRT or musyx SIGBUS;
+   no entry 2) and the
+   #6-dead flavor (s1932
+   180s: last logged n=1024
+   completed, no `#7/#8`)
+   are UNEVALUABLE for this
    split — enqueue, do not
    babysit, do not re-read
    them as the entry-2
-   answer. Ask (b) remains
+   answer. Five hunts since
+   s1931 have missed the
+   `#7/#8` flavor; if both
+   s1934 soaks miss again,
+   pivot off flavor-hunting
+   (static recv after the
+   slot walk) instead of a
+   sixth identical consume.
+   Ask (b) remains
    human-only. Do not re-run
    a reachability-only
    `s790`. Do not force-zero
@@ -703,6 +748,13 @@ not licensed — no
 `menu-entry` siten=2, and
 the crash is a later
 unlogged `musyxSynthFrame`.
+Treating the s1934 n=1280
+completion (or the
+`findTileCopyId` SIGABRT
+arm) as the entry-2 answer
+is not licensed — same
+missing `menu-entry`
+siten=2.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -1028,6 +1080,16 @@ entry=exit, n=1024
 loop=after; SIGBUS inside a
 later unlogged synth; entry-2
 split still UNEVALUABLE)
+and s1934 is the same last-
+logged completion on both
+queued hunts (n=1280
+entry=exit, n=1152
+loop=after; one
+`findTileCopyId` SIGABRT,
+one musyx SIGBUS; neither
+reached `menu-entry`
+siten=2; entry-2 split
+still UNEVALUABLE)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs
 failed across 4 crash/stall signatures, H1-flake refuted) —
