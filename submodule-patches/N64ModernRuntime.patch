@@ -561,7 +561,7 @@ index 1f3a4cf..b9cc34f 100644
  }
  
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
-index 149e770..e3dc9df 100644
+index 149e770..d8da457 100644
 --- a/ultramodern/src/events.cpp
 +++ b/ultramodern/src/events.cpp
 @@ -8,6 +8,9 @@
@@ -574,7 +574,7 @@ index 149e770..e3dc9df 100644
  
  #include "blockingconcurrentqueue.h"
  
-@@ -20,6 +23,43 @@
+@@ -20,6 +23,52 @@
  
  static ultramodern::events::callbacks_t events_callbacks{};
  
@@ -584,6 +584,15 @@ index 149e770..e3dc9df 100644
 +    static const bool enabled = [] {
 +        const char* all = std::getenv("ROGUESQ_LOG_ALL");
 +        const char* specific = std::getenv("ROGUESQ_LOG_EVENT_WIRING");
++        return (all && *all && *all != '0') || (specific && *specific && *specific != '0');
++    }();
++    return enabled;
++}
++
++bool audiotick_trace_enabled() {
++    static const bool enabled = [] {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* specific = std::getenv("ROGUESQ_LOG_AUDIOTICK_TRACE");
 +        return (all && *all && *all != '0') || (specific && *specific && *specific != '0');
 +    }();
 +    return enabled;
@@ -618,7 +627,7 @@ index 149e770..e3dc9df 100644
  void ultramodern::events::set_callbacks(const ultramodern::events::callbacks_t& callbacks) {
      events_callbacks = callbacks;
  }
-@@ -140,6 +180,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
+@@ -140,6 +189,8 @@ ultramodern::renderer::ViRegs* ultramodern::renderer::get_vi_regs() {
  extern "C" void osSetEventMesg(RDRAM_ARG OSEvent event_id, PTR(OSMesgQueue) mq_, OSMesg msg) {
      std::lock_guard lock{ events_context.message_mutex };
  
@@ -627,7 +636,39 @@ index 149e770..e3dc9df 100644
      switch (event_id) {
          case OS_EVENT_SP:
              events_context.sp.msg = msg;
-@@ -252,12 +294,14 @@ void vi_thread_func() {
+@@ -165,6 +216,13 @@ extern "C" void osViSetEvent(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, u32 ret
+     next_state->mq = mq_;
+     next_state->msg = msg;
+     next_state->retrace_count = retrace_count;
++    if (audiotick_trace_enabled()) {
++        static std::atomic<uint32_t> n{0};
++        const uint32_t row = n.fetch_add(1, std::memory_order_relaxed);
++        std::fprintf(stderr, "[vi-set-event] n=%u mq=0x%08X msg=0x%08X retrace=%u\n",
++            row, static_cast<uint32_t>(mq_), static_cast<uint32_t>(msg), retrace_count);
++        std::fflush(stderr);
++    }
+ }
+ 
+ uint64_t total_vis = 0;
+@@ -231,6 +289,17 @@ void vi_thread_func() {
+             ViState* cur_state = events_context.vi.get_cur_state();
+             if (remaining_retraces == 0) {
+                 if (cur_state->mq != NULLPTR) {
++                    if (audiotick_trace_enabled()) {
++                        static std::atomic<uint32_t> n{0};
++                        const uint32_t row = n.fetch_add(1, std::memory_order_relaxed);
++                        std::fprintf(stderr, "[vi-enq] n=%u mq=0x%08X msg=0x%08X retrace=%u total_vis=%" PRIu64 "\n",
++                            row,
++                            static_cast<uint32_t>(cur_state->mq),
++                            static_cast<uint32_t>(cur_state->msg),
++                            cur_state->retrace_count,
++                            total_vis);
++                        std::fflush(stderr);
++                    }
+                     // Send a message to the VI queue, and do not set it to be requeued if the queue was full.
+                     // The worst case scenario is that the game misses a VI message and has to wait a little longer for the next. 
+                     ultramodern::enqueue_external_message_src(cur_state->mq, cur_state->msg, false, ultramodern::EventMessageSource::Vi);
+@@ -252,12 +321,14 @@ void vi_thread_func() {
  void sp_complete() {
      uint8_t* rdram = events_context.rdram;
      std::lock_guard lock{ events_context.message_mutex };
@@ -643,10 +684,10 @@ index 149e770..e3dc9df 100644
  }
  
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..b99b340 100644
+index 9944a02..b1912e4 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,11 +1,50 @@
+@@ -1,11 +1,70 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -677,6 +718,26 @@ index 9944a02..b99b340 100644
 +
 +static std::atomic<uint32_t> g_mesgqueue_guard_bad{0};
 +
++static bool audiotick_trace_enabled() {
++    static const bool enabled = [] {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* specific = std::getenv("ROGUESQ_LOG_AUDIOTICK_TRACE");
++        return (all && *all && *all != '0') || (specific && *specific && *specific != '0');
++    }();
++    return enabled;
++}
++
++static void log_vi_mq(const char* site, PTR(OSMesgQueue) mq_, s32 flags) {
++    if (static_cast<uint32_t>(mq_) != 0x80114388u || !audiotick_trace_enabled()) {
++        return;
++    }
++    static std::atomic<uint32_t> n{0};
++    const uint32_t row = n.fetch_add(1, std::memory_order_relaxed);
++    std::fprintf(stderr, "[vi-mq] site=%s n=%u mq=0x%08X flags=%d\n",
++        site, row, static_cast<uint32_t>(mq_), static_cast<int>(flags));
++    std::fflush(stderr);
++}
++
 +// Returns true (refuse) if mq_ is outside the game's KSEG0 RDRAM range
 +// (0x80000000-0x80800000, the same 8MB bound used by every other guard site
 +// in this project).
@@ -697,7 +758,7 @@ index 9944a02..b99b340 100644
  struct QueuedMessage {
      PTR(OSMesgQueue) mq;
      OSMesg mesg;
-@@ -90,6 +129,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +149,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -707,7 +768,7 @@ index 9944a02..b99b340 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +148,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +168,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -722,7 +783,7 @@ index 9944a02..b99b340 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +179,9 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +199,9 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -732,7 +793,7 @@ index 9944a02..b99b340 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,6 +198,9 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,6 +218,9 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -742,6 +803,30 @@ index 9944a02..b99b340 100644
          *TO_PTR(OSMesg, msg_) = TO_PTR(OSMesg, mq->msg)[mq->first];
      }
      
+@@ -161,6 +237,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+ }
+ 
+ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
++    log_vi_mq("send", mq_, flags);
+     OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
+     bool jam = false;
+     
+@@ -183,6 +260,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+ }
+ 
+ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
++    log_vi_mq("jam", mq_, flags);
+     OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
+     bool jam = true;
+     
+@@ -205,6 +283,7 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+ }
+ 
+ extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
++    log_vi_mq("recv", mq_, flags);
+     OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
+     
+     assert(ultramodern::is_game_thread() && "RecvMesg not allowed outside of game threads.");
 diff --git a/ultramodern/src/scheduling.cpp b/ultramodern/src/scheduling.cpp
 index a22f747..d0510cb 100644
 --- a/ultramodern/src/scheduling.cpp

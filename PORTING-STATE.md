@@ -91784,3 +91784,144 @@ discriminator is why that
 queue never unblocks (VI
 producer vs retarget vs steal
 vs host-stuck recv).
+
+## Session 1939 (2026-08-18) — selected H-host-stuck; VI enqueues after recv1 never unblock
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: one Debug rebuild
+adding always-on `[vi-set-event]`
+on `osViSetEvent` and `[vi-enq]`
+on the host VI producer, plus
+`[vi-mq]` on guest
+send/recv/jam of `0x80114388`,
+then one `#7/#8` soak. After
+recv1-enter n=N+1: later
+`osViSetEvent` mq≠`0x80114388`
+(or 0) and vi-enq to that mq
+→ H-vi-unhooked; last
+`osViSetEvent` still
+`0x80114388` and zero vi-enq
+after enter → H-vi-stopped;
+vi-enq to `0x80114388` after
+enter and no recv1-exit →
+H-host-stuck; extra `[vi-mq]`
+recv/send/jam after enter →
+H-stolen.
+
+Sites live in
+`lib/N64ModernRuntime/ultramodern/src/events.cpp`
+and `mesgqueue.cpp` (exported
+via `submodule-patches/export.sh`).
+
+First soak
+`scratch/agent/soak_results/s1939_vi_register_producer_20260818-001551/run.log`
+(probe_rc=4, ~29s): catalogued
+`fillSampleStreamRange+336`
+SIGBUS last-guest-pc=`0x8000b650`
+before `menu-entry` siten=2;
+`osViSetMode` ends `#6`. This
+refutes using that crash flavor
+as the entry-2 four-way answer.
+Instruments were live
+(`[vi-set-event]` n=0
+`mq=0x80114388`; `[vi-enq]` n
+last=1463). Queued and ran the
+B copy.
+
+Second soak
+`scratch/agent/soak_results/s1939_vi_register_producer_b_20260818-001837/run.log`
+(probe_rc=5, 183s, 0 crash):
+the `#7/#8` / `menu-entry`
+siten=2 flavor. `#7` L416164
+and `#8` L418489 are
+`applyPendingViChanges`
+(`#8` `0x80128E40` yScale
+`0x02000612`). `menu-entry`
+siten=2 L418550 after
+`.ovl.menu` start-match
+L418548. `menu-spin` climbs
+to siten=644000000. Zero
+`menu-jal` / `menu-exit`
+siten=2. Zero width=1024.
+`update_screen` `#10880`
+origin `0x0062BD00`.
+
+Same-run positive control
+passed: tick-entry/jal/exit
+2/2/2; `took_swap=1` twice
+(swap n=2 and n=3);
+`slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`[vi-set-event]` n=0
+`mq=0x80114388` retrace=1;
+`[vi-enq]` n=0
+`mq=0x80114388`;
+`[vi-cb-recv1]` enter n=0
+`mq=0x80114388` and exit
+n=0; `[vi-cb-after]` n=0;
+`#7` and `#8` fire.
+
+Join key (log order):
+
+- recv1-exit n=2350 L418487
+- `#8` L418489
+- recv2 enter/exit n=2350
+- walk n=2350
+- synth-entry=exit n=2465
+- after n=2350 L418544
+- loop n=2351 L418545
+- recv1-enter n=2351 L418546
+  `mq=0x80114388`
+- `[vi-mq]` site=recv n=2351
+  L418547
+- `.ovl.menu` L418548
+- `menu-entry` siten=2
+  L418550
+- first post-enter `[vi-enq]`
+  n=2885 L418558
+  `mq=0x80114388`
+
+Zero recv1-exit n=2351.
+Zero `[vi-set-event]` after
+boot (lifetime n=0 only,
+still `mq=0x80114388`).
+7987 `[vi-enq]` after enter,
+all `mq=0x80114388`
+(lifetime 10872/10872).
+Zero `[vi-mq]` after the
+blocking recv n=2351
+(lifetime send=0 jam=0).
+This selects H-host-stuck
+and refutes H-vi-unhooked,
+H-vi-stopped, and H-stolen.
+
+**H-host-stuck SELECTED.**
+**H-vi-unhooked REFUTED**
+(never a later
+`osViSetEvent`; every enqueue
+stays `0x80114388`).
+**H-vi-stopped REFUTED**
+(7987 host enqueues after
+enter).
+**H-stolen REFUTED** (no
+other recv/send/jam on
+`0x80114388` after enter).
+The host VI thread keeps
+producing legitimate retrace
+messages; they never wake
+the blocked
+`osRecvMesg(0x80114388)`.
+Next discriminator is
+whether `dequeue_external_messages`
+never runs after enter
+(H-never-dequeued), runs
+and `do_send` fails
+(H-deq-dropped), or
+succeeds and the waiter is
+not scheduled
+(H-deq-not-woken).
+
+Do not pump dequeue from
+the menu spin. Do not
+force-zero. Ask (b) remains
+human-only.

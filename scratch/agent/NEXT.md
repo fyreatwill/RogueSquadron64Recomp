@@ -1,49 +1,54 @@
-# NEXT work unit (s1939) — why recv1 never unblocks
+# NEXT work unit (s1940) — why VI enqueues never unblock recv1
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1938 selected H-recv1-starved
+s1939 selected H-host-stuck
 on the `#7/#8` / `menu-entry`
 siten=2 staller
-`s1938_loop_recv1_20260818-000228`.
+`s1939_vi_register_producer_b_20260818-001837`.
 After `#8` the walk completes
-(after n=2409), then loop
-n=2410 and `[vi-cb-recv1]`
-enter n=2410 `mq=0x80114388`
-with no matching exit. Stall
-is `osRecvMesg(0x80114388)`
-never returning.
+(after n=2350), then loop
+n=2351 and `[vi-cb-recv1]`
+enter n=2351 `mq=0x80114388`
+with no matching exit. Host
+`[vi-enq]` keeps targeting
+`0x80114388` (7987 after
+enter). The guest queue never
+unblocks.
 
-## Work unit — VI register vs producer
+## Work unit — dequeue vs drop vs wake
 
 One Debug rebuild, one `#7/#8`
 soak. Do **not** re-probe
-recv1 enter/exit or the walk.
-Do **not** force-zero.
+`osViSetEvent` / vi-enq
+identity. Do **not** pump
+`dequeue_external_messages`
+from the menu spin (that is a
+mitigation).
 
 This is a `lib/` edit:
-`lib/N64ModernRuntime/ultramodern/src/events.cpp`.
+`lib/N64ModernRuntime/ultramodern/src/mesgqueue.cpp`.
 Must run `./submodule-patches/export.sh`
 and commit the refreshed patches
 in the same iteration.
 
-1. Always-on `[vi-set-event]`
-   in `osViSetEvent` (mq, msg,
-   retrace_count). Gate on
-   `ROGUESQ_LOG_AUDIOTICK_TRACE`
-   (already armed).
-2. Always-on `[vi-enq]` at the
-   existing `enqueue_external_message_src`
-   in `vi_thread_func` when
-   `cur_state->mq != NULLPTR`
-   (log mq, msg, retrace,
-   `total_vis`). Same gate.
-3. Leave `[vi-cb-loop]` /
-   `[vi-cb-recv1]` /
-   `[vi-cb-recv2]` /
-   `[vi-cb-walk]` /
-   `[vi-cb-after]` as they
-   are (already always-on).
+1. Always-on `[vi-deq]` in
+   `dequeue_external_messages`
+   when `to_send.mq==0x80114388`
+   (site=`ok` if `do_send`
+   returns true, `full` if
+   false; log n, validCount,
+   msgCount). Gate on
+   `ROGUESQ_LOG_AUDIOTICK_TRACE`.
+2. Always-on `[vi-wait]`
+   enter/exit on
+   `wait_for_external_message`
+   (and the timed variant).
+   Same gate.
+3. Leave `[vi-set-event]` /
+   `[vi-enq]` / `[vi-mq]` /
+   `[vi-cb-recv1]` as they
+   are.
 
 Same-run positive control
 (must fire **before** `#8`):
@@ -52,37 +57,39 @@ Same-run positive control
   with `took_swap=1` twice
 - `slot-alloc` ends
   `0x8018D4A0 count=16`
-- `[vi-set-event]` fires with
-  `mq=0x80114388` at least once
-- `[vi-enq]` fires to
-  `mq=0x80114388` from n=0
+- `[vi-set-event]` n=0
+  `mq=0x80114388`
+- `[vi-enq]` to
+  `0x80114388` from n=0
+- `[vi-deq]` site=ok fires
+  from n=0 for
+  `mq=0x80114388` (early
+  recv1-exit proves delivery
+  works)
 - `[vi-cb-recv1]` enter/exit
   fire from n=0
-  `mq=0x80114388`
-- `[vi-cb-after]` fires from
-  n=0 and a post-`#8` after
-  n=N fires (s1938: N=2409)
 - `menu-entry` siten=2 AND
   `menu-spin` climbs
 - `#7` and `#8` fire
 
-Then, after recv1-enter n=N+1:
+Then, after recv1-enter n=N+1
+with continuing `[vi-enq]`
+to `0x80114388`:
 
-- later `[vi-set-event]`
-  mq≠`0x80114388` (or 0)
-  and `[vi-enq]` to that
-  other mq → **H-vi-unhooked**
-- last `[vi-set-event]` still
-  `mq=0x80114388` and zero
-  `[vi-enq]` after enter →
-  **H-vi-stopped**
-- `[vi-enq]` to `0x80114388`
-  after enter and no
-  recv1-exit → **H-host-stuck**
-- another thread's recv on
-  `0x80114388` (or guest
-  `osSendMesg` drain) →
-  **H-stolen**
+- zero `[vi-deq]` after enter
+  (and zero `[vi-wait]`) →
+  **H-never-dequeued**
+- `[vi-deq]` site=full after
+  enter, no site=ok →
+  **H-deq-dropped**
+- `[vi-deq]` site=ok after
+  enter and no recv1-exit →
+  **H-deq-not-woken**
+- `[vi-wait]` enter after
+  enter (no matching deq ok)
+  → still H-never-dequeued,
+  but the idle-wait path
+  ran and did not deliver
 
 Crash / #6-dead (no entry 2)
 = UNEVALUABLE — enqueue a
@@ -92,7 +99,7 @@ recipe, do not babysit.
 Join key is log order:
 `#8` vs after n=N / loop
 n=N+1 / recv1 enter n=N+1 /
-vi-set-event / vi-enq /
+vi-enq / vi-deq / vi-wait /
 recv1-exit / menu-entry
 siten=2.
 
@@ -109,26 +116,18 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
-- The s1938 recv1 three-way
-  (closed: H-recv1-starved
-  SELECTED; H-post-recv1-stuck
-  / H-loop-missed REFUTED).
+- The s1939 four-way
+  (closed: H-host-stuck
+  SELECTED; H-vi-unhooked /
+  H-vi-stopped / H-stolen
+  REFUTED).
+- The s1938 recv1 three-way.
 - The s1937 walk-interior
-  three-way (closed:
-  H-synth-in-walk /
-  H-later-slot /
-  H-after-missed).
+  three-way.
 - Re-probing recv2 or the
   4-slot walk after `#8`.
-- The s1932 three-way on
-  synth-exit / vi-cb-after
-  at stride 128.
-- Crash / #6-dead last-
-  logged completion
-  (s1932–s1934) as the
-  entry-2 answer.
-- A slot-byte / gate
-  force-zero without
+- A dequeue-pump / yield
+  from `menu-spin` without
   `ORIGIN:`.
 - Ask (b) from s1891 —
   still human-only.
