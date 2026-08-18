@@ -140,14 +140,17 @@ detail. Reviewed through s1896 (2026-08-17).
    supplies the disposable clone for the literal bisect. This still blocks
    the entire `s790_postsec2_reachability` soak family and item 3 below until
    reachability itself is restored or explained.
-2. Resume the generated-symbol sweep at leftover `func_800F2D74`
-   (`0x800F2D74`, size `0x30`). Preliminary peek: `recomp_overlays.inl`
-   already shows `setObjectSubstructF10IfReady` at that same offset/size,
-   immediately following the newly-renamed `applyToObjectSubstructByFlag`.
+2. Resume the generated-symbol sweep at leftover `func_800F2DA4`
+   (`0x800F2DA4`, size `0x24`). Preliminary peek: `recomp_overlays.inl`
+   already shows `setAnimSubstructValueIfActive` at that same offset/size,
+   immediately following the newly-renamed `setObjectSubstructF10IfReady`.
    Confirm the full four-step procedure (adjacency, `funcs.h` order, `.inl`
-   offset/size, non-collision grep) before renaming. Archive:
-   `PROJECT-OVERVIEW.md` §33–§35. About 1,548 placeholder
-   `func_0x...` names remained at s1487.
+   offset/size, non-collision grep) before renaming. Note (s1897): the
+   generated tree (`funcs_41.c`, `funcs.h`, `recomp_overlays.inl`) is
+   gitignored and absent from this repo's `build/`; it currently lives at
+   `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/` — look
+   there first. Archive: `PROJECT-OVERVIEW.md` §33–§35. About 1,548
+   placeholder `func_0x...` names remained at s1487.
 3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
    s1888 attempt was blocked upstream by item 1, not by a bad input
    schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
@@ -214,11 +217,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1896 through s1888-s1892's VI-1024 reachability-regression
+s1648–s1897 through s1888-s1892's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, new n=1 H3a-lowpower lead
-found) and leftover `func_800F2D38` became
+found) and leftover `func_800F2D74` became
+`setObjectSubstructF10IfReady` (`0x800F2D74`, `0x30`) after leftover
+`func_800F2D38` became
 `applyToObjectSubstructByFlag` (`0x800F2D38`, `0x3C`) after leftover
 `func_800F2C6C` became
 `initAnimSubstructFromParams` (`0x800F2C6C`, `0xCC`) after leftover

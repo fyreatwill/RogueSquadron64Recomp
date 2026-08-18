@@ -1988,7 +1988,7 @@ functions = [
     { name = "initObjectAnimSubstruct", vram = 0x800F2B88, size = 0xE4 },
     { name = "initAnimSubstructFromParams", vram = 0x800F2C6C, size = 0xCC },
     { name = "applyToObjectSubstructByFlag", vram = 0x800F2D38, size = 0x3C },
-    { name = "func_800F2D74", vram = 0x800F2D74, size = 0x30 },
+    { name = "setObjectSubstructF10IfReady", vram = 0x800F2D74, size = 0x30 },
     { name = "func_800F2DA4", vram = 0x800F2DA4, size = 0x24 },
     { name = "func_800F2DC8", vram = 0x800F2DC8, size = 0x148 },
     { name = "func_800F2F10", vram = 0x800F2F10, size = 0xA4 },
