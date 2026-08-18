@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1959 (2026-08-18).
+detail. Reviewed through s1960 (2026-08-18).
 
 ## Current state
 
@@ -107,6 +107,13 @@ detail. Reviewed through s1959 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
+Re-ranked s1960 (unblock only — no porting evidence landed, order unchanged):
+the sweep leftover stays #1 because it is the only fully-derived, zero-risk
+unit on the board; items 2-5 all still need a new discriminator before they
+can be worked, so they stay ordered by blast-radius (visual artifacts and a
+known SIGBUS family below the mechanical rename, audio/M3 re-audits last
+since both are explicitly closed pending new leads).
+
 1. Generated-symbol sweep leftover `func_800F9918` (`0x800F9918`,
    TOML size `0xB0` matches generated `initActorAsType3`
    `rom_size 0xB0`). Four-step already complete (s1959 preview).
@@ -207,7 +214,10 @@ Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
 s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
-later superseded by Rice). s1728 and s1948 are maintenance only.
+later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
+loop-infra only (unblock: grok runner balance exhausted, refuted as a
+loop-stopper since the loop already runs under `RUNNER=claude` — no
+porting conclusion touched, see `PORTING-STATE.md` s1960).
 
 ## Method and safety rules
 
