@@ -89578,3 +89578,100 @@ patch-export needed.
 Next-15-title window after s1913 still keeps s1902 (1 of 15 slots
 non-sweep); still not a REVISIT trigger. The window starts dropping
 s1902 only after s1917. Check again next iteration.
+
+## Session 1914 (2026-08-17) — synchronized the executeActorType3Effect symbol
+
+Resumed the generated-symbol renaming sweep. Before starting, re-checked
+the 15-title REVISIT gate: `grep -n '^## Session ' PORTING-STATE.md |
+tail -15` shows s1902 still in the window (1 of 15 titles non-sweep),
+so the sweep continues; not a REVISIT. H3a-lowpower is closed (s1902);
+did not re-run `s790_postsec2_reachability.sh`. No new soak-queue
+verdicts landed between s1913 and this iteration (tail of
+`scratch/agent/SOAK-RESULTS.md` still ends on the s1902 LPM-off A/B).
+CURRENT-TRUTH is 28923 bytes — under the 60 KB maintenance trigger.
+
+Renamed leftover `func_800F538C` (`0x800F538C`, TOML size `0x6A4`,
+`syms/rogue_squadron.syms.toml:2007`) to
+`executeActorType3Effect`. The four-step confirmation was
+already complete in s1906–s1913 and was re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:11890` (`executeActorType2Effect`) and `:12993`
+   (`executeActorType3Effect`) are the only two `RECOMP_FUNC`
+   lines matched by name in that span — true adjacency, not a stray
+   substring match.
+2. `funcs.h:2165-2166` declares `executeActorType2Effect`
+   then `executeActorType3Effect` in that exact order.
+3. `recomp_overlays.inl:1893-1894`: `executeActorType3Effect`
+   offset is `0x0005025C` = `executeActorType2Effect`'s
+   `0x0004FD44 + 0x518` (its TOML size); `rom_size = 0x000006A4`
+   matches the TOML's `size = 0x6A4` exactly.
+4. `grep -rln 'func_800F538C'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+Generated body matches the name: stack `-0x98`, reads
+actor+0x198 (`lhu $a0, 0x198($s5)`), calls
+`getNpcContextField8` (`jal 0x8004015C`), `s3=actor+0x8`,
+then ctx+0x24 / ctx+0x0. Companion
+`rogue_squadron64/symbol_files/mission_overlay.txt` already
+names `executeActorType3Effect = 0x800F538C`. No existing
+TOML entry already used `executeActorType3Effect`. Sizes
+already agreed — no bump.
+
+All four agreed, so renamed the TOML entry only (metadata-only
+sync, no build/regen needed). Post-rename leftover `func_800*`
+count in the TOML is 985 (was 986). Zero leftover `func_800F538C`
+remains in repo sources outside the ledger.
+
+Previewed the next leftover for continuity: `func_800F5A30` (TOML
+size `0x304`, `syms/rogue_squadron.syms.toml:2008`) lines up with
+`recomp_overlays.inl:1895` (`initActorAsType4`,
+offset `0x00050900` = `0x0005025C + 0x6A4`, `rom_size =
+0x00000304`) — confirmed adjacency (`funcs_41.c:12993,14424`) and
+declaration order (`funcs.h:2166-2167`) and non-collision
+(`grep -rln 'func_800F5A30'` zero hits) this session too.
+Generated body stack `-0x30`, `sb $v0, 0x112($s1)` with
+`$v0=4`, then if assetName+0x0 non-null `jal 0x80047B48`
+(`getLevelDatItemByName`), `s2=actor+0x50`, matching the
+companion comment. Companion already names
+`initActorAsType4 = 0x800F5A30`. Sizes already agree — no
+bump. Next iteration can rename directly.
+
+Also previewed the leftovers after that: `func_800F5D34` (size
+`0xC20`, toml:2009) lines up with `recomp_overlays.inl:1896`
+(`buildSineWaveEffectGeometryA`, offset `0x00050C04` =
+`0x00050900 + 0x304`, `rom_size = 0x00000C20`) — adjacency
+(`funcs_41.c:14424,15028`), declaration order
+(`funcs.h:2167-2168`), and non-collision
+(`grep -rln 'func_800F5D34'` zero hits). Body matches:
+stack `-0x60`, `s1=$a0`, `s2=$a1`, `s0=$a3`, `f24=$a2`,
+reads `+0x8($s0)`. Companion already names
+`buildSineWaveEffectGeometryA = 0x800F5D34`.
+`func_800F6954` (size `0x7DC`, toml:2010) lines up with
+`recomp_overlays.inl:1897` (`buildSineWaveEffectGeometryB`,
+offset `0x00051824` = `0x00050C04 + 0xC20`, `rom_size =
+0x000007DC`) — adjacency (`funcs_41.c:15028,17961`),
+declaration order (`funcs.h:2168-2169`), and non-collision
+(`grep -rln 'func_800F6954'` zero hits). Body matches:
+stack `-0x60`, same `s1=$a0` / `s2=$a1` / `s0=$a3` /
+`f24=$a2` prologue as A. Companion already names
+`buildSineWaveEffectGeometryB = 0x800F6954`.
+`func_800F7130` (size `0xB44`, toml:2011) lines up with
+`recomp_overlays.inl:1898` (`renderNpcAnchoredProceduralEffect`,
+offset `0x00052000` = `0x00051824 + 0x7DC`, `rom_size =
+0x00000B44`) — adjacency (`funcs_41.c:17961,19845`; next
+function is `funcs_42.c:35` `spawnAndUpdateEffectActors`),
+declaration order (`funcs.h:2169-2170`), and non-collision
+(`grep -rln 'func_800F7130'` zero hits). Body matches:
+stack `-0x1B0`, `lhu $a0, 0x198($a0)` then
+`jal 0x8004015C` (`getNpcContextField8`), `t0=actor+0x8`,
+`s1=actor+0x50`. Companion already names
+`renderNpcAnchoredProceduralEffect = 0x800F7130`.
+
+Noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per
+CLAUDE.md) — untouched this session, no new edits under `lib/`, so no
+patch-export needed.
+
+Next-15-title window after s1914 still keeps s1902 (1 of 15 slots
+non-sweep); still not a REVISIT trigger. The window starts dropping
+s1902 only after s1917. Check again next iteration.
