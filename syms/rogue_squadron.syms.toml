@@ -1991,7 +1991,7 @@ functions = [
     { name = "setObjectSubstructF10IfReady", vram = 0x800F2D74, size = 0x30 },
     { name = "setAnimSubstructValueIfActive", vram = 0x800F2DA4, size = 0x24 },
     { name = "generatePerpEmitDirectionWithJitter", vram = 0x800F2DC8, size = 0x148 },
-    { name = "func_800F2F10", vram = 0x800F2F10, size = 0xA4 },
+    { name = "stepAndTickProgressChannel", vram = 0x800F2F10, size = 0xA4 },
     { name = "func_800F2FB4", vram = 0x800F2FB4, size = 0xC },
     { name = "func_800F2FC0", vram = 0x800F2FC0, size = 0xC },
     { name = "func_800F2FCC", vram = 0x800F2FCC, size = 0xE0 },

@@ -1,28 +1,37 @@
-# NEXT work unit (s1899)
+# NEXT work unit (s1900)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-**Primary path — resume the sweep.** Next census: leftover `func_800F2F10`
-at `0x800F2F10` (size `0xA4`, `syms/rogue_squadron.syms.toml:1994`).
-Preliminary peek: `recomp_overlays.inl:1881` already shows
-`{ .func = stepAndTickProgressChannel, .offset = 0x0004DDE0,
-.rom_size = 0x000000A4 }`, immediately following the newly-renamed
-`generatePerpEmitDirectionWithJitter` entry. Repeat the
-s1887/s1893/s1894/s1895/s1896/s1897/s1898/s1899 procedure exactly:
-1. `grep`/`awk` RECOMP_FUNC adjacency pairing in `funcs_41.c` to confirm
-   `stepAndTickProgressChannel` truly follows
-   `generatePerpEmitDirectionWithJitter` (not a stray substring match).
-2. Check `funcs.h` declares it in the right order.
-3. Check `recomp_overlays.inl` — offset must be
-   `generatePerpEmitDirectionWithJitter`'s offset (`0x0004DC98`) `+ 0x148 =
-   0x0004DDE0`, and `rom_size` must be `0x000000A4` (matching TOML `size =
-   0xA4`).
-4. `grep -rln 'func_800F2F10\b'` across generated RecompiledFuncs tree —
-   must be zero hits (non-collision).
-5. If all four agree, rename the TOML entry only — no build/regen needed
-   (this class of change is metadata-only sync; the generated tree already
-   has the correct name from N64Recomp's own matching, independent of this
-   repo's TOML).
+**Primary path — resume the sweep.** Next census: leftover `func_800F2FB4`
+at `0x800F2FB4` (size `0xC`, `syms/rogue_squadron.syms.toml:1995`).
+Already confirmed this session (s1900) via the full four-step procedure:
+1. Adjacency: `funcs_41.c:5348` (`stepAndTickProgressChannel`) and `:5478`
+   (`getEffectIntensity`) are the only two `RECOMP_FUNC` lines matched —
+   true adjacency.
+2. `funcs.h:2153-2154` declares `stepAndTickProgressChannel` then
+   `getEffectIntensity` in that exact order.
+3. `recomp_overlays.inl:1882`: `getEffectIntensity` offset is `0x0004DE84`
+   = `stepAndTickProgressChannel`'s `0x0004DDE0 + 0xA4` (its TOML size);
+   `rom_size = 0x0000000C` matches the TOML's `size = 0xC` for
+   `func_800F2FB4` exactly.
+4. `grep -rln 'func_800F2FB4\b'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+All four already agree — next iteration can rename `func_800F2FB4` to
+`getEffectIntensity` directly (TOML metadata-only sync, no build/regen
+needed), then re-verify + preview the one after it the same way before
+stopping (matching the s1887-s1900 pattern).
+
+**Bonus — the generated tree runs ahead here.** After `getEffectIntensity`,
+`recomp_overlays.inl:1883-1885` already shows three more resolved names in
+a row: `setEffectIntensity` (offset `0x0004DE90`, size `0xC`),
+`triggerCueWithSlotEffect` (offset `0x0004DE9C`, size `0xE0`), and
+`copyPipeDelimitedField` (offset `0x0004DF7C`, size `0x98`). Each still
+needs its own four-step confirmation (adjacency in `funcs_41.c`, `funcs.h`
+order, `.inl` offset/size math, non-collision grep) before renaming — do
+not skip the checks just because the `.inl` name is already visible — but
+expect several fast metadata-only syncs in a row before hitting the next
+genuinely-unresolved placeholder.
 
 **Where the generated tree actually lives:** it is gitignored
 (`RecompiledFuncs/` in `.gitignore`) and does NOT exist under this repo's
@@ -35,17 +44,17 @@ whole filesystem.
 **Before starting**, check whether `vi1024-reachability-regression` has
 been unblocked: run `python3 scratch/agent/thermal_probe.py` and read
 `isLowPowerModeEnabled`. If it now reads `False` (a human toggled Low Power
-Mode off in System Settings > Battery since s1892/s1895/s1896/s1897/s1898/
-s1899), STOP the sweep and instead re-run the unmodified
-`s790_postsec2_reachability.sh` once, with `vm_sampler.py` and
-`thermal_probe.py` running the same way s1892 did, and compare directly
-against s1892's result (`640 origin=0x00696100` stall @ 7.2s, then
+Mode off in System Settings > Battery since s1892/s1895-s1900), STOP the
+sweep and instead re-run the unmodified `s790_postsec2_reachability.sh`
+once, with `vm_sampler.py` and `thermal_probe.py` running the same way
+s1892 did, and compare directly against s1892's result (`640
+origin=0x00696100` stall @ 7.2s, then
 `fillSampleStreamRange`/`musyxRenderVoiceSamples` SIGBUS @ ~27s). A VI-1024
 reach or a different crash signature/timing selects H3a-lowpower; an
 identical stall with Low Power Mode confirmed off refutes it — one clean
 A/B closes it either way, no third run needed. If it still reads `True`,
 stay on the sweep — do not repeat a same-recipe reachability soak with no
-new measurement axis (iron rule 8). As of s1899 it still reads `True`
+new measurement axis (iron rule 8). As of s1900 it still reads `True`
 (unchanged since s1892).
 
 Also check the sweep's 15-title REVISIT gate: `grep -n '^## Session '
@@ -53,8 +62,8 @@ PORTING-STATE.md | tail -15`. If all 15 titles belong to the sweep
 (contain "synchronized" or "confirmed ... symbol"), this iteration is a
 REVISIT instead of another census — spend it re-attempting the external
 retail-entry boundary or M4 accumulator-origin threads with a genuinely
-new angle. As of s1899 this gate does NOT fire (s1888-s1892 are still in
-the 15-window, 5 of 15 slots non-sweep — window drops s1884 this time (a
+new angle. As of s1900 this gate does NOT fire (s1888-s1892 are still in
+the 15-window, 5 of 15 slots non-sweep — window drops s1885 this time (a
 sweep entry), not a reachability one, so the non-sweep count is unchanged
 at 5). The window won't start shrinking the non-sweep block until the
 sweep passes s1903 (when s1888 falls out of the trailing 15) — check again
@@ -67,7 +76,7 @@ next iteration regardless.
 - The `ROGUESQ_SKIP_HANGAR_PROBE` A/B (s1890) — closed, refuted.
 - A same-recipe `s790_postsec2_reachability.sh` run with no new measurement
   axis while Low Power Mode is still ON and unchanged since s1892 — that's
-  now 14 confirmations of the 7.2-7.4s stall; a 15th adds nothing.
+  now 15 confirmations of the 7.2-7.4s stall; a 16th adds nothing.
 - Ask (b) from s1891 (disposable clone + `git submodule update` bisect at
   `ef7a0fb9`) is still open and still legitimately human-only per CLAUDE.md's
   hard rule — do not attempt a workaround.
