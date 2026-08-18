@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1914 (2026-08-17).
+detail. Reviewed through s1915 (2026-08-17).
 
 ## Current state
 
@@ -145,35 +145,35 @@ detail. Reviewed through s1914 (2026-08-17).
    This still blocks the entire soak family and item 3 below until
    reachability itself is restored or explained. Productive work until then
    is item 2.
-2. Resume the generated-symbol sweep at leftover `func_800F5A30`
-   (`0x800F5A30`, TOML size `0x304` matches generated
-   `initActorAsType4` `rom_size 0x304`). Already
-   confirmed via the full four-step procedure (s1906–s1914):
-   `funcs_41.c:12993,14424` adjacency, `funcs.h:2166-2167` order,
-   `recomp_overlays.inl:1895` offset `0x00050900 = 0x0005025C +
-   0x6A4` / `rom_size 0x304`, zero-hit non-collision grep.
+2. Resume the generated-symbol sweep at leftover `func_800F5D34`
+   (`0x800F5D34`, TOML size `0xC20` matches generated
+   `buildSineWaveEffectGeometryA` `rom_size 0xC20`). Already
+   confirmed via the full four-step procedure (s1906–s1915):
+   `funcs_41.c:14424,15028` adjacency, `funcs.h:2167-2168` order,
+   `recomp_overlays.inl:1896` offset `0x00050C04 = 0x00050900 +
+   0x304` / `rom_size 0xC20`, zero-hit non-collision grep.
    Companion `mission_overlay.txt` already names
-   `initActorAsType4 = 0x800F5A30`. Generated body
-   stack `-0x30`, `sb $v0, 0x112($s1)` with `$v0=4`, then if
-   assetName+0x0 non-null `jal 0x80047B48`
-   (`getLevelDatItemByName`), `s2=actor+0x50`. Next
-   iteration can rename directly (TOML metadata-only; sizes
-   already agree, no bump). After that: `func_800F5D34` lines
-   up with `buildSineWaveEffectGeometryA` (`funcs_41.c:14424,15028`,
-   `funcs.h:2167-2168`, `.inl:1896` offset `0x00050C04 =
-   0x00050900 + 0x304` / `rom_size 0xC20`, zero-hit
-   `func_800F5D34`). After that: `func_800F6954` lines up
-   with `buildSineWaveEffectGeometryB` (`funcs_41.c:15028,17961`,
+   `buildSineWaveEffectGeometryA = 0x800F5D34`. Generated body
+   stack `-0x60`, `s1=$a0`, `s2=$a1`, `s0=$a3`, `f24=$a2`,
+   reads `+0x8($s0)`. Next iteration can rename directly
+   (TOML metadata-only; sizes already agree, no bump). After
+   that: `func_800F6954` lines up with
+   `buildSineWaveEffectGeometryB` (`funcs_41.c:15028,17961`,
    `funcs.h:2168-2169`, `.inl:1897` offset `0x00051824 =
    0x00050C04 + 0xC20` / `rom_size 0x7DC`, zero-hit
-   `func_800F6954`). Note
+   `func_800F6954`). After that: `func_800F7130` lines up
+   with `renderNpcAnchoredProceduralEffect`
+   (`funcs_41.c:17961,19845` / `funcs_42.c:35` file-boundary
+   next, `funcs.h:2169-2170`, `.inl:1898` offset `0x00052000 =
+   0x00051824 + 0x7DC` / `rom_size 0xB44`, zero-hit
+   `func_800F7130`). Note
    (s1897): the generated tree (`funcs_41.c`, `funcs.h`,
    `recomp_overlays.inl`) is gitignored and absent from
    this repo's `build/`; it currently lives at
    `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
    — look there first. Archive: `PROJECT-OVERVIEW.md` §33–§35. About
    1,548 placeholder `func_0x...` names remained at s1487; TOML leftover
-   `func_800*` count is 985 after s1914.
+   `func_800*` count is 984 after s1915.
 3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
    s1888 attempt was blocked upstream by item 1, not by a bad input
    schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
@@ -240,11 +240,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1914 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1915 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
-the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F538C` became
+the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F5A30` became
+`initActorAsType4` (`0x800F5A30`, `0x304`) after leftover
+`func_800F538C` became
 `executeActorType3Effect` (`0x800F538C`, `0x6A4`) after leftover
 `func_800F4E74` became
 `executeActorType2Effect` (`0x800F4E74`, `0x518`) after leftover
