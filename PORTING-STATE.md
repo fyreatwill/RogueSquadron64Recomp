@@ -91045,3 +91045,118 @@ further VI message
 `[synth-exit]` +
 `[vi-cb-after]` (not in this
 binary).
+
+## Session 1932 (2026-08-17) — last logged VI-cb iteration completes; entry-2 split still open
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: land `[synth-exit]`
+on `musyxSynthFrame`'s return
+and `[vi-cb-after]` just before
+`goto L_800198E8`, one Debug
+rebuild, one s1931-shaped 180s
+soak. After `menu-entry` siten=2:
+no matching `synth-exit` →
+H-synth-never-returned;
+`synth-exit` and no `vi-cb-after`
+→ H-stuck-later-slot; both fire
+and `[vi-cb-loop]` stays frozen
+→ H-recv-starved.
+
+Landed both sites in
+`N64Recomp/fixup_game_funcs.py`
+and the live `funcs_24.c` /
+`funcs_4.c` (same
+`ROGUESQ_LOG_AUDIOTICK_TRACE`
+gate and `n<40||n%128==0`
+stride as `[synth-entry]` /
+`[vi-cb-loop]`). Rebuilt Debug.
+
+First run
+`scratch/agent/soak_results/s1932_synth_exit_after_slots_20260817-225637/run.log`
+(probe_rc=4, ~22s): catalogued
+`fillSampleStreamRange+336`
+SIGBUS last-guest-pc=`0x8000b650`.
+No `menu-entry` siten=2.
+UNEVALUABLE for the split.
+New sites fired (`synth-exit`
+n=0..1024, `vi-cb-after`
+n=0..896).
+
+Second run
+`scratch/agent/soak_results/s1932_synth_exit_after_slots_20260817-225807/run.log`
+(probe_rc=5, 182s, last width
+640, 0 crash): the **#6-dead**
+flavor, not the s1931 `#7/#8`
+/ entry-2 spin. Same-run
+positive control otherwise
+passed: tick-entry/jal/exit
+2/2/2; `took_swap=1` twice;
+`slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`[synth-exit]` n=0,1,2 and
+`[vi-cb-after]` n=0,1,2 (sites
+not missed). Only
+`menu-entry`/`menu-spin`
+siten=1. `osViSetMode` ends at
+`#6` (`initVideoSubsystem`
+`0x80128DA0`). Zero `#7/#8`,
+zero width=1024.
+`update_screen` ends `#10816`
+origin `0x0062BD00`.
+
+Last logged tuple (all on
+stride 1024):
+
+- `[synth-entry]` n=1024 L255844
+- `[synth-exit]` n=1024 L255870
+- `[vi-cb-loop]` n=1024 L275325
+- `[vi-cb-slot]` n=4096 L275326
+  `ptr=0x80003250`
+- `[vi-cb-after]` n=1024 L275376
+
+Then 144 `slot-sb`
+`musyxRenderVoiceSamples`
+(n=9834..9977, 9×16-voice
+passes) ending L275774, then
+mix silence while
+`update_screen` `#1216→#10816`
+(151 more `[vi]` rows).
+
+This refutes
+H-synth-never-returned for
+the last logged synth
+(n=1024 has a matching
+`synth-exit`) and refutes
+H-stuck-later-slot for the
+last logged walk
+(`vi-cb-after` n=1024
+fired). The entry-2
+three-way split is
+**UNEVALUABLE** this run —
+the next discriminator is
+the same two sites on the
+`#7/#8` / entry-2 flavor.
+Wrong stall flavor, and the
+n=1025..1151 stride window
+is silent so a hang on the
+*next* unlogged iteration
+cannot be split from
+H-recv-starved. Do not treat
+the #6-dead last-logged
+completion as the s1931
+entry-2 answer.
+
+Next discriminator is
+unchanged and now live in
+the binary: the same two
+sites on the `#7/#8` /
+`menu-entry` siten=2 flavor
+(s1931 last synth n=2560 is
+on-stride, so that flavor
+does not have this silent
+window at the cut). Enqueued
+`scratch/agent/soak_queue/s1932_entry2_synth_exit.sh`.
+Do not rebuild. Do not
+change the stride. Do not
+re-run a reachability-only
+`s790`.

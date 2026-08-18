@@ -1,82 +1,64 @@
-# NEXT work unit (s1932) — synth-exit vs after-slots after entry 2
+# NEXT work unit (s1933) — consume entry-2 soak
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1931 selected H-viretrace-blocked:
-`[vi-cb-loop]` n=2432 and
-`[synth-entry]` n=2560 freeze
-at the `.ovl.menu` DMA +
-`menu-entry` siten=2;
-`menu-spin` climbs; host
-`update_screen` `#2880→#10816`.
-H-cb-unhooked and
-H-synth-early-return are
-closed. Why the handler stops
-after that last synth entry
-is three hypotheses. The
-existing s310 sites cannot
-split them (no synth-exit,
-no after-slots probe).
+s1932 landed `[synth-exit]` and
+`[vi-cb-after]` (live in the
+binary; same AUDIOTICK_TRACE
+stride as `[synth-entry]` /
+`[vi-cb-loop]`). Same-run
+control passed (both fire from
+n=0). The 180s inline run was
+the **#6-dead** flavor (no
+`#7/#8`, no `menu-entry`
+siten=2): last logged n=1024
+on entry/exit/loop/after
+completed, so H-synth-never-returned
+and H-stuck-later-slot are
+REFUTED for that logged
+iteration. That is **not** the
+s1931 entry-2 answer.
 
-Do **not** re-run s1931's
-existing-instrument recipe.
-Do **not** re-run a
-reachability-only `s790`.
-No force-zero.
+Do **not** rebuild.
+Do **not** change the stride.
+Do **not** re-run s1932's
+#6-dead log as if it were
+entry 2. No force-zero.
 
-## Work unit — two new sites, one build, one 180s soak
+## Work unit — consume the queued soak
 
-Land both in `fixup_game_funcs.py`
-(they die at the next regen
-otherwise), then one cmake
-Debug rebuild, then one
-s1931-shaped 180s run.
+Read the new
+`scratch/agent/SOAK-RESULTS.md`
+line for
+`s1932_entry2_synth_exit`
+(enqueued this session; loop
+runs it between iterations).
+Log:
+`scratch/agent/soak_results/s1932_entry2_synth_exit_*/run.log`.
 
-1. `[synth-exit]` in
-   `musyxSynthFrame`
-   (`RecompiledFuncs/funcs_24.c`
-   ~5649, the function's
-   `return;`). Same
-   `ROGUESQ_LOG_AUDIOTICK_TRACE`
-   gate and `n<40||n%128==0`
-   stride as `[synth-entry]`.
-   Log `n=` from the same
-   counter if possible, else a
-   sibling `s_synthexit_n`.
-2. `[vi-cb-after]` in
-   `viRetraceHandlerThread`
-   immediately before
-   `goto L_800198E8`
-   (`funcs_4.c` ~34870, after
-   the 4-slot walk). Same env
-   gate, `n<40||n%128==0`.
-
-Copy
-`scratch/agent/soak_queue/done/s1931_viretrace_during_spin_20260817-224233.sh`
-(same env, including
-`ROGUESQ_LOG_AUDIOTICK_TRACE=1`
-and `ROGUESQ_LOG_VI_CALLERS=1`).
-Do not enqueue until the new
-tags exist in the live `.c`.
-Crash-family (no entry 2) =
-UNEVALUABLE — enqueue, do not
-babysit.
+If the queue line is missing,
+the soak did not run — enqueue
+is already in
+`scratch/agent/soak_queue/`
+or `done/`; do not babysit a
+repeat.
 
 Same-run positive control:
-`site=tick-entry` / `tick-jal` /
-`tick-exit` 2/2/2 with
-`took_swap=1` twice;
-`slot-alloc` ends at
-`0x8018D4A0 count=16`;
-`menu-entry` siten=2 AND
-`menu-spin` climbs;
-`[vi-cb-loop]` n last > 0
-**and** `[synth-exit]` n last
-> 0 **before** entry 2 (if
-`synth-exit` is 0 the new
-site missed); `[vi-cb-after]`
-n last > 0 before entry 2
-(same).
+
+- `site=tick-entry` / `tick-jal` /
+  `tick-exit` 2/2/2 with
+  `took_swap=1` twice
+- `slot-alloc` ends
+  `0x8018D4A0 count=16`
+- `menu-entry` siten=2 AND
+  `menu-spin` climbs
+- `[vi-cb-loop]` n last > 0
+  **and** `[synth-exit]` n last
+  > 0 **before** entry 2 (if
+  `synth-exit` is 0 the site
+  missed)
+- `[vi-cb-after]` n last > 0
+  before entry 2 (same)
 
 Then, after `menu-entry`
 siten=2:
@@ -90,17 +72,18 @@ siten=2:
   does not increment past the
   last pre-spin value →
   H-stuck-later-slot
-  (returned from synth, never
-  finished the 4-slot walk)
 - `[synth-exit]` AND
   `[vi-cb-after]` both fire
   for that iteration AND
   `[vi-cb-loop]` stays frozen
   while `update_screen`
   climbs → H-recv-starved
-  (back at `osRecvMesg`
-  `0x80114388`, no further
-  VI message)
+
+Crash-family (no entry 2) =
+UNEVALUABLE — enqueue, do not
+babysit. #6-dead (no `#7/#8`,
+no entry 2) = UNEVALUABLE for
+this split — same, enqueue.
 
 Join key is log order: first
 `menu-entry` siten=2 vs last
@@ -117,6 +100,10 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- Last-logged n=1024 completion
+  on the #6-dead flavor (s1932)
+  — closed for that flavor;
+  not the entry-2 answer.
 - VI-cb during the spin (s1931)
   — closed (H-viretrace-blocked).
 - Mix-alive vs mix-dead vs

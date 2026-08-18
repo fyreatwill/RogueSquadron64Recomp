@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1931 (2026-08-17).
+detail. Reviewed through s1932 (2026-08-17).
 
 ## Current state
 
@@ -365,6 +365,35 @@ detail. Reviewed through s1931 (2026-08-17).
   last logged walk is
   `wakeSerialThreadOnSi`
   `0x80003250`.
+  **s1932**: landed
+  `[synth-exit]` /
+  `[vi-cb-after]` (same
+  AUDIOTICK_TRACE stride).
+  Same-run control: both
+  fire from n=0. First run
+  was catalogued
+  `fillSampleStreamRange`
+  SIGBUS (UNEVALUABLE).
+  Second was the 180s
+  **#6-dead** flavor (no
+  `#7/#8`, no `menu-entry`
+  siten=2, `#10816` origin
+  `0x0062BD00`). Last logged
+  n=1024 on entry/exit/loop/
+  after — that iteration
+  completed.
+  **H-synth-never-returned
+  and H-stuck-later-slot
+  REFUTED for last logged
+  n.** 144 `slot-sb` after
+  `after` n=1024 then mix
+  death. Entry-2 three-way
+  split still UNEVALUABLE
+  (wrong flavor; silent
+  n=1025..1151 window).
+  Sites are live; queued
+  the `#7/#8` / entry-2
+  flavor hunt.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -420,50 +449,43 @@ detail. Reviewed through s1931 (2026-08-17).
 
 1. **VI-retrace handler stops
    at menu-entry 2 (s1931).
-   The mixer dies because
-   `viRetraceHandlerThread`
-   stops iterating, not because
-   synth was unhooked or
-   returns early.** On the 180s
-   `#7/#8` staller, `[vi-cb-loop]`
-   n=2432 / `[synth-entry]`
-   n=2560 freeze at the
-   `.ovl.menu` DMA +
-   `menu-entry` siten=2;
-   `menu-spin` then climbs past
-   9e8 while host
-   `update_screen` goes
-   `#2880→#10816`. Next axis
-   needs two new sites in one
-   fixup / one build (not in
-   this binary): `[synth-exit]`
-   on `musyxSynthFrame`'s
-   return (`funcs_24.c` ~5649)
-   and `[vi-cb-after]` on
-   `viRetraceHandlerThread`
-   just before `goto L_800198E8`
-   (`funcs_4.c` ~34870). After
-   entry 2: no `synth-exit` for
-   n=2560 → H-synth-never-returned;
+   `[synth-exit]` /
+   `[vi-cb-after]` are live
+   (s1932).** Consume the
+   queued
+   `s1932_entry2_synth_exit`
+   soak — do not rebuild, do
+   not change the stride.
+   After `menu-entry` siten=2
+   on a `#7/#8` staller: no
+   `synth-exit` for the last
+   logged `[synth-entry]`
+   (s1931 n=2560 is
+   on-stride) →
+   H-synth-never-returned;
    `synth-exit` and no
    `vi-cb-after` →
-   H-stuck-later-slot;
-   both fire and loop stays
-   frozen → H-recv-starved
-   (completed the iteration,
-   blocked on `osRecvMesg`
-   `0x80114388`). Crash family
-   (no entry 2) is UNEVALUABLE.
-   Ask (b) remains human-only.
-   Do not re-run a
-   reachability-only `s790`.
-   Do not re-run s1931's
-   existing-instrument recipe.
-   Do not force-zero a slot
-   byte or the gate without an
-   `ORIGIN:`. Still blocks
-   item 3 (hangar/512) until a
-   port run publishes `[phase]
+   H-stuck-later-slot; both
+   fire and `[vi-cb-loop]`
+   stays frozen →
+   H-recv-starved. Crash
+   family (no entry 2) and
+   the #6-dead flavor (s1932
+   180s: last logged n=1024
+   completed, no `#7/#8`)
+   are UNEVALUABLE for this
+   split — enqueue, do not
+   babysit, do not re-read
+   them as the entry-2
+   answer. Ask (b) remains
+   human-only. Do not re-run
+   a reachability-only
+   `s790`. Do not force-zero
+   a slot byte or the gate
+   without an `ORIGIN:`.
+   Still blocks item 3
+   (hangar/512) until a port
+   run publishes `[phase]
    vi_width=512 origin=0x006AB400`
    (or `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
@@ -628,6 +650,12 @@ at the same overlay/entry-2
 cut; last synth n=2560 still
 ran (45 `slot-sb`) and the
 loop never reached n=2560.
+Treating the s1932 180s
+#6-dead last-logged n=1024
+completion as the entry-2
+answer is not licensed —
+wrong flavor, and the next
+127 stride slots are silent.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -940,6 +968,12 @@ H-viretrace-blocked
 at entry 2; `update_screen`
 `#2880→#10816`; H-cb-unhooked /
 H-synth-early-return REFUTED)
+and s1932 refutes
+H-synth-never-returned and
+H-stuck-later-slot for the
+last logged n=1024 on the
+#6-dead 180s flavor (entry-2
+split still UNEVALUABLE)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs
 failed across 4 crash/stall signatures, H1-flake refuted) —
