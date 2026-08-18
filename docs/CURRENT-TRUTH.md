@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1887 (2026-08-17).
+detail. Reviewed through s1888 (2026-08-17).
 
 ## Current state
 
@@ -11,9 +11,14 @@ detail. Reviewed through s1887 (2026-08-17).
 - Product multi-header freelist restore is ON. Garbage-CIMG and wrap-drop
   mitigations are OFF. Future mitigations need an `ORIGIN:` naming the writer
   and assessing legitimacy.
-- Phase-gated port captures reach VI 1024 with independent emit/raw/dispatch/match
-  controls. Late E9 identity is established; remaining deltas are
-  boundary/span-shaped and unclassified.
+- Phase-gated port captures reached VI 1024 with independent emit/raw/dispatch/match
+  controls repeatedly through s844 (2026-08-13). Late E9 identity is established; remaining
+  deltas are boundary/span-shaped and unclassified. **s1888 (2026-08-17): 5/5 fresh runs,
+  including one byte-for-byte unmodified `s790_postsec2_reachability.sh`, failed to reach
+  VI 1024 at all** — the passive attract sequence now stalls at 640 `0x00696100`
+  indefinitely (confirmed to 340s wait), and 2/5 runs additionally hit a new native crash
+  in `RT64::NativeTarget::copyToRAM` before that stall. Cause undiagnosed. Do not trust
+  "reaches VI 1024" as a given for any recipe until this is re-verified.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -67,26 +72,37 @@ detail. Reviewed through s1887 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800F2AC4`
+1. **New, s1888: re-establish VI-1024 reachability before anything downstream
+   of it.** 5/5 fresh runs today failed to reach VI width 1024 at all,
+   including an unmodified re-run of `s790_postsec2_reachability.sh` (ADVANCED
+   repeatedly through s844, 2026-08-13). The attract sequence now stalls at
+   640 `0x00696100` (confirmed stuck to 340s, not a timing shift); 2/5 runs
+   also hit a new native crash in `RT64::NativeTarget::copyToRAM` before that
+   stall. Cause undiagnosed — no `lib/` or source changes were made this
+   session, so this is not this session's own artifact. Next step: bisect
+   (does a build from before s844's era still reach 1024 on this machine?) or
+   re-run the identical recipe a few more times to rule out flake before
+   assuming a real regression. This blocks the entire
+   `s790_postsec2_reachability` soak family and item 3 below.
+2. Resume the generated-symbol sweep at leftover `func_800F2AC4`
    (`0x800F2AC4`, size `0xC4`). Preliminary peek: the generated body
    immediately after `clearObjectFlagBit4` in `funcs_41.c` is already
    `RECOMP_FUNC void computeAnchorRelativePositionByDistanceRatio` —
    confirm this is the true occupant (not a stray substring match)
-   and check companion/`funcs.h`/INL agreement before renaming. After
-   s1887 the last-15 titles still include s1872's hangar/512 revisit,
-   so the sweep REVISIT gate does not fire. Archive:
+   and check companion/`funcs.h`/INL agreement before renaming. Archive:
    `PROJECT-OVERVIEW.md` §33–§35. About 1,548 placeholder
    `func_0x...` names remained at s1487.
-2. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872). The
-   hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
+3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
+   s1888 attempt was blocked upstream by item 1, not by a bad input
+   schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
    plus `rs64_is_hangar_vi`). Re-open only when a port run logs
-   `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`).
-   Do not treat 640 or attract 512 as hangar. Do not re-walk
-   VMADH/VGE, `0xD60` shape, or the ovl20 consumer table.
-3. Keep audio closed unless a new independent lead reaches audio initialization
+   `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`) — which
+   first requires item 1 fixed. Do not treat 640 or attract 512 as hangar.
+   Do not re-walk VMADH/VGE, `0xD60` shape, or the ovl20 consumer table.
+4. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
-4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
-5. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`; batch
+5. Revisit M3 only as a complete idiom-class audit with a named discriminator.
+6. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`; batch
    arms; phase-gate; SIGKILL; queue soaks.
 
 ## Durable boundaries
@@ -339,6 +355,9 @@ and leftover `func_800F287C` became
 and leftover `func_800F2888` became
 `initActorMotionParams` (`0x800F2888`, `0x100`)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
+and s1888 found VI-1024 reachability itself regressed (5/5 runs
+failed, including an unmodified historically-reliable script) —
+UNEVALUABLE for hangar/512 for a new, upstream reason
 (§35). s1728 is maintenance only.
 
 ## Method and safety rules

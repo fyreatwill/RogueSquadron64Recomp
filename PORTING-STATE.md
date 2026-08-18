@@ -87755,3 +87755,82 @@ substring match) and check the companion/`funcs.h`/INL agree before
 renaming. Last-15 titles after s1887 still include s1872's hangar/512
 revisit, so the next iteration remains a leftover census, not a
 mandatory REVISIT.
+
+## Session 1888 (2026-08-17) — VI 1024 reachability itself has regressed; hangar/512 stays UNEVALUABLE for a new reason
+
+Mandatory 15-title REVISIT (HYPOTHESIS-ID: m4-accumulator-boundary-revisit).
+`grep -n '^## Session ' PORTING-STATE.md | tail -15` after s1887 returns
+s1873–s1887, all sweep ("synchronized … symbol"); s1872's hangar/512 entry
+is the 16th-from-last, outside the window. s1887's own "next work unit" note
+claiming s1872 was still inside the last-15 window was an off-by-one error —
+the gate had in fact fired. Step 0 `wc -c` was 19002; not maintenance. Soak
+queue empty (SOAK-RESULTS.md tail unchanged since s1029, 2026-08-14).
+
+### New angle (not `s1872`'s LLE walk)
+
+s1872's four arms used an undocumented "boot Starts" input mechanism and
+never published a hangar-origin mark. Cross-referencing older history
+(session 65, 2026-07-26) showed the port previously reached VI width 512 /
+origin `0x006AB400` routinely via the standard menu-navigation schedule
+(title → SELECT GAME → war room/SELECT LEVEL → **AVAILABLE CRAFT**, the
+screen at that origin — i.e. "AVAILABLE CRAFT" already *is* the hangar-origin
+screen), using `tools/probe.sh`'s proven phase-gated real key-injection
+mechanism with the standard `PROBE_KEYS='3:start 7:start 11:start 15:a
+100:start 130:start 160:a 190:start 220:a 250:start'` schedule under
+`ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1` (the
+`s790_postsec2_reachability` family's config, ADVANCED repeatedly through
+s844 on 2026-08-13). `src/main/rt64_render_context.cpp:302-306` confirms
+hangar-origin DLs auto-switch to LLE at runtime regardless of `LLE_FORCE`,
+so the plan was: run that exact proven schedule with
+`ROGUESQ_M4_Y8000_WIDTH=512` armed and see whether the hangar-gated
+`rs64_m4_y8000_*` counters (parked at UNEVALUABLE since s1872) finally fire.
+This combination — proven navigation schedule plus the hangar-gated M4
+counters — had never been run.
+
+### What happened instead
+
+Five runs, one game at a time, SIGKILL, all today:
+
+| Run | Config | Result |
+|---|---|---|
+| 1 | No LLE forcing, `ROGUESQ_M4_Y8000_WIDTH=512`, proven key schedule, `PROBE_PHASE_TIMEOUT=180` | Stuck at width 640 origin `0x00696100` from 9.1s; width 1024 never reached (exit 5) |
+| 2 | `LLE_FORCE=1 LLE_UNGATED=1 LLE_SOLO=1` + M4 gate + proven key schedule, timeout 180 | Native host crash before 1024: `RT64::NativeTarget::copyToRAM` inside `State::fullSync`/`Framebuffer::copyNativeToRAM`, `last-guest-pc=0x80001f88`, `pc-symbol` is a nearest-symbol misattribution (`__isPlatformOrVariantPlatformVersionAtLeast.cold.4+2288219460`) |
+| 3 | Identical to run 2 | Same crash, same call stack — reproduces 2/2 |
+| 4 (verbatim) | Unmodified `scratch/agent/s790_postsec2_reachability.sh`, the exact script ADVANCED through s844 | Stuck at width 640 origin `0x00696100` from 7.2s; width 1024 never reached in 180s (exit 5). `[host-start]` shows `btn=0x0000` throughout — expected, since `PROBE_KEYS_FROM_PHASE=1` never releases keys because the 1024 phase-wait never exits, not a key-delivery failure |
+| 5 | `LLE_FORCE=1 LLE_UNGATED=1 LLE_SOLO=1`, no keys, `PROBE_PHASE_TIMEOUT=340` (positive-control-style: rule out "just needs more wall-clock time" before calling it stuck) | Same stall, confirmed to 340s (nearly 2x the historical ~80s reach time) — not a timing shift, genuinely does not progress |
+
+Logs: `scratch/agent/s1888_m4_hangar_via_availcraft/run1/`,
+`.../run2/`, `.../run3/`, `.../run4_longwost/` (misnamed at capture time,
+contains the 340s long-wait run), and the verbatim run's own
+`scratch/agent/soak_results/s790_postsec2_reachability_20260817-173130/`.
+No stray/zombie game processes were contending (`ps aux` clean before each
+run) and `lib/N64ModernRuntime`/`lib/rt64` carry only the project's standing
+uncommitted patch set (unchanged from every prior session, not a stray
+in-progress edit) — ruling out the two boring explanations checked.
+
+### Outcome
+
+**UNEVALUABLE** for the hangar/512 H-* table, same as s1872, but for a
+different and more foundational reason: it is not merely that hangar-origin
+was never reached, it is that **VI width 1024 itself — reached reliably at
+~79.5-79.8s in every `s790_postsec2_reachability` soak from s815 through s844
+(2026-08-13) — did not reach it at all in 5/5 runs today**, including one
+byte-for-byte unmodified run of the script that used to succeed. The passive
+320→640(`0x0066A500`)→640(`0x00696100`) attract sequence now stalls at the
+second 640 origin indefinitely; two of five runs additionally hit a
+previously-uncatalogued native crash in `RT64::NativeTarget::copyToRAM`
+before reaching that stall. This blocks not just hangar/512 but the entire
+`s790_postsec2_reachability` soak family and everything downstream of VI
+1024 in the current soak queue design.
+
+This is an observation, not a diagnosed mechanism (iron rule: mechanism or
+it isn't done) — the cause (build drift, `lib/` patch state, machine-specific
+timing, or genuine nondeterminism) is not established. No `lib/` edits were
+made this session (only `scratch/agent/` and doc changes), so this is not an
+artifact of this session's own changes. ORIGIN: no mitigation, guard, skip,
+or restore was added or considered — this session only observed and did not
+touch runtime code.
+
+Do not re-run the hangar/512 H-* table until VI-1024 reachability itself is
+re-established. Do not re-walk VMADH/VGE, the `0xD60` shape, or the ovl20
+consumer table (still closed per s1824/s1840/s1856).
