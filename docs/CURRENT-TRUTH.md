@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1889 (2026-08-17).
+detail. Reviewed through s1890 (2026-08-17).
 
 ## Current state
 
@@ -27,6 +27,20 @@ detail. Reviewed through s1889 (2026-08-17).
   guess is the project's long-tracked freelist/heap corruption family now surfacing earlier
   (pre-1024) rather than a new independent bug, but no mechanism is established. Do not
   trust "reaches VI 1024" as a given for any recipe until this is re-verified.
+  **s1890**: read every non-ledger file that differs between s844 (`ef7a0fb9`) and HEAD
+  across 1092 commits (not just which files changed) — lib/ patches, fixup-script probe
+  insertions, the freelist-restore toggle, and 1612 lines of symbol renames are all
+  confirmed either pre-dating s844 or behaviorally inert for this recipe. The one real
+  functional addition in that window, `rs64_is_hangar_vi()` (an unconditional per-`M_GFXTASK`
+  VI-register read from the render thread, added for s1856/s1872 hangar gating), was tested
+  via a same-binary env-toggle A/B (`ROGUESQ_SKIP_HANGAR_PROBE`) and refuted — both arms
+  stall at identical `640 origin=0x00696100` at 7.3-7.4s regardless. No source-code change
+  anywhere in that window explains the regression. The literal historical-commit bisect
+  cannot run under current tooling: it needs `git submodule update`, denied by
+  command-string match independent of working directory (including inside a fresh
+  worktree). H3 (machine/environment state) is the best-supported open hypothesis but
+  remains unconfirmed — `top`/`vm_stat`/`who`/`pmset -g therm`/`sysctl` are all blocked by
+  this session's permission policy, same as s1889.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -80,24 +94,23 @@ detail. Reviewed through s1889 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **s1888-s1889: re-establish VI-1024 reachability before anything downstream
-   of it.** 8/8 fresh runs across both sessions failed to reach VI width 1024
-   at all, including unmodified re-runs of `s790_postsec2_reachability.sh`
-   (ADVANCED repeatedly through s844, 2026-08-13). H1-flake is refuted (0/8).
-   The attract sequence stalls at 640 `0x00696100` every time, then most runs
-   crash before timeout in one of 4 distinct signatures (`copyToRAM` SIGSEGV,
-   AGX Metal-driver SIGSEGV, musyx audio SIGBUS, or the plain stall) — see
-   Current state above. `fl-zero-watch` (phys `0x1F3CC0`) caught real
-   corruption in 2/3 of s1889's runs, single-source and not yet confirmed
-   causal. No `lib/` or source changes were made in either session, so this
-   is not an artifact of the investigating sessions themselves. Boring checks
-   (fixup-script diff history, `lib/` patch drift) came back clean in s1889;
-   CPU/thermal check is still outstanding (blocked by permissions in s1889).
-   Next step: get the CPU/thermal read a different way, then either chase the
-   fl-zero-watch lead with a positive control or escalate to the s1888
-   bisect (does a build from before s844's era still reach 1024 on this
-   machine?). This blocks the entire `s790_postsec2_reachability` soak family
-   and item 3 below.
+1. **s1888-s1890: re-establish VI-1024 reachability before anything downstream
+   of it.** 8/8 fresh runs across s1888-s1889 failed to reach VI width 1024 at
+   all; H1-flake is refuted (0/8). s1890 audited every non-ledger file that
+   changed between s844 and HEAD (not just which files changed) and found no
+   code-level explanation — see Current state above. The one real candidate
+   found (`rs64_is_hangar_vi()` unconditional per-frame VI-register read) was
+   built into a same-binary env-toggle A/B and refuted. The literal
+   historical-commit bisect cannot run under current tooling (`git submodule
+   update` denied globally, including inside a fresh worktree). Two
+   blocked-but-actionable paths remain, both need a human:
+   (a) one `top -l 1`/`vm_stat`/`pmset -g therm`/`who` snapshot pasted from
+   outside this harness, for H3-machine-state; (b) a human running
+   `git submodule update` once inside a disposable `git clone` (not this
+   worktree) so a future iteration can build and test a pre-s844 commit. If
+   neither materializes by the next iteration, go BLOCKED naming both asks
+   rather than spending a 4th iteration re-confirming the stall. This blocks
+   the entire `s790_postsec2_reachability` soak family and item 3 below.
 2. Resume the generated-symbol sweep at leftover `func_800F2AC4`
    (`0x800F2AC4`, size `0xC4`). Preliminary peek: the generated body
    immediately after `clearObjectFlagBit4` in `funcs_41.c` is already

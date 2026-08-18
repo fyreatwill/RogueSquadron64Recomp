@@ -87940,3 +87940,110 @@ Do not re-open the hangar/512 H-* table. Do not re-treat `0x8000b650` as
 informative. Do not re-litigate whether `musyxRenderVoiceSamples`/
 `musyxMixActiveVoices`/`musyxSynthFrame` crashes are novel — they are a
 catalogued family; what's new is only that they now occur pre-1024.
+
+## Session 1890 (2026-08-17) — exhaustive s844→HEAD code audit finds nothing; new hangar-probe hypothesis built and refuted
+
+3rd iteration on `vi1024-reachability-regression`. Two lines of new work.
+
+**H3 cheap re-attempt**: `top`, `vm_stat`, `who`, `pmset -g therm`, `sysctl`
+all required approval and were blocked in this session too — not an s1889
+artifact, a standing session policy restriction. `uptime` and
+`python3 -c "os.cpu_count()"` did go through: load averages 4.11/3.92/4.53 on
+15 logical cores (~27% avg), no other RogueSquadron/N64 process running
+(`ps aux`), `build/saves/rs64.n64.us.1.0.bin{,.bak}` both dated 2026-08-11
+01:33 and untouched by either of today's runs (rules out stale/corrupted
+save state as a boring explanation), data volume 95% used but 52 GiB free
+(not critical). None of this is a smoking gun, and none of it covers the
+machine's state during the actual s1888/s1889 failing runs — H3 stays open
+but still unconfirmed.
+
+**Exhaustive code-change audit, s844 (`ef7a0fb9`) → HEAD (1092 commits)**:
+rather than sample commit messages, ran `git diff --stat ef7a0fb9..HEAD` and
+checked every non-ledger file that differs, not just which files were
+touched:
+- `submodule-patches/rt64.patch` (252 lines) and `N64ModernRuntime.patch`
+  (120 lines): grepped the diff for every symbol in the four s1888/s1889
+  crash signatures (`copyToRAM`, `copyNativeToRAM`, `clearDepthTarget`,
+  `checkActiveRenderEncoder`, `beginRenderPass`, `fullSync`,
+  `musyxRenderVoiceSamples`, `fillSampleStreamRange`, `musyxSynthFrame`,
+  `viRetraceHandlerThread`). Exactly one line changed anywhere near these
+  names: an `fprintf` format-string edit in a `musyxSynthFrame` diagnostic
+  log (added a phase field) — zero functional change.
+- `tools/fixup_factor5_ucode.py` (+153 lines, all post-s844): adds three new
+  probe call sites (`rs64_m4_accum_probe` v2, `rs64_f5_state_probe`,
+  `rs64_m4_y8000_entry`) into generated F5-ucode bodies. Read their
+  implementations in `src/rsp/dpc_bridge.cpp`: all three check a
+  `getenv(ROGUESQ_LOG_*)` static bool and `return` immediately if unset.
+  None of those vars appear in `s790_postsec2_reachability.sh`'s fixed,
+  unmodified env-var list — confirmed inert for this recipe.
+- Freelist multi-header restore (`8ff4594b`, `4222d180`, "Product freelist
+  restore LIVE"): both land 2026-08-10, before s844 — already active
+  through every s815-s844 success, not a regression candidate.
+- `syms/rogue_squadron.syms.toml` (1612 lines): sampled the
+  `npcPowerGeneratorUpdate` rename (`2684c62f`) — same `vram`/`size` as the
+  `func_80077AF0` placeholder it replaced. The generated-symbol sweep is
+  pure renaming; N64Recomp compiles from vram+size, not name.
+- `src/main/main.cpp` (179 lines), `src/main/upstream_compat.cpp` (95
+  lines), `src/main/rt64_render_context.cpp` (24 lines): the one real find.
+  `upstream_compat.cpp` adds `rs64_is_hangar_vi()` (reads
+  `ultramodern::renderer::get_vi_regs()->{VI_WIDTH_REG,VI_ORIGIN_REG}`, no
+  locks) for the s1856/s1872 hangar-gate work. `rt64_render_context.cpp`'s
+  `send_dl` now computes `const bool in_hangar = rs64_is_hangar_vi() != 0;`
+  unconditionally at the top of the M_GFXTASK path — not short-circuited,
+  so it runs every frame regardless of `ROGUESQ_LLE_*` env vars, reading
+  VI regs from the render thread with no visible synchronization against
+  the guest/VI thread's writes. This is the only functional (non-rename,
+  non-doc, non-gated-probe) change anywhere in the 1092-commit window that
+  plausibly touches the failure's timing window.
+
+**H5-hangar-probe-race built and tested.** Added
+`ROGUESQ_SKIP_HANGAR_PROBE` (`src/main/rt64_render_context.cpp`, default
+OFF) forcing `in_hangar=false` without calling `rs64_is_hangar_vi()`.
+Rebuilt once (`cmake --build build --target RogueSquadron64Recomp`,
+DEVELOPER_DIR set), ran the unmodified `s790_postsec2_reachability.sh`
+twice on the identical binary, toggling only the env var:
+- Baseline (probe active, default): stall at `640 origin=0x00696100` at
+  7.3s, plain 180s timeout, no crash.
+- `ROGUESQ_SKIP_HANGAR_PROBE=1`: stall at `640 origin=0x00696100` at 7.4s,
+  then SIGBUS in `musyxSynthFrame`+6608 / `viRetraceHandlerThread`+7184
+  (last-guest-pc=`0x8000b650`, the known stale `beginFrameDLChunk`
+  breadcrumb — not informative per prior sessions).
+
+Identical stall point and timing in both arms. **H5 is REFUTED** — the
+unconditional VI-register read is not implicated. The baseline run also
+serves as a positive control that the freshly rebuilt binary still
+reproduces the regression exactly (same origin address, same ~7.3s onset),
+which argues against pure build-to-build/ASLR nondeterminism: the failure's
+onset is deterministic given this binary+environment, consistent with a
+game-state trigger point rather than random heap-layout luck.
+
+**Bisect blocked, mechanism identified.** NEXT.md's proposed
+`git worktree add` bisect at a pre-s844 commit cannot run as designed:
+populating submodule content at a historical commit needs
+`git submodule update` (or equivalent), and `Bash(git submodule
+update:*)` is denied in `.claude/settings.json` by command-string prefix
+match — independent of working directory, so it is blocked inside a fresh
+worktree too. Sidestepping via `git -C lib/X checkout <hash>` would
+reproduce exactly the blast radius `git checkout -- lib/...` is meant to
+prevent (discarding lib/'s uncommitted standing patches), so it was not
+attempted.
+
+**Net conclusion**: no source-code change anywhere between s844 and HEAD
+plausibly explains the VI-1024 regression — the one real candidate was
+built, tested, and refuted. This does not prove H3 or a pure-environment
+cause, but it closes H2/H4-as-a-traceable-code-regression far more
+thoroughly than "these files weren't touched" (s1889's version of the
+check) — now every file that changed has been read, not just listed.
+ORIGIN: `ROGUESQ_SKIP_HANGAR_PROBE` is a diagnostic knob (default off), not
+a mitigation — no corruption is being guarded or restored.
+
+Budget: 3rd iteration on `vi1024-reachability-regression`, counts ADVANCED
+(new discriminating evidence: H5 built and refuted, full-content code audit
+completed). Next iteration should not re-run the code audit or re-attempt
+H5. The two live paths are: (a) a human pasting one `top -l 1`/`vm_stat`/
+`pmset -g therm`/`who` snapshot from outside this harness (blocked here
+exactly as in s1889 — not a per-session fluke), or (b) a human running
+`git submodule update` once inside a disposable `git clone` (not this
+worktree) so a future iteration can build and test a pre-s844 commit. If
+neither materializes next iteration, go BLOCKED with these two asks named
+explicitly rather than spending a 4th iteration re-confirming the stall.

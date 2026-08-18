@@ -299,7 +299,17 @@ public:
                 fflush(stderr);
             }
         }
-        const bool in_hangar = rs64_is_hangar_vi() != 0;
+        // s1890: rs64_is_hangar_vi() reads shared VI regs from the render
+        // thread every M_GFXTASK, unconditionally, since the s1856/s1872
+        // hangar-gate work (post-s844). ROGUESQ_SKIP_HANGAR_PROBE=1 disables
+        // that read to test whether it is implicated in the s1888/s1889
+        // VI-1024 reachability regression.
+        static int s_skip_hangar_probe = -1;
+        if (s_skip_hangar_probe < 0) {
+            const char* v = std::getenv("ROGUESQ_SKIP_HANGAR_PROBE");
+            s_skip_hangar_probe = (v && *v && v[0] != '0') ? 1 : 0;
+        }
+        const bool in_hangar = s_skip_hangar_probe ? false : (rs64_is_hangar_vi() != 0);
         // Hangar LLE does not require LLE_FORCE. Attribution LLE never
         // leaves VI 640 (s1856, s1872), so the hangar census uses HLE
         // through the frontend and switches to LLE-solo only at hangar
