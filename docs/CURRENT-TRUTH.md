@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1922 (2026-08-17).
+detail. Reviewed through s1923 (2026-08-17).
 
 ## Current state
 
@@ -135,6 +135,21 @@ detail. Reviewed through s1922 (2026-08-17).
   `mainGameLoop` `0x8003E29C` / `0x8003E360`,
   `initSceneForMission` `0x800A9C70`,
   `menuOverlayInit` `0x800C5A18`.
+  **s1923**: `[avf-gate]` caller table on those four
+  sites (`s1923_tick_caller_20260817-210700`,
+  probe_rc=5, `#10816`, `#7/#8` applyPending, no
+  crash, no `#9/#10`). Same-run control: tick-entry
+  / jal / exit 2/2/2; `took_swap=1` at loop `n=2`
+  and `n=3`. Tick 1 = `menu-jal` siten=1 at `#128`;
+  tick 2 = `mission-jal` siten=1 at `#384`.
+  `mgl-entry` siten=1 at `#4` then frozen; zero
+  `mgl-jal-*`. After tick 2, `#7/#8` then
+  `menu-entry` siten=2 at `#2880` with no
+  `menu-jal`. **H-caller-mixed SELECTED.**
+  H-caller-init / H-mgl-skip / H-mgl-dead REFUTED.
+  `menuOverlayInit` `0x800C5A18` is behind the
+  `L_800C5930` `anyAudioSlotActive` spin
+  (single-source CFG).
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -188,30 +203,28 @@ detail. Reviewed through s1922 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **`runVideoFrameTick` returns twice; no caller jals
-   it a third time (s1922 H-tick-not-called).** s1919
+1. **The two ticks are boot inits; `menuOverlayInit`
+   entry 2 never jals (s1923 H-caller-mixed).** s1919
    named s844 `#10` as `initVideoSubsystem` via
-   `0x80018378`. s1920 selected H-advance-dead. s1921
-   selected H-not-called (`advanceVideoFrame` entryn=2
-   / exitn=2). s1922's same-run control (tick-entry /
-   tick-jal / tick-exit on both calls; `took_swap=1`
-   at loop `n=2` and `n=3`) then tickn=2 / jaln=2 /
-   exitn=2 SELECTS H-tick-not-called and REFUTES
-   H-tick-stuck-post-jal and H-tick-stuck-pre-jal.
-   This run is the early `#6`-dead / no-`#7/#8`
-   subtype (same as s1920/s1921), then musyx SIGBUS
-   at ~`#1024`; the 180s `#7/#8` subtype is not
-   re-measured here. Next axis: which of the four
-   `jal 0x80001354` sites made those two ticks, and
-   does that caller return / get re-entered?
-   `mainGameLoop` `0x8003E29C` (flag-set overlay-0
-   branch) / `0x8003E360` (clear branch after
-   `0x800BF358`), `initSceneForMission` `0x800A9C70`,
-   `menuOverlayInit` `0x800C5A18`. Ask (b) remains
-   human-only. Do not re-run
-   `s790_postsec2_reachability.sh` as a reachability
-   re-confirm. Still blocks item 3 (hangar/512) until a
-   port run publishes
+   `0x80018378`. s1920–s1922 selected H-advance-dead
+   / H-not-called / H-tick-not-called. s1923's
+   same-run control (tick-entry/jal/exit 2/2/2;
+   `took_swap=1` at loop `n=2` and `n=3`) then the
+   caller table SELECTS H-caller-mixed: tick 1 =
+   `menuOverlayInit` `0x800C5A18`, tick 2 =
+   `initSceneForMission` `0x800A9C70`. `mainGameLoop`
+   entered once (`mgl-entry=1` at `#4`) and never
+   took `0x8003E29C` / `0x8003E360`. After tick 2
+   the 180s `#7/#8` subtype fires
+   `applyPendingViChanges`, then `menu-entry` siten=2
+   at `#2880` with no `menu-jal`. The jal sits after
+   `L_800C5930` (`anyAudioSlotActive` spin). Next
+   axis: on entry 2, is that spin live, is the
+   function stuck earlier, or does it return before
+   the jal? Ask (b) remains human-only. Do not
+   re-run `s790_postsec2_reachability.sh` as a
+   reachability re-confirm. Still blocks item 3
+   (hangar/512) until a port run publishes
    `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
@@ -312,6 +325,11 @@ stall as inside `runVideoFrameTick` after the second
 `advanceVideoFrame` return (stuck in the post-jal
 tail, or a 3rd tick dying before the jal) is
 superseded by s1922 — tick-entry/jal/exit are all 2.
+Treating the two ticks as possibly
+`mainGameLoop`'s own jals (or as unknown parents
+of a once-entered `mainGameLoop`) is superseded by
+s1923 — tick 1 is `menuOverlayInit`, tick 2 is
+`initSceneForMission`; `mgl-jal-*` never fire.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -334,7 +352,11 @@ table-walk / `$s0!=byte` REFUTED) and s1921 selecting
 H-not-called (`advanceVideoFrame` entryn=2 exitn=2; the
 caller never jals a third time) and s1922 selecting
 H-tick-not-called (`runVideoFrameTick` tickn=2 jaln=2
-exitn=2; both ticks returned; no 3rd entry) and leftover `func_800F6954` became
+exitn=2; both ticks returned; no 3rd entry) and
+s1923 selecting H-caller-mixed (tick 1
+`menuOverlayInit`, tick 2 `initSceneForMission`;
+`mgl-jal-*=0`; `menu-entry` siten=2 after `#8`
+with no jal) and leftover `func_800F6954` became
 `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
 `func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover

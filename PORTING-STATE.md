@@ -90269,3 +90269,69 @@ Static `jal 0x80001354` sites:
 No mitigation. Next: which of those four sites issued
 the two ticks, and does that caller return / get
 re-entered. Ask (b) remains human-only.
+
+## Session 1923 (2026-08-17) — selected H-caller-mixed: menu then mission issued the two ticks
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit:
+which of the four `jal 0x80001354` sites issued the two
+`runVideoFrameTick` calls, and does that caller return
+or get re-entered?
+
+Hoisted s1922 `avf_tick_*` counters to file-scope in
+`funcs_0.c` and added `[avf-gate]`
+`site=mgl-entry` / `mgl-jal-a` / `mgl-jal-b` /
+`mission-entry` / `mission-jal` / `menu-entry` /
+`menu-jal` (`N64Recomp/fixup_game_funcs.py` + the four
+generated files). Same tag and
+`ROGUESQ_LOG_VI_CALLERS` gate. Fields: `tickn`,
+`jaln`, `siten`. Did not reuse
+`[maingameloop-entry]` / `ROGUESQ_LOG_MAINGAMELOOP_REACH`.
+
+One s790-shaped 180s run
+(`scratch/agent/s1923_tick_caller.sh`,
+`scratch/agent/soak_results/s1923_tick_caller_20260817-210700/run.log`):
+probe_rc=5, last width 640, `update_screen #10816`,
+0 crash, 0 `width=1024`. This is the 180s `#7/#8`
+subtype (s1919 B / 173130 / 180331): `#7/#8`
+`applyPendingViChanges` at `#2816`/`#2880`, no
+`#9/#10`. Late origin `0x0062BD00`.
+
+Same-run positive control: `site=tick-entry` /
+`tick-jal` / `tick-exit` fired 2/2/2;
+`took_swap=1` at loop `n=2` (`#2+#3`) and `n=3`
+(`#5+#6`).
+
+Caller table (in log order):
+
+- `mgl-entry` siten=1 at `update_screen #4` (tickn=0).
+  Zero `mgl-jal-a` / `mgl-jal-b`. `mgl-entry` never
+  climbed.
+- Tick 1 (`#128`, ~3.0s): `menu-entry` siten=1 then
+  `menu-jal` siten=1 → `#2+#3`.
+- Tick 2 (`#384`, ~7.4s): `mission-entry` siten=1
+  then `mission-jal` siten=1 → `#5+#6`. Both ticks
+  returned.
+- After tick 2, `#7/#8` at `#2816`/`#2880`, then
+  `menu-entry` siten=2 (tickn=2 jaln=2). No
+  `menu-jal` on that second entry. No further ticks
+  through `#10816`.
+
+This selects H-caller-mixed: the two ticks are the
+two boot inits (`menuOverlayInit` then
+`initSceneForMission`); `mainGameLoop` started once
+and never took either jal.
+This refutes H-caller-init (`mgl-entry=0`).
+This refutes H-mgl-skip and H-mgl-dead (both
+required `mgl-jal-*` as the tick parents).
+`mgl-entry` frozen at 1 answers the leftover
+"does it keep climbing?" — no.
+
+Static read of `menuOverlayInit`: the jal at
+`0x800C5A18` sits after `L_800C5930`, a
+`anyAudioSlotActive` spin (`beq $v0, $zero,
+L_800C5930`). Entry 2 not reaching `menu-jal` is
+therefore either that spin or an earlier stall
+(`zmemcpy` / `tickMusyXIfActive`). Single-source
+CFG; next unit is the runtime split.
+
+No mitigation. Ask (b) remains human-only.
