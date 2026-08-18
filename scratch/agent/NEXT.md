@@ -1,12 +1,10 @@
-# NEXT work unit (s1961) — leftover rename `func_800F9918`
+# NEXT work unit (s1962) — leftover rename `func_800F99C8`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1960 was an unblock iteration (grok balance exhaustion; refuted as a
-loop-stopper, loop continues under RUNNER=claude — see PORTING-STATE.md
-s1960 and scratch/agent/UNBLOCK.md). No porting work changed. s1959
-synchronized `setType2ActorVelocity` (`0x800F98CC`). No new soak to
-consume.
+s1961 renamed `func_800F9918` → `initActorAsType3`
+(`0x800F9918`, metadata-only TOML edit, no build/regen). No
+new soak since s1950; already folded into CURRENT-TRUTH.
 
 M5 closed. M3 only as idiom-class. Hangar/512 Y=0x8000 is not
 live on the first hangar window. Sweep leftover is the next
@@ -14,14 +12,23 @@ bounded unit (strategic priority 4).
 
 ## Work unit — TOML metadata-only rename
 
-`func_800F9918` → `initActorAsType3`
-(TOML `0xB0` already matches generated `rom_size 0xB0`).
-Four-step already complete (s1959 preview). Rename directly.
-
-After that, parked for a later sweep session:
 `func_800F99C8` → `setType3ActorParams`
-Generated tree:
-`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
+(TOML `0x4C` already matches generated `rom_size 0x4C`).
+Four-step already complete (s1961 preview):
+1. `funcs_42.c:6169` (`setType3ActorParams`) is the next
+   `RECOMP_FUNC` after `initActorAsType3`.
+2. `funcs.h:2181-2182` declares them in that order.
+3. `recomp_overlays.inl:1909`: offset `0x00054898` =
+   `0x000547E8 + 0xB0`; `rom_size = 0x0000004C` matches TOML.
+4. Companion `rogue_squadron64/symbol_files/mission_overlay.txt:760`
+   already names `setType3ActorParams = 0x800F99C8` with a
+   full field-layout comment.
+
+Before renaming: re-run the non-collision grep
+(`RECOMP_FUNC void func_800F99C8` across
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`)
+and a caller check, same as every prior sweep session, then
+edit `syms/rogue_squadron.syms.toml:2022` directly.
 
 Do **not** rebuild the game for a metadata-only rename unless
 the rename touches a generated `.c` that the Debug target

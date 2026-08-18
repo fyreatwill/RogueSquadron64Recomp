@@ -93644,3 +93644,65 @@ queued work unit (`func_800F9918` → `initActorAsType3`, preview already
 done in s1959) — it has no grok dependency and remains the next unit.
 Deleted `scratch/agent/BLOCKED.md`; see `scratch/agent/UNBLOCK.md` for
 the full route-taken writeup.
+
+## Session 1961 (2026-08-18) — synchronized the initActorAsType3 symbol
+
+`HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+
+CURRENT-TRUTH is 14049 bytes — under the 60 KB maintenance
+trigger. M5 closed; M3 parked. 15-title REVISIT gate: last 15
+headings are s1946–s1960 (title-SI / hangar / s1948
+maintenance / eight leftover remaps / s1960 unblock) — not all
+sweep-titled, so this iteration resumes the leftover rename.
+
+No new soak since s1950; already folded into CURRENT-TRUTH.
+
+Renamed leftover `func_800F9918` (`0x800F9918`, TOML size
+`0xB0`, `syms/rogue_squadron.syms.toml:2021`) to
+`initActorAsType3`. Four-step already complete in the s1959
+preview; re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_42.c:6046` (`initActorAsType3`) then `:6169`
+   (`setType3ActorParams`) are adjacent `RECOMP_FUNC` lines;
+   the generated tree already carries the target name (this
+   sweep documents already-correct generated code in the
+   TOML, it does not rename generated code).
+2. `funcs.h:2180-2181` declares `initActorAsType3` then
+   `setType3ActorParams` in that order.
+3. `recomp_overlays.inl:1908-1909`: offset `0x000547E8` =
+   previous `0x0005479C + 0xB0`; `rom_size = 0x000000B0`
+   matches the TOML `size = 0xB0`. Next overlay
+   `setType3ActorParams` is `0x00054898` =
+   `0x000547E8 + 0xB0`. Generated body starts `addiu $sp,
+   $sp, -0x30` at `0x800F9918`; `jr $ra` /  delay-slot
+   `addiu $sp, $sp, 0x30` end the function; next starts at
+   `0x800F99C8` (`0x800F9918 + 0xB0`).
+4. `grep` of `RECOMP_FUNC void func_800F9918` across the
+   generated tree: zero hits — non-collision (already
+   renamed in generated code). One caller already
+   `initActorAsType3(rdram, ctx)` (`funcs_39.c:25828`).
+
+Companion `rogue_squadron64/symbol_files/mission_overlay.txt`
+does not carry `initActorAsType3` but does already name
+`setType3ActorParams = 0x800F99C8` (the next leftover). No
+existing TOML entry already used `initActorAsType3`. Sizes
+already agreed — no bump. Metadata-only TOML rename; no
+build/regen.
+
+Post-rename leftover `func_800*` count is 971 (was 972). Zero
+leftover `func_800F9918` remains in repo sources outside the
+ledger.
+
+Previewed the next leftover: `func_800F99C8` (TOML size
+`0x4C`, toml:2022) lines up with `recomp_overlays.inl:1909`
+(`setType3ActorParams`, offset `0x00054898` =
+`0x000547E8 + 0xB0`, `rom_size = 0x0000004C`) — adjacency
+(`funcs_42.c:6169` then next `RECOMP_FUNC`), declaration
+order (`funcs.h:2181-2182`), and companion symbol file
+already naming `setType3ActorParams = 0x800F99C8` with a
+full field-layout comment (5-float type-3 extended-state
+setter). Next sweep iteration can rename directly after a
+non-collision grep and caller check.
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
+hangar SIGBUS. Did not rebuild.

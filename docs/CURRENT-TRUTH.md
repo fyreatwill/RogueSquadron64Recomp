@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1960 (2026-08-18).
+detail. Reviewed through s1961 (2026-08-18).
 
 ## Current state
 
@@ -114,16 +114,15 @@ can be worked, so they stay ordered by blast-radius (visual artifacts and a
 known SIGBUS family below the mechanical rename, audio/M3 re-audits last
 since both are explicitly closed pending new leads).
 
-1. Generated-symbol sweep leftover `func_800F9918` (`0x800F9918`,
-   TOML size `0xB0` matches generated `initActorAsType3`
-   `rom_size 0xB0`). Four-step already complete (s1959 preview).
+1. Generated-symbol sweep leftover `func_800F99C8` (`0x800F99C8`,
+   TOML size `0x4C` matches generated `setType3ActorParams`
+   `rom_size 0x4C`). Four-step already complete (s1961 preview).
    Next sweep iteration can rename directly (TOML metadata-only).
-   After that: `func_800F99C8` → `setType3ActorParams`.
    Generated tree lives at
    `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`.
    Archive: `PROJECT-OVERVIEW.md` §33–§36. About 1,548 placeholder
    `func_0x...` names remained at s1487; TOML leftover `func_800*`
-   count is 972 after s1959. s1918 was the mandatory 15-title
+   count is 971 after s1961. s1918 was the mandatory 15-title
    REVISIT (do not treat a later session as another REVISIT just
    because the window once contained only sweep titles).
 2. Hangar visual artifacts on the first live hangar frame (geometry
