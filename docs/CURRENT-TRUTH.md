@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1929 (2026-08-17).
+detail. Reviewed through s1930 (2026-08-17).
 
 ## Current state
 
@@ -293,9 +293,41 @@ detail. Reviewed through s1929 (2026-08-17).
   (unsigned `MEM_BU` of a KSEG0
   address; fixed in the fixup for
   the next soak). 180s
-  mix-during-spin is still open:
-  this crash died before
-  `menu-entry` siten=2.
+  mix-during-spin was still open
+  (this crash died before
+  `menu-entry` siten=2).
+  **s1930**: same instrument on
+  the queued 180s `#7/#8`
+  staller
+  `s1930_mix_during_spin_20260817-223106`
+  (probe_rc=5, 0 crash, `#10816`,
+  origin `0x0062BD00`, no
+  width=1024). Same-run control:
+  tick 2/2/2; `took_swap=1`
+  twice; `slot-alloc` x3 ending
+  `0x8018D4A0/16`; `cursor` n
+  last=16198; `menu-entry`
+  siten=2 at L378108;
+  `menu-spin` siten=972000000.
+  After entry 2: `cursor` /
+  `render-end` / `attack-jal`
+  after = 0 (last mix line is
+  `slot-sb` n=32442 at L378105,
+  then `[overlay] start-match`
+  section 3 `.ovl.menu`
+  `rom=0x0010C2D0`, then entry
+  2). Last
+  `[audtask-dispatch]` n=2304
+  at L374756 while host
+  `update_screen` still climbed
+  `#2752→#10816`.
+  **H-mix-dead-during-spin
+  SELECTED.** H-song-loop-forever
+  / H-pos-freeze-during-spin
+  REFUTED. Static: entry 2
+  `tickMusyXIfActive` once then
+  `anyAudioSlotActive`-only
+  spin.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -349,36 +381,41 @@ detail. Reviewed through s1929 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **Mix compare is healthy in the
-   27s window; the 180s 15/16
-   `0x02` freeze is now
-   mix-alive vs mix-dead vs
-   song-loop (s1929).**
-   `L_80090150` `cur` is a sane
-   sample-end; `pos` advances;
-   the 8 crosses are real ends.
-   Post-end re-attack is only
-   `tickAllAudioChannels`
-   `0x8008CE7C` (`startStreamed
-   SampleVoice` never jals). Next
-   axis, one existing instrument
-   on a 180s `#7/#8` staller:
-   after `menu-entry` siten=2,
-   does `site=cursor` `n` keep
-   climbing? Climbing + new ends
-   + new tick attacks →
-   H-song-loop-forever; climbing
-   + no more ends →
-   H-pos-freeze-during-spin;
-   frozen `n` while `menu-spin`
-   climbs → H-mix-dead-during-spin.
-   Crash-family runs (no entry 2)
-   are UNEVALUABLE for this axis.
-   Ask (b) remains human-only. Do
-   not re-run a reachability-only
-   `s790`. Do not force-zero a
-   slot byte or the gate without
-   an `ORIGIN:`. Still blocks
+1. **Mix dies at menu-entry 2
+   (s1930). The 15/16 `0x02`
+   freeze is a dead mixer, not a
+   stuck cursor or a song loop.**
+   On the 180s `#7/#8` staller,
+   `cursor` n=16198 /
+   `render-end` n=27 /
+   `attack-jal` n=605 all freeze
+   at the `.ovl.menu` DMA +
+   `menu-entry` siten=2;
+   `menu-spin` then climbs past
+   9e8. Next axis, existing
+   `[vi-cb-loop]` /
+   `[vi-cb-slot]`
+   (`ROGUESQ_LOG_AUDIOTICK_TRACE`)
+   on the same 180s recipe:
+   after entry 2, does the
+   `viRetraceHandlerThread`
+   loop keep ticking and still
+   `jalr` `musyxSynthFrame`
+   (`0x8009123C`)? Loop frozen
+   while `update_screen` climbs
+   → H-viretrace-blocked; loop
+   climbing + synth ptr gone →
+   H-cb-unhooked; loop climbing
+   + synth still slotted +
+   cursor frozen →
+   H-synth-early-return. Crash
+   family (no entry 2) is
+   UNEVALUABLE. Ask (b) remains
+   human-only. Do not re-run a
+   reachability-only `s790`.
+   Do not force-zero a slot
+   byte or the gate without an
+   `ORIGIN:`. Still blocks
    item 3 (hangar/512) until a
    port run publishes `[phase]
    vi_width=512 origin=0x006AB400`
@@ -523,7 +560,17 @@ re-keying) is superseded by
 s1929 — `cur` sane, `pos`
 advances, 8/8 crosses match
 ends, 183/183 `attack-jal` are
-`caller=tick`.
+`caller=tick`. Treating the
+180s 15/16 `0x02` freeze as
+maybe a live mix with a stuck
+cursor, or as a song that
+re-attacks forever after entry
+2, is superseded by s1930 —
+`cursor` / `render-end` /
+`attack-jal` all freeze at the
+`.ovl.menu` DMA + `menu-entry`
+siten=2 while `menu-spin`
+climbs.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -820,6 +867,14 @@ and s1929 selected H-not-yet-ended
 ends; 183/183 `attack-jal`
 `caller=tick`; H-cursor-stuck /
 H-end-wild / H-stream-retrigger
+REFUTED)
+and s1930 selected
+H-mix-dead-during-spin (`cursor`
+n last=16198 then 0 after
+`menu-entry` siten=2;
+`menu-spin` siten=972000000;
+H-song-loop-forever /
+H-pos-freeze-during-spin
 REFUTED)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs

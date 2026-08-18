@@ -1,11 +1,12 @@
 #!/bin/zsh
-# Repeat of s1929_cursor_attack.sh: same instrument, hunt the 180s #7/#8
-# staller so mix-alive vs mix-dead vs song-loop can be read off cursor n
-# after menu-entry siten=2. Crash-family (no entry 2) is UNEVALUABLE.
+# Repeat of s1930_mix_during_spin.sh plus ROGUESQ_LOG_AUDIOTICK_TRACE so
+# [vi-cb-loop]/[vi-cb-slot] split H-viretrace-blocked vs H-cb-unhooked vs
+# H-synth-early-return after menu-entry siten=2. Crash-family (no entry 2)
+# is UNEVALUABLE.
 set -euo pipefail
 
 ROOT=/Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-OUT="$ROOT/scratch/agent/soak_results/s1930_mix_during_spin_$(date +%Y%m%d-%H%M%S)"
+OUT="$ROOT/scratch/agent/soak_results/s1931_viretrace_during_spin_$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUT"
 cd "$ROOT/build"
 
@@ -19,6 +20,7 @@ env \
   ROGUESQ_LOG_DL_SYNC=1 ROGUESQ_LOG_DL_SYNC2=1 \
   ROGUESQ_LOG_VI_ARGS=1 \
   ROGUESQ_LOG_VI_CALLERS=1 \
+  ROGUESQ_LOG_AUDIOTICK_TRACE=1 \
   ROGUESQ_LOG_FL_ZERO_WATCH=1 ROGUESQ_LOG_CIMG_RAW=1 \
   ROGUESQ_LOG_RS_MALLOC_DIAG=1 ROGUESQ_LOG_FS_SLOT=1 \
   PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \

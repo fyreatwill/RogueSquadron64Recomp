@@ -90844,3 +90844,89 @@ mix-alive vs mix-dead vs
 song-loop on a 180s `#7/#8`
 staller (queued
 `s1930_mix_during_spin.sh`).
+
+## Session 1930 (2026-08-17) — selected H-mix-dead-during-spin
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: after
+`menu-entry` siten=2 on a 180s
+`#7/#8` staller, does mix stay
+alive (cursor / `render-end` /
+`attack-jal`) or die?
+
+Consumed the already-queued soak
+`scratch/agent/soak_results/s1930_mix_during_spin_20260817-223106/run.log`
+(probe_rc=5, 182s, last width
+640, 0 crash). Did not re-run.
+
+Same-run positive control
+passed: tick-entry/jal/exit
+2/2/2; `took_swap=1` twice;
+`slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`cursor` n last=16198;
+`menu-entry` siten=2 at L378108
+AND `menu-spin` to siten=972000000.
+`#7/#8` are
+`applyPendingViChanges` (640);
+zero `osViSetMode width=1024`;
+`update_screen` ends `#10816`
+origin `0x0062BD00`.
+
+After `menu-entry` siten=2:
+
+- `cursor` after = 0 (last
+  n=16198 L377739, idx=13
+  `cur=0x20A7 pos=0x201E
+  step=0x92 cross=1`)
+- `render-end` after = 0 (last
+  n=27 L377740 idx=13)
+- `attack-jal` after = 0 (last
+  n=605 L373595 `caller=tick`
+  `old=0x00`)
+- last `slot-sb` L378105 n=32442
+  `musyxRenderVoiceSamples`
+  idx=15 `old=2 new=2`, then
+  `[overlay] start-match:
+  section 3 rom=0x0010C2D0`
+  (`.ovl.menu`) then entry 2
+- last `[audtask-dispatch]`
+  n=2304 `real_ucode=0` at
+  L374756 (next log would be
+  n=2432). Host
+  `update_screen` still climbed
+  `#2752→#10816`
+
+**H-mix-dead-during-spin
+SELECTED.** H-song-loop-forever
+REFUTED (no new ends / attacks).
+H-pos-freeze-during-spin
+REFUTED (`cursor` n does not
+keep climbing). The 15/16
+`0x02` freeze is mix stopping
+at the menu overlay load /
+entry 2, not a stuck cursor.
+
+Static second line:
+`menuOverlayInit` `L_800C5928`
+jals `tickMusyXIfActive` once,
+then `L_800C5930` spins on
+`anyAudioSlotActive` only
+(`beq $v0,$zero` back; no mix
+re-enter). Mix chain is
+`musyxRenderVoiceSamples` ←
+`musyxMixActiveVoices` ←
+`musyxSynthFrame` ← s327 pump
+in `waitForMusyXAudioTaskDone`
+← `musyxNoopStub` ←
+`runVideoFrameTick`, plus the
+historical `viRetraceHandlerThread`
+`jalr` at `0x80019B74`.
+
+No mitigation. Ask (b) remains
+human-only. Next axis: why the
+VI-retrace mix producer also
+dies at entry 2 (existing
+`[vi-cb-loop]` /
+`[vi-cb-slot]` under
+`ROGUESQ_LOG_AUDIOTICK_TRACE`).

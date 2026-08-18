@@ -1,64 +1,74 @@
-# NEXT work unit (s1930) — mix-alive during menu-entry 2
+# NEXT work unit (s1931) — VI-retrace mix producer after entry 2
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1929 selected H-not-yet-ended +
-H-tick-retrigger in the 27s mix
-window: `L_80090150` `cur` is a
-sane sample-end, `pos` advances,
-8/8 `cross=1` match `render-end`,
-and every `jal 0x8009231C` is
-`tickAllAudioChannels` (0 stream).
-The 180s 15/16 `0x02` freeze is
-now three hypotheses on one
-already-landed instrument.
+s1930 selected H-mix-dead-during-spin:
+`cursor` / `render-end` /
+`attack-jal` all freeze at the
+`.ovl.menu` DMA + `menu-entry`
+siten=2; `menu-spin` climbs.
+The 15/16 `0x02` freeze is a
+dead mixer. Why the producer
+dies is now three hypotheses
+on an already-landed
+instrument (`[vi-cb-loop]` /
+`[vi-cb-slot]`, s310).
 
-Do **not** re-run a reachability-only
-`s790`. Do **not** force-zero a slot
-byte. Rebuild first if this binary
-is older than the s1929 MEM_BU
-fix (only needed for `old=`; the
-mix-alive table does not use it).
+Do **not** re-run a
+reachability-only `s790`. Do
+**not** force-zero a slot byte.
+No rebuild: the s310 sites are
+already in the live `.c`.
 
-## Work unit — mix during the spin
+## Work unit — VI-cb during the spin
 
 Same `[avf-gate]` sites. Same
 `ROGUESQ_LOG_VI_CALLERS` gate.
-One s790-shaped 180s run
-(copy `s1929_cursor_attack.sh`).
+Add `ROGUESQ_LOG_AUDIOTICK_TRACE=1`
+so `[vi-cb-loop]` / `[vi-cb-slot]`
+fire. One s790-shaped 180s run
+(copy `s1930_mix_during_spin.sh`).
 A queued copy is
-`scratch/agent/soak_queue/s1930_mix_during_spin.sh`
+`scratch/agent/soak_queue/s1931_viretrace_during_spin.sh`
 — consume `SOAK-RESULTS.md` first;
 if that line is already a 180s
-`#7/#8` staller, do not re-run.
+`#7/#8` staller with `vi-cb-loop`
+rows, do not re-run.
 
 Same-run positive control:
 `site=tick-entry` / `tick-jal` /
 `tick-exit` 2/2/2 with
 `took_swap=1` twice; `slot-alloc`
 ends at `0x8018D4A0 count=16`;
-`site=cursor` logs (n last > 0);
+`site=cursor` n last > 0;
 `menu-entry` siten=2 AND
-`menu-spin` climbs. Crash-family
-(no entry 2) = UNEVALUABLE for
-this axis — enqueue, do not
-babysit.
+`menu-spin` climbs; `[vi-cb-loop]`
+n last > 0 **before** entry 2
+(the mark-everything control —
+if this is 0 the env was not
+armed). Crash-family (no entry
+2) = UNEVALUABLE — enqueue, do
+not babysit.
 
 Then, after `menu-entry` siten=2:
 
-- `cursor` n keeps climbing AND
-  new `render-end` / `attack-jal`
-  fire → H-song-loop-forever
-- `cursor` n keeps climbing AND
-  `cross=1` / `render-end` freeze
-  → H-pos-freeze-during-spin
-- `cursor` n frozen while
-  `menu-spin` siten climbs →
-  H-mix-dead-during-spin
+- `vi-cb-loop` n frozen while
+  `update_screen` climbs →
+  H-viretrace-blocked
+- `vi-cb-loop` n climbing AND
+  `vi-cb-slot` `ptr=` no longer
+  includes `0x8009123C`
+  (`musyxSynthFrame`) →
+  H-cb-unhooked
+- `vi-cb-loop` n climbing AND
+  synth still slotted AND
+  `cursor` n frozen →
+  H-synth-early-return
 
-Join key is wall-clock / log
-order: first `menu-entry` siten=2
-line vs last `site=cursor` n.
+Join key is log order: first
+`menu-entry` siten=2 vs last
+`[vi-cb-loop]` / `[vi-cb-slot]`
+and last `site=cursor`.
 
 ## Sweep leftover (parked, not this unit)
 
@@ -68,10 +78,12 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- Mix-alive vs mix-dead vs
+  song-loop after entry 2
+  (s1930) — closed
+  (H-mix-dead-during-spin).
 - Cursor rarity / which jal
-  re-attacks (s1929) — closed
-  (H-not-yet-ended +
-  H-tick-retrigger).
+  re-attacks (s1929) — closed.
 - Why playing-state never ends
   (s1928) — closed.
 - Who writes slot+0 = 0x02 (s1927)
