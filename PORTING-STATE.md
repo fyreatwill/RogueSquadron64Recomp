@@ -88613,3 +88613,68 @@ Next-15-title window after s1901 drops s1886 (a sweep entry) and keeps all
 of s1888-s1892 (still 5 of 15 slots non-sweep — unchanged); still not a
 REVISIT trigger. The window won't start dropping s1888-s1892 until the
 sweep passes s1903; check again next iteration.
+
+## Session 1902 (2026-08-17) — H3a-lowpower refuted: LPM-off still stalls at 640 origin=0x00696100
+
+Pre-start checks: `python3 scratch/agent/thermal_probe.py` now reads
+`lowPowerModeEnabled False` (was `True` on every check from s1892 through
+s1901). 15-title REVISIT gate does not fire (s1888-s1892 still in the
+window, 5 of 15 non-sweep). Per CURRENT-TRUTH item 1 / s1901 NEXT.md,
+stopped the sweep and ran the H3a-lowpower A/B: unmodified
+`scratch/agent/s790_postsec2_reachability.sh` with `vm_sampler.py` in the
+background and `thermal_probe.py` immediately before and after.
+
+Independent-variable control: Low Power Mode `False` immediately before
+launch (`scratch/agent/thermal_probe_s1902_pre.log`) and immediately after
+the crash (`scratch/agent/thermal_probe_s1902_post.log`); thermalState
+`0`/nominal both times.
+
+**Result, run 10 of 10 (s1888 2/5, s1889 3/3, s1892 1/1, s1902 1/1):**
+`[phase] vi_width=640 origin=0x00696100 at 6.8s` — same stall identity as
+every prior run (origin `0x00696100`; 6.8s is 0.4s earlier than the
+7.2-7.4s band but the marker is the `2→640` transition onto that origin,
+not the stopwatch). VI 1024 count = 0. Recipe rc=4, process gone while
+waiting for width 1024 (last width: 640). H1-flake stays refuted (0/10).
+
+Crash is a different member of the already-catalogued post-stall family,
+not a restored 1024 path: `Assertion failed: (height > 0), function
+findTileCopyId, file rt64_framebuffer_manager.cpp, line 907` then SIGABRT
+(signal 6) at wall-clock ~17s (dir `20260817-185603`, log mtime 18:56:20)
+in `RT64::FramebufferManager::findTileCopyId` ←
+`State::fullSyncFramebufferPairTiles` ← `State::fullSync`.
+`last-guest-pc=0x8000b650`. This is the s787 zero-height tile-copy
+assert, same `fullSync` neighborhood as s1888/s1889's `copyToRAM`
+SIGSEGV. It is not the s1892 musyx SIGBUS. Crash-signature variance after
+the same 640 stall was already the s1888-s1889 result (`copyToRAM` /
+AGX `clearDepthTarget` / musyx SIGBUS) under LPM-on, so a fourth
+fullSync-family death under LPM-off does not select LPM as the
+1024-stall cause.
+
+Positive controls that fired in the same run:
+- LPM-off: `False` pre and post
+- `[e9-prov] ... emit=1 ... raw=1 ... dispatch=1 ... match=1` (512
+  control-scope rows) — LLE path live
+- `[fl-zero-poll] event=arm` plus heartbeats at 5/10/15s with
+  `changes=0 to_zero=0 fault_n=0` — watcher live, no corruption write
+  this run (unlike 2/3 of s1889)
+
+Resource trace (`scratch/agent/vm_sample_s1902.log`): free pages
+3,782-16,177 through the crash window, load1 2.67-3.13 / 15 cores —
+same "no pressure" reading as s1892, at even lower load (s1892 was
+5.2-5.7). Resource-exhaustion H3 remains unsupported.
+
+Artifacts:
+- `scratch/agent/soak_results/s790_postsec2_reachability_20260817-185603/run.log`
+- `scratch/agent/vm_sample_s1902.log`
+- `scratch/agent/thermal_probe_s1902_pre.log`
+- `scratch/agent/thermal_probe_s1902_post.log`
+
+**H3a-lowpower REFUTED** as the cause of the VI-1024 reachability
+regression. Turning Low Power Mode off does not restore the 1024
+transition. Ask (b) from s1891 (disposable clone + `git submodule
+update` bisect at `ef7a0fb9`) remains the only still-open human ask
+and is still legitimately human-only. Do not re-run this recipe
+without a new measurement axis.
+
+Sweep next leftover `func_800F2FC0` → `setEffectIntensity` is still
+pre-confirmed from s1901; resume there next iteration.

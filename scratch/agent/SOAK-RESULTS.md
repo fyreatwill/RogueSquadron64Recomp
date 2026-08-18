@@ -480,3 +480,4 @@
 20260814-s1009 | slot_sp_guard ANALYZED | UNEVALUABLE | crashed at slotDispatcherIter+8592 after 57 frames; no ROGUESQ_LOG_SLOT_SP_GUARD record before crash, so the +872 caller remains unclassified
 20260814-041217 | s1028_slot_sp_guard | rc=3 | 297s | scratch/agent/soak_results/s1028_slot_sp_guard_20260814-041217.log
 20260814-042134 | s1029_slot_sp_guard_late_a | rc=0 | 441s | scratch/agent/soak_results/s1029_slot_sp_guard_late_a_20260814-042134.log
+20260817-s1902 | s790_postsec2_reachability ADVANCED | LPM-off A/B; 640 origin=0x00696100 @ 6.8s; 0x VI 1024; SIGABRT findTileCopyId height>0 @ ~17s last-guest-pc=0x8000b650; H3a-lowpower REFUTED. scratch/agent/soak_results/s790_postsec2_reachability_20260817-185603/run.log

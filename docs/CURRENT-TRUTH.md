@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1901 (2026-08-17).
+detail. Reviewed through s1902 (2026-08-17).
 
 ## Current state
 
@@ -63,8 +63,20 @@ detail. Reviewed through s1901 (2026-08-17).
   lives) that is not yet a causal result and needs an on/off comparison to become one.
   Writing this setting needs `pmset`, which is denied the same way as the read-only
   binaries were — unlike those, no non-`pmset` write path has been found yet, so testing
-  H3a-lowpower still needs one human action (toggle Low Power Mode off in System Settings >
-  Battery), but it is far smaller than the git-clone bisect ask.
+  H3a-lowpower needed one human action (toggle Low Power Mode off in System Settings >
+  Battery). **s1902**: that toggle happened. `thermal_probe.py` read
+  `lowPowerModeEnabled False` (thermalState still 0/nominal) immediately before and
+  after an unmodified `s790_postsec2_reachability.sh` re-run. Result: same stall
+  identity (`[phase] vi_width=640 origin=0x00696100 at 6.8s`; 0 VI-1024 hits), then
+  SIGABRT in `RT64::FramebufferManager::findTileCopyId` (`Assertion failed: (height > 0)`,
+  `rt64_framebuffer_manager.cpp:907`) at ~17s, `last-guest-pc=0x8000b650` — the
+  catalogued s787 zero-height tile-copy assert, same `fullSync` neighborhood as
+  s1888/s1889's `copyToRAM`. Crash-signature variance after this stall was already
+  established under LPM-on (copyToRAM / AGX `clearDepthTarget` / musyx SIGBUS), so a
+  fourth fullSync-family death does not select LPM as the 1024-stall cause.
+  **H3a-lowpower REFUTED.** Reachability is still 0/10. Resource trace again showed
+  no pressure (free 3.8k-16k pages, load1 2.67-3.13). Do not re-run this recipe
+  without a new measurement axis.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -118,28 +130,21 @@ detail. Reviewed through s1901 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **UNBLOCKED (s1892): re-establish VI-1024 reachability before anything
-   downstream of it.** 9/9 fresh runs across s1888-s1892 have now failed to
-   reach VI width 1024 at all; H1-flake is refuted (0/9). s1890 audited every
-   non-ledger file that changed between s844 and HEAD (not just which files
-   changed) and found no code-level explanation. The one real code candidate
-   found (`rs64_is_hangar_vi()` unconditional per-frame VI-register read) was
-   built into a same-binary env-toggle A/B and refuted. s1891 went BLOCKED
-   asking for (a) a human machine-state snapshot and (b) a disposable clone
-   for a literal pre-s844 bisect. **s1892 refuted ask (a)**: machine state
-   (load average, free-page count, thermal state, Low Power Mode) is readable
-   in-harness via Python `ctypes`/`os` calls — see Current state above for the
-   technique and `scratch/agent/vm_sampler.py` / `thermal_probe.py`. A
-   resource-correlated 9th run found no memory/CPU pressure signature around
-   the failure, but did find Low Power Mode ON (n=1, not yet causal —
-   H3a-lowpower). **Ask (b) is still open and still legitimately human-only**
-   (CLAUDE.md hard rule on `git submodule update`, not a workaround-able
-   permission quirk). Next step is either: a human toggles Low Power Mode off
-   and a future iteration re-runs the identical recipe for a direct H3a
-   comparison, or continue gathering resource-correlated runs, or a human
-   supplies the disposable clone for the literal bisect. This still blocks
-   the entire `s790_postsec2_reachability` soak family and item 3 below until
-   reachability itself is restored or explained.
+1. **VI-1024 reachability still failed (10/10); H3a-lowpower REFUTED (s1902).**
+   H1-flake is refuted (0/10). s1890 audited every non-ledger file that changed
+   between s844 and HEAD and found no code-level explanation; the hangar-probe
+   A/B was also refuted. s1892 refuted the "need a human for machine state"
+   ask and found Low Power Mode ON (n=1). **s1902 closed that lead:** LPM-off
+   still stalls at `640 origin=0x00696100` (6.8s) and never publishes VI 1024;
+   the subsequent `findTileCopyId` SIGABRT is another already-catalogued
+   post-stall `fullSync` death, not a restored 1024 path. Resource traces on
+   both LPM arms show no memory/CPU pressure. **Ask (b) is still open and
+   still legitimately human-only** (CLAUDE.md hard rule on
+   `git submodule update` for a disposable clone bisect at `ef7a0fb9`). Do
+   not re-run `s790_postsec2_reachability.sh` without a new measurement axis.
+   This still blocks the entire soak family and item 3 below until
+   reachability itself is restored or explained. Productive work until then
+   is item 2.
 2. Resume the generated-symbol sweep at leftover `func_800F2FC0`
    (`0x800F2FC0`, size `0xC`). Already confirmed via the full four-step
    procedure (s1901): `funcs_41.c` adjacency, `funcs.h:2154-2155` order,
@@ -221,11 +226,11 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1901 through s1888-s1892's VI-1024 reachability-regression
+s1648–s1902 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
-ask refuted with a Python `ctypes` technique, new n=1 H3a-lowpower lead
-found) and leftover `func_800F2FB4` became
+ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
+the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F2FB4` became
 `getEffectIntensity` (`0x800F2FB4`, `0xC`) after leftover
 `func_800F2F10` became
 `stepAndTickProgressChannel` (`0x800F2F10`, `0xA4`) after leftover
