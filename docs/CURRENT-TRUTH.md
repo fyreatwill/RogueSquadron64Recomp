@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1949 (2026-08-18).
+detail. Reviewed through s1950 (2026-08-18).
 
 ## Current state
 
@@ -46,8 +46,9 @@ detail. Reviewed through s1949 (2026-08-18).
   so idle-wait never drains. Hardware would preempt.
 - **First hangar window is short.** SIGBUS in `filterVoiceSampleBlock+220`
   (`last-guest-pc=0x8000834c`, the known `drainMeshReleaseQueue` return)
-  ~4s after hangar. Do not chase as a single crash; a repro soak is
-  queued (`s1950_hangar_yield_repro.sh`).
+  ~4s after hangar. s1950 reproduced: 512 at 24.8s, gone at 4.3s after
+  1 hangar frame, same symbol/`last-guest-pc`. Do not chase as a
+  single crash.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -106,24 +107,22 @@ detail. Reviewed through s1949 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-1. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
-   TOML size `0xB44` matches generated `renderNpcAnchoredProceduralEffect`
-   `rom_size 0xB44`). Four-step already complete (s1906–s1917). Next sweep
-   iteration can rename directly (TOML metadata-only). After that:
-   `func_800F7C74` → `spawnAndUpdateEffectActors`;
-   `func_800F8398` → `executeActorType4Effect`;
+1. Generated-symbol sweep leftover `func_800F7C74` (`0x800F7C74`,
+   TOML size `0x724` matches generated `spawnAndUpdateEffectActors`
+   `rom_size 0x724`). Four-step already complete (s1950 preview).
+   Next sweep iteration can rename directly (TOML metadata-only).
+   After that: `func_800F8398` → `executeActorType4Effect`;
    `func_800F9474` → `clearObjectField112`. Generated tree lives
    at `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`.
    Archive: `PROJECT-OVERVIEW.md` §33–§36. About 1,548 placeholder
    `func_0x...` names remained at s1487; TOML leftover `func_800*`
-   count is 982 after s1917. s1903–s1917 were all sweep-titled;
-   s1918 was the mandatory 15-title REVISIT (do not treat a later
-   session as another REVISIT just because the window once contained
-   only sweep titles).
+   count is 981 after s1950. s1918 was the mandatory 15-title
+   REVISIT (do not treat a later session as another REVISIT just
+   because the window once contained only sweep titles).
 2. Hangar visual artifacts on the first live hangar frame (geometry
    cracks, blue tris, hologram layering). New discriminator required;
-   do not treat them as the parked M4 Y=0x8000. Consume `s1950` soak
-   first if it lengthens the hangar window.
+   do not treat them as the parked M4 Y=0x8000. s1950 did not
+   lengthen the hangar window (still ~4s / 1 frame).
 3. Hangar SIGBUS `filterVoiceSampleBlock+220` / `0x8000834c` is a
    known family. Revisit only as a complete idiom-class audit.
 4. Keep audio closed unless a new independent lead reaches audio
@@ -205,10 +204,10 @@ s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 ## Evidence ledger summary
 
 Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
-s1880–s1917 leftover remaps and the s1888–s1949 VI-1024 / spin-yield /
-title-SI / hangar chain live in §36. s820–s1239 closed post-sec2 / M3 /
-audio / VI (dummy-video retail-entry later superseded by Rice). s1728
-and s1948 are maintenance only.
+s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
+title-SI / hangar chain, and the s1950 leftover remap live in §36.
+s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
+later superseded by Rice). s1728 and s1948 are maintenance only.
 
 ## Method and safety rules
 

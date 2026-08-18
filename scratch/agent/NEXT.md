@@ -1,12 +1,11 @@
-# NEXT work unit (s1950) — leftover rename `func_800F7130`
+# NEXT work unit (s1951) — leftover rename `func_800F7C74`
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-s1949 closed hangar-after-title-1024: `ROGUESQ_SPIN_YIELD=1` on
-both `L_800C5930` (`site=menuInit`) and `L_800B8050`
-(`site=menuInput`) publishes hangar `0x006AB400` at 26.1s.
-Yield stays default-off. Consume `s1950_hangar_yield_repro.sh`
-from SOAK-RESULTS at session start (fold like any run).
+s1950 synchronized `renderNpcAnchoredProceduralEffect`
+(`0x800F7130`). Consumed `s1950_hangar_yield_repro`: hangar
+512 at 24.8s, crash at 4.3s after 1 frame — same short
+window as s1949. Do not chase that SIGBUS.
 
 M5 closed. M3 only as idiom-class. Hangar/512 Y=0x8000 is not
 live on the first hangar window. Sweep leftover is the next
@@ -14,12 +13,11 @@ bounded unit (strategic priority 4).
 
 ## Work unit — TOML metadata-only rename
 
-`func_800F7130` → `renderNpcAnchoredProceduralEffect`
-(TOML `0xB44` already matches generated `rom_size 0xB44`).
-Four-step already complete (s1906–s1917). Rename directly.
+`func_800F7C74` → `spawnAndUpdateEffectActors`
+(TOML `0x724` already matches generated `rom_size 0x724`).
+Four-step already complete (s1950 preview). Rename directly.
 
 After that, parked for a later sweep session:
-`func_800F7C74` → `spawnAndUpdateEffectActors`
 `func_800F8398` → `executeActorType4Effect`
 `func_800F9474` → `clearObjectField112`
 
@@ -42,3 +40,4 @@ compiles. Do **not** default `ROGUESQ_SPIN_YIELD` on. Do
 - `requeue_vi=true` as the only arm.
 - Ask (b) from s1891 — still human-only.
 - Treating 640, attract 512, or title `0x00790400` as hangar.
+- Re-running `s1950_hangar_yield_repro` as a work unit.

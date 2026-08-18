@@ -3228,19 +3228,18 @@ stays 320" used dummy video; Rice supplies the later phase. s1135
 "retail never accesses `0x130B10:0x130B58`" superseded by s1528. s1698
 "Z on attract 512 stays 512 through 125.8 s" superseded by s1714.
 
-## 36. Sweep leftover s1880–s1917 and the VI-1024 spin-yield chain (s1888–s1949)
+## 36. Sweep leftover s1880–s1917 / s1950 and the VI-1024 spin-yield chain (s1888–s1949)
 
 Migrated from `CURRENT-TRUTH.md` during the s1948 maintenance pass.
 
-### Leftover remaps s1880–s1917
+### Leftover remaps s1880–s1917 and s1950
 
 Same four-step as §33–§35: companion mapping, generated body, adjacent
-boundaries, overlay span + size. TOML leftover `func_800*` count is 982
-after s1917. Next leftover is `func_800F7130` →
-`renderNpcAnchoredProceduralEffect` (four-step already complete; TOML
-metadata-only rename). Then `func_800F7C74` → `spawnAndUpdateEffectActors`,
-`func_800F8398` → `executeActorType4Effect`, `func_800F9474` →
-`clearObjectField112`.
+boundaries, overlay span + size. TOML leftover `func_800*` count is 981
+after s1950. Next leftover is `func_800F7C74` →
+`spawnAndUpdateEffectActors` (four-step already complete; TOML
+metadata-only rename). Then `func_800F8398` → `executeActorType4Effect`,
+`func_800F9474` → `clearObjectField112`.
 
 | Sessions | Durable result |
 |---|---|
@@ -3278,6 +3277,8 @@ metadata-only rename). Then `func_800F7C74` → `spawnAndUpdateEffectActors`,
 | s1915 | Synchronized `initActorAsType4` (`0x800F5A30`, `0x304`). |
 | s1916 | Synchronized `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`). |
 | s1917 | Synchronized `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`). |
+| s1918–s1949 | VI-1024 / spin-yield / hangar chain (see below). Sweep paused. |
+| s1950 | Synchronized `renderNpcAnchoredProceduralEffect` (`0x800F7130`, `0xB44`). s1950 soak reproduced hangar 512 at 24.8s then the same ~4s `filterVoiceSampleBlock+220` SIGBUS. |
 
 s1903–s1917 (except the s1902 LPM A/B) were sweep-titled. s1918 was the
 mandatory 15-title REVISIT and opened the true-stall chain below.

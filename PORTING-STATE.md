@@ -92859,3 +92859,66 @@ Yield stays default-off. Hangar recipe is now
 `ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot. Ask (b)
 remains human-only.
 
+## Session 1950 (2026-08-18) — synchronized the renderNpcAnchoredProceduralEffect symbol
+
+`HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+
+CURRENT-TRUTH is 13485 bytes — under the 60 KB maintenance
+trigger. M5 closed; M3 parked. 15-title REVISIT gate: last 15
+headings are s1935–s1949 (VI-recv / spin-yield / title-SI /
+hangar / s1948 maintenance) — not all sweep-titled, so this
+iteration resumes the leftover rename.
+
+Consumed `s1950_hangar_yield_repro` (loop-run, not this
+session): 512 at 24.8s, gone at 4.3s after 1 hangar frame,
+`filterVoiceSampleBlock+220` `last-guest-pc=0x8000834c`. Same
+short window as s1949. Does not lengthen hangar. Do not chase
+as a single crash.
+
+Renamed leftover `func_800F7130` (`0x800F7130`, TOML size
+`0xB44`, `syms/rogue_squadron.syms.toml:2011`) to
+`renderNpcAnchoredProceduralEffect`. Four-step already complete
+in s1906–s1917; re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:17961` (`buildSineWaveEffectGeometryB`) then
+   `:19845` (`renderNpcAnchoredProceduralEffect`) are adjacent
+   `RECOMP_FUNC` lines; next is `funcs_42.c:35`
+   (`spawnAndUpdateEffectActors`).
+2. `funcs.h:2169-2171` declares B, then
+   `renderNpcAnchoredProceduralEffect`, then
+   `spawnAndUpdateEffectActors` in that order.
+3. `recomp_overlays.inl:1897-1899`: this function's offset is
+   `0x00052000` = B's `0x00051824 + 0x7DC`; `rom_size =
+   0x00000B44` matches the TOML `size = 0xB44`. Next overlay
+   `spawnAndUpdateEffectActors` is `0x00052B44` =
+   `0x00052000 + 0xB44`.
+4. `grep -rln 'func_800F7130'` across the generated tree: zero
+   hits — non-collision.
+
+Generated body matches the name: stack `-0x1B0`,
+`lhu $a0, 0x198($a0)` then `jal 0x8004015C`
+(`getNpcContextField8`), `t0=actor+0x8`, `s1=actor+0x50`.
+Companion `rogue_squadron64/symbol_files/mission_overlay.txt`
+already names `renderNpcAnchoredProceduralEffect = 0x800F7130`.
+No existing TOML entry already used that name. Sizes already
+agreed — no bump. Metadata-only TOML rename; no build/regen.
+
+Post-rename leftover `func_800*` count is 981 (was 982). Zero
+leftover `func_800F7130` remains in repo sources outside the
+ledger.
+
+Previewed the next leftover: `func_800F7C74` (TOML size `0x724`,
+toml:2012) lines up with `recomp_overlays.inl:1899`
+(`spawnAndUpdateEffectActors`, offset `0x00052B44` =
+`0x00052000 + 0xB44`, `rom_size = 0x00000724`) — adjacency
+(`funcs_42.c:35` then `:1481` `executeActorType4Effect`) and
+declaration order (`funcs.h:2171-2172`) and non-collision
+(`grep -rln 'func_800F7C74'` zero hits). Generated body stack
+`-0xC8`, `s0=actor+0x50`, `lbu $v1, 0x1A($s0)` vs `0xFF`, then
+`rand_recomp`. Companion already names
+`spawnAndUpdateEffectActors = 0x800F7C74`. Sizes already
+agree — no bump. Next sweep iteration can rename directly.
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
+hangar SIGBUS. Did not rebuild.
+
