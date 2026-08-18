@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1969 (2026-08-18).
+detail. Reviewed through s1970 (2026-08-18).
 
 ## Current state
 
@@ -49,6 +49,20 @@ detail. Reviewed through s1969 (2026-08-18).
   ~4s after hangar. s1950 reproduced: 512 at 24.8s, gone at 4.3s after
   1 hangar frame, same symbol/`last-guest-pc`. Do not chase as a
   single crash.
+- **The filterVoiceSampleBlock idiom audit selected a missing host-call link
+  (s1970).** The complete generated tree has three direct callers; static
+  inspection classified their source/output buffers as caller-owned, with
+  the callee reading 13 halfwords from source and writing 40 bytes to output.
+  The corrected hangar recipe reached the live `updateVoiceChannelParamsLarge`
+  edge at `0x8009D740` after both positive controls. Its source
+  `0x8011C748..762` and output `0x8011C7B0..7D8` were in RDRAM, but the
+  callee's fixed selector path used `ra+0xD4+a0 = 0x000000D4` because the
+  generated host call left `ctx->r31=0` instead of the guest link
+  `0x8009D748`. The entry row repeated the same values and the SIGBUS followed
+  at the invalid byte read. This selects H-filter-local-range: the writer is
+  N64Recomp's direct `jal` lowering, and zero is not the legitimate guest
+  return address. No guard or skip was added; the next M3 unit is a complete
+  branch-and-link/RA-derived idiom audit, not a one-site mitigation.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -164,13 +178,13 @@ detail. Reviewed through s1969 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1969: the generated-symbol sweep (former #1) is now
+Re-ranked s1970: the generated-symbol sweep (former #1) is now
 effectively closed — 845 of 902 leftovers resolved in one session, the
 remaining 57 are RE/deliberate-hold, not metadata-sync work. Items below
 promote by one; all still need a new discriminator before they can be
 worked, so they stay ordered by blast-radius (visual artifacts and a
-known SIGBUS family first, audio/M3 re-audits last since both are
-explicitly closed pending new leads). Per `tools/agent/ITERATION.md`'s
+known SIGBUS family first, with the newly selected M3 link-register audit
+before the parked audio re-audit). Per `tools/agent/ITERATION.md`'s
 strategic-priority rule, with the sweep no longer perpetually actionable,
 the next session with nothing else applicable should attempt the
 REVISIT (external retail-entry boundary or M4 accumulator boundary) with
@@ -186,8 +200,12 @@ a genuinely new angle rather than defaulting to sweep busywork.
    with the parked M4 Y=`0x8000` question (different mechanism,
    `y8000_any` stayed 0 in s1969 too). The first hangar window remains ~4s /
    1 frame.
-2. Hangar SIGBUS `filterVoiceSampleBlock+220` / `0x8000834c` is a
-   known family. Revisit only as a complete idiom-class audit.
+2. The selected M3 follow-up is a complete audit of generated direct
+   `bgezal`/`bltzal` host-call lowering wherever a callee or delay-slot
+   sequence consumes `$ra` as a data pointer. Enumerate every site, identify
+   the writer and intended link value, and use one hangar-gated batch probe to
+   distinguish missing context links from valid game data. Do not patch one
+   call site until the class is classified.
 3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. Write a bounded plan first.
 4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -239,6 +257,17 @@ beam-cone box had `blend=0x0055`, `ZMODE=0`, `Z_UPD=1`, `CVG_X_ALPHA=0`, and
 single-source evidence against an incompatible consumer mode, not pixel
 ground truth.
 
+**filterVoiceSampleBlock link contract.** s1970 static enumeration found the
+three direct callers in `funcs_27.c`; the live hangar row was
+`updateVoiceChannelParamsLarge` at `0x8009D740`. The fixed callee path computes
+its indexed byte table as `$ra+0xD4+$a0`. The same-run control and the two audit
+rows showed valid caller-owned source/output spans but `$ra=0`, table
+`0x000000D4`, and a SIGBUS immediately after the entry. The intended link for
+that `jal` is `0x8009D748`; the zero was written by the generated host-call
+lowering, not by game audio data. This is a single live edge plus static
+whole-tree enumeration; the next branch-and-link audit must establish whether
+the same contract affects other sites.
+
 ## Superseded conclusions
 
 Older overturned claims live in `PROJECT-OVERVIEW.md` §26, §35, and §36.
@@ -272,6 +301,10 @@ Most recent, still load-bearing for the next unit:
   mode command, is superseded by the fixed rerun: all six matches had
   impossible standard operands and were false candidates, while valid mode
   count remained zero.
+- s1970's first audit attempt without the proven LLE-solo hangar environment
+  stalled at VI 640 and produced no audit rows; it is recipe failure, not a
+  null result. The corrected run reached VI 512 and supplied the positive
+  control before selecting H-filter-local-range.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -282,7 +315,8 @@ Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
 s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
-archived to §36). s1968's H1 scope result is in `PORTING-STATE.md` directly.
+archived to §36). s1968's H1 scope result and s1970's filter audit are in
+`PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a

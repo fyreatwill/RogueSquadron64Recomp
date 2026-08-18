@@ -1,70 +1,90 @@
-# NEXT work unit (s1970) — filterVoiceSampleBlock whole-idiom audit
+# NEXT work unit (s1971) — audit generated branch-and-link `$ra` consumers
 
-HYPOTHESIS-ID: hangar-filter-voice-sample-block-idiom-audit
+HYPOTHESIS-ID: mips-link-register-lowering-audit
 
-## What s1969 settled
+## What s1970 settled
 
-The DPC writer control and RT64 consumer census both fired in the live hangar
-window. Five hundred consumer rows reached `drawTris`; 153 rows overlapped the
-captured beam-cone box, all with coherent `blend=0x0055`, coverage, and z-mode
-fields. H1 is refuted as a single-source consumer-state explanation. H3 is
-unavailable: the retail oracle has no screenshot or equivalent LLE `L_17F0`
-path. The known `filterVoiceSampleBlock+220` / `last-guest-pc=0x8000834c`
-SIGBUS remains the next actionable systematic M3 audit.
+The complete generated tree has three direct callers of
+`filterVoiceSampleBlock`. Static code says its indexed selector read is the
+fixed arithmetic `$ra + 0xD4 + $a0`; caller-owned source/output spans are 26
+and 40 bytes. The corrected LLE-solo hangar run reached
+`updateVoiceChannelParamsLarge` at `0x8009D740` after the hangar controls. The
+same-run control fired, source `0x8011C748` and output `0x8011C7B0` were valid,
+but the call and callee-entry rows both had `$ra=0`, table `0x000000D4`, and a
+SIGBUS followed at the invalid byte read. Static intended link is
+`0x8009D748`. H-filter-local-range is selected for this edge; no guard was
+added. The first run without the proven LLE-solo environment stalled at 640
+and was correctly classified as recipe failure.
 
 ## Single next work unit
 
-Complete one whole-idiom audit of `filterVoiceSampleBlock` at guest VRAM
-`0x8009D7D0` (syms entry size `0xEC`) and all three generated callers. Enumerate
-every caller argument setup, selector/table load, source-buffer base, and
-derived output address/length; classify each as fixed, caller-owned, table-
-indexed, or unbounded. Build one regeneration-safe batch probe covering the
-callee entry and every caller edge, with one row schema containing caller PC,
-voice/index bytes, source/output bases, requested span, and the range class.
-Do not add a guard or skip. The writer/legitimacy question is open: name the
-writer for every value before proposing any behavior change.
+Audit the whole generated idiom class in which a direct host call is reached
+from `bgezal`/`bltzal`, or a callee consumes `$ra` as a data-pointer base.
+Enumerate every site in `RecompiledFuncs/`, classify the intended link writer
+and the first post-call `$ra` consumer, then build one regeneration-safe batch
+probe that records expected link PC, actual `ctx->r31`, callee, and derived
+address/range. Do not repair one site or add a skip until the class is
+classified.
 
-## Competing hypotheses and discriminating measurement
+## Competing hypotheses and discriminator
 
-- **H-filter-local-range:** the callee's fixed filter arithmetic reaches outside
-  its caller-owned source/output span; selecting evidence is a callee row whose
-  effective range is invalid while the caller supplied a valid base.
-- **H-caller-contract:** one caller supplies a malformed voice record, selector,
-  base, or count; selecting evidence is a caller-specific invalid input before
-  the callee's fixed walk, with the other callers staying in-range.
-- **H-audio-host-or-stale-pc:** every guest range is in-range and the crash is
-  host decode/audio state or stale breadcrumb attribution; selecting evidence is
-  all rows passing the guest range contract plus a crash with no invalid guest
-  span.
+- **H-link-lost:** N64Recomp's direct host-call lowering leaves `ctx->r31`
+  unchanged for link-producing calls. Selecting evidence is multiple
+  independent `bgezal`/`bltzal` or `$ra`-consumer sites with actual RA not equal
+  to the guest link PC, while their static link writers are valid.
+- **H-link-preserved:** the runtime or generated wrapper writes the guest link
+  elsewhere, and the filter row is an isolated caller/context anomaly.
+  Selecting evidence is every audited site having actual RA equal to its
+  guest link or a documented equivalent before its consumer.
+- **H-legitimate-data:** a non-link RA value is intentional for a subset of
+  calls. Selecting evidence is a site whose static control flow proves the
+  value is not used as a guest-PC/data base, while the failing filter site is
+  the only range-invalid consumer.
+- **H-other-corruption:** RA is correct at the call boundary but changes before
+  the consumer, or the derived address is invalid despite a correct RA.
+  Selecting evidence is a same-site entry/consumer mismatch with a valid link
+  writer.
 
-**Discriminator:** one static enumeration plus one build/run carrying all three
-caller probes and the callee range calculation. A caller-specific bad input
-selects H-caller-contract; a callee-only bad effective span selects
-H-filter-local-range; all in-range rows leave only H-audio-host-or-stale-pc.
-The hangar-entry/control row must fire in the same run; a crash before that
-control is unevaluable and must be enqueued, not interpreted.
+The discriminator is one static census plus one run carrying every selected
+site in one build. Positive controls must include the whole-RDRAM retail oracle
+control already established in s1970, the port's hangar phase/control row, and
+at least one generated site with a known non-data `$ra` use. A null before
+VI=512 is unevaluable.
 
-## Ground truth and exact commands
+## Exact commands
 
-Before building, re-read `tools/oracle/README.md` and use the retail positive
-controls only to verify the driven hangar phase; do not treat a null audio
-watch as evidence unless the whole-RDRAM control fires. Then enumerate and
-classify the complete generated idiom with:
+Read `tools/oracle/README.md` and `docs/F5-UCODE-REFERENCE.md` before any new
+instrument. Enumerate first:
 
 ```sh
-rg -n "filterVoiceSampleBlock|0x8009D7D0|0x8000834C|drainMeshReleaseQueue" syms docs tools
-rg -n "voice|sample|selector|0x17C|0x88" RecompiledFuncs tools/fixup_game_funcs.py tools/fixup_factor5_ucode.py
+rg -n -U -g 'funcs_*.c' 'bgezal|bltzal|addu\s+\$at,\s+\$ra|addiu\s+\$[^,]+,\s+\$ra' ../N64Recomp/RecompiledFuncs
+rg -n 'jal|bgezal|bltzal|ctx->r31' ../N64Recomp/RecompiledFuncs/funcs_27.c
 ```
 
-Batch the probe through the regeneration path (`make_elf.py` -> N64Recomp ->
-`fixup_game_funcs.py` -> CMake), then build:
+Put the complete site table and probes in `../N64Recomp/fixup_game_funcs.py`,
+then regenerate in this order:
 
 ```sh
+python3 ../rogue_squadron64/tools/make_elf.py
+cd ../N64Recomp && ./build/N64Recomp rogue_squadron.toml
+python3 fixup_game_funcs.py
+cd ../RogueSquadron64Recomp
 cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-Run from `build/` with the hangar recipe and a non-dot capture path; arm the
-existing passive breadcrumbs and SIGKILL watchdog through `tools/probe.sh`.
-The run must phase-gate on `width=512` and origin `0x006AB400`/`0x006AB800`,
-not on elapsed time. Do not repeat the consumer census or the `0xD60` mode
-scan; this unit is the complete `filterVoiceSampleBlock` idiom class.
+Run from the build with the proven route, phase-gated and SIGKILL-watched:
+
+```sh
+env ROGUESQ_SPIN_YIELD=1 ROGUESQ_M4_Y8000_WIDTH=512 \
+ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_MIPS_LINK_AUDIT=1 \
+PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 \
+PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
+zsh tools/probe.sh scratch/agent/s1971_mips_link_audit 180 2
+```
+
+Expected split: repeated `actual_ra != expected_link` selects H-link-lost;
+all links matching selects H-link-preserved; a statically intentional
+non-link site selects H-legitimate-data; a valid call link followed by a
+changed/invalid consumer value selects H-other-corruption. Do not interpret
+any row unless the hangar control and positive row fire in the same run.

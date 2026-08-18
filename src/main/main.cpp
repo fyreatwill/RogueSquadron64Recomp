@@ -125,6 +125,101 @@ extern "C" void rs64_get_vifs_crash_snapshot(uint64_t *decisionN, uint64_t *last
 // name; defined once here.
 extern "C" volatile uint32_t g_rs64_last_guest_pc = 0;
 
+static bool rs64_filter_voice_guest_span_ok(uint32_t base, uint32_t span) {
+    const uint32_t segment = base & 0xE0000000u;
+    const uint32_t phys = base & 0x1FFFFFFFu;
+    const bool rdram_segment = segment == 0x80000000u || segment == 0xA0000000u;
+    return rdram_segment && phys <= 0x800000u && span <= 0x800000u - phys;
+}
+
+static const char* rs64_filter_voice_site_name(uint32_t site) {
+    switch (site) {
+    case 0x8009C540u: return "updateVoiceChannelParams";
+    case 0x8009C88Cu: return "decodeAndFillVoiceBlock";
+    case 0x8009D740u: return "updateVoiceChannelParamsLarge";
+    default: return "unknown";
+    }
+}
+
+static const char* rs64_filter_voice_range_class(bool source_ok, bool output_ok,
+                                                   bool table_used, bool table_ok) {
+    static char value[8];
+    unsigned n = 0;
+    if (!source_ok) value[n++] = 'S';
+    if (!output_ok) value[n++] = 'O';
+    if (table_used && !table_ok) value[n++] = 'T';
+    if (n == 0) value[n++] = 'O';
+    value[n] = '\0';
+    return value;
+}
+
+static void rs64_filter_voice_audit_row(const char* edge, uint32_t site,
+                                        uint32_t sp, uint32_t ra,
+                                        uint32_t a0, uint32_t a1,
+                                        uint32_t source, uint32_t output) {
+    static int enabled = -1;
+    static bool control = false;
+    static uint32_t phase_key = 0;
+    static unsigned long phase_rows = 0;
+    if (enabled < 0) {
+        const char* all = std::getenv("ROGUESQ_LOG_ALL");
+        const char* e = std::getenv("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+        enabled = ((all && *all && *all != '0') || (e && *e && *e != '0')) ? 1 : 0;
+    }
+    if (!enabled) return;
+
+    const uint32_t width = rs64_vi_committed_width();
+    const uint32_t origin = rs64_vi_committed_origin();
+    if (!control) {
+        const bool source_ok = rs64_filter_voice_guest_span_ok(0x80000000u, 26u);
+        const bool output_ok = rs64_filter_voice_guest_span_ok(0x80000000u, 40u);
+        fprintf(stderr,
+                "[filter-voice-audit-control] source=0x80000000 source_span=26 source_ok=%u output=0x80000000 output_span=40 output_ok=%u range=OK\n",
+                source_ok ? 1u : 0u, output_ok ? 1u : 0u);
+        fflush(stderr);
+        control = true;
+    }
+    if (width != 512u || (origin != 0x006AB400u && origin != 0x006AB800u)) return;
+
+    const uint32_t key = origin;
+    if (key != phase_key) {
+        phase_key = key;
+        phase_rows = 0;
+    }
+    if (phase_rows >= 256) return;
+
+    const int32_t index = static_cast<int32_t>(a0);
+    const int32_t selector = static_cast<int32_t>(static_cast<int16_t>(a1 & 0xFFFFu));
+    const bool table_used = index <= 7;
+    const uint32_t table = table_used ? ra + 0xD4u + a0 : 0u;
+    const bool source_ok = rs64_filter_voice_guest_span_ok(source, 26u);
+    const bool output_ok = rs64_filter_voice_guest_span_ok(output, 40u);
+    const bool table_ok = !table_used || rs64_filter_voice_guest_span_ok(table, 1u);
+    const uint32_t phase = rs64_phase_ord();
+    fprintf(stderr,
+            "[filter-voice-audit] edge=%s site=0x%08X caller=%s phase=%u width=%u origin=0x%06X row=%lu sp=0x%08X ra=0x%08X a0=%d a1=%d source=0x%08X source_span=26 output=0x%08X output_span=40 table_used=%u table=0x%08X table_span=1 source_ok=%u output_ok=%u table_ok=%u source_delta=%d output_delta=%d range=%s\n",
+            edge, site, rs64_filter_voice_site_name(site), phase, width, origin,
+            phase_rows, sp, ra, index, selector, source, output, table_used ? 1u : 0u,
+            table, source_ok ? 1u : 0u, output_ok ? 1u : 0u, table_ok ? 1u : 0u,
+            static_cast<int32_t>(source - sp), static_cast<int32_t>(output - sp),
+            rs64_filter_voice_range_class(source_ok, output_ok, table_used, table_ok));
+    fflush(stderr);
+    ++phase_rows;
+}
+
+extern "C" void rs64_filter_voice_call_probe(uint32_t site, uint32_t sp,
+                                               uint32_t ra, uint32_t a0,
+                                               uint32_t a1, uint32_t a2,
+                                               uint32_t a3) {
+    rs64_filter_voice_audit_row("call", site, sp, ra, a0, a1, a2, a3);
+}
+
+extern "C" void rs64_filter_voice_entry_probe(uint32_t sp, uint32_t ra,
+                                                uint32_t a0, uint32_t a1,
+                                                uint32_t a2, uint32_t a3) {
+    rs64_filter_voice_audit_row("entry", 0u, sp, ra, a0, a1, a2, a3);
+}
+
 extern "C" void rs64_probe_dma_write_origin(uint32_t dram_addr, uint32_t len,
                                                uint32_t dmem_addr) {
     static std::atomic<uint64_t> all_dma{0};

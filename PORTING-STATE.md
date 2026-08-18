@@ -94238,3 +94238,47 @@ mitigation based on the sampled beam rows. No mitigation or behavior change
 was added. The next work unit is a complete idiom-class audit of
 `filterVoiceSampleBlock` and its three callers, with writer/legitimacy
 classification before any guard is considered.
+
+## Session 1970 (2026-08-18) — selected missing host-call link in filterVoiceSampleBlock
+
+`HYPOTHESIS-ID: hangar-filter-voice-sample-block-idiom-audit`.
+
+Before building, the retail oracle controls passed: the whole-RDRAM physical
+watch produced 10,000 callbacks in eight seconds, and the Rice run with the
+eleven-Start schedule reached VI 512 at origins `0x006AB800` and
+`0x006AB400`. Static enumeration of the regenerated `funcs_27.c` found all
+three direct `jal 0x8009D7D0` callers. `updateVoiceChannelParams` uses a
+caller-supplied source plus `sp+0x10`; `decodeAndFillVoiceBlock` and
+`updateVoiceChannelParamsLarge` use `sp+0x40` plus `sp+0xA8`, with the source
+advancing by `0x1A`. The callee reads 13 halfwords and clears 40 bytes.
+
+The first port attempt omitted the proven LLE-solo environment and stalled at
+VI 640 with zero audit rows. That was recipe failure, not a null result. The
+corrected single run used `ROGUESQ_SPIN_YIELD=1`, LLE force/ungated/solo,
+`ROGUESQ_STUB_MISSING_FUNCS=1`, the eleven Start schedule, and a 512 phase
+gate. It reached origin `0x006AB400` at 24.9s, captured one frame, and the
+same-run `[filter-voice-audit-control]` fired before the live rows.
+
+The live edge was `updateVoiceChannelParamsLarge` at `0x8009D740`. Both the
+call row and callee-entry row had `sp=0x8011C708`, `a0=0`, `a1=1`, source
+`0x8011C748`, output `0x8011C7B0`, and `source_ok=1` / `output_ok=1`. The
+callee's fixed selector path uses `ra+0xD4+a0`; both rows had `ra=0` and
+`table=0x000000D4`, `table_ok=0`, `range=T`. The intended guest link after
+the `jal` is `0x8009D748`. The run then reproduced SIGBUS at
+`filterVoiceSampleBlock+296`, with `last-guest-pc=0x8000834c`.
+
+ORIGIN: the invalid table address is produced by the generated direct host
+call leaving `ctx->r31=0`; zero is not legitimate game audio data, and the
+caller-owned source/output spans are legitimate in this row. No guard, skip,
+or behavior change was added. The static caller census plus the same-run
+call/entry rows are two independent lines of evidence for H-filter-local-range:
+the fixed callee arithmetic consumes a missing host-call link. This rules out
+malformed source/output input as the immediate cause and rules out treating the
+known guest breadcrumb as a stale-only explanation. The other two callers were
+not reached before this first invalid callee read, so their runtime behavior
+remains unmeasured.
+
+Implemented the regeneration-safe probes in `fixup_game_funcs.py`, the host
+range classifier in `src/main/main.cpp`, and the env-var catalog entry; the
+full Debug target built successfully. The next work unit is a whole generated
+`bgezal`/`bltzal` and `$ra`-consumer idiom audit, not a one-site repair.

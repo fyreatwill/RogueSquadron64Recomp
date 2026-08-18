@@ -111,6 +111,14 @@ inline bool log_probes() {
     return v;
 }
 
+// Hangar-gated filterVoiceSampleBlock call/entry range audit. Logs the three
+// caller edges, fixed source/output spans, and the optional indexed table read.
+// ROGUESQ_LOG_FILTER_VOICE_AUDIT=1.
+inline bool log_filter_voice_audit() {
+    static const bool v = env_flag("ROGUESQ_LOG_FILTER_VOICE_AUDIT");
+    return v;
+}
+
 // SP task dispatch (`[sp] osSpTaskStartGo #N kind=GFX ...`,
 // `[trace] DISPATCH slot=N ...`). One line per submitted GFX task.
 // Useful when tracking task scheduling rate. ROGUESQ_LOG_SP_TASKS=1.
