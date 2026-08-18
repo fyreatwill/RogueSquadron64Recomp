@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1890 (2026-08-17).
+detail. Reviewed through s1891 (2026-08-17).
 
 ## Current state
 
@@ -94,23 +94,29 @@ detail. Reviewed through s1890 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **s1888-s1890: re-establish VI-1024 reachability before anything downstream
-   of it.** 8/8 fresh runs across s1888-s1889 failed to reach VI width 1024 at
-   all; H1-flake is refuted (0/8). s1890 audited every non-ledger file that
-   changed between s844 and HEAD (not just which files changed) and found no
-   code-level explanation — see Current state above. The one real candidate
-   found (`rs64_is_hangar_vi()` unconditional per-frame VI-register read) was
-   built into a same-binary env-toggle A/B and refuted. The literal
-   historical-commit bisect cannot run under current tooling (`git submodule
-   update` denied globally, including inside a fresh worktree). Two
-   blocked-but-actionable paths remain, both need a human:
-   (a) one `top -l 1`/`vm_stat`/`pmset -g therm`/`who` snapshot pasted from
+1. **BLOCKED (s1891): re-establish VI-1024 reachability before anything
+   downstream of it.** 8/8 fresh runs across s1888-s1889 failed to reach VI
+   width 1024 at all; H1-flake is refuted (0/8). s1890 audited every
+   non-ledger file that changed between s844 and HEAD (not just which files
+   changed) and found no code-level explanation — see Current state above.
+   The one real candidate found (`rs64_is_hangar_vi()` unconditional
+   per-frame VI-register read) was built into a same-binary env-toggle A/B
+   and refuted. The literal historical-commit bisect cannot run under
+   current tooling (`git submodule update` denied globally, including
+   inside a fresh worktree). s1891 confirmed neither of the two remaining
+   asks had materialized (no machine snapshot file, no disposable clone
+   anywhere in the repo) and went BLOCKED per s1890's own instruction and
+   iron rule 8 (3rd consecutive stalled iteration on one hypothesis stops
+   experimenting; this was the 4th) rather than run a 4th re-confirmation.
+   See `scratch/agent/BLOCKED.md` for exact asks: (a) one
+   `top -l 1`/`vm_stat`/`pmset -g therm`/`who`/`sysctl` snapshot pasted from
    outside this harness, for H3-machine-state; (b) a human running
    `git submodule update` once inside a disposable `git clone` (not this
-   worktree) so a future iteration can build and test a pre-s844 commit. If
-   neither materializes by the next iteration, go BLOCKED naming both asks
-   rather than spending a 4th iteration re-confirming the stall. This blocks
-   the entire `s790_postsec2_reachability` soak family and item 3 below.
+   worktree, e.g. `/tmp/rs64-bisect-clone` checked out at `ef7a0fb9`) so a
+   future iteration can build and test the pre-s844 commit. Do not spend a
+   5th iteration re-confirming the stall — stay BLOCKED until one of the two
+   lands. This blocks the entire `s790_postsec2_reachability` soak family
+   and item 3 below.
 2. Resume the generated-symbol sweep at leftover `func_800F2AC4`
    (`0x800F2AC4`, size `0xC4`). Preliminary peek: the generated body
    immediately after `clearObjectFlagBit4` in `funcs_41.c` is already

@@ -88047,3 +88047,30 @@ exactly as in s1889 — not a per-session fluke), or (b) a human running
 worktree) so a future iteration can build and test a pre-s844 commit. If
 neither materializes next iteration, go BLOCKED with these two asks named
 explicitly rather than spending a 4th iteration re-confirming the stall.
+
+## Session 1891 (2026-08-17) — went BLOCKED on vi1024-reachability-regression rather than a 4th re-confirmation
+
+s1888-s1890 exhaustively characterized and code-audited the VI-1024
+reachability regression across three consecutive iterations: 8/8 fresh runs
+fail to reach VI 1024 (four crash/stall signatures, H1-flake refuted at 0/8),
+a full content diff of every non-ledger file between s844 (`ef7a0fb9`) and
+HEAD found no code-level explanation, and the one real functional candidate in
+that window (`rs64_is_hangar_vi()`) was built into a same-binary env-toggle
+A/B and refuted. s1890's own NEXT.md instruction was explicit: if a human has
+not supplied either (a) a machine-state snapshot taken outside this harness
+(`top`/`vm_stat`/`who`/`pmset -g therm`/`sysctl` are all denied by this
+session's permission policy — confirmed independently in s1888, s1889, and
+s1890) or (b) a disposable clone with `git submodule update` already run (so a
+pre-s844 commit can actually be built and bisected — `git submodule update` is
+denied by command-string match in this worktree regardless of directory), the
+correct move is BLOCKED, not a 4th iteration re-confirming the same stall.
+Checked at session start: no such snapshot file exists anywhere under
+`scratch/agent/`, no `BLOCKED.md` was already present, and no disposable clone
+was referenced anywhere in the repo. Neither prerequisite has materialized.
+Wrote `scratch/agent/BLOCKED.md` naming both asks with exact commands, and
+what was already tried, so a human can act in under 2 minutes. This is a
+process/triage session, not a null-result experiment — iron rule 8 says a 3rd
+consecutive iteration on one hypothesis with no discriminating result should
+stop experimenting; this is the 4th, so it goes BLOCKED per that rule and
+s1890's own instruction rather than running a soak that would only reproduce
+already-catalogued signatures. Nothing was rebuilt or re-run this session.
