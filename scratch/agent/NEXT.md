@@ -1,108 +1,111 @@
-# NEXT work unit (s1917)
+# NEXT work unit (s1918) — mandatory 15-title REVISIT
 
-HYPOTHESIS-ID: generated-symbol-renaming-sweep
+HYPOTHESIS-ID: vi1024-early-crash-not-stall
 
-**Primary path — resume the sweep.** s1916 synchronized
-`func_800F5D34` → `buildSineWaveEffectGeometryA` (TOML size
-`0xC20` already matched generated `rom_size`; no bump). Do not
-re-run `s790_postsec2_reachability.sh` without a new measurement
-axis. Ask (b) (disposable clone + `git submodule update` bisect)
-is still human-only.
+**This is a REVISIT, not a sweep step.** After s1917 the last 15
+titles are s1903–s1917, every one a "synchronized the … symbol"
+sweep title. Do **not** rename `func_800F7130`. Resume the sweep
+at that leftover only in s1919 (HYPOTHESIS-ID back to
+`generated-symbol-renaming-sweep`).
 
-Next leftover: `func_800F6954` at `0x800F6954` (TOML size `0x7DC`,
-`syms/rogue_squadron.syms.toml:2010`). Already confirmed in
-s1906–s1916 via the full four-step procedure:
-1. Adjacency: `funcs_41.c:15028` (`buildSineWaveEffectGeometryA`)
-   and `:17961` (`buildSineWaveEffectGeometryB`) are the only two
-   `RECOMP_FUNC` lines matched — true adjacency.
-2. `funcs.h:2168-2169` declares `buildSineWaveEffectGeometryA`
-   then `buildSineWaveEffectGeometryB` in that exact order.
-3. `recomp_overlays.inl:1897`: `buildSineWaveEffectGeometryB`
-   offset is `0x00051824` = `buildSineWaveEffectGeometryA`'s
-   `0x00050C04 + 0xC20` (its TOML size); `rom_size = 0x000007DC`
-   matches the TOML's `size = 0x7DC` exactly.
-4. `grep -rln 'func_800F6954'` across N64Recomp's `RecompiledFuncs/`
-   tree: zero hits — non-collision.
+Do **not** re-run `s790_postsec2_reachability.sh`. That recipe is
+closed without a new measurement axis (10/10, H3a-lowpower
+refuted). Ask (b) (disposable clone + `git submodule update`
+bisect at `ef7a0fb9`) is still human-only.
 
-Generated body matches the name: stack `-0x60`, same
-`s1=$a0` / `s2=$a1` / `s0=$a3` / `f24=$a2` prologue as A,
-then `lwc1 $f20, 0x8($s0)` and `jal 0x8001C400` (`sinfApprox`).
-Companion `mission_overlay.txt` already names
-`buildSineWaveEffectGeometryB = 0x800F6954`.
-No existing TOML entry already uses `buildSineWaveEffectGeometryB`.
-Sizes already agree — no bump.
+## Work unit — offline [phase] timeline table
 
-All four already agree — this iteration can rename `func_800F6954`
-to `buildSineWaveEffectGeometryB` directly (TOML metadata-only
-sync, no build/regen needed), then re-verify + preview the one
-after it the same way before stopping (matching the s1887-s1916
-pattern).
+s844 (last known VI-1024 success,
+`scratch/agent/soak_results/s790_postsec2_reachability_20260813-061248/run.log`)
+first hits `640 origin=0x00696100` at **11.0s** (`update_screen
+#600`) and only then publishes `1024 origin=0x00790400` at
+**79.6s**. s1902 first hits the **same** origin at **6.8s**
+(`update_screen #359`) and has **no later [phase] line** before
+the ~17s `findTileCopyId` SIGABRT. If current failures die 10–70s
+into the same 640/`0x00696100` dwell that s844 sat in for ~68s,
+the "stall at 640" framing is a misnomer and the regression is
+an earlier crash, not a new VI-transition failure.
 
-Competing hypotheses for that leftover (already split):
-- H1: leftover is `buildSineWaveEffectGeometryB` — SELECTED by
-  the four-step table + companion + generated prologue.
-- H2: offset/size/body disagree with the companion name —
-  would require a TOML bump or skip.
-- H3: the human name is already claimed by another TOML entry —
-  collision; do not rename.
+Competing hypotheses (discriminated by one offline table; no
+build, no new game run):
 
-**After that leftover:** `func_800F7130` already lines up with
-`renderNpcAnchoredProceduralEffect` (s1906–s1916 preview:
-`funcs_41.c:17961,19845` / next is `funcs_42.c:35`,
-`funcs.h:2169-2170`, `.inl:1898` offset `0x00052000 =
-0x00051824 + 0x7DC` / `rom_size 0xB44`, zero-hit
-`func_800F7130`). Companion already names
-`renderNpcAnchoredProceduralEffect = 0x800F7130`. Body
-matches: stack `-0x1B0`, `lhu $a0, 0x198($a0)` then
-`jal 0x8004015C` (`getNpcContextField8`),
-`t0=actor+0x8`, `s1=actor+0x50`. After that:
-`func_800F7C74` lines up with `spawnAndUpdateEffectActors`
-(`funcs_41.c:19845` then `funcs_42.c:35,1481`,
-`funcs.h:2170-2171`, `.inl:1899` offset `0x00052B44 =
-0x00052000 + 0xB44` / `rom_size 0x724`, zero-hit
-`func_800F7C74`). Companion already names
-`spawnAndUpdateEffectActors = 0x800F7C74`. Body matches:
-stack `-0xC8`, `s2=0`, `s3=s2`, `$a1=8`. After that:
-`func_800F8398` lines up with `executeActorType4Effect`
-(`funcs_42.c:35,1481`, `funcs.h:2171-2172`, `.inl:1900`
-offset `0x00053268 = 0x00052B44 + 0x724` / `rom_size 0x10DC`,
-zero-hit `func_800F8398`). Companion already names
-`executeActorType4Effect = 0x800F8398`. Body matches:
-stack `-0x118`, `s7=$a0`, `s4=actor+0x8`,
-`lhu $a0, 0x198($s7)` then `jal 0x8004015C`
-(`getNpcContextField8`), `s6=actor+0x50`.
+- H1 early-crash-not-stall: every current failure first hits
+  `640 origin=0x00696100` after the same preceding
+  `320 → 640/0x0066A500` pair s844 used, then dies of a
+  catalogued crash (copyToRAM / AGX `clearDepthTarget` / musyx
+  SIGBUS / `findTileCopyId`) 10–70s later, still at that origin,
+  before s844's ~68s 1024 transition. SELECTS: the 1024 "stall"
+  is the crash family arriving earlier in a healthy dwell.
+- H2 early-wrong-transition: current logs reach
+  `0x00696100` by a different preceding origin/width sequence or
+  a wildly different `update_screen` count than s844 — the 6.8s
+  hit is a new, earlier, wrong VI change.
+- H3 true-stall: at least one current log lives past 80s wall
+  at `0x00696100` with no 1024 and no crash. SELECTS: a real
+  stuck VI, not an early death.
+- H4 log-incomparable: s844 `[phase]` format, origin set, or
+  recipe env is not the same series as the 20260817 logs.
 
-**Where the generated tree actually lives:** it is gitignored
-(`RecompiledFuncs/` in `.gitignore`) and does NOT exist under this
-repo's `build/` right now. It lives at
-`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/` (an
-additional working directory) — `funcs_41.c`, `funcs_42.c`, `funcs.h`,
-and `recomp_overlays.inl` are all there. Check there first; don't
-re-search the whole filesystem.
+**Discriminating measurement** — one table, all existing logs,
+no new run. For s844 plus every s1888/s1889/s1892/s1902
+`s790_postsec2_reachability_*` log under
+`scratch/agent/soak_results/`:
 
-**Before starting**, re-check the sweep's 15-title REVISIT gate:
-`grep -n '^## Session ' PORTING-STATE.md | tail -15`. If all 15 titles
-belong to the sweep (contain "synchronized" or "confirmed ... symbol"),
-this iteration is a REVISIT instead — spend it re-attempting the
-external retail-entry boundary or M4 accumulator-origin threads with a
-genuinely new angle. As of s1916 this gate does NOT fire (s1902 is
-still in the window — 1 of 15 slots non-sweep). s1917 starts with
-s1902–s1916 still containing s1902. The window starts dropping s1902
-only after s1917, so s1918 would be the first REVISIT if s1917 is
-another sweep step.
+| col | how |
+|---|---|
+| first 320 time / us# / origin | `grep '\[phase\]' \| head` |
+| first 640 / `0x0066A500` time / us# | same |
+| first 640 / `0x00696100` time / us# | same |
+| last `[phase]` time / width / origin | `grep '\[phase\]' \| tail -1` |
+| last wall / crash signature | existing SOAK-RESULTS + `grep -E 'SIGSEGV\|SIGBUS\|SIGABRT\|last-guest-pc'` |
+| 1024 present? | `grep -c 'vi_width=1024'` |
 
-H3a-lowpower is closed. Do **not** re-check `thermal_probe.py` as a
-reason to re-run the reachability recipe — that A/B is done.
+H1 needs: same preceding pair, 1024 count 0, last wall < 80s,
+crash in the catalogued set, last `[phase]` still 640/`0x00696100`.
+H2 needs: a different preceding origin or a first-`0x00696100`
+`update_screen` not in the same neighborhood as s844's #600.
+H3 needs: last wall ≥ 80s, 1024 count 0, process still in the
+640 dwell.
+H4 needs: missing `[phase]` lines or a different origin
+vocabulary so the columns cannot be filled.
+
+Same-run positive control: s844's own row must show 1024 at
+~79.6s and the 11.0s `0x00696100` hit — if that row cannot be
+reproduced from the file, the table is invalid.
+
+Logs to include (do not add a new run):
+- s844 success:
+  `scratch/agent/soak_results/s790_postsec2_reachability_20260813-061248/run.log`
+- 20260817 failures (s1888–s1902):
+  `s790_postsec2_reachability_20260817-{173130,174630,174727,174818,180331,180706,181917,185603}`
+  plus any sibling dirs from those sessions. Confirm the set
+  with `ls scratch/agent/soak_results | grep 20260817`.
+
+Do **not** treat a single s844-vs-s1902 pair as the result —
+that pair is the prompt, not the table. All failure logs in
+one comparison (iron rule 13).
+
+## Sweep leftover (s1919, after this REVISIT)
+
+`func_800F7130` → `renderNpcAnchoredProceduralEffect` (TOML
+`0xB44` already matches generated `rom_size`; no bump).
+Four-step already complete in s1906–s1917. After that:
+`func_800F7C74` → `spawnAndUpdateEffectActors`;
+`func_800F8398` → `executeActorType4Effect`;
+`func_800F9474` → `clearObjectField112` (size `0x8`,
+`sb $zero, 0x112($a0); jr $ra`, `.inl:1901` offset
+`0x00054344 = 0x00053268 + 0x10DC`). Companion already
+names all four. Generated tree lives at
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`.
 
 ## Do not repeat
 
-- The s844-HEAD full code-content audit (s1890) — closed, no candidate
-  found beyond `rs64_is_hangar_vi()`, already refuted.
-- The `ROGUESQ_SKIP_HANGAR_PROBE` A/B (s1890) — closed, refuted.
-- H3a-lowpower (s1902) — closed, refuted. A same-recipe
-  `s790_postsec2_reachability.sh` run with no new measurement axis is
-  now 16 confirmations of the 640 `0x00696100` stall (10 of those on
-  this regression, 1 of those with LPM confirmed off).
-- Ask (b) from s1891 (disposable clone + `git submodule update` bisect
-  at `ef7a0fb9`) is still open and still legitimately human-only per
-  CLAUDE.md's hard rule — do not attempt a workaround.
+- The s844-HEAD full code-content audit (s1890) — closed.
+- The `ROGUESQ_SKIP_HANGAR_PROBE` A/B (s1890) — closed.
+- H3a-lowpower (s1902) — closed. A same-recipe
+  `s790_postsec2_reachability.sh` run with no new measurement
+  axis is now 16 confirmations of the 640 `0x00696100` dwell
+  (10 of those on this regression).
+- Ask (b) from s1891 — still human-only.
+- Another sweep rename this iteration — the 15-title gate
+  forbids it.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1916 (2026-08-17).
+detail. Reviewed through s1917 (2026-08-17).
 
 ## Current state
 
@@ -144,36 +144,40 @@ detail. Reviewed through s1916 (2026-08-17).
    not re-run `s790_postsec2_reachability.sh` without a new measurement axis.
    This still blocks the entire soak family and item 3 below until
    reachability itself is restored or explained. Productive work until then
-   is item 2.
-2. Resume the generated-symbol sweep at leftover `func_800F6954`
-   (`0x800F6954`, TOML size `0x7DC` matches generated
-   `buildSineWaveEffectGeometryB` `rom_size 0x7DC`). Already
-   confirmed via the full four-step procedure (s1906–s1916):
-   `funcs_41.c:15028,17961` adjacency, `funcs.h:2168-2169` order,
-   `recomp_overlays.inl:1897` offset `0x00051824 = 0x00050C04 +
-   0xC20` / `rom_size 0x7DC`, zero-hit non-collision grep.
-   Companion `mission_overlay.txt` already names
-   `buildSineWaveEffectGeometryB = 0x800F6954`. Generated body
-   stack `-0x60`, same `s1=$a0` / `s2=$a1` / `s0=$a3` /
-   `f24=$a2` prologue as A, reads `+0x8($s0)`. Next iteration
-   can rename directly (TOML metadata-only; sizes already
-   agree, no bump). After that: `func_800F7130` lines up
-   with `renderNpcAnchoredProceduralEffect`
-   (`funcs_41.c:17961,19845` / `funcs_42.c:35` file-boundary
-   next, `funcs.h:2169-2170`, `.inl:1898` offset `0x00052000 =
+   is item 2. **s1918 is the first 15-title REVISIT** (s1903–s1917
+   are all sweep-titled). Spend it on the new offline axis in
+   `scratch/agent/NEXT.md` (`vi1024-early-crash-not-stall`), not
+   another rename. Do not re-run `s790_postsec2_reachability.sh`.
+2. After the s1918 REVISIT, resume the generated-symbol sweep at
+   leftover `func_800F7130` (`0x800F7130`, TOML size `0xB44`
+   matches generated `renderNpcAnchoredProceduralEffect`
+   `rom_size 0xB44`). Already confirmed via the full four-step
+   procedure (s1906–s1917): `funcs_41.c:17961,19845` adjacency
+   (next `RECOMP_FUNC` is `funcs_42.c:35`), `funcs.h:2169-2170`
+   order, `recomp_overlays.inl:1898` offset `0x00052000 =
    0x00051824 + 0x7DC` / `rom_size 0xB44`, zero-hit
-   `func_800F7130`). After that: `func_800F7C74` lines up
-   with `spawnAndUpdateEffectActors` (`funcs_41.c:19845` then
+   non-collision grep. Companion `mission_overlay.txt` already
+   names `renderNpcAnchoredProceduralEffect = 0x800F7130`.
+   Generated body stack `-0x1B0`, `lhu $a0, 0x198($a0)` then
+   `jal 0x8004015C` (`getNpcContextField8`), `t0=actor+0x8`,
+   `s1=actor+0x50`. Next sweep iteration can rename directly
+   (TOML metadata-only; sizes already agree, no bump). After
+   that: `func_800F7C74` lines up with
+   `spawnAndUpdateEffectActors` (`funcs_41.c:19845` then
    `funcs_42.c:35,1481`, `funcs.h:2170-2171`, `.inl:1899`
    offset `0x00052B44 = 0x00052000 + 0xB44` / `rom_size 0x724`,
-   zero-hit `func_800F7C74`). Note
-   (s1897): the generated tree (`funcs_41.c`, `funcs.h`,
-   `recomp_overlays.inl`) is gitignored and absent from
-   this repo's `build/`; it currently lives at
+   zero-hit `func_800F7C74`). After that: `func_800F8398`
+   lines up with `executeActorType4Effect` (`funcs_42.c:35,1481`,
+   `funcs.h:2171-2172`, `.inl:1900` offset `0x00053268 =
+   0x00052B44 + 0x724` / `rom_size 0x10DC`, zero-hit
+   `func_800F8398`). Note (s1897): the generated tree
+   (`funcs_41.c`, `funcs.h`, `recomp_overlays.inl`) is
+   gitignored and absent from this repo's `build/`; it currently
+   lives at
    `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
    — look there first. Archive: `PROJECT-OVERVIEW.md` §33–§35. About
    1,548 placeholder `func_0x...` names remained at s1487; TOML leftover
-   `func_800*` count is 983 after s1916.
+   `func_800*` count is 982 after s1917.
 3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
    s1888 attempt was blocked upstream by item 1, not by a bad input
    schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
@@ -240,11 +244,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1916 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1917 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
-the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F5D34` became
+the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F6954` became
+`buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
+`func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover
 `func_800F5A30` became
 `initActorAsType4` (`0x800F5A30`, `0x304`) after leftover
