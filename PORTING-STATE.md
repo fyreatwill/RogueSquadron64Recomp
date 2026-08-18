@@ -93299,3 +93299,81 @@ bump. Next sweep iteration can rename directly.
 
 Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
 hangar SIGBUS. Did not rebuild.
+
+## Session 1956 (2026-08-18) — synchronized the setType1ActorVelocity symbol
+
+`HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+
+CURRENT-TRUTH is 13412 bytes — under the 60 KB maintenance
+trigger. M5 closed; M3 parked. 15-title REVISIT gate: last 15
+headings are s1941–s1955 (VI-recv / spin-yield / title-SI /
+hangar / s1948 maintenance / six leftover remaps) — not all
+sweep-titled, so this iteration resumes the leftover rename.
+
+No new soak since s1950. The s1949–s1950 hangar-yield soaks
+were already folded: hangar `0x006AB400` publishes, then the
+~4s `filterVoiceSampleBlock+220` SIGBUS
+(`last-guest-pc=0x8000834c`). Do not chase as a single crash.
+
+Renamed leftover `func_800F97B4` (`0x800F97B4`, TOML size
+`0x40`, `syms/rogue_squadron.syms.toml:2017`) to
+`setType1ActorVelocity`. Four-step already complete in the
+s1955 preview; re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_42.c:5780` (`setType1ActorVelocity`) then
+   `:5833` (`setType1ActorField40`) are adjacent
+   `RECOMP_FUNC` lines; previous is `funcs_42.c:5546`
+   (`initActorAsType1WithAnchor`).
+2. `funcs.h:2176-2177` declares
+   `setType1ActorVelocity`, then
+   `setType1ActorField40` in that order.
+3. `recomp_overlays.inl:1904-1905`: this function's offset is
+   `0x00054684` = previous `0x00054544 + 0x140`; `rom_size =
+   0x00000040` matches the TOML `size = 0x40`. Next overlay
+   `setType1ActorField40` is `0x000546C4` =
+   `0x00054684 + 0x40`. Generated body starts
+   `addiu $v0, $zero, 0x1` at `0x800F97B4`; `jr $ra` at
+   `0x800F97EC` / delay-slot `swc1 $f0, 0x60($v1)` at
+   `0x800F97F0`; next starts at `0x800F97F4`
+   (`0x800F97B4 + 0x40`).
+4. `grep` of `RECOMP_FUNC void func_800F97B4` across the
+   generated tree: zero hits — non-collision. Two callers already
+   `jal 0x800F97B4` → `setType1ActorVelocity(...)`
+   (`funcs_38.c:19689`, `:25756`).
+
+Generated body matches the name: returns 0 if
+`MEM_B(actor+0x112) != 1`, else writes `a2` to
+`actor+0x8+0x7C`, `a3` to `+0xCC`, and
+`(a1 × MEM_W[0x800A8F50])` to `+0x60`. Companion
+`rogue_squadron64/symbol_files/mission_overlay.txt` already
+names `setType1ActorVelocity = 0x800F97B4`. No existing
+TOML entry already used that name. Sizes already agreed — no
+bump. Metadata-only TOML rename; no build/regen.
+
+Post-rename leftover `func_800*` count is 975 (was 976). Zero
+leftover `func_800F97B4` remains in repo sources outside the
+ledger.
+
+Previewed the next leftover: `func_800F97F4` (TOML size
+`0x28`, toml:2018) lines up with
+`recomp_overlays.inl:1905` (`setType1ActorField40`,
+offset `0x000546C4` = `0x00054684 + 0x40`, `rom_size =
+0x00000028`) — adjacency (`funcs_42.c:5833` then `:5865`
+`initActorAsType2`) and declaration order
+(`funcs.h:2177-2178`) and non-collision (`grep` of
+`RECOMP_FUNC void func_800F97F4` in the generated tree:
+zero hits). Generated body starts `addiu $v0, $zero, 0x1`
+at `0x800F97F4`; if `actor+0x112 != 1` skip, else load
+old `actor+0x40` into `f0` and store `a1` to `actor+0x40`.
+Companion already names `setType1ActorField40 = 0x800F97F4`.
+Function starts at `0x800F97F4`; `jr $ra` at `0x800F9814`
+/ delay-slot `nop` at `0x800F9818`; next starts at
+`0x800F981C` (`0x800F97F4 + 0x28`). Overlay next
+`0x000546EC` = `0x000546C4 + 0x28`. Three callers already
+`jal 0x800F97F4` → `setType1ActorField40(...)`
+(`funcs_38.c:36572`, `funcs_39.c:20770`, `:29631`).
+Sizes already agree — no bump. Next sweep iteration can
+rename directly.
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
+hangar SIGBUS. Did not rebuild.
