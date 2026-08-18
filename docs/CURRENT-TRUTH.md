@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1907 (2026-08-17).
+detail. Reviewed through s1908 (2026-08-17).
 
 ## Current state
 
@@ -145,33 +145,33 @@ detail. Reviewed through s1907 (2026-08-17).
    This still blocks the entire soak family and item 3 below until
    reachability itself is restored or explained. Productive work until then
    is item 2.
-2. Resume the generated-symbol sweep at leftover `func_800F3260`
-   (`0x800F3260`, TOML size `0x2C` vs generated `tallyMidDetailObject`
-   `rom_size 0x30`). Already confirmed via the full four-step procedure
-   (s1906 + re-checked s1907): `funcs_41.c:6046,6056` adjacency,
-   `funcs.h:2159-2160` order, `recomp_overlays.inl:1888` offset
-   `0x0004E130 = 0x0004E128 + 0x8` / `rom_size 0x30`, zero-hit
-   non-collision grep. Companion `mission_overlay.txt` already names
-   `tallyMidDetailObject = 0x800F3260`. Next iteration can rename
-   directly, and should bump the TOML size to `0x30` — the 4-byte gap
-   is the alignment nop at `0x800F328C`; no companion, generated, or
-   TOML occupant lives there, and the offset chain to
-   `resolveScriptedNameTokenList` only lands on `0x0004E160` if the
-   pad is included. After that leftover: `func_800F3290` already lines
-   up with `resolveScriptedNameTokenList` (s1906/s1907 preview:
-   `funcs_41.c:6056,6092`, `funcs.h:2160-2161`, `.inl:1889` offset
-   `0x0004E160 = 0x0004E130 + 0x30` / `rom_size 0x24C`, zero-hit
-   `func_800F3290`). After that: `func_800F34DC` lines up with
-   `computeRandomizedOrientationFrame` (`funcs_41.c:6092,6547`,
-   `funcs.h:2161-2162`, `.inl:1890` offset `0x0004E3AC = 0x0004E160 +
-   0x24C` / `rom_size 0x7D4`, zero-hit `func_800F34DC`). Note (s1897):
-   the generated tree (`funcs_41.c`, `funcs.h`, `recomp_overlays.inl`)
-   is gitignored and absent from this repo's `build/`; it currently
-   lives at
+2. Resume the generated-symbol sweep at leftover `func_800F3290`
+   (`0x800F3290`, TOML size `0x24C` matches generated
+   `resolveScriptedNameTokenList` `rom_size 0x24C`). Already confirmed
+   via the full four-step procedure (s1906–s1908): `funcs_41.c:6056,6092`
+   adjacency, `funcs.h:2160-2161` order, `recomp_overlays.inl:1889`
+   offset `0x0004E160 = 0x0004E130 + 0x30` / `rom_size 0x24C`,
+   zero-hit non-collision grep. Companion `mission_overlay.txt`
+   already names `resolveScriptedNameTokenList = 0x800F3290`.
+   Generated body walks 8 token slots, jump-tables on type, and
+   calls `copyPipeDelimitedField` / `copyRandomPipeDelimitedField`
+   then `0x80047B48` on the resolved buffer — name matches. Next
+   iteration can rename directly (TOML metadata-only; sizes already
+   agree, no bump). After that leftover: `func_800F34DC` lines up
+   with `computeRandomizedOrientationFrame` (s1906–s1908 preview:
+   `funcs_41.c:6092,6547`, `funcs.h:2161-2162`, `.inl:1890` offset
+   `0x0004E3AC = 0x0004E160 + 0x24C` / `rom_size 0x7D4`, zero-hit
+   `func_800F34DC`). After that: `func_800F3CB0` lines up with
+   `updateNpcEffectIntensity` (`funcs_41.c:6547,8302`,
+   `funcs.h:2162-2163`, `.inl:1891` offset `0x0004EB80 =
+   0x0004E3AC + 0x7D4` / `rom_size 0x45C`, zero-hit
+   `func_800F3CB0`). Note (s1897): the generated tree (`funcs_41.c`,
+   `funcs.h`, `recomp_overlays.inl`) is gitignored and absent from
+   this repo's `build/`; it currently lives at
    `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
    — look there first. Archive: `PROJECT-OVERVIEW.md` §33–§35. About
    1,548 placeholder `func_0x...` names remained at s1487; TOML leftover
-   `func_800*` count is 992 after s1907.
+   `func_800*` count is 991 after s1908.
 3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
    s1888 attempt was blocked upstream by item 1, not by a bad input
    schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
@@ -238,11 +238,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1907 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1908 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
-the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F3258` became
+the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F3260` became
+`tallyMidDetailObject` (`0x800F3260`, `0x30`) after leftover
+`func_800F3258` became
 `returnZero_800F3258` (`0x800F3258`, `0x8`) after leftover
 `func_800F3144` became
 `copyRandomPipeDelimitedField` (`0x800F3144`, `0x114`) after leftover

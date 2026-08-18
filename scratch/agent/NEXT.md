@@ -1,60 +1,54 @@
-# NEXT work unit (s1908)
+# NEXT work unit (s1909)
 
 HYPOTHESIS-ID: generated-symbol-renaming-sweep
 
-**Primary path — resume the sweep.** s1907 synchronized
-`func_800F3258` → `returnZero_800F3258`. Do not re-run
-`s790_postsec2_reachability.sh` without a new measurement axis. Ask (b)
-(disposable clone + `git submodule update` bisect) is still human-only.
+**Primary path — resume the sweep.** s1908 synchronized
+`func_800F3260` → `tallyMidDetailObject` (TOML size bumped
+`0x2C` → `0x30` for the alignment nop at `0x800F328C`). Do not
+re-run `s790_postsec2_reachability.sh` without a new measurement
+axis. Ask (b) (disposable clone + `git submodule update` bisect)
+is still human-only.
 
-Next leftover: `func_800F3260` at `0x800F3260` (TOML size `0x2C`,
-`syms/rogue_squadron.syms.toml:2001`). Already confirmed in s1906 and
-re-checked in s1907 via the full four-step procedure:
-1. Adjacency: `funcs_41.c:6046` (`returnZero_800F3258`) and
-   `:6056` (`tallyMidDetailObject`) are the only two `RECOMP_FUNC` lines
-   matched — true adjacency.
-2. `funcs.h:2159-2160` declares `returnZero_800F3258` then
-   `tallyMidDetailObject` in that exact order.
-3. `recomp_overlays.inl:1888`: `tallyMidDetailObject` offset is
-   `0x0004E130` = `returnZero_800F3258`'s `0x0004E128 + 0x8`
-   (its TOML size); `rom_size = 0x00000030` (not the TOML's `0x2C`).
-4. `grep -rln 'func_800F3260'` across N64Recomp's `RecompiledFuncs/`
+Next leftover: `func_800F3290` at `0x800F3290` (TOML size `0x24C`,
+`syms/rogue_squadron.syms.toml:2002`). Already confirmed in
+s1906–s1908 via the full four-step procedure:
+1. Adjacency: `funcs_41.c:6056` (`tallyMidDetailObject`) and
+   `:6092` (`resolveScriptedNameTokenList`) are the only two
+   `RECOMP_FUNC` lines matched — true adjacency.
+2. `funcs.h:2160-2161` declares `tallyMidDetailObject` then
+   `resolveScriptedNameTokenList` in that exact order.
+3. `recomp_overlays.inl:1889`: `resolveScriptedNameTokenList`
+   offset is `0x0004E160` = `tallyMidDetailObject`'s
+   `0x0004E130 + 0x30` (its TOML size); `rom_size = 0x0000024C`
+   matches the TOML's `size = 0x24C` exactly.
+4. `grep -rln 'func_800F3290'` across N64Recomp's `RecompiledFuncs/`
    tree: zero hits — non-collision.
 
-Generated body matches the name: `lbu 0x15($a0)`, `srl 6`, compare
-to 2, else increment the halfword at `0x80130B84`
-(`0x80130B78+0xC`). Companion `mission_overlay.txt` already names
-`tallyMidDetailObject = 0x800F3260` ("21 callers: (object_ptr) —
-increments mid-detail object counter at 0x80130B84"). No existing
-TOML entry already uses `tallyMidDetailObject`.
+Generated body matches the name: walks 8 token slots (`s4 < 8`,
+stride `+0x10`), jump-tables on type, calls
+`copyPipeDelimitedField` (`jal 0x800F30AC`) and
+`copyRandomPipeDelimitedField` (`jal 0x800F3144`), then
+`jal 0x80047B48` on the resolved stack buffer. Companion
+`mission_overlay.txt` already names
+`resolveScriptedNameTokenList = 0x800F3290`. No existing TOML
+entry already uses `resolveScriptedNameTokenList`. Sizes already
+agree — no bump.
 
-**Size decision (do not silently keep `0x2C`):** bump the TOML size
-to `0x30` in the same rename. Competing readings:
-- H-live-only: TOML `0x2C` is the live-insn span (`jr`/`nop` at
-  `0x800F3284`/`0x800F3288`); keep it.
-- H-include-pad: the generated overlay table, the offset chain to
-  `resolveScriptedNameTokenList` (`0x0004E130 + 0x30 = 0x0004E160`),
-  and the absence of any companion/generated/TOML occupant at
-  `0x800F328C` all treat the alignment nop as part of this function.
+All four already agree — this iteration can rename `func_800F3290`
+to `resolveScriptedNameTokenList` directly (TOML metadata-only
+sync, no build/regen needed), then re-verify + preview the one
+after it the same way before stopping (matching the s1887-s1908
+pattern).
 
-H-include-pad is already selected by those three independent sources
-(s1906 + s1907). Discriminator if re-opened: a `0x800F328C` leftover
-or a generated `RECOMP_FUNC` starting there. None exists.
-
-All four already agree — this iteration can rename `func_800F3260` to
-`tallyMidDetailObject` directly (TOML metadata-only sync, no
-build/regen needed), bumping `size` from `0x2C` to `0x30`, then
-re-verify + preview the one after it the same way before stopping
-(matching the s1887-s1907 pattern).
-
-**After that leftover:** `func_800F3290` already lines up with
-`resolveScriptedNameTokenList` (s1906/s1907 preview:
-`funcs_41.c:6056,6092`, `funcs.h:2160-2161`, `.inl:1889` offset
-`0x0004E160 = 0x0004E130 + 0x30` / `rom_size 0x24C`, zero-hit
-`func_800F3290`). After that: `func_800F34DC` lines up with
-`computeRandomizedOrientationFrame` (`funcs_41.c:6092,6547`,
-`funcs.h:2161-2162`, `.inl:1890` offset `0x0004E3AC = 0x0004E160 +
-0x24C` / `rom_size 0x7D4`, zero-hit `func_800F34DC`).
+**After that leftover:** `func_800F34DC` already lines up with
+`computeRandomizedOrientationFrame` (s1906–s1908 preview:
+`funcs_41.c:6092,6547`, `funcs.h:2161-2162`, `.inl:1890` offset
+`0x0004E3AC = 0x0004E160 + 0x24C` / `rom_size 0x7D4`, zero-hit
+`func_800F34DC`). After that: `func_800F3CB0` lines up with
+`updateNpcEffectIntensity` (`funcs_41.c:6547,8302`,
+`funcs.h:2162-2163`, `.inl:1891` offset `0x0004EB80 =
+0x0004E3AC + 0x7D4` / `rom_size 0x45C`, zero-hit
+`func_800F3CB0`).
 
 **Where the generated tree actually lives:** it is gitignored
 (`RecompiledFuncs/` in `.gitignore`) and does NOT exist under this
@@ -69,7 +63,7 @@ the whole filesystem.
 belong to the sweep (contain "synchronized" or "confirmed ... symbol"),
 this iteration is a REVISIT instead — spend it re-attempting the
 external retail-entry boundary or M4 accumulator-origin threads with a
-genuinely new angle. As of s1907 this gate does NOT fire (s1902 is
+genuinely new angle. As of s1908 this gate does NOT fire (s1902 is
 still in the window — 1 of 15 slots non-sweep). The window starts
 dropping s1902 only after s1917.
 
