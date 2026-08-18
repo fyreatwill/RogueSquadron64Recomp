@@ -91511,3 +91511,92 @@ the same `#7/#8` flavor.
 Do not rebuild a three-way
 re-hunt. Do not force-zero.
 Ask (b) remains human-only.
+
+## Session 1936 (2026-08-17) — selected H-unlogged-walk-stuck after #8 recv2
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: one Debug rebuild adding
+always-on `[vi-cb-recv2]` enter/exit
+around `osRecvMesg(0x80128D10)` at
+`0x80019928` and `[vi-cb-walk]` at
+`L_80019B68` (s1==0), then one `#7/#8`
+soak. After `#8` on a `menu-entry`
+siten=2 staller: recv2-enter and no
+recv2-exit → H-recv2-starved;
+recv2-exit and no walk-start →
+H-post-recv2-stuck; walk-start and
+no `[vi-cb-after]` past the last
+pre-`#8` value → H-unlogged-walk-stuck.
+
+Always-on (not the 128-stride) because
+a silent n=2433 window would make the
+three-way unevaluable (s1932 lesson).
+Sites live in
+`N64Recomp/RecompiledFuncs/funcs_4.c`
+and `N64Recomp/fixup_game_funcs.py`.
+
+`scratch/agent/soak_results/s1936_recv2_walk_20260817-233803/run.log`
+(probe_rc=5, 183s, 0 crash): the
+`#7/#8` / `menu-entry` siten=2
+flavor. `#7` L404114 and `#8`
+L405865 are `applyPendingViChanges`.
+`menu-entry` siten=2 L405916 after
+`.ovl.menu` DMA L405914. `menu-spin`
+climbs to siten=641000000. Zero
+`menu-jal` / `menu-exit` siten=2.
+Zero width=1024. `update_screen`
+`#10816` origin `0x00696100`.
+
+Same-run positive control passed:
+tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice (swap n=2 and
+n=3); `slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`[vi-cb-recv2] site=enter` n=0
+`mq=0x80128D10`, matching exit n=0,
+`[vi-cb-walk]` n=0 `s1=0` (sites
+not missed).
+
+Join key (log order):
+
+- `#8` L405865
+- `[vi-cb-recv2] site=enter` n=2354
+  L405866 `mq=0x80128D10`
+- `[vi-cb-recv2] site=exit` n=2354
+  L405867
+- `[vi-cb-walk]` n=2354 L405868
+  `s1=0`
+- 45 `slot-sb`
+  `musyxRenderVoiceSamples` (3×15
+  voices, idx 9 absent)
+- `.ovl.menu` L405914
+- `menu-entry` siten=2 L405916
+
+Zero recv2/walk n=2355. Last
+`[vi-cb-after]` n=2304 L404602
+(before `#8`; after is still
+strided). Last `[synth-exit]`
+n=2432 L404938 (before `#8`;
+also strided). Lifetime
+`[vi-cb-slot]` ptrs
+`{0x0, 0x80003250, 0x8009123C}`.
+
+**H-unlogged-walk-stuck SELECTED.**
+H-recv2-starved REFUTED (exit
+n=2354 immediately after `#8`).
+H-post-recv2-stuck REFUTED (walk
+n=2354 immediately after that
+exit).
+
+Second line: 45
+`musyxRenderVoiceSamples`
+writebacks after walk-start mean
+the walk entered `musyxSynthFrame`
+(`0x8009123C`) before freezing.
+Which jalr does not return is the
+next split (always-on slot/synth/
+after).
+
+Do not re-probe recv2. Do not
+force-zero. Ask (b) remains
+human-only.

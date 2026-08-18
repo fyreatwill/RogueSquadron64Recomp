@@ -1,57 +1,50 @@
-# NEXT work unit (s1936) — post-#8 recv2 vs walk
+# NEXT work unit (s1937) — walk interior after #8
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1935 consumed the queued
-`s1934_entry2_synth_exit` /
-`_b` soaks. Arm B was the
-`#7/#8` / `menu-entry`
-siten=2 flavor. Three-way
-result: **H-recv-starved
-SELECTED.** H-synth-never-
-returned REFUTED (`synth-exit`
-n=2560). H-stuck-later-slot
-REFUTED for the last logged
-walk (`vi-cb-after` n=2432;
-`vi-cb-slot` n=9728 = 2432×4).
-`#8` (applyPending, only
-caller `0x80019914`) fires
-after after-2432, so the
-loop-top `osRecvMesg(0x80114388)`
-of the next iteration
-unblocked. Stall is after
-`#8`.
+s1936 selected **H-unlogged-walk-stuck**
+on the `#7/#8` / `menu-entry`
+siten=2 staller
+`s1936_recv2_walk_20260817-233803`.
+recv2 enter/exit n=2354 and
+walk n=2354 fire immediately
+after `#8` L405865. `[vi-cb-after]`
+stays at last logged n=2304
+(L404602, before `#8`). Zero
+recv2/walk n=2355. 45
+`musyxRenderVoiceSamples`
+`slot-sb` then `.ovl.menu` then
+`menu-entry` siten=2. H-recv2-starved
+and H-post-recv2-stuck REFUTED.
 
-## Work unit — instrument the post-applyPending path
+## Work unit — always-on slot / synth / after
 
-One Debug rebuild, one
-`#7/#8` soak. Do **not**
-re-hunt the s1932 three-way.
+One Debug rebuild, one `#7/#8`
+soak. Do **not** re-probe recv2.
 Do **not** force-zero.
 
-Add three sites in
-`N64Recomp/fixup_game_funcs.py`
-(and the live `funcs_4.c`)
-under the existing
+In `N64Recomp/fixup_game_funcs.py`
+and the live generated files,
+make these existing
 `ROGUESQ_LOG_AUDIOTICK_TRACE`
-gate, same
-`n<40 || n%128==0` stride:
+sites **always-on** (drop the
+`n<40 || n%128==0` /
+`n<160 || n%512==0` stride),
+same silent-window reason as
+s1936 recv2/walk:
 
-1. `[vi-cb-recv2]` `site=enter`
-   immediately before
-   `osRecvMesg_recomp` at
-   `0x80019928` (queue
-   `0x8013 + -0x72F0` =
-   `0x80128D10`, `a2=1` BLOCK).
-   Log `n=` and `mq=`.
-2. `[vi-cb-recv2]` `site=exit`
-   at `after_7` (first insn
-   `0x80019930`).
-3. `[vi-cb-walk]` at
-   `L_80019B68` (start of the
-   4-slot walk; existing
-   `[vi-cb-slot]` is inside
-   the walk after the `lw`).
+1. `[vi-cb-slot]` after the `lw`
+   at `L_80019B68` (`funcs_4.c`)
+2. `[synth-entry]` on
+   `musyxSynthFrame` entry
+3. `[synth-exit]` on
+   `musyxSynthFrame` return
+4. `[vi-cb-after]` before the
+   jump back to `L_800198E8`
+
+Leave `[vi-cb-recv2]` /
+`[vi-cb-walk]` as they are
+(already always-on).
 
 Same-run positive control
 (must fire **before** `#8`):
@@ -60,44 +53,46 @@ Same-run positive control
   with `took_swap=1` twice
 - `slot-alloc` ends
   `0x8018D4A0 count=16`
-- `[vi-cb-recv2] site=enter`
-  and `site=exit` both fire
-  from n=0 (if enter is 0
-  the site missed)
-- `[vi-cb-walk]` n last > 0
-  before `#8` (if 0 the
-  site missed)
+- `[vi-cb-slot]` fires from n=0
+  with at least one
+  `ptr=0x80003250` and one
+  `ptr=0x8009123C`
+- `[synth-entry]` and
+  `[synth-exit]` both fire
+  from n=0
+- `[vi-cb-after]` fires from n=0
 - `menu-entry` siten=2 AND
   `menu-spin` climbs
 - `#7` and `#8` fire
 
-Then, after `#8` on that
-staller:
+Then, after `#8` / walk-start
+on that staller:
 
-- recv2-enter increments
-  past the last pre-`#8`
-  logged n AND recv2-exit
-  does not →
-  **H-recv2-starved**
-- recv2-exit increments
-  AND `[vi-cb-walk]` does
-  not increment past the
-  last pre-`#8` value →
-  **H-post-recv2-stuck**
-- `[vi-cb-walk]` increments
-  AND `[vi-cb-after]` stays
-  at 2432 →
-  **H-unlogged-walk-stuck**
+- `[synth-entry]` increments
+  past the last pre-`#8` n AND
+  matching `[synth-exit]` does
+  not → **H-synth-in-walk**
+- `[synth-exit]` increments AND
+  a later non-null `[vi-cb-slot]`
+  `ptr` is entered AND
+  `[vi-cb-after]` does not
+  increment past the last
+  pre-`#8` value →
+  **H-later-slot**
+- four `[vi-cb-slot]` lines
+  for that walk (s1 0..3) AND
+  still no `[vi-cb-after]` →
+  **H-after-missed**
 
 Crash / #6-dead (no entry 2)
 = UNEVALUABLE — enqueue a
 second copy of the same
-recipe, do not babysit, do
-not re-read as the answer.
+recipe, do not babysit.
 
 Join key is log order:
-`#8` vs last recv2-enter /
-recv2-exit / vi-cb-walk /
+`#8` vs last recv2-exit /
+vi-cb-walk / vi-cb-slot ptrs /
+synth-entry / synth-exit /
 vi-cb-after / menu-entry
 siten=2.
 
@@ -114,29 +109,23 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- The s1936 recv2/walk
+  three-way (closed:
+  H-unlogged-walk-stuck).
+- Treating the post-`#8`
+  stall as recv2-starved or
+  as stuck before
+  `L_80019B68`.
 - The s1932 three-way on
   synth-exit / vi-cb-after
-  (s1935 closed it:
-  H-recv-starved).
-- Treating H-recv-starved
-  as the loop-top
-  `osRecvMesg(0x80114388)`
-  — `#8` refuted that.
-- Another identical
-  entry-2 flavor hunt with
-  no new site.
+  at stride 128 (s1935
+  closed the logged split;
+  s1936 moved the stall
+  into the walk).
 - Crash / #6-dead last-
   logged completion
   (s1932–s1934) as the
   entry-2 answer.
-- VI-cb during the spin
-  (s1931) — closed
-  (H-viretrace-blocked).
-- Mix-alive vs mix-dead
-  after entry 2 (s1930) —
-  closed.
-- A same-recipe `s790`
-  with no new axis.
 - A slot-byte / gate
   force-zero without
   `ORIGIN:`.

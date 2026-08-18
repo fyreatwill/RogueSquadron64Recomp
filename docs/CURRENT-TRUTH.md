@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1935 (2026-08-17).
+detail. Reviewed through s1936 (2026-08-17).
 
 ## Current state
 
@@ -479,12 +479,46 @@ detail. Reviewed through s1935 (2026-08-17).
   `osRecvMesg(0x80114388)`
   — so recv1 of the next
   (unlogged) iteration
-  unblocked. Stall is after
-  `#8`: the second
-  `osRecvMesg(0x80128D10)`
-  at `0x80019928`, or the
-  work between `after_7`
-  and `L_80019B68`.
+  unblocked. s1935 left the
+  stall as recv2 or the
+  work before `L_80019B68`.
+  **s1936**: always-on
+  `[vi-cb-recv2]` enter/exit
+  and `[vi-cb-walk]` (s1==0)
+  on
+  `s1936_recv2_walk_20260817-233803`
+  (probe_rc=5, 183s, 0
+  crash, `#7/#8`,
+  `menu-entry` siten=2,
+  `menu-spin` 641000000,
+  `#10816`, 0 width=1024).
+  Same-run control passed:
+  tick 2/2/2; `took_swap=1`
+  twice; `slot-alloc` ends
+  `0x8018D4A0/16`; recv2
+  enter/exit/walk fire from
+  n=0 `mq=0x80128D10`. Join:
+  `#8` L405865 → recv2
+  enter n=2354 L405866 →
+  exit n=2354 L405867 →
+  walk n=2354 L405868 → 45
+  `slot-sb`
+  `musyxRenderVoiceSamples`
+  → `.ovl.menu` L405914 →
+  `menu-entry` siten=2
+  L405916. Zero recv2/walk
+  n=2355; last
+  `[vi-cb-after]` n=2304
+  L404602 (before `#8`).
+  **H-unlogged-walk-stuck
+  SELECTED.** H-recv2-starved
+  REFUTED (exit n=2354).
+  H-post-recv2-stuck
+  REFUTED (walk n=2354).
+  Lifetime slot ptrs
+  `{0x0, 0x80003250,
+  0x8009123C}`. Next split
+  is inside that walk.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -538,41 +572,37 @@ detail. Reviewed through s1935 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **VI-cb stuck after
-   applyPending `#8` (s1935).
-   H-recv-starved selected
-   on the s1932 three-way;
-   `#8` refines it off the
-   loop-top recv.** Next:
-   one Debug rebuild adding
-   `[vi-cb-recv2]` enter/exit
-   around `osRecvMesg`
-   `0x80019928` (queue
-   `0x80128D10`) and
-   `[vi-cb-walk]` at
-   `L_80019B68`, same
-   `ROGUESQ_LOG_AUDIOTICK_TRACE`
-   stride, then one `#7/#8`
-   soak. After `#8` on a
-   `menu-entry` siten=2
-   staller: recv2-enter and
-   no recv2-exit →
-   H-recv2-starved;
-   recv2-exit and no
-   walk-start →
-   H-post-recv2-stuck;
-   walk-start and no
-   `vi-cb-after` past 2432 →
-   H-unlogged-walk-stuck.
-   Do not force-zero. Do
-   not re-hunt the s1932
-   three-way or consume
-   another crash/#6-dead
-   soak as the entry-2
-   answer. Ask (b) remains
-   human-only. Still blocks
-   item 3 (hangar/512) until
-   a port run publishes
+1. **VI-cb stuck inside the
+   4-slot walk after `#8`
+   (s1936). H-unlogged-walk-
+   stuck selected: recv2
+   enter/exit n=2354 and
+   walk n=2354 fire after
+   `#8`; `[vi-cb-after]`
+   stays at 2304.** Next:
+   one Debug rebuild making
+   `[vi-cb-slot]`,
+   `[synth-entry]`,
+   `[synth-exit]`, and
+   `[vi-cb-after]` always-on
+   (same silent-window
+   reason as s1936 recv2),
+   then one `#7/#8` soak.
+   After `#8` / walk-start:
+   synth-entry and no
+   matching synth-exit →
+   H-synth-in-walk; synth-exit
+   and a later non-null
+   `vi-cb-slot` ptr with no
+   after → H-later-slot;
+   four slot lines (s1 0..3)
+   and still no after →
+   H-after-missed. Do not
+   force-zero. Do not
+   re-probe recv2. Ask (b)
+   remains human-only. Still
+   blocks item 3 (hangar/512)
+   until a port run publishes
    `[phase] vi_width=512
    origin=0x006AB400` (or
    `0x006AB800`).
@@ -777,7 +807,17 @@ has one generated caller
 (`0x80019914`) after that
 recv; `#8` fires after
 after-2432, so recv1
-unblocked.
+unblocked. Treating the
+post-`#8` stall as
+H-recv2-starved (blocked
+on `osRecvMesg(0x80128D10)`)
+or as stuck between
+`after_7` and `L_80019B68`
+is superseded by s1936 —
+recv2 enter/exit n=2354
+and walk n=2354 both fire
+immediately after `#8`;
+`[vi-cb-after]` does not.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -812,7 +852,12 @@ s1925 selecting H-slot-stuck (slot-ret
 969/969 `path=walk`; n=1..3 `v0=1 s1=0x00`,
 n=4..961000000 `v0=0 s1=0x01`, gate `0x65`
 both sides; stub-return-1 and gate-0
-REFUTED) and s1926 selecting H-all-idx +
+REFUTED) and s1936 selecting
+H-unlogged-walk-stuck (`#8` then
+recv2 enter/exit n=2354 then walk
+n=2354; after stays 2304;
+H-recv2-starved and
+H-post-recv2-stuck REFUTED) and s1926 selecting H-all-idx +
 H-base-moved (idle `0x80169460`/ch=20 all
 zero; stuck `0x8018D4A0`/ch=16 `nzn/n →
 15/16` `byte=0x02`; H-one-idx and
