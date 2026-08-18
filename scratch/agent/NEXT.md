@@ -1,69 +1,88 @@
-# NEXT work unit (s1973) — M3 slotDispatcherIter+872 SIGBUS class audit
+# NEXT work unit (s1974) — mission-entry key-sequence exploration
 
-HYPOTHESIS-ID: m3-dispatcher-sigbus-class
+HYPOTHESIS-ID: mission-entry-recipe
 
-## What s1972 settled
+## What s1973 settled
 
-`drainAudioAndFinalizeSpeechBuffer` was spinning on `anyAudioSlotActive` at
-`L_800B24D4` (funcs_30.c) — the same host-yield-starvation class as menuInit and
-menuInput. Adding the ROGUESQ_SPIN_YIELD gate (s1972 fixup in fixup_game_funcs.py
-and funcs_30.c) resolved the spin in ~300k iters. Hangar now stable 180s / 48
-frames / zero crashes with all three yield sites active. H-new-yield-needed
-SELECTED. Class closed.
+slotDispatcherIter was called 7659 times in 90s of hangar running with
+ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID sp events fired. H-uninit-stack and
+H-stack-collision are REFUTED in the hangar context. The SIGBUS is dormant in the
+current build/recipe (two-source: s1973 sp-guard probe + s1972_hangar_300s 300s
+clean soak). The M3 dispatcher SIGBUS class is now DORMANT — no active crash
+families remain in the hangar recipe.
+
+Hangar is stable 300s+ (s1972_hangar_300s: rc=0, 80 frames, no crashes).
 
 ## Single next work unit
 
-M3 systematic idiom-class audit: the recurring `slotDispatcherIter+872` SIGBUS at
-`funcs_8.c:22810`. This is the generated prologue spill of guest `$sp` that
-previous static audits exhausted without finding a reachable writer. The
-class-audit approach (per the s282–s288 model):
+The hangar recipe reaches the "SELECT LEVEL / AMBUSH AT MOS EISLEY" screen. It
+is not known whether extending the key sequence past 11 Starts advances into the
+actual mission (flight gameplay) or whether additional non-Start inputs (e.g., C
+buttons, Z, L/R) are needed to confirm a mission selection. This is the first
+time mission-entry is attempted.
 
-1. Locate the exact spill site and the guest stack range it occupies.
-2. Enumerate ALL generated prologue/epilogue instructions that store to the same
-   guest stack address range (across all funcs_*.c files, not just the caller).
-3. Classify each hit: can it race with slotDispatcherIter's frame? Prove dead or
-   mark as guard candidate.
-4. If a writer is found, name it with ORIGIN:. If the class is exhausted with no
-   writer, close as "no static writer found" and move on.
-
-Do NOT add a guard or mitigation until the writer is named.
+**Goal:** Determine whether a mission can be entered from the current hangar state,
+and if so, what key sequence achieves it. Mission entry would exercise:
+- slotDispatcherIter with live mission NPCs (enables H-corruption-from-caller test)
+- In-mission visual rendering (hologram artifact context changes)
+- Any crash families unique to mission code
 
 ## Competing hypotheses and discriminator
 
-- H-stack-collision: another generated function's prologue writes to the same guest
-  stack region during a concurrent slotDispatcherIter call.
-- H-corruption-from-caller: the dispatched callee corrupts $sp before the spill
-  address is read back, making the load see garbage.
-- H-uninit-stack: the SIGBUS comes from a guest $sp that was never initialized to a
-  valid host-mapped address, so the generated prologue store hits unmapped memory.
+- H-start-enters-mission: pressing Start from the mission-select screen (hangar)
+  confirms the selection and enters the mission.
+- H-needs-confirm-key: a non-Start button (e.g., A/C-right) is required to confirm
+  before Start starts the mission.
+- H-no-mission-path: the current recipe/state cannot enter a mission without
+  additional setup not yet understood.
 
-Discriminator: the spill address itself (computed from ctx->r29 at the prologue).
-If the SIGBUS address is a well-formed N64 address that just has no host mapping,
-H-uninit-stack is most likely. If it's a wild value far from any N64 range,
-H-corruption-from-caller. If it's within another function's frame range, H-stack-collision.
+Discriminator: does the VI width change or origin change to a new scene after
+additional Start presses? If a new origin (not 0x006AB400/hangar) appears after
+the extra presses, mission entry occurred.
 
 ## Exact commands
 
-Find the dispatcher prologue spill site:
-```sh
-grep -n 'funcs_8.c:22810\|slotDispatcherIter\|0x8003E8DC' docs/CURRENT-TRUTH.md PORTING-STATE.md | tail -10
-sed -n '22800,22830p' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c
-```
+Run a probe with extended Start presses after the hangar is reached:
+- Current recipe reaches hangar at ~26.6s (vi_width=512 origin=0x006AB400)
+- Add Start presses at 30s, 35s, 40s, 45s, 50s, 55s (6 extra beyond the eleven)
+- Watch for any new [phase] VI width/origin change after 30s
 
-Get the guest PC and $sp range from the generated prologue:
-```sh
-grep -n 'slotDispatcherIter\|0x8003E8DC' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c | head -5
-```
-
-Enumerate all stores to the same guest stack range across all funcs_*.c:
-```sh
-grep -n 'MEM_W.*ctx->r29\|MEM_W.*r29' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs_8.c | head -30
-```
-
-Positive control: verify the hangar is still reachable with current build:
 ```sh
 env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
 ROGUESQ_STUB_MISSING_FUNCS=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
-PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1973_control 60 2
+PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start 62:start 67:start 72:start 77:start 82:start 87:start' \
+zsh tools/probe.sh scratch/agent/s1974_mission_entry 120 2
 ```
+
+Check for a new VI origin after 30s:
+```sh
+grep '\[phase\].*origin' scratch/agent/s1974_mission_entry/run.log | grep -v '006AB400\|00790400\|00696100\|000000'
+```
+
+If no new origin: also try C-right and A button presses (check controller button names
+in tools/probe.sh or AGENTS.md). If mission-entry is achieved, record the key sequence
+and the first new VI origin.
+
+## If mission entry is not achieved
+
+Write a 600s hangar stability soak script to scratch/agent/soak_queue/:
+```sh
+cat > scratch/agent/soak_queue/s1974_hangar_600s.sh << 'SOAK_EOF'
+#!/bin/zsh
+set -e
+cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
+env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+ROGUESQ_STUB_MISSING_FUNCS=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
+PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
+zsh tools/probe.sh scratch/agent/soak_results/s1974_hangar_600s_$(date +%Y%m%d-%H%M%S) 600 2
+rc=$?
+echo "s1974_hangar_600s: rc=$rc frames=$(ls scratch/agent/soak_results/s1974_hangar_600s_*/f_*.png 2>/dev/null | wc -l) crashes=$(grep -c SIGBUS scratch/agent/soak_results/s1974_hangar_600s_*/run.log 2>/dev/null || echo 0)"
+exit $rc
+SOAK_EOF
+chmod +x scratch/agent/soak_queue/s1974_hangar_600s.sh
+```
+
+If mission entry is not achieved in the probe run, declare SUBSTITUTED and write
+the 600s soak instead. Do not chase non-discriminating key sequences more than
+once per session (iron rule 8 analog: if the probe shows no new origin after 17
+Starts, one additional attempt with non-Start buttons is permitted, then stop).

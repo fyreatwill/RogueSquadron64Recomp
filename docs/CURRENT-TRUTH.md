@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1972 (2026-08-18).
+detail. Reviewed through s1973 (2026-08-18).
 
 ## Current state
 
@@ -122,9 +122,11 @@ detail. Reviewed through s1972 (2026-08-18).
   isolated. The frame visibly retains the blue beam artifact, but the oracle
   has no pixel witness for this LLE path, so H3 (the remaining pixel/coverage
   explanation) is unavailable rather than selected. No mitigation applies.
-- Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
-  guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
-  frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
+- **`slotDispatcherIter+872` SIGBUS is DORMANT (s1973).** 7659 calls in 90s
+  hangar run (ROGUESQ_LOG_SLOT_SP_GUARD=1): zero INVALID sp events. H-uninit-stack
+  and H-stack-collision REFUTED in hangar context. Two-source with s1972_hangar_300s
+  (rc=0, 80 frames, 330s). H-corruption-from-caller cannot be ruled out in a
+  mission context. Re-evaluate with mission-entry recipe only.
 - Corrected `npcPowerGeneratorUpdate` is main `.text` at `0x80077AF0`;
   regenerated ELF, N64Recomp, fixups, and Debug target pass. Runtime boundary
   tests remain pre-1024 and unevaluable.
@@ -183,40 +185,44 @@ detail. Reviewed through s1972 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1972: audioDrain spin-yield class CLOSED. Hangar now stable 180s+
-(48 frames, zero crashes) with all three yield sites active. No new crash
-families in the 180s window. Remaining open items: hangar visual artifacts
-(H3 unavailable) and M3 slotDispatcherIter SIGBUS (static exhausted, runtime
-open). Next actionable step is M3 class audit for the dispatcher SIGBUS idiom.
+Re-ranked s1973: slotDispatcherIter sp guard: 7659 calls, 0 invalid sp in 90s
+hangar run; SIGBUS DORMANT. Hangar stable at 300s+ (s1972_hangar_300s: rc=0,
+80 frames, no crashes). No active crash families. Remaining open items: hangar
+visual artifacts (H3 unavailable). Next actionable work: queue 600s stability
+soak; attempt mission-entry key-sequence exploration.
 
-1. **M3 — `slotDispatcherIter+872` SIGBUS class (funcs_8.c:22810).** The
-   generated prologue spills guest `$sp` at this site; complete static audits
-   found no reachable frame-overlapping writer. Runtime guest corruption
-   remains open. Approach: enumerate all generated prologue spills that store
-   `$sp` (or any register) at a guest-stack address, check whether any site
-   can race with the dispatcher's stack frame, and if so classify as guard /
-   prove-dead. This is the same grep-enumerate → classify → guard/close
-   pattern as the s282–s288 `-0x25A4` class. Do not add a mitigation without
-   naming the writer.
+1. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
+   run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
+   H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
+   300s clean). H-corruption-from-caller cannot be ruled out in mission context.
+   Do not add mitigation. Re-evaluate only with a mission-entry recipe or a new
+   crash with this signature.
 2. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
    H2 (malformed triangle) REFUTED s1967; H1 (consumer draw state) REFUTED
    s1969 (single-source). H3 (pixel/coverage) unavailable — oracle has no
    screenshot for LLE path. Hologram-beam artifact remains open. Do not add
    mode-state mitigation or repeat the `0xD60` scan.
-3. Keep audio closed unless a new bounded lead reaches initialization.
-4. M3: only as complete idiom-class audits with a named discriminator.
-5. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
+3. 600s hangar stability soak: queue to soak_queue to establish 600s baseline and
+   look for any new crash families. If a new crash appears, classify as M3 class
+   audit target.
+4. Mission-entry key-sequence: attempt extending past 11 Starts to see if
+   additional inputs navigate past the hangar select screen into a mission. This
+   would exercise slotDispatcherIter with live mission NPCs.
+5. Keep audio closed unless a new bounded lead reaches initialization.
+6. M3: only as complete idiom-class audits with a named discriminator.
+7. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
    batch arms; phase-gate; SIGKILL; queue soaks. Hangar recipe is
    `ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot. Ask (b) remains
    human-only.
 
 ## Durable boundaries
 
-**M3 dispatcher/frame origin.** s1162: 144 direct `slotDispatcherIter` calls in
-72 generated callers; caller entries, stack pairs, and saved-`$ra` contracts
-match. No static indirect target to `0x8003E8DC`. One executable `r29`
-initializer in `run_thread_function`. Writer/load classes selected H3; no next
-class without a new discriminator.
+**M3 dispatcher/frame origin. DORMANT (s1973).** s1162: 144 direct
+`slotDispatcherIter` calls in 72 generated callers; caller entries, stack pairs,
+and saved-`$ra` contracts match. No static indirect target to `0x8003E8DC`. One
+executable `r29` initializer in `run_thread_function`. s1973: 7659 calls in 90s
+hangar run with sp guard active; zero INVALID sp events; H-uninit-stack and
+H-stack-collision REFUTED (hangar context). Two-source with s1972_hangar_300s clean soak.
 
 **VI descriptor.** `osTvType=1` → `rsViModeType=0`; boot selector `A/B/C=1/0/0`.
 Active record is base `+0xF0` (`0x80128E40`), the 320 descriptor.

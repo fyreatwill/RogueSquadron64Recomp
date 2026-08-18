@@ -537,3 +537,5 @@
 20260818-022703 | s1950_hangar_yield_repro | rc=3 | 31s | scratch/agent/soak_results/s1950_hangar_yield_repro_20260818-022703.log
 20260818-s1950 | s1950_hangar_yield_repro ADVANCED | H-hangar-reachable reproduced: 512 at 24.8s; gone at 4.3s after 1 hangar frame; filterVoiceSampleBlock+220 last-guest-pc=0x8000834c. Same short window as s1949; did not lengthen hangar. scratch/agent/soak_results/s1950_hangar_yield_repro_20260818-022703.log
 20260818-132555 | s1971_hangar_180s | rc=127 | 0s | scratch/agent/soak_results/s1971_hangar_180s_20260818-132555.log
+s1972_hangar_300s: rc=0 frames=80 crashes=0 audioDrain_yields=1
+20260818-134138 | s1972_hangar_300s | rc=0 | 330s | scratch/agent/soak_results/s1972_hangar_300s_20260818-134138.log

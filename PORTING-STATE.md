@@ -94417,3 +94417,76 @@ either — but s1971's function never completed).
 exhausted; runtime guest corruption open), (c) continue seeking a new hangar probe
 angle for visual quality. Enqueue a 300s stability soak to establish the longer
 baseline. M3 class audit is the next actionable systematic work.
+
+## Session 1973 (2026-08-18) — slotDispatcherIter sp guard: 7659 calls, 0 invalid sp; SIGBUS dormant
+
+**Fold-in: s1972_hangar_300s soak (loop-queued).**
+Soak ran 330s, rc=0, 80 frames, 0 crashes, audioDrain_yields=1. Extends s1972's
+180s / 48-frame window by 150s. No new crash families. Hangar confirmed stable at
+300s+.
+
+**Work unit: M3 slotDispatcherIter+872 SIGBUS class audit — runtime probe.**
+
+Static audits (s1162) already exhausted: 144 direct calls from 72 callers, all
+frame pairs balanced, no static indirect path to 0x8003E8DC, one r29 initializer
+in `run_thread_function`. This session added a runtime discriminating measurement
+to select among the three open hypotheses.
+
+**Competing hypotheses:**
+- H-uninit-stack: guest $sp is invalid at function entry (never set to a valid RDRAM address)
+- H-stack-collision: concurrent N64 thread's activity corrupts sp before or during the call
+- H-corruption-from-caller: sp was valid at entry but became invalid through callee corruption
+
+**Discriminating measurement:** Run with `ROGUESQ_LOG_SLOT_SP_GUARD=1` (existing
+env-gated check: fires if sp < 0x80000000 || sp >= 0x80800000 at function entry)
+and `ROGUESQ_LOG_SLOT_DISPATCH=1` (dispatch counter, cap 4096 per-phase) during
+a 90s hangar run (ROGUESQ_SPIN_YIELD=1, eleven-Start recipe, PROBE_PHASE_WIDTH=512,
+90s total).
+
+**Results (scratch/agent/s1973_dispatch_probe/run.log):**
+- Positive control: [phase] vi_width=512 origin=0x006AB400 at 26.6s, 25 frames
+  captured. slotDispatcherIter was called 7659 times (total dispatch log count).
+- [slot-sp-guard] INVALID fires: **0** in all 7659 calls.
+- No SIGBUS or crash of any kind.
+
+**Analysis:**
+slotDispatcherIter IS called during the hangar/menu run — 7659 calls in 90s
+confirms the function is live and the sp guard was exercised on every entry.
+With 0 INVALID fires across 7659 calls, ctx->r29 was always in the valid RDRAM
+range (0x80000000..0x807FFFFF) at function entry.
+
+**Hypothesis verdicts:**
+- H-uninit-stack: REFUTED. If sp were uninitialized (0 or garbage), the guard
+  would fire on the very first call. 7659 calls with 0 fires rules this out in
+  the hangar context.
+- H-stack-collision: REFUTED in hangar context. Concurrent corruption from another
+  N64 thread would eventually produce an out-of-range sp; 7659 calls with 0 fires
+  is strongly negative. Cannot rule out in mission context with more NPCs.
+- H-corruption-from-caller: Partially constrained. The guard fires BEFORE the
+  prologue write, so it only catches corruption that reached sp BEFORE function
+  entry. Deep-callee stack smash affecting sp mid-function cannot be ruled out,
+  but the absence of crashes in 7659 calls + 25 hangar frames is strongly negative.
+
+**Two-source consensus (combined with s1972_hangar_300s):**
+- Source 1: s1972_hangar_300s: rc=0, 80 frames, no crashes in 330s.
+- Source 2: this session: 7659 slotDispatcherIter calls, 0 invalid sp, 25 hangar
+  frames, no crashes in 90s.
+
+Both independent sources agree: the SIGBUS is dormant in the current build/recipe.
+
+**ORIGIN assessment:** The historical SIGBUS (s844, 275s, pre-fix era) coincided
+with filterVoiceSampleBlock crashing (bltzal bug) and audioDrain spinning (host
+starvation). Those conditions could have left ctx->r29 in a bad state if the
+broken function path had stack-unwinding defects. With bltzal fixed (s1971) and
+audioDrain yielding properly (s1972), the corruption chain is broken. Single-source
+— no direct proof of causal link.
+
+**Disposition:** slotDispatcherIter+872 SIGBUS is DORMANT in the current
+build/recipe. Re-evaluate only if mission-entry is achieved (which would exercise
+more NPC calls under deeper call stacks) or if a new crash with that signature
+appears in a soak.
+
+**Next work unit:** No active M3 crash families remain. No active M5 work. Visual
+artifacts H3 unavailable. Queue a 600s hangar stability soak (soak_queue) and
+attempt mission-entry key-sequence exploration (extend past 11 Starts to see if
+additional Starts enter the mission).
