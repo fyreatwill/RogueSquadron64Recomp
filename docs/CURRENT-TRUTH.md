@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1943 (2026-08-18).
+detail. Reviewed through s1944 (2026-08-18).
 
 ## Current state
 
@@ -733,40 +733,43 @@ detail. Reviewed through s1943 (2026-08-18).
   **s1943**: same Debug binary,
   `ROGUESQ_SPIN_YIELD=1`,
   classified eleven-Start from
-  boot (s707/s1496; not
-  s1942's from-phase-1024
-  Start/A). Same-run control
-  passed: tick 3/3/3
+  boot. Control passed; 1024
+  `origin=0x00790400` at 14.2s
+  then stayed through `#10816`.
+  **H-wrong-recipe SELECTED.**
+  Probe `[keys]` printed all
+  11 Sends; that is not host
+  consumption.
+  **s1944**: landed `[pad-host]`
+  Start/A rising edges with
+  committed `vi_width`/`origin`.
+  Same recipe
+  (`s1944_pad_host_after_title_20260818-012050/run.log`,
+  probe_rc=5, 180s, 0 crash).
+  Control passed: tick 3/3/3
   `took_swap=1` three times;
   third `slot-alloc`
-  `0x8018D4A0 count=16`;
-  `[spin-yield]` n=1/2;
-  `[vi-recv-path]` n=0
-  `blocked=1`; `#9/#10`;
+  `0x8018D4A0/16`;
+  `[spin-yield]` n=1;
   `[phase] 1024
-  origin=0x00790400` at 14.2s
-  `#778` (Rice-driven-like;
-  s1942 undriven-like was
-  50.3s). Then 166s at that
-  origin through
-  `update_screen #10816`; 0
-  hangar `0x006AB400`/`800`;
-  0 later `[phase]`; 0
-  `hangar=1`; probe_rc=5 last
-  width 1024. All 11 Starts
-  printed. Early Starts
-  skipped the cinematic;
-  Starts after 14.2s did not
-  leave title 1024.
-  **H-wrong-recipe SELECTED.**
-  H-hangar-reachable /
-  H-yield-not-armed /
-  H-1024-not-only-spin
-  REFUTED. Yield plus the
-  classified hangar schedule
-  is not sufficient.
-  Hangar/512 M4 still
-  UNEVALUABLE.
+  origin=0x00790400` at 14.1s
+  `#779`; `[pad-host]` Start
+  n=1,2 **before** that 1024
+  (`vi_width=640`). After:
+  `[pad-host]` Start n=3,4
+  both `vi_width=1024
+  origin=0x00790400`; A=0;
+  0 hangar origin; `#10816`
+  still title 1024.
+  **H-title-ignores-start
+  SELECTED.** H-late-keys-dropped
+  / H-hangar-reachable REFUTED.
+  Only 4/11 Starts reached
+  `get_n64_input`; last
+  `[host-start]` n=1309 (no
+  n=2000). Rice hangar is
+  38.4s — later Starts were
+  never polled.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -820,27 +823,27 @@ detail. Reviewed through s1943 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-1. **H-wrong-recipe SELECTED
-   (s1943).** Yield + classified
-   eleven-Start from boot
-   reached title-like 1024 at
-   14.2s (Rice-driven 17.3s)
-   then stayed
-   `origin=0x00790400` through
-   180s / `#10816` (0 hangar
-   origin). Early Starts did
-   skip the cinematic (s1942
-   undriven-like 1024 was
-   50.3s). Do not repeat
-   eleven-Start-from-boot or
-   s1942's from-phase-1024
-   Start/A as hangar recipes.
-   `ROGUESQ_SPIN_YIELD` stays
-   default-off. Next: why
-   title 1024 ignores later
-   Starts (host pad vs guest
-   edge vs hangar handler).
-   Ask (b) remains human-only.
+1. **H-title-ignores-start
+   SELECTED (s1944).** Two
+   post-1024 `[pad-host]`
+   Starts carry
+   `vi_width=1024
+   origin=0x00790400` and the
+   screen stays there through
+   `#10816`. H-late-keys-dropped
+   REFUTED for those edges.
+   Next split is why only 4/11
+   Starts were consumed
+   (pad poll dies after n=1309,
+   before Rice's 38.4s hangar
+   window) vs the title truly
+   ignoring a live pad for the
+   whole hangar window. Do not
+   repeat eleven-Start or
+   from-phase-1024 Start/A as
+   hangar recipes. Yield stays
+   default-off. Ask (b) remains
+   human-only.
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -864,8 +867,8 @@ detail. Reviewed through s1943 (2026-08-18).
    s1918 was the mandatory 15-title REVISIT (do not treat s1919
    as another REVISIT — the window now contains s1918).
 3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888,
-   s1943). The 640 stall is no longer the blocker (s1942 yield
-   publishes 1024; s1943 eleven-Start publishes it at 14.2s). The
+   s1943, s1944). The 640 stall is no longer the blocker (s1942 yield
+   publishes 1024; s1944 still publishes it at 14.1s). The
    classified hangar schedule still never produces origin
    `0x006AB400`/`800`. Gate stays
    (`ROGUESQ_M4_Y8000_WIDTH=512` plus `rs64_is_hangar_vi`). Success
@@ -941,6 +944,15 @@ recipe on the port once 1024 is
 reachable is superseded by s1943 —
 it reaches title-like 1024 at
 14.2s and stays there.
+Treating s1943's "all 11 Starts
+printed" as host pad consumption
+is superseded by s1944 —
+those were probe `[keys]`
+sends; only 4 rising Start
+edges reached `get_n64_input`,
+and 2 of them were a live
+title-1024 pad word the screen
+ignored.
 Treating s844 `#8`
 `applyPendingViChanges` as the 1024 function submitting 640
 is superseded by s1919 — `#8` is `0x80128E40`; `#10` is

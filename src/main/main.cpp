@@ -70,6 +70,8 @@
 // ---------------------------------------------------------------------------
 void rs64_register_overlays();
 extern "C" void recomp_entrypoint(uint8_t* rdram, recomp_context* ctx);
+extern "C" uint32_t rs64_vi_committed_width();
+extern "C" uint32_t rs64_vi_committed_origin();
 
 // Wrapper: captures rdram into the watchdog global on first call so the
 // hwbp/poll diagnostic threads can attach. Forwards to the real entrypoint.
@@ -3042,6 +3044,29 @@ static bool get_n64_input(int controller_num, uint16_t* buttons, float* x, float
     *x = stick_x;
     *y = stick_y;
     *buttons = btn;
+
+    // s1944: host Start/A rising edges on the outgoing pad word (always-on).
+    // Discriminates late winctl/focus drops vs title 1024 ignoring a live pad.
+    {
+        static uint16_t s_prev_pad = 0;
+        static int s_pad_host_n = 0;
+        const uint16_t rise = (uint16_t)(btn & ~s_prev_pad);
+        s_prev_pad = btn;
+        if (rise & (N64_START_BUTTON | N64_A_BUTTON)) {
+            ++s_pad_host_n;
+            if (s_pad_host_n <= 16 || (s_pad_host_n % 32) == 0) {
+                fprintf(stderr,
+                    "[pad-host] n=%d start=%d a=%d btn=0x%04X vi_width=%u origin=0x%08X\n",
+                    s_pad_host_n,
+                    (rise & N64_START_BUTTON) ? 1 : 0,
+                    (rise & N64_A_BUTTON) ? 1 : 0,
+                    (unsigned)btn,
+                    (unsigned)rs64_vi_committed_width(),
+                    (unsigned)rs64_vi_committed_origin());
+                fflush(stderr);
+            }
+        }
+    }
 
     // s577 item -7: host START edge probe (always-on). Discriminates H-edge1
     // (host never sees 2nd RETURN) vs H-edge2 (host sees it but guest new=0).

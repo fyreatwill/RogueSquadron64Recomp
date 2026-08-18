@@ -92323,3 +92323,88 @@ Next: host vs guest Start
 consumption after title
 1024. Ask (b) remains
 human-only.
+
+## Session 1944 (2026-08-18) — selected H-title-ignores-start; pad Start reaches title 1024
+
+`HYPOTHESIS-ID: hangar-after-title-1024`.
+Landed always-on `[pad-host]`
+rising edges for Start/A on
+the outgoing pad word in
+`get_n64_input` (rate-limit
+first 16 then every 32;
+`vi_width`/`origin` from
+`rs64_vi_committed_*`). No
+`lib/` edit. Debug rebuild.
+One soak: `ROGUESQ_SPIN_YIELD=1`
+plus s1943 eleven-Start from
+boot and the same passive
+instruments.
+
+Artifact:
+`scratch/agent/soak_results/s1944_pad_host_after_title_20260818-012050/run.log`
+(probe_rc=5, 180s, 0 crash,
+last width 1024).
+
+Same-run positive control
+passed before any post-1024
+pad claim: tick-entry/jal/exit
+3/3/3 with `took_swap=1`
+three times; third
+`slot-alloc` `new=0x8018D4A0
+count=16`; `[spin-yield]`
+n=1/2/3; `[phase] 1024
+origin=0x00790400` at 14.1s
+`#779` (L141337);
+`[pad-host]` Start n=1 and
+n=2 **before** that line
+(`vi_width=640
+origin=0x0062BD00`).
+
+After that 1024:
+`[pad-host]` Start n=3
+(L196044) and n=4
+(L285427), both
+`vi_width=1024
+origin=0x00790400` on the
+same line. A=0. Zero later
+`[phase]`; last
+`update_screen #10816`
+still `0x00790400`/1024;
+0 origin `0x006AB400`/`800`;
+0 `hangar=1`. All 11
+probe `[keys]` printed;
+only 4 rising Start edges
+reached `get_n64_input`.
+Last `[host-start]` is
+n=1309 edge 1→0 (L288173);
+no n=2000 heartbeat.
+
+This selects
+H-title-ignores-start.
+This refutes
+H-late-keys-dropped (after=0
+would have been required)
+and H-hangar-reachable.
+The two post-1024 Starts
+are a live pad word on
+title 1024; the screen
+does not leave.
+
+Caveat (next discriminator,
+not a reopen of after=0):
+Rice hangar is `1024→512`
+at ~38.4s. Only Starts
+~16s/~21s were consumed
+after 14.1s; pad polling
+stops after the 4th edge,
+so Starts 26–56 never
+enter the pad word.
+Do not treat “all 11
+Starts printed” as host
+consumption — those are
+probe sends.
+
+`ROGUESQ_SPIN_YIELD` stays
+default-off. Do not
+force-zero slots. Ask (b)
+remains human-only.
