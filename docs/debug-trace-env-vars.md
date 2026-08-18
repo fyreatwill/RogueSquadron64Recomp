@@ -104,7 +104,7 @@ they're orthogonal to the log gates above but commonly co-used.
 | `ROGUESQ_FULL_DUMP` | off | When a crash dump is written (SEH handler, SIGABRT, F12), `=1` produces a full-memory minidump (~5 GB) instead of the default lite dump. Use only when you need RDRAM contents for postmortem. |
 | `ROGUESQ_SUPPRESS_OOB_CIMG` | off | When set, drops Factor 5 ucode emissions of bogus SET_COLOR_IMAGE commands at HIGH (≥ 0x800000) and LOW (< 0x100000) addresses before they reach RT64. Reduces the iter-810 memory spike but causes a visual regression — the 3D Factor 5 logo no longer renders, since some legitimate Factor 5 lowmem CIMGs are dropped along with the garbage. |
 | `ROGUESQ_SWAP_SHADE` | off | **Legacy alias** for `ROGUESQ_SHADE_FIX=1`. Prefer setting `SHADE_FIX` directly. Kept because old logs reference it. |
-| `ROGUESQ_SPIN_YIELD` | off | s1942 A/B: every 100000 `menu-spin` iterations at `L_800C5930`, call `yield_self_1ms` and log `[spin-yield] n=` (first 4, then every 16). Tests whether the `anyAudioSlotActive` spin starves idle-wait so host VI retrace never drains. Off = control. |
+| `ROGUESQ_SPIN_YIELD` | off | s1942/s1949: every 100000 `anyAudioSlotActive` spin iterations at `L_800C5930` (`site=menuInit`) and `L_800B8050` (`site=menuInput`), call `yield_self_1ms` and log `[spin-yield] site=... n=` (first 4, then every 16). Tests whether those `beq v0==0` spins starve idle-wait so host VI/SI never drain. Off = control. Do not default on. |
 
 ## How to add a new debug trace
 

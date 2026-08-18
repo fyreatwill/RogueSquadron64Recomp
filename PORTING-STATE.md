@@ -92802,3 +92802,60 @@ collected no new evidence. It does rule out stale duplicated
 truth-file prose as the source of the live state summary; the
 deleted detail remains in the append-only ledger and §36.
 
+## Session 1949 (2026-08-18) — selected H-hangar-reachable; menuInput yield publishes hangar 512
+
+`HYPOTHESIS-ID: hangar-after-title-1024`.
+Extended `ROGUESQ_SPIN_YIELD` from `menuOverlayInit` `L_800C5930`
+to `menuControllerInput` `L_800B8050` via `fixup_game_funcs.py`
+(durable + one-shot `RS64_S1949_MENU_INPUT_YIELD=1` on the
+already-patched tree). Same cadence (every 100000), same
+`[spin-yield]` tag, `site=menuInit` vs `site=menuInput`.
+Default-off. No `lib/` edit. No pad-bit injection. Debug rebuild
+of `funcs_31.c` / `funcs_34.c`. One soak: `ROGUESQ_SPIN_YIELD=1`
++ s1943 eleven-Start from boot + the same passive instruments
+as s1947.
+
+ORIGIN: host VI/SI retrace (legitimate) sits in
+`external_messages`; this second `beq v0==0` spin is runnable
+so idle-wait never drains. Hardware would preempt. Same writer
+as s1942.
+
+Artifact:
+`scratch/agent/soak_results/s1949_menu_input_yield_20260818-021858/run.log`
+(probe_rc=3, crash after hangar, last width 512) and
+`f_001_000.0.png` (hangar SELECT LEVEL / AMBUSH AT MOS EISLEY).
+
+Same-run positive control passed before any yield/hangar claim:
+tick-entry/jal/exit 4/4/4 with `took_swap=1` four times; third
+`slot-alloc` `new=0x8018D4A0 count=16`; `[spin-yield]
+site=menuInit` n=1,2,3; `[phase] 1024 origin=0x00790400` at
+14.2s `#786`; `[slot-ret-caller] site=menuControllerInput`
+n=1..16 `after1024=1..8` all `1024`/`0x00790400` **after** that
+1024.
+
+After that control: `[spin-yield] site=menuInput` n=1..4
+(spin=100000..400000) then recv1-exit n=1429 (enter was
+blocked). SI `start-read` continues n=745 (just after 1024)
+through n=1435 (still title) to n=1600 at hangar
+`origin=0x00656400`. `[pad-host]` Start n=3,4 at title 1024
+(same 4/11 as s1944). Then `[phase] 512 origin=0x006AB400` at
+26.1s `#1496`; `[m4-y8000] mark hangar-origin hangar=1`.
+`osViSetMode #12` width=512 `site=initVideoSubsystem`.
+
+**H-hangar-reachable SELECTED.** H-same-starve selected as
+the mechanism (menuInput yield then recv1-exit then hangar).
+H-yield-miss REFUTED (`site=menuInput` n>=1). H-title-real
+REFUTED (title consumed Starts 3/4 and left for hangar).
+
+Hangar M4 on this first window: 2187 `L_17F0` entries, 3904
+flushes, `y8000_entry=0` `y8000_any=0`. Combined with a
+recognizable 3D hangar frame, H-never-live at hangar/512.
+Late-hangar Y unsampled: SIGBUS `filterVoiceSampleBlock+220`
+`last-guest-pc=0x8000834c` (~4s after hangar; known
+`drainMeshReleaseQueue` return). Do not chase as a single
+crash. Repro soak queued as `s1950_hangar_yield_repro.sh`.
+
+Yield stays default-off. Hangar recipe is now
+`ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot. Ask (b)
+remains human-only.
+

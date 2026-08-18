@@ -2,8 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1948 (2026-08-18). s1948 is maintenance: this file
-was compacted from 60,464 bytes / 1,700 lines.
+detail. Reviewed through s1949 (2026-08-18).
 
 ## Current state
 
@@ -36,15 +35,24 @@ was compacted from 60,464 bytes / 1,700 lines.
   (s1942; H-spin-starves-idle). Default-off. ORIGIN: host VI retrace
   (legitimate) sits in `external_messages`; hardware would preempt the spin.
   Session-by-session table: `PROJECT-OVERVIEW.md` §36.
-- **After title 1024 the same idiom re-starves SI.** Eleven-Start from boot
-  stays on title 1024 (s1943; not hangar). Only 4/11 Starts reach
-  `get_n64_input`; 2 of those are a live title pad word the screen ignores
-  (s1944). SDL poll and host pad die together after Start #4 (s1945).
-  `siServiceThread` completes iter 1419 then blocks on the next loop Recv
-  (s1946). After 1024 the only live `jal 0x8008E57C` is `menuControllerInput`
-  `L_800B8050` (n=773e6, `v0=0` walk); `menuOverlayInit` /
-  `waitForAnyAudioSlot` / the other seven are dead (s1947; H-menu-input).
-  The s1942 yield does not cover this site.
+- **Hangar is reachable (s1949).** Extending the same env-gated
+  `ROGUESQ_SPIN_YIELD` to `menuControllerInput` `L_800B8050`
+  (`site=menuInput`, every 100000, default-off) unblocks post-1024 SI
+  and publishes `[phase] 512 origin=0x006AB400` at 26.1s `#1496`.
+  Captured frame is the hangar SELECT LEVEL / AMBUSH AT MOS EISLEY
+  screen. Recipe: `ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot.
+  Do not default the yield on. ORIGIN: host VI/SI retrace (legitimate)
+  sits in `external_messages`; this second `beq v0==0` spin is runnable
+  so idle-wait never drains. Hardware would preempt.
+- **First hangar window is short.** SIGBUS in `filterVoiceSampleBlock+220`
+  (`last-guest-pc=0x8000834c`, the known `drainMeshReleaseQueue` return)
+  ~4s after hangar. Do not chase as a single crash; a repro soak is
+  queued (`s1950_hangar_yield_repro.sh`).
+- **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
+  capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
+  `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
+  VMADH/VGE / `0xD60` / the ovl20 table. Late-hangar Y is unsampled
+  (crash cut the window).
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -92,22 +100,13 @@ was compacted from 60,464 bytes / 1,700 lines.
   DxLDy/XH/DxHDy/XM/DxMDy) plus optional shade/tex suffixes. s1856
   selected H-never-live on VI 640 attribution LLE (single-source):
   15921 `L_17F0` entries and 9229 flushed `0xC8` headers, zero
-  `+0x1A` / YL/YM/YH `== 0x8000`. s1872 selected UNEVALUABLE for
-  hangar/512: four port arms never published origin `0x006ab400` /
-  `0x006ab800` or VI 512/1024 (all `640→2→640` at `0x00696100`).
+  `+0x1A` / YL/YM/YH `== 0x8000`. s1872 hangar/512 was UNEVALUABLE
+  (no hangar origin); s1949 published hangar and selected
+  H-never-live there (see Durable).
 
 ## Active investigation and ranked next steps
 
-1. **H-menu-input SELECTED (s1947).** After title 1024, the only live
-   `jal 0x8008E57C` site is `menuControllerInput` `0x800B8050` (n=773e6,
-   `v0=0` walk). Same `beq v0==0` audio-slot spin as the s1924
-   `menuOverlayInit` stall; s1942 `ROGUESQ_SPIN_YIELD` only covers
-   `L_800C5930`, so this second spin re-starves idle-wait (SI send 1418
-   then recv1 n=1419 `blocked=1`). Next split: extend that same env-gated
-   yield to `L_800B8050` and see whether SI/poll resume and whether hangar
-   appears. Do not default the yield on. Do not repeat eleven-Start as a
-   hangar recipe without that yield. Ask (b) remains human-only.
-2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
+1. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated `renderNpcAnchoredProceduralEffect`
    `rom_size 0xB44`). Four-step already complete (s1906–s1917). Next sweep
    iteration can rename directly (TOML metadata-only). After that:
@@ -121,19 +120,19 @@ was compacted from 60,464 bytes / 1,700 lines.
    s1918 was the mandatory 15-title REVISIT (do not treat a later
    session as another REVISIT just because the window once contained
    only sweep titles).
-3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888,
-   s1943, s1944). The 640 stall is no longer the blocker (s1942 yield
-   publishes 1024; s1944 still publishes it at 14.1s). The classified
-   hangar schedule still never produces origin `0x006AB400`/`800`. Gate
-   stays (`ROGUESQ_M4_Y8000_WIDTH=512` plus `rs64_is_hangar_vi`). Success
-   is still `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`).
-   Do not treat 640, attract 512, or title `0x00790400` as hangar. Do
-   not re-walk VMADH/VGE, `0xD60` shape, or the ovl20 consumer table.
+2. Hangar visual artifacts on the first live hangar frame (geometry
+   cracks, blue tris, hologram layering). New discriminator required;
+   do not treat them as the parked M4 Y=0x8000. Consume `s1950` soak
+   first if it lengthens the hangar window.
+3. Hangar SIGBUS `filterVoiceSampleBlock+220` / `0x8000834c` is a
+   known family. Revisit only as a complete idiom-class audit.
 4. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. Write a bounded plan first.
 5. Revisit M3 only as a complete idiom-class audit with a named discriminator.
 6. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
-   batch arms; phase-gate; SIGKILL; queue soaks.
+   batch arms; phase-gate; SIGKILL; queue soaks. Hangar recipe is
+   `ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot. Ask (b) remains
+   human-only.
 
 ## Durable boundaries
 
@@ -159,8 +158,10 @@ sentinel is that XY payload. s1840: the restage is a spec-accurate
 `0xFFFF8000` splits into X=`0xFFFF` (scaled to XL) and Y=`0x8000`
 (raw s11.2). s1856: that Y is not live at `L_17F0` or in flushed
 `0xD60` YL/YM/YH during VI 640 attribution LLE (H-never-live,
-single-source). s1872 hangar/512 UNEVALUABLE: four port arms
-never reached hangar origin or VI 512/1024.
+single-source). s1872 hangar/512 was UNEVALUABLE (no hangar origin).
+s1949 published hangar `0x006AB400` and selected H-never-live there:
+2187 hangar `L_17F0` entries / 3904 flushes with `y8000_any=0`, plus a
+recognizable 3D hangar frame. Late-hangar Y unsampled (4s crash).
 
 **Attract 1024 presenter.** Leave adds `submitGfxFrame` +104/+102 without a new
 screen-handler entry. Callee-side `prev_pc` attributes every present: eight
@@ -177,8 +178,8 @@ Most recent, still load-bearing for the next unit:
   live 180s with no crash and no `osViSetMode width=1024`.
 - H-slots-stay-live is superseded by s1942 — two `yield_self_1ms` calls
   unblocked recv1 and the guest issued `#9/#10`.
-- Eleven-Start-from-boot as a hangar recipe once 1024 is reachable is
-  superseded by s1943 — it reaches title-like 1024 at 14.2s and stays.
+- Eleven-Start-from-boot as a hangar recipe *without* yielding
+  `L_800B8050` is still wrong (s1943–s1947 stay at title 1024).
 - s1943 "all 11 Starts printed" as host pad consumption is superseded by
   s1944 — those were probe `[keys]` sends; only 4 rising Start edges
   reached `get_n64_input`.
@@ -191,6 +192,12 @@ Most recent, still load-bearing for the next unit:
 - Continuing post-1024 spin as `waitForAnyAudioSlot` / `menuOverlayInit`
   / another of the ten `jal 0x8008E57C` sites is superseded by s1947 —
   only `menuControllerInput` is live after 1024.
+- s1943–s1947 "eleven-Start stays at title 1024" is superseded by s1949
+  — those runs did not yield `L_800B8050`. With that yield, hangar
+  `0x006AB400` publishes at 26.1s.
+- Hangar/512 live `0x8000` Y parked UNEVALUABLE (s1872, s1888, s1943,
+  s1944) is superseded by s1949 — hangar origin published and
+  `y8000_any=0` on that window.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -198,10 +205,10 @@ s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 ## Evidence ledger summary
 
 Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
-s1880–s1917 leftover remaps and the s1888–s1947 VI-1024 / spin-yield /
-title-SI chain live in §36. s820–s1239 closed post-sec2 / M3 / audio / VI
-(dummy-video retail-entry later superseded by Rice). s1728 and s1948 are
-maintenance only.
+s1880–s1917 leftover remaps and the s1888–s1949 VI-1024 / spin-yield /
+title-SI / hangar chain live in §36. s820–s1239 closed post-sec2 / M3 /
+audio / VI (dummy-video retail-entry later superseded by Rice). s1728
+and s1948 are maintenance only.
 
 ## Method and safety rules
 

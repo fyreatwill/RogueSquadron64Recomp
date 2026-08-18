@@ -20,15 +20,18 @@ built on `MikeSemicolonD/RogueSquadron64Recomp` with local forks of N64Recomp, N
 RT64. The goal was to get the game building and rendering correctly on Apple Silicon.
 
 **Where it stands:** the game boots and renders through attribution, N64 logo, intro cinematic,
-star flare, Factor 5 logo, and a title-like 1024 (`0x00790400`) once
-`ROGUESQ_SPIN_YIELD=1` breaks the `menuOverlayInit` audio-slot spin (s1942). Overlay
+star flare, Factor 5 logo, title-like 1024 (`0x00790400`), and hangar 512
+(`0x006AB400`) once `ROGUESQ_SPIN_YIELD=1` yields both `menuOverlayInit`
+`L_800C5930` and `menuControllerInput` `L_800B8050` (s1942, s1949). Overlay
 dispatch is fixed enough for mission entry and post-sec2 outdoor presentation. The
-war-room floor band defect (s12–s48) is fixed. Audio is stubbed.
+war-room floor band defect (s12–s48) is fixed. Audio is stubbed. Yield stays
+default-off.
 
-**What is not done:** hangar origin `0x006AB400`/`800` has not been published on the
-port (s1943–s1947). After title 1024 a second `anyAudioSlotActive` spin in
-`menuControllerInput` re-starves SI/poll, so later Starts never reach the pad word.
-M5 remains closed; M3 and M4 hangar/512 are parked. See `CURRENT-TRUTH.md`.
+**What is not done:** the first hangar window dies ~4s later in
+`filterVoiceSampleBlock` (`last-guest-pc=0x8000834c`). Hangar visuals have
+geometry/color artifacts. M5 remains closed; M3 only as idiom-class audits.
+M4 hangar/512 Y=0x8000 is not live on the first hangar capture. See
+`CURRENT-TRUTH.md`.
 
 ## 2. How the pipeline fits together
 
@@ -3225,7 +3228,7 @@ stays 320" used dummy video; Rice supplies the later phase. s1135
 "retail never accesses `0x130B10:0x130B58`" superseded by s1528. s1698
 "Z on attract 512 stays 512 through 125.8 s" superseded by s1714.
 
-## 36. Sweep leftover s1880–s1917 and the VI-1024 spin-yield chain (s1888–s1947)
+## 36. Sweep leftover s1880–s1917 and the VI-1024 spin-yield chain (s1888–s1949)
 
 Migrated from `CURRENT-TRUTH.md` during the s1948 maintenance pass.
 
@@ -3279,7 +3282,7 @@ metadata-only rename). Then `func_800F7C74` → `spawnAndUpdateEffectActors`,
 s1903–s1917 (except the s1902 LPM A/B) were sweep-titled. s1918 was the
 mandatory 15-title REVISIT and opened the true-stall chain below.
 
-### VI-1024 / spin-yield / title-SI chain (s1888–s1947)
+### VI-1024 / spin-yield / title-SI / hangar chain (s1888–s1949)
 
 Post-s844 recipes stalled at 640 `0x00696100`. Crash families
 (`fillSampleStreamRange` SIGBUS, AGX `clearDepthTarget`, `findTileCopyId`)
@@ -3316,11 +3319,13 @@ kill some runs; they are not why 1024 is missing. Ask (b) (clone +
 | s1945 | H-poll-stopped | `[pad-sdl] site=poll` last n=1408 at `#1408`; pad-sdl and pad-host die together after Start #4. Unique `osContStartReadData` caller is `siServiceThread` `0x80002E10`. |
 | s1946 | H-si-loop-recv | Last `[si-thr]` is a complete iter `loop/start-read/after-read-recv/get-read/send` all n=1419; zero `loop` n=1420; `site=exit`=0. Unique sender to loop-top mq `0x8010FF50` is `wakeSerialThreadOnSi`. Then `[vi-cb-recv1] enter n=1420` `blocked=1`. `menu-spin` after 1024 = 0 (init returned). `[slot-ret]` after 1024 still climbs. |
 | s1947 | H-menu-input | After 1024 the only live `jal 0x8008E57C` is `menuControllerInput` `L_800B8050` (n=773e6, after1024=8, all `1024`/`0x00790400`). Zero post-1024 `menuOverlayInit` / `waitForAnyAudioSlot` / the other seven. Same `beq v0==0` spin; s1942 yield does not cover it. |
+| s1948 | maintenance | CURRENT-TRUTH 60,464 → 13,282 bytes. |
+| s1949 | H-hangar-reachable | Same yield on `L_800B8050` (`site=menuInput`). Control: tick 4/4/4, slot-alloc `0x8018D4A0`/16, `site=menuInit` n=1, `[phase] 1024 origin=0x00790400` at 14.2s `#786`, then `site=menuInput` n=1..4 and recv1-exit n=1429. `[phase] 512 origin=0x006AB400` at 26.1s `#1496`; hangar frame is SELECT LEVEL / AMBUSH AT MOS EISLEY. SI continues to start-read n=1600. Crash ~4s later: `filterVoiceSampleBlock+220` `last-guest-pc=0x8000834c`. Hangar `y8000_any=0` over 2187 entries. Default-off. ORIGIN: host VI/SI retrace (legitimate) sits in `external_messages`. |
 
 **Do not repeat.** s1942 yield off/on A/B (closed). s1942 from-phase-1024
 Start/A as a hangar recipe. s1943–s1947 eleven-Start-from-boot as a hangar
 recipe without yielding `L_800B8050`. Force-zero slots. `requeue_vi=true` as
-the only arm. Ask (b).
+the only arm. Ask (b). Do not default `ROGUESQ_SPIN_YIELD` on.
 
 **Superseded claims compacted out of CURRENT-TRUTH in s1948.** s1888–s1917
 "stall at 640 then crash". H-slots-stay-live (s1942). Eleven-Start as a
