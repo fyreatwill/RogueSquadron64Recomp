@@ -94346,3 +94346,74 @@ $ra around the PIC idiom so overwriting ctx->r31 is safe.
 - Next work unit: investigate drainAudioAndFinalizeSpeechBuffer spin (determine if
   it's a new spin-yield site or a different bottleneck) with a new idle-yield
   probe. HYPOTHESIS-ID: audio-drain-spin-class.
+
+## Session 1972 (2026-08-18) — audioDrain spin-yield gate closes the third host-starvation site; hangar stable 180s / 48 frames
+
+**Context:** s1971 observed `drainAudioAndFinalizeSpeechBuffer` spinning at 218M+
+iterations across the 60s window (same class as the two fixed menuInit/menuInput
+spins). A 180s stability soak (`soak_queue/s1971_hangar_180s.sh`) failed at rc=127
+because the script used `dirname "$0"/../../../../` — one level above the repo root —
+and `zsh tools/probe.sh` wasn't found. Soak discarded; probe run inline this session.
+
+**Competing hypotheses:**
+- H-spin-benign: spin resolves once audio data arrives; VI continues because the spin
+  and VI run in independent threads.
+- H-spin-starves-audio: spin starves the audio-mix thread, causing silence or
+  eventual crash.
+- H-new-yield-needed: same as menuControllerInput — yield lets the idle/audio thread
+  run, keys on a voice, anyAudioSlotActive returns nonzero, drain completes.
+
+**Discriminating measurement:** Add ROGUESQ_SPIN_YIELD gate at `L_800B24D4`
+(funcs_30.c, the `anyAudioSlotActive` back-branch in `drainAudioAndFinalizeSpeechBuffer`);
+run yield=1 for 180s; check whether audioDrain spin-yield fires (positive control)
+and whether spin count is materially lower than s1971's 218M+.
+
+**Static analysis:** `funcs_30.c:11114` — `L_800B24D4` is the loop label for a
+`beq $v0==0` spin on `anyAudioSlotActive` (`0x8008E57C`). Identical in structure
+to `L_800B8050` (menuControllerInput) and `L_800C5930` (menuOverlayInit). The
+`tickMusyXIfActive` call before the loop gives the audio engine one tick; then the
+loop waits for a slot to activate. With the audio-activation thread starved by the
+spin, no slot activates and the loop runs forever.
+
+**Fix:** Added s1972 fixup block to `fixup_game_funcs.py` (N64Recomp repo) inserting
+a yield-self-1ms gate at `L_800B24D4` in funcs_30.c, mirroring the s1949 menuInput
+pattern. Applied directly to funcs_30.c (RecompiledFuncs already patched from prior
+runs; full regen not performed). Rebuilt with cmake (funcs_30.c.o recompiled, binary
+relinked, zero new warnings).
+
+**Build:** touch funcs_30.c → cmake rebuild → funcs_30.c compiled; linked as
+RogueSquadron64Recomp. Pre-existing format warning at funcs_30.c:3688, not new.
+
+**Run results (yield=1 arm, 180s, ROGUESQ_SPIN_YIELD=1):**
+- Phase 512 (hangar origin `0x006AB400`) reached at 25.1s.
+- 48 frames captured; 206 `update_screen` calls; **zero crashes** (no SIGBUS,
+  no SIGSEGV, no slotDispatcherIter+872).
+- `[spin-yield] site=audioDrain n=1 spin=100000` → n=2 spin=200000 → n=3 spin=300000
+  (positive control confirmed live; spin resolved after ~300k iters, function returned).
+- menuInit n=1,2 and menuInput n=1..4 also confirmed (existing gates still live).
+
+**Comparison vs s1971 (single-source cross-session):** s1971 with no audioDrain
+yield gate saw 218M+ iterations in 60s with no resolution. s1972 with yield gate
+saw ~300k iters and resolution. Ratio ≈ 726× fewer iterations; function returned
+and the 180s window extended cleanly (vs s1971's 60s probe window, no crash in
+either — but s1971's function never completed).
+
+**Outcomes:**
+- H-new-yield-needed SELECTED for audioDrain site. H-spin-benign is inconsistent
+  with the s1971 218M+ observation (benign would imply eventual resolution without
+  yield, but 218M in 60s with no sign of stopping is inconsistent).
+- H-spin-starves-audio: the spin did not cause visible crashes in s1971 (VI was
+  advancing) so starvation was not causing immediate crashes — but the function
+  never completing IS an unresolved drain. With yield, drain completes cleanly.
+- `drainAudioAndFinalizeSpeechBuffer` spin-yield class is CLOSED. Gate is
+  default-off (ROGUESQ_SPIN_YIELD), same as the other two sites.
+- ORIGIN: host audio-thread never keys on a voice while the spin holds the CPU;
+  yield lets it run; anyAudioSlotActive returns nonzero; drain completes.
+- Hangar is now stable for 180s+ (no crashes in 180s window). Three spin-yield
+  sites total (menuInit, menuInput, audioDrain) all confirmed live and resolving.
+
+**Next work unit:** The open items are: (a) hangar visual artifacts (H3 unavailable
+— oracle has no screenshot), (b) M3 slotDispatcherIter+872 SIGBUS (static audits
+exhausted; runtime guest corruption open), (c) continue seeking a new hangar probe
+angle for visual quality. Enqueue a 300s stability soak to establish the longer
+baseline. M3 class audit is the next actionable systematic work.

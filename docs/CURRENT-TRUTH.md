@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1971 (2026-08-18).
+detail. Reviewed through s1972 (2026-08-18).
 
 ## Current state
 
@@ -58,12 +58,16 @@ detail. Reviewed through s1971 (2026-08-18).
   vs 1 frame / 4s before. H-link-lost selected class-wide; filterVoiceSampleBlock
   SIGBUS family CLOSED. ORIGIN: N64Recomp direct-call lowering omits the link
   write; fix is the legitimate PC+8 value.
-- **New observation (s1971): `drainAudioAndFinalizeSpeechBuffer` spin at
-  218M+ iterations in the 60s hangar window.** Similar to the prior
-  `menuControllerInput` spin-yield class. VI advances normally (update_screen
-  #5312 at 60s), so this spin does not currently block rendering. Whether it
-  blocks audio progression or will eventually cause a crash is unknown.
-  Needs investigation before calling the hangar fully stable.
+- **`drainAudioAndFinalizeSpeechBuffer` spin-yield class CLOSED (s1972).**
+  Same `beq v0==0 / anyAudioSlotActive` pattern as menuInit and menuInput.
+  Added ROGUESQ_SPIN_YIELD gate at `L_800B24D4` (funcs_30.c / fixup_game_funcs.py s1972).
+  With yield: spin resolved in ~300k iters (positive control audioDrain n=1,2,3 live);
+  180s hangar ran 48 frames / 206 update_screens / zero crashes. Without yield (s1971):
+  218M+ iters in 60s, function never returned (single-source cross-session comparison).
+  H-new-yield-needed SELECTED. ORIGIN: host audio-thread can't key on a voice while
+  the spin holds the CPU; yield lets it run; slot activates; drain completes. Default-off.
+  Hangar is now stable for 180s+. Three spin-yield sites total (menuInit, menuInput,
+  audioDrain) all confirmed resolving under ROGUESQ_SPIN_YIELD=1.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -179,27 +183,21 @@ detail. Reviewed through s1971 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1971: bltzal $zero link-register class is CLOSED (fix landed,
-hangar stable 60s+). New first item is the drainAudioAndFinalizeSpeechBuffer
-spin, which is a fresh discriminatable class. Hologram visual artifacts remain
-open (H3 unavailable). M3 is closed for this idiom class. Audio and M4
-boundaries remain parked.
+Re-ranked s1972: audioDrain spin-yield class CLOSED. Hangar now stable 180s+
+(48 frames, zero crashes) with all three yield sites active. No new crash
+families in the 180s window. Remaining open items: hangar visual artifacts
+(H3 unavailable) and M3 slotDispatcherIter SIGBUS (static exhausted, runtime
+open). Next actionable step is M3 class audit for the dispatcher SIGBUS idiom.
 
-1. **`drainAudioAndFinalizeSpeechBuffer` spin class (s1971 observation).** At
-   218M+ iterations in 60s, this loop is in the same host-yield-starvation
-   class as the fixed `menuControllerInput` spin. Competing hypotheses:
-   - H-spin-starves-audio: the spin starves the audio thread, blocking sample
-     production, which eventually causes a crash or audio-dead silence.
-   - H-spin-benign: the spin is expected to yield eventually as audio data
-     arrives; VI/rendering continue normally so it's not starving anything.
-   - H-new-yield-needed: like `menuControllerInput`, this spin needs a
-     `yield_self_1ms` gate, controlled by ROGUESQ_SPIN_YIELD, to let the
-     idle thread drain.
-   Discriminator: add a `drainAudioAndFinalizeSpeechBuffer` spin-yield site
-   (like the existing two) and run a 180s probe alongside a no-yield arm; if
-   audio output changes or crash pattern changes, H-spin-starves-audio selects.
-   The 180s soak in `soak_queue/s1971_hangar_180s.sh` may pre-answer the
-   stability question before the next iteration.
+1. **M3 — `slotDispatcherIter+872` SIGBUS class (funcs_8.c:22810).** The
+   generated prologue spills guest `$sp` at this site; complete static audits
+   found no reachable frame-overlapping writer. Runtime guest corruption
+   remains open. Approach: enumerate all generated prologue spills that store
+   `$sp` (or any register) at a guest-stack address, check whether any site
+   can race with the dispatcher's stack frame, and if so classify as guard /
+   prove-dead. This is the same grep-enumerate → classify → guard/close
+   pattern as the s282–s288 `-0x25A4` class. Do not add a mitigation without
+   naming the writer.
 2. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
    H2 (malformed triangle) REFUTED s1967; H1 (consumer draw state) REFUTED
    s1969 (single-source). H3 (pixel/coverage) unavailable — oracle has no
@@ -304,6 +302,9 @@ Most recent, still load-bearing for the next unit:
 - "First hangar window is short (~4s / 1 frame / SIGBUS filterVoiceSampleBlock)"
   is superseded by s1971 — bltzal $zero link-register fix eliminated the crash;
   hangar now stable 60s+ / 17 frames with no SIGBUS.
+- "Needs investigation before calling the hangar fully stable" (s1971 audioDrain
+  observation) is superseded by s1972 — audioDrain spin-yield gate closes the
+  class; 180s hangar stable / 48 frames / zero crashes.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
