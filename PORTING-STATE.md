@@ -88814,3 +88814,78 @@ Next-15-title window after s1904 drops s1889 (a non-sweep entry) and
 keeps s1890-s1892 plus s1902 (4 of 15 slots non-sweep); still not a
 REVISIT trigger. Check again next iteration.
 
+## Session 1905 (2026-08-17) — synchronized the copyPipeDelimitedField symbol
+
+Resumed the generated-symbol renaming sweep. Before starting, re-checked
+the 15-title REVISIT gate: `grep -n '^## Session ' PORTING-STATE.md |
+tail -15` shows s1890-s1892 plus s1902 in the window (4 of 15 titles
+non-sweep), so the sweep continues; not a REVISIT. H3a-lowpower is
+closed (s1902); did not re-run `s790_postsec2_reachability.sh`. No new
+soak-queue verdicts landed between s1904 and this iteration (tail of
+`scratch/agent/SOAK-RESULTS.md` still ends on the s1902 LPM-off A/B).
+
+Renamed leftover `func_800F30AC` (`0x800F30AC`, size `0x98`,
+`syms/rogue_squadron.syms.toml:1998`) to `copyPipeDelimitedField`. The
+four-step confirmation was already complete in s1903/s1904 and was
+re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:5503` (`triggerCueWithSlotEffect`) and `:5668`
+   (`copyPipeDelimitedField`) are the only two `RECOMP_FUNC` lines
+   matched by name in that span — true adjacency, not a stray substring
+   match.
+2. `funcs.h:2156-2157` declares `triggerCueWithSlotEffect` then
+   `copyPipeDelimitedField` in that exact order.
+3. `recomp_overlays.inl:1884-1885`: `copyPipeDelimitedField` offset is
+   `0x0004DF7C` = `triggerCueWithSlotEffect`'s `0x0004DE9C + 0xE0` (its
+   TOML size); `rom_size = 0x00000098` matches the TOML's `size = 0x98`
+   for `func_800F30AC` exactly.
+4. `grep -rln 'func_800F30AC\b'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+Generated body matches the name: walks `$a0` until NUL, comparing each
+byte to `0x7C` (`'|'`), then copies the selected field into `$a2`.
+No existing TOML entry already used `copyPipeDelimitedField`.
+
+All four agreed, so renamed the TOML entry only (metadata-only sync, no
+build/regen needed). Post-rename leftover `func_800*` count in the TOML
+is 994 (was 995). Zero leftover `func_800F30AC` remains in repo sources
+outside the ledger.
+
+Previewed the next leftover for continuity: `func_800F3144` (size
+`0x114`, `syms/rogue_squadron.syms.toml:1999`) lines up with
+`recomp_overlays.inl:1886` (`copyRandomPipeDelimitedField`, offset
+`0x0004E014` = `0x0004DF7C + 0x98`, `rom_size = 0x00000114`) —
+confirmed adjacency (`funcs_41.c:5668,5811`) and declaration order
+(`funcs.h:2157-2158`) and non-collision (`grep -rln 'func_800F3144\b'`
+zero hits) this session too, so the next iteration can rename directly
+without re-deriving these. Generated body jal's `rand_recomp`
+(`0x80003430`) then walks the same `|`-delimited field.
+
+Also previewed the leftover after that: `func_800F3258` (size `0x8`,
+`syms/rogue_squadron.syms.toml:2000`) lines up with
+`recomp_overlays.inl:1887` (`returnZero_800F3258`, offset
+`0x0004E128` = `0x0004E014 + 0x114`, `rom_size = 0x00000008`) —
+adjacency (`funcs_41.c:5811,6046`), declaration order
+(`funcs.h:2158-2159`), and non-collision. Generated body is
+`jr $ra` / `addu $v0, $zero, $zero`.
+
+Flagged a later size mismatch, not this session's rename: leftover
+`func_800F3260` is `size = 0x2C` in the TOML but
+`tallyMidDetailObject` has `rom_size = 0x00000030` in
+`recomp_overlays.inl:1888`. The 4-byte gap is the alignment nop at
+`0x800F328C` after `jr`/`nop` at `0x800F3284`/`0x800F3288`; the next
+function (`resolveScriptedNameTokenList`) starts at `0x800F3290` =
+`0x800F3260 + 0x30`. Offset chain from `returnZero_800F3258` only
+lands on `0x0004E160` if the pad is included. Do not silently keep
+`0x2C` when that leftover is reached — decide then whether to bump
+the TOML size to `0x30`.
+
+Noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per
+CLAUDE.md) — untouched this session, no new edits under `lib/`, so no
+patch-export needed.
+
+Next-15-title window after s1905 drops s1890 (a non-sweep entry) and
+keeps s1891-s1892 plus s1902 (3 of 15 slots non-sweep); still not a
+REVISIT trigger. Check again next iteration.
+
