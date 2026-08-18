@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1958 (2026-08-18).
+detail. Reviewed through s1959 (2026-08-18).
 
 ## Current state
 
@@ -107,16 +107,16 @@ detail. Reviewed through s1958 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-1. Generated-symbol sweep leftover `func_800F98CC` (`0x800F98CC`,
-   TOML size `0x4C` matches generated `setType2ActorVelocity`
-   `rom_size 0x4C`). Four-step already complete (s1958 preview).
+1. Generated-symbol sweep leftover `func_800F9918` (`0x800F9918`,
+   TOML size `0xB0` matches generated `initActorAsType3`
+   `rom_size 0xB0`). Four-step already complete (s1959 preview).
    Next sweep iteration can rename directly (TOML metadata-only).
-   After that: `func_800F9918` → `initActorAsType3`.
+   After that: `func_800F99C8` → `setType3ActorParams`.
    Generated tree lives at
    `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`.
    Archive: `PROJECT-OVERVIEW.md` §33–§36. About 1,548 placeholder
    `func_0x...` names remained at s1487; TOML leftover `func_800*`
-   count is 973 after s1958. s1918 was the mandatory 15-title
+   count is 972 after s1959. s1918 was the mandatory 15-title
    REVISIT (do not treat a later session as another REVISIT just
    because the window once contained only sweep titles).
 2. Hangar visual artifacts on the first live hangar frame (geometry
@@ -205,7 +205,7 @@ s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 
 Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
 s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
-title-SI / hangar chain, and the s1950–s1958 leftover remaps live in §36.
+title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only.
 
