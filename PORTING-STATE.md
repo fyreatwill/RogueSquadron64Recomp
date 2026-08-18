@@ -88967,3 +88967,89 @@ Next-15-title window after s1906 drops s1891 (a non-sweep entry) and
 keeps s1892 plus s1902 (2 of 15 slots non-sweep); still not a REVISIT
 trigger. Check again next iteration.
 
+
+## Session 1907 (2026-08-17) — synchronized the returnZero_800F3258 symbol
+
+Resumed the generated-symbol renaming sweep. Before starting, re-checked
+the 15-title REVISIT gate: `grep -n '^## Session ' PORTING-STATE.md |
+tail -15` shows s1892 plus s1902 in the window (2 of 15 titles
+non-sweep), so the sweep continues; not a REVISIT. H3a-lowpower is
+closed (s1902); did not re-run `s790_postsec2_reachability.sh`. No new
+soak-queue verdicts landed between s1906 and this iteration (tail of
+`scratch/agent/SOAK-RESULTS.md` still ends on the s1902 LPM-off A/B).
+CURRENT-TRUTH is 27978 bytes — under the 60 KB maintenance trigger.
+
+Renamed leftover `func_800F3258` (`0x800F3258`, size `0x8`,
+`syms/rogue_squadron.syms.toml:2000`) to `returnZero_800F3258`.
+The four-step confirmation was already complete in s1905/s1906 and was
+re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:5811` (`copyRandomPipeDelimitedField`) and `:6046`
+   (`returnZero_800F3258`) are the only two `RECOMP_FUNC` lines
+   matched by name in that span — true adjacency, not a stray substring
+   match.
+2. `funcs.h:2158-2159` declares `copyRandomPipeDelimitedField` then
+   `returnZero_800F3258` in that exact order.
+3. `recomp_overlays.inl:1886-1887`: `returnZero_800F3258` offset is
+   `0x0004E128` = `copyRandomPipeDelimitedField`'s `0x0004E014 +
+   0x114` (its TOML size); `rom_size = 0x00000008` matches the TOML's
+   `size = 0x8` for `func_800F3258` exactly.
+4. `grep -rln 'func_800F3258'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+Generated body matches the name: `jr $ra` / `addu $v0, $zero, $zero`
+at `0x800F3258` / `0x800F325C`. Companion
+`rogue_squadron64/symbol_files/mission_overlay.txt` already names
+`returnZero_800F3258 = 0x800F3258` ("pure `return 0` stub"). No
+existing TOML entry already used `returnZero_800F3258` (the only
+sibling is `returnZeroAudioStub` at `0x80097AC8`).
+
+All four agreed, so renamed the TOML entry only (metadata-only sync, no
+build/regen needed). Post-rename leftover `func_800*` count in the TOML
+is 992 (was 993). Zero leftover `func_800F3258` remains in repo sources
+outside the ledger.
+
+Previewed the next leftover for continuity: `func_800F3260` (TOML size
+`0x2C`, `syms/rogue_squadron.syms.toml:2001`) lines up with
+`recomp_overlays.inl:1888` (`tallyMidDetailObject`, offset
+`0x0004E130` = `0x0004E128 + 0x8`, `rom_size = 0x00000030`) —
+confirmed adjacency (`funcs_41.c:6046,6056`) and declaration order
+(`funcs.h:2159-2160`) and non-collision (`grep -rln 'func_800F3260'`
+zero hits) this session too. Generated body is `lbu 0x15($a0)`,
+`srl 6`, compare to 2, else increment the halfword at `0x80130B84`.
+Companion already names `tallyMidDetailObject = 0x800F3260` ("21
+callers: (object_ptr) — increments mid-detail object counter at
+0x80130B84"). Next iteration can rename directly.
+
+Size decision for that leftover, selected this session rather than
+deferred: bump TOML `0x2C` → `0x30`. The 4-byte gap is the alignment
+nop at `0x800F328C` after `jr`/`nop` at `0x800F3284`/`0x800F3288`;
+the next function (`resolveScriptedNameTokenList`) starts at
+`0x800F3290` = `0x800F3260 + 0x30`. No companion, generated
+`RECOMP_FUNC`, or TOML leftover occupies `0x800F328C`. Offset chain
+from `returnZero_800F3258` only lands on `0x0004E160` if the pad is
+included. H-include-pad selected; H-live-only (keep `0x2C`) is
+refuted by those three independent sources.
+
+Also previewed the leftovers after that: `func_800F3290` (size `0x24C`,
+`syms/rogue_squadron.syms.toml:2002`) lines up with
+`recomp_overlays.inl:1889` (`resolveScriptedNameTokenList`, offset
+`0x0004E160` = `0x0004E130 + 0x30`, `rom_size = 0x0000024C`) —
+adjacency (`funcs_41.c:6056,6092`), declaration order
+(`funcs.h:2160-2161`), and non-collision (`grep -rln 'func_800F3290'`
+zero hits). `func_800F34DC` (size `0x7D4`, toml:2003) lines up with
+`recomp_overlays.inl:1890` (`computeRandomizedOrientationFrame`,
+offset `0x0004E3AC` = `0x0004E160 + 0x24C`, `rom_size = 0x000007D4`)
+— adjacency (`funcs_41.c:6092,6547`), declaration order
+(`funcs.h:2161-2162`), and non-collision (`grep -rln 'func_800F34DC'`
+zero hits).
+
+Noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per
+CLAUDE.md) — untouched this session, no new edits under `lib/`, so no
+patch-export needed.
+
+Next-15-title window after s1907 drops s1892 (a non-sweep entry) and
+keeps s1902 (1 of 15 slots non-sweep); still not a REVISIT trigger.
+The window starts dropping s1902 only after s1917. Check again next
+iteration.

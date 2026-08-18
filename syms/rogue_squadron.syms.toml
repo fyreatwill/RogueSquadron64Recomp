@@ -1997,7 +1997,7 @@ functions = [
     { name = "triggerCueWithSlotEffect", vram = 0x800F2FCC, size = 0xE0 },
     { name = "copyPipeDelimitedField", vram = 0x800F30AC, size = 0x98 },
     { name = "copyRandomPipeDelimitedField", vram = 0x800F3144, size = 0x114 },
-    { name = "func_800F3258", vram = 0x800F3258, size = 0x8 },
+    { name = "returnZero_800F3258", vram = 0x800F3258, size = 0x8 },
     { name = "func_800F3260", vram = 0x800F3260, size = 0x2C },
     { name = "func_800F3290", vram = 0x800F3290, size = 0x24C },
     { name = "func_800F34DC", vram = 0x800F34DC, size = 0x7D4 },
