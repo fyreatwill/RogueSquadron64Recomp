@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1902 (2026-08-17).
+detail. Reviewed through s1903 (2026-08-17).
 
 ## Current state
 
@@ -145,16 +145,18 @@ detail. Reviewed through s1902 (2026-08-17).
    This still blocks the entire soak family and item 3 below until
    reachability itself is restored or explained. Productive work until then
    is item 2.
-2. Resume the generated-symbol sweep at leftover `func_800F2FC0`
-   (`0x800F2FC0`, size `0xC`). Already confirmed via the full four-step
-   procedure (s1901): `funcs_41.c` adjacency, `funcs.h:2154-2155` order,
-   `recomp_overlays.inl:1883` offset `0x0004DE90 = 0x0004DE84 + 0xC`/
-   `rom_size 0xC`, zero-hit non-collision grep — next iteration can rename
-   directly to `setEffectIntensity`. The generated tree still runs ahead
-   of our TOML for a short run here: `triggerCueWithSlotEffect` and
-   `copyPipeDelimitedField` are also already resolved by name in
-   `recomp_overlays.inl`, so the next few sessions should be fast
-   metadata-only syncs. Note (s1897): the generated tree (`funcs_41.c`,
+2. Resume the generated-symbol sweep at leftover `func_800F2FCC`
+   (`0x800F2FCC`, size `0xE0`). Already confirmed via the full four-step
+   procedure (s1903): `funcs_41.c:5490,5503` adjacency,
+   `funcs.h:2155-2156` order, `recomp_overlays.inl:1884` offset
+   `0x0004DE9C = 0x0004DE90 + 0xC` / `rom_size 0xE0`, zero-hit
+   non-collision grep — next iteration can rename directly to
+   `triggerCueWithSlotEffect`. The generated tree still runs ahead of
+   our TOML for a short run here: `copyPipeDelimitedField` is also
+   already resolved by name in `recomp_overlays.inl` (s1903 preview:
+   `funcs_41.c:5503,5668`, `funcs.h:2156-2157`, `.inl:1885` offset
+   `0x0004DF7C = 0x0004DE9C + 0xE0` / `rom_size 0x98`, zero-hit
+   `func_800F30AC`). Note (s1897): the generated tree (`funcs_41.c`,
    `funcs.h`, `recomp_overlays.inl`) is gitignored and absent from this
    repo's `build/`; it currently lives at
    `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/` — look
@@ -226,11 +228,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1902 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1903 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
-the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F2FB4` became
+the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F2FC0` became
+`setEffectIntensity` (`0x800F2FC0`, `0xC`) after leftover
+`func_800F2FB4` became
 `getEffectIntensity` (`0x800F2FB4`, `0xC`) after leftover
 `func_800F2F10` became
 `stepAndTickProgressChannel` (`0x800F2F10`, `0xA4`) after leftover
