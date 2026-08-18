@@ -94490,3 +94490,68 @@ appears in a soak.
 artifacts H3 unavailable. Queue a 600s hangar stability soak (soak_queue) and
 attempt mission-entry key-sequence exploration (extend past 11 Starts to see if
 additional Starts enter the mission).
+
+## Session 1974 (2026-08-18) — mission-entry probe: fs-freeze at update_screen #2176; 6 new spin-yield gates added
+
+**Work unit:** Mission-entry key-sequence exploration, both arms in one iteration.
+
+**ARM A (extra Starts):**
+- PROBE_KEYS: 11 boot-nav Starts + 6 extra Starts at 62–87s from boot.
+- SDL received only 6 of 17 Starts (down/up pairs n=1–12); keys at 36s and beyond
+  produced zero SDL events. 11 of 17 Starts were not delivered to the game window.
+- 2 Starts reached the hangar (pad-host n=5 at hangar entry, n=6 at 31s).
+- No phase change. H-start-enters-mission REFUTED (delivery failed; 2 delivered
+  Starts also did not advance).
+
+**ARM B (A button):**
+- PROBE_KEYS: 11 boot-nav Starts + 6 A presses at 62–87s from boot.
+- Identical pattern: 6 A/Start events delivered (pad-host n=1–5 for nav Starts,
+  no A presses reached pad-host because SDL A events stopped at the same cutoff).
+- No phase change. H-needs-confirm-key (A) REFUTED.
+
+**SDL key delivery cutoff finding:**
+- SDL `[pad-sdl] site=key` events stop after n=12 (6th Start press at 31s from boot).
+- SDL `[pad-sdl] site=poll` continues running in the hangar (n=1920, 1952, 1984, 2048).
+- SI thread is healthy (n=2048). The cutoff is not an SI or SDL-poll issue.
+- Root cause unconfirmed: likely the game window loses frontmost focus between 31s
+  and 36s, or macOS blocks winctl key injection after some time.
+
+**Frame-freeze discovery:**
+- Both ARM A and the census probe show `fs` (game frame state counter) freezes
+  at update_screen #2176, with `pq.wc=0 wq.wc=2` (census) or `pq.wc=3 wq.wc=0`
+  (ARM A). This happens ~40s after hangar entry in both runs.
+- After #2176 the update_screen counter continues (VI is alive) but `fs` is stuck.
+- This is a VI message-queue starvation or `osRecvMesg` deadlock in the hangar
+  state machine — NOT an anyAudioSlotActive spin.
+
+**anyAudioSlotActive class census (s1974):**
+- Enumerated all 10 `anyAudioSlotActive` call sites across the generated codebase.
+- 3 already patched: menuInit (L_800C5930/funcs_34.c), menuInput (L_800B8050/funcs_31.c),
+  audioDrain (L_800B24D4/funcs_30.c).
+- 1 bounded (not yield-gated): waitForAnyAudioSlot (L_800668C0/funcs_15.c).
+- 6 unpatched spins: runMenuRandomBackdropScreen (L_800BFF60/funcs_33.c),
+  runMenuShipSelectScreen (L_800C1750/funcs_33.c),
+  runMenuModelViewerScreen (L_800C2DB0/funcs_33.c),
+  menuSubtype02Handler (L_800C3F64/funcs_33.c),
+  runModelViewerLoop (L_800CA580/funcs_36.c),
+  initCinematicSceneAssets (L_800AE75C/funcs_28.c).
+- Added ROGUESQ_SPIN_YIELD gates to all 6 unpatched sites (same pattern as
+  menuInput/audioDrain); also added to fixup_game_funcs.py.
+- Census probe (120s hangar run with ROGUESQ_SPIN_YIELD=1): NONE of the 6 new
+  sites fired. The frame freeze at #2176 is NOT caused by any anyAudioSlotActive spin.
+- ORIGIN: not applicable (none fired; the freeze has a different cause).
+
+**State after s1974:**
+- anyAudioSlotActive spin class: fully enumerated and gated (10 sites, all have
+  yield or bounded guard). Closed for any further hangar exploration.
+- Frame freeze at update_screen #2176: open. Cause is a non-anyAudioSlotActive
+  blocking call in the hangar state machine (~40s after hangar entry).
+
+**Queued soak:** scratch/agent/soak_queue/s1974_hangar_600s.sh (600s baseline).
+
+**Next work unit:** Identify what blocks the game at update_screen #2176. The freeze
+coincides with `wq.wc=2` (two threads waiting for a queue that never receives).
+Likely candidates: the hangar state machine's VI-retrace receiver stalls because
+the host VI queue fills or the game's osRecvMesg consumer doesn't drain. Run a
+probe with ROGUESQ_LOG_VI_RECV or similar to capture the recv-path state at the
+freeze. See NEXT.md.

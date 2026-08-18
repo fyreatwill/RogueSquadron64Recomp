@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1973 (2026-08-18).
+detail. Reviewed through s1974 (2026-08-18).
 
 ## Current state
 
@@ -58,6 +58,16 @@ detail. Reviewed through s1973 (2026-08-18).
   vs 1 frame / 4s before. H-link-lost selected class-wide; filterVoiceSampleBlock
   SIGBUS family CLOSED. ORIGIN: N64Recomp direct-call lowering omits the link
   write; fix is the legitimate PC+8 value.
+- **anyAudioSlotActive spin class fully enumerated and gated (s1974).** All 10
+  `anyAudioSlotActive` callers catalogued: 3 yield-gated (menuInit/L_800C5930,
+  menuInput/L_800B8050, audioDrain/L_800B24D4), 1 bounded (waitForAnyAudioSlot/
+  L_800668C0), 6 newly yield-gated (runMenuRandomBackdropScreen/L_800BFF60,
+  runMenuShipSelectScreen/L_800C1750, runMenuModelViewerScreen/L_800C2DB0,
+  menuSubtype02Handler/L_800C3F64, runModelViewerLoop/L_800CA580,
+  initCinematicSceneAssets/L_800AE75C) — patches in funcs_33/36/28.c and
+  fixup_game_funcs.py. Census probe: none of the 6 new sites fired in 120s
+  hangar run. The frame freeze at update_screen #2176 is NOT an anyAudioSlotActive
+  spin. Class closed.
 - **`drainAudioAndFinalizeSpeechBuffer` spin-yield class CLOSED (s1972).**
   Same `beq v0==0 / anyAudioSlotActive` pattern as menuInit and menuInput.
   Added ROGUESQ_SPIN_YIELD gate at `L_800B24D4` (funcs_30.c / fixup_game_funcs.py s1972).
@@ -185,32 +195,42 @@ detail. Reviewed through s1973 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1973: slotDispatcherIter sp guard: 7659 calls, 0 invalid sp in 90s
-hangar run; SIGBUS DORMANT. Hangar stable at 300s+ (s1972_hangar_300s: rc=0,
-80 frames, no crashes). No active crash families. Remaining open items: hangar
-visual artifacts (H3 unavailable). Next actionable work: queue 600s stability
-soak; attempt mission-entry key-sequence exploration.
+Re-ranked s1974: mission-entry probe ran both arms (extra Starts + A button);
+neither advanced past hangar. SDL key delivery fails after Start #6 (31s from
+boot). Frame-counter (`fs`) freezes at update_screen #2176 (~40s after hangar
+entry) in every run — NOT caused by any anyAudioSlotActive spin (all 10 sites
+now gated; none fire at #2176). The freeze is a VI message-queue starvation or
+osRecvMesg deadlock in the hangar state machine. 600s soak queued.
 
-1. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
+1. **Hangar frame-freeze at update_screen #2176 (s1974).** `fs` (game frame
+   state) stops advancing at #2176; `pq.wc=0 wq.wc=2` (two threads waiting for
+   a queue). VI is alive (update_screen continues). anyAudioSlotActive spin class
+   fully enumerated and gated — all 10 sites have yield or bounded guard; none
+   fire at the freeze. Root cause: likely an osRecvMesg in the hangar state
+   machine waiting for a VI-retrace message that never arrives because the host
+   VI queue is full or the message path is broken. Next probe: capture recv-path
+   state at the freeze (ROGUESQ_LOG_VI_RECV or similar).
+2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
    300s clean). H-corruption-from-caller cannot be ruled out in mission context.
    Do not add mitigation. Re-evaluate only with a mission-entry recipe or a new
    crash with this signature.
-2. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
+3. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
    H2 (malformed triangle) REFUTED s1967; H1 (consumer draw state) REFUTED
    s1969 (single-source). H3 (pixel/coverage) unavailable — oracle has no
    screenshot for LLE path. Hologram-beam artifact remains open. Do not add
    mode-state mitigation or repeat the `0xD60` scan.
-3. 600s hangar stability soak: queue to soak_queue to establish 600s baseline and
-   look for any new crash families. If a new crash appears, classify as M3 class
-   audit target.
-4. Mission-entry key-sequence: attempt extending past 11 Starts to see if
-   additional inputs navigate past the hangar select screen into a mission. This
-   would exercise slotDispatcherIter with live mission NPCs.
-5. Keep audio closed unless a new bounded lead reaches initialization.
-6. M3: only as complete idiom-class audits with a named discriminator.
-7. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
+4. 600s hangar stability soak: queued (soak_queue/s1974_hangar_600s.sh).
+5. Mission-entry: SDL key delivery fails after Start #6 (31s from boot) due to
+   likely macOS focus drop. Both Start and A presses after hangar entry failed.
+   The frame freeze at #2176 also blocks the hangar state machine regardless of
+   key delivery. Mission entry requires: (a) fix key delivery for post-31s keys,
+   (b) resolve the frame freeze. Do not run more mission-entry probes until
+   the frame freeze is diagnosed.
+6. Keep audio closed unless a new bounded lead reaches initialization.
+7. M3: only as complete idiom-class audits with a named discriminator.
+8. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
    batch arms; phase-gate; SIGKILL; queue soaks. Hangar recipe is
    `ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot. Ask (b) remains
    human-only.
