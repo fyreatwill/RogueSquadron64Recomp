@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1896 (2026-08-17).
+detail. Reviewed through s1898 (2026-08-17).
 
 ## Current state
 
@@ -140,10 +140,10 @@ detail. Reviewed through s1896 (2026-08-17).
    supplies the disposable clone for the literal bisect. This still blocks
    the entire `s790_postsec2_reachability` soak family and item 3 below until
    reachability itself is restored or explained.
-2. Resume the generated-symbol sweep at leftover `func_800F2DA4`
-   (`0x800F2DA4`, size `0x24`). Preliminary peek: `recomp_overlays.inl`
-   already shows `setAnimSubstructValueIfActive` at that same offset/size,
-   immediately following the newly-renamed `setObjectSubstructF10IfReady`.
+2. Resume the generated-symbol sweep at leftover `func_800F2DC8`
+   (`0x800F2DC8`, size `0x148`). Preliminary peek (s1898): `recomp_overlays.inl`
+   already shows `generatePerpEmitDirectionWithJitter` at offset `0x0004DC98`,
+   immediately following the newly-renamed `setAnimSubstructValueIfActive`.
    Confirm the full four-step procedure (adjacency, `funcs.h` order, `.inl`
    offset/size, non-collision grep) before renaming. Note (s1897): the
    generated tree (`funcs_41.c`, `funcs.h`, `recomp_overlays.inl`) is
@@ -217,11 +217,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1897 through s1888-s1892's VI-1024 reachability-regression
+s1648–s1898 through s1888-s1892's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, new n=1 H3a-lowpower lead
-found) and leftover `func_800F2D74` became
+found) and leftover `func_800F2DA4` became
+`setAnimSubstructValueIfActive` (`0x800F2DA4`, `0x24`) after leftover
+`func_800F2D74` became
 `setObjectSubstructF10IfReady` (`0x800F2D74`, `0x30`) after leftover
 `func_800F2D38` became
 `applyToObjectSubstructByFlag` (`0x800F2D38`, `0x3C`) after leftover
