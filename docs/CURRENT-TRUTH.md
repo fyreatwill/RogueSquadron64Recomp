@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1924 (2026-08-17).
+detail. Reviewed through s1925 (2026-08-17).
 
 ## Current state
 
@@ -169,6 +169,21 @@ detail. Reviewed through s1924 (2026-08-17).
   H-menu2-returned REFUTED. The 1024 miss is
   this spin: `#9/#10` cannot fire while entry 2
   never reaches `0x800C5A18`.
+  **s1925**: `[avf-gate]` `site=slot-ret` on
+  `anyAudioSlotActive` `L_8008E5F4` after
+  `sltiu` (`s1925_slot_ret_20260817-213530`,
+  probe_rc=5, 180s `#7/#8` staller, 0 crash,
+  no `#9/#10`). Same-run control: tick 2/2/2;
+  `took_swap=1` twice; entry 1 siten=1 with
+  slot-ret n=1 `v0=1 path=walk s1=0x00
+  gate=0x65`. Then `menu-entry` siten=2 and
+  `menu-spin` siten=960527104. slot-ret
+  969/969 `path=walk`: n=1..3 idle, n=4..961000000
+  stuck (`v0=0 s1=0x01`), gate `0x65` both
+  sides. **H-slot-stuck SELECTED.** H-stub-one
+  / H-cfg-contradiction REFUTED. Next axis:
+  which `isAudioSlotActive` index stays
+  nonzero.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -222,31 +237,29 @@ detail. Reviewed through s1924 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **`menuOverlayInit` entry 2 is stuck in the
-   `anyAudioSlotActive` spin (s1924
-   H-menu2-audio-spin).** s1919–s1923 named `#10`
-   as `initVideoSubsystem` via `advanceVideoFrame`
-   and showed the two ticks are boot inits
-   (`menuOverlayInit` then `initSceneForMission`);
-   `mainGameLoop` never jals. s1924's same-run
-   control (tick 2/2/2; entry 1
-   entry/spin/jal/exit siten=1) then SELECTS the
-   spin: entry 2 `menu-spin` siten climbed to
-   907285100, no `menu-jal`/`menu-exit` siten=2.
-   `anyAudioSlotActive` returns `sltiu(s1,1)` after
-   reading gate `0x800A0F50`; a continuing spin
-   means that return is 0 (s1!=0), which CFG
-   requires gate nonzero plus a stub/slot reporting
-   active (single-source). Next axis: on entry 2,
-   is the gate on and `audioStubReturnZero`
-   returning 1, or is a slot byte stuck, or is
-   s1/v0 something the CFG does not allow? Ask (b)
+1. **`menuOverlayInit` entry 2 is stuck because
+   an `isAudioSlotActive` byte stays nonzero
+   (s1925 H-slot-stuck).** s1919–s1924 named `#10`
+   as `initVideoSubsystem` via `advanceVideoFrame`,
+   showed the two ticks are boot inits, and
+   selected the `L_800C5930` spin as the 1024
+   miss. s1925's same-run control (tick 2/2/2;
+   entry 1 slot-ret `v0=1 path=walk s1=0x00
+   gate=0x65`) then SELECTS the walk: 969/969
+   `path=walk`, n=4..961000000 `s1=0x01 v0=0`,
+   same `gate=0x65` as the idle control.
+   `audioStubReturnZero` never set s1; the gate
+   did not flip. Next axis: which slot index
+   (`isAudioSlotActive` `$a0`, table
+   `0x801496F8`, count `0x80141AD0`) stays
+   nonzero, and is that byte legitimate? Ask (b)
    remains human-only. Do not re-run a
    reachability-only `s790`. Do not add more
-   gate-byte force-zeros without an `ORIGIN:`.
-   Still blocks item 3 (hangar/512) until a port
-   run publishes `[phase] vi_width=512
-   origin=0x006AB400` (or `0x006AB800`).
+   gate-byte or slot-byte force-zeros without
+   an `ORIGIN:`. Still blocks item 3 (hangar/512)
+   until a port run publishes `[phase]
+   vi_width=512 origin=0x006AB400` (or
+   `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -356,6 +369,12 @@ stuck in `zmemcpy`/`tickMusyXIfActive` or as
 returning before the jal is superseded by
 s1924 — `menu-spin` climbs through the 180s
 timeout and `menu-exit` siten=2 never fires.
+Treating the continuing spin as maybe
+`audioStubReturnZero` returning 1, or as a
+gate-0 / s1-v0 CFG contradiction, is
+superseded by s1925 — 969/969 `path=walk`,
+gate `0x65` on both the idle control and
+the stuck return; the flip is `s1` 0→1.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -385,7 +404,12 @@ s1923 selecting H-caller-mixed (tick 1
 with no jal) and s1924 selecting
 H-menu2-audio-spin (`menu-spin` siten to
 907285100 on entry 2; no `menu-jal`/`menu-exit`
-siten=2; the 1024 miss is this spin) and leftover `func_800F6954` became
+siten=2; the 1024 miss is this spin) and
+s1925 selecting H-slot-stuck (slot-ret
+969/969 `path=walk`; n=1..3 `v0=1 s1=0x00`,
+n=4..961000000 `v0=0 s1=0x01`, gate `0x65`
+both sides; stub-return-1 and gate-0
+REFUTED) and leftover `func_800F6954` became
 `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
 `func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover

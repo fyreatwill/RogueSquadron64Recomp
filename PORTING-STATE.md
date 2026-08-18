@@ -90412,3 +90412,65 @@ every 1e6).
 
 No mitigation. Ask (b) remains human-only.
 
+## Session 1925 (2026-08-17) — selected H-slot-stuck: walk path, s1 stays 1
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit:
+on `menuOverlayInit` entry 2, which
+`anyAudioSlotActive` path returns 0?
+
+Added `[avf-gate]` `site=slot-ret` at
+`L_8008E5F4` after `sltiu` (before `lw $ra`)
+in `N64Recomp/fixup_game_funcs.py` plus the
+generated `funcs_23.c`. Same tag and
+`ROGUESQ_LOG_VI_CALLERS` gate. Fields:
+`tickn`/`jaln`/`n`/`gate`/`s1`/`v0`/`path`
+(`gate0`/`stub`/`walk`). Rate-limit first 8
+then every 1000000. Did not add a second
+counter family. Did not change any store to
+`0x800A0F50`.
+
+One s790-shaped 180s run of
+`scratch/agent/s1925_slot_ret.sh`:
+`scratch/agent/soak_results/s1925_slot_ret_20260817-213530/run.log`
+probe_rc=5, last width 640, 0 crash, 0
+`width=1024`. The 180s `#7/#8` subtype:
+`#7/#8` `applyPendingViChanges`, no `#9/#10`.
+Same-run control passed: tick-entry/jal/exit
+2/2/2; `took_swap=1` at loop `n=2` and `n=3`;
+entry 1 was `menu-entry` → `menu-spin`
+siten=1 → slot-ret n=1 `v0=1 path=walk
+s1=0x00 gate=0x65` → `menu-jal` siten=1 →
+`menu-exit` siten=1. Then `mission-jal` tick
+2. Then `menu-entry` siten=2 and `menu-spin`
+climbed to siten=960527104 with tickn/jaln
+frozen at 2; zero `menu-jal`/`menu-exit`
+siten=2.
+
+slot-ret 969 rows, 969/969 `path=walk`. Two
+tuples only:
+
+- n=1,2,3: `gate=0x65 s1=0x00 v0=1 path=walk`
+  (idle; this is why siten=1 exited)
+- n=4 through n=961000000: `gate=0x65
+  s1=0x01 v0=0 path=walk` (stuck)
+
+This selects H-slot-stuck: the gate is on,
+`audioStubReturnZero` did not set s1, and a
+real `isAudioSlotActive` byte stays nonzero.
+This refutes H-stub-one (`path=stub` never
+fired). This refutes H-cfg-contradiction
+(`gate=0` and `v0=0` never co-occurred).
+The gate byte is the same `0x65` on the idle
+control and the stuck walk — the flip is s1,
+not the gate. n=4 `v0=0` lands before
+`menu-entry` siten=2, so another caller
+(likely `waitForAnyAudioSlot`) already sees
+the same stuck slot; that does not change
+the selection.
+
+menu-spin every-50 still wrote a 1.3 GB
+`run.log`. Next instrument must also tighten
+that site (first 8, then every 1e6).
+
+No mitigation. Ask (b) remains human-only.
+
