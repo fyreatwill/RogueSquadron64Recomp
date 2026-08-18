@@ -93768,3 +93768,77 @@ Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
 hangar SIGBUS. Did not rebuild — no rename touched a generated
 `.c` the Debug target compiles (all target names pre-existed
 in the generated tree).
+
+## Session 1963 (2026-08-18) — synchronized thirty leftover symbols in one batch (0x800FA250-0x800FEECC)
+
+Continued the generated-symbol-renaming sweep (strategic priority
+4) using the s1962 technique: for each TOML `func_800*` entry,
+find the `RECOMP_FUNC void <name>(` line whose very next line is
+the `// 0x<addr>:` comment for that entry's vram (confirms the
+address is the function's own start, not a mid-body instruction),
+and check the generated name is not itself still `func_0x...`.
+
+Scanned the contiguous run at `syms/rogue_squadron.syms.toml:2039`
+onward (`func_800FA250` through the entry right before
+`func_800FEF10`) against `RecompiledFuncs/funcs_42.c` and
+`funcs_43.c`. All 30 non-`fake_func_` entries in that span already
+carry real generated names, offset by exactly 3 lines from their
+`RECOMP_FUNC` definition (the fixed prologue: `uint64_t hi = 0, lo
+= 0, result = 0;` / `int c1cs = 0;`), confirming each is a true
+function start:
+
+`func_800FA250`→`initMission`, `func_800FA6A4`→`runInMissionFrame`,
+`func_800FADEC`→`flashMissionAlertObjectsAndPrint`,
+`func_800FAF0C`→`beginMissionEndTransition`,
+`func_800FB05C`→`endMissionEndTransition`,
+`func_800FB190`→`requestMissionTransitionMode`,
+`func_800FB2F8`→`setupMissionTransitionScreenOverlay`,
+`func_800FB4B0`→`tickMissionTransitionAndTeardown`,
+`func_800FB6C0`→`choosePlayerCraftAssets`,
+`func_800FB9E4`→`endMissionCleanup`,
+`func_800FBAE8`→`requestSpeechResponseMode2`,
+`func_800FBB44`→`requestSpeechResponseMode1`,
+`func_800FBBA0`→`noopHandler_800FBBA0` (single-instruction `jr
+$ra` body — descriptive, not a placeholder),
+`func_800FBBA8`→`tickMissionPhaseTransitionTimer`,
+`func_800FBC4C`→`tickMissionObjectives`,
+`func_800FBD48`→`clearMissionObjectiveFlagsAndEnterPhaseSix`,
+`func_800FBDCC`→`advanceMissionObjectiveStageWhenModeOne`,
+`func_800FBE20`→`configurePlayerSecondaryWeaponHud`,
+`func_800FC108`→`resetHudInstancesAndUnbindNpcs`,
+`func_800FC260`→`findNearestTargetableNpcInRange`,
+`func_800FC564`→`projectForwardTerrainImpactPoint`,
+`func_800FC720`→`tickHudInstanceTargetingAndSpawns`,
+`func_800FD31C`→`updatePlayerHudFrame`,
+`func_800FE434`→`teardownHudInstancesAndUnbindNpcs`,
+`func_800FE500`→`dispatchHudInstanceWeaponEffect`,
+`func_800FEC98`→`refreshPlayerSecondaryWeaponHud`,
+`func_800FED40`→`resetTransientPlayerStateFlags`,
+`func_800FEE28`→`commitHudInstancePendingState`,
+`func_800FEE74`→`getActiveHudInstanceTargetPosition`,
+`func_800FEECC`→`isHudSecondaryWeaponActive`.
+
+`fake_func_800FBE14` (line 2056) left untouched (already matches
+its generated name and the `fake_func_` convention). The run
+stopped cleanly at `func_800FEF10` (`funcs_43.c:5660`): the
+generated name there is still literally `func_800FEF10` — genuine
+RE needed, out of scope for this metadata-only sweep, per NEXT.md
+rule 2. `fake_func_800FEF04` immediately before it is likewise
+already correctly named.
+
+Verified for all 30: exactly one `RECOMP_FUNC void <name>(`
+definition tree-wide (checked via a combined grep over the
+30-name list against `syms/rogue_squadron.syms.toml` — zero hits,
+i.e. no prior use of any target name anywhere in the symbol table)
+and zero remaining `func_800F<addr>` string references anywhere
+under the repo (`.py`/`.c`/`.h`/`.toml`) after the edit.
+
+TOML leftover `func_800*` count: 962 (s1962) → 932. Validated
+`syms/rogue_squadron.syms.toml` still parses
+(`python3 -c "import tomllib; tomllib.load(...)"` → `TOML OK`).
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
+hangar SIGBUS. Did not rebuild — no rename touched a generated
+`.c` the Debug target compiles (all 30 target names pre-existed
+in the generated tree). ORIGIN: not applicable — this is a
+metadata-only rename sync, not a mitigation.
