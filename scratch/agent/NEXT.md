@@ -1,76 +1,76 @@
-# NEXT work unit (s1927) — who writes slot+0 = 0x02
+# NEXT work unit (s1928) — why slot+0 never returns to 0
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1926 selected H-all-idx + H-base-moved:
-after tick 2 the voice table at
-`*0x801496F8` is `0x8018D4A0` ch=16, and
-15/16 `isAudioSlotActive` bytes stay
-`0x02`. Idle was `0x80169460` ch=20 all
-zero. Unique `sw` to `0x801496F8` is
-`allocateSongChannelArray` `0x8008F0EC`.
-`musyxTriggerVoiceAttack` writes `1`, not
-`0x02`. Do **not** re-run a reachability-only
-`s790`. Do **not** force-zero a slot byte
-(that is mitigation; needs `ORIGIN:`).
-Ask (b) is still human-only.
+s1927 selected H-keyon: after the third
+`allocateSongChannelArray` (`new=0x8018D4A0
+count=16` at tick 2) the sequence is alloc
+init `0` → `musyxInitVoiceFromSample` `0` →
+`musyxTriggerVoiceAttack` `0x01` →
+`musyxRenderVoiceSamples` `0x01→0x02` at
+`0x800909F4`. Two runs + the static
+`addiu $v0, $zero, 0x2` agree. That write
+is legitimate playing-state. `deactivateVoice`
+has zero generated `jal 0x800924F0` sites.
+`stopVoiceMarkRetrigger` does write `0`.
+Do **not** re-run a reachability-only `s790`.
+Do **not** force-zero a slot byte.
 
-## Work unit — name the 0x02 writer
+## Work unit — why playing-state never ends
 
 Keep every existing `[avf-gate]` site. Add,
 same tag, same `ROGUESQ_LOG_VI_CALLERS`
 gate, in `N64Recomp/fixup_game_funcs.py`
 plus the live `.c`:
 
-- `site=slot-alloc` in
-  `allocateSongChannelArray` after the
-  `sw $v0, -0x6908($at)` (`0x8008F0EC`).
-  Print `tickn`/`jaln` plus `old=` (value
-  before the store if you snapshot it),
-  `new=` (`$v0`), `count=` (`$s0` / the
-  halfword at `0x801496FF`/`-0x6900`).
-  No rate-limit needed (boot-rare).
-- `site=slot-sb` on every `sb` to slot+0
-  that uses the `0x801496F8` table
-  (start with `musyxTriggerVoiceAttack`
-  `0x8009235C` `sb $v0, 0x0($v1)` and
-  grep `MEM_B(0X0` after a `-0x6908`
-  load in `funcs_24.c` / `funcs_23.c`).
-  Print `tickn`/`jaln`/`func=`/`idx=`/
-  `old=`/`new=`. Rate-limit: first 32
-  then every 1000, and every `new==2`.
+- `site=render-end` on the
+  `sb $zero, 0x28($sp)` at `0x80090174`
+  (`musyxRenderVoiceSamples`). Print
+  `tickn`/`jaln`/`n`/`idx=` (from `$s1`
+  vs `0x801496F8`). No rate-limit
+  (should be rare if it fires at all).
+- `site=render-stage` on the
+  `addiu $v0, $zero, 0x2` /
+  `sb $v0, 0x28($sp)` at `0x80090080`.
+  Lifetime counters `n2`/`n0` only;
+  log first 8 then every 1000000.
+- `site=rekey` on
+  `musyxTriggerVoiceAttack` when
+  `old!=0` (re-key of an already
+  live slot). First 32 then every
+  1000.
 
-Do not add a second counter family. Do not
-change any store.
+Do not add a second counter family.
+Do not change any store.
 
-One build, one s790-shaped 180s run (copy
-`s1926_slot_byte.sh` to `s1927_slot_sb.sh`).
+One build, one s790-shaped 180s run
+(copy `s1927_slot_sb.sh` to
+`s1928_render_end.sh`).
 
 Same-run positive control: `site=tick-entry`
 / `tick-jal` / `tick-exit` still 2/2/2 with
-`took_swap=1` twice; slot-ret n=1..3 stay
-`v0=1 path=walk`; `menu-entry` siten=2 then
-`menu-spin` climbs (the s1926 skip
-reproduced). `site=slot-alloc` must fire
-(the base actually moved). Then:
+`took_swap=1` twice; `slot-alloc` still
+ends at `0x8018D4A0 count=16`;
+`slot-sb` `func=musyxRenderVoiceSamples`
+`new=2` still fires (the s1927 skip
+reproduced). Then:
 
-- alloc `new=0x8018D4A0 count=16` and no
-  `slot-sb new=2` from alloc itself, plus
-  later `slot-sb` with `new=2` from a
-  named func → H-keyon (next unit asks
-  why those voices never key off)
-- alloc itself writes `new=2` into the
-  fresh table → H-alloc-dirty (init left
-  them active)
-- `slot-sb new=2` never fires, but
-  `slot-byte` still sees `0x02` → H-other
-  (writer is a store we did not hook;
-  widen the grep)
-- `slot-alloc` never fires, or dest !=
-  `0x8018D4A0` → UNEVALUABLE for the
-  retarget; check a second `sw`
-- `menu-spin` does not climb →
-  UNEVALUABLE for the skip
+- `render-end` never fires, `n2` climbs,
+  `n0=0` → H-sample-never-ends (next
+  unit asks why `0x38($s1)` / the
+  sample cursor never crosses the
+  end — stubbed audio / fillSample
+  crash is the lead)
+- `render-end` fires and writeback
+  `new=0`, but `rekey` immediately
+  restores `1` → H-rekey-forever
+- `render-end` fires, writeback
+  `new=0`, no rekey, but slot-byte
+  still `0x02` → H-other-writer
+  (widen)
+- `slot-alloc` dest != `0x8018D4A0`
+  or no render `new=2` → UNEVALUABLE
+  for the playing-state claim
 
 ## Sweep leftover (parked, not this unit)
 
@@ -80,6 +80,9 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- Who writes slot+0 = 0x02 (s1927) — closed
+  (H-keyon: musyxRenderVoiceSamples; not
+  alloc-dirty, not an unhooked store).
 - Which slot index stays nonzero (s1926) — closed
   (H-all-idx 15/16 `0x02`; H-base-moved).
 - Why `anyAudioSlotActive` returns 0 (s1925) — closed

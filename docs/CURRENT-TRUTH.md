@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1926 (2026-08-17).
+detail. Reviewed through s1927 (2026-08-17).
 
 ## Current state
 
@@ -200,8 +200,34 @@ detail. Reviewed through s1926 (2026-08-17).
   sane 16-voice table, not a wrong-pointer
   read. Unique `sw` to `0x801496F8` is
   `allocateSongChannelArray` `0x8008F0EC`.
-  The `0x02` writer is unnamed
-  (`musyxTriggerVoiceAttack` stores `1`).
+  **s1927**: `[avf-gate]` `site=slot-alloc` /
+  `site=slot-sb` on every table-using
+  `sb` to slot+0
+  (`s1927_slot_sb_20260817-220342` and
+  `-220515`, both probe_rc=4 ~27s
+  catalogued `fillSampleStreamRange`
+  SIGBUS before `menu-entry` siten=2 —
+  UNEVALUABLE for the skip, evaluable
+  for the writer). Same-run control:
+  tick 2/2/2; `took_swap=1` twice;
+  `slot-alloc` x3 ending
+  `new=0x8018D4A0 count=16`. Sequence
+  after the third alloc: alloc init
+  `new=0`, `musyxInitVoiceFromSample`
+  `new=0`, `musyxTriggerVoiceAttack`
+  `old=0x00 new=0x01`, then
+  `musyxRenderVoiceSamples` `old=0x01
+  new=0x02` (14085 / 13420 logged
+  `new=2`, all 16 idx).
+  `stopVoiceMarkRetrigger` does write
+  `0`; `deactivateVoice` never ran (0
+  rows; no `jal 0x800924F0` anywhere
+  in the generated tree). **H-keyon
+  SELECTED.** H-alloc-dirty / H-other
+  REFUTED. Static second line:
+  `musyxRenderVoiceSamples` does
+  `addiu $v0, $zero, 0x2` then
+  `sb $v0, 0x0($s1)` at `0x800909F4`.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -255,27 +281,34 @@ detail. Reviewed through s1926 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **`menuOverlayInit` entry 2 walks a retargeted
-   16-voice table where 15/16 slot+0 bytes stay
-   `0x02` (s1926 H-all-idx + H-base-moved).**
-   s1925 selected the walk (`s1=0x01 v0=0
-   path=walk`). s1926's same-run control then
-   names the bytes: idle table `0x80169460`
-   ch=20 all-zero; after tick 2 / on the spin,
-   table `0x8018D4A0` ch=16 with `nzn/n → 15/16`
-   and first-8-nz idx {0,1,3,4,5,6} all
-   `byte=0x02`. Not one stuck index; not a wild
-   count; not a garbage base. Unique `sw` to
-   `0x801496F8` is `allocateSongChannelArray`
-   `0x8008F0EC`. Next axis: who writes `0x02`
-   onto slot+0 (and is that write legitimate
-   key-on that never keys off)? Ask (b) remains
-   human-only. Do not re-run a reachability-only
-   `s790`. Do not force-zero a slot byte or the
-   gate without an `ORIGIN:`. Still blocks item
-   3 (hangar/512) until a port run publishes
-   `[phase] vi_width=512 origin=0x006AB400` (or
-   `0x006AB800`).
+1. **`musyxRenderVoiceSamples` writes slot+0
+   `0x02` after `musyxTriggerVoiceAttack`
+   keys on `0x01` (s1927 H-keyon).** s1926
+   named the stuck table (`0x8018D4A0`
+   ch=16, 15/16 `0x02`). s1927 names the
+   writer: third `allocateSongChannelArray`
+   at tick 2 publishes that table and
+   zeros it; attack stores `1`; render
+   restages `2` every mix
+   (`0x80090080` / `0x800909F4`). That
+   write is legitimate playing-state,
+   not dirty malloc. Voices never return
+   to 0: render's sample-end `sb $zero,
+   0x28($sp)` at `0x80090174` was not
+   among the first 32 writebacks (all
+   `new=2`); `deactivateVoice` has zero
+   generated `jal` sites. Next axis: why
+   the playing state never ends (render
+   sample-end path vs immediate re-key
+   after `stopVoiceMarkRetrigger` vs
+   dead `deactivateVoice`). Ask (b)
+   remains human-only. Do not re-run a
+   reachability-only `s790`. Do not
+   force-zero a slot byte or the gate
+   without an `ORIGIN:`. Still blocks
+   item 3 (hangar/512) until a port run
+   publishes `[phase] vi_width=512
+   origin=0x006AB400` (or `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -397,7 +430,13 @@ pointer is wrong") is superseded by s1926
 — 15/16 bytes are a uniform `0x02` on a
 sane in-RDRAM 16-voice table at
 `0x8018D4A0` after `allocateSongChannelArray`
-retargeted `0x801496F8`.
+retargeted `0x801496F8`. Treating the
+`0x02` as an unnamed / possibly dirty
+alloc leftover is superseded by s1927
+— `musyxRenderVoiceSamples` writes it
+from `old=0x01` after
+`musyxTriggerVoiceAttack` keyed on;
+alloc init stores `0`.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -680,6 +719,10 @@ and leftover `func_800F287C` became
 `getObjectDetailLevel` (`0x800F287C`, `0xC`)
 and leftover `func_800F2888` became
 `initActorMotionParams` (`0x800F2888`, `0x100`)
+and s1927 selected H-keyon for the slot+0
+`0x02` writer (`musyxRenderVoiceSamples`
+`0x800909F4`; H-alloc-dirty and H-other
+REFUTED; `deactivateVoice` never called)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs
 failed across 4 crash/stall signatures, H1-flake refuted) —

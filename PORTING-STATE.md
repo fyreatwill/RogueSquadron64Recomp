@@ -90551,3 +90551,92 @@ to `0x801496F8` is `allocateSongChannelArray`
 not `0x02` — the `0x02` writer is still unnamed.
 
 No mitigation. Ask (b) remains human-only.
+
+## Session 1927 (2026-08-17) — named musyxRenderVoiceSamples as the slot+0 0x02 writer
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit:
+who writes slot+0 = `0x02` after
+`allocateSongChannelArray` retargets
+`0x801496F8`?
+
+Added `[avf-gate]` `site=slot-alloc` after
+the unique `sw $v0, -0x6908($at)` in
+`allocateSongChannelArray` (`old`/`new`/
+`count` from `$s0`) and `site=slot-sb` on
+every table-using `sb` to slot+0:
+`allocateSongChannelArray` init,
+`musyxRenderVoiceSamples` `0x800909F4`,
+`musyxInitVoiceFromSample`,
+`musyxTriggerVoiceAttack`,
+`stopVoiceMarkRetrigger`,
+`deactivateVoice`. Same tag and
+`ROGUESQ_LOG_VI_CALLERS` gate. Fields:
+`tickn`/`jaln`/`func`/`idx` (dest-base
+/ 136)/`old`/`new`/`dest`/`base`.
+Rate-limit first 32, every 1000, and
+every `new==2`. Did not add a second
+counter family. Did not change any
+store. KSEG0 reloads use `S32(0x8015
+<< 16)` (s1926 lesson).
+
+Two runs, same recipe
+(`scratch/agent/s1927_slot_sb.sh`):
+
+- `s1927_slot_sb_20260817-220342`
+  probe_rc=4, ~27s, last width 640,
+  `#6`, catalogued
+  `fillSampleStreamRange+6464`
+  SIGBUS `si_addr=0x380000000`
+  last-guest-pc=`0x8000b650`.
+- `s1927_slot_sb_20260817-220515`
+  probe_rc=4, ~27s, last width 640,
+  `fillSampleStreamRange+336`
+  `si_addr=0x33037a8e4`
+  last-guest-pc=`0x8000834c`.
+
+Both died before `menu-entry` siten=2
+(UNEVALUABLE for the skip). Writer
+axis is evaluable. Same-run control
+passed on both: tick-entry/jal/exit
+2/2/2; `took_swap=1` twice; entry 1
+`menu-entry`/`menu-spin`/`menu-jal`/
+`menu-exit` siten=1.
+
+`slot-alloc` x3 both runs:
+
+- tickn=0 `old=0 new=0x80169460 count=20`
+- tickn=1 `old=0x80169460 new=0x801714D0 count=17`
+- tickn=2 `old=0x801714D0 new=0x8018D4A0 count=16`
+
+Logged `slot-sb` histogram (run 1 /
+run 2):
+
+- `allocateSongChannelArray` 32/32 `new=0`
+- `musyxInitVoiceFromSample` 32/32 `new=0`
+- `musyxTriggerVoiceAttack` 32/32 `new=1` (`old=0`)
+- `musyxRenderVoiceSamples` 14085/13420 `new=2`
+  (first: `idx=0 old=0x01 new=0x02
+  dest=0x8018D4A0`; later all 16 idx)
+- `stopVoiceMarkRetrigger` 32/32 `new=0` (`old=0x02`)
+- `deactivateVoice` 0/0
+
+Static second line:
+`musyxRenderVoiceSamples` does
+`addiu $v0, $zero, 0x2` then
+`sb $v0, 0x28($sp)` at `0x80090080`
+and writeback `sb $v0, 0x0($s1)` at
+`0x800909F4`. `deactivateVoice`
+(`0x800924F0`) has zero generated
+`jal` sites.
+
+This selects H-keyon (named func
+writes `2` after a real key-on).
+This refutes H-alloc-dirty (alloc
+init stores `0`; third alloc
+`new=0x8018D4A0 count=16` matches
+s1926). This refutes H-other
+(`slot-sb new=2` fired). The `0x02`
+is legitimate playing-state that
+never returns to 0.
+
+No mitigation. Ask (b) remains human-only.
