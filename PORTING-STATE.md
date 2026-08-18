@@ -93842,3 +93842,48 @@ hangar SIGBUS. Did not rebuild — no rename touched a generated
 `.c` the Debug target compiles (all 30 target names pre-existed
 in the generated tree). ORIGIN: not applicable — this is a
 metadata-only rename sync, not a mitigation.
+
+## Session 1964 (2026-08-18) — synchronized 221 leftover symbols in one batch (0x800FFE00-0x800AB1C8), promoted the scan to a tool, cleared func_801* entirely
+
+Continued the generated-symbol-renaming sweep (strategic priority 4) from
+`func_800FFE00` per NEXT.md. Wrote `tools/sweep_scan_candidates.py` (promoted
+from a scratch script) to replace the manual per-entry grep: it builds an
+address→generated-name map from every `RECOMP_FUNC void <name>(` whose body's
+first disassembly comment is exactly 3 lines below (the function's own start,
+not a mid-body instruction), walks the TOML in file order (addresses are
+**not** monotonic — overlay sections restart their own VRAM range) from a
+given start name, and stops at the first entry with no generated definition,
+a still-placeholder generated name, or — new safety check this session — an
+address with **more than one** qualifying `RECOMP_FUNC` match tree-wide.
+
+That last check mattered: the scan crossed a section boundary partway through
+(`.ovl.mission` at line 1551 → `.ovl.menu` at line 2391, confirmed via the
+TOML's `[[section]]` markers), and overlay VRAM ranges are reused by other
+overlays — `0x800C63C0` has two distinct `RECOMP_FUNC` definitions tree-wide
+(`getAvailableShipsForLevel` / `getAvailablePlayerCraftFlagsIgnoreUnlocks`),
+so it's excluded from auto-resolve everywhere, not just where it happened to
+appear in this run's range. Every one of this session's 221 resolved
+addresses was checked and confirmed to have exactly one `RECOMP_FUNC` match
+tree-wide before being included, so the section crossing did not introduce a
+misattribution.
+
+Batch-renamed all 221 in one edit to `syms/rogue_squadron.syms.toml`,
+verified before applying: zero duplicate generated names among the 221
+candidates, zero collisions against the full existing TOML name list, and
+zero remaining `func_800F<addr>`/`func_8010<addr>`/`func_800A<addr>` string
+references anywhere else in the repo (`.py`/`.c`/`.h`/`.toml`) for any
+renamed address. Validated `syms/rogue_squadron.syms.toml` still parses
+(`python3 -c "import tomllib; tomllib.load(...)"` → OK).
+
+The run stopped cleanly at `func_800AB658` (`syms/rogue_squadron.syms.toml:2402`,
+size `0x2518`): no `RECOMP_FUNC` definition for that address exists anywhere
+in the generated tree at all (not even under a different name) — genuine RE
+needed, out of scope for this metadata-only sweep.
+
+TOML leftover count: `func_800*` 932 (s1963) → 928; `func_801*` 217 → **0,
+fully cleared**. Combined `func_8[01]*` placeholder total: 1149 → 928.
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the hangar SIGBUS.
+Did not rebuild — no rename touched a generated `.c` the Debug target
+compiles (all 221 target names pre-existed in the generated tree). ORIGIN:
+not applicable — this is a metadata-only rename sync, not a mitigation.

@@ -118,24 +118,34 @@ since both are explicitly closed pending new leads).
    placeholders against the generated tree at
    `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
    for entries where the generated `.c` already carries a real
-   name (a strong, cheap signal — batch every contiguous run
-   found this way into one metadata-only TOML edit per session;
-   s1962 did nine, s1963 did thirty in the same pattern). s1963
-   exhausted `0x800FA250`-`0x800FEECC`; it stopped at
-   `func_800FEF10` (`funcs_43.c:5660`), whose generated name is
-   still literally `func_800FEF10` — that one entry needs real RE,
-   not a metadata sync. Next work unit: grep TOML for
-   `"func_800FEF10"` onward and decide whether to skip it (leave
-   for RE work) and resume the contiguous-run scan from
-   `func_800FFE00`, repeating the same four-step-per-entry
-   verification (no collision, no leftover raw-address caller,
-   single definition, generated name not itself `func_0x...`)
-   before editing. Archive: `PROJECT-OVERVIEW.md` §33–§36. About
-   1,548 placeholder `func_0x...` names remained at s1487; TOML
-   leftover `func_800*` count is 932 after s1963. s1918 was the
-   mandatory 15-title REVISIT (do not treat a later session as
-   another REVISIT just because the window once contained only
-   sweep titles).
+   name (a strong, cheap signal — batch every contiguous run found
+   this way into one metadata-only TOML edit per session; s1962
+   did nine, s1963 did thirty, s1964 did 221 and promoted the scan
+   to `tools/sweep_scan_candidates.py <start_name>`). The tool
+   walks the TOML in file order (addresses are NOT monotonic —
+   overlay sections restart their own VRAM range) and now also
+   guards against overlay VRAM reuse: any address with more than
+   one `RECOMP_FUNC`-prologued match tree-wide is excluded from
+   auto-resolve instead of silently keeping the first hit (caught
+   `0x800C63C0`, which is two distinct functions in two different
+   overlays, at s1964). s1964 exhausted `0x800FFE00`-`0x800AB1C8`
+   and cleared `func_801*` entirely; it stopped at `func_800AB658`
+   (`syms/rogue_squadron.syms.toml:2402`), which has no
+   `RECOMP_FUNC` definition anywhere in the generated tree at
+   all — that one entry needs real RE, not a metadata sync. Next
+   work unit: `python3 tools/sweep_scan_candidates.py
+   func_800AB658` to confirm it's still unresolved (needs real
+   RE, skip it), then `python3 tools/sweep_scan_candidates.py
+   func_800ADB70` (`syms/rogue_squadron.syms.toml:2403`, the next
+   `func_800*` entry after it) to get the next candidate batch —
+   same collision/duplicate/external-reference verification as
+   s1964 before editing.
+   Archive: `PROJECT-OVERVIEW.md` §33–§36. About 1,548 placeholder
+   `func_0x...` names remained at s1487; TOML leftover combined
+   `func_8[01]*` count is 928 after s1964 (`func_801*` is now 0).
+   s1918 was the mandatory 15-title REVISIT (do not treat a later
+   session as another REVISIT just because the window once
+   contained only sweep titles).
 2. Hangar visual artifacts on the first live hangar frame (geometry
    cracks, blue tris, hologram layering). New discriminator required;
    do not treat them as the parked M4 Y=0x8000. s1950 did not
