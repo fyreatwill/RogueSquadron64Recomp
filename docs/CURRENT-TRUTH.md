@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1925 (2026-08-17).
+detail. Reviewed through s1926 (2026-08-17).
 
 ## Current state
 
@@ -184,6 +184,24 @@ detail. Reviewed through s1925 (2026-08-17).
   / H-cfg-contradiction REFUTED. Next axis:
   which `isAudioSlotActive` index stays
   nonzero.
+  **s1926**: `[avf-gate]` `site=slot-byte`
+  after the `lbu` (`s1926_slot_byte_20260817-215144`,
+  probe_rc=5, 180s `#7/#8` staller, 0 crash,
+  no `#9/#10`). Same-run control: tick 2/2/2;
+  `took_swap=1` twice; slot-ret n=1..3
+  `v0=1 path=walk`; `menu-entry` siten=2 and
+  `menu-spin` to siten=991000000. Idle n=1..8
+  idx=0..7 `byte=0x00 base=0x80169460 ch=20`.
+  First 8 nz (n=63..71, tickn=2): idx
+  {0,1,3,4,5,6} `byte=0x02 base=0x8018D4A0
+  ch=16`. Lifetime `nzn/n → 15/16`. **H-all-idx
+  and H-base-moved SELECTED.** H-one-idx /
+  H-chcount-wild REFUTED. The new base is a
+  sane 16-voice table, not a wrong-pointer
+  read. Unique `sw` to `0x801496F8` is
+  `allocateSongChannelArray` `0x8008F0EC`.
+  The `0x02` writer is unnamed
+  (`musyxTriggerVoiceAttack` stores `1`).
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -237,28 +255,26 @@ detail. Reviewed through s1925 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **`menuOverlayInit` entry 2 is stuck because
-   an `isAudioSlotActive` byte stays nonzero
-   (s1925 H-slot-stuck).** s1919–s1924 named `#10`
-   as `initVideoSubsystem` via `advanceVideoFrame`,
-   showed the two ticks are boot inits, and
-   selected the `L_800C5930` spin as the 1024
-   miss. s1925's same-run control (tick 2/2/2;
-   entry 1 slot-ret `v0=1 path=walk s1=0x00
-   gate=0x65`) then SELECTS the walk: 969/969
-   `path=walk`, n=4..961000000 `s1=0x01 v0=0`,
-   same `gate=0x65` as the idle control.
-   `audioStubReturnZero` never set s1; the gate
-   did not flip. Next axis: which slot index
-   (`isAudioSlotActive` `$a0`, table
-   `0x801496F8`, count `0x80141AD0`) stays
-   nonzero, and is that byte legitimate? Ask (b)
-   remains human-only. Do not re-run a
-   reachability-only `s790`. Do not add more
-   gate-byte or slot-byte force-zeros without
-   an `ORIGIN:`. Still blocks item 3 (hangar/512)
-   until a port run publishes `[phase]
-   vi_width=512 origin=0x006AB400` (or
+1. **`menuOverlayInit` entry 2 walks a retargeted
+   16-voice table where 15/16 slot+0 bytes stay
+   `0x02` (s1926 H-all-idx + H-base-moved).**
+   s1925 selected the walk (`s1=0x01 v0=0
+   path=walk`). s1926's same-run control then
+   names the bytes: idle table `0x80169460`
+   ch=20 all-zero; after tick 2 / on the spin,
+   table `0x8018D4A0` ch=16 with `nzn/n → 15/16`
+   and first-8-nz idx {0,1,3,4,5,6} all
+   `byte=0x02`. Not one stuck index; not a wild
+   count; not a garbage base. Unique `sw` to
+   `0x801496F8` is `allocateSongChannelArray`
+   `0x8008F0EC`. Next axis: who writes `0x02`
+   onto slot+0 (and is that write legitimate
+   key-on that never keys off)? Ask (b) remains
+   human-only. Do not re-run a reachability-only
+   `s790`. Do not force-zero a slot byte or the
+   gate without an `ORIGIN:`. Still blocks item
+   3 (hangar/512) until a port run publishes
+   `[phase] vi_width=512 origin=0x006AB400` (or
    `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
@@ -375,6 +391,13 @@ gate-0 / s1-v0 CFG contradiction, is
 superseded by s1925 — 969/969 `path=walk`,
 gate `0x65` on both the idle control and
 the stuck return; the flip is `s1` 0→1.
+Expecting a single stuck `isAudioSlotActive`
+index (or reading H-all-idx as "the table
+pointer is wrong") is superseded by s1926
+— 15/16 bytes are a uniform `0x02` on a
+sane in-RDRAM 16-voice table at
+`0x8018D4A0` after `allocateSongChannelArray`
+retargeted `0x801496F8`.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -409,7 +432,11 @@ s1925 selecting H-slot-stuck (slot-ret
 969/969 `path=walk`; n=1..3 `v0=1 s1=0x00`,
 n=4..961000000 `v0=0 s1=0x01`, gate `0x65`
 both sides; stub-return-1 and gate-0
-REFUTED) and leftover `func_800F6954` became
+REFUTED) and s1926 selecting H-all-idx +
+H-base-moved (idle `0x80169460`/ch=20 all
+zero; stuck `0x8018D4A0`/ch=16 `nzn/n →
+15/16` `byte=0x02`; H-one-idx and
+H-chcount-wild REFUTED) and leftover `func_800F6954` became
 `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
 `func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover

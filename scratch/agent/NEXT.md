@@ -1,78 +1,75 @@
-# NEXT work unit (s1926) — which isAudioSlotActive index stays nonzero
+# NEXT work unit (s1927) — who writes slot+0 = 0x02
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1925 selected H-slot-stuck: `anyAudioSlotActive`
-entry-2 return is `path=walk`, `gate=0x65`,
-`s1=0x01`, `v0=0` (n=4 through n=961000000).
-`audioStubReturnZero` never set s1. The same
-gate was already `0x65` on the idle positive
-control (n=1..3, `s1=0x00`, `v0=1`). Do **not**
-re-run a reachability-only `s790`. Do **not**
-force-zero the gate or a slot byte (that is
-mitigation; needs `ORIGIN:`). Ask (b) is still
-human-only.
+s1926 selected H-all-idx + H-base-moved:
+after tick 2 the voice table at
+`*0x801496F8` is `0x8018D4A0` ch=16, and
+15/16 `isAudioSlotActive` bytes stay
+`0x02`. Idle was `0x80169460` ch=20 all
+zero. Unique `sw` to `0x801496F8` is
+`allocateSongChannelArray` `0x8008F0EC`.
+`musyxTriggerVoiceAttack` writes `1`, not
+`0x02`. Do **not** re-run a reachability-only
+`s790`. Do **not** force-zero a slot byte
+(that is mitigation; needs `ORIGIN:`).
+Ask (b) is still human-only.
 
-## Work unit — name the stuck slot
-
-`isAudioSlotActive` `0x800920FC` (`funcs_24.c`):
-
-```
-lw   $v0, 0x801496F8          # slot table base
-addu $v1, $v0, $a0*136
-lbu  $v0, 0x0($v1)
-sltu $v0, $zero, $v0          # return (byte != 0)
-```
-
-Walked from `anyAudioSlotActive` as
-`i=0..MEM_BU(0x80141AD0)-1`, OR into s1.
+## Work unit — name the 0x02 writer
 
 Keep every existing `[avf-gate]` site. Add,
-same tag, same `ROGUESQ_LOG_VI_CALLERS` gate,
-in `N64Recomp/fixup_game_funcs.py` plus live
-`funcs_24.c`:
+same tag, same `ROGUESQ_LOG_VI_CALLERS`
+gate, in `N64Recomp/fixup_game_funcs.py`
+plus the live `.c`:
 
-- `site=slot-byte` after the `lbu` (before
-  `sltu` / the s166 guard return). Print
-  `tickn`/`jaln` plus `idx=` (`$a0`),
-  `byte=` (the loaded byte), `base=`
-  (`0x801496F8`), `ch=` (`MEM_BU` of
-  `0x80141AD0`).
-- Rate-limit HARD: first 8, then every
-  1000000, and also the first 8
-  `byte!=0` hits (so an idle walk of
-  many zero slots cannot hide the first
-  stuck index).
-- Same build: tighten `site=menu-spin`
-  to first 8 then every 1000000 (s1924
-  every-50 wrote another 1.3 GB log).
+- `site=slot-alloc` in
+  `allocateSongChannelArray` after the
+  `sw $v0, -0x6908($at)` (`0x8008F0EC`).
+  Print `tickn`/`jaln` plus `old=` (value
+  before the store if you snapshot it),
+  `new=` (`$v0`), `count=` (`$s0` / the
+  halfword at `0x801496FF`/`-0x6900`).
+  No rate-limit needed (boot-rare).
+- `site=slot-sb` on every `sb` to slot+0
+  that uses the `0x801496F8` table
+  (start with `musyxTriggerVoiceAttack`
+  `0x8009235C` `sb $v0, 0x0($v1)` and
+  grep `MEM_B(0X0` after a `-0x6908`
+  load in `funcs_24.c` / `funcs_23.c`).
+  Print `tickn`/`jaln`/`func=`/`idx=`/
+  `old=`/`new=`. Rate-limit: first 32
+  then every 1000, and every `new==2`.
 
 Do not add a second counter family. Do not
-change any store to `0x800A0F50` or to a
-slot byte.
+change any store.
 
 One build, one s790-shaped 180s run (copy
-`s1925_slot_ret.sh` to `s1926_slot_byte.sh`).
+`s1926_slot_byte.sh` to `s1927_slot_sb.sh`).
 
 Same-run positive control: `site=tick-entry`
 / `tick-jal` / `tick-exit` still 2/2/2 with
 `took_swap=1` twice; slot-ret n=1..3 stay
 `v0=1 path=walk`; `menu-entry` siten=2 then
-`menu-spin` must climb (the s1924 skip
-reproduced). Then read `slot-byte` after
-slot-ret n>=4 (`v0=0`):
+`menu-spin` climbs (the s1926 skip
+reproduced). `site=slot-alloc` must fire
+(the base actually moved). Then:
 
-- one `idx` with `byte!=0`, `ch` small
-  (≤16), `base` in RDRAM → H-one-idx
-  (next unit names that slot's writer)
-- many/all walked `idx` have `byte!=0`
-  → H-all-idx (table/base wrong)
-- `ch` huge (>64) → H-chcount-wild
-  (walk is reading past the table)
-- `base` differs between n=1..3 (idle)
-  and n>=4 (stuck) → H-base-moved
-- `menu-spin` does not climb, or
-  slot-ret `v0=1` on entry 2 →
+- alloc `new=0x8018D4A0 count=16` and no
+  `slot-sb new=2` from alloc itself, plus
+  later `slot-sb` with `new=2` from a
+  named func → H-keyon (next unit asks
+  why those voices never key off)
+- alloc itself writes `new=2` into the
+  fresh table → H-alloc-dirty (init left
+  them active)
+- `slot-sb new=2` never fires, but
+  `slot-byte` still sees `0x02` → H-other
+  (writer is a store we did not hook;
+  widen the grep)
+- `slot-alloc` never fires, or dest !=
+  `0x8018D4A0` → UNEVALUABLE for the
+  retarget; check a second `sw`
+- `menu-spin` does not climb →
   UNEVALUABLE for the skip
 
 ## Sweep leftover (parked, not this unit)
@@ -83,6 +80,8 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- Which slot index stays nonzero (s1926) — closed
+  (H-all-idx 15/16 `0x02`; H-base-moved).
 - Why `anyAudioSlotActive` returns 0 (s1925) — closed
   (H-slot-stuck; not stub, not gate-0).
 - Naming the two tick parents (s1923) — closed.

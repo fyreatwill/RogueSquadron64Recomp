@@ -90474,3 +90474,80 @@ that site (first 8, then every 1e6).
 
 No mitigation. Ask (b) remains human-only.
 
+
+## Session 1926 (2026-08-17) — selected H-all-idx: 15/16 slots stay 0x02 after table retarget
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit:
+which `isAudioSlotActive` index stays nonzero on
+`menuOverlayInit` entry 2?
+
+Added `[avf-gate]` `site=slot-byte` after the `lbu`
+in `isAudioSlotActive` (`funcs_24.c` +
+`N64Recomp/fixup_game_funcs.py`). Same tag and
+`ROGUESQ_LOG_VI_CALLERS` gate. Fields:
+`tickn`/`jaln`/`n`/`nzn`/`idx`/`byte`/`base`
+(reload of `0x801496F8` via `S32`) /`ch`
+(`0x80141AD0`). Rate-limit first 8, every
+1000000, and first 8 `byte!=0`. Tightened
+`site=menu-spin` to first 8 then every 1000000.
+Did not add a second counter family. Did not
+change any store to `0x800A0F50` or a slot byte.
+
+First two runs crashed inside the new (then the
+s1925) KSEG0 `MEM_*` immediates
+(`si_addr=0x4001496f8` / `0x4000a0f53`):
+unsigned `0x80150000`/`0x800A0000` zero-extend
+and miss RDRAM. Fixed both loads to
+`S32(hi << 16)` (same-run positive control on
+the later staller). Two further runs died in the
+catalogued musyx `fillSampleStreamRange` SIGBUS
+at ~27s with no `menu-entry` siten=2
+(UNEVALUABLE for the skip; same nz preview as
+the staller).
+
+Evaluable run:
+`scratch/agent/s1926_slot_byte.sh` →
+`scratch/agent/soak_results/s1926_slot_byte_20260817-215144/run.log`
+probe_rc=5, 180s `#7/#8` staller, last width 640,
+`#10816`, 0 crash, 0 `width=1024`. Same-run
+control passed: tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice; slot-ret n=1..3 `v0=1
+path=walk s1=0x00`; entry 1
+`menu-entry`/`menu-spin`/`menu-jal`/`menu-exit`
+siten=1; then `menu-entry` siten=2 and
+`menu-spin` to siten=991000000; zero
+`menu-jal`/`menu-exit` siten=2.
+
+slot-byte 15885 rows:
+
+- n=1..8 (idle, tickn=0): idx=0..7 `byte=0x00`
+  `base=0x80169460` `ch=20`
+- first 8 `byte!=0` (tickn=2, n=63..71): idx
+  {0,3,5,1,6,4} `byte=0x02` `base=0x8018D4A0`
+  `ch=16` (six distinct indices, not one)
+- million-interval samples (n=1e6..1.5869e10):
+  all `idx=1 byte=0x02 base=0x8018D4A0 ch=16`
+  (phase-aligned; not a single-idx claim)
+- last `nzn/n = 14877187780/15869000000 =
+  0.93750002` → 15/16. First million already
+  `0.93778`; the lifetime ratio converges on
+  15/16 after the early zero walks.
+
+slot-ret n=4..991000000 stays `v0=0 s1=0x01
+path=walk gate=0x01`.
+
+This selects H-all-idx (15 of 16 walked bytes
+are `0x02`) and H-base-moved (`0x80169460`/
+ch=20 idle → `0x8018D4A0`/ch=16 stuck). This
+refutes H-one-idx (first 8 nz already name six
+indices). This refutes H-chcount-wild (`ch=16`).
+The "table/base wrong" reading of H-all-idx is
+not selected: the new base is in RDRAM, `ch=16`
+is a normal voice count, and the byte is a
+uniform `0x02` not garbage. Static unique `sw`
+to `0x801496F8` is `allocateSongChannelArray`
+`0x8008F0EC` (malloc then store).
+`musyxTriggerVoiceAttack` writes `1` to slot+0,
+not `0x02` — the `0x02` writer is still unnamed.
+
+No mitigation. Ask (b) remains human-only.
