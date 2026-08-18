@@ -93887,3 +93887,41 @@ Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the hangar SIGBUS.
 Did not rebuild — no rename touched a generated `.c` the Debug target
 compiles (all 221 target names pre-existed in the generated tree). ORIGIN:
 not applicable — this is a metadata-only rename sync, not a mitigation.
+
+## Session 1965 (2026-08-18) — synchronized 26 leftover symbols in one batch (0x800ADB70-0x800B2564)
+
+Continued the generated-symbol-renaming sweep (strategic priority 4) from
+`func_800ADB70` per NEXT.md, which had already dry-run-verified this exact
+batch the prior session. Ran `python3 tools/sweep_scan_candidates.py
+func_800ADB70`: resolved 26 entries and stopped cleanly at `func_800B2630`
+(`syms/rogue_squadron.syms.toml:2435`, size `0x468`) — still a literal
+placeholder in the generated tree (`funcs_30.c:11406`), genuine RE needed,
+out of scope for this metadata-only sweep. One address was excluded from
+auto-resolve tree-wide by the tool's existing overlay-VRAM-reuse guard
+(unchanged from s1964, not re-investigated).
+
+Verified before applying, same procedure as s1964: zero duplicate generated
+names among the 26 candidates; zero exact collisions against the full
+existing TOML name list (one substring false-positive during the raw grep
+pass — `composeInterpolatedNodeMatricesAlt` contains `composeInterpolatedNodeMatrices`
+as a substring — resolved with an exact-match check, not a real collision);
+zero remaining `func_800AD<addr>`/`func_800AE<addr>`/`func_800AF<addr>`/
+`func_800B0<addr>`/`func_800B1<addr>`/`func_800B2<addr>` string references
+anywhere else in the repo (`.py`/`.c`/`.h`/`.toml`) for any renamed address.
+Batch-renamed all 26 in one edit to `syms/rogue_squadron.syms.toml` via a
+small address-keyed python replace (not manual per-line edits). Validated
+the TOML still parses (`python3 -c "import tomllib; tomllib.load(...)"` → OK).
+
+Pre-verified the *next* batch for the following session's NEXT.md, same
+pattern as s1964→s1965: `python3 tools/sweep_scan_candidates.py
+func_800B2A98` (the TOML entry immediately after this session's stop point)
+resolves 4 entries and stops cleanly at `func_800B3824`
+(`funcs_30.c:15181`, still a literal placeholder) — did not apply this
+batch, only dry-ran it.
+
+TOML leftover count: `func_800*`/`func_8[01]*` combined 928 (s1964) → 902.
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the hangar SIGBUS.
+Did not rebuild — no rename touched a generated `.c` the Debug target
+compiles (all 26 target names pre-existed in the generated tree). ORIGIN:
+not applicable — this is a metadata-only rename sync, not a mitigation.

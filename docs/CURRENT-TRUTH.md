@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1963 (2026-08-18).
+detail. Reviewed through s1965 (2026-08-18).
 
 ## Current state
 
@@ -121,28 +121,23 @@ since both are explicitly closed pending new leads).
    name (a strong, cheap signal — batch every contiguous run found
    this way into one metadata-only TOML edit per session; s1962
    did nine, s1963 did thirty, s1964 did 221 and promoted the scan
-   to `tools/sweep_scan_candidates.py <start_name>`). The tool
-   walks the TOML in file order (addresses are NOT monotonic —
-   overlay sections restart their own VRAM range) and now also
+   to `tools/sweep_scan_candidates.py <start_name>`, s1965 did 26).
+   The tool walks the TOML in file order (addresses are NOT
+   monotonic — overlay sections restart their own VRAM range) and
    guards against overlay VRAM reuse: any address with more than
    one `RECOMP_FUNC`-prologued match tree-wide is excluded from
-   auto-resolve instead of silently keeping the first hit (caught
-   `0x800C63C0`, which is two distinct functions in two different
-   overlays, at s1964). s1964 exhausted `0x800FFE00`-`0x800AB1C8`
-   and cleared `func_801*` entirely; it stopped at `func_800AB658`
-   (`syms/rogue_squadron.syms.toml:2402`), which has no
-   `RECOMP_FUNC` definition anywhere in the generated tree at
-   all — that one entry needs real RE, not a metadata sync. Next
-   work unit: `python3 tools/sweep_scan_candidates.py
-   func_800AB658` to confirm it's still unresolved (needs real
-   RE, skip it), then `python3 tools/sweep_scan_candidates.py
-   func_800ADB70` (`syms/rogue_squadron.syms.toml:2403`, the next
-   `func_800*` entry after it) to get the next candidate batch —
-   same collision/duplicate/external-reference verification as
-   s1964 before editing.
+   auto-resolve instead of silently keeping the first hit. s1965
+   resolved `0x800ADB70`-`0x800B2564` and stopped at `func_800B2630`
+   (`syms/rogue_squadron.syms.toml:2435`, size `0x468`), a literal
+   placeholder in the generated tree (`funcs_30.c:11406`) — genuine
+   RE needed, not a metadata sync. Next work unit: `python3
+   tools/sweep_scan_candidates.py func_800B2A98` (the entry right
+   after the s1965 stop point) — already dry-run verified to resolve
+   4 entries and stop cleanly at `func_800B3824` — then the usual
+   collision/duplicate/external-reference verification before editing.
    Archive: `PROJECT-OVERVIEW.md` §33–§36. About 1,548 placeholder
    `func_0x...` names remained at s1487; TOML leftover combined
-   `func_8[01]*` count is 928 after s1964 (`func_801*` is now 0).
+   `func_8[01]*` count is 902 after s1965 (`func_801*` is 0).
    s1918 was the mandatory 15-title REVISIT (do not treat a later
    session as another REVISIT just because the window once
    contained only sweep titles).
@@ -233,7 +228,7 @@ s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
 s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
-s1961–s1963 leftover remaps are in `PORTING-STATE.md` directly (not yet
+s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36).
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
