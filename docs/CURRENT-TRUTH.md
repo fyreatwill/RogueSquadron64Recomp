@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1886 (2026-08-17).
+detail. Reviewed through s1887 (2026-08-17).
 
 ## Current state
 
@@ -67,14 +67,14 @@ detail. Reviewed through s1886 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. Resume the generated-symbol sweep at leftover `func_800F2AB4`
-   (`0x800F2AB4`, size `0x10`). Preliminary peek: the generated body
-   immediately after `setObjectFlagBit4` in `funcs_41.c` is already
-   `RECOMP_FUNC void clearObjectFlagBit4` — confirm this is the true
-   occupant (not a stray substring match) and check companion/
-   `funcs.h`/INL agreement before renaming. After s1886 the last-15
-   titles still include s1872's hangar/512 revisit, so the sweep
-   REVISIT gate does not fire. Archive:
+1. Resume the generated-symbol sweep at leftover `func_800F2AC4`
+   (`0x800F2AC4`, size `0xC4`). Preliminary peek: the generated body
+   immediately after `clearObjectFlagBit4` in `funcs_41.c` is already
+   `RECOMP_FUNC void computeAnchorRelativePositionByDistanceRatio` —
+   confirm this is the true occupant (not a stray substring match)
+   and check companion/`funcs.h`/INL agreement before renaming. After
+   s1887 the last-15 titles still include s1872's hangar/512 revisit,
+   so the sweep REVISIT gate does not fire. Archive:
    `PROJECT-OVERVIEW.md` §33–§35. About 1,548 placeholder
    `func_0x...` names remained at s1487.
 2. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872). The
@@ -142,7 +142,9 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1886 through leftover `func_800F2AA4` became
+s1648–s1887 through leftover `func_800F2AB4` became
+`clearObjectFlagBit4` (`0x800F2AB4`, `0x10`) after leftover
+`func_800F2AA4` became
 `setObjectFlagBit4` (`0x800F2AA4`, `0x10`) after leftover
 `func_800F2A24` became
 `clearPendingChildNpc` (`0x800F2A24`, `0x80`) after leftover

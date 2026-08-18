@@ -1983,7 +1983,7 @@ functions = [
     { name = "getObjectNpcTypeId", vram = 0x800F2A00, size = 0x24 },
     { name = "clearPendingChildNpc", vram = 0x800F2A24, size = 0x80 },
     { name = "setObjectFlagBit4", vram = 0x800F2AA4, size = 0x10 },
-    { name = "func_800F2AB4", vram = 0x800F2AB4, size = 0x10 },
+    { name = "clearObjectFlagBit4", vram = 0x800F2AB4, size = 0x10 },
     { name = "func_800F2AC4", vram = 0x800F2AC4, size = 0xC4 },
     { name = "func_800F2B88", vram = 0x800F2B88, size = 0xE4 },
     { name = "func_800F2C6C", vram = 0x800F2C6C, size = 0xCC },

@@ -87715,3 +87715,43 @@ occupant of `0x800F2AB4` (not a stray substring match) and check the
 companion/`funcs.h`/INL agree before renaming. Last-15 titles after
 s1886 still include s1872's hangar/512 revisit, so the next iteration
 remains a leftover census, not a mandatory REVISIT.
+
+## Session 1887 (2026-08-17) — synchronized the clearObjectFlagBit4 symbol
+
+Exact generated-symbol census for leftover `func_800F2AB4` at
+`0x800F2AB4` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles after s1886 still include s1872's hangar/512 revisit
+(`hangar/512 0x8000 Y is unevaluable`), so the 15-title all-sweep
+REVISIT gate did not fire. Step 0 `wc -c` was 18893; not a maintenance
+iteration. `tail -20` of `scratch/agent/SOAK-RESULTS.md` showed no
+verdicts newer than the already-folded s1029-era tail (no queued soaks
+ran since).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void clearObjectFlagBit4` immediately after `setObjectFlagBit4`, matched via the `awk` name/comment pairing (avoids stray substring matches) |
+| `funcs.h` / `recomp_overlays.inl` | Already declare/register `clearObjectFlagBit4` (`funcs.h:2145`; INL `recomp_overlays.inl:1873`, `.offset = 0x0004D984, .rom_size = 0x00000010`) |
+| Non-collision | `grep -rn 'func_800F2AB4\b'` across generated `*.c`/`*.h`/`*.inl` returned zero hits |
+| TOML | Was `{ name = "func_800F2AB4", vram = 0x800F2AB4, size = 0x10 }` — stale leftover; size matches INL `rom_size`. Renamed to `clearObjectFlagBit4` at `syms/rogue_squadron.syms.toml:1986` |
+| Boundary check | INL offset `0x0004D984` = prior `setObjectFlagBit4`'s `0x0004D974 + 0x10` (s1886), confirming contiguous placement |
+
+### Outcome
+
+H2 selected. Live generated body, `funcs.h` declaration, and overlay
+INL entry all already agreed on `clearObjectFlagBit4` / `0x10`; only
+the TOML still carried `func_800F2AB4`. Renamed it to match — no
+invented name, no build or runtime run required. This refutes H1
+(TOML was not already synchronized) and H3 (no size/boundary
+disagreement).
+
+Next census: leftover `func_800F2AC4` at `0x800F2AC4` (size `0xC4`,
+`syms/rogue_squadron.syms.toml:1987`). Preliminary peek: the generated
+body immediately after `clearObjectFlagBit4` in `funcs_41.c` is
+already `RECOMP_FUNC void computeAnchorRelativePositionByDistanceRatio`
+— confirm this is the actual occupant of `0x800F2AC4` (not a stray
+substring match) and check the companion/`funcs.h`/INL agree before
+renaming. Last-15 titles after s1887 still include s1872's hangar/512
+revisit, so the next iteration remains a leftover census, not a
+mandatory REVISIT.
