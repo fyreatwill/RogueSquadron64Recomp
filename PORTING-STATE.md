@@ -90640,3 +90640,98 @@ is legitimate playing-state that
 never returns to 0.
 
 No mitigation. Ask (b) remains human-only.
+
+## Session 1928 (2026-08-17) — selected H-fresh-attack-after-end: sample-end fires, rekey does not
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: why slot+0 playing-state
+never returns to 0 after s1927 H-keyon.
+
+Kept every existing `[avf-gate]` site.
+Added, same tag / `ROGUESQ_LOG_VI_CALLERS`
+gate, in `N64Recomp/fixup_game_funcs.py`
+plus live `funcs_24.c`:
+
+- `site=render-end` on
+  `sb $zero, 0x28($sp)` at
+  `0x80090174` (no rate-limit;
+  `tickn`/`jaln`/`n`/`idx` from
+  `$s1` vs `0x801496F8`)
+- `site=render-stage` on
+  `addiu $v0, $zero, 0x2` at
+  `0x80090080` (`n2`/`n0`; first 8
+  then every 1000000)
+- `site=rekey` on
+  `musyxTriggerVoiceAttack` when
+  `old!=0` (first 32 then every
+  1000)
+
+Did not add a second counter family.
+Did not change any store.
+
+One run, s790-shaped recipe
+(`scratch/agent/s1928_render_end.sh`):
+`s1928_render_end_20260817-221305`
+probe_rc=4, ~27s, last width 640
+`origin=0x00696100` at 7.0s `#378`,
+last `update_screen` `#1536`. Catalogued
+`fillSampleStreamRange+6464` SIGBUS
+`si_addr=0x380000000`
+last-guest-pc=`0x8000834c`. Died
+before `menu-entry` siten=2
+(UNEVALUABLE for the skip). Playing-
+state axis is evaluable.
+
+Same-run positive control passed:
+tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice; `slot-alloc`
+x3 ending `new=0x8018D4A0 count=16`;
+`slot-sb` `func=musyxRenderVoiceSamples`
+`new=2` n=13646; `render-stage`
+n2=1..8 n0=0 (instrument live).
+
+Discriminator:
+
+- `render-end` n=9, all tickn=2,
+  all `base=0x8018D4A0`. idx
+  {15,4,0,1,15,10,7,4,13}.
+- `rekey` n=0.
+- After every end, the next
+  same-idx render writeback is
+  `old=0x01 new=0x02` (idx=15
+  n=3505, idx=4 n=4254, idx=0
+  n=9014, …). Zero render
+  writebacks have `old=0x00`
+  (0/13646). 349 have `old=0x01`.
+- Direct writeback `new=0` is
+  single-source inferred (the
+  s1927 `new==2` rate-limit hides
+  zeros; that idx is missing from
+  the immediately following
+  `new=2` rows).
+- `deactivateVoice` still 0.
+
+**H-fresh-attack-after-end
+SELECTED.** H-sample-never-ends
+REFUTED as a universal (9 fires).
+H-rekey-forever (`old!=0`)
+REFUTED. H-other-writer not
+needed: the restore writer is
+already-named
+`musyxTriggerVoiceAttack` with
+`old=0`. Ends are rare
+(9/13646 mix writebacks); the
+bulk of slots stay `0x02` because
+`0x80090080` restages 2 every
+call that does not take
+sample-end.
+
+Static second line: only two
+generated `jal 0x8009231C` sites
+— `tickAllAudioChannels`
+`0x8008CE7C` and
+`startStreamedSampleVoice`
+`0x80098194`.
+
+No mitigation. Ask (b) remains
+human-only.

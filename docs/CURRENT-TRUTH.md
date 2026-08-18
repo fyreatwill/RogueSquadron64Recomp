@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1927 (2026-08-17).
+detail. Reviewed through s1928 (2026-08-17).
 
 ## Current state
 
@@ -228,6 +228,35 @@ detail. Reviewed through s1927 (2026-08-17).
   `musyxRenderVoiceSamples` does
   `addiu $v0, $zero, 0x2` then
   `sb $v0, 0x0($s1)` at `0x800909F4`.
+  **s1928**: `[avf-gate]` `site=render-end`
+  / `render-stage` / `rekey`
+  (`s1928_render_end_20260817-221305`,
+  probe_rc=4 ~27s catalogued
+  `fillSampleStreamRange+6464` SIGBUS
+  last-guest-pc=`0x8000834c`, `#1536`,
+  no `#7/#8`). Same-run control:
+  tick 2/2/2; `took_swap=1` twice;
+  `slot-alloc` x3 ending
+  `0x8018D4A0/16`; render
+  `slot-sb` n=13646 `new=2`;
+  `render-stage` n2=1..8 n0=0.
+  `render-end` n=9 (idx
+  {15,4,0,1,15,10,7,4,13}, all
+  `base=0x8018D4A0`). `rekey` n=0.
+  After every end, next same-idx
+  render writeback is `old=0x01
+  new=0x02`. Zero render
+  writebacks have `old=0x00`.
+  **H-fresh-attack-after-end
+  SELECTED.** H-sample-never-ends
+  REFUTED as a universal (9 fires;
+  9/13646 mix calls). H-rekey-forever
+  (`old!=0`) REFUTED. Static:
+  `jal 0x8009231C` only in
+  `tickAllAudioChannels`
+  `0x8008CE7C` and
+  `startStreamedSampleVoice`
+  `0x80098194`.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -281,34 +310,41 @@ detail. Reviewed through s1927 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **`musyxRenderVoiceSamples` writes slot+0
-   `0x02` after `musyxTriggerVoiceAttack`
-   keys on `0x01` (s1927 H-keyon).** s1926
-   named the stuck table (`0x8018D4A0`
-   ch=16, 15/16 `0x02`). s1927 names the
-   writer: third `allocateSongChannelArray`
-   at tick 2 publishes that table and
-   zeros it; attack stores `1`; render
-   restages `2` every mix
-   (`0x80090080` / `0x800909F4`). That
-   write is legitimate playing-state,
-   not dirty malloc. Voices never return
-   to 0: render's sample-end `sb $zero,
-   0x28($sp)` at `0x80090174` was not
-   among the first 32 writebacks (all
-   `new=2`); `deactivateVoice` has zero
-   generated `jal` sites. Next axis: why
-   the playing state never ends (render
-   sample-end path vs immediate re-key
-   after `stopVoiceMarkRetrigger` vs
-   dead `deactivateVoice`). Ask (b)
-   remains human-only. Do not re-run a
-   reachability-only `s790`. Do not
-   force-zero a slot byte or the gate
-   without an `ORIGIN:`. Still blocks
-   item 3 (hangar/512) until a port run
-   publishes `[phase] vi_width=512
-   origin=0x006AB400` (or `0x006AB800`).
+1. **Playing-state rarely ends, and
+   when it does a fresh attack
+   restarts the voice (s1928
+   H-fresh-attack-after-end).**
+   `render-end` at `0x80090174`
+   fired 9 times on the
+   `0x8018D4A0` table; `rekey`
+   (`TriggerVoiceAttack` `old!=0`)
+   never fired; after every end the
+   next same-idx render sees
+   `old=0x01`. Bulk of the 15/16
+   stuck `0x02` is the other
+   13637/13646 mix calls, which
+   restage 2 because the
+   `0x38($s1)` compare does not
+   take sample-end. Next axis
+   (one instrument): (a) why that
+   compare almost never crosses
+   (`cur` / `pos+$s4` at
+   `L_80090150`) and (b) which of
+   the two `jal 0x8009231C` sites
+   (`tickAllAudioChannels`
+   `0x8008CE7C` vs
+   `startStreamedSampleVoice`
+   `0x80098194`) issues the
+   post-end fresh attack. Ask (b)
+   remains human-only. Do not
+   re-run a reachability-only
+   `s790`. Do not force-zero a
+   slot byte or the gate without
+   an `ORIGIN:`. Still blocks
+   item 3 (hangar/512) until a
+   port run publishes `[phase]
+   vi_width=512 origin=0x006AB400`
+   (or `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -436,7 +472,12 @@ alloc leftover is superseded by s1927
 — `musyxRenderVoiceSamples` writes it
 from `old=0x01` after
 `musyxTriggerVoiceAttack` keyed on;
-alloc init stores `0`.
+alloc init stores `0`. Treating
+sample-end as unreachable (or the
+restore as a re-key of a live
+slot) is superseded by s1928 —
+`render-end` n=9, `rekey` n=0,
+next same-idx render `old=0x01`.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -723,6 +764,10 @@ and s1927 selected H-keyon for the slot+0
 `0x02` writer (`musyxRenderVoiceSamples`
 `0x800909F4`; H-alloc-dirty and H-other
 REFUTED; `deactivateVoice` never called)
+and s1928 selected H-fresh-attack-after-end
+(`render-end` n=9; `rekey` n=0;
+H-sample-never-ends REFUTED as a
+universal; H-rekey-forever REFUTED)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs
 failed across 4 crash/stall signatures, H1-flake refuted) —
