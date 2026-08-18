@@ -1,65 +1,66 @@
-# NEXT work unit (s1922) — why runVideoFrameTick never jals a 3rd time
+# NEXT work unit (s1923) — which caller issued the two ticks
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1921 selected H-not-called: `advanceVideoFrame` is
-entered twice, both calls return (`entryn=2`/`exitn=2`),
-then `runVideoFrameTick` never jals `0x8001818C` again.
-s1920's loop `n=3` was the inner swap-wait, not a third
-call. Do **not** re-run a reachability-only `s790`. Do
+s1922 selected H-tick-not-called: `runVideoFrameTick`
+entered twice, both calls jal'd `0x8001818C` and
+returned (`tickn=2`/`jaln=2`/`exitn=2`). No 3rd entry.
+Do **not** re-run a reachability-only `s790`. Do
 **not** rename `func_800F7130` — item 1 still has a live
 discriminator. Ask (b) is still human-only.
 
-## Work unit — tick entry vs jal vs exit after AVF #2
+## Work unit — name the two `jal 0x80001354` sites
 
-Sole function that jals `0x8001818C` is `runVideoFrameTick`
-(`funcs_0.c`). Static callers of `runVideoFrameTick`
-(`jal 0x80001354`): `funcs_8.c` (two sites),
-`funcs_27.c`, `funcs_34.c`. After AVF call 2 returns,
-three hypotheses, one instrument:
+Four static sites, three functions:
 
-- H-tick-not-called: the 2nd `runVideoFrameTick` returns;
-  no 3rd entry. SELECTS: stall is in a caller / scheduler
-  after the 2nd tick returns.
-- H-tick-stuck-post-jal: the 2nd tick never returns after
-  AVF exits (blocked in the post-jal tail at
-  `0x800014F8` / `L_800015E8`). SELECTS: stall is inside
-  that second tick after the jal.
-- H-tick-stuck-pre-jal: a 3rd tick enters but never jals
-  `0x8001818C` (blocked in the prologue:
-  `partitionFramebufferMemory` / `coalesceFreeHeapBlocks`
-  / setup). SELECTS: stall is the pre-jal tail.
+| site | function | guest jal |
+|---|---|---|
+| mgl-a | `mainGameLoop` | `0x8003E29C` (flag `0x2000000` set; overlay-0 + `applyLevelScreenAndCameraSettings`) |
+| mgl-b | `mainGameLoop` | `0x8003E360` (flag clear; overlay-0 + `0x800BF358` + apply) |
+| mission | `initSceneForMission` | `0x800A9C70` |
+| menu | `menuOverlayInit` | `0x800C5A18` (then `clearSceneBssRegion` `0x8003DF20`, not `mainGameLoop`) |
 
-**Discriminating measurement**
+`mainGameLoop` is a real loop (`j L_8003E114`). The two
+init functions are one tick per entry.
 
-Keep existing `[avf-gate]` entry/exit/loop/B0/swap rows.
-Add `[avf-gate]` `site=tick-entry` at
-`runVideoFrameTick` start (after the existing
-`[frametick-top]` block, or reuse it if that env is on)
-and `site=tick-exit` at `L_800015E8` / `jr $ra`, plus
-`site=tick-jal` immediately before
-`advanceVideoFrame(rdram, ctx);`. Same tag, same
-`ROGUESQ_LOG_VI_CALLERS` gate. Put them in
-`N64Recomp/fixup_game_funcs.py` (generated `funcs_0.c`).
-One build, one s790-shaped run with
-`PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180`
-(`scratch/agent/s1921_avf_entry_exit.sh` recipe is
-fine; copy to `s1922_rvft_gate.sh`).
+Keep existing `[avf-gate]` tick-entry/jal/exit and
+AVF entry/exit/loop/B0/swap. Add, same tag, same
+`ROGUESQ_LOG_VI_CALLERS` gate, in
+`N64Recomp/fixup_game_funcs.py`:
 
-Same-run positive control: `site=tick-entry`,
-`site=tick-jal`, `site=tick-exit` must all fire on the
-first two ticks (s1921 already proved those two AVF
-calls return), and `site=swap took_swap=1` must appear
-twice. Then read the post-AVF-#2 counts:
+- `site=mgl-entry` at `mainGameLoop` start (do **not**
+  reuse `[maingameloop-entry]` / `ROGUESQ_LOG_MAINGAMELOOP_REACH`)
+- `site=mgl-jal-a` / `site=mgl-jal-b` immediately before
+  each `runVideoFrameTick(rdram, ctx);`
+- `site=mission-entry` + `site=mission-jal`
+- `site=menu-entry` + `site=menu-jal`
 
-- tick-entry=2, tick-exit=2, tick-jal=2 → H-tick-not-called
-- tick-entry=2, tick-exit=1, tick-jal=2 → H-tick-stuck-post-jal
-- tick-entry>=3, tick-jal=2 → H-tick-stuck-pre-jal
+Print `tickn`/`jaln` plus a per-site counter. One
+build, one s790-shaped 180s run (`s1922_rvft_gate.sh`
+recipe; copy to `s1923_tick_caller.sh`).
 
-Do not add a second counter family. Existing
-`[frametick-top]` is gated on
-`ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` and is entry-only
-— do not treat it as this table.
+Same-run positive control: `site=tick-entry` /
+`tick-jal` / `tick-exit` must still fire 2/2/2 with
+`took_swap=1` twice. Then read the two tick-jal
+parents:
+
+- both ticks `mgl-jal-*`, `mgl-entry` keeps climbing
+  after tick 2, no more `mgl-jal-*` → H-mgl-skip
+  (loop alive, both jal branches dead)
+- both ticks `mgl-jal-*`, `mgl-entry` frozen after
+  the last tick → H-mgl-dead (loop not re-entered)
+- both ticks `menu-jal` and/or `mission-jal`,
+  `mgl-entry=0` → H-caller-init (boot inits did the
+  VI setup; `mainGameLoop` never started)
+- mixed init + mgl, then mgl frozen or skip →
+  H-caller-mixed; follow the last parent's post-return
+  counts
+- `mgl-entry>=1` but zero `mgl-jal-*` on the two
+  ticks → the inits issued them; mgl is alive but
+  has not taken a jal yet (same table: does
+  `mgl-entry` keep climbing?)
+
+Do not add a second counter family.
 
 ## Sweep leftover (parked, not this unit)
 
@@ -69,9 +70,10 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- AVF entry vs exit vs prologue after `#6` (s1921) — closed.
+- Tick entry vs jal vs exit after AVF #2 (s1922) — closed.
 - Naming the `#10` osViSetMode site (s1919) — closed.
 - The `0x80128EAD` / `$s0` swap-gate table (s1920) — closed.
-- AVF entry vs exit vs prologue after `#6` (s1921) — closed.
 - The s844-HEAD full code-content audit (s1890) — closed.
 - The `ROGUESQ_SKIP_HANGAR_PROBE` A/B (s1890) — closed.
 - H3a-lowpower (s1902) — closed.

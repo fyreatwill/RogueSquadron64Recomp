@@ -90215,3 +90215,57 @@ as a third `advanceVideoFrame` invocation is withdrawn.
 No mitigation. Next: `runVideoFrameTick` entry vs jal
 vs exit after the second return. Ask (b) remains
 human-only.
+
+## Session 1922 (2026-08-17) — selected H-tick-not-called after the second tick returns
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit:
+after the second `advanceVideoFrame` return, does
+`runVideoFrameTick` itself return, stay in the post-jal
+tail, or does a 3rd tick enter and die before
+`jal 0x8001818C`? Three hypotheses: H-tick-not-called /
+H-tick-stuck-post-jal / H-tick-stuck-pre-jal.
+
+Added `[avf-gate]` `site=tick-entry` after the
+`[frametick-top]` block, `site=tick-jal` immediately
+before `advanceVideoFrame`, and `site=tick-exit` at
+`L_800015E8` (`N64Recomp/fixup_game_funcs.py` +
+`funcs_0.c`). Same tag and `ROGUESQ_LOG_VI_CALLERS`
+gate. Fields: `tickn`, `jaln`, `exitn`.
+
+One s790-shaped run
+(`scratch/agent/s1922_rvft_gate.sh`,
+`scratch/agent/soak_results/s1922_rvft_gate_20260817-205624/run.log`):
+probe_rc=4, last width 640, `update_screen #1024`,
+origin `0x00696100` then `0x0062BD00`, no `#7/#8`.
+Then musyx SIGBUS (`fillSampleStreamRange+6464`,
+`musyxRenderVoiceSamples`, last-guest-pc=`0x8000b650`,
+si_addr=`0x380000000`). Early `#6`-dead subtype, not
+the 180s `#7/#8` staller.
+
+Same-run positive control: `site=tick-entry`,
+`site=tick-jal`, and `site=tick-exit` all fired on
+both ticks; `took_swap=1` at loop `n=2` (`#2+#3`)
+and `n=3` (`#5+#6`).
+
+Final counts: tickn=2, jaln=2, exitn=2.
+Tick 1: entry → jal → AVF loop n=1 (no swap) then
+n=2 (swap) → tick-exit after `#3`.
+Tick 2: entry → jal → AVF loop n=3 (swap) →
+tick-exit after `#6`.
+Zero further tick entries for the remaining ~13s /
+~650 `update_screen` ticks before the crash.
+
+This selects H-tick-not-called. A caller of
+`runVideoFrameTick` never jals `0x80001354` a third
+time.
+This refutes H-tick-stuck-post-jal (tick-exit=2).
+This refutes H-tick-stuck-pre-jal (no 3rd entry).
+
+Static `jal 0x80001354` sites:
+`mainGameLoop` `0x8003E29C` / `0x8003E360`,
+`initSceneForMission` `0x800A9C70`,
+`menuOverlayInit` `0x800C5A18`.
+
+No mitigation. Next: which of those four sites issued
+the two ticks, and does that caller return / get
+re-entered. Ask (b) remains human-only.

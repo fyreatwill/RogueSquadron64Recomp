@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1921 (2026-08-17).
+detail. Reviewed through s1922 (2026-08-17).
 
 ## Current state
 
@@ -116,8 +116,25 @@ detail. Reviewed through s1921 (2026-08-17).
   and returned. **H-not-called SELECTED.**
   H-stuck-post-swap / H-stuck-prologue REFUTED.
   s1920's `n=3` was the inner-loop counter, not a third
-  call. Next axis: `runVideoFrameTick` entry vs jal vs
-  exit after that second return.
+  call.
+  **s1922**: `[avf-gate]` `site=tick-entry` /
+  `tick-jal` / `tick-exit` on `runVideoFrameTick`
+  (`s1922_rvft_gate_20260817-205624`, probe_rc=4,
+  musyx SIGBUS at `fillSampleStreamRange+6464` /
+  last-guest-pc=`0x8000b650`, `#1024`, no `#7/#8`).
+  Same-run control: all three sites fired on both
+  ticks; `took_swap=1` at loop `n=2` and `n=3`.
+  Final counts: tickn=2, jaln=2, exitn=2. Tick 1
+  returned after `#3`; tick 2 returned after `#6`.
+  Zero further entries before the crash (~13s /
+  ~650 `update_screen` after tick 2).
+  **H-tick-not-called SELECTED.**
+  H-tick-stuck-post-jal / H-tick-stuck-pre-jal
+  REFUTED. Stall is in a caller after the second
+  return. Static `jal 0x80001354` sites:
+  `mainGameLoop` `0x8003E29C` / `0x8003E360`,
+  `initSceneForMission` `0x800A9C70`,
+  `menuOverlayInit` `0x800C5A18`.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -171,25 +188,26 @@ detail. Reviewed through s1921 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **`runVideoFrameTick` never jals `advanceVideoFrame` a
-   third time; H-not-called (s1921).** s1919 named s844
-   `#10` as `initVideoSubsystem` via `0x80018378`. s1920
-   selected H-advance-dead (`L_80018264` `n` frozen at 3
-   after `#6`; table-walk / `$s0!=byte` REFUTED). s1921's
-   same-run control (entry+exit on both calls;
-   `took_swap=1` at loop `n=2` and `n=3`) then entryn=2
-   / exitn=2 for the rest of a 180s / `#10816` staller
-   SELECTS H-not-called and REFUTES H-stuck-post-swap
-   and H-stuck-prologue. s1920's `n=3` was the inner-loop
-   counter across two calls, not a third invocation.
-   This run also lacked `#7/#8` (other 180s stallers have
-   them as `applyPendingViChanges`); that is independent
-   of the swap loop. Next axis: after the second
-   `advanceVideoFrame` return, does `runVideoFrameTick`
-   itself return, or does its caller stop entering it, or
-   is a later tick stuck before the jal? Static callers:
-   `funcs_8.c` (two `jal 0x80001354` sites),
-   `funcs_27.c`, `funcs_34.c`. Ask (b) remains
+1. **`runVideoFrameTick` returns twice; no caller jals
+   it a third time (s1922 H-tick-not-called).** s1919
+   named s844 `#10` as `initVideoSubsystem` via
+   `0x80018378`. s1920 selected H-advance-dead. s1921
+   selected H-not-called (`advanceVideoFrame` entryn=2
+   / exitn=2). s1922's same-run control (tick-entry /
+   tick-jal / tick-exit on both calls; `took_swap=1`
+   at loop `n=2` and `n=3`) then tickn=2 / jaln=2 /
+   exitn=2 SELECTS H-tick-not-called and REFUTES
+   H-tick-stuck-post-jal and H-tick-stuck-pre-jal.
+   This run is the early `#6`-dead / no-`#7/#8`
+   subtype (same as s1920/s1921), then musyx SIGBUS
+   at ~`#1024`; the 180s `#7/#8` subtype is not
+   re-measured here. Next axis: which of the four
+   `jal 0x80001354` sites made those two ticks, and
+   does that caller return / get re-entered?
+   `mainGameLoop` `0x8003E29C` (flag-set overlay-0
+   branch) / `0x8003E360` (clear branch after
+   `0x800BF358`), `initSceneForMission` `0x800A9C70`,
+   `menuOverlayInit` `0x800C5A18`. Ask (b) remains
    human-only. Do not re-run
    `s790_postsec2_reachability.sh` as a reachability
    re-confirm. Still blocks item 3 (hangar/512) until a
@@ -289,14 +307,18 @@ is superseded by s1919 — `#8` is `0x80128E40`; `#10` is
 `0x80128EAD` is not the gate. Treating s1920's loop
 `n=3` as a third `advanceVideoFrame` call is superseded
 by s1921 — two calls produced loop n=1,2,3; both
-returned; the caller never jals again.
+returned; the caller never jals again. Treating the
+stall as inside `runVideoFrameTick` after the second
+`advanceVideoFrame` return (stuck in the post-jal
+tail, or a 3rd tick dying before the jal) is
+superseded by s1922 — tick-entry/jal/exit are all 2.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1921 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1922 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
@@ -310,7 +332,9 @@ and applyPending-as-1024-issuer REFUTED) and s1920 selecting
 H-advance-dead (`L_80018264` `n` frozen at 3 after `#6`;
 table-walk / `$s0!=byte` REFUTED) and s1921 selecting
 H-not-called (`advanceVideoFrame` entryn=2 exitn=2; the
-caller never jals a third time) and leftover `func_800F6954` became
+caller never jals a third time) and s1922 selecting
+H-tick-not-called (`runVideoFrameTick` tickn=2 jaln=2
+exitn=2; both ticks returned; no 3rd entry) and leftover `func_800F6954` became
 `buildSineWaveEffectGeometryB` (`0x800F6954`, `0x7DC`) after leftover
 `func_800F5D34` became
 `buildSineWaveEffectGeometryA` (`0x800F5D34`, `0xC20`) after leftover
