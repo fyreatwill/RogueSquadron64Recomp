@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1970 (2026-08-18).
+detail. Reviewed through s1971 (2026-08-18).
 
 ## Current state
 
@@ -44,25 +44,26 @@ detail. Reviewed through s1970 (2026-08-18).
   Do not default the yield on. ORIGIN: host VI/SI retrace (legitimate)
   sits in `external_messages`; this second `beq v0==0` spin is runnable
   so idle-wait never drains. Hardware would preempt.
-- **First hangar window is short.** SIGBUS in `filterVoiceSampleBlock+220`
-  (`last-guest-pc=0x8000834c`, the known `drainMeshReleaseQueue` return)
-  ~4s after hangar. s1950 reproduced: 512 at 24.8s, gone at 4.3s after
-  1 hangar frame, same symbol/`last-guest-pc`. Do not chase as a
-  single crash.
-- **The filterVoiceSampleBlock idiom audit selected a missing host-call link
-  (s1970).** The complete generated tree has three direct callers; static
-  inspection classified their source/output buffers as caller-owned, with
-  the callee reading 13 halfwords from source and writing 40 bytes to output.
-  The corrected hangar recipe reached the live `updateVoiceChannelParamsLarge`
-  edge at `0x8009D740` after both positive controls. Its source
-  `0x8011C748..762` and output `0x8011C7B0..7D8` were in RDRAM, but the
-  callee's fixed selector path used `ra+0xD4+a0 = 0x000000D4` because the
-  generated host call left `ctx->r31=0` instead of the guest link
-  `0x8009D748`. The entry row repeated the same values and the SIGBUS followed
-  at the invalid byte read. This selects H-filter-local-range: the writer is
-  N64Recomp's direct `jal` lowering, and zero is not the legitimate guest
-  return address. No guard or skip was added; the next M3 unit is a complete
-  branch-and-link/RA-derived idiom audit, not a one-site mitigation.
+- **bltzal $zero PIC-idiom link-register class fixed (s1971); hangar stable
+  60s+ (17 frames, no crash).** N64Recomp's direct-call lowering generates
+  `if (SIGNED(0) < 0) { ... }` for `bltzal $zero` (dead code) but omits
+  writing `ctx->r31 = PC+8`. Six sites in `funcs_27.c` use `$ra` as a
+  PC-relative data-pointer base immediately after: two in
+  `filterVoiceSampleBlock` (0x8009D7E0, 0x8009D8EC), one in
+  `applyVoiceDelayFilter` (0x8009D8EC), and four in `renderVoiceAudioBlock`
+  (0x8009DBA4, 0x8009DBC8, 0x8009DBEC, 0x8009DC10). The `fixup_game_funcs.py`
+  s1971 patch inserts `ctx->r31 = 0x[PC+8]u` before each consumer. Callees of
+  `bgezal $zero` (`audioMixStereoBlock8`, `runVoiceLatticeFilter`) confirmed
+  to use ctx->r31 zero times — safe. Runtime: hangar ran 60s with 17 frames
+  vs 1 frame / 4s before. H-link-lost selected class-wide; filterVoiceSampleBlock
+  SIGBUS family CLOSED. ORIGIN: N64Recomp direct-call lowering omits the link
+  write; fix is the legitimate PC+8 value.
+- **New observation (s1971): `drainAudioAndFinalizeSpeechBuffer` spin at
+  218M+ iterations in the 60s hangar window.** Similar to the prior
+  `menuControllerInput` spin-yield class. VI advances normally (update_screen
+  #5312 at 60s), so this spin does not currently block rendering. Whether it
+  blocks audio progression or will eventually cause a crash is unknown.
+  Needs investigation before calling the hangar fully stable.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -178,37 +179,34 @@ detail. Reviewed through s1970 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1970: the generated-symbol sweep (former #1) is now
-effectively closed — 845 of 902 leftovers resolved in one session, the
-remaining 57 are RE/deliberate-hold, not metadata-sync work. Items below
-promote by one; all still need a new discriminator before they can be
-worked, so they stay ordered by blast-radius (visual artifacts and a
-known SIGBUS family first, with the newly selected M3 link-register audit
-before the parked audio re-audit). Per `tools/agent/ITERATION.md`'s
-strategic-priority rule, with the sweep no longer perpetually actionable,
-the next session with nothing else applicable should attempt the
-REVISIT (external retail-entry boundary or M4 accumulator boundary) with
-a genuinely new angle rather than defaulting to sweep busywork.
+Re-ranked s1971: bltzal $zero link-register class is CLOSED (fix landed,
+hangar stable 60s+). New first item is the drainAudioAndFinalizeSpeechBuffer
+spin, which is a fresh discriminatable class. Hologram visual artifacts remain
+open (H3 unavailable). M3 is closed for this idiom class. Audio and M4
+boundaries remain parked.
 
-1. Hangar visual artifacts on the first live hangar frame (geometry
-   cracks, blue tris, hologram layering). s1967 refuted H2 (malformed
-   triangle command) with writer attestation, and s1969's consumer census
-   refuted H1 as a single-source result: beam-overlap triangles reached RT64
-   with coherent coverage/blender state. H3 remains unavailable because the
-   oracle has no screenshot or equivalent LLE `L_17F0` path. Do not add a
-   mode-state mitigation, repeat the `0xD60` opcode scan, or conflate this
-   with the parked M4 Y=`0x8000` question (different mechanism,
-   `y8000_any` stayed 0 in s1969 too). The first hangar window remains ~4s /
-   1 frame.
-2. The selected M3 follow-up is a complete audit of generated direct
-   `bgezal`/`bltzal` host-call lowering wherever a callee or delay-slot
-   sequence consumes `$ra` as a data pointer. Enumerate every site, identify
-   the writer and intended link value, and use one hangar-gated batch probe to
-   distinguish missing context links from valid game data. Do not patch one
-   call site until the class is classified.
-3. Keep audio closed unless a new independent lead reaches audio
-   initialization or voice allocation. Write a bounded plan first.
-4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
+1. **`drainAudioAndFinalizeSpeechBuffer` spin class (s1971 observation).** At
+   218M+ iterations in 60s, this loop is in the same host-yield-starvation
+   class as the fixed `menuControllerInput` spin. Competing hypotheses:
+   - H-spin-starves-audio: the spin starves the audio thread, blocking sample
+     production, which eventually causes a crash or audio-dead silence.
+   - H-spin-benign: the spin is expected to yield eventually as audio data
+     arrives; VI/rendering continue normally so it's not starving anything.
+   - H-new-yield-needed: like `menuControllerInput`, this spin needs a
+     `yield_self_1ms` gate, controlled by ROGUESQ_SPIN_YIELD, to let the
+     idle thread drain.
+   Discriminator: add a `drainAudioAndFinalizeSpeechBuffer` spin-yield site
+   (like the existing two) and run a 180s probe alongside a no-yield arm; if
+   audio output changes or crash pattern changes, H-spin-starves-audio selects.
+   The 180s soak in `soak_queue/s1971_hangar_180s.sh` may pre-answer the
+   stability question before the next iteration.
+2. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
+   H2 (malformed triangle) REFUTED s1967; H1 (consumer draw state) REFUTED
+   s1969 (single-source). H3 (pixel/coverage) unavailable — oracle has no
+   screenshot for LLE path. Hologram-beam artifact remains open. Do not add
+   mode-state mitigation or repeat the `0xD60` scan.
+3. Keep audio closed unless a new bounded lead reaches initialization.
+4. M3: only as complete idiom-class audits with a named discriminator.
 5. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
    batch arms; phase-gate; SIGKILL; queue soaks. Hangar recipe is
    `ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot. Ask (b) remains
@@ -257,16 +255,14 @@ beam-cone box had `blend=0x0055`, `ZMODE=0`, `Z_UPD=1`, `CVG_X_ALPHA=0`, and
 single-source evidence against an incompatible consumer mode, not pixel
 ground truth.
 
-**filterVoiceSampleBlock link contract.** s1970 static enumeration found the
-three direct callers in `funcs_27.c`; the live hangar row was
-`updateVoiceChannelParamsLarge` at `0x8009D740`. The fixed callee path computes
-its indexed byte table as `$ra+0xD4+$a0`. The same-run control and the two audit
-rows showed valid caller-owned source/output spans but `$ra=0`, table
-`0x000000D4`, and a SIGBUS immediately after the entry. The intended link for
-that `jal` is `0x8009D748`; the zero was written by the generated host-call
-lowering, not by game audio data. This is a single live edge plus static
-whole-tree enumeration; the next branch-and-link audit must establish whether
-the same contract affects other sites.
+**bltzal $zero link-register class. CLOSED (s1971).** s1970 found ctx->r31=0
+at the `filterVoiceSampleBlock` site; s1971 completed the class census: six
+`bltzal $zero` PIC-idiom sites in `funcs_27.c` (across three functions)
+never received their `ctx->r31 = PC+8` write. The `fixup_game_funcs.py` s1971
+patch applies all six. Hangar ran 60s / 17 frames with no SIGBUS after the fix,
+vs 1 frame / 4s before. Class is fully enumerated and patched; no remaining
+sites elsewhere in the generated codebase. Do not reopen without a new site
+identified by grep + static analysis.
 
 ## Superseded conclusions
 
@@ -305,6 +301,9 @@ Most recent, still load-bearing for the next unit:
   stalled at VI 640 and produced no audit rows; it is recipe failure, not a
   null result. The corrected run reached VI 512 and supplied the positive
   control before selecting H-filter-local-range.
+- "First hangar window is short (~4s / 1 frame / SIGBUS filterVoiceSampleBlock)"
+  is superseded by s1971 — bltzal $zero link-register fix eliminated the crash;
+  hangar now stable 60s+ / 17 frames with no SIGBUS.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -315,8 +314,8 @@ Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
 s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
-archived to §36). s1968's H1 scope result and s1970's filter audit are in
-`PORTING-STATE.md` directly.
+archived to §36). s1968's H1 scope result, s1970's filter audit, and s1971's bltzal class fix
+are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a

@@ -94282,3 +94282,67 @@ Implemented the regeneration-safe probes in `fixup_game_funcs.py`, the host
 range classifier in `src/main/main.cpp`, and the env-var catalog entry; the
 full Debug target built successfully. The next work unit is a whole generated
 `bgezal`/`bltzal` and `$ra`-consumer idiom audit, not a one-site repair.
+
+## Session 1971 (2026-08-18) — bltzal $zero link-register class fix: hangar extended from 4s to 60s+
+
+**Hypothesis:** N64Recomp's direct-call lowering for `bgezal`/`bltzal` instructions
+never writes the link register (`ctx->r31 = PC+8`), causing all Factor5/MusyX PIC
+idiom sites to compute data pointers from stale/zero `ctx->r31`.
+
+**Class census (static):**
+- `rg` across all 54 `funcs_*.c` files found `bgezal`/`bltzal` only in `funcs_27.c`
+  and `funcs_49.c`.
+- `funcs_49.c:1726`: `bltzal $fp, L_801096D8` — real conditional (non-$zero),
+  post-branch code uses no `$ra` consumer. Safe.
+- `funcs_27.c:13413–13671,98399,106602`: `bgezal/bltzal` in code surrounded by
+  `do_break()` / INVALID-instruction traps — dead-code zone. Safe.
+- Six `bltzal $zero` sites with immediate `addiu $rN, $ra, offset` consumers
+  (the Factor5 PIC "get-PC" idiom: $zero is always 0, so 0 < 0 is always false,
+  branch never taken, but link $ra = PC+8 is written unconditionally on hardware):
+
+| # | PC | Link (PC+8) | Consumer | Function |
+|---|---|---|---|---|
+| 1 | 0x8009D7E0 | 0x8009D7E8 | `addiu $t7, $ra, 0xD4` | filterVoiceSampleBlock |
+| 2 | 0x8009D8EC | 0x8009D8F4 | `addiu $t0, $ra, 0x84` | applyVoiceDelayFilter |
+| 3 | 0x8009DBA4 | 0x8009DBAC | `addiu $t3, $ra, 0x190` | renderVoiceAudioBlock |
+| 4 | 0x8009DBC8 | 0x8009DBD0 | `addiu $t3, $ra, 0x184` | renderVoiceAudioBlock |
+| 5 | 0x8009DBEC | 0x8009DBF4 | `addiu $t3, $ra, 0x170` | renderVoiceAudioBlock |
+| 6 | 0x8009DC10 | 0x8009DC18 | `addiu $t3, $ra, 0x164` | renderVoiceAudioBlock |
+
+- `bgezal $zero` sites in `renderVoiceAudioBlock` call `audioMixStereoBlock8` and
+  `runVoiceLatticeFilter` — both callees confirmed to use ctx->r31 zero times
+  (grep verified). Safe.
+
+**Discriminating evidence:**
+- Static: N64Recomp generates `if (SIGNED(0) < 0) { call; goto after_N; }` — the
+  body is dead code and ctx->r31 is never written.
+- Runtime (s1970): ctx->r31=0 at filterVoiceSampleBlock site; static intended link
+  was 0x8009D748. Two independent sources confirm H-link-lost.
+
+**Fix:** `fixup_game_funcs.py` s1971 patch: for each of the 6 sites, insert
+`ctx->r31 = 0x[link]u;` immediately before the post-bltzal PC-consumer comment.
+Anchor is the unique PC-address comment for each instruction. Each anchor verified
+to appear exactly once in funcs_27.c. The game code saves/restores the caller's
+$ra around the PIC idiom so overwriting ctx->r31 is safe.
+
+**Build and run results:**
+- Regen order: `make_elf.py` → N64Recomp → `fixup_game_funcs.py` → cmake. All
+  succeeded; all 6 patches confirmed present in funcs_27.c.
+- Hangar probe (ROGUESQ_SPIN_YIELD=1, eleven-Start, PROBE_PHASE_WIDTH=512,
+  PROBE_PHASE_TIMEOUT=60): phase 512 at 26.5s, 17 frames captured in 60s, NO SIGBUS.
+  `drainAudioAndFinalizeSpeechBuffer` site spinning at n=218M+ by end.
+  `[vi] update_screen #5312` — VI advancing continuously.
+- **Before fix: 1 frame / ~4s then SIGBUS. After fix: 17 frames / 60s, no crash.**
+
+**Outcomes:**
+- H-link-lost SELECTED class-wide. H-link-preserved, H-legitimate-data,
+  H-other-corruption all refuted statically.
+- filterVoiceSampleBlock SIGBUS family is CLOSED.
+- New observation: `drainAudioAndFinalizeSpeechBuffer` spinning at 218M+
+  iterations in 60s. Similar to the `menuControllerInput` spin that was fixed
+  with ROGUESQ_SPIN_YIELD. Audio path may be stuck in same class of host-yield
+  starvation. Needs investigation.
+- Soak enqueued: `soak_queue/s1971_hangar_180s.sh` — 180s hangar stability check.
+- Next work unit: investigate drainAudioAndFinalizeSpeechBuffer spin (determine if
+  it's a new spin-yield site or a different bottleneck) with a new idle-yield
+  probe. HYPOTHESIS-ID: audio-drain-spin-class.
