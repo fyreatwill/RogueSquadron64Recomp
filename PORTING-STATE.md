@@ -87508,3 +87508,90 @@ live `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F2980` /
 `getObjectMeshTransformOrLocal` at `0x800F2988`. Last-15 titles
 after s1881 still include s1872's hangar/512 revisit, so the next
 iteration is another leftover census rather than a mandatory REVISIT.
+## Session 1882 (2026-08-17) — synchronized the initActorMotionParams symbol
+
+Exact generated-symbol census for leftover `func_800F2888` at
+`0x800F2888` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles include s1872's hangar/512 revisit (`hangar/512 0x8000 Y
+is unevaluable`), so the 15-title all-sweep REVISIT gate did not fire.
+Step 0 `wc -c` was 18444; not a maintenance iteration. No new
+soak-queue verdicts beyond the already-folded s1029-and-earlier tail.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `initActorMotionParams = 0x800F2888` at line 742 (19 callers; initializes actor motion/velocity parameter block at actor+0x114..+0x137 from two (angle, magnitude) pairs via `cosf_recomp` / magnitude scale / rand jitter). Sequential previous `getObjectDetailLevel = 0x800F287C`; next occupant `getObjectMeshTransformOrLocal = 0x800F2988` at line 1036 |
+| Companion `main_overlay.txt` / cinematic / menu | No occupant at `0x800F2888`. Menu overlay listed-symbol max around `0x800C6660`; cinematic max `0x800B072C` |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void initActorMotionParams` at VRAM `0x800F2888`. First insn `addiu $sp, $sp, -0x40` at `0x800F2888`; last live `jr $ra` / `addiu $sp, $sp, 0x40` at `0x800F2980` / `0x800F2984`. Previous is already `getObjectDetailLevel` (`0x800F287C`); next is already `getObjectMeshTransformOrLocal` at `0x800F2988` (`addiu $sp, $sp, -0x20`). `funcs.h` and overlay INL already the human name. No leftover `func_800F2888` in generated headers/body/INL |
+| Body semantics | `$a0` actor; f32 args angle1/magnitude1/angle2 plus stack magnitude2 at `0x50($sp)`. Deg-to-rad scale from `MEM_W[0x800A89EC]` (`lui/lwc1 -0x7614`), magnitude scale `MEM_W[0x800A89F0]` (`-0x7610`). Two `cosf_recomp` calls write cos1/mag1 and cos2/mag2 into actor+0x114/+0x118/+0x11C/+0x120. `rand_recomp` + magic-multiply mod-17 path writes jitter at +0x124; state bytes +0x135=1, +0x136=0, +0x137=0. Matches companion comment |
+| Callers | Many generated `initActorMotionParams(rdram, ctx)` call sites across `funcs_36.c`..`funcs_39.c` and `funcs_49.c` (companion said 19; live call sites exceed that after effect/spawn renames). No leftover `LOOKUP_FUNC` / `func_800F2888` sites |
+| TOML | Was `{ name = "func_800F2888", vram = 0x800F2888, size = 0x100 }` — stale leftover. Size already matched `0x800F2988 - 0x800F2888`. Renamed to `initActorMotionParams`. The human name was not already a TOML symbol |
+| Overlay section 4 | `{ .func = initActorMotionParams, .offset = 0x0004D758, .rom_size = 0x00000100 }` under `section_4_ovl_mission_funcs` (`0x800F2888 - 0x800A5130 = 0x4D758`; previous `0x4D74C + 0xC = 0x4D758`; `0x4D758 + 0x100 = 0x4D858` matches next `getObjectMeshTransformOrLocal`) |
+| Non-collision | No leftover `func_800F2888` in generated headers, body, overlay INL, or TOML after the rename. Other overlay files have no occupant at `0x800F2888` |
+
+### Outcome
+
+H2 selected. Companion mission mapping, live generated body
+(`addiu $sp, $sp, -0x40` … `jr $ra` / `addiu $sp, $sp, 0x40` at
+`0x800F2888` / `0x800F2980` / `0x800F2984`), previous
+(`getObjectDetailLevel` / `0x800F287C`) and next
+(`getObjectMeshTransformOrLocal` / `0x800F2988`) boundaries, overlay
+span, and size already agreed on `initActorMotionParams` / `0x100`.
+TOML still carried leftover `func_800F2888`; renamed it to match.
+Generated headers/body/INL were already the human name. This refutes
+H1 (TOML was not already synchronized), H3 (no overlay collision, no
+size/boundary disagreement; previous ends exactly at `0x800F2888` and
+next starts at `0x800F2988`; body is the polar motion-param
+initializer, not an unnameable span). No invented name. No build or
+runtime run required.
+
+Next census: leftover `func_800F2988` at `0x800F2988` (size `0x78`).
+Neighbor peek already: companion `mission_overlay.txt` and generated
+headers/body/INL already `getObjectMeshTransformOrLocal`; TOML still
+leftover `func_800F2988`. First insn `addiu $sp, $sp, -0x20`; last
+live `jr $ra` / `addiu $sp, $sp, 0x20` at `0x800F29F8` /
+`0x800F29FC`. Next already-named occupant is
+`getObjectNpcTypeId` at `0x800F2A00`. Last-15 titles after s1882
+still include s1872's hangar/512 revisit, so the next iteration is
+another leftover census rather than a mandatory REVISIT.
+
+## Session 1883 (2026-08-17) — synchronized the getObjectMeshTransformOrLocal symbol
+
+Exact generated-symbol census for leftover `func_800F2988` at
+`0x800F2988` (HYPOTHESIS-ID: generated-symbol-renaming-sweep). Last-15
+ledger titles after s1882 still include s1872's hangar/512 revisit
+(`hangar/512 0x8000 Y is unevaluable`), so the 15-title all-sweep
+REVISIT gate did not fire. Step 0 `wc -c` was 18610; not a maintenance
+iteration. `tail -20` of `scratch/agent/SOAK-RESULTS.md` showed no
+verdicts newer than the already-folded s1029-era tail (file mtime
+2026-08-14, no queued soaks ran since).
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Companion `mission_overlay.txt` | `getObjectMeshTransformOrLocal = 0x800F2988` at line 1036 (17 callers; `(obj, optional_out_buffer)` — returns world-transformed mesh data or local ptr). Next occupant `getObjectNpcTypeId = 0x800F2A00` at line 1028 (10 callers, convenience wrapper over `findActiveNpcInSlotChain`) |
+| Generated `funcs_41.c` | Already `RECOMP_FUNC void getObjectMeshTransformOrLocal` at VRAM `0x800F2988`, line 4172. First insn `addiu $sp, $sp, -0x20`; body calls `findActiveNpcInSlotChain` (`jal 0x8003FC28`) then `getNpcContextByIndex` (`jal 0x8004013C`) on `a0+0x130`, matching the companion's NPC-lookup-then-transform shape. `funcs.h` (line 2141) and `recomp_overlays.inl` (line 1869, `.offset = 0x0004D858, .rom_size = 0x00000078`) already the human name |
+| Non-collision | `grep -rn 'func_800F2988\b'` across generated `*.c`/`*.h`/`*.inl` returned zero hits — no leftover call sites anywhere in the generated tree |
+| TOML | Was `{ name = "func_800F2988", vram = 0x800F2988, size = 0x78 }` — stale leftover, size already correct (`0x800F2A00 - 0x800F2988 = 0x78`, matches overlay INL `rom_size`). Renamed to `getObjectMeshTransformOrLocal` at `syms/rogue_squadron.syms.toml:1982` |
+| Overlay boundary | INL offset `0x0004D858` plus `initActorMotionParams`'s prior `0x0004D758 + 0x100 = 0x0004D858` (s1882) confirms contiguous placement; `getObjectNpcTypeId`'s INL offset `0x0004D8D0` = `0x0004D858 + 0x78`, confirming the next boundary too |
+
+### Outcome
+
+H2 selected. Companion mapping, live generated body, `funcs.h`
+declaration, and overlay INL entry all already agreed on
+`getObjectMeshTransformOrLocal` / `0x78`; only the TOML still carried
+`func_800F2988`. Renamed it to match — no invented name, no build or
+runtime run required. This refutes H1 (TOML was not already
+synchronized) and H3 (no size/boundary disagreement; body matches the
+companion's NPC-lookup-then-transform semantics).
+
+Next census: leftover `func_800F2A00` at `0x800F2A00` (size `0x24`).
+Neighbor peek already: companion `mission_overlay.txt` (line 1028) and
+generated `funcs.h`/`recomp_overlays.inl` already
+`getObjectNpcTypeId`; TOML still `func_800F2A00`
+(`syms/rogue_squadron.syms.toml:1983`). Confirm the generated body and
+non-collision the same way, then rename the TOML entry. Last-15 titles
+after s1883 still include s1872's hangar/512 revisit, so the next
+iteration remains a leftover census, not a mandatory REVISIT.
