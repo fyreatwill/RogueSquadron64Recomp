@@ -88262,3 +88262,47 @@ after s1894 still include s1888-s1892's reachability investigation, so the
 next iteration remains a leftover census, not a mandatory REVISIT, unless
 VI-1024 reachability has been unblocked by then (check
 `scratch/agent/thermal_probe.py`'s `isLowPowerModeEnabled` first).
+
+## Session 1895 (2026-08-17) — synchronized the initAnimSubstructFromParams symbol
+
+Exact generated-symbol census for leftover `func_800F2C6C` at `0x800F2C6C`
+(HYPOTHESIS-ID: generated-symbol-renaming-sweep). `vi1024-reachability-regression`
+stayed genuinely blocked this iteration: `scratch/agent/thermal_probe.py`
+confirmed Low Power Mode is still ON (unchanged since s1892), so re-running
+`s790_postsec2_reachability.sh` would only be an 11th same-recipe
+reconfirmation with no new measurement axis — NEXT.md's "do not repeat"
+list forbids that. Last-15 ledger titles (`grep '^## Session ' | tail -15`,
+s1880-s1894) are NOT all sweep entries (s1888-s1892 are the reachability
+investigation), so the sweep's 15-title all-sweep REVISIT gate did not
+fire — resumed the sweep. Step 0 `wc -c` on `docs/CURRENT-TRUTH.md` was
+25853; not a maintenance iteration.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Generated `funcs_41.c` (N64Recomp/RecompiledFuncs) | `grep` RECOMP_FUNC adjacency shows `initObjectAnimSubstruct` at line 4612 immediately precedes `initAnimSubstructFromParams` at line 4793 (which precedes `applyToObjectSubstructByFlag` at 4955) — avoids stray substring matches |
+| `funcs.h` | Declares `initObjectAnimSubstruct` (line 2147) then `initAnimSubstructFromParams` (2148) then `applyToObjectSubstructByFlag` (2149), in that order |
+| `recomp_overlays.inl` | `initObjectAnimSubstruct` `.offset = 0x0004DA58, .rom_size = 0x000000E4`; `initAnimSubstructFromParams` `.offset = 0x0004DB3C, .rom_size = 0x000000CC` — exactly contiguous (`0x0004DA58 + 0xE4 = 0x0004DB3C`), and `rom_size` matches TOML `size = 0xCC` |
+| Non-collision | `grep -rln 'func_800F2C6C\b'` across generated RecompiledFuncs tree returned zero hits |
+| TOML | Was `{ name = "func_800F2C6C", vram = 0x800F2C6C, size = 0xCC }` — stale leftover. Renamed to `initAnimSubstructFromParams` at `syms/rogue_squadron.syms.toml:1989` |
+
+### Outcome
+
+H2 selected (as in s1887/s1893/s1894): live generated body, `funcs.h`
+declaration, and overlay INL entry already agreed; only the TOML still
+carried the placeholder. Renamed it to match — no invented name, no build
+or runtime run required (same metadata-only-sync precedent). Refutes H1
+(TOML was not already synchronized) and H3 (no size/boundary disagreement).
+
+Next census: leftover `func_800F2D38` at `0x800F2D38` (size `0x3C`,
+`syms/rogue_squadron.syms.toml:1990`). Preliminary peek: the generated body
+immediately after `initAnimSubstructFromParams` in `funcs_41.c` is already
+`RECOMP_FUNC void applyToObjectSubstructByFlag` (address arithmetic checks
+out: `0x800F2C6C + 0xCC = 0x800F2D38`) — confirm this is the actual
+occupant (not a stray substring match) and check the companion/`funcs.h`/INL
+offset agreement before renaming, same as this session. Last-15 titles
+after s1895 will drop s1880 and keep s1888-s1892's reachability
+investigation, so the next iteration remains a leftover census, not a
+mandatory REVISIT, unless VI-1024 reachability has been unblocked by then
+(check `scratch/agent/thermal_probe.py`'s `isLowPowerModeEnabled` first).

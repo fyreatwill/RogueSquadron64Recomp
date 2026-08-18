@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1894 (2026-08-17).
+detail. Reviewed through s1895 (2026-08-17).
 
 ## Current state
 
@@ -140,11 +140,11 @@ detail. Reviewed through s1894 (2026-08-17).
    supplies the disposable clone for the literal bisect. This still blocks
    the entire `s790_postsec2_reachability` soak family and item 3 below until
    reachability itself is restored or explained.
-2. Resume the generated-symbol sweep at leftover `func_800F2C6C`
-   (`0x800F2C6C`, size `0xCC`). Preliminary peek: the generated body
-   immediately after `initObjectAnimSubstruct` in
-   `funcs_41.c` is already `RECOMP_FUNC void initAnimSubstructFromParams`
-   (address arithmetic checks out: `0x800F2B88 + 0xE4 = 0x800F2C6C`) —
+2. Resume the generated-symbol sweep at leftover `func_800F2D38`
+   (`0x800F2D38`, size `0x3C`). Preliminary peek: the generated body
+   immediately after `initAnimSubstructFromParams` in
+   `funcs_41.c` is already `RECOMP_FUNC void applyToObjectSubstructByFlag`
+   (address arithmetic checks out: `0x800F2C6C + 0xCC = 0x800F2D38`) —
    confirm this is the true occupant (not a stray substring match)
    and check companion/`funcs.h`/INL agreement before renaming. Archive:
    `PROJECT-OVERVIEW.md` §33–§35. About 1,548 placeholder
@@ -215,11 +215,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1894 through s1888-s1892's VI-1024 reachability-regression
+s1648–s1895 through s1888-s1892's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, new n=1 H3a-lowpower lead
-found) and leftover `func_800F2B88` became
+found) and leftover `func_800F2C6C` became
+`initAnimSubstructFromParams` (`0x800F2C6C`, `0xCC`) after leftover
+`func_800F2B88` became
 `initObjectAnimSubstruct` (`0x800F2B88`, `0xE4`) after leftover
 `func_800F2AC4` became
 `computeAnchorRelativePositionByDistanceRatio` (`0x800F2AC4`, `0xC4`)
