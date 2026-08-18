@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1941 (2026-08-18).
+detail. Reviewed through s1942 (2026-08-18).
 
 ## Current state
 
@@ -720,6 +720,64 @@ detail. Reviewed through s1941 (2026-08-18).
   idle-wait never runs and
   the spin never calls
   `os*Mesg`.
+  **s1942**: one Debug rebuild with `[vi-recv-path]`
+  (`pre_vc`/`deq_any`/`deq_vi`/`post_vc`/`blocked`)
+  plus env-gated `yield_self_1ms` every 100000
+  `menu-spin` iterations (`ROGUESQ_SPIN_YIELD`).
+  Same-run control passed on every evaluable
+  arm: tick 2/2/2 `took_swap=1` twice;
+  `slot-alloc` ends `0x8018D4A0/16`;
+  `[vi-set-event]` n=0 `mq=0x80114388`;
+  `[vi-enq]`/`[vi-deq]` n=0 `site=ok`;
+  `[vi-wait]` n=1 exit `sent=1`;
+  `[vi-recv-path]` n=0 `blocked=1` then
+  matching recv1-exit n=0. First pair
+  (off/on) both catalogued
+  last-guest-pc=`0x8000b650` before
+  `menu-entry` siten=2 / `#7/#8` —
+  UNEVALUABLE. Second pair, same
+  binary: **off** 182s `#7/#8`
+  staller (probe_rc=5,
+  `s1942_spin_yield_off_b_20260818-005352`):
+  recv1-enter n=2291 L426233
+  `blocked=1` `deq_vi=0`; 7984
+  `[vi-enq]` after; zero `[vi-deq]`;
+  zero `[vi-wait]`; zero recv1-exit
+  n=2291; `menu-spin` 573000000;
+  `#10880` origin `0x00696100`; 0
+  width=1024. **on** (probe_rc=0,
+  `s1942_spin_yield_on_b_20260818-005352`):
+  recv1-enter n=2308 then
+  `menu-entry` siten=2 L426690 →
+  `[spin-yield]` n=1 spin=100000
+  L426700 → `[vi-wait]` timed exit
+  `mq=0x80114388 sent=1` →
+  recv1-exit n=2308 L426703 →
+  `[synth-entry]` n=2423 → yield
+  n=2 → `[vi-deq]` n=68 `site=ok`
+  → `menu-jal` siten=2 L426801 →
+  tick 3 → `#9` width-2 → `#10`
+  width-1024 `initVideoSubsystem`
+  L426991 → `[phase] 1024`
+  origin=`0x00790400` at 50.3s
+  `#2948`. 682 `[synth-entry]`
+  and 2 `cursor` after entry 2.
+  **H-spin-starves-idle SELECTED.**
+  H-slots-stay-live /
+  H-yield-never-reached REFUTED.
+  Attract 1024, not hangar (0
+  later `[phase]`, 0 origin
+  `0x006AB400`/`800` across 300s
+  of from-phase Start/A).
+  `ROGUESQ_SPIN_YIELD` stays
+  default-off (experiment, not
+  product). ORIGIN: host VI
+  retrace (legitimate) sits in
+  `external_messages`; the
+  `anyAudioSlotActive` spin is
+  a runnable game thread so
+  idle-wait never drains;
+  hardware would preempt it.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -773,62 +831,29 @@ detail. Reviewed through s1941 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-1. **Host VI enqueues never
-   drain after recv1-enter
-   n=N+1 (s1941).
-   H-never-dequeued
-   SELECTED.** 8038
-   `[vi-enq]` after enter,
-   zero `[vi-deq]`, zero
-   `[vi-wait]`. Next: one
-   Debug rebuild with
-   (a) `[vi-recv-path]` on
-   `osRecvMesg(0x80114388)`
-   (`pre_vc`/`deq_any`/
-   `deq_vi`/`post_vc`/
-   `blocked`) as the
-   same-run control that
-   enter took empty-then-
-   block, and (b)
-   env-gated
-   `yield_self_1ms` every
-   100000 `menu-spin`
-   iterations
-   (`ROGUESQ_SPIN_YIELD`).
-   ORIGIN: host VI retrace
-   (legitimate) sits in
-   `external_messages`;
-   the spin is a runnable
-   game thread so idle-wait
-   never runs; hardware
-   would preempt it.
-   Two soaks of the same
-   binary (yield off / on).
-   Off must reproduce
-   H-never-dequeued. On:
-   recv1-exit n=N+1 +
-   later `[vi-deq]` site=ok
-   + synth/cursor after
-   entry 2 →
-   H-spin-starves-idle
-   SELECTED. If recv1
-   continues but `#9/#10`
-   still miss and
-   `menu-spin` still climbs
-   → H-slots-stay-live
-   (mix resumed, song
-   still holds 0x02). If
-   yield on still has
-   zero deq after enter →
-   H-yield-never-reached.
-   Do not force-zero. Ask
-   (b) remains human-only.
-   Still blocks item 3
-   (hangar/512) until a port
-   run publishes
-   `[phase] vi_width=512
-   origin=0x006AB400` (or
-   `0x006AB800`).
+1. **H-spin-starves-idle SELECTED
+   (s1942).** Same-binary A/B:
+   yield-off reproduced
+   H-never-dequeued (recv1-enter
+   n=2291, 7984 `[vi-enq]`, 0
+   deq/wait/exit); yield-on
+   unblocked recv1-exit n=2308
+   on the first `[spin-yield]`,
+   resumed synth/cursor, issued
+   `#9/#10`, and published
+   `[phase] 1024 origin=0x00790400`
+   at 50.3s. `ROGUESQ_SPIN_YIELD`
+   stays default-off. Do not
+   land it as product, force-zero
+   slots, or set `requeue_vi=true`
+   as the only change. Next:
+   hangar/512 with the yield
+   lever on (item 3) — this
+   session's from-phase-1024
+   Start/A schedule stayed at
+   attract `0x00790400` for 300s
+   (0 hangar origin). Ask (b)
+   remains human-only.
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -851,13 +876,16 @@ detail. Reviewed through s1941 (2026-08-18).
    count is 982 after s1917. s1903–s1917 were all sweep-titled;
    s1918 was the mandatory 15-title REVISIT (do not treat s1919
    as another REVISIT — the window now contains s1918).
-3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
-   s1888 attempt was blocked upstream by item 1, not by a bad input
-   schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
-   plus `rs64_is_hangar_vi`). Re-open only when a port run logs
-   `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`) — which
-   first requires item 1 fixed. Do not treat 640 or attract 512 as hangar.
-   Do not re-walk VMADH/VGE, `0xD60` shape, or the ovl20 consumer table.
+3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888). The
+   s1888 attempt was blocked by the 640/`0x00696100` stall; s1942's
+   yield-on arm now publishes attract 1024, so this is unblocked as a
+   recipe problem, not a 1024-request problem. Gate is in place
+   (`ROGUESQ_M4_Y8000_WIDTH=512` plus `rs64_is_hangar_vi`). Re-open with
+   `ROGUESQ_SPIN_YIELD=1` and a hangar input recipe (not s1942's
+   from-phase-1024 Start/A). Success =
+   `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`). Do not
+   treat 640 or attract 512/`0x00790400` as hangar. Do not re-walk
+   VMADH/VGE, `0xD60` shape, or the ovl20 consumer table.
 4. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 5. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -914,7 +942,13 @@ superseded by the 16-bit split (X at `+0x18` scaled; Y at `+0x1A` raw).
 s1888–s1917's "stall at 640 then crash" / "early crash may be
 the 1024 miss" framing is superseded by s1918 — 2/8 logs live
 180s with no crash and no `osViSetMode width=1024`; the guest
-never requests the transition. Treating s844 `#8`
+never requests the transition. Treating the 180s `#7/#8` stall as "slots stay
+`0x02` forever even if mix resumed"
+(H-slots-stay-live) is superseded by s1942 —
+two `yield_self_1ms` calls from the spin
+unblocked recv1, resumed synth/cursor, and
+the guest issued `#9/#10` width-1024.
+Treating s844 `#8`
 `applyPendingViChanges` as the 1024 function submitting 640
 is superseded by s1919 — `#8` is `0x80128E40`; `#10` is
 `initVideoSubsystem` submitting `0x80128DA0`. Treating

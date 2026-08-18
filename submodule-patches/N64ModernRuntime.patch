@@ -684,10 +684,10 @@ index 149e770..d8da457 100644
  }
  
 diff --git a/ultramodern/src/mesgqueue.cpp b/ultramodern/src/mesgqueue.cpp
-index 9944a02..cac14a2 100644
+index 9944a02..b9dc1fd 100644
 --- a/ultramodern/src/mesgqueue.cpp
 +++ b/ultramodern/src/mesgqueue.cpp
-@@ -1,11 +1,92 @@
+@@ -1,11 +1,103 @@
  #include <bitset>
  #include <thread>
 +#include <cstdio>
@@ -760,6 +760,17 @@ index 9944a02..cac14a2 100644
 +    std::fflush(stderr);
 +}
 +
++static void log_vi_recv_path(s32 pre_vc, uint32_t deq_any, uint32_t deq_vi, s32 post_vc, int blocked) {
++    if (!audiotick_trace_enabled()) {
++        return;
++    }
++    static std::atomic<uint32_t> n{0};
++    const uint32_t row = n.fetch_add(1, std::memory_order_relaxed);
++    std::fprintf(stderr, "[vi-recv-path] n=%u pre_vc=%d deq_any=%u deq_vi=%u post_vc=%d blocked=%d\n",
++        row, static_cast<int>(pre_vc), deq_any, deq_vi, static_cast<int>(post_vc), blocked);
++    std::fflush(stderr);
++}
++
 +// Returns true (refuse) if mq_ is outside the game's KSEG0 RDRAM range
 +// (0x80000000-0x80800000, the same 8MB bound used by every other guard site
 +// in this project).
@@ -780,11 +791,26 @@ index 9944a02..cac14a2 100644
  struct QueuedMessage {
      PTR(OSMesgQueue) mq;
      OSMesg mesg;
-@@ -41,7 +122,16 @@ void dequeue_external_messages(RDRAM_ARG1) {
+@@ -37,33 +129,61 @@ void ultramodern::enqueue_external_message(PTR(OSMesgQueue) mq, OSMesg msg, bool
+ 
+ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block);
+ 
+-void dequeue_external_messages(RDRAM_ARG1) {
++struct DeqStats {
++    uint32_t any = 0;
++    uint32_t vi = 0;
++};
++
++DeqStats dequeue_external_messages(RDRAM_ARG1) {
++    DeqStats stats{};
      QueuedMessage to_send;
      std::vector<QueuedMessage> requeued_messages{};
      while (external_messages.try_dequeue(to_send)) {
 -        if (!do_send(PASS_RDRAM to_send.mq, to_send.mesg, to_send.jam, false) && to_send.requeue_if_blocked) {
++        stats.any++;
++        if (static_cast<uint32_t>(to_send.mq) == 0x80114388u) {
++            stats.vi++;
++        }
 +        s32 validCount = -1;
 +        s32 msgCount = -1;
 +        if (static_cast<uint32_t>(to_send.mq) == 0x80114388u && !mesgqueue_guard_refuse("vi-deq", to_send.mq)) {
@@ -798,7 +824,10 @@ index 9944a02..cac14a2 100644
              requeued_messages.push_back(to_send);
          }
      }
-@@ -51,19 +141,27 @@ void dequeue_external_messages(RDRAM_ARG1) {
+     for (QueuedMessage& cur_mesg : requeued_messages) {
+         external_messages.enqueue(cur_mesg);
+     }
++    return stats;
  }
  
  void ultramodern::wait_for_external_message(RDRAM_ARG1) {
@@ -828,7 +857,7 @@ index 9944a02..cac14a2 100644
      }
  }
  
-@@ -90,6 +188,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
+@@ -90,6 +210,9 @@ s32 MQ_IS_FULL(OSMesgQueue* mq) {
  }
  
  bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
@@ -838,7 +867,7 @@ index 9944a02..cac14a2 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is full.
-@@ -106,6 +207,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -106,6 +229,14 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
          }
      }
      
@@ -853,7 +882,7 @@ index 9944a02..cac14a2 100644
      if (jam) {
          // Jams insert at the head of the message queue's buffer.
          mq->first = (mq->first + mq->msgCount - 1) % mq->msgCount;
-@@ -129,6 +238,9 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
+@@ -129,6 +260,9 @@ bool do_send(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, bool jam, bool block) {
  }
  
  bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
@@ -863,7 +892,7 @@ index 9944a02..cac14a2 100644
      OSMesgQueue* mq = TO_PTR(OSMesgQueue, mq_);
      if (!block) {
          // If non-blocking, fail if the queue is empty
-@@ -145,6 +257,9 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -145,6 +279,9 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
      }
  
      if (msg_ != NULLPTR) {
@@ -873,7 +902,7 @@ index 9944a02..cac14a2 100644
          *TO_PTR(OSMesg, msg_) = TO_PTR(OSMesg, mq->msg)[mq->first];
      }
      
-@@ -161,6 +276,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
+@@ -161,6 +298,7 @@ bool do_recv(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, bool block) {
  }
  
  extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -881,7 +910,7 @@ index 9944a02..cac14a2 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = false;
      
-@@ -183,6 +299,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -183,6 +321,7 @@ extern "C" s32 osSendMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags) {
@@ -889,7 +918,7 @@ index 9944a02..cac14a2 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      bool jam = true;
      
-@@ -205,6 +322,7 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
+@@ -205,12 +344,22 @@ extern "C" s32 osJamMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, OSMesg msg, s32 flags)
  }
  
  extern "C" s32 osRecvMesg(RDRAM_ARG PTR(OSMesgQueue) mq_, PTR(OSMesg) msg_, s32 flags) {
@@ -897,6 +926,22 @@ index 9944a02..cac14a2 100644
      OSMesgQueue *mq = TO_PTR(OSMesgQueue, mq_);
      
      assert(ultramodern::is_game_thread() && "RecvMesg not allowed outside of game threads.");
++
++    const bool is_vi_mq = (static_cast<uint32_t>(mq_) == 0x80114388u);
++    const s32 pre_vc = is_vi_mq ? mq->validCount : -1;
+     
+     // Handle any messages that have been received from an external thread.
+-    dequeue_external_messages(PASS_RDRAM1);
++    const DeqStats deq = dequeue_external_messages(PASS_RDRAM1);
++
++    const s32 post_vc = is_vi_mq ? mq->validCount : -1;
++    const int blocked = (is_vi_mq && flags == OS_MESG_BLOCK && post_vc == 0) ? 1 : 0;
++    if (is_vi_mq) {
++        log_vi_recv_path(pre_vc, deq.any, deq.vi, post_vc, blocked);
++    }
+ 
+     // Try to receive a message.
+     bool received = do_recv(PASS_RDRAM mq_, msg_, flags == OS_MESG_BLOCK);
 diff --git a/ultramodern/src/scheduling.cpp b/ultramodern/src/scheduling.cpp
 index a22f747..d0510cb 100644
 --- a/ultramodern/src/scheduling.cpp

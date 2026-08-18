@@ -92127,3 +92127,111 @@ stay `0x02`
 (H-slots-stay-live).
 Do not force-zero. Ask
 (b) remains human-only.
+
+## Session 1942 (2026-08-18) — selected H-spin-starves-idle; yield unblocks 1024
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: one Debug rebuild
+with `[vi-recv-path]` on
+`osRecvMesg(0x80114388)` and
+env-gated `yield_self_1ms`
+every 100000 `menu-spin`
+iterations (`ROGUESQ_SPIN_YIELD`),
+then two soaks of the same
+binary (rule 13).
+
+ORIGIN: host VI retrace
+(legitimate) enqueues to
+`external_messages`. The
+`anyAudioSlotActive` spin is
+a runnable game thread
+(`beq v0==0`; v0 is
+`sltiu(s1,1)` so 0 means a
+live slot), so idle-wait
+never drains. Hardware would
+preempt it.
+
+Same-run positive control
+passed on every evaluable
+arm before `#8`: tick
+2/2/2 `took_swap=1` twice;
+`slot-alloc` ends
+`0x8018D4A0 count=16`;
+`[vi-set-event]` n=0
+`mq=0x80114388`; `[vi-enq]` /
+`[vi-deq]` n=0 `site=ok`;
+`[vi-wait]` n=1 exit `sent=1`;
+`[vi-recv-path]` n=0
+`blocked=1` then matching
+recv1-exit n=0.
+
+First pair (off/on
+`20260818-005155`) both
+catalogued last-guest-pc=
+`0x8000b650` before
+`menu-entry` siten=2 / `#7/#8`
+— UNEVALUABLE for the
+post-`#8` three-way.
+Instruments were live.
+Queued/ran B.
+
+Second pair, same binary:
+
+Off B
+(`s1942_spin_yield_off_b_20260818-005352`,
+probe_rc=5, 182s, 0 crash,
+`#7/#8`, `menu-entry` siten=2,
+`menu-spin` 573000000,
+`#10880` origin `0x00696100`,
+0 width=1024): recv1-enter
+n=2291 L426233
+`[vi-recv-path] blocked=1
+deq_any=1 deq_vi=0`; 7984
+`[vi-enq]` after; zero
+`[vi-deq]`; zero `[vi-wait]`;
+zero recv1-exit n=2291.
+Reproduces H-never-dequeued.
+
+On B
+(`s1942_spin_yield_on_b_20260818-005352`,
+probe_rc=0): `#8` L426628 →
+recv1-enter n=2308 L426685
+(no exit yet) → `menu-entry`
+siten=2 L426690 →
+`[spin-yield]` n=1
+spin=100000 L426700 →
+`[vi-wait]` timed exit
+`mq=0x80114388 sent=1` →
+recv1-exit n=2308 L426703 →
+`[synth-entry]` n=2423 →
+yield n=2 → `[vi-deq]` n=68
+`site=ok` → `menu-jal`
+siten=2 L426801 → tick 3 →
+`#9` width-2 L426956 →
+`#10` width-1024
+`initVideoSubsystem`
+L426991 → `[phase] 1024
+origin=0x00790400` at 50.3s
+`#2948`. 682 `[synth-entry]`
+and 2 `cursor` after entry 2.
+300s after 1024 stayed at
+attract `0x00790400` (0 hangar
+origin, 0 later `[phase]`).
+
+This selects
+H-spin-starves-idle. This
+refutes H-slots-stay-live
+(mix resumed and `#9/#10`
+fired) and
+H-yield-never-reached
+(`[spin-yield]` n=1/2 both
+fired). `ROGUESQ_SPIN_YIELD`
+stays default-off. Do not
+land it as product this
+session.
+
+Next: hangar/512 with the
+yield lever on and a hangar
+input recipe, not s1942's
+from-phase-1024 Start/A list.
+Ask (b) remains human-only.

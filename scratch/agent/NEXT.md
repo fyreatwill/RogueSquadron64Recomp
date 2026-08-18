@@ -1,148 +1,98 @@
-# NEXT work unit (s1942) — yield-from-spin A/B
+# NEXT work unit (s1943) — hangar/512 with spin-yield on
 
-HYPOTHESIS-ID: vi1024-guest-never-requests
+HYPOTHESIS-ID: hangar-512-with-spin-yield
 
-s1941 selected H-never-dequeued:
-after recv1-enter n=2343,
-8038 `[vi-enq]` to
-`0x80114388`, zero
-`[vi-deq]`, zero
-`[vi-wait]`. `osRecvMesg`
-already passed dequeue and
-blocked in `do_recv`; the
-`anyAudioSlotActive` spin
-is runnable so idle-wait
-never runs.
+s1942 selected H-spin-starves-idle.
+Same-binary A/B: yield-off reproduced
+H-never-dequeued; yield-on published
+`[phase] 1024 origin=0x00790400` at
+50.3s after `[spin-yield]` n=1
+unblocked recv1-exit n=2308.
+That 1024 is attract, not hangar.
+s1942's from-phase-1024 Start/A
+schedule stayed there 300s with
+zero `0x006AB400`/`0x006AB800`.
 
-## Work unit — one rebuild, two soaks
+## Work unit — no rebuild
 
-One Debug rebuild carrying
-both:
-
-1. Always-on `[vi-recv-path]`
-   on `osRecvMesg` when
-   `mq==0x80114388` (same
-   `ROGUESQ_LOG_AUDIOTICK_TRACE`
-   gate as `[vi-mq]`):
-   `pre_vc`, `deq_any`,
-   `deq_vi`, `post_vc`,
-   `blocked=1` if
-   `do_recv` entered the
-   empty loop. Same-run
-   control: n=0 must print
-   and an early n must show
-   `blocked=1` then a
-   matching recv1-exit.
-2. Env-gated
-   `yield_self_1ms` every
-   100000 `menu-spin`
-   iterations at
-   `L_800C5930` (fixup in
-   `fixup_game_funcs.py`
-   next to the s1924
-   `menu-spin` patch). Gate:
-   `ROGUESQ_SPIN_YIELD=1`.
-   Log `[spin-yield] n=`
-   first 4 then every 16.
-
-ORIGIN: host VI retrace
-(legitimate) enqueues to
-`external_messages`.
-`requeue_vi` defaults
-false so deq n=50-54
-`site=full` were dropped.
-The spin is a runnable
-game thread
-(`beq v0==0`; v0 is
-`sltiu(s1,1)` so 0 means
-a live slot). Hardware
-would preempt it with a
-VI interrupt.
-
-Then two soaks of the
-**same** binary (rule 13),
-same recipe as
-`s1940_vi_deq_wait_c.sh`
-plus the yield env on
-one arm only. Run them
-concurrently.
+Same Debug binary. One soak with
+`ROGUESQ_SPIN_YIELD=1` and a
+**hangar** input recipe (PROJECT-OVERVIEW
+§35 / s707 / s1496 classified
+frontend route — not the s1942
+from-phase-1024 Start/A list).
+Arm the same passive instruments
+as `s1942_spin_yield_on.sh`.
 
 ```
-# arm off (control)
-zsh scratch/agent/soak_queue/s1942_spin_yield_off.sh
-# arm on
-zsh scratch/agent/soak_queue/s1942_spin_yield_on.sh
+zsh scratch/agent/soak_queue/s1943_hangar_spin_yield.sh
 ```
 
-Write both scripts this
-iteration before the
-rebuild. Crash / #6-dead
-= enqueue another copy of
-that arm, do not babysit.
+Write that script this iteration
+before launching. Crash / #6-dead /
+stall at 640 = enqueue another
+copy, do not babysit. If the run
+never leaves attract 1024, that
+is a result (wrong recipe), not
+a crash retry.
 
-Same-run positive control
-(must fire **before** `#8`
-on both arms):
+ORIGIN: host VI retrace is
+legitimate; the spin-yield is
+still env-gated experiment, not
+product. Do not default-on
+`ROGUESQ_SPIN_YIELD`. Do not
+force-zero slots. Do not set
+`requeue_vi=true` as the only
+arm.
 
-- tick-entry/jal/exit 2/2/2
-  with `took_swap=1` twice
+Same-run positive control (must
+fire **before** hangar/512):
+
+- tick-entry/jal/exit at least
+  2/2/2 with `took_swap=1` twice
 - `slot-alloc` ends
   `0x8018D4A0 count=16`
-- `[vi-set-event]` n=0
-  `mq=0x80114388`
-- `[vi-enq]` / `[vi-deq]`
-  n=0 `site=ok` /
-  `[vi-wait]` delivers
-  `0x80114388`
-- `[vi-recv-path]` n=0
-- `[vi-cb-recv1]` enter/exit
-  from n=0
-- `menu-entry` siten=2 AND
-  `menu-spin` climbs
-- `#7` and `#8` fire
+- `[spin-yield]` n=1
+- `[phase] 1024 origin=0x00790400`
+  (or another 1024 origin) —
+  proves the s1942 lever still
+  works on this recipe
+- `[vi-recv-path]` n=0 `blocked=1`
 
-After recv1-enter n=N+1:
+After that control:
 
-- off: zero `[vi-deq]` /
-  zero `[vi-wait]` /
-  `[vi-recv-path] blocked=1`
-  → reproduces
-  H-never-dequeued
-  (control live)
-- on + `[spin-yield]` fires
-  + recv1-exit n=N+1 +
-  later `[vi-deq]` site=ok
-  + synth/cursor after
-  entry 2 →
-  **H-spin-starves-idle
-  SELECTED**
-- on + `[spin-yield]` fires
-  + recv1 continues but
-  `#9/#10` still miss and
-  `menu-spin` still climbs
-  → **H-slots-stay-live**
-  (mix resumed; song still
-  holds `0x02`)
-- on + zero `[spin-yield]`
-  or zero deq after enter
-  → **H-yield-never-reached**
+- `[phase] vi_width=512
+  origin=0x006AB400` (or
+  `0x006AB800`) →
+  **H-hangar-reachable SELECTED**
+  (item 3 unblocked; reopen M4
+  Y=0x8000 on that run)
+- 1024 control fires, 300s+ at
+  attract `0x00790400`, zero
+  hangar origin →
+  **H-wrong-recipe SELECTED**
+  (yield is not sufficient;
+  need the classified hangar
+  route, not more Start/A)
+- 640/`0x00696100` stall, zero
+  `[spin-yield]`, `#9/#10`
+  miss → **H-yield-not-armed**
+  (recipe dropped the env var)
+- 640 stall *with* `[spin-yield]`
+  and recv1-exit after entry 2
+  but no `#9/#10` →
+  **H-1024-not-only-spin**
+  (s1942 lever insufficient on
+  this path)
 
-Do **not** force-zero
-slots. Do **not** set
-`requeue_vi=true` as the
-only arm (that buys at
-most one extra walk).
-Do **not** rebuild the
-s1940 probes; they stay.
+Do **not** rebuild s1942 probes.
+Do **not** land spin-yield as
+default. Do **not** treat attract
+512 or 640 as hangar. Ask (b)
+from s1891 — still human-only.
 
-If the 15-title window is
-all sweep-titled, this is
-still the VI thread, not
-a sweep, so do not
-REVISIT.
-
-Run from `build/` with the
-ROM present. SIGKILL.
+Run from `build/` with the ROM
+present. SIGKILL.
 
 ## Sweep leftover (parked, not this unit)
 
@@ -152,19 +102,14 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
-- The s1941 consume (C
-  already selected
-  H-never-dequeued).
-- The s1940 rebuild.
-- The s1939 four-way
-  (closed: H-host-stuck
+- The s1942 yield off/on A/B
+  (closed: H-spin-starves-idle
   SELECTED).
-- Re-probing recv2 or the
-  4-slot walk after `#8`.
-- A dequeue-pump from
-  `menu-spin` that is not
-  the env-gated yield
-  above (ORIGIN is now
-  named).
-- Ask (b) from s1891 —
-  still human-only.
+- s1942's from-phase-1024
+  Start/A key list as a hangar
+  recipe (300s at attract 1024).
+- Force-zero slots.
+- `requeue_vi=true` as the only
+  arm.
+- Ask (b) from s1891 — still
+  human-only.
