@@ -93706,3 +93706,65 @@ non-collision grep and caller check.
 
 Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
 hangar SIGBUS. Did not rebuild.
+
+## Session 1962 (2026-08-18) — synchronized nine leftover symbols in one batch
+
+`HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+
+CURRENT-TRUTH is 13994 bytes — under the 60 KB maintenance
+trigger. M5 closed; M3 parked. Sweep leftover is next per
+strategic priority.
+
+No new soak since s1950; already folded into CURRENT-TRUTH.
+
+Renamed the s1961-previewed leftover plus eight more found by
+scanning the same contiguous TOML block, all in
+`syms/rogue_squadron.syms.toml` (metadata-only, no regen — the
+generated tree already carries every target name):
+
+1. `func_800F99C8` (line 2022, size `0x4C`) →
+   `setType3ActorParams`. Four-step re-verified: no
+   `func_800F99C8` string anywhere under
+   `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
+   (already generated as the target name); single
+   `RECOMP_FUNC void setType3ActorParams` definition
+   (`funcs_42.c:6169`); single caller reference
+   (`funcs_39.c:25858`); companion
+   `rogue_squadron64/symbol_files/mission_overlay.txt:760`
+   already names it with a field-layout comment.
+2. `func_800F9A14` (size `0xA4`) → `dispatchEffectByActorType`.
+   Generated body at `funcs_42.c:6227` already carries this
+   name (23 callers per the companion doc, `mission_overlay.txt:741`,
+   type-keyed effect dispatcher on actor+0x112).
+3. `func_800F9AB8` (size `0x3C`) → `setType1ActorParams`.
+   `funcs_42.c:6368`; companion doc `mission_overlay.txt:749`
+   (type-1 extended-params writer, sister to the dispatcher).
+4. `func_800F9AF4` (size `0x18`) → `updateObjectFlags110`
+   (`funcs_42.c:6420`).
+5. `func_800F9B0C` (size `0x28`) → `resetType1FxFields`
+   (`funcs_42.c:6440`).
+6. `func_800F9B34` (size `0xB8`) → `updateType1AnimRamp`
+   (`funcs_42.c:6473`).
+7. `func_800F9BEC` (size `0x44`) → `getActorCurrentValueByType`
+   (`funcs_42.c:6638`).
+8. `func_800F9C30` (size `0x138`) →
+   `syncType1ActorFrameToAnchorIfZeroGate` (`funcs_42.c:6695`).
+9. `func_800F9D68` (size `0xD8`) → `spawnNpcAnchoredEffectSlot`
+   (`funcs_42.c:6948`).
+
+Verified for each of 2-9: exactly one `RECOMP_FUNC void <name>(`
+definition under `RecompiledFuncs/` (no collision) and zero
+remaining `func_800F9*` string references anywhere in that tree
+after the edit (no leftover raw-address caller). The next TOML
+entry after this run, `load_model_animation` at `0x800F9E40`,
+is already named — this run exhausted the whole contiguous
+placeholder block from `0x800F99C8` through `0x800F9D68`.
+
+TOML leftover `func_800*` count: 971 (s1961) → 962. Validated
+`syms/rogue_squadron.syms.toml` still parses
+(`python3 -c "import tomllib; tomllib.load(...)"` → `TOML valid`).
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
+hangar SIGBUS. Did not rebuild — no rename touched a generated
+`.c` the Debug target compiles (all target names pre-existed
+in the generated tree).
