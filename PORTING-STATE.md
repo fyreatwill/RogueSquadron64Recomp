@@ -89305,3 +89305,87 @@ patch-export needed.
 Next-15-title window after s1910 still keeps s1902 (1 of 15 slots
 non-sweep); still not a REVISIT trigger. The window starts dropping
 s1902 only after s1917. Check again next iteration.
+
+## Session 1911 (2026-08-17) — synchronized the updateNpcEffectIntensity symbol
+
+Resumed the generated-symbol renaming sweep. Before starting, re-checked
+the 15-title REVISIT gate: `grep -n '^## Session ' PORTING-STATE.md |
+tail -15` shows s1902 still in the window (1 of 15 titles non-sweep),
+so the sweep continues; not a REVISIT. H3a-lowpower is closed (s1902);
+did not re-run `s790_postsec2_reachability.sh`. No new soak-queue
+verdicts landed between s1910 and this iteration (tail of
+`scratch/agent/SOAK-RESULTS.md` still ends on the s1902 LPM-off A/B).
+CURRENT-TRUTH is 28728 bytes — under the 60 KB maintenance trigger.
+
+Renamed leftover `func_800F3CB0` (`0x800F3CB0`, TOML size `0x45C`,
+`syms/rogue_squadron.syms.toml:2004`) to
+`updateNpcEffectIntensity`. The four-step confirmation was
+already complete in s1906–s1910 and was re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:6547` (`computeRandomizedOrientationFrame`) and `:8302`
+   (`updateNpcEffectIntensity`) are the only two `RECOMP_FUNC`
+   lines matched by name in that span — true adjacency, not a stray
+   substring match.
+2. `funcs.h:2162-2163` declares `computeRandomizedOrientationFrame`
+   then `updateNpcEffectIntensity` in that exact order.
+3. `recomp_overlays.inl:1890-1891`: `updateNpcEffectIntensity`
+   offset is `0x0004EB80` = `computeRandomizedOrientationFrame`'s
+   `0x0004E3AC + 0x7D4` (its TOML size); `rom_size = 0x0000045C`
+   matches the TOML's `size = 0x45C` exactly.
+4. `grep -rln 'func_800F3CB0'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+Generated body matches the name: calls `setEffectIntensity`
+(`jal 0x800F2FC0` at `0x800F3F40`). Companion
+`rogue_squadron64/symbol_files/mission_overlay.txt` already
+names `updateNpcEffectIntensity = 0x800F3CB0`. No existing
+TOML entry already used `updateNpcEffectIntensity`. Sizes
+already agreed — no bump.
+
+All four agreed, so renamed the TOML entry only (metadata-only
+sync, no build/regen needed). Post-rename leftover `func_800*`
+count in the TOML is 988 (was 989). Zero leftover `func_800F3CB0`
+remains in repo sources outside the ledger.
+
+Previewed the next leftover for continuity: `func_800F410C` (TOML
+size `0xD68`, `syms/rogue_squadron.syms.toml:2005`) lines up with
+`recomp_overlays.inl:1892` (`executeActorType1Effect`,
+offset `0x0004EFDC` = `0x0004EB80 + 0x45C`, `rom_size =
+0x00000D68`) — confirmed adjacency (`funcs_41.c:8302,9212`) and
+declaration order (`funcs.h:2163-2164`) and non-collision
+(`grep -rln 'func_800F410C'` zero hits) this session too.
+Generated body reads actor+0x198 (`lhu $a0, 0x198($s7)`), the
+position triplet at +0xD8/+0xDC/+0xE0, and intensity at +0x10C
+via `s5=actor+0x8` (`lwc1 $f0, 0x104($s5)`), matching the
+companion comment. Companion already names
+`executeActorType1Effect = 0x800F410C`. Sizes already agree —
+no bump. Next iteration can rename directly.
+
+Also previewed the leftovers after that: `func_800F4E74` (size
+`0x518`, toml:2006) lines up with `recomp_overlays.inl:1893`
+(`executeActorType2Effect`, offset `0x0004FD44` =
+`0x0004EFDC + 0xD68`, `rom_size = 0x00000518`) — adjacency
+(`funcs_41.c:9212,11890`), declaration order
+(`funcs.h:2164-2165`), and non-collision
+(`grep -rln 'func_800F4E74'` zero hits). Body matches the
+companion: stack `-0x88`, reads actor+0x198 then
+`getNpcContextField8` (`jal 0x8004015C`), `s2=actor+0x8`.
+Companion already names `executeActorType2Effect = 0x800F4E74`.
+`func_800F538C` (size `0x6A4`, toml:2007) lines up with
+`recomp_overlays.inl:1894` (`executeActorType3Effect`, offset
+`0x0005025C` = `0x0004FD44 + 0x518`, `rom_size = 0x000006A4`) —
+adjacency (`funcs_41.c:11890,12993`), declaration order
+(`funcs.h:2165-2166`), and non-collision
+(`grep -rln 'func_800F538C'` zero hits). Body matches: stack
+`-0x98`, same +0x198 NPC-context prologue
+(`lhu $a0, 0x198($s5)`). Companion already names
+`executeActorType3Effect = 0x800F538C`.
+
+Noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per
+CLAUDE.md) — untouched this session, no new edits under `lib/`, so no
+patch-export needed.
+
+Next-15-title window after s1911 still keeps s1902 (1 of 15 slots
+non-sweep); still not a REVISIT trigger. The window starts dropping
+s1902 only after s1917. Check again next iteration.

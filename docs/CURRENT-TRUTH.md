@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1910 (2026-08-17).
+detail. Reviewed through s1911 (2026-08-17).
 
 ## Current state
 
@@ -145,34 +145,35 @@ detail. Reviewed through s1910 (2026-08-17).
    This still blocks the entire soak family and item 3 below until
    reachability itself is restored or explained. Productive work until then
    is item 2.
-2. Resume the generated-symbol sweep at leftover `func_800F3CB0`
-   (`0x800F3CB0`, TOML size `0x45C` matches generated
-   `updateNpcEffectIntensity` `rom_size 0x45C`). Already
-   confirmed via the full four-step procedure (s1906–s1910):
-   `funcs_41.c:6547,8302` adjacency, `funcs.h:2162-2163` order,
-   `recomp_overlays.inl:1891` offset `0x0004EB80 = 0x0004E3AC +
-   0x7D4` / `rom_size 0x45C`, zero-hit non-collision grep.
+2. Resume the generated-symbol sweep at leftover `func_800F410C`
+   (`0x800F410C`, TOML size `0xD68` matches generated
+   `executeActorType1Effect` `rom_size 0xD68`). Already
+   confirmed via the full four-step procedure (s1906–s1911):
+   `funcs_41.c:8302,9212` adjacency, `funcs.h:2163-2164` order,
+   `recomp_overlays.inl:1892` offset `0x0004EFDC = 0x0004EB80 +
+   0x45C` / `rom_size 0xD68`, zero-hit non-collision grep.
    Companion `mission_overlay.txt` already names
-   `updateNpcEffectIntensity = 0x800F3CB0`. Generated
-   body calls `setEffectIntensity` (`jal 0x800F2FC0`) — name
-   matches. Next iteration can rename directly (TOML
-   metadata-only; sizes already agree, no bump). After that:
-   `func_800F410C` lines up with `executeActorType1Effect`
-   (`funcs_41.c:8302,9212`, `funcs.h:2163-2164`, `.inl:1892`
-   offset `0x0004EFDC = 0x0004EB80 + 0x45C` / `rom_size 0xD68`,
-   zero-hit `func_800F410C`; body reads actor+0x198 /
-   +0xD8/+0xDC/+0xE0 and intensity at +0x10C via `s5=actor+0x8`,
-   matching companion). After that: `func_800F4E74` lines up
+   `executeActorType1Effect = 0x800F410C`. Generated body
+   reads actor+0x198 / +0xD8/+0xDC/+0xE0 and intensity at
+   +0x10C via `s5=actor+0x8` — name matches. Next iteration
+   can rename directly (TOML metadata-only; sizes already
+   agree, no bump). After that: `func_800F4E74` lines up
    with `executeActorType2Effect` (`funcs_41.c:9212,11890`,
    `funcs.h:2164-2165`, `.inl:1893` offset `0x0004FD44 =
    0x0004EFDC + 0xD68` / `rom_size 0x518`, zero-hit
-   `func_800F4E74`). Note (s1897): the generated tree (`funcs_41.c`,
-   `funcs.h`, `recomp_overlays.inl`) is gitignored and absent from
+   `func_800F4E74`; stack `-0x88`, actor+0x198 →
+   `getNpcContextField8`). After that: `func_800F538C`
+   lines up with `executeActorType3Effect`
+   (`funcs_41.c:11890,12993`, `funcs.h:2165-2166`,
+   `.inl:1894` offset `0x0005025C = 0x0004FD44 + 0x518` /
+   `rom_size 0x6A4`, zero-hit `func_800F538C`). Note
+   (s1897): the generated tree (`funcs_41.c`, `funcs.h`,
+   `recomp_overlays.inl`) is gitignored and absent from
    this repo's `build/`; it currently lives at
    `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
    — look there first. Archive: `PROJECT-OVERVIEW.md` §33–§35. About
    1,548 placeholder `func_0x...` names remained at s1487; TOML leftover
-   `func_800*` count is 989 after s1910.
+   `func_800*` count is 988 after s1911.
 3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888 — the
    s1888 attempt was blocked upstream by item 1, not by a bad input
    schedule). The hangar-origin gate is in place (`ROGUESQ_M4_Y8000_WIDTH=512`
@@ -239,11 +240,13 @@ Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry later
 superseded by Rice). s1240–s1589 sweep through `triggerFalconEngineEffect` (§33).
 s1590–s1647 through `dispatchObjectiveSlot1` plus M4 s1602 and Rice revisits (§34).
-s1648–s1910 through s1888-s1902's VI-1024 reachability-regression
+s1648–s1911 through s1888-s1902's VI-1024 reachability-regression
 investigation (reachability itself regressed, H1-flake refuted, code
 audit and hangar-probe hypothesis both refuted, human-machine-snapshot
 ask refuted with a Python `ctypes` technique, H3a-lowpower REFUTED by
-the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F34DC` became
+the s1902 LPM-off A/B — same 640 `0x00696100` stall, 0 VI 1024) and leftover `func_800F3CB0` became
+`updateNpcEffectIntensity` (`0x800F3CB0`, `0x45C`) after leftover
+`func_800F34DC` became
 `computeRandomizedOrientationFrame` (`0x800F34DC`, `0x7D4`) after leftover
 `func_800F3290` became
 `resolveScriptedNameTokenList` (`0x800F3290`, `0x24C`) after leftover
