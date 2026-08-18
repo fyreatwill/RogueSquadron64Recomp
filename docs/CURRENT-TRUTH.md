@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1965 (2026-08-18).
+detail. Reviewed through s1966 (2026-08-18).
 
 ## Current state
 
@@ -63,6 +63,14 @@ detail. Reviewed through s1965 (2026-08-18).
 - M5 audio de-stubbing is closed. Audio remains stubbed. Dummy-video retail
   watches never reached `musyxInitVoiceFromSample`. Do not reopen without a new
   bounded plan using the Rice hangar recipe.
+- **Generated-symbol sweep is effectively closed (s1966).** A full-file
+  census found s1962–s1965 had only swept a small tail of the TOML;
+  845 leftovers resolved in one batch (902 → 57 `func_8[01]*`). The
+  remaining 57 all need genuine RE or are deliberate holds (live
+  `patches/heap_guards.c` declarations, `build_redefs.py` reverts, one
+  `PROJECT-OVERVIEW.md`-parked entry, overlay-VRAM collisions, and
+  entries with no generated-tree match at all) — not a metadata-sync
+  target anymore. Full detail: `PORTING-STATE.md` s1966.
 - Retail oracle whole-RDRAM, scheduled PIF, and VI controls are healthy. Dummy
   video stays 320 / `0x006dd280`. Homebrew Rice with the eleven-Start schedule
   is the hangar-entry recipe (s707, s1496). Classified frontend routes live in
@@ -107,50 +115,28 @@ detail. Reviewed through s1965 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1960 (unblock only — no porting evidence landed, order unchanged):
-the sweep leftover stays #1 because it is the only fully-derived, zero-risk
-unit on the board; items 2-5 all still need a new discriminator before they
-can be worked, so they stay ordered by blast-radius (visual artifacts and a
-known SIGBUS family below the mechanical rename, audio/M3 re-audits last
-since both are explicitly closed pending new leads).
+Re-ranked s1966: the generated-symbol sweep (former #1) is now
+effectively closed — 845 of 902 leftovers resolved in one session, the
+remaining 57 are RE/deliberate-hold, not metadata-sync work. Items below
+promote by one; all still need a new discriminator before they can be
+worked, so they stay ordered by blast-radius (visual artifacts and a
+known SIGBUS family first, audio/M3 re-audits last since both are
+explicitly closed pending new leads). Per `tools/agent/ITERATION.md`'s
+strategic-priority rule, with the sweep no longer perpetually actionable,
+the next session with nothing else applicable should attempt the
+REVISIT (external retail-entry boundary or M4 accumulator boundary) with
+a genuinely new angle rather than defaulting to sweep busywork.
 
-1. Generated-symbol sweep: continue scanning TOML `func_800*`
-   placeholders against the generated tree at
-   `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`
-   for entries where the generated `.c` already carries a real
-   name (a strong, cheap signal — batch every contiguous run found
-   this way into one metadata-only TOML edit per session; s1962
-   did nine, s1963 did thirty, s1964 did 221 and promoted the scan
-   to `tools/sweep_scan_candidates.py <start_name>`, s1965 did 26).
-   The tool walks the TOML in file order (addresses are NOT
-   monotonic — overlay sections restart their own VRAM range) and
-   guards against overlay VRAM reuse: any address with more than
-   one `RECOMP_FUNC`-prologued match tree-wide is excluded from
-   auto-resolve instead of silently keeping the first hit. s1965
-   resolved `0x800ADB70`-`0x800B2564` and stopped at `func_800B2630`
-   (`syms/rogue_squadron.syms.toml:2435`, size `0x468`), a literal
-   placeholder in the generated tree (`funcs_30.c:11406`) — genuine
-   RE needed, not a metadata sync. Next work unit: `python3
-   tools/sweep_scan_candidates.py func_800B2A98` (the entry right
-   after the s1965 stop point) — already dry-run verified to resolve
-   4 entries and stop cleanly at `func_800B3824` — then the usual
-   collision/duplicate/external-reference verification before editing.
-   Archive: `PROJECT-OVERVIEW.md` §33–§36. About 1,548 placeholder
-   `func_0x...` names remained at s1487; TOML leftover combined
-   `func_8[01]*` count is 902 after s1965 (`func_801*` is 0).
-   s1918 was the mandatory 15-title REVISIT (do not treat a later
-   session as another REVISIT just because the window once
-   contained only sweep titles).
-2. Hangar visual artifacts on the first live hangar frame (geometry
+1. Hangar visual artifacts on the first live hangar frame (geometry
    cracks, blue tris, hologram layering). New discriminator required;
    do not treat them as the parked M4 Y=0x8000. s1950 did not
    lengthen the hangar window (still ~4s / 1 frame).
-3. Hangar SIGBUS `filterVoiceSampleBlock+220` / `0x8000834c` is a
+2. Hangar SIGBUS `filterVoiceSampleBlock+220` / `0x8000834c` is a
    known family. Revisit only as a complete idiom-class audit.
-4. Keep audio closed unless a new independent lead reaches audio
+3. Keep audio closed unless a new independent lead reaches audio
    initialization or voice allocation. Write a bounded plan first.
-5. Revisit M3 only as a complete idiom-class audit with a named discriminator.
-6. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
+4. Revisit M3 only as a complete idiom-class audit with a named discriminator.
+5. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
    batch arms; phase-gate; SIGKILL; queue soaks. Hangar recipe is
    `ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot. Ask (b) remains
    human-only.

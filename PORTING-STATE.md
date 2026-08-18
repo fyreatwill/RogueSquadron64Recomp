@@ -93925,3 +93925,80 @@ Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the hangar SIGBUS.
 Did not rebuild — no rename touched a generated `.c` the Debug target
 compiles (all 26 target names pre-existed in the generated tree). ORIGIN:
 not applicable — this is a metadata-only rename sync, not a mitigation.
+
+## Session 1966 (2026-08-18) — synchronized 845 leftover symbols in one whole-file sweep, closing the sweep to 57 genuine holdouts
+
+Resumed at the queued `func_800B2A98` resume point (4 entries, matched the
+s1965 dry-run exactly). While pre-verifying the *next* batch
+(`func_800B3AFC`), the scan kept going far past the small run NEXT.md
+predicted — 107 entries, then another 36 from `func_800C5D9C` — before
+running out of `func_8xxxxxxx` names in the *tool's own resume-ordered
+list*. That was the tell: `sweep_scan_candidates.py` walks the TOML's
+`func_8` placeholders in file order starting from a given name, and every
+prior session (s1962–s1965) had only ever resumed linearly from the
+previous session's stop point. Nobody had checked whether resolvable runs
+existed *earlier* in the file, outside that linear cursor. A full-file
+census (same address→generated-name lookup the tool uses, run once over
+all 755 then-remaining placeholders instead of from one cursor) found 710
+resolvable and only 45 genuinely blocked (32 unmatched, 12 still-placeholder
+in the generated tree, 1 overlay-VRAM collision) — the campaign had been
+sweeping a small tail of the file while a five-times-larger resolvable body
+sat untouched earlier in file order.
+
+Verification, scaled to the batch size: zero duplicate generated names
+among the 710 candidates; zero exact collisions against the full existing
+TOML name list; a repo-wide grep (`.py`/`.c`/`.h`/`.toml`) for all 710
+placeholder strings outside the symbol TOML surfaced two *real* holds this
+session's smaller batches never triggered — `patches/heap_guards.c` has
+live `RECOMP_PATCH`/`extern` declarations naming `func_80007D74` and
+`func_8002221C` directly (renaming the TOML would desync the patch file
+from the generated symbol it overrides), and `tools/rename/build_redefs.py`
+has an `EXTRA_REVERTS` dict that explicitly re-reverts five
+`setGlobalByte_8011A8XX`-family addresses back to their `func_` form at
+llvm-objcopy time per a prior user directive. Excluded all 7 addresses
+before applying (703 of the 710 applied). A broader sweep into `.md`/`.cpp`
+comments (outside the mandated check) found only prose mentions and one
+*live* tracking table, `docs/plan-kseg-guard-migration.md` — updated its 12
+references to match (51 occurrences; not required by the process, but it's
+an active plan doc, not the historical ledger).
+
+**Caught after applying, before commit:** cross-checking the applied batch
+against `PROJECT-OVERVIEW.md`'s existing "Parked (do not re-census)" list
+(§ around s1477/s1478) found 3 addresses that should never have been
+in the candidate set — `func_8008ED6C`, `func_8009D8BC`, `func_8009D978` —
+already investigated and parked (truncated function / eight-byte
+lookup-table pads) despite the generated tree carrying *something*
+non-placeholder-shaped at their address. Two of those three, plus two more
+this scale of batch surfaced for the first time (`func_80007064`,
+`func_80085CD8`), had generated names of the form `static_N_ADDR` —
+N64Recomp's own auto-generated name for anonymous statics, not a real
+semantic name. The tool's placeholder filter (`gen_name.startswith
+("func_0x")`) never had to handle this pattern before because no prior
+batch was large enough to contain one. Reverted all 5 back to `func_`
+placeholders in the TOML before finalizing. Net applied: 845 (703 − 5 +
+147 from the small pre-verified batches). **Lesson for future large-batch
+sweeps: check the resolved name for non-semantic auto-naming conventions
+(`static_N_`, and by extension anything else N64Recomp emits for anonymous
+symbols), and always diff the candidate set against every "parked"/"do not
+re-census" list in the docs before applying, not just the small
+`.py`/`.c`/`.h`/`.toml` reference check NEXT.md specifies for small
+batches** — that check catches functional breakage, not "this was already
+investigated and rejected."
+
+TOML leftover count: `func_800*`/`func_8[01]*` combined 902 (s1965) → 57.
+Full classification of the 57: 34 genuinely unmatched in the generated tree
+(no `// 0xADDR:` comment / `RECOMP_FUNC` prologue at all — likely dead
+code, inlined, or in an unswept overlay), 10 still-placeholder in the
+generated tree too (includes the known stops `func_800FEF10` s1963,
+`func_800AB658` s1964, `func_800B2630`, `func_800B3824`, `func_800C58A0`
+this session), 1 overlay-VRAM-reuse collision the tool auto-excludes
+(unchanged, not re-investigated), 4 the `static_N_ADDR` non-semantic
+auto-names reverted above, and 8 real semantic names deliberately kept as
+placeholders — 2 live `RECOMP_PATCH`/`extern` declarations in
+`patches/heap_guards.c`, 5 in `build_redefs.py`'s `EXTRA_REVERTS`, and the
+1 explicitly `PROJECT-OVERVIEW.md`-parked `func_8008ED6C`.
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the hangar SIGBUS.
+Did not rebuild — every renamed target name pre-existed in the generated
+tree; this is a metadata-only TOML sync. ORIGIN: not applicable — no
+mitigation landed, this is a symbol-name sync.
