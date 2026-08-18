@@ -2002,7 +2002,7 @@ functions = [
     { name = "resolveScriptedNameTokenList", vram = 0x800F3290, size = 0x24C },
     { name = "computeRandomizedOrientationFrame", vram = 0x800F34DC, size = 0x7D4 },
     { name = "updateNpcEffectIntensity", vram = 0x800F3CB0, size = 0x45C },
-    { name = "func_800F410C", vram = 0x800F410C, size = 0xD68 },
+    { name = "executeActorType1Effect", vram = 0x800F410C, size = 0xD68 },
     { name = "func_800F4E74", vram = 0x800F4E74, size = 0x518 },
     { name = "func_800F538C", vram = 0x800F538C, size = 0x6A4 },
     { name = "func_800F5A30", vram = 0x800F5A30, size = 0x304 },
