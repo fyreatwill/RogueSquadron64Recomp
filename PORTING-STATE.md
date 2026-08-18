@@ -88171,3 +88171,50 @@ System Settings toggle, and (still) for the code-bisect clone. Iron rule 8:
 this iteration counts ADVANCED (new measurement capability + new H3a lead +
 a 9th independent repro with full resource correlation), resetting the
 stall counter on `vi1024-reachability-regression`.
+
+## Session 1893 (2026-08-17) — synchronized the computeAnchorRelativePositionByDistanceRatio symbol
+
+Exact generated-symbol census for leftover `func_800F2AC4` at `0x800F2AC4`
+(HYPOTHESIS-ID: generated-symbol-renaming-sweep). `vi1024-reachability-regression`
+stayed genuinely blocked this iteration: `scratch/agent/thermal_probe.py`
+confirmed Low Power Mode is still ON (no human has toggled it since s1892),
+so re-running `s790_postsec2_reachability.sh` would only be a 10th
+same-recipe reconfirmation with no new measurement axis — NEXT.md's own
+"do not repeat" list forbids that. Last-15 ledger titles
+(`grep '^## Session ' | tail -15`, s1878-s1892) are NOT all sweep entries
+(s1888-s1892 are the reachability investigation), so the sweep's 15-title
+all-sweep REVISIT gate did not fire — resumed the sweep per
+`tools/agent/ITERATION.md`'s explicit fallback. Step 0 `wc -c` on
+`docs/CURRENT-TRUTH.md` was 25333; not a maintenance iteration.
+
+### Evidence
+
+| Source | Observation |
+|---|---|
+| Generated `funcs_41.c` (N64Recomp/RecompiledFuncs) | `awk` RECOMP_FUNC adjacency pairing shows `computeAnchorRelativePositionByDistanceRatio` immediately follows `clearObjectFlagBit4` and precedes `initObjectAnimSubstruct` — avoids stray substring matches |
+| `funcs.h` | Declares `clearObjectFlagBit4` (line 2145), `computeAnchorRelativePositionByDistanceRatio` (2146), `initObjectAnimSubstruct` (2147) in that order |
+| `recomp_overlays.inl` | `clearObjectFlagBit4` `.offset = 0x0004D984, .rom_size = 0x00000010`; `computeAnchorRelativePositionByDistanceRatio` `.offset = 0x0004D994, .rom_size = 0x000000C4` — exactly contiguous (`0x0004D984 + 0x10 = 0x0004D994`), and `rom_size` matches TOML `size = 0xC4` |
+| Non-collision | `grep -rn 'func_800F2AC4\b'` across generated `*.c`/`*.h`/`*.inl` returned zero hits |
+| TOML | Was `{ name = "func_800F2AC4", vram = 0x800F2AC4, size = 0xC4 }` — stale leftover. Renamed to `computeAnchorRelativePositionByDistanceRatio` at `syms/rogue_squadron.syms.toml:1987` |
+
+### Outcome
+
+H2 selected (as in s1887): live generated body, `funcs.h` declaration, and
+overlay INL entry already agreed; only the TOML still carried the
+placeholder. Renamed it to match — no invented name, no build or runtime
+run required (consistent with s1887's precedent that this class of
+metadata-only sync doesn't need a regen/build to validate). Refutes H1
+(TOML was not already synchronized) and H3 (no size/boundary disagreement).
+
+Next census: leftover `func_800F2B88` at `0x800F2B88` (size `0xE4`,
+`syms/rogue_squadron.syms.toml:1988`). Preliminary peek: the generated body
+immediately after `computeAnchorRelativePositionByDistanceRatio` in
+`funcs_41.c` is already `RECOMP_FUNC void initObjectAnimSubstruct` (address
+arithmetic checks out: `0x800F2AC4 + 0xC4 = 0x800F2B88`) — confirm this is
+the actual occupant (not a stray substring match) and check the
+companion/`funcs.h`/INL offset agreement before renaming, same as this
+session. Last-15 titles after s1893 still include s1888-s1892's
+reachability investigation, so the next iteration remains a leftover
+census, not a mandatory REVISIT, unless VI-1024 reachability has been
+unblocked by then (check `scratch/agent/thermal_probe.py`'s
+`isLowPowerModeEnabled` first).
