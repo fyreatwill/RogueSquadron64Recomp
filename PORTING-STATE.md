@@ -92922,3 +92922,76 @@ agree — no bump. Next sweep iteration can rename directly.
 Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
 hangar SIGBUS. Did not rebuild.
 
+
+## Session 1951 (2026-08-18) — synchronized the spawnAndUpdateEffectActors symbol
+
+`HYPOTHESIS-ID: generated-symbol-renaming-sweep`.
+
+CURRENT-TRUTH is 13456 bytes — under the 60 KB maintenance
+trigger. M5 closed; M3 parked. 15-title REVISIT gate: last 15
+headings are s1936–s1950 (VI-recv / spin-yield / title-SI /
+hangar / s1948 maintenance / one leftover remap) — not all
+sweep-titled, so this iteration resumes the leftover rename.
+
+No new soak since s1950. The s1950 hangar-yield repro was
+already folded: 512 at 24.8s, gone at 4.3s after 1 hangar
+frame, `filterVoiceSampleBlock+220` `last-guest-pc=0x8000834c`.
+Do not chase as a single crash.
+
+Renamed leftover `func_800F7C74` (`0x800F7C74`, TOML size
+`0x724`, `syms/rogue_squadron.syms.toml:2012`) to
+`spawnAndUpdateEffectActors`. Four-step already complete in
+the s1950 preview; re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_42.c:35` (`spawnAndUpdateEffectActors`) then
+   `:1481` (`executeActorType4Effect`) are adjacent
+   `RECOMP_FUNC` lines; previous is `funcs.h` order
+   `renderNpcAnchoredProceduralEffect` then this function.
+2. `funcs.h:2170-2172` declares
+   `renderNpcAnchoredProceduralEffect`, then
+   `spawnAndUpdateEffectActors`, then
+   `executeActorType4Effect` in that order.
+3. `recomp_overlays.inl:1898-1900`: this function's offset is
+   `0x00052B44` = previous `0x00052000 + 0xB44`; `rom_size =
+   0x00000724` matches the TOML `size = 0x724`. Next overlay
+   `executeActorType4Effect` is `0x00053268` =
+   `0x00052B44 + 0x724`. Generated body ends at `0x800F8394`
+   (`jr $ra` / `addiu $sp, $sp, 0xC8`); next starts at
+   `0x800F8398`.
+4. `grep` of `func_800F7C74` across the generated tree: zero
+   hits — non-collision.
+
+Generated body matches the name: stack `-0xC8`, `s0=actor+0x50`,
+`lbu $v1, 0x1A($s0)` vs `0xFF`, then `rand_recomp`. Type-4
+executor `executeActorType4Effect` jals this address at
+`0x800F8484`. Companion `rogue_squadron64/symbol_files/mission_overlay.txt`
+already names `spawnAndUpdateEffectActors = 0x800F7C74`.
+No existing TOML entry already used that name. Sizes already
+agreed — no bump. Metadata-only TOML rename; no build/regen.
+
+Post-rename leftover `func_800*` count is 980 (was 981). Zero
+leftover `func_800F7C74` remains in repo sources outside the
+ledger.
+
+Previewed the next leftover: `func_800F8398` (TOML size `0x10DC`,
+toml:2013) lines up with `recomp_overlays.inl:1900`
+(`executeActorType4Effect`, offset `0x00053268` =
+`0x00052B44 + 0x724`, `rom_size = 0x000010DC`) — adjacency
+(`funcs_42.c:1481` then `:5177` `clearObjectField112`) and
+declaration order (`funcs.h:2172-2173`) and non-collision
+(`grep` of `func_800F8398` in the generated tree: zero hits).
+Generated body stack `-0x118`, `s7=actor`, `s4=actor+0x8`,
+`lhu $a0, 0x198($s7)` then `jal 0x8004015C`
+(`getNpcContextField8`), then jals
+`renderNpcAnchoredProceduralEffect` and
+`spawnAndUpdateEffectActors`. Companion already names
+`executeActorType4Effect = 0x800F8398` (type-4 executor
+dispatched from `dispatchEffectByActorType`; same `+0x198`
+NPC-context prologue as the other Type{N} impls). Function
+ends at `0x800F946C` (`jr $ra` / `addiu $sp, $sp, 0x118`);
+next starts at `0x800F9474` (`0x800F8398 + 0x10DC`). Sizes
+already agree — no bump. Next sweep iteration can rename
+directly.
+
+Did not default `ROGUESQ_SPIN_YIELD` on. Did not chase the
+hangar SIGBUS. Did not rebuild.
