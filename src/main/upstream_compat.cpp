@@ -9,6 +9,9 @@
 #include <cstdio>
 #include <cstdlib>
 #include <thread>
+#if !defined(_WIN32)
+#include <dlfcn.h>
+#endif
 
 #ifdef _WIN32
 // For RtlCaptureStackBackTrace + GetCurrentThreadId in the task-submit
@@ -206,10 +209,18 @@ extern "C" void osViSetMode_recomp(uint8_t* rdram, recomp_context* ctx) {
     uint32_t width   = read_u32(0x08);
     uint32_t xScale  = read_u32(0x20);
     uint32_t yScale  = read_u32(0x2C);
+    uint32_t ra      = (uint32_t)ctx->r31;
+    const char* site = "?";
+#if !defined(_WIN32)
+    Dl_info di{};
+    if (dladdr(__builtin_return_address(0), &di) && di.dli_sname) {
+        site = di.dli_sname;
+    }
+#endif
     fprintf(stderr,
         "[osViSetMode #%d] mode_ptr=0x%08X  type=0x%08X ctrl=0x%08X "
-        "width=%u xScale=0x%08X yScale=0x%08X\n",
-        n, mode_ptr, type, ctrl, width, xScale, yScale);
+        "width=%u xScale=0x%08X yScale=0x%08X ra=0x%08X site=%s\n",
+        n, mode_ptr, type, ctrl, width, xScale, yScale, ra, site);
     fflush(stderr);
     static const bool log_transition = [] {
         const char* all = std::getenv("ROGUESQ_LOG_ALL");

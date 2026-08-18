@@ -1,64 +1,77 @@
-# NEXT work unit (s1919) — who issues osViSetMode 1024
+# NEXT work unit (s1920) — why advanceVideoFrame skips swap→init after #8
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1918 closed `vi1024-early-crash-not-stall` (H3 SELECTED).
-Do **not** re-run `s790_postsec2_reachability.sh` as a
-reachability re-confirm. Do **not** rename `func_800F7130`
-this iteration unless this unit is blocked — the 15-title
-window now contains s1918, so the sweep is allowed but item 1
-has a live discriminator. Ask (b) is still human-only.
+s1919 named s844 `#10` as `advanceVideoFrame` `0x80018378` →
+`initVideoSubsystem` and selected H-never-entered: the 180s
+staller fires `#7/#8` as `applyPendingViChanges` and never
+reaches the swap→init pair. Do **not** re-run
+`s790_postsec2_reachability.sh` as a reachability re-confirm.
+Do **not** rename `func_800F7130` this iteration — item 1
+still has a live discriminator. Ask (b) is still human-only.
 
-## Work unit — name the s844 1024 osViSetMode caller
+## Work unit — why the post-#8 swap→init pair never runs
 
-s844 publishes 1024 via `[osViSetMode #10] mode_ptr=0x80128DA0
-type=0x08000000 ctrl=0x0000324E width=1024` at 79.6s /
-`update_screen #4715`, immediately after `#8` (same
-`0x80128E40` 640 yScale `0x02000612`) and `#9` (width 2).
-The two 180s stallers (173130, 180331) fire that same `#8`
-descriptor at ~45s / `#2816` and then never issue `#9`/`#10`.
+s844 `#9` (width 2, only `swapBufferWithViMode`) then
+`[vi-arg] 0x80018378` then `#10` (1024, `initVideoSubsystem`)
+is one `advanceVideoFrame` path:
 
-Competing hypotheses (discriminated by naming the caller and
-checking whether it is entered in a staller; prefer offline
-+ one existing-log grep before any new run):
+```
+L_80018264: waitOnVideoQueue; $s0=0; awaitFrameSync
+            *(u8*)0x80128EAD == 0  → L_800182B0
+            else walk *(u8*)(0x80128EAA+$s0)
+L_800182B0: signalFrameSync; bne $s0, byte, L_80018264
+            jal swapBufferWithViMode          // #9
+            waitOnVideoQueue; clearPending; clearPostSwap
+            jal initVideoSubsystem            // #10
+```
 
-- H-never-entered: the function that issues width=1024
-  `osViSetMode` is never called in 173130/180331. SELECTS:
-  the stall is upstream of the VI submit (scene/state never
-  reaches the transition).
-- H-entered-640: that function runs in the stallers but
-  submits width 640 (the `#8` precursor) and does not take
-  the 1024 branch. SELECTS: the caller is live; the 1024
-  argument/selector is not.
-- H-host-drop: guest writes a 1024 descriptor and calls
-  `osViSetMode_recomp`, but the existing `[osViSetMode]`
-  log misses it. SELECTS only if a new same-run control
-  shows s844 `#10` *and* a staller `#10` that the old logs
-  lacked — currently weak, because stallers already log
-  `#1–#8` on the same channel that recorded s844 `#10`.
-- H-s844-env-only: s844's 16 `osViSetMode` lines are an
-  env/recipe difference, not a guest-behavior difference.
-  REFUTED if stallers' `#1–#6` match s844's `#1–#6`
-  descriptors (they do — s1918 table).
+The staller already did this pair twice (`#2+#3`, `#5+#6`)
+and never a third time after `#8`.
+
+Competing hypotheses (one instrument, one 180s-capable run):
+
+- H-advance-dead: `advanceVideoFrame` stops entering
+  `L_80018264` after `#8`. SELECTS: the stall is upstream
+  of the swap gate (thread parked / not scheduled).
+- H-loop-no-B0: the loop keeps running but never reaches
+  `L_800182B0` (table walk never takes the B0 exits).
+  SELECTS: the 0x80128EAA table / `$s2=3` / `$s1=4`
+  comparison is the gate.
+- H-B0-mismatch: `L_800182B0` is reached but
+  `$s0 != *(u8*)0x80128EAD`, so it branches back to
+  `L_80018264` and skips swap. SELECTS: the byte (or `$s0`)
+  is the gate.
+- H-swap-ran: swap is entered after `#8` but
+  `[osViSetMode]` missed `#9`. REFUTE if the new site
+  field (unconditional) stays silent — already weak.
 
 **Discriminating measurement**
 
-1. Offline, no new run first: find the host log site for
-   `[osViSetMode` and every guest caller of
-   `osViSetMode` / `osViSetMode_recomp`. Record whether the
-   current log line already carries `ra` / guest PC. If it
-   does, grep s844 for `#10`'s ra and grep 173130/180331
-   for that same ra/function.
-2. Only if the log line has no caller: add `ra` (and guest
-   PC if cheap) to that one fprintf, one build, one `s790`
-   run. Same-run positive control: the new field must appear
-   on boot `#1` width=320 *and* on the `#6` 640/`0x80128DA0`
-   line. Then read whether a later `#10` width=1024 appears
-   (regression healed) or the run matches 173130 (`#8` then
-   silence) and report the last caller's ra.
+One fprintf in `advanceVideoFrame` at `L_800182B0` *and*
+at the `bne $s0, $v0` fallthrough, plus a loop-head
+counter at `L_80018264`. Fields on one line: `n`,
+`byte_0x80128EAD`, `$s0`, `took_B0`, `took_swap`.
+Put it in `tools/fixup_game_funcs.py` (generated
+`funcs_4.c`). Gate on `ROGUESQ_LOG_VI_CALLERS` (already
+wired). One build, one s790-shaped run with
+`PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180`.
 
-Do not add a second counter. The caller identity is the
-whole table.
+Same-run positive control: the loop-head counter must
+be nonzero before `#6` (the second swap+init already
+proved the path is live at 6.9s) **and** the `#5+#6`
+pair must show `took_swap=1`. Then read the post-`#8`
+rows:
+
+- counter freezes at `#8` → H-advance-dead
+- counter climbs, `took_B0=0` → H-loop-no-B0
+- `took_B0=1` and `took_swap=0` → H-B0-mismatch
+  (dump byte and `$s0`)
+- `took_swap=1` after `#8` → H-swap-ran; inspect
+  why `#9`/`#10` are missing
+
+Do not add a second counter family. The gate table is
+the whole unit.
 
 ## Sweep leftover (parked, not this unit)
 
@@ -68,11 +81,10 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- Naming the `#10` osViSetMode site (s1919) — closed.
 - The s844-HEAD full code-content audit (s1890) — closed.
 - The `ROGUESQ_SKIP_HANGAR_PROBE` A/B (s1890) — closed.
 - H3a-lowpower (s1902) — closed.
-- `vi1024-early-crash-not-stall` (s1918) — closed: H3
-  selected, H1/H2/H4 refuted. Do not rebuild the `[phase]`
-  timeline.
+- `vi1024-early-crash-not-stall` (s1918) — closed.
 - A same-recipe `s790` run with no new measurement axis.
 - Ask (b) from s1891 — still human-only.

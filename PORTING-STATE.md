@@ -90056,3 +90056,68 @@ the transition; the host is not dropping a 1024 submit.
 "Stall at 640" is not a misnomer. Next axis: name the caller of
 s844 `#10` and test whether that caller is entered in a 180s
 staller (`HYPOTHESIS-ID: vi1024-guest-never-requests`).
+
+## Session 1919 (2026-08-17) — named the s844 1024 osViSetMode caller
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`. Planned unit: name
+the caller of s844 `osViSetMode #10 width=1024` and test whether
+that caller is entered in a 180s staller. Offline first: the
+`[osViSetMode]` fprintf in `src/main/upstream_compat.cpp` had no
+`ra` / guest PC; five generated jal sites call
+`osViSetMode_recomp` (`preNmiResetThread`, `initVideoSubsystem`,
+`applyPendingViChanges`, `swapBufferWithViMode`,
+`selectAndApplyViMode`). N64Recomp never writes `ctx->r31` on
+`jal`, so guest `$ra` is not a caller id. Added `ra=` plus
+`site=` (`dladdr(__builtin_return_address(0))`) to that one
+unconditional line. Also armed existing `ROGUESQ_LOG_VI_CALLERS`
+/ `ROGUESQ_LOG_VI_SELECTOR` (no second instrument).
+
+Run A (`scratch/agent/soak_results/s1919_osvisetmode_caller_20260817-201520/run.log`)
+died in the 15–25s musyx family (`fillSampleStreamRange+6464`,
+guest `0x8000b650`) after `#6`. Instrument already passed the
+positive control (`#1` width=320 `site=initVideoSubsystem`;
+`#6` width=640/`0x80128DA0` `site=initVideoSubsystem`). Re-ran.
+
+Run B (`scratch/agent/soak_results/s1919_osvisetmode_caller_b_20260817-201636/run.log`)
+is a 180s staller matching 173130/180331: no `[CRASH]`, no
+`[phase] 1024`, last `update_screen #10816`, probe_rc=5.
+
+| # | width | mode_ptr | site (run B) |
+|---|------:|----------|--------------|
+| 1 | 320 | 0x80128DA0 | initVideoSubsystem |
+| 2 | 2 | 0x80128CD4 | swapBufferWithViMode |
+| 3 | 640 | 0x80128E40 | initVideoSubsystem |
+| 4 | 640 | 0x80128DF0 | applyPendingViChanges |
+| 5 | 2 | 0x80128CD4 | swapBufferWithViMode |
+| 6 | 640 | 0x80128DA0 | initVideoSubsystem |
+| 7 | 640 | 0x80128DA0 | applyPendingViChanges (`#2816`) |
+| 8 | 640 | 0x80128E40 | applyPendingViChanges (`#2880`, yScale 0x02000612) |
+| 9/10 | — | — | never |
+
+`ra=0x00000000` on every line (expected). `[vi-gate]` pairs
+matched `site=` 1:1. `[vi-selector-control]` = 0 —
+`selectAndApplyViMode` never entered (it would submit
+`0x80128C90`, which no s844 line uses).
+
+s844 `#9`/`#10` identity (second source): historical
+`[vi-arg] site=0x80018378 name=advanceVideoFrame-main n=2`
+sits between `#9` (width 2) and `#10` (1024 `0x80128DA0`)
+in `scratch/agent/soak_results/s790_postsec2_reachability_20260813-061248/run.log`.
+`0x80018378` is the jal to `initVideoSubsystem`. Width-2 is
+only `swapBufferWithViMode`. Static `advanceVideoFrame` does
+swap → wait → clearPending → clearPostSwap → initVideo.
+
+H-s844-env-only: already REFUTED (s1918); run B `#1–#8`
+descriptors match s844.
+H-host-drop: REFUTED. Same-run control: `site=` present on
+`#1` and `#6`; `#7/#8` also logged on that channel; no `#10`.
+H-entered-640: REFUTED as "`#8` applyPending is the 1024
+function submitting 640". `#8` is `0x80128E40`; `#10` is
+`0x80128DA0` from `initVideoSubsystem`.
+H-never-entered: SELECTED for the 1024 submitter. The stall
+is upstream of `advanceVideoFrame` `0x80018378`. The path
+already ran twice (`#2+#3`, `#5+#6`) and never a third time
+after `#8`.
+
+No mitigation. Next: why `advanceVideoFrame` does not reach
+the swap→init pair after `#8`.
