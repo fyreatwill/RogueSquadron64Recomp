@@ -1,95 +1,104 @@
-# NEXT work unit (s1943) — hangar/512 with spin-yield on
+# NEXT work unit (s1944) — Start consumption after title 1024
 
-HYPOTHESIS-ID: hangar-512-with-spin-yield
+HYPOTHESIS-ID: hangar-after-title-1024
 
-s1942 selected H-spin-starves-idle.
-Same-binary A/B: yield-off reproduced
-H-never-dequeued; yield-on published
-`[phase] 1024 origin=0x00790400` at
-50.3s after `[spin-yield]` n=1
-unblocked recv1-exit n=2308.
-That 1024 is attract, not hangar.
-s1942's from-phase-1024 Start/A
-schedule stayed there 300s with
-zero `0x006AB400`/`0x006AB800`.
+s1943 selected H-wrong-recipe.
+Yield + classified eleven-Start
+from boot reached title-like
+`[phase] 1024 origin=0x00790400`
+at 14.2s (Rice-driven 17.3s)
+then stayed through 180s /
+`#10816`. Early Starts skipped
+the cinematic; later Starts did
+not leave that 1024. No guest
+pad log existed, so host
+delivery vs title-ignore is
+still open.
 
-## Work unit — no rebuild
+## Work unit — one rebuild
 
-Same Debug binary. One soak with
-`ROGUESQ_SPIN_YIELD=1` and a
-**hangar** input recipe (PROJECT-OVERVIEW
-§35 / s707 / s1496 classified
-frontend route — not the s1942
-from-phase-1024 Start/A list).
-Arm the same passive instruments
-as `s1942_spin_yield_on.sh`.
+Land `[pad-host]` in
+`src/main/main.cpp` keyboard
+fallback (`SDL_SCANCODE_RETURN`
+→ `N64_START_BUTTON`, `Z` → A)
+when those bits are newly set
+on the outgoing pad word.
+Rate-limit first 16 then every
+32. Include `vi_width` from
+the last committed phase (or
+`rs64` VI width already used
+by hangar gate). Do **not**
+edit `lib/` (osContGetReadData
+already calls this callback).
+
+Same Debug binary otherwise.
+One soak: `ROGUESQ_SPIN_YIELD=1`
++ s1943 eleven-Start from boot
++ the same passive instruments
+as `s1943_hangar_spin_yield`.
 
 ```
-zsh scratch/agent/soak_queue/s1943_hangar_spin_yield.sh
+# after the rebuild:
+zsh scratch/agent/soak_queue/s1944_pad_host_after_title.sh
 ```
 
 Write that script this iteration
-before launching. Crash / #6-dead /
-stall at 640 = enqueue another
-copy, do not babysit. If the run
-never leaves attract 1024, that
-is a result (wrong recipe), not
-a crash retry.
+before launching. Crash / #6-dead
+/ 640 stall = enqueue another
+copy, do not babysit.
 
-ORIGIN: host VI retrace is
-legitimate; the spin-yield is
-still env-gated experiment, not
-product. Do not default-on
+ORIGIN: Start presses after
+title 1024 are the question;
+do not default-on
 `ROGUESQ_SPIN_YIELD`. Do not
-force-zero slots. Do not set
-`requeue_vi=true` as the only
-arm.
+force-zero slots. Do not treat
+title `0x00790400` as hangar.
 
-Same-run positive control (must
-fire **before** hangar/512):
+Same-run positive control
+(must fire **before** any
+post-1024 pad claim):
 
 - tick-entry/jal/exit at least
   2/2/2 with `took_swap=1` twice
-- `slot-alloc` ends
+- `slot-alloc` third row
   `0x8018D4A0 count=16`
 - `[spin-yield]` n=1
 - `[phase] 1024 origin=0x00790400`
-  (or another 1024 origin) —
-  proves the s1942 lever still
-  works on this recipe
-- `[vi-recv-path]` n=0 `blocked=1`
+- at least one `[pad-host]`
+  Start **before** that 1024
+  (early Starts skipped the
+  cinematic — this is the
+  "mark everything" control)
 
-After that control:
+After that control, count
+`[pad-host]` Start (and A)
+**after** the 1024 `[phase]`:
 
-- `[phase] vi_width=512
-  origin=0x006AB400` (or
-  `0x006AB800`) →
+- after=0 → **H-late-keys-dropped
+  SELECTED** (winctl/focus;
+  later Starts never reach SDL)
+- after>0 and zero hangar origin
+  / zero hangar handler →
+  **H-title-ignores-start
+  SELECTED** (pad word has
+  Start; this 1024 is not the
+  Rice title-to-hangar screen)
+- after>0 and
+  `[phase] 512 origin=0x006AB400`
+  or `0x006AB800` →
   **H-hangar-reachable SELECTED**
-  (item 3 unblocked; reopen M4
-  Y=0x8000 on that run)
-- 1024 control fires, 300s+ at
-  attract `0x00790400`, zero
-  hangar origin →
-  **H-wrong-recipe SELECTED**
-  (yield is not sufficient;
-  need the classified hangar
-  route, not more Start/A)
-- 640/`0x00696100` stall, zero
-  `[spin-yield]`, `#9/#10`
-  miss → **H-yield-not-armed**
-  (recipe dropped the env var)
-- 640 stall *with* `[spin-yield]`
-  and recv1-exit after entry 2
-  but no `#9/#10` →
-  **H-1024-not-only-spin**
-  (s1942 lever insufficient on
-  this path)
+  (reopen M4 Y=0x8000 on that
+  log; s1943 was a short window
+  or a missed edge)
 
-Do **not** rebuild s1942 probes.
+Do **not** repeat s1942
+from-phase-1024 Start/A or
+s1943 eleven-Start as a
+"maybe hangar this time"
+recipe without this pad split.
 Do **not** land spin-yield as
-default. Do **not** treat attract
-512 or 640 as hangar. Ask (b)
-from s1891 — still human-only.
+default. Ask (b) from s1891 —
+still human-only.
 
 Run from `build/` with the ROM
 present. SIGKILL.
@@ -102,12 +111,12 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
-- The s1942 yield off/on A/B
-  (closed: H-spin-starves-idle
-  SELECTED).
-- s1942's from-phase-1024
-  Start/A key list as a hangar
-  recipe (300s at attract 1024).
+- s1942 yield off/on A/B (closed).
+- s1942 from-phase-1024 Start/A
+  as a hangar recipe.
+- s1943 eleven-Start-from-boot
+  as a hangar recipe without a
+  pad-consumption split.
 - Force-zero slots.
 - `requeue_vi=true` as the only
   arm.

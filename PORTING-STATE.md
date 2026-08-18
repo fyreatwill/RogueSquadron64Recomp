@@ -92235,3 +92235,91 @@ yield lever on and a hangar
 input recipe, not s1942's
 from-phase-1024 Start/A list.
 Ask (b) remains human-only.
+
+## Session 1943 (2026-08-18) — selected H-wrong-recipe; eleven-Start stays at title 1024
+
+`HYPOTHESIS-ID: hangar-512-with-spin-yield`.
+No rebuild. Same Debug binary as
+s1942. One soak with
+`ROGUESQ_SPIN_YIELD=1` and the
+classified hangar recipe
+(eleven-Start from boot,
+PROJECT-OVERVIEW §35 / s707 /
+s1496), not s1942's
+from-phase-1024 Start/A list.
+Passive instruments matched
+`s1942_spin_yield_on.sh` plus
+`ROGUESQ_M4_Y8000_WIDTH=512`.
+
+Artifact:
+`scratch/agent/soak_results/s1943_hangar_spin_yield_20260818-010741/run.log`
+(probe_rc=5, 180s, 0 crash).
+
+Same-run positive control
+passed before any hangar
+claim: tick-entry/jal/exit
+3/3/3 with `took_swap=1`
+three times; third
+`slot-alloc` ends
+`0x8018D4A0 count=16`;
+`[spin-yield]` n=1
+(L141000) and n=2
+(L141056); `[vi-recv-path]`
+n=0 `blocked=1` (L46);
+`#9` width-2
+`swapBufferWithViMode` then
+`#10` width-1024
+`initVideoSubsystem`
+(L141297); `[phase] 1024
+origin=0x00790400` at 14.2s
+`#778` (L141303).
+
+All 11 from-boot Starts
+printed (6,11,16,21,26,31,
+36,41,46,51,56). 1024 at
+14.2s is Rice-driven-like
+(17.3s), not s1942's
+undriven-like 50.3s — the
+early Starts skipped the
+cinematic. Then zero later
+`[phase]`; last
+`update_screen #10816`
+origin `0x00790400` width
+1024; 0 origin
+`0x006AB400`/`0x006AB800`;
+0 `hangar=1`; 0 attract
+512 `0x00690400`; 157/157
+post-1024 `[vi]` rows stay
+`0x00790400`/1024.
+`recv1-exit` after 1024 =
+685 (VI stays unblocked).
+`menu-jal` siten=2 fired;
+`menu-exit` siten=2 did
+not. Fourth `slot-alloc`
+after tick 3 retargets
+`0x801714D0 count=15`
+(post-control).
+
+This selects H-wrong-recipe.
+This refutes
+H-hangar-reachable (no
+hangar origin),
+H-yield-not-armed
+(`[spin-yield]` n=1/2 and
+`#9/#10` fired), and
+H-1024-not-only-spin (1024
+published). Yield plus the
+classified hangar schedule
+is not sufficient.
+Hangar/512 M4 remains
+UNEVALUABLE. Do not repeat
+this recipe or s1942's
+from-phase-1024 Start/A as
+a hangar path.
+`ROGUESQ_SPIN_YIELD` stays
+default-off.
+
+Next: host vs guest Start
+consumption after title
+1024. Ask (b) remains
+human-only.

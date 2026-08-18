@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1942 (2026-08-18).
+detail. Reviewed through s1943 (2026-08-18).
 
 ## Current state
 
@@ -13,63 +13,15 @@ detail. Reviewed through s1942 (2026-08-18).
   and assessing legitimacy.
 - Phase-gated port captures reached VI 1024 with independent emit/raw/dispatch/match
   controls repeatedly through s844 (2026-08-13). Late E9 identity is established; remaining
-  deltas are boundary/span-shaped and unclassified. **s1888-s1889 (2026-08-17): 8/8 fresh
-  runs failed to reach VI 1024 at all**, including unmodified re-runs of
-  `s790_postsec2_reachability.sh`. All 8 stall at 640 `0x00696100` (7-9s); most then crash
-  before the 180-340s timeout, in 4 distinct signatures: `RT64::NativeTarget::copyToRAM`
-  SIGSEGV (s1888 2/5, s1889 1/3), an Apple AGX Metal-driver SIGSEGV via `clearDepthTarget`
-  (s1889, new), and a guest-side `musyxRenderVoiceSamples`/`fillSampleStreamRange` SIGBUS
-  (s1889, new — this exact crash family is long-catalogued but previously only seen
-  post-1024 or as a rare pre-scene boot outcome, never blocking 1024 itself). H1-flake is
-  refuted (0/8). `ROGUESQ_LOG_FL_ZERO_WATCH` (phys `0x1F3CC0`) caught a genuine corruption
-  write in 2/3 of s1889's runs shortly before their crash — single-source, no positive
-  control yet, does not explain the run without it. Cause still undiagnosed; best current
-  guess is the project's long-tracked freelist/heap corruption family now surfacing earlier
-  (pre-1024) rather than a new independent bug, but no mechanism is established. Do not
-  trust "reaches VI 1024" as a given for any recipe until this is re-verified.
-  **s1890**: read every non-ledger file that differs between s844 (`ef7a0fb9`) and HEAD
-  across 1092 commits (not just which files changed) — lib/ patches, fixup-script probe
-  insertions, the freelist-restore toggle, and 1612 lines of symbol renames are all
-  confirmed either pre-dating s844 or behaviorally inert for this recipe. The one real
-  functional addition in that window, `rs64_is_hangar_vi()` (an unconditional per-`M_GFXTASK`
-  VI-register read from the render thread, added for s1856/s1872 hangar gating), was tested
-  via a same-binary env-toggle A/B (`ROGUESQ_SKIP_HANGAR_PROBE`) and refuted — both arms
-  stall at identical `640 origin=0x00696100` at 7.3-7.4s regardless. No source-code change
-  anywhere in that window explains the regression. The literal historical-commit bisect
-  cannot run under current tooling: it needs `git submodule update`, denied by
-  command-string match independent of working directory (including inside a fresh
-  worktree) — this one is a legitimate human-only ask, not a workaround-able one, since
-  CLAUDE.md makes `git submodule update` a hard NEVER rule protecting `lib/`'s uncommitted
-  patches, not just an over-broad permission match.
-  **s1892**: machine-state binaries are denied by command-string match; the data
-  is reachable via Python (`os.getloadavg`, `sysctlbyname`, `NSProcessInfo`).
-  9th `s790` run: same 640 `0x00696100` stall, then musyx SIGBUS at ~27s; no
-  memory/CPU-pressure prelude. `isLowPowerModeEnabled` was True (n=1).
-  **s1902**: LPM toggled off; same stall then `findTileCopyId` SIGABRT at ~17s.
-  **H3a-lowpower REFUTED.** Resource traces on both LPM arms showed no pressure.
-  **s1918** (offline `[phase]` + `osViSetMode` table, s844 + all eight
-  20260817 `s790` logs; s844 row reproduced as same-run positive control:
-  `640/0x00696100` at 11.0s `#600`, `1024/0x00790400` at 79.6s `#4715` via
-  `osViSetMode #10 width=1024`): **H3 true-stall SELECTED. H1
-  early-crash-not-stall REFUTED as a universal explanation** (not every
-  failure dies; 2/8 live to the 180s timeout). H2 early-wrong-transition
-  REFUTED (every failure uses s844's `320/0x280 → 2/0x6DD000 →
-  640/0x66A500 → 640/0x696100` pair; the earlier 6.8–8.8s `0x696100` hit
-  is a shorter 320 dwell, then the same ~256-`update_screen` / ~4.3s
-  `0x66A500` dwell). H4 log-incomparable REFUTED (same `[phase]` format
-  and origin vocabulary). Split: 6/8 die at 15–25s still in the 640
-  `0x696100↔0x62BD00` ping-pong (copyToRAM / AGX `clearDepthTarget` /
-  musyx SIGBUS / `findTileCopyId`); **2/8 (173130, 180331) live 180s
-  with zero `[phase] 1024`, zero `osViSetMode width=1024`, and
-  `update_screen` past `#10816`** — more frames than s844 needed to
-  publish 1024 (`#4715`). Those two fire s844's `#7/#8` 640 precursor
-  (`0x80128DA0` then `0x80128E40` yScale `0x02000612`) at ~45s / `#2816`
-  and then never issue s844's immediate `#9` width-2 / `#10` width-1024
-  cluster (s844 `#8–#10` is 75s / `#4672`). The 640 origin ping-pong
-  freezes on `0x0062BD00` at ~42–45s. "Stall at 640" is not a misnomer:
-  the guest never requests 1024 even when the process survives. Ask (b)
-  (disposable clone + `git submodule update` bisect at `ef7a0fb9`) is
-  still human-only.
+  deltas are boundary/span-shaped and unclassified. **s1888–s1918:** post-s844
+  recipes stalled at 640 `0x00696100`. H1-flake, H3a-lowpower, and the
+  `rs64_is_hangar_vi` toggle are refuted; no source change in the
+  s844→HEAD window explains it. Ask (b) (clone + `git submodule update`
+  bisect at `ef7a0fb9`) is still human-only. s1918 selected H3
+  true-stall: 2/8 `s790` logs live 180s with zero
+  `osViSetMode width=1024` (s844 control: `#10` at 79.6s `#4715`).
+  Crash families (copyToRAM / AGX `clearDepthTarget` / musyx SIGBUS /
+  `findTileCopyId`) kill some runs but are not why 1024 is missing.
   **s1919**: named the s844 `#10` issuer. Unconditional
   `[osViSetMode]` now carries `site=` (`dladdr` of the host
   caller; guest `$ra` is always `0` because N64Recomp never
@@ -778,6 +730,43 @@ detail. Reviewed through s1942 (2026-08-18).
   a runnable game thread so
   idle-wait never drains;
   hardware would preempt it.
+  **s1943**: same Debug binary,
+  `ROGUESQ_SPIN_YIELD=1`,
+  classified eleven-Start from
+  boot (s707/s1496; not
+  s1942's from-phase-1024
+  Start/A). Same-run control
+  passed: tick 3/3/3
+  `took_swap=1` three times;
+  third `slot-alloc`
+  `0x8018D4A0 count=16`;
+  `[spin-yield]` n=1/2;
+  `[vi-recv-path]` n=0
+  `blocked=1`; `#9/#10`;
+  `[phase] 1024
+  origin=0x00790400` at 14.2s
+  `#778` (Rice-driven-like;
+  s1942 undriven-like was
+  50.3s). Then 166s at that
+  origin through
+  `update_screen #10816`; 0
+  hangar `0x006AB400`/`800`;
+  0 later `[phase]`; 0
+  `hangar=1`; probe_rc=5 last
+  width 1024. All 11 Starts
+  printed. Early Starts
+  skipped the cinematic;
+  Starts after 14.2s did not
+  leave title 1024.
+  **H-wrong-recipe SELECTED.**
+  H-hangar-reachable /
+  H-yield-not-armed /
+  H-1024-not-only-spin
+  REFUTED. Yield plus the
+  classified hangar schedule
+  is not sufficient.
+  Hangar/512 M4 still
+  UNEVALUABLE.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -831,29 +820,27 @@ detail. Reviewed through s1942 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-1. **H-spin-starves-idle SELECTED
-   (s1942).** Same-binary A/B:
-   yield-off reproduced
-   H-never-dequeued (recv1-enter
-   n=2291, 7984 `[vi-enq]`, 0
-   deq/wait/exit); yield-on
-   unblocked recv1-exit n=2308
-   on the first `[spin-yield]`,
-   resumed synth/cursor, issued
-   `#9/#10`, and published
-   `[phase] 1024 origin=0x00790400`
-   at 50.3s. `ROGUESQ_SPIN_YIELD`
-   stays default-off. Do not
-   land it as product, force-zero
-   slots, or set `requeue_vi=true`
-   as the only change. Next:
-   hangar/512 with the yield
-   lever on (item 3) — this
-   session's from-phase-1024
-   Start/A schedule stayed at
-   attract `0x00790400` for 300s
-   (0 hangar origin). Ask (b)
-   remains human-only.
+1. **H-wrong-recipe SELECTED
+   (s1943).** Yield + classified
+   eleven-Start from boot
+   reached title-like 1024 at
+   14.2s (Rice-driven 17.3s)
+   then stayed
+   `origin=0x00790400` through
+   180s / `#10816` (0 hangar
+   origin). Early Starts did
+   skip the cinematic (s1942
+   undriven-like 1024 was
+   50.3s). Do not repeat
+   eleven-Start-from-boot or
+   s1942's from-phase-1024
+   Start/A as hangar recipes.
+   `ROGUESQ_SPIN_YIELD` stays
+   default-off. Next: why
+   title 1024 ignores later
+   Starts (host pad vs guest
+   edge vs hangar handler).
+   Ask (b) remains human-only.
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -876,16 +863,16 @@ detail. Reviewed through s1942 (2026-08-18).
    count is 982 after s1917. s1903–s1917 were all sweep-titled;
    s1918 was the mandatory 15-title REVISIT (do not treat s1919
    as another REVISIT — the window now contains s1918).
-3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888). The
-   s1888 attempt was blocked by the 640/`0x00696100` stall; s1942's
-   yield-on arm now publishes attract 1024, so this is unblocked as a
-   recipe problem, not a 1024-request problem. Gate is in place
-   (`ROGUESQ_M4_Y8000_WIDTH=512` plus `rs64_is_hangar_vi`). Re-open with
-   `ROGUESQ_SPIN_YIELD=1` and a hangar input recipe (not s1942's
-   from-phase-1024 Start/A). Success =
-   `[phase] vi_width=512 origin=0x006AB400` (or `0x006AB800`). Do not
-   treat 640 or attract 512/`0x00790400` as hangar. Do not re-walk
-   VMADH/VGE, `0xD60` shape, or the ovl20 consumer table.
+3. Hangar/512 live `0x8000` Y is parked UNEVALUABLE (s1872, s1888,
+   s1943). The 640 stall is no longer the blocker (s1942 yield
+   publishes 1024; s1943 eleven-Start publishes it at 14.2s). The
+   classified hangar schedule still never produces origin
+   `0x006AB400`/`800`. Gate stays
+   (`ROGUESQ_M4_Y8000_WIDTH=512` plus `rs64_is_hangar_vi`). Success
+   is still `[phase] vi_width=512 origin=0x006AB400` (or
+   `0x006AB800`). Do not treat 640, attract 512, or title
+   `0x00790400` as hangar. Do not re-walk VMADH/VGE, `0xD60`
+   shape, or the ovl20 consumer table.
 4. Keep audio closed unless a new independent lead reaches audio initialization
    or voice allocation. Write a bounded plan first.
 5. Revisit M3 only as a complete idiom-class audit with a named discriminator.
@@ -948,6 +935,12 @@ never requests the transition. Treating the 180s `#7/#8` stall as "slots stay
 two `yield_self_1ms` calls from the spin
 unblocked recv1, resumed synth/cursor, and
 the guest issued `#9/#10` width-1024.
+Treating the classified eleven-Start
+from-boot schedule as a hangar
+recipe on the port once 1024 is
+reachable is superseded by s1943 —
+it reaches title-like 1024 at
+14.2s and stays there.
 Treating s844 `#8`
 `applyPendingViChanges` as the 1024 function submitting 640
 is superseded by s1919 — `#8` is `0x80128E40`; `#10` is
