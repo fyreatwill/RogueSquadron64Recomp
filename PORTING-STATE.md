@@ -88465,3 +88465,45 @@ Next-15-title window after s1898 drops s1883 (a sweep entry) and keeps all
 of s1888-s1892 (still 5 of 15 slots non-sweep — unchanged from s1897's
 window); still not a REVISIT trigger. The window won't start dropping
 s1888-s1892 until the sweep passes s1902; check again next iteration.
+
+## Session 1899 (2026-08-17) — synchronized the generatePerpEmitDirectionWithJitter symbol
+
+Resumed the generated-symbol renaming sweep. Before starting, re-checked
+`vi1024-reachability-regression`: `python3 scratch/agent/thermal_probe.py`
+still reads `lowPowerModeEnabled True` — unchanged since s1892/s1895-s1898.
+Stayed on the sweep per NEXT.md's gate.
+
+Confirmed leftover `func_800F2DC8` (`0x800F2DC8`, size `0x148`,
+`syms/rogue_squadron.syms.toml:1993`) via the full four-step procedure
+against `/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:5055` (`setAnimSubstructValueIfActive`) and `:5092`
+   (`generatePerpEmitDirectionWithJitter`) are the only two `RECOMP_FUNC`
+   lines in that span — true adjacency, not a stray substring match.
+2. `funcs.h:2151-2152` declares `setAnimSubstructValueIfActive` then
+   `generatePerpEmitDirectionWithJitter` in that exact order.
+3. `recomp_overlays.inl:1879-1880`: `generatePerpEmitDirectionWithJitter`
+   offset is `0x0004DC98` = `setAnimSubstructValueIfActive`'s `0x0004DC74
+   + 0x24` (its TOML size); `rom_size = 0x00000148` matches the TOML's
+   `size = 0x148` for `func_800F2DC8` exactly.
+4. `grep -rln 'func_800F2DC8\b'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+All four agreed, so renamed the TOML entry only (metadata-only sync, no
+build/regen needed).
+
+Previewed the next leftover for continuity: `func_800F2F10` (size `0xA4`,
+`syms/rogue_squadron.syms.toml:1994`) lines up with `recomp_overlays.inl:1881`
+(`stepAndTickProgressChannel`, offset `0x0004DDE0` = `0x0004DC98 + 0x148`,
+`rom_size = 0x000000A4`) — not yet verified via the full four-step
+procedure, just a preview matching prior sessions' pattern.
+
+Noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per CLAUDE.md,
+confirmed byte-identical to `submodule-patches/*.patch` this session via
+diff — no drift) — untouched this session, no new edits under `lib/`, so
+no patch-export needed.
+
+Next-15-title window after s1899 drops s1884 (a sweep entry) and keeps all
+of s1888-s1892 (still 5 of 15 slots non-sweep — unchanged from s1898's
+window); still not a REVISIT trigger. The window won't start dropping
+s1888-s1892 until the sweep passes s1903; check again next iteration.
