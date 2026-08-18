@@ -1999,7 +1999,7 @@ functions = [
     { name = "copyRandomPipeDelimitedField", vram = 0x800F3144, size = 0x114 },
     { name = "returnZero_800F3258", vram = 0x800F3258, size = 0x8 },
     { name = "tallyMidDetailObject", vram = 0x800F3260, size = 0x30 },
-    { name = "func_800F3290", vram = 0x800F3290, size = 0x24C },
+    { name = "resolveScriptedNameTokenList", vram = 0x800F3290, size = 0x24C },
     { name = "func_800F34DC", vram = 0x800F34DC, size = 0x7D4 },
     { name = "func_800F3CB0", vram = 0x800F3CB0, size = 0x45C },
     { name = "func_800F410C", vram = 0x800F410C, size = 0xD68 },

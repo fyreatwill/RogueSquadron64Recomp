@@ -89141,3 +89141,86 @@ patch-export needed.
 Next-15-title window after s1908 still keeps s1902 (1 of 15 slots
 non-sweep); still not a REVISIT trigger. The window starts dropping
 s1902 only after s1917. Check again next iteration.
+
+## Session 1909 (2026-08-17) — synchronized the resolveScriptedNameTokenList symbol
+
+Resumed the generated-symbol renaming sweep. Before starting, re-checked
+the 15-title REVISIT gate: `grep -n '^## Session ' PORTING-STATE.md |
+tail -15` shows s1902 still in the window (1 of 15 titles non-sweep),
+so the sweep continues; not a REVISIT. H3a-lowpower is closed (s1902);
+did not re-run `s790_postsec2_reachability.sh`. No new soak-queue
+verdicts landed between s1908 and this iteration (tail of
+`scratch/agent/SOAK-RESULTS.md` still ends on the s1902 LPM-off A/B).
+CURRENT-TRUTH is 28581 bytes — under the 60 KB maintenance trigger.
+
+Renamed leftover `func_800F3290` (`0x800F3290`, TOML size `0x24C`,
+`syms/rogue_squadron.syms.toml:2002`) to
+`resolveScriptedNameTokenList`. The four-step confirmation was already
+complete in s1906–s1908 and was re-checked this session against
+`/Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/`:
+1. `funcs_41.c:6056` (`tallyMidDetailObject`) and `:6092`
+   (`resolveScriptedNameTokenList`) are the only two `RECOMP_FUNC`
+   lines matched by name in that span — true adjacency, not a stray
+   substring match.
+2. `funcs.h:2160-2161` declares `tallyMidDetailObject` then
+   `resolveScriptedNameTokenList` in that exact order.
+3. `recomp_overlays.inl:1888-1889`: `resolveScriptedNameTokenList`
+   offset is `0x0004E160` = `tallyMidDetailObject`'s
+   `0x0004E130 + 0x30` (its TOML size); `rom_size = 0x0000024C`
+   matches the TOML's `size = 0x24C` exactly.
+4. `grep -rln 'func_800F3290'` across N64Recomp's `RecompiledFuncs/`
+   tree: zero hits — non-collision.
+
+Generated body matches the name: walks 8 token slots (`s4 < 8`,
+stride `+0x10`), jump-tables on type (`sltiu $v1, 0x7`), and
+calls `copyPipeDelimitedField` (`jal 0x800F30AC`) /
+`copyRandomPipeDelimitedField` (`jal 0x800F3144`) then
+`jal 0x80047B48` on the resolved stack buffer. Companion
+`rogue_squadron64/symbol_files/mission_overlay.txt` already names
+`resolveScriptedNameTokenList = 0x800F3290`. No existing TOML
+entry already used `resolveScriptedNameTokenList`. Sizes already
+agreed — no bump.
+
+All four agreed, so renamed the TOML entry only (metadata-only
+sync, no build/regen needed). Post-rename leftover `func_800*`
+count in the TOML is 990 (was 991). Zero leftover `func_800F3290`
+remains in repo sources outside the ledger.
+
+Previewed the next leftover for continuity: `func_800F34DC` (TOML
+size `0x7D4`, `syms/rogue_squadron.syms.toml:2003`) lines up with
+`recomp_overlays.inl:1890` (`computeRandomizedOrientationFrame`,
+offset `0x0004E3AC` = `0x0004E160 + 0x24C`, `rom_size =
+0x000007D4`) — confirmed adjacency (`funcs_41.c:6092,6547`) and
+declaration order (`funcs.h:2161-2162`) and non-collision
+(`grep -rln 'func_800F34DC'` zero hits) this session too.
+Generated body calls `rand` (`jal 0x80003430`) three times
+(`0x800F3654`, `0x800F37D4`, `0x800F380C`), plus `cosf`
+(`jal 0x8002B190`) and `normalize_vector` (`jal 0x8001CF58`),
+after reading the orientation triplet at `+0x60/+0x64/+0x68`.
+Companion already names `computeRandomizedOrientationFrame =
+0x800F34DC`. Sizes already agree — no bump. Next iteration can
+rename directly.
+
+Also previewed the leftovers after that: `func_800F3CB0` (size
+`0x45C`, toml:2004) lines up with `recomp_overlays.inl:1891`
+(`updateNpcEffectIntensity`, offset `0x0004EB80` =
+`0x0004E3AC + 0x7D4`, `rom_size = 0x0000045C`) — adjacency
+(`funcs_41.c:6547,8302`), declaration order (`funcs.h:2162-2163`),
+and non-collision (`grep -rln 'func_800F3CB0'` zero hits). Body
+calls `setEffectIntensity` (`jal 0x800F2FC0`). `func_800F410C`
+(size `0xD68`, toml:2005) lines up with
+`recomp_overlays.inl:1892` (`executeActorType1Effect`, offset
+`0x0004EFDC` = `0x0004EB80 + 0x45C`, `rom_size = 0x00000D68`) —
+adjacency (`funcs_41.c:8302,9212`), declaration order
+(`funcs.h:2163-2164`), and non-collision
+(`grep -rln 'func_800F410C'` zero hits). Companion already names
+`executeActorType1Effect = 0x800F410C`.
+
+Noted the pre-existing dirty `lib/N64ModernRuntime` and `lib/rt64`
+submodule working trees (long-tracked uncommitted patches per
+CLAUDE.md) — untouched this session, no new edits under `lib/`, so no
+patch-export needed.
+
+Next-15-title window after s1909 still keeps s1902 (1 of 15 slots
+non-sweep); still not a REVISIT trigger. The window starts dropping
+s1902 only after s1917. Check again next iteration.
