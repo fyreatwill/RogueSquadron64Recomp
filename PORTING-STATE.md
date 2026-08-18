@@ -94197,3 +94197,44 @@ the `0xB3`/`0xBE` Factor 5 input opcodes as restaged RDP bytes; and claiming
 that the zero valid-mode count refutes H1. The next discriminator is a
 whole-RDP/RT64 consumer-side draw-state correlation, not another `0xD60`
 opcode scan. No `lib/` edits this session.
+
+## Session 1969 (2026-08-18) — hangar hologram-beam artifact: RT64 consumer census refuted incompatible draw state
+
+Work unit per CURRENT-TRUTH's s1968 handoff: add one regeneration-safe census
+immediately before RT64's `state->rdp->drawTris(...)` in
+`decodeTriangles`. I read `tools/oracle/README.md` and
+`docs/F5-UCODE-REFERENCE.md` first. The oracle remains unable to provide a
+pixel witness for the LLE `L_17F0` path, so this unit can establish only the
+port's actual consumer state; the captured frame is the visual positive
+control, not an independent pixel oracle.
+
+The census reuses `ROGUESQ_LOG_M4_TRI_DUMP` and
+`ROGUESQ_M4_TRI_DUMP_CAP`, gates on VI width 512 plus origin
+`0x006AB400`/`0x006AB800`, resets its row budget on origin change, and prints
+screen bounds, RT64 H/L, `Z_CMP`, `Z_UPD`, `ZMODE`, `CVG_X_ALPHA`,
+`ALPHA_CVG_SEL`, raw blender inputs, and decoded blender selectors. The first
+build failed only because `commandId` was scoped inside the triangle loop;
+carrying the current ID to the consumer call fixed it. The final Debug target
+built successfully, with only existing JSON/imgui warnings. The lib change was
+exported to `submodule-patches/rt64.patch` as required.
+
+The single phase-gated run was
+`scratch/agent/soak_results/s1969_hangar_rdp_state/`: VI 512/origin
+`0x006AB400` at 24.9s, one frame, then the known
+`filterVoiceSampleBlock+220` SIGBUS / `last-guest-pc=0x8000834c` 4.3s later.
+The same run supplied both controls: the DPC writer-side census reported 1,128
+live `0xC8`-class triangles and the RT64 consumer emitted all 500 rows of its
+cap. In the captured frame's beam-cone box, 153 consumer rows overlapped;
+every one had `blend=0x0055`, `ZMODE=0`, `Z_UPD=1`, `CVG_X_ALPHA=0`, and
+`ALPHA_CVG_SEL=1`, with 95 `Z_CMP=1` and 58 `Z_CMP=0`. The consumer path is
+therefore reached and no incompatible mode was isolated. This is a
+single-source refutation of H1-consumer-wrong; H1-consumer-unreached is also
+refuted by the 500 rows. H3 remains unavailable because neither this runtime
+nor the oracle supplies independent pixel ground truth.
+
+Rules out: another `0xD60` mode-byte scan, the claim that live writer-attested
+triangles never reach RT64's triangle consumer, and a consumer-state
+mitigation based on the sampled beam rows. No mitigation or behavior change
+was added. The next work unit is a complete idiom-class audit of
+`filterVoiceSampleBlock` and its three callers, with writer/legitimacy
+classification before any guard is considered.

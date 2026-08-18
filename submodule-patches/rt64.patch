@@ -116,10 +116,10 @@ index a0d4a6a..39c294f 100644
              // 0xB5: Factor 5 chunk/DL terminator marker. Treated as no-op
              //       since op 0xB8 (standard G_ENDDL, inherited from F3D)
 diff --git a/src/gbi/rt64_gbi_rdp.cpp b/src/gbi/rt64_gbi_rdp.cpp
-index 6255872..1ab2251 100644
+index 6255872..df82c27 100644
 --- a/src/gbi/rt64_gbi_rdp.cpp
 +++ b/src/gbi/rt64_gbi_rdp.cpp
-@@ -4,12 +4,36 @@
+@@ -4,12 +4,38 @@
  
  #include "rt64_gbi_rdp.h"
  
@@ -139,6 +139,8 @@ index 6255872..1ab2251 100644
 +extern "C" __attribute__((weak)) uint32_t rs64_e9prov_current_task(void);
 +extern "C" __attribute__((weak)) uint64_t rs64_dpc_get_last_submit_serial(void);
 +extern "C" __attribute__((weak)) void rs64_dpc_get_last_submit(uint32_t *lo, uint32_t *hi);
++extern "C" __attribute__((weak)) uint32_t rs64_vi_committed_width(void);
++extern "C" __attribute__((weak)) uint32_t rs64_vi_committed_origin(void);
 +extern "C" __attribute__((weak)) void rs64_f5_vtxcolor_get(uint32_t *task, uint32_t *valid,
 +                                                             uint32_t *ordinal, uint32_t *pc,
 +                                                             uint32_t *source);
@@ -156,7 +158,7 @@ index 6255872..1ab2251 100644
          void noOp(State *state, DisplayList **dl) {
              // Do nothing.
          }
-@@ -253,6 +277,17 @@ namespace RT64 {
+@@ -253,6 +279,17 @@ namespace RT64 {
          }
  
          void fullSync(State *state, DisplayList **dl) {
@@ -174,7 +176,19 @@ index 6255872..1ab2251 100644
              RT64_LOG_PRINTF("GBI_RDP::fullSync()");
              state->fullSync();
              state->dpInterrupt();
-@@ -420,6 +455,22 @@ namespace RT64 {
+@@ -336,9 +373,11 @@ namespace RT64 {
+             size_t workBufferIndex = 0;
+             uint32_t tile = -1;
+             uint32_t level = -1;
++            uint32_t consumerCommandId = 0xFFFFFFFFu;
+ 
+             for (const DisplayList* curData : triangles) {
+                 uint32_t commandId = (curData[0].w0 >> 24) & 0x3F;
++                consumerCommandId = commandId;
+                 // TODO flush when tile and level change
+                 tile = (curData[0].w0 >> 16) & 0x7;
+                 level = (curData[0].w0 >> 19) & 0x7;
+@@ -420,6 +459,22 @@ namespace RT64 {
                  // Calculate x distance from the point opposite vertex 3 to vertex 3 itself.
                  float dx_3 = x3 - x3_opposite;
  
@@ -197,7 +211,7 @@ index 6255872..1ab2251 100644
                  if (shaded) {
                      hlslpp::int4 baseColorFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -455,6 +506,14 @@ namespace RT64 {
+@@ -455,6 +510,14 @@ namespace RT64 {
                      hlslpp::float4 colorDe = hlslpp::float4(colorDeFixed) * (1.0f / 65536.0f);
                      // hlslpp::float4 colorDy   = hlslpp::float4(colorDyFixed)   * (1.0f / 65536.0f);
  
@@ -212,7 +226,7 @@ index 6255872..1ab2251 100644
                      // Offset the base color (which seems to start at XH) by the distance between YH and the y-coord of XH.
                      hlslpp::float4 v1Color = baseColor + colorDe * dy_1;
                      // Use the edge derivative to calculate the color at the middle vertex from the color at the major vertex
-@@ -464,6 +523,179 @@ namespace RT64 {
+@@ -464,6 +527,179 @@ namespace RT64 {
                      // Use the x derivative to calculate the color at the last vertex, starting from its opposite point
                      hlslpp::float4 v3Color = v3OppositeColor + colorDx * dx_3;
  
@@ -392,7 +406,7 @@ index 6255872..1ab2251 100644
                      colorWorkBuffer[workBufferIndex + 0] = v1Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 1] = v2Color * (1/255.0f);
                      colorWorkBuffer[workBufferIndex + 2] = v3Color * (1/255.0f);
-@@ -477,6 +709,369 @@ namespace RT64 {
+@@ -477,6 +713,369 @@ namespace RT64 {
                      colorWorkBuffer[workBufferIndex + 2] = interop::float4(0.0f, 0.0f, 0.0f, 0.0f);
                  }
  
@@ -762,7 +776,7 @@ index 6255872..1ab2251 100644
                  if (textured) {
                      hlslpp::int3 baseTexcoordFixed{
                          ((curData[0].w0 >> 16) << 16) | (curData[2].w0 >> 16),
-@@ -537,6 +1132,66 @@ namespace RT64 {
+@@ -537,6 +1136,66 @@ namespace RT64 {
                          texcoordWorkBuffer[workBufferIndex + 2] = (v3_texcoord * 1024.0f) / 16384.0f;
                      }
  
@@ -829,6 +843,75 @@ index 6255872..1ab2251 100644
                      curData += triangleTexWords;
                  }
                  // No texture coefficients
+@@ -584,6 +1243,68 @@ namespace RT64 {
+                 break;
+             }
+ 
++            // ROGUESQ_LOG_M4_TRI_DUMP: observe the state at the actual RT64
++            // triangle consumer, using the same hangar gate and row budget as
++            // the DPC-side restage census.
++            {
++                static const bool s_dump = [] {
++                    const char *all = std::getenv("ROGUESQ_LOG_ALL");
++                    if (all && *all && *all != '0') return true;
++                    const char *e = std::getenv("ROGUESQ_LOG_M4_TRI_DUMP");
++                    return e && *e && *e != '0';
++                }();
++                static const uint32_t s_cap = [] {
++                    const char *e = std::getenv("ROGUESQ_M4_TRI_DUMP_CAP");
++                    return e && *e ? static_cast<uint32_t>(std::strtoul(e, nullptr, 10)) : 500u;
++                }();
++                if (s_dump && rs64_vi_committed_width && rs64_vi_committed_origin) {
++                    const uint32_t viWidth = rs64_vi_committed_width();
++                    const uint32_t viOrigin = rs64_vi_committed_origin();
++                    const bool hangar = viWidth == 512u &&
++                        (viOrigin == 0x006AB400u || viOrigin == 0x006AB800u);
++                    if (hangar) {
++                        static std::mutex dumpMutex;
++                        static uint32_t lastOrigin = 0xFFFFFFFFu;
++                        static uint32_t nDump = 0;
++                        std::lock_guard<std::mutex> lock(dumpMutex);
++                        if (viOrigin != lastOrigin) {
++                            lastOrigin = viOrigin;
++                            nDump = 0;
++                        }
++                        if (nDump < s_cap) {
++                            const uint32_t n = ++nDump;
++                            const float x0 = float(posWorkBuffer[workBufferIndex + 0].x);
++                            const float x1 = float(posWorkBuffer[workBufferIndex + 1].x);
++                            const float x2 = float(posWorkBuffer[workBufferIndex + 2].x);
++                            const float y0 = float(posWorkBuffer[workBufferIndex + 0].y);
++                            const float y1 = float(posWorkBuffer[workBufferIndex + 1].y);
++                            const float y2 = float(posWorkBuffer[workBufferIndex + 2].y);
++                            const float minX = std::min({x0, x1, x2});
++                            const float maxX = std::max({x0, x1, x2});
++                            const float minY = std::min({y0, y1, y2});
++                            const float maxY = std::max({y0, y1, y2});
++                            const interop::OtherMode &om = state->rdp->otherMode;
++                            const uint32_t blend = om.blenderInputs();
++                            fprintf(stderr,
++                                "[m4-rdp-tri] n=%u phase=%u cmd=0x%02X viw=%u origin=0x%08X "
++                                "bounds=(%.1f,%.1f)..(%.1f,%.1f) H=%08X L=%08X "
++                                "zcmp=%d zupd=%d zmode=%u cvgx=%d alphacvg=%d blend=%04X "
++                                "p0=%u m0=%u a0=%u b0=%u p1=%u m1=%u a1=%u b1=%u\n",
++                                n, rs64_phase_ord ? rs64_phase_ord() : 0u, consumerCommandId,
++                                viWidth, viOrigin, minX, minY, maxX, maxY,
++                                om.H, om.L, om.zCmp() ? 1 : 0, om.zUpd() ? 1 : 0,
++                                (om.zMode() >> 10) & 3u, om.cvgXAlpha() ? 1 : 0,
++                                om.alphaCvgSel() ? 1 : 0, blend,
++                                (blend >> 14) & 3u, (blend >> 6) & 3u,
++                                (blend >> 10) & 3u, (blend >> 2) & 3u,
++                                (blend >> 12) & 3u, (blend >> 4) & 3u,
++                                (blend >> 8) & 3u, blend & 3u);
++                            fflush(stderr);
++                        }
++                    }
++                }
++            }
++
+             state->rdp->drawTris(1, &posWorkBuffer.data()[0][0], &texcoordWorkBuffer.data()[0][0], &colorWorkBuffer[0][0], tile, level);
+ 
+             return trianglesEnd;
 diff --git a/src/hle/rt64_framebuffer.cpp b/src/hle/rt64_framebuffer.cpp
 index 873883d..dbe946a 100644
 --- a/src/hle/rt64_framebuffer.cpp

@@ -1,74 +1,70 @@
-# NEXT work unit (s1969) — whole-RDP consumer-side blend/z census
+# NEXT work unit (s1970) — filterVoiceSampleBlock whole-idiom audit
 
-HYPOTHESIS-ID: hangar-hologram-beam-artifact
+HYPOTHESIS-ID: hangar-filter-voice-sample-block-idiom-audit
 
-## What s1968 settled
+## What s1969 settled
 
-The corrected `0xD60..r16` walker saw the live hangar triangle stream but
-zero valid standard RDP `SETOTHERMODE_L/H` commands. It saw 1,134 parsed
-triangles with ordinary `stored=1` writer-attestation control and rejected
-six `0xB9/0xBA` header-shaped bytes whose operands violated the standard
-32-bit field contract. H1 is therefore not refuted or selected in this
-buffer. H2 remains refuted by s1967; H3 remains unavailable to the oracle.
+The DPC writer control and RT64 consumer census both fired in the live hangar
+window. Five hundred consumer rows reached `drawTris`; 153 rows overlapped the
+captured beam-cone box, all with coherent `blend=0x0055`, coverage, and z-mode
+fields. H1 is refuted as a single-source consumer-state explanation. H3 is
+unavailable: the retail oracle has no screenshot or equivalent LLE `L_17F0`
+path. The known `filterVoiceSampleBlock+220` / `last-guest-pc=0x8000834c`
+SIGBUS remains the next actionable systematic M3 audit.
 
 ## Single next work unit
 
-Add one regeneration-safe RT64 consumer-side census in
-`lib/rt64/src/gbi/rt64_gbi_rdp.cpp`, immediately before the existing
-`state->rdp->drawTris(...)` call in `decodeTriangles`. Reuse
-`ROGUESQ_LOG_M4_TRI_DUMP` and its cap; gate rows to the hangar VI (`width=512`
-and `origin=0x006AB400` or `0x006AB800`), reset the row budget on origin
-change, and print the actual triangle screen bounds plus the active RT64
-other-mode H/L words and decoded `Z_CMP`, `Z_UPD`, `ZMODE`, `CVG_X_ALPHA`,
-`ALPHA_CVG_SEL`, and blender inputs. This is the actual RDP triangle consumer,
-not the stale-tail `0xD60` walker. Because this is under `lib/`, run
-`./submodule-patches/export.sh` after the edit and commit the refreshed patch
-artifacts in the same iteration.
+Complete one whole-idiom audit of `filterVoiceSampleBlock` at guest VRAM
+`0x8009D7D0` (syms entry size `0xEC`) and all three generated callers. Enumerate
+every caller argument setup, selector/table load, source-buffer base, and
+derived output address/length; classify each as fixed, caller-owned, table-
+indexed, or unbounded. Build one regeneration-safe batch probe covering the
+callee entry and every caller edge, with one row schema containing caller PC,
+voice/index bytes, source/output bases, requested span, and the range class.
+Do not add a guard or skip. The writer/legitimacy question is open: name the
+writer for every value before proposing any behavior change.
 
 ## Competing hypotheses and discriminating measurement
 
-- **H1-consumer-wrong:** a consumer-side triangle whose screen bounds cover
-  the beam has incompatible blend/z state, selecting H1.
-- **H1-consumer-correct:** the beam-covering consumer triangles have a
-  coherent translucent state (`Z_CMP`/`Z_UPD`/coverage/blender fields),
-  refuting H1 and leaving H3 as the only remaining explanation available to
-  this runtime/oracle pair.
-- **H1-consumer-unreached:** the existing DPC writer-attestation control is
-  live but `decodeTriangles` emits no hangar consumer rows, proving this is
-  not the actual path for the LLE triangle and requiring a different consumer
-  hook; it does not select H1 or H3.
+- **H-filter-local-range:** the callee's fixed filter arithmetic reaches outside
+  its caller-owned source/output span; selecting evidence is a callee row whose
+  effective range is invalid while the caller supplied a valid base.
+- **H-caller-contract:** one caller supplies a malformed voice record, selector,
+  base, or count; selecting evidence is a caller-specific invalid input before
+  the callee's fixed walk, with the other callers staying in-range.
+- **H-audio-host-or-stale-pc:** every guest range is in-range and the crash is
+  host decode/audio state or stale breadcrumb attribution; selecting evidence is
+  all rows passing the guest range contract plus a crash with no invalid guest
+  span.
 
-**Discriminator:** one build and one established hangar recipe with the DPC
-`[m4-tri]` control plus the new consumer rows. A row with bounds in the
-beam-cone region and an incompatible mode selects H1; compatible state on all
-beam-covering rows refutes H1; zero consumer rows with live DPC triangles
-selects the unreached-path outcome. Do not infer a mode from an opcode byte
-without its standard fields, and do not add a mitigation.
+**Discriminator:** one static enumeration plus one build/run carrying all three
+caller probes and the callee range calculation. A caller-specific bad input
+selects H-caller-contract; a callee-only bad effective span selects
+H-filter-local-range; all in-range rows leave only H-audio-host-or-stale-pc.
+The hangar-entry/control row must fire in the same run; a crash before that
+control is unevaluable and must be enqueued, not interpreted.
 
-## Exact run
+## Ground truth and exact commands
 
-Build with:
+Before building, re-read `tools/oracle/README.md` and use the retail positive
+controls only to verify the driven hangar phase; do not treat a null audio
+watch as evidence unless the whole-RDRAM control fires. Then enumerate and
+classify the complete generated idiom with:
+
+```sh
+rg -n "filterVoiceSampleBlock|0x8009D7D0|0x8000834C|drainMeshReleaseQueue" syms docs tools
+rg -n "voice|sample|selector|0x17C|0x88" RecompiledFuncs tools/fixup_game_funcs.py tools/fixup_factor5_ucode.py
+```
+
+Batch the probe through the regeneration path (`make_elf.py` -> N64Recomp ->
+`fixup_game_funcs.py` -> CMake), then build:
 
 ```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-Run from `build/` with the s1950 recipe, adding the reused dump flag:
-
-```sh
-env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M4_TRI_DUMP=1 ROGUESQ_M4_TRI_DUMP_CAP=500 ROGUESQ_M4_Y8000_WIDTH=512 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' zsh ../tools/probe.sh ../scratch/agent/soak_results/s1969_hangar_rdp_state 180 2
-```
-
-The known `filterVoiceSampleBlock+220` crash is acceptable only after the
-hangar positive control and consumer rows have been captured. If the crash
-prevents the consumer rows, record the scope as unevaluable and enqueue the
-recipe rather than chasing that known family.
-
-## Do not repeat
-
-- Do not scan `0xD60` for `0xB3`/`0xBE` or accept impossible `0xB9`/`0xBA`
-  operands as mode commands.
-- Do not rerun the H2 writer-attestation check or the parked M4 `Y=0x8000`
-  accumulator question.
-- Do not use a stopwatch or cross-run visual A/B; the gate is the hangar VI
-  origin and the same-run writer/consumer controls.
+Run from `build/` with the hangar recipe and a non-dot capture path; arm the
+existing passive breadcrumbs and SIGKILL watchdog through `tools/probe.sh`.
+The run must phase-gate on `width=512` and origin `0x006AB400`/`0x006AB800`,
+not on elapsed time. Do not repeat the consumer census or the `0xD60` mode
+scan; this unit is the complete `filterVoiceSampleBlock` idiom class.

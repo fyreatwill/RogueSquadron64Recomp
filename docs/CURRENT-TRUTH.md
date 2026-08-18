@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1968 (2026-08-18).
+detail. Reviewed through s1969 (2026-08-18).
 
 ## Current state
 
@@ -92,6 +92,17 @@ detail. Reviewed through s1968 (2026-08-18).
   and no mitigation applies. Next scope is the RT64 whole-RDP stream/draw
   state, not another `0xD60` opcode scan. Full detail: `PORTING-STATE.md`
   s1968.
+- **Hangar hologram-beam artifact: H1 consumer-state explanation REFUTED
+  (s1969, single-source).** The same-run DPC positive control saw 1,128 live
+  restaged triangles and the new RT64 consumer census reached its 500-row cap
+  at hangar VI 512/origin `0x006AB400`. Of 153 sampled consumer triangles whose
+  bounds overlapped the captured beam-cone box, all had the same coherent
+  coverage/blender state (`CVG_X_ALPHA=0`, `ALPHA_CVG_SEL=1`, `ZMODE=0`,
+  `Z_UPD=1`, `blend=0x0055`); 95 had `Z_CMP=1` and 58 had `Z_CMP=0`. The
+  consumer path is therefore reached and no incompatible draw mode was
+  isolated. The frame visibly retains the blue beam artifact, but the oracle
+  has no pixel witness for this LLE path, so H3 (the remaining pixel/coverage
+  explanation) is unavailable rather than selected. No mitigation applies.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -153,7 +164,7 @@ detail. Reviewed through s1968 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1968: the generated-symbol sweep (former #1) is now
+Re-ranked s1969: the generated-symbol sweep (former #1) is now
 effectively closed — 845 of 902 leftovers resolved in one session, the
 remaining 57 are RE/deliberate-hold, not metadata-sync work. Items below
 promote by one; all still need a new discriminator before they can be
@@ -167,15 +178,14 @@ a genuinely new angle rather than defaulting to sweep busywork.
 
 1. Hangar visual artifacts on the first live hangar frame (geometry
    cracks, blue tris, hologram layering). s1967 refuted H2 (malformed
-   triangle command) with writer attestation — the flagged commands were
-   unwritten stale DMEM, not a real defect. s1968's corrected H1 census found
-   live triangles but no valid `0xB9/0xBA` mode commands in the same `0xD60`
-   buffer, so H1 is not refuted or selected. Next step is a whole-RDP/RT64
-   draw-state correlation at the actual triangle consumer; do not repeat the
-   `0xD60` opcode scan or treat invalid operand matches as modes. Do not
-   conflate this with the parked M4 Y=`0x8000` question (different mechanism,
-   `y8000_any` stayed 0 in s1968 too). s1950 did not lengthen the hangar
-   window (still ~4s / 1 frame).
+   triangle command) with writer attestation, and s1969's consumer census
+   refuted H1 as a single-source result: beam-overlap triangles reached RT64
+   with coherent coverage/blender state. H3 remains unavailable because the
+   oracle has no screenshot or equivalent LLE `L_17F0` path. Do not add a
+   mode-state mitigation, repeat the `0xD60` opcode scan, or conflate this
+   with the parked M4 Y=`0x8000` question (different mechanism,
+   `y8000_any` stayed 0 in s1969 too). The first hangar window remains ~4s /
+   1 frame.
 2. Hangar SIGBUS `filterVoiceSampleBlock+220` / `0x8000834c` is a
    known family. Revisit only as a complete idiom-class audit.
 3. Keep audio closed unless a new independent lead reaches audio
@@ -220,6 +230,14 @@ screen-handler entry. Callee-side `prev_pc` attributes every present: eight
 ROM jals, of which `menuControllerInput` `0x800B8014` rises and
 `runInMissionFrame` `0x800FAD90` drops, net matching the extra (s1808 H2).
 VRAM jal/entry watches at overlay addresses are not a second source.
+
+**Hangar RDP consumer state.** s1969: with the DPC writer-attestation control
+live, `decodeTriangles` reached the actual `drawTris` consumer for 500 rows in
+the hangar origin `0x006AB400` window. The 153 rows overlapping the captured
+beam-cone box had `blend=0x0055`, `ZMODE=0`, `Z_UPD=1`, `CVG_X_ALPHA=0`, and
+`ALPHA_CVG_SEL=1`; the sample split was 95 `Z_CMP=1` / 58 `Z_CMP=0`. This is
+single-source evidence against an incompatible consumer mode, not pixel
+ground truth.
 
 ## Superseded conclusions
 
