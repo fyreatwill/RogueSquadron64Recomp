@@ -1,49 +1,47 @@
-# NEXT work unit (s1937) — walk interior after #8
+# NEXT work unit (s1938) — loop-top / recv1 after completed walk
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1936 selected **H-unlogged-walk-stuck**
+s1937 refuted H-synth-in-walk /
+H-later-slot / H-after-missed
 on the `#7/#8` / `menu-entry`
 siten=2 staller
-`s1936_recv2_walk_20260817-233803`.
-recv2 enter/exit n=2354 and
-walk n=2354 fire immediately
-after `#8` L405865. `[vi-cb-after]`
-stays at last logged n=2304
-(L404602, before `#8`). Zero
-recv2/walk n=2355. 45
-`musyxRenderVoiceSamples`
-`slot-sb` then `.ovl.menu` then
-`menu-entry` siten=2. H-recv2-starved
-and H-post-recv2-stuck REFUTED.
+`s1937_walk_interior_20260817-234929`.
+After `#8` the walk completes:
+recv2/walk n=2310, slot 9240
+`ptr=0x80003250`, slot 9241
+`ptr=0x8009123C`, synth-entry=
+exit n=2425, slot 9242/9243
+null, `[vi-cb-after]` n=2310,
+then `.ovl.menu` + `menu-entry`
+siten=2. Stall is the next
+`L_800198E8` / recv1 iteration.
 
-## Work unit — always-on slot / synth / after
+## Work unit — always-on loop + recv1
 
 One Debug rebuild, one `#7/#8`
-soak. Do **not** re-probe recv2.
-Do **not** force-zero.
+soak. Do **not** re-probe the
+walk interior. Do **not**
+force-zero.
 
 In `N64Recomp/fixup_game_funcs.py`
-and the live generated files,
-make these existing
-`ROGUESQ_LOG_AUDIOTICK_TRACE`
-sites **always-on** (drop the
-`n<40 || n%128==0` /
-`n<160 || n%512==0` stride),
-same silent-window reason as
-s1936 recv2/walk:
+and the live generated files:
 
-1. `[vi-cb-slot]` after the `lw`
-   at `L_80019B68` (`funcs_4.c`)
-2. `[synth-entry]` on
-   `musyxSynthFrame` entry
-3. `[synth-exit]` on
-   `musyxSynthFrame` return
-4. `[vi-cb-after]` before the
-   jump back to `L_800198E8`
+1. Make `[vi-cb-loop]` at
+   `L_800198E8` (`funcs_4.c`)
+   **always-on** (drop the
+   `n<40 || n%128==0` stride).
+2. Add always-on `[vi-cb-recv1]`
+   enter immediately before
+   `osRecvMesg_recomp` at
+   `0x800198F4` (mq already in
+   `$a0` = `0x80114388`) and
+   exit at `after_3`.
 
-Leave `[vi-cb-recv2]` /
-`[vi-cb-walk]` as they are
+Leave `[vi-cb-slot]` /
+`[synth-entry]` / `[synth-exit]` /
+`[vi-cb-after]` / `[vi-cb-recv2]`
+/ `[vi-cb-walk]` as they are
 (already always-on).
 
 Same-run positive control
@@ -53,36 +51,29 @@ Same-run positive control
   with `took_swap=1` twice
 - `slot-alloc` ends
   `0x8018D4A0 count=16`
-- `[vi-cb-slot]` fires from n=0
-  with at least one
-  `ptr=0x80003250` and one
-  `ptr=0x8009123C`
-- `[synth-entry]` and
-  `[synth-exit]` both fire
-  from n=0
+- `[vi-cb-loop]` fires from n=0
+- `[vi-cb-recv1]` enter/exit
+  fire from n=0 with
+  `mq=0x80114388`
 - `[vi-cb-after]` fires from n=0
+  and a post-`#8` after n=N
+  fires (s1937: N=2310)
 - `menu-entry` siten=2 AND
   `menu-spin` climbs
 - `#7` and `#8` fire
 
-Then, after `#8` / walk-start
-on that staller:
+Then, after that post-`#8`
+`[vi-cb-after]` n=N:
 
-- `[synth-entry]` increments
-  past the last pre-`#8` n AND
-  matching `[synth-exit]` does
-  not → **H-synth-in-walk**
-- `[synth-exit]` increments AND
-  a later non-null `[vi-cb-slot]`
-  `ptr` is entered AND
-  `[vi-cb-after]` does not
-  increment past the last
-  pre-`#8` value →
-  **H-later-slot**
-- four `[vi-cb-slot]` lines
-  for that walk (s1 0..3) AND
-  still no `[vi-cb-after]` →
-  **H-after-missed**
+- `[vi-cb-loop]` n=N+1 AND
+  `[vi-cb-recv1]` enter n=N+1
+  AND no matching recv1-exit →
+  **H-recv1-starved**
+- recv1-exit n=N+1 AND no
+  `[vi-cb-recv2]` n=N+1 →
+  **H-post-recv1-stuck**
+- no `[vi-cb-loop]` n=N+1 →
+  **H-loop-missed**
 
 Crash / #6-dead (no entry 2)
 = UNEVALUABLE — enqueue a
@@ -90,10 +81,9 @@ second copy of the same
 recipe, do not babysit.
 
 Join key is log order:
-`#8` vs last recv2-exit /
-vi-cb-walk / vi-cb-slot ptrs /
-synth-entry / synth-exit /
-vi-cb-after / menu-entry
+`#8` vs last after n=N /
+vi-cb-loop n=N+1 / recv1
+enter/exit / recv2 / menu-entry
 siten=2.
 
 Build from `build/` with
@@ -109,19 +99,16 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
-- The s1936 recv2/walk
+- The s1937 walk-interior
   three-way (closed:
-  H-unlogged-walk-stuck).
-- Treating the post-`#8`
-  stall as recv2-starved or
-  as stuck before
-  `L_80019B68`.
+  H-synth-in-walk /
+  H-later-slot /
+  H-after-missed).
+- Re-probing recv2 or the
+  4-slot walk after `#8`.
 - The s1932 three-way on
   synth-exit / vi-cb-after
-  at stride 128 (s1935
-  closed the logged split;
-  s1936 moved the stall
-  into the walk).
+  at stride 128.
 - Crash / #6-dead last-
   logged completion
   (s1932–s1934) as the

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1936 (2026-08-17).
+detail. Reviewed through s1937 (2026-08-17).
 
 ## Current state
 
@@ -519,6 +519,44 @@ detail. Reviewed through s1936 (2026-08-17).
   `{0x0, 0x80003250,
   0x8009123C}`. Next split
   is inside that walk.
+  **s1937**: always-on
+  `[vi-cb-slot]` /
+  `[synth-entry]` /
+  `[synth-exit]` /
+  `[vi-cb-after]` on
+  `s1937_walk_interior_20260817-234929`
+  (probe_rc=5, 184s, 0
+  crash, `#7/#8`,
+  `menu-entry` siten=2,
+  `menu-spin` 640000000,
+  `#10880`, 0 width=1024).
+  Same-run control passed:
+  tick 2/2/2; `took_swap=1`
+  twice; `slot-alloc` ends
+  `0x8018D4A0/16`; slot n=0
+  plus `ptr=0x80003250` and
+  `0x8009123C`; synth-entry/
+  exit/after fire from n=0.
+  Join: `#8` L420364 →
+  recv2 enter/exit n=2310 →
+  walk n=2310 → slot n=9240
+  `ptr=0x80003250` → slot
+  n=9241 `ptr=0x8009123C` →
+  synth-entry n=2425 → 45
+  `slot-sb` → synth-exit
+  n=2425 → slot n=9242/9243
+  `ptr=0` → after n=2310
+  L420419 → `.ovl.menu`
+  L420420 → `menu-entry`
+  siten=2 L420422. Zero of
+  those sites after entry 2.
+  **H-synth-in-walk /
+  H-later-slot /
+  H-after-missed REFUTED.**
+  The post-`#8` walk
+  completes. Stall is the
+  next `L_800198E8` / recv1
+  (`0x80114388`) iteration.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -572,34 +610,31 @@ detail. Reviewed through s1936 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **VI-cb stuck inside the
-   4-slot walk after `#8`
-   (s1936). H-unlogged-walk-
-   stuck selected: recv2
-   enter/exit n=2354 and
-   walk n=2354 fire after
-   `#8`; `[vi-cb-after]`
-   stays at 2304.** Next:
-   one Debug rebuild making
-   `[vi-cb-slot]`,
-   `[synth-entry]`,
-   `[synth-exit]`, and
-   `[vi-cb-after]` always-on
-   (same silent-window
-   reason as s1936 recv2),
-   then one `#7/#8` soak.
-   After `#8` / walk-start:
-   synth-entry and no
-   matching synth-exit →
-   H-synth-in-walk; synth-exit
-   and a later non-null
-   `vi-cb-slot` ptr with no
-   after → H-later-slot;
-   four slot lines (s1 0..3)
-   and still no after →
-   H-after-missed. Do not
-   force-zero. Do not
-   re-probe recv2. Ask (b)
+1. **VI-cb walk after `#8`
+   completes (s1937).
+   H-synth-in-walk /
+   H-later-slot /
+   H-after-missed REFUTED:
+   after n=2310 fires, then
+   `.ovl.menu` + `menu-entry`
+   siten=2.** Next: one
+   Debug rebuild making
+   `[vi-cb-loop]` always-on
+   and adding always-on
+   `[vi-cb-recv1]` enter/exit
+   around `osRecvMesg(0x80114388)`
+   at `0x800198F4`, then one
+   `#7/#8` soak. After the
+   post-`#8` `after` n=N:
+   loop n=N+1 and recv1-enter
+   with no recv1-exit →
+   H-recv1-starved; recv1-exit
+   and no recv2 n=N+1 →
+   H-post-recv1-stuck; no
+   loop n=N+1 → H-loop-missed.
+   Do not re-probe the walk
+   interior. Do not
+   force-zero. Ask (b)
    remains human-only. Still
    blocks item 3 (hangar/512)
    until a port run publishes
@@ -818,6 +853,19 @@ recv2 enter/exit n=2354
 and walk n=2354 both fire
 immediately after `#8`;
 `[vi-cb-after]` does not.
+Treating the post-`#8`
+walk as H-synth-in-walk
+(synth never returns),
+H-later-slot (a later
+non-null jalr never
+returns), or H-after-missed
+(four slots then no after)
+is superseded by s1937 —
+synth-exit n=2425, slots
+9242/9243 are null, and
+after n=2310 all fire
+before `.ovl.menu` /
+`menu-entry` siten=2.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -857,7 +905,12 @@ H-unlogged-walk-stuck (`#8` then
 recv2 enter/exit n=2354 then walk
 n=2354; after stays 2304;
 H-recv2-starved and
-H-post-recv2-stuck REFUTED) and s1926 selecting H-all-idx +
+H-post-recv2-stuck REFUTED) and s1937
+refuting H-synth-in-walk /
+H-later-slot / H-after-missed
+(after n=2310 completes the
+post-`#8` walk; stall is the
+next loop-top / recv1) and s1926 selecting H-all-idx +
 H-base-moved (idle `0x80169460`/ch=20 all
 zero; stuck `0x8018D4A0`/ch=16 `nzn/n →
 15/16` `byte=0x02`; H-one-idx and

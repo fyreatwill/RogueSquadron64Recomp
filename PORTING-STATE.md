@@ -91600,3 +91600,94 @@ after).
 Do not re-probe recv2. Do not
 force-zero. Ask (b) remains
 human-only.
+
+## Session 1937 (2026-08-17) — walk after #8 completes; stall is past after
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: one Debug rebuild making
+`[vi-cb-slot]`, `[synth-entry]`,
+`[synth-exit]`, and `[vi-cb-after]`
+always-on (drop the 160/512 and
+40/128 stride), then one `#7/#8`
+soak. After `#8` / walk-start on a
+`menu-entry` siten=2 staller:
+synth-entry past last pre-`#8` n
+and no matching synth-exit →
+H-synth-in-walk; synth-exit and a
+later non-null `vi-cb-slot` ptr
+with no after → H-later-slot;
+four slot lines (s1 0..3) and
+still no after → H-after-missed.
+
+Always-on because a silent window
+hid the single post-`#8` walk
+(s1932–s1936). Sites live in
+`N64Recomp/RecompiledFuncs/funcs_4.c`,
+`funcs_24.c`, and
+`N64Recomp/fixup_game_funcs.py`.
+
+`scratch/agent/soak_results/s1937_walk_interior_20260817-234929/run.log`
+(probe_rc=5, 184s, 0 crash): the
+`#7/#8` / `menu-entry` siten=2
+flavor. `#7` L418371 and `#8`
+L420364 are `applyPendingViChanges`.
+`menu-entry` siten=2 L420422 after
+`.ovl.menu` DMA L420420. `menu-spin`
+climbs to siten=640000000. Zero
+`menu-jal` / `menu-exit` siten=2.
+Zero width=1024. `update_screen`
+`#10880` origin `0x0062BD00`.
+
+Same-run positive control passed:
+tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice (swap n=2 and
+n=3); `slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`[vi-cb-slot]` n=0 (null) then
+n=4 `ptr=0x80003250` and n=9
+`ptr=0x8009123C`; `[synth-entry]`
+and `[synth-exit]` n=0;
+`[vi-cb-after]` n=0.
+
+Join key (log order):
+
+- `#8` L420364
+- `[vi-cb-recv2]` enter/exit n=2310
+  L420365/420366 `mq=0x80128D10`
+- `[vi-cb-walk]` n=2310 L420367
+- `[vi-cb-slot]` n=9240
+  `ptr=0x80003250` L420368
+- `[vi-cb-slot]` n=9241
+  `ptr=0x8009123C` L420369
+- `[synth-entry]` n=2425 L420370
+- 45 `slot-sb`
+  `musyxRenderVoiceSamples`
+- `[synth-exit]` n=2425 L420416
+- `[vi-cb-slot]` n=9242/9243
+  `ptr=0` L420417/420418
+- `[vi-cb-after]` n=2310 L420419
+- `.ovl.menu` L420420
+- `menu-entry` siten=2 L420422
+
+Zero slot/synth/after/recv2/walk
+after entry 2. Last
+`[vi-cb-loop]` n=2304 L420157
+(still strided; n=2311 would be
+silent).
+
+**H-synth-in-walk REFUTED**
+(matching exit n=2425).
+**H-later-slot REFUTED** (later
+slots are null; after n=2310
+fires). **H-after-missed REFUTED**
+(four slot lines then after).
+The post-`#8` walk completes.
+The stall is the next
+`L_800198E8` / recv1
+(`osRecvMesg(0x80114388)`)
+iteration — still silent under
+the loop stride.
+
+Do not re-probe the walk
+interior. Do not force-zero.
+Ask (b) remains human-only.
