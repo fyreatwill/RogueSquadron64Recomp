@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1932 (2026-08-17).
+detail. Reviewed through s1933 (2026-08-17).
 
 ## Current state
 
@@ -394,6 +394,41 @@ detail. Reviewed through s1932 (2026-08-17).
   Sites are live; queued
   the `#7/#8` / entry-2
   flavor hunt.
+  **s1933**: consumed that
+  hunt
+  (`s1932_entry2_synth_exit_20260817-230707/run.log`,
+  probe_rc=4, ~24s).
+  Catalogued
+  `fillSampleStreamRange+336`
+  SIGBUS last-guest-pc
+  `0x8000b650` (stack:
+  `viRetraceHandlerThread` →
+  `musyxSynthFrame` →
+  `musyxMixActiveVoices` →
+  `musyxRenderVoiceSamples`).
+  Same-run control passed:
+  tick 2/2/2; `took_swap=1`
+  twice; `slot-alloc` x3
+  ending `0x8018D4A0/16`;
+  `[synth-entry]`/`[synth-exit]`
+  n last=1152;
+  `[vi-cb-loop]`/`[vi-cb-after]`
+  n last=1024 (sites not
+  missed). Zero `menu-entry`
+  siten=2 (only siten=1 then
+  `menu-exit`); `osViSetMode`
+  ends at `#6`; last
+  `update_screen` `#1280`
+  origin `0x0062BD00`. After
+  `synth-exit` n=1152: 128
+  `slot-sb` then crash
+  inside a later unlogged
+  synth. **UNEVALUABLE** for
+  the entry-2 three-way
+  split. Last-logged
+  completion also holds on
+  this crash flavor. Queued
+  two more `#7/#8` hunts.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -453,11 +488,12 @@ detail. Reviewed through s1932 (2026-08-17).
    `[vi-cb-after]` are live
    (s1932).** Consume the
    queued
-   `s1932_entry2_synth_exit`
-   soak — do not rebuild, do
-   not change the stride.
-   After `menu-entry` siten=2
-   on a `#7/#8` staller: no
+   `s1933_entry2_synth_exit`
+   / `_b` soaks — do not
+   rebuild, do not change
+   the stride. After
+   `menu-entry` siten=2 on a
+   `#7/#8` staller: no
    `synth-exit` for the last
    logged `[synth-entry]`
    (s1931 n=2560 is
@@ -469,11 +505,15 @@ detail. Reviewed through s1932 (2026-08-17).
    fire and `[vi-cb-loop]`
    stays frozen →
    H-recv-starved. Crash
-   family (no entry 2) and
-   the #6-dead flavor (s1932
-   180s: last logged n=1024
-   completed, no `#7/#8`)
-   are UNEVALUABLE for this
+   family (s1933: last
+   logged n=1152 completed,
+   then SIGBUS inside a
+   later unlogged synth; no
+   entry 2) and the #6-dead
+   flavor (s1932 180s: last
+   logged n=1024 completed,
+   no `#7/#8`) are
+   UNEVALUABLE for this
    split — enqueue, do not
    babysit, do not re-read
    them as the entry-2
@@ -656,6 +696,13 @@ completion as the entry-2
 answer is not licensed —
 wrong flavor, and the next
 127 stride slots are silent.
+Treating the s1933 crash-
+flavor last-logged n=1152
+completion the same way is
+not licensed — no
+`menu-entry` siten=2, and
+the crash is a later
+unlogged `musyxSynthFrame`.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -973,6 +1020,13 @@ H-synth-never-returned and
 H-stuck-later-slot for the
 last logged n=1024 on the
 #6-dead 180s flavor (entry-2
+split still UNEVALUABLE)
+and s1933 is the same last-
+logged completion on the
+crash flavor (n=1152
+entry=exit, n=1024
+loop=after; SIGBUS inside a
+later unlogged synth; entry-2
 split still UNEVALUABLE)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs

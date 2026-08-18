@@ -1,44 +1,57 @@
-# NEXT work unit (s1933) — consume entry-2 soak
+# NEXT work unit (s1934) — consume entry-2 soak
 
 HYPOTHESIS-ID: vi1024-guest-never-requests
 
-s1932 landed `[synth-exit]` and
-`[vi-cb-after]` (live in the
-binary; same AUDIOTICK_TRACE
-stride as `[synth-entry]` /
-`[vi-cb-loop]`). Same-run
-control passed (both fire from
-n=0). The 180s inline run was
-the **#6-dead** flavor (no
-`#7/#8`, no `menu-entry`
-siten=2): last logged n=1024
-on entry/exit/loop/after
-completed, so H-synth-never-returned
-and H-stuck-later-slot are
-REFUTED for that logged
-iteration. That is **not** the
-s1931 entry-2 answer.
+s1933 consumed queued
+`s1932_entry2_synth_exit`.
+It was the catalogued
+`fillSampleStreamRange+336`
+SIGBUS crash family
+(probe_rc=4, ~24s, last-guest-pc
+`0x8000b650`). Same-run
+control passed (tick 2/2/2,
+`took_swap=1` twice,
+`slot-alloc` ends
+`0x8018D4A0/16`,
+`[synth-exit]` n last=1152,
+`[vi-cb-after]` n last=1024).
+Zero `menu-entry` siten=2;
+`osViSetMode` ends at `#6`.
+Last logged synth completed;
+crash is inside a later
+unlogged `musyxSynthFrame`.
+**UNEVALUABLE** for the
+entry-2 three-way split.
+s1932 already closed last-logged
+completion on the #6-dead
+flavor; this closes it on the
+crash flavor too. Still not
+the s1931 entry-2 answer.
 
 Do **not** rebuild.
 Do **not** change the stride.
-Do **not** re-run s1932's
-#6-dead log as if it were
-entry 2. No force-zero.
+Do **not** re-read the crash
+or #6-dead logs as entry 2.
+No force-zero.
 
-## Work unit — consume the queued soak
+## Work unit — consume the queued soaks
 
 Read the new
 `scratch/agent/SOAK-RESULTS.md`
-line for
-`s1932_entry2_synth_exit`
+lines for
+`s1933_entry2_synth_exit`
+and/or
+`s1933_entry2_synth_exit_b`
 (enqueued this session; loop
-runs it between iterations).
-Log:
-`scratch/agent/soak_results/s1932_entry2_synth_exit_*/run.log`.
+runs up to two between
+iterations). Logs:
+`scratch/agent/soak_results/s1933_entry2_synth_exit_*/run.log`
+and
+`scratch/agent/soak_results/s1933_entry2_synth_exit_b_*/run.log`.
 
-If the queue line is missing,
-the soak did not run — enqueue
-is already in
+If both queue lines are
+missing, the soaks did not
+run — enqueue is already in
 `scratch/agent/soak_queue/`
 or `done/`; do not babysit a
 repeat.
@@ -84,6 +97,10 @@ UNEVALUABLE — enqueue, do not
 babysit. #6-dead (no `#7/#8`,
 no entry 2) = UNEVALUABLE for
 this split — same, enqueue.
+s1932 last-logged n=1024
+(#6-dead) and s1933
+last-logged n=1152 (crash)
+are closed for those flavors.
 
 Join key is log order: first
 `menu-entry` siten=2 vs last
@@ -100,6 +117,10 @@ Four-step already complete in s1906–s1917.
 
 ## Do not repeat
 
+- Last-logged n=1152 completion
+  on the crash flavor (s1933)
+  — closed for that flavor;
+  not the entry-2 answer.
 - Last-logged n=1024 completion
   on the #6-dead flavor (s1932)
   — closed for that flavor;

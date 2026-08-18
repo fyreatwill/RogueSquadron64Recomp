@@ -496,3 +496,6 @@
 20260817-s1932-att1 | s1932_synth_exit_after_slots UNEVALUABLE | catalogued fillSampleStreamRange+336 SIGBUS last-guest-pc=0x8000b650 before menu-entry siten=2; new sites fired (synth-exit n last=1024, vi-cb-after n last=896); tick 2/2/2 slot-alloc 0x8018D4A0/16.
 20260817-225807 | s1932_synth_exit_after_slots | rc=5 | 182s | scratch/agent/soak_results/s1932_synth_exit_after_slots_20260817-225807/run.log
 20260817-s1932 | s1932_synth_exit_after_slots ADVANCED | 180s #6-dead staller (no #7/#8, no menu-entry 2); last logged synth-entry=exit=loop=after n=1024; 144 slot-sb after after-1024 then mix death; update_screen #1216->#10816; H-synth-never-returned / H-stuck-later-slot REFUTED for last logged n; entry-2 split UNEVALUABLE.
+20260817-230707 | s1932_entry2_synth_exit | rc=4 | 24s | scratch/agent/soak_results/s1932_entry2_synth_exit_20260817-230707.log
+
+20260817-s1933 | s1932_entry2_synth_exit UNEVALUABLE | catalogued fillSampleStreamRange+336 SIGBUS last-guest-pc=0x8000b650 before menu-entry siten=2; synth-entry=exit n last=1152; vi-cb-loop=after n last=1024; tick 2/2/2 slot-alloc 0x8018D4A0/16; 0 #7/#8; 128 slot-sb after exit-1152 then crash in later unlogged synth. scratch/agent/soak_results/s1932_entry2_synth_exit_20260817-230707/run.log

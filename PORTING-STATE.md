@@ -91160,3 +91160,109 @@ Do not rebuild. Do not
 change the stride. Do not
 re-run a reachability-only
 `s790`.
+
+## Session 1933 (2026-08-17) — crash-family UNEVALUABLE for entry-2 synth-exit split
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: consume the
+queued `s1932_entry2_synth_exit`
+soak (no rebuild, no stride
+change). After `menu-entry`
+siten=2 on a `#7/#8`
+staller: no matching
+`synth-exit` →
+H-synth-never-returned;
+`synth-exit` and no
+`vi-cb-after` →
+H-stuck-later-slot; both
+fire and `[vi-cb-loop]`
+stays frozen →
+H-recv-starved.
+
+Consumed
+`scratch/agent/soak_results/s1932_entry2_synth_exit_20260817-230707/run.log`
+(probe_rc=4, ~24s). Catalogued
+`fillSampleStreamRange+336`
+SIGBUS last-guest-pc=`0x8000b650`.
+Crash stack:
+`viRetraceHandlerThread` →
+`musyxSynthFrame` →
+`musyxMixActiveVoices` →
+`musyxRenderVoiceSamples` →
+`fillSampleStreamRange`.
+Zero `menu-entry` siten=2
+(only siten=1 → `menu-spin`
+siten=1 → `menu-jal` siten=1
+→ `menu-exit` siten=1).
+`osViSetMode` ends at `#6`
+(`initVideoSubsystem`
+`0x80128DA0`). Zero `#7/#8`,
+zero width=1024. Last
+`update_screen` `#1280`
+origin `0x0062BD00`.
+
+Same-run positive control
+passed: tick-entry/jal/exit
+2/2/2; `took_swap=1` twice
+(swap n=2 and n=3);
+`slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`[synth-entry]` and
+`[synth-exit]` both fire
+from n=0 and last-match at
+n=1152; `[vi-cb-loop]` and
+`[vi-cb-after]` last-match
+at n=1024 (sites not
+missed). Last
+`[vi-cb-slot]` n=4096
+`ptr=0x80003250`.
+
+After `synth-exit` n=1152:
+11 `attack-jal`
+`caller=tick` then 128
+`slot-sb`
+`musyxRenderVoiceSamples`
+(n=10158..10285, 8×16-voice
+passes) then
+`[audtask-dispatch]` n=1024
+then the SIGBUS. The crash
+is inside a later unlogged
+`musyxSynthFrame`, not a
+hang on the last logged
+iteration.
+
+This refutes
+H-synth-never-returned for
+the last logged synth
+(n=1152 has a matching
+`synth-exit`) and refutes
+H-stuck-later-slot for the
+last logged walk
+(`vi-cb-after` n=1024
+fired) on the **crash**
+flavor. s1932 already
+refuted those for last
+logged n on the #6-dead
+flavor. The entry-2
+three-way split is
+**UNEVALUABLE** this run —
+no `menu-entry` siten=2.
+Do not treat the crash-
+flavor last-logged
+completion as the s1931
+entry-2 answer.
+
+Next discriminator is
+unchanged and still live in
+the binary: the same two
+sites on the `#7/#8` /
+`menu-entry` siten=2 flavor
+(s1931 last synth n=2560 is
+on-stride). Enqueued
+`scratch/agent/soak_queue/s1933_entry2_synth_exit.sh`
+and
+`scratch/agent/soak_queue/s1933_entry2_synth_exit_b.sh`
+(loop runs up to two). Do
+not rebuild. Do not change
+the stride. Do not re-run a
+reachability-only `s790`.
