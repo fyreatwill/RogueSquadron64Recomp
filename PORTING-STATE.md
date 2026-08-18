@@ -92408,3 +92408,101 @@ probe sends.
 default-off. Do not
 force-zero slots. Ask (b)
 remains human-only.
+
+## Session 1945 (2026-08-18) — selected H-poll-stopped; siServiceThread stops after Start #4
+
+`HYPOTHESIS-ID: hangar-after-title-1024`.
+Landed always-on `[pad-sdl]`
+on `SDL_KEYDOWN`/`SDL_KEYUP`
+for `SDLK_RETURN`/`SDLK_z`
+plus a `site=poll` heartbeat
+in `poll_input()` (rate-limit
+first 16 then every 32;
+`vi_width`/`origin` from
+`rs64_vi_committed_*`). No
+`lib/` edit. Debug rebuild.
+One soak: `ROGUESQ_SPIN_YIELD=1`
+plus s1943 eleven-Start from
+boot and the same passive
+instruments as s1944.
+
+Artifact:
+`scratch/agent/soak_results/s1945_pad_sdl_after_title_20260818-013155/run.log`
+(probe_rc=5, 180s, 0 crash,
+last width 1024).
+
+Same-run positive control
+passed before any late-key
+claim: tick-entry/jal/exit
+3/3/3 with `took_swap=1`
+three times; third
+`slot-alloc` `new=0x8018D4A0
+count=16`; `[spin-yield]`
+n=1/2; `[phase] 1024
+origin=0x00790400` at 14.1s
+`#775` (L139025);
+`[pad-sdl]` Return KEYDOWN
+n=1,3 and `[pad-host]`
+Start n=1,2 **before** that
+line (`vi_width=640`).
+
+After that 1024:
+`[pad-sdl]` Return down n=5
+(L193822) and n=7
+(L280681), matching
+`[pad-host]` Start n=3 and
+n=4, both
+`vi_width=1024
+origin=0x00790400`. All 11
+probe `[keys]` printed
+(6s through 56s). Last
+`[pad-sdl] site=poll` is
+n=1408 at
+`update_screen #1408`
+(L289965); last
+`[host-start]` is n=1309
+edge 1→0 (L283427); 0
+further key/poll/host
+through `#10816` still
+`0x00790400`/1024. 0
+origin `0x006AB400`/`800`.
+147 later `[vi]` lines
+after the last poll.
+
+This selects
+H-poll-stopped for the
+missing 7 Starts (26–56s).
+This refutes
+H-sdl-late-drop (poll
+heartbeat would have kept
+climbing through 26–56s),
+H-poll-input-only
+(`[pad-sdl] site=key`
+would have climbed while
+pad-host stayed at n=4),
+and H-title-through-window
+(both would have climbed
+through 56s).
+H-title-ignores-start
+still holds for the two
+Starts that did reach
+title 1024.
+
+Static second line: the
+only generated
+`osContStartReadData`
+call is `siServiceThread`
+`0x80002E10`. After that
+jal it RecvMesg →
+GetReadData →
+`processPolledControllerData`
+→ SendMesg →
+`L_80002EA0`. Next
+discriminator is which
+of those sites is the
+last one after Start #4.
+
+`ROGUESQ_SPIN_YIELD` stays
+default-off. Do not
+force-zero slots. Ask (b)
+remains human-only.

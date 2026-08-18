@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1944 (2026-08-18).
+detail. Reviewed through s1945 (2026-08-18).
 
 ## Current state
 
@@ -770,6 +770,44 @@ detail. Reviewed through s1944 (2026-08-18).
   n=2000). Rice hangar is
   38.4s — later Starts were
   never polled.
+  **s1945**: landed `[pad-sdl]`
+  Return/Z KEYDOWN/KEYUP plus
+  `site=poll` heartbeat in
+  `poll_input`. Same recipe
+  (`s1945_pad_sdl_after_title_20260818-013155/run.log`,
+  probe_rc=5, 180s, 0 crash).
+  Control passed: tick 3/3/3
+  `took_swap=1` three times;
+  third `slot-alloc`
+  `0x8018D4A0/16`;
+  `[spin-yield]` n=1;
+  `[phase] 1024
+  origin=0x00790400` at 14.1s
+  `#775`; `[pad-sdl]` Return
+  KEYDOWN n=1,3 and
+  `[pad-host]` Start n=1,2
+  **before** that 1024.
+  After: `[pad-sdl]` Return
+  down n=5,7 and
+  `[pad-host]` Start n=3,4
+  on title 1024 (16s/21s);
+  last `[pad-sdl] site=poll`
+  n=1408 at
+  `update_screen #1408`;
+  last `[host-start]` n=1309;
+  0 further key/poll/host
+  through `#10816`. All 11
+  winctl Starts printed.
+  0 hangar origin.
+  **H-poll-stopped SELECTED**
+  for the missing 7 Starts.
+  H-sdl-late-drop /
+  H-poll-input-only /
+  H-title-through-window
+  REFUTED. Unique
+  `osContStartReadData`
+  caller is `siServiceThread`
+  `0x80002E10`.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -823,27 +861,26 @@ detail. Reviewed through s1944 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-1. **H-title-ignores-start
-   SELECTED (s1944).** Two
-   post-1024 `[pad-host]`
-   Starts carry
-   `vi_width=1024
-   origin=0x00790400` and the
-   screen stays there through
-   `#10816`. H-late-keys-dropped
-   REFUTED for those edges.
-   Next split is why only 4/11
-   Starts were consumed
-   (pad poll dies after n=1309,
-   before Rice's 38.4s hangar
-   window) vs the title truly
-   ignoring a live pad for the
-   whole hangar window. Do not
-   repeat eleven-Start or
-   from-phase-1024 Start/A as
-   hangar recipes. Yield stays
-   default-off. Ask (b) remains
-   human-only.
+1. **H-poll-stopped SELECTED
+   (s1945).** `poll_input` and
+   `get_n64_input` die after
+   Start #4 (`site=poll` last
+   n=1408 at `#1408`;
+   `[host-start]` last n=1309).
+   Starts 26–56 never become
+   `[pad-sdl]` or `[pad-host]`.
+   H-title-ignores-start still
+   holds for the two Starts
+   that did reach title 1024.
+   Next split is why unique
+   caller `siServiceThread`
+   `0x80002E10` stops issuing
+   `osContStartReadData`.
+   Do not repeat eleven-Start
+   or from-phase-1024 Start/A
+   as hangar recipes. Yield
+   stays default-off. Ask (b)
+   remains human-only.
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -953,6 +990,22 @@ edges reached `get_n64_input`,
 and 2 of them were a live
 title-1024 pad word the screen
 ignored.
+Treating the missing 7 Starts
+as maybe SDL/focus drop
+(H-sdl-late-drop), as
+`poll_input` draining KEYDOWN
+without `get_n64_input`
+(H-poll-input-only), or as
+both seeing Starts through
+56s (H-title-through-window)
+is superseded by s1945 —
+`[pad-sdl] site=poll` last
+n=1408 at `#1408` then
+silence while
+`update_screen` climbed to
+`#10816`; pad-sdl and
+pad-host died together
+after Start #4.
 Treating s844 `#8`
 `applyPendingViChanges` as the 1024 function submitting 640
 is superseded by s1919 — `#8` is `0x80128E40`; `#10` is
@@ -1447,6 +1500,16 @@ and leftover `func_800F287C` became
 `getObjectDetailLevel` (`0x800F287C`, `0xC`)
 and leftover `func_800F2888` became
 `initActorMotionParams` (`0x800F2888`, `0x100`)
+and s1945 selected H-poll-stopped
+for the missing 7 eleven-Start
+edges (`[pad-sdl] site=poll`
+last n=1408 at `#1408`;
+pad-sdl and pad-host die
+together after Start #4;
+H-sdl-late-drop /
+H-poll-input-only /
+H-title-through-window
+REFUTED)
 and s1927 selected H-keyon for the slot+0
 `0x02` writer (`musyxRenderVoiceSamples`
 `0x800909F4`; H-alloc-dirty and H-other

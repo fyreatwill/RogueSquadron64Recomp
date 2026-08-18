@@ -2917,6 +2917,21 @@ static void start_memwp_watchdog() {
 static SDL_GameController* controller = nullptr;
 
 static void poll_input() {
+    // Heartbeat: a quiet [pad-sdl] site=key after title 1024 is
+    // H-poll-stopped if this dies, H-sdl-late-drop if it keeps climbing.
+    {
+        static int s_poll_n = 0;
+        ++s_poll_n;
+        if (s_poll_n <= 16 || (s_poll_n % 32) == 0) {
+            fprintf(stderr,
+                "[pad-sdl] site=poll n=%d vi_width=%u origin=0x%08X\n",
+                s_poll_n,
+                (unsigned)rs64_vi_committed_width(),
+                (unsigned)rs64_vi_committed_origin());
+            fflush(stderr);
+        }
+    }
+
     SDL_Event e;
     // On macOS only the main thread may pump Cocoa events (update_gfx does);
     // here we must only dequeue already-pumped events.
@@ -2925,6 +2940,22 @@ static void poll_input() {
             fprintf(stderr, "[main] SDL_QUIT received, exiting\n");
             fflush(stderr);
             exit(EXIT_SUCCESS);
+        }
+        if ((e.type == SDL_KEYDOWN || e.type == SDL_KEYUP) &&
+            (e.key.keysym.sym == SDLK_RETURN || e.key.keysym.sym == SDLK_z)) {
+            static int s_pad_sdl_n = 0;
+            ++s_pad_sdl_n;
+            if (s_pad_sdl_n <= 16 || (s_pad_sdl_n % 32) == 0) {
+                fprintf(stderr,
+                    "[pad-sdl] site=key n=%d ev=%s key=%s repeat=%d vi_width=%u origin=0x%08X\n",
+                    s_pad_sdl_n,
+                    (e.type == SDL_KEYDOWN) ? "down" : "up",
+                    (e.key.keysym.sym == SDLK_RETURN) ? "return" : "z",
+                    e.key.repeat ? 1 : 0,
+                    (unsigned)rs64_vi_committed_width(),
+                    (unsigned)rs64_vi_committed_origin());
+                fflush(stderr);
+            }
         }
         if (e.type == SDL_CONTROLLERDEVICEADDED) {
             if (!controller) {
