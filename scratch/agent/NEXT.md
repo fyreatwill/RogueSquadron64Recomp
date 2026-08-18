@@ -1,95 +1,98 @@
-# NEXT work unit (s1968) — hangar hologram-beam artifact: writer vs stale-read
+# NEXT work unit (s1968) — hangar hologram-beam artifact: H1 blend/z census
 
 HYPOTHESIS-ID: hangar-hologram-beam-artifact
 
-## What s1967 found
+## What s1967 settled
 
-Extended `rs64_m4_y8000_flush` (`src/rsp/dpc_bridge.cpp`) to check
-`YH<=YM<=YL` ordering and degeneracy on EVERY flushed `0xC8`-class Fill
-Triangle in the hangar/512 gate, not just the (closed) M4 Y=`0x8000`
-subset. Result, captured in
-`scratch/agent/soak_results/s1968_hangar_tri_dump_20260818-085342/run.log`:
+H2 (a malformed/corrupted triangle command reaching the RDP queue) is
+**REFUTED** for the hangar hologram-beam visual artifact. Built a
+writer-attestation hook at the actual `L_1930` header-byte store
+(`sb $10, 0x0($16)`, `tools/fixup_factor5_ucode.py` Fixup 21 +
+`rs64_m4_y8000_store` in `src/rsp/dpc_bridge.cpp`) that marks a
+per-offset `stored[0x1000]` bitmap, cleared after each flush drains
+`[0xD60, end)`. Result
+(`scratch/agent/soak_results/s1968_hangar_tri_dump_20260818-090536/`):
+every one of 14 sampled `YH<=YM<=YL`-violating "triangle" commands had
+`stored=0` (never written that cycle), while every ordinary
+well-formed triangle showed `stored=1` (same-run positive control that
+the attestation bitmap actually works). The commands flagged bad in
+s1967's first pass were reading stale, previously-used DMEM bytes that
+`r16`'s write-pointer happened to still cover — not a real defect.
+Do not re-open H2 without a new, different anomaly (this exact
+instrument is now closed on this question).
 
-- `tri_degenerate` stayed 0 throughout — no zero-height triangles.
-- `tri_order_bad` reaches exactly 1 per gate-window across most of ~700
-  sampled heartbeats in the ~4s hangar capture. Always the SAME
-  pattern: one command at a variable offset in `0xE80-0xEA8` (about
-  nine 32-byte slots past the flush region's start at `0xD60`), header
-  byte varying frame to frame but always validly `0xC8-0xCF`, with
-  `YL`/`YM`/`YH`/edge fields at implausible magnitudes (thousands of
-  pixels as signed s10.2) and a real ordering violation.
+## What's still open
 
-This did NOT select H2. Two explanations survive and the current
-instrument can't split them:
-- (a) a genuinely malformed/corrupted triangle command reaches the RDP
-  queue for this draw (real H2, and plausibly the visual spike defect).
-- (b) the scanned range `[0xD60, end)` — `end` derived from the `r16`
-  write-pointer at flush time — includes bytes past what this frame
-  actually wrote. If `r16` ever advances further than real stores (a
-  narrower, previously-untested claim; `docs/M4-ACCUMULATOR-GROUND-
-  TRUTH.md`'s H-dead-store refutation covered the 640-attribution case,
-  not this later multi-triangle-per-flush hangar case), the walker
-  would read stale leftover bytes from a differently-shaped earlier
-  command and misinterpret them as a new triangle header purely by
-  chance landing in `0xC8-0xCF`.
+- **H1 (blend/z-compare mismatch).** RT64's HLE may set the wrong RDP
+  blend mode or z-compare state for the beam-cone draw. The Fill
+  Triangle command's own fields (checked in s1967) carry no blend/z
+  information — that lives in separate `SETOTHERMODE_L_EX` (`0xB3`)
+  and `SETOTHERMODE_H_EX` (`0xBE`) commands per
+  `docs/F5-UCODE-REFERENCE.md`'s command table. Untested so far.
+- **H3 (legitimate retail design).** Still unresolvable by
+  instrumentation — confirmed twice now (s1967) that the oracle has no
+  screenshot capability and its RSP-HLE plugin never executes guest
+  `L_17F0`, so there is no independent pixel or geometry ground truth
+  to check this against. Do not keep re-confirming this; it's settled
+  as "cannot check," not "assumed false."
 
-ORIGIN not named (ambiguous between writer and stale-read) — iron rule
-11 blocks any mitigation until this is settled. Do not add a skip/guard
-for this offset without first doing the check below.
+## Discriminator to build next (H1 probe)
 
-## Discriminating measurement to build next
+The M4/`0xD60` flush walker (`rs64_m4_y8000_flush`) only recognizes
+`0xC8`-class (`0xC8-0xCF`) triangle headers and skips everything else
+by 8 bytes. Extend it (or add a sibling hook) to ALSO recognize and
+dump `SETOTHERMODE_L_EX`/`SETOTHERMODE_H_EX`-class RDP commands in the
+same hangar-gated `[0xD60, end)` stream — these are standard 8-byte RDP
+commands (opcode + mask/set words), not part of the F5-specific
+inline-data commands `docs/F5-UCODE-REFERENCE.md` warns about (that
+warning is about the *original* F5 display list, upstream of this
+restage buffer, which by s1840/s1856/s1967 is established to already
+be plain RDP-format bytes).
 
-Tag the DMEM scratch region so a stale read is directly distinguishable
-from a fresh write:
-1. Immediately after each `SP_WR_LEN` DMA that drains `[0xD60, r16)`
-   (the same site `rs64_m4_y8000_flush` is called from), memset the
-   drained range to a fixed sentinel byte (e.g. `0xEE`) BEFORE the next
-   frame's restage writes begin. This requires finding the actual
-   drain/reset point in the generated ovl20 `L_112C`-equivalent flush
-   path (see `docs/M4-ACCUMULATOR-GROUND-TRUTH.md` for the site names)
-   or, more simply, sentinel-fill the buffer once at hangar-gate entry
-   and re-fill everything up to the PREVIOUS frame's `end` right after
-   each flush is processed — either gives the same discriminating
-   signal.
-2. In `rs64_m4_y8000_flush`, when a `tri_order_bad` hit is found, check
-   whether the bytes at that offset still carry any sentinel byte in a
-   position `L_17F0` would have overwritten if a real store happened
-   this frame (e.g. the unused padding byte at `off+1`, which `L_17F0`
-   per s1840 does not write). Sentinel present == (b) stale-read
-   confirmed, no writer bug. Sentinel absent == real bytes were stored
-   here this frame == (a) selected, promote to a "who wrote this
-   specific offset" hunt (watch DMEM `0xE80-0xEA8` writes directly with
-   an `RSP_MEM` write-side hook, restricted to the hangar gate).
-3. Same-run positive control: a deliberately UN-drained slot (or the
-   known-good `0xD60` triangle in the same flush) must show sentinel
-   absent, proving the tagging mechanism actually marks fresh writes.
-
-Run with the existing hangar recipe (`scratch/agent/soak_queue/done/
-s1950_hangar_yield_repro_*.sh` as template, add
-`ROGUESQ_LOG_M4_TRI_DUMP=1`). Same ~4s window budget; do not expect the
-crash timing to change.
+1. Identify the RDP opcode bytes for `SETOTHERMODE_L`/`SETOTHERMODE_H`
+   in standard hardware encoding (not the F5-custom `_EX` wrapper,
+   which is what F5Rogue.cpp's ucode-side handler consumes before
+   restage — the RESTAGED byte in this buffer should be the plain RDP
+   opcode). Cross-check against `docs/F5-UCODE-REFERENCE.md` and, if
+   needed, a quick grep of RT64's `rt64_gbi_f3dfactor5.cpp` HLE path
+   for how it encodes these after translation.
+2. Add a dump (reuse the `ROGUESQ_LOG_M4_TRI_DUMP` gate or a new flag)
+   that logs every `SETOTHERMODE` command's mode bits alongside the
+   existing triangle dump, so blend/z-compare state can be read
+   directly adjacent to the triangle commands in stream order —
+   the state active when the beam-cone triangle(s) draw is whatever
+   the most recent preceding `SETOTHERMODE` set.
+3. Same hangar recipe (`scratch/agent/soak_queue/done/
+   s1950_hangar_yield_repro_*.sh` as template, add the new dump flag).
+   Same ~4s window budget.
+4. Compare the blend/z mode active around the triangles at the known
+   `0xE80`-region area (now confirmed stale/irrelevant — the REAL
+   beam-cone triangles are elsewhere in the stream, likely near
+   `0xD60` given most triangles land there) against what a correctly
+   alpha-blended translucent primitive requires (`Z_CMP`/`Z_UPD` off
+   or blended, `CVG_X_ALPHA`/`ALPHA_CVG_SEL` set appropriately per
+   standard RDP other-modes semantics) — a mismatch selects H1.
 
 ## If this doesn't discriminate cleanly in one session
 
-Per iteration budget rule 8: this is the SAME hypothesis thread as
-s1967 (not yet a 3rd stalled iteration on it — s1967 was the first). If
-s1968 also comes back ambiguous, write the hypothesis/evidence table
-explicitly into this file and consider the fallback: an H1 probe
-(census every `SETOTHERMODE_L/H_EX` in the hangar window's flushed
-stream — different instrument, same buffer) since H2's own instrument
-has now been tried once without a clean answer.
+Per iteration budget rule 8: this is a NEW probe within the same
+hypothesis thread (s1967 was H2; this is H1) — not yet a stalled
+iteration. If the H1 census also comes back ambiguous or clean, write
+the hypothesis/evidence table explicitly here and treat H3 as the only
+remaining explanation (unresolvable, not refuted) — at that point this
+item likely drops in priority since no further instrumentation is
+available for either survivor.
 
 ## Do not repeat
 
+- Do not re-run the H2 (`tri_order_bad`) check expecting a different
+  answer — it's settled (REFUTED, same-run positive control, 14/14
+  agreement).
 - Do not conflate this with the closed M4 Y=`0x8000` accumulator
-  question (`y8000_any=0` again this session) — different mechanism,
+  question (`y8000_any=0` again in s1967) — different mechanism,
   different offset, do not re-walk VMADH/VGE.
-- Do not point the oracle at DMEM `0xD60` — confirmed s1967 the
-  RSP-HLE plugin never executes guest `L_17F0`, so there is nothing
-  comparable to watch there.
-- Do not land a skip/guard for the `0xE80-0xEA8` offset without first
-  running the sentinel check above — that would be exactly the
-  mitigation-without-explanation trap iron rule 11 exists to block.
+- Do not point the oracle at DMEM `0xD60` — confirmed (twice now) the
+  RSP-HLE plugin never executes guest `L_17F0`.
 - Do not resume the generated-symbol sweep (closed, 57 RE/hold left,
   s1966).
 - Cross-run A/B on this scene without phase-gating still forbidden —

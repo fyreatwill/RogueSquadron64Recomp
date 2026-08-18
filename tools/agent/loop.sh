@@ -6,7 +6,7 @@
 # become sleeps, not handoffs.
 #
 # Env: ITER_CAP (default 80), SLEEP_ON_LIMIT (default 1800s), MAX_LIMIT_WAITS (12),
-#      LOOP_MODEL (default sonnet), MAX_NO_CONTRACT (default 2),
+#      LOOP_MODEL (default claude-sonnet-4-6), MAX_NO_CONTRACT (default 2),
 #      SLEEP_ON_ERROR (120s) / MAX_ERR_RETRIES (4) for nonzero-rc-without-limit-wording,
 #      SOAKS_BETWEEN_ITERS (2) / SOAK_TIMEOUT (600s) for the queued-soak runner,
 #      UNBLOCK_ENABLE (1) / MAX_UNBLOCK_ATTEMPTS (1) / UNBLOCK_RUNNER /
@@ -49,7 +49,7 @@ SOAK_TIMEOUT="${SOAK_TIMEOUT:-600}"
 # mechanical (grep, instrument, rebuild, capture, reconcile, write the ledger);
 # the investigative discipline lives in ITERATION.md and the Stop gate, not in
 # raw model strength. Override per run: LOOP_MODEL=opus tools/agent/loop.sh
-LOOP_MODEL="${LOOP_MODEL:-sonnet}"
+LOOP_MODEL="${LOOP_MODEL:-claude-sonnet-4-6}"
 
 log() { echo "[loop] $*" | tee -a "$AG/loop.log"; }
 

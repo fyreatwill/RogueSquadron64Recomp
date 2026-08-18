@@ -522,6 +522,8 @@ struct Rs64M4Y8000 {
     uint32_t n_tri_order_bad = 0;
     uint32_t n_tri_degenerate = 0;
     uint32_t n_tri_dump = 0;
+    uint32_t n_tri_order_bad_confirmed = 0;
+    uint32_t n_tri_order_bad_stale = 0;
     uint32_t last_width = 0xFFFFFFFFu;
     uint32_t last_origin = 0xFFFFFFFFu;
     bool last_in_gate = false;
@@ -529,6 +531,12 @@ struct Rs64M4Y8000 {
     bool marked_flush = false;
     bool marked_hangar = false;
     bool atexit_armed = false;
+    // Writer-attestation bitmap (s1968): set by rs64_m4_y8000_store when
+    // L_1930 genuinely stores a header byte at that DMEM offset this
+    // accumulation cycle. Cleared for the drained range after each flush
+    // consumes it, so a true bit always means "written since the last
+    // flush", never a carry-over from an older cycle.
+    bool stored[0x1000] = {};
 };
 
 static Rs64M4Y8000 g_m4_y8000;
@@ -551,6 +559,9 @@ static void rs64_m4_y8000_reset_gated() {
     g_m4_y8000.n_tri_order_bad = 0;
     g_m4_y8000.n_tri_degenerate = 0;
     g_m4_y8000.n_tri_dump = 0;
+    g_m4_y8000.n_tri_order_bad_confirmed = 0;
+    g_m4_y8000.n_tri_order_bad_stale = 0;
+    std::memset(g_m4_y8000.stored, 0, sizeof(g_m4_y8000.stored));
 }
 
 static void rs64_m4_y8000_summary(const char *why) {
@@ -559,7 +570,8 @@ static void rs64_m4_y8000_summary(const char *why) {
         "entry_all=%u flush_site_all=%u "
         "entry=%u y8000_entry=%u allout=%u partial=%u fall=%u "
         "flush=%u empty=%u hdr=%u y8000_any=%u y8000_equal=%u y8000_mixed=%u dump=%u "
-        "tri_total=%u tri_order_bad=%u tri_degenerate=%u\n",
+        "tri_total=%u tri_order_bad=%u tri_degenerate=%u "
+        "tri_order_bad_confirmed=%u tri_order_bad_stale=%u\n",
         why, rs64_phase_ord(), rs64_vi_committed_width(),
         rs64_vi_committed_origin(), rs64_is_hangar_vi(),
         g_m4_y8000.n_entry_all, g_m4_y8000.n_flush_site_all,
@@ -568,7 +580,8 @@ static void rs64_m4_y8000_summary(const char *why) {
         g_m4_y8000.n_flush, g_m4_y8000.n_empty, g_m4_y8000.n_hdr,
         g_m4_y8000.n_y8000_any, g_m4_y8000.n_y8000_equal, g_m4_y8000.n_y8000_mixed,
         g_m4_y8000.n_dump,
-        g_m4_y8000.n_tri_total, g_m4_y8000.n_tri_order_bad, g_m4_y8000.n_tri_degenerate);
+        g_m4_y8000.n_tri_total, g_m4_y8000.n_tri_order_bad, g_m4_y8000.n_tri_degenerate,
+        g_m4_y8000.n_tri_order_bad_confirmed, g_m4_y8000.n_tri_order_bad_stale);
     fflush(stderr);
 }
 
@@ -605,6 +618,16 @@ static bool rs64_m4_y8000_in_gate() {
     }
     g_m4_y8000.last_in_gate = now_in;
     return now_in;
+}
+
+// s1968 writer-attestation hook: called from the actual L_1930 store site
+// (`sb $10, 0x0($16)`, see tools/fixup_factor5_ucode.py Fixup 21) so the
+// flush walker below can tell a genuinely-written header byte from one
+// that only appears written because the buffer wasn't cleared.
+extern "C" void rs64_m4_y8000_store(uint32_t r16) {
+    if (!rs64_m4_y8000_enabled()) return;
+    if (!rs64_m4_y8000_in_gate()) return;
+    g_m4_y8000.stored[r16 & 0xFFFu] = true;
 }
 
 extern "C" void rs64_m4_y8000_entry(uint32_t y11, uint32_t y12, uint32_t y13,
@@ -698,6 +721,21 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
         const bool degenerate = (yl == ym && ym == yh);
         if (order_bad) g_m4_y8000.n_tri_order_bad++;
         if (degenerate) g_m4_y8000.n_tri_degenerate++;
+        // Writer attestation (s1968): a genuine L_1930 store this cycle set
+        // stored[off]. If it's false, the 0xC8-class byte we're reading was
+        // never written since the last drain -- a stale-buffer misread, not
+        // a malformed command from the game. Only meaningful for order_bad
+        // (the ambiguous case from s1967); a well-formed triangle at a
+        // stale offset would be indistinguishable from a real one anyway.
+        bool order_bad_confirmed = false;
+        if (order_bad) {
+            if (g_m4_y8000.stored[off & 0xFFFu]) {
+                g_m4_y8000.n_tri_order_bad_confirmed++;
+                order_bad_confirmed = true;
+            } else {
+                g_m4_y8000.n_tri_order_bad_stale++;
+            }
+        }
         if (rs64_m4_tri_dump_enabled() && g_m4_y8000.n_tri_dump < rs64_m4_tri_dump_cap()) {
             g_m4_y8000.n_tri_dump++;
             const uint32_t xl = RSP_MEM_W_LOAD(off + 8, 0);
@@ -709,10 +747,11 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
             fprintf(stderr,
                 "[m4-tri] n=%u off=0x%03X hdr=%02X YL=%04X YM=%04X YH=%04X "
                 "XL=%08X DxLDy=%08X XH=%08X DxHDy=%08X XM=%08X DxMDy=%08X "
-                "order_bad=%d degenerate=%d\n",
+                "order_bad=%d degenerate=%d stored=%d\n",
                 g_m4_y8000.n_tri_dump, off, hdr, yl, ym, yh,
                 xl, dxldy, xh, dxhdy, xm, dxmdy,
-                order_bad ? 1 : 0, degenerate ? 1 : 0);
+                order_bad ? 1 : 0, degenerate ? 1 : 0,
+                order_bad ? (order_bad_confirmed ? 1 : 0) : (g_m4_y8000.stored[off & 0xFFFu] ? 1 : 0));
             fflush(stderr);
         }
 
@@ -741,6 +780,10 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
         if (hdr & 0x1) size += 64;
         off += size;
     }
+    // Drained: clear the writer-attestation bits for [0xD60, end) so the
+    // next accumulation cycle starts from a clean "not written" state and
+    // a leftover true bit can never be misread as this cycle's write.
+    std::memset(g_m4_y8000.stored + 0xD60, 0, end - 0xD60);
     if ((g_m4_y8000.n_flush & 63u) == 0) rs64_m4_y8000_summary("flush-hb");
 }
 

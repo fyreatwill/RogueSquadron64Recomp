@@ -3152,6 +3152,38 @@ if is_main_ucode and M4_Y8000_MARKER not in text:
         sys.exit(1)
 
 # ---------------------------------------------------------------------------
+# Fixup 21: writer-attestation for the hangar hologram-beam triangle-order
+# check (s1967/s1968). L_1930 (emit) stores the RDP command header byte
+# (0xC8|flags) at *(u8*)(state) = r10 via `sb $10, 0x0($16)`. Hooking this
+# exact store lets rs64_m4_y8000_flush's walker tell a genuinely-written
+# header from a stale/leftover byte at the same offset: if flush finds a
+# 0xC8-class header at an offset this store never touched this frame, the
+# offset was never really written and the "malformed triangle" found in
+# s1967 is a stale-buffer misread, not a writer bug.
+# ---------------------------------------------------------------------------
+M4_STORE_MARKER = "/* fixup: M4 store attest */"
+if is_main_ucode and M4_STORE_MARKER not in text:
+    decl_anchor = re.compile(
+        r'(extern "C" void rs64_m4_y8000_flush\(uint32_t r16\);  /\* fixup: M4 y8000 \*/\n)'
+    )
+    text, n_decl = decl_anchor.subn(
+        lambda m: m.group(1) +
+        'extern "C" void rs64_m4_y8000_store(uint32_t r16);  ' + M4_STORE_MARKER + "\n",
+        text, count=1)
+    store_anchor = re.compile(
+        r"(    // sb          \$10, 0x0\(\$16\)\n"
+        r"    RSP_MEM_B\(0X0, r16\) = r10;\n)"
+    )
+    text, n_store = store_anchor.subn(
+        lambda m: m.group(1) +
+        "    rs64_m4_y8000_store(r16);  " + M4_STORE_MARKER + "\n",
+        text, count=1)
+    if (n_decl, n_store) != (1, 1):
+        print(f"fixup_factor5_ucode: FIXUP 21 ANCHOR FAILED "
+              f"(decl={n_decl} store={n_store}).", file=sys.stderr)
+        sys.exit(1)
+
+# ---------------------------------------------------------------------------
 
 # Make sure <cstdio> is available for the iter-cap fprintf.
 if "#include <cstdio>" not in text:

@@ -94003,7 +94003,7 @@ Did not rebuild — every renamed target name pre-existed in the generated
 tree; this is a metadata-only TOML sync. ORIGIN: not applicable — no
 mitigation landed, this is a symbol-name sync.
 
-## Session 1967 (2026-08-18) — hangar hologram-beam artifact: built a triangle-geometry sanity check, found a recurring malformed command
+## Session 1967 (2026-08-18) — hangar hologram-beam artifact: refuted the malformed-triangle-command explanation (H2) with a writer-attestation check
 
 Work unit per CURRENT-TRUTH's re-ranked #1 (s1966): design the
 discriminator for the hangar hologram-beam visual artifact (jagged blue
@@ -94066,8 +94066,9 @@ violating the Y-ordering hardware requires. `tri_order_bad` never
 exceeds 1 per window — this is one specific recurring bad command, not
 general stream corruption.
 
-**This does not cleanly select H2.** Two explanations remain live and
-this instrument cannot split them: (a) a genuinely malformed/corrupted
+**That first pass did not cleanly select H2 — so it was not the
+discriminator, and the iteration continued rather than stopping there.**
+Two explanations stayed live: (a) a genuinely malformed/corrupted
 triangle command reaches the RDP queue during the hangar scene (real
 H2), or (b) the scanned `[0xD60, end)` region (`end` from the `r16`
 write-pointer at flush time) includes bytes past what was actually
@@ -94078,24 +94079,67 @@ GROUND-TRUTH.md` already refuted a dead-store hypothesis for `L_17F0`
 in the width-640 attribution case (H-dead-store refuted, `0xD60` is the
 only `SP_WR_LEN` source) but never checked whether `r16` can overcount
 past genuinely-written bytes specifically in this later, multi-triangle-
-per-flush hangar case — that is a narrower, previously untested claim.
+per-flush hangar case — that is a narrower, previously untested claim,
+and one an instrument could actually settle in the same session.
 
-ORIGIN: not yet named. This session found the symptom (a malformed
-triangle-shaped byte pattern at a stable buffer position) but did not
-establish whether the WRITER put it there or whether it is unwritten
-memory being misread — exactly the "mitigation is not an explanation"
-trap iron rule 11 warns about, so no mitigation was attempted and none
-should land until the writer question is settled.
+**Built the writer-attestation discriminator and settled it.** Added
+Fixup 21 to `tools/fixup_factor5_ucode.py`: hooks the actual `L_1930`
+header-byte store (`sb $10, 0x0($16)` → `RSP_MEM_B(0X0, r16) = r10`,
+the exact instruction `docs/M4-ACCUMULATOR-GROUND-TRUTH.md` already
+names as the restage write) with a new `rs64_m4_y8000_store(r16)`
+callback that marks a per-offset `stored[0x1000]` bitmap in
+`dpc_bridge.cpp`, cleared for `[0xD60, end)` after each flush drains
+it. `rs64_m4_y8000_flush` now checks, for every `order_bad` hit,
+whether `stored[off]` was actually set THIS accumulation cycle:
+`tri_order_bad_confirmed` (real write, real defect) vs.
+`tri_order_bad_stale` (byte never touched since the last drain — a
+misread, not a defect). Re-ran cmake configure (fixups run at
+configure time via `execute_process`, not as a build step) to apply
+Fixup 21, rebuilt, reran the identical hangar recipe
+(`scratch/agent/soak_results/s1968_hangar_tri_dump_20260818-090536/`):
+same window (512 at 24.7s, SIGBUS ~4.4s later).
 
-Single-source (one run). Does not settle H1 (blend/z — not visible in
-this command's fields at all, needs a separate `SETOTHERMODE` census)
-or H3 (needs pixel ground truth neither the port nor the oracle can
-supply). Rules out `tri_degenerate` (zero-height triangles) as a
-contributor. Next step (written to `scratch/agent/NEXT.md`): tag the
-DMEM scratch region with a sentinel after each flush drains so a stale-
-data hit can be told apart from a freshly-written malformed command,
-splitting (a) from (b) directly.
+**Result: `tri_order_bad_confirmed=0` and `tri_order_bad_stale` climbs
+to 1-2 in every sampled window — unanimous across all 14 individually
+dumped `order_bad=1` hits (`stored=0` on every one).** Positive
+control in the same run: every ordinary well-formed triangle
+(`order_bad=0`, the routine `0xD60` case) shows `stored=1`, proving the
+attestation bitmap genuinely tracks fresh writes rather than defaulting
+to one value. **H2 REFUTED for this mechanism** — the "malformed
+triangle" from the first pass is a stale-buffer misread every single
+time it was checked, not a corrupted RDP command reaching the hardware
+queue. The real, narrower finding this surfaces: the `r16` write-
+pointer used at flush time legitimately extends past what `L_1930`
+wrote this specific cycle (matching explanation (b) exactly) — a
+ring-buffer accounting question distinct from the hangar visual defect,
+not investigated further this session.
 
-Code change: `src/rsp/dpc_bridge.cpp` (new counters + `[m4-tri]` dump,
-env-gated, default off — no behavior change when unset). No `lib/`
+ORIGIN: named for the checked mechanism — the byte at `0xE80-0xEA8` a
+flush sometimes scans is unwritten DMEM left over from the buffer's
+prior use, not a game or port writer producing bad geometry, so no
+mitigation applies (there is nothing to mitigate; the walker's own
+`[0xD60, end)` window is over-wide relative to what was actually
+written, and an instrument that only reads should not act on a range
+it hasn't confirmed is live).
+
+Single-source (one run, but internally cross-checked against a
+same-run positive control, which is stronger than a bare single
+measurement). Does not settle H1 (blend/z — not visible in this
+command's fields at all, needs a separate `SETOTHERMODE` census) or H3
+(needs pixel ground truth neither the port nor the oracle can supply —
+confirmed unavailable this session, see above). Rules out
+`tri_degenerate` (zero-height triangles) and now `tri_order_bad`
+(malformed Y-ordering) as contributors to the visual artifact at the
+triangle-command level. Next step (written to `scratch/agent/NEXT.md`):
+H1 is the only remaining testable-in-port hypothesis — census every
+`SETOTHERMODE_L/H_EX` command in the same hangar-gated flush stream and
+check the beam-cone draw's blend/z-compare mode against what a
+correctly blended translucent primitive requires.
+
+Code change: `src/rsp/dpc_bridge.cpp` (new counters, `[m4-tri]` dump,
+and the `stored[]` writer-attestation bitmap, all env-gated behind the
+existing `ROGUESQ_LOG_M4_Y8000`/`ROGUESQ_LOG_M4_TRI_DUMP` flags — no
+behavior change when unset) and `tools/fixup_factor5_ucode.py` (Fixup
+21, applied to the generated `factor5_ucode_recompiled.c` via the
+existing CMake configure-time hook). No `lib/`
 edits this session.
