@@ -2006,7 +2006,7 @@ functions = [
     { name = "executeActorType2Effect", vram = 0x800F4E74, size = 0x518 },
     { name = "executeActorType3Effect", vram = 0x800F538C, size = 0x6A4 },
     { name = "initActorAsType4", vram = 0x800F5A30, size = 0x304 },
-    { name = "func_800F5D34", vram = 0x800F5D34, size = 0xC20 },
+    { name = "buildSineWaveEffectGeometryA", vram = 0x800F5D34, size = 0xC20 },
     { name = "func_800F6954", vram = 0x800F6954, size = 0x7DC },
     { name = "func_800F7130", vram = 0x800F7130, size = 0xB44 },
     { name = "func_800F7C74", vram = 0x800F7C74, size = 0x724 },
