@@ -94143,3 +94143,57 @@ behavior change when unset) and `tools/fixup_factor5_ucode.py` (Fixup
 21, applied to the generated `factor5_ucode_recompiled.c` via the
 existing CMake configure-time hook). No `lib/`
 edits this session.
+
+## Session 1968 (2026-08-18) — hangar hologram-beam artifact: D60 mode census found no valid mode commands
+
+Work unit per CURRENT-TRUTH's s1967 H1 handoff: census the RDP
+`SETOTHERMODE` state adjacent to the live hangar triangle stream. Read the
+Factor 5 reference and the oracle README first. The independent reference
+identifies `0xB3`/`0xBE` as upstream Factor 5 `_EX` handlers with an extra
+inline word, while RT64's hardware RDP map identifies plain `0xB9`/`0xBA`
+as `SETOTHERMODE_L/H`; the oracle has no DMEM `L_17F0` execution or screenshot
+path and could not provide a second hangar-pixel witness.
+
+Built one batch instrument in `src/rsp/dpc_bridge.cpp`: the existing
+hangar-gated `rs64_m4_y8000_flush` walker now recognizes standard `0xB9`/
+`0xBA`, reconstructs the masked H/L other-mode state, and includes it on
+each `[m4-tri]` record. It rejects opcode-shaped bytes unless the standard
+operand contract holds (`shift < 32`, `size <= 32`, `shift + size <= 32`),
+and reports rejected candidates as `[m4-om-invalid]`. The existing
+writer-attested `stored=1` triangle rows remain the same-run positive control.
+The trace flag and cap were added to `docs/debug-trace-env-vars.md`.
+
+The first run was a failed measurement, not a result:
+`scratch/agent/soak_results/s1968_hangar_mode_census/` reached hangar 512
+at 25.2s, captured one frame, and crashed at the known
+`filterVoiceSampleBlock+220` / last guest PC `0x8000834c`. It printed six
+header matches with impossible fields (`shift=81..242`, `size=90..211`),
+which exposed the missing operand validation. I fixed that instrument and
+ran the same recipe again, rather than accepting the false null.
+
+The corrected run is in
+`scratch/agent/soak_results/s1968_hangar_mode_census_fixed/`: hangar 512 at
+24.9s, one frame, same known crash 4.3s later. Positive control was live:
+2,187 `L_17F0` entries, 1,134 parsed `0xC8`-class triangles, ordinary
+triangle rows with `stored=1`, and `y8000_any=0`. Discriminator result:
+zero valid `0xB9`/`0xBA` commands and six invalid candidates, all rejected by
+the operand contract. No `[m4-om]` valid-mode records were emitted.
+
+Two lines of evidence support the scope conclusion. (1) The corrected
+runtime measurement has live writer-attested triangles but no valid mode
+state in the `0xD60..r16` stream. (2) Static generated-code inspection shows
+generic `L_10F4` word copies can populate this output buffer, while the
+`L_1930` path emits the `0xC8` triangle header and the generated Factor 5
+files contain no explicit `0xB9`/`0xBA` constants. Thus H1 is not refuted or
+selected: this particular restage buffer has no valid mode command to
+associate with a triangle, and mode state may arrive through the surrounding
+RDP stream. ORIGIN: the six rejected values are stale/non-command bytes or
+copied source words with malformed operands; they are not legitimate mode
+state, so no mitigation was added. H2 remains refuted by s1967's independent
+writer attestation; H3 remains unresolvable by the oracle.
+
+Rules out: treating every `0xB9`/`0xBA` header byte as a mode command; using
+the `0xB3`/`0xBE` Factor 5 input opcodes as restaged RDP bytes; and claiming
+that the zero valid-mode count refutes H1. The next discriminator is a
+whole-RDP/RT64 consumer-side draw-state correlation, not another `0xD60`
+opcode scan. No `lib/` edits this session.

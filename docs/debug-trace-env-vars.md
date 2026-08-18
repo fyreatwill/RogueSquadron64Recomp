@@ -64,6 +64,7 @@ To disable: unset, set to `0`, or leave undefined.
 | `ROGUESQ_LOG_INLINE_ADVANCE` | off | `[inline-advance]`, `[inline-route]`, `[inline-overlay]`, `[inline-advance-summary]` | Factor 5 live inline-data audit: logs DMA table words, `r17` advances, and the TriGen indirect route/overlay selector. TriGen routes have their own phase-scoped 96-row budget; other detail rows share a separate 96-row budget. |
 | `ROGUESQ_LOG_BEGINFRAME_S0_GUARD` | off | `[beginframe-s0-guard] site=0x8000AFA0 n=… bad_s0=… ra=…` | Item -338 / -365: range-check on stack-slot node ptr (`$s0`/`ctx->r16`) before `lw $v0,0x8($s0)` in `beginFrameDLChunk`. Fire = same-run positive control for the guard. Pass via `GAME_EXTRA_ENV`. |
 | `ROGUESQ_LOG_M4_Y8000` | on | `[m4-y8000]` | s1856: phase-gated L_17F0 / L_112C census of vertex `+0x1A == 0x8000` vs flushed `0xD60` YL/YM/YH. Default on; set `0` to silence. Pair with `ROGUESQ_M4_Y8000_WIDTH` (default 640). Width 512 also requires hangar origin `0x006ab400` / `0x006ab800` so attract 512 is not counted. |
+| `ROGUESQ_LOG_M4_TRI_DUMP` | off | `[m4-tri]`, `[m4-om]` | Hangar-gated full Fill-Triangle geometry plus standard RDP `SETOTHERMODE_L/H` (`0xB9`/`0xBA`) state census in the same `0xD60..r16` restage stream. Pair with `ROGUESQ_M4_TRI_DUMP_CAP` (default 500). |
 
 ### Cinematic-loop checkpoints
 

@@ -1,99 +1,74 @@
-# NEXT work unit (s1968) — hangar hologram-beam artifact: H1 blend/z census
+# NEXT work unit (s1969) — whole-RDP consumer-side blend/z census
 
 HYPOTHESIS-ID: hangar-hologram-beam-artifact
 
-## What s1967 settled
+## What s1968 settled
 
-H2 (a malformed/corrupted triangle command reaching the RDP queue) is
-**REFUTED** for the hangar hologram-beam visual artifact. Built a
-writer-attestation hook at the actual `L_1930` header-byte store
-(`sb $10, 0x0($16)`, `tools/fixup_factor5_ucode.py` Fixup 21 +
-`rs64_m4_y8000_store` in `src/rsp/dpc_bridge.cpp`) that marks a
-per-offset `stored[0x1000]` bitmap, cleared after each flush drains
-`[0xD60, end)`. Result
-(`scratch/agent/soak_results/s1968_hangar_tri_dump_20260818-090536/`):
-every one of 14 sampled `YH<=YM<=YL`-violating "triangle" commands had
-`stored=0` (never written that cycle), while every ordinary
-well-formed triangle showed `stored=1` (same-run positive control that
-the attestation bitmap actually works). The commands flagged bad in
-s1967's first pass were reading stale, previously-used DMEM bytes that
-`r16`'s write-pointer happened to still cover — not a real defect.
-Do not re-open H2 without a new, different anomaly (this exact
-instrument is now closed on this question).
+The corrected `0xD60..r16` walker saw the live hangar triangle stream but
+zero valid standard RDP `SETOTHERMODE_L/H` commands. It saw 1,134 parsed
+triangles with ordinary `stored=1` writer-attestation control and rejected
+six `0xB9/0xBA` header-shaped bytes whose operands violated the standard
+32-bit field contract. H1 is therefore not refuted or selected in this
+buffer. H2 remains refuted by s1967; H3 remains unavailable to the oracle.
 
-## What's still open
+## Single next work unit
 
-- **H1 (blend/z-compare mismatch).** RT64's HLE may set the wrong RDP
-  blend mode or z-compare state for the beam-cone draw. The Fill
-  Triangle command's own fields (checked in s1967) carry no blend/z
-  information — that lives in separate `SETOTHERMODE_L_EX` (`0xB3`)
-  and `SETOTHERMODE_H_EX` (`0xBE`) commands per
-  `docs/F5-UCODE-REFERENCE.md`'s command table. Untested so far.
-- **H3 (legitimate retail design).** Still unresolvable by
-  instrumentation — confirmed twice now (s1967) that the oracle has no
-  screenshot capability and its RSP-HLE plugin never executes guest
-  `L_17F0`, so there is no independent pixel or geometry ground truth
-  to check this against. Do not keep re-confirming this; it's settled
-  as "cannot check," not "assumed false."
+Add one regeneration-safe RT64 consumer-side census in
+`lib/rt64/src/gbi/rt64_gbi_rdp.cpp`, immediately before the existing
+`state->rdp->drawTris(...)` call in `decodeTriangles`. Reuse
+`ROGUESQ_LOG_M4_TRI_DUMP` and its cap; gate rows to the hangar VI (`width=512`
+and `origin=0x006AB400` or `0x006AB800`), reset the row budget on origin
+change, and print the actual triangle screen bounds plus the active RT64
+other-mode H/L words and decoded `Z_CMP`, `Z_UPD`, `ZMODE`, `CVG_X_ALPHA`,
+`ALPHA_CVG_SEL`, and blender inputs. This is the actual RDP triangle consumer,
+not the stale-tail `0xD60` walker. Because this is under `lib/`, run
+`./submodule-patches/export.sh` after the edit and commit the refreshed patch
+artifacts in the same iteration.
 
-## Discriminator to build next (H1 probe)
+## Competing hypotheses and discriminating measurement
 
-The M4/`0xD60` flush walker (`rs64_m4_y8000_flush`) only recognizes
-`0xC8`-class (`0xC8-0xCF`) triangle headers and skips everything else
-by 8 bytes. Extend it (or add a sibling hook) to ALSO recognize and
-dump `SETOTHERMODE_L_EX`/`SETOTHERMODE_H_EX`-class RDP commands in the
-same hangar-gated `[0xD60, end)` stream — these are standard 8-byte RDP
-commands (opcode + mask/set words), not part of the F5-specific
-inline-data commands `docs/F5-UCODE-REFERENCE.md` warns about (that
-warning is about the *original* F5 display list, upstream of this
-restage buffer, which by s1840/s1856/s1967 is established to already
-be plain RDP-format bytes).
+- **H1-consumer-wrong:** a consumer-side triangle whose screen bounds cover
+  the beam has incompatible blend/z state, selecting H1.
+- **H1-consumer-correct:** the beam-covering consumer triangles have a
+  coherent translucent state (`Z_CMP`/`Z_UPD`/coverage/blender fields),
+  refuting H1 and leaving H3 as the only remaining explanation available to
+  this runtime/oracle pair.
+- **H1-consumer-unreached:** the existing DPC writer-attestation control is
+  live but `decodeTriangles` emits no hangar consumer rows, proving this is
+  not the actual path for the LLE triangle and requiring a different consumer
+  hook; it does not select H1 or H3.
 
-1. Identify the RDP opcode bytes for `SETOTHERMODE_L`/`SETOTHERMODE_H`
-   in standard hardware encoding (not the F5-custom `_EX` wrapper,
-   which is what F5Rogue.cpp's ucode-side handler consumes before
-   restage — the RESTAGED byte in this buffer should be the plain RDP
-   opcode). Cross-check against `docs/F5-UCODE-REFERENCE.md` and, if
-   needed, a quick grep of RT64's `rt64_gbi_f3dfactor5.cpp` HLE path
-   for how it encodes these after translation.
-2. Add a dump (reuse the `ROGUESQ_LOG_M4_TRI_DUMP` gate or a new flag)
-   that logs every `SETOTHERMODE` command's mode bits alongside the
-   existing triangle dump, so blend/z-compare state can be read
-   directly adjacent to the triangle commands in stream order —
-   the state active when the beam-cone triangle(s) draw is whatever
-   the most recent preceding `SETOTHERMODE` set.
-3. Same hangar recipe (`scratch/agent/soak_queue/done/
-   s1950_hangar_yield_repro_*.sh` as template, add the new dump flag).
-   Same ~4s window budget.
-4. Compare the blend/z mode active around the triangles at the known
-   `0xE80`-region area (now confirmed stale/irrelevant — the REAL
-   beam-cone triangles are elsewhere in the stream, likely near
-   `0xD60` given most triangles land there) against what a correctly
-   alpha-blended translucent primitive requires (`Z_CMP`/`Z_UPD` off
-   or blended, `CVG_X_ALPHA`/`ALPHA_CVG_SEL` set appropriately per
-   standard RDP other-modes semantics) — a mismatch selects H1.
+**Discriminator:** one build and one established hangar recipe with the DPC
+`[m4-tri]` control plus the new consumer rows. A row with bounds in the
+beam-cone region and an incompatible mode selects H1; compatible state on all
+beam-covering rows refutes H1; zero consumer rows with live DPC triangles
+selects the unreached-path outcome. Do not infer a mode from an opcode byte
+without its standard fields, and do not add a mitigation.
 
-## If this doesn't discriminate cleanly in one session
+## Exact run
 
-Per iteration budget rule 8: this is a NEW probe within the same
-hypothesis thread (s1967 was H2; this is H1) — not yet a stalled
-iteration. If the H1 census also comes back ambiguous or clean, write
-the hypothesis/evidence table explicitly here and treat H3 as the only
-remaining explanation (unresolvable, not refuted) — at that point this
-item likely drops in priority since no further instrumentation is
-available for either survivor.
+Build with:
+
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+```
+
+Run from `build/` with the s1950 recipe, adding the reused dump flag:
+
+```sh
+env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M4_TRI_DUMP=1 ROGUESQ_M4_TRI_DUMP_CAP=500 ROGUESQ_M4_Y8000_WIDTH=512 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 ROGUESQ_STUB_MISSING_FUNCS=1 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=180 PROBE_LEAVE_OK=1 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' zsh ../tools/probe.sh ../scratch/agent/soak_results/s1969_hangar_rdp_state 180 2
+```
+
+The known `filterVoiceSampleBlock+220` crash is acceptable only after the
+hangar positive control and consumer rows have been captured. If the crash
+prevents the consumer rows, record the scope as unevaluable and enqueue the
+recipe rather than chasing that known family.
 
 ## Do not repeat
 
-- Do not re-run the H2 (`tri_order_bad`) check expecting a different
-  answer — it's settled (REFUTED, same-run positive control, 14/14
-  agreement).
-- Do not conflate this with the closed M4 Y=`0x8000` accumulator
-  question (`y8000_any=0` again in s1967) — different mechanism,
-  different offset, do not re-walk VMADH/VGE.
-- Do not point the oracle at DMEM `0xD60` — confirmed (twice now) the
-  RSP-HLE plugin never executes guest `L_17F0`.
-- Do not resume the generated-symbol sweep (closed, 57 RE/hold left,
-  s1966).
-- Cross-run A/B on this scene without phase-gating still forbidden —
-  the hangar window is ~4s of animating content.
+- Do not scan `0xD60` for `0xB3`/`0xBE` or accept impossible `0xB9`/`0xBA`
+  operands as mode commands.
+- Do not rerun the H2 writer-attestation check or the parked M4 `Y=0x8000`
+  accumulator question.
+- Do not use a stopwatch or cross-run visual A/B; the gate is the hangar VI
+  origin and the same-run writer/consumer controls.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1967 (2026-08-18).
+detail. Reviewed through s1968 (2026-08-18).
 
 ## Current state
 
@@ -75,6 +75,23 @@ detail. Reviewed through s1967 (2026-08-18).
   assumed). H1 (blend/z — needs a `SETOTHERMODE` census, untested) and
   H3 (needs pixel ground truth neither side can supply) remain open.
   Full detail: `PORTING-STATE.md` s1967.
+- **H1 mode-state census is out-of-scope in the `0xD60` restage buffer
+  (s1968).** The corrected hangar-gated walker recognized 1,134 live
+  `0xC8`-class triangles, with ordinary triangles `stored=1` as the same-run
+  writer-attestation positive control, but found zero valid standard RDP
+  `SETOTHERMODE_L/H` commands (`0xB9`/`0xBA`). Six header matches were
+  rejected because their standard operands were impossible (`shift=81..242`,
+  `size=90..211`); the first pass counted these false candidates and was
+  fixed/re-run in the same iteration. Static generated-code evidence shows
+  generic `L_10F4` source-word copies can populate the output buffer while
+  `L_1930` emits its triangle headers, and there are no explicit `0xB9/0xBA`
+  constants in the generated Factor 5 files. Therefore the null does not
+  refute H1: this buffer has no valid mode command to associate with a
+  triangle. ORIGIN: invalid candidates are stale/non-command bytes or copied
+  source words with malformed operands; they are not legitimate mode state,
+  and no mitigation applies. Next scope is the RT64 whole-RDP stream/draw
+  state, not another `0xD60` opcode scan. Full detail: `PORTING-STATE.md`
+  s1968.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -136,7 +153,7 @@ detail. Reviewed through s1967 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1966: the generated-symbol sweep (former #1) is now
+Re-ranked s1968: the generated-symbol sweep (former #1) is now
 effectively closed — 845 of 902 leftovers resolved in one session, the
 remaining 57 are RE/deliberate-hold, not metadata-sync work. Items below
 promote by one; all still need a new discriminator before they can be
@@ -150,12 +167,15 @@ a genuinely new angle rather than defaulting to sweep busywork.
 
 1. Hangar visual artifacts on the first live hangar frame (geometry
    cracks, blue tris, hologram layering). s1967 refuted H2 (malformed
-   triangle command) with a writer-attestation check — the flagged
-   commands were unwritten stale DMEM, not a real defect. Next step is
-   an H1 probe: census `SETOTHERMODE_L/H_EX` in the same hangar-gated
-   flush stream (see NEXT.md). Do not treat this as the parked M4
-   Y=0x8000 (different mechanism, `y8000_any` stayed 0 in s1967 too).
-   s1950 did not lengthen the hangar window (still ~4s / 1 frame).
+   triangle command) with writer attestation — the flagged commands were
+   unwritten stale DMEM, not a real defect. s1968's corrected H1 census found
+   live triangles but no valid `0xB9/0xBA` mode commands in the same `0xD60`
+   buffer, so H1 is not refuted or selected. Next step is a whole-RDP/RT64
+   draw-state correlation at the actual triangle consumer; do not repeat the
+   `0xD60` opcode scan or treat invalid operand matches as modes. Do not
+   conflate this with the parked M4 Y=`0x8000` question (different mechanism,
+   `y8000_any` stayed 0 in s1968 too). s1950 did not lengthen the hangar
+   window (still ~4s / 1 frame).
 2. Hangar SIGBUS `filterVoiceSampleBlock+220` / `0x8000834c` is a
    known family. Revisit only as a complete idiom-class audit.
 3. Keep audio closed unless a new independent lead reaches audio
@@ -230,6 +250,10 @@ Most recent, still load-bearing for the next unit:
 - Hangar/512 live `0x8000` Y parked UNEVALUABLE (s1872, s1888, s1943,
   s1944) is superseded by s1949 — hangar origin published and
   `y8000_any=0` on that window.
+- s1968's first H1 census pass, which treated any `0xB9/0xBA` header as a
+  mode command, is superseded by the fixed rerun: all six matches had
+  impossible standard operands and were false candidates, while valid mode
+  count remained zero.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -240,7 +264,7 @@ Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
 s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
-archived to §36).
+archived to §36). s1968's H1 scope result is in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a

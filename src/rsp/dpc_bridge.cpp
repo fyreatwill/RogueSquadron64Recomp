@@ -481,9 +481,8 @@ static uint32_t rs64_m4_y8000_gate_width() {
 // s1967 hangar hologram-beam artifact discriminator: unconditional (not
 // Y=0x8000-gated) dump of every 0xC8-class Fill Triangle command's full
 // geometry, restricted to the same hangar/512 gate as the y8000 probe.
-// Checks the hardware-required YH<=YM<=YL scanline ordering and flags
-// degenerate (zero-height) triangles -- a hit here selects H2 (vertex/
-// winding corruption) over H1 (blend/z state) or H3 (legitimate design).
+// The mode census below uses standard RDP 0xB9/0xBA commands; Factor 5's
+// upstream 0xB3/0xBE commands are not bytes emitted by this restage buffer.
 static bool rs64_m4_tri_dump_enabled() {
     static const bool v = [] {
         const char *all = std::getenv("ROGUESQ_LOG_ALL");
@@ -524,6 +523,14 @@ struct Rs64M4Y8000 {
     uint32_t n_tri_dump = 0;
     uint32_t n_tri_order_bad_confirmed = 0;
     uint32_t n_tri_order_bad_stale = 0;
+    uint32_t n_othermode = 0;
+    uint32_t n_othermode_h = 0;
+    uint32_t n_othermode_l = 0;
+    uint32_t n_othermode_invalid = 0;
+    uint32_t n_othermode_dump = 0;
+    uint32_t othermode_h = 0;
+    uint32_t othermode_l = 0;
+    bool othermode_valid = false;
     uint32_t last_width = 0xFFFFFFFFu;
     uint32_t last_origin = 0xFFFFFFFFu;
     bool last_in_gate = false;
@@ -561,6 +568,14 @@ static void rs64_m4_y8000_reset_gated() {
     g_m4_y8000.n_tri_dump = 0;
     g_m4_y8000.n_tri_order_bad_confirmed = 0;
     g_m4_y8000.n_tri_order_bad_stale = 0;
+    g_m4_y8000.n_othermode = 0;
+    g_m4_y8000.n_othermode_h = 0;
+    g_m4_y8000.n_othermode_l = 0;
+    g_m4_y8000.n_othermode_invalid = 0;
+    g_m4_y8000.n_othermode_dump = 0;
+    g_m4_y8000.othermode_h = 0;
+    g_m4_y8000.othermode_l = 0;
+    g_m4_y8000.othermode_valid = false;
     std::memset(g_m4_y8000.stored, 0, sizeof(g_m4_y8000.stored));
 }
 
@@ -571,7 +586,8 @@ static void rs64_m4_y8000_summary(const char *why) {
         "entry=%u y8000_entry=%u allout=%u partial=%u fall=%u "
         "flush=%u empty=%u hdr=%u y8000_any=%u y8000_equal=%u y8000_mixed=%u dump=%u "
         "tri_total=%u tri_order_bad=%u tri_degenerate=%u "
-        "tri_order_bad_confirmed=%u tri_order_bad_stale=%u\n",
+        "tri_order_bad_confirmed=%u tri_order_bad_stale=%u "
+        "othermode=%u h=%u l=%u invalid=%u valid=%d\n",
         why, rs64_phase_ord(), rs64_vi_committed_width(),
         rs64_vi_committed_origin(), rs64_is_hangar_vi(),
         g_m4_y8000.n_entry_all, g_m4_y8000.n_flush_site_all,
@@ -581,7 +597,10 @@ static void rs64_m4_y8000_summary(const char *why) {
         g_m4_y8000.n_y8000_any, g_m4_y8000.n_y8000_equal, g_m4_y8000.n_y8000_mixed,
         g_m4_y8000.n_dump,
         g_m4_y8000.n_tri_total, g_m4_y8000.n_tri_order_bad, g_m4_y8000.n_tri_degenerate,
-        g_m4_y8000.n_tri_order_bad_confirmed, g_m4_y8000.n_tri_order_bad_stale);
+        g_m4_y8000.n_tri_order_bad_confirmed, g_m4_y8000.n_tri_order_bad_stale,
+        g_m4_y8000.n_othermode, g_m4_y8000.n_othermode_h, g_m4_y8000.n_othermode_l,
+        g_m4_y8000.n_othermode_invalid,
+        g_m4_y8000.othermode_valid ? 1 : 0);
     fflush(stderr);
 }
 
@@ -699,6 +718,65 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
     uint32_t off = 0xD60;
     while (off + 8 <= end) {
         const uint8_t hdr = RSP_MEM_BU(off, 0);
+
+        // Standard RDP SETOTHERMODE_L/H are 0xB9/0xBA. The published Factor
+        // 5 reference identifies 0xB3/0xBE as upstream _EX handlers with an
+        // extra inline word; the L_1930 restage buffer is the plain RDP
+        // command stream and must be decoded at the hardware opcode layer.
+        if (hdr == 0xB9 || hdr == 0xBA) {
+            const uint32_t w0 = RSP_MEM_W_LOAD(off, 0);
+            const uint32_t w1 = RSP_MEM_W_LOAD(off + 4, 0);
+            const uint32_t shift = (w0 >> 8) & 0xFFu;
+            const uint32_t size = (w0 & 0xFFu) + 1u;
+            const bool valid = shift < 32u && size <= 32u && shift + size <= 32u;
+            if (!valid) {
+                g_m4_y8000.n_othermode_invalid++;
+                if (rs64_m4_tri_dump_enabled() &&
+                    g_m4_y8000.n_othermode_dump < rs64_m4_tri_dump_cap()) {
+                    g_m4_y8000.n_othermode_dump++;
+                    fprintf(stderr,
+                        "[m4-om-invalid] n=%u off=0x%03X kind=%c w0=%08X w1=%08X "
+                        "shift=%u size=%u\n",
+                        g_m4_y8000.n_othermode_dump, off, hdr == 0xBA ? 'H' : 'L',
+                        w0, w1, shift, size);
+                    fflush(stderr);
+                }
+                off += 8;
+                continue;
+            }
+            const uint32_t mask = size >= 32u
+                ? 0xFFFFFFFFu
+                : (shift >= 32u ? 0u : ((1u << size) - 1u) << shift);
+            if (hdr == 0xBA) {
+                g_m4_y8000.n_othermode_h++;
+                g_m4_y8000.othermode_h = (g_m4_y8000.othermode_h & ~mask) | (w1 & mask);
+            } else {
+                g_m4_y8000.n_othermode_l++;
+                g_m4_y8000.othermode_l = (g_m4_y8000.othermode_l & ~mask) | (w1 & mask);
+            }
+            g_m4_y8000.n_othermode++;
+            g_m4_y8000.othermode_valid = true;
+            if (rs64_m4_tri_dump_enabled() &&
+                g_m4_y8000.n_othermode_dump < rs64_m4_tri_dump_cap()) {
+                g_m4_y8000.n_othermode_dump++;
+                fprintf(stderr,
+                    "[m4-om] n=%u off=0x%03X kind=%c w0=%08X w1=%08X "
+                    "shift=%u size=%u H=%08X L=%08X zcmp=%d zupd=%d "
+                    "cvgx=%d alphacvg=%d zmode=%u blend=%04X\n",
+                    g_m4_y8000.n_othermode_dump, off, hdr == 0xBA ? 'H' : 'L',
+                    w0, w1, shift, size, g_m4_y8000.othermode_h,
+                    g_m4_y8000.othermode_l,
+                    (g_m4_y8000.othermode_l & 0x10u) != 0,
+                    (g_m4_y8000.othermode_l & 0x20u) != 0,
+                    (g_m4_y8000.othermode_l & 0x1000u) != 0,
+                    (g_m4_y8000.othermode_l & 0x2000u) != 0,
+                    (g_m4_y8000.othermode_l >> 10) & 3u,
+                    (g_m4_y8000.othermode_l >> 16) & 0xFFFFu);
+                fflush(stderr);
+            }
+            off += 8;
+            continue;
+        }
         if ((hdr & 0xF8) != 0xC8) {
             off += 8;
             continue;
@@ -747,11 +825,18 @@ extern "C" void rs64_m4_y8000_flush(uint32_t r16) {
             fprintf(stderr,
                 "[m4-tri] n=%u off=0x%03X hdr=%02X YL=%04X YM=%04X YH=%04X "
                 "XL=%08X DxLDy=%08X XH=%08X DxHDy=%08X XM=%08X DxMDy=%08X "
-                "order_bad=%d degenerate=%d stored=%d\n",
+                "order_bad=%d degenerate=%d stored=%d om_valid=%d "
+                "omH=%08X omL=%08X zcmp=%d zupd=%d cvgx=%d alphacvg=%d\n",
                 g_m4_y8000.n_tri_dump, off, hdr, yl, ym, yh,
                 xl, dxldy, xh, dxhdy, xm, dxmdy,
                 order_bad ? 1 : 0, degenerate ? 1 : 0,
-                order_bad ? (order_bad_confirmed ? 1 : 0) : (g_m4_y8000.stored[off & 0xFFFu] ? 1 : 0));
+                order_bad ? (order_bad_confirmed ? 1 : 0) : (g_m4_y8000.stored[off & 0xFFFu] ? 1 : 0),
+                g_m4_y8000.othermode_valid ? 1 : 0,
+                g_m4_y8000.othermode_h, g_m4_y8000.othermode_l,
+                (g_m4_y8000.othermode_l & 0x10u) != 0,
+                (g_m4_y8000.othermode_l & 0x20u) != 0,
+                (g_m4_y8000.othermode_l & 0x1000u) != 0,
+                (g_m4_y8000.othermode_l & 0x2000u) != 0);
             fflush(stderr);
         }
 
