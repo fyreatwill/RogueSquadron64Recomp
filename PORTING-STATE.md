@@ -92506,3 +92506,134 @@ last one after Start #4.
 default-off. Do not
 force-zero slots. Ask (b)
 remains human-only.
+
+## Session 1946 (2026-08-18) — selected H-si-loop-recv; SI dies on the next loop Recv
+
+`HYPOTHESIS-ID: hangar-after-title-1024`.
+Landed always-on `[si-thr]`
+on `siServiceThread`
+`0x80002E10` via
+`fixup_game_funcs.py` (and
+the already-patched
+`funcs_0.c`; the full fixup
+is not idempotent). No
+`lib/` edit. No pad-bit
+injection. Yield stays
+default-off. Sites:
+`no-epilogue` once at entry
+(generated body has no
+`jr $ra`), `loop` after the
+`L_80002EA0` Recv returns,
+`start-read` just before
+`osContStartReadData`,
+`after-read-recv` after that
+Recv, `get-read` just before
+`osContGetReadData`, `send`
+after `osSendMesg`, `exit`
+on the unreachable
+delay-slot tail. Helper
+logs `vi_width`/`origin`;
+rate-limit first 16 then
+every 32, plus every fire
+once committed width
+>=1024. Debug rebuild of
+`funcs_0.c`. One soak:
+`ROGUESQ_SPIN_YIELD=1` plus
+s1943 eleven-Start from
+boot and the same passive
+instruments as s1945.
+
+Artifact:
+`scratch/agent/soak_results/s1946_si_thr_after_title_20260818-014456/run.log`
+(probe_rc=5, 180s, 0 crash,
+last width 1024).
+
+Same-run positive control
+passed before any stop
+claim: tick-entry/jal/exit
+3/3/3 with `took_swap=1`
+three times; third
+`slot-alloc` `new=0x8018D4A0
+count=16`; `[spin-yield]`
+n=1/2; `[phase] 1024
+origin=0x00790400` at 14.0s
+`#773` (L138376);
+`[si-thr] site=start-read`
+and `site=get-read` n=1 at
+L202/205 **before** that
+1024 (`vi_width=320`);
+`[pad-sdl]` Return KEYDOWN
+n=1,3 and `[pad-host]`
+Start n=1,2 before it
+(`vi_width=640`).
+`site=no-epilogue` n=1 at
+L156.
+
+After that 1024: pad-sdl
+Return down n=5,7 and
+pad-host Start n=3,4 on
+title 1024. Last `[si-thr]`
+is a complete iter
+`loop/start-read/after-read-recv/get-read/send`
+all n=1419 at L292439–443
+(`update_screen #1472`);
+zero `loop` n=1420;
+`site=exit` = 0. 146 later
+`[vi]` lines through
+`#10816` still
+`0x00790400`/1024. 0 origin
+`0x006AB400`/`800`. All 11
+probe `[keys]` printed.
+
+**H-si-loop-recv SELECTED.**
+H-si-recv-after-read
+REFUTED (after-read-recv
+n=1419 matches start-read).
+H-si-exited REFUTED
+(`site=exit` never fired;
+`no-epilogue` said there is
+no return). H-si-other-path
+REFUTED (last site is
+`send`, not a pre-start-read
+site). H-hangar-reachable
+REFUTED again.
+
+Same-run join (already-on
+AUDIOTICK_TRACE, not a new
+unit): unique `osSendMesg`
+to the loop-top mq
+`0x8010FF50` is
+`wakeSerialThreadOnSi`
+`0x80003250`. Last
+`[vi-cb-slot] ptr=0x80003250`
+is n=5676 L292438 (5 lines
+before send 1419). Then
+`[vi-cb-after]` n=1419,
+`[vi-cb-loop]` n=1420,
+`[vi-cb-recv1] enter n=1420
+mq=0x80114388`,
+`[vi-recv-path] n=1420
+blocked=1 deq_vi=0`; 9369
+later `[vi-enq]` to that mq;
+zero `[vi-deq]` / `[vi-wait]`
+after send 1419; zero
+recv1-exit n=1420. The
+s1941 starve reproduced
+after title 1024.
+`menu-spin` / `[spin-yield]`
+after 1024 = 0
+(`menuOverlayInit`
+returned). `[slot-ret]`
+after 1024 still climbs to
+n=821000000 `v0=0 path=walk
+s1=0x01`. Next split: which
+of the other nine
+`jal 0x8008E57C` sites is
+that post-1024 spinner
+(`menuOverlayInit`
+`0x800C5930` is dead).
+
+Do not repeat eleven-Start
+as a hangar recipe. Yield
+stays default-off. Ask (b)
+remains human-only.

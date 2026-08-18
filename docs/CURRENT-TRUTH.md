@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1945 (2026-08-18).
+detail. Reviewed through s1946 (2026-08-18).
 
 ## Current state
 
@@ -808,6 +808,70 @@ detail. Reviewed through s1945 (2026-08-18).
   `osContStartReadData`
   caller is `siServiceThread`
   `0x80002E10`.
+  **s1946**: always-on `[si-thr]`
+  on `siServiceThread` (fixup +
+  `funcs_0.c`; no `lib/` edit).
+  Sites: `no-epilogue` (once;
+  function has no `jr $ra`),
+  `loop` after the `L_80002EA0`
+  Recv, `start-read` /
+  `after-read-recv` /
+  `get-read` / `send`, and
+  `exit` on the unreachable
+  delay-slot tail. Rate-limit
+  first 16 then every 32, plus
+  every fire at
+  `vi_width>=1024`. Same
+  recipe
+  (`s1946_si_thr_after_title_20260818-014456/run.log`,
+  probe_rc=5, 180s, 0 crash).
+  Control passed: tick 3/3/3
+  `took_swap=1` three times;
+  third `slot-alloc`
+  `0x8018D4A0/16`;
+  `[spin-yield]` n=1/2;
+  `[phase] 1024
+  origin=0x00790400` at 14.0s
+  `#773`; `start-read` /
+  `get-read` n=1 at L202/205
+  **before** that 1024;
+  `[pad-sdl]` Return down n=1,3
+  and `[pad-host]` Start n=1,2
+  before it. Last `[si-thr]`
+  is a complete iter
+  `loop/start-read/after-read-recv/get-read/send`
+  all n=1419 at L292439–443
+  (`#1472`); zero `loop`
+  n=1420; `site=exit` = 0.
+  146 later `update_screen`
+  through `#10816`. 0 hangar
+  origin. **H-si-loop-recv
+  SELECTED.** H-si-recv-after-read
+  / H-si-exited /
+  H-si-other-path REFUTED.
+  Same-run (not a new unit):
+  unique sender to the
+  loop-top mq `0x8010FF50` is
+  `wakeSerialThreadOnSi`
+  `0x80003250`; last
+  `[vi-cb-slot]` of that ptr
+  is n=5676 L292438 (the
+  walk that produced SI
+  1419); then
+  `[vi-cb-recv1] enter n=1420`
+  + `[vi-recv-path] n=1420
+  blocked=1 deq_vi=0` and
+  9369 later `[vi-enq]` to
+  `0x80114388` with zero
+  `[vi-deq]` / `[vi-wait]`.
+  `menu-spin` / `[spin-yield]`
+  after 1024 = 0 (init
+  returned). `[slot-ret]`
+  after 1024 still climbs to
+  n=821000000 `v0=0
+  path=walk`. The s1942 yield
+  unblocked only the
+  `menuOverlayInit` spin.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -861,25 +925,33 @@ detail. Reviewed through s1945 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-1. **H-poll-stopped SELECTED
-   (s1945).** `poll_input` and
-   `get_n64_input` die after
-   Start #4 (`site=poll` last
-   n=1408 at `#1408`;
-   `[host-start]` last n=1309).
-   Starts 26–56 never become
-   `[pad-sdl]` or `[pad-host]`.
-   H-title-ignores-start still
-   holds for the two Starts
-   that did reach title 1024.
-   Next split is why unique
-   caller `siServiceThread`
-   `0x80002E10` stops issuing
-   `osContStartReadData`.
-   Do not repeat eleven-Start
-   or from-phase-1024 Start/A
-   as hangar recipes. Yield
-   stays default-off. Ask (b)
+1. **H-si-loop-recv SELECTED
+   (s1946).** `siServiceThread`
+   finishes a complete iter
+   (send n=1419) then the
+   next `L_80002EA0` Recv on
+   mq `0x8010FF50` never
+   returns. Unique producer
+   is `wakeSerialThreadOnSi`
+   `0x80003250` (VI-retrace
+   slot). That slot's last
+   fire is the walk that
+   produced SI 1419; recv1
+   n=1420 then starves
+   exactly as s1941
+   (9369 `[vi-enq]`, 0
+   deq/wait). `menu-spin`
+   yield is gone after 1024;
+   `anyAudioSlotActive`
+   (`slot-ret`) still spins
+   (`v0=0`, n=821e6). Next
+   split is which of the
+   other nine `jal 0x8008E57C`
+   sites is that post-1024
+   spinner. Do not repeat
+   eleven-Start as a hangar
+   recipe. Yield stays
+   default-off. Ask (b)
    remains human-only.
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
@@ -1006,30 +1078,21 @@ silence while
 `#10816`; pad-sdl and
 pad-host died together
 after Start #4.
-Treating s844 `#8`
-`applyPendingViChanges` as the 1024 function submitting 640
-is superseded by s1919 — `#8` is `0x80128E40`; `#10` is
-`initVideoSubsystem` submitting `0x80128DA0`. Treating
-`#8` as the swap-path stall point is superseded by s1920
-— `L_80018264` already stops after `#6`; the table at
-`0x80128EAD` is not the gate. Treating s1920's loop
-`n=3` as a third `advanceVideoFrame` call is superseded
-by s1921 — two calls produced loop n=1,2,3; both
-returned; the caller never jals again. Treating the
-stall as inside `runVideoFrameTick` after the second
-`advanceVideoFrame` return (stuck in the post-jal
-tail, or a 3rd tick dying before the jal) is
-superseded by s1922 — tick-entry/jal/exit are all 2.
-Treating the two ticks as possibly
-`mainGameLoop`'s own jals (or as unknown parents
-of a once-entered `mainGameLoop`) is superseded by
-s1923 — tick 1 is `menuOverlayInit`, tick 2 is
-`initSceneForMission`; `mgl-jal-*` never fire.
-Treating `menuOverlayInit` entry 2 as maybe
-stuck in `zmemcpy`/`tickMusyXIfActive` or as
-returning before the jal is superseded by
-s1924 — `menu-spin` climbs through the 180s
-timeout and `menu-exit` siten=2 never fires.
+Treating the SI stop as a
+stuck post-`StartReadData`
+Recv, a thread exit, or a
+skip of `StartReadData`
+(H-si-recv-after-read /
+H-si-exited /
+H-si-other-path) is
+superseded by s1946 —
+last site is `send` n=1419
+with all five body sites
+tied and no `loop` n=1420.
+s1919–s1924 caller/swap/tick
+supersessions live in the
+s1918–s1924 current-state
+block above.
 Treating the continuing spin as maybe
 `audioStubReturnZero` returning 1, or as a
 gate-0 / s1-v0 CFG contradiction, is
