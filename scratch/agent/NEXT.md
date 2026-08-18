@@ -1,95 +1,87 @@
-# NEXT work unit (s1947) — which anyAudioSlotActive caller spins after title 1024
+# NEXT work unit (s1948) — yield the menuControllerInput audio-slot spin
 
 HYPOTHESIS-ID: hangar-after-title-1024
 
-s1946 selected H-si-loop-recv:
-`siServiceThread` finishes
-send n=1419 then the next
-`L_80002EA0` Recv on mq
-`0x8010FF50` never returns.
-Unique producer is
-`wakeSerialThreadOnSi`
-`0x80003250`. Last fire of
-that VI slot is the walk
-that produced SI 1419;
-recv1 n=1420 then starves
-(9369 `[vi-enq]`, 0 deq).
-`menu-spin` / `[spin-yield]`
-after 1024 = 0. `[slot-ret]`
-still climbs to n=821e6
-`v0=0 path=walk`.
+s1947 selected H-menu-input:
+after title 1024 the only
+live `jal 0x8008E57C` site
+is `menuControllerInput`
+`0x800B8050` (n=773e6,
+`after1024=8`, all
+`1024`/`0x00790400`).
+`menuOverlayInit` /
+`waitForAnyAudioSlot` /
+the other seven are dead
+after 1024. Same
+`beq v0==0` tight spin as
+`L_800C5930`; s1942
+`ROGUESQ_SPIN_YIELD` does
+not cover `L_800B8050`, so
+idle-wait starves again
+(SI send 1418 then recv1
+n=1419 `blocked=1`).
 
 ## Competing hypotheses
 
-- **H-wait-slot** —
-  `waitForAnyAudioSlot`
-  `0x800668C0` is the
-  post-1024 spinner.
-- **H-menu-input** —
+- **H-same-starve** —
+  extending the existing
+  env-gated `yield_self_1ms`
+  (every 100000 iters) to
   `menuControllerInput`
-  `0x800B8050` (title/attract
-  presenter) is the spinner.
-- **H-other-jal** —
-  one of the other seven
-  live `jal 0x8008E57C`
-  sites
-  (`initCinematicSceneAssets`
-  `0x800AE75C`,
-  `drainAudioAndFinalizeSpeechBuffer`
-  `0x800B24D4`,
-  `runMenuRandomBackdropScreen`
-  `0x800BFF60`,
-  `runMenuShipSelectScreen`
-  `0x800C1750`,
-  `runMenuModelViewerScreen`
-  `0x800C2DB0`,
-  `menuSubtype02Handler`
-  `0x800C3F64`,
-  `runModelViewerLoop`
-  `0x800CA580`).
-- **H-menu-init-still** —
-  `menuOverlayInit`
-  `0x800C5930` still issues
-  the post-1024 `slot-ret`
-  (s1946 `menu-spin`=0
-  would be a miss).
+  `L_800B8050` unblocks
+  recv1 (exit after a
+  `[spin-yield]`) and later
+  Starts reach
+  `get_n64_input` after
+  1024.
+- **H-title-real** —
+  yield unblocks SI/poll
+  but title still ignores
+  Start (Starts consumed,
+  0 hangar origin).
+- **H-yield-miss** —
+  `[spin-yield]` never
+  fires on this site
+  (wrong loop / cadence
+  never reached).
+- **H-hangar-reachable** —
+  `[phase] 512
+  origin=0x006AB400` or
+  `0x006AB800`.
 
 ## Work unit — one rebuild
 
-Land always-on
-`[slot-ret-caller]` on every
-`jal 0x8008E57C` site
-(fixup, not a hand-edit).
-Fields: `site=<fn-short>`,
-`n`, `vi_width`, `origin`.
-Rate-limit first 16 then
-every 32, plus every fire
-once `vi_width>=1024` is
-too hot (821e6 calls) —
-instead: first 16, every
-1e6, and every fire in a
-32-deep ring dumped once
-`slot-ret` n crosses 1e6
-*after* the 1024 phase
-(or just first 16 / every
-1e6 / first 8 after 1024).
-Keep existing `[slot-ret]`
-and `[si-thr]`. Do **not**
-edit `lib/`. Do **not**
-inject pad bits. Do **not**
-default-on
-`ROGUESQ_SPIN_YIELD`.
+Extend the existing
+`ROGUESQ_SPIN_YIELD` block
+(currently only on
+`menuOverlayInit`
+`L_800C5930`) to the
+`L_800B8050` `beq v0==0`
+loop in
+`menuControllerInput`.
+Same cadence (every
+100000), same
+`[spin-yield]` tag, add
+`site=menuInput` so the
+two yields are
+distinguishable. Fixup,
+not a hand-edit. Do **not**
+default the env on. Do
+**not** edit `lib/`. Do
+**not** inject pad bits.
 
-Same Debug binary
-otherwise. One soak:
-`ROGUESQ_SPIN_YIELD=1` +
-s1943 eleven-Start from
+Keep `[slot-ret-caller]`,
+`[si-thr]`, `[pad-host]`,
+`[pad-sdl]`. Same Debug
+binary otherwise. One
+soak: `ROGUESQ_SPIN_YIELD=1`
++ s1943 eleven-Start from
 boot + the same passive
-instruments as s1946.
+instruments as s1947.
 
 ```
 # after the rebuild:
-zsh scratch/agent/soak_queue/s1947_slot_ret_caller.sh
+zsh scratch/agent/soak_queue/s1948_menu_input_yield.sh
 ```
 
 Write that script this
@@ -100,56 +92,54 @@ not babysit.
 
 Same-run positive control
 (must fire **before** any
-caller claim):
+yield claim):
 
 - tick-entry/jal/exit at
   least 2/2/2 with
   `took_swap=1` twice
 - `slot-alloc` third row
   `0x8018D4A0 count=16`
-- `[spin-yield]` n=1
+- `[spin-yield] site=menuInit`
+  n=1 (the existing s1942
+  yield still fires)
 - `[phase] 1024
   origin=0x00790400`
-- `[si-thr] site=start-read`
-  and `site=get-read` fire
-  **before** that 1024
 - `[slot-ret-caller]
-  site=menuOverlayInit`
-  fires **before** that
-  1024 (the known s1924
-  spinner)
+  site=menuControllerInput`
+  fires **after** that 1024
 
-After that control, look at
-`[slot-ret-caller]` rows
-*after* the 1024 phase
-(and after SI send last):
+After that control:
 
-- only `waitForAnyAudioSlot`
-  climbs → **H-wait-slot
+- `[spin-yield] site=menuInput`
+  n>=1, then recv1-exit
+  after the post-1024
+  enter, and `[si-thr]`
+  `start-read` n>1418, and
+  later `[pad-host]` Start
+  after 1024
+  → **H-same-starve
+  SELECTED** (if still 0
+  hangar, say so)
+- yield + SI/poll resume
+  but 0 further pad-host
+  Start after the already-
+  known n=3,4 and 0 hangar
+  → **H-title-real
   SELECTED**
-- only `menuControllerInput`
-  climbs → **H-menu-input
-  SELECTED**
-- exactly one of the other
-  seven climbs →
-  **H-other-jal SELECTED**
-  (name it)
-- `menuOverlayInit` still
-  climbs →
-  **H-menu-init-still
+- `[slot-ret-caller]
+  site=menuControllerInput`
+  climbs and `[spin-yield]
+  site=menuInput` never
+  fires → **H-yield-miss
   SELECTED**
 - `[phase] 512
   origin=0x006AB400` or
-  `0x006AB800` →
-  **H-hangar-reachable
+  `0x006AB800`
+  → **H-hangar-reachable
   SELECTED**
 
-Do **not** repeat
-s1943–s1946 eleven-Start
-as a hangar recipe without
-this caller split. Do
-**not** land spin-yield as
-default. Ask (b) from
+Do **not** land spin-yield
+as default. Ask (b) from
 s1891 — still human-only.
 
 Run from `build/` with the
@@ -165,8 +155,8 @@ Four-step already complete in s1906–s1917.
 
 - s1942 yield off/on A/B (closed).
 - s1942 from-phase-1024 Start/A as a hangar recipe.
-- s1943–s1946 eleven-Start-from-boot as a hangar
-  recipe without the post-1024 slot-ret caller split.
+- s1943–s1947 eleven-Start-from-boot as a hangar
+  recipe without yielding `L_800B8050`.
 - Force-zero slots.
 - `requeue_vi=true` as the only arm.
 - Ask (b) from s1891 — still human-only.

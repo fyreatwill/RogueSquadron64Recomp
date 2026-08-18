@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1946 (2026-08-18).
+detail. Reviewed through s1947 (2026-08-18).
 
 ## Current state
 
@@ -872,6 +872,53 @@ detail. Reviewed through s1946 (2026-08-18).
   path=walk`. The s1942 yield
   unblocked only the
   `menuOverlayInit` spin.
+  **s1947**: always-on
+  `[slot-ret-caller]` on
+  every `jal 0x8008E57C`
+  (fixup + generated TUs;
+  helper in `funcs_0.c`).
+  Same recipe
+  (`s1947_slot_ret_caller_20260818-020140/run.log`,
+  probe_rc=5, 180s, 0
+  crash). Control passed:
+  tick 3/3/3 `took_swap=1`
+  three times; third
+  `slot-alloc`
+  `0x8018D4A0/16`;
+  `[spin-yield]` n=1/2;
+  `[phase] 1024
+  origin=0x00790400` at
+  14.1s `#775`; `[si-thr]`
+  start-read/get-read n=1
+  **before** that 1024;
+  `[slot-ret-caller]
+  site=menuOverlayInit`
+  n=1..16 **before** that
+  1024 (`vi_width=640`).
+  After: only
+  `menuControllerInput`
+  (n=1..773e6, after1024=8,
+  all `1024`/`0x00790400`,
+  first L295055 right after
+  SI send n=1418 / recv1
+  enter n=1419 `blocked=1`).
+  Zero post-1024
+  `menuOverlayInit` /
+  `waitForAnyAudioSlot` /
+  the other seven.
+  `menu-spin` after 1024 =
+  0. `#10816` still title
+  1024. 0 hangar origin.
+  **H-menu-input SELECTED.**
+  H-wait-slot /
+  H-other-jal /
+  H-menu-init-still /
+  H-hangar-reachable
+  REFUTED. Same tight
+  `beq v0==0` spin as
+  `menuOverlayInit`
+  (`L_800B8050`); the s1942
+  yield does not cover it.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -925,33 +972,32 @@ detail. Reviewed through s1946 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-1. **H-si-loop-recv SELECTED
-   (s1946).** `siServiceThread`
-   finishes a complete iter
-   (send n=1419) then the
-   next `L_80002EA0` Recv on
-   mq `0x8010FF50` never
-   returns. Unique producer
-   is `wakeSerialThreadOnSi`
-   `0x80003250` (VI-retrace
-   slot). That slot's last
-   fire is the walk that
-   produced SI 1419; recv1
-   n=1420 then starves
-   exactly as s1941
-   (9369 `[vi-enq]`, 0
-   deq/wait). `menu-spin`
-   yield is gone after 1024;
-   `anyAudioSlotActive`
-   (`slot-ret`) still spins
-   (`v0=0`, n=821e6). Next
-   split is which of the
-   other nine `jal 0x8008E57C`
-   sites is that post-1024
-   spinner. Do not repeat
-   eleven-Start as a hangar
-   recipe. Yield stays
-   default-off. Ask (b)
+1. **H-menu-input SELECTED
+   (s1947).** After title
+   1024, the only live
+   `jal 0x8008E57C` site is
+   `menuControllerInput`
+   `0x800B8050` (n=773e6,
+   `v0=0` walk). Same
+   `beq v0==0` audio-slot
+   spin as the s1924
+   `menuOverlayInit` stall;
+   s1942 `ROGUESQ_SPIN_YIELD`
+   only covers
+   `L_800C5930`, so this
+   second spin re-starves
+   idle-wait (SI send 1418
+   then recv1 n=1419
+   `blocked=1`). Next split:
+   extend that same env-gated
+   yield to `L_800B8050` and
+   see whether SI/poll resume
+   and whether hangar
+   appears. Do not default
+   the yield on. Do not
+   repeat eleven-Start as a
+   hangar recipe without
+   that yield. Ask (b)
    remains human-only.
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated

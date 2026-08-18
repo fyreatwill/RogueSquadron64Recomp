@@ -92637,3 +92637,139 @@ Do not repeat eleven-Start
 as a hangar recipe. Yield
 stays default-off. Ask (b)
 remains human-only.
+
+## Session 1947 (2026-08-18) — selected H-menu-input; title 1024 spins in menuControllerInput
+
+`HYPOTHESIS-ID: hangar-after-title-1024`.
+Landed always-on
+`[slot-ret-caller]` on every
+generated `jal 0x8008E57C`
+(`anyAudioSlotActive`) site
+via `fixup_game_funcs.py`
+(and a one-shot apply to
+the already-patched
+`RecompiledFuncs/`; the
+full fixup is not
+idempotent). Helper in
+`funcs_0.c` logs
+`site`/`n`/`after1024`/
+`vi_width`/`origin`.
+Rate-limit first 16, every
+1e6, and first 8 once
+committed width >=1024.
+No `lib/` edit. No pad-bit
+injection. Yield stays
+default-off. Sites:
+`waitForAnyAudioSlot`
+`0x800668C0`,
+`initCinematicSceneAssets`
+`0x800AE75C`,
+`drainAudioAndFinalizeSpeechBuffer`
+`0x800B24D4`,
+`menuControllerInput`
+`0x800B8050`,
+`runMenuRandomBackdropScreen`
+`0x800BFF60`,
+`runMenuShipSelectScreen`
+`0x800C1750`,
+`runMenuModelViewerScreen`
+`0x800C2DB0`,
+`menuSubtype02Handler`
+`0x800C3F64`,
+`menuOverlayInit`
+`0x800C5930`,
+`runModelViewerLoop`
+`0x800CA580`. Debug rebuild
+of the seven TUs plus
+`funcs_0.c`. One soak:
+`ROGUESQ_SPIN_YIELD=1` plus
+s1943 eleven-Start from
+boot and the same passive
+instruments as s1946.
+
+Artifact:
+`scratch/agent/soak_results/s1947_slot_ret_caller_20260818-020140/run.log`
+(probe_rc=5, 180s, 0 crash,
+last width 1024).
+
+Same-run positive control
+passed before any caller
+claim: tick-entry/jal/exit
+3/3/3 with `took_swap=1`
+three times; third
+`slot-alloc` `new=0x8018D4A0
+count=16`; `[spin-yield]`
+n=1/2; `[phase] 1024
+origin=0x00790400` at 14.1s
+`#775` (L140633); `[si-thr]`
+`site=start-read` and
+`site=get-read` n=1 **before**
+that 1024; `[slot-ret-caller]
+site=menuOverlayInit` n=1..16
+at L140321 **before** that
+1024 (`vi_width=640
+origin=0x0062BD00`).
+`waitForAnyAudioSlot` also
+logged n=1..16 before 1024
+(last L140209, width 640);
+`runMenuModelViewerScreen`
+n=1 once at L64620 (width
+640). The other six sites
+never logged.
+
+After that 1024: only
+`menuControllerInput`
+(789 rows, n=1..773000000,
+`after1024` 1→8, all
+`vi_width=1024
+origin=0x00790400`). First
+row L295055 sits on the
+same join as SI send n=1418
+and `[vi-cb-recv1] enter
+n=1419 mq=0x80114388` +
+`[vi-recv-path] n=1419
+blocked=1 deq_vi=0`. Zero
+post-1024
+`menuOverlayInit` /
+`waitForAnyAudioSlot` /
+any of the other seven.
+`menu-spin` after 1024 = 0.
+`[slot-ret]` last
+n=774000000 `v0=0 path=walk
+s1=0x01`. `#10816` still
+`0x00790400`/1024. 0 origin
+`0x006AB400`/`800`. All 11
+probe `[keys]` printed.
+
+**H-menu-input SELECTED.**
+H-wait-slot REFUTED (no
+post-1024
+`waitForAnyAudioSlot`).
+H-other-jal REFUTED (none
+of the other seven climb;
+only a single pre-1024
+`runMenuModelViewerScreen`
+n=1). H-menu-init-still
+REFUTED (`menuOverlayInit`
+stops at n=16 before 1024;
+`menu-spin` after = 0).
+H-hangar-reachable REFUTED
+again.
+
+Static second line:
+`menuControllerInput`
+`L_800B8050` is the same
+`andi $v0; beq $v0, $zero`
+tight spin as
+`menuOverlayInit`
+`L_800C5930`. The s1942
+yield only covers the
+latter, so this second
+spin re-starves idle-wait
+exactly as s1941/s1946.
+
+Do not repeat eleven-Start
+as a hangar recipe without
+yielding this spin. Yield
+stays default-off. Ask (b)
+remains human-only.
