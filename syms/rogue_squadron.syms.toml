@@ -2011,7 +2011,7 @@ functions = [
     { name = "renderNpcAnchoredProceduralEffect", vram = 0x800F7130, size = 0xB44 },
     { name = "spawnAndUpdateEffectActors", vram = 0x800F7C74, size = 0x724 },
     { name = "executeActorType4Effect", vram = 0x800F8398, size = 0x10DC },
-    { name = "func_800F9474", vram = 0x800F9474, size = 0x8 },
+    { name = "clearObjectField112", vram = 0x800F9474, size = 0x8 },
     { name = "func_800F947C", vram = 0x800F947C, size = 0x1F8 },
     { name = "func_800F9674", vram = 0x800F9674, size = 0x140 },
     { name = "func_800F97B4", vram = 0x800F97B4, size = 0x40 },
