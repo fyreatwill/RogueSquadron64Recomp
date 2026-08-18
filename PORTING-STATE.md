@@ -87834,3 +87834,109 @@ touch runtime code.
 Do not re-run the hangar/512 H-* table until VI-1024 reachability itself is
 re-established. Do not re-walk VMADH/VGE, the `0xD60` shape, or the ovl20
 consumer table (still closed per s1824/s1840/s1856).
+
+## Session 1889 (2026-08-17) — VI-1024 stall/crash reproduces 3/3, in three different signatures; H1-flake refuted
+
+HYPOTHESIS-ID: vi1024-reachability-regression (continuing s1888). Step 0
+`wc -c docs/CURRENT-TRUTH.md` was 20571; not maintenance. Executed s1888's own
+prescribed discriminating measurement: re-ran the unmodified
+`scratch/agent/s790_postsec2_reachability.sh` 3 more times, one game at a
+time, SIGKILL between runs, no source/lib edits before or during.
+
+### Results
+
+| Run | Result | Detail |
+|---|---|---|
+| 1 (`...20260817-174630`) | Native SIGSEGV before 1024, ~15-24s | `RT64::NativeTarget::copyToRAM` inside `Framebuffer::copyNativeToRAM`/`State::fullSync` — same call stack as 2/5 of s1888's runs, now reproduced a 3rd/4th time |
+| 2 (`...20260817-174727`) | Native SIGSEGV before 1024, ~15-20s | **New signature**: inside the Apple AGX Metal driver (`checkActiveRenderEncoder`→`beginRenderPass`) via `RT64::RenderTarget::clearDepthTarget`, also under `State::fullSync`; `si_addr=0x1211ffff11121161` (garbage, not a null/near-null pointer) |
+| 3 (`...20260817-174818`) | Guest-side SIGBUS before 1024, ~19-25s | **New signature**: `musyxRenderVoiceSamples`→`fillSampleStreamRange` (called from `musyxMixActiveVoices`→`musyxSynthFrame`→`viRetraceHandlerThread`) |
+
+Combined with s1888: **0/8 runs today reached VI width 1024** (was 100%
+through s815-s844). All 3 of today's runs stalled at the same `640
+origin=0x00696100` point at 7-9s before crashing, matching s1888 exactly.
+
+### H1-flake refuted; corruption-shaped, not a single repeat bug
+
+Three different runs produced three different crash signatures (two
+host-side RT64/Metal, one guest-side musyx audio) rather than one
+consistently-reproducing bug. This is not "flaky sometimes reaches 1024,
+sometimes doesn't" — it is "never reaches 1024, dies differently each time,"
+which reads as a shared upstream corruption source with variable
+downstream fallout, not independent unrelated bugs and not ordinary
+scheduling flake. H1-flake (s1888's hypothesis list) is refuted: 0/8, not a
+partial hit rate.
+
+**Two false leads checked and correctly discarded, not re-opened:**
+- `last-guest-pc=0x8000b650` appeared in runs 1 and 2's crash dumps. Per
+  extensive prior documentation (s269-s278, `PROJECT-OVERVIEW.md`
+  "Dispatcher and breadcrumb family") this exact PC is `beginFrameDLChunk`'s
+  own body — a known-stale breadcrumb that fires whenever that (very
+  frequently-called) function last ran, not the fault origin. Not treated as
+  a new clue.
+- `musyxRenderVoiceSamples`/`musyxMixActiveVoices`/`musyxSynthFrame` are a
+  long-catalogued crash family (`PROJECT-OVERVIEW.md` audio idiom sessions)
+  with several sites already deliberately left unguarded. Run 3's crash is
+  plausibly a recurrence of that known family, not a new bug — but it is
+  the first time it has been observed to occur *pre*-1024 and block the whole
+  `s790_postsec2_reachability` soak rather than as a rare pre-scene boot
+  outcome.
+
+**One genuine new lead, single-source, not yet confirmed with a positive
+control:** `ROGUESQ_LOG_FL_ZERO_WATCH` (watching phys `0x1F3CC0`, kseg
+`0x801F3CC0` — a slot the project's freelist instrumentation expects to stay
+zero) recorded a corruption write in 2/3 runs shortly before their crash:
+run 2 `cur_f=0xC51F cur_sz=0x912E002D` at t_ms=17554; run 3 `cur_f=0xEAA5
+cur_sz=0xA9712AE` at t_ms=19267, then 26 further faults by t_ms=20001. Run 1
+(the copyToRAM crash) showed **no** corresponding write — the watched slot
+stayed all-zero through its crash — so this is not present in every failure
+and does not explain run 1. `rs-malloc-diag` in run 1 reported `sane=1`
+throughout with no anomaly. ORIGIN: no mitigation was added or considered
+this session — this is an observation only.
+
+### Boring-things-first checks (all clean, ruling nothing in)
+
+- `tools/fixup_game_funcs.py`: zero commits touching it since s1888/ever in
+  the `--since 2026-08-13` window. `tools/fixup_factor5_ucode.py`: last
+  touched by `c8750cf7` (M4 shade work, unrelated to VI/native-target code).
+- `lib/N64ModernRuntime` / `lib/rt64` uncommitted status unchanged from
+  s1888's own check (same standing patch set, e.g. `rt64_native_target.cpp`'s
+  `isNativeCopySupported`/`copyToRAM` history-index guard — traced via `git
+  log -S` on `submodule-patches/rt64.patch` to `9e4ce66c`, 2026-07-26, the
+  original harness-install commit, i.e. *not* a recent addition and was
+  present unfired through every s815-s844 success).
+- Binary (`build/RogueSquadron64Recomp`) was rebuilt today (13:01) — expected
+  given the intervening symbol-rename sweep commits; no way to attribute the
+  regression to that without a bisect.
+- CPU/thermal (`top`, `vm_stat`, `pmset -g therm`) could not be checked —
+  denied by this session's permission policy. H3-machine-state remains
+  formally unruled-out, though three *different* crash signatures in one
+  batch reads more like corruption than pure slowdown/contention.
+
+### Outcome
+
+Still UNEVALUABLE for hangar/512 and everything downstream of VI 1024, for
+the same s1888 reason, now with 8/8 combined non-reaching runs and 4 distinct
+crash/stall signatures instead of 2. H1-flake is refuted. H2-build-drift's
+two checked candidates (fixup scripts, lib/ patch drift) came back clean.
+H3-machine-state has one check outstanding (CPU/thermal, blocked by
+permissions this session). H4-real-regression is not proven but is now the
+best-supported explanation, tentatively centered on the same
+freelist/heap-corruption family this project has tracked for months
+(`fl-zero-watch`, product multi-header restore, garbage-CIMG) rather than a
+new independent bug — plausible because it explains the diversity of
+downstream crash sites (RT64 native buffers, Metal driver resources, musyx
+voice buffers all read attacker-controlled-looking sizes/pointers) but not
+yet a mechanism (iron rule: mechanism or it isn't done — not claimed as one).
+
+Per iron rule 8, this is the 2nd non-ADVANCED-eligible iteration on this
+hypothesis if judged as "still stuck" — but this iteration produced a real
+discriminating result (refuted H1) and new evidence (2 new crash signatures,
+the fl-zero-watch lead), so it is declared ADVANCED, not a stall, resetting
+the counter. Next iteration should attempt the CPU/thermal check via a
+different mechanism, then decide between chasing the fl-zero-watch lead with
+a positive-control re-run or escalating to the s1888-proposed bisect.
+
+Do not re-open the hangar/512 H-* table. Do not re-treat `0x8000b650` as
+informative. Do not re-litigate whether `musyxRenderVoiceSamples`/
+`musyxMixActiveVoices`/`musyxSynthFrame` crashes are novel — they are a
+catalogued family; what's new is only that they now occur pre-1024.

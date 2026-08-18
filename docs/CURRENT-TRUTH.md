@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1888 (2026-08-17).
+detail. Reviewed through s1889 (2026-08-17).
 
 ## Current state
 
@@ -13,12 +13,20 @@ detail. Reviewed through s1888 (2026-08-17).
   and assessing legitimacy.
 - Phase-gated port captures reached VI 1024 with independent emit/raw/dispatch/match
   controls repeatedly through s844 (2026-08-13). Late E9 identity is established; remaining
-  deltas are boundary/span-shaped and unclassified. **s1888 (2026-08-17): 5/5 fresh runs,
-  including one byte-for-byte unmodified `s790_postsec2_reachability.sh`, failed to reach
-  VI 1024 at all** — the passive attract sequence now stalls at 640 `0x00696100`
-  indefinitely (confirmed to 340s wait), and 2/5 runs additionally hit a new native crash
-  in `RT64::NativeTarget::copyToRAM` before that stall. Cause undiagnosed. Do not trust
-  "reaches VI 1024" as a given for any recipe until this is re-verified.
+  deltas are boundary/span-shaped and unclassified. **s1888-s1889 (2026-08-17): 8/8 fresh
+  runs failed to reach VI 1024 at all**, including unmodified re-runs of
+  `s790_postsec2_reachability.sh`. All 8 stall at 640 `0x00696100` (7-9s); most then crash
+  before the 180-340s timeout, in 4 distinct signatures: `RT64::NativeTarget::copyToRAM`
+  SIGSEGV (s1888 2/5, s1889 1/3), an Apple AGX Metal-driver SIGSEGV via `clearDepthTarget`
+  (s1889, new), and a guest-side `musyxRenderVoiceSamples`/`fillSampleStreamRange` SIGBUS
+  (s1889, new — this exact crash family is long-catalogued but previously only seen
+  post-1024 or as a rare pre-scene boot outcome, never blocking 1024 itself). H1-flake is
+  refuted (0/8). `ROGUESQ_LOG_FL_ZERO_WATCH` (phys `0x1F3CC0`) caught a genuine corruption
+  write in 2/3 of s1889's runs shortly before their crash — single-source, no positive
+  control yet, does not explain the run without it. Cause still undiagnosed; best current
+  guess is the project's long-tracked freelist/heap corruption family now surfacing earlier
+  (pre-1024) rather than a new independent bug, but no mechanism is established. Do not
+  trust "reaches VI 1024" as a given for any recipe until this is re-verified.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -72,18 +80,24 @@ detail. Reviewed through s1888 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **New, s1888: re-establish VI-1024 reachability before anything downstream
-   of it.** 5/5 fresh runs today failed to reach VI width 1024 at all,
-   including an unmodified re-run of `s790_postsec2_reachability.sh` (ADVANCED
-   repeatedly through s844, 2026-08-13). The attract sequence now stalls at
-   640 `0x00696100` (confirmed stuck to 340s, not a timing shift); 2/5 runs
-   also hit a new native crash in `RT64::NativeTarget::copyToRAM` before that
-   stall. Cause undiagnosed — no `lib/` or source changes were made this
-   session, so this is not this session's own artifact. Next step: bisect
-   (does a build from before s844's era still reach 1024 on this machine?) or
-   re-run the identical recipe a few more times to rule out flake before
-   assuming a real regression. This blocks the entire
-   `s790_postsec2_reachability` soak family and item 3 below.
+1. **s1888-s1889: re-establish VI-1024 reachability before anything downstream
+   of it.** 8/8 fresh runs across both sessions failed to reach VI width 1024
+   at all, including unmodified re-runs of `s790_postsec2_reachability.sh`
+   (ADVANCED repeatedly through s844, 2026-08-13). H1-flake is refuted (0/8).
+   The attract sequence stalls at 640 `0x00696100` every time, then most runs
+   crash before timeout in one of 4 distinct signatures (`copyToRAM` SIGSEGV,
+   AGX Metal-driver SIGSEGV, musyx audio SIGBUS, or the plain stall) — see
+   Current state above. `fl-zero-watch` (phys `0x1F3CC0`) caught real
+   corruption in 2/3 of s1889's runs, single-source and not yet confirmed
+   causal. No `lib/` or source changes were made in either session, so this
+   is not an artifact of the investigating sessions themselves. Boring checks
+   (fixup-script diff history, `lib/` patch drift) came back clean in s1889;
+   CPU/thermal check is still outstanding (blocked by permissions in s1889).
+   Next step: get the CPU/thermal read a different way, then either chase the
+   fl-zero-watch lead with a positive control or escalate to the s1888
+   bisect (does a build from before s844's era still reach 1024 on this
+   machine?). This blocks the entire `s790_postsec2_reachability` soak family
+   and item 3 below.
 2. Resume the generated-symbol sweep at leftover `func_800F2AC4`
    (`0x800F2AC4`, size `0xC4`). Preliminary peek: the generated body
    immediately after `clearObjectFlagBit4` in `funcs_41.c` is already
@@ -355,8 +369,8 @@ and leftover `func_800F287C` became
 and leftover `func_800F2888` became
 `initActorMotionParams` (`0x800F2888`, `0x100`)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
-and s1888 found VI-1024 reachability itself regressed (5/5 runs
-failed, including an unmodified historically-reliable script) —
+and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs
+failed across 4 crash/stall signatures, H1-flake refuted) —
 UNEVALUABLE for hangar/512 for a new, upstream reason
 (§35). s1728 is maintenance only.
 
