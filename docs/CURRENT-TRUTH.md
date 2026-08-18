@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1934 (2026-08-17).
+detail. Reviewed through s1935 (2026-08-17).
 
 ## Current state
 
@@ -432,40 +432,59 @@ detail. Reviewed through s1934 (2026-08-17).
   **s1934**: consumed both
   queued hunts. Both died
   before `menu-entry`
-  siten=2; `osViSetMode`
-  ends at `#6`; last
+  siten=2; last
   `[synth-entry]`=`[synth-exit]`
   n=1280 and last
   `[vi-cb-loop]`=`[vi-cb-after]`
-  n=1152 (sites not missed;
-  last-logged iteration
-  completed on a later
-  stride than s1933). Same-
-  run control passed on
-  both (tick 2/2/2,
-  `took_swap=1` twice,
-  `slot-alloc` ends
-  `0x8018D4A0/16`).
-  `s1933_entry2_synth_exit_20260817-231343`
-  (probe_rc=4, ~27s) is
-  `findTileCopyId` `height>0`
-  SIGABRT last-guest-pc
-  `0x8000b650`.
-  `s1933_entry2_synth_exit_b_20260817-231314`
-  (probe_rc=4, ~29s) is
-  catalogued
-  `fillSampleStreamRange+6464`
-  SIGBUS last-guest-pc
-  `0x8000b650`. Neither is
-  the `#7/#8` / entry-2
-  flavor. **UNEVALUABLE**
-  for the three-way split.
-  Last-logged completion on
-  the crash flavor is
-  closed through n=1280;
-  still not the s1931
-  entry-2 answer. Queued
-  two more hunts.
+  n=1152. Crash /
+  `findTileCopyId` flavors;
+  **UNEVALUABLE** for the
+  three-way split.
+  **s1935**: consumed
+  `s1934_entry2_synth_exit`
+  (crash, UNEVALUABLE) and
+  `s1934_entry2_synth_exit_b`
+  (probe_rc=5, 182s
+  `#7/#8` / `menu-entry`
+  siten=2). Same-run
+  control passed. Join
+  key: `[vi-cb-loop]` n=2432
+  L387378 → `[vi-cb-slot]`
+  n=9728 `ptr=0x80003250`
+  → `[vi-cb-after]` n=2432
+  L387407 → `[synth-entry]`
+  / `[synth-exit]` n=2560
+  L387704/387724 → `#8`
+  L388334 → `.ovl.menu`
+  L388380 → `menu-entry`
+  siten=2 L388382;
+  `menu-spin` to
+  953000000; `update_screen`
+  `#2880→#10816`; 0
+  width=1024. **H-recv-
+  starved SELECTED.**
+  H-synth-never-returned
+  REFUTED (exit n=2560).
+  H-stuck-later-slot
+  REFUTED for the last
+  logged walk (after n=2432
+  fired; slot n=9728 =
+  2432×4). `#8` is
+  `applyPendingViChanges`
+  whose only generated
+  caller is
+  `viRetraceHandlerThread`
+  `0x80019914` after the
+  loop-top
+  `osRecvMesg(0x80114388)`
+  — so recv1 of the next
+  (unlogged) iteration
+  unblocked. Stall is after
+  `#8`: the second
+  `osRecvMesg(0x80128D10)`
+  at `0x80019928`, or the
+  work between `after_7`
+  and `L_80019B68`.
 - Recurring `slotDispatcherIter+872` SIGBUS is the generated prologue spill of
   guest `$sp` at `funcs_8.c:22810`. Complete static audits found no reachable
   frame-overlapping writer. Runtime guest corruption remains open; no mitigation.
@@ -519,60 +538,44 @@ detail. Reviewed through s1934 (2026-08-17).
 
 ## Active investigation and ranked next steps
 
-1. **VI-retrace handler stops
-   at menu-entry 2 (s1931).
-   `[synth-exit]` /
-   `[vi-cb-after]` are live
-   (s1932).** Consume the
-   queued
-   `s1934_entry2_synth_exit`
-   / `_b` soaks — do not
-   rebuild, do not change
-   the stride. After
-   `menu-entry` siten=2 on a
-   `#7/#8` staller: no
-   `synth-exit` for the last
-   logged `[synth-entry]`
-   (s1931 n=2560 is
-   on-stride) →
-   H-synth-never-returned;
-   `synth-exit` and no
-   `vi-cb-after` →
-   H-stuck-later-slot; both
-   fire and `[vi-cb-loop]`
-   stays frozen →
-   H-recv-starved. Crash
-   family (s1933 n=1152;
-   s1934 n=1280 completed
-   then `findTileCopyId`
-   SIGABRT or musyx SIGBUS;
-   no entry 2) and the
-   #6-dead flavor (s1932
-   180s: last logged n=1024
-   completed, no `#7/#8`)
-   are UNEVALUABLE for this
-   split — enqueue, do not
-   babysit, do not re-read
-   them as the entry-2
-   answer. Five hunts since
-   s1931 have missed the
-   `#7/#8` flavor; if both
-   s1934 soaks miss again,
-   pivot off flavor-hunting
-   (static recv after the
-   slot walk) instead of a
-   sixth identical consume.
-   Ask (b) remains
-   human-only. Do not re-run
-   a reachability-only
-   `s790`. Do not force-zero
-   a slot byte or the gate
-   without an `ORIGIN:`.
-   Still blocks item 3
-   (hangar/512) until a port
-   run publishes `[phase]
-   vi_width=512 origin=0x006AB400`
-   (or `0x006AB800`).
+1. **VI-cb stuck after
+   applyPending `#8` (s1935).
+   H-recv-starved selected
+   on the s1932 three-way;
+   `#8` refines it off the
+   loop-top recv.** Next:
+   one Debug rebuild adding
+   `[vi-cb-recv2]` enter/exit
+   around `osRecvMesg`
+   `0x80019928` (queue
+   `0x80128D10`) and
+   `[vi-cb-walk]` at
+   `L_80019B68`, same
+   `ROGUESQ_LOG_AUDIOTICK_TRACE`
+   stride, then one `#7/#8`
+   soak. After `#8` on a
+   `menu-entry` siten=2
+   staller: recv2-enter and
+   no recv2-exit →
+   H-recv2-starved;
+   recv2-exit and no
+   walk-start →
+   H-post-recv2-stuck;
+   walk-start and no
+   `vi-cb-after` past 2432 →
+   H-unlogged-walk-stuck.
+   Do not force-zero. Do
+   not re-hunt the s1932
+   three-way or consume
+   another crash/#6-dead
+   soak as the entry-2
+   answer. Ask (b) remains
+   human-only. Still blocks
+   item 3 (hangar/512) until
+   a port run publishes
+   `[phase] vi_width=512
+   origin=0x006AB400` (or
+   `0x006AB800`).
 2. Generated-symbol sweep leftover `func_800F7130` (`0x800F7130`,
    TOML size `0xB44` matches generated
    `renderNpcAnchoredProceduralEffect` `rom_size 0xB44`). Four-step
@@ -754,7 +757,27 @@ completion (or the
 arm) as the entry-2 answer
 is not licensed — same
 missing `menu-entry`
-siten=2.
+siten=2. Treating the
+entry-2 freeze as
+H-synth-never-returned or
+H-stuck-later-slot is
+superseded by s1935 —
+`synth-exit` n=2560 and
+`vi-cb-after` n=2432 both
+fire before `menu-entry`
+siten=2; `[vi-cb-loop]`
+stays at 2432 while
+`update_screen` climbs.
+Treating H-recv-starved as
+"blocked on the loop-top
+`osRecvMesg(0x80114388)`"
+is superseded by s1935's
+`#8` — `applyPendingViChanges`
+has one generated caller
+(`0x80019914`) after that
+recv; `#8` fires after
+after-2432, so recv1
+unblocked.
 
 ## Evidence ledger summary
 Per-session rows through s1789 live in `PROJECT-OVERVIEW.md` §33–§35.
@@ -1090,6 +1113,18 @@ one musyx SIGBUS; neither
 reached `menu-entry`
 siten=2; entry-2 split
 still UNEVALUABLE)
+and s1935 selected
+H-recv-starved on the
+`#7/#8` / entry-2 flavor
+(`synth-exit` n=2560,
+`vi-cb-after` n=2432,
+loop frozen at 2432,
+`#10816`; H-synth-never-
+returned and
+H-stuck-later-slot
+REFUTED; `#8` refines
+the stall to after
+applyPending)
 and s1872 selected UNEVALUABLE for hangar/512 live `0x8000` Y
 and s1888-s1889 found VI-1024 reachability itself regressed (8/8 runs
 failed across 4 crash/stall signatures, H1-flake refuted) —

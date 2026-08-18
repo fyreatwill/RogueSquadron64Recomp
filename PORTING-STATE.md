@@ -91377,3 +91377,137 @@ hunting. Do not rebuild. Do
 not change the stride. Do not
 re-run a reachability-only
 `s790`.
+
+## Session 1935 (2026-08-17) — selected H-recv-starved; #8 refines stall past recv1
+
+`HYPOTHESIS-ID: vi1024-guest-never-requests`.
+Planned unit: consume the queued
+`s1934_entry2_synth_exit` and
+`s1934_entry2_synth_exit_b`
+soaks (no rebuild, no stride
+change). After `menu-entry`
+siten=2 on a `#7/#8` staller:
+no matching `synth-exit` →
+H-synth-never-returned;
+`synth-exit` and no
+`vi-cb-after` →
+H-stuck-later-slot; both fire
+and `[vi-cb-loop]` stays frozen
+→ H-recv-starved.
+
+Consumed both. Same-run
+positive control passed on each:
+tick-entry/jal/exit 2/2/2;
+`took_swap=1` twice (swap n=2
+and n=3); `slot-alloc` x3 ending
+`new=0x8018D4A0 count=16`;
+`[synth-exit]` and `[vi-cb-after]`
+fire from n=0 (sites not missed).
+
+`scratch/agent/soak_results/s1934_entry2_synth_exit_20260817-232335/run.log`
+(probe_rc=4, ~29s): catalogued
+`fillSampleStreamRange+6464`
+SIGBUS last-guest-pc=`0x8000b650`.
+Only `menu-entry` siten=1.
+`osViSetMode` ends at `#6`.
+Last `[synth-entry]`=`[synth-exit]`
+n=1280; last
+`[vi-cb-loop]`=`[vi-cb-after]`
+n=1152. Last `update_screen`
+`#1600` origin `0x0062BD00`.
+**UNEVALUABLE** for the
+three-way split (crash flavor;
+s1934 already closed last-logged
+completion through n=1280 on
+this signature).
+
+`scratch/agent/soak_results/s1934_entry2_synth_exit_b_20260817-232033/run.log`
+(probe_rc=5, 182s, 0 crash):
+the s1931 `#7/#8` / entry-2
+flavor. `#7` L386596 and `#8`
+L388334 are
+`applyPendingViChanges`
+(`0x80128DA0` then
+`0x80128E40`). `menu-entry`
+siten=2 at L388382 after
+`.ovl.menu` DMA L388380.
+`menu-spin` climbs to
+siten=953000000. Zero
+`menu-jal` / `menu-exit`
+siten=2. Zero width=1024.
+`update_screen` `#2880→#10816`
+origin `0x00696100`.
+
+Join key (log order):
+
+- `[vi-cb-loop]` n=2432 L387378
+- `[vi-cb-slot]` n=9728 L387379
+  `ptr=0x80003250`
+  (`wakeSerialThreadOnSi`;
+  9728 = 2432×4)
+- `[vi-cb-after]` n=2432 L387407
+- `[synth-entry]` n=2560 L387704
+- `[synth-exit]` n=2560 L387724
+- `#8` L388334
+- `.ovl.menu` + `menu-entry`
+  siten=2 L388380/388382
+
+No further
+`[vi-cb-loop]` / `[vi-cb-after]`
+/ `[vi-cb-slot]` after
+after-2432. 192 `slot-sb`
+between after-2432 and synth
+2560, 16 during that synth
+(one 16-voice pass), 434
+after `synth-exit` 2560 before
+the overlay cut — extra mix
+from the s327 wait-pump path
+(`musyxSynthFrame` has no
+direct `jal`; only the two
+64-pump sites plus the slot
+`jalr`). Two
+`[audio-wait-pump-stall]`
+rows exist, both early
+(L2563, L88577).
+
+**H-recv-starved SELECTED**
+on the s1932 operational
+three-way: last logged synth
+has a matching exit, last
+logged walk has a matching
+after, loop stays at 2432
+while host presents past
+`#10816`.
+
+H-synth-never-returned
+REFUTED (exit n=2560 before
+entry 2). H-stuck-later-slot
+REFUTED for the last logged
+walk (after n=2432 fired;
+the 4-slot walk completed).
+
+Second line (static CFG):
+`applyPendingViChanges` has
+one generated caller,
+`viRetraceHandlerThread`
+`0x80019914`, after the
+loop-top
+`osRecvMesg(0x80114388)` and
+before the second
+`osRecvMesg(0x80128D10)` at
+`0x80019928`. `#8` after
+after-2432 means the next
+iteration's recv1 unblocked
+and reached applyPending.
+The loop-top-recv reading of
+H-recv-starved is therefore
+REFUTED. The thread is past
+`#8` and never reaches
+`L_80019B68` / after-2433.
+
+Next discriminator: recv2
+enter/exit vs walk-start on
+the same `#7/#8` flavor.
+Do not rebuild a three-way
+re-hunt. Do not force-zero.
+Ask (b) remains human-only.
