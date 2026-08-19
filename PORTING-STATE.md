@@ -94556,7 +94556,7 @@ the host VI queue fills or the game's osRecvMesg consumer doesn't drain. Run a
 probe with ROGUESQ_LOG_VI_RECV or similar to capture the recv-path state at the
 freeze. See NEXT.md.
 
-## s1975 — 2026-08-18 — diagnose frame-freeze at update_screen #2176 (ROGUESQ_LOG_AUDIOTICK_TRACE=1)
+## Session 1975 (2026-08-18) — drainAudioAndFinalizeSpeechBuffer #17 spin root cause: tickMusyXIfActive submits no RSP task at craft-select exit
 
 **Hypothesis context.** Three competing hypotheses from s1974/NEXT.md:
 - H-vi-queue-full: host VI message queue fills; retrace messages dropped; audio tick
