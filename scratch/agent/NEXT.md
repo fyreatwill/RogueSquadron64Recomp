@@ -1,74 +1,110 @@
-# NEXT work unit (s1975) — diagnose frame-freeze at update_screen #2176
+# NEXT work unit (s1976) — fix drainAudioAndFinalizeSpeechBuffer infinite spin
 
 HYPOTHESIS-ID: hangar-frame-freeze
 
-## What s1974 settled
+## What s1975 settled
 
-Two mission-entry arms ran (extra Starts + A button presses):
-- SDL key delivery fails after Start #6 (31s from boot) — macOS focus issue.
-- 2 Starts reached the hangar (pad-host n=5, n=6) but no phase change.
-- H-start-enters-mission and H-needs-confirm-key (A) both REFUTED.
+Root cause of update_screen #2176 freeze: `drainAudioAndFinalizeSpeechBuffer` (#17, the
+final drain after the craft-select screen completes) spins forever because `tickMusyXIfActive`
+(called once before the spin) submits no RSP audio task — MusyX is in shutdown/idle state at
+that point. Every `anyAudioSlotActive` call in the spin returns 0. Audio tick eventually blocks
+in `do_recv(0x80114388)` at vi-cb-recv1 n=1970.
 
-anyAudioSlotActive spin class fully enumerated (10 sites) and gated.
-Census probe: none of the 6 new ROGUESQ_SPIN_YIELD sites fired in 120s.
+Evidence chain:
+- No `[lle task]` from main game thread between slot-ret-caller n=16 exit and update_screen #2176
+- spin-yield n=1,2,3 fired (300k iters), vi-cb-recv1 ran synths n=2199-2204, none activated slot
+- vi-wait counter stopped at n=8113; no game events for full 120s probe after n=1970 blocks
+- Caller (funcs_34.c:0x800C5E88): do { tickCraftSelectScreen(); } while (r16==0xFFFFFFFF);
+  then drainAudioAndFinalizeSpeechBuffer() — drain #17 is the "screen done" drain
 
-Frame-counter `fs` freezes at update_screen #2176 in every run (~40s after hangar
-entry). Pattern: `pq.wc=0 wq.wc=2` — two threads blocked waiting for a message
-that never arrives. The VI is alive (update_screen continues). This is NOT an
-anyAudioSlotActive spin. It is a different blocking mechanism in the hangar state
-machine.
+H-vi-queue-full REFUTED; H-game-recv-blocks CONFIRMED (audio tick variant); H-yield-missing
+REFUTED.
 
-## Competing hypotheses and discriminator
+## Fix to implement
 
-- H-vi-queue-full: the host VI message queue fills up (producer-side overflow)
-  and subsequent retrace messages are dropped. The game's osRecvMesg consumer
-  starves because no messages arrive after the queue fills. Evidence for: this
-  is the same family as the s1939-s1941 title-screen stall, just a different
-  site/phase.
-- H-game-recv-blocks: the hangar state machine calls osRecvMesg on a queue that
-  never receives (a different queue from the VI retrace one). The VI queue is fine
-  but the game thread is waiting on something else.
-- H-yield-missing: an unidentified spin (not anyAudioSlotActive) in the hangar
-  state machine occupies the CPU and prevents the VI consumer from draining,
-  similar to how menuInput spin prevented VI drain in the title screen.
+In `tools/fixup_game_funcs.py`, locate the existing s1972 spin-yield patch for
+`L_800B24D4` inside `drainAudioAndFinalizeSpeechBuffer` (`funcs_30.c`). Add two
+new insertions at the same label:
 
-Discriminator: does ROGUESQ_LOG_VI_RECV or the existing vi-enq/vi-deq/recv1
-instrumentation show the VI retrace queue state at update_screen #2176? If vi-enq
-count increases but vi-deq stops, H-vi-queue-full is supported. If both stop,
-H-game-recv-blocks is more likely. If neither changed but the game is CPU-bound,
-H-yield-missing is supported.
+1. Call `tickMusyXIfActive` inside the spin loop — add it AFTER the yield gate, BEFORE
+   `anyAudioSlotActive` is called. This matches the `menuControllerInput` (L_800B8050)
+   pattern which already calls both in each iteration. With tickMusyX inside the loop,
+   MusyX will eventually submit a task and activate a slot.
 
-## Exact commands
+2. Add a safety timeout (only if anyAudioSlotActive hasn't returned true after 10M iters,
+   break with a warning log). Prevents a regression to infinite spin if MusyX truly cannot
+   produce audio.
 
-Check which recv/enq/deq log flags are available:
-```sh
-grep -r 'vi-enq\|vi-deq\|recv1\|LOG_VI' /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/src/ 2>/dev/null | head -20
+Exact patch location in `funcs_30.c`:
+- Function: `drainAudioAndFinalizeSpeechBuffer` (RECOMP_FUNC at line 11098)
+- Label: `L_800B24D4` (line 11114)
+- Current patch block: lines 11115-11133 (spin-yield gate s1972)
+- New insertion: between the yield gate and the `anyAudioSlotActive` call (line 11137)
+
+The fixup pattern should look like:
+
+```python
+# In fixup_game_funcs.py, within the L_800B24D4 patch:
+# After existing spin-yield block, before anyAudioSlotActive:
+"    { // PATCH s1976: tickMusyXIfActive inside drain spin\n"
+"        static int drain_tickmusyx_en = -1;\n"
+"        static long long drain_spin_iters = 0;\n"
+"        if (drain_tickmusyx_en < 0) { const char* e = getenv(\"ROGUESQ_DRAIN_TICK_MUSYX\"); "
+"drain_tickmusyx_en = (e && e[0] && e[0] != '0') ? 1 : 0; }\n"
+"        ++drain_spin_iters;\n"
+"        if (drain_tickmusyx_en) { tickMusyXIfActive(rdram, ctx); }\n"
+"        if (drain_spin_iters > 10000000LL) { "
+"fprintf(stderr, \"[drain-timeout] drainAudioAndFinalizeSpeechBuffer exceeded 10M iters, breaking\\n\"); "
+"fflush(stderr); break; }\n"
+"    }\n"
 ```
 
-Run a probe with vi-recv-path logging enabled (re-use existing flags from s1940):
+Make `ROGUESQ_DRAIN_TICK_MUSYX` default-on (check if `e == NULL || e[0] == '0'` to disable).
+The env gate lets it be turned off for isolation but should be on by default since the root
+cause is confirmed.
+
+Alternatively, since the root cause is confirmed and tickMusyXIfActive in a loop is the
+correct N64 pattern (matching menuControllerInput), make it unconditional + just keep the
+timeout as a safety net.
+
+After patching: follow the regen order (make_elf.py is not needed for fixup-only changes;
+just re-run fixup_game_funcs.py and cmake rebuild).
+
+**Regen note:** fixup_game_funcs.py edits regenerated C. Just rebuild:
 ```sh
-mkdir -p scratch/agent/s1975_freeze_probe
+cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp/build
+python3 ../tools/fixup_game_funcs.py ../N64Recomp/RecompiledFuncs/
+ninja RogueSquadron64Recomp
+```
+
+## Exact test
+
+Run a 120s probe after the fix:
+```sh
+mkdir -p scratch/agent/s1976_drain_fix_probe
 env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
 ROGUESQ_STUB_MISSING_FUNCS=1 \
-ROGUESQ_LOG_VI_RECV_PATH=1 \
 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1975_freeze_probe 120 2
+zsh tools/probe.sh scratch/agent/s1976_drain_fix_probe 120 2
 ```
 
-Check the vi-recv state around the freeze (near update_screen #2176):
-```sh
-grep -E 'vi-enq|vi-deq|vi-recv|recv1' scratch/agent/s1975_freeze_probe/run.log | tail -30
-```
+Success criteria:
+- `[slot-ret-caller] site=drainAudioAndFinalizeSpeechBuffer n=17` appears in the log
+- `fs` advances past 1256 after update_screen #2176
+- No new crash family introduced
+- Positive control: spin-yield n=1,2,3 still fire (drain IS still spinning briefly, then resolves)
 
-If vi-enq/vi-deq logging is not available via env flags, check the s1940 probe setup
-in PORTING-STATE.md and replicate the relevant instrumentation.
+If drain timeout fires (`[drain-timeout]`): tickMusyXIfActive is still not submitting a task
+inside the loop — root cause is deeper (MusyX state issue). Log the drain iter count and
+investigate tickMusyXIfActive's internal condition.
 
 ## Iron rules for this unit
 
-- Do NOT add a mitigation or yield without naming the root cause. The freeze is
-  NOT an anyAudioSlotActive spin — don't add more spin gates without evidence.
-- Positive control: verify the known spins (menuInit, menuInput, audioDrain) still
-  fire in the same run (they should appear before #2176).
-- If the recv-path log is not available, check existing ROGUESQ_ env flags to find
-  what can observe VI message queue state, then run a census first.
+- Do NOT change the spin condition (it is correct: wait for slot to become active).
+- Do NOT add a blanket "break after N iters" without logging — silent skip would hide regression.
+- The fix is an unconditional code-path change within fixup_game_funcs.py. No new env gate
+  needed for the tickMusyXIfActive call (root cause is confirmed); keep the timeout.
+- Positive control required: verify spin-yield n=1,2,3 STILL fire (confirms drain still spins
+  initially, then resolves — not bypassed by timeout).
+- Single game run. Build once. If build fails, diagnose before re-running.

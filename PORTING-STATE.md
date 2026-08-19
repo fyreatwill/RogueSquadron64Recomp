@@ -94555,3 +94555,65 @@ Likely candidates: the hangar state machine's VI-retrace receiver stalls because
 the host VI queue fills or the game's osRecvMesg consumer doesn't drain. Run a
 probe with ROGUESQ_LOG_VI_RECV or similar to capture the recv-path state at the
 freeze. See NEXT.md.
+
+## s1975 — 2026-08-18 — diagnose frame-freeze at update_screen #2176 (ROGUESQ_LOG_AUDIOTICK_TRACE=1)
+
+**Hypothesis context.** Three competing hypotheses from s1974/NEXT.md:
+- H-vi-queue-full: host VI message queue fills; retrace messages dropped; audio tick
+  starves.
+- H-game-recv-blocks: hangar state machine calls osRecvMesg on a non-VI queue that
+  never receives.
+- H-yield-missing: an unidentified CPU spin in the hangar state machine holds the
+  thread and prevents VI drain.
+
+**Probe.** `scratch/agent/s1975_freeze_probe/` (120s, `ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1`); phase-gated to VI width 512 hangar entry. 77169 log lines.
+
+**Key trace (lines 69759–69903).**
+
+| Line | Event | Meaning |
+|------|-------|---------|
+| 69759 | slot-ret-caller site=drainAudioAndFinalizeSpeechBuffer n=16 | drain #16 returned |
+| 69762 | spin-yield site=audioDrain n=1 spin=100000 | drain #17 started; 100k iters, no slot |
+| 69784 | [lle task] ... | audio tick (recv2 n=1965) submits RSP audio task |
+| 69802 | spin-yield n=2 spin=200000 | drain #17 still spinning; no slot at 200k iters |
+| 69822 | spin-yield n=3 spin=300000 | drain #17 still spinning; no slot at 300k iters |
+| 69873 | vi-recv-path n=1970 pre_vc=0 deq_any=0 post_vc=0 blocked=1 | audio tick stuck in do_recv(0x80114388) |
+| 69874–69902 | vi-enq n=2016..2044 | 29 VI retraces pile in external_messages; nobody drains |
+| 69903 | [vi] update_screen #2176 fs=1256 stalled=1 | game frame counter frozen |
+| — | rest of 120s probe | only vi-enq events; no game-thread events ever again |
+
+**Critical observation: NO `[lle task]` from the main game thread between lines 69759 and 69903.** The only [lle task] in that window is from the audio tick thread's recv2 (n=1965), submitted long before drain #17. This means `tickMusyXIfActive` (called once at the start of drainAudioAndFinalizeSpeechBuffer, before the spin) did not submit an RSP audio task on drain #17. With no RSP task running, no audio voice key-on occurs, and `anyAudioSlotActive` returns 0 on every spin iteration.
+
+**Slot-ret-caller semantics (clarified).** The slot-ret-caller PATCH fires on every call to `anyAudioSlotActive` inside the spin, not just at function exit. It is rate-limited to the first 16 total calls (then every 1e6). Drains #1-16 each activated a slot in 1–2 spin iterations (total ≤ 16 anyAudioSlotActive calls = n=1..16 all logged, all returning non-zero quickly). Drain #17 started at n=17 (not logged due to rate limit); the spin ran 300k+ iters with `anyAudioSlotActive` always returning 0. `after1024=0` just means vi_width=512 (hangar, not 1024); it says nothing about slot state.
+
+**Root cause — confirmed mechanism.**
+`drainAudioAndFinalizeSpeechBuffer` calls `tickMusyXIfActive` once before the spin label `L_800B24D4`, then loops: `anyAudioSlotActive(); if (r2==0) goto L_800B24D4`. On drain #17 (the final drain after `tickCraftSelectScreen` returned the "screen complete" sentinel 0xFFFFFFFE), `tickMusyXIfActive` found MusyX in a shutdown/idle state and submitted no RSP audio task. Every subsequent anyAudioSlotActive call returns 0. The spin is infinite.
+
+**Audio tick deadlock.** Once the drain spin exceeds 300k iters, three yield gates (n=1,2,3) fired via ROGUESQ_SPIN_YIELD. Each delivered a VI retrace to 0x80114388 and ran audio tick synths n=2199–2204. None activated a slot (MusyX has nothing to play). After synth n=2204 (n=1969's processing), audio tick entered vi-cb-recv1 n=1970 with no message in 0x80114388 (deq_any=0, pre_vc=0) → blocked in do_recv → run_next_thread_and_wait. After that point, vi-wait stops at n=8113 permanently. The scheduling analysis suggests a cooperative-scheduler breakdown (likely idle thread stuck in wait_for_resumed after audio tick n=1970's run_next_thread_and_wait found its expected partner thread unexpectedly absent from running_queue), but this specific breakdown mechanism is not fully traced in this session.
+
+**Hypothesis verdicts.**
+- H-vi-queue-full: **REFUTED.** vi-enq continued to n=8825 (VI ISR healthy). The freeze is not producer-side.
+- H-game-recv-blocks: **CONFIRMED (audio tick variant).** Audio tick is stuck in do_recv(0x80114388) — VI retrace messages accumulate in external_messages but nobody drains them.
+- H-yield-missing: **REFUTED as stated.** No new unidentified spin. The freeze is in the KNOWN audioDrain spin. The root cause is `tickMusyXIfActive` not submitting an RSP task, not a missing yield.
+
+**Caller structure (confirmed from code).** `funcs_34.c:8430–8510` at `0x800C5E88`:
+```
+initCraftSelectScreen();
+r17 = 0xFFFFFFFF;
+do { r16 = tickCraftSelectScreen(); } while (r16 == r17);
+drainAudioAndFinalizeSpeechBuffer();   // drain #17 is the LAST drain (r16 == 0xFFFFFFFE)
+return (r16 != 0xFFFFFFFE) ? 1 : 0;
+```
+Each outer-caller loop iteration: one tickCraftSelectScreen loop (cooperative, waits for
+waitForPrevFrameDone → waitForPostSwapAck → osRecvMesg(0x80128CF0)) + one drain. Drains
+#1-16 each completed because MusyX was active and a slot activated quickly. Drain #17
+is the "screen done" drain; by then MusyX is in shutdown/idle → no RSP submission → infinite.
+
+**Fix for s1976.** Add `tickMusyXIfActive` call **inside** the spin loop at `L_800B24D4`
+in `fixup_game_funcs.py` (after the yield gate, before `anyAudioSlotActive`). This matches
+the `menuControllerInput` spin pattern which already calls both in each iteration. Also add a
+safety timeout: if `anyAudioSlotActive` has not returned true after 10M iters, break
+(log warning). Rebuild + run 120s probe: verify `[slot-ret-caller] site=drain n=17` appears,
+verify `fs` advances past #2176.
+
+**OUTCOME: ADVANCED** — root cause of the #2176 freeze identified with mechanistic evidence.

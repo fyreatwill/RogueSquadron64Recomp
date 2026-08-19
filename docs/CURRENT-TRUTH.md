@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1974 (2026-08-18).
+detail. Reviewed through s1975 (2026-08-18).
 
 ## Current state
 
@@ -195,21 +195,22 @@ detail. Reviewed through s1974 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1974: mission-entry probe ran both arms (extra Starts + A button);
-neither advanced past hangar. SDL key delivery fails after Start #6 (31s from
-boot). Frame-counter (`fs`) freezes at update_screen #2176 (~40s after hangar
-entry) in every run — NOT caused by any anyAudioSlotActive spin (all 10 sites
-now gated; none fire at #2176). The freeze is a VI message-queue starvation or
-osRecvMesg deadlock in the hangar state machine. 600s soak queued.
+Re-ranked s1975: root cause of the #2176 freeze identified. `drainAudioAndFinalizeSpeechBuffer`
+(#17 call in the craft-select-to-hangar transition) spins forever because `tickMusyXIfActive`
+at drain start submits no RSP audio task (MusyX in shutdown/idle), so `anyAudioSlotActive`
+never returns true. Audio tick eventually blocks in `do_recv(0x80114388)` (stuck, no
+more VI messages delivered after n=1970). Fix: add `tickMusyXIfActive` inside the drain
+spin loop (matching `menuControllerInput` pattern) + safety timeout. Build + test in s1976.
 
-1. **Hangar frame-freeze at update_screen #2176 (s1974).** `fs` (game frame
-   state) stops advancing at #2176; `pq.wc=0 wq.wc=2` (two threads waiting for
-   a queue). VI is alive (update_screen continues). anyAudioSlotActive spin class
-   fully enumerated and gated — all 10 sites have yield or bounded guard; none
-   fire at the freeze. Root cause: likely an osRecvMesg in the hangar state
-   machine waiting for a VI-retrace message that never arrives because the host
-   VI queue is full or the message path is broken. Next probe: capture recv-path
-   state at the freeze (ROGUESQ_LOG_VI_RECV or similar).
+1. **Hangar frame-freeze at update_screen #2176 — fix queued (s1975).** Root cause:
+   `drainAudioAndFinalizeSpeechBuffer` (#17) spin is infinite because `tickMusyXIfActive`
+   submits no RSP task at drain start → `anyAudioSlotActive` always false → spin never exits.
+   Audio tick blocked in `do_recv(0x80114388)` at vi-cb-recv1 n=1970. No `[lle task]` from
+   main game thread between drain-16-exit and freeze. H-vi-queue-full REFUTED; H-game-recv-blocks
+   CONFIRMED (audio tick variant); H-yield-missing REFUTED (known spin, root cause identified).
+   Fix: add `tickMusyXIfActive` inside the spin + 10M-iter timeout in `fixup_game_funcs.py`.
+   Caller structure (`funcs_34.c:0x800C5E88`): tickCraftSelectScreen loop → drain, repeated;
+   drain #17 is the "screen done" drain where MusyX is already idle.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
