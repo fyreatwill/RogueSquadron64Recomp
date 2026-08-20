@@ -97047,3 +97047,51 @@ default audio behavior, or generated code changed.
 
 OUTCOME: ADVANCED — same-wrapper A/B selected the forced-LLE route gate and
 opened the drain/shutdown status boundary.
+
+## Session 2026 (2026-08-20) — drain-tick A/B stopped by a pre-phase anchor failure
+
+HYPOTHESIS-ID: m5-drain-shutdown-status-boundary
+
+The planned unit was a concurrent forced-LLE A/B using the same
+`tools/probe.sh` wrapper, eleven-Start schedule, passive audio/status
+environment, and 120-second phase gate. The only intended treatment was
+`ROGUESQ_DRAIN_INLOOP_TICK` on versus `0`. The queued s1971–s1974 soak tail
+was already consumed by earlier ledger entries and did not change this unit.
+
+The first pair was invalid. `strings build/RogueSquadron64Recomp` showed the
+binary had the unconditional s1976 drain tick but neither the
+`ROGUESQ_DRAIN_INLOOP_TICK` string nor `[drain-inloop-gate]`; both arms were
+therefore running the same treatment. The existing `fixup_game_funcs.py`
+already contained the s1993 gate, so the generated function was rebuilt with
+that authored gate and the pair was rerun. This was a configuration repair,
+not a new probe or a default behavior change.
+
+In the corrected pair, tick-on reached VI 1024 at 13.9s and VI 512 at 26.0s.
+It emitted the s2006 positive control (24 entries and 24 exits), reached
+shutdown call 3, and produced 400 phase-valid s2020 entries/exits and 400
+s2022 loop rows. Every sampled loop row was status `0x00` with
+`zero_skip=1`; there were no `status=0x03`, `zero_skip=0`, or independent
+`s2022-svc edge=store` rows. The s2008 census emitted five rows, including the
+`0x8009B2C4` `0x01 -> 0x00` writer during shutdown call 3. The arm later hit
+the known `do_rom_read` crash at guest PC `0x80001B08`, after its table was
+complete.
+
+Tick-off emitted only its pre-phase s2006 control and crashed before VI 1024
+in `matchKeywordWithPriority+88`, with last guest PC `0x8000834C`; it never
+reached `[drain-inloop-gate]`, VI 512, or a phase-valid service table. This is
+an anchor failure, not evidence for H1–H4. The pre-gate location also means
+the run cannot select a drain/status explanation from the tick-off null. The
+valid tick-on arm alone leaves the prior status-0/no-store observation intact
+but does not distinguish the drain boundary from worker dispatch.
+
+This rules out the stale-binary explanation for the requested toggle and
+rules out treating the tick-off null as status evidence. It does not select
+H1, H2, H3, or H4. No mitigation, status-value override, default audio
+change, or committed generated-tree logic change was made.
+
+ORIGIN: the only generated-function change used for the corrected binary was
+the already-authored s1993 environment gate around the s1976 host drain-tick
+injection; it is not a ROM writer or a game-value mitigation.
+
+OUTCOME: ADVANCED — corrected the stale A/B binary gate and obtained a
+phase-valid tick-on/no-store witness; tick-off remains an anchor failure.

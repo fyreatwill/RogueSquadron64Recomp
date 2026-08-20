@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2025 (2026-08-20).
+for session detail. Reviewed through s2026 (2026-08-20).
 
 ## Current state
 
@@ -136,19 +136,33 @@ for session detail. Reviewed through s2025 (2026-08-20).
   emitted only the non-control `0x8009BBF0` helper row. This selects H1:
   forced LLE is the route gate under the common wrapper; it does not show a
   status-3 interval or the worker-side clear path.
+- The s2026 drain-tick A/B first exposed a stale-binary failure: the existing
+  executable contained the unconditional s1976 drain tick but no
+  `ROGUESQ_DRAIN_INLOOP_TICK` string or `[drain-inloop-gate]` marker, so that
+  first pair was not a valid toggle. After rebuilding with the already-authored
+  s1993 fixup gate, tick-on reached VI 1024 at 13.9s and VI 512 at 26.0s,
+  reached shutdown call 3, and emitted 400 phase-valid s2020/s2022 rows, all
+  status `0x00`/`zero_skip=1`, with no independent store edge. The tick-off
+  arm crashed before VI 1024 in `matchKeywordWithPriority+88`
+  (`last-guest-pc=0x8000834C`), so it is an anchor failure and no H1–H4
+  status conclusion is selected. The next unit must recover a phase-valid
+  tick-off control before interpreting the drain boundary.
 
 ## Active investigation and ranked next steps
 
-1. **M5 drain/shutdown boundary.** The route gate is now selected, but the
-   phase-valid LLE service rows all saw status `0x00` and no worker-side store.
-   Run the same forced-LLE `tools/probe.sh` wrapper and eleven-Start schedule
-   concurrently with only `ROGUESQ_DRAIN_INLOOP_TICK` toggled. Compare drain
-   return, shutdown call 3, status-3/status-zero transitions, service entry,
-   and the existing store edge. If tick-off alone exposes call 3 and a
-   worker/store sequence, the drain injection is the selected boundary; if
-   both arms reach call 3 but neither shows a worker/store, the worker
-   dispatch boundary remains selected; if only tick-off reaches call 3 but
-   still has no status-3 interval, investigate the named status writer/source.
+1. **M5 drain/shutdown boundary — recover the missing A/B anchor.** The
+   corrected gate binary has only a phase-valid tick-on arm; its service rows
+   still saw status `0x00` and no worker-side store, while tick-off crashed at
+   a pre-1024 `matchKeywordWithPriority` boundary. Repeat one same-wrapper forced-LLE A/B with the
+   eleven-Start schedule and only `ROGUESQ_DRAIN_INLOOP_TICK` toggled. First
+   require both arms to emit the s2006 control and reach VI 1024/512; only
+   then compare drain return, shutdown call 3, status-3/status-zero
+   transitions, service entry, and the existing store edge. If both arms
+   become phase-valid and tick-off alone exposes call 3 plus a worker/store
+   sequence, the drain injection is selected; if both reach call 3 but
+   neither shows a worker/store, the worker-dispatch boundary remains open;
+   if tick-off repeats the pre-1024 crash, stop this A/B and audit that named
+   `matchKeywordWithPriority` crash as the new anchor boundary.
 2. **M5 service store edge.** Once a live slot-0 status-3 interval is
    observed, use the existing s2022 store rows to join the worker clear path
    and then proceed to the seven-site callback join. Do not add a skip or
@@ -321,6 +335,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   HLE remained at VI 640, selecting the LLE route gate. The earlier wording
   was believable because the wrappers differed; the common-wrapper control
   removes that confound.
+- s2026's initial drain-tick pair is superseded as an A/B because binary-string
+  inspection showed the executable did not contain the requested environment
+  gate; the result was believable because the fixup script already documented
+  the toggle, but the generated tree had not received that later fixup. The
+  corrected rebuild then supplied a live tick-on arm, while tick-off crashed
+  in `matchKeywordWithPriority+88` before its phase control, leaving H1–H4
+  unselected rather than proving a status boundary.
 
 ## Evidence ledger summary
 
@@ -343,7 +364,8 @@ shutdown scheduling question. The durable milestones are: hangar reachability,
 bltzal link repair, audio-drain writer mapping, M5 plan, opt-in DMA-to-queue
 mapping, shutdown call-3 reachability, the repeated retail status-value
 sequence, retail gate-writer attribution, and the unresolved port-side
-writer/read join.
+writer/read join. s2026 adds the stale-gate diagnosis and a phase-valid
+tick-on/no-store witness, but the tick-off arm is not yet a valid comparison.
 
 ## Method and safety rules
 
