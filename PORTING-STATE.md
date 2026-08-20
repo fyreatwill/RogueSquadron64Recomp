@@ -98895,3 +98895,40 @@ ORIGIN: the five stores are legitimate retail guest writers observed through
 the oracle's physical RDRAM watch. The post-step value capture is host-side
 observation only; it does not write guest memory or establish a port-side
 task/output interpretation.
+
+## Session 2074 (2026-08-20) — qualified the writer-specific gate arm
+
+The Debug target built cleanly once. I ran the prescribed two-arm comparison
+with `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`,
+`ROGUESQ_SPIN_YIELD=1`, `ROGUESQ_AUDIO_UCODE=1`, phase-gated probe controls,
+and the existing M5 gate/PCM/audio diagnostics. The only treatment difference
+was `ROGUESQ_M5_C88_VALUE=1`; the control left it unset.
+
+The unchanged control passed the positive route controls: title VI
+`1024 @ 0x00790400` at 50.5 s, hangar VI `512 @ 0x006AB400`, five
+`[pad-host]` rows, 132 `[audtask-dispatch]` rows, 1,024 `[m5-gate]` rows,
+and no `[CRASH]`/`[ABORT]` marker. Its two
+`reapplyDisplayMode:reapply-success` writer rows at `0x8008EC88` both had
+`gate=0`, and its target-phase PCM source/consumer rows were live.
+
+The concurrent `C88_VALUE=1` treatment failed before title VI 1024 with a
+Bus error at `fillSampleStreamRange+6464`, last guest PC `0x8000B650`, after
+decision 1663. Because that could still have been a concurrency artifact, I
+reran the same treatment alone from the same build. It independently failed
+before title, this time with a segmentation fault at
+`waitForAnyAudioSlot+336`, last guest PC `0x80095D54`, after decision 356.
+Neither treatment run reached the `0x8008EC88` writer, either target phase,
+or target-phase task/slot/PCM rows. The arm is therefore inadmissible for
+H-GateWriterCompletes, H-GateWriterPartial, or H-GateWriterNoEffect.
+
+This selects **H-GateArmMissing** as a route qualification failure. It rules
+out concurrency as the sole explanation for the treatment failure, but does
+not explain either crash family or establish any downstream gate/task/PCM
+null. The result is single-source port evidence; s2073's independent retail
+writer/value witness remains the authority for the treatment's intended
+guest value.
+
+ORIGIN: no mitigation or guest behavior changed. The observed failures are
+from the existing `waitForAnyAudioSlot` and `fillSampleStreamRange` paths; the
+`0x8008EC88` value was never written in the treatment runs. The control's
+`gate=0` rows are the existing default fixup behavior, not a new writer.

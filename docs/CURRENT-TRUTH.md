@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2073 (2026-08-20).
+for session detail. Reviewed through s2074 (2026-08-20).
 
 ## Current state
 
@@ -157,6 +157,20 @@ for session detail. Reviewed through s2073 (2026-08-20).
   nonzero contract and H-RetailGateBypass as a uniform zero contract. The
   independent retail result authorizes one writer-specific opt-in gate arm;
   no port or guest behavior changed in s2073.
+- s2074 built one Debug binary and ran the prescribed qualified route with the
+  existing Factor 5 image arm in both gate arms. The unchanged control reached
+  title VI `1024 @ 0x00790400` and hangar VI `512 @ 0x006AB400`, with 132
+  audio-task dispatch rows, 1,024 gate rows, and the `0x8008EC88` writer
+  reporting `gate=0` in both target phases; it had no crash marker. The
+  `ROGUESQ_M5_C88_VALUE=1` arm never reached title: the concurrent attempt
+  crashed in `fillSampleStreamRange+6464` at guest PC `0x8000B650` after
+  decision 1663, and an alone retry crashed in `waitForAnyAudioSlot+336` at
+  guest PC `0x80095D54` after decision 356. Neither treatment run produced
+  the gate writer or target-phase task/slot/PCM rows. This selects
+  H-GateArmMissing as a route qualification failure, not H-GateWriterNoEffect
+  or any downstream task/PCM hypothesis; it is single-source port evidence.
+  The writer-specific gate arm is not admissible for another cross-run A/B
+  until the wait/slot contract has an independent retail witness.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -281,13 +295,15 @@ are not active work items.
    H-E50-RetailIntermediate at named-writer value scope. The exact E50
    snapshot is nonzero in retail but does not match the port's zero-only
    class; this still does not identify the final E50 role or authorize routing
-   output. s2073 selects a mixed retail gate contract: `setDisplayMode` and
-   `reapplyDisplayMode` are the nonzero named stores, while the other
-   requested writers are zero. The next bounded test may opt in only the
-   existing `reapplyDisplayMode` store at `0x8008EC88`; compare its
-   target-phase task/slot/PCM table against the unchanged default. Do not
-   change output routing, reverse a task field, remove the canary
-   reservation, or alter waits/guards.
+   output. s2073 selected a mixed retail gate contract, but s2074's
+   `ROGUESQ_M5_C88_VALUE=1` treatment failed before its writer in both the
+   concurrent arm and an alone retry: the control reached both target phases,
+   while the treatment died in the known audio wait/render crash families at
+   VI 640. H-GateArmMissing is selected as a qualification failure; no gate,
+   task, slot, or PCM null is admissible from that treatment. The next unit is
+   an independent retail watch of the slot-table writer/consumer contract
+   before another port arm. Do not change output routing, reverse a task field,
+   remove the canary reservation, or alter waits/guards.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -662,6 +678,17 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   found `0,1,0,0,1` at `0x800A0F50`, selecting H-RetailGateMixed. The result
   authorizes only a writer-specific gate test; it does not establish that the
   gate is sufficient for image-task completion or PCM output.
+- s2074 supersedes the wording that the authorized writer-specific gate arm
+  was ready for task/slot/PCM interpretation. That wording was believable
+  because s2073 had independently qualified the retail writer and the
+  unchanged port route had previously reached both target phases. In the same
+  build, the default arm reached title and hangar, but the `C88_VALUE=1` arm
+  crashed before title in two runs: once in `fillSampleStreamRange+6464` and
+  once in `waitForAnyAudioSlot+336`. Neither treatment run reached the
+  writer or target phases, so the comparison selects H-GateArmMissing as a
+  route qualification failure and proves no downstream gate/task hypothesis.
+  The result is single-source port evidence; the next unit must obtain the
+  independent retail wait/slot contract before another treatment arm.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -730,6 +757,14 @@ This selects H-RetailGateMixed and refutes uniform-active and uniform-bypass
 contracts at retail writer/value scope. It authorizes the next one-writer
 gate arm but leaves task ABI, output routing, canary, waits, and guards
 unchanged.
+s2074 then ran that writer-specific arm from one Debug build. The unchanged
+control passed title and hangar phase controls, with 132 audio-task dispatch
+rows and two `0x8008EC88` writer rows at `gate=0`; the treatment failed before
+title in a concurrent run at `fillSampleStreamRange+6464` and in an alone
+retry at `waitForAnyAudioSlot+336`. Neither treatment run reached the gate
+writer or a target phase, so H-GateArmMissing is selected as a qualification
+failure and no task/slot/PCM conclusion is drawn. This is single-source port
+evidence; no guest or host behavior changed.
 
 ## Method and safety rules
 
