@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1978 (2026-08-19).
+detail. Reviewed through s1979 (2026-08-19).
 
 ## Current state
 
@@ -84,8 +84,11 @@ detail. Reviewed through s1978 (2026-08-19).
   zero-extends against `0xFFFFFFFF80000000` and reads host memory at
   rdram+4GiB — not RDRAM. Always pass `S32(guest_addr)` into `MEM_*`.
   ORIGIN: `musyxRenderVoiceSamples` (legitimate `0x02` key-on). Drain is
-  correctly waiting; 11 `render-end` (cursor cross) fire at this base but
-  enough slots stay `0x02` that the OR never idles. `deactivateVoice` is 0
+  correctly waiting. s1979 selected H-subset-live: of 18 slots at
+  `0x801714D0`, 12 stay `0x02` with `cross_n=0` through the 10M timeout
+  (idx 0–4, 6, 7, 13–17); only 9–12 cursor-cross once and land
+  `slot-sb new=0x00`. idx 5 and 8 are already idle. H-end-zero-lost /
+  H-rekey-after-end / H-zero-unlogged REFUTED. `deactivateVoice` is 0
   globally; `stopVoice` only hits the boot array. Timeout remains a
   diagnostic hatch. Default-off yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
@@ -205,22 +208,20 @@ detail. Reviewed through s1978 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1978: `0x801714D0` is a live 18-voice table with `0x02`
-key-on, not leftover text. Drain waits correctly; remaining live slots
-never idle.
+Re-ranked s1979: 12 of 18 live slots never cursor-cross; the four that
+do end land `new=0x00` and stay idle. Drain waits on the 12.
 
-1. **Hangar frame-freeze: live `0x02` key-ons at `0x801714D0` never all
-   idle (s1978).** Same-run positive controls: `[drain-tick] call=1
-   iters=1 gate=0x01` and `[avf-gate] site=slot-alloc` boot
-   `0x8018D4A0 count=16`. Last alloc is `new=0x801714D0 count=18`
-   matching `ch=18`. Two independent loads/stores see `0x02`
-   (`musyxRenderVoiceSamples` slot-sb 16967; `isAudioSlotActive`
-   slot-byte 135/184). 11 `render-end` (cursor cross=1) at this base;
-   `deactivateVoice` 0 globally; `stopVoice` only at the boot array.
-   Next: per-idx cursor-cross vs last byte+0, and whether render-end's
-   `sb $zero, 0x28($sp)` actually lands on slot+0 (`slot-sb` rate-limit
-   currently drops `new==0` after the first 32). Use `S32(guest_addr)`
-   in any `MEM_*` dump.
+1. **Hangar frame-freeze: 12 idxs stay `0x02` with `cross_n=0` (s1979).**
+   Same-run positive controls: `[drain-tick]`/`[drain-cross] call=1
+   iters=1 gate=0x01` (108 paired samples) and `[avf-gate] site=slot-alloc`
+   boot `0x8018D4A0 count=16` (tickn=2). Last alloc `0x801714D0 count=18`
+   matching `ch=18`. After drain starts, idxs 9–12 each fire one
+   `render-end` + matching `slot-sb new=0x00` (old=0x02); no rekey.
+   The other 12 `0x02` slots take 162 further `new=0x02` stores each
+   and never cross. idx 5 and 8 stay `0x00` with no post-drain render.
+   Next: per-idx last `cur`/`pos`/`step` at the cursor site on the
+   same drain-tick samples — why those 12 never reach end. Use
+   `S32(guest_addr)` in any `MEM_*` dump.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -360,6 +361,12 @@ Most recent, still load-bearing for the next unit:
   `slot-sb`/`slot-byte` (gpr addresses) see live `0x02` at that table;
   last `slot-alloc` is count=18 matching `ch=18`. Believable because
   the dump printed a stable hex/ASCII line 108 times.
+- s1978 "whether render-end's `sb $zero, 0x28($sp)` lands on slot+0"
+  is superseded by s1979 — the four post-drain ends (idx 9–12) each
+  have a matching `musyxRenderVoiceSamples` `slot-sb new=0x00`;
+  H-end-zero-lost / H-rekey-after-end / H-zero-unlogged REFUTED.
+  Believable because the s1927 rate-limit dropped `new==0` after the
+  first 32 events.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -370,7 +377,8 @@ Per-session rows through s1879 live in `PROJECT-OVERVIEW.md` §33–§35.
 s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
-archived to §36). s1968's H1 scope result, s1970's filter audit, and s1971's bltzal class fix
+archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
+and s1978–s1979's drain-slot identity / subset-live result
 are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

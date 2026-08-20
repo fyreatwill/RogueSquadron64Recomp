@@ -1,77 +1,77 @@
-# NEXT work unit (s1979) — why live 0x02 slots never all idle
+# NEXT work unit (s1980) — why 12 live 0x02 slots never cursor-cross
 
 HYPOTHESIS-ID: hangar-frame-freeze
 
-## What s1978 settled
+## What s1979 settled
 
-`0x801714D0` is a live voice table. Last `slot-alloc` is `count=18`
-matching `ch=18` (boot `0x8018D4A0 count=16` is tickn=2). Same-run
-`musyxRenderVoiceSamples` slot-sb writes `0x02` (16967) and
-`isAudioSlotActive` slot-byte reads `0x02` (135/184). H-ascii-heap /
-H-count-desync / H-never-keyed REFUTED; H-voice-records SELECTED.
-s1977 ASCII leftover was `MEM_BU` with a 32-bit unsigned KSEG0 address
-(zero-extends; host read at rdram+4GiB). Always `S32(guest_addr)`.
-Positive controls: `[drain-tick] call=1 iters=1 gate=0x01` and
-`[avf-gate] site=slot-alloc` boot `0x8018D4A0 count=16`.
+Of 18 slots at `0x801714D0` (last alloc count=18, ch=18), drain
+call=1 sees 16 live `0x02`. Only idxs 9, 12, 11, 10 (in that order)
+cursor-cross once; each lands `slot-sb new=0x00` and stays idle.
+The other 12 (0–4, 6, 7, 13–17) stay `0x02` with `cross_n=0` through
+the 10M timeout and take 162 further `new=0x02` stores each.
+idx 5 and 8 are already idle. H-end-zero-lost / H-rekey-after-end /
+H-zero-unlogged REFUTED; H-subset-live SELECTED.
 
-11 `render-end` (cursor cross=1) fire at this base; `deactivateVoice`
-is 0 globally; `stopVoice` only hits the boot array. Drain OR of 18
-slots never goes idle.
+The four that ended had `cur` in {0x453C, 0x7601}, `pos` just below,
+`step` 0x6F–0xA3. The 12 never-cross idxs produced no cursor log
+after drain (site rate-limit: first 8 globally + every 1M + cross).
 
-## Competing hypotheses (why the OR stays busy)
+## Competing hypotheses (why those 12 never reach end)
 
-- **H-subset-live:** only some idxs ever cursor-cross; the rest never
-  reach end (looping / frozen pos). One live `0x02` keeps the drain.
-- **H-end-zero-lost:** render-end writes `0` to `0x28($sp)` but the
-  later `sb $v0, 0($s1)` still stores `2` (`0x28($sp)` overwritten).
-- **H-rekey-after-end:** ended idxs get `2` again next tick via
-  render-stage's default `addiu $v0, 0x2` and then do not cross.
-- **H-zero-unlogged:** slot-sb DID store `0`; the rate-limit (first 32
-  / every 1000 / `new==2`) dropped those events. Equivalent to
-  H-subset-live if other idxs stay `2`.
+- **H-frozen-pos:** `pos`/`step` do not advance (step=0, or in-loop
+  tick does not update these voices' positions).
+- **H-huge-end:** `cur` is 0 or far above `pos+step*remaining`; they
+  would finish only after many more ticks.
+- **H-looping:** `pos` wraps or restarts before `cur`; `sltu` stays
+  true forever.
+- **H-not-at-cursor:** these dests take `slot-sb` but skip the
+  `L_80090150` cursor compare (different render path). Unlikely —
+  `slot-sb` is after that compare in the same function — but dump
+  per-idx cursor-visit count to close it.
 
 ## Discriminating measurement (one instrument, one build, one 60s probe)
 
-Keep s1978 `[drain-tick]` sampling (first 8 + every 100k). On those
-samples, dump all 18 slot byte+0 via `MEM_BU(0, S32(base+i*0x88))`
-(`[drain-slots]` already walks them; the S32 fix is in the source).
-Also:
+Keep s1979 `[drain-cross]`. At the cursor site, always record last
+`cur`/`pos`/`step` and a visit counter per idx (no rate-limit on the
+record). On the same drain-tick samples, dump `[drain-cursor]` for
+all 18 idxs: `idx=N vis=V cur= pos= step= dpos=` where `dpos` is
+`pos - pos_at_previous_sample` (0 on first sample).
 
-1. Always log `slot-sb` when `newb==0` (add `|| newb == 0` next to
-   `newb == 2` in `musyxRenderVoiceSamples` only).
-2. On the same drain-tick samples, print per-idx `cross_n` accumulated
-   since drain call=1 (`[drain-cross]`).
+Also dump slot+0x38 via `MEM_W(0, S32(base+i*0x88+0x38))` as a
+second source for `cur`.
 
 Outcomes:
-- some idxs have `cross_n=0` and byte=`0x02` through timeout → H-subset-live
-- render-end fires and slot-sb `new=0x00` is 0 at that dest → H-end-zero-lost
-- render-end then next slot-sb at that dest is `new=0x02` with later
-  `cross=0` → H-rekey-after-end
-- slot-sb `new=0x00` exists and the 18-byte vector still has `0x02` →
-  H-zero-unlogged / H-subset-live
+- `vis=0` on a live `0x02` idx → H-not-at-cursor
+- `vis>0` and `step=0` or `dpos=0` throughout → H-frozen-pos
+- `vis>0`, `dpos>0`, `pos+step < cur` and `cur` is huge / 0 → H-huge-end
+- `vis>0` and `dpos<0` or `pos` wraps while `cur` fixed → H-looping
+- `vis>0`, `dpos>0`, `cur` similar to the ended idxs (~0x7601) and
+  `pos` still well below → still H-huge-end (they are just slow);
+  compare `pos` vs the 4 ended idxs' start to see remaining distance
 
-Positive control: `[drain-tick] call=1 iters=1 gate=0x01`, plus at
-least one `[avf-gate] site=slot-alloc` `0x8018D4A0 count=16` before
-drain. Keep `ROGUESQ_SPIN_YIELD=1` and `ROGUESQ_LOG_VI_CALLERS=1`.
+Positive control: `[drain-tick]`/`[drain-cross] call=1 iters=1
+gate=0x01`, plus `[avf-gate] site=slot-alloc` `0x8018D4A0 count=16`
+before drain. The four ended idxs must show `vis>0`, `dpos>0`, and
+a last sample with `pos+step >= cur`. Keep `ROGUESQ_SPIN_YIELD=1`
+and `ROGUESQ_LOG_VI_CALLERS=1`.
+
+SENTINEL is applied — incremental edit, do not rerun full fixup.
 
 ## Exact patch sites
 
-- `apply_s1976_drain_tick` / `[drain-slots]` in
+- Cursor site in `RecompiledFuncs/funcs_24.c` / `_cur_new` in
   `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-  and `RecompiledFuncs/funcs_30.c` (S32 already applied — add
-  `[drain-cross]` only).
-- `musyxRenderVoiceSamples` slot-sb rate-limit in `funcs_24.c` /
-  `_s1927_slot_sb` (the `newb == 2` condition).
-
-SENTINEL is applied — incremental edit, do not rerun full fixup.
+  (record last cur/pos/step/vis per idx).
+- `[drain-cursor]` dump next to `[drain-cross]` in `funcs_30.c` /
+  `apply_s1979_drain_cross`.
 
 ## Exact test
 
 ```sh
-mkdir -p scratch/agent/s1979_drain_cross
+mkdir -p scratch/agent/s1980_drain_cursor
 env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VI_CALLERS=1 \
 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1979_drain_cross 60 2
+zsh tools/probe.sh scratch/agent/s1980_drain_cursor 60 2
 ```

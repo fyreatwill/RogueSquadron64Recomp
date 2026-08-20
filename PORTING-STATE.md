@@ -94784,3 +94784,65 @@ on slot+0 is the next discriminator.
 
 **OUTCOME: ADVANCED** — planned dump+slot-alloc run discriminated the
 four hypotheses; ASCII leftover identified as a MEM_* sign-extend bug.
+
+## Session 1979 (2026-08-19) — 12 of 18 live slots never cursor-cross; zeros land on the four that end
+
+**Instrument.** One incremental patch (`apply_s1979_drain_cross`,
+`RS64_S1979_DRAIN_CROSS=1`; also in the full-fixup templates):
+1. `musyxRenderVoiceSamples` `slot-sb` always logs `newb==0` (other
+   writers keep the old rate-limit).
+2. Cursor site increments `s1979_drain_cross_n[idx]` when `cross==1`
+   after drain call=1 arms.
+3. `[drain-cross]` on the existing drain-tick samples dumps all 18
+   slot byte+0 (`MEM_BU(0, S32(dest))`) plus `cross_n`.
+
+No store changed. Timeout left in place.
+
+**Probe.** `scratch/agent/s1979_drain_cross/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 53395 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 25.9s #1492.
+
+Positive controls (same run): `[drain-tick]` and `[drain-cross]
+call=1 iters=1 gate=0x01` (108 paired samples through 10M, then
+`[drain-timeout]` / `[drain-exit] call=1 iters=10000001 v0=1`) and
+`[avf-gate] site=slot-alloc` boot `new=0x8018D4A0 count=16` at tickn=2.
+Last alloc tickn=4 `0x801714D0 count=18` matching `ch=18`.
+
+**drain-cross (5 distinct states).**
+- iters=1: 16 live `0x02` with `c=0`; idx 5 and 8 already `0x00`.
+- iters=2.5M / 3.0M / 3.4M / 5.3M: idxs 9, 12, 11, 10 each go
+  `0x02/c=0` → `0x00/c=1` in that order. Then frozen through 10M
+  at `live_no_cross=12`.
+- Final 12 still-live idxs: 0–4, 6, 7, 13–17. All `0x02` / `c=0`.
+
+**slot-sb new=0 (now always logged in musyxRenderVoiceSamples).**
+60 zeros in the whole run; 4 after drain start, exactly idxs 9–12
+at base `0x801714D0`, each `old=0x02 new=0x00`, matching the four
+post-drain `render-end` / cursor `cross=1`. After drain, those four
+had 44–88 further `new=0x02` stores then the one zero; the 12
+never-cross idxs took 162 `new=0x02` each and zero `new=0x00`.
+Rekey after zero during drain: 0. `deactivateVoice` 0; `stopVoice`
+32 at the boot array only.
+
+**Verdicts.**
+- H-subset-live SELECTED (two-source: drain-cross `c=0`+`byte=0x02`
+  on 12 idxs through timeout, and those 12 keep taking `slot-sb
+  new=0x02` with no `new=0x00`).
+- H-end-zero-lost REFUTED (four ends have matching `slot-sb new=0x00`).
+- H-rekey-after-end REFUTED (no `new=0x02` after `new=0x00` during drain;
+  ended idxs stay `0x00`).
+- H-zero-unlogged REFUTED (zeros are now logged; they are only the
+  four ended idxs).
+
+ORIGIN: `musyxRenderVoiceSamples` keeps writing legitimate `0x02`
+because those 12 voices never reach their sample-end cursor. Drain
+is correctly waiting. No skip/guard landed. Next discriminator is
+per-idx last `cur`/`pos`/`step` at the cursor site (rate-limit hid
+the 12: only the four crosses logged after drain).
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned drain-cross + new0 instrument
+discriminated the four hypotheses.
