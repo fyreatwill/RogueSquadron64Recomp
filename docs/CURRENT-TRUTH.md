@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s2007 (2026-08-20).
+detail. Reviewed through s2008 (2026-08-20).
 
 ## Current state
 
@@ -528,9 +528,19 @@ detail. Reviewed through s2007 (2026-08-20).
   yet observed a status-3 worker edge. No spin yield, audio change, PI change,
   or mitigation was added.
 
+- **s2008 status-writer instrumentation landed, but the runtime capture was
+  unevaluable.** The retail oracle again passed its positive controls (10,015
+  whole-RDRAM writes, 15 writes to physical `0x154620`, including
+  `0x8009B7EC`). The fixup enumerates seven direct `0x4620` status-byte
+  stores with provenance and retail control. A fresh
+  51-file tree built but crashed before VI 1024 in `slotDispatcherIter+3092`;
+  the preserved 45-file tree built but stalled at VI 640. Neither emitted
+  s2008 rows, so no status hypothesis moved. This is generation-provenance
+  generator mismatch, not evidence that status `0x03` is absent.
+
 ## Active investigation and ranked next steps
 
-Re-ranked s2007: the opt-in image's two nonzero hangar DMA buffers are proven
+Re-ranked s2008: the opt-in image's two nonzero hangar DMA buffers are proven
 to reach `queue_samples` byte-for-byte. Do not reopen the payload boundary or
 change audio defaults from this result. The status-3 worker hypothesis is
 now parked at a status-transition/source boundary: shutdown call 3 is reached
@@ -539,39 +549,44 @@ next discriminator must observe every legitimate writer of the status table
 and join its value/slot to shutdown and worker rows; do not infer starvation
 from the absence of a status-3 row.
 
-1. **M5 status-table writer/transition census (s2008).** Enumerate every
-   generated store to the `D_80154620` status-byte table, retain the retail
-   oracle writer-PC control, and phase-gate one port table joining writer PC,
-   slot/index, old/new byte, thread, shutdown call, and service/callback edges.
-   The discriminator is whether the port writes a legitimate `0x03` before
-   call 3, writes `0x03` and clears it before the spin sample, or never writes
-   `0x03`; do not add a guard or force a status value. Keep the shutdown rows
-   as the same-run control.
-2. **M5 callback-side PCM witness.** Only if needed after the status-table
+1. **M5 phase-valid generated-tree provenance repair (s2009).** Identify the
+   exact generator/symbol snapshot behind the phase-valid s2007 build without
+   discarding the companion repo's pending symbol edits. The discriminator is
+   a clean build that reaches VI 1024 with the existing shutdown/service
+   controls; the 51-file fresh tree crashed pre-1024 and the 45-file snapshot
+   stalled at VI 640, so neither can host a status null. Do not change status,
+   audio, spin, or PI behavior.
+2. **M5 status-table writer/transition census (after provenance is fixed).**
+   Run the already-landed seven-site table joining writer PC, slot/index,
+   old/new byte, thread, shutdown call, and service/callback edges. A slot-0
+   `0x03` then clear selects transient-cleared; another slot selects
+   other-slot; no `0x03` with controls live selects never-written. The
+   `0x8009B7EC` writer and retail oracle remain positive controls.
+3. **M5 callback-side PCM witness.** Only if needed after the status-table
    work,
    phase-gate a callback-side census at the exact nonzero bridge rows rather
    than relying on first-20/every-256 `pcm-sanity`; this is not evidence for a
    bridge defect yet. Do not change the audio path or default dispatch.
-3. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
+4. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
    300s clean). H-corruption-from-caller cannot be ruled out in mission context.
    Do not add mitigation. Re-evaluate only with a mission-entry recipe or a new
    crash with this signature.
-4. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
+5. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
    H2 (malformed triangle) REFUTED s1967; H1 (consumer draw state) REFUTED
    s1969 (single-source). H3 (pixel/coverage) unavailable — oracle has no
    screenshot for LLE path. Hologram-beam artifact remains open. Do not add
    mode-state mitigation or repeat the `0xD60` scan. Captured s1976 hangar
    frame is AVAILABLE CRAFT / AMBUSH AT MOS EISLEY with the blue beam.
-5. 600s hangar soak (s1974_hangar_600s): done. rc=137 SIGKILL at cap, hangar
+6. 600s hangar soak (s1974_hangar_600s): done. rc=137 SIGKILL at cap, hangar
    at 26.9s, audioDrain yields n=1,2,3, last slot-ret drain n=16, `fs=1248`
    through update_screen #35904, 0 crashes. Freeze is a hang.
-6. Mission-entry: SDL key delivery fails after Start #6 (31s from boot) due to
+7. Mission-entry: SDL key delivery fails after Start #6 (31s from boot) due to
    likely macOS focus drop. Do not run more mission-entry probes until the
    frame freeze is diagnosed.
-7. M3: only as complete idiom-class audits with a named discriminator.
-8. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
+8. M3: only as complete idiom-class audits with a named discriminator.
+9. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
    batch arms; phase-gate; SIGKILL; queue soaks. Hangar recipe is
    `ROGUESQ_SPIN_YIELD=1` + eleven-Start from boot. Ask (b) remains
    human-only.
@@ -924,6 +939,7 @@ entry/exit pairs in port phase 6; no status-3 row before PI/stop boundary)
 / s2007 M5 shutdown reachability census (same retail controls; port calls
 1–3 entered/scanned/returned; call 3 entry status `0x01`, spin status `0x00`;
 no status-3 row or PI assertion)
+/ s2008 status-writer census (oracle valid; 7 stores; runtime unevaluable)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

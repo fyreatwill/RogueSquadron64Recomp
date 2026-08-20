@@ -96448,3 +96448,42 @@ audio behavior, PI handling, status value, guard, or mitigation changed.
 
 OUTCOME: ADVANCED — the batched shutdown census reached call 3 and narrowed
 the next boundary to status-table writer/transition provenance.
+
+## Session 2008 (2026-08-20) — status-writer census landed; generated baseline unevaluable
+
+HYPOTHESIS-ID: m5-status3-worker-dispatch
+
+Ground truth ran first. The 60-second retail oracle passed the whole-RDRAM
+positive-control threshold with 10,015 callbacks, kept the target watch armed,
+and recorded 15 writes to physical `0x154620`, including the required
+`0x8009B7EC` writer. The oracle witness is valid for this iteration.
+
+The bounded change added a regeneration-stable s2008 helper to
+`fixup_game_funcs.py`. Static enumeration found exactly seven direct status
+byte stores at `0x8009B2C4`, `0x8009B30C`, `0x8009B6F8`, `0x8009B7A8`,
+`0x8009B7CC`, `0x8009B7EC`, and `0x8009BBF0`, with no overlapping nearby
+`MEM_H`/`MEM_W` store. The helper logs effective address, slot, old/new byte,
+phase, thread, and latest shutdown call; `0x8009B7EC` is a named same-run
+control. The existing s2006/s2007 controls were reapplied in the same build.
+
+The fresh `make_elf.py`/N64Recomp output contained 51 generated C files. It
+built successfully, but the phase-gated capture crashed before VI 1024 with
+signal 10 in `slotDispatcherIter+3092` (last guest PC `0x800547BC`). No s2008
+row was emitted, so this was not a status-table result. As the fixed version,
+the preserved `scratch_batch8/RecompiledFuncs-before` 45-file tree was copied
+into place, its overlay include was matched, all generated objects were
+forced to rebuild, and the target linked successfully. Its capture stayed at
+VI 640 (origin `0x0066A500`) for 1:49 with no VI-1024 transition and no s2008
+row; the harness/game were then SIGKILLed. Neither generated tree is a
+phase-valid witness for the status hypotheses.
+
+This rules out neither H-status3-never-written, H-status3-transient-cleared,
+H-status3-other-slot, nor H-status3-uninstrumented-site. It does rule out
+using either attempted regenerated tree to interpret a status-writer null.
+The next discriminator is generator/overlay provenance: establish an
+internally matched tree that reaches VI 1024 before consuming the census. No
+status value, audio dispatch, spin, PI path, guard, or mitigation changed.
+
+OUTCOME: ADVANCED — the full writer census was landed and regeneration-checked;
+runtime status measurement was unevaluable because both candidate generated
+trees failed phase validity.
