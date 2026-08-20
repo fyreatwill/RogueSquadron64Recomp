@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1988 (2026-08-19).
+detail. Reviewed through s1989 (2026-08-19).
 
 ## Current state
 
@@ -164,6 +164,16 @@ detail. Reviewed through s1988 (2026-08-19).
   +0x60 (`0x8008F64C`) and treats +0x58 as duration; fade
   zeros +0x60 every call (`0x800924DC`). H-working-timer-is-0x58
   REFUTED; H-envelope-fields-stuck SELECTED for +0x58/64/68.
+  s1989 dest-mapped those +0x60 stores. Envelope hangar-armed
+  n=2690 n0=0 n8b=2678 lastval=`0x8B000`; fade-zero narmed=
+  131404 n0=131404 matching `[h30-sum]` fade narmed. Unique
+  envelope vals are `0x8B000*N` (uniq overflow 137614). Dump
+  loopers stay 0 (1391) with 40 mid-tick `0x8B000` races.
+  H-envelope-never-called / H-step-is-zero REFUTED;
+  H-fade-rearms-zeros-elapsed SELECTED. Fade has two static
+  callers: `stopVoicesByHandle` n=30 and `stopAllSynthVoices`
+  (`0x8008DBF4`) from every `tickMusyXIfActive` (`$a0=0`);
+  the sweep is `blez`-gated on `lbu 0x80141AD0`.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -281,24 +291,26 @@ detail. Reviewed through s1988 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1988: hangar +0x58 is frozen duration `0x14`; elapsed
-is +0x60 (mostly 0, 5× `0x8B000` mid-tick). Looping slot+0 stays
-`0x02`. Fade zeros +0x60 every call; whether that is why elapsed
-never accumulates is the next dest-map.
+Re-ranked s1989: fade re-inits +0x60 every hangar-armed call
+(narmed=131404, all zeros) so envelope elapsed never accumulates
+(envelope narmed=2690, step `0x8B000`). Looping slot+0 stays
+`0x02`. Next is why fade keeps firing: `stopAllSynthVoices`
+gate `0x80141AD0`.
 
-1. **Hangar frame-freeze: dest-map +0x60 add vs fade zero (s1988).**
-   Same-run controls: `[drain-path] call=1 unmap=0` 18 idx rows
-   `h58=0x0014` at iters=1 (idx 12 idle `h58=0`), last alloc
-   tickn=4 `0x801714D0 count=18`, `[drain-stop-sum] entry=1`
-   fade n=153, `[drain-timeout]` 10M, `[h30-sum]` fade
-   narmed=134547, `[h58=]` on every drain-path row. H-working-timer-is-0x58
-   REFUTED; H-envelope-fields-stuck SELECTED for +0x58/64/68.
-   Next: dest-map `advanceVolumeFadeEnvelope` `sw +0x60`
-   (`0x8008F64C`, val after `addu $a1`) and fade/release
-   `sw $zero, +0x60` (`0x800924DC` / `0x800922B0`). Hangar
-   dest = `0x801714D0+idx*0x88`. Keep `[drain-path] w60=`.
-   Use `S32`. Do not dest-map render `sw 0x58($s0)` — those
-   write a mix object at `0x80175xxx` (s1987 nhangar=0).
+1. **Hangar frame-freeze: census `stopAllSynthVoices` gate
+   `0x80141AD0` (s1989).** Same-run controls: `[drain-path]
+   call=1 unmap=0` 18 idx rows `h58=0x0014` at iters=1, last
+   alloc tickn=4 `0x801714D0 count=18`, `[drain-stop-sum]
+   entry=1` fade n=153, `[drain-timeout]` 10M, `[w60-sum]`
+   envelope narmed=2690 n8b=2678, fade-zero narmed=131404,
+   first-8 `[w60-store]` envelope val=`0x8B000` and fade
+   val=0. H-fade-rearms-zeros-elapsed SELECTED;
+   H-envelope-never-called / H-step-is-zero REFUTED. Next:
+   instrument `stopAllSynthVoices` `0x8008DBF4` entry (gate
+   `lbu 0x80141AD0`, n/narmed/n_skip/n_work) and its fade
+   jal `0x8008DCC4` vs `stopVoicesByHandle` jal `0x8008DB98`.
+   Keep `[w60-sum]` / `[drain-path] w60=`. Use `S32`. Do not
+   dest-map render `sw 0x58($s0)`.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -495,6 +507,12 @@ Most recent, still load-bearing for the next unit:
   s1988 — `h58` is frozen at the fade copy `0x14` through 10M
   (duration). Elapsed is the word at +0x60. Believable because
   fade's next instruction after `+0x6C=3` is `sh +0x30 → +0x58`.
+- s1988 "whether fade zeros +0x60 after the add in the same
+  tick, vs envelope never running / step 0" is superseded by
+  s1989 — envelope hangar-armed n=2690 stores `0x8B000`-class;
+  fade-zero narmed=131404 all val=0, matching the +0x30
+  rewrite. Believable because dump-after-tick saw 5× `0x8B000`
+  which could have been another writer.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -506,10 +524,11 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1988 drain-slot identity / subset-live / skip-cursor /
+and s1978–s1989 drain-slot identity / subset-live / skip-cursor /
 slot+0x40-skip / init-writer / loop-length / stop-dest-retrigger /
 stop-family song-handle-fade / fade-timer-stuck / +0x30
 store-census (H-no-decrement) / +0x58-duration (H-envelope-fields-stuck)
+/ +0x60 dest-map (H-fade-rearms-zeros-elapsed)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

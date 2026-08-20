@@ -95401,3 +95401,70 @@ the ledger; no new unevaluated verdict.
 H-working-timer-is-0x58 and selects H-envelope-fields-stuck.
 Next: dest-map `advanceVolumeFadeEnvelope` `sw +0x60` vs fade
 `sw $zero, +0x60`.
+
+## Session 1989 (2026-08-19) — dest-mapped +0x60: fade zeros elapsed after envelope add
+
+**Instrument.** Incremental `apply_s1989_w60_store`
+(`RS64_S1989_W60_STORE=1`). Dest-mapped every hangar `sw` to
+slot+0x60: `advanceVolumeFadeEnvelope` `0x8008F64C` (val after
+`addu $a1`), `beginVoiceFadeRelease` `0x800924DC` zero,
+`musyxStartVoiceRelease` `0x800922B0` zero. Census n/nhangar/
+narmed/n0/n8b/nother, lastval/idx/dest, unique hangar (site,val).
+First 8 any dest; hangar first 16 + every 10000th; every hangar
+val!=0 logged. Sum dump at `[drain-timeout]`. Kept `[drain-path]
+w60=` / `h58=` and s1987 `[h30-sum]`. No store changed. `S32`.
+Each store is a single copy (delay/fallthrough join before the
++0x60 write).
+
+**Probe.** `scratch/agent/s1989_w60_store/run.log` — eleven-Start
++ `ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512.
+Probe rc=0, 17 frames, 269380 log lines, 0 CRASH/SIGBUS.
+Hangar `[phase] 512 origin=0x006AB400` at 26.0s.
+
+Positive controls (same run): `[drain-path] call=1 iters=1
+unmap=0` 18 idx rows `h58=0x0014` (idx 12 idle `h58=0`); last
+alloc tickn=4 `0x801714D0 count=18`; `[drain-stop-sum] entry=1`
+fade n=153; `[drain-timeout]` 10M; `[h30-sum]` fade narmed=
+131404 n14=131404 nlt14=0; first-8 `[w60-store]` on envelope
+(boot `0x8018D4A0` val=`0x8B000`) and fade (val=0).
+
+**Census.** Envelope: n=22801 nhangar=17472 narmed=2690 n0=0
+n8b=2678 nother=12 lastval=`0x0008B000` lastidx=17 dest=
+`0x80171DD8`. Fade zero: n=131437 nhangar=131412 narmed=131404
+n0=131404 n8b=0 nother=0 lastval=0 lastidx=17. Release zero:
+n=24 nhangar=23 narmed=0. Fade-zero narmed == `[h30-sum]` fade
+narmed (131404). Unique hangar (site,val) overflowed 64 slots
+(used=64 overflow=137614): envelope vals are the arithmetic
+sequence `0x8B000 * N` (N=1..64 in the table, narmed only on
+N=1 (2678) and N=2 (12)). Fade unique is all val=0 (sampled
+out of the 64 by envelope accumulation). Dump-after-tick on
+loopers (`b=0x02`): w60=0 on 1391 rows, `0x8B000` on 40. Idle
+idxs keep leftover elapsed (idx 5 `0x1A1000`, idx 12
+`0x1BB1000`) because fade `beq slot+0==0` skips the zero.
+
+**Verdicts.**
+- H-envelope-never-called REFUTED: hangar-armed envelope n=2690,
+  dests are `0x801714D0+idx*0x88`.
+- H-step-is-zero REFUTED: n0=0, n8b=2678, lastval=`0x8B000`;
+  unique vals are exact multiples of the step.
+- H-fade-rearms-zeros-elapsed SELECTED: fade zeros +0x60 on
+  every hangar-armed call (n0=narmed=131404), matching the
+  +0x30 `0x14` rewrite. Envelope adds one step; fade re-inits
+  in the same `tickMusyXIfActive` so the dump sees 0 (the 40
+  looper `0x8B000` dump rows are the mid-tick race). Elapsed
+  never reaches duration because fade restarts it ~50× more
+  often than the envelope ticks (2690 vs 131404).
+- Static (not scored): fade has two direct callers —
+  `stopVoicesByHandle` (runtime n=30) and `stopAllSynthVoices`
+  `0x8008DBF4`, jal'd unconditionally from `tickMusyXIfActive`
+  with `$a0=0`. `stopAllSynthVoices` skips the sweep on
+  `blez` of `lbu 0x80141AD0`. Next unit censuses that gate /
+  n_work.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in
+the ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned +0x60 dest-map refutes
+H-envelope-never-called and H-step-is-zero; selects
+H-fade-rearms-zeros-elapsed. Next: `stopAllSynthVoices` gate
+`0x80141AD0` vs n_work during drain.
