@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1998 (2026-08-19).
+detail. Reviewed through s1999 (2026-08-20).
 
 ## Current state
 
@@ -350,6 +350,22 @@ detail. Reviewed through s1998 (2026-08-19).
   MusyX task/engine question from the still-unproven MORT codec boundary and
   gives every proposed step a control, VI phase, soak, and rollback. No audio
   runtime behavior changed in s1998.
+- **M5 ground truth and gate reconciliation (s1999).** The retail oracle
+  completed a 30-second run with 17,184 whole-RDRAM write hits and 1,799 VI;
+  its positive control is valid. Retail reached `setDisplayMode` stores at
+  `0x8008EA34` (`0x800A0F50=0`) and `0x8008EB40` (`=1`), matching the current
+  generated code, so that gate transition is legitimate guest state rather
+  than a port-only shortcut. The whole-control trace also saw 1,795 retail
+  writes from `0x800916A4` to the `0x8014998A` countdown; the narrow watch's
+  zero is invalid for absence because the debugger reports aligned addresses.
+  The `0x8014974C` narrow count is likewise a composite aligned-word watch;
+  its exact observed target writer is the init clear at `0x8008F490`, while
+  neighboring `+1/+2` stores account for the remaining hits. The current
+  `0x8008EC88` fixup regex still misses the generated probe-interposed store,
+  selecting a regeneration repair before de-stubbing. `M_AUDTASK` remains
+  statically env-gated (`musyx_stub` by default, `factor5_ucode_b` only with
+  `ROGUESQ_AUDIO_UCODE`); gate activity does not prove host dispatch. No audio
+  runtime behavior changed in s1999.
 - **Generated-symbol sweep is effectively closed (s1966).** A full-file
   census found s1962–s1965 had only swept a small tail of the TOML;
   845 leftovers resolved in one batch (902 → 57 `func_8[01]*`). The
@@ -402,16 +418,14 @@ detail. Reviewed through s1998 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1998: the M5 inventory is complete; its ground-truth and generated
-source reconciliation is next. The hangar status-3 result remains parked with
-a precise scheduler lead.
+Re-ranked s1999: the M5 ground-truth row is complete; repair the generated
+fixup anchor before validating the opt-in RSP arm. The hangar status-3 result
+remains parked with a precise scheduler lead.
 
-1. **M5 ground truth and generated-gate reconciliation (s1999).** Run the
-   retail oracle with a whole-RDRAM positive control and inspect the target
-   physical writes around the audio gates, then reconcile those results with
-   `fixup_game_funcs.py`, generated `funcs_23.c`, and the host M_AUDTASK
-   dispatch. Do not de-stub or repair a gate until the writer and legitimacy
-   are identified. Use the exact measurement in `scratch/agent/NEXT.md`.
+1. **M5 fixup-anchor repair, then opt-in RSP validation (s2000).** First make
+   the existing `0x8008EC88` force-zero rule regeneration-stable; then the
+   next unit can validate `ROGUESQ_AUDIO_UCODE=1` with task exit, DMEM, slot,
+   and PCM controls. Do not flip the default or reverse another gate.
 2. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
    census reached hangar `[phase] 512 origin=0x006AB400` in 24.6s and captured
    17 frames. `[svc-pool]` reached `n=1000 armed=0 gate=1`; after
@@ -711,6 +725,10 @@ site=finalizeCurrentSpeechBuffer)
 / s1998 M5 audio inventory and reversible de-stubbing plan
  (H-MORT-path / H-degenerate-host-path / H-MusyX-mismatch / H-scheduler-independent;
   design complete, ground truth next)
+/ s1999 M5 oracle/generation reconciliation
+ (retail setDisplayMode `0xF50` 0→1 confirmed legitimate; aligned-watch
+  composite for `0x14974C`; `0x8008EC88` fixup mismatch retained; no runtime
+  audio change)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

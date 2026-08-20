@@ -96040,3 +96040,57 @@ s1971–s1974 entries.
 
 **OUTCOME: ADVANCED** — current M5 inventory and reversible execution plan
 written; next work unit is ground-truth/generation reconciliation.
+
+## Session 1999 (2026-08-20) — reconciled retail audio gates with generated output
+
+The M5 ground-truth and generated-gate reconciliation work unit ran exactly one
+retail-oracle capture before any build or runtime change. The oracle command
+watched whole RDRAM plus physical `0xA0F50`, `0x14998A`, and `0x14974C` ranges
+for 30 seconds. It completed normally at 1,799 VI with 17,184 whole-RDRAM
+write hits, so the positive control passed.
+
+The `0xA0F50` watch had two exact hits: retail PC `0x8008EA34` wrote zero and
+`0x8008EB40` wrote one, both in `setDisplayMode`. The generated `funcs_23.c`
+has the same stores and values. This independently confirms that the retail
+0-to-1 transition is legitimate guest gate state, not a port-only shortcut.
+The retail trace had no `0x8008EC88` hit in the reached attract phase, so it
+does not validate that later `reapplyDisplayMode` tail.
+
+The narrow `0x14998A:0x14998C` watch reported zero, but that null is not
+usable: the oracle's debugger callback reports aligned addresses. The positive
+whole-RDRAM trace nevertheless attributed 1,795 writes to retail PC
+`0x800916A4`, which the generated source identifies as the halfword write to
+the `0x8014998A` countdown. The current source also contains the seed at
+`0x80091ECC`; no conclusion was drawn about its absence in this phase.
+
+The narrow `0x14974C:0x149750` watch reported 3,590 aligned-word hits, not an
+exact byte-owner count. Their retail PCs were `0x8008F20C` (1), `0x8008F490`
+(1), `0x800916DC` (1,793), `0x800917A8` (1,794), and `0x80091928` (1).
+Generated-source mapping shows `0x8008F490` is the observed exact target
+(`0x8014974C`) init clear; `0x800916DC`, `0x800917A8`, and `0x80091928` write
+the neighboring `+1` byte, while `0x8008F20C` writes the `+2/+3` halfword.
+The other generated exact target writers (`0x80091680`, `0x800912F8`) did not
+appear in this reached phase. The flag-owner question therefore remains open,
+but the composite watch is not evidence of a new port writer.
+
+Static reconciliation confirmed the existing `fixup_game_funcs.py` regex for
+`0x8008EC88` requires the instruction comment to be immediately followed by
+`MEM_B`; current generated output inserts `rs64_probe_submit_gate_store` between
+those lines, so the force-zero rule does not match and the generated tail writes
+one. This selects H-generated-mismatch for the next regeneration repair. It is
+not a runtime gate conclusion and no mitigation or de-stubbing change landed.
+
+`src/main/main.cpp:get_rsp_microcode` remains statically env-gated: every
+`M_AUDTASK` increments `[audtask-dispatch]`, returns `musyx_stub` by default,
+and returns `factor5_ucode_b` only when `ROGUESQ_AUDIO_UCODE` is set. Gate
+activity therefore does not prove host audio-task dispatch; that arm remains a
+separate work unit. The worker/status-3 and MORT questions were not tested.
+
+This run selects legitimate retail gate semantics for the reached
+`setDisplayMode` transition, the fixup/generated mismatch for `0x8008EC88`,
+and leaves the `0x8014974C` wait-owner question unevaluable beyond its observed
+init clear. It rules out treating the aligned narrow-watch totals as exact
+byte ownership and rules out de-stubbing based on gate writes alone.
+
+**OUTCOME: ADVANCED** — the independent oracle control passed and selected the
+fixup-anchor repair as the next M5 work unit.
