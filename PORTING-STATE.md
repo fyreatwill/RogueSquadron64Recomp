@@ -97412,3 +97412,21 @@ change the default store.
 ORIGIN: `reapplyDisplayMode` at `0x8008EC88` remains the only changed game
 writer under test. Its `$v0=1` value is legitimate retail state; no mitigation,
 guard, or shipped value change was added.
+
+## Session 2035 (2026-08-20) — explicit C88 control still stalled at VI 640
+
+Rebuilt `RogueSquadron64Recomp` and ran the planned single control with
+`env -u ROGUESQ_M5_C88_VALUE`, forced LLE, opt-in audio, spin yield, the
+corrected whitespace eleven-Start schedule, and the existing M5 witnesses.
+The probe returned 5 after its 120-second phase wait: VI 1024 was never
+reached and the last width was VI 640.
+
+The result passed the required same-run controls. `s2006-svc` emitted 24
+entries and 24 exits; `reapplyDisplayMode` emitted two callsite/entry/exit
+sequences; the driver scheduled all eleven Starts; and the run recorded
+post-640 SDL key rows plus host Start edges. No crash marker appeared. Thus
+the unset arm is not an inherited C88-value arm, and the phase result is not
+an input-control null. H2 of the planned table is selected: a common VI-640
+route failure remains, so the C88=1 comparison stays phase-invalid and the
+store remains unchanged. The next unit uses `tools/regress.sh` preflight and
+width-relative keys to separate a stale/focus schedule from the common route.

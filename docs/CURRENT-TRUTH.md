@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2034 (2026-08-20).
+for session detail. Reviewed through s2035 (2026-08-20).
 
 ## Current state
 
@@ -93,6 +93,13 @@ for session detail. Reviewed through s2034 (2026-08-20).
   nonzero while the unset arm stayed all-zero, but that downstream difference
   is not phase-valid. This is a common-route/recipe failure for s2034, not a
   selection between H1 and H2; the phase-valid s2033 B result remains active.
+- s2035 explicitly cleared `ROGUESQ_M5_C88_VALUE` and reran the control with
+  forced LLE, opt-in audio, spin yield, and the corrected eleven-Start
+  schedule. The arm again stayed at VI 640, but its same-run controls were
+  live: `s2006-svc` entry/exit was 24/24, `reapplyDisplayMode` was 2/2, and
+  the driver produced post-640 SDL/host Start transitions. This selects H2,
+  a common VI-640 route failure, over H3's missing-input-control explanation.
+  The C88 value A/B remains phase-invalid and unchanged.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -237,15 +244,13 @@ for session detail. Reviewed through s2034 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 C88 control qualification, then writer reachability.** s2034's
-  same-build control and value arms both stalled at VI 640 despite live
-  positive controls, so its writer rows are not phase-valid. First qualify a
-  single unset control with the environment explicitly cleared; use the
-  existing entry/exit, input-route, and VI-1024 witnesses to distinguish an
-  inherited-arm problem from a common route failure. Once the control is
-  phase-valid, repeat the C88=1 comparison. Keep the corrected whitespace
-  eleven-Start schedule, `ROGUESQ_AUDIO_UCODE=1`, and the phase-gated M5
-  census. Do not change another writer.
+1. **M5 common VI-640 route boundary.** s2035's explicitly-cleared C88
+   control still stalled at VI 640 after live `s2006-svc` 24/24,
+   `reapplyDisplayMode` 2/2, and post-640 host Start controls. Do not repeat
+   the C88 value A/B or change another writer. Use the preflighted,
+   width-relative `tools/regress.sh` route to separate a stale/focus schedule
+   from a guest consumer or common render-route failure; only a phase-valid
+   VI-1024 arm reopens the value comparison.
 2. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
@@ -533,6 +538,12 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   required service and reapply controls fired. The new wording is limited to
   a common-route/recipe failure because the control was not phase-valid; the
   next unit must qualify that control before interpreting writer reachability.
+- s2035 supersedes s2034's control-qualification wording as the immediate
+  next question. That wording was believable because s2034's concurrent and
+  corrected single-window arms were both phase-invalid. The explicit `env -u`
+  control now repeats the VI-640 stall while its service, reapply, and
+  post-640 host-input controls are live, selecting a common route boundary
+  and ruling out an inherited C88 arm or a missing input positive control.
 
 ## Evidence ledger summary
 
@@ -580,7 +591,11 @@ writer reachability. s2034 then exercised that witness in concurrent and
 single-window arms. All arms passed the 24/24 service positive control and
 reapply 2/2, but all remained at VI 640, leaving the C88 comparison
 phase-invalid and moving the immediate next unit to explicit control
-qualification.
+qualification. s2035 completed that qualification with
+`env -u ROGUESQ_M5_C88_VALUE`: the same controls and post-640 host-input
+transitions fired, but VI 1024 did not. This selects the common route branch
+of the control table, leaves the C88 value unchanged, and makes a preflighted
+width-relative input/focus route the next discriminator.
 
 ## Method and safety rules
 
