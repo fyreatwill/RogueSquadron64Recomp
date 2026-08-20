@@ -1,17 +1,21 @@
-# NEXT work unit (s2069)
+# NEXT work unit (s2070)
 
 HYPOTHESIS-ID: m5-audio-image-output-contract
 
 ## Work unit
 
-Add a diagnostic-only, environment-gated within-run A/B for the host's DMEM
-canary prefill at `0xF80..0xF8F`. With `ROGUESQ_AUDIO_CANARY_AB=1`, alternate
-canary-on and canary-off image tasks by phase-keyed task ordinal; leave the
-default canary-on behavior unchanged. Log the arm beside the existing
-`audtask-abi`/DMA rows and retain the exact E50 DMA payload fields. Because this
-touches `lib/N64ModernRuntime`, export the submodule patch in the same change.
-Run both arms in one qualified route; do not change task fields, dispatch,
-guest values, output routing, waits, or guards.
+Rerun the existing diagnostic-only canary A/B on the fully qualified M5 route.
+The s2069 instrument is already built and exported; do not change its logic or
+guest behavior. With `ROGUESQ_AUDIO_CANARY_AB=1`, alternate canary-on and
+canary-off image tasks by phase-keyed task ordinal, and collect the complete
+source/E50/PCM table with `ROGUESQ_M5_C88_VALUE=1` and
+`ROGUESQ_SPIN_YIELD=1`. Do not change task fields, dispatch, guest values,
+output routing, waits, or guards.
+
+ORIGIN: the host writes the `0xF80..0xF8F` canary; generated
+`factor5_ucode_b` loops at `L_146C`, `L_1D24`, and `L_1F40` are the guest-side
+writers under test. The legitimacy of the reserved-gap assumption is not
+established by ownership alone.
 
 ## Competing hypotheses and discriminator
 
@@ -37,29 +41,28 @@ output; unchanged rows select H-CanaryObserver.
 
 ## Exact commands
 
-1. Patch `lib/N64ModernRuntime/librecomp/src/rsp.cpp` so the existing canary
-   fill is skipped only when `ROGUESQ_AUDIO_CANARY_AB=1` and the phase-keyed
-   image-task ordinal is odd; log `canary_arm=on|off` in the ABI and DMA rows.
-   Hash the task's `data_ptr..data_ptr+data_size` source span before the ucode
-   call and include its FNV/nonzero count in the same row. No default behavior
-   change. Add an `ORIGIN:` line naming the host canary writer and the
-   generated `factor5_ucode_b` DMEM output loops; state that legitimacy is the
-   question under test.
-2. Export and build the one modified submodule:
+1. Ask ground truth first with the corrected Rice oracle. Require the
+   whole-RDRAM positive-control threshold, title VI `1024 @ 0x00790400`,
+   hangar VI `512 @ 0x006AB400`, and nonzero exact-E50 writes.
+2. Build the already committed diagnostic:
 
    ```sh
    ./submodule-patches/export.sh
    cmake --build build --config Debug --target RogueSquadron64Recomp
    ```
 
-3. Run the qualified route once with both arms enabled in-process:
+3. Run both arms once in-process on the complete tuple. The wrapper supplies
+   `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`:
 
    ```sh
-   env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUDIO_CANARY_AB=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-canary-ab 30 12
+   env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUDIO_CANARY_AB=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-canary-ab-c88 30 12
    ```
 
 4. Verify title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, the paired
-   arm/source/E50/PCM table, no crash or abort marker, and `git diff --check`.
+   arm/source/E50/PCM table, and the live input/image dispatch controls. A
+   no-crash capture is required for hypothesis selection; if the known odd-ROM
+   DMA assertion recurs, record the table as inadmissible and do not infer from
+   the canary fields alone. Run `git diff --check`.
    Kill any wrapper-owned game process with SIGKILL after the capture window.
 
 The exact E50 retail ownership from s2068 is the ground-truth reason this

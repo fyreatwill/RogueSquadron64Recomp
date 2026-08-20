@@ -98689,3 +98689,47 @@ audio-image, or default behavior changed. The only failed measurement was the
 initial single-watch histogram selection, corrected by separate oracle arms;
 the retail PCs above are the observed writers and their audio ownership is
 legitimate at the retail execution scope.
+
+## Session 2069 (2026-08-20) — instrumented the audio canary A/B
+
+Ground truth ran before the port build. The corrected Rice oracle passed the
+whole-RDRAM positive control with 52,753 writes, reached title VI
+`1024 @ 0x00790400` and hangar VI `512 @ 0x006AB400`, and recorded 42,753
+writes in the exact E50 envelope `0x1931F0..0x194E70`. This independently
+keeps the retail route and E50 writer live for the experiment.
+
+The first prescribed port invocation used the exact NEXT command, but the
+wrapper does not set `ROGUESQ_SPIN_YIELD=1`; it held at VI 640 and emitted zero
+audio-task rows. That capture was rejected. The fixed invocation added
+spin-yield and reached title VI 1024 at 49.0 seconds and hangar VI 512 at 85.1
+seconds, with the live route controls. It still omitted
+`ROGUESQ_M5_C88_VALUE=1`, so it was not the fully qualified s2067 C88=1 recipe.
+
+The code change is diagnostic-only in
+`lib/N64ModernRuntime/librecomp/src/rsp.cpp`: with
+`ROGUESQ_AUDIO_CANARY_AB=1`, odd phase-keyed image-task ordinals skip only the
+host prefill of DMEM `0xF80..0xF8F`; even rows and all default runs retain the
+prefill. ABI, DMA, and join rows now carry `canary_arm` and the pre-ucode
+`data_ptr..data_ptr+data_size` source FNV/nonzero counts. The submodule patch
+was exported and the Debug target built successfully.
+
+The fixed run emitted 934/933 title and 1,192/1,191 hangar task rows for
+canary-on/off. Both arms had live source, dispatch, input, and target-VI
+controls. Both returned `exit=1`; on rows had `canary_ok=0` and off rows had
+`canary_ok=1`; source-span keys intersected in 9 of 11 observed classes. It
+emitted 4,250 `0xCB0/0x198` ranges but no `0xE50/0x180` ranges. PCM logging
+recorded 6,814 source and 6,811 consumer rows, with one nonzero row at each
+endpoint. The process then hit 36 `[CRASH]` markers at the known odd-ROM DMA
+alignment assertion in `pi.cpp:do_rom_read`.
+
+This is a real diagnostic table but not an admissible canary hypothesis result:
+the missing C88=1 arm, absent E50 rows, mostly-zero PCM, and known host abort
+leave H-CanaryObserver, H-CanaryPoison, and H-CanaryContract all pending. It
+rules out only the claim that the original prescribed command itself qualified
+the route; it does not rule out a canary effect. The next work unit reruns the
+same table with C88=1 and spin-yield together.
+
+ORIGIN: the host writes the reserved-gap canary; generated `factor5_ucode_b`
+loops at `L_146C`, `L_1D24`, and `L_1F40` are the guest-side writers under
+test. The canary A/B is an observation of that host/guest boundary, not a
+mitigation or permission to remove the reservation.
