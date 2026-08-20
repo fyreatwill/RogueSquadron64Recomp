@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2040 (2026-08-20).
+for session detail. Reviewed through s2041 (2026-08-20).
 
 ## Current state
 
@@ -160,6 +160,18 @@ for session detail. Reviewed through s2040 (2026-08-20).
   port split with concurrent GUI arbitration unresolved. It does not select
   the planned route hypotheses, but the C88=1 arm is phase-valid for the
   callback-side PCM witness.
+- s2041 ran the C88=1 callback-side witness with forced LLE, opt-in Factor 5
+  audio, and all passive controls. Preflight was `input=ok visual=ok`; the
+  run reached title VI `1024 @ 0x00790400` at 14.0s but never reached the
+  hangar VI `512 @ 0x006AB400` anchor. The scorer marked the route FAIL because
+  the width-640 keys fired without a following VI transition, so this is H5
+  route failure rather than a PCM verdict. The controls were live: 24/24
+  `s2006-svc` entry/exit pairs, 123 real audio-task rows, one phase-8
+  `0 -> 1` writer row, 116 phase-8 gate-one rows, 88 phase-8 bridge rows
+  (19 with `nz=768`), and 40 phase-8 `pcm-sanity` rows all with
+  `all_zero=1`. No phase-10 rows existed; title-only PCM rows are not
+  interpreted. The next arm uses the known title-to-hangar phase-relative
+  schedule.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -304,17 +316,18 @@ for session detail. Reviewed through s2040 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 callback-side PCM witness.** The s2040 C88=1 arm is phase-valid
-   through title and hangar with live service, gate, and audio-task controls.
-   Build once and run that arm with forced LLE, opt-in Factor 5 audio, spin
-   yield, `ROGUESQ_LOG_ALL=1`, `ROGUESQ_LOG_PCM_SANITY=1`, the existing
-   gate/writer witness, and the 24/24 `s2006-svc` control. A phase-valid
-   bridge row with nonzero bytes plus `all_zero=0` selects upstream-valid PCM
-   and moves the question to AI/device ordering; bridge rows with `nz=0`
-   select an upstream task/ABI problem; no bridge rows with live gate/task
-   controls select the guest AI-submit/queue boundary. If the arm again
-   fails before a target anchor, record route failure and do not interpret
-   PCM.
+1. **M5 callback-side PCM witness.** The s2041 C88=1 arm reached only the
+   title anchor, despite live service, gate, task, bridge, and PCM controls.
+   Build once and rerun one C88=1 arm with forced LLE, opt-in Factor 5 audio,
+   spin yield, `ROGUESQ_LOG_ALL=1`, `ROGUESQ_LOG_PCM_SANITY=1`, the existing
+   gate/writer witness, and the known title-to-hangar phase-relative schedule
+   (`640@1/3/5/7/9:start`, then `1024@2:a 1024@3:start 1024@4:a
+   1024@6:start`). A phase-valid bridge row with nonzero bytes plus
+   `all_zero=0` selects upstream-valid PCM and moves the question to
+   AI/device ordering; bridge rows with `nz=0` select an upstream task/ABI
+   problem; no bridge rows with live gate/task controls select the guest
+   AI-submit/queue boundary. If the arm again fails before both target
+   anchors, record route failure and do not interpret PCM.
 2. **M5 gate-writer value causality.** Keep `ROGUESQ_M5_C88_VALUE=1` opt-in
    and the retail-value writer unchanged. The phase-valid s2038 split is
    now reproduced in s2040, but remains single-source because both arms
@@ -662,6 +675,14 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   writer/gate split, so the C88=1 callback witness is runnable again. The
   inverse split remains single-source and GUI-focus confounded; it is not a
   causal authorization to change the writer.
+- s2041 supersedes the unqualified claim that the eleven width-640 schedule
+  is sufficient to make the C88=1 callback witness phase-valid. The wording
+  was believable because s2040's C88=1 arm reached title and hangar with the
+  same schedule, but the fresh single arm reached title only and the scorer
+  recorded a missing post-key VI transition. Its title-side controls proved
+  the instrument was live, not that the PCM boundary was reached. The next
+  recipe adds the known title-to-hangar width-1024 key schedule and keeps the
+  no-PCM-interpretation rule until both anchors exist.
 
 ## Evidence ledger summary
 
@@ -734,7 +755,11 @@ complete explanation. s2040's same-build comparison then reached title and
 hangar in the C88=1 arm and title in the unset arm, with 24/24 service
 controls in both and `0 -> 1`/gate-one versus `0 -> 0`/511 gate-zero rows.
 This reproduces the inverse single-source port split without selecting a
-causal route hypothesis; the C88=1 callback-side PCM witness is next.
+causal route hypothesis. s2041's C88=1 callback arm then reached title only:
+the title-side controls were live, including 19 nonzero bridge rows and
+all-zero PCM sanity rows, but the hangar anchor and phase-10 rows were absent.
+The result is a route failure, not a PCM conclusion; the next run adds the
+known title-to-hangar phase-relative key schedule.
 
 ## Method and safety rules
 

@@ -97619,3 +97619,39 @@ callback-side PCM witness; bridge and PCM contents were not interpreted here.
 
 ORIGIN: no writer or value was changed; `ROGUESQ_M5_C88_VALUE=1` remained an
 opt-in test arm and this iteration added no mitigation.
+
+## Session 2041 (2026-08-20) — callback witness was title-only
+
+`HYPOTHESIS-ID: m5-callback-side-pcm-witness`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 52,437 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. One fresh
+C88=1 arm used forced LLE, opt-in Factor 5 audio, spin yield, `ROGUESQ_LOG_ALL`,
+the existing gate/writer/service witnesses, `ROGUESQ_LOG_PCM_SANITY=1`, and
+the eleven width-640 Start schedule.
+
+The regress preflights were `input=ok visual=ok`. The 180.9-second capture
+completed with 47 frames and no crash, abort, missing-function, or deferred-DL
+markers. It reached title VI `1024 @ 0x00790400` at 14.0s, but never reached
+hangar VI `512 @ 0x006AB400`. The scorer marked FAIL because the width-640 keys
+fired around 24.3s without a following VI transition within ten seconds and
+classified the run as the undriven route.
+
+The positive controls and instruments were live despite the route failure:
+`s2006-svc` emitted 24/24 entry/exit pairs, `audtask-dispatch` emitted 123
+real-task rows, and the title phase emitted one `reapplyDisplayMode` writer
+row (`0 -> 1`) plus 116 gate-one rows. It also emitted 88 phase-8 bridge rows,
+19 with `nz=768`, and 40 phase-8 `pcm-sanity` rows, all `all_zero=1`. There
+were no phase-10 rows. Because the required hangar anchor was absent, these
+title-only bridge and PCM rows cannot select H1, H2, H3, or H4; the work unit
+result is H5 route failure. The next recipe adds the known title-to-hangar
+phase-relative width-1024 key schedule before interpreting PCM.
+
+This rules out an instrumentation-dead/null-control explanation for this run,
+but it does not distinguish producer PCM, callback ABI, device ordering, or
+guest submit/queue behavior. It also does not overturn the s2040 C88 route
+split: the single arm did not reproduce the hangar depth needed for that
+comparison.
+
+ORIGIN: no writer or value was changed; `ROGUESQ_M5_C88_VALUE=1` remained an
+opt-in test arm and this iteration added no mitigation.
