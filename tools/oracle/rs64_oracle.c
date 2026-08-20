@@ -298,6 +298,7 @@ static void dbg_update(unsigned int pc)
 static long g_vis;
 static int g_vi_trace;
 static int g_vi_poll;
+static int g_status_poll;
 static int g_pif_trace;
 static unsigned g_last_pad0 = 0xFFFFFFFFu;
 static unsigned g_last_pad = 0xFFFFFFFFu;
@@ -465,14 +466,31 @@ static int state_file_exists(const char *path)
 static void *vi_poller(void *arg)
 {
     unsigned last_width = 0xFFFFFFFFu, last_origin = 0xFFFFFFFFu;
+    unsigned last_status[18];
     double last_raw_log = -1e9;
+    int i;
     (void)arg;
+
+    for (i = 0; i < 18; i++) last_status[i] = 0xFFFFFFFFu;
 
     sleep_s(0.1);
     while (g_poll_running) {
         double t = now_s() - g_t0;
         unsigned width = pDebugMemRead32(VI_WIDTH_ADDR);
         unsigned origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        if (g_status_poll) {
+            for (i = 0; i < 18; i++) {
+                unsigned addr = 0x00154620u + (unsigned)i * 0x1228u;
+                unsigned word = pDebugMemRead32(0xA0000000u | addr);
+                unsigned status = (word >> 24) & 0xFFu;
+                if (status != last_status[i]) {
+                    printf("[oracle-status-poll] t=%6.1fs slot=%d addr=0x%08x word=0x%08x top=0x%02x low=0x%02x\n",
+                           t, i, addr, word, status, word & 0xFFu);
+                    fflush(stdout);
+                    last_status[i] = status;
+                }
+            }
+        }
         if ((t - last_raw_log) >= 1.0) {
             printf("[vi-poll-raw] t=%6.1fs width=%u origin=0x%08x\n", t, width, origin);
             fflush(stdout);
@@ -629,6 +647,7 @@ static void usage(void)
         "  --oracle-emulator N   set Core/R4300Emulator (default 0, pure interpreter)\n"
         "  --vi-trace            log VI width/origin changes - the headless phase signal\n"
         "  --vi-poll             poll VI width/origin through the core API outside callbacks\n"
+        "  --status-poll         poll the 18 status-table words through the core API\n"
         "  --pif-trace           log pad-1 buttons as the GAME reads them from PIF RAM\n"
         "  --debug-write VADDR:VALUE  write one 32-bit word on first VI width 320\n"
         "  --state-path PATH     savestate path used by ORACLE_STATE_SMOKE/REACH=1\n"
@@ -704,6 +723,7 @@ int main(int argc, char **argv)
         }
         else if (!strcmp(argv[i], "--vi-trace"))                   g_vi_trace = 1;
         else if (!strcmp(argv[i], "--vi-poll"))                    g_vi_poll = 1;
+        else if (!strcmp(argv[i], "--status-poll"))                g_status_poll = 1;
         else if (!strcmp(argv[i], "--pif-trace"))                  g_pif_trace = 1;
         else if (!strcmp(argv[i], "--debug-write") && i + 1 < argc) {
             unsigned addr, value;
@@ -806,8 +826,8 @@ int main(int argc, char **argv)
     }
 
     g_t0 = now_s();
-    g_poll_running = g_vi_poll;
-    if (g_vi_poll)
+    g_poll_running = g_vi_poll || g_status_poll;
+    if (g_poll_running)
         pthread_create(&poll_th, NULL, vi_poller, NULL);
     pthread_create(&th, NULL, director, &secs);
 
@@ -817,7 +837,7 @@ int main(int argc, char **argv)
     pCoreDoCommand(M64CMD_EXECUTE, 0, NULL);
 
     g_poll_running = 0;
-    if (g_vi_poll)
+    if (g_vi_poll || g_status_poll)
         pthread_join(poll_th, NULL);
 
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",

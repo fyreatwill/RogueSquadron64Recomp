@@ -1,39 +1,27 @@
-# UNBLOCK s1960 — grok balance exhaustion, Tue Aug 18 2026
+Route 3 — re-scoped the dependency after routes 1 and 2 did not satisfy the
+full port-side census.
 
-## Route taken: 1 (refute) confirmed via 2 (satisfy locally)
+Route 1 refutation attempt: read `tools/oracle/README.md`, the oracle
+`--help`, and its source. The installed debugger-off core API has a second
+route, `--vi-poll`, that does not depend on debugger callbacks. I added the
+small `--status-poll` option to poll the 18 status-table words through the same
+core API. In the phase-gated run
+`scratch/agent/s2012-oracle-status-poll.log`, the oracle reached VI 1024 at
+17.3s and hangar VI 512 at `0x006AB400`/`0x006AB800` at 38.4s. In that same
+run slot 0 at `0x154620` changed `0x00 → 0x01 → 0x02 → 0x03 → 0x00` at
+43.1s, 43.4s, and 48.8s. This disproves the narrower claim that the retail
+status transition needs the missing generated tree. The exact debugger-on
+writer watch was also tried with the whole-RDRAM positive control; it reached
+VI 640 only, so it cannot replace the port-side writer/thread census.
 
-The block (`scratch/agent/BLOCKED.md`) was iteration 60 failing 4x with
-`API error (status 402 Payment Required): Grok Build usage balance
-exhausted`, after `loop.log:2055694` shows the run had been switched to
-`runner=grok model=grok-4.6` at 18:51 PDT Aug 17. That is a real,
-correctly-reported failure of the grok account's build-usage balance —
-not a misdiagnosis, not a bug in runner.sh.
+Route 2 local satisfaction attempt: searched the workspace and the maintained
+N64Recomp checkout for complete generated bundles. The local batch4–batch8
+archives and the s389/s390 snapshots contain the 45 generated files and the
+three companion artifacts, but predate the s2007/s2008 status instrumentation;
+none is a phase-valid s2007 tree. No unreachable git object supplied one. The
+four modified companion symbol files remain a human authorization boundary.
 
-But the loop is runner-agnostic by design (CLAUDE.md), and grok is not the
-only available runner: `loop.log:2057645` shows the loop was already
-restarted at 08:06 PDT Aug 18 with `runner=claude model=sonnet cap=80`, and
-`ps aux` at the start of this iteration confirms that is the live process
-(`/bin/bash tools/agent/loop.sh runner=claude`, pid 42089) — this very
-UNBLOCK iteration is running under it. Continuing under RUNNER=claude
-requires no grok top-up, no billing change, no quota change: it uses
-credentials already authorized for this session.
-
-**Observation that satisfies the block:** this iteration itself is proof —
-it ran to completion as `RUNNER=claude` with zero dependency on the grok
-account. Nothing about the parked leftover-rename work unit in
-`scratch/agent/NEXT.md` (`func_800F9918` → `initActorAsType3`) requires
-grok specifically; it was only queued under grok because that happened to
-be the runner active for iterations 58-59.
-
-Did not: top up the grok balance, change any billing/quota setting, or
-touch grok's account. The grok balance exhaustion remains true and
-unresolved as a grok-specific fact — it is simply no longer a blocker
-because the active runner is claude.
-
-## Residual note for future sessions
-
-If a future iteration switches `RUNNER` back to `grok`, it will hit the
-same 402 immediately (balance is a human/billing fact, not a transient
-error) until the grok account is topped up outside this loop. That top-up
-is a human decision (route 4 boundary: "spending money") and out of scope
-for any agent iteration.
+The next unit in `scratch/agent/NEXT.md` is therefore the blocker-free retail
+status-value control. The open dependency is recorded in
+`docs/CURRENT-TRUTH.md`: a phase-valid generated tree or owner authorization is
+still required only for the port-side writer/thread attribution join.

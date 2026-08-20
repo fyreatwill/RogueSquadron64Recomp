@@ -96567,3 +96567,37 @@ phase-gated control can be rerun.
 
 OUTCOME: BLOCKED — phase-valid generated-tree provenance or explicit
 reconciliation authorization is required from the project owner.
+
+## Session 2012 (2026-08-20) — re-scoped provenance block to retail status control
+
+HYPOTHESIS-ID: m5-retail-status-poll-branch
+
+The blocked claim was audited in order. The oracle README, `--help`, and source
+showed that debugger-off `--vi-poll` reads VI through the core API without
+debugger callbacks. I added a small `--status-poll` option to the local oracle,
+rebuilt it, and ran the installed retail core with the Rice video plugin and
+the eleven-Start schedule. The same run reached VI 1024 at 17.3s and hangar
+VI 512 at origins `0x006AB400`/`0x006AB800` at 38.4s. Its slot-0 poll at
+physical `0x154620` then recorded `0x00`, `0x01`, `0x02`, `0x03`, and `0x00`
+again at 43.1s, 43.4s, and 48.8s. The phase transitions are the positive
+controls for the status read; the value observation is phase-valid and does
+not depend on the missing generated tree.
+
+The alternate debugger-on exact status watch was also tried with the oracle's
+whole-RDRAM positive control. It reached VI 640 and stalled before the
+transition, so it cannot replace the port-side writer-PC/thread attribution
+census. The local complete generated bundles were then checked: batch4–batch8
+and s389/s390 contain older 45-file/companion snapshots without the s2007 or
+s2008 status instrumentation, and no unreachable git object supplied a
+phase-valid tree. The four modified companion symbol files therefore remain a
+human authorization boundary.
+
+Route 3 was taken: the next work unit is the blocker-free retail status-value
+control in `scratch/agent/NEXT.md`; the open dependency is now explicitly
+limited to the port-side writer/thread join. `docs/CURRENT-TRUTH.md` records
+that split. No port status, audio, spin, PI, guard, or mitigation behavior
+changed.
+
+OUTCOME: ADVANCED — the full generated-tree census remains dependency-bound,
+but the retail status-value branch is locally phase-measurable and the loop can
+continue without human input.

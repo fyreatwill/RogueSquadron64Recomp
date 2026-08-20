@@ -1,53 +1,43 @@
-# NEXT work unit (s2012) — obtain phase-valid generated-tree provenance
+# NEXT work unit (s2013) — repeat the retail status-value control
 
-HYPOTHESIS-ID: m5-status3-worker-dispatch
+HYPOTHESIS-ID: m5-retail-status-poll-branch
 
 ## Work unit
 
-M5 phase-valid generated-tree provenance repair. This is the only next unit;
-do not run the status-writer census until its VI-1024 positive control passes.
-Human input is required: provide the phase-valid s2007 generated tree, or
-explicitly authorize reconciling the four pending companion symbol files.
-The s2011 read-only check found only the 45-file current tree, uncommitted
-companion/symbol edits, and a provenance retry that died before VI 1024. Do
-not build or reconcile until that input is supplied.
+Repeat the local retail-oracle status poll as a blocker-free M5 unit. The
+phase-valid generated tree is still required for the port-side writer/thread
+join, but it is not required to observe the retail status-value branch. Do not
+rebuild or reconcile the generated/symbol trees for this unit.
 
-## Competing hypotheses and discriminator
+## Discriminator and controls
 
-- **H-current-symbols:** pending companion symbol edits changed generated
-  layout/dispatch, so the current 51-file tree is not behaviorally equivalent
-  to s2007.
-- **H-snapshot-stale:** the preserved 45-file tree is too old for the current
-  runtime/CMake sources and its VI-640 stall is not a valid status result.
-- **H-overlay-pairing:** `recomp_overlays.inl`, `funcs.h`, `lookup.cpp`, and
-  generated C files are from different generations even when file count
-  matches.
-- **H-build-staleness:** an object or source-list mismatch caused the phase
-  failure; a forced full rebuild should remove it.
+Use the debugger-off `--status-poll --vi-poll` route described in
+`tools/oracle/README.md`. The same run must reach VI 1024 and then hangar VI
+512 at origins `0x006AB400`/`0x006AB800`; those are the positive phase controls.
+Within that phase, slot 0 at physical `0x154620` must show the sequence
+`0x00 → 0x01 → 0x02 → 0x03 → 0x00`. A missing `0x03` is a null only if the
+phase controls pass. The poll does not attribute a host writer or thread.
 
-The discriminating measurement is one internally matched generated/overlay
-artifact with every generated object forced to compile. VI 1024 plus the
-s2006/s2007 controls selects a phase-valid baseline. A pre-1024 crash or a
-VI-640 live stall keeps the status census blocked. A link/source mismatch
-selects overlay pairing or stale CMake inputs. Do not interpret a status-writer
-null without VI 1024 in the same run.
+The s2012 run already supplied this observation: slot 0 changed at 43.1s,
+43.4s, 48.8s, and 48.8s while the run had reached VI 1024 at 17.3s and
+hangar VI 512 at 38.4s. The static generated source independently maps the
+table base to `0x80154620`, the stride to `0x1228`, and the seven candidate
+writer PCs. Keep those two sources separate when classifying the value branch.
 
-## Exact commands after the required human input
+## Exact command
 
 ```sh
-git -C /Users/williambuckley/Documents/Tools/rogue_squadron64 status --short -- symbol_files
-git -C /Users/williambuckley/Documents/Tools/N64Recomp status --short -- fixup_game_funcs.py RecompiledFuncs
-git -C /Users/williambuckley/Documents/Tools/N64Recomp log -5 --oneline -- fixup_game_funcs.py
-rg --files /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs -g 'funcs_*.c' | wc -l
-rg -n 'section_table|overlay_sections_by_index|slotDispatcherIter' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/recomp_overlays.inl /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/funcs.h src/main/register_overlays.cpp
-cmake -S . -B build
-find /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs -maxdepth 1 -type f -name 'funcs_*.c' -exec touch {} +
-cmake --build build --config Debug --target RogueSquadron64Recomp
-env PROBES_OVERRIDE="p1:start:5 p2:a:3" ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_THREADS=1 ROGUESQ_LOG_RUNNER_ALL=1 ROGUESQ_LOG_SPBOOT=1 ROGUESQ_LOG_SCHED=1 ROGUESQ_LOG_THREAD_RESUME=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2011-provenance 0 12 > scratch/agent/s2011-provenance.log 2>&1
+tools/oracle/build.sh
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --oracle-debugger 0 --oracle-emulator 1 --secs 60 --vi-poll --status-poll \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  > scratch/agent/s2013-retail-status-poll.log 2>&1
 ```
 
-The run must be scoped and SIGKILLed. Positive control is VI 1024; VI-enqueue
-rows alone are insufficient. If no internally matched artifact reaches VI
-1024, stop and request the phase-valid s2007 tree or permission to reconcile
-the companion symbol snapshot. Do not alter status, audio, spin, or PI
-behavior in that case.
+Do not turn this into a cross-run A/B on an animating scene. Do not infer the
+port-side thread join from the poll, promote audio, alter status/spin/PI
+behavior, or weaken a guard. The remaining port census stays open until the
+phase-valid generated tree or owner authorization exists.

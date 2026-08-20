@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2011 (2026-08-20).
+for session detail. Reviewed through s2012 (2026-08-20).
 
 ## Current state
 
@@ -14,8 +14,8 @@ for session detail. Reviewed through s2011 (2026-08-20).
 - The phase-gated baseline reached VI 1024 and hangar VI 512 in the known-good
   s844 and s1949-era recipes. The later 45-file generated snapshot reaches VI
   0, 320, and 640 but not 1024; the fresh 51-file tree crashes earlier. The
-  status-table census is therefore blocked on generated-tree provenance, not
-  on a status-value null.
+  port-side writer/thread census remains dependent on generated provenance,
+  but the status-value branch is no longer unobservable.
 - `ROGUESQ_SPIN_YIELD=1` remains an environment-gated diagnostic aid. It
   yields runnable menu spins so host VI/SI external messages can drain; it is
   not a default behavior change. With the matching menu-input yield and the
@@ -38,26 +38,27 @@ for session detail. Reviewed through s2011 (2026-08-20).
 - The s2011 provenance check found no phase-valid generated tree available for
   an authorized rebuild. The current external tree has 45 generated function
   files and uncommitted companion/symbol edits; the s2009 retry exited while
-  waiting for VI 1024. The status-writer census remains blocked on human input.
+  waiting for VI 1024. The s2012 debugger-off retail oracle instead reached VI
+  1024 and hangar VI 512 while polling slot 0 through `0x03` and back to
+  `0x00`. This closes the status-value branch, but not host writer/thread
+  attribution.
 
 ## Active investigation and ranked next steps
 
-1. **M5 generated-tree provenance repair (human input required).** Obtain the
+1. **M5 retail status-value control.** Reuse the local oracle's
+   `--status-poll --vi-poll` route to repeat the same-run phase gate and confirm
+   slot 0's `0x00 → 0x01 → 0x02 → 0x03 → 0x00` sequence. The phase controls are
+   VI 1024 followed by hangar VI 512 at origins `0x006AB400`/`0x006AB800`.
+   This is a status-value control only; do not infer a host thread from it.
+2. **M5 port-side writer/thread census (human input remains open).** Obtain the
    phase-valid s2007 generated tree, including `funcs_*.c`, `funcs.h`,
    `recomp_overlays.inl`, and `lookup.cpp`, or explicitly authorize
-   reconciliation of the four pending companion symbol files. The s2011
-   read-only check found 45 current generated files and no phase-valid local
-   artifact; `s2009-provenance.log` records that the process died while
-   waiting for VI 1024. After the artifact or authorization arrives, force a
-   full rebuild and rerun the existing phase-gated control. VI 1024 selects a
-   usable baseline; another pre-1024 crash or VI-640 stall keeps the status
-   census blocked. Do not change status, audio, spin, PI, or mitigation code.
-2. **M5 status-table writer/transition census (only after #1).** Run the
+   reconciliation of the four pending companion symbol files. Then run the
    seven-site join of writer PC, slot/index, old/new byte, thread, shutdown
    call, and service/callback edge. Slot 0 `0x03` then clear selects
    transient-cleared; another slot selects other-slot; no `0x03` with live
-   controls selects never-written. The retail oracle and `0x8009B7EC` writer
-   are positive controls.
+   controls selects never-written. Do not change status, audio, spin, PI, or
+   mitigation code while this dependency is open.
 3. **M5 callback-side PCM witness (only if #2 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.
@@ -78,14 +79,17 @@ for session detail. Reviewed through s2011 (2026-08-20).
 **Generated-tree provenance.** The s2008 writer census is regeneration-stable
 and its retail controls are valid, but neither candidate generated tree is a
 phase-valid witness. A live VI-enqueue counter is only a positive control; it
-does not substitute for the VI-1024 phase marker.
+does not substitute for the VI-1024 phase marker. This dependency remains for
+the port-side writer/thread join, not for observing the retail status value.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
-capture. Its first sampled spin row is already status `0x00`; no status-3 row
-was observed. The status-2 stop path legitimately writes `0x03` at
-`0x8009B30C`, while `serviceVoicePoolFrame` (`0x8009B7EC` among its stores)
-is the legitimate worker-side zeroing path. The transition cannot be
-interpreted until a phase-valid generated tree runs the all-writer census.
+capture. The debugger-off retail oracle independently reached VI 1024 and
+hangar VI 512 in one run, then observed slot 0 at `0x00`, `0x01`, `0x02`,
+`0x03`, and `0x00` again. The status-2 stop path legitimately writes `0x03`
+at `0x8009B30C`, while `serviceVoicePoolFrame` (`0x8009B7EC` among its
+stores) is the legitimate worker-side zeroing path. The value branch is
+settled; only the port-side writer/thread join still needs a phase-valid
+generated tree.
 
 **M5 opt-in audio.** Both arms receive the same `M_AUDTASK` descriptor and
 the selected image matches `aspMainTextStart`/`aspMainDataStart`. Treatment
@@ -143,8 +147,8 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
 
 Per-session history through s1879 is in `PROJECT-OVERVIEW.md` §§33–35.
 s1880–s1959 and the VI-1024 chain are in §36. s1961–s2009 are archived in
-§37 and remain in `PORTING-STATE.md` as the primary ledger; s2011 records the
-current provenance block. The durable
+§37 and remain in `PORTING-STATE.md` as the primary ledger; s2011–s2012 record
+the provenance block and its blocker-free retail status re-scope. The durable
 milestones are: hangar reachability, bltzal link repair, audio-drain writer
 mapping, M5 plan, opt-in DMA-to-queue mapping, shutdown call-3 reachability,
 and the unresolved generated-tree provenance boundary.
@@ -155,8 +159,9 @@ and the unresolved generated-tree provenance boundary.
   arms in one build and run; scope counters to the VI phase; never compare
   animating scenes by stopwatch.
 - Ask the retail oracle for ground truth before building an instrument. Arm
-  its whole-RDRAM positive control first, then use physical-address watches
-  with PC attribution. The oracle currently reaches boot and attract only.
+  its whole-RDRAM positive control first when debugger watches are enabled;
+  debugger-off `--vi-poll` is the phase-valid route for status-table reads
+  when PC watches stall at VI 640. Keep the two roles separate.
 - Read `docs/F5-UCODE-REFERENCE.md` before reasoning about Factor 5 display
   lists. Regen in order: `make_elf.py`, N64Recomp, `fixup_game_funcs.py`,
   then CMake. Diagnostics in generated output must be fixed in the scripts.
