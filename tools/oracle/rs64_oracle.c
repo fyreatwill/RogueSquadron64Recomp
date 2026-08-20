@@ -98,6 +98,9 @@ static int g_first_watch = -1;
 static int g_pc_hist_watch = -1;
 static int g_post_value_watch = -1;
 static uint32_t g_post_value_requested_pc[32];
+static int g_post_value_requested_seen[32];
+static uint32_t g_post_value_requested_value[32];
+static uint32_t g_post_value_requested_addr[32];
 static int g_n_post_value_requested_pc;
 struct post_value_entry {
     uint32_t value;
@@ -117,6 +120,7 @@ static long g_post_value_samples;
 static long g_post_value_overflow;
 static long g_post_value_pc_overflow;
 static int g_post_value_pending;
+static int g_post_value_pending_target = -1;
 static int g_post_value_armed;
 static uint32_t g_post_value_addr;
 static uint32_t g_post_value_pc_addr;
@@ -223,14 +227,14 @@ static int post_value_pc_seen(uint32_t pc)
     return 0;
 }
 
-static int post_value_pc_requested(uint32_t pc)
+static int post_value_requested_index(uint32_t pc)
 {
     int i;
     for (i = 0; i < g_n_post_value_requested_pc; i++) {
         if (g_post_value_requested_pc[i] == pc)
-            return 1;
+            return i;
     }
-    return 0;
+    return -1;
 }
 
 static void add_post_value_pcs(const char *arg)
@@ -378,9 +382,23 @@ static void dbg_update(unsigned int pc)
     }
 
     if (g_post_value_pending) {
+        uint32_t value;
         g_post_value_pending = 0;
-        count_post_value(g_post_value_pc_addr,
-                         pDebugMemRead32(debug_rdram_addr(g_post_value_addr & ~3u)));
+        value = pDebugMemRead32(debug_rdram_addr(g_post_value_addr & ~3u));
+        count_post_value(g_post_value_pc_addr, value);
+        if (g_post_value_pending_target >= 0) {
+            int target = g_post_value_pending_target;
+            g_post_value_pending_target = -1;
+            if (!g_post_value_requested_seen[target]) {
+                g_post_value_requested_seen[target] = 1;
+                g_post_value_requested_value[target] = value;
+                g_post_value_requested_addr[target] = g_post_value_addr & ~3u;
+                printf("[post-target] pc=0x%08x addr=0x%08x value=0x%08x\n",
+                       g_post_value_requested_pc[target],
+                       g_post_value_requested_addr[target], value);
+                fflush(stdout);
+            }
+        }
         pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
         pDebugStep();
         return;
@@ -402,14 +420,17 @@ static void dbg_update(unsigned int pc)
             if (g_pc_hist_watch == i && (access_flags & M64P_BKP_FLAG_WRITE))
                 count_writer_pc(i, pc);
             if (g_post_value_watch == i && (access_flags & M64P_BKP_FLAG_WRITE) &&
-                g_post_value_armed &&
-                (g_post_value_samples < MAX_POST_VALUE_SAMPLES ||
-                 (!post_value_pc_seen(pc) &&
-                  (g_n_post_value_pc < MAX_POST_VALUE_PCS ||
-                   post_value_pc_requested(pc))))) {
-                g_post_value_pending = 1;
-                g_post_value_addr = accessed;
-                g_post_value_pc_addr = pc;
+                (g_post_value_armed || post_value_requested_index(pc) >= 0)) {
+                int target = post_value_requested_index(pc);
+                int force_target = target >= 0 && !g_post_value_requested_seen[target];
+                int sample_generic = g_post_value_samples < MAX_POST_VALUE_SAMPLES ||
+                    (!post_value_pc_seen(pc) && g_n_post_value_pc < MAX_POST_VALUE_PCS);
+                if (force_target || sample_generic) {
+                    g_post_value_pending = 1;
+                    g_post_value_pending_target = force_target ? target : -1;
+                    g_post_value_addr = accessed;
+                    g_post_value_pc_addr = pc;
+                }
             }
         }
         if ((g_watch[i].flags & M64P_BKP_FLAG_EXEC) &&
@@ -1075,6 +1096,10 @@ int main(int argc, char **argv)
                    g_post_value_pc[j].zero_words, g_post_value_pc[j].nonzero_words);
         if (g_post_value_pc_overflow)
             printf("[oracle] post-value-pc overflow=%ld\n", g_post_value_pc_overflow);
+        for (j = 0; j < g_n_post_value_requested_pc; j++)
+            printf("[oracle] post-target-summary pc=0x%08x seen=%d addr=0x%08x value=0x%08x\n",
+                   g_post_value_requested_pc[j], g_post_value_requested_seen[j],
+                   g_post_value_requested_addr[j], g_post_value_requested_value[j]);
         if (g_post_snapshot_valid)
             printf("[oracle] post-value snapshot bytes=%lu nonzero=%lu fnv=0x%08x\n",
                    g_post_snapshot_bytes, g_post_snapshot_nonzero,

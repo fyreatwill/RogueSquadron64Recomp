@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2071 (2026-08-20).
+for session detail. Reviewed through s2072 (2026-08-20).
 
 ## Current state
 
@@ -134,18 +134,19 @@ for session detail. Reviewed through s2071 (2026-08-20).
   The A/B and task result are single-source port evidence; the oracle is the
   independent route/E50-write witness. Default canary prefill, task fields,
   dispatch, routing, and guest behavior remain unchanged.
-- s2071's corrected Rice oracle value witness passed the whole-RDRAM control
-  with 57,552 writes, reached title VI `1024 @ 0x00790400` and hangar VI
-  `512 @ 0x006AB400`, and recorded 47,552 exact-E50 writes. Its bounded
-  post-store table had 401 samples, 255 zero words, and nonzero
-  metadata/control-like values including `0x8019...`, `0x8006...`,
-  `0xCDCDCD`, and `0xFFD6` families; the final range snapshot had 5,745
-  nonzero bytes and FNV `0xA4EF5852`. Named retail audio writers still fired,
-  but the bounded post-store table did not attach a value to those named PCs.
-  Against s2070's 1,068-per-arm port E50 rows, all zero-only with FNV
-  `0x25E26BC5`, this refutes H-E50-PortPayloadMatch and favors
-  H-E50-RetailIntermediate at bounded value scope. It does not prove the
-  final snapshot is PCM or close the exact E50 output role.
+- s2072's corrected Rice oracle witness passed the whole-RDRAM control with
+  57,353 writes, reached title VI `1024 @ 0x00790400` and hangar VI
+  `512 @ 0x006AB400`, and recorded 47,353 exact-E50 writes. The first
+  phase-gated requested-PC attempt was positive-controlled but produced no
+  named rows because all five writers ran at 10.5--10.6s, before the title
+  VI callback at 17.3s. The fixed requested-PC path captured one post-store
+  value for each named writer: `0x0002FFFF`, `0x0001FFFF`, `0xB02F5600`,
+  `0x00000100`, and `0x8019A3D0`, at exact E50 addresses. The final range
+  snapshot had 5,721 nonzero bytes and FNV `0xA177ADED`. These values are
+  control/metadata/pointer-like rather than a direct match for the port's
+  zero-only `0x25E26BC5` span, selecting H-E50-RetailIntermediate and
+  refuting H-E50-PortPayloadMatch at named-writer value scope. The final
+  retail E50 role and the image task/exit ABI remain open.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -265,19 +266,19 @@ This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
 1. **M5 Factor 5 image task/exit contract.** s2067 selects
-   H-ImageTaskAbiMismatch at live contract scope, and s2070 selects
-   H-CanaryObserver at the canary output scope: exact E50 payloads and PCM
-   joins are unchanged by canary-off, but every image task still exits `Broke`
-   with zero exact-E50 payload. s2071's independent retail value witness
-   refutes a direct match to the port's zero-only E50 class and favors an
-   intermediate/metadata interpretation at bounded value scope, but its
-   post-store values did not reach the named audio PCs. The next discriminator
-   is a phase-gated sampler that captures one post-store value specifically at
-   `0x8008F7D4`, `0x80091374`, and `0x8008FB64/68/78`, with the same-run
-   whole-RDRAM and VI controls. Do not route output, reverse a task field, add
-   a guard, remove the canary reservation, or change guest behavior from
-   ownership alone. Keep the retail writer, C88 value, wait/slot guards, and
-   default dispatch unchanged.
+   H-ImageTaskAbiMismatch at live contract scope, s2070 selects
+   H-CanaryObserver at the canary output scope, and s2072 selects
+   H-E50-RetailIntermediate at named-writer value scope. The exact E50
+   snapshot is nonzero in retail but does not match the port's zero-only
+   class; this still does not identify the final E50 role or authorize routing
+   output. The next discriminator is the retail prerequisite for the first
+   incremental de-stubbing gate test: capture post-store values at
+   `0x800A0F50` for `0x8008EA34`, `0x8008EB40`, `0x8008ED48`, `0x8008EB7C`,
+   and `0x8008EC88`, with the same whole-RDRAM and VI controls. Only after
+   that table selects a writer/value arm may one guest store be changed. Do
+   not change output routing, reverse a task field, remove the canary
+   reservation, or alter waits/guards; keep all guest gate stores and default
+   dispatch unchanged during the value witness.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -463,6 +464,17 @@ capture values at the named audio PCs. This favors H-E50-RetailIntermediate at
 bounded value scope without proving the final snapshot's role; no output
 routing or guest behavior change is authorized.
 
+s2072 repaired the named-PC observation linkage without changing the port. Its
+positive-controlled Rice run reached title and hangar, and the requested-PC
+path captured one post-step value for each exact-span writer. The values were
+`0x0002FFFF`, `0x0001FFFF`, `0xB02F5600`, `0x00000100`, and `0x8019A3D0`;
+the final snapshot remained nonzero with FNV `0xA177ADED`, unlike the port's
+zero-only `0x25E26BC5` class. The first phase-gated attempt produced no named
+rows because the writers ran before the title VI callback; the fixed targeted
+path preserves the generic phase gate while handling that pre-transition
+one-shot case. This selects H-E50-RetailIntermediate at named-writer value
+scope and leaves the final E50 role and image task/exit ABI open.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -615,6 +627,15 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   that was not stable across the invasive sampler retries. It refutes a direct
   port-payload match and favors H-E50-RetailIntermediate at bounded value
   scope, but leaves named-audio-PC payload values and the final E50 role open.
+- s2072 supersedes the wording that the named audio PCs had no usable
+  post-store value witness. That wording was believable because the prior
+  bounded sampler's generic table had already marked those PCs seen before its
+  phase gate. The same-run detail trace showed their exact-span stores precede
+  the title VI callback; an explicit requested-PC path then captured one
+  post-step value per PC while preserving the generic phase gate and all route
+  controls. The values are metadata/control/pointer-like and differ from the
+  port's zero-only class, so the named-writer value boundary is selected, but
+  the final E50 role and task ABI remain open.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -667,9 +688,14 @@ payload, and PCM output unchanged. s2071 then ran the corrected retail
 post-store value witness with the whole-RDRAM and VI controls. It recorded
 57,552 whole-RDRAM writes, 47,552 exact-E50 writes, 401 bounded post-store
 samples, 255 zero words, and a final snapshot of 5,745 nonzero bytes with FNV
-`0xA4EF5852`; the named audio-PC value join remained absent. This refutes
-H-E50-PortPayloadMatch and favors H-E50-RetailIntermediate at bounded value
-scope, while leaving exact audio-PC payload and final E50 role open.
+`0xA4EF5852`; the named audio-PC value join remained absent. s2072 repaired
+that join: the positive-controlled 57,353-write run reached both target VIs,
+recorded 47,353 exact-E50 writes, and captured one value per named writer.
+The values were `0x0002FFFF`/`0x0001FFFF`/`0xB02F5600`/`0x00000100`/
+`0x8019A3D0`, while the final snapshot had 5,721 nonzero bytes and FNV
+`0xA177ADED`. This refutes H-E50-PortPayloadMatch and favors
+H-E50-RetailIntermediate at named-writer value scope, while leaving the final
+E50 role and image task/exit ABI open.
 
 ## Method and safety rules
 

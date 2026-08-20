@@ -1,68 +1,59 @@
-# NEXT work unit (s2072)
+# NEXT work unit (s2073)
 
-HYPOTHESIS-ID: m5-audio-image-output-contract
+HYPOTHESIS-ID: m5-a0f50-retail-value-contract
 
 ## Work unit
 
-Repair the oracle's named-writer post-store join so one-shot samples are
-guaranteed for the exact retail PCs already attributed to the E50 envelope:
-`0x8008F7D4`, `0x80091374`, and `0x8008FB64/68/78`. Keep the current phase gate,
-KSEG0 conversion, bounded histogram, and final range summary. The targeted
-sample path must not depend on the general histogram's 256-word budget or on
-the generic writer-PC table; it needs an explicit per-requested-PC seen bit
-and one `[post-target] pc=... value=...` row per target PC. Do not change the
-port, task fields, output routing, canary, guest gate, waits, guards, or guest
-behavior.
+Capture the retail post-store value of guest gate `0x800A0F50` for each named
+writer before changing any gate store. Use the existing oracle requested-PC
+path and the same corrected Rice route; do not modify the port, generated gate
+stores, task fields, output routing, canary, waits, guards, or defaults.
 
-ORIGIN: s2068 independently attributes E50 writes to named MusyX/audio
-functions, while s2071's generated oracle sampler reaches the exact span and
-the same named PCs in its ordinary histogram but does not attach post-store
-values to them. The port's generated `L_1E48` path still emits zero-only E50
-payloads and returns `Broke`; this unit repairs observation linkage only.
+ORIGIN: the gate byte is written by legitimate retail MusyX/display-mode
+functions. The oracle's post-step reader is host-side observation only; the
+next test must establish the retail value contract before any guest-store arm
+is attempted.
 
 ## Competing hypotheses and discriminator
 
-- **H-E50-RetailFinal** — the named retail audio PCs write nonzero,
-  PCM-shaped words into the exact E50 envelope. The port's zero-only E50 rows
-  are then a live image-task destination/ABI mismatch.
-- **H-E50-RetailIntermediate** — the named PCs write zero, metadata, pointers,
-  sentinels, or otherwise non-PCM values. E50 ownership is real but does not
-  identify final PCM output.
-- **H-E50-PortPayloadMatch** — the named retail post-store values match the
-  port's exact E50 class, including the zero-only FNV `0x25E26BC5` table.
+- **H-RetailGateActive** — the active retail route writes `0x01` at the named
+  display-mode/init writers, so the port's force-zero behavior is a guest-gate
+  mismatch.
+- **H-RetailGateBypass** — retail legitimately writes `0x00` at the relevant
+  writer or consumer boundary, so changing that store would not explain the
+  image task/exit defect.
+- **H-RetailGateMixed** — retail values are writer- or phase-specific, so only
+  one named store can be tested in a later arm.
 
-The discriminator is one phase-qualified table containing the whole-RDRAM
-positive control, title/hangar VI anchors, one post-store value per named
-writer PC, the exact-E50 snapshot FNV/nonzero summary, and the port crosswalk.
-H-E50-RetailFinal requires nonzero PCM-shaped named-PC values plus a port
-mismatch; H-E50-RetailIntermediate requires zero/metadata/non-PCM named-PC
-values; H-E50-PortPayloadMatch requires named-PC values matching the port
-class. A hit count or unjoined PC histogram selects nothing.
+The discriminator is one table with the whole-RDRAM positive control, exact
+`0xA0F50` write count, one post-step value per named writer, title VI
+`1024 @ 0x00790400`, and hangar VI `512 @ 0x006AB400`. All requested writer
+PCs must produce a `[post-target]` row or an explicit seen=0 summary. A table
+of writer hits without post-store values selects nothing.
 
 ## Exact commands
 
-1. Re-run the corrected Rice witness before editing the oracle; require the
-   whole-RDRAM control, exact-E50 writes, title VI `1024 @ 0x00790400`, and
-   hangar VI `512 @ 0x006AB400`:
+1. Before editing/building the oracle, run the existing corrected Rice witness
+   with the whole-RDRAM control, exact gate watch, and both VI anchors:
 
    ```sh
-   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0x1931F0:0x194E70 --hit-cap 10000 --vi-trace
+   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F54 --hit-cap 10000 --vi-trace
    ```
 
-2. Add the explicit requested-PC seen-bit path to `tools/oracle/rs64_oracle.c`
-   and rebuild:
+2. Run one targeted gate-value arm, saving the log to a non-hidden final
+   path. Require the whole-RDRAM threshold, `[post-target]` rows for
+   `0x8008EA34`, `0x8008EB40`, `0x8008ED48`, `0x8008EB7C`, and `0x8008EC88`,
+   and both target VI transitions:
 
    ```sh
-   tools/oracle/build.sh
+   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F54 --hit-cap 10000 --vi-trace --pc-hist-watch 1 --post-value-watch 1 --post-value-pc 8008ea34,8008eb40,8008ed48,8008eb7c,8008ec88 > scratch/agent/oracle_s2073_a0f50_targeted.log 2>&1
    ```
 
-3. Run one corrected route with the same watches and the named-PC list. Save
-   it to a named path; require `[post-target]` rows for all five PCs:
+3. Crosswalk the five values and their writer/phase timing. H-RetailGateActive
+   requires a consistent nonzero active-path value; H-RetailGateBypass
+   requires zero at the relevant writer; H-RetailGateMixed requires distinct
+   writer/phase values. Do not land a gate change from writer ownership or
+   hit counts alone.
 
-   ```sh
-   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0x1931F0:0x194E70 --hit-cap 10000 --vi-trace --pc-hist-watch 1 --post-value-watch 1 --post-value-pc 8008f7d4,80091374,8008fb64,8008fb68,8008fb78 > scratch/agent/oracle_s2072_e50_targeted.log 2>&1
-   ```
-
-4. Crosswalk the five named-PC values and the exact-range FNV/nonzero table
-   against s2070's port E50 rows (`0x25E26BC5`, zero nonzero bytes). Run
-   `git diff --check`; no runtime behavior change is authorized by the result.
+Run `git diff --check` after the instrument change. No game binary build or
+guest behavior change is authorized by this work unit.

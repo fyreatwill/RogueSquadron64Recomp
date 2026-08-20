@@ -98812,3 +98812,50 @@ ORIGIN: the retail writes are the named MusyX/audio-region guest writers;
 the oracle's post-step reader is host-side observation only. The port's zero
 E50 payload is produced by the generated image-task path. This diagnostic does
 not authorize routing output, removing the canary, or changing a task field.
+
+## Session 2072 (2026-08-20) — captured named E50 retail writer values
+
+Ground truth ran before changing the oracle. The corrected Rice witness passed
+the whole-RDRAM positive control with 57,559 writes, recorded 47,559 writes in
+`0x1931F0..0x194E70`, and reached title VI `1024 @ 0x00790400` and hangar VI
+`512 @ 0x006AB400`.
+
+The oracle then added an explicit seen/value/address slot for each requested
+writer PC, independent of the generic 256-sample histogram and writer-PC
+table. The first corrected build preserved the existing phase gate and
+produced zero target rows even though all five PCs appeared in the writer
+histogram. A detail run supplied the discriminator: each requested writer's
+first exact-span store occurred at 10.5--10.6s, before the title VI callback
+at 17.3s. The targeted path was then fixed to capture the first exact-span
+store for requested PCs while retaining the generic phase gate.
+
+The final targeted run passed the positive-control threshold, reached both
+target VIs, and recorded 57,353 whole-RDRAM writes and 47,353 exact-E50
+writes. It emitted one `[post-target]` row for every requested PC:
+
+| Writer PC | Physical address | Post-store value |
+|---|---:|---:|
+| `0x8008F7D4` | `0x00193C30` | `0x0002FFFF` |
+| `0x80091374` | `0x00193C58` | `0x0001FFFF` |
+| `0x8008FB64` | `0x00193794` | `0xB02F5600` |
+| `0x8008FB68` | `0x00193790` | `0x00000100` |
+| `0x8008FB78` | `0x00193798` | `0x8019A3D0` |
+
+The final exact-range snapshot contained 5,721 nonzero bytes with FNV
+`0xA177ADED`. The five values are control/metadata/pointer-like and the
+snapshot differs from s2070's port-side zero-only `0x25E26BC5` class. This
+selects **H-E50-RetailIntermediate** and refutes **H-E50-PortPayloadMatch** at
+named-writer value scope. It does not prove that the final snapshot is PCM or
+resolve the image task/exit ABI and exact E50 output role. The first phase-gated
+null is not evidence of absent retail writes; it is explained by the writer
+timeline and the VI callback boundary.
+
+The source build passed `git diff --check`; no port, task field, output route,
+canary, guest value, wait, guard, or default behavior changed.
+
+ORIGIN: the named writes are legitimate retail MusyX/audio-region guest
+writers identified independently in s2068. The oracle reads the post-store
+word from KSEG0 RDRAM as host-side observation; it does not write guest memory.
+The port's zero-only E50 payload remains produced by the generated image-task
+path. This diagnostic does not authorize routing output, changing a task field,
+removing the canary, or changing guest behavior.
