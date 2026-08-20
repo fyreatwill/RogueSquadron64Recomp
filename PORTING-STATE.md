@@ -95937,3 +95937,65 @@ verdict.
 
 **OUTCOME: ADVANCED** — planned shutdown inner
 census selects H-slot-spin.
+
+## Session 1997 (2026-08-19) — serviceVoicePoolFrame is absent during status-3 shutdown spin
+
+**Ground truth first.** Ran the retail ROM through
+`tools/oracle/build/rs64_oracle` for 60 seconds with a whole-RDRAM positive
+control and a physical watch on `0x154620:0x154621`. The positive control
+reached 10,015 callbacks; the watched byte had 15 writes. Retail attributed
+the relevant writes to `0x8009B7EC` (three writes at 49.0–49.1s, with the
+other hits from initialization and stop paths). This independently confirms
+that the worker-side zero store is real and game-owned; it is not a port-only
+address or an assumed writer.
+
+**Instrument.** Added incremental `apply_s1997_svc_pool` to
+`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py` and the
+generated `funcs_26.c`. It shares an arm flag set at shutdown call 3, logs
+`serviceVoicePoolFrame` entry/gate state, and logs all three status-store
+sites (`0x8009B7A8`, `0x8009B7CC`, `0x8009B7EC`). The first run's global
+first-8/every-1000 budget left a sub-1000 post-arm ambiguity and produced no
+store-site positive hit, so it was not used for a strong null conclusion.
+The fixed version widened only the same census to log every armed worker
+entry/store; no game store or control flow was changed.
+
+**Probe.** `scratch/agent/s1997_svc_pool_fixed/run.log` — the exact
+eleven-Start LLE-solo hangar recipe with
+`ROGUESQ_DRAIN_INLOOP_TICK=0`, `ROGUESQ_SPIN_YIELD=1`, and a 60-second
+phase-gated run. Build passed. Hangar `[phase] 512 origin=0x006AB400`
+arrived at 24.6s and the run captured 17 frames with no crash marker.
+
+Positive controls (same run): `[svc-pool]` entries 1–8 and `n=1000` all
+fired before arming with `gate=1`; `[shut-enter]` calls 1 and 2 had
+`b0=0x00 gate=1` and their `shut-spin` wrappers exited; call 3 had
+`b0=0x02 gate=1`; `[drain-exit] iters=300000 v0=1`; and
+`[shut-post] stop-synced nenter=3 nexit=3`. The fixed armed-entry probe
+itself was live: it would print on every post-arm worker entry.
+
+**Census.** After `[shut-enter] n=3`, there were zero
+`[svc-pool] ... armed=1` entries and zero `[svc-store]` rows. The
+`[shut-spin]` then held `v0=0x03`, `a0=0`, `a1=1`, and `b0=0x03` through
+the remainder of the 60-second window. The gate was 1, so the worker's own
+early-out gate was not off. The store-site null is not used to distinguish
+skip versus rewrite because those sites had no same-run store positive
+control; the armed worker-entry null is independently controlled by the
+worker's pre-arm entries and the retail oracle.
+
+**Verdicts.** H-service-starved SELECTED: the port's legitimate worker
+callback runs before the status-3 shutdown, then produces no armed callback
+while the cooperative thread remains in the tight spin. H-service-skips and
+H-service-rewritten have no armed worker invocation to execute; H-gate-off is
+REFUTED by `gate=1`. The result does not yet identify why the callback stops;
+the next scheduler lead is its callback/thread dispatch path.
+
+ORIGIN: `serviceVoicePoolFrame`'s zero stores are legitimate retail worker
+writes (`0x8009B7EC` was independently observed by the oracle). This
+iteration added observation only; it landed no mitigation and changed no
+game-side store.
+
+SOAK-RESULTS tail consumed: no new queued verdict beyond the already-recorded
+s1971–s1974 entries.
+
+**OUTCOME: ADVANCED** — fixed worker-entry census selects H-service-starved
+and refutes the worker-gate hypothesis; M5 audio planning is next by
+directive.

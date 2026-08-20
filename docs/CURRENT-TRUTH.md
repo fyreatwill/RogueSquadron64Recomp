@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1996 (2026-08-19).
+detail. Reviewed through s1997 (2026-08-19).
 
 ## Current state
 
@@ -268,6 +268,19 @@ detail. Reviewed through s1996 (2026-08-19).
   `0x8009B7EC` (and init / status==1).
   No store changed. Default-off in-loop
   tick unchanged.
+- **s1997 serviceVoicePoolFrame schedule census.** The retail oracle passed
+  its whole-RDRAM positive control (10,015 callbacks) and independently saw
+  legitimate writes to physical `0x154620` from `0x8009B7EC` (plus init/stop
+  paths). In the port, the same-run worker control reached `n=1000` with
+  `gate=1` before shutdown call 3; after `[shut-enter] n=3`, no armed
+  `serviceVoicePoolFrame` entry appeared in the fixed every-armed-entry
+  census, while `[shut-spin]` held `b0=0x03` through the 60-second hangar
+  window. `[shut-enter]` call 3 had `gate=1`, and calls 1–2 exited their
+  spins. H-service-starved is selected; H-service-skips and H-service-
+  rewritten have no armed worker entry to execute. The port store-site
+  probes were null and are not used as independent evidence. ORIGIN:
+  serviceVoicePoolFrame's status-zero stores are legitimate retail worker
+  writes; no store or game state was changed by this iteration's probes.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -330,9 +343,10 @@ detail. Reviewed through s1996 (2026-08-19).
 - Corrected `npcPowerGeneratorUpdate` is main `.text` at `0x80077AF0`;
   regenerated ELF, N64Recomp, fixups, and Debug target pass. Runtime boundary
   tests remain pre-1024 and unevaluable.
-- M5 audio de-stubbing is closed. Audio remains stubbed. Dummy-video retail
-  watches never reached `musyxInitVoiceFromSample`. Do not reopen without a new
-  bounded plan using the Rice hangar recipe.
+- M5 audio de-stubbing remains technically unimplemented: audio is still
+  stubbed. The older closure based on dummy-video retail watches is superseded
+  as a planning state by the 2026-08-04/15 directive to reopen M5 with a
+  bounded design document and Rice-hangar validation sequence.
 - **Generated-symbol sweep is effectively closed (s1966).** A full-file
   census found s1962–s1965 had only swept a small tail of the TOML;
   845 leftovers resolved in one batch (902 → 57 `func_8[01]*`). The
@@ -385,50 +399,42 @@ detail. Reviewed through s1996 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1996: shutdown call 3 spins on
-`D_80154620==0x03`. Next is whether
-`serviceVoicePoolFrame` runs in that window.
+Re-ranked s1997: the user-directed M5 audio track now takes priority; the
+hangar status-3 result remains parked with a precise scheduler lead.
 
-1. **Hangar frame-freeze: speech-slot status-3
-   spin (s1996).** Same-run controls:
-   `[drain-inloop-gate] en=0`, `[drain-exit]
-   iters=300000 v0=1`, hangar `[phase] 512
-   origin=0x006AB400` at 26.3s `#1523`,
-   shutdown calls 1–2 both-edge every inner
-   site then exit spin `b0=0x00`, call 3
-   `[shut-enter] b0=0x02` then stop-synced
-   both-edge and `[shut-spin]` `b0=0x03`
-   through 1.63e10. find-zero nenter stays 2.
-   fs frozen 1244 from `#2176`. Do not default
-   `ROGUESQ_DRAIN_INLOOP_TICK` off. Do not
-   yield the spin yet. Next: always-on enter
-   count on `serviceVoicePoolFrame` plus the
-   two `sb $zero` sites (`0x8009B7A8`,
-   `0x8009B7EC`) and the `sb 3` site
-   (`0x8009B7CC`), split at shut-enter n=3.
-   Discriminator: n frozen after call 3
-   (starved) vs n grows but zeros=0
-   (skips status-3) vs zeros fire and b0
-   stays 3 (rewritten).
-2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
+1. **M5 audio de-stubbing design.** Create `docs/M5-AUDIO-PLAN.md` before
+   changing runtime behavior. Survey every audio stub, trap, disabled gate,
+   timeout, and host-side shortcut currently in force; identify the MORT/MusyX
+   boundary; then specify a reversible incremental sequence with a validation
+   soak and positive control for each step. Use the Rice eleven-Start hangar
+   recipe, not dummy-video retail watches.
+2. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
+   census reached hangar `[phase] 512 origin=0x006AB400` in 24.6s and captured
+   17 frames. `[svc-pool]` reached `n=1000 armed=0 gate=1`; after
+   `[shut-enter] n=3 b0=0x02 gate=1`, zero armed worker entries appeared,
+   while `[shut-spin]` held `b0=0x03` and stop-synced returned. The retail
+   oracle independently saw the worker-side `0x8009B7EC` write. After M5's
+   plan, identify the callback/thread dispatch path that should run
+   `serviceVoicePoolFrame` and test whether the cooperative status-3 spin
+   prevents it. Do not yield the spin or default the in-loop tick off.
+3. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
    300s clean). H-corruption-from-caller cannot be ruled out in mission context.
    Do not add mitigation. Re-evaluate only with a mission-entry recipe or a new
    crash with this signature.
-3. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
+4. Hangar visual artifacts (geometry cracks, blue tris, hologram layering).
    H2 (malformed triangle) REFUTED s1967; H1 (consumer draw state) REFUTED
    s1969 (single-source). H3 (pixel/coverage) unavailable — oracle has no
    screenshot for LLE path. Hologram-beam artifact remains open. Do not add
    mode-state mitigation or repeat the `0xD60` scan. Captured s1976 hangar
    frame is AVAILABLE CRAFT / AMBUSH AT MOS EISLEY with the blue beam.
-4. 600s hangar soak (s1974_hangar_600s): done. rc=137 SIGKILL at cap, hangar
+5. 600s hangar soak (s1974_hangar_600s): done. rc=137 SIGKILL at cap, hangar
    at 26.9s, audioDrain yields n=1,2,3, last slot-ret drain n=16, `fs=1248`
    through update_screen #35904, 0 crashes. Freeze is a hang.
-5. Mission-entry: SDL key delivery fails after Start #6 (31s from boot) due to
+6. Mission-entry: SDL key delivery fails after Start #6 (31s from boot) due to
    likely macOS focus drop. Do not run more mission-entry probes until the
    frame freeze is diagnosed.
-6. Keep audio closed unless a new bounded lead reaches initialization.
 7. M3: only as complete idiom-class audits with a named discriminator.
 8. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
    batch arms; phase-gate; SIGKILL; queue soaks. Hangar recipe is
@@ -493,6 +499,10 @@ identified by grep + static analysis.
 Older overturned claims live in `PROJECT-OVERVIEW.md` §26, §35, and §36.
 Most recent, still load-bearing for the next unit:
 
+- The older "M5 audio de-stubbing is closed" planning state is superseded by
+  the 2026-08-04/15 directive: dummy-video retail watches never reached
+  `musyxInitVoiceFromSample`, but audio remains stubbed and must now get a
+  bounded design document before any de-stubbing change.
 - s1888–s1917 "stall at 640 then crash" is superseded by s1918 — 2/8 logs
   live 180s with no crash and no `osViSetMode width=1024`.
 - H-slots-stay-live is superseded by s1942 — two `yield_self_1ms` calls
@@ -687,6 +697,8 @@ site=finalizeCurrentSpeechBuffer)
 (H-shutdown-musyx; call 3 never returns)
 / s1996 shutdown inner-site census
 (H-slot-spin; call 3 D_80154620 stays 0x03)
+ / s1997 serviceVoicePoolFrame census
+ (H-service-starved; no armed worker entry)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

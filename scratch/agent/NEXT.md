@@ -1,104 +1,61 @@
-# NEXT work unit (s1997) — serviceVoicePoolFrame during status-3 spin
+# NEXT work unit (s1998) — write the M5 audio de-stubbing plan
 
-HYPOTHESIS-ID: hangar-frame-freeze
+HYPOTHESIS-ID: m5-audio-plan
 
-## What s1996 settled
+## Single work unit
 
-`shutdownMusyXVoices` call 3 returns from
-`stopVoiceSlotSynced` (nenter=3 nexit=3) then
-spins at `L_8009BD10` with `D_80154620==0x03`
-through 1.63e10 iters. Calls 1–2 exit that
-spin in one iter with `b0=0x00`. find-zero
-and both `rs_free` never enter on call 3.
-H-stop-synced / H-find-zero / H-tail-free
-REFUTED; H-slot-spin SELECTED.
+Create `docs/M5-AUDIO-PLAN.md`. This is a bounded documentation/change
+unit: survey every audio stub, trap, disabled gate, timeout, and host-side
+shortcut currently in force, then specify an incremental de-stubbing sequence
+with a phase-gated validation soak and positive control for every step. Do not
+change runtime behavior or build/run the game in this unit.
 
-Writer of `0x03`: `stopVoiceSlotSynced`
-`sb 0x8009B30C` (status==2 recv/stop/send).
-Legitimate stop-in-progress. Spin waits for
-slot-0 idle. Named zeroers:
-`serviceVoicePoolFrame` `0x8009B7A8` /
-`0x8009B7EC` (no jal in the generated tree;
-likely a thread entry). Recipe keeps
-`ROGUESQ_DRAIN_INLOOP_TICK=0`. Do not yield
-the spin yet.
+The older "M5 closed" state was based on dummy-video retail watches never
+reaching `musyxInitVoiceFromSample`; the current directive explicitly reopens
+M5, and the Rice eleven-Start hangar recipe is the required validation path.
 
 ## Competing hypotheses
 
-- **H-service-starved:** `serviceVoicePoolFrame`
-  n grows before `[shut-enter] n=3`, then
-  narmed=0 through the spin. Cooperative
-  tight loop never schedules the worker.
-- **H-service-skips:** narmed grows; both
-  `sb $zero` sites narmed=0.
-- **H-service-rewritten:** a zero-store
-  narmed>0 but `[shut-spin] b0` stays `0x03`.
-- **H-gate-off:** `lbu 0x800A5121` is 0 at
-  shut-enter n=3 so the worker early-outs
-  even if entered (`beq` at `0x8009B5D8`).
+- **H-MORT-path:** the first real blocker is the missing MORT audio RSP path;
+  host-side gates can be removed only after a MORT task format/ABI and RSP
+  recompile boundary are identified.
+- **H-degenerate-host-path:** the current immediate-`Broke` audio-task stub,
+  disabled callbacks, and timeout/shortcut gates create the voice-slot and
+  wait states; the first safe step can be a reversible host-side de-stub with
+  no MORT code.
+- **H-MusyX-mismatch:** generic `aspMain` is not compatible with this game's
+  MusyX-formatted tasks, so any plan that enables stock audio before naming
+  the MORT/MusyX boundary is invalid and would reproduce the known audio
+  thread hang.
+- **H-scheduler-independent:** the s1997 status-3 hang is a cooperative
+  scheduler starvation issue independent of audio implementation; audio
+  planning may still be productive, but must not claim it explains that hang
+  without a separate control.
 
-## Discriminating measurement (one instrument, one build, one 60s probe)
+## Discriminating measurement
 
-Always-on (not `ROGUESQ_LOG_VOICE_TRIGGER_CHAIN`):
-`[svc-pool] n= armed= a0= gate=` on
-`serviceVoicePoolFrame` entry, first 8 and
-every 1000. `armed` is a flag set at
-`[shut-enter] n==3`. `gate` is
-`MEM_BU(0, S32(0x800A5121u))`.
+The plan itself must contain one complete inventory table with one row per
+stub/trap/gate/shortcut: file and symbol, current behavior, guest contract,
+MORT versus MusyX ownership, writer/consumer, proposed reversible change,
+same-run positive control, VI phase, soak command, and rollback. The outcome
+that splits the hypotheses is the first row whose contract is fully
+independent and testable: a pure host gate selects a host-only first step;
+an MORT-owned task selects an RSP/MORT artifact first; a MusyX/aspMain
+format mismatch rejects generic audio enablement; and an absent control
+blocks de-stubbing rather than producing a null result.
 
-On the three `serviceVoicePoolFrame` stores
-to `D_80154620`:
-`[svc-store] site=zero-a8|zero-ec|sb3 n=
-armed= val=` first 8 and every 1000.
-
-Keep `[shut-enter]` / `[shut-spin]` /
-`[shut-post]` / `[drain-exit]` /
-`[drain-inloop-gate]` / `[fin-post]`.
-`S32`. No store changed. Do not default
-the in-loop tick off. Do not yield the
-spin.
-
-Positive control: `[drain-inloop-gate] en=0`;
-`[drain-exit] v0=1`; `[shut-enter] n=3
-b0=0x02`; `[shut-post] site=stop-synced
-nenter=3 nexit=3`; `[shut-spin] n=3 b0=0x03`;
-`[svc-pool]` n>0 before armed (status-2
-voice was live, worker ran at least once).
-
-Outcomes:
-- svc-pool n>0 then narmed=0 → H-service-starved
-- narmed grows; both zero sites narmed=0 →
-  H-service-skips
-- a zero-store narmed>0 and b0 stays 0x03 →
-  H-service-rewritten
-- shut-enter n=3 gate=0 → H-gate-off
-  (worker would early-out)
-
-If svc-pool n=0 entire run, the positive
-control failed: find the actual caller /
-thread of `serviceVoicePoolFrame` before
-concluding starved.
-
-SENTINEL is applied — incremental edit, do
-not rerun full fixup.
-
-## Exact patch sites
-
-- Incremental wrap via
-  `apply_s1997_svc_pool` in
-  `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
-- Flag set in existing `[shut-enter]` when
-  n==3; counters in `serviceVoicePoolFrame`
-  (`funcs_26.c`).
-
-## Exact test
+## Exact inspection commands
 
 ```sh
-mkdir -p scratch/agent/s1997_svc_pool
-env ROGUESQ_DRAIN_INLOOP_TICK=0 ROGUESQ_SPIN_YIELD=1 \
-ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VI_CALLERS=1 \
-PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
-PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1997_svc_pool 60 2
+rg -n -i "audio|musyx|mort|M_AUDTASK|aspMain|audioDrain|waitForAnyAudioSlot|tickMusyX|RspExitReason::Broke|audio.*stub|stub.*audio|audio.*timeout" src lib docs tools
+rg -n "ROGUESQ_.*AUDIO|ROGUESQ_DRAIN|waitForAnyAudioSlot|tickMusyXIfActive|M_AUDTASK|aspMain" src lib tools
+sed -n '1,260p' src/main/main.cpp
+sed -n '1,220p' src/rsp/aspMain.cpp
+sed -n '1,260p' docs/PROJECT-OVERVIEW.md
+sed -n '1,240p' tools/oracle/README.md
 ```
+
+Read only bounded windows around grep hits in generated files and submodules.
+The plan must preserve the known constraint that MusyX is not stock `aspMain`,
+must name every current audio shortcut, and must give one soak recipe per
+future step before any implementation begins.
