@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2063 (2026-08-20).
+for session detail. Reviewed through s2064 (2026-08-20).
 
 ## Current state
 
@@ -51,6 +51,16 @@ for session detail. Reviewed through s2063 (2026-08-20).
   consumer joins, every joined DMA/source/consumer payload was zero. This
   selects H-ImageDmaStagingOnly and refutes a nonzero image-DMA PCM feed at
   this scope; the `Broke`/canary/DMEM contract remains open.
+- s2064's bounded source audit found three generated `factor5_ucode_b` output
+  loops (`L_146C`, `L_1D24`, and `L_1F40`) that intentionally cover DMEM
+  `0xE50..0xFCF`, including the host canary gap `0xF80..0xF8F`. All other
+  generated store families and image DMA-read destinations stay outside the
+  gap. The only reachable `Broke` edge in the image function is the guest
+  `break 0` at `L_1328`, after its final DMA write; the main-ucode `L_1090`
+  iteration-cap fixup does not apply to `_b`. This selects the generated-guest
+  writer origin and refutes a synthetic cap or image-DMA staging origin at
+  source scope, but is single-source evidence and does not yet prove that the
+  host's reserved-gap assumption matches the retail task ABI.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -172,10 +182,12 @@ are not active work items.
 1. **M5 Factor 5 image task/exit contract.** s2063 closes the nonzero
    image-DMA-to-PCM branch: every observed image DMA payload was zero and the
    exact task joins were zero-only, while the retail-owned band remains broad.
-   Attribute the reserved-DMEM writes and `Broke` return to the generated
-   image-task control flow and task ABI, then determine whether the canary
-   overwrite is legitimate task semantics or an ABI mismatch. Keep the retail
-   writer, C88 value, wait/slot guards, and default dispatch unchanged.
+   s2064 attributes the canary overwrite to generated DMEM work/output loops
+   and the `Broke` result to the natural `L_1328` break, but leaves the host
+   reserved-gap/task-ABI interpretation open. Map the final DMA source and
+   destination against the task fields and decide whether `0xE50..0xFCF` is
+   legitimate scratch/output or an ABI mismatch. Keep the retail writer, C88
+   value, wait/slot guards, and default dispatch unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -317,6 +329,19 @@ H-ImageDmaFeedsPcm at this scope, but remains single-source port evidence for
 the task boundary; the independent oracle still supplies only band ownership
 and route qualification.
 
+s2064 then audited the generated image function and the shared RSP memory/DMA
+helpers. `L_146C`, `L_1D24`, and `L_1F40` each reach the exact `0xF80..0xF8F`
+canary interval as part of an `0xE50..0xFCF` DMEM stream; the scalar stores,
+other vector stores, and all image DMA-read destinations do not. The image
+function's only reachable `Broke` return is the generated `break 0` at
+`L_1328`, reached after the final `L_1314` DMA write. The fixup's synthetic
+`L_1090` cap and its `L_10E8` audit anchor are gated to `factor5_ucode(` and
+therefore do not apply to `factor5_ucode_b(`. This selects
+the generated-writer portion of H-CanaryLegitimateTaskOutput at source scope
+and refutes a synthetic-cap or DMA-staging origin; it is single-source
+generated-tree evidence, not yet an independent retail validation of the host
+gap reservation.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -436,7 +461,11 @@ store. s2060 ruled out harness focus as the callback-count explanation while
 preserving the C88 gate split. s2062 then selected H-RetailAudioWriter for the
 candidate `0x166000..0x17A000` band from the independent retail writer census;
 s2063 then selected H-ImageDmaStagingOnly from the complete zero-payload task
-joins. The exact task exit/canary contract remains open. The C88 and callback conclusions remain
+joins. s2064 selected the generated-writer portion of
+H-CanaryLegitimateTaskOutput at source scope: the image function's generated
+work/output loops, not a fixup cap or image DMA staging, reach `0xF80..0xF8F`,
+and its natural `L_1328` break supplies `Broke`. The
+exact host task-ABI interpretation remains open. The C88 and callback conclusions remain
 single-source port evidence;
 the independent oracle supplied route/phase qualification. The task ABI and
 complete playback remain open. The oracle and port both independently reach

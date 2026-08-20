@@ -98467,3 +98467,50 @@ normalization, complete target-phase sampling, and an incremental matcher;
 no guest writer, C88 value, wait, guard, skip, dispatch, or default behavior
 changed. The zero-payload writer is the already-observed image task's DMA
 path, not a new mitigation.
+
+## Session 2064 (2026-08-20) — attributed image canary and Broke to generated guest flow
+
+This was the queued M5 static origin audit from `scratch/agent/NEXT.md`; it
+used the existing generated image source and did not build, regenerate, run the
+game, or enqueue a soak. I checked the generated scalar/vector store sites,
+the `SQV`/`SSV`/`SDV` address implementations, the image DMA helpers, the
+`factor5_ucode_b` registration, and the fixup self-gating.
+
+The exhaustive candidate table for stores that can overlap the host canary
+`DMEM 0xF80..0xF8F` is:
+
+| Generated site | Effective destination | Why it reaches the canary |
+|---|---|---|
+| `L_146C`, `SQV` through `r28` | `0xE50..0xFCF` in 24 16-byte steps | `L_169C` seeds `r28=0xE50`; the loop advances it by `0x10` and runs from `r26=0x3F0` to `r29=0x570`; the `r28=0xF80` iteration writes `0xF80..0xF8F`. |
+| `L_1D24`, two `SQV` stores through `r9` | `0xE50..0xFCF` in twelve 32-byte rows | `r9` starts at `0xE50`, the two stores cover each row, and the row beginning at `0xF70` covers the canary. |
+| `L_1F40`, `SQV` through `r6` | `0xE50..0xFCF` in 24 16-byte steps | `L_1EF0` receives `r6=0xE50`; the loop advances by `0x10` for `0x18` iterations; the `r6=0xF80` iteration writes the canary. |
+
+The other generated stores do not overlap the interval: scalar stores are
+`0xE48..0xE4F`; the fixed vector ranges include `0x320..0x33F`,
+`0x3F0..0x6EF`, `0x6F0..0x8DF`, `0xCC0..0xE3F`, and `0x740..0x8BF`;
+`L_1A40`'s data-dependent base is `0xAF0 - (field << 6)` (congruent to
+`0x30 mod 0x40`) and therefore cannot start at the `0xF80` aligned block.
+The `L_1938`/`L_1EF0` short stores are `0xCB0..0xCBF` and `0x738..0x73F`.
+The image's `DO_DMA_READ` destinations are the lower fixed/data ranges
+`0x220`, `0x340`, `0x350`/`0x3A0`, `0x6F0`, `0x8C0`, and `0xCB0`; none reaches
+the canary. Its `DO_DMA_WRITE` path reads from DMEM `0xCB0`, so it is not a
+DMEM canary writer.
+
+The only `return RspExitReason::Broke` in `factor5_ucode_b_recompiled.c` is
+the generated `break 0` at `L_1328`, reached after `L_1314`'s final DMA-write
+return edge. The other image returns are the unreachable fallthrough
+`ImemOverrun` and the indirect-dispatch `UnhandledJumpTarget`. The synthetic
+`L_1090` iteration cap and `L_10E8` source-end anchor in
+`tools/fixup_factor5_ucode.py` are gated by the exact `factor5_ucode(`
+function-name test; they do not apply to `factor5_ucode_b(`. `run_task` only
+seeds the canary before the selected ucode and reads it afterward.
+
+This selects the generated-writer portion of **H-CanaryLegitimateTaskOutput**
+at source scope and refutes a synthetic-cap or image-DMA-staging origin. It does not yet establish, from an
+independent retail witness, whether the host's description of `0xF80..0xF8F`
+as reserved is compatible with this image's task ABI; that is the next M5
+boundary. No mitigation or behavior change was made.
+
+ORIGIN: the named writers are the generated `factor5_ucode_b` loops at
+`L_146C`, `L_1D24`, and `L_1F40`; their values are legitimate generated guest
+DMEM stores at source scope, while host/retail ABI legitimacy remains open.
