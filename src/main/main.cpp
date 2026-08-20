@@ -1376,7 +1376,7 @@ static void set_frequency(uint32_t freq) {
     SDL_PauseAudioDevice(audio_device, 0);
 }
 
-static void queue_samples(int16_t* samples, size_t num_samples) {
+static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_addr) {
     // s371 (M5-AUDIO-PLAN.md Step 6): this parameter was named `num_bytes` but
     // is actually a SAMPLE count -- ultramodern::queue_audio_buffer
     // (lib/N64ModernRuntime/ultramodern/src/audio.cpp:25-36) computes
@@ -1392,6 +1392,48 @@ static void queue_samples(int16_t* samples, size_t num_samples) {
     // overturned (docs/CURRENT-TRUTH.md superseded section, this session).
     if (audio_device) {
         SDL_QueueAudio(audio_device, samples, (Uint32)(num_samples * sizeof(int16_t)));
+    }
+
+    static int s_log_pcm_boundary = -1;
+    if (s_log_pcm_boundary < 0) {
+        const char* all = getenv("ROGUESQ_LOG_ALL");
+        const char* own = getenv("ROGUESQ_LOG_PCM_BOUNDARY");
+        const bool all_enabled = all && all[0] && all[0] != '0';
+        const bool own_enabled = own && own[0] && own[0] != '0';
+        s_log_pcm_boundary = (all_enabled || own_enabled) ? 1 : 0;
+    }
+    if (s_log_pcm_boundary) {
+        const uint32_t width = rs64_vi_committed_width();
+        const uint32_t origin = rs64_vi_committed_origin();
+        const bool phase_allowed =
+            (width == 1024u && origin == 0x00790400u) ||
+            (width == 512u && origin == 0x006AB400u);
+        static uint32_t s_phase_key = 0xFFFFFFFFu;
+        static uint32_t s_phase_n = 0;
+        if (phase_allowed) {
+            const uint32_t phase_key = (width << 24) ^ origin;
+            if (phase_key != s_phase_key) {
+                s_phase_key = phase_key;
+                s_phase_n = 0;
+            }
+            const uint32_t n = s_phase_n++;
+            if (n < 40 || (n % 128) == 0) {
+                const size_t full_byte_count = num_samples * sizeof(int16_t);
+                const uint8_t* p = reinterpret_cast<const uint8_t*>(samples);
+                uint32_t fnv = 2166136261u;
+                uint32_t nonzero = 0;
+                for (size_t i = 0; i < full_byte_count; i++) {
+                    fnv = (fnv * 16777619u) ^ p[i];
+                    nonzero += p[i] != 0;
+                }
+                fprintf(stderr,
+                    "[pcm-boundary-consumer] n=%u phase=%u width=%u origin=0x%06X"
+                    " rdram=0x%08X samples=%zu bytes=%zu fnv=0x%08X nz=%u\n",
+                    n, rs64_phase_ord(), width, origin, rdram_addr, num_samples,
+                    full_byte_count, fnv, nonzero);
+                fflush(stderr);
+            }
+        }
     }
 
     // ROGUESQ_LOG_PCM_SANITY (M5-AUDIO-PLAN.md Step 6): independent of the

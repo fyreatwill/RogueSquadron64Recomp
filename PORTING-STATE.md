@@ -97772,6 +97772,43 @@ fixup-script post-wait entry/return/branch census for the menu/mission path.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
 
+## Session 2055 (2026-08-20) — paired the M5 PCM source and consumer boundary
+
+Ground truth ran first. The retail oracle passed the whole-RDRAM positive
+control at 10,000 writes, executed all three watched PCs, and reached title VI
+1024 at 17.3s and hangar VI 512 at 38.4s. This independently qualified the
+two target phases before interpreting the port witness.
+
+The port change added `ROGUESQ_LOG_PCM_BOUNDARY` rows at
+`ultramodern::queue_audio_buffer` and the host `queue_samples` callback. The
+callback contract now carries the guest RDRAM address so both endpoints report
+the same identity. Each row hashes the complete `sample_count * 2` byte span
+and reports phase, origin, guest address, sample count, byte count, FNV, and
+nonzero-byte count. The submodule diff was exported to
+`submodule-patches/N64ModernRuntime.patch`; the Debug target built cleanly
+after fixing one compile-time format warning before the run.
+
+The qualified forced-LLE/`LLE_UNGATED=1`/`LLE_SOLO=1`/audio-on/C88=1 route
+reached title VI 1024 and hangar VI 512. It emitted 86 source and 86 consumer
+rows. Every target-phase pair matched on RDRAM address, 384 samples, 768
+bytes, full-span FNV, and nonzero count. Title had 19 nonzero pairs followed
+by zero pairs; hangar pairs were zero. Same-run positive controls fired: 55
+`[audtask-dispatch]` rows and 1,024 `[m5-gate]` rows, with zero missing
+functions, zero deferred drops, and no aborts. The wrapper marked FAIL only
+for a late scheduled key rejected by macOS Accessibility after the valid
+target chain; the captured target phases and controls remain admissible.
+
+This selects H-P, the probe-unit/host-boundary equality hypothesis. It rules
+out host mutation between the two synchronous endpoints, a missing callback
+in the target phases, and a phase/join error for this route. The prior s2053
+title-H2/hangar-H4 split was a logging-boundary artifact: its stdout bridge
+rows lacked the consumer-side address and full-span join, so the absent
+hangar row was over-interpreted. The run does not prove PCM playback, the
+guest gate, or the audio task ABI.
+
+ORIGIN: no guest writer, audio behavior, guard, skip, or default was changed;
+the diagnostic only adds a phase-scoped paired byte witness.
+
 ## Session 2047 (2026-08-20) — title-side route remained without menu handoff
 
 `HYPOTHESIS-ID: m5-route-qualification`.

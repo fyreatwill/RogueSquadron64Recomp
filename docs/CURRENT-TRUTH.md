@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2054 (2026-08-20).
+for session detail. Reviewed through s2055 (2026-08-20).
 
 ## Current state
 
@@ -62,14 +62,13 @@ for session detail. Reviewed through s2054 (2026-08-20).
   zero yields and held VI 640. s2052 added the prior hangar-capable LLE-mode
   tuple and reached `menuControllerInput`, `menuInput`, and VI 512, so the
   route-level boundary is closed and the callback-side rows are admissible.
-- s2053 repeated the qualified route: the port reached title VI 1024 at
-  11.9s and hangar VI 512 at 21.3s, while the independent retail oracle
-  passed its whole-RDRAM control and reached both anchors. The phase-keyed
-  port join is heterogeneous: title phase 8 had 44 bridge rows (19 with
-  nonzero bytes, then 25 zero-byte rows) and two sanity rows, both
-  `all_zero=1`; hangar phase 10 had live gate/task controls and four sanity
-  rows, all zero, but no bridge row. This is single-source port evidence:
-  title is H2-shaped, while hangar is H4-shaped.
+- s2053's bridge/sanity join was superseded by s2055's paired witness. On
+  the qualified `11` route, s2055 emitted 86 source and 86 consumer rows:
+  every target-phase pair matched on RDRAM address, 384 samples, 768 bytes,
+  full-span FNV, and nonzero-byte count. Title had 19 nonzero pairs followed
+  by zero pairs; hangar pairs were zero. The wrapper reported a late-key
+  Accessibility warning, but both target VIs were reached with 55 real audio
+  task rows, 1,024 gate rows, zero missing functions, and no aborts.
 - s2054's four-arm flag table separates the route tuple. With the qualified
   recipe held fixed, only `LLE_UNGATED=1, LLE_SOLO=1` reached the full title VI
   1024 -> `menuControllerInput`/`menuInput` -> hangar VI 512 chain. `10`
@@ -87,25 +86,20 @@ for session detail. Reviewed through s2054 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 callback-side PCM boundary.** s2053's phase join is not one uniform
-   boundary: title is H2-shaped (nonzero bridge bytes with all-zero sanity),
-   while hangar is H4-shaped (no bridge row despite live task/gate controls).
-   The flag table is now separated; add a paired source/consumer byte-level
-   witness before changing any audio behavior.
-2. **M5 guest-gate value causality.** Keep the retail-value writer unchanged.
+1. **M5 guest-gate value causality.** Keep the retail-value writer unchanged.
    The C88=1/unset split is repeatable port evidence but GUI/focus-confounded;
    revisit only with a genuinely focus-isolated, phase-valid discriminator.
-3. **M5 service store edge.** Park unless an audio arm supplies a live
+2. **M5 service store edge.** Park unless an audio arm supplies a live
    slot-0 status-3 interval. Then use the existing store rows to join worker
    clear, slot ownership, and callback reachability.
-4. **M3 crash work.** Only complete idiom-class audits with a named
+3. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
-5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+4. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation; consumer-mode H1 is refuted by the RT64 census. H3 remains
    unavailable because the oracle cannot screenshot the LLE path. Do not
    repeat the `0xD60` scan.
-6. **Generated-symbol renaming sweep.** Park until M5 and any required
+5. **Generated-symbol renaming sweep.** Park until M5 and any required
    status/PCM boundary are closed. The remaining 57 names are not a sync
    backlog.
 
@@ -160,9 +154,13 @@ store edge is parked. Do not force a status byte or add a skip.
 
 The stock `aspMain` path is not the game's MusyX contract. The opt-in Factor 5
 image arm is deliberately isolated behind `ROGUESQ_AUDIO_UCODE=1`; broad DMEM
-activity is real but its image/task ABI is not proven. Two nonzero `0x6F0`
-buffers match at the DMA writer and `queue_samples`; this does not establish
-complete playback.
+activity is real but its image/task ABI is not proven. s2055's new
+`ROGUESQ_LOG_PCM_BOUNDARY` witness joins `queue_audio_buffer` to
+`queue_samples` at full byte span: all 86 source/consumer pairs in title and
+hangar matched on guest address, count, FNV, and nonzero-byte count. Title
+content changed from 19 nonzero buffers to zero; hangar content was zero. This
+selects H-P and refutes host-boundary mutation, callback absence, and phase/join
+error for this route, but does not prove playback or the guest gate.
 
 Retail executes the named display-mode writer cluster. The port fixup currently
 records `0 -> 0` at `0x8008EC88`, and the raw gate consumer skips on zero. The
@@ -199,12 +197,14 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
 - s2041–s2043 showed that title-side controls can be live without a phase-valid
   callback route. s2047 reached title but not hangar, so its bridge/PCM rows
   remained inadmissible. s2052 reproduced the prior hangar-capable LLE-mode
-  tuple and reached both anchors; s2053 then joined the callback rows by
-  phase. That overturns the earlier aggregate wording that the callback
-  boundary was uniformly unclassified: the title result is H2-shaped and
-  the hangar result is H4-shaped in this run. It was believable because
-  s2052 summarized title and hangar sanity rows without joining bridge
-  presence to each anchor.
+  tuple and reached both anchors; s2053 joined the old callback rows by phase
+  and appeared H2-shaped in title but H4-shaped in hangar. s2055 supersedes
+  that callback-boundary split: both target phases had paired source and
+  consumer rows with identical full-span values. The old split was believable
+  because the bridge logger used stdout and had no consumer-side guest-address
+  or byte-span join; a missing hangar row was therefore mistaken for a missing
+  callback. The remaining fact is content-level: title starts nonzero then
+  becomes zero, while hangar is zero.
 - s2050 did not overturn s2049's phase-valid single-arm observation: both new
   arms stopped before title 1024, so no C88 route comparison was admissible.
   The same-run controls made that a route/recipe failure, not evidence for
@@ -229,17 +229,16 @@ is in §37–38 and remains in `PORTING-STATE.md` as the primary ledger.
 Durable milestones are: overlay-dispatch recovery; hangar reachability;
 bltzal link repair; audio-drain writer mapping; the M5 plan; opt-in
 DMA-to-queue mapping; shutdown call-3 reachability; the retail status sequence
-and writer attribution; the guest-gate boundary; and the unresolved port-side
-callback/read join. s2053 is the latest phase-valid port observation: the
-prior LLE-mode tuple reached title and hangar; title had nonzero then zero
-bridge rows with all-zero sanity, while hangar had no bridge rows and live
-task/gate controls. The bridge/sanity classification is single-source port
-evidence, with the independent oracle supplying the route/phase ground truth.
-s2054 is the latest phase-valid port observation: the four-arm table selects
-the interacting `11` LLE-mode tuple for the full title-to-hangar chain; the
-oracle independently reaches both target anchors. s2050's two arms were
-pre-title and therefore remain recipe-scoped. Retail independently reaches
-both target anchors, so this is not a retail-route absence.
+and writer attribution; the guest-gate boundary; and the callback-side
+source/consumer join. s2054 selected the interacting `11` LLE-mode tuple for
+the full title-to-hangar chain. s2055 is the latest phase-valid port
+observation: the paired source/consumer witness matched every target row,
+with title content becoming zero after 19 nonzero pairs and hangar content
+zero throughout. This is single-source port evidence for the callback
+boundary; the independent oracle supplied the route/phase ground truth. The
+guest gate, task ABI, and complete playback remain open. The oracle and port
+both independently reach both target anchors, so this is not a retail-route
+absence.
 
 ## Method and safety rules
 

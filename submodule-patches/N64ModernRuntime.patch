@@ -852,8 +852,21 @@ index 1f3a4cf..b9cc34f 100644
      osViSetMode(rdram, (int32_t)ctx->r4);
  }
  
+diff --git a/ultramodern/include/ultramodern/ultramodern.hpp b/ultramodern/include/ultramodern/ultramodern.hpp
+index 57db6f6..435252c 100644
+--- a/ultramodern/include/ultramodern/ultramodern.hpp
++++ b/ultramodern/include/ultramodern/ultramodern.hpp
+@@ -122,7 +122,7 @@ void queue_audio_buffer(RDRAM_ARG PTR(s16) audio_data, uint32_t byte_count);
+ uint32_t get_remaining_audio_bytes();
+ 
+ struct audio_callbacks_t {
+-    using queue_samples_t = void(int16_t*, size_t);
++    using queue_samples_t = void(int16_t*, size_t, uint32_t);
+     using get_samples_remaining_t = size_t();
+     using set_frequency_t = void(uint32_t);
+     queue_samples_t* queue_samples;
 diff --git a/ultramodern/src/audio.cpp b/ultramodern/src/audio.cpp
-index 3198be0..d7a294d 100644
+index 3198be0..6a0587d 100644
 --- a/ultramodern/src/audio.cpp
 +++ b/ultramodern/src/audio.cpp
 @@ -1,9 +1,15 @@
@@ -872,16 +885,20 @@ index 3198be0..d7a294d 100644
  static ultramodern::audio_callbacks_t audio_callbacks;
  
  void ultramodern::set_audio_callbacks(const ultramodern::audio_callbacks_t& callbacks) {
-@@ -31,6 +37,44 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
+@@ -31,7 +37,50 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
  
      // Queue the swapped audio data.
      if (sample_count > 0 && audio_callbacks.queue_samples) {
-+        static int s_log_pcm_bridge = -1;
-+        if (s_log_pcm_bridge < 0) {
-+            const char* e = std::getenv("ROGUESQ_LOG_ALL");
-+            s_log_pcm_bridge = (e && e[0] && e[0] != '0') ? 1 : 0;
+-        audio_callbacks.queue_samples(TO_PTR(int16_t, audio_data_), sample_count);
++        static int s_log_pcm_boundary = -1;
++        if (s_log_pcm_boundary < 0) {
++            const char* all = std::getenv("ROGUESQ_LOG_ALL");
++            const char* own = std::getenv("ROGUESQ_LOG_PCM_BOUNDARY");
++            const bool all_enabled = all && all[0] && all[0] != '0';
++            const bool own_enabled = own && own[0] && own[0] != '0';
++            s_log_pcm_boundary = (all_enabled || own_enabled) ? 1 : 0;
 +        }
-+        if (s_log_pcm_bridge) {
++        if (s_log_pcm_boundary) {
 +            const uint32_t width = rs64_vi_committed_width();
 +            const uint32_t origin = rs64_vi_committed_origin();
 +            const bool phase_allowed =
@@ -905,18 +922,21 @@ index 3198be0..d7a294d 100644
 +                        fnv = (fnv * 16777619u) ^ p[i];
 +                        nonzero += p[i] != 0;
 +                    }
-+                    std::printf(
-+                        "[pcm-bridge] n=%u phase=%u w=%u org=%08x rdram=%08x"
-+                        " bytes=%u fnv=%08x nz=%u\n",
++                    std::fprintf(stderr,
++                        "[pcm-boundary-source] n=%u phase=%u width=%u origin=0x%06X"
++                        " rdram=0x%08X samples=%u bytes=%u fnv=0x%08X nz=%u\n",
 +                        n, rs64_phase_ord(), width, origin,
-+                        static_cast<uint32_t>(audio_data_), sample_count * 2,
++                        static_cast<uint32_t>(audio_data_), sample_count, sample_count * 2,
 +                        fnv, nonzero);
++                    std::fflush(stderr);
 +                }
 +            }
 +        }
-         audio_callbacks.queue_samples(TO_PTR(int16_t, audio_data_), sample_count);
++        audio_callbacks.queue_samples(TO_PTR(int16_t, audio_data_), sample_count,
++                                      static_cast<uint32_t>(audio_data_));
      }
  }
+ 
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
 index 149e770..d8da457 100644
 --- a/ultramodern/src/events.cpp
