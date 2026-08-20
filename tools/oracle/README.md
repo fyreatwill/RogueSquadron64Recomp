@@ -31,6 +31,12 @@ exec hit, mupen's `PREVIOUS_PC` (the jal site that transferred here;
 `$ra` is prev+8). Use that instead of overlay-aliased VRAM watches
 when attributing a callee.
 
+For a memory watch after the global `--hit-cap` has gone silent,
+`--first-watch N` prints the first hit for watch index N and
+`--pc-hist-watch N` prints a bounded writer-PC histogram for that watch at
+shutdown. These are useful when a positive-control watch is intentionally
+first in the list and must be removed without hiding the target attribution.
+
 Exit status: 0 = hits, 3 = clean run with zero hits, 1/2 = setup error. The
 VI count is emulated frames, so a run always reports how far the *game* got,
 not just how long the wall clock ran.

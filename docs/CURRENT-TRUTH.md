@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2061 (2026-08-20).
+for session detail. Reviewed through s2062 (2026-08-20).
 
 ## Current state
 
@@ -143,6 +143,14 @@ for session detail. Reviewed through s2061 (2026-08-20).
   controls. This is single-source port A/B evidence: it refutes a pure stub
   or host-bridge explanation, refutes clean image-task validity, and selects
   an image-task exit/canary/output-contract boundary for the next M5 unit.
+- s2062's independent retail writer attribution passed the whole-RDRAM
+  positive control, PIF Start reads, title VI 1024, hangar VI 512, and menu
+  PCs. The image-arm destination band `0x166000..0x17A000` received
+  4,240,706 retail writes, including high-volume PCs inside the named MusyX
+  mixer/command-list path (`0x80090F8C`, `0x80091078`, `0x800923B8`). This
+  selects H-RetailAudioWriter and refutes a wrong-destination null at this
+  band; it does not prove that the whole band is final PCM or resolve the
+  image task's `Broke`/canary contract.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -153,13 +161,14 @@ This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
 1. **M5 Factor 5 image task/exit contract.** s2061 closes the pure-stub and
-   host-bridge explanations at the qualified route: the image arm changes
-   DMEM, performs DMA, and produces matched nonzero title PCM, but every
-   sampled task still exits `Broke` with `canary_ok=0`; the guest status rows
-   remain live in both arms. Determine whether the writes through the reserved
-   DMEM/canary range and the `Broke` return are legitimate output/task
-   semantics or an ABI mismatch. Keep the retail writer, C88 value, wait/slot
-   guards, and default dispatch unchanged.
+   host-bridge explanations at the qualified route, and s2062 shows that the
+   candidate RDRAM destination band is written by retail MusyX code. The image
+   arm still changes DMEM, performs DMA, produces matched nonzero title PCM,
+   and exits `Broke` with `canary_ok=0` on every sampled task. Attribute the
+   exact image-arm DMA/output subranges and reserved DMEM writes to a task
+   phase or output layout, then determine whether the return/canary result is
+   legitimate task semantics or an ABI mismatch. Keep the retail writer, C88
+   value, wait/slot guards, and default dispatch unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -279,6 +288,16 @@ nonzero title PCM, but its task/output contract is still unresolved. This is
 single-source port evidence; the oracle independently qualifies only the
 route and menu/input PCs.
 
+s2062 then asked the retail ROM whether the image arm's broad candidate RDRAM
+destination band was untouched, generic, or audio-owned. The independent
+oracle passed the same route controls and recorded 4,240,706 writes in
+`0x166000..0x17A000`; its bounded writer-PC census included high-volume
+instructions inside `musyxMixActiveVoices`/`musyxBuildVoiceCommandList` and
+the voice-trigger path. This selects H-RetailAudioWriter at the band scope,
+but leaves H-WorkBufferNotPCM open for the band's exact subranges. The next
+M5 unit must therefore narrow the image DMA/output contract rather than treat
+the whole band as proven PCM.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -357,6 +376,12 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   nonzero title pairs, but also recorded `exit=1` and `canary_ok=0` on all 122
   image task rows. It therefore refutes clean image validity and host-bridge
   mutation without proving the image's task/output ABI.
+- s2062 supersedes the unqualified wrong-destination branch for the candidate
+  image DMA band. That branch was believable because s2061 had only port-side
+  DMA rows and no independent retail writer attribution. The retail oracle's
+  positive-controlled, phase-qualified writer census now shows frequent
+  writes from named MusyX mixer/command-list PCs, while the exact PCM
+  subrange and image-task return contract remain open.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -381,7 +406,9 @@ observed a live port status-3 interval. s2057 selected the worker-clears
 portion of the status-3 edge with independent s2008/s2022 rows and the retail
 writer-PC watch; s2059 then selected the later shutdown return after that
 store. s2060 ruled out harness focus as the callback-count explanation while
-preserving the C88 gate split. The C88 and callback conclusions remain
+preserving the C88 gate split. s2062 then selected H-RetailAudioWriter for the
+candidate `0x166000..0x17A000` band from the independent retail writer census;
+the band-wide result leaves its exact PCM subrange open. The C88 and callback conclusions remain
 single-source port evidence;
 the independent oracle supplied route/phase qualification. The task ABI and
 complete playback remain open. The oracle and port both independently reach

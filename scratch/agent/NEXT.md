@@ -1,71 +1,77 @@
-# NEXT work unit (s2062)
+# NEXT work unit (s2063)
 
 HYPOTHESIS-ID: m5-audio-image-output-contract
 
 ## Work unit
 
-Attribute the opt-in image arm's DMA destination band against the retail ROM
-before changing the audio runner. s2061 showed that `factor5_ucode_b` writes
-DMEM through the reserved `0xF80..0xF8F` canary and returns `Broke`, yet emits
-19 matched nonzero title PCM pairs. The next unit asks whether the image's
-DMA destinations are legitimate retail-owned audio buffers or an ABI-shaped
-runtime artifact.
-
-Do not change the guest gate, C88 value, task descriptor, RSP runner, canary,
-wait/slot guards, PCM bridge, or default dispatch in this unit. Do not enable
-stock `aspMain`. The port recipe is not rerun: s2061 already supplied the
-phase-valid image rows; this unit is the independent writer attribution.
+Narrow the opt-in image arm's broad RDRAM DMA band into exact phase-keyed
+DMA-to-PCM joins. s2062 established from the independent retail ROM that
+`0x166000..0x17A000` is written by named MusyX mixer/command-list PCs, but
+that band is too broad to prove final PCM. Extend the existing
+`AudioDmaRange`/PCM boundary census with one joined table per image task:
+task ordinal and VI phase; DMA direction, DMEM source, guest address, length,
+payload FNV, and nonzero-byte count; matching `queue_audio_buffer` and
+`queue_samples` address/count/FNV/nonzero fields; temporal order; and the
+reserved-DMEM/canary result. Do not change dispatch, the guest gate, C88,
+wait/slot guards, the canary contents, or default behavior.
 
 ## Competing hypotheses and discriminator
 
-- **H-RetailAudioWriter** — the retail game writes the image arm's destination
-  band (`0x166000..0x17A000`) during the qualified title/hangar route, with
-  PCs in the MusyX/audio producer path. This makes the destination class
-  legitimate and leaves the `Broke`/canary result as an unresolved task ABI or
-  output-layout contract.
-- **H-WrongDestination** — retail never writes the image arm's destination
-  band under the same route, or writes it only from an unrelated boot path.
-  This selects an image-side destination/ABI mismatch; the nonzero title PCM
-  is not sufficient evidence of a valid current task output.
-- **H-WorkBufferNotPCM** — retail writes the band from audio code, but the
-  writes are work/state buffers rather than the PCM destination. This keeps
-  the task/output contract open and requires a narrower next watch around the
-  actual AI source ring.
+- **H-ImageDmaFeedsPcm** — an image-arm DMEM-to-RDRAM range with nonzero
+  payload joins the same phase/task's `queue_audio_buffer` and
+  `queue_samples` rows on address, byte count, FNV, and nonzero count, in
+  producer-before-consumer order. The image output is real at that scope;
+  the remaining issue is task exit/canary semantics.
+- **H-ImageDmaStagingOnly** — image DMA ranges do not join the PCM source or
+  consumer rows, or only join zero/retained rows. The retail-owned band is
+  audio work/state storage, not the current task's PCM output.
+- **H-ImageOutputDiscarded** — image DMA joins the source but not the
+  consumer, or joins with a mismatched span/hash/order. The image produces a
+  candidate buffer that the guest/host boundary discards or replaces.
+- **H-RouteUnevaluable** — the same-run image task, `[audtask-dispatch]`,
+  `[pad-host]`, title VI 1024, or hangar VI 512 controls are absent; no PCM
+  interpretation is allowed.
 
-The discriminator is the retail narrow-watch hit count plus PC attribution,
-phase timeline, and PIF/menu controls in one oracle run. The positive-control
-watch must cross its threshold before any narrow-watch null is used. A target
-watch hit from the named audio PCs selects H-RetailAudioWriter; zero target
-writes after the qualified title/hangar route selects H-WrongDestination; a
-target hit only from unrelated PCs selects H-WorkBufferNotPCM. A missing
-whole-RDRAM threshold, PIF rows, title VI 1024, hangar VI 512, or relevant
-menu PC selects H-RouteUnevaluable and no port interpretation is allowed.
+The discriminator is the complete phase-keyed join table, not a new scalar
+counter. H-ImageDmaFeedsPcm requires at least one nonzero exact join and no
+unexplained nonzero image range in the target phases; H-ImageDmaStagingOnly
+requires live task/PCM controls but zero exact joins; H-ImageOutputDiscarded
+requires a source-only, consumer-mismatch, or ordering-mismatch pattern.
+Missing controls select H-RouteUnevaluable.
 
-## Exact command
+## Exact commands
 
-Run from the repository root, before any port command:
+Before editing, read the Factor 5 command reference and locate the existing
+range/boundary fields:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 55 --hit-cap 1 \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0x166000:0x17A000 \
-  --watch-write 0x0CE730:0x0CE828 \
-  --watch-pc 0x800B47C4,0x800B8014,0x800B8050 \
-  --vi-trace --pif-trace \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start \
-  > scratch/agent/s2062_oracle.log 2>&1
+sed -n '1,220p' docs/F5-UCODE-REFERENCE.md
+rg -n 'AudioDmaRange|queue_audio_buffer|queue_samples|PCM_BOUNDARY|audtask-abi' \
+  lib/N64ModernRuntime/librecomp/src lib/N64ModernRuntime/ultramodern/src src
 ```
 
-Require the positive-control threshold, at least one target-band write and
-its PC (or a qualified zero), PIF Start rows, title VI 1024, hangar VI 512 at
-`0x006AB400/0x006AB800`, and at least one relevant menu PC before selecting a
-hypothesis. Preserve the oracle log and report the target watch's PCs, not
-just its count.
+After the single batched instrumentation change, export any submodule patch,
+build once, and run the already-qualified image recipe from the build
+directory. Preserve the full log and use phase-gated frame keys; do not use a
+stopwatch as a phase substitute:
 
-ORIGIN: no guest writer, C88 value, wait, guard, skip, audio task, callback,
-or default behavior change is authorized; this is an independent retail
-writer attribution for the already-observed image-arm destination class.
+```sh
+./submodule-patches/export.sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_LLE_UNGATED=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_POSTWAIT=1 \
+  ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_PCM_SANITY=1 \
+  ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 \
+  ROGUESQ_STUB_MISSING_FUNCS=1 \
+  PROBE_PHASE_WIDTH=640 PROBE_PHASE_TIMEOUT=180 \
+  PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+  PROBE_KEYS='6:start 11:start 16:start 21:start 24:a 25:start 26:a 27:start 29:a' \
+  zsh tools/probe.sh scratch/agent/s2063_audio_image_join 180 0.6 \
+  > scratch/agent/s2063_audio_image_join_launcher.log 2>&1
+```
+
+Read the resulting run with `rg`, never `cat`; require both target VIs,
+`[audtask-dispatch]`, `[pad-host]`, and the joined task/PCM rows before
+selecting a hypothesis. If a run fails the controls, fix the runner or
+instrument and rerun it in this iteration. ORIGIN: s2062 changed no port
+behavior; this unit is attribution of already-observed image writes only.

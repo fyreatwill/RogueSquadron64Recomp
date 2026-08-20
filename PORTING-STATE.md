@@ -98396,3 +98396,34 @@ ORIGIN: no guest writer, C88 value, wait, guard, skip, audio task, callback,
 or default behavior changed; this session only ran the existing stub/image
 dispatch arms and corrected the oracle command to expose its independent
 route controls.
+
+## Session 2062 (2026-08-20) — selected retail MusyX writers for the image DMA band
+
+The prescribed M5 unit asked the retail oracle to attribute the candidate
+image-arm RDRAM destination band before changing the audio runner. The exact
+`--hit-cap 1` command passed its whole-RDRAM positive-control threshold, but
+the global cap suppressed the target watch's PC line. I added the bounded
+oracle-only `--first-watch N` diagnostic, rebuilt, and reran the same 55-second
+route; the first target write was `0x00166030` from PC `0x80001C38`.
+
+The final bounded writer-PC run passed the positive control at 10,000 writes,
+recorded PIF Start reads (`7C4=0x10000000`), title VI 1024 at origin
+`0x00790400`, hangar VI 512 at origins `0x006AB400`/`0x006AB800`, and menu
+execution watches `0x800B8014` (1051 hits) and `0x800B8050` (1 hit); the
+`0x800B47C4` watch stayed at zero. The target band
+`0x166000..0x17A000` recorded 4,240,706 writes. Its bounded writer-PC census
+included high-volume PCs inside the named MusyX regions: `0x80090F8C` in
+`musyxMixActiveVoices`, `0x80091078` in `musyxBuildVoiceCommandList`, and
+`0x800923B8` in the voice-trigger path, among other audio-region writers.
+
+This selects H-RetailAudioWriter at the band scope and rules out a
+wrong-destination null for the candidate band. It does not prove that the
+whole band is final PCM, because the band also has many unrelated writers and
+the unique-PC census overflowed after retaining 128 entries. H-WorkBufferNotPCM
+therefore remains open for exact subranges; the image task's `Broke` return,
+DMEM canary writes, and output layout remain unchanged and unresolved.
+
+ORIGIN: no guest writer, C88 value, wait, guard, skip, audio task, callback,
+or default behavior changed. The only code change was a bounded oracle
+writer-attribution diagnostic needed because the existing global hit cap
+otherwise hid the target watch's PC; no port/runtime behavior was changed.

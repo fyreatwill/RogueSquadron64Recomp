@@ -45,6 +45,7 @@
 #endif
 
 #define MAX_WATCHES 64
+#define MAX_WRITER_PCS 128
 
 static void *g_core;
 static double g_t0;
@@ -79,10 +80,19 @@ struct watch {
     long write_hits;
 };
 static struct watch g_watch[MAX_WATCHES];
+struct writer_pc {
+    uint32_t pc;
+    long n;
+};
+static struct writer_pc g_writer_pc[MAX_WATCHES][MAX_WRITER_PCS];
+static int g_n_writer_pc[MAX_WATCHES];
+static long g_writer_pc_overflow[MAX_WATCHES];
 static int g_nwatch;
 static long g_hits;
 static long g_hit_cap = 200;          /* stop logging after this many, keep running */
 static unsigned int g_detail_watch_mask;
+static int g_first_watch = -1;
+static int g_pc_hist_watch = -1;
 static int g_verbose;
 static int g_watches_armed;
 static int g_positive_watch_removed;
@@ -113,6 +123,24 @@ static void count_exec_prev(uint32_t pc, uint32_t prev)
         return;
     }
     g_exec_prev_overflow++;
+}
+
+static void count_writer_pc(int watch, uint32_t pc)
+{
+    int i;
+    for (i = 0; i < g_n_writer_pc[watch]; i++) {
+        if (g_writer_pc[watch][i].pc == pc) {
+            g_writer_pc[watch][i].n++;
+            return;
+        }
+    }
+    if (g_n_writer_pc[watch] < MAX_WRITER_PCS) {
+        g_writer_pc[watch][g_n_writer_pc[watch]].pc = pc;
+        g_writer_pc[watch][g_n_writer_pc[watch]].n = 1;
+        g_n_writer_pc[watch]++;
+    } else {
+        g_writer_pc_overflow[watch]++;
+    }
 }
 static int g_voice_base_write_seen;
 static int g_voice_base_read_after_write_seen;
@@ -222,6 +250,8 @@ static void dbg_update(unsigned int pc)
                 g_watch[i].read_hits++;
             if (access_flags & M64P_BKP_FLAG_WRITE)
                 g_watch[i].write_hits++;
+            if (g_pc_hist_watch == i && (access_flags & M64P_BKP_FLAG_WRITE))
+                count_writer_pc(i, pc);
         }
         if ((g_watch[i].flags & M64P_BKP_FLAG_EXEC) &&
             pc >= g_watch[i].start && pc < g_watch[i].end) {
@@ -233,6 +263,8 @@ static void dbg_update(unsigned int pc)
             (access_flags & g_watch[i].flags &
              (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE)) &&
             (g_detail_watch_mask & (1u << i)))
+            detail_hit = 1;
+        if (g_first_watch == i && g_watch[i].hits == 1)
             detail_hit = 1;
     }
     if (!g_positive_watch_removed && g_nwatch > 0 && g_watch[0].write_hits == 10000) {
@@ -632,6 +664,8 @@ static void usage(void)
         "  --secs N              run for N seconds (default 120)\n"
         "  --hit-cap N           log at most N hits, then count silently (default 200)\n"
         "  --detail-watch N      always log hits for watch index N\n"
+        "  --first-watch N       log the first hit for watch index N\n"
+        "  --pc-hist-watch N     summarize writer PCs for watch index N\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
         "  --rsp PATH            RSP plugin (default homebrew mupen64plus-rsp-hle)\n"
         "  --datadir PATH        dir holding mupen64plus.ini (default homebrew share dir)\n"
@@ -700,6 +734,10 @@ int main(int argc, char **argv)
             if (watch >= 0 && watch < MAX_WATCHES)
                 g_detail_watch_mask |= 1u << watch;
         }
+        else if (!strcmp(argv[i], "--first-watch") && i + 1 < argc)
+            g_first_watch = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--pc-hist-watch") && i + 1 < argc)
+            g_pc_hist_watch = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--watch-write") && i + 1 < argc)
             add_watch(argv[++i], M64P_BKP_FLAG_WRITE, "write");
         else if (!strcmp(argv[i], "--watch-read") && i + 1 < argc)
@@ -846,6 +884,19 @@ int main(int argc, char **argv)
         printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s), %ld read(s), %ld write(s)\n",
                g_watch[i].label, g_watch[i].start, g_watch[i].end,
                g_watch[i].hits, g_watch[i].read_hits, g_watch[i].write_hits);
+    if (g_pc_hist_watch >= 0 && g_pc_hist_watch < g_nwatch) {
+        int i;
+        printf("[oracle] writer-pc watch=%d range=[0x%08x,0x%08x)\n",
+               g_pc_hist_watch, g_watch[g_pc_hist_watch].start,
+               g_watch[g_pc_hist_watch].end);
+        for (i = 0; i < g_n_writer_pc[g_pc_hist_watch]; i++)
+            printf("[oracle] writer-pc pc=0x%08x n=%ld\n",
+                   g_writer_pc[g_pc_hist_watch][i].pc,
+                   g_writer_pc[g_pc_hist_watch][i].n);
+        if (g_writer_pc_overflow[g_pc_hist_watch])
+            printf("[oracle] writer-pc overflow=%ld\n",
+                   g_writer_pc_overflow[g_pc_hist_watch]);
+    }
     printf("[oracle] execution watch hits: %ld\n", g_pc_hits);
     for (int i = 0; i < g_n_exec_prev; i++)
         printf("[oracle] exec-prev pc=0x%08x prev=0x%08x n=%ld\n",
