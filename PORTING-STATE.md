@@ -96972,3 +96972,39 @@ never written. No mitigation or default behavior changed.
 
 OUTCOME: ADVANCED — the planned capture ran, but both recipe arms were
 unevaluable before VI 1024; the next unit must restore a phase-valid route.
+
+## Session 2024 (2026-08-20) — isolated phase route with fixed LLE/HLE A/B
+
+HYPOTHESIS-ID: m5-phase-valid-route-recovery
+
+The retail oracle positive control ran before the port captures and reached
+its 10,000 whole-RDRAM callbacks in 8 emulated seconds. No build or
+instrumentation change was made.
+
+The planned first A/B used the existing forced-LLE mission runner in arm A
+and a direct no-LLE binary launch with no input in arm B. Arm A crashed before
+VI 1024 in `RT64::Interpreter::processRDPLists`, with last guest PC
+`0x8000B650`, after its last VI 640 transition. Arm B stayed alive at VI 640
+and was SIGKILLed after the 120-second window. Arm A emitted 1,358 s2020 and
+s2022 rows; arm B emitted 15,448 of each. Neither emitted the s2008 positive
+control. This first arm pair was not a valid title-route discriminator because
+arm B had no input schedule.
+
+The fixed same-window rerun used the eleven-Start boot schedule for the
+direct arm. The forced-LLE runner reached VI 1024 at 48.9 seconds. The direct
+no-LLE `tools/probe.sh` arm delivered all eleven scheduled key sends, but its
+last phase remained VI 640 through the 120-second timeout. The LLE arm emitted
+3,884 s2020 and 3,884 s2022 rows; the no-LLE arm emitted 13,494 of each. Both
+had zero `[s2008-status-control]` rows and only the non-control `n=0` helper
+row at `pc=0x8009BBF0`; neither reopened the status-writer/read join.
+
+The fixed result refutes the three s2024 outcomes as written: no-LLE-only
+phase success, a common pre-1024 failure, and two phase-valid arms. It gives
+an inverse LLE/route split (forced LLE phase-valid, direct no-LLE stalled),
+but wrapper and schedule still differ between those arms, so it does not yet
+select LLE itself. This rules out treating s2023's phase failure as universal
+and selects a same-wrapper LLE toggle as the next discriminator. No mitigation
+or default audio behavior changed.
+
+OUTCOME: ADVANCED — the fixed capture produced the inverse phase split and
+selected the wrapper-controlled LLE isolation A/B.

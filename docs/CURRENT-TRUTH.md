@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2023 (2026-08-20).
+for session detail. Reviewed through s2024 (2026-08-20).
 
 ## Current state
 
@@ -113,20 +113,32 @@ for session detail. Reviewed through s2023 (2026-08-20).
   s2020/s2022 body controls but no s2008 writer positive-control row, so H1,
   H2, and H3 remain unresolved and the missing writer is a census-anchor
   failure, not status evidence.
+- The s2024 route-recovery A/B first repeated the no-input direct no-LLE arm:
+  forced-LLE crashed in `RT64::Interpreter::processRDPLists` with last guest
+  PC `0x8000B650` after VI 640, while no-LLE stayed at VI 640. The fixed
+  same-window rerun used the eleven-Start boot schedule for the direct arm.
+  The forced-LLE runner then reached VI 1024 at 48.9s; the direct no-LLE
+  `tools/probe.sh` arm delivered all eleven key sends but stayed at VI 640
+  through its 120s timeout. The fixed arms emitted 3,884 and 13,494
+  s2020/s2022 body rows respectively, but no s2008 positive-control row (the
+  lone `n=0` helper row is not that control). This refutes the three s2024
+  outcomes as written: no-LLE-only success, a common pre-1024 failure, and
+  two phase-valid arms. It selects an inverse LLE/route split provisionally;
+  the different wrappers and input schedules still confound LLE itself.
 
 ## Active investigation and ranked next steps
 
-1. **M5 phase-valid route recovery for the port-side status writer/read
-   join.** s2022 still selects the slot/status boundary, but s2023 showed
-   that the clean regenerated binary cannot currently supply the required VI
-   1024 capture with `run_mission_keys.sh`: the control arm stalls at VI 640
-   and the spin-yield arm aborts in RT64. In one build/run, compare the
-   forced-LLE runner against a direct no-LLE title/phase control, both with
-   the phase transition logger and all s2020/s2022/s2008 controls. A VI 1024
-   transition in only the no-LLE arm selects a runner/LLE recipe boundary; a
-   pre-1024 RT64 abort in both arms selects a generated-tree/render boundary;
-   a VI 1024 transition with the s2008 control live reopens the writer/read
-   discriminator. Do not interpret the s2023 writer null as H1.
+1. **M5 isolate the LLE/route split before the port-side status writer/read
+   join.** s2024's fixed A/B is phase-valid only in the forced-LLE runner;
+   the direct no-LLE arm remains at VI 640 even with eleven boot Starts.
+   Because those arms used different wrappers and schedules, run the same
+   `tools/probe.sh` wrapper and the same eleven-Start schedule concurrently,
+   toggling only the LLE variables, with all s2020/s2022/s2008 controls. If
+   only the LLE arm reaches VI 1024, LLE is the selected route gate; if both
+   arms match the earlier split, the wrapper/input recipe is the cause; if
+   both reach VI 1024, the s2024 split was runner-specific. A phase-valid
+   arm with a live s2008 control reopens the writer/read discriminator; a
+   phase-valid arm without it remains an anchor failure.
 2. **M5 service store edge (blocked on #1).** If the writer/read join shows a
    live slot-0 status-3 interval, use the already-built s2022 store rows to
    join the worker clear path and then proceed to the seven-site callback
@@ -157,9 +169,10 @@ authorization to reconcile companion files are therefore not prerequisites
 for the port-side writer/thread join. The s2017 hold-based run adds a
 crash-free late-route witness, but the join remains unevaluable because the
 service positive control is absent. s2023's clean regeneration built, but its
-forced-LLE recipe stalled at VI 640 or aborted in RT64 before VI 1024; this is
-a new recipe/render boundary, not evidence against the s2016 phase-valid
-observation.
+forced-LLE recipe stalled at VI 640 or aborted in RT64 before VI 1024. s2024's
+fixed forced-LLE arm reached VI 1024, while its same-window direct no-LLE arm
+stayed at VI 640; the new boundary is therefore an unresolved LLE/route split,
+not evidence against the s2016 phase-valid observation.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -283,6 +296,12 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   with slot 0 status `0x00` taking the zero-status skip on every sampled row.
   The next unit must identify the writer/read join for that status byte rather
   than add another service-entry witness.
+- s2023's complete “the clean regenerated route cannot become phase-valid”
+  explanation is superseded by the fixed s2024 A/B. It was believable because
+  both s2023 recipe arms stopped before VI 1024 and lacked the s2008 control;
+  the corrected same-window run reached VI 1024 in the forced-LLE arm. The
+  direct no-LLE arm still stalled at VI 640, so the remaining issue is an
+  unisolated LLE/route split rather than a universal phase failure.
 
 ## Evidence ledger summary
 
