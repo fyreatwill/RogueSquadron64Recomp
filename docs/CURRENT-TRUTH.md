@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1975 (2026-08-18).
+detail. Reviewed through s1976 (2026-08-19).
 
 ## Current state
 
@@ -68,16 +68,20 @@ detail. Reviewed through s1975 (2026-08-18).
   fixup_game_funcs.py. Census probe: none of the 6 new sites fired in 120s
   hangar run. The frame freeze at update_screen #2176 is NOT an anyAudioSlotActive
   spin. Class closed.
-- **`drainAudioAndFinalizeSpeechBuffer` spin-yield class CLOSED (s1972).**
-  Same `beq v0==0 / anyAudioSlotActive` pattern as menuInit and menuInput.
-  Added ROGUESQ_SPIN_YIELD gate at `L_800B24D4` (funcs_30.c / fixup_game_funcs.py s1972).
-  With yield: spin resolved in ~300k iters (positive control audioDrain n=1,2,3 live);
-  180s hangar ran 48 frames / 206 update_screens / zero crashes. Without yield (s1971):
-  218M+ iters in 60s, function never returned (single-source cross-session comparison).
-  H-new-yield-needed SELECTED. ORIGIN: host audio-thread can't key on a voice while
-  the spin holds the CPU; yield lets it run; slot activates; drain completes. Default-off.
-  Hangar is now stable for 180s+. Three spin-yield sites total (menuInit, menuInput,
-  audioDrain) all confirmed resolving under ROGUESQ_SPIN_YIELD=1.
+- **`drainAudioAndFinalizeSpeechBuffer` spin-yield class CLOSED (s1972); idle
+  wait is NOT.** Same `beq v0==0 / anyAudioSlotActive` pattern as menuInit and
+  menuInput. Yield at `L_800B24D4` (s1972) lets idle-wait run; it does not
+  make the drain return. s1976 ground truth: `anyAudioSlotActive` returns 1
+  when idle (`sltiu s1<1` after OR of slot byte+0); the spin waits for idle,
+  not for a key-on. In-loop `tickMusyXIfActive` (gate=0x01, 10M iters, same-run
+  `[drain-tick]` control) never idled call=1; logged 10M timeout forced
+  `v0=1` and the function returned; `fs` stayed 1215 with zero further
+  `[lle task]`. H-reap-in-loop and H-tick-skips REFUTED; H-stuck-slot
+  SELECTED; force-idle is not sufficient. ORIGIN: leftover nonzero
+  slot-status bytes (legitimate `isAudioSlotActive` byte+0). Writer is the
+  game's own voice key-on. `tickAndReap3DAudioVoices` + `stopAllSynthVoices`
+  do not clear them on this host path. Timeout is a diagnostic escape hatch,
+  not a product mitigation. Default-off yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -195,22 +199,17 @@ detail. Reviewed through s1975 (2026-08-18).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1975: root cause of the #2176 freeze identified. `drainAudioAndFinalizeSpeechBuffer`
-(#17 call in the craft-select-to-hangar transition) spins forever because `tickMusyXIfActive`
-at drain start submits no RSP audio task (MusyX in shutdown/idle), so `anyAudioSlotActive`
-never returns true. Audio tick eventually blocks in `do_recv(0x80114388)` (stuck, no
-more VI messages delivered after n=1970). Fix: add `tickMusyXIfActive` inside the drain
-spin loop (matching `menuControllerInput` pattern) + safety timeout. Build + test in s1976.
+Re-ranked s1976: in-loop MusyX tick does not idle the drain; force-idle
+does not restore `fs`. Next discriminator is which slot bytes stay
+nonzero (idx / byte / chCount / flicker after tick).
 
-1. **Hangar frame-freeze at update_screen #2176 — fix queued (s1975).** Root cause:
-   `drainAudioAndFinalizeSpeechBuffer` (#17) spin is infinite because `tickMusyXIfActive`
-   submits no RSP task at drain start → `anyAudioSlotActive` always false → spin never exits.
-   Audio tick blocked in `do_recv(0x80114388)` at vi-cb-recv1 n=1970. No `[lle task]` from
-   main game thread between drain-16-exit and freeze. H-vi-queue-full REFUTED; H-game-recv-blocks
-   CONFIRMED (audio tick variant); H-yield-missing REFUTED (known spin, root cause identified).
-   Fix: add `tickMusyXIfActive` inside the spin + 10M-iter timeout in `fixup_game_funcs.py`.
-   Caller structure (`funcs_34.c:0x800C5E88`): tickCraftSelectScreen loop → drain, repeated;
-   drain #17 is the "screen done" drain where MusyX is already idle.
+1. **Hangar frame-freeze: leftover slot bytes never idle (s1976).** Drain
+   call=1 at origin `0x00656400` (craft-select, after hangar `0x006AB400`)
+   spun 10M iters with `tickMusyXIfActive` in the loop, gate `0x800A0F50=1`.
+   Timeout forced idle; function returned; `fs` stayed 1215 and `[lle task]`
+   stopped. Dump `isAudioSlotActive` idx+byte and `chCount` (`0x80141AD0`)
+   on the existing `[drain-tick]` samples. Discriminators: one zombie idx,
+   all slots stuck, wild chCount, or bytes that clear then re-key.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -221,14 +220,14 @@ spin loop (matching `menuControllerInput` pattern) + safety timeout. Build + tes
    H2 (malformed triangle) REFUTED s1967; H1 (consumer draw state) REFUTED
    s1969 (single-source). H3 (pixel/coverage) unavailable — oracle has no
    screenshot for LLE path. Hologram-beam artifact remains open. Do not add
-   mode-state mitigation or repeat the `0xD60` scan.
-4. 600s hangar stability soak: queued (soak_queue/s1974_hangar_600s.sh).
+   mode-state mitigation or repeat the `0xD60` scan. Captured s1976 hangar
+   frame is AVAILABLE CRAFT / AMBUSH AT MOS EISLEY with the blue beam.
+4. 600s hangar soak (s1974_hangar_600s): done. rc=137 SIGKILL at cap, hangar
+   at 26.9s, audioDrain yields n=1,2,3, last slot-ret drain n=16, `fs=1248`
+   through update_screen #35904, 0 crashes. Freeze is a hang.
 5. Mission-entry: SDL key delivery fails after Start #6 (31s from boot) due to
-   likely macOS focus drop. Both Start and A presses after hangar entry failed.
-   The frame freeze at #2176 also blocks the hangar state machine regardless of
-   key delivery. Mission entry requires: (a) fix key delivery for post-31s keys,
-   (b) resolve the frame freeze. Do not run more mission-entry probes until
-   the frame freeze is diagnosed.
+   likely macOS focus drop. Do not run more mission-entry probes until the
+   frame freeze is diagnosed.
 6. Keep audio closed unless a new bounded lead reaches initialization.
 7. M3: only as complete idiom-class audits with a named discriminator.
 8. Runtime probes: `tools/oracle/README.md` + `docs/F5-UCODE-REFERENCE.md`;
@@ -331,7 +330,15 @@ Most recent, still load-bearing for the next unit:
   hangar now stable 60s+ / 17 frames with no SIGBUS.
 - "Needs investigation before calling the hangar fully stable" (s1971 audioDrain
   observation) is superseded by s1972 — audioDrain spin-yield gate closes the
-  class; 180s hangar stable / 48 frames / zero crashes.
+  class; 180s hangar stable / 48 frames / zero crashes. The later #2176 freeze
+  is a different drain-idle failure, not a missing yield.
+- s1975 "anyAudioSlotActive returns 0 because no slot keyed on" and "add
+  tickMusyXIfActive inside the spin to match menuControllerInput" are
+  superseded by s1976 — the return is inverted (1=idle); menuInput is the
+  same one-tick-then-poll shape; 10M in-loop ticks with gate=0x01 never
+  idled; force-idle did not restore `fs`. s1975's "drains 1–16 completed"
+  was slot-ret-caller n (per-site anyAudioSlotActive polls, no v0), not
+  drain function returns.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.

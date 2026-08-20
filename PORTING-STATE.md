@@ -94617,3 +94617,59 @@ safety timeout: if `anyAudioSlotActive` has not returned true after 10M iters, b
 verify `fs` advances past #2176.
 
 **OUTCOME: ADVANCED** — root cause of the #2176 freeze identified with mechanistic evidence.
+
+## Session 1976 (2026-08-19) — in-loop tickMusyXIfActive does not idle the drain; force-idle does not restore fs
+
+**Polarity (generated-code ground truth).** `anyAudioSlotActive` (`funcs_23.c:9453`)
+ORs `isAudioSlotActive` slot-byte+0 into s1 then `sltiu v0, s1, 1`. Return 1 =
+idle, 0 = something still active. `audioStubReturnZero` is the original
+`0x80092120` `jr $ra; addu $v0, $zero, $zero` (always 0). The drain
+`beq v0==0` at `L_800B24D4` waits for idle. `menuControllerInput` `L_800B8050`
+is the same one-tick-then-poll shape; s1975's "already ticks each iteration"
+claim is false.
+
+**s1974 soak folded.** `s1974_hangar_600s` rc=137 (SIGKILL at 600s cap). Hangar
+`[phase] 512 origin=0x006AB400` at 26.9s. audioDrain yields n=1,2,3. Last
+slot-ret drain n=16. `fs=1248` through update_screen #35904. 0 crashes. Freeze
+is a hang.
+
+**Patch.** `apply_s1976_drain_tick` in N64Recomp `fixup_game_funcs.py` plus
+`RecompiledFuncs/funcs_30.c`: per-call iter counter, `tickMusyXIfActive` for
+the first 64 iters then every 1000, logged 10M timeout that force-sets `v0=1`,
+`[drain-tick]` / `[drain-exit]` / `[drain-timeout]`. Incremental env
+`RS64_S1976_DRAIN_TICK=1`.
+
+**Probe.** `scratch/agent/s1976_drain_fix_probe` 120s after hangar, same
+eleven-Start + `ROGUESQ_SPIN_YIELD=1` LLE-solo recipe. 43204 log lines, 33
+frames, probe rc=0, no CRASH/SIGBUS.
+
+Positive control: `[drain-tick] call=1 iters=1..10000000 gate=0x01` (108
+lines). Timeout at iters=10000001 then `[drain-exit] call=1 iters=10000001
+v0=1`. Only one drain invocation. slot-ret n=1..16 then every 1e6 to 10e6 at
+origin `0x00656400`. Hangar `0x006AB400` at 26.3s #1512; origin shifts to
+`0x00656400` ~#1856 (craft-select AVAILABLE CRAFT); drain starts; #2176
+`fs=1215` stalled. After timeout, origin returns to `0x006AB400`, `fs` stays
+1215 through #8896, zero `[lle task]` after drain-exit, zero further
+`[drain-tick]`. Frames: hangar craft-select, then 43KB frozen.
+
+**Verdicts.**
+- H-tick-skips REFUTED (gate=0x01 for all 10M samples).
+- H-reap-in-loop REFUTED (10M game-thread ticks never produced idle).
+- H-stuck-slot SELECTED (slot bytes stay nonzero through those ticks).
+- Force-idle is not sufficient: drain returned and `fs` did not advance.
+
+**s1975 "drain #17" reinterpreted.** slot-ret-caller n is per-site
+`anyAudioSlotActive` polls and does not log v0. This run's n=1..16 are the
+first 16 polls of drain call=1, all continuing the spin. s1975's "drains
+1–16 completed quickly" was that log shape without a per-call counter.
+
+ORIGIN: leftover nonzero slot-status bytes (legitimate `isAudioSlotActive`
+byte+0). Writer is the game's own voice key-on during craft-select.
+`tickAndReap3DAudioVoices` + `stopAllSynthVoices` did not clear them. The
+10M timeout force-idle is a diagnostic escape hatch, not a product
+mitigation — `fs` stayed frozen. Do not ship it as a default-on skip.
+
+Keep the patch as the instrument for s1977's slot-byte dump.
+
+**OUTCOME: ADVANCED** — planned fix built and measured; in-loop tick does
+not idle; force-idle does not restore frames.
