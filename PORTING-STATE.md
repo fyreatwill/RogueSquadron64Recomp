@@ -96516,3 +96516,28 @@ status value, audio dispatch, spin, PI path, guard, or mitigation changed.
 
 OUTCOME: ADVANCED — the forced rebuild and phase-gated provenance retry
 produced a positive VI-640 control but no phase-valid VI-1024 baseline.
+
+## Session 2010 (2026-08-20) — compacted current truth and archived late findings
+
+HYPOTHESIS-ID: maintenance-current-truth-compaction
+
+The maintenance gate ran first: `docs/CURRENT-TRUTH.md` was 61,023 bytes and
+974 lines, above the 60,000-byte threshold. No build, game run, oracle run, or
+experiment was performed.
+
+The bounded documentation change migrated the durable s1961–s2009 symbol,
+hangar, M5 audio, shutdown, and generated-tree provenance record into
+`docs/PROJECT-OVERVIEW.md` §37. It then replaced CURRENT-TRUTH with a compact
+operational front page of 163 lines / 9,544 bytes, preserving the active
+provenance blocker, ranked backlog, durable boundaries, superseded claims,
+ledger pointers, and method rules. The reduction was 811 lines and 51,479
+bytes, exceeding the maintenance advancement threshold.
+
+The next work unit remains M5 generated-tree provenance repair. The new
+`scratch/agent/NEXT.md` keeps the competing hypotheses and the discriminator:
+an internally matched generated artifact must reach VI 1024 in the same run
+before the seven-site status census can be interpreted. No status, audio,
+spin, PI, guard, or mitigation conclusion changed.
+
+OUTCOME: ADVANCED — maintenance compaction completed with durable late-session
+material archived and the next provenance work unit preserved.

@@ -3337,6 +3337,107 @@ Start/A as a hangar recipe. s1943–s1947 eleven-Start-from-boot as a hangar
 recipe without yielding `L_800B8050`. Force-zero slots. `requeue_vi=true` as
 the only arm. Ask (b). Do not default `ROGUESQ_SPIN_YIELD` on.
 
+## 37. M5 audio/status archive and late generated-tree boundary (s1961–s2009)
+
+This section was migrated from `CURRENT-TRUTH.md` during the s2010
+maintenance pass. The ledger in `PORTING-STATE.md` remains authoritative for
+full probe output and exact commands.
+
+### Symbol and hangar context
+
+- s1961–s1966 completed the generated-symbol metadata sweep. The apparent
+  902-entry tail reduced to 57 `func_8[01]*` names. Those remaining entries
+  require genuine reverse engineering or are deliberate holds (patch
+  declarations, build redefinitions, overlay/V-RAM collisions, an overview
+  park, or no generated-tree match); they are not a synchronization backlog.
+- s1967–s1969 closed the malformed-triangle and consumer-mode explanations for
+  the hangar beam. The `stored=0` writer-attestation result identifies stale
+  unwritten scratch bytes, and the live RT64 consumer rows show coherent draw
+  state. Pixel/coverage ground truth for the LLE path is still unavailable.
+- s1970–s1974 fixed the six-site `bltzal $zero` PIC link-register class and
+  gated all ten `anyAudioSlotActive` callers as required. The first fix
+  removed the hangar `filterVoiceSampleBlock` SIGBUS; the second census found
+  no new-site fires in a 120-second hangar run. These are closed classes, not
+  invitations to add blanket guards.
+
+### Drain and shutdown boundary
+
+The s1976–s1997 chain established the following compact causal record:
+
+1. `anyAudioSlotActive` returns 1 for idle; the drain correctly waits for
+   active voices to end. The hangar table at `0x801714D0` is a live
+   18-voice allocation, not ASCII heap residue or the boot table.
+2. The persistent `0x02` bytes are legitimately written by
+   `musyxRenderVoiceSamples`; twelve looping voices do not reach the sample
+   cursor because `slot+0x40` contains the legitimate loop length. The
+   `musyxInitVoiceFromSample` writer supplies that field from `desc+0x14`.
+   The sample-header triplet proves `d14` is loop length, while `d00` is the
+   sample rate.
+3. The craft-select drain's in-loop host tick was the re-fade source. With
+   the injection disabled, the ROM drain returns with all 18 slots idle, so
+   the default-on tick is not the fix and must not be used as a causal
+   shortcut.
+4. After drain exit, `finalizeCurrentSpeechBuffer` reaches
+   `shutdownMusyXVoices`; its third call enters but does not finish. The
+   `stopVoiceSlotSynced` site returns, then `L_8009BD10` spins with the slot
+   status at `0x03`. That value is legitimately written by the status-2
+   stop path at `0x8009B30C`. `serviceVoicePoolFrame` is the named worker
+   that normally writes status zero, and the s1997 armed-entry census found
+   no worker entry during call 3. This is a scheduling/transition boundary,
+   not proof that status 3 is never written.
+
+### M5 plan and opt-in audio evidence
+
+- s1998 added `docs/M5-AUDIO-PLAN.md`, the design gate for incremental audio
+  de-stubbing. It inventories the task stub, stock `aspMain` path, generated
+  guest gates, voice/table guards, waits, drain timeout/tick, status-3
+  shutdown spin, scheduler yield, AI shortcut, SDL fallback, and DMEM lock.
+  Each step has a same-run control, phase gate, soak, and rollback. No
+  default audio behavior changed.
+- s1999–s2000 reconciled retail ground truth and repaired the regeneration
+  anchor for the `0x8008EC88` gate. Retail set-display-mode stores and the
+  `0x8009B7EC`-family activity are legitimate guest state; aligned debugger
+  watches at `0x14974C` are composite-word watches. The fixup now scopes the
+  optional probe to `funcs_23.c` and requires one fresh match.
+- s2001–s2003 validated the opt-in `ROGUESQ_AUDIO_UCODE=1` arm without
+  promoting it. Both arms receive the same `M_AUDTASK` descriptor, whose
+  image matches `aspMainTextStart`/`aspMainDataStart`; both return `Broke` and
+  sampled PCM was initially all zero. The treatment writes a broad DMEM
+  footprint, so its ABI and output contract were not initially proven.
+- s2005 closed the payload boundary for the observed nonzero buffers. In a
+  phase-valid matched control/treatment build, two `0x300`-byte DMEM `0x6F0`
+  writes reached `queue_samples` at `0x80166450` and `0x80166750` with the
+  same FNV hashes and nonzero counts; a third nonzero `0xC30` write is
+  metadata. This refutes a blanket task-staging or guest-buffer-selection
+  explanation for those buffers, but does not establish complete audio
+  playback or justify changing the default dispatch. The existing
+  `pcm-sanity` sample is not a callback witness because it missed bridge rows
+  12 and 13.
+
+### Status-table and generated-tree boundary
+
+- s2006–s2007 established the shutdown reachability boundary. The status-3
+  callback census had live controls; the later capture reached shutdown calls
+  1, 2, and 3. Call 3 entered at status `0x01`, its first sampled scan already
+  saw status `0x00`, and it returned without a status-3 row or PI assertion.
+  The earlier “call 3 was not reached” claim is superseded. The worker/source
+  transition remains open.
+- s2008 landed a regeneration-stable census for seven direct status-byte
+  stores: `0x8009B2C4`, `0x8009B30C`, `0x8009B6F8`, `0x8009B7A8`,
+  `0x8009B7CC`, `0x8009B7EC`, and `0x8009BBF0`. The retail whole-RDRAM and
+  `0x8009B7EC` controls were valid, but the fresh 51-file tree crashed before
+  VI 1024 and the preserved 45-file tree stalled at VI 640. No status null is
+  interpretable from either tree.
+- s2009 force-rebuilt all 45 generated units and linked successfully. The
+  phase control reached VI 0, 320, and 640 at origin `0x0066A500`, with live
+  VI-enqueue rows beyond 20,000, but never reached VI 1024. The watchdog did
+  not reap the live child at its nominal limit; the scoped process was
+  SIGKILLed. This rules out treating the preserved 45-file snapshot as the
+  phase-valid s2007 witness, not any status hypothesis.
+
+The next status measurement requires the phase-valid s2007 generated tree or
+explicit authorization to reconcile the four pending companion symbol files.
+
 **Superseded claims compacted out of CURRENT-TRUTH in s1948.** s1888–s1917
 "stall at 640 then crash". H-slots-stay-live (s1942). Eleven-Start as a
 hangar recipe once 1024 is reachable (s1943). s1943 "all 11 Starts printed"
