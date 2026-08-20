@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1995 (2026-08-19).
+detail. Reviewed through s1996 (2026-08-19).
 
 ## Current state
 
@@ -248,6 +248,26 @@ detail. Reviewed through s1995 (2026-08-19).
   dumped only nenter==1 (pre-title zeros) —
   not the hanging call. H-rs-free /
   H-teardown-dma / H-finalize-body REFUTED.
+  s1996 selected H-slot-spin: inner wraps
+  show call-3 `stopVoiceSlotSynced`
+  nenter=3 nexit=3 (H-stop-synced REFUTED);
+  find-zero / free-opt / free-tail stay at
+  nenter=2 (H-find-zero / H-tail-free
+  REFUTED). `[shut-enter] n=3 b0=0x02`;
+  then `[shut-spin]` n=3..1.63e10 with
+  `v0=b0=0x03` `a0=0 != a1=1`. Calls 1–2
+  both-edged every inner site and exited
+  the spin in one iter (`n=1,2 v0=b0=0x00
+  a0==a1`, same-run control). Writer of
+  `0x03` is `stopVoiceSlotSynced`
+  `sb 0x8009B30C` after the status==2
+  recv/stop/send (legitimate stop-in-
+  progress). Spin waits for slot-0 idle.
+  Named zeroers of `D_80154620`:
+  `serviceVoicePoolFrame` `0x8009B7A8` /
+  `0x8009B7EC` (and init / status==1).
+  No store changed. Default-off in-loop
+  tick unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -365,29 +385,31 @@ detail. Reviewed through s1995 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1995: finalize hangs in
-`shutdownMusyXVoices` (call 3). Next is that
-function's stop/spin/findZero/tail-free sites.
+Re-ranked s1996: shutdown call 3 spins on
+`D_80154620==0x03`. Next is whether
+`serviceVoicePoolFrame` runs in that window.
 
-1. **Hangar frame-freeze: shutdownMusyXVoices
-   hang (s1995).** Same-run controls:
+1. **Hangar frame-freeze: speech-slot status-3
+   spin (s1996).** Same-run controls:
    `[drain-inloop-gate] en=0`, `[drain-exit]
-   iters=300000 v0=1`, no timeout, shutdown
-   calls 1–2 both-edge then teardown, hangar
-   `[phase] 512 origin=0x006AB400` at 26.3s
-   `#1514`. Drain's finalize: shutdown
-   nenter=3 nexit=2; 0 `[fin-a0] n=3`; 0
-   `site=free`; 0 `[craft-select-s0]`; fs
-   frozen 1239 from `#2176` through `#5120`
-   (SKIP `lastCimg=0 pairs=0 stalled=1`).
-   Do not default `ROGUESQ_DRAIN_INLOOP_TICK`
-   off. `[fin-slot]` is stale (nenter==1 only).
-   Next: enter/exit on `stopVoiceSlotSynced`,
-   the `L_8009BCEC` slot-byte spin,
-   `findAndZeroTableSlotMatching`, and the two
-   tail `rs_free` jals, plus `D_80154620` b0
-   on every shutdown enter. Discriminator:
-   which site enters and never exits on call 3.
+   iters=300000 v0=1`, hangar `[phase] 512
+   origin=0x006AB400` at 26.3s `#1523`,
+   shutdown calls 1–2 both-edge every inner
+   site then exit spin `b0=0x00`, call 3
+   `[shut-enter] b0=0x02` then stop-synced
+   both-edge and `[shut-spin]` `b0=0x03`
+   through 1.63e10. find-zero nenter stays 2.
+   fs frozen 1244 from `#2176`. Do not default
+   `ROGUESQ_DRAIN_INLOOP_TICK` off. Do not
+   yield the spin yet. Next: always-on enter
+   count on `serviceVoicePoolFrame` plus the
+   two `sb $zero` sites (`0x8009B7A8`,
+   `0x8009B7EC`) and the `sb 3` site
+   (`0x8009B7CC`), split at shut-enter n=3.
+   Discriminator: n frozen after call 3
+   (starved) vs n grows but zeros=0
+   (skips status-3) vs zeros fire and b0
+   stays 3 (rewritten).
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -630,6 +652,15 @@ Most recent, still load-bearing for the next unit:
   teardown stayed at 2. Believable because
   finalize is 84 bytes with three jals and
   the first is unconditional.
+- s1995 "which inner site of
+  shutdownMusyXVoices hangs on call 3"
+  is superseded by s1996 — stop-synced
+  returns; the `L_8009BD10` spin runs
+  with `D_80154620==0x03` and never
+  reaches find-zero. Believable because
+  finalize's first jal is unconditional
+  and the function has several later
+  blocking-looking sites.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -654,6 +685,8 @@ store-census (H-no-decrement) / +0x58-duration (H-envelope-fields-stuck)
 site=finalizeCurrentSpeechBuffer)
 / s1995 finalize inner-jal census
 (H-shutdown-musyx; call 3 never returns)
+/ s1996 shutdown inner-site census
+(H-slot-spin; call 3 D_80154620 stays 0x03)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

@@ -95857,3 +95857,83 @@ verdict.
 **OUTCOME: ADVANCED** — planned finalize jal
 census selects H-shutdown-musyx.
 
+
+## Session 1996 (2026-08-19) — shutdownMusyXVoices hangs in D_80154620 status-3 spin
+
+**Instrument.** Incremental `apply_s1996_shutdown_inner`
+(`RS64_S1996_SHUTDOWN_INNER=1`). Enter/exit wraps on
+the four inner jals of `shutdownMusyXVoices`
+(`[shut-post] site=stop-synced|find-zero|free-opt|
+free-tail nenter= nexit=`, first 8 each edge).
+`[shut-enter] n= b0=` on every enter n<=8
+(`MEM_BU(0, S32(0x80154620u))`). `[shut-spin]`
+at `L_8009BD10` first 8 and every 100000 with
+`v0 a0 a1 b0`. No store changed.
+
+**Probe.** `scratch/agent/s1996_shutdown_inner/run.log`
+— eleven-Start + `ROGUESQ_SPIN_YIELD=1` +
+`ROGUESQ_DRAIN_INLOOP_TICK=0` LLE-solo hangar, 60s
+after VI 512. Probe rc=0, 17 frames, 0 CRASH/SIGBUS.
+Hangar `[phase] 512 origin=0x006AB400` at 26.3s
+`#1523`.
+
+Positive controls (same run): `[drain-inloop-gate]
+en=0`; `[drain-exit] call=1 iters=300000 v0=1`;
+no `[drain-timeout]`; `[tick-site-sum]` drain-inloop
+n=0 narmed=0; shutdown calls 1 and 2 both-edge
+every inner site (stop-synced / find-zero /
+free-opt / free-tail nenter=nexit=1 then 2)
+and exit the slot-byte spin in one iter
+(`[shut-spin] n=1,2 v0=0x00 a0=a1=1 b0=0x00`);
+`[fin-post] site=shutdown nenter=3 nexit=2`.
+
+**Census.** Three `shutdownMusyXVoices` entries:
+- n=1 (pre-title): `[shut-enter] b0=0x00`,
+  stop-synced 1/1, spin n=1 a0==a1, find-zero
+  1/1, free-opt 1/1, free-tail 1/1.
+- n=2 (pre-hangar): `[shut-enter] b0=0x00`,
+  same both-edge, spin n=2 a0==a1.
+- n=3 (post `[drain-exit]`, line 78904):
+  `[shut-enter] b0=0x02`; stop-synced
+  nenter=3 nexit=3; `[shut-spin] n=3`
+  `v0=0x03 a0=0 a1=1 b0=0x03` then n through
+  1.63079e10 (163085 logs, all `b0=0x03`);
+  find-zero / free-opt / free-tail stay
+  nenter=2. `[drain-post] finalize nenter=1
+  nexit=0`. 0 `[craft-select-s0]`. fs climbs
+  to 1244 at `#2176` then frozen through
+  `#5312` (SKIP lastCimg=0 pairs=0 stalled=1).
+
+Static: `stopVoiceSlotSynced` status==2 path
+recv/stop/`sb 3` at `0x8009B30C`/send
+matches enter `0x02` then spin `0x03`.
+Named zero stores of `D_80154620`:
+`stopVoiceSlotSynced` `0x8009B2C4` (status==1),
+`serviceVoicePoolFrame` `0x8009B7A8` /
+`0x8009B7EC`, `initMusyXVoiceTable`
+`0x8009BBF0`. No jal to `serviceVoicePoolFrame`
+in the generated tree (likely a thread entry).
+
+**Verdicts.**
+- H-slot-spin SELECTED: call 3 reaches
+  `L_8009BD10` with `D_80154620==0x03` and
+  never leaves. Wrap both-edged on calls 1–2
+  (spin can exit). Writer of `0x03` is
+  `stopVoiceSlotSynced` `0x8009B30C`
+  (legitimate stop-in-progress).
+- H-stop-synced REFUTED: nexit=3.
+- H-find-zero REFUTED: nenter stays 2.
+- H-tail-free REFUTED: free nenter stays 2.
+
+Next unit counts `serviceVoicePoolFrame`
+enters and its `sb $zero` / `sb 3` sites,
+split at shut-enter n=3. Do not yield the
+spin and do not default the in-loop tick
+off.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar
+soaks already in the ledger; no new unevaluated
+verdict.
+
+**OUTCOME: ADVANCED** — planned shutdown inner
+census selects H-slot-spin.
