@@ -97165,3 +97165,47 @@ change, or generated game-logic override was added.
 
 ORIGIN: diagnostic-only join instrumentation; the `0x8009B2C4` transition is
 the existing guest writer and is not a host-side mitigation.
+
+## Session 2029 (2026-08-20) — joined the stop/reaper writer contract
+
+HYPOTHESIS-ID: m5-service-worker-dispatch-boundary
+
+The planned unit was the regeneration-stable writer/reaper join around
+`stopVoiceSlotSynced` and shutdown call 3. Before instrumenting, the retail
+oracle ran for 50.2 seconds with a whole-RDRAM positive-control watch and an
+exact physical watch on `0x154620`–`0x154632`. The control reached its 10,000
+callback cap, the exact table watch produced 16 writes, and retail reached VI
+1024 followed by the VI 512 route. This independently establishes that the
+status table is game-owned and active; the current capture's PC list included
+the retail status-writer/service cluster.
+
+The new s2029 event stream was added to `../N64Recomp/fixup_game_funcs.py`
+and applied to the generated tree. The first build failed because the new
+status-writer event was inserted before the generated `slot` local existed.
+The fixup was repaired to insert after slot derivation, the incremental repair
+was applied through the same script, and the final build succeeded. No game
+value, default audio dispatch, or status guard was changed.
+
+One forced-LLE `tools/probe.sh` capture with the eleven-Start schedule reached
+VI 1024 at 14.1 seconds and VI 512 at 26.0 seconds. The same-run positive
+controls were live: 24 s2006 control rows, 393 service-entry rows, five
+status-writer rows, and four stop call/entry/exit pairs. In the phase-10
+hangar row, shutdown call 3 entered with slot 0 and record `0x80154620` at
+status `0x01`; direct call site `0x8009BCD4` entered
+`stopVoiceSlotSynced`, whose `0x8009B2C4` writer changed that same record from
+`0x01` to `0x00` before stop exit. Shutdown then returned at status `0x00`.
+There was no status-3 scan, service-store row, hidden status writer, or
+`0x8009B3A8` call in that phase. The process later hit the known PI
+`do_rom_read` crash at guest PC `0x80001B08`, after the join table completed.
+
+This selects W1: legitimate writer/reaper ordering for the observed port
+route. The static stop-body contract and the phase-valid before/after join are
+independent lines for the writer identity; the retail oracle independently
+validates the physical table and writer family. W2 wrong-slot/address alias,
+W3 hidden writer/transition, and W4 incomplete controls are ruled out for this
+route. The absent status-3 interval is an observed ordering result, not
+permission to force zero or skip shutdown. The next M5 unit is the opt-in RSP
+arm contract from `M5-AUDIO-PLAN.md`.
+
+ORIGIN: diagnostic-only s2029 join; the `0x8009B2C4` write remains existing
+guest logic and is classified as legitimate by its status-1 stop contract.

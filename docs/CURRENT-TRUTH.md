@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2028 (2026-08-20).
+for session detail. Reviewed through s2029 (2026-08-20).
 
 ## Current state
 
@@ -162,21 +162,32 @@ for session detail. Reviewed through s2028 (2026-08-20).
   complete. A same-iteration retail-oracle run independently passed its
   whole-RDRAM control, reached the retail hangar route, and watched the
   corresponding `0x8009B2C4`/`0x8009B7EC` writer family.
+- The s2029 regeneration-stable stop/reaper join passed its same-run controls:
+  24 bounded s2006 controls, 393 service entries, five status-writer rows, and
+  four stop call/entry/exit pairs. In the phase-valid call-3 row, direct site
+  `0x8009BCD4` stopped slot 0 at record `0x80154620` with status `0x01`;
+  `stopVoiceSlotSynced` then executed the sole `0x8009B2C4` `0x01 -> 0x00`
+  writer before returning, and shutdown returned with status `0x00`. No
+  status-3 scan, hidden writer, service entry/store, or `0x8009B3A8` call fired
+  in that phase. This selects W1, legitimate writer/reaper ordering, for the
+  observed port route; the terminal PI `do_rom_read` crash at guest PC
+  `0x80001B08` occurred after the table. The independent s2029 retail oracle
+  again passed its whole-RDRAM control, reached VI 1024 and hangar VI 512, and
+  watched the exact status table and retail writer cluster.
 
 ## Active investigation and ranked next steps
 
-1. **M5 writer/reaper ordering audit.** The s2028 A11 census selects H3: call 3
-   sees `0x01`, `0x8009B2C4` writes `0x00`, and the scan never observes status
-   `0x03`. The next bounded unit must join that writer to its caller/slot
-   record and the shutdown scan in one phase-gated table. Do not add a skip or
-   force-zero mitigation; classify the writer as legitimate or corrupt from
-   its guest-side contract and the retail oracle.
-2. **M5 service store edge.** Reopen only if the writer audit supplies a live
-   slot-0 status-3 interval; then use the existing s2022 store rows to join the
-   worker clear path and proceed to the seven-site callback join.
-3. **M5 callback-side PCM witness (only if #2 requires it).** Phase-gate a
-   callback census at the exact two nonzero bridge rows. Do not infer a bridge
-   defect from the old rate-limited `pcm-sanity` rows or change default audio.
+1. **M5 opt-in RSP arm.** Execute step 2 of `M5-AUDIO-PLAN.md`: validate the
+   existing `ROGUESQ_AUDIO_UCODE=1` arm against the unset stub in one build and
+   phase-gated comparison. Require direct task dispatch/exit, DMEM canary,
+   slot transition, and PCM nonzero/silence fields; do not promote the image
+   or change default audio.
+2. **M5 service store edge.** Park unless a future audio arm supplies a live
+   slot-0 status-3 interval. If it does, use the existing s2022 store rows to
+   join the worker clear path and proceed to the seven-site callback join.
+3. **M5 callback-side PCM witness (only if #1 produces a task result).**
+   Phase-gate a callback census at the exact two nonzero bridge rows. Do not
+   infer a bridge defect from old rate-limited `pcm-sanity` rows.
 4. **M3 crash work.** Only perform complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` SIGBUS has 7659 clean
    hangar calls in the guarded run; do not add a mitigation. Revisit only with
@@ -185,9 +196,9 @@ for session detail. Reviewed through s2028 (2026-08-20).
    attestation; consumer-mode H1 is refuted by the RT64 census (single-source
    against pixel state). H3 remains unavailable because the oracle cannot
    screenshot the LLE path. Do not repeat the `0xD60` scan.
-6. **M5 audio execution.** Continue only from `M5-AUDIO-PLAN.md`, after the
-   provenance/status boundary is settled. The proven DMA-to-`queue_samples`
-   mapping is not permission to promote the opt-in image.
+6. **Generated-symbol renaming sweep.** Remains parked until the M5 arm and
+   any required status/PCM boundary are closed; do not use it to outrun the
+   audio contract.
 
 ## Durable boundaries
 
@@ -221,7 +232,12 @@ retail branch/loop and store PCs are executed, so the missing store is not a
 retail-body absence. s2028 adds the finer port boundary: call 3's
 `0x8009B2C4` writer changes slot 0 from `0x01` to `0x00` before the scan, so
 the service's zero-status skip is downstream of a writer/reaper ordering
-event, not an observed status-3 dispatch failure.
+event, not an observed status-3 dispatch failure. s2029 then joined the
+writer to its direct caller and stop body: call 3 uses `0x8009BCD4`, the slot
+record is the same `0x80154620`, and `0x8009B2C4` performs the only call-3
+transition before stop returns. This selects the legitimate W1 writer/reaper
+contract for this route and parks the service-store edge until a live status-3
+interval exists.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
 capture. The s2012 and s2013 debugger-off retail oracles both reached VI 1024
@@ -240,7 +256,11 @@ is the legitimate worker-side zeroing path. The value branch is settled;
    contract, not a permission to force the byte to zero. s2028's call-3 row
    supplies the first phase-valid join: the `0x8009B2C4` writer performs the
    `0x01 -> 0x00` transition before shutdown exits, with no intervening
-   status-3 read.
+   status-3 read. s2029 supplies the writer-side contract: the transition occurs
+   inside `stopVoiceSlotSynced` reached from shutdown's `0x8009BCD4` call, with
+   matching slot/address and stop before/after values. The absence of a status-3
+   interval is therefore an observed ordering result, not permission to force a
+   status value or skip the shutdown scan.
 
 **M5 opt-in audio.** Both arms receive the same `M_AUDTASK` descriptor and
 the selected image matches `aspMainTextStart`/`aspMainDataStart`. Treatment
@@ -370,6 +390,14 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   `0x01`, the named game writer `0x8009B2C4` changes it to `0x00`, and shutdown
   returns without a status-3 read. The next discriminator is the writer/reaper
   caller and slot contract, not another worker-entry witness.
+- s2029 supersedes s2028's “writer/reaper ordering” as an incomplete
+  explanation. That wording was believable because A11 already showed the
+  `0x01 -> 0x00` writer before shutdown return, but it did not identify the
+  caller or prove that the writer targeted the scanned record. The new table
+  joins shutdown call 3, direct site `0x8009BCD4`, stop entry/exit, matching
+  record `0x80154620`, and the sole `0x8009B2C4` store. It selects legitimate
+  W1 ordering for this route and leaves the opt-in audio task/PCM contract as
+  the next M5 discriminator.
 
 ## Evidence ledger summary
 
@@ -397,8 +425,11 @@ mapping, shutdown call-3 reachability, the repeated retail status-value
 sequence, retail gate-writer attribution, and the unresolved port-side
 writer/read join. s2026 adds the stale-gate diagnosis, s2027 completes the
 corrected drain A/B, and s2028 selects the writer/reaper ordering boundary with
-a phase-valid A11 table. The retail oracle was independently live in s2028, so
-the port census is not being used as its own ground truth.
+a phase-valid A11 table. s2029 closes the first writer/reaper join: the
+call-3 stop caller, slot record, before/after status, and named guest writer
+match, while no status-3/service-store edge is live. The retail oracle was
+independently live in s2029, so the port census is not being used as its own
+ground truth.
 
 ## Method and safety rules
 
