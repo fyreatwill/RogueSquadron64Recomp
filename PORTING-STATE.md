@@ -97772,6 +97772,38 @@ fixup-script post-wait entry/return/branch census for the menu/mission path.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
 
+## Session 2047 (2026-08-20) — title-side route remained without menu handoff
+
+`HYPOTHESIS-ID: m5-route-qualification`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 59,757 bytes, so this was not a
+maintenance iteration. The retail oracle ran first with the independent
+whole-RDRAM positive control: it reached 10,000 writes, title VI 1024,
+hangar VI 512, and all three execution watches (`runMenuModelViewerScreen` 1,
+`menuControllerInput` 1, `anyAudioSlotActive` 3,910).
+
+One audio-on C88=1 arm then used the existing build, forced LLE, opt-in audio,
+spin yield, all passive controls, and the grouped width-relative schedule.
+Regress preflight was `input=ok visual=ok`; the run reached title VI 1024 at
+`0x00790400` and recorded 15 `[pad-host]` rises. The title phase emitted 5,763
+`s2020-svc` entries, 84 Factor 5 audio-DMA rows, 44 bridge rows, and 23 PCM
+sanity rows, so the controls were live. The run never reached hangar VI 512
+or `menuControllerInput`; its verdict's late-key failures did not erase the
+title anchor or host-input witness (the completed capture returned route
+verdict rc=1 only for those scorer failures). The existing caller rows remained the
+phase-4 `menuOverlayInit`/wait sequence, while no phase-8 caller handoff was
+observed.
+
+This selects the title-side guest route boundary (R2) for the measured run,
+over missing preflight/input controls; R3 is not selected because no live
+`menuControllerInput`/512 request was observed, and R4 is not selected because
+the hangar anchor is absent. Bridge and PCM rows are inadmissible without both
+VI anchors. The retail oracle is the independent path-live control; the route
+classification is single-source port evidence. No code, guest value, guard,
+skip, or default audio behavior was changed.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
 ## Session 2045 (2026-08-20) — audited the shared post-wait audio boundary
 
 `HYPOTHESIS-ID: m5-audio-wait-boundary`.

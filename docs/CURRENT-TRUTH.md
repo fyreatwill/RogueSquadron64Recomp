@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2046 (2026-08-20).
+for session detail. Reviewed through s2047 (2026-08-20).
 
 ## Current state
 
@@ -219,13 +219,18 @@ for session detail. Reviewed through s2046 (2026-08-20).
   the shared route and is not a callback verdict. Input depth/focus remains a
   confound.
 - s2046's retail oracle passed its 10,000-write control, both target VI
-  anchors, and all three execution watches. After fixing an invalid circular
-  VI-1024/key gate, the VI-640-gated port pair passed input in both arms
-  (7 `[pad-host]` rises each) and produced identical caller tables through
-  `menuOverlayInit` return, with no `menuControllerInput`, service row, VI
-  target, or PCM-admissible phase. The shared three-row VI producer control
-  and matching edges select Q4, a guest-to-VI handoff boundary, over an
-  audio-specific continuation or missing wait return.
+  anchors, and all three execution watches. Its VI-640-gated port pair
+  produced identical caller tables through `menuOverlayInit` return, with no
+  `menuControllerInput`, service row, or target VI; the shared three-row VI
+  producer control selected Q4, a guest-to-VI handoff boundary.
+- s2047's retail oracle again passed the whole-RDRAM cap, both target anchors,
+  and all three execution watches. The C88=1 forced-LLE port qualification
+  had `input=ok visual=ok`, reached title VI 1024 at origin `0x00790400`,
+  and recorded 15 `[pad-host]` rises plus phase-8 service/audio controls,
+  including 5,763 service entries and 84 audio-DMA rows. Its dense grouped
+  schedule produced no hangar VI 512 and no `menuControllerInput`; the title
+  route remains the boundary. This rules out missing preflight/host-input
+  controls as a complete explanation, but makes bridge/PCM rows inadmissible.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -370,15 +375,15 @@ for session detail. Reviewed through s2046 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 phase-valid route qualification.** s2046 found identical
-   post-wait caller/return edges and matching input/VI-producer controls in
-   both arms, but no `menuControllerInput`, service rows, or target VI. The
-   next unit must use the existing caller table with the whole-pass
-   `tools/regress.sh` phase scheduler and a known width-640-to-1024-to-512
-   key schedule, with no new wait counters. A live 1024 request/anchor moves
-   the boundary to the callback-side PCM witness; a continued common 640 route
-   keeps the shared handoff open. No bridge or PCM result is admissible
-   without both target VI anchors.
+1. **M5 title-to-hangar route qualification.** s2047 reached title VI 1024
+   with live host input and service/audio controls, but not
+   `menuControllerInput` or hangar VI 512. The next unit must retain the
+   existing caller table and use one denser post-1024 A/Start schedule with
+   `tools/regress.sh`; add no wait counters. A missing preflight/pad-host
+   control is R1, live title input without menu handoff is R2, live menu/512
+   request without the anchor is R3, and both anchors move the boundary to the
+   callback-side PCM witness. No bridge or PCM result is admissible without
+   both target VI anchors.
 2. **M5 callback-side PCM witness.** Once the route is phase-valid, keep
    `ROGUESQ_M5_C88_VALUE=1` opt-in and use the existing bridge/sanity table.
    Nonzero bridge bytes plus `all_zero=0` selects upstream-valid PCM;
@@ -463,6 +468,11 @@ rows, but no `menuControllerInput`, service row, or target anchor. This
 selects a shared guest-to-VI handoff boundary (Q4) and closes the measured
 audio-specific-continuation and missing-wait-return explanations; it does not
 make the service or PCM null phase-valid.
+
+s2047 then reached the title-side 1024 phase under C88=1 with live preflight,
+host-input, service, and audio controls, but its grouped post-title keys did
+not produce `menuControllerInput` or a 512 anchor. The shared handoff remains
+open; title-only service/bridge/PCM rows are not callback evidence.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -792,6 +802,11 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   return, and the same `menuOverlayInit` post-wait branch. This closes the
   missing-return and audio-arm-specific-continuation explanations for the
   measured path; the caller/route edge after that branch remains unmeasured.
+- s2046's “no target VI” route observation is superseded as a complete claim
+  by s2047: the same caller family can reach title 1024 with live service and
+  audio controls. It was believable because s2046's corrected 640-gated pair
+  stopped before any target transition; s2047 leaves the title-to-hangar
+  handoff open and still provides no phase-valid PCM result.
 
 ## Evidence ledger summary
 
@@ -835,11 +850,11 @@ controls; no PCM conclusion follows. s2043 then selected the pre-title
 audio-wait boundary after a fixed eleven-Start control. s2044 showed both
 audio arms share the VI-640 wait/menu/mission route, with input depth still a
 confound. s2045 added positive post-wait entry/return/branch rows in both
-arms and selected the shared post-wait route boundary (P1); the later
 arms and selected the shared post-wait route boundary (P1); s2046 then
 joined static caller/return edges and selected the common guest-to-VI handoff
-boundary (Q4) after a corrected VI-640-gated key control. The later
-audio-on/nonzero versus stub/all-zero PCM split remains phase-invalid.
+boundary (Q4) after a corrected VI-640-gated key control. s2047 reached title
+1024 but not hangar 512 or `menuControllerInput`; the later audio-on/nonzero
+versus stub/all-zero PCM split remains phase-invalid.
 
 ## Method and safety rules
 
