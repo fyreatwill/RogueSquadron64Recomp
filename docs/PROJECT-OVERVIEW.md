@@ -29,7 +29,8 @@ default-off.
 
 **What is not done:** the first hangar window dies ~4s later in
 `filterVoiceSampleBlock` (`last-guest-pc=0x8000834c`). Hangar visuals have
-geometry/color artifacts. M5 remains closed; M3 only as idiom-class audits.
+geometry/color artifacts. M5 audio de-stubbing remains open; M3 is limited to
+idiom-class audits.
 M4 hangar/512 Y=0x8000 is not live on the first hangar capture. See
 `CURRENT-TRUTH.md`.
 
@@ -3435,8 +3436,9 @@ The s1976–s1997 chain established the following compact causal record:
   SIGKILLed. This rules out treating the preserved 45-file snapshot as the
   phase-valid s2007 witness, not any status hypothesis.
 
-The next status measurement requires the phase-valid s2007 generated tree or
-explicit authorization to reconcile the four pending companion symbol files.
+The phase-valid s2007-tree requirement was superseded by s2016: the current
+45-file tree independently reaches the target phases and emits the status
+census, so no companion-file reconciliation is required for the active join.
 
 **Superseded claims compacted out of CURRENT-TRUTH in s1948.** s1888–s1917
 "stall at 640 then crash". H-slots-stay-live (s1942). Eleven-Start as a
@@ -3447,3 +3449,73 @@ or skip of `StartReadData` (s1946). Continuing post-1024 spin as
 `waitForAnyAudioSlot` / `menuOverlayInit` / another of the ten
 `jal 0x8008E57C` sites (s1947). Intermediate caller / slot / mix / VI-recv
 supersessions (s1919–s1941) are the selected column above.
+
+## 38. Late M5 route and status archive (s2011–s2047), migrated in s2048
+
+The chronological ledger in `PORTING-STATE.md` remains authoritative for exact
+commands and probe rows. This section preserves the durable conclusions moved
+out of `CURRENT-TRUTH.md` during the s2048 maintenance pass.
+
+### Status, service, and generated-tree boundary
+
+- s2011–s2016 narrowed the generated-tree question. The current 45-file tree
+  can reach title VI 1024 and hangar VI 512 and emit the status-writer census;
+  the earlier provenance block is not a prerequisite. Retail independently
+  reaches the same phases and cycles slot 0 through `00 -> 01 -> 02 -> 03 ->
+  00`, with gate-writer PCs attributed by the Rice oracle in s2014.
+- s2017–s2022 closed static registration and indirect lookup explanations for
+  `serviceVoicePoolFrame`. Direct service entry/exit and its gate/loop are
+  live on the port, but sampled slot-0 status is `00` and always takes the
+  zero-status skip. The retail oracle confirms that the branch and store body
+  execute on retail; this is a port-side status/read boundary, not a missing
+  function registration.
+- s2023–s2025 established the route control: a clean forced-LLE arm can reach
+  title while the common-wrapper HLE arm stops at VI 640. The LLE arm's later
+  crash does not erase its earlier phase-valid controls. No status value was
+  forced and no mitigation was authorized.
+- s2026–s2029 joined the shutdown writer. Call 3 reaches `stopVoiceSlotSynced`
+  on the matching slot record; `0x8009B2C4` legitimately changes status
+  `01 -> 00` before the scan returns, so no status-3/service-store interval is
+  observed. The worker-side store remains parked until a live status-3 interval
+  exists.
+
+### Opt-in audio and guest gate
+
+- s2030 proved the opt-in Factor 5 audio arm returns `Broke` after real DMEM
+  activity and audio DMAs, while the default stub returns `Broke` without DMEM
+  changes or DMAs. Both arms still sampled all-zero PCM. Two nonzero `0x6F0`
+  buffers are proven to reach `queue_samples`; the image/task ABI and complete
+  playback contract remain unvalidated, so the arm stays opt-in.
+- s2031–s2033 established the guest gate boundary. Retail executes the named
+  writer cluster; the port's `0x8008EC88` row is `0 -> 0` under the default
+  fixup, and the raw consumer skips on zero. Caller/order controls are live,
+  but the retail-value `1` arm is not a permission to change the default.
+- s2034–s2040 repeatedly observed an inverse single-source port split between
+  unset C88 and C88=1. The result is GUI/focus-confounded and therefore does
+  not select a causal writer reversal. The C88=1 arm is the only arm currently
+  admissible for a callback-side PCM witness, and only after both target VI
+  anchors appear.
+
+### Route qualification and current boundary
+
+- s2041–s2043 showed that title-side controls and host input can be live while
+  a fresh C88=1 run remains phase-invalid. A fixed eleven-Start route then
+  stopped in the shared `waitForAnyAudioSlot`/menu path at VI 640; no PCM rows
+  were interpreted from that route.
+- s2044–s2046 showed both audio arms enter and return from the wait and take the
+  same post-wait `menuOverlayInit` branch. The static caller table and live
+  VI-producer rows select a shared guest-to-VI handoff boundary; service and
+  PCM nulls before a target phase are inadmissible.
+- s2047 reached title VI 1024 with C88=1, forced LLE, opt-in audio, live
+  preflight, host-input, service, and audio controls, but did not reach
+  `menuControllerInput` or hangar VI 512. The next bounded unit is one denser
+  post-title schedule using the existing caller table. If both anchors appear,
+  the callback bridge/PCM table becomes admissible; otherwise the title-side
+  route remains open.
+
+These records supersede the older “640 is a flaky crash,” missing-input,
+missing-wait-return, audio-specific continuation, and unqualified PCM-null
+claims. They do not supersede the active safety rules in `CURRENT-TRUTH.md`:
+retail ground truth precedes instrumentation, every null needs a same-run
+positive control, phase gates are mandatory, and a mitigation needs an
+`ORIGIN:` naming its writer and legitimacy.

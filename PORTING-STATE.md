@@ -97881,3 +97881,21 @@ also rules out treating the original rc=5 pair as evidence. No mitigation or
 guest value was changed; no crash occurred.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2048 (2026-08-20) — compacted current truth after maintenance threshold
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 60,815 bytes, so this was a
+maintenance iteration and no experiment or soak was run. The document was
+compacted to 10,945 bytes / 194 lines, a net reduction of 685 lines. Durable
+s2011–s2047 status, audio, gate, and route material was migrated to
+`docs/PROJECT-OVERVIEW.md` §38. Superseded detail was reduced to a pointer and
+the active backlog was rewritten as one monotonic sequence with the s2047
+title-to-hangar route qualification first.
+
+This maintenance result changes documentation only. It does not add a guard,
+skip, restore, audio default, writer change, or experimental conclusion; the
+s2047 phase-valid boundary remains title VI 1024 without hangar VI 512 or
+`menuControllerInput`, and callback/PCM rows remain inadmissible until both
+target anchors appear.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
