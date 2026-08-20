@@ -1,74 +1,103 @@
-# NEXT work unit (s2059)
+# NEXT work unit (s2060)
 
-HYPOTHESIS-ID: m5-service-store-edge
+HYPOTHESIS-ID: m5-guest-gate-handoff
 
 ## Work unit
 
-Run one qualified forced-LLE/audio/C88=1 arm that leaves hangar input idle
-until well after the worker's status-3 `0x03 -> 0x00` store should have
-occurred, then sends one Start. Do not add instrumentation, force a status
-byte, add a skip, change the retail writer, or change the scorer. The prior
-s2058 key reached shutdown call 3 while status was still `0x02`, so its stall
-was a pre-store result.
+Run the retail oracle first, then add one opt-in `REGRESS_NO_FOCUS=1` branch
+to `tools/regress.sh` that skips only the `raise_game` call. Run both C88 arms
+with that branch in the same iteration. `winctl key` already posts directly to
+the game PID, so this tests whether the prior menu callback-count difference
+depends on the harness raising the window rather than on the guest gate.
+
+Do not change `0x8008EC88`, the retail writer, any guest status byte, audio
+task behavior, menu code, or the scorer. Keep the existing qualified
+forced-LLE/audio/spin-yield route and the existing post-wait, input, gate,
+menu, audio-task/ABI, and PCM controls.
 
 ## Competing hypotheses and discriminator
 
-- **H-PostStoreReturn** — the delayed Start produces a shutdown entry after
-  the named service store, followed by a shutdown exit.
-- **H-PostStoreStall** — the named store precedes shutdown entry, but status 3
-  persists and no matching shutdown exit follows.
-- **H-PreStoreAgain** — shutdown entry still precedes the named store, showing
-  that the delayed input did not allow the worker edge to become live first.
-- **H-NoStore** — the hangar service/status positive controls fire, but no
-  `0x03 -> 0x00` store occurs before the delayed shutdown; this leaves the
-  worker edge nondeterministic at this recipe and does not select a return.
+- **H-Focus** — skipping `raise_game` prevents the scheduled keys from being
+  observed. The no-focus arms will miss `[pad-host]` in the target phases or
+  fail title VI 1024/hangar VI 512, so the earlier callback difference cannot
+  be attributed to C88 until input delivery is repaired.
+- **H-GateRoute** — direct PID input remains live without a focused window in
+  both arms, and both reach the two target VIs, but C88=1 still takes the
+  active raw-gate branch and has the larger `menuControllerInput`/`menuInput`
+  count. This selects the guest gate/route as the cause at this scope and
+  refutes GUI focus.
+- **H-StateOnly** — direct input and both target VIs remain live, but the
+  callback counts converge while the oracle's menu-state watch and the port's
+  post-wait branch rows remain different. This would move the discriminator
+  from focus to a guest menu-state boundary without changing C88.
+- **H-RetailMismatch** — the oracle positive controls fire but its watched
+  menu PCs/state writes do not cover the driven title-to-hangar route. The
+  retail witness is then insufficient for this question; do not infer a port
+  callback explanation from the A/B rows.
 
-The discriminator is one ordered, phase-10 table:
-`service-store old=0x03 value=0` -> later `shutdown-entry` ->
-`shutdown-exit`, with `shutdown_call`, thread, slot, and status on every edge.
-H-PostStoreReturn requires the exit after the store; H-PostStoreStall requires
-the post-store entry with persistent status 3 and no exit; H-PreStoreAgain is
-selected only when the entry precedes the store; H-NoStore is selected only
-when the service/status positive controls fire but the store is absent. Title
-VI 1024, hangar VI 512, phase-10 `[pad-host]` input, s2020 service entry/exit,
-s2008 writer, audio-task/ABI, and PCM source/consumer rows are same-run
-positive controls.
+The selecting table is phase-keyed: preflight input/visual, retail whole-RDRAM
+positive control, retail title/hangar VIs, port title VI 1024, port hangar VI
+512, `[pad-host]` in both target phases, raw-gate branch/value, the
+`menuControllerInput`/`menuInput` callback counts, and the existing
+post-wait/ABI/PCM controls. H-Focus requires the no-focus input/route controls
+to fail. H-GateRoute requires both arms' direct-input/route controls plus a
+non-convergent callback/gate table. H-StateOnly requires live input/route
+controls with convergent callbacks but divergent state/branch rows.
 
-The generic regress scorer may flag the stationary 512 phase because a
-shutdown stall does not require a VI transition. Treat that check as
-inapplicable only after the direct 512 `[pad-host]` and shutdown-entry
-controls fire; do not accept a run with missing controls.
-
-## Commands
+## Ground truth command (run before editing the harness)
 
 ```sh
-# Ground truth first: retail writer/status controls and target route.
 tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
   --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
   --secs 55 --hit-cap 1 \
   --watch-write 0x0:0x800000 \
-  --watch-write 0x154620:0x154624 \
-  --watch-pc 0x8009B5A8,0x8009B8A0,0x8009B7EC,0x8009B2C4 \
-  --vi-trace \
+  --watch-write 0x0CE730:0x0CE828 \
+  --watch-pc 0x800B47C4,0x800B8014,0x800B8050 \
+  --vi-trace --pif-trace \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start \
-  > scratch/agent/s2059_oracle.log 2>&1
-
-route_keys='640@6:start 640@11:start 640@16:start 640@21:start 1024@2:a 1024@3:start 1024@4:a 1024@5:start 1024@7:a 512@120:start'
-env REGRESS_REQUIRE_VISUAL=1 REGRESS_SECS=240 REGRESS_INTERVAL=0.6 REGRESS_KEYS="$route_keys" REGRESS_LABEL=s2059_m5_post_store_shutdown \
-  ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
-  ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LOG_ALL=1 \
-  ROGUESQ_LOG_S2028_A11=1 ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_PCM_SANITY=1 \
-  zsh tools/regress.sh scratch/agent/s2059_m5_post_store_shutdown 240 \
-  > scratch/agent/s2059_m5_post_store_shutdown_driver.log 2>&1
+  > scratch/agent/s2060_oracle.log 2>&1
 ```
 
-Inspect the oracle controls first. In the port log, require both target VIs,
-the delayed 512-phase input, and shutdown-entry before ordering the service
-store and shutdown rows. Use SIGKILL only if the harness does not clean up.
+Require the whole-RDRAM control to reach its threshold, title VI 1024 and
+hangar VI 512, PIF input rows, and at least one relevant menu PC/state row
+before treating a retail null as evidence.
+
+## Harness change and port arms
+
+Add this bounded branch around the existing `raise_game` invocation in
+`tools/regress.sh`:
+
+```sh
+if [[ -z "${REGRESS_NO_FOCUS:-}" ]]; then
+    raise_game
+else
+    print "focus: skipped window raise; keys use direct PID injection"
+fi
+```
+
+Then run both arms sequentially with the same route and no 512-phase input:
+
+```sh
+route_keys='640@6:start 640@11:start 640@16:start 640@21:start 1024@2:a 1024@3:start 1024@4:a 1024@5:start 1024@7:a'
+env REGRESS_REQUIRE_VISUAL=1 REGRESS_SECS=180 REGRESS_INTERVAL=0.6 REGRESS_KEYS="$route_keys" REGRESS_LABEL=s2060_no_focus_c88_on \
+  REGRESS_NO_FOCUS=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
+  ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_POSTWAIT=1 \
+  ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_PCM_SANITY=1 \
+  zsh tools/regress.sh scratch/agent/s2060_no_focus_c88_on 180 \
+  > scratch/agent/s2060_no_focus_c88_on_driver.log 2>&1
+
+env -u ROGUESQ_M5_C88_VALUE REGRESS_REQUIRE_VISUAL=1 REGRESS_SECS=180 REGRESS_INTERVAL=0.6 REGRESS_KEYS="$route_keys" REGRESS_LABEL=s2060_no_focus_c88_unset \
+  REGRESS_NO_FOCUS=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
+  ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_POSTWAIT=1 \
+  ROGUESQ_LOG_PCM_BOUNDARY=1 ROGUESQ_LOG_PCM_SANITY=1 \
+  zsh tools/regress.sh scratch/agent/s2060_no_focus_c88_unset 180 \
+  > scratch/agent/s2060_no_focus_c88_unset_driver.log 2>&1
+```
 
 ORIGIN: no guest writer, value, wait, guard, skip, audio task, callback, or
-default behavior changes; this is an input/ordering experiment using existing
-diagnostics.
+default behavior change is authorized; the only harness change is an opt-in
+skip of window raising while retaining direct PID key injection.

@@ -98261,3 +98261,39 @@ the next arm must leave hangar input idle until that store is live.
 ORIGIN: no guest writer, value, wait, guard, skip, audio task, callback, or
 default behavior changed; this session ran the existing diagnostics and
 changed only the phase-key schedule.
+
+## Session 2059 (2026-08-20) — selected shutdown return after worker store
+
+HYPOTHESIS-ID: m5-service-store-edge.
+
+Ground truth ran first. The retail oracle passed the whole-RDRAM positive
+control with 10,011 writes, reached title VI 1024 at `0x00790400` and hangar
+VI 512 at `0x006AB400`, recorded 11 writes to the slot table, and executed
+`0x8009B7EC` twice. This independently qualified the route and the legitimate
+worker-store witness before the port run.
+
+The unchanged qualified C88=1 forced-LLE/audio/spin-yield port arm completed
+the 240-second recipe at 248 seconds with 50 captured frames, visual capture,
+title VI 1024, hangar VI 512, zero missing functions, zero aborts, and no
+crash markers. Its generic scorer returned FAIL because a stationary 640 key
+check saw no VI transition; that warning does not make the target route or
+input null: the run reached both target VIs and emitted the 512-phase
+`[pad-host]` control.
+
+The ordered phase-10 table supplied the discriminator. Before the delayed
+512-phase Start, service call 1593 recorded a status-3 read and the named
+`0x8009B7EC` store at guest `0x80154620`, with `old=0x03`, `new=0x00`, and
+`shutdown_call=2`; the independent s2022/s2008 rows agreed. After that store,
+the delayed 512-phase host Start fired, shutdown call 3 entered with slot 0
+status `0x00`, and the matching shutdown-exit row followed with status
+`0x00`. The service and PCM/audio controls remained live throughout.
+
+This selects H-PostStoreReturn. It rules out H-PostStoreStall, H-PreStoreAgain,
+and H-NoStore for this qualified schedule: the store is present and precedes
+the later shutdown entry, and the shutdown returns after it. It does not prove
+complete MusyX playback or nonzero PCM production, and it does not explain
+the remaining C88/menu callback-count difference.
+
+ORIGIN: no guest writer, value, wait, guard, skip, audio task, callback, or
+default behavior changed; this session ran the existing diagnostics and
+changed only the phase-key schedule.

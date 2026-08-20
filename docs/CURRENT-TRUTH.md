@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2058 (2026-08-20).
+for session detail. Reviewed through s2059 (2026-08-20).
 
 ## Current state
 
@@ -109,8 +109,15 @@ for session detail. Reviewed through s2058 (2026-08-20).
   the `0x03` spin with no exit. The scorer reported FAIL because its generic
   stationary-phase key check expected a VI transition, but the direct
   `[pad-host]`, shutdown-entry, and persistent-status controls fired; the
-  ordered edge rows are admissible single-source port evidence, and the
-  post-store return remains open.
+  ordered edge rows are admissible single-source port evidence; that schedule
+  did not measure a post-store return.
+- s2059 left hangar input idle until after the phase-10 worker store, then
+  delivered a later 512-phase Start. The same run reached title VI 1024 and
+  hangar VI 512, recorded the `0x8009B7EC` `0x03 -> 0x00` store first, and
+  then recorded shutdown call 3 entry and exit with status `0x00`. This
+  selects H-PostStoreReturn and closes the store-to-shutdown return boundary
+  at this scope. The generic scorer's stationary-phase warning does not
+  overturn the direct input, store, and shutdown controls.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -120,25 +127,18 @@ for session detail. Reviewed through s2058 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 store-to-shutdown return.** The worker-clears portion is selected: a
-   phase-10 slot-0 status-3 read is followed by the named service store and a
-   zero status at service exit. s2058's shutdown key arrived before that edge
-   and selected the pre-store stall, not the requested boundary. Run one
-   phase-keyed arm with no hangar input until after the worker store should be
-   live, then trigger a later shutdown call and determine whether it returns
-   after the store. Do not force a status byte or add a skip.
-2. **M5 guest-gate handoff boundary.** H-R is selected at the current scope:
+1. **M5 guest-gate handoff boundary.** H-R is selected at the current scope:
    C88 causally controls the raw gate, but not the title-to-hangar anchors.
    Revisit only with a genuinely focus-isolated discriminator that explains
    the menu callback-count difference; keep the retail writer unchanged.
-3. **M3 crash work.** Only complete idiom-class audits with a named
+2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
-4. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+3. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation; consumer-mode H1 is refuted by the RT64 census. H3 remains
    unavailable because the oracle cannot screenshot the LLE path. Do not
    repeat the `0xD60` scan.
-5. **Generated-symbol renaming sweep.** Park until M5 and any required
+4. **Generated-symbol renaming sweep.** Park until M5 and any required
    status/PCM boundary are closed. The remaining 57 names are not a sync
    backlog.
 
@@ -192,12 +192,11 @@ rows agree, and the service exit read `0x00`. s2058 then showed, as
 single-source port evidence, that an input-
 driven shutdown can enter while the slot is still `0x02`: the legitimate
 `0x8009B30C` writer changes it to `0x03`, after which call 3 remains in its
-status-3 spin with no exit. The port status sequence is
-therefore `00 -> 01 -> 02 -> 03 -> 00` at this scope, selecting the worker
-clears portion of H-S and refuting an alternate writer, no-store result, or
-join failure. Shutdown calls 1 and 2 returned in the same run, but both were
-before the status-3 interval; a shutdown return after the worker store is not
-yet measured. Do not force a status byte or add a skip.
+status-3 spin with no exit. s2059 then left input idle until the worker store
+ran and recorded a later shutdown call 3 entry and exit with status `0x00`.
+The port status sequence is therefore `00 -> 01 -> 02 -> 03 -> 00` at this
+scope, and the store-to-shutdown return is now selected. Do not force a
+status byte or add a skip.
 
 ### M5 audio and guest gate
 
@@ -283,13 +282,20 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   status-3 interval but no service-store join. The new regeneration-stable
   census recorded the same-slot `0x03 -> 0x00` service store and a post-store
   zero at service exit, while its shutdown-return rows were earlier than the
-  status-3 interval; only the store edge is therefore closed.
+  status-3 interval; only the store edge was therefore closed at s2057.
+- s2059 supersedes the remaining wording that a shutdown return after the
+  worker store was unmeasured. It was believable because s2058's input reached
+  call 3 before the status-3 worker edge and the call stayed in its spin. The
+  delayed 512-phase input in s2059 produced the store first, then shutdown
+  call 3 entered and exited with status `0x00`; the generic scorer warning was
+  about a stationary phase, while direct input, store, and shutdown controls
+  all fired.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
-  s2029 to the observed legitimate writer/reaper ordering; s2057 now measures
-  the status-zero worker store, while a shutdown return after that store
-  remains unmeasured.
+  s2029 to the observed legitimate writer/reaper ordering; s2057 measured
+  the status-zero worker store and s2059 measured a shutdown return after that
+  store.
 
 ## Evidence ledger summary
 
@@ -306,9 +312,9 @@ the full title-to-hangar chain. s2055 paired every target-phase source and
 consumer row; s2056 then selected H-R for the C88 gate-to-route boundary and
 observed a live port status-3 interval. s2057 selected the worker-clears
 portion of the status-3 edge with independent s2008/s2022 rows and the retail
-writer-PC watch; it did not observe a shutdown return after that store. The
-C88 and callback conclusions remain single-source port evidence; the
-independent oracle supplied route/phase qualification. The task ABI and
+writer-PC watch; s2059 then selected the later shutdown return after that
+store. The C88 and callback conclusions remain single-source port evidence;
+the independent oracle supplied route/phase qualification. The task ABI and
 complete playback remain open. The oracle and port both independently reach
 both target anchors, so this is not a retail-route absence.
 
