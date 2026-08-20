@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s2008 (2026-08-20).
+detail. Reviewed through s2009 (2026-08-20).
 
 ## Current state
 
@@ -538,6 +538,19 @@ detail. Reviewed through s2008 (2026-08-20).
   s2008 rows, so no status hypothesis moved. This is generation-provenance
   generator mismatch, not evidence that status `0x03` is absent.
 
+- **s2009 phase-valid provenance retry failed on the preserved 45-file tree.**
+  CMake and a forced rebuild compiled all 45 generated units and linked the
+  target. The same-run phase control published VI 0, 320, and 640
+  (`0x0066A500`), while live VI-enqueue rows continued past 20,000; no VI
+  1024 transition appeared. The status-writer rows therefore remain
+  unevaluable. The watchdog did not reap the child at its nominal 600-second
+  limit, so the scoped game was externally SIGKILLed and the harness exited
+  on process loss. This does not distinguish the status hypotheses; it rules
+  out treating the 45-file snapshot as the phase-valid s2007 witness. A
+  phase-valid generated tree or permission to reconcile the pending companion
+  symbol snapshot is now required. No status, audio, spin, PI, or mitigation
+  change was made.
+
 ## Active investigation and ranked next steps
 
 Re-ranked s2008: the opt-in image's two nonzero hangar DMA buffers are proven
@@ -549,13 +562,14 @@ next discriminator must observe every legitimate writer of the status table
 and join its value/slot to shutdown and worker rows; do not infer starvation
 from the absence of a status-3 row.
 
-1. **M5 phase-valid generated-tree provenance repair (s2009).** Identify the
-   exact generator/symbol snapshot behind the phase-valid s2007 build without
-   discarding the companion repo's pending symbol edits. The discriminator is
-   a clean build that reaches VI 1024 with the existing shutdown/service
-   controls; the 51-file fresh tree crashed pre-1024 and the 45-file snapshot
-   stalled at VI 640, so neither can host a status null. Do not change status,
-   audio, spin, or PI behavior.
+1. **M5 phase-valid generated-tree provenance repair (human input required).**
+   Provide the phase-valid s2007 generated tree (including `funcs_*.c`,
+   `funcs.h`, `recomp_overlays.inl`, and `lookup.cpp`) or explicitly authorize
+   reconciliation of the four pending companion symbol files. Then force a
+   full rebuild and rerun the existing phase-gated control. A VI-1024
+   transition selects the baseline; another pre-1024 crash or VI-640 stall
+   keeps the status census blocked. Do not change status, audio, spin, or PI
+   behavior.
 2. **M5 status-table writer/transition census (after provenance is fixed).**
    Run the already-landed seven-site table joining writer PC, slot/index,
    old/new byte, thread, shutdown call, and service/callback edges. A slot-0
@@ -940,6 +954,8 @@ entry/exit pairs in port phase 6; no status-3 row before PI/stop boundary)
 1–3 entered/scanned/returned; call 3 entry status `0x01`, spin status `0x00`;
 no status-3 row or PI assertion)
 / s2008 status-writer census (oracle valid; 7 stores; runtime unevaluable)
+/ s2009 forced 45-file provenance retry (build clean; VI 0/320/640 and
+20,000+ VI-enqueue control rows; no VI 1024; status census unevaluable)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

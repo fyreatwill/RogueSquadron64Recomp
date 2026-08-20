@@ -96487,3 +96487,32 @@ status value, audio dispatch, spin, PI path, guard, or mitigation changed.
 OUTCOME: ADVANCED — the full writer census was landed and regeneration-checked;
 runtime status measurement was unevaluable because both candidate generated
 trees failed phase validity.
+
+## Session 2009 (2026-08-20) — preserved generated tree stalled at VI 640
+
+HYPOTHESIS-ID: m5-status3-worker-dispatch
+
+The planned provenance discriminator was run without changing status, audio,
+spin, PI, or mitigation behavior. The companion repo still had four pending
+symbol-file edits. The active generated tree contained 45 `funcs_*.c` files;
+`recomp_overlays.inl`, `funcs.h`, and `register_overlays.cpp` referenced the
+same overlay tables and `slotDispatcherIter`. CMake configured cleanly, all
+45 generated translation units were forced to compile, and the target linked
+successfully. This rules out an object-cache or link failure for this snapshot.
+
+The phase-gated run supplied its positive control in the same capture: phase
+markers reached VI 0, 320, and 640 at origin `0x0066A500`, while live
+`vi-enq` rows continued past 20,000. No VI-1024 marker appeared. The process
+remained alive at the VI-640 stall, so the watchdog's nominal 600-second
+timeout was not observed; the scoped game was SIGKILLed and the harness then
+exited on process loss. This is a phase-validity failure, not a status-writer
+null. It rules out using the preserved 45-file snapshot as the s2007 witness,
+but does not distinguish current-symbols, stale-snapshot, overlay-pairing, or
+status-transition hypotheses.
+
+The next discriminator requires the phase-valid s2007 generated tree, or
+explicit permission to reconcile the pending companion symbol snapshot. No
+status value, audio dispatch, spin, PI path, guard, or mitigation changed.
+
+OUTCOME: ADVANCED — the forced rebuild and phase-gated provenance retry
+produced a positive VI-640 control but no phase-valid VI-1024 baseline.
