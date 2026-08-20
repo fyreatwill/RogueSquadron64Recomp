@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1977 (2026-08-19).
+detail. Reviewed through s1978 (2026-08-19).
 
 ## Current state
 
@@ -73,20 +73,21 @@ detail. Reviewed through s1977 (2026-08-19).
   menuInput. Yield at `L_800B24D4` (s1972) lets idle-wait run; it does not
   make the drain return. s1976 ground truth: `anyAudioSlotActive` returns 1
   when idle (`sltiu s1<1` after OR of slot byte+0); the spin waits for idle,
-  not for a key-on. In-loop `tickMusyXIfActive` (gate=0x01, 10M iters, same-run
-  `[drain-tick]` control) never idled call=1; logged 10M timeout forced
-  `v0=1` and the function returned; `fs` stayed 1215 with zero further
-  `[lle task]`. H-reap-in-loop and H-tick-skips REFUTED; H-stuck-slot
-  SELECTED; force-idle is not sufficient. s1977 dump (108 `[drain-slots]`
-  samples, same-run `[drain-tick] call=1 iters=1 gate=0x01` control):
-  `ch=18 base=0x801714D0 dest_ok=1 nz=13` frozen for 10M iters. Nonzero
-  idx 0,1,2,3,4,5,6,7,8,9,12,14,16 with bytes `. o \n sBgm c a \xFF`;
-  idx 10,11,13,15,17 are 0. None is s1926 `0x02` key-on. H-one-zombie /
-  H-chCount-wild / H-tick-rekeys REFUTED. ORIGIN: unattributed — leftover
-  `isAudioSlotActive` byte+0 is nonzero but is not the boot 16-voice
-  `0x02` key-on at `0x8018D4A0`; table is the s1943 retarget
-  `0x801714D0`. Timeout is a diagnostic escape hatch, not a product
-  mitigation. Default-off yield unchanged.
+  not for a key-on. In-loop `tickMusyXIfActive` never idled call=1;
+  force-idle did not restore `fs`. s1978: `0x801714D0` is a live
+  `allocateSongChannelArray` table, last alloc count=18 matching `ch=18`
+  (tickn=4; boot 16-voice `0x8018D4A0` is tickn=2). `musyxRenderVoiceSamples`
+  writes `0x02` here (16967 slot-sb) and `isAudioSlotActive` reads `0x02`
+  (135/184 slot-byte samples at this base). H-ascii-heap / H-count-desync /
+  H-never-keyed REFUTED; H-voice-records SELECTED. s1977's ASCII leftover
+  dump used `MEM_BU` with a 32-bit unsigned KSEG0 address, which
+  zero-extends against `0xFFFFFFFF80000000` and reads host memory at
+  rdram+4GiB — not RDRAM. Always pass `S32(guest_addr)` into `MEM_*`.
+  ORIGIN: `musyxRenderVoiceSamples` (legitimate `0x02` key-on). Drain is
+  correctly waiting; 11 `render-end` (cursor cross) fire at this base but
+  enough slots stay `0x02` that the OR never idles. `deactivateVoice` is 0
+  globally; `stopVoice` only hits the boot array. Timeout remains a
+  diagnostic hatch. Default-off yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -204,19 +205,22 @@ detail. Reviewed through s1977 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1977: leftover drain slots are a frozen 13-zombie set of
-ASCII-shaped bytes at `0x801714D0` ch=18, not `0x02` key-on. Next
-discriminator is whether that region is a voice table.
+Re-ranked s1978: `0x801714D0` is a live 18-voice table with `0x02`
+key-on, not leftover text. Drain waits correctly; remaining live slots
+never idle.
 
-1. **Hangar frame-freeze: leftover slots are a frozen 13-zombie ASCII-shaped
-   set at `0x801714D0` (s1977).** Drain call=1 at origin `0x00656400`:
-   `ch=18 base=0x801714D0 dest_ok=1 nz=13` identical for 10M iters (108
-   `[drain-slots]` samples; `[drain-tick] call=1 iters=1 gate=0x01`
-   control). Nonzero idx 0–9,12,14,16; zeros 10,11,13,15,17. Bytes are
-   not s1926 `0x02`. H-one-zombie / H-chCount-wild / H-tick-rekeys
-   REFUTED; H-all-stuck is not exact (5 zeros). Next: 32 consecutive
-   bytes at the base + slot-0 16-byte header + live `slot-alloc` count
-   vs ch=18 (s1943 retarget here was count=15).
+1. **Hangar frame-freeze: live `0x02` key-ons at `0x801714D0` never all
+   idle (s1978).** Same-run positive controls: `[drain-tick] call=1
+   iters=1 gate=0x01` and `[avf-gate] site=slot-alloc` boot
+   `0x8018D4A0 count=16`. Last alloc is `new=0x801714D0 count=18`
+   matching `ch=18`. Two independent loads/stores see `0x02`
+   (`musyxRenderVoiceSamples` slot-sb 16967; `isAudioSlotActive`
+   slot-byte 135/184). 11 `render-end` (cursor cross=1) at this base;
+   `deactivateVoice` 0 globally; `stopVoice` only at the boot array.
+   Next: per-idx cursor-cross vs last byte+0, and whether render-end's
+   `sb $zero, 0x28($sp)` actually lands on slot+0 (`slot-sb` rate-limit
+   currently drops `new==0` after the first 32). Use `S32(guest_addr)`
+   in any `MEM_*` dump.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -350,6 +354,12 @@ Most recent, still load-bearing for the next unit:
   legitimate `0x02` key-on status is superseded by s1977 — 13 frozen
   nonzero bytes at `0x801714D0` are ASCII-shaped and none are `0x02`;
   the table is not the boot `0x8018D4A0 count=16` array.
+- s1977 "ASCII leftover / not `0x02`" is superseded by s1978 — the
+  `[drain-slots]` dump used `MEM_BU(0, unsigned_kseg0)`, which
+  zero-extends and reads host memory at rdram+4GiB. Same-run
+  `slot-sb`/`slot-byte` (gpr addresses) see live `0x02` at that table;
+  last `slot-alloc` is count=18 matching `ch=18`. Believable because
+  the dump printed a stable hex/ASCII line 108 times.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.

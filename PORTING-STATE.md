@@ -94720,3 +94720,67 @@ landed. Next discriminator: 32 consecutive bytes at `0x801714D0` plus
 slot-0 16-byte header plus live `slot-alloc` count vs ch=18.
 
 **OUTCOME: ADVANCED** — planned slot dump ran; four hypotheses discriminated.
+
+## Session 1978 (2026-08-19) — 0x801714D0 is a live 18-voice table; s1977 ASCII dump was MEM_BU unsigned
+
+**Instrument.** Extended the s1976 `[drain-tick]` sample block with
+`[drain-base]` (32 consecutive bytes at `base` as hex+ASCII) and
+`[drain-hdr]` (16-byte headers of slot 0 and slot 16 as hex+words).
+Enabled existing `slot-alloc` / `slot-sb` / `slot-byte` via
+`ROGUESQ_LOG_VI_CALLERS=1`. Patch in `RecompiledFuncs/funcs_30.c` and
+`apply_s1976_drain_tick` in N64Recomp `fixup_game_funcs.py`. No new
+run-lifetime counter. 10M timeout left in place.
+
+**Probe.** `scratch/agent/s1978_drain_base/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 63252 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.0s #1499.
+
+Positive controls (same run): `[drain-tick] call=1 iters=1 gate=0x01`
+(108 paired `[drain-base]`/`[drain-hdr]` samples through 10M, then
+`[drain-timeout]` / `[drain-exit] call=1 iters=10000001 v0=1`) and
+`[avf-gate] site=slot-alloc` boot `new=0x8018D4A0 count=16` at tickn=2.
+
+**slot-alloc (5 events).**
+- tickn=0 `new=0x80169460 count=20`
+- tickn=1 `new=0x801714D0 count=17` (zeros slots)
+- tickn=2 `new=0x8018D4A0 count=16` (boot 16-voice)
+- tickn=3 `new=0x801714D0 count=15` (s1943 retarget)
+- tickn=4 `old=new=0x801714D0 count=18` (live last alloc, matches `ch=18`)
+
+**Valid RDRAM witnesses (gpr addresses).** `slot-sb` at base
+`0x801714D0`: 16967 `musyxRenderVoiceSamples` `new=0x02`, 12
+`allocateSongChannelArray` `new=0x00`, zero other `new=` values.
+`old=0x02` throughout the drain window (276 dest=slot0 stores).
+`slot-byte` at this base: 135/184 samples `byte=0x02`, 49 `byte=0x00`.
+`stopVoice` 32 at boot `0x8018D4A0` only; `deactivateVoice` 0 globally.
+11 `render-end` (cursor `cross=1`) at `0x801714D0`.
+
+**Invalid dump.** `[drain-base]`/`[drain-hdr]`/`[drain-slots]` used
+`MEM_BU(0, unsigned dest)`. `MEM_*` does
+`(addr ^ 3) - 0xFFFFFFFF80000000`; a zero-extended `0x801714D0`
+yields host `rdram+0x1001714D0`, not physical `0x1714D0`. That is why
+s1977 printed stable ASCII-shaped bytes that disagreed with `slot-sb`
+`old=0x02` at the same guest dest. Source now passes `S32(guest_addr)`.
+Do not treat s1977/s1978 `[drain-slots]`/`[drain-base]`/`[drain-hdr]`
+payloads as RDRAM.
+
+**Verdicts.**
+- H-ascii-heap REFUTED (dump was not RDRAM; `slot-byte`/`slot-sb` see
+  `0x02`, not a C string).
+- H-count-desync REFUTED (live last alloc is count=18, not 15).
+- H-never-keyed REFUTED (16967 writes of `0x02` at this base; `old=0x02`
+  during drain).
+- H-voice-records SELECTED: live 18-voice `allocateSongChannelArray`
+  table; `musyxRenderVoiceSamples` key-on `0x02`; `isAudioSlotActive`
+  agrees. Two-source: slot-sb store path + slot-byte load path.
+
+ORIGIN: `musyxRenderVoiceSamples` writes legitimate `0x02` key-on.
+Drain is correctly waiting; some idxs `render-end` but enough slots
+stay `0x02` that the OR never idles. No skip/guard landed. `slot-sb`
+rate-limit drops `new==0` after the first 32 (only `new==2` is
+always-logged), so whether render-end's `sb $zero, 0x28($sp)` lands
+on slot+0 is the next discriminator.
+
+**OUTCOME: ADVANCED** — planned dump+slot-alloc run discriminated the
+four hypotheses; ASCII leftover identified as a MEM_* sign-extend bug.

@@ -1,70 +1,77 @@
-# NEXT work unit (s1978) — is 0x801714D0 a voice table or leftover text?
+# NEXT work unit (s1979) — why live 0x02 slots never all idle
 
 HYPOTHESIS-ID: hangar-frame-freeze
 
-## What s1977 settled
+## What s1978 settled
 
-Drain call=1 leftover slots are a frozen 13-zombie set: `ch=18
-base=0x801714D0 dest_ok=1 nz=13` for 10M iters. Bytes `. o \n sBgm c a
-\xFF` at 0x88 stride; idx 10,11,13,15,17 are 0; none is `0x02`. H-one-zombie
-/ H-chCount-wild / H-tick-rekeys REFUTED. Force-idle still does not restore
-`fs`. Positive control: `[drain-tick] call=1 iters=1 gate=0x01`.
+`0x801714D0` is a live voice table. Last `slot-alloc` is `count=18`
+matching `ch=18` (boot `0x8018D4A0 count=16` is tickn=2). Same-run
+`musyxRenderVoiceSamples` slot-sb writes `0x02` (16967) and
+`isAudioSlotActive` slot-byte reads `0x02` (135/184). H-ascii-heap /
+H-count-desync / H-never-keyed REFUTED; H-voice-records SELECTED.
+s1977 ASCII leftover was `MEM_BU` with a 32-bit unsigned KSEG0 address
+(zero-extends; host read at rdram+4GiB). Always `S32(guest_addr)`.
+Positive controls: `[drain-tick] call=1 iters=1 gate=0x01` and
+`[avf-gate] site=slot-alloc` boot `0x8018D4A0 count=16`.
 
-## Competing hypotheses (what lives at the table)
+11 `render-end` (cursor cross=1) fire at this base; `deactivateVoice`
+is 0 globally; `stopVoice` only hits the boot array. Drain OR of 18
+slots never goes idle.
 
-- **H-ascii-heap:** `0x801714D0` is not a live voice array. Consecutive
-  bytes are a C string / text dump; 0x88-stride just samples printable
-  chars. `isAudioSlotActive` treats them as status.
-- **H-voice-records:** the 0x88 records are real MusyX channel structs
-  (KSEG0 pointers, typed fields). byte+0 just is not `0x02` on this path.
-- **H-count-desync:** s1943 retargeted this address with count=15; ch=18
-  walks 3 slots past the allocation. idx16=0xFF is the past-end sentinel.
-- **H-never-keyed:** records are the live table, but byte+0 was never
-  written as key-on `0x02` and never cleared (stale heap / skipped init).
+## Competing hypotheses (why the OR stays busy)
+
+- **H-subset-live:** only some idxs ever cursor-cross; the rest never
+  reach end (looping / frozen pos). One live `0x02` keeps the drain.
+- **H-end-zero-lost:** render-end writes `0` to `0x28($sp)` but the
+  later `sb $v0, 0($s1)` still stores `2` (`0x28($sp)` overwritten).
+- **H-rekey-after-end:** ended idxs get `2` again next tick via
+  render-stage's default `addiu $v0, 0x2` and then do not cross.
+- **H-zero-unlogged:** slot-sb DID store `0`; the rate-limit (first 32
+  / every 1000 / `new==2`) dropped those events. Equivalent to
+  H-subset-live if other idxs stay `2`.
 
 ## Discriminating measurement (one instrument, one build, one 60s probe)
 
-Keep the s1977 `[drain-slots]` idx+byte dump. On the same `[drain-tick]`
-samples (first 8 + every 100k), also log:
+Keep s1978 `[drain-tick]` sampling (first 8 + every 100k). On those
+samples, dump all 18 slot byte+0 via `MEM_BU(0, S32(base+i*0x88))`
+(`[drain-slots]` already walks them; the S32 fix is in the source).
+Also:
 
-1. 32 consecutive bytes at `base` as hex + ASCII (`[drain-base]`).
-2. First 16 bytes of slot 0 (`base+0`) and slot 16 (`base+16*0x88`)
-   (`[drain-hdr] idx=0|16`).
-3. Enable existing `slot-alloc` via `ROGUESQ_LOG_VI_CALLERS=1` (no new
-   counter) so the live `allocateSongChannelArray` `new`/`count` is in
-   the same run.
+1. Always log `slot-sb` when `newb==0` (add `|| newb == 0` next to
+   `newb == 2` in `musyxRenderVoiceSamples` only).
+2. On the same drain-tick samples, print per-idx `cross_n` accumulated
+   since drain call=1 (`[drain-cross]`).
 
 Outcomes:
-- consecutive 32 at base is a C string → H-ascii-heap
-- 0x88 records show KSEG0 pointers / typed fields, byte+0 is a status
-  nibble → H-voice-records
-- slot-alloc count=15 at `0x801714D0` while ch=18, and slot-16 header
-  is not a record → H-count-desync
-- records look real, slot-sb never writes `0x02` at this base → H-never-keyed
+- some idxs have `cross_n=0` and byte=`0x02` through timeout → H-subset-live
+- render-end fires and slot-sb `new=0x00` is 0 at that dest → H-end-zero-lost
+- render-end then next slot-sb at that dest is `new=0x02` with later
+  `cross=0` → H-rekey-after-end
+- slot-sb `new=0x00` exists and the 18-byte vector still has `0x02` →
+  H-zero-unlogged / H-subset-live
 
-Positive control: `[drain-tick] call=1 iters=1 gate=0x01` still fires,
-plus at least one `[avf-gate] site=slot-alloc` before drain (the boot
-`0x8018D4A0 count=16` alloc). Keep `ROGUESQ_SPIN_YIELD=1`. Leave the 10M
-timeout in place.
+Positive control: `[drain-tick] call=1 iters=1 gate=0x01`, plus at
+least one `[avf-gate] site=slot-alloc` `0x8018D4A0 count=16` before
+drain. Keep `ROGUESQ_SPIN_YIELD=1` and `ROGUESQ_LOG_VI_CALLERS=1`.
 
-## Exact patch site
+## Exact patch sites
 
-`apply_s1976_drain_tick` in
-`/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-and the matching `[drain-slots]` block in `RecompiledFuncs/funcs_30.c`
-(SENTINEL is already applied — incremental edit, do not rerun full fixup).
+- `apply_s1976_drain_tick` / `[drain-slots]` in
+  `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
+  and `RecompiledFuncs/funcs_30.c` (S32 already applied — add
+  `[drain-cross]` only).
+- `musyxRenderVoiceSamples` slot-sb rate-limit in `funcs_24.c` /
+  `_s1927_slot_sb` (the `newb == 2` condition).
 
-Log tags: `[drain-base]`, `[drain-hdr]`.
+SENTINEL is applied — incremental edit, do not rerun full fixup.
 
 ## Exact test
 
 ```sh
-mkdir -p scratch/agent/s1978_drain_base
+mkdir -p scratch/agent/s1979_drain_cross
 env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VI_CALLERS=1 \
 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1978_drain_base 60 2
+zsh tools/probe.sh scratch/agent/s1979_drain_cross 60 2
 ```
-
-60s after hangar is enough: s1977 hit 10M / timeout well before that.
