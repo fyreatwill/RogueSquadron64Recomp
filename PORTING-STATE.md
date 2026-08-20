@@ -95075,3 +95075,70 @@ ledger; no new unevaluated verdict.
 H-start-end-triplet (loop length) and refutes H-loop-flag /
 H-rate-as-flag. Next discriminator: who should stop the looping
 hangar table before drain.
+
+## Session 1984 (2026-08-19) — dest-mapped hangar stops; MarkRetrigger is retrigger not key-off
+
+**Instrument.** Incremental `apply_s1984_stop_dest` (`RS64_S1984_STOP_DEST=1`).
+On the live store of `musyxStopVoice` (slot+1), `stopVoice`
+(`+0x11DD($a0)`), `deactivateVoice` (slot+0), and
+`stopVoiceMarkRetrigger` (slot+0), dump `[stop-dest] site= n=
+dest= idx= base= val= armed= hidx=` with the s1982 `-0x6908` /
+stride-136 map plus a hangar-base map onto `0x801714D0`. First 8
+always, then every mapped `idx<18`. At
+`drainAudioAndFinalizeSpeechBuffer` entry, one `[drain-stop-sum]`
+with per-site n / nmap / nhangar / last dest. No store changed.
+
+**Probe.** `scratch/agent/s1984_stop_dest/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 61653 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 25.9s #1486.
+
+Positive controls (same run): `[stop-dest] site=stopVoiceMarkRetrigger
+n=1 dest=0x8018D4A0 idx=0` (boot table); `[keyon-w40]` first 8;
+239 `[init-desc]`; `[drain-path] call=1 iters=1 unmap=0
+keyon_unmap=18480` through iters=10000000 `keyon_unmap=20482`;
+last alloc tickn=4 `0x801714D0 count=18`.
+
+**[drain-stop-sum] entry=1 calls=0.** musyxStopVoice n=0;
+stopVoice n=0; deactivateVoice n=0; stopVoiceMarkRetrigger n=165
+nmap=165 nhangar=84 last=`0x80171800` idx=6 base=`0x801714D0`.
+(The one `stopVoice` dump is after the 10M timeout, dest
+`0x80153420` unmapped, `armed=1`, val=4 — not a pre-drain stop.)
+
+**Timeline vs tickn=4.** MarkRetrigger 81 dests on boot
+`0x8018D4A0` (tickn=2 window), 84 on hangar `0x801714D0`. Of
+those 84, 8 fire after tickn=4 alloc (L45916) and before drain
+entry (L54378): idxs 3,4,6,8,9,10,11 (idx 9 twice). Each of
+those 8 is followed on the next log line by `[init-desc]` of the
+same idx, then `musyxRenderVoiceSamples` `slot-sb old=0x01
+new=0x02`. Last pre-drain event on every idx 0–17 is INIT, not
+STOP. Drain-path iters=1 still has slot+0 `0x02` on 16/18 idxs
+(5 and 12 already `0x00`).
+
+**Verdicts.**
+- H-stop-unmapped REFUTED for MarkRetrigger: dests map onto
+  both boot and hangar tables (165/165).
+- H-missing-pre-stop REFUTED as "zero stops after hangar alloc":
+  8 hangar dests fire in that window.
+- H-retrigger-not-keyoff SELECTED: MarkRetrigger zeros slot+0
+  and sets `+0x85=1`, then the same idx is re-inited from the
+  sample header (including loop length) and render writes `0x02`.
+  That is the retrigger path, not a song/BGM key-off.
+- H-drain-too-wide still open: `musyxStopVoice` / `deactivateVoice`
+  never run; looping BGM is live at drain because it was just
+  retriggered.
+
+s1983's "32/32 dests on boot, zero on hangar" was the s1927
+`slot-sb` rate-limit (`n<=32 || n%1000==0 || newb==2`); hangar
+stops were n=82–165 with `newb=0`.
+
+ORIGIN: `stopVoiceMarkRetrigger` retrigger (legitimate). No
+skip/guard landed.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned dest-map selects
+H-retrigger-not-keyoff and refutes H-stop-unmapped /
+H-missing-pre-stop for the four named sites. Next discriminator:
+remaining stop/release family plus `$ra` on MarkRetrigger.

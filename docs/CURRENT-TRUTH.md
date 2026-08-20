@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1983 (2026-08-19).
+detail. Reviewed through s1984 (2026-08-19).
 
 ## Current state
 
@@ -112,11 +112,20 @@ detail. Reviewed through s1983 (2026-08-19).
   rate. H-loop-flag / H-rate-as-flag REFUTED. Live drain voices
   are the looping ones; `bnez slot+0x40` is the legitimate
   loop-length skip. `ninitd=0`: that length is never cleared.
-  `stopVoiceMarkRetrigger` 32/32 dests on boot `0x8018D4A0`,
-  zero on hangar `0x801714D0`. `deactivateVoice` 0.
-  ORIGIN: sample-header loop length (legitimate). Drain waiting
-  on looping hangar BGM is correct given they were never stopped.
-  Timeout remains a diagnostic hatch. Default-off yield unchanged.
+  s1984 dest-mapped the four named stop sites: `stopVoiceMarkRetrigger`
+  165/165 mapped (81 boot `0x8018D4A0`, 84 hangar `0x801714D0`);
+  8 hangar dests fire after tickn=4 alloc and before drain, each
+  immediately followed by `musyxInitVoiceFromSample` of the same
+  idx then render `slot-sb old=0x01 new=0x02`. `musyxStopVoice` 0,
+  `deactivateVoice` 0; `stopVoice` n=1 after the 10M timeout
+  (dest `0x80153420` unmapped, `armed=1`). Slot+0 is still `0x02`
+  at drain because MarkRetrigger is the retrigger path (zero
+  status, `+0x85=1`, re-init), not a key-off. s1983's "zero on
+  hangar" was the s1927 first-32 `slot-sb` rate-limit.
+  ORIGIN: sample-header loop length (legitimate); MarkRetrigger
+  retrigger (legitimate). Drain waits on looping hangar BGM that
+  was just retriggered. Timeout remains a diagnostic hatch.
+  Default-off yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -234,20 +243,24 @@ detail. Reviewed through s1983 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1983: `desc+0x14` is loop length (`d14==d0c-d10` or 0).
-The skip is legitimate; drain waits because looping hangar voices
-were never stopped.
+Re-ranked s1984: MarkRetrigger dest-maps onto the hangar table but
+is retrigger (stop then same-idx INIT), not a key-off.
+`musyxStopVoice` / `deactivateVoice` never fire.
 
-1. **Hangar frame-freeze: who should stop looping voices before drain (s1983).**
-   Same-run controls: `[keyon-w40]` first 8, 256 `[init-desc]`,
-   `[drain-path] call=1 unmap=0`, last alloc `0x801714D0 count=18`,
-   256/256 inits match the loop-length identity, `d14==after`.
-   Drain is `jal 0x800B24C4` immediately after
-   `tickCraftSelectScreen` returns != `0x00FFFFFF` (generated
-   `drawRadarIcon` / menu overlay at `0x800C5EB8`).
-   `stopVoiceMarkRetrigger` never dest-maps onto `0x801714D0`.
-   Next: dest-map `musyxStopVoice` / `stopVoice` / `deactivateVoice`
-   / `stopVoiceMarkRetrigger` from hangar alloc through drain entry.
+1. **Hangar frame-freeze: remaining stop/release family (s1984).**
+   Same-run controls: `[stop-dest]` MarkRetrigger n=1 dest=`0x8018D4A0`
+   (boot, 32x-class positive control), 239 `[init-desc]`, `[keyon-w40]`
+   first 8, `[drain-path] call=1 unmap=0`, last alloc tickn=4
+   `0x801714D0 count=18`, `[drain-stop-sum] entry=1` with
+   MarkRetrigger n=165 nmap=165 nhangar=84.
+   H-stop-unmapped / H-missing-pre-stop REFUTED for the four named
+   sites. Next: dest-map the remaining stop/release family
+   (`stopVoiceByKey` `0x80086914`, `stopVoiceByHandleLocked`
+   `0x800894F0`, `stopVoicesByHandle` `0x8008DA98`,
+   `stopVoiceSlotSynced` `0x8009B268`, `stopVoiceByHandle`
+   `0x8009B33C`, `musyxStartVoiceRelease` `0x80092274`,
+   `beginVoiceFadeRelease` `0x80092490`) plus `$ra` on the existing
+   MarkRetrigger dump, hangar alloc through drain entry.
    Use `S32(guest_addr)` in any `MEM_*` dump.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
@@ -416,6 +429,13 @@ Most recent, still load-bearing for the next unit:
   `d00` low-16. Believable because the live values sat in a
   16-bit scalar band that could have been either a rate or a
   length.
+- s1983 "`stopVoiceMarkRetrigger` 32/32 dests on boot `0x8018D4A0`,
+  zero on hangar `0x801714D0`" and "voices were never stopped" are
+  superseded by s1984 — 84 hangar dests (n=82–165) were hidden by
+  the s1927 `slot-sb` rate-limit (`n<=32 || n%1000==0 || newb==2`;
+  MarkRetrigger writes `newb=0`). The 8 post-tickn=4 hangar dests
+  each re-init the same idx before drain. Believable because the
+  first 32 dumps were all boot-table.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -427,9 +447,9 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1983 drain-slot identity / subset-live / skip-cursor /
-slot+0x40-skip / init-writer / loop-length results are in
-`PORTING-STATE.md` directly.
+and s1978–s1984 drain-slot identity / subset-live / skip-cursor /
+slot+0x40-skip / init-writer / loop-length / stop-dest-retrigger
+results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a
