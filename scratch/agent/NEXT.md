@@ -1,41 +1,39 @@
-# NEXT work unit (s2040)
+# NEXT work unit (s2041)
 
-HYPOTHESIS-ID: m5-callback-route-c88-control
+HYPOTHESIS-ID: m5-callback-side-pcm-witness
 
 ## Work unit
 
-Build once, then run a same-build concurrent route comparison: one
-`ROGUESQ_M5_C88_VALUE=1` arm and one unset/default arm. Use forced LLE, opt-in
-Factor 5 audio, spin yield, `ROGUESQ_LOG_ALL=1`, and the eleven width-640
-Starts that previously reached the target route. This is route qualification
-for the callback witness, not a PCM interpretation or a writer change. Keep
-the retail-value store opt-in and unchanged. Do not interpret any bridge or
-PCM row unless the target VI anchors and positive controls are live.
+Build once, then run one fresh `ROGUESQ_M5_C88_VALUE=1` arm using forced LLE,
+opt-in Factor 5 audio, spin yield, `ROGUESQ_LOG_ALL=1`, and the eleven
+width-640 Start schedule. This is the callback-side PCM witness. Keep the
+retail-value writer unchanged and treat the C88 value as an opt-in route arm.
+Do not interpret bridge or PCM rows unless the run has the title and hangar VI
+anchors plus the `s2006-svc` positive control and live gate/task controls.
 
 ## Competing hypotheses and discriminator
 
-- **H1 — C88=1 is the route-specific blocker:** the unset arm reaches title
-  and/or hangar with live controls while the C88=1 arm remains at VI 640. The
-  callback arm is not yet runnable; the next boundary is the C88 route branch.
-- **H2 — C88=1 is required for the route:** the C88=1 arm reaches a target
-  anchor while unset remains at VI 640, with matching preflight and service
-  controls. The callback arm is phase-valid and can be rerun as the next M5
-  unit.
-- **H3 — common route/focus failure:** both arms remain at VI 640 despite
-  `input=ok visual=ok`, post-640 host Start edges, and 24/24 `s2006-svc`
-  entry/exit controls. No PCM conclusion is allowed; the next unit must fix
-  the route or focus wrapper.
-- **H4 — s2039 was intermittent:** both arms reach their target anchors with
-  the required controls. The prior H4 result was not reproducible, and the
-  callback-side PCM witness becomes the next unit.
+- **H1 — upstream-valid PCM:** phase-valid `[pcm-bridge]` rows carry nonzero
+  bytes and the paired `pcm-sanity` rows include `all_zero=0`. The task/image
+  path is producing usable samples; the next boundary is AI/device ordering.
+- **H2 — zero payload at the callback:** phase-valid bridge rows fire but have
+  `nz=0`/all-zero payloads, with `pcm-sanity all_zero=1`. The callback is
+  reached, but the task/image ABI or upstream sample production is wrong.
+- **H3 — device-side boundary:** phase-valid bridge rows carry nonzero data,
+  but all paired `pcm-sanity` rows remain zero. The remaining boundary is
+  after the callback, in AI submission or device ordering.
+- **H4 — guest submit/queue boundary:** title and hangar anchors, the 24/24
+  service control, gate-one rows, and real audio-task rows are live, but no
+  phase-valid bridge row appears. The guest AI-submit/queue path is the next
+  boundary.
+- **H5 — route failure:** the target anchors or positive controls are absent.
+  This is a route result; it cannot select any PCM hypothesis.
 
-The discriminator is one same-build table for both arms: preflight status;
-width-relative host Start edges; VI transitions at `0x00790400` and
-`0x006AB400`; `s2006-svc` entry/exit; `reapplyDisplayMode` writer and
-raw-gate/gate-1 rows; and real `audtask-dispatch` rows. A target bridge row
-is useful only after those controls pass. Concurrent GUI arbitration remains
-a possible H3 confound and must be reported, not silently treated as a C88
-result.
+The discriminating table is one run: verdict phase anchors and preflight;
+`s2006-svc` entry/exit; phase-valid `reapplyDisplayMode` writer and raw/gate-1
+rows; real `audtask-dispatch`; then paired `[pcm-bridge]` and `[pcm-sanity]`
+rows. Counts and fields must be phase-scoped. A run-lifetime PCM null is not
+evidence for H2-H4.
 
 ## Commands
 
@@ -43,27 +41,18 @@ result.
 cmake --build build --config Debug --target RogueSquadron64Recomp
 
 set +e
-env REGRESS_SECS=150 REGRESS_INTERVAL=0.6 REGRESS_REQUIRE_VISUAL=1 \
+env REGRESS_SECS=180 REGRESS_INTERVAL=0.6 REGRESS_REQUIRE_VISUAL=1 \
 REGRESS_KEYS='640@1:start 640@3:start 640@5:start 640@7:start 640@9:start 640@11:start 640@13:start 640@15:start 640@17:start 640@19:start 640@21:start' \
-REGRESS_LABEL=s2040_c88_one \
-ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
-ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 \
+REGRESS_LABEL=s2041_pcm \
+ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 \
+ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 \
+ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 \
 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 \
-  zsh tools/regress.sh scratch/agent/s2040_c88_one 150 > scratch/agent/s2040_c88_one_driver.log 2>&1 &
-p_one=$!
-env -u ROGUESQ_M5_C88_VALUE REGRESS_SECS=150 REGRESS_INTERVAL=0.6 REGRESS_REQUIRE_VISUAL=1 \
-REGRESS_KEYS='640@1:start 640@3:start 640@5:start 640@7:start 640@9:start 640@11:start 640@13:start 640@15:start 640@17:start 640@19:start 640@21:start' \
-REGRESS_LABEL=s2040_c88_unset \
-ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
-ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 \
-ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 \
-  zsh tools/regress.sh scratch/agent/s2040_c88_unset 150 > scratch/agent/s2040_c88_unset_driver.log 2>&1 &
-p_unset=$!
-wait $p_one; r_one=$?
-wait $p_unset; r_unset=$?
-print "c88_one_rc=$r_one c88_unset_rc=$r_unset"
+  zsh tools/regress.sh scratch/agent/s2041_pcm 180 > scratch/agent/s2041_pcm_driver.log 2>&1
+rc=$?
+print "probe_rc=$rc"
 ```
 
-After both runs, use only bounded `grep -c`, `grep -n ... | head/tail`,
-`tail`, and `verdict.json` reads. Compare target phases only; a scorer FAIL
-caused by a final-key heuristic does not override live anchors and controls.
+After the run, read `scratch/agent/s2041_pcm/verdict.json` and use only
+bounded `grep -c`, `grep -n ... | head/tail`, and `tail` on `run.log`. Record
+the selected row table before interpreting any PCM result.

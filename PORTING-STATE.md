@@ -97582,3 +97582,40 @@ comparison under the eleven-Start schedule. It must not interpret bridge or
 PCM rows unless the target VI anchors and positive controls are live.
 
 ORIGIN: no writer or value was changed; this iteration added no mitigation.
+
+## Session 2040 (2026-08-20) — C88 route pair reached different target depth
+
+`HYPOTHESIS-ID: m5-callback-route-c88-control`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 51,297 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. One fresh
+same-build pair used forced LLE, opt-in Factor 5 audio, spin yield,
+`ROGUESQ_LOG_ALL`, the existing gate/PCM/service witnesses, and the eleven
+width-640 Start schedule.
+
+The `ROGUESQ_M5_C88_VALUE=1` arm reached title VI `1024 @ 0x00790400` at
+12.6s and hangar VI `512 @ 0x006AB400` at 20.9s. Its positive service control
+was live at 24/24 entry/exit rows, with 109 real audio-task dispatch rows.
+The phase-valid `reapplyDisplayMode` writer reported `0 -> 1` in both target
+phases; the raw consumer produced gate-one rows (269 total), and the arm
+emitted 45 callback bridge rows. The harness capture was unavailable under
+concurrent GUI arbitration, but the VI transitions and phase-gated log rows
+were present.
+
+The unset/default arm reached title VI `1024 @ 0x00790400` at 12.3s but did
+not reach hangar during the 150-second run. It also passed the 24/24 service
+entry/exit control and emitted 109 audio-task rows. Its phase-valid writer
+reported `0 -> 0`; the raw consumer produced 511 gate-zero skip rows and no
+gate-one row. Both verdicts warned that the final scheduled key had no later
+VI transition, but each arm's relevant title transition preceded that key.
+There were no crash, abort, missing-function, or deferred-DL markers.
+
+This does not select the four planned route hypotheses: it is another inverse
+single-source port split, reproducing the s2038 shape with the C88 arm
+reaching hangar and the unset arm reaching title only. Concurrent GUI
+arbitration and the unset arm's missing hangar anchor leave causal writer
+interpretation open. The C88=1 arm is nevertheless phase-valid for the next
+callback-side PCM witness; bridge and PCM contents were not interpreted here.
+
+ORIGIN: no writer or value was changed; `ROGUESQ_M5_C88_VALUE=1` remained an
+opt-in test arm and this iteration added no mitigation.

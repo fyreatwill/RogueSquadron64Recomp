@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2039 (2026-08-20).
+for session detail. Reviewed through s2040 (2026-08-20).
 
 ## Current state
 
@@ -151,6 +151,15 @@ for session detail. Reviewed through s2039 (2026-08-20).
   evidence for H4 route failure, single-source port evidence; it does not
   select a PCM null or make the logging overhead the cause. The next M5 unit
   must compare C88=1 against the unset arm under the longer route schedule.
+- s2040 completed that same-build eleven-Start comparison. The C88=1 arm
+  reached title VI 1024 and hangar VI 512, passed the 24/24 service control,
+  and produced `0 -> 1` reapply-writer rows plus gate-one consumer rows. The
+  unset arm reached title VI 1024 but not hangar, passed the same service
+  control, and produced `0 -> 0` plus 511 gate-zero skip rows. Both arms
+  emitted real audio-task rows; the result is another inverse, single-source
+  port split with concurrent GUI arbitration unresolved. It does not select
+  the planned route hypotheses, but the C88=1 arm is phase-valid for the
+  callback-side PCM witness.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -295,26 +304,22 @@ for session detail. Reviewed through s2039 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 callback route qualification.** The s2039 C88=1 arm failed before
-   title despite positive controls, and removing `ROGUESQ_LOG_ALL` did not
-   change that route. Run the C88=1 and unset/default arms from one fresh
-   build with the longer eleven-Start schedule. If unset reaches a target
-   while C88=1 stays at VI 640, the C88 value is the route discriminator; if
-   both stay at VI 640, the common route/focus recipe is the blocker; if both
-   reach targets, the s2039 H4 result was intermittent and the callback
-   witness can be rerun. Keep all PCM conclusions gated on target anchors.
-2. **M5 callback-side PCM witness.** Once the C88=1 arm is phase-valid, use
-   forced LLE, opt-in Factor 5 audio, spin yield, and `ROGUESQ_LOG_ALL=1` so
-   the existing `[pcm-bridge]` census is live, while retaining
-   `ROGUESQ_LOG_PCM_SANITY=1`, the gate/writer witness, and the `s2006-svc`
-   control. A bridge row with nonzero bytes plus `all_zero=0` selects
-   upstream-valid PCM and moves the question to AI/device ordering; bridge
-   rows with `nz=0` select an upstream task/ABI problem; no bridge rows with
-   live gate/task controls select the guest AI-submit/queue boundary.
-3. **M5 gate-writer value causality.** Keep `ROGUESQ_M5_C88_VALUE=1` opt-in
+1. **M5 callback-side PCM witness.** The s2040 C88=1 arm is phase-valid
+   through title and hangar with live service, gate, and audio-task controls.
+   Build once and run that arm with forced LLE, opt-in Factor 5 audio, spin
+   yield, `ROGUESQ_LOG_ALL=1`, `ROGUESQ_LOG_PCM_SANITY=1`, the existing
+   gate/writer witness, and the 24/24 `s2006-svc` control. A phase-valid
+   bridge row with nonzero bytes plus `all_zero=0` selects upstream-valid PCM
+   and moves the question to AI/device ordering; bridge rows with `nz=0`
+   select an upstream task/ABI problem; no bridge rows with live gate/task
+   controls select the guest AI-submit/queue boundary. If the arm again
+   fails before a target anchor, record route failure and do not interpret
+   PCM.
+2. **M5 gate-writer value causality.** Keep `ROGUESQ_M5_C88_VALUE=1` opt-in
    and the retail-value writer unchanged. The phase-valid s2038 split is
-   still single-source because both arms shared GUI focus; revisit only with
-   a genuinely focus-isolated discriminator, not another reactive store
+   now reproduced in s2040, but remains single-source because both arms
+   shared GUI focus and the unset arm lacked the hangar anchor. Revisit only
+   with a genuinely focus-isolated discriminator, not another reactive store
    reversal.
 4. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
@@ -357,7 +362,10 @@ post-640 controls, the unset arm reached title, and C88=1 reached hangar with
 the matching `0 -> 0`/gate-zero versus `0 -> 1`/gate-one table. The unset
 scorer FAIL is therefore not an H4 selection. The split is reproducible as a
 port observation but not yet a causal store explanation because concurrent GUI
-arbitration remains live; the next boundary is the callback-side PCM census.
+arbitration remains live. s2040 reproduced the same shape with both arms
+passing 24/24 service controls, C88=1 reaching both target phases, and unset
+reaching title only. The next boundary is the callback-side PCM census, using
+the phase-valid C88=1 arm.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -647,6 +655,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   eleven-Start arms all stopped at VI 640 with live service/audio controls;
   the no-`LOG_ALL` control stopped there too. This leaves the callback
   question unmeasured and promotes the C88=1 versus unset route comparison.
+- s2040 supersedes s2039's immediate route-retry wording. The retry was
+  believable because all three s2039 C88=1 attempts stopped at VI 640 with
+  live pre-target controls. The fresh same-build pair instead reached both
+  target phases in the C88=1 arm and title in the unset arm, with the expected
+  writer/gate split, so the C88=1 callback witness is runnable again. The
+  inverse split remains single-source and GUI-focus confounded; it is not a
+  causal authorization to change the writer.
 
 ## Evidence ledger summary
 
@@ -715,9 +730,11 @@ attempts: the five-Start arm, its 90-second retry, and the eleven-Start arm
 all stayed at VI 640 despite live input/visual preflights, 24/24 service
 controls, and real audio-task dispatch. The same five-Start route with
 `ROGUESQ_LOG_ALL` unset also stayed at VI 640, so logging volume is not the
-complete explanation. This is a single-source H4 route result; the next
-discriminator is a same-build C88=1 versus unset/default comparison under
-the eleven-Start schedule.
+complete explanation. s2040's same-build comparison then reached title and
+hangar in the C88=1 arm and title in the unset arm, with 24/24 service
+controls in both and `0 -> 1`/gate-one versus `0 -> 0`/511 gate-zero rows.
+This reproduces the inverse single-source port split without selecting a
+causal route hypothesis; the C88=1 callback-side PCM witness is next.
 
 ## Method and safety rules
 
