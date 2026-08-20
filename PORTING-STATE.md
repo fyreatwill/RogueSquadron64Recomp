@@ -98778,3 +98778,37 @@ ORIGIN: the host writes the `0xF80..0xF8F` canary; generated
 `factor5_ucode_b` loops at `L_146C`, `L_1D24`, and `L_1F40` are the guest-side
 writers. The canary result is an observation of that host/guest boundary, not
 a mitigation or permission to remove the reservation.
+
+## Session 2071 (2026-08-20) — value-witnessed the exact E50 retail span
+
+Ground truth ran before changing the oracle. The existing corrected Rice
+witness passed its whole-RDRAM positive control with 57,758 writes, recorded
+47,758 writes in `0x1931F0..0x194E70`, and reached title VI `1024 @
+0x00790400` and hangar VI `512 @ 0x006AB400`.
+
+The first post-store implementation was invalid: it sampled before the target
+VI phase and left the retail run at VI 320 with one target hit and an invalid
+`0xFFFFFFFF` read. The fixed implementation phase-gated sampling to title or
+hangar, converted physical RDRAM addresses to KSEG0 for post-step reads, and
+bounded sampling. The final targeted run passed the positive control with
+57,552 whole-RDRAM writes, reached both target VIs, and recorded 47,552 exact
+E50 writes. It collected 401 post-store word samples: 255 were zero; the
+nonzero classes were metadata/control-like values including RDRAM pointers,
+`0xCDCDCD`, `0xFFD6`, and small offsets. The final range snapshot contained
+5,745 nonzero bytes and FNV `0xA4EF5852`. The existing writer-PC histogram
+again showed `0x8008F7D4`, `0x80091374`, and `0x8008FB64/68/78`, but the
+bounded post-value subtable did not attach a value to those named PCs. The
+final snapshot changed across invasive sampler retries, so it is not treated
+as stable PCM ground truth.
+
+Against s2070's port-side table, where all 1,068 exact-E50 rows per canary arm
+were zero-only with FNV `0x25E26BC5`, this refutes **H-E50-PortPayloadMatch**
+and favors **H-E50-RetailIntermediate** at bounded value scope. It does not
+prove that the retail snapshot is final PCM, and it leaves the named-audio-PC
+payload and exact E50 output role open. No runtime, task field, output route,
+guest behavior, or mitigation changed.
+
+ORIGIN: the retail writes are the named MusyX/audio-region guest writers;
+the oracle's post-step reader is host-side observation only. The port's zero
+E50 payload is produced by the generated image-task path. This diagnostic does
+not authorize routing output, removing the canary, or changing a task field.

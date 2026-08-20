@@ -46,6 +46,9 @@
 
 #define MAX_WATCHES 64
 #define MAX_WRITER_PCS 128
+#define MAX_POST_VALUE_HIST 64
+#define MAX_POST_VALUE_PCS 512
+#define MAX_POST_VALUE_SAMPLES 256
 
 static void *g_core;
 static double g_t0;
@@ -93,6 +96,34 @@ static long g_hit_cap = 200;          /* stop logging after this many, keep runn
 static unsigned int g_detail_watch_mask;
 static int g_first_watch = -1;
 static int g_pc_hist_watch = -1;
+static int g_post_value_watch = -1;
+static uint32_t g_post_value_requested_pc[32];
+static int g_n_post_value_requested_pc;
+struct post_value_entry {
+    uint32_t value;
+    long n;
+};
+struct post_value_pc_entry {
+    uint32_t pc;
+    long samples;
+    long zero_words;
+    long nonzero_words;
+};
+static struct post_value_entry g_post_value_hist[MAX_POST_VALUE_HIST];
+static struct post_value_pc_entry g_post_value_pc[MAX_POST_VALUE_PCS];
+static int g_n_post_value_hist;
+static int g_n_post_value_pc;
+static long g_post_value_samples;
+static long g_post_value_overflow;
+static long g_post_value_pc_overflow;
+static int g_post_value_pending;
+static int g_post_value_armed;
+static uint32_t g_post_value_addr;
+static uint32_t g_post_value_pc_addr;
+static uint32_t g_post_snapshot_fnv;
+static unsigned long g_post_snapshot_nonzero;
+static unsigned long g_post_snapshot_bytes;
+static int g_post_snapshot_valid;
 static int g_verbose;
 static int g_watches_armed;
 static int g_positive_watch_removed;
@@ -141,6 +172,115 @@ static void count_writer_pc(int watch, uint32_t pc)
     } else {
         g_writer_pc_overflow[watch]++;
     }
+}
+
+static void count_post_value(uint32_t pc, uint32_t value)
+{
+    int i, found = 0;
+    g_post_value_samples++;
+    for (i = 0; i < g_n_post_value_hist; i++) {
+        if (g_post_value_hist[i].value == value) {
+            g_post_value_hist[i].n++;
+            found = 1;
+            break;
+        }
+    }
+    if (!found && g_n_post_value_hist < MAX_POST_VALUE_HIST) {
+        g_post_value_hist[g_n_post_value_hist].value = value;
+        g_post_value_hist[g_n_post_value_hist].n = 1;
+        g_n_post_value_hist++;
+    } else if (!found) {
+        g_post_value_overflow++;
+    }
+    for (i = 0; i < g_n_post_value_pc; i++) {
+        if (g_post_value_pc[i].pc == pc) {
+            g_post_value_pc[i].samples++;
+            if (value == 0)
+                g_post_value_pc[i].zero_words++;
+            else
+                g_post_value_pc[i].nonzero_words++;
+            return;
+        }
+    }
+    if (g_n_post_value_pc < MAX_POST_VALUE_PCS) {
+        g_post_value_pc[g_n_post_value_pc].pc = pc;
+        g_post_value_pc[g_n_post_value_pc].samples = 1;
+        g_post_value_pc[g_n_post_value_pc].zero_words = value == 0;
+        g_post_value_pc[g_n_post_value_pc].nonzero_words = value != 0;
+        g_n_post_value_pc++;
+    } else {
+        g_post_value_pc_overflow++;
+    }
+}
+
+static int post_value_pc_seen(uint32_t pc)
+{
+    int i;
+    for (i = 0; i < g_n_post_value_pc; i++) {
+        if (g_post_value_pc[i].pc == pc)
+            return 1;
+    }
+    return 0;
+}
+
+static int post_value_pc_requested(uint32_t pc)
+{
+    int i;
+    for (i = 0; i < g_n_post_value_requested_pc; i++) {
+        if (g_post_value_requested_pc[i] == pc)
+            return 1;
+    }
+    return 0;
+}
+
+static void add_post_value_pcs(const char *arg)
+{
+    char *copy = strdup(arg);
+    char *tok, *save = NULL;
+    if (!copy)
+        exit(1);
+    for (tok = strtok_r(copy, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
+        unsigned int pc;
+        if (g_n_post_value_requested_pc >= 32 || sscanf(tok, "%x", &pc) != 1) {
+            fprintf(stderr, "[oracle] bad --post-value-pc '%s'\n", tok);
+            free(copy);
+            exit(2);
+        }
+        g_post_value_requested_pc[g_n_post_value_requested_pc++] = pc;
+    }
+    free(copy);
+}
+
+static uint32_t debug_rdram_addr(uint32_t physical)
+{
+    return 0x80000000u | (physical & 0x1FFFFFFFu);
+}
+
+static void summarize_post_snapshot(int watch)
+{
+    uint32_t fnv = 2166136261u;
+    unsigned long nonzero = 0;
+    unsigned long bytes = 0;
+    uint32_t addr;
+
+    if (watch < 0 || watch >= g_nwatch)
+        return;
+    for (addr = g_watch[watch].start; addr + 4 <= g_watch[watch].end; addr += 4) {
+        uint32_t value = pDebugMemRead32(debug_rdram_addr(addr));
+        unsigned int shift;
+        for (shift = 24; ; shift -= 8) {
+            unsigned int byte = (value >> shift) & 0xFFu;
+            fnv = (fnv * 16777619u) ^ byte;
+            nonzero += byte != 0;
+            bytes++;
+            if (shift == 0)
+                break;
+        }
+    }
+    g_post_snapshot_fnv = fnv;
+    g_post_snapshot_nonzero = nonzero;
+    g_post_snapshot_bytes = bytes;
+    g_post_snapshot_valid = 1;
 }
 static int g_voice_base_write_seen;
 static int g_voice_base_read_after_write_seen;
@@ -237,6 +377,15 @@ static void dbg_update(unsigned int pc)
         return;
     }
 
+    if (g_post_value_pending) {
+        g_post_value_pending = 0;
+        count_post_value(g_post_value_pc_addr,
+                         pDebugMemRead32(debug_rdram_addr(g_post_value_addr & ~3u)));
+        pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
+        pDebugStep();
+        return;
+    }
+
     pDebugBreakpointTriggeredBy(&flags, &accessed);
     access_flags = flags & (M64P_BKP_FLAG_READ | M64P_BKP_FLAG_WRITE);
 
@@ -252,6 +401,16 @@ static void dbg_update(unsigned int pc)
                 g_watch[i].write_hits++;
             if (g_pc_hist_watch == i && (access_flags & M64P_BKP_FLAG_WRITE))
                 count_writer_pc(i, pc);
+            if (g_post_value_watch == i && (access_flags & M64P_BKP_FLAG_WRITE) &&
+                g_post_value_armed &&
+                (g_post_value_samples < MAX_POST_VALUE_SAMPLES ||
+                 (!post_value_pc_seen(pc) &&
+                  (g_n_post_value_pc < MAX_POST_VALUE_PCS ||
+                   post_value_pc_requested(pc))))) {
+                g_post_value_pending = 1;
+                g_post_value_addr = accessed;
+                g_post_value_pc_addr = pc;
+            }
         }
         if ((g_watch[i].flags & M64P_BKP_FLAG_EXEC) &&
             pc >= g_watch[i].start && pc < g_watch[i].end) {
@@ -300,10 +459,16 @@ static void dbg_update(unsigned int pc)
         fflush(stdout);
     }
 
-    pDebugSetRunState(g_voice_base_post_step_pending
-                      ? M64P_DBG_RUNSTATE_STEPPING
-                      : M64P_DBG_RUNSTATE_RUNNING);
-    pDebugStep();
+    if (g_voice_base_post_step_pending) {
+        pDebugSetRunState(M64P_DBG_RUNSTATE_STEPPING);
+        pDebugStep();
+    } else if (g_post_value_pending) {
+        pDebugSetRunState(M64P_DBG_RUNSTATE_STEPPING);
+        pDebugStep();
+    } else {
+        pDebugSetRunState(M64P_DBG_RUNSTATE_RUNNING);
+        pDebugStep();
+    }
 }
 
 /* One call per vertical interrupt = one displayed frame on real hardware.
@@ -376,6 +541,14 @@ static void dbg_vi(void)
             g_last_pad = w1;
             fflush(stdout);
         }
+    }
+
+    if (g_post_value_watch >= 0) {
+        width = pDebugMemRead32(VI_WIDTH_ADDR);
+        origin = pDebugMemRead32(VI_ORIGIN_ADDR);
+        if ((width == 1024 && origin == 0x00790400u) ||
+            (width == 512 && origin == 0x006AB400u))
+            g_post_value_armed = 1;
     }
 
     if (!g_vi_trace) return;
@@ -666,6 +839,8 @@ static void usage(void)
         "  --detail-watch N      always log hits for watch index N\n"
         "  --first-watch N       log the first hit for watch index N\n"
         "  --pc-hist-watch N     summarize writer PCs for watch index N\n"
+        "  --post-value-watch N  sample post-store words and final range summary\n"
+        "  --post-value-pc A[,B] force one post-store sample for writer PCs\n"
         "  --core PATH           libmupen64plus.dylib built with DEBUGGER=1\n"
         "  --rsp PATH            RSP plugin (default homebrew mupen64plus-rsp-hle)\n"
         "  --datadir PATH        dir holding mupen64plus.ini (default homebrew share dir)\n"
@@ -738,6 +913,10 @@ int main(int argc, char **argv)
             g_first_watch = atoi(argv[++i]);
         else if (!strcmp(argv[i], "--pc-hist-watch") && i + 1 < argc)
             g_pc_hist_watch = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--post-value-watch") && i + 1 < argc)
+            g_post_value_watch = atoi(argv[++i]);
+        else if (!strcmp(argv[i], "--post-value-pc") && i + 1 < argc)
+            add_post_value_pcs(argv[++i]);
         else if (!strcmp(argv[i], "--watch-write") && i + 1 < argc)
             add_watch(argv[++i], M64P_BKP_FLAG_WRITE, "write");
         else if (!strcmp(argv[i], "--watch-read") && i + 1 < argc)
@@ -880,6 +1059,27 @@ int main(int argc, char **argv)
 
     printf("[oracle] done: %ld hit(s) in %.1fs wall, %ld VI (~%.1fs emulated)\n",
            g_hits, now_s() - g_t0, g_vis, g_vis / 60.0);
+    if (g_post_value_watch >= 0 && g_post_value_watch < g_nwatch) {
+        int j;
+        summarize_post_snapshot(g_post_value_watch);
+        printf("[oracle] post-value watch=%d range=[0x%08x,0x%08x) samples=%ld unique=%d overflow=%ld\n",
+               g_post_value_watch, g_watch[g_post_value_watch].start,
+               g_watch[g_post_value_watch].end, g_post_value_samples,
+               g_n_post_value_hist, g_post_value_overflow);
+        for (j = 0; j < g_n_post_value_hist; j++)
+            printf("[oracle] post-value value=0x%08x n=%ld\n",
+                   g_post_value_hist[j].value, g_post_value_hist[j].n);
+        for (j = 0; j < g_n_post_value_pc; j++)
+            printf("[oracle] post-value-pc pc=0x%08x samples=%ld zero=%ld nonzero=%ld\n",
+                   g_post_value_pc[j].pc, g_post_value_pc[j].samples,
+                   g_post_value_pc[j].zero_words, g_post_value_pc[j].nonzero_words);
+        if (g_post_value_pc_overflow)
+            printf("[oracle] post-value-pc overflow=%ld\n", g_post_value_pc_overflow);
+        if (g_post_snapshot_valid)
+            printf("[oracle] post-value snapshot bytes=%lu nonzero=%lu fnv=0x%08x\n",
+                   g_post_snapshot_bytes, g_post_snapshot_nonzero,
+                   g_post_snapshot_fnv);
+    }
     for (int i = 0; i < g_nwatch; i++)
         printf("[oracle] watch %s [0x%08x,0x%08x): %ld hit(s), %ld read(s), %ld write(s)\n",
                g_watch[i].label, g_watch[i].start, g_watch[i].end,

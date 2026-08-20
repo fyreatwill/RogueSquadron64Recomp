@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2070 (2026-08-20).
+for session detail. Reviewed through s2071 (2026-08-20).
 
 ## Current state
 
@@ -134,6 +134,18 @@ for session detail. Reviewed through s2070 (2026-08-20).
   The A/B and task result are single-source port evidence; the oracle is the
   independent route/E50-write witness. Default canary prefill, task fields,
   dispatch, routing, and guest behavior remain unchanged.
+- s2071's corrected Rice oracle value witness passed the whole-RDRAM control
+  with 57,552 writes, reached title VI `1024 @ 0x00790400` and hangar VI
+  `512 @ 0x006AB400`, and recorded 47,552 exact-E50 writes. Its bounded
+  post-store table had 401 samples, 255 zero words, and nonzero
+  metadata/control-like values including `0x8019...`, `0x8006...`,
+  `0xCDCDCD`, and `0xFFD6` families; the final range snapshot had 5,745
+  nonzero bytes and FNV `0xA4EF5852`. Named retail audio writers still fired,
+  but the bounded post-store table did not attach a value to those named PCs.
+  Against s2070's 1,068-per-arm port E50 rows, all zero-only with FNV
+  `0x25E26BC5`, this refutes H-E50-PortPayloadMatch and favors
+  H-E50-RetailIntermediate at bounded value scope. It does not prove the
+  final snapshot is PCM or close the exact E50 output role.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -256,12 +268,16 @@ are not active work items.
    H-ImageTaskAbiMismatch at live contract scope, and s2070 selects
    H-CanaryObserver at the canary output scope: exact E50 payloads and PCM
    joins are unchanged by canary-off, but every image task still exits `Broke`
-   with zero exact-E50 payload. The next discriminator is an independent
-   retail payload-value witness for `0x1931F0..0x194E70`, joined to its writer
-   PCs and the port's exact E50 FNV/nonzero table. Do not route output, reverse
-   a task field, add a guard, remove the canary reservation, or change guest
-   behavior from ownership alone. Keep the retail writer, C88 value,
-   wait/slot guards, and default dispatch unchanged.
+   with zero exact-E50 payload. s2071's independent retail value witness
+   refutes a direct match to the port's zero-only E50 class and favors an
+   intermediate/metadata interpretation at bounded value scope, but its
+   post-store values did not reach the named audio PCs. The next discriminator
+   is a phase-gated sampler that captures one post-store value specifically at
+   `0x8008F7D4`, `0x80091374`, and `0x8008FB64/68/78`, with the same-run
+   whole-RDRAM and VI controls. Do not route output, reverse a task field, add
+   a guard, remove the canary reservation, or change guest behavior from
+   ownership alone. Keep the retail writer, C88 value, wait/slot guards, and
+   default dispatch unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -436,6 +452,17 @@ rows had the same `Broke` result but different canary comparisons and DMEM
 change counts; the missing E50 rows, mostly-zero PCM, and odd-ROM-DMA abort
 leave all three canary hypotheses pending until the full C88=1 recipe is run.
 
+s2070 then supplied the full C88=1 tuple and selected H-CanaryObserver at
+output-contract scope: canary-off did not improve the image task's `Broke`
+result, exact-E50 payload, or PCM joins. The port task ABI and zero-payload
+origin remained open. s2071's corrected retail oracle route independently
+passed both VI anchors and the whole-RDRAM control, and its exact-E50
+post-store sample differed from the port's zero-only class, but the bounded
+value table was dominated by zero and metadata/control words and did not
+capture values at the named audio PCs. This favors H-E50-RetailIntermediate at
+bounded value scope without proving the final snapshot's role; no output
+routing or guest behavior change is authorized.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -579,6 +606,15 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   refuted and H-CanaryObserver is selected at this scope. The task ABI and
   zero-payload `Broke` origin remain open; the selection does not authorize
   removing the reservation or changing output routing.
+- s2071 supersedes the wording that exact-E50 retail ownership alone could
+  support a final-output interpretation. That wording was believable because
+  s2068 attached named MusyX PCs to the exact span, while s2070 supplied only
+  the port's zero-only value class. The corrected, positive-controlled retail
+  witness reached both target VIs and produced a bounded post-store table
+  dominated by zero and metadata/control words, with a nonzero final snapshot
+  that was not stable across the invasive sampler retries. It refutes a direct
+  port-payload match and favors H-E50-RetailIntermediate at bounded value
+  scope, but leaves named-audio-PC payload values and the final E50 role open.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -625,17 +661,15 @@ port both independently reach both target anchors, so this is not a
 retail-route absence.
 s2069 added a host canary A/B and source-span witness but was recipe-incomplete
 for E50 because C88=1 was unset; the task ABI, canary interpretation, and
-complete playback remain open pending the full tuple.
-
-s2070 supplied that tuple and selected H-CanaryObserver at output-contract
-scope. The oracle independently passed the whole-RDRAM control, printed both
-target route anchors, and saw 47,741 writes in the exact E50 envelope. The
-port A/B had 2,855 rows per arm, identical `exit=1`, zero-only identical E50
-payloads, and title/hangar PCM joins with no canary-off improvement. The
-canary-on/off `dmem_changed` difference is prefill-relative and not a valid
-output discriminator; the task ABI, `Broke` edge, and complete playback remain
-open. This is single-source port A/B evidence paired with the independent
-retail route/write witness.
+complete playback remain open pending the full tuple. s2070 supplied that
+tuple and selected H-CanaryObserver: canary-off left `Broke`, exact-E50
+payload, and PCM output unchanged. s2071 then ran the corrected retail
+post-store value witness with the whole-RDRAM and VI controls. It recorded
+57,552 whole-RDRAM writes, 47,552 exact-E50 writes, 401 bounded post-store
+samples, 255 zero words, and a final snapshot of 5,745 nonzero bytes with FNV
+`0xA4EF5852`; the named audio-PC value join remained absent. This refutes
+H-E50-PortPayloadMatch and favors H-E50-RetailIntermediate at bounded value
+scope, while leaving exact audio-PC payload and final E50 role open.
 
 ## Method and safety rules
 
