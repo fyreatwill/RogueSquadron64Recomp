@@ -97933,3 +97933,30 @@ No writer, guard, skip, default audio behavior, or guest value was changed.
 ORIGIN: no corruption or wild-value mitigation was added; the observed route
 boundary is attributed only to the measured guest control path, not to a
 newly authorized value change.
+
+## Session 2050 (2026-08-20) — C88 pair failed pre-title route qualification
+
+Ground truth ran first. The retail oracle passed the 10,000-write
+whole-RDRAM positive control, reached title VI 1024 and hangar VI 512, and
+hit the watched menu/audio/status PCs. Those are the independent route-live
+controls; the port is not its own witness for a null.
+
+The planned port A/B used the existing build, forced LLE, opt-in Factor 5
+audio, spin yield, eleven width-640 Starts, the dense post-title schedule,
+and all passive controls. The concurrent launch was inadmissible: the unset
+arm died at `waitForAnyAudioSlot` before title and the C88=1 arm held VI 640.
+I reran the fixed version sequentially to preserve focus. Both C88=1 and
+unset arms then completed 130 seconds with visual/input preflight, 11
+`[pad-host]` Start rises, 275/276 `[pad-sdl]` rows, six phase rows, and eight
+caller/post-wait controls. Both remained at VI 640, emitted zero
+`menuControllerInput`, zero title VI 1024, zero hangar VI 512, and zero
+`[spin-yield]` rows; both verdicts explicitly flagged the scheduled keys as
+not followed by a VI transition.
+
+This selects G4, a route/recipe qualification failure before the title
+anchor. It does not select G1, G2, or G3, and it does not overturn s2049's
+phase-valid C88=1 title observation because neither new arm was admissible
+for the C88 comparison. Bridge and PCM rows remain inadmissible. No code,
+guest value, guard, skip, or default audio behavior changed.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2049 (2026-08-20).
+for session detail. Reviewed through s2050 (2026-08-20).
 
 ## Current state
 
@@ -42,6 +42,12 @@ for session detail. Reviewed through s2049 (2026-08-20).
   controls, but emitted no `menuControllerInput` and no VI 512. This selects
   the title-side guest-route boundary (R2); its bridge and PCM rows remain
   inadmissible.
+- s2050's C88=1/unset pair did not reach the title anchor. Both sequential
+  130-second arms passed visual/input preflight, emitted 11 host Start rises
+  and the caller/post-wait controls, then held VI width 640 with no
+  `menuControllerInput`, VI 1024, or VI 512. The wrapper flagged the missing
+  post-key transition in both arms. This selects G4, a route/recipe
+  qualification failure, and does not select C88 polarity or causality.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -51,11 +57,11 @@ for session detail. Reviewed through s2049 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 title-to-hangar route qualification.** s2049 selected R2: the
-   C88=1 arm has phase-valid title input and VI 1024 but no
-   `menuControllerInput` or VI 512. The next discriminator is the
-   focus-isolated, phase-gated C88=1 versus unset pair in `NEXT.md`; keep the
-   full positive-control table in both arms. A live menu/512 request without
+1. **M5 title-to-hangar route qualification.** s2050 selected G4: both C88
+   arms stopped at VI 640 before the title anchor, despite host-input and
+   caller controls. Re-establish a phase-valid title-1024 control with the
+   spin-yield on/off route requalification in `NEXT.md`; do not interpret the
+   C88 pair until one arm reaches title 1024. A live menu/512 request without
    the anchor selects a presentation handoff; both anchors make the PCM
    witness admissible.
 2. **M5 callback-side PCM witness.** Only after item 1 is phase-valid, retain
@@ -155,6 +161,10 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   callback route. s2047 now reaches title but not hangar, so its bridge/PCM
   rows remain inadmissible. The active boundary is the title-to-hangar route,
   not a PCM null.
+- s2050 did not overturn s2049's phase-valid single-arm observation: both new
+  arms stopped before title 1024, so no C88 route comparison was admissible.
+  The same-run controls make this a route/recipe failure, not evidence for
+  either C88 polarity.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -173,8 +183,9 @@ DMA-to-queue mapping; shutdown call-3 reachability; the retail status sequence
 and writer attribution; the guest-gate boundary; and the unresolved
 title-to-hangar and port-side writer/read joins. s2049 is the latest phase-valid
 port observation: title yes, host input and controls live, hangar/menu handoff
-no, PCM inadmissible. Retail independently reaches both target anchors, so
-this is not a retail-route absence.
+no, PCM inadmissible. s2050's two arms were pre-title and therefore do not
+replace that observation. Retail independently reaches both target anchors,
+so this is not a retail-route absence.
 
 ## Method and safety rules
 
