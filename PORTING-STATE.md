@@ -96753,3 +96753,33 @@ spin, PI, guard, or mitigation behavior changed.
 
 OUTCOME: ADVANCED — fixed the recipe boundary and isolated the missing
 service positive control as the next M5 dispatch question.
+
+## Session 2018 (2026-08-20) — audited service function registration and callers
+
+HYPOTHESIS-ID: m5-service-path-registration-audit
+
+The planned no-build source/binary crosswalk was run against the current
+external 45-file generated tree and already-built binary. The generated
+definition is in `funcs_26.c`, the `recomp_overlays.inl` entry is in
+`section_3_text_funcs`, and the base section table is `ROM 0x1040`,
+`RAM 0x80000440`. Its `0x9B168` offset maps exactly to guest
+`0x8009B5A8`. The binary contains the linked `_serviceVoicePoolFrame`
+symbol at host address `0x1003762A4`.
+
+The complete named-reference search found only the base table entry, header
+declaration, generated definition, and its diagnostic strings; it found no
+incoming caller. Targeted arm64 disassembly likewise found no direct branch to
+the linked host symbol. The runtime contains `get_function` and the
+`load_overlays_by_start` path, but this function is base text, so overlay
+start matching is not relevant to its registration.
+
+This gives two independent static lines of evidence that the generated
+definition, base map entry, and linked symbol exist, and refutes the static
+missing-registration/linkage form of H2. It does not select H1 or H3: the
+crosswalk has no caller/dispatch request to classify, and it does not prove
+that the runtime map was populated or that the guest audio gate suppressed a
+caller. No build, game run, status/audio behavior, spin, PI, guard, or
+mitigation code changed. The next discriminator is a same-run retail
+execution watch plus port `get_function(0x8009B5A8)` resolution witness.
+
+OUTCOME: ADVANCED — static registration/linkage is present; runtime caller dispatch remains open.

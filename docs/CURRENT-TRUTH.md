@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2017 (2026-08-20).
+for session detail. Reviewed through s2018 (2026-08-20).
 
 ## Current state
 
@@ -66,19 +66,30 @@ for session detail. Reviewed through s2017 (2026-08-20).
   hangar route. All three emitted slot-0 status rows and shutdown call 3, but
   none emitted the unconditional `serviceVoicePoolFrame` entry/exit rows or
   the `0x8009B7EC` control. This is a positive-control failure, not H1/H2/H3
-  evidence; the next unit audits service registration/dispatch in the current
-  binary and 45-file tree.
+  evidence.
+- The s2018 source/binary crosswalk places `serviceVoicePoolFrame` in the
+  base `section_3_text_funcs` table (`ROM 0x1040`, `RAM 0x80000440`), where
+  offset `0x9B168` maps to guest `0x8009B5A8`. The generated definition, base
+  table entry, and linked `_serviceVoicePoolFrame` symbol are present, but
+  there is no named incoming reference or direct branch to that host symbol
+  in the current 45-file tree/binary. The static missing-registration/linkage
+  H2 explanation is refuted; H1 and H3 remain unselected because the caller
+  path itself is not present in this crosswalk.
 
 ## Active investigation and ranked next steps
 
-1. **M5 service-path registration/dispatch audit (unblocked).** Use one
-   bounded source/binary crosswalk for `serviceVoicePoolFrame` (`0x8009B5A8`):
-   overlay registration, generated definition, every call/reference, linked
-   symbol, and the existing service/status markers. The s2017 run is phase
-   valid and crash-free but has no service positive control, so determine
-   whether the current binary can dispatch this function at all before
-   running another status join. Do not change status, audio, spin, PI, guard,
-   or mitigation code.
+1. **M5 runtime service-dispatch witness (unblocked).** The s2018 crosswalk
+   refutes a static map/link defect but cannot observe an incoming call. Ask
+   the retail oracle for a phase-valid execution watch at `0x8009B5A8` with a
+   whole-RDRAM write control, then add one `get_function` target-resolution
+   witness and run the existing phase-valid port recipe. Keep status, audio,
+   spin, PI, guard, and mitigation behavior unchanged. A target resolve that
+   returns the linked function and is followed by its entry selects a live
+   service path; a target resolve with a missing/wrong map result selects a
+   runtime map defect; a positive-control run with no target request, together
+   with a retail PC hit and the existing audio-gate rows, selects an audio
+   gate before dispatch. Do not run another status join until one row is
+   selected.
 2. **M5 port-side writer/thread census (blocked on #1).** Once the service
    control is live in the same run, use the existing seven-site join: writer
    PC, slot/index, old/new byte, host thread, shutdown call, service
@@ -117,7 +128,11 @@ entry/exit census and the named `0x8009B7EC` store control both remain at zero,
 while VI 1024/512, shutdown call 3, and slot-0 `0x8009B2C4` rows fire. It
 rules out a simple phase-gate or crash-before-worker explanation for those
 captures, but does not yet distinguish missing registration, an unobserved
-caller path, or an audio-side gate before the call.
+caller path, or an audio-side gate before the call. The s2018 source/binary
+crosswalk independently shows that the function is base text, not an overlay:
+the section-3 table entry and linked symbol are present, while no named caller
+or direct host branch exists. This closes the static registration/linkage
+variant only; runtime target resolution remains unobserved.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
 capture. The s2012 and s2013 debugger-off retail oracles both reached VI 1024
@@ -197,6 +212,11 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   was believable because the earlier phase-valid run did die before the
   service rows; the fixed route now shows the more durable boundary is absent
   service dispatch, not merely an early crash.
+- s2017's “registration/dispatch audit” work unit is superseded as a complete
+  discriminator by s2018. The crosswalk refuted a static registration/linkage
+  defect, but it had no incoming caller to distinguish unobserved runtime
+  dispatch from an audio-gated path; the next unit must witness target
+  resolution in the same phase-valid run.
 
 ## Evidence ledger summary
 
@@ -207,7 +227,9 @@ the provenance block and its blocker-free retail status re-scope. s2014 adds
 the phase-valid retail gate-PC capture and closes retail writer attribution;
 the port-side join remains unresolved. s2016 refutes the provenance block while
 leaving the join open. s2017 isolates the missing service positive control as
-the next M5 boundary. The durable milestones are: hangar
+the next M5 boundary. s2018 refutes a static registration/linkage defect for
+the base-text service function but leaves runtime target resolution open. The
+durable milestones are: hangar
 reachability, bltzal link repair, audio-drain writer mapping, M5 plan, opt-in
 DMA-to-queue mapping, shutdown call-3 reachability, the repeated retail
 status-value sequence, retail gate-writer attribution, and the unresolved

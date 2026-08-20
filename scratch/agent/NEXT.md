@@ -1,46 +1,78 @@
-# NEXT work unit (s2018) — audit missing service dispatch
+# NEXT work unit (s2019) — witness runtime service dispatch
 
-HYPOTHESIS-ID: m5-service-path-registration-audit
+HYPOTHESIS-ID: m5-service-runtime-dispatch-witness
 
 ## Work unit
 
-Run one bounded source/binary crosswalk for `serviceVoicePoolFrame`
-(`0x8009B5A8`) in the current 45-file generated tree and already-built
-binary. Enumerate its overlay registration, generated definition, every
-static call/reference, linked symbol, and the existing service/status marker
-strings. Do not rebuild, alter status/audio behavior, or run another
-phase-gated status join until this dispatch boundary is understood.
+Ask the retail oracle for an execution watch at `0x8009B5A8` with a same-run
+whole-RDRAM write control. Then add one target-resolution witness in
+`lib/N64ModernRuntime/librecomp/src/overlays.cpp:get_function` and run the
+existing phase-valid port recipe `scratch/s73_post_a_scene/run_mission_keys.sh`
+from one build. Do not change status, audio, spin, PI, guard, or mitigation
+behavior. Export any lib submodule patch in the same iteration.
+
+The s2018 crosswalk already established that this is base text, not an
+overlay: `section_3_text_funcs` has `ROM 0x1040`, `RAM 0x80000440`, and the
+`0x9B168` entry maps to `0x8009B5A8`; the generated definition and linked
+symbol are present, but no incoming named reference or direct host branch was
+found.
 
 ## Competing hypotheses and discriminator
 
-- H1: The function is registered and linked, but the current route never
-  reaches its caller; the crosswalk has a valid map entry and caller with no
-  same-binary dispatch witness.
-- H2: Overlay registration or dynamic lookup points elsewhere (or is absent);
-  the crosswalk shows a missing/mismatched map entry or symbol address.
-- H3: The function is reachable only behind the audio-disabled gate; the
-  crosswalk shows a valid caller whose dispatch is conditioned on the stubbed
-  audio path.
+- H1: The port route never requests the service function. The target branch of
+  `get_function` is absent, while the existing `ROGUESQ_LOG_DMA_CALLER=1`
+  resolution control fires and the service entry remains absent.
+- H2: The route requests `0x8009B5A8`, but the runtime map is absent or returns
+  a function other than `_serviceVoicePoolFrame`. The target-resolution row
+  records a miss or wrong host pointer.
+- H3: The audio-disabled guest path suppresses the request. The target branch
+  is absent, the retail oracle execution watch hits in a phase-valid run, and
+  the same port run shows the existing audio-gate rows without a service
+  entry.
 
-The discriminator is one table with address, overlay, caller/reference,
-linked symbol, and marker evidence. A complete valid map plus caller but no
-dispatch selects H1; a missing/mismatched map selects H2; a valid map/caller
-with an explicit audio gate selects H3. If the table cannot separate these,
-stop and redesign before building or running anything.
+The discriminator is one table containing oracle whole-RDRAM-control count,
+oracle target-PC hits, port positive-control resolution, target resolution and
+returned host pointer, service entry, and audio-gate rows. Target resolve plus
+entry selects live dispatch and closes this boundary; target resolve plus a
+miss/wrong pointer selects a runtime map defect; no target request with both
+positive controls live splits H1 from H3 using the oracle PC and gate rows. If
+the table cannot split H1/H3, stop and redesign before another build/run.
 
 ## Exact commands
 
-Run from the repository root, keeping each result bounded:
+Ground truth first; build the oracle only if its executable is absent:
 
 ```sh
-rg -n -F 'serviceVoicePoolFrame' ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime
-rg -n -F -e '0x8009B5A8' -e '8009B5A8' ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime
-rg -n -F -e 'serviceVoicePoolFrame' -e '0x0009B168' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
-nm -an build/RogueSquadron64Recomp | rg -F -e 'serviceVoicePoolFrame' -e '8009B5A8'
-rg -n -F -e 'get_function' -e 'func_map' -e 'load_overlays' lib/N64ModernRuntime/librecomp/src | head -160
+if [[ ! -x tools/oracle/build/rs64_oracle ]]; then
+  (cd tools/oracle && ./build.sh)
+fi
 ```
 
-The output must identify whether the same binary contains a registration,
-caller, and linked symbol for the guest function. Record the table and the
-selected hypothesis in the next ledger entry; do not infer a runtime H1/H2/H3
-status result from the s2017 zero worker control.
+Run the retail control/watch from the repository root, using the existing
+debugger-enabled core and the Rice path:
+
+```sh
+tools/oracle/build/rs64_oracle \
+  --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom ../rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --secs 80 --hit-cap 10000 --watch-write 0x0:0x800000 \
+  --watch-pc 0x8009B5A8 --vi-trace \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  > scratch/agent/soak_results/s2019-retail-service-watch.log 2>&1
+```
+
+Add the target-resolution row to `get_function` in one instrumented build;
+retain the existing `ROGUESQ_LOG_DMA_CALLER` path as its same-run positive
+control. Build and run the port recipe with all passive M5 breadcrumbs:
+
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+env ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2019-runtime-dispatch 30 12
+```
+
+Capture the bounded rows without reading the full log:
+
+```sh
+rg -n -e '\[svc-resolve\]' -e '\[s2006-svc\]' -e '\[dma-ring-caller\]' -e '\[phase\]' -e '\[gate\]' scratch/s73_post_a_scene/s2019-runtime-dispatch/run.log
+```
