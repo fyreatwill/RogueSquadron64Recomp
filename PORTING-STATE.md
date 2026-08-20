@@ -98178,3 +98178,49 @@ arm. It does not explain the menu callback-count difference, the status-zero
 worker store, or why the Factor 5 task still produces all-zero PCM.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed; only the existing opt-in C88 behavior arm was exercised.
+
+## Session 2057 (2026-08-20) — joined the status-3 worker store to shutdown state
+
+HYPOTHESIS-ID: m5-service-store-edge.
+
+Ground truth ran first. The retail oracle passed the whole-RDRAM positive
+control with 10,011 writes, reached title VI 1024 at `0x00790400` and hangar
+VI 512 at `0x006AB400`, recorded 11 writes to the slot table, and executed
+the exact `0x8009B7EC` writer PC twice. The shutdown PC watch had no hits in
+that retail run; that is writer ground truth, not a port-side null result.
+
+The first prescribed regen command exposed two environment/tool facts. The
+`splat` executable is absent on this machine, while `make_elf.py` succeeds;
+the newer project build of N64Recomp then fails on the documented `cache`
+instruction at `func_8000040C`. The older `/Users/williambuckley/Documents/Tools/N64Recomp/build/N64Recomp`
+completed the full generation. The normal fixup required the existing
+incremental prerequisites in anchor order: s2006, s2007, s2008, s2022, then
+the existing regeneration-stable s2028 A11 join. It patched the expected
+counts, and the two tracked legacy generated files were preserved byte for
+byte. The Debug target built successfully.
+
+One qualified C88=1 forced-LLE/audio/spin-yield run then completed 180s with
+43 captured frames, title VI 1024, hangar VI 512, zero missing functions,
+zero aborts, and no crash markers. In hangar phase 10, the s2028 table
+recorded five slot-0 `status3-read` rows followed by the service store at
+`0x8009B7EC`, guest `0x80154620`, `old=0x03`, `value=0`; the service exit
+read status `0x00`. Independent s2022 and s2008 rows recorded the same
+store, and s2008's writer sequence was `00 -> 01 -> 02 -> 03 -> 00`.
+Shutdown calls 1 and 2 both had entry/exit rows, but both occurred before
+the phase-10 status-3 interval, so no shutdown return after this store was
+observed.
+
+The same run supplied the positive controls: 123 audio-task dispatch rows,
+121 ABI rows, 118 PCM source rows and 118 consumer rows, with all 118
+full-span joins matching and sampled PCM still all-zero. The ordered table
+selects the worker-clears portion of H-S. It rules out H-N (the named store
+does follow status 3), H-W (the exact service writer/address is observed),
+and H-J (the s2020 service and new status-3 controls both fire). It does not
+select the post-store shutdown-return arm; that is the next discriminator.
+
+What this rules out: the status-zero worker store being absent or
+unobservable on the qualified route, an alternate zeroing writer for this
+status-3 interval, and a PCM callback/phase join failure. It does not prove
+complete playback or a shutdown return after the store.
+
+ORIGIN: no guest writer, value, wait, guard, skip, audio task, callback, or default behavior changed; this session applied existing regeneration-stable diagnostics and changed only the input schedule.
