@@ -98022,3 +98022,39 @@ failed) for this recipe. It does not rule out a later callback/device or
 task/ABI boundary.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2053 (2026-08-20) — joined M5 PCM witness rows by phase
+
+Ground truth ran first. The retail oracle passed the 10,000-write
+whole-RDRAM positive control, reached title VI 1024 and hangar VI 512, and
+hit all three watched execution PCs. This independently qualified the two
+target phases before interpreting the port rows.
+
+The planned port witness used the existing qualified route: forced LLE,
+`LLE_UNGATED=1`, `LLE_SOLO=1`, opt-in Factor 5 audio, C88=1, spin yield,
+eleven width-640 Starts, the dense post-title schedule, and the complete
+phase/gate/task/PCM diagnostic set. Input and visual preflight passed. The
+port reached title VI 1024 at 11.9s and hangar VI 512 at 21.3s, emitted 16
+`menuControllerInput` rows and four `menuInput` spin rows, and completed
+181.1s with 47 captured frames, zero missing functions, zero deferred drops,
+and no aborts. The harness marked FAIL only for a late width-640 key at about
+58.8s with no subsequent VI transition; that warning followed the valid
+title-to-hangar chain.
+
+The phase-keyed join split the two anchors. Title phase 8 had 44
+`[pcm-bridge]` rows: 19 had `nz=768` and 25 had `nz=0`. Its two sampled
+`[pcm-sanity]` rows were both `all_zero=1`; the gate census had 512 rows and
+the rate-limited audio-task control fired. Hangar phase 10 had no bridge row,
+four sanity rows all with `all_zero=1`, 512 gate rows, and the rate-limited
+audio-task control fired. Thus the title result is H2-shaped (host/device
+boundary after nonzero bridge bytes), while the hangar result is H4-shaped
+(no target-phase bridge despite live task/gate controls). This is
+single-source port evidence; the oracle is the independent route/phase line.
+
+What this rules out: a single uniform H1/H2/H3/H4 explanation for both target
+anchors in this run, and any interpretation of the target-phase null as a
+missing route. It does not separate `LLE_UNGATED` from `LLE_SOLO`, prove the
+callback/device boundary, or establish that the hangar task control submitted
+a buffer. The next probe is a four-arm flag-causality table.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.

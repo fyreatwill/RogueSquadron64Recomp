@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2052 (2026-08-20).
+for session detail. Reviewed through s2053 (2026-08-20).
 
 ## Current state
 
@@ -42,11 +42,9 @@ for session detail. Reviewed through s2052 (2026-08-20).
   points. The port is never its own witness for a null result.
 - s2047's C88=1, forced-LLE, opt-in run reached title with live preflight,
   host-input, service, and audio controls, but not `menuControllerInput` or
-  hangar VI 512. s2052's route arm reached both anchors for 180 seconds with
-  no missing functions or aborts. Its phase-valid title bridge rows had
-  nonzero bytes, while the sampled title and hangar `pcm-sanity` rows were
-  all-zero; these rows are now admissible, but the callback-side boundary is
-  still unclassified.
+  hangar VI 512; its bridge/PCM rows remained inadmissible. s2052's route arm
+  reached both anchors for 180 seconds with no missing functions or aborts,
+  making the phase-keyed callback rows admissible for the next witness.
 - s2049's independent retail run passed the whole-RDRAM control and reached
   title VI 1024 and hangar VI 512. The port C88=1 qualification passed
   preflight, `[pad-sdl]`/`[pad-host]`, title VI 1024, caller, gate, and service
@@ -64,6 +62,14 @@ for session detail. Reviewed through s2052 (2026-08-20).
   zero yields and held VI 640. s2052 added the prior hangar-capable LLE-mode
   tuple and reached `menuControllerInput`, `menuInput`, and VI 512, so the
   route-level boundary is closed and the callback-side rows are admissible.
+- s2053 repeated the qualified route: the port reached title VI 1024 at
+  11.9s and hangar VI 512 at 21.3s, while the independent retail oracle
+  passed its whole-RDRAM control and reached both anchors. The phase-keyed
+  port join is heterogeneous: title phase 8 had 44 bridge rows (19 with
+  nonzero bytes, then 25 zero-byte rows) and two sanity rows, both
+  `all_zero=1`; hangar phase 10 had live gate/task controls and four sanity
+  rows, all zero, but no bridge row. This is single-source port evidence:
+  title is H2-shaped, while hangar is H4-shaped.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -73,17 +79,15 @@ for session detail. Reviewed through s2052 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 callback-side PCM witness.** s2052 qualified both target anchors
-   with the C88=1 arm. Retain that route and use the existing phase-keyed
-   bridge/sanity table. Nonzero bridge bytes with `all_zero=0` selects
-   upstream-valid PCM; nonzero bridge bytes with all-zero sanity selects the
-   device boundary; zero bridge bytes selects the task/ABI boundary; no bridge
-   with live gate/task controls selects guest submit/queue.
-2. **M5 title-to-hangar route causality.** The
-   `LLE_UNGATED=1` + `LLE_SOLO=1` tuple is sufficient at recipe level, but the
-   two flags were not separated. Revisit only after the PCM witness or with a
-   one-run arm table that changes both flags together and retains the full
-   phase chain.
+1. **M5 title-to-hangar route causality.** The
+   `LLE_UNGATED=1` + `LLE_SOLO=1` tuple is sufficient at recipe level, but
+   s2053 still does not separate the flags. Run one four-arm table changing
+   both flags (`11`, `10`, `01`, `00`) while retaining the full phase chain.
+2. **M5 callback-side PCM boundary.** s2053's phase join is not one uniform
+   boundary: title is H2-shaped (nonzero bridge bytes with all-zero sanity),
+   while hangar is H4-shaped (no bridge row despite live task/gate controls).
+   Revisit after flag causality is separated, or with a new callback-side
+   discriminator.
 3. **M5 guest-gate value causality.** Keep the retail-value writer unchanged.
    The C88=1/unset split is repeatable port evidence but GUI/focus-confounded;
    revisit only with a genuinely focus-isolated, phase-valid discriminator.
@@ -153,9 +157,9 @@ Retail executes the named display-mode writer cluster. The port fixup currently
 records `0 -> 0` at `0x8008EC88`, and the raw gate consumer skips on zero. The
 retail-value `1` arm remains opt-in and does not authorize changing the
 legitimate guest writer. The repeated C88 A/B is single-source port evidence
-with GUI arbitration unresolved. s2052's explicit C88=1 run recorded the
-reapply writer, gate controls, target route, and phase-valid bridge/sanity
-rows; this is still not causality for the guest value.
+with GUI arbitration unresolved. s2053's explicit C88=1 run recorded the
+reapply writer, live title/hangar gate and task controls, and the phase-keyed
+bridge/sanity split; this is still not causality for the guest value.
 
 ### M3, M4, and generated symbols
 
@@ -184,15 +188,19 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
 - s2041–s2043 showed that title-side controls can be live without a phase-valid
   callback route. s2047 reached title but not hangar, so its bridge/PCM rows
   remained inadmissible. s2052 reproduced the prior hangar-capable LLE-mode
-  tuple and reached both anchors; the active boundary is now callback-side
-  PCM, not route absence.
+  tuple and reached both anchors; s2053 then joined the callback rows by
+  phase. That overturns the earlier aggregate wording that the callback
+  boundary was uniformly unclassified: the title result is H2-shaped and
+  the hangar result is H4-shaped in this run. It was believable because
+  s2052 summarized title and hangar sanity rows without joining bridge
+  presence to each anchor.
 - s2050 did not overturn s2049's phase-valid single-arm observation: both new
   arms stopped before title 1024, so no C88 route comparison was admissible.
   The same-run controls made that a route/recipe failure, not evidence for
   either C88 polarity; s2051's yield-on title result shows the failure was not
   universal across route recipes, but did not identify the missing handoff
   condition. s2052 narrowed that condition to the prior LLE-mode tuple at
-  recipe level; it did not separate `UNGATED` from `SOLO`.
+  recipe level; s2053's callback join did not separate `UNGATED` from `SOLO`.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -209,11 +217,14 @@ Durable milestones are: overlay-dispatch recovery; hangar reachability;
 bltzal link repair; audio-drain writer mapping; the M5 plan; opt-in
 DMA-to-queue mapping; shutdown call-3 reachability; the retail status sequence
 and writer attribution; the guest-gate boundary; and the unresolved port-side
-callback/read join. s2052 is the latest phase-valid port observation: the
-prior LLE-mode tuple reached title and hangar, while title and hangar sanity
-samples remained silent. s2050's two arms were pre-title and therefore remain
-recipe-scoped. Retail independently reaches both target anchors, so this is
-not a retail-route absence.
+callback/read join. s2053 is the latest phase-valid port observation: the
+prior LLE-mode tuple reached title and hangar; title had nonzero then zero
+bridge rows with all-zero sanity, while hangar had no bridge rows and live
+task/gate controls. The bridge/sanity classification is single-source port
+evidence, with the independent oracle supplying the route/phase ground truth.
+s2050's two arms were pre-title and therefore remain recipe-scoped. Retail
+independently reaches both target anchors, so this is not a retail-route
+absence.
 
 ## Method and safety rules
 
