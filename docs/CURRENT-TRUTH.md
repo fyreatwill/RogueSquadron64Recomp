@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2053 (2026-08-20).
+for session detail. Reviewed through s2054 (2026-08-20).
 
 ## Current state
 
@@ -17,8 +17,8 @@ for session detail. Reviewed through s2053 (2026-08-20).
   `ROGUESQ_LLE_UNGATED=1` + `ROGUESQ_LLE_SOLO=1` tuple and reproduced the
   full ordered chain: title VI 1024 at 11.9s, 16 post-title
   `menuControllerInput` calls, four `menuInput` spin markers, and hangar VI
-  512 at 21.0s. This selects the recipe-level LLE-mode hypothesis; it does
-  not isolate which of the two flags is causal.
+  512 at 21.0s. This selected the recipe-level LLE-mode hypothesis; s2054's
+  four-arm table now selects interaction H-I for the two flags.
 - Product multi-header freelist restore is ON. Garbage-CIMG and wrap-drop
   mitigations are OFF. Any future mitigation must name its writer, state
   legitimacy, and carry an `ORIGIN:` line.
@@ -70,6 +70,14 @@ for session detail. Reviewed through s2053 (2026-08-20).
   `all_zero=1`; hangar phase 10 had live gate/task controls and four sanity
   rows, all zero, but no bridge row. This is single-source port evidence:
   title is H2-shaped, while hangar is H4-shaped.
+- s2054's four-arm flag table separates the route tuple. With the qualified
+  recipe held fixed, only `LLE_UNGATED=1, LLE_SOLO=1` reached the full title VI
+  1024 -> `menuControllerInput`/`menuInput` -> hangar VI 512 chain. `10`
+  reached neither target, `01` reached title only, and `00` reached neither.
+  The independent retail oracle passed its whole-RDRAM control and both target
+  VIs. The accepted table was run sequentially because the first concurrent
+  launch made `11`/`10` crash in `waitForAnyAudioSlot` and dropped the `00`
+  result; those concurrent rows are invalid and are not flag evidence.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -79,29 +87,25 @@ for session detail. Reviewed through s2053 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 title-to-hangar route causality.** The
-   `LLE_UNGATED=1` + `LLE_SOLO=1` tuple is sufficient at recipe level, but
-   s2053 still does not separate the flags. Run one four-arm table changing
-   both flags (`11`, `10`, `01`, `00`) while retaining the full phase chain.
-2. **M5 callback-side PCM boundary.** s2053's phase join is not one uniform
+1. **M5 callback-side PCM boundary.** s2053's phase join is not one uniform
    boundary: title is H2-shaped (nonzero bridge bytes with all-zero sanity),
    while hangar is H4-shaped (no bridge row despite live task/gate controls).
-   Revisit after flag causality is separated, or with a new callback-side
-   discriminator.
-3. **M5 guest-gate value causality.** Keep the retail-value writer unchanged.
+   The flag table is now separated; add a paired source/consumer byte-level
+   witness before changing any audio behavior.
+2. **M5 guest-gate value causality.** Keep the retail-value writer unchanged.
    The C88=1/unset split is repeatable port evidence but GUI/focus-confounded;
    revisit only with a genuinely focus-isolated, phase-valid discriminator.
-4. **M5 service store edge.** Park unless an audio arm supplies a live
+3. **M5 service store edge.** Park unless an audio arm supplies a live
    slot-0 status-3 interval. Then use the existing store rows to join worker
    clear, slot ownership, and callback reachability.
-5. **M3 crash work.** Only complete idiom-class audits with a named
+4. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
-6. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation; consumer-mode H1 is refuted by the RT64 census. H3 remains
    unavailable because the oracle cannot screenshot the LLE path. Do not
    repeat the `0xD60` scan.
-7. **Generated-symbol renaming sweep.** Park until M5 and any required
+6. **Generated-symbol renaming sweep.** Park until M5 and any required
    status/PCM boundary are closed. The remaining 57 names are not a sync
    backlog.
 
@@ -118,6 +122,13 @@ Forced LLE is the route gate under the common wrapper: s2024/s2025 reached
 title with forced LLE while the matching HLE arm stopped at VI 640. The later
 LLE crash does not erase its earlier phase-valid controls. The known menu
 spin-yield fix is a diagnostic aid, not a default behavior change.
+
+s2054 closes the flag-level ambiguity at the recipe boundary. The accepted
+sequential table selected an interaction: `11` reached title and hangar,
+`01` reached title but not hangar, and `10`/`00` reached neither. This is
+phase-valid port evidence with `menuControllerInput` and `menuInput` as the
+independent route line; the retail oracle independently qualified the target
+VI route. It does not explain the audio callback or PCM boundary.
 
 s2051's sequential pair independently requalified that title-side split:
 the yield-on arm emitted three `menuInit` spin markers and reached VI 1024 at
@@ -201,6 +212,8 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   universal across route recipes, but did not identify the missing handoff
   condition. s2052 narrowed that condition to the prior LLE-mode tuple at
   recipe level; s2053's callback join did not separate `UNGATED` from `SOLO`.
+  s2054's four-arm table closes that ambiguity and selects interaction H-I. The
+  earlier wording was believable because s2052 had only a sufficient `11` arm.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -222,9 +235,11 @@ prior LLE-mode tuple reached title and hangar; title had nonzero then zero
 bridge rows with all-zero sanity, while hangar had no bridge rows and live
 task/gate controls. The bridge/sanity classification is single-source port
 evidence, with the independent oracle supplying the route/phase ground truth.
-s2050's two arms were pre-title and therefore remain recipe-scoped. Retail
-independently reaches both target anchors, so this is not a retail-route
-absence.
+s2054 is the latest phase-valid port observation: the four-arm table selects
+the interacting `11` LLE-mode tuple for the full title-to-hangar chain; the
+oracle independently reaches both target anchors. s2050's two arms were
+pre-title and therefore remain recipe-scoped. Retail independently reaches
+both target anchors, so this is not a retail-route absence.
 
 ## Method and safety rules
 

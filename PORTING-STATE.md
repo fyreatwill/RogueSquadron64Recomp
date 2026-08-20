@@ -98058,3 +98058,42 @@ callback/device boundary, or establish that the hangar task control submitted
 a buffer. The next probe is a four-arm flag-causality table.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2054 (2026-08-20) — separated the LLE flag interaction
+
+Ground truth ran first. The retail oracle passed the 10,000-write whole-RDRAM
+positive control, hit all three watched PCs, and reached title VI 1024 and
+hangar VI 512. This independently qualified the two route anchors before
+interpreting the port table.
+
+The planned port table held forced LLE, C88=1, opt-in Factor 5 audio, spin
+yield, the eleven width-640 Starts, the dense post-title schedule, and all
+passive diagnostics fixed while varying only `LLE_UNGATED` and `LLE_SOLO`.
+The first concurrent four-process launch was invalid: `11` and `10` died in
+`waitForAnyAudioSlot+336`, `01` took the undriven route, and `00` was refused
+by the harness preflight. A single-arm `11` retry then passed input/visual
+preflight and reached title VI 1024 at 12.0s, emitted 16
+`menuControllerInput` rows and four `menuInput` rows, and reached hangar VI
+512 at 21.3s. Its harness warning was only the late width-640 key after the
+valid chain.
+
+To complete the fixed table without the concurrent launch interference, the
+remaining arms ran sequentially from the same build and all passed
+input/visual preflight. `10` completed without title or hangar; `01` reached
+title VI 1024 at 11.9s but emitted no `menuControllerInput`/`menuInput` and
+did not reach hangar; `00` completed without either target. All accepted arms
+had zero missing functions, zero deferred drops, zero aborts, and no crash.
+
+The phase-keyed four-row table selects H-I, interaction between the two LLE
+flags: only `11` reached the full title-to-hangar chain. H-U, H-S, and H-N are
+ruled out by their required counterfactual rows. The oracle route and the
+port's independent VI plus menu-marker lines are the two evidence sources.
+This does not explain the callback-side PCM boundary; the next probe pairs
+full-byte source and consumer hashes at `queue_audio_buffer` and
+`queue_samples`.
+
+What this rules out: `LLE_UNGATED` alone, `LLE_SOLO` alone, and a
+neither-flag explanation of the qualified route. It does not rule out a
+callback/device or task/ABI boundary after the route handoff.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
