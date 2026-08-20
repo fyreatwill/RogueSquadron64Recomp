@@ -1,85 +1,77 @@
-# NEXT work unit (s2023)
+# NEXT work unit (s2024)
 
-HYPOTHESIS-ID: m5-port-status-writer-read-join
+HYPOTHESIS-ID: m5-phase-valid-route-recovery
 
-## RESUME: s2022 body census
+## RESUME: s2023 phase-gate failure
 
-s2022 selected H2 in one phase-valid run. The independent s2020 controls
-emitted 1,988 service entries and exits; all 1,988 s2022 branch rows had
-`gate=0x01 path=body`; all 1,988 loop rows were slot 0 with `status=0x00`
-and `zero_skip=1`; the independent s2022 store edge emitted zero rows.
-The run later hit the known PI `do_rom_read` abort. Retail ground truth
-independently executed the branch and loop PCs 3,033 times each and the
-store PC twice, so the next question is port-side status production/read
-ordering, not whether retail enters the function.
+s2023 regenerated and built the complete instrumented tree, then ran both the
+prescribed forced-LLE capture and its `ROGUESQ_SPIN_YIELD=1` correction. The
+first stayed at VI 640 until SIGKILL; the second aborted in
+`RT64::RenderTarget::copyFromTarget` before VI 1024. Both had live s2020 and
+s2022 body controls but no s2008 writer positive-control row. This does not
+select H1, H2, or H3.
 
 ## Work unit
 
-Run the existing seven-site status-writer census in the same phase-valid
-capture as the s2022 body census. Keep all behavior unchanged. Apply the
-existing s2007 shutdown-reach hook and s2008 writer hook during regeneration;
-arm `ROGUESQ_LOG_S2008_STATUS_WRITERS=1` at runtime. Retain s2020 entry/exit,
-s2006 entry/exit/store, and s2022 branch/loop/store rows as positive controls.
-The writer rows must be joined by phase, slot/address, old/new byte, host
-thread, and shutdown call. Do not add another direct-entry or `get_function`
-witness.
+Recover a phase-valid route before attempting the status-writer join. Use the
+same already-built binary and the same passive/body/writer controls in two
+arms launched concurrently: arm A is the existing forced-LLE mission runner
+with `ROGUESQ_SPIN_YIELD=1`; arm B is a direct no-LLE title/phase launch with
+the same logging environment and no input. Each arm stops on VI 1024, a
+process loss, or 120 seconds, and the game is killed with SIGKILL. Do not add
+instrumentation or change audio behavior.
 
 ## Competing hypotheses and discriminator
 
-- H1 `never-written`: with s2020/s2022 controls live, no port writer reaches
-  slot 0 with new status `0x03`; service reads `0x00` because the status-3
-  lead never occurs on the port.
-- H2 `transient-cleared`: a port writer reaches slot 0 with new status
-  `0x03`, then a later service row reads slot 0 as `0x00` before the s2022
-  store edge; the writer and reader can be joined by phase/thread/shutdown
-  call.
-- H3 `other-slot-or-table`: the writer census fires only for other slots or
-  addresses outside the service's `0x80154620 + slot*0x1228` table, so the
-  service's slot-0 zero is an indexing/table-base mismatch.
+- H1 `runner-LLE-boundary`: the existing runner's forced LLE path is the
+  phase failure; the direct no-LLE arm reaches VI 1024 while arm A aborts or
+  stalls before it.
+- H2 `generated-tree-render-boundary`: the regenerated binary/runtime fails
+  before VI 1024 independent of the LLE choice; both arms abort or stall at
+  the same pre-1024 boundary.
+- H3 `phase-observer-only`: both arms reach VI 1024, but the current status
+  census is not attached to the route that the phase logger observes; the
+  s2008 control remains absent while the independent VI transition is live.
 
-The discriminating measurement is one same-run timeline of all s2008 status
-writer rows and the s2022 slot-0 reads. H1 is selected by live service
-controls plus no slot-0 `new=0x03`; H2 by a slot-0 `new=0x03` followed by a
-zero service read; H3 by writer activity confined to other slots/addresses.
-A slot-0 service row with nonzero status or an independent s2022 store row
-closes this unit in favor of the already-defined store/writer join. If the
-writer census is zero while its shutdown positive control is live, classify
-that as a census-anchor failure rather than a status conclusion.
+The discriminating measurement is the same-build, same-window table of each
+arm's first VI 1024 transition, pre-1024 terminal signature, and s2008
+positive-control count. Only a VI 1024 arm with a live s2008 control reopens
+the writer/read join. A no-LLE-only VI 1024 selects H1; matching pre-1024
+RT64 failures select H2; two VI 1024 arms with no writer control select H3.
 
-## Ground truth before the build
+## Ground truth
 
-Run the oracle whole-RDRAM positive control first; retain the s2022 exact
-retail target result as the independent body contract. Do not interpret a
-new port writer null without a live positive control.
+No new diagnostic is being built. Still retain the retail whole-RDRAM control
+before any rebuild or run:
 
 ```sh
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 8 --watch-write 0x0:0x800000 --hit-cap 1 > scratch/agent/oracle_s2023_whole_control.log 2>&1
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --secs 8 --watch-write 0x0:0x800000 --hit-cap 1 > scratch/agent/oracle_s2024_whole_control.log 2>&1
 ```
 
-## Regeneration, build, and run
+## Arms
+
+Use one shared `env` prefix containing the existing passive controls:
+`ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1
+ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_PCM_SANITY=1
+ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1
+ROGUESQ_LOG_S2008_STATUS_WRITERS=1 ROGUESQ_SPIN_YIELD=1`.
+
+Arm A:
 
 ```sh
-set -e
-backup_dir=$(mktemp -d /tmp/rs64-s2023-recompiled.XXXXXX)
-cp -a /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs/. "$backup_dir/"
-find /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs -mindepth 1 -maxdepth 1 -type f -delete
-cd /Users/williambuckley/Documents/Tools/rogue_squadron64
-python3 tools/make_elf.py
-cd /Users/williambuckley/Documents/Tools/N64Recomp
-build/N64Recomp rogue_squadron.toml
-python3 fixup_game_funcs.py
-env RS64_S2006_STATUS3=1 python3 fixup_game_funcs.py
-env RS64_S2007_STATUS3_REACH=1 python3 fixup_game_funcs.py
-env RS64_S2008_STATUS_WRITERS=1 python3 fixup_game_funcs.py
-env RS64_S2022_SERVICE_BODY=1 python3 fixup_game_funcs.py
-cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
-cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_S2008_STATUS_WRITERS=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2023-status-writer 30 12
+env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_S2008_STATUS_WRITERS=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2024-lle 0 0
 ```
 
-Extract with bounded aggregates:
+Arm B must launch `build/RogueSquadron64Recomp` directly from `build/` with
+the same prefix, but without `ROGUESQ_LLE_FORCE`, `ROGUESQ_LLE_UNGATED`, or
+`ROGUESQ_LLE_SOLO`. Write to `scratch/s73_post_a_scene/s2024-hle/run.log`,
+poll its `[phase] vi_width=` line for `1024` for 120 seconds, then SIGKILL
+that exact PID. Record the first terminal signature and counts for
+`[s2020-svc]`, `[s2022-svc]`, `[s2008-status-control]`, and
+`[s2008-status-writer]` for both logs.
 
-```sh
-RUN=scratch/s73_post_a_scene/s2023-status-writer/run.log
-rg -n -e '\[s2008-status-writer\]' -e '\[s2008-status-control\]' -e '\[s2022-svc\]' -e '\[s2020-svc\]' -e '\[s2007-shut\]' -e '\[s2007-spin\]' "$RUN" | tail -320
-```
+## If the route is recovered
+
+The following unit, not this one, reruns the seven-site writer/read join on
+the phase-valid arm. A writer null without `[s2008-status-control]` is still
+an anchor failure and must not be called H1.

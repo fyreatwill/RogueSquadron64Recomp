@@ -96940,3 +96940,35 @@ the crash occurred after the phase-valid census and did not invalidate its
 rows. No mitigation or default behavior changed.
 
 OUTCOME: ADVANCED — H2 selected; the next discriminator is the port-side status writer/read join.
+
+## Session 2023 (2026-08-20) — status-writer join blocked by phase recipe
+
+HYPOTHESIS-ID: m5-port-status-writer-read-join
+
+The required retail whole-RDRAM control passed before the build: it reached
+the 10,000-callback cap and recorded 479 VI in 8 emulated seconds. The clean
+make_elf → N64Recomp → fixup → CMake regeneration/build also completed.
+
+The prescribed port capture did not become phase-valid. The no-yield arm ran
+past four minutes while its phase wait saw only VI widths 0, 320, 2, and 640;
+it emitted 1,632 s2020 entries/exits, 1,632 s2022 entries/exits, and 48
+s2006 service controls, but no s2008 writer positive-control row. I killed
+the game with SIGKILL and the runner exited while waiting for VI 1024. The
+required recipe correction, `ROGUESQ_SPIN_YIELD=1`, was then run on the same
+build. That arm again reached only VI 640 and aborted after about 7 seconds
+in `RT64::RenderTarget::copyFromTarget`, through
+`FramebufferManager::createTileCopyRecord`, with last guest PC `0x8000834C`.
+It emitted 1,576 s2020 entries/exits, 1,576 s2022 entries/exits, 48 s2006
+controls, and no `[spin-yield]` row or s2008 positive-control row.
+
+The single `[s2008-status-writer]` `n=0` line in each log is not a census
+positive control: it is the first status-table helper row at
+`pc=0x8009BBF0`, with `addr=0x80154620`, `old=0x00`, and `new=0x00`; the
+expected `pc=0x8009B7EC` control row never appeared. These two same-build
+arms therefore establish a phase/renderer recipe boundary, not a status
+transition. H1, H2, and H3 remain unresolved, and the writer null is
+classified as a census-anchor failure rather than evidence that status 3 was
+never written. No mitigation or default behavior changed.
+
+OUTCOME: ADVANCED — the planned capture ran, but both recipe arms were
+unevaluable before VI 1024; the next unit must restore a phase-valid route.

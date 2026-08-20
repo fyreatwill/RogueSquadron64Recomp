@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2022 (2026-08-20).
+for session detail. Reviewed through s2023 (2026-08-20).
 
 ## Current state
 
@@ -105,20 +105,28 @@ for session detail. Reviewed through s2022 (2026-08-20).
   run passed its whole-RDRAM control (10,000 callbacks), reached VI 3585 and
   hangar VI 512, and independently recorded 3,033 executions each at
   `0x8009B5D8`/`0x8009B624` and two at `0x8009B7EC`, plus 15 writes to the
-  exact status word; this is the second line for the retail body contract.
+   exact status word; this is the second line for the retail body contract.
+- The s2023 status-writer capture was not phase-valid after clean
+  regeneration. The no-yield arm remained at VI 640 for more than four
+  minutes; the `ROGUESQ_SPIN_YIELD=1` correction instead aborted in
+  `RT64::RenderTarget::copyFromTarget` before VI 1024. Both arms had live
+  s2020/s2022 body controls but no s2008 writer positive-control row, so H1,
+  H2, and H3 remain unresolved and the missing writer is a census-anchor
+  failure, not status evidence.
 
 ## Active investigation and ranked next steps
 
-1. **M5 port-side status writer/read join (unblocked).** s2022 selects H2:
-   the gate is live and the service reaches the loop, but slot 0 is always
-   observed as zero before the zero-status skip. In one phase-gated run arm
-   the existing seven-site status-writer census alongside the s2022 body and
-   s2020 entry/exit controls. A slot-0 `0x03` writer before a service read
-   followed by a zero read selects transient-cleared; only other-slot writers
-   select an indexing/table mismatch; no slot-0 `0x03` with live controls
-   selects never-written or an earlier status setup gate. Record writer PC,
-   slot/address, old/new byte, host thread, shutdown call, and phase. Do not
-   repeat the direct-entry or `get_function` witness alone.
+1. **M5 phase-valid route recovery for the port-side status writer/read
+   join.** s2022 still selects the slot/status boundary, but s2023 showed
+   that the clean regenerated binary cannot currently supply the required VI
+   1024 capture with `run_mission_keys.sh`: the control arm stalls at VI 640
+   and the spin-yield arm aborts in RT64. In one build/run, compare the
+   forced-LLE runner against a direct no-LLE title/phase control, both with
+   the phase transition logger and all s2020/s2022/s2008 controls. A VI 1024
+   transition in only the no-LLE arm selects a runner/LLE recipe boundary; a
+   pre-1024 RT64 abort in both arms selects a generated-tree/render boundary;
+   a VI 1024 transition with the s2008 control live reopens the writer/read
+   discriminator. Do not interpret the s2023 writer null as H1.
 2. **M5 service store edge (blocked on #1).** If the writer/read join shows a
    live slot-0 status-3 interval, use the already-built s2022 store rows to
    join the worker clear path and then proceed to the seven-site callback
@@ -148,7 +156,10 @@ while the census emitted slot-0 rows. The exact s2007 snapshot and owner
 authorization to reconcile companion files are therefore not prerequisites
 for the port-side writer/thread join. The s2017 hold-based run adds a
 crash-free late-route witness, but the join remains unevaluable because the
-service positive control is absent.
+service positive control is absent. s2023's clean regeneration built, but its
+forced-LLE recipe stalled at VI 640 or aborted in RT64 before VI 1024; this is
+a new recipe/render boundary, not evidence against the s2016 phase-valid
+observation.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
