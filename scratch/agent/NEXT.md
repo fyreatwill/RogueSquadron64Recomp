@@ -1,61 +1,68 @@
-# NEXT work unit (s2068)
+# NEXT work unit (s2069)
 
 HYPOTHESIS-ID: m5-audio-image-output-contract
 
 ## Work unit
 
-Run one exact-span retail writer attribution using the corrected Rice oracle.
-Reuse the admissible s2067 port table; do not rebuild, regenerate, rerun the
-port, or change task fields, dispatch, guards, guest behavior, or host output
-routing. Watch the title CB0 span, hangar CB0 span, and the title E50 span
-envelope separately, with the whole-RDRAM watch as the same-run positive
-control. The oracle must reach both target VI anchors and produce writer-PC
-histograms for the exact watches.
+Add a diagnostic-only, environment-gated within-run A/B for the host's DMEM
+canary prefill at `0xF80..0xF8F`. With `ROGUESQ_AUDIO_CANARY_AB=1`, alternate
+canary-on and canary-off image tasks by phase-keyed task ordinal; leave the
+default canary-on behavior unchanged. Log the arm beside the existing
+`audtask-abi`/DMA rows and retain the exact E50 DMA payload fields. Because this
+touches `lib/N64ModernRuntime`, export the submodule patch in the same change.
+Run both arms in one qualified route; do not change task fields, dispatch,
+guest values, output routing, waits, or guards.
 
 ## Competing hypotheses and discriminator
 
-- **H-E50-RetailOutput** — the exact E50 envelope receives writes from the
-  named retail MusyX writer cluster. Combined with s2067's zero overlap table,
-  this identifies a live task/output ABI mismatch rather than scratch data.
-- **H-CB0Only** — the exact CB0 spans receive named retail MusyX writes, but the
-  E50 envelope does not. The CB0 path is independently audio-owned; the E50
-  canary path remains scratch/unknown and cannot be promoted to final output.
-- **H-NoExactOwner** — the exact watches have no named MusyX writer hits (or
-  fail to fire despite the whole-RDRAM control). The prior broad-band writer
-  result cannot be transferred to the generated spans, so the E50 contract is
-  unevaluable.
+- **H-CanaryObserver** — the prefill is overwritten before any relevant read;
+  canary-on and canary-off rows have the same `exit`, DMEM changes, exact-E50
+  payload, and PCM joins.
+- **H-CanaryPoison** — the canary bytes are consumed before the generated
+  output loops overwrite them; canary-off image rows improve the `Broke`,
+  canary, exact-E50 payload, or nonzero-PCM contract while input spans remain
+  matched.
+- **H-CanaryContract** — the bytes are part of a required task-side DMEM
+  contract; canary-off changes the task but does not produce a valid output,
+  selecting the reserved-gap/ABI boundary rather than a harmless observer.
 
-The discriminator is the four-watch table: positive-control callback count,
-title-CB0 callback count and writer PCs, hangar-CB0 callback count and writer
-PCs, and title-E50-envelope callback count and writer PCs, joined to the
-s2067 effective spans. A positive whole-RDRAM control plus named MusyX PCs on
-E50 selects H-E50-RetailOutput; named MusyX PCs only on CB0 selects
-H-CB0Only; zero exact callbacks or missing route/PC controls selects
-H-NoExactOwner. Do not infer ownership from the broad candidate-band count.
+The discriminator is one phase-keyed table for both arms: arm, `data_ptr` and
+`data_size`, source-span FNV/nonzero count, DMEM pre/post/change range, exit,
+canary result, every exact E50 DMA span's FNV/nonzero count, and paired PCM
+source/consumer rows. Positive controls are both target VI anchors, live input,
+and the existing stub/image dispatch controls; no conclusion may use a canary
+counter alone. H-CanaryPoison requires a canary-off improvement with matched
+source spans; H-CanaryContract requires a canary-off change without a valid
+output; unchanged rows select H-CanaryObserver.
 
-## Exact command
+## Exact commands
 
-```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 60 --vi-trace --pif-trace \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0x178D80:0x178F18 \
-  --watch-write 0x1798B0:0x179A48 \
-  --watch-write 0x1931F0:0x194E70 \
-  --first-watch 1 --pc-hist-watch 1 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2068_oracle_exact_spans.log 2>&1
+1. Patch `lib/N64ModernRuntime/librecomp/src/rsp.cpp` so the existing canary
+   fill is skipped only when `ROGUESQ_AUDIO_CANARY_AB=1` and the phase-keyed
+   image-task ordinal is odd; log `canary_arm=on|off` in the ABI and DMA rows.
+   Hash the task's `data_ptr..data_ptr+data_size` source span before the ucode
+   call and include its FNV/nonzero count in the same row. No default behavior
+   change. Add an `ORIGIN:` line naming the host canary writer and the
+   generated `factor5_ucode_b` DMEM output loops; state that legitimacy is the
+   question under test.
+2. Export and build the one modified submodule:
 
-rg -n 'positive-control threshold|watch write \[|writer-pc|\[vi\]|done:' \
-  scratch/agent/s2068_oracle_exact_spans.log | tail -160
-rg -n 'VI.*1024|VI.*512|0x00790400|0x006AB400' \
-  scratch/agent/s2068_oracle_exact_spans.log
-git diff --check
-```
+   ```sh
+   ./submodule-patches/export.sh
+   cmake --build build --config Debug --target RogueSquadron64Recomp
+   ```
 
-If the whole-RDRAM threshold, both target anchors, or any exact-watch PC
-histogram is missing, the result is H-NoExactOwner and the next iteration must
-not alter the port to compensate.
+3. Run the qualified route once with both arms enabled in-process:
+
+   ```sh
+   env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUDIO_CANARY_AB=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-canary-ab 30 12
+   ```
+
+4. Verify title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, the paired
+   arm/source/E50/PCM table, no crash or abort marker, and `git diff --check`.
+   Kill any wrapper-owned game process with SIGKILL after the capture window.
+
+The exact E50 retail ownership from s2068 is the ground-truth reason this
+instrument is scoped to the DMEM canary/output contract; do not reinterpret a
+canary-off result as permission to remove the reservation until the table
+selects it.

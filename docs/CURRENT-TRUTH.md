@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2067 (2026-08-20).
+for session detail. Reviewed through s2068 (2026-08-20).
 
 ## Current state
 
@@ -101,6 +101,18 @@ for session detail. Reviewed through s2067 (2026-08-20).
   next M5 discriminator. The task/exit result is single-source port evidence
   paired with the independent route/writer witness; no guest or host behavior
   changed.
+- s2068 completed the exact-span retail writer attribution with three
+  identical Rice-oracle arms, one PC histogram per target watch. Every arm
+  passed the whole-RDRAM positive control (59,267--59,409 writes), reached
+  title VI 1024 and hangar VI 512, and fired title-CB0 (408), hangar-CB0
+  (1,125), and title E50-envelope (47,734--47,876) watches. CB0 was dominated
+  by `0x800078EC` (408 title; 816 hangar), with hangar-only `0x80007670` and
+  small helper counts. E50 had named audio-region writers including
+  `0x8008F7D4` inside `acquireSampleStreamBlock`, `0x80091374` inside
+  `musyxSynthFrame`, and `0x8008FB64/68/78` inside
+  `fillSampleStreamRange`. This selects H-E50-RetailOutput at exact-span
+  retail ownership scope and refutes H-CB0Only and H-NoExactOwner; it does not
+  by itself prove that the port's zero-payload task output is valid final PCM.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -223,14 +235,16 @@ are not active work items.
    H-ImageTaskAbiMismatch at live contract scope: both target phases have
    complete exact-span rows with no overlap against the task's output, yield,
    or data intervals, while every image task changes DMEM, corrupts the canary,
-   and exits `Broke`. The candidate-band oracle is independent and qualified,
-   but its writer attribution does not cover the E50 spans. Run one exact-span
-   retail writer attribution for the title CB0 range, hangar CB0 range, and
-   title E50 envelope, reusing the s2067 port table; do not change task fields,
-   dispatch, guards, guest behavior, or host output routing. s2063 still closes
-   the nonzero image-DMA-to-PCM branch: every observed image DMA payload was
-   zero and the exact task joins were zero-only. Keep the retail writer, C88
-   value, wait/slot guards, and default dispatch unchanged.
+   and exits `Broke`. s2068 independently shows that the exact E50 envelope is
+   written by retail audio-region functions, while the CB0 spans are dominated
+   by a non-MusyX writer. Run one same-run input/output crosswalk: capture the
+   `data_ptr` source span and payload before each image task, then join it to
+   E50 DMA payload, exit, and canary rows. Do not route output, reverse a task
+   field, add a guard, or change guest behavior from ownership alone. s2063
+   still closes the nonzero image-DMA-to-PCM branch at current scope: every
+   observed image DMA payload was zero and the exact task joins were zero-only.
+   Keep the retail writer, C88 value, wait/slot guards, and default dispatch
+   unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -389,6 +403,14 @@ OSTask `output_buff` or `yield_data_ptr`, and the two output-looking RDRAM
 destinations are indirect. The host-gap legitimacy and output classification
 therefore remain unevaluable from generated source alone.
 
+s2068 then supplied the missing independent E50 ownership line. Three
+identical Rice-oracle arms all passed the whole-RDRAM control and both route
+anchors. The title and hangar CB0 watches were dominated by `0x800078EC`, while
+the E50 envelope included PCs inside `acquireSampleStreamBlock`,
+`musyxSynthFrame`, and `fillSampleStreamRange`. This selects exact-span retail
+audio ownership for E50 and refutes CB0-only ownership or an exact-watch null;
+it does not turn the port's zero-payload image task into proven PCM.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -508,6 +530,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   scope; exact retail writer ownership of the E50 envelope remains open
   because the independent watch in this run covered only the lower candidate
   band.
+- s2068 supersedes the s2067 wording that exact E50 ownership remained open.
+  That wording was believable because s2067's independent watch covered only
+  the lower candidate band. The corrected exact-span witness passed its
+  whole-RDRAM control and both route anchors, and its E50 histogram contained
+  PCs inside named retail audio functions, while the CB0 histograms were
+  dominated by `0x800078EC`. The E50 retail ownership line is now selected;
+  the port task's zero payload and ABI/exit defect remain unresolved.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -547,9 +576,11 @@ single-source port evidence; the independent oracle supplied route/phase
 qualification. s2067 then selected H-ImageTaskAbiMismatch at live contract
 scope: both target phases had complete exact E50/CB0 rows, no task-field
 overlap, zero payloads, `exit=1`, and canary failure on every row. Exact E50
-writer ownership remains the next discriminator. The task ABI and complete
-playback remain open. The oracle and port both independently reach both target
-anchors, so this is not a retail-route absence.
+writer ownership was then selected by s2068's exact-span retail witness: E50
+is written by named audio-region functions, while CB0 is dominated by
+`0x800078EC`. The task ABI and complete playback remain open. The oracle and
+port both independently reach both target anchors, so this is not a
+retail-route absence.
 
 ## Method and safety rules
 

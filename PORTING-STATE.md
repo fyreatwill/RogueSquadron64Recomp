@@ -98654,3 +98654,38 @@ guest OSTask values copied by `recomp::rsp::run_task`; the canary corruption is
 written by generated `factor5_ucode_b` DMA/output loops. This is a measured
 ABI/staging defect, not a mitigation or a claim that the E50 destination is
 legitimate final audio output.
+
+## Session 2068 (2026-08-20) — attributed exact E50 retail audio writers
+
+Ground truth ran first with the corrected Rice video plugin and the whole-RDRAM
+positive control. The prescribed single process completed, but its singular
+`--pc-hist-watch 1` option emitted a histogram only for watch 1; its callback
+counts were retained, but that invocation was insufficient for the planned
+three-watch discriminator. Three identical 60-second oracle arms were then
+run concurrently with `--pc-hist-watch` set to 1, 2, and 3. Every arm reached
+title VI `1024 @ 0x00790400` and hangar VI `512` at the expected origins, and
+the whole-RDRAM watch fired 59,267--59,409 writes.
+
+All three exact watches fired in every arm. The title CB0 span
+`0x178D80..0x178F18` had 408 writes, all attributed to `0x800078EC`. The
+hangar CB0 span `0x1798B0..0x179A48` had 1,125 writes, dominated by
+`0x800078EC` (816) and `0x80007670` (184), with small helper counts. The E50
+envelope `0x1931F0..0x194E70` had 47,734--47,876 writes. Its histogram
+included `0x8008F7D4` inside `acquireSampleStreamBlock` (10,440),
+`0x80091374` inside `musyxSynthFrame` (3,219), and
+`0x8008FB64/68/78` inside `fillSampleStreamRange` (1,263 each), alongside
+other audio-region writers and generic helpers.
+
+This selects H-E50-RetailOutput at exact-span retail ownership scope and
+refutes H-CB0Only and H-NoExactOwner: the E50 envelope is independently
+written by named retail audio functions, while CB0 is dominated by a separate
+writer. It does not prove that the port's zero-payload image-task output is
+valid final PCM, nor does it authorize changing task fields, output routing, or
+the DMEM canary. The oracle and port remain independent witnesses for the
+route; the ownership result is an attribution result, not a playback result.
+
+ORIGIN: no guest writer, task field, dispatch path, guard, skip, canary,
+audio-image, or default behavior changed. The only failed measurement was the
+initial single-watch histogram selection, corrected by separate oracle arms;
+the retail PCs above are the observed writers and their audio ownership is
+legitimate at the retail execution scope.
