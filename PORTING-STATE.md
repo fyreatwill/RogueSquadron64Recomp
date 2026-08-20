@@ -98617,3 +98617,40 @@ behavior changed.
 ORIGIN: no mitigation was added; the observed late failure originated at the
 host `do_rom_read` alignment assertion, and its writer-to-task relationship
 was not promoted beyond the measured crash record.
+
+## Session 2067 (2026-08-20) — selected live image task ABI mismatch
+
+Ground truth ran first with the corrected Rice video plugin. The retail oracle
+passed the whole-RDRAM positive control with 4,667,615 writes, passed the
+`0x166000..0x17A000` candidate-band watch with 4,657,615 writes, and reached
+title VI `1024 @ 0x00790400` and hangar VI `512 @ 0x006AB400`. Its named
+MusyX writer PCs included `0x80090F8C`, `0x80091078`, and `0x800923B8`.
+
+The unchanged qualified C88=1/spin-yield port recipe used the existing
+`audtask-abi`, `audtask-dma-row`, and `audtask-dma-range` probes. It reached
+both target phases and emitted 3,076 ABI rows, 3,076 DMA rows, and 11,520
+DMA-range rows. Title supplied 2,145 task rows and hangar supplied 931. Every
+target row had `output_buff=0`, `yield_ptr=0`, a nonzero `data_ptr`,
+`exit=1`, `changed>0`, and `canary_ok=0`. Every output/yield/data overlap flag
+was zero and every DMA payload was zero. The exact table contained 2,172
+`0xE50/0x180` ranges and 3,076 `0xCB0/0x198` ranges. The wrapper returned
+before its child stopped; after the log reached hangar, PID 47924 was killed
+with SIGKILL. No crash or abort marker preceded that kill, and `git diff --check`
+passed.
+
+This selects **H-ImageTaskAbiMismatch** at live contract scope and refutes
+H-ImageOutputField and H-ImageDataStruct: the complete target-phase rows show
+no field overlap, while the image task changes DMEM, corrupts the canary, and
+returns `Broke`. The independent retail witness qualifies the route and the
+lower-band writer line; exact CB0 spans are inside that band, but the E50
+spans are above it, so exact E50 retail ownership remains the next M5
+discriminator. The earlier H-OutputRouteUnevaluable result is therefore
+superseded for the live port contract, not for exact E50 writer attribution.
+No task field, dispatch path, guard, guest value, host output route, or default
+behavior changed.
+
+ORIGIN: the observed `output_buff=0`/`yield_ptr=0` values are the legitimate
+guest OSTask values copied by `recomp::rsp::run_task`; the canary corruption is
+written by generated `factor5_ucode_b` DMA/output loops. This is a measured
+ABI/staging defect, not a mitigation or a claim that the E50 destination is
+legitimate final audio output.

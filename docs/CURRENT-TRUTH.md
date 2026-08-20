@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2066 (2026-08-20).
+for session detail. Reviewed through s2067 (2026-08-20).
 
 ## Current state
 
@@ -84,6 +84,23 @@ for session detail. Reviewed through s2066 (2026-08-20).
   H-OutputRouteUnevaluable selected: the corrected oracle qualifies the route,
   but the port task/value join is not admissible and does not select an ABI
   explanation.
+- s2067 reran the existing crosswalk after the corrected Rice oracle witness.
+  The oracle passed the whole-RDRAM control with 4,667,615 writes, the watched
+  `0x166000..0x17A000` band with 4,657,615 writes, and both target route
+  anchors. The port reached title `1024 @ 0x00790400` and hangar
+  `512 @ 0x006AB400` without a crash/abort marker before the explicit SIGKILL,
+  and emitted 3,076 ABI rows, 3,076 DMA rows, and 11,520 DMA ranges. Every
+  target row had `output_buff=0`, `yield_ptr=0`, a nonzero `data_ptr`,
+  `exit=1`, `changed>0`, and `canary_ok=0`; every observed output/yield/data
+  overlap flag and every DMA payload was zero. The exact table contained
+  2,172 `0xE50/0x180` ranges and 3,076 `0xCB0/0x198` ranges. This selects
+  H-ImageTaskAbiMismatch at live contract scope and refutes
+  H-ImageOutputField and H-ImageDataStruct. The retail writer witness remains
+  band-scoped: the exact CB0 spans lie inside the watched band and the named
+  MusyX PCs fired, while the E50 spans lie above it; exact E50 ownership is the
+  next M5 discriminator. The task/exit result is single-source port evidence
+  paired with the independent route/writer witness; no guest or host behavior
+  changed.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -202,19 +219,18 @@ for session detail. Reviewed through s2066 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 Factor 5 image task/exit contract.** s2065 maps every generated DMA
-   path but selects H-OutputRouteUnevaluable: `output_buff` and
-   `yield_data_ptr` are not consumed by the image, while the canary-covering
-   `L_1E48` write and the `L_1314` write both use indirect DMEM-derived RDRAM
-   destinations. s2066 corrected the retail witness and qualified both route
-   anchors, but the port run crashed before a no-crash task/value table and
-   emitted no `0xE50/0x180` row. Re-run the crosswalk on the qualified C88=1,
-   spin-yield route with immediate post-probe SIGKILL; do not change task
-   fields, dispatch, guards, or guest behavior. s2063 still closes the nonzero
-   image-DMA-to-PCM branch: every observed image DMA payload was zero and the
-   exact task joins were zero-only, while the retail-owned band remains broad.
-   Keep the retail writer, C88 value, wait/slot guards, and default dispatch
-   unchanged.
+1. **M5 Factor 5 image task/exit contract.** s2067 selects
+   H-ImageTaskAbiMismatch at live contract scope: both target phases have
+   complete exact-span rows with no overlap against the task's output, yield,
+   or data intervals, while every image task changes DMEM, corrupts the canary,
+   and exits `Broke`. The candidate-band oracle is independent and qualified,
+   but its writer attribution does not cover the E50 spans. Run one exact-span
+   retail writer attribution for the title CB0 range, hangar CB0 range, and
+   title E50 envelope, reusing the s2067 port table; do not change task fields,
+   dispatch, guards, guest behavior, or host output routing. s2063 still closes
+   the nonzero image-DMA-to-PCM branch: every observed image DMA payload was
+   zero and the exact task joins were zero-only. Keep the retail writer, C88
+   value, wait/slot guards, and default dispatch unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -482,6 +498,16 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   port capture later aborted in `do_rom_read`, and the zero-grace retries died
   before target phases, so the task/value join remains unevaluable rather than
   an ABI mismatch.
+- s2067 supersedes the s2066 wording that the live port task/value join was
+  unevaluable. That wording was believable because the prior capture aborted
+  before a canary-covering E50 row and failed the no-crash contract. The new
+  capture reached both target phases, supplied exact E50 and CB0 rows, and
+  showed zero field overlaps alongside `exit=1`, DMEM changes, and
+  `canary_ok=0` on every target row. It therefore selects the live
+  ABI/staging mismatch and refutes output-field or data-struct overlap at this
+  scope; exact retail writer ownership of the E50 envelope remains open
+  because the independent watch in this run covered only the lower candidate
+  band.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -517,10 +543,13 @@ exact host task-ABI interpretation remains open. s2065 narrowed the source
 claim: the complete DMA table shows that `output_buff` and `yield_data_ptr`
 are never read, and both candidate write destinations are DMEM-derived rather
 than direct OSTask fields. The C88 and callback conclusions remain
-single-source port evidence;
-the independent oracle supplied route/phase qualification. The task ABI and
-complete playback remain open. The oracle and port both independently reach
-both target anchors, so this is not a retail-route absence.
+single-source port evidence; the independent oracle supplied route/phase
+qualification. s2067 then selected H-ImageTaskAbiMismatch at live contract
+scope: both target phases had complete exact E50/CB0 rows, no task-field
+overlap, zero payloads, `exit=1`, and canary failure on every row. Exact E50
+writer ownership remains the next discriminator. The task ABI and complete
+playback remain open. The oracle and port both independently reach both target
+anchors, so this is not a retail-route absence.
 
 ## Method and safety rules
 
