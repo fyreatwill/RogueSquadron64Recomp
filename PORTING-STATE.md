@@ -96665,5 +96665,5 @@ guard, mitigation, or generated-tree changes. The next unit is blocked on the
 phase-valid s2007 tree or owner authorization to reconcile the four pending
 companion symbol files.
 
-OUTCOME: BLOCKED — retail writer attribution completed; port-side join needs
-the generated-tree artifact or owner authorization.
+OUTCOME: ADVANCED — retail writer attribution completed; the next port-side
+join needs the generated-tree artifact or owner authorization.
