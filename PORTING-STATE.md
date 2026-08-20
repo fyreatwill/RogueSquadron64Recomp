@@ -95343,3 +95343,61 @@ ledger; no new unevaluated verdict.
 **OUTCOME: ADVANCED** — planned +0x30 store census selects
 H-no-decrement and refutes H-dec-then-rewrite. Next: dump slot+0x58
 on `[drain-path]` rows.
+
+## Session 1988 (2026-08-19) — hangar fade +0x58 frozen; working elapsed is +0x60
+
+**Instrument.** Incremental `apply_s1988_drain_h58`
+(`RS64_S1988_DRAIN_H58=1`). Extended each `[drain-path]` idx row with
+`h58=` (`MEM_HU` +0x58) and `w60=`/`w64=`/`w68=` (`MEM_W`). Bound
+already +0x70. Kept s1987 `[h30-sum]`/`[h30-uniq]` and s1986
+`h30=`/`b6c=`. No store changed. `S32` on every `MEM_*`.
+
+**Probe.** `scratch/agent/s1988_drain_h58/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 250852 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512`
+at 25.1s.
+
+Positive controls (same run): `[drain-path] call=1 iters=1 unmap=0`
+18 idx rows with `h58=`; last alloc tickn=4 `0x801714D0 count=18`;
+`[drain-stop-sum] entry=1` fade n=153; `[drain-timeout]` 10M;
+`[h30-sum]` fade narmed=134547 n14=134547 nlt14=0; `[h30-uniq]`
+fade `0x14` only during drain. iters=1: 16/18 idxs `h58=0x0014`
+matching the fade copy (idx 12 idle `h58=0x0000` `b6c=0x02`;
+idx 5 already `b=0x00` with `h58=0x0014`).
+
+**Census (108 samples, iters 1–8 then every 100000 through 10M).**
+Loopers last `b=0x02`: 0–4, 6, 7, 13–17 (12 voices). On every
+looper, all 108 samples: `h30=0x0014`, `h58=0x0014`, `b6c=0x03`,
+`w64=0`, `w68=0x3F800000` (1.0f). Unique h58 globally: `0x14`
+(1836 rows) and `0x00` (108 rows, all idx 12). `h58` never
+counts `0x13..0` and never jumps.
+
+`w60` is not a countdown either: 103/108 samples `0`, 5 samples
+`0x0008B000` (569344) on **all 12 loopers at the same 5 iters**
+(4, 1.7M, 2.5M, 4.2M, 7.9M). Static: `advanceVolumeFadeEnvelope`
+(`0x8008F4D8`) uses +0x58 as duration (`lhu`) and +0x60 as
+elapsed (`lw` / `addu $a1` / `sw` at `0x8008F64C`). Fade
+(`beginVoiceFadeRelease` `0x800924DC`) zeros +0x60 every call.
+`+0x6C==3` skips only the init copy, not the +0x60 add
+(`beq +0x6C, 3 → L_8008F548`, which still falls into
+`L_8008F5E8`). Single-source static; not scored as a verdict.
+
+**Verdicts.**
+- H-working-timer-is-0x58 REFUTED: `h58` frozen at the fade copy
+  `0x14` through 10M. Duration, not elapsed.
+- H-envelope-fields-stuck SELECTED for +0x58/+0x64/+0x68. +0x60
+  is the elapsed word; the 5× `0x8B000` hits are consistent with
+  a mid-tick add that fade then zeros (dump is after
+  `tickMusyXIfActive`).
+- H-b6c-skips-tick still open as a runtime claim. Static read of
+  `advanceVolumeFadeEnvelope` says +0x6C=3 does **not** skip the
+  tick, only the init. Next unit dest-maps the +0x60 add vs the
+  fade zero.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in
+the ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned +0x58 dump refutes
+H-working-timer-is-0x58 and selects H-envelope-fields-stuck.
+Next: dest-map `advanceVolumeFadeEnvelope` `sw +0x60` vs fade
+`sw $zero, +0x60`.
