@@ -95468,3 +95468,64 @@ the ledger; no new unevaluated verdict.
 H-envelope-never-called and H-step-is-zero; selects
 H-fade-rearms-zeros-elapsed. Next: `stopAllSynthVoices` gate
 `0x80141AD0` vs n_work during drain.
+
+## Session 1990 (2026-08-19) — stopAllSynthVoices gate stays voice-count 18; every drain tick re-fades
+
+**Instrument.** Incremental `apply_s1990_stop_all`
+(`RS64_S1990_STOP_ALL=1`). After `lbu 0x80141AD0` at
+`stopAllSynthVoices` `0x8008DBF8`: n/narmed/n_skip (blez)/
+n_work, last gate, nchg; first 8 + every 10000th + every gate
+change. Fade jal `0x8008DCC4` (stopAll, `$a0=$s4`) vs
+`0x8008DB98` (stopVoicesByHandle, `$a0=$s1`): n/narmed/last
+a0. Sum dump at `[drain-timeout]`. Kept `[w60-sum]` /
+`[drain-path] w60=` / `h58=`. `S32`. No store changed.
+
+**Probe.** `scratch/agent/s1990_stop_all/run.log` — eleven-Start
++ `ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512.
+Probe rc=0, 17 frames, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.3s `#1512`.
+
+Positive controls (same run): `[drain-path] call=1 iters=1
+unmap=0` 18 idx rows `h58=0x0014` (idx 12 idle `h58=0`); last
+alloc tickn=4 `0x801714D0 count=18`; `[drain-stop-sum] entry=1`
+fade n=154; `[drain-timeout]` 10M; `[w60-sum]` fade-zero
+narmed=134878 n0=134878; first-8 `[stop-all]` a0=0 gate
+printed (ra=0, jal omits `ctx->r31`; static caller is
+`tickMusyXIfActive`).
+
+**Census.** `[stop-all-sum] n=10073 narmed=10064 n_skip=0
+n_work=10073 lastgate=18 nchg=5 lasta0=0`. Gate changes are
+all pre-drain: 20→17→16→15 then 18 at n=9 (drain's entry
+tick, still `armed=0`) and stuck. In-loop ticks are 64 +
+every 1000th of 10M = 10064, matching narmed. `[stop-all-fade-sum]
+n=181301 narmed=181152 lasta0=17` — 10064×18 = 181152.
+`[handle-fade-sum] n=31 narmed=0`. `[drain-slots] ch=18`
+through 10M (same byte). Fade-zero narmed=134878 is the
+live-slot subset (`beginVoiceFadeRelease` `beq slot+0==0`
+skips idle). Envelope narmed=2416 step `0x8B000`. Static
+writers of `0x80141AD0`: `sb` in `setDisplayMode`
+`0x8008EA44/54` and `reapplyDisplayMode` `0x8008EB8C/9C`
+(voice count, clamp 0x20), then `initAudioSubsystem`.
+
+**Verdicts.**
+- H-stop-all-skips REFUTED: n_skip=0, n_work=10073.
+- H-stop-all-once REFUTED: n_work stays huge; gate last=18
+  not 0; nchg=5 all before drain armed.
+- H-stop-all-gate-stuck SELECTED: gate=18 through 10M,
+  n_work=every tick, stopAll-fade narmed = narmed_ticks×18.
+  `0x80141AD0` is the allocated voice count (matches
+  `allocateSongChannelArray` count=18 / drain-slots `ch=`),
+  not a pending-stop flag, so it is not supposed to drop.
+  Every `tickMusyXIfActive` with `$a0=0` therefore re-fades
+  every live sample voice, zeroing +0x60 and restarting the
+  +0x14 duration — that is why elapsed never accumulates.
+  Handle-fade narmed=0: the 31 handle jals are all pre-drain
+  and are not the 134k rewrite.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already
+in the ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned stopAll gate census selects
+H-stop-all-gate-stuck and refutes skip/once. Next: whether
+each loop iter takes the FREE path (`lw 0($s2)` nonzero →
+`L_8008DC78`) or empty-slot fade-only (`beq L_8008DCC4`).

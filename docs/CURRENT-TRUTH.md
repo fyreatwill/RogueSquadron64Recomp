@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1989 (2026-08-19).
+detail. Reviewed through s1990 (2026-08-19).
 
 ## Current state
 
@@ -174,6 +174,19 @@ detail. Reviewed through s1989 (2026-08-19).
   callers: `stopVoicesByHandle` n=30 and `stopAllSynthVoices`
   (`0x8008DBF4`) from every `tickMusyXIfActive` (`$a0=0`);
   the sweep is `blez`-gated on `lbu 0x80141AD0`.
+  s1990 selected H-stop-all-gate-stuck: `[stop-all-sum]
+  n=10073 narmed=10064 n_skip=0 n_work=10073 lastgate=18
+  nchg=5`. Gate changes 20→17→16→15→18 are all pre-drain;
+  then stuck at 18 through 10M (same byte as drain-slots
+  `ch=` / `allocateSongChannelArray` count=18). In-loop
+  ticks 64+10000=10064 match narmed. StopAll-fade narmed=
+  181152 = 10064×18; handle-fade narmed=0 (n=31, all
+  pre-drain). Fade-zero narmed=134878 is the live-slot
+  subset. `0x80141AD0` is the allocated voice count
+  (`sb` in `setDisplayMode`/`reapplyDisplayMode`, clamp
+  0x20), not a pending-stop flag, so it never drops.
+  Every drain tick therefore re-fades every live voice.
+  H-stop-all-skips / H-stop-all-once REFUTED.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -291,26 +304,29 @@ detail. Reviewed through s1989 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1989: fade re-inits +0x60 every hangar-armed call
-(narmed=131404, all zeros) so envelope elapsed never accumulates
-(envelope narmed=2690, step `0x8B000`). Looping slot+0 stays
-`0x02`. Next is why fade keeps firing: `stopAllSynthVoices`
-gate `0x80141AD0`.
+Re-ranked s1990: `stopAllSynthVoices` runs the sweep on
+every drain tick (`n_skip=0 n_work=10073 lastgate=18`);
+its fade jal narmed=181152 = 10064×18. `0x80141AD0` is the
+voice count, so it stays 18. Next is whether each loop
+iter FREEs an occupied synth slot or only fades from the
+empty-slot branch.
 
-1. **Hangar frame-freeze: census `stopAllSynthVoices` gate
-   `0x80141AD0` (s1989).** Same-run controls: `[drain-path]
-   call=1 unmap=0` 18 idx rows `h58=0x0014` at iters=1, last
-   alloc tickn=4 `0x801714D0 count=18`, `[drain-stop-sum]
-   entry=1` fade n=153, `[drain-timeout]` 10M, `[w60-sum]`
-   envelope narmed=2690 n8b=2678, fade-zero narmed=131404,
-   first-8 `[w60-store]` envelope val=`0x8B000` and fade
-   val=0. H-fade-rearms-zeros-elapsed SELECTED;
-   H-envelope-never-called / H-step-is-zero REFUTED. Next:
-   instrument `stopAllSynthVoices` `0x8008DBF4` entry (gate
-   `lbu 0x80141AD0`, n/narmed/n_skip/n_work) and its fade
-   jal `0x8008DCC4` vs `stopVoicesByHandle` jal `0x8008DB98`.
-   Keep `[w60-sum]` / `[drain-path] w60=`. Use `S32`. Do not
-   dest-map render `sw 0x58($s0)`.
+1. **Hangar frame-freeze: census `stopAllSynthVoices` loop
+   path FREE vs empty-slot fade (s1990).** Same-run
+   controls: `[drain-path] call=1 unmap=0` 18 idx rows
+   `h58=0x0014` at iters=1, last alloc tickn=4
+   `0x801714D0 count=18`, `[drain-stop-sum] entry=1` fade
+   n=154, `[drain-timeout]` 10M, `[w60-sum]` fade-zero
+   narmed=134878, `[stop-all-sum] n=10073 n_skip=0
+   n_work=10073 lastgate=18`, `[stop-all-fade-sum]`
+   narmed=181152, first-8 `[stop-all]` a0=0 gate printed.
+   H-stop-all-gate-stuck SELECTED; H-stop-all-skips /
+   H-stop-all-once REFUTED. Next: at `L_8008DC50`
+   `lw 0x0($s2)` count n_free (fallthrough `L_8008DC78`
+   `freeSynthVoiceFromActiveList`) vs n_empty (`beq
+   L_8008DCC4` fade-only) per drain-armed tick. Keep
+   `[stop-all-sum]` / `[w60-sum]`. Use `S32`. Do not
+   skip or rewrite the fade jal.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -513,6 +529,12 @@ Most recent, still load-bearing for the next unit:
   fade-zero narmed=131404 all val=0, matching the +0x30
   rewrite. Believable because dump-after-tick saw 5× `0x8B000`
   which could have been another writer.
+- s1989 "whether `stopAllSynthVoices` blez-skips, runs once,
+  or stays gated on" is superseded by s1990 — n_skip=0,
+  n_work=10073, lastgate=18 through 10M, stopAll-fade
+  narmed=181152=10064×18. Believable because `0x80141AD0`
+  could have been a pending-stop flag that should drop; it
+  is the allocated voice count.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -524,11 +546,12 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1989 drain-slot identity / subset-live / skip-cursor /
+and s1978–s1990 drain-slot identity / subset-live / skip-cursor /
 slot+0x40-skip / init-writer / loop-length / stop-dest-retrigger /
 stop-family song-handle-fade / fade-timer-stuck / +0x30
 store-census (H-no-decrement) / +0x58-duration (H-envelope-fields-stuck)
-/ +0x60 dest-map (H-fade-rearms-zeros-elapsed)
+/ +0x60 dest-map (H-fade-rearms-zeros-elapsed) / stopAll gate
+(H-stop-all-gate-stuck)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
