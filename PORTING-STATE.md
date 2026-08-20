@@ -96175,3 +96175,56 @@ gate, guard, or mitigation changed.
 
 **OUTCOME: ADVANCED** — the opt-in arm was phase-validated and the simple
 host-stub-removal hypothesis was refuted; next is task/DMEM ABI attribution.
+
+## Session 2002 (2026-08-20) — mapped opt-in audio task and DMEM footprint
+
+The maintenance check was 49,780 bytes, so this was not a maintenance
+iteration. `scratch/agent/NEXT.md` named four competing hypotheses and the
+phase-gated DMA/DMEM discriminator before the build. The independent retail
+oracle was run first: its whole-RDRAM positive control fired 18,401 writes and
+the aligned `0x14974C` watch fired 8,401 writes. Dominant writer PCs were
+`0x800912F8` (1,567), `0x80091680` (1,568), `0x800916DC` (2,623), and
+`0x800917A8` (2,628), with five additional init/neighbor hits. The ground
+truth control was therefore live.
+
+The one code change extended the existing `librecomp/src/rsp.cpp:run_task`
+audio probe and exported it through `submodule-patches/export.sh`. Sampled
+rows now contain the complete `OSTask` descriptor, full-DMEM pre/post FNV
+hashes, changed-byte count and first/last changed offsets, the existing
+canary, and direct `RspExitReason`. The Debug target built successfully.
+
+Both arms used that same binary and the phase-gated
+`run_mission_keys.sh` schedule concurrently. The control produced 91 sampled
+ABI rows (29 while title VI was 1024), all `exit=1`, with unchanged DMEM and
+`canary_ok=1`. The treatment produced 111 rows (17 at title 1024 and 37 in
+hangar VI 512/origin `0x006AB400`), all `exit=1`; every treatment row changed
+DMEM from `0x340` through `0xFCF`, with 1,590–1,600 changed bytes and
+`canary_ok=0`. Both arms presented the same descriptor shape: `type=2`,
+`ucode=0x80099FE0`, `ucode_size=0x1000`, `ucode_data=0x800A4E00`,
+`ucode_data_size=0x800`, `dram_stack=0`, zero output/yield fields, and
+`data_size` 1–3. All 62 sampled control PCM rows and all 72 treatment PCM
+rows were `all_zero=1`; the treatment slot census had no terminal slot
+transition. The two processes ended before their drivers completed all later
+probes (control in `do_rom_read`, treatment in an abort path), but both had
+valid title phase rows and the treatment had valid hangar phase rows, so those
+termination events are not used as phase nulls.
+
+Independent static evidence resolves the image identity: `factor5b_rsp.toml`
+describes `factor5_ucode_b` as the second Factor 5 graphics ucode, and its
+generated body executes `DPC_STATUS` and `SP_WR_LEN` graphics paths. Combined
+with the same-build descriptor/DMEM table and the independent PCM/slot
+consumer rows, this selects H-wrong-resident-ABI. H-task-staging,
+H-bridge, and H-gate-scheduler remain open because the selected image did not
+produce a valid audio output for those downstream hypotheses.
+
+ORIGIN: the `0x340..0xFCF` footprint and canary change are written by the
+selected graphics ucode; they are ABI observations, not a corruption
+diagnosis or mitigation. No image default, guest audio gate, guard, or
+runtime audio behavior changed.
+
+This rules out treating `factor5_ucode_b` as the next audio de-stubbing step;
+it does not yet name the retail MusyX/MORT resident or its DMEM/output ABI.
+
+**OUTCOME: ADVANCED** — same-build task/DMEM rows plus independent static and
+retail controls selected the wrong-resident ABI; next is retail audio-image
+and output-contract attribution.

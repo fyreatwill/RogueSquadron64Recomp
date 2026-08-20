@@ -440,7 +440,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..d589787 100644
+index 1cb3f6a..a47442d 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -32,6 +32,14 @@ void recomp::rsp::constants_init() {
@@ -458,7 +458,7 @@ index 1cb3f6a..d589787 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,15 +50,66 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,15 +50,120 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -489,10 +489,14 @@ index 1cb3f6a..d589787 100644
 +    constexpr uint32_t audio_canary_size = 0x10;
 +    uint32_t audio_canary_pre = 0;
 +    uint32_t audio_probe_n = 0;
++    bool audio_probe_row = false;
++    uint8_t audio_dmem_before[0x1000]{};
++    uint32_t audio_dmem_pre_hash = 0;
 +    const char* audio_arm = "n/a";
 +    if (probe_audio) {
 +        static uint32_t s_audio_probe_n = 0;
 +        audio_probe_n = s_audio_probe_n++;
++        audio_probe_row = audio_probe_n < 40 || (audio_probe_n % 128) == 0;
 +        const char* enabled = std::getenv("ROGUESQ_AUDIO_UCODE");
 +        audio_arm = (enabled && enabled[0] && enabled[0] != '0') ?
 +            "factor5_ucode_b" : "musyx_stub";
@@ -502,22 +506,72 @@ index 1cb3f6a..d589787 100644
 +            audio_canary_pre = (audio_canary_pre * 16777619u) ^
 +                RSP_MEM_BU(0, audio_canary_offset + i);
 +        }
++        if (audio_probe_row) {
++            audio_dmem_pre_hash = 2166136261u;
++            for (uint32_t i = 0; i < sizeof(audio_dmem_before); i++) {
++                audio_dmem_before[i] = RSP_MEM_BU(0, i);
++                audio_dmem_pre_hash = (audio_dmem_pre_hash * 16777619u) ^
++                    audio_dmem_before[i];
++            }
++        }
 +    }
 +
      // Run the ucode
      RspExitReason exit_reason = ucode_func(rdram, task->t.ucode);
  
-+    if (probe_audio &&
-+        (audio_probe_n < 40 || (audio_probe_n % 128) == 0)) {
++    if (probe_audio && audio_probe_row) {
 +        uint32_t audio_canary_post = 0;
++        uint32_t audio_dmem_post_hash = 2166136261u;
++        uint32_t audio_dmem_changed = 0;
++        uint32_t audio_dmem_first_changed = 0xFFFFFFFFu;
++        uint32_t audio_dmem_last_changed = 0xFFFFFFFFu;
 +        for (uint32_t i = 0; i < audio_canary_size; i++) {
 +            audio_canary_post = (audio_canary_post * 16777619u) ^
 +                RSP_MEM_BU(0, audio_canary_offset + i);
 +        }
++        for (uint32_t i = 0; i < sizeof(audio_dmem_before); i++) {
++            const uint8_t post = RSP_MEM_BU(0, i);
++            audio_dmem_post_hash = (audio_dmem_post_hash * 16777619u) ^ post;
++            if (post != audio_dmem_before[i]) {
++                audio_dmem_changed++;
++                if (audio_dmem_first_changed == 0xFFFFFFFFu) {
++                    audio_dmem_first_changed = i;
++                }
++                audio_dmem_last_changed = i;
++            }
++        }
 +        fprintf(stderr,
-+                "[audtask-run] n=%u type=%" PRIu32 " arm=%s pre=0x%08X post=0x%08X canary_ok=%d exit=%d\n",
-+                audio_probe_n, task->t.type, audio_arm, audio_canary_pre,
-+                audio_canary_post, audio_canary_pre == audio_canary_post ? 1 : 0,
++                "[audtask-abi] n=%u arm=%s type=%" PRIu32
++                " flags=0x%08X ucode=0x%08X ucode_size=0x%X"
++                " ucode_data=0x%08X ucode_data_size=0x%X"
++                " dram_stack=0x%08X dram_stack_size=0x%X"
++                " data_ptr=0x%08X data_size=0x%X"
++                " ucode_boot=0x%08X ucode_boot_size=0x%X"
++                " output_buff=0x%08X output_buff_size=0x%08X"
++                " yield_ptr=0x%08X yield_size=0x%X"
++                " dmem_pre=0x%08X dmem_post=0x%08X changed=%u"
++                " first=0x%03X last=0x%03X"
++                " canary_pre=0x%08X canary_post=0x%08X canary_ok=%d exit=%d\n",
++                audio_probe_n, audio_arm, task->t.type,
++                static_cast<uint32_t>(task->t.flags),
++                static_cast<uint32_t>(task->t.ucode),
++                static_cast<uint32_t>(task->t.ucode_size),
++                static_cast<uint32_t>(task->t.ucode_data),
++                static_cast<uint32_t>(task->t.ucode_data_size),
++                static_cast<uint32_t>(task->t.dram_stack),
++                static_cast<uint32_t>(task->t.dram_stack_size),
++                static_cast<uint32_t>(task->t.data_ptr),
++                static_cast<uint32_t>(task->t.data_size),
++                static_cast<uint32_t>(task->t.ucode_boot),
++                static_cast<uint32_t>(task->t.ucode_boot_size),
++                static_cast<uint32_t>(task->t.output_buff),
++                static_cast<uint32_t>(task->t.output_buff_size),
++                static_cast<uint32_t>(task->t.yield_data_ptr),
++                static_cast<uint32_t>(task->t.yield_data_size),
++                audio_dmem_pre_hash, audio_dmem_post_hash, audio_dmem_changed,
++                audio_dmem_first_changed, audio_dmem_last_changed,
++                audio_canary_pre, audio_canary_post,
++                audio_canary_pre == audio_canary_post ? 1 : 0,
 +                static_cast<int>(exit_reason));
 +        fflush(stderr);
 +    }

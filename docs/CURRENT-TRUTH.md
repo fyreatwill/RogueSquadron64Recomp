@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s2001 (2026-08-20).
+detail. Reviewed through s2002 (2026-08-20).
 
 ## Current state
 
@@ -396,6 +396,29 @@ detail. Reviewed through s2001 (2026-08-20).
   positive control (23,639 writes) and saw 8,367 writes to physical
   `0x14974C` from four retail PCs; it does not yet identify the opt-in task's
   ABI. No audio dispatch, guest gate, or default behavior changed.
+- **M5 task/DMEM ABI census (s2002).** The independent retail oracle again
+  passed its whole-RDRAM positive control (18,401 writes) and the aligned
+  `0x14974C` watch fired 8,401 times, with four dominant retail writer PCs
+  (`0x800912F8`, `0x80091680`, `0x800916DC`, `0x800917A8`). One Debug build
+  ran the phase-gated `musyx_stub` control and `ROGUESQ_AUDIO_UCODE=1`
+  treatment. Both arms presented the same sampled `M_AUDTASK` descriptor:
+  `type=2`, `ucode=0x80099FE0`, `ucode_size=0x1000`,
+  `ucode_data=0x800A4E00`, `ucode_data_size=0x800`, zero stack/output/yield
+  fields, and `data_size` 1–3. At title VI 1024 the control had 29 audio rows,
+  all `exit=1`, unchanged full-DMEM hash, and `canary_ok=1`; treatment had 17
+  rows, all `exit=1`, with 1,590 or 1,597 changed bytes spanning
+  `0x340..0xFCF` and `canary_ok=0`. In the treatment hangar window
+  (`0x006AB400`/512), 37 rows had 1,590/1,597/1,600 changed bytes and the
+  same failed canary. Every sampled PCM row in both arms was `all_zero=1`;
+  treatment did not produce a terminal slot transition. Static independent
+  evidence identifies `factor5_ucode_b` as graphics code (`DPC_STATUS` and
+  `SP_WR_LEN` paths; `factor5b_rsp.toml` calls it the second Factor 5 gfx
+  ucode), so H-wrong-resident-ABI is selected. H-task-staging, H-bridge, and
+  H-gate-scheduler remain unproven because the selected image produced no
+  valid audio output to hand to those downstream stages. ORIGIN: the changed
+  DMEM footprint is written by the selected graphics ucode; it is an ABI
+  observation, not a mitigation or corruption diagnosis. No audio default,
+  guest gate, or guard changed.
 - **Generated-symbol sweep is effectively closed (s1966).** A full-file
   census found s1962–s1965 had only swept a small tail of the TOML;
   845 leftovers resolved in one batch (902 → 57 `func_8[01]*`). The
@@ -448,19 +471,21 @@ detail. Reviewed through s2001 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s2001: the opt-in arm is exercised but its task/DMEM ABI remains
-unidentified; map that boundary before changing audio gates or defaults. The
-hangar status-3 result remains parked with a precise scheduler lead.
+Re-ranked s2002: the existing opt-in image is a graphics resident, not a
+validated audio resident, so identify the retail audio image/task contract
+before changing audio gates or defaults. The hangar status-3 result remains
+parked with a precise scheduler lead.
 
-1. **M5 task/DMEM ABI boundary census (s2002).** Batch the audio task
-   descriptor (`ucode`, `ucode_data`, sizes, `data_ptr`, `data_size`), input
-   and post-task DMEM hashes/ranges, direct exit, slot transition, and PCM
-   result in one host table for both arms. Pair it with the existing retail
-   whole-RDRAM control and named `0x14974C` writer watch before building the
-   instrument. This splits host staging mismatch, wrong MusyX/MORT resident
-   image, and a downstream PCM bridge failure. Keep the dispatch toggle and
-   all guest gate stores unchanged; `ROGUESQ_SPIN_YIELD=1` is only the common
-   frontend scheduler control needed to reach hangar.
+1. **M5 retail audio-resident attribution (s2003).** Identify the ROM/RSP
+   image and DMEM contract that the retail audio task actually uses, then
+   compare it with the live `M_AUDTASK` descriptor and the graphics-only
+   `factor5_ucode_b` source. Use the oracle's whole-RDRAM and aligned
+   `0x14974C` controls first; do not enable another image or reverse a guest
+   gate. The next port table must include task descriptor, selected image
+   provenance, DMEM input/output ranges, DMEM-to-RDRAM writes, direct exit,
+   slot transition, and PCM result in one phase-gated run. A retail-matched
+   audio image/output range selects the next de-stubbing step; a graphics
+   image with no audio-range write keeps the task/ROM boundary open.
 2. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
    census reached hangar `[phase] 512 origin=0x006AB400` in 24.6s and captured
    17 frames. `[svc-pool]` reached `n=1000 armed=0 gate=1`; after
@@ -547,16 +572,16 @@ vs 1 frame / 4s before. Class is fully enumerated and patched; no remaining
 sites elsewhere in the generated codebase. Do not reopen without a new site
 identified by grep + static analysis.
 
-**M5 opt-in RSP arm.** s2001's same-build, phase-gated control/treatment rows
-show that `musyx_stub` and `factor5_ucode_b` both return `Broke`, but only the
-opt-in function changes the `0xF80..0xF8F` DMEM canary and neither arm produces
-nonzero PCM. The same slot census reached voice key-on in both arms without a
-treatment-only terminal transition. This is two-source port evidence from
-`run_task` and the independent PCM/slot consumers; it refutes the simple
-"remove the host stub and valid audio appears" step. The canary's ownership is
-not yet established, so it does not select MORT versus a wrong resident/task
-ABI. Retail oracle writer activity at `0x14974C` is confirmed independently;
-task-image attribution remains the next M5 boundary.
+**M5 opt-in RSP arm.** s2002's same-build, phase-gated task/DMEM census shows
+that both arms receive the same `M_AUDTASK` descriptor, while
+`factor5_ucode_b` changes 1,590–1,600 bytes from `0x340..0xFCF`, including the
+`0xF80..0xF8F` canary, and neither arm produces nonzero PCM. The independent
+source/config census identifies that function as the second Factor 5 graphics
+ucode, not a validated MusyX/MORT audio resident. H-wrong-resident-ABI is
+selected; H-task-staging, H-bridge, and H-gate-scheduler remain open because
+no valid audio output was produced. Retail oracle writer activity at
+`0x14974C` is confirmed independently; the next M5 unit is retail image/task
+attribution. No dispatch default, guest gate, guard, or mitigation changed.
 
 ## Superseded conclusions
 
@@ -748,6 +773,12 @@ Most recent, still load-bearing for the next unit:
   s2001 — the paired phase-gated run completed the dispatch comparison but
   found no treatment PCM/slot completion and an unexplained DMEM footprint;
   the next boundary is task/DMEM ABI attribution, not a default flip.
+- s2001's "H-MORT-path versus wrong task/resident ABI remains open" is
+  superseded by s2002 — the complete descriptor rows matched across arms,
+  the treatment footprint had no audio output, and independent source/config
+  evidence identifies `factor5_ucode_b` as graphics code. Believable because
+  its guest pointer and the active M5 label had previously been treated as
+  the audio resident without a complete task-image census.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -791,6 +822,11 @@ site=finalizeCurrentSpeechBuffer)
  canary changed to zero; both PCM-silent and no arm-specific slot completion;
  phase-gated title/hangar reached; retail oracle positive control plus
  `0x14974C` writer PCs)
+/ s2002 M5 task/DMEM ABI census
+ (18,401 whole-RDRAM and 8,401 aligned `0x14974C` oracle hits; same
+ `M_AUDTASK` descriptor in both arms; treatment 1,590–1,600 changed bytes
+ `0x340..0xFCF`, no PCM; `factor5_ucode_b` statically identified as gfx;
+ H-wrong-resident-ABI selected)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
