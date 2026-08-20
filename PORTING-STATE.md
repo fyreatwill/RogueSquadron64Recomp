@@ -96857,3 +96857,47 @@ No code changed this iteration beyond what s2019 already committed.
 OUTCOME: ADVANCED — checkpoint; s2019's indirect-dispatch refutation is
 formally restated with discrimination language; direct-entry discriminator
 named for s2021.
+
+## Session 2021 (2026-08-20) — direct service entry selected the body boundary
+
+HYPOTHESIS-ID: m5-service-direct-entry-caller-witness
+
+The planned direct-entry discriminator was implemented in the durable fixup
+path at `../N64Recomp/fixup_game_funcs.py`, not in runtime dispatch. The clean
+regeneration used the available macOS commands (`python3`, the local
+`build/N64Recomp`, and the existing s2006 opt-in hook); the game target then
+built successfully. The first invocation exposed only an environment command
+failure (`python` is absent); no ELF, game build, or run occurred in that
+attempt. The fixed `python3` invocation regenerated all functions, reapplied
+the s2006 entry/exit/store control, and produced the s2020 witness in
+`funcs_26.c`.
+
+The single phase-valid port capture reached VI 1024 at 49.7 seconds and VI
+512 at 85.6 and 131.8 seconds. The same run emitted 2,096 phase-valid
+`[s2020-svc]` entry rows and 2,096 matching exit rows. The bounded pre-phase
+`[s2020-svc] edge=pre-entry` control emitted zero rows. The independent s2006
+entry/exit control emitted its bounded rows, and the existing
+`[service-voice-pool-frame]` control emitted 20 rows, so the target-entry
+instrumentation was live. Every sampled s2020 entry had `thr=0`,
+`status=0x00`, and `ra=0`, producing `callsite=0xFFFFFFF8` rather than the
+retail predecessor `0x80019B74`. No `[s2006-store]` row for `0x8009B7EC`
+fired. Audio-drain entry/exit and PCM rows were also live. The process later
+hit the known arm64 SIGBUS boundary at guest PC `0x80054780`; that later crash
+does not invalidate the earlier phase-valid service rows.
+
+This discriminates the planned table to D4: the direct service target is
+reached and returns, but the worker-side clear edge is not observed. It rules
+out a simple “target is absent from the phase-valid route” explanation and
+does not authorize the seven-site writer/thread join yet. The zero `ctx->r31`
+is an invalid caller attribution, not enough by itself to call a retail call
+site mismatch. The missing store selects a body-level gate/slot predicate
+measurement next. The result is supported by the independent s2006 entry/exit
+control and the existing service-entry control in the same capture; caller
+identity and the exact body stop remain open.
+
+The clean regeneration also showed that the existing s2006 census is an
+opt-in fixup stage rather than part of the default fixup pass, so the session
+preserved it by invoking its documented hook after the normal pass. No
+runtime behavior, mitigation, or overlay dispatch code changed.
+
+OUTCOME: ADVANCED — direct target entry/exit was observed and D4 selected; the next discriminator is the service-body gate/store census.

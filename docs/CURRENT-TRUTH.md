@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2020 (2026-08-20).
+for session detail. Reviewed through s2021 (2026-08-20).
 
 ## Current state
 
@@ -84,28 +84,36 @@ for session detail. Reviewed through s2020 (2026-08-20).
   both arms of the missing-registration hypothesis are closed. Only a runtime
   caller-path or audio-side gate before the function remains open. The s2020
   checkpoint formally restated this as discrimination language for the gate.
+- The s2021 clean-regenerated tree built successfully and its same-run direct
+  witness emitted 2,096 phase-valid `serviceVoicePoolFrame` entries and
+  2,096 exits. The bounded pre-phase control emitted zero rows, while the
+  independent s2006 entry/exit control and the existing service-entry control
+  also fired. Every s2020 row had `thr=0`, `status=0x00`, and `ra=0`, yielding
+  the unusable derived call site `0xFFFFFFF8`; the expected retail predecessor
+  `0x80019B74` was not observed. No `0x8009B7EC` store edge fired. This
+  selects the planned D4 service-body boundary: the target is reached and
+  returns, but its worker-side clear path is not reached. The zero `ra` is an
+  attribution failure, not yet evidence of a specific caller mismatch.
 
 ## Active investigation and ranked next steps
 
-1. **M5 direct service-entry/caller witness (unblocked).** The s2018 static
-   crosswalk and s2019 oracle both establish that retail executes
-   `0x8009B5A8`, while s2019 proves the port's `get_function` path is not
-   exercised by either of its two controls in the phase-valid recipe. Add a
-   phase-gated entry witness to the existing `serviceVoicePoolFrame`
-   diagnostic, including the guest/host thread, native caller/backtrace or
-   equivalent guest call-site attribution, status, and exit edge; retain a
-   bounded pre-phase entry row as the same-run instrumentation control. A
-   phase-valid entry with a caller selects a live direct service path; no
-   phase-valid entry with the pre-phase control live selects a gate or missing
-   caller before the service function; an entry with a caller different from
-   retail's `exec-prev` `0x80019B74` selects a port call-path mismatch. Do not
-   run another `get_function` or status join until this witness is live.
-2. **M5 port-side writer/thread census (blocked on #1).** Once the service
-   control is live in the same run, use the existing seven-site join: writer
-   PC, slot/index, old/new byte, host thread, shutdown call, service
-   entry/exit, callback edge, and `0x8009B7EC`. Slot 0 `0x03` then clear
-   selects transient-cleared; another slot selects other-slot; no `0x03` with
-   live controls selects never-written.
+1. **M5 service-body gate/store witness (unblocked).** s2021 selects D4:
+   phase-valid direct entry and exit are live, but the pre-phase control and
+   `0x8009B7EC` store edge are both absent. Batch one phase-gated body census
+   at the `0x8009B5D8` audio gate, the `0x8009B624` slot-loop head, and the
+   actual `0x8009B7EC` store. Record the gate byte at `0x800A5121`, skip/body
+   path, slot index/status, thread, shutdown call, and phase. A live gate with
+   only skip paths selects the audio-side gate; body iterations with no store
+   select the slot/status predicate; a store row selects the existing
+   writer/thread join. Retain an unconditional bounded pre-phase body control
+   and the s2020 entry/exit rows as same-run controls. Do not repeat the
+   direct-entry or `get_function` witness alone.
+2. **M5 port-side writer/thread census (blocked on #1).** Once the body
+   census reaches the store edge in the same run, use the existing seven-site
+   join: writer PC, slot/index, old/new byte, host thread, shutdown call,
+   service entry/exit, callback edge, and `0x8009B7EC`. Slot 0 `0x03` then
+   clear selects transient-cleared; another slot selects other-slot; no
+   `0x03` with live controls selects never-written.
 3. **M5 callback-side PCM witness (only if #2 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.
@@ -132,22 +140,20 @@ for the port-side writer/thread join. The s2017 hold-based run adds a
 crash-free late-route witness, but the join remains unevaluable because the
 service positive control is absent.
 
-**M5 service dispatch boundary.** This is a single-source port observation
-from three same-binary captures: the unconditional `serviceVoicePoolFrame`
-entry/exit census and the named `0x8009B7EC` store control both remain at zero,
-while VI 1024/512, shutdown call 3, and slot-0 `0x8009B2C4` rows fire. It
-rules out a simple phase-gate or crash-before-worker explanation for those
-captures, but does not yet distinguish missing registration, an unobserved
-caller path, or an audio-side gate before the call. The s2018 source/binary
-crosswalk independently shows that the function is base text, not an overlay:
-the section-3 table entry and linked symbol are present, while no named caller
-or direct host branch exists. This closes the static registration/linkage
-variant only; runtime target resolution remains unobserved.
-The s2019 phase-valid run does not repair that gap: the new target witness and
-both independent `get_function` positive controls were zero, while the direct
-service diagnostic's bounded first 20 entries were pre-title. This is a
-measurement failure for the indirect-dispatch mechanism, not evidence that
-the phase-valid service call is absent.
+**M5 service dispatch boundary.** s2018 and s2019 close the static
+registration/linkage and observed `get_function` arms. s2021 then supplied a
+different same-run line: the direct target emitted 2,096 phase-valid entries
+and exits, while the bounded pre-phase control remained zero. The independent
+s2006 entry/exit control and the existing service-entry control fired in the
+same run, and VI 1024/512 plus audio-drain rows were live. This rules out the
+claim that the service target is simply absent from the phase-valid port route.
+The target's `ctx->r31` was zero on every sampled phase-valid entry, so no
+guest caller can yet be attributed; `0xFFFFFFF8` is an invalid derived call
+site, not a selected retail mismatch. The `0x8009B7EC` edge remained absent,
+which selects the service-body boundary for the next measurement rather than
+the writer/thread join. This is still port-side, single-source evidence; it
+does not identify whether the body stops at the `0x800A5121` gate or at the
+slot/status predicate.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
 capture. The s2012 and s2013 debugger-off retail oracles both reached VI 1024
@@ -241,6 +247,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   formally: both the static (s2018) and indirect-dispatch (s2019) arms of the
   registration hypothesis are refuted; the direct-entry discriminator (D1-D4
   table in s2020/NEXT.md) is the required next measurement.
+- s2020's direct-entry discriminator is superseded by s2021: the phase-valid
+  target entry and exit fired, but the pre-phase control and `0x8009B7EC`
+  store edge did not. The wording that a live phase-valid entry would move
+  directly to the writer/thread join was believable because D1 was the
+  intended live-path arm; the missing store is now the selected D4
+  service-body boundary, and the next unit must distinguish the body gate from
+  the slot/status predicate.
 
 ## Evidence ledger summary
 
@@ -254,8 +267,9 @@ leaving the join open. s2017 isolates the missing service positive control as
 the next M5 boundary. s2018 refutes a static registration/linkage defect for
 the base-text service function but leaves runtime target resolution open. s2019
 shows that the chosen `get_function` witness mechanism and both its controls
-were unexercised in the phase-valid port route; the direct-entry caller
-witness is next. The durable milestones are: hangar
+were unexercised in the phase-valid port route. s2021 establishes direct
+service entry/exit but selects the body/store boundary because no pre-phase
+control or `0x8009B7EC` edge fired. The durable milestones are: hangar
 reachability, bltzal link repair, audio-drain writer mapping, M5 plan, opt-in
 DMA-to-queue mapping, shutdown call-3 reachability, the repeated retail
 status-value sequence, retail gate-writer attribution, and the unresolved
