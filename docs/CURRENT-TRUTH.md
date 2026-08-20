@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1999 (2026-08-20).
+detail. Reviewed through s2000 (2026-08-20).
 
 ## Current state
 
@@ -366,6 +366,15 @@ detail. Reviewed through s1999 (2026-08-20).
   statically env-gated (`musyx_stub` by default, `factor5_ucode_b` only with
   `ROGUESQ_AUDIO_UCODE`); gate activity does not prove host dispatch. No audio
   runtime behavior changed in s1999.
+- **M5 fixup anchor repaired (s2000).** `fixup_game_funcs.py` now scopes the
+  `0x8008EC88` force-zero rule to `funcs_23.c`, accepts the optional
+  `rs64_probe_submit_gate_store` line, and requires exactly one fresh match.
+  Supported N64Recomp regeneration and fixup reported `audio gate patched x1`;
+  generated `funcs_23.c` preserves the probe and writes zero at the anchored
+  store. The full `RogueSquadron64Recomp` target builds successfully. This
+  selects H-probe-anchor and rules out a generator-layout or output-path
+  failure. No game ran and no default audio dispatch or runtime behavior
+  changed.
 - **Generated-symbol sweep is effectively closed (s1966).** A full-file
   census found s1962–s1965 had only swept a small tail of the TOML;
   845 leftovers resolved in one batch (902 → 57 `func_8[01]*`). The
@@ -418,14 +427,16 @@ detail. Reviewed through s1999 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1999: the M5 ground-truth row is complete; repair the generated
-fixup anchor before validating the opt-in RSP arm. The hangar status-3 result
+Re-ranked s2000: the M5 fixup anchor is repaired; validate the existing opt-in
+RSP arm next. The hangar status-3 result
 remains parked with a precise scheduler lead.
 
-1. **M5 fixup-anchor repair, then opt-in RSP validation (s2000).** First make
-   the existing `0x8008EC88` force-zero rule regeneration-stable; then the
-   next unit can validate `ROGUESQ_AUDIO_UCODE=1` with task exit, DMEM, slot,
-   and PCM controls. Do not flip the default or reverse another gate.
+1. **M5 opt-in RSP validation (s2001).** One build must run the unset-env
+   `musyx_stub` control and `ROGUESQ_AUDIO_UCODE=1` treatment with the same
+   phase-gated title/hangar recipe. Measure direct task exit, DMEM canary,
+   guest slot transition, and PCM nonzero/silence together. Keep the default
+   dispatch and every gate store unchanged; `ROGUESQ_SPIN_YIELD=1` is only the
+   common frontend scheduler control needed to reach hangar.
 2. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
    census reached hangar `[phase] 512 origin=0x006AB400` in 24.6s and captured
    17 frames. `[svc-pool]` reached `n=1000 armed=0 gate=1`; after
@@ -526,6 +537,10 @@ Most recent, still load-bearing for the next unit:
   `0x8008EC88` misses the current output because a probe call sits between the
   instruction comment and the store; the generated reapply-display tail
   therefore writes `1`. This is not yet a mitigation or a runtime conclusion.
+- s1999's unrepaired `0x8008EC88` mismatch is superseded by s2000: the
+  regeneration-stable, exact-PC optional-probe anchor matches once and restores
+  the intended zero store; the full target build passes. This is a source
+  pipeline repair only, not evidence that the guest gate is safe to reverse.
 - s1888–s1917 "stall at 640 then crash" is superseded by s1918 — 2/8 logs
   live 180s with no crash and no `osViSetMode width=1024`.
 - H-slots-stay-live is superseded by s1942 — two `yield_self_1ms` calls
@@ -727,8 +742,11 @@ site=finalizeCurrentSpeechBuffer)
   design complete, ground truth next)
 / s1999 M5 oracle/generation reconciliation
  (retail setDisplayMode `0xF50` 0→1 confirmed legitimate; aligned-watch
-  composite for `0x14974C`; `0x8008EC88` fixup mismatch retained; no runtime
-  audio change)
+ composite for `0x14974C`; `0x8008EC88` fixup mismatch retained; no runtime
+ audio change)
+/ s2000 M5 fixup-anchor repair
+ (exact-PC optional-probe rule matched x1; generated `0x8008EC88` store is 0;
+ full Debug target builds; no runtime audio change)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

@@ -96094,3 +96094,31 @@ byte ownership and rules out de-stubbing based on gate writes alone.
 
 **OUTCOME: ADVANCED** — the independent oracle control passed and selected the
 fixup-anchor repair as the next M5 work unit.
+
+## Session 2000 (2026-08-20) — repaired the M5 audio gate fixup anchor
+
+This work unit ran the required regeneration/build path without running the
+game or changing audio dispatch. The maintenance check was 45,422 bytes, so
+this was not a maintenance iteration. `tools/make_elf.py` completed normally.
+
+The first attempted N64Recomp command used the project build's stale CLI and
+failed at the known unsupported `cache` instruction before fixup. The supported
+external `N64Recomp/build/N64Recomp` then regenerated the tree successfully;
+the failure was a tool-path issue, not a generator-layout result.
+
+`fixup_game_funcs.py` now anchors the existing force-zero rule to guest PC
+`0x8008EC88`, permits the optional `rs64_probe_submit_gate_store` line between
+the instruction comment and `MEM_B`, scopes the rule to `funcs_23.c`, and
+requires exactly one match. Fixup reported `funcs_23.c: audio gate patched x1`.
+The generated output preserves the probe and contains
+`MEM_B(0XF50, ctx->r1) = 0` at the anchored site. The other `0xF50` stores were
+not targeted by this change. This selects H-probe-anchor; H-generator-layout
+and H-wrong-output-path are refuted by the exact-count report/output table.
+
+The full `cmake --build build --target RogueSquadron64Recomp` completed
+successfully. Existing generated-code format warnings and the macOS SDL
+deployment-target warning remained non-fatal. No runtime audio behavior,
+default dispatch, guest gate semantics, or PCM conclusion was established.
+
+**OUTCOME: ADVANCED** — regeneration-stable M5 anchor and full build pass;
+next is the same-build default-versus-opt-in RSP validation.
