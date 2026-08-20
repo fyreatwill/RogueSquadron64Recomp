@@ -97988,3 +97988,37 @@ probe, not an explanation from this run. No code, guest value, guard, skip,
 or default audio behavior changed.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2052 (2026-08-20) — qualified the hangar-capable LLE route tuple
+
+Ground truth ran first. The retail oracle passed the 10,000-write
+whole-RDRAM positive control, reached title VI 1024 at about 17.4s and hangar
+VI 512 at about 38.4s, and hit all three watched execution PCs.
+
+The planned port route used the existing build, forced LLE, opt-in Factor 5
+audio, C88=1, `ROGUESQ_SPIN_YIELD=1`, eleven width-640 Starts, the dense
+post-title schedule, and the previously hangar-capable
+`ROGUESQ_LLE_UNGATED=1` plus `ROGUESQ_LLE_SOLO=1` tuple. Preflight input and
+visual controls passed. The run reached title VI 1024 at 11.9s, then emitted
+16 `[slot-ret-caller] site=menuControllerInput` rows with `after1024=1`, four
+`[spin-yield] site=menuInput` rows, and hangar VI 512 at 21.0s. It completed
+180.4s with 47 captured frames, no missing functions, no deferred drops, and
+no aborts. The harness marked the verdict FAIL only because a late width-640
+key at about 58.9s was not followed by another VI transition; that warning
+occurred after the phase-valid title-to-hangar chain.
+
+This selects the recipe-level H1: the added LLE-mode tuple restores the
+title-to-hangar handoff relative to s2051's otherwise matching title route.
+It does not isolate `LLE_UNGATED` from `LLE_SOLO`, and it does not prove that
+either flag alone is causal. With VI 512 live, the callback rows are
+admissible: title bridge samples were nonzero, while the sampled title and
+hangar `[pcm-sanity]` rows were all-zero. The next work unit must join those
+rows by phase with the task/gate controls. No code, guest value, guard, skip,
+or default audio behavior changed.
+
+What this rules out: H2 (handoff blocked independently of the route tuple),
+H3 (the `menuInput` marker is not live), and H4 (input/visual qualification
+failed) for this recipe. It does not rule out a later callback/device or
+task/ABI boundary.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
