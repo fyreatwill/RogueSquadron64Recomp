@@ -95142,3 +95142,80 @@ ledger; no new unevaluated verdict.
 H-retrigger-not-keyoff and refutes H-stop-unmapped /
 H-missing-pre-stop for the four named sites. Next discriminator:
 remaining stop/release family plus `$ra` on MarkRetrigger.
+
+## Session 1985 (2026-08-19) — dest-mapped remaining stop family; song-stop is handle fade at drain start
+
+**Instrument.** Incremental `apply_s1985_stop_family`
+(`RS64_S1985_STOP_FAMILY=1`). Same dest-map as s1984 on
+`stopVoiceByKey` / `stopVoiceByHandleLocked` / `stopVoicesByHandle`
+/ `stopVoiceSlotSynced` / `stopVoiceByHandle` (function entry,
+dest=`$a0`) and on `musyxStartVoiceRelease` / `beginVoiceFadeRelease`
+(slot pointer after the *136 compute). First 8 always, then mapped
+`idx<18`, then unmapped `n<=32`. `ra=U32(ctx->r31)` on every new
+site and on MarkRetrigger. `[drain-stop-sum]` extended with per-new-site
+n / nmap / nhangar / last dest / last ra. No store changed.
+
+**Probe.** `scratch/agent/s1985_stop_family/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 250443 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.0s #1499. Log is large because fade
+`idx<18` dumps every mapped call during the 10M drain (181k rows);
+the discriminator is the tickn=4→drain window plus `[drain-stop-sum]`.
+
+Positive controls (same run): `[stop-dest] site=stopVoiceMarkRetrigger
+n=1 dest=0x8018D4A0 idx=0` (boot table); `[keyon-w40]` first 8;
+257 `[init-desc]`; `[drain-path] call=1 unmap=0
+keyon_unmap=19348` through iters=10000000; last alloc tickn=4
+`0x801714D0 count=18`.
+
+**[drain-stop-sum] entry=1 calls=0.** musyxStopVoice 0; stopVoice 0;
+deactivateVoice 0; MarkRetrigger n=184 nmap=184 nhangar=84 last
+`0x80171800` idx=6 ra=0. New sites: stopVoiceByKey n=1 dest=`0xFF`
+unmapped; stopVoiceByHandleLocked 0; stopVoicesByHandle n=23 dest
+last=`0x43` unmapped; stopVoiceSlotSynced n=2 dest=0 unmapped;
+stopVoiceByHandle 0; musyxStartVoiceRelease n=22 nmap=22 nhangar=21
+last idx=5; beginVoiceFadeRelease n=154 nmap=154 nhangar=93 last
+idx=14.
+
+**Timeline vs tickn=4 (L53149) → drain (L61624).** MarkRetrigger 8
+hangar dests (idxs 9,10,11,8,3,4,9,6) each followed by same-idx
+INIT. musyxStartVoiceRelease 2 hangar (idx 2 then 5); render still
+`slot-sb new=0x02` on both immediately after; drain-entry idx 2
+b=`0x02`, idx 5 b=`0x00`. stopVoiceByKey 1 dest=`0xFF` (no
+MarkRetrigger). fade / handle / slot-synced / ByHandle / Locked:
+0 in the window. `ra=0` on every dump including MarkRetrigger n=1.
+
+**Drain start (immediately after the sum).** stopVoicesByHandle n=24..31
+handles `0x17,0x16,0x15,0x14,0x0D,0x0E,0x0C,0x11`, each followed by
+beginVoiceFadeRelease on hangar idxs 4,3,17,16,14,15,13,2. Fade then
+sweeps idxs 0–17 repeatedly (181k dumps through timeout). Static
+callers of stopVoicesByHandle: `stopSongByHandle` `0x8009582C` and
+`tickSongSequence`. Static MarkRetrigger callers: `tickAudioChannel`
+`0x8008BC58`, `stopVoiceByKey`, `silenceVoiceSlot`. Static
+musyxStartVoiceRelease callers: `soundMacroOpKeyOff`,
+`tickAudioChannel`. N64Recomp jal lowering does not write
+`ctx->r31` (C return is the control flow).
+
+**Verdicts.**
+- H-missing-song-stop REFUTED: `stopSongByHandle` →
+  `stopVoicesByHandle` fires 8 song handles as drain's first
+  `tickMusyXIfActive`, then fade on hangar voices.
+- H-song-stop-unmapped SELECTED for the handle: dest is an 8-bit
+  song handle, not the 0x88 table; the 0x88 effect is fade
+  `+0x30=0x14`.
+- H-drain-expects-bgm-end SELECTED: song-stop starts fade; looping
+  slot+0 stays `0x02` through 10M (idx 2 still live after its own
+  musyxStartVoiceRelease).
+- MarkRetrigger `$ra` cannot name the caller at runtime (always 0);
+  static caller in the retrigger window is `tickAudioChannel` (note
+  engine), matching s1984's retrigger shape.
+
+ORIGIN: `stopSongByHandle` / `beginVoiceFadeRelease` (legitimate
+song fade). No skip/guard landed.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned dest-map selects H-song-stop-unmapped
++ H-drain-expects-bgm-end and refutes H-missing-song-stop. Next
+discriminator: fade timer + ADSR state on `[drain-path]`.
