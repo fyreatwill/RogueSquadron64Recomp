@@ -1,36 +1,35 @@
-# NEXT work unit (s2051)
+# NEXT work unit (s2052)
 
-HYPOTHESIS-ID: m5-route-requalification
+HYPOTHESIS-ID: m5-title-to-hangar-route
 
 ## Work unit
 
 Run the retail oracle first with its whole-RDRAM positive control and the
-title/hangar VI trace. Then run a same-build, sequential spin-yield A/B with
-C88 fixed at `1`, using the eleven width-640 Starts and the dense post-title
-schedule. Sequential launch preserves the GUI focus that the failed
-concurrent pair did not. Keep the opt-in audio arm and every passive control.
-The new discriminator is whether the known-good title route is reproducible
-and whether the spin arm visibly fires its positive control. Do not start the
-C88 polarity comparison until one arm reaches VI 1024.
+title/hangar VI trace. Then run one bounded port recipe using the existing
+build and the previously hangar-capable LLE mode: retain forced LLE, add
+`ROGUESQ_LLE_UNGATED=1` and `ROGUESQ_LLE_SOLO=1`, retain
+`ROGUESQ_SPIN_YIELD=1`, C88=1, opt-in audio, the eleven width-640 Starts, and
+the dense post-title schedule. This is a route-reproduction experiment, not
+a guest-value or PCM experiment.
 
 ## Competing hypotheses and discriminator
 
-- **Q1 — scheduler route is active but transient:** the yield-on arm emits
-  `[spin-yield]` and reaches title VI 1024, while the yield-off arm remains
-  at VI 640. The title route is restored; C88 qualification becomes admissible.
-- **Q2 — current 640 boundary is deterministic guest/menu state:** both arms
-  have `[pad-host]` and caller/post-wait controls but no VI 1024. The issue is
-  upstream of C88 and needs a new route probe.
-- **Q3 — the spin arm is not active in the binary/config:** neither arm emits
-  `[spin-yield]`, even if one reaches 1024. Check the build/config provenance
-  before interpreting route depth.
-- **Q4 — GUI/input failure:** an arm lacks `input=ok visual=ok` or host Start
-  rises. Discard its route result and request an active desktop run.
+- **H1 — the missing LLE mode gates the handoff:** preflight passes, title VI
+  1024 occurs, `[slot-ret-caller] site=menuControllerInput` fires after that
+  title anchor, `[spin-yield] site=menuInput` fires, and VI 512 follows.
+- **H2 — the handoff is blocked independently of LLE mode:** title VI 1024
+  and `menuInit` yield occur, but `menuControllerInput`, `menuInput` yield,
+  and VI 512 remain absent.
+- **H3 — the menu-input patch is not live:** title and
+  `menuControllerInput` controls fire, but no `site=menuInput` spin marker or
+  VI 512 appears. Check binary/fixup provenance before another route change.
+- **H4 — input/visual qualification failed:** preflight or host Start control
+  is absent. Discard the route result and request an active desktop run.
 
-The single discriminator is the two-arm table of preflight, `[pad-sdl]`,
-`[pad-host]`, `[spin-yield]`, caller/post-wait controls, VI 1024/512, and
-`menuControllerInput`. PCM and bridge rows remain inadmissible without both
-target VI anchors.
+The single discriminator is the ordered positive-control chain:
+`input=ok visual=ok` -> `menuInit` spin -> VI 1024 ->
+`menuControllerInput after1024=1` -> `menuInput` spin -> VI 512. A PCM or
+bridge row is still inadmissible unless the final VI 512 control fires.
 
 ## Commands
 
@@ -43,18 +42,22 @@ tools/oracle/build/rs64_oracle \
   --secs 55 --hit-cap 1 --watch-write 0x0:0x800000 \
   --watch-pc 0x800C28F0,0x800B47D0,0x8008E57C --vi-trace \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2051_oracle.log 2>&1
+  > scratch/agent/s2052_oracle.log 2>&1
 
 set +e
 route_keys='640@6:start 640@11:start 640@16:start 640@21:start 640@26:start 640@31:start 640@36:start 640@41:start 640@46:start 640@51:start 640@56:start 1024@2:a 1024@3:start 1024@4:a 1024@5:start 1024@7:a'
-common_env=(REGRESS_SECS=130 REGRESS_INTERVAL=0.6 ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_CALLER_EDGE=1 ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_VI_TRANSITION=1 ROGUESQ_LOG_PCM_SANITY=1)
-env $common_env REGRESS_KEYS="$route_keys" REGRESS_LABEL=s2051_spin_on ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 zsh tools/regress.sh scratch/agent/s2051_spin_on 130 > scratch/agent/s2051_spin_on_driver.log 2>&1
-rc_on=$?
-env $common_env REGRESS_KEYS="$route_keys" REGRESS_LABEL=s2051_spin_off ROGUESQ_M5_C88_VALUE=1 zsh tools/regress.sh scratch/agent/s2051_spin_off 130 > scratch/agent/s2051_spin_off_driver.log 2>&1
-rc_off=$?
-printf 'spin_on_rc=%s spin_off_rc=%s\n' "$rc_on" "$rc_off"
+env REGRESS_SECS=180 REGRESS_INTERVAL=0.6 REGRESS_KEYS="$route_keys" REGRESS_LABEL=s2052_hangar_recipe \
+  ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
+  ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LOG_ALL=1 \
+  ROGUESQ_LOG_M5_CALLER_EDGE=1 ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 \
+  ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_VI_TRANSITION=1 \
+  ROGUESQ_LOG_PCM_SANITY=1 zsh tools/regress.sh \
+  scratch/agent/s2052_hangar_recipe 180 > scratch/agent/s2052_hangar_recipe_driver.log 2>&1
+rc=$?
+printf 'recipe_rc=%s\n' "$rc"
 ```
 
-Confirm the binary contains `ROGUESQ_SPIN_YIELD` before running. Inspect only
-each `verdict.json`, `env.txt`, bounded tag counts, and log tails; do not read
-a full run log.
+Confirm the executable contains `ROGUESQ_SPIN_YIELD` and the
+`site=menuInput` marker before running. Inspect only `verdict.json`, `env.txt`,
+bounded marker counts, and log tails; do not read a full run log.

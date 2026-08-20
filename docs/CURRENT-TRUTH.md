@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2050 (2026-08-20).
+for session detail. Reviewed through s2051 (2026-08-20).
 
 ## Current state
 
@@ -11,6 +11,12 @@ for session detail. Reviewed through s2050 (2026-08-20).
 - The known-good route reaches title VI `1024 @ 0x00790400` and hangar VI
   `512 @ 0x006AB400` when `ROGUESQ_SPIN_YIELD=1` yields both menu spins. Yield
   remains environment-gated and default-off.
+- s2051 requalified only the title leg: sequential forced-LLE/audio/C88=1
+  arms reached title VI 1024 with spin yield and held at VI 640 without it.
+  The spin-on arm never reached `menuControllerInput` or VI 512, so its
+  bridge/PCM rows remain inadmissible. The old hangar-capable recipe also
+  used `ROGUESQ_LLE_UNGATED=1` and `ROGUESQ_LLE_SOLO=1`; that difference is
+  the next controlled route probe, not yet an explanation.
 - Product multi-header freelist restore is ON. Garbage-CIMG and wrap-drop
   mitigations are OFF. Any future mitigation must name its writer, state
   legitimacy, and carry an `ORIGIN:` line.
@@ -48,6 +54,11 @@ for session detail. Reviewed through s2050 (2026-08-20).
   `menuControllerInput`, VI 1024, or VI 512. The wrapper flagged the missing
   post-key transition in both arms. This selects G4, a route/recipe
   qualification failure, and does not select C88 polarity or causality.
+- s2051's sequential C88=1 pair passed the same preflight. Spin-on emitted
+  three `menuInit` yields and reached title VI 1024 at 11.9s; spin-off emitted
+  zero yields and held VI 640. Neither reached `menuControllerInput` or VI
+  512, so Q1 is selected for the title leg, while the title-to-hangar handoff
+  and all bridge/PCM rows remain unqualified.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -57,16 +68,15 @@ for session detail. Reviewed through s2050 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 title-to-hangar route qualification.** s2050 selected G4: both C88
-   arms stopped at VI 640 before the title anchor, despite host-input and
-   caller controls. Re-establish a phase-valid title-1024 control with the
-   spin-yield on/off route requalification in `NEXT.md`; do not interpret the
-   C88 pair until one arm reaches title 1024. A live menu/512 request without
-   the anchor selects a presentation handoff; both anchors make the PCM
-   witness admissible.
-2. **M5 callback-side PCM witness.** Only after item 1 is phase-valid, retain
-   C88=1 and use the existing bridge/sanity table. Nonzero bridge bytes with
-   `all_zero=0` selects upstream-valid PCM; nonzero bridge bytes with
+1. **M5 title-to-hangar route qualification.** s2051 selected Q1 for the
+   title leg: spin-on reached VI 1024 and spin-off remained at VI 640, with
+   positive input/visual controls. The next probe must add the prior
+   hangar-capable `ROGUESQ_LLE_UNGATED=1` and `ROGUESQ_LLE_SOLO=1` recipe and
+   discriminate `menuControllerInput`, the `menuInput` spin marker, and VI
+   512. Do not interpret C88 or PCM rows until both target anchors are live.
+2. **M5 callback-side PCM witness.** After item 1 reaches both anchors,
+   retain C88=1 and use the existing bridge/sanity table. Nonzero bridge bytes
+   with `all_zero=0` selects upstream-valid PCM; nonzero bridge bytes with
    all-zero sanity selects the device boundary; zero bridge bytes selects the
    task/ABI boundary; no bridge with live gate/task controls selects guest
    submit/queue.
@@ -100,6 +110,15 @@ Forced LLE is the route gate under the common wrapper: s2024/s2025 reached
 title with forced LLE while the matching HLE arm stopped at VI 640. The later
 LLE crash does not erase its earlier phase-valid controls. The known menu
 spin-yield fix is a diagnostic aid, not a default behavior change.
+
+s2051's sequential pair independently requalified that title-side split:
+the yield-on arm emitted three `menuInit` spin markers and reached VI 1024 at
+11.9s, while yield-off emitted zero markers and stayed at VI 640. Both arms
+passed visual/input preflight and produced host Start rises. Neither emitted
+`menuControllerInput` or reached VI 512; the scheduled post-title keys were
+therefore a handoff result, not an admissible C88 or PCM comparison. The old
+hangar-capable recipe also used `ROGUESQ_LLE_UNGATED=1` and
+`ROGUESQ_LLE_SOLO=1`, which is the next route probe.
 
 ### M5 status and service
 
@@ -163,8 +182,10 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   not a PCM null.
 - s2050 did not overturn s2049's phase-valid single-arm observation: both new
   arms stopped before title 1024, so no C88 route comparison was admissible.
-  The same-run controls make this a route/recipe failure, not evidence for
-  either C88 polarity.
+  The same-run controls made that a route/recipe failure, not evidence for
+  either C88 polarity; s2051's yield-on title result shows the failure was not
+  universal across route recipes, but does not identify the missing handoff
+  condition.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -181,11 +202,11 @@ Durable milestones are: overlay-dispatch recovery; hangar reachability;
 bltzal link repair; audio-drain writer mapping; the M5 plan; opt-in
 DMA-to-queue mapping; shutdown call-3 reachability; the retail status sequence
 and writer attribution; the guest-gate boundary; and the unresolved
-title-to-hangar and port-side writer/read joins. s2049 is the latest phase-valid
-port observation: title yes, host input and controls live, hangar/menu handoff
-no, PCM inadmissible. s2050's two arms were pre-title and therefore do not
-replace that observation. Retail independently reaches both target anchors,
-so this is not a retail-route absence.
+title-to-hangar and port-side writer/read joins. s2051 is the latest
+phase-valid port observation: spin-on title yes, spin-off title no, host input
+live, hangar/menu handoff no, PCM inadmissible. s2050's two arms were
+pre-title and therefore remain recipe-scoped. Retail independently reaches
+both target anchors, so this is not a retail-route absence.
 
 ## Method and safety rules
 

@@ -97960,3 +97960,31 @@ for the C88 comparison. Bridge and PCM rows remain inadmissible. No code,
 guest value, guard, skip, or default audio behavior changed.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2051 (2026-08-20) — requalified the spin-yield title route
+
+Ground truth ran first. The retail oracle passed the 10,000-write
+whole-RDRAM positive control, reached title VI 1024 and hangar VI 512, and
+hit all three watched execution PCs. The independent route was therefore
+live before interpreting either port arm.
+
+The planned port A/B used one existing build, forced LLE, opt-in Factor 5
+audio, C88=1, eleven width-640 Starts, the dense post-title schedule, and
+all passive controls. The arms ran sequentially. Both completed 130 seconds
+with visual/input preflight and host Start controls. The yield-on arm emitted
+three `[spin-yield] site=menuInit` rows and reached VI 1024 at 11.9s;
+yield-off emitted zero spin rows and remained at VI 640. Neither arm emitted
+`menuControllerInput` or reached VI 512. The on-arm verdict also flagged the
+scheduled post-title keys as not followed by a VI transition; the off arm
+had the same route qualification failure at 640.
+
+This selects Q1 for the title-side route: the spin-yield control is active
+and restores the title anchor, while Q3 is refuted by the positive marker and
+Q4 is refuted by visual/input preflight and host Start controls. It does not
+identify the title-to-hangar handoff condition, and bridge/PCM rows remain
+inadmissible without VI 512. The previously hangar-capable recipe also used
+`ROGUESQ_LLE_UNGATED=1` and `ROGUESQ_LLE_SOLO=1`; that is the next controlled
+probe, not an explanation from this run. No code, guest value, guard, skip,
+or default audio behavior changed.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
