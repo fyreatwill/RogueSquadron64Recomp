@@ -96401,3 +96401,50 @@ worker; no PI or audio mitigation was added.
 OUTCOME: ADVANCED — the phase-gated callback census built and passed its
 positive control, while two fixed captures established that status-3 remains
 unreached in the current recipe before the PI-DMA assertion boundary.
+
+## Session 2007 (2026-08-20) — reached shutdown call 3 but not status 3
+
+HYPOTHESIS-ID: m5-status3-worker-dispatch
+
+Ground truth ran first. The 60-second retail oracle passed the whole-RDRAM
+positive-control threshold with 10,015 callbacks, kept the target watch armed,
+and recorded 15 writes to physical `0x154620`, including the required
+`0x8009B7EC` writer at 48.9s. The oracle witness is valid for this run.
+
+The planned s2007 command initially exposed a tooling gap: the maintained
+`fixup_game_funcs.py` had s2006's incremental gate but no
+`RS64_S2007_STATUS3_REACH` handler, so its sentinel check correctly refused
+to re-run the full fixup. A diagnostics-only incremental handler was added to
+that script and applied once to the already-patched generated tree. It adds
+shutdown entry/exit and `L_8009BD10` rows with call number, phase, thread,
+status, `a0/a1/v0`, and spin ordinal. The Debug target rebuilt successfully.
+
+The single phase-gated port capture used the required `p1:start,p2:a`
+recipe, `ROGUESQ_SPIN_YIELD=1`, the existing scheduler/thread/audio
+breadcrumbs, and the default status-3 spin. It reached VI 1024 at 50.6s and
+VI 512 at 86.6s. The existing s2006 worker control remained live: 24
+`serviceVoicePoolFrame` entry/exit pairs at phase 6, thread 0, status `0x00`.
+The new table recorded:
+
+- shutdown call 1: entry/spin/exit, status `0x00`, `a0=a1=1`, `v0=0`;
+- shutdown call 2: entry/spin/exit, status `0x00`, `a0=a1=1`, `v0=0`;
+- shutdown call 3: entry status `0x01`, then spin status `0x00`,
+  `a0=a1=1`, `v0=0`, then exit.
+
+There was no status-3 row, expected store row, PI odd-ROM assertion, or crash
+in this capture. The harness completed the phase/keyboard schedule and
+SIGKILLed the still-live game as prescribed. This selects H-call3-reached and
+refutes H-no-call3 and H-pi-preempts for this recipe. It does not select
+H-status3-precedes-pi: no PI assertion occurred, and no status-3 transition
+was observed. The callback positive control plus the shutdown table are two
+independent runtime edges showing that the instrumentation is live; the
+absence of a status-3 writer remains a single-capture null, not a worker
+starvation conclusion.
+
+The s2006 claim that the recipe stopped before shutdown call 3 is superseded:
+it was believable because its callback-only captures either hit the PI
+assertion or were stopped before shutdown-side rows existed. No spin yield,
+audio behavior, PI handling, status value, guard, or mitigation changed.
+
+OUTCOME: ADVANCED — the batched shutdown census reached call 3 and narrowed
+the next boundary to status-table writer/transition provenance.

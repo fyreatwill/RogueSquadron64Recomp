@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s2006 (2026-08-20).
+detail. Reviewed through s2007 (2026-08-20).
 
 ## Current state
 
@@ -511,38 +511,44 @@ detail. Reviewed through s2006 (2026-08-20).
   (no hangar origin); s1949 published hangar and selected
   H-never-live there (see Durable).
 
-- **s2006 status-3 dispatch census did not reach status 3.** The corrected
-  60-second retail oracle control saw 10,015 whole-RDRAM callbacks and 15
-  writes to physical `0x154620`, including the required retail PC
-  `0x8009B7EC` at 48.9s. The port fixup added phase-gated callback,
-  service-entry/exit, thread-id, status-byte, and expected-store rows in one
-  build. The full recipe and the `p1:start,p2:a` fixed recipe reached VI 1024
-  and VI 512, and both showed the positive control (24 service entry/exit
-  pairs at phase 6, thread 0, status `0x00`). Both nevertheless stopped before
-  any status-3 row: the full and second fixed captures hit the existing
-  unaligned-ROM-address assertion in `do_rom_read`, while the first fixed
-  capture was SIGKILLed before that later assertion. This is a reachability
-  boundary, not evidence for worker starvation, missing dispatch, callback
-  body blocking, or a bad store address. Next probe the shutdown entry/spin
-  itself; do not add a PI or audio mitigation.
+- **s2007 reached shutdown call 3 but still did not reach status 3.** The
+  independent retail oracle passed its positive controls (10,015 whole-RDRAM
+  callbacks, 15 writes to physical `0x154620`, and a `0x8009B7EC` writer at
+  48.9s). The missing incremental fixup handler was added to
+  `fixup_game_funcs.py`; one Debug build then carried shutdown entry/exit and
+  `L_8009BD10` rows alongside the existing s2006 callback census. The single
+  phase-gated port capture reached VI 1024 at 50.6s and VI 512 at 86.6s. The
+  shutdown positive control fired for calls 1 and 2, and call 3 also entered,
+  scanned, and returned. Call 3 entered with status `0x01`, but its sampled
+  `L_8009BD10` row was already status `0x00`, with `a0=a1=1` and `v0=0`; no
+  status-3 row, PI odd-ROM assertion, or crash occurred before the harness
+  SIGKILL. This selects H-call3-reached and supersedes s2006's narrower
+  “call 3 was not reached” boundary. The status-3 worker/transition source
+  remains open: the callback/service positive control is live, but no run has
+  yet observed a status-3 worker edge. No spin yield, audio change, PI change,
+  or mitigation was added.
 
 ## Active investigation and ranked next steps
 
-Re-ranked s2006: the opt-in image's two nonzero hangar DMA buffers are proven
+Re-ranked s2007: the opt-in image's two nonzero hangar DMA buffers are proven
 to reach `queue_samples` byte-for-byte. Do not reopen the payload boundary or
 change audio defaults from this result. The status-3 worker hypothesis is
-parked at a pre-status-3 reachability boundary: the callback census is live,
-but the current post-craft recipe reaches the PI-DMA assertion before the
-discriminator.
+now parked at a status-transition/source boundary: shutdown call 3 is reached
+and returns cleanly, but the byte is zero by the first sampled spin row. The
+next discriminator must observe every legitimate writer of the status table
+and join its value/slot to shutdown and worker rows; do not infer starvation
+from the absence of a status-3 row.
 
-1. **M5 status-3 reachability boundary (s2006).** Add durable entry and
-   `L_8009BD10` spin breadcrumbs to the same batched census, with the earlier
-   shutdown calls as the positive control and the PI assertion as a separate
-   timeline row. The discriminator is whether shutdown call 3/status `0x03`
-   is reached before the PI worker abort; only then interpret missing worker
-   rows as dispatch evidence. Do not yield the spin, default the in-loop tick
-   off, or mitigate the odd ROM address.
-2. **M5 callback-side PCM witness.** Only if needed after the status-3 work,
+1. **M5 status-table writer/transition census (s2008).** Enumerate every
+   generated store to the `D_80154620` status-byte table, retain the retail
+   oracle writer-PC control, and phase-gate one port table joining writer PC,
+   slot/index, old/new byte, thread, shutdown call, and service/callback edges.
+   The discriminator is whether the port writes a legitimate `0x03` before
+   call 3, writes `0x03` and clears it before the spin sample, or never writes
+   `0x03`; do not add a guard or force a status value. Keep the shutdown rows
+   as the same-run control.
+2. **M5 callback-side PCM witness.** Only if needed after the status-table
+   work,
    phase-gate a callback-side census at the exact nonzero bridge rows rather
    than relying on first-20/every-256 `pcm-sanity`; this is not evidence for a
    bridge defect yet. Do not change the audio path or default dispatch.
@@ -848,6 +854,12 @@ Most recent, still load-bearing for the next unit:
   conclusion was believable because s2003 only recorded DMA extents and the
   rate-limited `pcm-sanity` samples were all zero; s2005 shows that the latter
   did not sample the two nonzero bridge calls, so it cannot refute the mapping.
+- s2006's "the current recipe stops before shutdown call 3" is superseded by
+  s2007. The new entry/spin/exit rows reached calls 1, 2, and 3, with call 3
+  entering at status `0x01` and returning after a status-`0x00` scan. The old
+  conclusion was believable because the earlier callback-only captures either
+  hit the PI assertion or were SIGKILLed before shutdown-side evidence existed;
+  it was a reachability gap, not a status-3 or worker conclusion.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -907,6 +919,11 @@ site=finalizeCurrentSpeechBuffer)
  treatment 112 task rows/254 ranges, with two `0x6F0` `0x300`-byte ranges
  nonzero and byte-for-byte matched at `queue_samples`; third nonzero range is
  8-byte `0xC30` metadata; rate-limited `pcm-sanity` missed bridge n=12/13)
+/ s2006 M5 status-3 callback census (corrected retail controls; 24 service
+entry/exit pairs in port phase 6; no status-3 row before PI/stop boundary)
+/ s2007 M5 shutdown reachability census (same retail controls; port calls
+1–3 entered/scanned/returned; call 3 entry status `0x01`, spin status `0x00`;
+no status-3 row or PI assertion)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
