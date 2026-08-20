@@ -97899,3 +97899,37 @@ s2047 phase-valid boundary remains title VI 1024 without hangar VI 512 or
 target anchors appear.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2049 (2026-08-20) — M5 route qualification selected the title-side guest boundary
+
+Ground truth ran first. The retail oracle's whole-RDRAM watch reached its
+10,000-callback positive-control threshold, then independently reached title
+VI width 1024 and hangar VI width 512. Its three PC watches produced no rows,
+so they are unavailable as evidence; the positive control and VI trace are
+the admissible retail lines.
+
+The port run used the existing build with C88=1, forced LLE, opt-in Factor 5
+audio, spin yield, eleven boot-relative width-640 Starts, the dense title
+schedule, and all passive controls. It completed 131 seconds with visual
+capture, preflight `input=ok visual=ok`, no missing functions, no aborts, and
+30 frames. The run reached title VI 1024 at 13.0 seconds and held it through
+the end. `[pad-sdl]` key events, 16 `[pad-host]` rows, host Start edges, the
+caller table, the reapply writer, gate rows, and service rows all fired as
+positive controls. The caller table showed the menu-overlay/model-viewer
+edges at width 640, but there were zero `menuControllerInput` rows and zero
+VI-512 transitions. The regression scorer's final-key check failed because
+no later VI transition followed the injected keys; that does not erase the
+phase-valid controls.
+
+The route table selects R2, the title-side guest route: live title input
+without the menu handoff. R1 (wrapper/input) is ruled out by the same-run
+preflight and input controls; R3 (presentation handoff) is ruled out because
+neither menu-controller entry nor a 512 request appeared; R4 is not reached.
+PCM and bridge rows are inadmissible without both target anchors, even though
+the passive PCM controls fired. This narrows the next work unit to a
+phase-gated C88=1 versus unset route pair with the same positive-control table.
+No writer, guard, skip, default audio behavior, or guest value was changed.
+
+ORIGIN: no corruption or wild-value mitigation was added; the observed route
+boundary is attributed only to the measured guest control path, not to a
+newly authorized value change.

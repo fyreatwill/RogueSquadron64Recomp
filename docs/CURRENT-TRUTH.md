@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2048 (2026-08-20).
+for session detail. Reviewed through s2049 (2026-08-20).
 
 ## Current state
 
@@ -36,6 +36,12 @@ for session detail. Reviewed through s2048 (2026-08-20).
   host-input, service, and audio controls, but not `menuControllerInput` or
   hangar VI 512. No bridge or PCM row from that run is admissible as a
   callback verdict.
+- s2049's independent retail run passed the whole-RDRAM control and reached
+  title VI 1024 and hangar VI 512. The port C88=1 qualification passed
+  preflight, `[pad-sdl]`/`[pad-host]`, title VI 1024, caller, gate, and service
+  controls, but emitted no `menuControllerInput` and no VI 512. This selects
+  the title-side guest-route boundary (R2); its bridge and PCM rows remain
+  inadmissible.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -45,17 +51,13 @@ for session detail. Reviewed through s2048 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 title-to-hangar route qualification.** Use the existing build and
-   caller table. Keep C88=1, forced LLE, opt-in audio, spin yield, and passive
-   controls. Retain the eleven boot-relative width-640 Starts, then use the
-   established denser post-title schedule:
-   `1024@2:a 1024@3:start 1024@4:a 1024@5:start 1024@7:a`. The one-pass table
-   must include preflight, VI 640/1024/512 anchors, `[pad-host]`, caller
-   edges, `menuControllerInput`, VI-producer requests, and service controls.
-   Missing preflight/input is a recipe failure; live title input without the
-   menu handoff leaves the guest route selected; a live menu/512 request
-   without the anchor selects a presentation handoff; both anchors make the
-   PCM witness admissible.
+1. **M5 title-to-hangar route qualification.** s2049 selected R2: the
+   C88=1 arm has phase-valid title input and VI 1024 but no
+   `menuControllerInput` or VI 512. The next discriminator is the
+   focus-isolated, phase-gated C88=1 versus unset pair in `NEXT.md`; keep the
+   full positive-control table in both arms. A live menu/512 request without
+   the anchor selects a presentation handoff; both anchors make the PCM
+   witness admissible.
 2. **M5 callback-side PCM witness.** Only after item 1 is phase-valid, retain
    C88=1 and use the existing bridge/sanity table. Nonzero bridge bytes with
    `all_zero=0` selects upstream-valid PCM; nonzero bridge bytes with
@@ -120,7 +122,10 @@ Retail executes the named display-mode writer cluster. The port fixup currently
 records `0 -> 0` at `0x8008EC88`, and the raw gate consumer skips on zero. The
 retail-value `1` arm remains opt-in and does not authorize changing the
 legitimate guest writer. The repeated C88 A/B is single-source port evidence
-with GUI arbitration unresolved.
+with GUI arbitration unresolved. s2049's explicit C88=1 run recorded the
+reapply writer and gate controls in the title phase, but still had no
+`menuControllerInput` or VI 512; this is a route result, not causality for the
+guest value.
 
 ### M3, M4, and generated symbols
 
@@ -166,8 +171,10 @@ Durable milestones are: overlay-dispatch recovery; hangar reachability;
 bltzal link repair; audio-drain writer mapping; the M5 plan; opt-in
 DMA-to-queue mapping; shutdown call-3 reachability; the retail status sequence
 and writer attribution; the guest-gate boundary; and the unresolved
-title-to-hangar and port-side writer/read joins. s2047 is the latest phase-valid
-port observation: title yes, hangar/menu handoff no, PCM inadmissible.
+title-to-hangar and port-side writer/read joins. s2049 is the latest phase-valid
+port observation: title yes, host input and controls live, hangar/menu handoff
+no, PCM inadmissible. Retail independently reaches both target anchors, so
+this is not a retail-route absence.
 
 ## Method and safety rules
 
