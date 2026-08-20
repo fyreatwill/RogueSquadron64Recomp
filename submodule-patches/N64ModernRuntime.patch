@@ -162,10 +162,14 @@ index b0d6bef..5bf22df 100644
  
  namespace recomp {
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
-index 8c8e5d1..25ab070 100644
+index 8c8e5d1..0d5f7a5 100644
 --- a/librecomp/src/overlays.cpp
 +++ b/librecomp/src/overlays.cpp
-@@ -4,6 +4,7 @@
+@@ -1,9 +1,11 @@
+ #include <algorithm>
++#include <atomic>
+ #include <cassert>
+ #include <cstdio>
  #include <cstring>
  #include <unordered_map>
  #include <vector>
@@ -173,17 +177,18 @@ index 8c8e5d1..25ab070 100644
  
  #include "ultramodern/ultramodern.hpp"
  
-@@ -12,6 +13,9 @@
+@@ -12,6 +14,10 @@
  #include "overlays.hpp"
  #include "sections.h"
  
 +extern "C" void rs64_e9prov_section2_latch();
 +extern "C" uint32_t rs64_phase_ord();
++extern "C" recomp_func_t serviceVoicePoolFrame;
 +
  static recomp::overlays::overlay_section_table_data_t sections_info {};
  static recomp::overlays::overlays_by_index_t overlays_info {};
  
-@@ -198,8 +202,14 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
+@@ -198,8 +204,14 @@ extern "C" void load_overlays(uint32_t rom, int32_t ram_addr, uint32_t size) {
              return addr < entry.size + entry.rom_addr;
          }
      );
@@ -200,7 +205,7 @@ index 8c8e5d1..25ab070 100644
          load_overlay(std::distance(&sections_info.code_sections[0], it), it->rom_addr - rom + ram_addr);
      }
  }
-@@ -238,6 +248,25 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
+@@ -238,6 +250,25 @@ extern "C" void load_overlay_by_id(uint32_t id, uint32_t ram_addr) {
      }
  }
  
@@ -226,7 +231,7 @@ index 8c8e5d1..25ab070 100644
  extern "C" void unload_overlays(int32_t ram_addr, uint32_t size) {
      for (auto it = loaded_sections.begin(); it != loaded_sections.end();) {
          const auto& section = sections_info.code_sections[it->section_table_index];
-@@ -361,9 +390,121 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
+@@ -361,13 +392,150 @@ recomp_func_t* recomp::overlays::get_func_by_section_rom_function_vram(uint32_t
      return get_func_by_section_index_function_offset(find_section_it->second, func_offset);
  }
  
@@ -328,6 +333,30 @@ index 8c8e5d1..25ab070 100644
 +    fflush(stderr);
 +}
 +
++static void rs64_log_service_resolution(int32_t addr, recomp_func_t* func) {
++    constexpr int32_t k_service_voice_pool_frame = 0x8009B5A8;
++    if (addr != k_service_voice_pool_frame || rs64_phase_ord() < 4) {
++        return;
++    }
++    static const bool enabled = []{
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* specific = std::getenv("ROGUESQ_LOG_SERVICE_RESOLVE");
++        return (all && *all && *all != '0') || (specific && *specific && *specific != '0');
++    }();
++    if (!enabled) {
++        return;
++    }
++    static std::atomic<uint32_t> n{0};
++    const uint32_t call = n.fetch_add(1, std::memory_order_relaxed) + 1;
++    if (call <= 20 || (call % 100) == 0) {
++        fprintf(stderr, "[svc-resolve] n=%u phase=%u guest=0x%08X host=%p expected=%p match=%d\n",
++                call, rs64_phase_ord(), static_cast<uint32_t>(addr),
++                reinterpret_cast<void*>(func), reinterpret_cast<void*>(&serviceVoicePoolFrame),
++                func == &serviceVoicePoolFrame ? 1 : 0);
++        fflush(stderr);
++    }
++}
++
  extern "C" recomp_func_t * get_function(int32_t addr) {
 +    rs64_log_dma_ring_caller(addr);
 +    rs64_log_tickfunc_caller(addr);
@@ -348,6 +377,11 @@ index 8c8e5d1..25ab070 100644
          fprintf(stderr, "Failed to find function at 0x%08X\n", addr);
          assert(false);
          std::exit(EXIT_FAILURE);
+     }
++    rs64_log_service_resolution(addr, func_find->second);
+     return func_find->second;
+ }
+ 
 diff --git a/librecomp/src/pi.cpp b/librecomp/src/pi.cpp
 index 43509ba..908dae1 100644
 --- a/librecomp/src/pi.cpp

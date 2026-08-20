@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2018 (2026-08-20).
+for session detail. Reviewed through s2019 (2026-08-20).
 
 ## Current state
 
@@ -75,21 +75,30 @@ for session detail. Reviewed through s2018 (2026-08-20).
   in the current 45-file tree/binary. The static missing-registration/linkage
   H2 explanation is refuted; H1 and H3 remain unselected because the caller
   path itself is not present in this crosswalk.
+- The s2019 runtime-resolution witness was not evaluable as planned. The
+  retail oracle passed its whole-RDRAM control and hit `0x8009B5A8` 4,223
+  times through the phase-valid title/hangar route. The fixed port run reached
+  VI 1024 and 512, but emitted zero `[svc-resolve]`, `[dma-ring-caller]`, and
+  `[tickfunc-caller]` rows; the two independent `get_function` controls were
+  both zero. The direct service entry diagnostic fired its first 20 pre-title
+  rows, so the target-resolution null is a positive-control failure, not H1,
+  H2, or H3 evidence.
 
 ## Active investigation and ranked next steps
 
-1. **M5 runtime service-dispatch witness (unblocked).** The s2018 crosswalk
-   refutes a static map/link defect but cannot observe an incoming call. Ask
-   the retail oracle for a phase-valid execution watch at `0x8009B5A8` with a
-   whole-RDRAM write control, then add one `get_function` target-resolution
-   witness and run the existing phase-valid port recipe. Keep status, audio,
-   spin, PI, guard, and mitigation behavior unchanged. A target resolve that
-   returns the linked function and is followed by its entry selects a live
-   service path; a target resolve with a missing/wrong map result selects a
-   runtime map defect; a positive-control run with no target request, together
-   with a retail PC hit and the existing audio-gate rows, selects an audio
-   gate before dispatch. Do not run another status join until one row is
-   selected.
+1. **M5 direct service-entry/caller witness (unblocked).** The s2018 static
+   crosswalk and s2019 oracle both establish that retail executes
+   `0x8009B5A8`, while s2019 proves the port's `get_function` path is not
+   exercised by either of its two controls in the phase-valid recipe. Add a
+   phase-gated entry witness to the existing `serviceVoicePoolFrame`
+   diagnostic, including the guest/host thread, native caller/backtrace or
+   equivalent guest call-site attribution, status, and exit edge; retain a
+   bounded pre-phase entry row as the same-run instrumentation control. A
+   phase-valid entry with a caller selects a live direct service path; no
+   phase-valid entry with the pre-phase control live selects a gate or missing
+   caller before the service function; an entry with a caller different from
+   retail's `exec-prev` `0x80019B74` selects a port call-path mismatch. Do not
+   run another `get_function` or status join until this witness is live.
 2. **M5 port-side writer/thread census (blocked on #1).** Once the service
    control is live in the same run, use the existing seven-site join: writer
    PC, slot/index, old/new byte, host thread, shutdown call, service
@@ -133,6 +142,11 @@ crosswalk independently shows that the function is base text, not an overlay:
 the section-3 table entry and linked symbol are present, while no named caller
 or direct host branch exists. This closes the static registration/linkage
 variant only; runtime target resolution remains unobserved.
+The s2019 phase-valid run does not repair that gap: the new target witness and
+both independent `get_function` positive controls were zero, while the direct
+service diagnostic's bounded first 20 entries were pre-title. This is a
+measurement failure for the indirect-dispatch mechanism, not evidence that
+the phase-valid service call is absent.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
 capture. The s2012 and s2013 debugger-off retail oracles both reached VI 1024
@@ -217,6 +231,12 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   defect, but it had no incoming caller to distinguish unobserved runtime
   dispatch from an audio-gated path; the next unit must witness target
   resolution in the same phase-valid run.
+- s2019's planned `get_function` discriminator is superseded as the next
+  measurement because its two same-run controls were both zero. The null was
+  believable because the target is a known runtime lookup boundary, but the
+  direct service entry control fired pre-title and the phase gates were live;
+  the next unit must witness the direct service entry and caller instead of
+  treating an unexercised lookup helper as a map result.
 
 ## Evidence ledger summary
 
@@ -228,8 +248,10 @@ the phase-valid retail gate-PC capture and closes retail writer attribution;
 the port-side join remains unresolved. s2016 refutes the provenance block while
 leaving the join open. s2017 isolates the missing service positive control as
 the next M5 boundary. s2018 refutes a static registration/linkage defect for
-the base-text service function but leaves runtime target resolution open. The
-durable milestones are: hangar
+the base-text service function but leaves runtime target resolution open. s2019
+shows that the chosen `get_function` witness mechanism and both its controls
+were unexercised in the phase-valid port route; the direct-entry caller
+witness is next. The durable milestones are: hangar
 reachability, bltzal link repair, audio-drain writer mapping, M5 plan, opt-in
 DMA-to-queue mapping, shutdown call-3 reachability, the repeated retail
 status-value sequence, retail gate-writer attribution, and the unresolved

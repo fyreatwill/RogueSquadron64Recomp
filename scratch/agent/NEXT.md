@@ -1,78 +1,85 @@
-# NEXT work unit (s2019) — witness runtime service dispatch
+# NEXT work unit (s2020)
 
-HYPOTHESIS-ID: m5-service-runtime-dispatch-witness
+HYPOTHESIS-ID: m5-service-direct-entry-caller-witness
 
 ## Work unit
 
-Ask the retail oracle for an execution watch at `0x8009B5A8` with a same-run
-whole-RDRAM write control. Then add one target-resolution witness in
-`lib/N64ModernRuntime/librecomp/src/overlays.cpp:get_function` and run the
-existing phase-valid port recipe `scratch/s73_post_a_scene/run_mission_keys.sh`
-from one build. Do not change status, audio, spin, PI, guard, or mitigation
-behavior. Export any lib submodule patch in the same iteration.
+Witness the phase-valid direct entry and caller of serviceVoicePoolFrame.
 
-The s2018 crosswalk already established that this is base text, not an
-overlay: `section_3_text_funcs` has `ROM 0x1040`, `RAM 0x80000440`, and the
-`0x9B168` entry maps to `0x8009B5A8`; the generated definition and linked
-symbol are present, but no incoming named reference or direct host branch was
-found.
+Ask the retail oracle for the phase-valid `0x8009B5A8` execution watch and
+whole-RDRAM write control again, then modify the existing
+`serviceVoicePoolFrame` entry diagnostic through the fixup script (not the
+generated C) to record a bounded pre-phase control and a phase-gated direct
+entry/exit witness. Include the entry's `rs64_phase_ord`, guest thread,
+status, `ctx->r31`/derived guest call site, and the existing `0x8009B7EC`
+store edge. Keep the `get_function` witness, status writers, audio, spin, PI,
+guard, and mitigation behavior unchanged. Run one build and one phase-valid
+port recipe with the direct-entry witness and the existing audio controls.
+
+The s2019 oracle already supplied a phase-valid retail control: whole-RDRAM
+writes reached the 10,000 callback cap, `0x8009B5A8` executed 4,223 times,
+and the oracle's aggregate predecessor was `0x80019B74`. The s2019 port run
+reached VI 1024 and 512 but had zero `[svc-resolve]`, `[dma-ring-caller]`,
+and `[tickfunc-caller]` rows. That was a positive-control failure for the
+indirect-dispatch mechanism, not evidence about the worker boundary.
 
 ## Competing hypotheses and discriminator
 
-- H1: The port route never requests the service function. The target branch of
-  `get_function` is absent, while the existing `ROGUESQ_LOG_DMA_CALLER=1`
-  resolution control fires and the service entry remains absent.
-- H2: The route requests `0x8009B5A8`, but the runtime map is absent or returns
-  a function other than `_serviceVoicePoolFrame`. The target-resolution row
-  records a miss or wrong host pointer.
-- H3: The audio-disabled guest path suppresses the request. The target branch
-  is absent, the retail oracle execution watch hits in a phase-valid run, and
-  the same port run shows the existing audio-gate rows without a service
-  entry.
+- D1: The phase-valid port reaches the service function directly. The
+  pre-phase control fires, phase-gated entry and exit fire, and the derived
+  guest call site agrees with the retail predecessor (`ctx->r31 - 8` near
+  `0x80019B74`). This selects a live direct service path and moves the open
+  question to its status/worker stores.
+- D2: The phase-valid port never enters the service function. The pre-phase
+  control fires, phase-gated entry/exit and `0x8009B7EC` remain zero, while
+  phase-valid audio-gate/task rows and the VI controls are live. This selects
+  a gate or missing caller before the service function.
+- D3: The phase-valid port enters, but the guest call site or host thread
+  differs from retail. Entry/exit are live with a non-retail `ctx->r31 - 8`
+  or thread, selecting a port call-path/scheduler mismatch rather than a
+  missing registration.
+- D4: Entry is live but the exit/store edge is absent or the status is not
+  the expected phase-valid value. This selects a service-body or callback
+  boundary; it must not be collapsed into D2.
 
-The discriminator is one table containing oracle whole-RDRAM-control count,
-oracle target-PC hits, port positive-control resolution, target resolution and
-returned host pointer, service entry, and audio-gate rows. Target resolve plus
-entry selects live dispatch and closes this boundary; target resolve plus a
-miss/wrong pointer selects a runtime map defect; no target request with both
-positive controls live splits H1 from H3 using the oracle PC and gate rows. If
-the table cannot split H1/H3, stop and redesign before another build/run.
+The one discriminating table is: oracle control count, oracle target-PC hits,
+port pre-phase entry control, port phase-valid entry count/call site/thread,
+phase-valid exit count, status at entry, `0x8009B7EC` store count, and the
+existing audio-gate/task rows. A phase-valid port row is only interpreted if
+the pre-phase entry control is nonzero in the same run. Do not run another
+`get_function` or status-writer join until this direct-entry table selects a
+row.
 
 ## Exact commands
 
-Ground truth first; build the oracle only if its executable is absent:
+Ground truth first. Run the existing oracle command from s2019, changing only
+the output path to `scratch/agent/soak_results/s2020-retail-service-entry.log`:
 
 ```sh
-if [[ ! -x tools/oracle/build/rs64_oracle ]]; then
-  (cd tools/oracle && ./build.sh)
-fi
+tools/oracle/build/rs64_oracle --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom ../rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 80 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-pc 0x8009B5A8 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/soak_results/s2020-retail-service-entry.log 2>&1
 ```
 
-Run the retail control/watch from the repository root, using the existing
-debugger-enabled core and the Rice path:
+Update the existing `serviceVoicePoolFrame` diagnostic in
+`../N64Recomp/fixup_game_funcs.py`, then regenerate in the required order:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom ../rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 80 --hit-cap 10000 --watch-write 0x0:0x800000 \
-  --watch-pc 0x8009B5A8 --vi-trace \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/soak_results/s2019-retail-service-watch.log 2>&1
+cd ../N64Recomp && python tools/make_elf.py rogue_squadron.toml
+build/Debug/N64Recomp.exe rogue_squadron.toml
+python fixup_game_funcs.py
+cd ../RogueSquadron64Recomp && cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-Add the target-resolution row to `get_function` in one instrumented build;
-retain the existing `ROGUESQ_LOG_DMA_CALLER` path as its same-run positive
-control. Build and run the port recipe with all passive M5 breadcrumbs:
+Run the single phase-valid port capture without `ROGUESQ_LOG_ALL` (s2019's
+ALL arm produced a pre-phase RT64 crash before the gate; the fixed specific
+arm reached both 1024 and 512):
 
 ```sh
-cmake --build build --config Debug --target RogueSquadron64Recomp
-env ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2019-runtime-dispatch 30 12
+env ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2020-direct-entry 30 12
 ```
 
-Capture the bounded rows without reading the full log:
+Extract only bounded discriminator rows:
 
 ```sh
-rg -n -e '\[svc-resolve\]' -e '\[s2006-svc\]' -e '\[dma-ring-caller\]' -e '\[phase\]' -e '\[gate\]' scratch/s73_post_a_scene/s2019-runtime-dispatch/run.log
+RUN=scratch/s73_post_a_scene/s2020-direct-entry/run.log
+rg -n -e '\\[s2020-svc\\]' -e '\\[s2006-svc\\]' -e '\\[service-voice-pool-frame\\]' -e '\\[pcm-sanity\\]' -e 'musyx-gate|audio-drain|\\[phase\\]' "$RUN" | tail -220
 ```

@@ -96783,3 +96783,35 @@ mitigation code changed. The next discriminator is a same-run retail
 execution watch plus port `get_function(0x8009B5A8)` resolution witness.
 
 OUTCOME: ADVANCED — static registration/linkage is present; runtime caller dispatch remains open.
+
+## Session 2019 (2026-08-20) — runtime service-resolution witness was unevaluable
+
+HYPOTHESIS-ID: m5-service-runtime-dispatch-witness
+
+Ground truth was run first. The retail oracle's whole-RDRAM write watch reached
+its 10,000-callback positive-control cap, and its execution watch at
+`0x8009B5A8` recorded 4,223 phase-valid hits through the 1024-width title and
+512-width hangar route. The aggregate retail predecessor was `0x80019B74`.
+
+The first port invocation used `ROGUESQ_LOG_ALL=1` and died before the 1024
+phase at the known `0x8000B650` RT64 copy/readback boundary. This was not used
+as evidence. The fixed specific-log invocation used the same built binary and
+reached VI 1024 and VI 512, completed 4,631 LLE tasks, and had no missing
+function or unhandled-jump rows. The added phase-gated `get_function` witness
+emitted zero `[svc-resolve]` rows. Its existing same-run DMA resolution
+control emitted zero `[dma-ring-caller]` rows; a second control run also armed
+the existing indirect MusyX callback witness and emitted zero
+`[tickfunc-caller]` rows. The direct service diagnostic emitted its bounded
+first 20 `[service-voice-pool-frame]` rows pre-title, while the phase-gated
+`[s2006-svc]` entry/exit rows remained zero.
+
+This is a positive-control failure for the chosen `get_function` mechanism:
+the phase-valid target null cannot select H1, H2, or H3. It rules out no
+runtime service hypothesis. It does establish that the current route's
+observable service activity is not passing through the instrumented indirect
+lookup, so the next discriminator must witness direct service entry and its
+guest caller. The `overlays.cpp` witness was exported to
+`submodule-patches/N64ModernRuntime.patch`; no runtime behavior or mitigation
+changed.
+
+OUTCOME: ADVANCED — landed the runtime witness and documented its same-run positive-control failure; direct-entry attribution is next.
