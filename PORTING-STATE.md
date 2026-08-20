@@ -95589,3 +95589,71 @@ already in the ledger; no new unevaluated verdict.
 selects H-empty-then-fade. Next: which
 `tickMusyXIfActive` site produces the 10064 armed stopAll
 (s1976 in-loop drain tick vs the 10 ROM jals).
+
+## Session 1992 (2026-08-19) — all 10064 armed stopAll ticks are the s1976 in-loop drain injection
+
+**Instrument.** Incremental `apply_s1992_tick_site`
+(`RS64_S1992_TICK_SITE=1`). Named n/narmed at every
+`tickMusyXIfActive(rdram, ctx)` site (10 ROM `jal
+0x8008DA00` plus the s1976 in-loop injection). First 8
++ every 10000th `[tick-site]`. Sum dump `[tick-site-sum]`
+at existing `[drain-timeout]`. Kept `[stop-all-sum]` /
+`[stop-all-path-sum]` / `[w60-sum]` / `[drain-path]`.
+`S32`. No store changed. Did not skip stopAll or the
+fade jal.
+
+**Probe.** `scratch/agent/s1992_tick_site/run.log` —
+eleven-Start + `ROGUESQ_SPIN_YIELD=1` LLE-solo hangar,
+60s after VI 512. Probe rc=0, 17 frames, 0 CRASH/SIGBUS.
+Hangar `[phase] 512 origin=0x006AB400` at 26.4s `#1504`.
+
+Positive controls (same run): `[drain-path] call=1
+iters=1 unmap=0` 18 idx rows `h58=0x0014` (idx 12 idle
+`h58=0`); last alloc tickn=4 `0x801714D0 count=18`;
+`[drain-stop-sum] entry=1` fade n=154; `[drain-timeout]`
+10M; `[w60-sum]` fade-zero narmed=134706 n0=134706;
+`[stop-all-sum] n=10073 narmed=10064 n_skip=0 n_work=10073
+lastgate=18`; `[stop-all-path-sum] n_empty_armed=181152
+n_free_armed=0`; first-8 `[tick-site]` rows printed
+(menuOverlayInit / waitForAnyAudioSlot / drain-entry /
+drain-inloop n=1..8).
+
+**Census.** `[tick-site-sum]`:
+- drain-inloop n=10064 narmed=10064
+- drain-entry n=1 narmed=0
+- waitForAnyAudioSlot n=3 narmed=0
+- menuOverlayInit n=3 narmed=0
+- menuControllerInput n=1 narmed=0
+- runMenuModelViewerScreen n=1 narmed=0
+- gracefulMenuShutdown / runMenuRandomBackdropScreen /
+  runMenuShipSelectScreen / menuSubtype02Handler /
+  runModelViewerLoop all n=0 narmed=0
+
+drain-inloop narmed == `[stop-all-sum]` narmed == 10064.
+
+**Verdicts.**
+- H-drain-inloop-only SELECTED: every drain-armed
+  `tickMusyXIfActive` is the s1976 host injection inside
+  the `L_800B24D4` spin (rate-limited first 64 then every
+  1000, 64+10000=10064). That is also why stopAll
+  narmed=10064.
+- H-drain-entry-plus-inloop REFUTED for armed ticks:
+  drain-entry n=1 narmed=0 (ROM jal `0x800B24CC` runs
+  once before `s1979_drain_cross_armed=1`).
+- H-other-tick-sites REFUTED: all ten ROM jals
+  narmed=0.
+
+ORIGIN: s1976 `tickMusyXIfActive` injection in
+`drainAudioAndFinalizeSpeechBuffer` (host, not a ROM
+jal). The ROM drain is one entry tick then
+`anyAudioSlotActive` spin. Each injected tick calls
+`stopAllSynthVoices` `$a0=0`, which empty-slot-fades
+all 18 live voices and restarts duration `0x14`.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks
+already in the ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned caller census selects
+H-drain-inloop-only. Next: disable the s1976 in-loop
+tick and measure whether drain idles or still hits
+10M with w60 stuck.

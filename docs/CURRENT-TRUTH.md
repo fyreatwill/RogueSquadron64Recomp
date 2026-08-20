@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1991 (2026-08-19).
+detail. Reviewed through s1992 (2026-08-19).
 
 ## Current state
 
@@ -196,6 +196,18 @@ detail. Reviewed through s1991 (2026-08-19).
   stride `0x17C` stay empty; `beginVoiceFadeRelease(idx)`
   still hits live `0x88` voices. H-free-every-tick /
   H-free-once REFUTED.
+  s1992 selected H-drain-inloop-only:
+  `[tick-site-sum]` drain-inloop n=10064
+  narmed=10064 matching `[stop-all-sum]` narmed;
+  drain-entry n=1 narmed=0 (ROM jal `0x800B24CC`
+  before armed); waitForAnyAudioSlot n=3,
+  menuOverlayInit n=3, menuControllerInput n=1,
+  runMenuModelViewerScreen n=1, all narmed=0;
+  the other five ROM jals 0. H-drain-entry-plus-inloop
+  / H-other-tick-sites REFUTED. ORIGIN: s1976 host
+  injection inside the drain spin, not a ROM jal.
+  The ROM drain is one entry tick then spin; each
+  injected tick re-fades all 18 live voices.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -313,26 +325,26 @@ detail. Reviewed through s1991 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1991: drain-armed stopAll never FREEs
-(`n_free_armed=0`); every armed iter is empty-slot fade
-(`n_empty_armed=181152`). Sole caller is
-`tickMusyXIfActive` `$a0=0`. Next is which of that
-function's call sites produces the 10064 armed ticks.
+Re-ranked s1992: every drain-armed `tickMusyXIfActive`
+is the s1976 in-loop injection (narmed=10064);
+all 10 ROM jals narmed=0. Next is whether that
+injection is why drain never idles.
 
-1. **Hangar frame-freeze: census `tickMusyXIfActive`
-   callers during drain-armed (s1991).** Same-run
-   controls: `[drain-path] call=1 unmap=0` 18 idx rows
-   `h58=0x0014` at iters=1, last alloc tickn=4
-   `0x801714D0 count=18`, `[drain-stop-sum] entry=1` fade
-   n=154, `[drain-timeout]` 10M, `[w60-sum]` fade-zero
-   narmed=134520, `[stop-all-sum] n=10073 n_skip=0
-   n_work=10073 lastgate=18`, `[stop-all-path-sum]`
-   n_empty_armed=181152 n_free_armed=0, first-8
-   `[stop-all-path]` v0=0. H-empty-then-fade SELECTED;
-   H-free-every-tick / H-free-once REFUTED. Next: tag
-   every `jal 0x8008DA00` plus the s1976 in-loop drain
-   tick; dump per-site n/narmed at `[drain-timeout]`.
-   Do not skip stopAll or the fade jal.
+1. **Hangar frame-freeze: disable s1976 in-loop drain
+   tick (s1992).** Same-run controls: `[tick-site-sum]`
+   drain-inloop narmed=10064, all ROM narmed=0,
+   `[stop-all-sum] narmed=10064`, `[stop-all-path-sum]`
+   n_empty_armed=181152 n_free_armed=0, `[drain-path]`
+   call=1 unmap=0 18 idx `h58=0x0014`, last alloc
+   tickn=4 `0x801714D0 count=18`, `[drain-timeout]` 10M.
+   H-drain-inloop-only SELECTED; H-drain-entry-plus-inloop
+   / H-other-tick-sites REFUTED. Next: env-gate the
+   s1976 in-loop `tickMusyXIfActive` (default ON),
+   run with it OFF. Keep `[tick-site-sum]` /
+   `[stop-all-sum]` / `[w60-sum]` / `[drain-path]`.
+   Do not skip stopAll or the fade jal as a landed
+   default. Discriminator: drain returns vs 10M with
+   w60 stuck vs 10M with elapsed advancing.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -546,6 +558,11 @@ Most recent, still load-bearing for the next unit:
   n_free_armed=0, n_empty_armed=181152. Believable because
   a0=0 takes FREE whenever 0($s2) is nonzero; the synth
   table is already empty when drain starts.
+- s1991 "which of tickMusyXIfActive's call sites produces
+  the 10064 armed stopAll" is superseded by s1992 — all
+  10064 are the s1976 in-loop injection; the 10 ROM jals
+  narmed=0. Believable because the ROM drain jal at
+  `0x800B24CC` is a real tick, but it runs before armed.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -557,13 +574,14 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1991 drain-slot identity / subset-live / skip-cursor /
+and s1978–s1992 drain-slot identity / subset-live / skip-cursor /
 slot+0x40-skip / init-writer / loop-length / stop-dest-retrigger /
 stop-family song-handle-fade / fade-timer-stuck / +0x30
 store-census (H-no-decrement) / +0x58-duration (H-envelope-fields-stuck)
 / +0x60 dest-map (H-fade-rearms-zeros-elapsed) / stopAll gate
 (H-stop-all-gate-stuck) / stopAll L_8008DC50 path
-(H-empty-then-fade)
+(H-empty-then-fade) / tickMusyXIfActive caller census
+(H-drain-inloop-only)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
