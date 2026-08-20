@@ -96633,3 +96633,37 @@ on a phase-valid generated tree or owner authorization.
 
 OUTCOME: ADVANCED — H1 selected by a repeated, phase-valid retail transition;
 writer/thread attribution remains open.
+
+## Session 2014 (2026-08-20) — captured retail MusyX gate writers
+
+HYPOTHESIS-ID: m5-retail-gate-ground-truth
+
+The oracle frontend rebuilt successfully. The required whole-RDRAM positive
+control reached its 10,000-callback threshold in 8 seconds, ran 480 VI, and
+removed only the control watch while leaving the target-watch slot armed. The
+debugger-on Rice target run watched physical `0xA0F50` for 60 seconds, reached
+VI 1024 at about 17.4 seconds and hangar VI 512 at about 38.4 seconds, and
+reported 17 writes.
+
+The target PCs were `0x8008EA34` and `0x8008EB40` during boot, then repeated
+clusters of `0x8008ED48`, `0x8008EB7C`, and `0x8008EC88` at the title/reapply
+transitions and in hangar. Static companion/generated mapping identifies the
+first pair as the named display-mode gate stores, the `0xEB7C`/`0xEC88` pair
+as the reapply stores, and `0xED48` as the MusyX no-op/shutdown zeroing path.
+The oracle hit format does not print old/new byte values; the exact value
+detail for the first pair is independently established by s1999, while later
+store semantics come from the static mapping. This is therefore two-source
+retail writer attribution with an explicit logger limitation, not a claim that
+the new run itself captured byte payloads.
+
+H1 was selected: the retail gate is written by the expected named init/display
+and zeroing paths, and the run reached the required phases. H2 and H3 are
+ruled out for this capture: the watch was live, the positive control passed,
+and the target run reached both title and hangar. This does not identify the
+port-side writer/thread join and does not authorize audio, status, spin, PI,
+guard, mitigation, or generated-tree changes. The next unit is blocked on the
+phase-valid s2007 tree or owner authorization to reconcile the four pending
+companion symbol files.
+
+OUTCOME: BLOCKED — retail writer attribution completed; port-side join needs
+the generated-tree artifact or owner authorization.

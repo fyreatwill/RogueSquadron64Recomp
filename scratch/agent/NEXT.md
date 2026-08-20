@@ -1,65 +1,51 @@
-# NEXT work unit (s2014) — capture retail MusyX gate writers
+# NEXT work unit (s2015) — join port-side gate/status writers
 
-HYPOTHESIS-ID: m5-retail-gate-ground-truth
+HYPOTHESIS-ID: m5-port-writer-thread-census
 
 ## Work unit
 
-Capture independent retail ground truth for the MusyX enabled-state byte before
-adding port instrumentation. First run the whole-RDRAM positive control, then
-run the debugger-on Rice recipe with a narrow watch on physical `0xA0F50`
-(`0x800A0F50`). Do not rebuild, reconcile, or edit the generated/symbol trees,
-and do not change any runtime audio, status, spin, PI, or mitigation behavior.
+Obtain from the project owner either the phase-valid s2007 generated snapshot
+(`funcs_*.c`, `funcs.h`, `recomp_overlays.inl`, and `lookup.cpp`) or explicit
+authorization to reconcile the four pending companion symbol files. Then run
+one batched port-side census joining the gate writer PC, slot/index, old/new
+byte, host thread, shutdown call, and service/callback edge. Do not change
+status, audio, spin, PI, guard, or mitigation behavior.
+
+This unit cannot start until that artifact or authorization is supplied. The
+s2014 retail oracle capture is complete and does not substitute for the
+port-side generated provenance.
 
 ## Competing hypotheses and discriminator
 
-- H1: The retail gate is written by the named init/display/shutdown paths; the
-  target watch reports their PCs and the expected zero/nonzero transitions.
-- H2: The gate is not written in the debugger-on prefix despite a valid oracle
-  watch; this leaves the retail gate contract unattributed and selects a
-  phase/driver reachability question rather than a port-side explanation.
-- H3: The oracle's watch is invalid or the run does not reach its expected
-  phase; a failed whole-RDRAM control or missing phase evidence makes the
-  target result unevaluable.
+- H1: The port reaches the legitimate slot-0 `0x03` write and the service
+  worker clears it transiently; the join shows the same slot, writer, and
+  callback edge before shutdown returns.
+- H2: The port's `0x03` belongs to another slot or writer path; slot/index and
+  thread correlation separates it from the watched slot-0 shutdown record.
+- H3: The port never writes slot 0 to `0x03`; the shutdown spin observes a
+  stale or mismatched status, so the missing writer—not the reaper—is the
+  discriminator.
 
-The discriminator is positive-control hit volume followed by target-watch hit
-records containing the retail PC, old/new value, and phase. The positive
-control must produce roughly 1.6M whole-RDRAM writes in 8 emulated seconds;
-only then is a target-watch null meaningful. H1 is selected by named-PC
-transitions; H2 requires a valid control and phase reach without target hits;
-H3 is selected by either failed control or absent phase reach.
+The one discriminating measurement is the seven-site join in one phase-gated
+run: writer PC, slot/index, old/new status byte, host thread, shutdown call,
+service entry, and callback/zeroing edge. H1 requires a same-slot `0x03` then
+zero with the worker edge; H2 requires another slot/index or writer; H3
+requires shutdown with no live slot-0 `0x03` writer.
 
-## Exact commands
+## Exact commands after the dependency is resolved
 
-Build the frontend, then run the positive control:
-
-```sh
-tools/oracle/build.sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --oracle-debugger 1 --oracle-emulator 1 --secs 8 \
-  --watch-write 0x0:0x800000 \
-  > scratch/agent/s2014-oracle-rdram-control.log 2>&1
-```
-
-The target run uses the eleven-Start Rice schedule and watches the aligned
-word containing the gate:
+Verify the supplied tree before any build:
 
 ```sh
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --oracle-debugger 1 --oracle-emulator 1 --secs 60 \
-  --vi-trace \
-  --watch-write 0xA0F50:0xA0F54 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2014-oracle-gate-watch.log 2>&1
+test -f <phase-valid-tree>/funcs.h
+test -f <phase-valid-tree>/recomp_overlays.inl
+test -f <phase-valid-tree>/lookup.cpp
+find <phase-valid-tree> -maxdepth 1 -name 'funcs_*.c' | wc -l
 ```
 
-Expected H1 PCs are the retail writers corresponding to `initMusyXEngine`,
-`setDisplayMode`, `reapplyDisplayMode`, and shutdown/failure zeroing. A valid
-positive control followed by no target hit is not enough to claim H2 unless
-the target run also reports the relevant boot/title phase; a debugger-on stall
-before that phase selects H3. Do not infer the port-side thread join from this
-watch, promote audio, alter status/spin/PI behavior, or weaken a guard.
+If the owner authorizes reconciliation, record the authorization in the
+ledger, reconcile only the four named companion files, then regenerate in the
+required order (`make_elf.py`, N64Recomp, `fixup_game_funcs.py`, CMake). Build
+all census fields in one build and run the existing phase-gated hangar recipe
+with `ROGUESQ_LOG_ALL=1`; do not spend a build/run per field. The outcome table
+above selects the next audio step.

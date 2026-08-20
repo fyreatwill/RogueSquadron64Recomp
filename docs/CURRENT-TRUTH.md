@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2013 (2026-08-20).
+for session detail. Reviewed through s2014 (2026-08-20).
 
 ## Current state
 
@@ -42,15 +42,19 @@ for session detail. Reviewed through s2013 (2026-08-20).
   both reached VI 1024 and hangar VI 512 while polling slot 0
   through `0x00 → 0x01 → 0x02 → 0x03 → 0x00`. This closes the retail
   status-value branch, but not host writer/thread attribution.
+- The s2014 debugger-on Rice oracle passed its whole-RDRAM control (10,000
+  callbacks before the tool's positive-control cap), then reached VI 1024 and
+  hangar VI 512 while watching physical `0xA0F50`. It recorded the expected
+  retail writer PCs: boot `0x8008EA34`/`0x8008EB40`, followed by repeated
+  `0x8008ED48`/`0x8008EB7C`/`0x8008EC88` transition clusters. The watch
+  logger reports PCs and phase but not old/new byte values; existing exact
+  store mapping supplies that missing value detail. Retail gate-writer
+  attribution is selected, while the port-side writer/thread join remains
+  open.
 
 ## Active investigation and ranked next steps
 
-1. **M5 retail gate ground-truth capture.** Run the oracle's whole-RDRAM
-   positive control, then a debugger-on Rice run watching physical `0xA0F50`
-   (`0x800A0F50`) to identify the retail gate writers and their value changes.
-   This is contract capture before any port instrumentation; it does not
-   reconcile the untrusted generated tree.
-2. **M5 port-side writer/thread census (human input remains open).** Obtain the
+1. **M5 port-side writer/thread census (human input remains open).** Obtain the
    phase-valid s2007 generated tree, including `funcs_*.c`, `funcs.h`,
    `recomp_overlays.inl`, and `lookup.cpp`, or explicitly authorize
    reconciliation of the four pending companion symbol files. Then run the
@@ -59,18 +63,18 @@ for session detail. Reviewed through s2013 (2026-08-20).
    transient-cleared; another slot selects other-slot; no `0x03` with live
    controls selects never-written. Do not change status, audio, spin, PI, or
    mitigation code while this dependency is open.
-3. **M5 callback-side PCM witness (only if #2 requires it).** Phase-gate a
+2. **M5 callback-side PCM witness (only if #1 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.
-4. **M3 crash work.** Only perform complete idiom-class audits with a named
+3. **M3 crash work.** Only perform complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` SIGBUS has 7659 clean
    hangar calls in the guarded run; do not add a mitigation. Revisit only with
    a mission-entry recipe or a new crash of that signature.
-5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+4. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation; consumer-mode H1 is refuted by the RT64 census (single-source
    against pixel state). H3 remains unavailable because the oracle cannot
    screenshot the LLE path. Do not repeat the `0xD60` scan.
-6. **M5 audio execution.** Continue only from `M5-AUDIO-PLAN.md`, after the
+5. **M5 audio execution.** Continue only from `M5-AUDIO-PLAN.md`, after the
    provenance/status boundary is settled. The proven DMA-to-`queue_samples`
    mapping is not permission to promote the opt-in image.
 
@@ -96,6 +100,16 @@ the selected image matches `aspMainTextStart`/`aspMainDataStart`. Treatment
 DMEM writes are real image activity, not yet a corruption diagnosis. Two
 nonzero `0x6F0`/`0x300` buffers match at the DMA writer and `queue_samples`;
 the default dispatch and guest gates remain unchanged.
+
+**M5 retail gate writers.** The s2014 whole-RDRAM control and debugger-on Rice
+watch are both live: the control reached its 10,000-callback cap and the target
+run reached VI 1024 and hangar VI 512. Retail PCs `0x8008EA34`/`0x8008EB40`
+map to the named boot display-mode gate stores; repeated
+`0x8008EB7C`/`0x8008EC88` map to the reapply pair, and `0x8008ED48` is the
+zeroing path in the MusyX no-op/shutdown cluster. The logger does not expose
+old/new bytes, so the exact values for the later PCs remain static-source
+mapping rather than a new oracle field. This closes retail writer attribution,
+not the port-side thread join.
 
 **Drain and voice records.** The hangar table at `0x801714D0` has 18 live
 voice records. `musyxRenderVoiceSamples` legitimately writes status `0x02`.
@@ -148,11 +162,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
 Per-session history through s1879 is in `PROJECT-OVERVIEW.md` §§33–35.
 s1880–s1959 and the VI-1024 chain are in §36. s1961–s2009 are archived in
 §37 and remain in `PORTING-STATE.md` as the primary ledger; s2011–s2013 record
-the provenance block and its blocker-free retail status re-scope. The durable
-milestones are: hangar reachability, bltzal link repair, audio-drain writer
-mapping, M5 plan, opt-in DMA-to-queue mapping, shutdown call-3 reachability,
-the repeated retail status-value sequence, and the unresolved generated-tree
-provenance boundary.
+the provenance block and its blocker-free retail status re-scope. s2014 adds
+the phase-valid retail gate-PC capture and closes retail writer attribution;
+the port-side join remains unresolved. The durable milestones are: hangar
+reachability, bltzal link repair, audio-drain writer mapping, M5 plan, opt-in
+DMA-to-queue mapping, shutdown call-3 reachability, the repeated retail
+status-value sequence, retail gate-writer attribution, and the unresolved
+generated-tree provenance boundary.
 
 ## Method and safety rules
 
