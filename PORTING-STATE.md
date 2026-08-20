@@ -98341,3 +98341,58 @@ transitions, or complete/nonzero PCM playback.
 ORIGIN: no guest writer, C88 value, wait, guard, skip, audio task, callback,
 or default behavior changed; the only code change was the opt-in harness
 branch that skips window raising while retaining direct PID key injection.
+
+## Session 2061 (2026-08-20) — selected the Factor 5 image task/PCM boundary
+
+The prescribed M5 unit compared the default `musyx_stub` with the opt-in
+`ROGUESQ_AUDIO_UCODE=1` arm on the already-qualified no-focus route. Before
+the port runs, the first oracle invocation exposed two tooling issues: its
+`--hit-cap 1` suppressed visible post-boot PC hits, and the first corrected
+retry used a duplicated core path and failed immediately. The fixed oracle
+run used the documented core path plus `--detail-watch` attempts, then ran
+45 seconds. It crossed the whole-RDRAM positive-control threshold, logged
+PIF Start reads, reached title VI 1024, reached hangar VI 512 at
+`0x006AB400/0x006AB800`, and reported menu PC execution at `0x800B8014` and
+`0x800B8050`. The `0x800B47C4` watch was zero; the other relevant menu PCs
+qualified the route.
+
+Both port arms used the same forced-LLE, `LLE_UNGATED=1`, `LLE_SOLO=1`,
+C88=1, spin-yield, no-focus, and phase-key schedule. Both completed the
+180-second capture with 45 frames, eight direct `[pad-host]` rows, title VI
+1024, hangar VI 512, zero missing functions, zero aborts, and no crash
+markers. The generic scorer marked both FAIL because its stationary-640 key
+check treated the known direct-PID schedule as undriven; the direct input and
+target-VI rows are the admissible controls.
+
+The stub arm emitted 125 dispatch rows and 122 phase-keyed audio task rows.
+All 122 had `exit=1` (`RspExitReason::Broke`), `changed=0`, `canary_ok=1`,
+and `dma_count=0`. It emitted 121 PCM source/consumer pairs, all zero, with
+44 title pairs and 77 hangar pairs. The image arm emitted 126 dispatch rows
+and 122 task rows. All 122 had `exit=1`, `changed>0`, and `canary_ok=0`; it
+produced 413 DMA-range rows, including 124 ranges touching DMEM `0x6F0`.
+Its PCM boundary emitted the same 121 source/consumer pairs: 19 title pairs
+were nonzero and 25 title plus all 77 hangar pairs were zero. Every source and
+consumer row matched on full-span FNV, sample/byte count, and nonzero-byte
+count. The slot/status controls were the same in both arms, including the
+legitimate `01 -> 02 -> 03 -> 00` writer sequence.
+
+This selects a new M5 image-task exit/canary/output-contract boundary at the
+current scope. It refutes a pure-stub explanation because the image performs
+DMEM work, DMA, and nonzero title PCM; it refutes H-HostBridge because all
+121 source/consumer joins match; and it refutes clean H-ImageValid because
+every image task still exits `Broke` with `canary_ok=0`. It also supersedes
+the all-zero PCM clause in the originally written H-StubBoundary prediction:
+the image does produce matched nonzero title PCM, although its task/output
+ABI remains unproven. This is single-source port A/B evidence; the retail
+oracle independently qualifies the route and relevant menu/input PCs.
+
+What this rules out: a route/input failure, a default-stub-only explanation,
+host-side PCM mutation on this path, and clean completion of the current
+Factor 5 image task. It does not establish whether writes through DMEM
+`0xF80..0xF8F` are legitimate task output or an ABI mismatch, nor whether
+the nonzero title buffers are current task output rather than retained state.
+
+ORIGIN: no guest writer, C88 value, wait, guard, skip, audio task, callback,
+or default behavior changed; this session only ran the existing stub/image
+dispatch arms and corrected the oracle command to expose its independent
+route controls.

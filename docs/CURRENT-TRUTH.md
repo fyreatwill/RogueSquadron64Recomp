@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2060 (2026-08-20).
+for session detail. Reviewed through s2061 (2026-08-20).
 
 ## Current state
 
@@ -33,10 +33,15 @@ for session detail. Reviewed through s2060 (2026-08-20).
   Factor 5 audio-image arm is not defaulted on. Two nonzero hangar DMA buffers
   reach `queue_samples` byte-for-byte, but complete playback and task/bridge
   semantics remain unproven.
-- The stub audio arm returns `Broke` with no DMEM changes or audio DMA. The
-  opt-in arm returns `Broke` after DMEM activity and audio DMA, including
-  nonzero `0x6F0` payloads, but sampled PCM is still all-zero. The guest gate
-  and its consumer remain the immediate contract boundary.
+- The stub audio arm returns `Broke` with no DMEM changes or audio DMA. In the
+  same qualified route, the opt-in image arm returns `Broke` on all 122
+  phase-keyed task rows while changing DMEM on all rows, failing its reserved
+  canary on all rows, and producing 413 DMA-range rows (124 touching DMEM
+  `0x6F0`). It nevertheless produced 19 nonzero title PCM source/consumer
+  pairs; every one of the 121 source/consumer pairs matched on full-span FNV,
+  byte count, and nonzero-byte count, while all 77 hangar pairs were zero.
+  Task completion/slot validity remains open; host-boundary mutation is not
+  selected.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -127,6 +132,17 @@ for session detail. Reviewed through s2060 (2026-08-20).
   H-GateRoute and refutes focus and callback-convergence explanations at this
   scope; the scorer's Accessibility warning was a false negative because its
   stationary 640-key check did not model direct PID injection.
+- s2061's corrected retail oracle passed the whole-RDRAM threshold, PIF Start
+  reads, title VI 1024, hangar VI 512 at the hangar origin, and menu PCs
+  `0x800B8014`/`0x800B8050`. On that qualified route, the stub arm had 125
+  dispatch rows, 122 clean `Broke` task rows, zero DMEM changes, zero audio
+  DMA ranges, and zero PCM. The image arm had 126 dispatch rows, 122 task
+  rows with `changed>0` and `canary_ok=0`, 413 DMA-range rows, and the 19
+  nonzero title PCM pairs described above. Both arms had the same live
+  `[pad-host]`, target-VI, status `01 -> 02 -> 03 -> 00`, and no-crash
+  controls. This is single-source port A/B evidence: it refutes a pure stub
+  or host-bridge explanation, refutes clean image-task validity, and selects
+  an image-task exit/canary/output-contract boundary for the next M5 unit.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -136,14 +152,14 @@ for session detail. Reviewed through s2060 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 audio task/PCM completion boundary.** The focus-isolated s2060 table
-   closes the GUI explanation: C88 remains causally correlated with the raw
-   gate and menu callback counts while direct input and both route anchors stay
-   live in both arms. The remaining open boundary is the opt-in Factor 5 image
-   versus the default audio stub: task exit, valid slot transitions, and
-   nonzero PCM are still unproven. Keep the retail writer and C88 value
-   unchanged; next compare the two dispatch arms with the full task/slot/PCM
-   table in one run.
+1. **M5 Factor 5 image task/exit contract.** s2061 closes the pure-stub and
+   host-bridge explanations at the qualified route: the image arm changes
+   DMEM, performs DMA, and produces matched nonzero title PCM, but every
+   sampled task still exits `Broke` with `canary_ok=0`; the guest status rows
+   remain live in both arms. Determine whether the writes through the reserved
+   DMEM/canary range and the `Broke` return are legitimate output/task
+   semantics or an ABI mismatch. Keep the retail writer, C88 value, wait/slot
+   guards, and default dispatch unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -231,8 +247,8 @@ the two target VIs. This selects H-R at the current scope: C88 is causal for
 the guest gate, but not sufficient for the route handoff. The retail-value `1`
 arm remains opt-in and does not authorize changing the legitimate guest writer.
 The value/route conclusion is single-source port evidence; the oracle supplied
-the independent route qualification. PCM remained all-zero at the paired
-source/consumer boundary in both arms.
+the independent route qualification. The earlier all-zero PCM result applied
+to that prior arm and is not a claim about every later image run.
 
 s2057 repeated the paired witness on the qualified C88=1 route with 118
 phase-keyed source rows and 118 consumer rows. Every full-span join matched
@@ -248,6 +264,20 @@ writer produced `0x00` and 1/0 rows. This is single-source port A/B evidence
 for H-GateRoute after H-Focus and H-StateOnly were tested; the retail oracle
 provided the independent route/input/menu-PC witness. It does not prove the
 Factor 5 image's task ABI or nonzero PCM.
+
+s2061 then held that route and compared the default stub with the opt-in image
+in one run sequence. Both arms reached title 1024 and hangar 512 with eight
+direct `[pad-host]` rows, 121 paired PCM source/consumer rows, and the same
+status writer sequence. The stub had `changed=0`, `canary_ok=1`,
+`dma_count=0`, and zero PCM. The image had `changed>0` and `canary_ok=0` on
+all 122 task rows, `dma_count>0` on all 122 rows, and 19 nonzero title PCM
+pairs followed by zero hangar pairs. Source and consumer matched on every
+full-span row, so H-HostBridge is refuted at this scope; `exit=1` on every
+image row and the canary failure refute H-ImageValid. The originally expected
+H-StubBoundary all-zero PCM clause is also superseded: the image does produce
+nonzero title PCM, but its task/output contract is still unresolved. This is
+single-source port evidence; the oracle independently qualifies only the
+route and menu/input PCs.
 
 ### M3, M4, and generated symbols
 
@@ -319,6 +349,14 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   injection; both arms still had live input and both target VIs, while the
   gate value and callback counts remained different. The remaining M5 work is
   therefore task/slot/PCM completion, not another focus retry.
+- s2061 supersedes the wording that the opt-in image's sampled PCM remained
+  all-zero and that the first comparison could select only an all-zero
+  `H-StubBoundary`. That wording was believable because the prior paired
+  source/consumer witnesses were zero in the relevant capture and the image
+  task ABI was already unproven. The new same-route A/B recorded 19 matched
+  nonzero title pairs, but also recorded `exit=1` and `canary_ok=0` on all 122
+  image task rows. It therefore refutes clean image validity and host-bridge
+  mutation without proving the image's task/output ABI.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
