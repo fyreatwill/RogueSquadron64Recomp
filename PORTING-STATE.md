@@ -96601,3 +96601,35 @@ changed.
 OUTCOME: ADVANCED — the full generated-tree census remains dependency-bound,
 but the retail status-value branch is locally phase-measurable and the loop can
 continue without human input.
+
+## Session 2013 (2026-08-20) — reproduced retail status-value sequence
+
+HYPOTHESIS-ID: m5-retail-status-poll-branch
+
+I added the competing-outcome table and discriminator to `scratch/agent/NEXT.md`,
+rebuilt the local oracle frontend, and ran the prescribed debugger-off Rice
+recipe with `--vi-poll --status-poll` and the eleven-Start schedule. The run
+completed naturally with exit 3, which is the oracle's clean zero-breakpoint
+exit; debugger-off polling does not populate the execution-watch VI counter.
+The `vi-poll` records nevertheless supplied the phase controls: VI 1024 was
+followed by 512 at origins `0x006AB400`/`0x006AB800` at about 38.4s.
+
+Within that same run, physical slot 0 at `0x154620` changed from `0x00` to
+`0x01` at 43.2s, `0x02` at 43.5s, `0x03` at 48.9s, and back to `0x00` at
+48.9s. A later poll showed the slot live again at `0x01`. This same-source
+repeat reproduces the s2012 status sequence under the same phase-valid controls
+and rules out treating the earlier value observation as a one-run fluke. It does
+not identify the port-side writer or thread, and it did not change status, audio, spin, PI,
+guard, mitigation, or generated-tree behavior. The debugger-off oracle's
+summary of zero VI is an instrumentation limitation, not evidence that the
+game failed to reach the phase; the explicit `vi-poll` records are the phase
+witness.
+
+The status-value branch is therefore closed at the retail level. The next
+autonomous M5 unit is the oracle whole-RDRAM positive control followed by a
+debugger-on watch of physical `0xA0F50`, as specified in the rewritten
+`scratch/agent/NEXT.md`. The port writer/thread census remains dependency-bound
+on a phase-valid generated tree or owner authorization.
+
+OUTCOME: ADVANCED — H1 selected by a repeated, phase-valid retail transition;
+writer/thread attribution remains open.

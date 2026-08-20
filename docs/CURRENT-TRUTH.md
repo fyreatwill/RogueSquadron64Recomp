@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2012 (2026-08-20).
+for session detail. Reviewed through s2013 (2026-08-20).
 
 ## Current state
 
@@ -38,18 +38,18 @@ for session detail. Reviewed through s2012 (2026-08-20).
 - The s2011 provenance check found no phase-valid generated tree available for
   an authorized rebuild. The current external tree has 45 generated function
   files and uncommitted companion/symbol edits; the s2009 retry exited while
-  waiting for VI 1024. The s2012 debugger-off retail oracle instead reached VI
-  1024 and hangar VI 512 while polling slot 0 through `0x03` and back to
-  `0x00`. This closes the status-value branch, but not host writer/thread
-  attribution.
+  waiting for VI 1024. The s2012 and s2013 debugger-off retail-oracle runs
+  both reached VI 1024 and hangar VI 512 while polling slot 0
+  through `0x00 → 0x01 → 0x02 → 0x03 → 0x00`. This closes the retail
+  status-value branch, but not host writer/thread attribution.
 
 ## Active investigation and ranked next steps
 
-1. **M5 retail status-value control.** Reuse the local oracle's
-   `--status-poll --vi-poll` route to repeat the same-run phase gate and confirm
-   slot 0's `0x00 → 0x01 → 0x02 → 0x03 → 0x00` sequence. The phase controls are
-   VI 1024 followed by hangar VI 512 at origins `0x006AB400`/`0x006AB800`.
-   This is a status-value control only; do not infer a host thread from it.
+1. **M5 retail gate ground-truth capture.** Run the oracle's whole-RDRAM
+   positive control, then a debugger-on Rice run watching physical `0xA0F50`
+   (`0x800A0F50`) to identify the retail gate writers and their value changes.
+   This is contract capture before any port instrumentation; it does not
+   reconcile the untrusted generated tree.
 2. **M5 port-side writer/thread census (human input remains open).** Obtain the
    phase-valid s2007 generated tree, including `funcs_*.c`, `funcs.h`,
    `recomp_overlays.inl`, and `lookup.cpp`, or explicitly authorize
@@ -83,13 +83,13 @@ does not substitute for the VI-1024 phase marker. This dependency remains for
 the port-side writer/thread join, not for observing the retail status value.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
-capture. The debugger-off retail oracle independently reached VI 1024 and
-hangar VI 512 in one run, then observed slot 0 at `0x00`, `0x01`, `0x02`,
+capture. The s2012 and s2013 debugger-off retail oracles both reached VI 1024
+and hangar VI 512, then observed slot 0 at `0x00`, `0x01`, `0x02`,
 `0x03`, and `0x00` again. The status-2 stop path legitimately writes `0x03`
 at `0x8009B30C`, while `serviceVoicePoolFrame` (`0x8009B7EC` among its
 stores) is the legitimate worker-side zeroing path. The value branch is
-settled; only the port-side writer/thread join still needs a phase-valid
-generated tree.
+settled in this single-source retail execution line; only the port-side
+writer/thread join still needs a phase-valid generated tree.
 
 **M5 opt-in audio.** Both arms receive the same `M_AUDTASK` descriptor and
 the selected image matches `aspMainTextStart`/`aspMainDataStart`. Treatment
@@ -147,11 +147,12 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
 
 Per-session history through s1879 is in `PROJECT-OVERVIEW.md` §§33–35.
 s1880–s1959 and the VI-1024 chain are in §36. s1961–s2009 are archived in
-§37 and remain in `PORTING-STATE.md` as the primary ledger; s2011–s2012 record
+§37 and remain in `PORTING-STATE.md` as the primary ledger; s2011–s2013 record
 the provenance block and its blocker-free retail status re-scope. The durable
 milestones are: hangar reachability, bltzal link repair, audio-drain writer
 mapping, M5 plan, opt-in DMA-to-queue mapping, shutdown call-3 reachability,
-and the unresolved generated-tree provenance boundary.
+the repeated retail status-value sequence, and the unresolved generated-tree
+provenance boundary.
 
 ## Method and safety rules
 

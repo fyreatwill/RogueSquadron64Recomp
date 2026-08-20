@@ -1,43 +1,65 @@
-# NEXT work unit (s2013) — repeat the retail status-value control
+# NEXT work unit (s2014) — capture retail MusyX gate writers
 
-HYPOTHESIS-ID: m5-retail-status-poll-branch
+HYPOTHESIS-ID: m5-retail-gate-ground-truth
 
 ## Work unit
 
-Repeat the local retail-oracle status poll as a blocker-free M5 unit. The
-phase-valid generated tree is still required for the port-side writer/thread
-join, but it is not required to observe the retail status-value branch. Do not
-rebuild or reconcile the generated/symbol trees for this unit.
+Capture independent retail ground truth for the MusyX enabled-state byte before
+adding port instrumentation. First run the whole-RDRAM positive control, then
+run the debugger-on Rice recipe with a narrow watch on physical `0xA0F50`
+(`0x800A0F50`). Do not rebuild, reconcile, or edit the generated/symbol trees,
+and do not change any runtime audio, status, spin, PI, or mitigation behavior.
 
-## Discriminator and controls
+## Competing hypotheses and discriminator
 
-Use the debugger-off `--status-poll --vi-poll` route described in
-`tools/oracle/README.md`. The same run must reach VI 1024 and then hangar VI
-512 at origins `0x006AB400`/`0x006AB800`; those are the positive phase controls.
-Within that phase, slot 0 at physical `0x154620` must show the sequence
-`0x00 → 0x01 → 0x02 → 0x03 → 0x00`. A missing `0x03` is a null only if the
-phase controls pass. The poll does not attribute a host writer or thread.
+- H1: The retail gate is written by the named init/display/shutdown paths; the
+  target watch reports their PCs and the expected zero/nonzero transitions.
+- H2: The gate is not written in the debugger-on prefix despite a valid oracle
+  watch; this leaves the retail gate contract unattributed and selects a
+  phase/driver reachability question rather than a port-side explanation.
+- H3: The oracle's watch is invalid or the run does not reach its expected
+  phase; a failed whole-RDRAM control or missing phase evidence makes the
+  target result unevaluable.
 
-The s2012 run already supplied this observation: slot 0 changed at 43.1s,
-43.4s, 48.8s, and 48.8s while the run had reached VI 1024 at 17.3s and
-hangar VI 512 at 38.4s. The static generated source independently maps the
-table base to `0x80154620`, the stride to `0x1228`, and the seven candidate
-writer PCs. Keep those two sources separate when classifying the value branch.
+The discriminator is positive-control hit volume followed by target-watch hit
+records containing the retail PC, old/new value, and phase. The positive
+control must produce roughly 1.6M whole-RDRAM writes in 8 emulated seconds;
+only then is a target-watch null meaningful. H1 is selected by named-PC
+transitions; H2 requires a valid control and phase reach without target hits;
+H3 is selected by either failed control or absent phase reach.
 
-## Exact command
+## Exact commands
+
+Build the frontend, then run the positive control:
 
 ```sh
 tools/oracle/build.sh
 tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --oracle-debugger 0 --oracle-emulator 1 --secs 60 --vi-poll --status-poll \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2013-retail-status-poll.log 2>&1
+  --oracle-debugger 1 --oracle-emulator 1 --secs 8 \
+  --watch-write 0x0:0x800000 \
+  > scratch/agent/s2014-oracle-rdram-control.log 2>&1
 ```
 
-Do not turn this into a cross-run A/B on an animating scene. Do not infer the
-port-side thread join from the poll, promote audio, alter status/spin/PI
-behavior, or weaken a guard. The remaining port census stays open until the
-phase-valid generated tree or owner authorization exists.
+The target run uses the eleven-Start Rice schedule and watches the aligned
+word containing the gate:
+
+```sh
+tools/oracle/build/rs64_oracle \
+  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
+  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
+  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
+  --oracle-debugger 1 --oracle-emulator 1 --secs 60 \
+  --vi-trace \
+  --watch-write 0xA0F50:0xA0F54 \
+  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
+  > scratch/agent/s2014-oracle-gate-watch.log 2>&1
+```
+
+Expected H1 PCs are the retail writers corresponding to `initMusyXEngine`,
+`setDisplayMode`, `reapplyDisplayMode`, and shutdown/failure zeroing. A valid
+positive control followed by no target hit is not enough to claim H2 unless
+the target run also reports the relevant boot/title phase; a debugger-on stall
+before that phase selects H3. Do not infer the port-side thread join from this
+watch, promote audio, alter status/spin/PI behavior, or weaken a guard.
