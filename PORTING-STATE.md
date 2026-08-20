@@ -98224,3 +98224,40 @@ status-3 interval, and a PCM callback/phase join failure. It does not prove
 complete playback or a shutdown return after the store.
 
 ORIGIN: no guest writer, value, wait, guard, skip, audio task, callback, or default behavior changed; this session applied existing regeneration-stable diagnostics and changed only the input schedule.
+
+## Session 2058 (2026-08-20) — tested shutdown before the worker store
+
+HYPOTHESIS-ID: m5-service-store-edge.
+
+Ground truth ran first. The retail oracle passed the whole-RDRAM positive
+control with 10,011 writes, reached title VI 1024 at `0x00790400` and hangar
+VI 512 at `0x006AB400`, recorded 11 writes to the slot table, and executed
+`0x8009B7EC` twice. This independently qualified the route and the legitimate
+worker-store witness before the port run.
+
+The qualified C88=1 forced-LLE/audio/spin-yield port arm completed 180 seconds
+with 48 captured frames, title VI 1024, hangar VI 512, zero missing functions,
+zero aborts, and no crash markers. The same run emitted the live input,
+audio-task/ABI, and PCM source/consumer controls. Its generic scorer reported
+FAIL because the final 512-phase key did not produce a VI transition; that is
+not a null input result here: `[pad-host]` fired in the 512 phase, shutdown
+call 3 entered, and the shutdown status rows continued afterward.
+
+The ordered M5 rows showed the requested negative arm (single-source port
+evidence). Shutdown call 3 entered
+in phase 10 with slot 0 at status `0x02`; the legitimate writer at
+`0x8009B30C` changed guest `0x80154620` from `0x02` to `0x03`, after which the
+call remained in the `0x03` spin through the end of the run. There was no
+post-store `0x03 -> 0x00` service edge and no shutdown exit. Because the input
+and shutdown controls both fired, this is not H-NoTrigger or H-JoinGap. It
+selects the pre-store shutdown stall at this schedule, not the still-open
+post-store return boundary.
+
+What this rules out: an absent 512-phase input control, an absent shutdown
+call-3 entry, and a shutdown return before the worker store. It does not rule
+out a later shutdown call returning after the already-observed worker store;
+the next arm must leave hangar input idle until that store is live.
+
+ORIGIN: no guest writer, value, wait, guard, skip, audio task, callback, or
+default behavior changed; this session ran the existing diagnostics and
+changed only the phase-key schedule.

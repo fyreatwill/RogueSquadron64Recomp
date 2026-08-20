@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2057 (2026-08-20).
+for session detail. Reviewed through s2058 (2026-08-20).
 
 ## Current state
 
@@ -101,6 +101,16 @@ for session detail. Reviewed through s2057 (2026-08-20).
   all 118 full-span joins matched and all sampled PCM was zero. The oracle's
   independent watch saw two executions at `0x8009B7EC` and 11 slot-table
   writes, while the port reached both target VIs.
+- s2058's qualified route again reached title VI 1024 and hangar VI 512 with
+  live input, audio-task/ABI, and PCM source/consumer controls. A 512-phase
+  Start reached shutdown call 3 before any phase-10 status-3 worker store:
+  the call entered with slot 0 status `0x02`, the legitimate writer at
+  `0x8009B30C` changed guest `0x80154620` to `0x03`, and shutdown remained in
+  the `0x03` spin with no exit. The scorer reported FAIL because its generic
+  stationary-phase key check expected a VI transition, but the direct
+  `[pad-host]`, shutdown-entry, and persistent-status controls fired; the
+  ordered edge rows are admissible single-source port evidence, and the
+  post-store return remains open.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -112,9 +122,11 @@ are not active work items.
 
 1. **M5 store-to-shutdown return.** The worker-clears portion is selected: a
    phase-10 slot-0 status-3 read is followed by the named service store and a
-   zero status at service exit. Run one phase-keyed hangar input arm that
-   drives a later shutdown call, and determine whether that call returns after
-   the store. Do not force a status byte or add a skip.
+   zero status at service exit. s2058's shutdown key arrived before that edge
+   and selected the pre-store stall, not the requested boundary. Run one
+   phase-keyed arm with no hangar input until after the worker store should be
+   live, then trigger a later shutdown call and determine whether it returns
+   after the store. Do not force a status byte or add a skip.
 2. **M5 guest-gate handoff boundary.** H-R is selected at the current scope:
    C88 causally controls the raw gate, but not the title-to-hangar anchors.
    Revisit only with a genuinely focus-isolated discriminator that explains
@@ -176,7 +188,11 @@ service entry saw `0x02`, exited with `0x03`, and subsequent service calls
 observed `0x03`. s2057 then observed five phase-10 status-3 reads followed by
 the service's exact `0x8009B7EC` store at slot 0, guest address `0x80154620`,
 with `old=0x03`, `new=0x00`; the independent s2008 writer and s2022 store
-rows agree, and the service exit read `0x00`. The port status sequence is
+rows agree, and the service exit read `0x00`. s2058 then showed, as
+single-source port evidence, that an input-
+driven shutdown can enter while the slot is still `0x02`: the legitimate
+`0x8009B30C` writer changes it to `0x03`, after which call 3 remains in its
+status-3 spin with no exit. The port status sequence is
 therefore `00 -> 01 -> 02 -> 03 -> 00` at this scope, selecting the worker
 clears portion of H-S and refuting an alternate writer, no-store result, or
 join failure. Shutdown calls 1 and 2 returned in the same run, but both were
