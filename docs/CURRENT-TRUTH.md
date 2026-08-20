@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1994 (2026-08-19).
+detail. Reviewed through s1995 (2026-08-19).
 
 ## Current state
 
@@ -236,6 +236,18 @@ detail. Reviewed through s1994 (2026-08-19).
   reached-again REFUTED. First jal inside
   finalize is always `shutdownMusyXVoices`
   (`0x8009BCC4`).
+  s1995 selected H-shutdown-musyx: three
+  finalize entries in the run; calls 1–2
+  (pre-title, pre-hangar) both-edge shutdown
+  then teardown (`[fin-a0] a0=0 beqz=1`);
+  call 3 (post `[drain-exit]`) is shutdown
+  nenter=3 nexit=2, no `[fin-a0] n=3`,
+  teardown stays 2, 0 `site=free` entire run.
+  Wrap both-edged on the two earlier shutdown
+  calls (function can return). `[fin-slot]`
+  dumped only nenter==1 (pre-title zeros) —
+  not the hanging call. H-rs-free /
+  H-teardown-dma / H-finalize-body REFUTED.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -353,26 +365,29 @@ detail. Reviewed through s1994 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1994: drain's post-idle jals all return
-except `finalizeCurrentSpeechBuffer`. Next is that
-function's three jals.
+Re-ranked s1995: finalize hangs in
+`shutdownMusyXVoices` (call 3). Next is that
+function's stop/spin/findZero/tail-free sites.
 
-1. **Hangar frame-freeze: finalize hang (s1994).**
-   Same-run controls: `[drain-inloop-gate] en=0`,
-   `[drain-exit] iters=300000 v0=1`, no timeout,
-   arbiter/destroy/shutdown nenter=1 nexit=1
-   (wrap positive control), `[tick-site-sum]`
-   drain-inloop n=0 narmed=0, hangar `[phase] 512
-   origin=0x006AB400` at 26.1s `#1508`. Finalize
-   nenter=1 nexit=0; 0 `[craft-select-s0]`; 0
-   slot-ret after drain-exit; fs frozen 1233 from
-   `#2112` (SKIP `lastCimg=0 pairs=0 stalled=1`).
-   Do not default `ROGUESQ_DRAIN_INLOOP_TICK` off.
-   Next: enter/exit on finalize's three jals
-   (`shutdownMusyXVoices`, `rs_free`,
-   `teardownAssetDma`) plus dump `$a0` at the
-   `beq 0x800678FC`. Discriminator: which jal
-   enters and never exits.
+1. **Hangar frame-freeze: shutdownMusyXVoices
+   hang (s1995).** Same-run controls:
+   `[drain-inloop-gate] en=0`, `[drain-exit]
+   iters=300000 v0=1`, no timeout, shutdown
+   calls 1–2 both-edge then teardown, hangar
+   `[phase] 512 origin=0x006AB400` at 26.3s
+   `#1514`. Drain's finalize: shutdown
+   nenter=3 nexit=2; 0 `[fin-a0] n=3`; 0
+   `site=free`; 0 `[craft-select-s0]`; fs
+   frozen 1239 from `#2176` through `#5120`
+   (SKIP `lastCimg=0 pairs=0 stalled=1`).
+   Do not default `ROGUESQ_DRAIN_INLOOP_TICK`
+   off. `[fin-slot]` is stale (nenter==1 only).
+   Next: enter/exit on `stopVoiceSlotSynced`,
+   the `L_8009BCEC` slot-byte spin,
+   `findAndZeroTableSlotMatching`, and the two
+   tail `rs_free` jals, plus `D_80154620` b0
+   on every shutdown enter. Discriminator:
+   which site enters and never exits on call 3.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -608,6 +623,13 @@ Most recent, still load-bearing for the next unit:
   and shutdown all return; finalize does not.
   Believable because arbiter is the next
   instruction and contains blocking `osRecvMesg`.
+- s1994 "next is finalize's three jals /
+  which of rs_free vs teardown vs shutdown"
+  is superseded by s1995 — shutdown call 3
+  nenter=3 nexit=2; free never entered;
+  teardown stayed at 2. Believable because
+  finalize is 84 bytes with three jals and
+  the first is unconditional.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -630,6 +652,8 @@ store-census (H-no-decrement) / +0x58-duration (H-envelope-fields-stuck)
 (H-injection-prevents-idle for drain; fs residual)
 / s1994 post-drain jal census (H-later-drain-jal
 site=finalizeCurrentSpeechBuffer)
+/ s1995 finalize inner-jal census
+(H-shutdown-musyx; call 3 never returns)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

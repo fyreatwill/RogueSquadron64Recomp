@@ -1,89 +1,107 @@
-# NEXT work unit (s1995) — finalizeCurrentSpeechBuffer jal enter/exit
+# NEXT work unit (s1996) — shutdownMusyXVoices inner sites
 
 HYPOTHESIS-ID: hangar-frame-freeze
 
-## What s1994 settled
+## What s1995 settled
 
-Post-idle jals after `[drain-exit]`:
-arbiter/destroy/shutdown nenter=1 nexit=1;
-finalize nenter=1 nexit=0. 0 `[craft-select-s0]`.
-H-later-drain-jal SELECTED site=
-`finalizeCurrentSpeechBuffer`. H-arbiter-wait /
-H-caller-returned / H-drain-exit-never-reached-again
-REFUTED. Wrap control: the three prior sites both
-edges printed. Recipe keeps
-`ROGUESQ_DRAIN_INLOOP_TICK=0`.
+`finalizeCurrentSpeechBuffer` hangs in
+`shutdownMusyXVoices` on call 3 (post
+`[drain-exit]`): nenter=3 nexit=2. Calls 1–2
+both-edge then take teardown (`a0=0`). 0
+`site=free`. H-rs-free / H-teardown-dma /
+H-finalize-body REFUTED. Wrap control: those
+two earlier shutdown calls both edges printed.
+`[fin-slot]` dumped only nenter==1 (pre-title
+zeros) — stale for the hanging call. Recipe
+keeps `ROGUESQ_DRAIN_INLOOP_TICK=0`.
 
-finalize body (0x800678E4) is three jals:
-always `shutdownMusyXVoices` (0x8009BCC4), then
-`beq $a0, $zero` on `*(0x80139B74)` to either
-`rs_free` or `teardownAssetDma`.
+`shutdownMusyXVoices` (`0x8009BCC4`) is:
+one `stopVoiceSlotSynced(s0=0)` (blez loop
+runs once), then `L_8009BCEC` spin on
+`lbu 0x80154620` until that byte is 0
+(`a0` counts zeros, `a1=1`), then
+`findAndZeroTableSlotMatching`, optional
+`rs_free(*(0x8015467C))`, unconditional
+`rs_free(*(0x80154674))`.
 
 ## Competing hypotheses
 
-- **H-shutdown-musyx:** `shutdownMusyXVoices`
-  nenter=1 nexit=0. Nested candidate inside it:
-  the `lbu 0x80154620` / `bne $a0,$a1` spin at
-  `L_8009BCEC` waiting for speech-slot byte 0.
-- **H-rs-free:** shutdown exits; `$a0 != 0`;
-  `rs_free` nenter=1 nexit=0.
-- **H-teardown-dma:** shutdown exits; `$a0 == 0`;
-  `teardownAssetDma` nenter=1 nexit=0.
-- **H-finalize-body:** all taken jals nexit=1
-  (or the skipped arm nenter=0) but finalize
-  still nexit=0.
+- **H-stop-synced:** `stopVoiceSlotSynced`
+  nenter=1 nexit=0 on call 3. Spin never
+  reached.
+- **H-slot-spin:** stop-synced exits;
+  `[shut-spin]` n grows with `v0!=0` /
+  `a0!=a1`; `findAndZero` nenter=0.
+- **H-find-zero:** spin exits (`a0==a1`);
+  `findAndZeroTableSlotMatching` nenter=1
+  nexit=0.
+- **H-tail-free:** find-zero exits; one of
+  the two tail `rs_free` jals nenter=1
+  nexit=0.
 
 ## Discriminating measurement (one instrument, one build, one 60s probe)
 
-Named enter/exit counters on the three jals
-inside `finalizeCurrentSpeechBuffer`. Log
-`[fin-post] site=shutdown|free|teardown nenter=
-nexit=` on each edge (first 8). Dump
-`[fin-a0] a0=0x... beqz=N` once at
-`0x800678FC` (the speech-buffer pointer).
-If shutdown enters, also dump first 5 bytes of
-`D_80154620` (`[fin-slot] b0=...`) — one line.
+Named enter/exit counters on:
+`stopVoiceSlotSynced` (jal `0x8009BCD4`),
+`findAndZeroTableSlotMatching` (jal
+`0x8009BD28`), `rs_free` at `0x8009BD50`
+(site=free-opt), `rs_free` at `0x8009BD60`
+(site=free-tail). Log `[shut-post] site=...
+nenter= nexit=` on each edge (first 8).
+
+At `L_8009BD10` (`bne $a0,$a1`):
+`[shut-spin] n= v0= a0= a1=` first 8 and
+every 100000, with `D_80154620` b0 via
+`MEM_BU(0, S32(0x80154620u))`.
+
+On every `shutdownMusyXVoices` enter
+(n<=8): `[shut-enter] n= b0=` (same S32
+load) — fixes s1995's nenter==1-only dump.
 
 Keep `[drain-exit]` / `[drain-post]` /
-`[drain-inloop-gate]` / `[craft-select-s0]`.
-`S32`. No store changed. Do not default the
-in-loop tick off.
+`[drain-inloop-gate]` / `[fin-post]` /
+`[craft-select-s0]`. `S32`. No store
+changed. Do not default the in-loop tick
+off.
 
 Positive control: `[drain-inloop-gate] en=0`;
-`[drain-exit] v0=1`; `[drain-post] site=finalize
-nenter=1 nexit=0`; `[fin-post] site=shutdown
-nenter=1` (first jal is unconditional).
+`[drain-exit] v0=1`; `[fin-post] site=shutdown
+nenter=3 nexit=2`; `[shut-enter] n=1` and n=2
+both followed by `[shut-post]` both-edge on
+the sites those calls take; call 3
+`[shut-enter] n=3` (function entered).
 
 Outcomes:
-- shutdown nenter=1 nexit=0 → H-shutdown-musyx
-  (`[fin-slot]` is the extra key)
-- shutdown exits; free nenter=1 nexit=0 and
-  a0!=0 → H-rs-free
-- shutdown exits; teardown nenter=1 nexit=0
-  and a0==0 → H-teardown-dma
-- taken jals nexit=1 and finalize still
-  nexit=0 → H-finalize-body
+- stop-synced nenter++ without nexit on
+  call 3 → H-stop-synced
+- stop-synced exits; shut-spin n grows
+  with v0!=0; find-zero nenter=0 →
+  H-slot-spin (`b0` is the extra key)
+- spin exits; find-zero nenter=1 nexit=0 →
+  H-find-zero
+- find-zero exits; free-opt or free-tail
+  nenter=1 nexit=0 → H-tail-free
 
-SENTINEL is applied — incremental edit, do not
-rerun full fixup.
+SENTINEL is applied — incremental edit, do
+not rerun full fixup.
 
 ## Exact patch sites
 
-- Incremental wrap of the three jals in
-  `finalizeCurrentSpeechBuffer` (`funcs_15.c`)
-  via `apply_s1995_finalize_post` in
+- Incremental wrap in `shutdownMusyXVoices`
+  (`funcs_26.c`) via
+  `apply_s1996_shutdown_inner` in
   `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
-- One `[fin-a0]` at `beq 0x800678FC`; one
-  `[fin-slot]` at shutdown enter.
+- `[shut-enter]` at function entry;
+  `[shut-spin]` at `0x8009BD10`.
 
 ## Exact test
 
 ```sh
-mkdir -p scratch/agent/s1995_finalize_post
+mkdir -p scratch/agent/s1996_shutdown_inner
 env ROGUESQ_DRAIN_INLOOP_TICK=0 ROGUESQ_SPIN_YIELD=1 \
 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VI_CALLERS=1 \
 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1995_finalize_post 60 2
+zsh tools/probe.sh scratch/agent/s1996_shutdown_inner 60 2
 ```

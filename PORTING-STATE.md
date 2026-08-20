@@ -95785,3 +95785,75 @@ verdict.
 **OUTCOME: ADVANCED** — planned post-drain jal
 census selects H-later-drain-jal at finalize.
 
+## Session 1995 (2026-08-19) — hangar drain hangs inside shutdownMusyXVoices
+
+**Instrument.** Incremental `apply_s1995_finalize_post`
+(`RS64_S1995_FINALIZE_POST=1`). Enter/exit wraps on
+the three jals inside `finalizeCurrentSpeechBuffer`
+(`[fin-post] site=shutdown|free|teardown nenter=
+nexit=`, first 8 each edge). `[fin-a0]` at
+`beq 0x800678FC`. `[fin-slot]` first 5 bytes of
+`D_80154620` at shutdown nenter==1 (`S32`). No
+store changed.
+
+**Probe.** `scratch/agent/s1995_finalize_post/run.log`
+— eleven-Start + `ROGUESQ_SPIN_YIELD=1` +
+`ROGUESQ_DRAIN_INLOOP_TICK=0` LLE-solo hangar, 60s
+after VI 512. Probe rc=0, 16 frames, 0 CRASH/SIGBUS.
+Hangar `[phase] 512 origin=0x006AB400` at 26.3s
+`#1514`.
+
+Positive controls (same run): `[drain-inloop-gate]
+en=0`; `[drain-exit] call=1 iters=300000 v0=1`;
+no `[drain-timeout]`; `[tick-site-sum]` drain-inloop
+n=0 narmed=0; shutdown calls 1 and 2 both-edge
+(nenter=nexit=1 then 2) then teardown both-edge;
+`[fin-a0] n=1,2 a0=0x00000000 beqz=1`.
+
+**Census.** Three `finalizeCurrentSpeechBuffer`
+entries:
+- n=1 (pre-title 1024): shutdown nenter=1 nexit=1,
+  `[fin-slot] b0..b4=0`, a0=0, teardown
+  nenter=1 nexit=1.
+- n=2 (pre-hangar): shutdown nenter=2 nexit=2,
+  a0=0, teardown nenter=2 nexit=2.
+- n=3 (post `[drain-exit]`, line 77075): shutdown
+  nenter=3 nexit=2 — enter-only. 0 `[fin-a0] n=3`.
+  teardown stays nenter=2. 0 `site=free` entire
+  run. `[drain-post] finalize nenter=1 nexit=0`.
+  0 `[craft-select-s0]`. 0 slot-ret after
+  drain-exit. fs climbs to 1239 at `#2176` then
+  frozen through `#5120` (SKIP lastCimg=0
+  pairs=0 stalled=1).
+
+`[fin-slot]` fired only on nenter==1 (pre-title
+zeros); the hangar-drain shutdown enter did not
+dump. Extra key is stale for call 3.
+
+**Verdicts.**
+- H-shutdown-musyx SELECTED: drain's finalize
+  enters `shutdownMusyXVoices` and never returns.
+  Wrap both-edged on the two earlier calls
+  (function can return).
+- H-rs-free REFUTED: `site=free` nenter=0;
+  completed calls took a0==0 teardown arm.
+- H-teardown-dma REFUTED for the hanging call:
+  teardown stayed nenter=2 nexit=2.
+- H-finalize-body REFUTED: shutdown nexit did
+  not increment.
+
+Next unit wraps the sites inside
+`shutdownMusyXVoices` (`stopVoiceSlotSynced`,
+`L_8009BCEC` slot-byte spin,
+`findAndZeroTableSlotMatching`, two tail
+`rs_free`) and dumps `D_80154620` b0 on every
+shutdown enter. Do not default the in-loop tick
+off.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar
+soaks already in the ledger; no new unevaluated
+verdict.
+
+**OUTCOME: ADVANCED** — planned finalize jal
+census selects H-shutdown-musyx.
+
