@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1981 (2026-08-19).
+detail. Reviewed through s1982 (2026-08-19).
 
 ## Current state
 
@@ -97,12 +97,16 @@ detail. Reviewed through s1981 (2026-08-19).
   `pos+step >= cur`. After skipping 084 they split `L_80090188` vs
   `0x800900B8` on `$a2 < $a0+$s4` -- that split is not why they miss
   the cursor. H-loop-wrap / H-a2-gate / H-idx-unmapped REFUTED
-  (`unmap=0`, `vis==to_cur` on every idx). Static candidate writer of
-  slot+0x40 is `musyxKeyOnVoice` (`0x80090B68`/`0x80090C28`).
-  Their `mem38` is still a sane end. The 084 skip is the `slot+0x40`
-  flag, not a later branch. `deactivateVoice` is 0 globally;
-  `stopVoice` only hits the boot array. Timeout remains a diagnostic
-  hatch. Default-off yield unchanged.
+  (`unmap=0`, `vis==to_cur` on every idx). s1982 selected
+  H-later-overwrite: the writer is `musyxInitVoiceFromSample`
+  `sw 0x40($a0)` at `0x80092230` from `desc+0x14`. `last_init==w40`
+  on all 18 idxs (`ninit` 1..22, all `armed=0`); `nsw=nsh=0` on
+  idxs 0–17. `musyxKeyOnVoice` `0x80090B68`/`0x80090C28` write a
+  different structure (stride ~0x50, `keyon_unmap` 18366→20372).
+  H-keyon-sw / H-keyon-sh / H-stale-word REFUTED. `mem38` is still a
+  sane end. `deactivateVoice` is 0 globally; `stopVoice` only hits
+  the boot array. Timeout remains a diagnostic hatch. Default-off
+  yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -220,19 +224,19 @@ detail. Reviewed through s1981 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1981: the 12 skip `L_80090150` because `slot+0x40 != 0`.
-Drain waits on voices whose sample-end compare is the loop path.
+Re-ranked s1982: init copies `desc+0x14` onto `slot+0x40`; key-on
+does not touch the 0x88 table. Drain waits on voices whose init
+left that word nonzero.
 
-1. **Hangar frame-freeze: slot+0x40 skip (s1981).** Same-run
-   positive controls: `[drain-path] call=1 iters=1 unmap=0` (108
-   samples, 1944 rows), ended idxs 5/10/11/12 `to_cur==vis` and
-   `pos+step >= cur`, boot `slot-alloc 0x8018D4A0 count=16`. Last
-   alloc `0x801714D0 count=18`. The 12 live idxs have `w40!=0`,
-   `skip084=155==slot-sb new=0x02`, `to_cur=0`. Next: which
-   `musyxKeyOnVoice` store writes that nonzero — `sw` sample+0x40
-   at `0x80090B68` vs later `sh` sample+0x44 at `0x80090C28` vs a
-   later overwrite. Dump source value + dest idx at those two
-   stores (and any other `slot+0x40` sw/sh in the voice family).
+1. **Hangar frame-freeze: what is desc+0x14 / slot+0x40 (s1982).**
+   Same-run controls: `[keyon-w40]` first 8 fired (init mapped,
+   sw unmapped), `[drain-path]` 108 samples `unmap=0`, last alloc
+   `0x801714D0 count=18`, ended 8–11 `w40==last_init==0` and
+   `vis==to_cur`. The 12 live idxs have `last_init==w40!=0`
+   (`0x9241`/`0x49FD`/`0x5511`/`0x092E`/`0x10E0`) and `nsw=nsh=0`.
+   Next: classify `desc+0x14` from its neighbors (`+0x0C`→slot+0x38
+   end cursor, `+0x10`→slot+0x3C, `+0x18` byte→slot+0x6D). Dump
+   those words at init when dest maps to the current voice table.
    Use `S32(guest_addr)` in any `MEM_*` dump.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
@@ -389,6 +393,11 @@ Most recent, still load-bearing for the next unit:
   superseded by s1981 — they skip 084, then split 188 vs 0B8 on
   `$a2 < $a0+$s4`. Believable because 084 is the only skip before
   those two labels.
+- s1981 "static candidate writer of slot+0x40 is `musyxKeyOnVoice`"
+  is superseded by s1982 — those stores write a ~0x50-stride
+  structure, not the 0x88 voice table; `musyxInitVoiceFromSample`
+  copies `desc+0x14` and `last_init==w40`. Believable because both
+  functions use `$s1`/`$a0` as "the voice" in different layouts.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -400,8 +409,8 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1981's drain-slot identity / subset-live / skip-cursor /
-slot+0x40-skip results are in `PORTING-STATE.md` directly.
+and s1978–s1982's drain-slot identity / subset-live / skip-cursor /
+slot+0x40-skip / init-writer results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a

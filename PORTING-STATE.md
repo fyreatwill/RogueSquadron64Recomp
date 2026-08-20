@@ -94958,3 +94958,59 @@ ledger; no new unevaluated verdict.
 H-slot40-skip and refutes the other three. Next discriminator: which
 `musyxKeyOnVoice` store (or later overwrite) writes nonzero
 `slot+0x40` on the 12.
+
+## Session 1982 (2026-08-19) — musyxInitVoiceFromSample writes the live slot+0x40; key-on does not
+
+**Instrument.** Incremental `apply_s1982_keyon_w40` (`RS64_S1982_KEYON_W40=1`).
+Logs `[keyon-w40] site=sw|sh|init` at `musyxKeyOnVoice` `0x80090B68` /
+`0x80090C28` and `musyxInitVoiceFromSample` `0x80092230` (the only
+other musyx `slot+0x40` store in funcs_24.c). Records last/n/n-drain
+per idx; dumps them on existing `[drain-path]` rows. No store changed.
+
+**Probe.** `scratch/agent/s1982_keyon_w40/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 60480 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.2s #1507.
+
+Positive controls (same run): `[keyon-w40]` first 8 fired (init n=1
+idx=0 dest=`0x8018D4A0` mapped; sw n=1 dest=`0x8018DD40` unmapped);
+`[drain-path] call=1 iters=1 unmap=0 keyon_unmap=18366` through
+iters=10000000 `keyon_unmap=20372` (108 headers, 1944 rows);
+`[drain-tick]`/`[drain-exit] call=1 iters=10000001 v0=1`; boot
+`slot-alloc` tickn=2 `0x8018D4A0 count=16`; last alloc tickn=4
+`0x801714D0 count=18`. Ended idxs 8–11: `w40==last_init==0`,
+`vis==to_cur` (55/47/91/61), `skip084=0`.
+
+**Stores.** 531 logged `[keyon-w40]` lines (init 70, sw 442, sh 19;
+sw/sh rate-limited). Zero sw/sh dests map to drain-table idxs 0–17
+(`nsw=nsh=0`, `last_sw=last_sh=0`, `nswd=nshd=ninitd=0`). Key-on
+dests are a ~0x50-stride structure (`off%136 != 0`; sw val is an
+`0x8017xxxx` pointer). Init dests are the 0x88 table: `last_init==w40`
+on all 18 idxs, `ninit` 1..22 all before drain (`armed=0`). Live 0x02
+idxs 0–4,6,7,13–17 have `last_init` in
+`{0x9241,0x49FD,0x5511,0x092E,0x10E0}`. Source is `desc+0x14`
+(`lw 0x14($a1)` → `sw 0x40($a0)`).
+
+**Verdicts.**
+- H-later-overwrite SELECTED (two-source: per-store dest mapping +
+  drain-path `last_init==w40` / `nsw=nsh=0`). Writer is
+  `musyxInitVoiceFromSample` `0x80092230`, not key-on.
+- H-keyon-sw REFUTED: `nsw=0` on idxs 0–17; dests do not sit on the
+  0x88 table.
+- H-keyon-sh REFUTED: `nsh=0` on idxs 0–17.
+- H-stale-word REFUTED: `ninit>=1` on every idx of this occupancy;
+  last init word is the live `w40`, not an unwritten leftover.
+
+ORIGIN: `musyxInitVoiceFromSample` copies `desc+0x14` onto slot+0x40.
+The copy is a legitimate sample-header word (neighbors `+0x0C`→
+slot+0x38 end cursor, `+0x10`→slot+0x3C). Whether a nonzero value is
+a legitimate skip-end flag is the next discriminator. No skip/guard
+landed.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned keyon-w40 instrument selects
+H-later-overwrite (init writer) and refutes the three key-on/stale
+hypotheses. Next discriminator: what `desc+0x14` is.
+
