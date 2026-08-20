@@ -95657,3 +95657,70 @@ already in the ledger; no new unevaluated verdict.
 H-drain-inloop-only. Next: disable the s1976 in-loop
 tick and measure whether drain idles or still hits
 10M with w60 stuck.
+
+## Session 1993 (2026-08-19) — s1976 in-loop tick off: drain idles at 300k; fs still frozen
+
+**Instrument.** Incremental `apply_s1993_drain_inloop_gate`
+(`RS64_S1993_DRAIN_INLOOP_GATE=1`). Env-gate the s1976
+in-loop `tickMusyXIfActive` behind
+`ROGUESQ_DRAIN_INLOOP_TICK` (unset/1 = ON; 0 = skip
+the call). Iters, drain-path dumps, and the 10M
+timeout still run. `[drain-inloop-gate] en=`. Sum
+dump at `[drain-exit]` when iters ≤ 10M. Did not
+skip stopAll or the fade jal. Default stays ON.
+`S32`. No store changed.
+
+**Probe.** `scratch/agent/s1993_inloop_off/run.log` —
+eleven-Start + `ROGUESQ_SPIN_YIELD=1` +
+`ROGUESQ_DRAIN_INLOOP_TICK=0` LLE-solo hangar, 60s
+after VI 512. Probe rc=0, 17 frames, 0 CRASH/SIGBUS.
+Hangar `[phase] 512 origin=0x006AB400` at 25.9s `#1495`.
+
+Positive controls (same run): `[drain-inloop-gate]
+en=0`; `[tick-site-sum]` drain-inloop n=0 narmed=0;
+first-8 `[tick-site]` ROM rows printed
+(menuOverlayInit / waitForAnyAudioSlot /
+menuControllerInput / runMenuModelViewerScreen /
+drain-entry n=1); `[drain-path] call=1 iters=1
+unmap=0` 18 idx; last alloc tickn=4 `0x801714D0
+count=18`; `[drain-stop-sum] entry=1`.
+
+**Census.** No `[drain-timeout]`. `[drain-exit]
+call=1 iters=300000 v0=1`. Drain-path b:
+- iters=1/8/100000/200000: 16 live `0x02` (idx 5,12
+  already `0x00`)
+- iters=300000: all 18 `b=0x00`
+w60 moved (idx0 `0x14311000` → `0x116000` →
+`0x1A1000`). `[w60-sum]` envelope narmed=48 n8b=16
+nother=32 lastval=`0x1A1000`. `[stop-all-sum] n=9
+narmed=0`. fade narmed=0. `[tick-site-sum]` all ROM
+narmed=0. After drain-exit: 0 slot-ret; host VI
+`#2112`–`#5312` fs=1245 SKIP `lastCimg=0 pairs=0
+stalled=1`.
+
+**Verdicts.**
+- H-injection-prevents-idle SELECTED for drain:
+  skipping the s1976 in-loop tick lets the ROM entry
+  fade finish; slots idle; drain returns before 10M.
+  fs does **not** rise past the freeze (1245 from
+  `#2112`). Two-source with s1976 force-idle.
+- H-need-envelope-without-stopall REFUTED: envelope
+  narmed=48 ≠ 0; w60 stepped; drain returned.
+- H-other-keep-alive REFUTED: loopers went `b=0x00`;
+  drain returned; not stuck at `0x02`.
+
+ORIGIN: s1976 host injection of `tickMusyXIfActive`
+inside `L_800B24D4` (not a ROM jal). Skipping it
+restores the ROM one-entry-tick then spin. Drain is
+the craft-select exit (`tickCraftSelectScreen` loop
+at `0x800C5EA4`). Next ROM jal after drain-exit is
+`bufferArbiterProducerScanWait`. Do not default the
+gate off.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks
+already in the ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned in-loop-off probe
+selects H-injection-prevents-idle for drain and
+leaves the fs freeze as a post-drain hang.
+

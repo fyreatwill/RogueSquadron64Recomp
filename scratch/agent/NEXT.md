@@ -1,83 +1,94 @@
-# NEXT work unit (s1993) — disable s1976 in-loop drain tick
+# NEXT work unit (s1994) — post-drain jal enter/exit breadcrumbs
 
 HYPOTHESIS-ID: hangar-frame-freeze
 
-## What s1992 settled
+## What s1993 settled
 
-Every drain-armed `tickMusyXIfActive` is the s1976 host
-injection: drain-inloop n=10064 narmed=10064 matching
-`[stop-all-sum]` narmed. Drain-entry ROM jal n=1
-narmed=0 (before armed). All other ROM jals narmed=0.
-H-drain-inloop-only SELECTED; H-drain-entry-plus-inloop
-/ H-other-tick-sites REFUTED.
+`ROGUESQ_DRAIN_INLOOP_TICK=0` skips the s1976 host
+injection. Drain returns at 300k with v0=1; all 18
+hangar slots `b=0x00`. Envelope narmed=48; stopAll
+narmed=0. H-injection-prevents-idle SELECTED for
+drain. H-need-envelope-without-stopall /
+H-other-keep-alive REFUTED.
 
-The ROM drain is one entry tick then
-`anyAudioSlotActive` spin. The injection re-calls
-`tickMusyXIfActive` → `stopAllSynthVoices` `$a0=0` →
-empty-slot `beginVoiceFadeRelease` on all 18 live
-voices, restarting duration 0x14 every tick.
+fs still 1245 from `#2112` after drain-exit (same
+freeze as s1976 force-idle). 0 slot-ret after exit.
+Host VI SKIP `lastCimg=0 pairs=0 stalled=1`. Drain
+is the craft-select exit path; the next ROM jal
+after `[drain-exit]` is `bufferArbiterProducerScanWait`.
+
+Default stays ON. Recipe for this unit keeps
+`ROGUESQ_DRAIN_INLOOP_TICK=0`.
 
 ## Competing hypotheses
 
-- **H-injection-prevents-idle:** with the in-loop tick
-  off, fade from the ROM entry tick (or pre-drain
-  handle-stop) is allowed to finish; slots go idle;
-  drain returns before 10M; `fs` moves.
-- **H-need-envelope-without-stopall:** in-loop off →
-  `[drain-timeout]` 10M still, `[w60-sum]` envelope
-  narmed=0 and fade narmed=0, `w60` stuck 0 / `h30`
-  stuck 0x14. Removing the re-fade also removes the
-  only envelope advance, so idle still never happens.
-- **H-other-keep-alive:** in-loop off → 10M still, but
-  `w60` advances / `h30` counts down and slot+0 stays
-  `0x02` anyway (loopers are not released by fade).
+- **H-arbiter-wait:** drain-exit then
+  `bufferArbiterProducerScanWait` enter=1 exit=0.
+  Guest never reaches destroy/shutdown/finalize or
+  the overlay caller.
+- **H-later-drain-jal:** arbiter exits; hang is in
+  `destroyPlayerShipRecord` /
+  `shutdownFormatMessageWorker` /
+  `finalizeCurrentSpeechBuffer` (enter=1 exit=0 on
+  one of those).
+- **H-caller-returned:** all four post-idle jals
+  enter=1 exit=1; overlay caller
+  (`tickCraftSelectScreen` loop at `0x800C5EA4`)
+  stores s0 and returns; hang is in that parent.
+- **H-drain-exit-never-reached-again:** this run's
+  drain-exit was a fluke; 10M timeout returns.
 
 ## Discriminating measurement (one instrument, one build, one 60s probe)
 
-Env-gate the s1976 in-loop `tickMusyXIfActive` behind
-`ROGUESQ_DRAIN_INLOOP_TICK` (unset/1 = current ON;
-0 = skip the call, still count iters / timeout dump).
-Default stays ON. Do not skip stopAll or the fade jal.
+Named enter/exit counters on the four post-idle jals
+inside `drainAudioAndFinalizeSpeechBuffer` after
+`L_800B24E4_drain_done`. Log `[drain-post] site=
+arbiter|destroy|shutdown|finalize nenter= nexit=`
+on each edge (first 8). Dump `[drain-post-sum]` at
+process end is unnecessary — a 60s hangar window
+after drain-exit is enough. Also log overlay caller
+s0 (`ctx->r16`) once at the `jal 0x800B24C4` return
+in funcs_34.c (`[craft-select-s0] s0=0x...`).
 
-Keep `[tick-site-sum]` / `[stop-all-sum]` /
-`[stop-all-path-sum]` / `[w60-sum]` / `[drain-path]`.
-Dump at `[drain-timeout]` OR at drain exit if it
-returns. `S32`. No store changed.
+Keep `[drain-exit]` / `[tick-site-sum]` /
+`[drain-inloop-gate]`. `S32`. No store changed.
+Do not default the in-loop tick off.
 
-Positive control: `[tick-site-sum]` drain-inloop n=0
-narmed=0 (the gate fired); `[drain-path] call=1
-unmap=0` 18 idx rows at iters=1; last alloc tickn=4
-`0x801714D0 count=18`; `[drain-stop-sum] entry=1`;
-first-8 `[tick-site]` rows still print for ROM sites.
+Positive control: `[drain-inloop-gate] en=0`;
+`[drain-exit] v0=1` iters<10M; `[drain-post]
+site=arbiter nenter=1` (the first jal after
+drain-exit must fire if we returned).
 
 Outcomes:
-- drain returns before 10M (no `[drain-timeout]`, or
-  timeout absent and `fs` rises past the freeze) →
-  H-injection-prevents-idle
-- `[drain-timeout]` 10M, envelope narmed=0, fade
-  narmed=0, last `w60=0` `h30=0x14` `b=0x02` on
-  loopers → H-need-envelope-without-stopall
-- `[drain-timeout]` 10M, `w60`/`h30` move toward
-  idle but `b=0x02` stays → H-other-keep-alive
+- arbiter nenter=1 nexit=0 → H-arbiter-wait
+- arbiter exits; one later site nenter=1 nexit=0
+  → H-later-drain-jal (name the site)
+- all four nenter=1 nexit=1 and `[craft-select-s0]`
+  prints → H-caller-returned (s0 is the extra key)
+- no `[drain-exit]` / `[drain-timeout]` 10M →
+  H-drain-exit-never-reached-again
 
 SENTINEL is applied — incremental edit, do not rerun
 full fixup.
 
 ## Exact patch sites
 
-- Incremental wrap of the s1976 in-loop
-  `tickMusyXIfActive(rdram, ctx);` in
+- Incremental wrap of the four post-idle jals in
+  `drainAudioAndFinalizeSpeechBuffer` after
+  `L_800B24E4_drain_done` in
   `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-  (`apply_s1993_drain_inloop_gate`) and `funcs_30.c`.
+  (`apply_s1994_drain_post`) and `funcs_30.c`.
+- One log at the `jal 0x800B24C4` return in
+  `funcs_34.c` (overlay craft-select loop).
 
 ## Exact test
 
 ```sh
-mkdir -p scratch/agent/s1993_inloop_off
+mkdir -p scratch/agent/s1994_drain_post
 env ROGUESQ_DRAIN_INLOOP_TICK=0 ROGUESQ_SPIN_YIELD=1 \
 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VI_CALLERS=1 \
 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1993_inloop_off 60 2
+zsh tools/probe.sh scratch/agent/s1994_drain_post 60 2
 ```

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1992 (2026-08-19).
+detail. Reviewed through s1993 (2026-08-19).
 
 ## Current state
 
@@ -208,6 +208,26 @@ detail. Reviewed through s1992 (2026-08-19).
   injection inside the drain spin, not a ROM jal.
   The ROM drain is one entry tick then spin; each
   injected tick re-fades all 18 live voices.
+  s1993 selected H-injection-prevents-idle for
+  drain (not for fs): `ROGUESQ_DRAIN_INLOOP_TICK=0`
+  skipped the injection (`[drain-inloop-gate] en=0`,
+  drain-inloop n=0 narmed=0). No `[drain-timeout]`.
+  `[drain-exit] call=1 iters=300000 v0=1`. All 18
+  hangar slots `b=0x00` at that dump (16 were `0x02`
+  at iters=1/8/100000/200000). Envelope hangar-armed
+  n=48 stepped `0x8B000`/`0x116000`/`0x1A1000`;
+  stopAll narmed=0; fade narmed=0. H-need-envelope-
+  without-stopall / H-other-keep-alive REFUTED.
+  Default stays ON. ORIGIN: s1976 host injection
+  (not a ROM jal); skipping it restores the ROM
+  one-entry-tick then spin, and yield-unblocked
+  synth lets the ROM fade finish. Residual: fs
+  still 1245 from `#2112` after drain-exit (same
+  freeze as s1976 force-idle). Drain is the
+  craft-select exit path (`tickCraftSelectScreen`
+  loop at `0x800C5EA4`, overlay func currently
+  named `drawRadarIcon`); next ROM jal after
+  drain-exit is `bufferArbiterProducerScanWait`.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -325,26 +345,30 @@ detail. Reviewed through s1992 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1992: every drain-armed `tickMusyXIfActive`
-is the s1976 in-loop injection (narmed=10064);
-all 10 ROM jals narmed=0. Next is whether that
-injection is why drain never idles.
+Re-ranked s1993: skipping the s1976 in-loop tick lets
+drain idle at 300k (all 18 `b=0x00`); fs stays 1245
+from `#2112`. Next is the first ROM jal after
+drain-exit.
 
-1. **Hangar frame-freeze: disable s1976 in-loop drain
-   tick (s1992).** Same-run controls: `[tick-site-sum]`
-   drain-inloop narmed=10064, all ROM narmed=0,
-   `[stop-all-sum] narmed=10064`, `[stop-all-path-sum]`
-   n_empty_armed=181152 n_free_armed=0, `[drain-path]`
-   call=1 unmap=0 18 idx `h58=0x0014`, last alloc
-   tickn=4 `0x801714D0 count=18`, `[drain-timeout]` 10M.
-   H-drain-inloop-only SELECTED; H-drain-entry-plus-inloop
-   / H-other-tick-sites REFUTED. Next: env-gate the
-   s1976 in-loop `tickMusyXIfActive` (default ON),
-   run with it OFF. Keep `[tick-site-sum]` /
-   `[stop-all-sum]` / `[w60-sum]` / `[drain-path]`.
-   Do not skip stopAll or the fade jal as a landed
-   default. Discriminator: drain returns vs 10M with
-   w60 stuck vs 10M with elapsed advancing.
+1. **Hangar frame-freeze: post-drain hang (s1993).**
+   Same-run controls: `[drain-inloop-gate] en=0`,
+   drain-inloop n=0 narmed=0, ROM first-8 `[tick-site]`
+   printed, `[drain-path] call=1 unmap=0` 18 idx at
+   iters=1, last alloc tickn=4 `0x801714D0 count=18`,
+   `[drain-stop-sum] entry=1`. Drain returned:
+   no `[drain-timeout]`, `[drain-exit] iters=300000
+   v0=1`, all 18 `b=0x00`. Envelope narmed=48;
+   stopAll narmed=0. fs still 1245 `#2112`–`#5312`;
+   0 slot-ret after drain-exit; host VI SKIP
+   `lastCimg=0 pairs=0 stalled=1`. Do not default
+   `ROGUESQ_DRAIN_INLOOP_TICK` off. Next: enter/exit
+   breadcrumbs on drain's four post-idle jals
+   (`bufferArbiterProducerScanWait`,
+   `destroyPlayerShipRecord`,
+   `shutdownFormatMessageWorker`,
+   `finalizeCurrentSpeechBuffer`) with
+   `ROGUESQ_DRAIN_INLOOP_TICK=0`. Discriminator:
+   which jal enters and never exits.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -563,6 +587,17 @@ Most recent, still load-bearing for the next unit:
   10064 are the s1976 in-loop injection; the 10 ROM jals
   narmed=0. Believable because the ROM drain jal at
   `0x800B24CC` is a real tick, but it runs before armed.
+- s1992 "whether the s1976 in-loop tick is why drain
+  never idles" is superseded by s1993 — with it gated
+  off, drain returns at 300k with all 18 slots idle.
+  Believable because every armed stopAll was that
+  injection re-fading duration 0x14.
+- "Hangar freeze is the drain-idle spin" (s1974–s1992)
+  is superseded by s1993 — drain returns and fs stays
+  1245 from `#2112` (two-source with s1976 force-idle).
+  Believable because drain never returned while the
+  injection was on, so the spin and the freeze were
+  simultaneous.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -581,7 +616,8 @@ store-census (H-no-decrement) / +0x58-duration (H-envelope-fields-stuck)
 / +0x60 dest-map (H-fade-rearms-zeros-elapsed) / stopAll gate
 (H-stop-all-gate-stuck) / stopAll L_8008DC50 path
 (H-empty-then-fade) / tickMusyXIfActive caller census
-(H-drain-inloop-only)
+(H-drain-inloop-only) / s1976 in-loop tick gate
+(H-injection-prevents-idle for drain; fs residual)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
