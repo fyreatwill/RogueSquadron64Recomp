@@ -189,7 +189,11 @@ raise_game() {
     "$WINCTL" activate "$PID" >/dev/null 2>&1
     /usr/bin/osascript -e "tell application \"System Events\" to set frontmost of first application process whose unix id is $PID to true" >/dev/null 2>&1
 }
-raise_game
+if [[ -z "${REGRESS_NO_FOCUS:-}" ]]; then
+    raise_game
+else
+    print "focus: skipped window raise; keys use direct PID injection"
+fi
 
 # Keycodes: same map as probe.sh, matching the keyboard fallback in
 # src/main/main.cpp.
@@ -231,7 +235,9 @@ fire_keys() {
             sleep "$(print "$t - $prev" | bc -l)"
             prev=$t
             kill -0 "$PID" 2>/dev/null || exit 0
-            raise_game
+            if [[ -z "${REGRESS_NO_FOCUS:-}" ]]; then
+                raise_game
+            fi
             "$WINCTL" key "$PID" "$(keycode_for $name)" >/dev/null 2>&1
             print "  [keys] w=$w $name at +${t}s"
         done

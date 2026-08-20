@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2059 (2026-08-20).
+for session detail. Reviewed through s2060 (2026-08-20).
 
 ## Current state
 
@@ -118,6 +118,15 @@ for session detail. Reviewed through s2059 (2026-08-20).
   selects H-PostStoreReturn and closes the store-to-shutdown return boundary
   at this scope. The generic scorer's stationary-phase warning does not
   overturn the direct input, store, and shutdown controls.
+- s2060's focus-isolated C88 A/B kept direct PID input live without any
+  `raise_game` call. Both arms reached title VI 1024 and hangar VI 512 with
+  `[pad-host]` controls. C88=1 wrote gate `0x01` and emitted 16
+  `menuControllerInput` plus 4 `menuInput` rows; C88 unset wrote `0x00` and
+  emitted 1/0. The retail oracle independently passed the whole-RDRAM
+  control, title/hangar VIs, PIF input, and relevant menu PCs. This selects
+  H-GateRoute and refutes focus and callback-convergence explanations at this
+  scope; the scorer's Accessibility warning was a false negative because its
+  stationary 640-key check did not model direct PID injection.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -127,10 +136,14 @@ for session detail. Reviewed through s2059 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 guest-gate handoff boundary.** H-R is selected at the current scope:
-   C88 causally controls the raw gate, but not the title-to-hangar anchors.
-   Revisit only with a genuinely focus-isolated discriminator that explains
-   the menu callback-count difference; keep the retail writer unchanged.
+1. **M5 audio task/PCM completion boundary.** The focus-isolated s2060 table
+   closes the GUI explanation: C88 remains causally correlated with the raw
+   gate and menu callback counts while direct input and both route anchors stay
+   live in both arms. The remaining open boundary is the opt-in Factor 5 image
+   versus the default audio stub: task exit, valid slot transitions, and
+   nonzero PCM are still unproven. Keep the retail writer and C88 value
+   unchanged; next compare the two dispatch arms with the full task/slot/PCM
+   table in one run.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -227,6 +240,15 @@ on guest address, sample count, byte count, FNV, and nonzero-byte count; the
 PCM sanity rows remained all-zero. This independently keeps the guest
 source/consumer boundary selected while leaving production/playback open.
 
+s2060 then skipped only the harness's window-raise calls in both C88 arms;
+direct PID key injection remained live, and both arms reached title 1024 and
+hangar 512. The C88=1 writer produced gate `0x01` in both target phases and
+the route emitted 16/4 `menuControllerInput`/`menuInput` rows; the unset
+writer produced `0x00` and 1/0 rows. This is single-source port A/B evidence
+for H-GateRoute after H-Focus and H-StateOnly were tested; the retail oracle
+provided the independent route/input/menu-PC witness. It does not prove the
+Factor 5 image's task ABI or nonzero PCM.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -290,6 +312,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   call 3 entered and exited with status `0x00`; the generic scorer warning was
   about a stationary phase, while direct input, store, and shutdown controls
   all fired.
+- s2060 supersedes focus as an explanation for the C88/menu callback split.
+  Focus was believable because the normal regression harness raises the game
+  before each key and its scorer reported Accessibility/undriven warnings.
+  The opt-in no-focus branch skipped every raise while retaining direct PID
+  injection; both arms still had live input and both target VIs, while the
+  gate value and callback counts remained different. The remaining M5 work is
+  therefore task/slot/PCM completion, not another focus retry.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -313,7 +342,9 @@ consumer row; s2056 then selected H-R for the C88 gate-to-route boundary and
 observed a live port status-3 interval. s2057 selected the worker-clears
 portion of the status-3 edge with independent s2008/s2022 rows and the retail
 writer-PC watch; s2059 then selected the later shutdown return after that
-store. The C88 and callback conclusions remain single-source port evidence;
+store. s2060 ruled out harness focus as the callback-count explanation while
+preserving the C88 gate split. The C88 and callback conclusions remain
+single-source port evidence;
 the independent oracle supplied route/phase qualification. The task ABI and
 complete playback remain open. The oracle and port both independently reach
 both target anchors, so this is not a retail-route absence.

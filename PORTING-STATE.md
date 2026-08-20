@@ -98297,3 +98297,47 @@ the remaining C88/menu callback-count difference.
 ORIGIN: no guest writer, value, wait, guard, skip, audio task, callback, or
 default behavior changed; this session ran the existing diagnostics and
 changed only the phase-key schedule.
+
+## Session 2060 (2026-08-20) — ruled out harness focus for the C88 callback split
+
+HYPOTHESIS-ID: m5-guest-gate-handoff.
+
+Ground truth ran first. The retail oracle passed the whole-RDRAM positive
+control with 12,262 writes, the target-region watch with 2,262 writes,
+reached title VI width 1024 and hangar VI width 512, recorded PIF input, and
+executed menu PCs `0x800B8014` 1,049 times and `0x800B8050` once. The named
+`0x800B47C4` watch was zero, but the other relevant menu PCs and the route
+controls fired, so that individual watch was not required for this witness.
+
+The harness received one opt-in `REGRESS_NO_FOCUS=1` branch. It skipped the
+initial and per-key `raise_game` calls while leaving `winctl key PID` direct
+injection unchanged. The qualified forced-LLE/audio/spin-yield route was then
+run sequentially with C88=1 and C88 unset, using the same phase-key schedule.
+Both 180-second arms completed with visual capture, zero missing functions,
+zero aborts, title VI 1024, hangar VI 512, and live `[pad-host]` controls.
+The generic scorer marked both FAIL only because its stationary 640-key check
+assumed missing Accessibility input; the direct PID and target-phase rows
+are positive controls in these runs.
+
+The phase-keyed discriminator remained split. The C88=1 arm wrote guest gate
+`0x01` at `0x8008EC88` in title and hangar, and emitted 16
+`menuControllerInput` rows plus 4 `menuInput` spin rows. The C88-unset arm
+wrote gate `0x00` in both phases and emitted 1 `menuControllerInput` plus 0
+`menuInput` rows. PCM source/consumer controls remained live in both arms;
+this work unit did not claim that the all-zero PCM is a task-ABI explanation.
+
+This selects H-GateRoute at this scope and refutes H-Focus and H-StateOnly:
+direct input and both target anchors survived without any window raise, while
+the C88 gate value and callback counts remained different. The independent
+retail oracle rules out a missing retail route or menu input path. The next
+M5 discriminator is the opt-in Factor 5 audio image versus the default audio
+stub at the task-exit/slot/PCM boundary.
+
+What this rules out: window raising as the cause of the C88/menu callback
+split, no-focus direct-PID input loss, and callback-count convergence caused
+by the harness. It does not prove the Factor 5 task ABI, valid audio-slot
+transitions, or complete/nonzero PCM playback.
+
+ORIGIN: no guest writer, C88 value, wait, guard, skip, audio task, callback,
+or default behavior changed; the only code change was the opt-in harness
+branch that skips window raising while retaining direct PID key injection.
