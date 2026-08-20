@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2016 (2026-08-20).
+for session detail. Reviewed through s2017 (2026-08-20).
 
 ## Current state
 
@@ -60,29 +60,43 @@ for session detail. Reviewed through s2016 (2026-08-20).
   No owner authorization or companion-file reconciliation was needed. The
   seven-site writer/thread join remains unselected because the run crashed at
   the known `0x8000B650` boundary before the worker-side control became live.
+- The s2017 recipe audit removed the input-route explanation for the missing
+  worker control: the prescribed tap recipe, a phase-relative retry, and the
+  archived 400-ms hold/mixed-probe recipe all reached the phase-valid title /
+  hangar route. All three emitted slot-0 status rows and shutdown call 3, but
+  none emitted the unconditional `serviceVoicePoolFrame` entry/exit rows or
+  the `0x8009B7EC` control. This is a positive-control failure, not H1/H2/H3
+  evidence; the next unit audits service registration/dispatch in the current
+  binary and 45-file tree.
 
 ## Active investigation and ranked next steps
 
-1. **M5 port-side writer/thread census (unblocked).** Verify the current
-   45-file tree and run one batched, phase-gated capture with the existing
-   seven-site join: writer PC, slot/index, old/new byte, host thread, shutdown
-   call, and service/callback edge. The s2016 run proves the tree reaches the
-   required phases, but its crash precedes the worker-side positive control.
-   Slot 0 `0x03` then clear selects transient-cleared; another slot selects
-   other-slot; no `0x03` with live controls selects never-written. Do not
-   change status, audio, spin, PI, or mitigation code.
-2. **M5 callback-side PCM witness (only if #1 requires it).** Phase-gate a
+1. **M5 service-path registration/dispatch audit (unblocked).** Use one
+   bounded source/binary crosswalk for `serviceVoicePoolFrame` (`0x8009B5A8`):
+   overlay registration, generated definition, every call/reference, linked
+   symbol, and the existing service/status markers. The s2017 run is phase
+   valid and crash-free but has no service positive control, so determine
+   whether the current binary can dispatch this function at all before
+   running another status join. Do not change status, audio, spin, PI, guard,
+   or mitigation code.
+2. **M5 port-side writer/thread census (blocked on #1).** Once the service
+   control is live in the same run, use the existing seven-site join: writer
+   PC, slot/index, old/new byte, host thread, shutdown call, service
+   entry/exit, callback edge, and `0x8009B7EC`. Slot 0 `0x03` then clear
+   selects transient-cleared; another slot selects other-slot; no `0x03` with
+   live controls selects never-written.
+3. **M5 callback-side PCM witness (only if #2 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.
-3. **M3 crash work.** Only perform complete idiom-class audits with a named
+4. **M3 crash work.** Only perform complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` SIGBUS has 7659 clean
    hangar calls in the guarded run; do not add a mitigation. Revisit only with
    a mission-entry recipe or a new crash of that signature.
-4. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation; consumer-mode H1 is refuted by the RT64 census (single-source
    against pixel state). H3 remains unavailable because the oracle cannot
    screenshot the LLE path. Do not repeat the `0xD60` scan.
-5. **M5 audio execution.** Continue only from `M5-AUDIO-PLAN.md`, after the
+6. **M5 audio execution.** Continue only from `M5-AUDIO-PLAN.md`, after the
    provenance/status boundary is settled. The proven DMA-to-`queue_samples`
    mapping is not permission to promote the opt-in image.
 
@@ -93,7 +107,17 @@ and its retail controls are valid. The s2016 run independently established
 that the current 45-file generated tree reaches VI 1024 and hangar VI 512,
 while the census emitted slot-0 rows. The exact s2007 snapshot and owner
 authorization to reconcile companion files are therefore not prerequisites
-for the port-side writer/thread join; the join itself remains open.
+for the port-side writer/thread join. The s2017 hold-based run adds a
+crash-free late-route witness, but the join remains unevaluable because the
+service positive control is absent.
+
+**M5 service dispatch boundary.** This is a single-source port observation
+from three same-binary captures: the unconditional `serviceVoicePoolFrame`
+entry/exit census and the named `0x8009B7EC` store control both remain at zero,
+while VI 1024/512, shutdown call 3, and slot-0 `0x8009B2C4` rows fire. It
+rules out a simple phase-gate or crash-before-worker explanation for those
+captures, but does not yet distinguish missing registration, an unobserved
+caller path, or an audio-side gate before the call.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
 capture. The s2012 and s2013 debugger-off retail oracles both reached VI 1024
@@ -168,6 +192,11 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   for the next status question. s2016 refuted the stronger claim that the
   current generated tree cannot provide a phase-valid census run: it reached
   VI 1024 and hangar VI 512, then emitted the existing status-writer rows.
+- s2016's “the process crashed before the worker control” is superseded as a
+  complete explanation by s2017's crash-free hold-based capture. The wording
+  was believable because the earlier phase-valid run did die before the
+  service rows; the fixed route now shows the more durable boundary is absent
+  service dispatch, not merely an early crash.
 
 ## Evidence ledger summary
 
@@ -177,7 +206,8 @@ s1880–s1959 and the VI-1024 chain are in §36. s1961–s2009 are archived in
 the provenance block and its blocker-free retail status re-scope. s2014 adds
 the phase-valid retail gate-PC capture and closes retail writer attribution;
 the port-side join remains unresolved. s2016 refutes the provenance block while
-leaving the join open. The durable milestones are: hangar
+leaving the join open. s2017 isolates the missing service positive control as
+the next M5 boundary. The durable milestones are: hangar
 reachability, bltzal link repair, audio-drain writer mapping, M5 plan, opt-in
 DMA-to-queue mapping, shutdown call-3 reachability, the repeated retail
 status-value sequence, retail gate-writer attribution, and the unresolved

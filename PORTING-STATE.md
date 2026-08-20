@@ -96720,3 +96720,36 @@ live worker control required before interpreting a null.
 
 OUTCOME: ADVANCED — the provenance block was false as reasoned; the
 port-side writer/thread discriminator remains open.
+
+## Session 2017 (2026-08-20) — phase-valid status join still lacks service dispatch
+
+HYPOTHESIS-ID: m5-port-writer-thread-census
+
+The planned seven-site join was run against the current external 45-file
+generated tree and existing binary. Ground truth was already established for
+the phase controls; no build or runtime behavior changed. The prescribed
+eleven-Start capture reached VI 1024 and VI 512 but crashed before the worker
+control. Two fixed recipes were then run: a phase-relative tap retry and the
+archived phase-relative driver with 400-ms key holds and the full mixed
+post-craft probe. Both were phase-valid; the hold run was crash-free through
+the bounded 154-second post-title route and continued to VI 640.
+
+The status/shutdown side of the join was live in all three captures: slot 0
+rows included `0x8009B2C4`, old `0x01` to new `0x00`, during shutdown call 3,
+with shutdown entry/spin/exit on host thread 3. The same runs emitted no
+`serviceVoicePoolFrame` entry/exit rows, no `0x8009B7EC` control/store rows,
+and no callback dispatch/return rows. The hold driver reported no crash,
+4109 `exit=1` returns, and 956 `UnhandledJump` breadcrumbs; those are
+diagnostic background activity, not a status conclusion.
+
+The first null was therefore not interpreted. The hold-based rerun removes
+the recipe/crash explanation for the missing worker positive control, but it
+does not select H1, H2, or H3: without a same-run service control, the status
+join remains unevaluable. This rules out only “the worker rows are absent
+because the phase-gated capture always dies first” for the current route. The
+next discriminator is a source/binary crosswalk for `serviceVoicePoolFrame`
+registration, callers, linked symbol, and audio-side gate. No status, audio,
+spin, PI, guard, or mitigation behavior changed.
+
+OUTCOME: ADVANCED — fixed the recipe boundary and isolated the missing
+service positive control as the next M5 dispatch question.

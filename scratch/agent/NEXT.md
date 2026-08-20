@@ -1,63 +1,46 @@
-# NEXT work unit (s2017) — join port-side gate/status writers
+# NEXT work unit (s2018) — audit missing service dispatch
 
-HYPOTHESIS-ID: m5-port-writer-thread-census
+HYPOTHESIS-ID: m5-service-path-registration-audit
 
 ## Work unit
 
-Run one batched, phase-gated port-side census using the current external
-45-file generated tree. The s2016 capture established that this tree reaches
-the required phases, so do not wait for the exact s2007 snapshot and do not
-reconcile the four companion symbol files. Keep status, audio, spin, PI,
-guard, and mitigation behavior unchanged.
-
-The join must contain all seven fields in the same run: every direct status
-writer PC and slot/index, old/new byte, host thread, shutdown call, service
-entry/exit, callback dispatch/return, and the expected `0x8009B7EC` zeroing
-edge. The existing s2006/s2007/s2008 generated instrumentation is already in
-the current build.
+Run one bounded source/binary crosswalk for `serviceVoicePoolFrame`
+(`0x8009B5A8`) in the current 45-file generated tree and already-built
+binary. Enumerate its overlay registration, generated definition, every
+static call/reference, linked symbol, and the existing service/status marker
+strings. Do not rebuild, alter status/audio behavior, or run another
+phase-gated status join until this dispatch boundary is understood.
 
 ## Competing hypotheses and discriminator
 
-- H1: The port reaches the legitimate slot-0 `0x03` write and the service
-  worker clears it transiently; the join shows the same slot, writer, and
-  callback edge before shutdown returns.
-- H2: The port's `0x03` belongs to another slot or writer path; slot/index and
-  thread correlation separates it from the watched slot-0 shutdown record.
-- H3: The port never writes slot 0 to `0x03`; shutdown spins with live controls
-  but no slot-0 `0x03` writer.
+- H1: The function is registered and linked, but the current route never
+  reaches its caller; the crosswalk has a valid map entry and caller with no
+  same-binary dispatch witness.
+- H2: Overlay registration or dynamic lookup points elsewhere (or is absent);
+  the crosswalk shows a missing/mismatched map entry or symbol address.
+- H3: The function is reachable only behind the audio-disabled gate; the
+  crosswalk shows a valid caller whose dispatch is conditioned on the stubbed
+  audio path.
 
-The discriminating result is one phase-gated table, not a field-by-field
-probe. H1 requires same-slot `0x03` then zero with the worker edge; H2
-requires another slot/index or writer; H3 requires shutdown with no live
-slot-0 `0x03` writer and a live positive control.
+The discriminator is one table with address, overlay, caller/reference,
+linked symbol, and marker evidence. A complete valid map plus caller but no
+dispatch selects H1; a missing/mismatched map selects H2; a valid map/caller
+with an explicit audio gate selects H3. If the table cannot separate these,
+stop and redesign before building or running anything.
 
 ## Exact commands
 
-Verify the tree without changing it:
+Run from the repository root, keeping each result bounded:
 
 ```sh
-test -f ../N64Recomp/RecompiledFuncs/funcs.h
-test -f ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
-test -f ../N64Recomp/RecompiledFuncs/lookup.cpp
-test "$(find ../N64Recomp/RecompiledFuncs -maxdepth 1 -name 'funcs_*.c' | wc -l)" -eq 45
+rg -n -F 'serviceVoicePoolFrame' ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime
+rg -n -F -e '0x8009B5A8' -e '8009B5A8' ../N64Recomp/RecompiledFuncs src lib/N64ModernRuntime
+rg -n -F -e 'serviceVoicePoolFrame' -e '0x0009B168' ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+nm -an build/RogueSquadron64Recomp | rg -F -e 'serviceVoicePoolFrame' -e '8009B5A8'
+rg -n -F -e 'get_function' -e 'func_map' -e 'load_overlays' lib/N64ModernRuntime/librecomp/src | head -160
 ```
 
-Run one capture from the build directory. VI 1024 and hangar VI 512 are the
-phase controls; the first 24 service rows are the service positive control,
-and `0x8009B7EC` is the named worker-store control:
-
-```sh
-OUT="$PWD/../scratch/agent/s2017_port_writer_join"
-mkdir -p "$OUT"
-env ROGUESQ_SPIN_YIELD=1 \
-  ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-  ROGUESQ_STUB_MISSING_FUNCS=1 \
-  ROGUESQ_LOG_S2008_STATUS_WRITERS=1 \
-  PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300 PROBE_LEAVE_OK=1 \
-  PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-  zsh ../tools/probe.sh "$OUT" 180 2 >"$OUT/driver.log" 2>&1
-```
-
-Treat a crash before the phase or before the worker positive control as
-unevaluable and fix the recipe in this iteration; do not infer H2/H3 from a
-dead run. Do not use stopwatch-based comparison against an animating scene.
+The output must identify whether the same binary contains a registration,
+caller, and linked symbol for the guest function. Record the table and the
+selected hypothesis in the next ledger entry; do not infer a runtime H1/H2/H3
+status result from the s2017 zero worker control.
