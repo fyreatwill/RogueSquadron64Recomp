@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2035 (2026-08-20).
+for session detail. Reviewed through s2036 (2026-08-20).
 
 ## Current state
 
@@ -97,9 +97,22 @@ for session detail. Reviewed through s2035 (2026-08-20).
   forced LLE, opt-in audio, spin yield, and the corrected eleven-Start
   schedule. The arm again stayed at VI 640, but its same-run controls were
   live: `s2006-svc` entry/exit was 24/24, `reapplyDisplayMode` was 2/2, and
-  the driver produced post-640 SDL/host Start transitions. This selects H2,
-  a common VI-640 route failure, over H3's missing-input-control explanation.
-  The C88 value A/B remains phase-invalid and unchanged.
+  the driver produced post-640 SDL/host Start transitions. This provisionally
+  selected H2, a common VI-640 route failure, over H3's missing-input-control
+  explanation. s2036 supersedes that route selection; the C88 value A/B
+  remains phase-invalid and unchanged.
+- s2036 reran the unset-C88 arm through the preflighted, width-relative
+  `tools/regress.sh` route. Input and visual preflight were both `ok`; the
+  eleven scheduled Starts produced post-640 host edges, and the run reached
+  title VI `1024 @ 0x00790400` at 13.9s and hangar VI `512 @ 0x006AB400` at
+  22.3s. The same run emitted `s2006-svc` 24/24, two phase-valid
+  `reapplyDisplayMode` writer rows, 111 logged real audio-task dispatch rows,
+  and no crash. `regress_score.py` returned `FAIL` only because its final-key
+  heuristic expected a transition after the last key at 23.9s, although both
+  target transitions had already occurred; the phase/control table selects
+  H1, route recovery, and supersedes the s2035 common-route explanation.
+  The C88 value remains unset and the retail-value arm is still untested in a
+  phase-valid A/B.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -244,13 +257,12 @@ for session detail. Reviewed through s2035 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 common VI-640 route boundary.** s2035's explicitly-cleared C88
-   control still stalled at VI 640 after live `s2006-svc` 24/24,
-   `reapplyDisplayMode` 2/2, and post-640 host Start controls. Do not repeat
-   the C88 value A/B or change another writer. Use the preflighted,
-   width-relative `tools/regress.sh` route to separate a stale/focus schedule
-   from a guest consumer or common render-route failure; only a phase-valid
-   VI-1024 arm reopens the value comparison.
+1. **M5 gate-writer value A/B.** Run unset-C88 and
+   `ROGUESQ_M5_C88_VALUE=1` arms from the same build with the preflighted,
+   width-relative schedule. Keep the retail-value arm opt-in and do not change
+   the writer. Compare only phase-valid title/hangar rows, preflight/input
+   controls, `s2006-svc`, `reapplyDisplayMode`, raw-gate, audio-task, and PCM
+   rows; the s2036 unset arm is the control, not a cross-run baseline.
 2. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
@@ -284,6 +296,14 @@ forced-LLE recipe stalled at VI 640 or aborted in RT64 before VI 1024. s2024's
    stayed at VI 640. s2025 then reproduced the split with the same wrapper and
    schedule, selecting forced LLE as the route gate; the LLE arm's later PI
    crash does not erase its earlier phase-valid census.
+
+**M5 width-relative route control.** s2035's unset-C88 control was not a
+complete common-route failure. s2036 passed both preflight checks, produced
+post-640 host Start edges, and reached the title and hangar anchors under the
+same forced-LLE/opt-in-audio configuration. The `regress_score.py` FAIL is a
+single-source harness heuristic: its final scheduled key came after the
+transitions it expected to observe. The phase/control table is the selected
+line; the next question is the phase-valid C88 value A/B.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -544,6 +564,12 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   control now repeats the VI-640 stall while its service, reapply, and
   post-640 host-input controls are live, selecting a common route boundary
   and ruling out an inherited C88 arm or a missing input positive control.
+- s2036 supersedes s2035's common-route explanation as a complete result. The
+  wording was believable because s2035 had the same service, writer, and
+  host-input controls but no VI-1024 anchor. The preflighted width-relative
+  run now reaches VI 1024 and VI 512 with those controls live; the harness
+  FAIL is explained by its final-key-after-transition heuristic. The C88=1
+  arm still needs a same-build phase-valid comparison.
 
 ## Evidence ledger summary
 
@@ -596,6 +622,11 @@ qualification. s2035 completed that qualification with
 transitions fired, but VI 1024 did not. This selects the common route branch
 of the control table, leaves the C88 value unchanged, and makes a preflighted
 width-relative input/focus route the next discriminator.
+s2036 then supplies that phase-valid route control: preflight was `ok`, title
+VI 1024 and hangar VI 512 both appeared, and the service/reapply/audio-task
+controls were live. The harness's final-key quality check was invalid for a
+route that had already transitioned, so the next unit is the same-build C88
+unset-versus-`1` A/B rather than another route-recovery run.
 
 ## Method and safety rules
 

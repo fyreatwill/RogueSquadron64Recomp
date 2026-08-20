@@ -97430,3 +97430,29 @@ an input-control null. H2 of the planned table is selected: a common VI-640
 route failure remains, so the C88=1 comparison stays phase-invalid and the
 store remains unchanged. The next unit uses `tools/regress.sh` preflight and
 width-relative keys to separate a stale/focus schedule from the common route.
+
+## Session 2036 (2026-08-20) — width-relative route recovered the phase anchors
+
+Rebuilt `RogueSquadron64Recomp` and ran the planned unset-C88 arm with
+`env -u ROGUESQ_M5_C88_VALUE`, forced LLE, opt-in audio, spin yield, the
+preflighted `tools/regress.sh` harness, and eleven width-640-relative Starts.
+The process completed 150 seconds with 40 captured frames and no crash or
+abort marker. Input and visual preflight were both `ok`.
+
+The width-relative driver produced post-640 host Start edges. The run reached
+title VI `1024 @ 0x00790400` at 13.9s and hangar VI `512 @ 0x006AB400` at
+22.3s. Same-run positive controls were live: `s2006-svc` emitted 24 entries
+and 24 exits, `reapplyDisplayMode` emitted one phase-valid writer row in each
+target phase, and the log recorded 111 real audio-task dispatch rows plus PCM
+sanity rows. No crash, abort, missing-function, or deferred-DL marker
+appeared. The raw gate remained zero in the phase-valid rows; this run does
+not decide the C88 value arm.
+
+`regress_score.py` returned `FAIL` because its final-key heuristic saw the
+last scheduled key at 23.9s and found no later VI transition. That is a
+harness-quality false negative for this run: the title and hangar transitions
+had already occurred at 13.9s and 22.3s, and the preflight plus post-640 host
+edges are independent input controls. The phase/control table selects H1 of
+the planned s2036 table: the s2035 common VI-640 route explanation is
+superseded, and the next work unit is a same-build phase-valid C88 unset versus
+`ROGUESQ_M5_C88_VALUE=1` A/B.
