@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2033 (2026-08-20).
+for session detail. Reviewed through s2034 (2026-08-20).
 
 ## Current state
 
@@ -85,6 +85,14 @@ for session detail. Reviewed through s2033 (2026-08-20).
   legitimate retail value at `reapplyDisplayMode` is destabilizing or
   insufficient on the port route before the downstream gate/task boundary.
   It does not prove the stall's mechanism or authorize changing the default.
+- s2034 attempted the existing reachability witness in one same-build
+  concurrent pair and then corrected single-window reruns. Every arm passed
+  the required 24/24 `s2006-svc` entry/exit control and reached
+  `reapplyDisplayMode` 2/2, but every arm stayed at VI 640 and produced no
+  phase-valid VI-1024 title/hangar rows. The C88=1 arm's phase-6 PCM became
+  nonzero while the unset arm stayed all-zero, but that downstream difference
+  is not phase-valid. This is a common-route/recipe failure for s2034, not a
+  selection between H1 and H2; the phase-valid s2033 B result remains active.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -229,14 +237,15 @@ for session detail. Reviewed through s2033 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 C88 writer reachability.** Use the existing
-  `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` entry/exit witness in both arms to
-  determine whether the C88=1 VI-640 stall occurs before or after
-  `reapplyDisplayMode` executes. Keep the corrected whitespace eleven-Start
-  schedule, `ROGUESQ_AUDIO_UCODE=1`, and the phase-gated M5 census. A writer
-  entry/exit in the C88=1 arm before its stall selects a post-writer gate
-  transition; no C88=1 entry with the same pre-phase controls leaves the
-  route/dispatch boundary open. Do not change another writer.
+1. **M5 C88 control qualification, then writer reachability.** s2034's
+  same-build control and value arms both stalled at VI 640 despite live
+  positive controls, so its writer rows are not phase-valid. First qualify a
+  single unset control with the environment explicitly cleared; use the
+  existing entry/exit, input-route, and VI-1024 witnesses to distinguish an
+  inherited-arm problem from a common route failure. Once the control is
+  phase-valid, repeat the C88=1 comparison. Keep the corrected whitespace
+  eleven-Start schedule, `ROGUESQ_AUDIO_UCODE=1`, and the phase-gated M5
+  census. Do not change another writer.
 2. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
@@ -519,6 +528,11 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   C88=1 VI-640 stall with the same pre-phase controls and no downstream
   phase-valid rows; the next measurement must locate the stall relative to
   `reapplyDisplayMode`, not reverse another gate or infer a PCM null.
+- s2034 does not supersede s2033's selected B result: its concurrent and
+  single-window arms all failed the VI-1024 phase anchor, even though the
+  required service and reapply controls fired. The new wording is limited to
+  a common-route/recipe failure because the control was not phase-valid; the
+  next unit must qualify that control before interpreting writer reachability.
 
 ## Evidence ledger summary
 
@@ -562,7 +576,11 @@ s2033 then selects the C88=1 pre-phase stall outcome: the unset arm reaches
 the title census, while the value arm repeats VI 640 with the same pre-phase
 controls and no downstream phase-valid rows. The C88 writer's original value
 is legitimate guest state, so the arm remains opt-in and the next boundary is
-writer reachability.
+writer reachability. s2034 then exercised that witness in concurrent and
+single-window arms. All arms passed the 24/24 service positive control and
+reapply 2/2, but all remained at VI 640, leaving the C88 comparison
+phase-invalid and moving the immediate next unit to explicit control
+qualification.
 
 ## Method and safety rules
 

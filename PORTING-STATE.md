@@ -97385,3 +97385,30 @@ ORIGIN: `reapplyDisplayMode` at `0x8008EC88` is the writer. Its generated
 `$v0=1`/retail value is legitimate guest state; the existing default `0` is
 the port's MusyX-stub mitigation. The new arm is opt-in diagnostic behavior,
 not a shipped mitigation or game-value change.
+
+## Session 2034 (2026-08-20) — C88 reachability A/B was not phase-valid
+
+Ran the prescribed same-build M5 C88 reachability A/B with the whitespace
+eleven-Start schedule, forced LLE, opt-in audio, spin yield, and the existing
+reapply/gate/PCM witnesses. The first concurrent pair was not phase-valid:
+both arms had the `s2006-svc` positive control at 24/24 entry/exit and both
+reached `reapplyDisplayMode` at 2/2 entry/exit, but both stayed at VI 640
+through the 120-second phase wait. This was not treated as a C88 result.
+
+Ran corrected single-window control and value arms from the same binary. The
+control again passed `s2006-svc` 24/24 and reapply 2/2; the value arm did the
+same. Neither reached VI 1024, and neither emitted a phase-valid C88/raw-gate
+row. The unset arm's phase-6 PCM witness remained all-zero (7169/7169
+all-zero calls); the value arm had a nonzero PCM sample (`all_zero=0`,
+423/7169 all-zero calls), but that difference is not phase-valid. No crash
+marker appeared. The binary contains the `ROGUESQ_M5_C88_VALUE` string.
+
+This leaves H1 versus H2 unselected: the value arm reaches the named writer,
+but the unset control also fails the required VI-1024 route anchor in this
+iteration. The phase-valid s2033 B result remains the stronger selected
+evidence; this run adds a common-route/recipe failure, not permission to
+change the default store.
+
+ORIGIN: `reapplyDisplayMode` at `0x8008EC88` remains the only changed game
+writer under test. Its `$v0=1` value is legitimate retail state; no mitigation,
+guard, or shipped value change was added.
