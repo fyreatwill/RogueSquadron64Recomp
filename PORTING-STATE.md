@@ -96360,3 +96360,44 @@ playback result.
 
 OUTCOME: ADVANCED — payload and `queue_samples` hashes match for the two
 nonzero audio buffers; next work is the status-3 worker-dispatch census.
+
+## Session 2006 (2026-08-20) — bounded status-3 dispatch census stopped before status-3
+
+Ground truth came first. The original 45-second oracle recipe failed its
+required writer-PC gate: whole-RDRAM watch control passed, but no retail
+`0x8009B7EC` writer appeared. A corrected 60-second run with the 12-press
+schedule passed the same positive control (10,015 whole-RDRAM callbacks) and
+recorded 15 writes to physical `0x154620`, including `0x8009B7EC` at 48.9s.
+The retail writer claim is therefore independently usable; the short recipe
+was not.
+
+The static census mapped `serviceVoicePoolFrame` to `0x8009B5A8`, its expected
+status store to `0x8009B7EC`, and the owning indirect handoff to the
+`musyxSynthFrame` `jalr` at `0x80091684`. One batched fixup added phase-gated
+service entry/exit, callback-dispatch/return, synth entry/exit, thread-id,
+status-byte, and expected-store rows. The Debug target built successfully;
+the only compiler diagnostic was an existing format warning elsewhere in
+`funcs_24.c`.
+
+The prescribed full capture reached VI 1024 at 49.4s and had a live positive
+control: 24 `serviceVoicePoolFrame` entry/exit pairs at phase 6, thread 0,
+with status `0x00`. It then hit the pre-existing PI assertion requiring an
+aligned ROM address in `do_rom_read`; no status-3 row or expected store was
+observed. A fixed one-probe capture (only post-craft Start, zero grace)
+reached both VI 1024 and VI 512, completed the same 24 entry/exit control,
+and was SIGKILLed before the later assertion. A second fixed capture adding
+the post-craft `A` edge again reached both phases and the 24-pair control,
+but hit the same PI assertion immediately after the indirect callback
+dispatch. Neither fixed capture observed status `0x03`, a status-3 service
+entry, or the expected store.
+
+This advances the instrument and rules out “the new census is inert,” but it
+does not select H-status3-starves-worker, H-dispatch-unregistered,
+H-worker-body-blocks, or H-service-writes-elsewhere: the port did not reach
+the discriminating state before the capture was either stopped or aborted.
+The PI assertion is a reachability blocker, not an explanation for the audio
+worker; no PI or audio mitigation was added.
+
+OUTCOME: ADVANCED — the phase-gated callback census built and passed its
+positive control, while two fixed captures established that status-3 remains
+unreached in the current recipe before the PI-DMA assertion boundary.

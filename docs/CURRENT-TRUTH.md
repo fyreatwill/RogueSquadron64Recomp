@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s2005 (2026-08-20).
+detail. Reviewed through s2006 (2026-08-20).
 
 ## Current state
 
@@ -511,23 +511,37 @@ detail. Reviewed through s2005 (2026-08-20).
   (no hangar origin); s1949 published hangar and selected
   H-never-live there (see Durable).
 
+- **s2006 status-3 dispatch census did not reach status 3.** The corrected
+  60-second retail oracle control saw 10,015 whole-RDRAM callbacks and 15
+  writes to physical `0x154620`, including the required retail PC
+  `0x8009B7EC` at 48.9s. The port fixup added phase-gated callback,
+  service-entry/exit, thread-id, status-byte, and expected-store rows in one
+  build. The full recipe and the `p1:start,p2:a` fixed recipe reached VI 1024
+  and VI 512, and both showed the positive control (24 service entry/exit
+  pairs at phase 6, thread 0, status `0x00`). Both nevertheless stopped before
+  any status-3 row: the full and second fixed captures hit the existing
+  unaligned-ROM-address assertion in `do_rom_read`, while the first fixed
+  capture was SIGKILLed before that later assertion. This is a reachability
+  boundary, not evidence for worker starvation, missing dispatch, callback
+  body blocking, or a bad store address. Next probe the shutdown entry/spin
+  itself; do not add a PI or audio mitigation.
+
 ## Active investigation and ranked next steps
 
-Re-ranked s2005: the opt-in image's two nonzero hangar DMA buffers are proven
+Re-ranked s2006: the opt-in image's two nonzero hangar DMA buffers are proven
 to reach `queue_samples` byte-for-byte. Do not reopen the payload boundary or
-change audio defaults from this result; the remaining M5 lead is the hangar
-status-3 worker dispatch, and the callback-side `pcm-sanity` witness is still
-rate-limited rather than a valid null.
+change audio defaults from this result. The status-3 worker hypothesis is
+parked at a pre-status-3 reachability boundary: the callback census is live,
+but the current post-craft recipe reaches the PI-DMA assertion before the
+discriminator.
 
-1. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
-   census reached hangar `[phase] 512 origin=0x006AB400` in 24.6s and captured
-   17 frames. `[svc-pool]` reached `n=1000 armed=0 gate=1`; after
-   `[shut-enter] n=3 b0=0x02 gate=1`, zero armed worker entries appeared,
-   while `[shut-spin]` held `b0=0x03` and stop-synced returned. The retail
-   oracle independently saw the worker-side `0x8009B7EC` write. After M5's
-   plan, identify the callback/thread dispatch path that should run
-   `serviceVoicePoolFrame` and test whether the cooperative status-3 spin
-   prevents it. Do not yield the spin or default the in-loop tick off.
+1. **M5 status-3 reachability boundary (s2006).** Add durable entry and
+   `L_8009BD10` spin breadcrumbs to the same batched census, with the earlier
+   shutdown calls as the positive control and the PI assertion as a separate
+   timeline row. The discriminator is whether shutdown call 3/status `0x03`
+   is reached before the PI worker abort; only then interpret missing worker
+   rows as dispatch evidence. Do not yield the spin, default the in-loop tick
+   off, or mitigate the odd ROM address.
 2. **M5 callback-side PCM witness.** Only if needed after the status-3 work,
    phase-gate a callback-side census at the exact nonzero bridge rows rather
    than relying on first-20/every-256 `pcm-sanity`; this is not evidence for a
