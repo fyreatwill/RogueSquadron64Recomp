@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2072 (2026-08-20).
+for session detail. Reviewed through s2073 (2026-08-20).
 
 ## Current state
 
@@ -147,6 +147,16 @@ for session detail. Reviewed through s2072 (2026-08-20).
   zero-only `0x25E26BC5` span, selecting H-E50-RetailIntermediate and
   refuting H-E50-PortPayloadMatch at named-writer value scope. The final
   retail E50 role and the image task/exit ABI remain open.
+- s2073's corrected Rice oracle gate-value witness passed the whole-RDRAM
+  positive control with 10,017 writes, recorded 17 writes to `0xA0F50`, and
+  reached title VI `1024 @ 0x00790400` and hangar VI `512 @ 0x006AB400`.
+  Every requested writer produced a post-store row. Values were
+  `0x8008EA34=0`, `0x8008EB40=1`, `0x8008ED48=0`, `0x8008EB7C=0`, and
+  `0x8008EC88=1`; the aggregate was 11 zero and 6 nonzero stores. This
+  selects H-RetailGateMixed and refutes H-RetailGateActive as a uniform
+  nonzero contract and H-RetailGateBypass as a uniform zero contract. The
+  independent retail result authorizes one writer-specific opt-in gate arm;
+  no port or guest behavior changed in s2073.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -271,14 +281,13 @@ are not active work items.
    H-E50-RetailIntermediate at named-writer value scope. The exact E50
    snapshot is nonzero in retail but does not match the port's zero-only
    class; this still does not identify the final E50 role or authorize routing
-   output. The next discriminator is the retail prerequisite for the first
-   incremental de-stubbing gate test: capture post-store values at
-   `0x800A0F50` for `0x8008EA34`, `0x8008EB40`, `0x8008ED48`, `0x8008EB7C`,
-   and `0x8008EC88`, with the same whole-RDRAM and VI controls. Only after
-   that table selects a writer/value arm may one guest store be changed. Do
-   not change output routing, reverse a task field, remove the canary
-   reservation, or alter waits/guards; keep all guest gate stores and default
-   dispatch unchanged during the value witness.
+   output. s2073 selects a mixed retail gate contract: `setDisplayMode` and
+   `reapplyDisplayMode` are the nonzero named stores, while the other
+   requested writers are zero. The next bounded test may opt in only the
+   existing `reapplyDisplayMode` store at `0x8008EC88`; compare its
+   target-phase task/slot/PCM table against the unchanged default. Do not
+   change output routing, reverse a task field, remove the canary
+   reservation, or alter waits/guards.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -475,6 +484,16 @@ path preserves the generic phase gate while handling that pre-transition
 one-shot case. This selects H-E50-RetailIntermediate at named-writer value
 scope and leaves the final E50 role and image task/exit ABI open.
 
+s2073 then ran the corrected Rice oracle with the whole-RDRAM positive control,
+exact gate watch, and both target VI anchors. All five requested gate writers
+were observed and supplied post-store values: `0x8008EA34=0`,
+`0x8008EB40=1`, `0x8008ED48=0`, `0x8008EB7C=0`, and `0x8008EC88=1`; the
+aggregate was 11 zero and 6 nonzero stores. This selects
+H-RetailGateMixed and refutes uniform-active and uniform-bypass contracts at
+the retail writer/value scope. It is the independent prerequisite for the
+next one-writer guest-gate arm; it does not authorize any output, task-ABI,
+canary, wait, or guard change.
+
 ### M3, M4, and generated symbols
 
 The `-0x25A4` pointer-chase family, six-site PIC class, ten-site audio-slot
@@ -636,6 +655,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   controls. The values are metadata/control/pointer-like and differ from the
   port's zero-only class, so the named-writer value boundary is selected, but
   the final E50 role and task ABI remain open.
+- s2073 supersedes the wording that the retail gate had one uniform value
+  contract. That wording was believable because the port's `reapplyDisplayMode`
+  force-zero arm and the earlier C88 route comparison focused on one store.
+  The positive-controlled retail table observed all five requested writers and
+  found `0,1,0,0,1` at `0x800A0F50`, selecting H-RetailGateMixed. The result
+  authorizes only a writer-specific gate test; it does not establish that the
+  gate is sufficient for image-task completion or PCM output.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -696,6 +722,14 @@ The values were `0x0002FFFF`/`0x0001FFFF`/`0xB02F5600`/`0x00000100`/
 `0xA177ADED`. This refutes H-E50-PortPayloadMatch and favors
 H-E50-RetailIntermediate at named-writer value scope, while leaving the final
 E50 role and image task/exit ABI open.
+s2073 then ran the corrected Rice gate-value witness. The positive-controlled
+10,017-write run reached both target VIs, recorded 17 writes to `0xA0F50`,
+and captured post-store values `0,1,0,0,1` for the requested PCs
+`0x8008EA34`, `0x8008EB40`, `0x8008ED48`, `0x8008EB7C`, and `0x8008EC88`.
+This selects H-RetailGateMixed and refutes uniform-active and uniform-bypass
+contracts at retail writer/value scope. It authorizes the next one-writer
+gate arm but leaves task ABI, output routing, canary, waits, and guards
+unchanged.
 
 ## Method and safety rules
 

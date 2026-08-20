@@ -98859,3 +98859,39 @@ word from KSEG0 RDRAM as host-side observation; it does not write guest memory.
 The port's zero-only E50 payload remains produced by the generated image-task
 path. This diagnostic does not authorize routing output, changing a task field,
 removing the canary, or changing guest behavior.
+
+## Session 2073 (2026-08-20) — captured retail gate writer values
+
+The prescribed corrected Rice oracle preflight passed the whole-RDRAM positive
+control with 10,017 writes, recorded 17 writes to the exact physical gate
+range `0x000A0F50..0x000A0F54`, and reached title VI `1024 @ 0x00790400` and
+hangar VI `512 @ 0x006AB400`. The first targeted invocation had a malformed
+core path and exited before `dlopen`; the corrected invocation was then run
+without changing the experiment.
+
+The final targeted run passed the same controls and produced one post-store
+row for every requested writer:
+
+| Writer PC | Post-store value at `0xA0F50` | Samples | Zero | Nonzero |
+|---|---:|---:|---:|---:|
+| `0x8008EA34` | `0x00000000` | 1 | 1 | 0 |
+| `0x8008EB40` | `0x01000000` | 1 | 0 | 1 |
+| `0x8008ED48` | `0x00000000` | 5 | 5 | 0 |
+| `0x8008EB7C` | `0x00000000` | 5 | 5 | 0 |
+| `0x8008EC88` | `0x01000000` | 5 | 0 | 5 |
+
+The aggregate gate watch had 17 writes: 11 zero and 6 nonzero. This selects
+**H-RetailGateMixed** and refutes **H-RetailGateActive** as a uniform nonzero
+contract and **H-RetailGateBypass** as a uniform zero contract. It supplies
+the independent prerequisite for one writer-specific port arm, but does not
+show that the gate is sufficient for image-task completion, valid slot state,
+or PCM output.
+
+The oracle logs are `scratch/agent/oracle_s2073_a0f50_preflight.log` and
+`scratch/agent/oracle_s2073_a0f50_targeted.log`. No port build, guest store,
+task field, output route, canary, wait, guard, or default behavior changed.
+
+ORIGIN: the five stores are legitimate retail guest writers observed through
+the oracle's physical RDRAM watch. The post-step value capture is host-side
+observation only; it does not write guest memory or establish a port-side
+task/output interpretation.

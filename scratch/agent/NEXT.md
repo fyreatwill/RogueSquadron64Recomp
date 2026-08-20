@@ -1,59 +1,83 @@
-# NEXT work unit (s2073)
+# NEXT work unit (s2074)
 
-HYPOTHESIS-ID: m5-a0f50-retail-value-contract
+HYPOTHESIS-ID: m5-writer-specific-gate-arm
 
 ## Work unit
 
-Capture the retail post-store value of guest gate `0x800A0F50` for each named
-writer before changing any gate store. Use the existing oracle requested-PC
-path and the same corrected Rice route; do not modify the port, generated gate
-stores, task fields, output routing, canary, waits, guards, or defaults.
+Run one same-build, two-arm phase-gated port comparison. Keep the qualified
+route and the opt-in Factor 5 image arm fixed; the only treatment difference
+is the existing `ROGUESQ_M5_C88_VALUE=1` behavior arm, which restores the
+retail value at `reapplyDisplayMode`'s guest store `0x8008EC88`. The control
+leaves that variable unset. Do not change any other guest gate store, task
+field, output route, canary reservation, wait, guard, or default.
 
-ORIGIN: the gate byte is written by legitimate retail MusyX/display-mode
-functions. The oracle's post-step reader is host-side observation only; the
-next test must establish the retail value contract before any guest-store arm
-is attempted.
+ORIGIN: `0x8008EC88` is a legitimate retail `reapplyDisplayMode` writer and
+s2073 observed its post-store value as `0x01000000`; the port's default fixup
+force-zero is the treatment under test. No mitigation or host-side skip is
+authorized.
 
 ## Competing hypotheses and discriminator
 
-- **H-RetailGateActive** — the active retail route writes `0x01` at the named
-  display-mode/init writers, so the port's force-zero behavior is a guest-gate
-  mismatch.
-- **H-RetailGateBypass** — retail legitimately writes `0x00` at the relevant
-  writer or consumer boundary, so changing that store would not explain the
-  image task/exit defect.
-- **H-RetailGateMixed** — retail values are writer- or phase-specific, so only
-  one named store can be tested in a later arm.
+- **H-GateWriterCompletes** — the writer-specific retail gate value is the
+  missing prerequisite, so the treatment improves the downstream image-task
+  contract and produces valid slot/PCM evidence in title or hangar.
+- **H-GateWriterPartial** — the treatment changes guest gate/voice activity or
+  PCM, but the image task still returns `Broke` or retains the zero-payload
+  contract; the gate is necessary for a later step but not sufficient.
+- **H-GateWriterNoEffect** — the treatment changes the gate byte but task exit,
+  slot status, DMA payload, and PCM joins remain the same as the control.
+- **H-GateArmMissing** — the treatment does not produce the expected
+  `0x8008EC88` value transition or either arm fails the target-route controls,
+  so no downstream null is admissible.
 
-The discriminator is one table with the whole-RDRAM positive control, exact
-`0xA0F50` write count, one post-step value per named writer, title VI
-`1024 @ 0x00790400`, and hangar VI `512 @ 0x006AB400`. All requested writer
-PCs must produce a `[post-target]` row or an explicit seen=0 summary. A table
-of writer hits without post-store values selects nothing.
+The discriminator is one table with both arms and both target phases. Require
+live route/input controls, `[m5-gate]` rows showing the `0x8008EC88` value,
+audio-task exit/DMEM/DMA rows, slot-status transitions, and paired PCM
+source/consumer rows. H-GateWriterCompletes requires a treatment-side
+improvement in task completion plus valid slot/PCM evidence; H-GateWriterPartial
+requires a downstream voice/PCM change without task-contract completion;
+H-GateWriterNoEffect requires the gate transition with no downstream change;
+H-GateArmMissing rejects the comparison before interpreting any null.
 
 ## Exact commands
 
-1. Before editing/building the oracle, run the existing corrected Rice witness
-   with the whole-RDRAM control, exact gate watch, and both VI anchors:
+Build once before the two arms:
 
-   ```sh
-   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F54 --hit-cap 10000 --vi-trace
-   ```
+```sh
+cmake --build build --config Debug --target RogueSquadron64Recomp
+```
 
-2. Run one targeted gate-value arm, saving the log to a non-hidden final
-   path. Require the whole-RDRAM threshold, `[post-target]` rows for
-   `0x8008EA34`, `0x8008EB40`, `0x8008ED48`, `0x8008EB7C`, and `0x8008EC88`,
-   and both target VI transitions:
+Run both arms concurrently from the same build. `probe.sh` starts the game
+from `build/`, gates on title VI 1024, sends the established title/menu key
+schedule relative to that phase, keeps capturing through hangar VI 512, and
+SIGKILLs the game at the end:
 
-   ```sh
-   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F54 --hit-cap 10000 --vi-trace --pc-hist-watch 1 --post-value-watch 1 --post-value-pc 8008ea34,8008eb40,8008ed48,8008eb7c,8008ec88 > scratch/agent/oracle_s2073_a0f50_targeted.log 2>&1
-   ```
+```sh
+(
+  env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 \
+    ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_PCM_BOUNDARY=1 \
+    ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
+    ROGUESQ_LOG_WAITFORSLOT_GUARD=1 \
+    PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
+    PROBE_KEYS_FROM_PHASE=1 PROBE_KEYS="2:a 3:start 4:a 5:start 7:a" \
+    PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/s2074_gate_off 180
+) &
+(
+  env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+    ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 \
+    ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_PCM_BOUNDARY=1 \
+    ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
+    ROGUESQ_LOG_WAITFORSLOT_GUARD=1 \
+    PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
+    PROBE_KEYS_FROM_PHASE=1 PROBE_KEYS="2:a 3:start 4:a 5:start 7:a" \
+    PROBE_LEAVE_OK=1 zsh tools/probe.sh scratch/agent/s2074_gate_on 180
+) &
+wait
+```
 
-3. Crosswalk the five values and their writer/phase timing. H-RetailGateActive
-   requires a consistent nonzero active-path value; H-RetailGateBypass
-   requires zero at the relevant writer; H-RetailGateMixed requires distinct
-   writer/phase values. Do not land a gate change from writer ownership or
-   hit counts alone.
-
-Run `git diff --check` after the instrument change. No game binary build or
-guest behavior change is authorized by this work unit.
+Cross-check each `run.log` for title `1024 @ 0x00790400`, hangar
+`512 @ 0x006AB400`, no crash/abort marker, and the positive `[pad-host]` /
+`[audtask-dispatch]` controls before comparing task, slot, DMA, and PCM rows.
+Run `git diff --check`; no further code change is authorized if the gate
+transition is absent or the route controls fail.
