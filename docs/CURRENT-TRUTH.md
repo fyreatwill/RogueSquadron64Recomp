@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1986 (2026-08-19).
+detail. Reviewed through s1987 (2026-08-19).
 
 ## Current state
 
@@ -146,6 +146,17 @@ detail. Reviewed through s1986 (2026-08-19).
   H-fade-timer-stuck SELECTED; H-fade-counts-no-zero /
   H-fade-zeros-rekey REFUTED. `beginVoiceFadeRelease` n
   155→181333 during the spin (rewrite of `0x14` every tick).
+  s1987 dest-mapped every hangar `sh` to slot+0x30: during drain
+  the only hangar writer is `beginVoiceFadeRelease` val=`0x14`
+  (narmed=135611, nlt14=0, nother=0). Render `0x80090570` n=0;
+  render `0x80090688` n=575 nhangar=0 (dests `0x80175F30`/
+  `0x80177D90`); ADSR hangar n=115 narmed=0 val=`0xDBDA` (all
+  pre-drain). Release hangar n=21 narmed=0 val=`0x14`. Unique
+  hangar (site,val) during drain is one row: fade `0x14`.
+  H-no-decrement SELECTED; H-dec-then-rewrite REFUTED.
+  Fade then `lhu +0x30` and `sh` that value to slot+0x58
+  (`0x800924E4`) after `+0x6C=3`. The watched field is the
+  reload; the working counter may be `+0x58`.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -263,22 +274,23 @@ detail. Reviewed through s1986 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1986: fade writes +0x30=`0x14` / +0x6C=3 and those
-fields never change through 10M. Fade is also re-entered every
-in-loop tick (n 155→181333). Looping slot+0 stays `0x02`.
+Re-ranked s1987: drain hangar +0x30 is only rewritten as `0x14`
+by fade (135611 armed stores, 0 values in `0..0x13`). Fade copies
+that reload into slot+0x58. Looping slot+0 stays `0x02`.
 
-1. **Hangar frame-freeze: +0x30 store census (s1986).**
-   Same-run controls: MarkRetrigger n=1 dest=`0x8018D4A0`, 234
-   `[init-desc]`, `[drain-path] call=1 unmap=0` 18 idx rows with
-   `h30=`/`b6c=` at iters=1, last alloc tickn=4 `0x801714D0
-   count=18`, `[drain-stop-sum] entry=1` fade n=155
-   `stopVoicesByHandle` n=24, `[drain-timeout]` 10M, 108
-   `[drain-tick]` gate=`0x01`. H-fade-timer-stuck SELECTED;
-   H-fade-counts-no-zero / H-fade-zeros-rekey REFUTED. Next:
-   dest-map every hangar `sh` to slot+0x30 while drain-armed
-   (fade `0x800924BC`, release `0x80092298`, render
-   `0x80090570`/`0x80090688`, ADSR `0x80092318`) with site+value.
-   Use `S32(guest_addr)` in any `MEM_*` dump.
+1. **Hangar frame-freeze: dump fade working-timer +0x58 (s1987).**
+   Same-run controls: MarkRetrigger n=1 dest=`0x8018D4A0`,
+   `[drain-path] call=1 unmap=0` 18 idx rows `h30=0x0014` at
+   iters=1, last alloc tickn=4 `0x801714D0 count=18`,
+   `[drain-stop-sum] entry=1` fade n=154, `[drain-timeout]` 10M
+   with `[h30-sum]`/`[h30-uniq]`, first-8 `[h30-store]` on fade/
+   release/render_90688/ADSR, fade val=`0x14` after drain-sum.
+   H-no-decrement SELECTED; H-dec-then-rewrite REFUTED. Next:
+   add `h58=` / `w60=` / `w64=` / `w68=` to `[drain-path]` rows
+   (`MEM_HU` +0x58, `MEM_W` +0x60/64/68; bound already +0x70).
+   Use `S32(guest_addr)` in any `MEM_*` dump. Do not dest-map
+   `musyxInitVoiceFromSample` `0x800921C8` (also writes `0x14`
+   to +0x30) — `ninitd=0` during drain.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -465,6 +477,12 @@ Most recent, still load-bearing for the next unit:
   `b6c=0x03` on every looper through 10M (108 samples, dump after
   tick). Believable because fade n=155 at entry already proved the
   envelope started; the missing field was the timer itself.
+- s1986 "either nothing decrements +0x30 or a decrement is
+  overwritten before the dump" is superseded by s1987 — unique
+  hangar (site,val) during drain is only fade `0x14` (narmed=
+  135611); render/ADSR hangar-armed stores are 0. Believable
+  because fade n-growth already showed a rewrite every tick, which
+  can hide a mid-tick decrement from a dump-after-tick.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -476,9 +494,10 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1986 drain-slot identity / subset-live / skip-cursor /
+and s1978–s1987 drain-slot identity / subset-live / skip-cursor /
 slot+0x40-skip / init-writer / loop-length / stop-dest-retrigger /
-stop-family song-handle-fade / fade-timer-stuck results are in
+stop-family song-handle-fade / fade-timer-stuck / +0x30
+store-census (H-no-decrement) results are in
 `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

@@ -95275,3 +95275,71 @@ ledger; no new unevaluated verdict.
 H-fade-timer-stuck and refutes H-fade-counts-no-zero /
 H-fade-zeros-rekey. Next discriminator: dest-map every hangar
 slot+0x30 store during drain.
+
+## Session 1987 (2026-08-19) — hangar +0x30 store census: only fade writes 0x14 during drain
+
+**Instrument.** Incremental `apply_s1987_h30_store`
+(`RS64_S1987_H30_STORE=1`). Dest-mapped every `MEM_H(0X30, …)` in
+`beginVoiceFadeRelease` (`0x800924BC`, both copies),
+`musyxStartVoiceRelease` (`0x80092298`, both copies),
+`musyxRenderVoiceSamples` (`0x80090570`, `0x80090688`),
+`musyxStoreVoiceAdsrParams` (`0x80092318`, both copies). Hangar
+dest = `0x801714D0 + idx*0x88`, idx<18. First 8 any dest; hangar
+`val!=0x14` all; hangar `0x14` first 16 + every 10000th. Unique
+(site,val) + per-site n/nhangar/narmed/n14/nlt14/nother dumped at
+`[drain-timeout]`. No store changed.
+
+**Probe.** `scratch/agent/s1987_h30_store/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+16 frames, 250694 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.0s #1499.
+
+Positive controls (same run): `[stop-dest] site=stopVoiceMarkRetrigger
+n=1 dest=0x8018D4A0`; `[drain-path] call=1 iters=1 unmap=0` 18 idx
+rows `h30=0x0014`; last alloc tickn=4 `0x801714D0 count=18`;
+`[drain-stop-sum] entry=1` fade n=154; `[drain-timeout]` 10M;
+first-8 `[h30-store]` on fade/release/render_90688/ADSR (render
+90570 n=0, never taken); fade `[h30-store] n=57 dest=0x801716F0
+idx=4 val=0x0014` after drain-sum, then armed samples n=10041,
+20041, … 130041 val=`0x14`.
+
+**Census at timeout.**
+- fade: n=135691 nhangar=135650 narmed=135611 n14=135611 nlt14=0
+  nother=0 lastval=`0x0014` lastidx=17
+- release: n=22 nhangar=21 narmed=0 lastval=`0x0014` (all pre-drain)
+- render 90570: n=0
+- render 90688: n=575 nhangar=0 last dest=`0x80175E20` lastval=`0x0018`
+  (logged dests `0x80175F30`/`0x80177D90`, not the voice table)
+- ADSR: n=209 nhangar=115 narmed=0 lastval=`0xDBDA` (all pre-drain)
+
+`[h30-uniq] used=3 overflow=0`: ADSR `0xDBDA` n=115 narmed=0;
+release `0x0014` n=21 narmed=0; fade `0x0014` n=135650
+narmed=135611. Drain-path `h30=` is `0x0014` on 1944/1944 samples.
+This run's loopers (b stays `0x02`): 0–4, 6, 8, 13–17; idx 7 idled
+(`vis=57`). Uninstrumented `musyxInitVoiceFromSample` `0x800921C8`
+also `sh 0x14, 0x30($v0)`; `ninitd=0` so it did not fire during
+drain.
+
+**Verdicts.**
+- H-no-decrement SELECTED: the only hangar +0x30 writer while
+  drain-armed is fade rewriting `0x14`. Render/ADSR contribute 0
+  hangar-armed stores, so nothing writes `0..0x13` then gets
+  overwritten before the dump-after-tick.
+- H-dec-then-rewrite REFUTED.
+- H-fade-rearms-only holds as the n-growth explanation (154 calls
+  at entry → 135691 stores) but is the same fact as H-no-decrement
+  once the mid-tick decrement is gone.
+
+Fade after the `0x14` store does `lhu +0x30` / `sb +0x6C=3` /
+`sh` that halfword to slot+0x58 (`0x800924E4`). Next discriminator
+is whether +0x58 (and +0x60/64/68) counts down.
+
+ORIGIN: `beginVoiceFadeRelease` `sh 0x14, 0x30($a0)` (legitimate
+fade start). No skip/guard landed.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned +0x30 store census selects
+H-no-decrement and refutes H-dec-then-rewrite. Next: dump slot+0x58
+on `[drain-path]` rows.
