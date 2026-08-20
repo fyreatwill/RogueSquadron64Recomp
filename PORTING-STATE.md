@@ -95724,3 +95724,64 @@ already in the ledger; no new unevaluated verdict.
 selects H-injection-prevents-idle for drain and
 leaves the fs freeze as a post-drain hang.
 
+## Session 1994 (2026-08-19) — post-drain hang is finalizeCurrentSpeechBuffer
+
+**Instrument.** Incremental `apply_s1994_drain_post`
+(`RS64_S1994_DRAIN_POST=1`). Enter/exit wraps on
+the four post-idle jals after
+`L_800B24E4_drain_done` (`[drain-post] site=
+arbiter|destroy|shutdown|finalize nenter= nexit=`,
+first 8 each edge). Overlay-caller s0 log at the
+`jal 0x800B24C4` return in `funcs_34.c`
+(`[craft-select-s0]`). `S32`. No store changed.
+
+**Probe.** `scratch/agent/s1994_drain_post/run.log`
+— eleven-Start + `ROGUESQ_SPIN_YIELD=1` +
+`ROGUESQ_DRAIN_INLOOP_TICK=0` LLE-solo hangar, 60s
+after VI 512. Probe rc=0, 17 frames, 0 CRASH/SIGBUS.
+Hangar `[phase] 512 origin=0x006AB400` at 26.1s
+`#1508`.
+
+Positive controls (same run): `[drain-inloop-gate]
+en=0`; `[drain-exit] call=1 iters=300000 v0=1`;
+no `[drain-timeout]`; `[tick-site-sum]` drain-inloop
+n=0 narmed=0; first-8 ROM `[tick-site]` printed
+(drain-entry n=1); arbiter/destroy/shutdown each
+printed nenter=1 nexit=0 then nenter=1 nexit=1
+(wrap fires both edges).
+
+**Census.** `[drain-post]`:
+- arbiter nenter=1 nexit=1
+- destroy nenter=1 nexit=1
+- shutdown nenter=1 nexit=1
+- finalize nenter=1 nexit=0 (no second edge)
+0 `[craft-select-s0]`. 0 slot-ret after drain-exit.
+fs frozen 1233 from `#2112` (SKIP lastCimg=0
+pairs=0 stalled=1) through `#5312`. Last alloc
+tickn=4 `0x801714D0 count=18`. Drain-path at
+iters=300000: all 18 `b=0x00`.
+
+**Verdicts.**
+- H-later-drain-jal SELECTED site=
+  `finalizeCurrentSpeechBuffer`: the wrap's other
+  three sites both-edge, finalize enter-only, and
+  the overlay caller never resumes.
+- H-arbiter-wait REFUTED: arbiter nexit=1.
+- H-caller-returned REFUTED: 0 `[craft-select-s0]`;
+  drain has not returned to `0x800C5EA4`.
+- H-drain-exit-never-reached-again REFUTED:
+  `[drain-exit] v0=1` iters=300000.
+
+First jal inside finalize is always
+`shutdownMusyXVoices` (`0x8009BCC4`); then
+`beq $a0` on `*(0x80139B74)` to `rs_free` or
+`teardownAssetDma`. Next unit wraps those three.
+Do not default the in-loop tick off.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar
+soaks already in the ledger; no new unevaluated
+verdict.
+
+**OUTCOME: ADVANCED** — planned post-drain jal
+census selects H-later-drain-jal at finalize.
+

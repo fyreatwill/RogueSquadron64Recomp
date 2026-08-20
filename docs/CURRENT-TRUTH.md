@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1993 (2026-08-19).
+detail. Reviewed through s1994 (2026-08-19).
 
 ## Current state
 
@@ -222,12 +222,20 @@ detail. Reviewed through s1993 (2026-08-19).
   (not a ROM jal); skipping it restores the ROM
   one-entry-tick then spin, and yield-unblocked
   synth lets the ROM fade finish. Residual: fs
-  still 1245 from `#2112` after drain-exit (same
+  still frozen from `#2112` after drain-exit (same
   freeze as s1976 force-idle). Drain is the
   craft-select exit path (`tickCraftSelectScreen`
   loop at `0x800C5EA4`, overlay func currently
-  named `drawRadarIcon`); next ROM jal after
-  drain-exit is `bufferArbiterProducerScanWait`.
+  named `drawRadarIcon`).
+  s1994 selected H-later-drain-jal site=
+  `finalizeCurrentSpeechBuffer`: with the same
+  in-loop-off recipe, arbiter/destroy/shutdown
+  all nenter=1 nexit=1; finalize nenter=1
+  nexit=0; 0 `[craft-select-s0]`. H-arbiter-wait
+  / H-caller-returned / H-drain-exit-never-
+  reached-again REFUTED. First jal inside
+  finalize is always `shutdownMusyXVoices`
+  (`0x8009BCC4`).
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -345,30 +353,26 @@ detail. Reviewed through s1993 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1993: skipping the s1976 in-loop tick lets
-drain idle at 300k (all 18 `b=0x00`); fs stays 1245
-from `#2112`. Next is the first ROM jal after
-drain-exit.
+Re-ranked s1994: drain's post-idle jals all return
+except `finalizeCurrentSpeechBuffer`. Next is that
+function's three jals.
 
-1. **Hangar frame-freeze: post-drain hang (s1993).**
+1. **Hangar frame-freeze: finalize hang (s1994).**
    Same-run controls: `[drain-inloop-gate] en=0`,
-   drain-inloop n=0 narmed=0, ROM first-8 `[tick-site]`
-   printed, `[drain-path] call=1 unmap=0` 18 idx at
-   iters=1, last alloc tickn=4 `0x801714D0 count=18`,
-   `[drain-stop-sum] entry=1`. Drain returned:
-   no `[drain-timeout]`, `[drain-exit] iters=300000
-   v0=1`, all 18 `b=0x00`. Envelope narmed=48;
-   stopAll narmed=0. fs still 1245 `#2112`–`#5312`;
-   0 slot-ret after drain-exit; host VI SKIP
-   `lastCimg=0 pairs=0 stalled=1`. Do not default
-   `ROGUESQ_DRAIN_INLOOP_TICK` off. Next: enter/exit
-   breadcrumbs on drain's four post-idle jals
-   (`bufferArbiterProducerScanWait`,
-   `destroyPlayerShipRecord`,
-   `shutdownFormatMessageWorker`,
-   `finalizeCurrentSpeechBuffer`) with
-   `ROGUESQ_DRAIN_INLOOP_TICK=0`. Discriminator:
-   which jal enters and never exits.
+   `[drain-exit] iters=300000 v0=1`, no timeout,
+   arbiter/destroy/shutdown nenter=1 nexit=1
+   (wrap positive control), `[tick-site-sum]`
+   drain-inloop n=0 narmed=0, hangar `[phase] 512
+   origin=0x006AB400` at 26.1s `#1508`. Finalize
+   nenter=1 nexit=0; 0 `[craft-select-s0]`; 0
+   slot-ret after drain-exit; fs frozen 1233 from
+   `#2112` (SKIP `lastCimg=0 pairs=0 stalled=1`).
+   Do not default `ROGUESQ_DRAIN_INLOOP_TICK` off.
+   Next: enter/exit on finalize's three jals
+   (`shutdownMusyXVoices`, `rs_free`,
+   `teardownAssetDma`) plus dump `$a0` at the
+   `beq 0x800678FC`. Discriminator: which jal
+   enters and never exits.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -598,6 +602,12 @@ Most recent, still load-bearing for the next unit:
   Believable because drain never returned while the
   injection was on, so the spin and the freeze were
   simultaneous.
+- s1993 "next ROM jal after drain-exit is
+  `bufferArbiterProducerScanWait`" as the hang
+  site is superseded by s1994 — arbiter, destroy,
+  and shutdown all return; finalize does not.
+  Believable because arbiter is the next
+  instruction and contains blocking `osRecvMesg`.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -618,6 +628,8 @@ store-census (H-no-decrement) / +0x58-duration (H-envelope-fields-stuck)
 (H-empty-then-fade) / tickMusyXIfActive caller census
 (H-drain-inloop-only) / s1976 in-loop tick gate
 (H-injection-prevents-idle for drain; fs residual)
+/ s1994 post-drain jal census (H-later-drain-jal
+site=finalizeCurrentSpeechBuffer)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
