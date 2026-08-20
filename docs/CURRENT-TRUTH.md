@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1982 (2026-08-19).
+detail. Reviewed through s1983 (2026-08-19).
 
 ## Current state
 
@@ -103,10 +103,20 @@ detail. Reviewed through s1982 (2026-08-19).
   on all 18 idxs (`ninit` 1..22, all `armed=0`); `nsw=nsh=0` on
   idxs 0–17. `musyxKeyOnVoice` `0x80090B68`/`0x80090C28` write a
   different structure (stride ~0x50, `keyon_unmap` 18366→20372).
-  H-keyon-sw / H-keyon-sh / H-stale-word REFUTED. `mem38` is still a
-  sane end. `deactivateVoice` is 0 globally; `stopVoice` only hits
-  the boot array. Timeout remains a diagnostic hatch. Default-off
-  yield unchanged.
+  H-keyon-sw / H-keyon-sh / H-stale-word REFUTED. s1983 selected
+  H-start-end-triplet: 256/256 `[init-desc]` inits are oneshot
+  (`d14==0` and `d10==0x11`, n=125), whole-sample loop
+  (`d10==0` and `d14==d0c`, n=3), or loop length
+  (`d14==d0c-d10`, n=128). `d00` low-16 is the sample rate
+  (22050/16000/24000/…). `d14` is not a pointer, 0/1 flag, or
+  rate. H-loop-flag / H-rate-as-flag REFUTED. Live drain voices
+  are the looping ones; `bnez slot+0x40` is the legitimate
+  loop-length skip. `ninitd=0`: that length is never cleared.
+  `stopVoiceMarkRetrigger` 32/32 dests on boot `0x8018D4A0`,
+  zero on hangar `0x801714D0`. `deactivateVoice` 0.
+  ORIGIN: sample-header loop length (legitimate). Drain waiting
+  on looping hangar BGM is correct given they were never stopped.
+  Timeout remains a diagnostic hatch. Default-off yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -224,19 +234,20 @@ detail. Reviewed through s1982 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1982: init copies `desc+0x14` onto `slot+0x40`; key-on
-does not touch the 0x88 table. Drain waits on voices whose init
-left that word nonzero.
+Re-ranked s1983: `desc+0x14` is loop length (`d14==d0c-d10` or 0).
+The skip is legitimate; drain waits because looping hangar voices
+were never stopped.
 
-1. **Hangar frame-freeze: what is desc+0x14 / slot+0x40 (s1982).**
-   Same-run controls: `[keyon-w40]` first 8 fired (init mapped,
-   sw unmapped), `[drain-path]` 108 samples `unmap=0`, last alloc
-   `0x801714D0 count=18`, ended 8–11 `w40==last_init==0` and
-   `vis==to_cur`. The 12 live idxs have `last_init==w40!=0`
-   (`0x9241`/`0x49FD`/`0x5511`/`0x092E`/`0x10E0`) and `nsw=nsh=0`.
-   Next: classify `desc+0x14` from its neighbors (`+0x0C`→slot+0x38
-   end cursor, `+0x10`→slot+0x3C, `+0x18` byte→slot+0x6D). Dump
-   those words at init when dest maps to the current voice table.
+1. **Hangar frame-freeze: who should stop looping voices before drain (s1983).**
+   Same-run controls: `[keyon-w40]` first 8, 256 `[init-desc]`,
+   `[drain-path] call=1 unmap=0`, last alloc `0x801714D0 count=18`,
+   256/256 inits match the loop-length identity, `d14==after`.
+   Drain is `jal 0x800B24C4` immediately after
+   `tickCraftSelectScreen` returns != `0x00FFFFFF` (generated
+   `drawRadarIcon` / menu overlay at `0x800C5EB8`).
+   `stopVoiceMarkRetrigger` never dest-maps onto `0x801714D0`.
+   Next: dest-map `musyxStopVoice` / `stopVoice` / `deactivateVoice`
+   / `stopVoiceMarkRetrigger` from hangar alloc through drain entry.
    Use `S32(guest_addr)` in any `MEM_*` dump.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
@@ -398,6 +409,13 @@ Most recent, still load-bearing for the next unit:
   structure, not the 0x88 voice table; `musyxInitVoiceFromSample`
   copies `desc+0x14` and `last_init==w40`. Believable because both
   functions use `$s1`/`$a0` as "the voice" in different layouts.
+- s1982 "whether a nonzero `desc+0x14` is a legitimate skip-end
+  flag" is superseded by s1983 — it is loop length, with
+  `d14==d0c-d10` (or `d14==d0c` when `d10==0`; or `d14==0` with
+  `d10==0x11` for oneshots) on 256/256 inits. Sample rate is
+  `d00` low-16. Believable because the live values sat in a
+  16-bit scalar band that could have been either a rate or a
+  length.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -409,8 +427,9 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1982's drain-slot identity / subset-live / skip-cursor /
-slot+0x40-skip / init-writer results are in `PORTING-STATE.md` directly.
+and s1978–s1983 drain-slot identity / subset-live / skip-cursor /
+slot+0x40-skip / init-writer / loop-length results are in
+`PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a

@@ -95014,3 +95014,64 @@ ledger; no new unevaluated verdict.
 H-later-overwrite (init writer) and refutes the three key-on/stale
 hypotheses. Next discriminator: what `desc+0x14` is.
 
+
+## Session 1983 (2026-08-19) — desc+0x14 is loop length (d14==d0c-d10); skip is legitimate
+
+**Instrument.** Incremental `apply_s1983_init_desc` (`RS64_S1983_INIT_DESC=1`).
+Dumps `[init-desc]` at `musyxInitVoiceFromSample` `0x80092230` after
+the s1982 `site=init` store: `desc+0x00..+0x18` via `S32` (first 8
+always, then every mapped `idx<18`). No store changed.
+
+**Probe.** `scratch/agent/s1983_init_desc/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 67865 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 25.9s #1493.
+
+Positive controls (same run): `[keyon-w40]` first 8 fired (init n=1
+idx=0 dest=`0x8018D4A0` mapped; sw n=1 dest=`0x8018DD40` unmapped);
+256 `[init-desc]` (n=1 dest=`0x8018D4A0`); `[drain-path] call=1
+iters=1 unmap=0 keyon_unmap=19161` through iters=10000000
+`keyon_unmap=21196` (108 headers, 1944 rows); `[drain-exit] call=1
+iters=10000001 v0=1`; last alloc tickn=4 `0x801714D0 count=18`;
+`d14==after` on 256/256 inits.
+
+**Descriptor identity (256/256, OTHER=0).**
+- oneshot: `d14==0` and `d10==0x11` (n=125)
+- whole-sample loop: `d10==0` and `d14==d0c` (n=3)
+- loop length: `d14==d0c-d10` (n=128)
+`d00` low-16 is a sample rate (22050×102, 16000×95, 24000×28, plus
+20000/19000/11025/6000/8000/14000/23000). `d04` high byte `0xB0`
+(ROM) except idx 8 `0x80` (RAM `0x801B2C60`). Almost all desc ptrs
+are the scratch buffer `0x8013ACA0`. Last-per-idx join: live `0x02`
+idxs have nonzero `d14==w40==last_init`; cursor-ended idxs 7/9/10/11
+have `d14==0` and `vis==to_cur`. idx 5 was already `b=0x00` at drain
+iters=1 with a leftover looping header (ended before drain, not a
+oneshot-end counterexample). `ninitd=0` on every idx.
+
+**stopVoice this run.** `slot-sb` by func: render 22046, alloc 32,
+init 32, trigger 32, `stopVoiceMarkRetrigger` 32 (all dests on boot
+`0x8018D4A0`, zero on hangar `0x801714D0`). `deactivateVoice` /
+`stopVoice` slot-sb: 0.
+
+**Verdicts.**
+- H-start-end-triplet SELECTED (two-source: 256/256 arithmetic
+  identity plus the static copies `d0c`→slot+0x38 end cursor,
+  `d10`→slot+0x3C, `d14`→slot+0x40 / `bnez` skip).
+- H-loop-flag REFUTED: `d14` is not a KSEG0 pointer or 0/1 flag;
+  neighbors `d0c`/`d10` are the same 16-bit length band.
+- H-rate-as-flag REFUTED: sample rate is `d00` low-16; `d14` is
+  loop length. The skip-if-nonzero is that length test, not a
+  rate-as-flag.
+
+ORIGIN: `musyxInitVoiceFromSample` copies a legitimate sample-header
+loop length onto slot+0x40. The render skip is legitimate looping.
+Drain waiting on those voices is correct given they were never
+stopped. No skip/guard landed.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned init-desc dump selects
+H-start-end-triplet (loop length) and refutes H-loop-flag /
+H-rate-as-flag. Next discriminator: who should stop the looping
+hangar table before drain.
