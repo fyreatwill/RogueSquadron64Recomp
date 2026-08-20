@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s2000 (2026-08-20).
+detail. Reviewed through s2001 (2026-08-20).
 
 ## Current state
 
@@ -375,6 +375,27 @@ detail. Reviewed through s2000 (2026-08-20).
   selects H-probe-anchor and rules out a generator-layout or output-path
   failure. No game ran and no default audio dispatch or runtime behavior
   changed.
+- **M5 opt-in RSP arm validation (s2001).** One Debug build carried a batched
+  `run_task` probe through the default `musyx_stub` control and
+  `ROGUESQ_AUDIO_UCODE=1` `factor5_ucode_b` treatment. The same-run positive
+  control was live (`[audtask-dispatch]`); the host rows were 107 control and
+  104 treatment. Every control row returned `exit=1` (`Broke`) with the seeded
+  DMEM `0xF80..0xF8F` canary intact (`0xEA3B8DC0`); every treatment row also
+  returned `Broke` but changed the canary hash to `0x00000000`. Both arms'
+  sampled PCM rows were `all_zero=1`, and the existing slot writer census had
+  the same initialization/key-on rows with no treatment-only terminal
+  transition. The control reached title VI 1024 at 48.4s and hangar VI 512 at
+  83.5s/129.4s before a later `do_break` crash; the treatment reached 1024 at
+  48.7s and hangar at 84.2s/129.7s, then ended by the driver's SIGKILL at 248s
+  with no crash. ORIGIN: `factor5_ucode_b` execution writes the canary region;
+  that region is not yet proven reserved rather than legitimate RSP scratch,
+  so this is a footprint observation, not a mitigation or corruption claim.
+  H-degenerate-host-path is refuted: the opt-in arm does not produce valid
+  PCM/slot completion evidence. H-MORT-path versus wrong task/resident ABI
+  remains open. A separate 45s retail oracle run passed its whole-RDRAM
+  positive control (23,639 writes) and saw 8,367 writes to physical
+  `0x14974C` from four retail PCs; it does not yet identify the opt-in task's
+  ABI. No audio dispatch, guest gate, or default behavior changed.
 - **Generated-symbol sweep is effectively closed (s1966).** A full-file
   census found s1962–s1965 had only swept a small tail of the TOML;
   845 leftovers resolved in one batch (902 → 57 `func_8[01]*`). The
@@ -427,16 +448,19 @@ detail. Reviewed through s2000 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s2000: the M5 fixup anchor is repaired; validate the existing opt-in
-RSP arm next. The hangar status-3 result
-remains parked with a precise scheduler lead.
+Re-ranked s2001: the opt-in arm is exercised but its task/DMEM ABI remains
+unidentified; map that boundary before changing audio gates or defaults. The
+hangar status-3 result remains parked with a precise scheduler lead.
 
-1. **M5 opt-in RSP validation (s2001).** One build must run the unset-env
-   `musyx_stub` control and `ROGUESQ_AUDIO_UCODE=1` treatment with the same
-   phase-gated title/hangar recipe. Measure direct task exit, DMEM canary,
-   guest slot transition, and PCM nonzero/silence together. Keep the default
-   dispatch and every gate store unchanged; `ROGUESQ_SPIN_YIELD=1` is only the
-   common frontend scheduler control needed to reach hangar.
+1. **M5 task/DMEM ABI boundary census (s2002).** Batch the audio task
+   descriptor (`ucode`, `ucode_data`, sizes, `data_ptr`, `data_size`), input
+   and post-task DMEM hashes/ranges, direct exit, slot transition, and PCM
+   result in one host table for both arms. Pair it with the existing retail
+   whole-RDRAM control and named `0x14974C` writer watch before building the
+   instrument. This splits host staging mismatch, wrong MusyX/MORT resident
+   image, and a downstream PCM bridge failure. Keep the dispatch toggle and
+   all guest gate stores unchanged; `ROGUESQ_SPIN_YIELD=1` is only the common
+   frontend scheduler control needed to reach hangar.
 2. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
    census reached hangar `[phase] 512 origin=0x006AB400` in 24.6s and captured
    17 frames. `[svc-pool]` reached `n=1000 armed=0 gate=1`; after
@@ -522,6 +546,17 @@ patch applies all six. Hangar ran 60s / 17 frames with no SIGBUS after the fix,
 vs 1 frame / 4s before. Class is fully enumerated and patched; no remaining
 sites elsewhere in the generated codebase. Do not reopen without a new site
 identified by grep + static analysis.
+
+**M5 opt-in RSP arm.** s2001's same-build, phase-gated control/treatment rows
+show that `musyx_stub` and `factor5_ucode_b` both return `Broke`, but only the
+opt-in function changes the `0xF80..0xF8F` DMEM canary and neither arm produces
+nonzero PCM. The same slot census reached voice key-on in both arms without a
+treatment-only terminal transition. This is two-source port evidence from
+`run_task` and the independent PCM/slot consumers; it refutes the simple
+"remove the host stub and valid audio appears" step. The canary's ownership is
+not yet established, so it does not select MORT versus a wrong resident/task
+ABI. Retail oracle writer activity at `0x14974C` is confirmed independently;
+task-image attribution remains the next M5 boundary.
 
 ## Superseded conclusions
 
@@ -709,6 +744,10 @@ Most recent, still load-bearing for the next unit:
   finalize's first jal is unconditional
   and the function has several later
   blocking-looking sites.
+- s2000's "next is the same-build opt-in RSP validation" is superseded by
+  s2001 — the paired phase-gated run completed the dispatch comparison but
+  found no treatment PCM/slot completion and an unexplained DMEM footprint;
+  the next boundary is task/DMEM ABI attribution, not a default flip.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -747,6 +786,11 @@ site=finalizeCurrentSpeechBuffer)
 / s2000 M5 fixup-anchor repair
  (exact-PC optional-probe rule matched x1; generated `0x8008EC88` store is 0;
  full Debug target builds; no runtime audio change)
+/ s2001 M5 opt-in RSP validation
+ (107/104 direct audio rows, both `Broke`; control canary intact, treatment
+ canary changed to zero; both PCM-silent and no arm-specific slot completion;
+ phase-gated title/hangar reached; retail oracle positive control plus
+ `0x14974C` writer PCs)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

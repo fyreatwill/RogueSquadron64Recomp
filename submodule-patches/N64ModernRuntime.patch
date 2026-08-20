@@ -440,7 +440,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..def6f71 100644
+index 1cb3f6a..d589787 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -32,6 +32,14 @@ void recomp::rsp::constants_init() {
@@ -458,7 +458,7 @@ index 1cb3f6a..def6f71 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,6 +50,11 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,15 +50,66 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -470,6 +470,61 @@ index 1cb3f6a..def6f71 100644
      // Load the OSTask into DMEM
      memcpy(&dmem[0xFC0], task, sizeof(OSTask));
  
+     // Load the ucode data into DMEM
+     dma_rdram_to_dmem(rdram, 0x0000, task->t.ucode_data, 0xF80 - 1);
+ 
++    // The OSTask occupies DMEM[0xFC0..0xFFF] and the ucode-data DMA ends at
++    // 0xF7F. Keep a canary in the intervening reserved gap while validating
++    // the opt-in audio runner; a change proves the runner touched that area.
++    const bool is_audio_task = task->t.type == M_AUDTASK;
++    static int s_log_audio_run = -1;
++    if (s_log_audio_run < 0) {
++        const char* all = std::getenv("ROGUESQ_LOG_ALL");
++        const char* spboot = std::getenv("ROGUESQ_LOG_SPBOOT");
++        s_log_audio_run = ((all && all[0] && all[0] != '0') ||
++                           (spboot && spboot[0] && spboot[0] != '0')) ? 1 : 0;
++    }
++    const bool probe_audio = is_audio_task && s_log_audio_run != 0;
++    constexpr uint32_t audio_canary_offset = 0xF80;
++    constexpr uint32_t audio_canary_size = 0x10;
++    uint32_t audio_canary_pre = 0;
++    uint32_t audio_probe_n = 0;
++    const char* audio_arm = "n/a";
++    if (probe_audio) {
++        static uint32_t s_audio_probe_n = 0;
++        audio_probe_n = s_audio_probe_n++;
++        const char* enabled = std::getenv("ROGUESQ_AUDIO_UCODE");
++        audio_arm = (enabled && enabled[0] && enabled[0] != '0') ?
++            "factor5_ucode_b" : "musyx_stub";
++        for (uint32_t i = 0; i < audio_canary_size; i++) {
++            RSP_MEM_BU(0, audio_canary_offset + i) =
++                static_cast<uint8_t>(0xA5u ^ (i * 0x1Du));
++            audio_canary_pre = (audio_canary_pre * 16777619u) ^
++                RSP_MEM_BU(0, audio_canary_offset + i);
++        }
++    }
++
+     // Run the ucode
+     RspExitReason exit_reason = ucode_func(rdram, task->t.ucode);
+ 
++    if (probe_audio &&
++        (audio_probe_n < 40 || (audio_probe_n % 128) == 0)) {
++        uint32_t audio_canary_post = 0;
++        for (uint32_t i = 0; i < audio_canary_size; i++) {
++            audio_canary_post = (audio_canary_post * 16777619u) ^
++                RSP_MEM_BU(0, audio_canary_offset + i);
++        }
++        fprintf(stderr,
++                "[audtask-run] n=%u type=%" PRIu32 " arm=%s pre=0x%08X post=0x%08X canary_ok=%d exit=%d\n",
++                audio_probe_n, task->t.type, audio_arm, audio_canary_pre,
++                audio_canary_post, audio_canary_pre == audio_canary_post ? 1 : 0,
++                static_cast<int>(exit_reason));
++        fflush(stderr);
++    }
++
+     // Ensure that the ucode exited correctly
+     if (exit_reason != RspExitReason::Broke) {
+         fprintf(stderr, "RSP ucode %" PRIu32 " exited unexpectedly. exit_reason: %i\n", task->t.type, static_cast<int>(exit_reason));
 diff --git a/librecomp/src/sp.cpp b/librecomp/src/sp.cpp
 index ae0f44f..8eaf259 100644
 --- a/librecomp/src/sp.cpp

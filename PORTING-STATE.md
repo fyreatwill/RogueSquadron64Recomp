@@ -96122,3 +96122,56 @@ default dispatch, guest gate semantics, or PCM conclusion was established.
 
 **OUTCOME: ADVANCED** — regeneration-stable M5 anchor and full build pass;
 next is the same-build default-versus-opt-in RSP validation.
+
+## Session 2001 (2026-08-20) — validated the opt-in audio RSP arm
+
+The maintenance check was 46,602 bytes, so this was not a maintenance
+iteration. `scratch/agent/NEXT.md` named four competing task/host hypotheses
+and the discriminator before the build. The only code change was a batched
+audio-task probe around `librecomp/src/rsp.cpp:run_task`; it records the task
+arm/type, a seeded DMEM `0xF80..0xF8F` canary before and after the selected RSP
+function, and `RspExitReason`. `submodule-patches/export.sh` refreshed the
+tracked submodule patch, and `cmake --build build --target
+RogueSquadron64Recomp` completed successfully.
+
+The first concurrent control/treatment attempt was not phase-valid: both
+instances dispatched 48 audio tasks but stalled at VI 640 with no menu spin
+yield or VI 1024 row, so both games were SIGKILLed. A sequential control then
+hit the known pre-title `slotDispatcherIter+3092` crash before VI 1024. Those
+failures are documented recipe results, not phase nulls.
+
+The fixed sequential pair used the same built binary and the phase-gated
+`run_mission_keys.sh` schedule. The control reached title VI 1024 at 48.4s,
+hangar VI 512/origin `0x006AB400` at 83.5s and again at 129.4s, then later
+crashed in `do_break` at guest PC `0x80054744`. The treatment reached title
+1024 at 48.7s, hangar at 84.2s and 129.7s, then ran to the 248s driver cap and
+was SIGKILLed with no crash.
+
+The discriminating rows were:
+
+- Control: 107 `[audtask-run]` rows, arm `musyx_stub`, `type=2`, `exit=1`
+  (`Broke`), `pre=post=0xEA3B8DC0`, `canary_ok=1`.
+- Treatment: 104 rows, arm `factor5_ucode_b`, `type=2`, `exit=1` (`Broke`),
+  `pre=0xEA3B8DC0`, `post=0x00000000`, `canary_ok=0`.
+- Every sampled `[pcm-sanity]` row in both arms was `all_zero=1`; no sampled
+  row had nonzero PCM. The existing `avf-gate` slot census showed the same
+  allocation and `musyxRenderVoiceSamples` key-on rows in both arms, with no
+  treatment-only terminal slot transition.
+
+ORIGIN: the `factor5_ucode_b` RSP execution writes the canary region. That
+region is not yet proven reserved rather than legitimate RSP scratch, so the
+changed hash is a footprint observation, not a corruption diagnosis or
+mitigation. The independent 45s retail oracle passed its whole-RDRAM positive
+control with 23,639 writes and observed 8,367 writes to physical `0x14974C`
+from retail PCs `0x800912F8`, `0x80091680`, `0x800916DC`, and `0x800917A8`.
+This confirms live retail audio-side writer activity but does not identify the
+opt-in task ABI or resident image.
+
+This refutes H-degenerate-host-path: selecting the existing opt-in RSP arm did
+not produce valid PCM or arm-specific slot completion. It does not distinguish
+H-MORT-path from a wrong MusyX/task resident ABI, because the canary ownership
+and task-image contract remain unresolved. No dispatch default, guest audio
+gate, guard, or mitigation changed.
+
+**OUTCOME: ADVANCED** — the opt-in arm was phase-validated and the simple
+host-stub-removal hypothesis was refuted; next is task/DMEM ABI attribution.
