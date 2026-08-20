@@ -97456,3 +97456,49 @@ edges are independent input controls. The phase/control table selects H1 of
 the planned s2036 table: the s2035 common VI-640 route explanation is
 superseded, and the next work unit is a same-build phase-valid C88 unset versus
 `ROGUESQ_M5_C88_VALUE=1` A/B.
+
+## Session 2037 (2026-08-20) — C88 A/B produced an inverse, single-source route split
+
+`HYPOTHESIS-ID: m5-c88-value-phase-valid-ab`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 44,662 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. Both arms ran
+from that binary concurrently with forced LLE, opt-in Factor 5 audio, spin
+yield, the existing M5 witnesses, and the ten width-640-relative Starts.
+Both `tools/regress.sh` preflights reported `input=ok visual=ok`; both logs
+recorded post-640 `pad-host` and `host-start` edges, and both emitted the
+24/24 `s2006-svc` entry/exit positive controls. Therefore the scorer's FAIL
+was not accepted as H4: its final-key heuristic again reported no later VI
+transition after a key that fired after the relevant transition.
+
+The unset arm reached title VI `1024 @ 0x00790400` at 12.6s but did not reach
+hangar VI 512 during the 90-second run. Its phase-valid writer row at
+`0x8008EC88` recorded `0 -> 0`, and its 511 phase-8 raw-gate rows recorded
+`gate=0, branch=1`; it had no phase-10 rows. The C88=1 arm reached title VI
+`1024 @ 0x00790400` at 12.7s and hangar VI `512 @ 0x006AB400` at 21.0s.
+Its writer recorded `0 -> 1` in both target phases; phase 8 had both raw-gate
+and gate-1 rows, and phase 10 had six raw-gate and four gate-1 rows. Both
+arms logged 81 total audio-task dispatch rows. Phase-valid PCM samples were
+all zero in the observed target rows. No crash, abort, missing-function, or
+deferred-DL marker appeared.
+
+This is an inverse route split relative to the planned H1/H2/H3 table, not a
+selected causal explanation. It is one port-side log source, and the
+concurrent GUI run leaves focus/arbitration as a live confound: s2036's unset
+control reached hangar, while s2033's C88=1 arm stalled before title. The
+result does establish that the value arm can reach the gate-1 consumer path
+and that the unset arm can remain on the gate-zero skip path in a phase-valid
+title comparison. The next work unit must qualify reproducibility with a
+post-title schedule that does not leave a final key after the expected
+transition, then compare the same phase/control table before interpreting
+the inverse split.
+
+The queued-soak tail was also consumed: `s1971_hangar_180s` exited immediately
+with `rc=127`, `s1972_hangar_300s` completed 330s with 80 frames, no crashes,
+and one audio-drain yield, and `s1974_hangar_600s` reached the 600s hard cap
+with `rc=137`. These are hangar soak outcomes without a new M5 discriminator;
+the immediate launcher failure and hard-cap kill are not port crash evidence.
+
+ORIGIN: `reapplyDisplayMode` at `0x8008EC88` is the writer. Retail value `1`
+is legitimate guest state; the default port value `0` remains the existing
+MusyX-stub mitigation. No store change or new mitigation landed.

@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2036 (2026-08-20).
+for session detail. Reviewed through s2037 (2026-08-20).
 
 ## Current state
 
@@ -113,6 +113,21 @@ for session detail. Reviewed through s2036 (2026-08-20).
   H1, route recovery, and supersedes the s2035 common-route explanation.
   The C88 value remains unset and the retail-value arm is still untested in a
   phase-valid A/B.
+- s2037 ran the unset-C88 versus `ROGUESQ_M5_C88_VALUE=1` arms concurrently
+  from one fresh build. Both preflights were `input=ok visual=ok`, both had
+  post-640 host Start edges and 24/24 `s2006-svc` entry/exit controls, so the
+  scorer's final-key FAIL is a harness heuristic rather than H4. The unset arm
+  reached title VI 1024 but not hangar VI 512 in 90s; its phase-valid writer
+  was `0 -> 0` and its 511 raw-gate rows were `gate=0, branch=1`. The C88=1
+  arm reached title VI 1024 and hangar VI 512; its writer was `0 -> 1` in
+  both target phases, with phase-8 raw/gate-1 rows and phase-10 raw/gate-1
+  rows. Both arms logged 81 total audio-task dispatch rows and all observed
+  target PCM samples were zero. This is an inverse route split against the
+  planned H1/H2/H3 table, not a causal selection: it is single-source
+  port-side evidence and concurrent GUI arbitration remains a confound. The
+  next M5 unit must qualify reproducibility with a post-title schedule whose
+  final key precedes the expected transition, then repeat the phase/control
+  comparison without changing the writer.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -257,12 +272,15 @@ for session detail. Reviewed through s2036 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 gate-writer value A/B.** Run unset-C88 and
-   `ROGUESQ_M5_C88_VALUE=1` arms from the same build with the preflighted,
-   width-relative schedule. Keep the retail-value arm opt-in and do not change
-   the writer. Compare only phase-valid title/hangar rows, preflight/input
-   controls, `s2006-svc`, `reapplyDisplayMode`, raw-gate, audio-task, and PCM
-   rows; the s2036 unset arm is the control, not a cross-run baseline.
+1. **M5 gate-writer value A/B reproducibility.** Run unset-C88 and
+   `ROGUESQ_M5_C88_VALUE=1` arms from the same build with a post-title,
+   width-1024-relative key schedule whose final key precedes the expected
+   hangar transition. Keep the retail-value arm opt-in and do not change the
+   writer. Require both preflight/input controls and post-640 host edges;
+   compare only phase-valid title/hangar rows, `s2006-svc`,
+   `reapplyDisplayMode`, raw-gate, audio-task, and PCM rows. Treat s2037's
+   inverse split as single-source until this route qualification reproduces or
+   refutes it.
 2. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
@@ -570,6 +588,14 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   run now reaches VI 1024 and VI 512 with those controls live; the harness
   FAIL is explained by its final-key-after-transition heuristic. The C88=1
   arm still needs a same-build phase-valid comparison.
+- s2037 supersedes s2036's expectation that the unset arm is a sufficient
+  control for a straightforward value A/B. That expectation was believable
+  because s2036 reached both title and hangar anchors with live controls, but
+  the concurrent same-build pair instead reached hangar only in the C88=1 arm
+  and showed the matching gate-zero versus gate-one split. Because the result
+  is single-source port evidence and concurrent GUI arbitration remains a
+  confound, it does not select an inverse causal story or authorize changing
+  the writer; the next unit is a post-title schedule qualification.
 
 ## Evidence ledger summary
 
@@ -624,9 +650,12 @@ of the control table, leaves the C88 value unchanged, and makes a preflighted
 width-relative input/focus route the next discriminator.
 s2036 then supplies that phase-valid route control: preflight was `ok`, title
 VI 1024 and hangar VI 512 both appeared, and the service/reapply/audio-task
-controls were live. The harness's final-key quality check was invalid for a
-route that had already transitioned, so the next unit is the same-build C88
-unset-versus-`1` A/B rather than another route-recovery run.
+controls were live. s2037 ran the requested same-build value A/B with the same
+preflight and input controls, but produced an inverse single-source route
+split: unset reached title only, while C88=1 reached hangar and gate one. The
+scorer's final-key check was invalid in both arms because the last scheduled
+key followed the relevant transition. The next unit qualifies that split with
+a post-title schedule before interpreting it.
 
 ## Method and safety rules
 
