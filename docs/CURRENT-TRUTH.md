@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1976 (2026-08-19).
+detail. Reviewed through s1977 (2026-08-19).
 
 ## Current state
 
@@ -77,11 +77,16 @@ detail. Reviewed through s1976 (2026-08-19).
   `[drain-tick]` control) never idled call=1; logged 10M timeout forced
   `v0=1` and the function returned; `fs` stayed 1215 with zero further
   `[lle task]`. H-reap-in-loop and H-tick-skips REFUTED; H-stuck-slot
-  SELECTED; force-idle is not sufficient. ORIGIN: leftover nonzero
-  slot-status bytes (legitimate `isAudioSlotActive` byte+0). Writer is the
-  game's own voice key-on. `tickAndReap3DAudioVoices` + `stopAllSynthVoices`
-  do not clear them on this host path. Timeout is a diagnostic escape hatch,
-  not a product mitigation. Default-off yield unchanged.
+  SELECTED; force-idle is not sufficient. s1977 dump (108 `[drain-slots]`
+  samples, same-run `[drain-tick] call=1 iters=1 gate=0x01` control):
+  `ch=18 base=0x801714D0 dest_ok=1 nz=13` frozen for 10M iters. Nonzero
+  idx 0,1,2,3,4,5,6,7,8,9,12,14,16 with bytes `. o \n sBgm c a \xFF`;
+  idx 10,11,13,15,17 are 0. None is s1926 `0x02` key-on. H-one-zombie /
+  H-chCount-wild / H-tick-rekeys REFUTED. ORIGIN: unattributed — leftover
+  `isAudioSlotActive` byte+0 is nonzero but is not the boot 16-voice
+  `0x02` key-on at `0x8018D4A0`; table is the s1943 retarget
+  `0x801714D0`. Timeout is a diagnostic escape hatch, not a product
+  mitigation. Default-off yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -199,17 +204,19 @@ detail. Reviewed through s1976 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1976: in-loop MusyX tick does not idle the drain; force-idle
-does not restore `fs`. Next discriminator is which slot bytes stay
-nonzero (idx / byte / chCount / flicker after tick).
+Re-ranked s1977: leftover drain slots are a frozen 13-zombie set of
+ASCII-shaped bytes at `0x801714D0` ch=18, not `0x02` key-on. Next
+discriminator is whether that region is a voice table.
 
-1. **Hangar frame-freeze: leftover slot bytes never idle (s1976).** Drain
-   call=1 at origin `0x00656400` (craft-select, after hangar `0x006AB400`)
-   spun 10M iters with `tickMusyXIfActive` in the loop, gate `0x800A0F50=1`.
-   Timeout forced idle; function returned; `fs` stayed 1215 and `[lle task]`
-   stopped. Dump `isAudioSlotActive` idx+byte and `chCount` (`0x80141AD0`)
-   on the existing `[drain-tick]` samples. Discriminators: one zombie idx,
-   all slots stuck, wild chCount, or bytes that clear then re-key.
+1. **Hangar frame-freeze: leftover slots are a frozen 13-zombie ASCII-shaped
+   set at `0x801714D0` (s1977).** Drain call=1 at origin `0x00656400`:
+   `ch=18 base=0x801714D0 dest_ok=1 nz=13` identical for 10M iters (108
+   `[drain-slots]` samples; `[drain-tick] call=1 iters=1 gate=0x01`
+   control). Nonzero idx 0–9,12,14,16; zeros 10,11,13,15,17. Bytes are
+   not s1926 `0x02`. H-one-zombie / H-chCount-wild / H-tick-rekeys
+   REFUTED; H-all-stuck is not exact (5 zeros). Next: 32 consecutive
+   bytes at the base + slot-0 16-byte header + live `slot-alloc` count
+   vs ch=18 (s1943 retarget here was count=15).
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -339,6 +346,10 @@ Most recent, still load-bearing for the next unit:
   idled; force-idle did not restore `fs`. s1975's "drains 1–16 completed"
   was slot-ret-caller n (per-site anyAudioSlotActive polls, no v0), not
   drain function returns.
+- s1976 "Writer is the game's own voice key-on" / leftover bytes as
+  legitimate `0x02` key-on status is superseded by s1977 — 13 frozen
+  nonzero bytes at `0x801714D0` are ASCII-shaped and none are `0x02`;
+  the table is not the boot `0x8018D4A0 count=16` array.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.

@@ -1,70 +1,70 @@
-# NEXT work unit (s1977) — dump leftover drain slot bytes
+# NEXT work unit (s1978) — is 0x801714D0 a voice table or leftover text?
 
 HYPOTHESIS-ID: hangar-frame-freeze
 
-## What s1976 settled
+## What s1977 settled
 
-`anyAudioSlotActive` returns 1 when idle. Drain call=1 at craft-select origin
-`0x00656400` spun 10M iters with in-loop `tickMusyXIfActive` (gate=0x01,
-positive control `[drain-tick]`). Timeout forced idle; `fs` stayed 1215;
-zero `[lle task]` after `[drain-exit]`. H-reap-in-loop / H-tick-skips
-REFUTED. H-stuck-slot SELECTED. Force-idle is not a fix.
+Drain call=1 leftover slots are a frozen 13-zombie set: `ch=18
+base=0x801714D0 dest_ok=1 nz=13` for 10M iters. Bytes `. o \n sBgm c a
+\xFF` at 0x88 stride; idx 10,11,13,15,17 are 0; none is `0x02`. H-one-zombie
+/ H-chCount-wild / H-tick-rekeys REFUTED. Force-idle still does not restore
+`fs`. Positive control: `[drain-tick] call=1 iters=1 gate=0x01`.
 
-s1975 "drain #17" was slot-ret-caller n, not a 17th function call.
+## Competing hypotheses (what lives at the table)
 
-## Competing hypotheses (why bytes stay nonzero)
+- **H-ascii-heap:** `0x801714D0` is not a live voice array. Consecutive
+  bytes are a C string / text dump; 0x88-stride just samples printable
+  chars. `isAudioSlotActive` treats them as status.
+- **H-voice-records:** the 0x88 records are real MusyX channel structs
+  (KSEG0 pointers, typed fields). byte+0 just is not `0x02` on this path.
+- **H-count-desync:** s1943 retargeted this address with count=15; ch=18
+  walks 3 slots past the allocation. idx16=0xFF is the past-end sentinel.
+- **H-never-keyed:** records are the live table, but byte+0 was never
+  written as key-on `0x02` and never cleared (stale heap / skipped init).
 
-- **H-one-zombie:** one idx keeps a nonzero slot byte; others are 0.
-- **H-all-stuck:** every live idx has a nonzero byte.
-- **H-chCount-wild:** `MEM_BU(0x80141AD0)` is huge / non-sane, so the walk
-  reads OOB bytes that look active (`isAudioSlotActive` guards the base
-  pointer, not dest+idx).
-- **H-tick-rekeys:** some bytes go 0 then become nonzero again after the
-  in-loop `tickMusyXIfActive` (ticking songs re-keys voices; the extra
-  tick is why idle never arrives).
+## Discriminating measurement (one instrument, one build, one 60s probe)
 
-## Discriminating measurement (one instrument, one build, one 120s probe)
+Keep the s1977 `[drain-slots]` idx+byte dump. On the same `[drain-tick]`
+samples (first 8 + every 100k), also log:
 
-Extend the existing s1976 `[drain-tick]` block (already first 8 + every
-100k of the first 64/every-1000 ticks). On each of those samples log:
-
-- `chCount` = `MEM_BU(0x1AD0, 0x80140000)`
-- for idx in `0 .. min(chCount, 32)-1`: slot byte at
-  `base + idx*0x88` where `base = MEM_W(-0x6908, 0x80150000)`
-  (`isAudioSlotActive` addressing). Print idx+byte for nonzero only,
-  plus `nz` count.
-
-Do not add a new run-lifetime counter. Scope to drain call=1 samples
-already produced by `[drain-tick]`.
+1. 32 consecutive bytes at `base` as hex + ASCII (`[drain-base]`).
+2. First 16 bytes of slot 0 (`base+0`) and slot 16 (`base+16*0x88`)
+   (`[drain-hdr] idx=0|16`).
+3. Enable existing `slot-alloc` via `ROGUESQ_LOG_VI_CALLERS=1` (no new
+   counter) so the live `allocateSongChannelArray` `new`/`count` is in
+   the same run.
 
 Outcomes:
-- one idx always nonzero, others 0 → H-one-zombie
-- every idx nonzero → H-all-stuck
-- chCount > 32 or dest OOB → H-chCount-wild
-- a byte is 0 on one sample and nonzero on the next → H-tick-rekeys
+- consecutive 32 at base is a C string → H-ascii-heap
+- 0x88 records show KSEG0 pointers / typed fields, byte+0 is a status
+  nibble → H-voice-records
+- slot-alloc count=15 at `0x801714D0` while ch=18, and slot-16 header
+  is not a record → H-count-desync
+- records look real, slot-sb never writes `0x02` at this base → H-never-keyed
 
-Positive control: `[drain-tick] call=1 iters=1 gate=0x01` still fires
-(same path as s1976). Keep `ROGUESQ_SPIN_YIELD=1`. Leave the 10M timeout
-in place so the probe still exits the spin.
+Positive control: `[drain-tick] call=1 iters=1 gate=0x01` still fires,
+plus at least one `[avf-gate] site=slot-alloc` before drain (the boot
+`0x8018D4A0 count=16` alloc). Keep `ROGUESQ_SPIN_YIELD=1`. Leave the 10M
+timeout in place.
 
 ## Exact patch site
 
 `apply_s1976_drain_tick` in
 `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`
-and the matching block in `RecompiledFuncs/funcs_30.c` (SENTINEL is
-already applied — incremental edit, do not rerun full fixup).
+and the matching `[drain-slots]` block in `RecompiledFuncs/funcs_30.c`
+(SENTINEL is already applied — incremental edit, do not rerun full fixup).
 
-Log tag: `[drain-slots]`.
+Log tags: `[drain-base]`, `[drain-hdr]`.
 
 ## Exact test
 
 ```sh
-mkdir -p scratch/agent/s1977_drain_slots
+mkdir -p scratch/agent/s1978_drain_base
 env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
-ROGUESQ_STUB_MISSING_FUNCS=1 \
+ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VI_CALLERS=1 \
 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1977_drain_slots 60 2
+zsh tools/probe.sh scratch/agent/s1978_drain_base 60 2
 ```
 
-60s after hangar is enough: s1976 hit 10M / timeout well before that.
+60s after hangar is enough: s1977 hit 10M / timeout well before that.

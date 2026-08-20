@@ -94673,3 +94673,50 @@ Keep the patch as the instrument for s1977's slot-byte dump.
 
 **OUTCOME: ADVANCED** — planned fix built and measured; in-loop tick does
 not idle; force-idle does not restore frames.
+
+## Session 1977 (2026-08-19) — leftover drain slots are a frozen 13-zombie ASCII-shaped set at 0x801714D0
+
+**Instrument.** Extended the s1976 `[drain-tick]` sample block (first 8, then
+every 100k) to dump `chCount` (`MEM_BU(0x1AD0, 0x80140000)`), table `base`
+(`MEM_W(-0x6908, 0x80150000)`), dest_ok, nz, and idx:byte for nonzero slots
+only. Patch in `RecompiledFuncs/funcs_30.c` and `apply_s1976_drain_tick` in
+N64Recomp `fixup_game_funcs.py`. No new run-lifetime counter. Log tag
+`[drain-slots]`. 10M timeout left in place.
+
+**Probe.** `scratch/agent/s1977_drain_slots/run.log` — same eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar recipe, 60s after VI 512. Probe rc=0,
+17 frames, 40406 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.1s #1506 (f_001 is SELECT LEVEL / AMBUSH AT MOS
+EISLEY). Drain call=1 starts at origin `0x00656400` #2048 `fs=1179`. After
+timeout, origin stays `0x00656400`, `fs=1208` through #5312, 0 `[lle task]`
+after `[drain-exit]`. Later frames are black.
+
+Positive control: `[drain-tick] call=1 iters=1 gate=0x01` and matching
+`[drain-slots] call=1 iters=1` (108 paired samples through iters=10000000,
+then `[drain-timeout]` / `[drain-exit] call=1 iters=10000001 v0=1`).
+
+**Dump (stable across 107 complete samples).** `ch=18 base=0x801714D0
+dest_ok=1 nz=13`. Nonzero: idx0=0x2E idx1=0x20 idx2=0x6F idx3=0x20 idx4=0x0A
+idx5=0x20 idx6=0x73 idx7=0x42 idx8=0x67 idx9=0x6D idx12=0x63 idx14=0x61
+idx16=0xFF. Zero: idx 10,11,13,15,17. One apparent payload change at
+iters=600000 is stderr interleave with `[vi] update_screen #2112` mid-line
+(nz still 13; next sample identical to the rest) — not a byte flicker.
+
+**Verdicts.**
+- This refutes H-one-zombie (13 frozen nonzero idxs, not 1).
+- This refutes H-chCount-wild (ch=18<=32, dest_ok=1, base in RDRAM).
+- This refutes H-tick-rekeys (identical idx+byte for 10M iters).
+- This selects H-stable-zombies, not H-all-stuck: 13/18 stuck, 5 zeros.
+- None of the leftover bytes is s1926's `0x02` key-on status. They decode
+  as ASCII `. o \n sBgm c a \xFF` at 0x88 stride. Table base is the s1943
+  retarget `0x801714D0 count=15`, not the boot `0x8018D4A0 count=16`.
+  ch=18 vs that historical alloc-15 is an open lead (idx16=0xFF sits past
+  a 15-slot span).
+
+ORIGIN: unattributed - s1976 named the writer as craft-select voice key-on
+because `isAudioSlotActive` byte+0 was nonzero. This dump shows those bytes
+are not `0x02` and the table is not the boot 16-voice array. No skip/guard
+landed. Next discriminator: 32 consecutive bytes at `0x801714D0` plus
+slot-0 16-byte header plus live `slot-alloc` count vs ch=18.
+
+**OUTCOME: ADVANCED** — planned slot dump ran; four hypotheses discriminated.
