@@ -96541,3 +96541,29 @@ spin, PI, guard, or mitigation conclusion changed.
 
 OUTCOME: ADVANCED — maintenance compaction completed with durable late-session
 material archived and the next provenance work unit preserved.
+
+## Session 2011 (2026-08-20) — provenance repair blocked on phase-valid generated tree
+
+HYPOTHESIS-ID: m5-status3-worker-dispatch
+
+The planned M5 generated-tree provenance work unit could not run because its
+required human input was not available. The read-only checks this iteration
+found 45 `funcs_*.c` files in the current external `RecompiledFuncs` tree,
+uncommitted generated edits in the N64Recomp checkout, and uncommitted edits
+to all four companion symbol files in the `rogue_squadron64` checkout.
+`scratch/agent/s2009-provenance.log` is a 227-byte failed retry: it waited for
+VI 1024 and the process disappeared before reaching that marker. The older
+s2007 status capture did reach VI 1024, but it is not an internally matched
+current artifact.
+
+This establishes that no phase-valid generated tree is available for an
+authorized rebuild in the current workspace. It does not adjudicate the
+generated-layout, stale-snapshot, overlay-pairing, or build-staleness
+hypotheses, and no status, audio, spin, PI, guard, or mitigation behavior was
+changed. A human must provide the phase-valid s2007 generated tree
+(`funcs_*.c`, `funcs.h`, `recomp_overlays.inl`, and `lookup.cpp`) or explicitly
+authorize reconciling the pending companion symbol files before the build and
+phase-gated control can be rerun.
+
+OUTCOME: BLOCKED — phase-valid generated-tree provenance or explicit
+reconciliation authorization is required from the project owner.

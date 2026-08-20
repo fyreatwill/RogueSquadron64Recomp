@@ -1,4 +1,4 @@
-# NEXT work unit (s2011) — obtain phase-valid generated-tree provenance
+# NEXT work unit (s2012) — obtain phase-valid generated-tree provenance
 
 HYPOTHESIS-ID: m5-status3-worker-dispatch
 
@@ -8,6 +8,9 @@ M5 phase-valid generated-tree provenance repair. This is the only next unit;
 do not run the status-writer census until its VI-1024 positive control passes.
 Human input is required: provide the phase-valid s2007 generated tree, or
 explicitly authorize reconciling the four pending companion symbol files.
+The s2011 read-only check found only the 45-file current tree, uncommitted
+companion/symbol edits, and a provenance retry that died before VI 1024. Do
+not build or reconcile until that input is supplied.
 
 ## Competing hypotheses and discriminator
 

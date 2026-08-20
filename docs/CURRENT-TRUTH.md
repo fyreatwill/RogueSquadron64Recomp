@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2010 (2026-08-20).
+for session detail. Reviewed through s2011 (2026-08-20).
 
 ## Current state
 
@@ -35,14 +35,21 @@ for session detail. Reviewed through s2010 (2026-08-20).
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
+- The s2011 provenance check found no phase-valid generated tree available for
+  an authorized rebuild. The current external tree has 45 generated function
+  files and uncommitted companion/symbol edits; the s2009 retry exited while
+  waiting for VI 1024. The status-writer census remains blocked on human input.
 
 ## Active investigation and ranked next steps
 
 1. **M5 generated-tree provenance repair (human input required).** Obtain the
    phase-valid s2007 generated tree, including `funcs_*.c`, `funcs.h`,
    `recomp_overlays.inl`, and `lookup.cpp`, or explicitly authorize
-   reconciliation of the four pending companion symbol files. Force a full
-   rebuild and rerun the existing phase-gated control. VI 1024 selects a
+   reconciliation of the four pending companion symbol files. The s2011
+   read-only check found 45 current generated files and no phase-valid local
+   artifact; `s2009-provenance.log` records that the process died while
+   waiting for VI 1024. After the artifact or authorization arrives, force a
+   full rebuild and rerun the existing phase-gated control. VI 1024 selects a
    usable baseline; another pre-1024 crash or VI-640 stall keeps the status
    census blocked. Do not change status, audio, spin, PI, or mitigation code.
 2. **M5 status-table writer/transition census (only after #1).** Run the
@@ -136,7 +143,8 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
 
 Per-session history through s1879 is in `PROJECT-OVERVIEW.md` §§33–35.
 s1880–s1959 and the VI-1024 chain are in §36. s1961–s2009 are archived in
-§37 and remain in `PORTING-STATE.md` as the primary ledger. The durable
+§37 and remain in `PORTING-STATE.md` as the primary ledger; s2011 records the
+current provenance block. The durable
 milestones are: hangar reachability, bltzal link repair, audio-drain writer
 mapping, M5 plan, opt-in DMA-to-queue mapping, shutdown call-3 reachability,
 and the unresolved generated-tree provenance boundary.
