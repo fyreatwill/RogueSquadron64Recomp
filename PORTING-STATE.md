@@ -96687,3 +96687,36 @@ to obtain the s2007 artifact or explicit owner authorization, then run the
 single seven-site join described in `scratch/agent/NEXT.md`.
 
 OUTCOME: BLOCKED — awaiting phase-valid generated tree or owner authorization.
+
+## Session 2016 (2026-08-20) — refuted the generated-provenance block
+
+HYPOTHESIS-ID: m5-port-writer-thread-census
+
+The block was audited through route 1. I read the N64Recomp README and CLI
+source, then checked the current generated output and existing binary. The
+current `funcs_26.c` already contains the regeneration-stable s2006/s2007
+shutdown and worker census plus the s2008 helper around all seven direct
+status-byte stores. The binary contains the s2008 markers. No owner
+authorization or companion-file reconciliation was needed to test whether
+this tree could provide the required phase witness.
+
+One fresh run used the existing current binary, `ROGUESQ_SPIN_YIELD=1`, the
+eleven-Start recipe, `ROGUESQ_LOG_S2008_STATUS_WRITERS=1`, and the
+phase-gated `tools/probe.sh` capture. The same run reached VI 1024 at 17.5s
+with title origin `0x00790400`, then hangar VI 512 at 29.4s with origin
+`0x006AB400`. The status census emitted slot-0 rows in both phases, including
+`0x8009B2C4`, old `0x01` to new `0x00`, during shutdown call 3 on host thread
+3; shutdown call 3 entry and exit were also observed. These phase markers and
+the static generated-source mapping are independent evidence lines that the
+current 45-file tree is usable for the next port-side census.
+
+The process later crashed at the known guest-PC boundary `0x8000B650`, before
+the worker-side positive control became live. That leaves H1/H2/H3
+unselected and is not evidence against phase validity. No status, audio, spin,
+PI, guard, or mitigation behavior changed. This refutes the stronger claim
+that the exact s2007 generated snapshot or owner authorization is a
+prerequisite; the next unit is the seven-site join on the current tree, with a
+live worker control required before interpreting a null.
+
+OUTCOME: ADVANCED — the provenance block was false as reasoned; the
+port-side writer/thread discriminator remains open.

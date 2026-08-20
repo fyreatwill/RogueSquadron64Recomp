@@ -1,27 +1,39 @@
-Route 3 — re-scoped the dependency after routes 1 and 2 did not satisfy the
-full port-side census.
+# Unblock result (s2016)
 
-Route 1 refutation attempt: read `tools/oracle/README.md`, the oracle
-`--help`, and its source. The installed debugger-off core API has a second
-route, `--vi-poll`, that does not depend on debugger callbacks. I added the
-small `--status-poll` option to poll the 18 status-table words through the same
-core API. In the phase-gated run
-`scratch/agent/s2012-oracle-status-poll.log`, the oracle reached VI 1024 at
-17.3s and hangar VI 512 at `0x006AB400`/`0x006AB800` at 38.4s. In that same
-run slot 0 at `0x154620` changed `0x00 → 0x01 → 0x02 → 0x03 → 0x00` at
-43.1s, 43.4s, and 48.8s. This disproves the narrower claim that the retail
-status transition needs the missing generated tree. The exact debugger-on
-writer watch was also tried with the whole-RDRAM positive control; it reached
-VI 640 only, so it cannot replace the port-side writer/thread census.
+Route 1 — refuted the dependency as reasoned.
 
-Route 2 local satisfaction attempt: searched the workspace and the maintained
-N64Recomp checkout for complete generated bundles. The local batch4–batch8
-archives and the s389/s390 snapshots contain the 45 generated files and the
-three companion artifacts, but predate the s2007/s2008 status instrumentation;
-none is a phase-valid s2007 tree. No unreachable git object supplied one. The
-four modified companion symbol files remain a human authorization boundary.
+## Claim tested
 
-The next unit in `scratch/agent/NEXT.md` is therefore the blocker-free retail
-status-value control. The open dependency is recorded in
-`docs/CURRENT-TRUTH.md`: a phase-valid generated tree or owner authorization is
-still required only for the port-side writer/thread attribution join.
+The prior block said the port-side seven-site census could not run until a
+phase-valid s2007 generated snapshot was supplied, or the owner authorized
+reconciling four pending companion symbol files.
+
+## Evidence
+
+The N64Recomp README/source was read first. The current generated output already
+contains the complete s2006/s2007/s2008 diagnostic path, including the seven
+direct status stores and the named `funcs.h`, `recomp_overlays.inl`, and
+`lookup.cpp` companion artifacts. The existing binary contains the s2008
+markers, so no companion-file reconciliation or new generated snapshot was
+needed for this observation.
+
+One fresh, phase-gated run used the existing current binary and eleven-Start
+recipe with `ROGUESQ_LOG_S2008_STATUS_WRITERS=1`. It reached:
+
+- VI 1024 at 17.5s, title origin `0x00790400`;
+- hangar VI 512 at 29.4s, origin `0x006AB400`;
+- status writer `0x8009B2C4`, slot 0, `0x01 -> 0x00`, during shutdown call 3;
+- shutdown call 3 entry/exit on host thread 3.
+
+The run later crashed at the already-known guest-PC boundary `0x8000B650`
+after the phase controls, before the worker-side positive control became live.
+That crash leaves H1/H2/H3 open; it does not invalidate the phase-validity
+observation. Static generated-source inspection and the dynamic phase/status
+capture are independent evidence lines.
+
+## Conclusion
+
+The exact s2007 snapshot and owner authorization are not prerequisites for
+running the port-side census. The block is false as reasoned. The next unit is
+the same seven-site join on the current 45-file tree, with a live worker
+positive control required before interpreting a null.

@@ -1,22 +1,20 @@
-# NEXT work unit (s2016) — join port-side gate/status writers
+# NEXT work unit (s2017) — join port-side gate/status writers
 
 HYPOTHESIS-ID: m5-port-writer-thread-census
 
 ## Work unit
 
-Obtain from the project owner either the phase-valid s2007 generated snapshot
-(`funcs_*.c`, `funcs.h`, `recomp_overlays.inl`, and `lookup.cpp`) or explicit
-authorization to reconcile the four pending companion symbol files. The s2015
-workspace check found only 45-function candidates and no authorization. Once
-the dependency is supplied, run one batched port-side census joining the gate
-writer PC, slot/index, old/new byte, host thread, shutdown call, and
-service/callback edge. Do not change status, audio, spin, PI, guard, or
-mitigation behavior.
+Run one batched, phase-gated port-side census using the current external
+45-file generated tree. The s2016 capture established that this tree reaches
+the required phases, so do not wait for the exact s2007 snapshot and do not
+reconcile the four companion symbol files. Keep status, audio, spin, PI,
+guard, and mitigation behavior unchanged.
 
-This unit cannot start until that artifact or authorization is supplied. The
-s2014 retail oracle capture is complete and does not substitute for the
-port-side generated provenance. The exact blocked request is in
-`scratch/agent/BLOCKED.md`.
+The join must contain all seven fields in the same run: every direct status
+writer PC and slot/index, old/new byte, host thread, shutdown call, service
+entry/exit, callback dispatch/return, and the expected `0x8009B7EC` zeroing
+edge. The existing s2006/s2007/s2008 generated instrumentation is already in
+the current build.
 
 ## Competing hypotheses and discriminator
 
@@ -25,36 +23,41 @@ port-side generated provenance. The exact blocked request is in
   callback edge before shutdown returns.
 - H2: The port's `0x03` belongs to another slot or writer path; slot/index and
   thread correlation separates it from the watched slot-0 shutdown record.
-- H3: The port never writes slot 0 to `0x03`; the shutdown spin observes a
-  stale or mismatched status, so the missing writer—not the reaper—is the
-  discriminator.
+- H3: The port never writes slot 0 to `0x03`; shutdown spins with live controls
+  but no slot-0 `0x03` writer.
 
-The one discriminating measurement is the seven-site join in one phase-gated
-run: writer PC, slot/index, old/new status byte, host thread, shutdown call,
-service entry, and callback/zeroing edge. H1 requires a same-slot `0x03` then
-zero with the worker edge; H2 requires another slot/index or writer; H3
-requires shutdown with no live slot-0 `0x03` writer.
+The discriminating result is one phase-gated table, not a field-by-field
+probe. H1 requires same-slot `0x03` then zero with the worker edge; H2
+requires another slot/index or writer; H3 requires shutdown with no live
+slot-0 `0x03` writer and a live positive control.
 
-## Exact commands after the dependency is resolved
+## Exact commands
 
-Verify the supplied tree before any build:
+Verify the tree without changing it:
 
 ```sh
-test -f <phase-valid-tree>/funcs.h
-test -f <phase-valid-tree>/recomp_overlays.inl
-test -f <phase-valid-tree>/lookup.cpp
-find <phase-valid-tree> -maxdepth 1 -name 'funcs_*.c' | wc -l
+test -f ../N64Recomp/RecompiledFuncs/funcs.h
+test -f ../N64Recomp/RecompiledFuncs/recomp_overlays.inl
+test -f ../N64Recomp/RecompiledFuncs/lookup.cpp
+test "$(find ../N64Recomp/RecompiledFuncs -maxdepth 1 -name 'funcs_*.c' | wc -l)" -eq 45
 ```
 
-Expected gating outcomes: all four named artifacts exist and the tree is
-identified as the phase-valid s2007 snapshot; otherwise stop before building
-and keep this unit blocked. After the gate passes, H1 is selected by a
-same-slot `0x03` then clear with the worker edge, H2 by another slot/index or
-writer, and H3 by shutdown with no live slot-0 `0x03` writer.
+Run one capture from the build directory. VI 1024 and hangar VI 512 are the
+phase controls; the first 24 service rows are the service positive control,
+and `0x8009B7EC` is the named worker-store control:
 
-If the owner authorizes reconciliation, record the authorization in the
-ledger, reconcile only the four named companion files, then regenerate in the
-required order (`make_elf.py`, N64Recomp, `fixup_game_funcs.py`, CMake). Build
-all census fields in one build and run the existing phase-gated hangar recipe
-with `ROGUESQ_LOG_ALL=1`; do not spend a build/run per field. The outcome table
-above selects the next audio step.
+```sh
+OUT="$PWD/../scratch/agent/s2017_port_writer_join"
+mkdir -p "$OUT"
+env ROGUESQ_SPIN_YIELD=1 \
+  ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_STUB_MISSING_FUNCS=1 \
+  ROGUESQ_LOG_S2008_STATUS_WRITERS=1 \
+  PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=300 PROBE_LEAVE_OK=1 \
+  PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
+  zsh ../tools/probe.sh "$OUT" 180 2 >"$OUT/driver.log" 2>&1
+```
+
+Treat a crash before the phase or before the worker positive control as
+unevaluable and fix the recipe in this iteration; do not infer H2/H3 from a
+dead run. Do not use stopwatch-based comparison against an animating scene.

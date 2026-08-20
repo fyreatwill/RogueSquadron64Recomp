@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2015 (2026-08-20).
+for session detail. Reviewed through s2016 (2026-08-20).
 
 ## Current state
 
@@ -12,10 +12,11 @@ for session detail. Reviewed through s2015 (2026-08-20).
   mitigations are OFF. Any future mitigation must carry an `ORIGIN:` naming
   its writer and stating whether the value is legitimate.
 - The phase-gated baseline reached VI 1024 and hangar VI 512 in the known-good
-  s844 and s1949-era recipes. The later 45-file generated snapshot reaches VI
-  0, 320, and 640 but not 1024; the fresh 51-file tree crashes earlier. The
-  port-side writer/thread census remains dependent on generated provenance,
-  but the status-value branch is no longer unobservable.
+  s844 and s1949-era recipes. A fresh s2016 run of the current 45-file
+  generated tree also reached VI 1024 and hangar VI 512, with the existing
+  status-writer census live. The later crash at guest PC `0x8000B650` is a
+  separate runtime boundary; generated-tree provenance is no longer a
+  prerequisite for the port-side census.
 - `ROGUESQ_SPIN_YIELD=1` remains an environment-gated diagnostic aid. It
   yields runnable menu spins so host VI/SI external messages can drain; it is
   not a default behavior change. With the matching menu-input yield and the
@@ -37,8 +38,9 @@ for session detail. Reviewed through s2015 (2026-08-20).
   non-sync entries, not a metadata sweep.
 - The s2011 provenance check found no phase-valid generated tree available for
   an authorized rebuild. The current external tree has 45 generated function
-  files and uncommitted companion/symbol edits; the s2009 retry exited while
-  waiting for VI 1024. The s2012 and s2013 debugger-off retail-oracle runs
+  files and uncommitted companion/symbol edits; s2016 now supplies the missing
+  phase-valid runtime observation without reconciling those files. The s2012
+  and s2013 debugger-off retail-oracle runs
   both reached VI 1024 and hangar VI 512 while polling slot 0
   through `0x00 → 0x01 → 0x02 → 0x03 → 0x00`. This closes the retail
   status-value branch, but not host writer/thread attribution.
@@ -51,26 +53,24 @@ for session detail. Reviewed through s2015 (2026-08-20).
   store mapping supplies that missing value detail. Retail gate-writer
   attribution is selected, while the port-side writer/thread join remains
   open.
-- The s2015 provenance check found only 45-function candidates in the local
-  workspace (the external tree and scratch batches); none is identified as the
-  phase-valid s2007 witness. The external tree also has uncommitted generated
-  and source edits. No owner authorization to reconcile the four companion
-  files is present, so the port-side census remains blocked and no build or
-  runtime experiment was authorized.
+- The s2015 block was refuted in s2016. The current external tree and the
+  already-built binary expose the complete s2008 seven-site census; one fresh
+  phase-gated run reached VI 1024 and hangar VI 512 and emitted slot-0 rows,
+  including `0x8009B2C4` changing `0x01` to `0x00` during shutdown call 3.
+  No owner authorization or companion-file reconciliation was needed. The
+  seven-site writer/thread join remains unselected because the run crashed at
+  the known `0x8000B650` boundary before the worker-side control became live.
 
 ## Active investigation and ranked next steps
 
-1. **M5 port-side writer/thread census (blocked on human input).** Supply the
-   phase-valid s2007 generated tree, including `funcs_*.c`, `funcs.h`,
-   `recomp_overlays.inl`, and `lookup.cpp`, or explicitly authorize
-   reconciliation of the four pending companion symbol files. The s2015
-   workspace check found only 45-function candidates and no such
-   authorization. Once supplied, run the seven-site join of writer PC,
-   slot/index, old/new byte, thread, shutdown call, and service/callback edge.
+1. **M5 port-side writer/thread census (unblocked).** Verify the current
+   45-file tree and run one batched, phase-gated capture with the existing
+   seven-site join: writer PC, slot/index, old/new byte, host thread, shutdown
+   call, and service/callback edge. The s2016 run proves the tree reaches the
+   required phases, but its crash precedes the worker-side positive control.
    Slot 0 `0x03` then clear selects transient-cleared; another slot selects
    other-slot; no `0x03` with live controls selects never-written. Do not
-   change status, audio, spin, PI, or mitigation code while this dependency is
-   open.
+   change status, audio, spin, PI, or mitigation code.
 2. **M5 callback-side PCM witness (only if #1 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.
@@ -89,10 +89,11 @@ for session detail. Reviewed through s2015 (2026-08-20).
 ## Durable boundaries
 
 **Generated-tree provenance.** The s2008 writer census is regeneration-stable
-and its retail controls are valid, but neither candidate generated tree is a
-phase-valid witness. A live VI-enqueue counter is only a positive control; it
-does not substitute for the VI-1024 phase marker. This dependency remains for
-the port-side writer/thread join, not for observing the retail status value.
+and its retail controls are valid. The s2016 run independently established
+that the current 45-file generated tree reaches VI 1024 and hangar VI 512,
+while the census emitted slot-0 rows. The exact s2007 snapshot and owner
+authorization to reconcile companion files are therefore not prerequisites
+for the port-side writer/thread join; the join itself remains open.
 
 **M5 status transition.** Shutdown call 3 enters and returns in the s2007
 capture. The s2012 and s2013 debugger-off retail oracles both reached VI 1024
@@ -100,8 +101,9 @@ and hangar VI 512, then observed slot 0 at `0x00`, `0x01`, `0x02`,
 `0x03`, and `0x00` again. The status-2 stop path legitimately writes `0x03`
 at `0x8009B30C`, while `serviceVoicePoolFrame` (`0x8009B7EC` among its
 stores) is the legitimate worker-side zeroing path. The value branch is
-settled in this single-source retail execution line; only the port-side
-writer/thread join still needs a phase-valid generated tree.
+settled in this single-source retail execution line; the port-side
+writer/thread join now has a phase-valid generated-tree witness but remains
+unselected.
 
 **M5 opt-in audio.** Both arms receive the same `M_AUDTASK` descriptor and
 the selected image matches `aspMainTextStart`/`aspMainDataStart`. Treatment
@@ -162,8 +164,10 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
 - s1993–s1997's post-drain hypotheses were superseded by the shutdown call-3
   and service-worker boundary.
 - s2006's “call 3 was not reached” was superseded by s2007; s2008–s2009 then
-  established that the current generated snapshots are not phase-valid
-  witnesses for the next status question.
+  established that the then-preserved snapshots were not phase-valid witnesses
+  for the next status question. s2016 refuted the stronger claim that the
+  current generated tree cannot provide a phase-valid census run: it reached
+  VI 1024 and hangar VI 512, then emitted the existing status-writer rows.
 
 ## Evidence ledger summary
 
@@ -172,11 +176,12 @@ s1880–s1959 and the VI-1024 chain are in §36. s1961–s2009 are archived in
 §37 and remain in `PORTING-STATE.md` as the primary ledger; s2011–s2013 record
 the provenance block and its blocker-free retail status re-scope. s2014 adds
 the phase-valid retail gate-PC capture and closes retail writer attribution;
-the port-side join remains unresolved. The durable milestones are: hangar
+the port-side join remains unresolved. s2016 refutes the provenance block while
+leaving the join open. The durable milestones are: hangar
 reachability, bltzal link repair, audio-drain writer mapping, M5 plan, opt-in
 DMA-to-queue mapping, shutdown call-3 reachability, the repeated retail
 status-value sequence, retail gate-writer attribution, and the unresolved
-generated-tree provenance boundary.
+port-side writer/thread join.
 
 ## Method and safety rules
 
