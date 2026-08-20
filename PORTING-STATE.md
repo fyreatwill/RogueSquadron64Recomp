@@ -97814,3 +97814,38 @@ before starting children because noninteractive zsh rejected `set -m`; the
 identical pair was rerun without that shell toggle.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2046 (2026-08-20) — isolated the shared post-wait caller edge
+
+`HYPOTHESIS-ID: m5-postwait-caller-edge`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 58,548 bytes, so this was not a
+maintenance iteration. The retail oracle ran first with the whole-RDRAM
+positive control: it reached 10,000 writes, title VI 1024, hangar VI 512, and
+the three execution watches (`runMenuModelViewerScreen` 1,
+`menuControllerInput` 1, `anyAudioSlotActive` 4,140). The new fixup helper was
+then added in the regeneration-safe path, and the required make-elf,
+N64Recomp, fixup, header-fix, and CMake order built successfully.
+
+The first same-build pair was invalid: `PROBE_PHASE_WIDTH=1024` combined with
+`PROBE_KEYS_FROM_PHASE=1`, so neither key thread started (`[keys]` 0/0 and
+`[pad-host]` 0/0). The fixed pair gated at VI 640 and ran the same eleven-Start
+schedule. Both arms completed rc=0; each driver recorded 11 scheduled keys
+and each run recorded 7 `[pad-host]` rises. The existing s2045 post-wait
+positive controls emitted 8 rows per arm.
+
+The new `[m5-caller-edge]` table emitted the same six rows in both arms:
+`menuOverlayInit->runMenuModelViewerScreen` call and return,
+`menuOverlayInit->waitForAnyAudioSlot` call and return, the post-wait branch
+to `0x800C5D38`, and `menuOverlayInit` return. Neither arm reached
+`menuControllerInput`, service entry/exit, VI 1024, or VI 512. Both emitted
+the same three live `[vi-transition-producer]` rows. This selects Q4, a shared
+guest-to-VI handoff boundary, over Q2's audio-specific continuation and the
+missing-wait-return explanation. It is single-source port evidence for the
+caller table; service and PCM nulls are not phase-valid.
+
+This rules out the planned missing-input explanation for the fixed route and
+also rules out treating the original rc=5 pair as evidence. No mitigation or
+guest value was changed; no crash occurred.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.

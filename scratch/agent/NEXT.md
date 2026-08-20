@@ -1,50 +1,48 @@
-# NEXT work unit (s2046)
+# NEXT work unit (s2047)
 
-HYPOTHESIS-ID: m5-postwait-caller-edge
+HYPOTHESIS-ID: m5-route-qualification
 
 ## Work unit
 
-Ask the retail oracle first with the whole-RDRAM positive control and the
+Ask the retail oracle first with its whole-RDRAM positive control and the
 existing watches at `runMenuModelViewerScreen` (`0x800C28F0`),
 `menuControllerInput` (`0x800B47D0`), and `anyAudioSlotActive`
-(`0x8008E57C`). Then add one regeneration-safe, phase-scoped caller-edge
-table to the fixup script. It must record, per arm and VI-640 phase, the
-post-wait branch's caller/return address, the next `menuOverlayInit` and
-`runMenuModelViewerScreen` edge, the existing `pad-host` and service
-controls, and the existing VI-transition-producer control. Do not add another
-loop counter. Build once in the normal regeneration order and run the
-same C88=1, forced-LLE, spin-yield, eleven-Start pair: arm A sets
-`ROGUESQ_AUDIO_UCODE=1`; arm B leaves it unset. Keep all passive controls and
-do not interpret bridge or PCM rows without both VI 1024 and hangar VI 512
-anchors.
+(`0x8008E57C`). Then run one audio-on route qualification from the existing
+s2046 build. Use `tools/regress.sh` so the key schedule is grouped by VI
+width: eleven Starts after the first VI-640 phase, followed by the known
+title-to-hangar A/Start sequence after VI 1024. Keep C88=1, forced LLE, opt-in
+audio, spin yield, the existing s2046 caller table, and all passive controls.
+Do not add instrumentation or interpret bridge/PCM rows unless both VI 1024
+and hangar VI 512 anchors appear.
 
 ## Competing hypotheses and discriminator
 
-- **Q1 — shared guest route:** both arms have the same post-wait caller/edge
-  table and live input/service controls, but neither reaches a target VI. The
-  shared menu/mission route remains the boundary.
-- **Q2 — audio-specific continuation:** the caller/return or next-edge table
-  diverges by arm, or only one arm reaches `menuControllerInput`. This selects
-  an audio/task-dependent continuation.
-- **Q3 — input/focus confound:** the caller edges match, but one arm lacks its
-  scheduled `pad-host` depth or the 24/24 service control. No route conclusion
-  is allowed; repair the wrapper/input control first.
-- **Q4 — VI handoff boundary:** caller edges and controls match in both arms,
-  and the VI-transition producer is live, but no target VI appears. This moves
-  the boundary below the guest route and above presentation, without claiming
-  an audio cause.
+- **R1 — wrapper/input failure:** regress preflight is not `input=ok visual=ok`,
+  or the phase-relative schedule has no `[pad-host]` rows. The recipe is
+  invalid and must be repaired before route evidence is read.
+- **R2 — shared route remains:** input is live, but the existing caller table
+  still ends at the common `menuOverlayInit` return with no
+  `menuControllerInput`/VI-1024 handoff. The shared route boundary remains.
+- **R3 — route is phase-valid:** the schedule reaches VI 1024 and hangar VI
+  512, making the existing callback-side bridge/PCM table admissible next.
+- **R4 — presentation handoff:** `menuControllerInput` and a VI producer
+  request for 1024 are live, but no 1024 anchor appears. This keeps the
+  boundary between guest route and presentation without assigning an audio
+  cause.
 
-The single discriminating table is keyed by arm, phase, origin, site, caller
-PC/RA, next edge, `pad-host`, service entry/exit, VI-transition-producer rows,
-and target anchors. Q3 wins on a missing control; otherwise Q2 wins on an arm
-edge split, Q4 on identical edges plus live VI producer and no target, and Q1
-on identical edges with the route still stopping before the handoff.
+The single discriminator is the whole-pass table keyed by preflight status,
+VI 640/1024/512 anchors, `[pad-host]` rows, existing s2046 caller edges,
+`menuControllerInput`, VI-producer requested widths, and service controls.
+R1 wins on a missing preflight/input control; otherwise R3 wins on both target
+anchors, R4 on live menu/1024 request without the anchor, and R2 on live input
+with the common pre-1024 edge and no handoff. PCM remains inadmissible for R2,
+R4, or any run missing either target anchor.
 
 ## Commands
 
 ```sh
-# Ground truth: the whole-RDRAM watch must hit its cap and retail must show
-# both target anchors plus the three execution-watch controls.
+# Ground truth first: whole-RDRAM must reach its cap, retail must reach both
+# target anchors, and all three execution watches must fire.
 tools/oracle/build/rs64_oracle \
   --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
   --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
@@ -52,33 +50,23 @@ tools/oracle/build/rs64_oracle \
   --secs 55 --hit-cap 1 --watch-write 0x0:0x800000 \
   --watch-pc 0x800C28F0,0x800B47D0,0x8008E57C --vi-trace \
   --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  > scratch/agent/s2046_oracle.log 2>&1
+  > scratch/agent/s2047_oracle.log 2>&1
 
-# Add the caller-edge table to fixup_game_funcs.py, then regenerate in order:
-cd ../rogue_squadron64 && python3 tools/make_elf.py
-cd ../N64Recomp && find RecompiledFuncs -mindepth 1 -maxdepth 1 -type f -delete && ./build/N64Recomp rogue_squadron.toml && python3 fixup_game_funcs.py
-cd ../RogueSquadron64Recomp && python3 tools/apply_s652_ssnr_hdr_zero.py
-cmake --build build --config Debug --target RogueSquadron64Recomp
-
-# Run both arms from the one build; phase-relative gating is required.
+# Use the existing s2046 build; no generated code or new diagnostic field is
+# needed for this route-qualification unit.
 set +e
-env PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=120 PROBE_LEAVE_OK=1 PROBE_KEYS_FROM_PHASE=1 \
-PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 \
-ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_CALLER_EDGE=1 ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 \
-ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_VI_TRANSITION=1 ROGUESQ_LOG_PCM_SANITY=1 \
-zsh tools/probe.sh scratch/agent/s2046_audio_on 90 0.6 > scratch/agent/s2046_audio_on_driver.log 2>&1 &
-p1=$!
-env -u ROGUESQ_AUDIO_UCODE PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=120 PROBE_LEAVE_OK=1 PROBE_KEYS_FROM_PHASE=1 \
-PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 \
-ROGUESQ_LOG_M5_CALLER_EDGE=1 ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 \
-ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_VI_TRANSITION=1 ROGUESQ_LOG_PCM_SANITY=1 \
-zsh tools/probe.sh scratch/agent/s2046_audio_stub 90 0.6 > scratch/agent/s2046_audio_stub_driver.log 2>&1 &
-p2=$!
-wait $p1; r1=$?
-wait $p2; r2=$?
-printf 'audio_on_rc=%s audio_stub_rc=%s\n' "$r1" "$r2"
+env REGRESS_SECS=105 REGRESS_INTERVAL=0.6 \
+REGRESS_KEYS='640@6:start 640@11:start 640@16:start 640@21:start 640@26:start 640@31:start 640@36:start 640@41:start 640@46:start 640@51:start 640@56:start 1024@2:a 1024@3:start 1024@4:a 1024@6:start' \
+REGRESS_LABEL=s2047_m5_route \
+ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 \
+ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_M5_CALLER_EDGE=1 \
+ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 \
+ROGUESQ_LOG_VI_TRANSITION=1 ROGUESQ_LOG_PCM_SANITY=1 \
+zsh tools/regress.sh scratch/agent/s2047_route 105 \
+  > scratch/agent/s2047_route_driver.log 2>&1
+printf 'route_rc=%s\n' "$?"
 ```
 
-Inspect bounded counts and tails only from the oracle and each `run.log`.
+Inspect `verdict.json`, `env.txt`, bounded tag counts, and tails only; do not
+read the full run log or treat a final-key scorer failure as a route verdict
+when the VI anchors and pad-host rows are present.

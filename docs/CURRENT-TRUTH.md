@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2045 (2026-08-20).
+for session detail. Reviewed through s2046 (2026-08-20).
 
 ## Current state
 
@@ -218,6 +218,14 @@ for session detail. Reviewed through s2045 (2026-08-20).
   PCM became nonzero later while stub PCM stayed all-zero, but that is after
   the shared route and is not a callback verdict. Input depth/focus remains a
   confound.
+- s2046's retail oracle passed its 10,000-write control, both target VI
+  anchors, and all three execution watches. After fixing an invalid circular
+  VI-1024/key gate, the VI-640-gated port pair passed input in both arms
+  (7 `[pad-host]` rises each) and produced identical caller tables through
+  `menuOverlayInit` return, with no `menuControllerInput`, service row, VI
+  target, or PCM-admissible phase. The shared three-row VI producer control
+  and matching edges select Q4, a guest-to-VI handoff boundary, over an
+  audio-specific continuation or missing wait return.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -362,15 +370,15 @@ for session detail. Reviewed through s2045 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 shared post-wait route boundary.** s2045 selected P1: both audio arms
-   execute and return from `waitForAnyAudioSlot`, then take the same
-   `menuOverlayInit` post-wait branch, yet both stop at VI 640. The next unit
-   must isolate the first post-wait caller edge, not add more wait counters:
-   use the existing retail watches plus one phase-scoped return-address/caller
-   table around `menuOverlayInit` and `runMenuModelViewerScreen`, with a
-   per-arm input control. A divergent caller edge selects an arm-specific
-   continuation; identical caller edges select the guest menu/mission route.
-   No bridge or PCM result is admissible without both target VI anchors.
+1. **M5 phase-valid route qualification.** s2046 found identical
+   post-wait caller/return edges and matching input/VI-producer controls in
+   both arms, but no `menuControllerInput`, service rows, or target VI. The
+   next unit must use the existing caller table with the whole-pass
+   `tools/regress.sh` phase scheduler and a known width-640-to-1024-to-512
+   key schedule, with no new wait counters. A live 1024 request/anchor moves
+   the boundary to the callback-side PCM witness; a continued common 640 route
+   keeps the shared handoff open. No bridge or PCM result is admissible
+   without both target VI anchors.
 2. **M5 callback-side PCM witness.** Once the route is phase-valid, keep
    `ROGUESQ_M5_C88_VALUE=1` opt-in and use the existing bridge/sanity table.
    Nonzero bridge bytes plus `all_zero=0` selects upstream-valid PCM;
@@ -448,7 +456,13 @@ stopping at VI 640. The loop's sampled pump count differed (`0xE6` versus
 missing-return and arm-specific-postwait hypotheses for the measured path;
 the caller/route edge after that branch remains open. The retail oracle's
 execution watches are an independent path-live control, not proof of the
-port's caller identity.
+port's caller identity. s2046 added the missing static caller/return identity
+in a regeneration-safe table. After correcting the circular 1024 gate, both
+arms had the same six caller rows, seven input rises, and three VI-producer
+rows, but no `menuControllerInput`, service row, or target anchor. This
+selects a shared guest-to-VI handoff boundary (Q4) and closes the measured
+audio-specific-continuation and missing-wait-return explanations; it does not
+make the service or PCM null phase-valid.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -822,6 +836,9 @@ audio-wait boundary after a fixed eleven-Start control. s2044 showed both
 audio arms share the VI-640 wait/menu/mission route, with input depth still a
 confound. s2045 added positive post-wait entry/return/branch rows in both
 arms and selected the shared post-wait route boundary (P1); the later
+arms and selected the shared post-wait route boundary (P1); s2046 then
+joined static caller/return edges and selected the common guest-to-VI handoff
+boundary (Q4) after a corrected VI-640-gated key control. The later
 audio-on/nonzero versus stub/all-zero PCM split remains phase-invalid.
 
 ## Method and safety rules
