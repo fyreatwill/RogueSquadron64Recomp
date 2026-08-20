@@ -97771,3 +97771,46 @@ equivalence. The next discriminator is a retail execution watch plus one
 fixup-script post-wait entry/return/branch census for the menu/mission path.
 
 ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
+
+## Session 2045 (2026-08-20) — audited the shared post-wait audio boundary
+
+`HYPOTHESIS-ID: m5-audio-wait-boundary`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 59,972 bytes, so this was not a
+maintenance iteration. The retail oracle ran before instrumentation with the
+whole-RDRAM positive control: it reached the 10,000-hit cap, title VI 1024,
+and hangar VI 512. Its execution watches hit `runMenuModelViewerScreen`
+(`0x800C28F0`) once, `menuControllerInput` (`0x800B47D0`) once, and
+`anyAudioSlotActive` (`0x8008E57C`) 5,154 times. This is the independent
+ground-truth control for the corresponding retail path.
+
+The fixup script was extended with one regeneration-safe, phase-scoped census
+covering `runMenuModelViewerScreen`, `waitForAnyAudioSlot`,
+`menuControllerInput`, and `menuOverlayInit` post-wait edges. The required
+`make_elf.py -> N64Recomp -> fixup_game_funcs.py -> CMake` order completed and
+the Debug target built. The first build exposed a quoting error in the prior
+C88 fixup; the fixup was corrected, the generated tree was regenerated, and
+the target rebuilt successfully before the pair was run.
+
+The same-build concurrent pair used C88=1, forced LLE, spin yield, the
+eleven boot-relative Start schedule, and all passive controls. Audio-on set
+`ROGUESQ_AUDIO_UCODE=1`; the control left it unset. Both arms timed out at
+the VI-1024 gate after the same six phase transitions ending at VI 640, with
+no title or hangar anchor. Both had the post-wait positive-control rows and
+the complete observed sequence: `runMenuModelViewerScreen` entry/return,
+`waitForAnyAudioSlot` entry/loop/branch/return, and `menuOverlayInit`
+post-wait return/branch. The sampled loop pump count differed (`0xE6`
+audio-on versus `0x72` stub), but the wait return and post-wait branch values
+matched. The audio-on arm later produced nonzero PCM sanity samples while the
+stub stayed all-zero; those rows are after the shared route and are not a
+callback verdict. The stub also had shallower host-input depth, so focus/input
+remains a confound.
+
+This selects P1: a shared post-wait route boundary. It rules out, for the
+measured path, a missing wait return and an audio-arm-specific continuation.
+It does not identify the next caller/route edge, validate the audio ABI, or
+authorize a writer/guard/skip change. The initial launcher attempt failed
+before starting children because noninteractive zsh rejected `set -m`; the
+identical pair was rerun without that shell toggle.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.

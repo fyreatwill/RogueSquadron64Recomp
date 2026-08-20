@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2044 (2026-08-20).
+for session detail. Reviewed through s2045 (2026-08-20).
 
 ## Current state
 
@@ -201,6 +201,23 @@ for session detail. Reviewed through s2044 (2026-08-20).
   the stub arm 2, so the stub input control was live but shallower. W2 is
   selected (shared pre-title route); input depth/focus remains a confound and
   phase-invalid PCM is ignored.
+- s2045 ran the required same-build pair with the new post-wait census. The
+  independent retail oracle passed the whole-RDRAM control, reached title 1024
+  and hangar 512, and hit the three requested execution watches: one each at
+  `runMenuModelViewerScreen` and `menuControllerInput`, plus 5154 at
+  `anyAudioSlotActive`. On the port, both audio-on and stub arms passed the
+  post-wait positive-control rows and logged the complete sequence:
+  `runMenuModelViewerScreen` entry/return, `waitForAnyAudioSlot`
+  entry/loop/branch/return, and `menuOverlayInit` post-wait return/branch.
+  Both still stopped at VI 640 with no title or hangar anchor. The wait loop
+  sampled different pump counts (`0xE6` audio-on versus `0x72` stub), but its
+  return and post-wait branch values matched. This selects P1, a shared
+  post-wait route boundary, over an audio-arm-specific continuation or a
+  missing wait return; it is single-source port evidence, with the retail
+  watch only confirming that the corresponding retail path is live. Audio-on
+  PCM became nonzero later while stub PCM stayed all-zero, but that is after
+  the shared route and is not a callback verdict. Input depth/focus remains a
+  confound.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -345,14 +362,15 @@ for session detail. Reviewed through s2044 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 shared pre-title menu/mission boundary.** s2044 selected the shared
-   route outcome: both audio arms reached `waitForAnyAudioSlot`, `menu-exit`,
-   and the mission handoff at VI 640, with service controls live, but neither
-   reached title. The next unit must ask the retail oracle for whole-RDRAM plus
-   execution watches at `runMenuModelViewerScreen`, `menuControllerInput`, and
-   `anyAudioSlotActive`, then add one fixup-script post-wait entry/return/branch
-   census and run the same two arms. Require a per-arm `pad-host` control;
-   no bridge or PCM result is admissible without both target VI anchors.
+1. **M5 shared post-wait route boundary.** s2045 selected P1: both audio arms
+   execute and return from `waitForAnyAudioSlot`, then take the same
+   `menuOverlayInit` post-wait branch, yet both stop at VI 640. The next unit
+   must isolate the first post-wait caller edge, not add more wait counters:
+   use the existing retail watches plus one phase-scoped return-address/caller
+   table around `menuOverlayInit` and `runMenuModelViewerScreen`, with a
+   per-arm input control. A divergent caller edge selects an arm-specific
+   continuation; identical caller edges select the guest menu/mission route.
+   No bridge or PCM result is admissible without both target VI anchors.
 2. **M5 callback-side PCM witness.** Once the route is phase-valid, keep
    `ROGUESQ_M5_C88_VALUE=1` opt-in and use the existing bridge/sanity table.
    Nonzero bridge bytes plus `all_zero=0` selects upstream-valid PCM;
@@ -421,6 +439,16 @@ VI 640, with 24/24 service controls; neither reached VI 1024 or VI 512. The
 opt-in arm had 11 host Start rows and the stub 2, so the shared route is
 selected but input depth is not equivalent. This is a route boundary, not
 evidence that the wait itself spins or that the audio image is valid.
+
+**M5 post-wait route boundary.** s2045's same-build census was positive in
+both arms: each entered and returned from `waitForAnyAudioSlot`, and each
+reached the same `menuOverlayInit` post-wait return/branch rows before
+stopping at VI 640. The loop's sampled pump count differed (`0xE6` versus
+`0x72`), but the observed return/branch values did not. This closes the
+missing-return and arm-specific-postwait hypotheses for the measured path;
+the caller/route edge after that branch remains open. The retail oracle's
+execution watches are an independent path-live control, not proof of the
+port's caller identity.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -745,6 +773,11 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   same-build pair reaches the same wait/menu/mission sequence in both arms.
   The stub's two versus opt-in's eleven host Start rows leave input depth as a
   confound; next is the post-wait branch census, not a PCM or writer change.
+- s2045 supersedes the claim that the post-wait boundary was unmeasured. The
+  new census had positive controls in both arms and observed wait entry,
+  return, and the same `menuOverlayInit` post-wait branch. This closes the
+  missing-return and audio-arm-specific-continuation explanations for the
+  measured path; the caller/route edge after that branch remains unmeasured.
 
 ## Evidence ledger summary
 
@@ -776,70 +809,20 @@ a phase-valid A11 table. s2029 closes the first writer/reaper join: the
 call-3 stop caller, slot record, before/after status, and named guest writer
 match, while no status-3/service-store edge is live. The retail oracle was
 independently live in s2029, so the port census is not being used as its own
-ground truth. s2030 validates the opt-in task arm only as a reversible
-experiment: it returns `Broke` and writes DMEM/DMA state but produces no PCM;
-the independent retail gate watch and phase-valid port gate skip make the
-guest gate/consumer census the next M5 boundary. s2031 completes that census
-with live retail/port controls, two phase-valid `0x8008EC88` zero-valued writer
-rows, and 511 raw-gate skip rows in each target phase. The next boundary is
-the existing writer-value divergence; s2032 selects the ordinary retail
-reapply order and leaves a one-writer C88 value A/B, not the wait consumer.
-s2033 then selects the C88=1 pre-phase stall outcome: the unset arm reaches
-the title census, while the value arm repeats VI 640 with the same pre-phase
-controls and no downstream phase-valid rows. The C88 writer's original value
-is legitimate guest state, so the arm remains opt-in and the next boundary is
-writer reachability. s2034 then exercised that witness in concurrent and
-single-window arms. All arms passed the 24/24 service positive control and
-reapply 2/2, but all remained at VI 640, leaving the C88 comparison
-phase-invalid and moving the immediate next unit to explicit control
-qualification. s2035 completed that qualification with
-`env -u ROGUESQ_M5_C88_VALUE`: the same controls and post-640 host-input
-transitions fired, but VI 1024 did not. This selects the common route branch
-of the control table, leaves the C88 value unchanged, and makes a preflighted
-width-relative input/focus route the next discriminator.
-s2036 then supplies that phase-valid route control: preflight was `ok`, title
-VI 1024 and hangar VI 512 both appeared, and the service/reapply/audio-task
-controls were live. s2037 ran the requested same-build value A/B with the same
-preflight and input controls, but produced an inverse single-source route
-split: unset reached title only, while C88=1 reached hangar and gate one. The
-scorer's final-key check was invalid in both arms because the last scheduled
-key followed the relevant transition. s2038 repeated the table with the final
-post-title key before the expected transition: the split remained, C88=1
-reached the phase-10 gate-one path, and unset remained on the phase-8
-gate-zero path. The callback-side PCM witness is now the next M5 boundary;
-the retail-value store remains unchanged and opt-in.
-s2039 then failed to reach that callback boundary in three C88=1 route
-attempts: the five-Start arm, its 90-second retry, and the eleven-Start arm
-all stayed at VI 640 despite live input/visual preflights, 24/24 service
-controls, and real audio-task dispatch. The same five-Start route with
-`ROGUESQ_LOG_ALL` unset also stayed at VI 640, so logging volume is not the
-complete explanation. s2040's same-build comparison then reached title and
-hangar in the C88=1 arm and title in the unset arm, with 24/24 service
-controls in both and `0 -> 1`/gate-one versus `0 -> 0`/511 gate-zero rows.
-This reproduces the inverse single-source port split without selecting a
-causal route hypothesis. s2041's C88=1 callback arm then reached title only:
-the title-side controls were live, including 19 nonzero bridge rows and
-all-zero PCM sanity rows, but the hangar anchor and phase-10 rows were absent.
-The result is a route failure, not a PCM conclusion; the next run adds the
-known title-to-hangar phase-relative key schedule. s2042 ran that schedule
-and an extended-Start fixed form; both reached title only despite live host
-input, 24/24 service controls, real audio tasks, gate-one rows, and callback
-bridge/sanity controls. The scorer's undriven warning is contradicted by the
-same-run `pad-host` rows. This preserves H5 route failure and makes a
-phase-gated `probe.sh` route-isolation run the next unit; PCM rows remain
-inadmissible until VI 512 is present.
-s2043 then ran that route arm with a phase gate and a fixed boot-relative
-eleven-Start correction. The first arm stayed at VI 640 before its gate; the
-fixed arm recorded 11/11 host Start rows at VI 640, reapply 2/2, 24/24 service
-controls, and one `waitForAnyAudioSlot` caller, while the retail oracle's
-whole-RDRAM control reached title 1024 and hangar-origin 512. This makes the
-pre-title audio wait the next M5 boundary; it does not distinguish the wait's
-audio ABI from the guest menu route and does not admit PCM interpretation.
-s2044 then ran the audio-on versus stub pair: retail passed its controls and
-both target anchors; both port arms shared the VI-640 wait/menu/mission route
-with live service controls, but neither target anchor appeared. W2 is selected
-with the stub arm's shallower input count as a confound; PCM remains
-inadmissible.
+ground truth.
+s2030–s2033 closed the opt-in task/guest gate census and selected the
+phase-valid C88 writer A/B as the next boundary; the original writer value
+remains legitimate guest state and the opt-in arm remains off by default.
+s2034–s2038 qualified and repeated that A/B, producing a single-source,
+GUI-confounded inverse route split and making the C88=1 callback PCM witness
+the next boundary. s2039–s2042 showed that witness was not phase-valid on
+fresh C88=1 routes despite live input, service, task, gate, bridge, and PCM
+controls; no PCM conclusion follows. s2043 then selected the pre-title
+audio-wait boundary after a fixed eleven-Start control. s2044 showed both
+audio arms share the VI-640 wait/menu/mission route, with input depth still a
+confound. s2045 added positive post-wait entry/return/branch rows in both
+arms and selected the shared post-wait route boundary (P1); the later
+audio-on/nonzero versus stub/all-zero PCM split remains phase-invalid.
 
 ## Method and safety rules
 
