@@ -97546,3 +97546,39 @@ M3 mitigation target.
 ORIGIN: `reapplyDisplayMode` at `0x8008EC88` is the only changed-value writer
 under test. Retail value `1` is legitimate guest state; the default port value
 `0` remains unchanged and opt-in. No store change or mitigation landed.
+
+## Session 2039 (2026-08-20) — callback witness stayed before target phases
+
+`HYPOTHESIS-ID: m5-callback-side-pcm-witness`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 49,209 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. The planned
+C88=1 arm used forced LLE, opt-in Factor 5 audio, spin yield, `ROGUESQ_LOG_ALL`,
+the existing gate/PCM/service witnesses, and the five width-640 plus three
+width-1024 schedule. Its input and visual preflights were both `ok`, but the
+run stopped on the VI-640 outdoor route. It emitted five post-640 host Start
+edges, 24 `s2006-svc` entries, and 62 audio-task dispatch rows; it reached no
+title or hangar origin and emitted no `[pcm-bridge]` row. The required
+positive controls were live, so this is H4 route failure, not a PCM null.
+
+The fixed 90-second retry with the same five-Start schedule had the same
+phase table: five host Start edges, 24 service entries, 82 audio-task rows,
+no `0x00790400`/`0x006AB400` anchor, and no bridge row. A same-schedule
+90-second C88=1 control with `ROGUESQ_LOG_ALL` unset also stayed at VI 640
+with five host edges, 24 service entries, 82 audio-task rows, and no target
+anchor. This rejects logging volume as the complete route explanation.
+
+The longer s2036-derived eleven-Start schedule was then run with
+`ROGUESQ_LOG_ALL=1`. It again passed input/visual preflight, emitted eleven
+host Start edges, 24 service entries, and 111 audio-task rows, but remained at
+VI 640 for the full 150-second capture with no title/hangar or bridge row. No
+crash, abort, missing-function, or deferred-DL marker appeared in any arm.
+The comparison is single-source port evidence: the route failure is
+reproduced across logging and schedule controls, while the C88-specific
+versus common-route explanation remains open.
+
+The next work unit is a same-build C88=1 versus unset/default route
+comparison under the eleven-Start schedule. It must not interpret bridge or
+PCM rows unless the target VI anchors and positive controls are live.
+
+ORIGIN: no writer or value was changed; this iteration added no mitigation.

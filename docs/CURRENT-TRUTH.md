@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2038 (2026-08-20).
+for session detail. Reviewed through s2039 (2026-08-20).
 
 ## Current state
 
@@ -141,6 +141,16 @@ for session detail. Reviewed through s2038 (2026-08-20).
   C88=1 arm then hit the known RT64 `moveWord` assertion at guest PC
   `0x8000834c`, after the target table was live. The gate/task join is now
   sufficient for the callback-side PCM witness.
+- s2039 could not make the callback-side PCM witness phase-valid. The initial
+  five-Start C88=1 arm, a 90-second retry with the same schedule, and an
+  eleven-Start arm all passed `input=ok visual=ok`, emitted five or eleven
+  post-640 host Start edges, the 24/24 `s2006-svc` control, and real audio-task
+  dispatch, but stayed at VI 640 with no title/hangar anchor and no
+  `[pcm-bridge]` row. A same-schedule C88=1 control with `ROGUESQ_LOG_ALL`
+  unset had the same VI-640 result. This is phase-valid positive-control
+  evidence for H4 route failure, single-source port evidence; it does not
+  select a PCM null or make the logging overhead the cause. The next M5 unit
+  must compare C88=1 against the unset arm under the longer route schedule.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -285,34 +295,39 @@ for session detail. Reviewed through s2038 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 callback-side PCM witness.** Use the opt-in C88=1 arm, forced LLE,
-   opt-in Factor 5 audio, spin yield, and the post-title schedule that reached
-   both target anchors in s2038. Add `ROGUESQ_LOG_ALL=1` so the existing
-   `[pcm-bridge]` census is live, while retaining `ROGUESQ_LOG_PCM_SANITY=1`,
-   the gate/writer witness, and the `s2006-svc` control. Require preflight,
-   title/hangar transitions, post-640 host edges, and real audio-task markers.
-   Compare only phase-valid bridge rows at the two target origins. A bridge
-   row with nonzero bytes plus `all_zero=0` selects upstream-valid PCM and
-   moves the question to AI/device ordering; bridge rows with `nz=0` select
-   an upstream task/ABI problem; no bridge rows with live gate/task controls
-   select the guest AI-submit/queue boundary; missing controls is H4.
-2. **M5 gate-writer value causality.** Keep `ROGUESQ_M5_C88_VALUE=1` opt-in
+1. **M5 callback route qualification.** The s2039 C88=1 arm failed before
+   title despite positive controls, and removing `ROGUESQ_LOG_ALL` did not
+   change that route. Run the C88=1 and unset/default arms from one fresh
+   build with the longer eleven-Start schedule. If unset reaches a target
+   while C88=1 stays at VI 640, the C88 value is the route discriminator; if
+   both stay at VI 640, the common route/focus recipe is the blocker; if both
+   reach targets, the s2039 H4 result was intermittent and the callback
+   witness can be rerun. Keep all PCM conclusions gated on target anchors.
+2. **M5 callback-side PCM witness.** Once the C88=1 arm is phase-valid, use
+   forced LLE, opt-in Factor 5 audio, spin yield, and `ROGUESQ_LOG_ALL=1` so
+   the existing `[pcm-bridge]` census is live, while retaining
+   `ROGUESQ_LOG_PCM_SANITY=1`, the gate/writer witness, and the `s2006-svc`
+   control. A bridge row with nonzero bytes plus `all_zero=0` selects
+   upstream-valid PCM and moves the question to AI/device ordering; bridge
+   rows with `nz=0` select an upstream task/ABI problem; no bridge rows with
+   live gate/task controls select the guest AI-submit/queue boundary.
+3. **M5 gate-writer value causality.** Keep `ROGUESQ_M5_C88_VALUE=1` opt-in
    and the retail-value writer unchanged. The phase-valid s2038 split is
    still single-source because both arms shared GUI focus; revisit only with
    a genuinely focus-isolated discriminator, not another reactive store
    reversal.
-3. **M5 service store edge.** Park unless a future audio arm supplies a live
+4. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
-4. **M3 crash work.** Only perform complete idiom-class audits with a named
+5. **M3 crash work.** Only perform complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` SIGBUS has 7659 clean
    hangar calls in the guarded run; do not add a mitigation. Revisit only with
    a mission-entry recipe or a new crash of that signature.
-5. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
+6. **Hangar visual artifact.** Malformed-triangle H2 is refuted by writer
    attestation; consumer-mode H1 is refuted by the RT64 census (single-source
    against pixel state). H3 remains unavailable because the oracle cannot
    screenshot the LLE path. Do not repeat the `0xD60` scan.
-6. **Generated-symbol renaming sweep.** Remains parked until the M5 arm and
+7. **Generated-symbol renaming sweep.** Remains parked until the M5 arm and
    any required status/PCM boundary are closed; do not use it to outrun the
    audio contract.
 
@@ -626,6 +641,12 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   `moveWord` assertion. The result remains single-source and concurrent-focus
   confounded, so it does not reverse the legitimate writer; the next unit is
   the existing callback-side PCM census.
+- s2039 supersedes s2038's immediate callback-census wording as a runnable
+  next step. That wording was believable because the C88=1 arm had reached
+  the phase-10 gate in s2038, but the fresh five-Start, 90-second retry, and
+  eleven-Start arms all stopped at VI 640 with live service/audio controls;
+  the no-`LOG_ALL` control stopped there too. This leaves the callback
+  question unmeasured and promotes the C88=1 versus unset route comparison.
 
 ## Evidence ledger summary
 
@@ -689,6 +710,14 @@ post-title key before the expected transition: the split remained, C88=1
 reached the phase-10 gate-one path, and unset remained on the phase-8
 gate-zero path. The callback-side PCM witness is now the next M5 boundary;
 the retail-value store remains unchanged and opt-in.
+s2039 then failed to reach that callback boundary in three C88=1 route
+attempts: the five-Start arm, its 90-second retry, and the eleven-Start arm
+all stayed at VI 640 despite live input/visual preflights, 24/24 service
+controls, and real audio-task dispatch. The same five-Start route with
+`ROGUESQ_LOG_ALL` unset also stayed at VI 640, so logging volume is not the
+complete explanation. This is a single-source H4 route result; the next
+discriminator is a same-build C88=1 versus unset/default comparison under
+the eleven-Start schedule.
 
 ## Method and safety rules
 
