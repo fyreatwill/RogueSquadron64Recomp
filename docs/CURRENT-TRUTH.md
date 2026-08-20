@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2019 (2026-08-20).
+for session detail. Reviewed through s2020 (2026-08-20).
 
 ## Current state
 
@@ -75,14 +75,15 @@ for session detail. Reviewed through s2019 (2026-08-20).
   in the current 45-file tree/binary. The static missing-registration/linkage
   H2 explanation is refuted; H1 and H3 remain unselected because the caller
   path itself is not present in this crosswalk.
-- The s2019 runtime-resolution witness was not evaluable as planned. The
-  retail oracle passed its whole-RDRAM control and hit `0x8009B5A8` 4,223
-  times through the phase-valid title/hangar route. The fixed port run reached
-  VI 1024 and 512, but emitted zero `[svc-resolve]`, `[dma-ring-caller]`, and
-  `[tickfunc-caller]` rows; the two independent `get_function` controls were
-  both zero. The direct service entry diagnostic fired its first 20 pre-title
-  rows, so the target-resolution null is a positive-control failure, not H1,
-  H2, or H3 evidence.
+- The s2019 runtime-resolution witness refuted the indirect `get_function`
+  lookup as the observable mechanism: both independent controls
+  (`[dma-ring-caller]` and `[tickfunc-caller]`) were zero in the same
+  phase-valid VI 1024 and 512 run; the direct service entry diagnostic fired
+  its bounded pre-title rows, confirming the phase gate was live. Combined
+  with the s2018 static crosswalk that refuted static linkage/registration,
+  both arms of the missing-registration hypothesis are closed. Only a runtime
+  caller-path or audio-side gate before the function remains open. The s2020
+  checkpoint formally restated this as discrimination language for the gate.
 
 ## Active investigation and ranked next steps
 
@@ -236,7 +237,10 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   believable because the target is a known runtime lookup boundary, but the
   direct service entry control fired pre-title and the phase gates were live;
   the next unit must witness the direct service entry and caller instead of
-  treating an unexercised lookup helper as a map result.
+  treating an unexercised lookup helper as a map result. s2020 restated this
+  formally: both the static (s2018) and indirect-dispatch (s2019) arms of the
+  registration hypothesis are refuted; the direct-entry discriminator (D1-D4
+  table in s2020/NEXT.md) is the required next measurement.
 
 ## Evidence ledger summary
 

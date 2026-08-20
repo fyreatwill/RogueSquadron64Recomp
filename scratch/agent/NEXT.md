@@ -1,85 +1,79 @@
-# NEXT work unit (s2020)
+# NEXT work unit (s2021)
 
 HYPOTHESIS-ID: m5-service-direct-entry-caller-witness
 
+## RESUME: where s2019/s2020 left off
+
+s2019 exported a `get_function` witness to `submodule-patches/N64ModernRuntime.patch`.
+That witness refuted the indirect-dispatch lookup as the phase-valid service
+mechanism (both controls zero, phase gate live). s2020 is a checkpoint that
+formally named the discrimination. No code for the direct-entry arm was written.
+s2021 must add the direct-entry witness to `fixup_game_funcs.py` and run one
+phase-valid port capture.
+
+The retail oracle was already run in s2019: whole-RDRAM write control hit the
+10,000-callback cap; `0x8009B5A8` executed 4,223 times; aggregate retail
+predecessor was `0x80019B74`. A fresh oracle run is NOT required unless the
+binary changed. The port binary at `build/RogueSquadron64Recomp` was last built
+with the s2019 `get_function` witness but has NO direct-entry rows yet.
+
 ## Work unit
 
-Witness the phase-valid direct entry and caller of serviceVoicePoolFrame.
+Add a bounded pre-phase entry control and a phase-gated direct entry/exit
+witness to `serviceVoicePoolFrame` in `../N64Recomp/fixup_game_funcs.py`.
+Do NOT modify `overlays.cpp` or the N64ModernRuntime patch — the direct-entry
+probe belongs in the generated body via the fixup script.
 
-Ask the retail oracle for the phase-valid `0x8009B5A8` execution watch and
-whole-RDRAM write control again, then modify the existing
-`serviceVoicePoolFrame` entry diagnostic through the fixup script (not the
-generated C) to record a bounded pre-phase control and a phase-gated direct
-entry/exit witness. Include the entry's `rs64_phase_ord`, guest thread,
-status, `ctx->r31`/derived guest call site, and the existing `0x8009B7EC`
-store edge. Keep the `get_function` witness, status writers, audio, spin, PI,
-guard, and mitigation behavior unchanged. Run one build and one phase-valid
-port recipe with the direct-entry witness and the existing audio controls.
+The existing diagnostic tag is `[s2006-svc]` (unconditional pre-phase rows,
+first 20 only). Add a second block:
+- Tag `[s2020-svc]` (choose a tag name not already present in the log)
+- Pre-phase bounded control: fire on the first N (e.g. 10) calls before
+  `rs64_phase_ord() >= 4`, confirming the function is reachable before the
+  phase gate
+- Phase-gated entry row: fire on every call where `rs64_phase_ord() >= 4`,
+  recording `rs64_phase_ord()`, the guest thread ID (if available), `ctx->r31`
+  as derived call site, and the status byte at the standard slot-0 address
+- Exit row: fire on return from the same phase-gated calls
+- `0x8009B7EC` store edge: already in the existing diagnostic — keep it; do
+  not add a new tag for it
 
-The s2019 oracle already supplied a phase-valid retail control: whole-RDRAM
-writes reached the 10,000 callback cap, `0x8009B5A8` executed 4,223 times,
-and the oracle's aggregate predecessor was `0x80019B74`. The s2019 port run
-reached VI 1024 and 512 but had zero `[svc-resolve]`, `[dma-ring-caller]`,
-and `[tickfunc-caller]` rows. That was a positive-control failure for the
-indirect-dispatch mechanism, not evidence about the worker boundary.
+After the fixup script change, regenerate in the required order:
+
+```sh
+cd /Users/williambuckley/Documents/Tools/N64Recomp
+python tools/make_elf.py rogue_squadron.toml
+build/Debug/N64Recomp.exe rogue_squadron.toml
+python fixup_game_funcs.py
+cd /Users/williambuckley/Documents/Tools/RogueSquadron64Recomp
+cmake --build build --config Debug --target RogueSquadron64Recomp
+```
+
+Run one phase-valid port capture (same recipe as s2019's successful specific arm):
+
+```sh
+env ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2021-direct-entry 30 12
+```
+
+Extract the discriminating rows:
+
+```sh
+RUN=scratch/s73_post_a_scene/s2021-direct-entry/run.log
+rg -n -e '\[s2020-svc\]' -e '\[s2006-svc\]' -e '\[service-voice-pool-frame\]' -e '\[pcm-sanity\]' -e 'musyx-gate|audio-drain|\[phase\]' "$RUN" | tail -220
+```
 
 ## Competing hypotheses and discriminator
 
-- D1: The phase-valid port reaches the service function directly. The
-  pre-phase control fires, phase-gated entry and exit fire, and the derived
-  guest call site agrees with the retail predecessor (`ctx->r31 - 8` near
-  `0x80019B74`). This selects a live direct service path and moves the open
-  question to its status/worker stores.
-- D2: The phase-valid port never enters the service function. The pre-phase
-  control fires, phase-gated entry/exit and `0x8009B7EC` remain zero, while
-  phase-valid audio-gate/task rows and the VI controls are live. This selects
-  a gate or missing caller before the service function.
-- D3: The phase-valid port enters, but the guest call site or host thread
-  differs from retail. Entry/exit are live with a non-retail `ctx->r31 - 8`
-  or thread, selecting a port call-path/scheduler mismatch rather than a
-  missing registration.
-- D4: Entry is live but the exit/store edge is absent or the status is not
-  the expected phase-valid value. This selects a service-body or callback
-  boundary; it must not be collapsed into D2.
+- D1: Phase-valid `[s2020-svc]` entry fires AND pre-phase control fires → live
+  direct service path. Move to writer/thread join (Next step #2 in CURRENT-TRUTH).
+  Retail predecessor `0x80019B74` is the expected `ctx->r31 - 8` target.
+- D2: Pre-phase control fires but phase-gated entry is zero → gate or missing
+  caller before the function. Requires tracing the audio scheduler path.
+- D3: Phase-valid entry fires with call site differing from retail `0x80019B74`
+  → port call-path or scheduler mismatch; not a registration defect.
+- D4: Entry fires but exit or `0x8009B7EC` store is absent → service-body or
+  callback boundary; do not collapse into D2.
 
-The one discriminating table is: oracle control count, oracle target-PC hits,
-port pre-phase entry control, port phase-valid entry count/call site/thread,
-phase-valid exit count, status at entry, `0x8009B7EC` store count, and the
-existing audio-gate/task rows. A phase-valid port row is only interpreted if
-the pre-phase entry control is nonzero in the same run. Do not run another
-`get_function` or status-writer join until this direct-entry table selects a
-row.
-
-## Exact commands
-
-Ground truth first. Run the existing oracle command from s2019, changing only
-the output path to `scratch/agent/soak_results/s2020-retail-service-entry.log`:
-
-```sh
-tools/oracle/build/rs64_oracle --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom ../rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 80 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-pc 0x8009B5A8 --vi-trace --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start > scratch/agent/soak_results/s2020-retail-service-entry.log 2>&1
-```
-
-Update the existing `serviceVoicePoolFrame` diagnostic in
-`../N64Recomp/fixup_game_funcs.py`, then regenerate in the required order:
-
-```sh
-cd ../N64Recomp && python tools/make_elf.py rogue_squadron.toml
-build/Debug/N64Recomp.exe rogue_squadron.toml
-python fixup_game_funcs.py
-cd ../RogueSquadron64Recomp && cmake --build build --config Debug --target RogueSquadron64Recomp
-```
-
-Run the single phase-valid port capture without `ROGUESQ_LOG_ALL` (s2019's
-ALL arm produced a pre-phase RT64 crash before the gate; the fixed specific
-arm reached both 1024 and 512):
-
-```sh
-env ROGUESQ_LOG_AUDIO_DRAIN=1 ROGUESQ_LOG_AUDIOTICK_TRACE=1 ROGUESQ_LOG_DMA=1 ROGUESQ_LOG_DMA_CALLER=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_VOICE_TRIGGER_CHAIN=1 ROGUESQ_LOG_WAITFORSLOT_GUARD=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2020-direct-entry 30 12
-```
-
-Extract only bounded discriminator rows:
-
-```sh
-RUN=scratch/s73_post_a_scene/s2020-direct-entry/run.log
-rg -n -e '\\[s2020-svc\\]' -e '\\[s2006-svc\\]' -e '\\[service-voice-pool-frame\\]' -e '\\[pcm-sanity\\]' -e 'musyx-gate|audio-drain|\\[phase\\]' "$RUN" | tail -220
-```
+The discriminating table: pre-phase entry control count, phase-valid entry
+count/call site/thread, phase-valid exit count, `0x8009B7EC` store count,
+audio-gate/task rows, VI 1024 and 512 phase rows. Interpret only when the
+pre-phase control is nonzero in the same run.

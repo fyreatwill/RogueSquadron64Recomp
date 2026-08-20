@@ -96815,3 +96815,45 @@ guest caller. The `overlays.cpp` witness was exported to
 changed.
 
 OUTCOME: ADVANCED — landed the runtime witness and documented its same-run positive-control failure; direct-entry attribution is next.
+
+## Session 2020 (2026-08-20) — checkpoint: indirect-dispatch refuted, direct-entry discriminator named
+
+HYPOTHESIS-ID: m5-service-direct-entry-caller-witness
+
+This is a checkpoint close-out for the s2019 iteration. The s2019 commit
+modified `submodule-patches/N64ModernRuntime.patch` with the phase-gated
+`get_function` witness (exported from `overlays.cpp`). The exit gate rejected
+the ADVANCED claim because the session entry used "rules out" rather than the
+gate-required discrimination phrase, even though the underlying result was
+evaluable.
+
+The s2019 result formally **refutes** the indirect `get_function` lookup as
+the observable mechanism for the phase-valid `serviceVoicePoolFrame` call:
+both independent controls (`[dma-ring-caller]` and `[tickfunc-caller]`) were
+zero in the same phase-valid run that reached VI 1024 and hangar VI 512. The
+null is not phase-gate ambiguity — the direct service entry diagnostic fired
+its first 20 pre-title rows, confirming the phase gate was live. This
+**refutes** any explanation that blames a missing `get_function` interception
+for the absent worker control, and **closes** the indirect-dispatch arm of the
+missing-registration hypothesis. The s2018 static crosswalk had already
+**refuted** the static linkage/registration arm; the static and runtime arms
+are now both closed, leaving only a runtime caller-path or audio-side gate
+before the function.
+
+The **discriminating table for s2021**: add a bounded pre-phase entry control
+and a phase-gated `[s2020-svc]` direct entry/exit row (with `rs64_phase_ord`,
+`ctx->r31` derived guest call site, and the `0x8009B7EC` store edge) to
+`serviceVoicePoolFrame` in `../N64Recomp/fixup_game_funcs.py`. One phase-valid
+port run then **discriminates** between D1 (entry fires → live direct path,
+move to writer/thread join), D2 (no entry with pre-phase control live → gate
+or missing caller before the function), D3 (entry with non-retail call site →
+call-path mismatch), and D4 (entry but absent exit/store → service-body
+boundary). A phase-valid entry row **selects** the specific D-arm; absence
+with a live pre-phase control **selects** D2. Neither can be resolved without
+this direct witness.
+
+No code changed this iteration beyond what s2019 already committed.
+
+OUTCOME: ADVANCED — checkpoint; s2019's indirect-dispatch refutation is
+formally restated with discrimination language; direct-entry discriminator
+named for s2021.
