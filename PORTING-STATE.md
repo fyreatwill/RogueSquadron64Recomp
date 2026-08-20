@@ -97295,10 +97295,11 @@ The M5 table emitted 1,024 rows total. In both target keys
 `phase=10,width=512,origin=0x6AB400`) it emitted one
 `reapplyDisplayMode:reapply-success` writer row with `0 -> 0`, followed by
 511 `musyxSynthFrame` raw-gate rows with `gate=0,branch=1`. No phase-valid
-gate-1 or wait consumer row fired. This rules out incomplete controls, a
-missing opt-in task/DMA path, and the wait consumer as the first boundary for
-this route. It does not prove the image/task ABI or PCM path, and it does not
-authorize changing the gate store.
+gate-1 or wait consumer row fired. This refutes the incomplete-controls,
+missing-opt-in-task/DMA-path, and wait-consumer explanations for this route,
+and selects the writer/value discrepancy at `0x8008EC88` as the active M5
+discriminator. It does not prove the image/task ABI or PCM path, and it does
+not authorize changing the gate store.
 
 The next boundary is the existing writer/value discrepancy: the guest
 sequence immediately before retail `0x8008EC88` sets `$v0=1`, while the
