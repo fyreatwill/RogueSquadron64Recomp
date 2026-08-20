@@ -1,4 +1,4 @@
-# NEXT work unit (s2015) — join port-side gate/status writers
+# NEXT work unit (s2016) — join port-side gate/status writers
 
 HYPOTHESIS-ID: m5-port-writer-thread-census
 
@@ -6,14 +6,17 @@ HYPOTHESIS-ID: m5-port-writer-thread-census
 
 Obtain from the project owner either the phase-valid s2007 generated snapshot
 (`funcs_*.c`, `funcs.h`, `recomp_overlays.inl`, and `lookup.cpp`) or explicit
-authorization to reconcile the four pending companion symbol files. Then run
-one batched port-side census joining the gate writer PC, slot/index, old/new
-byte, host thread, shutdown call, and service/callback edge. Do not change
-status, audio, spin, PI, guard, or mitigation behavior.
+authorization to reconcile the four pending companion symbol files. The s2015
+workspace check found only 45-function candidates and no authorization. Once
+the dependency is supplied, run one batched port-side census joining the gate
+writer PC, slot/index, old/new byte, host thread, shutdown call, and
+service/callback edge. Do not change status, audio, spin, PI, guard, or
+mitigation behavior.
 
 This unit cannot start until that artifact or authorization is supplied. The
 s2014 retail oracle capture is complete and does not substitute for the
-port-side generated provenance.
+port-side generated provenance. The exact blocked request is in
+`scratch/agent/BLOCKED.md`.
 
 ## Competing hypotheses and discriminator
 
@@ -42,6 +45,12 @@ test -f <phase-valid-tree>/recomp_overlays.inl
 test -f <phase-valid-tree>/lookup.cpp
 find <phase-valid-tree> -maxdepth 1 -name 'funcs_*.c' | wc -l
 ```
+
+Expected gating outcomes: all four named artifacts exist and the tree is
+identified as the phase-valid s2007 snapshot; otherwise stop before building
+and keep this unit blocked. After the gate passes, H1 is selected by a
+same-slot `0x03` then clear with the worker edge, H2 by another slot/index or
+writer, and H3 by shutdown with no live slot-0 `0x03` writer.
 
 If the owner authorizes reconciliation, record the authorization in the
 ledger, reconcile only the four named companion files, then regenerate in the

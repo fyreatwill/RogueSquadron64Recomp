@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2014 (2026-08-20).
+for session detail. Reviewed through s2015 (2026-08-20).
 
 ## Current state
 
@@ -51,18 +51,26 @@ for session detail. Reviewed through s2014 (2026-08-20).
   store mapping supplies that missing value detail. Retail gate-writer
   attribution is selected, while the port-side writer/thread join remains
   open.
+- The s2015 provenance check found only 45-function candidates in the local
+  workspace (the external tree and scratch batches); none is identified as the
+  phase-valid s2007 witness. The external tree also has uncommitted generated
+  and source edits. No owner authorization to reconcile the four companion
+  files is present, so the port-side census remains blocked and no build or
+  runtime experiment was authorized.
 
 ## Active investigation and ranked next steps
 
-1. **M5 port-side writer/thread census (human input remains open).** Obtain the
+1. **M5 port-side writer/thread census (blocked on human input).** Supply the
    phase-valid s2007 generated tree, including `funcs_*.c`, `funcs.h`,
    `recomp_overlays.inl`, and `lookup.cpp`, or explicitly authorize
-   reconciliation of the four pending companion symbol files. Then run the
-   seven-site join of writer PC, slot/index, old/new byte, thread, shutdown
-   call, and service/callback edge. Slot 0 `0x03` then clear selects
-   transient-cleared; another slot selects other-slot; no `0x03` with live
-   controls selects never-written. Do not change status, audio, spin, PI, or
-   mitigation code while this dependency is open.
+   reconciliation of the four pending companion symbol files. The s2015
+   workspace check found only 45-function candidates and no such
+   authorization. Once supplied, run the seven-site join of writer PC,
+   slot/index, old/new byte, thread, shutdown call, and service/callback edge.
+   Slot 0 `0x03` then clear selects transient-cleared; another slot selects
+   other-slot; no `0x03` with live controls selects never-written. Do not
+   change status, audio, spin, PI, or mitigation code while this dependency is
+   open.
 2. **M5 callback-side PCM witness (only if #1 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.

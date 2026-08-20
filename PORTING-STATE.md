@@ -96667,3 +96667,23 @@ companion symbol files.
 
 OUTCOME: ADVANCED — retail writer attribution completed; the next port-side
 join needs the generated-tree artifact or owner authorization.
+
+## Session 2015 (2026-08-20) — blocked on phase-valid generated provenance
+
+HYPOTHESIS-ID: m5-port-writer-thread-census
+
+The planned port-side writer/thread census did not run because its provenance
+gate was not satisfied. A workspace search found the external generated tree
+and scratch batches, but every candidate had 45 `funcs_*.c` files; none was
+identified as the phase-valid s2007 snapshot. The external N64Recomp tree also
+has uncommitted generated and source edits. No owner authorization to
+reconcile `funcs.h`, `recomp_overlays.inl`, `lookup.cpp`, and the remaining
+companion symbol file was present in the workspace or request.
+
+This rules out treating any available 45-file candidate as a phase-valid
+witness, but it does not discriminate H1/H2/H3. No build, runtime, status,
+audio, spin, PI, guard, or mitigation change was made. The next action remains
+to obtain the s2007 artifact or explicit owner authorization, then run the
+single seven-site join described in `scratch/agent/NEXT.md`.
+
+OUTCOME: BLOCKED — awaiting phase-valid generated tree or owner authorization.
