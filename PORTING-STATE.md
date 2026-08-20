@@ -97693,3 +97693,43 @@ reinterpreted.
 
 ORIGIN: no writer or value was changed; `ROGUESQ_M5_C88_VALUE=1` remained an
 opt-in test arm and this iteration added no mitigation.
+
+## Session 2043 (2026-08-20) — C88 route stopped at the pre-title audio wait
+
+`HYPOTHESIS-ID: m5-callback-route-isolation`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 56,600 bytes, so this was not a
+maintenance iteration. The independent retail oracle was run first with its
+whole-RDRAM positive control: the watch reached its 10,000-hit cap, retail
+entered title VI `1024` at 17.3s, and entered hangar-origin VI `512` at 38.4s.
+The Debug target then rebuilt successfully.
+
+The planned C88=1, forced-LLE, opt-in-audio arm used the phase-gated
+`tools/probe.sh` recipe with `PROBE_KEYS_FROM_PHASE=1`. It exited `rc=5`
+because VI 1024 never appeared; the only phase transitions were 0, 320, 2,
+and 640 at origin `0x00696100`. The same run had live 24/24 s2006 service
+controls, 10,390 direct service entries/exits, and 8,192 gate branch/loop
+rows, but no phase-valid host-input control because the phase-relative keys
+were never scheduled. This did not select the planned post-1024 route table.
+
+Per the failed-experiment rule, the fixed form retained the C88=1, forced-LLE,
+opt-in-audio and passive controls but restored the documented boot-relative
+eleven-Start schedule. It also exited `rc=5` after the 120-second phase wait;
+its phase table again ended at VI 640 origin `0x00696100`. This time the
+positive controls were complete: 11/11 `pad-host` Start rows and 22 host
+Start edges arrived at VI 640, `reapplyDisplayMode` entry/exit was 2/2,
+s2006 service entry/exit was 24/24, and the existing service/gate/task rows
+were live. The fixed run reached `waitForAnyAudioSlot` once at width 640,
+then never produced VI 1024 or VI 512; no crash or abort marker appeared.
+Bridge and PCM-sanity rows were not interpreted because neither target anchor
+was present.
+
+The port-side result rules out missing host Start delivery as the complete
+explanation for this pre-title stop and promotes `waitForAnyAudioSlot` as the
+next M5 boundary. It does not distinguish the opt-in audio task/slot ABI from
+the guest menu route, and it provides no authorization to change the C88
+writer or any mitigation. The next unit is a same-build concurrent
+`ROGUESQ_AUDIO_UCODE=1` versus unset/stub comparison with the same boot route
+and per-arm `pad-host`/service controls.
+
+ORIGIN: no writer, guest value, guard, or skip was changed; `ROGUESQ_M5_C88_VALUE=1` remained an opt-in test arm.

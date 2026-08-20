@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2042 (2026-08-20).
+for session detail. Reviewed through s2043 (2026-08-20).
 
 ## Current state
 
@@ -182,6 +182,19 @@ for session detail. Reviewed through s2042 (2026-08-20).
   so the scorer's “undriven” wording is contradicted by same-run input
   evidence. This is H5 route failure, not a PCM result; the next unit must
   isolate the title-to-hangar route with a phase-gated `probe.sh` schedule.
+- s2043 ran that C88=1 route arm with a phase gate, then its required fixed
+  form with the documented boot-relative eleven-Start schedule. The initial
+  arm never opened VI 1024, and the fixed arm also stopped at VI 640 origin
+  `0x00696100`; the fixed arm nevertheless logged 11/11 `pad-host` Start rows
+  at width 640, `reapplyDisplayMode` 2/2, and the existing 24/24 service
+  controls. It also reached `waitForAnyAudioSlot` once before title, while no
+  VI-1024 or VI-512 anchor appeared. An independent retail-oracle control
+  passed its 10,000-hit whole-RDRAM positive control and reached title 1024 at
+  17.3s plus hangar-origin 512 at 38.4s. This rules out missing host Start
+  delivery as the complete explanation for the port's pre-title stop, but it
+  does not select the guest menu route versus the opt-in-audio wait boundary;
+  bridge and PCM rows remain inadmissible. The next M5 unit is the
+  `waitForAnyAudioSlot` audio-arm discriminator.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -326,16 +339,17 @@ for session detail. Reviewed through s2042 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 title-to-hangar route isolation.** The s2042 C88=1 arm had live host
-   A/Start edges and all title-side audio controls but no VI-512 transition,
-   while the regress scorer mislabeled the route as undriven. Build once and
-   run one forced-LLE, opt-in-audio `tools/probe.sh` arm gated on VI 1024 with
-   `PROBE_KEYS_FROM_PHASE=1` and `PROBE_LEAVE_OK=1`; use a dense title
-   A/Start schedule and all passive M5 controls. A phase-valid VI-512 row
-   selects a wrapper/schedule explanation and reopens the PCM witness; live
-   host input with no VI-512 selects a guest title-to-hangar boundary; no
-   host input selects the focus/event wrapper. Do not interpret bridge or PCM
-   rows without both anchors.
+1. **M5 opt-in-audio wait boundary.** The s2043 fixed C88=1 arm reached
+   `waitForAnyAudioSlot` before title at VI 640 despite 11/11 host Start rows,
+   2/2 reapply controls, and live service/task controls. Build once and run
+   the same boot-relative eleven-Start recipe concurrently with the opt-in
+   Factor 5 audio arm and the unset/stub audio arm, keeping C88=1 and all
+   passive controls. If only the opt-in arm reaches the wait site and the
+   stub arm reaches title, the audio task/slot ABI is selected; if both arms
+   reach the wait site, the C88/menu route remains upstream; if neither does,
+   the current wait observation was route timing. Require phase and
+   `pad-host` controls per arm before interpreting any result; bridge and PCM
+   rows remain inadmissible until VI 1024 and VI 512 both exist.
 2. **M5 callback-side PCM witness.** Once the route is phase-valid, keep
    `ROGUESQ_M5_C88_VALUE=1` opt-in and use the existing bridge/sanity table.
    Nonzero bridge bytes plus `all_zero=0` selects upstream-valid PCM;
@@ -710,6 +724,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   anchor. The regress scorer's undriven diagnosis is therefore not selected;
   the next unit must isolate the route wrapper or guest title-to-hangar
   boundary.
+- s2043 supersedes s2042's immediate post-1024 route-isolation recipe as the
+  next measurement. That recipe was believable because s2042 had a title
+  anchor and live host A/Start rows, but the fresh phase-gated arm never
+  reached title; its fixed boot-relative form supplied the missing input
+  control and still stopped at VI 640 inside `waitForAnyAudioSlot`. The result
+  promotes the opt-in-audio wait boundary without selecting its cause; no
+  PCM or writer-value conclusion follows.
 
 ## Evidence ledger summary
 
@@ -793,6 +814,13 @@ bridge/sanity controls. The scorer's undriven warning is contradicted by the
 same-run `pad-host` rows. This preserves H5 route failure and makes a
 phase-gated `probe.sh` route-isolation run the next unit; PCM rows remain
 inadmissible until VI 512 is present.
+s2043 then ran that route arm with a phase gate and a fixed boot-relative
+eleven-Start correction. The first arm stayed at VI 640 before its gate; the
+fixed arm recorded 11/11 host Start rows at VI 640, reapply 2/2, 24/24 service
+controls, and one `waitForAnyAudioSlot` caller, while the retail oracle's
+whole-RDRAM control reached title 1024 and hangar-origin 512. This makes the
+pre-title audio wait the next M5 boundary; it does not distinguish the wait's
+audio ABI from the guest menu route and does not admit PCM interpretation.
 
 ## Method and safety rules
 
