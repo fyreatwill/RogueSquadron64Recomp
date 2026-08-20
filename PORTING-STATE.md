@@ -96901,3 +96901,42 @@ preserved it by invoking its documented hook after the normal pass. No
 runtime behavior, mitigation, or overlay dispatch code changed.
 
 OUTCOME: ADVANCED — direct target entry/exit was observed and D4 selected; the next discriminator is the service-body gate/store census.
+
+## Session 2022 (2026-08-20) — service body census selected the slot-status predicate
+
+HYPOTHESIS-ID: m5-service-body-store-boundary
+
+The planned M5 body/store work unit was run after the required ground-truth
+check. The retail oracle whole-RDRAM positive control reached its 10,000-hit
+cap in an 8-second run. A separate debugger-on Rice run with the verified
+Start schedule reached VI 3585 and the hangar 512-origin route. Its PC watch
+recorded 3,033 executions each at `0x8009B5D8` and `0x8009B624`, two at
+`0x8009B7EC`, and 15 writes to physical status word `0x154620`. The gate
+read appeared at the aligned physical word `0x0A5120` from PC `0x8009B5AC`;
+the unaligned one-byte watch itself reported zero, so that watch result was
+not used as evidence.
+
+The durable fixup gained one s2022 phase-gated census at the
+`0x8009B5D8` gate, `0x8009B624` loop head, and independent
+`0x8009B7EC` store, plus a shutdown ordinal needed to label store rows.
+The full make_elf → N64Recomp → fixup → CMake regeneration/build completed
+successfully. The one port run reached phase 6 and emitted the same-run
+positive controls: 1,988 s2020 service entries and 1,988 exits, 24 s2006
+entries and 24 exits, and 20 bounded service-entry control rows. The s2022
+census emitted 1,988 phase-valid branch rows, all with gate `0x01` and
+`path=body`, and 1,988 loop rows, all for slot 0 with status `0x00` and
+`zero_skip=1`. Its independently bounded store edge emitted zero rows;
+the old s2006 store arm also emitted zero rows. No pre-phase s2022 row was
+needed for evaluation because the independent phase-valid controls were live.
+
+This selects H2: the port service body is reached past the audio gate, but
+the observed slot/status predicate skips before the worker-side zeroing
+store. It rules out the s2021-era generic gate/registration explanation and
+does not authorize the seven-site writer/thread join to be interpreted yet.
+The retail PC/status-watch result independently rules out “retail never
+executes this body” as an explanation. The port process later hit the known
+PI `do_rom_read` abort (`do_dma`/`piDmaWorker`, last guest PC `0x80001B08`);
+the crash occurred after the phase-valid census and did not invalidate its
+rows. No mitigation or default behavior changed.
+
+OUTCOME: ADVANCED — H2 selected; the next discriminator is the port-side status writer/read join.
