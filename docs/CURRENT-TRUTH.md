@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1997 (2026-08-19).
+detail. Reviewed through s1998 (2026-08-19).
 
 ## Current state
 
@@ -343,10 +343,13 @@ detail. Reviewed through s1997 (2026-08-19).
 - Corrected `npcPowerGeneratorUpdate` is main `.text` at `0x80077AF0`;
   regenerated ELF, N64Recomp, fixups, and Debug target pass. Runtime boundary
   tests remain pre-1024 and unevaluable.
-- M5 audio de-stubbing remains technically unimplemented: audio is still
-  stubbed. The older closure based on dummy-video retail watches is superseded
-  as a planning state by the 2026-08-04/15 directive to reopen M5 with a
-  bounded design document and Rice-hangar validation sequence.
+- **M5 audio plan written (s1998).** `docs/M5-AUDIO-PLAN.md` now inventories
+  the live task stub, stock `aspMain` stub, generated guest gates, voice and
+  table guards, waits, drain timeout/tick, status-3 shutdown spin, scheduler
+  yield, AI status shortcut, SDL fallback, and DMEM lock. It separates the
+  MusyX task/engine question from the still-unproven MORT codec boundary and
+  gives every proposed step a control, VI phase, soak, and rollback. No audio
+  runtime behavior changed in s1998.
 - **Generated-symbol sweep is effectively closed (s1966).** A full-file
   census found s1962–s1965 had only swept a small tail of the TOML;
   845 leftovers resolved in one batch (902 → 57 `func_8[01]*`). The
@@ -399,15 +402,16 @@ detail. Reviewed through s1997 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1997: the user-directed M5 audio track now takes priority; the
-hangar status-3 result remains parked with a precise scheduler lead.
+Re-ranked s1998: the M5 inventory is complete; its ground-truth and generated
+source reconciliation is next. The hangar status-3 result remains parked with
+a precise scheduler lead.
 
-1. **M5 audio de-stubbing design.** Create `docs/M5-AUDIO-PLAN.md` before
-   changing runtime behavior. Survey every audio stub, trap, disabled gate,
-   timeout, and host-side shortcut currently in force; identify the MORT/MusyX
-   boundary; then specify a reversible incremental sequence with a validation
-   soak and positive control for each step. Use the Rice eleven-Start hangar
-   recipe, not dummy-video retail watches.
+1. **M5 ground truth and generated-gate reconciliation (s1999).** Run the
+   retail oracle with a whole-RDRAM positive control and inspect the target
+   physical writes around the audio gates, then reconcile those results with
+   `fixup_game_funcs.py`, generated `funcs_23.c`, and the host M_AUDTASK
+   dispatch. Do not de-stub or repair a gate until the writer and legitimacy
+   are identified. Use the exact measurement in `scratch/agent/NEXT.md`.
 2. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
    census reached hangar `[phase] 512 origin=0x006AB400` in 24.6s and captured
    17 frames. `[svc-pool]` reached `n=1000 armed=0 gate=1`; after
@@ -499,10 +503,15 @@ identified by grep + static analysis.
 Older overturned claims live in `PROJECT-OVERVIEW.md` §26, §35, and §36.
 Most recent, still load-bearing for the next unit:
 
-- The older "M5 audio de-stubbing is closed" planning state is superseded by
-  the 2026-08-04/15 directive: dummy-video retail watches never reached
-  `musyxInitVoiceFromSample`, but audio remains stubbed and must now get a
-  bounded design document before any de-stubbing change.
+- The historical s298–s373 M5 plan is superseded as the current work plan by
+  s1998: its dummy-video closure and old audio-bridge assumptions did not
+  inventory the current task stub, generated gates, waits, or MORT/MusyX
+  uncertainty. The new plan is design-only until oracle and generation
+  ground truth are reconciled.
+- s1998 found a generated-source discrepancy: the fixup force-zero regex for
+  `0x8008EC88` misses the current output because a probe call sits between the
+  instruction comment and the store; the generated reapply-display tail
+  therefore writes `1`. This is not yet a mitigation or a runtime conclusion.
 - s1888–s1917 "stall at 640 then crash" is superseded by s1918 — 2/8 logs
   live 180s with no crash and no `osViSetMode width=1024`.
 - H-slots-stay-live is superseded by s1942 — two `yield_self_1ms` calls
@@ -697,8 +706,11 @@ site=finalizeCurrentSpeechBuffer)
 (H-shutdown-musyx; call 3 never returns)
 / s1996 shutdown inner-site census
 (H-slot-spin; call 3 D_80154620 stays 0x03)
- / s1997 serviceVoicePoolFrame census
+/ s1997 serviceVoicePoolFrame census
  (H-service-starved; no armed worker entry)
+/ s1998 M5 audio inventory and reversible de-stubbing plan
+ (H-MORT-path / H-degenerate-host-path / H-MusyX-mismatch / H-scheduler-independent;
+  design complete, ground truth next)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is

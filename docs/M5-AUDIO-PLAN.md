@@ -1,292 +1,136 @@
 # M5 — audio de-stubbing plan
 
-Written s298. Investigation-first per the M5 goal-stack entry in `docs/CURRENT-TRUTH.md` — this is
-a design doc, no code changes in this session. Survey done by 3 parallel agents (fixup/toml/env-var
-grep, runtime dispatch/DMEM/SDL grep, PORTING-STATE crash-history grep); findings below are sourced
-from that survey, not re-derived from memory.
+Written in session 1998 (2026-08-19). This is the required investigation-first
+design document. This session changes no runtime code and runs no game soak.
 
-## 1. Where audio is actually stubbed today (one point, not many)
+## Contract and boundary
 
-Contrary to the loose framing in the M5 goal-stack entry ("the MusyX ucode already recompiles ... as
-a never-called artifact"), the stub is a **single function pointer swap**, and everything else
-audio-related in the codebase is either a downstream defensive reaction to it or genuinely unrelated:
+The current default is silent, but “audio” is not one missing function:
 
-- **The actual stub**: `musyx_stub()` in `src/main/main.cpp:110-112` — registered as the `M_AUDTASK`
-  handler in `get_rsp_microcode()`'s dispatch switch (`main.cpp:594-595`, `case M_AUDTASK: return
-  &musyx_stub;`). It returns `RspExitReason::Broke` immediately with **zero ucode instructions
-  executed** — the game thinks the audio task completed instantly. `factor5_ucode_b` (the recompiled
-  MusyX ucode, from `factor5b_rsp.toml` → `factor5_ucode_b_recompiled.c`) is compiled, linked, and
-  declared (`main.cpp:78`) but the dispatch switch never returns it — dead code at runtime, not
-  broken code.
-- **The guest-side reinforcement**: `N64Recomp/fixup_game_funcs.py:94-101` force-zeros the
-  audio-engine-enable gate byte (`0x800A0F50`) at its 3 store sites (`initMusyXEngine`,
-  `setDisplayMode`, `reapplyDisplayMode`), so the *guest game code itself* believes audio is off and
-  takes its own degenerate paths, independent of the RSP-side stub. Comment in the patch: "force
-  audio-engine-disabled (MusyX stubbed; spin-wait wedges coop scheduler)" — this was a **fix**, not
-  an arbitrary choice (see §3, crash family #1).
-- **Downstream of the gate**: 8 `musyxKeyOnVoice` divide-by-zero/overflow compiler traps
-  (`fixup_game_funcs.py:113-123`) replaced with early `return` — needed because voice data is
-  uninitialized (a direct consequence of the engine never running), not an independent disable.
-- **Independent of the gate**: the `allocateSongChannelArray` count/pointer race fix (s147,
-  `fixup_game_funcs.py:2318-2400`) is a real correctness fix in code that runs every VI-retrace tick
-  regardless of the enable gate (`musyxSynthFrame`'s bookkeeping is unconditional). This stays as-is
-  through de-stubbing — it is not part of the stub, don't touch it.
-- **~15 env-gated diagnostic loggers** already exist covering the audio call chain end to end
-  (`ROGUESQ_LOG_AUDIO_DRAIN`, `_VOICE_TRIGGER_CHAIN`, `_MUSYX_DMA_CALL`, `_INIT_VOICE_SAMPLE`,
-  `_SONG_ARRAY_LIFECYCLE`, `_VOICE_ACTIVE_GATE`, `_VOICE_CURSOR`, `_STREAM_NODE_INIT`), all default
-  OFF. These are exactly the instruments the de-stubbing soaks below need — no new logging plumbing
-  required, just arm them.
+- `src/main/main.cpp:get_rsp_microcode` sends `M_AUDTASK` to `musyx_stub`, which
+  returns `RspExitReason::Broke` without executing the task. Setting
+  `ROGUESQ_AUDIO_UCODE=1` selects the already-linked
+  `factor5_ucode_b` instead. The toggle is opt-in.
+- `src/rsp/aspMain.cpp:aspMain` is a separate stock-ASP stub. It is not a safe
+  substitute: the project documents the retail task format as Factor 5
+  MusyX-derived, not stock `aspMain`.
+- The guest has a MusyX engine, voice tables, song sequencer, DMA-batch
+  submission, and audio-task completion waits. The voice-compression material
+  identifies MORT as a codec/library boundary inside the MusyX ecosystem; the
+  repository has no MORT RSPRecomp config or completed MORT decoder pass. Do
+  not call `factor5_ucode_b` “the MORT recompile” until its ROM segment and ABI
+  are independently matched. The current working boundary is therefore
+  **MusyX engine/task plumbing, MORT voice data/codec still unproven**.
+- The current generated tree is authoritative for behavior. It has live `=1`
+  stores at guest `0x800A0F50` in `initMusyXEngine` (`0x8008E9F8`),
+  `setDisplayMode` (`0x8008EB40`), and `reapplyDisplayMode` (`0x8008EC88`),
+  with zeroing stores in their entry/failure paths and in
+  `shutdownMusyXEngine`/`musyxNoopStub`. The historical force-zero comment in
+  `../N64Recomp/fixup_game_funcs.py` does not match the current generated
+  `funcs_23.c` because its regex does not account for the intervening
+  `rs64_probe_submit_gate_store` line. Reconcile this before changing a gate.
 
-**Open question RESOLVED (s300, step 1 of §4): task submission is NOT gated.** Source-read of
-`tickMusyXIfActive` (`N64Recomp/RecompiledFuncs/funcs_23.c:6785`) and `musyxSynthFrame`
-(`funcs_24.c:3146`), both reading the same gate byte (`lui $v0,0x800A` / `lbu $v0,0xF50($v0)` =
-`0x800A0F50`):
+## Complete current inventory
 
-- `tickMusyXIfActive` (called from ~15 gameplay sites across `funcs_15/28/29/30/40/41/42/43.c`) DOES
-  fully short-circuit on gate==0 — a single `beq $v0,$zero,L_8008DA3C` at its very top skips
-  `factor5MutexAcquire`, `tickActiveSongs`, `tickAndReap3DAudioVoices`, `stopAllSynthVoices`,
-  `factor5MutexRelease` entirely. This is where songs/voices would normally get added.
-- `musyxSynthFrame` — the **separate**, per-VI-retrace tick (confirmed s101 called via
-  `viRetraceHandlerThread`, independent of `tickMusyXIfActive`) — checks the same gate byte 5 times
-  in its body but only ever uses it to skip narrow slices: `update3DAudioFrame` (1 check,
-  `0x800912A8`) and, inside the per-voice loop, `tickAllActiveSongs`/`tickAudioSequencerFrame` (a
-  2nd read of the same byte at `0x8009145C`, re-checked because the loop runs once per voice). The
-  voice-mixing call (`musyxMixActiveVoices`) and the DMA-batch/task-submission call
-  (`LOOKUP_FUNC(ctx->r3)` at `0x80091684`, confirmed by the s102 diagnostic comment at that exact
-  site to be `submitDmaRequestBatch`) sit on the **unconditional** path after the gate checks — no
-  branch skips them when the byte is 0.
-- Corroborating structural evidence, independent of this trace: crash family #1 (`docs/M5-AUDIO-PLAN.md`
-  §3) — the original *incomplete* stub caused a **boot-time scheduler wedge**
-  (`waitForMusyXAudioTaskDone` spinning on a countdown only real ucode execution decrements). That
-  hang could only happen if the RSP audio-task pipeline (submission → dispatch → completion) already
-  runs every frame regardless of the gate — otherwise there would be nothing for the incomplete stub
-  to fail to complete. The existence of that historical crash family is itself independent proof that
-  `M_AUDTASK` submission is not gate-suppressed.
+“Current” below means present in the generated/runtime tree, not merely
+mentioned in an old plan. Diagnostic-only probes are listed separately after
+the table; they must not be mistaken for behavior changes.
 
-**Both lines of evidence agree**: swapping `musyx_stub` → `factor5_ucode_b` (step 2) is **not** a
-provable no-op — it is a live first exercise of the recompiled ucode, on every VI retrace, on
-whatever (largely degenerate, since `tickMusyXIfActive`'s song/voice population is fully gated off)
-task data `musyxSynthFrame` currently produces. Per §4 step 2's own outcome-2 branch, this needs
-soak scrutiny from the start, not a trivial "did the phase timeline change" check.
+| ID | File and symbol | Current behavior | Guest contract; ownership | Writer / consumer | Reversible change and same-run positive control | Phase, soak, rollback |
+|---|---|---|---|---|---|---|
+| A1 | `src/main/main.cpp:get_rsp_microcode` → `musyx_stub` | Default `M_AUDTASK` returns `Broke`; `ROGUESQ_AUDIO_UCODE=1` selects `factor5_ucode_b`. | `M_AUDTASK` must execute the retail audio task and complete its SP/DP contract. Task ownership is MusyX-derived; MORT ownership is not established. | Guest `submit_rsp_task` writes an `OSTask`; `librecomp/rsp.cpp:run_task` stages DMEM and calls the selected function. | Keep the toggle. First validate both dispatch arms in one build. The `[audtask-dispatch]` line is reachability evidence only; the positive control is a known-good non-audio RSP task completing through the same dispatcher, followed by task exit and slot/PCM evidence for the audio arm. | Boot through title/menu, VI-gated. Treatment rollback is unset `ROGUESQ_AUDIO_UCODE`; no default flip until two-source completion evidence. |
+| A2 | `src/rsp/aspMain.cpp:aspMain` | Always returns `Broke`; not selected by the RS64 dispatch table. | Stock `aspMain` has a different task ABI/format and is not the retail implementation. | No live caller in this target. | Do not enable it. Positive control for any future replacement is a known-good stock-ASP task, not an RS64 `M_AUDTASK`. | Out of M5 execution until task format is proven; rollback is deletion of any experimental dispatch arm. |
+| A3 | Guest gate `0x800A0F50`: `initMusyXEngine`, `setDisplayMode`, `reapplyDisplayMode`, `shutdownMusyXEngine`, `musyXNoopStub` | The three init/display tails write `1`; entry/failure/shutdown/no-op paths write `0`. Consumers branch on this byte. | This is the guest’s MusyX enabled/disabled state, not a host audio-device flag. | Writers are the named guest functions; consumers include `tickMusyXIfActive`, `musyxSynthFrame`, `waitForMusyXAudioTaskDone`, and `musyxNoopStub`. | Before flipping any store, compare generated output to the fixup anchor and ask the retail oracle which physical address writers fire and from which PCs. Positive controls in the same oracle run: whole-RDRAM watch plus the narrow target watch; port evidence must show the named writer’s value transition and a downstream task/slot outcome, not a writer counter alone. | Boot/title and hangar `VI 512 origin=0x006AB400`; use the Rice eleven-Start driver. Roll back by regenerating and restoring the exact store semantics, not by adding a second host guard. |
+| A4 | `funcs_23.c:tickMusyXIfActive` | Returns immediately when `0x800A0F50 == 0`; otherwise acquires the Factor 5 mutex, ticks songs/voices, stops synth voices, and releases the mutex. | Guest audio engine scheduling; MusyX-side. It is not evidence that the RSP task completed. | Gate byte is written by A3; consumers are song/voice population and reaping. | Do not bypass this gate in the first RSP experiment. Later, reverse one writer at a time only after A1 task completion and A3 retail writer attribution are known. Positive control is a nonzero voice/slot transition plus a completed task, not entry count alone. | Gate-reversal step must be phase-gated at title and hangar; rollback one store at a time. |
+| A5 | `funcs_24.c:musyxKeyOnVoice` | Eight generated `break` divide/overflow sites are replaced with early returns (`0x80090CEC`, `0x80090D04`, `0x80090D30`, `0x80090D48`, `0x80090D74`, `0x80090D8C`, `0x80090DB8`, `0x80090DD0`). | These traps protect invalid voice arithmetic in the currently incomplete/degenerate path. They are not proof that the inputs are illegitimate once real MORT/MusyX descriptors arrive. | Voice descriptors and channel records are writers; `musyxKeyOnVoice` consumes them. | Keep until a descriptor census proves the divisor/range contract. Replace one class only with a checked, contract-matching implementation. Positive control must show valid key-on records reaching the normal tail and a corresponding slot status transition. | Hangar VI 512; use `ROGUESQ_LOG_VI_CALLERS=1` and slot writer probes. Roll back the individual fixup class if valid records stop or a new trap appears. |
+| A6 | `funcs_24.c` voice-array base guards | Ten entry guards (including `musyxInitVoiceFromSample`, `musyxStoreVoiceAdsrParams`, `musyxTriggerVoiceAttack`, stop/release/pitch helpers) and two loop-scoped guards in `musyxMixActiveVoices`/`musyxSynthFrame` return or skip when the voice base is outside KSEG0 RDRAM. | Defensive port safety; the legitimate contract is a live voice-array pointer in `0x80000000..0x807FFFFF`. | `allocateSongChannelArray` publishes the base/count; all MusyX voice functions consume it. | Do not remove as “audio de-stubbing.” First obtain retail PC/write evidence for the base and a port positive control showing valid in-range base plus slot activity. Any future relaxation needs an `ORIGIN:` naming the writer. | Hangar VI 512 and mission only after input path is restored; rollback each guard class independently. |
+| A7 | `funcs_26.c:tickAndReap3DAudioVoices`; `funcs_25.c` song-tempo users | One voice-list-node range guard and 43 song-tick-table pointer guards skip invalid pointers rather than dereferencing them. | These are M3 safety patches around MusyX lists/sequencer tables, not the RSP stub. | Guest list/table allocators write the pointers; reaper and sequencer consumers read them. | Leave in place while bringing up audio. Audit or relax only as a separate idiom-class work unit with writer attribution. Positive control is valid list/table traversal and a matching retail write, not zero guard hits. | Not part of the first M5 toggle; rollback is the generated patch regeneration. |
+| A8 | `funcs_15.c:waitForAnyAudioSlot` | The original unbounded `anyAudioSlotActive` loop has a default 500,000-iteration escape; `ROGUESQ_WAITFORSLOT_GUARD_CAP` changes the cap. | Guest waits for an audio slot condition; escape is a port safety hatch, not a completed audio task. | `isAudioSlotActive` reads the voice table; MusyX render/key-on/reap paths write slot bytes. | Keep the guard while real timing is exercised. A future removal requires a same-run proof that a valid slot reaches the expected terminal state. Positive control is a live slot-byte transition and guard-fire count of zero in the normal arm. | Pre-title and hangar phases; rollback by unsetting the experimental cap only if the default guard remains. |
+| A9 | `funcs_24.c:waitForMusyXAudioTaskDone` and `shutdownAudioEngine` | The countdown spin on `0x8014998A` now pumps `musyxSynthFrame` up to 64 times. `ROGUESQ_AUDIO_WAIT_NOPUMP=1` restores the original blind spin. A second spin on `0x8014974C` remains unbounded; its current probes are diagnostic only. | The countdown must be decremented by the real audio pipeline; the flag spin is a separate guest synchronization contract. | `waitFor...` seeds/reads `0x8014998A`; `musyxSynthFrame` is the known decrementer and task producer; the owner of `0x8014974C` must be identified. | Treat the pump as a mitigation, not an explanation. First map the retail writer/consumer for both words and compare a pump-on/off arm in one build. Positive controls: countdown reaches zero and a real `M_AUDTASK` completes; `ROGUESQ_AUDIO_WAIT_NOPUMP=1` must reproduce the known failure mode if the control is valid. | Boot/title VI 320→640; do not run the blind-spin arm as an unattended soak. Roll back by disabling only the pump toggle. |
+| A10 | `funcs_30.c:drainAudioAndFinalizeSpeechBuffer` | The spin has an injected `tickMusyXIfActive` by default; `ROGUESQ_DRAIN_INLOOP_TICK=0` skips it. After 10,000,000 iterations it logs and forces idle. | The ROM drain waits for slots; injected ticking and forced idle are port behavior, not the retail contract. | Slot status is written by render/release/service paths; drain reads it. | Do not default the injection off or remove the timeout until the status-3 worker starvation is explained. Positive control is a slot transition caused by a named writer plus a clean drain return; a timeout fire is evidence of failure, not success. | Hangar VI 512; exact driver is `scratch/s73_post_a_scene/run_mission_keys.sh` with eleven-Start equivalent. Roll back with `ROGUESQ_DRAIN_INLOOP_TICK=0` for the comparison arm; retain the timeout as a diagnostic hatch. |
+| A11 | `funcs_26.c:shutdownMusyXVoices` | Call 3 can spin on `D_80154620` status `0x03`; there is no default timeout or yield. s1997 found no armed `serviceVoicePoolFrame` entry during this spin. | Voice shutdown waits for the service worker to clear the status; this is a live scheduler/worker contract, not a reason to skip shutdown. | `stopVoiceSlotSynced` writes status `0x03`; `serviceVoicePoolFrame` is the named zeroing writer in retail. | First trace worker dispatch and retail writer PCs. Do not add a skip or force-zero mitigation. Positive control is an armed worker entry followed by a status-zero store and shutdown return. | Hangar VI 512, after M5 plan; rollback means reverting only a future diagnostic, not the status value. |
+| A12 | `ROGUESQ_SPIN_YIELD` patches in menu/audio spins | When enabled, yields for 1 ms every 100,000 iterations at menu init, menu input, and audio drain. Default is off. | Scheduler fairness workaround for cooperative host threads; not part of MusyX or MORT. | Host external-message delivery is starved by runnable guest spins; spin sites are consumers. | Use only as a same-run scheduler control, never as an audio fix. Positive control is host VI/SI dequeue progress, with guest audio counters unchanged. | Title/hangar phase gates; rollback is unset env. |
+| A13 | `lib/N64ModernRuntime/librecomp/src/ai.cpp:osAiGetStatus_recomp` | Always reports `0`, treating AI DMA as complete immediately. | This is a host shortcut for AI DMA status; it is independent of RSP `M_AUDTASK` completion. | Guest polls AI status; host `queue_audio_buffer` submits PCM to callbacks. | Replace only after measuring whether retail polls the status and what ordering it requires. Positive control is a queued buffer plus a status transition observed by both host and guest. | Audio-buffer phase; rollback is the current constant-zero implementation. |
+| A14 | `src/main/main.cpp:set_frequency`, `queue_samples`, `get_frames_remaining`; `ultramodern/src/audio.cpp` | SDL device is opened at requested frequency; failure leaves no device. PCM queueing now converts sample count to bytes correctly. Remaining frames are zero if no device is open. Missing callbacks are no-op by runtime contract, but this target registers all three. | Host bridge owns SDL buffering; guest/RSP owns PCM production. MORT/MusyX decoding must precede this bridge. | `osAiSetNextBuffer` calls `queue_audio_buffer`; callback calls `SDL_QueueAudio`. | Keep the byte-count fix. Validate nonzero PCM separately from device success. Positive controls: known nonzero synthetic callback data in a host-only test and `ROGUESQ_LOG_PCM_SANITY` with real ucode; all-zero PCM is a failure result, not a control. | Audio callback phase after RSP task completion; rollback is a callback-only change. |
+| A15 | `lib/N64ModernRuntime/librecomp/src/rsp.cpp:DmemGuard` and `main.cpp:g_lle_task_mutex` | All RSP task staging/execution, including opt-in audio, serializes on the shared global `dmem[]` mutex. | One emulated RSP has one DMEM; serialization is required. This is an invariant, not a stub. | GFX LLE and SP/audio task paths both use the lock. | Do not remove or parallelize. Positive control is a gfx DMEM canary remaining unchanged across an audio task. | Every RSP task phase; rollback means restoring the lock before any other experiment. |
 
-**s173 contradiction, also resolved this session**: `PORTING-STATE.md` Session 173 inferred the gate
-byte was "nonzero mid-run" from a crash backtrace passing through `tickMusyXIfActive`'s body (only
-reachable past the gate check). A full-tree grep of every store to offset `0xF50` off base `0x800A`
-found exactly **one** site that ever writes a value other than a hardcoded literal 0:
-`initMusyXEngine` (`funcs_23.c:9537`, `sb $v0,...` where `$v0=1` on init success) — and that is the
-exact site `fixup_game_funcs.py:94-101`'s regex force-zeros. `setDisplayMode`, `reapplyDisplayMode`,
-`shutdownMusyXEngine`, and `musyxNoopStub` all contain their own **native** `sb $zero,0xF50($at)`
-(hardcoded 0, needs no patch, already always-0). So under the patch, nothing in the recompiled guest
-code can ever legitimately set that byte nonzero — if s173's inference was accurate, the only
-remaining explanations are (a) the patch wasn't applied in that build, or (b) a wild/corrupting write
-clobbered ordinary BSS at that address, consistent with this project's dominant crash theme. Not
-investigated further this session (out of step-1's scope) — flagged for whoever next touches the
-`waitForAnyAudioSlot`/crash-family-#3 thread, since a corrupted gate byte would be a new, previously
-unconsidered mechanism for that family.
+The generic `unknown_task_stub` in `main.cpp` is intentionally outside M5: it
+handles malformed task types, not `M_AUDTASK`. Likewise, the many
+`ROGUESQ_LOG_*` voice, slot, DMA, and gate probes are instruments, not
+de-stubbing changes. They should be armed in every M5 soak, but a probe hit is
+not a positive control unless it marks the mechanism’s expected state change.
 
-## 2. The DMEM-sharing question is already answered — it's not new work
+## Competing hypotheses and discriminator
 
-The M5 goal-stack entry frames "how audio tasks would run LLE alongside gfx (they share the `dmem[]`
-serialization built in s5)" as an open design question. It isn't — s5's mechanism already handles
-this and requires no new work:
+| Hypothesis | Prediction | Discriminating measurement |
+|---|---|---|
+| H-MORT-path | The missing work is a MORT/voice-codec boundary; selecting the current RSP image without naming that ABI cannot produce valid samples. | Independent retail task/ROM-segment attribution plus a port task descriptor/PCM census. A MORT-owned descriptor or decoder path selects the MORT artifact first. |
+| H-degenerate-host-path | The immediate `Broke` stub and host shortcuts are the first safe layer to remove; current guest data is otherwise structurally usable. | Same-build `musyx_stub` versus `factor5_ucode_b`, with direct dispatch completion, task exit reason, slot transition, and PCM controls. A completed task with valid slots selects the host/RSP step; zero valid data does not. |
+| H-MusyX-mismatch | `aspMain` cannot consume this task format; enabling it will hang or corrupt the audio task. | A known MusyX task-format witness and a controlled `aspMain` negative arm. The negative arm must be isolated and never be the default. |
+| H-scheduler-independent | The s1997 status-3 hang is worker starvation independent of decoder correctness. | With audio implementation held constant, correlate worker entry/status-zero writes against the status-3 spin; an absent worker entry with a retail worker writer selects scheduler dispatch, not an audio-codec explanation. |
 
-- There is exactly **one** global `uint8_t dmem[0x1000]` (`N64ModernRuntime/librecomp/src/rsp.cpp:13`),
-  shared by every RSP task regardless of type.
-- `rs64_dmem_lock`/`rs64_dmem_unlock` (weak hooks declared `rsp.cpp:40-41`, `DmemGuard` wraps
-  `run_task`'s staging+execution) are strongly implemented in `src/main/main.cpp:184,189-190` as a
-  single `std::recursive_mutex g_lle_task_mutex`, taken by **both** `rs64_dmem_lock/unlock` and the
-  gfx LLE runner (`factor5_gfx_runner`) before touching `dmem[]`.
-- This mutex exists *because* concurrent gfx/audio DMEM access was already found to corrupt state
-  ("trig-looking data over the dispatch tables", `main.cpp:176-183`) — it is the s5 fix for exactly
-  the hazard the goal-stack entry worries about. Audio and gfx RSP execution are already fully
-  serialized through this one lock; enabling real audio ucode execution does not require any new
-  synchronization design, only exercising the existing one under a case (audio) it hasn't run
-  through since the lock was added.
-- Genuine future risk, not a blocker: true gfx/audio *concurrency* (as opposed to correct
-  serialization) is not on the table without per-task DMEM storage, since the memory itself is
-  shared, not just its access. Out of scope for de-stubbing — the game only needs correct
-  serialized execution, not parallelism, to produce audio.
+The first measurement is therefore not “did a counter print.” It is a complete
+row of: retail writer/consumer attribution, direct `M_AUDTASK` dispatch and
+exit, guest slot transition, and PCM nonzero/silence result. A null without the
+same-run whole-RDRAM/oracle control is unevaluable.
 
-## 3. What flipping the gate byte implies — and the actual crash-risk balance
+## Incremental execution sequence
 
-Reversing the gate-byte force-zero makes the guest game code itself believe audio is enabled,
-activating voice-triggering, `tickMusyXIfActive`, real `waitForAnyAudioSlot` waits, and real
-`allocateSongChannelArray` traffic — paths that today mostly run in a degenerate all-empty state.
-The PORTING-STATE crash history for the 4 documented audio-adjacent crash families is more mixed
-than the goal-stack's rationale ("several recurring crash families are plausibly artifacts of the
-audio-disabled degenerate paths") suggests — worth stating precisely before spending soak budget:
+Every step is one work unit. Build all A/B arms in the same build, phase-gate
+on VI transitions, and enqueue the soak rather than babysitting it. Every
+recipe must arm `ROGUESQ_LOG_ALL`, `ROGUESQ_LOG_PCM_SANITY`,
+`ROGUESQ_LOG_WAITFORSLOT_GUARD`, `ROGUESQ_LOG_AUDIO_DRAIN`,
+`ROGUESQ_LOG_AUDIOTICK_TRACE`, and the voice/slot diagnostics from
+`docs/debug-trace-env-vars.md`; keep `ROGUESQ_SPIN_YIELD` off unless it is the
+explicit control arm.
 
-| # | crash family | status | relationship to the audio-disable stub |
-|---|---|---|---|
-| 1 | Boot-time scheduler wedge (`waitForMusyXAudioTaskDone` spin on a countdown only real ucode decrements) | **closed (s1)** | **Confirmed caused by the incomplete stub** — but the fix was disabling audio *harder* (the gate byte), not de-stubbing. Reversing the gate directly re-exposes this exact, previously-fatal hang unless the ucode now actually completes tasks and decrements the countdown for real. **This is the single highest-risk regression of this whole plan** — see §4 step 3. |
-| 2 | `voice+0x34`/`voice+0x0` DMA corruption ("Thread B", ~30 sessions) | **closed (s147)** | **Confirmed unrelated** — a non-atomic count/pointer race in code that runs unconditionally every VI-retrace regardless of the gate. Already fixed; not expected to be affected by de-stubbing either way. |
-| 3 | `waitForAnyAudioSlot` pre-title SIGSEGV (23rd crash class) | **open/parked**, ~12-21% of pre-scene soak deaths | **Plausible, never confirmed** — `tickMusyXIfActive` is gated on the same byte, and s173 saw it apparently nonzero mid-run (an unresolved contradiction with the disable patch that this plan's step 1 should also help clarify). No positive-control evidence either way. |
-| 4 | Post-cutscene ~92s stall hypothesis | **abandoned/inconclusive** | **Plausible, never confirmed or refuted** — every soak built to test it died to unrelated earlier crashes first. |
+1. **Ground truth and regeneration reconciliation.** Run the retail oracle
+   positive control before adding instrumentation: whole-RDRAM write watch
+   (`--watch-write 0x0:0x800000`) must fire, then a separate target watch for
+   physical `0xA0F50`, `0x14998A`, and the audio-task/AI structures must name
+   retail PCs. Reconcile the generated `0xF50` stores against
+   `fixup_game_funcs.py`. Positive control: oracle whole-RDRAM count and a
+   port `audtask-dispatch` count in the same phase. Soak: one 30-second retail
+   oracle run plus one port boot/title run from the existing driver, no code
+   change. Rollback: none; this is contract capture.
+2. **Validate the existing opt-in RSP arm.** Use one build with default
+   `musyx_stub` and `ROGUESQ_AUDIO_UCODE=1` arms. The direct discriminator is
+   dispatch count, `RspExitReason`, DMEM canary, slot status transition, and
+   PCM nonzero count. Soak command for the treatment is:
+   `env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-audio-step2 30 12`.
+   Run the unset-env control from the same build and phase schedule. Rollback:
+   unset `ROGUESQ_AUDIO_UCODE`.
+3. **Resolve guest gate semantics one site at a time.** Do not reverse all
+   `0xF50` stores. First instrument/observe the three writers and the two
+   zeroing consumers, then test exactly one writer arm with the RSP arm held
+   constant. Positive control is the retail PC attribution plus a guest
+   gate-write count and a task/slot outcome. Soak: the step-2 command with
+   `ROGUESQ_AUDIO_UCODE=1` and only one generated store changed. Rollback:
+   regenerate and restore that store.
+4. **Remove or replace the eight key-on early returns only after valid input
+   is proven.** Use the descriptor fields and divisor values from the same
+   run; preserve a checked fallback for invalid records. Positive control is
+   normal key-on tail + slot `0x02` + eventual `0x00`, not entry count. Soak:
+   hangar eleven-Start recipe, VI `512 / 0x006AB400`; rollback the single
+   key-on fixup class.
+5. **Replace waits with the real completion contract.** Audit the countdown
+   decrement, `0x8014974C` worker flag, `waitForAnyAudioSlot`, drain timeout,
+   and status-3 shutdown together only after steps 2–4 produce real voice
+   transitions. Positive control is named writer → observed value transition
+   → caller return. Soak: 600-second hangar recipe with the pump/timeout
+   toggles recorded; rollback each wait change independently. A timeout fire
+   is a failure and must not be promoted.
+6. **Validate PCM and AI ordering.** With real voice/codec data, require
+   nonzero PCM before changing `osAiGetStatus_recomp` or SDL behavior. Positive
+   control is host-only known nonzero PCM plus real-ucode `pcm-sanity`; a live
+   SDL device alone proves nothing. Soak: title/hangar VI transition followed
+   by the same 600-second hangar recipe; rollback host callback changes only.
+7. **MORT boundary work.** Only after the task ABI and PCM path are named,
+   create the separate MORT artifact/config and validate it against retail
+   sample descriptors. Positive control is a known MORT sample decode with
+   byte-count and waveform checks, followed by the in-game slot/PCM controls.
+   Soak: one controlled voice/sample phase, then hangar; rollback by leaving
+   the MORT dispatch arm opt-in.
 
-Net: **1 of 4 confirmed-related** (and that one argues for caution, not optimism — de-stubbing
-recreates the exact condition that already caused one fatal hang), **2 of 4 plausible-but-unconfirmed**
-(the ones the goal-stack's optimism is actually banking on), **1 of 4 confirmed-unrelated**. This
-doesn't argue against doing M5 — the user directive already set its priority — but it means the
-first de-stubbing step must be defensive about crash family #1 specifically, not just "flip the
-switch and see."
-
-**Separate pre-existing landmine, independent of this plan**: `waitForAnyAudioSlot`
-(`fixup_game_funcs.py:2054-2119`, instrumented s163 but never fixed) is a tight `while
-(!anyAudioSlotActive()) { tickMusyXIfActive(); }` spin with **no timeout**. It's currently benign
-because the stub resolves it fast (empty voice state converges instantly). Real audio load with real
-timing makes an actual hang here more likely, not less. Recommend landing a bounded-iteration guard
-on this loop as a cheap risk-reduction step before step 3 below, independent of whether it ends up
-being the mechanism behind crash family #3.
-
-## 4. Incremental de-stubbing sequence — one validation soak per step
-
-Each step below is a single work unit (one iteration). Do not combine steps — the whole point is
-isolating which layer, if any, causes a regression. Arm every existing audio diagnostic env var
-(§1's list) in every soak from step 1 onward; they're free and already built.
-
-**Step 1 — source-read only, no code change, no soak.** Determine whether the guest ever calls
-`osSpTaskStartGo` for a real `M_AUDTASK` while the gate byte reads 0, versus the gate short-circuiting
-task creation before it reaches the RSP task queue. Trace `initMusyXEngine`/`tickMusyXIfActive`/
-`musyxSynthFrame` forward from the gate-byte read to find where (if anywhere) task submission is
-skipped. This determines whether step 2 is provably a no-op (safe structural change) or already
-changes behavior (needs its own soak scrutiny). Free — do this first regardless of session budget.
-
-**Step 2 — DONE (s300).** Landed as an env-gated toggle, not an unconditional swap: `main.cpp:594-620`
-`case M_AUDTASK` now dispatches `&factor5_ucode_b` when `ROGUESQ_AUDIO_UCODE` is set (any non-`0`
-value), else falls through to `&musyx_stub` unchanged — default behavior is untouched until a human
-decides to flip the env var on by default. Also landed an always-on `[audtask-dispatch]` counter
-(logs `n`/`real_ucode` for the first 20 dispatches then every 256th) as **ground truth** for whether
-`M_AUDTASK` is dispatched at all — step 1's `musyx-dma-call`/`voice-trigger-chain` instruments turned
-out to measure a different mechanism (PI-DMA sample streaming, gated on real song/voice state) and
-fired 0 times in every soak, which would have read as a false null if trusted alone. The counter
-settled it directly: **`M_AUDTASK` dispatches continuously from `n=0` at process boot**, independent
-of `ROGUESQ_AUDIO_UCODE` and of the gate byte — confirms and strengthens step 1's conclusion with a
-2nd, more direct instrument.
-
-3 soaks run (`env ROGUESQ_AUDIO_UCODE=1 HOLD_S=15|60 PROBE_MODE=start_only zsh run_mission_keys.sh
-...`, title→3xStart→a→probe→hold(+stick pulses)→grace, per the existing s73 driver):
-- **Treatment, 86s wall** (`audiostep2_s300`, predates the counter): title reached 45.1s, full
-  key/stick sequence, 60s hold, **0 `[CRASH]`**, `exit=2: 0`, `UnhandledJump: 0`, `missing-func: 0`.
-- **Treatment, 33s wall** (`audtasktreat_s300`, counter live): title reached 44.8s, `real_ucode=1`
-  confirmed firing from `n=0`, dispatch count into the hundreds within the run, **0 `[CRASH]`**, same
-  clean stability line.
-- **Control, `ROGUESQ_AUDIO_UCODE` unset** (`audtaskctrl_s300`): `real_ucode=0` confirmed (musyx_stub,
-  default path), dispatch counter firing identically from boot — then died mid-hold to a **pre-existing,
-  unrelated** crash (`reserveAndEmitDLEntry`/`submitSceneNodeRender`, the known
-  `x0=0x0000000300000000` RDRAM-host-base signature already catalogued in `CURRENT-TRUTH.md`'s crash
-  catalog, item -15 class #18/#14 lineage) — confirms this project's baseline crash rate is nonzero on
-  the unmodified path too; 1 control run is not enough to compare rates, and that wasn't the goal here.
-
-**Verdict**: no hang before title screen, no new `[CRASH]` signature, no `[missing-func]`, in either
-treatment soak, across roughly 1,500+ combined `M_AUDTASK`→`factor5_ucode_b` dispatches (extrapolated
-from the counter's growth rate) spanning boot through title, menu navigation, and a stick-driven hold
-in the level-select war room. `factor5_ucode_b` itself is not observably broken under real dispatch
-load. This is 2 clean runs, not the "multiple soaks, rate comparison" bar step 5 sets for the
-crash-family question — sufficient for step 2's narrower "does the ucode itself crash/hang" check,
-not sufficient to claim anything about crash-family rates yet (that's step 5, after the gate is
-reversed).
-
-**Step 3 — land the `waitForAnyAudioSlot` bounded-timeout guard** (§3's landmine), independent of
-gate state, as risk reduction before real audio timing is exercised. Validation soak: confirm the
-existing ~12-21% pre-scene `waitForAnyAudioSlot` death rate is unaffected (this guard should be a
-pure safety net, not change steady-state behavior) — a same-run positive control needs the guard's
-fire-counter to stay at 0 in a normal soak, proving it isn't firing spuriously.
-
-**Step 4 — reverse ONE gate-byte site at a time, starting with `initMusyXEngine`** (earliest in
-boot, so a regression is caught before menu/gameplay complexity compounds it). Validation soak
-specifically watches for crash family #1's exact signature (`waitForMusyXAudioTaskDone` /
-`shutdownAudioEngine` hang, boot-time scheduler wedge) recurring — this is a confirmed historical
-failure mode being deliberately re-exposed, not a hypothetical. If it recurs: the ucode from step 2
-is completing dispatch (`Broke`/return) but not actually decrementing the real countdown the guest
-spin-waits on — needs a source-level fix in the ucode's task-completion signaling, not a gate
-re-revert. If it doesn't recur after 2 clean soaks: reverse `setDisplayMode`'s site next, same
-validation, then `reapplyDisplayMode` last.
-
-**Step 5 — once all 3 gate sites are reversed and boot/menu is stable**, this is the actual test of
-the goal-stack's rationale: soak through the pre-title/title/menu phases the usual way and check
-whether crash families #3 (`waitForAnyAudioSlot` SIGSEGV) and #4 (post-cutscene stall) change rate
-relative to their documented historical baselines (~12-21% and "every soak died earlier" respectively).
-Use the existing `ROGUESQ_LOG_AUDIO_DRAIN`/`_VOICE_ACTIVE_GATE`/`_VOICE_TRIGGER_CHAIN` instruments
-(already armed from step 1 onward) to get a same-run positive control that real voice/slot activity
-is actually occurring, not just that the crash rate moved for an unrelated reason. This step needs
-multiple soaks (rate comparison, not a single pass/fail) — budget accordingly, don't treat 1-2 clean
-runs as confirmation per the standing 0/2-is-a-weak-null lesson from the `MATEXPIRY_GUARD` thread.
-
-**Step 6 — validate real PCM reaches SDL, not just that the guest stopped hanging.** ANSWERED s371:
-NO, not yet — see `docs/CURRENT-TRUTH.md` item -226 and Overturned conclusions. This section's
-original claim that the host bridge (`ultramodern::audio_callbacks_t`, `audio.cpp`'s
-`queue_samples`/`SDL_QueueAudio` wiring) was "already fully implemented and functional... nothing
-needs to be built here" was WRONG — it had a real unit-mismatch bug (silently dropped half the
-bytes of every PCM buffer), now fixed. With that fixed and a sanity counter
-(`ROGUESQ_LOG_PCM_SANITY`) added, two soaks (13,832 total logged calls, including 13,825 under
-genuine RSP-dispatched `real_ucode=1`) found **100% of samples reaching `queue_samples` are
-exactly zero** — the real ucode dispatches and completes without crashing but produces no audible
-content.
-
-**WHY, answered s373 (source trace, no new soak) — item -227:** voice population is structurally
-blocked, not an ucode-internal mixing bug. `tickMusyXIfActive` (the only caller of
-`tickActiveSongs`/`tickAndReap3DAudioVoices`, s300) short-circuits whenever the gate byte at
-`0x800A0F50` reads 0. `reapplyDisplayMode` (`funcs_23.c:9805-10024`) runs every video frame (s304)
-and unconditionally zeros that byte at its own entry, then — whenever `reapplyAudioConfig` succeeds,
-the common case — runs a full song/voice/stream reset (`resetSongSubsystemCounter`,
-`initSongSequencerPools`, `resetMusyXEngineState`, `clearStreamedVoiceFlags`, `reset3DAudioLists`)
-and would restore the byte to 1 at its tail, except that tail write IS the exact site
-`fixup_game_funcs.py` force-zeros — required to stay force-zeroed (s343: reversing it broke
-title-reach 0/5 times). Net: every frame re-disables audio and wipes any accumulated voice/song
-state, so the gate never durably opens and voices are never added — the ucode faithfully mixes
-"nothing" into silence. **Hypothesis 1 (voice array never populated) confirmed; hypotheses 2
-(mixing internally gated off) and 3 (wrong buffer) are moot** — nothing reaches the ucode to mix or
-misroute in the first place. The only path to real audio output is resolving WHY reversing the C88
-site causes the pre-title hang (never root-caused across the original 41-session s297-337 arc,
-which reverted empirically without finding the mechanism) — a large, separate investigation, not a
-Step 6 follow-on. See `docs/CURRENT-TRUTH.md` item -227 and NEXT.md for the open decision.
-
-## 5. Summary of what this doc changes vs. the existing goal-stack framing
-
-- The stub is one function-pointer swap (`main.cpp:594-595`), not a diffuse set of gates — the
-  incremental sequence above can isolate "did the ucode itself break" (step 2) from "did enabling
-  the guest-side gate break" (step 4) from "did real audio content break something downstream" (step
-  5), rather than one big flip.
-- The `dmem[]` sharing question the goal stack posed as open is already answered by the existing s5
-  mutex — no new design work needed there, only validation that it holds up under real audio
-  traffic (implicitly covered by every soak above).
-- ~~The host SDL/`ultramodern` audio-output bridge is already fully built and functional — it does
-  not need any work as part of this plan.~~ **WRONG, overturned s371**: it had a real bug (silently
-  dropped half the bytes of every PCM buffer to `SDL_QueueAudio`), now fixed — see Step 6 above and
-  `docs/CURRENT-TRUTH.md`'s Overturned conclusions. The RSP-side ucode dispatch and guest-side
-  enable gate weren't the only things needing touching after all.
-- The expected payoff for M3 crash-family dissolution is weaker than the goal-stack's phrasing
-  implied: 1 of 4 documented audio-adjacent crash families is confirmed related to the stub, and that
-  one argues for caution (a historical fatal hang gets re-exposed), not for an easy win. 2 of 4 are
-  plausible-but-unconfirmed — step 5 is where that gets tested for real, not assumed going in.
-
-## Next work unit
-
-Steps 1-3 are DONE (s300 for 1-2, see §4; the `waitForAnyAudioSlot` bounded-timeout guard for 3,
-landed and validated in the s297-322 arc). **Step 4 is now DONE (s340)**: of the 3 gate-byte sites,
-`initMusyXEngine`'s was found to be dead code (s306, never actually called — reversing it validates
-nothing) and the other 2 (`setDisplayMode`, `reapplyDisplayMode`) were both made permanently reversed
-as the shipped default (`fixup_game_funcs.py`, N64Recomp repo, untracked) after 2 apparently-clean
-confirmatory soaks with both reversed simultaneously (s340bothgates/s340bothgates2, HOLD_S=600 each,
-zero crash markers). See CURRENT-TRUTH item -196 / PORTING-STATE Session 340 — **but see the s342
-correction immediately below before trusting that validation.**
-
-**Step 5 is BLOCKED, not in progress (s342 correction of s341)**: s341 queued a 6-run soak batch
-(`scratch/agent/soak_queue/m5step5_rate_1..6.sh`) to measure step 5's crash-family rate; reading the
-raw logs of the first 2 completed recipes by hand (s342) found the game never reaches the title screen
-at all — 0 `[keys]` presses, only 3 `[phase] vi_width=` lines (0->320->640 by 2.3s) in ~599s of runtime.
-Cross-checking s340's own raw logs found the IDENTICAL signature: **s340's "2/2 clean soaks" promotion
-validation never left the pre-title boot-logo screen either** — no menu navigation, no craft select, no
-mission launch, in either soak. Isolated the cause to `reapplyDisplayMode`'s gate specifically:
-`setDisplayMode` reversed alone (s328's `step4gate2` log) reaches title normally at 45.4s and proceeds
-into the menu; every soak with `reapplyDisplayMode`'s gate reversed (alone, s329, or combined, s340x2/
-s341x2) has NEVER reached title — 0/5 across 3 sessions. The `[vi-fs-decision] pairs=0` plateau this
-whole arc characterized as a "benign locked-camera cutscene" (s339, item -195) actually onsets
-pre-title, immediately post-logo — it blocks title-screen advancement entirely, not just one already-
-reached cutscene frame. Cancelled the remaining `m5step5_rate_3..6.sh` recipes (moved to
-`scratch/agent/soak_queue/cancelled/`) since step 5's family #3/#4 rate comparison is defined relative
-to phases (pre-title death rate, post-cutscene stall) this build cannot reach while the gate stays
-reversed. **Recommended next step (not yet done)**: revert `reapplyDisplayMode`'s gate to force-zero
-(keep `setDisplayMode`'s reversal — the only one actually validated through title/menu/mission-launch),
-rebuild, re-validate title-reach is restored to the ~45s baseline. Step 5 can only resume once title is
-reachable again. See CURRENT-TRUTH item -198 / PORTING-STATE Session 342.
+No step may default stock `aspMain`, remove a safety guard without an ORIGIN,
+or treat a forced-idle/skip/yield as an explanation.

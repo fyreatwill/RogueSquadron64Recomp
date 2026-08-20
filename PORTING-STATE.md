@@ -95999,3 +95999,44 @@ s1971–s1974 entries.
 **OUTCOME: ADVANCED** — fixed worker-entry census selects H-service-starved
 and refutes the worker-gate hypothesis; M5 audio planning is next by
 directive.
+
+## Session 1998 (2026-08-19) — rebuilt the M5 audio de-stubbing inventory
+
+The required M5 design work unit was completed without a build or game run.
+Read `docs/CURRENT-TRUTH.md`, `scratch/agent/NEXT.md`, and the soak-result
+tail first; `CURRENT-TRUTH.md` was 43,359 bytes, so maintenance was not
+triggered. Then surveyed the project runtime, generated audio functions, the
+external `fixup_game_funcs.py`, `factor5b_rsp.toml`, the AI/SDL bridge, and the
+oracle documentation.
+
+The old `docs/M5-AUDIO-PLAN.md` was a historical s298–s373 plan, not a current
+s1998 inventory. It incorrectly described the guest gate as force-zeroed and
+treated the audio bridge as already complete. The replacement plan records the
+live default `musyx_stub`, opt-in `ROGUESQ_AUDIO_UCODE` arm, separate unused
+`aspMain` stub, eight `musyxKeyOnVoice` early returns, voice/list/table guards,
+countdown/flag waits, drain tick/timeout, status-3 shutdown spin, scheduler
+yield, AI status shortcut, SDL fallback, and DMEM serialization. It explicitly
+separates the MusyX task/engine question from the still-unproven MORT codec
+boundary and gives a positive control, VI phase, soak, and rollback for each
+planned step.
+
+Static source evidence and the generated output agree that the three
+`0x800A0F50` init/display tails currently write `1`; the generated output also
+contains their zeroing entry/failure/shutdown/no-op paths. The survey found a
+regeneration hazard: `fixup_game_funcs.py`'s force-zero regex for
+`0x8008EC88` does not match current generated output because
+`rs64_probe_submit_gate_store` is between the instruction comment and the
+store, so the current generated `reapplyDisplayMode` writes `1`. This is a
+configuration/source-of-truth discrepancy, not a runtime experiment result.
+
+This work rules out the old plan as a trustworthy description of the current
+audio state and rules out stock `aspMain` as an implicit first step. It does
+not select MORT versus MusyX, does not explain the status-3 worker starvation,
+and makes no claim about runtime stability or PCM content; those require the
+ground-truth oracle and phase-gated soaks specified by the new plan.
+
+SOAK-RESULTS tail consumed: no new queued verdict beyond the already-recorded
+s1971–s1974 entries.
+
+**OUTCOME: ADVANCED** — current M5 inventory and reversible execution plan
+written; next work unit is ground-truth/generation reconciliation.
