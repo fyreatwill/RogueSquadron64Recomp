@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1985 (2026-08-19).
+detail. Reviewed through s1986 (2026-08-19).
 
 ## Current state
 
@@ -139,6 +139,13 @@ detail. Reviewed through s1985 (2026-08-19).
   `tickAudioChannel` (note engine). H-missing-song-stop REFUTED.
   H-song-stop-unmapped SELECTED for the handle. H-drain-expects-bgm-end
   SELECTED: song-stop starts fade, looping BGM never idles.
+  s1986: slot+0x30 stays `0x14` and slot+0x6C stays 3 on every
+  hangar idx through 108 `[drain-path]` samples (iters 1–10M);
+  dump is after in-loop `tickMusyXIfActive`. Loopers 0–4, 6, 7,
+  13–17 keep `b=0x02`; oneshots 9–12 go idle and stay idle.
+  H-fade-timer-stuck SELECTED; H-fade-counts-no-zero /
+  H-fade-zeros-rekey REFUTED. `beginVoiceFadeRelease` n
+  155→181333 during the spin (rewrite of `0x14` every tick).
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -256,20 +263,21 @@ detail. Reviewed through s1985 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1985: song-stop IS `stopSongByHandle` →
-`stopVoicesByHandle` (handle dest) → `beginVoiceFadeRelease`
-(hangar +0x30=0x14). Fade starts; looping slot+0 stays `0x02`.
+Re-ranked s1986: fade writes +0x30=`0x14` / +0x6C=3 and those
+fields never change through 10M. Fade is also re-entered every
+in-loop tick (n 155→181333). Looping slot+0 stays `0x02`.
 
-1. **Hangar frame-freeze: fade envelope vs loop skip (s1985).**
-   Same-run controls: MarkRetrigger n=1 dest=`0x8018D4A0` ra=0,
-   257 `[init-desc]`, `[keyon-w40]` first 8, `[drain-path] call=1
-   unmap=0`, last alloc tickn=4 `0x801714D0 count=18`,
-   `[drain-stop-sum] entry=1` MarkRetrigger n=184 nhangar=84,
-   `beginVoiceFadeRelease` n=154, `stopVoicesByHandle` n=23,
-   `musyxStartVoiceRelease` n=22 nmap=22 nhangar=21.
-   H-missing-song-stop REFUTED. Next: add slot+0x30 (release timer)
-   and slot+0x6C (ADSR state, fade writes 3) to the existing
-   per-idx `[drain-path]` dump, hangar alloc through 10M timeout.
+1. **Hangar frame-freeze: +0x30 store census (s1986).**
+   Same-run controls: MarkRetrigger n=1 dest=`0x8018D4A0`, 234
+   `[init-desc]`, `[drain-path] call=1 unmap=0` 18 idx rows with
+   `h30=`/`b6c=` at iters=1, last alloc tickn=4 `0x801714D0
+   count=18`, `[drain-stop-sum] entry=1` fade n=155
+   `stopVoicesByHandle` n=24, `[drain-timeout]` 10M, 108
+   `[drain-tick]` gate=`0x01`. H-fade-timer-stuck SELECTED;
+   H-fade-counts-no-zero / H-fade-zeros-rekey REFUTED. Next:
+   dest-map every hangar `sh` to slot+0x30 while drain-armed
+   (fade `0x800924BC`, release `0x80092298`, render
+   `0x80090570`/`0x80090688`, ADSR `0x80092318`) with site+value.
    Use `S32(guest_addr)` in any `MEM_*` dump.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
@@ -452,6 +460,11 @@ Most recent, still load-bearing for the next unit:
   `$ra` is 0 because jal omits `ctx->r31`, static caller is
   `tickAudioChannel`. Believable because the pre-drain window had
   no handle-stop (those fire as drain's first tick).
+- s1985 "whether fade counts down, skips the end-zero, or zeros
+  then re-keys" is superseded by s1986 — `h30=0x0014` and
+  `b6c=0x03` on every looper through 10M (108 samples, dump after
+  tick). Believable because fade n=155 at entry already proved the
+  envelope started; the missing field was the timer itself.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -463,10 +476,10 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1985 drain-slot identity / subset-live / skip-cursor /
+and s1978–s1986 drain-slot identity / subset-live / skip-cursor /
 slot+0x40-skip / init-writer / loop-length / stop-dest-retrigger /
-stop-family song-handle-fade results are in `PORTING-STATE.md`
-directly.
+stop-family song-handle-fade / fade-timer-stuck results are in
+`PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a

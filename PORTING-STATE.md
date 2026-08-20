@@ -95219,3 +95219,59 @@ ledger; no new unevaluated verdict.
 **OUTCOME: ADVANCED** — planned dest-map selects H-song-stop-unmapped
 + H-drain-expects-bgm-end and refutes H-missing-song-stop. Next
 discriminator: fade timer + ADSR state on `[drain-path]`.
+
+## Session 1986 (2026-08-19) — hangar fade timer stuck at 0x14 through 10M drain
+
+**Instrument.** Incremental `apply_s1986_drain_fade`
+(`RS64_S1986_DRAIN_FADE=1`). Added `h30=` (`MEM_HU` slot+0x30) and
+`b6c=` (`MEM_BU` slot+0x6C) to each `[drain-path]` idx row; dest
+bound extended to +0x70. `S32(dest+off)` on every `MEM_*`. No store
+changed.
+
+**Probe.** `scratch/agent/s1986_drain_fade/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 239953 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.1s #1506.
+
+Positive controls (same run): `[stop-dest] site=stopVoiceMarkRetrigger
+n=1 dest=0x8018D4A0`; `[keyon-w40]` first 8; 234 `[init-desc]`;
+`[drain-path] call=1 iters=1 unmap=0` with 18 idx rows carrying
+`h30=`/`b6c=` (instrument fired); last alloc tickn=4 `0x801714D0
+count=18`; `[drain-stop-sum] entry=1` fade n=155, `stopVoicesByHandle`
+n=24, MarkRetrigger n=161 nhangar=92; `[drain-timeout]` at
+iters=10000001.
+
+**h30/b6c, 108 samples (iters 1..8 then every 100000 through 10M).**
+Every idx 0–17, every sample: `h30=0x0014`. `b6c=0x03` except idx 8
+(`b6c=0x02` throughout). Loopers (b stays `0x02`): 0–4, 6, 7, 13–17.
+Idx 5 idle from iters=1 (`b=0x00`); idx 8 idle (`b=0x00`); idxs 9–12
+go `0x02→0x00` and stay 0 (the oneshot subset). Unique triples:
+`(b=2,h30=20,b6c=3)` 1469, `(0,20,3)` 367, `(0,20,2)` 108. Dump is
+after in-loop `tickMusyXIfActive` (108 `[drain-tick]` gate=`0x01`).
+Post-sum hangar `slot-sb new=0x00` only on idxs 9–12 (n=4); loopers
+keep `new=0x02` (n=2388). `beginVoiceFadeRelease` n 155→181333 during
+the spin (~18 calls per executed tick).
+
+**Verdicts.**
+- H-fade-timer-stuck SELECTED: looping slot+0x30 stays the fade-written
+  `0x14` through 10M; ADSR `+0x6C` stays the fade-written 3.
+- H-fade-counts-no-zero REFUTED: h30 never drops.
+- H-fade-zeros-rekey REFUTED for the freeze: loopers never hit
+  `slot+0=0`; the 9–12 zeros are oneshots that stay idle.
+
+Same-run (not a new instrument): fade n growth means
+`beginVoiceFadeRelease` is re-entered on the hangar table every tick
+and rewrites `+0x30=0x14`. The dump-after-tick still reads `0x14`, so
+either nothing decrements or a decrement is overwritten before the
+dump. Next discriminator is a store census on hangar slot+0x30.
+
+ORIGIN: `beginVoiceFadeRelease` `sh 0x14, 0x30($a0)` (legitimate fade
+start). No skip/guard landed.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned h30/b6c dump selects
+H-fade-timer-stuck and refutes H-fade-counts-no-zero /
+H-fade-zeros-rekey. Next discriminator: dest-map every hangar
+slot+0x30 store during drain.
