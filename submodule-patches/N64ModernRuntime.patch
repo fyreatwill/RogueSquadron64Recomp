@@ -11,7 +11,7 @@ index 35703bd..6d53261 100644
  
  #endif
 diff --git a/librecomp/include/librecomp/rsp.hpp b/librecomp/include/librecomp/rsp.hpp
-index b0d6bef..d52cbee 100644
+index b0d6bef..5bf22df 100644
 --- a/librecomp/include/librecomp/rsp.hpp
 +++ b/librecomp/include/librecomp/rsp.hpp
 @@ -2,6 +2,7 @@
@@ -22,7 +22,7 @@ index b0d6bef..d52cbee 100644
  
  #include "rsp_vu.hpp"
  #include "recomp.h"
-@@ -94,6 +95,25 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
+@@ -94,6 +95,26 @@ static inline void RSP_MEM_H_STORE(uint32_t offset, uint32_t addr, uint32_t val)
  #define DO_DMA_READ(rd_len) dma_rdram_to_dmem(rdram, dma_mem_address, dma_dram_address, (rd_len))
  #define DO_DMA_WRITE(wr_len) dma_dmem_to_rdram(rdram, dma_mem_address, dma_dram_address, (wr_len))
  
@@ -42,13 +42,14 @@ index b0d6bef..d52cbee 100644
 +extern uint32_t g_rsp_last_chunk_len;
 +extern "C" void rs64_probe_dma_write_origin(uint32_t dram_addr, uint32_t len,
 +                                               uint32_t dmem_addr);
-+extern "C" void rs64_probe_audio_dma_write(uint32_t dram_addr, uint32_t len,
++extern "C" void rs64_probe_audio_dma_write(uint8_t* rdram,
++                                              uint32_t dram_addr, uint32_t len,
 +                                              uint32_t dmem_addr);
 +
  static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_t dram_addr, uint32_t rd_len) {
      rd_len += 1; // Read length is inclusive
      dram_addr &= 0xFFFFF8;
-@@ -101,11 +121,98 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -101,11 +122,98 @@ static inline void dma_rdram_to_dmem(uint8_t* rdram, uint32_t dmem_addr, uint32_
      // When a graphics ucode boot DMAs its own text into IMEM, we already ARE
      // the recompiled ucode running as C — silently skip so it doesn't corrupt
      // DMEM at the masked offset.
@@ -148,15 +149,18 @@ index b0d6bef..d52cbee 100644
      for (uint32_t i = 0; i < rd_len; i++) {
          RSP_MEM_B(i, dmem_addr) = MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000));
      }
-@@ -121,6 +228,8 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
+@@ -121,9 +229,11 @@ static inline void dma_dmem_to_rdram(uint8_t* rdram, uint32_t dmem_addr, uint32_
      if (dmem_addr + wr_len > 0x1000) wr_len = 0x1000 - dmem_addr;
      if (dram_addr >= 0x800000) return;
      if (dram_addr + wr_len > 0x800000) wr_len = 0x800000 - dram_addr;
 +    rs64_probe_dma_write_origin(dram_addr, wr_len, dmem_addr);
-+    rs64_probe_audio_dma_write(dram_addr, wr_len, dmem_addr);
      for (uint32_t i = 0; i < wr_len; i++) {
          MEM_B(0, (int64_t)(int32_t)(dram_addr + i + 0x80000000)) = RSP_MEM_B(i, dmem_addr);
      }
++    rs64_probe_audio_dma_write(rdram, dram_addr, wr_len, dmem_addr);
+ }
+ 
+ namespace recomp {
 diff --git a/librecomp/src/overlays.cpp b/librecomp/src/overlays.cpp
 index 8c8e5d1..25ab070 100644
 --- a/librecomp/src/overlays.cpp
@@ -443,7 +447,7 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..80a8d1d 100644
+index 1cb3f6a..ed8ad9c 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
 @@ -1,6 +1,7 @@
@@ -454,7 +458,7 @@ index 1cb3f6a..80a8d1d 100644
  
  #include "rsp.hpp"
  
-@@ -32,6 +33,66 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +33,80 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -473,6 +477,8 @@ index 1cb3f6a..80a8d1d 100644
 +    uint32_t dram;
 +    uint32_t len;
 +    uint32_t dmem;
++    uint32_t payload_fnv;
++    uint32_t payload_nz;
 +    bool output_overlap;
 +    bool yield_overlap;
 +    bool data_overlap;
@@ -501,7 +507,8 @@ index 1cb3f6a..80a8d1d 100644
 +           static_cast<uint64_t>(dram) + len > start;
 +}
 +
-+extern "C" void rs64_probe_audio_dma_write(uint32_t dram_addr, uint32_t len,
++extern "C" void rs64_probe_audio_dma_write(uint8_t* rdram,
++                                              uint32_t dram_addr, uint32_t len,
 +                                              uint32_t dmem_addr) {
 +    AudioDmaProbe* probe = g_audio_dma_probe;
 +    if (probe == nullptr) return;
@@ -510,18 +517,29 @@ index 1cb3f6a..80a8d1d 100644
 +        dram_addr,
 +        len,
 +        dmem_addr,
++        0,
++        0,
 +        audio_dma_overlaps(dram_addr, len, task.output_buff,
 +                           task.output_buff_size),
 +        audio_dma_overlaps(dram_addr, len, task.yield_data_ptr,
 +                           task.yield_data_size),
 +        audio_dma_overlaps(dram_addr, len, task.data_ptr, task.data_size),
 +    });
++    uint32_t payload_fnv = 2166136261u;
++    uint32_t payload_nz = 0;
++    for (uint32_t i = 0; i < len; i++) {
++        const uint8_t b = rdram[(dram_addr + i) & 0x007FFFFFu];
++        payload_fnv = (payload_fnv * 16777619u) ^ b;
++        payload_nz += b != 0;
++    }
++    probe->ranges.back().payload_fnv = payload_fnv;
++    probe->ranges.back().payload_nz = payload_nz;
 +}
 +
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +103,186 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +117,188 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -697,11 +715,13 @@ index 1cb3f6a..80a8d1d 100644
 +            fprintf(stderr,
 +                    "[audtask-dma-range] n=%u i=%zu dmem=0x%03X len=0x%X"
 +                    " dram=0x%06X..0x%06X output_overlap=%u"
-+                    " yield_overlap=%u data_overlap=%u\n",
++                    " yield_overlap=%u data_overlap=%u payload_fnv=%08X"
++                    " payload_nz=%u\n",
 +                    audio_dma_probe.n, i, range.dmem, range.len, range.dram,
 +                    range.dram + range.len, range.output_overlap ? 1u : 0u,
 +                    range.yield_overlap ? 1u : 0u,
-+                    range.data_overlap ? 1u : 0u);
++                    range.data_overlap ? 1u : 0u, range.payload_fnv,
++                    range.payload_nz);
 +        }
 +        fflush(stderr);
 +    }
@@ -798,6 +818,71 @@ index 1f3a4cf..b9cc34f 100644
      osViSetMode(rdram, (int32_t)ctx->r4);
  }
  
+diff --git a/ultramodern/src/audio.cpp b/ultramodern/src/audio.cpp
+index 3198be0..d7a294d 100644
+--- a/ultramodern/src/audio.cpp
++++ b/ultramodern/src/audio.cpp
+@@ -1,9 +1,15 @@
+ #include "ultramodern/ultra64.h"
+ #include "ultramodern/ultramodern.hpp"
+ #include <cassert>
++#include <cstdio>
++#include <cstdlib>
+ 
+ static uint32_t sample_rate = 48000;
+ 
++extern "C" uint32_t rs64_phase_ord();
++extern "C" uint32_t rs64_vi_committed_width();
++extern "C" uint32_t rs64_vi_committed_origin();
++
+ static ultramodern::audio_callbacks_t audio_callbacks;
+ 
+ void ultramodern::set_audio_callbacks(const ultramodern::audio_callbacks_t& callbacks) {
+@@ -31,6 +37,44 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
+ 
+     // Queue the swapped audio data.
+     if (sample_count > 0 && audio_callbacks.queue_samples) {
++        static int s_log_pcm_bridge = -1;
++        if (s_log_pcm_bridge < 0) {
++            const char* e = std::getenv("ROGUESQ_LOG_ALL");
++            s_log_pcm_bridge = (e && e[0] && e[0] != '0') ? 1 : 0;
++        }
++        if (s_log_pcm_bridge) {
++            const uint32_t width = rs64_vi_committed_width();
++            const uint32_t origin = rs64_vi_committed_origin();
++            const bool phase_allowed =
++                (width == 1024u && origin == 0x00790400u) ||
++                (width == 512u && origin == 0x006AB400u);
++            static uint32_t s_phase_key = 0xFFFFFFFFu;
++            static uint32_t s_phase_n = 0;
++            if (phase_allowed) {
++                const uint32_t phase_key = (width << 24) ^ origin;
++                if (phase_key != s_phase_key) {
++                    s_phase_key = phase_key;
++                    s_phase_n = 0;
++                }
++                const uint32_t n = s_phase_n++;
++                if (n < 40 || (n % 128) == 0) {
++                    const uint8_t* p = reinterpret_cast<const uint8_t*>(
++                        TO_PTR(int16_t, audio_data_));
++                    uint32_t fnv = 2166136261u;
++                    uint32_t nonzero = 0;
++                    for (uint32_t i = 0; i < sample_count * 2; i++) {
++                        fnv = (fnv * 16777619u) ^ p[i];
++                        nonzero += p[i] != 0;
++                    }
++                    std::printf(
++                        "[pcm-bridge] n=%u phase=%u w=%u org=%08x rdram=%08x"
++                        " bytes=%u fnv=%08x nz=%u\n",
++                        n, rs64_phase_ord(), width, origin,
++                        static_cast<uint32_t>(audio_data_), sample_count * 2,
++                        fnv, nonzero);
++                }
++            }
++        }
+         audio_callbacks.queue_samples(TO_PTR(int16_t, audio_data_), sample_count);
+     }
+ }
 diff --git a/ultramodern/src/events.cpp b/ultramodern/src/events.cpp
 index 149e770..d8da457 100644
 --- a/ultramodern/src/events.cpp

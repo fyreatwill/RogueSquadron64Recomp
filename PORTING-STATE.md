@@ -96314,3 +96314,49 @@ What IS known entering this session:
 OUTCOME: SUBSTITUTED — session died mid-work-unit before payload
 instrumentation was added; next unit is a RESUME of the s2004 payload-hash
 design.
+
+## Session 2005 (2026-08-20) — mapped nonzero audio DMA into queue_samples
+
+HYPOTHESIS-ID: m5-audio-dma-pcm-contract
+
+The retail oracle was run first and passed both positive controls: 18,368
+whole-RDRAM writes and 8,368 writes to the aligned `0x14974C` watch, with the
+known writer PCs visible. The first concurrent port control died before VI
+1024, so it was discarded; a standalone control on the same final binary
+reached VI 1024 at 48.3s and VI 512 at 84.1s and 130.1s. That control produced
+112 phase-gated audio task rows, zero DMA ranges, 130 bridge rows, and zero
+payload/nonzero counts in all bridge rows. The matched standalone treatment
+also reached both phases and produced 112 task rows, 254 DMA ranges, and 127
+phase-gated bridge rows.
+
+The new post-write DMA census and the independent pre-`queue_samples` host
+census supplied the discriminator. Treatment had 251 zero-payload ranges.
+The only nonzero audio buffers were two `DMEM 0x6F0`, length `0x300` writes:
+guest `0x80166450` had FNV `2B9E9631` and 621 nonzero bytes, and guest
+`0x80166750` had FNV `6ADD4218` and 639 nonzero bytes. The bridge hook saw
+those same guest addresses, byte count 768, hashes, and nonzero counts in
+hangar phase 10 / VI 512. The third nonzero DMA was an 8-byte `DMEM 0xC30`
+metadata write (`07E44B4B`, four nonzero bytes), not a queue buffer. This
+refutes blanket H-task-staging and H-guest-buffer-selection for the two audio
+buffers and selects the DMA-to-`queue_samples` contract; no hash mismatch
+supports H-bridge.
+
+The existing `[pcm-sanity]` probe remained all-zero on its 70 sampled
+treatment rows, but it logs only the first 20 calls and every 256th call; it
+did not sample bridge rows n=12/13. Therefore that null is not evidence that
+the callback received zero data, and the full callback/SDL witness remains
+parked rather than selected. `[audtask-dispatch]` remained live in both arms.
+An initial build failed because the new C-linkage declarations were placed at
+block scope; moving them to file scope and removing the pre-write duplicate
+probe call produced a successful full Debug build. The refreshed
+`submodule-patches/N64ModernRuntime.patch` was exported.
+
+ORIGIN: `factor5_ucode_b` `SP_WR_LEN` is the legitimate writer of the two
+nonzero hangar buffers; the bridge independently reads the same guest ranges.
+No default audio dispatch, guest gate, guard, or mitigation changed. This
+rules out the old s2003 claim that the DMA/output contract was still wholly
+unmapped, but does not establish a default-on audio path or a complete SDL
+playback result.
+
+OUTCOME: ADVANCED — payload and `queue_samples` hashes match for the two
+nonzero audio buffers; next work is the status-3 worker-dispatch census.

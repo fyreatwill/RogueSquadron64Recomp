@@ -1,133 +1,90 @@
-# NEXT work unit (s2005) — RESUME: s2004 payload-hash census
+# NEXT work unit (s2006) — status-3 worker-dispatch census
 
-HYPOTHESIS-ID: m5-audio-dma-pcm-contract
+HYPOTHESIS-ID: m5-status3-worker-dispatch
 
 ## Status at session start
 
-Session 2004 died before any code was written. Session 2003's instrument is
-the current state: `AudioDmaRange` in `librecomp/src/rsp.cpp` tracks dram
-address, length, DMEM source, and declared-field overlap flags for every DMA
-write during a sampled audio task. No payload hash or nonzero count exists
-yet. No `queue_samples` hook exists in `ultramodern/src/audio.cpp`. All PCM
-in both arms is `all_zero=1`; treatment shows 248 DMEM-to-RDRAM ranges
-(DMEM 0x6F0/0xCB0); control shows 0.
+Session 2005 closed the M5 DMA-to-`queue_samples` boundary for the two
+nonzero hangar buffers: post-DMA and pre-queue FNV/nonzero counts matched at
+guest addresses `0x80166450` and `0x80166750`. Do not reopen that boundary or
+change default audio dispatch. The parked hangar freeze remains the next M5
+lead: after `shutdownMusyXVoices` enters the status-3 spin, the retail worker
+continues writing `0x80154620` from `0x8009B7EC`, while the port has no armed
+`serviceVoicePoolFrame` entry.
 
 ## Competing hypotheses
 
-- **H-task-staging:** treatment DMA payloads are zero or structurally invalid;
-  `queue_samples` is never given a nonzero buffer.
-- **H-guest-buffer-selection:** payloads are nonzero but the AI callback
-  receives a different or zero RDRAM range.
-- **H-bridge:** payload nonzero reaches `queue_samples` but samples differ or
-  `pcm-sanity` stays silent.
-- **H-audio-path-valid:** payload nonzero, same bytes reach `queue_samples`,
-  `pcm-sanity` becomes nonzero — RSP/bridge boundary closed.
+- **H-status3-starves-worker:** the worker is ready, but the cooperative
+  status-3 spin monopolizes execution; no post-spin `serviceVoicePoolFrame`
+  entry or scheduler turn occurs until the spin is externally broken.
+- **H-dispatch-unregistered:** the port never dispatches the worker callback
+  after its earlier positive-control entries, independent of the shutdown
+  spin; the worker has no wake/queue handoff.
+- **H-worker-body-blocks:** the callback is dispatched after status 3, but its
+  entry has no matching exit because the worker body blocks or faults before
+  the expected service write.
+- **H-service-writes-elsewhere:** entry and exit continue after status 3 and
+  the missing `0x80154620` write is a store/guest-address mismatch rather than
+  scheduler starvation.
 
 ## Discriminating measurement
 
-One phase-gated table joined by task row n: payload FNV hash + nonzero byte
-count from rdram[dram..dram+len] immediately after the DMA write (in rsp.cpp),
-versus AI-buffer FNV hash + nonzero count from the buffer handed to
-`queue_samples` (in audio.cpp). With retail oracle and `[audtask-dispatch]`
-as positive controls.
+One phase-gated table in one build/run, with a row for every
+`serviceVoicePoolFrame` entry/exit and every owning worker scheduler
+dispatch/ready/block transition, joined to the status-3 spin sample by
+ordinal. The table must include: pre/post-status-3, guest PC, worker/thread
+identity, entry/exit edge, `D_80154620` status, and whether the expected
+`0x80154620` store probe fired. The pre-status-3 service entry/exit and the
+`[svc-pool]` counter are positive controls; a counter that only proves the
+spin ran is not a control.
 
-- Payload nonzero + bridge nonzero + same hash → H-audio-path-valid.
-- Payload nonzero + bridge zero → H-guest-buffer-selection.
-- Payload nonzero + bridge nonzero + hash mismatch → H-bridge.
-- Payload zero/null → H-task-staging.
+- No post-status-3 service entry, with a ready worker and no scheduler turn,
+  selects H-status3-starves-worker.
+- No post-status-3 service entry and no ready/wake/dispatch event, while the
+  pre-status-3 control is live, selects H-dispatch-unregistered.
+- A post-status-3 entry without exit selects H-worker-body-blocks.
+- Post-status-3 entry/exit plus scheduler turns but no expected store selects
+  H-service-writes-elsewhere; do not add a store mitigation from this result.
 
 ## Exact commands
 
-### Step 1 — extend `AudioDmaRange` in rsp.cpp
-
-In `librecomp/src/rsp.cpp`, add to the `AudioDmaRange` struct:
-```cpp
-    uint32_t payload_fnv;   // FNV-1a hash of rdram[dram..dram+len]
-    uint32_t payload_nz;    // nonzero byte count in rdram[dram..dram+len]
-```
-
-In `rs64_probe_audio_dma_write`, after pushing the range, compute the hash
-and nz count from `rdram` (add `uint8_t* rdram` as a parameter and update all
-callers), using the same FNV-1a constants already present in rsp.cpp:
-```cpp
-    uint32_t h = 2166136261u, nz = 0;
-    for (uint32_t i = 0; i < len; i++) {
-        uint8_t b = rdram[S32(dram_addr + i) & 0x7FFFFF];
-        h = (h * 16777619u) ^ b;
-        nz += (b != 0);
-    }
-    probe->ranges.back().payload_fnv = h;
-    probe->ranges.back().payload_nz = nz;
-```
-
-Update the `[audtask-ranges]` printf to include `payload_fnv=%08x nz=%u`.
-
-### Step 2 — add `queue_samples` hook in audio.cpp
-
-In `ultramodern/src/audio.cpp`, immediately before the
-`audio_callbacks.queue_samples(...)` call (line ~34), add:
-
-```cpp
-    extern "C" uint32_t rs64_phase_ord();
-    extern "C" uint32_t rs64_vi_committed_width();
-    extern "C" uint32_t rs64_vi_committed_origin();
-    static int s_log_pcm_bridge = -1;
-    if (s_log_pcm_bridge < 0) {
-        const char* e = getenv("ROGUESQ_LOG_ALL");
-        s_log_pcm_bridge = (e && e[0] == '1') ? 1 : 0;
-    }
-    if (s_log_pcm_bridge && sample_count > 0) {
-        const uint8_t* p = reinterpret_cast<const uint8_t*>(
-            TO_PTR(int16_t, audio_data_));
-        uint32_t h = 2166136261u, nz = 0;
-        for (int32_t i = 0; i < sample_count * 2; i++) {
-            h = (h * 16777619u) ^ p[i]; nz += (p[i] != 0);
-        }
-        printf("[pcm-bridge] phase=%u w=%u org=%08x rdram=%08x bytes=%d fnv=%08x nz=%u\n",
-               rs64_phase_ord(), rs64_vi_committed_width(),
-               rs64_vi_committed_origin(), (uint32_t)audio_data_,
-               sample_count * 2, h, nz);
-    }
-```
-
-### Step 3 — export patches and build
+### Step 1 — independent retail control first
 
 ```sh
-./submodule-patches/export.sh
+tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 45 --watch-write 0x0:0x800000 --watch-write 0x154620:0x154624 --detail-watch 1 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start > scratch/agent/s2006-oracle.log 2>&1
+```
+
+Require nonzero whole-RDRAM hits and a `0x154620` hit from retail PC
+`0x8009B7EC` before trusting a port null.
+
+### Step 2 — static dispatch census and one batched port instrument
+
+```sh
+rg -n 'serviceVoicePoolFrame|8009B5A8|8009B7EC|8009BD10' syms tools patches
+rg -n 'serviceVoicePoolFrame|8009B5A8|8009B7EC|8009BD10' /Users/williambuckley/Documents/Tools/N64Recomp/RecompiledFuncs
+```
+
+Use the generated-tree/fixup path identified by that census to add all entry,
+exit, scheduler-edge, status-3, and expected-store rows in one build. Preserve
+the default status-3 spin and do not enable `ROGUESQ_DRAIN_INLOOP_TICK=0`.
+Export any `lib/` changes with `./submodule-patches/export.sh`, then build:
+
+```sh
 cmake --build build --config Debug --target RogueSquadron64Recomp
 ```
 
-### Step 4 — run oracle positive control first
+### Step 3 — one phase-gated run
 
 ```sh
-tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 45 --watch-write 0x0:0x800000 --watch-write 0x14974C:0x149750 --detail-watch 1 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start > scratch/agent/s2005-oracle.log 2>&1
+env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_THREADS=1 ROGUESQ_LOG_RUNNER_ALL=1 ROGUESQ_LOG_SPBOOT=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2006-status3 180 12 > scratch/agent/s2006-status3.log 2>&1
 ```
 
-Require nonzero whole-RDRAM and aligned-watch hits before proceeding.
+`ROGUESQ_SPIN_YIELD=1` is only the established boot/title/hangar-entry aid;
+the status-3 shutdown spin itself must remain unyielded. Require VI 1024 /
+`0x00790400` and VI 512 / `0x006AB400`, then join the complete table around
+`[shut-enter]`/`[shut-spin]`/`[shut-exit]`.
 
-### Step 5 — run A/B concurrently
+## Stop condition
 
-```sh
-env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_SPBOOT=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2005-control 30 12 > scratch/agent/s2005-control.log 2>&1 &
-env ROGUESQ_SPIN_YIELD=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 ROGUESQ_LOG_SPBOOT=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh s2005-treatment 30 12 > scratch/agent/s2005-treatment.log 2>&1 &
-wait
-```
-
-If control crashes before VI 1024, rerun it standalone and then rerun
-treatment; use the standalone control. Do not interpret treatment rows
-without a valid control.
-
-### Step 6 — analyze
-
-From both logs, extract:
-- `[audtask-ranges]` rows: per-range dram/len/dmem/payload_fnv/nz
-- `[pcm-bridge]` rows: phase/rdram/bytes/fnv/nz
-- `[audtask-dispatch]` count (positive control)
-- `[pcm-sanity]` count
-
-Join on phase: if treatment ranges have nz>0 and pcm-bridge has nz>0 and
-FNVs match → H-audio-path-valid. Apply the discriminator table above.
-
-## Phase gates
-
-VI 1024/origin 0x00790400 and VI 512/origin 0x006AB400 only.
+If the table cannot distinguish the four outcomes, do not add another field.
+Record the ambiguity and redesign the next highest-information-value probe.

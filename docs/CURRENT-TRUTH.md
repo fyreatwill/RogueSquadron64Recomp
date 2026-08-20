@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s2003 (2026-08-20).
+detail. Reviewed through s2005 (2026-08-20).
 
 ## Current state
 
@@ -441,6 +441,26 @@ detail. Reviewed through s2003 (2026-08-20).
   selected audio-image `SP_WR_LEN` path is the named writer and the writes are
   legitimate image activity, but their destination/payload contract is not
   yet proven. No default dispatch, guest gate, guard, or mitigation changed.
+- **M5 DMA-to-`queue_samples` contract (s2005).** The 45s retail oracle
+  positive controls passed with 18,368 whole-RDRAM writes and 8,368 aligned
+  `0x14974C` writes. The standalone control reached VI 1024 at 48.3s and
+  VI 512 at 84.1s/130.1s: 112 phase-gated task rows, 0 DMA ranges, and 130
+  bridge rows, all zero. The matched treatment reached the same phases and
+  produced 112 task rows, 254 DMAs, and 127 bridge rows. Of the 254 ranges,
+  251 were zero payload; the only nonzero audio buffers were two `0x300`-byte
+  DMEM `0x6F0` writes at `0x166450`/`0x166750`, with FNV/nonzero pairs
+  `2B9E9631/621` and `6ADD4218/639`. They reached `queue_samples` at the
+  exact guest addresses `0x80166450`/`0x80166750` with the same hashes and
+  counts in hangar VI 512; the third nonzero range was an 8-byte `0xC30`
+  metadata write (`07E44B4B`, 4 bytes). This selects the valid
+  DMA-to-`queue_samples` contract, refutes blanket H-task-staging and
+  H-guest-buffer-selection for these buffers, and does not select H-bridge.
+  Existing `pcm-sanity` is first-20/every-256 rate-limited: its 70 treatment
+  rows were all zero, but it did not sample bridge rows n=12/13, so that is
+  not a callback null. ORIGIN: `factor5_ucode_b` `SP_WR_LEN` is the legitimate
+  DMA writer; the two nonzero buffers are now independently mapped to the
+  host audio queue. No default dispatch, guest gate, guard, or mitigation
+  changed.
 - **Generated-symbol sweep is effectively closed (s1966).** A full-file
   census found s1962–s1965 had only swept a small tail of the TOML;
   845 leftovers resolved in one batch (902 → 57 `func_8[01]*`). The
@@ -493,25 +513,13 @@ detail. Reviewed through s2003 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s2003: the opt-in image matches the retail task's aspMain text/data
-symbols, but its DMA payload/output contract is not yet validated. Map those
-payloads to the AI/PCM bridge before changing audio gates or defaults. The
-hangar status-3 result remains parked with a precise scheduler lead.
+Re-ranked s2005: the opt-in image's two nonzero hangar DMA buffers are proven
+to reach `queue_samples` byte-for-byte. Do not reopen the payload boundary or
+change audio defaults from this result; the remaining M5 lead is the hangar
+status-3 worker dispatch, and the callback-side `pcm-sanity` witness is still
+rate-limited rather than a valid null.
 
-1. **M5 audio DMA-to-PCM contract (s2004).** Extend the existing phase-gated
-   task census in one build to hash/count nonzero bytes in every treatment DMA
-   payload before writeback and to hash/count the RDRAM buffer handed to
-   `queue_samples` in `ultramodern/src/audio.cpp`. Keep the
-   `musyx_stub`/`factor5_ucode_b` A/B, do not change dispatch or gates. The
-   discriminator is whether a treatment `DMEM 0x6F0/0xCB0` destination carries
-   nonzero PCM-shaped data and the same buffer/bytes reach `queue_samples`:
-   payload plus bridge nonzero selects H-bridge; payload nonzero but bridge
-   zero selects guest buffer selection/AI plumbing; zero/structured-invalid
-   payload keeps H-task-staging open. The retail oracle positive control must
-   run first with whole-RDRAM and aligned `0x14974C` watches. Run the standalone
-   control and treatment recipes from the same built binary with VI 1024 /
-   `0x00790400` and VI 512 / `0x006AB400` gates only.
-2. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
+1. **Hangar frame-freeze: status-3 worker starvation (s1997).** The fixed
    census reached hangar `[phase] 512 origin=0x006AB400` in 24.6s and captured
    17 frames. `[svc-pool]` reached `n=1000 armed=0 gate=1`; after
    `[shut-enter] n=3 b0=0x02 gate=1`, zero armed worker entries appeared,
@@ -520,6 +528,10 @@ hangar status-3 result remains parked with a precise scheduler lead.
    plan, identify the callback/thread dispatch path that should run
    `serviceVoicePoolFrame` and test whether the cooperative status-3 spin
    prevents it. Do not yield the spin or default the in-loop tick off.
+2. **M5 callback-side PCM witness.** Only if needed after the status-3 work,
+   phase-gate a callback-side census at the exact nonzero bridge rows rather
+   than relying on first-20/every-256 `pcm-sanity`; this is not evidence for a
+   bridge defect yet. Do not change the audio path or default dispatch.
 3. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -597,15 +609,17 @@ vs 1 frame / 4s before. Class is fully enumerated and patched; no remaining
 sites elsewhere in the generated codebase. Do not reopen without a new site
 identified by grep + static analysis.
 
-**M5 opt-in RSP arm.** s2002–s2003 show that both arms receive the same
- `M_AUDTASK` descriptor; the selected image matches the companion
- `aspMainTextStart`/`aspMainDataStart` symbols and writes phase-scoped DMA
- ranges, but neither arm produces nonzero PCM. Treatment writes
- `DMEM 0x6F0/0xCB0` ranges without overlap with declared task output fields;
- their payload and AI/PCM mapping are not yet measured. H-task-staging versus
- H-bridge remains open. Retail oracle writer activity at `0x14974C` is
- independently confirmed. No dispatch default, guest gate, guard, or
- mitigation changed.
+**M5 opt-in RSP arm.** s2002–s2005 show that both arms receive the same
+`M_AUDTASK` descriptor and the selected image matches the companion
+`aspMainTextStart`/`aspMainDataStart` symbols. In the control, sampled DMA
+payloads and bridge buffers stay zero. In treatment, 251/254 sampled DMA
+ranges stay zero, while two hangar `DMEM 0x6F0` `0x300`-byte ranges are
+nonzero and reach `queue_samples` at the same addresses with identical FNV
+hashes/nonzero counts. The payload-to-queue boundary is closed for those
+buffers; `pcm-sanity` is not a callback witness for them because its sampled
+rows miss bridge n=12/13. Retail oracle writer activity at `0x14974C` is
+independently confirmed. No dispatch default, guest gate, guard, or
+mitigation changed.
 
 ## Superseded conclusions
 
@@ -813,6 +827,14 @@ Most recent, still load-bearing for the next unit:
   previously been treated as the audio resident without a complete
   task/output census.
 
+- s2003's "payload/output contract remains open" is superseded by s2005.
+  The retail oracle controls remained valid, and independent hashes at the
+  post-DMA writer and pre-`queue_samples` host boundary matched for both
+  nonzero hangar buffers, at the same guest addresses and byte count. The old
+  conclusion was believable because s2003 only recorded DMA extents and the
+  rate-limited `pcm-sanity` samples were all zero; s2005 shows that the latter
+  did not sample the two nonzero bridge calls, so it cannot refute the mapping.
+
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
 
@@ -865,6 +887,12 @@ site=finalizeCurrentSpeechBuffer)
  control 115 rows/0 DMA ranges; treatment 119 rows/248 ranges; all PCM
  zero; no declared output overlap; payload nonzero/bridge mapping not yet
  measured)
+/ s2005 M5 DMA-to-`queue_samples` contract
+ (18,368 whole-RDRAM and 8,368 aligned `0x14974C` oracle hits; phase-valid
+ standalone control 112 task rows/0 DMA ranges and all-zero bridge rows;
+ treatment 112 task rows/254 ranges, with two `0x6F0` `0x300`-byte ranges
+ nonzero and byte-for-byte matched at `queue_samples`; third nonzero range is
+ 8-byte `0xC30` metadata; rate-limited `pcm-sanity` missed bridge n=12/13)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
