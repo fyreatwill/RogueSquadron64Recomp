@@ -98574,3 +98574,46 @@ ORIGIN: the canary writer is the generated guest `L_1E48` DMA source fed by
 `L_146C`/`L_1D24`/`L_1F40`; it is legitimate generated guest work at source
 scope. Whether that work is scratch, output staging, or an ABI mismatch is
 not established without an independent live task/value crosswalk.
+
+## Session 2066 (2026-08-20) — requalified retail route; port ABI crosswalk remained unevaluable
+
+Ground truth ran first. The prescribed oracle command passed its whole-RDRAM
+and candidate-band callbacks but omitted the Rice video plugin, and the run
+measured only VI 320. The oracle README identifies dummy video as a known
+configuration that never advances beyond 320. The fixed command added
+`--video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib` without
+changing the ROM, watch ranges, or eleven-Start schedule. It passed the
+whole-RDRAM positive control with 4,657,999 writes, the candidate band with
+4,647,999 writes, reached title VI `1024 @ 0x00790400` at 17.3 seconds, and
+reached hangar VI `512 @ 0x006AB400` at 38.4 seconds. Writer-PC hits included
+the established MusyX path at `0x80090F8C`, `0x80091078`, and `0x800923B8`.
+The corrected retail witness therefore qualifies both route anchors and the
+band ownership for this unit.
+
+The unchanged Debug build then ran the prescribed port recipe with
+`ROGUESQ_AUDIO_UCODE=1` and `ROGUESQ_LOG_ALL=1`. Its first capture reached
+title VI 1024 and hangar VI 512, and its controls emitted 4,105
+`[audtask-abi]` rows, 4,105 `[audtask-dma-row]` rows, and 9,878 DMA-range
+rows. Every task row had `output_buff=0`, `yield_ptr=0`, a nonzero
+`data_ptr`, `canary_ok=0`, and `exit=1`; every observed overlap flag was zero.
+The DMA-range census contained 4,105 `dmem=0xCB0 len=0x198` rows, 5,772
+`dmem=0x6F0` rows, and one `dmem=0xC30` row, with no
+`dmem=0xE50 len=0x180` row. The process later aborted in
+`pi.cpp:do_rom_read` on the runtime's odd-ROM-address assertion, so this
+capture fails the unit's no-crash admissibility rule. A zero-grace retry died
+before title in `cutsceneDispatchSlotsByFlag+8960`; a second retry with
+spin-yield died before title in `waitForAnyAudioSlot+640`. Neither retry was
+used as ABI evidence.
+
+The corrected retail route rules out an oracle route/input absence and makes
+the band writer watch admissible. The port controls prove that the image task
+ran on both target phases, but the crash and missing `0xE50/0x180` row prevent
+the required task/value join from selecting H-ImageOutputField,
+H-ImageDataStruct, or H-ImageTaskAbiMismatch. H-OutputRouteUnevaluable
+therefore remains selected for the port-side contract. No build,
+regeneration, guest value, task field, dispatch, guard, skip, or default
+behavior changed.
+
+ORIGIN: no mitigation was added; the observed late failure originated at the
+host `do_rom_read` alignment assertion, and its writer-to-task relationship
+was not promoted beyond the measured crash record.

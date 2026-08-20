@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2065 (2026-08-20).
+for session detail. Reviewed through s2066 (2026-08-20).
 
 ## Current state
 
@@ -69,6 +69,21 @@ for session detail. Reviewed through s2065 (2026-08-20).
   `L_1314` write. This selects H-OutputRouteUnevaluable at source scope: the
   generated writer is proven, but scratch versus output staging versus task-ABI
   mismatch cannot be selected without the live task/value relationship.
+- s2066 first exposed a configuration error in the prescribed retail command:
+  without Rice video it passed the whole-RDRAM and candidate-band watches but
+  stayed at VI 320. The corrected Rice witness passed both watches (4,657,999
+  whole-RDRAM writes; 4,647,999 band writes), reached title
+  `1024 @ 0x00790400`, and reached hangar `512 @ 0x006AB400`. The port's first
+  capture reached both target phases and emitted 4,105 task/row controls and
+  9,878 DMA-range rows, but later aborted in `pi.cpp:do_rom_read` on an odd ROM
+  DMA address; two zero-grace retries died before title in separate known
+  crash families. Its admissible no-crash contract therefore failed. The
+  observed rows had `output_buff=0` and `yield_ptr=0` on all 4,105 rows,
+  nonzero `data_ptr`, zero overlap flags, only `0xCB0/0x198`, `0x6F0`, and one
+  `0xC30` DMA-range family, and no `0xE50/0x180` row. This keeps
+  H-OutputRouteUnevaluable selected: the corrected oracle qualifies the route,
+  but the port task/value join is not admissible and does not select an ABI
+  explanation.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -191,12 +206,15 @@ are not active work items.
    path but selects H-OutputRouteUnevaluable: `output_buff` and
    `yield_data_ptr` are not consumed by the image, while the canary-covering
    `L_1E48` write and the `L_1314` write both use indirect DMEM-derived RDRAM
-   destinations. Use a phase-valid task-value/retail-writer witness to decide
-   whether those destinations are intentional image output or an ABI mismatch.
-   s2063 still closes the nonzero image-DMA-to-PCM branch: every observed image
-   DMA payload was zero and the exact task joins were zero-only, while the
-   retail-owned band remains broad. Keep the retail writer, C88 value,
-   wait/slot guards, and default dispatch unchanged.
+   destinations. s2066 corrected the retail witness and qualified both route
+   anchors, but the port run crashed before a no-crash task/value table and
+   emitted no `0xE50/0x180` row. Re-run the crosswalk on the qualified C88=1,
+   spin-yield route with immediate post-probe SIGKILL; do not change task
+   fields, dispatch, guards, or guest behavior. s2063 still closes the nonzero
+   image-DMA-to-PCM branch: every observed image DMA payload was zero and the
+   exact task joins were zero-only, while the retail-owned band remains broad.
+   Keep the retail writer, C88 value, wait/slot guards, and default dispatch
+   unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -455,6 +473,15 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   both candidate RDRAM destinations are indirect DMEM-derived values; source
   alone therefore selects H-OutputRouteUnevaluable, not scratch, output
   staging, or ABI mismatch.
+- s2066 supersedes the initial unqualified retail null from this work unit.
+  That null was believable because the prescribed command contained all of
+  the watches and input schedule, but the oracle README's required Rice video
+  plugin was omitted; the measured run stayed at VI 320. Adding the documented
+  Rice plugin passed the positive control and reached both target origins.
+  The corrected ground truth does not supersede the port-side null: its first
+  port capture later aborted in `do_rom_read`, and the zero-grace retries died
+  before target phases, so the task/value join remains unevaluable rather than
+  an ABI mismatch.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
