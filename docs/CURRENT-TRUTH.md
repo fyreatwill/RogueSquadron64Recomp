@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1980 (2026-08-19).
+detail. Reviewed through s1981 (2026-08-19).
 
 ## Current state
 
@@ -90,11 +90,17 @@ detail. Reviewed through s1980 (2026-08-19).
   lands `slot-sb new=0x00`. H-end-zero-lost / H-rekey-after-end /
   H-zero-unlogged REFUTED. s1980 selected H-not-at-cursor: those 12
   have `vis=0` at `L_80090150` through 108 drain-tick samples while
-  still taking 155 `slot-sb new=0x02` each at dests on `0x801714D0`.
-  Their `mem38` (`slot+0x38`) is a sane end (`0x9241`/`0x853F`/…) —
-  they are not frozen mid-cursor. Static skip: `0x80090084`
-  `lw $a3, 0x40($s1)` nonzero falls through toward `L_80090188` and
-  the `sb 0x28($sp)` tail. `deactivateVoice` is 0 globally;
+  still taking 155 `slot-sb new=0x02` each. s1981 selected
+  H-slot40-skip: the 12 have `slot+0x40 != 0`, `skip084=155`
+  matching those 155 writes, `to_cur=0`; the four ended (this run
+  5/10/11/12) have `w40==0`, `skip084=0`, `to_cur==vis>0`, last
+  `pos+step >= cur`. After skipping 084 they split `L_80090188` vs
+  `0x800900B8` on `$a2 < $a0+$s4` -- that split is not why they miss
+  the cursor. H-loop-wrap / H-a2-gate / H-idx-unmapped REFUTED
+  (`unmap=0`, `vis==to_cur` on every idx). Static candidate writer of
+  slot+0x40 is `musyxKeyOnVoice` (`0x80090B68`/`0x80090C28`).
+  Their `mem38` is still a sane end. The 084 skip is the `slot+0x40`
+  flag, not a later branch. `deactivateVoice` is 0 globally;
   `stopVoice` only hits the boot array. Timeout remains a diagnostic
   hatch. Default-off yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
@@ -214,19 +220,19 @@ detail. Reviewed through s1980 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1980: the 12 never-cross slots never enter `L_80090150`.
-Drain waits on voices that skip the sample-end compare.
+Re-ranked s1981: the 12 skip `L_80090150` because `slot+0x40 != 0`.
+Drain waits on voices whose sample-end compare is the loop path.
 
-1. **Hangar frame-freeze: 12 live idxs skip the cursor site (s1980).**
-   Same-run positive controls: `[drain-tick]`/`[drain-cross]`/
-   `[drain-cursor] call=1 iters=1 gate=0x01` (108 samples, 1944
-   cursor rows) and boot `slot-alloc 0x8018D4A0 count=16`. Last
-   alloc `0x801714D0 count=18`. Ended idxs 5/8/10/11: `vis` 47–99,
-   `dpos>0`, last `pos+step >= cur`, `mem38==cur`. The 12 live
-   `0x02` idxs stay `vis=0` and still take 155 `slot-sb new=0x02`
-   each. Next: which `musyxRenderVoiceSamples` branch they take —
-   dump `slot+0x40` / `slot+1` / `slot+0x3C` on the same drain-tick
-   samples and count the `0x80090084`/`9C`/`A4`/`B0` gotos per idx.
+1. **Hangar frame-freeze: slot+0x40 skip (s1981).** Same-run
+   positive controls: `[drain-path] call=1 iters=1 unmap=0` (108
+   samples, 1944 rows), ended idxs 5/10/11/12 `to_cur==vis` and
+   `pos+step >= cur`, boot `slot-alloc 0x8018D4A0 count=16`. Last
+   alloc `0x801714D0 count=18`. The 12 live idxs have `w40!=0`,
+   `skip084=155==slot-sb new=0x02`, `to_cur=0`. Next: which
+   `musyxKeyOnVoice` store writes that nonzero — `sw` sample+0x40
+   at `0x80090B68` vs later `sh` sample+0x44 at `0x80090C28` vs a
+   later overwrite. Dump source value + dest idx at those two
+   stores (and any other `slot+0x40` sw/sh in the voice family).
    Use `S32(guest_addr)` in any `MEM_*` dump.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
@@ -379,6 +385,10 @@ Most recent, still load-bearing for the next unit:
   `slot-sb new=0x02` keeps firing. Believable because the write is
   later in the same function; the `0x80090084` fallthrough skips the
   compare and still reaches the `0x28($sp)` tail.
+- s1980 "nonzero `slot+0x40` skips straight toward `L_80090188`" is
+  superseded by s1981 — they skip 084, then split 188 vs 0B8 on
+  `$a2 < $a0+$s4`. Believable because 084 is the only skip before
+  those two labels.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -390,8 +400,8 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1980's drain-slot identity / subset-live / skip-cursor
-results are in `PORTING-STATE.md` directly.
+and s1978–s1981's drain-slot identity / subset-live / skip-cursor /
+slot+0x40-skip results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a

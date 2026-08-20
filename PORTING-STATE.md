@@ -94896,3 +94896,65 @@ ledger; no new unevaluated verdict.
 
 **OUTCOME: ADVANCED** — planned drain-cursor instrument discriminated
 the four hypotheses.
+
+## Session 1981 (2026-08-19) — 12 live drain slots skip L_80090150 because slot+0x40 != 0
+
+**Instrument.** Incremental `apply_s1981_drain_path` (`RS64_S1981_DRAIN_PATH=1`;
+also in the full-fixup `_cur_new` / `apply_s1976_drain_tick` templates and
+the funcs_24.c main-loop branch sites). Counts per idx at
+`0x80090084/9C/A4` (`to_cur`), `0x800900B0` (`to_188`), `0x800900B8`
+(`to_0b8`), plus `skip084` and last `w40`/`a2`/`a0`/`s4`/`b0v0`. Dumps
+`[drain-path]` on the existing drain-tick samples with live
+`slot+0x40`/`+0x3C`/`+1`. Unmapped dests at the cursor site. No store
+changed.
+
+**Probe.** `scratch/agent/s1981_drain_path/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+16 frames, 62772 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.0s #1494.
+
+Positive controls (same run): `[drain-tick]`/`[drain-cross]`/
+`[drain-cursor]`/`[drain-path] call=1 iters=1 gate=0x01` (108 paired
+samples; 1944 path rows = 108*18) through `[drain-timeout]` /
+`[drain-exit] call=1 iters=10000001 v0=1`; boot `[avf-gate]
+site=slot-alloc` `0x8018D4A0 count=16` at tickn=2; last alloc tickn=4
+`0x801714D0 count=18`. Ended idxs 5/10/11/12: `vis==to_cur` (46/94/64/58),
+`w40==0`, `skip084=0`, last `pos+step >= cur`, `mem38==cur`, and a
+matching `slot-sb new=0x00`. `unmap=0` on every header.
+
+**drain-path (last sample).**
+- The 12 still-live `0x02` idxs (0–4, 6, 7, 13–17) have `w40!=0`
+  (`0x9241`/`0x49FD`/`0x5511`/`0x092E`/`0x10E0`), `last_w40==w40`,
+  `skip084=155` matching 155 `slot-sb new=0x02` each, `to_cur=0`,
+  `vis=0`. After 084 they split `to_188` vs `to_0b8` (sums 155; only
+  idx 16 is 188-only). Last `b0v0` matches that split (`0` = 188,
+  `1` = 0B8). `b1=0`.
+- Ended 5/10/11/12 never reach B0 (`to_188=to_0b8=0`, last a2/a0/s4=0).
+- idxs 8/9 are already `0x00` at drain start (`b1=0x01`, no render).
+
+**Verdicts.**
+- H-slot40-skip SELECTED (two-source: live `w40!=0` + `skip084=155`
+  with `to_cur=0`, versus ended `w40==0` + `to_cur==vis>0` +
+  `skip084=0`, plus `slot-sb` 155/zero alignment).
+- H-loop-wrap REFUTED as the exclusive skip: 11/12 take both 188 and
+  0B8; 0B8 is the `$a2 < $a0+$s4` arm after skipping 084, not instead
+  of the flag.
+- H-a2-gate REFUTED: ended never reach the B0 compare; the cursor skip
+  is decided at 084 by `slot+0x40`.
+- H-idx-unmapped REFUTED: `unmap=0` on 108 samples; `vis==to_cur` on
+  every idx.
+
+ORIGIN: `musyxRenderVoiceSamples` reads a nonzero `slot+0x40` and
+skips the sample-end compare; the 0x02 tail store is the legitimate
+key-on status. Static candidate writer of that word is
+`musyxKeyOnVoice` (`sw` from sample+0x40 at `0x80090B68`, later `sh`
+from sample+0x44 at `0x80090C28`) — unmeasured this run. No
+skip/guard landed.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned drain-path instrument selects
+H-slot40-skip and refutes the other three. Next discriminator: which
+`musyxKeyOnVoice` store (or later overwrite) writes nonzero
+`slot+0x40` on the 12.

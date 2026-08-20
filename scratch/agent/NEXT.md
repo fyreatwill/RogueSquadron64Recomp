@@ -1,83 +1,79 @@
-# NEXT work unit (s1981) — which musyxRenderVoiceSamples branch the 12 take
+# NEXT work unit (s1982) — which musyxKeyOnVoice store writes nonzero slot+0x40
 
 HYPOTHESIS-ID: hangar-frame-freeze
 
-## What s1980 settled
+## What s1981 settled
 
-The 12 still-live `0x02` idxs at `0x801714D0` (0–4, 6, 7, 13–17) have
-`vis=0` at `L_80090150` through 108 drain-tick samples. They still
-take 155 `musyxRenderVoiceSamples` `slot-sb new=0x02` each on that
-table. The four that ended (5/8/10/11) show `vis>0`, `dpos>0`, last
-`pos+step >= cur`, `mem38==cur`. H-frozen-pos / H-huge-end /
-H-looping REFUTED; H-not-at-cursor SELECTED.
+The 12 still-live `0x02` idxs skip `L_80090150` because `slot+0x40 != 0`
+(`skip084=155` matching 155 `slot-sb new=0x02`, `to_cur=0`). Ended
+idxs 5/10/11/12 have `w40==0`, `skip084=0`, `to_cur==vis>0`. After
+skipping 084 they split `L_80090188` vs `0x800900B8` on `$a2 < $a0+$s4`;
+that split is not why they miss the cursor. H-slot40-skip SELECTED;
+H-loop-wrap / H-a2-gate / H-idx-unmapped REFUTED.
 
-Static: `0x80090084` loads `$a3 = slot+0x40`. Zero goes to the
-cursor; nonzero falls through `0x8009008C..B0` and can
-`beq L_80090188`, skipping the compare and still reaching the
-`sb 0x28($sp)` tail that writes `0x02`.
+Static: `musyxKeyOnVoice` stores slot+0x40 twice — `sw` from sample+0x40
+at `0x80090B68`, then `sh` from sample+0x44 at `0x80090C28`.
 
-## Competing hypotheses (which skip)
+## Competing hypotheses (who writes nonzero w40)
 
-- **H-slot40-skip:** `slot+0x40 != 0` on the 12, `== 0` on the four
-  ended. They take `0x80090084` fallthrough then `0x800900B0` to
-  `L_80090188`.
-- **H-loop-wrap:** `slot+0x40 != 0` and they take `0x800900B8`
-  (`lw 0x3C($s1)` loop-point) instead of `L_80090188` or cursor.
-- **H-a2-gate:** `slot+0x40 != 0` but the skip is `$a2 >= $a0+$s4`
-  at `0x800900B0`, not the +0x40 flag itself.
-- **H-idx-unmapped:** they do execute `L_80090150` but dest does
-  not map to drain-table idxs so `vis` stays 0. Unlikely (`n_cur`
-  growth matches the four ended) — dump unmapped dests to close it.
+- **H-keyon-sw:** `0x80090B68` copies a nonzero sample+0x40 word onto
+  the 12; ended get 0 from the same store. The later `sh` does not
+  change the live/ended split.
+- **H-keyon-sh:** `0x80090C28` halfword from sample+0x44 is the nonzero
+  that the 12 keep; the earlier `sw` is 0 or is overwritten. Ended
+  get 0 from this `sh`.
+- **H-later-overwrite:** both key-on stores write 0 (or the same value
+  on live and ended); a later store (other `sw`/`sh` of slot+0x40)
+  writes the live nonzero after key-on.
+- **H-stale-word:** neither key-on store hits the 12 during this drain
+  window; the nonzero is leftover from a previous table occupant.
 
 ## Discriminating measurement (one instrument, one build, one 60s probe)
 
-Keep s1980 `[drain-cursor]`. On the same drain-tick samples, dump
-`[drain-path]` for all 18 idxs:
+Keep s1981 `[drain-path]`. On every `musyxKeyOnVoice` slot+0x40 store
+(`0x80090B68` sw, `0x80090C28` sh) log:
 
-`idx=N b= vis= w40= w3c= b1= to_cur= to_188= to_0b8=`
+`[keyon-w40] site=sw|sh idx=N dest=0x.. src=0x.. val=0x..`
 
-where `w40`/`w3c`/`b1` are `MEM_W(0, S32(dest+0x40))`,
-`MEM_W(0, S32(dest+0x3C))`, `MEM_BU(0, S32(dest+1))`, and the
-three counters increment at:
+plus any other voice-family `MEM_W/MEM_H(0x40, slot)` store found by
+grep of `musyx*` in funcs_24.c. Count per idx since drain-cross armed.
 
-- `to_cur`: each `goto L_80090150` (sites `0x80090084/9C/A4` plus
-  fallthrough into the label)
-- `to_188`: `goto L_80090188` at `0x800900B0`
-- `to_0b8`: fallthrough into `0x800900B8`
-
-Also increment an unmapped-dest counter at the cursor site when
-`idx == 0xFFFFFFFF`.
+On the same drain-tick samples, dump last keyon sw/sh val per idx next
+to live `w40`.
 
 Outcomes:
-- 12 have `w40!=0` and `to_188>0` / `to_cur=0`; ended have
-  `w40==0` and `to_cur>0` → H-slot40-skip
-- 12 have `to_0b8>0` / `to_cur=0` → H-loop-wrap
-- 12 have `w40!=0` but `to_188` tracks `$a2` not the flag → H-a2-gate
-- unmapped dests ≈ slot-sb count for the 12 → H-idx-unmapped
+- 12 have last sw val == live w40, sh does not change it; ended sw=0
+  → H-keyon-sw
+- 12 have last sh val == live w40 (low 16 bits); ended sh=0 → H-keyon-sh
+- both key-on vals 0 (or equal live/ended) and a later site writes the
+  nonzero → H-later-overwrite
+- zero key-on stores to the 12 after the last alloc of `0x801714D0`
+  → H-stale-word
 
-Positive control: `[drain-tick]`/`[drain-cross]`/`[drain-cursor]
-call=1 iters=1 gate=0x01`, boot `[avf-gate] site=slot-alloc
-0x8018D4A0 count=16`, and the four ended idxs must show `to_cur>0`
-plus last `pos+step >= cur`. Keep `ROGUESQ_SPIN_YIELD=1` and
-`ROGUESQ_LOG_VI_CALLERS=1`.
+Positive control: `[drain-tick]`/`[drain-path] call=1 iters=1 unmap=0`,
+boot `[avf-gate] site=slot-alloc 0x8018D4A0 count=16`, ended idxs
+`to_cur>0` `w40==0`, and at least one `[keyon-w40]` line must fire
+(mark-everything: log the first 8 stores regardless of dest). Keep
+`ROGUESQ_SPIN_YIELD=1` and `ROGUESQ_LOG_VI_CALLERS=1`.
 
 SENTINEL is applied — incremental edit, do not rerun full fixup.
 
 ## Exact patch sites
 
-- Branch counters in `RecompiledFuncs/funcs_24.c` at `0x80090084` /
-  `9C` / `A4` / `B0` / `B8` and unmapped dest at the cursor site;
-  `_cur_new` / new incremental `apply_s1981_drain_path` in
+- Store logs in `RecompiledFuncs/funcs_24.c` at `0x80090B68` /
+  `0x80090C28` (and any other musyx slot+0x40 stores the grep adds).
+- Incremental `apply_s1982_keyon_w40` in
   `/Users/williambuckley/Documents/Tools/N64Recomp/fixup_game_funcs.py`.
-- `[drain-path]` dump next to `[drain-cursor]` in `funcs_30.c`.
+- Last-sw/sh fields on `[drain-path]` in `funcs_30.c` if cheap; otherwise
+  the per-store log plus a drain-tick join on idx is enough.
 
 ## Exact test
 
 ```sh
-mkdir -p scratch/agent/s1981_drain_path
+mkdir -p scratch/agent/s1982_keyon_w40
 env ROGUESQ_SPIN_YIELD=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
 ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_LOG_VI_CALLERS=1 \
 PROBE_PHASE_WIDTH=512 PROBE_PHASE_TIMEOUT=60 PROBE_LEAVE_OK=1 \
 PROBE_KEYS='6:start 11:start 16:start 21:start 26:start 31:start 36:start 41:start 46:start 51:start 56:start' \
-zsh tools/probe.sh scratch/agent/s1981_drain_path 60 2
+zsh tools/probe.sh scratch/agent/s1982_keyon_w40 60 2
 ```
