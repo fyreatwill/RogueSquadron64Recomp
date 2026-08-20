@@ -1,41 +1,34 @@
-# NEXT work unit (s2042)
+# NEXT work unit (s2043)
 
-HYPOTHESIS-ID: m5-callback-side-pcm-witness
+HYPOTHESIS-ID: m5-callback-route-isolation
 
 ## Work unit
 
-Build once, then run one fresh `ROGUESQ_M5_C88_VALUE=1` arm using forced LLE,
-opt-in Factor 5 audio, spin yield, `ROGUESQ_LOG_ALL=1`, the existing M5
-writer/gate/service controls, and the known title-to-hangar phase-relative
-schedule. This is a corrected callback-side PCM witness after s2041 reached
-title only. Keep the retail-value writer unchanged and treat C88=1 as an
-opt-in route arm. Do not interpret bridge or PCM rows unless both the title
-and hangar VI anchors, the 24/24 `s2006-svc` control, and live gate/task
-controls are present.
+Build once, then run one fresh `ROGUESQ_M5_C88_VALUE=1` arm with forced LLE,
+opt-in Factor 5 audio, spin yield, and all passive M5 controls through the
+phase-gated `tools/probe.sh` wrapper. Wait for VI 1024, start the dense title
+A/Start schedule only after that phase, and keep capturing after the phase
+changes. This removes the regress scorer's invalid “undriven” classification
+from the route measurement. Do not interpret bridge or PCM rows unless both
+title VI 1024 and hangar VI 512 anchors, the 24/24 `s2006-svc` control, and
+live gate/task controls are present.
 
 ## Competing hypotheses and discriminator
 
-- **H1 — upstream-valid PCM:** target-phase `[pcm-bridge]` rows carry nonzero
-  bytes and paired `pcm-sanity` rows include `all_zero=0`. Usable samples
-  reach the callback; the next boundary is AI/device ordering.
-- **H2 — zero payload at the callback:** target-phase bridge rows fire with
-  `nz=0` and paired sanity rows remain `all_zero=1`. The callback is reached,
-  but task/image ABI or upstream sample production is wrong.
-- **H3 — device-side boundary:** target-phase bridge rows carry nonzero data,
-  but all paired sanity rows remain zero. The remaining boundary is after the
-  callback, in AI submission or device ordering.
-- **H4 — guest submit/queue boundary:** both anchors, the 24/24 service
-  control, gate-one rows, and real audio-task rows are live, but no target-
-  phase bridge row appears. The guest AI-submit/queue path is next.
-- **H5 — route failure:** either target anchor or required positive control is
-  absent. This is a route result and cannot select a PCM hypothesis.
+- **R1 — wrapper/schedule boundary:** the phase-gated wrapper and dense title
+  schedule produce a VI-512 transition. The earlier route failures were
+  launch/schedule artifacts; the callback PCM witness becomes admissible.
+- **R2 — guest title-to-hangar boundary:** phase-valid `pad-host` A/Start
+  edges, service, writer, gate, and task controls are live, but no VI-512
+  transition occurs. The next probe is inside the guest menu/title route.
+- **R3 — focus/event boundary:** the phase-gated wrapper posts keys but no
+  phase-valid `pad-host` A/Start edge appears. The remaining boundary is the
+  host focus/event path, not PCM production.
 
-The one-run table is: preflight and phase anchors; `s2006-svc` entry/exit;
-phase-valid `reapplyDisplayMode` writer and gate-one rows; real
-`audtask-dispatch`; then paired target-phase `[pcm-bridge]` and
-`[pcm-sanity]` rows. Expected outcomes are H1 (`nz>0` with `all_zero=0`), H2
-(`nz=0` with `all_zero=1`), H3 (`nz>0` with `all_zero=1`), H4 (live controls
-but no bridge), or H5 (missing anchor/control). Counts must be phase-scoped.
+The one-run discriminator is the phase table joined to post-1024
+`pad-host` rows: VI 512 selects R1; live post-1024 host edges without VI 512
+select R2; no post-1024 host edges selects R3. PCM rows are admissible only
+under R1 and the required positive controls.
 
 ## Commands
 
@@ -43,18 +36,19 @@ but no bridge), or H5 (missing anchor/control). Counts must be phase-scoped.
 cmake --build build --config Debug --target RogueSquadron64Recomp
 
 set +e
-env REGRESS_SECS=150 REGRESS_INTERVAL=0.6 REGRESS_REQUIRE_VISUAL=1 \
-REGRESS_KEYS='640@1:start 640@3:start 640@5:start 640@7:start 640@9:start 1024@2:a 1024@3:start 1024@4:a 1024@6:start' \
-REGRESS_LABEL=s2042_pcm \
+env PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 \
+PROBE_KEYS_FROM_PHASE=1 PROBE_LEAVE_OK=1 \
+PROBE_KEYS='1:a 2:start 3:a 4:start 6:start 8:start 10:start 12:start 14:start 16:start 18:start' \
 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 \
 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 \
 ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH=1 \
 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_LOG_PCM_SANITY=1 \
-  zsh tools/regress.sh scratch/agent/s2042_pcm 150 > scratch/agent/s2042_pcm_driver.log 2>&1
+  zsh tools/probe.sh scratch/agent/s2043_route 120 0.6 > scratch/agent/s2043_route_driver.log 2>&1
 rc=$?
 print "probe_rc=$rc"
 ```
 
-After the run, read `scratch/agent/s2042_pcm/verdict.json` and use only
-bounded `grep -c`, `grep -n ... | head/tail`, and `tail` on `run.log`. Record
-the selected row table before interpreting any PCM result.
+After the run, inspect only bounded `grep -c`, `grep -n ... | head/tail`,
+and `tail` slices of `scratch/agent/s2043_route/run.log`. Record the phase,
+post-1024 `pad-host`, service, gate, task, and hangar rows before interpreting
+any PCM result.

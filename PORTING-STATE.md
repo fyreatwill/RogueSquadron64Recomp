@@ -97655,3 +97655,41 @@ comparison.
 
 ORIGIN: no writer or value was changed; `ROGUESQ_M5_C88_VALUE=1` remained an
 opt-in test arm and this iteration added no mitigation.
+
+## Session 2042 (2026-08-20) — callback route remained title-only
+
+`HYPOTHESIS-ID: m5-callback-side-pcm-witness`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 54,239 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. One fresh
+C88=1 arm used forced LLE, opt-in Factor 5 audio, spin yield, `ROGUESQ_LOG_ALL`,
+the existing writer/gate/service controls, and the documented title-to-hangar
+width-relative schedule. The regress scorer completed at 150.9s with
+`input=ok visual=ok`, 39 frames, no crash/abort/missing-function/deferred-DL
+markers, and title VI `1024 @ 0x00790400` at 14.2s but no hangar VI `512 @
+0x006AB400`.
+
+The phase-valid title controls were live: `s2006-svc` was 24/24 entry/exit,
+`audtask-dispatch` emitted 109 real-task rows, the writer was `0 -> 1`, gate-one
+rows were present, and 90 bridge plus 54 PCM-sanity rows fired. The bridge and
+PCM values were not interpreted because the hangar anchor was absent. The
+scorer called the route “undriven,” but the same run's `pad-host` witness saw
+all four scheduled width-1024 A/Start events, so that wording is not selected
+as the cause.
+
+Per the failed-experiment rule, the fixed form retained the title schedule and
+extended the eleven-Start route. It completed at 182.3s with the same phase
+shape: title only, no crash/abort/missing-function/deferred-DL markers, 24/24
+service control, 124 real-task rows, 90 bridge rows, 62 PCM-sanity rows, and
+14 host A/Start edges. The raw `[phase]` rows and both verdict transition
+tables independently show no VI-512 anchor. This selects H5 route failure and
+rules out a dead instrument or a simple missing title input edge; it does not
+select any PCM hypothesis.
+
+The next unit is a phase-gated `tools/probe.sh` route-isolation run with a
+dense post-1024 A/Start schedule. It will separate wrapper/focus event loss
+from a guest title-to-hangar boundary before the callback PCM witness is
+reinterpreted.
+
+ORIGIN: no writer or value was changed; `ROGUESQ_M5_C88_VALUE=1` remained an
+opt-in test arm and this iteration added no mitigation.
