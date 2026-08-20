@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2024 (2026-08-20).
+for session detail. Reviewed through s2025 (2026-08-20).
 
 ## Current state
 
@@ -125,25 +125,34 @@ for session detail. Reviewed through s2024 (2026-08-20).
   outcomes as written: no-LLE-only success, a common pre-1024 failure, and
   two phase-valid arms. It selects an inverse LLE/route split provisionally;
   the different wrappers and input schedules still confound LLE itself.
+- The s2025 same-wrapper A/B isolated that split. With the same
+  `tools/probe.sh`, eleven-Start schedule, binary, and passive controls, the
+  forced-LLE arm reached VI 1024 at 14.5s and VI 512 at 26.6s; the HLE arm
+  never reached VI 1024 in 120s and remained at VI 640. The LLE arm later
+  hit the known PI `do_rom_read` crash at guest PC `0x80001B08`; the HLE arm
+  had no crash. The LLE arm's phase-valid service census emitted 409 matched
+  s2020/s2022 entries, all slot-0 status `0x00`, plus the real s2008 writer
+  `0x8009B2C4` changing `0x01` to `0x00` during shutdown call 3. The HLE arm
+  emitted only the non-control `0x8009BBF0` helper row. This selects H1:
+  forced LLE is the route gate under the common wrapper; it does not show a
+  status-3 interval or the worker-side clear path.
 
 ## Active investigation and ranked next steps
 
-1. **M5 isolate the LLE/route split before the port-side status writer/read
-   join.** s2024's fixed A/B is phase-valid only in the forced-LLE runner;
-   the direct no-LLE arm remains at VI 640 even with eleven boot Starts.
-   Because those arms used different wrappers and schedules, run the same
-   `tools/probe.sh` wrapper and the same eleven-Start schedule concurrently,
-   toggling only the LLE variables, with all s2020/s2022/s2008 controls. If
-   only the LLE arm reaches VI 1024, LLE is the selected route gate; if both
-   arms match the earlier split, the wrapper/input recipe is the cause; if
-   both reach VI 1024, the s2024 split was runner-specific. A phase-valid
-   arm with a live s2008 control reopens the writer/read discriminator; a
-   phase-valid arm without it remains an anchor failure.
-2. **M5 service store edge (blocked on #1).** If the writer/read join shows a
-   live slot-0 status-3 interval, use the already-built s2022 store rows to
-   join the worker clear path and then proceed to the seven-site callback
-   join. If no slot-0 status-3 interval exists, keep the store-edge arm
-   parked and investigate the named status writer/source instead.
+1. **M5 drain/shutdown boundary.** The route gate is now selected, but the
+   phase-valid LLE service rows all saw status `0x00` and no worker-side store.
+   Run the same forced-LLE `tools/probe.sh` wrapper and eleven-Start schedule
+   concurrently with only `ROGUESQ_DRAIN_INLOOP_TICK` toggled. Compare drain
+   return, shutdown call 3, status-3/status-zero transitions, service entry,
+   and the existing store edge. If tick-off alone exposes call 3 and a
+   worker/store sequence, the drain injection is the selected boundary; if
+   both arms reach call 3 but neither shows a worker/store, the worker
+   dispatch boundary remains selected; if only tick-off reaches call 3 but
+   still has no status-3 interval, investigate the named status writer/source.
+2. **M5 service store edge.** Once a live slot-0 status-3 interval is
+   observed, use the existing s2022 store rows to join the worker clear path
+   and then proceed to the seven-site callback join. Do not add a skip or
+   force-zero mitigation; the writer must be named and its value classified.
 3. **M5 callback-side PCM witness (only if #2 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.
@@ -170,9 +179,10 @@ for the port-side writer/thread join. The s2017 hold-based run adds a
 crash-free late-route witness, but the join remains unevaluable because the
 service positive control is absent. s2023's clean regeneration built, but its
 forced-LLE recipe stalled at VI 640 or aborted in RT64 before VI 1024. s2024's
-fixed forced-LLE arm reached VI 1024, while its same-window direct no-LLE arm
-stayed at VI 640; the new boundary is therefore an unresolved LLE/route split,
-not evidence against the s2016 phase-valid observation.
+   fixed forced-LLE arm reached VI 1024, while its same-window direct no-LLE arm
+   stayed at VI 640. s2025 then reproduced the split with the same wrapper and
+   schedule, selecting forced LLE as the route gate; the LLE arm's later PI
+   crash does not erase its earlier phase-valid census.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -197,8 +207,13 @@ recorded the retail branch/loop/store execution PCs and 15 writes to the
 exact status word. The status-2 stop path legitimately writes `0x03` at
 `0x8009B30C`, while `serviceVoicePoolFrame` (`0x8009B7EC` among its stores)
 is the legitimate worker-side zeroing path. The value branch is settled;
-s2022 selects the port-side status-writer/read join because the port service
-reads zero before its skip and never reaches the store.
+   s2022 selects the port-side status-writer/read join because the port service
+   reads zero before its skip and never reaches the store. The s2025
+   phase-valid LLE arm adds the same-run route control: 409 service rows still
+   read slot 0 as `0x00`, while the named `0x8009B2C4` writer records `0x01 ->
+   0x00` during shutdown call 3. No status-3 service interval or worker store
+   was observed, so the next boundary is the drain/shutdown scheduling
+   contract, not a permission to force the byte to zero.
 
 **M5 opt-in audio.** Both arms receive the same `M_AUDTASK` descriptor and
 the selected image matches `aspMainTextStart`/`aspMainDataStart`. Treatment
@@ -300,8 +315,12 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   explanation is superseded by the fixed s2024 A/B. It was believable because
   both s2023 recipe arms stopped before VI 1024 and lacked the s2008 control;
   the corrected same-window run reached VI 1024 in the forced-LLE arm. The
-  direct no-LLE arm still stalled at VI 640, so the remaining issue is an
-  unisolated LLE/route split rather than a universal phase failure.
+  direct no-LLE arm still stalled at VI 640, so the remaining issue was an
+  unisolated LLE/route split rather than a universal phase failure. s2025's
+  same-wrapper A/B is the superseding result: forced LLE reached VI 1024 and
+  HLE remained at VI 640, selecting the LLE route gate. The earlier wording
+  was believable because the wrappers differed; the common-wrapper control
+  removes that confound.
 
 ## Evidence ledger summary
 
@@ -318,7 +337,9 @@ shows that the chosen `get_function` witness mechanism and both its controls
 were unexercised in the phase-valid port route. s2021 establishes direct
 service entry/exit and s2022 refines the body/store boundary to the port
 slot/status predicate because the gate and loop are live but every sampled
-slot-0 status is zero. The durable milestones are: hangar reachability,
+slot-0 status is zero. s2025 selects forced LLE as the route gate under the
+common wrapper and leaves the port-side writer/read boundary at the drain /
+shutdown scheduling question. The durable milestones are: hangar reachability,
 bltzal link repair, audio-drain writer mapping, M5 plan, opt-in DMA-to-queue
 mapping, shutdown call-3 reachability, the repeated retail status-value
 sequence, retail gate-writer attribution, and the unresolved port-side

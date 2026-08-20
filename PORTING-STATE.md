@@ -97008,3 +97008,42 @@ or default audio behavior changed.
 
 OUTCOME: ADVANCED — the fixed capture produced the inverse phase split and
 selected the wrapper-controlled LLE isolation A/B.
+
+## Session 2025 (2026-08-20) — same-wrapper A/B selected the LLE route gate
+
+HYPOTHESIS-ID: m5-phase-route-lle-vs-wrapper
+
+The planned work unit used the existing binary and no new build or
+instrumentation. Both arms used the same `tools/probe.sh` wrapper, eleven
+boot-Start schedule, phase gate, passive audio/status environment, and
+120-second timeout. The only intended treatment was the forced-LLE trio
+`ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`.
+
+The forced-LLE arm reached VI 1024 at 14.5s and VI 512 at 26.6s. It emitted
+409 matched s2020 service entries/exits and s2022 branch/loop rows; every
+loop row was slot 0 with status `0x00` and `zero_skip=1`. The independent
+s2006 service control emitted 24 entries and 24 exits. Its s2008 census
+emitted five rows, including the real transition
+`pc=0x8009B2C4`, `old=0x01`, `new=0x00`, `shutdown_call=3`; the other four
+were the `0x8009BBF0` zero-to-zero helper rows. The arm later crashed in the
+known PI `do_rom_read` path with last guest PC `0x80001B08`, after the
+phase-valid table had completed.
+
+The HLE arm never reached VI 1024 in 120s and remained at VI 640. Its
+positive s2006 control emitted 24 entries and 24 exits, and its pre-phase
+s2020/s2022 controls were live, so the null phase result is not an
+instrument-dead null. It emitted only the non-control s2008 helper row and
+had no crash. The wrapper output independently classified the arms as LLE
+crash-after-phase versus HLE width-1024 timeout.
+
+This selects H1 (`lle-required`) and rules out the s2024 wrapper-confound
+explanation: forced LLE is the route gate under the common wrapper and
+schedule. It does not select a status-3 writer/read explanation; the
+phase-valid LLE service never observed status 3 or the worker-side store.
+The next discriminator is the same forced-LLE route with
+`ROGUESQ_DRAIN_INLOOP_TICK` on versus off, joining drain return, shutdown
+call 3, status transitions, worker entry, and the store edge. No mitigation,
+default audio behavior, or generated code changed.
+
+OUTCOME: ADVANCED — same-wrapper A/B selected the forced-LLE route gate and
+opened the drain/shutdown status boundary.
