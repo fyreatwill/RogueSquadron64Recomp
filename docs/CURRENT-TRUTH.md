@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2064 (2026-08-20).
+for session detail. Reviewed through s2065 (2026-08-20).
 
 ## Current state
 
@@ -61,6 +61,14 @@ for session detail. Reviewed through s2064 (2026-08-20).
   writer origin and refutes a synthetic cap or image-DMA staging origin at
   source scope, but is single-source evidence and does not yet prove that the
   host's reserved-gap assumption matches the retail task ABI.
+- s2065's complete generated-DMA table found five logical write paths and
+  twelve logical read paths. The image reads only staged `data_ptr`/`data_size`
+  fields; it never reads `output_buff` or `yield_data_ptr`. The canary span is
+  the full source of the `L_1E48` `0x180`-byte DMA write, but that write's
+  RDRAM destination is derived from DMEM audio state, as is the separate
+  `L_1314` write. This selects H-OutputRouteUnevaluable at source scope: the
+  generated writer is proven, but scratch versus output staging versus task-ABI
+  mismatch cannot be selected without the live task/value relationship.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -179,15 +187,16 @@ for session detail. Reviewed through s2064 (2026-08-20).
 This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
-1. **M5 Factor 5 image task/exit contract.** s2063 closes the nonzero
-   image-DMA-to-PCM branch: every observed image DMA payload was zero and the
-   exact task joins were zero-only, while the retail-owned band remains broad.
-   s2064 attributes the canary overwrite to generated DMEM work/output loops
-   and the `Broke` result to the natural `L_1328` break, but leaves the host
-   reserved-gap/task-ABI interpretation open. Map the final DMA source and
-   destination against the task fields and decide whether `0xE50..0xFCF` is
-   legitimate scratch/output or an ABI mismatch. Keep the retail writer, C88
-   value, wait/slot guards, and default dispatch unchanged.
+1. **M5 Factor 5 image task/exit contract.** s2065 maps every generated DMA
+   path but selects H-OutputRouteUnevaluable: `output_buff` and
+   `yield_data_ptr` are not consumed by the image, while the canary-covering
+   `L_1E48` write and the `L_1314` write both use indirect DMEM-derived RDRAM
+   destinations. Use a phase-valid task-value/retail-writer witness to decide
+   whether those destinations are intentional image output or an ABI mismatch.
+   s2063 still closes the nonzero image-DMA-to-PCM branch: every observed image
+   DMA payload was zero and the exact task joins were zero-only, while the
+   retail-owned band remains broad. Keep the retail writer, C88 value,
+   wait/slot guards, and default dispatch unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -340,7 +349,11 @@ therefore do not apply to `factor5_ucode_b(`. This selects
 the generated-writer portion of H-CanaryLegitimateTaskOutput at source scope
 and refutes a synthetic-cap or DMA-staging origin; it is single-source
 generated-tree evidence, not yet an independent retail validation of the host
-gap reservation.
+gap reservation. s2065 completed the ABI table and narrowed that conclusion:
+the writer origin remains selected, but no generated instruction consumes the
+OSTask `output_buff` or `yield_data_ptr`, and the two output-looking RDRAM
+destinations are indirect. The host-gap legitimacy and output classification
+therefore remain unevaluable from generated source alone.
 
 ### M3, M4, and generated symbols
 
@@ -434,6 +447,14 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   remained unmatched by image DMA. This selects H-ImageDmaStagingOnly and
   refutes H-ImageDmaFeedsPcm at this scope; the task exit/canary ABI remains
   open and the task-side result is single-source port evidence.
+- s2065 narrows s2064's source-scope wording from “generated writer proves
+  task output” to “generated writer is identified, output role is unknown.”
+  The stronger wording was believable because the canary-covering stream is
+  generated guest data and is immediately DMA-written. The complete table
+  shows that `output_buff` and `yield_data_ptr` are never consumed and that
+  both candidate RDRAM destinations are indirect DMEM-derived values; source
+  alone therefore selects H-OutputRouteUnevaluable, not scratch, output
+  staging, or ABI mismatch.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -465,7 +486,10 @@ joins. s2064 selected the generated-writer portion of
 H-CanaryLegitimateTaskOutput at source scope: the image function's generated
 work/output loops, not a fixup cap or image DMA staging, reach `0xF80..0xF8F`,
 and its natural `L_1328` break supplies `Broke`. The
-exact host task-ABI interpretation remains open. The C88 and callback conclusions remain
+exact host task-ABI interpretation remains open. s2065 narrowed the source
+claim: the complete DMA table shows that `output_buff` and `yield_data_ptr`
+are never read, and both candidate write destinations are DMEM-derived rather
+than direct OSTask fields. The C88 and callback conclusions remain
 single-source port evidence;
 the independent oracle supplied route/phase qualification. The task ABI and
 complete playback remain open. The oracle and port both independently reach

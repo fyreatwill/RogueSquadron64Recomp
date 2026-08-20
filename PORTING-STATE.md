@@ -98514,3 +98514,63 @@ boundary. No mitigation or behavior change was made.
 ORIGIN: the named writers are the generated `factor5_ucode_b` loops at
 `L_146C`, `L_1D24`, and `L_1F40`; their values are legitimate generated guest
 DMEM stores at source scope, while host/retail ABI legitimacy remains open.
+
+## Session 2065 (2026-08-20) — audited image DMA/task ABI crosswalk
+
+This was the prescribed bounded M5 static ABI audit. I did not regenerate,
+build, run the game, or enqueue a soak. I read every generated
+`DO_DMA_READ`/`DO_DMA_WRITE` path in `build/factor5_ucode/factor5_ucode_b_recompiled.c`,
+the inclusive-length and 8-byte RDRAM-alignment helpers, and the staged OSTask
+field layout. `git diff --check` passed.
+
+The helper macros add one to the encoded length, mask the RDRAM address with
+`0xFFFFF8`, mask the DMEM address with `0xFFF`, and clamp at the memory ends.
+The table uses `A8(x)=x&0xFFFFF8` and half-open byte spans `[start,end)`.
+`B=DMEM[0x348]`, `P=DMEM[0xE4C]`, `Q=DMEM[0x34C]`, `S=DMEM[0x6F0]`,
+`T=DMEM[0x6F4]`, and `N=HU(DMEM[0x342])` unless a row defines another
+register-derived value. The two generated `DO_DMA_READ` lines in `L_1418`
+are one reachable DMA: the second is after `goto do_indirect_jump` and is
+unreachable duplicate output.
+
+| Site / caller | Direction | Effective DMEM span | Effective RDRAM span | Controlling formula | OSTask field match |
+|---|---|---|---|---|---|
+| `L_10A8 -> L_13E8` | read | `[0x340,0x350)` | `[A8(data_ptr),A8(data_ptr)+0x10)` | `r5=data_ptr`, `r6=0x340`, `r7=0xF` | `data_ptr` source |
+| `L_10C4 -> L_13E8` | read | `[0xCB0,0xE48)` | `[A8(B+0x100),A8(B+0x100)+0x198)` | `B=word(data_ptr+8)`; `r5=B+0x100`, `r6=0xCB0`, `r7=0x197` | indirect data payload; no direct field |
+| `L_10E8 -> L_1418` | read | `[0x350,0x3A0)` | `[A8(data_ptr+0x10),A8(data_ptr+0x10)+0x50)` | `r4=data_ptr+0x10`, `r5=r4`, `r6=0x350`, `r7=0x4F` | derived from `data_ptr`; no direct field |
+| `L_12F0 -> L_13E8` | read | `[0x340,0x350)` | `[A8(P+0xA10),A8(P+0xA10)+0x10)` | `r5=P+0xA10`, `r6=0x340`, `r7=0xF` | indirect data state; no direct field |
+| `L_1340` first -> `L_13E8` | read | `[0xAF0,0xAF0+h0)` | `[A8(w0),A8(w0)+h0)` | `w0=word(r2+0x30)`, `h0=HU(r2+0x38)` | indirect table; no direct field |
+| `L_1360` second -> `L_13E8` | read | `[0xAF0+h0,0xAF0+h0+h1)` | `[A8(w1),A8(w1)+h1)` | `w1=word(r2+0x34)`, `h1=HU(r2+0x3A)`, conditional `h1!=0` | indirect table; no direct field |
+| `L_1384 -> L_1418` | read | `[0x220,0x320)` | `[A8(word(base+0x40)),A8(word(base+0x40))+0x100)` | `base=r5`, `r6=0x220`, `r7=0xFF` | indirect table; no direct field |
+| `L_1394/L_13A8 -> L_1418` | read | `[base_dmem,base_dmem+0x50)` | `[A8(r4),A8(r4)+0x50)` | `base_dmem=0x350` or `0x3A0`; `r5=r4`, `r7=0x4F` | register-derived; no direct field |
+| `L_1924 -> L_13E8` | read | `[0x6F0,0x700)` | `[A8(B),A8(B)+0x100)` | `r5=B`, `r6=0x6F0`, `r7=0xFF` | indirect data payload; no direct field |
+| `L_1D68 -> L_13E8` | read | `[0x6F0,0x738)` | `[A8(Q),A8(Q)+0x48)` | `Q=DMEM[0x34C]`, `r6=0x6F0`, `r7=0x47` | indirect task data; no direct field |
+| `L_1E00` positive -> `L_13E8` | read | `[0x8C0+2e,0x8C0+2e+2d)` | `[A8(S),A8(S)+2d)` | `d=r15+0xC0-T>0`, `e=T-r15` | DMEM audio state; no direct field |
+| `L_1E04` nonpositive -> `L_13E8` | read | `[0x8C0,0xA40)` | `[A8(S+2r15),A8(S+2r15)+0x180)` | branch condition `r15+0xC0-T<=0` | DMEM audio state; no direct field |
+| `L_1200 -> L_13B0` | write | `[0xC30,0xCB0)` | `[A8(B+8k),A8(B+8k)+0x80)` | `k=(old DMEM[0xE48]&0xF0)-0x10`, low nibble zero path | indirect data/ring state; no direct field |
+| `L_1294/L_12AC -> L_13B0` | write | `[0xC30,0xC30+8n)` | `[A8(B+8m),A8(B+8m)+8n)` | `m/n` are the high/low nibble-derived ring index/length | indirect data/ring state; no direct field |
+| `L_12E0 -> L_13B0` | write | `[0x6F0,0x9F0)` | `[A8(word(r2+0x44)),A8(word(r2+0x44)+0x300)` | `r5=0x6F0`, `r6=word(r2+0x44)`, `r7=0x2FF` | indirect table; no direct field |
+| `L_1314 -> L_13B0` | write | `[0xCB0,0xE48)` | `[A8(B+0x100),A8(B+0x100)+0x198)` | `B=word(data_ptr+8)`, `r5=0xCB0`, `r6=B+0x100`, `r7=0x197` | indirect data payload; no direct field |
+| `L_1E48 -> L_13B0` | write | `[0xE50,0xFD0)` | `[A8(S+0x180N),A8(S+0x180N)+0x180)` | `r13=0xC0*N`, `r14=S`, so `r6=S+2r13` and `r7=0x17F` | indirect DMEM audio state; no direct field |
+
+The OSTask is staged at DMEM `0xFC0..0xFFF`: `output_buff` is at `0xFE8`,
+`data_ptr` at `0xFF0`, and `yield_data_ptr` at `0xFF8`. The image has only the
+two direct task-field loads at `0x30($r1)` and `0x34($r1)`, i.e. `data_ptr` and
+`data_size`. No generated instruction reads `0x28($r1)` or `0x38($r1)`.
+
+The canary-covering stream is therefore not a partial write: `L_1E48` writes
+the complete `[0xE50,0xFD0)` source span, including `0xF80..0xF8F`, to an
+indirect destination. The separate `L_1314` write is `[0xCB0,0xE48)` and is
+the write immediately before the natural `L_1328` `Broke` edge. Neither path
+is statically matched to `output_buff` or `yield_data_ptr`; the s2063 zero
+payload result cannot identify the intended task field from payload alone.
+
+This selects **H-OutputRouteUnevaluable** under the declared discriminator.
+H-ImageWorkScratch, H-ImageOutputStaging, and H-ImageTaskAbiMismatch remain
+unselected because the source proves the generated writer and its spans but
+not the live relationship between the DMEM-derived destinations and the
+OSTask/task-data values. No mitigation or behavior change is authorized.
+
+ORIGIN: the canary writer is the generated guest `L_1E48` DMA source fed by
+`L_146C`/`L_1D24`/`L_1F40`; it is legitimate generated guest work at source
+scope. Whether that work is scratch, output staging, or an ABI mismatch is
+not established without an independent live task/value crosswalk.
