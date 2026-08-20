@@ -97342,3 +97342,46 @@ store reversal. The next work unit is a same-build, phase-gated unset versus
 controls retained. This run rules out missing retail target execution and an
 alternate target-site order; it leaves the value and downstream audio outcome
 open.
+
+## Session 2033 (2026-08-20) — selected the C88 value-arm route outcome
+
+`HYPOTHESIS-ID: m5-c88-value-ab`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 37,892 bytes, so this was not a
+maintenance iteration. Before building, the retail oracle ran with a
+whole-RDRAM positive control, a physical `0xA0F50` watch, and execution
+watches at `0x8008EB7C` and `0x8008EC88`. The whole-RDRAM watch produced
+10,017 writes, the target byte watch produced 17 writes, and both execution
+watches produced ten hits. Retail reached title `1024 @ 0x00790400` and
+hangar `512 @ 0x006AB400`. This independently confirms the retail writer and
+phase route for the planned comparison.
+
+The regeneration-backed fixup changed only the `reapplyDisplayMode` store at
+`0x8008EC88`: unset keeps the existing force-zero, while
+`ROGUESQ_M5_C88_VALUE=1` stores the generated `$v0` value. The build succeeded
+with the expected pre-existing format and macOS deployment warnings. The first
+planned A/B was invalid because `NEXT.md` used comma-separated keys, which
+`probe.sh` parses as one malformed token; both arms stopped at VI 640. The
+corrected same-build A/B used whitespace-separated keys from boot. The unset
+arm reached title `1024 @ 0x00790400`, passed 24/24 `s2006-svc` entry/exit
+controls, and emitted one phase-valid C88 writer row (`0 -> 0`) plus 511
+phase-valid raw-gate skip rows (`gate=0, branch=1`). The C88=1 arm passed the
+same 24/24 pre-phase service controls and 74 real-audio task-dispatch rows,
+but remained at VI 640 and produced no phase-valid C88, raw-gate, gate-1,
+wait, task, or PCM rows. A serial C88=1 reproduction with a 75-second phase
+wait repeated the VI-640 result with the same pre-phase controls. The unset
+control's hangar transition was not completed because the concurrent
+`probe.sh` windows race for macOS frontmost focus; the result is therefore a
+title-phase gate comparison, not a full hangar/PCM comparison.
+
+This selects B of the planned table: the legitimate retail-value arm is
+destabilizing or insufficient on the port route before the downstream
+gate/task boundary. It rules out a missing C88 string in the binary, a missing
+pre-phase service/task control, and a conclusion based only on a downstream
+PCM null. It does not identify whether the stall is before or after the C88
+writer, and it does not authorize changing the default store.
+
+ORIGIN: `reapplyDisplayMode` at `0x8008EC88` is the writer. Its generated
+`$v0=1`/retail value is legitimate guest state; the existing default `0` is
+the port's MusyX-stub mitigation. The new arm is opt-in diagnostic behavior,
+not a shipped mitigation or game-value change.

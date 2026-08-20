@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2032 (2026-08-20).
+for session detail. Reviewed through s2033 (2026-08-20).
 
 ## Current state
 
@@ -69,6 +69,22 @@ for session detail. Reviewed through s2032 (2026-08-20).
   does not expose an external caller beyond the local predecessor/self pattern
   or report old/new byte values, so it does not authorize reversing the port's
   force-zero.
+- s2033 completed the C88 value A/B with the independent retail control. The
+  retail oracle again passed its whole-RDRAM control (10,017 writes), recorded
+  17 physical `0xA0F50` writes and ten executions each at `0x8008EB7C` and
+  `0x8008EC88`, and reached title `1024 @ 0x00790400` plus hangar `512 @
+  0x006AB400`. The corrected port A/B used one build: the unset arm reached
+  title `1024 @ 0x00790400`, passed 24/24 `s2006-svc` entry/exit controls, and
+  emitted one phase-valid C88 writer row plus 511 raw-gate skip rows; the
+  C88=1 arm passed the same 24/24 pre-phase service controls and 74 real audio
+  task-dispatch rows but remained at VI 640 through a 75-second serial
+  reproduction, with no phase-valid C88/raw-gate/task/PCM rows. The initial
+  concurrent recipe was invalid because its comma-separated key list was not
+  parsed by `probe.sh`; the corrected control also exposed a macOS frontmost
+  race that prevented its hangar transition. This selects B: restoring the
+  legitimate retail value at `reapplyDisplayMode` is destabilizing or
+  insufficient on the port route before the downstream gate/task boundary.
+  It does not prove the stall's mechanism or authorize changing the default.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -213,13 +229,14 @@ for session detail. Reviewed through s2032 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 C88 value A/B.** Add one env-gated arm that restores the original
-  `reapplyDisplayMode` store value at `0x8008EC88`, with every other gate
-  writer unchanged. Build both arms together and compare the unset control
-  against `ROGUESQ_M5_C88_VALUE=1` phase-gated at title and hangar; keep
-  `ROGUESQ_AUDIO_UCODE=1` opt-in. Require the existing task, raw-gate,
-  gate-1, wait, slot, and PCM controls in both arms before interpreting the
-  value result.
+1. **M5 C88 writer reachability.** Use the existing
+  `ROGUESQ_LOG_REAPPLYDISPLAYMODE_REACH` entry/exit witness in both arms to
+  determine whether the C88=1 VI-640 stall occurs before or after
+  `reapplyDisplayMode` executes. Keep the corrected whitespace eleven-Start
+  schedule, `ROGUESQ_AUDIO_UCODE=1`, and the phase-gated M5 census. A writer
+  entry/exit in the C88=1 arm before its stall selects a post-writer gate
+  transition; no C88=1 entry with the same pre-phase controls leaves the
+  route/dispatch boundary open. Do not change another writer.
 2. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
@@ -495,6 +512,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   predecessor/self pattern and all phase controls. The remaining discriminator
   is the value arm itself, not an alternate writer path. The oracle still does
   not expose old/new bytes, so this does not reverse the store by itself.
+- s2033 supersedes s2032's one-writer A/B as the active next question. The
+  wording that the value arm could be judged from downstream gate/task/PCM
+  rows was believable because the unset control reached the title census and
+  the retail site is live. The corrected A/B instead found a repeatable
+  C88=1 VI-640 stall with the same pre-phase controls and no downstream
+  phase-valid rows; the next measurement must locate the stall relative to
+  `reapplyDisplayMode`, not reverse another gate or infer a PCM null.
 
 ## Evidence ledger summary
 
@@ -534,6 +558,11 @@ with live retail/port controls, two phase-valid `0x8008EC88` zero-valued writer
 rows, and 511 raw-gate skip rows in each target phase. The next boundary is
 the existing writer-value divergence; s2032 selects the ordinary retail
 reapply order and leaves a one-writer C88 value A/B, not the wait consumer.
+s2033 then selects the C88=1 pre-phase stall outcome: the unset arm reaches
+the title census, while the value arm repeats VI 640 with the same pre-phase
+controls and no downstream phase-valid rows. The C88 writer's original value
+is legitimate guest state, so the arm remains opt-in and the next boundary is
+writer reachability.
 
 ## Method and safety rules
 
