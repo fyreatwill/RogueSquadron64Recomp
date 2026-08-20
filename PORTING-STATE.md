@@ -96283,3 +96283,34 @@ or change a gate.
 **OUTCOME: ADVANCED** — batched DMA scope built and phase-validated; the
 graphics classification was overturned and the payload-to-PCM discriminator
 is the next boundary.
+
+## Session 2004 (2026-08-20) — checkpoint: s2004 payload-hash work unit unstarted
+
+HYPOTHESIS-ID: m5-audio-dma-pcm-contract
+
+This is a checkpoint close-out. The planned work unit (extend the existing
+`AudioDmaRange` / `AudioDmaProbe` census in `librecomp/src/rsp.cpp` with a
+per-range FNV payload hash + nonzero byte count, add a matching
+`queue_samples` hook in `ultramodern/src/audio.cpp`, run the A/B, and read
+H-task-staging vs H-bridge vs H-bridge-valid) did not execute. The prior turn
+died before any payload-hash code was written or built, and before the retail
+oracle or any port run was launched for this session. No new code, log
+artifacts, or discriminating results exist.
+
+What IS known entering this session:
+- Session 2003's batched probe is the current instrument: `AudioDmaRange`
+  tracks dram address, length, DMEM source, and overlap flags for every DMA
+  write during a sampled audio task. Treatment (ROGUESQ_AUDIO_UCODE=1) shows
+  248 DMEM-to-RDRAM ranges with write sources at DMEM 0x6F0/0xCB0; control
+  shows zero ranges; all sampled PCM in both arms is `all_zero=1`.
+- The DMA ranges are legitimate aspMain activity (symbol map confirms
+  aspMainTextStart/aspMainDataStart); their payload contents are not yet
+  hashed, so we cannot distinguish valid PCM output from a malformed
+  staged/task result.
+- H-task-staging vs H-bridge vs H-audio-path-valid remain open; the
+  discriminator is the payload hash joined to the AI-buffer hash from
+  `queue_samples`.
+
+OUTCOME: SUBSTITUTED — session died mid-work-unit before payload
+instrumentation was added; next unit is a RESUME of the s2004 payload-hash
+design.
