@@ -1,48 +1,58 @@
-# NEXT work unit (s2032)
+# NEXT work unit (s2033)
 
-HYPOTHESIS-ID: m5-guest-gate-writer-order
+HYPOTHESIS-ID: m5-c88-value-ab
 
 ## Work unit
 
-Trace the retail caller/order for `reapplyDisplayMode` and its
-`0x8008EC88` gate write before changing the existing port force-zero. This is
-one ground-truth experiment, not a store reversal or a new runtime counter.
-Use the already-valid s2031 port table as the port-side line: its phase-valid
-row is `reapplyDisplayMode:reapply-success`, `0 -> 0`, followed by raw-gate
-zero/skip rows. The new discriminator is retail execution at the reapply
-entry and store PC, with the `exec-prev` caller histogram, in the same run as
-the whole-RDRAM and physical gate-write controls.
+Build one env-gated C88 value arm and compare it with the unset control. The
+arm restores the original guest value at `reapplyDisplayMode`'s
+`0x8008EC88` store only; all other `0x800A0F50` writers remain unchanged.
+Keep `ROGUESQ_AUDIO_UCODE=1` opt-in and use the existing eleven-Start,
+phase-gated probe recipe. Both arms must be built from the same instrumented
+tree and run in the same iteration; no value conclusion is allowed from a
+single arm or from a run without the existing positive controls.
 
 ## Competing hypotheses and discriminator
 
-- **A — ordinary reapply order:** retail enters `reapplyDisplayMode` through
-  the expected display-mode caller, reaches `0x8008EC88`, and the write is
-  part of the normal title/hangar transition. This supports testing the
-  original guest value later, but does not authorize it now.
-- **B — late or alternate writer order:** retail reaches the store from a
-  different caller/re-entry or with a transition order absent from the port.
-  This keeps the force-zero arm closed and selects caller/order tracing.
-- **C — watch/control failure:** the whole-RDRAM watch does not reach its cap,
-  retail misses VI 1024 or hangar VI 512, or the PC watch has no hit despite
-  the target write. Treat the result as unevaluable and repair only the
-  oracle control.
+- **A — value enables the intended path:** the C88=1 arm records a phase-valid
+  `gate=1` transition and downstream gate-1/task/slot/PCM activity that the
+  unset arm lacks, while both arms pass the s2006/task positive controls.
+- **B — value is insufficient or destabilizing:** C88=1 is phase-valid but
+  remains consumer/task/PCM-silent, or it stalls/crashes before the required
+  phase rows while the unset control stays valid. This selects a later audio
+  boundary, not permission to add another gate change.
+- **C — arm/control failure:** the new env arm does not appear in the binary or
+  both arms lack the same-run positive controls. Treat the comparison as
+  unevaluable and repair the fixup/build recipe before interpreting audio.
 
-The discriminator is one retail table keyed by phase and PC: reapply-entry
-execution count, `exec-prev` caller PCs, `0x8008EC88` execution/write count,
-and the target-write PC cluster. A/B split on the caller/order; C is accepted
-only when its positive-control failure is visible. Do not compare a new
-animating port run by wall-clock timing.
+The discriminator is one phase-keyed A/B table containing C88 writer value,
+raw gate, gate-1, wait, task exit/DMEM, slot/status, and PCM rows, with the
+existing s2006 control in both arms. A/B split on downstream gate/task
+activity; C is accepted only when its positive-control failure is visible.
+Use VI width/origin gates, never wall-clock scene matching.
 
-## Ground truth command
+## Build and A/B commands
 
 ~~~sh
-tools/oracle/build/rs64_oracle --core ../rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom ../rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 70 --hit-cap 10000 --watch-write 0x0:0x800000 --watch-write 0xA0F50:0xA0F51 --watch-pc 0x8008EB7C,0x8008EC88 --detail-watch 1 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --vi-trace > scratch/agent/s2032-groundtruth.log 2>&1
+# Regeneration order when the external generated tree is changed:
+# make_elf.py -> N64Recomp -> fixup_game_funcs.py -> cmake.
+cmake --build build --config Debug --target RogueSquadron64Recomp
+
+env PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 \
+PROBE_LEAVE_OK=1 PROBE_KEYS='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' \
+ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 \
+  zsh tools/probe.sh scratch/agent/s2033_c88_unset 70 0.5 > scratch/agent/s2033_c88_unset_driver.log 2>&1 &
+
+env PROBE_PHASE_WIDTH=1024 PROBE_PHASE_TIMEOUT=180 PROBE_KEYS_FROM_PHASE=1 \
+PROBE_LEAVE_OK=1 PROBE_KEYS='6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start' \
+ROGUESQ_LLE_FORCE=1 ROGUESQ_AUDIO_UCODE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_M5_GATE_CONTRACT=1 ROGUESQ_M5_C88_VALUE=1 \
+  zsh tools/probe.sh scratch/agent/s2033_c88_value 70 0.5 > scratch/agent/s2033_c88_value_driver.log 2>&1 &
+wait
 ~~~
 
-Accept the run only if the whole-RDRAM watch reaches its cap, the target
-write watch fires, and retail reaches VI 1024 plus the hangar VI 512 origin.
-Do not edit `fixup_game_funcs.py`, reverse `0x8008EC88`, or rebuild until
-this command supplies its caller/order result. If the result is A or B, the
-following unit can make one env-gated C88 store arm with every other gate
-writer unchanged; it must be built and compared phase-gated against its
-unset control in one iteration.
+Accept an arm only if the same-run s2006/task controls fire, the arm reaches
+the 1024-width title and 512-width hangar phases, and its phase rows are
+present for the full table. The C88=1 arm is the only treatment; the unset arm
+is the control. Do not change any other gate writer or promote the value from
+task exit alone. If C88=1 produces no downstream gate/task/PCM distinction,
+park the value arm and move to the next M5 boundary.

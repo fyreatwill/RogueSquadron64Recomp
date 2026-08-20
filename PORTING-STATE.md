@@ -97311,3 +97311,34 @@ ORIGIN: `reapplyDisplayMode` at `0x8008EC88` is the writer. Its retail value
 `1` is legitimate guest state; the port value `0` is the existing
 `fixup_game_funcs.py` mitigation for the stubbed MusyX engine. No new
 mitigation or game-value change landed in this session.
+
+## Session 2032 (2026-08-20) — selected the retail reapply order
+
+`HYPOTHESIS-ID: m5-guest-gate-writer-order`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 35,983 bytes, so this was not a
+maintenance iteration. The prescribed retail oracle ran before any build or
+store change. Its whole-RDRAM positive control reached the 10,000-hit cap at
+the start of the run. The physical `0xA0F50` watch recorded 17 writes, and the
+execution watches at `0x8008EB7C` and `0x8008EC88` each recorded ten hits.
+
+The run reached the 1024-width title phase (`vi=1008`, origin
+`0x00790800`) and the 512-width hangar phase (`vi=2276`, origin
+`0x006AB800`). The target write cluster repeated at approximately 2.1, 6.8,
+17.3, 38.4, and 52.9 seconds. Its `exec-prev` histogram was
+`0x8008EB7C <- 0x8008EB78` five times plus self five times, and
+`0x8008EC88 <- 0x8008EC84` five times plus self five times. Static source
+mapping independently identifies these sites as the early gate-clear and
+tail-store points in `reapplyDisplayMode`. This selects A for the ordinary
+repeated reapply order at the named sites, over an alternate or late writer
+order. The narrow execution watch does not expose an external caller beyond
+the local predecessor/self pattern.
+
+The oracle watch reports execution and write PCs but not old/new byte values.
+Therefore it does not prove the retail value at `0x8008EC88`, does not prove
+that the port's force-zero is wrong, and does not authorize a mitigation or a
+store reversal. The next work unit is a same-build, phase-gated unset versus
+`ROGUESQ_M5_C88_VALUE=1` A/B with all existing task, gate, slot, and PCM
+controls retained. This run rules out missing retail target execution and an
+alternate target-site order; it leaves the value and downstream audio outcome
+open.

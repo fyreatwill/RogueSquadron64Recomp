@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2031 (2026-08-20).
+for session detail. Reviewed through s2032 (2026-08-20).
 
 ## Current state
 
@@ -58,6 +58,17 @@ for session detail. Reviewed through s2031 (2026-08-20).
   port/retail value discrepancy at `0x8008EC88` remains the next question:
   the retail instruction sets `$v0=1`, while the existing port fixup forces
   that store to zero. No value was changed in s2031.
+- s2032 completed the retail caller/order discriminator before any store
+  change. The whole-RDRAM control reached its 10,000-hit cap, the physical
+  `0xA0F50` watch recorded 17 writes, and retail reached the 1024-width title
+  phase and 512-width hangar phase. The execution watches recorded ten hits
+  each at `0x8008EB7C` and `0x8008EC88`; their local `exec-prev` rows were the
+  expected `0x8008EB78`/self and `0x8008EC84`/self pairs. Together with the
+  static site mapping, this selects the ordinary repeated reapply order (A)
+  at the named sites over an alternate/late writer order (B). The narrow watch
+  does not expose an external caller beyond the local predecessor/self pattern
+  or report old/new byte values, so it does not authorize reversing the port's
+  force-zero.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -202,12 +213,13 @@ for session detail. Reviewed through s2031 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 reapply writer/value contract.** Trace the divergent
-  `reapplyDisplayMode` writer at `0x8008EC88` before changing its value.
-  Use the retail PC/previous-PC attribution and one phase-keyed port table
-  joining writer order/value to the raw gate, gate-1, wait, task, slot, and
-  PCM rows. Keep `ROGUESQ_AUDIO_UCODE=1` opt-in; do not reverse the store
-  until the caller/order evidence is captured.
+1. **M5 C88 value A/B.** Add one env-gated arm that restores the original
+  `reapplyDisplayMode` store value at `0x8008EC88`, with every other gate
+  writer unchanged. Build both arms together and compare the unset control
+  against `ROGUESQ_M5_C88_VALUE=1` phase-gated at title and hangar; keep
+  `ROGUESQ_AUDIO_UCODE=1` opt-in. Require the existing task, raw-gate,
+  gate-1, wait, slot, and PCM controls in both arms before interpreting the
+  value result.
 2. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
@@ -326,6 +338,14 @@ gate-1 or wait row fired, while the opt-in task returned through the
 Factor-5 arm and PCM stayed zero. This selects the writer/value divergence
 as the next M5 boundary, not a missing wait consumer or a missing positive
 control. The store remains unchanged pending caller/order tracing.
+
+s2032 then supplied the named-site order line: the retail execution watch saw
+the repeated `0x8008EB7C`/`0x8008EC88` pair with the expected local
+predecessor/self histogram in both sites, while the independent whole-RDRAM
+and physical-byte watches were live through title and hangar. This selects the
+ordinary reapply order at the named sites; it leaves any external caller
+detail, the retail byte value, and the port-side consumer outcome for the
+one-writer C88 A/B.
 
 **M5 retail gate writers.** The s2014 whole-RDRAM control and debugger-on Rice
 watch are both live: the control reached its 10,000-callback cap and the target
@@ -468,6 +488,13 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   value and caller/order, not whether the gate census was exercised. The
   image/task ABI remains open rather than being promoted or blamed from a
   single null.
+- s2032 supersedes s2031's caller/order uncertainty as the complete next
+  question. That uncertainty was believable because s2031 had only static
+  value mapping and port-side rows; the live retail oracle now records the
+  repeated `0x8008EB7C`/`0x8008EC88` execution cluster with its expected local
+  predecessor/self pattern and all phase controls. The remaining discriminator
+  is the value arm itself, not an alternate writer path. The oracle still does
+  not expose old/new bytes, so this does not reverse the store by itself.
 
 ## Evidence ledger summary
 
@@ -505,7 +532,8 @@ the independent retail gate watch and phase-valid port gate skip make the
 guest gate/consumer census the next M5 boundary. s2031 completes that census
 with live retail/port controls, two phase-valid `0x8008EC88` zero-valued writer
 rows, and 511 raw-gate skip rows in each target phase. The next boundary is
-the existing writer-value divergence and caller/order, not the wait consumer.
+the existing writer-value divergence; s2032 selects the ordinary retail
+reapply order and leaves a one-writer C88 value A/B, not the wait consumer.
 
 ## Method and safety rules
 
