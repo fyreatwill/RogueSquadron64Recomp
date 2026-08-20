@@ -97502,3 +97502,47 @@ the immediate launcher failure and hard-cap kill are not port crash evidence.
 ORIGIN: `reapplyDisplayMode` at `0x8008EC88` is the writer. Retail value `1`
 is legitimate guest state; the default port value `0` remains the existing
 MusyX-stub mitigation. No store change or new mitigation landed.
+
+## Session 2038 (2026-08-20) — post-title C88 A/B reproduced the route split
+
+`HYPOTHESIS-ID: m5-c88-value-phase-valid-ab`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 46,750 bytes, so this was not a
+maintenance iteration. The Debug target rebuilt successfully. Both arms ran
+from that fresh binary concurrently with forced LLE, opt-in Factor 5 audio,
+spin yield, the six existing M5 witnesses, and five width-640 plus three
+width-1024 phase-relative Starts. Both `tools/regress.sh` preflights reported
+`input=ok visual=ok`; both logs recorded post-640 `pad-host` and `host-start`
+edges and the 24/24 `s2006-svc` entry/exit positive control. The unset arm's
+scorer FAIL therefore did not establish H4: the preflight and guest-side input
+controls were live, and the arm reached the requested title anchor.
+
+The unset arm reached title VI `1024 @ 0x00790400` at 12.2s and remained in
+phase 8 through the 91.0s capture. Its phase-valid writer row at
+`0x8008EC88` recorded `0 -> 0`, and its 511 phase-8 raw-gate rows recorded
+`gate=0, branch=1`; it had no phase-10 rows. The `audtask-dispatch` marker
+advanced through `n=5376`, and every target-phase `pcm-sanity` sample was
+zero. The C88=1 arm reached title VI `1024 @ 0x00790400` at 12.7s and hangar
+VI `512 @ 0x006AB400` at 21.3s. Its writer recorded `0 -> 1` in both target
+phases, with phase-8 and phase-10 gate-1 rows; the sampled audio-task marker
+advanced through `n=1152`, and every observed target-phase PCM sample was
+zero. It then terminated on the known RT64 `moveWord` assertion with last
+guest PC `0x8000834c`, after the target table was live; no missing-function or
+deferred-DL marker appeared.
+
+This reproduces the s2037 inverse route split under the post-title schedule:
+the value arm reaches the gate-1/hangar path while unset remains on the
+gate-zero/title path. It is still single-source port evidence, and concurrent
+GUI arbitration remains a confound, so this is a provisional observation of
+the H1 split rather than authorization to change the legitimate retail store
+value. The gate/task join now exists for the callback-side PCM witness; the
+next unit must enable the existing `[pcm-bridge]` census on the opt-in arm and
+separate nonzero producer data from an AI/queueing boundary.
+
+The run produced no new soak-queue verdicts. The C88=1 assertion is recorded
+as a terminal runtime symptom after the phase-valid M5 result, not as a new
+M3 mitigation target.
+
+ORIGIN: `reapplyDisplayMode` at `0x8008EC88` is the only changed-value writer
+under test. Retail value `1` is legitimate guest state; the default port value
+`0` remains unchanged and opt-in. No store change or mitigation landed.

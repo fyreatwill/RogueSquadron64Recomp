@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2037 (2026-08-20).
+for session detail. Reviewed through s2038 (2026-08-20).
 
 ## Current state
 
@@ -128,6 +128,19 @@ for session detail. Reviewed through s2037 (2026-08-20).
   next M5 unit must qualify reproducibility with a post-title schedule whose
   final key precedes the expected transition, then repeat the phase/control
   comparison without changing the writer.
+- s2038 completed that post-title qualification from one fresh build. Both
+  arms passed `input=ok visual=ok`, post-640 host-input edges, and 24/24
+  `s2006-svc` controls. Unset-C88 reached title VI 1024 but not hangar: its
+  writer was `0 -> 0`, its 511 phase-8 raw-gate rows were `gate=0,
+  branch=1`, and its target PCM samples were all zero. C88=1 reached hangar
+  VI 512: its writer was `0 -> 1` in both target phases and its phase-8 and
+  phase-10 consumers took gate-1 rows; target PCM samples were still all
+  zero. This reproduces the inverse route split at the phase/control level,
+  but it remains single-source port evidence with concurrent GUI arbitration
+  unresolved, so the retail-value store stays opt-in and unchanged. The
+  C88=1 arm then hit the known RT64 `moveWord` assertion at guest PC
+  `0x8000834c`, after the target table was live. The gate/task join is now
+  sufficient for the callback-side PCM witness.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -272,21 +285,25 @@ for session detail. Reviewed through s2037 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 gate-writer value A/B reproducibility.** Run unset-C88 and
-   `ROGUESQ_M5_C88_VALUE=1` arms from the same build with a post-title,
-   width-1024-relative key schedule whose final key precedes the expected
-   hangar transition. Keep the retail-value arm opt-in and do not change the
-   writer. Require both preflight/input controls and post-640 host edges;
-   compare only phase-valid title/hangar rows, `s2006-svc`,
-   `reapplyDisplayMode`, raw-gate, audio-task, and PCM rows. Treat s2037's
-   inverse split as single-source until this route qualification reproduces or
-   refutes it.
-2. **M5 service store edge.** Park unless a future audio arm supplies a live
+1. **M5 callback-side PCM witness.** Use the opt-in C88=1 arm, forced LLE,
+   opt-in Factor 5 audio, spin yield, and the post-title schedule that reached
+   both target anchors in s2038. Add `ROGUESQ_LOG_ALL=1` so the existing
+   `[pcm-bridge]` census is live, while retaining `ROGUESQ_LOG_PCM_SANITY=1`,
+   the gate/writer witness, and the `s2006-svc` control. Require preflight,
+   title/hangar transitions, post-640 host edges, and real audio-task markers.
+   Compare only phase-valid bridge rows at the two target origins. A bridge
+   row with nonzero bytes plus `all_zero=0` selects upstream-valid PCM and
+   moves the question to AI/device ordering; bridge rows with `nz=0` select
+   an upstream task/ABI problem; no bridge rows with live gate/task controls
+   select the guest AI-submit/queue boundary; missing controls is H4.
+2. **M5 gate-writer value causality.** Keep `ROGUESQ_M5_C88_VALUE=1` opt-in
+   and the retail-value writer unchanged. The phase-valid s2038 split is
+   still single-source because both arms shared GUI focus; revisit only with
+   a genuinely focus-isolated discriminator, not another reactive store
+   reversal.
+3. **M5 service store edge.** Park unless a future audio arm supplies a live
    slot-0 status-3 interval. If it does, use the existing s2022 store rows to
    join the worker clear path and proceed to the seven-site callback join.
-3. **M5 callback-side PCM witness (only after #1 produces a gate/task join).**
-   Phase-gate a callback census at the exact two nonzero bridge rows. Do not
-   infer a bridge defect from old rate-limited `pcm-sanity` rows.
 4. **M3 crash work.** Only perform complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` SIGBUS has 7659 clean
    hangar calls in the guarded run; do not add a mitigation. Revisit only with
@@ -318,10 +335,14 @@ forced-LLE recipe stalled at VI 640 or aborted in RT64 before VI 1024. s2024's
 **M5 width-relative route control.** s2035's unset-C88 control was not a
 complete common-route failure. s2036 passed both preflight checks, produced
 post-640 host Start edges, and reached the title and hangar anchors under the
-same forced-LLE/opt-in-audio configuration. The `regress_score.py` FAIL is a
-single-source harness heuristic: its final scheduled key came after the
-transitions it expected to observe. The phase/control table is the selected
-line; the next question is the phase-valid C88 value A/B.
+same forced-LLE/opt-in-audio configuration. s2037 then showed an inverse
+single-source split, but its final scheduled key followed the relevant
+transition. s2038 fixed that schedule: both arms passed the input/visual and
+post-640 controls, the unset arm reached title, and C88=1 reached hangar with
+the matching `0 -> 0`/gate-zero versus `0 -> 1`/gate-one table. The unset
+scorer FAIL is therefore not an H4 selection. The split is reproducible as a
+port observation but not yet a causal store explanation because concurrent GUI
+arbitration remains live; the next boundary is the callback-side PCM census.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -596,6 +617,15 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   is single-source port evidence and concurrent GUI arbitration remains a
   confound, it does not select an inverse causal story or authorize changing
   the writer; the next unit is a post-title schedule qualification.
+- s2038 supersedes s2037's immediate next-unit wording that a post-title
+  schedule still had to qualify whether the inverse split could be observed.
+  That wording was believable because s2037's final key came after its
+  relevant transition and its scorer reported an input failure. The corrected
+  schedule reproduced the phase-valid writer/gate split with both preflight and
+  post-640 host controls, while C88=1 reached hangar before a known RT64
+  `moveWord` assertion. The result remains single-source and concurrent-focus
+  confounded, so it does not reverse the legitimate writer; the next unit is
+  the existing callback-side PCM census.
 
 ## Evidence ledger summary
 
@@ -654,8 +684,11 @@ controls were live. s2037 ran the requested same-build value A/B with the same
 preflight and input controls, but produced an inverse single-source route
 split: unset reached title only, while C88=1 reached hangar and gate one. The
 scorer's final-key check was invalid in both arms because the last scheduled
-key followed the relevant transition. The next unit qualifies that split with
-a post-title schedule before interpreting it.
+key followed the relevant transition. s2038 repeated the table with the final
+post-title key before the expected transition: the split remained, C88=1
+reached the phase-10 gate-one path, and unset remained on the phase-8
+gate-zero path. The callback-side PCM witness is now the next M5 boundary;
+the retail-value store remains unchanged and opt-in.
 
 ## Method and safety rules
 
