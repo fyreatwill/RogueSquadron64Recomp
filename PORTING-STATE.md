@@ -95529,3 +95529,63 @@ in the ledger; no new unevaluated verdict.
 H-stop-all-gate-stuck and refutes skip/once. Next: whether
 each loop iter takes the FREE path (`lw 0($s2)` nonzero →
 `L_8008DC78`) or empty-slot fade-only (`beq L_8008DCC4`).
+
+## Session 1991 (2026-08-19) — stopAll drain path is empty-slot fade; FREE never runs
+
+**Instrument.** Incremental `apply_s1991_stop_all_path`
+(`RS64_S1991_STOP_ALL_PATH=1`). After `lw 0x0($s2)` at
+`L_8008DC50` / `0x8008DC50` in `stopAllSynthVoices`:
+n/narmed/n_empty (v0==0)/n_free (v0!=0), last v0/s2/idx.
+First 8 + every 10000th `[stop-all-path]`. Sum dump
+`[stop-all-path-sum]` at existing `[drain-timeout]`. Kept
+`[stop-all-sum]` / `[w60-sum]` / `[drain-path]`. `S32` on
+the existing load (observe `ctx->r2` after `MEM_W`). No
+store changed. Fade jal not skipped or rewritten.
+
+**Probe.** `scratch/agent/s1991_stop_all_path/run.log` —
+eleven-Start + `ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s
+after VI 512. Probe rc=0, 16 frames, 0 CRASH/SIGBUS.
+Hangar `[phase] 512 origin=0x006AB400` at 26.1s `#1505`.
+
+Positive controls (same run): `[drain-path] call=1 iters=1
+unmap=0` 18 idx rows `h58=0x0014` (idx 12 idle `h58=0`);
+last alloc tickn=4 `0x801714D0 count=18`; `[drain-stop-sum]
+entry=1` fade n=154; `[drain-timeout]` 10M; `[w60-sum]`
+fade-zero narmed=134520 n0=134520; `[stop-all-sum] n=10073
+n_skip=0 n_work=10073 lastgate=18 lasta0=0x00`;
+`[stop-all-fade-sum] n=181301 narmed=181152`; first-8
+`[stop-all-path]` from the `L_8008DC50` loop with v0 printed
+(n=1..8 all `v0=0x00000000` `empty=1` `armed=0`, s2 walks
+`0x8013D880` stride `0x17C`).
+
+**Census.** `[stop-all-path-sum] n=181301 narmed=181152
+n_empty=181288 n_empty_armed=181152 n_free=13
+n_free_armed=0 lastv0=0x00000000 lastv0armed=0x00000000
+lasts2=0x8013F1BC lastidx=17`. n_empty_armed == fade
+narmed == 10064×18. n_free stays 13 from n=10000 through
+n=180000 (all 13 pre-drain: n_free_armed=0). Pre-drain
+path iters = 149 = 136 empty + 13 free.
+
+**Verdicts.**
+- H-empty-then-fade SELECTED: every drain-armed `lw 0($s2)`
+  is 0; the rewrite is the empty-slot `beq L_8008DCC4` fade
+  jal, not `freeSynthVoiceFromActiveList`.
+- H-free-every-tick REFUTED: n_free_armed=0, not huge.
+- H-free-once REFUTED for drain: n_free_armed=0 from the
+  first armed iter, not "small then 0". The 13 FREEs are
+  pre-drain lifetime teardowns of the `0x17C` synth table
+  at `0x8013D880`.
+
+Static: `L_8008DCC4` is the merge of empty and FREE, so
+empty synth objects still `beginVoiceFadeRelease($s4=idx)`
+on the live `0x88` table at `0x801714D0`. Sole caller of
+`stopAllSynthVoices` is `tickMusyXIfActive` `0x8008DA2C`
+(`$a0=0`).
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks
+already in the ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned FREE-vs-empty census
+selects H-empty-then-fade. Next: which
+`tickMusyXIfActive` site produces the 10064 armed stopAll
+(s1976 in-loop drain tick vs the 10 ROM jals).

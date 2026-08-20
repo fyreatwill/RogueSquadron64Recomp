@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1990 (2026-08-19).
+detail. Reviewed through s1991 (2026-08-19).
 
 ## Current state
 
@@ -187,6 +187,15 @@ detail. Reviewed through s1990 (2026-08-19).
   0x20), not a pending-stop flag, so it never drops.
   Every drain tick therefore re-fades every live voice.
   H-stop-all-skips / H-stop-all-once REFUTED.
+  s1991 selected H-empty-then-fade: `[stop-all-path-sum]
+  n=181301 narmed=181152 n_empty_armed=181152
+  n_free_armed=0 lastv0armed=0`. Every drain-armed
+  `lw 0($s2)` at `L_8008DC50` is 0; the 13 FREEs are
+  pre-drain (n_free=13). Empty-slot fade jal narmed
+  matches 10064×18. Synth objects at `0x8013D880`
+  stride `0x17C` stay empty; `beginVoiceFadeRelease(idx)`
+  still hits live `0x88` voices. H-free-every-tick /
+  H-free-once REFUTED.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -304,29 +313,26 @@ detail. Reviewed through s1990 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1990: `stopAllSynthVoices` runs the sweep on
-every drain tick (`n_skip=0 n_work=10073 lastgate=18`);
-its fade jal narmed=181152 = 10064×18. `0x80141AD0` is the
-voice count, so it stays 18. Next is whether each loop
-iter FREEs an occupied synth slot or only fades from the
-empty-slot branch.
+Re-ranked s1991: drain-armed stopAll never FREEs
+(`n_free_armed=0`); every armed iter is empty-slot fade
+(`n_empty_armed=181152`). Sole caller is
+`tickMusyXIfActive` `$a0=0`. Next is which of that
+function's call sites produces the 10064 armed ticks.
 
-1. **Hangar frame-freeze: census `stopAllSynthVoices` loop
-   path FREE vs empty-slot fade (s1990).** Same-run
+1. **Hangar frame-freeze: census `tickMusyXIfActive`
+   callers during drain-armed (s1991).** Same-run
    controls: `[drain-path] call=1 unmap=0` 18 idx rows
    `h58=0x0014` at iters=1, last alloc tickn=4
    `0x801714D0 count=18`, `[drain-stop-sum] entry=1` fade
    n=154, `[drain-timeout]` 10M, `[w60-sum]` fade-zero
-   narmed=134878, `[stop-all-sum] n=10073 n_skip=0
-   n_work=10073 lastgate=18`, `[stop-all-fade-sum]`
-   narmed=181152, first-8 `[stop-all]` a0=0 gate printed.
-   H-stop-all-gate-stuck SELECTED; H-stop-all-skips /
-   H-stop-all-once REFUTED. Next: at `L_8008DC50`
-   `lw 0x0($s2)` count n_free (fallthrough `L_8008DC78`
-   `freeSynthVoiceFromActiveList`) vs n_empty (`beq
-   L_8008DCC4` fade-only) per drain-armed tick. Keep
-   `[stop-all-sum]` / `[w60-sum]`. Use `S32`. Do not
-   skip or rewrite the fade jal.
+   narmed=134520, `[stop-all-sum] n=10073 n_skip=0
+   n_work=10073 lastgate=18`, `[stop-all-path-sum]`
+   n_empty_armed=181152 n_free_armed=0, first-8
+   `[stop-all-path]` v0=0. H-empty-then-fade SELECTED;
+   H-free-every-tick / H-free-once REFUTED. Next: tag
+   every `jal 0x8008DA00` plus the s1976 in-loop drain
+   tick; dump per-site n/narmed at `[drain-timeout]`.
+   Do not skip stopAll or the fade jal.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -535,6 +541,11 @@ Most recent, still load-bearing for the next unit:
   narmed=181152=10064×18. Believable because `0x80141AD0`
   could have been a pending-stop flag that should drop; it
   is the allocated voice count.
+- s1990 "whether each loop iter FREEs an occupied 0x17C
+  synth or only empty-slot fades" is superseded by s1991 —
+  n_free_armed=0, n_empty_armed=181152. Believable because
+  a0=0 takes FREE whenever 0($s2) is nonzero; the synth
+  table is already empty when drain starts.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -546,12 +557,13 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1990 drain-slot identity / subset-live / skip-cursor /
+and s1978–s1991 drain-slot identity / subset-live / skip-cursor /
 slot+0x40-skip / init-writer / loop-length / stop-dest-retrigger /
 stop-family song-handle-fade / fade-timer-stuck / +0x30
 store-census (H-no-decrement) / +0x58-duration (H-envelope-fields-stuck)
 / +0x60 dest-map (H-fade-rearms-zeros-elapsed) / stopAll gate
-(H-stop-all-gate-stuck)
+(H-stop-all-gate-stuck) / stopAll L_8008DC50 path
+(H-empty-then-fade)
 results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
