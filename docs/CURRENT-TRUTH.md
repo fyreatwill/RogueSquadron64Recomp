@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2026 (2026-08-20).
+for session detail. Reviewed through s2027 (2026-08-20).
 
 ## Current state
 
@@ -136,37 +136,34 @@ for session detail. Reviewed through s2026 (2026-08-20).
   emitted only the non-control `0x8009BBF0` helper row. This selects H1:
   forced LLE is the route gate under the common wrapper; it does not show a
   status-3 interval or the worker-side clear path.
-- The s2026 drain-tick A/B first exposed a stale-binary failure: the existing
-  executable contained the unconditional s1976 drain tick but no
-  `ROGUESQ_DRAIN_INLOOP_TICK` string or `[drain-inloop-gate]` marker, so that
-  first pair was not a valid toggle. After rebuilding with the already-authored
-  s1993 fixup gate, tick-on reached VI 1024 at 13.9s and VI 512 at 26.0s,
-  reached shutdown call 3, and emitted 400 phase-valid s2020/s2022 rows, all
-  status `0x00`/`zero_skip=1`, with no independent store edge. The tick-off
-  arm crashed before VI 1024 in `matchKeywordWithPriority+88`
-  (`last-guest-pc=0x8000834C`), so it is an anchor failure and no H1–H4
-  status conclusion is selected. The next unit must recover a phase-valid
-  tick-off control before interpreting the drain boundary.
+- The s2026 stale-gate diagnosis was corrected in s2027. The valid s2027
+  unset/default-on versus `ROGUESQ_DRAIN_INLOOP_TICK=0` pair reached VI 1024
+  and VI 512 in both arms and emitted the s2006 positive control. Both arms
+  reached shutdown call 3 and recorded the same `0x8009B2C4` `0x01 -> 0x00`
+  writer; both service tables remained status `0x00`/`zero_skip=1`, with no
+  status-3 interval, worker entry, or `0x8009B7EC` store. This selects H2 of
+  the planned table: the drain toggle is not the missing worker dispatch.
+  The on arm and off arm later hit the known `do_rom_read` boundary at guest
+  PC `0x80001B08`; that terminal crash is after the phase-valid table and does
+  not erase the result. The first s2027 pair, which explicitly set the on arm
+  to `1` contrary to the prescribed unset/default arm, is invalid and is not
+  evidence.
 
 ## Active investigation and ranked next steps
 
-1. **M5 drain/shutdown boundary — recover the missing A/B anchor.** The
-   corrected gate binary has only a phase-valid tick-on arm; its service rows
-   still saw status `0x00` and no worker-side store, while tick-off crashed at
-   a pre-1024 `matchKeywordWithPriority` boundary. Repeat one same-wrapper forced-LLE A/B with the
-   eleven-Start schedule and only `ROGUESQ_DRAIN_INLOOP_TICK` toggled. First
-   require both arms to emit the s2006 control and reach VI 1024/512; only
-   then compare drain return, shutdown call 3, status-3/status-zero
-   transitions, service entry, and the existing store edge. If both arms
-   become phase-valid and tick-off alone exposes call 3 plus a worker/store
-   sequence, the drain injection is selected; if both reach call 3 but
-   neither shows a worker/store, the worker-dispatch boundary remains open;
-   if tick-off repeats the pre-1024 crash, stop this A/B and audit that named
-   `matchKeywordWithPriority` crash as the new anchor boundary.
-2. **M5 service store edge.** Once a live slot-0 status-3 interval is
-   observed, use the existing s2022 store rows to join the worker clear path
-   and then proceed to the seven-site callback join. Do not add a skip or
-   force-zero mitigation; the writer must be named and its value classified.
+1. **M5 worker dispatch/status-zero join.** The s2027 drain A/B is phase-valid
+   in both arms and selects the worker boundary: neither treatment produces a
+   status-3 interval, worker entry, or service store. Build one
+   regeneration-stable A11 census that joins shutdown call 3, every existing
+   status writer, worker dispatch/entry/exit, and the `0x8009B7EC` store in a
+   single phase-gated capture. Do not add a skip or force-zero mitigation; the
+   writer must be named and its value classified. If status 3 is written and
+   persists with no worker entry, scheduler dispatch is selected; if worker
+   entry precedes a zeroing store, the service path is selected; if call 3
+   never observes status 3, classify the writer/reaper ordering instead.
+2. **M5 service store edge.** Once the A11 census supplies a live slot-0
+   status-3 interval, use the existing s2022 store rows to join the worker
+   clear path and then proceed to the seven-site callback join.
 3. **M5 callback-side PCM witness (only if #2 requires it).** Phase-gate a
    callback census at the exact two nonzero bridge rows. Do not infer a bridge
    defect from the old rate-limited `pcm-sanity` rows or change default audio.
@@ -342,6 +339,14 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   corrected rebuild then supplied a live tick-on arm, while tick-off crashed
   in `matchKeywordWithPriority+88` before its phase control, leaving H1–H4
   unselected rather than proving a status boundary.
+- s2027 supersedes s2026's incomplete drain comparison. The first s2027 pair
+  explicitly set the on arm to `1`, so it was invalid against the prescribed
+  unset/default treatment. The corrected pair reached VI 1024/512 and the
+  s2006 control in both arms; both reached shutdown call 3 and showed the same
+  status-zero writer, while neither showed status 3, worker entry, or the
+  service store. The earlier pre-phase-anchor wording was believable because
+  the first corrected-looking arm did fail before VI 1024, but the fixed
+  unset/default pair closes that route issue and selects the worker boundary.
 
 ## Evidence ledger summary
 
@@ -364,8 +369,9 @@ shutdown scheduling question. The durable milestones are: hangar reachability,
 bltzal link repair, audio-drain writer mapping, M5 plan, opt-in DMA-to-queue
 mapping, shutdown call-3 reachability, the repeated retail status-value
 sequence, retail gate-writer attribution, and the unresolved port-side
-writer/read join. s2026 adds the stale-gate diagnosis and a phase-valid
-tick-on/no-store witness, but the tick-off arm is not yet a valid comparison.
+writer/read join. s2026 adds the stale-gate diagnosis and s2027 completes the
+corrected drain A/B: both arms are phase-valid, both reach call 3, and neither
+exposes the worker entry/store, selecting the worker boundary.
 
 ## Method and safety rules
 

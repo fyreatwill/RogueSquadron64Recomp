@@ -97089,6 +97089,41 @@ rules out treating the tick-off null as status evidence. It does not select
 H1, H2, H3, or H4. No mitigation, status-value override, default audio
 change, or committed generated-tree logic change was made.
 
+## Session 2027 (2026-08-20) — corrected drain A/B selected the worker boundary
+
+HYPOTHESIS-ID: m5-drain-shutdown-status-boundary
+
+The planned unit was the same-wrapper forced-LLE drain-tick A/B from s2026,
+with the binary-string control, eleven-Start schedule, phase gates, s2006
+positive control, and passive audio/status breadcrumbs. The first pair in this
+iteration was invalid because I explicitly set `ROGUESQ_DRAIN_INLOOP_TICK=1`
+for the on arm; NEXT required that arm to be unset/default-on. That pair was
+not used as evidence. The corrected pair was run immediately with the on arm
+unset and the off arm set to `0`.
+
+The corrected on arm reached VI 1024 at 13.7s and VI 512 at 25.9s, emitted
+the s2006 service control with 24 entries and 24 exits, and reached shutdown
+call 3. Its gate row was `[drain-inloop-gate] en=1`. The off arm reached VI
+1024 at 30.3s and VI 512 at 42.1s (with a second hangar 512 transition),
+emitted the same 24-entry/24-exit s2006 control, and reached shutdown call 3;
+its gate row was `en=0`. Both arms recorded the named
+`0x8009B2C4` `0x01 -> 0x00` status writer during call 3. Both phase-valid
+s2020/s2022 service tables read slot 0 as `0x00` and took `zero_skip=1`;
+neither produced a status-3 interval, independent worker entry, or
+`0x8009B7EC` store edge. The on arm later crashed at the known `do_rom_read`
+boundary with last guest PC `0x80001B08`; the off arm did the same after its
+table. Those terminal crashes occurred after the phase-valid controls.
+
+This selects H2 of the planned table: toggling the injected drain tick does
+not expose the missing worker dispatch or service store. It rules out the
+drain toggle as the sufficient explanation for the status-zero boundary and
+closes the stale-binary/invalid-anchor interpretation from s2026. It does not
+name the worker writer or explain why status 3 is absent; that is the s2028
+A11 census. No mitigation, default audio change, opt-in audio image, or
+generated game-logic change was made.
+
+OUTCOME: ADVANCED — corrected phase-valid drain A/B selected the worker boundary.
+
 ORIGIN: the only generated-function change used for the corrected binary was
 the already-authored s1993 environment gate around the s1976 host drain-tick
 injection; it is not a ROM writer or a game-value mitigation.
