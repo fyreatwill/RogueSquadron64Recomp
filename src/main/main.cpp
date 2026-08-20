@@ -1417,15 +1417,19 @@ static void queue_samples(int16_t* samples, size_t num_samples, uint32_t rdram_a
                 s_phase_n = 0;
             }
             const uint32_t n = s_phase_n++;
+            const size_t full_byte_count = num_samples * sizeof(int16_t);
+            const uint8_t* p = reinterpret_cast<const uint8_t*>(samples);
+            uint32_t fnv = 2166136261u;
+            uint32_t nonzero = 0;
+            for (size_t i = 0; i < full_byte_count; i++) {
+                fnv = (fnv * 16777619u) ^ p[i];
+                nonzero += p[i] != 0;
+            }
+            ultramodern::rs64_audio_join_pcm(
+                "consumer", rs64_phase_ord(), width, origin, n, rdram_addr,
+                static_cast<uint32_t>(num_samples),
+                static_cast<uint32_t>(full_byte_count), fnv, nonzero);
             if (n < 40 || (n % 128) == 0) {
-                const size_t full_byte_count = num_samples * sizeof(int16_t);
-                const uint8_t* p = reinterpret_cast<const uint8_t*>(samples);
-                uint32_t fnv = 2166136261u;
-                uint32_t nonzero = 0;
-                for (size_t i = 0; i < full_byte_count; i++) {
-                    fnv = (fnv * 16777619u) ^ p[i];
-                    nonzero += p[i] != 0;
-                }
                 fprintf(stderr,
                     "[pcm-boundary-consumer] n=%u phase=%u width=%u origin=0x%06X"
                     " rdram=0x%08X samples=%zu bytes=%zu fnv=0x%08X nz=%u\n",

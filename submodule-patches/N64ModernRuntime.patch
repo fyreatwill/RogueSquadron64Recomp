@@ -481,18 +481,21 @@ index 4276b7d..32b2bd7 100644
  }
  
 diff --git a/librecomp/src/rsp.cpp b/librecomp/src/rsp.cpp
-index 1cb3f6a..ed8ad9c 100644
+index 1cb3f6a..3b7d8ed 100644
 --- a/librecomp/src/rsp.cpp
 +++ b/librecomp/src/rsp.cpp
-@@ -1,6 +1,7 @@
+@@ -1,6 +1,10 @@
  #include <cassert>
  #include <cstring>
  #include <cinttypes>
++#include <atomic>
++#include <mutex>
++#include <utility>
 +#include <vector>
  
  #include "rsp.hpp"
  
-@@ -32,6 +33,80 @@ void recomp::rsp::constants_init() {
+@@ -32,6 +36,308 @@ void recomp::rsp::constants_init() {
      }
  }
  
@@ -516,6 +519,7 @@ index 1cb3f6a..ed8ad9c 100644
 +    bool output_overlap;
 +    bool yield_overlap;
 +    bool data_overlap;
++    uint64_t event;
 +};
 +
 +struct AudioDmaProbe {
@@ -526,10 +530,236 @@ index 1cb3f6a..ed8ad9c 100644
 +    uint32_t width;
 +    uint32_t origin;
 +    uint32_t pre_hash;
++    uint64_t begin_event;
++    uint64_t end_event;
 +    std::vector<AudioDmaRange> ranges;
 +};
 +
 +static thread_local AudioDmaProbe* g_audio_dma_probe = nullptr;
++
++struct AudioJoinPcm {
++    bool source;
++    uint64_t event;
++    uint32_t phase;
++    uint32_t width;
++    uint32_t origin;
++    uint32_t n;
++    uint32_t rdram;
++    uint32_t samples;
++    uint32_t bytes;
++    uint32_t fnv;
++    uint32_t nonzero;
++    bool used;
++};
++
++struct AudioJoinRange {
++    AudioDmaRange range;
++    int source_pcm = -1;
++    int consumer_pcm = -1;
++};
++
++struct AudioJoinTask {
++    uint32_t n;
++    uint32_t phase;
++    uint32_t width;
++    uint32_t origin;
++    uint64_t begin_event;
++    uint64_t end_event;
++    uint32_t dmem_changed;
++    bool canary_ok;
++    int exit;
++    std::vector<AudioJoinRange> ranges;
++    size_t reported_sources = 0;
++    size_t reported_consumers = 0;
++    bool reported = false;
++};
++
++static std::atomic<uint64_t> g_audio_join_event{1};
++static std::mutex g_audio_join_mutex;
++static std::vector<AudioJoinPcm> g_audio_join_pcm;
++static std::vector<AudioJoinTask> g_audio_join_tasks;
++
++static uint64_t audio_join_next_event() {
++    return g_audio_join_event.fetch_add(1, std::memory_order_relaxed);
++}
++
++static bool audio_join_match(const AudioDmaRange& range,
++                             const AudioJoinPcm& pcm) {
++    return range.dram == (pcm.rdram & 0x007FFFFFu) &&
++           range.len == pcm.bytes &&
++           range.payload_fnv == pcm.fnv && range.payload_nz == pcm.nonzero;
++}
++
++static void audio_join_report_locked(AudioJoinTask& task) {
++    size_t sources = 0;
++    size_t consumers = 0;
++    bool complete = false;
++    bool dma_before_source = true;
++    bool source_before_consumer = true;
++    bool source_after_task = true;
++    bool consumer_after_task = true;
++    for (const AudioJoinRange& joined : task.ranges) {
++        if (joined.source_pcm >= 0) {
++            const AudioJoinPcm& source = g_audio_join_pcm[joined.source_pcm];
++            ++sources;
++            dma_before_source &= joined.range.event < source.event;
++            source_after_task &= task.end_event < source.event;
++        }
++        if (joined.consumer_pcm >= 0) {
++            const AudioJoinPcm& consumer = g_audio_join_pcm[joined.consumer_pcm];
++            ++consumers;
++            dma_before_source &= joined.range.event < consumer.event;
++            consumer_after_task &= task.end_event < consumer.event;
++        }
++        if (joined.source_pcm >= 0 && joined.consumer_pcm >= 0) {
++            const AudioJoinPcm& source = g_audio_join_pcm[joined.source_pcm];
++            const AudioJoinPcm& consumer = g_audio_join_pcm[joined.consumer_pcm];
++            complete = true;
++            source_before_consumer &= source.event < consumer.event;
++        }
++    }
++    if (task.reported && sources == task.reported_sources &&
++        consumers == task.reported_consumers) {
++        return;
++    }
++    task.reported_sources = sources;
++    task.reported_consumers = consumers;
++    task.reported = true;
++    fprintf(stderr,
++            "[audtask-join] n=%u phase=%u width=%u origin=0x%06X"
++            " begin=%" PRIu64 " end=%" PRIu64 " dma_count=%zu"
++            " source_matches=%zu consumer_matches=%zu complete=%d"
++            " dma_before_pcm=%d source_before_consumer=%d"
++            " pcm_after_task=%d consumer_after_task=%d"
++            " dmem_changed=%u canary_ok=%d exit=%d\n",
++            task.n, task.phase, task.width, task.origin, task.begin_event,
++            task.end_event, task.ranges.size(), sources, consumers,
++            complete ? 1 : 0, dma_before_source ? 1 : 0,
++            source_before_consumer ? 1 : 0, source_after_task ? 1 : 0,
++            consumer_after_task ? 1 : 0, task.dmem_changed,
++            task.canary_ok ? 1 : 0, task.exit);
++    for (size_t i = 0; i < task.ranges.size(); ++i) {
++        const AudioJoinRange& joined = task.ranges[i];
++        if (joined.source_pcm < 0 && joined.consumer_pcm < 0) continue;
++        const AudioJoinPcm* source = joined.source_pcm >= 0 ?
++            &g_audio_join_pcm[joined.source_pcm] : nullptr;
++        const AudioJoinPcm* consumer = joined.consumer_pcm >= 0 ?
++            &g_audio_join_pcm[joined.consumer_pcm] : nullptr;
++        fprintf(stderr,
++                "[audtask-join-range] task=%u i=%zu direction=dmem_to_rdram"
++                " dma_event=%" PRIu64 " dmem=0x%03X guest=0x%06X len=0x%X"
++                " dma_fnv=%08X dma_nz=%u"
++                " source_event=%" PRIu64 " source_n=%u source_samples=%u"
++                " source_bytes=%u source_fnv=%08X source_nz=%u"
++                " consumer_event=%" PRIu64 " consumer_n=%u"
++                " consumer_samples=%u consumer_bytes=%u consumer_fnv=%08X"
++                " consumer_nz=%u\n",
++                task.n, i, joined.range.event, joined.range.dmem,
++                joined.range.dram, joined.range.len, joined.range.payload_fnv,
++                joined.range.payload_nz, source ? source->event : 0,
++                source ? source->n : 0, source ? source->samples : 0,
++                source ? source->bytes : 0, source ? source->fnv : 0,
++                source ? source->nonzero : 0, consumer ? consumer->event : 0,
++                consumer ? consumer->n : 0, consumer ? consumer->samples : 0,
++                consumer ? consumer->bytes : 0, consumer ? consumer->fnv : 0,
++                consumer ? consumer->nonzero : 0);
++    }
++    fflush(stderr);
++}
++
++static void audio_join_match_task_locked(AudioJoinTask& task) {
++    for (AudioJoinRange& joined : task.ranges) {
++        for (size_t i = 0; i < g_audio_join_pcm.size(); ++i) {
++            AudioJoinPcm& pcm = g_audio_join_pcm[i];
++            if (pcm.used || pcm.phase != task.phase ||
++                !audio_join_match(joined.range, pcm)) continue;
++            if (pcm.source && joined.source_pcm < 0) {
++                joined.source_pcm = static_cast<int>(i);
++                pcm.used = true;
++                break;
++            }
++            if (!pcm.source && joined.consumer_pcm < 0) {
++                joined.consumer_pcm = static_cast<int>(i);
++                pcm.used = true;
++                break;
++            }
++        }
++    }
++}
++
++static void audio_join_match_pcm_locked(size_t pcm_index) {
++    AudioJoinPcm& pcm = g_audio_join_pcm[pcm_index];
++    for (AudioJoinTask& task : g_audio_join_tasks) {
++        if (task.phase != pcm.phase) continue;
++        for (AudioJoinRange& joined : task.ranges) {
++            if (!audio_join_match(joined.range, pcm)) continue;
++            if (pcm.source && joined.source_pcm < 0) {
++                joined.source_pcm = static_cast<int>(pcm_index);
++                pcm.used = true;
++                audio_join_report_locked(task);
++                return;
++            }
++            if (!pcm.source && joined.consumer_pcm < 0) {
++                joined.consumer_pcm = static_cast<int>(pcm_index);
++                pcm.used = true;
++                audio_join_report_locked(task);
++                return;
++            }
++        }
++    }
++}
++
++static void audio_join_register_task(const AudioDmaProbe& probe,
++                                     uint32_t dmem_changed, bool canary_ok,
++                                     int exit) {
++    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
++    AudioJoinTask task{};
++    task.n = probe.n;
++    task.phase = probe.phase;
++    task.width = probe.width;
++    task.origin = probe.origin;
++    task.begin_event = probe.begin_event;
++    task.end_event = probe.end_event;
++    task.dmem_changed = dmem_changed;
++    task.canary_ok = canary_ok;
++    task.exit = exit;
++    task.ranges.reserve(probe.ranges.size());
++    for (const AudioDmaRange& range : probe.ranges) {
++        task.ranges.push_back({range});
++    }
++    g_audio_join_tasks.push_back(std::move(task));
++    AudioJoinTask& registered = g_audio_join_tasks.back();
++    audio_join_match_task_locked(registered);
++    audio_join_report_locked(registered);
++}
++
++extern "C" void rs64_audio_join_pcm(const char* kind, uint32_t phase,
++                                     uint32_t width, uint32_t origin,
++                                     uint32_t n, uint32_t rdram,
++                                     uint32_t samples, uint32_t bytes,
++                                     uint32_t fnv, uint32_t nonzero) {
++    std::lock_guard<std::mutex> lock(g_audio_join_mutex);
++    AudioJoinPcm pcm{};
++    pcm.source = std::strcmp(kind, "source") == 0;
++    pcm.event = audio_join_next_event();
++    pcm.phase = phase;
++    pcm.width = width;
++    pcm.origin = origin;
++    pcm.n = n;
++    pcm.rdram = rdram;
++    pcm.samples = samples;
++    pcm.bytes = bytes;
++    pcm.fnv = fnv;
++    pcm.nonzero = nonzero;
++    g_audio_join_pcm.push_back(pcm);
++    fprintf(stderr,
++            "[audio-join-pcm] kind=%s event=%" PRIu64 " n=%u phase=%u"
++            " width=%u origin=0x%06X guest=0x%06X samples=%u bytes=%u"
++            " fnv=%08X nz=%u\n",
++            kind, pcm.event, n, phase, width, origin, rdram, samples, bytes,
++            fnv, nonzero);
++    audio_join_match_pcm_locked(g_audio_join_pcm.size() - 1);
++}
 +
 +static bool audio_dma_overlaps(uint32_t dram, uint32_t len, int32_t ptr,
 +                               int32_t size) {
@@ -558,6 +788,7 @@ index 1cb3f6a..ed8ad9c 100644
 +        audio_dma_overlaps(dram_addr, len, task.yield_data_ptr,
 +                           task.yield_data_size),
 +        audio_dma_overlaps(dram_addr, len, task.data_ptr, task.data_size),
++        audio_join_next_event(),
 +    });
 +    uint32_t payload_fnv = 2166136261u;
 +    uint32_t payload_nz = 0;
@@ -573,7 +804,7 @@ index 1cb3f6a..ed8ad9c 100644
  // Runs a recompiled RSP microcode
  bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
      assert(rsp_callbacks.get_rsp_microcode != nullptr);
-@@ -42,14 +117,188 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
+@@ -42,14 +348,195 @@ bool recomp::rsp::run_task(uint8_t* rdram, const OSTask* task) {
          return false;
      }
  
@@ -623,7 +854,7 @@ index 1cb3f6a..ed8ad9c 100644
 +                s_audio_phase_row = 0;
 +            }
 +            audio_probe_n = s_audio_phase_row++;
-+            audio_probe_row = audio_probe_n < 40 || (audio_probe_n % 128) == 0;
++            audio_probe_row = true;
 +        }
 +        const char* enabled = std::getenv("ROGUESQ_AUDIO_UCODE");
 +        audio_arm = (enabled && enabled[0] && enabled[0] != '0') ?
@@ -655,6 +886,7 @@ index 1cb3f6a..ed8ad9c 100644
 +        audio_dma_probe.width = rs64_vi_committed_width();
 +        audio_dma_probe.origin = rs64_vi_committed_origin();
 +        audio_dma_probe.pre_hash = audio_dmem_pre_hash;
++        audio_dma_probe.begin_event = audio_join_next_event();
 +        audio_dma_probe.ranges.reserve(64);
 +        g_audio_dma_probe = &audio_dma_probe;
 +    }
@@ -662,6 +894,7 @@ index 1cb3f6a..ed8ad9c 100644
 +    g_audio_dma_probe = previous_audio_probe;
 +
 +    if (probe_audio && audio_probe_row) {
++        audio_dma_probe.end_event = audio_join_next_event();
 +        uint32_t audio_canary_post = 0;
 +        uint32_t audio_dmem_post_hash = 2166136261u;
 +        uint32_t audio_dmem_changed = 0;
@@ -748,15 +981,20 @@ index 1cb3f6a..ed8ad9c 100644
 +            const AudioDmaRange& range = audio_dma_probe.ranges[i];
 +            fprintf(stderr,
 +                    "[audtask-dma-range] n=%u i=%zu dmem=0x%03X len=0x%X"
++                    " event=%" PRIu64 " direction=dmem_to_rdram"
 +                    " dram=0x%06X..0x%06X output_overlap=%u"
 +                    " yield_overlap=%u data_overlap=%u payload_fnv=%08X"
 +                    " payload_nz=%u\n",
-+                    audio_dma_probe.n, i, range.dmem, range.len, range.dram,
-+                    range.dram + range.len, range.output_overlap ? 1u : 0u,
++                    audio_dma_probe.n, i, range.dmem, range.len, range.event,
++                    range.dram, range.dram + range.len,
++                    range.output_overlap ? 1u : 0u,
 +                    range.yield_overlap ? 1u : 0u,
 +                    range.data_overlap ? 1u : 0u, range.payload_fnv,
 +                    range.payload_nz);
 +        }
++        audio_join_register_task(audio_dma_probe, audio_dmem_changed,
++                                 audio_canary_pre == audio_canary_post,
++                                 static_cast<int>(exit_reason));
 +        fflush(stderr);
 +    }
  
@@ -853,12 +1091,19 @@ index 1f3a4cf..b9cc34f 100644
  }
  
 diff --git a/ultramodern/include/ultramodern/ultramodern.hpp b/ultramodern/include/ultramodern/ultramodern.hpp
-index 57db6f6..435252c 100644
+index 57db6f6..cd78b51 100644
 --- a/ultramodern/include/ultramodern/ultramodern.hpp
 +++ b/ultramodern/include/ultramodern/ultramodern.hpp
-@@ -122,7 +122,7 @@ void queue_audio_buffer(RDRAM_ARG PTR(s16) audio_data, uint32_t byte_count);
+@@ -121,8 +121,14 @@ void set_audio_frequency(uint32_t freq);
+ void queue_audio_buffer(RDRAM_ARG PTR(s16) audio_data, uint32_t byte_count);
  uint32_t get_remaining_audio_bytes();
  
++extern "C" void rs64_audio_join_pcm(const char* kind, uint32_t phase,
++                                     uint32_t width, uint32_t origin,
++                                     uint32_t n, uint32_t rdram,
++                                     uint32_t samples, uint32_t bytes,
++                                     uint32_t fnv, uint32_t nonzero);
++
  struct audio_callbacks_t {
 -    using queue_samples_t = void(int16_t*, size_t);
 +    using queue_samples_t = void(int16_t*, size_t, uint32_t);
@@ -866,7 +1111,7 @@ index 57db6f6..435252c 100644
      using set_frequency_t = void(uint32_t);
      queue_samples_t* queue_samples;
 diff --git a/ultramodern/src/audio.cpp b/ultramodern/src/audio.cpp
-index 3198be0..6a0587d 100644
+index 3198be0..730ca54 100644
 --- a/ultramodern/src/audio.cpp
 +++ b/ultramodern/src/audio.cpp
 @@ -1,9 +1,15 @@
@@ -885,7 +1130,7 @@ index 3198be0..6a0587d 100644
  static ultramodern::audio_callbacks_t audio_callbacks;
  
  void ultramodern::set_audio_callbacks(const ultramodern::audio_callbacks_t& callbacks) {
-@@ -31,7 +37,50 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
+@@ -31,7 +37,54 @@ void ultramodern::queue_audio_buffer(RDRAM_ARG PTR(int16_t) audio_data_, uint32_
  
      // Queue the swapped audio data.
      if (sample_count > 0 && audio_callbacks.queue_samples) {
@@ -913,20 +1158,24 @@ index 3198be0..6a0587d 100644
 +                    s_phase_n = 0;
 +                }
 +                const uint32_t n = s_phase_n++;
++                const uint32_t full_byte_count = sample_count * sizeof(int16_t);
++                const uint8_t* p = reinterpret_cast<const uint8_t*>(
++                    TO_PTR(int16_t, audio_data_));
++                uint32_t fnv = 2166136261u;
++                uint32_t nonzero = 0;
++                for (uint32_t i = 0; i < full_byte_count; i++) {
++                    fnv = (fnv * 16777619u) ^ p[i];
++                    nonzero += p[i] != 0;
++                }
++                rs64_audio_join_pcm("source", rs64_phase_ord(), width, origin,
++                                    n, static_cast<uint32_t>(audio_data_),
++                                    sample_count, full_byte_count, fnv, nonzero);
 +                if (n < 40 || (n % 128) == 0) {
-+                    const uint8_t* p = reinterpret_cast<const uint8_t*>(
-+                        TO_PTR(int16_t, audio_data_));
-+                    uint32_t fnv = 2166136261u;
-+                    uint32_t nonzero = 0;
-+                    for (uint32_t i = 0; i < sample_count * 2; i++) {
-+                        fnv = (fnv * 16777619u) ^ p[i];
-+                        nonzero += p[i] != 0;
-+                    }
 +                    std::fprintf(stderr,
 +                        "[pcm-boundary-source] n=%u phase=%u width=%u origin=0x%06X"
 +                        " rdram=0x%08X samples=%u bytes=%u fnv=0x%08X nz=%u\n",
 +                        n, rs64_phase_ord(), width, origin,
-+                        static_cast<uint32_t>(audio_data_), sample_count, sample_count * 2,
++                        static_cast<uint32_t>(audio_data_), sample_count, full_byte_count,
 +                        fnv, nonzero);
 +                    std::fflush(stderr);
 +                }

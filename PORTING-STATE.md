@@ -98427,3 +98427,43 @@ ORIGIN: no guest writer, C88 value, wait, guard, skip, audio task, callback,
 or default behavior changed. The only code change was a bounded oracle
 writer-attribution diagnostic needed because the existing global hit cap
 otherwise hid the target watch's PC; no port/runtime behavior was changed.
+
+## Session 2063 (2026-08-20) — selected image DMA staging over PCM output
+
+The independent retail preflight passed the whole-RDRAM positive control at
+10,000 callbacks and recorded 6,408,719 writes in the candidate
+`0x166000..0x17A000` band during a 60-second driven run; it reached title VI
+1024 and verified Start reads. The port instrument was then extended in one
+build to join every target-phase image task's DMEM-to-RDRAM DMA range with
+`queue_audio_buffer` and `queue_samples` on physical guest address, byte
+count, FNV, nonzero count, and event order, while retaining task exit, DMEM
+change, and reserved-canary fields.
+
+The first capture exposed an instrumentation-only KSEG0/physical address
+normalization bug and a quadratic matcher; it was not used as evidence. A
+normalized sample rerun reached both anchors but captured only the prior
+first-40/every-128 task sample. The incremental matcher and complete-table
+rerun reached title `1024 @ 0x00790400` and hangar `512 @ 0x006AB400`, with
+live `[pad-host]`, `[audtask-dispatch]`, and `[audtask-abi]` controls and no
+crash or abort markers. It recorded 1,011 target-phase task rows and 3,729
+DMA ranges; every DMA range had `payload_nz=0`. There were 1,013 exact
+phase-keyed source/consumer PCM pairs, all matching each other on guest
+address, 384 samples, 768 bytes, FNV, and nonzero count. Nineteen title
+pairs were nonzero; all hangar pairs were zero. Of the 1,011 task rows, 943
+had one-to-one source and consumer joins, and every joined range remained
+zero for DMA, source, and consumer payloads; all rows had `changed>0`,
+`canary_ok=0`, and `exit=1`.
+
+This selects H-ImageDmaStagingOnly at the measured scope: the image arm's
+candidate writes are zero/staging activity, not a nonzero current PCM feed.
+It refutes H-ImageDmaFeedsPcm and does not select a nonzero
+H-ImageOutputDiscarded candidate, because no nonzero DMA range joined either
+PCM boundary. The remaining ABI question is why the image runner changes
+DMEM, overwrites the reserved canary, and returns `Broke`; the retail writer
+attribution establishes ownership of the broad band but not that contract.
+
+ORIGIN: the only runtime changes were diagnostic join fields, KSEG0
+normalization, complete target-phase sampling, and an incremental matcher;
+no guest writer, C88 value, wait, guard, skip, dispatch, or default behavior
+changed. The zero-payload writer is the already-observed image task's DMA
+path, not a new mitigation.
