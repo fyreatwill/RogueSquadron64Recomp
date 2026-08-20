@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2043 (2026-08-20).
+for session detail. Reviewed through s2044 (2026-08-20).
 
 ## Current state
 
@@ -195,6 +195,12 @@ for session detail. Reviewed through s2043 (2026-08-20).
   does not select the guest menu route versus the opt-in-audio wait boundary;
   bridge and PCM rows remain inadmissible. The next M5 unit is the
   `waitForAnyAudioSlot` audio-arm discriminator.
+- s2044 ran that discriminator from one build. Both port arms reached the same
+  VI-640 `waitForAnyAudioSlot` caller and passed 24/24 service controls, but
+  neither reached VI 1024 or 512. The opt-in arm had 11 host Start rows and
+  the stub arm 2, so the stub input control was live but shallower. W2 is
+  selected (shared pre-title route); input depth/focus remains a confound and
+  phase-invalid PCM is ignored.
 - The generated-symbol sweep is effectively closed: the remaining 57
   placeholder names are genuine reverse-engineering holds or intentional
   non-sync entries, not a metadata sweep.
@@ -339,17 +345,14 @@ for session detail. Reviewed through s2043 (2026-08-20).
 
 ## Active investigation and ranked next steps
 
-1. **M5 opt-in-audio wait boundary.** The s2043 fixed C88=1 arm reached
-   `waitForAnyAudioSlot` before title at VI 640 despite 11/11 host Start rows,
-   2/2 reapply controls, and live service/task controls. Build once and run
-   the same boot-relative eleven-Start recipe concurrently with the opt-in
-   Factor 5 audio arm and the unset/stub audio arm, keeping C88=1 and all
-   passive controls. If only the opt-in arm reaches the wait site and the
-   stub arm reaches title, the audio task/slot ABI is selected; if both arms
-   reach the wait site, the C88/menu route remains upstream; if neither does,
-   the current wait observation was route timing. Require phase and
-   `pad-host` controls per arm before interpreting any result; bridge and PCM
-   rows remain inadmissible until VI 1024 and VI 512 both exist.
+1. **M5 shared pre-title menu/mission boundary.** s2044 selected the shared
+   route outcome: both audio arms reached `waitForAnyAudioSlot`, `menu-exit`,
+   and the mission handoff at VI 640, with service controls live, but neither
+   reached title. The next unit must ask the retail oracle for whole-RDRAM plus
+   execution watches at `runMenuModelViewerScreen`, `menuControllerInput`, and
+   `anyAudioSlotActive`, then add one fixup-script post-wait entry/return/branch
+   census and run the same two arms. Require a per-arm `pad-host` control;
+   no bridge or PCM result is admissible without both target VI anchors.
 2. **M5 callback-side PCM witness.** Once the route is phase-valid, keep
    `ROGUESQ_M5_C88_VALUE=1` opt-in and use the existing bridge/sanity table.
    Nonzero bridge bytes plus `all_zero=0` selects upstream-valid PCM;
@@ -411,6 +414,13 @@ can stop at title despite live host input and title-side controls; s2042's
 fixed schedule added more Start events without producing VI 512. The next
 boundary is therefore route isolation, not a writer reversal or PCM
 interpretation.
+
+**M5 shared pre-title route.** s2044's same-build opt-in/stub pair both
+reached the `waitForAnyAudioSlot` call, `menu-exit`, and mission handoff at
+VI 640, with 24/24 service controls; neither reached VI 1024 or VI 512. The
+opt-in arm had 11 host Start rows and the stub 2, so the shared route is
+selected but input depth is not equivalent. This is a route boundary, not
+evidence that the wait itself spins or that the audio image is valid.
 
 **M5 service dispatch boundary.** s2018 and s2019 close the static
 registration/linkage and observed `get_function` arms. s2021 then supplied a
@@ -731,6 +741,10 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   control and still stopped at VI 640 inside `waitForAnyAudioSlot`. The result
   promotes the opt-in-audio wait boundary without selecting its cause; no
   PCM or writer-value conclusion follows.
+- s2044 supersedes the claim that the wait caller is audio-arm-specific: the
+  same-build pair reaches the same wait/menu/mission sequence in both arms.
+  The stub's two versus opt-in's eleven host Start rows leave input depth as a
+  confound; next is the post-wait branch census, not a PCM or writer change.
 
 ## Evidence ledger summary
 
@@ -821,6 +835,11 @@ controls, and one `waitForAnyAudioSlot` caller, while the retail oracle's
 whole-RDRAM control reached title 1024 and hangar-origin 512. This makes the
 pre-title audio wait the next M5 boundary; it does not distinguish the wait's
 audio ABI from the guest menu route and does not admit PCM interpretation.
+s2044 then ran the audio-on versus stub pair: retail passed its controls and
+both target anchors; both port arms shared the VI-640 wait/menu/mission route
+with live service controls, but neither target anchor appeared. W2 is selected
+with the stub arm's shallower input count as a confound; PCM remains
+inadmissible.
 
 ## Method and safety rules
 

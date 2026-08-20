@@ -97733,3 +97733,41 @@ writer or any mitigation. The next unit is a same-build concurrent
 and per-arm `pad-host`/service controls.
 
 ORIGIN: no writer, guest value, guard, or skip was changed; `ROGUESQ_M5_C88_VALUE=1` remained an opt-in test arm.
+
+## Session 2044 (2026-08-20) — audio-on and stub arms shared the pre-title route
+
+`HYPOTHESIS-ID: m5-audio-wait-boundary`.
+
+Step 0 measured `docs/CURRENT-TRUTH.md` at 58,684 bytes, so this was not a
+maintenance iteration. The independent retail oracle ran first with the
+whole-RDRAM positive control: the watch reached its 10,000-hit cap, retail
+entered title VI `1024` at 17.3s, and entered hangar-origin VI `512` at 38.4s.
+The Debug target then rebuilt successfully.
+
+The planned same-build concurrent pair kept C88=1, forced LLE, spin yield,
+the eleven boot-relative Start schedule, and all passive M5 controls. The
+opt-in arm set `ROGUESQ_AUDIO_UCODE=1`; the control left it unset. Both arms
+exited `rc=5` after the phase wait. Each had six phase rows ending at VI 640
+origin `0x00696100`, one `waitForAnyAudioSlot` caller at width 640, and 24/24
+`s2006-svc` entry/exit controls. Neither reached VI 1024 or VI 512.
+
+The shared sequence is independently visible in each run: `slot-ret` reported
+`gate=0x01 s1=0x00 v0=1 path=walk`, followed by `runMenuModelViewerScreen`,
+`waitForAnyAudioSlot`, and `menu-exit`/mission-handoff rows. The opt-in arm
+had 11 `pad-host` Start rows; the stub arm had 2. Thus both arms had a live
+input control, but the stub arm did not match the opt-in input depth. The
+planned table selects W2, a shared pre-title guest menu/mission route, while
+retaining input/focus depth as a confound. The result does not prove that the
+wait spins, does not validate the Factor 5 audio ABI, and admits no bridge or
+PCM interpretation because neither target phase appeared. The phase-6 PCM
+sanity rows are recorded only as inadmissible observations: audio-on was
+nonzero and the stub was all-zero.
+
+This rules out the W1 prediction that only the opt-in audio arm reaches the
+wait while the stub reaches title. It also does not select W3 because both
+arms supplied `pad-host` rows and the full service positive control; the
+shallower stub input is carried forward as a confound rather than treated as
+equivalence. The next discriminator is a retail execution watch plus one
+fixup-script post-wait entry/return/branch census for the menu/mission path.
+
+ORIGIN: no writer, guest value, guard, skip, or default audio behavior was changed.
