@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2069 (2026-08-20).
+for session detail. Reviewed through s2070 (2026-08-20).
 
 ## Current state
 
@@ -113,25 +113,27 @@ for session detail. Reviewed through s2069 (2026-08-20).
   `fillSampleStreamRange`. This selects H-E50-RetailOutput at exact-span
   retail ownership scope and refutes H-CB0Only and H-NoExactOwner; it does not
   by itself prove that the port's zero-payload task output is valid final PCM.
-- s2069 added an opt-in, diagnostic-only canary A/B to the host audio image
-  task. The corrected Rice oracle witness passed the whole-RDRAM control with
-  52,753 writes, reached title VI `1024 @ 0x00790400` and hangar VI
-  `512 @ 0x006AB400`, and wrote the exact E50 envelope 42,753 times. The
-  first prescribed port command omitted `ROGUESQ_SPIN_YIELD=1` and stopped at
-  VI 640 before any task row; the fixed retry reached both target VIs with
-  spin-yield but still omitted the qualified `ROGUESQ_M5_C88_VALUE=1` arm.
-  It produced 934/933 title and 1,192/1,191 hangar canary-on/off task rows,
-  with source-span FNV/nonzero fields and live positive controls. Both arms
-  returned `exit=1`; canary-on had `canary_ok=0`, canary-off had
-  `canary_ok=1`, and source-span keys overlapped in 9 of 11 observed classes.
-  This run emitted 4,250 CB0/198 ranges but no E50/180 ranges; PCM had 6,814
-  source and 6,811 consumer rows with one nonzero row at each endpoint. The
-  process later hit 36 `[CRASH]` markers from the known odd-ROM DMA assertion
-  in `pi.cpp:do_rom_read`. The canary table is therefore single-source,
-  route-incomplete evidence: it does not select H-CanaryObserver,
-  H-CanaryPoison, or H-CanaryContract, and the exact E50/input/output join
-  remains pending on the fully qualified tuple. The default canary-on path
-  and guest task fields were unchanged.
+- s2069's diagnostic-only canary A/B was completed on the fully qualified
+  route in s2070. The corrected Rice oracle passed the whole-RDRAM control
+  with 59,274 writes, printed title VI `1024 @ 0x00790400` and hangar VI
+  `512 @ 0x006AB400`, and recorded 47,741 writes in the exact E50 envelope.
+  The port emitted 5,710 target task rows, balanced 2,855/2,855 between
+  canary-on/off, with live target-VI and input controls and no crash/abort
+  marker before the required SIGKILL. Every row returned `exit=1`, changed
+  DMEM, and retained `output_buff=0`/`yield_ptr=0`; on rows had
+  `canary_ok=0`, off rows had `canary_ok=1`. It emitted 1,068 exact
+  `0xE50/0x180` ranges per arm; every payload was the same zero-only
+  `25E26BC5` span. Title PCM had 2,154 source/consumer rows with 14 matched
+  nonzero pairs; both hangar intervals had matched source/consumer rows and
+  zero nonzero pairs. Source-span keys overlapped in 17 classes. This selects
+  H-CanaryObserver at the declared output-contract scope and refutes
+  H-CanaryPoison: canary-off produced no improvement in exit, exact-E50
+  payload, or PCM output. The small prefill-relative `dmem_changed` shift is
+  not treated as a functional task improvement; the reserved-gap/ABI
+  interpretation and the image `Broke`/zero-payload boundary remain open.
+  The A/B and task result are single-source port evidence; the oracle is the
+  independent route/E50-write witness. Default canary prefill, task fields,
+  dispatch, routing, and guest behavior remain unchanged.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -251,21 +253,14 @@ This is the single monotonic backlog; historical item numbers in the ledger
 are not active work items.
 
 1. **M5 Factor 5 image task/exit contract.** s2067 selects
-   H-ImageTaskAbiMismatch at live contract scope: both target phases have
-   complete exact-span rows with no overlap against the task's output, yield,
-   or data intervals, while every image task changes DMEM, corrupts the canary,
-   and exits `Broke`. s2068 independently shows that the exact E50 envelope is
-   written by retail audio-region functions, while the CB0 spans are dominated
-   by a non-MusyX writer. s2069's canary A/B is not admissible for that
-   discriminator because the s73 recipe omitted `ROGUESQ_M5_C88_VALUE=1` and
-   emitted no E50/180 rows. Re-run the same source/E50/PCM table with the full
-   tuple `ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_AUDIO_CANARY_AB=1`,
-   `ROGUESQ_M5_C88_VALUE=1`, `ROGUESQ_SPIN_YIELD=1`, and the wrapper's
-   `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, `ROGUESQ_LLE_SOLO=1`.
-   Do not route output, reverse a task field, add a guard, or change guest
-   behavior from ownership alone. s2063 still closes the nonzero image-DMA-
-   to-PCM branch at current scope: every observed image DMA payload was zero
-   and the exact task joins were zero-only. Keep the retail writer, C88 value,
+   H-ImageTaskAbiMismatch at live contract scope, and s2070 selects
+   H-CanaryObserver at the canary output scope: exact E50 payloads and PCM
+   joins are unchanged by canary-off, but every image task still exits `Broke`
+   with zero exact-E50 payload. The next discriminator is an independent
+   retail payload-value witness for `0x1931F0..0x194E70`, joined to its writer
+   PCs and the port's exact E50 FNV/nonzero table. Do not route output, reverse
+   a task field, add a guard, remove the canary reservation, or change guest
+   behavior from ownership alone. Keep the retail writer, C88 value,
    wait/slot guards, and default dispatch unchanged.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
@@ -575,6 +570,15 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   DMA assertion. Those controls make the on/off fields a real diagnostic
   result, but not an admissible E50/output conclusion; the next full-tuple run
   must remeasure the same table.
+- s2070 supersedes the wording that the canary hypotheses were pending at the
+  output-contract scope. That wording was believable because s2069 had no
+  C88=1 arm, no exact E50 rows, and a known host abort. The corrected witness
+  reached both anchors without a crash marker and supplied balanced on/off
+  task rows, exact E50 ranges, and PCM joins. Canary-off did not improve the
+  `Broke` result, exact E50 payload, or PCM output, so H-CanaryPoison is
+  refuted and H-CanaryObserver is selected at this scope. The task ABI and
+  zero-payload `Broke` origin remain open; the selection does not authorize
+  removing the reservation or changing output routing.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -622,6 +626,16 @@ retail-route absence.
 s2069 added a host canary A/B and source-span witness but was recipe-incomplete
 for E50 because C88=1 was unset; the task ABI, canary interpretation, and
 complete playback remain open pending the full tuple.
+
+s2070 supplied that tuple and selected H-CanaryObserver at output-contract
+scope. The oracle independently passed the whole-RDRAM control, printed both
+target route anchors, and saw 47,741 writes in the exact E50 envelope. The
+port A/B had 2,855 rows per arm, identical `exit=1`, zero-only identical E50
+payloads, and title/hangar PCM joins with no canary-off improvement. The
+canary-on/off `dmem_changed` difference is prefill-relative and not a valid
+output discriminator; the task ABI, `Broke` edge, and complete playback remain
+open. This is single-source port A/B evidence paired with the independent
+retail route/write witness.
 
 ## Method and safety rules
 

@@ -1,71 +1,69 @@
-# NEXT work unit (s2070)
+# NEXT work unit (s2071)
 
 HYPOTHESIS-ID: m5-audio-image-output-contract
 
 ## Work unit
 
-Rerun the existing diagnostic-only canary A/B on the fully qualified M5 route.
-The s2069 instrument is already built and exported; do not change its logic or
-guest behavior. With `ROGUESQ_AUDIO_CANARY_AB=1`, alternate canary-on and
-canary-off image tasks by phase-keyed task ordinal, and collect the complete
-source/E50/PCM table with `ROGUESQ_M5_C88_VALUE=1` and
-`ROGUESQ_SPIN_YIELD=1`. Do not change task fields, dispatch, guest values,
-output routing, waits, or guards.
+Add one bounded post-store value witness to the retail oracle for the exact
+E50 envelope `0x1931F0..0x194E70`, then run one corrected Rice route and
+crosswalk its value/FNV/nonzero table against s2070's port-side
+`0xE50/0x180` rows. The oracle callback currently reports writer PCs and hit
+counts but not the value written by the stopped store; extend it only enough
+to capture a bounded post-step value histogram and per-watch nonzero-byte/FNV
+summary. Do not change the port, task fields, output routing, canary, guest
+gate, waits, or guards.
 
-ORIGIN: the host writes the `0xF80..0xF8F` canary; generated
-`factor5_ucode_b` loops at `L_146C`, `L_1D24`, and `L_1F40` are the guest-side
-writers under test. The legitimacy of the reserved-gap assumption is not
-established by ownership alone.
+ORIGIN: retail writer PCs are independently established, while the port's
+generated `L_1E48` writer emits zero-only E50 payloads and returns `Broke`.
+Whether the retail E50 bytes are final PCM or an intermediate work buffer is
+not established by writer ownership alone.
 
 ## Competing hypotheses and discriminator
 
-- **H-CanaryObserver** — the prefill is overwritten before any relevant read;
-  canary-on and canary-off rows have the same `exit`, DMEM changes, exact-E50
-  payload, and PCM joins.
-- **H-CanaryPoison** — the canary bytes are consumed before the generated
-  output loops overwrite them; canary-off image rows improve the `Broke`,
-  canary, exact-E50 payload, or nonzero-PCM contract while input spans remain
-  matched.
-- **H-CanaryContract** — the bytes are part of a required task-side DMEM
-  contract; canary-off changes the task but does not produce a valid output,
-  selecting the reserved-gap/ABI boundary rather than a harmless observer.
+- **H-E50-RetailFinal** — retail writes to the exact E50 envelope carry
+  nonzero, PCM-like final output. The port's zero-only E50 rows are then a
+  live image-task destination/ABI mismatch, not evidence that E50 is scratch.
+- **H-E50-RetailIntermediate** — retail writes to the exact envelope are
+  zero/constant or otherwise do not match a PCM payload; the port's zero-only
+  rows cannot be classified as a final-output mismatch from this span.
+- **H-E50-PortPayloadMatch** — the retail post-store values match the port's
+  exact E50 payload classes and the current port capture is a stale or
+  phase-misaligned witness. This requires a value/FNV/nonzero match, not just
+  the same address range.
 
-The discriminator is one phase-keyed table for both arms: arm, `data_ptr` and
-`data_size`, source-span FNV/nonzero count, DMEM pre/post/change range, exit,
-canary result, every exact E50 DMA span's FNV/nonzero count, and paired PCM
-source/consumer rows. Positive controls are both target VI anchors, live input,
-and the existing stub/image dispatch controls; no conclusion may use a canary
-counter alone. H-CanaryPoison requires a canary-off improvement with matched
-source spans; H-CanaryContract requires a canary-off change without a valid
-output; unchanged rows select H-CanaryObserver.
+The discriminator is one phase-qualified oracle table containing the whole-
+RDRAM control, VI anchors, exact-E50 post-store value/FNV/nonzero summaries,
+and writer-PC histogram. H-E50-RetailFinal is selected by nonzero
+PCM-shaped retail values plus a port mismatch; H-E50-RetailIntermediate by
+zero/constant or non-PCM values; H-E50-PortPayloadMatch only by matching
+post-store payload classes. A hit counter or PC histogram alone selects
+nothing.
 
 ## Exact commands
 
-1. Ask ground truth first with the corrected Rice oracle. Require the
-   whole-RDRAM positive-control threshold, title VI `1024 @ 0x00790400`,
-   hangar VI `512 @ 0x006AB400`, and nonzero exact-E50 writes.
-2. Build the already committed diagnostic:
+1. Before modifying the oracle, rerun the existing corrected Rice witness and
+   require the whole-RDRAM control, title `1024 @ 0x00790400`, hangar
+   `512 @ 0x006AB400`, and nonzero exact-E50 writes:
 
    ```sh
-   ./submodule-patches/export.sh
-   cmake --build build --config Debug --target RogueSquadron64Recomp
+   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0x1931F0:0x194E70 --hit-cap 10000 --vi-trace
    ```
 
-3. Run both arms once in-process on the complete tuple. The wrapper supplies
-   `ROGUESQ_LLE_FORCE=1`, `ROGUESQ_LLE_UNGATED=1`, and `ROGUESQ_LLE_SOLO=1`:
+2. Add the single post-store value summary to `tools/oracle/rs64_oracle.c`
+   and rebuild the oracle:
 
    ```sh
-   env ROGUESQ_AUDIO_UCODE=1 ROGUESQ_AUDIO_CANARY_AB=1 ROGUESQ_M5_C88_VALUE=1 ROGUESQ_SPIN_YIELD=1 ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 zsh scratch/s73_post_a_scene/run_mission_keys.sh m5-canary-ab-c88 30 12
+   tools/oracle/build.sh
    ```
 
-4. Verify title `1024 @ 0x00790400`, hangar `512 @ 0x006AB400`, the paired
-   arm/source/E50/PCM table, and the live input/image dispatch controls. A
-   no-crash capture is required for hypothesis selection; if the known odd-ROM
-   DMA assertion recurs, record the table as inadmissible and do not infer from
-   the canary fields alone. Run `git diff --check`.
-   Kill any wrapper-owned game process with SIGKILL after the capture window.
+3. Run the same route with the whole-RDRAM watch first and the E50 watch
+   second; use the new value-summary option for watch 1. Capture to a named
+   path and keep `--vi-trace` enabled:
 
-The exact E50 retail ownership from s2068 is the ground-truth reason this
-instrument is scoped to the DMEM canary/output contract; do not reinterpret a
-canary-off result as permission to remove the reservation until the table
-selects it.
+   ```sh
+   tools/oracle/build/rs64_oracle --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib --secs 60 --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start --watch-write 0x0:0x800000 --watch-write 0x1931F0:0x194E70 --hit-cap 10000 --vi-trace --pc-hist-watch 1 --post-value-watch 1 > scratch/agent/oracle_s2071_e50_values.log 2>&1
+   ```
+
+4. Compare the oracle E50 value/FNV/nonzero classes with s2070's port
+   `audtask-dma-range` rows. Run `git diff --check`; no runtime behavior
+   change is authorized by the result alone.

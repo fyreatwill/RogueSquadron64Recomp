@@ -98733,3 +98733,48 @@ ORIGIN: the host writes the reserved-gap canary; generated `factor5_ucode_b`
 loops at `L_146C`, `L_1D24`, and `L_1F40` are the guest-side writers under
 test. The canary A/B is an observation of that host/guest boundary, not a
 mitigation or permission to remove the reservation.
+
+## Session 2070 (2026-08-20) — selected canary observer at output-contract scope
+
+Ground truth ran first. The corrected Rice oracle with `--vi-trace` passed the
+whole-RDRAM positive control with 59,274 writes, printed title VI `1024 @
+0x00790400` and hangar VI `512 @ 0x006AB400`, and recorded 47,741 writes in
+the exact E50 envelope `0x1931F0..0x194E70`. The same run recorded 408 title
+CB0 writes and 1,125 hangar CB0 writes. This independently qualifies the
+route and the retail E50-write activity for the port table.
+
+The existing diagnostic build was exported and completed successfully. The
+full tuple was run in one process:
+`ROGUESQ_AUDIO_UCODE=1`, `ROGUESQ_AUDIO_CANARY_AB=1`,
+`ROGUESQ_M5_C88_VALUE=1`, `ROGUESQ_SPIN_YIELD=1`, plus the wrapper's forced
+LLE/ungated/solo flags. It printed title VI `1024 @ 0x00790400` and hangar
+VI `512 @ 0x006AB400`, emitted 5,710 ABI/DMA task rows split evenly into
+2,855 canary-on and 2,855 canary-off rows, and had no `[CRASH]`, `[ABORT]`, or
+assertion marker before the game was terminated with SIGKILL after the
+capture window.
+
+Every task row returned `exit=1`, changed DMEM, and retained
+`output_buff=0`/`yield_ptr=0`. Canary-on rows had `canary_ok=0`; canary-off
+rows had `canary_ok=1`. Exact `0xE50/0x180` ranges numbered 1,068 per arm;
+all 2,136 payloads had FNV `25E26BC5` and zero nonzero bytes. The title
+interval supplied 2,154 source and 2,154 consumer PCM rows, all 2,154 joined,
+with 14 nonzero pairs. The two hangar target intervals supplied
+1,420/1,418 and 2,973/2,968 source/consumer rows; 1,418 and 2,968 joined,
+and every hangar row was zero. Full task source-span keys overlapped in 17
+classes. The on/off `dmem_changed` averages differed slightly because the
+counter is relative to the deliberately different canary prefill; that was
+not promoted as a functional improvement.
+
+This selects **H-CanaryObserver** at the declared output-contract scope and
+refutes **H-CanaryPoison**: canary-off did not improve `Broke`, exact-E50
+payload, or PCM output. H-CanaryContract is not selected because the only
+functional output fields were unchanged; the reserved-gap legitimacy, image
+task ABI, `Broke` origin, and complete playback remain open. The A/B result is
+single-source port evidence paired with the independent retail route/write
+witness. No task field, dispatch path, output route, guest value, guard, or
+default behavior changed.
+
+ORIGIN: the host writes the `0xF80..0xF8F` canary; generated
+`factor5_ucode_b` loops at `L_146C`, `L_1D24`, and `L_1F40` are the guest-side
+writers. The canary result is an observation of that host/guest boundary, not
+a mitigation or permission to remove the reservation.
