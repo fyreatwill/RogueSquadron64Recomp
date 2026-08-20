@@ -98932,3 +98932,32 @@ ORIGIN: no mitigation or guest behavior changed. The observed failures are
 from the existing `waitForAnyAudioSlot` and `fillSampleStreamRange` paths; the
 `0x8008EC88` value was never written in the treatment runs. The control's
 `gate=0` rows are the existing default fixup behavior, not a new writer.
+
+## Session 2075 (2026-08-20) — qualified the retail slot-table contract
+
+I ran the exact corrected Rice retail-oracle witness from `NEXT.md` for 120.2
+seconds. The run passed the independent controls: the whole-RDRAM watch
+recorded 10,040 writes, PIF tracing observed all eleven scheduled Start words
+(`7C4=0x10000000`), title VI `1024 @ 0x00790400` fired, and hangar VI
+`512 @ 0x006AB400` fired repeatedly through the end of the run.
+
+The physical candidate table at `0x154620` was live: its narrow write watch
+recorded 40 writes and its read watch recorded 21,060 reads. Status polling at
+slot 0 captured the repeated sequence `0x00 -> 0x01 -> 0x02 -> 0x03 ->
+0x00` at 43.3--49.0 seconds and again at 60.0--87.2 seconds. Direct table
+write attribution included three `0x03 -> 0x00` stores from retail PC
+`0x8009B7EC`; the requested `0x8009B30C` writer had zero PC hits. The
+requested `waitForAnyAudioSlot` PC `0x80095D54` also had zero hits, despite
+the candidate table being read and written on the same qualified route.
+
+This selects **H-RetailWaitCallsiteUnreached** at the named wait-PC scope and
+refutes a retail slot-table null. It rules out treating the port's
+`waitForAnyAudioSlot+336` crash PC as an independently confirmed retail route
+boundary, but it does not explain the port treatment-only crash or authorize a
+wait/guard/gate change. The result is independent retail ground truth paired
+with the prior single-source port failure; the next unit is a phase-gated port
+census of that treatment-only wait path.
+
+The preserved oracle log is `scratch/agent/oracle_s2075_wait_slot/run.log`.
+No port build, guest store, task field, output route, canary, wait, guard, or
+default behavior changed.

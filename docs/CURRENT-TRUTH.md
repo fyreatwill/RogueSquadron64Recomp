@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is
 in [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is authoritative
-for session detail. Reviewed through s2074 (2026-08-20).
+for session detail. Reviewed through s2075 (2026-08-20).
 
 ## Current state
 
@@ -171,6 +171,17 @@ for session detail. Reviewed through s2074 (2026-08-20).
   or any downstream task/PCM hypothesis; it is single-source port evidence.
   The writer-specific gate arm is not admissible for another cross-run A/B
   until the wait/slot contract has an independent retail witness.
+- s2075 supplied that independent retail witness with the corrected Rice
+  oracle. The whole-RDRAM control recorded 10,040 writes; PIF traces showed
+  eleven scheduled Start transitions; title VI `1024 @ 0x00790400` and hangar
+  VI `512 @ 0x006AB400` both fired. The physical slot table at `0x154620`
+  produced 21,060 reads and 40 writes, and status polling recorded repeated
+  `0 -> 1 -> 2 -> 3 -> 0` transitions. The actual retail `0x8009B7EC`
+  writer fired three `0x03 -> 0x00` edges, while `0x80095D54` and
+  `0x8009B30C` never executed on this qualified route. This selects
+  H-RetailWaitCallsiteUnreached at the requested wait-PC scope and refutes a
+  retail null for the slot table; it does not authorize a port wait change or
+  another gate arm yet.
 - Retail ground truth independently reaches title and hangar, passes the
   whole-RDRAM positive control, and executes the menu/audio/status watch
   points. The port is never its own witness for a null result.
@@ -300,10 +311,13 @@ are not active work items.
    concurrent arm and an alone retry: the control reached both target phases,
    while the treatment died in the known audio wait/render crash families at
    VI 640. H-GateArmMissing is selected as a qualification failure; no gate,
-   task, slot, or PCM null is admissible from that treatment. The next unit is
-   an independent retail watch of the slot-table writer/consumer contract
-   before another port arm. Do not change output routing, reverse a task field,
-   remove the canary reservation, or alter waits/guards.
+   task, slot, or PCM null is admissible from that treatment. s2075 closed the
+   independent retail slot-table prerequisite but showed that the named port
+   crash PC is not a retail call site. The next unit must build one phase-gated
+   port census of the treatment-only wait path, joining `waitForAnyAudioSlot`,
+   its dominant slot readers, status writers, and the C88 treatment's first
+   failure. Do not change output routing, reverse a task field, remove the
+   canary reservation, or alter waits/guards.
 2. **M3 crash work.** Only complete idiom-class audits with a named
    discriminator. The dormant `slotDispatcherIter+872` class has 7659 clean
    hangar calls in its guarded run; no mitigation is authorized.
@@ -370,6 +384,15 @@ ran and recorded a later shutdown call 3 entry and exit with status `0x00`.
 The port status sequence is therefore `00 -> 01 -> 02 -> 03 -> 00` at this
 scope, and the store-to-shutdown return is now selected. Do not force a
 status byte or add a skip.
+
+s2075 independently qualified the same retail slot table before another port
+arm. With the whole-RDRAM positive control, PIF Start traces, title and hangar
+VI anchors, the table at physical `0x154620` produced 21,060 reads and 40
+writes, and status polling captured repeated `00 -> 01 -> 02 -> 03 -> 00`
+cycles. Retail `0x8009B7EC` executed three times for the `03 -> 00` edges;
+`0x8009B30C` and the port crash PC `0x80095D54` did not execute. This selects
+H-RetailWaitCallsiteUnreached at the requested wait-PC scope and keeps the
+port-side treatment-only wait path open. No wait or guard behavior changed.
 
 ### M5 audio and guest gate
 
@@ -689,6 +712,15 @@ Detailed overturned claims are archived in `PROJECT-OVERVIEW.md` §§26, 35,
   route qualification failure and proves no downstream gate/task hypothesis.
   The result is single-source port evidence; the next unit must obtain the
   independent retail wait/slot contract before another treatment arm.
+- s2075 supersedes only that pending prerequisite. It was believable because
+  s2074's treatment died at the port's `waitForAnyAudioSlot+336`, and the
+  retail witness had not yet joined the status table to its writers. The
+  corrected Rice run passed the whole-RDRAM, PIF, title, and hangar controls,
+  observed the retail table's repeated status cycle, and attributed its
+  `03 -> 00` stores to `0x8009B7EC`; neither `0x80095D54` nor `0x8009B30C`
+  executed. The retail table is therefore real, but the named wait call site
+  is not a retail route boundary; the port treatment-only wait path still
+  requires a port census before any gate arm is interpreted.
 - The old “generated tree cannot provide a phase-valid census” provenance
   block is closed by s2016. The old “call 3 was not reached” claim is closed by
   s2007. The old “worker boundary is selected” wording is narrowed by s2028/
@@ -765,6 +797,15 @@ retry at `waitForAnyAudioSlot+336`. Neither treatment run reached the gate
 writer or a target phase, so H-GateArmMissing is selected as a qualification
 failure and no task/slot/PCM conclusion is drawn. This is single-source port
 evidence; no guest or host behavior changed.
+s2075 then supplied the missing retail slot-table witness. The corrected Rice
+oracle passed the whole-RDRAM control with 10,040 writes, showed eleven PIF
+Start transitions, and reached title `1024 @ 0x00790400` and hangar
+`512 @ 0x006AB400`. The physical `0x154620` table produced 21,060 reads and
+40 writes; status polling captured repeated `00 -> 01 -> 02 -> 03 -> 00`
+cycles, and `0x8009B7EC` supplied three observed `03 -> 00` writer edges.
+The requested `0x80095D54` wait PC and `0x8009B30C` writer had zero hits.
+This selects H-RetailWaitCallsiteUnreached at the named-PC scope and leaves
+the port treatment-only wait path open; no port behavior changed.
 
 ## Method and safety rules
 

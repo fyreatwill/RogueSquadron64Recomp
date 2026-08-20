@@ -1,67 +1,78 @@
-# NEXT work unit (s2075)
+# NEXT work unit (s2076)
 
-HYPOTHESIS-ID: m5-retail-wait-slot-contract
+HYPOTHESIS-ID: m5-port-treatment-wait-path
 
 ## Work unit
 
-Run one corrected Rice retail-oracle witness before adding or changing any
-port instrumentation. Watch the physical slot/status table at guest
-`0x80154620` (`0x154620` physical), read and write it, poll the full status
-table, and attribute the wait and status writers by PC while driving the
-known title-to-hangar route. The whole-RDRAM watch is the positive control;
-title VI 1024, hangar VI 512 at origin `0x006AB400`, and PIF input reads are
-the route controls. This is ground-truth capture only: no port build, guest
-store change, task-field change, routing change, canary change, wait/guard
-change, or mitigation is authorized.
+Build one Debug binary containing a single regeneration-stable,
+phase-keyed `wait-contract` census for the existing port treatment path, then
+run the qualified `ROGUESQ_M5_C88_VALUE=1` arm. Do not change the gate store,
+audio task fields, output routing, canary reservation, wait cap, or any guard.
+Join in one table: treatment gate value and phase, entry/exit/guard state of
+`waitForAnyAudioSlot`, the dominant slot readers (`0x8009B62C`,
+`0x8009B654`, `0x8009B3EC`, `0x8009B44C`), slot-0 status, named status-writer
+stores, and the first failure/last guest PC. Existing `[pad-host]`, VI 640,
+`[audtask-dispatch]`, and process-alive rows are the same-run positive
+controls; a wait counter alone is not a control.
+
+The s2075 retail witness established that the real table at `0x154620`
+cycles `00 -> 01 -> 02 -> 03 -> 00` and that retail never executes
+`0x80095D54`. This unit tests whether the port's treatment-only crash enters
+an unrelated wait path, consumes the real slot contract, or fails earlier.
 
 ## Competing hypotheses and discriminator
 
-- **H-RetailWaitReadsSlotTable** — the retail wait at `0x80095D54` reads the
-  slot table at `0x154620`, and named status writers such as `0x8009B30C` or
-  `0x8009B7EC` produce the observed transitions. Select this only if the
-  whole-RDRAM control, both route anchors, wait-PC hits, slot read hits, and
-  named writer attribution all fire.
-- **H-RetailWaitReadsOtherTable** — the wait PC fires on the qualified route,
-  but the candidate slot-table read watch stays silent while status polling or
-  another watched region moves. This selects a wrong-table/address boundary,
-  not a port null.
-- **H-RetailStatusOtherWriter** — the candidate slot table is read and
-  written on the qualified route, but the writer-PC histogram is dominated by
-  PCs other than the named status writers. This selects an unclassified retail
-  writer boundary.
-- **H-RetailWaitNotReached** — the independent route reaches title/hangar but
-  the requested wait PC and candidate-table reads do not fire. This selects a
-  call-site/function-address or phase-scope mismatch only if the route and
-  whole-RDRAM controls pass; otherwise the run is UNEVALUABLE.
+- **H-PortTreatmentMisdirectsGate** — C88 treatment enters the port wait while
+  the gate is active or before the legitimate gate/slot transition; the joined
+  row shows gate/phase, wait entry, and a zero or non-retail slot state before
+  the first failure. This selects a gate-to-wait misrouting boundary.
+- **H-PortWaitConsumesRetailSlot** — treatment wait reads the same slot-0
+  status contract and observes a valid transition or named writer before
+  returning/guarding; this selects a port scheduling/completion boundary,
+  not a wrong table or gate value.
+- **H-PortTreatmentFailsBeforeWait** — the treatment has live preflight and
+  audio-task controls but no `wait-contract` entry before its first failure;
+  this selects an earlier render/voice path and rules out the wait as the
+  first treatment boundary.
+- **H-PortWaitStarvesWorker** — treatment enters the wait, slot readers remain
+  active, but no status-zero writer/exit occurs while the worker/VI controls
+  stop; this selects a scheduler/worker handoff boundary after the retail
+  table identity is established.
 
-The discriminator is the single oracle table joining whole-RDRAM count,
-title/hangar/PIF controls, `waitForAnyAudioSlot` PC hits, slot-table reads,
-slot-table write PCs, and `--status-poll` transitions. A missing target row
-without all controls is not evidence.
+The discriminator is one phase-keyed table containing all of those fields and
+the first-failure edge. Positive controls must fire in the same run. A missing
+wait row without live preflight/audio-task controls is UNEVALUABLE; a guard
+fire is a failure outcome, not completion.
 
-## Exact command
+## Exact commands
 
-Run from the repository root; the command writes its bounded output to an
-absolute capture path:
+Patch the existing fixup instrumentation in one batch, regenerate in the
+required order, and build once:
 
 ```sh
-mkdir -p scratch/agent/oracle_s2075_wait_slot
-tools/oracle/build/rs64_oracle \
-  --core /Users/williambuckley/Documents/Tools/rs64-oracle/src/mupen64plus-core/projects/unix/libmupen64plus.dylib \
-  --rom /Users/williambuckley/Documents/Tools/rogue_squadron64/rogue_squadron.z64 \
-  --video /opt/homebrew/lib/mupen64plus/mupen64plus-video-rice.dylib \
-  --secs 120 \
-  --press 6:start,11:start,16:start,21:start,26:start,31:start,36:start,41:start,46:start,51:start,56:start \
-  --watch-write 0x0:0x800000 \
-  --watch-write 0x154620:0x154630 \
-  --watch-read 0x154620:0x154630 \
-  --watch-pc 0x80095D54,0x8009B30C,0x8009B7EC,0x8009B2C4 \
-  --detail-watch 1 --detail-watch 2 \
-  --pc-hist-watch 1 --pc-hist-watch 2 \
-  --vi-trace --pif-trace --status-poll \
-  > scratch/agent/oracle_s2075_wait_slot/run.log 2>&1
+(cd ../rogue_squadron64 && python3 tools/make_elf.py)
+(cd ../N64Recomp && build/N64Recomp rogue_squadron.toml)
+python3 ../N64Recomp/fixup_game_funcs.py
+cmake --build build --target RogueSquadron64Recomp
 ```
 
-Require a whole-RDRAM positive-control count, title `1024 @ 0x00790400`,
-hangar `512 @ 0x006AB400`, and PIF reads before interpreting any watch null.
-Preserve the output and append the selected table to the next ledger entry.
+Then run the treatment from the repository root; the driver launches from
+`build/`, captures to an absolute path, and kills the game with SIGKILL:
+
+```sh
+env ROGUESQ_LLE_FORCE=1 ROGUESQ_LLE_UNGATED=1 ROGUESQ_LLE_SOLO=1 \
+  ROGUESQ_STUB_MISSING_FUNCS=1 ROGUESQ_SPIN_YIELD=1 \
+  ROGUESQ_AUDIO_UCODE=1 ROGUESQ_M5_C88_VALUE=1 \
+  ROGUESQ_LOG_ALL=1 ROGUESQ_LOG_PCM_SANITY=1 \
+  ROGUESQ_LOG_WAITFORSLOT_GUARD=1 ROGUESQ_LOG_AUDIO_DRAIN=1 \
+  ROGUESQ_LOG_AUDIOTICK_TRACE=1 \
+  zsh scratch/s73_post_a_scene/run_mission_keys.sh s2076_c88_wait 30 12
+```
+
+Require `[pad-host]`/preflight and `[audtask-dispatch]` controls before
+interpreting any wait or slot null. Expected outcomes are: misdirected gate
+if a treatment wait row precedes a non-retail slot state; retail-like slot
+consumption if the table transition and named writer join; pre-wait failure if
+the first failure precedes every wait row; or worker starvation if wait and
+readers stay live while the status-zero/exit edge is absent. No mitigation is
+authorized from any outcome.
