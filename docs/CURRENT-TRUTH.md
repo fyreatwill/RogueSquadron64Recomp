@@ -2,7 +2,7 @@
 
 Front matter for [`PORTING-STATE.md`](../PORTING-STATE.md). Durable history is in
 [`PROJECT-OVERVIEW.md`](PROJECT-OVERVIEW.md); the ledger is the authority for session
-detail. Reviewed through s1979 (2026-08-19).
+detail. Reviewed through s1980 (2026-08-19).
 
 ## Current state
 
@@ -86,11 +86,17 @@ detail. Reviewed through s1979 (2026-08-19).
   ORIGIN: `musyxRenderVoiceSamples` (legitimate `0x02` key-on). Drain is
   correctly waiting. s1979 selected H-subset-live: of 18 slots at
   `0x801714D0`, 12 stay `0x02` with `cross_n=0` through the 10M timeout
-  (idx 0–4, 6, 7, 13–17); only 9–12 cursor-cross once and land
-  `slot-sb new=0x00`. idx 5 and 8 are already idle. H-end-zero-lost /
-  H-rekey-after-end / H-zero-unlogged REFUTED. `deactivateVoice` is 0
-  globally; `stopVoice` only hits the boot array. Timeout remains a
-  diagnostic hatch. Default-off yield unchanged.
+  (idx 0–4, 6, 7, 13–17); only a 4-voice subset cursor-crosses and
+  lands `slot-sb new=0x00`. H-end-zero-lost / H-rekey-after-end /
+  H-zero-unlogged REFUTED. s1980 selected H-not-at-cursor: those 12
+  have `vis=0` at `L_80090150` through 108 drain-tick samples while
+  still taking 155 `slot-sb new=0x02` each at dests on `0x801714D0`.
+  Their `mem38` (`slot+0x38`) is a sane end (`0x9241`/`0x853F`/…) —
+  they are not frozen mid-cursor. Static skip: `0x80090084`
+  `lw $a3, 0x40($s1)` nonzero falls through toward `L_80090188` and
+  the `sb 0x28($sp)` tail. `deactivateVoice` is 0 globally;
+  `stopVoice` only hits the boot array. Timeout remains a diagnostic
+  hatch. Default-off yield unchanged.
 - **M4 hangar/512 Y=0x8000 is not live (s1949).** On the first hangar
   capture: 2187 `L_17F0` entries, 3904 flushes, `y8000_entry=0`
   `y8000_any=0`, plus a recognizable 3D hangar frame. Do not re-walk
@@ -208,20 +214,20 @@ detail. Reviewed through s1979 (2026-08-19).
 
 ## Active investigation and ranked next steps
 
-Re-ranked s1979: 12 of 18 live slots never cursor-cross; the four that
-do end land `new=0x00` and stay idle. Drain waits on the 12.
+Re-ranked s1980: the 12 never-cross slots never enter `L_80090150`.
+Drain waits on voices that skip the sample-end compare.
 
-1. **Hangar frame-freeze: 12 idxs stay `0x02` with `cross_n=0` (s1979).**
-   Same-run positive controls: `[drain-tick]`/`[drain-cross] call=1
-   iters=1 gate=0x01` (108 paired samples) and `[avf-gate] site=slot-alloc`
-   boot `0x8018D4A0 count=16` (tickn=2). Last alloc `0x801714D0 count=18`
-   matching `ch=18`. After drain starts, idxs 9–12 each fire one
-   `render-end` + matching `slot-sb new=0x00` (old=0x02); no rekey.
-   The other 12 `0x02` slots take 162 further `new=0x02` stores each
-   and never cross. idx 5 and 8 stay `0x00` with no post-drain render.
-   Next: per-idx last `cur`/`pos`/`step` at the cursor site on the
-   same drain-tick samples — why those 12 never reach end. Use
-   `S32(guest_addr)` in any `MEM_*` dump.
+1. **Hangar frame-freeze: 12 live idxs skip the cursor site (s1980).**
+   Same-run positive controls: `[drain-tick]`/`[drain-cross]`/
+   `[drain-cursor] call=1 iters=1 gate=0x01` (108 samples, 1944
+   cursor rows) and boot `slot-alloc 0x8018D4A0 count=16`. Last
+   alloc `0x801714D0 count=18`. Ended idxs 5/8/10/11: `vis` 47–99,
+   `dpos>0`, last `pos+step >= cur`, `mem38==cur`. The 12 live
+   `0x02` idxs stay `vis=0` and still take 155 `slot-sb new=0x02`
+   each. Next: which `musyxRenderVoiceSamples` branch they take —
+   dump `slot+0x40` / `slot+1` / `slot+0x3C` on the same drain-tick
+   samples and count the `0x80090084`/`9C`/`A4`/`B0` gotos per idx.
+   Use `S32(guest_addr)` in any `MEM_*` dump.
 2. **slotDispatcherIter+872 SIGBUS: DORMANT (s1973).** 7659 calls in 90s hangar
    run with ROGUESQ_LOG_SLOT_SP_GUARD=1; zero INVALID fires. H-uninit-stack and
    H-stack-collision REFUTED for hangar context (two-source with s1972_hangar_300s
@@ -367,6 +373,12 @@ Most recent, still load-bearing for the next unit:
   H-end-zero-lost / H-rekey-after-end / H-zero-unlogged REFUTED.
   Believable because the s1927 rate-limit dropped `new==0` after the
   first 32 events.
+- s1979 "they almost certainly pass `L_80090150` because `slot-sb` is
+  after that compare in the same function" is superseded by s1980 —
+  `vis=0` on the 12 live idxs through the whole drain while
+  `slot-sb new=0x02` keeps firing. Believable because the write is
+  later in the same function; the `0x80090084` fallthrough skips the
+  compare and still reaches the `0x28($sp)` tail.
 
 s1919–s1941 caller / slot / mix / VI-recv supersessions are archived in
 §36 rather than restated here.
@@ -378,8 +390,8 @@ s1880–s1917 leftover remaps, the s1888–s1949 VI-1024 / spin-yield /
 title-SI / hangar chain, and the s1950–s1959 leftover remaps live in §36.
 s1961–s1965 leftover remaps are in `PORTING-STATE.md` directly (not yet
 archived to §36). s1968's H1 scope result, s1970's filter audit, s1971's bltzal class fix,
-and s1978–s1979's drain-slot identity / subset-live result
-are in `PORTING-STATE.md` directly.
+and s1978–s1980's drain-slot identity / subset-live / skip-cursor
+results are in `PORTING-STATE.md` directly.
 s820–s1239 closed post-sec2 / M3 / audio / VI (dummy-video retail-entry
 later superseded by Rice). s1728 and s1948 are maintenance only; s1960 is
 loop-infra only (unblock: grok runner balance exhausted, refuted as a

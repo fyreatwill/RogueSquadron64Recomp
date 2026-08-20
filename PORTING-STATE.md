@@ -94846,3 +94846,53 @@ ledger; no new unevaluated verdict.
 
 **OUTCOME: ADVANCED** — planned drain-cross + new0 instrument
 discriminated the four hypotheses.
+
+## Session 1980 (2026-08-19) — 12 live drain slots never enter the cursor site
+
+**Instrument.** Incremental `apply_s1980_drain_cursor` (`RS64_S1980_DRAIN_CURSOR=1`;
+also in the full-fixup `_cur_new` / `apply_s1976_drain_tick` templates).
+At `L_80090150` every visit records last `cur`/`pos`/`step` and increments
+`vis[idx]` with no rate-limit. On the existing drain-tick samples,
+`[drain-cursor]` dumps all 18 idxs plus `MEM_W(0, S32(dest+0x38))` as a
+second `cur` source. No store changed.
+
+**Probe.** `scratch/agent/s1980_drain_cursor/run.log` — eleven-Start +
+`ROGUESQ_SPIN_YIELD=1` LLE-solo hangar, 60s after VI 512. Probe rc=0,
+17 frames, 66554 log lines, 0 CRASH/SIGBUS. Hangar `[phase] 512
+origin=0x006AB400` at 26.0s #1500.
+
+Positive controls (same run): `[drain-tick]`/`[drain-cross]`/`[drain-cursor]
+call=1 iters=1 gate=0x01` (108 paired samples; 1944 cursor rows = 108*18)
+through `[drain-timeout]` / `[drain-exit] call=1 iters=10000001 v0=1`, and
+`[avf-gate] site=slot-alloc` boot `0x8018D4A0 count=16` at tickn=2. Last
+alloc tickn=4 `0x801714D0 count=18` matching `ch=18`. The four ended idxs
+(5, 8, 10, 11) show `vis>0` (47/63/99/69), `dpos>0` while advancing,
+last sample `pos+step >= cur`, and `mem38 == cur`.
+
+**drain-cursor.**
+- The 12 still-live `0x02` idxs (0–4, 6, 7, 13–17) have `vis=0` on every
+  sample through 10M. `cur`/`pos`/`step` stay 0 (never recorded).
+  `mem38` is populated and stable (`0x9241`/`0x7324`/`0x853F`/`0x53ED`/
+  `0x10E0`) — same magnitude as the ended voices, so they are not
+  waiting on a huge remaining distance.
+- idxs 9 and 12 are already `0x00` at drain start (`vis=0`, no render).
+- After drain, only four cursor logs fire, all `cross=1` on 5/8/11/10.
+  `musyxRenderVoiceSamples` `slot-sb` still writes `new=0x02` 155 times
+  per each of the 12 at dests on `0x801714D0`.
+
+**Verdicts.**
+- H-not-at-cursor SELECTED (two-source: `vis=0` on 12 live idxs through
+  108 samples, and 155 `slot-sb new=0x02` per idx with only the four
+  ended voices ever logging a post-drain cursor visit).
+- H-frozen-pos / H-huge-end / H-looping REFUTED (all require `vis>0`).
+
+ORIGIN: `musyxRenderVoiceSamples` still writes legitimate `0x02` on a
+path that never executes `L_80090150`. Static fallthrough at
+`0x80090084` (`lw $a3, 0x40($s1)`; nonzero skips straight toward
+`L_80090188` / the `sb 0x28($sp)` tail). No skip/guard landed.
+
+SOAK-RESULTS tail consumed: s1971–s1974 hangar soaks already in the
+ledger; no new unevaluated verdict.
+
+**OUTCOME: ADVANCED** — planned drain-cursor instrument discriminated
+the four hypotheses.
